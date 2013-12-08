@@ -6,7 +6,7 @@ PritzMage::PritzMage(Map* map, int x, int y):Pritz(map,x,y)
 {
     className="PritzMage";
     this->setAnimation("images/monsters/pritzmage/");
-    bonusLevel->setIntelligence(2);
+    bonusLevel->setIntelligence(3);
     stats->setMain("I");
     sw=2;
 }

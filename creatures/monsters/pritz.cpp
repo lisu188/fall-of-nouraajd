@@ -15,6 +15,8 @@ Pritz::Pritz(Map *map, int x, int y):Monster(map,x,y)
 
     bonusLevel->setStamina(2);
     bonusLevel->setStrength(3);
+    bonusLevel->setAgility(2);
+    bonusLevel->setIntelligence(1);
 
     bonusLevel->setHit(3);
     bonusLevel->setCrit(1);
