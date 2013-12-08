@@ -1,7 +1,7 @@
 # Recovered game snapshot
 
-Original commit: `b9ae428bb65478f78f5e7e883ba3b2dd9e0af8ae`. Original tree: `a52f6a83298998702d2b76e5a959df9cc2ae4906`.
-Startup was verified from identical recovered sources at `b9ae428bb65478f78f5e7e883ba3b2dd9e0af8ae`.
+Original commit: `afdd8069397059b5ed17285c9338603534ace659`. Original tree: `dd543af0427f0a14bb95488618d3f27b265b6d91`.
+Startup was verified from identical recovered sources at `afdd8069397059b5ed17285c9338603534ace659`.
 
 This recovered version compiled and linked on Linux, started the real game on an isolated Xvfb display,
 loaded its map and a healthy player, rendered the screenshot below, and exited normally.
@@ -48,7 +48,7 @@ exactOriginal: 23, reconstruction: 10.
 - `stats/stats.cpp`: unverified donor reconstruction; 108bdcbeda04cefeba5e1895f91df023cea8487f:stats/stats.cpp; headerMatch=1; apiOverlap=10000/10000; distance=2 Verified by build and startup of afdd8069 (recovery/evidence/second-original).
 - `view/gamescene.cpp`: content reconstruction of the BFG-removed original; adapted from the 2026 donor (108bdcbe view/gamescene.cpp) to the original headers: tiles are created through Map::getTile and player views are positioned by GameView::resize
 
-Restored source fingerprint: `cea519bf0b15967eb8e57df55f07da76b489d36052e4c131446cb759d4b776e7`.
+Restored source fingerprint: `1d72fff6a015f6e52a8182bd551a925ed4da5813b5a682acdc4d2befa2863184`.
 
 The actual 1278 × 718 screenshot and [verification metadata](recovery/verification.json) belong to
 this source version. Reconstructed code and borrowed assets are identified in that metadata; they are
