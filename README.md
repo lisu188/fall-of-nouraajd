@@ -1,0 +1,67 @@
+# Recovered game snapshot
+
+Original commit: `afdd8069397059b5ed17285c9338603534ace659`. Original tree: `dd543af0427f0a14bb95488618d3f27b265b6d91`.
+Startup was verified from identical recovered sources at `afdd8069397059b5ed17285c9338603534ace659`.
+
+This recovered version compiled and linked on Linux, started the real game on an isolated Xvfb display,
+loaded its map and a healthy player, rendered the screenshot below, and exited normally.
+
+![Actual startup of this recovered game](recovery/startup.png)
+
+## Build and run
+
+Install Qt 5 Core, Gui and Widgets development files and a C++ compiler. The verified tool versions were:
+
+- g++ (Ubuntu 15.2.0-16ubuntu1) 15.2.0
+- QMake version 3.1
+- Using Qt version 5.15.18 in /tmp/nouraajd-recovery-qt/root/usr/lib/x86_64-linux-gnu
+
+Build from this snapshot's root directory:
+
+```sh
+qmake Game.pro -after TARGET=RecoveryGame DESTDIR=.
+make -j"$(nproc)"
+./RecoveryGame
+```
+
+For an isolated launch, use:
+
+```sh
+LIBGL_ALWAYS_SOFTWARE=1 QT_OPENGL=software xvfb-run -a --server-args="-screen 0 1920x1080x24" ./RecoveryGame
+```
+
+The automated readiness observer used for verification is recorded in the attached evidence; ordinary
+launches run the game's original entry point. Startup evidence does not establish full gameplay equivalence.
+
+## Recovery provenance
+
+compatibilityRepair: 11, exactOriginal: 22, reconstruction: 11.
+
+- `Game.pro`: unverified donor reconstruction; 108bdcbeda04cefeba5e1895f91df023cea8487f:Game.pro; headerMatch=0; apiOverlap=0/10000; distance=2
+- `creatures/creature.cpp`: unverified donor reconstruction; 108bdcbeda04cefeba5e1895f91df023cea8487f:creatures/creature.cpp; headerMatch=1; apiOverlap=10000/10000; distance=2
+- `images/buildings/cave/0.png`: unverified donor reconstruction; 71a3432e36b5649aabdd63c7807a78e9a8a3749a:images/buildings/cave/0.png; headerMatch=0; apiOverlap=0/10000; distance=159
+- `images/tiles/grass/0.png`: unverified donor reconstruction; c049ac73064442354af6224d06fe1c8b847bb8d9:images/tiles/grass/0.png; headerMatch=0; apiOverlap=0/10000; distance=105
+- `images/tiles/ground/0.png`: unverified donor reconstruction; c049ac73064442354af6224d06fe1c8b847bb8d9:images/tiles/ground/0.png; headerMatch=0; apiOverlap=0/10000; distance=105
+- `images/tiles/mountain/0.png`: unverified donor reconstruction; 152007b28631784d3c5e17f2686eb6ef9ff30e46:images/tiles/mountain/0.png; headerMatch=0; apiOverlap=0/10000; distance=155
+- `images/tiles/road/0.png`: unverified donor reconstruction; 152007b28631784d3c5e17f2686eb6ef9ff30e46:images/tiles/road/0.png; headerMatch=0; apiOverlap=0/10000; distance=155
+- `images/tiles/water/0.png`: unverified donor reconstruction; c049ac73064442354af6224d06fe1c8b847bb8d9:images/tiles/water/0.png; headerMatch=0; apiOverlap=0/10000; distance=105
+- `map/map.cpp`: unverified donor reconstruction; 108bdcbeda04cefeba5e1895f91df023cea8487f:map/map.cpp; headerMatch=0; apiOverlap=9500/10000; distance=2
+- `stats/stats.cpp`: unverified donor reconstruction; 108bdcbeda04cefeba5e1895f91df023cea8487f:stats/stats.cpp; headerMatch=1; apiOverlap=10000/10000; distance=2
+- `view/gamescene.cpp`: unverified donor reconstruction; 108bdcbeda04cefeba5e1895f91df023cea8487f:view/gamescene.cpp; headerMatch=1; apiOverlap=10000/10000; distance=2
+- `animation/animatedobject.h`: Root-era compatibility repair from108bdcbe, applied only to identical original files; the afdd8069 Pritz agility/intelligence changes are explicitly preserved. Actual build/startup pending.
+- `animation/animationprovider.cpp`: Root-era compatibility repair from108bdcbe, applied only to identical original files; the afdd8069 Pritz agility/intelligence changes are explicitly preserved. Actual build/startup pending.
+- `creatures/monsters/pritz.cpp`: Root-era compatibility repair from108bdcbe, applied only to identical original files; the afdd8069 Pritz agility/intelligence changes are explicitly preserved. Actual build/startup pending.
+- `creatures/monsters/pritzmage.cpp`: Root-era compatibility repair from108bdcbe, applied only to identical original files; the afdd8069 Pritz agility/intelligence changes are explicitly preserved. Actual build/startup pending.
+- `creatures/players/mage.cpp`: Root-era compatibility repair from108bdcbe, applied only to identical original files; the afdd8069 Pritz agility/intelligence changes are explicitly preserved. Actual build/startup pending.
+- `creatures/players/player.cpp`: Root-era compatibility repair from108bdcbe, applied only to identical original files; the afdd8069 Pritz agility/intelligence changes are explicitly preserved. Actual build/startup pending.
+- `creatures/players/rogue.cpp`: Root-era compatibility repair from108bdcbe, applied only to identical original files; the afdd8069 Pritz agility/intelligence changes are explicitly preserved. Actual build/startup pending.
+- `creatures/players/warrior.cpp`: Root-era compatibility repair from108bdcbe, applied only to identical original files; the afdd8069 Pritz agility/intelligence changes are explicitly preserved. Actual build/startup pending.
+- `map/map.h`: Root-era compatibility repair from108bdcbe, applied only to identical original files; the afdd8069 Pritz agility/intelligence changes are explicitly preserved. Actual build/startup pending.
+- `map/tiles/tile.h`: Root-era compatibility repair from108bdcbe, applied only to identical original files; the afdd8069 Pritz agility/intelligence changes are explicitly preserved. Actual build/startup pending.
+- `view/gameview.cpp`: Root-era compatibility repair from108bdcbe, applied only to identical original files; the afdd8069 Pritz agility/intelligence changes are explicitly preserved. Actual build/startup pending.
+
+Restored source fingerprint: `6e9533789314a17902c072169fd9805d796a29dbeb7180eadb5d6a24a59b0237`.
+
+The actual 1278 × 718 screenshot and [verification metadata](recovery/verification.json) belong to
+this source version. Reconstructed code and borrowed assets are identified in that metadata; they are
+not claimed to be the original deleted bytes. BFG removal-marker files are absent from this snapshot.
