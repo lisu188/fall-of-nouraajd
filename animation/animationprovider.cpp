@@ -12,17 +12,16 @@
 namespace {
 
 QPixmap makePlaceholder(const std::string &path) {
-  QPixmap pixmap(Tile::size, Tile::size);
-  const int seed = static_cast<int>(std::hash<std::string>{}(path) % 255);
-  pixmap.fill(
-      QColor((seed + 40) % 255, (seed * 2 + 90) % 255, (seed * 3 + 140) % 255));
+    QPixmap pixmap(Tile::size, Tile::size);
+    const int seed = static_cast<int>(std::hash<std::string>{}(path) % 255);
+    pixmap.fill(QColor((seed + 40) % 255, (seed * 2 + 90) % 255, (seed * 3 + 140) % 255));
 
-  QPainter painter(&pixmap);
-  painter.setPen(QColor("black"));
-  painter.drawRect(0, 0, Tile::size - 1, Tile::size - 1);
-  painter.end();
+    QPainter painter(&pixmap);
+    painter.setPen(QColor("black"));
+    painter.drawRect(0, 0, Tile::size - 1, Tile::size - 1);
+    painter.end();
 
-  return pixmap;
+    return pixmap;
 }
 
 } // namespace
@@ -30,10 +29,10 @@ QPixmap makePlaceholder(const std::string &path) {
 AnimationProvider *AnimationProvider::instance = 0;
 
 Animation *AnimationProvider::getAnim(std::string path) {
-  if (!instance) {
-    instance = new AnimationProvider();
-  }
-  return instance->getAnimation(path);
+    if (!instance) {
+        instance = new AnimationProvider();
+    }
+    return instance->getAnimation(path);
 }
 
 void AnimationProvider::terminate() { delete instance; }
@@ -42,78 +41,76 @@ AnimationProvider::AnimationProvider() {}
 
 AnimationProvider::~AnimationProvider() {
 
-  for (iterator it = begin(); it != end(); it++) {
-    delete (*it).second;
-  }
-  clear();
+    for (iterator it = begin(); it != end(); it++) {
+        delete (*it).second;
+    }
+    clear();
 }
 
 Animation *AnimationProvider::getAnimation(std::string path) {
-  if (this->find(path) != this->end()) {
-    return this->at(path);
-  } else if (this->find("assets:/" + path) != this->end()) {
-    return this->at("assets:/" + path);
-  }
-  loadAnim(path);
-  return getAnimation(path);
+    if (this->find(path) != this->end()) {
+        return this->at(path);
+    } else if (this->find("assets:/" + path) != this->end()) {
+        return this->at("assets:/" + path);
+    }
+    loadAnim(path);
+    return getAnimation(path);
 }
 
 void AnimationProvider::loadAnim(std::string path) {
-  Animation *anim = new Animation();
-  QPixmap *img = 0;
-  std::map<int, int> timemap;
+    Animation *anim = new Animation();
+    QPixmap *img = 0;
+    std::map<int, int> timemap;
 
-  std::ifstream time;
+    std::ifstream time;
 
-  time.open((path + "time.txt").c_str());
+    time.open((path + "time.txt").c_str());
 
-  if (time.is_open()) {
-    for (int i = 0; !time.eof(); i++) {
-      int x;
-      time >> x;
-      timemap.insert(std::pair<int, int>(i, x));
-    }
-  } else {
-    timemap.insert(std::pair<int, int>(0, 250));
-  }
-  time.close();
-
-  for (int i = 0; true; i++) {
-    std::string result;
-    std::ostringstream convert;
-    convert << i;
-    result = convert.str();
-
-    QPixmap image((path + result + ".png").c_str());
-    if (image.isNull()) {
-      image.load(QString::fromStdString(":/" + path + result + ".png"));
-    }
-    if (!image.isNull() && !image.hasAlphaChannel())
-      image.setMask(image.createHeuristicMask());
-
-    if (!image.isNull()) {
-      img = new QPixmap(image.scaled(Tile::size, Tile::size,
-                                     Qt::IgnoreAspectRatio,
-                                     Qt::SmoothTransformation));
+    if (time.is_open()) {
+        for (int i = 0; !time.eof(); i++) {
+            int x;
+            time >> x;
+            timemap.insert(std::pair<int, int>(i, x));
+        }
     } else {
-      if (anim->size() == 0 && path.find("assets:/") == std::string::npos) {
-        delete anim;
-        loadAnim("assets:/" + path);
-        return;
-      }
-      if (anim->size() == 0) {
-        anim->add(new QPixmap(makePlaceholder(path)), timemap.at(0));
-      }
-      break;
+        timemap.insert(std::pair<int, int>(0, 250));
     }
-    int frame;
-    if (timemap.size() == 1)
-      frame = timemap.at(0);
-    else
-      frame = timemap.at(i);
+    time.close();
 
-    anim->add(img, frame);
-  }
-  this->insert(std::pair<std::string, Animation *>(path, anim));
-  qDebug() << "Loaded animation:" << path.c_str();
+    for (int i = 0; true; i++) {
+        std::string result;
+        std::ostringstream convert;
+        convert << i;
+        result = convert.str();
+
+        QPixmap image((path + result + ".png").c_str());
+        if (image.isNull()) {
+            image.load(QString::fromStdString(":/" + path + result + ".png"));
+        }
+        if (!image.isNull() && !image.hasAlphaChannel())
+            image.setMask(image.createHeuristicMask());
+
+        if (!image.isNull()) {
+            img = new QPixmap(image.scaled(Tile::size, Tile::size, Qt::IgnoreAspectRatio, Qt::SmoothTransformation));
+        } else {
+            if (anim->size() == 0 && path.find("assets:/") == std::string::npos) {
+                delete anim;
+                loadAnim("assets:/" + path);
+                return;
+            }
+            if (anim->size() == 0) {
+                anim->add(new QPixmap(makePlaceholder(path)), timemap.at(0));
+            }
+            break;
+        }
+        int frame;
+        if (timemap.size() == 1)
+            frame = timemap.at(0);
+        else
+            frame = timemap.at(i);
+
+        anim->add(img, frame);
+    }
+    this->insert(std::pair<std::string, Animation *>(path, anim));
+    qDebug() << "Loaded animation:" << path.c_str();
 }

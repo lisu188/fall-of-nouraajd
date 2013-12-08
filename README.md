@@ -1,7 +1,7 @@
 # Recovered game snapshot
 
-Original commit: `b9ae428bb65478f78f5e7e883ba3b2dd9e0af8ae`. Original tree: `a52f6a83298998702d2b76e5a959df9cc2ae4906`.
-Startup was verified from identical recovered sources at `b9ae428bb65478f78f5e7e883ba3b2dd9e0af8ae`.
+Original commit: `afdd8069397059b5ed17285c9338603534ace659`. Original tree: `dd543af0427f0a14bb95488618d3f27b265b6d91`.
+Startup was verified from identical recovered sources at `afdd8069397059b5ed17285c9338603534ace659`.
 
 This recovered version compiled and linked on Linux, started the real game on an isolated Xvfb display,
 loaded its map and a healthy player, rendered the screenshot below, and exited normally.
@@ -37,30 +37,30 @@ launches run the game's original entry point. Startup evidence does not establis
 
 compatibilityRepair: 11, exactOriginal: 22, reconstruction: 11.
 
-- `Game.pro`: unverified donor reconstruction; earliest compatibility set 108bdcbeda04cefeba5e1895f91df023cea8487f:Game.pro
-- `creatures/creature.cpp`: unverified donor reconstruction; earliest compatibility set 108bdcbeda04cefeba5e1895f91df023cea8487f:creatures/creature.cpp
-- `images/buildings/cave/0.png`: unverified donor reconstruction; 71a3432e36b5649aabdd63c7807a78e9a8a3749a:images/buildings/cave/0.png; headerMatch=0; apiOverlap=0/10000; distance=160
-- `images/tiles/grass/0.png`: unverified donor reconstruction; c049ac73064442354af6224d06fe1c8b847bb8d9:images/tiles/grass/0.png; headerMatch=0; apiOverlap=0/10000; distance=106
-- `images/tiles/ground/0.png`: unverified donor reconstruction; c049ac73064442354af6224d06fe1c8b847bb8d9:images/tiles/ground/0.png; headerMatch=0; apiOverlap=0/10000; distance=106
-- `images/tiles/mountain/0.png`: unverified donor reconstruction; 152007b28631784d3c5e17f2686eb6ef9ff30e46:images/tiles/mountain/0.png; headerMatch=0; apiOverlap=0/10000; distance=156
-- `images/tiles/road/0.png`: unverified donor reconstruction; 152007b28631784d3c5e17f2686eb6ef9ff30e46:images/tiles/road/0.png; headerMatch=0; apiOverlap=0/10000; distance=156
-- `images/tiles/water/0.png`: unverified donor reconstruction; c049ac73064442354af6224d06fe1c8b847bb8d9:images/tiles/water/0.png; headerMatch=0; apiOverlap=0/10000; distance=106
-- `map/map.cpp`: unverified donor reconstruction; earliest compatibility set 108bdcbeda04cefeba5e1895f91df023cea8487f:map/map.cpp
-- `stats/stats.cpp`: unverified donor reconstruction; earliest compatibility set 108bdcbeda04cefeba5e1895f91df023cea8487f:stats/stats.cpp
-- `view/gamescene.cpp`: unverified donor reconstruction; earliest compatibility set 108bdcbeda04cefeba5e1895f91df023cea8487f:view/gamescene.cpp
-- `animation/animatedobject.h`: unverified donor reconstruction; earliest compatibility set 108bdcbeda04cefeba5e1895f91df023cea8487f:animation/animatedobject.h
-- `animation/animationprovider.cpp`: unverified donor reconstruction; earliest compatibility set 108bdcbeda04cefeba5e1895f91df023cea8487f:animation/animationprovider.cpp
-- `creatures/monsters/pritz.cpp`: unverified donor reconstruction; earliest compatibility set 108bdcbeda04cefeba5e1895f91df023cea8487f:creatures/monsters/pritz.cpp
-- `creatures/monsters/pritzmage.cpp`: unverified donor reconstruction; earliest compatibility set 108bdcbeda04cefeba5e1895f91df023cea8487f:creatures/monsters/pritzmage.cpp
-- `creatures/players/mage.cpp`: unverified donor reconstruction; earliest compatibility set 108bdcbeda04cefeba5e1895f91df023cea8487f:creatures/players/mage.cpp
-- `creatures/players/player.cpp`: unverified donor reconstruction; earliest compatibility set 108bdcbeda04cefeba5e1895f91df023cea8487f:creatures/players/player.cpp
-- `creatures/players/rogue.cpp`: unverified donor reconstruction; earliest compatibility set 108bdcbeda04cefeba5e1895f91df023cea8487f:creatures/players/rogue.cpp
-- `creatures/players/warrior.cpp`: unverified donor reconstruction; earliest compatibility set 108bdcbeda04cefeba5e1895f91df023cea8487f:creatures/players/warrior.cpp
-- `map/map.h`: unverified donor reconstruction; earliest compatibility set 108bdcbeda04cefeba5e1895f91df023cea8487f:map/map.h
-- `map/tiles/tile.h`: unverified donor reconstruction; earliest compatibility set 108bdcbeda04cefeba5e1895f91df023cea8487f:map/tiles/tile.h
-- `view/gameview.cpp`: unverified donor reconstruction; earliest compatibility set 108bdcbeda04cefeba5e1895f91df023cea8487f:view/gameview.cpp
+- `Game.pro`: unverified donor reconstruction; 108bdcbeda04cefeba5e1895f91df023cea8487f:Game.pro; headerMatch=0; apiOverlap=0/10000; distance=2
+- `creatures/creature.cpp`: unverified donor reconstruction; 108bdcbeda04cefeba5e1895f91df023cea8487f:creatures/creature.cpp; headerMatch=1; apiOverlap=10000/10000; distance=2
+- `images/buildings/cave/0.png`: unverified donor reconstruction; 71a3432e36b5649aabdd63c7807a78e9a8a3749a:images/buildings/cave/0.png; headerMatch=0; apiOverlap=0/10000; distance=159
+- `images/tiles/grass/0.png`: unverified donor reconstruction; c049ac73064442354af6224d06fe1c8b847bb8d9:images/tiles/grass/0.png; headerMatch=0; apiOverlap=0/10000; distance=105
+- `images/tiles/ground/0.png`: unverified donor reconstruction; c049ac73064442354af6224d06fe1c8b847bb8d9:images/tiles/ground/0.png; headerMatch=0; apiOverlap=0/10000; distance=105
+- `images/tiles/mountain/0.png`: unverified donor reconstruction; 152007b28631784d3c5e17f2686eb6ef9ff30e46:images/tiles/mountain/0.png; headerMatch=0; apiOverlap=0/10000; distance=155
+- `images/tiles/road/0.png`: unverified donor reconstruction; 152007b28631784d3c5e17f2686eb6ef9ff30e46:images/tiles/road/0.png; headerMatch=0; apiOverlap=0/10000; distance=155
+- `images/tiles/water/0.png`: unverified donor reconstruction; c049ac73064442354af6224d06fe1c8b847bb8d9:images/tiles/water/0.png; headerMatch=0; apiOverlap=0/10000; distance=105
+- `map/map.cpp`: unverified donor reconstruction; 108bdcbeda04cefeba5e1895f91df023cea8487f:map/map.cpp; headerMatch=0; apiOverlap=9500/10000; distance=2
+- `stats/stats.cpp`: unverified donor reconstruction; 108bdcbeda04cefeba5e1895f91df023cea8487f:stats/stats.cpp; headerMatch=1; apiOverlap=10000/10000; distance=2
+- `view/gamescene.cpp`: unverified donor reconstruction; 108bdcbeda04cefeba5e1895f91df023cea8487f:view/gamescene.cpp; headerMatch=1; apiOverlap=10000/10000; distance=2
+- `animation/animatedobject.h`: Root-era compatibility repair from108bdcbe, applied only to identical original files; the afdd8069 Pritz agility/intelligence changes are explicitly preserved. Actual build/startup pending.
+- `animation/animationprovider.cpp`: Root-era compatibility repair from108bdcbe, applied only to identical original files; the afdd8069 Pritz agility/intelligence changes are explicitly preserved. Actual build/startup pending.
+- `creatures/monsters/pritz.cpp`: Root-era compatibility repair from108bdcbe, applied only to identical original files; the afdd8069 Pritz agility/intelligence changes are explicitly preserved. Actual build/startup pending.
+- `creatures/monsters/pritzmage.cpp`: Root-era compatibility repair from108bdcbe, applied only to identical original files; the afdd8069 Pritz agility/intelligence changes are explicitly preserved. Actual build/startup pending.
+- `creatures/players/mage.cpp`: Root-era compatibility repair from108bdcbe, applied only to identical original files; the afdd8069 Pritz agility/intelligence changes are explicitly preserved. Actual build/startup pending.
+- `creatures/players/player.cpp`: Root-era compatibility repair from108bdcbe, applied only to identical original files; the afdd8069 Pritz agility/intelligence changes are explicitly preserved. Actual build/startup pending.
+- `creatures/players/rogue.cpp`: Root-era compatibility repair from108bdcbe, applied only to identical original files; the afdd8069 Pritz agility/intelligence changes are explicitly preserved. Actual build/startup pending.
+- `creatures/players/warrior.cpp`: Root-era compatibility repair from108bdcbe, applied only to identical original files; the afdd8069 Pritz agility/intelligence changes are explicitly preserved. Actual build/startup pending.
+- `map/map.h`: Root-era compatibility repair from108bdcbe, applied only to identical original files; the afdd8069 Pritz agility/intelligence changes are explicitly preserved. Actual build/startup pending.
+- `map/tiles/tile.h`: Root-era compatibility repair from108bdcbe, applied only to identical original files; the afdd8069 Pritz agility/intelligence changes are explicitly preserved. Actual build/startup pending.
+- `view/gameview.cpp`: Root-era compatibility repair from108bdcbe, applied only to identical original files; the afdd8069 Pritz agility/intelligence changes are explicitly preserved. Actual build/startup pending.
 
-Restored source fingerprint: `4dd9688483ab8e3fc0b8890ed80178454b335e16a0520d0c4be8fac4141e53b5`.
+Restored source fingerprint: `6e9533789314a17902c072169fd9805d796a29dbeb7180eadb5d6a24a59b0237`.
 
 The actual 1278 × 718 screenshot and [verification metadata](recovery/verification.json) belong to
 this source version. Reconstructed code and borrowed assets are identified in that metadata; they are
