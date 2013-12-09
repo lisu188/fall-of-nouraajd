@@ -1,16 +1,16 @@
 #include "spell.h"
 
-#ifndef CHAOSBLAST_H
-#define CHAOSBLAST_H
+#ifndef ABYSSALSHADOWS_H
+#define ABYSSALSHADOWS_H
 
-class ChaosBlast : public Spell
+class AbyssalShadows : public Spell
 {
 public:
-    ChaosBlast();
+    AbyssalShadows();
 
     // Interaction interface
 public:
     virtual void action(Creature *first, Creature *second);
 };
 
-#endif // CHAOSBLAST_H
+#endif // ABYSSALSHADOWS_H

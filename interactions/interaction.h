@@ -10,7 +10,6 @@ public:
     virtual ~Interaction();
     virtual void action(Creature *first,Creature *second);
     int getManaCost();
-    virtual Interaction *clone()=0;
 protected:
     void setAnimation(std::string path);
     virtual void mousePressEvent(QGraphicsSceneMouseEvent *event);

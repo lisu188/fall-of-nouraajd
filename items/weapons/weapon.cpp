@@ -14,6 +14,10 @@ Interaction *Weapon::getInteraction() {
     return interaction;
 }
 
+Stats *Weapon::getStats() {
+    return &bonus;
+}
+
 void Weapon::onUse(Creature *creature)
 {
     creature->setWeapon(this);

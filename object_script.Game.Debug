@@ -68,5 +68,6 @@ INPUT(
 ./debug\damageovertime.o
 ./debug\stunner.o
 ./debug\elemstaff.o
+./debug\abyssalshadows.o
 ./debug\moc_animatedobject.o
 );
