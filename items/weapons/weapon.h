@@ -9,11 +9,7 @@ class Weapon : public Item
 {
 public:
     Weapon();
-    Interaction *getInteraction() {
-        return interaction;
-    }
-protected:
-    Interaction *interaction;
+    Interaction *getInteraction();
 
     // Item interface
 protected:

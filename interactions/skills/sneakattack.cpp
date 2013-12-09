@@ -23,3 +23,8 @@ void SneakAttack::action(Creature *first, Creature *second)
             attack.action(first,second);
     }
 }
+
+Interaction *SneakAttack::clone()
+{
+    return new SneakAttack();
+}

@@ -4,16 +4,19 @@
 #include <creatures/players/player.h>
 #include <view/gameview.h>
 
+
 Weapon::Weapon()
 {
     className="Weapon";
-    bonus=new Stats();
-    bonus->setDamage(5);
-    bonus->setAttack(3);
-    interaction=0;
+}
+
+Interaction *Weapon::getInteraction() {
+    return interaction;
 }
 
 void Weapon::onUse(Creature *creature)
 {
     creature->setWeapon(this);
 }
+
+

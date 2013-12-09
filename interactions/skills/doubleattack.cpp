@@ -16,3 +16,9 @@ void DoubleAttack::action(Creature *first, Creature *second)
     attack.action(first,second);
     attack.action(first,second);
 }
+
+Interaction *DoubleAttack::clone()
+{
+    return new DoubleAttack();
+}
+

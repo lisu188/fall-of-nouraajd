@@ -1,19 +1,17 @@
 #include <interactions/interaction.h>
 
-#ifndef ATTACK_H
-#define ATTACK_H
+#ifndef ELEMSTAFF_H
+#define ELEMSTAFF_H
 
-class Attack : public Interaction
+class ElemStaff : public Interaction
 {
 public:
-    Attack();
-
-public:
     virtual void action(Creature *first, Creature *second);
+    ElemStaff();
 
     // Interaction interface
 public:
     virtual Interaction *clone();
 };
 
-#endif // ATTACK_H
+#endif // ELEMSTAFF_H

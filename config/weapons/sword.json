@@ -1,0 +1,9 @@
+{
+	"name" : "Sword",
+	"path" : "images/items/weapons/sword/",
+
+	"bonus" : {
+		"damage" : 10,
+		"attack" : 5
+	}
+}

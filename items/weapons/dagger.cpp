@@ -2,7 +2,5 @@
 
 Dagger::Dagger()
 {
-    className="Dagger";
-    bonus->setCrit(3);
-    setAnimation("images/items/weapons/dagger/");
+    loadJsonFile("config/weapons/dagger.json");
 }

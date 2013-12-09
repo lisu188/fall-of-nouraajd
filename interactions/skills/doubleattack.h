@@ -11,6 +11,10 @@ public:
     // Interaction interface
 public:
     virtual void action(Creature *first, Creature *second);
+
+    // Interaction interface
+public:
+    virtual Interaction *clone();
 };
 
 #endif // DOUBLEATTACK_H

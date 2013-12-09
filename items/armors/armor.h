@@ -12,8 +12,6 @@ public:
     Interaction *getInteraction() {
         return interaction;
     }
-protected:
-    Interaction *interaction;
 
 protected:
     virtual void onUse(Creature *creature);

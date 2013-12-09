@@ -14,3 +14,8 @@ void Stunner::action(Creature *first, Creature *second)
     Interaction::action(first,second);
     second->addEffect(new Stun(rand()%1+3));
 }
+
+Interaction *Stunner::clone()
+{
+    return new Stunner();
+}

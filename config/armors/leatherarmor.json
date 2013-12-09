@@ -1,0 +1,12 @@
+{
+	"name" : "LeatherArmor",
+	"path" : "images/items/armors/leatherarmor/",
+
+	"bonus" : {
+		"block" : 5,
+		"armor" : 10,
+		"agility" : 5,
+		"stamina" : 2,
+		"crit" : 2
+	}
+}
