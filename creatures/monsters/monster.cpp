@@ -2,6 +2,9 @@
 
 #include <view/gamescene.h>
 
+#include <items/potions/lifepotion.h>
+#include <items/potions/manapotion.h>
+
 Monster::Monster(Map *map,int x,int y):Creature(map,x,y)
 {
     className="Monster";
@@ -10,7 +13,6 @@ Monster::Monster(Map *map,int x,int y):Creature(map,x,y)
 
 void Monster::onMove()
 {
-
     if(!isAlive())return;
     int px=GameScene::getPlayer()->getPosX();
     int py=GameScene::getPlayer()->getPosY();
@@ -41,10 +43,26 @@ void Monster::onMove()
     }
     move(movx,movy);
     if(rand()%20==0)onMove();
+    this->addExp(rand()%25);
 }
 
 void Monster::onEnter()
 {
     if(!isAlive())return;
     GameScene::getPlayer()->addToFightList(this);
+}
+
+void Monster::levelUp()
+{
+    Creature::levelUp();
+    heal(0);
+    addMana(0);
+}
+
+std::list<Item *> *Monster::getLoot()
+{
+    std::list<Item *>* list=new std::list<Item *>();
+    if(rand()%3==0)list->push_back(new ManaPotion());
+    else list->push_back(new LifePotion());
+    return list;
 }

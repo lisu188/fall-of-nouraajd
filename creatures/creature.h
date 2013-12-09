@@ -34,16 +34,10 @@ public:
     void hurt(int i);
 
     virtual int getDmg();
-    int getScale() {
-        return level+sw;
-    }
+    int getScale();
 
-    inline bool isAlive() const {
-        return alive;
-    }
-    inline void setAlive() {
-        alive=true;
-    }
+    bool isAlive() const;
+    void setAlive();
 
     virtual void fight(Creature *creature);
     virtual void levelUp();
@@ -94,13 +88,14 @@ protected:
     Weapon *weapon;
     Armor *armor;
 
-    Stats *stats;
-    Stats *bonusLevel;
+    Stats stats;
+    Stats bonusLevel;
 
     virtual void mousePressEvent(QGraphicsSceneMouseEvent *event);
     virtual void mouseReleaseEvent(QGraphicsSceneMouseEvent *event);
 
     bool applyEffects();
+    void loadJsonFile(char *path);
 
 private:
     Interaction *selectAction();

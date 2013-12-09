@@ -9,6 +9,14 @@ public:
     Monster(Map* map, int x, int y);
     virtual void onMove();
     virtual void onEnter();
+
+    // Creature interface
+public:
+    virtual void levelUp();
+
+    // Creature interface
+public:
+    virtual std::list<Item *> *getLoot();
 };
 
 #endif // MONSTER_H

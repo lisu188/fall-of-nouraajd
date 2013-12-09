@@ -1,5 +1,6 @@
 #ifndef STATS_H
 #define STATS_H
+#include <json/json.h>
 
 class Stats
 {
@@ -60,6 +61,7 @@ public:
     void setAttack(int value);
 
     const char *getText(int level);
+    void init(Json::Value statConfig);
 
 private:
     int strength=0;

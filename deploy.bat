@@ -2,9 +2,11 @@ rmdir /s /q ".\official"
 
 mkdir ".\official"
 mkdir ".\official\images"
+mkdir ".\official\config"
 
 xcopy /s ".\libraries" ".\official"
 xcopy /s ".\images" ".\official\images"
+xcopy /s ".\config" ".\official\config"
 xcopy /s ".\release\Game.exe" ".\official"
 
 del official.zip

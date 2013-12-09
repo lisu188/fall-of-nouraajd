@@ -132,6 +132,10 @@ void Player::addToFightList(Creature *creature)
     fightList.push_back(creature);
 }
 
+std::list<Creature *> *Player::getFightList() {
+    return &fightList;
+}
+
 
 
 void Player::fight(Creature *creature)
