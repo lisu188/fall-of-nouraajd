@@ -10,6 +10,7 @@ class Weapon : public Item
 public:
     Weapon();
     Interaction *getInteraction();
+    Stats *getStats();
 
     // Item interface
 protected:
