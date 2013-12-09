@@ -1,7 +1,7 @@
 # Recovered game snapshot
 
-Original commit: `937210731327bd6202a04e67dfd471508f65894a`. Original tree: `9118081935f3720147cc6191cddc7eabf8ea0ec3`.
-Startup was verified from identical recovered sources at `937210731327bd6202a04e67dfd471508f65894a`.
+Original commit: `c6ac94e1ec6a81ee1f618530c95fa93fe1cebe17`. Original tree: `8be3489c991bab764817418bc0ab74b292fcdc50`.
+Startup was verified from identical recovered sources at `c6ac94e1ec6a81ee1f618530c95fa93fe1cebe17`.
 
 This recovered version compiled and linked on Linux, started the real game on an isolated Xvfb display,
 loaded its map and a healthy player, rendered the screenshot below, and exited normally.
@@ -37,8 +37,8 @@ launches run the game's original entry point. Startup evidence does not establis
 
 compatibilityRepair: 1, exactOriginal: 30, reconstruction: 13.
 
-- `Game.pro`: unverified donor reconstruction; 108bdcbeda04cefeba5e1895f91df023cea8487f:Game.pro; headerMatch=0; apiOverlap=0/10000; distance=4
-- `creatures/creature.cpp`: content reconstruction of the BFG-removed original; adapted from the ef44b5df reconstruction: value action list (mirrors the same-commit player.cpp change) and Creature::addEffect
+- `Game.pro`: unverified donor reconstruction; 108bdcbeda04cefeba5e1895f91df023cea8487f:Game.pro; headerMatch=0; apiOverlap=0/10000; distance=5
+- `creatures/creature.cpp`: content reconstruction of the BFG-removed original; adapted from the 1f4cd3f2 reconstruction: effects replace stun (applyEffects, as used by the same-commit player.cpp and effect.cpp) and out-of-line accessors
 - `images/tiles/grass/0.png`: unverified donor reconstruction; c049ac73064442354af6224d06fe1c8b847bb8d9:images/tiles/grass/0.png; headerMatch=0; apiOverlap=0/10000; distance=105 Verified by build and startup of afdd8069 (recovery/evidence/second-original).
 - `images/tiles/ground/0.png`: unverified donor reconstruction; c049ac73064442354af6224d06fe1c8b847bb8d9:images/tiles/ground/0.png; headerMatch=0; apiOverlap=0/10000; distance=105 Verified by build and startup of afdd8069 (recovery/evidence/second-original).
 - `images/tiles/mountain/0.png`: unverified donor reconstruction; 152007b28631784d3c5e17f2686eb6ef9ff30e46:images/tiles/mountain/0.png; headerMatch=0; apiOverlap=0/10000; distance=155 Verified by build and startup of afdd8069 (recovery/evidence/second-original).
@@ -52,7 +52,7 @@ compatibilityRepair: 1, exactOriginal: 30, reconstruction: 13.
 - `view/gamescene.cpp`: content reconstruction of the BFG-removed original; adapted from the 2026 donor (108bdcbe view/gamescene.cpp) to the original headers: tiles are created through Map::getTile and player views are positioned by GameView::resize
 - `json/LICENSE`: https://github.com/open-source-parsers/jsoncpp/tree/4fce396c9d3e27a8ab8fb88e94c1676e021ae3a6 upstream distribution license
 
-Restored source fingerprint: `72f37a6c1ee5969debdd4bbd5e0f2519a9ca93f8956545843d4eda4ef29c00de`.
+Restored source fingerprint: `01313899f99de3798e8aa16017d76ebbd2a986308f4ae96fb71052bd83ff4fbe`.
 
 The actual 1278 × 718 screenshot and [verification metadata](recovery/verification.json) belong to
 this source version. Reconstructed code and borrowed assets are identified in that metadata; they are

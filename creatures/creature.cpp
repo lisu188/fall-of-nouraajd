@@ -44,7 +44,6 @@ Creature::Creature(Map *map, int x, int y) : MapObject(map, x, y, 2) {
   armor = 0;
   stats = new Stats();
   bonusLevel = new Stats();
-  stun = 0;
 
   addAction(new Attack());
   attribChange();
@@ -146,7 +145,7 @@ int Creature::getDmg() {
 void Creature::fight(Creature *creature) {
   if (!alive || !creature || !creature->isAlive())
     return;
-  if (isStun())
+  if (applyEffects())
     return;
 
   Interaction *action = selectAction();
@@ -220,14 +219,33 @@ Weapon *Creature::getWeapon() { return weapon; }
 
 Armor *Creature::getArmor() { return armor; }
 
-bool Creature::isStun() {
-  if (stun <= 0)
-    return false;
-  stun--;
-  return true;
-}
+Stats *Creature::getStats() { return stats; }
 
-void Creature::addStun(int i) { stun = std::max(stun, i); }
+int Creature::getHp() { return hp; }
+
+int Creature::getHpMax() { return hpMax; }
+
+int Creature::getManaMax() { return manaMax; }
+
+int Creature::getLevel() { return level; }
+
+// Applies every active effect for this turn. Returns true when an effect (such as
+// Stun) prevents the creature from acting; finished effects are dropped.
+bool Creature::applyEffects() {
+  bool skipTurn = false;
+  std::list<Effect *> active(effects.begin(), effects.end());
+  for (std::list<Effect *>::iterator it = active.begin(); it != active.end();
+       ++it) {
+    Effect *effect = *it;
+    if (effect->apply(this))
+      skipTurn = true;
+    if (effect->getDuration() <= 0) {
+      effects.remove(effect);
+      delete effect;
+    }
+  }
+  return skipTurn;
+}
 
 int Creature::getManaRatio() { return clamp_ratio(mana, manaMax); }
 
