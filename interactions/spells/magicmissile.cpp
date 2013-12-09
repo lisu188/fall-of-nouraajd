@@ -17,3 +17,8 @@ void MagicMissile::action(Creature *first, Creature *second)
     }
     second->hurt(dmg);
 }
+
+Interaction *MagicMissile::clone()
+{
+    return new MagicMissile();
+}

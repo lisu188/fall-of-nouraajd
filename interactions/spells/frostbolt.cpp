@@ -19,3 +19,8 @@ void FrostBolt::action(Creature *first, Creature *second)
     second->hurt(damage);
     //change to ice
 }
+
+Interaction *FrostBolt::clone()
+{
+    return new FrostBolt();
+}

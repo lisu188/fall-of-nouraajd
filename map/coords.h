@@ -11,11 +11,7 @@ public:
 
 struct CoordsHasher
 {
-    std::size_t operator()(const Coords& coords) const
-    {
-        using std::size_t;
-        return ((coords.first*coords.second)^(coords.first+coords.second));
-    }
+    std::size_t operator()(const Coords& coords) const;
 };
 
 #endif // COORDS_H

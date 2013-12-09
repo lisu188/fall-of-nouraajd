@@ -1,7 +1,7 @@
 # Recovered game snapshot
 
-Original commit: `f4bf8a28af45446e2deb5a51288cf4304a776d9e`. Original tree: `505ae131a1c5b47397cbe0b9a44c32d089dc8e54`.
-Startup was verified from identical recovered sources at `f4bf8a28af45446e2deb5a51288cf4304a776d9e`.
+Original commit: `6249de1f73f78e69d83773a7645f69e7e64cc5f3`. Original tree: `15dfb18cc1d3b83d0cd777a8683692a4e79c45db`.
+Startup was verified from identical recovered sources at `6249de1f73f78e69d83773a7645f69e7e64cc5f3`.
 
 This recovered version compiled and linked on Linux, started the real game on an isolated Xvfb display,
 loaded its map and a healthy player, rendered the screenshot below, and exited normally.
@@ -35,24 +35,25 @@ launches run the game's original entry point. Startup evidence does not establis
 
 ## Recovery provenance
 
-compatibilityRepair: 1, exactOriginal: 30, reconstruction: 13.
+compatibilityRepair: 1, exactOriginal: 30, reconstruction: 14.
 
-- `Game.pro`: unverified donor reconstruction; 108bdcbeda04cefeba5e1895f91df023cea8487f:Game.pro; headerMatch=0; apiOverlap=0/10000; distance=6
+- `Game.pro`: unverified donor reconstruction; 108bdcbeda04cefeba5e1895f91df023cea8487f:Game.pro; headerMatch=0; apiOverlap=0/10000; distance=7
 - `creatures/creature.cpp`: content reconstruction of the BFG-removed original; adapted from the 678eb109 reconstruction: value Stats, JSON creature configuration in the style of the surviving Item::loadJsonFile, per-level stat growth
 - `images/tiles/grass/0.png`: unverified donor reconstruction; c049ac73064442354af6224d06fe1c8b847bb8d9:images/tiles/grass/0.png; headerMatch=0; apiOverlap=0/10000; distance=105 Verified by build and startup of afdd8069 (recovery/evidence/second-original).
 - `images/tiles/ground/0.png`: unverified donor reconstruction; c049ac73064442354af6224d06fe1c8b847bb8d9:images/tiles/ground/0.png; headerMatch=0; apiOverlap=0/10000; distance=105 Verified by build and startup of afdd8069 (recovery/evidence/second-original).
 - `images/tiles/mountain/0.png`: unverified donor reconstruction; 152007b28631784d3c5e17f2686eb6ef9ff30e46:images/tiles/mountain/0.png; headerMatch=0; apiOverlap=0/10000; distance=155 Verified by build and startup of afdd8069 (recovery/evidence/second-original).
 - `images/tiles/road/0.png`: unverified donor reconstruction; 152007b28631784d3c5e17f2686eb6ef9ff30e46:images/tiles/road/0.png; headerMatch=0; apiOverlap=0/10000; distance=155 Verified by build and startup of afdd8069 (recovery/evidence/second-original).
 - `images/tiles/water/0.png`: unverified donor reconstruction; c049ac73064442354af6224d06fe1c8b847bb8d9:images/tiles/water/0.png; headerMatch=0; apiOverlap=0/10000; distance=105 Verified by build and startup of afdd8069 (recovery/evidence/second-original).
+- `interactions/interaction.cpp`: content reconstruction of the BFG-removed original; surviving f4bf8a28 interactions/interaction.cpp plus the prototype registry (getAction, terminate, init) declared in the same-commit interaction.h
 - `json/json_reader.cpp`: unverified upstream reconstruction; https://github.com/open-source-parsers/jsoncpp/tree/4fce396c9d3e27a8ab8fb88e94c1676e021ae3a6
 - `json/json_value.cpp`: unverified upstream reconstruction; https://github.com/open-source-parsers/jsoncpp/tree/4fce396c9d3e27a8ab8fb88e94c1676e021ae3a6
 - `json/json_writer.cpp`: unverified upstream reconstruction; https://github.com/open-source-parsers/jsoncpp/tree/4fce396c9d3e27a8ab8fb88e94c1676e021ae3a6
 - `map/map.cpp`: content reconstruction of the BFG-removed original; reconstructed against the original map.h/tile.h API (private AnimatedObject bases, Tile::addToGame, Destroyer-owned objects); replaces the 2026 donor that required modified headers
-- `stats/stats.cpp`: content reconstruction of the BFG-removed original; 2026 donor stats.cpp plus Stats::init(Json::Value) declared in the same-commit stats.h
-- `view/gamescene.cpp`: content reconstruction of the BFG-removed original; from the 5b28e824 reconstruction with Mage renamed to Sorcerer (same-commit mage.h)
+- `stats/stats.cpp`: content reconstruction of the BFG-removed original; carried forward unchanged from the 6d39ac77 reconstruction (previous version of stats/stats.cpp)
+- `view/gamescene.cpp`: content reconstruction of the BFG-removed original; carried forward unchanged from the c11d143b reconstruction (previous version of view/gamescene.cpp)
 - `json/LICENSE`: https://github.com/open-source-parsers/jsoncpp/tree/4fce396c9d3e27a8ab8fb88e94c1676e021ae3a6 upstream distribution license
 
-Restored source fingerprint: `dc4d84295ad3c1627ae5497e1a95c1daa92aa3ae40e154aac0474d1b7b12221b`.
+Restored source fingerprint: `f86cdfdd18b8e4e0efe82edb8bf343fe34586cd7d9efb398767f256aa40bf6f5`.
 
 The actual 1278 × 718 screenshot and [verification metadata](recovery/verification.json) belong to
 this source version. Reconstructed code and borrowed assets are identified in that metadata; they are

@@ -1,33 +1,31 @@
 {
-	"name":"Assasin",
-	"path":"images/players/assasin/",
-	"sw":0,
-	
-	"initStats" :
-	{
-		"strength":5,
-		"stamina":5,
-		"agility":5,
-		"intelligence":5,
+	"name" : "Assasin",
+	"path" : "images/players/assasin/",
+	"sw" : 0,
 
-		"dmgMin":10,
-		"dmgMax":12,
-		"hit":75,
-		"crit":10,
-		
-		"main":"A"
+	"initStats" : {
+		"strength" : 5,
+		"stamina" : 5,
+		"agility" : 5,
+		"intelligence" : 5,
+
+		"dmgMin" : 10,
+		"dmgMax" : 12,
+		"hit" : 75,
+		"crit" : 10,
+
+		"main" : "A"
 	},
-	
-    "levelStats" :
-	{
-		"strength":1,
-		"stamina":1,
-		"agility":3,
-		"intelligence":2,
 
-		"dmgMin":1,
-		"dmgMax":2,
-		"hit":3,
-		"crit":2
+	"levelStats" : {
+		"strength" : 1,
+		"stamina" : 1,
+		"agility" : 3,
+		"intelligence" : 2,
+
+		"dmgMin" : 1,
+		"dmgMax" : 2,
+		"hit" : 3,
+		"crit" : 2
 	}
 }

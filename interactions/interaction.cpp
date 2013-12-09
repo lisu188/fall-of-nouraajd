@@ -11,6 +11,18 @@
 #include <items/armors/armor.h>
 #include <QDebug>
 
+#include <interactions/attacks/attack.h>
+#include <interactions/attacks/elemstaff.h>
+#include <interactions/skills/doubleattack.h>
+#include <interactions/skills/sneakattack.h>
+#include <interactions/skills/strike.h>
+#include <interactions/skills/stunner.h>
+#include <interactions/spells/chaosblast.h>
+#include <interactions/spells/frostbolt.h>
+#include <interactions/spells/magicmissile.h>
+
+std::list<Interaction*> Interaction::actions;
+
 Interaction::Interaction()
 {
     className="Interaction";
@@ -27,6 +39,11 @@ void Interaction::action(Creature *first, Creature *second)
     qDebug() << first->className.c_str() << " used "
              << this->className.c_str() << " against "
              << second->className.c_str();
+}
+
+int Interaction::getManaCost()
+{
+    return manaCost;
 }
 
 void Interaction::setAnimation(std::string path)
@@ -81,4 +98,36 @@ void Interaction::mousePressEvent(QGraphicsSceneMouseEvent *event)
     if(!player->isAlive()) {
         GameScene::getView()->close();
     }
+}
+
+Interaction *Interaction::getAction(std::string name)
+{
+    if(actions.size()==0)init();
+    for(std::list<Interaction*>::iterator it=actions.begin(); it!=actions.end(); it++)
+    {
+        if((*it)->className==name)return (*it)->clone();
+    }
+    return 0;
+}
+
+void Interaction::terminate()
+{
+    for(std::list<Interaction*>::iterator it=actions.begin(); it!=actions.end(); it++)
+    {
+        delete *it;
+    }
+    actions.clear();
+}
+
+void Interaction::init()
+{
+    actions.push_back(new Attack());
+    actions.push_back(new ElemStaff());
+    actions.push_back(new DoubleAttack());
+    actions.push_back(new SneakAttack());
+    actions.push_back(new Strike());
+    actions.push_back(new Stunner());
+    actions.push_back(new ChaosBlast());
+    actions.push_back(new FrostBolt());
+    actions.push_back(new MagicMissile());
 }

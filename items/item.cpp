@@ -5,17 +5,20 @@
 #include <view/gamescene.h>
 #include <stats/stats.h>
 #include <QDebug>
+#include <json/json.h>
+#include <fstream>
+#include <interactions/interaction.h>
 
 Item::Item()
 {
     className="Item";
     singleUse=false;
     this->setZValue(1);
+    interaction=0;
 }
 
-Item::~Item()
-{
-    if(bonus)delete bonus;
+bool Item::isSingleUse() {
+    return singleUse;
 }
 
 void Item::setPos(QPointF point)
@@ -25,15 +28,13 @@ void Item::setPos(QPointF point)
 
 void Item::onEquip(Creature *creature)
 {
-    if(!bonus)return;
-    creature->getStats()->addBonus(bonus);
+    creature->getStats()->addBonus(&bonus);
     qDebug() << creature->className.c_str()<<"equipped"<<className.c_str();
 }
 
 void Item::onUnequip(Creature *creature)
 {
-    if(!bonus)return;
-    creature->getStats()->removeBonus(bonus);
+    creature->getStats()->removeBonus(&bonus);
     qDebug() << creature->className.c_str()<<"unequipped"<<className.c_str();
 }
 
@@ -50,4 +51,21 @@ void Item::mousePressEvent(QGraphicsSceneMouseEvent *event)
         GameScene::getPlayer()->loseItem(this);
         delete this;
     }
+}
+
+void Item::loadJsonFile(char *path)
+{
+    std::fstream jsonFileStream;
+    jsonFileStream.open (path);
+
+    Json::Value config;
+    Json::Reader reader;
+    reader.parse( jsonFileStream, config );
+    jsonFileStream.close();
+
+    bonus.init(config["bonus"]);
+    interaction=Interaction::getAction(config.get("interaction","").asString());
+
+    setAnimation(config.get("path","").asCString());
+    className=config.get("name","").asCString();
 }
