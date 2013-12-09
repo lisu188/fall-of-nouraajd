@@ -129,7 +129,10 @@ void Creature::fight(Creature *creature) {
 
 void Creature::levelUp() {
   level++;
-  stats.addBonus(&bonusLevel);
+  stats.addBonus(getLevelBonus());
+  Interaction *action = getLevelAction();
+  if (action)
+    addAction(action);
   attribChange();
   heal(0);
   addMana(0);
@@ -197,11 +200,31 @@ Stats *Creature::getStats() { return &stats; }
 
 int Creature::getScale() { return level + sw; }
 
+Stats *Creature::getLevelBonus() { return &bonusLevel; }
+
+// The creature's configuration names the interaction learned at each level.
+Interaction *Creature::getLevelAction() {
+  if (path.empty())
+    return 0;
+  std::fstream jsonFileStream;
+  jsonFileStream.open(path.c_str());
+
+  Json::Value config;
+  Json::Reader reader;
+  reader.parse(jsonFileStream, config);
+  jsonFileStream.close();
+
+  std::ostringstream key;
+  key << level;
+  return Interaction::getAction(config["levelling"].get(key.str(), "").asString());
+}
+
 bool Creature::isAlive() const { return alive; }
 
 void Creature::setAlive() { alive = true; }
 
-void Creature::loadJsonFile(char *path) {
+void Creature::initializeFromFile(char *path) {
+  this->path = path;
   std::fstream jsonFileStream;
   jsonFileStream.open(path);
 

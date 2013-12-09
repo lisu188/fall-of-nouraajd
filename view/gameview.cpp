@@ -6,10 +6,8 @@ GameView::GameView()
 {
     showFullScreen();
     //this->setWindowState(Qt::WindowNoState);
-
     setHorizontalScrollBarPolicy ( Qt::ScrollBarAlwaysOff );
     setVerticalScrollBarPolicy ( Qt::ScrollBarAlwaysOff );
-
     setViewportUpdateMode(QGraphicsView::BoundingRectViewportUpdate);
     /*
     view.setViewport(new QGLWidget(
@@ -18,7 +16,6 @@ GameView::GameView()
              QGraphicsView::FullViewportUpdate);
     */
     init=true;
-
     scene=new GameScene();
     setScene(scene);
     resize();
@@ -46,7 +43,9 @@ void GameView::showFightView()
 
 void GameView::mouseDoubleClickEvent(QMouseEvent *e) {
     QWidget::mouseDoubleClickEvent(e);
-    if(e->button()==Qt::MouseButton::LeftButton)return;
+    if(e->button()==Qt::MouseButton::LeftButton) {
+        return;
+    }
     if(isFullScreen()) {
         this->setWindowState(Qt::WindowNoState);
     } else {

@@ -21,7 +21,6 @@
 #include <interactions/spells/frostbolt.h>
 #include <interactions/spells/magicmissile.h>
 
-std::list<Interaction*> Interaction::actions;
 
 Interaction::Interaction()
 {
@@ -102,32 +101,32 @@ void Interaction::mousePressEvent(QGraphicsSceneMouseEvent *event)
 
 Interaction *Interaction::getAction(std::string name)
 {
-    if(actions.size()==0)init();
-    for(std::list<Interaction*>::iterator it=actions.begin(); it!=actions.end(); it++)
-    {
-        if((*it)->className==name)return (*it)->clone();
+    if(name=="Attack") {
+        return new Attack();
+    }
+    if(name=="ElemStaff") {
+        return new ElemStaff();
+    }
+    if(name=="DoubleAttack") {
+        return new DoubleAttack();
+    }
+    if(name=="SneakAttack") {
+        return new SneakAttack();
+    }
+    if(name=="Strike") {
+        return new Strike();
+    }
+    if(name=="Stunner") {
+        return new Stunner();
+    }
+    if(name=="ChaosBlast") {
+        return new ChaosBlast();
+    }
+    if(name=="FrostBolt") {
+        return new FrostBolt();
+    }
+    if(name=="MagicMissile") {
+        return new MagicMissile();
     }
     return 0;
-}
-
-void Interaction::terminate()
-{
-    for(std::list<Interaction*>::iterator it=actions.begin(); it!=actions.end(); it++)
-    {
-        delete *it;
-    }
-    actions.clear();
-}
-
-void Interaction::init()
-{
-    actions.push_back(new Attack());
-    actions.push_back(new ElemStaff());
-    actions.push_back(new DoubleAttack());
-    actions.push_back(new SneakAttack());
-    actions.push_back(new Strike());
-    actions.push_back(new Stunner());
-    actions.push_back(new ChaosBlast());
-    actions.push_back(new FrostBolt());
-    actions.push_back(new MagicMissile());
 }

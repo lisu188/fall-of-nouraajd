@@ -29,5 +29,9 @@
 		"crit" : 1,
 
 		"normalResist" : 5
+	},
+
+	"levelling" : {
+		"2" : "MagicMissile"
 	}
 }

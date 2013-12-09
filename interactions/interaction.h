@@ -20,10 +20,7 @@ public:
 
 public:
     static Interaction *getAction(std::string name);
-    static void terminate();
-private:
-    static std::list<Interaction*> actions;
-    static void init();
+
 };
 
 #endif // INTERACTION_H

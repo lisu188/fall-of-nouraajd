@@ -27,5 +27,11 @@
 		"dmgMax" : 2,
 		"hit" : 3,
 		"crit" : 2
+	},
+
+	"levelling" : {
+		"1" : "SneakAttack",
+		"5 " : "Stunner"
 	}
+
 }

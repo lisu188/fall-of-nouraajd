@@ -49,43 +49,33 @@ QRectF CreatureFightView::boundingRect() const
 void CreatureFightView::paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget)
 {
     QGraphicsItem *item=*childItems().begin();
-    if(childItems().size()==0)return;
+    if(childItems().size()==0) {
+        return;
+    }
     item->setPos(((boundingRect().width()-item->boundingRect().width())/2),0);
-
     painter->fillRect(0,boundingRect().height()-50,
                       boundingRect().width(),25,QColor("ORANGE"));
-
     painter->fillRect(0,boundingRect().height()-50,
                       boundingRect().width()*creature->getHpRatio()/100.0,25,QColor("RED"));
-
     QTextOption opt(Qt::AlignCenter);
-
     std::ostringstream hpStream;
     hpStream << creature->getHp();
     hpStream <<"/";
     hpStream << creature->getHpMax();
-
     painter->drawText(QRectF(0,boundingRect().height()-50,
                              boundingRect().width(),25)
                       ,hpStream.str().c_str(),opt);
-
-
     painter->fillRect(0,boundingRect().height()-25,
                       boundingRect().width(),25,QColor("CYAN"));
-
     painter->fillRect(0,boundingRect().height()-25,
                       boundingRect().width()*creature->getManaRatio()/100.0,25,QColor("BLUE"));
-
-
     std::ostringstream manaStream;
     manaStream << creature->getMana();
     manaStream <<"/";
     manaStream << creature->getManaMax();
-
     painter->drawText(QRectF(0,boundingRect().height()-25,
                              boundingRect().width(),25)
                       ,manaStream.str().c_str(),opt);
-
 }
 
 void CreatureFightView::mousePressEvent(QGraphicsSceneMouseEvent *event)

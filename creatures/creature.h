@@ -72,10 +72,14 @@ public:
     int getLevel();
     void addExpScaled(int scale);
     void addExp(int exp);
+
+    Stats *getLevelBonus();
+    Interaction *getLevelAction();
 protected:
     int exp;
     int level;
     int sw;
+    std::string path;
 
     int mana,manaMax,manaRegRate;
     int hpMax,hp;
@@ -95,7 +99,7 @@ protected:
     virtual void mouseReleaseEvent(QGraphicsSceneMouseEvent *event);
 
     bool applyEffects();
-    void loadJsonFile(char *path);
+    void initializeFromFile(char *path);
 
 private:
     Interaction *selectAction();

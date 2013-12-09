@@ -21,7 +21,9 @@ QPixmap *Animation::getImage()
 
 int Animation::getTime()
 {
-    if(size()==1)return -1;
+    if(size()==1) {
+        return -1;
+    }
     return at(actual).second;
 }
 

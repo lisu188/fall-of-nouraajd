@@ -27,25 +27,18 @@ Player::Player(Map *map, int x, int y):Creature(map,x,y)
     className="Player";
     lock=false;
     level=0;
-
     gold=0;
     sw=0;
     turn=0;
-
     playerStatsView=new PlayerStatsView(this);
     playerStatsView->setZValue(3);
-
     playerInventoryView=new PlayerListView((std::list<ListItem*>*)&inventory);
     playerInventoryView->setZValue(3);
-
     playerSkillsView=new PlayerListView((std::list<ListItem*>*)&actions);
     playerSkillsView->setZValue(3);
-
     GameScene::getGame()->addItem(playerStatsView);
     GameScene::getGame()->addItem(playerInventoryView);
     GameScene::getGame()->addItem(playerSkillsView);
-
-
     std::list<Item *> list;
     list.push_back(new LifePotion());
     list.push_back(new ManaPotion());
@@ -68,7 +61,6 @@ void Player::onMove()
 
 void Player::onEnter()
 {
-
 }
 
 void Player::addItem(Item *item)
@@ -140,5 +132,7 @@ std::list<Creature *> *Player::getFightList() {
 
 void Player::fight(Creature *creature)
 {
-    if(applyEffects())creature->fight(this);
+    if(applyEffects()) {
+        creature->fight(this);
+    }
 }
