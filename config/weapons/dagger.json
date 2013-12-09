@@ -1,0 +1,10 @@
+{
+	"name" : "Dagger",
+	"path" : "images/items/weapons/dagger/",
+
+	"bonus" : {
+		"crit" : 3,
+		"damage" : 5,
+		"attack" : 3
+	}
+}
