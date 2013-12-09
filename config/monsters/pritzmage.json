@@ -1,35 +1,33 @@
 {
-	"name":"PritzMage",
-	"path":"images/monsters/pritzmage/",
-	"sw":2,
-	
-	"initStats" :
-	{
-		"strength":5,
-		"stamina":5,
-		"agility":5,
-		"intelligence":5,
+	"name" : "PritzMage",
+	"path" : "images/monsters/pritzmage/",
+	"sw" : 2,
 
-		"dmgMin":10,
-		"dmgMax":12,
-		"hit":75,
-		"crit":10,
-		
-		"main":"I"
+	"initStats" : {
+		"strength" : 5,
+		"stamina" : 5,
+		"agility" : 5,
+		"intelligence" : 5,
+
+		"dmgMin" : 10,
+		"dmgMax" : 12,
+		"hit" : 75,
+		"crit" : 10,
+
+		"main" : "I"
 	},
-	
-    "levelStats" :
-	{
-		"strength":3,
-		"stamina":2,
-		"agility":2,
-		"intelligence":3,
 
-		"dmgMin":2,
-		"dmgMax":3,
-		"hit":3,
-		"crit":1,
+	"levelStats" : {
+		"strength" : 3,
+		"stamina" : 2,
+		"agility" : 2,
+		"intelligence" : 3,
 
-		"normalResist":5
+		"dmgMin" : 2,
+		"dmgMax" : 3,
+		"hit" : 3,
+		"crit" : 1,
+
+		"normalResist" : 5
 	}
 }

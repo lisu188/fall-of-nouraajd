@@ -11,6 +11,10 @@ public:
     // Interaction interface
 public:
     void action(Creature *first, Creature *second);
+
+    // Interaction interface
+public:
+    virtual Interaction *clone();
 };
 
 #endif // STRIKE_H

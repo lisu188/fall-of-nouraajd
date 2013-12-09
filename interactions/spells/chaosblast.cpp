@@ -15,3 +15,8 @@ void ChaosBlast::action(Creature *first, Creature *second)
     damage.setThunder(first->getMana()/2);
     second->hurt(damage);
 }
+
+Interaction *ChaosBlast::clone()
+{
+    return new ChaosBlast();
+}

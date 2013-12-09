@@ -20,3 +20,8 @@ void Strike::action(Creature *first, Creature *second)
         }
     }
 }
+
+Interaction *Strike::clone()
+{
+    return new Strike();
+}

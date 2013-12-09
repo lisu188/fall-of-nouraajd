@@ -67,5 +67,6 @@ INPUT(
 ./release\stun.o
 ./release\damageovertime.o
 ./release\stunner.o
+./release\elemstaff.o
 ./release\moc_animatedobject.o
 );

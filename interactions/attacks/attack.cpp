@@ -28,3 +28,8 @@ void Attack::action(Creature *first, Creature *second)
         }
     }
 }
+
+Interaction *Attack::clone()
+{
+    return new Attack();
+}
