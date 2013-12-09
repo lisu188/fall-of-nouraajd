@@ -1,4 +1,5 @@
 #include <QGraphicsPixmapItem>
+#include <effects/effect.h>
 #include <items/item.h>
 #include <map/map.h>
 #include <map/tiles/tile.h>
@@ -49,6 +50,7 @@ public:
     virtual std::list<Item*>* getLoot()=0;
 
     void addAction(Interaction *action);
+    void addEffect(Effect *effect);
 
     int getMana();
     void addMana(int i);
@@ -99,7 +101,9 @@ protected:
 
     bool alive;
 
-    std::list<Interaction *> *actions;
+    std::list<Interaction *> actions;
+    std::list<Effect *> effects;
+
     Weapon *weapon;
     Armor *armor;
 

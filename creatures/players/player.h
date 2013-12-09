@@ -18,7 +18,7 @@ public:
     ~Player();
 
     std::list<Item *>* getLoot() {
-        return inventory;
+        return &inventory;
     }
 
     virtual void fight(Creature *creature);
@@ -59,7 +59,7 @@ protected:
 
     int gold;
 
-    std::list<Item*> *inventory;
+    std::list<Item*> inventory;
 private:
 
     PlayerStatsView *playerStatsView;
