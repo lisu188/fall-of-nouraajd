@@ -40,7 +40,6 @@ Creature::Creature(Map *map, int x, int y) : MapObject(map, x, y, 2) {
   hpMax = 0;
   hp = 0;
   alive = true;
-  actions = new std::list<Interaction *>();
   weapon = 0;
   armor = 0;
   stats = new Stats();
@@ -54,10 +53,8 @@ Creature::Creature(Map *map, int x, int y) : MapObject(map, x, y, 2) {
 }
 
 Creature::~Creature() {
-  if (actions) {
-    actions->clear();
-    delete actions;
-  }
+  actions.clear();
+  effects.clear();
   delete stats;
   delete bonusLevel;
 }
@@ -170,7 +167,13 @@ std::list<Item *> *Creature::getLoot() { return new std::list<Item *>(); }
 void Creature::addAction(Interaction *action) {
   if (!action)
     return;
-  actions->push_back(action);
+  actions.push_back(action);
+}
+
+void Creature::addEffect(Effect *effect) {
+  if (!effect)
+    return;
+  effects.push_back(effect);
 }
 
 int Creature::getMana() { return mana; }
@@ -240,15 +243,15 @@ void Creature::addExp(int exp) {
 }
 
 Interaction *Creature::selectAction() {
-  if (actions->empty())
+  if (actions.empty())
     return 0;
 
-  for (std::list<Interaction *>::iterator it = actions->begin();
-       it != actions->end(); ++it) {
+  for (std::list<Interaction *>::iterator it = actions.begin();
+       it != actions.end(); ++it) {
     if ((*it)->getManaCost() <= mana)
       return *it;
   }
-  return actions->front();
+  return actions.front();
 }
 
 void Creature::mousePressEvent(QGraphicsSceneMouseEvent *event) {

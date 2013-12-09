@@ -32,15 +32,13 @@ Player::Player(Map *map, int x, int y):Creature(map,x,y)
     sw=0;
     turn=0;
 
-    inventory=new std::list<Item*>();
-
     playerStatsView=new PlayerStatsView(this);
     playerStatsView->setZValue(3);
 
-    playerInventoryView=new PlayerListView((std::list<ListItem*>*)inventory);
+    playerInventoryView=new PlayerListView((std::list<ListItem*>*)&inventory);
     playerInventoryView->setZValue(3);
 
-    playerSkillsView=new PlayerListView((std::list<ListItem*>*)actions);
+    playerSkillsView=new PlayerListView((std::list<ListItem*>*)&actions);
     playerSkillsView->setZValue(3);
 
     GameScene::getGame()->addItem(playerStatsView);
@@ -58,8 +56,7 @@ Player::Player(Map *map, int x, int y):Creature(map,x,y)
 
 Player::~Player()
 {
-    inventory->clear();
-    delete inventory;
+    inventory.clear();
 }
 
 void Player::onMove()
@@ -83,13 +80,13 @@ void Player::addItem(Item *item)
 
 void Player::addItem(std::list<Item*> *items)
 {
-    inventory->merge(*items);
+    inventory.merge(*items);
     playerInventoryView->update();
 }
 
 void Player::loseItem(Item *item)
 {
-    inventory->remove(item);
+    inventory.remove(item);
     playerInventoryView->update();
 }
 
@@ -114,7 +111,7 @@ void Player::update()
 
 std::list<Item *> *Player::getInventory()
 {
-    return inventory;
+    return &inventory;
 }
 
 PlayerStatsView *Player::getStatsView() {

@@ -61,5 +61,9 @@ INPUT(
 ./release\dagger.o
 ./release\staff.o
 ./release\pritzmage.o
+./release\json_writer.o
+./release\json_value.o
+./release\json_reader.o
+./release\effect.o
 ./release\moc_animatedobject.o
 );

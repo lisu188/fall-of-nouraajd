@@ -61,5 +61,9 @@ INPUT(
 ./debug\dagger.o
 ./debug\staff.o
 ./debug\pritzmage.o
+./debug\json_writer.o
+./debug\json_value.o
+./debug\json_reader.o
+./debug\effect.o
 ./debug\moc_animatedobject.o
 );
