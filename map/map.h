@@ -10,10 +10,11 @@
 #include <QTimeLine>
 #include <animation/animation.h>
 #include <animation/animatedobject.h>
+#include <unordered_map>
 
 class MapObject;
 
-class Map : private std::map<Coords,Tile*>
+class Map : private std::unordered_map<Coords,Tile*,CoordsHasher>
 {
 public:
     Map();

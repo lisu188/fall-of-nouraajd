@@ -1,7 +1,7 @@
 #include "rogue.h"
 
 #include <interactions/skills/sneakattack.h>
-#include <interactions/skills/stun.h>
+#include <interactions/skills/stunner.h>
 #include <stats/stats.h>
 
 Rogue::Rogue(Map *map,int x,int y):Player(map,x,y)
@@ -27,5 +27,5 @@ void Rogue::levelUp()
 {
     Creature::levelUp();
     if(level==1)addAction(new SneakAttack());
-    if(level==5)addAction(new Stun());
+    if(level==5)addAction(new Stunner());
 }
