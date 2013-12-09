@@ -50,9 +50,7 @@ public:
     PlayerListView *getSkillsView();
 
     void addToFightList(Creature *creature);
-    std::list<Creature *> *getFightList() {
-        return &fightList;
-    }
+    std::list<Creature *> *getFightList();
 
 protected:
 

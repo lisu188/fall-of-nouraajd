@@ -3,10 +3,10 @@
 #ifndef MAGE_H
 #define MAGE_H
 
-class Mage : public Player
+class Sorcerer : public Player
 {
 public:
-    Mage(Map *map, int x, int y);
+    Sorcerer(Map *map, int x, int y);
 
 protected:
     void levelUp();

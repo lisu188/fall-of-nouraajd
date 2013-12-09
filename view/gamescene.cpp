@@ -16,7 +16,7 @@ GameScene::GameScene() {
   map = new Map();
 
   if (!player) {
-    player = new Mage(map, 0, 0);
+    player = new Sorcerer(map, 0, 0);
     map->addObject(player);
   }
 
