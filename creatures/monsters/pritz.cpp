@@ -4,5 +4,5 @@
 
 Pritz::Pritz(Map *map, int x, int y):Monster(map,x,y)
 {
-    loadJsonFile("config/monsters/pritz.json");
+    initializeFromFile("config/monsters/pritz.json");
 }

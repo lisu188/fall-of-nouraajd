@@ -16,11 +16,11 @@ void SneakAttack::action(Creature *first, Creature *second)
     Interaction::action(first,second);
     Attack attack;
     attack.action(first,second);
-
     if(rand()%100>(100-second->getHpRatio()))
     {
-        if(second->isAlive())
+        if(second->isAlive()) {
             attack.action(first,second);
+        }
     }
 }
 

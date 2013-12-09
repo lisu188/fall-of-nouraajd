@@ -27,5 +27,11 @@
 		"dmgMax" : 1,
 		"hit" : 1,
 		"crit" : 1
+	},
+
+	"levelling" : {
+		"1" : "MagicMissile",
+		"3" : "FrostBolt",
+		"7" : "ChaosBlast"
 	}
 }
