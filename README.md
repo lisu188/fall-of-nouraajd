@@ -1,7 +1,7 @@
 # Recovered game snapshot
 
-Original commit: `81c2907a78c6d303d8e0f08aa6811ab7a0d48bf9`. Original tree: `363929ff3eff475998a80cfcf6409f825565c806`.
-Startup was verified from identical recovered sources at `81c2907a78c6d303d8e0f08aa6811ab7a0d48bf9`.
+Original commit: `aae16c85d246c6031f53332fbc36cfb0586ca43f`. Original tree: `a0aff4985ea1a0123a52a11c6a766b9e5fcdc7aa`.
+Startup was verified from identical recovered sources at `aae16c85d246c6031f53332fbc36cfb0586ca43f`.
 
 This recovered version compiled and linked on Linux, started the real game on an isolated Xvfb display,
 loaded its map and a healthy player, rendered the screenshot below, and exited normally.
@@ -37,7 +37,7 @@ launches run the game's original entry point. Startup evidence does not establis
 
 compatibilityRepair: 1, exactOriginal: 30, reconstruction: 15.
 
-- `Game.pro`: unverified donor reconstruction; 108bdcbeda04cefeba5e1895f91df023cea8487f:Game.pro; headerMatch=0; apiOverlap=0/10000; distance=9
+- `Game.pro`: unverified donor reconstruction; 108bdcbeda04cefeba5e1895f91df023cea8487f:Game.pro; headerMatch=0; apiOverlap=0/10000; distance=10
 - `creatures/creature.cpp`: content reconstruction of the BFG-removed original; from the 65ed8ffa reconstruction: initializeFromFile, configured levelling actions (getLevelAction) and getLevelBonus declared in the same-commit creature.h
 - `images/tiles/grass/0.png`: unverified donor reconstruction; c049ac73064442354af6224d06fe1c8b847bb8d9:images/tiles/grass/0.png; headerMatch=0; apiOverlap=0/10000; distance=105 Verified by build and startup of afdd8069 (recovery/evidence/second-original).
 - `images/tiles/ground/0.png`: unverified donor reconstruction; c049ac73064442354af6224d06fe1c8b847bb8d9:images/tiles/ground/0.png; headerMatch=0; apiOverlap=0/10000; distance=105 Verified by build and startup of afdd8069 (recovery/evidence/second-original).
