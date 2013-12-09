@@ -67,28 +67,15 @@ public:
     Weapon *getWeapon();
     Armor *getArmor();
 
-    bool isStun();
-    void addStun(int i);
-
-    Stats *getStats() {
-        return stats;
-    }
+    Stats *getStats();
     int getManaRatio();
 
-    int getHp() {
-        return hp;
-    }
-    int getHpMax() {
-        return hpMax;
-    }
+    int getHp();
+    int getHpMax();
 
-    int getManaMax() {
-        return manaMax;
-    }
+    int getManaMax();
 
-    int getLevel() {
-        return level;
-    }
+    int getLevel();
     void addExpScaled(int scale);
     void addExp(int exp);
 protected:
@@ -113,10 +100,11 @@ protected:
     virtual void mousePressEvent(QGraphicsSceneMouseEvent *event);
     virtual void mouseReleaseEvent(QGraphicsSceneMouseEvent *event);
 
+    bool applyEffects();
+
 private:
     Interaction *selectAction();
     void setItem(void *pointer, Item *newItem);
-    int stun;
     void takeDamage(int i);
 
 

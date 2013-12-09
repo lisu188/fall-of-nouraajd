@@ -136,5 +136,5 @@ void Player::addToFightList(Creature *creature)
 
 void Player::fight(Creature *creature)
 {
-    if(isStun())creature->fight(this);
+    if(applyEffects())creature->fight(this);
 }

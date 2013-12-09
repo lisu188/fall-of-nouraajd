@@ -51,7 +51,6 @@ INPUT(
 ./release\listitem.o
 ./release\destroyer.o
 ./release\strike.o
-./release\stun.o
 ./release\frostbolt.o
 ./release\robe.o
 ./release\leatherarmor.o
@@ -65,5 +64,8 @@ INPUT(
 ./release\json_value.o
 ./release\json_reader.o
 ./release\effect.o
+./release\stun.o
+./release\damageovertime.o
+./release\stunner.o
 ./release\moc_animatedobject.o
 );

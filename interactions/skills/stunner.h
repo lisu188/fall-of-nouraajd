@@ -1,16 +1,16 @@
 #include "skill.h"
 
-#ifndef STUN_H
-#define STUN_H
+#ifndef STUNNER_H
+#define STUNNER_H
 
-class Stun : public Skill
+class Stunner : public Skill
 {
 public:
-    Stun();
+    Stunner();
 
     // Interaction interface
 public:
     void action(Creature *first, Creature *second);
 };
 
-#endif // STUN_H
+#endif // STUNNER_H
