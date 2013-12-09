@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cstdlib>
+#include <fstream>
 #include <sstream>
 
 #include <interactions/attacks/attack.h>
@@ -42,8 +43,6 @@ Creature::Creature(Map *map, int x, int y) : MapObject(map, x, y, 2) {
   alive = true;
   weapon = 0;
   armor = 0;
-  stats = new Stats();
-  bonusLevel = new Stats();
 
   addAction(new Attack());
   attribChange();
@@ -54,8 +53,6 @@ Creature::Creature(Map *map, int x, int y) : MapObject(map, x, y, 2) {
 Creature::~Creature() {
   actions.clear();
   effects.clear();
-  delete stats;
-  delete bonusLevel;
 }
 
 int Creature::getExpRatio() {
@@ -63,42 +60,18 @@ int Creature::getExpRatio() {
   return clamp_ratio(exp, required);
 }
 
+// Stats are loaded from the creature's JSON configuration and grow by the
+// configured per-level bonus; derived pools follow the current stats.
 void Creature::attribChange() {
-  const int effectiveLevel = std::max(1, level + sw);
   const int oldHpMax = std::max(1, hpMax);
   const int oldManaMax = std::max(1, manaMax);
   const float hpRatio = hpMax > 0 ? static_cast<float>(hp) / oldHpMax : 1.0f;
   const float manaRatio =
       manaMax > 0 ? static_cast<float>(mana) / oldManaMax : 1.0f;
 
-  stats->setStrength(effectiveLevel + bonusLevel->getStrength());
-  stats->setStamina(effectiveLevel + bonusLevel->getStamina());
-  stats->setAgility(effectiveLevel + bonusLevel->getAgility());
-  stats->setIntelligence(effectiveLevel + bonusLevel->getIntelligence());
-
-  stats->setArmor(bonusLevel->getArmor() + stats->getStamina() / 2);
-  stats->setBlock(bonusLevel->getBlock() + stats->getAgility() / 3);
-
-  stats->setDmgMin(std::max(1, effectiveLevel + bonusLevel->getDmgMin() +
-                                   stats->getStrength() / 2));
-  stats->setDmgMax(std::max(stats->getDmgMin(), effectiveLevel +
-                                                    bonusLevel->getDmgMax() +
-                                                    stats->getStrength()));
-  stats->setHit(bonusLevel->getHit() + effectiveLevel + stats->getAgility());
-  stats->setCrit(bonusLevel->getCrit() + stats->getAgility() / 2);
-
-  stats->setFireResist(bonusLevel->getFireResist());
-  stats->setThunderResist(bonusLevel->getThunderResist());
-  stats->setFrostResist(bonusLevel->getFrostResist());
-  stats->setNormalResist(bonusLevel->getNormalResist());
-
-  stats->setDamage(bonusLevel->getDamage() + stats->getStrength() / 2);
-  stats->setAttack(bonusLevel->getAttack() + effectiveLevel +
-                   stats->getAgility());
-
-  hpMax = 60 + stats->getStamina() * 15;
-  manaMax = 20 + stats->getIntelligence() * 12;
-  manaRegRate = std::max(1, stats->getIntelligence() / 4);
+  hpMax = 60 + stats.getStamina() * 15;
+  manaMax = 20 + stats.getIntelligence() * 12;
+  manaRegRate = std::max(1, stats.getIntelligence() / 4);
 
   hp = std::max(1, static_cast<int>(hpRatio * hpMax));
   mana = std::max(0, static_cast<int>(manaRatio * manaMax));
@@ -122,23 +95,23 @@ void Creature::takeDamage(int i) {
 
 void Creature::hurt(Damage damage) {
   int total = 0;
-  total += stat_resisted(damage.getNormal(), stats->getNormalResist());
-  total += stat_resisted(damage.getFire(), stats->getFireResist());
-  total += stat_resisted(damage.getFrost(), stats->getFrostResist());
-  total += stat_resisted(damage.getThunder(), stats->getThunderResist());
+  total += stat_resisted(damage.getNormal(), stats.getNormalResist());
+  total += stat_resisted(damage.getFire(), stats.getFireResist());
+  total += stat_resisted(damage.getFrost(), stats.getFrostResist());
+  total += stat_resisted(damage.getThunder(), stats.getThunderResist());
   hurt(total);
 }
 
 void Creature::hurt(int i) {
-  const int blocked = std::max(0, i - stats->getArmor() / 8);
+  const int blocked = std::max(0, i - stats.getArmor() / 8);
   takeDamage(blocked);
 }
 
 int Creature::getDmg() {
   if (!alive)
     return 0;
-  const int minDamage = std::max(1, stats->getDmgMin());
-  const int maxDamage = std::max(minDamage, stats->getDmgMax());
+  const int minDamage = std::max(1, stats.getDmgMin());
+  const int maxDamage = std::max(minDamage, stats.getDmgMax());
   return minDamage + rand() % (maxDamage - minDamage + 1);
 }
 
@@ -156,6 +129,7 @@ void Creature::fight(Creature *creature) {
 
 void Creature::levelUp() {
   level++;
+  stats.addBonus(&bonusLevel);
   attribChange();
   heal(0);
   addMana(0);
@@ -219,7 +193,33 @@ Weapon *Creature::getWeapon() { return weapon; }
 
 Armor *Creature::getArmor() { return armor; }
 
-Stats *Creature::getStats() { return stats; }
+Stats *Creature::getStats() { return &stats; }
+
+int Creature::getScale() { return level + sw; }
+
+bool Creature::isAlive() const { return alive; }
+
+void Creature::setAlive() { alive = true; }
+
+void Creature::loadJsonFile(char *path) {
+  std::fstream jsonFileStream;
+  jsonFileStream.open(path);
+
+  Json::Value config;
+  Json::Reader reader;
+  reader.parse(jsonFileStream, config);
+  jsonFileStream.close();
+
+  className = config.get("name", "").asCString();
+  setAnimation(config.get("path", "").asCString());
+  sw = config.get("sw", 0).asInt();
+  stats.init(config["initStats"]);
+  bonusLevel.init(config["levelStats"]);
+
+  attribChange();
+  heal(0);
+  addMana(0);
+}
 
 int Creature::getHp() { return hp; }
 

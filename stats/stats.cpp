@@ -151,3 +151,31 @@ const char *Stats::getText(int level) {
   text = stream.str();
   return text.c_str();
 }
+
+void Stats::init(Json::Value statConfig) {
+  if (!statConfig.isObject())
+    return;
+  strength = statConfig.get("strength", strength).asInt();
+  stamina = statConfig.get("stamina", stamina).asInt();
+  agility = statConfig.get("agility", agility).asInt();
+  intelligence = statConfig.get("intelligence", intelligence).asInt();
+
+  armor = statConfig.get("armor", armor).asInt();
+  block = statConfig.get("block", block).asInt();
+
+  dmgMin = statConfig.get("dmgMin", dmgMin).asInt();
+  dmgMax = statConfig.get("dmgMax", dmgMax).asInt();
+  hit = statConfig.get("hit", hit).asInt();
+  crit = statConfig.get("crit", crit).asInt();
+
+  fireResist = statConfig.get("fireResist", fireResist).asInt();
+  thunderResist = statConfig.get("thunderResist", thunderResist).asInt();
+  frostResist = statConfig.get("frostResist", frostResist).asInt();
+  normalResist = statConfig.get("normalResist", normalResist).asInt();
+
+  damage = statConfig.get("damage", damage).asInt();
+  attack = statConfig.get("attack", attack).asInt();
+
+  if (statConfig.isMember("main"))
+    setMain(statConfig["main"].asString().c_str());
+}

@@ -5,26 +5,12 @@
 #include <interactions/spells/frostbolt.h>
 #include <stats/stats.h>
 
-Mage::Mage(Map *map,int x,int y):Player(map,x,y)
+Sorcerer::Sorcerer(Map *map,int x,int y):Player(map,x,y)
 {
-    className="Mage";
-    setAnimation("images/players/mage/");
-
-    bonusLevel->setStrength(1);
-    bonusLevel->setAgility(2);
-    bonusLevel->setIntelligence(3);
-    bonusLevel->setStamina(1);
-
-    bonusLevel->setDmgMin(1);
-    bonusLevel->setDmgMax(1);
-
-    bonusLevel->setHit(1);
-    bonusLevel->setCrit(1);
-
-    stats->setMain("I");
+    loadJsonFile("config/players/sorcerer.json");
 }
 
-void Mage::levelUp()
+void Sorcerer::levelUp()
 {
     Creature::levelUp();
     if(level==1)addAction(new MagicMissile());

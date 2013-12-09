@@ -1,0 +1,35 @@
+{
+	"name":"Pritz",
+	"path":"images/monsters/pritz/",
+	"sw":1,
+	
+	"initStats" :
+	{
+		"strength":5,
+		"stamina":5,
+		"agility":5,
+		"intelligence":5,
+
+		"dmgMin":10,
+		"dmgMax":12,
+		"hit":75,
+		"crit":10,
+		
+		"main":"S"
+	},
+	
+    "levelStats" :
+	{
+		"strength":3,
+		"stamina":2,
+		"agility":2,
+		"intelligence":1,
+
+		"dmgMin":2,
+		"dmgMax":3,
+		"hit":3,
+		"crit":1,
+
+		"normalResist":5
+	}
+}

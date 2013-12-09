@@ -4,26 +4,12 @@
 #include <interactions/skills/stunner.h>
 #include <stats/stats.h>
 
-Rogue::Rogue(Map *map,int x,int y):Player(map,x,y)
+Assasin::Assasin(Map *map,int x,int y):Player(map,x,y)
 {
-    className="Rogue";
-    setAnimation("images/players/rogue/");
-
-    bonusLevel->setStrength(1);
-    bonusLevel->setAgility(3);
-    bonusLevel->setIntelligence(2);
-    bonusLevel->setStamina(1);
-
-    bonusLevel->setDmgMin(1);
-    bonusLevel->setDmgMax(2);
-
-    bonusLevel->setHit(3);
-    bonusLevel->setCrit(2);
-
-    stats->setMain("A");
+    loadJsonFile("config/players/assasin.json");
 }
 
-void Rogue::levelUp()
+void Assasin::levelUp()
 {
     Creature::levelUp();
     if(level==1)addAction(new SneakAttack());

@@ -3,10 +3,10 @@
 #ifndef ROGUE_H
 #define ROGUE_H
 
-class Rogue : public Player
+class Assasin : public Player
 {
 public:
-    Rogue(Map* map,int x,int y);
+    Assasin(Map* map,int x,int y);
 
 protected:
     void levelUp();
