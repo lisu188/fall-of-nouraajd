@@ -2,7 +2,6 @@
 
 Stun::Stun(int duration):Effect(duration)
 {
-
 }
 
 bool Stun::apply(Creature *creature)

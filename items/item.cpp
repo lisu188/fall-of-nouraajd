@@ -57,15 +57,12 @@ void Item::loadJsonFile(char *path)
 {
     std::fstream jsonFileStream;
     jsonFileStream.open (path);
-
     Json::Value config;
     Json::Reader reader;
     reader.parse( jsonFileStream, config );
     jsonFileStream.close();
-
     bonus.init(config["bonus"]);
     interaction=Interaction::getAction(config.get("interaction","").asString());
-
     setAnimation(config.get("path","").asCString());
     className=config.get("name","").asCString();
 }

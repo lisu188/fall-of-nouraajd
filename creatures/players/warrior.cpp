@@ -6,12 +6,5 @@
 
 Warrior::Warrior(Map *map,int x,int y ):Player(map,x,y)
 {
-    loadJsonFile("config/players/warrior.json");
-}
-
-void Warrior::levelUp()
-{
-    Creature::levelUp();
-    if(level==1)addAction(new Strike());
-    if(level==5)addAction(new DoubleAttack());
+    initializeFromFile("config/players/warrior.json");
 }

@@ -2,10 +2,8 @@
 
 Event::Event()
 {
-
 }
 
 Event::~Event()
 {
-
 }

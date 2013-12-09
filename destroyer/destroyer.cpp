@@ -4,7 +4,6 @@ Destroyer *Destroyer::instance=0;
 
 Destroyer::Destroyer()
 {
-
 }
 
 Destroyer::~Destroyer()

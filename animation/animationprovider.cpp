@@ -25,12 +25,10 @@ void AnimationProvider::terminate()
 
 AnimationProvider::AnimationProvider()
 {
-
 }
 
 AnimationProvider::~AnimationProvider()
 {
-
     for(iterator it=begin(); it!=end(); it++)
     {
         delete (*it).second;
@@ -55,11 +53,8 @@ void AnimationProvider::loadAnim(std::string path)
     Animation *anim=new Animation();
     QPixmap *img=0;
     std::map<int,int> timemap;
-
     std::ifstream time;
-
     time.open((path+"time.txt").c_str());
-
     if (time.is_open())
     {
         for (int i=0; !time.eof(); i++)
@@ -73,19 +68,16 @@ void AnimationProvider::loadAnim(std::string path)
         timemap.insert(std::pair<int,int>(0,250));
     }
     time.close();
-
-
     for(int i=0; true; i++)
     {
         std::string result;
         std::ostringstream convert;
         convert << i;
         result = convert.str();
-
         QPixmap image((path+result+".png").c_str());
-        if(!image.hasAlphaChannel())
+        if(!image.hasAlphaChannel()) {
             image.setMask(image.createHeuristicMask());
-
+        }
         if(!image.isNull())
         {
             img = new QPixmap(image.scaled(Tile::size,Tile::size,Qt::IgnoreAspectRatio,Qt::SmoothTransformation));
@@ -101,9 +93,12 @@ void AnimationProvider::loadAnim(std::string path)
             break;
         }
         int frame;
-        if(timemap.size()==1)frame=timemap.at(0);
-        else frame=timemap.at(i);
-
+        if(timemap.size()==1) {
+            frame=timemap.at(0);
+        }
+        else {
+            frame=timemap.at(i);
+        }
         anim->add(img,frame);
     }
     this->insert(std::pair<std::string,Animation*>(path,anim));

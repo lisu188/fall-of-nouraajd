@@ -2,7 +2,6 @@
 
 Damage::Damage()
 {
-
 }
 int Damage::getFire() const
 {

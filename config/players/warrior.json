@@ -27,5 +27,10 @@
 		"dmgMax" : 3,
 		"hit" : 3,
 		"crit" : 1
+	},
+
+	"levelling" : {
+		"1" : "Strike",
+		"5" : "DoubleAttack"
 	}
 }

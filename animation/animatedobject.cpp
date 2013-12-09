@@ -13,7 +13,9 @@ AnimatedObject::AnimatedObject()
 AnimatedObject::~AnimatedObject()
 {
     Destroyer::remove(this);
-    if(timer)delete timer;
+    if(timer) {
+        delete timer;
+    }
 }
 
 
@@ -32,13 +34,17 @@ void AnimatedObject::animate()
 {
     int time=animation->getTime();
     setPixmap(*animation->getImage());
-    if(time==-1)return;
+    if(time==-1) {
+        return;
+    }
     if(!timer)
     {
         timer = new QTimer(this);
         connect(timer, SIGNAL(timeout()), this, SLOT(animate()));
     }
-    if(time==0)time=rand()%3000;
+    if(time==0) {
+        time=rand()%3000;
+    }
     timer->start(time);
     animation->next();
 }

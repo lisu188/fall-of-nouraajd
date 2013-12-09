@@ -29,5 +29,6 @@
 		"crit" : 1,
 
 		"normalResist" : 5
-	}
+	},
+	"levelling" : {}
 }

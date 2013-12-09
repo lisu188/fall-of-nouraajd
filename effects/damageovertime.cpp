@@ -4,7 +4,6 @@
 
 DamageOverTime::DamageOverTime(int duration, Damage dmg):Effect(duration),damage(dmg)
 {
-
 }
 
 bool DamageOverTime::apply(Creature *creature)

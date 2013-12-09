@@ -54,9 +54,12 @@ Tile *Tile::getRandomTile(int x, int y)
     {
     case 0:
     case 1:
-        if(rand()%20==0)
+        if(rand()%20==0) {
             return new MountainTile(x,y);
-        else return new GrassTile(x,y);
+        }
+        else {
+            return new GrassTile(x,y);
+        }
     case 2:
         return new GroundTile(x,y);
     case 3:
@@ -72,11 +75,11 @@ void Tile::addToGame()
 
 void Tile::mousePressEvent(QGraphicsSceneMouseEvent *event)
 {
-
     int x=GameScene::getPlayer()->getPosX()-this->getCoords().first;
     int y=GameScene::getPlayer()->getPosY()-this->getCoords().second;
-
-    if(x==0&&y==0)return;
+    if(x==0&&y==0) {
+        return;
+    }
     if(std::abs(x)>std::abs(y))
     {
         GameScene::getGame()->playerMove(-x/std::abs(x),0);
