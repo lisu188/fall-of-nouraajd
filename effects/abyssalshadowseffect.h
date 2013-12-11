@@ -8,13 +8,11 @@
 class AbyssalShadowsEffect : public Effect
 {
 public:
-    AbyssalShadowsEffect(int dur,Damage dmg);
+    AbyssalShadowsEffect(Creature *caster,int dur);
 
     // Effect interface
 public:
     virtual bool apply(Creature *creature);
-private:
-    Damage damage;
 
 };
 

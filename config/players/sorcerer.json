@@ -1,40 +1,52 @@
 {
-	"name" : "Sorcerer",
-	"path" : "images/players/sorcerer/",
-	"sw" : 0,
+"name" : "Sorcerer"
+    ,
+"path" : "images/players/sorcerer/"
+    ,
+    "sw" : 0,
 
-	"initStats" : {
-		"strength" : 5,
-		"stamina" : 5,
-		"agility" : 5,
-		"intelligence" : 5,
+"initStats" :
+    {
+        "strength" : 5,
+        "stamina" : 5,
+        "agility" : 5,
+        "intelligence" : 5,
 
-		"dmgMin" : 10,
-		"dmgMax" : 12,
-		"hit" : 75,
-		"crit" : 10,
+        "dmgMin" : 10,
+        "dmgMax" : 12,
+        "hit" : 75,
+        "crit" : 10,
 
-		"main" : "I"
-	},
+"main" : "I"
+    },
 
-	"levelStats" : {
-		"strength" : 1,
-		"stamina" : 1,
-		"agility" : 2,
-		"intelligence" : 3,
+"levelStats" :
+    {
+        "strength" : 1,
+        "stamina" : 1,
+        "agility" : 2,
+        "intelligence" : 3,
 
-		"dmgMin" : 1,
-		"dmgMax" : 1,
-		"hit" : 1,
-		"crit" : 1
-	},
+        "dmgMin" : 1,
+        "dmgMax" : 1,
+        "hit" : 1,
+        "crit" : 1
+    },
 
-	"levelling" : {
-		"1" : "MagicMissile",
-		"2" : "AbyssalShadows",
-		"3" : "FrostBolt",
-		"4" : "EndlessPain",
-		"5" : "ShadowBolt",
-		"7" : "ChaosBlast"
-	}
+"levelling" :
+    {
+"1" : "MagicMissile"
+        ,
+"2" : "AbyssalShadows"
+        ,
+"3" : "FrostBolt"
+        ,
+"4" : "EndlessPain"
+        ,
+"5" : "ShadowBolt"
+        ,
+"6" : "Devour"
+        ,
+"7" : "ChaosBlast"
+    }
 }

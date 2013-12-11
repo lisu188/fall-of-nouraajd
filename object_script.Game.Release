@@ -72,5 +72,6 @@ INPUT(
 ./release\endlesspain.o
 ./release\endlesspaineffect.o
 ./release\shadowbolt.o
+./release\devour.o
 ./release\moc_animatedobject.o
 );

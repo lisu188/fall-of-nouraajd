@@ -1,11 +1,14 @@
 {
-	"name" : "PlateArmor",
-	"path" : "images/items/armors/platearmor/",
+"name" : "PlateArmor"
+    ,
+"path" : "images/items/armors/platearmor/"
+    ,
 
-	"bonus" : {
-		"block" : 5,
-		"armor" : 10,
-		"strength" : 4,
-		"stamina" : 3
-	}
+"bonus" :
+    {
+        "block" : 5,
+        "armor" : 10,
+        "strength" : 4,
+        "stamina" : 3
+    }
 }

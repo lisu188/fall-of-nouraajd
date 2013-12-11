@@ -19,9 +19,7 @@ public:
     Creature(Map *map, int x, int y);
     ~Creature();
 
-    int getExp() {
-        return level*750;
-    }
+    int getExp();
     int getExpRatio();
 
     void attribChange();
@@ -33,7 +31,8 @@ public:
     void hurt(Damage damage);
     void hurt(int i);
 
-    virtual int getDmg();
+    int getDmg();
+
     int getScale();
 
     bool isAlive() const;

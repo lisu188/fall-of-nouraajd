@@ -2,7 +2,7 @@
 #include <QDebug>
 #include <creatures/creature.h>
 
-Effect::Effect(int duration):dur(duration)
+Effect::Effect(Creature *caster, int duration):dur(duration),caster(caster)
 {
     className="Effect";
 }
@@ -16,7 +16,6 @@ bool Effect::apply(Creature *creature)
     dur--;
     if(dur==0)
     {
-        qDebug()<<className.c_str()<<"ends for"<<creature->className.c_str();
         return false;
     }
     return true;

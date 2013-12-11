@@ -2,7 +2,7 @@
 
 #include <creatures/creature.h>
 
-AbyssalShadowsEffect::AbyssalShadowsEffect(int dur,Damage dmg):Effect(dur),damage(dmg)
+AbyssalShadowsEffect::AbyssalShadowsEffect(Creature *caster, int dur):Effect(caster,dur)
 {
     className="AbyssalShadowsEffect";
 }
@@ -12,12 +12,14 @@ bool AbyssalShadowsEffect::apply(Creature *creature)
     if(dur>1)
     {
         Damage tmp;
-        tmp.setShadow(damage.getShadow()*45.0/100.0);
+        tmp.setShadow(caster->getDmg()*45.0/100.0);
         creature->hurt(tmp);
     }
     else
     {
-        creature->hurt(damage);
+        Damage tmp;
+        tmp.setShadow(caster->getDmg());
+        creature->hurt(tmp);
     }
     return false&&Effect::apply(creature);
 }

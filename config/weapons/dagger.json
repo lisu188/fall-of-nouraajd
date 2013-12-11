@@ -1,10 +1,13 @@
 {
-	"name" : "Dagger",
-	"path" : "images/items/weapons/dagger/",
+"name" : "Dagger"
+    ,
+"path" : "images/items/weapons/dagger/"
+    ,
 
-	"bonus" : {
-		"crit" : 3,
-		"damage" : 5,
-		"attack" : 3
-	}
+"bonus" :
+    {
+        "crit" : 3,
+        "damage" : 5,
+        "attack" : 3
+    }
 }

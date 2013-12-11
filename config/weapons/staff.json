@@ -1,10 +1,14 @@
 {
-	"name" : "Staff",
-	"path" : "images/items/weapons/staff/",
-	"interaction":"ElemStaff",
+"name" : "Staff"
+    ,
+"path" : "images/items/weapons/staff/"
+    ,
+"interaction":"ElemStaff"
+    ,
 
-	"bonus" : {
-		"damage" : 5,
-		"attack" : 3
-	}
+"bonus" :
+    {
+        "damage" : 5,
+        "attack" : 3
+    }
 }

@@ -14,7 +14,5 @@ EndlessPain::EndlessPain()
 
 void EndlessPain::action(Creature *first, Creature *second)
 {
-    Damage damage;
-    damage.setShadow(first->getWeapon()->getStats()->getDamage()*15.0/100.0);//change to shadow
-    second->addEffect(new EndlessPainEffect(2,&damage));
+    second->addEffect(new EndlessPainEffect(first,2));
 }
