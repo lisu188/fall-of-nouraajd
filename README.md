@@ -1,7 +1,7 @@
 # Recovered game snapshot
 
-Original commit: `aae16c85d246c6031f53332fbc36cfb0586ca43f`. Original tree: `a0aff4985ea1a0123a52a11c6a766b9e5fcdc7aa`.
-Startup was verified from identical recovered sources at `aae16c85d246c6031f53332fbc36cfb0586ca43f`.
+Original commit: `3e4cc2a9d557307a635f980f58d11e04c61b2b8d`. Original tree: `b0d80f953f9322938deb0ed5bb1b50d8b9e4f122`.
+Startup was verified from identical recovered sources at `3e4cc2a9d557307a635f980f58d11e04c61b2b8d`.
 
 This recovered version compiled and linked on Linux, started the real game on an isolated Xvfb display,
 loaded its map and a healthy player, rendered the screenshot below, and exited normally.
@@ -37,8 +37,8 @@ launches run the game's original entry point. Startup evidence does not establis
 
 compatibilityRepair: 1, exactOriginal: 30, reconstruction: 15.
 
-- `Game.pro`: unverified donor reconstruction; 108bdcbeda04cefeba5e1895f91df023cea8487f:Game.pro; headerMatch=0; apiOverlap=0/10000; distance=10
-- `creatures/creature.cpp`: content reconstruction of the BFG-removed original; from the 65ed8ffa reconstruction: initializeFromFile, configured levelling actions (getLevelAction) and getLevelBonus declared in the same-commit creature.h
+- `Game.pro`: unverified donor reconstruction; 108bdcbeda04cefeba5e1895f91df023cea8487f:Game.pro; headerMatch=0; apiOverlap=0/10000; distance=11
+- `creatures/creature.cpp`: content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of 056acff8a5ac07d4006cfa545a2fe842117df4af (previous version of creatures/creature.cpp); compiles in 3e4cc2a9d557307a635f980f58d11e04c61b2b8d
 - `images/tiles/grass/0.png`: unverified donor reconstruction; c049ac73064442354af6224d06fe1c8b847bb8d9:images/tiles/grass/0.png; headerMatch=0; apiOverlap=0/10000; distance=105 Verified by build and startup of afdd8069 (recovery/evidence/second-original).
 - `images/tiles/ground/0.png`: unverified donor reconstruction; c049ac73064442354af6224d06fe1c8b847bb8d9:images/tiles/ground/0.png; headerMatch=0; apiOverlap=0/10000; distance=105 Verified by build and startup of afdd8069 (recovery/evidence/second-original).
 - `images/tiles/mountain/0.png`: unverified donor reconstruction; 152007b28631784d3c5e17f2686eb6ef9ff30e46:images/tiles/mountain/0.png; headerMatch=0; apiOverlap=0/10000; distance=155 Verified by build and startup of afdd8069 (recovery/evidence/second-original).
@@ -50,11 +50,11 @@ compatibilityRepair: 1, exactOriginal: 30, reconstruction: 15.
 - `json/json_value.cpp`: unverified upstream reconstruction; https://github.com/open-source-parsers/jsoncpp/tree/4fce396c9d3e27a8ab8fb88e94c1676e021ae3a6
 - `json/json_writer.cpp`: unverified upstream reconstruction; https://github.com/open-source-parsers/jsoncpp/tree/4fce396c9d3e27a8ab8fb88e94c1676e021ae3a6
 - `map/map.cpp`: content reconstruction of the BFG-removed original; reconstructed against the original map.h/tile.h API (private AnimatedObject bases, Tile::addToGame, Destroyer-owned objects); Player comes through view/gamescene.h so the same file builds before and after creatures/players/ moved; carried unchanged across the 4a6a0310 source reformat
-- `stats/stats.cpp`: content reconstruction of the BFG-removed original; carried forward unchanged from the ff3d46a0 reconstruction across the 4a6a0310 source reformat
+- `stats/stats.cpp`: content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of 1056f5a1bb90ad6555a946e3ee2e95334ea0cca5 (previous version of stats/stats.cpp); compiles in 3e4cc2a9d557307a635f980f58d11e04c61b2b8d
 - `view/gamescene.cpp`: content reconstruction of the BFG-removed original; carried forward unchanged from the 45cb7aaa reconstruction across the 4a6a0310 source reformat
 - `json/LICENSE`: https://github.com/open-source-parsers/jsoncpp/tree/4fce396c9d3e27a8ab8fb88e94c1676e021ae3a6 upstream distribution license
 
-Restored source fingerprint: `07b4fb634f9a440cff7e86be7c047f60d86f031222a192475400d4f57937856b`.
+Restored source fingerprint: `319f159b341da11d1ef1bfa974d70fc707b8b75c8a0feb83b1810c3888731936`.
 
 The actual 1278 × 718 screenshot and [verification metadata](recovery/verification.json) belong to
 this source version. Reconstructed code and borrowed assets are identified in that metadata; they are

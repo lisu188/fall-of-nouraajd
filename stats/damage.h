@@ -17,11 +17,15 @@ public:
     int getNormal() const;
     void setNormal(int value);
 
+    int getShadow() const;
+    void setShadow(int value);
+
 private:
     int fire=0;
     int thunder=0;
     int frost=0;
     int normal=0;
+    int shadow=0;
 };
 
 #endif // DAMAGE_H
