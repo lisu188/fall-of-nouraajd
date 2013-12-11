@@ -13,7 +13,7 @@ Stunner::Stunner()
 void Stunner::action(Creature *first, Creature *second)
 {
     Interaction::action(first,second);
-    second->addEffect(new Stun(rand()%1+3));
+    second->addEffect(new Stun(first,rand()%1+3));
 }
 
 Interaction *Stunner::clone()

@@ -6,13 +6,11 @@ class Damage;
 class EndlessPainEffect : public Effect
 {
 public:
-    EndlessPainEffect(int duration,Damage *dmg);
+    EndlessPainEffect(Creature*caster,int duration);
 
     // Effect interface
 public:
-    virtual bool apply(Creature *creature);
-private:
-    Damage *damage;
+    virtual bool apply(Creature * creature);
 };
 
 #endif // ENDLESSPAINEFFECT_H

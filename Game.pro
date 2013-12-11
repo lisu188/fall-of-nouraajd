@@ -85,7 +85,8 @@ SOURCES += main.cpp \
     effects/abyssalshadowseffect.cpp \
     interactions/spells/endlesspain.cpp \
     effects/endlesspaineffect.cpp \
-    interactions/spells/shadowbolt.cpp
+    interactions/spells/shadowbolt.cpp \
+    interactions/spells/devour.cpp
 
 HEADERS  += \
     animation/animatedobject.h \
@@ -118,6 +119,7 @@ HEADERS  += \
     interactions/skills/stunner.h \
     interactions/spells/abyssalshadows.h \
     interactions/spells/chaosblast.h \
+    interactions/spells/devour.h \
     interactions/spells/endlesspain.h \
     interactions/spells/frostbolt.h \
     interactions/spells/magicmissile.h \

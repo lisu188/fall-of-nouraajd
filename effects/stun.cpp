@@ -1,6 +1,8 @@
 #include "effects/stun.h"
 
-Stun::Stun(int duration):Effect(duration)
+#include <creatures/creature.h>
+
+Stun::Stun(Creature *caster, int duration):Effect(caster,duration)
 {
     className="Stun";
 }

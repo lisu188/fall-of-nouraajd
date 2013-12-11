@@ -6,7 +6,7 @@
 class Stun : public Effect
 {
 public:
-    Stun(int duration);
+    Stun(Creature *caster,int duration);
 
     // Effect interface
 public:
