@@ -1,7 +1,7 @@
 # Recovered game snapshot
 
-Original commit: `da13b28d2062a5727d5856e3f94cf5aa2d653194`. Original tree: `bfccfc73583df90ab1ee7b207b1ea934b6dfae26`.
-Startup was verified from identical recovered sources at `da13b28d2062a5727d5856e3f94cf5aa2d653194`.
+Original commit: `afe6b3dcfc8bb1166843d705625f88cb549d0ed7`. Original tree: `88b1cabf76878d8a90d98bc0313e9a5c0870afd5`.
+Startup was verified from identical recovered sources at `afe6b3dcfc8bb1166843d705625f88cb549d0ed7`.
 
 This recovered version compiled and linked on Linux, started the real game on an isolated Xvfb display,
 loaded its map and a healthy player, rendered the screenshot below, and exited normally.
@@ -35,16 +35,16 @@ launches run the game's original entry point. Startup evidence does not establis
 
 ## Recovery provenance
 
-compatibilityRepair: 1, exactOriginal: 30, reconstruction: 15.
+compatibilityRepair: 1, exactOriginal: 32, reconstruction: 15.
 
-- `Game.pro`: unverified donor reconstruction; 108bdcbeda04cefeba5e1895f91df023cea8487f:Game.pro; headerMatch=0; apiOverlap=0/10000; distance=12
-- `creatures/creature.cpp`: content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of 056acff8a5ac07d4006cfa545a2fe842117df4af (previous version of creatures/creature.cpp); compiles in 3e4cc2a9d557307a635f980f58d11e04c61b2b8d
+- `Game.pro`: content reconstruction of the BFG-removed original; qmake project regenerated with 73 sources from object_script.Game.Debug; settings from intact d23993e8:Game.pro
+- `creatures/creature.cpp`: content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of 1c25469b4d (previous version of creatures/creature.cpp)
 - `images/tiles/grass/0.png`: unverified donor reconstruction; c049ac73064442354af6224d06fe1c8b847bb8d9:images/tiles/grass/0.png; headerMatch=0; apiOverlap=0/10000; distance=105 Verified by build and startup of afdd8069 (recovery/evidence/second-original).
 - `images/tiles/ground/0.png`: unverified donor reconstruction; c049ac73064442354af6224d06fe1c8b847bb8d9:images/tiles/ground/0.png; headerMatch=0; apiOverlap=0/10000; distance=105 Verified by build and startup of afdd8069 (recovery/evidence/second-original).
 - `images/tiles/mountain/0.png`: unverified donor reconstruction; 152007b28631784d3c5e17f2686eb6ef9ff30e46:images/tiles/mountain/0.png; headerMatch=0; apiOverlap=0/10000; distance=155 Verified by build and startup of afdd8069 (recovery/evidence/second-original).
 - `images/tiles/road/0.png`: unverified donor reconstruction; 152007b28631784d3c5e17f2686eb6ef9ff30e46:images/tiles/road/0.png; headerMatch=0; apiOverlap=0/10000; distance=155 Verified by build and startup of afdd8069 (recovery/evidence/second-original).
 - `images/tiles/water/0.png`: unverified donor reconstruction; c049ac73064442354af6224d06fe1c8b847bb8d9:images/tiles/water/0.png; headerMatch=0; apiOverlap=0/10000; distance=105 Verified by build and startup of afdd8069 (recovery/evidence/second-original).
-- `interactions/interaction.cpp`: content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of 0ad4caa5defe2d4fbf210d0bd61c8f3e41f79d9d (previous version of interactions/interaction.cpp); compiles in da13b28d2062a5727d5856e3f94cf5aa2d653194
+- `interactions/interaction.cpp`: content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of 8895196e12 (previous version of interactions/interaction.cpp)
 - `json/json_batchallocator.h`: unverified upstream reconstruction; https://github.com/open-source-parsers/jsoncpp/tree/4fce396c9d3e27a8ab8fb88e94c1676e021ae3a6
 - `json/json_reader.cpp`: unverified upstream reconstruction; https://github.com/open-source-parsers/jsoncpp/tree/4fce396c9d3e27a8ab8fb88e94c1676e021ae3a6
 - `json/json_value.cpp`: unverified upstream reconstruction; https://github.com/open-source-parsers/jsoncpp/tree/4fce396c9d3e27a8ab8fb88e94c1676e021ae3a6
@@ -54,7 +54,7 @@ compatibilityRepair: 1, exactOriginal: 30, reconstruction: 15.
 - `view/gamescene.cpp`: content reconstruction of the BFG-removed original; carried forward unchanged from the 45cb7aaa reconstruction across the 4a6a0310 source reformat
 - `json/LICENSE`: https://github.com/open-source-parsers/jsoncpp/tree/4fce396c9d3e27a8ab8fb88e94c1676e021ae3a6 upstream distribution license
 
-Restored source fingerprint: `14e89eaa8072beafdcf8fcf1ed121d588ac791a7f78075caeec6d4a66a4cb34a`.
+Restored source fingerprint: `82714c40ed95b6c983a72b08a77a3c7eb4311cc1a4f65e38440b46416be47eef`.
 
 The actual 1278 × 718 screenshot and [verification metadata](recovery/verification.json) belong to
 this source version. Reconstructed code and borrowed assets are identified in that metadata; they are
