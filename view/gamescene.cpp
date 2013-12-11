@@ -3,7 +3,7 @@
 #include <QGraphicsView>
 
 #include <buildings/cave.h>
-#include <creatures/players/mage.h>
+#include <creatures/player.h>
 #include <destroyer/destroyer.h>
 #include <view/gameview.h>
 
@@ -16,7 +16,7 @@ GameScene::GameScene() {
   map = new Map();
 
   if (!player) {
-    player = new Sorcerer(map, 0, 0);
+    player = new Player("config/players/sorcerer.json", map, 0, 0);
     map->addObject(player);
   }
 

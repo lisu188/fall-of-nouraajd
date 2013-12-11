@@ -27,17 +27,11 @@ SOURCES += main.cpp \
     buildings/building.cpp \
     buildings/towers/tower.cpp \
     buildings/towns/town.cpp \
-    creatures/players/player.cpp \
-    creatures/players/warrior.cpp \
-    creatures/players/mage.cpp \
-    creatures/players/rogue.cpp \
-    creatures/monsters/monster.cpp \
     items/weapons/weapon.cpp \
     interactions/interaction.cpp \
     interactions/attacks/attack.cpp \
     interactions/spells/spell.cpp \
     interactions/skills/skill.cpp \
-    creatures/monsters/pritz.cpp \
     map/tiles/mountaintile.cpp \
     buildings/cave.cpp \
     animation/animationprovider.cpp \
@@ -73,7 +67,6 @@ SOURCES += main.cpp \
     view/fightview.cpp \
     items/weapons/dagger.cpp \
     items/weapons/staff.cpp \
-    creatures/monsters/pritzmage.cpp \
     json/json_writer.cpp \
     json/json_value.cpp \
     json/json_reader.cpp \
@@ -86,7 +79,9 @@ SOURCES += main.cpp \
     interactions/spells/endlesspain.cpp \
     effects/endlesspaineffect.cpp \
     interactions/spells/shadowbolt.cpp \
-    interactions/spells/devour.cpp
+    interactions/spells/devour.cpp \
+    creatures/player.cpp \
+    creatures/monster.cpp
 
 HEADERS  += \
     animation/animatedobject.h \
@@ -97,13 +92,8 @@ HEADERS  += \
     buildings/towers/tower.h \
     buildings/towns/town.h \
     creatures/creature.h \
-    creatures/monsters/monster.h \
-    creatures/monsters/pritz.h \
-    creatures/monsters/pritzmage.h \
-    creatures/players/mage.h \
-    creatures/players/player.h \
-    creatures/players/rogue.h \
-    creatures/players/warrior.h \
+    creatures/monster.h \
+    creatures/player.h \
     destroyer/destroyer.h \
     effects/abyssalshadowseffect.h \
     effects/effect.h \
