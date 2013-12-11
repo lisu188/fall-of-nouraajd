@@ -69,5 +69,7 @@ INPUT(
 ./release\elemstaff.o
 ./release\abyssalshadows.o
 ./release\abyssalshadowseffect.o
+./release\endlesspain.o
+./release\endlesspaineffect.o
 ./release\moc_animatedobject.o
 );
