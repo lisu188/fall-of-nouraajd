@@ -4,7 +4,7 @@
 #include "scrollobject.h"
 
 #include <QGraphicsItem>
-#include <creatures/players/player.h>
+#include <creatures/player.h>
 
 class PlayerStatsView : public QGraphicsItem
 {

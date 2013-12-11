@@ -14,8 +14,7 @@
 #include <random>
 #include <time.h>
 
-#include <creatures/players/player.h>
-#include <creatures/players/mage.h>
+#include <creatures/player.h>
 
 class GameView;
 class FightView;

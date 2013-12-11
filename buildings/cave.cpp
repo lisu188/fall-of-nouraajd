@@ -1,10 +1,9 @@
 #include "cave.h"
 
-#include <creatures/monsters/pritz.h>
-#include <creatures/monsters/pritzmage.h>
-
 #include <view/gamescene.h>
 #include <view/playerstatsview.h>
+
+#include <creatures/monster.h>
 
 int Cave::count=0;
 Cave::Cave(Map *map, int x, int y):Building(map,x,y)
@@ -30,11 +29,11 @@ void Cave::onEnter()
                 }
                 if(rand()%5==0)
                 {
-                    map->addObject(new PritzMage(map,getPosX()+2*i,getPosY()+2*j));
+                    map->addObject(new Monster("config/monsters/pritzmage.json",map,getPosX()+2*i,getPosY()+2*j));
                 }
                 else
                 {
-                    map->addObject(new Pritz(map,getPosX()+2*i,getPosY()+2*j));
+                    map->addObject(new Monster("config/monsters/pritz.json",map,getPosX()+2*i,getPosY()+2*j));
                 }
             }
         this->removeFromGame();
@@ -47,11 +46,11 @@ void Cave::onMove()
     {
         if(rand()%5==0)
         {
-            map->addObject(new PritzMage(map,getPosX(),getPosY()));
+            map->addObject(new Monster("config/monsters/pritzmage.json",map,getPosX(),getPosY()));
         }
         else
         {
-            map->addObject(new Pritz(map,getPosX(),getPosY()));
+            map->addObject(new Monster("config/monsters/pritz.json",map,getPosX(),getPosY()));
         }
     }
 }

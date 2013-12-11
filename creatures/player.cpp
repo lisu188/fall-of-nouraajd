@@ -22,13 +22,10 @@
 #include <stats/stats.h>
 #include <math.h>
 
-Player::Player(Map *map, int x, int y):Creature(map,x,y)
+Player::Player(char *path,Map *map, int x, int y):Creature(path,map,x,y)
 {
-    className="Player";
     lock=false;
-    level=0;
     gold=0;
-    sw=0;
     turn=0;
     playerStatsView=new PlayerStatsView(this);
     playerStatsView->setZValue(3);
