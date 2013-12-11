@@ -1,10 +1,14 @@
 {
-	"name" : "ChaosSword",
-	"path" : "images/items/weapons/chaossword/",
-	"interaction" : "ChaosBlast",
+"name" : "ChaosSword"
+    ,
+"path" : "images/items/weapons/chaossword/"
+    ,
+"interaction" : "ChaosBlast"
+    ,
 
-	"bonus" : {
-		"damage" : 25,
-		"attack" : 15
-	}
+"bonus" :
+    {
+        "damage" : 25,
+        "attack" : 15
+    }
 }

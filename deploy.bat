@@ -15,7 +15,7 @@ del official.zip
 
 rmdir /s /q ".\official"
 
-astyle.exe -n -xe -j --recursive *.cpp *.h
+astyle.exe -n -xe -j --recursive *.cpp *.h *.json
 
 .\git\git.exe add -A
 .\git\git.exe commit -m auto
