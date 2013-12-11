@@ -65,9 +65,9 @@ INPUT(
 ./debug\json_reader.o
 ./debug\effect.o
 ./debug\stun.o
-./debug\damageovertime.o
 ./debug\stunner.o
 ./debug\elemstaff.o
 ./debug\abyssalshadows.o
+./debug\abyssalshadowseffect.o
 ./debug\moc_animatedobject.o
 );

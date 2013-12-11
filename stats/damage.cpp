@@ -39,6 +39,16 @@ void Damage::setNormal(int value)
 {
     normal = value;
 }
+int Damage::getShadow() const
+{
+    return shadow;
+}
+
+void Damage::setShadow(int value)
+{
+    shadow = value;
+}
+
 
 
 
