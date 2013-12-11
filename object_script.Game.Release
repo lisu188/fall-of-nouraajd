@@ -71,5 +71,6 @@ INPUT(
 ./release\abyssalshadowseffect.o
 ./release\endlesspain.o
 ./release\endlesspaineffect.o
+./release\shadowbolt.o
 ./release\moc_animatedobject.o
 );

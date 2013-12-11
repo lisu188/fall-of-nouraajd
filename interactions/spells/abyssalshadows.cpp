@@ -17,5 +17,5 @@ void AbyssalShadows::action(Creature *first, Creature *second)
 {
     Damage damage;
     damage.setShadow(first->getWeapon()->getStats()->getDamage());//change to shadow
-    second->addEffect(new AbyssalShadowsEffect(4,&damage));
+    second->addEffect(new AbyssalShadowsEffect(4,damage));
 }
