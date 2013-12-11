@@ -57,6 +57,9 @@ void Item::loadJsonFile(char *path)
 {
     std::fstream jsonFileStream;
     jsonFileStream.open (path);
+    if(!jsonFileStream.is_open()) {
+        jsonFileStream.open((std::string("assets:/")+path).c_str());
+    }
     Json::Value config;
     Json::Reader reader;
     reader.parse( jsonFileStream, config );
