@@ -5,10 +5,8 @@
 #include <items/potions/lifepotion.h>
 #include <items/potions/manapotion.h>
 
-Monster::Monster(Map *map,int x,int y):Creature(map,x,y)
+Monster::Monster(char *path,Map *map,int x,int y):Creature(path,map,x,y)
 {
-    className="Monster";
-    sw=0;
 }
 
 void Monster::onMove()

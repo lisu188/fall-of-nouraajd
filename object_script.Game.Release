@@ -13,17 +13,11 @@ INPUT(
 ./release\building.o
 ./release\tower.o
 ./release\town.o
-./release\player.o
-./release\warrior.o
-./release\mage.o
-./release\rogue.o
-./release\monster.o
 ./release\weapon.o
 ./release\interaction.o
 ./release\attack.o
 ./release\spell.o
 ./release\skill.o
-./release\pritz.o
 ./release\mountaintile.o
 ./release\cave.o
 ./release\animationprovider.o
@@ -59,7 +53,6 @@ INPUT(
 ./release\fightview.o
 ./release\dagger.o
 ./release\staff.o
-./release\pritzmage.o
 ./release\json_writer.o
 ./release\json_value.o
 ./release\json_reader.o
@@ -73,5 +66,7 @@ INPUT(
 ./release\endlesspaineffect.o
 ./release\shadowbolt.o
 ./release\devour.o
+./release\player.o
+./release\monster.o
 ./release\moc_animatedobject.o
 );

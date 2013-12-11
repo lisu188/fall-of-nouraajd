@@ -13,17 +13,11 @@ INPUT(
 ./debug\building.o
 ./debug\tower.o
 ./debug\town.o
-./debug\player.o
-./debug\warrior.o
-./debug\mage.o
-./debug\rogue.o
-./debug\monster.o
 ./debug\weapon.o
 ./debug\interaction.o
 ./debug\attack.o
 ./debug\spell.o
 ./debug\skill.o
-./debug\pritz.o
 ./debug\mountaintile.o
 ./debug\cave.o
 ./debug\animationprovider.o
@@ -59,7 +53,6 @@ INPUT(
 ./debug\fightview.o
 ./debug\dagger.o
 ./debug\staff.o
-./debug\pritzmage.o
 ./debug\json_writer.o
 ./debug\json_value.o
 ./debug\json_reader.o
@@ -73,5 +66,7 @@ INPUT(
 ./debug\endlesspaineffect.o
 ./debug\shadowbolt.o
 ./debug\devour.o
+./debug\player.o
+./debug\monster.o
 ./debug\moc_animatedobject.o
 );

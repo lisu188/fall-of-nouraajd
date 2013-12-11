@@ -1,6 +1,6 @@
 #include "interaction.h"
 
-#include <creatures/players/player.h>
+#include <creatures/player.h>
 
 #include <view/gamescene.h>
 #include <view/gameview.h>

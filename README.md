@@ -1,7 +1,7 @@
 # Recovered game snapshot
 
-Original commit: `f2221242fa026c5f1275a53376da6ed0d5e07b5c`. Original tree: `a641d92d4cfbd12a33c205bbf47492a65e64b51f`.
-Startup was verified from identical recovered sources at `f2221242fa026c5f1275a53376da6ed0d5e07b5c`.
+Original commit: `08867695683dd074db43837f0df8b95428921f3f`. Original tree: `8fe15b1808a2d0eef1239fd01e05fda66915f1ce`.
+Startup was verified from identical recovered sources at `08867695683dd074db43837f0df8b95428921f3f`.
 
 This recovered version compiled and linked on Linux, started the real game on an isolated Xvfb display,
 loaded its map and a healthy player, rendered the screenshot below, and exited normally.
@@ -37,24 +37,24 @@ launches run the game's original entry point. Startup evidence does not establis
 
 compatibilityRepair: 1, exactOriginal: 33, reconstruction: 15.
 
-- `Game.pro`: content reconstruction of the BFG-removed original; qmake project regenerated with 74 sources from object_script.Game.Debug; settings from intact d23993e8:Game.pro
-- `creatures/creature.cpp`: content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of 3e8ae69135343931bdd2c2b991501be297258d5a (previous version of creatures/creature.cpp)
+- `Game.pro`: content reconstruction of the BFG-removed original; qmake project regenerated with 69 sources from object_script.Game.Debug; settings from intact d23993e8:Game.pro
+- `creatures/creature.cpp`: content reconstruction of the BFG-removed original; adapted from the 04855a2d reconstruction: Creature(path, map, x, y) loads its configuration in the constructor (same-commit creature.h/player.cpp/monster.cpp) and levels from 0 to 1 so level-1 actions apply
 - `images/tiles/grass/0.png`: unverified donor reconstruction; c049ac73064442354af6224d06fe1c8b847bb8d9:images/tiles/grass/0.png; headerMatch=0; apiOverlap=0/10000; distance=105 Verified by build and startup of afdd8069 (recovery/evidence/second-original).
 - `images/tiles/ground/0.png`: unverified donor reconstruction; c049ac73064442354af6224d06fe1c8b847bb8d9:images/tiles/ground/0.png; headerMatch=0; apiOverlap=0/10000; distance=105 Verified by build and startup of afdd8069 (recovery/evidence/second-original).
 - `images/tiles/mountain/0.png`: unverified donor reconstruction; 152007b28631784d3c5e17f2686eb6ef9ff30e46:images/tiles/mountain/0.png; headerMatch=0; apiOverlap=0/10000; distance=155 Verified by build and startup of afdd8069 (recovery/evidence/second-original).
 - `images/tiles/road/0.png`: unverified donor reconstruction; 152007b28631784d3c5e17f2686eb6ef9ff30e46:images/tiles/road/0.png; headerMatch=0; apiOverlap=0/10000; distance=155 Verified by build and startup of afdd8069 (recovery/evidence/second-original).
 - `images/tiles/water/0.png`: unverified donor reconstruction; c049ac73064442354af6224d06fe1c8b847bb8d9:images/tiles/water/0.png; headerMatch=0; apiOverlap=0/10000; distance=105 Verified by build and startup of afdd8069 (recovery/evidence/second-original).
-- `interactions/interaction.cpp`: content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of 51538e9c356cd19cc2021268cdc93bae0d3763e9 (previous version of interactions/interaction.cpp)
+- `interactions/interaction.cpp`: content reconstruction of the BFG-removed original; carried from the 217e1fa2 reconstruction with player.h at its new creatures/ path
 - `json/json_batchallocator.h`: unverified upstream reconstruction; https://github.com/open-source-parsers/jsoncpp/tree/4fce396c9d3e27a8ab8fb88e94c1676e021ae3a6
 - `json/json_reader.cpp`: unverified upstream reconstruction; https://github.com/open-source-parsers/jsoncpp/tree/4fce396c9d3e27a8ab8fb88e94c1676e021ae3a6
 - `json/json_value.cpp`: unverified upstream reconstruction; https://github.com/open-source-parsers/jsoncpp/tree/4fce396c9d3e27a8ab8fb88e94c1676e021ae3a6
 - `json/json_writer.cpp`: unverified upstream reconstruction; https://github.com/open-source-parsers/jsoncpp/tree/4fce396c9d3e27a8ab8fb88e94c1676e021ae3a6
 - `map/map.cpp`: content reconstruction of the BFG-removed original; reconstructed against the original map.h/tile.h API (private AnimatedObject bases, Tile::addToGame, Destroyer-owned objects); Player comes through view/gamescene.h so the same file builds before and after creatures/players/ moved; carried unchanged across the 4a6a0310 source reformat
 - `stats/stats.cpp`: content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of 1056f5a1bb90ad6555a946e3ee2e95334ea0cca5 (previous version of stats/stats.cpp); compiles in 3e4cc2a9d557307a635f980f58d11e04c61b2b8d
-- `view/gamescene.cpp`: content reconstruction of the BFG-removed original; carried forward unchanged from the 45cb7aaa reconstruction across the 4a6a0310 source reformat
+- `view/gamescene.cpp`: content reconstruction of the BFG-removed original; from the da0d2da6 reconstruction: the player is a config-driven Player (sorcerer.json) after the class hierarchy flattened
 - `json/LICENSE`: https://github.com/open-source-parsers/jsoncpp/tree/4fce396c9d3e27a8ab8fb88e94c1676e021ae3a6 upstream distribution license
 
-Restored source fingerprint: `f6d45a630e10815c20926619c4e118acef1cdb799c47114fb1cec271d6486cf1`.
+Restored source fingerprint: `201c950b23daf0d4bb5f5279c1ea5b86dc4d1956a97dea91b6de872147b1f75f`.
 
 The actual 1278 × 718 screenshot and [verification metadata](recovery/verification.json) belong to
 this source version. Reconstructed code and borrowed assets are identified in that metadata; they are

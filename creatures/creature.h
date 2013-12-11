@@ -16,7 +16,7 @@ class Stats;
 class Creature : public MapObject
 {
 public:
-    Creature(Map *map, int x, int y);
+    Creature(char *path, Map *map, int x, int y);
     ~Creature();
 
     int getExp();

@@ -1,7 +1,7 @@
 #include "weapon.h"
 
 #include <view/gamescene.h>
-#include <creatures/players/player.h>
+#include <creatures/player.h>
 #include <view/gameview.h>
 
 

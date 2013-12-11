@@ -2,7 +2,7 @@
 
 #include <interactions/attacks/attack.h>
 
-#include <creatures/players/player.h>
+#include <creatures/player.h>
 
 SneakAttack::SneakAttack()
 {

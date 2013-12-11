@@ -30,10 +30,11 @@ int stat_resisted(int value, int resist) {
 
 } // namespace
 
-Creature::Creature(Map *map, int x, int y) : MapObject(map, x, y, 2) {
+Creature::Creature(char *path, Map *map, int x, int y)
+    : MapObject(map, x, y, 2) {
   className = "Creature";
   exp = 0;
-  level = 1;
+  level = 0;
   sw = 0;
   mana = 0;
   manaMax = 0;
@@ -45,9 +46,8 @@ Creature::Creature(Map *map, int x, int y) : MapObject(map, x, y, 2) {
   armor = 0;
 
   addAction(new Attack());
-  attribChange();
-  heal(0);
-  addMana(0);
+  initializeFromFile(path);
+  levelUp();
 }
 
 Creature::~Creature() {
