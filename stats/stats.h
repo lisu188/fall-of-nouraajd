@@ -63,6 +63,9 @@ public:
     const char *getText(int level);
     void init(Json::Value statConfig);
 
+    int getShadowResist() const;
+    void setShadowResist(int value);
+
 private:
     int strength=0;
     int stamina=0;
@@ -81,6 +84,7 @@ private:
     int thunderResist=0;
     int frostResist=0;
     int normalResist=0;
+    int shadowResist=0;
 
     int damage=0;
     int attack=0;
