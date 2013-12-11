@@ -1,5 +1,9 @@
 #include "chaosblast.h"
 
+#include <stats/damage.h>
+
+#include <creatures/creature.h>
+
 ChaosBlast::ChaosBlast()
 {
     className="ChaosBlast";

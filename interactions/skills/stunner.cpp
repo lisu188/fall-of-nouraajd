@@ -1,6 +1,7 @@
 #include "stunner.h"
 
 #include <effects/stun.h>
+#include <creatures/creature.h>
 
 Stunner::Stunner()
 {

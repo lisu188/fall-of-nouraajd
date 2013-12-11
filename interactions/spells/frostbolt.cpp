@@ -2,6 +2,9 @@
 
 #include <interactions/attacks/attack.h>
 
+#include <stats/damage.h>
+#include <creatures/creature.h>
+
 FrostBolt::FrostBolt()
 {
     className="FrostBolt";

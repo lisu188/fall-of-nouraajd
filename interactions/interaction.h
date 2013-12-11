@@ -1,7 +1,11 @@
-#include <creatures/creature.h>
+#include <string>
+#include <view/listitem.h>
 
 #ifndef INTERACTION_H
 #define INTERACTION_H
+
+class Creature;
+class QGraphicsSceneMouseEvent;
 
 class Interaction : private ListItem
 {
