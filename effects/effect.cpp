@@ -17,6 +17,7 @@ bool Effect::apply(Creature *creature)
     if(dur==0)
     {
         qDebug()<<className.c_str()<<"ends for"<<creature->className.c_str();
-        return false&&Effect::apply(creature);
+        return false;
     }
+    return true;
 }

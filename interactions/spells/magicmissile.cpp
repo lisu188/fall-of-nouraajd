@@ -1,5 +1,7 @@
 #include "magicmissile.h"
 
+#include <creatures/creature.h>
+
 MagicMissile::MagicMissile()
 {
     className="MagicMissile";

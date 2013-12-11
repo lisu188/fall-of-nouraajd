@@ -1,6 +1,8 @@
 #include "strike.h"
 #include "items/weapons/weapon.h"
 
+#include <creatures/creature.h>
+
 Strike::Strike()
 {
     className="Strike";

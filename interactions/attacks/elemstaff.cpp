@@ -1,5 +1,7 @@
 #include "elemstaff.h"
 
+#include <creatures/creature.h>
+
 ElemStaff::ElemStaff()
 {
     className="ElemStaff";
