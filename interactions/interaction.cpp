@@ -18,6 +18,7 @@
 #include <interactions/skills/stunner.h>
 
 #include <interactions/spells/abyssalshadows.h>
+#include <interactions/spells/armorofendlesswinter.h>
 #include <interactions/spells/chaosblast.h>
 #include <interactions/spells/devour.h>
 #include <interactions/spells/endlesspain.h>
@@ -121,6 +122,9 @@ Interaction *Interaction::getAction(std::string name)
     else if(name.compare("Devour")==0)
     {
         return new Devour();
+    }    else if(name.compare("ArmorOfEndlessWinter")==0)
+    {
+        return new ArmorOfEndlessWinter();
     }
     return 0;
 }

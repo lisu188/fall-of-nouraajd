@@ -43,11 +43,13 @@
         ,
 "4" : "EndlessPain"
         ,
-"5" : "ShadowBolt"
+"5":"ArmorOfEndlessWinter"
         ,
-"6" : "Devour"
+"7" : "ShadowBolt"
         ,
-"7" : "ChaosBlast"
+"8" : "Devour"
+        ,
+"10" : "ChaosBlast"
     },
 
 "items" :
