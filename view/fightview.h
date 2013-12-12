@@ -12,6 +12,7 @@ public:
     static Creature *selected;
 
 public:
+    void update();
     virtual QRectF boundingRect() const;
     virtual void paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget);
 };

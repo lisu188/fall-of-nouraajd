@@ -13,16 +13,9 @@ FightView::FightView()
     setVisible(false);
 }
 
-
-QRectF FightView::boundingRect() const
-{
-    return QRectF(0,0,400,300);
-}
-
-void FightView::paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget)
+void FightView::update()
 {
     Player *player=GameScene::getPlayer();
-    painter->fillRect(boundingRect(),QColor("BLACK"));
     std::list<Creature*> *creatures=player->getFightList();
     std::list<Creature*>::iterator it;
     int i=0;
@@ -32,6 +25,18 @@ void FightView::paint(QPainter *painter, const QStyleOptionGraphicsItem *option,
         fightView->setParentItem(this);
         fightView->setPos((i%4)*100,(i/4*100));
     }
+    QGraphicsItem::update();
+}
+
+
+QRectF FightView::boundingRect() const
+{
+    return QRectF(0,0,400,300);
+}
+
+void FightView::paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget)
+{
+    painter->fillRect(boundingRect(),QColor("BLACK"));
 }
 
 
