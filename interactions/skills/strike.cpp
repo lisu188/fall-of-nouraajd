@@ -1,5 +1,5 @@
 #include "strike.h"
-#include "items/weapons/weapon.h"
+#include "items/weapon.h"
 
 #include <creatures/creature.h>
 

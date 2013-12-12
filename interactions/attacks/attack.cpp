@@ -2,7 +2,7 @@
 
 #include <creatures/creature.h>
 
-#include <items/weapons/weapon.h>
+#include <items/weapon.h>
 
 Attack::Attack()
 {

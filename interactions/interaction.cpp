@@ -8,7 +8,7 @@
 #include <view/playerstatsview.h>
 #include <view/fightview.h>
 
-#include <items/armors/armor.h>
+#include <items/armor.h>
 #include <QDebug>
 
 

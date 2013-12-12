@@ -1,8 +1,6 @@
 #include "endlesspain.h"
 
-#include <stats/damage.h>
 #include <effects/endlesspaineffect.h>
-#include <items/weapons/weapon.h>
 #include <creatures/creature.h>
 
 EndlessPain::EndlessPain()

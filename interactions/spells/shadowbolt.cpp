@@ -1,7 +1,7 @@
 #include "shadowbolt.h"
 
 #include <effects/abyssalshadowseffect.h>
-#include <items/weapons/weapon.h>
+#include <items/weapon.h>
 #include <stats/stats.h>
 #include <creatures/creature.h>
 

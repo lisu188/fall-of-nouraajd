@@ -5,9 +5,9 @@
 #include <view/gameview.h>
 
 
-Weapon::Weapon()
+Weapon::Weapon(char *path)
 {
-    className="Weapon";
+    initializeFromFile(path);
 }
 
 Interaction *Weapon::getInteraction() {
