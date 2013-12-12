@@ -17,9 +17,7 @@ public:
     Player(char *path, Map *map, int x, int y);
     ~Player();
 
-    std::list<Item *>* getLoot() {
-        return &inventory;
-    }
+    std::list<Item *>* getLoot();
 
     virtual void fight(Creature *creature);
 
@@ -29,34 +27,20 @@ public:
     void doLock();
     bool isLock();
 
-
-    void addItem(std::list<Item *> *items);
-
-    void addItem(Item *item);
-    void loseItem(Item *item);
-
     void update();
-
-    std::list<Item*> *getInventory();
+    void updateViews();
 
     PlayerStatsView *getStatsView();
     PlayerListView *getInventoryView();
     PlayerListView *getSkillsView();
 
     void addToFightList(Creature *creature);
-    std::list<Creature *> *getFightList();
+    void removeFromFightList(Creature *creature);
 
+    std::list<Creature *> *getFightList();
     void *performAction(Interaction *action,Creature *creature);
 
-    void defeatCreature(Creature *creature);
-protected:
-
-
-    int gold;
-
-    std::list<Item*> inventory;
 private:
-
     PlayerStatsView *playerStatsView;
     PlayerListView *playerInventoryView;
     PlayerListView *playerSkillsView;

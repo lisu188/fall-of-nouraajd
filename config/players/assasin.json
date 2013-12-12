@@ -38,6 +38,10 @@
 "1" : "SneakAttack"
         ,
 "5 " : "Stunner"
-    }
+    },
+"items" :
+    [
+        "Dagger", "LeatherArmor"
+    ]
 
 }

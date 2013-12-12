@@ -44,6 +44,7 @@ Creature::Creature(char *path, Map *map, int x, int y)
   alive = true;
   weapon = 0;
   armor = 0;
+  gold = 0;
 
   addAction(new Attack());
   initializeFromFile(path);
@@ -152,6 +153,29 @@ void Creature::addEffect(Effect *effect) {
   effects.push_back(effect);
 }
 
+void Creature::addItem(std::list<Item *> *items) {
+  inventory.merge(*items);
+  // Players show their inventory; a creature still being constructed is not yet one.
+  Player *player = dynamic_cast<Player *>(this);
+  if (player)
+    player->updateViews();
+}
+
+void Creature::addItem(Item *item) {
+  std::list<Item *> list;
+  list.push_back(item);
+  addItem(&list);
+}
+
+void Creature::loseItem(Item *item) {
+  inventory.remove(item);
+  Player *player = dynamic_cast<Player *>(this);
+  if (player)
+    player->updateViews();
+}
+
+std::list<Item *> *Creature::getInventory() { return &inventory; }
+
 int Creature::getMana() { return mana; }
 
 void Creature::addMana(int i) {
@@ -238,6 +262,15 @@ void Creature::initializeFromFile(char *path) {
   sw = config.get("sw", 0).asInt();
   stats.init(config["initStats"]);
   bonusLevel.init(config["levelStats"]);
+
+  std::list<Item *> items;
+  Json::Value names = config["items"];
+  for (unsigned int i = 0; i < names.size(); i++) {
+    Item *item = Item::getItem(names[i].asCString());
+    if (item)
+      items.push_back(item);
+  }
+  addItem(&items);
 
   attribChange();
   heal(0);

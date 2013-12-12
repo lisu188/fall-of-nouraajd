@@ -1,7 +1,7 @@
 # Recovered game snapshot
 
-Original commit: `2c626dc3beea8f1405e7250ab52724bb77d41e86`. Original tree: `e4c69b6564310ebaa622a6333504a0230ad2a445`.
-Startup was verified from identical recovered sources at `2c626dc3beea8f1405e7250ab52724bb77d41e86`.
+Original commit: `3a165015af6c10f22c9951cc65ebf2d2150a89cc`. Original tree: `ffda04a28a833dc10e2831de0d7358270de57a28`.
+Startup was verified from identical recovered sources at `3a165015af6c10f22c9951cc65ebf2d2150a89cc`.
 
 This recovered version compiled and linked on Linux, started the real game on an isolated Xvfb display,
 loaded its map and a healthy player, rendered the screenshot below, and exited normally.
@@ -37,9 +37,9 @@ launches run the game's original entry point. Startup evidence does not establis
 
 compatibilityRepair: 1, exactOriginal: 33, reconstruction: 15.
 
-- `Game.pro`: content reconstruction of the BFG-removed original; qmake project regenerated with 62 sources from object_script.Game.Debug; settings from intact d23993e8:Game.pro
-- `creatures/creature.cpp`: content reconstruction of the BFG-removed original; carried from the 5c4fab9c reconstruction with armor/weapon headers at their new items/ paths
-- `creatures/player.cpp`: content reconstruction of the BFG-removed original; carried from the 3096492a reconstruction; dropped includes of the item subclasses removed in this commit and included items/armor.h and items/weapon.h
+- `Game.pro`: content reconstruction of the BFG-removed original; qmake project regenerated from object_script.Game.Debug; settings from intact d23993e8:Game.pro
+- `creatures/creature.cpp`: content reconstruction of the BFG-removed original; from the c6dbc139 reconstruction: inventory, gold and addItem/loseItem/getInventory moved into Creature (same-commit creature.h/player.h), starting items from the configuration's items list through the surviving Item::getItem
+- `creatures/player.cpp`: content reconstruction of the BFG-removed original; from the 14bed295 reconstruction: inventory functions moved to Creature, out-of-line getLoot, updateViews and removeFromFightList, defeat handling folded back into performAction (defeatCreature removed from player.h)
 - `images/tiles/grass/0.png`: unverified donor reconstruction; c049ac73064442354af6224d06fe1c8b847bb8d9:images/tiles/grass/0.png; headerMatch=0; apiOverlap=0/10000; distance=105 Verified by build and startup of afdd8069 (recovery/evidence/second-original).
 - `images/tiles/ground/0.png`: unverified donor reconstruction; c049ac73064442354af6224d06fe1c8b847bb8d9:images/tiles/ground/0.png; headerMatch=0; apiOverlap=0/10000; distance=105 Verified by build and startup of afdd8069 (recovery/evidence/second-original).
 - `images/tiles/mountain/0.png`: unverified donor reconstruction; 152007b28631784d3c5e17f2686eb6ef9ff30e46:images/tiles/mountain/0.png; headerMatch=0; apiOverlap=0/10000; distance=155 Verified by build and startup of afdd8069 (recovery/evidence/second-original).
@@ -51,10 +51,10 @@ compatibilityRepair: 1, exactOriginal: 33, reconstruction: 15.
 - `json/json_writer.cpp`: unverified upstream reconstruction; https://github.com/open-source-parsers/jsoncpp/tree/4fce396c9d3e27a8ab8fb88e94c1676e021ae3a6
 - `map/map.cpp`: content reconstruction of the BFG-removed original; reconstructed against the original map.h/tile.h API (private AnimatedObject bases, Tile::addToGame, Destroyer-owned objects); Player comes through view/gamescene.h so the same file builds before and after creatures/players/ moved; carried unchanged across the 4a6a0310 source reformat
 - `stats/stats.cpp`: content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of 1056f5a1bb90ad6555a946e3ee2e95334ea0cca5 (previous version of stats/stats.cpp); compiles in 3e4cc2a9d557307a635f980f58d11e04c61b2b8d
-- `view/gamescene.cpp`: content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of 87d8078c26 (previous version of view/gamescene.cpp)
+- `view/gamescene.cpp`: content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of 6e5718200d (previous version of view/gamescene.cpp)
 - `json/LICENSE`: https://github.com/open-source-parsers/jsoncpp/tree/4fce396c9d3e27a8ab8fb88e94c1676e021ae3a6 upstream distribution license
 
-Restored source fingerprint: `4a20ddb5d1a9a7feea51db3059d35aec28e8dd480c57e254994b284a33ad22ad`.
+Restored source fingerprint: `215b5cb2bb73b4a8ef8d9f3bbc9a997af6e5280608225b1ffd3287a4a8be4455`.
 
 The actual 1278 × 718 screenshot and [verification metadata](recovery/verification.json) belong to
 this source version. Reconstructed code and borrowed assets are identified in that metadata; they are

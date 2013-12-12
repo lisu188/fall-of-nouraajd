@@ -1,4 +1,6 @@
 {
+"type" : "weapon"
+    ,
 "name" : "Sword"
     ,
 "path" : "images/items/weapons/sword/"
