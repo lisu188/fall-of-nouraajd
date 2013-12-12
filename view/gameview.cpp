@@ -39,6 +39,7 @@ void GameView::showFightView()
     fightView->setVisible(true);
     fightView->setPos(mapToScene(this->width()/2-fightView->boundingRect().width()/2,this->height()/2
                                  -fightView->boundingRect().height()/2));
+    fightView->update();
 }
 
 void GameView::mouseDoubleClickEvent(QMouseEvent *e) {
