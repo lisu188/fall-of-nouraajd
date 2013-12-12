@@ -60,5 +60,7 @@ INPUT(
 ./release\potioneffect.o
 ./release\lifepotioneffect.o
 ./release\manapotioneffect.o
+./release\armorofendlesswinter.o
+./release\armorofendlesswintereffect.o
 ./release\moc_animatedobject.o
 );
