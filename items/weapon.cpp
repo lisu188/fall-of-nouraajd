@@ -5,7 +5,7 @@
 #include <view/gameview.h>
 
 
-Weapon::Weapon(char *path)
+Weapon::Weapon(const char* path)
 {
     initializeFromFile(path);
 }

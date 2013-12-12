@@ -6,7 +6,9 @@
 #include <stats/stats.h>
 #include <QDebug>
 #include <json/json.h>
+#include <items/armor.h>
 #include <fstream>
+#include <items/weapon.h>
 #include <interactions/interaction.h>
 
 Item::Item()
@@ -38,8 +40,27 @@ void Item::onUnequip(Creature *creature)
     qDebug() << creature->className.c_str()<<"unequipped"<<className.c_str();
 }
 
-Item *Item::getItem(char *name)
+Item *Item::getItem(const char *name)
 {
+    std::string path=name;
+    path="config/items/"+path+".json";
+    std::fstream jsonFileStream;
+    jsonFileStream.open (path);
+    if(!jsonFileStream.is_open()) {
+        jsonFileStream.open((std::string("assets:/")+path).c_str());
+    }
+    Json::Value config;
+    Json::Reader reader;
+    reader.parse( jsonFileStream, config );
+    jsonFileStream.close();
+    std::string type=config.get("type","").asString();
+    if(type.compare("weapon")==0)
+    {
+        return new Weapon(path.c_str());
+    } else if(type.compare("armor")==0) {
+        return new Armor(path.c_str());
+    }
+    return 0;
 }
 
 void Item::setAnimation(std::string path)
@@ -57,7 +78,7 @@ void Item::mousePressEvent(QGraphicsSceneMouseEvent *event)
     }
 }
 
-void Item::initializeFromFile(char *path)
+void Item::initializeFromFile(const char *path)
 {
     std::fstream jsonFileStream;
     jsonFileStream.open (path);

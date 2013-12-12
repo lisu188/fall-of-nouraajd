@@ -38,5 +38,10 @@
 "1" : "Strike"
         ,
 "5" : "DoubleAttack"
-    }
+    },
+
+"items" :
+    [
+        "Sword", "PlateArmor"
+    ]
 }

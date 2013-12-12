@@ -8,7 +8,7 @@
 class Armor : public Item
 {
 public:
-    Armor(char *path);
+    Armor(const char *path);
     Interaction *getInteraction();
 
 protected:

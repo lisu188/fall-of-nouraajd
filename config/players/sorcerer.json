@@ -48,5 +48,10 @@
 "6" : "Devour"
         ,
 "7" : "ChaosBlast"
-    }
+    },
+
+"items" :
+    [
+        "Robe", "Staff"
+    ]
 }

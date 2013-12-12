@@ -1,4 +1,6 @@
 {
+"type" : "weapon"
+    ,
 "name" : "ChaosSword"
     ,
 "path" : "images/items/weapons/chaossword/"

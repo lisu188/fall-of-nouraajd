@@ -74,7 +74,14 @@ public:
 
     Stats *getLevelBonus();
     Interaction *getLevelAction();
+
+    void addItem(std::list<Item *> *items);
+    void addItem(Item *item);
+    void loseItem(Item *item);
+    std::list<Item *> *getInventory();
 protected:
+    int gold;
+    std::list<Item*> inventory;
     int exp;
     int level;
     int sw;

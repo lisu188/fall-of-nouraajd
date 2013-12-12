@@ -1,4 +1,6 @@
 {
+"type" : "weapon"
+    ,
 "name" : "Dagger"
     ,
 "path" : "images/items/weapons/dagger/"
