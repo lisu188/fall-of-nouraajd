@@ -14,10 +14,9 @@
 
 #include <view/gameview.h>
 
-#include <items/weapons/swords/chaossword.h>
-#include <items/weapons/swords/sword.h>
 
-#include <items/armors/platearmor.h>
+#include <items/armor.h>
+#include <items/weapon.h>
 #include <view/playerlistview.h>
 #include <stats/stats.h>
 #include <math.h>

@@ -2,10 +2,13 @@
 
 #include <view/gamescene.h>
 
-Armor::Armor()
+Armor::Armor(char *path)
 {
-    className="Armor";
-    interaction=0;
+    initializeFromFile(path);
+}
+
+Interaction *Armor::getInteraction() {
+    return interaction;
 }
 
 void Armor::onUse(Creature *creature)

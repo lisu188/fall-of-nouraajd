@@ -8,10 +8,8 @@
 class Armor : public Item
 {
 public:
-    Armor();
-    Interaction *getInteraction() {
-        return interaction;
-    }
+    Armor(char *path);
+    Interaction *getInteraction();
 
 protected:
     virtual void onUse(Creature *creature);

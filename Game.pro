@@ -27,7 +27,7 @@ SOURCES += main.cpp \
     buildings/building.cpp \
     buildings/towers/tower.cpp \
     buildings/towns/town.cpp \
-    items/weapons/weapon.cpp \
+    items/weapon.cpp \
     interactions/interaction.cpp \
     interactions/attacks/attack.cpp \
     interactions/spells/spell.cpp \
@@ -48,11 +48,8 @@ SOURCES += main.cpp \
     interactions/skills/doubleattack.cpp \
     interactions/skills/sneakattack.cpp \
     view/scrollobject.cpp \
-    items/weapons/swords/chaossword.cpp \
-    items/weapons/swords/sword.cpp \
     interactions/spells/chaosblast.cpp \
-    items/armors/armor.cpp \
-    items/armors/platearmor.cpp \
+    items/armor.cpp \
     items/potions/poisonpotion.cpp \
     items/potions/blesspotion.cpp \
     view/playerlistview.cpp \
@@ -60,13 +57,9 @@ SOURCES += main.cpp \
     destroyer/destroyer.cpp \
     interactions/skills/strike.cpp \
     interactions/spells/frostbolt.cpp \
-    items/armors/robe.cpp \
-    items/armors/leatherarmor.cpp \
     stats/stats.cpp \
     stats/damage.cpp \
     view/fightview.cpp \
-    items/weapons/dagger.cpp \
-    items/weapons/staff.cpp \
     json/json_writer.cpp \
     json/json_value.cpp \
     json/json_reader.cpp \
@@ -115,21 +108,14 @@ HEADERS  += \
     interactions/spells/magicmissile.h \
     interactions/spells/shadowbolt.h \
     interactions/spells/spell.h \
-    items/armors/armor.h \
-    items/armors/leatherarmor.h \
-    items/armors/platearmor.h \
-    items/armors/robe.h \
+    items/armor.h \
     items/item.h \
     items/potions/blesspotion.h \
     items/potions/lifepotion.h \
     items/potions/manapotion.h \
     items/potions/poisonpotion.h \
     items/potions/potion.h \
-    items/weapons/dagger.h \
-    items/weapons/staff.h \
-    items/weapons/swords/chaossword.h \
-    items/weapons/swords/sword.h \
-    items/weapons/weapon.h \
+    items/weapon.h \
     json/autolink.h \
     json/config.h \
     json/features.h \
