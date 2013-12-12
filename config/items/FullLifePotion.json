@@ -1,0 +1,9 @@
+{
+"type" : "potion"
+    ,
+"name" : "FullLifePotion"
+    ,
+"path" : "images/items/potions/life/"
+    ,
+    "power" : 5
+}

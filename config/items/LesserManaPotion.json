@@ -1,0 +1,9 @@
+{
+"type" : "potion"
+    ,
+"name" : "LesserManaPotion"
+    ,
+"path" : "images/items/potions/mana/"
+    ,
+    "power" : 1
+}

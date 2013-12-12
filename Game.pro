@@ -41,17 +41,12 @@ SOURCES += main.cpp \
     view/playerstatsview.cpp \
     view/gameview.cpp \
     view/gamescene.cpp \
-    items/potions/potion.cpp \
-    items/potions/lifepotion.cpp \
-    items/potions/manapotion.cpp \
     interactions/spells/magicmissile.cpp \
     interactions/skills/doubleattack.cpp \
     interactions/skills/sneakattack.cpp \
     view/scrollobject.cpp \
     interactions/spells/chaosblast.cpp \
     items/armor.cpp \
-    items/potions/poisonpotion.cpp \
-    items/potions/blesspotion.cpp \
     view/playerlistview.cpp \
     view/listitem.cpp \
     destroyer/destroyer.cpp \
@@ -74,7 +69,11 @@ SOURCES += main.cpp \
     interactions/spells/shadowbolt.cpp \
     interactions/spells/devour.cpp \
     creatures/player.cpp \
-    creatures/monster.cpp
+    creatures/monster.cpp \
+    items/potion.cpp \
+    potioneffects/potioneffect.cpp \
+    potioneffects/lifepotioneffect.cpp \
+    potioneffects/manapotioneffect.cpp
 
 HEADERS  += \
     animation/animatedobject.h \
@@ -110,11 +109,7 @@ HEADERS  += \
     interactions/spells/spell.h \
     items/armor.h \
     items/item.h \
-    items/potions/blesspotion.h \
-    items/potions/lifepotion.h \
-    items/potions/manapotion.h \
-    items/potions/poisonpotion.h \
-    items/potions/potion.h \
+    items/potion.h \
     items/weapon.h \
     json/autolink.h \
     json/config.h \
@@ -135,6 +130,9 @@ HEADERS  += \
     map/tiles/roadtile.h \
     map/tiles/tile.h \
     map/tiles/watertile.h \
+    potioneffects/lifepotioneffect.h \
+    potioneffects/manapotioneffect.h \
+    potioneffects/potioneffect.h \
     stats/damage.h \
     stats/stats.h \
     view/fightview.h \
