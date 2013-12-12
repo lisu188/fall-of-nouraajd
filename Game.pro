@@ -73,7 +73,9 @@ SOURCES += main.cpp \
     items/potion.cpp \
     potioneffects/potioneffect.cpp \
     potioneffects/lifepotioneffect.cpp \
-    potioneffects/manapotioneffect.cpp
+    potioneffects/manapotioneffect.cpp \
+    interactions/spells/armorofendlesswinter.cpp \
+    effects/armorofendlesswintereffect.cpp
 
 HEADERS  += \
     animation/animatedobject.h \
@@ -88,6 +90,7 @@ HEADERS  += \
     creatures/player.h \
     destroyer/destroyer.h \
     effects/abyssalshadowseffect.h \
+    effects/armorofendlesswintereffect.h \
     effects/effect.h \
     effects/endlesspaineffect.h \
     effects/stun.h \
@@ -100,6 +103,7 @@ HEADERS  += \
     interactions/skills/strike.h \
     interactions/skills/stunner.h \
     interactions/spells/abyssalshadows.h \
+    interactions/spells/armorofendlesswinter.h \
     interactions/spells/chaosblast.h \
     interactions/spells/devour.h \
     interactions/spells/endlesspain.h \
