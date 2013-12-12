@@ -52,6 +52,6 @@
 
 "items" :
     [
-        "Robe", "Staff"
+        "Robe", "Staff","LifePotion","ManaPotion"
     ]
 }

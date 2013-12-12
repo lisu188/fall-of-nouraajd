@@ -27,17 +27,12 @@ INPUT(
 ./debug\playerstatsview.o
 ./debug\gameview.o
 ./debug\gamescene.o
-./debug\potion.o
-./debug\lifepotion.o
-./debug\manapotion.o
 ./debug\magicmissile.o
 ./debug\doubleattack.o
 ./debug\sneakattack.o
 ./debug\scrollobject.o
 ./debug\chaosblast.o
 ./debug\armor.o
-./debug\poisonpotion.o
-./debug\blesspotion.o
 ./debug\playerlistview.o
 ./debug\listitem.o
 ./debug\destroyer.o
@@ -61,5 +56,9 @@ INPUT(
 ./debug\devour.o
 ./debug\player.o
 ./debug\monster.o
+./debug\potion.o
+./debug\potioneffect.o
+./debug\lifepotioneffect.o
+./debug\manapotioneffect.o
 ./debug\moc_animatedobject.o
 );

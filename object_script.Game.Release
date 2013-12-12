@@ -27,17 +27,12 @@ INPUT(
 ./release\playerstatsview.o
 ./release\gameview.o
 ./release\gamescene.o
-./release\potion.o
-./release\lifepotion.o
-./release\manapotion.o
 ./release\magicmissile.o
 ./release\doubleattack.o
 ./release\sneakattack.o
 ./release\scrollobject.o
 ./release\chaosblast.o
 ./release\armor.o
-./release\poisonpotion.o
-./release\blesspotion.o
 ./release\playerlistview.o
 ./release\listitem.o
 ./release\destroyer.o
@@ -61,5 +56,9 @@ INPUT(
 ./release\devour.o
 ./release\player.o
 ./release\monster.o
+./release\potion.o
+./release\potioneffect.o
+./release\lifepotioneffect.o
+./release\manapotioneffect.o
 ./release\moc_animatedobject.o
 );

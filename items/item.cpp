@@ -10,13 +10,12 @@
 #include <fstream>
 #include <items/weapon.h>
 #include <interactions/interaction.h>
+#include <items/potion.h>
 
 Item::Item()
 {
-    className="Item";
     singleUse=false;
     this->setZValue(1);
-    interaction=0;
 }
 
 bool Item::isSingleUse() {
@@ -60,7 +59,13 @@ Item *Item::getItem(const char *name)
     } else if(type.compare("armor")==0) {
         return new Armor(path.c_str());
     }
-    return 0;
+    else if(type.compare("potion")==0) {
+        return new Potion(path.c_str());
+    } else
+    {
+        std::exception e;
+        throw e;
+    }
 }
 
 void Item::setAnimation(std::string path)
@@ -93,4 +98,5 @@ void Item::initializeFromFile(const char *path)
     interaction=Interaction::getAction(config.get("interaction","").asString());
     setAnimation(config.get("path","").asCString());
     className=config.get("name","").asCString();
+    power=config.get("power",1).asInt();
 }

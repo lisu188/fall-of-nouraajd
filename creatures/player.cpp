@@ -5,10 +5,6 @@
 #include <view/gamescene.h>
 #include <view/playerstatsview.h>
 
-#include <items/potions/blesspotion.h>
-#include <items/potions/lifepotion.h>
-#include <items/potions/manapotion.h>
-#include <items/potions/poisonpotion.h>
 
 #include <view/playerlistview.h>
 
@@ -39,12 +35,6 @@ Player::Player(char *path,Map *map, int x, int y):Creature(path,map,x,y)
     GameScene::getGame()->addItem(playerStatsView);
     GameScene::getGame()->addItem(playerInventoryView);
     GameScene::getGame()->addItem(playerSkillsView);
-    std::list<Item *> list;
-    list.push_back(new LifePotion());
-    list.push_back(new ManaPotion());
-    list.push_back(new BlessPotion());
-    list.push_back(new PoisonPotion());
-    addItem(&list);
     updateViews();
 }
 

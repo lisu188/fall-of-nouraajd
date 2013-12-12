@@ -1,0 +1,9 @@
+{
+"type" : "potion"
+    ,
+"name" : "MaxManaPotion"
+    ,
+"path" : "images/items/potions/mana/"
+    ,
+    "power" : 4
+}
