@@ -45,6 +45,7 @@ Player::Player(char *path,Map *map, int x, int y):Creature(path,map,x,y)
     list.push_back(new BlessPotion());
     list.push_back(new PoisonPotion());
     addItem(&list);
+    updateViews();
 }
 
 Player::~Player()
@@ -61,25 +62,6 @@ void Player::onMove()
 
 void Player::onEnter()
 {
-}
-
-void Player::addItem(Item *item)
-{
-    std::list<Item *> list;
-    list.push_back(item);
-    addItem(&list);
-}
-
-void Player::addItem(std::list<Item*> *items)
-{
-    inventory.merge(*items);
-    playerInventoryView->update();
-}
-
-void Player::loseItem(Item *item)
-{
-    inventory.remove(item);
-    playerInventoryView->update();
 }
 
 void Player::update()
@@ -101,11 +83,6 @@ void Player::update()
     }
 }
 
-std::list<Item *> *Player::getInventory()
-{
-    return &inventory;
-}
-
 PlayerStatsView *Player::getStatsView() {
     return playerStatsView;
 }
@@ -122,6 +99,23 @@ PlayerListView *Player::getSkillsView()
 void Player::addToFightList(Creature *creature)
 {
     fightList.push_back(creature);
+}
+
+void Player::removeFromFightList(Creature *creature)
+{
+    fightList.remove(creature);
+}
+
+std::list<Item *> *Player::getLoot()
+{
+    return &inventory;
+}
+
+void Player::updateViews()
+{
+    playerStatsView->update();
+    playerInventoryView->update();
+    playerSkillsView->update();
 }
 
 std::list<Creature *> *Player::getFightList() {
@@ -155,7 +149,18 @@ void *Player::performAction(Interaction *action, Creature *creature)
         }
     }
     if(!creature->isAlive()) {
-        defeatCreature(creature);
+        qDebug()<<className.c_str()<<"defeated"<<creature->className.c_str()<<"\n";
+        addExpScaled(creature->getScale());
+        addItem(creature->getLoot());
+        creature->removeFromGame();
+        removeFromFightList(creature);
+        if(fightList.size()==0) {
+            GameScene::getView()->getFightView()->setVisible(false);
+            FightView::selected=0;
+        } else {
+            FightView::selected=fightList.front();
+        }
+        updateViews();
     } else {
         qDebug()<<"";
         for(std::list<Creature*>::iterator it=fightList.begin(); it!=fightList.end(); it++) {
@@ -169,21 +174,6 @@ void *Player::performAction(Interaction *action, Creature *creature)
     return 0;
 }
 
-void Player::defeatCreature(Creature *creature)
-{
-    qDebug()<<className.c_str()<<"defeated"<<creature->className.c_str()<<"\n";
-    addExpScaled(creature->getScale());
-    addItem(creature->getLoot());
-    creature->removeFromGame();
-    fightList.remove(creature);
-    if(fightList.size()==0) {
-        GameScene::getView()->getFightView()->setVisible(false);
-        FightView::selected=0;
-    } else {
-        FightView::selected=fightList.front();
-    }
-    playerStatsView->update();
-}
 
 
 

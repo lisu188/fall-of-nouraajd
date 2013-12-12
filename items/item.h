@@ -16,9 +16,8 @@ public:
     void setPos(QPointF point);
     virtual void onEquip(Creature *creature);
     virtual void onUnequip(Creature *creature);
-    \
 
-    static Item *getItem(char *name);
+    static Item *getItem(const char *name);
 
 protected:
     void setAnimation(std::string path);
@@ -27,7 +26,7 @@ protected:
     bool singleUse;
     Stats bonus;
     std::string className;
-    void initializeFromFile(char *path);
+    void initializeFromFile(const char *path);
     Interaction *interaction;
 };
 

@@ -2,7 +2,7 @@
 
 #include <view/gamescene.h>
 
-Armor::Armor(char *path)
+Armor::Armor(const char *path)
 {
     initializeFromFile(path);
 }
