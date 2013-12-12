@@ -2,9 +2,6 @@
 
 #include <view/gamescene.h>
 
-#include <items/potions/lifepotion.h>
-#include <items/potions/manapotion.h>
-
 Monster::Monster(char *path,Map *map,int x,int y):Creature(path,map,x,y)
 {
 }
@@ -75,10 +72,10 @@ std::list<Item *> *Monster::getLoot()
 {
     std::list<Item *>* list=new std::list<Item *>();
     if(rand()%3==0) {
-        list->push_back(new ManaPotion());
+        list->push_back(Item::getItem("ManaPotion"));
     }
     else {
-        list->push_back(new LifePotion());
+        list->push_back(Item::getItem("LifePotion"));
     }
     return list;
 }

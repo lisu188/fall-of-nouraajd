@@ -42,6 +42,6 @@
 
 "items" :
     [
-        "Sword", "PlateArmor"
+        "Sword", "PlateArmor","LifePotion","ManaPotion"
     ]
 }

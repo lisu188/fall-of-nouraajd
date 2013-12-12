@@ -1,0 +1,9 @@
+{
+"type" : "potion"
+    ,
+"name" : "MaxLifePotion"
+    ,
+"path" : "images/items/potions/life/"
+    ,
+    "power" : 4
+}

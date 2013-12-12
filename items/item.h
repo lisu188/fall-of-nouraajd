@@ -28,6 +28,7 @@ protected:
     std::string className;
     void initializeFromFile(const char *path);
     Interaction *interaction;
+    int power;
 };
 
 #endif // ITEM_H

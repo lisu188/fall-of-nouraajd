@@ -41,7 +41,7 @@
     },
 "items" :
     [
-        "Dagger", "LeatherArmor"
+        "Dagger", "LeatherArmor","LifePotion","ManaPotion"
     ]
 
 }
