@@ -7,8 +7,8 @@
 
 #include <interactions/attacks/attack.h>
 #include <interactions/interaction.h>
-#include <items/armors/armor.h>
-#include <items/weapons/weapon.h>
+#include <items/armor.h>
+#include <items/weapon.h>
 #include <stats/stats.h>
 #include <view/gamescene.h>
 #include <view/gameview.h>

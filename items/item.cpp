@@ -38,6 +38,10 @@ void Item::onUnequip(Creature *creature)
     qDebug() << creature->className.c_str()<<"unequipped"<<className.c_str();
 }
 
+Item *Item::getItem(char *name)
+{
+}
+
 void Item::setAnimation(std::string path)
 {
     AnimatedObject::setAnimation(path);
@@ -53,7 +57,7 @@ void Item::mousePressEvent(QGraphicsSceneMouseEvent *event)
     }
 }
 
-void Item::loadJsonFile(char *path)
+void Item::initializeFromFile(char *path)
 {
     std::fstream jsonFileStream;
     jsonFileStream.open (path);

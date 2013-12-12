@@ -34,11 +34,8 @@ INPUT(
 ./release\doubleattack.o
 ./release\sneakattack.o
 ./release\scrollobject.o
-./release\chaossword.o
-./release\sword.o
 ./release\chaosblast.o
 ./release\armor.o
-./release\platearmor.o
 ./release\poisonpotion.o
 ./release\blesspotion.o
 ./release\playerlistview.o
@@ -46,13 +43,9 @@ INPUT(
 ./release\destroyer.o
 ./release\strike.o
 ./release\frostbolt.o
-./release\robe.o
-./release\leatherarmor.o
 ./release\stats.o
 ./release\damage.o
 ./release\fightview.o
-./release\dagger.o
-./release\staff.o
 ./release\json_writer.o
 ./release\json_value.o
 ./release\json_reader.o

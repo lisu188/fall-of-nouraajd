@@ -34,11 +34,8 @@ INPUT(
 ./debug\doubleattack.o
 ./debug\sneakattack.o
 ./debug\scrollobject.o
-./debug\chaossword.o
-./debug\sword.o
 ./debug\chaosblast.o
 ./debug\armor.o
-./debug\platearmor.o
 ./debug\poisonpotion.o
 ./debug\blesspotion.o
 ./debug\playerlistview.o
@@ -46,13 +43,9 @@ INPUT(
 ./debug\destroyer.o
 ./debug\strike.o
 ./debug\frostbolt.o
-./debug\robe.o
-./debug\leatherarmor.o
 ./debug\stats.o
 ./debug\damage.o
 ./debug\fightview.o
-./debug\dagger.o
-./debug\staff.o
 ./debug\json_writer.o
 ./debug\json_value.o
 ./debug\json_reader.o
