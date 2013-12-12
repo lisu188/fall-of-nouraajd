@@ -22,6 +22,10 @@
 #include <stats/stats.h>
 #include <math.h>
 
+#include <interactions/interaction.h>
+#include <view/fightview.h>
+#include <QDebug>
+
 Player::Player(char *path,Map *map, int x, int y):Creature(path,map,x,y)
 {
     lock=false;
@@ -123,6 +127,63 @@ void Player::addToFightList(Creature *creature)
 
 std::list<Creature *> *Player::getFightList() {
     return &fightList;
+}
+
+void Player::unLock()
+{
+    lock=false;
+}
+
+void Player::doLock()
+{
+    lock=true;
+}
+
+bool Player::isLock()
+{
+    return lock;
+}
+
+void *Player::performAction(Interaction *action, Creature *creature)
+{
+    action->action(this,creature);
+    takeMana(action->getManaCost());
+    Armor *armor=creature->getArmor();
+    if(armor) {
+        Interaction *interaction=armor->getInteraction();
+        if(interaction) {
+            interaction->action(creature,this);
+        }
+    }
+    if(!creature->isAlive()) {
+        defeatCreature(creature);
+    } else {
+        qDebug()<<"";
+        for(std::list<Creature*>::iterator it=fightList.begin(); it!=fightList.end(); it++) {
+            (*it)->fight(this);
+        }
+    }
+    GameScene::getView()->getFightView()->update();
+    if(!isAlive()) {
+        GameScene::getView()->close();
+    }
+    return 0;
+}
+
+void Player::defeatCreature(Creature *creature)
+{
+    qDebug()<<className.c_str()<<"defeated"<<creature->className.c_str()<<"\n";
+    addExpScaled(creature->getScale());
+    addItem(creature->getLoot());
+    creature->removeFromGame();
+    fightList.remove(creature);
+    if(fightList.size()==0) {
+        GameScene::getView()->getFightView()->setVisible(false);
+        FightView::selected=0;
+    } else {
+        FightView::selected=fightList.front();
+    }
+    playerStatsView->update();
 }
 
 

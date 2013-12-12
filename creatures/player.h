@@ -25,15 +25,9 @@ public:
 
     void onMove();
     void onEnter();
-    void unLock() {
-        lock=false;
-    }
-    void doLock() {
-        lock=true;
-    }
-    bool isLock() {
-        return lock;
-    }
+    void unLock();
+    void doLock();
+    bool isLock();
 
 
     void addItem(std::list<Item *> *items);
@@ -52,6 +46,9 @@ public:
     void addToFightList(Creature *creature);
     std::list<Creature *> *getFightList();
 
+    void *performAction(Interaction *action,Creature *creature);
+
+    void defeatCreature(Creature *creature);
 protected:
 
 

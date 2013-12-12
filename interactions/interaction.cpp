@@ -11,15 +11,24 @@
 #include <items/armors/armor.h>
 #include <QDebug>
 
-#include <interactions/attacks/attack.h>
-#include <interactions/attacks/elemstaff.h>
+
 #include <interactions/skills/doubleattack.h>
 #include <interactions/skills/sneakattack.h>
 #include <interactions/skills/strike.h>
 #include <interactions/skills/stunner.h>
+
+#include <interactions/spells/abyssalshadows.h>
 #include <interactions/spells/chaosblast.h>
+#include <interactions/spells/devour.h>
+#include <interactions/spells/endlesspain.h>
 #include <interactions/spells/frostbolt.h>
 #include <interactions/spells/magicmissile.h>
+#include <interactions/spells/shadowbolt.h>
+
+#include <interactions/attacks/attack.h>
+#include <interactions/attacks/elemstaff.h>
+#include <list>
+#include <creatures/creature.h>
 
 
 Interaction::Interaction()
@@ -30,7 +39,6 @@ Interaction::Interaction()
 
 Interaction::~Interaction()
 {
-
 }
 
 void Interaction::action(Creature *first, Creature *second)
@@ -40,8 +48,7 @@ void Interaction::action(Creature *first, Creature *second)
              << second->className.c_str();
 }
 
-int Interaction::getManaCost()
-{
+int Interaction::getManaCost() {
     return manaCost;
 }
 
@@ -53,80 +60,68 @@ void Interaction::setAnimation(std::string path)
 void Interaction::mousePressEvent(QGraphicsSceneMouseEvent *event)
 {
     Player *player=GameScene::getPlayer();
-    if(player->getFightList()->size()==0)return;
-    if(manaCost>player->getMana())return;
+    if(player->getFightList()->size()==0) {
+        return;
+    }
+    if(manaCost>player->getMana()) {
+        return;
+    }
     Creature *creature=FightView::selected;
-    if(!creature)return;
-    action(player,creature);
-    player->takeMana(manaCost);
-
-    Armor *armor=creature->getArmor();
-    if(armor)
-    {
-        Interaction *interaction=armor->getInteraction();
-        if(interaction)interaction->action(creature,player);
+    if(!creature) {
+        return;
     }
-
-    if(!creature->isAlive())
-    {
-        qDebug()<<player->className.c_str()<<"defeated"<<creature->className.c_str()<<"\n";
-        player->addExpScaled(creature->getScale());
-        player->addItem(creature->getLoot());
-        creature->removeFromGame();
-        player->getFightList()->remove(creature);
-        if(player->getFightList()->size()==0)
-        {
-            GameScene::getView()->getFightView()->setVisible(false);
-            FightView::selected=0;
-        }
-        else
-        {
-            FightView::selected=player->getFightList()->front();
-        }
-        player->getStatsView()->update();
-    } else
-    {
-        qDebug()<<"";
-        for(std::list<Creature*>::iterator it=player->getFightList()->begin();
-                it!=player->getFightList()->end(); it++)
-        {
-            (*it)->fight(player);
-        }
-    }
-    GameScene::getView()->getFightView()->update();
-    if(!player->isAlive()) {
-        GameScene::getView()->close();
-    }
+    player->performAction(this,creature);
 }
 
 Interaction *Interaction::getAction(std::string name)
 {
-    if(name=="Attack") {
-        return new Attack();
+    if(name.compare("")==0) {
+        return 0;
     }
-    if(name=="ElemStaff") {
+    if(name.compare("Attack")==0)
+    {
+        return new Attack();
+    } else if(name.compare("DoubleAttack")==0)
+    {
+        return new DoubleAttack();
+    } else if(name.compare("SneakAttack")==0)
+    {
+        return new SneakAttack();
+    } else if(name.compare("Strike")==0)
+    {
+        return new Strike();
+    } else if(name.compare("Stunner")==0)
+    {
+        return new Stunner();
+    } else if(name.compare("ChaosBlast")==0)
+    {
+        return new ChaosBlast();
+    } else if(name.compare("FrostBolt")==0)
+    {
+        return new FrostBolt();
+    } else if(name.compare("MagicMissile")==0)
+    {
+        return new MagicMissile();
+    } else if(name.compare("ElemStaff")==0)
+    {
         return new ElemStaff();
     }
-    if(name=="DoubleAttack") {
-        return new DoubleAttack();
+    else if(name.compare("AbyssalShadows")==0)
+    {
+        return new AbyssalShadows();
     }
-    if(name=="SneakAttack") {
-        return new SneakAttack();
+    else if(name.compare("EndlessPain")==0)
+    {
+        return new EndlessPain();
     }
-    if(name=="Strike") {
-        return new Strike();
+    else if(name.compare("ShadowBolt")==0)
+    {
+        return new ShadowBolt();
     }
-    if(name=="Stunner") {
-        return new Stunner();
-    }
-    if(name=="ChaosBlast") {
-        return new ChaosBlast();
-    }
-    if(name=="FrostBolt") {
-        return new FrostBolt();
-    }
-    if(name=="MagicMissile") {
-        return new MagicMissile();
+    else if(name.compare("Devour")==0)
+    {
+        return new Devour();
     }
     return 0;
 }
+
