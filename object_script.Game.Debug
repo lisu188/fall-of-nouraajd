@@ -57,9 +57,6 @@ INPUT(
 ./debug\player.o
 ./debug\monster.o
 ./debug\potion.o
-./debug\potioneffect.o
-./debug\lifepotioneffect.o
-./debug\manapotioneffect.o
 ./debug\armorofendlesswinter.o
 ./debug\armorofendlesswintereffect.o
 ./debug\configurationprovider.o

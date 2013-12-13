@@ -1,18 +1,31 @@
 #include "potion.h"
 #include <QDebug>
 #include <creatures/creature.h>
-#include <interactions/interaction.h>
-#include <potioneffects/potioneffect.h>
 
 Potion::Potion(const char *path)
 {
     singleUse=true;
     initializeFromFile(path);
-    effect=PotionEffect::getPotionEffect(className.c_str());
+    if((std::string(path).find("LifePotion") != std::string::npos))
+    {
+        effect=&LifeEffect;
+    } else if(std::string(path).find("ManaPotion") != std::string::npos) {
+        effect=&ManaEffect;
+    }
 }
 
 void Potion::onUse(Creature *creature)
 {
     qDebug() << creature->className.c_str() << "used" << className.c_str();
-    effect->effect(creature,power);
+    effect(creature,power);
+}
+
+void LifeEffect(Creature *creature,int power)
+{
+    creature->healProc(power*20);
+}
+
+void ManaEffect(Creature *creature,int power)
+{
+    creature->addManaProc(power*20);
 }
