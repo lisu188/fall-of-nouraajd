@@ -36,8 +36,13 @@ void GameView::resize()
 
 void GameView::showFightView()
 {
+    std::list<Creature *> *fightlist=GameScene::getPlayer()->getFightList();
+    FightView::selected=fightlist->front();
+    for(std::list<Creature*>::iterator it=fightlist->begin(); it!=fightlist->end(); it++)
+    {
+        qDebug()<<(*it)->className.c_str()<<"attacked"<<GameScene::getPlayer()->className.c_str();
+    }
     qDebug()<<"";
-    FightView::selected=GameScene::getPlayer()->getFightList()->front();
     fightView->setVisible(true);
     fightView->setPos(mapToScene(this->width()/2-fightView->boundingRect().width()/2,this->height()/2
                                  -fightView->boundingRect().height()/2));

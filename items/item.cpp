@@ -30,14 +30,14 @@ void Item::setPos(QPointF point)
 
 void Item::onEquip(Creature *creature)
 {
-    creature->getStats()->addBonus(&bonus);
-    qDebug() << creature->className.c_str()<<"equipped"<<className.c_str();
+    creature->getStats()->addBonus(bonus);
+    qDebug() << creature->className.c_str()<<"equipped"<<className.c_str()<<"\n";
 }
 
 void Item::onUnequip(Creature *creature)
 {
-    creature->getStats()->removeBonus(&bonus);
-    qDebug() << creature->className.c_str()<<"unequipped"<<className.c_str();
+    creature->getStats()->removeBonus(bonus);
+    qDebug() << creature->className.c_str()<<"unequipped"<<className.c_str()<<"\n";
 }
 
 Item *Item::getItem(const char *name)
@@ -78,7 +78,7 @@ void Item::initializeFromFile(const char *path)
 {
     Json::Value *config=ConfigurationProvider::getConfig(path);
     bonus.init((*config)["bonus"]);
-    interaction=Interaction::getAction(config->get("interaction","").asString());
+    interaction=Interaction::getInteraction(config->get("interaction","").asString());
     setAnimation(config->get("path","").asCString());
     className=config->get("name","").asCString();
     power=config->get("power",1).asInt();

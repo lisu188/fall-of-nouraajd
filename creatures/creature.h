@@ -72,13 +72,14 @@ public:
     void addExpScaled(int scale);
     void addExp(int exp);
 
-    Stats *getLevelBonus();
+    Stats getLevelBonus();
     Interaction *getLevelAction();
 
     void addItem(std::list<Item *> *items);
     void addItem(Item *item);
     void loseItem(Item *item);
     std::list<Item *> *getInventory();
+    std::string getCoordsString();
 protected:
     int gold;
     std::list<Item*> inventory;

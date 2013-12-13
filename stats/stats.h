@@ -9,8 +9,8 @@ public:
     void setMain(const char* stat);
     int getMain();
 
-    void addBonus(Stats *stats);
-    void removeBonus(Stats *stats);
+    void addBonus(Stats stats);
+    void removeBonus(Stats stats);
 
     int getStrength() const;
     void setStrength(int value);
