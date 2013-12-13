@@ -1,7 +1,7 @@
 # Recovered game snapshot
 
-Original commit: `feb27f5300dab7878fbdbc40df2126b0d1e8e4ff`. Original tree: `d59f9f9105d89590a7b27ffc74f7a749f3f18dd1`.
-Startup was verified from identical recovered sources at `feb27f5300dab7878fbdbc40df2126b0d1e8e4ff`.
+Original commit: `3cc699ff0c3ee07dfbca1793828cbe2ee4298932`. Original tree: `7feb3bc67f589976d94fb9ddc23cec95a085d078`.
+Startup was verified from identical recovered sources at `3cc699ff0c3ee07dfbca1793828cbe2ee4298932`.
 
 This recovered version compiled and linked on Linux, started the real game on an isolated Xvfb display,
 loaded its map and a healthy player, rendered the screenshot below, and exited normally.
@@ -37,8 +37,8 @@ launches run the game's original entry point. Startup evidence does not establis
 
 compatibilityRepair: 1, exactOriginal: 34, reconstruction: 15.
 
-- `Game.pro`: content reconstruction of the BFG-removed original; qmake project regenerated with 63 sources from object_script.Game.Debug; settings from intact d23993e8:Game.pro
-- `creatures/creature.cpp`: content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of 7859caf8ac (previous version of creatures/creature.cpp)
+- `Game.pro`: content reconstruction of the BFG-removed original; qmake project regenerated with 64 sources from object_script.Game.Debug; settings from intact d23993e8:Game.pro
+- `creatures/creature.cpp`: content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of 33a4078c8428a57a35c744b645c707cbf40d9a64 (previous version of creatures/creature.cpp)
 - `creatures/player.cpp`: content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of e550689d8e13c4bd58c34c9007da23103bde25bd (previous version of creatures/player.cpp)
 - `images/tiles/grass/0.png`: unverified donor reconstruction; c049ac73064442354af6224d06fe1c8b847bb8d9:images/tiles/grass/0.png; headerMatch=0; apiOverlap=0/10000; distance=105 Verified by build and startup of afdd8069 (recovery/evidence/second-original).
 - `images/tiles/ground/0.png`: unverified donor reconstruction; c049ac73064442354af6224d06fe1c8b847bb8d9:images/tiles/ground/0.png; headerMatch=0; apiOverlap=0/10000; distance=105 Verified by build and startup of afdd8069 (recovery/evidence/second-original).
@@ -54,7 +54,7 @@ compatibilityRepair: 1, exactOriginal: 34, reconstruction: 15.
 - `view/gamescene.cpp`: content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of 6e5718200d (previous version of view/gamescene.cpp)
 - `json/LICENSE`: https://github.com/open-source-parsers/jsoncpp/tree/4fce396c9d3e27a8ab8fb88e94c1676e021ae3a6 upstream distribution license
 
-Restored source fingerprint: `6d7524c646659840eae178f105b81811361f41655d674c12e43cf4209abb2aff`.
+Restored source fingerprint: `c95411aef2221c964231087b817a8a767f832d2c116ff72c6427aa43c14b40e5`.
 
 The actual 1278 × 718 screenshot and [verification metadata](recovery/verification.json) belong to
 this source version. Reconstructed code and borrowed assets are identified in that metadata; they are
