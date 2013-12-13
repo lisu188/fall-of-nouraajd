@@ -1,5 +1,9 @@
 #include "destroyer.h"
 
+#include <configuration/configurationprovider.h>
+
+#include <animation/animationprovider.h>
+
 Destroyer *Destroyer::instance=0;
 
 Destroyer::Destroyer()
@@ -12,6 +16,9 @@ Destroyer::~Destroyer()
     {
         delete *this->begin();
     }
+    this->clear();
+    AnimationProvider::terminate();
+    ConfigurationProvider::terminate();
 }
 
 void Destroyer::add(AnimatedObject *object)
