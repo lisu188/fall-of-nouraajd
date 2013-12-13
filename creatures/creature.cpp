@@ -5,7 +5,6 @@
 #include <fstream>
 #include <sstream>
 
-#include <interactions/attacks/attack.h>
 #include <interactions/interaction.h>
 #include <items/armor.h>
 #include <items/weapon.h>
@@ -46,7 +45,7 @@ Creature::Creature(char *path, Map *map, int x, int y)
   armor = 0;
   gold = 0;
 
-  addAction(new Attack());
+  addAction(Interaction::getInteraction("Attack"));
   initializeFromFile(path);
   levelUp();
 }
@@ -124,7 +123,7 @@ void Creature::fight(Creature *creature) {
 
   Interaction *action = selectAction();
   if (action) {
-    action->action(this, creature);
+    action->onAction(this, creature);
   }
 }
 
@@ -176,6 +175,12 @@ void Creature::loseItem(Item *item) {
 
 std::list<Item *> *Creature::getInventory() { return &inventory; }
 
+std::string Creature::getCoordsString() {
+  std::ostringstream coords;
+  coords << "(" << getPosX() << "," << getPosY() << ")";
+  return coords.str();
+}
+
 int Creature::getMana() { return mana; }
 
 void Creature::addMana(int i) {
@@ -224,7 +229,7 @@ Stats *Creature::getStats() { return &stats; }
 
 int Creature::getScale() { return level + sw; }
 
-Stats *Creature::getLevelBonus() { return &bonusLevel; }
+Stats Creature::getLevelBonus() { return bonusLevel; }
 
 // The creature's configuration names the interaction learned at each level.
 Interaction *Creature::getLevelAction() {
@@ -240,7 +245,7 @@ Interaction *Creature::getLevelAction() {
 
   std::ostringstream key;
   key << level;
-  return Interaction::getAction(config["levelling"].get(key.str(), "").asString());
+  return Interaction::getInteraction(config["levelling"].get(key.str(), "").asString());
 }
 
 bool Creature::isAlive() const { return alive; }

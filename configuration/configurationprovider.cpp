@@ -52,5 +52,5 @@ void ConfigurationProvider::loadConfig(std::string path)
     reader.parse( jsonFileStream, *config );
     jsonFileStream.close();
     this->insert(std::pair<std::string,Json::Value*>(path,config));
-    qDebug() << "Loaded configuration:" << path.c_str();
+    qDebug() << "Loaded configuration:" << path.c_str()<<"\n";
 }

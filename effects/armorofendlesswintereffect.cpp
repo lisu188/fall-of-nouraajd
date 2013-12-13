@@ -13,7 +13,7 @@ ArmorOfEndlessWinterEffect::ArmorOfEndlessWinterEffect(Creature *caster, int dur
 bool ArmorOfEndlessWinterEffect::apply(Creature *creature)
 {
     if(dur==1) {
-        creature->getStats()->removeBonus(&bonusArmor);
+        creature->getStats()->removeBonus(bonusArmor);
     }
     creature->healProc(20);
     return false&&Effect::apply(creature);//must implement ban to other skills

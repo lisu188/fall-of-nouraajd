@@ -27,56 +27,50 @@ void Stats::setMain(const char *stat) {
 
 int Stats::getMain() { return main ? *main : 0; }
 
-void Stats::addBonus(Stats *stats) {
-  if (!stats)
-    return;
+void Stats::addBonus(Stats stats) {
+  strength += stats.getStrength();
+  stamina += stats.getStamina();
+  agility += stats.getAgility();
+  intelligence += stats.getIntelligence();
 
-  strength += stats->getStrength();
-  stamina += stats->getStamina();
-  agility += stats->getAgility();
-  intelligence += stats->getIntelligence();
+  armor += stats.getArmor();
+  block += stats.getBlock();
 
-  armor += stats->getArmor();
-  block += stats->getBlock();
+  dmgMin += stats.getDmgMin();
+  dmgMax += stats.getDmgMax();
+  hit += stats.getHit();
+  crit += stats.getCrit();
 
-  dmgMin += stats->getDmgMin();
-  dmgMax += stats->getDmgMax();
-  hit += stats->getHit();
-  crit += stats->getCrit();
+  fireResist += stats.getFireResist();
+  thunderResist += stats.getThunderResist();
+  frostResist += stats.getFrostResist();
+  normalResist += stats.getNormalResist();
 
-  fireResist += stats->getFireResist();
-  thunderResist += stats->getThunderResist();
-  frostResist += stats->getFrostResist();
-  normalResist += stats->getNormalResist();
-
-  damage += stats->getDamage();
-  attack += stats->getAttack();
+  damage += stats.getDamage();
+  attack += stats.getAttack();
 }
 
-void Stats::removeBonus(Stats *stats) {
-  if (!stats)
-    return;
+void Stats::removeBonus(Stats stats) {
+  strength -= stats.getStrength();
+  stamina -= stats.getStamina();
+  agility -= stats.getAgility();
+  intelligence -= stats.getIntelligence();
 
-  strength -= stats->getStrength();
-  stamina -= stats->getStamina();
-  agility -= stats->getAgility();
-  intelligence -= stats->getIntelligence();
+  armor -= stats.getArmor();
+  block -= stats.getBlock();
 
-  armor -= stats->getArmor();
-  block -= stats->getBlock();
+  dmgMin -= stats.getDmgMin();
+  dmgMax -= stats.getDmgMax();
+  hit -= stats.getHit();
+  crit -= stats.getCrit();
 
-  dmgMin -= stats->getDmgMin();
-  dmgMax -= stats->getDmgMax();
-  hit -= stats->getHit();
-  crit -= stats->getCrit();
+  fireResist -= stats.getFireResist();
+  thunderResist -= stats.getThunderResist();
+  frostResist -= stats.getFrostResist();
+  normalResist -= stats.getNormalResist();
 
-  fireResist -= stats->getFireResist();
-  thunderResist -= stats->getThunderResist();
-  frostResist -= stats->getFrostResist();
-  normalResist -= stats->getNormalResist();
-
-  damage -= stats->getDamage();
-  attack -= stats->getAttack();
+  damage -= stats.getDamage();
+  attack -= stats.getAttack();
 }
 
 int Stats::getStrength() const { return strength; }

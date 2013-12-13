@@ -129,13 +129,13 @@ bool Player::isLock()
 
 void *Player::performAction(Interaction *action, Creature *creature)
 {
-    action->action(this,creature);
+    action->onAction(this,creature);
     takeMana(action->getManaCost());
     Armor *armor=creature->getArmor();
     if(armor) {
         Interaction *interaction=armor->getInteraction();
         if(interaction) {
-            interaction->action(creature,this);
+            interaction->onAction(creature,this);
         }
     }
     if(!creature->isAlive()) {
