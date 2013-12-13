@@ -1,4 +1,5 @@
 #include "gameview.h"
+#include <QDebug>
 
 bool GameView::init=false;
 
@@ -35,6 +36,7 @@ void GameView::resize()
 
 void GameView::showFightView()
 {
+    qDebug()<<"";
     FightView::selected=GameScene::getPlayer()->getFightList()->front();
     fightView->setVisible(true);
     fightView->setPos(mapToScene(this->width()/2-fightView->boundingRect().width()/2,this->height()/2

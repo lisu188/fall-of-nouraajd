@@ -11,6 +11,7 @@
 #include <items/weapon.h>
 #include <interactions/interaction.h>
 #include <items/potion.h>
+#include <configuration/configurationprovider.h>
 
 Item::Item()
 {
@@ -43,16 +44,7 @@ Item *Item::getItem(const char *name)
 {
     std::string path=name;
     path="config/items/"+path+".json";
-    std::fstream jsonFileStream;
-    jsonFileStream.open (path);
-    if(!jsonFileStream.is_open()) {
-        jsonFileStream.open((std::string("assets:/")+path).c_str());
-    }
-    Json::Value config;
-    Json::Reader reader;
-    reader.parse( jsonFileStream, config );
-    jsonFileStream.close();
-    std::string type=config.get("type","").asString();
+    std::string type=ConfigurationProvider::getConfig(path)->get("type","").asString();
     if(type.compare("weapon")==0)
     {
         return new Weapon(path.c_str());
@@ -63,8 +55,7 @@ Item *Item::getItem(const char *name)
         return new Potion(path.c_str());
     } else
     {
-        std::exception e;
-        throw e;
+        throw type;
     }
 }
 
@@ -85,18 +76,10 @@ void Item::mousePressEvent(QGraphicsSceneMouseEvent *event)
 
 void Item::initializeFromFile(const char *path)
 {
-    std::fstream jsonFileStream;
-    jsonFileStream.open (path);
-    if(!jsonFileStream.is_open()) {
-        jsonFileStream.open((std::string("assets:/")+path).c_str());
-    }
-    Json::Value config;
-    Json::Reader reader;
-    reader.parse( jsonFileStream, config );
-    jsonFileStream.close();
-    bonus.init(config["bonus"]);
-    interaction=Interaction::getAction(config.get("interaction","").asString());
-    setAnimation(config.get("path","").asCString());
-    className=config.get("name","").asCString();
-    power=config.get("power",1).asInt();
+    Json::Value *config=ConfigurationProvider::getConfig(path);
+    bonus.init((*config)["bonus"]);
+    interaction=Interaction::getAction(config->get("interaction","").asString());
+    setAnimation(config->get("path","").asCString());
+    className=config->get("name","").asCString();
+    power=config->get("power",1).asInt();
 }

@@ -62,5 +62,6 @@ INPUT(
 ./release\manapotioneffect.o
 ./release\armorofendlesswinter.o
 ./release\armorofendlesswintereffect.o
+./release\configurationprovider.o
 ./release\moc_animatedobject.o
 );
