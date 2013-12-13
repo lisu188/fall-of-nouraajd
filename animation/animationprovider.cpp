@@ -102,5 +102,5 @@ void AnimationProvider::loadAnim(std::string path)
         anim->add(img,frame);
     }
     this->insert(std::pair<std::string,Animation*>(path,anim));
-    qDebug() << "Loaded animation:" << path.c_str();
+    qDebug() << "Loaded animation:" << path.c_str()<<"\n";
 }

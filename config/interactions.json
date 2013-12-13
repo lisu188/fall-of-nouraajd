@@ -1,0 +1,80 @@
+{
+"Attack" :
+    {
+"anim" : "images/interactions/attack/"
+    },
+"ElemStaff" :
+    {},
+"DoubleAttack" :
+    {
+"anim" : "images/interactions/doubleattack/"
+        ,
+        "manaCost" : 50
+    },
+"SneakAttack" :
+    {
+"anim" : "images/interactions/sneakattack/"
+        ,
+        "manaCost" : 15
+    },
+"Strike" :
+    {
+"anim" : "images/interactions/strike/"
+        ,
+        "manaCost" : 25
+    },
+"Stunner" :
+    {
+"anim" : "images/interactions/stun/"
+        ,
+        "manaCost" : 40
+    },
+"AbyssalShadows" :
+    {
+"anim" : "images/interactions/abyssalshadows/"
+        ,
+        "manaCost" : 15
+    },
+"ArmorOfEndlessWinter" :
+    {
+"anim" : "images/interactions/armorofendlesswinter/"
+        ,
+        "manaCost" : 60
+    },
+"ChaosBlast" :
+    {
+"anim" : "images/interactions/chaosblast/"
+        ,
+        "manaCost" : 150
+    },
+"Devour" :
+    {
+"anim" : "images/interactions/devour/"
+        ,
+        "manaCost" : 75
+    },
+"EndlessPain" :
+    {
+"anim" : "images/interactions/endlesspain/"
+        ,
+        "manaCost" : 25
+    },
+"FrostBolt" :
+    {
+"anim" : "images/interactions/frostbolt/"
+        ,
+        "manaCost" : 20
+    },
+"MagicMissile" :
+    {
+"anim" : "images/interactions/magicmissile/"
+        ,
+        "manaCost" : 5
+    },
+"ShadowBolt" :
+    {
+"anim" : "images/interactions/shadowbolt/"
+        ,
+        "manaCost" : 45
+    }
+}

@@ -8,5 +8,5 @@ Building::Building(Map *map,int x, int y):MapObject(map,x,y,1)
 
 void Building::onEnter()
 {
-    qDebug() << "Entered:" << className.c_str();
+    qDebug() << "Entered" << className.c_str()<<"\n";
 }
