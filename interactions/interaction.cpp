@@ -44,8 +44,8 @@ Interaction::~Interaction()
 
 void Interaction::action(Creature *first, Creature *second)
 {
-    qDebug() << first->className.c_str() << " used "
-             << this->className.c_str() << " against "
+    qDebug() << first->className.c_str() << "used"
+             << this->className.c_str() << "against"
              << second->className.c_str();
 }
 

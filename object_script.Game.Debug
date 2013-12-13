@@ -62,5 +62,6 @@ INPUT(
 ./debug\manapotioneffect.o
 ./debug\armorofendlesswinter.o
 ./debug\armorofendlesswintereffect.o
+./debug\configurationprovider.o
 ./debug\moc_animatedobject.o
 );

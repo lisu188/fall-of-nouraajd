@@ -75,7 +75,8 @@ SOURCES += main.cpp \
     potioneffects/lifepotioneffect.cpp \
     potioneffects/manapotioneffect.cpp \
     interactions/spells/armorofendlesswinter.cpp \
-    effects/armorofendlesswintereffect.cpp
+    effects/armorofendlesswintereffect.cpp \
+    configuration/configurationprovider.cpp
 
 HEADERS  += \
     animation/animatedobject.h \
@@ -85,6 +86,7 @@ HEADERS  += \
     buildings/cave.h \
     buildings/towers/tower.h \
     buildings/towns/town.h \
+    configuration/configurationprovider.h \
     creatures/creature.h \
     creatures/monster.h \
     creatures/player.h \
