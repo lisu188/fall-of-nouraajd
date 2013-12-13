@@ -1,7 +1,7 @@
 # Recovered game snapshot
 
-Original commit: `b7f23b6f889dc583e963167964a9a5df19d594a8`. Original tree: `b34e2ff0d606e42accb0edd35feb6c9631fe4710`.
-Startup was verified from identical recovered sources at `b7f23b6f889dc583e963167964a9a5df19d594a8`.
+Original commit: `feb27f5300dab7878fbdbc40df2126b0d1e8e4ff`. Original tree: `d59f9f9105d89590a7b27ffc74f7a749f3f18dd1`.
+Startup was verified from identical recovered sources at `feb27f5300dab7878fbdbc40df2126b0d1e8e4ff`.
 
 This recovered version compiled and linked on Linux, started the real game on an isolated Xvfb display,
 loaded its map and a healthy player, rendered the screenshot below, and exited normally.
