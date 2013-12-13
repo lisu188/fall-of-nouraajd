@@ -12,7 +12,11 @@ public:
 protected:
     virtual void onUse(Creature *creature);
 private:
-    PotionEffect *effect;
+    std::function<void (Creature *, int)> effect;
 };
+
+void LifeEffect(Creature *creature,int power);
+void ManaEffect(Creature *creature,int power);
+
 
 #endif // POTION_H
