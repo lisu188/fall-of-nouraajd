@@ -71,9 +71,6 @@ SOURCES += main.cpp \
     creatures/player.cpp \
     creatures/monster.cpp \
     items/potion.cpp \
-    potioneffects/potioneffect.cpp \
-    potioneffects/lifepotioneffect.cpp \
-    potioneffects/manapotioneffect.cpp \
     interactions/spells/armorofendlesswinter.cpp \
     effects/armorofendlesswintereffect.cpp \
     configuration/configurationprovider.cpp
@@ -136,9 +133,6 @@ HEADERS  += \
     map/tiles/roadtile.h \
     map/tiles/tile.h \
     map/tiles/watertile.h \
-    potioneffects/lifepotioneffect.h \
-    potioneffects/manapotioneffect.h \
-    potioneffects/potioneffect.h \
     stats/damage.h \
     stats/stats.h \
     view/fightview.h \
