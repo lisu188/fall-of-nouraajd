@@ -1,7 +1,7 @@
 # Recovered game snapshot
 
-Original commit: `d23993e897e48d26de66ca6fc0f10226be4ef187`. Original tree: `da57f1c235b2cb151c20dc504313013ada830f8d`.
-Startup was verified from identical recovered sources at `d23993e897e48d26de66ca6fc0f10226be4ef187`.
+Original commit: `adeb6cc5fe0091ac2c3de13b923464396bbc6b3c`. Original tree: `e053ae64c8a2c9aad4a16a486bbcfebffdad196f`.
+Startup was verified from identical recovered sources at `adeb6cc5fe0091ac2c3de13b923464396bbc6b3c`.
 
 This recovered version compiled and linked on Linux, started the real game on an isolated Xvfb display,
 loaded its map and a healthy player, rendered the screenshot below, and exited normally.
@@ -51,10 +51,10 @@ compatibilityRepair: 1, exactOriginal: 34, reconstruction: 15.
 - `json/json_writer.cpp`: unverified upstream reconstruction; https://github.com/open-source-parsers/jsoncpp/tree/4fce396c9d3e27a8ab8fb88e94c1676e021ae3a6
 - `map/map.cpp`: content reconstruction of the BFG-removed original; reconstructed against the original map.h/tile.h API (private AnimatedObject bases, Tile::addToGame, Destroyer-owned objects); Player comes through view/gamescene.h so the same file builds before and after creatures/players/ moved; carried unchanged across the 4a6a0310 source reformat
 - `stats/stats.cpp`: content reconstruction of the BFG-removed original; from the 0340e81f reconstruction: addBonus and removeBonus take Stats by value (same-commit stats.h)
-- `view/gamescene.cpp`: content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of f27c3b303d (previous version of view/gamescene.cpp)
+- `view/gamescene.cpp`: content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of cc72feb06247816b7fc4c6468403d3f195fd69de (previous version of view/gamescene.cpp)
 - `json/LICENSE`: https://github.com/open-source-parsers/jsoncpp/tree/4fce396c9d3e27a8ab8fb88e94c1676e021ae3a6 upstream distribution license
 
-Restored source fingerprint: `489ca0a2d4c14b5aa562119e8b7910e59282596e0020c9dd15fef9794c017d27`.
+Restored source fingerprint: `96edff4b77e73eecb3a44546600a4090f2c4e14fedde6ca77eed1a33e32e9247`.
 
 The actual 1278 × 718 screenshot and [verification metadata](recovery/verification.json) belong to
 this source version. Reconstructed code and borrowed assets are identified in that metadata; they are
