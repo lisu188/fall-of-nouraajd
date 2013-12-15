@@ -14,10 +14,7 @@
 #include <stats/damage.h>
 #include <configuration/configurationprovider.h>
 
-#include <effects/stun.h>
-#include <effects/abyssalshadowseffect.h>
-#include <effects/armorofendlesswintereffect.h>
-#include <effects/endlesspaineffect.h>
+#include <effects/effect.h>
 
 #include <QDebug>
 #include <list>
@@ -153,17 +150,17 @@ void Strike(Creature *first, Creature *second)
 
 void Stunner(Creature *first, Creature *second)
 {
-    second->addEffect(new Stun(first,rand()%1+3));
+    second->addEffect(new Effect("Stun",first,rand()%1+3));
 }
 
 void AbyssalShadows(Creature *first, Creature *second)
 {
-    second->addEffect(new AbyssalShadowsEffect(first,4));
+    second->addEffect(new Effect("AbyssalShadowsEffect",first,4));
 }
 
 void ArmorOfEndlessWinter(Creature *first, Creature *second)
 {
-    first->addEffect(new ArmorOfEndlessWinterEffect(first,3));
+    first->addEffect(new Effect("ArmorOfEndlessWinterEffect",first,3));
 }
 
 void ChaosBlast(Creature *first, Creature *second)
@@ -189,7 +186,7 @@ void Devour(Creature *first, Creature *second)
 
 void EndlessPain(Creature *first, Creature *second)
 {
-    second->addEffect(new EndlessPainEffect(first,2));
+    second->addEffect(new Effect("EndlessPainEffect",first,2));
 }
 
 void FrostBolt(Creature *first, Creature *second)
@@ -219,6 +216,6 @@ void ShadowBolt(Creature *first, Creature *second)
     if(rand()%2==0)
     {
         damage.setShadow(first->getWeapon()->getStats()->getDamage());
-        second->addEffect(new AbyssalShadowsEffect(first,4));
+        second->addEffect(new Effect("AbyssalShadowsEffect",first,4));
     }
 }
