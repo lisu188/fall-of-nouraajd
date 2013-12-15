@@ -300,7 +300,7 @@ bool Creature::applyEffects() {
     Effect *effect = *it;
     if (effect->apply(this))
       skipTurn = true;
-    if (effect->getDuration() <= 0) {
+    if (effect->getTimeLeft() <= 0) {
       effects.remove(effect);
       delete effect;
     }

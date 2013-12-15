@@ -1,7 +1,7 @@
 # Recovered game snapshot
 
-Original commit: `6fade625f65ffb1b52a73605014175780e5f50bb`. Original tree: `a7acfbeb34266c80c57ac23334f8c7a814c9411b`.
-Startup was verified from identical recovered sources at `6fade625f65ffb1b52a73605014175780e5f50bb`.
+Original commit: `59752dfef1f5777705f9a3f66d0cdfd08aa9d1c1`. Original tree: `56527f9b926bec939909be4b21c54616f4035896`.
+Startup was verified from identical recovered sources at `59752dfef1f5777705f9a3f66d0cdfd08aa9d1c1`.
 
 This recovered version compiled and linked on Linux, started the real game on an isolated Xvfb display,
 loaded its map and a healthy player, rendered the screenshot below, and exited normally.
@@ -37,14 +37,14 @@ launches run the game's original entry point. Startup evidence does not establis
 
 compatibilityRepair: 1, exactOriginal: 34, reconstruction: 15.
 
-- `creatures/creature.cpp`: content reconstruction of the BFG-removed original; from the 97e50043 reconstruction: interactions are created with Interaction::getInteraction and run with onAction, the level bonus is a value (same-commit creature.h), and getCoordsString is defined
+- `creatures/creature.cpp`: content reconstruction of the BFG-removed original; from the d635f66f reconstruction: finished effects are detected with Effect::getTimeLeft
 - `creatures/player.cpp`: content reconstruction of the BFG-removed original; from the fc0655d1 reconstruction: interactions run through Interaction::onAction
 - `images/tiles/grass/0.png`: unverified donor reconstruction; c049ac73064442354af6224d06fe1c8b847bb8d9:images/tiles/grass/0.png; headerMatch=0; apiOverlap=0/10000; distance=105 Verified by build and startup of afdd8069 (recovery/evidence/second-original).
 - `images/tiles/ground/0.png`: unverified donor reconstruction; c049ac73064442354af6224d06fe1c8b847bb8d9:images/tiles/ground/0.png; headerMatch=0; apiOverlap=0/10000; distance=105 Verified by build and startup of afdd8069 (recovery/evidence/second-original).
 - `images/tiles/mountain/0.png`: unverified donor reconstruction; 152007b28631784d3c5e17f2686eb6ef9ff30e46:images/tiles/mountain/0.png; headerMatch=0; apiOverlap=0/10000; distance=155 Verified by build and startup of afdd8069 (recovery/evidence/second-original).
 - `images/tiles/road/0.png`: unverified donor reconstruction; 152007b28631784d3c5e17f2686eb6ef9ff30e46:images/tiles/road/0.png; headerMatch=0; apiOverlap=0/10000; distance=155 Verified by build and startup of afdd8069 (recovery/evidence/second-original).
 - `images/tiles/water/0.png`: unverified donor reconstruction; c049ac73064442354af6224d06fe1c8b847bb8d9:images/tiles/water/0.png; headerMatch=0; apiOverlap=0/10000; distance=105 Verified by build and startup of afdd8069 (recovery/evidence/second-original).
-- `interactions/interaction.cpp`: content reconstruction of the BFG-removed original; from the 1ecc50a8 reconstruction: the name-to-action table is the static Interaction::actions member declared in the same-commit interaction.h
+- `interactions/interaction.cpp`: content reconstruction of the BFG-removed original; from the a1107283 reconstruction: effects are data-driven Effect(type, caster, duration) objects (same-commit effect.h, surviving effect.cpp)
 - `json/json_batchallocator.h`: unverified upstream reconstruction; https://github.com/open-source-parsers/jsoncpp/tree/4fce396c9d3e27a8ab8fb88e94c1676e021ae3a6
 - `json/json_reader.cpp`: unverified upstream reconstruction; https://github.com/open-source-parsers/jsoncpp/tree/4fce396c9d3e27a8ab8fb88e94c1676e021ae3a6
 - `json/json_value.cpp`: unverified upstream reconstruction; https://github.com/open-source-parsers/jsoncpp/tree/4fce396c9d3e27a8ab8fb88e94c1676e021ae3a6
@@ -54,7 +54,7 @@ compatibilityRepair: 1, exactOriginal: 34, reconstruction: 15.
 - `view/gamescene.cpp`: content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of cc72feb06247816b7fc4c6468403d3f195fd69de (previous version of view/gamescene.cpp)
 - `json/LICENSE`: https://github.com/open-source-parsers/jsoncpp/tree/4fce396c9d3e27a8ab8fb88e94c1676e021ae3a6 upstream distribution license
 
-Restored source fingerprint: `09fe4013d5115bf74ced03ce88e7596bd99347ccf075a3809db3bf67457b69b7`.
+Restored source fingerprint: `484fd76cfdd61973c464a4e6b56421b8bc95e46e79e534409ca6d008f52c6c4f`.
 
 The actual 1278 × 718 screenshot and [verification metadata](recovery/verification.json) belong to
 this source version. Reconstructed code and borrowed assets are identified in that metadata; they are
