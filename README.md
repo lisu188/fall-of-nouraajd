@@ -1,7 +1,7 @@
 # Recovered game snapshot
 
-Original commit: `59752dfef1f5777705f9a3f66d0cdfd08aa9d1c1`. Original tree: `56527f9b926bec939909be4b21c54616f4035896`.
-Startup was verified from identical recovered sources at `59752dfef1f5777705f9a3f66d0cdfd08aa9d1c1`.
+Original commit: `7e36b9a19871bbfd4f14d42c6bf42bdd7aa16502`. Original tree: `c6389c1c3fff5ddf29ed27909ea50695673c70c6`.
+Startup was verified from identical recovered sources at `7e36b9a19871bbfd4f14d42c6bf42bdd7aa16502`.
 
 This recovered version compiled and linked on Linux, started the real game on an isolated Xvfb display,
 loaded its map and a healthy player, rendered the screenshot below, and exited normally.
@@ -54,7 +54,7 @@ compatibilityRepair: 1, exactOriginal: 34, reconstruction: 15.
 - `view/gamescene.cpp`: content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of cc72feb06247816b7fc4c6468403d3f195fd69de (previous version of view/gamescene.cpp)
 - `json/LICENSE`: https://github.com/open-source-parsers/jsoncpp/tree/4fce396c9d3e27a8ab8fb88e94c1676e021ae3a6 upstream distribution license
 
-Restored source fingerprint: `484fd76cfdd61973c464a4e6b56421b8bc95e46e79e534409ca6d008f52c6c4f`.
+Restored source fingerprint: `bcce9fb89116e9d9e8d3abb54bc4eeacc70baef199821867ef17455bf44ea001`.
 
 The actual 1278 × 718 screenshot and [verification metadata](recovery/verification.json) belong to
 this source version. Reconstructed code and borrowed assets are identified in that metadata; they are
