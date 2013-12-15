@@ -53,13 +53,9 @@ SOURCES += main.cpp \
     json/json_internalmap.inl \
     json/json_internalarray.inl \
     effects/effect.cpp \
-    effects/stun.cpp \
-    effects/abyssalshadowseffect.cpp \
-    effects/endlesspaineffect.cpp \
     creatures/player.cpp \
     creatures/monster.cpp \
     items/potion.cpp \
-    effects/armorofendlesswintereffect.cpp \
     configuration/configurationprovider.cpp
 
 INCLUDEPATH += tmp/moc/release_shared
@@ -106,13 +102,9 @@ HEADERS  += \
     json/config.h \
     json/autolink.h \
     effects/effect.h \
-    effects/stun.h \
-    effects/abyssalshadowseffect.h \
-    effects/endlesspaineffect.h \
     creatures/player.h \
     creatures/monster.h \
     items/weapon.h \
     items/armor.h \
     items/potion.h \
-    effects/armorofendlesswintereffect.h \
     configuration/configurationprovider.h
