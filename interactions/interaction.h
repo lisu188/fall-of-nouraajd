@@ -3,6 +3,7 @@
 
 #include <string>
 #include <functional>
+#include <unordered_map>
 #include <view/listitem.h>
 
 class Creature;
@@ -22,6 +23,8 @@ protected:
 private:
     std::function<void (Creature *, Creature *)> action;
     Interaction(std::string name);
+    static std::unordered_map<std::string,std::function<void (Creature *, Creature *)>> actions;
+
 };
 
 void Attack(Creature *first,Creature *second);
@@ -38,7 +41,5 @@ void EndlessPain(Creature *first, Creature *second);
 void FrostBolt(Creature *first, Creature *second);
 void MagicMissile(Creature *first, Creature *second);
 void ShadowBolt(Creature *first, Creature *second);
-
-
 
 #endif // INTERACTION_H

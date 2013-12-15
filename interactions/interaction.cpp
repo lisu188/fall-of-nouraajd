@@ -21,29 +21,24 @@
 
 #include <QDebug>
 #include <list>
-#include <map>
 #include <creatures/creature.h>
 
-namespace {
-std::map<std::string, std::function<void (Creature *, Creature *)> > actions() {
-    std::map<std::string, std::function<void (Creature *, Creature *)> > result;
-    result["Attack"]=Attack;
-    result["ElemStaff"]=ElemStaff;
-    result["DoubleAttack"]=DoubleAttack;
-    result["SneakAttack"]=SneakAttack;
-    result["Strike"]=Strike;
-    result["Stunner"]=Stunner;
-    result["AbyssalShadows"]=AbyssalShadows;
-    result["ArmorOfEndlessWinter"]=ArmorOfEndlessWinter;
-    result["ChaosBlast"]=ChaosBlast;
-    result["Devour"]=Devour;
-    result["EndlessPain"]=EndlessPain;
-    result["FrostBolt"]=FrostBolt;
-    result["MagicMissile"]=MagicMissile;
-    result["ShadowBolt"]=ShadowBolt;
-    return result;
-}
-}
+std::unordered_map<std::string,std::function<void (Creature *, Creature *)>> Interaction::actions= {
+    {"Attack",Attack},
+    {"ElemStaff",ElemStaff},
+    {"DoubleAttack",DoubleAttack},
+    {"SneakAttack",SneakAttack},
+    {"Strike",Strike},
+    {"Stunner",Stunner},
+    {"AbyssalShadows",AbyssalShadows},
+    {"ArmorOfEndlessWinter",ArmorOfEndlessWinter},
+    {"ChaosBlast",ChaosBlast},
+    {"Devour",Devour},
+    {"EndlessPain",EndlessPain},
+    {"FrostBolt",FrostBolt},
+    {"MagicMissile",MagicMissile},
+    {"ShadowBolt",ShadowBolt}
+};
 
 Interaction::Interaction(std::string name)
 {
@@ -54,7 +49,7 @@ Interaction::Interaction(std::string name)
     if(anim.compare("")!=0) {
         setAnimation(anim);
     }
-    action=actions()[name];
+    action=actions[name];
 }
 
 void Interaction::onAction(Creature *first, Creature *second)

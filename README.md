@@ -1,7 +1,7 @@
 # Recovered game snapshot
 
-Original commit: `adeb6cc5fe0091ac2c3de13b923464396bbc6b3c`. Original tree: `e053ae64c8a2c9aad4a16a486bbcfebffdad196f`.
-Startup was verified from identical recovered sources at `adeb6cc5fe0091ac2c3de13b923464396bbc6b3c`.
+Original commit: `6fade625f65ffb1b52a73605014175780e5f50bb`. Original tree: `a7acfbeb34266c80c57ac23334f8c7a814c9411b`.
+Startup was verified from identical recovered sources at `6fade625f65ffb1b52a73605014175780e5f50bb`.
 
 This recovered version compiled and linked on Linux, started the real game on an isolated Xvfb display,
 loaded its map and a healthy player, rendered the screenshot below, and exited normally.
@@ -44,7 +44,7 @@ compatibilityRepair: 1, exactOriginal: 34, reconstruction: 15.
 - `images/tiles/mountain/0.png`: unverified donor reconstruction; 152007b28631784d3c5e17f2686eb6ef9ff30e46:images/tiles/mountain/0.png; headerMatch=0; apiOverlap=0/10000; distance=155 Verified by build and startup of afdd8069 (recovery/evidence/second-original).
 - `images/tiles/road/0.png`: unverified donor reconstruction; 152007b28631784d3c5e17f2686eb6ef9ff30e46:images/tiles/road/0.png; headerMatch=0; apiOverlap=0/10000; distance=155 Verified by build and startup of afdd8069 (recovery/evidence/second-original).
 - `images/tiles/water/0.png`: unverified donor reconstruction; c049ac73064442354af6224d06fe1c8b847bb8d9:images/tiles/water/0.png; headerMatch=0; apiOverlap=0/10000; distance=105 Verified by build and startup of afdd8069 (recovery/evidence/second-original).
-- `interactions/interaction.cpp`: content reconstruction of the BFG-removed original; rebuilt for the same-commit interaction.h: one data-driven Interaction (config/interactions.json for mana cost and animation) bound to free action functions whose bodies are the surviving 47b73fdf interaction subclasses' action methods; structure and mousePressEvent from the surviving 47b73fdf interaction.cpp
+- `interactions/interaction.cpp`: content reconstruction of the BFG-removed original; from the 1ecc50a8 reconstruction: the name-to-action table is the static Interaction::actions member declared in the same-commit interaction.h
 - `json/json_batchallocator.h`: unverified upstream reconstruction; https://github.com/open-source-parsers/jsoncpp/tree/4fce396c9d3e27a8ab8fb88e94c1676e021ae3a6
 - `json/json_reader.cpp`: unverified upstream reconstruction; https://github.com/open-source-parsers/jsoncpp/tree/4fce396c9d3e27a8ab8fb88e94c1676e021ae3a6
 - `json/json_value.cpp`: unverified upstream reconstruction; https://github.com/open-source-parsers/jsoncpp/tree/4fce396c9d3e27a8ab8fb88e94c1676e021ae3a6
@@ -54,7 +54,7 @@ compatibilityRepair: 1, exactOriginal: 34, reconstruction: 15.
 - `view/gamescene.cpp`: content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of cc72feb06247816b7fc4c6468403d3f195fd69de (previous version of view/gamescene.cpp)
 - `json/LICENSE`: https://github.com/open-source-parsers/jsoncpp/tree/4fce396c9d3e27a8ab8fb88e94c1676e021ae3a6 upstream distribution license
 
-Restored source fingerprint: `96edff4b77e73eecb3a44546600a4090f2c4e14fedde6ca77eed1a33e32e9247`.
+Restored source fingerprint: `09fe4013d5115bf74ced03ce88e7596bd99347ccf075a3809db3bf67457b69b7`.
 
 The actual 1278 × 718 screenshot and [verification metadata](recovery/verification.json) belong to
 this source version. Reconstructed code and borrowed assets are identified in that metadata; they are
