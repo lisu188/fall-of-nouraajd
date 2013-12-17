@@ -17,6 +17,7 @@
         "crit" : 10,
 
 "main" : "S"
+
     },
 
 "levelStats" :
@@ -30,6 +31,7 @@
         "dmgMax" : 3,
         "hit" : 3,
         "crit" : 1
+
     },
 
 "levelling" :
@@ -37,6 +39,7 @@
 "1" : "Strike"
         ,
 "5" : "DoubleAttack"
+
     },
 "items" :
     [
@@ -47,9 +50,11 @@
 "weapon" : "Sword"
         ,
 "armor" : "PlateArmor"
+
     },
 "actions" :
     [
         "Attack"
     ]
+
 }

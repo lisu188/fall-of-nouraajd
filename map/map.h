@@ -11,6 +11,7 @@
 #include <animation/animation.h>
 #include <animation/animatedobject.h>
 #include <unordered_map>
+#include <json/json.h>
 
 class MapObject;
 
@@ -31,8 +32,11 @@ public:
 
     void removeObject(MapObject *mapObject);
 
+    void loadFromJson(Json::Value config);
+    Json::Value saveToJson();
+
 private:
-    std::list<MapObject*> *mapObjects;
+    std::list<MapObject*> mapObjects;
     void randomDir(int *tab, int rule);
     bool addTile(Tile *tile);
 };
@@ -56,6 +60,9 @@ public:
     void move(int x, int y);
 
     void setParentItem(QGraphicsItem *parent);
+
+    virtual void loadFromJson(Json::Value config)=0;
+    virtual Json::Value saveToJson()=0;
 
 protected:
     void setAnimation(std::string path);

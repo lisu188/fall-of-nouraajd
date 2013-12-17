@@ -16,6 +16,11 @@ public:
 private:
     bool enabled;
 
+
+    // MapObject interface
+public:
+    virtual void loadFromJson(Json::Value config);
+    virtual Json::Value saveToJson();
 };
 
 #endif // CAVE_H

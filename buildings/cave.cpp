@@ -62,3 +62,16 @@ void Cave::onMove()
         }
     }
 }
+
+void Cave::loadFromJson(Json::Value config)
+{
+}
+
+Json::Value Cave::saveToJson()
+{
+    Json::Value config;
+    config["name"]=className;
+    config["coords"]["X"]=getPosX();
+    config["coords"]["Y"]=getPosY();
+    return config;
+}

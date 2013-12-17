@@ -2,6 +2,7 @@
 #include <animation/animatedobject.h>
 #include <map/coords.h>
 #include "map/events/event.h"
+#include <json/json.h>
 
 #ifndef TILE_H
 #define TILE_H
@@ -29,6 +30,13 @@ public:
     static Tile *getRandomTile(int x, int y);
 
     void addToGame();
+
+    std::string className;
+
+    void loadFromJson(Json::Value config);
+    Json::Value saveToJson();
+
+
 
 protected:
     bool step;

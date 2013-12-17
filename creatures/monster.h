@@ -6,7 +6,7 @@
 class Monster : public Creature
 {
 public:
-    Monster(char *path, Map* map);
+    Monster(char *animPath, Map* map);
     virtual void onMove();
     virtual void onEnter();
 

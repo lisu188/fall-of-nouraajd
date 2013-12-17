@@ -16,7 +16,7 @@ class Stats;
 class Creature : public MapObject
 {
 public:
-    Creature(char *path, Map *map);
+    Creature(char *animPath, Map *map);
     ~Creature();
 
     int getExp();
@@ -78,18 +78,19 @@ public:
     void addItem(Item *item);
     void loseItem(Item *item);
     std::list<Item *> *getInventory();
-    std::string getCoordsString();
 
     void loadFromJson(Json::Value config);
     Json::Value saveToJson();
+
 protected:
     int gold;
+    Json::Value levelling;
     std::list<Item*> inventory;
     std::list<Item*> equipped;
     int exp;
     int level;
     int sw;
-    std::string path;
+    std::string animPath;
 
     int mana,manaMax,manaRegRate;
     int hpMax,hp;
@@ -110,8 +111,6 @@ protected:
 
     bool applyEffects();
 
-
-private:
     Interaction *selectAction();
     void setItem(void *pointer, Item *newItem);
     void takeDamage(int i);
