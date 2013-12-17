@@ -1,7 +1,7 @@
 # Recovered game snapshot
 
-Original commit: `d96cb47c9272200eb1a6cbc3b7f7785688cdd741`. Original tree: `185be101556f3b98aaaaa29e58aa11e7c00ac203`.
-Startup was verified from identical recovered sources at `d96cb47c9272200eb1a6cbc3b7f7785688cdd741`.
+Original commit: `653b34639f347701f578c2c7a30d766067ee5f1e`. Original tree: `896267a0f2e54bf0c69144163db197f6f75be3c6`.
+Startup was verified from identical recovered sources at `653b34639f347701f578c2c7a30d766067ee5f1e`.
 
 This recovered version compiled and linked on Linux, started the real game on an isolated Xvfb display,
 loaded its map and a healthy player, rendered the screenshot below, and exited normally.
@@ -37,7 +37,7 @@ launches run the game's original entry point. Startup evidence does not establis
 
 compatibilityRepair: 1, exactOriginal: 36, reconstruction: 15.
 
-- `creatures/creature.cpp`: content reconstruction of the BFG-removed original; from the b5dc5c70 reconstruction: Creature(Json::Value, map) takes the configuration itself, and canSave leaves defeated creatures out of saves (same-commit creature.h/map.h)
+- `creatures/creature.cpp`: content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of b3c72b5223bf75a02ad419ac7f90431d89b0f062 (previous version of creatures/creature.cpp)
 - `creatures/player.cpp`: content reconstruction of the BFG-removed original; carried from the d73ccec8 reconstruction with the Json::Value constructor (same-commit player.h)
 - `images/tiles/grass/0.png`: unverified donor reconstruction; c049ac73064442354af6224d06fe1c8b847bb8d9:images/tiles/grass/0.png; headerMatch=0; apiOverlap=0/10000; distance=105 Verified by build and startup of afdd8069 (recovery/evidence/second-original).
 - `images/tiles/ground/0.png`: unverified donor reconstruction; c049ac73064442354af6224d06fe1c8b847bb8d9:images/tiles/ground/0.png; headerMatch=0; apiOverlap=0/10000; distance=105 Verified by build and startup of afdd8069 (recovery/evidence/second-original).
