@@ -9,14 +9,13 @@
 #include <map/tiles/watertile.h>
 #include <view/gamescene.h>
 
-Map::Map() { mapObjects = new std::list<MapObject *>(); }
+Map::Map() {}
 
 // Tiles and map objects are AnimatedObjects owned by the Destroyer, which deletes
 // them when the game terminates; the map only drops its references here.
 Map::~Map() {
   clear();
-  mapObjects->clear();
-  delete mapObjects;
+  mapObjects.clear();
 }
 
 void Map::move(int x, int y) {
@@ -25,19 +24,19 @@ void Map::move(int x, int y) {
     return;
   player->move(x, y);
 
-  std::vector<MapObject *> objects(mapObjects->begin(), mapObjects->end());
+  std::vector<MapObject *> objects(mapObjects.begin(), mapObjects.end());
   for (std::vector<MapObject *>::iterator it = objects.begin();
        it != objects.end(); ++it) {
     MapObject *object = *it;
     if (object == player ||
-        std::find(mapObjects->begin(), mapObjects->end(), object) ==
-            mapObjects->end())
+        std::find(mapObjects.begin(), mapObjects.end(), object) ==
+            mapObjects.end())
       continue;
     if (object->getPosX() != player->getPosX() ||
         object->getPosY() != player->getPosY())
       object->onMove();
-    if (std::find(mapObjects->begin(), mapObjects->end(), object) !=
-            mapObjects->end() &&
+    if (std::find(mapObjects.begin(), mapObjects.end(), object) !=
+            mapObjects.end() &&
         object->getPosX() == player->getPosX() &&
         object->getPosY() == player->getPosY())
       object->onEnter();
@@ -59,9 +58,9 @@ bool Map::contains(int x, int y) { return find(Coords(x, y)) != end(); }
 void Map::addObject(MapObject *mapObject) {
   if (!mapObject)
     return;
-  if (std::find(mapObjects->begin(), mapObjects->end(), mapObject) ==
-      mapObjects->end())
-    mapObjects->push_back(mapObject);
+  if (std::find(mapObjects.begin(), mapObjects.end(), mapObject) ==
+      mapObjects.end())
+    mapObjects.push_back(mapObject);
   getTile(mapObject->getPosX(), mapObject->getPosY());
 }
 
@@ -109,7 +108,32 @@ void Map::addRoad(int length, int startx, int starty) {
 
 void Map::removeObject(MapObject *mapObject) {
   if (mapObject)
-    mapObjects->remove(mapObject);
+    mapObjects.remove(mapObject);
+}
+
+void Map::loadFromJson(Json::Value config) {
+  Json::Value objects = config["objects"];
+  for (unsigned int i = 0; i < objects.size(); i++) {
+    for (std::list<MapObject *>::iterator it = mapObjects.begin();
+         it != mapObjects.end(); ++it) {
+      if ((*it)->className == objects[i].get("name", "").asString())
+        (*it)->loadFromJson(objects[i]);
+    }
+  }
+}
+
+Json::Value Map::saveToJson() {
+  Json::Value config;
+  Json::Value tiles(Json::arrayValue);
+  for (iterator it = begin(); it != end(); ++it)
+    tiles.append((*it).second->saveToJson());
+  config["tiles"] = tiles;
+  Json::Value objects(Json::arrayValue);
+  for (std::list<MapObject *>::iterator it = mapObjects.begin();
+       it != mapObjects.end(); ++it)
+    objects.append((*it)->saveToJson());
+  config["objects"] = objects;
+  return config;
 }
 
 void Map::randomDir(int *tab, int rule) {

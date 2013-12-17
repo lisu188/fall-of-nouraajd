@@ -73,6 +73,19 @@ void Tile::addToGame()
     GameScene::getGame()->addItem(this);
 }
 
+void Tile::loadFromJson(Json::Value config)
+{
+}
+
+Json::Value Tile::saveToJson()
+{
+    Json::Value config;
+    config["name"]=className;
+    config["coords"]["x"]=posx;
+    config["coords"]["y"]=posy;
+    return config;
+}
+
 void Tile::mousePressEvent(QGraphicsSceneMouseEvent *event)
 {
     int x=GameScene::getPlayer()->getPosX()-this->getCoords().first;

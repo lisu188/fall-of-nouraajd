@@ -4,6 +4,7 @@
 
 RoadTile::RoadTile(int x,int y):Tile(x,y)
 {
+    className="RoadTile";
     this->setAnimation(("images/tiles/road/"));
 }
 

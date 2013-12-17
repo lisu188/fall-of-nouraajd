@@ -2,6 +2,7 @@
 
 GrassTile::GrassTile(int x,int y):Tile(x,y)
 {
+    className="GrassTile";
     this->setAnimation(("images/tiles/grass/"));
 }
 
