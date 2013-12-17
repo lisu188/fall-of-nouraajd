@@ -16,7 +16,7 @@ class Stats;
 class Creature : public MapObject
 {
 public:
-    Creature(char *path, Map *map, int x, int y);
+    Creature(char *path, Map *map);
     ~Creature();
 
     int getExp();
@@ -72,7 +72,6 @@ public:
     void addExpScaled(int scale);
     void addExp(int exp);
 
-    Stats getLevelBonus();
     Interaction *getLevelAction();
 
     void addItem(std::list<Item *> *items);
@@ -80,9 +79,13 @@ public:
     void loseItem(Item *item);
     std::list<Item *> *getInventory();
     std::string getCoordsString();
+
+    void loadFromJson(Json::Value config);
+    Json::Value saveToJson();
 protected:
     int gold;
     std::list<Item*> inventory;
+    std::list<Item*> equipped;
     int exp;
     int level;
     int sw;
@@ -96,8 +99,8 @@ protected:
     std::list<Interaction *> actions;
     std::list<Effect *> effects;
 
-    Weapon *weapon;
-    Armor *armor;
+    Weapon *weapon=0;
+    Armor *armor=0;
 
     Stats stats;
     Stats bonusLevel;
@@ -106,15 +109,12 @@ protected:
     virtual void mouseReleaseEvent(QGraphicsSceneMouseEvent *event);
 
     bool applyEffects();
-    void initializeFromFile(char *path);
+
 
 private:
     Interaction *selectAction();
     void setItem(void *pointer, Item *newItem);
     void takeDamage(int i);
-
-
-
 };
 
 #endif // CREATURE_H

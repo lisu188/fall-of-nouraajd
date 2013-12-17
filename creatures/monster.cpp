@@ -2,7 +2,7 @@
 
 #include <view/gamescene.h>
 
-Monster::Monster(char *path,Map *map,int x,int y):Creature(path,map,x,y)
+Monster::Monster(char *path,Map *map):Creature(path,map)
 {
 }
 

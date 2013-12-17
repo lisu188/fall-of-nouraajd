@@ -3,7 +3,6 @@
     ,
 "path" : "images/players/assasin/"
     ,
-    "sw" : 0,
 
 "initStats" :
     {
@@ -41,7 +40,18 @@
     },
 "items" :
     [
-        "Dagger", "LeatherArmor","LifePotion","ManaPotion"
-    ]
+        "LifePotion", "ManaPotion"
+    ],
+"actions" :
+    [
+        "Attack"
+    ],
+"inventory" :
+    {
+"weapon" : "Dagger"
+        ,
+"armor" : "LeatherArmor"
+        ,
+    }
 
 }

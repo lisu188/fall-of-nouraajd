@@ -3,7 +3,6 @@
     ,
 "path" : "images/players/warrior/"
     ,
-    "sw" : 0,
 
 "initStats" :
     {
@@ -39,9 +38,18 @@
         ,
 "5" : "DoubleAttack"
     },
-
 "items" :
     [
-        "Sword", "PlateArmor","LifePotion","ManaPotion"
+        "LifePotion", "ManaPotion"
+    ],
+"inventory" :
+    {
+"weapon" : "Sword"
+        ,
+"armor" : "PlateArmor"
+    },
+"actions" :
+    [
+        "Attack"
     ]
 }

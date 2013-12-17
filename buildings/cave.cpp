@@ -29,11 +29,15 @@ void Cave::onEnter()
                 }
                 if(rand()%5==0)
                 {
-                    map->addObject(new Monster("config/monsters/pritzmage.json",map,getPosX()+2*i,getPosY()+2*j));
+                    Monster *monster=new Monster("config/monsters/pritzmage.json",map);
+                    map->addObject(monster);
+                    monster->moveTo(getPosX()+2*i,getPosY()+2*j,true);
                 }
                 else
                 {
-                    map->addObject(new Monster("config/monsters/pritz.json",map,getPosX()+2*i,getPosY()+2*j));
+                    Monster *monster=new Monster("config/monsters/pritz.json",map);
+                    map->addObject(monster);
+                    monster->moveTo(getPosX()+2*i,getPosY()+2*j,true);
                 }
             }
         this->removeFromGame();
@@ -46,11 +50,15 @@ void Cave::onMove()
     {
         if(rand()%5==0)
         {
-            map->addObject(new Monster("config/monsters/pritzmage.json",map,getPosX(),getPosY()));
+            Monster *monster=new Monster("config/monsters/pritzmage.json",map);
+            map->addObject(monster);
+            monster->moveTo(getPosX(),getPosY(),true);
         }
         else
         {
-            map->addObject(new Monster("config/monsters/pritz.json",map,getPosX(),getPosY()));
+            Monster *monster=new Monster("config/monsters/pritz.json",map);
+            map->addObject(monster);
+            monster->moveTo(getPosX(),getPosY(),true);
         }
     }
 }

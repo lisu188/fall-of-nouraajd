@@ -1,0 +1,70 @@
+{
+"actions" :
+    [ "Attack", "Strike" ],
+"coords" :
+    {
+        "X" : 13,
+        "Y" : 10
+    },
+    "exp" : 500,
+    "hp" : 112,
+"initStats" :
+    {
+        "agility" : 7,
+        "armor" : 30,
+        "attack" : 15,
+        "block" : 15,
+        "crit" : 11,
+        "damage" : 30,
+        "dmgMax" : 15,
+        "dmgMin" : 12,
+        "fireResist" : 0,
+        "frostResist" : 0,
+        "hit" : 78,
+        "intelligence" : 6,
+"main" : "S"
+        ,
+        "normalResist" : 0,
+        "shadowResist" : 0,
+        "stamina" : 16,
+        "strength" : 20,
+        "thunderResist" : 0
+    },
+"inventory" :
+    {
+"armor" : "PlateArmor"
+        ,
+"weapon" : "Sword"
+    },
+"items" :
+    [ "ManaPotion", "LifePotion", "ManaPotion" ],
+    "level" : 1,
+"levelStats" :
+    {
+        "agility" : 2,
+        "armor" : 0,
+        "attack" : 0,
+        "block" : 0,
+        "crit" : 1,
+        "damage" : 0,
+        "dmgMax" : 3,
+        "dmgMin" : 2,
+        "fireResist" : 0,
+        "frostResist" : 0,
+        "hit" : 3,
+        "intelligence" : 1,
+"main" : ""
+        ,
+        "normalResist" : 0,
+        "shadowResist" : 0,
+        "stamina" : 2,
+        "strength" : 3,
+        "thunderResist" : 0
+    },
+    "mana" : 140,
+"name" : "Warrior"
+    ,
+"path" : "images/players/warrior/"
+    ,
+    "sw" : 0
+}

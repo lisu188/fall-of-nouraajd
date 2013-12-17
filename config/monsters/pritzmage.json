@@ -38,5 +38,9 @@
 "levelling" :
     {
 "2" : "MagicMissile"
-    }
+    },
+"actions" :
+    [
+        "Attack"
+    ]
 }

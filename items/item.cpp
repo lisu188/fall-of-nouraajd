@@ -25,6 +25,7 @@ bool Item::isSingleUse() {
 
 void Item::setPos(QPointF point)
 {
+    ListItem::setVisible(true);
     ListItem::setPos(point);
 }
 
@@ -43,6 +44,9 @@ void Item::onUnequip(Creature *creature)
 Item *Item::getItem(const char *name)
 {
     std::string path=name;
+    if(path.compare("")==0) {
+        return 0;
+    }
     path="config/items/"+path+".json";
     std::string type=ConfigurationProvider::getConfig(path)->get("type","").asString();
     if(type.compare("weapon")==0)
@@ -55,7 +59,7 @@ Item *Item::getItem(const char *name)
         return new Potion(path.c_str());
     } else
     {
-        throw type;
+        throw new std::exception();
     }
 }
 
@@ -77,7 +81,7 @@ void Item::mousePressEvent(QGraphicsSceneMouseEvent *event)
 void Item::initializeFromFile(const char *path)
 {
     Json::Value *config=ConfigurationProvider::getConfig(path);
-    bonus.init((*config)["bonus"]);
+    bonus.loadFromJson((*config)["bonus"]);
     interaction=Interaction::getInteraction(config->get("interaction","").asString());
     setAnimation(config->get("path","").asCString());
     className=config->get("name","").asCString();

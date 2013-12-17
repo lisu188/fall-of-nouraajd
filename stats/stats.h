@@ -61,7 +61,8 @@ public:
     void setAttack(int value);
 
     const char *getText(int level);
-    void init(Json::Value statConfig);
+    void loadFromJson(Json::Value statConfig);
+    Json::Value saveToJson();
 
     int getShadowResist() const;
     void setShadowResist(int value);
@@ -90,6 +91,7 @@ private:
     int attack=0;
 
     int *main=0;
+    std::string mainS;
 };
 
 #endif // STATS_H
