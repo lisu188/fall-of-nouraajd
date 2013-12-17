@@ -6,7 +6,8 @@
 Stats::Stats() {}
 
 void Stats::setMain(const char *stat) {
-  if (!stat) {
+  mainS = stat ? stat : "";
+  if (!stat || !*stat) {
     main = &strength;
     return;
   }
@@ -146,30 +147,53 @@ const char *Stats::getText(int level) {
   return text.c_str();
 }
 
-void Stats::init(Json::Value statConfig) {
+void Stats::loadFromJson(Json::Value statConfig) {
   if (!statConfig.isObject())
     return;
   strength = statConfig.get("strength", strength).asInt();
   stamina = statConfig.get("stamina", stamina).asInt();
   agility = statConfig.get("agility", agility).asInt();
   intelligence = statConfig.get("intelligence", intelligence).asInt();
-
   armor = statConfig.get("armor", armor).asInt();
   block = statConfig.get("block", block).asInt();
-
   dmgMin = statConfig.get("dmgMin", dmgMin).asInt();
   dmgMax = statConfig.get("dmgMax", dmgMax).asInt();
   hit = statConfig.get("hit", hit).asInt();
   crit = statConfig.get("crit", crit).asInt();
-
   fireResist = statConfig.get("fireResist", fireResist).asInt();
   thunderResist = statConfig.get("thunderResist", thunderResist).asInt();
   frostResist = statConfig.get("frostResist", frostResist).asInt();
   normalResist = statConfig.get("normalResist", normalResist).asInt();
-
+  shadowResist = statConfig.get("shadowResist", shadowResist).asInt();
   damage = statConfig.get("damage", damage).asInt();
   attack = statConfig.get("attack", attack).asInt();
-
   if (statConfig.isMember("main"))
     setMain(statConfig["main"].asString().c_str());
 }
+
+Json::Value Stats::saveToJson() {
+  Json::Value config;
+  config["strength"] = strength;
+  config["stamina"] = stamina;
+  config["agility"] = agility;
+  config["intelligence"] = intelligence;
+  config["armor"] = armor;
+  config["block"] = block;
+  config["dmgMin"] = dmgMin;
+  config["dmgMax"] = dmgMax;
+  config["hit"] = hit;
+  config["crit"] = crit;
+  config["fireResist"] = fireResist;
+  config["thunderResist"] = thunderResist;
+  config["frostResist"] = frostResist;
+  config["normalResist"] = normalResist;
+  config["shadowResist"] = shadowResist;
+  config["damage"] = damage;
+  config["attack"] = attack;
+  config["main"] = mainS;
+  return config;
+}
+
+int Stats::getShadowResist() const { return shadowResist; }
+
+void Stats::setShadowResist(int value) { shadowResist = value; }

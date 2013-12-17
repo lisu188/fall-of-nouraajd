@@ -150,10 +150,16 @@ MapObject::~MapObject() {
     delete animation;
 }
 
-void MapObject::moveTo(int x, int y) {
+// A silent move only places the object; ordinary moves also step onto the tile.
+void MapObject::moveTo(int x, int y, bool silent) {
   posx = x;
   posy = y;
   setPos(x * Tile::size, y * Tile::size);
+  if (!silent && map) {
+    Tile *tile = map->getTile(x, y);
+    if (tile)
+      tile->onStep();
+  }
 }
 
 int MapObject::getPosX() const { return posx; }
@@ -175,7 +181,6 @@ void MapObject::move(int x, int y) {
   if (!destination || !destination->canStep())
     return;
   moveTo(posx + x, posy + y);
-  destination->onStep();
 }
 
 void MapObject::setParentItem(QGraphicsItem *parent) {

@@ -21,7 +21,7 @@
 #include <view/fightview.h>
 #include <QDebug>
 
-Player::Player(char *path,Map *map, int x, int y):Creature(path,map,x,y)
+Player::Player(char *path,Map *map):Creature(path,map)
 {
     lock=false;
     gold=0;
@@ -32,9 +32,12 @@ Player::Player(char *path,Map *map, int x, int y):Creature(path,map,x,y)
     playerInventoryView->setZValue(3);
     playerSkillsView=new PlayerListView((std::list<ListItem*>*)&actions);
     playerSkillsView->setZValue(3);
+    playerEquippedView=new PlayerListView((std::list<ListItem*>*)&equipped);
+    playerEquippedView->setZValue(3);
     GameScene::getGame()->addItem(playerStatsView);
     GameScene::getGame()->addItem(playerInventoryView);
     GameScene::getGame()->addItem(playerSkillsView);
+    GameScene::getGame()->addItem(playerEquippedView);
     updateViews();
 }
 
@@ -63,14 +66,8 @@ void Player::update()
     playerSkillsView->setPos(view->mapToScene(
                                  view->width()-playerSkillsView->boundingRect().width(),
                                  view->height()-playerSkillsView->boundingRect().height()));
-    if(weapon)
-    {
-        weapon->setPos(view->mapToScene(view->width()-Tile::size,0));
-    }
-    if(armor)
-    {
-        armor->setPos(view->mapToScene(view->width()-Tile::size,Tile::size));
-    }
+    playerEquippedView->setPos(view->mapToScene(
+                                   view->width()-playerEquippedView->boundingRect().width(),0));
 }
 
 PlayerStatsView *Player::getStatsView() {
@@ -79,6 +76,11 @@ PlayerStatsView *Player::getStatsView() {
 
 PlayerListView *Player::getInventoryView() {
     return playerInventoryView;
+}
+
+PlayerListView *Player::getEquippedView()
+{
+    return playerEquippedView;
 }
 
 PlayerListView *Player::getSkillsView()
@@ -106,6 +108,7 @@ void Player::updateViews()
     playerStatsView->update();
     playerInventoryView->update();
     playerSkillsView->update();
+    playerEquippedView->update();
 }
 
 std::list<Creature *> *Player::getFightList() {

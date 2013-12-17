@@ -18,6 +18,7 @@ public:
     virtual void onUnequip(Creature *creature);
 
     static Item *getItem(const char *name);
+    std::string className;
 
 protected:
     void setAnimation(std::string path);
@@ -25,7 +26,7 @@ protected:
     virtual void onUse(Creature *creature)=0;
     bool singleUse;
     Stats bonus;
-    std::string className;
+
     void initializeFromFile(const char *path);
     Interaction *interaction;
     int power;

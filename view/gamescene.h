@@ -28,7 +28,6 @@ public:
     static GameScene* getGame();
     static GameView *getView();
     void playerMove(int dirx, int diry);
-
     void ensureSize(int sizex, int sizey);
 protected:
     void keyPressEvent(QKeyEvent *keyEvent);
