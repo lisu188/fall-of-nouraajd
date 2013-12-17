@@ -21,7 +21,7 @@
 #include <view/fightview.h>
 #include <QDebug>
 
-Player::Player(char *path,Map *map):Creature(path,map)
+Player::Player(char *animPath,Map *map):Creature(animPath,map)
 {
     lock=false;
     gold=0;

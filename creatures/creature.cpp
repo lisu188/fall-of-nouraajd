@@ -30,7 +30,7 @@ int stat_resisted(int value, int resist) {
 
 } // namespace
 
-Creature::Creature(char *path, Map *map) : MapObject(map, 0, 0, 2) {
+Creature::Creature(char *animPath, Map *map) : MapObject(map, 0, 0, 2) {
   className = "Creature";
   exp = 0;
   level = 0;
@@ -43,8 +43,7 @@ Creature::Creature(char *path, Map *map) : MapObject(map, 0, 0, 2) {
   alive = true;
   gold = 0;
 
-  this->path = path;
-  loadFromJson(*ConfigurationProvider::getConfig(path));
+  loadFromJson(*ConfigurationProvider::getConfig(animPath));
 }
 
 Creature::~Creature() {
@@ -172,12 +171,6 @@ void Creature::loseItem(Item *item) {
 
 std::list<Item *> *Creature::getInventory() { return &inventory; }
 
-std::string Creature::getCoordsString() {
-  std::ostringstream coords;
-  coords << "(" << getPosX() << "," << getPosY() << ")";
-  return coords.str();
-}
-
 int Creature::getMana() { return mana; }
 
 void Creature::addMana(int i) {
@@ -229,20 +222,11 @@ Stats *Creature::getStats() { return &stats; }
 int Creature::getScale() { return level + sw; }
 
 // The creature's configuration names the interaction learned at each level.
+// The levelling table from the creature's configuration names the action learned at each level.
 Interaction *Creature::getLevelAction() {
-  if (path.empty())
-    return 0;
-  std::fstream jsonFileStream;
-  jsonFileStream.open(path.c_str());
-
-  Json::Value config;
-  Json::Reader reader;
-  reader.parse(jsonFileStream, config);
-  jsonFileStream.close();
-
   std::ostringstream key;
   key << level;
-  return Interaction::getInteraction(config["levelling"].get(key.str(), "").asString());
+  return Interaction::getInteraction(levelling.get(key.str(), "").asString());
 }
 
 bool Creature::isAlive() const { return alive; }
@@ -252,7 +236,9 @@ void Creature::setAlive() { alive = true; }
 // Creatures are described by a configuration or a saved game: both use the same keys.
 void Creature::loadFromJson(Json::Value config) {
   className = config.get("name", "").asString();
-  setAnimation(config.get("path", "").asString());
+  animPath = config.get("path", "").asString();
+  setAnimation(animPath);
+  levelling = config["levelling"];
   sw = config.get("sw", 0).asInt();
   stats.loadFromJson(config["initStats"]);
   bonusLevel.loadFromJson(config["levelStats"]);
@@ -294,7 +280,8 @@ void Creature::loadFromJson(Json::Value config) {
 Json::Value Creature::saveToJson() {
   Json::Value config;
   config["name"] = className;
-  config["path"] = ConfigurationProvider::getConfig(path)->get("path", "");
+  config["path"] = animPath;
+  config["levelling"] = levelling;
   config["sw"] = sw;
   config["level"] = level;
   config["exp"] = exp;

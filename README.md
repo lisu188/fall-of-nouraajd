@@ -1,7 +1,7 @@
 # Recovered game snapshot
 
-Original commit: `c85e4a79bde5380e2df8505aab816b3823be4ca9`. Original tree: `9117e1015d0eac6e39c61f9ded1e57d16669d0b1`.
-Startup was verified from identical recovered sources at `c85e4a79bde5380e2df8505aab816b3823be4ca9`.
+Original commit: `beaccdfa47c0491cdfd1f194b8f234c631704b61`. Original tree: `71182a5b244d317ee14d62481a3fca8da0d438a1`.
+Startup was verified from identical recovered sources at `beaccdfa47c0491cdfd1f194b8f234c631704b61`.
 
 This recovered version compiled and linked on Linux, started the real game on an isolated Xvfb display,
 loaded its map and a healthy player, rendered the screenshot below, and exited normally.
@@ -37,8 +37,8 @@ launches run the game's original entry point. Startup evidence does not establis
 
 compatibilityRepair: 1, exactOriginal: 34, reconstruction: 15.
 
-- `creatures/creature.cpp`: content reconstruction of the BFG-removed original; from the cf8025b1 reconstruction: Creature(path, map) loads configurations and saved games through loadFromJson (actions, items, equipped weapon/armor, coordinates, saved level/exp/hp/mana) with the matching saveToJson, and keeps the equipped list (same-commit creature.h, player.json, configs)
-- `creatures/player.cpp`: content reconstruction of the BFG-removed original; from the 3ffa66f1 reconstruction: Player(path, map) and an equipped-items view (same-commit player.h)
+- `creatures/creature.cpp`: content reconstruction of the BFG-removed original; from the 44595a0a reconstruction: the configuration's animation path and levelling table are kept as members (animPath, levelling) and getCoordsString is gone (same-commit creature.h)
+- `creatures/player.cpp`: content reconstruction of the BFG-removed original; carried from the 206d84ba reconstruction with the renamed constructor parameter
 - `images/tiles/grass/0.png`: unverified donor reconstruction; c049ac73064442354af6224d06fe1c8b847bb8d9:images/tiles/grass/0.png; headerMatch=0; apiOverlap=0/10000; distance=105 Verified by build and startup of afdd8069 (recovery/evidence/second-original).
 - `images/tiles/ground/0.png`: unverified donor reconstruction; c049ac73064442354af6224d06fe1c8b847bb8d9:images/tiles/ground/0.png; headerMatch=0; apiOverlap=0/10000; distance=105 Verified by build and startup of afdd8069 (recovery/evidence/second-original).
 - `images/tiles/mountain/0.png`: unverified donor reconstruction; 152007b28631784d3c5e17f2686eb6ef9ff30e46:images/tiles/mountain/0.png; headerMatch=0; apiOverlap=0/10000; distance=155 Verified by build and startup of afdd8069 (recovery/evidence/second-original).
@@ -49,12 +49,12 @@ compatibilityRepair: 1, exactOriginal: 34, reconstruction: 15.
 - `json/json_reader.cpp`: unverified upstream reconstruction; https://github.com/open-source-parsers/jsoncpp/tree/4fce396c9d3e27a8ab8fb88e94c1676e021ae3a6
 - `json/json_value.cpp`: unverified upstream reconstruction; https://github.com/open-source-parsers/jsoncpp/tree/4fce396c9d3e27a8ab8fb88e94c1676e021ae3a6
 - `json/json_writer.cpp`: unverified upstream reconstruction; https://github.com/open-source-parsers/jsoncpp/tree/4fce396c9d3e27a8ab8fb88e94c1676e021ae3a6
-- `map/map.cpp`: content reconstruction of the BFG-removed original; from the 27745415 reconstruction: MapObject::moveTo gains the silent flag declared in the same-commit map.h (silent moves only place the object)
+- `map/map.cpp`: content reconstruction of the BFG-removed original; from the aad65fa3 reconstruction: the object list is a value member and Map gains loadFromJson/saveToJson over tiles and objects (same-commit map.h; Tile and Cave serializers survive)
 - `stats/stats.cpp`: content reconstruction of the BFG-removed original; from the fe3928a0 reconstruction: init renamed loadFromJson with saveToJson, main stat name and shadow resistance (same-commit stats.h)
-- `view/gamescene.cpp`: content reconstruction of the BFG-removed original; from the b1f98e58 reconstruction: the player is restored from the saved player.json introduced in this commit
+- `view/gamescene.cpp`: content reconstruction of the BFG-removed original; from the a9e9a3e3 reconstruction: player.json was deleted in this commit, so the player starts from config/players/warrior.json (the class of the deleted save)
 - `json/LICENSE`: https://github.com/open-source-parsers/jsoncpp/tree/4fce396c9d3e27a8ab8fb88e94c1676e021ae3a6 upstream distribution license
 
-Restored source fingerprint: `5f3e1511abd08b990494cbab59ac8e8566748a51cb290de8428e9a854532cd8c`.
+Restored source fingerprint: `9ddc1b21a864cd8da5cb8fefc149c1e482292d2561315da7e5b170f17ed296e8`.
 
 The actual 1278 × 718 screenshot and [verification metadata](recovery/verification.json) belong to
 this source version. Reconstructed code and borrowed assets are identified in that metadata; they are

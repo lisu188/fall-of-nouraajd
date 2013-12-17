@@ -14,7 +14,7 @@ class Player : public Creature
 
 public:
 
-    Player(char *path, Map *map);
+    Player(char *animPath, Map *map);
     ~Player();
 
     std::list<Item *>* getLoot();
