@@ -108,3 +108,10 @@ HEADERS  += \
     items/armor.h \
     items/potion.h \
     configuration/configurationprovider.h
+
+win32:CONFIG(release, debug|release): LIBS += -L$$PWD/lib/ -lzdll
+else:win32:CONFIG(debug, debug|release): LIBS += -L$$PWD/lib/ -lzdll
+else:unix: LIBS += -L$$PWD/lib/ -lzdll
+
+INCLUDEPATH += $$PWD/include
+DEPENDPATH += $$PWD/include
