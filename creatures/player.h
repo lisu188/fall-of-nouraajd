@@ -14,7 +14,7 @@ class Player : public Creature
 
 public:
 
-    Player(char *path, Map *map, int x, int y);
+    Player(char *path, Map *map);
     ~Player();
 
     std::list<Item *>* getLoot();
@@ -33,6 +33,7 @@ public:
     PlayerStatsView *getStatsView();
     PlayerListView *getInventoryView();
     PlayerListView *getSkillsView();
+    PlayerListView *getEquippedView();
 
     void addToFightList(Creature *creature);
     void removeFromFightList(Creature *creature);
@@ -44,6 +45,7 @@ private:
     PlayerStatsView *playerStatsView;
     PlayerListView *playerInventoryView;
     PlayerListView *playerSkillsView;
+    PlayerListView *playerEquippedView;
     bool lock;
     std::list<Creature *> fightList;
     int turn;

@@ -35,5 +35,9 @@
         "normalResist" : 5
     },
 "levelling" :
-    {}
+    {},
+"actions" :
+    [
+        "Attack"
+    ]
 }

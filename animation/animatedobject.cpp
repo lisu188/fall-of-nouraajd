@@ -3,6 +3,8 @@
 
 #include <destroyer/destroyer.h>
 
+#include <view/gamescene.h>
+
 AnimatedObject::AnimatedObject()
 {
     Destroyer::add(this);

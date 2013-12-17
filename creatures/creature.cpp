@@ -6,6 +6,7 @@
 #include <sstream>
 
 #include <interactions/interaction.h>
+#include <configuration/configurationprovider.h>
 #include <items/armor.h>
 #include <items/weapon.h>
 #include <stats/stats.h>
@@ -29,8 +30,7 @@ int stat_resisted(int value, int resist) {
 
 } // namespace
 
-Creature::Creature(char *path, Map *map, int x, int y)
-    : MapObject(map, x, y, 2) {
+Creature::Creature(char *path, Map *map) : MapObject(map, 0, 0, 2) {
   className = "Creature";
   exp = 0;
   level = 0;
@@ -41,13 +41,10 @@ Creature::Creature(char *path, Map *map, int x, int y)
   hpMax = 0;
   hp = 0;
   alive = true;
-  weapon = 0;
-  armor = 0;
   gold = 0;
 
-  addAction(Interaction::getInteraction("Attack"));
-  initializeFromFile(path);
-  levelUp();
+  this->path = path;
+  loadFromJson(*ConfigurationProvider::getConfig(path));
 }
 
 Creature::~Creature() {
@@ -129,7 +126,7 @@ void Creature::fight(Creature *creature) {
 
 void Creature::levelUp() {
   level++;
-  stats.addBonus(getLevelBonus());
+  stats.addBonus(bonusLevel);
   Interaction *action = getLevelAction();
   if (action)
     addAction(action);
@@ -210,9 +207,11 @@ void Creature::setItem(void *pointer, Item *newItem) {
 
   if (*slot) {
     (*slot)->onUnequip(this);
+    equipped.remove(*slot);
   }
   *slot = newItem;
   if (*slot) {
+    equipped.push_back(*slot);
     (*slot)->onEquip(this);
   }
 }
@@ -228,8 +227,6 @@ Armor *Creature::getArmor() { return armor; }
 Stats *Creature::getStats() { return &stats; }
 
 int Creature::getScale() { return level + sw; }
-
-Stats Creature::getLevelBonus() { return bonusLevel; }
 
 // The creature's configuration names the interaction learned at each level.
 Interaction *Creature::getLevelAction() {
@@ -252,24 +249,20 @@ bool Creature::isAlive() const { return alive; }
 
 void Creature::setAlive() { alive = true; }
 
-void Creature::initializeFromFile(char *path) {
-  this->path = path;
-  std::fstream jsonFileStream;
-  jsonFileStream.open(path);
-
-  Json::Value config;
-  Json::Reader reader;
-  reader.parse(jsonFileStream, config);
-  jsonFileStream.close();
-
-  className = config.get("name", "").asCString();
-  setAnimation(config.get("path", "").asCString());
+// Creatures are described by a configuration or a saved game: both use the same keys.
+void Creature::loadFromJson(Json::Value config) {
+  className = config.get("name", "").asString();
+  setAnimation(config.get("path", "").asString());
   sw = config.get("sw", 0).asInt();
-  stats.init(config["initStats"]);
-  bonusLevel.init(config["levelStats"]);
+  stats.loadFromJson(config["initStats"]);
+  bonusLevel.loadFromJson(config["levelStats"]);
+
+  Json::Value names = config["actions"];
+  for (unsigned int i = 0; i < names.size(); i++)
+    addAction(Interaction::getInteraction(names[i].asString()));
 
   std::list<Item *> items;
-  Json::Value names = config["items"];
+  names = config["items"];
   for (unsigned int i = 0; i < names.size(); i++) {
     Item *item = Item::getItem(names[i].asCString());
     if (item)
@@ -277,9 +270,53 @@ void Creature::initializeFromFile(char *path) {
   }
   addItem(&items);
 
+  Json::Value equipment = config["inventory"];
+  setWeapon(dynamic_cast<Weapon *>(Item::getItem(equipment.get("weapon", "").asCString())));
+  setArmor(dynamic_cast<Armor *>(Item::getItem(equipment.get("armor", "").asCString())));
+
+  if (config.isMember("coords"))
+    moveTo(config["coords"].get("X", 0).asInt(), config["coords"].get("Y", 0).asInt(), true);
+
   attribChange();
-  heal(0);
-  addMana(0);
+  if (config.isMember("level")) {
+    level = config["level"].asInt();
+    exp = config.get("exp", 0).asInt();
+    hp = config.get("hp", hpMax).asInt();
+    mana = config.get("mana", manaMax).asInt();
+    alive = hp > 0;
+  } else {
+    heal(0);
+    addMana(0);
+    levelUp();
+  }
+}
+
+Json::Value Creature::saveToJson() {
+  Json::Value config;
+  config["name"] = className;
+  config["path"] = ConfigurationProvider::getConfig(path)->get("path", "");
+  config["sw"] = sw;
+  config["level"] = level;
+  config["exp"] = exp;
+  config["hp"] = hp;
+  config["mana"] = mana;
+  config["initStats"] = stats.saveToJson();
+  config["levelStats"] = bonusLevel.saveToJson();
+  config["coords"]["X"] = getPosX();
+  config["coords"]["Y"] = getPosY();
+  Json::Value names(Json::arrayValue);
+  for (std::list<Interaction *>::iterator it = actions.begin(); it != actions.end(); ++it)
+    names.append((*it)->className);
+  config["actions"] = names;
+  Json::Value items(Json::arrayValue);
+  for (std::list<Item *>::iterator it = inventory.begin(); it != inventory.end(); ++it)
+    items.append((*it)->className);
+  config["items"] = items;
+  if (weapon)
+    config["inventory"]["weapon"] = weapon->className;
+  if (armor)
+    config["inventory"]["armor"] = armor->className;
+  return config;
 }
 
 int Creature::getHp() { return hp; }

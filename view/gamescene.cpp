@@ -16,7 +16,7 @@ GameScene::GameScene() {
   map = new Map();
 
   if (!player) {
-    player = new Player("config/players/sorcerer.json", map, 0, 0);
+    player = new Player("player.json", map);
     map->addObject(player);
   }
 

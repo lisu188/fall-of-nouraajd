@@ -43,7 +43,7 @@ public:
     MapObject(Map *map,int x,int y,int z);
     ~MapObject();
     int posx,posy;
-    void moveTo(int x, int y);
+    void moveTo(int x, int y,bool silent=false);
 
     int getPosX() const;
     int getPosY() const;

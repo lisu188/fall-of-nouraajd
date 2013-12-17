@@ -3,7 +3,6 @@
     ,
 "path" : "images/players/sorcerer/"
     ,
-    "sw" : 0,
 
 "initStats" :
     {
@@ -43,7 +42,7 @@
         ,
 "4" : "EndlessPain"
         ,
-"5":"ArmorOfEndlessWinter"
+"5" : "ArmorOfEndlessWinter"
         ,
 "7" : "ShadowBolt"
         ,
@@ -54,6 +53,18 @@
 
 "items" :
     [
-        "Robe", "Staff","LifePotion","ManaPotion"
-    ]
+        "LifePotion", "ManaPotion"
+    ],
+
+"actions" :
+    [
+        "Attack"
+    ],
+
+"inventory" :
+    {
+"weapon" : "Staff"
+        ,
+"armor" : "Robe"
+    }
 }
