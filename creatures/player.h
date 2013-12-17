@@ -14,7 +14,7 @@ class Player : public Creature
 
 public:
 
-    Player(char *animPath, Map *map);
+    Player(Json::Value config, Map *map);
     ~Player();
 
     std::list<Item *>* getLoot();

@@ -112,6 +112,16 @@ void Map::removeObject(MapObject *mapObject) {
 }
 
 void Map::loadFromJson(Json::Value config) {
+  Json::Value tiles = config["tiles"];
+  for (unsigned int i = 0; i < tiles.size(); i++) {
+    Tile *tile = Tile::getTile(tiles[i]);
+    if (!tile)
+      continue;
+    iterator it = find(tile->getCoords());
+    if (it != end())
+      erase(it);
+    addTile(tile);
+  }
   Json::Value objects = config["objects"];
   for (unsigned int i = 0; i < objects.size(); i++) {
     for (std::list<MapObject *>::iterator it = mapObjects.begin();
@@ -131,7 +141,8 @@ Json::Value Map::saveToJson() {
   Json::Value objects(Json::arrayValue);
   for (std::list<MapObject *>::iterator it = mapObjects.begin();
        it != mapObjects.end(); ++it)
-    objects.append((*it)->saveToJson());
+    if ((*it)->canSave())
+      objects.append((*it)->saveToJson());
   config["objects"] = objects;
   return config;
 }

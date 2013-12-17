@@ -16,7 +16,7 @@ class Stats;
 class Creature : public MapObject
 {
 public:
-    Creature(char *animPath, Map *map);
+    Creature(Json::Value config, Map *map);
     ~Creature();
 
     int getExp();
@@ -81,6 +81,8 @@ public:
 
     void loadFromJson(Json::Value config);
     Json::Value saveToJson();
+
+    bool canSave();
 
 protected:
     int gold;
