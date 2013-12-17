@@ -1,7 +1,7 @@
 # Recovered game snapshot
 
-Original commit: `653b34639f347701f578c2c7a30d766067ee5f1e`. Original tree: `896267a0f2e54bf0c69144163db197f6f75be3c6`.
-Startup was verified from identical recovered sources at `653b34639f347701f578c2c7a30d766067ee5f1e`.
+Original commit: `d371496488d43e4624d7198c86c4a39296c62a24`. Original tree: `838cf148d1bf97c8075463e4ddf8a0041e0993bb`.
+Startup was verified from identical recovered sources at `d371496488d43e4624d7198c86c4a39296c62a24`.
 
 This recovered version compiled and linked on Linux, started the real game on an isolated Xvfb display,
 loaded its map and a healthy player, rendered the screenshot below, and exited normally.
@@ -44,7 +44,7 @@ compatibilityRepair: 1, exactOriginal: 36, reconstruction: 15.
 - `images/tiles/mountain/0.png`: unverified donor reconstruction; 152007b28631784d3c5e17f2686eb6ef9ff30e46:images/tiles/mountain/0.png; headerMatch=0; apiOverlap=0/10000; distance=155 Verified by build and startup of afdd8069 (recovery/evidence/second-original).
 - `images/tiles/road/0.png`: unverified donor reconstruction; 152007b28631784d3c5e17f2686eb6ef9ff30e46:images/tiles/road/0.png; headerMatch=0; apiOverlap=0/10000; distance=155 Verified by build and startup of afdd8069 (recovery/evidence/second-original).
 - `images/tiles/water/0.png`: unverified donor reconstruction; c049ac73064442354af6224d06fe1c8b847bb8d9:images/tiles/water/0.png; headerMatch=0; apiOverlap=0/10000; distance=105 Verified by build and startup of afdd8069 (recovery/evidence/second-original).
-- `interactions/interaction.cpp`: content reconstruction of the BFG-removed original; from the a1107283 reconstruction: effects are data-driven Effect(type, caster, duration) objects (same-commit effect.h, surviving effect.cpp)
+- `interactions/interaction.cpp`: content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of 9ee96a8e2bf78f077cdfbfd98442a2512e79febc (previous version of interactions/interaction.cpp)
 - `json/json_batchallocator.h`: unverified upstream reconstruction; https://github.com/open-source-parsers/jsoncpp/tree/4fce396c9d3e27a8ab8fb88e94c1676e021ae3a6
 - `json/json_reader.cpp`: unverified upstream reconstruction; https://github.com/open-source-parsers/jsoncpp/tree/4fce396c9d3e27a8ab8fb88e94c1676e021ae3a6
 - `json/json_value.cpp`: unverified upstream reconstruction; https://github.com/open-source-parsers/jsoncpp/tree/4fce396c9d3e27a8ab8fb88e94c1676e021ae3a6
