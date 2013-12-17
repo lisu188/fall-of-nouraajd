@@ -10,3 +10,7 @@ void Building::onEnter()
 {
     qDebug() << "Entered" << className.c_str()<<"\n";
 }
+
+bool Building::canSave() {
+    return true;
+}

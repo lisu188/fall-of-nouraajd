@@ -1,7 +1,7 @@
 # Recovered game snapshot
 
-Original commit: `eecb6cfb9a44161dbe829cdc7009d3c253718446`. Original tree: `74679e1a2ab79b615c26634e62e39b47b449d05d`.
-Startup was verified from identical recovered sources at `eecb6cfb9a44161dbe829cdc7009d3c253718446`.
+Original commit: `d96cb47c9272200eb1a6cbc3b7f7785688cdd741`. Original tree: `185be101556f3b98aaaaa29e58aa11e7c00ac203`.
+Startup was verified from identical recovered sources at `d96cb47c9272200eb1a6cbc3b7f7785688cdd741`.
 
 This recovered version compiled and linked on Linux, started the real game on an isolated Xvfb display,
 loaded its map and a healthy player, rendered the screenshot below, and exited normally.
@@ -37,8 +37,8 @@ launches run the game's original entry point. Startup evidence does not establis
 
 compatibilityRepair: 1, exactOriginal: 36, reconstruction: 15.
 
-- `creatures/creature.cpp`: content reconstruction of the BFG-removed original; from the 44595a0a reconstruction: the configuration's animation path and levelling table are kept as members (animPath, levelling) and getCoordsString is gone (same-commit creature.h)
-- `creatures/player.cpp`: content reconstruction of the BFG-removed original; carried from the 206d84ba reconstruction with the renamed constructor parameter
+- `creatures/creature.cpp`: content reconstruction of the BFG-removed original; from the b5dc5c70 reconstruction: Creature(Json::Value, map) takes the configuration itself, and canSave leaves defeated creatures out of saves (same-commit creature.h/map.h)
+- `creatures/player.cpp`: content reconstruction of the BFG-removed original; carried from the d73ccec8 reconstruction with the Json::Value constructor (same-commit player.h)
 - `images/tiles/grass/0.png`: unverified donor reconstruction; c049ac73064442354af6224d06fe1c8b847bb8d9:images/tiles/grass/0.png; headerMatch=0; apiOverlap=0/10000; distance=105 Verified by build and startup of afdd8069 (recovery/evidence/second-original).
 - `images/tiles/ground/0.png`: unverified donor reconstruction; c049ac73064442354af6224d06fe1c8b847bb8d9:images/tiles/ground/0.png; headerMatch=0; apiOverlap=0/10000; distance=105 Verified by build and startup of afdd8069 (recovery/evidence/second-original).
 - `images/tiles/mountain/0.png`: unverified donor reconstruction; 152007b28631784d3c5e17f2686eb6ef9ff30e46:images/tiles/mountain/0.png; headerMatch=0; apiOverlap=0/10000; distance=155 Verified by build and startup of afdd8069 (recovery/evidence/second-original).
@@ -49,12 +49,12 @@ compatibilityRepair: 1, exactOriginal: 36, reconstruction: 15.
 - `json/json_reader.cpp`: unverified upstream reconstruction; https://github.com/open-source-parsers/jsoncpp/tree/4fce396c9d3e27a8ab8fb88e94c1676e021ae3a6
 - `json/json_value.cpp`: unverified upstream reconstruction; https://github.com/open-source-parsers/jsoncpp/tree/4fce396c9d3e27a8ab8fb88e94c1676e021ae3a6
 - `json/json_writer.cpp`: unverified upstream reconstruction; https://github.com/open-source-parsers/jsoncpp/tree/4fce396c9d3e27a8ab8fb88e94c1676e021ae3a6
-- `map/map.cpp`: content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of b53f162880b9e7a11d28e171b902ac423003c19d (previous version of map/map.cpp)
+- `map/map.cpp`: content reconstruction of the BFG-removed original; from the cde8ba2e reconstruction: saved maps skip objects whose canSave is false and loading recreates tiles through the surviving Tile::getTile
 - `stats/stats.cpp`: content reconstruction of the BFG-removed original; from the fe3928a0 reconstruction: init renamed loadFromJson with saveToJson, main stat name and shadow resistance (same-commit stats.h)
-- `view/gamescene.cpp`: content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of e34408f131b5d6791bf47010b2b65339307989cf (previous version of view/gamescene.cpp)
+- `view/gamescene.cpp`: content reconstruction of the BFG-removed original; from the e29597b4 reconstruction: the player is built from the warrior configuration value, and GameScene::setPlayer is defined (same-commit gamescene.h)
 - `json/LICENSE`: https://github.com/open-source-parsers/jsoncpp/tree/4fce396c9d3e27a8ab8fb88e94c1676e021ae3a6 upstream distribution license
 
-Restored source fingerprint: `114e2bd93f80a34bbe400e20a9e50de35752a283277bb12cf9ba14e40f143806`.
+Restored source fingerprint: `68de59c296f66b2346e5b83af693d6ed9f503fc45b2dfc7136647d9892494aa7`.
 
 The actual 1278 × 718 screenshot and [verification metadata](recovery/verification.json) belong to
 this source version. Reconstructed code and borrowed assets are identified in that metadata; they are

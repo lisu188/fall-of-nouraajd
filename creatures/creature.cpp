@@ -30,7 +30,7 @@ int stat_resisted(int value, int resist) {
 
 } // namespace
 
-Creature::Creature(char *animPath, Map *map) : MapObject(map, 0, 0, 2) {
+Creature::Creature(Json::Value config, Map *map) : MapObject(map, 0, 0, 2) {
   className = "Creature";
   exp = 0;
   level = 0;
@@ -43,7 +43,7 @@ Creature::Creature(char *animPath, Map *map) : MapObject(map, 0, 0, 2) {
   alive = true;
   gold = 0;
 
-  loadFromJson(*ConfigurationProvider::getConfig(animPath));
+  loadFromJson(config);
 }
 
 Creature::~Creature() {
@@ -276,6 +276,9 @@ void Creature::loadFromJson(Json::Value config) {
     levelUp();
   }
 }
+
+// Defeated creatures are left out of saved games.
+bool Creature::canSave() { return alive; }
 
 Json::Value Creature::saveToJson() {
   Json::Value config;

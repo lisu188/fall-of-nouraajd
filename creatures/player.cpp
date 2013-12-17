@@ -21,7 +21,7 @@
 #include <view/fightview.h>
 #include <QDebug>
 
-Player::Player(char *animPath,Map *map):Creature(animPath,map)
+Player::Player(Json::Value config,Map *map):Creature(config,map)
 {
     lock=false;
     gold=0;

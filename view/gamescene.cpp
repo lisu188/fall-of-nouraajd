@@ -2,6 +2,8 @@
 
 #include <QGraphicsView>
 
+#include <configuration/configurationprovider.h>
+
 #include <buildings/cave.h>
 #include <creatures/player.h>
 #include <destroyer/destroyer.h>
@@ -16,7 +18,7 @@ GameScene::GameScene() {
   map = new Map();
 
   if (!player) {
-    player = new Player("config/players/warrior.json", map);
+    player = new Player(*ConfigurationProvider::getConfig("config/players/warrior.json"), map);
     map->addObject(player);
   }
 
@@ -34,6 +36,11 @@ GameScene::~GameScene() {
 }
 
 Player *GameScene::getPlayer() { return player; }
+
+Player *GameScene::setPlayer(Player *pla) {
+  player = pla;
+  return player;
+}
 
 GameScene *GameScene::getGame() { return game; }
 
