@@ -2,7 +2,7 @@
 
 #include <view/gamescene.h>
 
-Monster::Monster(char *path,Map *map):Creature(path,map)
+Monster::Monster(Json::Value config,Map *map):Creature(config,map)
 {
 }
 

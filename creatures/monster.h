@@ -6,7 +6,7 @@
 class Monster : public Creature
 {
 public:
-    Monster(char *animPath, Map* map);
+    Monster(Json::Value config, Map* map);
     virtual void onMove();
     virtual void onEnter();
 

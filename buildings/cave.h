@@ -12,6 +12,7 @@ public:
     virtual void onEnter();
     virtual void onMove();
     static int count;
+    bool canSave();
 
 private:
     bool enabled;

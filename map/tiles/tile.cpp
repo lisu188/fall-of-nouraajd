@@ -68,6 +68,29 @@ Tile *Tile::getRandomTile(int x, int y)
     return 0;
 }
 
+Tile *Tile::getTile(Json::Value config)
+{
+    int x=config["coords"].get("x",0).asInt();
+    int y=config["coords"].get("y",0).asInt();
+    std::string type=config.get("name","").asString();
+    if(type.compare("GrassTile")==0)
+    {
+        return new GrassTile(x,y);
+    } else if(type.compare("GroundTile")==0)
+    {
+        return new GroundTile(x,y);
+    } else if(type.compare("RoadTile")==0)
+    {
+        return new RoadTile(x,y);
+    } else if(type.compare("WaterTile")==0)
+    {
+        return new WaterTile(x,y);
+    } else if(type.compare("MountainTile")==0)
+    {
+        return new MountainTile(x,y);
+    }
+}
+
 void Tile::addToGame()
 {
     GameScene::getGame()->addItem(this);

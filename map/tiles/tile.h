@@ -28,6 +28,7 @@ public:
     bool canStep() const;
 
     static Tile *getRandomTile(int x, int y);
+    static Tile *getTile(Json::Value config);
 
     void addToGame();
 

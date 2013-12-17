@@ -12,6 +12,7 @@ public:
     // MapObject interface
 public:
     virtual void onEnter();
+    virtual bool canSave();
 };
 
 #endif // BUILDING_H
