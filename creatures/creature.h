@@ -17,6 +17,7 @@ class Creature : public MapObject
 {
 public:
     Creature(Json::Value config, Map *map);
+    Creature(Map *map,std::string name);
     ~Creature();
 
     int getExp();
@@ -86,7 +87,6 @@ public:
 
 protected:
     int gold;
-    Json::Value levelling;
     std::list<Item*> inventory;
     std::list<Item*> equipped;
     int exp;

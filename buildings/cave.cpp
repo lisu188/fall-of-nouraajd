@@ -31,13 +31,13 @@ void Cave::onEnter()
                 }
                 if(rand()%5==0)
                 {
-                    Monster *monster=new Monster(*ConfigurationProvider::getConfig("config/monsters/pritzmage.json"),map);
+                    Monster *monster=new Monster(map,"PritzMage");
                     map->addObject(monster);
                     monster->moveTo(getPosX()+2*i,getPosY()+2*j,true);
                 }
                 else
                 {
-                    Monster *monster=new Monster(*ConfigurationProvider::getConfig("config/monsters/pritz.json"),map);
+                    Monster *monster=new Monster(map,"Pritz");
                     map->addObject(monster);
                     monster->moveTo(getPosX()+2*i,getPosY()+2*j,true);
                 }
@@ -52,13 +52,13 @@ void Cave::onMove()
     {
         if(rand()%5==0)
         {
-            Monster *monster=new Monster(*ConfigurationProvider::getConfig("config/monsters/pritzmage.json"),map);
+            Monster *monster=new Monster(map,"PritzMage");
             map->addObject(monster);
             monster->moveTo(getPosX(),getPosY(),true);
         }
         else
         {
-            Monster *monster=new Monster(*ConfigurationProvider::getConfig("config/monsters/pritz.json"),map);
+            Monster *monster=new Monster(map,"Pritz");
             map->addObject(monster);
             monster->moveTo(getPosX(),getPosY(),true);
         }
