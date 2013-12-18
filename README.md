@@ -1,7 +1,7 @@
 # Recovered game snapshot
 
-Original commit: `32ac0b973b0c15a92e1ff865d9c8b1d7fefa64e5`. Original tree: `b8665c2478a2dad6259d7fb14f30f9f3f302c738`.
-Startup was verified from identical recovered sources at `32ac0b973b0c15a92e1ff865d9c8b1d7fefa64e5`.
+Original commit: `0cd1487d1d407875508c84689ce67c5f83634e7b`. Original tree: `91064cd9f99dd117304ac4165a501a883f8be423`.
+Startup was verified from identical recovered sources at `0cd1487d1d407875508c84689ce67c5f83634e7b`.
 
 This recovered version compiled and linked on Linux, started the real game on an isolated Xvfb display,
 loaded its map and a healthy player, rendered the screenshot below, and exited normally.
@@ -50,7 +50,7 @@ compatibilityRepair: 1, exactOriginal: 36, reconstruction: 16.
 - `json/json_reader.cpp`: unverified upstream reconstruction; https://github.com/open-source-parsers/jsoncpp/tree/4fce396c9d3e27a8ab8fb88e94c1676e021ae3a6
 - `json/json_value.cpp`: unverified upstream reconstruction; https://github.com/open-source-parsers/jsoncpp/tree/4fce396c9d3e27a8ab8fb88e94c1676e021ae3a6
 - `json/json_writer.cpp`: unverified upstream reconstruction; https://github.com/open-source-parsers/jsoncpp/tree/4fce396c9d3e27a8ab8fb88e94c1676e021ae3a6
-- `map/map.cpp`: content reconstruction of the BFG-removed original; carried the nearest #41 reconstruction through API-stable revision #46; surviving files reveal no recoverable implementation/data delta, so original internal changes remain unknown
+- `map/map.cpp`: content reconstruction of the BFG-removed original; carried the nearest #41 reconstruction through API-stable revision #47; surviving files reveal no recoverable implementation/data delta, so original internal changes remain unknown
 - `stats/stats.cpp`: content reconstruction of the BFG-removed original; from the fe3928a0 reconstruction: init renamed loadFromJson with saveToJson, main stat name and shadow resistance (same-commit stats.h)
 - `view/gamescene.cpp`: content reconstruction of the BFG-removed original; carried the nearest #41 reconstruction through API-stable revision #46; surviving files reveal no recoverable implementation/data delta, so original internal changes remain unknown
 - `json/LICENSE`: https://github.com/open-source-parsers/jsoncpp/tree/4fce396c9d3e27a8ab8fb88e94c1676e021ae3a6 upstream distribution license
