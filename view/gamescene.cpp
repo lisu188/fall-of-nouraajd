@@ -18,7 +18,7 @@ GameScene::GameScene() {
     map = new Map();
 
     if (!player) {
-        player = new Player(map, "Warrior");
+        player = new Player("Warrior", map);
         map->addObject(player);
     }
 

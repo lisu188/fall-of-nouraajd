@@ -30,8 +30,8 @@ int stat_resisted(int value, int resist) {
 
 } // namespace
 
-Creature::Creature(Json::Value config, Map *map) : MapObject(map, 0, 0, 2) {
-    className = "Creature";
+Creature::Creature(std::string name, Json::Value config, Map *map) : MapObject(map, 0, 0, 2) {
+    className = name;
     exp = 0;
     level = 0;
     sw = 0;
@@ -46,8 +46,8 @@ Creature::Creature(Json::Value config, Map *map) : MapObject(map, 0, 0, 2) {
     loadFromJson(config);
 }
 
-Creature::Creature(Map *map, std::string name)
-    : Creature((*ConfigurationProvider::getConfig("config/creatures.json"))[name], map) {
+Creature::Creature(std::string name, Map *map)
+    : Creature(name, (*ConfigurationProvider::getConfig("config/creatures.json"))[name], map) {
     className = name;
 }
 
@@ -236,7 +236,6 @@ void Creature::setAlive() { alive = true; }
 
 // Creatures are described by a configuration or a saved game: both use the same keys.
 void Creature::loadFromJson(Json::Value config) {
-    className = config.get("name", "").asString();
     animPath = config.get("path", "").asString();
     setAnimation(animPath);
     sw = config.get("sw", 0).asInt();
@@ -282,7 +281,6 @@ bool Creature::canSave() { return alive; }
 
 Json::Value Creature::saveToJson() {
     Json::Value config;
-    config["name"] = className;
     config["path"] = animPath;
     config["sw"] = sw;
     config["level"] = level;

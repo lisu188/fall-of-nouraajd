@@ -9,8 +9,6 @@
 #include <map/tiles/watertile.h>
 #include <view/gamescene.h>
 
-Map::Map() {}
-
 // Tiles and map objects are AnimatedObjects owned by the Destroyer, which deletes
 // them when the game terminates; the map only drops its references here.
 Map::~Map() {
@@ -121,10 +119,14 @@ void Map::loadFromJson(Json::Value config) {
         }
     }
     Json::Value objects = config["objects"];
-    for (unsigned int i = 0; i < objects.size(); i++) {
-        for (std::list<MapObject *>::iterator it = mapObjects.begin(); it != mapObjects.end(); ++it) {
-            if ((*it)->className == objects[i].get("name", "").asString())
-                (*it)->loadFromJson(objects[i]);
+    Json::Value::Members names = objects.getMemberNames();
+    for (unsigned int n = 0; n < names.size(); n++) {
+        Json::Value instances = objects[names[n]];
+        for (unsigned int i = 0; i < instances.size(); i++) {
+            for (std::list<MapObject *>::iterator it = mapObjects.begin(); it != mapObjects.end(); ++it) {
+                if ((*it)->className == names[n])
+                    (*it)->loadFromJson(instances[i]);
+            }
         }
     }
 }
@@ -135,10 +137,10 @@ Json::Value Map::saveToJson() {
     for (iterator it = begin(); it != end(); ++it)
         tiles[(*it).second->className].append((*it).second->saveToJson());
     config["tiles"] = tiles;
-    Json::Value objects(Json::arrayValue);
+    Json::Value objects;
     for (std::list<MapObject *>::iterator it = mapObjects.begin(); it != mapObjects.end(); ++it)
         if ((*it)->canSave())
-            objects.append((*it)->saveToJson());
+            objects[(*it)->className].append((*it)->saveToJson());
     config["objects"] = objects;
     return config;
 }
