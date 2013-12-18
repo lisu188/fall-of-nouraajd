@@ -1,7 +1,7 @@
 # Recovered game snapshot
 
-Original commit: `f26e3d60b941581e9ce323602b7394a5a9119eea`. Original tree: `e59c9129d07ba8fa54bb8e0ba0d4976f5666e71f`.
-Startup was verified from identical recovered sources at `f26e3d60b941581e9ce323602b7394a5a9119eea`.
+Original commit: `1a3664c6aa7596d5b8467e0ebdb5b145d4c8238f`. Original tree: `d3db073245dbf5c252d3afc1cf173196f4c46cc2`.
+Startup was verified from identical recovered sources at `1a3664c6aa7596d5b8467e0ebdb5b145d4c8238f`.
 
 This recovered version compiled and linked on Linux, started the real game on an isolated Xvfb display,
 loaded its map and a healthy player, rendered the screenshot below, and exited normally.
@@ -38,7 +38,7 @@ launches run the game's original entry point. Startup evidence does not establis
 compatibilityRepair: 1, exactOriginal: 36, reconstruction: 16.
 
 - `config/creatures.json`: content reconstruction of the BFG-removed original; carried the nearest #41 reconstruction through API-stable revision #43; surviving files reveal no recoverable implementation/data delta, so original internal changes remain unknown
-- `creatures/creature.cpp`: content reconstruction of the BFG-removed original; adapted #40 reconstruction to the original #41 Creature(name,config,map) and Creature(name,map); retain explicit name across load/save
+- `creatures/creature.cpp`: content reconstruction of the BFG-removed original; carried the nearest #41 reconstruction through API-stable revision #44; surviving files reveal no recoverable implementation/data delta, so original internal changes remain unknown
 - `creatures/player.cpp`: content reconstruction of the BFG-removed original; adapted #40 reconstruction to both original #41 Player(name,...) constructors
 - `images/tiles/grass/0.png`: unverified donor reconstruction; c049ac73064442354af6224d06fe1c8b847bb8d9:images/tiles/grass/0.png; headerMatch=0; apiOverlap=0/10000; distance=105 Verified by build and startup of afdd8069 (recovery/evidence/second-original).
 - `images/tiles/ground/0.png`: unverified donor reconstruction; c049ac73064442354af6224d06fe1c8b847bb8d9:images/tiles/ground/0.png; headerMatch=0; apiOverlap=0/10000; distance=105 Verified by build and startup of afdd8069 (recovery/evidence/second-original).
