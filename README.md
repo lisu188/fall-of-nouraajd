@@ -1,7 +1,7 @@
 # Recovered game snapshot
 
-Original commit: `6da7e98186ea29ca59619905c550447459ebedb8`. Original tree: `147c55f2280c21a4069918c57998dd17b152d931`.
-Startup was verified from identical recovered sources at `6da7e98186ea29ca59619905c550447459ebedb8`.
+Original commit: `c79d046b24474a80fd55e3e55e912c3bc91d667a`. Original tree: `c2c81b8ae8f989455e09b2ff25913e646737d4fc`.
+Startup was verified from identical recovered sources at `c79d046b24474a80fd55e3e55e912c3bc91d667a`.
 
 This recovered version compiled and linked on Linux, started the real game on an isolated Xvfb display,
 loaded its map and a healthy player, rendered the screenshot below, and exited normally.
@@ -51,10 +51,10 @@ compatibilityRepair: 1, exactOriginal: 36, reconstruction: 15.
 - `json/json_writer.cpp`: unverified upstream reconstruction; https://github.com/open-source-parsers/jsoncpp/tree/4fce396c9d3e27a8ab8fb88e94c1676e021ae3a6
 - `map/map.cpp`: content reconstruction of the BFG-removed original; from the 6dc1be85 reconstruction: tiles are saved grouped by type as coordinates and recreated with the surviving Tile::getTile(type, x, y) (same-commit tile.cpp)
 - `stats/stats.cpp`: content reconstruction of the BFG-removed original; from the fe3928a0 reconstruction: init renamed loadFromJson with saveToJson, main stat name and shadow resistance (same-commit stats.h)
-- `view/gamescene.cpp`: content reconstruction of the BFG-removed original; from the f1ad1b8f reconstruction: GameScene::setPlayer returns void (same-commit gamescene.h)
+- `view/gamescene.cpp`: content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of bcc6eba508085367cc0e3f6957c33713a2ec62cc (previous version of view/gamescene.cpp)
 - `json/LICENSE`: https://github.com/open-source-parsers/jsoncpp/tree/4fce396c9d3e27a8ab8fb88e94c1676e021ae3a6 upstream distribution license
 
-Restored source fingerprint: `b6c041766f7c3dcc19f97eeed98338343347aa509549dec231af1e2ad54b3b54`.
+Restored source fingerprint: `107d8e22e154c2d70b695f00c0ee874e8c6bedd3cfc5fdeeefc5e566c132e744`.
 
 The actual 1278 × 718 screenshot and [verification metadata](recovery/verification.json) belong to
 this source version. Reconstructed code and borrowed assets are identified in that metadata; they are
