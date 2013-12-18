@@ -68,11 +68,8 @@ Tile *Tile::getRandomTile(int x, int y)
     return 0;
 }
 
-Tile *Tile::getTile(Json::Value config)
+Tile *Tile::getTile(std::string type,int x,int y)
 {
-    int x=config["coords"].get("x",0).asInt();
-    int y=config["coords"].get("y",0).asInt();
-    std::string type=config.get("name","").asString();
     if(type.compare("GrassTile")==0)
     {
         return new GrassTile(x,y);
@@ -103,9 +100,8 @@ void Tile::loadFromJson(Json::Value config)
 Json::Value Tile::saveToJson()
 {
     Json::Value config;
-    config["name"]=className;
-    config["coords"]["x"]=posx;
-    config["coords"]["y"]=posy;
+    config["x"]=posx;
+    config["y"]=posy;
     return config;
 }
 

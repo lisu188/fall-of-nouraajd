@@ -40,5 +40,6 @@ INPUT(
 ./release\monster.o
 ./release\potion.o
 ./release\configurationprovider.o
+./release\compression.o
 ./release\moc_animatedobject.o
 );

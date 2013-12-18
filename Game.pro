@@ -56,7 +56,8 @@ SOURCES += main.cpp \
     creatures/player.cpp \
     creatures/monster.cpp \
     items/potion.cpp \
-    configuration/configurationprovider.cpp
+    configuration/configurationprovider.cpp \
+    compression/compression.cpp
 
 INCLUDEPATH += tmp/moc/release_shared
 
@@ -107,7 +108,8 @@ HEADERS  += \
     items/weapon.h \
     items/armor.h \
     items/potion.h \
-    configuration/configurationprovider.h
+    configuration/configurationprovider.h \
+    compression/compression.h
 
 win32:CONFIG(release, debug|release): LIBS += -L$$PWD/lib/ -lzdll
 else:win32:CONFIG(debug, debug|release): LIBS += -L$$PWD/lib/ -lzdll
