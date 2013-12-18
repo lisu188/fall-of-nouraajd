@@ -31,13 +31,13 @@ void Cave::onEnter()
                 }
                 if(rand()%5==0)
                 {
-                    Monster *monster=new Monster(map,"PritzMage");
+                    Monster *monster=new Monster("PritzMage",map);
                     map->addObject(monster);
                     monster->moveTo(getPosX()+2*i,getPosY()+2*j,true);
                 }
                 else
                 {
-                    Monster *monster=new Monster(map,"Pritz");
+                    Monster *monster=new Monster("Pritz",map);
                     map->addObject(monster);
                     monster->moveTo(getPosX()+2*i,getPosY()+2*j,true);
                 }
@@ -52,13 +52,13 @@ void Cave::onMove()
     {
         if(rand()%5==0)
         {
-            Monster *monster=new Monster(map,"PritzMage");
+            Monster *monster=new Monster("PritzMage",map);
             map->addObject(monster);
             monster->moveTo(getPosX(),getPosY(),true);
         }
         else
         {
-            Monster *monster=new Monster(map,"Pritz");
+            Monster *monster=new Monster("Pritz",map);
             map->addObject(monster);
             monster->moveTo(getPosX(),getPosY(),true);
         }
@@ -77,7 +77,6 @@ void Cave::loadFromJson(Json::Value config)
 Json::Value Cave::saveToJson()
 {
     Json::Value config;
-    config["name"]=className;
     config["coords"]["x"]=getPosX();
     config["coords"]["y"]=getPosY();
     return config;

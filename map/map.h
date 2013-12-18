@@ -18,7 +18,6 @@ class MapObject;
 class Map : private std::unordered_map<Coords,Tile*,CoordsHasher>
 {
 public:
-    Map();
     ~Map();
 
     void move(int x,int y);

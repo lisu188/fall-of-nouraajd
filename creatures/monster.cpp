@@ -2,11 +2,11 @@
 
 #include <view/gamescene.h>
 
-Monster::Monster(Json::Value config,Map *map):Creature(config,map)
+Monster::Monster(std::string name, Json::Value config, Map *map):Creature(name,config,map)
 {
 }
 
-Monster::Monster( Map *map,std::string name):Creature(map,name)
+Monster::Monster(std::string name, Map *map):Creature(name,map)
 {
 }
 

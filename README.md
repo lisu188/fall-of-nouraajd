@@ -1,7 +1,7 @@
 # Recovered game snapshot
 
-Original commit: `396231cf76e089db836e546b915481836d32767f`. Original tree: `2cc2f5442ec4a6915b4f0388e23eb0073f2637be`.
-Startup was verified from identical recovered sources at `396231cf76e089db836e546b915481836d32767f`.
+Original commit: `467d4b5cd6231cdaa33ea0430536e4345bf46fe0`. Original tree: `7484e04268eac2b756ff4dbdc6569b6cf5f01bc5`.
+Startup was verified from identical recovered sources at `467d4b5cd6231cdaa33ea0430536e4345bf46fe0`.
 
 This recovered version compiled and linked on Linux, started the real game on an isolated Xvfb display,
 loaded its map and a healthy player, rendered the screenshot below, and exited normally.
@@ -35,11 +35,11 @@ launches run the game's original entry point. Startup evidence does not establis
 
 ## Recovery provenance
 
-compatibilityRepair: 1, exactOriginal: 36, reconstruction: 16.
+compatibilityRepair: 1, exactOriginal: 36, reconstruction: 17.
 
-- `config/creatures.json`: content reconstruction of the BFG-removed original; consolidated the five exact surviving creature templates from #39 (49e97768); preserved their stats, equipment, actions and levelling without the later unverified donor defaults
-- `creatures/creature.cpp`: content reconstruction of the BFG-removed original; adapted validated e80827d4 reconstruction to the original #40 named constructor and removed levelling member; read levelling from the consolidated template
-- `creatures/player.cpp`: content reconstruction of the BFG-removed original; adapted validated 7f754424 reconstruction with the original #40 Player(Map*,std::string) delegating constructor
+- `config/creatures.json`: content reconstruction of the BFG-removed original; carried #40 consolidated original templates, removing duplicated names because #41 original constructors pass the template name separately
+- `creatures/creature.cpp`: content reconstruction of the BFG-removed original; adapted #40 reconstruction to the original #41 Creature(name,config,map) and Creature(name,map); retain explicit name across load/save
+- `creatures/player.cpp`: content reconstruction of the BFG-removed original; adapted #40 reconstruction to both original #41 Player(name,...) constructors
 - `images/tiles/grass/0.png`: unverified donor reconstruction; c049ac73064442354af6224d06fe1c8b847bb8d9:images/tiles/grass/0.png; headerMatch=0; apiOverlap=0/10000; distance=105 Verified by build and startup of afdd8069 (recovery/evidence/second-original).
 - `images/tiles/ground/0.png`: unverified donor reconstruction; c049ac73064442354af6224d06fe1c8b847bb8d9:images/tiles/ground/0.png; headerMatch=0; apiOverlap=0/10000; distance=105 Verified by build and startup of afdd8069 (recovery/evidence/second-original).
 - `images/tiles/mountain/0.png`: unverified donor reconstruction; 152007b28631784d3c5e17f2686eb6ef9ff30e46:images/tiles/mountain/0.png; headerMatch=0; apiOverlap=0/10000; distance=155 Verified by build and startup of afdd8069 (recovery/evidence/second-original).
@@ -50,12 +50,13 @@ compatibilityRepair: 1, exactOriginal: 36, reconstruction: 16.
 - `json/json_reader.cpp`: unverified upstream reconstruction; https://github.com/open-source-parsers/jsoncpp/tree/4fce396c9d3e27a8ab8fb88e94c1676e021ae3a6
 - `json/json_value.cpp`: unverified upstream reconstruction; https://github.com/open-source-parsers/jsoncpp/tree/4fce396c9d3e27a8ab8fb88e94c1676e021ae3a6
 - `json/json_writer.cpp`: unverified upstream reconstruction; https://github.com/open-source-parsers/jsoncpp/tree/4fce396c9d3e27a8ab8fb88e94c1676e021ae3a6
-- `map/map.cpp`: content reconstruction of the BFG-removed original; carried validated 3843e147 reconstruction; surviving #40 map.h has unchanged APIs, so no unsupported implementation changes inferred
+- `map/map.cpp`: content reconstruction of the BFG-removed original; adapted prepared #40 map reconstruction to original #41 implicit Map constructor; group saved objects by className because original Cave no longer serializes its name
+- `save/map`: unverified donor reconstruction; 00b9212a0944c4032bebc65310406734d3c678a3:save/map; headerMatch=0; apiOverlap=0/10000; distance=27
 - `stats/stats.cpp`: content reconstruction of the BFG-removed original; from the fe3928a0 reconstruction: init renamed loadFromJson with saveToJson, main stat name and shadow resistance (same-commit stats.h)
-- `view/gamescene.cpp`: content reconstruction of the BFG-removed original; adapted validated f1dcf296 reconstruction to Player(map,"Warrior") and the consolidated creature configuration; retained map initialization
+- `view/gamescene.cpp`: content reconstruction of the BFG-removed original; adapted #40 scene reconstruction to the original #41 Player(name,map) constructor
 - `json/LICENSE`: https://github.com/open-source-parsers/jsoncpp/tree/4fce396c9d3e27a8ab8fb88e94c1676e021ae3a6 upstream distribution license
 
-Restored source fingerprint: `d216bd4c10dc4831541d17c6fb581ef27212c6052144e07a90a3ca799f76634c`.
+Restored source fingerprint: `aaf0c8c0ab6bcd8011aa2dff94d36c79a8450caf1637d27d5b78d2b24f67195f`.
 
 The actual 1278 × 718 screenshot and [verification metadata](recovery/verification.json) belong to
 this source version. Reconstructed code and borrowed assets are identified in that metadata; they are
