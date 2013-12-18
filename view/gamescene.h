@@ -25,7 +25,7 @@ public:
     GameScene();
     ~GameScene();
     static Player* getPlayer();
-    static Player *setPlayer(Player *pla);
+    static void setPlayer(Player *pla);
     static GameScene* getGame();
     static GameView *getView();
     void playerMove(int dirx, int diry);

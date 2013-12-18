@@ -37,10 +37,7 @@ GameScene::~GameScene() {
 
 Player *GameScene::getPlayer() { return player; }
 
-Player *GameScene::setPlayer(Player *pla) {
-  player = pla;
-  return player;
-}
+void GameScene::setPlayer(Player *pla) { player = pla; }
 
 GameScene *GameScene::getGame() { return game; }
 

@@ -40,5 +40,6 @@ INPUT(
 ./debug\monster.o
 ./debug\potion.o
 ./debug\configurationprovider.o
+./debug\compression.o
 ./debug\moc_animatedobject.o
 );

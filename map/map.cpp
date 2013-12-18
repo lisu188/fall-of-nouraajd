@@ -112,15 +112,21 @@ void Map::removeObject(MapObject *mapObject) {
 }
 
 void Map::loadFromJson(Json::Value config) {
+  // Tiles are saved grouped by tile type, each as its coordinates.
   Json::Value tiles = config["tiles"];
-  for (unsigned int i = 0; i < tiles.size(); i++) {
-    Tile *tile = Tile::getTile(tiles[i]);
-    if (!tile)
-      continue;
-    iterator it = find(tile->getCoords());
-    if (it != end())
-      erase(it);
-    addTile(tile);
+  Json::Value::Members types = tiles.getMemberNames();
+  for (unsigned int t = 0; t < types.size(); t++) {
+    Json::Value coords = tiles[types[t]];
+    for (unsigned int i = 0; i < coords.size(); i++) {
+      Tile *tile = Tile::getTile(types[t], coords[i].get("x", 0).asInt(),
+                                 coords[i].get("y", 0).asInt());
+      if (!tile)
+        continue;
+      iterator it = find(tile->getCoords());
+      if (it != end())
+        erase(it);
+      addTile(tile);
+    }
   }
   Json::Value objects = config["objects"];
   for (unsigned int i = 0; i < objects.size(); i++) {
@@ -134,9 +140,9 @@ void Map::loadFromJson(Json::Value config) {
 
 Json::Value Map::saveToJson() {
   Json::Value config;
-  Json::Value tiles(Json::arrayValue);
+  Json::Value tiles;
   for (iterator it = begin(); it != end(); ++it)
-    tiles.append((*it).second->saveToJson());
+    tiles[(*it).second->className].append((*it).second->saveToJson());
   config["tiles"] = tiles;
   Json::Value objects(Json::arrayValue);
   for (std::list<MapObject *>::iterator it = mapObjects.begin();

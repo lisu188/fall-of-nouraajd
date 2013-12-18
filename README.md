@@ -1,7 +1,7 @@
 # Recovered game snapshot
 
-Original commit: `d371496488d43e4624d7198c86c4a39296c62a24`. Original tree: `838cf148d1bf97c8075463e4ddf8a0041e0993bb`.
-Startup was verified from identical recovered sources at `d371496488d43e4624d7198c86c4a39296c62a24`.
+Original commit: `6da7e98186ea29ca59619905c550447459ebedb8`. Original tree: `147c55f2280c21a4069918c57998dd17b152d931`.
+Startup was verified from identical recovered sources at `6da7e98186ea29ca59619905c550447459ebedb8`.
 
 This recovered version compiled and linked on Linux, started the real game on an isolated Xvfb display,
 loaded its map and a healthy player, rendered the screenshot below, and exited normally.
@@ -49,12 +49,12 @@ compatibilityRepair: 1, exactOriginal: 36, reconstruction: 15.
 - `json/json_reader.cpp`: unverified upstream reconstruction; https://github.com/open-source-parsers/jsoncpp/tree/4fce396c9d3e27a8ab8fb88e94c1676e021ae3a6
 - `json/json_value.cpp`: unverified upstream reconstruction; https://github.com/open-source-parsers/jsoncpp/tree/4fce396c9d3e27a8ab8fb88e94c1676e021ae3a6
 - `json/json_writer.cpp`: unverified upstream reconstruction; https://github.com/open-source-parsers/jsoncpp/tree/4fce396c9d3e27a8ab8fb88e94c1676e021ae3a6
-- `map/map.cpp`: content reconstruction of the BFG-removed original; from the cde8ba2e reconstruction: saved maps skip objects whose canSave is false and loading recreates tiles through the surviving Tile::getTile
+- `map/map.cpp`: content reconstruction of the BFG-removed original; from the 6dc1be85 reconstruction: tiles are saved grouped by type as coordinates and recreated with the surviving Tile::getTile(type, x, y) (same-commit tile.cpp)
 - `stats/stats.cpp`: content reconstruction of the BFG-removed original; from the fe3928a0 reconstruction: init renamed loadFromJson with saveToJson, main stat name and shadow resistance (same-commit stats.h)
-- `view/gamescene.cpp`: content reconstruction of the BFG-removed original; from the e29597b4 reconstruction: the player is built from the warrior configuration value, and GameScene::setPlayer is defined (same-commit gamescene.h)
+- `view/gamescene.cpp`: content reconstruction of the BFG-removed original; from the f1ad1b8f reconstruction: GameScene::setPlayer returns void (same-commit gamescene.h)
 - `json/LICENSE`: https://github.com/open-source-parsers/jsoncpp/tree/4fce396c9d3e27a8ab8fb88e94c1676e021ae3a6 upstream distribution license
 
-Restored source fingerprint: `68de59c296f66b2346e5b83af693d6ed9f503fc45b2dfc7136647d9892494aa7`.
+Restored source fingerprint: `b6c041766f7c3dcc19f97eeed98338343347aa509549dec231af1e2ad54b3b54`.
 
 The actual 1278 × 718 screenshot and [verification metadata](recovery/verification.json) belong to
 this source version. Reconstructed code and borrowed assets are identified in that metadata; they are
