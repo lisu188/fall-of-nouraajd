@@ -17,7 +17,7 @@ void Compression::compressFile(std::string path)
     gzclose(outfile);
     remove(path.c_str());
     int endTime=QDateTime::currentMSecsSinceEpoch()-startTime;
-    qDebug()<<"Compressed"<<path.c_str()<<"in"<<endTime<<"ms";
+    qDebug()<<"Compressed"<<path.c_str()<<"in"<<endTime<<"ms\n";
 }
 
 
@@ -34,5 +34,5 @@ void Compression::decompressFile(std::string path)
     gzclose(infile);
     fclose(outfile);
     int endTime=QDateTime::currentMSecsSinceEpoch()-startTime;
-    qDebug()<<"Decompressed"<<path.c_str()<<"in"<<endTime<<"ms";
+    qDebug()<<"Decompressed"<<path.c_str()<<"in"<<endTime<<"ms\n";
 }
