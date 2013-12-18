@@ -1,7 +1,7 @@
 # Recovered game snapshot
 
-Original commit: `423c1927af5a5efbd1367b567b26b9fb02c95ae8`. Original tree: `1d31bb9d73610a9134c7620d527d733866d5afc8`.
-Startup was verified from identical recovered sources at `423c1927af5a5efbd1367b567b26b9fb02c95ae8`.
+Original commit: `32ac0b973b0c15a92e1ff865d9c8b1d7fefa64e5`. Original tree: `b8665c2478a2dad6259d7fb14f30f9f3f302c738`.
+Startup was verified from identical recovered sources at `32ac0b973b0c15a92e1ff865d9c8b1d7fefa64e5`.
 
 This recovered version compiled and linked on Linux, started the real game on an isolated Xvfb display,
 loaded its map and a healthy player, rendered the screenshot below, and exited normally.
@@ -38,7 +38,7 @@ launches run the game's original entry point. Startup evidence does not establis
 compatibilityRepair: 1, exactOriginal: 36, reconstruction: 16.
 
 - `config/creatures.json`: content reconstruction of the BFG-removed original; carried the nearest #41 reconstruction through API-stable revision #43; surviving files reveal no recoverable implementation/data delta, so original internal changes remain unknown
-- `creatures/creature.cpp`: content reconstruction of the BFG-removed original; carried the nearest #41 reconstruction through API-stable revision #44; surviving files reveal no recoverable implementation/data delta, so original internal changes remain unknown
+- `creatures/creature.cpp`: content reconstruction of the BFG-removed original; carried the nearest #41 reconstruction through API-stable revision #46; surviving files reveal no recoverable implementation/data delta, so original internal changes remain unknown
 - `creatures/player.cpp`: content reconstruction of the BFG-removed original; adapted #40 reconstruction to both original #41 Player(name,...) constructors
 - `images/tiles/grass/0.png`: unverified donor reconstruction; c049ac73064442354af6224d06fe1c8b847bb8d9:images/tiles/grass/0.png; headerMatch=0; apiOverlap=0/10000; distance=105 Verified by build and startup of afdd8069 (recovery/evidence/second-original).
 - `images/tiles/ground/0.png`: unverified donor reconstruction; c049ac73064442354af6224d06fe1c8b847bb8d9:images/tiles/ground/0.png; headerMatch=0; apiOverlap=0/10000; distance=105 Verified by build and startup of afdd8069 (recovery/evidence/second-original).
@@ -50,9 +50,9 @@ compatibilityRepair: 1, exactOriginal: 36, reconstruction: 16.
 - `json/json_reader.cpp`: unverified upstream reconstruction; https://github.com/open-source-parsers/jsoncpp/tree/4fce396c9d3e27a8ab8fb88e94c1676e021ae3a6
 - `json/json_value.cpp`: unverified upstream reconstruction; https://github.com/open-source-parsers/jsoncpp/tree/4fce396c9d3e27a8ab8fb88e94c1676e021ae3a6
 - `json/json_writer.cpp`: unverified upstream reconstruction; https://github.com/open-source-parsers/jsoncpp/tree/4fce396c9d3e27a8ab8fb88e94c1676e021ae3a6
-- `map/map.cpp`: content reconstruction of the BFG-removed original; carried the nearest #41 reconstruction through API-stable revision #45; surviving files reveal no recoverable implementation/data delta, so original internal changes remain unknown
+- `map/map.cpp`: content reconstruction of the BFG-removed original; carried the nearest #41 reconstruction through API-stable revision #46; surviving files reveal no recoverable implementation/data delta, so original internal changes remain unknown
 - `stats/stats.cpp`: content reconstruction of the BFG-removed original; from the fe3928a0 reconstruction: init renamed loadFromJson with saveToJson, main stat name and shadow resistance (same-commit stats.h)
-- `view/gamescene.cpp`: content reconstruction of the BFG-removed original; adapted #40 scene reconstruction to the original #41 Player(name,map) constructor
+- `view/gamescene.cpp`: content reconstruction of the BFG-removed original; carried the nearest #41 reconstruction through API-stable revision #46; surviving files reveal no recoverable implementation/data delta, so original internal changes remain unknown
 - `json/LICENSE`: https://github.com/open-source-parsers/jsoncpp/tree/4fce396c9d3e27a8ab8fb88e94c1676e021ae3a6 upstream distribution license
 
 Restored source fingerprint: `ddf170ae6d0c60b8e0c85d4411f007cfba9b79f07331accfc090a72c2ec9430f`.
