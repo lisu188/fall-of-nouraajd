@@ -1,7 +1,7 @@
 # Recovered game snapshot
 
-Original commit: `1a3664c6aa7596d5b8467e0ebdb5b145d4c8238f`. Original tree: `d3db073245dbf5c252d3afc1cf173196f4c46cc2`.
-Startup was verified from identical recovered sources at `1a3664c6aa7596d5b8467e0ebdb5b145d4c8238f`.
+Original commit: `423c1927af5a5efbd1367b567b26b9fb02c95ae8`. Original tree: `1d31bb9d73610a9134c7620d527d733866d5afc8`.
+Startup was verified from identical recovered sources at `423c1927af5a5efbd1367b567b26b9fb02c95ae8`.
 
 This recovered version compiled and linked on Linux, started the real game on an isolated Xvfb display,
 loaded its map and a healthy player, rendered the screenshot below, and exited normally.
@@ -50,7 +50,7 @@ compatibilityRepair: 1, exactOriginal: 36, reconstruction: 16.
 - `json/json_reader.cpp`: unverified upstream reconstruction; https://github.com/open-source-parsers/jsoncpp/tree/4fce396c9d3e27a8ab8fb88e94c1676e021ae3a6
 - `json/json_value.cpp`: unverified upstream reconstruction; https://github.com/open-source-parsers/jsoncpp/tree/4fce396c9d3e27a8ab8fb88e94c1676e021ae3a6
 - `json/json_writer.cpp`: unverified upstream reconstruction; https://github.com/open-source-parsers/jsoncpp/tree/4fce396c9d3e27a8ab8fb88e94c1676e021ae3a6
-- `map/map.cpp`: content reconstruction of the BFG-removed original; adapted prepared #40 map reconstruction to original #41 implicit Map constructor; group saved objects by className because original Cave no longer serializes its name
+- `map/map.cpp`: content reconstruction of the BFG-removed original; carried the nearest #41 reconstruction through API-stable revision #45; surviving files reveal no recoverable implementation/data delta, so original internal changes remain unknown
 - `stats/stats.cpp`: content reconstruction of the BFG-removed original; from the fe3928a0 reconstruction: init renamed loadFromJson with saveToJson, main stat name and shadow resistance (same-commit stats.h)
 - `view/gamescene.cpp`: content reconstruction of the BFG-removed original; adapted #40 scene reconstruction to the original #41 Player(name,map) constructor
 - `json/LICENSE`: https://github.com/open-source-parsers/jsoncpp/tree/4fce396c9d3e27a8ab8fb88e94c1676e021ae3a6 upstream distribution license
