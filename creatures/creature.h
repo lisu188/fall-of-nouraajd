@@ -16,8 +16,8 @@ class Stats;
 class Creature : public MapObject
 {
 public:
-    Creature(Json::Value config, Map *map);
-    Creature(Map *map,std::string name);
+    Creature(std::string name,Json::Value config, Map *map);
+    Creature(std::string name, Map *map);
     ~Creature();
 
     int getExp();
@@ -84,6 +84,7 @@ public:
     Json::Value saveToJson();
 
     bool canSave();
+
 
 protected:
     int gold;
