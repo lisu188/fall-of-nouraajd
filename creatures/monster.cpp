@@ -6,6 +6,10 @@ Monster::Monster(Json::Value config,Map *map):Creature(config,map)
 {
 }
 
+Monster::Monster( Map *map,std::string name):Creature(map,name)
+{
+}
+
 void Monster::onMove()
 {
     if(!isAlive()) {

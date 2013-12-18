@@ -7,6 +7,7 @@ class Monster : public Creature
 {
 public:
     Monster(Json::Value config, Map* map);
+    Monster(Map* map, std::string name);
     virtual void onMove();
     virtual void onEnter();
 
