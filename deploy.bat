@@ -3,6 +3,7 @@ rmdir /s /q ".\official"
 mkdir ".\official"
 mkdir ".\official\images"
 mkdir ".\official\config"
+mkdir ".\official\save"
 
 xcopy /s ".\libraries" ".\official"
 xcopy /s ".\images" ".\official\images"
@@ -23,4 +24,5 @@ astyle.exe -n -xe -j --recursive *.cpp *.h *.json
 
 mkdir ".\release"
 mkdir ".\debug"
+mkdir ".\save"
 
