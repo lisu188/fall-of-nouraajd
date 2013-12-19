@@ -1,4 +1,3 @@
-
 {
 "Attack" :
     {
@@ -95,5 +94,11 @@
 "anim" : "images/interactions/chloroform/"
         ,
         "manaCost" : 25
+    },
+"Backstab" :
+    {
+"anim" : "images/interactions/backstab/"
+        ,
+        "manaCost" : 40
     }
 }
