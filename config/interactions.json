@@ -100,5 +100,11 @@
 "anim" : "images/interactions/backstab/"
         ,
         "manaCost" : 40
+    },
+"Bloodlash" :
+    {
+"anim" : "images/interactions/bloodlash/"
+        ,
+        "manaCost" : 30
     }
 }
