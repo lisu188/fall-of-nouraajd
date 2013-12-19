@@ -37,7 +37,8 @@ std::unordered_map<std::string, std::function<void(Creature *, Creature *)>> Int
     {"ShadowBolt", ShadowBolt},
     {"Mutilation", Mutilation},
     {"LethalPoison", LethalPoison},
-    {"Chloroform", Chloroform}};
+    {"Chloroform", Chloroform},
+    {"Backstab", Backstab}};
 
 Interaction::Interaction(std::string name) {
     className = name;
@@ -189,3 +190,5 @@ void Mutilation(Creature *first, Creature *second) { second->addEffect(new Effec
 void LethalPoison(Creature *first, Creature *second) { second->addEffect(new Effect("LethalPoisonEffect", first, 6)); }
 
 void Chloroform(Creature *first, Creature *second) { second->addEffect(new Effect("ChloroformEffect", first, 3)); }
+
+void Backstab(Creature *first, Creature *second) { second->hurt(first->getDmg() * 2); }
