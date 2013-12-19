@@ -45,6 +45,6 @@ void Mutilation(Creature *first, Creature *second);
 void LethalPoison(Creature *first, Creature *second);
 void Chloroform(Creature *first, Creature *second);
 void Backstab(Creature *first, Creature *second);
-
+void Bloodlash(Creature *first, Creature *second);
 
 #endif // INTERACTION_H

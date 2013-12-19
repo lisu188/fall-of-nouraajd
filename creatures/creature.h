@@ -40,7 +40,7 @@ public:
     void setAlive();
 
     virtual void fight(Creature *creature);
-    virtual void levelUp();
+    void levelUp();
     virtual std::list<Item*>* getLoot()=0;
 
     void addAction(Interaction *action);
