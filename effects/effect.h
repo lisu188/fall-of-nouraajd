@@ -32,5 +32,8 @@ bool Stun(Effect *effect, Creature *creature);
 bool EndlessPainEffect(Effect *effect, Creature *creature);
 bool AbyssalShadowsEffect(Effect *effect, Creature *creature);
 bool ArmorOfEndlessWinterEffect(Effect *effect,Creature *creature);
+bool MutilationEffect(Effect *effect,Creature *creature);
+bool LethalPoisonEffect(Effect *effect,Creature *creature);
+bool ChloroformEffect(Effect *effect, Creature *creature);
 
 #endif // EFFECT_H

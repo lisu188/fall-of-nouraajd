@@ -1,3 +1,4 @@
+
 {
 "Attack" :
     {
@@ -76,5 +77,23 @@
 "anim" : "images/interactions/shadowbolt/"
         ,
         "manaCost" : 45
+    },
+"Mutilation" :
+    {
+"anim" : "images/interactions/mutilation/"
+        ,
+        "manaCost" : 15
+    },
+"LethalPoison" :
+    {
+"anim" : "images/interactions/lethalpoison/"
+        ,
+        "manaCost" : 20
+    },
+"Chloroform" :
+    {
+"anim" : "images/interactions/chloroform/"
+        ,
+        "manaCost" : 25
     }
 }

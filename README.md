@@ -1,7 +1,7 @@
 # Recovered game snapshot
 
-Original commit: `fa7f36fa1c27767341e800a8e2833676d04b25b1`. Original tree: `3249f0db37df6a537905eec899df90e05e5bd00e`.
-Startup was verified from identical recovered sources at `fa7f36fa1c27767341e800a8e2833676d04b25b1`.
+Original commit: `27217e5f0cf3f8fba8d63d7ac92a7780d77a51b9`. Original tree: `f39cccef256812a8c2c2b92a838839a64b4d71d2`.
+Startup was verified from identical recovered sources at `27217e5f0cf3f8fba8d63d7ac92a7780d77a51b9`.
 
 This recovered version compiled and linked on Linux, started the real game on an isolated Xvfb display,
 loaded its map and a healthy player, rendered the screenshot below, and exited normally.
@@ -35,9 +35,9 @@ launches run the game's original entry point. Startup evidence does not establis
 
 ## Recovery provenance
 
-compatibilityRepair: 1, exactOriginal: 36, reconstruction: 16.
+compatibilityRepair: 1, exactOriginal: 38, reconstruction: 16.
 
-- `config/creatures.json`: content reconstruction of the BFG-removed original; carried the nearest #41 reconstruction through API-stable revision #43; surviving files reveal no recoverable implementation/data delta, so original internal changes remain unknown
+- `config/creatures.json`: content reconstruction of the BFG-removed original; carried #43 reconstructed templates; #49 original creature data delta is unavailable, so new skill levelling assignments are not invented
 - `creatures/creature.cpp`: content reconstruction of the BFG-removed original; carried the nearest #41 reconstruction through API-stable revision #46; surviving files reveal no recoverable implementation/data delta, so original internal changes remain unknown
 - `creatures/player.cpp`: content reconstruction of the BFG-removed original; carried the nearest #41 reconstruction through API-stable revision #48; surviving files reveal no recoverable implementation/data delta, so original internal changes remain unknown
 - `images/tiles/grass/0.png`: unverified donor reconstruction; c049ac73064442354af6224d06fe1c8b847bb8d9:images/tiles/grass/0.png; headerMatch=0; apiOverlap=0/10000; distance=105 Verified by build and startup of afdd8069 (recovery/evidence/second-original).
@@ -45,7 +45,7 @@ compatibilityRepair: 1, exactOriginal: 36, reconstruction: 16.
 - `images/tiles/mountain/0.png`: unverified donor reconstruction; 152007b28631784d3c5e17f2686eb6ef9ff30e46:images/tiles/mountain/0.png; headerMatch=0; apiOverlap=0/10000; distance=155 Verified by build and startup of afdd8069 (recovery/evidence/second-original).
 - `images/tiles/road/0.png`: unverified donor reconstruction; 152007b28631784d3c5e17f2686eb6ef9ff30e46:images/tiles/road/0.png; headerMatch=0; apiOverlap=0/10000; distance=155 Verified by build and startup of afdd8069 (recovery/evidence/second-original).
 - `images/tiles/water/0.png`: unverified donor reconstruction; c049ac73064442354af6224d06fe1c8b847bb8d9:images/tiles/water/0.png; headerMatch=0; apiOverlap=0/10000; distance=105 Verified by build and startup of afdd8069 (recovery/evidence/second-original).
-- `interactions/interaction.cpp`: content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of 9ee96a8e2bf78f077cdfbfd98442a2512e79febc (previous version of interactions/interaction.cpp)
+- `interactions/interaction.cpp`: content reconstruction of the BFG-removed original; extended validated c609dca2 reconstruction with three #49 declarations, configuration entries and exact surviving Effect handlers; original durations are missing, so reconstructed durations are 4/6/3 turns for Mutilation/LethalPoison/Chloroform
 - `json/json_batchallocator.h`: unverified upstream reconstruction; https://github.com/open-source-parsers/jsoncpp/tree/4fce396c9d3e27a8ab8fb88e94c1676e021ae3a6
 - `json/json_reader.cpp`: unverified upstream reconstruction; https://github.com/open-source-parsers/jsoncpp/tree/4fce396c9d3e27a8ab8fb88e94c1676e021ae3a6
 - `json/json_value.cpp`: unverified upstream reconstruction; https://github.com/open-source-parsers/jsoncpp/tree/4fce396c9d3e27a8ab8fb88e94c1676e021ae3a6
@@ -55,7 +55,7 @@ compatibilityRepair: 1, exactOriginal: 36, reconstruction: 16.
 - `view/gamescene.cpp`: content reconstruction of the BFG-removed original; carried the nearest #41 reconstruction through API-stable revision #46; surviving files reveal no recoverable implementation/data delta, so original internal changes remain unknown
 - `json/LICENSE`: https://github.com/open-source-parsers/jsoncpp/tree/4fce396c9d3e27a8ab8fb88e94c1676e021ae3a6 upstream distribution license
 
-Restored source fingerprint: `ddf170ae6d0c60b8e0c85d4411f007cfba9b79f07331accfc090a72c2ec9430f`.
+Restored source fingerprint: `0b9f3f549b7c35b68d6bb2da8d3efb0598f81842db4b59b53056f189b4e0839a`.
 
 The actual 1278 × 718 screenshot and [verification metadata](recovery/verification.json) belong to
 this source version. Reconstructed code and borrowed assets are identified in that metadata; they are
