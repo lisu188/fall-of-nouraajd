@@ -41,5 +41,9 @@ void EndlessPain(Creature *first, Creature *second);
 void FrostBolt(Creature *first, Creature *second);
 void MagicMissile(Creature *first, Creature *second);
 void ShadowBolt(Creature *first, Creature *second);
+void Mutilation(Creature *first, Creature *second);
+void LethalPoison(Creature *first, Creature *second);
+void Chloroform(Creature *first, Creature *second);
+
 
 #endif // INTERACTION_H

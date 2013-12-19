@@ -4,8 +4,13 @@
 
 std::unordered_map<std::string,std::function<bool (Effect *effects, Creature *)>> Effect::effects
 {
-    {"Stun",&Stun},{"EndlessPainEffect",&EndlessPainEffect},
-    {"AbyssalShadowsEffect",&AbyssalShadowsEffect},{"ArmorOfEndlessWinterEffect",&ArmorOfEndlessWinterEffect}
+    {"Stun",&Stun},
+    {"EndlessPainEffect",&EndlessPainEffect},
+    {"MutilationEffect",&MutilationEffect},
+    {"AbyssalShadowsEffect",&AbyssalShadowsEffect},
+    {"ArmorOfEndlessWinterEffect",&ArmorOfEndlessWinterEffect},
+    {"LethalPoisonEffect",&LethalPoisonEffect},
+    {"ChloroformEffect",&ChloroformEffect}
 };
 
 Effect::Effect(std::string type,Creature *caster, int duration):caster(caster)
@@ -90,4 +95,23 @@ bool ArmorOfEndlessWinterEffect(Effect *effect,Creature *creature)
 {
     creature->healProc(20);
     return false;//must implement ban to other skills
+}
+
+
+bool MutilationEffect(Effect *effect, Creature *creature)
+{
+    creature->hurt(effect->getCaster()->getStats()->getAgility()*0.25);
+    return false;
+}
+
+
+bool LethalPoisonEffect(Effect *effect, Creature *creature)
+{
+    creature->hurt(effect->getCaster()->getDmg()*4.0/6.0);
+    return false;
+}
+
+bool ChloroformEffect(Effect *effect, Creature *creature)
+{
+    return creature->getHpRatio()>25;//must discuss going to sleep again
 }
