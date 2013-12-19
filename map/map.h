@@ -63,10 +63,6 @@ public:
     virtual void loadFromJson(Json::Value config)=0;
     virtual Json::Value saveToJson()=0;
     virtual bool canSave()=0;
-
-
-
-
 protected:
     void setAnimation(std::string path);
     Map *map;

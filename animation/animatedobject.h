@@ -16,12 +16,8 @@ protected:
     Animation *animation;
     void setPixmap(const QPixmap &pixmap);
     void setAnimation(std::string path);
-
-
-
 private:
     QTimer *timer;
-
 private slots:
     void animate();
 
