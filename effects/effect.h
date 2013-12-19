@@ -35,5 +35,6 @@ bool ArmorOfEndlessWinterEffect(Effect *effect,Creature *creature);
 bool MutilationEffect(Effect *effect,Creature *creature);
 bool LethalPoisonEffect(Effect *effect,Creature *creature);
 bool ChloroformEffect(Effect *effect, Creature *creature);
+bool BloodlashEffect(Effect *effect, Creature *creature);
 
 #endif // EFFECT_H

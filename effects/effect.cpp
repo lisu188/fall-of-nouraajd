@@ -10,7 +10,8 @@ std::unordered_map<std::string,std::function<bool (Effect *effects, Creature *)>
     {"AbyssalShadowsEffect",&AbyssalShadowsEffect},
     {"ArmorOfEndlessWinterEffect",&ArmorOfEndlessWinterEffect},
     {"LethalPoisonEffect",&LethalPoisonEffect},
-    {"ChloroformEffect",&ChloroformEffect}
+    {"ChloroformEffect",&ChloroformEffect},
+    {"BloodlashEffect",&BloodlashEffect}
 };
 
 Effect::Effect(std::string type,Creature *caster, int duration):caster(caster)
@@ -114,4 +115,10 @@ bool LethalPoisonEffect(Effect *effect, Creature *creature)
 bool ChloroformEffect(Effect *effect, Creature *creature)
 {
     return creature->getHpRatio()>25;//must discuss going to sleep again
+}
+
+
+bool BloodlashEffect(Effect *effect, Creature *creature)
+{
+    creature->hurt(effect->getCaster()->getDmg()*0.75);
 }
