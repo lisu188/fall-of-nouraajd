@@ -1,7 +1,7 @@
 #include "player.h"
 #include <configuration/configurationprovider.h>
 
-#include <map/tiles/tile.h>
+#include <map/tile.h>
 
 #include <view/gamescene.h>
 #include <view/playerstatsview.h>
@@ -133,3 +133,7 @@ void Player::fight(Creature *creature) {
         creature->fight(this);
     }
 }
+
+void Player::addEntered(MapObject *object) { entered.push_back(object); }
+
+std::list<MapObject *> *Player::getEntered() { return &entered; }

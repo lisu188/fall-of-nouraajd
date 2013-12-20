@@ -1,7 +1,7 @@
 # Recovered game snapshot
 
-Original commit: `e4fd2d72a1278ebb391789b226bfb1241133d5a9`. Original tree: `8dc6cfc0bbee1f66c9298a2566bad593dc44dc3e`.
-Startup was verified from identical recovered sources at `e4fd2d72a1278ebb391789b226bfb1241133d5a9`.
+Original commit: `b3809b01f32d7e57fa0e3fe21c39d9916e18260c`. Original tree: `98c6e48a6a94462b39a56a0fdcb06185873dd397`.
+Startup was verified from identical recovered sources at `b3809b01f32d7e57fa0e3fe21c39d9916e18260c`.
 
 This recovered version compiled and linked on Linux, started the real game on an isolated Xvfb display,
 loaded its map and a healthy player, rendered the screenshot below, and exited normally.
@@ -35,27 +35,28 @@ launches run the game's original entry point. Startup evidence does not establis
 
 ## Recovery provenance
 
-compatibilityRepair: 1, exactOriginal: 40, reconstruction: 16.
+compatibilityRepair: 1, exactOriginal: 43, reconstruction: 17.
 
-- `config/creatures.json`: content reconstruction of the BFG-removed original; carried #50 reconstructed templates; #51 original creature data delta is unavailable, so new skill levelling assignments are not invented
-- `creatures/creature.cpp`: content reconstruction of the BFG-removed original; carried #46 creature reconstruction; #51 only changes levelUp to nonvirtual in surviving header and requires no implementation adaptation
-- `creatures/player.cpp`: content reconstruction of the BFG-removed original; carried the nearest #41 reconstruction through API-stable revision #48; surviving files reveal no recoverable implementation/data delta, so original internal changes remain unknown
+- `config/creatures.json`: content reconstruction of the BFG-removed original; carried #51 reconstructed creature templates; original #52 data delta is unavailable and surviving interfaces still query the same template keys
+- `creatures/creature.cpp`: content reconstruction of the BFG-removed original; adapted #51 reconstruction to surviving #52 removal of bonusLevel and addition of getLevelStats(); obtain per-level stats from the consolidated template
+- `creatures/player.cpp`: content reconstruction of the BFG-removed original; adapted #48 reconstruction to original #52 tile header and entered-object API consumed by surviving PlayerAnimation callback
+- `images/buildings/dungeon/0.png`: unverified donor reconstruction; 71a3432e36b5649aabdd63c7807a78e9a8a3749a:images/buildings/dungeon/0.png; headerMatch=0; apiOverlap=0/10000; distance=109
 - `images/tiles/grass/0.png`: unverified donor reconstruction; c049ac73064442354af6224d06fe1c8b847bb8d9:images/tiles/grass/0.png; headerMatch=0; apiOverlap=0/10000; distance=105 Verified by build and startup of afdd8069 (recovery/evidence/second-original).
 - `images/tiles/ground/0.png`: unverified donor reconstruction; c049ac73064442354af6224d06fe1c8b847bb8d9:images/tiles/ground/0.png; headerMatch=0; apiOverlap=0/10000; distance=105 Verified by build and startup of afdd8069 (recovery/evidence/second-original).
 - `images/tiles/mountain/0.png`: unverified donor reconstruction; 152007b28631784d3c5e17f2686eb6ef9ff30e46:images/tiles/mountain/0.png; headerMatch=0; apiOverlap=0/10000; distance=155 Verified by build and startup of afdd8069 (recovery/evidence/second-original).
 - `images/tiles/road/0.png`: unverified donor reconstruction; 152007b28631784d3c5e17f2686eb6ef9ff30e46:images/tiles/road/0.png; headerMatch=0; apiOverlap=0/10000; distance=155 Verified by build and startup of afdd8069 (recovery/evidence/second-original).
 - `images/tiles/water/0.png`: unverified donor reconstruction; c049ac73064442354af6224d06fe1c8b847bb8d9:images/tiles/water/0.png; headerMatch=0; apiOverlap=0/10000; distance=105 Verified by build and startup of afdd8069 (recovery/evidence/second-original).
-- `interactions/interaction.cpp`: content reconstruction of the BFG-removed original; extended #50 reconstruction with #51 Bloodlash declaration, config and exact surviving Effect handler; original duration is unavailable, so reconstructed duration is four turns
+- `interactions/interaction.cpp`: content reconstruction of the BFG-removed original; adapted #51 reconstruction to original #52 removal of stored action callback; register three new declared/configured skills with minimal reconstructed behavior (DeathStrike=Attack, Barrier=3-turn surviving Effect, BloodThirst=damage heal); original formulas unavailable
 - `json/json_batchallocator.h`: unverified upstream reconstruction; https://github.com/open-source-parsers/jsoncpp/tree/4fce396c9d3e27a8ab8fb88e94c1676e021ae3a6
 - `json/json_reader.cpp`: unverified upstream reconstruction; https://github.com/open-source-parsers/jsoncpp/tree/4fce396c9d3e27a8ab8fb88e94c1676e021ae3a6
 - `json/json_value.cpp`: unverified upstream reconstruction; https://github.com/open-source-parsers/jsoncpp/tree/4fce396c9d3e27a8ab8fb88e94c1676e021ae3a6
 - `json/json_writer.cpp`: unverified upstream reconstruction; https://github.com/open-source-parsers/jsoncpp/tree/4fce396c9d3e27a8ab8fb88e94c1676e021ae3a6
-- `map/map.cpp`: content reconstruction of the BFG-removed original; carried the nearest #41 reconstruction through API-stable revision #47; surviving files reveal no recoverable implementation/data delta, so original internal changes remain unknown
+- `map/map.cpp`: content reconstruction of the BFG-removed original; adapted #47 reconstruction to surviving #52 generic Tile factory and array coordinate format; retire old map graphics without deleting Destroyer-owned objects; define declared clearRange helper
 - `stats/stats.cpp`: content reconstruction of the BFG-removed original; from the fe3928a0 reconstruction: init renamed loadFromJson with saveToJson, main stat name and shadow resistance (same-commit stats.h)
-- `view/gamescene.cpp`: content reconstruction of the BFG-removed original; carried the nearest #41 reconstruction through API-stable revision #46; surviving files reveal no recoverable implementation/data delta, so original internal changes remain unknown
+- `view/gamescene.cpp`: content reconstruction of the BFG-removed original; adapted #46 scene reconstruction with changeMap() consumed by original #52 Dungeon; preserve player save state and hide retired views; reconstructed destination dungeon at (3,3), original layout unavailable; defer map transition until the current Map::move callback returns to avoid retiring its active receiver
 - `json/LICENSE`: https://github.com/open-source-parsers/jsoncpp/tree/4fce396c9d3e27a8ab8fb88e94c1676e021ae3a6 upstream distribution license
 
-Restored source fingerprint: `a7d5f5f3f9f40373b3d41e97769b43366a6784edae3c477a73102ee6df840012`.
+Restored source fingerprint: `5e945b6408b58bc9e74302a4fc253fb99ab775ca412bf0fdd6e3538398bdcbc1`.
 
 The actual 1278 × 718 screenshot and [verification metadata](recovery/verification.json) belong to
 this source version. Reconstructed code and borrowed assets are identified in that metadata; they are

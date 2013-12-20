@@ -21,7 +21,6 @@ protected:
     void mousePressEvent(QGraphicsSceneMouseEvent *event);
     int manaCost;
 private:
-    std::function<void (Creature *, Creature *)> action;
     Interaction(std::string name);
     static std::unordered_map<std::string,std::function<void (Creature *, Creature *)>> actions;
 
@@ -46,5 +45,8 @@ void LethalPoison(Creature *first, Creature *second);
 void Chloroform(Creature *first, Creature *second);
 void Backstab(Creature *first, Creature *second);
 void Bloodlash(Creature *first, Creature *second);
+void DeathStrike(Creature *first, Creature *second);
+void Barrier(Creature *first, Creature *second);
+void BloodThirst(Creature *first, Creature *second);
 
 #endif // INTERACTION_H

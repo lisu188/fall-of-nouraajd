@@ -1,3 +1,4 @@
+
 {
 "Attack" :
     {
@@ -106,5 +107,23 @@
 "anim" : "images/interactions/bloodlash/"
         ,
         "manaCost" : 30
+    },
+"DeathStrike" :
+    {
+"anim" : "images/interactions/deathstrike/"
+        ,
+        "manaCost" : 45
+    },
+"Barrier" :
+    {
+"anim" : "images/interactions/barrier/"
+        ,
+        "manaCost" : 17
+    },
+"BloodThirst" :
+    {
+"anim" : "images/interactions/bloodthirst/"
+        ,
+        "manaCost" : 35
     }
 }

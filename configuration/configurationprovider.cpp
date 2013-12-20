@@ -35,9 +35,6 @@ Json::Value *ConfigurationProvider::getConfiguration(std::string path)
 {
     if(this->find(path)!=this->end()) {
         return this->at(path);
-    } else if(this->find("assets:/"+path)!=this->end())
-    {
-        return this->at("assets:/"+path);
     }
     loadConfig(path);
     return getConfiguration(path);

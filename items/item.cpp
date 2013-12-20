@@ -1,7 +1,5 @@
 #include "item.h"
 
-#include <map/tiles/tile.h>
-
 #include <view/gamescene.h>
 #include <stats/stats.h>
 #include <QDebug>
@@ -15,7 +13,6 @@
 
 Item::Item()
 {
-    singleUse=false;
     this->setZValue(1);
 }
 
@@ -43,24 +40,26 @@ void Item::onUnequip(Creature *creature)
 
 Item *Item::getItem(const char *name)
 {
-    std::string path=name;
-    if(path.compare("")==0) {
-        return 0;
+    Item *item=0;
+    if(std::string(name).compare("")==0) {
+        return item;
     }
-    path="config/items/"+path+".json";
-    std::string type=ConfigurationProvider::getConfig(path)->get("type","").asString();
+    std::string type=
+        (*ConfigurationProvider::getConfig("config/items.json"))
+        [name].get("type","").asString();;
     if(type.compare("weapon")==0)
     {
-        return new Weapon(path.c_str());
+        item=new Weapon(name);
     } else if(type.compare("armor")==0) {
-        return new Armor(path.c_str());
+        item =new Armor(name);
     }
     else if(type.compare("potion")==0) {
-        return new Potion(path.c_str());
+        item =new Potion(name);
     } else
     {
-        throw new std::exception();
+        item=0;
     }
+    return item;
 }
 
 void Item::setAnimation(std::string path)
@@ -78,12 +77,11 @@ void Item::mousePressEvent(QGraphicsSceneMouseEvent *event)
     }
 }
 
-void Item::initializeFromFile(const char *path)
+void Item::loadFromJson(Json::Value config)
 {
-    Json::Value *config=ConfigurationProvider::getConfig(path);
-    bonus.loadFromJson((*config)["bonus"]);
-    interaction=Interaction::getInteraction(config->get("interaction","").asString());
-    setAnimation(config->get("path","").asCString());
-    className=config->get("name","").asCString();
-    power=config->get("power",1).asInt();
+    bonus.loadFromJson(config["bonus"]);
+    interaction=Interaction::getInteraction(config.get("interaction","").asString());
+    setAnimation(config.get("path","").asCString());
+    power=config.get("power",1).asInt();
+    singleUse=config.get("singleUse",false).asBool();
 }

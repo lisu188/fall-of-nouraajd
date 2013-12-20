@@ -5,7 +5,7 @@ class PotionEffect;
 class Potion : public Item
 {
 public:
-    Potion(const char *path);
+    Potion(std::string name);
 
     // Item interface
 protected:

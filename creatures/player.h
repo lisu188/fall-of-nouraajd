@@ -41,6 +41,8 @@ public:
 
     std::list<Creature *> *getFightList();
     void *performAction(Interaction *action,Creature *creature);
+    void addEntered(MapObject *object);
+    std::list<MapObject *> *getEntered();
 
 private:
     PlayerStatsView *playerStatsView;
@@ -50,6 +52,8 @@ private:
     bool lock;
     std::list<Creature *> fightList;
     int turn;
+
+    std::list<MapObject *> entered;
 };
 
 #endif // PLAYER_H
