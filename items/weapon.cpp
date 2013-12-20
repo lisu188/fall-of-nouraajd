@@ -3,11 +3,14 @@
 #include <view/gamescene.h>
 #include <creatures/player.h>
 #include <view/gameview.h>
+#include <configuration/configurationprovider.h>
 
 
-Weapon::Weapon(const char* path)
+Weapon::Weapon(std::string name)
 {
-    initializeFromFile(path);
+    className=name;
+    Json::Value config=(*ConfigurationProvider::getConfig("config/items.json"))[name];
+    loadFromJson(config);
 }
 
 Interaction *Weapon::getInteraction() {

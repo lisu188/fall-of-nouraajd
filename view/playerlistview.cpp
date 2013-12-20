@@ -42,7 +42,7 @@ void PlayerListView::update()
     }
     right->setVisible(items->size()>x*y);
     left->setVisible(items->size()>x*y);
-    if(GameScene::getView())
+    if(GameScene::getView()&&GameScene::getPlayer())
     {
         GameScene::getPlayer()->update();
     }

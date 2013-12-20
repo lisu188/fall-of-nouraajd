@@ -11,7 +11,8 @@ std::unordered_map<std::string,std::function<bool (Effect *effects, Creature *)>
     {"ArmorOfEndlessWinterEffect",&ArmorOfEndlessWinterEffect},
     {"LethalPoisonEffect",&LethalPoisonEffect},
     {"ChloroformEffect",&ChloroformEffect},
-    {"BloodlashEffect",&BloodlashEffect}
+    {"BloodlashEffect",&BloodlashEffect},
+    {"BarrierEffect",&BarrierEffect}
 };
 
 Effect::Effect(std::string type,Creature *caster, int duration):caster(caster)
@@ -19,7 +20,6 @@ Effect::Effect(std::string type,Creature *caster, int duration):caster(caster)
     bonus=0;
     className=type;
     timeLeft=timeTotal=duration;
-    effect=effects[type];
 }
 
 int Effect::getTimeLeft() {
@@ -47,7 +47,7 @@ bool Effect::apply(Creature *creature)
         }
         return false;
     }
-    return effect(this,creature);
+    return effects[className](this,creature);
 }
 
 Stats *Effect::getBonus()
@@ -117,8 +117,13 @@ bool ChloroformEffect(Effect *effect, Creature *creature)
     return creature->getHpRatio()>25;//must discuss going to sleep again
 }
 
-
 bool BloodlashEffect(Effect *effect, Creature *creature)
 {
     creature->hurt(effect->getCaster()->getDmg()*0.75);
+    return false;
+}
+
+bool BarrierEffect(Effect *effect, Creature *creature)
+{
+    return false;
 }

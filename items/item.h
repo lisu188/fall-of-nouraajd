@@ -11,7 +11,6 @@ class Interaction;
 class Item : private ListItem
 {
 public:
-    Item();
     bool isSingleUse();
     void setPos(QPointF point);
     virtual void onEquip(Creature *creature);
@@ -27,9 +26,10 @@ protected:
     bool singleUse;
     Stats bonus;
 
-    void initializeFromFile(const char *path);
+    void loadFromJson(Json::Value config);
     Interaction *interaction;
     int power;
+    Item();
 };
 
 #endif // ITEM_H

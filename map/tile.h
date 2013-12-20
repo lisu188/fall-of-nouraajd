@@ -1,17 +1,19 @@
+#ifndef TILE_H
+#define TILE_H
 #include <QGraphicsPixmapItem>
 #include <animation/animatedobject.h>
 #include <map/coords.h>
 #include "map/events/event.h"
 #include <json/json.h>
-
-#ifndef TILE_H
-#define TILE_H
+#include <unordered_map>
+#include <string>
+#include <functional>
 
 class Tile : protected AnimatedObject
 {
 public:
 
-    Tile(int x,int y);
+    Tile(std::string name,int x,int y);
 
     ~Tile();
 
@@ -21,7 +23,7 @@ public:
 
     void move(int x,int y);
 
-    virtual void onStep();
+    void onStep();
 
     static int size;
 
@@ -31,6 +33,7 @@ public:
     static Tile *getTile(std::string type, int x, int y);
 
     void addToGame();
+    void removeFromGame();
 
     std::string className;
 
@@ -41,7 +44,6 @@ public:
 
 protected:
     bool step;
-    void mousePressEvent(QGraphicsSceneMouseEvent *event);
 
 private:
     void setXY(int x, int y);
@@ -51,7 +53,8 @@ private:
     int posx;
     int posy;
 
-
+    static std::unordered_map<std::string,std::function<void()>> steps;
 };
 
+void RoadTile();
 #endif // TILE_H

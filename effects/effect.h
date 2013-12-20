@@ -19,7 +19,6 @@ public:
     void setBonus(Stats *value);
 
 private:
-    std::function<bool (Effect *effect, Creature *)> effect;
     static std::unordered_map<std::string,std::function<bool (Effect *effect, Creature *)>> effects;
 
     int timeLeft;
@@ -36,5 +35,6 @@ bool MutilationEffect(Effect *effect,Creature *creature);
 bool LethalPoisonEffect(Effect *effect,Creature *creature);
 bool ChloroformEffect(Effect *effect, Creature *creature);
 bool BloodlashEffect(Effect *effect, Creature *creature);
+bool BarrierEffect(Effect *effect, Creature *creature);
 
 #endif // EFFECT_H

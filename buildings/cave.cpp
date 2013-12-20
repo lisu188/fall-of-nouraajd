@@ -70,14 +70,4 @@ bool Cave::canSave() {
 }
 
 
-void Cave::loadFromJson(Json::Value config)
-{
-}
 
-Json::Value Cave::saveToJson()
-{
-    Json::Value config;
-    config["coords"]["x"]=getPosX();
-    config["coords"]["y"]=getPosY();
-    return config;
-}

@@ -2,9 +2,13 @@
 
 #include <view/gamescene.h>
 
-Armor::Armor(const char *path)
+#include <configuration/configurationprovider.h>
+
+Armor::Armor(std::string name)
 {
-    initializeFromFile(path);
+    className=name;
+    Json::Value config=(*ConfigurationProvider::getConfig("config/items.json"))[name];
+    loadFromJson(config);
 }
 
 Interaction *Armor::getInteraction() {

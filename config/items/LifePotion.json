@@ -1,9 +1,0 @@
-{
-"type" : "potion"
-    ,
-"name" : "LifePotion"
-    ,
-"path" : "images/items/potions/life/"
-    ,
-    "power" : 2
-}

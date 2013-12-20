@@ -1,11 +1,11 @@
 #include "animationprovider.h"
 
 #include <animation/animation.h>
-#include <map/tiles/tile.h>
 #include <sstream>
 #include <fstream>
 #include <QBitmap>
 #include <QDebug>
+#include <map/tile.h>
 
 AnimationProvider *AnimationProvider::instance=0;
 
@@ -40,9 +40,6 @@ Animation *AnimationProvider::getAnimation(std::string path)
 {
     if(this->find(path)!=this->end()) {
         return this->at(path);
-    } else if(this->find("assets:/"+path)!=this->end())
-    {
-        return this->at("assets:/"+path);
     }
     loadAnim(path);
     return getAnimation(path);
@@ -84,12 +81,6 @@ void AnimationProvider::loadAnim(std::string path)
         }
         else
         {
-            if(anim->size()==0&&path.find("assets:/")==std::string::npos)
-            {
-                delete anim;
-                loadAnim("assets:/"+path);
-                return;
-            }
             break;
         }
         int frame;

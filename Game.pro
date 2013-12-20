@@ -14,11 +14,6 @@ CONFIG += console
 QMAKE_CXXFLAGS += -std=c++11
 
 SOURCES += main.cpp \
-    map/tiles/watertile.cpp \
-    map/tiles/tile.cpp \
-    map/tiles/grasstile.cpp \
-    map/tiles/groundtile.cpp \
-    map/tiles/roadtile.cpp \
     map/map.cpp \
     map/events/event.cpp \
     map/coords.cpp \
@@ -29,7 +24,6 @@ SOURCES += main.cpp \
     buildings/towns/town.cpp \
     items/weapon.cpp \
     interactions/interaction.cpp \
-    map/tiles/mountaintile.cpp \
     buildings/cave.cpp \
     animation/animationprovider.cpp \
     animation/animation.cpp \
@@ -57,16 +51,13 @@ SOURCES += main.cpp \
     creatures/monster.cpp \
     items/potion.cpp \
     configuration/configurationprovider.cpp \
-    compression/compression.cpp
+    compression/compression.cpp \
+    map/tile.cpp \
+    buildings/dungeon.cpp
 
 INCLUDEPATH += tmp/moc/release_shared
 
 HEADERS  += \
-    map/tiles/watertile.h \
-    map/tiles/tile.h \
-    map/tiles/grasstile.h \
-    map/tiles/groundtile.h \
-    map/tiles/roadtile.h \
     map/map.h \
     map/events/event.h \
     map/coords.h \
@@ -76,7 +67,6 @@ HEADERS  += \
     buildings/towers/tower.h \
     buildings/towns/town.h \
     interactions/interaction.h \
-    map/tiles/mountaintile.h \
     buildings/cave.h \
     animation/animationprovider.h \
     animation/animation.h \
@@ -109,7 +99,9 @@ HEADERS  += \
     items/armor.h \
     items/potion.h \
     configuration/configurationprovider.h \
-    compression/compression.h
+    compression/compression.h \
+    map/tile.h \
+    buildings/dungeon.h
 
 win32:CONFIG(release, debug|release): LIBS += -L$$PWD/lib/ -lzdll
 else:win32:CONFIG(debug, debug|release): LIBS += -L$$PWD/lib/ -lzdll

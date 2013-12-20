@@ -2,7 +2,6 @@
 #include <effects/effect.h>
 #include <items/item.h>
 #include <map/map.h>
-#include <map/tiles/tile.h>
 #include <stats/damage.h>
 
 #ifndef CREATURE_H
@@ -40,7 +39,7 @@ public:
     void setAlive();
 
     virtual void fight(Creature *creature);
-    void levelUp();
+    virtual void levelUp();
     virtual std::list<Item*>* getLoot()=0;
 
     void addAction(Interaction *action);
@@ -73,7 +72,7 @@ public:
     void addExpScaled(int scale);
     void addExp(int exp);
 
-    Interaction *getLevelAction();
+
 
     void addItem(std::list<Item *> *items);
     void addItem(Item *item);
@@ -107,7 +106,6 @@ protected:
     Armor *armor=0;
 
     Stats stats;
-    Stats bonusLevel;
 
     virtual void mousePressEvent(QGraphicsSceneMouseEvent *event);
     virtual void mouseReleaseEvent(QGraphicsSceneMouseEvent *event);
@@ -117,6 +115,10 @@ protected:
     Interaction *selectAction();
     void setItem(void *pointer, Item *newItem);
     void takeDamage(int i);
+
+    Interaction *getLevelAction();
+    Stats getLevelStats();
+
 };
 
 #endif // CREATURE_H

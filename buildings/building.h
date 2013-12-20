@@ -8,11 +8,10 @@ class Building :public MapObject
 {
 public:
     Building(Map *map, int x, int y);
-
-    // MapObject interface
-public:
     virtual void onEnter();
     virtual bool canSave();
+    virtual void loadFromJson(Json::Value config);
+    virtual Json::Value saveToJson();
 };
 
 #endif // BUILDING_H

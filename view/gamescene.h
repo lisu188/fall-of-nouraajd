@@ -4,11 +4,6 @@
 #include <QGraphicsScene>
 #include <QGraphicsSceneMouseEvent>
 #include <QKeyEvent>
-#include "map/tiles/tile.h"
-#include "map/tiles/grasstile.h"
-#include "map/tiles/groundtile.h"
-#include "map/tiles/roadtile.h"
-#include "map/tiles/watertile.h"
 #include "map/map.h"
 #include <list>
 #include <random>
@@ -30,6 +25,8 @@ public:
     static GameView *getView();
     void playerMove(int dirx, int diry);
     void ensureSize(int sizex, int sizey);
+
+    void changeMap();
 protected:
     void keyPressEvent(QKeyEvent *keyEvent);
 private:

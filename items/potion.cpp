@@ -1,15 +1,17 @@
 #include "potion.h"
 #include <QDebug>
+#include <configuration/configurationprovider.h>
 #include <creatures/creature.h>
 
-Potion::Potion(const char *path)
+Potion::Potion(std::string name)
 {
-    singleUse=true;
-    initializeFromFile(path);
-    if((std::string(path).find("LifePotion") != std::string::npos))
+    className=name;
+    Json::Value config=(*ConfigurationProvider::getConfig("config/items.json"))[name];
+    loadFromJson(config);
+    if((std::string(className).find("LifePotion") != std::string::npos))
     {
         effect=&LifeEffect;
-    } else if(std::string(path).find("ManaPotion") != std::string::npos) {
+    } else if(std::string(className).find("ManaPotion") != std::string::npos) {
         effect=&ManaEffect;
     }
 }

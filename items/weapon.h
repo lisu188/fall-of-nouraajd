@@ -8,7 +8,7 @@
 class Weapon : public Item
 {
 public:
-    Weapon(const char *path);
+    Weapon(std::string name);
     Interaction *getInteraction();
     Stats *getStats();
 

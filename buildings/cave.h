@@ -1,9 +1,6 @@
-#include "building.h"
-
-#include <QPixmap>
-
 #ifndef CAVE_H
 #define CAVE_H
+#include "building.h"
 
 class Cave : public Building
 {
@@ -16,12 +13,6 @@ public:
 
 private:
     bool enabled;
-
-
-    // MapObject interface
-public:
-    virtual void loadFromJson(Json::Value config);
-    virtual Json::Value saveToJson();
 };
 
 #endif // CAVE_H

@@ -2,7 +2,7 @@
 #define MAP_H
 
 #include "map/coords.h"
-#include "map/tiles/tile.h"
+#include "tile.h"
 #include <list>
 #include <QTimer>
 #include <QObject>
@@ -38,6 +38,7 @@ private:
     std::list<MapObject*> mapObjects;
     void randomDir(int *tab, int rule);
     bool addTile(Tile *tile);
+    std::vector<Tile *> tiles;
 };
 
 class MapObject : private AnimatedObject
@@ -73,5 +74,7 @@ protected:
 public:
     std::string className;
 };
+
+void clearRange(std::vector<Tile *> *vector, int start, int stop);
 
 #endif // MAP_H

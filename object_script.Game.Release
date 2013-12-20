@@ -1,10 +1,5 @@
 INPUT(
 ./release\main.o
-./release\watertile.o
-./release\tile.o
-./release\grasstile.o
-./release\groundtile.o
-./release\roadtile.o
 ./release\map.o
 ./release\event.o
 ./release\coords.o
@@ -15,7 +10,6 @@ INPUT(
 ./release\town.o
 ./release\weapon.o
 ./release\interaction.o
-./release\mountaintile.o
 ./release\cave.o
 ./release\animationprovider.o
 ./release\animation.o
@@ -41,5 +35,7 @@ INPUT(
 ./release\potion.o
 ./release\configurationprovider.o
 ./release\compression.o
+./release\tile.o
+./release\dungeon.o
 ./release\moc_animatedobject.o
 );

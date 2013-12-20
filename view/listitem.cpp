@@ -1,6 +1,6 @@
 #include "listitem.h"
 
-#include <map/tiles/tile.h>
+#include <map/tile.h>
 
 ListItem::ListItem()
 {
