@@ -20,6 +20,16 @@ void PlayerAnimation::afterAnimationStep(qreal step)
     if(step==1)
     {
         player->unLock();
+        std::list<MapObject *> entered(*player->getEntered());
+        for(std::list<MapObject *>::iterator it=entered.begin();
+                it!=entered.end(); it++)
+        {
+            (*it)->onEnter();
+            if(player!=GameScene::getPlayer()) {
+                return;
+            }
+        }
+        player->getEntered()->clear();
         if(player->getFightList()->size()>0)
         {
             view->showFightView();

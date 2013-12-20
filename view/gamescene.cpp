@@ -5,6 +5,9 @@
 #include <configuration/configurationprovider.h>
 
 #include <buildings/cave.h>
+#include <buildings/dungeon.h>
+#include <view/playerstatsview.h>
+#include <view/playerlistview.h>
 #include <creatures/player.h>
 #include <destroyer/destroyer.h>
 #include <view/gameview.h>
@@ -115,3 +118,27 @@ void GameScene::addTile(Tile *tile) {
 }
 
 void GameScene::addObject(MapObject *mapObject) { map->addObject(mapObject); }
+
+void GameScene::changeMap() {
+    QTimer::singleShot(0, this, [this]() {
+        if (!player)
+            return;
+        const std::string name = player->className;
+        Json::Value state = player->saveToJson();
+        player->getStatsView()->setVisible(false);
+        player->getInventoryView()->setVisible(false);
+        player->getSkillsView()->setVisible(false);
+        player->getEquippedView()->setVisible(false);
+        delete map;
+        player = 0;
+        map = new Map();
+        player = new Player(name, state, map);
+        map->addObject(player);
+        map->addObject(new Dungeon(map, 3, 3));
+        ensureSize(24, 16);
+        if (getView()) {
+            getView()->centerOn(player->getPosX() * Tile::size, player->getPosY() * Tile::size);
+            player->update();
+        }
+    });
+}

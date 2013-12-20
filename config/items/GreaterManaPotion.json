@@ -1,9 +1,0 @@
-{
-"type" : "potion"
-    ,
-"name" : "GreaterManaPotion"
-    ,
-"path" : "images/items/potions/mana/"
-    ,
-    "power" : 3
-}

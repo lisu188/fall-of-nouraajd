@@ -1,0 +1,38 @@
+
+{
+"GrassTile" :
+    {
+"path" : "images/tiles/grass/"
+        ,
+"canStep" :
+        true
+    },
+"RoadTile" :
+    {
+"path" : "images/tiles/road/"
+        ,
+"canStep" :
+        true
+    },
+"WaterTile" :
+    {
+"path" : "images/tiles/water/"
+        ,
+"canStep" :
+        false
+    },
+"MountainTile" :
+    {
+"path" : "images/tiles/mountain/"
+        ,
+"canStep" :
+        false
+    },
+"GroundTile" :
+    {
+"path" : "images/tiles/ground/"
+        ,
+"canStep" :
+        true
+    },
+}

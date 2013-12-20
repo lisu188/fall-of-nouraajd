@@ -39,7 +39,10 @@ std::unordered_map<std::string, std::function<void(Creature *, Creature *)>> Int
     {"LethalPoison", LethalPoison},
     {"Chloroform", Chloroform},
     {"Backstab", Backstab},
-    {"Bloodlash", Bloodlash}};
+    {"Bloodlash", Bloodlash},
+    {"DeathStrike", DeathStrike},
+    {"Barrier", Barrier},
+    {"BloodThirst", BloodThirst}};
 
 Interaction::Interaction(std::string name) {
     className = name;
@@ -49,13 +52,12 @@ Interaction::Interaction(std::string name) {
     if (anim.compare("") != 0) {
         setAnimation(anim);
     }
-    action = actions[name];
 }
 
 void Interaction::onAction(Creature *first, Creature *second) {
     qDebug() << first->className.c_str() << "used" << this->className.c_str() << "against" << second->className.c_str();
-    if (action) {
-        action(first, second);
+    if (actions[className]) {
+        actions[className](first, second);
     }
 }
 
@@ -195,3 +197,13 @@ void Chloroform(Creature *first, Creature *second) { second->addEffect(new Effec
 void Backstab(Creature *first, Creature *second) { second->hurt(first->getDmg() * 2); }
 
 void Bloodlash(Creature *first, Creature *second) { second->addEffect(new Effect("BloodlashEffect", first, 4)); }
+
+void DeathStrike(Creature *first, Creature *second) { Attack(first, second); }
+
+void Barrier(Creature *first, Creature *second) { first->addEffect(new Effect("BarrierEffect", first, 3)); }
+
+void BloodThirst(Creature *first, Creature *second) {
+    int damage = first->getDmg();
+    second->hurt(damage);
+    first->heal(damage);
+}

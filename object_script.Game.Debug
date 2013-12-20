@@ -1,10 +1,5 @@
 INPUT(
 ./debug\main.o
-./debug\watertile.o
-./debug\tile.o
-./debug\grasstile.o
-./debug\groundtile.o
-./debug\roadtile.o
 ./debug\map.o
 ./debug\event.o
 ./debug\coords.o
@@ -15,7 +10,6 @@ INPUT(
 ./debug\town.o
 ./debug\weapon.o
 ./debug\interaction.o
-./debug\mountaintile.o
 ./debug\cave.o
 ./debug\animationprovider.o
 ./debug\animation.o
@@ -41,5 +35,7 @@ INPUT(
 ./debug\potion.o
 ./debug\configurationprovider.o
 ./debug\compression.o
+./debug\tile.o
+./debug\dungeon.o
 ./debug\moc_animatedobject.o
 );

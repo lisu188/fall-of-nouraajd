@@ -129,7 +129,7 @@ void Creature::fight(Creature *creature) {
 
 void Creature::levelUp() {
     level++;
-    stats.addBonus(bonusLevel);
+    stats.addBonus(getLevelStats());
     Interaction *action = getLevelAction();
     if (action)
         addAction(action);
@@ -240,7 +240,6 @@ void Creature::loadFromJson(Json::Value config) {
     setAnimation(animPath);
     sw = config.get("sw", 0).asInt();
     stats.loadFromJson(config["initStats"]);
-    bonusLevel.loadFromJson(config["levelStats"]);
 
     Json::Value names = config["actions"];
     for (unsigned int i = 0; i < names.size(); i++)
@@ -288,7 +287,6 @@ Json::Value Creature::saveToJson() {
     config["hp"] = hp;
     config["mana"] = mana;
     config["initStats"] = stats.saveToJson();
-    config["levelStats"] = bonusLevel.saveToJson();
     config["coords"]["X"] = getPosX();
     config["coords"]["Y"] = getPosY();
     Json::Value names(Json::arrayValue);
@@ -375,4 +373,11 @@ void Creature::mousePressEvent(QGraphicsSceneMouseEvent *event) {
 void Creature::mouseReleaseEvent(QGraphicsSceneMouseEvent *event) {
     if (event)
         event->setAccepted(true);
+}
+
+Stats Creature::getLevelStats() {
+    Stats bonus;
+    Json::Value config = (*ConfigurationProvider::getConfig("config/creatures.json"))[className];
+    bonus.loadFromJson(config["levelStats"]);
+    return bonus;
 }

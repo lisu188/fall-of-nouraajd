@@ -5,13 +5,17 @@
 #include <vector>
 
 #include <buildings/cave.h>
-#include <map/tiles/roadtile.h>
-#include <map/tiles/watertile.h>
+#include <map/tile.h>
 #include <view/gamescene.h>
 
 // Tiles and map objects are AnimatedObjects owned by the Destroyer, which deletes
 // them when the game terminates; the map only drops its references here.
 Map::~Map() {
+    for (iterator it = begin(); it != end(); ++it)
+        (*it).second->removeFromGame();
+    std::list<MapObject *> objects(mapObjects);
+    for (std::list<MapObject *>::iterator it = objects.begin(); it != objects.end(); ++it)
+        (*it)->removeFromGame();
     clear();
     mapObjects.clear();
 }
@@ -63,7 +67,7 @@ void Map::addRiver(int length, int startx, int starty) {
         iterator it = find(Coords(x, y));
         if (it != end())
             erase(it);
-        addTile(new WaterTile(x, y));
+        addTile(Tile::getTile("WaterTile", x, y));
         randomDir(dirs, 4);
         switch (dirs[0]) {
         case 0:
@@ -89,7 +93,7 @@ void Map::addRoad(int length, int startx, int starty) {
         iterator it = find(Coords(x, y));
         if (it != end())
             erase(it);
-        addTile(new RoadTile(x, y));
+        addTile(Tile::getTile("RoadTile", x, y));
         if (rand() % 2 == 0)
             x += rand() % 2 == 0 ? 1 : -1;
         else
@@ -109,7 +113,8 @@ void Map::loadFromJson(Json::Value config) {
     for (unsigned int t = 0; t < types.size(); t++) {
         Json::Value coords = tiles[types[t]];
         for (unsigned int i = 0; i < coords.size(); i++) {
-            Tile *tile = Tile::getTile(types[t], coords[i].get("x", 0).asInt(), coords[i].get("y", 0).asInt());
+            Tile *tile =
+                Tile::getTile(types[t], coords[i][(unsigned int)0].asInt(), coords[i][(unsigned int)1].asInt());
             if (!tile)
                 continue;
             iterator it = find(tile->getCoords());
@@ -219,3 +224,12 @@ void MapObject::move(int x, int y) {
 void MapObject::setParentItem(QGraphicsItem *parent) { QGraphicsItem::setParentItem(parent); }
 
 void MapObject::setAnimation(std::string path) { AnimatedObject::setAnimation(path); }
+
+void clearRange(std::vector<Tile *> *tiles, int start, int stop) {
+    if (!tiles)
+        return;
+    start = std::max(0, start);
+    stop = std::min(static_cast<int>(tiles->size()), stop);
+    for (int i = start; i < stop; i++)
+        (*tiles)[i]->removeFromGame();
+}
