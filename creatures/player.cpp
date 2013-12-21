@@ -21,7 +21,6 @@
 #include <QDebug>
 
 Player::Player(std::string name, Json::Value config, Map *map) : Creature(name, config, map) {
-    lock = false;
     gold = 0;
     turn = 0;
     playerStatsView = new PlayerStatsView(this);
@@ -85,12 +84,6 @@ void Player::updateViews() {
 }
 
 std::list<Creature *> *Player::getFightList() { return &fightList; }
-
-void Player::unLock() { lock = false; }
-
-void Player::doLock() { lock = true; }
-
-bool Player::isLock() { return lock; }
 
 void *Player::performAction(Interaction *action, Creature *creature) {
     action->onAction(this, creature);

@@ -1,7 +1,7 @@
 # Recovered game snapshot
 
-Original commit: `b3809b01f32d7e57fa0e3fe21c39d9916e18260c`. Original tree: `98c6e48a6a94462b39a56a0fdcb06185873dd397`.
-Startup was verified from identical recovered sources at `b3809b01f32d7e57fa0e3fe21c39d9916e18260c`.
+Original commit: `f5199306c188d9a088fe5c0ee6b14f75a269e433`. Original tree: `e26e4ffcaa4411741a565f373b59ac4dfa8e8b84`.
+Startup was verified from identical recovered sources at `f5199306c188d9a088fe5c0ee6b14f75a269e433`.
 
 This recovered version compiled and linked on Linux, started the real game on an isolated Xvfb display,
 loaded its map and a healthy player, rendered the screenshot below, and exited normally.
@@ -39,8 +39,8 @@ compatibilityRepair: 1, exactOriginal: 43, reconstruction: 17.
 
 - `config/creatures.json`: content reconstruction of the BFG-removed original; carried #51 reconstructed creature templates; original #52 data delta is unavailable and surviving interfaces still query the same template keys
 - `creatures/creature.cpp`: content reconstruction of the BFG-removed original; adapted #51 reconstruction to surviving #52 removal of bonusLevel and addition of getLevelStats(); obtain per-level stats from the consolidated template
-- `creatures/player.cpp`: content reconstruction of the BFG-removed original; adapted #48 reconstruction to original #52 tile header and entered-object API consumed by surviving PlayerAnimation callback
-- `images/buildings/dungeon/0.png`: unverified donor reconstruction; 71a3432e36b5649aabdd63c7807a78e9a8a3749a:images/buildings/dungeon/0.png; headerMatch=0; apiOverlap=0/10000; distance=109
+- `creatures/player.cpp`: content reconstruction of the BFG-removed original; adapted #52 reconstruction to surviving #53 removal of lock field and unLock/doLock/isLock declarations
+- `images/buildings/dungeon/0.png`: unverified donor reconstruction; 71a3432e36b5649aabdd63c7807a78e9a8a3749a:images/buildings/dungeon/0.png; headerMatch=0; apiOverlap=0/10000; distance=108
 - `images/tiles/grass/0.png`: unverified donor reconstruction; c049ac73064442354af6224d06fe1c8b847bb8d9:images/tiles/grass/0.png; headerMatch=0; apiOverlap=0/10000; distance=105 Verified by build and startup of afdd8069 (recovery/evidence/second-original).
 - `images/tiles/ground/0.png`: unverified donor reconstruction; c049ac73064442354af6224d06fe1c8b847bb8d9:images/tiles/ground/0.png; headerMatch=0; apiOverlap=0/10000; distance=105 Verified by build and startup of afdd8069 (recovery/evidence/second-original).
 - `images/tiles/mountain/0.png`: unverified donor reconstruction; 152007b28631784d3c5e17f2686eb6ef9ff30e46:images/tiles/mountain/0.png; headerMatch=0; apiOverlap=0/10000; distance=155 Verified by build and startup of afdd8069 (recovery/evidence/second-original).
@@ -51,12 +51,12 @@ compatibilityRepair: 1, exactOriginal: 43, reconstruction: 17.
 - `json/json_reader.cpp`: unverified upstream reconstruction; https://github.com/open-source-parsers/jsoncpp/tree/4fce396c9d3e27a8ab8fb88e94c1676e021ae3a6
 - `json/json_value.cpp`: unverified upstream reconstruction; https://github.com/open-source-parsers/jsoncpp/tree/4fce396c9d3e27a8ab8fb88e94c1676e021ae3a6
 - `json/json_writer.cpp`: unverified upstream reconstruction; https://github.com/open-source-parsers/jsoncpp/tree/4fce396c9d3e27a8ab8fb88e94c1676e021ae3a6
-- `map/map.cpp`: content reconstruction of the BFG-removed original; adapted #47 reconstruction to surviving #52 generic Tile factory and array coordinate format; retire old map graphics without deleting Destroyer-owned objects; define declared clearRange helper
+- `map/map.cpp`: content reconstruction of the BFG-removed original; carried #52 reconstruction; #53 surviving changes expose only getStep() and remove Player locking, neither requires additional implementation changes
 - `stats/stats.cpp`: content reconstruction of the BFG-removed original; from the fe3928a0 reconstruction: init renamed loadFromJson with saveToJson, main stat name and shadow resistance (same-commit stats.h)
-- `view/gamescene.cpp`: content reconstruction of the BFG-removed original; adapted #46 scene reconstruction with changeMap() consumed by original #52 Dungeon; preserve player save state and hide retired views; reconstructed destination dungeon at (3,3), original layout unavailable; defer map transition until the current Map::move callback returns to avoid retiring its active receiver
+- `view/gamescene.cpp`: content reconstruction of the BFG-removed original; carried #52 reconstruction; #53 surviving changes expose only getStep() and remove Player locking, neither requires additional implementation changes; defer map transition until the current Map::move callback returns to avoid retiring its active receiver
 - `json/LICENSE`: https://github.com/open-source-parsers/jsoncpp/tree/4fce396c9d3e27a8ab8fb88e94c1676e021ae3a6 upstream distribution license
 
-Restored source fingerprint: `5e945b6408b58bc9e74302a4fc253fb99ab775ca412bf0fdd6e3538398bdcbc1`.
+Restored source fingerprint: `79adc93378ae1d97c55357cc4ec4f2e10110a4fbff1195ad45bd3ab2c0caf844`.
 
 The actual 1278 × 718 screenshot and [verification metadata](recovery/verification.json) belong to
 this source version. Reconstructed code and borrowed assets are identified in that metadata; they are
