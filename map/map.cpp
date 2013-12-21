@@ -233,3 +233,16 @@ void clearRange(std::vector<Tile *> *tiles, int start, int stop) {
     for (int i = start; i < stop; i++)
         (*tiles)[i]->removeFromGame();
 }
+
+void Map::addDungeon(int centerx, int centery, int width, int height) {
+    for (int x = centerx - width / 2; x <= centerx + width / 2; x++) {
+        for (int y = centery - height / 2; y <= centery + height / 2; y++) {
+            iterator it = find(Coords(x, y));
+            if (it != end())
+                erase(it);
+            const bool wall = x == centerx - width / 2 || x == centerx + width / 2 || y == centery - height / 2 ||
+                              y == centery + height / 2;
+            addTile(Tile::getTile(wall ? "MountainTile" : "GroundTile", x, y));
+        }
+    }
+}

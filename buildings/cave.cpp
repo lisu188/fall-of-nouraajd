@@ -7,12 +7,10 @@
 
 #include <configuration/configurationprovider.h>
 
-int Cave::count=0;
 Cave::Cave(Map *map, int x, int y):Building(map,x,y)
 {
     className="Cave";
     this->setAnimation("images/buildings/cave/");
-    count++;
     enabled=true;
 }
 
@@ -22,7 +20,6 @@ void Cave::onEnter()
     if(enabled)
     {
         enabled=false;
-        count--;
         for(int i=-1; i<2; i++)
             for(int j=-1; j<2; j++)
             {

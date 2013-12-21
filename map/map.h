@@ -28,6 +28,7 @@ public:
 
     void addRiver(int length, int startx, int starty);
     void addRoad(int length, int startx, int starty);
+    void addDungeon(int centerx,int centery, int width,int height);
 
     void removeObject(MapObject *mapObject);
 
