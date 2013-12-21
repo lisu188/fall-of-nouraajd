@@ -8,7 +8,6 @@ public:
     Cave(Map *map, int x, int y);
     virtual void onEnter();
     virtual void onMove();
-    static int count;
     bool canSave();
 
 private:
