@@ -17,9 +17,8 @@ void PlayerAnimation::afterAnimationStep(qreal step)
     Player *player=GameScene::getPlayer();
     view->centerOn(this->item());
     player->update();
-    if(step==1)
+    if(step>=1)
     {
-        player->unLock();
         std::list<MapObject *> entered(*player->getEntered());
         for(std::list<MapObject *>::iterator it=entered.begin();
                 it!=entered.end(); it++)

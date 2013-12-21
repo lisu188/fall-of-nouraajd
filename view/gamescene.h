@@ -23,10 +23,13 @@ public:
     static void setPlayer(Player *pla);
     static GameScene* getGame();
     static GameView *getView();
+    static int getStep() {
+        return 100;
+    }
     void playerMove(int dirx, int diry);
     void ensureSize(int sizex, int sizey);
-
     void changeMap();
+
 protected:
     void keyPressEvent(QKeyEvent *keyEvent);
 private:
@@ -37,6 +40,7 @@ private:
     void addTile(Tile *tile);
     void addObject(MapObject *mapObject);
 
+    int click=0;
 };
 
 #endif // GAMESCENE_H

@@ -24,9 +24,6 @@ public:
 
     void onMove();
     void onEnter();
-    void unLock();
-    void doLock();
-    bool isLock();
 
     void update();
     void updateViews();
@@ -49,7 +46,6 @@ private:
     PlayerListView *playerInventoryView;
     PlayerListView *playerSkillsView;
     PlayerListView *playerEquippedView;
-    bool lock;
     std::list<Creature *> fightList;
     int turn;
 
