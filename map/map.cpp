@@ -3,21 +3,20 @@
 #include <algorithm>
 #include <cstdlib>
 #include <vector>
-
 #include <buildings/cave.h>
+#include <configuration/configurationprovider.h>
 #include <map/tile.h>
 #include <view/gamescene.h>
 
-// Tiles and map objects are AnimatedObjects owned by the Destroyer, which deletes
-// them when the game terminates; the map only drops its references here.
 Map::~Map() {
-    for (iterator it = begin(); it != end(); ++it)
-        (*it).second->removeFromGame();
+    for (std::map<Coords, Tile *>::iterator it = tiles.begin(); it != tiles.end(); ++it)
+        delete (*it).second;
+    tiles.clear();
     std::list<MapObject *> objects(mapObjects);
     for (std::list<MapObject *>::iterator it = objects.begin(); it != objects.end(); ++it)
         (*it)->removeFromGame();
-    clear();
     mapObjects.clear();
+    clear();
 }
 
 void Map::move(int x, int y) {
@@ -25,7 +24,6 @@ void Map::move(int x, int y) {
     if (!player)
         return;
     player->move(x, y);
-
     std::vector<MapObject *> objects(mapObjects.begin(), mapObjects.end());
     for (std::vector<MapObject *>::iterator it = objects.begin(); it != objects.end(); ++it) {
         MapObject *object = *it;
@@ -38,36 +36,72 @@ void Map::move(int x, int y) {
             object->onEnter();
     }
     player->onMove();
+    ensureSize(player);
 }
 
-Tile *Map::getTile(int x, int y) {
+std::string Map::getTile(int x, int y) {
     iterator it = find(Coords(x, y));
     if (it != end())
         return (*it).second;
-    Tile *tile = Tile::getRandomTile(x, y);
-    addTile(tile);
-    return tile;
+    const std::string name = Tile::getRandomTile();
+    addTile(name, x, y);
+    return name;
 }
 
 bool Map::contains(int x, int y) { return find(Coords(x, y)) != end(); }
 
-void Map::addObject(MapObject *mapObject) {
-    if (!mapObject)
-        return;
-    if (std::find(mapObjects.begin(), mapObjects.end(), mapObject) == mapObjects.end())
-        mapObjects.push_back(mapObject);
-    getTile(mapObject->getPosX(), mapObject->getPosY());
+bool Map::addTile(std::string name, int x, int y) {
+    const Coords coords(x, y);
+    if (find(coords) != end())
+        return false;
+    insert(std::pair<Coords, std::string>(coords, name));
+    return true;
 }
 
-void Map::addRiver(int length, int startx, int starty) {
-    int x = startx;
-    int y = starty;
+void Map::addObject(MapObject *object) {
+    if (!object)
+        return;
+    if (std::find(mapObjects.begin(), mapObjects.end(), object) == mapObjects.end())
+        mapObjects.push_back(object);
+    object->setMap(this);
+    getTile(object->getPosX(), object->getPosY());
+}
+
+void Map::removeObject(MapObject *object) { mapObjects.remove(object); }
+
+void Map::ensureSize(Player *player) {
+    if (!player)
+        return;
+    const int x = player->getPosX();
+    const int y = player->getPosY();
+    std::map<Coords, Tile *>::iterator it = tiles.begin();
+    while (it != tiles.end()) {
+        const Coords coords = (*it).first;
+        if (std::abs(coords.first - x) > cacheSize || std::abs(coords.second - y) > cacheSize ||
+            (*it).second->className != getTile(coords.first, coords.second)) {
+            delete (*it).second;
+            tiles.erase(it++);
+        } else {
+            ++it;
+        }
+    }
+    for (int tx = x - cacheSize; tx <= x + cacheSize; tx++) {
+        for (int ty = y - cacheSize; ty <= y + cacheSize; ty++) {
+            const Coords coords(tx, ty);
+            if (tiles.find(coords) == tiles.end()) {
+                Tile *tile = Tile::getTile(getTile(tx, ty), tx, ty);
+                tiles.insert(std::pair<Coords, Tile *>(coords, tile));
+                tile->addToGame();
+            }
+        }
+    }
+}
+
+void Map::addRiver(int length, int x, int y) {
     int dirs[4];
-    for (int i = 0; i < length; ++i) {
-        iterator it = find(Coords(x, y));
-        if (it != end())
-            erase(it);
-        addTile(Tile::getTile("WaterTile", x, y));
+    for (int i = 0; i < length; i++) {
+        erase(Coords(x, y));
+        addTile("WaterTile", x, y);
         randomDir(dirs, 4);
         switch (dirs[0]) {
         case 0:
@@ -86,14 +120,10 @@ void Map::addRiver(int length, int startx, int starty) {
     }
 }
 
-void Map::addRoad(int length, int startx, int starty) {
-    int x = startx;
-    int y = starty;
-    for (int i = 0; i < length; ++i) {
-        iterator it = find(Coords(x, y));
-        if (it != end())
-            erase(it);
-        addTile(Tile::getTile("RoadTile", x, y));
+void Map::addRoad(int length, int x, int y) {
+    for (int i = 0; i < length; i++) {
+        erase(Coords(x, y));
+        addTile("RoadTile", x, y);
         if (rand() % 2 == 0)
             x += rand() % 2 == 0 ? 1 : -1;
         else
@@ -101,70 +131,61 @@ void Map::addRoad(int length, int startx, int starty) {
     }
 }
 
-void Map::removeObject(MapObject *mapObject) {
-    if (mapObject)
-        mapObjects.remove(mapObject);
+void Map::addDungeon(int centerx, int centery, int width, int height) {
+    for (int x = centerx - width / 2; x <= centerx + width / 2; x++) {
+        for (int y = centery - height / 2; y <= centery + height / 2; y++) {
+            const bool wall = x == centerx - width / 2 || x == centerx + width / 2 || y == centery - height / 2 ||
+                              y == centery + height / 2;
+            erase(Coords(x, y));
+            addTile(wall ? "MountainTile" : "GroundTile", x, y);
+        }
+    }
+}
+
+void Map::randomDir(int *tab, int rule) {
+    for (int i = 0; i < 4; i++)
+        tab[i] = i;
+    for (int i = 0; i < 4; i++)
+        std::swap(tab[i], tab[rand() % std::max(1, std::min(4, rule))]);
 }
 
 void Map::loadFromJson(Json::Value config) {
-    // Tiles are saved grouped by tile type, each as its coordinates.
-    Json::Value tiles = config["tiles"];
-    Json::Value::Members types = tiles.getMemberNames();
-    for (unsigned int t = 0; t < types.size(); t++) {
-        Json::Value coords = tiles[types[t]];
+    Json::Value groups = config["tiles"];
+    Json::Value::Members names = groups.getMemberNames();
+    for (unsigned int n = 0; n < names.size(); n++) {
+        Json::Value coords = groups[names[n]];
         for (unsigned int i = 0; i < coords.size(); i++) {
-            Tile *tile =
-                Tile::getTile(types[t], coords[i][(unsigned int)0].asInt(), coords[i][(unsigned int)1].asInt());
-            if (!tile)
-                continue;
-            iterator it = find(tile->getCoords());
-            if (it != end())
-                erase(it);
-            addTile(tile);
+            const int x = coords[i][(unsigned int)0].asInt();
+            const int y = coords[i][(unsigned int)1].asInt();
+            erase(Coords(x, y));
+            addTile(names[n], x, y);
         }
     }
     Json::Value objects = config["objects"];
-    Json::Value::Members names = objects.getMemberNames();
+    names = objects.getMemberNames();
     for (unsigned int n = 0; n < names.size(); n++) {
         Json::Value instances = objects[names[n]];
         for (unsigned int i = 0; i < instances.size(); i++) {
-            for (std::list<MapObject *>::iterator it = mapObjects.begin(); it != mapObjects.end(); ++it) {
+            for (std::list<MapObject *>::iterator it = mapObjects.begin(); it != mapObjects.end(); ++it)
                 if ((*it)->className == names[n])
                     (*it)->loadFromJson(instances[i]);
-            }
         }
     }
+    ensureSize(GameScene::getPlayer());
 }
 
 Json::Value Map::saveToJson() {
     Json::Value config;
-    Json::Value tiles;
-    for (iterator it = begin(); it != end(); ++it)
-        tiles[(*it).second->className].append((*it).second->saveToJson());
-    config["tiles"] = tiles;
-    Json::Value objects;
+    for (iterator it = begin(); it != end(); ++it) {
+        Json::Value coords(Json::arrayValue);
+        coords.append((*it).first.first);
+        coords.append((*it).first.second);
+        config["tiles"][(*it).second].append(coords);
+    }
     for (std::list<MapObject *>::iterator it = mapObjects.begin(); it != mapObjects.end(); ++it)
         if ((*it)->canSave())
-            objects[(*it)->className].append((*it)->saveToJson());
-    config["objects"] = objects;
+            config["objects"][(*it)->className].append((*it)->saveToJson());
     return config;
-}
-
-void Map::randomDir(int *tab, int rule) {
-    for (int i = 0; i < 4; ++i)
-        tab[i] = i;
-    for (int i = 0; i < 4; ++i)
-        std::swap(tab[i], tab[rand() % std::max(1, std::min(4, rule))]);
-}
-
-bool Map::addTile(Tile *tile) {
-    if (!tile)
-        return false;
-    if (contains(tile->getCoords().first, tile->getCoords().second))
-        return false;
-    insert(std::pair<Coords, Tile *>(tile->getCoords(), tile));
-    tile->addToGame();
-    return true;
 }
 
 MapObject::MapObject(Map *map, int x, int y, int z) {
@@ -194,9 +215,11 @@ void MapObject::moveTo(int x, int y, bool silent) {
     posy = y;
     setPos(x * Tile::size, y * Tile::size);
     if (!silent && map) {
-        Tile *tile = map->getTile(x, y);
-        if (tile)
+        Tile *tile = Tile::getTile(map->getTile(x, y), x, y);
+        if (tile) {
             tile->onStep();
+            delete tile;
+        }
     }
 }
 
@@ -215,8 +238,9 @@ void MapObject::removeFromGame() {
 void MapObject::move(int x, int y) {
     if (!map || (x == 0 && y == 0))
         return;
-    Tile *destination = map->getTile(posx + x, posy + y);
-    if (!destination || !destination->canStep())
+    const std::string destination = map->getTile(posx + x, posy + y);
+    Json::Value config = (*ConfigurationProvider::getConfig("config/tiles.json"))[destination];
+    if (!config.get("canStep", true).asBool())
         return;
     moveTo(posx + x, posy + y);
 }
@@ -225,24 +249,9 @@ void MapObject::setParentItem(QGraphicsItem *parent) { QGraphicsItem::setParentI
 
 void MapObject::setAnimation(std::string path) { AnimatedObject::setAnimation(path); }
 
-void clearRange(std::vector<Tile *> *tiles, int start, int stop) {
-    if (!tiles)
-        return;
-    start = std::max(0, start);
-    stop = std::min(static_cast<int>(tiles->size()), stop);
-    for (int i = start; i < stop; i++)
-        (*tiles)[i]->removeFromGame();
-}
-
-void Map::addDungeon(int centerx, int centery, int width, int height) {
-    for (int x = centerx - width / 2; x <= centerx + width / 2; x++) {
-        for (int y = centery - height / 2; y <= centery + height / 2; y++) {
-            iterator it = find(Coords(x, y));
-            if (it != end())
-                erase(it);
-            const bool wall = x == centerx - width / 2 || x == centerx + width / 2 || y == centery - height / 2 ||
-                              y == centery + height / 2;
-            addTile(Tile::getTile(wall ? "MountainTile" : "GroundTile", x, y));
-        }
-    }
+void MapObject::setMap(Map *map) {
+    this->map = map;
+    if (GameScene::getGame() && scene() != GameScene::getGame())
+        GameScene::getGame()->addItem(this);
+    setVisible(true);
 }

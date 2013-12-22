@@ -28,7 +28,7 @@ GameScene::GameScene() {
     map->addRoad(18, -8, 0);
     map->addRiver(16, 6, -5);
     map->addObject(new Cave(map, 5, 2));
-    ensureSize(24, 16);
+    map->ensureSize(player);
 }
 
 GameScene::~GameScene() {
@@ -59,25 +59,10 @@ void GameScene::playerMove(int dirx, int diry) {
     if (view) {
         view->centerOn(player->getPosX() * Tile::size + Tile::size / 2,
                        player->getPosY() * Tile::size + Tile::size / 2);
-        ensureSize(view->width() / Tile::size + 2, view->height() / Tile::size + 2);
+        map->ensureSize(player);
         player->update();
         if (player->getFightList()->size() > 0) {
             view->showFightView();
-        }
-    }
-}
-
-void GameScene::ensureSize(int sizex, int sizey) {
-    if (!player)
-        return;
-
-    const int halfx = sizex / 2;
-    const int halfy = sizey / 2;
-    for (int x = player->getPosX() - halfx; x <= player->getPosX() + halfx; ++x) {
-        for (int y = player->getPosY() - halfy; y <= player->getPosY() + halfy; ++y) {
-            if (!map->contains(x, y)) {
-                addRandomTile(x, y);
-            }
         }
     }
 }
@@ -123,19 +108,14 @@ void GameScene::changeMap() {
     QTimer::singleShot(0, this, [this]() {
         if (!player)
             return;
-        const std::string name = player->className;
-        Json::Value state = player->saveToJson();
-        player->getStatsView()->setVisible(false);
-        player->getInventoryView()->setVisible(false);
-        player->getSkillsView()->setVisible(false);
-        player->getEquippedView()->setVisible(false);
+        map->removeObject(player);
         delete map;
-        player = 0;
         map = new Map();
-        player = new Player(name, state, map);
         map->addObject(player);
+        player->moveTo(0, 0, true);
+        map->addDungeon(0, 0, 20, 16);
         map->addObject(new Dungeon(map, 3, 3));
-        ensureSize(24, 16);
+        map->ensureSize(player);
         if (getView()) {
             getView()->centerOn(player->getPosX() * Tile::size, player->getPosY() * Tile::size);
             player->update();

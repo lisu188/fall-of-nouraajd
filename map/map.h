@@ -14,15 +14,17 @@
 #include <json/json.h>
 
 class MapObject;
+class Player;
 
-class Map : private std::unordered_map<Coords,Tile*,CoordsHasher>
+class Map : private std::unordered_map<Coords,std::string,CoordsHasher>
 {
 public:
+
     ~Map();
 
     void move(int x,int y);
 
-    Tile *getTile(int x,int y);
+    std::string getTile(int x,int y);
     bool contains(int x,int y);
     void addObject(MapObject *mapObject);
 
@@ -35,11 +37,14 @@ public:
     void loadFromJson(Json::Value config);
     Json::Value saveToJson();
 
+    void ensureSize(Player *player);
 private:
     std::list<MapObject*> mapObjects;
     void randomDir(int *tab, int rule);
-    bool addTile(Tile *tile);
-    std::vector<Tile *> tiles;
+    bool addTile(std::string name, int x, int y);
+    std::map<Coords,Tile *> tiles;
+
+    int cacheSize=25;
 };
 
 class MapObject : private AnimatedObject
@@ -65,6 +70,8 @@ public:
     virtual void loadFromJson(Json::Value config)=0;
     virtual Json::Value saveToJson()=0;
     virtual bool canSave()=0;
+
+    void setMap(Map *map);
 protected:
     void setAnimation(std::string path);
     Map *map;
@@ -75,7 +82,5 @@ protected:
 public:
     std::string className;
 };
-
-void clearRange(std::vector<Tile *> *vector, int start, int stop);
 
 #endif // MAP_H
