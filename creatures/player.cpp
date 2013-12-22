@@ -20,7 +20,7 @@
 #include <view/fightview.h>
 #include <QDebug>
 
-Player::Player(std::string name, Json::Value config, Map *map) : Creature(name, config, map) {
+Player::Player(std::string name, Json::Value config) : Creature(name, config) {
     gold = 0;
     turn = 0;
     playerStatsView = new PlayerStatsView(this);
@@ -38,8 +38,7 @@ Player::Player(std::string name, Json::Value config, Map *map) : Creature(name, 
     updateViews();
 }
 
-Player::Player(std::string name, Map *map)
-    : Player(name, (*ConfigurationProvider::getConfig("config/creatures.json"))[name], map) {
+Player::Player(std::string name) : Player(name, (*ConfigurationProvider::getConfig("config/creatures.json"))[name]) {
     className = name;
 }
 

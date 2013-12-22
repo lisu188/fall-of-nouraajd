@@ -2,6 +2,7 @@
 #include <QDebug>
 #include <configuration/configurationprovider.h>
 #include <creatures/creature.h>
+#include <view/gamescene.h>
 
 Potion::Potion(std::string name)
 {
@@ -20,6 +21,7 @@ void Potion::onUse(Creature *creature)
 {
     qDebug() << creature->className.c_str() << "used" << className.c_str();
     effect(creature,power);
+    GameScene::getPlayer()->updateViews();;
 }
 
 void LifeEffect(Creature *creature,int power)

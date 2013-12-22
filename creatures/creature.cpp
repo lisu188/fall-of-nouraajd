@@ -30,7 +30,7 @@ int stat_resisted(int value, int resist) {
 
 } // namespace
 
-Creature::Creature(std::string name, Json::Value config, Map *map) : MapObject(map, 0, 0, 2) {
+Creature::Creature(std::string name, Json::Value config) : MapObject(0, 0, 2) {
     className = name;
     exp = 0;
     level = 0;
@@ -46,8 +46,8 @@ Creature::Creature(std::string name, Json::Value config, Map *map) : MapObject(m
     loadFromJson(config);
 }
 
-Creature::Creature(std::string name, Map *map)
-    : Creature(name, (*ConfigurationProvider::getConfig("config/creatures.json"))[name], map) {
+Creature::Creature(std::string name)
+    : Creature(name, (*ConfigurationProvider::getConfig("config/creatures.json"))[name]) {
     className = name;
 }
 
@@ -146,10 +146,10 @@ void Creature::addAction(Interaction *action) {
     actions.push_back(action);
 }
 
-void Creature::addEffect(Effect *effect) {
-    if (!effect)
+void Creature::addEffect(std::string type, Creature *caster) {
+    if (type.empty())
         return;
-    effects.push_back(effect);
+    effects.push_back(new Effect(type, caster));
 }
 
 void Creature::addItem(std::list<Item *> *items) {
