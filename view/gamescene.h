@@ -33,6 +33,7 @@ protected:
     void keyPressEvent(QKeyEvent *keyEvent);
 private:
     Map *map;
+    Map *oldMap,*newMap;
     static Player *player;
     static GameScene *game;
     void addRandomTile(int x,int y);

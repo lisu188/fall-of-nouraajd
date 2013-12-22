@@ -1,6 +1,6 @@
 #include "town.h"
 
-Town::Town(Map *map,int x,int y):Building(map,x,y)
+Town::Town(int x, int y):Building(x,y)
 {
     className="Town";
 }

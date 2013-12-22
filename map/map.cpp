@@ -188,8 +188,8 @@ Json::Value Map::saveToJson() {
     return config;
 }
 
-MapObject::MapObject(Map *map, int x, int y, int z) {
-    this->map = map;
+MapObject::MapObject(int x, int y, int z) {
+    this->map = 0;
     posx = x;
     posy = y;
     animation = 0;
@@ -254,4 +254,14 @@ void MapObject::setMap(Map *map) {
     if (GameScene::getGame() && scene() != GameScene::getGame())
         GameScene::getGame()->addItem(this);
     setVisible(true);
+}
+
+void Map::hide() {
+    for (std::map<Coords, Tile *>::iterator it = tiles.begin(); it != tiles.end(); ++it)
+        delete (*it).second;
+    tiles.clear();
+    std::list<MapObject *> objects(mapObjects);
+    for (std::list<MapObject *>::iterator it = objects.begin(); it != objects.end(); ++it)
+        (*it)->removeFromGame();
+    mapObjects = objects;
 }

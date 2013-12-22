@@ -21,13 +21,13 @@ GameScene::GameScene() {
     map = new Map();
 
     if (!player) {
-        player = new Player("Warrior", map);
+        player = new Player("Warrior");
         map->addObject(player);
     }
 
     map->addRoad(18, -8, 0);
     map->addRiver(16, 6, -5);
-    map->addObject(new Cave(map, 5, 2));
+    map->addObject(new Cave(5, 2));
     map->ensureSize(player);
 }
 
@@ -114,7 +114,7 @@ void GameScene::changeMap() {
         map->addObject(player);
         player->moveTo(0, 0, true);
         map->addDungeon(0, 0, 20, 16);
-        map->addObject(new Dungeon(map, 3, 3));
+        map->addObject(new Dungeon(3, 3));
         map->ensureSize(player);
         if (getView()) {
             getView()->centerOn(player->getPosX() * Tile::size, player->getPosY() * Tile::size);

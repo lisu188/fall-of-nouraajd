@@ -29,7 +29,6 @@ INPUT(
 ./release\json_writer.o
 ./release\json_value.o
 ./release\json_reader.o
-./release\effect.o
 ./release\player.o
 ./release\monster.o
 ./release\potion.o

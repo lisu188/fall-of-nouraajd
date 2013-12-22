@@ -1,6 +1,6 @@
 #include "tower.h"
 
-Tower::Tower(Map *map,int x,int y):Building(map,x,y)
+Tower::Tower(int x, int y):Building(x,y)
 {
     className="Tower";
 }

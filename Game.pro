@@ -46,7 +46,6 @@ SOURCES += main.cpp \
     json/json_reader.cpp \
     json/json_internalmap.inl \
     json/json_internalarray.inl \
-    effects/effect.cpp \
     creatures/player.cpp \
     creatures/monster.cpp \
     items/potion.cpp \
@@ -92,7 +91,6 @@ HEADERS  += \
     json/features.h \
     json/config.h \
     json/autolink.h \
-    effects/effect.h \
     creatures/player.h \
     creatures/monster.h \
     items/weapon.h \

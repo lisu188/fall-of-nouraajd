@@ -61,11 +61,13 @@ public:
     void setAttack(int value);
 
     const char *getText(int level);
-    void loadFromJson(Json::Value statConfig);
+    void loadFromJson(Json::Value config);
     Json::Value saveToJson();
 
     int getShadowResist() const;
     void setShadowResist(int value);
+
+
 
 private:
     int strength=0;

@@ -1,5 +1,4 @@
 #include <QGraphicsPixmapItem>
-#include <effects/effect.h>
 #include <items/item.h>
 #include <map/map.h>
 #include <stats/damage.h>
@@ -8,6 +7,7 @@
 #define CREATURE_H
 
 class Interaction;
+class Effect;
 class Weapon;
 class Armor;
 class Stats;
@@ -15,8 +15,8 @@ class Stats;
 class Creature : public MapObject
 {
 public:
-    Creature(std::string name,Json::Value config, Map *map);
-    Creature(std::string name, Map *map);
+    Creature(std::string name, Json::Value config);
+    Creature(std::string name);
     ~Creature();
 
     int getExp();
@@ -43,7 +43,7 @@ public:
     virtual std::list<Item*>* getLoot()=0;
 
     void addAction(Interaction *action);
-    void addEffect(Effect *effect);
+    void addEffect(std::string type, Creature *caster);
 
     int getMana();
     void addMana(int i);
