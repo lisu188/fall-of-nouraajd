@@ -74,7 +74,6 @@ void GameView::resizeEvent( QResizeEvent * event)
         {
             int sizex=(event->size().width()/Tile::size+1);
             int sizey=(event->size().height()/Tile::size+1);
-            GameScene::getGame()->ensureSize(sizex,sizey);
         }
     }
 }

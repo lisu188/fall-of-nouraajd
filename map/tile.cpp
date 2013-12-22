@@ -55,25 +55,9 @@ bool Tile::canStep() const
     return step;
 }
 
-Tile *Tile::getRandomTile(int x, int y)
+std::string Tile::getRandomTile()
 {
-    return new Tile("GrassTile",x,y);
-    switch(rand()%4)
-    {
-    case 0:
-    case 1:
-        if(rand()%20==0) {
-            return new Tile("MountainTile",x,y);
-        }
-        else {
-            return new Tile("GrassTile",x,y);
-        }
-    case 2:
-        return new Tile("GroundTile",x,y);
-    case 3:
-        return new Tile("GroundTile",x,y);
-    }
-    return 0;
+    return "GrassTile";
 }
 
 Tile *Tile::getTile(std::string type,int x,int y)

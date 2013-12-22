@@ -29,7 +29,7 @@ public:
 
     bool canStep() const;
 
-    static Tile *getRandomTile(int x, int y);
+    static std::string getRandomTile();
     static Tile *getTile(std::string type, int x, int y);
 
     void addToGame();
