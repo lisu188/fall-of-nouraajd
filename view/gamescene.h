@@ -27,7 +27,6 @@ public:
         return 100;
     }
     void playerMove(int dirx, int diry);
-    void ensureSize(int sizex, int sizey);
     void changeMap();
 
 protected:
