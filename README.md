@@ -1,7 +1,7 @@
 # Recovered game snapshot
 
-Original commit: `42b8f0f2b45c2a149af67102398d296c4cd7fae7`. Original tree: `c4473e058fb22980d6c87fca2a966bcaebce5eb5`.
-Startup was verified from identical recovered sources at `42b8f0f2b45c2a149af67102398d296c4cd7fae7`.
+Original commit: `edfb95cb76b2db3794277d726b58dc7d6ee301d1`. Original tree: `c7c84b1e957f56fb4c962f4800789be5c9d3b4f7`.
+Startup was verified from identical recovered sources at `edfb95cb76b2db3794277d726b58dc7d6ee301d1`.
 
 This recovered version compiled and linked on Linux, started the real game on an isolated Xvfb display,
 loaded its map and a healthy player, rendered the screenshot below, and exited normally.
@@ -35,14 +35,13 @@ launches run the game's original entry point. Startup evidence does not establis
 
 ## Recovery provenance
 
-compatibilityRepair: 1, exactOriginal: 43, reconstruction: 19.
+compatibilityRepair: 1, exactOriginal: 44, reconstruction: 18.
 
-- `config/creatures.json`: content reconstruction of the BFG-removed original; carried nearest reconstructed config/creatures.json through API-stable #60; surviving files provide no recoverable internal implementation/data delta
+- `config/creatures.json`: content reconstruction of the BFG-removed original; carried nearest reconstructed config/creatures.json through API-stable #61; surviving files provide no recoverable internal implementation/data delta
 - `creatures/creature.cpp`: content reconstruction of the BFG-removed original; adapted #51 reconstruction to surviving #52 removal of bonusLevel and addition of getLevelStats(); obtain per-level stats from the consolidated template
 - `creatures/player.cpp`: content reconstruction of the BFG-removed original; adapted #52 reconstruction to surviving #53 removal of lock field and unLock/doLock/isLock declarations
-- `images/buildings/dungeon/0.png`: unverified donor reconstruction; 71a3432e36b5649aabdd63c7807a78e9a8a3749a:images/buildings/dungeon/0.png; headerMatch=0; apiOverlap=0/10000; distance=101
-- `images/monsters/octobogz/0.png`: unverified donor reconstruction; 55e6516eb91b739e899df1ef8d72116da44fec49:images/monsters/octobogz/0.png; headerMatch=0; apiOverlap=0/10000; distance=298
-- `images/monsters/octobogz/1.png`: unverified donor reconstruction; 55e6516eb91b739e899df1ef8d72116da44fec49:images/monsters/octobogz/1.png; headerMatch=0; apiOverlap=0/10000; distance=298
+- `images/buildings/dungeon/0.png`: unverified donor reconstruction; 71a3432e36b5649aabdd63c7807a78e9a8a3749a:images/buildings/dungeon/0.png; headerMatch=0; apiOverlap=0/10000; distance=100
+- `images/monsters/octobogz/1.png`: unverified donor reconstruction; 55e6516eb91b739e899df1ef8d72116da44fec49:images/monsters/octobogz/1.png; headerMatch=0; apiOverlap=0/10000; distance=297
 - `images/tiles/grass/0.png`: unverified donor reconstruction; c049ac73064442354af6224d06fe1c8b847bb8d9:images/tiles/grass/0.png; headerMatch=0; apiOverlap=0/10000; distance=105 Verified by build and startup of afdd8069 (recovery/evidence/second-original).
 - `images/tiles/ground/0.png`: unverified donor reconstruction; c049ac73064442354af6224d06fe1c8b847bb8d9:images/tiles/ground/0.png; headerMatch=0; apiOverlap=0/10000; distance=105 Verified by build and startup of afdd8069 (recovery/evidence/second-original).
 - `images/tiles/mountain/0.png`: unverified donor reconstruction; 152007b28631784d3c5e17f2686eb6ef9ff30e46:images/tiles/mountain/0.png; headerMatch=0; apiOverlap=0/10000; distance=155 Verified by build and startup of afdd8069 (recovery/evidence/second-original).
@@ -53,7 +52,7 @@ compatibilityRepair: 1, exactOriginal: 43, reconstruction: 19.
 - `json/json_reader.cpp`: unverified upstream reconstruction; https://github.com/open-source-parsers/jsoncpp/tree/4fce396c9d3e27a8ab8fb88e94c1676e021ae3a6
 - `json/json_value.cpp`: unverified upstream reconstruction; https://github.com/open-source-parsers/jsoncpp/tree/4fce396c9d3e27a8ab8fb88e94c1676e021ae3a6
 - `json/json_writer.cpp`: unverified upstream reconstruction; https://github.com/open-source-parsers/jsoncpp/tree/4fce396c9d3e27a8ab8fb88e94c1676e021ae3a6
-- `map/map.cpp`: content reconstruction of the BFG-removed original; carried nearest reconstructed map/map.cpp through API-stable #60; surviving files provide no recoverable internal implementation/data delta
+- `map/map.cpp`: content reconstruction of the BFG-removed original; carried nearest reconstructed map/map.cpp through API-stable #61; surviving files provide no recoverable internal implementation/data delta
 - `stats/stats.cpp`: content reconstruction of the BFG-removed original; from the fe3928a0 reconstruction: init renamed loadFromJson with saveToJson, main stat name and shadow resistance (same-commit stats.h)
 - `view/gamescene.cpp`: content reconstruction of the BFG-removed original; carried nearest reconstructed view/gamescene.cpp through API-stable #59; surviving files provide no recoverable internal implementation/data delta; defer map transition until the current Map::move callback returns to avoid retiring its active receiver
 - `json/LICENSE`: https://github.com/open-source-parsers/jsoncpp/tree/4fce396c9d3e27a8ab8fb88e94c1676e021ae3a6 upstream distribution license
