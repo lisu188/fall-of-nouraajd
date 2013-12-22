@@ -7,7 +7,7 @@
 
 #include <configuration/configurationprovider.h>
 
-Cave::Cave(Map *map, int x, int y):Building(map,x,y)
+Cave::Cave(int x, int y):Building(x,y)
 {
     className="Cave";
     this->setAnimation("images/buildings/cave/");
@@ -28,13 +28,13 @@ void Cave::onEnter()
                 }
                 if(rand()%5==0)
                 {
-                    Monster *monster=new Monster("PritzMage",map);
+                    Monster *monster=new Monster("PritzMage");
                     map->addObject(monster);
                     monster->moveTo(getPosX()+1*i,getPosY()+1*j,true);
                 }
                 else
                 {
-                    Monster *monster=new Monster("Pritz",map);
+                    Monster *monster=new Monster("Pritz");
                     map->addObject(monster);
                     monster->moveTo(getPosX()+1*i,getPosY()+1*j,true);
                 }
@@ -49,13 +49,13 @@ void Cave::onMove()
     {
         if(rand()%5==0)
         {
-            Monster *monster=new Monster("PritzMage",map);
+            Monster *monster=new Monster("PritzMage");
             map->addObject(monster);
             monster->moveTo(getPosX(),getPosY(),true);
         }
         else
         {
-            Monster *monster=new Monster("Pritz",map);
+            Monster *monster=new Monster("Pritz");
             map->addObject(monster);
             monster->moveTo(getPosX(),getPosY(),true);
         }

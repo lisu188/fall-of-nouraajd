@@ -38,6 +38,7 @@ public:
     Json::Value saveToJson();
 
     void ensureSize(Player *player);
+    void hide();
 private:
     std::list<MapObject*> mapObjects;
     void randomDir(int *tab, int rule);
@@ -50,7 +51,7 @@ private:
 class MapObject : private AnimatedObject
 {
 public:
-    MapObject(Map *map,int x,int y,int z);
+    MapObject(int x,int y,int z);
     ~MapObject();
     int posx,posy;
     void moveTo(int x, int y,bool silent=false);

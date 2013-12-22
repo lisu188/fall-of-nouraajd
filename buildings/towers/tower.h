@@ -5,7 +5,7 @@
 class Tower : public Building
 {
 public:
-    Tower(Map *map,int x,int y);
+    Tower(int x,int y);
 };
 
 #endif // TOWE_H

@@ -1,4 +1,3 @@
-
 {
 "Attack" :
     {
@@ -28,17 +27,23 @@
     {
 "anim" : "images/interactions/stun/"
         ,
+"effect" : "Stun"
+        ,
         "manaCost" : 40
     },
 "AbyssalShadows" :
     {
 "anim" : "images/interactions/abyssalshadows/"
         ,
+"effect" : "AbyssalShadowsEffect"
+        ,
         "manaCost" : 15
     },
 "ArmorOfEndlessWinter" :
     {
 "anim" : "images/interactions/armorofendlesswinter/"
+        ,
+"effect" : "ArmorOfEndlessWinterEffect"
         ,
         "manaCost" : 60
     },
@@ -57,6 +62,8 @@
 "EndlessPain" :
     {
 "anim" : "images/interactions/endlesspain/"
+        ,
+"effect" : "EndlessPainEffect"
         ,
         "manaCost" : 25
     },
@@ -82,17 +89,23 @@
     {
 "anim" : "images/interactions/mutilation/"
         ,
+"effect" : "MutilationEffect"
+        ,
         "manaCost" : 15
     },
 "LethalPoison" :
     {
 "anim" : "images/interactions/lethalpoison/"
         ,
+"effect" : "LethalPoisonEffect"
+        ,
         "manaCost" : 20
     },
 "Chloroform" :
     {
 "anim" : "images/interactions/chloroform/"
+        ,
+"effect" : "ChloroformEffect"
         ,
         "manaCost" : 25
     },
@@ -106,6 +119,8 @@
     {
 "anim" : "images/interactions/bloodlash/"
         ,
+"effect" : "BloodlashEffect"
+        ,
         "manaCost" : 30
     },
 "DeathStrike" :
@@ -117,6 +132,8 @@
 "Barrier" :
     {
 "anim" : "images/interactions/barrier/"
+        ,
+"effect":"BarrierEffect"
         ,
         "manaCost" : 17
     },

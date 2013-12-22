@@ -2,7 +2,7 @@
 
 #include <view/gamescene.h>
 
-Dungeon::Dungeon(Map *map, int x, int y):Building(map,x,y)
+Dungeon::Dungeon(int x, int y):Building(x,y)
 {
     className="Dungeon";
     this->setAnimation("images/buildings/dungeon/");

@@ -29,7 +29,6 @@ INPUT(
 ./debug\json_writer.o
 ./debug\json_value.o
 ./debug\json_reader.o
-./debug\effect.o
 ./debug\player.o
 ./debug\monster.o
 ./debug\potion.o
