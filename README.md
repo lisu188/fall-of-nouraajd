@@ -1,7 +1,7 @@
 # Recovered game snapshot
 
-Original commit: `edfb95cb76b2db3794277d726b58dc7d6ee301d1`. Original tree: `c7c84b1e957f56fb4c962f4800789be5c9d3b4f7`.
-Startup was verified from identical recovered sources at `edfb95cb76b2db3794277d726b58dc7d6ee301d1`.
+Original commit: `76d496a31d7caca5597e15de1610af998daf8b34`. Original tree: `94b69e2d20f6af2bf14944b2be950aaebcfd0306`.
+Startup was verified from identical recovered sources at `76d496a31d7caca5597e15de1610af998daf8b34`.
 
 This recovered version compiled and linked on Linux, started the real game on an isolated Xvfb display,
 loaded its map and a healthy player, rendered the screenshot below, and exited normally.
@@ -37,11 +37,11 @@ launches run the game's original entry point. Startup evidence does not establis
 
 compatibilityRepair: 1, exactOriginal: 44, reconstruction: 18.
 
-- `config/creatures.json`: content reconstruction of the BFG-removed original; carried nearest reconstructed config/creatures.json through API-stable #61; surviving files provide no recoverable internal implementation/data delta
+- `config/creatures.json`: content reconstruction of the BFG-removed original; carried nearest reconstructed config/creatures.json through API-stable #62; surviving files provide no recoverable internal implementation/data delta
 - `creatures/creature.cpp`: content reconstruction of the BFG-removed original; adapted #51 reconstruction to surviving #52 removal of bonusLevel and addition of getLevelStats(); obtain per-level stats from the consolidated template
 - `creatures/player.cpp`: content reconstruction of the BFG-removed original; adapted #52 reconstruction to surviving #53 removal of lock field and unLock/doLock/isLock declarations
-- `images/buildings/dungeon/0.png`: unverified donor reconstruction; 71a3432e36b5649aabdd63c7807a78e9a8a3749a:images/buildings/dungeon/0.png; headerMatch=0; apiOverlap=0/10000; distance=100
-- `images/monsters/octobogz/1.png`: unverified donor reconstruction; 55e6516eb91b739e899df1ef8d72116da44fec49:images/monsters/octobogz/1.png; headerMatch=0; apiOverlap=0/10000; distance=297
+- `images/buildings/dungeon/0.png`: unverified donor reconstruction; 71a3432e36b5649aabdd63c7807a78e9a8a3749a:images/buildings/dungeon/0.png; headerMatch=0; apiOverlap=0/10000; distance=99
+- `images/monsters/octobogz/1.png`: unverified donor reconstruction; 55e6516eb91b739e899df1ef8d72116da44fec49:images/monsters/octobogz/1.png; headerMatch=0; apiOverlap=0/10000; distance=296
 - `images/tiles/grass/0.png`: unverified donor reconstruction; c049ac73064442354af6224d06fe1c8b847bb8d9:images/tiles/grass/0.png; headerMatch=0; apiOverlap=0/10000; distance=105 Verified by build and startup of afdd8069 (recovery/evidence/second-original).
 - `images/tiles/ground/0.png`: unverified donor reconstruction; c049ac73064442354af6224d06fe1c8b847bb8d9:images/tiles/ground/0.png; headerMatch=0; apiOverlap=0/10000; distance=105 Verified by build and startup of afdd8069 (recovery/evidence/second-original).
 - `images/tiles/mountain/0.png`: unverified donor reconstruction; 152007b28631784d3c5e17f2686eb6ef9ff30e46:images/tiles/mountain/0.png; headerMatch=0; apiOverlap=0/10000; distance=155 Verified by build and startup of afdd8069 (recovery/evidence/second-original).
