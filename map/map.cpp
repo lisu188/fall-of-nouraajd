@@ -265,3 +265,11 @@ void Map::hide() {
         (*it)->removeFromGame();
     mapObjects = objects;
 }
+
+void MapObject::setVisible(bool visible) { QGraphicsItem::setVisible(visible); }
+
+void Map::show() {
+    for (std::list<MapObject *>::iterator it = mapObjects.begin(); it != mapObjects.end(); ++it)
+        (*it)->setMap(this);
+    ensureSize(GameScene::getPlayer());
+}
