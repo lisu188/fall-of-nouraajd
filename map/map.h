@@ -39,6 +39,7 @@ public:
 
     void ensureSize(Player *player);
     void hide();
+    void show();
 private:
     std::list<MapObject*> mapObjects;
     void randomDir(int *tab, int rule);
@@ -73,12 +74,12 @@ public:
     virtual bool canSave()=0;
 
     void setMap(Map *map);
+    void setVisible(bool vis);
 protected:
     void setAnimation(std::string path);
     Map *map;
     QGraphicsItemAnimation *animation;
     QTimeLine *timer;
-
     QGraphicsSimpleTextItem statsView;
 public:
     std::string className;

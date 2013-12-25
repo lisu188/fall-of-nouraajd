@@ -27,13 +27,13 @@ public:
         return 100;
     }
     void playerMove(int dirx, int diry);
-    void changeMap();
+    void changeMap(int x, int y,int z);
 
 protected:
     void keyPressEvent(QKeyEvent *keyEvent);
 private:
     Map *map;
-    Map *oldMap,*newMap;
+    std::vector<Map*> maps;
     static Player *player;
     static GameScene *game;
     void addRandomTile(int x,int y);
