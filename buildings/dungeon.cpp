@@ -10,7 +10,7 @@ Dungeon::Dungeon(Coords enter, Coords exit):exit(exit),Building(enter.x,enter.y,
 
 void Dungeon::onEnter()
 {
-    GameScene::getPlayer()->moveTo(exit.x,exit.y,exit.z,false);
+    GameScene::getPlayer()->moveTo(exit.x,exit.y,exit.z,true);
     map->move(0,0);
 }
 
