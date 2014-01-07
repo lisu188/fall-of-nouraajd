@@ -3,13 +3,25 @@
 #include <algorithm>
 #include <cstdlib>
 #include <vector>
+#include <sstream>
+#include <creatures/monster.h>
+#include <creatures/player.h>
 #include <buildings/cave.h>
 #include <buildings/dungeon.h>
 #include <configuration/configurationprovider.h>
 #include <map/tile.h>
 #include <view/gamescene.h>
 
+namespace {
+struct MapJsonState {
+    Json::Value defaults;
+    Json::Value unimplementedObjects;
+};
+std::map<Map *, MapJsonState> mapJsonStates;
+} // namespace
+
 Map::~Map() {
+    mapJsonStates.erase(this);
     for (std::map<Coords, Tile *>::iterator it = tiles.begin(); it != tiles.end(); ++it)
         delete (*it).second;
     tiles.clear();
@@ -46,7 +58,10 @@ std::string Map::getTile(int x, int y, int z) {
     iterator it = find(Coords(x, y, z));
     if (it != end())
         return (*it).second;
-    const std::string name = Tile::getRandomTile();
+    std::ostringstream depth;
+    depth << z;
+    const Json::Value defaults = mapJsonStates[this].defaults;
+    const std::string name = defaults.get(depth.str(), Tile::getRandomTile()).asString();
     addTile(name, x, y, z);
     return name;
 }
@@ -162,11 +177,18 @@ void Map::randomDir(int *tab, int rule) {
 }
 
 void Map::loadMapFromJson(Json::Value config) {
-    Json::Value groups = config["tiles"];
+    Json::Value groups = config.isMember("tiles") ? config["tiles"] : config;
+    if (!groups.isObject())
+        return;
+    mapJsonStates[this].defaults = groups["default"];
     Json::Value::Members names = groups.getMemberNames();
     for (unsigned int n = 0; n < names.size(); n++) {
         Json::Value coords = groups[names[n]];
+        if (!coords.isArray())
+            continue;
         for (unsigned int i = 0; i < coords.size(); i++) {
+            if (!coords[i].isArray() || coords[i].size() < 2)
+                continue;
             const int x = coords[i][(unsigned int)0].asInt();
             const int y = coords[i][(unsigned int)1].asInt();
             const int z = coords[i].size() > 2 ? coords[i][(unsigned int)2].asInt() : 0;
@@ -178,36 +200,104 @@ void Map::loadMapFromJson(Json::Value config) {
 }
 
 Json::Value Map::saveMapToJson() {
-    Json::Value config;
+    Json::Value config(Json::objectValue);
+    if (!mapJsonStates[this].defaults.isNull())
+        config["default"] = mapJsonStates[this].defaults;
     for (iterator it = begin(); it != end(); ++it) {
         Json::Value coords(Json::arrayValue);
         coords.append((*it).first.x);
         coords.append((*it).first.y);
         coords.append((*it).first.z);
-        config["tiles"][(*it).second].append(coords);
+        config[(*it).second].append(coords);
     }
     return config;
 }
 
 void Map::loadStateFromJson(Json::Value config) {
-    Json::Value objects = config["objects"];
-    Json::Value::Members names = objects.getMemberNames();
-    for (unsigned int n = 0; n < names.size(); n++) {
-        Json::Value instances = objects[names[n]];
-        for (unsigned int i = 0; i < instances.size(); i++) {
-            for (std::list<MapObject *>::iterator it = mapObjects.begin(); it != mapObjects.end(); ++it)
-                if ((*it)->className == names[n])
-                    (*it)->loadFromJson(instances[i]);
+    if (!config.isObject())
+        return;
+    if (config.isMember("objects")) {
+        Json::Value objects = config["objects"];
+        Json::Value::Members names = objects.getMemberNames();
+        for (unsigned int n = 0; n < names.size(); n++) {
+            Json::Value instances = objects[names[n]];
+            for (unsigned int i = 0; i < instances.size(); i++) {
+                for (std::list<MapObject *>::iterator it = mapObjects.begin(); it != mapObjects.end(); ++it)
+                    if ((*it)->className == names[n])
+                        (*it)->loadFromJson(instances[i]);
+            }
+        }
+    } else {
+        Json::Value::Members classes = config.getMemberNames();
+        for (unsigned int c = 0; c < classes.size(); c++) {
+            const std::string type = classes[c];
+            if (type != "Cave" && type != "Dungeon" && type != "Monster" && type != "Player") {
+                // Unavailable historical world-item APIs cannot safely create MapObjects.
+                mapJsonStates[this].unimplementedObjects[type] = config[type];
+                continue;
+            }
+            Json::Value::Members names = config[type].getMemberNames();
+            for (unsigned int n = 0; n < names.size(); n++) {
+                Json::Value instances = config[type][names[n]];
+                for (unsigned int i = 0; i < instances.size(); i++) {
+                    Json::Value state = instances[i];
+                    MapObject *object = 0;
+                    if (type == "Cave" && state.isArray() && state.size() >= 3) {
+                        object = new Cave(state[(unsigned int)0].asInt(), state[(unsigned int)1].asInt(),
+                                          state[(unsigned int)2].asInt());
+                    } else if (type == "Dungeon" && state.isArray() && state.size() >= 6) {
+                        object = new Dungeon(Coords(state[(unsigned int)0].asInt(), state[(unsigned int)1].asInt(),
+                                                    state[(unsigned int)2].asInt()),
+                                             Coords(state[(unsigned int)3].asInt(), state[(unsigned int)4].asInt(),
+                                                    state[(unsigned int)5].asInt()));
+                    } else if (type == "Monster" && state.isObject()) {
+                        object = new Monster(names[n], state);
+                    } else if (type == "Player" && state.isObject() && !GameScene::getPlayer()) {
+                        Player *player = new Player(names[n], state);
+                        GameScene::setPlayer(player);
+                        object = player;
+                    }
+                    if (object)
+                        addObject(object);
+                }
+            }
         }
     }
     ensureSize(GameScene::getPlayer());
 }
 
 Json::Value Map::saveStateToJson() {
+    Json::Value config = mapJsonStates[this].unimplementedObjects;
+    for (std::list<MapObject *>::iterator it = mapObjects.begin(); it != mapObjects.end(); ++it) {
+        MapObject *object = *it;
+        if (!object->canSave())
+            continue;
+        std::string type;
+        if (dynamic_cast<Player *>(object))
+            type = "Player";
+        else if (dynamic_cast<Monster *>(object))
+            type = "Monster";
+        else if (dynamic_cast<Cave *>(object))
+            type = "Cave";
+        else if (dynamic_cast<Dungeon *>(object))
+            type = "Dungeon";
+        if (!type.empty())
+            config[type][object->className].append(object->saveToJson());
+    }
+    return config;
+}
+
+void Map::loadFromJson(Json::Value config) {
+    if (!config.isObject())
+        return;
+    loadMapFromJson(config["map"]);
+    loadStateFromJson(config["state"]);
+}
+
+Json::Value Map::saveToJson() {
     Json::Value config;
-    for (std::list<MapObject *>::iterator it = mapObjects.begin(); it != mapObjects.end(); ++it)
-        if ((*it)->canSave())
-            config["objects"][(*it)->className].append((*it)->saveToJson());
+    config["map"] = saveMapToJson();
+    config["state"] = saveStateToJson();
     return config;
 }
 
