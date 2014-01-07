@@ -1,7 +1,7 @@
 # Recovered game snapshot
 
-Original commit: `4a877c5583d007e2a6ca5be2fc86db9cd6c3a6f8`. Original tree: `d32509080b0ef4ddf0b6bdca084c288cdc35a2c0`.
-Startup was verified from identical recovered sources at `4a877c5583d007e2a6ca5be2fc86db9cd6c3a6f8`.
+Original commit: `a2af8392c91594acefcd0d812e2d86f354d93746`. Original tree: `b39f6a503f850f98021ba0d235a8f3af45705f08`.
+Startup was verified from identical recovered sources at `a2af8392c91594acefcd0d812e2d86f354d93746`.
 
 This recovered version compiled and linked on Linux, started the real game on an isolated Xvfb display,
 loaded its map and a healthy player, rendered the screenshot below, and exited normally.
@@ -48,10 +48,10 @@ The source call, source hash and created/preserved directory are recorded in ver
 compatibilityRepair: 1, exactOriginal: 43, reconstruction: 19.
 
 - `config/creatures.json`: content reconstruction of the BFG-removed original; carried nearest reconstructed config/creatures.json through API-stable #62; surviving files provide no recoverable internal implementation/data delta
-- `config/map.json`: unverified donor reconstruction; bf32a4c93e396bd645769a9957eacd6a75106b62:config/map.json; headerMatch=0; apiOverlap=0/10000; distance=50
+- `config/map.json`: unverified donor reconstruction; bf32a4c93e396bd645769a9957eacd6a75106b62:config/map.json; headerMatch=0; apiOverlap=0/10000; distance=49
 - `creatures/creature.cpp`: working reconstruction
 - `creatures/player.cpp`: content reconstruction of the BFG-removed original; adapted #53 reconstruction to both original #63 map-independent Player constructors; Map::addObject assigns the actual owning map
-- `images/buildings/dungeon/0.png`: unverified donor reconstruction; 71a3432e36b5649aabdd63c7807a78e9a8a3749a:images/buildings/dungeon/0.png; headerMatch=0; apiOverlap=0/10000; distance=82
+- `images/buildings/dungeon/0.png`: unverified donor reconstruction; 71a3432e36b5649aabdd63c7807a78e9a8a3749a:images/buildings/dungeon/0.png; headerMatch=0; apiOverlap=0/10000; distance=81
 - `images/tiles/grass/0.png`: unverified donor reconstruction; c049ac73064442354af6224d06fe1c8b847bb8d9:images/tiles/grass/0.png; headerMatch=0; apiOverlap=0/10000; distance=105 Verified by build and startup of afdd8069 (recovery/evidence/second-original).
 - `images/tiles/ground/0.png`: unverified donor reconstruction; c049ac73064442354af6224d06fe1c8b847bb8d9:images/tiles/ground/0.png; headerMatch=0; apiOverlap=0/10000; distance=105 Verified by build and startup of afdd8069 (recovery/evidence/second-original).
 - `images/tiles/mountain/0.png`: unverified donor reconstruction; 152007b28631784d3c5e17f2686eb6ef9ff30e46:images/tiles/mountain/0.png; headerMatch=0; apiOverlap=0/10000; distance=155 Verified by build and startup of afdd8069 (recovery/evidence/second-original).
@@ -68,7 +68,7 @@ compatibilityRepair: 1, exactOriginal: 43, reconstruction: 19.
 - `stats/stats.cpp`: content reconstruction of the BFG-removed original; carried validated d30a3f79 stats reconstruction; #63 surviving Stats change only renames a loadFromJson parameter
 - `json/LICENSE`: https://github.com/open-source-parsers/jsoncpp/tree/4fce396c9d3e27a8ab8fb88e94c1676e021ae3a6 upstream distribution license
 
-Restored source fingerprint: `d921267c978b436b90a2e03766c1c6ef56e60e1e769a1a193b6f1a72c442e74d`.
+Restored source fingerprint: `4f45bc5e16717f28aedba0773b6f445460cb01475724724cc07fb180391dcc41`.
 
 The restored source fingerprint identifies inputs before generation. The
 [source preparation metadata](recovery/source-preparation.json) records the original inputs
