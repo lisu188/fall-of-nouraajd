@@ -1,6 +1,6 @@
 {
   "adapter": {
-    "config": "/tmp/nouraajd-bfg-recovery/native-early/verify/snapshot-_h5g557z/observer/recovery_smoke_config.h",
+    "config": "/tmp/nouraajd-bfg-recovery/native-early/verify/snapshot-p1uw0s2e/observer/recovery_smoke_config.h",
     "configSha256": "f124a4d8f73c38c63e818323ac465f75fd5f03174a465844d936dd9f9e47a662",
     "id": "classic-3d",
     "overlays": [
@@ -24,17 +24,17 @@
       "make",
       "-j4"
     ],
-    "log": "/tmp/nouraajd-bfg-recovery/native-early/verify/snapshot-_h5g557z/build.log",
+    "log": "/tmp/nouraajd-bfg-recovery/native-early/verify/snapshot-p1uw0s2e/build.log",
     "returnCode": 0,
-    "seconds": 6.139,
+    "seconds": 6.733,
     "timedOut": false
   },
   "configure": {
     "command": [
       "qmake",
-      "/tmp/nouraajd-bfg-recovery/native-early/verify/snapshot-_h5g557z/source/Game.pro",
+      "/tmp/nouraajd-bfg-recovery/native-early/verify/snapshot-p1uw0s2e/source/Game.pro",
       "-o",
-      "/tmp/nouraajd-bfg-recovery/native-early/verify/snapshot-_h5g557z/build/Makefile",
+      "/tmp/nouraajd-bfg-recovery/native-early/verify/snapshot-p1uw0s2e/build/Makefile",
       "QMAKE_CC=gcc-5",
       "QMAKE_CXX=g++-5",
       "QMAKE_LINK=g++-5",
@@ -44,16 +44,16 @@
       "DESTDIR=.",
       "CONFIG-=app_bundle",
       "SOURCES+=/tmp/nouraajd-bfg-recovery/source/recovery/smoke/game_startup.cpp",
-      "INCLUDEPATH+=/tmp/nouraajd-bfg-recovery/native-early/verify/snapshot-_h5g557z/source",
-      "INCLUDEPATH+=/tmp/nouraajd-bfg-recovery/native-early/verify/snapshot-_h5g557z/observer",
-      "LIBS+=-L/tmp/nouraajd-bfg-recovery/native-early/verify/snapshot-_h5g557z/observer/library-aliases"
+      "INCLUDEPATH+=/tmp/nouraajd-bfg-recovery/native-early/verify/snapshot-p1uw0s2e/source",
+      "INCLUDEPATH+=/tmp/nouraajd-bfg-recovery/native-early/verify/snapshot-p1uw0s2e/observer",
+      "LIBS+=-L/tmp/nouraajd-bfg-recovery/native-early/verify/snapshot-p1uw0s2e/observer/library-aliases"
     ],
-    "log": "/tmp/nouraajd-bfg-recovery/native-early/verify/snapshot-_h5g557z/configure.log",
+    "log": "/tmp/nouraajd-bfg-recovery/native-early/verify/snapshot-p1uw0s2e/configure.log",
     "returnCode": 0,
     "seconds": 0.032,
     "timedOut": false
   },
-  "evidenceDir": "/tmp/nouraajd-bfg-recovery/native-early/verify/evidence/63a3481280442c2671b9abd04a1e4d64dac392e6a45cf93173d7b7e8acd86c59",
+  "evidenceDir": "/tmp/nouraajd-bfg-recovery/native-early/verify/evidence/ececc496265c9669f427991f96bb4cce0e607cd23785e3fa1fe19bbd7e4203bc",
   "fileLookup": {
     "command": [
       "g++-5",
@@ -62,22 +62,22 @@
       "-O2",
       "-std=c++11",
       "-o",
-      "/tmp/nouraajd-bfg-recovery/native-early/verify/snapshot-_h5g557z/observer/libwindowspaths.so",
+      "/tmp/nouraajd-bfg-recovery/native-early/verify/snapshot-p1uw0s2e/observer/libwindowspaths.so",
       "/tmp/nouraajd-bfg-recovery/source/recovery/smoke/windows_paths.cpp",
       "-ldl"
     ],
-    "log": "/tmp/nouraajd-bfg-recovery/native-early/verify/snapshot-_h5g557z/file-lookup.log",
+    "log": "/tmp/nouraajd-bfg-recovery/native-early/verify/snapshot-p1uw0s2e/file-lookup.log",
     "returnCode": 0,
-    "seconds": 0.214,
+    "seconds": 0.215,
     "semantics": "Windows-style case-insensitive file lookup for the game process",
     "timedOut": false
   },
-  "fingerprint": "63a3481280442c2671b9abd04a1e4d64dac392e6a45cf93173d7b7e8acd86c59",
+  "fingerprint": "ececc496265c9669f427991f96bb4cce0e607cd23785e3fa1fe19bbd7e4203bc",
   "libraryAliases": {
     "aliases": {
       "zdll": "/usr/lib/x86_64-linux-gnu/libz.so"
     },
-    "directory": "/tmp/nouraajd-bfg-recovery/native-early/verify/snapshot-_h5g557z/observer/library-aliases"
+    "directory": "/tmp/nouraajd-bfg-recovery/native-early/verify/snapshot-p1uw0s2e/observer/library-aliases"
   },
   "project": "Game.pro",
   "recipe": {
@@ -126,7 +126,7 @@
       },
       {
         "markerPath": "Game.pro.user.REMOVED.git-id",
-        "originalBlob": "e2961cd53730474d4ee72d30c2a9724b6a3b4a75",
+        "originalBlob": "1001f1feba44d526e58693c4a474fd79a2a9b27e",
         "path": "Game.pro.user",
         "reason": "machine-specific IDE state"
       },
@@ -138,19 +138,19 @@
       },
       {
         "markerPath": "Makefile.Debug.REMOVED.git-id",
-        "originalBlob": "acadd4479c75cfd512839e34fcb989007e2c7a21",
+        "originalBlob": "e7eeed36e94b474d2121b32023809f8cfd7bd0d3",
         "path": "Makefile.Debug",
         "reason": "generated build output"
       },
       {
         "markerPath": "Makefile.REMOVED.git-id",
-        "originalBlob": "a686c5c4d31175000fea468046d23d3857b2741f",
+        "originalBlob": "d32469351ff30ccb5fbd98013828232ccf7e4d78",
         "path": "Makefile",
         "reason": "generated build output"
       },
       {
         "markerPath": "Makefile.Release.REMOVED.git-id",
-        "originalBlob": "1179a617167f3fa306b3a580a833b68bd64e0a93",
+        "originalBlob": "34298f9f8956fb3c60aa0f6ff7a4b441753a287e",
         "path": "Makefile.Release",
         "reason": "generated build output"
       },
@@ -162,7 +162,7 @@
       },
       {
         "markerPath": "debug/Game.exe.REMOVED.git-id",
-        "originalBlob": "8c53d2274ed3e1b55b0bd7bbb4b88bfd12850904",
+        "originalBlob": "22f76d78494dc2e5910f64c2b3b7b80d1ea1965c",
         "path": "debug/Game.exe",
         "reason": "generated binary, redistributable, or packaged artifact"
       },
@@ -258,13 +258,13 @@
       },
       {
         "markerPath": "official.zip.REMOVED.git-id",
-        "originalBlob": "c8a2611ff4c85f8b372b8119dd56f41f4fef519d",
+        "originalBlob": "bb4d68f81fbe3936c773969c4676f8c5187f9d03",
         "path": "official.zip",
         "reason": "generated binary, redistributable, or packaged artifact"
       },
       {
         "markerPath": "release/Game.exe.REMOVED.git-id",
-        "originalBlob": "5b0271080f517f5c222a9101d4cee887efa38f49",
+        "originalBlob": "50255bfe897b3f35bae5edbfbc8fbb0a260abc0e",
         "path": "release/Game.exe",
         "reason": "generated binary, redistributable, or packaged artifact"
       },
@@ -467,7 +467,7 @@
         "reason": "generated binary, redistributable, or packaged artifact"
       }
     ],
-    "outputDir": "/tmp/nouraajd-bfg-recovery/native-early/verify/snapshot-_h5g557z/source",
+    "outputDir": "/tmp/nouraajd-bfg-recovery/native-early/verify/snapshot-p1uw0s2e/source",
     "restored": [
       {
         "markerPath": "config/creatures.json.REMOVED.git-id",
@@ -519,7 +519,7 @@
         "method": "reconstruction",
         "originalBlob": "6dde9d7686fbf5b8733af9d6663cbb2018149ec3",
         "path": "images/buildings/dungeon/0.png",
-        "provenance": "unverified donor reconstruction; 71a3432e36b5649aabdd63c7807a78e9a8a3749a:images/buildings/dungeon/0.png; headerMatch=0; apiOverlap=0/10000; distance=95",
+        "provenance": "unverified donor reconstruction; 71a3432e36b5649aabdd63c7807a78e9a8a3749a:images/buildings/dungeon/0.png; headerMatch=0; apiOverlap=0/10000; distance=94",
         "replacementBlob": "24f5f0edc0a248b89101db535bdb429f0b1b7861"
       },
       {
@@ -930,8 +930,8 @@
       }
     ],
     "restoredFilesFingerprint": "bce87931509bf1027328747be32142f4984b48e3827daa41a672855ef89d03c8",
-    "sourceCommit": "a38eeef4f17603c79b9b64a88bf87ff36b79d926",
-    "sourceTree": "4997f8568f2f4960fca1a019f1f9b28923704d9a",
+    "sourceCommit": "b7347069aae3d596883e4e962683945b868850c4",
+    "sourceTree": "b0699a4995b82cd38d062d85b683b8689fa976c3",
     "status": "complete",
     "submodules": [],
     "unresolved": []
@@ -942,12 +942,12 @@
       "-a",
       "--server-args=-screen 0 1920x1080x24",
       "env",
-      "LD_PRELOAD=/tmp/nouraajd-bfg-recovery/native-early/verify/snapshot-_h5g557z/observer/libwindowspaths.so",
-      "/tmp/nouraajd-bfg-recovery/native-early/verify/snapshot-_h5g557z/build/RecoveryGame"
+      "LD_PRELOAD=/tmp/nouraajd-bfg-recovery/native-early/verify/snapshot-p1uw0s2e/observer/libwindowspaths.so",
+      "/tmp/nouraajd-bfg-recovery/native-early/verify/snapshot-p1uw0s2e/build/RecoveryGame"
     ],
-    "log": "/tmp/nouraajd-bfg-recovery/native-early/verify/snapshot-_h5g557z/smoke/startup.log",
+    "log": "/tmp/nouraajd-bfg-recovery/native-early/verify/snapshot-p1uw0s2e/smoke/startup.log",
     "returnCode": 0,
-    "seconds": 0.265,
+    "seconds": 0.264,
     "startup": {
       "checks": {
         "eventLoop": true,
@@ -958,7 +958,7 @@
       "frame": {
         "height": 718,
         "path": "startup.png",
-        "sha256": "9ecb448012559d17f39b6b01be33363857408daaf8aea0786554d36dbe906ca7",
+        "sha256": "4588bda118a64b019b232784989636c205e028ec4c4c830569a592c5faced9b9",
         "width": 1278
       },
       "reason": "",
@@ -968,9 +968,9 @@
     "status": "success",
     "timedOut": false
   },
-  "sourceCommit": "a38eeef4f17603c79b9b64a88bf87ff36b79d926",
+  "sourceCommit": "b7347069aae3d596883e4e962683945b868850c4",
   "sourceCommits": [
-    "a38eeef4f17603c79b9b64a88bf87ff36b79d926"
+    "b7347069aae3d596883e4e962683945b868850c4"
   ],
   "sourcePreparation": {
     "identity": {
@@ -980,7 +980,7 @@
     "status": "not-required",
     "steps": []
   },
-  "sourceTree": "4997f8568f2f4960fca1a019f1f9b28923704d9a",
+  "sourceTree": "b0699a4995b82cd38d062d85b683b8689fa976c3",
   "status": "success",
   "toolchain": {
     "compilerCommand": {
@@ -997,5 +997,5 @@
     }
   },
   "toolchainImage": "sha256:d3f59ec1d12297ee8091fbea687aa619275fc92b3fd426560e0a1fa40715afc8",
-  "verifiedFromCommit": "a38eeef4f17603c79b9b64a88bf87ff36b79d926"
+  "verifiedFromCommit": "b7347069aae3d596883e4e962683945b868850c4"
 }
