@@ -30,7 +30,7 @@ int stat_resisted(int value, int resist) {
 
 } // namespace
 
-Creature::Creature(std::string name, Json::Value config) : MapObject(0, 0, 2) {
+Creature::Creature(std::string name, Json::Value config) : MapObject(0, 0, 0, 2) {
     className = name;
     exp = 0;
     level = 0;
@@ -259,7 +259,8 @@ void Creature::loadFromJson(Json::Value config) {
     setArmor(dynamic_cast<Armor *>(Item::getItem(equipment.get("armor", "").asCString())));
 
     if (config.isMember("coords"))
-        moveTo(config["coords"].get("X", 0).asInt(), config["coords"].get("Y", 0).asInt(), true);
+        moveTo(config["coords"].get("X", 0).asInt(), config["coords"].get("Y", 0).asInt(),
+               config["coords"].get("Z", 0).asInt(), true);
 
     attribChange();
     if (config.isMember("level")) {
@@ -286,9 +287,17 @@ Json::Value Creature::saveToJson() {
     config["exp"] = exp;
     config["hp"] = hp;
     config["mana"] = mana;
-    config["initStats"] = stats.saveToJson();
+    Stats initialStats;
+    initialStats.loadFromJson(stats.saveToJson());
+    for (std::list<Item *>::iterator it = equipped.begin(); it != equipped.end(); ++it) {
+        Stats bonus;
+        bonus.loadFromJson((*ConfigurationProvider::getConfig("config/items.json"))[(*it)->className]["bonus"]);
+        initialStats.removeBonus(bonus);
+    }
+    config["initStats"] = initialStats.saveToJson();
     config["coords"]["X"] = getPosX();
     config["coords"]["Y"] = getPosY();
+    config["coords"]["Z"] = getPosZ();
     Json::Value names(Json::arrayValue);
     for (std::list<Interaction *>::iterator it = actions.begin(); it != actions.end(); ++it)
         names.append((*it)->className);

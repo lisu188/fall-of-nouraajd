@@ -27,7 +27,7 @@ GameScene::GameScene() {
 
     map->addRoad(18, -8, 0, 0);
     map->addRiver(16, 6, -5, 0);
-    map->addObject(new Cave(5, 2));
+    map->addObject(new Cave(5, 2, 0));
     map->ensureSize(player);
 }
 

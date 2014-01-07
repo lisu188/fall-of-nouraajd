@@ -5,7 +5,7 @@
 class Cave : public Building
 {
 public:
-    Cave(int x, int y);
+    Cave(int x, int y,int z);
     virtual void onEnter();
     virtual void onMove();
     bool canSave();
