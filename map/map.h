@@ -19,11 +19,8 @@ class Player;
 class Map : private std::unordered_map<Coords,std::string,CoordsHasher>
 {
 public:
-
     ~Map();
-
     void move(int x,int y);
-
     std::string getTile(int x, int y, int z);
     bool contains(int x, int y, int z);
     void addObject(MapObject *mapObject);
