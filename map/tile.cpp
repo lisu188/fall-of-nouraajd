@@ -11,12 +11,12 @@ std::unordered_map<std::string,std::function<void()>> Tile::steps
     {"RoadTile",&RoadTile}
 };
 
-Tile::Tile(std::string name, int x, int y) {
+Tile::Tile(std::string name, int x, int y, int z) {
     this->setZValue(0);
     className=name;
     Json::Value config=(*ConfigurationProvider::getConfig("config/tiles.json"))[className];
     loadFromJson(config);
-    setXY(x,y);
+    setXYZ(x,y,z);
 }
 
 Tile::~Tile()
@@ -30,7 +30,7 @@ Tile::~Tile()
 
 Coords Tile::getCoords()
 {
-    return Coords(posx,posy);
+    return Coords(posx,posy,posz);
 }
 
 bool Tile::isOn(int x, int y)
@@ -60,9 +60,9 @@ std::string Tile::getRandomTile()
     return "GrassTile";
 }
 
-Tile *Tile::getTile(std::string type,int x,int y)
+Tile *Tile::getTile(std::string type,int x,int y,int z)
 {
-    return new Tile(type,x,y);
+    return new Tile(type,x,y,z);
 }
 
 void Tile::addToGame()
@@ -89,10 +89,11 @@ Json::Value Tile::saveToJson()
     return config;
 }
 
-void Tile::setXY(int x, int y)
+void Tile::setXYZ(int x, int y, int z)
 {
     posx=x;
     posy=y;
+    posz=z;
     setPos(x*size,y*size);
 }
 

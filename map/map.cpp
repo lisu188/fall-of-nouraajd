@@ -9,7 +9,7 @@
 #include <view/gamescene.h>
 
 Map::~Map() {
-    for (std::map<Coords, Tile *>::iterator it = tiles.begin(); it != tiles.end(); ++it)
+    for (std::unordered_map<Coords, Tile *, CoordsHasher>::iterator it = tiles.begin(); it != tiles.end(); ++it)
         delete (*it).second;
     tiles.clear();
     std::list<MapObject *> objects(mapObjects);
@@ -29,29 +29,31 @@ void Map::move(int x, int y) {
         MapObject *object = *it;
         if (object == player || std::find(mapObjects.begin(), mapObjects.end(), object) == mapObjects.end())
             continue;
-        if (object->getPosX() != player->getPosX() || object->getPosY() != player->getPosY())
+        if (object->getPosZ() == player->getPosZ() &&
+            (object->getPosX() != player->getPosX() || object->getPosY() != player->getPosY()))
             object->onMove();
         if (std::find(mapObjects.begin(), mapObjects.end(), object) != mapObjects.end() &&
-            object->getPosX() == player->getPosX() && object->getPosY() == player->getPosY())
+            object->getPosZ() == player->getPosZ() && object->getPosX() == player->getPosX() &&
+            object->getPosY() == player->getPosY())
             object->onEnter();
     }
     player->onMove();
     ensureSize(player);
 }
 
-std::string Map::getTile(int x, int y) {
-    iterator it = find(Coords(x, y));
+std::string Map::getTile(int x, int y, int z) {
+    iterator it = find(Coords(x, y, z));
     if (it != end())
         return (*it).second;
     const std::string name = Tile::getRandomTile();
-    addTile(name, x, y);
+    addTile(name, x, y, z);
     return name;
 }
 
-bool Map::contains(int x, int y) { return find(Coords(x, y)) != end(); }
+bool Map::contains(int x, int y, int z) { return find(Coords(x, y, z)) != end(); }
 
-bool Map::addTile(std::string name, int x, int y) {
-    const Coords coords(x, y);
+bool Map::addTile(std::string name, int x, int y, int z) {
+    const Coords coords(x, y, z);
     if (find(coords) != end())
         return false;
     insert(std::pair<Coords, std::string>(coords, name));
@@ -64,7 +66,7 @@ void Map::addObject(MapObject *object) {
     if (std::find(mapObjects.begin(), mapObjects.end(), object) == mapObjects.end())
         mapObjects.push_back(object);
     object->setMap(this);
-    getTile(object->getPosX(), object->getPosY());
+    getTile(object->getPosX(), object->getPosY(), object->getPosZ());
 }
 
 void Map::removeObject(MapObject *object) { mapObjects.remove(object); }
@@ -74,11 +76,15 @@ void Map::ensureSize(Player *player) {
         return;
     const int x = player->getPosX();
     const int y = player->getPosY();
-    std::map<Coords, Tile *>::iterator it = tiles.begin();
+    const int z = player->getPosZ();
+    currentMap = z;
+    for (std::list<MapObject *>::iterator object = mapObjects.begin(); object != mapObjects.end(); ++object)
+        (*object)->setVisible((*object)->getPosZ() == currentMap);
+    std::unordered_map<Coords, Tile *, CoordsHasher>::iterator it = tiles.begin();
     while (it != tiles.end()) {
         const Coords coords = (*it).first;
-        if (std::abs(coords.first - x) > cacheSize || std::abs(coords.second - y) > cacheSize ||
-            (*it).second->className != getTile(coords.first, coords.second)) {
+        if (coords.z != z || std::abs(coords.x - x) > cacheSize || std::abs(coords.y - y) > cacheSize ||
+            (*it).second->className != getTile(coords.x, coords.y, coords.z)) {
             delete (*it).second;
             tiles.erase(it++);
         } else {
@@ -87,9 +93,9 @@ void Map::ensureSize(Player *player) {
     }
     for (int tx = x - cacheSize; tx <= x + cacheSize; tx++) {
         for (int ty = y - cacheSize; ty <= y + cacheSize; ty++) {
-            const Coords coords(tx, ty);
+            const Coords coords(tx, ty, z);
             if (tiles.find(coords) == tiles.end()) {
-                Tile *tile = Tile::getTile(getTile(tx, ty), tx, ty);
+                Tile *tile = Tile::getTile(getTile(tx, ty, z), tx, ty, z);
                 tiles.insert(std::pair<Coords, Tile *>(coords, tile));
                 tile->addToGame();
             }
@@ -97,11 +103,11 @@ void Map::ensureSize(Player *player) {
     }
 }
 
-void Map::addRiver(int length, int x, int y) {
+void Map::addRiver(int length, int x, int y, int z) {
     int dirs[4];
     for (int i = 0; i < length; i++) {
-        erase(Coords(x, y));
-        addTile("WaterTile", x, y);
+        erase(Coords(x, y, z));
+        addTile("WaterTile", x, y, z);
         randomDir(dirs, 4);
         switch (dirs[0]) {
         case 0:
@@ -120,10 +126,10 @@ void Map::addRiver(int length, int x, int y) {
     }
 }
 
-void Map::addRoad(int length, int x, int y) {
+void Map::addRoad(int length, int x, int y, int z) {
     for (int i = 0; i < length; i++) {
-        erase(Coords(x, y));
-        addTile("RoadTile", x, y);
+        erase(Coords(x, y, z));
+        addTile("RoadTile", x, y, z);
         if (rand() % 2 == 0)
             x += rand() % 2 == 0 ? 1 : -1;
         else
@@ -131,13 +137,13 @@ void Map::addRoad(int length, int x, int y) {
     }
 }
 
-void Map::addDungeon(int centerx, int centery, int width, int height) {
+void Map::addDungeon(int centerx, int centery, int centerz, int width, int height) {
     for (int x = centerx - width / 2; x <= centerx + width / 2; x++) {
         for (int y = centery - height / 2; y <= centery + height / 2; y++) {
             const bool wall = x == centerx - width / 2 || x == centerx + width / 2 || y == centery - height / 2 ||
                               y == centery + height / 2;
-            erase(Coords(x, y));
-            addTile(wall ? "MountainTile" : "GroundTile", x, y);
+            erase(Coords(x, y, centerz));
+            addTile(wall ? "MountainTile" : "GroundTile", x, y, centerz);
         }
     }
 }
@@ -149,7 +155,7 @@ void Map::randomDir(int *tab, int rule) {
         std::swap(tab[i], tab[rand() % std::max(1, std::min(4, rule))]);
 }
 
-void Map::loadFromJson(Json::Value config) {
+void Map::loadMapFromJson(Json::Value config) {
     Json::Value groups = config["tiles"];
     Json::Value::Members names = groups.getMemberNames();
     for (unsigned int n = 0; n < names.size(); n++) {
@@ -157,12 +163,29 @@ void Map::loadFromJson(Json::Value config) {
         for (unsigned int i = 0; i < coords.size(); i++) {
             const int x = coords[i][(unsigned int)0].asInt();
             const int y = coords[i][(unsigned int)1].asInt();
-            erase(Coords(x, y));
-            addTile(names[n], x, y);
+            const int z = coords[i].size() > 2 ? coords[i][(unsigned int)2].asInt() : 0;
+            erase(Coords(x, y, z));
+            addTile(names[n], x, y, z);
         }
     }
+    ensureSize(GameScene::getPlayer());
+}
+
+Json::Value Map::saveMapToJson() {
+    Json::Value config;
+    for (iterator it = begin(); it != end(); ++it) {
+        Json::Value coords(Json::arrayValue);
+        coords.append((*it).first.x);
+        coords.append((*it).first.y);
+        coords.append((*it).first.z);
+        config["tiles"][(*it).second].append(coords);
+    }
+    return config;
+}
+
+void Map::loadStateFromJson(Json::Value config) {
     Json::Value objects = config["objects"];
-    names = objects.getMemberNames();
+    Json::Value::Members names = objects.getMemberNames();
     for (unsigned int n = 0; n < names.size(); n++) {
         Json::Value instances = objects[names[n]];
         for (unsigned int i = 0; i < instances.size(); i++) {
@@ -174,14 +197,8 @@ void Map::loadFromJson(Json::Value config) {
     ensureSize(GameScene::getPlayer());
 }
 
-Json::Value Map::saveToJson() {
+Json::Value Map::saveStateToJson() {
     Json::Value config;
-    for (iterator it = begin(); it != end(); ++it) {
-        Json::Value coords(Json::arrayValue);
-        coords.append((*it).first.first);
-        coords.append((*it).first.second);
-        config["tiles"][(*it).second].append(coords);
-    }
     for (std::list<MapObject *>::iterator it = mapObjects.begin(); it != mapObjects.end(); ++it)
         if ((*it)->canSave())
             config["objects"][(*it)->className].append((*it)->saveToJson());
@@ -192,6 +209,7 @@ MapObject::MapObject(int x, int y, int z) {
     this->map = 0;
     posx = x;
     posy = y;
+    posz = 0;
     animation = 0;
     timer = 0;
     setZValue(z);
@@ -210,12 +228,13 @@ MapObject::~MapObject() {
 }
 
 // A silent move only places the object; ordinary moves also step onto the tile.
-void MapObject::moveTo(int x, int y, bool silent) {
+void MapObject::moveTo(int x, int y, int z, bool silent) {
     posx = x;
     posy = y;
+    posz = z;
     setPos(x * Tile::size, y * Tile::size);
     if (!silent && map) {
-        Tile *tile = Tile::getTile(map->getTile(x, y), x, y);
+        Tile *tile = Tile::getTile(map->getTile(x, y, z), x, y, z);
         if (tile) {
             tile->onStep();
             delete tile;
@@ -226,6 +245,8 @@ void MapObject::moveTo(int x, int y, bool silent) {
 int MapObject::getPosX() const { return posx; }
 
 int MapObject::getPosY() const { return posy; }
+
+int MapObject::getPosZ() const { return posz; }
 
 void MapObject::removeFromGame() {
     setVisible(false);
@@ -238,11 +259,11 @@ void MapObject::removeFromGame() {
 void MapObject::move(int x, int y) {
     if (!map || (x == 0 && y == 0))
         return;
-    const std::string destination = map->getTile(posx + x, posy + y);
+    const std::string destination = map->getTile(posx + x, posy + y, posz);
     Json::Value config = (*ConfigurationProvider::getConfig("config/tiles.json"))[destination];
     if (!config.get("canStep", true).asBool())
         return;
-    moveTo(posx + x, posy + y);
+    moveTo(posx + x, posy + y, posz);
 }
 
 void MapObject::setParentItem(QGraphicsItem *parent) { QGraphicsItem::setParentItem(parent); }
@@ -257,7 +278,7 @@ void MapObject::setMap(Map *map) {
 }
 
 void Map::hide() {
-    for (std::map<Coords, Tile *>::iterator it = tiles.begin(); it != tiles.end(); ++it)
+    for (std::unordered_map<Coords, Tile *, CoordsHasher>::iterator it = tiles.begin(); it != tiles.end(); ++it)
         delete (*it).second;
     tiles.clear();
     std::list<MapObject *> objects(mapObjects);

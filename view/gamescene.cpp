@@ -19,23 +19,20 @@ GameScene::GameScene() {
     srand(time(0));
     game = this;
     map = new Map();
-    maps.push_back(map);
 
     if (!player) {
         player = new Player("Warrior");
         map->addObject(player);
     }
 
-    map->addRoad(18, -8, 0);
-    map->addRiver(16, 6, -5);
+    map->addRoad(18, -8, 0, 0);
+    map->addRiver(16, 6, -5, 0);
     map->addObject(new Cave(5, 2));
     map->ensureSize(player);
 }
 
 GameScene::~GameScene() {
-    for (std::vector<Map *>::iterator it = maps.begin(); it != maps.end(); ++it)
-        delete *it;
-    maps.clear();
+    delete map;
     player = 0;
     game = 0;
     Destroyer::terminate();
@@ -98,7 +95,7 @@ void GameScene::keyPressEvent(QKeyEvent *keyEvent) {
     }
 }
 
-void GameScene::addRandomTile(int x, int y) { map->getTile(x, y); }
+void GameScene::addRandomTile(int x, int y) { map->getTile(x, y, player->getPosZ()); }
 
 void GameScene::addTile(Tile *tile) {
     if (tile)
@@ -106,29 +103,3 @@ void GameScene::addTile(Tile *tile) {
 }
 
 void GameScene::addObject(MapObject *mapObject) { map->addObject(mapObject); }
-
-void GameScene::changeMap(int x, int y, int z) {
-    QTimer::singleShot(0, this, [this, x, y, z]() {
-        if (!player || z < 0)
-            return;
-        map->removeObject(player);
-        map->hide();
-        if (static_cast<unsigned int>(z) >= maps.size())
-            maps.resize(z + 1, 0);
-        const bool created = maps[z] == 0;
-        if (created)
-            maps[z] = new Map();
-        map = maps[z];
-        map->addObject(player);
-        player->moveTo(x, y, true);
-        if (created) {
-            map->addDungeon(0, 0, 20, 16);
-            map->addObject(new Dungeon(3, 3));
-        }
-        map->show();
-        if (getView()) {
-            getView()->centerOn(player->getPosX() * Tile::size, player->getPosY() * Tile::size);
-            player->update();
-        }
-    });
-}
