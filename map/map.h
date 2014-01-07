@@ -47,16 +47,14 @@ private:
     std::list<MapObject*> mapObjects;
     void randomDir(int *tab, int rule);
     bool addTile(std::string name, int x, int y, int z);
-    std::unordered_map<Coords,Tile *,CoordsHasher> tiles;
+    std::map<Coords,Tile *> tiles;
     int cacheSize=25;
-
-    int currentMap;
 };
 
 class MapObject : private AnimatedObject
 {
 public:
-    MapObject(int x,int y,int z);
+    MapObject(int x, int y, int z);
     ~MapObject();
     int posx,posy,posz;
     void moveTo(int x, int y, int z, bool silent=false);
