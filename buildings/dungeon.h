@@ -9,6 +9,7 @@ public:
     virtual void onEnter();
     virtual void onMove();
     bool canSave();
+    Json::Value saveToJson();
 private:
     Coords exit;
 };
