@@ -1,7 +1,7 @@
 # Recovered game snapshot
 
-Original commit: `2e3be1ab489eb4d62156adf63296c0be80aced02`. Original tree: `5188a0a2607cfea0b500de4052dafe34e48e5eb0`.
-Startup was verified from identical recovered sources at `2e3be1ab489eb4d62156adf63296c0be80aced02`.
+Original commit: `25a25733afccb1fb4ad76840bb99dcb6e8798252`. Original tree: `46f6130e2cf50eb90c670c44aa73590220b74bb2`.
+Startup was verified from identical recovered sources at `25a25733afccb1fb4ad76840bb99dcb6e8798252`.
 
 This recovered version compiled and linked on Linux, started the real game on an isolated Xvfb display,
 loaded its map and a healthy player, rendered the screenshot below, and exited normally.
@@ -40,7 +40,7 @@ compatibilityRepair: 1, exactOriginal: 43, reconstruction: 19.
 - `config/creatures.json`: content reconstruction of the BFG-removed original; carried nearest reconstructed config/creatures.json through API-stable #62; surviving files provide no recoverable internal implementation/data delta
 - `creatures/creature.cpp`: working reconstruction
 - `creatures/player.cpp`: content reconstruction of the BFG-removed original; adapted #53 reconstruction to both original #63 map-independent Player constructors; Map::addObject assigns the actual owning map
-- `images/buildings/dungeon/0.png`: unverified donor reconstruction; 71a3432e36b5649aabdd63c7807a78e9a8a3749a:images/buildings/dungeon/0.png; headerMatch=0; apiOverlap=0/10000; distance=87
+- `images/buildings/dungeon/0.png`: unverified donor reconstruction; 71a3432e36b5649aabdd63c7807a78e9a8a3749a:images/buildings/dungeon/0.png; headerMatch=0; apiOverlap=0/10000; distance=86
 - `images/tiles/grass/0.png`: unverified donor reconstruction; c049ac73064442354af6224d06fe1c8b847bb8d9:images/tiles/grass/0.png; headerMatch=0; apiOverlap=0/10000; distance=105 Verified by build and startup of afdd8069 (recovery/evidence/second-original).
 - `images/tiles/ground/0.png`: unverified donor reconstruction; c049ac73064442354af6224d06fe1c8b847bb8d9:images/tiles/ground/0.png; headerMatch=0; apiOverlap=0/10000; distance=105 Verified by build and startup of afdd8069 (recovery/evidence/second-original).
 - `images/tiles/mountain/0.png`: unverified donor reconstruction; 152007b28631784d3c5e17f2686eb6ef9ff30e46:images/tiles/mountain/0.png; headerMatch=0; apiOverlap=0/10000; distance=155 Verified by build and startup of afdd8069 (recovery/evidence/second-original).
@@ -58,7 +58,7 @@ compatibilityRepair: 1, exactOriginal: 43, reconstruction: 19.
 - `view/gamescene.cpp`: working reconstruction
 - `json/LICENSE`: https://github.com/open-source-parsers/jsoncpp/tree/4fce396c9d3e27a8ab8fb88e94c1676e021ae3a6 upstream distribution license
 
-Restored source fingerprint: `3cc3ee675bce59c72e25e37e9cbad90e5f0bf025f2aeb95831fd54f8b502495c`.
+Restored source fingerprint: `503f1a86ce5e2313a2adc0d04994a12e9f91c1d589e327475a210a45b564c87d`.
 
 The actual 1278 × 718 screenshot and [verification metadata](recovery/verification.json) belong to
 this source version. Reconstructed code and borrowed assets are identified in that metadata; they are
