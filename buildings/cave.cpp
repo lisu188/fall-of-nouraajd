@@ -30,13 +30,13 @@ void Cave::onEnter()
                 {
                     Monster *monster=new Monster("PritzMage");
                     map->addObject(monster);
-                    monster->moveTo(getPosX()+1*i,getPosY()+1*j,true);
+                    monster->moveTo(getPosX()+1*i,getPosY()+1*j,getPosZ(),true);
                 }
                 else
                 {
                     Monster *monster=new Monster("Pritz");
                     map->addObject(monster);
-                    monster->moveTo(getPosX()+1*i,getPosY()+1*j,true);
+                    monster->moveTo(getPosX()+1*i,getPosY()+1*j,getPosZ(),true);
                 }
             }
         this->removeFromGame();
@@ -51,13 +51,13 @@ void Cave::onMove()
         {
             Monster *monster=new Monster("PritzMage");
             map->addObject(monster);
-            monster->moveTo(getPosX(),getPosY(),true);
+            monster->moveTo(getPosX(),getPosY(),getPosZ(),true);
         }
         else
         {
             Monster *monster=new Monster("Pritz");
             map->addObject(monster);
-            monster->moveTo(getPosX(),getPosY(),true);
+            monster->moveTo(getPosX(),getPosY(),getPosZ(),true);
         }
     }
 }
