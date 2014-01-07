@@ -1,7 +1,7 @@
 #include "building.h"
 #include <QDebug>
 
-Building::Building(int x, int y):MapObject(x,y,1)
+Building::Building(int x, int y, int z):MapObject(x,y,z,1)
 {
     className="Building";
 }
@@ -24,5 +24,6 @@ Json::Value Building::saveToJson()
     Json::Value config;
     config[(unsigned int)0]=getPosX();
     config[(unsigned int)1]=getPosY();
+    config[(unsigned int)2]=getPosZ();
     return config;
 }

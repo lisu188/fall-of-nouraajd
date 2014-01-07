@@ -5,9 +5,11 @@
 class Dungeon : public Building
 {
 public:
-    Dungeon(int x, int y);
+    Dungeon(Coords enter,Coords exit);
     virtual void onEnter();
     virtual void onMove();
     bool canSave();
+private:
+    Coords exit;
 };
 #endif // DUNGEON_H

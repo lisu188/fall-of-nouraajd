@@ -7,7 +7,7 @@
 
 #include <configuration/configurationprovider.h>
 
-Cave::Cave(int x, int y):Building(x,y)
+Cave::Cave(int x, int y,int z):Building(x,y,z)
 {
     className="Cave";
     this->setAnimation("images/buildings/cave/");
