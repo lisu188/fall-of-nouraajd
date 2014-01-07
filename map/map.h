@@ -24,29 +24,33 @@ public:
 
     void move(int x,int y);
 
-    std::string getTile(int x,int y);
-    bool contains(int x,int y);
+    std::string getTile(int x, int y, int z);
+    bool contains(int x, int y, int z);
     void addObject(MapObject *mapObject);
 
-    void addRiver(int length, int startx, int starty);
-    void addRoad(int length, int startx, int starty);
-    void addDungeon(int centerx,int centery, int width,int height);
+    void addRiver(int length, int startx, int starty, int startz);
+    void addRoad(int length, int startx, int starty, int startz);
+    void addDungeon(int centerx, int centery,int centerz, int width, int height);
 
     void removeObject(MapObject *mapObject);
 
-    void loadFromJson(Json::Value config);
-    Json::Value saveToJson();
+    void loadMapFromJson(Json::Value config);
+    Json::Value saveMapToJson();
 
     void ensureSize(Player *player);
     void hide();
     void show();
+    Json::Value saveStateToJson();
+    void loadStateFromJson(Json::Value config);
+
 private:
     std::list<MapObject*> mapObjects;
     void randomDir(int *tab, int rule);
-    bool addTile(std::string name, int x, int y);
-    std::map<Coords,Tile *> tiles;
-
+    bool addTile(std::string name, int x, int y, int z);
+    std::unordered_map<Coords,Tile *,CoordsHasher> tiles;
     int cacheSize=25;
+
+    int currentMap;
 };
 
 class MapObject : private AnimatedObject
@@ -54,11 +58,12 @@ class MapObject : private AnimatedObject
 public:
     MapObject(int x,int y,int z);
     ~MapObject();
-    int posx,posy;
-    void moveTo(int x, int y,bool silent=false);
+    int posx,posy,posz;
+    void moveTo(int x, int y, int z, bool silent=false);
 
     int getPosX() const;
     int getPosY() const;
+    int getPosZ() const;
 
     void removeFromGame();
 

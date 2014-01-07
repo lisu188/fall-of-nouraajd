@@ -2,10 +2,11 @@
 #define COORDS_H
 #include <utility>
 
-class Coords : public std::pair<int,int>
+class Coords
 {
 public:
-    Coords(int x,int y);
+    Coords(int x,int y,int z);
+    int x,y,z;
     bool operator==(const Coords &other) const;
 };
 

@@ -1,18 +1,17 @@
 #include "coords.h"
 
-Coords::Coords(int x, int y):std::pair<int,int>(x,y) {}
+Coords::Coords(int x, int y,int z):x(x),y(y),z(z) {}
 
 bool Coords::operator==(const Coords &other) const
 {
-    return (other.first==this->first&&other.second==this->second);
+    return (x==other.x&&y==other.y&&z==other.z);
 }
-
 
 std::size_t CoordsHasher::operator()(const Coords &coords) const
 {
     using std::size_t;
-    int a=(size_t)coords.first;
-    int b=(size_t)coords.second;
-    size_t hash=a >= b ? a * a + a + b : a + b * b;
-    return hash;
+    int a=(size_t)coords.x;
+    int b=(size_t)coords.y;
+    int c=(size_t)coords.z;
+    return (a^b)^(b^c)^(a^c);
 }
