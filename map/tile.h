@@ -13,7 +13,7 @@ class Tile : protected AnimatedObject
 {
 public:
 
-    Tile(std::string name,int x,int y);
+    Tile(std::string name,int x,int y,int z);
 
     ~Tile();
 
@@ -30,7 +30,7 @@ public:
     bool canStep() const;
 
     static std::string getRandomTile();
-    static Tile *getTile(std::string type, int x, int y);
+    static Tile *getTile(std::string type, int x, int y,int z);
 
     void addToGame();
     void removeFromGame();
@@ -46,12 +46,13 @@ protected:
     bool step;
 
 private:
-    void setXY(int x, int y);
+    void setXYZ(int x, int y,int z);
 
     std::list<Event*> events;
 
     int posx;
     int posy;
+    int posz;
 
     static std::unordered_map<std::string,std::function<void()>> steps;
 };

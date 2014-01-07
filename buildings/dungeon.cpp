@@ -10,7 +10,7 @@ Dungeon::Dungeon(int x, int y):Building(x,y)
 
 void Dungeon::onEnter()
 {
-    GameScene::getGame()->changeMap(0,0,1);
+    GameScene::getPlayer()->moveTo(0,0,1,true);
 }
 
 void Dungeon::onMove()
