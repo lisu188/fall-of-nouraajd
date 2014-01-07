@@ -9,7 +9,7 @@
 #include <view/gamescene.h>
 
 Map::~Map() {
-    for (std::unordered_map<Coords, Tile *, CoordsHasher>::iterator it = tiles.begin(); it != tiles.end(); ++it)
+    for (std::map<Coords, Tile *>::iterator it = tiles.begin(); it != tiles.end(); ++it)
         delete (*it).second;
     tiles.clear();
     std::list<MapObject *> objects(mapObjects);
@@ -77,10 +77,10 @@ void Map::ensureSize(Player *player) {
     const int x = player->getPosX();
     const int y = player->getPosY();
     const int z = player->getPosZ();
-    currentMap = z;
+    const int currentMap = z;
     for (std::list<MapObject *>::iterator object = mapObjects.begin(); object != mapObjects.end(); ++object)
         (*object)->setVisible((*object)->getPosZ() == currentMap);
-    std::unordered_map<Coords, Tile *, CoordsHasher>::iterator it = tiles.begin();
+    std::map<Coords, Tile *>::iterator it = tiles.begin();
     while (it != tiles.end()) {
         const Coords coords = (*it).first;
         if (coords.z != z || std::abs(coords.x - x) > cacheSize || std::abs(coords.y - y) > cacheSize ||
@@ -278,7 +278,7 @@ void MapObject::setMap(Map *map) {
 }
 
 void Map::hide() {
-    for (std::unordered_map<Coords, Tile *, CoordsHasher>::iterator it = tiles.begin(); it != tiles.end(); ++it)
+    for (std::map<Coords, Tile *>::iterator it = tiles.begin(); it != tiles.end(); ++it)
         delete (*it).second;
     tiles.clear();
     std::list<MapObject *> objects(mapObjects);

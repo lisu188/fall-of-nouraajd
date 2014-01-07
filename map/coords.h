@@ -8,6 +8,7 @@ public:
     Coords(int x,int y,int z);
     int x,y,z;
     bool operator==(const Coords &other) const;
+    bool operator<(const Coords &other) const;
 };
 
 struct CoordsHasher
