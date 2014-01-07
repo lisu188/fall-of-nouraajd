@@ -34,6 +34,9 @@ public:
     void loadMapFromJson(Json::Value config);
     Json::Value saveMapToJson();
 
+    void loadFromJson(Json::Value config);
+    Json::Value saveToJson();
+
     void ensureSize(Player *player);
     void hide();
     void show();
