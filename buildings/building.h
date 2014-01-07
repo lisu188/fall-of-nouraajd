@@ -7,7 +7,7 @@
 class Building :public MapObject
 {
 public:
-    Building(int x, int y);
+    Building(int x, int y,int z);
     virtual void onEnter();
     virtual bool canSave();
     virtual void loadFromJson(Json::Value config);

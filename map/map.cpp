@@ -4,6 +4,7 @@
 #include <cstdlib>
 #include <vector>
 #include <buildings/cave.h>
+#include <buildings/dungeon.h>
 #include <configuration/configurationprovider.h>
 #include <map/tile.h>
 #include <view/gamescene.h>
@@ -137,7 +138,10 @@ void Map::addRoad(int length, int x, int y, int z) {
     }
 }
 
-void Map::addDungeon(int centerx, int centery, int centerz, int width, int height) {
+void Map::addDungeon(Coords enter, Coords exit, int width, int height) {
+    const int centerx = exit.x;
+    const int centery = exit.y;
+    const int centerz = exit.z;
     for (int x = centerx - width / 2; x <= centerx + width / 2; x++) {
         for (int y = centery - height / 2; y <= centery + height / 2; y++) {
             const bool wall = x == centerx - width / 2 || x == centerx + width / 2 || y == centery - height / 2 ||
@@ -146,6 +150,8 @@ void Map::addDungeon(int centerx, int centery, int centerz, int width, int heigh
             addTile(wall ? "MountainTile" : "GroundTile", x, y, centerz);
         }
     }
+    addObject(new Dungeon(enter, exit));
+    addObject(new Dungeon(exit, enter));
 }
 
 void Map::randomDir(int *tab, int rule) {
@@ -205,14 +211,14 @@ Json::Value Map::saveStateToJson() {
     return config;
 }
 
-MapObject::MapObject(int x, int y, int z) {
+MapObject::MapObject(int x, int y, int z, int v) {
     this->map = 0;
     posx = x;
     posy = y;
-    posz = 0;
+    posz = z;
     animation = 0;
     timer = 0;
-    setZValue(z);
+    setZValue(v);
     statsView.setParentItem(this);
     statsView.setVisible(false);
     setPos(x * Tile::size, y * Tile::size);

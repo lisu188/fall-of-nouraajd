@@ -30,7 +30,7 @@ public:
 
     void addRiver(int length, int startx, int starty, int startz);
     void addRoad(int length, int startx, int starty, int startz);
-    void addDungeon(int centerx, int centery,int centerz, int width, int height);
+    void addDungeon(Coords enter, Coords exit, int width, int height);
 
     void removeObject(MapObject *mapObject);
 
@@ -54,7 +54,7 @@ private:
 class MapObject : private AnimatedObject
 {
 public:
-    MapObject(int x, int y, int z);
+    MapObject(int x, int y,int z, int v);
     ~MapObject();
     int posx,posy,posz;
     void moveTo(int x, int y, int z, bool silent=false);

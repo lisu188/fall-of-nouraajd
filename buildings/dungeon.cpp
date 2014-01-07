@@ -2,7 +2,7 @@
 
 #include <view/gamescene.h>
 
-Dungeon::Dungeon(int x, int y):Building(x,y)
+Dungeon::Dungeon(Coords enter, Coords exit):exit(exit),Building(enter.x,enter.y,enter.z)
 {
     className="Dungeon";
     this->setAnimation("images/buildings/dungeon/");
@@ -10,7 +10,7 @@ Dungeon::Dungeon(int x, int y):Building(x,y)
 
 void Dungeon::onEnter()
 {
-    GameScene::getPlayer()->moveTo(0,0,1,true);
+    GameScene::getPlayer()->moveTo(exit.x,exit.y,exit.z,true);
 }
 
 void Dungeon::onMove()
