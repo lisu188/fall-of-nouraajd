@@ -22,3 +22,15 @@ bool Dungeon::canSave()
 {
     return true;
 }
+
+Json::Value Dungeon::saveToJson()
+{
+    Json::Value config;
+    config[(unsigned int)0]=getPosX();
+    config[(unsigned int)1]=getPosY();
+    config[(unsigned int)2]=getPosZ();
+    config[(unsigned int)3]=exit.x;
+    config[(unsigned int)4]=exit.y;
+    config[(unsigned int)5]=exit.z;
+    return config;
+}

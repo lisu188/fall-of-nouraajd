@@ -77,7 +77,7 @@ public:
     void setVisible(bool vis);
 protected:
     void setAnimation(std::string path);
-    Map *map;
+    Map *map=0;
     QGraphicsItemAnimation *animation;
     QTimeLine *timer;
     QGraphicsSimpleTextItem statsView;
