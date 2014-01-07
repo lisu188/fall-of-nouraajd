@@ -1,105 +1,139 @@
 #include "gamescene.h"
+#include "gameview.h"
 
 #include <QGraphicsView>
-
-#include <configuration/configurationprovider.h>
-
+#include <QPointF>
+#include <items/weapon.h>
+#include <items/armor.h>
+#include <creatures/monster.h>
 #include <buildings/cave.h>
 #include <buildings/dungeon.h>
-#include <view/playerstatsview.h>
-#include <view/playerlistview.h>
-#include <creatures/player.h>
+#include <QApplication>
+#include <QDesktopWidget>
+#include "view\playerlistview.h"
+#include <animation/animationprovider.h>
+#include <configuration/configurationprovider.h>
 #include <destroyer/destroyer.h>
-#include <view/gameview.h>
+#include <view/fightview.h>
+#include <fstream>
+#include <json/json.h>
+#include <compression/compression.h>
+#include <QDateTime>
+#include <QDebug>
+#include <vector>
 
-Player *GameScene::player = 0;
-GameScene *GameScene::game = 0;
 
-GameScene::GameScene() {
+Player *GameScene::player=0;
+GameScene *GameScene::game=0;
+
+GameScene::GameScene()
+{
     srand(time(0));
-    game = this;
-    map = new Map();
-
-    if (!player) {
-        player = new Player("Warrior");
+    game=this;
+    map=new Map();
+    map->loadFromJson(*ConfigurationProvider::getConfig("save/game.sav"));
+    if(!player)
+    {
+        delete map;
+        map=new Map();
+        map->loadFromJson(*ConfigurationProvider::getConfig("config/map.json"));
+        player=new Player("Sorcerer");
         map->addObject(player);
     }
-
-    map->addRoad(18, -8, 0, 0);
-    map->addRiver(16, 6, -5, 0);
-    map->addObject(new Cave(5, 2, 0));
+    player->updateViews();
     map->ensureSize(player);
 }
 
-GameScene::~GameScene() {
+GameScene::~GameScene()
+{
+    int startTime=QDateTime::currentMSecsSinceEpoch();
+    FILE *infile = fopen("save/game.sav", "w+");
+    fclose(infile);
+    std::fstream jsonFileStream;
+    Json::FastWriter writer;
+    jsonFileStream.open ("save/game.sav");
+    jsonFileStream << writer.write(map->saveToJson());
+    jsonFileStream.close();
     delete map;
-    player = 0;
-    game = 0;
     Destroyer::terminate();
 }
 
-Player *GameScene::getPlayer() { return player; }
-
-void GameScene::setPlayer(Player *pla) { player = pla; }
-
-GameScene *GameScene::getGame() { return game; }
-
-GameView *GameScene::getView() {
-    if (!game || game->views().isEmpty())
-        return 0;
-    return dynamic_cast<GameView *>(game->views().front());
+Player *GameScene::getPlayer()
+{
+    return player;
 }
 
-void GameScene::playerMove(int dirx, int diry) {
-    if (!player)
-        return;
-    map->move(dirx, diry);
+void GameScene::setPlayer(Player *pla) {
+    player=pla;
+}
 
-    GameView *view = getView();
-    if (view) {
-        view->centerOn(player->getPosX() * Tile::size + Tile::size / 2,
-                       player->getPosY() * Tile::size + Tile::size / 2);
-        map->ensureSize(player);
-        player->update();
-        if (player->getFightList()->size() > 0) {
-            view->showFightView();
+GameScene *GameScene::getGame()
+{
+    return game;
+}
+
+void GameScene::addObject(MapObject *mapObject)
+{
+    map->addObject(mapObject);
+}
+
+void GameScene::keyPressEvent(QKeyEvent * keyEvent)
+{
+    if(keyEvent)
+    {
+        keyEvent->setAccepted(false);
+        switch(keyEvent->key())
+        {
+        case Qt::Key_Up:
+            playerMove(0,-1);
+            keyEvent->setAccepted(true);
+            break;
+        case Qt::Key_Down:
+            playerMove(0,1);
+            keyEvent->setAccepted(true);
+            break;
+        case Qt::Key_Left:
+            playerMove(-1,0);
+            keyEvent->setAccepted(true);
+            break;
+        case Qt::Key_Right:
+            playerMove(1,0);
+            keyEvent->setAccepted(true);
+            break;
         }
     }
 }
 
-void GameScene::keyPressEvent(QKeyEvent *keyEvent) {
-    if (!keyEvent)
+void GameScene::playerMove(int dirx,int diry)
+{
+    if((int)QDateTime::currentMSecsSinceEpoch()-click<=(getStep()*1.5))
+    {
         return;
-
-    keyEvent->setAccepted(false);
-    switch (keyEvent->key()) {
-    case Qt::Key_Up:
-        playerMove(0, -1);
-        keyEvent->setAccepted(true);
-        break;
-    case Qt::Key_Down:
-        playerMove(0, 1);
-        keyEvent->setAccepted(true);
-        break;
-    case Qt::Key_Left:
-        playerMove(-1, 0);
-        keyEvent->setAccepted(true);
-        break;
-    case Qt::Key_Right:
-        playerMove(1, 0);
-        keyEvent->setAccepted(true);
-        break;
-    default:
-        QGraphicsScene::keyPressEvent(keyEvent);
-        break;
+    }
+    click=QDateTime::currentMSecsSinceEpoch();
+    if(player->getFightList()->size()>0) {
+        return;
+    }
+    int sizex,sizey;
+    if(getView())
+    {
+        sizex=getView()->width()/Tile::size+1;
+        sizey=getView()->height()/Tile::size+1;
+    } else
+    {
+        sizex=QApplication::desktop()->width()/Tile::size+1;
+        sizey=QApplication::desktop()->height()/Tile::size+1;
+    }
+    map->move(dirx,diry);
+    if(!player->isAlive()) {
+        getView()->close();
     }
 }
 
-void GameScene::addRandomTile(int x, int y) { map->getTile(x, y, player->getPosZ()); }
-
-void GameScene::addTile(Tile *tile) {
-    if (tile)
-        tile->addToGame();
+GameView *GameScene::getView()
+{
+    if(!GameScene::getGame()->views().size()) {
+        return 0;
+    }
+    return dynamic_cast<GameView*>((*GameScene::getGame()->views().begin()));
 }
-
-void GameScene::addObject(MapObject *mapObject) { map->addObject(mapObject); }
