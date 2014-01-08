@@ -3,6 +3,7 @@
 #include <view/gamescene.h>
 #include <stats/stats.h>
 #include <QDebug>
+#include <QDrag>
 #include <json/json.h>
 #include <items/armor.h>
 #include <fstream>
@@ -75,11 +76,14 @@ void Item::mousePressEvent(QGraphicsSceneMouseEvent *event)
     }
     else
     {
-        onUse(GameScene::getPlayer());
         if(singleUse)
         {
             GameScene::getPlayer()->loseItem(this);
             delete this;
+        }
+        else
+        {
+            AnimatedObject::mousePressEvent(event);
         }
     }
 }

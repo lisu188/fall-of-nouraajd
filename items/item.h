@@ -15,17 +15,15 @@ public:
     void setPos(QPointF point);
     virtual void onEquip(Creature *creature);
     virtual void onUnequip(Creature *creature);
-
     static Item *getItem(const char *name);
     std::string className;
+    virtual void onUse(Creature *creature)=0;
 
 protected:
     void setAnimation(std::string path);
     virtual void mousePressEvent(QGraphicsSceneMouseEvent *event);
-    virtual void onUse(Creature *creature)=0;
     bool singleUse;
     Stats bonus;
-
     void loadFromJson(Json::Value config);
     Interaction *interaction;
     int power;

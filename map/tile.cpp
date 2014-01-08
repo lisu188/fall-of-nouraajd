@@ -97,6 +97,10 @@ void Tile::setXYZ(int x, int y, int z)
     setPos(x*size,y*size);
 }
 
+void Tile::mousePressEvent(QGraphicsSceneMouseEvent *event)
+{
+}
+
 
 void RoadTile()
 {

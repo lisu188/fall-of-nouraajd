@@ -10,8 +10,6 @@ class Armor : public Item
 public:
     Armor(std::string name);
     Interaction *getInteraction();
-
-protected:
     virtual void onUse(Creature *creature);
 };
 

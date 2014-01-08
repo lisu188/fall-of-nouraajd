@@ -3,11 +3,12 @@
 #include <map/tile.h>
 
 #include <QGraphicsSceneMouseEvent>
+#include <QDrag>
 
 ListItem::ListItem()
 {
     statsView.setParentItem(this);
-    statsView.setVisible(false);
+    statsView.setVisible(true);
 }
 
 
@@ -42,7 +43,6 @@ void ListItem::mousePressEvent(QGraphicsSceneMouseEvent *event)
         statsView.setText(tooltip.c_str());
         statsView.setPos(-this->mapToParent(0,0).x(),
                          -statsView.boundingRect().height());
-        statsView.setVisible(true);
         event->setAccepted(true);
     }
     else
@@ -55,7 +55,7 @@ void ListItem::mouseReleaseEvent(QGraphicsSceneMouseEvent *event)
 {
     if(event->button()==Qt::MouseButton::RightButton)
     {
-        statsView.setVisible(false);
+        statsView.setText("");
         event->setAccepted(true);
     }
     else
