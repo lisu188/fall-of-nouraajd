@@ -13,7 +13,7 @@ class AnimatedObject : private QWidget,protected QGraphicsPixmapItem
 public:
     explicit AnimatedObject();
     ~AnimatedObject();
-    QPoint mapToParent(int a,int b);
+    QPointF mapToParent(int a,int b);
 protected:
     Animation *animation;
     void setPixmap(const QPixmap &pixmap);
