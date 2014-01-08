@@ -37,4 +37,5 @@ INPUT(
 ./release\tile.o
 ./release\dungeon.o
 ./release\moc_animatedobject.o
+./release\moc_gameview.o
 );

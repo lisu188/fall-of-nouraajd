@@ -8,7 +8,7 @@
 
 class GameView : public QGraphicsView
 {
-
+    Q_OBJECT
 public:
     explicit GameView();
     ~GameView();
@@ -25,6 +25,10 @@ private:
     GameScene *scene;
     FightView *fightView;
     static bool init;
+    QTimer timer;
+    QGraphicsPixmapItem loading;
+private slots:
+    void start();
 };
 
 #endif // GAMEVIEW_H

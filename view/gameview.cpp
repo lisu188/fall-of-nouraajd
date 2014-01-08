@@ -3,10 +3,18 @@
 
 bool GameView::init=false;
 
+void GameView::start()
+{
+    scene->startGame();
+    scene->removeItem(&loading);
+    init=true;
+    showFullScreen();
+    resize();
+}
+
 GameView::GameView()
 {
     showFullScreen();
-    //this->setWindowState(Qt::WindowNoState);
     setHorizontalScrollBarPolicy ( Qt::ScrollBarAlwaysOff );
     setVerticalScrollBarPolicy ( Qt::ScrollBarAlwaysOff );
     setViewportUpdateMode(QGraphicsView::BoundingRectViewportUpdate);
@@ -16,12 +24,18 @@ GameView::GameView()
     view.setViewportUpdateMode(
              QGraphicsView::FullViewportUpdate);
     */
-    init=true;
     scene=new GameScene();
     setScene(scene);
-    resize();
+    QPixmap pixmap("images/loading.jpg");
+    loading.setPixmap(pixmap.scaled(this->width(),this->height(),
+                                    Qt::IgnoreAspectRatio,Qt::SmoothTransformation));
+    scene->addItem(&loading);
     fightView=new FightView();
     scene->addItem(fightView);
+    timer.setSingleShot(true);
+    timer.setInterval(50);
+    connect(&timer, SIGNAL(timeout()), this, SLOT(start()));
+    timer.start();
 }
 
 GameView::~GameView()
@@ -51,7 +65,7 @@ void GameView::showFightView()
 
 void GameView::mouseDoubleClickEvent(QMouseEvent *e) {
     QWidget::mouseDoubleClickEvent(e);
-    if(e->button()==Qt::MouseButton::LeftButton) {
+    if(e->button()==Qt::MouseButton::LeftButton||!init) {
         return;
     }
     if(isFullScreen()) {
