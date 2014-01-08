@@ -69,11 +69,18 @@ void Item::setAnimation(std::string path)
 
 void Item::mousePressEvent(QGraphicsSceneMouseEvent *event)
 {
-    onUse(GameScene::getPlayer());
-    if(singleUse)
+    if(event->button()==Qt::MouseButton::RightButton)
     {
-        GameScene::getPlayer()->loseItem(this);
-        delete this;
+        ListItem::mousePressEvent(event);
+    }
+    else
+    {
+        onUse(GameScene::getPlayer());
+        if(singleUse)
+        {
+            GameScene::getPlayer()->loseItem(this);
+            delete this;
+        }
     }
 }
 
@@ -84,4 +91,8 @@ void Item::loadFromJson(Json::Value config)
     setAnimation(config.get("path","").asCString());
     power=config.get("power",1).asInt();
     singleUse=config.get("singleUse",false).asBool();
+    tooltip=config.get("tooltip","").asString();
+    if(tooltip.compare("")==0) {
+        tooltip=className;
+    }
 }

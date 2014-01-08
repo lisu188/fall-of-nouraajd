@@ -1,7 +1,10 @@
+
 {
 "Attack" :
     {
 "anim" : "images/interactions/attack/"
+        ,
+"tooltip" : "Standard Attack"
     },
 "ElemStaff" :
     {},
@@ -77,7 +80,8 @@
     {
 "anim" : "images/interactions/magicmissile/"
         ,
-        "manaCost" : 5
+        "manaCost" : 5,
+"tooltip" : "Magic Missile"
     },
 "ShadowBolt" :
     {
@@ -133,7 +137,7 @@
     {
 "anim" : "images/interactions/barrier/"
         ,
-"effect":"BarrierEffect"
+"effect" : "BarrierEffect"
         ,
         "manaCost" : 17
     },

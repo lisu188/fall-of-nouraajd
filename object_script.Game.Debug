@@ -37,4 +37,5 @@ INPUT(
 ./debug\tile.o
 ./debug\dungeon.o
 ./debug\moc_animatedobject.o
+./debug\moc_gameview.o
 );

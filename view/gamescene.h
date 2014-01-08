@@ -17,7 +17,6 @@ class GameScene : public QGraphicsScene
 {
 
 public:
-    GameScene();
     ~GameScene();
     static Player* getPlayer();
     static void setPlayer(Player *pla);
@@ -28,6 +27,7 @@ public:
     }
     void playerMove(int dirx, int diry);
 
+    void startGame();
 protected:
     void keyPressEvent(QKeyEvent *keyEvent);
 private:

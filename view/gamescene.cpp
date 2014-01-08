@@ -26,7 +26,7 @@
 Player *GameScene::player=0;
 GameScene *GameScene::game=0;
 
-GameScene::GameScene()
+void GameScene::startGame()
 {
     srand(time(0));
     game=this;

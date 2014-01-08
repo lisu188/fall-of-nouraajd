@@ -11,7 +11,6 @@ class PlayerListView;
 class Player : public Creature
 {
     friend class PlayerStatsView;
-
 public:
 
     Player(std::string name,Json::Value config);
