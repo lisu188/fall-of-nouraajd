@@ -2,6 +2,7 @@
 #include "playerlistview.h"
 
 #include <qpainter.h>
+#include <QWidget>
 
 PlayerListView::PlayerListView(std::list<ListItem *> *listItems):items(listItems)
 {
@@ -63,4 +64,14 @@ void PlayerListView::updatePosition(int i)
 {
     curPosition+=i;
     update();
+}
+
+void PlayerListView::dropEvent(QGraphicsSceneDragDropEvent *event)
+{
+    Item *item=(Item*)(event->source());
+    if(static_cast<Item*>(item))
+    {
+        event->acceptProposedAction();
+        item->onUse(GameScene::getPlayer());
+    }
 }

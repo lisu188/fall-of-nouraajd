@@ -5,13 +5,15 @@
 
 #include <QGraphicsPixmapItem>
 #include <QTimer>
+#include <QWidget>
 
-class AnimatedObject : private QObject,protected QGraphicsPixmapItem
+class AnimatedObject : private QWidget,protected QGraphicsPixmapItem
 {
     Q_OBJECT
 public:
     explicit AnimatedObject();
     ~AnimatedObject();
+    QPoint mapToParent(int a,int b);
 protected:
     Animation *animation;
     void setPixmap(const QPixmap &pixmap);
@@ -21,6 +23,10 @@ private:
 private slots:
     void animate();
 
+
+    // QGraphicsItem interface
+protected:
+    virtual void mousePressEvent(QGraphicsSceneMouseEvent *event);
 };
 
 #endif // ANIMATEDOBJECT_H

@@ -39,9 +39,6 @@ public:
 
     void loadFromJson(Json::Value config);
     Json::Value saveToJson();
-
-
-
 protected:
     bool step;
 
@@ -55,6 +52,10 @@ private:
     int posz;
 
     static std::unordered_map<std::string,std::function<void()>> steps;
+
+    // QGraphicsItem interface
+protected:
+    virtual void mousePressEvent(QGraphicsSceneMouseEvent *event);
 };
 
 void RoadTile();

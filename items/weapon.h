@@ -11,9 +11,6 @@ public:
     Weapon(std::string name);
     Interaction *getInteraction();
     Stats *getStats();
-
-    // Item interface
-protected:
     virtual void onUse(Creature *creature);
 };
 

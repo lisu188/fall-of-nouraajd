@@ -6,9 +6,6 @@ class Potion : public Item
 {
 public:
     Potion(std::string name);
-
-    // Item interface
-protected:
     virtual void onUse(Creature *creature);
 private:
     std::function<void (Creature *, int)> effect;
