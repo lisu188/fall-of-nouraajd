@@ -51,7 +51,10 @@ void PlayerListView::update()
 
 QRectF PlayerListView::boundingRect() const
 {
-    QRectF rect= childrenBoundingRect();
+    QRectF rect=childrenBoundingRect();
+    if(rect.width()<50||rect.height()<50) {
+        return QRectF(0,0,50,50);
+    }
     rect.setHeight(rect.height()-13);
     return rect;
 }

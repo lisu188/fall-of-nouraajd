@@ -9,6 +9,9 @@ ListItem::ListItem()
 {
     statsView.setParentItem(this);
     statsView.setVisible(true);
+    statsView.setText(" ");
+    statsView.setPos(-this->mapToParent(0,0).x(),
+                     -statsView.boundingRect().height());
 }
 
 
@@ -55,7 +58,7 @@ void ListItem::mouseReleaseEvent(QGraphicsSceneMouseEvent *event)
 {
     if(event->button()==Qt::MouseButton::RightButton)
     {
-        statsView.setText("");
+        statsView.setText(" ");
         event->setAccepted(true);
     }
     else

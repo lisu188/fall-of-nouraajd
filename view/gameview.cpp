@@ -8,7 +8,7 @@ void GameView::start()
     scene->startGame();
     scene->removeItem(&loading);
     init=true;
-    //showFullScreen();
+    showFullScreen();
     resize();
 }
 

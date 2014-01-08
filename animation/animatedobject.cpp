@@ -22,9 +22,9 @@ AnimatedObject::~AnimatedObject()
     }
 }
 
-QPoint AnimatedObject::mapToParent(int a, int b)
+QPointF AnimatedObject::mapToParent(int a, int b)
 {
-    return QWidget::mapToParent(QPoint(a,b));
+    return QGraphicsItem::mapToParent(QPointF(a,b));
 }
 
 
