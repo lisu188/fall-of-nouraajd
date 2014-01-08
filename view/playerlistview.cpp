@@ -50,7 +50,9 @@ void PlayerListView::update()
 
 QRectF PlayerListView::boundingRect() const
 {
-    return childrenBoundingRect();
+    QRectF rect= childrenBoundingRect();
+    rect.setHeight(rect.height()-13);
+    return rect;
 }
 
 void PlayerListView::paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget)
