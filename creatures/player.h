@@ -40,6 +40,7 @@ public:
     void addEntered(MapObject *object);
     std::list<MapObject *> *getEntered();
 
+    void init();
 private:
     PlayerStatsView *playerStatsView;
     PlayerListView *playerInventoryView;
