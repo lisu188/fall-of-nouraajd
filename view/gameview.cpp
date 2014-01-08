@@ -8,13 +8,14 @@ void GameView::start()
     scene->startGame();
     scene->removeItem(&loading);
     init=true;
-    showFullScreen();
+    //showFullScreen();
     resize();
 }
 
 GameView::GameView()
 {
     showFullScreen();
+    setWindowState(Qt::WindowNoState);
     setHorizontalScrollBarPolicy ( Qt::ScrollBarAlwaysOff );
     setVerticalScrollBarPolicy ( Qt::ScrollBarAlwaysOff );
     setViewportUpdateMode(QGraphicsView::BoundingRectViewportUpdate);

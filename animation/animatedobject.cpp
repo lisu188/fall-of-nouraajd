@@ -4,6 +4,8 @@
 #include <destroyer/destroyer.h>
 
 #include <view/gamescene.h>
+#include <QDrag>
+#include <QMimeData>
 
 AnimatedObject::AnimatedObject()
 {
@@ -18,6 +20,11 @@ AnimatedObject::~AnimatedObject()
     if(timer) {
         delete timer;
     }
+}
+
+QPoint AnimatedObject::mapToParent(int a, int b)
+{
+    return QWidget::mapToParent(QPoint(a,b));
 }
 
 
@@ -49,4 +56,13 @@ void AnimatedObject::animate()
     }
     timer->start(time);
     animation->next();
+}
+
+void AnimatedObject::mousePressEvent(QGraphicsSceneMouseEvent *event)
+{
+    QDrag *drag = new QDrag(this);
+    QMimeData *mimeData = new QMimeData();
+    drag->setMimeData(mimeData);
+    drag->setPixmap(this->pixmap());
+    Qt::DropAction dropAction = drag->exec();
 }

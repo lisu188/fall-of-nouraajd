@@ -25,6 +25,10 @@ public:
     virtual QRectF boundingRect() const;
     virtual void paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget);
     void updatePosition(int i);
+
+    // QGraphicsItem interface
+protected:
+    virtual void dropEvent(QGraphicsSceneDragDropEvent *event);
 };
 
 #endif // PLAYERINVENTORYVIEW_H
