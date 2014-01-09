@@ -25,8 +25,10 @@ public:
     static int getStep() {
         return 100;
     }
+    Map *getMap() {
+        return map;
+    }
     void playerMove(int dirx, int diry);
-
     void startGame();
 protected:
     void keyPressEvent(QKeyEvent *keyEvent);

@@ -1,3 +1,4 @@
+#include "gamescene.h"
 #include "listitem.h"
 
 #include <map/tile.h>
@@ -23,8 +24,8 @@ void ListItem::setParentItem(QGraphicsItem *parent)
 void ListItem::setNumber(int i, int x)
 {
     this->QGraphicsItem::setVisible(true);
-    int px=i%x*Tile::size;
-    int py=i/x*Tile::size;
+    int px=i%x*GameScene::getGame()->getMap()->getTileSize();
+    int py=i/x*GameScene::getGame()->getMap()->getTileSize();
     this->QGraphicsItem::setPos(px,py);
 }
 

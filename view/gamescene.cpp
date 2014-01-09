@@ -30,12 +30,14 @@ void GameScene::startGame()
 {
     srand(time(0));
     game=this;
-    map=new Map();
+    map=new Map(this);
+    map->setTileSize(50);
     map->loadFromJson(*ConfigurationProvider::getConfig("save/game.sav"));
     if(!player)
     {
         delete map;
-        map=new Map();
+        map=new Map(this);
+        map->setTileSize(50);
         map->loadFromJson(*ConfigurationProvider::getConfig("config/map.json"));
         player=new Player("Sorcerer");
         map->addObject(player);
@@ -46,7 +48,6 @@ void GameScene::startGame()
 
 GameScene::~GameScene()
 {
-    int startTime=QDateTime::currentMSecsSinceEpoch();
     FILE *infile = fopen("save/game.sav", "w+");
     fclose(infile);
     std::fstream jsonFileStream;
@@ -117,12 +118,12 @@ void GameScene::playerMove(int dirx,int diry)
     int sizex,sizey;
     if(getView())
     {
-        sizex=getView()->width()/Tile::size+1;
-        sizey=getView()->height()/Tile::size+1;
+        sizex=getView()->width()/map->getTileSize()+1;
+        sizey=getView()->height()/map->getTileSize()+1;
     } else
     {
-        sizex=QApplication::desktop()->width()/Tile::size+1;
-        sizey=QApplication::desktop()->height()/Tile::size+1;
+        sizex=QApplication::desktop()->width()/map->getTileSize()+1;
+        sizey=QApplication::desktop()->height()/map->getTileSize()+1;
     }
     map->move(dirx,diry);
     if(!player->isAlive()) {

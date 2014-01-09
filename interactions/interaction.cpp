@@ -69,7 +69,7 @@ Interaction *Interaction::getInteraction(std::string name) {
     return new Interaction(name);
 }
 
-void Interaction::setAnimation(std::string path) { ListItem::setAnimation(path); }
+void Interaction::setAnimation(std::string path) { ListItem::setAnimation(path, 50); }
 
 void Interaction::mousePressEvent(QGraphicsSceneMouseEvent *event) {
     Player *player = GameScene::getPlayer();

@@ -33,9 +33,9 @@ void AnimatedObject::setPixmap(const QPixmap &pixmap)
     QGraphicsPixmapItem::setPixmap(pixmap);
 }
 
-void AnimatedObject::setAnimation(std::string path)
+void AnimatedObject::setAnimation(std::string path,int size)
 {
-    animation=AnimationProvider::getAnim(path);
+    animation=AnimationProvider::getAnim(path,size);
     animate();
 }
 

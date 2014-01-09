@@ -17,7 +17,7 @@ public:
 protected:
     Animation *animation;
     void setPixmap(const QPixmap &pixmap);
-    void setAnimation(std::string path);
+    void setAnimation(std::string path, int size);
 private:
     QTimer *timer;
 private slots:
