@@ -34,7 +34,7 @@ GameView::GameView()
     fightView=new FightView();
     scene->addItem(fightView);
     timer.setSingleShot(true);
-    timer.setInterval(50);
+    timer.setInterval(500);
     connect(&timer, SIGNAL(timeout()), this, SLOT(start()));
     timer.start();
 }
@@ -81,14 +81,14 @@ void GameView::resizeEvent( QResizeEvent * event)
     QWidget::resizeEvent(event);
     if(init)
     {
-        int size=Tile::size;
+        int size=GameScene::getGame()->getMap()->getTileSize();
         Player *player=GameScene::getPlayer();
         centerOn(player->getPosX()*size+size/2,player->getPosY()*size+size/2);
         player->update();
         if(event)
         {
-            int sizex=(event->size().width()/Tile::size+1);
-            int sizey=(event->size().height()/Tile::size+1);
+            int sizex=(event->size().width()/size+1);
+            int sizey=(event->size().height()/size+1);
         }
     }
 }

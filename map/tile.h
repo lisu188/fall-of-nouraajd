@@ -19,21 +19,17 @@ public:
 
     Coords getCoords();
 
-    bool isOn(int x,int y);
-
     void move(int x,int y);
 
     void onStep();
-
-    static int size;
 
     bool canStep() const;
 
     static std::string getRandomTile();
     static Tile *getTile(std::string type, int x, int y,int z);
 
-    void addToGame();
-    void removeFromGame();
+    void addToScene(QGraphicsScene *scene);
+    void removeFromScene(QGraphicsScene *scene);
 
     std::string className;
 
@@ -51,11 +47,13 @@ private:
     int posy;
     int posz;
 
+    int size;
+
     static std::unordered_map<std::string,std::function<void()>> steps;
 
-    // QGraphicsItem interface
 protected:
     virtual void mousePressEvent(QGraphicsSceneMouseEvent *event);
+    virtual void dropEvent(QGraphicsSceneDragDropEvent *event);
 };
 
 void RoadTile();

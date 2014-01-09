@@ -1,10 +1,9 @@
 #include "tile.h"
 
 #include <view/gamescene.h>
+#include <view/mapscene.h>
 #include <configuration/configurationprovider.h>
 #include <destroyer/destroyer.h>
-
-int Tile::size=50;
 
 std::unordered_map<std::string,std::function<void()>> Tile::steps
 {
@@ -14,8 +13,6 @@ std::unordered_map<std::string,std::function<void()>> Tile::steps
 Tile::Tile(std::string name, int x, int y, int z) {
     this->setZValue(0);
     className=name;
-    Json::Value config=(*ConfigurationProvider::getConfig("config/tiles.json"))[className];
-    loadFromJson(config);
     setXYZ(x,y,z);
 }
 
@@ -33,10 +30,7 @@ Coords Tile::getCoords()
     return Coords(posx,posy,posz);
 }
 
-bool Tile::isOn(int x, int y)
-{
-    return posx==x&&posy==y;
-}
+
 
 void Tile::onStep()
 {
@@ -65,20 +59,31 @@ Tile *Tile::getTile(std::string type,int x,int y,int z)
     return new Tile(type,x,y,z);
 }
 
-void Tile::addToGame()
+void Tile::addToScene(QGraphicsScene *scene)
 {
-    GameScene::getGame()->addItem(this);
+    if(dynamic_cast<MapScene*>(scene))
+    {
+        this->QGraphicsPixmapItem::setAcceptDrops(true);
+        size=dynamic_cast<MapScene*>(scene)->getMap()->getTileSize();
+    }
+    else {
+        size=dynamic_cast<GameScene*>(scene)->getMap()->getTileSize();
+    }
+    Json::Value config=(*ConfigurationProvider::getConfig("config/tiles.json"))[className];
+    loadFromJson(config);
+    setPos(posx*size,posy*size);
+    scene->addItem(this);
 }
 
-void Tile::removeFromGame()
+void Tile::removeFromScene(QGraphicsScene *scene)
 {
-    GameScene::getGame()->removeItem(this);
+    scene->removeItem(this);
 }
 
 void Tile::loadFromJson(Json::Value config)
 {
     step=config.get("canStep",true).asBool();
-    setAnimation(config.get("path","").asCString());
+    setAnimation(config.get("path","").asCString(),size);
 }
 
 Json::Value Tile::saveToJson()
@@ -94,11 +99,18 @@ void Tile::setXYZ(int x, int y, int z)
     posx=x;
     posy=y;
     posz=z;
-    setPos(x*size,y*size);
 }
 
 void Tile::mousePressEvent(QGraphicsSceneMouseEvent *event)
 {
+    //tu supress dragging
+}
+
+void Tile::dropEvent(QGraphicsSceneDragDropEvent *event)
+{
+    MapObject *object=(MapObject*)event->source();
+    event->acceptProposedAction();
+    object->moveTo(posx,posy,posz,true);
 }
 
 

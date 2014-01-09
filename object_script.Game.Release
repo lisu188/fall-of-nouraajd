@@ -36,6 +36,8 @@ INPUT(
 ./release\compression.o
 ./release\tile.o
 ./release\dungeon.o
+./release\mapview.o
+./release\mapscene.o
 ./release\moc_animatedobject.o
 ./release\moc_gameview.o
 );

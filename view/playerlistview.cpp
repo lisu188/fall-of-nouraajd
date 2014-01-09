@@ -72,9 +72,6 @@ void PlayerListView::updatePosition(int i)
 void PlayerListView::dropEvent(QGraphicsSceneDragDropEvent *event)
 {
     Item *item=(Item*)(event->source());
-    if(static_cast<Item*>(item))
-    {
-        event->acceptProposedAction();
-        item->onUse(GameScene::getPlayer());
-    }
+    event->acceptProposedAction();
+    item->onUse(GameScene::getPlayer());
 }

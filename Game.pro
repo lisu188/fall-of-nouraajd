@@ -52,7 +52,9 @@ SOURCES += main.cpp \
     configuration/configurationprovider.cpp \
     compression/compression.cpp \
     map/tile.cpp \
-    buildings/dungeon.cpp
+    buildings/dungeon.cpp \
+    view/mapview.cpp \
+    view/mapscene.cpp
 
 INCLUDEPATH += tmp/moc/release_shared
 
@@ -99,7 +101,9 @@ HEADERS  += \
     configuration/configurationprovider.h \
     compression/compression.h \
     map/tile.h \
-    buildings/dungeon.h
+    buildings/dungeon.h \
+    view/mapview.h \
+    view/mapscene.h
 
 win32:CONFIG(release, debug|release): LIBS += -L$$PWD/lib/ -lzdll
 else:win32:CONFIG(debug, debug|release): LIBS += -L$$PWD/lib/ -lzdll

@@ -4,13 +4,14 @@
 #include "gamescene.h"
 
 #include <QGraphicsView>
+#include <QThread>
 #include <view/fightview.h>
 
 class GameView : public QGraphicsView
 {
     Q_OBJECT
 public:
-    explicit GameView();
+    GameView();
     ~GameView();
     void resize();
     FightView *getFightView() {
