@@ -20,6 +20,8 @@ struct MapJsonState {
 std::map<Map *, MapJsonState> mapJsonStates;
 } // namespace
 
+Map::Map(QGraphicsScene *scene) : scene(scene), tileSize(50) {}
+
 Map::~Map() {
     mapJsonStates.erase(this);
     for (std::map<Coords, Tile *>::iterator it = tiles.begin(); it != tiles.end(); ++it)
@@ -93,7 +95,7 @@ void Map::ensureSize(Player *player) {
     const int x = player->getPosX();
     const int y = player->getPosY();
     const int z = player->getPosZ();
-    const int currentMap = z;
+    currentMap = z;
     for (std::list<MapObject *>::iterator object = mapObjects.begin(); object != mapObjects.end(); ++object)
         (*object)->setVisible((*object)->getPosZ() == currentMap);
     std::map<Coords, Tile *>::iterator it = tiles.begin();
@@ -113,7 +115,7 @@ void Map::ensureSize(Player *player) {
             if (tiles.find(coords) == tiles.end()) {
                 Tile *tile = Tile::getTile(getTile(tx, ty, z), tx, ty, z);
                 tiles.insert(std::pair<Coords, Tile *>(coords, tile));
-                tile->addToGame();
+                tile->addToScene(scene);
             }
         }
     }
@@ -311,9 +313,7 @@ MapObject::MapObject(int x, int y, int z, int v) {
     setZValue(v);
     statsView.setParentItem(this);
     statsView.setVisible(false);
-    setPos(x * Tile::size, y * Tile::size);
-    if (GameScene::getGame())
-        GameScene::getGame()->addItem(this);
+    setPos(x * (map ? map->getTileSize() : 50), y * (map ? map->getTileSize() : 50));
 }
 
 MapObject::~MapObject() {
@@ -328,7 +328,7 @@ void MapObject::moveTo(int x, int y, int z, bool silent) {
     posx = x;
     posy = y;
     posz = z;
-    setPos(x * Tile::size, y * Tile::size);
+    setPos(x * (map ? map->getTileSize() : 50), y * (map ? map->getTileSize() : 50));
     if (!silent && map) {
         Tile *tile = Tile::getTile(map->getTile(x, y, z), x, y, z);
         if (tile) {
@@ -364,12 +364,18 @@ void MapObject::move(int x, int y) {
 
 void MapObject::setParentItem(QGraphicsItem *parent) { QGraphicsItem::setParentItem(parent); }
 
-void MapObject::setAnimation(std::string path) { AnimatedObject::setAnimation(path); }
+void MapObject::setAnimation(std::string path) {
+    this->path = path;
+    AnimatedObject::setAnimation(path, map ? map->getTileSize() : 50);
+}
 
 void MapObject::setMap(Map *map) {
     this->map = map;
-    if (GameScene::getGame() && scene() != GameScene::getGame())
-        GameScene::getGame()->addItem(this);
+    if (map && map->getScene() && scene() != map->getScene())
+        map->getScene()->addItem(this);
+    if (!path.empty())
+        setAnimation(path);
+    moveTo(posx, posy, posz, true);
     setVisible(true);
 }
 
@@ -389,4 +395,39 @@ void Map::show() {
     for (std::list<MapObject *>::iterator it = mapObjects.begin(); it != mapObjects.end(); ++it)
         (*it)->setMap(this);
     ensureSize(GameScene::getPlayer());
+}
+
+QGraphicsScene *Map::getScene() const { return scene; }
+
+int Map::getTileSize() const { return tileSize; }
+
+void Map::setTileSize(int value) {
+    if (value <= 0)
+        return;
+    tileSize = value;
+    for (std::map<Coords, Tile *>::iterator it = tiles.begin(); it != tiles.end(); ++it)
+        delete (*it).second;
+    tiles.clear();
+    for (std::list<MapObject *>::iterator it = mapObjects.begin(); it != mapObjects.end(); ++it)
+        (*it)->setMap(this);
+}
+
+void Map::mapUp() { ++currentMap; }
+
+void Map::mapDown() { --currentMap; }
+
+void Map::showAll() {
+    hide();
+    for (std::list<MapObject *>::iterator it = mapObjects.begin(); it != mapObjects.end(); ++it) {
+        (*it)->setMap(this);
+        (*it)->setVisible((*it)->getPosZ() == currentMap);
+    }
+    for (iterator it = begin(); it != end(); ++it) {
+        const Coords coords = (*it).first;
+        if (coords.z != currentMap)
+            continue;
+        Tile *tile = Tile::getTile((*it).second, coords.x, coords.y, coords.z);
+        tiles.insert(std::pair<Coords, Tile *>(coords, tile));
+        tile->addToScene(scene);
+    }
 }

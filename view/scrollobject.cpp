@@ -1,3 +1,4 @@
+#include "gamescene.h"
 #include "scrollobject.h"
 
 #include <view/playerlistview.h>
@@ -8,11 +9,11 @@ ScrollObject::ScrollObject(PlayerListView *stats, bool isRight)
     this->stats=stats;
     if(!isRight)
     {
-        this->setAnimation("images/arrows/left/");
+        this->setAnimation("images/arrows/left/",50);
     }
     else
     {
-        this->setAnimation("images/arrows/right/");
+        this->setAnimation("images/arrows/right/",50);
     }
 }
 
@@ -23,10 +24,10 @@ void ScrollObject::setVisible(bool visible)
     {
         setParentItem(stats);
         if(!isRight) {
-            this->setPos(0,Tile::size*(stats->y));
+            this->setPos(0,GameScene::getGame()->getMap()->getTileSize()*(stats->y));
         }
         else {
-            this->setPos(Tile::size*(stats->x-1),Tile::size*(stats->y));
+            this->setPos(GameScene::getGame()->getMap()->getTileSize()*(stats->x-1),GameScene::getGame()->getMap()->getTileSize()*(stats->y));
         }
     }
     else {

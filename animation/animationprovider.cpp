@@ -6,24 +6,30 @@
 #include <QBitmap>
 #include <QDebug>
 #include <map/tile.h>
+#include <map>
 
-AnimationProvider *AnimationProvider::instance=0;
+std::map<int, AnimationProvider *> AnimationProvider::instances;
 
-Animation *AnimationProvider::getAnim(std::string path)
+Animation *AnimationProvider::getAnim(std::string path,int size)
 {
-    if(!instance)
+    if(instances.find(size)==instances.end())
     {
-        instance=new AnimationProvider();
+        instances.insert(std::pair<int, AnimationProvider *>
+                         (size,new AnimationProvider(size)));
     }
-    return instance->getAnimation(path);
+    return instances.at(size)->getAnimation(path);
 }
 
 void AnimationProvider::terminate()
 {
-    delete instance;
+    for(std::map<int, AnimationProvider *>::iterator it=instances.begin(); it!=instances.end(); it++)
+    {
+        delete (*it).second;
+    }
+    instances.clear();
 }
 
-AnimationProvider::AnimationProvider()
+AnimationProvider::AnimationProvider(int size):tileSize(size)
 {
 }
 
@@ -77,7 +83,7 @@ void AnimationProvider::loadAnim(std::string path)
         }
         if(!image.isNull())
         {
-            img = new QPixmap(image.scaled(Tile::size,Tile::size,Qt::IgnoreAspectRatio,Qt::SmoothTransformation));
+            img = new QPixmap(image.scaled(tileSize,tileSize,Qt::IgnoreAspectRatio,Qt::SmoothTransformation));
         }
         else
         {

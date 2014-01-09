@@ -65,7 +65,7 @@ Item *Item::getItem(const char *name)
 
 void Item::setAnimation(std::string path)
 {
-    AnimatedObject::setAnimation(path);
+    AnimatedObject::setAnimation(path,50);
 }
 
 void Item::mousePressEvent(QGraphicsSceneMouseEvent *event)

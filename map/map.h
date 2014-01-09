@@ -19,6 +19,7 @@ class Player;
 class Map : private std::unordered_map<Coords,std::string,CoordsHasher>
 {
 public:
+    Map(QGraphicsScene *scene);
     ~Map();
     void move(int x,int y);
     std::string getTile(int x, int y, int z);
@@ -42,13 +43,23 @@ public:
     void show();
     Json::Value saveStateToJson();
     void loadStateFromJson(Json::Value config);
+    QGraphicsScene *getScene() const;
+    void showAll();
 
+    void mapUp();
+    void mapDown();
+
+    int getTileSize() const;
+    void setTileSize(int value);
 private:
     std::list<MapObject*> mapObjects;
     void randomDir(int *tab, int rule);
     bool addTile(std::string name, int x, int y, int z);
     std::map<Coords,Tile *> tiles;
     int cacheSize=25;
+    QGraphicsScene *scene;
+    int currentMap=0;
+    int tileSize;
 };
 
 class MapObject : private AnimatedObject
@@ -84,6 +95,8 @@ protected:
     QGraphicsItemAnimation *animation;
     QTimeLine *timer;
     QGraphicsSimpleTextItem statsView;
+private:
+    std::string path;
 public:
     std::string className;
 };
