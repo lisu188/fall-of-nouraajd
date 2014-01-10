@@ -32,13 +32,14 @@ void PlayerListView::update()
     int i=0;
     for(itemIter=items->begin(); itemIter!=items->end(); i++,itemIter++)
     {
-        (*itemIter)->setVisible(false);
-        (*itemIter)->setParentItem(0);
+        ListItem *item=*itemIter;
+        item->setVisible(false);
+        item->setParentItem(0);
         int position=i-curPosition;
         if(position>=0&&position<x*y)
         {
-            (*itemIter)->setParentItem(this);
-            (*itemIter)->setNumber(position,x);
+            item->setParentItem(this);
+            item->setNumber(position,x);
         }
     }
     right->setVisible(items->size()>x*y);

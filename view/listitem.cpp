@@ -6,7 +6,7 @@
 #include <QGraphicsSceneMouseEvent>
 #include <QDrag>
 
-ListItem::ListItem()
+ListItem::ListItem():MapObject(0,0,0,0)
 {
     statsView.setParentItem(this);
     statsView.setVisible(true);

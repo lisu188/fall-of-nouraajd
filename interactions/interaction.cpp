@@ -40,7 +40,15 @@ std::unordered_map<std::string, std::function<void(Creature *, Creature *)>> Int
 
 Interaction::Interaction(std::string name) {
     className = name;
-    Json::Value config = (*ConfigurationProvider::getConfig("config/interactions.json"))[name];
+    MapObject::className = name;
+    loadFromJson((*ConfigurationProvider::getConfig("config/interactions.json"))[name]);
+}
+
+void Interaction::loadFromJson(Json::Value config) {
+    if (config.isArray() && config.size() >= 3) {
+        moveTo(config[(unsigned int)0].asInt(), config[(unsigned int)1].asInt(), config[(unsigned int)2].asInt(), true);
+        return;
+    }
     manaCost = config.get("manaCost", 0).asInt();
     effect = config.get("effect", "").asString();
     std::string anim = config.get("anim", "").asString();
@@ -69,7 +77,7 @@ Interaction *Interaction::getInteraction(std::string name) {
     return new Interaction(name);
 }
 
-void Interaction::setAnimation(std::string path) { ListItem::setAnimation(path, 50); }
+void Interaction::setAnimation(std::string path) { MapObject::setAnimation(path); }
 
 void Interaction::mousePressEvent(QGraphicsSceneMouseEvent *event) {
     Player *player = GameScene::getPlayer();
@@ -286,3 +294,25 @@ bool BloodlashEffect(Effect *effect, Creature *creature) {
 }
 
 bool BarrierEffect(Effect *effect, Creature *creature) { return false; }
+
+void Interaction::onEnter() {
+    Player *player = GameScene::getPlayer();
+    if (!player)
+        return;
+    if (getMap())
+        getMap()->removeObject(this);
+    player->addAction(this);
+    player->updateViews();
+}
+
+void Interaction::onMove() {}
+
+Json::Value Interaction::saveToJson() {
+    Json::Value config(Json::arrayValue);
+    config.append(getPosX());
+    config.append(getPosY());
+    config.append(getPosZ());
+    return config;
+}
+
+bool Interaction::canSave() { return true; }
