@@ -26,7 +26,6 @@ private:
     static std::unordered_map<std::string,std::function<void (Creature *, Creature *)>> actions;
     std::string effect;
     QGraphicsSimpleTextItem statsView;
-
 };
 
 void Attack(Creature *first,Creature *second);

@@ -27,6 +27,10 @@ QPointF AnimatedObject::mapToParent(int a, int b)
     return QGraphicsItem::mapToParent(QPointF(a,b));
 }
 
+int AnimatedObject::getSize() {
+    return this->pixmap().size().height();
+}
+
 
 void AnimatedObject::setPixmap(const QPixmap &pixmap)
 {
@@ -65,4 +69,5 @@ void AnimatedObject::mousePressEvent(QGraphicsSceneMouseEvent *event)
     drag->setMimeData(mimeData);
     drag->setPixmap(this->pixmap());
     Qt::DropAction dropAction = drag->exec();
+    delete drag;
 }
