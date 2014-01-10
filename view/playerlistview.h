@@ -11,7 +11,7 @@ class PlayerListView : public QGraphicsItem
 {
     friend class ScrollObject;
 public:
-    explicit PlayerListView(std::list<ListItem *> *listItems);
+    PlayerListView(std::list<ListItem *> *listItems);
     void update();
 
 private:

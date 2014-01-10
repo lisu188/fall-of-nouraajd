@@ -17,7 +17,7 @@ QRectF PlayerStatsView::boundingRect() const
     return QRect(0,0,75,150);
 }
 
-void PlayerStatsView::paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget)
+void PlayerStatsView::paint(QPainter *painter, const QStyleOptionGraphicsItem *, QWidget *)
 {
     QTextOption opt(Qt::AlignCenter);
     float barx=250;

@@ -8,7 +8,7 @@
 #define ITEM_H
 class Creature;
 class Interaction;
-class Item : private ListItem
+class Item : public ListItem
 {
 public:
     bool isSingleUse();
@@ -16,7 +16,6 @@ public:
     virtual void onEquip(Creature *creature);
     virtual void onUnequip(Creature *creature);
     static Item *getItem(const char *name);
-    std::string className;
     virtual void onUse(Creature *creature)=0;
 
 protected:
@@ -28,6 +27,15 @@ protected:
     Interaction *interaction;
     int power;
     Item();
+
+    // MapObject interface
+public:
+    virtual void onEnter();
+    virtual void onMove() {}
+    virtual Json::Value saveToJson();
+    virtual bool canSave();
+
+    // QGraphicsItem interface
 };
 
 #endif // ITEM_H
