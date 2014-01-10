@@ -14,7 +14,6 @@
 
 namespace {
 struct MapJsonState {
-    Json::Value defaults;
     Json::Value unimplementedObjects;
 };
 std::map<Map *, MapJsonState> mapJsonStates;
@@ -60,10 +59,8 @@ std::string Map::getTile(int x, int y, int z) {
     iterator it = find(Coords(x, y, z));
     if (it != end())
         return (*it).second;
-    std::ostringstream depth;
-    depth << z;
-    const Json::Value defaults = mapJsonStates[this].defaults;
-    const std::string name = defaults.get(depth.str(), Tile::getRandomTile()).asString();
+    std::map<int, std::string>::iterator fallback = defaultTiles.find(z);
+    const std::string name = fallback == defaultTiles.end() ? "GrassTile" : fallback->second;
     addTile(name, x, y, z);
     return name;
 }
@@ -182,7 +179,11 @@ void Map::loadMapFromJson(Json::Value config) {
     Json::Value groups = config.isMember("tiles") ? config["tiles"] : config;
     if (!groups.isObject())
         return;
-    mapJsonStates[this].defaults = groups["default"];
+    defaultTiles.clear();
+    Json::Value defaults = groups["default"];
+    Json::Value::Members depths = defaults.getMemberNames();
+    for (unsigned int i = 0; i < depths.size(); ++i)
+        defaultTiles[std::atoi(depths[i].c_str())] = defaults[depths[i]].asString();
     Json::Value::Members names = groups.getMemberNames();
     for (unsigned int n = 0; n < names.size(); n++) {
         Json::Value coords = groups[names[n]];
@@ -203,8 +204,11 @@ void Map::loadMapFromJson(Json::Value config) {
 
 Json::Value Map::saveMapToJson() {
     Json::Value config(Json::objectValue);
-    if (!mapJsonStates[this].defaults.isNull())
-        config["default"] = mapJsonStates[this].defaults;
+    for (std::map<int, std::string>::iterator it = defaultTiles.begin(); it != defaultTiles.end(); ++it) {
+        std::ostringstream depth;
+        depth << it->first;
+        config["default"][depth.str()] = it->second;
+    }
     for (iterator it = begin(); it != end(); ++it) {
         Json::Value coords(Json::arrayValue);
         coords.append((*it).first.x);
@@ -375,7 +379,7 @@ void MapObject::setMap(Map *map) {
         map->getScene()->addItem(this);
     if (!path.empty())
         setAnimation(path);
-    moveTo(posx, posy, posz, true);
+    MapObject::moveTo(posx, posy, posz, true);
     setVisible(true);
 }
 
@@ -431,3 +435,9 @@ void Map::showAll() {
         tile->addToScene(scene);
     }
 }
+
+int Map::getCurrentMap() { return currentMap; }
+
+Map *MapObject::getMap() { return map; }
+
+int MapObject::getSize() { return map ? map->getTileSize() : 50; }

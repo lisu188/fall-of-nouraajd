@@ -12,6 +12,9 @@ public:
     ~MapView();
 private:
     MapScene *scene;
+protected:
+    void dragMoveEvent(QDragMoveEvent *event);
+
 };
 
 #endif // MAPVIEW_H
