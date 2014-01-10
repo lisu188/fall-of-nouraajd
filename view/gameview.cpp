@@ -93,6 +93,6 @@ void GameView::resizeEvent( QResizeEvent * event)
     }
 }
 
-void GameView::wheelEvent(QWheelEvent *event)
+void GameView::wheelEvent(QWheelEvent *)
 {
 }

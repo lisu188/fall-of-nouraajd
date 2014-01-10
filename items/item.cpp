@@ -17,6 +17,26 @@ Item::Item()
     this->setZValue(1);
 }
 
+void Item::onEnter()
+{
+    this->getMap()->removeObject(this);
+    GameScene::getPlayer()->addItem(this);
+}
+
+Json::Value Item::saveToJson()
+{
+    Json::Value config;
+    config[(unsigned int)0]=getPosX();
+    config[(unsigned int)1]=getPosY();
+    config[(unsigned int)2]=getPosZ();
+    return config;
+}
+
+bool Item::canSave()
+{
+    return true;
+}
+
 bool Item::isSingleUse() {
     return singleUse;
 }
@@ -65,7 +85,7 @@ Item *Item::getItem(const char *name)
 
 void Item::setAnimation(std::string path)
 {
-    AnimatedObject::setAnimation(path,50);
+    MapObject::setAnimation(path);
 }
 
 void Item::mousePressEvent(QGraphicsSceneMouseEvent *event)

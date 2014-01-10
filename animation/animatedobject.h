@@ -27,7 +27,7 @@ private slots:
 
     // QGraphicsItem interface
 protected:
-    virtual void mousePressEvent(QGraphicsSceneMouseEvent *event);
+    virtual void mousePressEvent(QGraphicsSceneMouseEvent *);
 };
 
 #endif // ANIMATEDOBJECT_H

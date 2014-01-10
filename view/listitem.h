@@ -1,9 +1,9 @@
-#include <animation/animatedobject.h>
-
 #ifndef LISTITEM_H
 #define LISTITEM_H
 
-class ListItem : public AnimatedObject
+#include <map/map.h>
+
+class ListItem : public MapObject
 {
 public:
     ListItem();

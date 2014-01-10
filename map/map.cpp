@@ -6,6 +6,10 @@
 #include <sstream>
 #include <creatures/monster.h>
 #include <creatures/player.h>
+#include <items/armor.h>
+#include <items/weapon.h>
+#include <items/potion.h>
+#include <interactions/interaction.h>
 #include <buildings/cave.h>
 #include <buildings/dungeon.h>
 #include <configuration/configurationprovider.h>
@@ -237,8 +241,9 @@ void Map::loadStateFromJson(Json::Value config) {
         Json::Value::Members classes = config.getMemberNames();
         for (unsigned int c = 0; c < classes.size(); c++) {
             const std::string type = classes[c];
-            if (type != "Cave" && type != "Dungeon" && type != "Monster" && type != "Player") {
-                // Unavailable historical world-item APIs cannot safely create MapObjects.
+            if (type != "Cave" && type != "Dungeon" && type != "Monster" && type != "Player" && type != "Item" &&
+                type != "Potion" && type != "Armor" && type != "Weapon" && type != "Interaction") {
+                // Preserve classes whose historical construction API remains unavailable.
                 mapJsonStates[this].unimplementedObjects[type] = config[type];
                 continue;
             }
@@ -262,6 +267,17 @@ void Map::loadStateFromJson(Json::Value config) {
                         Player *player = new Player(names[n], state);
                         GameScene::setPlayer(player);
                         object = player;
+                    }
+                    if ((type == "Item" || type == "Potion" || type == "Armor" || type == "Weapon") &&
+                        state.isArray() && state.size() >= 3) {
+                        object = Item::getItem(names[n].c_str());
+                        if (object)
+                            object->moveTo(state[(unsigned int)0].asInt(), state[(unsigned int)1].asInt(),
+                                           state[(unsigned int)2].asInt(), true);
+                    } else if (type == "Interaction" && state.isArray() && state.size() >= 3) {
+                        object = Interaction::getInteraction(names[n]);
+                        if (object)
+                            object->loadFromJson(state);
                     }
                     if (object)
                         addObject(object);
@@ -287,6 +303,14 @@ Json::Value Map::saveStateToJson() {
             type = "Cave";
         else if (dynamic_cast<Dungeon *>(object))
             type = "Dungeon";
+        else if (dynamic_cast<Potion *>(object))
+            type = "Potion";
+        else if (dynamic_cast<Armor *>(object))
+            type = "Armor";
+        else if (dynamic_cast<Weapon *>(object))
+            type = "Weapon";
+        else if (dynamic_cast<Interaction *>(object))
+            type = "Interaction";
         if (!type.empty())
             config[type][object->className].append(object->saveToJson());
     }
