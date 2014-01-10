@@ -2,7 +2,6 @@
 #define MAP_H
 
 #include "map/coords.h"
-#include "tile.h"
 #include <list>
 #include <QTimer>
 #include <QObject>
@@ -14,9 +13,10 @@
 #include <json/json.h>
 
 class MapObject;
+class Tile;
 class Player;
 
-class Map : private std::unordered_map<Coords,std::string,CoordsHasher>
+class Map : public std::unordered_map<Coords,std::string,CoordsHasher>
 {
 public:
     Map(QGraphicsScene *scene);
@@ -51,6 +51,8 @@ public:
 
     int getTileSize() const;
     void setTileSize(int value);
+
+    int getCurrentMap();
 private:
     std::list<MapObject*> mapObjects;
     void randomDir(int *tab, int rule);
@@ -60,15 +62,16 @@ private:
     QGraphicsScene *scene;
     int currentMap=0;
     int tileSize;
+    std::map<int,std::string> defaultTiles;
 };
 
-class MapObject : private AnimatedObject
+class MapObject : protected AnimatedObject
 {
 public:
     MapObject(int x, int y,int z, int v);
     ~MapObject();
     int posx,posy,posz;
-    void moveTo(int x, int y, int z, bool silent=false);
+    virtual void moveTo(int x, int y, int z, bool silent=false);
 
     int getPosX() const;
     int getPosY() const;
@@ -87,8 +90,10 @@ public:
     virtual Json::Value saveToJson()=0;
     virtual bool canSave()=0;
 
-    void setMap(Map *map);
+    virtual void setMap(Map *map);
+    Map *getMap();
     void setVisible(bool vis);
+    int getSize();
 protected:
     void setAnimation(std::string path);
     Map *map=0;

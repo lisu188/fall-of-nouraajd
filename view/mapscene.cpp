@@ -41,3 +41,14 @@ void MapScene::keyPressEvent(QKeyEvent *event)
     }
     map->showAll();
 }
+
+
+void MapScene::dropEvent(QGraphicsSceneDragDropEvent *event)
+{
+    event->acceptProposedAction();
+    MapObject *object=(MapObject*)(event->source());
+    int posx=event->scenePos().x()/object->getSize();
+    int posy=event->scenePos().y()/object->getSize();
+    object->moveTo(posx,posy,object->getPosZ(),true);
+}
+

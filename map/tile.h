@@ -1,21 +1,24 @@
 #ifndef TILE_H
 #define TILE_H
+
 #include <QGraphicsPixmapItem>
-#include <animation/animatedobject.h>
 #include <map/coords.h>
-#include "map/events/event.h"
+#include <map/events/event.h>
+#include <map/map.h>
 #include <json/json.h>
 #include <unordered_map>
 #include <string>
 #include <functional>
 
-class Tile : protected AnimatedObject
+class Tile : public MapObject
 {
 public:
 
     Tile(std::string name,int x,int y,int z);
 
     ~Tile();
+
+    void moveTo(int x, int y, int z, bool silent=false);
 
     Coords getCoords();
 
@@ -25,7 +28,6 @@ public:
 
     bool canStep() const;
 
-    static std::string getRandomTile();
     static Tile *getTile(std::string type, int x, int y,int z);
 
     void addToScene(QGraphicsScene *scene);
@@ -35,6 +37,10 @@ public:
 
     void loadFromJson(Json::Value config);
     Json::Value saveToJson();
+
+    void setDraggable() {
+        draggable=true;
+    }
 protected:
     bool step;
 
@@ -43,17 +49,21 @@ private:
 
     std::list<Event*> events;
 
-    int posx;
-    int posy;
-    int posz;
-
-    int size;
+    bool draggable=false;
 
     static std::unordered_map<std::string,std::function<void()>> steps;
 
 protected:
     virtual void mousePressEvent(QGraphicsSceneMouseEvent *event);
-    virtual void dropEvent(QGraphicsSceneDragDropEvent *event);
+
+public:
+    virtual void onEnter() {}
+    virtual void onMove() {}
+    virtual bool canSave() {
+        return false;
+    }
+
+    void setMap(Map *map);
 };
 
 void RoadTile();

@@ -10,8 +10,7 @@ std::unordered_map<std::string,std::function<void()>> Tile::steps
     {"RoadTile",&RoadTile}
 };
 
-Tile::Tile(std::string name, int x, int y, int z) {
-    this->setZValue(0);
+Tile::Tile(std::string name, int x, int y, int z) :MapObject(x,y,z,0) {
     className=name;
     setXYZ(x,y,z);
 }
@@ -23,6 +22,14 @@ Tile::~Tile()
         delete *it;
     }
     events.clear();
+}
+
+void Tile::moveTo(int x, int y, int z, bool silent)
+{
+    map->erase(map->find(Coords(posx,posy,posz)));
+    setXYZ(x,y,z);
+    map->insert(std::pair<Coords,std::string>(Coords(posx,posy,posz),className));
+    MapObject::moveTo(x,y,z,silent);
 }
 
 Coords Tile::getCoords()
@@ -49,11 +56,6 @@ bool Tile::canStep() const
     return step;
 }
 
-std::string Tile::getRandomTile()
-{
-    return "GrassTile";
-}
-
 Tile *Tile::getTile(std::string type,int x,int y,int z)
 {
     return new Tile(type,x,y,z);
@@ -61,18 +63,17 @@ Tile *Tile::getTile(std::string type,int x,int y,int z)
 
 void Tile::addToScene(QGraphicsScene *scene)
 {
-    if(dynamic_cast<MapScene*>(scene))
-    {
-        this->QGraphicsPixmapItem::setAcceptDrops(true);
-        size=dynamic_cast<MapScene*>(scene)->getMap()->getTileSize();
-    }
-    else {
-        size=dynamic_cast<GameScene*>(scene)->getMap()->getTileSize();
-    }
     Json::Value config=(*ConfigurationProvider::getConfig("config/tiles.json"))[className];
     loadFromJson(config);
-    setPos(posx*size,posy*size);
-    scene->addItem(this);
+    setPos(posx*getSize(),posy*getSize());
+    if(dynamic_cast<MapScene*>(scene))
+    {
+        this->setDraggable();
+        MapObject::setMap(dynamic_cast<MapScene*>(scene)->getMap());
+    }
+    else {
+        MapObject::setMap(dynamic_cast<GameScene*>(scene)->getMap());
+    }
 }
 
 void Tile::removeFromScene(QGraphicsScene *scene)
@@ -83,7 +84,7 @@ void Tile::removeFromScene(QGraphicsScene *scene)
 void Tile::loadFromJson(Json::Value config)
 {
     step=config.get("canStep",true).asBool();
-    setAnimation(config.get("path","").asCString(),size);
+    setAnimation(config.get("path","").asCString());
 }
 
 Json::Value Tile::saveToJson()
@@ -103,16 +104,17 @@ void Tile::setXYZ(int x, int y, int z)
 
 void Tile::mousePressEvent(QGraphicsSceneMouseEvent *event)
 {
-    //tu supress dragging
+    if(draggable)
+    {
+        AnimatedObject::mousePressEvent(event);
+    }
 }
 
-void Tile::dropEvent(QGraphicsSceneDragDropEvent *event)
+void Tile::setMap(Map *map)
 {
-    MapObject *object=(MapObject*)event->source();
-    event->acceptProposedAction();
-    object->moveTo(posx,posy,posz,true);
+    this->map=map;
+    addToScene(map->getScene());
 }
-
 
 void RoadTile()
 {

@@ -2,6 +2,8 @@
 #include "mapview.h"
 #include <map/tile.h>
 #include <QKeyEvent>
+#include <map/map.h>
+#include <QGraphicsSceneDragDropEvent>
 
 
 MapView::MapView()
@@ -11,9 +13,18 @@ MapView::MapView()
     setWindowState(Qt::WindowNoState);
     scene=new MapScene();
     setScene(scene);
+    setAcceptDrops(true);
 }
 
 MapView::~MapView()
 {
     delete scene;
 }
+
+void MapView::dragMoveEvent(QDragMoveEvent *event)
+{
+    QGraphicsView::dragMoveEvent(event);
+    event->acceptProposedAction();
+}
+
+
