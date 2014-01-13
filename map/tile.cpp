@@ -26,10 +26,14 @@ Tile::~Tile()
 
 void Tile::moveTo(int x, int y, int z, bool silent)
 {
-    map->erase(map->find(Coords(posx,posy,posz)));
-    setXYZ(x,y,z);
-    map->insert(std::pair<Coords,std::string>(Coords(posx,posy,posz),className));
+    if(init)
+    {
+        map->erase(map->find(Coords(posx,posy,posz)));
+        setXYZ(x,y,z);
+        map->insert(std::pair<Coords,std::string>(Coords(posx,posy,posz),className));
+    }
     MapObject::moveTo(x,y,z,silent);
+    init =true;
 }
 
 Coords Tile::getCoords()

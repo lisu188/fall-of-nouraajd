@@ -64,6 +64,8 @@ public:
     }
 
     void setMap(Map *map);
+private:
+    bool init=false;
 };
 
 void RoadTile();
