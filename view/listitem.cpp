@@ -24,8 +24,8 @@ void ListItem::setParentItem(QGraphicsItem *parent)
 void ListItem::setNumber(int i, int x)
 {
     this->QGraphicsItem::setVisible(true);
-    int px=i%x*GameScene::getGame()->getMap()->getTileSize();
-    int py=i/x*GameScene::getGame()->getMap()->getTileSize();
+    int px=i%x*getMap()->getTileSize();
+    int py=i/x*getMap()->getTileSize();
     this->QGraphicsItem::setPos(px,py);
 }
 

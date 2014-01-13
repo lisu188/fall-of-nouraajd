@@ -1,8 +1,11 @@
 #ifndef MAPVIEW_H
 #define MAPVIEW_H
 
+#include <view/playerlistview.h>
 #include <QGraphicsView>
 #include <QThread>
+#include <list>
+
 class MapScene;
 
 class MapView : public QGraphicsView
@@ -12,6 +15,8 @@ public:
     ~MapView();
 private:
     MapScene *scene;
+    std::list<Item *> items;
+    PlayerListView *itemsList;
 protected:
     void dragMoveEvent(QDragMoveEvent *event);
 
