@@ -10,6 +10,7 @@
 #include <animation/animation.h>
 #include <animation/animatedobject.h>
 #include <unordered_map>
+#include <set>
 #include <json/json.h>
 
 class MapObject;
@@ -54,7 +55,7 @@ public:
 
     int getCurrentMap();
 private:
-    std::list<MapObject*> mapObjects;
+    std::set<MapObject*> mapObjects;
     void randomDir(int *tab, int rule);
     bool addTile(std::string name, int x, int y, int z);
     std::map<Coords,Tile *> tiles;
