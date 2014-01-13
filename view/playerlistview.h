@@ -13,6 +13,14 @@ class PlayerListView : public QGraphicsItem
 public:
     PlayerListView(std::list<ListItem *> *listItems);
     void update();
+    Map *getMap()
+    {
+        if(items->size())
+        {
+            return items->front()->getMap();
+        }
+        return 0;
+    }
 
 private:
     int curPosition;

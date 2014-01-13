@@ -7,13 +7,21 @@ ScrollObject::ScrollObject(PlayerListView *stats, bool isRight)
 {
     this->isRight=isRight;
     this->stats=stats;
-    if(!isRight)
+    if(stats->getMap())
     {
-        this->setAnimation("images/arrows/left/",50);
+        tileSize=stats->getMap()->getTileSize();
     }
     else
     {
-        this->setAnimation("images/arrows/right/",50);
+        tileSize=0;
+    }
+    if(!isRight)
+    {
+        this->setAnimation("images/arrows/left/",tileSize);
+    }
+    else
+    {
+        this->setAnimation("images/arrows/right/",tileSize);
     }
 }
 
@@ -24,10 +32,10 @@ void ScrollObject::setVisible(bool visible)
     {
         setParentItem(stats);
         if(!isRight) {
-            this->setPos(0,GameScene::getGame()->getMap()->getTileSize()*(stats->y));
+            this->setPos(0,tileSize*(stats->y));
         }
         else {
-            this->setPos(GameScene::getGame()->getMap()->getTileSize()*(stats->x-1),GameScene::getGame()->getMap()->getTileSize()*(stats->y));
+            this->setPos(tileSize*(stats->x-1),tileSize*(stats->y));
         }
     }
     else {
