@@ -22,7 +22,7 @@ public:
     static void setPlayer(Player *pla);
     static GameScene* getGame();
     static GameView *getView();
-    static int getStep() {
+    static unsigned int getStep() {
         return 100;
     }
     Map *getMap() {
@@ -39,7 +39,7 @@ private:
     void addRandomTile(int x,int y);
     void addTile(Tile *tile);
     void addObject(MapObject *mapObject);
-    int click=0;
+    unsigned int click=0;
 };
 
 #endif // GAMESCENE_H

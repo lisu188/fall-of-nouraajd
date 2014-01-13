@@ -97,8 +97,8 @@ public:
 protected:
     void setAnimation(std::string path);
     Map *map=0;
-    QGraphicsItemAnimation *animation;
-    QTimeLine *timer;
+    QGraphicsItemAnimation *animation=0;
+    QTimeLine *timer=0;
     QGraphicsSimpleTextItem statsView;
 private:
     std::string path;

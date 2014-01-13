@@ -107,7 +107,8 @@ void GameScene::keyPressEvent(QKeyEvent * keyEvent)
 
 void GameScene::playerMove(int dirx,int diry)
 {
-    if((int)QDateTime::currentMSecsSinceEpoch()-click<=(getStep()*1.5))
+    unsigned int curClick=(unsigned int)QDateTime::currentMSecsSinceEpoch();
+    if(curClick-click<=(getStep()*1.5))
     {
         return;
     }
