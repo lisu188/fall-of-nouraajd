@@ -104,9 +104,13 @@ void Item::mousePressEvent(QGraphicsSceneMouseEvent *event)
         else
         {
             QGraphicsItem *parent=this->parentItem();
-            parent->setAcceptDrops(false);
+            if(parent) {
+                parent->setAcceptDrops(false);
+            }
             AnimatedObject::mousePressEvent(event);
-            parent->setAcceptDrops(true);
+            if(parent) {
+                parent->setAcceptDrops(true);
+            }
         }
     }
 }
