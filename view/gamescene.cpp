@@ -134,7 +134,7 @@ void GameScene::playerMove(int dirx,int diry)
 
 GameView *GameScene::getView()
 {
-    if(!GameScene::getGame()->views().size()) {
+    if(!GameScene::getGame()||!GameScene::getGame()->views().size()) {
         return 0;
     }
     return dynamic_cast<GameView*>((*GameScene::getGame()->views().begin()));
