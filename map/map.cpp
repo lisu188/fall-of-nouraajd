@@ -30,8 +30,8 @@ Map::~Map() {
     for (std::map<Coords, Tile *>::iterator it = tiles.begin(); it != tiles.end(); ++it)
         delete (*it).second;
     tiles.clear();
-    std::list<MapObject *> objects(mapObjects);
-    for (std::list<MapObject *>::iterator it = objects.begin(); it != objects.end(); ++it)
+    std::set<MapObject *> objects(mapObjects);
+    for (std::set<MapObject *>::iterator it = objects.begin(); it != objects.end(); ++it)
         (*it)->removeFromGame();
     mapObjects.clear();
     clear();
@@ -45,14 +45,13 @@ void Map::move(int x, int y) {
     std::vector<MapObject *> objects(mapObjects.begin(), mapObjects.end());
     for (std::vector<MapObject *>::iterator it = objects.begin(); it != objects.end(); ++it) {
         MapObject *object = *it;
-        if (object == player || std::find(mapObjects.begin(), mapObjects.end(), object) == mapObjects.end())
+        if (object == player || mapObjects.find(object) == mapObjects.end())
             continue;
         if (object->getPosZ() == player->getPosZ() &&
             (object->getPosX() != player->getPosX() || object->getPosY() != player->getPosY()))
             object->onMove();
-        if (std::find(mapObjects.begin(), mapObjects.end(), object) != mapObjects.end() &&
-            object->getPosZ() == player->getPosZ() && object->getPosX() == player->getPosX() &&
-            object->getPosY() == player->getPosY())
+        if (mapObjects.find(object) != mapObjects.end() && object->getPosZ() == player->getPosZ() &&
+            object->getPosX() == player->getPosX() && object->getPosY() == player->getPosY())
             object->onEnter();
     }
     player->onMove();
@@ -82,13 +81,12 @@ bool Map::addTile(std::string name, int x, int y, int z) {
 void Map::addObject(MapObject *object) {
     if (!object)
         return;
-    if (std::find(mapObjects.begin(), mapObjects.end(), object) == mapObjects.end())
-        mapObjects.push_back(object);
+    mapObjects.insert(object);
     object->setMap(this);
     getTile(object->getPosX(), object->getPosY(), object->getPosZ());
 }
 
-void Map::removeObject(MapObject *object) { mapObjects.remove(object); }
+void Map::removeObject(MapObject *object) { mapObjects.erase(object); }
 
 void Map::ensureSize(Player *player) {
     if (!player)
@@ -97,7 +95,7 @@ void Map::ensureSize(Player *player) {
     const int y = player->getPosY();
     const int z = player->getPosZ();
     currentMap = z;
-    for (std::list<MapObject *>::iterator object = mapObjects.begin(); object != mapObjects.end(); ++object)
+    for (std::set<MapObject *>::iterator object = mapObjects.begin(); object != mapObjects.end(); ++object)
         (*object)->setVisible((*object)->getPosZ() == currentMap);
     std::map<Coords, Tile *>::iterator it = tiles.begin();
     while (it != tiles.end()) {
@@ -232,7 +230,7 @@ void Map::loadStateFromJson(Json::Value config) {
         for (unsigned int n = 0; n < names.size(); n++) {
             Json::Value instances = objects[names[n]];
             for (unsigned int i = 0; i < instances.size(); i++) {
-                for (std::list<MapObject *>::iterator it = mapObjects.begin(); it != mapObjects.end(); ++it)
+                for (std::set<MapObject *>::iterator it = mapObjects.begin(); it != mapObjects.end(); ++it)
                     if ((*it)->className == names[n])
                         (*it)->loadFromJson(instances[i]);
             }
@@ -290,7 +288,7 @@ void Map::loadStateFromJson(Json::Value config) {
 
 Json::Value Map::saveStateToJson() {
     Json::Value config = mapJsonStates[this].unimplementedObjects;
-    for (std::list<MapObject *>::iterator it = mapObjects.begin(); it != mapObjects.end(); ++it) {
+    for (std::set<MapObject *>::iterator it = mapObjects.begin(); it != mapObjects.end(); ++it) {
         MapObject *object = *it;
         if (!object->canSave())
             continue;
@@ -411,8 +409,8 @@ void Map::hide() {
     for (std::map<Coords, Tile *>::iterator it = tiles.begin(); it != tiles.end(); ++it)
         delete (*it).second;
     tiles.clear();
-    std::list<MapObject *> objects(mapObjects);
-    for (std::list<MapObject *>::iterator it = objects.begin(); it != objects.end(); ++it)
+    std::set<MapObject *> objects(mapObjects);
+    for (std::set<MapObject *>::iterator it = objects.begin(); it != objects.end(); ++it)
         (*it)->removeFromGame();
     mapObjects = objects;
 }
@@ -420,7 +418,7 @@ void Map::hide() {
 void MapObject::setVisible(bool visible) { QGraphicsItem::setVisible(visible); }
 
 void Map::show() {
-    for (std::list<MapObject *>::iterator it = mapObjects.begin(); it != mapObjects.end(); ++it)
+    for (std::set<MapObject *>::iterator it = mapObjects.begin(); it != mapObjects.end(); ++it)
         (*it)->setMap(this);
     ensureSize(GameScene::getPlayer());
 }
@@ -436,7 +434,7 @@ void Map::setTileSize(int value) {
     for (std::map<Coords, Tile *>::iterator it = tiles.begin(); it != tiles.end(); ++it)
         delete (*it).second;
     tiles.clear();
-    for (std::list<MapObject *>::iterator it = mapObjects.begin(); it != mapObjects.end(); ++it)
+    for (std::set<MapObject *>::iterator it = mapObjects.begin(); it != mapObjects.end(); ++it)
         (*it)->setMap(this);
 }
 
@@ -446,7 +444,7 @@ void Map::mapDown() { --currentMap; }
 
 void Map::showAll() {
     hide();
-    for (std::list<MapObject *>::iterator it = mapObjects.begin(); it != mapObjects.end(); ++it) {
+    for (std::set<MapObject *>::iterator it = mapObjects.begin(); it != mapObjects.end(); ++it) {
         (*it)->setMap(this);
         (*it)->setVisible((*it)->getPosZ() == currentMap);
     }
