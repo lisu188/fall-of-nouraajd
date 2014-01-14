@@ -15,8 +15,9 @@ private:
     QGraphicsSimpleTextItem statsView;
 protected:
     std::string tooltip;
-    void mousePressEvent(QGraphicsSceneMouseEvent *event);
-    void mouseReleaseEvent(QGraphicsSceneMouseEvent *event);
+
+    virtual void hoverEnterEvent(QGraphicsSceneHoverEvent *event);
+    virtual void hoverLeaveEvent(QGraphicsSceneHoverEvent *event);
 };
 
 #endif // LISTITEM_H

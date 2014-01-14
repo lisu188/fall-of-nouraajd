@@ -48,6 +48,7 @@ void MapScene::dropEvent(QGraphicsSceneDragDropEvent *event)
     event->acceptProposedAction();
     MapObject *object=(MapObject*)(event->source());
     map->addObject(object);
+    object->setParentItem(0);
     int posx=event->scenePos().x()/object->getSize();
     int posy=event->scenePos().y()/object->getSize();
     object->moveTo(posx,posy,object->getPosZ(),true);

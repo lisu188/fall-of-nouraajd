@@ -90,27 +90,20 @@ void Item::setAnimation(std::string path)
 
 void Item::mousePressEvent(QGraphicsSceneMouseEvent *event)
 {
-    if(event->button()==Qt::MouseButton::RightButton)
+    if(singleUse&&GameScene::getPlayer())
     {
-        ListItem::mousePressEvent(event);
+        GameScene::getPlayer()->loseItem(this);
+        delete this;
     }
     else
     {
-        if(singleUse)
-        {
-            GameScene::getPlayer()->loseItem(this);
-            delete this;
+        QGraphicsItem *parent=this->parentItem();
+        if(parent) {
+            parent->setAcceptDrops(false);
         }
-        else
-        {
-            QGraphicsItem *parent=this->parentItem();
-            if(parent) {
-                parent->setAcceptDrops(false);
-            }
-            AnimatedObject::mousePressEvent(event);
-            if(parent) {
-                parent->setAcceptDrops(true);
-            }
+        AnimatedObject::mousePressEvent(event);
+        if(parent) {
+            parent->setAcceptDrops(true);
         }
     }
 }

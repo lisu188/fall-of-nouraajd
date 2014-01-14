@@ -3,6 +3,8 @@
 
 #include <qpainter.h>
 #include <QWidget>
+#include <QDrag>
+#include <QMimeData>
 
 PlayerListView::PlayerListView(std::list<ListItem *> *listItems):items(listItems)
 {
@@ -11,6 +13,7 @@ PlayerListView::PlayerListView(std::list<ListItem *> *listItems):items(listItems
     right=new ScrollObject(this,true);
     left=new ScrollObject(this,false);
     x=4,y=4;
+    pixmap.load("images/item.jpg");
 }
 
 void PlayerListView::update()
@@ -56,12 +59,21 @@ QRectF PlayerListView::boundingRect() const
     if(rect.width()<50||rect.height()<50) {
         return QRectF(0,0,50,50);
     }
-    rect.setHeight(rect.height()-13);
     return rect;
 }
 
 void PlayerListView::paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget)
 {
+    QList<QGraphicsItem*> list=childItems();
+    QList<QGraphicsItem *>::Iterator chilIter;
+    for(chilIter=list.begin(); chilIter!=list.end(); chilIter++)
+    {
+        if(pixmap.size()!=(*chilIter)->boundingRect().size())
+            pixmap=pixmap.scaled((*chilIter)->boundingRect().size().width(),
+                                 (*chilIter)->boundingRect().size().height()
+                                 ,Qt::IgnoreAspectRatio,Qt::SmoothTransformation);
+        painter->drawPixmap((*chilIter)->pos(),pixmap);
+    }
 }
 
 void PlayerListView::updatePosition(int i)
@@ -75,4 +87,16 @@ void PlayerListView::dropEvent(QGraphicsSceneDragDropEvent *event)
     Item *item=(Item*)(event->source());
     event->acceptProposedAction();
     item->onUse(GameScene::getPlayer());
+}
+
+
+void PlayerListView::mousePressEvent(QGraphicsSceneMouseEvent *event)
+{
+    if(!draggable) {
+        return;
+    }
+    QDrag *drag = new QDrag(this);
+    QMimeData *mimeData = new QMimeData();
+    drag->setMimeData(mimeData);
+    drag->exec();
 }

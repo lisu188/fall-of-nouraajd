@@ -40,30 +40,17 @@ void ListItem::setPos(QPointF point)
     this->QGraphicsItem::setPos(point);
 }
 
-void ListItem::mousePressEvent(QGraphicsSceneMouseEvent *event)
+void ListItem::hoverEnterEvent(QGraphicsSceneHoverEvent *event)
 {
-    if(event->button()==Qt::MouseButton::RightButton)
-    {
-        statsView.setText(tooltip.c_str());
-        statsView.setPos(-this->mapToParent(0,0).x(),
-                         -statsView.boundingRect().height());
-        event->setAccepted(true);
-    }
-    else
-    {
-        event->setAccepted(false);
-    }
+    statsView.setVisible(true);
+    statsView.setText(tooltip.c_str());
+    statsView.setPos(0,0-statsView.boundingRect().height());
+    event->setAccepted(true);
 }
 
-void ListItem::mouseReleaseEvent(QGraphicsSceneMouseEvent *event)
+void ListItem::hoverLeaveEvent(QGraphicsSceneHoverEvent *event)
 {
-    if(event->button()==Qt::MouseButton::RightButton)
-    {
-        statsView.setText(" ");
-        event->setAccepted(true);
-    }
-    else
-    {
-        event->setAccepted(false);
-    }
+    statsView.setVisible(false);
+    event->setAccepted(true);
 }
+
