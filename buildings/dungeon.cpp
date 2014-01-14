@@ -2,7 +2,7 @@
 
 #include <view/gamescene.h>
 
-Dungeon::Dungeon(Coords enter, Coords exit):exit(exit),Building(enter.x,enter.y,enter.z)
+Dungeon::Dungeon(Coords enter, Coords exit):Building(enter.x,enter.y,enter.z),exit(exit)
 {
     className="Dungeon";
     this->setAnimation("images/buildings/dungeon/");
