@@ -1,10 +1,8 @@
 #include "compression.h"
-#include <zlib.h>
-#include <stdio.h>
-#include <QDateTime>
-#include <QDebug>
+
 void Compression::compressFile(std::string path)
 {
+    /*
     int startTime=QDateTime::currentMSecsSinceEpoch();
     FILE *infile = fopen(path.c_str(), "rb");
     gzFile outfile = gzopen((path+".sav").c_str(), "wb");
@@ -18,11 +16,13 @@ void Compression::compressFile(std::string path)
     remove(path.c_str());
     int endTime=QDateTime::currentMSecsSinceEpoch()-startTime;
     qDebug()<<"Compressed"<<path.c_str()<<"in"<<endTime<<"ms\n";
+    */
 }
 
 
 void Compression::decompressFile(std::string path)
 {
+    /*
     int startTime=QDateTime::currentMSecsSinceEpoch();
     gzFile infile = gzopen(path.c_str(), "rb");
     FILE *outfile = fopen(path.substr(0,path.find(".sav")).c_str(), "wb");
@@ -35,4 +35,5 @@ void Compression::decompressFile(std::string path)
     fclose(outfile);
     int endTime=QDateTime::currentMSecsSinceEpoch()-startTime;
     qDebug()<<"Decompressed"<<path.c_str()<<"in"<<endTime<<"ms\n";
+    */
 }
