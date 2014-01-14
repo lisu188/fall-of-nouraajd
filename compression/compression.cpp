@@ -1,4 +1,5 @@
 #include "compression.h"
+#include <compression/minizip.h>
 
 void Compression::compressFile(std::string path)
 {
