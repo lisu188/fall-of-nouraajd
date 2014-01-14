@@ -41,6 +41,7 @@ public:
     std::list<MapObject *> *getEntered();
 
     void init();
+    virtual void setMap(Map *map);
 private:
     PlayerStatsView *playerStatsView;
     PlayerListView *playerInventoryView;

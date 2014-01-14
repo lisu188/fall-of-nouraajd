@@ -28,6 +28,7 @@ MapView::MapView()
     }
     itemsList=new PlayerListView((std::list<ListItem *> *)&items);
     scene->addItem(itemsList);
+    itemsList->setDraggable();
     itemsList->setPos(mapToScene(0,0));
     itemsList->update();
 }
@@ -40,7 +41,28 @@ MapView::~MapView()
 void MapView::dragMoveEvent(QDragMoveEvent *event)
 {
     QGraphicsView::dragMoveEvent(event);
+    if(event->source()==itemsList)
+    {
+        itemsList->setPos(this->mapToScene(event->pos()));
+    }
     event->acceptProposedAction();
 }
 
 
+
+
+void MapView::dropEvent(QDropEvent *event)
+{
+    if(event->source()!=itemsList)
+    {
+        QGraphicsView::dropEvent(event);
+        Item *item=(Item*)(event->source());
+        items.remove(item);
+        item=Item::getItem(item->className.c_str());
+        if(item) {
+            item->setMap(itemsList->getMap());
+            items.push_back(item);
+        }
+        itemsList->update();
+    }
+}

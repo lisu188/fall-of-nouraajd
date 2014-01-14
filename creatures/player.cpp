@@ -31,10 +31,6 @@ Player::Player(std::string name, Json::Value config) : Creature(name, config) {
     playerSkillsView->setZValue(3);
     playerEquippedView = new PlayerListView((std::list<ListItem *> *)&equipped);
     playerEquippedView->setZValue(3);
-    GameScene::getGame()->addItem(playerStatsView);
-    GameScene::getGame()->addItem(playerInventoryView);
-    GameScene::getGame()->addItem(playerSkillsView);
-    GameScene::getGame()->addItem(playerEquippedView);
     updateViews();
 }
 
@@ -76,6 +72,15 @@ void Player::removeFromFightList(Creature *creature) { fightList.remove(creature
 std::list<Item *> *Player::getLoot() { return &inventory; }
 
 void Player::updateViews() {
+    Map *map = getMap();
+    if (!map)
+        return;
+    for (std::list<Item *>::iterator item = inventory.begin(); item != inventory.end(); ++item)
+        (*item)->setMap(map);
+    for (std::list<Item *>::iterator item = equipped.begin(); item != equipped.end(); ++item)
+        (*item)->setMap(map);
+    for (std::list<Interaction *>::iterator action = actions.begin(); action != actions.end(); ++action)
+        (*action)->setMap(map);
     playerStatsView->update();
     playerInventoryView->update();
     playerSkillsView->update();
@@ -129,3 +134,14 @@ void Player::fight(Creature *creature) {
 void Player::addEntered(MapObject *object) { entered.push_back(object); }
 
 std::list<MapObject *> *Player::getEntered() { return &entered; }
+
+void Player::setMap(Map *map) {
+    MapObject::setMap(map);
+    if (!map || !dynamic_cast<GameScene *>(map->getScene()))
+        return;
+    map->getScene()->addItem(playerStatsView);
+    map->getScene()->addItem(playerInventoryView);
+    map->getScene()->addItem(playerSkillsView);
+    map->getScene()->addItem(playerEquippedView);
+    updateViews();
+}

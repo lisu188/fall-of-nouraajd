@@ -1,5 +1,6 @@
 #include "creature.h"
 
+#include <QGraphicsSceneHoverEvent>
 #include <algorithm>
 #include <cstdlib>
 #include <fstream>
@@ -42,6 +43,7 @@ Creature::Creature(std::string name, Json::Value config) : MapObject(0, 0, 0, 2)
     hp = 0;
     alive = true;
     gold = 0;
+    setAcceptHoverEvents(true);
 
     loadFromJson(config);
 }
@@ -362,31 +364,25 @@ Interaction *Creature::selectAction() {
     return actions.front();
 }
 
-void Creature::mousePressEvent(QGraphicsSceneMouseEvent *event) {
-    Player *player = GameScene::getPlayer();
-    if (!player || player == this || !alive)
-        return;
-
-    std::list<Creature *> *fightList = player->getFightList();
-    if (std::find(fightList->begin(), fightList->end(), this) == fightList->end()) {
-        player->addToFightList(this);
-    }
-
-    if (GameScene::getView()) {
-        GameScene::getView()->showFightView();
-    }
-    if (event)
-        event->setAccepted(true);
-}
-
-void Creature::mouseReleaseEvent(QGraphicsSceneMouseEvent *event) {
-    if (event)
-        event->setAccepted(true);
-}
-
 Stats Creature::getLevelStats() {
     Stats bonus;
     Json::Value config = (*ConfigurationProvider::getConfig("config/creatures.json"))[className];
     bonus.loadFromJson(config["levelStats"]);
     return bonus;
+}
+
+void Creature::hoverEnterEvent(QGraphicsSceneHoverEvent *event) {
+    std::ostringstream text;
+    text << className << "\nHP: " << hp << "/" << hpMax << "\nMana: " << mana << "/" << manaMax;
+    statsView.setText(text.str().c_str());
+    statsView.setPos(0, -statsView.boundingRect().height());
+    statsView.setVisible(true);
+    if (event)
+        event->accept();
+}
+
+void Creature::hoverLeaveEvent(QGraphicsSceneHoverEvent *event) {
+    statsView.setVisible(false);
+    if (event)
+        event->accept();
 }

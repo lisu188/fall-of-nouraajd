@@ -20,6 +20,10 @@ private:
 protected:
     void dragMoveEvent(QDragMoveEvent *event);
 
+
+    // QWidget interface
+protected:
+    virtual void dropEvent(QDropEvent *event);
 };
 
 #endif // MAPVIEW_H
