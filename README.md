@@ -1,15 +1,12 @@
-# Recovered editor snapshot
+# Recovered game snapshot
 
-Original commit: `10d313da2d8f48f7ca90baa3655a479a80e66e30`. Original tree: `5c81e58140bb504b054695985652e93033bda7a5`.
-Startup was verified from identical recovered sources at `10d313da2d8f48f7ca90baa3655a479a80e66e30`.
+Original commit: `bc84e08dccf3b1f823d058411611908c9cd5a6b0`. Original tree: `caaf8160198fa62439883758671443ce2852908a`.
+Startup was verified from identical recovered sources at `bc84e08dccf3b1f823d058411611908c9cd5a6b0`.
 
-This recovered version compiled and linked on Linux, started the real editor on an isolated Xvfb display,
-loaded its editor map, rendered the screenshot below, and exited normally.
-Gameplay and player behavior were not verified. The surviving original `main.cpp` and
-`config/init.json` selected the editor; their Git blob and SHA256 identities are recorded in
-the attached verification metadata. The original entrypoint and configuration are preserved.
+This recovered version compiled and linked on Linux, started the real game on an isolated Xvfb display,
+loaded its map and a healthy player, rendered the screenshot below, and exited normally.
 
-![Actual startup of this recovered editor](recovery/startup.png)
+![Actual startup of this recovered game](recovery/startup.png)
 
 ## Build and run
 
@@ -51,10 +48,10 @@ The source call, source hash and created/preserved directory are recorded in ver
 compatibilityRepair: 1, exactOriginal: 43, reconstruction: 20.
 
 - `config/creatures.json`: content reconstruction of the BFG-removed original; carried nearest reconstructed config/creatures.json through API-stable #62; surviving files provide no recoverable internal implementation/data delta
-- `config/map.json`: unverified donor reconstruction; bf32a4c93e396bd645769a9957eacd6a75106b62:config/map.json; headerMatch=0; apiOverlap=0/10000; distance=38
+- `config/map.json`: unverified donor reconstruction; bf32a4c93e396bd645769a9957eacd6a75106b62:config/map.json; headerMatch=0; apiOverlap=0/10000; distance=37
 - `creatures/creature.cpp`: working reconstruction
 - `creatures/player.cpp`: working reconstruction
-- `images/buildings/dungeon/0.png`: unverified donor reconstruction; 71a3432e36b5649aabdd63c7807a78e9a8a3749a:images/buildings/dungeon/0.png; headerMatch=0; apiOverlap=0/10000; distance=70
+- `images/buildings/dungeon/0.png`: unverified donor reconstruction; 71a3432e36b5649aabdd63c7807a78e9a8a3749a:images/buildings/dungeon/0.png; headerMatch=0; apiOverlap=0/10000; distance=69
 - `images/loading.jpg`: synthesized visible 32px placeholder; original artwork unavailable; unverified
 - `images/tiles/grass/0.png`: unverified donor reconstruction; c049ac73064442354af6224d06fe1c8b847bb8d9:images/tiles/grass/0.png; headerMatch=0; apiOverlap=0/10000; distance=105 Verified by build and startup of afdd8069 (recovery/evidence/second-original).
 - `images/tiles/ground/0.png`: unverified donor reconstruction; c049ac73064442354af6224d06fe1c8b847bb8d9:images/tiles/ground/0.png; headerMatch=0; apiOverlap=0/10000; distance=105 Verified by build and startup of afdd8069 (recovery/evidence/second-original).
@@ -72,7 +69,7 @@ compatibilityRepair: 1, exactOriginal: 43, reconstruction: 20.
 - `stats/stats.cpp`: content reconstruction of the BFG-removed original; carried validated d30a3f79 stats reconstruction; #63 surviving Stats change only renames a loadFromJson parameter
 - `json/LICENSE`: https://github.com/open-source-parsers/jsoncpp/tree/4fce396c9d3e27a8ab8fb88e94c1676e021ae3a6 upstream distribution license
 
-Restored source fingerprint: `0d1133c192974fa9525154a11f9345907fa96cda7da1fdb58babc60559a6fa38`.
+Restored source fingerprint: `5f8f843b385eb88c83ad6f01c8b23354e9660bb65a6b2d0b73e8b7a463731254`.
 
 The restored source fingerprint identifies inputs before generation. The
 [source preparation metadata](recovery/source-preparation.json) records the original inputs

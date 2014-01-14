@@ -7,7 +7,7 @@
 #include <creatures/player.h>
 
 
-class PlayerListView : public QGraphicsItem
+class PlayerListView : public QGraphicsObject
 {
     friend class ScrollObject;
 public:
@@ -21,12 +21,17 @@ public:
         }
         return 0;
     }
+    void setDraggable() {
+        draggable=true;
+    }
 
 private:
     int curPosition;
     int x,y;
     ScrollObject *right,*left;
     std::list<ListItem *> *items;
+    bool draggable=false;
+    QPixmap pixmap;
 
     // QGraphicsItem interface
 public:
@@ -37,6 +42,10 @@ public:
     // QGraphicsItem interface
 protected:
     virtual void dropEvent(QGraphicsSceneDragDropEvent *event);
+
+    // QGraphicsItem interface
+protected:
+    virtual void mousePressEvent(QGraphicsSceneMouseEvent *event);
 };
 
 #endif // PLAYERINVENTORYVIEW_H
