@@ -54,7 +54,8 @@ SOURCES += main.cpp \
     map/tile.cpp \
     buildings/dungeon.cpp \
     view/mapview.cpp \
-    view/mapscene.cpp
+    view/mapscene.cpp \
+    minizip/miniz.c
 
 INCLUDEPATH += tmp/moc/release_shared
 
@@ -104,10 +105,3 @@ HEADERS  += \
     buildings/dungeon.h \
     view/mapview.h \
     view/mapscene.h
-
-win32:CONFIG(release, debug|release): LIBS += -L$$PWD/lib/ -lzdll
-else:win32:CONFIG(debug, debug|release): LIBS += -L$$PWD/lib/ -lzdll
-else:unix: LIBS += -L$$PWD/lib/ -lzdll
-
-INCLUDEPATH += $$PWD/include
-DEPENDPATH += $$PWD/include

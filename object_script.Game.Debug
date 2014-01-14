@@ -38,6 +38,7 @@ INPUT(
 ./debug\dungeon.o
 ./debug\mapview.o
 ./debug\mapscene.o
+./debug\miniz.o
 ./debug\moc_animatedobject.o
 ./debug\moc_gameview.o
 );
