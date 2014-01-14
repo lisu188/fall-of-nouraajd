@@ -55,7 +55,6 @@ SOURCES += main.cpp \
     buildings/dungeon.cpp \
     view/mapview.cpp \
     view/mapscene.cpp \
-    minizip/miniz.c
 
 INCLUDEPATH += tmp/moc/release_shared
 
@@ -104,4 +103,5 @@ HEADERS  += \
     map/tile.h \
     buildings/dungeon.h \
     view/mapview.h \
-    view/mapscene.h
+    view/mapscene.h \
+    compression/minizip.h
