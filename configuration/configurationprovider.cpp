@@ -37,6 +37,10 @@ Json::Value *ConfigurationProvider::getConfiguration(std::string path)
         return this->at(path);
     }
     loadConfig(path);
+    if(this->find(path)==this->end())
+    {
+        path="assets:/"+path;
+    }
     return getConfiguration(path);
 }
 
@@ -48,6 +52,9 @@ void ConfigurationProvider::loadConfig(std::string path)
     Json::Reader reader;
     reader.parse( jsonFileStream, *config );
     jsonFileStream.close();
+    if(config->isNull()&&path.find("assets")==std::string::npos) {
+        return;
+    }
     this->insert(std::pair<std::string,Json::Value*>(path,config));
     qDebug() << "Loaded configuration:" << path.c_str()<<"\n";
 }
