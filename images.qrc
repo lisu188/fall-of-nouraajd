@@ -36,5 +36,26 @@
         <file>images/arrows/right/0.png</file>
         <file>images/buildings/cave/0.png</file>
         <file>images/buildings/dungeon/0.png</file>
+        <file>images/interactions/abyssalshadows/0.png</file>
+        <file>images/interactions/armorofendlesswinter/0.png</file>
+        <file>images/interactions/attack/0.png</file>
+        <file>images/interactions/backstab/0.png</file>
+        <file>images/interactions/barrier/0.png</file>
+        <file>images/interactions/bloodlash/0.png</file>
+        <file>images/interactions/bloodthirst/0.png</file>
+        <file>images/interactions/chaosblast/0.png</file>
+        <file>images/interactions/chloroform/0.png</file>
+        <file>images/interactions/deathstrike/0.png</file>
+        <file>images/interactions/devour/0.png</file>
+        <file>images/interactions/doubleattack/0.png</file>
+        <file>images/interactions/endlesspain/0.png</file>
+        <file>images/interactions/frostbolt/0.png</file>
+        <file>images/interactions/lethalpoison/0.png</file>
+        <file>images/interactions/magicmissile/0.png</file>
+        <file>images/interactions/mutilation/0.png</file>
+        <file>images/interactions/shadowbolt/0.png</file>
+        <file>images/interactions/sneakattack/0.png</file>
+        <file>images/interactions/strike/0.png</file>
+        <file>images/interactions/stun/0.png</file>
     </qresource>
 </RCC>
