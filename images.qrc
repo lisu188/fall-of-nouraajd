@@ -1,7 +1,5 @@
 <RCC>
     <qresource prefix="/">
-        <file>images/item.jpg</file>
-        <file>images/loading.jpg</file>
         <file>images/tiles/grass/0.png</file>
         <file>images/tiles/ground/0.png</file>
         <file>images/tiles/mountain/0.png</file>
@@ -57,5 +55,7 @@
         <file>images/interactions/sneakattack/0.png</file>
         <file>images/interactions/strike/0.png</file>
         <file>images/interactions/stun/0.png</file>
+        <file>images/item.png</file>
+        <file>images/loading.png</file>
     </qresource>
 </RCC>

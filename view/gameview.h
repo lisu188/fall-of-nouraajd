@@ -28,7 +28,6 @@ private:
     static bool init;
     QTimer timer;
     QGraphicsPixmapItem loading;
-    QPixmap *loadingPixmap;
 private slots:
     void start();
 };
