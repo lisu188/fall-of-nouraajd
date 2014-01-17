@@ -83,7 +83,9 @@ void GameView::mouseDoubleClickEvent(QMouseEvent *e) {
 
 void GameView::resizeEvent( QResizeEvent * event)
 {
-    if(event)QWidget::resizeEvent(event);
+    if(event) {
+        QWidget::resizeEvent(event);
+    }
     if(init)
     {
         int size=GameScene::getGame()->getMap()->getTileSize();
