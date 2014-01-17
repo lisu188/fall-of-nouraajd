@@ -27,6 +27,7 @@ GameView::GameView()
     */
     scene=new GameScene();
     setScene(scene);
+
     QPixmap pixmap(":/images/loading.jpg");
     loading.setPixmap(pixmap.scaled(this->width(),this->height(),
                                     Qt::IgnoreAspectRatio,Qt::SmoothTransformation));
