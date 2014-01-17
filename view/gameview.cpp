@@ -27,10 +27,11 @@ GameView::GameView()
     */
     scene=new GameScene();
     setScene(scene);
-
     QPixmap pixmap(":/images/loading.jpg");
-    loading.setPixmap(pixmap.scaled(this->width(),this->height(),
+    loadingPixmap=new QPixmap(pixmap.scaled(this->width(),this->height(),
                                     Qt::IgnoreAspectRatio,Qt::SmoothTransformation));
+
+    loading.setPixmap(*loadingPixmap);
     scene->addItem(&loading);
     fightView=new FightView();
     scene->addItem(fightView);
@@ -42,6 +43,7 @@ GameView::GameView()
 
 GameView::~GameView()
 {
+    delete loadingPixmap;
     delete scene;
 }
 

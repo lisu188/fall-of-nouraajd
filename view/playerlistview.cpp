@@ -13,7 +13,7 @@ PlayerListView::PlayerListView(std::list<ListItem *> *listItems):items(listItems
     right=new ScrollObject(this,true);
     left=new ScrollObject(this,false);
     x=4,y=4;
-    pixmap.load(":/images/item.jpg");
+    pixmap=new QPixmap(":/images/item.jpg");
 }
 
 void PlayerListView::update()
@@ -68,11 +68,11 @@ void PlayerListView::paint(QPainter *painter, const QStyleOptionGraphicsItem *op
     QList<QGraphicsItem *>::Iterator chilIter;
     for(chilIter=list.begin(); chilIter!=list.end(); chilIter++)
     {
-        if(pixmap.size()!=(*chilIter)->boundingRect().size()&&!(*chilIter)->boundingRect().size().isEmpty())
-            pixmap=pixmap.scaled((*chilIter)->boundingRect().size().width(),
+        if(pixmap->size()!=(*chilIter)->boundingRect().size()&&!(*chilIter)->boundingRect().size().isEmpty())
+            (*pixmap)=pixmap->scaled((*chilIter)->boundingRect().size().width(),
                                  (*chilIter)->boundingRect().size().height()
                                  ,Qt::IgnoreAspectRatio,Qt::SmoothTransformation);
-        painter->drawPixmap((*chilIter)->pos(),pixmap);
+        painter->drawPixmap((*chilIter)->pos(),*pixmap);
     }
 }
 

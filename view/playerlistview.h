@@ -31,7 +31,7 @@ private:
     ScrollObject *right,*left;
     std::list<ListItem *> *items;
     bool draggable=false;
-    QPixmap pixmap;
+    QPixmap *pixmap;
 
     // QGraphicsItem interface
 public:
