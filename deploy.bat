@@ -10,7 +10,7 @@ xcopy /s ".\release\Game.exe" ".\official"
 
 del official.zip
 
-7za a -mx9 -tzip official.zip ".\official\*"
+7za a -tzip official.zip ".\official\*"
 
 rmdir /s /q ".\official"
 
