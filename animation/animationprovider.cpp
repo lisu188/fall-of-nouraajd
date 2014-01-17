@@ -79,7 +79,7 @@ void AnimationProvider::loadAnim(std::string path)
         convert << i;
         result = convert.str();
         QPixmap image((path+result+".png").c_str());
-        if(!image.hasAlphaChannel()) {
+        if(!image.hasAlphaChannel()&&path.find("tiles")==std::string::npos) {
             image.setMask(image.createHeuristicMask());
         }
         if(!image.isNull())

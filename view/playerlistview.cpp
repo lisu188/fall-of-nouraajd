@@ -70,8 +70,8 @@ void PlayerListView::paint(QPainter *painter, const QStyleOptionGraphicsItem *op
     {
         if(pixmap.size()!=(*chilIter)->boundingRect().size()&&!(*chilIter)->boundingRect().size().isEmpty())
             pixmap=pixmap.scaled((*chilIter)->boundingRect().size().width(),
-                                     (*chilIter)->boundingRect().size().height()
-                                     ,Qt::IgnoreAspectRatio,Qt::SmoothTransformation);
+                                 (*chilIter)->boundingRect().size().height()
+                                 ,Qt::IgnoreAspectRatio,Qt::SmoothTransformation);
         painter->drawPixmap((*chilIter)->pos(),pixmap);
     }
 }

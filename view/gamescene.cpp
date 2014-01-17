@@ -31,7 +31,7 @@ void GameScene::startGame()
     srand(time(0));
     game=this;
     map=new Map(this);
-    map->setTileSize(50);
+    map->setTileSize(ConfigurationProvider::getConfig("save/game.sav")->get("gameSize",50).asInt());
     map->loadFromJson(*ConfigurationProvider::getConfig("save/game.sav"));
     if(!player)
     {
@@ -44,6 +44,7 @@ void GameScene::startGame()
     }
     player->updateViews();
     map->ensureSize(player);
+    int size=map->getTileSize();
 }
 
 GameScene::~GameScene()
