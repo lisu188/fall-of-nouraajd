@@ -15,6 +15,9 @@ TEMPLATE = app
  }
 QMAKE_CXXFLAGS += -std=c++11
 
+RESOURCES += \
+    images.qrc
+
 SOURCES += main.cpp \
     map/map.cpp \
     map/events/event.cpp \
@@ -56,7 +59,7 @@ SOURCES += main.cpp \
     map/tile.cpp \
     buildings/dungeon.cpp \
     view/mapview.cpp \
-    view/mapscene.cpp \
+    view/mapscene.cpp
 
 INCLUDEPATH += tmp/moc/release_shared
 
@@ -107,6 +110,3 @@ HEADERS  += \
     view/mapview.h \
     view/mapscene.h \
     compression/minizip.h
-
-RESOURCES += \
-    images.qrc

@@ -9,6 +9,7 @@
 int main(int argc, char *argv[])
 {
     QApplication a(argc, argv);
+    Q_INIT_RESOURCE(images);
     QGraphicsView *view;
     bool editor=(*ConfigurationProvider::getConfig("config/init.json")).get("editor",false).asBool();
     if(editor) {
@@ -21,5 +22,3 @@ int main(int argc, char *argv[])
     delete view;
     return ret;
 }
-
-
