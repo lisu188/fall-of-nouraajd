@@ -13,10 +13,7 @@ class GameView : public QGraphicsView
 public:
     GameView();
     ~GameView();
-    void resize();
-    FightView *getFightView() {
-        return fightView;
-    }
+    FightView *getFightView();
     void showFightView();
 protected:
     void mouseDoubleClickEvent(QMouseEvent *e);

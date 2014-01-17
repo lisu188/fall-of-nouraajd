@@ -11,7 +11,7 @@
 MapScene::MapScene()
 {
     map=new Map(this);
-    map->setTileSize(10);
+   map->setTileSize(ConfigurationProvider::getConfig("save/game.sav")->get("mapSize",10).asInt());
     map->loadFromJson(*ConfigurationProvider::getConfig("config/map.json"));
     map->showAll();
 }
