@@ -14,11 +14,11 @@ del official.zip
 
 rmdir /s /q ".\official"
 
-astyle.exe -n -xe -j --recursive *.cpp *.h *.json --exclude=release/ --exclude=debug/ -Q
-
 .\git\git.exe add -A
 .\git\git.exe commit -m auto
 .\git\git.exe clean -fd -x -e *.zip *.apk
+
+astyle.exe -n -xe -j --recursive *.cpp *.h *.json
 
 mkdir ".\release"
 mkdir ".\debug"
