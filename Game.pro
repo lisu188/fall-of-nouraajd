@@ -105,3 +105,6 @@ HEADERS  += \
     view/mapview.h \
     view/mapscene.h \
     compression/minizip.h
+
+RESOURCES += \
+    images.qrc
