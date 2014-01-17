@@ -10,6 +10,7 @@ void GameView::start()
         scene->startGame();
         scene->removeItem(&loading);
         init=true;
+        timer.setInterval(0);
         timer.start();
     }
     else
@@ -40,7 +41,7 @@ GameView::GameView()
     fightView=new FightView();
     scene->addItem(fightView);
     timer.setSingleShot(true);
-    timer.setInterval(100);
+    timer.setInterval(50);
     connect(&timer, SIGNAL(timeout()), this, SLOT(start()));
     timer.start();
 }
