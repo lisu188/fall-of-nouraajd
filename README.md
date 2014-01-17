@@ -1,7 +1,7 @@
 # Recovered game snapshot
 
-Original commit: `d17093d881d39bad873d61baab7acf703abb23ea`. Original tree: `67e57a41e807263641e7555c20aa4558b398f083`.
-Startup was verified from identical recovered sources at `d17093d881d39bad873d61baab7acf703abb23ea`.
+Original commit: `34752b534da5159a391cec2ecfbe681cc38e1db9`. Original tree: `374080417e9775094eb87ff2459dc8cb097f1f11`.
+Startup was verified from identical recovered sources at `34752b534da5159a391cec2ecfbe681cc38e1db9`.
 
 This recovered version compiled and linked on Linux, started the real game on an isolated Xvfb display,
 loaded its map and a healthy player, rendered the screenshot below, and exited normally.
@@ -45,15 +45,15 @@ The genuine scene writes `save/game.sav` during shutdown. Verification prepared 
 parent directory before startup, without changing source files or replacing existing save data.
 The source call, source hash and created/preserved directory are recorded in verification metadata.
 
-compatibilityRepair: 1, exactOriginal: 43, reconstruction: 21.
+compatibilityRepair: 1, exactOriginal: 44, reconstruction: 21.
 
 - `compression/minizip.h`: unverified upstream reconstruction; https://github.com/richgel999/miniz/tree/v114
 - `config/creatures.json`: content reconstruction of the BFG-removed original; carried nearest reconstructed config/creatures.json through API-stable #62; surviving files provide no recoverable internal implementation/data delta
-- `config/map.json`: unverified donor reconstruction; bf32a4c93e396bd645769a9957eacd6a75106b62:config/map.json; headerMatch=0; apiOverlap=0/10000; distance=24
+- `config/map.json`: unverified donor reconstruction; bf32a4c93e396bd645769a9957eacd6a75106b62:config/map.json; headerMatch=0; apiOverlap=0/10000; distance=23
 - `creatures/creature.cpp`: working reconstruction
 - `creatures/player.cpp`: working reconstruction
-- `images/buildings/dungeon/0.png`: unverified donor reconstruction; 71a3432e36b5649aabdd63c7807a78e9a8a3749a:images/buildings/dungeon/0.png; headerMatch=0; apiOverlap=0/10000; distance=56
-- `images/loading.jpg`: synthesized visible 32px placeholder; original artwork unavailable; unverified
+- `images/buildings/dungeon/0.png`: unverified donor reconstruction; 71a3432e36b5649aabdd63c7807a78e9a8a3749a:images/buildings/dungeon/0.png; headerMatch=0; apiOverlap=0/10000; distance=55
+- `images/loading.png`: synthesized visible 32px placeholder; original artwork unavailable; unverified
 - `images/tiles/grass/0.png`: unverified donor reconstruction; c049ac73064442354af6224d06fe1c8b847bb8d9:images/tiles/grass/0.png; headerMatch=0; apiOverlap=0/10000; distance=105 Verified by build and startup of afdd8069 (recovery/evidence/second-original).
 - `images/tiles/ground/0.png`: unverified donor reconstruction; c049ac73064442354af6224d06fe1c8b847bb8d9:images/tiles/ground/0.png; headerMatch=0; apiOverlap=0/10000; distance=105 Verified by build and startup of afdd8069 (recovery/evidence/second-original).
 - `images/tiles/mountain/0.png`: unverified donor reconstruction; 152007b28631784d3c5e17f2686eb6ef9ff30e46:images/tiles/mountain/0.png; headerMatch=0; apiOverlap=0/10000; distance=155 Verified by build and startup of afdd8069 (recovery/evidence/second-original).
@@ -70,7 +70,7 @@ compatibilityRepair: 1, exactOriginal: 43, reconstruction: 21.
 - `stats/stats.cpp`: content reconstruction of the BFG-removed original; carried validated d30a3f79 stats reconstruction; #63 surviving Stats change only renames a loadFromJson parameter
 - `json/LICENSE`: https://github.com/open-source-parsers/jsoncpp/tree/4fce396c9d3e27a8ab8fb88e94c1676e021ae3a6 upstream distribution license
 
-Restored source fingerprint: `05b5233e4af9fbcd6fa8fe39505960c111055c4e7c1bfab389ebbb79e1c45899`.
+Restored source fingerprint: `2bf1a25b86ad0a9505d112ce372221bd4249245a3f3351b4f158ebd77a12c14a`.
 
 The restored source fingerprint identifies inputs before generation. The
 [source preparation metadata](recovery/source-preparation.json) records the original inputs
