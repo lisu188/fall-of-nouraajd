@@ -5,11 +5,17 @@ bool GameView::init=false;
 
 void GameView::start()
 {
-    scene->startGame();
-    scene->removeItem(&loading);
-    init=true;
-    showFullScreen();
-    resize();
+    if(!init)
+    {
+        scene->startGame();
+        scene->removeItem(&loading);
+        init=true;
+        timer.start();
+    }
+    else
+    {
+        setWindowState(Qt::WindowFullScreen);
+    }
 }
 
 GameView::GameView()
@@ -29,12 +35,12 @@ GameView::GameView()
     setScene(scene);
     QPixmap pixmap(":/images/loading.png");
     loading.setPixmap(pixmap.scaled(this->width(),this->height(),
-                                            Qt::IgnoreAspectRatio,Qt::SmoothTransformation));
+                                    Qt::IgnoreAspectRatio,Qt::SmoothTransformation));
     scene->addItem(&loading);
     fightView=new FightView();
     scene->addItem(fightView);
     timer.setSingleShot(true);
-    timer.setInterval(500);
+    timer.setInterval(100);
     connect(&timer, SIGNAL(timeout()), this, SLOT(start()));
     timer.start();
 }
@@ -44,9 +50,8 @@ GameView::~GameView()
     delete scene;
 }
 
-void GameView::resize()
-{
-    resizeEvent(0);
+FightView *GameView::getFightView() {
+    return fightView;
 }
 
 void GameView::showFightView()
@@ -78,18 +83,13 @@ void GameView::mouseDoubleClickEvent(QMouseEvent *e) {
 
 void GameView::resizeEvent( QResizeEvent * event)
 {
-    QWidget::resizeEvent(event);
+    if(event)QWidget::resizeEvent(event);
     if(init)
     {
         int size=GameScene::getGame()->getMap()->getTileSize();
         Player *player=GameScene::getPlayer();
         centerOn(player->getPosX()*size+size/2,player->getPosY()*size+size/2);
         player->update();
-        if(event)
-        {
-            int sizex=(event->size().width()/size+1);
-            int sizey=(event->size().height()/size+1);
-        }
     }
 }
 
