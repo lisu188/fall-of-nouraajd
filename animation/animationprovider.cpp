@@ -12,6 +12,7 @@ std::map<int, AnimationProvider *> AnimationProvider::instances;
 
 Animation *AnimationProvider::getAnim(std::string path,int size)
 {
+    path=":/"+path;
     if(instances.find(size)==instances.end())
     {
         instances.insert(std::pair<int, AnimationProvider *>
@@ -48,10 +49,6 @@ Animation *AnimationProvider::getAnimation(std::string path)
         return this->at(path);
     }
     loadAnim(path);
-    if(this->find(path)==this->end())
-    {
-        path="assets:/"+path;
-    }
     return getAnimation(path);
 }
 
@@ -101,9 +98,6 @@ void AnimationProvider::loadAnim(std::string path)
             frame=timemap.at(i);
         }
         anim->add(img,frame);
-    }
-    if(anim->size()==0) {
-        return;
     }
     this->insert(std::pair<std::string,Animation*>(path,anim));
     qDebug() << "Loaded animation:" << path.c_str()<<"\n";
