@@ -13,11 +13,7 @@ PlayerListView::PlayerListView(std::list<ListItem *> *listItems):items(listItems
     right=new ScrollObject(this,true);
     left=new ScrollObject(this,false);
     x=4,y=4;
-    pixmap.load("images/item.jpg");
-    if(pixmap.isNull())
-    {
-        pixmap.load("assets:/images/item.jpg");
-    }
+    pixmap.load(":/images/item.jpg");
 }
 
 void PlayerListView::update()
