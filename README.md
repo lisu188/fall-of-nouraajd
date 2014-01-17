@@ -1,10 +1,17 @@
 # Recovered game snapshot
 
-Original commit: `dd491c463722a689dcc62c279d9f595d6c01def6`. Original tree: `5fb3675b948238a5d0d66571a3fe29ea06b17ef1`.
-Startup was verified from identical recovered sources at `dd491c463722a689dcc62c279d9f595d6c01def6`.
+Original commit: `83f5addfdbc6f59cc91ac0a9fee63e7131b6b7d8`. Original tree: `18775f04cc0da5e3d1c3b03749869b145a875f18`.
+Startup was verified from identical recovered sources at `83f5addfdbc6f59cc91ac0a9fee63e7131b6b7d8`.
 
 This recovered version compiled and linked on Linux, started the real game on an isolated Xvfb display,
 loaded its map and a healthy player, rendered the screenshot below, and exited normally.
+
+Startup used supplemental Qt resource compatibility. The original manifest omitted 21 interaction
+images required by the original animation loader. Verification generated a separate manifest from
+the existing original images using the immediately following original commit's resource entries.
+The original manifest, provider and configuration remain unchanged. Their exact hashes, the image
+hashes, generated manifest and compatibility boundary are recorded in the attached preparation proof.
+This result establishes startup with that recorded compatibility step.
 
 ![Actual startup of this recovered game](recovery/startup.png)
 
@@ -23,8 +30,9 @@ source file's original and prepared SHA256, and preserves the recovered snapshot
 Build from this snapshot's root directory:
 
 ```sh
+python3 recovery/prepare_supplemental_resources.py
 python3 recovery/prepare_build_sources.py
-qmake Game.pro QMAKE_CC=gcc-5 QMAKE_CXX=g++-5 QMAKE_LINK=g++-5 'QMAKE_CXXFLAGS+=-include functional' -after TARGET=RecoveryGame DESTDIR=.
+qmake Game.pro QMAKE_CC=gcc-5 QMAKE_CXX=g++-5 QMAKE_LINK=g++-5 'QMAKE_CXXFLAGS+=-include functional' 'RESOURCES+=$$_PRO_FILE_PWD_/recovery_supplemental_images.qrc' -after TARGET=RecoveryGame DESTDIR=.
 make -j"$(nproc)"
 mkdir -p save
 ./RecoveryGame
@@ -49,10 +57,10 @@ compatibilityRepair: 1, exactOriginal: 43, reconstruction: 21.
 
 - `compression/minizip.h`: unverified upstream reconstruction; https://github.com/richgel999/miniz/tree/v114
 - `config/creatures.json`: content reconstruction of the BFG-removed original; carried nearest reconstructed config/creatures.json through API-stable #62; surviving files provide no recoverable internal implementation/data delta
-- `config/map.json`: unverified donor reconstruction; bf32a4c93e396bd645769a9957eacd6a75106b62:config/map.json; headerMatch=0; apiOverlap=0/10000; distance=32
+- `config/map.json`: unverified donor reconstruction; bf32a4c93e396bd645769a9957eacd6a75106b62:config/map.json; headerMatch=0; apiOverlap=0/10000; distance=31
 - `creatures/creature.cpp`: working reconstruction
 - `creatures/player.cpp`: working reconstruction
-- `images/buildings/dungeon/0.png`: unverified donor reconstruction; 71a3432e36b5649aabdd63c7807a78e9a8a3749a:images/buildings/dungeon/0.png; headerMatch=0; apiOverlap=0/10000; distance=64
+- `images/buildings/dungeon/0.png`: unverified donor reconstruction; 71a3432e36b5649aabdd63c7807a78e9a8a3749a:images/buildings/dungeon/0.png; headerMatch=0; apiOverlap=0/10000; distance=63
 - `images/loading.jpg`: synthesized visible 32px placeholder; original artwork unavailable; unverified
 - `images/tiles/grass/0.png`: unverified donor reconstruction; c049ac73064442354af6224d06fe1c8b847bb8d9:images/tiles/grass/0.png; headerMatch=0; apiOverlap=0/10000; distance=105 Verified by build and startup of afdd8069 (recovery/evidence/second-original).
 - `images/tiles/ground/0.png`: unverified donor reconstruction; c049ac73064442354af6224d06fe1c8b847bb8d9:images/tiles/ground/0.png; headerMatch=0; apiOverlap=0/10000; distance=105 Verified by build and startup of afdd8069 (recovery/evidence/second-original).
@@ -70,7 +78,7 @@ compatibilityRepair: 1, exactOriginal: 43, reconstruction: 21.
 - `stats/stats.cpp`: content reconstruction of the BFG-removed original; carried validated d30a3f79 stats reconstruction; #63 surviving Stats change only renames a loadFromJson parameter
 - `json/LICENSE`: https://github.com/open-source-parsers/jsoncpp/tree/4fce396c9d3e27a8ab8fb88e94c1676e021ae3a6 upstream distribution license
 
-Restored source fingerprint: `93a8565ea7716f7287ed5228f1c5f4d84232d72298c7888eb451d1fb88ba06a6`.
+Restored source fingerprint: `2adcec412911a5a3a3d546eb368e424e76a6eb7c4d74a3965bce923843a033ef`.
 
 The restored source fingerprint identifies inputs before generation. The
 [source preparation metadata](recovery/source-preparation.json) records the original inputs

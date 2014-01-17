@@ -1,1 +1,40 @@
-<RCC/>
+<RCC>
+    <qresource prefix="/">
+        <file>images/item.jpg</file>
+        <file>images/loading.jpg</file>
+        <file>images/tiles/grass/0.png</file>
+        <file>images/tiles/ground/0.png</file>
+        <file>images/tiles/mountain/0.png</file>
+        <file>images/tiles/road/0.png</file>
+        <file>images/tiles/water/0.png</file>
+        <file>images/players/warrior/0.png</file>
+        <file>images/players/sorcerer/0.png</file>
+        <file>images/players/assasin/0.png</file>
+        <file>images/monsters/octobogz/0.png</file>
+        <file>images/monsters/octobogz/1.png</file>
+        <file>images/monsters/octobogz/time.txt</file>
+        <file>images/monsters/pritz/0.png</file>
+        <file>images/monsters/pritz/1.png</file>
+        <file>images/monsters/pritz/time.txt</file>
+        <file>images/monsters/pritzmage/0.png</file>
+        <file>images/monsters/pritzmage/1.png</file>
+        <file>images/monsters/pritzmage/2.png</file>
+        <file>images/monsters/pritzmage/3.png</file>
+        <file>images/monsters/pritzmage/time.txt</file>
+        <file>images/items/armors/leatherarmor/0.png</file>
+        <file>images/items/armors/platearmor/0.png</file>
+        <file>images/items/armors/robe/0.png</file>
+        <file>images/items/potions/bless/0.png</file>
+        <file>images/items/potions/life/0.png</file>
+        <file>images/items/potions/mana/0.png</file>
+        <file>images/items/potions/poison/0.png</file>
+        <file>images/items/weapons/chaossword/0.png</file>
+        <file>images/items/weapons/dagger/0.png</file>
+        <file>images/items/weapons/staff/0.png</file>
+        <file>images/items/weapons/sword/0.png</file>
+        <file>images/arrows/left/0.png</file>
+        <file>images/arrows/right/0.png</file>
+        <file>images/buildings/cave/0.png</file>
+        <file>images/buildings/dungeon/0.png</file>
+    </qresource>
+</RCC>
