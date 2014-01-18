@@ -1,11 +1,13 @@
 #include "configurationprovider.h"
 #include <QDebug>
+#include <QFile>
 #include <fstream>
 
 ConfigurationProvider *ConfigurationProvider::instance=0;
 
 Json::Value *ConfigurationProvider::getConfig(std::string path)
 {
+    path=":/"+path;
     if(!instance)
     {
         instance=new ConfigurationProvider();
@@ -37,24 +39,19 @@ Json::Value *ConfigurationProvider::getConfiguration(std::string path)
         return this->at(path);
     }
     loadConfig(path);
-    if(this->find(path)==this->end())
-    {
-        path="assets:/"+path;
-    }
     return getConfiguration(path);
 }
 
 void ConfigurationProvider::loadConfig(std::string path)
 {
+    QFile file(path.c_str());
+    file.open(QIODevice::ReadOnly);
     Json::Value *config=new Json::Value();
-    std::fstream jsonFileStream;
-    jsonFileStream.open (path);
     Json::Reader reader;
-    reader.parse( jsonFileStream, *config );
-    jsonFileStream.close();
-    if(config->isNull()&&path.find("assets")==std::string::npos) {
-        return;
-    }
+    QByteArray data=file.readAll();
+    std::string dataString=data.data();
+    reader.parse( dataString, *config );
+    file.close();
     this->insert(std::pair<std::string,Json::Value*>(path,config));
     qDebug() << "Loaded configuration:" << path.c_str()<<"\n";
 }

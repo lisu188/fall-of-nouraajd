@@ -1,7 +1,7 @@
 # Recovered game snapshot
 
-Original commit: `ae187ade45027e4a0786c4ba843758d32f79af5d`. Original tree: `de23b83456999cbf363e72398199771094e9a5b1`.
-Startup was verified from identical recovered sources at `ae187ade45027e4a0786c4ba843758d32f79af5d`.
+Original commit: `0dcab4e4099037c9b5fd233e232ff971c343f0a9`. Original tree: `f05f6e80bb1e1b04030a218dddedd40f5e770d61`.
+Startup was verified from identical recovered sources at `0dcab4e4099037c9b5fd233e232ff971c343f0a9`.
 
 This recovered version compiled and linked on Linux, started the real game on an isolated Xvfb display,
 loaded its map and a healthy player, rendered the screenshot below, and exited normally.
@@ -45,14 +45,15 @@ The genuine scene writes `save/game.sav` during shutdown. Verification prepared 
 parent directory before startup, without changing source files or replacing existing save data.
 The source call, source hash and created/preserved directory are recorded in verification metadata.
 
-compatibilityRepair: 1, exactOriginal: 44, reconstruction: 19.
+compatibilityRepair: 1, exactOriginal: 44, reconstruction: 20.
 
+- `Game.pro`: working reconstruction
 - `compression/minizip.h`: unverified upstream reconstruction; https://github.com/richgel999/miniz/tree/v114
-- `config/creatures.json`: content reconstruction of the BFG-removed original; carried nearest reconstructed config/creatures.json through API-stable #62; surviving files provide no recoverable internal implementation/data delta
-- `config/map.json`: unverified donor reconstruction; bf32a4c93e396bd645769a9957eacd6a75106b62:config/map.json; headerMatch=0; apiOverlap=0/10000; distance=20
+- `config/creatures.json`: {'evidence': ['historical image directory IDs', 'config/map.json saved creature state when present'], 'inferred': ['missing initial stats', 'levelStats encoding and progression'], 'kind': 'reconstructed-config', 'note': 'Saved state is retained; absent stats are positive synthetic defaults. Build/startup unverified.', 'sourceCommit': '0dcab4e4099037c9b5fd233e232ff971c343f0a9', 'verified': False}
+- `config/map.json`: unverified donor reconstruction; bf32a4c93e396bd645769a9957eacd6a75106b62:config/map.json; headerMatch=0; apiOverlap=0/10000; distance=19
 - `creatures/creature.cpp`: working reconstruction
 - `creatures/player.cpp`: working reconstruction
-- `images/buildings/dungeon/0.png`: unverified donor reconstruction; 71a3432e36b5649aabdd63c7807a78e9a8a3749a:images/buildings/dungeon/0.png; headerMatch=0; apiOverlap=0/10000; distance=52
+- `images/buildings/dungeon/0.png`: unverified donor reconstruction; 71a3432e36b5649aabdd63c7807a78e9a8a3749a:images/buildings/dungeon/0.png; headerMatch=0; apiOverlap=0/10000; distance=51
 - `images/loading.png`: synthesized visible 32px placeholder; original artwork unavailable; unverified
 - `images/tiles/mountain/0.png`: unverified donor reconstruction; 152007b28631784d3c5e17f2686eb6ef9ff30e46:images/tiles/mountain/0.png; headerMatch=0; apiOverlap=0/10000; distance=155 Verified by build and startup of afdd8069 (recovery/evidence/second-original).
 - `images/tiles/road/0.png`: unverified donor reconstruction; 152007b28631784d3c5e17f2686eb6ef9ff30e46:images/tiles/road/0.png; headerMatch=0; apiOverlap=0/10000; distance=155 Verified by build and startup of afdd8069 (recovery/evidence/second-original).
@@ -68,7 +69,7 @@ compatibilityRepair: 1, exactOriginal: 44, reconstruction: 19.
 - `view/gamescene.cpp`: working reconstruction
 - `json/LICENSE`: https://github.com/open-source-parsers/jsoncpp/tree/4fce396c9d3e27a8ab8fb88e94c1676e021ae3a6 upstream distribution license
 
-Restored source fingerprint: `476dae76a77d2e20307c90619b59ed3bf1ee7777c6e8a2db6200fbf65207e7f2`.
+Restored source fingerprint: `cd57d2e30b4b6da0b1f099ba1eddb28e7af45029e5e7d09fd6e097a9f826bec7`.
 
 The restored source fingerprint identifies inputs before generation. The
 [source preparation metadata](recovery/source-preparation.json) records the original inputs

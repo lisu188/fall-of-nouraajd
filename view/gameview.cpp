@@ -10,7 +10,6 @@ void GameView::start()
         scene->startGame();
         scene->removeItem(&loading);
         init=true;
-        timer.setInterval(0);
         timer.start();
     }
     else
