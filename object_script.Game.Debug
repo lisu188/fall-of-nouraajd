@@ -39,6 +39,7 @@ INPUT(
 ./debug\mapview.o
 ./debug\mapscene.o
 ./debug\qrc_images.o
+./debug\qrc_config.o
 ./debug\moc_animatedobject.o
 ./debug\moc_gameview.o
 );

@@ -15,8 +15,7 @@ TEMPLATE = app
  }
 QMAKE_CXXFLAGS += -std=c++11
 
-RESOURCES += \
-    images.qrc
+RE
 
 SOURCES += main.cpp \
     map/map.cpp \
@@ -46,11 +45,8 @@ SOURCES += main.cpp \
     stats/damage.cpp \
     view/fightview.cpp \
     json/json_writer.cpp \
-    json/json_valueiterator.inl \
     json/json_value.cpp \
     json/json_reader.cpp \
-    json/json_internalmap.inl \
-    json/json_internalarray.inl \
     creatures/player.cpp \
     creatures/monster.cpp \
     items/potion.cpp \
@@ -61,52 +57,55 @@ SOURCES += main.cpp \
     view/mapview.cpp \
     view/mapscene.cpp
 
-INCLUDEPATH += tmp/moc/release_shared
-
 HEADERS  += \
-    map/map.h \
-    map/events/event.h \
-    map/coords.h \
-    creatures/creature.h \
-    items/item.h \
+    animation/animatedobject.h \
+    animation/animation.h \
+    animation/animationprovider.h \
     buildings/building.h \
+    buildings/cave.h \
+    buildings/dungeon.h \
     buildings/towers/tower.h \
     buildings/towns/town.h \
-    interactions/interaction.h \
-    buildings/cave.h \
-    animation/animationprovider.h \
-    animation/animation.h \
-    map/playeranimation.h \
-    animation/animatedobject.h \
-    view/playerstatsview.h \
-    view/gameview.h \
-    view/gamescene.h \
-    view/scrollobject.h \
-    items/armor.h \
-    view/playerlistview.h \
-    view/listitem.h \
-    destroyer/destroyer.h \
-    stats/stats.h \
-    stats/damage.h \
-    view/fightview.h \
-    json/writer.h \
-    json/value.h \
-    json/reader.h \
-    json/json_batchallocator.h \
-    json/json.h \
-    json/forwards.h \
-    json/features.h \
-    json/config.h \
-    json/autolink.h \
-    creatures/player.h \
-    creatures/monster.h \
-    items/weapon.h \
-    items/armor.h \
-    items/potion.h \
-    configuration/configurationprovider.h \
     compression/compression.h \
+    compression/minizip.h \
+    configuration/configurationprovider.h \
+    creatures/creature.h \
+    creatures/monster.h \
+    creatures/player.h \
+    destroyer/destroyer.h \
+    include/zconf.h \
+    include/zlib.h \
+    interactions/interaction.h \
+    items/armor.h \
+    items/item.h \
+    items/potion.h \
+    items/weapon.h \
+    json/autolink.h \
+    json/config.h \
+    json/features.h \
+    json/forwards.h \
+    json/json.h \
+    json/json_batchallocator.h \
+    json/reader.h \
+    json/value.h \
+    json/writer.h \
+    map/coords.h \
+    map/events/event.h \
+    map/map.h \
+    map/playeranimation.h \
     map/tile.h \
-    buildings/dungeon.h \
-    view/mapview.h \
+    stats/damage.h \
+    stats/stats.h \
+    view/fightview.h \
+    view/gamescene.h \
+    view/gameview.h \
+    view/listitem.h \
     view/mapscene.h \
-    compression/minizip.h
+    view/mapview.h \
+    view/playerlistview.h \
+    view/playerstatsview.h \
+    view/scrollobject.h
+
+RESOURCES += \
+    config.qrc \
+    images.qrc
