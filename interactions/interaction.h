@@ -68,6 +68,7 @@ public:
     std::string className;
     Stats *getBonus();
     void setBonus(Stats *value);
+    Json::Value saveToJson();
 
 private:
     static std::unordered_map<std::string,std::function<bool (Effect *effect, Creature *)>> effects;
