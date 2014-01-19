@@ -83,7 +83,7 @@ public:
     Json::Value saveToJson();
 
     bool canSave();
-
+    bool applyEffects();
 
 protected:
     int gold;
@@ -110,7 +110,7 @@ protected:
     virtual void hoverEnterEvent(QGraphicsSceneHoverEvent *event);
     virtual void hoverLeaveEvent(QGraphicsSceneHoverEvent *event);
 
-    bool applyEffects();
+
 
     Interaction *selectAction();
     void setItem(void *pointer, Item *newItem);
