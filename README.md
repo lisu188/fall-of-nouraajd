@@ -1,7 +1,7 @@
 # Recovered game snapshot
 
-Original commit: `0dcab4e4099037c9b5fd233e232ff971c343f0a9`. Original tree: `f05f6e80bb1e1b04030a218dddedd40f5e770d61`.
-Startup was verified from identical recovered sources at `0dcab4e4099037c9b5fd233e232ff971c343f0a9`.
+Original commit: `66eff54a33083c0ea5d52283c4103681adb63508`. Original tree: `6606399a97f4fbce716a2cc44b6d0edd55ec4363`.
+Startup was verified from identical recovered sources at `66eff54a33083c0ea5d52283c4103681adb63508`.
 
 This recovered version compiled and linked on Linux, started the real game on an isolated Xvfb display,
 loaded its map and a healthy player, rendered the screenshot below, and exited normally.
@@ -10,20 +10,15 @@ loaded its map and a healthy player, rendered the screenshot below, and exited n
 
 ## Build and run
 
-Install Qt 5 Core, Gui and Widgets development files and a C++ compiler, and Python 3 for the hash-pinned build-source preparation helper. The verified tool versions were:
+Install Qt 5 Core, Gui and Widgets development files and a C++ compiler. The verified tool versions were:
 
 - g++-5 (Ubuntu 5.4.0-6ubuntu1~16.04.12) 5.4.0 20160609
 - QMake version 3.0
 - Using Qt version 5.5.1 in /usr/lib/x86_64-linux-gnu
 
-Use a separate build copy for this version. Its original source contains Windows separators
-in quoted includes. The attached helper changes only those recorded literals, verifies each
-source file's original and prepared SHA256, and preserves the recovered snapshot's provenance.
-
 Build from this snapshot's root directory:
 
 ```sh
-python3 recovery/prepare_build_sources.py
 qmake Game.pro QMAKE_CC=gcc-5 QMAKE_CXX=g++-5 QMAKE_LINK=g++-5 'QMAKE_CXXFLAGS+=-include functional' -after TARGET=RecoveryGame DESTDIR=.
 make -j"$(nproc)"
 mkdir -p save
@@ -49,11 +44,11 @@ compatibilityRepair: 1, exactOriginal: 44, reconstruction: 20.
 
 - `Game.pro`: working reconstruction
 - `compression/minizip.h`: unverified upstream reconstruction; https://github.com/richgel999/miniz/tree/v114
-- `config/creatures.json`: {'evidence': ['historical image directory IDs', 'config/map.json saved creature state when present'], 'inferred': ['missing initial stats', 'levelStats encoding and progression'], 'kind': 'reconstructed-config', 'note': 'Saved state is retained; absent stats are positive synthetic defaults. Build/startup unverified.', 'sourceCommit': '0dcab4e4099037c9b5fd233e232ff971c343f0a9', 'verified': False}
-- `config/map.json`: unverified donor reconstruction; bf32a4c93e396bd645769a9957eacd6a75106b62:config/map.json; headerMatch=0; apiOverlap=0/10000; distance=19
+- `config/creatures.json`: content reconstruction of the BFG-removed original; carried nearest reconstructed config/creatures.json through API-stable #62; surviving files provide no recoverable internal implementation/data delta
+- `config/map.json`: unverified donor reconstruction; bf32a4c93e396bd645769a9957eacd6a75106b62:config/map.json; headerMatch=0; apiOverlap=0/10000; distance=18
 - `creatures/creature.cpp`: working reconstruction
 - `creatures/player.cpp`: working reconstruction
-- `images/buildings/dungeon/0.png`: unverified donor reconstruction; 71a3432e36b5649aabdd63c7807a78e9a8a3749a:images/buildings/dungeon/0.png; headerMatch=0; apiOverlap=0/10000; distance=51
+- `images/buildings/dungeon/0.png`: unverified donor reconstruction; 71a3432e36b5649aabdd63c7807a78e9a8a3749a:images/buildings/dungeon/0.png; headerMatch=0; apiOverlap=0/10000; distance=50
 - `images/loading.png`: synthesized visible 32px placeholder; original artwork unavailable; unverified
 - `images/tiles/mountain/0.png`: unverified donor reconstruction; 152007b28631784d3c5e17f2686eb6ef9ff30e46:images/tiles/mountain/0.png; headerMatch=0; apiOverlap=0/10000; distance=155 Verified by build and startup of afdd8069 (recovery/evidence/second-original).
 - `images/tiles/road/0.png`: unverified donor reconstruction; 152007b28631784d3c5e17f2686eb6ef9ff30e46:images/tiles/road/0.png; headerMatch=0; apiOverlap=0/10000; distance=155 Verified by build and startup of afdd8069 (recovery/evidence/second-original).
@@ -69,12 +64,7 @@ compatibilityRepair: 1, exactOriginal: 44, reconstruction: 20.
 - `view/gamescene.cpp`: working reconstruction
 - `json/LICENSE`: https://github.com/open-source-parsers/jsoncpp/tree/4fce396c9d3e27a8ab8fb88e94c1676e021ae3a6 upstream distribution license
 
-Restored source fingerprint: `cd57d2e30b4b6da0b1f099ba1eddb28e7af45029e5e7d09fd6e097a9f826bec7`.
-
-The restored source fingerprint identifies inputs before generation. The
-[source preparation metadata](recovery/source-preparation.json) records the original inputs
-and every generated or modified file's before/after hashes; the
-[preparation log](recovery/source-preparation.log) retains the actual preparation steps.
+Restored source fingerprint: `03ab6f62ae09c7b6144033b575419bbb94d94c4778bb635b7a892a6b950a4ca2`.
 
 The actual 1278 × 718 screenshot and [verification metadata](recovery/verification.json) belong to
 this source version. Reconstructed code and borrowed assets are identified in that metadata; they are
