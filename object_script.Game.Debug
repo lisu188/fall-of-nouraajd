@@ -42,4 +42,5 @@ INPUT(
 ./debug\qrc_config.o
 ./debug\moc_animatedobject.o
 ./debug\moc_gameview.o
+./debug\moc_gamescene.o
 );

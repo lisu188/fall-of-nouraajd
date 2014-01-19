@@ -112,6 +112,7 @@ void Tile::mousePressEvent(QGraphicsSceneMouseEvent *event)
     {
         AnimatedObject::mousePressEvent(event);
     }
+    event->setAccepted(draggable);
 }
 
 void Tile::setMap(Map *map)
