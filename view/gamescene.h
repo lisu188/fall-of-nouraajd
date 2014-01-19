@@ -45,7 +45,7 @@ private:
     void addTile(Tile *tile);
     void addObject(MapObject *mapObject);
     unsigned int click=0;
-    class StepTimer:public QTimer{
+    class StepTimer:public QTimer {
     public:
         int getDirx() const;
         void setDirx(int value);
