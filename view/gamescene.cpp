@@ -1,27 +1,27 @@
 #include "gamescene.h"
 #include "gameview.h"
 
-#include <QGraphicsView>
-#include <QPointF>
-#include <items/weapon.h>
-#include <items/armor.h>
-#include <creatures/monster.h>
-#include <buildings/cave.h>
-#include <buildings/dungeon.h>
-#include <QApplication>
-#include <QDesktopWidget>
 #include "view/playerlistview.h"
-#include <animation/animationprovider.h>
-#include <configuration/configurationprovider.h>
-#include <destroyer/destroyer.h>
-#include <view/fightview.h>
-#include <fstream>
-#include <json/json.h>
-#include <compression/compression.h>
+#include <QApplication>
 #include <QDateTime>
 #include <QDebug>
-#include <vector>
+#include <QDesktopWidget>
+#include <QGraphicsView>
+#include <QPointF>
+#include <animation/animationprovider.h>
+#include <buildings/cave.h>
+#include <buildings/dungeon.h>
 #include <cmath>
+#include <compression/compression.h>
+#include <configuration/configurationprovider.h>
+#include <creatures/monster.h>
+#include <destroyer/destroyer.h>
+#include <fstream>
+#include <items/armor.h>
+#include <items/weapon.h>
+#include <json/json.h>
+#include <vector>
+#include <view/fightview.h>
 
 Player *GameScene::player = 0;
 GameScene *GameScene::game = 0;
@@ -178,3 +178,7 @@ void GameScene::clickMove() {
     }
     playerMove(stepTimer.getDirx(), stepTimer.getDiry());
 }
+
+unsigned int GameScene::getStep() { return 100; }
+
+Map *GameScene::getMap() { return map; }

@@ -6,8 +6,8 @@
 #include <fstream>
 #include <sstream>
 
-#include <interactions/interaction.h>
 #include <configuration/configurationprovider.h>
+#include <interactions/interaction.h>
 #include <items/armor.h>
 #include <items/weapon.h>
 #include <stats/stats.h>
@@ -140,42 +140,46 @@ void Creature::levelUp() {
     addMana(0);
 }
 
-std::list<Item *> *Creature::getLoot() { return new std::list<Item *>(); }
+std::set<Item *> *Creature::getLoot() { return new std::set<Item *>(); }
 
 void Creature::addAction(Interaction *action) {
     if (!action)
         return;
-    actions.push_back(action);
+    actions.insert(action);
 }
 
 void Creature::addEffect(std::string type, Creature *caster) {
     if (type.empty())
         return;
-    effects.push_back(new Effect(type, caster));
+    effects.insert(new Effect(type, caster));
 }
 
-void Creature::addItem(std::list<Item *> *items) {
-    inventory.merge(*items);
-    // Players show their inventory; a creature still being constructed is not yet one.
+void Creature::addItem(std::set<Item *> *items) {
+    if (!items || items == &inventory)
+        return;
+    inventory.insert(items->begin(), items->end());
+    items->clear();
+    // Players show their inventory; a creature still being constructed is not yet
+    // one.
     Player *player = dynamic_cast<Player *>(this);
     if (player)
         player->updateViews();
 }
 
 void Creature::addItem(Item *item) {
-    std::list<Item *> list;
-    list.push_back(item);
+    std::set<Item *> list;
+    list.insert(item);
     addItem(&list);
 }
 
 void Creature::loseItem(Item *item) {
-    inventory.remove(item);
+    inventory.erase(item);
     Player *player = dynamic_cast<Player *>(this);
     if (player)
         player->updateViews();
 }
 
-std::list<Item *> *Creature::getInventory() { return &inventory; }
+std::set<Item *> *Creature::getInventory() { return &inventory; }
 
 int Creature::getMana() { return mana; }
 
@@ -203,11 +207,11 @@ void Creature::setItem(void *pointer, Item *newItem) {
 
     if (*slot) {
         (*slot)->onUnequip(this);
-        equipped.remove(*slot);
+        equipped.erase(*slot);
     }
     *slot = newItem;
     if (*slot) {
-        equipped.push_back(*slot);
+        equipped.insert(*slot);
         (*slot)->onEquip(this);
     }
 }
@@ -236,7 +240,8 @@ bool Creature::isAlive() const { return alive; }
 
 void Creature::setAlive() { alive = true; }
 
-// Creatures are described by a configuration or a saved game: both use the same keys.
+// Creatures are described by a configuration or a saved game: both use the same
+// keys.
 void Creature::loadFromJson(Json::Value config) {
     animPath = config.get("path", "").asString();
     setAnimation(animPath);
@@ -247,12 +252,12 @@ void Creature::loadFromJson(Json::Value config) {
     for (unsigned int i = 0; i < names.size(); i++)
         addAction(Interaction::getInteraction(names[i].asString()));
 
-    std::list<Item *> items;
+    std::set<Item *> items;
     names = config["items"];
     for (unsigned int i = 0; i < names.size(); i++) {
         Item *item = Item::getItem(names[i].asCString());
         if (item)
-            items.push_back(item);
+            items.insert(item);
     }
     addItem(&items);
 
@@ -291,7 +296,7 @@ Json::Value Creature::saveToJson() {
     config["mana"] = mana;
     Stats initialStats;
     initialStats.loadFromJson(stats.saveToJson());
-    for (std::list<Item *>::iterator it = equipped.begin(); it != equipped.end(); ++it) {
+    for (std::set<Item *>::iterator it = equipped.begin(); it != equipped.end(); ++it) {
         Stats bonus;
         bonus.loadFromJson((*ConfigurationProvider::getConfig("config/items.json"))[(*it)->className]["bonus"]);
         initialStats.removeBonus(bonus);
@@ -301,11 +306,11 @@ Json::Value Creature::saveToJson() {
     config["coords"]["Y"] = getPosY();
     config["coords"]["Z"] = getPosZ();
     Json::Value names(Json::arrayValue);
-    for (std::list<Interaction *>::iterator it = actions.begin(); it != actions.end(); ++it)
+    for (std::set<Interaction *>::iterator it = actions.begin(); it != actions.end(); ++it)
         names.append((*it)->className);
     config["actions"] = names;
     Json::Value items(Json::arrayValue);
-    for (std::list<Item *>::iterator it = inventory.begin(); it != inventory.end(); ++it)
+    for (std::set<Item *>::iterator it = inventory.begin(); it != inventory.end(); ++it)
         items.append((*it)->className);
     config["items"] = items;
     if (weapon)
@@ -323,17 +328,17 @@ int Creature::getManaMax() { return manaMax; }
 
 int Creature::getLevel() { return level; }
 
-// Applies every active effect for this turn. Returns true when an effect (such as
-// Stun) prevents the creature from acting; finished effects are dropped.
+// Applies every active effect for this turn. Returns true when an effect (such
+// as Stun) prevents the creature from acting; finished effects are dropped.
 bool Creature::applyEffects() {
     bool skipTurn = false;
-    std::list<Effect *> active(effects.begin(), effects.end());
-    for (std::list<Effect *>::iterator it = active.begin(); it != active.end(); ++it) {
+    std::set<Effect *> active(effects.begin(), effects.end());
+    for (std::set<Effect *>::iterator it = active.begin(); it != active.end(); ++it) {
         Effect *effect = *it;
         if (effect->apply(this))
             skipTurn = true;
         if (effect->getTimeLeft() <= 0) {
-            effects.remove(effect);
+            effects.erase(effect);
             delete effect;
         }
     }
@@ -357,11 +362,11 @@ Interaction *Creature::selectAction() {
     if (actions.empty())
         return 0;
 
-    for (std::list<Interaction *>::iterator it = actions.begin(); it != actions.end(); ++it) {
+    for (std::set<Interaction *>::iterator it = actions.begin(); it != actions.end(); ++it) {
         if ((*it)->getManaCost() <= mana)
             return *it;
     }
-    return actions.front();
+    return *actions.begin();
 }
 
 Stats Creature::getLevelStats() {
@@ -386,3 +391,7 @@ void Creature::hoverLeaveEvent(QGraphicsSceneHoverEvent *event) {
     if (event)
         event->accept();
 }
+
+std::set<Item *> *Creature::getEquipped() { return &equipped; }
+
+int Creature::getExp() { return exp; }

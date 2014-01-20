@@ -6,7 +6,7 @@
 #include <QDrag>
 #include <QMimeData>
 
-PlayerListView::PlayerListView(std::list<ListItem *> *listItems):items(listItems)
+PlayerListView::PlayerListView(std::set<ListItem *> *listItems):items(listItems)
 {
     this->setZValue(3);
     curPosition=0;
@@ -31,7 +31,7 @@ void PlayerListView::update()
         (*chilIter)->setParentItem(0);
         (*chilIter)->setVisible(false);
     }
-    std::list<ListItem *>::iterator itemIter;
+    std::set<ListItem *>::iterator itemIter;
     int i=0;
     for(itemIter=items->begin(); itemIter!=items->end(); i++,itemIter++)
     {
@@ -51,6 +51,19 @@ void PlayerListView::update()
     {
         GameScene::getPlayer()->update();
     }
+}
+
+Map *PlayerListView::getMap()
+{
+    if(items->size())
+    {
+        return (*items->begin())->getMap();
+    }
+    return 0;
+}
+
+void PlayerListView::setDraggable() {
+    draggable=true;
 }
 
 QRectF PlayerListView::boundingRect() const

@@ -72,14 +72,14 @@ void Monster::levelUp()
     addMana(0);
 }
 
-std::list<Item *> *Monster::getLoot()
+std::set<Item *> *Monster::getLoot()
 {
-    std::list<Item *>* list=new std::list<Item *>();
+    std::set<Item *>* list=new std::set<Item *>();
     if(rand()%3==0) {
-        list->push_back(Item::getItem("ManaPotion"));
+        list->insert(Item::getItem("ManaPotion"));
     }
     else {
-        list->push_back(Item::getItem("LifePotion"));
+        list->insert(Item::getItem("LifePotion"));
     }
     return list;
 }

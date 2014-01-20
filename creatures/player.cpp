@@ -12,24 +12,33 @@
 
 #include <items/armor.h>
 #include <items/weapon.h>
-#include <view/playerlistview.h>
-#include <stats/stats.h>
 #include <math.h>
+#include <stats/stats.h>
+#include <view/playerlistview.h>
 
+#include <QDebug>
 #include <interactions/interaction.h>
 #include <view/fightview.h>
-#include <QDebug>
+
+namespace {
+struct PlayerLists {
+    std::set<ListItem *> inventory;
+    std::set<ListItem *> skills;
+    std::set<ListItem *> equipped;
+};
+std::map<Player *, PlayerLists> playerLists;
+} // namespace
 
 Player::Player(std::string name, Json::Value config) : Creature(name, config) {
     gold = 0;
     turn = 0;
     playerStatsView = new PlayerStatsView(this);
     playerStatsView->setZValue(3);
-    playerInventoryView = new PlayerListView((std::list<ListItem *> *)&inventory);
+    playerInventoryView = new PlayerListView(&playerLists[this].inventory);
     playerInventoryView->setZValue(3);
-    playerSkillsView = new PlayerListView((std::list<ListItem *> *)&actions);
+    playerSkillsView = new PlayerListView(&playerLists[this].skills);
     playerSkillsView->setZValue(3);
-    playerEquippedView = new PlayerListView((std::list<ListItem *> *)&equipped);
+    playerEquippedView = new PlayerListView(&playerLists[this].equipped);
     playerEquippedView->setZValue(3);
     updateViews();
 }
@@ -38,7 +47,10 @@ Player::Player(std::string name) : Player(name, (*ConfigurationProvider::getConf
     className = name;
 }
 
-Player::~Player() { inventory.clear(); }
+Player::~Player() {
+    playerLists.erase(this);
+    inventory.clear();
+}
 
 void Player::onMove() {
     addMana(manaRegRate);
@@ -69,18 +81,28 @@ void Player::addToFightList(Creature *creature) { fightList.push_back(creature);
 
 void Player::removeFromFightList(Creature *creature) { fightList.remove(creature); }
 
-std::list<Item *> *Player::getLoot() { return &inventory; }
+std::set<Item *> *Player::getLoot() { return &inventory; }
 
 void Player::updateViews() {
     Map *map = getMap();
     if (!map)
         return;
-    for (std::list<Item *>::iterator item = inventory.begin(); item != inventory.end(); ++item)
+    for (std::set<Item *>::iterator item = inventory.begin(); item != inventory.end(); ++item)
         (*item)->setMap(map);
-    for (std::list<Item *>::iterator item = equipped.begin(); item != equipped.end(); ++item)
+    for (std::set<Item *>::iterator item = equipped.begin(); item != equipped.end(); ++item)
         (*item)->setMap(map);
-    for (std::list<Interaction *>::iterator action = actions.begin(); action != actions.end(); ++action)
+    for (std::set<Interaction *>::iterator action = actions.begin(); action != actions.end(); ++action)
         (*action)->setMap(map);
+    PlayerLists &lists = playerLists[this];
+    lists.inventory.clear();
+    lists.skills.clear();
+    lists.equipped.clear();
+    for (Item *item : inventory)
+        lists.inventory.insert(item);
+    for (Interaction *action : actions)
+        lists.skills.insert(action);
+    for (Item *item : equipped)
+        lists.equipped.insert(item);
     playerStatsView->update();
     playerInventoryView->update();
     playerSkillsView->update();
