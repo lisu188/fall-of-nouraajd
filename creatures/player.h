@@ -54,8 +54,6 @@ private:
         BackPackObject();
     protected:
         void mousePressEvent(QGraphicsSceneMouseEvent *event);
-    private:
-        QPixmap pixmap;
     } backpack;
 
     int turn;
