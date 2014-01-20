@@ -98,3 +98,10 @@ void GameView::resizeEvent( QResizeEvent * event)
 void GameView::wheelEvent(QWheelEvent *)
 {
 }
+
+
+void GameView::dragMoveEvent(QDragMoveEvent *e)
+{
+    QGraphicsView::dragMoveEvent(e);
+    repaint();
+}

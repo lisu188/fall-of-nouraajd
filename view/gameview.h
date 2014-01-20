@@ -19,6 +19,7 @@ protected:
     void mouseDoubleClickEvent(QMouseEvent *e);
     void resizeEvent(QResizeEvent *event);
     virtual void wheelEvent(QWheelEvent *);
+    virtual void dragMoveEvent(QDragMoveEvent *e);
 private:
     GameScene *scene;
     FightView *fightView;
