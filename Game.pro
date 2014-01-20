@@ -1,21 +1,23 @@
-#-------------------------------------------------
-#
-# Project created by QtCreator 2013-10-30T13:16:43
-#
-#-------------------------------------------------
+ # ------------------------------------------------ -
+ #
+ # Project created by QtCreator 2013 - 10 - 30T13 : 16 : 43
+ #
+ # ------------------------------------------------ -
 
-QT       += core gui
+QT += core gui
 
-greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
+greaterThan(QT_MAJOR_VERSION, 4) : QT += widgets
 
 TARGET = Game
 TEMPLATE = app
- win32 {
-         CONFIG += console
- }
+
+win32 {
+CONFIG += console
+}
+
 QMAKE_CXXFLAGS += -std=c++11
 
-RE
+        RE
 
 SOURCES += main.cpp \
     map/map.cpp \
