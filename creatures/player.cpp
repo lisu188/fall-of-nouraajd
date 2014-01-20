@@ -176,8 +176,7 @@ void Player::init() {
 }
 
 Player::BackPackObject::BackPackObject() {
-    pixmap.load(":/images/backpack.png");
-    setPixmap(pixmap);
+    setPixmap(QPixmap(":/images/backpack.png"));
     setZValue(4);
     setAcceptedMouseButtons(Qt::LeftButton);
 }

@@ -17,12 +17,9 @@ CONFIG += console
 
 QMAKE_CXXFLAGS += -std=c++11
 
-        RESOURCES +=  \
-        images.qrc \
-        config.qrc
+        RE
 
-SOURCES += \
-    creatures/player.cpp \
+SOURCES += creatures/player.cpp \
     view/fightview.cpp \
     map/map.cpp \
     view/gameview.cpp \
@@ -63,40 +60,27 @@ SOURCES += \
     animation/animation.cpp \
     destroyer/destroyer.cpp
 
-HEADERS += \
-    creatures/player.h \
-    view/gameview.h \
-    map/map.h \
-    creatures/creature.h \
-    view/charview.h \
-    view/mapview.h \
-    view/playerlistview.h \
-    view/gamescene.h \
-    creatures/monster.h \
-    view/fightview.h \
-    interactions/interaction.h \
-    compression/minizip.h \
-    view/listitem.h \
-    view/scrollobject.h \
-    map/tile.h \
-    items/item.h \
-    view/playerstatsview.h \
+HEADERS  += \
     animation/animatedobject.h \
-    view/mapscene.h \
+    animation/animation.h \
     animation/animationprovider.h \
+    buildings/building.h \
+    buildings/cave.h \
+    buildings/dungeon.h \
+    buildings/towers/tower.h \
+    buildings/towns/town.h \
+    compression/compression.h \
+    compression/minizip.h \
+    configuration/configurationprovider.h \
+    creatures/creature.h \
+    creatures/monster.h \
+    creatures/player.h \
+    destroyer/destroyer.h \
+    interactions/interaction.h \
     items/armor.h \
+    items/item.h \
     items/potion.h \
     items/weapon.h \
-    buildings/dungeon.h \
-    buildings/cave.h \
-    buildings/towns/town.h \
-    buildings/towers/tower.h \
-    buildings/building.h \
-    map/coords.h \
-    stats/damage.h \
-    map/events/event.h \
-    map/playeranimation.h \
-    stats/stats.h \
     json/autolink.h \
     json/config.h \
     json/features.h \
@@ -106,7 +90,24 @@ HEADERS += \
     json/reader.h \
     json/value.h \
     json/writer.h \
-    animation/animation.h \
-    compression/compression.h \
-    configuration/configurationprovider.h \
-    destroyer/destroyer.h
+    map/coords.h \
+    map/events/event.h \
+    map/map.h \
+    map/playeranimation.h \
+    map/tile.h \
+    stats/damage.h \
+    stats/stats.h \
+    view/charview.h \
+    view/fightview.h \
+    view/gamescene.h \
+    view/gameview.h \
+    view/listitem.h \
+    view/mapscene.h \
+    view/mapview.h \
+    view/playerlistview.h \
+    view/playerstatsview.h \
+    view/scrollobject.h
+
+RESOURCES += \
+    config.qrc \
+    images.qrc
