@@ -41,7 +41,6 @@ public:
 
     void ensureSize(Player *player);
     void hide();
-    void show();
     Json::Value saveStateToJson();
     void loadStateFromJson(Json::Value config);
     QGraphicsScene *getScene() const;
@@ -59,7 +58,6 @@ private:
     void randomDir(int *tab, int rule);
     bool addTile(std::string name, int x, int y, int z);
     std::map<Coords,Tile *> tiles;
-    int cacheSize=25;
     QGraphicsScene *scene;
     int currentMap=0;
     int tileSize;

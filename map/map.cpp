@@ -1,19 +1,19 @@
 #include "map.h"
 
 #include <algorithm>
-#include <cstdlib>
-#include <vector>
-#include <sstream>
-#include <creatures/monster.h>
-#include <creatures/player.h>
-#include <items/armor.h>
-#include <items/weapon.h>
-#include <items/potion.h>
-#include <interactions/interaction.h>
 #include <buildings/cave.h>
 #include <buildings/dungeon.h>
 #include <configuration/configurationprovider.h>
+#include <creatures/monster.h>
+#include <creatures/player.h>
+#include <cstdlib>
+#include <interactions/interaction.h>
+#include <items/armor.h>
+#include <items/potion.h>
+#include <items/weapon.h>
 #include <map/tile.h>
+#include <sstream>
+#include <vector>
 #include <view/gamescene.h>
 
 namespace {
@@ -91,6 +91,7 @@ void Map::removeObject(MapObject *object) { mapObjects.erase(object); }
 void Map::ensureSize(Player *player) {
     if (!player)
         return;
+    const int cacheSize = 25;
     const int x = player->getPosX();
     const int y = player->getPosY();
     const int z = player->getPosZ();
@@ -241,7 +242,8 @@ void Map::loadStateFromJson(Json::Value config) {
             const std::string type = classes[c];
             if (type != "Cave" && type != "Dungeon" && type != "Monster" && type != "Player" && type != "Item" &&
                 type != "Potion" && type != "Armor" && type != "Weapon" && type != "Interaction") {
-                // Preserve classes whose historical construction API remains unavailable.
+                // Preserve classes whose historical construction API remains
+                // unavailable.
                 mapJsonStates[this].unimplementedObjects[type] = config[type];
                 continue;
             }
@@ -416,12 +418,6 @@ void Map::hide() {
 }
 
 void MapObject::setVisible(bool visible) { QGraphicsItem::setVisible(visible); }
-
-void Map::show() {
-    for (std::set<MapObject *>::iterator it = mapObjects.begin(); it != mapObjects.end(); ++it)
-        (*it)->setMap(this);
-    ensureSize(GameScene::getPlayer());
-}
 
 QGraphicsScene *Map::getScene() const { return scene; }
 

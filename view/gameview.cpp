@@ -37,8 +37,13 @@ GameView::GameView()
     loading.setPixmap(pixmap.scaled(this->width(),this->height(),
                                     Qt::IgnoreAspectRatio,Qt::SmoothTransformation));
     scene->addItem(&loading);
+
     fightView=new FightView();
+    charView=new CharView();
+
     scene->addItem(fightView);
+    scene->addItem(charView);
+
     timer.setSingleShot(true);
     timer.setInterval(50);
     connect(&timer, SIGNAL(timeout()), this, SLOT(start()));
@@ -52,6 +57,23 @@ GameView::~GameView()
 
 FightView *GameView::getFightView() {
     return fightView;
+}
+
+CharView *GameView::getCharView(){return charView;}
+
+void GameView::showCharView()
+{
+    if(!charView->isVisible()){
+
+    charView->setVisible(true);
+    charView->setPos(mapToScene(this->width()/2-charView->boundingRect().width()/2,this->height()/2
+                                 -charView->boundingRect().height()/2));
+    charView->update();
+    }
+    else
+    {
+        charView->setVisible(false);
+    }
 }
 
 void GameView::showFightView()
@@ -105,3 +127,4 @@ void GameView::dragMoveEvent(QDragMoveEvent *e)
     QGraphicsView::dragMoveEvent(e);
     repaint();
 }
+

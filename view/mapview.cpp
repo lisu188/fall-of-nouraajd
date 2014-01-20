@@ -22,11 +22,12 @@ MapView::MapView()
         std::string name=it.memberName();
         Item*item=Item::getItem(name.c_str());
         if(item) {
-            items.push_back(item);
+            items.insert(item);
             item->setMap(scene->getMap());
         }
     }
-    itemsList=new PlayerListView((std::list<ListItem *> *)&items);
+    itemsList=new PlayerListView((std::set<ListItem *> *)&items);
+    itemsList->setAcceptDrops(false);
     scene->addItem(itemsList);
     itemsList->setDraggable();
     itemsList->setPos(mapToScene(0,0));
@@ -48,20 +49,17 @@ void MapView::dragMoveEvent(QDragMoveEvent *event)
     event->acceptProposedAction();
 }
 
-
-
-
 void MapView::dropEvent(QDropEvent *event)
 {
     if(event->source()!=itemsList)
     {
         QGraphicsView::dropEvent(event);
         Item *item=(Item*)(event->source());
-        items.remove(item);
+        items.erase(items.find(item));
         item=Item::getItem(item->className.c_str());
         if(item) {
             item->setMap(itemsList->getMap());
-            items.push_back(item);
+            items.insert(item);
         }
         itemsList->update();
     }

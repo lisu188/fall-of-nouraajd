@@ -17,7 +17,7 @@ public:
 
     // Creature interface
 public:
-    virtual std::list<Item *> *getLoot();
+    virtual std::set<Item *> *getLoot();
 };
 
 #endif // MONSTER_H

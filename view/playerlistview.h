@@ -11,40 +11,23 @@ class PlayerListView : public QGraphicsObject
 {
     friend class ScrollObject;
 public:
-    PlayerListView(std::list<ListItem *> *listItems);
+    PlayerListView(std::set<ListItem *> *listItems);
     void update();
-    Map *getMap()
-    {
-        if(items->size())
-        {
-            return items->front()->getMap();
-        }
-        return 0;
-    }
-    void setDraggable() {
-        draggable=true;
-    }
+    Map *getMap();
+    void setDraggable();
+    virtual QRectF boundingRect() const;
+    virtual void paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget);
+    void updatePosition(int i);
 
 private:
     int curPosition;
     int x,y;
     ScrollObject *right,*left;
-    std::list<ListItem *> *items;
+    std::set<ListItem *> *items;
     bool draggable=false;
     QPixmap pixmap;
-
-    // QGraphicsItem interface
-public:
-    virtual QRectF boundingRect() const;
-    virtual void paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget);
-    void updatePosition(int i);
-
-    // QGraphicsItem interface
 protected:
     virtual void dropEvent(QGraphicsSceneDragDropEvent *event);
-
-    // QGraphicsItem interface
-protected:
     virtual void mousePressEvent(QGraphicsSceneMouseEvent *event);
 };
 

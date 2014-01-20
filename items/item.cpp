@@ -90,6 +90,14 @@ void Item::setAnimation(std::string path)
 
 void Item::mousePressEvent(QGraphicsSceneMouseEvent *event)
 {
+    if(GameScene::getPlayer()&&
+            GameScene::getPlayer()->getInventory()->find(this)
+            ==GameScene::getPlayer()->getInventory()->end()&&
+            GameScene::getPlayer()->getEquipped()->find(this)
+            ==GameScene::getPlayer()->getEquipped()->end())
+    {
+        return;
+    }
     if(singleUse&&GameScene::getPlayer())
     {
         GameScene::getPlayer()->loseItem(this);
