@@ -98,6 +98,7 @@ HEADERS  += \
     map/tile.h \
     stats/damage.h \
     stats/stats.h \
+    view/charview.h \
     view/fightview.h \
     view/gamescene.h \
     view/gameview.h \
@@ -111,3 +112,9 @@ HEADERS  += \
 RESOURCES += \
     config.qrc \
     images.qrc
+
+# Inferred build compatibility: expose the surviving CharView declaration to GameView.
+QMAKE_CXXFLAGS += -include $$PWD/view/charview.h
+
+# The next surviving GameView constructs the same-tree CharView.
+SOURCES += view/charview.cpp
