@@ -48,6 +48,16 @@ private:
     PlayerListView *playerSkillsView;
     PlayerListView *playerEquippedView;
     std::list<Creature *> fightList;
+
+    class BackPackObject:public QGraphicsPixmapItem{
+    public:
+        BackPackObject();
+    protected:
+        void mousePressEvent(QGraphicsSceneMouseEvent *event);
+    private:
+        QPixmap pixmap;
+    } backpack;
+
     int turn;
 
     std::list<MapObject *> entered;

@@ -16,7 +16,6 @@ public:
     ~GameView();
     FightView *getFightView();
     CharView *getCharView();
-    void showCharView();
     void showFightView();
 protected:
     void mouseDoubleClickEvent(QMouseEvent *e);
@@ -30,6 +29,8 @@ private:
     static bool init;
     QTimer timer;
     QGraphicsPixmapItem loading;
+public slots:
+    void showCharView();
 private slots:
     void start();
 };
