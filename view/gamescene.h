@@ -22,12 +22,8 @@ public:
     static void setPlayer(Player *pla);
     static GameScene* getGame();
     static GameView *getView();
-    static unsigned int getStep() {
-        return 100;
-    }
-    Map *getMap() {
-        return map;
-    }
+    static unsigned int getStep();
+    Map *getMap();
     void playerMove(int dirx, int diry);
     void startGame();
 

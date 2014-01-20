@@ -1,6 +1,7 @@
 #ifndef GAMEVIEW_H
 #define GAMEVIEW_H
 
+#include <view/charview.h>
 #include "gamescene.h"
 
 #include <QGraphicsView>
@@ -14,6 +15,8 @@ public:
     GameView();
     ~GameView();
     FightView *getFightView();
+    CharView *getCharView();
+    void showCharView();
     void showFightView();
 protected:
     void mouseDoubleClickEvent(QMouseEvent *e);

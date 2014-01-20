@@ -19,6 +19,11 @@ void FightView::update()
     std::list<Creature*> *creatures=player->getFightList();
     std::list<Creature*>::iterator it;
     int i=0;
+    QList<QGraphicsItem*> list=childItems();
+     for(QList<QGraphicsItem*>::iterator it=list.begin(); it!=list.end(); it++)
+     {
+         delete *it;
+     }
     for(it=creatures->begin(); it!=creatures->end(); i++,it++)
     {
         CreatureFightView *fightView=new CreatureFightView(*it);
@@ -27,7 +32,6 @@ void FightView::update()
     }
     QGraphicsItem::update();
 }
-
 
 QRectF FightView::boundingRect() const
 {

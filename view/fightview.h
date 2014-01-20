@@ -10,8 +10,6 @@ class FightView : public QGraphicsItem
 public:
     FightView();
     static Creature *selected;
-
-public:
     void update();
     virtual QRectF boundingRect() const;
     virtual void paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget);
@@ -25,8 +23,6 @@ public:
     CreatureFightView(Creature *creature);
     virtual QRectF boundingRect() const;
     virtual void paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget);
-
-    // QGraphicsItem interface
 protected:
     virtual void mousePressEvent(QGraphicsSceneMouseEvent *event);
 };

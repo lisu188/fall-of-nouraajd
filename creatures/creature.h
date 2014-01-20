@@ -40,7 +40,7 @@ public:
 
     virtual void fight(Creature *creature);
     virtual void levelUp();
-    virtual std::list<Item*>* getLoot()=0;
+    virtual std::set<Item*>* getLoot()=0;
 
     void addAction(Interaction *action);
     void addEffect(std::string type, Creature *caster);
@@ -74,10 +74,11 @@ public:
 
 
 
-    void addItem(std::list<Item *> *items);
+    void addItem(std::set<Item *> *items);
     void addItem(Item *item);
     void loseItem(Item *item);
-    std::list<Item *> *getInventory();
+    std::set<Item *> *getInventory();
+    std::set<Item *> *getEquipped();
 
     void loadFromJson(Json::Value config);
     Json::Value saveToJson();
@@ -87,8 +88,8 @@ public:
 
 protected:
     int gold;
-    std::list<Item*> inventory;
-    std::list<Item*> equipped;
+    std::set<Item*> inventory;
+    std::set<Item*> equipped;
     int exp;
     int level;
     int sw;
@@ -99,8 +100,8 @@ protected:
 
     bool alive;
 
-    std::list<Interaction *> actions;
-    std::list<Effect *> effects;
+    std::set<Interaction *> actions;
+    std::set<Effect *> effects;
 
     Weapon *weapon=0;
     Armor *armor=0;

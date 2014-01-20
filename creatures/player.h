@@ -17,7 +17,7 @@ public:
     Player(std::string name);
     ~Player();
 
-    std::list<Item *>* getLoot();
+    std::set<Item *> *getLoot();
 
     virtual void fight(Creature *creature);
 

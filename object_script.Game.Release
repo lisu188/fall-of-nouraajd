@@ -38,6 +38,7 @@ INPUT(
 ./release\dungeon.o
 ./release\mapview.o
 ./release\mapscene.o
+./release\charview.o
 ./release\qrc_images.o
 ./release\qrc_config.o
 ./release\moc_animatedobject.o
