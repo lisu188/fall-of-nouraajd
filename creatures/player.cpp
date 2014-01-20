@@ -1,4 +1,5 @@
 #include "player.h"
+#include <QGraphicsSceneMouseEvent>
 #include <configuration/configurationprovider.h>
 
 #include <map/tile.h>
@@ -30,8 +31,7 @@ std::map<Player *, PlayerLists> playerLists;
 } // namespace
 
 Player::Player(std::string name, Json::Value config) : Creature(name, config) {
-    gold = 0;
-    turn = 0;
+    init();
     playerStatsView = new PlayerStatsView(this);
     playerStatsView->setZValue(3);
     playerInventoryView = new PlayerListView(&playerLists[this].inventory);
@@ -62,6 +62,7 @@ void Player::onEnter() {}
 
 void Player::update() {
     GameView *view = GameScene::getView();
+    backpack.setPos(mapFromScene(view->mapToScene((view->width() - backpack.boundingRect().width()) / 2, 0)));
     playerStatsView->setPos(view->mapToScene(0, 0));
     playerInventoryView->setPos(view->mapToScene(0, view->height() - playerInventoryView->boundingRect().height()));
     playerSkillsView->setPos(view->mapToScene(view->width() - playerSkillsView->boundingRect().width(),
@@ -166,4 +167,27 @@ void Player::setMap(Map *map) {
     map->getScene()->addItem(playerSkillsView);
     map->getScene()->addItem(playerEquippedView);
     updateViews();
+}
+
+void Player::init() {
+    gold = 0;
+    turn = 0;
+    backpack.setParentItem(this);
+}
+
+Player::BackPackObject::BackPackObject() {
+    pixmap.load(":/images/backpack.png");
+    setPixmap(pixmap);
+    setZValue(4);
+    setAcceptedMouseButtons(Qt::LeftButton);
+}
+
+void Player::BackPackObject::mousePressEvent(QGraphicsSceneMouseEvent *event) {
+    GameView *view = GameScene::getView();
+    if (view && event && event->button() == Qt::LeftButton) {
+        view->showCharView();
+        event->accept();
+        return;
+    }
+    QGraphicsPixmapItem::mousePressEvent(event);
 }

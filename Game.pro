@@ -17,71 +17,86 @@ CONFIG += console
 
 QMAKE_CXXFLAGS += -std=c++11
 
-        RE
+        RESOURCES +=  \
+        images.qrc \
+        config.qrc
 
-SOURCES += main.cpp \
+SOURCES += \
+    creatures/player.cpp \
+    view/fightview.cpp \
     map/map.cpp \
-    map/events/event.cpp \
-    map/coords.cpp \
-    creatures/creature.cpp \
-    items/item.cpp \
-    buildings/building.cpp \
-    buildings/towers/tower.cpp \
-    buildings/towns/town.cpp \
-    items/weapon.cpp \
-    interactions/interaction.cpp \
-    buildings/cave.cpp \
-    animation/animationprovider.cpp \
-    animation/animation.cpp \
-    map/playeranimation.cpp \
-    animation/animatedobject.cpp \
-    view/playerstatsview.cpp \
     view/gameview.cpp \
     view/gamescene.cpp \
-    view/scrollobject.cpp \
-    items/armor.cpp \
-    view/playerlistview.cpp \
+    items/item.cpp \
+    creatures/creature.cpp \
     view/listitem.cpp \
-    destroyer/destroyer.cpp \
-    stats/stats.cpp \
-    stats/damage.cpp \
-    view/fightview.cpp \
-    json/json_writer.cpp \
-    json/json_value.cpp \
-    json/json_reader.cpp \
-    creatures/player.cpp \
-    creatures/monster.cpp \
-    items/potion.cpp \
-    configuration/configurationprovider.cpp \
-    compression/compression.cpp \
-    map/tile.cpp \
-    buildings/dungeon.cpp \
     view/mapview.cpp \
-    view/mapscene.cpp
+    view/charview.cpp \
+    view/playerlistview.cpp \
+    creatures/monster.cpp \
+    map/tile.cpp \
+    interactions/interaction.cpp \
+    configuration/configurationprovider.cpp \
+    view/mapscene.cpp \
+    animation/animationprovider.cpp \
+    main.cpp \
+    buildings/dungeon.cpp \
+    compression/compression.cpp \
+    view/scrollobject.cpp \
+    view/playerstatsview.cpp \
+    animation/animatedobject.cpp \
+    buildings/cave.cpp \
+    buildings/building.cpp \
+    buildings/towns/town.cpp \
+    buildings/towers/tower.cpp \
+    map/coords.cpp \
+    stats/damage.cpp \
+    map/events/event.cpp \
+    map/playeranimation.cpp \
+    stats/stats.cpp \
+    items/armor.cpp \
+    json/json_reader.cpp \
+    json/json_value.cpp \
+    json/json_writer.cpp \
+    items/potion.cpp \
+    items/weapon.cpp \
+    animation/animation.cpp \
+    destroyer/destroyer.cpp
 
-HEADERS  += \
-    animation/animatedobject.h \
-    animation/animation.h \
-    animation/animationprovider.h \
-    buildings/building.h \
-    buildings/cave.h \
-    buildings/dungeon.h \
-    buildings/towers/tower.h \
-    buildings/towns/town.h \
-    compression/compression.h \
-    compression/minizip.h \
-    configuration/configurationprovider.h \
-    creatures/creature.h \
-    creatures/monster.h \
+HEADERS += \
     creatures/player.h \
-    destroyer/destroyer.h \
-    include/zconf.h \
-    include/zlib.h \
+    view/gameview.h \
+    map/map.h \
+    creatures/creature.h \
+    view/charview.h \
+    view/mapview.h \
+    view/playerlistview.h \
+    view/gamescene.h \
+    creatures/monster.h \
+    view/fightview.h \
     interactions/interaction.h \
-    items/armor.h \
+    compression/minizip.h \
+    view/listitem.h \
+    view/scrollobject.h \
+    map/tile.h \
     items/item.h \
+    view/playerstatsview.h \
+    animation/animatedobject.h \
+    view/mapscene.h \
+    animation/animationprovider.h \
+    items/armor.h \
     items/potion.h \
     items/weapon.h \
+    buildings/dungeon.h \
+    buildings/cave.h \
+    buildings/towns/town.h \
+    buildings/towers/tower.h \
+    buildings/building.h \
+    map/coords.h \
+    stats/damage.h \
+    map/events/event.h \
+    map/playeranimation.h \
+    stats/stats.h \
     json/autolink.h \
     json/config.h \
     json/features.h \
@@ -91,30 +106,7 @@ HEADERS  += \
     json/reader.h \
     json/value.h \
     json/writer.h \
-    map/coords.h \
-    map/events/event.h \
-    map/map.h \
-    map/playeranimation.h \
-    map/tile.h \
-    stats/damage.h \
-    stats/stats.h \
-    view/charview.h \
-    view/fightview.h \
-    view/gamescene.h \
-    view/gameview.h \
-    view/listitem.h \
-    view/mapscene.h \
-    view/mapview.h \
-    view/playerlistview.h \
-    view/playerstatsview.h \
-    view/scrollobject.h
-
-RESOURCES += \
-    config.qrc \
-    images.qrc
-
-# Inferred build compatibility: expose the surviving CharView declaration to GameView.
-QMAKE_CXXFLAGS += -include $$PWD/view/charview.h
-
-# The next surviving GameView constructs the same-tree CharView.
-SOURCES += view/charview.cpp
+    animation/animation.h \
+    compression/compression.h \
+    configuration/configurationprovider.h \
+    destroyer/destroyer.h
