@@ -23,6 +23,7 @@ protected:
 private:
     GameScene *scene;
     FightView *fightView;
+    CharView *charView;
     static bool init;
     QTimer timer;
     QGraphicsPixmapItem loading;
