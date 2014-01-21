@@ -7,7 +7,7 @@
 #include <QTimer>
 #include <QWidget>
 
-class AnimatedObject : private QWidget,protected QGraphicsPixmapItem
+class AnimatedObject : public QWidget,public QGraphicsPixmapItem
 {
     Q_OBJECT
 public:
@@ -19,15 +19,12 @@ protected:
     Animation *animation;
     void setPixmap(const QPixmap &pixmap);
     void setAnimation(std::string path, int size);
+    virtual void mousePressEvent(QGraphicsSceneMouseEvent *);
 private:
     QTimer *timer;
 private slots:
     void animate();
 
-
-    // QGraphicsItem interface
-protected:
-    virtual void mousePressEvent(QGraphicsSceneMouseEvent *);
 };
 
 #endif // ANIMATEDOBJECT_H

@@ -1,5 +1,5 @@
 #include "player.h"
-#include <QGraphicsSceneMouseEvent>
+#include <view/charview.h>
 #include <configuration/configurationprovider.h>
 
 #include <map/tile.h>
@@ -32,8 +32,6 @@ std::map<Player *, PlayerLists> playerLists;
 
 Player::Player(std::string name, Json::Value config) : Creature(name, config) {
     init();
-    playerStatsView = new PlayerStatsView(this);
-    playerStatsView->setZValue(3);
     playerInventoryView = new PlayerListView(&playerLists[this].inventory);
     playerInventoryView->setZValue(3);
     playerSkillsView = new PlayerListView(&playerLists[this].skills);
@@ -55,22 +53,19 @@ Player::~Player() {
 void Player::onMove() {
     addMana(manaRegRate);
     turn++;
-    playerStatsView->update();
+    emit statsChanged();
 }
 
 void Player::onEnter() {}
 
 void Player::update() {
     GameView *view = GameScene::getView();
-    backpack.setPos(mapFromScene(view->mapToScene((view->width() - backpack.boundingRect().width()) / 2, 0)));
-    playerStatsView->setPos(view->mapToScene(0, 0));
-    playerInventoryView->setPos(view->mapToScene(0, view->height() - playerInventoryView->boundingRect().height()));
+    playerInventoryView->setPos(0, 0);
+    playerEquippedView->setPos(view->getCharView()->boundingRect().width() - playerEquippedView->boundingRect().width(),
+                               0);
     playerSkillsView->setPos(view->mapToScene(view->width() - playerSkillsView->boundingRect().width(),
                                               view->height() - playerSkillsView->boundingRect().height()));
-    playerEquippedView->setPos(view->mapToScene(view->width() - playerEquippedView->boundingRect().width(), 0));
 }
-
-PlayerStatsView *Player::getStatsView() { return playerStatsView; }
 
 PlayerListView *Player::getInventoryView() { return playerInventoryView; }
 
@@ -104,7 +99,7 @@ void Player::updateViews() {
         lists.skills.insert(action);
     for (Item *item : equipped)
         lists.equipped.insert(item);
-    playerStatsView->update();
+    emit statsChanged();
     playerInventoryView->update();
     playerSkillsView->update();
     playerEquippedView->update();
@@ -162,31 +157,13 @@ void Player::setMap(Map *map) {
     MapObject::setMap(map);
     if (!map || !dynamic_cast<GameScene *>(map->getScene()))
         return;
-    map->getScene()->addItem(playerStatsView);
-    map->getScene()->addItem(playerInventoryView);
+    playerInventoryView->setParentItem(GameScene::getView()->getCharView());
     map->getScene()->addItem(playerSkillsView);
-    map->getScene()->addItem(playerEquippedView);
+    playerEquippedView->setParentItem(GameScene::getView()->getCharView());
     updateViews();
 }
 
 void Player::init() {
     gold = 0;
     turn = 0;
-    backpack.setParentItem(this);
-}
-
-Player::BackPackObject::BackPackObject() {
-    setPixmap(QPixmap(":/images/backpack.png"));
-    setZValue(4);
-    setAcceptedMouseButtons(Qt::LeftButton);
-}
-
-void Player::BackPackObject::mousePressEvent(QGraphicsSceneMouseEvent *event) {
-    GameView *view = GameScene::getView();
-    if (view && event && event->button() == Qt::LeftButton) {
-        view->showCharView();
-        event->accept();
-        return;
-    }
-    QGraphicsPixmapItem::mousePressEvent(event);
 }

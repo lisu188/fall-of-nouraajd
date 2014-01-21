@@ -77,6 +77,7 @@ void Creature::attribChange() {
 
     hp = std::max(1, static_cast<int>(hpRatio * hpMax));
     mana = std::max(0, static_cast<int>(manaRatio * manaMax));
+    emit statsChanged();
 }
 
 void Creature::heal(int i) {
@@ -85,6 +86,7 @@ void Creature::heal(int i) {
     else
         hp = std::min(hpMax, hp + i);
     alive = hp > 0;
+    emit statsChanged();
 }
 
 void Creature::healProc(float i) { heal(static_cast<int>(hpMax * i / 100.0f)); }
@@ -93,6 +95,7 @@ void Creature::takeDamage(int i) {
     hp = std::max(0, hp - i);
     if (hp == 0)
         alive = false;
+    emit statsChanged();
 }
 
 void Creature::hurt(Damage damage) {
@@ -188,11 +191,15 @@ void Creature::addMana(int i) {
         mana = manaMax;
     else
         mana = std::min(manaMax, mana + i);
+    emit statsChanged();
 }
 
 void Creature::addManaProc(float i) { addMana(static_cast<int>(manaMax * i / 100.0f)); }
 
-void Creature::takeMana(int i) { mana = std::max(0, mana - i); }
+void Creature::takeMana(int i) {
+    mana = std::max(0, mana - i);
+    emit statsChanged();
+}
 
 bool Creature::isPlayer() {
     return className == "Player" || className == "Mage" || className == "Warrior" || className == "Rogue";
