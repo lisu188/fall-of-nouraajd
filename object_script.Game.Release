@@ -42,6 +42,8 @@ INPUT(
 ./release\qrc_images.o
 ./release\qrc_config.o
 ./release\moc_gameview.o
+./release\moc_creature.o
 ./release\moc_gamescene.o
+./release\moc_playerstatsview.o
 ./release\moc_animatedobject.o
 );

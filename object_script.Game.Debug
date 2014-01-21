@@ -42,6 +42,8 @@ INPUT(
 ./debug\qrc_images.o
 ./debug\qrc_config.o
 ./debug\moc_gameview.o
+./debug\moc_creature.o
 ./debug\moc_gamescene.o
+./debug\moc_playerstatsview.o
 ./debug\moc_animatedobject.o
 );

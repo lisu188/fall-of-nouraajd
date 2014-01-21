@@ -6,17 +6,17 @@
 #include <QGraphicsItem>
 #include <creatures/player.h>
 
-class PlayerStatsView : public QGraphicsItem
+class PlayerStatsView : public QWidget
 {
+    Q_OBJECT
 public:
-    explicit PlayerStatsView(Player *player);
-private:
-    Player* player;
+    explicit PlayerStatsView();
+    void setPlayer(Player *value);
 
-    // QGraphicsItem interface
-public:
-    virtual QRectF boundingRect() const;
-    virtual void paint(QPainter *painter, const QStyleOptionGraphicsItem *, QWidget *);
+protected:
+    void paintEvent(QPaintEvent *);
+private:
+    Player* player=0;
 };
 
 #endif // PLAYERSTATSVIEW_H

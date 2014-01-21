@@ -6,7 +6,21 @@
 
 #include <QGraphicsView>
 #include <QThread>
+#include <view/playerstatsview.h>
 #include <view/fightview.h>
+
+class BackPackObject:public QWidget {
+    Q_OBJECT
+public:
+    BackPackObject();
+protected:
+    void mousePressEvent(QMouseEvent *);
+    void paintEvent(QPaintEvent *event);
+private:
+    QPixmap pixmap;
+signals:
+    void clicked();
+};
 
 class GameView : public QGraphicsView
 {
@@ -29,10 +43,11 @@ private:
     static bool init;
     QTimer timer;
     QGraphicsPixmapItem loading;
+    BackPackObject backpack;
+    PlayerStatsView playerStatsView;
 public slots:
     void showCharView();
 private slots:
     void start();
 };
-
 #endif // GAMEVIEW_H

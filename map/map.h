@@ -64,7 +64,7 @@ private:
     std::map<int,std::string> defaultTiles;
 };
 
-class MapObject : protected AnimatedObject
+class MapObject : public AnimatedObject
 {
 public:
     MapObject(int x, int y,int z, int v);
