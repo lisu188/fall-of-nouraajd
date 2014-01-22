@@ -9,16 +9,16 @@
 
 class PlayerListView : public QGraphicsObject
 {
+    Q_OBJECT
     friend class ScrollObject;
 public:
     PlayerListView(std::set<ListItem *> *listItems);
-    void update();
     Map *getMap();
     void setDraggable();
     virtual QRectF boundingRect() const;
     virtual void paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget);
     void updatePosition(int i);
-
+    void setXY(int x,int y);
 private:
     int curPosition;
     int x,y;
@@ -29,6 +29,8 @@ private:
 protected:
     virtual void dropEvent(QGraphicsSceneDragDropEvent *event);
     virtual void mousePressEvent(QGraphicsSceneMouseEvent *event);
+public slots:
+    void update();
 };
 
 #endif // PLAYERINVENTORYVIEW_H

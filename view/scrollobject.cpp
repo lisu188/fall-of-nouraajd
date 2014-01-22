@@ -6,41 +6,25 @@
 ScrollObject::ScrollObject(PlayerListView *stats, bool isRight)
 {
     this->isRight=isRight;
+    this->setZValue(1);
     this->stats=stats;
-    if(stats->getMap())
-    {
-        tileSize=stats->getMap()->getTileSize();
-    }
-    else
-    {
-        tileSize=0;
-    }
     if(!isRight)
     {
-        this->setAnimation("images/arrows/left/",tileSize);
+        this->setAnimation("images/arrows/left/",50);
     }
     else
     {
-        this->setAnimation("images/arrows/right/",tileSize);
+        this->setAnimation("images/arrows/right/",50);
     }
+    setParentItem(stats);
 }
 
 void ScrollObject::setVisible(bool visible)
 {
-    this->QGraphicsPixmapItem::setVisible(visible);
-    if(visible)
-    {
-        setParentItem(stats);
-        if(!isRight) {
-            this->setPos(0,tileSize*(stats->y));
-        }
-        else {
-            this->setPos(tileSize*(stats->x-1),tileSize*(stats->y));
-        }
+    if(visible&&this->scene()!=stats->scene()) {
+        stats->scene()->addItem(this);
     }
-    else {
-        setParentItem(0);
-    }
+    QGraphicsItem::setVisible(visible);
 }
 
 void ScrollObject::mousePressEvent(QGraphicsSceneMouseEvent *event)

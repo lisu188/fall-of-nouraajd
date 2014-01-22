@@ -13,10 +13,9 @@ PlayerAnimation::PlayerAnimation(QObject *parent) :
 
 void PlayerAnimation::afterAnimationStep(qreal step)
 {
-    GameView *view=GameScene::getView();
     Player *player=GameScene::getPlayer();
-    view->centerOn(this->item());
-    player->update();
+    GameView *view=GameScene::getView();
+    view->centerOn(player);
     if(step>=1)
     {
         std::list<MapObject *> entered(*player->getEntered());
