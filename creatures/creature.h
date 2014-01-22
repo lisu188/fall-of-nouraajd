@@ -62,7 +62,7 @@ public:
     Json::Value saveToJson();
     bool canSave();
     bool applyEffects();
-
+    std::set<Interaction *> *getActions();
 protected:
     int gold;
     std::set<Item*> inventory;
@@ -88,6 +88,9 @@ protected:
     Stats getLevelStats();
 signals:
     void statsChanged();
+    void skillsChanged();
+    void inventoryChanged();
+    void equippedChanged();
 };
 
 #endif // CREATURE_H

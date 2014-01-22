@@ -1,7 +1,7 @@
 # Recovered game snapshot
 
-Original commit: `800026c23e9d51578496bbbc95b8e052dba1d6f8`. Original tree: `4398768e69eaad569c05f83b0b591ad65d5e9604`.
-Startup was verified from identical recovered sources at `800026c23e9d51578496bbbc95b8e052dba1d6f8`.
+Original commit: `5e000dca02a17e179719d99ae93d31687c9d2244`. Original tree: `31217a2066f3e568d8701155f95e3c79bac7a596`.
+Startup was verified from identical recovered sources at `5e000dca02a17e179719d99ae93d31687c9d2244`.
 
 This recovered version compiled and linked on Linux, started the real game on an isolated Xvfb display,
 loaded its map and a healthy player, rendered the screenshot below, and exited normally.
@@ -40,15 +40,13 @@ The genuine scene writes `save/game.sav` during shutdown. Verification prepared 
 parent directory before startup, without changing source files or replacing existing save data.
 The source call, source hash and created/preserved directory are recorded in verification metadata.
 
-compatibilityRepair: 1, exactOriginal: 44, reconstruction: 19.
+compatibilityRepair: 1, exactOriginal: 44, reconstruction: 17.
 
-- `Game.pro`: Missing qmake project regenerated from genuine same-tree object_script.Game.Debug (40 source objects, no unmatched objects), with nearest intact #116 84017c91 Game.pro settings and same-tree headers/resources. No CharView force-include compatibility is needed because the genuine GameView header now declares it.
 - `compression/minizip.h`: unverified upstream reconstruction; https://github.com/richgel999/miniz/tree/v114
 - `config/creatures.json`: content reconstruction of the BFG-removed original; carried nearest reconstructed config/creatures.json through API-stable #62; surviving files provide no recoverable internal implementation/data delta
-- `config/map.json`: unverified donor reconstruction; bf32a4c93e396bd645769a9957eacd6a75106b62:config/map.json; headerMatch=0; apiOverlap=0/10000; distance=11
-- `creatures/creature.cpp`: Adapted validated #117 Creature to genuine #118 Q_OBJECT/statsChanged signal and surviving PlayerStatsView::setPlayer connection. Actual HP/mana/derived-pool mutations emit the real moc-generated signal so the original stats widget refreshes. Set containers/combat/stat formulas/save schema retain prior provenance; exact original signal timing and internal delta remain unverified.
-- `creatures/player.cpp`: Adapted validated #117 Player to genuine #118 removal of its stats widget/backpack and original QWidget PlayerStatsView::setPlayer signal contract. Player keeps its actual inventory/skill/equipment list views and base-pointer sets. Inventory/equipment parent to the actual CharView, following the surviving #117 GameView::showCharView local positions; exact original parenting/layout remains inferred. Real Player mutations emit inherited statsChanged; no stats/widget stand-ins. Prior save/combat inference remains explicit.
-- `images/buildings/dungeon/0.png`: unverified donor reconstruction; 71a3432e36b5649aabdd63c7807a78e9a8a3749a:images/buildings/dungeon/0.png; headerMatch=0; apiOverlap=0/10000; distance=43
+- `config/map.json`: unverified donor reconstruction; bf32a4c93e396bd645769a9957eacd6a75106b62:config/map.json; headerMatch=0; apiOverlap=0/10000; distance=10
+- `creatures/creature.cpp`: Adapted validated #118 Creature to genuine #119 getActions getter and inventoryChanged/skillsChanged/equippedChanged signals, which match original PlayerListView Qt slots and new GameView-owned lists. Returns actual owned actions and emits real moc-generated signals after actual collection changes; original Player.cpp remains untouched. Prior inferred formulas/save schema and unknown signal timing remain explicit.
+- `images/buildings/dungeon/0.png`: unverified donor reconstruction; 71a3432e36b5649aabdd63c7807a78e9a8a3749a:images/buildings/dungeon/0.png; headerMatch=0; apiOverlap=0/10000; distance=42
 - `images/loading.png`: synthesized visible 32px placeholder; original artwork unavailable; unverified
 - `images/tiles/mountain/0.png`: unverified donor reconstruction; 152007b28631784d3c5e17f2686eb6ef9ff30e46:images/tiles/mountain/0.png; headerMatch=0; apiOverlap=0/10000; distance=155 Verified by build and startup of afdd8069 (recovery/evidence/second-original).
 - `images/tiles/road/0.png`: unverified donor reconstruction; 152007b28631784d3c5e17f2686eb6ef9ff30e46:images/tiles/road/0.png; headerMatch=0; apiOverlap=0/10000; distance=155 Verified by build and startup of afdd8069 (recovery/evidence/second-original).
@@ -57,13 +55,13 @@ compatibilityRepair: 1, exactOriginal: 44, reconstruction: 19.
 - `json/json_reader.cpp`: unverified upstream reconstruction; https://github.com/open-source-parsers/jsoncpp/tree/4fce396c9d3e27a8ab8fb88e94c1676e021ae3a6
 - `json/json_value.cpp`: unverified upstream reconstruction; https://github.com/open-source-parsers/jsoncpp/tree/4fce396c9d3e27a8ab8fb88e94c1676e021ae3a6
 - `json/json_writer.cpp`: unverified upstream reconstruction; https://github.com/open-source-parsers/jsoncpp/tree/4fce396c9d3e27a8ab8fb88e94c1676e021ae3a6
-- `map/map.cpp`: Carried validated #115 Map reconstruction unchanged; same surviving Map API at #116. Prior explicitly inferred cache radius and unknown original implementation deltas retained.
+- `map/map.cpp`: Carried validated #116–118 Map reconstruction unchanged; same surviving API at #119. Previous inferred cache radius and unknown internal deltas retained.
 - `stats/stats.cpp`: content reconstruction of the BFG-removed original; carried validated d30a3f79 stats reconstruction; #63 surviving Stats change only renames a loadFromJson parameter
 - `view/gamescene.cpp`: Carried validated #115–117 Scene reconstruction unchanged; surviving #118 Scene API is identical. Prior actual movement/map/save behavior retained; unknown original internal delta remains unverified.
-- `view/gameview.cpp`: Adapted genuine surviving immediately preceding #117 eacc2b048f24ef3ac1622e2ddfb6767e75ce0649:view/gameview.cpp to original #118 QWidget BackPackObject clicked signal/paint event and GameView-owned PlayerStatsView. Uses the actual backpack image, connects clicked to the authored showCharView slot, and binds the original stats widget to the actual player after real Scene startup. Child QWidget ownership preserves value-member lifetimes. Top-center backpack placement and exact original widget layout/signal timing are inferred; original main/config/headers/widgets/resources unchanged. Startup does not prove ordinary click behavior or gameplay parity.
+- `view/gameview.cpp`: Adapted validated #118 View (derived from genuine #117 source) to genuine #119 GameView-owned inventory/skill/equipment list pointers, Creature actual getters/new signals, and intact Player.cpp that no longer owns those views. Actual base-pointer view sets are refreshed from the real player on real collection-change signals, avoiding reinterpretation of incompatible containers. Original PlayerListView updates and CharView parenting are used; exact original layout/signal timing remains inferred. Original main/config/headers/Player.cpp/widgets/assets unchanged; startup does not prove ordinary GUI interaction or historical gameplay parity.
 - `json/LICENSE`: https://github.com/open-source-parsers/jsoncpp/tree/4fce396c9d3e27a8ab8fb88e94c1676e021ae3a6 upstream distribution license
 
-Restored source fingerprint: `e507c46e3a729f3cf6d8b64f3617eef275caf35193c20688c94d85695062927c`.
+Restored source fingerprint: `f8bb5e11245fd0248f4c765c34c9a08b8fb033927b4ab081cbd05df384eeb5ce`.
 
 The actual 1278 × 718 screenshot and [verification metadata](recovery/verification.json) belong to
 this source version. Reconstructed code and borrowed assets are identified in that metadata; they are

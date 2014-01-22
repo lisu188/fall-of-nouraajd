@@ -14,6 +14,7 @@ PlayerListView::PlayerListView(std::set<ListItem *> *listItems):items(listItems)
     left=new ScrollObject(this,false);
     x=4,y=4;
     pixmap.load(":/images/item.png");
+    update();
 }
 
 void PlayerListView::update()
@@ -25,17 +26,24 @@ void PlayerListView::update()
         curPosition=items->size()-x*y;
     }
     QList<QGraphicsItem*> list=childItems();
-    QList<QGraphicsItem *>::Iterator chilIter;
-    for(chilIter=list.begin(); chilIter!=list.end(); chilIter++)
+    QList<QGraphicsItem *>::Iterator childIter;
+    for(childIter=list.begin(); childIter!=list.end(); childIter++)
     {
-        (*chilIter)->setParentItem(0);
-        (*chilIter)->setVisible(false);
+        if(*childIter==right||*childIter==left) {
+            continue;
+        }
+        (*childIter)->setParentItem(0);
+        (*childIter)->setVisible(false);
     }
     std::set<ListItem *>::iterator itemIter;
     int i=0;
     for(itemIter=items->begin(); itemIter!=items->end(); i++,itemIter++)
     {
         ListItem *item=*itemIter;
+        if(item->getMap()!=GameScene::getPlayer()->getMap())
+        {
+            item->setMap(GameScene::getPlayer()->getMap());
+        }
         item->setVisible(false);
         item->setParentItem(0);
         int position=i-curPosition;
@@ -46,11 +54,9 @@ void PlayerListView::update()
         }
     }
     right->setVisible(items->size()>x*y);
+    right->setPos((x-1)*pixmap.size().width(),y*pixmap.size().height());
     left->setVisible(items->size()>x*y);
-    if(GameScene::getView()&&GameScene::getPlayer())
-    {
-        GameScene::getPlayer()->update();
-    }
+    left->setPos(0,y*pixmap.size().height());
 }
 
 Map *PlayerListView::getMap()
@@ -68,24 +74,23 @@ void PlayerListView::setDraggable() {
 
 QRectF PlayerListView::boundingRect() const
 {
-    QRectF rect=childrenBoundingRect();
-    if(rect.width()<50||rect.height()<50) {
-        return QRectF(0,0,50,50);
-    }
-    return rect;
+    return QRect(0,0,pixmap.size().width()*x,pixmap.size().height()*(items->size()>x*y?y+1:y));
 }
 
 void PlayerListView::paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget)
 {
     QList<QGraphicsItem*> list=childItems();
-    QList<QGraphicsItem *>::Iterator chilIter;
-    for(chilIter=list.begin(); chilIter!=list.end(); chilIter++)
+    QList<QGraphicsItem *>::Iterator childIter;
+    for(childIter=list.begin(); childIter!=list.end(); childIter++)
     {
-        if(pixmap.size()!=(*chilIter)->boundingRect().size()&&!(*chilIter)->boundingRect().size().isEmpty())
-            pixmap=pixmap.scaled((*chilIter)->boundingRect().size().width(),
-                                 (*chilIter)->boundingRect().size().height()
+        if(*childIter==right||*childIter==left) {
+            continue;
+        }
+        if(pixmap.size()!=(*childIter)->boundingRect().size()&&!(*childIter)->boundingRect().size().isEmpty())
+            pixmap=pixmap.scaled((*childIter)->boundingRect().size().width(),
+                                 (*childIter)->boundingRect().size().height()
                                  ,Qt::IgnoreAspectRatio,Qt::SmoothTransformation);
-        painter->drawPixmap((*chilIter)->pos(),pixmap);
+        painter->drawPixmap((*childIter)->pos(),pixmap);
     }
 }
 
@@ -93,6 +98,12 @@ void PlayerListView::updatePosition(int i)
 {
     curPosition+=i;
     update();
+}
+
+void PlayerListView::setXY(int x, int y)
+{
+    this->x=x;
+    this->y=y;
 }
 
 void PlayerListView::dropEvent(QGraphicsSceneDragDropEvent *event)

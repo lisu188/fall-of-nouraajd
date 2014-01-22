@@ -1,62 +1,9 @@
 <RCC>
     <qresource prefix="/">
-        <file>images/tiles/grass/0.png</file>
-        <file>images/tiles/ground/0.png</file>
-        <file>images/tiles/mountain/0.png</file>
-        <file>images/tiles/road/0.png</file>
-        <file>images/tiles/water/0.png</file>
-        <file>images/players/warrior/0.png</file>
-        <file>images/players/sorcerer/0.png</file>
-        <file>images/players/assasin/0.png</file>
-        <file>images/monsters/octobogz/0.png</file>
-        <file>images/monsters/octobogz/1.png</file>
-        <file>images/monsters/octobogz/time.txt</file>
-        <file>images/monsters/pritz/0.png</file>
-        <file>images/monsters/pritz/1.png</file>
-        <file>images/monsters/pritz/time.txt</file>
-        <file>images/monsters/pritzmage/0.png</file>
-        <file>images/monsters/pritzmage/1.png</file>
-        <file>images/monsters/pritzmage/2.png</file>
-        <file>images/monsters/pritzmage/3.png</file>
-        <file>images/monsters/pritzmage/time.txt</file>
-        <file>images/items/armors/leatherarmor/0.png</file>
-        <file>images/items/armors/platearmor/0.png</file>
-        <file>images/items/armors/robe/0.png</file>
-        <file>images/items/potions/bless/0.png</file>
-        <file>images/items/potions/life/0.png</file>
-        <file>images/items/potions/mana/0.png</file>
-        <file>images/items/potions/poison/0.png</file>
-        <file>images/items/weapons/chaossword/0.png</file>
-        <file>images/items/weapons/dagger/0.png</file>
-        <file>images/items/weapons/staff/0.png</file>
-        <file>images/items/weapons/sword/0.png</file>
-        <file>images/arrows/left/0.png</file>
-        <file>images/arrows/right/0.png</file>
-        <file>images/buildings/cave/0.png</file>
-        <file>images/buildings/dungeon/0.png</file>
-        <file>images/interactions/abyssalshadows/0.png</file>
-        <file>images/interactions/armorofendlesswinter/0.png</file>
-        <file>images/interactions/attack/0.png</file>
-        <file>images/interactions/backstab/0.png</file>
-        <file>images/interactions/barrier/0.png</file>
-        <file>images/interactions/bloodlash/0.png</file>
-        <file>images/interactions/bloodthirst/0.png</file>
-        <file>images/interactions/chaosblast/0.png</file>
-        <file>images/interactions/chloroform/0.png</file>
-        <file>images/interactions/deathstrike/0.png</file>
-        <file>images/interactions/devour/0.png</file>
-        <file>images/interactions/doubleattack/0.png</file>
-        <file>images/interactions/endlesspain/0.png</file>
-        <file>images/interactions/frostbolt/0.png</file>
-        <file>images/interactions/lethalpoison/0.png</file>
-        <file>images/interactions/magicmissile/0.png</file>
-        <file>images/interactions/mutilation/0.png</file>
-        <file>images/interactions/shadowbolt/0.png</file>
-        <file>images/interactions/sneakattack/0.png</file>
-        <file>images/interactions/strike/0.png</file>
-        <file>images/interactions/stun/0.png</file>
+        <file>images/backpack.png</file>
         <file>images/item.png</file>
         <file>images/loading.png</file>
-        <file>images/backpack.png</file>
+        <file>images/arrows/right/0.png</file>
+        <file>images/arrows/left/0.png</file>
     </qresource>
 </RCC>

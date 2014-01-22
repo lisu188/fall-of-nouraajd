@@ -15,8 +15,6 @@ public:
 private:
     bool isRight;
     PlayerListView *stats;
-    int tileSize;
-    // QGraphicsItem interface
 protected:
     virtual void mousePressEvent(QGraphicsSceneMouseEvent *event);
 };

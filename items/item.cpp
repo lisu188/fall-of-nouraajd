@@ -101,6 +101,7 @@ void Item::mousePressEvent(QGraphicsSceneMouseEvent *event)
     if(singleUse&&GameScene::getPlayer())
     {
         GameScene::getPlayer()->loseItem(this);
+        onUse(GameScene::getPlayer());
         delete this;
     }
     else

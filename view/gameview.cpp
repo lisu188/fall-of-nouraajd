@@ -1,14 +1,58 @@
 #include "gameview.h"
+#include <interactions/interaction.h>
 #include <QDebug>
 #include <QPainter>
 #include <QMouseEvent>
 #include <view/playerlistview.h>
+
+namespace {
+struct ViewLists {
+    std::set<ListItem *> inventory;
+    std::set<ListItem *> skills;
+    std::set<ListItem *> equipped;
+};
+std::map<GameView *, ViewLists> viewLists;
+
+void copyPlayerLists(Player *player, ViewLists &lists) {
+    lists.inventory.clear();
+    lists.skills.clear();
+    lists.equipped.clear();
+    for (Item *item : *player->getInventory())
+        lists.inventory.insert(item);
+    for (Interaction *action : *player->getActions())
+        lists.skills.insert(action);
+    for (Item *item : *player->getEquipped())
+        lists.equipped.insert(item);
+}
+} // namespace
 
 bool GameView::init = false;
 
 void GameView::start() {
 
     scene->startGame();
+    Player *player = GameScene::getPlayer();
+    ViewLists &lists = viewLists[this];
+    copyPlayerLists(player, lists);
+    playerInventoryView = new PlayerListView(&lists.inventory);
+    playerSkillsView = new PlayerListView(&lists.skills);
+    playerEquippedView = new PlayerListView(&lists.equipped);
+    playerInventoryView->setParentItem(charView);
+    playerEquippedView->setParentItem(charView);
+    scene->addItem(playerSkillsView);
+    playerInventoryView->setPos(0, 0);
+    playerEquippedView->setPos(charView->boundingRect().width() - playerEquippedView->boundingRect().width(), 0);
+    playerSkillsView->setPos(mapToScene(width() - playerSkillsView->boundingRect().width(),
+                                        height() - playerSkillsView->boundingRect().height()));
+    auto refresh = [this, player]() {
+        copyPlayerLists(player, viewLists[this]);
+        playerInventoryView->update();
+        playerSkillsView->update();
+        playerEquippedView->update();
+    };
+    connect(player, &Creature::inventoryChanged, this, refresh);
+    connect(player, &Creature::skillsChanged, this, refresh);
+    connect(player, &Creature::equippedChanged, this, refresh);
     playerStatsView.setPlayer(GameScene::getPlayer());
     playerStatsView.update();
     scene->removeItem(&loading);
@@ -16,6 +60,9 @@ void GameView::start() {
 }
 
 GameView::GameView() {
+    playerInventoryView = 0;
+    playerSkillsView = 0;
+    playerEquippedView = 0;
     showFullScreen();
     setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
     setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
@@ -52,23 +99,27 @@ GameView::GameView() {
     timer.start();
 }
 
-GameView::~GameView() { delete scene; }
+GameView::~GameView() {
+    delete scene;
+    viewLists.erase(this);
+}
 
 FightView *GameView::getFightView() { return fightView; }
 
 CharView *GameView::getCharView() { return charView; }
 
 void GameView::showCharView() {
+    if (!playerInventoryView || !playerEquippedView)
+        return;
     if (!charView->isVisible()) {
 
         charView->setVisible(true);
         charView->setPos(mapToScene(this->width() / 2 - charView->boundingRect().width() / 2,
                                     this->height() / 2 - charView->boundingRect().height() / 2));
-        GameScene::getPlayer()->getInventoryView()->setPos(0, 0);
-        GameScene::getPlayer()->getEquippedView()->setPos(
-            GameScene::getView()->getCharView()->boundingRect().width() -
-                GameScene::getPlayer()->getEquippedView()->boundingRect().width(),
-            0);
+        playerInventoryView->setPos(0, 0);
+        playerEquippedView->setPos(GameScene::getView()->getCharView()->boundingRect().width() -
+                                       playerEquippedView->boundingRect().width(),
+                                   0);
         charView->update();
     } else {
         charView->setVisible(false);
@@ -104,11 +155,14 @@ void GameView::resizeEvent(QResizeEvent *event) {
     if (event) {
         QWidget::resizeEvent(event);
     }
+    backpack.move((width() - backpack.width()) / 2, 0);
+    playerStatsView.move(0, 0);
     if (init) {
         int size = GameScene::getGame()->getMap()->getTileSize();
         Player *player = GameScene::getPlayer();
         centerOn(player->getPosX() * size + size / 2, player->getPosY() * size + size / 2);
-        player->update();
+        playerSkillsView->setPos(mapToScene(width() - playerSkillsView->boundingRect().width(),
+                                            height() - playerSkillsView->boundingRect().height()));
     }
 }
 

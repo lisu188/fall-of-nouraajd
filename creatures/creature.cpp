@@ -149,6 +149,7 @@ void Creature::addAction(Interaction *action) {
     if (!action)
         return;
     actions.insert(action);
+    emit skillsChanged();
 }
 
 void Creature::addEffect(std::string type, Creature *caster) {
@@ -167,6 +168,7 @@ void Creature::addItem(std::set<Item *> *items) {
     Player *player = dynamic_cast<Player *>(this);
     if (player)
         player->updateViews();
+    emit inventoryChanged();
 }
 
 void Creature::addItem(Item *item) {
@@ -180,6 +182,7 @@ void Creature::loseItem(Item *item) {
     Player *player = dynamic_cast<Player *>(this);
     if (player)
         player->updateViews();
+    emit inventoryChanged();
 }
 
 std::set<Item *> *Creature::getInventory() { return &inventory; }
@@ -221,6 +224,7 @@ void Creature::setItem(void *pointer, Item *newItem) {
         equipped.insert(*slot);
         (*slot)->onEquip(this);
     }
+    emit equippedChanged();
 }
 
 void Creature::setWeapon(Weapon *weapon) { setItem(&this->weapon, weapon); }
@@ -402,3 +406,5 @@ void Creature::hoverLeaveEvent(QGraphicsSceneHoverEvent *event) {
 std::set<Item *> *Creature::getEquipped() { return &equipped; }
 
 int Creature::getExp() { return exp; }
+
+std::set<Interaction *> *Creature::getActions() { return &actions; }
