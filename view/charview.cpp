@@ -8,11 +8,6 @@ CharView::CharView()
     setVisible(false);
 }
 
-void CharView::update()
-{
-    QGraphicsItem::update();
-}
-
 QRectF CharView::boundingRect() const
 {
     return QRectF(0,0,400,300);

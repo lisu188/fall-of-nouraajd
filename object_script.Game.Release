@@ -39,10 +39,16 @@ INPUT(
 ./release\weapon.o
 ./release\animation.o
 ./release\destroyer.o
-./release\qrc_images.o
 ./release\qrc_config.o
+./release\qrc_iteractions.o
+./release\qrc_items.o
+./release\qrc_creatures.o
+./release\qrc_buildings.o
+./release\qrc_tiles.o
+./release\qrc_images.o
 ./release\moc_gameview.o
 ./release\moc_creature.o
+./release\moc_playerlistview.o
 ./release\moc_gamescene.o
 ./release\moc_playerstatsview.o
 ./release\moc_animatedobject.o

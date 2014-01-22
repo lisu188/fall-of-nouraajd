@@ -45,6 +45,9 @@ private:
     QGraphicsPixmapItem loading;
     BackPackObject backpack;
     PlayerStatsView playerStatsView;
+    PlayerListView *playerInventoryView;
+    PlayerListView *playerSkillsView;
+    PlayerListView *playerEquippedView;
 public slots:
     void showCharView();
 private slots:

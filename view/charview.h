@@ -3,11 +3,10 @@
 
 #include <QGraphicsItem>
 
-class CharView : public QGraphicsItem
+class CharView : public QGraphicsObject
 {
 public:
     CharView();
-    void update();
     virtual QRectF boundingRect() const;
     virtual void paint(QPainter *painter, const QStyleOptionGraphicsItem *, QWidget *);
 };

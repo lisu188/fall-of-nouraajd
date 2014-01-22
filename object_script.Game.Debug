@@ -39,10 +39,16 @@ INPUT(
 ./debug\weapon.o
 ./debug\animation.o
 ./debug\destroyer.o
-./debug\qrc_images.o
 ./debug\qrc_config.o
+./debug\qrc_iteractions.o
+./debug\qrc_items.o
+./debug\qrc_creatures.o
+./debug\qrc_buildings.o
+./debug\qrc_tiles.o
+./debug\qrc_images.o
 ./debug\moc_gameview.o
 ./debug\moc_creature.o
+./debug\moc_playerlistview.o
 ./debug\moc_gamescene.o
 ./debug\moc_playerstatsview.o
 ./debug\moc_animatedobject.o

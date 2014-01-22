@@ -26,8 +26,6 @@ public:
     void update();
     void updateViews();
 
-    PlayerListView *getInventoryView();
-    PlayerListView *getSkillsView();
     PlayerListView *getEquippedView();
 
     void addToFightList(Creature *creature);
@@ -41,9 +39,6 @@ public:
     void init();
     virtual void setMap(Map *map);
 private:
-    PlayerListView *playerInventoryView;
-    PlayerListView *playerSkillsView;
-    PlayerListView *playerEquippedView;
     std::list<Creature *> fightList;
 
     int turn;

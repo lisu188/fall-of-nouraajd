@@ -1,0 +1,18 @@
+<RCC>
+    <qresource prefix="/">
+        <file>images/players/warrior/0.png</file>
+        <file>images/players/sorcerer/0.png</file>
+        <file>images/players/assasin/0.png</file>
+        <file>images/monsters/pritzmage/0.png</file>
+        <file>images/monsters/pritz/0.png</file>
+        <file>images/monsters/octobogz/0.png</file>
+        <file>images/monsters/pritzmage/1.png</file>
+        <file>images/monsters/pritz/1.png</file>
+        <file>images/monsters/octobogz/1.png</file>
+        <file>images/monsters/pritzmage/2.png</file>
+        <file>images/monsters/pritzmage/3.png</file>
+        <file>images/monsters/pritzmage/time.txt</file>
+        <file>images/monsters/pritz/time.txt</file>
+        <file>images/monsters/octobogz/time.txt</file>
+    </qresource>
+</RCC>
