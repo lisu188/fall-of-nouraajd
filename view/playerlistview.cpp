@@ -6,7 +6,7 @@
 #include <QDrag>
 #include <QMimeData>
 
-PlayerListView::PlayerListView(std::set<ListItem *> *listItems):items(listItems)
+PlayerListView::PlayerListView(std::set<ListItem *,Comparer> *listItems):items(listItems)
 {
     this->setZValue(3);
     curPosition=0;
@@ -14,6 +14,10 @@ PlayerListView::PlayerListView(std::set<ListItem *> *listItems):items(listItems)
     left=new ScrollObject(this,false);
     x=4,y=4;
     pixmap.load(":/images/item.png");
+    pixmap=pixmap.scaled(Map::getTileSize(),Map::getTileSize(),
+                         Qt::IgnoreAspectRatio,Qt::SmoothTransformation);
+    left->setPos(0,y*Map::getTileSize());
+    right->setPos((x-1)*Map::getTileSize(),y*Map::getTileSize());
     update();
 }
 
@@ -40,7 +44,7 @@ void PlayerListView::update()
     for(itemIter=items->begin(); itemIter!=items->end(); i++,itemIter++)
     {
         ListItem *item=*itemIter;
-        if(item->getMap()!=GameScene::getPlayer()->getMap())
+        if(GameScene::getPlayer()&&item->getMap()!=GameScene::getPlayer()->getMap())
         {
             item->setMap(GameScene::getPlayer()->getMap());
         }
@@ -54,9 +58,7 @@ void PlayerListView::update()
         }
     }
     right->setVisible(items->size()>x*y);
-    right->setPos((x-1)*pixmap.size().width(),y*pixmap.size().height());
     left->setVisible(items->size()>x*y);
-    left->setPos(0,y*pixmap.size().height());
 }
 
 Map *PlayerListView::getMap()
@@ -86,10 +88,6 @@ void PlayerListView::paint(QPainter *painter, const QStyleOptionGraphicsItem *op
         if(*childIter==right||*childIter==left) {
             continue;
         }
-        if(pixmap.size()!=(*childIter)->boundingRect().size()&&!(*childIter)->boundingRect().size().isEmpty())
-            pixmap=pixmap.scaled((*childIter)->boundingRect().size().width(),
-                                 (*childIter)->boundingRect().size().height()
-                                 ,Qt::IgnoreAspectRatio,Qt::SmoothTransformation);
         painter->drawPixmap((*childIter)->pos(),pixmap);
     }
 }

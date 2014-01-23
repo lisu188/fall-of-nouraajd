@@ -17,9 +17,12 @@ public:
     virtual void onUnequip(Creature *creature);
     static Item *getItem(const char *name);
     virtual void onUse(Creature *creature)=0;
+    virtual void onEnter();
+    virtual void onMove() {}
+    virtual Json::Value saveToJson();
+    virtual bool canSave();
 
 protected:
-    void setAnimation(std::string path);
     virtual void mousePressEvent(QGraphicsSceneMouseEvent *event);
     bool singleUse;
     Stats bonus;
@@ -27,15 +30,6 @@ protected:
     Interaction *interaction;
     int power;
     Item();
-
-    // MapObject interface
-public:
-    virtual void onEnter();
-    virtual void onMove() {}
-    virtual Json::Value saveToJson();
-    virtual bool canSave();
-
-    // QGraphicsItem interface
 };
 
 #endif // ITEM_H

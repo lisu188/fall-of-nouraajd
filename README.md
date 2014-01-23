@@ -1,7 +1,7 @@
 # Recovered game snapshot
 
-Original commit: `5e000dca02a17e179719d99ae93d31687c9d2244`. Original tree: `31217a2066f3e568d8701155f95e3c79bac7a596`.
-Startup was verified from identical recovered sources at `5e000dca02a17e179719d99ae93d31687c9d2244`.
+Original commit: `627b788d90ebebaab4e4da3a6300b802b10ce4bf`. Original tree: `ca5a2edc1229cea216959feed80feb195c6feaa6`.
+Startup was verified from identical recovered sources at `627b788d90ebebaab4e4da3a6300b802b10ce4bf`.
 
 This recovered version compiled and linked on Linux, started the real game on an isolated Xvfb display,
 loaded its map and a healthy player, rendered the screenshot below, and exited normally.
@@ -40,28 +40,29 @@ The genuine scene writes `save/game.sav` during shutdown. Verification prepared 
 parent directory before startup, without changing source files or replacing existing save data.
 The source call, source hash and created/preserved directory are recorded in verification metadata.
 
-compatibilityRepair: 1, exactOriginal: 44, reconstruction: 17.
+compatibilityRepair: 1, exactOriginal: 56, reconstruction: 18.
 
 - `compression/minizip.h`: unverified upstream reconstruction; https://github.com/richgel999/miniz/tree/v114
 - `config/creatures.json`: content reconstruction of the BFG-removed original; carried nearest reconstructed config/creatures.json through API-stable #62; surviving files provide no recoverable internal implementation/data delta
-- `config/map.json`: unverified donor reconstruction; bf32a4c93e396bd645769a9957eacd6a75106b62:config/map.json; headerMatch=0; apiOverlap=0/10000; distance=10
-- `creatures/creature.cpp`: Adapted validated #118 Creature to genuine #119 getActions getter and inventoryChanged/skillsChanged/equippedChanged signals, which match original PlayerListView Qt slots and new GameView-owned lists. Returns actual owned actions and emits real moc-generated signals after actual collection changes; original Player.cpp remains untouched. Prior inferred formulas/save schema and unknown signal timing remain explicit.
-- `images/buildings/dungeon/0.png`: unverified donor reconstruction; 71a3432e36b5649aabdd63c7807a78e9a8a3749a:images/buildings/dungeon/0.png; headerMatch=0; apiOverlap=0/10000; distance=42
+- `config/items.json`: unverified donor reconstruction; 5e000dca02a17e179719d99ae93d31687c9d2244:config/items.json; headerMatch=0; apiOverlap=0/10000; distance=1
+- `config/map.json`: unverified donor reconstruction; bf32a4c93e396bd645769a9957eacd6a75106b62:config/map.json; headerMatch=0; apiOverlap=0/10000; distance=9
+- `creatures/creature.cpp`: Adapted validated #119 Creature to genuine #120 private Comparer sets while its public getter types remain std::set<T*>*. Matches the explicit same-commit surviving Player::getLoot cast pattern to return the actual owned containers through their legacy types, preserving pointer identity and mutation semantics rather than inventing snapshots. This is a documented original-style container ABI/aliasing compatibility inference under pinned GCC5, not a portable C++ guarantee or gameplay parity claim. Real contents/signals/formulas/save behavior retain prior provenance.
+- `images/buildings/dungeon/0.png`: unverified donor reconstruction; 71a3432e36b5649aabdd63c7807a78e9a8a3749a:images/buildings/dungeon/0.png; headerMatch=0; apiOverlap=0/10000; distance=41
 - `images/loading.png`: synthesized visible 32px placeholder; original artwork unavailable; unverified
 - `images/tiles/mountain/0.png`: unverified donor reconstruction; 152007b28631784d3c5e17f2686eb6ef9ff30e46:images/tiles/mountain/0.png; headerMatch=0; apiOverlap=0/10000; distance=155 Verified by build and startup of afdd8069 (recovery/evidence/second-original).
 - `images/tiles/road/0.png`: unverified donor reconstruction; 152007b28631784d3c5e17f2686eb6ef9ff30e46:images/tiles/road/0.png; headerMatch=0; apiOverlap=0/10000; distance=155 Verified by build and startup of afdd8069 (recovery/evidence/second-original).
-- `interactions/interaction.cpp`: carried forward unchanged from the reconstruction of d8eebeb95fdc4734ed2094dc13c298671c8b0529 (previous version of interactions/interaction.cpp)
+- `interactions/interaction.cpp`: Carried validated #119 Interaction and removed only its obsolete setAnimation definition because genuine #120 header now inherits MapObject::setAnimation. Real configured animations and combat/effects remain enabled; previous behavior/inference provenance retained.
 - `json/json_batchallocator.h`: unverified upstream reconstruction; https://github.com/open-source-parsers/jsoncpp/tree/4fce396c9d3e27a8ab8fb88e94c1676e021ae3a6
 - `json/json_reader.cpp`: unverified upstream reconstruction; https://github.com/open-source-parsers/jsoncpp/tree/4fce396c9d3e27a8ab8fb88e94c1676e021ae3a6
 - `json/json_value.cpp`: unverified upstream reconstruction; https://github.com/open-source-parsers/jsoncpp/tree/4fce396c9d3e27a8ab8fb88e94c1676e021ae3a6
 - `json/json_writer.cpp`: unverified upstream reconstruction; https://github.com/open-source-parsers/jsoncpp/tree/4fce396c9d3e27a8ab8fb88e94c1676e021ae3a6
-- `map/map.cpp`: Carried validated #116–118 Map reconstruction unchanged; same surviving API at #119. Previous inferred cache radius and unknown internal deltas retained.
+- `map/map.cpp`: Adapted validated #119 Map/MapObject to genuine #120 static Map::getTileSize and removal of per-map tileSize/setTileSize, MapObject path cache/getSize. Static size selects the surviving init.json editor/mapSize/gameSize keys, matching the original MapScene removal of its per-map size assignment; exact missing default-size implementation remains inferred. Real animation setup now uses static size directly, no cached path fabricated. Geometry/save/object behavior retains prior provenance.
 - `stats/stats.cpp`: content reconstruction of the BFG-removed original; carried validated d30a3f79 stats reconstruction; #63 surviving Stats change only renames a loadFromJson parameter
-- `view/gamescene.cpp`: Carried validated #115–117 Scene reconstruction unchanged; surviving #118 Scene API is identical. Prior actual movement/map/save behavior retained; unknown original internal delta remains unverified.
-- `view/gameview.cpp`: Adapted validated #118 View (derived from genuine #117 source) to genuine #119 GameView-owned inventory/skill/equipment list pointers, Creature actual getters/new signals, and intact Player.cpp that no longer owns those views. Actual base-pointer view sets are refreshed from the real player on real collection-change signals, avoiding reinterpretation of incompatible containers. Original PlayerListView updates and CharView parenting are used; exact original layout/signal timing remains inferred. Original main/config/headers/Player.cpp/widgets/assets unchanged; startup does not prove ordinary GUI interaction or historical gameplay parity.
+- `view/gamescene.cpp`: Adapted validated #119 Scene to genuine #120 static Map tile-size API by removing the two obsolete per-map setter calls. Real original configuration now determines static size; real map/player/save/movement remains unchanged. Exact missing original implementation delta remains unverified.
+- `view/gameview.cpp`: Adapted validated #119 GameView-owned real collections to genuine #120 PlayerListView constructor std::set<ListItem*,Comparer>* using the actual surviving Comparer. Actual player inventory/actions/equipment remain the source, with real signals/views/widgets. Prior explicit layout/timing inference and original-style Creature container ABI limitation remain; original headers/main/config/player/assets unchanged.
 - `json/LICENSE`: https://github.com/open-source-parsers/jsoncpp/tree/4fce396c9d3e27a8ab8fb88e94c1676e021ae3a6 upstream distribution license
 
-Restored source fingerprint: `f8bb5e11245fd0248f4c765c34c9a08b8fb033927b4ab081cbd05df384eeb5ce`.
+Restored source fingerprint: `43295025d37053fad09f505b813e0be513846a3ef953b1b901ca7c4ba4dc2630`.
 
 The actual 1278 × 718 screenshot and [verification metadata](recovery/verification.json) belong to
 this source version. Reconstructed code and borrowed assets are identified in that metadata; they are

@@ -23,7 +23,7 @@ struct MapJsonState {
 std::map<Map *, MapJsonState> mapJsonStates;
 } // namespace
 
-Map::Map(QGraphicsScene *scene) : scene(scene), tileSize(50) {}
+Map::Map(QGraphicsScene *scene) : scene(scene) {}
 
 Map::~Map() {
     mapJsonStates.erase(this);
@@ -392,17 +392,12 @@ void MapObject::move(int x, int y) {
 
 void MapObject::setParentItem(QGraphicsItem *parent) { QGraphicsItem::setParentItem(parent); }
 
-void MapObject::setAnimation(std::string path) {
-    this->path = path;
-    AnimatedObject::setAnimation(path, map ? map->getTileSize() : 50);
-}
+void MapObject::setAnimation(std::string path) { AnimatedObject::setAnimation(path, Map::getTileSize()); }
 
 void MapObject::setMap(Map *map) {
     this->map = map;
     if (map && map->getScene() && scene() != map->getScene())
         map->getScene()->addItem(this);
-    if (!path.empty())
-        setAnimation(path);
     MapObject::moveTo(posx, posy, posz, true);
     setVisible(true);
 }
@@ -421,17 +416,11 @@ void MapObject::setVisible(bool visible) { QGraphicsItem::setVisible(visible); }
 
 QGraphicsScene *Map::getScene() const { return scene; }
 
-int Map::getTileSize() const { return tileSize; }
-
-void Map::setTileSize(int value) {
-    if (value <= 0)
-        return;
-    tileSize = value;
-    for (std::map<Coords, Tile *>::iterator it = tiles.begin(); it != tiles.end(); ++it)
-        delete (*it).second;
-    tiles.clear();
-    for (std::set<MapObject *>::iterator it = mapObjects.begin(); it != mapObjects.end(); ++it)
-        (*it)->setMap(this);
+int Map::getTileSize() {
+    Json::Value *config = ConfigurationProvider::getConfig("config/init.json");
+    const bool editor = config->get("editor", false).asBool();
+    const int size = config->get(editor ? "mapSize" : "gameSize", 50).asInt();
+    return size > 0 ? size : 50;
 }
 
 void Map::mapUp() { ++currentMap; }
@@ -457,5 +446,3 @@ void Map::showAll() {
 int Map::getCurrentMap() { return currentMap; }
 
 Map *MapObject::getMap() { return map; }
-
-int MapObject::getSize() { return map ? map->getTileSize() : 50; }

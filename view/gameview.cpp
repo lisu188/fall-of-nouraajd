@@ -7,9 +7,9 @@
 
 namespace {
 struct ViewLists {
-    std::set<ListItem *> inventory;
-    std::set<ListItem *> skills;
-    std::set<ListItem *> equipped;
+    std::set<ListItem *, Comparer> inventory;
+    std::set<ListItem *, Comparer> skills;
+    std::set<ListItem *, Comparer> equipped;
 };
 std::map<GameView *, ViewLists> viewLists;
 

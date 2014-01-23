@@ -27,11 +27,6 @@ QPointF AnimatedObject::mapToParent(int a, int b)
     return QGraphicsItem::mapToParent(QPointF(a,b));
 }
 
-int AnimatedObject::getSize() {
-    return this->pixmap().size().height();
-}
-
-
 void AnimatedObject::setPixmap(const QPixmap &pixmap)
 {
     QGraphicsPixmapItem::setPixmap(pixmap);
@@ -40,7 +35,9 @@ void AnimatedObject::setPixmap(const QPixmap &pixmap)
 void AnimatedObject::setAnimation(std::string path,int size)
 {
     animation=AnimationProvider::getAnim(path,size);
-    animate();
+    if(animation) {
+        animate();
+    }
 }
 
 void AnimatedObject::animate()

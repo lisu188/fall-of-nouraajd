@@ -83,11 +83,6 @@ Item *Item::getItem(const char *name)
     return item;
 }
 
-void Item::setAnimation(std::string path)
-{
-    MapObject::setAnimation(path);
-}
-
 void Item::mousePressEvent(QGraphicsSceneMouseEvent *event)
 {
     if(GameScene::getPlayer()&&
