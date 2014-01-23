@@ -30,12 +30,10 @@ void GameScene::startGame() {
     srand(time(0));
     game = this;
     map = new Map(this);
-    map->setTileSize(ConfigurationProvider::getConfig("save/game.sav")->get("gameSize", 50).asInt());
     map->loadFromJson(*ConfigurationProvider::getConfig("save/game.sav"));
     if (!player) {
         delete map;
         map = new Map(this);
-        map->setTileSize(50);
         map->loadFromJson(*ConfigurationProvider::getConfig("config/map.json"));
         player = new Player("Sorcerer");
         map->addObject(player);

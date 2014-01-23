@@ -77,8 +77,6 @@ Interaction *Interaction::getInteraction(std::string name) {
     return new Interaction(name);
 }
 
-void Interaction::setAnimation(std::string path) { MapObject::setAnimation(path); }
-
 void Interaction::mousePressEvent(QGraphicsSceneMouseEvent *event) {
     Player *player = GameScene::getPlayer();
     if (player->getFightList()->size() == 0) {

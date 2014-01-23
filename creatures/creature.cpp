@@ -159,7 +159,7 @@ void Creature::addEffect(std::string type, Creature *caster) {
 }
 
 void Creature::addItem(std::set<Item *> *items) {
-    if (!items || items == &inventory)
+    if (!items || items == getInventory())
         return;
     inventory.insert(items->begin(), items->end());
     items->clear();
@@ -185,7 +185,7 @@ void Creature::loseItem(Item *item) {
     emit inventoryChanged();
 }
 
-std::set<Item *> *Creature::getInventory() { return &inventory; }
+std::set<Item *> *Creature::getInventory() { return reinterpret_cast<std::set<Item *> *>(&inventory); }
 
 int Creature::getMana() { return mana; }
 
@@ -403,8 +403,8 @@ void Creature::hoverLeaveEvent(QGraphicsSceneHoverEvent *event) {
         event->accept();
 }
 
-std::set<Item *> *Creature::getEquipped() { return &equipped; }
+std::set<Item *> *Creature::getEquipped() { return reinterpret_cast<std::set<Item *> *>(&equipped); }
 
 int Creature::getExp() { return exp; }
 
-std::set<Interaction *> *Creature::getActions() { return &actions; }
+std::set<Interaction *> *Creature::getActions() { return reinterpret_cast<std::set<Interaction *> *>(&actions); }

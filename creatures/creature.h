@@ -64,9 +64,14 @@ public:
     bool applyEffects();
     std::set<Interaction *> *getActions();
 protected:
+
+    std::set<Item*,Comparer> inventory;
+    std::set<Item*,Comparer> equipped;
+    std::set<Interaction *,Comparer> actions;
+
+    std::set<Effect *> effects;
+
     int gold;
-    std::set<Item*> inventory;
-    std::set<Item*> equipped;
     int exp;
     int level;
     int sw;
@@ -74,8 +79,7 @@ protected:
     int mana,manaMax,manaRegRate;
     int hpMax,hp;
     bool alive;
-    std::set<Interaction *> actions;
-    std::set<Effect *> effects;
+
     Weapon *weapon=0;
     Armor *armor=0;
     Stats stats;

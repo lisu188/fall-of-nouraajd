@@ -41,11 +41,13 @@ INPUT(
 ./release\destroyer.o
 ./release\qrc_config.o
 ./release\qrc_iteractions.o
-./release\qrc_items.o
 ./release\qrc_creatures.o
 ./release\qrc_buildings.o
 ./release\qrc_tiles.o
 ./release\qrc_images.o
+./release\qrc_weapons.o
+./release\qrc_armors.o
+./release\qrc_potions.o
 ./release\moc_gameview.o
 ./release\moc_creature.o
 ./release\moc_playerlistview.o

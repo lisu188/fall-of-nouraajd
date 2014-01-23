@@ -14,7 +14,6 @@ public:
     explicit AnimatedObject();
     ~AnimatedObject();
     QPointF mapToParent(int a,int b);
-    virtual int getSize();
 protected:
     Animation *animation;
     void setPixmap(const QPixmap &pixmap);
