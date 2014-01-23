@@ -11,7 +11,6 @@
 MapScene::MapScene()
 {
     map=new Map(this);
-    map->setTileSize(ConfigurationProvider::getConfig("config/init.json")->get("mapSize",10).asInt());
     map->loadFromJson(*ConfigurationProvider::getConfig("config/map.json"));
     map->showAll();
 }
@@ -49,8 +48,8 @@ void MapScene::dropEvent(QGraphicsSceneDragDropEvent *event)
     MapObject *object=(MapObject*)(event->source());
     map->addObject(object);
     object->setParentItem(0);
-    int posx=event->scenePos().x()/object->getSize();
-    int posy=event->scenePos().y()/object->getSize();
+    int posx=event->scenePos().x()/Map::getTileSize();
+    int posy=event->scenePos().y()/Map::getTileSize();
     object->moveTo(posx,posy,object->getPosZ(),true);
 }
 

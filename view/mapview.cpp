@@ -26,7 +26,7 @@ MapView::MapView()
             item->setMap(scene->getMap());
         }
     }
-    itemsList=new PlayerListView((std::set<ListItem *> *)&items);
+    itemsList=new PlayerListView((std::set<ListItem *,Comparer> *)&items);
     itemsList->setAcceptDrops(false);
     scene->addItem(itemsList);
     itemsList->setDraggable();

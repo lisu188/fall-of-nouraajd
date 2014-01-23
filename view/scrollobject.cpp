@@ -3,18 +3,21 @@
 
 #include <view/playerlistview.h>
 
+#include <configuration/configurationprovider.h>
+
 ScrollObject::ScrollObject(PlayerListView *stats, bool isRight)
 {
     this->isRight=isRight;
     this->setZValue(1);
     this->stats=stats;
+    int size=Map::getTileSize();
     if(!isRight)
     {
-        this->setAnimation("images/arrows/left/",50);
+        this->setAnimation("images/arrows/left/",size);
     }
     else
     {
-        this->setAnimation("images/arrows/right/",50);
+        this->setAnimation("images/arrows/right/",size);
     }
     setParentItem(stats);
 }

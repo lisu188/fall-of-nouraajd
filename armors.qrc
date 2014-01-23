@@ -1,0 +1,7 @@
+<RCC>
+    <qresource prefix="/">
+        <file>images/items/armors/robe/0.png</file>
+        <file>images/items/armors/platearmor/0.png</file>
+        <file>images/items/armors/leatherarmor/0.png</file>
+    </qresource>
+</RCC>

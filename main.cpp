@@ -1,6 +1,7 @@
 #include "view/gameview.h"
 
 #include <QApplication>
+#include <QDebug>
 
 #include <view/mapview.h>
 

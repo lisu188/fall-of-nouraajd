@@ -69,7 +69,7 @@ void Tile::addToScene(QGraphicsScene *scene)
 {
     Json::Value config=(*ConfigurationProvider::getConfig("config/tiles.json"))[className];
     loadFromJson(config);
-    setPos(posx*getSize(),posy*getSize());
+    setPos(posx*Map::getTileSize(),posy*Map::getTileSize());
     if(dynamic_cast<MapScene*>(scene))
     {
         this->setDraggable();
@@ -99,6 +99,10 @@ Json::Value Tile::saveToJson()
     return config;
 }
 
+void Tile::setDraggable() {
+    draggable=true;
+}
+
 void Tile::setXYZ(int x, int y, int z)
 {
     posx=x;
@@ -113,6 +117,10 @@ void Tile::mousePressEvent(QGraphicsSceneMouseEvent *event)
         AnimatedObject::mousePressEvent(event);
     }
     event->setAccepted(draggable);
+}
+
+bool Tile::canSave() {
+    return false;
 }
 
 void Tile::setMap(Map *map)

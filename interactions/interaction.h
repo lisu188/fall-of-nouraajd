@@ -17,8 +17,12 @@ public:
     void onAction(Creature *first,Creature *second);
     int getManaCost();
     static Interaction *getInteraction(std::string name);
+    virtual void onEnter();
+    virtual void onMove();
+    virtual void loadFromJson(Json::Value config);
+    virtual Json::Value saveToJson();
+    virtual bool canSave();
 protected:
-    void setAnimation(std::string path);
     void mousePressEvent(QGraphicsSceneMouseEvent *event);
     int manaCost;
 private:
@@ -26,16 +30,6 @@ private:
     static std::unordered_map<std::string,std::function<void (Creature *, Creature *)>> actions;
     std::string effect;
     QGraphicsSimpleTextItem statsView;
-
-    // MapObject interface
-public:
-    virtual void onEnter();
-    virtual void onMove();
-    virtual void loadFromJson(Json::Value config);
-    virtual Json::Value saveToJson();
-    virtual bool canSave();
-
-    // QGraphicsItem interface
 };
 
 void Attack(Creature *first,Creature *second);
@@ -69,10 +63,8 @@ public:
     Stats *getBonus();
     void setBonus(Stats *value);
     Json::Value saveToJson();
-
 private:
     static std::unordered_map<std::string,std::function<bool (Effect *effect, Creature *)>> effects;
-
     int timeLeft;
     int timeTotal;
     Stats *bonus;

@@ -1,0 +1,8 @@
+<RCC>
+    <qresource prefix="/">
+        <file>images/items/potions/poison/0.png</file>
+        <file>images/items/potions/mana/0.png</file>
+        <file>images/items/potions/life/0.png</file>
+        <file>images/items/potions/bless/0.png</file>
+    </qresource>
+</RCC>

@@ -32,7 +32,7 @@ public:
     void removeFromFightList(Creature *creature);
 
     std::list<Creature *> *getFightList();
-    void *performAction(Interaction *action,Creature *creature);
+    void performAction(Interaction *action,Creature *creature);
     void addEntered(MapObject *object);
     std::list<MapObject *> *getEntered();
 

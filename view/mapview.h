@@ -15,7 +15,7 @@ public:
     ~MapView();
 private:
     MapScene *scene;
-    std::set<Item *> items;
+    std::set<Item *,Comparer> items;
     PlayerListView *itemsList;
 protected:
     void dragMoveEvent(QDragMoveEvent *event);

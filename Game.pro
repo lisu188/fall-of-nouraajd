@@ -20,11 +20,13 @@ QMAKE_CXXFLAGS += -std=c++11
         RESOURCES +=  \
         config.qrc \
     iteractions.qrc \
-    items.qrc \
     creatures.qrc \
     buildings.qrc \
     tiles.qrc \
-    images.qrc
+    images.qrc \
+    weapons.qrc \
+    armors.qrc \
+    potions.qrc
 
 SOURCES += \
     creatures/player.cpp \

@@ -72,7 +72,7 @@ Player::~Player()
 }
 
 std::set<Item *> *Player::getLoot() {
-    return &inventory;
+    return (std::set<Item*>*)&inventory;
 }
 
 void Player::onMove()
@@ -117,7 +117,7 @@ void Player::removeFromFightList(Creature *creature)
     emit statsChanged();
 }
 
-void *Player::performAction(Interaction *action, Creature *creature)
+void Player::performAction(Interaction *action, Creature *creature)
 {
     action->onAction(this,creature);
     takeMana(action->getManaCost());

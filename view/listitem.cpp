@@ -6,6 +6,17 @@
 #include <QGraphicsSceneMouseEvent>
 #include <QDrag>
 
+std::string toLower(const std::string& s)
+{
+    std::string result;
+    std::locale loc;
+    for (unsigned int i = 0; i < s.length(); ++i)
+    {
+        result += std::tolower(s.at(i), loc);
+    }
+    return result;
+}
+
 ListItem::ListItem():MapObject(0,0,0,0)
 {
     statsView.setParentItem(this);
@@ -14,7 +25,6 @@ ListItem::ListItem():MapObject(0,0,0,0)
     statsView.setPos(-this->mapToParent(0,0).x(),
                      -statsView.boundingRect().height());
 }
-
 
 void ListItem::setParentItem(QGraphicsItem *parent)
 {
@@ -38,6 +48,11 @@ void ListItem::setPos(QPointF point)
 {
     this->QGraphicsItem::setVisible(true);
     this->QGraphicsItem::setPos(point);
+}
+
+bool ListItem::compare(ListItem *item)
+{
+    return toLower(className).compare(toLower(item->className))<0;
 }
 
 void ListItem::hoverEnterEvent(QGraphicsSceneHoverEvent *event)
