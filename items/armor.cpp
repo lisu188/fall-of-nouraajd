@@ -4,6 +4,14 @@
 
 #include <configuration/configurationprovider.h>
 
+Armor::Armor()
+{
+}
+
+Armor::Armor(const Armor &armor):Armor(armor.className)
+{
+}
+
 Armor::Armor(std::string name)
 {
     className=name;

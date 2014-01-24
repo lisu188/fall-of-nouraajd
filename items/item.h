@@ -11,11 +11,12 @@ class Interaction;
 class Item : public ListItem
 {
 public:
+    Item();
     bool isSingleUse();
     void setPos(QPointF point);
     virtual void onEquip(Creature *creature);
     virtual void onUnequip(Creature *creature);
-    static Item *getItem(const char *name);
+    static Item *getItem(std::string name);
     virtual void onUse(Creature *creature)=0;
     virtual void onEnter();
     virtual void onMove() {}
@@ -29,7 +30,6 @@ protected:
     void loadFromJson(Json::Value config);
     Interaction *interaction;
     int power;
-    Item();
 };
 
 #endif // ITEM_H

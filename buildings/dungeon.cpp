@@ -8,6 +8,12 @@ Dungeon::Dungeon(Coords enter, Coords exit):Building(enter.x,enter.y,enter.z),ex
     this->setAnimation("images/buildings/dungeon/");
 }
 
+Dungeon::Dungeon(const Dungeon &dungeon)
+    :Dungeon(Coords(dungeon.getPosX(),dungeon.getPosY(),dungeon.getPosZ()),
+             dungeon.getExit())
+{
+}
+
 void Dungeon::onEnter()
 {
     GameScene::getPlayer()->moveTo(exit.x,exit.y,exit.z,true);

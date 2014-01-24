@@ -54,4 +54,9 @@ INPUT(
 ./release\moc_gamescene.o
 ./release\moc_playerstatsview.o
 ./release\moc_animatedobject.o
+./release\moc_armor.o
+./release\moc_potion.o
+./release\moc_weapon.o
+./release\moc_dungeon.o
+./release\moc_cave.o
 );
