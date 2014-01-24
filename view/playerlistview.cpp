@@ -71,7 +71,7 @@ Map *PlayerListView::getMap()
 }
 
 void PlayerListView::setDraggable() {
-    draggable=true;
+    this->setFlag(QGraphicsItem::ItemIsMovable);
 }
 
 QRectF PlayerListView::boundingRect() const
@@ -81,15 +81,11 @@ QRectF PlayerListView::boundingRect() const
 
 void PlayerListView::paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget)
 {
-    QList<QGraphicsItem*> list=childItems();
-    QList<QGraphicsItem *>::Iterator childIter;
-    for(childIter=list.begin(); childIter!=list.end(); childIter++)
-    {
-        if(*childIter==right||*childIter==left) {
-            continue;
+    for(int i=0; i<x; i++)
+        for(int j=0; j<y; j++)
+        {
+            painter->drawPixmap(i*Map::getTileSize(),j*Map::getTileSize(),pixmap);
         }
-        painter->drawPixmap((*childIter)->pos(),pixmap);
-    }
 }
 
 void PlayerListView::updatePosition(int i)
@@ -103,22 +99,22 @@ void PlayerListView::setXY(int x, int y)
     this->x=x;
     this->y=y;
 }
+std::set<ListItem *, Comparer> *PlayerListView::getItems() const
+{
+    return items;
+}
+
+void PlayerListView::setItems(std::set<ListItem *, Comparer> *value)
+{
+    items = value;
+    curPosition=0;
+    update();
+}
+
 
 void PlayerListView::dropEvent(QGraphicsSceneDragDropEvent *event)
 {
     Item *item=(Item*)(event->source());
     event->acceptProposedAction();
     item->onUse(GameScene::getPlayer());
-}
-
-
-void PlayerListView::mousePressEvent(QGraphicsSceneMouseEvent *event)
-{
-    if(!draggable) {
-        return;
-    }
-    QDrag *drag = new QDrag(this);
-    QMimeData *mimeData = new QMimeData();
-    drag->setMimeData(mimeData);
-    drag->exec();
 }

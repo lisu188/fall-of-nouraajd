@@ -10,14 +10,16 @@ class Creature;
 class Interaction;
 class Item : public ListItem
 {
+    Q_OBJECT
 public:
     Item();
+    Item(const Item&);
     bool isSingleUse();
     void setPos(QPointF point);
     virtual void onEquip(Creature *creature);
     virtual void onUnequip(Creature *creature);
     static Item *getItem(std::string name);
-    virtual void onUse(Creature *creature)=0;
+    virtual void onUse(Creature *);
     virtual void onEnter();
     virtual void onMove() {}
     virtual Json::Value saveToJson();
@@ -31,5 +33,6 @@ protected:
     Interaction *interaction;
     int power;
 };
+Q_DECLARE_METATYPE(Item)
 
 #endif // ITEM_H

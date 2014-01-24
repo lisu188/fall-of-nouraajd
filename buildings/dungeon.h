@@ -8,14 +8,12 @@ class Dungeon : public Building
 public:
     Dungeon();
     Dungeon(const Dungeon& dungeon);
-    Dungeon(Coords enter,Coords exit);
     virtual void onEnter();
     virtual void onMove();
     bool canSave();
     Json::Value saveToJson();
-    Coords getExit()const {
-        return exit;
-    }
+    void loadFromJson(Json::Value config);
+    Coords getExit()const;
 private:
     Coords exit;
 };
