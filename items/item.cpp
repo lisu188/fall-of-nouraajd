@@ -65,20 +65,15 @@ Item *Item::getItem(std::string name)
     if(std::string(name).compare("")==0) {
         return item;
     }
-    std::string type=
+    std::string Class=
         (*ConfigurationProvider::getConfig("config/items.json"))
-        [name].get("type","").asString();;
-    if(type.compare("weapon")==0)
-    {
-        item=new Weapon(name);
-    } else if(type.compare("armor")==0) {
-        item =new Armor(name);
-    }
-    else if(type.compare("potion")==0) {
-        item =new Potion(name);
-    } else
-    {
-        item=0;
+        [name].get("class","").asString();
+    Json::Value config=(*ConfigurationProvider::getConfig("config/items.json"))[name];
+    int id=QMetaType::type(Class.c_str());
+    item=(Item*)QMetaType::create(id);
+    if(item) {
+        item->className=name;
+        item->loadFromJson(config);
     }
     return item;
 }

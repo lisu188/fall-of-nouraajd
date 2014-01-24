@@ -10,6 +10,7 @@ public:
     Potion(const Potion& potion);
     Potion(std::string name);
     virtual void onUse(Creature *creature);
+    void loadFromJson(Json::Value config);
 private:
     std::function<void (Creature *, int)> effect;
 };

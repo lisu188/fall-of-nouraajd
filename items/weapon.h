@@ -10,7 +10,7 @@ class Weapon : public Item
     Q_OBJECT
 public:
     Weapon();
-    Weapon(std::string name);
+    void init(std::string name);
     Weapon(const Weapon &weapon);
     Interaction *getInteraction();
     Stats *getStats();

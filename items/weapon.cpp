@@ -10,15 +10,11 @@ Weapon::Weapon()
 {
 }
 
-Weapon::Weapon(std::string name)
+Weapon::Weapon(const Weapon &weapon)
 {
-    className=name;
-    Json::Value config=(*ConfigurationProvider::getConfig("config/items.json"))[name];
+    className=weapon.className;
+    Json::Value config=(*ConfigurationProvider::getConfig("config/items.json"))[className];
     loadFromJson(config);
-}
-
-Weapon::Weapon(const Weapon &weapon):Weapon(weapon.className)
-{
 }
 
 Interaction *Weapon::getInteraction() {
