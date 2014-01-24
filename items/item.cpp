@@ -17,6 +17,11 @@ Item::Item()
     this->setZValue(1);
 }
 
+Item::Item(const Item &)
+{
+    this->setZValue(1);
+}
+
 void Item::onEnter()
 {
     this->getMap()->removeObject(this);
@@ -76,6 +81,10 @@ Item *Item::getItem(std::string name)
         item->loadFromJson(config);
     }
     return item;
+}
+
+void Item::onUse(Creature *)
+{
 }
 
 void Item::mousePressEvent(QGraphicsSceneMouseEvent *event)

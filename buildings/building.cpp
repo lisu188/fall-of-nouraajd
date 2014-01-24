@@ -3,11 +3,11 @@
 
 Building::Building()
 {
+    this->setZValue(2);
 }
 
-Building::Building(int x, int y, int z):MapObject(x,y,z,1)
+Building::Building(const Building &)
 {
-    className="Building";
 }
 
 void Building::onEnter()
@@ -17,6 +17,10 @@ void Building::onEnter()
 
 bool Building::canSave() {
     return true;
+}
+
+void Building::onMove()
+{
 }
 
 void Building::loadFromJson(Json::Value config)

@@ -19,16 +19,16 @@ public:
     virtual void paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget);
     void updatePosition(int i);
     void setXY(int x,int y);
+    std::set<ListItem *, Comparer> *getItems() const;
+    void setItems(std::set<ListItem *, Comparer> *value);
 private:
     int curPosition;
     int x,y;
     ScrollObject *right,*left;
     std::set<ListItem *,Comparer> *items;
-    bool draggable=false;
     QPixmap pixmap;
 protected:
     virtual void dropEvent(QGraphicsSceneDragDropEvent *event);
-    virtual void mousePressEvent(QGraphicsSceneMouseEvent *event);
 public slots:
     void update();
 };

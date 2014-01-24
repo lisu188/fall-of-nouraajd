@@ -2,17 +2,19 @@
 #define BUILDING_H
 #include "buildings/building.h"
 
-#include <map/map.h>
+#include <view/listitem.h>
 
-class Building :public MapObject
+class Building :public ListItem
 {
+    Q_OBJECT
 public:
     Building();
-    Building(int x, int y,int z);
+    Building(const Building&);
     virtual void onEnter();
     virtual bool canSave();
+    void onMove();
     virtual void loadFromJson(Json::Value config);
     virtual Json::Value saveToJson();
 };
-
+Q_DECLARE_METATYPE(Building)
 #endif // BUILDING_H

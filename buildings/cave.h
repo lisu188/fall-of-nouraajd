@@ -8,10 +8,10 @@ class Cave : public Building
 public:
     Cave();
     Cave(const Cave& cave);
-    Cave(int x, int y,int z);
     virtual void onEnter();
     virtual void onMove();
     bool canSave();
+    void loadFromJson(Json::Value config);
 
 private:
     bool enabled;

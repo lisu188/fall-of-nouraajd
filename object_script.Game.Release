@@ -52,6 +52,7 @@ INPUT(
 ./release\moc_creature.o
 ./release\moc_playerlistview.o
 ./release\moc_gamescene.o
+./release\moc_item.o
 ./release\moc_playerstatsview.o
 ./release\moc_animatedobject.o
 ./release\moc_armor.o
@@ -59,4 +60,5 @@ INPUT(
 ./release\moc_weapon.o
 ./release\moc_dungeon.o
 ./release\moc_cave.o
+./release\moc_building.o
 );

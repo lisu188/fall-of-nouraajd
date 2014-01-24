@@ -69,3 +69,13 @@ void ListItem::hoverLeaveEvent(QGraphicsSceneHoverEvent *event)
     event->setAccepted(true);
 }
 
+QRectF ListItem::boundingRect() const
+{
+    return QRectF(0,0,Map::getTileSize(),Map::getTileSize());
+}
+
+void ListItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget)
+{
+    AnimatedObject::paint(painter,option,widget);
+}
+

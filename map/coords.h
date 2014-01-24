@@ -5,6 +5,7 @@
 class Coords
 {
 public:
+    Coords();
     Coords(int x,int y,int z);
     int x,y,z;
     bool operator==(const Coords &other) const;

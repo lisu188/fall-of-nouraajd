@@ -2,16 +2,16 @@
 
 #include <view/gamescene.h>
 
-Dungeon::Dungeon(Coords enter, Coords exit):Building(enter.x,enter.y,enter.z),exit(exit)
+Dungeon::Dungeon()
 {
     className="Dungeon";
     this->setAnimation("images/buildings/dungeon/");
 }
 
-Dungeon::Dungeon(const Dungeon &dungeon)
-    :Dungeon(Coords(dungeon.getPosX(),dungeon.getPosY(),dungeon.getPosZ()),
-             dungeon.getExit())
+Dungeon::Dungeon(const Dungeon &dungeon):Dungeon()
 {
+    this->moveTo(dungeon.getPosX(),dungeon.getPosY(),dungeon.getPosZ());
+    exit=Coords(getExit());
 }
 
 void Dungeon::onEnter()
@@ -39,4 +39,20 @@ Json::Value Dungeon::saveToJson()
     config[(unsigned int)4]=exit.y;
     config[(unsigned int)5]=exit.z;
     return config;
+}
+
+void Dungeon::loadFromJson(Json::Value config)
+{
+    int x=config[(unsigned int)0].asInt();
+    int y=config[(unsigned int)1].asInt();
+    int z=config[(unsigned int)2].asInt();
+    this->moveTo(x,y,z,true);
+    x=config[(unsigned int)3].asInt();
+    y=config[(unsigned int)4].asInt();
+    z=config[(unsigned int)5].asInt();
+    exit=Coords(x,y,z);
+}
+
+Coords Dungeon::getExit() const {
+    return exit;
 }

@@ -18,12 +18,20 @@ protected:
     virtual void hoverLeaveEvent(QGraphicsSceneHoverEvent *event);
 private:
     QGraphicsSimpleTextItem statsView;
+
+    // QGraphicsItem interface
+public:
+    QRectF boundingRect() const;
+    virtual void paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget);
 };
 
 class Comparer {
 public:
     bool operator()(ListItem *first,ListItem *second)
     {
+        if(!second) {
+            return 0;
+        }
         return first->compare(second);
     }
 };

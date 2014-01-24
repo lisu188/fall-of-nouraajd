@@ -5,7 +5,42 @@
 #include <map/map.h>
 #include <QGraphicsSceneDragDropEvent>
 #include <configuration/configurationprovider.h>
+#include <buildings/building.h>
+#include <QDebug>
 
+extern std::set<int> qMetaTypesRegister;
+
+void MapView::loadItems()
+{
+    Json::Value config=*ConfigurationProvider::getConfig("config/items.json");
+    Json::Value::iterator it=config.begin();
+    for(; it!=config.end(); it++)
+    {
+        std::string name=it.memberName();
+        Item*item=Item::getItem(name.c_str());
+        if(item) {
+            items.insert(item);
+            //item->setMap(scene->getMap());
+        }
+    }
+}
+
+void MapView::loadBuildings()
+{
+    for(std::set<int>::iterator it=qMetaTypesRegister.begin(); it!=qMetaTypesRegister.end(); it++)
+    {
+        QObject *object=(QObject*)QMetaType::create(*it);
+        if(object->inherits("Building")&&*it!=QMetaType::type("Building"))
+        {
+            buildings.insert((Building*)object);
+            //((Building*)object)->setMap(scene->getMap());
+        }
+        else
+        {
+            delete object;
+        }
+    }
+}
 
 MapView::MapView()
 {
@@ -15,17 +50,8 @@ MapView::MapView()
     scene=new MapScene();
     setScene(scene);
     setAcceptDrops(true);
-    Json::Value config=*ConfigurationProvider::getConfig("config/items.json");
-    Json::Value::iterator it=config.begin();
-    for(; it!=config.end(); it++)
-    {
-        std::string name=it.memberName();
-        Item*item=Item::getItem(name.c_str());
-        if(item) {
-            items.insert(item);
-            item->setMap(scene->getMap());
-        }
-    }
+    loadItems();
+    loadBuildings();
     itemsList=new PlayerListView((std::set<ListItem *,Comparer> *)&items);
     itemsList->setAcceptDrops(false);
     scene->addItem(itemsList);
@@ -54,13 +80,40 @@ void MapView::dropEvent(QDropEvent *event)
     if(event->source()!=itemsList)
     {
         QGraphicsView::dropEvent(event);
-        Item *item=(Item*)(event->source());
-        items.erase(items.find(item));
-        item=Item::getItem(item->className.c_str());
-        if(item) {
-            item->setMap(itemsList->getMap());
-            items.insert(item);
+        ListItem *item=(ListItem*)(event->source());
+        auto list=itemsList->getItems();
+        if(list->find(item)!=list->end())
+        {
+            list->erase(list->find(item));
+            if(item->inherits("Item"))
+            {
+                item=Item::getItem(item->className);
+            }
+            else
+            {
+                item=(ListItem*)QMetaType::create(QMetaType::type(item->metaObject()->className()));
+            }
+            if(item) {
+                list->insert(item);
+            }
+            //item->setMap(scene->getMap());
+            itemsList->update();
         }
-        itemsList->update();
+    }
+}
+
+void MapView::keyPressEvent(QKeyEvent *e)
+{
+    QGraphicsView::keyPressEvent(e);
+    if(e->key()==Qt::Key_Space)
+    {
+        if(itemsList->getItems()==&items)
+        {
+            itemsList->setItems(&buildings);
+        }
+        else
+        {
+            itemsList->setItems(&items);
+        }
     }
 }

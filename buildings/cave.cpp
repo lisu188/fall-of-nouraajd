@@ -9,17 +9,14 @@
 
 Cave::Cave()
 {
-}
-
-Cave::Cave(const Cave &cave):Cave(cave.getPosX(),cave.getPosY(),cave.getPosZ())
-{
-}
-
-Cave::Cave(int x, int y,int z):Building(x,y,z)
-{
     className="Cave";
     this->setAnimation("images/buildings/cave/");
     enabled=true;
+}
+
+Cave::Cave(const Cave &cave):Cave()
+{
+    this->moveTo(cave.getPosX(),cave.getPosY(),cave.getPosZ(),true);
 }
 
 void Cave::onEnter()
@@ -72,6 +69,14 @@ void Cave::onMove()
 
 bool Cave::canSave() {
     return enabled;
+}
+
+void Cave::loadFromJson(Json::Value config)
+{
+    int x=config[(unsigned int)0].asInt();
+    int y=config[(unsigned int)1].asInt();
+    int z=config[(unsigned int)2].asInt();
+    this->moveTo(x,y,z,true);
 }
 
 

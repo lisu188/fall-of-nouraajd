@@ -13,17 +13,17 @@ class MapView : public QGraphicsView
 public:
     MapView();
     ~MapView();
+    void loadItems();
+    void loadBuildings();
 private:
     MapScene *scene;
-    std::set<Item *,Comparer> items;
+    std::set<ListItem *,Comparer> items;
+    std::set<ListItem *,Comparer> buildings;
     PlayerListView *itemsList;
 protected:
     void dragMoveEvent(QDragMoveEvent *event);
-
-
-    // QWidget interface
-protected:
     virtual void dropEvent(QDropEvent *event);
+    void keyPressEvent(QKeyEvent *e);
 };
 
 #endif // MAPVIEW_H
