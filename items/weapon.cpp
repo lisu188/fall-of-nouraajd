@@ -6,11 +6,19 @@
 #include <configuration/configurationprovider.h>
 
 
+Weapon::Weapon()
+{
+}
+
 Weapon::Weapon(std::string name)
 {
     className=name;
     Json::Value config=(*ConfigurationProvider::getConfig("config/items.json"))[name];
     loadFromJson(config);
+}
+
+Weapon::Weapon(const Weapon &weapon):Weapon(weapon.className)
+{
 }
 
 Interaction *Weapon::getInteraction() {

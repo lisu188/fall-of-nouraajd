@@ -7,6 +7,14 @@
 
 #include <configuration/configurationprovider.h>
 
+Cave::Cave()
+{
+}
+
+Cave::Cave(const Cave &cave):Cave(cave.getPosX(),cave.getPosY(),cave.getPosZ())
+{
+}
+
 Cave::Cave(int x, int y,int z):Building(x,y,z)
 {
     className="Cave";

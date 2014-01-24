@@ -4,6 +4,14 @@
 #include <creatures/creature.h>
 #include <view/gamescene.h>
 
+Potion::Potion()
+{
+}
+
+Potion::Potion(const Potion &potion):Potion(potion.className)
+{
+}
+
 Potion::Potion(std::string name)
 {
     className=name;

@@ -1,6 +1,10 @@
 #include "building.h"
 #include <QDebug>
 
+Building::Building()
+{
+}
+
 Building::Building(int x, int y, int z):MapObject(x,y,z,1)
 {
     className="Building";

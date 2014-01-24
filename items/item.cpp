@@ -59,7 +59,7 @@ void Item::onUnequip(Creature *creature)
     qDebug() << creature->className.c_str()<<"unequipped"<<className.c_str()<<"\n";
 }
 
-Item *Item::getItem(const char *name)
+Item *Item::getItem(std::string name)
 {
     Item *item=0;
     if(std::string(name).compare("")==0) {

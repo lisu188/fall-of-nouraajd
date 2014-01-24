@@ -7,6 +7,7 @@
 class Building :public MapObject
 {
 public:
+    Building();
     Building(int x, int y,int z);
     virtual void onEnter();
     virtual bool canSave();
