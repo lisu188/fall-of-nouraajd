@@ -21,6 +21,19 @@ struct MapJsonState {
     Json::Value unimplementedObjects;
 };
 std::map<Map *, MapJsonState> mapJsonStates;
+Dungeon *configuredDungeon(const Coords &entry, const Coords &exit) {
+    Json::Value state(Json::arrayValue);
+    state.append(entry.x);
+    state.append(entry.y);
+    state.append(entry.z);
+    state.append(exit.x);
+    state.append(exit.y);
+    state.append(exit.z);
+    Dungeon *dungeon = new Dungeon();
+    dungeon->loadFromJson(state);
+    return dungeon;
+}
+
 } // namespace
 
 Map::Map(QGraphicsScene *scene) : scene(scene) {}
@@ -167,8 +180,8 @@ void Map::addDungeon(Coords enter, Coords exit, int width, int height) {
             addTile(wall ? "MountainTile" : "GroundTile", x, y, centerz);
         }
     }
-    addObject(new Dungeon(enter, exit));
-    addObject(new Dungeon(exit, enter));
+    addObject(configuredDungeon(enter, exit));
+    addObject(configuredDungeon(exit, enter));
 }
 
 void Map::randomDir(int *tab, int rule) {
@@ -254,13 +267,13 @@ void Map::loadStateFromJson(Json::Value config) {
                     Json::Value state = instances[i];
                     MapObject *object = 0;
                     if (type == "Cave" && state.isArray() && state.size() >= 3) {
-                        object = new Cave(state[(unsigned int)0].asInt(), state[(unsigned int)1].asInt(),
-                                          state[(unsigned int)2].asInt());
+                        Cave *cave = new Cave();
+                        cave->loadFromJson(state);
+                        object = cave;
                     } else if (type == "Dungeon" && state.isArray() && state.size() >= 6) {
-                        object = new Dungeon(Coords(state[(unsigned int)0].asInt(), state[(unsigned int)1].asInt(),
-                                                    state[(unsigned int)2].asInt()),
-                                             Coords(state[(unsigned int)3].asInt(), state[(unsigned int)4].asInt(),
-                                                    state[(unsigned int)5].asInt()));
+                        Dungeon *dungeon = new Dungeon();
+                        dungeon->loadFromJson(state);
+                        object = dungeon;
                     } else if (type == "Monster" && state.isObject()) {
                         object = new Monster(names[n], state);
                     } else if (type == "Player" && state.isObject() && !GameScene::getPlayer()) {

@@ -52,6 +52,7 @@ INPUT(
 ./debug\moc_creature.o
 ./debug\moc_playerlistview.o
 ./debug\moc_gamescene.o
+./debug\moc_item.o
 ./debug\moc_playerstatsview.o
 ./debug\moc_animatedobject.o
 ./debug\moc_armor.o
@@ -59,4 +60,5 @@ INPUT(
 ./debug\moc_weapon.o
 ./debug\moc_dungeon.o
 ./debug\moc_cave.o
+./debug\moc_building.o
 );

@@ -4,8 +4,7 @@
 
 class Tower : public Building
 {
-public:
-    Tower(int x,int y,int z);
+
 };
 
 #endif // TOWE_H
