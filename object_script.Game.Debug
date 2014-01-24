@@ -54,4 +54,9 @@ INPUT(
 ./debug\moc_gamescene.o
 ./debug\moc_playerstatsview.o
 ./debug\moc_animatedobject.o
+./debug\moc_armor.o
+./debug\moc_potion.o
+./debug\moc_weapon.o
+./debug\moc_dungeon.o
+./debug\moc_cave.o
 );

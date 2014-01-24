@@ -331,6 +331,8 @@ Json::Value Map::saveToJson() {
     return config;
 }
 
+MapObject::MapObject() : MapObject(0, 0, 0, 0) {}
+
 MapObject::MapObject(int x, int y, int z, int v) {
     this->map = 0;
     posx = x;

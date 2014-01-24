@@ -4,12 +4,16 @@
 class PotionEffect;
 class Potion : public Item
 {
+    Q_OBJECT
 public:
+    Potion();
+    Potion(const Potion& potion);
     Potion(std::string name);
     virtual void onUse(Creature *creature);
 private:
     std::function<void (Creature *, int)> effect;
 };
+Q_DECLARE_METATYPE(Potion)
 
 void LifeEffect(Creature *creature,int power);
 void ManaEffect(Creature *creature,int power);

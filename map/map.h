@@ -57,6 +57,7 @@ private:
 class MapObject : public AnimatedObject
 {
 public:
+    MapObject();
     MapObject(int x, int y,int z, int v);
     ~MapObject();
     std::string className;
