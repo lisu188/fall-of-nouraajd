@@ -8,8 +8,11 @@ Armor::Armor()
 {
 }
 
-Armor::Armor(const Armor &armor):Armor(armor.className)
+Armor::Armor(const Armor &armor)
 {
+    className=armor.className;
+    Json::Value config=(*ConfigurationProvider::getConfig("config/items.json"))[className];
+    loadFromJson(config);
 }
 
 Armor::Armor(std::string name)
