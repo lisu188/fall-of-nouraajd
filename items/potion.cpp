@@ -8,21 +8,11 @@ Potion::Potion()
 {
 }
 
-Potion::Potion(const Potion &potion):Potion(potion.className)
+Potion::Potion(const Potion &potion)
 {
-}
-
-Potion::Potion(std::string name)
-{
-    className=name;
-    Json::Value config=(*ConfigurationProvider::getConfig("config/items.json"))[name];
+    className=potion.className;
+    Json::Value config=(*ConfigurationProvider::getConfig("config/items.json"))[className];
     loadFromJson(config);
-    if((std::string(className).find("LifePotion") != std::string::npos))
-    {
-        effect=&LifeEffect;
-    } else if(std::string(className).find("ManaPotion") != std::string::npos) {
-        effect=&ManaEffect;
-    }
 }
 
 void Potion::onUse(Creature *creature)
@@ -30,6 +20,17 @@ void Potion::onUse(Creature *creature)
     qDebug() << creature->className.c_str() << "used" << className.c_str();
     effect(creature,power);
     GameScene::getPlayer()->updateViews();;
+}
+
+void Potion::loadFromJson(Json::Value config)
+{
+    Item::loadFromJson(config);
+    if((std::string(className).find("LifePotion") != std::string::npos))
+    {
+        effect=&LifeEffect;
+    } else if(std::string(className).find("ManaPotion") != std::string::npos) {
+        effect=&ManaEffect;
+    }
 }
 
 void LifeEffect(Creature *creature,int power)
