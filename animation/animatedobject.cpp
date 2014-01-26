@@ -50,12 +50,14 @@ void AnimatedObject::animate()
     if(!timer)
     {
         timer = new QTimer(this);
+        timer->setSingleShot(true);
         connect(timer, SIGNAL(timeout()), this, SLOT(animate()));
     }
     if(time==0) {
         time=rand()%3000;
     }
-    timer->start(time);
+    timer->setInterval(time);
+    timer->start();
     animation->next();
 }
 

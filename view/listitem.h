@@ -25,7 +25,7 @@ class Comparer {
 public:
     bool operator()(ListItem *first,ListItem *second)
     {
-        if(!second) {
+        if(!second||!first) {
             return 0;
         }
         return first->compare(second);
