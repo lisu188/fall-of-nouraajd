@@ -48,10 +48,12 @@ INPUT(
 ./debug\qrc_weapons.o
 ./debug\qrc_armors.o
 ./debug\qrc_potions.o
+./debug\moc_player.o
 ./debug\moc_gameview.o
 ./debug\moc_creature.o
 ./debug\moc_playerlistview.o
 ./debug\moc_gamescene.o
+./debug\moc_monster.o
 ./debug\moc_item.o
 ./debug\moc_playerstatsview.o
 ./debug\moc_animatedobject.o

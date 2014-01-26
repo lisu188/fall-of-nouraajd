@@ -31,7 +31,7 @@ int stat_resisted(int value, int resist) {
 
 } // namespace
 
-Creature::Creature(std::string name, Json::Value config) : MapObject(0, 0, 0, 2) {
+Creature::Creature(std::string name, Json::Value config) : ListItem(0, 0, 0, 2) {
     className = name;
     exp = 0;
     level = 0;

@@ -7,113 +7,106 @@
 #include <configuration/configurationprovider.h>
 #include <buildings/building.h>
 #include <QDebug>
+#include <creatures/monster.h>
 
 extern std::set<int> qMetaTypesRegister;
 
-void MapView::loadItems()
-{
-    Json::Value config=*ConfigurationProvider::getConfig("config/items.json");
-    Json::Value::iterator it=config.begin();
-    for(; it!=config.end(); it++)
-    {
-        std::string name=it.memberName();
-        Item*item=Item::getItem(name.c_str());
-        if(item) {
+void MapView::loadItems() {
+    Json::Value config = *ConfigurationProvider::getConfig("config/items.json");
+    Json::Value::iterator it = config.begin();
+    for (; it != config.end(); it++) {
+        std::string name = it.memberName();
+        Item *item = Item::getItem(name.c_str());
+        if (item) {
             items.insert(item);
-            //item->setMap(scene->getMap());
+            // item->setMap(scene->getMap());
         }
     }
 }
 
-void MapView::loadBuildings()
-{
-    for(std::set<int>::iterator it=qMetaTypesRegister.begin(); it!=qMetaTypesRegister.end(); it++)
-    {
-        QObject *object=(QObject*)QMetaType::create(*it);
-        if(object->inherits("Building")&&*it!=QMetaType::type("Building"))
-        {
-            buildings.insert((Building*)object);
+void MapView::loadBuildings() {
+    for (std::set<int>::iterator it = qMetaTypesRegister.begin(); it != qMetaTypesRegister.end(); it++) {
+        QObject *object = (QObject *)QMetaType::create(*it);
+        if (object->inherits("Building") && *it != QMetaType::type("Building")) {
+            buildings.insert((Building *)object);
             //((Building*)object)->setMap(scene->getMap());
-        }
-        else
-        {
+        } else {
             delete object;
         }
     }
 }
 
-MapView::MapView()
-{
+MapView::MapView() {
     showFullScreen();
     setViewportUpdateMode(QGraphicsView::BoundingRectViewportUpdate);
     setWindowState(Qt::WindowNoState);
-    scene=new MapScene();
+    scene = new MapScene();
     setScene(scene);
     setAcceptDrops(true);
     loadItems();
     loadBuildings();
-    itemsList=new PlayerListView((std::set<ListItem *,Comparer> *)&items);
+    loadCreatures();
+    itemsList = new PlayerListView(&items);
     itemsList->setAcceptDrops(false);
     scene->addItem(itemsList);
     itemsList->setDraggable();
-    itemsList->setPos(mapToScene(0,0));
+    itemsList->setPos(mapToScene(0, 0));
     itemsList->update();
 }
 
-MapView::~MapView()
-{
-    delete scene;
-}
+MapView::~MapView() { delete scene; }
 
-void MapView::dragMoveEvent(QDragMoveEvent *event)
-{
+void MapView::dragMoveEvent(QDragMoveEvent *event) {
     QGraphicsView::dragMoveEvent(event);
-    if(event->source()==itemsList)
-    {
+    if (event->source() == itemsList) {
         itemsList->setPos(this->mapToScene(event->pos()));
     }
     event->acceptProposedAction();
 }
 
-void MapView::dropEvent(QDropEvent *event)
-{
-    if(event->source()!=itemsList)
-    {
+void MapView::dropEvent(QDropEvent *event) {
+    if (event->source() != itemsList) {
         QGraphicsView::dropEvent(event);
-        ListItem *item=(ListItem*)(event->source());
-        auto list=itemsList->getItems();
-        if(list->find(item)!=list->end())
-        {
+        ListItem *item = (ListItem *)(event->source());
+        auto list = itemsList->getItems();
+        if (list->find(item) != list->end()) {
             list->erase(list->find(item));
-            if(item->inherits("Item"))
-            {
-                item=Item::getItem(item->className);
+            if (item->inherits("Item")) {
+                item = Item::getItem(item->className);
+            } else if (item->inherits("Creature")) {
+                item = new Monster(item->className);
+            } else {
+                item = (ListItem *)QMetaType::create(QMetaType::type(item->metaObject()->className()));
             }
-            else
-            {
-                item=(ListItem*)QMetaType::create(QMetaType::type(item->metaObject()->className()));
-            }
-            if(item) {
+            if (item) {
                 list->insert(item);
             }
-            //item->setMap(scene->getMap());
+            // item->setMap(scene->getMap());
             itemsList->update();
         }
     }
 }
 
-void MapView::keyPressEvent(QKeyEvent *e)
-{
+void MapView::keyPressEvent(QKeyEvent *e) {
     QGraphicsView::keyPressEvent(e);
-    if(e->key()==Qt::Key_Space)
-    {
-        if(itemsList->getItems()==&items)
-        {
+    if (e->key() == Qt::Key_Space) {
+        if (itemsList->getItems() == &items) {
             itemsList->setItems(&buildings);
-        }
-        else
-        {
+        } else if (itemsList->getItems() == &buildings) {
+            itemsList->setItems(&creatures);
+        } else {
             itemsList->setItems(&items);
         }
+    }
+}
+
+void MapView::loadCreatures() {
+    Json::Value config = *ConfigurationProvider::getConfig("config/creatures.json");
+    Json::Value::Members names = config.getMemberNames();
+    for (const std::string &name : names) {
+        const std::string path = config[name].get("path", "").asString();
+        if (path.find("images/monsters/") != 0)
+            continue;
+        creatures.insert(new Monster(name, config[name]));
     }
 }
