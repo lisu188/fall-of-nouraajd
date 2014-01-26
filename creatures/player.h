@@ -15,6 +15,8 @@ class Player : public Creature
 public:
     Player(std::string name,Json::Value config);
     Player(std::string name);
+    Player();
+    Player(const Player& player);
     ~Player();
 
     std::set<Item *> *getLoot();
@@ -45,5 +47,6 @@ private:
     int turn;
     std::list<MapObject *> entered;
 };
+Q_DECLARE_METATYPE(Player)
 
 #endif // PLAYER_H

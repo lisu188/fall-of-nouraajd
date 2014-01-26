@@ -18,6 +18,8 @@ class Creature : public ListItem
 public:
     Creature(std::string name, Json::Value config);
     Creature(std::string name);
+    Creature(const Creature &creature);
+    Creature();
     ~Creature();
     int getExp();
     int getExpRatio();
@@ -32,7 +34,7 @@ public:
     void setAlive();
     virtual void fight(Creature *creature);
     virtual void levelUp();
-    virtual std::set<Item*>* getLoot()=0;
+    virtual std::set<Item *> *getLoot();
     void addAction(Interaction *action);
     void addEffect(std::string type, Creature *caster);
     int getMana();
@@ -63,6 +65,8 @@ public:
     bool canSave();
     bool applyEffects();
     std::set<Interaction *> *getActions();
+    virtual void onEnter();
+    virtual void onMove();
 protected:
     std::set<Item*,Comparer> inventory;
     std::set<Item*,Comparer> equipped;
@@ -92,5 +96,6 @@ signals:
     void inventoryChanged();
     void equippedChanged();
 };
+Q_DECLARE_METATYPE(Creature)
 
 #endif // CREATURE_H

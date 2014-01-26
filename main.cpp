@@ -9,6 +9,7 @@
 #include <configuration/configurationprovider.h>
 #include <buildings/cave.h>
 #include <buildings/dungeon.h>
+#include <creatures/monster.h>
 
 std::set<int> qMetaTypesRegister;
 
@@ -21,6 +22,9 @@ void registerMetaTypes()
     qMetaTypesRegister.insert(qRegisterMetaType<Dungeon>());
     qMetaTypesRegister.insert(qRegisterMetaType<Building>());
     qMetaTypesRegister.insert(qRegisterMetaType<Item>());
+    qMetaTypesRegister.insert(qRegisterMetaType<Creature>());
+    qMetaTypesRegister.insert(qRegisterMetaType<Player>());
+    qMetaTypesRegister.insert(qRegisterMetaType<Monster>());
 }
 
 int main(int argc, char *argv[])
