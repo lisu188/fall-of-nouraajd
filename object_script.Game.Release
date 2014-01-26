@@ -48,10 +48,12 @@ INPUT(
 ./release\qrc_weapons.o
 ./release\qrc_armors.o
 ./release\qrc_potions.o
+./release\moc_player.o
 ./release\moc_gameview.o
 ./release\moc_creature.o
 ./release\moc_playerlistview.o
 ./release\moc_gamescene.o
+./release\moc_monster.o
 ./release\moc_item.o
 ./release\moc_playerstatsview.o
 ./release\moc_animatedobject.o

@@ -12,7 +12,7 @@ class Weapon;
 class Armor;
 class Stats;
 
-class Creature : public MapObject
+class Creature : public ListItem
 {
     Q_OBJECT
 public:
@@ -64,13 +64,10 @@ public:
     bool applyEffects();
     std::set<Interaction *> *getActions();
 protected:
-
     std::set<Item*,Comparer> inventory;
     std::set<Item*,Comparer> equipped;
     std::set<Interaction *,Comparer> actions;
-
     std::set<Effect *> effects;
-
     int gold;
     int exp;
     int level;
@@ -79,7 +76,6 @@ protected:
     int mana,manaMax,manaRegRate;
     int hpMax,hp;
     bool alive;
-
     Weapon *weapon=0;
     Armor *armor=0;
     Stats stats;

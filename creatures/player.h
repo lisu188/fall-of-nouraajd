@@ -10,6 +10,7 @@ class PlayerListView;
 
 class Player : public Creature
 {
+    Q_OBJECT
     friend class PlayerStatsView;
 public:
     Player(std::string name,Json::Value config);

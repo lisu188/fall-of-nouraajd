@@ -15,10 +15,12 @@ public:
     ~MapView();
     void loadItems();
     void loadBuildings();
+    void loadCreatures();
 private:
     MapScene *scene;
     std::set<ListItem *,Comparer> items;
     std::set<ListItem *,Comparer> buildings;
+    std::set<ListItem *,Comparer> creatures;
     PlayerListView *itemsList;
 protected:
     void dragMoveEvent(QDragMoveEvent *event);
