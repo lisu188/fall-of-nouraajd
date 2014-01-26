@@ -53,6 +53,14 @@ Creature::Creature(std::string name)
     className = name;
 }
 
+Creature::Creature() : Creature("", Json::Value()) {}
+
+Creature::Creature(const Creature &creature) : Creature(creature.className) {}
+
+void Creature::onEnter() {}
+
+void Creature::onMove() {}
+
 Creature::~Creature() {
     actions.clear();
     effects.clear();

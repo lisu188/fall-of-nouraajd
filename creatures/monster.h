@@ -9,6 +9,8 @@ class Monster : public Creature
 public:
     Monster(std::string name,Json::Value config);
     Monster(std::string name);
+    Monster();
+    Monster(const Monster& monster);
     virtual void onMove();
     virtual void onEnter();
 
@@ -20,5 +22,6 @@ public:
 public:
     virtual std::set<Item *> *getLoot();
 };
+Q_DECLARE_METATYPE(Monster)
 
 #endif // MONSTER_H

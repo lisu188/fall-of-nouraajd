@@ -66,6 +66,14 @@ Player::Player(std::string name):Creature(name)
     init();
 }
 
+Player::Player()
+{
+}
+
+Player::Player(const Player &player):Player(player.className)
+{
+}
+
 Player::~Player()
 {
     inventory.clear();
