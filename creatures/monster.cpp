@@ -10,6 +10,14 @@ Monster::Monster(std::string name):Creature(name)
 {
 }
 
+Monster::Monster()
+{
+}
+
+Monster::Monster(const Monster &monster):Monster(monster.className)
+{
+}
+
 void Monster::onMove()
 {
     if(!isAlive()) {

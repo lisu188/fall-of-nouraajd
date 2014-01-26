@@ -1,7 +1,7 @@
 # Recovered game snapshot
 
-Original commit: `1084dbc78cb2606f6740c61f03622b360206ce32`. Original tree: `0d8b368a0e19a66249eef922b6f044b6d7f21e34`.
-Startup was verified from identical recovered sources at `1084dbc78cb2606f6740c61f03622b360206ce32`.
+Original commit: `bc243030d30e75591a3aff3702525f4472f37331`. Original tree: `708e0a9cdb13df64e6bd4918027c8fd63485970c`.
+Startup was verified from identical recovered sources at `bc243030d30e75591a3aff3702525f4472f37331`.
 
 This recovered version compiled and linked on Linux, started the real game on an isolated Xvfb display,
 loaded its map and a healthy player, rendered the screenshot below, and exited normally.
@@ -45,9 +45,9 @@ compatibilityRepair: 1, exactOriginal: 56, reconstruction: 19.
 - `compression/minizip.h`: unverified upstream reconstruction; https://github.com/richgel999/miniz/tree/v114
 - `config/creatures.json`: content reconstruction of the BFG-removed original; carried nearest reconstructed config/creatures.json through API-stable #62; surviving files provide no recoverable internal implementation/data delta
 - `config/items.json`: Adapted genuine surviving #119 5e000dca02a17e179719d99ae93d31687c9d2244 config/items.json donor to missing originalBlob2c4 shared by122–139. Genuine original122 Item::getItem migrated from legacy type strings to class + QMetaType::create, while the previous generic donor had only type and returned no real items. Adds only class Weapon/Armor/Potion corresponding to actual existing type, retaining every donor name/path/stat/power/type. This is source-derived missing-config reconstruction; unknown original added items/balance/slot declarations remain unavailable and are not invented. No surviving original file changes. Does not apply≤121 or≥140 different content groups.
-- `config/map.json`: unverified donor reconstruction; bf32a4c93e396bd645769a9957eacd6a75106b62:config/map.json; headerMatch=0; apiOverlap=0/10000; distance=4
-- `creatures/creature.cpp`: carried forward unchanged from the reconstruction of 59d5eac7f9b9aea005b57389eae9c06912fc98f7 (previous version of creatures/creature.cpp)
-- `images/buildings/dungeon/0.png`: unverified donor reconstruction; 71a3432e36b5649aabdd63c7807a78e9a8a3749a:images/buildings/dungeon/0.png; headerMatch=0; apiOverlap=0/10000; distance=36
+- `config/map.json`: unverified donor reconstruction; bf32a4c93e396bd645769a9957eacd6a75106b62:config/map.json; headerMatch=0; apiOverlap=0/10000; distance=3
+- `creatures/creature.cpp`: Adapted validated #125 Creature reconstruction to genuine #126 newly concrete Creature and Qt metatype default/copy constructor declarations. Copy reconstruction resets from className using exactly the genuine same-commit Monster and Player copy-constructor pattern, rather than copying QObject/graphics state. Default initializes the actual Creature state with empty configuration for metatype inspection; generic base has no autonomous movement or entry action, while original Monster/Player overrides retain all actual turn/combat behavior. Empty base event policy and exact default state are inferred; existing empty generic loot has no class-specific drop table. Prior formulas/collection-cast ABI limitations remain. No surviving original changed; ordinary gameplay parity is unverified.
+- `images/buildings/dungeon/0.png`: unverified donor reconstruction; 71a3432e36b5649aabdd63c7807a78e9a8a3749a:images/buildings/dungeon/0.png; headerMatch=0; apiOverlap=0/10000; distance=35
 - `images/loading.png`: synthesized visible 32px placeholder; original artwork unavailable; unverified
 - `images/tiles/mountain/0.png`: unverified donor reconstruction; 152007b28631784d3c5e17f2686eb6ef9ff30e46:images/tiles/mountain/0.png; headerMatch=0; apiOverlap=0/10000; distance=155 Verified by build and startup of afdd8069 (recovery/evidence/second-original).
 - `images/tiles/road/0.png`: unverified donor reconstruction; 152007b28631784d3c5e17f2686eb6ef9ff30e46:images/tiles/road/0.png; headerMatch=0; apiOverlap=0/10000; distance=155 Verified by build and startup of afdd8069 (recovery/evidence/second-original).
@@ -63,7 +63,7 @@ compatibilityRepair: 1, exactOriginal: 56, reconstruction: 19.
 - `view/mapview.cpp`: carried forward unchanged from the reconstruction of 27eb10ea230c1cf4b8bb45432fc6a83f81a74751 (previous version of view/mapview.cpp)
 - `json/LICENSE`: https://github.com/open-source-parsers/jsoncpp/tree/4fce396c9d3e27a8ab8fb88e94c1676e021ae3a6 upstream distribution license
 
-Restored source fingerprint: `609bcca555279da8da028913ccb5fdd92fe09a5e83d1b3134384b5bd0773bbff`.
+Restored source fingerprint: `5db4f19a7a51398a134637b5338345215c5bb6381423c076d9e729e3206cccf0`.
 
 The actual 1278 × 718 screenshot and [verification metadata](recovery/verification.json) belong to
 this source version. Reconstructed code and borrowed assets are identified in that metadata; they are
