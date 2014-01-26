@@ -5,6 +5,7 @@
 
 class Monster : public Creature
 {
+    Q_OBJECT
 public:
     Monster(std::string name,Json::Value config);
     Monster(std::string name);

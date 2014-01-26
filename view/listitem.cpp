@@ -17,7 +17,7 @@ std::string toLower(const std::string& s)
     return result;
 }
 
-ListItem::ListItem():MapObject(0,0,0,0)
+ListItem::ListItem(int x,int y,int z,int v):MapObject(x,y,z,v)
 {
     statsView.setParentItem(this);
     statsView.setVisible(true);
