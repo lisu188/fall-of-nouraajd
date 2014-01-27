@@ -13,7 +13,9 @@ class Stats;
 class Interaction : public ListItem
 {
 public:
-    std::string className;
+    Interaction(std::string name);
+    Interaction();
+    Interaction(const Interaction& interaction);
     void onAction(Creature *first,Creature *second);
     int getManaCost();
     static Interaction *getInteraction(std::string name);
@@ -22,15 +24,16 @@ public:
     virtual void loadFromJson(Json::Value config);
     virtual Json::Value saveToJson();
     virtual bool canSave();
+    virtual bool compare(ListItem *item);
 protected:
     void mousePressEvent(QGraphicsSceneMouseEvent *event);
     int manaCost;
 private:
-    Interaction(std::string name);
     static std::unordered_map<std::string,std::function<void (Creature *, Creature *)>> actions;
     std::string effect;
     QGraphicsSimpleTextItem statsView;
 };
+Q_DECLARE_METATYPE(Interaction)
 
 void Attack(Creature *first,Creature *second);
 void ElemStaff(Creature *first,Creature *second);

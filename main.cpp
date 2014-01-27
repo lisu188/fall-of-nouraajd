@@ -29,6 +29,7 @@ void registerMetaTypes()
     qMetaTypesRegister.insert(qRegisterMetaType<Monster>());
     qMetaTypesRegister.insert(qRegisterMetaType<Tile>());
     qMetaTypesRegister.insert(qRegisterMetaType<Teleporter>());
+    qMetaTypesRegister.insert(qRegisterMetaType<Interaction>());
 }
 
 int main(int argc, char *argv[])
