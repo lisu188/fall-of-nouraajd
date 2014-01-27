@@ -4,8 +4,12 @@
 #include <QPainter>
 #include <QMouseEvent>
 #include <view/playerlistview.h>
+#include <utility>
 
 namespace {
+Item *equipmentItem(Item *item) { return item; }
+Item *equipmentItem(const std::pair<const int, Item *> &entry) { return entry.second; }
+
 struct ViewLists {
     std::set<ListItem *, Comparer> inventory;
     std::set<ListItem *, Comparer> skills;
@@ -21,8 +25,11 @@ void copyPlayerLists(Player *player, ViewLists &lists) {
         lists.inventory.insert(item);
     for (Interaction *action : *player->getActions())
         lists.skills.insert(action);
-    for (Item *item : *player->getEquipped())
-        lists.equipped.insert(item);
+    for (const auto &entry : *player->getEquipped()) {
+        Item *item = equipmentItem(entry);
+        if (item)
+            lists.equipped.insert(item);
+    }
 }
 } // namespace
 
