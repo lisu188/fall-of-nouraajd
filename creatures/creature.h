@@ -68,6 +68,7 @@ public:
     virtual void onEnter();
     virtual void onMove();
 protected:
+    void hoverEnterEvent(QGraphicsSceneHoverEvent *event);
     std::set<Item*,Comparer> inventory;
     std::set<Item*,Comparer> equipped;
     std::set<Interaction *,Comparer> actions;
@@ -83,8 +84,6 @@ protected:
     Weapon *weapon=0;
     Armor *armor=0;
     Stats stats;
-    virtual void hoverEnterEvent(QGraphicsSceneHoverEvent *event);
-    virtual void hoverLeaveEvent(QGraphicsSceneHoverEvent *event);
     Interaction *selectAction();
     void setItem(void *pointer, Item *newItem);
     void takeDamage(int i);

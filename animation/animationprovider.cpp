@@ -7,6 +7,7 @@
 #include <QDebug>
 #include <map/tile.h>
 #include <map>
+#include <configuration/configurationprovider.h>
 
 std::map<int, AnimationProvider *> AnimationProvider::instances;
 
@@ -60,21 +61,17 @@ void AnimationProvider::loadAnim(std::string path)
     Animation *anim=new Animation();
     QPixmap *img=0;
     std::map<int,int> timemap;
-    std::ifstream time;
-    time.open((path+"time.txt").c_str());
-    if (time.is_open())
+    Json::Value config=*ConfigurationProvider::getConfig(path+"time.json");
+    if (!config.isNull())
     {
-        for (int i=0; !time.eof(); i++)
+        for (int i=0; i<config.size(); i++)
         {
-            int x;
-            time >> x;
-            timemap.insert(std::pair<int,int>(i,x));
+            timemap.insert(std::pair<int,int>(i,config[i].asInt()));
         }
     } else
     {
         timemap.insert(std::pair<int,int>(0,250));
     }
-    time.close();
     for(int i=0; true; i++)
     {
         std::string result;

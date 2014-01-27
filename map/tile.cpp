@@ -10,9 +10,19 @@ std::unordered_map<std::string,std::function<void()>> Tile::steps
     {"RoadTile",&RoadTile}
 };
 
-Tile::Tile(std::string name, int x, int y, int z) :MapObject(x,y,z,0) {
+Tile::Tile(std::string name, int x, int y, int z) :ListItem(x,y,z,1) {
     className=name;
     setXYZ(x,y,z);
+    Json::Value config=(*ConfigurationProvider::getConfig("config/tiles.json"))[className];
+    loadFromJson(config);
+}
+
+Tile::Tile()
+{
+}
+
+Tile::Tile(const Tile &tile):Tile(tile.className,tile.getPosX(),tile.getPosY(),tile.getPosZ())
+{
 }
 
 Tile::~Tile()
@@ -26,9 +36,11 @@ Tile::~Tile()
 
 void Tile::moveTo(int x, int y, int z, bool silent)
 {
-    if(init)
+    if(init&&map)
     {
-        map->erase(map->find(Coords(posx,posy,posz)));
+        if(map->find(Coords(posx,posy,posz))!=map->end()) {
+            map->erase(map->find(Coords(posx,posy,posz)));
+        }
         setXYZ(x,y,z);
         map->insert(std::pair<Coords,std::string>(Coords(posx,posy,posz),className));
     }
@@ -67,8 +79,6 @@ Tile *Tile::getTile(std::string type,int x,int y,int z)
 
 void Tile::addToScene(QGraphicsScene *scene)
 {
-    Json::Value config=(*ConfigurationProvider::getConfig("config/tiles.json"))[className];
-    loadFromJson(config);
     setPos(posx*Map::getTileSize(),posy*Map::getTileSize());
     if(dynamic_cast<MapScene*>(scene))
     {

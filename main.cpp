@@ -2,6 +2,7 @@
 
 #include <QApplication>
 #include <QDebug>
+#include <map/tile.h>
 #include <items/armor.h>
 #include <items/weapon.h>
 #include <items/potion.h>
@@ -25,6 +26,7 @@ void registerMetaTypes()
     qMetaTypesRegister.insert(qRegisterMetaType<Creature>());
     qMetaTypesRegister.insert(qRegisterMetaType<Player>());
     qMetaTypesRegister.insert(qRegisterMetaType<Monster>());
+    qMetaTypesRegister.insert(qRegisterMetaType<Tile>());
 }
 
 int main(int argc, char *argv[])

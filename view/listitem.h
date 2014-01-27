@@ -11,6 +11,7 @@ public:
     void setNumber(int i, int x);
     void setVisible(bool visible);
     void setPos(QPointF point);
+    void setPos(int x,int y);
     virtual bool compare(ListItem *item);
     QRectF boundingRect() const;
     virtual void paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget);
@@ -25,8 +26,12 @@ class Comparer {
 public:
     bool operator()(ListItem *first,ListItem *second)
     {
-        if(!second||!first) {
-            return 0;
+        if(!first) {
+            return false;
+        }
+        if(!second)
+        {
+            return true;
         }
         return first->compare(second);
     }

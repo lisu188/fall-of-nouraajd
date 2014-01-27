@@ -54,6 +54,7 @@ INPUT(
 ./debug\moc_playerlistview.o
 ./debug\moc_gamescene.o
 ./debug\moc_monster.o
+./debug\moc_tile.o
 ./debug\moc_item.o
 ./debug\moc_playerstatsview.o
 ./debug\moc_animatedobject.o
