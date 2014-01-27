@@ -77,6 +77,8 @@ Interaction *Interaction::getInteraction(std::string name) {
     return new Interaction(name);
 }
 
+
+
 void Interaction::mousePressEvent(QGraphicsSceneMouseEvent *event) {
     Player *player = GameScene::getPlayer();
     if (player->getFightList()->size() == 0) {
@@ -314,3 +316,14 @@ Json::Value Interaction::saveToJson() {
 }
 
 bool Interaction::canSave() { return true; }
+
+Interaction::Interaction() : Interaction("") {}
+Interaction::Interaction(const Interaction &interaction) : Interaction(interaction.className) {}
+bool Interaction::compare(ListItem *item) { return ListItem::compare(item); }
+Json::Value Effect::saveToJson() {
+    Json::Value config;
+    config["type"] = className;
+    config["timeLeft"] = timeLeft;
+    config["timeTotal"] = timeTotal;
+    return config;
+}
