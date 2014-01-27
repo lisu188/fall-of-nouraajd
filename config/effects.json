@@ -10,7 +10,7 @@
 "ArmorOfEndlessWinterEffect" :
     {
         "duration" : 3,
-"buff":
+"buff" :
         true
     },
 "EndlessPainEffect" :
@@ -36,7 +36,7 @@
 "BarrierEffect" :
     {
         "duration" : 3,
-"buff":
+"buff" :
         true
     }
 }

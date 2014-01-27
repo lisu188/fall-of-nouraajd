@@ -54,6 +54,7 @@ INPUT(
 ./release\moc_playerlistview.o
 ./release\moc_gamescene.o
 ./release\moc_monster.o
+./release\moc_tile.o
 ./release\moc_item.o
 ./release\moc_playerstatsview.o
 ./release\moc_animatedobject.o

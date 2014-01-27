@@ -22,6 +22,7 @@ class Map : public std::unordered_map<Coords,std::string,CoordsHasher>
 public:
     Map(QGraphicsScene *scene);
     ~Map();
+    bool addTile(std::string name, int x, int y, int z);
     static int getTileSize();
     void move(int x,int y);
     std::string getTile(int x, int y, int z);
@@ -47,7 +48,6 @@ public:
 private:
     std::set<MapObject*> mapObjects;
     void randomDir(int *tab, int rule);
-    bool addTile(std::string name, int x, int y, int z);
     std::map<Coords,Tile *> tiles;
     QGraphicsScene *scene;
     int currentMap=0;

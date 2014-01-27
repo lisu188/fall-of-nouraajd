@@ -9,11 +9,15 @@
 #include <unordered_map>
 #include <string>
 #include <functional>
+#include <view/listitem.h>
 
-class Tile : public MapObject
+class Tile : public ListItem
 {
+    Q_OBJECT
 public:
-    Tile(std::string name,int x,int y,int z);
+    Tile(std::string name,int x=0,int y=0,int z=0);
+    Tile();
+    Tile(const Tile &tile);
     ~Tile();
     void moveTo(int x, int y, int z, bool silent=false);
     Coords getCoords();
@@ -23,7 +27,6 @@ public:
     static Tile *getTile(std::string type, int x, int y,int z);
     void addToScene(QGraphicsScene *scene);
     void removeFromScene(QGraphicsScene *scene);
-    std::string className;
     void loadFromJson(Json::Value config);
     Json::Value saveToJson();
     void setDraggable();
@@ -41,6 +44,6 @@ private:
     static std::unordered_map<std::string,std::function<void()>> steps;
     bool init=false;
 };
-
+Q_DECLARE_METATYPE(Tile)
 void RoadTile();
 #endif // TILE_H

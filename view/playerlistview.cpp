@@ -39,7 +39,7 @@ void PlayerListView::update()
         (*childIter)->setParentItem(0);
         (*childIter)->setVisible(false);
     }
-    std::set<ListItem *>::iterator itemIter;
+    std::set<ListItem *,Comparer>::iterator itemIter;
     int i=0;
     for(itemIter=items->begin(); itemIter!=items->end(); i++,itemIter++)
     {

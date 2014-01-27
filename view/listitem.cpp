@@ -34,8 +34,8 @@ void ListItem::setParentItem(QGraphicsItem *parent)
 void ListItem::setNumber(int i, int x)
 {
     this->QGraphicsItem::setVisible(true);
-    int px=i%x*getMap()->getTileSize();
-    int py=i/x*getMap()->getTileSize();
+    int px=i%x*Map::getTileSize();
+    int py=i/x*Map::getTileSize();
     this->QGraphicsItem::setPos(px,py);
 }
 
@@ -50,9 +50,18 @@ void ListItem::setPos(QPointF point)
     this->QGraphicsItem::setPos(point);
 }
 
+void ListItem::setPos(int x, int y)
+{
+    setPos(QPointF(x,y));
+}
+
 bool ListItem::compare(ListItem *item)
 {
-    return toLower(className).compare(toLower(item->className))<0;
+    int value=toLower(className).compare(toLower(item->className));
+    if(value==0) {
+        return this<item;
+    }
+    return value<0;
 }
 
 void ListItem::hoverEnterEvent(QGraphicsSceneHoverEvent *event)

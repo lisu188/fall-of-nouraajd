@@ -11,8 +11,8 @@
         <file>images/monsters/octobogz/1.png</file>
         <file>images/monsters/pritzmage/2.png</file>
         <file>images/monsters/pritzmage/3.png</file>
-        <file>images/monsters/pritzmage/time.txt</file>
-        <file>images/monsters/pritz/time.txt</file>
-        <file>images/monsters/octobogz/time.txt</file>
+        <file>images/monsters/pritzmage/time.json</file>
+        <file>images/monsters/pritz/time.json</file>
+        <file>images/monsters/octobogz/time.json</file>
     </qresource>
 </RCC>
