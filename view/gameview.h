@@ -18,6 +18,7 @@ protected:
     void paintEvent(QPaintEvent *event);
 private:
     QPixmap pixmap;
+    int time=0;
 signals:
     void clicked();
 };
