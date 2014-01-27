@@ -46,6 +46,7 @@ MapView::MapView() {
     loadItems();
     loadBuildings();
     loadCreatures();
+    loadTiles();
     itemsList = new PlayerListView(&items);
     itemsList->setAcceptDrops(false);
     scene->addItem(itemsList);
@@ -73,6 +74,8 @@ void MapView::dropEvent(QDropEvent *event) {
             list->erase(list->find(item));
             if (item->inherits("Item")) {
                 item = Item::getItem(item->className);
+            } else if (item->inherits("Tile")) {
+                item = new Tile(item->className);
             } else if (item->inherits("Creature")) {
                 item = new Monster(item->className);
             } else {
@@ -94,6 +97,8 @@ void MapView::keyPressEvent(QKeyEvent *e) {
             itemsList->setItems(&buildings);
         } else if (itemsList->getItems() == &buildings) {
             itemsList->setItems(&creatures);
+        } else if (itemsList->getItems() == &creatures) {
+            itemsList->setItems(&tiles);
         } else {
             itemsList->setItems(&items);
         }
@@ -108,5 +113,15 @@ void MapView::loadCreatures() {
         if (path.find("images/monsters/") != 0)
             continue;
         creatures.insert(new Monster(name, config[name]));
+    }
+}
+
+void MapView::loadTiles() {
+    Json::Value config = *ConfigurationProvider::getConfig("config/tiles.json");
+    Json::Value::Members names = config.getMemberNames();
+    for (const std::string &name : names) {
+        Tile *tile = new Tile(name);
+        tile->setDraggable();
+        tiles.insert(tile);
     }
 }

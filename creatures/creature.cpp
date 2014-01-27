@@ -405,12 +405,6 @@ void Creature::hoverEnterEvent(QGraphicsSceneHoverEvent *event) {
         event->accept();
 }
 
-void Creature::hoverLeaveEvent(QGraphicsSceneHoverEvent *event) {
-    statsView.setVisible(false);
-    if (event)
-        event->accept();
-}
-
 std::set<Item *> *Creature::getEquipped() { return reinterpret_cast<std::set<Item *> *>(&equipped); }
 
 int Creature::getExp() { return exp; }

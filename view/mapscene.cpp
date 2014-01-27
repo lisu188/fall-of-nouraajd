@@ -6,6 +6,7 @@
 
 #include <QKeyEvent>
 #include <fstream>
+#include <map/tile.h>
 #include <json/json.h>
 
 MapScene::MapScene()
@@ -46,10 +47,22 @@ void MapScene::dropEvent(QGraphicsSceneDragDropEvent *event)
 {
     event->acceptProposedAction();
     MapObject *object=(MapObject*)(event->source());
-    map->addObject(object);
-    object->setParentItem(0);
+    Tile *tile=0;
     int posx=event->scenePos().x()/Map::getTileSize();
     int posy=event->scenePos().y()/Map::getTileSize();
+    if(!object->inherits("Tile")) {
+        map->addObject(object);
+    } else
+    {
+        tile=(Tile*)object;
+        if(tile->getMap()==0)
+        {
+            map->addTile(tile->className,posx,posy,map->getCurrentMap());
+            map->showAll();
+            return;
+        }
+    }
+    object->setParentItem(0);
     object->moveTo(posx,posy,object->getPosZ(),true);
 }
 

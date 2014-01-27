@@ -73,10 +73,10 @@ Item *Item::getItem(std::string name)
     std::string Class=
         (*ConfigurationProvider::getConfig("config/items.json"))
         [name].get("class","").asString();
-    Json::Value config=(*ConfigurationProvider::getConfig("config/items.json"))[name];
     int id=QMetaType::type(Class.c_str());
     item=(Item*)QMetaType::create(id);
     if(item) {
+        Json::Value config;
         item->className=name;
         item->loadFromJson(config);
     }
@@ -118,6 +118,11 @@ void Item::mousePressEvent(QGraphicsSceneMouseEvent *event)
 
 void Item::loadFromJson(Json::Value config)
 {
+    this->moveTo(config.isNull()?0:config[(unsigned int)0].asInt(),
+                 config.isNull()?0:config[(unsigned int)1].asInt(),
+                 config.isNull()?0:config[(unsigned int)2].asInt()
+                 ,true);
+    config=(*ConfigurationProvider::getConfig("config/items.json"))[className];
     bonus.loadFromJson(config["bonus"]);
     interaction=Interaction::getInteraction(config.get("interaction","").asString());
     setAnimation(config.get("path","").asCString());
