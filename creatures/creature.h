@@ -80,7 +80,7 @@ protected:
     std::string animPath;
     int mana,manaMax,manaRegRate;
     int hpMax,hp;
-    bool alive;
+    bool alive=true;
     Weapon *weapon=0;
     Armor *armor=0;
     Stats stats;
