@@ -39,6 +39,7 @@ INPUT(
 ./debug\weapon.o
 ./debug\animation.o
 ./debug\destroyer.o
+./debug\teleporter.o
 ./debug\qrc_config.o
 ./debug\qrc_iteractions.o
 ./debug\qrc_creatures.o
@@ -64,4 +65,5 @@ INPUT(
 ./debug\moc_dungeon.o
 ./debug\moc_cave.o
 ./debug\moc_building.o
+./debug\moc_teleporter.o
 );
