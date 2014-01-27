@@ -39,6 +39,7 @@ INPUT(
 ./release\weapon.o
 ./release\animation.o
 ./release\destroyer.o
+./release\teleporter.o
 ./release\qrc_config.o
 ./release\qrc_iteractions.o
 ./release\qrc_creatures.o
@@ -64,4 +65,5 @@ INPUT(
 ./release\moc_dungeon.o
 ./release\moc_cave.o
 ./release\moc_building.o
+./release\moc_teleporter.o
 );

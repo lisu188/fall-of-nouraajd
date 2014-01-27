@@ -63,6 +63,6 @@ void MapScene::dropEvent(QGraphicsSceneDragDropEvent *event)
         }
     }
     object->setParentItem(0);
-    object->moveTo(posx,posy,object->getPosZ(),true);
+    object->moveTo(posx,posy,map->getCurrentMap(),true);
 }
 

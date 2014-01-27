@@ -45,6 +45,9 @@ public:
     void mapUp();
     void mapDown();
     int getCurrentMap();
+    std::set<MapObject*> *getObjects() {
+        return &mapObjects;
+    }
 private:
     std::set<MapObject*> mapObjects;
     void randomDir(int *tab, int rule);

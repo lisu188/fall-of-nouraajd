@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <buildings/cave.h>
 #include <buildings/dungeon.h>
+#include <buildings/teleporter.h>
 #include <configuration/configurationprovider.h>
 #include <creatures/monster.h>
 #include <creatures/player.h>
@@ -253,8 +254,8 @@ void Map::loadStateFromJson(Json::Value config) {
         Json::Value::Members classes = config.getMemberNames();
         for (unsigned int c = 0; c < classes.size(); c++) {
             const std::string type = classes[c];
-            if (type != "Cave" && type != "Dungeon" && type != "Monster" && type != "Player" && type != "Item" &&
-                type != "Potion" && type != "Armor" && type != "Weapon" && type != "Interaction") {
+            if (type != "Cave" && type != "Dungeon" && type != "Teleporter" && type != "Monster" && type != "Player" &&
+                type != "Item" && type != "Potion" && type != "Armor" && type != "Weapon" && type != "Interaction") {
                 // Preserve classes whose historical construction API remains
                 // unavailable.
                 mapJsonStates[this].unimplementedObjects[type] = config[type];
@@ -270,6 +271,10 @@ void Map::loadStateFromJson(Json::Value config) {
                         Cave *cave = new Cave();
                         cave->loadFromJson(state);
                         object = cave;
+                    } else if (type == "Teleporter" && state.isArray() && state.size() >= 3) {
+                        Teleporter *teleporter = new Teleporter();
+                        teleporter->loadFromJson(state);
+                        object = teleporter;
                     } else if (type == "Dungeon" && state.isArray() && state.size() >= 6) {
                         Dungeon *dungeon = new Dungeon();
                         dungeon->loadFromJson(state);
@@ -316,6 +321,8 @@ Json::Value Map::saveStateToJson() {
             type = "Cave";
         else if (dynamic_cast<Dungeon *>(object))
             type = "Dungeon";
+        else if (dynamic_cast<Teleporter *>(object))
+            type = "Teleporter";
         else if (dynamic_cast<Potion *>(object))
             type = "Potion";
         else if (dynamic_cast<Armor *>(object))
