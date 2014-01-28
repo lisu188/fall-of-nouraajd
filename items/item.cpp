@@ -129,6 +129,7 @@ void Item::loadFromJson(Json::Value config)
     power=config.get("power",1).asInt();
     singleUse=config.get("singleUse",false).asBool();
     tooltip=config.get("tooltip","").asString();
+    slot=config.get("slot",0).asInt();
     if(tooltip.compare("")==0) {
         tooltip=className;
     }
