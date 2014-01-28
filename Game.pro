@@ -69,7 +69,9 @@ SOURCES += \
     items/weapon.cpp \
     animation/animation.cpp \
     destroyer/destroyer.cpp \
-    buildings/teleporter.cpp
+    buildings/teleporter.cpp \
+    items/smallweapon.cpp \
+    items/helmet.cpp
 
 HEADERS += \
     creatures/player.h \
@@ -118,4 +120,6 @@ HEADERS += \
     compression/compression.h \
     configuration/configurationprovider.h \
     destroyer/destroyer.h \
-    buildings/teleporter.h
+    buildings/teleporter.h \
+    items/smallweapon.h \
+    items/helmet.h

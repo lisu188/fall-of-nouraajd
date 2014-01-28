@@ -40,6 +40,8 @@ INPUT(
 ./debug\animation.o
 ./debug\destroyer.o
 ./debug\teleporter.o
+./debug\smallweapon.o
+./debug\helmet.o
 ./debug\qrc_config.o
 ./debug\qrc_iteractions.o
 ./debug\qrc_creatures.o

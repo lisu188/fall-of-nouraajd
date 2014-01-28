@@ -1,0 +1,58 @@
+{
+"1" :
+    {
+"name" : "RightHand"
+        ,
+"types" :
+        ["Weapon"]
+    },
+"2" :
+    {
+"name" : "LeftHand"
+        ,
+"types" :
+        ["SmallWeapon", "Shield"]
+    },
+"3" :
+    {
+"name" : "Head"
+        ,
+"types" :
+        ["Helmet"]
+    },
+"4" :
+    {
+"name" : "Chest"
+        ,
+"types" :
+        ["Armor"]
+    },
+"5" :
+    {
+"name" : "Waist"
+        ,
+"types" :
+        ["Belt"]
+    },
+"6" :
+    {
+"name" : "Feet"
+        ,
+"types" :
+        ["Boots"]
+    },
+"7" :
+    {
+"name" : "Legs"
+        ,
+"types" :
+        ["Pants"]
+    },
+"8" :
+    {
+"name" : "Hands"
+        ,
+"types" :
+        ["Gloves"]
+    }
+}

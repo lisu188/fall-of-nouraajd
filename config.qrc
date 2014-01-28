@@ -7,5 +7,6 @@
         <file>config/items.json</file>
         <file>config/map.json</file>
         <file>config/tiles.json</file>
+        <file>config/slots.json</file>
     </qresource>
 </RCC>

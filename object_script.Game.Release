@@ -40,6 +40,8 @@ INPUT(
 ./release\animation.o
 ./release\destroyer.o
 ./release\teleporter.o
+./release\smallweapon.o
+./release\helmet.o
 ./release\qrc_config.o
 ./release\qrc_iteractions.o
 ./release\qrc_creatures.o
