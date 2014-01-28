@@ -6,6 +6,8 @@
 #include <items/armor.h>
 #include <items/weapon.h>
 #include <items/potion.h>
+#include <items/smallweapon.h>
+#include <items/helmet.h>
 #include <view/mapview.h>
 #include <configuration/configurationprovider.h>
 #include <buildings/cave.h>
@@ -30,6 +32,8 @@ void registerMetaTypes()
     qMetaTypesRegister.insert(qRegisterMetaType<Tile>());
     qMetaTypesRegister.insert(qRegisterMetaType<Teleporter>());
     qMetaTypesRegister.insert(qRegisterMetaType<Interaction>());
+    qMetaTypesRegister.insert(qRegisterMetaType<SmallWeapon>());
+    qMetaTypesRegister.insert(qRegisterMetaType<Helmet>());
 }
 
 int main(int argc, char *argv[])

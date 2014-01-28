@@ -1,7 +1,7 @@
 # Recovered editor snapshot
 
-Original commit: `d27f773772f47adafa4a9077b9c9e2b1ab67f091`. Original tree: `35a3d321720be5f8bc07e4414d60e52d2c0db737`.
-Startup was verified from identical recovered sources at `d27f773772f47adafa4a9077b9c9e2b1ab67f091`.
+Original commit: `cdb285560097d679b94f693db0519c3cb83252fa`. Original tree: `81dfc3b5e7435b74cbb9763901b8b27b54279e0f`.
+Startup was verified from identical recovered sources at `cdb285560097d679b94f693db0519c3cb83252fa`.
 
 This recovered version compiled and linked on Linux, started the real editor on an isolated Xvfb display,
 loaded its editor map, rendered the screenshot below, and exited normally.
@@ -49,8 +49,8 @@ compatibilityRepair: 1, exactOriginal: 56, reconstruction: 19.
 - `config/creatures.json`: content reconstruction of the BFG-removed original; carried nearest reconstructed config/creatures.json through API-stable #62; surviving files provide no recoverable internal implementation/data delta
 - `config/items.json`: Adapted genuine surviving #119 5e000dca02a17e179719d99ae93d31687c9d2244 config/items.json donor to missing originalBlob2c4 shared by122–139. Genuine original122 Item::getItem migrated from legacy type strings to class + QMetaType::create, while the previous generic donor had only type and returned no real items. Adds only class Weapon/Armor/Potion corresponding to actual existing type, retaining every donor name/path/stat/power/type. This is source-derived missing-config reconstruction; unknown original added items/balance/slot declarations remain unavailable and are not invented. No surviving original file changes. Does not apply≤121 or≥140 different content groups.
 - `creatures/creature.cpp`: carried forward unchanged from the reconstruction of a773641d633236095a67164688d482c402ac87ca (previous version of creatures/creature.cpp)
-- `images/buildings/dungeon/0.png`: unverified donor reconstruction; 71a3432e36b5649aabdd63c7807a78e9a8a3749a:images/buildings/dungeon/0.png; headerMatch=0; apiOverlap=0/10000; distance=27
-- `images/buildings/teleporter/0.png`: unverified donor reconstruction; 71a3432e36b5649aabdd63c7807a78e9a8a3749a:images/buildings/teleporter/0.png; headerMatch=0; apiOverlap=0/10000; distance=27
+- `images/buildings/dungeon/0.png`: unverified donor reconstruction; 71a3432e36b5649aabdd63c7807a78e9a8a3749a:images/buildings/dungeon/0.png; headerMatch=0; apiOverlap=0/10000; distance=26
+- `images/buildings/teleporter/0.png`: unverified donor reconstruction; 71a3432e36b5649aabdd63c7807a78e9a8a3749a:images/buildings/teleporter/0.png; headerMatch=0; apiOverlap=0/10000; distance=26
 - `images/loading.png`: synthesized visible 32px placeholder; original artwork unavailable; unverified
 - `images/tiles/mountain/0.png`: unverified donor reconstruction; 152007b28631784d3c5e17f2686eb6ef9ff30e46:images/tiles/mountain/0.png; headerMatch=0; apiOverlap=0/10000; distance=155 Verified by build and startup of afdd8069 (recovery/evidence/second-original).
 - `images/tiles/road/0.png`: unverified donor reconstruction; 152007b28631784d3c5e17f2686eb6ef9ff30e46:images/tiles/road/0.png; headerMatch=0; apiOverlap=0/10000; distance=155 Verified by build and startup of afdd8069 (recovery/evidence/second-original).
@@ -66,8 +66,8 @@ compatibilityRepair: 1, exactOriginal: 56, reconstruction: 19.
 - `view/mapview.cpp`: Adapted validated #124–128 MapView reconstruction and genuine original123 donor to genuine #129 Tile-derived ListItem, actual loadTiles()/tiles palette and original MapScene tile drop path. Creates real configured Tile objects, marks actual drag support, cycles items/buildings/creatures/tiles, and replaces dropped palette prototypes using actual named Tile constructor. Config key enumeration and palette order/clone policy are inferred from actual headers/callers, not recovered original bodies. Monster filtering/default editor policy remains as documented124. No original source changed; startup does not establish palette-control parity.
 - `json/LICENSE`: https://github.com/open-source-parsers/jsoncpp/tree/4fce396c9d3e27a8ab8fb88e94c1676e021ae3a6 upstream distribution license
 
-Restored source fingerprint: `72d743b9ad5690079af1bc0f964a044bcd0f250d2eff7952256a2ea813c6ead1`.
+Restored source fingerprint: `631ba4368d4e986c474725f8a5dafbb404147b3191a52283d66dc7101c2cff5f`.
 
-The actual 1278 × 718 screenshot and [verification metadata](recovery/verification.json) belong to
+The actual 1264 × 704 screenshot and [verification metadata](recovery/verification.json) belong to
 this source version. Reconstructed code and borrowed assets are identified in that metadata; they are
 not claimed to be the original deleted bytes. BFG removal-marker files are absent from this snapshot.

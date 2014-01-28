@@ -24,7 +24,6 @@ public:
     virtual void onMove() {}
     virtual Json::Value saveToJson();
     virtual bool canSave();
-
 protected:
     virtual void mousePressEvent(QGraphicsSceneMouseEvent *event);
     bool singleUse;
@@ -32,6 +31,8 @@ protected:
     void loadFromJson(Json::Value config);
     Interaction *interaction;
     int power;
+private:
+    int slot=0;
 };
 Q_DECLARE_METATYPE(Item)
 
