@@ -16,7 +16,6 @@ public:
     QPointF mapToParent(int a,int b);
 protected:
     Animation *animation;
-    void setPixmap(const QPixmap &pixmap);
     void setAnimation(std::string path, int size);
     virtual void mousePressEvent(QGraphicsSceneMouseEvent *);
 private:

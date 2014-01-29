@@ -30,4 +30,5 @@ void PlayerEquippedView::update()
     {
         (*it)->update();
     }
+    QGraphicsObject::update();
 }
