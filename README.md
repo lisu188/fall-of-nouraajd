@@ -1,7 +1,7 @@
 # Recovered game snapshot
 
-Original commit: `026e63de89a691376462db46297f8564012c024c`. Original tree: `dd5aeb5dbca956517f1f91f718b6f6c9a29673e8`.
-Startup was verified from identical recovered sources at `026e63de89a691376462db46297f8564012c024c`.
+Original commit: `21ebd6611c521acf175ba29ab5247e6d221a5c87`. Original tree: `ab33e8cc26da48da461ff44786a1816ca1029411`.
+Startup was verified from identical recovered sources at `21ebd6611c521acf175ba29ab5247e6d221a5c87`.
 
 This recovered version compiled and linked on Linux, started the real game on an isolated Xvfb display,
 loaded its map and a healthy player, rendered the screenshot below, and exited normally.
@@ -50,11 +50,11 @@ compatibilityRepair: 1, exactOriginal: 57, reconstruction: 22.
 - `compression/minizip.h`: unverified upstream reconstruction; https://github.com/richgel999/miniz/tree/v114
 - `config/creatures.json`: content reconstruction of the BFG-removed original; carried nearest reconstructed config/creatures.json through API-stable #62; surviving files provide no recoverable internal implementation/data delta
 - `config/items.json`: Adapted genuine surviving #119 5e000dca02a17e179719d99ae93d31687c9d2244 config/items.json donor to missing originalBlob2c4 shared by122–139. Genuine original122 Item::getItem migrated from legacy type strings to class + QMetaType::create, while the previous generic donor had only type and returned no real items. Adds only class Weapon/Armor/Potion corresponding to actual existing type, retaining every donor name/path/stat/power/type. This is source-derived missing-config reconstruction; unknown original added items/balance/slot declarations remain unavailable and are not invented. No surviving original file changes. Does not apply≤121 or≥140 different content groups.
-- `creatures/creature.cpp`: carried forward unchanged from the reconstruction of a773641d633236095a67164688d482c402ac87ca (previous version of creatures/creature.cpp)
-- `images/buildings/dungeon/0.png`: unverified donor reconstruction; 71a3432e36b5649aabdd63c7807a78e9a8a3749a:images/buildings/dungeon/0.png; headerMatch=0; apiOverlap=0/10000; distance=25
-- `images/buildings/teleporter/0.png`: unverified donor reconstruction; 71a3432e36b5649aabdd63c7807a78e9a8a3749a:images/buildings/teleporter/0.png; headerMatch=0; apiOverlap=0/10000; distance=25
-- `images/items/armors/chestplateofnorth/0`: unverified donor reconstruction; 55e6516eb91b739e899df1ef8d72116da44fec49:images/items/armors/chestplateofnorth.png; headerMatch=0; apiOverlap=0/10000; distance=222
-- `images/items/belts/undestructiblebelt/0.jpg`: unverified donor reconstruction; 55e6516eb91b739e899df1ef8d72116da44fec49:images/items/belts/undestructiblebelt.png; headerMatch=0; apiOverlap=0/10000; distance=222
+- `creatures/creature.cpp`: Adapted validated #132 Creature reconstruction to genuine #137 std::map<int,Item*> equipped storage and actual hasEquipped/setItem(int)/getter declarations. Seeds keys from genuine137 slots.json; its actual RightHand=1 and Chest=4 retain weapon/armor APIs, unlike later0/3. Real item onEquip/onUnequip callbacks maintain stat bonuses; save subtracts each equipped bonus before serializing base stats. Inferred slot-value equipment JSON is inverse across save/load, and legacy inventory.weapon/armor template fields are applied only when present so they cannot erase restored equipment. Slot serialization format and exact missing policies remain inferred, not recovered original137 bodies; broader formulas and inventory/action collection-cast ABI limitation remain documented. Original surviving Player/Item/slot widgets unchanged.
+- `images/buildings/dungeon/0.png`: unverified donor reconstruction; 71a3432e36b5649aabdd63c7807a78e9a8a3749a:images/buildings/dungeon/0.png; headerMatch=0; apiOverlap=0/10000; distance=24
+- `images/buildings/teleporter/0.png`: unverified donor reconstruction; 71a3432e36b5649aabdd63c7807a78e9a8a3749a:images/buildings/teleporter/0.png; headerMatch=0; apiOverlap=0/10000; distance=24
+- `images/items/armors/chestplateofnorth/0`: unverified donor reconstruction; 55e6516eb91b739e899df1ef8d72116da44fec49:images/items/armors/chestplateofnorth.png; headerMatch=0; apiOverlap=0/10000; distance=221
+- `images/items/belts/undestructiblebelt/0.jpg`: unverified donor reconstruction; 55e6516eb91b739e899df1ef8d72116da44fec49:images/items/belts/undestructiblebelt.png; headerMatch=0; apiOverlap=0/10000; distance=221
 - `images/items/helmets/0.jpg`: synthesized visible 32px placeholder; original artwork unavailable; unverified
 - `images/loading.png`: synthesized visible 32px placeholder; original artwork unavailable; unverified
 - `images/tiles/mountain/0.png`: unverified donor reconstruction; 152007b28631784d3c5e17f2686eb6ef9ff30e46:images/tiles/mountain/0.png; headerMatch=0; apiOverlap=0/10000; distance=155 Verified by build and startup of afdd8069 (recovery/evidence/second-original).
@@ -71,7 +71,7 @@ compatibilityRepair: 1, exactOriginal: 57, reconstruction: 22.
 - `view/mapview.cpp`: Adapted validated #124–128 MapView reconstruction and genuine original123 donor to genuine #129 Tile-derived ListItem, actual loadTiles()/tiles palette and original MapScene tile drop path. Creates real configured Tile objects, marks actual drag support, cycles items/buildings/creatures/tiles, and replaces dropped palette prototypes using actual named Tile constructor. Config key enumeration and palette order/clone policy are inferred from actual headers/callers, not recovered original bodies. Monster filtering/default editor policy remains as documented124. No original source changed; startup does not establish palette-control parity.
 - `json/LICENSE`: https://github.com/open-source-parsers/jsoncpp/tree/4fce396c9d3e27a8ab8fb88e94c1676e021ae3a6 upstream distribution license
 
-Restored source fingerprint: `35966961f1f83087c71aa501fb9eb32bb2fdbdb182f77e54a6a6b1e79c7ba242`.
+Restored source fingerprint: `98589a3fbbe48a9251a8c72cecf5128ff1b4a7e70106b4cef75fab8127abbe5c`.
 
 The restored source fingerprint identifies inputs before generation. The
 [source preparation metadata](recovery/source-preparation.json) records the original inputs

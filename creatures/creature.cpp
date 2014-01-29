@@ -45,6 +45,9 @@ Creature::Creature(std::string name, Json::Value config) : ListItem(0, 0, 0, 2) 
     gold = 0;
     setAcceptHoverEvents(true);
 
+    Json::Value equipment_config = *ConfigurationProvider::getConfig("config/slots.json");
+    for (const std::string &key : equipment_config.getMemberNames())
+        equipped[std::atoi(key.c_str())] = 0;
     loadFromJson(config);
 }
 
@@ -218,30 +221,34 @@ bool Creature::isPlayer() {
 
 int Creature::getHpRatio() { return clamp_ratio(hp, hpMax); }
 
-void Creature::setItem(void *pointer, Item *newItem) {
-    Item **slot = static_cast<Item **>(pointer);
-    if (*slot == newItem)
+void Creature::setItem(int slot, Item *newItem) {
+    Item *previous = equipped[slot];
+    if (previous == newItem)
         return;
-
-    if (*slot) {
-        (*slot)->onUnequip(this);
-        equipped.erase(*slot);
-    }
-    *slot = newItem;
-    if (*slot) {
-        equipped.insert(*slot);
-        (*slot)->onEquip(this);
-    }
+    if (previous)
+        previous->onUnequip(this);
+    equipped[slot] = newItem;
+    if (newItem)
+        newItem->onEquip(this);
     emit equippedChanged();
 }
 
-void Creature::setWeapon(Weapon *weapon) { setItem(&this->weapon, weapon); }
+void Creature::setWeapon(Weapon *weapon) { setItem(1, weapon); }
 
-void Creature::setArmor(Armor *armor) { setItem(&this->armor, armor); }
+void Creature::setArmor(Armor *armor) { setItem(4, armor); }
 
-Weapon *Creature::getWeapon() { return weapon; }
+Weapon *Creature::getWeapon() { return dynamic_cast<Weapon *>(equipped[1]); }
 
-Armor *Creature::getArmor() { return armor; }
+Armor *Creature::getArmor() { return dynamic_cast<Armor *>(equipped[4]); }
+
+bool Creature::hasEquipped(Item *item) {
+    if (!item)
+        return false;
+    for (const auto &entry : equipped)
+        if (entry.second == item)
+            return true;
+    return false;
+}
 
 Stats *Creature::getStats() { return &stats; }
 
@@ -280,9 +287,14 @@ void Creature::loadFromJson(Json::Value config) {
     }
     addItem(&items);
 
-    Json::Value equipment = config["inventory"];
-    setWeapon(dynamic_cast<Weapon *>(Item::getItem(equipment.get("weapon", "").asCString())));
-    setArmor(dynamic_cast<Armor *>(Item::getItem(equipment.get("armor", "").asCString())));
+    Json::Value equipment = config["equipment"];
+    for (const std::string &key : equipment.getMemberNames())
+        setItem(std::atoi(key.c_str()), Item::getItem(equipment[key].asString()));
+    Json::Value legacy = config["inventory"];
+    if (legacy.isMember("weapon"))
+        setWeapon(dynamic_cast<Weapon *>(Item::getItem(legacy["weapon"].asString())));
+    if (legacy.isMember("armor"))
+        setArmor(dynamic_cast<Armor *>(Item::getItem(legacy["armor"].asString())));
 
     if (config.isMember("coords"))
         moveTo(config["coords"].get("X", 0).asInt(), config["coords"].get("Y", 0).asInt(),
@@ -315,9 +327,11 @@ Json::Value Creature::saveToJson() {
     config["mana"] = mana;
     Stats initialStats;
     initialStats.loadFromJson(stats.saveToJson());
-    for (std::set<Item *>::iterator it = equipped.begin(); it != equipped.end(); ++it) {
+    for (const auto &entry : equipped) {
+        if (!entry.second)
+            continue;
         Stats bonus;
-        bonus.loadFromJson((*ConfigurationProvider::getConfig("config/items.json"))[(*it)->className]["bonus"]);
+        bonus.loadFromJson((*ConfigurationProvider::getConfig("config/items.json"))[entry.second->className]["bonus"]);
         initialStats.removeBonus(bonus);
     }
     config["initStats"] = initialStats.saveToJson();
@@ -332,10 +346,10 @@ Json::Value Creature::saveToJson() {
     for (std::set<Item *>::iterator it = inventory.begin(); it != inventory.end(); ++it)
         items.append((*it)->className);
     config["items"] = items;
-    if (weapon)
-        config["inventory"]["weapon"] = weapon->className;
-    if (armor)
-        config["inventory"]["armor"] = armor->className;
+    config["equipment"] = Json::Value(Json::objectValue);
+    for (const auto &entry : equipped)
+        if (entry.second)
+            config["equipment"][std::to_string(entry.first)] = entry.second->className;
     return config;
 }
 
@@ -405,7 +419,7 @@ void Creature::hoverEnterEvent(QGraphicsSceneHoverEvent *event) {
         event->accept();
 }
 
-std::set<Item *> *Creature::getEquipped() { return reinterpret_cast<std::set<Item *> *>(&equipped); }
+std::map<int, Item *> *Creature::getEquipped() { return &equipped; }
 
 int Creature::getExp() { return exp; }
 

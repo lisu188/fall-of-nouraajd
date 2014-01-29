@@ -71,7 +71,9 @@ SOURCES += \
     destroyer/destroyer.cpp \
     buildings/teleporter.cpp \
     items/smallweapon.cpp \
-    items/helmet.cpp
+    items/helmet.cpp \
+    view/playerequippedview.cpp \
+    view/itemslot.cpp
 
 HEADERS += \
     creatures/player.h \
@@ -122,4 +124,7 @@ HEADERS += \
     destroyer/destroyer.h \
     buildings/teleporter.h \
     items/smallweapon.h \
-    items/helmet.h
+    items/helmet.h \
+    view/playerequippedview.h \
+    view/itemslot.h \
+    util/patch.h
