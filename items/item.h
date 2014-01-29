@@ -15,7 +15,6 @@ public:
     Item();
     Item(const Item&);
     bool isSingleUse();
-    void setPos(QPointF point);
     virtual void onEquip(Creature *creature);
     virtual void onUnequip(Creature *creature);
     static Item *getItem(std::string name);

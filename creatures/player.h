@@ -6,7 +6,6 @@
 #include <queue>
 
 class PlayerStatsView;
-class PlayerListView;
 
 class Player : public Creature
 {

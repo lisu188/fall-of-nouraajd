@@ -26,33 +26,12 @@ ListItem::ListItem(int x,int y,int z,int v):MapObject(x,y,z,v)
                      -statsView.boundingRect().height());
 }
 
-void ListItem::setParentItem(QGraphicsItem *parent)
-{
-    QGraphicsItem::setParentItem(parent);
-}
-
 void ListItem::setNumber(int i, int x)
 {
     this->QGraphicsItem::setVisible(true);
     int px=i%x*Map::getTileSize();
     int py=i/x*Map::getTileSize();
     this->QGraphicsItem::setPos(px,py);
-}
-
-void ListItem::setVisible(bool visible)
-{
-    QGraphicsItem::setVisible(visible);
-}
-
-void ListItem::setPos(QPointF point)
-{
-    this->QGraphicsItem::setVisible(true);
-    this->QGraphicsItem::setPos(point);
-}
-
-void ListItem::setPos(int x, int y)
-{
-    setPos(QPointF(x,y));
 }
 
 bool ListItem::compare(ListItem *item)
@@ -77,14 +56,3 @@ void ListItem::hoverLeaveEvent(QGraphicsSceneHoverEvent *event)
     statsView.setVisible(false);
     event->setAccepted(true);
 }
-
-QRectF ListItem::boundingRect() const
-{
-    return QRectF(0,0,Map::getTileSize(),Map::getTileSize());
-}
-
-void ListItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget)
-{
-    AnimatedObject::paint(painter,option,widget);
-}
-

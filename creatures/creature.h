@@ -68,6 +68,9 @@ public:
     virtual void onEnter();
     virtual void onMove();
     bool hasEquipped(Item *item);
+    void setItem(int i, Item *newItem);
+    bool hasInInventory(Item *item);
+    bool hasItem(Item *item);
 protected:
     void hoverEnterEvent(QGraphicsSceneHoverEvent *event);
     std::set<Item*,Comparer> inventory;
@@ -84,7 +87,6 @@ protected:
     bool alive=true;
     Stats stats;
     Interaction *selectAction();
-    void setItem(int i, Item *newItem);
     void takeDamage(int i);
     Interaction *getLevelAction();
     Stats getLevelStats();
