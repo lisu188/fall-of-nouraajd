@@ -1,3 +1,4 @@
+#include "gamescene.h"
 #include "itemslot.h"
 #include <map/map.h>
 #include <QGraphicsSceneDragDropEvent>
@@ -6,7 +7,7 @@
 #include <creatures/creature.h>
 #include <util/patch.h>
 
-ItemSlot::ItemSlot(int number):number(number)
+ItemSlot::ItemSlot(int number, std::map<int, Item *> *equipped):number(number),equipped(equipped)
 {
     pixmap.load(":/images/item.png");//change to slot items path in json
     pixmap=pixmap.scaled(Map::getTileSize(),Map::getTileSize(),
@@ -42,6 +43,16 @@ bool ItemSlot::checkType(int slot,QWidget *widget)
     return inherits;
 }
 
+void ItemSlot::update()
+{
+    Item *item=equipped->at(number);
+    if(item)
+    {
+        item->setParentItem(this);
+        item->setPos(0,0);
+    }
+}
+
 void ItemSlot::dragMoveEvent(QGraphicsSceneDragDropEvent *event)
 {
     setAcceptDrops(checkType(number,event->source()));
@@ -49,4 +60,9 @@ void ItemSlot::dragMoveEvent(QGraphicsSceneDragDropEvent *event)
 
 void ItemSlot::dropEvent(QGraphicsSceneDragDropEvent *event)
 {
+    if(checkType(number,event->source()))
+    {
+        GameScene::getPlayer()->setItem(number,(Item*)event->source());
+        event->acceptProposedAction();
+    }
 }

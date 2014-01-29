@@ -46,12 +46,6 @@ bool Item::isSingleUse() {
     return singleUse;
 }
 
-void Item::setPos(QPointF point)
-{
-    ListItem::setVisible(true);
-    ListItem::setPos(point);
-}
-
 void Item::onEquip(Creature *creature)
 {
     creature->getStats()->addBonus(bonus);
@@ -89,10 +83,7 @@ void Item::onUse(Creature *)
 
 void Item::mousePressEvent(QGraphicsSceneMouseEvent *event)
 {
-    if(GameScene::getPlayer()&&
-            GameScene::getPlayer()->getInventory()->find(this)
-            ==GameScene::getPlayer()->getInventory()->end()&&
-            !GameScene::getPlayer()->hasEquipped(this))
+    if(GameScene::getPlayer()&&!GameScene::getPlayer()->hasItem(this))
     {
         return;
     }
@@ -104,14 +95,7 @@ void Item::mousePressEvent(QGraphicsSceneMouseEvent *event)
     }
     else
     {
-        QGraphicsItem *parent=this->parentItem();
-        if(parent) {
-            parent->setAcceptDrops(false);
-        }
         AnimatedObject::mousePressEvent(event);
-        if(parent) {
-            parent->setAcceptDrops(true);
-        }
     }
 }
 

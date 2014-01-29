@@ -18,6 +18,11 @@
 #include <view/gamescene.h>
 
 namespace {
+bool itemGroup(const std::string &type) {
+    return type == "Item" || type == "Weapon" || type == "Armor" || type == "Potion" || type == "SmallWeapon" ||
+           type == "Helmet" || type == "Belt" || type == "Boots" || type == "Gloves" || type == "Shield" ||
+           type == "Pants";
+}
 struct MapJsonState {
     Json::Value unimplementedObjects;
 };
@@ -100,7 +105,15 @@ void Map::addObject(MapObject *object) {
     getTile(object->getPosX(), object->getPosY(), object->getPosZ());
 }
 
-void Map::removeObject(MapObject *object) { mapObjects.erase(object); }
+void Map::removeObject(MapObject *object) {
+    if (!object)
+        return;
+    mapObjects.erase(object);
+    if (object->scene() == scene)
+        scene->removeItem(object);
+    if (object->getMap() == this)
+        object->setMap(0);
+}
 
 void Map::ensureSize(Player *player) {
     if (!player)
@@ -255,7 +268,7 @@ void Map::loadStateFromJson(Json::Value config) {
         for (unsigned int c = 0; c < classes.size(); c++) {
             const std::string type = classes[c];
             if (type != "Cave" && type != "Dungeon" && type != "Teleporter" && type != "Monster" && type != "Player" &&
-                type != "Item" && type != "Potion" && type != "Armor" && type != "Weapon" && type != "Interaction") {
+                !itemGroup(type) && type != "Interaction") {
                 // Preserve classes whose historical construction API remains
                 // unavailable.
                 mapJsonStates[this].unimplementedObjects[type] = config[type];
@@ -286,8 +299,7 @@ void Map::loadStateFromJson(Json::Value config) {
                         GameScene::setPlayer(player);
                         object = player;
                     }
-                    if ((type == "Item" || type == "Potion" || type == "Armor" || type == "Weapon") &&
-                        state.isArray() && state.size() >= 3) {
+                    if (itemGroup(type) && state.isArray() && state.size() >= 3) {
                         object = Item::getItem(names[n].c_str());
                         if (object)
                             object->moveTo(state[(unsigned int)0].asInt(), state[(unsigned int)1].asInt(),
@@ -299,6 +311,8 @@ void Map::loadStateFromJson(Json::Value config) {
                     }
                     if (object)
                         addObject(object);
+                    else if (itemGroup(type))
+                        mapJsonStates[this].unimplementedObjects[type][names[n]].append(state);
                 }
             }
         }
@@ -329,6 +343,8 @@ Json::Value Map::saveStateToJson() {
             type = "Armor";
         else if (dynamic_cast<Weapon *>(object))
             type = "Weapon";
+        else if (dynamic_cast<Item *>(object))
+            type = object->metaObject()->className();
         else if (dynamic_cast<Interaction *>(object))
             type = "Interaction";
         if (!type.empty())
@@ -411,8 +427,6 @@ void MapObject::move(int x, int y) {
         return;
     moveTo(posx + x, posy + y, posz);
 }
-
-void MapObject::setParentItem(QGraphicsItem *parent) { QGraphicsItem::setParentItem(parent); }
 
 void MapObject::setAnimation(std::string path) { AnimatedObject::setAnimation(path, Map::getTileSize()); }
 
