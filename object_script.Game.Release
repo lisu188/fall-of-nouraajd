@@ -42,6 +42,8 @@ INPUT(
 ./release\teleporter.o
 ./release\smallweapon.o
 ./release\helmet.o
+./release\playerequippedview.o
+./release\itemslot.o
 ./release\qrc_config.o
 ./release\qrc_iteractions.o
 ./release\qrc_creatures.o
@@ -68,4 +70,6 @@ INPUT(
 ./release\moc_cave.o
 ./release\moc_building.o
 ./release\moc_teleporter.o
+./release\moc_playerequippedview.o
+./release\moc_itemslot.o
 );

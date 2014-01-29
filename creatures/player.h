@@ -29,8 +29,6 @@ public:
     void update();
     void updateViews();
 
-    PlayerListView *getEquippedView();
-
     void addToFightList(Creature *creature);
     void removeFromFightList(Creature *creature);
 
@@ -43,7 +41,6 @@ public:
     virtual void setMap(Map *map);
 private:
     std::list<Creature *> fightList;
-
     int turn;
     std::list<MapObject *> entered;
 };

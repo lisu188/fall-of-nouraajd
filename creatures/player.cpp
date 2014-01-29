@@ -35,13 +35,6 @@ void Player::updateViews()
             action->setMap(map);
         }
     }
-    for(std::set<Item*>::iterator it=equipped.begin(); it!=equipped.end(); it++)
-    {
-        Item *item=*it;
-        if(map&&item->getMap()!=map) {
-            item->setMap(map);
-        }
-    }
 }
 
 Player::Player(std::string name, Json::Value config):Creature(name,config)

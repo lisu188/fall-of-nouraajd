@@ -42,6 +42,8 @@ INPUT(
 ./debug\teleporter.o
 ./debug\smallweapon.o
 ./debug\helmet.o
+./debug\playerequippedview.o
+./debug\itemslot.o
 ./debug\qrc_config.o
 ./debug\qrc_iteractions.o
 ./debug\qrc_creatures.o
@@ -68,4 +70,6 @@ INPUT(
 ./debug\moc_cave.o
 ./debug\moc_building.o
 ./debug\moc_teleporter.o
+./debug\moc_playerequippedview.o
+./debug\moc_itemslot.o
 );

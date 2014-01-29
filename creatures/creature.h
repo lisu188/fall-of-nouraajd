@@ -59,7 +59,7 @@ public:
     void addItem(Item *item);
     void loseItem(Item *item);
     std::set<Item *> *getInventory();
-    std::set<Item *> *getEquipped();
+    std::map<int,Item*> *getEquipped();
     void loadFromJson(Json::Value config);
     Json::Value saveToJson();
     bool canSave();
@@ -67,10 +67,11 @@ public:
     std::set<Interaction *> *getActions();
     virtual void onEnter();
     virtual void onMove();
+    bool hasEquipped(Item *item);
 protected:
     void hoverEnterEvent(QGraphicsSceneHoverEvent *event);
     std::set<Item*,Comparer> inventory;
-    std::set<Item*,Comparer> equipped;
+    std::map<int,Item*> equipped;
     std::set<Interaction *,Comparer> actions;
     std::set<Effect *> effects;
     int gold;
@@ -81,11 +82,9 @@ protected:
     int mana,manaMax,manaRegRate;
     int hpMax,hp;
     bool alive=true;
-    Weapon *weapon=0;
-    Armor *armor=0;
     Stats stats;
     Interaction *selectAction();
-    void setItem(void *pointer, Item *newItem);
+    void setItem(int i, Item *newItem);
     void takeDamage(int i);
     Interaction *getLevelAction();
     Stats getLevelStats();

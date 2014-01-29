@@ -92,8 +92,7 @@ void Item::mousePressEvent(QGraphicsSceneMouseEvent *event)
     if(GameScene::getPlayer()&&
             GameScene::getPlayer()->getInventory()->find(this)
             ==GameScene::getPlayer()->getInventory()->end()&&
-            GameScene::getPlayer()->getEquipped()->find(this)
-            ==GameScene::getPlayer()->getEquipped()->end())
+            !GameScene::getPlayer()->hasEquipped(this))
     {
         return;
     }
