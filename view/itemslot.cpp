@@ -26,7 +26,6 @@ void ItemSlot::paint(QPainter *painter, const QStyleOptionGraphicsItem *, QWidge
 
 bool ItemSlot::checkType(int slot,QWidget *widget)
 {
-    bool inherits=false;
     if(widget)
     {
         Json::Value config=(*ConfigurationProvider::
@@ -34,13 +33,12 @@ bool ItemSlot::checkType(int slot,QWidget *widget)
                            [patch::to_string(slot).c_str()]["types"];
         for(int i=0; i<config.size(); i++)
         {
-            inherits=inherits||widget->inherits(config[i].asCString());
-            if(inherits) {
-                break;
+            if(widget->inherits(config[i].asCString())) {
+                return true;
             }
         }
     }
-    return inherits;
+    return false;
 }
 
 void ItemSlot::update()
@@ -50,12 +48,15 @@ void ItemSlot::update()
     {
         item->setParentItem(this);
         item->setPos(0,0);
+        item->setVisible(true);
+        item->QGraphicsItem::update();
     }
+    QGraphicsObject::update();
 }
 
 void ItemSlot::dragMoveEvent(QGraphicsSceneDragDropEvent *event)
 {
-    setAcceptDrops(checkType(number,event->source()));
+    event->setAccepted(checkType(number,event->source()));
 }
 
 void ItemSlot::dropEvent(QGraphicsSceneDragDropEvent *event)
@@ -63,6 +64,7 @@ void ItemSlot::dropEvent(QGraphicsSceneDragDropEvent *event)
     if(checkType(number,event->source()))
     {
         GameScene::getPlayer()->setItem(number,(Item*)event->source());
-        event->acceptProposedAction();
     }
+    event->acceptProposedAction();
+    event->accept();
 }
