@@ -3,6 +3,7 @@
 
 #include <view/charview.h>
 #include "gamescene.h"
+#include "playerequippedview.h"
 
 #include <QGraphicsView>
 #include <QThread>
@@ -48,7 +49,7 @@ private:
     PlayerStatsView playerStatsView;
     PlayerListView *playerInventoryView;
     PlayerListView *playerSkillsView;
-    PlayerListView *playerEquippedView;
+    PlayerEquippedView *playerEquippedView;
 public slots:
     void showCharView();
 private slots:

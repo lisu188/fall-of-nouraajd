@@ -73,7 +73,6 @@ public:
     virtual void onEnter()=0;
     virtual void onMove()=0;
     void move(int x, int y);
-    void setParentItem(QGraphicsItem *parent);
     virtual void loadFromJson(Json::Value config)=0;
     virtual Json::Value saveToJson()=0;
     virtual bool canSave()=0;

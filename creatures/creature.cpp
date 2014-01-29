@@ -233,13 +233,13 @@ void Creature::setItem(int slot, Item *newItem) {
     emit equippedChanged();
 }
 
-void Creature::setWeapon(Weapon *weapon) { setItem(1, weapon); }
+void Creature::setWeapon(Weapon *weapon) { setItem(0, weapon); }
 
-void Creature::setArmor(Armor *armor) { setItem(4, armor); }
+void Creature::setArmor(Armor *armor) { setItem(3, armor); }
 
-Weapon *Creature::getWeapon() { return dynamic_cast<Weapon *>(equipped[1]); }
+Weapon *Creature::getWeapon() { return dynamic_cast<Weapon *>(equipped[0]); }
 
-Armor *Creature::getArmor() { return dynamic_cast<Armor *>(equipped[4]); }
+Armor *Creature::getArmor() { return dynamic_cast<Armor *>(equipped[3]); }
 
 bool Creature::hasEquipped(Item *item) {
     if (!item)
@@ -249,6 +249,10 @@ bool Creature::hasEquipped(Item *item) {
             return true;
     return false;
 }
+
+bool Creature::hasInInventory(Item *item) { return inventory.find(item) != inventory.end(); }
+
+bool Creature::hasItem(Item *item) { return hasInInventory(item) || hasEquipped(item); }
 
 Stats *Creature::getStats() { return &stats; }
 
