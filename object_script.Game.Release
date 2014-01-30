@@ -44,6 +44,9 @@ INPUT(
 ./release\helmet.o
 ./release\playerequippedview.o
 ./release\itemslot.o
+./release\boots.o
+./release\gloves.o
+./release\belt.o
 ./release\qrc_config.o
 ./release\qrc_iteractions.o
 ./release\qrc_creatures.o
@@ -53,6 +56,7 @@ INPUT(
 ./release\qrc_weapons.o
 ./release\qrc_armors.o
 ./release\qrc_potions.o
+./release\qrc_items.o
 ./release\moc_player.o
 ./release\moc_gameview.o
 ./release\moc_creature.o
@@ -70,6 +74,11 @@ INPUT(
 ./release\moc_cave.o
 ./release\moc_building.o
 ./release\moc_teleporter.o
+./release\moc_smallweapon.o
+./release\moc_helmet.o
 ./release\moc_playerequippedview.o
 ./release\moc_itemslot.o
+./release\moc_boots.o
+./release\moc_gloves.o
+./release\moc_belt.o
 );

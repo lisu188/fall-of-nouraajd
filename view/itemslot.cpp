@@ -12,6 +12,7 @@ ItemSlot::ItemSlot(int number, std::map<int, Item *> *equipped):number(number),e
     pixmap.load(":/images/item.png");//change to slot items path in json
     pixmap=pixmap.scaled(Map::getTileSize(),Map::getTileSize(),
                          Qt::IgnoreAspectRatio,Qt::SmoothTransformation);
+    this->setAcceptDrops(true);
 }
 
 QRectF ItemSlot::boundingRect() const
@@ -56,11 +57,13 @@ void ItemSlot::update()
 
 void ItemSlot::dragMoveEvent(QGraphicsSceneDragDropEvent *event)
 {
+    QGraphicsObject::dragMoveEvent(event);
     event->setAccepted(checkType(number,event->source()));
 }
 
 void ItemSlot::dropEvent(QGraphicsSceneDragDropEvent *event)
 {
+    QGraphicsObject::dropEvent(event);
     if(checkType(number,event->source()))
     {
         GameScene::getPlayer()->setItem(number,(Item*)event->source());

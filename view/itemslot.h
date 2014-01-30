@@ -14,6 +14,9 @@ public:
     void paint(QPainter *painter, const QStyleOptionGraphicsItem *, QWidget *);
     static bool checkType(int slot, QWidget *widget);
     void update();
+    int getNumber() {
+        return number;
+    }
 protected:
     void dragMoveEvent(QGraphicsSceneDragDropEvent *event);
     void dropEvent(QGraphicsSceneDragDropEvent *event);

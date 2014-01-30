@@ -5,6 +5,7 @@
 
 class SmallWeapon : public Weapon
 {
+    Q_OBJECT
 public:
     SmallWeapon();
     SmallWeapon(const SmallWeapon &weapon);

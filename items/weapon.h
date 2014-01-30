@@ -14,7 +14,6 @@ public:
     Weapon(const Weapon &weapon);
     Interaction *getInteraction();
     Stats *getStats();
-    virtual void onUse(Creature *creature);
 };
 Q_DECLARE_METATYPE(Weapon)
 

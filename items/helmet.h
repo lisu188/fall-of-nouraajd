@@ -5,6 +5,7 @@
 
 class Helmet : public Item
 {
+    Q_OBJECT
 public:
     Helmet();
     Helmet(const Helmet &helmet);
