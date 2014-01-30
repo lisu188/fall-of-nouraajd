@@ -25,8 +25,3 @@ Armor::Armor(std::string name)
 Interaction *Armor::getInteraction() {
     return interaction;
 }
-
-void Armor::onUse(Creature *creature)
-{
-    creature->setArmor(this);
-}

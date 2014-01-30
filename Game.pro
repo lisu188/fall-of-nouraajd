@@ -26,7 +26,8 @@ QMAKE_CXXFLAGS += -std=c++11
     images.qrc \
     weapons.qrc \
     armors.qrc \
-    potions.qrc
+    potions.qrc \
+    items.qrc
 
 SOURCES += \
     creatures/player.cpp \
@@ -73,7 +74,10 @@ SOURCES += \
     items/smallweapon.cpp \
     items/helmet.cpp \
     view/playerequippedview.cpp \
-    view/itemslot.cpp
+    view/itemslot.cpp \
+    items/boots.cpp \
+    items/gloves.cpp \
+    items/belt.cpp
 
 HEADERS += \
     creatures/player.h \
@@ -127,4 +131,7 @@ HEADERS += \
     items/helmet.h \
     view/playerequippedview.h \
     view/itemslot.h \
-    util/patch.h
+    util/patch.h \
+    items/boots.h \
+    items/gloves.h \
+    items/belt.h

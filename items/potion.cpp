@@ -19,7 +19,6 @@ void Potion::onUse(Creature *creature)
 {
     qDebug() << creature->className.c_str() << "used" << className.c_str();
     effect(creature,power);
-    GameScene::getPlayer()->updateViews();;
 }
 
 void Potion::loadFromJson(Json::Value config)

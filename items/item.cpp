@@ -1,6 +1,7 @@
 #include "item.h"
 
 #include <view/gamescene.h>
+#include <view/itemslot.h>
 #include <stats/stats.h>
 #include <QDebug>
 #include <QDrag>
@@ -77,8 +78,16 @@ Item *Item::getItem(std::string name)
     return item;
 }
 
-void Item::onUse(Creature *)
+void Item::onUse(Creature *creature)
 {
+    ItemSlot *parent=(ItemSlot *)this->parentItem();
+    if(!parent)
+    {
+        qDebug()<<"Parentless item dropped";
+        return;
+    }
+    int slot=parent->getNumber();
+    creature->setItem(slot,this);
 }
 
 void Item::mousePressEvent(QGraphicsSceneMouseEvent *event)

@@ -1,7 +1,7 @@
 # Recovered game snapshot
 
-Original commit: `b4855c2e4b2628bb1ba4e9504de4400c4729603c`. Original tree: `43fdf5482a5a9001e145078f75e8d226ce9854aa`.
-Startup was verified from identical recovered sources at `b4855c2e4b2628bb1ba4e9504de4400c4729603c`.
+Original commit: `308cdda7906564428d9d9e2094f2b3f4f64157a6`. Original tree: `5a66f2bd1028794eb1b8ac73b3a3e846f9f964a2`.
+Startup was verified from identical recovered sources at `308cdda7906564428d9d9e2094f2b3f4f64157a6`.
 
 This recovered version compiled and linked on Linux, started the real game on an isolated Xvfb display,
 loaded its map and a healthy player, rendered the screenshot below, and exited normally.
@@ -45,17 +45,15 @@ The genuine scene writes `save/game.sav` during shutdown. Verification prepared 
 parent directory before startup, without changing source files or replacing existing save data.
 The source call, source hash and created/preserved directory are recorded in verification metadata.
 
-compatibilityRepair: 1, exactOriginal: 59, reconstruction: 22.
+compatibilityRepair: 1, exactOriginal: 61, reconstruction: 20.
 
 - `compression/minizip.h`: unverified upstream reconstruction; https://github.com/richgel999/miniz/tree/v114
-- `config/creatures.json`: {'evidence': ['historical image directory IDs', 'config/map.json saved creature state when present'], 'inferred': ['missing initial stats', 'levelStats encoding and progression'], 'kind': 'reconstructed-config', 'note': 'Saved state is retained; absent stats are positive synthetic defaults. Build/startup unverified.', 'sourceCommit': 'b4855c2e4b2628bb1ba4e9504de4400c4729603c', 'verified': False}
+- `config/creatures.json`: {'evidence': ['historical image directory IDs', 'config/map.json saved creature state when present'], 'inferred': ['missing initial stats', 'levelStats encoding and progression'], 'kind': 'reconstructed-config', 'note': 'Saved state is retained; absent stats are positive synthetic defaults. Build/startup unverified.', 'sourceCommit': '308cdda7906564428d9d9e2094f2b3f4f64157a6', 'verified': False}
 - `config/items.json`: working reconstruction
 - `creatures/creature.cpp`: working reconstruction
 - `creatures/player.cpp`: Missing #150 player body inferred from earlier surviving donor and exact original Player.h/GameView caller: restored declared update() to refresh inventory/action maps and emit statsChanged. Remaining donor combat preserved; historical behavior not proven.
-- `images/buildings/dungeon/0.png`: unverified donor reconstruction; 71a3432e36b5649aabdd63c7807a78e9a8a3749a:images/buildings/dungeon/0.png; headerMatch=0; apiOverlap=0/10000; distance=22
-- `images/buildings/teleporter/0.png`: unverified donor reconstruction; 71a3432e36b5649aabdd63c7807a78e9a8a3749a:images/buildings/teleporter/0.png; headerMatch=0; apiOverlap=0/10000; distance=22
-- `images/items/armors/chestplateofnorth/0`: unverified donor reconstruction; 55e6516eb91b739e899df1ef8d72116da44fec49:images/items/armors/chestplateofnorth.png; headerMatch=0; apiOverlap=0/10000; distance=219
-- `images/items/helmets/0.png`: synthesized visible 32px placeholder; original artwork unavailable; unverified
+- `images/buildings/dungeon/0.png`: unverified donor reconstruction; 71a3432e36b5649aabdd63c7807a78e9a8a3749a:images/buildings/dungeon/0.png; headerMatch=0; apiOverlap=0/10000; distance=21
+- `images/buildings/teleporter/0.png`: unverified donor reconstruction; 71a3432e36b5649aabdd63c7807a78e9a8a3749a:images/buildings/teleporter/0.png; headerMatch=0; apiOverlap=0/10000; distance=21
 - `images/loading.png`: synthesized visible 32px placeholder; original artwork unavailable; unverified
 - `images/tiles/mountain/0.png`: unverified donor reconstruction; 152007b28631784d3c5e17f2686eb6ef9ff30e46:images/tiles/mountain/0.png; headerMatch=0; apiOverlap=0/10000; distance=155 Verified by build and startup of afdd8069 (recovery/evidence/second-original).
 - `images/tiles/road/0.png`: unverified donor reconstruction; 152007b28631784d3c5e17f2686eb6ef9ff30e46:images/tiles/road/0.png; headerMatch=0; apiOverlap=0/10000; distance=155 Verified by build and startup of afdd8069 (recovery/evidence/second-original).
@@ -71,7 +69,7 @@ compatibilityRepair: 1, exactOriginal: 59, reconstruction: 22.
 - `view/mapview.cpp`: working reconstruction
 - `json/LICENSE`: https://github.com/open-source-parsers/jsoncpp/tree/4fce396c9d3e27a8ab8fb88e94c1676e021ae3a6 upstream distribution license
 
-Restored source fingerprint: `e28730f59ea6d8084eb55f492da2e0dd5b069b41d223ba9cffd6d2cddbc220f6`.
+Restored source fingerprint: `e68f942be9891fb620ea5ca09019d53150e9945c56f9e061a3700b4bcbf8e207`.
 
 The restored source fingerprint identifies inputs before generation. The
 [source preparation metadata](recovery/source-preparation.json) records the original inputs
