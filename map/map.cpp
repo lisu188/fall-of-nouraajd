@@ -1,5 +1,6 @@
 #include "map.h"
 
+#include <QGraphicsSceneMouseEvent>
 #include <algorithm>
 #include <buildings/cave.h>
 #include <buildings/dungeon.h>
@@ -482,3 +483,14 @@ void Map::showAll() {
 int Map::getCurrentMap() { return currentMap; }
 
 Map *MapObject::getMap() { return map; }
+
+bool Map::isEditor() { return GameScene::getGame() == 0 || GameScene::getView() == 0; }
+
+void MapObject::mousePressEvent(QGraphicsSceneMouseEvent *event) {
+    if (Map::isEditor()) {
+        AnimatedObject::mousePressEvent(event);
+        event->accept();
+        return;
+    }
+    event->ignore();
+}
