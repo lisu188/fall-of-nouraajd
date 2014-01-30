@@ -92,6 +92,10 @@ void Item::onUse(Creature *creature)
 
 void Item::mousePressEvent(QGraphicsSceneMouseEvent *event)
 {
+    ListItem::mousePressEvent(event);
+    if(event->isAccepted()) {
+        return;
+    }
     if(GameScene::getPlayer()&&!GameScene::getPlayer()->hasItem(this))
     {
         return;

@@ -24,6 +24,7 @@ public:
     ~Map();
     bool addTile(std::string name, int x, int y, int z);
     static int getTileSize();
+    static bool isEditor();
     void move(int x,int y);
     std::string getTile(int x, int y, int z);
     bool contains(int x, int y, int z);
@@ -80,6 +81,7 @@ public:
     Map *getMap();
     void setVisible(bool vis);
 protected:
+    virtual void mousePressEvent(QGraphicsSceneMouseEvent *event);
     void setAnimation(std::string path);
     Map *map=0;
     QGraphicsItemAnimation *animation=0;
