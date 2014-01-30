@@ -45,6 +45,7 @@ void MapScene::keyPressEvent(QKeyEvent *event)
 
 void MapScene::dropEvent(QGraphicsSceneDragDropEvent *event)
 {
+    QGraphicsScene::dropEvent(event);
     event->acceptProposedAction();
     MapObject *object=(MapObject*)(event->source());
     Tile *tile=0;
