@@ -1,12 +1,15 @@
-# Recovered game snapshot
+# Recovered editor snapshot
 
-Original commit: `308cdda7906564428d9d9e2094f2b3f4f64157a6`. Original tree: `5a66f2bd1028794eb1b8ac73b3a3e846f9f964a2`.
-Startup was verified from identical recovered sources at `308cdda7906564428d9d9e2094f2b3f4f64157a6`.
+Original commit: `50b044ed131403e4b9f39f3a41d2143bc39e104e`. Original tree: `926636885c6b985e36be3e9690a09ee16ab47b48`.
+Startup was verified from identical recovered sources at `50b044ed131403e4b9f39f3a41d2143bc39e104e`.
 
-This recovered version compiled and linked on Linux, started the real game on an isolated Xvfb display,
-loaded its map and a healthy player, rendered the screenshot below, and exited normally.
+This recovered version compiled and linked on Linux, started the real editor on an isolated Xvfb display,
+loaded its editor map, rendered the screenshot below, and exited normally.
+Gameplay and player behavior were not verified. The surviving original `main.cpp` and
+`config/init.json` selected the editor; their Git blob and SHA256 identities are recorded in
+the attached verification metadata. The original entrypoint and configuration are preserved.
 
-![Actual startup of this recovered game](recovery/startup.png)
+![Actual startup of this recovered editor](recovery/startup.png)
 
 ## Build and run
 
@@ -48,12 +51,12 @@ The source call, source hash and created/preserved directory are recorded in ver
 compatibilityRepair: 1, exactOriginal: 61, reconstruction: 20.
 
 - `compression/minizip.h`: unverified upstream reconstruction; https://github.com/richgel999/miniz/tree/v114
-- `config/creatures.json`: {'evidence': ['historical image directory IDs', 'config/map.json saved creature state when present'], 'inferred': ['missing initial stats', 'levelStats encoding and progression'], 'kind': 'reconstructed-config', 'note': 'Saved state is retained; absent stats are positive synthetic defaults. Build/startup unverified.', 'sourceCommit': '308cdda7906564428d9d9e2094f2b3f4f64157a6', 'verified': False}
+- `config/creatures.json`: {'evidence': ['historical image directory IDs', 'config/map.json saved creature state when present'], 'inferred': ['missing initial stats', 'levelStats encoding and progression'], 'kind': 'reconstructed-config', 'note': 'Saved state is retained; absent stats are positive synthetic defaults. Build/startup unverified.', 'sourceCommit': '50b044ed131403e4b9f39f3a41d2143bc39e104e', 'verified': False}
 - `config/items.json`: working reconstruction
 - `creatures/creature.cpp`: working reconstruction
 - `creatures/player.cpp`: Missing #150 player body inferred from earlier surviving donor and exact original Player.h/GameView caller: restored declared update() to refresh inventory/action maps and emit statsChanged. Remaining donor combat preserved; historical behavior not proven.
-- `images/buildings/dungeon/0.png`: unverified donor reconstruction; 71a3432e36b5649aabdd63c7807a78e9a8a3749a:images/buildings/dungeon/0.png; headerMatch=0; apiOverlap=0/10000; distance=21
-- `images/buildings/teleporter/0.png`: unverified donor reconstruction; 71a3432e36b5649aabdd63c7807a78e9a8a3749a:images/buildings/teleporter/0.png; headerMatch=0; apiOverlap=0/10000; distance=21
+- `images/buildings/dungeon/0.png`: unverified donor reconstruction; 71a3432e36b5649aabdd63c7807a78e9a8a3749a:images/buildings/dungeon/0.png; headerMatch=0; apiOverlap=0/10000; distance=20
+- `images/buildings/teleporter/0.png`: unverified donor reconstruction; 71a3432e36b5649aabdd63c7807a78e9a8a3749a:images/buildings/teleporter/0.png; headerMatch=0; apiOverlap=0/10000; distance=20
 - `images/loading.png`: synthesized visible 32px placeholder; original artwork unavailable; unverified
 - `images/tiles/mountain/0.png`: unverified donor reconstruction; 152007b28631784d3c5e17f2686eb6ef9ff30e46:images/tiles/mountain/0.png; headerMatch=0; apiOverlap=0/10000; distance=155 Verified by build and startup of afdd8069 (recovery/evidence/second-original).
 - `images/tiles/road/0.png`: unverified donor reconstruction; 152007b28631784d3c5e17f2686eb6ef9ff30e46:images/tiles/road/0.png; headerMatch=0; apiOverlap=0/10000; distance=155 Verified by build and startup of afdd8069 (recovery/evidence/second-original).
@@ -69,13 +72,13 @@ compatibilityRepair: 1, exactOriginal: 61, reconstruction: 20.
 - `view/mapview.cpp`: working reconstruction
 - `json/LICENSE`: https://github.com/open-source-parsers/jsoncpp/tree/4fce396c9d3e27a8ab8fb88e94c1676e021ae3a6 upstream distribution license
 
-Restored source fingerprint: `e68f942be9891fb620ea5ca09019d53150e9945c56f9e061a3700b4bcbf8e207`.
+Restored source fingerprint: `cefb7cb2fbd59f164679a39d0c829d6549e3e423f8b86178fc5b5f22182bd2f4`.
 
 The restored source fingerprint identifies inputs before generation. The
 [source preparation metadata](recovery/source-preparation.json) records the original inputs
 and every generated or modified file's before/after hashes; the
 [preparation log](recovery/source-preparation.log) retains the actual preparation steps.
 
-The actual 1278 × 718 screenshot and [verification metadata](recovery/verification.json) belong to
+The actual 1264 × 704 screenshot and [verification metadata](recovery/verification.json) belong to
 this source version. Reconstructed code and borrowed assets are identified in that metadata; they are
 not claimed to be the original deleted bytes. BFG removal-marker files are absent from this snapshot.
