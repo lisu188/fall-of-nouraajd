@@ -47,6 +47,7 @@ INPUT(
 ./release\boots.o
 ./release\gloves.o
 ./release\belt.o
+./release\lootprovider.o
 ./release\qrc_config.o
 ./release\qrc_iteractions.o
 ./release\qrc_creatures.o

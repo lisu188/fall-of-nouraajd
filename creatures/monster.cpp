@@ -2,6 +2,8 @@
 
 #include <view/gamescene.h>
 
+#include <items/lootprovider.h>
+
 Monster::Monster(std::string name, Json::Value config):Creature(name,config)
 {
 }
@@ -82,12 +84,5 @@ void Monster::levelUp()
 
 std::set<Item *> *Monster::getLoot()
 {
-    std::set<Item *>* list=new std::set<Item *>();
-    if(rand()%3==0) {
-        list->insert(Item::getItem("ManaPotion"));
-    }
-    else {
-        list->insert(Item::getItem("LifePotion"));
-    }
-    return list;
+    return LootProvider::getLoot(getScale());
 }
