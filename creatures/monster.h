@@ -1,7 +1,6 @@
-#include <creatures/creature.h>
-
 #ifndef MONSTER_H
 #define MONSTER_H
+#include <creatures/creature.h>
 
 class Monster : public Creature
 {
@@ -13,13 +12,7 @@ public:
     Monster(const Monster& monster);
     virtual void onMove();
     virtual void onEnter();
-
-    // Creature interface
-public:
     virtual void levelUp();
-
-    // Creature interface
-public:
     virtual std::set<Item *> *getLoot();
 };
 Q_DECLARE_METATYPE(Monster)
