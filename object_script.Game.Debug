@@ -47,6 +47,7 @@ INPUT(
 ./debug\boots.o
 ./debug\gloves.o
 ./debug\belt.o
+./debug\lootprovider.o
 ./debug\qrc_config.o
 ./debug\qrc_iteractions.o
 ./debug\qrc_creatures.o

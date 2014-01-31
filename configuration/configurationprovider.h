@@ -13,7 +13,6 @@ private:
     ~ConfigurationProvider();
     static ConfigurationProvider *instance;
     Json::Value * getConfiguration(std::string path);
-
     void loadConfig(std::string path);
 
 };

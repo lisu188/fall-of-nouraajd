@@ -77,7 +77,8 @@ SOURCES += \
     view/itemslot.cpp \
     items/boots.cpp \
     items/gloves.cpp \
-    items/belt.cpp
+    items/belt.cpp \
+    items/lootprovider.cpp
 
 HEADERS += \
     creatures/player.h \
@@ -134,4 +135,5 @@ HEADERS += \
     util/patch.h \
     items/boots.h \
     items/gloves.h \
-    items/belt.h
+    items/belt.h \
+    items/lootprovider.h
