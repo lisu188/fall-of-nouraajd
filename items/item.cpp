@@ -92,6 +92,13 @@ void Item::onUse(Creature *creature)
 
 void Item::mousePressEvent(QGraphicsSceneMouseEvent *event)
 {
+    if(singleUse&&GameScene::getPlayer())
+    {
+        GameScene::getPlayer()->loseItem(this);
+        onUse(GameScene::getPlayer());
+        delete this;
+        return;
+    }
     ListItem::mousePressEvent(event);
     if(event->isAccepted()) {
         return;
@@ -100,14 +107,6 @@ void Item::mousePressEvent(QGraphicsSceneMouseEvent *event)
     {
         return;
     }
-    if(singleUse&&GameScene::getPlayer())
-    {
-        GameScene::getPlayer()->loseItem(this);
-        onUse(GameScene::getPlayer());
-        delete this;
-    }
-    else
-    {
         QGraphicsObject *parent=this->parentObject();
         if(parent) {
             parent->setAcceptDrops(false);
@@ -116,7 +115,7 @@ void Item::mousePressEvent(QGraphicsSceneMouseEvent *event)
         if(parent) {
             parent->setAcceptDrops(true);
         }
-    }
+
 }
 
 void Item::loadFromJson(Json::Value config)
