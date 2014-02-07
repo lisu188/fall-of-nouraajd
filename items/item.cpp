@@ -115,7 +115,6 @@ void Item::mousePressEvent(QGraphicsSceneMouseEvent *event)
         if(parent) {
             parent->setAcceptDrops(true);
         }
-
 }
 
 void Item::loadFromJson(Json::Value config)
