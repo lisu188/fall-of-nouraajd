@@ -1,6 +1,6 @@
 #include "dumbpathfinder.h"
 #include "smartpathfinder.h"
-#include <deque>
+#include <queue>
 #include <QDebug>
 #include <view/gamescene.h>
 #include <configuration/configurationprovider.h>
@@ -22,60 +22,35 @@ Coords SmartPathFinder::findPath(Coords start, Coords goal)
     class Cell{
     public:
         int x,y,z;
-        Cell(int x,int y,int z):x(x),y(y),z(z){}
+        Coords goal;
+        Cell(int x,int y,int z,Coords goal):x(x),y(y),z(z),goal(goal){}
     };
+    class CellCompare{
+    public:
+        bool operator()(Cell *a,Cell *b){
+            int dista=std::abs(a->x-a->goal.x)+std::abs(a->y-a->goal.y);
+            int distb=std::abs(b->x-b->goal.x)+std::abs(b->y-b->goal.y);
+            return dista>distb;
+        }
+    };
+
     std::list<Cell*> target;
-    std::deque<Cell*> queue;
+    std::priority_queue<Cell*,std::deque<Cell*>,CellCompare> queue;
     int level=goal.z;
-    Cell *current=new Cell(goal.x,goal.y,0);
+    Cell *current=new Cell(goal.x,goal.y,0,start);
     Map *map=GameScene::getGame()->getMap();
     while(start.x!=current->x||start.y!=current->y){
-        std::list<Cell*> list;
         if((*ConfigurationProvider::getConfig("config/tiles.json"))
-                     [map->getTile(current->x+1,current->y,level)].get("canStep",true).asBool()){
-        list.push_back(new Cell(current->x+1,current->y,current->z+1));}
-
-        if((*ConfigurationProvider::getConfig("config/tiles.json"))
-                     [map->getTile(current->x,current->y+1,level)].get("canStep",true).asBool()){
-        list.push_back(new Cell(current->x,current->y+1,current->z+1));}
-
-        if((*ConfigurationProvider::getConfig("config/tiles.json"))
-                     [map->getTile(current->x-1,current->y,level)].get("canStep",true).asBool()){
-        list.push_back(new Cell(current->x-1,current->y,current->z+1));}
-
-        if((*ConfigurationProvider::getConfig("config/tiles.json"))
-                     [map->getTile(current->x,current->y-1,level)].get("canStep",true).asBool()){
-        list.push_back(new Cell(current->x,current->y-1,current->z+1));}
-
-            for(std::deque<Cell*>::iterator itq=queue.begin();itq!=queue.end();itq++){
-                for(std::list<Cell*>::iterator itl=list.begin();itl!=list.end();itl++){
-                    Cell *qcell=(*itq);
-                    Cell *lcell=(*itl);
-                    if(qcell->x==lcell->x&&qcell->y==lcell->y){
-                        if(qcell->z>=lcell->z){
-                            delete *itq;
-                            queue.erase(itq);
-                            itq=queue.begin();
-                            itl=list.begin();
-                        }
-                        else{
-                            delete *itl;
-                            list.erase(itl);
-                            itq=queue.begin();
-                            itl=list.begin();
-                        }
-                    }
-                }
-            }
-         for(std::list<Cell*>::iterator itl=list.begin();itl!=list.end();itl++){
-            queue.push_front(*itl);
-         }
-         do{
+                     [map->getTile(current->x,current->y,level)].get("canStep",true).asBool()){
+        queue.push(new Cell(current->x+1,current->y,current->z+1,start));
+        queue.push(new Cell(current->x,current->y+1,current->z+1,start));
+        queue.push(new Cell(current->x-1,current->y,current->z+1,start));
+        queue.push(new Cell(current->x,current->y-1,current->z+1,start));
+}
          delete current;
-         current=queue.back();
-         queue.pop_back();}
-         while(current->z>10&&queue.size()>0);
-         if(queue.size()==0)break;
+         current=queue.top();
+         queue.pop();
+         if(queue.empty())break;
          int dist=std::abs(current->x-start.x)+std::abs(current->y-start.y);
          if(dist==1){
             target.push_front(current);
