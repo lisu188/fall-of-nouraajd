@@ -17,6 +17,7 @@
 #include <buildings/dungeon.h>
 #include <buildings/teleporter.h>
 #include <creatures/monster.h>
+#include <pathfinder/dumbpathfinder.h>
 
 std::set<int> qMetaTypesRegister;
 
@@ -40,6 +41,7 @@ void registerMetaTypes()
     qMetaTypesRegister.insert(qRegisterMetaType<Boots>());
     qMetaTypesRegister.insert(qRegisterMetaType<Belt>());
     qMetaTypesRegister.insert(qRegisterMetaType<Gloves>());
+    qMetaTypesRegister.insert(qRegisterMetaType<DumbPathFinder>());
 }
 
 int main(int argc, char *argv[])

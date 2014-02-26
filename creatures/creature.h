@@ -71,6 +71,7 @@ public:
     void setItem(int i, Item *newItem);
     bool hasInInventory(Item *item);
     bool hasItem(Item *item);
+    Coords getCoords();
 protected:
     void hoverEnterEvent(QGraphicsSceneHoverEvent *event);
     std::set<Item*,Comparer> inventory;

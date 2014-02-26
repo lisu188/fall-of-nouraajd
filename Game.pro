@@ -78,7 +78,9 @@ SOURCES += \
     items/boots.cpp \
     items/gloves.cpp \
     items/belt.cpp \
-    items/lootprovider.cpp
+    items/lootprovider.cpp \
+    pathfinder/pathfinder.cpp \
+    pathfinder/dumbpathfinder.cpp
 
 HEADERS += \
     creatures/player.h \
@@ -136,4 +138,6 @@ HEADERS += \
     items/boots.h \
     items/gloves.h \
     items/belt.h \
-    items/lootprovider.h
+    items/lootprovider.h \
+    pathfinder/pathfinder.h \
+    pathfinder/dumbpathfinder.h
