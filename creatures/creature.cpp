@@ -6,8 +6,8 @@
 #include <fstream>
 #include <sstream>
 
-#include <configuration/configurationprovider.h>
 #include <interactions/interaction.h>
+#include <configuration/configurationprovider.h>
 #include <items/armor.h>
 #include <items/weapon.h>
 #include <stats/stats.h>
@@ -46,8 +46,8 @@ Creature::Creature(std::string name, Json::Value config) : ListItem(0, 0, 0, 2) 
     setAcceptHoverEvents(true);
 
     Json::Value equipment_config = *ConfigurationProvider::getConfig("config/slots.json");
-    for (const std::string &key : equipment_config.getMemberNames())
-        equipped[std::atoi(key.c_str())] = 0;
+    for (Json::Value::iterator it = equipment_config.begin(); it != equipment_config.end(); ++it)
+        equipped[std::atoi(it.memberName())] = 0;
     loadFromJson(config);
 }
 
@@ -55,14 +55,6 @@ Creature::Creature(std::string name)
     : Creature(name, (*ConfigurationProvider::getConfig("config/creatures.json"))[name]) {
     className = name;
 }
-
-Creature::Creature() : Creature("", Json::Value()) {}
-
-Creature::Creature(const Creature &creature) : Creature(creature.className) {}
-
-void Creature::onEnter() {}
-
-void Creature::onMove() {}
 
 Creature::~Creature() {
     actions.clear();
@@ -88,7 +80,6 @@ void Creature::attribChange() {
 
     hp = std::max(1, static_cast<int>(hpRatio * hpMax));
     mana = std::max(0, static_cast<int>(manaRatio * manaMax));
-    emit statsChanged();
 }
 
 void Creature::heal(int i) {
@@ -97,7 +88,6 @@ void Creature::heal(int i) {
     else
         hp = std::min(hpMax, hp + i);
     alive = hp > 0;
-    emit statsChanged();
 }
 
 void Creature::healProc(float i) { heal(static_cast<int>(hpMax * i / 100.0f)); }
@@ -106,7 +96,6 @@ void Creature::takeDamage(int i) {
     hp = std::max(0, hp - i);
     if (hp == 0)
         alive = false;
-    emit statsChanged();
 }
 
 void Creature::hurt(Damage damage) {
@@ -170,34 +159,14 @@ void Creature::addEffect(std::string type, Creature *caster) {
 }
 
 void Creature::addItem(std::set<Item *> *items) {
-    if (!items || items == getInventory())
-        return;
-    inventory.insert(items->begin(), items->end());
-    items->clear();
-    // Players show their inventory; a creature still being constructed is not yet
-    // one.
-    Player *player = dynamic_cast<Player *>(this);
-    if (player)
-        player->updateViews();
+    for (Item *item : *items) if (item) inventory.insert(item);
     emit inventoryChanged();
 }
-
-void Creature::addItem(Item *item) {
-    std::set<Item *> list;
-    list.insert(item);
-    addItem(&list);
-}
-
-void Creature::loseItem(Item *item) {
-    inventory.erase(item);
-    Player *player = dynamic_cast<Player *>(this);
-    if (player)
-        player->updateViews();
-    emit inventoryChanged();
-}
-
-std::set<Item *> *Creature::getInventory() { return reinterpret_cast<std::set<Item *> *>(&inventory); }
-
+void Creature::addItem(Item *item) { if (item) inventory.insert(item); emit inventoryChanged(); }
+void Creature::loseItem(Item *item) { inventory.erase(item); emit inventoryChanged(); }
+std::set<Item *> *Creature::getInventory() { return (std::set<Item *> *)&inventory; }
+std::map<int, Item *> *Creature::getEquipped() { return &equipped; }
+std::set<Interaction *> *Creature::getActions() { return (std::set<Interaction *> *)&actions; }
 int Creature::getMana() { return mana; }
 
 void Creature::addMana(int i) {
@@ -205,15 +174,11 @@ void Creature::addMana(int i) {
         mana = manaMax;
     else
         mana = std::min(manaMax, mana + i);
-    emit statsChanged();
 }
 
 void Creature::addManaProc(float i) { addMana(static_cast<int>(manaMax * i / 100.0f)); }
 
-void Creature::takeMana(int i) {
-    mana = std::max(0, mana - i);
-    emit statsChanged();
-}
+void Creature::takeMana(int i) { mana = std::max(0, mana - i); }
 
 bool Creature::isPlayer() {
     return className == "Player" || className == "Mage" || className == "Warrior" || className == "Rogue";
@@ -221,39 +186,31 @@ bool Creature::isPlayer() {
 
 int Creature::getHpRatio() { return clamp_ratio(hp, hpMax); }
 
-void Creature::setItem(int slot, Item *newItem) {
+void Creature::setItem(int slot, Item *item) {
     Item *previous = equipped[slot];
-    if (previous == newItem)
-        return;
-    if (previous)
-        previous->onUnequip(this);
-    equipped[slot] = newItem;
-    if (newItem)
-        newItem->onEquip(this);
+    if (previous == item) return;
+    if (previous) previous->onUnequip(this);
+    equipped[slot] = item;
+    if (item) item->onEquip(this);
     emit equippedChanged();
+    emit statsChanged();
 }
-
 void Creature::setWeapon(Weapon *weapon) { setItem(0, weapon); }
-
 void Creature::setArmor(Armor *armor) { setItem(3, armor); }
-
 Weapon *Creature::getWeapon() { return dynamic_cast<Weapon *>(equipped[0]); }
-
 Armor *Creature::getArmor() { return dynamic_cast<Armor *>(equipped[3]); }
-
 bool Creature::hasEquipped(Item *item) {
-    if (!item)
-        return false;
-    for (const auto &entry : equipped)
-        if (entry.second == item)
-            return true;
+    for (const auto &entry : equipped) if (entry.second == item) return true;
     return false;
 }
-
 bool Creature::hasInInventory(Item *item) { return inventory.find(item) != inventory.end(); }
-
 bool Creature::hasItem(Item *item) { return hasInInventory(item) || hasEquipped(item); }
-
+Coords Creature::getCoords() { return Coords(getPosX(), getPosY(), getPosZ()); }
+void Creature::onEnter() {}
+void Creature::onMove() {}
+Creature::Creature() : Creature("Creature", Json::Value()) {}
+Creature::Creature(const Creature &creature) : Creature(creature.className) {}
+int Creature::getExp() { return exp; }
 Stats *Creature::getStats() { return &stats; }
 
 int Creature::getScale() { return level + sw; }
@@ -270,8 +227,7 @@ bool Creature::isAlive() const { return alive; }
 
 void Creature::setAlive() { alive = true; }
 
-// Creatures are described by a configuration or a saved game: both use the same
-// keys.
+// Creatures are described by a configuration or a saved game: both use the same keys.
 void Creature::loadFromJson(Json::Value config) {
     animPath = config.get("path", "").asString();
     setAnimation(animPath);
@@ -291,18 +247,18 @@ void Creature::loadFromJson(Json::Value config) {
     }
     addItem(&items);
 
-    Json::Value equipment = config["equipment"];
-    for (const std::string &key : equipment.getMemberNames())
-        setItem(std::atoi(key.c_str()), Item::getItem(equipment[key].asString()));
-    Json::Value legacy = config["inventory"];
-    if (legacy.isMember("weapon"))
-        setWeapon(dynamic_cast<Weapon *>(Item::getItem(legacy["weapon"].asString())));
-    if (legacy.isMember("armor"))
-        setArmor(dynamic_cast<Armor *>(Item::getItem(legacy["armor"].asString())));
+    Json::Value equipment_config = config["equipment"];
+    for (Json::Value::iterator it = equipment_config.begin(); it != equipment_config.end(); ++it)
+        setItem(std::atoi(it.memberName()), Item::getItem((*it).asCString()));
+    Json::Value equipment = config["inventory"];
+    if (equipment.isMember("weapon"))
+        setWeapon(dynamic_cast<Weapon *>(Item::getItem(equipment["weapon"].asCString())));
+    if (equipment.isMember("armor"))
+        setArmor(dynamic_cast<Armor *>(Item::getItem(equipment["armor"].asCString())));
 
     if (config.isMember("coords"))
-        moveTo(config["coords"].get("X", 0).asInt(), config["coords"].get("Y", 0).asInt(),
-               config["coords"].get("Z", 0).asInt(), true);
+        moveTo(config["coords"].get("x", 0).asInt(), config["coords"].get("y", 0).asInt(),
+               config["coords"].get("z", 0).asInt(), true);
 
     attribChange();
     if (config.isMember("level")) {
@@ -332,28 +288,25 @@ Json::Value Creature::saveToJson() {
     Stats initialStats;
     initialStats.loadFromJson(stats.saveToJson());
     for (const auto &entry : equipped) {
-        if (!entry.second)
-            continue;
+        if (!entry.second) continue;
         Stats bonus;
         bonus.loadFromJson((*ConfigurationProvider::getConfig("config/items.json"))[entry.second->className]["bonus"]);
         initialStats.removeBonus(bonus);
     }
     config["initStats"] = initialStats.saveToJson();
-    config["coords"]["X"] = getPosX();
-    config["coords"]["Y"] = getPosY();
-    config["coords"]["Z"] = getPosZ();
+    config["coords"]["x"] = getPosX();
+    config["coords"]["y"] = getPosY();
+    config["coords"]["z"] = getPosZ();
     Json::Value names(Json::arrayValue);
-    for (std::set<Interaction *>::iterator it = actions.begin(); it != actions.end(); ++it)
+    for (auto it = actions.begin(); it != actions.end(); ++it)
         names.append((*it)->className);
     config["actions"] = names;
     Json::Value items(Json::arrayValue);
-    for (std::set<Item *>::iterator it = inventory.begin(); it != inventory.end(); ++it)
+    for (auto it = inventory.begin(); it != inventory.end(); ++it)
         items.append((*it)->className);
     config["items"] = items;
-    config["equipment"] = Json::Value(Json::objectValue);
     for (const auto &entry : equipped)
-        if (entry.second)
-            config["equipment"][std::to_string(entry.first)] = entry.second->className;
+        if (entry.second) config["equipment"][std::to_string(entry.first)] = entry.second->className;
     return config;
 }
 
@@ -365,12 +318,12 @@ int Creature::getManaMax() { return manaMax; }
 
 int Creature::getLevel() { return level; }
 
-// Applies every active effect for this turn. Returns true when an effect (such
-// as Stun) prevents the creature from acting; finished effects are dropped.
+// Applies every active effect for this turn. Returns true when an effect (such as
+// Stun) prevents the creature from acting; finished effects are dropped.
 bool Creature::applyEffects() {
     bool skipTurn = false;
-    std::set<Effect *> active(effects.begin(), effects.end());
-    for (std::set<Effect *>::iterator it = active.begin(); it != active.end(); ++it) {
+    std::list<Effect *> active(effects.begin(), effects.end());
+    for (std::list<Effect *>::iterator it = active.begin(); it != active.end(); ++it) {
         Effect *effect = *it;
         if (effect->apply(this))
             skipTurn = true;
@@ -399,7 +352,7 @@ Interaction *Creature::selectAction() {
     if (actions.empty())
         return 0;
 
-    for (std::set<Interaction *>::iterator it = actions.begin(); it != actions.end(); ++it) {
+    for (auto it = actions.begin(); it != actions.end(); ++it) {
         if ((*it)->getManaCost() <= mana)
             return *it;
     }
@@ -423,8 +376,3 @@ void Creature::hoverEnterEvent(QGraphicsSceneHoverEvent *event) {
         event->accept();
 }
 
-std::map<int, Item *> *Creature::getEquipped() { return &equipped; }
-
-int Creature::getExp() { return exp; }
-
-std::set<Interaction *> *Creature::getActions() { return reinterpret_cast<std::set<Interaction *> *>(&actions); }
