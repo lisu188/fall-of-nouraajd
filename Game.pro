@@ -80,7 +80,8 @@ SOURCES += \
     items/belt.cpp \
     items/lootprovider.cpp \
     pathfinder/pathfinder.cpp \
-    pathfinder/dumbpathfinder.cpp
+    pathfinder/dumbpathfinder.cpp \
+    pathfinder/smartpathfinder.cpp
 
 HEADERS += \
     creatures/player.h \
@@ -140,4 +141,5 @@ HEADERS += \
     items/belt.h \
     items/lootprovider.h \
     pathfinder/pathfinder.h \
-    pathfinder/dumbpathfinder.h
+    pathfinder/dumbpathfinder.h \
+    pathfinder/smartpathfinder.h
