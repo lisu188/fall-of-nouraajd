@@ -1,22 +1,4 @@
 
-=== coordinatesHash ===
-{
-  "inputs": {
-    "map/coords.cpp": "64acf00cab276e850f453b2a7bc5b0cd5f8162d43f46e7288f8354f605fbefd3",
-    "map/coords.h": "a15fa3a6583c1f421551535d4a2a9a266af92e8af77cda284b3e5e65e57d7264",
-    "pathfinder/smartpathfinder.cpp": "dfdf97905b268c029f221b88ad2ac8eab3375f172cfcc5edd66e8dd25dd9fae5"
-  },
-  "path": "recovery_coordinates_hash.h",
-  "provenance": {
-    "operation": "Provide std::hash<Coords> by delegating to the unchanged original CoordsHasher implementation",
-    "sourceCommit": "169b592c32924654d830fbf0571e86c5de9dc692"
-  },
-  "qmakeArgument": "QMAKE_CXXFLAGS+=-include $$_PRO_FILE_PWD_/recovery_coordinates_hash.h",
-  "replaySha256": "84471abbd3c59dfc11f9eb5dce088bacbc0357e40268a29882c5909dc09db78f",
-  "sha256": "64031980ad55bc1cc92a9a0f97bf5bfdaf1662b942fb91ab14ad5095df96574c",
-  "validationBoundary": "Game startup with coordinate hashing delegated to original CoordsHasher; original sources unchanged"
-}
-
 === windowsIncludeSeparators ===
 [
   {
