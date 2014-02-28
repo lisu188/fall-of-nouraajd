@@ -3,8 +3,11 @@
 #include <set>
 #include <unordered_map>
 #include <QDebug>
+#include <QLabel>
 #include <view/gamescene.h>
 #include <configuration/configurationprovider.h>
+#include <QPixmap>
+#include <QApplication>
 SmartPathFinder::SmartPathFinder()
 {
 }
@@ -39,7 +42,6 @@ Coords SmartPathFinder::findPath(Coords start, Coords goal)
     std::set<Cell,CellCompare> nodes;
     std::set<Cell,CellCompare> marked;
     std::map<Cell,int,CellCompare> values;
-
     int level=start.z;
     nodes.insert(Cell(goal.x,goal.y,start));
     values.insert(std::pair<Cell,int>(Cell(goal.x,goal.y,start),0));
@@ -50,14 +52,17 @@ Coords SmartPathFinder::findPath(Coords start, Coords goal)
         if(currentCell.x==currentCell.goal.x&&currentCell.y==currentCell.goal.y){
             break;
         }
-
-        int curValue=(*values.find(currentCell)).second;
-        for(int i=-1;i<=1;i+=2)
-            for(int j=-1;j<=1;j+=2){
-        Cell tmpCell(currentCell.x+i,currentCell.y+j,start);
-        if(marked.find(tmpCell)!=marked.end()){
+        if(marked.find(currentCell)!=marked.end()){
             continue;
         }
+        QApplication::instance()->processEvents(QEventLoop::ExcludeUserInputEvents);
+        int curValue=(*values.find(currentCell)).second;
+
+        for(int i=-1;i<=1;i++)
+            for(int j=-1;j<=1;j++){
+                if(i!=0&&j!=0)continue;
+                if(i==0&&j==0)continue;
+        Cell tmpCell(currentCell.x+i,currentCell.y+j,start);
         bool canStep=(*ConfigurationProvider::getConfig("config/tiles.json"))
                      [map->getTile(tmpCell.x,tmpCell.y,level)].get("canStep",true).asBool();
         if(!canStep){
@@ -65,22 +70,22 @@ Coords SmartPathFinder::findPath(Coords start, Coords goal)
         }
         if(values.find(tmpCell)!=values.end()){
             int tmpValue=(*values.find(tmpCell)).second;
-            if(tmpValue>curValue+1){
+            if(tmpValue>=curValue+1){
                 values.erase(values.find(tmpCell));
-                nodes.insert(tmpCell);
                 values.insert(std::pair<Cell,int>(tmpCell,curValue+1));
             }
-        }else{
-            nodes.insert(tmpCell);
+        }else{         
             values.insert(std::pair<Cell,int>(tmpCell,curValue+1));
         }
-
+         nodes.insert(tmpCell);
     }
         marked.insert(currentCell);
     }
         std::list<Cell> list;
-        for(int i=-1;i<=1;i+=2)
-            for(int j=-1;j<=1;j+=2){
+        for(int i=-1;i<=1;i++)
+            for(int j=-1;j<=1;j++){
+                if(i!=0&&j!=0)continue;
+                if(i==0&&j==0)continue;
                 if(values.find(Cell(start.x+i,start.y+j,start))!=values.end()){
                     list.push_back(Cell(start.x+i,start.y+j,start));
                 }
