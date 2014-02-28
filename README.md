@@ -1,7 +1,7 @@
 # Recovered game snapshot
 
-Original commit: `fd507cdac42337d763550ffe41334a39a1d0d954`. Original tree: `bab208e1dc6b94c87ea1f5cb6bbd4cb5ed58b5d4`.
-Startup was verified from identical recovered sources at `fd507cdac42337d763550ffe41334a39a1d0d954`.
+Original commit: `80920f276d6aff53a2aa0dd237f4a26cb47cb60d`. Original tree: `f258b5917713c6e1eeebb2d39e5595d166d2d819`.
+Startup was verified from identical recovered sources at `80920f276d6aff53a2aa0dd237f4a26cb47cb60d`.
 
 This recovered version compiled and linked on Linux, started the real game on an isolated Xvfb display,
 loaded its map and a healthy player, rendered the screenshot below, and exited normally.
@@ -48,12 +48,12 @@ The source call, source hash and created/preserved directory are recorded in ver
 compatibilityRepair: 1, exactOriginal: 62, reconstruction: 20.
 
 - `compression/minizip.h`: unverified upstream reconstruction; https://github.com/richgel999/miniz/tree/v114
-- `config/creatures.json`: {'evidence': ['historical image directory IDs', 'config/map.json saved creature state when present'], 'inferred': ['missing initial stats', 'levelStats encoding and progression'], 'kind': 'reconstructed-config', 'note': 'Saved state is retained; absent stats are positive synthetic defaults. Build/startup unverified.', 'sourceCommit': 'fd507cdac42337d763550ffe41334a39a1d0d954', 'verified': False}
+- `config/creatures.json`: {'evidence': ['historical image directory IDs', 'config/map.json saved creature state when present'], 'inferred': ['missing initial stats', 'levelStats encoding and progression'], 'kind': 'reconstructed-config', 'note': 'Saved state is retained; absent stats are positive synthetic defaults. Build/startup unverified.', 'sourceCommit': '80920f276d6aff53a2aa0dd237f4a26cb47cb60d', 'verified': False}
 - `config/items.json`: content reconstruction of the BFG-removed original; Adapted genuine119 config/items.json donor blob41d081fe6c796beab79afb418358b8af12cfa877 to missing original2081: adds only class Weapon/Armor/Potion from each actual legacy type, as required by surviving150 Item::getItem/QMetaType factory. Preserves every donor item name/path/stat/power/type. All lost original later item IDs, exact balance and slot metadata remain unavailable and are not invented. This is inferred missing-config compatibility, not original2081 bytes or gameplay parity. Root owns integration and affected-proof revalidation.
 - `creatures/creature.cpp`: Content reconstruction of the BFG-removed original; Missing #150 Creature body inferred from native-verified #97 body and exact surviving #150 declarations/callers/config: ListItem base, ordered sets, slot-index equipment map, collection signals, lower-case coordinates. Slot initialization follows original config/slots.json and ItemSlot::update at(). Saves subtract equipped bonuses before reload. Formula, equipment serialization and historical gameplay parity remain inferred; no surviving source edited. Corrected inferred equipment reload: legacy inventory.weapon/armor apply only if present; modern equipment slots survive save/load. Before/after native regression and revalidation required.
 - `creatures/player.cpp`: Missing #150 player body inferred from earlier surviving donor and exact original Player.h/GameView caller: restored declared update() to refresh inventory/action maps and emit statsChanged. Remaining donor combat preserved; historical behavior not proven.
-- `images/buildings/dungeon/0.png`: unverified donor reconstruction; 71a3432e36b5649aabdd63c7807a78e9a8a3749a:images/buildings/dungeon/0.png; headerMatch=0; apiOverlap=0/10000; distance=9
-- `images/buildings/teleporter/0.png`: unverified donor reconstruction; 71a3432e36b5649aabdd63c7807a78e9a8a3749a:images/buildings/teleporter/0.png; headerMatch=0; apiOverlap=0/10000; distance=9
+- `images/buildings/dungeon/0.png`: unverified donor reconstruction; 71a3432e36b5649aabdd63c7807a78e9a8a3749a:images/buildings/dungeon/0.png; headerMatch=0; apiOverlap=0/10000; distance=8
+- `images/buildings/teleporter/0.png`: unverified donor reconstruction; 71a3432e36b5649aabdd63c7807a78e9a8a3749a:images/buildings/teleporter/0.png; headerMatch=0; apiOverlap=0/10000; distance=8
 - `images/loading.png`: synthesized visible 32px placeholder; original artwork unavailable; unverified
 - `images/tiles/mountain/0.png`: unverified donor reconstruction; 152007b28631784d3c5e17f2686eb6ef9ff30e46:images/tiles/mountain/0.png; headerMatch=0; apiOverlap=0/10000; distance=155 Verified by build and startup of afdd8069 (recovery/evidence/second-original).
 - `images/tiles/road/0.png`: unverified donor reconstruction; 152007b28631784d3c5e17f2686eb6ef9ff30e46:images/tiles/road/0.png; headerMatch=0; apiOverlap=0/10000; distance=155 Verified by build and startup of afdd8069 (recovery/evidence/second-original).
@@ -69,7 +69,7 @@ compatibilityRepair: 1, exactOriginal: 62, reconstruction: 20.
 - `view/mapview.cpp`: content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of 7476f6bac498deb69ac2f9eb80963e8cab3c5705 (previous version of view/mapview.cpp)
 - `json/LICENSE`: https://github.com/open-source-parsers/jsoncpp/tree/4fce396c9d3e27a8ab8fb88e94c1676e021ae3a6 upstream distribution license
 
-Restored source fingerprint: `65bb1df7f5d6d9f3aed2472cd334fe07be6222eb12aff8d51148d9439350707e`.
+Restored source fingerprint: `143cbe83924dd33a00ed9062aa8f3ef1e089444a26967ca675d927270e3fee37`.
 
 The restored source fingerprint identifies inputs before generation. The
 [source preparation metadata](recovery/source-preparation.json) records the original inputs
