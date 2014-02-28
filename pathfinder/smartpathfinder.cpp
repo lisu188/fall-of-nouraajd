@@ -29,14 +29,15 @@ Coords SmartPathFinder::findPath(Coords start, Coords goal)
     class CellCompare{
     public:
         bool operator()(const Cell &a,const Cell &b){
-            int dista=std::abs(a.x-a.goal.x)+std::abs(a.y-a.goal.y);
-            int distb=std::abs(b.x-b.goal.x)+std::abs(b.y-b.goal.y);
+            int dista=(a.x-a.goal.x)*(a.x-a.goal.x)+(a.y-a.goal.y)*(a.y-a.goal.y);
+            int distb=(b.x-b.goal.x)*(b.x-b.goal.x)+(b.y-b.goal.y)*(b.y-b.goal.y);
             if(dista!=distb)return dista<distb;
             if(a.x!=b.x)return a.x<b.x;
             return a.y<b.y;
         }
     };
     std::set<Cell,CellCompare> nodes;
+    std::set<Cell,CellCompare> marked;
     std::map<Cell,int,CellCompare> values;
 
     int level=start.z;
@@ -46,32 +47,42 @@ Coords SmartPathFinder::findPath(Coords start, Coords goal)
     while(!nodes.empty()){
         Cell currentCell=*nodes.begin();
         nodes.erase(nodes.begin());
-        bool canStep=(*ConfigurationProvider::getConfig("config/tiles.json"))
-                     [map->getTile(currentCell.x,currentCell.y,level)].get("canStep",true).asBool();
-        if(!canStep){
-            continue;
+        if(currentCell.x==currentCell.goal.x&&currentCell.y==currentCell.goal.y){
+            break;
         }
 
         int curValue=(*values.find(currentCell)).second;
         for(int i=-1;i<=1;i+=2)
             for(int j=-1;j<=1;j+=2){
-        Cell tmpCell(currentCell.x+i,currentCell.y+j,goal);
+        Cell tmpCell(currentCell.x+i,currentCell.y+j,start);
+        if(marked.find(tmpCell)!=marked.end()){
+            continue;
+        }
+        bool canStep=(*ConfigurationProvider::getConfig("config/tiles.json"))
+                     [map->getTile(tmpCell.x,tmpCell.y,level)].get("canStep",true).asBool();
+        if(!canStep){
+            continue;
+        }
         if(values.find(tmpCell)!=values.end()){
             int tmpValue=(*values.find(tmpCell)).second;
             if(tmpValue>curValue+1){
                 values.erase(values.find(tmpCell));
                 nodes.insert(tmpCell);
+                values.insert(std::pair<Cell,int>(tmpCell,curValue+1));
             }
         }else{
             nodes.insert(tmpCell);
+            values.insert(std::pair<Cell,int>(tmpCell,curValue+1));
         }
-        values.insert(std::pair<Cell,int>(tmpCell,curValue+1));
+
+    }
+        marked.insert(currentCell);
     }
         std::list<Cell> list;
         for(int i=-1;i<=1;i+=2)
             for(int j=-1;j<=1;j+=2){
-                if(values.find(Cell(start.x+i,start.y+j,goal))!=values.end()){
-                    list.push_back(Cell(start.x+i,start.y+j,goal));
+                if(values.find(Cell(start.x+i,start.y+j,start))!=values.end()){
+                    list.push_back(Cell(start.x+i,start.y+j,start));
                 }
             }
         if(list.size()==0){
@@ -89,4 +100,4 @@ Coords SmartPathFinder::findPath(Coords start, Coords goal)
         }
     return Coords(target.x-start.x,target.y-start.y,0);
 }
-}
+
