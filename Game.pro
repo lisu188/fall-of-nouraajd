@@ -17,106 +17,120 @@ CONFIG += console
 
 QMAKE_CXXFLAGS += -std=c++11
 
-        RESOURCES +=  \
-        config.qrc \
-    iteractions.qrc \
-    creatures.qrc \
-    buildings.qrc \
-    tiles.qrc \
-    images.qrc \
-    weapons.qrc \
-    armors.qrc \
-    potions.qrc \
-    items.qrc
-
-SOURCES += \
-    creatures/player.cpp \
-    view/fightview.cpp \
-    map/map.cpp \
-    view/gameview.cpp \
-    view/gamescene.cpp \
-    items/item.cpp \
-    creatures/creature.cpp \
-    view/listitem.cpp \
-    view/mapview.cpp \
-    view/charview.cpp \
-    view/playerlistview.cpp \
-    creatures/monster.cpp \
-    map/tile.cpp \
-    interactions/interaction.cpp \
-    configuration/configurationprovider.cpp \
-    view/mapscene.cpp \
+        RE
+SOURCES += animation/animatedobject.cpp \
+    animation/animation.cpp \
     animation/animationprovider.cpp \
-    main.cpp \
-    buildings/dungeon.cpp \
-    compression/compression.cpp \
-    view/scrollobject.cpp \
-    view/playerstatsview.cpp \
-    animation/animatedobject.cpp \
-    buildings/cave.cpp \
+    base64/base64.cpp \
     buildings/building.cpp \
-    buildings/towns/town.cpp \
+    buildings/cave.cpp \
+    buildings/dungeon.cpp \
+    buildings/teleporter.cpp \
     buildings/towers/tower.cpp \
-    map/coords.cpp \
-    stats/damage.cpp \
-    map/events/event.cpp \
-    map/playeranimation.cpp \
-    stats/stats.cpp \
+    buildings/towns/town.cpp \
+    compression/compression.cpp \
+    configuration/configurationprovider.cpp \
+    creatures/creature.cpp \
+    creatures/monster.cpp \
+    creatures/player.cpp \
+    destroyer/destroyer.cpp \
+    interactions/interaction.cpp \
     items/armor.cpp \
+    items/belt.cpp \
+    items/boots.cpp \
+    items/gloves.cpp \
+    items/helmet.cpp \
+    items/item.cpp \
+    items/lootprovider.cpp \
+    items/potion.cpp \
+    items/smallweapon.cpp \
+    items/weapon.cpp \
     json/json_reader.cpp \
     json/json_value.cpp \
     json/json_writer.cpp \
-    items/potion.cpp \
-    items/weapon.cpp \
-    animation/animation.cpp \
-    destroyer/destroyer.cpp \
-    buildings/teleporter.cpp \
-    items/smallweapon.cpp \
-    items/helmet.cpp \
-    view/playerequippedview.cpp \
-    view/itemslot.cpp \
-    items/boots.cpp \
-    items/gloves.cpp \
-    items/belt.cpp \
-    items/lootprovider.cpp \
-    pathfinder/pathfinder.cpp \
+    main.cpp \
+    map/coords.cpp \
+    map/events/event.cpp \
+    map/map.cpp \
+    map/playeranimation.cpp \
+    map/tile.cpp \
     pathfinder/dumbpathfinder.cpp \
-    pathfinder/smartpathfinder.cpp
+    pathfinder/pathfinder.cpp \
+    pathfinder/smartpathfinder.cpp \
+    stats/damage.cpp \
+    stats/stats.cpp \
+    tinyxml/tinystr.cpp \
+    tinyxml/tinyxml.cpp \
+    tinyxml/tinyxmlerror.cpp \
+    tinyxml/tinyxmlparser.cpp \
+    tmx/TmxEllipse.cpp \
+    tmx/TmxImage.cpp \
+    tmx/TmxImageLayer.cpp \
+    tmx/TmxLayer.cpp \
+    tmx/TmxMap.cpp \
+    tmx/TmxObject.cpp \
+    tmx/TmxObjectGroup.cpp \
+    tmx/TmxPolygon.cpp \
+    tmx/TmxPolyline.cpp \
+    tmx/TmxPropertySet.cpp \
+    tmx/TmxTile.cpp \
+    tmx/TmxTileset.cpp \
+    tmx/TmxUtil.cpp \
+    view/charview.cpp \
+    view/fightview.cpp \
+    view/gamescene.cpp \
+    view/gameview.cpp \
+    view/itemslot.cpp \
+    view/listitem.cpp \
+    view/mapscene.cpp \
+    view/mapview.cpp \
+    view/playerequippedview.cpp \
+    view/playerlistview.cpp \
+    view/playerstatsview.cpp \
+    view/scrollobject.cpp \
+    zlib/adler32.c \
+    zlib/compress.c \
+    zlib/crc32.c \
+    zlib/deflate.c \
+    zlib/gzclose.c \
+    zlib/gzlib.c \
+    zlib/gzread.c \
+    zlib/gzwrite.c \
+    zlib/infback.c \
+    zlib/inffast.c \
+    zlib/inflate.c \
+    zlib/inftrees.c \
+    zlib/trees.c \
+    zlib/uncompr.c \
+    zlib/zutil.c
 
-HEADERS += \
-    creatures/player.h \
-    view/gameview.h \
-    map/map.h \
-    creatures/creature.h \
-    view/charview.h \
-    view/mapview.h \
-    view/playerlistview.h \
-    view/gamescene.h \
-    creatures/monster.h \
-    view/fightview.h \
-    interactions/interaction.h \
-    compression/minizip.h \
-    view/listitem.h \
-    view/scrollobject.h \
-    map/tile.h \
-    items/item.h \
-    view/playerstatsview.h \
-    animation/animatedobject.h \
-    view/mapscene.h \
+HEADERS += animation/animatedobject.h \
+    animation/animation.h \
     animation/animationprovider.h \
-    items/armor.h \
-    items/potion.h \
-    items/weapon.h \
-    buildings/dungeon.h \
-    buildings/cave.h \
-    buildings/towns/town.h \
-    buildings/towers/tower.h \
+    base64/base64.h \
     buildings/building.h \
-    map/coords.h \
-    stats/damage.h \
-    map/events/event.h \
-    map/playeranimation.h \
-    stats/stats.h \
+    buildings/cave.h \
+    buildings/dungeon.h \
+    buildings/teleporter.h \
+    buildings/towers/tower.h \
+    buildings/towns/town.h \
+    compression/compression.h \
+    configuration/configurationprovider.h \
+    creatures/creature.h \
+    creatures/monster.h \
+    creatures/player.h \
+    destroyer/destroyer.h \
+    interactions/interaction.h \
+    items/armor.h \
+    items/belt.h \
+    items/boots.h \
+    items/gloves.h \
+    items/helmet.h \
+    items/item.h \
+    items/lootprovider.h \
+    items/potion.h \
+    items/smallweapon.h \
+    items/weapon.h \
     json/autolink.h \
     json/config.h \
     json/features.h \
@@ -126,20 +140,68 @@ HEADERS += \
     json/reader.h \
     json/value.h \
     json/writer.h \
-    animation/animation.h \
-    compression/compression.h \
-    configuration/configurationprovider.h \
-    destroyer/destroyer.h \
-    buildings/teleporter.h \
-    items/smallweapon.h \
-    items/helmet.h \
-    view/playerequippedview.h \
-    view/itemslot.h \
-    util/patch.h \
-    items/boots.h \
-    items/gloves.h \
-    items/belt.h \
-    items/lootprovider.h \
-    pathfinder/pathfinder.h \
+    map/coords.h \
+    map/events/event.h \
+    map/map.h \
+    map/playeranimation.h \
+    map/tile.h \
     pathfinder/dumbpathfinder.h \
-    pathfinder/smartpathfinder.h
+    pathfinder/pathfinder.h \
+    pathfinder/smartpathfinder.h \
+    stats/damage.h \
+    stats/stats.h \
+    tinyxml/tinystr.h \
+    tinyxml/tinyxml.h \
+    tmx/Tmx.h \
+    tmx/TmxEllipse.h \
+    tmx/TmxImage.h \
+    tmx/TmxImageLayer.h \
+    tmx/TmxLayer.h \
+    tmx/TmxMap.h \
+    tmx/TmxMapTile.h \
+    tmx/TmxObject.h \
+    tmx/TmxObjectGroup.h \
+    tmx/TmxPoint.h \
+    tmx/TmxPolygon.h \
+    tmx/TmxPolyline.h \
+    tmx/TmxPropertySet.h \
+    tmx/TmxTile.h \
+    tmx/TmxTileset.h \
+    tmx/TmxUtil.h \
+    util/patch.h \
+    view/charview.h \
+    view/fightview.h \
+    view/gamescene.h \
+    view/gameview.h \
+    view/itemslot.h \
+    view/listitem.h \
+    view/mapscene.h \
+    view/mapview.h \
+    view/playerequippedview.h \
+    view/playerlistview.h \
+    view/playerstatsview.h \
+    view/scrollobject.h \
+    zlib/crc32.h \
+    zlib/deflate.h \
+    zlib/gzguts.h \
+    zlib/inffast.h \
+    zlib/inffixed.h \
+    zlib/inflate.h \
+    zlib/inftrees.h \
+    zlib/trees.h \
+    zlib/zconf.h \
+    zlib/zlib.h \
+    zlib/zutil.h
+
+RESOURCES += armors.qrc \
+    buildings.qrc \
+    config.qrc \
+    creatures.qrc \
+    images.qrc \
+    items.qrc \
+    iteractions.qrc \
+    potions.qrc \
+    tiles.qrc \
+    weapons.qrc
+
+LIBS += -lz
