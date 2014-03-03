@@ -1,6 +1,6 @@
 {
 "editor" :
-true,
+false,
     "mapSize" : 30,
-    "gameSize" : 50
+    "gameSize" : 32
 }
