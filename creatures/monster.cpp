@@ -5,6 +5,7 @@
 #include <items/lootprovider.h>
 
 #include <pathfinder/dumbpathfinder.h>
+#include <pathfinder/randompathfinder.h>
 #include <pathfinder/smartpathfinder.h>
 
 Monster::Monster(std::string name, Json::Value config):Creature(name,config)
@@ -28,13 +29,20 @@ void Monster::onMove()
     if(!isAlive()) {
         return;
     }
-    SmartPathFinder finder;
-    Coords path=finder.findPath(this->getCoords(),GameScene::getPlayer()->getCoords());
+    PathFinder *finder;
+
+    if((getCoords().getDist(GameScene::getPlayer()->getCoords()))<25){
+            finder=new SmartPathFinder();
+}else{
+        finder=new RandomPathFinder();
+}
+    Coords path=finder->findPath(this->getCoords(),GameScene::getPlayer()->getCoords());
     move(path.x,path.y);
     if(rand()%20==0) {
         onMove();
     }
     this->addExp(rand()%25);
+    delete finder;
 }
 
 void Monster::onEnter()
