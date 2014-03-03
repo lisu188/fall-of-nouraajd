@@ -1,7 +1,6 @@
 #include "tile.h"
 
 #include <view/gamescene.h>
-#include <view/mapscene.h>
 #include <configuration/configurationprovider.h>
 #include <destroyer/destroyer.h>
 
@@ -80,14 +79,8 @@ Tile *Tile::getTile(std::string type,int x,int y,int z)
 void Tile::addToScene(QGraphicsScene *scene)
 {
     setPos(posx*Map::getTileSize(),posy*Map::getTileSize());
-    if(dynamic_cast<MapScene*>(scene))
-    {
-        this->setDraggable();
-        MapObject::setMap(dynamic_cast<MapScene*>(scene)->getMap());
-    }
-    else {
-        MapObject::setMap(dynamic_cast<GameScene*>(scene)->getMap());
-    }
+    MapObject::setMap(dynamic_cast<GameScene*>(scene)->getMap());
+
 }
 
 void Tile::removeFromScene(QGraphicsScene *scene)
