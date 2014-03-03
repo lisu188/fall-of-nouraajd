@@ -1,4 +1,5 @@
 #include "coords.h"
+#include <math.h>
 
 Coords::Coords()
 {
@@ -24,6 +25,15 @@ bool Coords::operator<(const Coords &other) const
         return true;
     }
     return false;
+}
+
+int Coords::getDist(Coords a)
+{
+    double x=this->x-a.x;
+    x*=x;
+    double y=this->y-a.y;
+    y*=y;
+    return sqrt(x+y);
 }
 
 std::size_t CoordsHasher::operator()(const Coords &coords) const
