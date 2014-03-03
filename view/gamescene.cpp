@@ -40,8 +40,11 @@ void GameScene::startGame()
     {
         delete map;
         map=new Map(this);
-            map->loadFromJson(*ConfigurationProvider::getConfig("config/map.json"));
+        Tmx::Map authored;
+        authored.ParseFile("config/map.tmx");
+        map->loadMapFromTmx(authored);
         player=new Player("Sorcerer");
+        player->moveTo(map->getEntryX(), map->getEntryY(), map->getEntryZ(), true);
         map->addObject(player);
     }
     player->updateViews();

@@ -20,6 +20,12 @@
 #include <algorithm>
 #include <cstdlib>
 #include <vector>
+#include <QDebug>
+#include <tmx/TmxLayer.h>
+#include <tmx/TmxTileset.h>
+#include <tmx/TmxTile.h>
+#include <tmx/TmxObject.h>
+#include <tmx/TmxObjectGroup.h>
 
 namespace {
 
@@ -86,7 +92,7 @@ bool contains_object(std::list<MapObject *> *objects, MapObject *object) {
 
 } // namespace
 
-Map::Map(QGraphicsScene *scene) : scene(scene) {
+Map::Map(QGraphicsScene *scene) : scene(scene), entryx(0), entryz(0), entryy(0) {
   defaultTiles[0] = "GrassTile";
 }
 
@@ -700,4 +706,52 @@ void MapObject::mousePressEvent(QGraphicsSceneMouseEvent *event) {
 
 void MapObject::setAnimation(std::string path) {
   AnimatedObject::setAnimation(path, Map::getTileSize());
+}
+
+void Map::loadMapFromTmx(Tmx::Map &source) {
+    if (source.HasError()) qFatal("TMX reconstruction could not parse the authored map");
+    entryx = source.GetProperties().GetNumericProperty("x");
+    entryy = source.GetProperties().GetNumericProperty("y");
+    entryz = source.GetProperties().GetNumericProperty("z");
+    for (int z = 0; z < source.GetNumLayers(); ++z) {
+        const Tmx::Layer *layer = source.GetLayer(z);
+        for (int y = 0; y < layer->GetHeight(); ++y) {
+            for (int x = 0; x < layer->GetWidth(); ++x) {
+                int set = layer->GetTileTilesetIndex(x, y);
+                if (set < 0 || set >= source.GetNumTilesets()) continue;
+                const Tmx::Tile *tile = source.GetTileset(set)->GetTile(layer->GetTileId(x, y));
+                if (!tile) continue;
+                std::string type = tile->GetProperties().GetLiteralProperty("type");
+                if (!type.empty()) addTile(type, x, y, z);
+            }
+        }
+    }
+    const Json::Value &items = *ConfigurationProvider::getConfig("config/items.json");
+    const Json::Value &creatures = *ConfigurationProvider::getConfig("config/creatures.json");
+    for (int group = 0; group < source.GetNumObjectGroups(); ++group) {
+        const Tmx::ObjectGroup *objects = source.GetObjectGroup(group);
+        for (int index = 0; index < objects->GetNumObjects(); ++index) {
+            const Tmx::Object *authored = objects->GetObject(index);
+            std::string type = authored->GetType();
+            MapObject *object = 0;
+            if (items.isMember(type)) object = Item::getItem(type);
+            else if (creatures.isMember(type)) object = new Monster(type);
+            else {
+                int registered = QMetaType::type(type.c_str());
+                if (registered != QMetaType::UnknownType)
+                    object = static_cast<MapObject *>(QMetaType::create(registered));
+            }
+            if (!object) {
+                qWarning() << "TMX object has no genuine class in this revision:" << type.c_str();
+                continue;
+            }
+            object->setObjectName(QString::fromStdString(authored->GetName()));
+            std::map<std::string, std::string> properties = authored->GetProperties().GetList();
+            for (auto property : properties)
+                object->setProperty(property.first.c_str(), QString::fromStdString(property.second));
+            object->moveTo(authored->GetX() / source.GetTileWidth(),
+                           authored->GetY() / source.GetTileHeight(), entryz, true);
+            addObject(object);
+        }
+    }
 }
