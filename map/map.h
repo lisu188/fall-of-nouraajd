@@ -12,6 +12,7 @@
 #include <unordered_map>
 #include <set>
 #include <json/json.h>
+#include <tmx/TmxMap.h>
 
 class MapObject;
 class Tile;
@@ -49,6 +50,10 @@ public:
     std::set<MapObject*> *getObjects() {
         return &mapObjects;
     }
+    void loadMapFromTmx(Tmx::Map &map);
+    int getEntryX(){return entryx;}
+    int getEntryY(){return entryy;}
+    int getEntryZ(){return entryz;}
 private:
     std::set<MapObject*> mapObjects;
     void randomDir(int *tab, int rule);
@@ -56,6 +61,7 @@ private:
     QGraphicsScene *scene;
     int currentMap=0;
     std::map<int,std::string> defaultTiles;
+    int entryx,entryz,entryy;
 };
 
 class MapObject : public AnimatedObject
