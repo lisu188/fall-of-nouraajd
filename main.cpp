@@ -17,6 +17,7 @@
 #include <buildings/teleporter.h>
 #include <creatures/monster.h>
 #include <pathfinder/dumbpathfinder.h>
+#include <pathfinder/randompathfinder.h>
 #include <pathfinder/smartpathfinder.h>
 
 std::set<int> qMetaTypesRegister;
@@ -43,6 +44,7 @@ void registerMetaTypes()
     qMetaTypesRegister.insert(qRegisterMetaType<Gloves>());
     qMetaTypesRegister.insert(qRegisterMetaType<DumbPathFinder>());
     qMetaTypesRegister.insert(qRegisterMetaType<SmartPathFinder>());
+    qMetaTypesRegister.insert(qRegisterMetaType<RandomPathFinder>());
 }
 
 int main(int argc, char *argv[])
