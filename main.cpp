@@ -11,7 +11,6 @@
 #include <items/boots.h>
 #include <items/belt.h>
 #include <items/gloves.h>
-#include <view/mapview.h>
 #include <configuration/configurationprovider.h>
 #include <buildings/cave.h>
 #include <buildings/dungeon.h>
@@ -51,13 +50,7 @@ int main(int argc, char *argv[])
     QApplication a(argc, argv);
     QGraphicsView *view;
     registerMetaTypes();
-    bool editor=(*ConfigurationProvider::getConfig("config/init.json")).get("editor",false).asBool();
-    if(editor) {
-        view=new MapView();
-    }
-    else {
-        view = new GameView();
-    }
+    view = new GameView();
     int ret=a.exec();
     delete view;
     return ret;
