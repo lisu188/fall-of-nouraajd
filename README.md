@@ -1,7 +1,7 @@
 # Recovered game snapshot
 
-Original commit: `c90b86c5098927c1f123ad050632d9a220aa4604`. Original tree: `2098f8082af66db6a3be9a9cb112eef7a7a15402`.
-Startup was verified from identical recovered sources at `c90b86c5098927c1f123ad050632d9a220aa4604`.
+Original commit: `a9a1b6f7f64c3c775b1942ed0ad006ecc63cf177`. Original tree: `15933f7c7d096db851eab42d42bf8dc3d177502f`.
+Startup was verified from identical recovered sources at `a9a1b6f7f64c3c775b1942ed0ad006ecc63cf177`.
 
 This recovered version compiled and linked on Linux, started the real game on an isolated Xvfb display,
 loaded its map and a healthy player, rendered the screenshot below, and exited normally.
@@ -45,10 +45,10 @@ The genuine scene writes `save/game.sav` during shutdown. Verification prepared 
 parent directory before startup, without changing source files or replacing existing save data.
 The source call, source hash and created/preserved directory are recorded in verification metadata.
 
-compatibilityRepair: 1, exactOriginal: 89, reconstruction: 21.
+compatibilityRepair: 1, exactOriginal: 90, reconstruction: 21.
 
 - `Game.pro`: working reconstruction
-- `config/creatures.json`: {'evidence': ['historical image directory IDs', 'config/map.json saved creature state when present'], 'inferred': ['missing initial stats', 'levelStats encoding and progression'], 'kind': 'reconstructed-config', 'note': 'Saved state is retained; absent stats are positive synthetic defaults. Build/startup unverified.', 'sourceCommit': 'c90b86c5098927c1f123ad050632d9a220aa4604', 'verified': False}
+- `config/creatures.json`: {'evidence': ['historical image directory IDs', 'config/map.json saved creature state when present'], 'inferred': ['missing initial stats', 'levelStats encoding and progression'], 'kind': 'reconstructed-config', 'note': 'Saved state is retained; absent stats are positive synthetic defaults. Build/startup unverified.', 'sourceCommit': 'a9a1b6f7f64c3c775b1942ed0ad006ecc63cf177', 'verified': False}
 - `config/items.json`: working reconstruction
 - `config/map.tmx`: unverified donor reconstruction; authored Tiled geometry/object coordinates from 55e6516e:maps/map1/map.json converted to XML; missing target script reference omitted
 - `creatures/creature.cpp`: working reconstruction
@@ -60,17 +60,17 @@ compatibilityRepair: 1, exactOriginal: 89, reconstruction: 21.
 - `json/json_value.cpp`: unverified upstream reconstruction; https://github.com/open-source-parsers/jsoncpp/tree/4fce396c9d3e27a8ab8fb88e94c1676e021ae3a6
 - `json/json_writer.cpp`: unverified upstream reconstruction; https://github.com/open-source-parsers/jsoncpp/tree/4fce396c9d3e27a8ab8fb88e94c1676e021ae3a6
 - `map/map.cpp`: working reconstruction
-- `pathfinder/smartpathfinder.cpp`: unverified donor reconstruction; 0815aeac5f12dc58dd113d3fee1a837c06e39413:pathfinder/smartpathfinder.cpp; headerMatch=1; apiOverlap=10000/10000; distance=4
+- `pathfinder/smartpathfinder.cpp`: unverified donor reconstruction; 0815aeac5f12dc58dd113d3fee1a837c06e39413:pathfinder/smartpathfinder.cpp; headerMatch=1; apiOverlap=10000/10000; distance=3
 - `stats/stats.cpp`: content reconstruction of the BFG-removed original; carried validated d30a3f79 stats reconstruction; #63 surviving Stats change only renames a loadFromJson parameter
 - `tmx/TmxLayer.cpp`: unverified upstream reconstruction; https://github.com/tamatias/tmxparser/tree/6fa4d38742313b6365df0d224b8978be1eb81290; adapted vendored tinyxml/zlib include paths to historical directory layout
 - `tmx/TmxMap.cpp`: unverified upstream reconstruction; https://github.com/tamatias/tmxparser/tree/6fa4d38742313b6365df0d224b8978be1eb81290; adapted vendored tinyxml/zlib include paths to historical directory layout
-- `tmx/TmxObject.cpp`: unverified donor reconstruction; fb2bcb07e3b2267e7f24c5a7cd48604180b1be0f:tmx/TmxObject.cpp; headerMatch=0; apiOverlap=10000/10000; distance=13
+- `tmx/TmxObject.cpp`: unverified donor reconstruction; fb2bcb07e3b2267e7f24c5a7cd48604180b1be0f:tmx/TmxObject.cpp; headerMatch=0; apiOverlap=10000/10000; distance=12
 - `tmx/TmxTileset.cpp`: unverified upstream reconstruction; https://github.com/tamatias/tmxparser/tree/6fa4d38742313b6365df0d224b8978be1eb81290; adapted vendored tinyxml/zlib include paths to historical directory layout
 - `view/gamescene.cpp`: working reconstruction
 - `view/gameview.cpp`: working reconstruction
 - `json/LICENSE`: https://github.com/open-source-parsers/jsoncpp/tree/4fce396c9d3e27a8ab8fb88e94c1676e021ae3a6 upstream distribution license
 
-Restored source fingerprint: `86b42aceeec3a805ad83487f3ea71961899f63ef06e0e662d486fbabf4a4d940`.
+Restored source fingerprint: `d01a4f87132ec791857b9bc4531b3eb1d4334a077599198ecd475731272b3945`.
 
 The restored source fingerprint identifies inputs before generation. The
 [source preparation metadata](recovery/source-preparation.json) records the original inputs
