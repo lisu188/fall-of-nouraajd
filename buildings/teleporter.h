@@ -14,6 +14,9 @@ public:
     bool canSave();
     Json::Value saveToJson();
     void loadFromJson(Json::Value config);
+    void loadFromProps(Tmx::PropertySet set);
+private:
+    bool enabled=true;
 };
 Q_DECLARE_METATYPE(Teleporter)
 

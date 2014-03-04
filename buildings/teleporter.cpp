@@ -15,6 +15,7 @@ Teleporter::Teleporter(const Teleporter &teleporter):Teleporter()
 
 void Teleporter::onEnter()
 {
+    if(!enabled)return;
     std::set<MapObject*> *objects=this->getMap()->getObjects();
     std::set<MapObject*>::iterator it;
     std::vector<Teleporter*> teleporters;
@@ -51,6 +52,7 @@ Json::Value Teleporter::saveToJson()
     config[(unsigned int)0]=getPosX();
     config[(unsigned int)1]=getPosY();
     config[(unsigned int)2]=getPosZ();
+    config["enabled"]=enabled;
     return config;
 }
 
@@ -59,5 +61,11 @@ void Teleporter::loadFromJson(Json::Value config)
     int x=config[(unsigned int)0].asInt();
     int y=config[(unsigned int)1].asInt();
     int z=config[(unsigned int)2].asInt();
+    enabled=config["enabled"].asBool();
     this->moveTo(x,y,z,true);
+}
+
+void Teleporter::loadFromProps(Tmx::PropertySet set)
+{
+    enabled=(set.GetLiteralProperty("enabled").compare("true")==0);
 }
