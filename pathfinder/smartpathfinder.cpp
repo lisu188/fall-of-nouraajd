@@ -8,6 +8,8 @@
 #include <configuration/configurationprovider.h>
 #include <QPixmap>
 #include <QApplication>
+#include <math.h>
+
 SmartPathFinder::SmartPathFinder()
 {
 }
@@ -32,8 +34,8 @@ Coords SmartPathFinder::findPath(Coords start, Coords goal)
     class CellCompare{
     public:
         bool operator()(const Cell &a,const Cell &b){
-            int dista=(a.x-a.goal.x)*(a.x-a.goal.x)+(a.y-a.goal.y)*(a.y-a.goal.y);
-            int distb=(b.x-b.goal.x)*(b.x-b.goal.x)+(b.y-b.goal.y)*(b.y-b.goal.y);
+            int dista=sqrt((a.x-a.goal.x)*(a.x-a.goal.x)+(a.y-a.goal.y)*(a.y-a.goal.y));
+            int distb=sqrt((b.x-b.goal.x)*(b.x-b.goal.x)+(b.y-b.goal.y)*(b.y-b.goal.y));
             if(dista!=distb)return dista<distb;
             if(a.x!=b.x)return a.x<b.x;
             return a.y<b.y;
@@ -55,7 +57,6 @@ Coords SmartPathFinder::findPath(Coords start, Coords goal)
         if(marked.find(currentCell)!=marked.end()){
             continue;
         }
-        QApplication::instance()->processEvents(QEventLoop::ExcludeUserInputEvents);
         int curValue=(*values.find(currentCell)).second;
 
         for(int i=-1;i<=1;i++)
@@ -77,7 +78,7 @@ Coords SmartPathFinder::findPath(Coords start, Coords goal)
         }else{         
             values.insert(std::pair<Cell,int>(tmpCell,curValue+1));
         }
-         nodes.insert(tmpCell);
+            nodes.insert(tmpCell);
     }
         marked.insert(currentCell);
     }
