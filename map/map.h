@@ -81,6 +81,7 @@ public:
     virtual void onMove()=0;
     void move(int x, int y);
     virtual void loadFromJson(Json::Value config)=0;
+    virtual void loadFromProps(Tmx::PropertySet){}
     virtual Json::Value saveToJson()=0;
     virtual bool canSave()=0;
     virtual void setMap(Map *map);

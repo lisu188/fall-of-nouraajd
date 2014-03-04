@@ -745,6 +745,7 @@ void Map::loadMapFromTmx(Tmx::Map &source) {
                 qWarning() << "TMX object has no genuine class in this revision:" << type.c_str();
                 continue;
             }
+            object->loadFromProps(authored->GetProperties());
             object->setObjectName(QString::fromStdString(authored->GetName()));
             std::map<std::string, std::string> properties = authored->GetProperties().GetList();
             for (auto property : properties)
