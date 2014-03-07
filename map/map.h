@@ -47,9 +47,7 @@ public:
     void mapUp();
     void mapDown();
     int getCurrentMap();
-    std::set<MapObject*> *getObjects() {
-        return &mapObjects;
-    }
+    std::set<MapObject*> *getObjects();
     void loadMapFromTmx(Tmx::Map &map);
     int getEntryX(){return entryx;}
     int getEntryY(){return entryy;}
@@ -79,6 +77,7 @@ public:
     void removeFromGame();
     virtual void onEnter()=0;
     virtual void onMove()=0;
+    virtual void onMoveEnd();
     void move(int x, int y);
     virtual void loadFromJson(Json::Value config)=0;
     virtual void loadFromProps(Tmx::PropertySet){}
@@ -87,6 +86,7 @@ public:
     virtual void setMap(Map *map);
     Map *getMap();
     void setVisible(bool vis);
+    virtual bool isAsync(){return false;}
 protected:
     virtual void mousePressEvent(QGraphicsSceneMouseEvent *event);
     void setAnimation(std::string path);
