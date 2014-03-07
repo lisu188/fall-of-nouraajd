@@ -1,6 +1,7 @@
 #ifndef MONSTER_H
 #define MONSTER_H
 #include <creatures/creature.h>
+#include <future>
 
 class Monster : public Creature
 {
@@ -11,9 +12,13 @@ public:
     Monster();
     Monster(const Monster& monster);
     virtual void onMove();
+    virtual void onMoveEnd();
     virtual void onEnter();
     virtual void levelUp();
     virtual std::set<Item *> *getLoot();
+    virtual bool isAsync(){return true;}
+private:
+    std::future<Coords> coords;
 };
 Q_DECLARE_METATYPE(Monster)
 

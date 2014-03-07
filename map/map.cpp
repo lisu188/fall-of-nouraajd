@@ -624,9 +624,11 @@ void MapObject::moveTo(int x, int y, int z, bool silent) {
     animation->setTimeLine(timer);
     animation->setPosAt(0, from);
     animation->setPosAt(1, to);
+    QObject::connect(timer, &QTimeLine::finished, this, [this]() { onMoveEnd(); });
     timer->start();
   } else {
     setPos(to);
+    if (!silent) onMoveEnd();
   }
 
   if (map) {
@@ -756,3 +758,7 @@ void Map::loadMapFromTmx(Tmx::Map &source) {
         }
     }
 }
+
+std::set<MapObject *> *Map::getObjects() { return &mapObjects; }
+
+void MapObject::onMoveEnd() {}

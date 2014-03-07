@@ -1,6 +1,6 @@
 {
   "adapter": {
-    "config": "/tmp/nouraajd-bfg-recovery/native-early/verify/snapshot-o8pxpzi5/observer/recovery_smoke_config.h",
+    "config": "/tmp/nouraajd-bfg-recovery/native-early/verify/snapshot-eyncb723/observer/recovery_smoke_config.h",
     "configSha256": "9e5d3a791bc308327147ab07ef697533c391e9e97f00313c2250e2a217da007c",
     "id": "classic-3d",
     "mode": "game",
@@ -24,7 +24,7 @@
     },
     "source-preparation.json": {
       "path": "source-preparation.json",
-      "sha256": "d87d53ff61b0b7cb4c902198836964ee0727b39c4c24caf40f0c8e44f06a38e7"
+      "sha256": "2117ddf4dbf2d5160072d155a8cf096a911a2e99d4698c422f296a3db32b13ee"
     },
     "source-preparation.log": {
       "path": "source-preparation.log",
@@ -40,17 +40,17 @@
       "make",
       "-j8"
     ],
-    "log": "/tmp/nouraajd-bfg-recovery/native-early/verify/snapshot-o8pxpzi5/build.log",
+    "log": "/tmp/nouraajd-bfg-recovery/native-early/verify/snapshot-eyncb723/build.log",
     "returnCode": 0,
-    "seconds": 9.507,
+    "seconds": 9.304,
     "timedOut": false
   },
   "configure": {
     "command": [
       "qmake",
-      "/tmp/nouraajd-bfg-recovery/native-early/verify/snapshot-o8pxpzi5/source/Game.pro",
+      "/tmp/nouraajd-bfg-recovery/native-early/verify/snapshot-eyncb723/source/Game.pro",
       "-o",
-      "/tmp/nouraajd-bfg-recovery/native-early/verify/snapshot-o8pxpzi5/build/Makefile",
+      "/tmp/nouraajd-bfg-recovery/native-early/verify/snapshot-eyncb723/build/Makefile",
       "QMAKE_CC=gcc-5",
       "QMAKE_CXX=g++-5",
       "QMAKE_LINK=g++-5",
@@ -63,15 +63,15 @@
       "DESTDIR=.",
       "CONFIG-=app_bundle",
       "SOURCES+=/tmp/nouraajd-bfg-recovery/source/recovery/smoke/game_startup.cpp",
-      "INCLUDEPATH+=/tmp/nouraajd-bfg-recovery/native-early/verify/snapshot-o8pxpzi5/source",
-      "INCLUDEPATH+=/tmp/nouraajd-bfg-recovery/native-early/verify/snapshot-o8pxpzi5/observer"
+      "INCLUDEPATH+=/tmp/nouraajd-bfg-recovery/native-early/verify/snapshot-eyncb723/source",
+      "INCLUDEPATH+=/tmp/nouraajd-bfg-recovery/native-early/verify/snapshot-eyncb723/observer"
     ],
-    "log": "/tmp/nouraajd-bfg-recovery/native-early/verify/snapshot-o8pxpzi5/configure.log",
+    "log": "/tmp/nouraajd-bfg-recovery/native-early/verify/snapshot-eyncb723/configure.log",
     "returnCode": 0,
     "seconds": 0.064,
     "timedOut": false
   },
-  "evidenceDir": "/tmp/nouraajd-bfg-recovery/native-early/verify/evidence/d5eaf435b54ecac2bfdb7d5b299079a05210ece38aecd67ab3f90278188480e5",
+  "evidenceDir": "/tmp/nouraajd-bfg-recovery/native-early/verify/evidence/a7588d2029b99201ae92c57ecdf6a31cf10b2527012c0b2e66f7797cf9509733",
   "fileLookup": {
     "command": [
       "g++-5",
@@ -80,20 +80,20 @@
       "-O2",
       "-std=c++11",
       "-o",
-      "/tmp/nouraajd-bfg-recovery/native-early/verify/snapshot-o8pxpzi5/observer/libwindowspaths.so",
+      "/tmp/nouraajd-bfg-recovery/native-early/verify/snapshot-eyncb723/observer/libwindowspaths.so",
       "/tmp/nouraajd-bfg-recovery/source/recovery/smoke/windows_paths.cpp",
       "-ldl"
     ],
-    "log": "/tmp/nouraajd-bfg-recovery/native-early/verify/snapshot-o8pxpzi5/file-lookup.log",
+    "log": "/tmp/nouraajd-bfg-recovery/native-early/verify/snapshot-eyncb723/file-lookup.log",
     "returnCode": 0,
-    "seconds": 0.214,
+    "seconds": 0.164,
     "semantics": "Windows-style case-insensitive file lookup for the game process",
     "timedOut": false
   },
-  "fingerprint": "d5eaf435b54ecac2bfdb7d5b299079a05210ece38aecd67ab3f90278188480e5",
+  "fingerprint": "a7588d2029b99201ae92c57ecdf6a31cf10b2527012c0b2e66f7797cf9509733",
   "libraryAliases": {
     "aliases": {},
-    "directory": "/tmp/nouraajd-bfg-recovery/native-early/verify/snapshot-o8pxpzi5/observer/library-aliases"
+    "directory": "/tmp/nouraajd-bfg-recovery/native-early/verify/snapshot-eyncb723/observer/library-aliases"
   },
   "project": "Game.pro",
   "recipe": {
@@ -216,7 +216,7 @@
         "reason": "generated binary, redistributable, or packaged artifact"
       }
     ],
-    "outputDir": "/tmp/nouraajd-bfg-recovery/native-early/verify/snapshot-o8pxpzi5/source",
+    "outputDir": "/tmp/nouraajd-bfg-recovery/native-early/verify/snapshot-eyncb723/source",
     "restored": [
       {
         "markerPath": "Game.pro.REMOVED.git-id",
@@ -249,7 +249,7 @@
           ],
           "kind": "reconstructed-config",
           "note": "Saved state is retained; absent stats are positive synthetic defaults. Build/startup unverified.",
-          "sourceCommit": "b51715bf9de3a0138b49e1a28e81e914268fb49a",
+          "sourceCommit": "0815aeac5f12dc58dd113d3fee1a837c06e39413",
           "verified": false
         },
         "replacementBlob": "b0a928006abf104b29e0c9bbabd93a30a63cd3aa"
@@ -771,18 +771,10 @@
       {
         "markerPath": "map/map.cpp.REMOVED.git-id",
         "method": "reconstruction",
-        "originalBlob": "78c0f564d9e8c27c80bc82812979cf1709c3a866",
+        "originalBlob": "6b6244e51180200914bebe6d31d0fc5f372d925b",
         "path": "map/map.cpp",
-        "provenance": "Content reconstruction of the BFG-removed original; Missing #164 Map body inferred from accepted #163; only genuine header change adds virtual loadFromProps, now invoked with actual TMX object properties before positioning/adding each genuine object. Unknown original body behavior remains inferred. Missing body inferred by carrying accepted #161 reconstruction e197feb3953c9c65e51587a60fc2fe66155a063e; exact surviving same-path header bytes are unchanged. Unknown removed implementation changes and historical gameplay parity are unverified. Missing body inferred by carrying accepted #159 reconstruction f59850bc2948c48c34f05161ff83bf840234b80b; exact surviving same-path header bytes are unchanged. Unknown removed implementation changes and historical gameplay parity are unverified. Missing #159 Map/MapObject body inferred from accepted #150 body and genuine same-version APIs/config. Added real TMX layer/tileset/property loading and authored entry coordinates from genuine map.tmx, with available genuine object classes/configured items/creatures. Authored TMX names without a class in this revision (StartEvent, Market) are explicitly logged, not replaced by stand-ins. Object property behavior and removed body gameplay semantics remain unverified; no original edited. Corrected missing-body ownership: removeObject detaches without deleting, as genuine Item::onEnter transfers the live item to player inventory; original AnimatedObject/Destroyer retains lifetime registration. Actual QObject destroyed-signal before/after regression required.",
-        "replacementBlob": "3a45aed3ca047c1e8dae97834b986056b6c51f6e"
-      },
-      {
-        "markerPath": "pathfinder/smartpathfinder.cpp.REMOVED.git-id",
-        "method": "reconstruction",
-        "originalBlob": "283c5263f2e7417b86ab84c4d3fd8c5c888ed998",
-        "path": "pathfinder/smartpathfinder.cpp",
-        "provenance": "unverified donor reconstruction; 0815aeac5f12dc58dd113d3fee1a837c06e39413:pathfinder/smartpathfinder.cpp; headerMatch=1; apiOverlap=10000/10000; distance=1",
-        "replacementBlob": "ce0fc3c35cb7fb3e04015c7f2ee50ca5a1b38226"
+        "provenance": "Content reconstruction of the BFG-removed original; Missing #166 Map body inferred from native-verified #164/#165. Genuine getObjects changes from inline to external: return actual mapObjects. Added optional movement-completion callback dispatched after real animation or immediate non-silent move; base callback policy defaults to no action because no surviving #166 caller defines base effects. Genuine derived callbacks are dispatched virtually. Default policy, removed implementation changes and gameplay parity remain inferred. Missing #164 Map body inferred from accepted #163; only genuine header change adds virtual loadFromProps, now invoked with actual TMX object properties before positioning/adding each genuine object. Unknown original body behavior remains inferred. Missing body inferred by carrying accepted #161 reconstruction e197feb3953c9c65e51587a60fc2fe66155a063e; exact surviving same-path header bytes are unchanged. Unknown removed implementation changes and historical gameplay parity are unverified. Missing body inferred by carrying accepted #159 reconstruction f59850bc2948c48c34f05161ff83bf840234b80b; exact surviving same-path header bytes are unchanged. Unknown removed implementation changes and historical gameplay parity are unverified. Missing #159 Map/MapObject body inferred from accepted #150 body and genuine same-version APIs/config. Added real TMX layer/tileset/property loading and authored entry coordinates from genuine map.tmx, with available genuine object classes/configured items/creatures. Authored TMX names without a class in this revision (StartEvent, Market) are explicitly logged, not replaced by stand-ins. Object property behavior and removed body gameplay semantics remain unverified; no original edited. Corrected missing-body ownership: removeObject detaches without deleting, as genuine Item::onEnter transfers the live item to player inventory; original AnimatedObject/Destroyer retains lifetime registration. Actual QObject destroyed-signal before/after regression required.",
+        "replacementBlob": "3016ce6dd58ba40d6ee784e7981329694c285c98"
       },
       {
         "markerPath": "stats/stats.cpp.REMOVED.git-id",
@@ -855,7 +847,7 @@
         "method": "reconstruction",
         "originalBlob": "4488271486a09a2db1e09a32453b00f436138e19",
         "path": "tmx/TmxObject.cpp",
-        "provenance": "unverified donor reconstruction; fb2bcb07e3b2267e7f24c5a7cd48604180b1be0f:tmx/TmxObject.cpp; headerMatch=0; apiOverlap=10000/10000; distance=10",
+        "provenance": "unverified donor reconstruction; fb2bcb07e3b2267e7f24c5a7cd48604180b1be0f:tmx/TmxObject.cpp; headerMatch=0; apiOverlap=10000/10000; distance=9",
         "replacementBlob": "a5c4c3bb3e27a463bd9d8c8b652fb8ae621aa85f"
       },
       {
@@ -1036,9 +1028,9 @@
         "replacementBlob": "d20fb29a7e23828c15487438c93ae790d2045707"
       }
     ],
-    "restoredFilesFingerprint": "b7aeb67952acd2366fc9c34ce6dddc6ee81ee17b94ead7c53a0099272189044d",
-    "sourceCommit": "b51715bf9de3a0138b49e1a28e81e914268fb49a",
-    "sourceTree": "3bb524fa1791d87e8131c549c380e30d114a7d3e",
+    "restoredFilesFingerprint": "e2d5af9ccfc6a2a3fa824adac4d759a4e95b585dbf0308d4a293e30ec7db62fc",
+    "sourceCommit": "0815aeac5f12dc58dd113d3fee1a837c06e39413",
+    "sourceTree": "5a42ecb9c61185cc0f8c4f411e3bf8e279c3e865",
     "status": "complete",
     "submodules": [],
     "unresolved": []
@@ -1074,12 +1066,12 @@
       "-a",
       "--server-args=-screen 0 1920x1080x24",
       "env",
-      "LD_PRELOAD=/tmp/nouraajd-bfg-recovery/native-early/verify/snapshot-o8pxpzi5/observer/libwindowspaths.so",
-      "/tmp/nouraajd-bfg-recovery/native-early/verify/snapshot-o8pxpzi5/build/RecoveryGame"
+      "LD_PRELOAD=/tmp/nouraajd-bfg-recovery/native-early/verify/snapshot-eyncb723/observer/libwindowspaths.so",
+      "/tmp/nouraajd-bfg-recovery/native-early/verify/snapshot-eyncb723/build/RecoveryGame"
     ],
-    "log": "/tmp/nouraajd-bfg-recovery/native-early/verify/snapshot-o8pxpzi5/smoke/startup.log",
+    "log": "/tmp/nouraajd-bfg-recovery/native-early/verify/snapshot-eyncb723/smoke/startup.log",
     "returnCode": 0,
-    "seconds": 0.465,
+    "seconds": 0.417,
     "startup": {
       "checks": {
         "eventLoop": true,
@@ -1101,9 +1093,9 @@
     "status": "success",
     "timedOut": false
   },
-  "sourceCommit": "b51715bf9de3a0138b49e1a28e81e914268fb49a",
+  "sourceCommit": "0815aeac5f12dc58dd113d3fee1a837c06e39413",
   "sourceCommits": [
-    "b51715bf9de3a0138b49e1a28e81e914268fb49a"
+    "0815aeac5f12dc58dd113d3fee1a837c06e39413"
   ],
   "sourcePreparation": {
     "identity": {
@@ -1204,7 +1196,7 @@
           "history_source_prep.py",
           "prepare-teleporter-serialization"
         ],
-        "log": "/tmp/nouraajd-bfg-recovery/native-early/verify/snapshot-o8pxpzi5/preparation/teleporter-serialization.log",
+        "log": "/tmp/nouraajd-bfg-recovery/native-early/verify/snapshot-eyncb723/preparation/teleporter-serialization.log",
         "name": "teleporterSerialization",
         "returnCode": 0,
         "timedOut": false
@@ -1214,14 +1206,14 @@
           "history_source_prep.py",
           "normalize-quoted-includes"
         ],
-        "log": "/tmp/nouraajd-bfg-recovery/native-early/verify/snapshot-o8pxpzi5/preparation/include-separators.log",
+        "log": "/tmp/nouraajd-bfg-recovery/native-early/verify/snapshot-eyncb723/preparation/include-separators.log",
         "name": "windowsIncludeSeparators",
         "returnCode": 0,
         "timedOut": false
       }
     ]
   },
-  "sourceTree": "3bb524fa1791d87e8131c549c380e30d114a7d3e",
+  "sourceTree": "5a42ecb9c61185cc0f8c4f411e3bf8e279c3e865",
   "startupCompatibility": "teleporterSerialization",
   "startupMode": "game",
   "startupSelection": {
@@ -1244,5 +1236,5 @@
     }
   },
   "toolchainImage": "sha256:d3f59ec1d12297ee8091fbea687aa619275fc92b3fd426560e0a1fa40715afc8",
-  "verifiedFromCommit": "b51715bf9de3a0138b49e1a28e81e914268fb49a"
+  "verifiedFromCommit": "0815aeac5f12dc58dd113d3fee1a837c06e39413"
 }
