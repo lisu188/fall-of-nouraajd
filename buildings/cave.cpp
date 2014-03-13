@@ -50,7 +50,7 @@ void Cave::onEnter()
 
 void Cave::onMove()
 {
-    if(enabled&&rand()%100==0)
+    if(enabled&&rand()%10==0)
     {
         if(rand()%5==0)
         {
