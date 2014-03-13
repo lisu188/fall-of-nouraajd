@@ -7,6 +7,7 @@
 #include <pathfinder/dumbpathfinder.h>
 #include <pathfinder/randompathfinder.h>
 #include <pathfinder/smartpathfinder.h>
+#include <QDebug>
 
 Monster::Monster(std::string name, Json::Value config):Creature(name,config)
 {
@@ -26,6 +27,7 @@ Monster::Monster(const Monster &monster):Monster(monster.className)
 
 void Monster::onMove()
 {
+    try{
     if(!isAlive()) {
         return;
     }
@@ -42,10 +44,14 @@ void Monster::onMove()
     });
     coords = task.get_future();
     std::thread(std::move(task),getCoords(),GameScene::getPlayer()->getCoords()).detach();
+    }catch(std::exception e){
+        qDebug()<<"Exception onMove()";
+    }
 }
 
 void Monster::onMoveEnd()
 {
+    try{
     coords.wait();
     Coords path=coords.get();
     move(path.x,path.y);
@@ -55,6 +61,9 @@ void Monster::onMoveEnd()
     }
     */
     this->addExp(rand()%25);
+        }catch(std::exception e){
+        qDebug()<<"Exception onMoveEnd()";
+    }
 }
 
 void Monster::onEnter()
