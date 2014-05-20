@@ -27,33 +27,17 @@ Monster::Monster(const Monster &monster):Monster(monster.className)
 
 void Monster::onMove()
 {
-    try{
     if(!isAlive()) {
         return;
     }
-    std::packaged_task<Coords(Coords,Coords)> task([](Coords a,Coords b){
     PathFinder *finder;
-    if((a.getDist(b))<25){
+    if((this->getCoords().getDist(GameScene::getPlayer()->getCoords()))<25){
             finder=new SmartPathFinder();
     }else{
             finder=new RandomPathFinder();
     }
-    Coords c=finder->findPath(a,b);
+    Coords path=finder->findPath(this->getCoords(),GameScene::getPlayer()->getCoords());
     delete finder;
-    return c;
-    });
-    coords = task.get_future();
-    std::thread(std::move(task),getCoords(),GameScene::getPlayer()->getCoords()).detach();
-    }catch(std::exception e){
-        qDebug()<<"Exception onMove()";
-    }
-}
-
-void Monster::onMoveEnd()
-{
-    try{
-    coords.wait();
-    Coords path=coords.get();
     move(path.x,path.y);
     /*
     if(rand()%20==0) {
@@ -61,9 +45,6 @@ void Monster::onMoveEnd()
     }
     */
     this->addExp(rand()%25);
-        }catch(std::exception e){
-        qDebug()<<"Exception onMoveEnd()";
-    }
 }
 
 void Monster::onEnter()
