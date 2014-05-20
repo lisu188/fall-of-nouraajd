@@ -42,6 +42,17 @@ private:
     std::list<Creature *> fightList;
     int turn;
     std::list<MapObject *> entered;
+    bool canMove=true;
+
+    // Creature interface
+
+    // MapObject interface
+
+    // QObject interface
+public:
+    bool event(QEvent *event);
+    bool getCanMove() const;
+    void setCanMove(bool value);
 };
 Q_DECLARE_METATYPE(Player)
 
