@@ -57,7 +57,11 @@ namespace Tmx {
 			properties[propertyName] = propertyValue;
 			
 			propertyNode = propertiesNode->IterateChildren("property",
+<<<<<<< HEAD
+			        propertyNode);
+=======
 					propertyNode);
+>>>>>>> refs/remotes/origin/master
 		}
 	}
 	

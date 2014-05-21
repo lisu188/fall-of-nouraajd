@@ -18,52 +18,59 @@ CONFIG += console
 QMAKE_CXXFLAGS += -std=c++11
 
         RE
-SOURCES += animation/animatedobject.cpp \
-    animation/animation.cpp \
-    animation/animationprovider.cpp \
-    base64/base64.cpp \
-    buildings/building.cpp \
-    buildings/cave.cpp \
-    buildings/dungeon.cpp \
-    buildings/teleporter.cpp \
-    buildings/towers/tower.cpp \
-    buildings/towns/town.cpp \
-    compression/compression.cpp \
-    configuration/configurationprovider.cpp \
-    creatures/creature.cpp \
-    creatures/monster.cpp \
-    creatures/player.cpp \
-    destroyer/destroyer.cpp \
-    interactions/interaction.cpp \
-    items/armor.cpp \
-    items/belt.cpp \
-    items/boots.cpp \
-    items/gloves.cpp \
-    items/helmet.cpp \
+
+SOURCES += creatures/player.cpp \
+    view/fightview.cpp \
+    map/map.cpp \
+    view/gameview.cpp \
+    view/gamescene.cpp \
     items/item.cpp \
-    items/lootprovider.cpp \
-    items/potion.cpp \
-    items/smallweapon.cpp \
-    items/weapon.cpp \
+    creatures/creature.cpp \
+    view/listitem.cpp \
+    view/charview.cpp \
+    view/playerlistview.cpp \
+    creatures/monster.cpp \
+    map/tile.cpp \
+    interactions/interaction.cpp \
+    configuration/configurationprovider.cpp \
+    animation/animationprovider.cpp \
+    main.cpp \
+    buildings/dungeon.cpp \
+    compression/compression.cpp \
+    view/scrollobject.cpp \
+    view/playerstatsview.cpp \
+    animation/animatedobject.cpp \
+    buildings/cave.cpp \
+    buildings/building.cpp \
+    buildings/towns/town.cpp \
+    buildings/towers/tower.cpp \
+    map/coords.cpp \
+    stats/damage.cpp \
+    map/events/event.cpp \
+    map/playeranimation.cpp \
+    stats/stats.cpp \
+    items/armor.cpp \
     json/json_reader.cpp \
     json/json_value.cpp \
     json/json_writer.cpp \
-    main.cpp \
-    map/coords.cpp \
-    map/events/event.cpp \
-    map/map.cpp \
-    map/playeranimation.cpp \
-    map/tile.cpp \
-    pathfinder/dumbpathfinder.cpp \
+    items/potion.cpp \
+    items/weapon.cpp \
+    animation/animation.cpp \
+    destroyer/destroyer.cpp \
+    buildings/teleporter.cpp \
+    items/smallweapon.cpp \
+    items/helmet.cpp \
+    view/playerequippedview.cpp \
+    view/itemslot.cpp \
+    items/boots.cpp \
+    items/gloves.cpp \
+    items/belt.cpp \
+    items/lootprovider.cpp \
     pathfinder/pathfinder.cpp \
-    pathfinder/randompathfinder.cpp \
+    pathfinder/dumbpathfinder.cpp \
     pathfinder/smartpathfinder.cpp \
-    stats/damage.cpp \
-    stats/stats.cpp \
-    tinyxml/tinystr.cpp \
-    tinyxml/tinyxml.cpp \
-    tinyxml/tinyxmlerror.cpp \
-    tinyxml/tinyxmlparser.cpp \
+    pathfinder/pathfindercache.cpp \
+    pathfinder/randompathfinder.cpp \
     tmx/TmxEllipse.cpp \
     tmx/TmxImage.cpp \
     tmx/TmxImageLayer.cpp \
@@ -77,18 +84,29 @@ SOURCES += animation/animatedobject.cpp \
     tmx/TmxTile.cpp \
     tmx/TmxTileset.cpp \
     tmx/TmxUtil.cpp \
-    view/charview.cpp \
-    view/fightview.cpp \
-    view/gamescene.cpp \
-    view/gameview.cpp \
-    view/itemslot.cpp \
-    view/listitem.cpp \
-    view/playerequippedview.cpp \
-    view/playerlistview.cpp \
-    view/playerstatsview.cpp \
-    view/scrollobject.cpp
+    zlib/adler32.c \
+    zlib/compress.c \
+    zlib/crc32.c \
+    zlib/deflate.c \
+    zlib/gzclose.c \
+    zlib/gzlib.c \
+    zlib/gzread.c \
+    zlib/gzwrite.c \
+    zlib/infback.c \
+    zlib/inffast.c \
+    zlib/inflate.c \
+    zlib/inftrees.c \
+    zlib/trees.c \
+    zlib/uncompr.c \
+    zlib/zutil.c \
+    base64/base64.cpp \
+    tinyxml/tinystr.cpp \
+    tinyxml/tinyxml.cpp \
+    tinyxml/tinyxmlerror.cpp \
+    tinyxml/tinyxmlparser.cpp
 
-HEADERS += animation/animatedobject.h \
+HEADERS  += \
+    animation/animatedobject.h \
     animation/animation.h \
     animation/animationprovider.h \
     base64/base64.h \
@@ -131,6 +149,7 @@ HEADERS += animation/animatedobject.h \
     map/tile.h \
     pathfinder/dumbpathfinder.h \
     pathfinder/pathfinder.h \
+    pathfinder/pathfindercache.h \
     pathfinder/randompathfinder.h \
     pathfinder/smartpathfinder.h \
     stats/damage.h \
@@ -176,7 +195,8 @@ HEADERS += animation/animatedobject.h \
     zlib/zlib.h \
     zlib/zutil.h
 
-RESOURCES += armors.qrc \
+RESOURCES += \
+    armors.qrc \
     buildings.qrc \
     config.qrc \
     creatures.qrc \
@@ -186,21 +206,3 @@ RESOURCES += armors.qrc \
     potions.qrc \
     tiles.qrc \
     weapons.qrc
-
-LIBS += -lz
-
-SOURCES += zlib/adler32.c \
-    zlib/compress.c \
-    zlib/crc32.c \
-    zlib/deflate.c \
-    zlib/gzclose.c \
-    zlib/gzlib.c \
-    zlib/gzread.c \
-    zlib/gzwrite.c \
-    zlib/infback.c \
-    zlib/inffast.c \
-    zlib/inflate.c \
-    zlib/inftrees.c \
-    zlib/trees.c \
-    zlib/uncompr.c \
-    zlib/zutil.c

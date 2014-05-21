@@ -1,7 +1,7 @@
 # Recovered game snapshot
 
-Original commit: `fb2bcb07e3b2267e7f24c5a7cd48604180b1be0f`. Original tree: `f6b583fcab8d7da3b4fa077d1401da8eafeacbde`.
-Startup was verified from identical recovered sources at `fb2bcb07e3b2267e7f24c5a7cd48604180b1be0f`.
+Original commit: `7022f82ba68e4b740e85915b1710dd0502837efe`. Original tree: `3a3959894ad4327a3cf53ae6a7cf3fbc23427748`.
+Startup was verified from identical recovered sources at `7022f82ba68e4b740e85915b1710dd0502837efe`.
 
 This recovered version compiled and linked on Linux, started the real game on an isolated Xvfb display,
 loaded its map and a healthy player, rendered the screenshot below, and exited normally.
@@ -16,6 +16,16 @@ that derived unit after reading the project, preserving teleporting and ordinary
 Exact source/header/JsonCpp hashes and the semantic compatibility boundary are attached.
 This establishes startup and shutdown with that compatibility step; gameplay parity is unverified.
 
+The isolated build copy resolves exact-pinned original merge conflicts only where the two
+alternatives differ in whitespace. Five compiled files retain the reviewed HEAD alternative;
+the derived teleporter unit also resolves its whitespace-only conflict. Original Git inputs
+remain unchanged. Exact before/after hashes and portable replay helpers document this build
+compatibility separately from teleporter serialization semantics; gameplay parity is unverified.
+
+The reconstructed qmake project also requires pathfinder/pathfindercache.cpp. The original
+revision omitted that file. The isolated build uses the exact file added by immediate child
+779fb803, the sole change in that child. The attached helper verifies the donor and its inputs.
+
 ![Actual startup of this recovered game](recovery/startup.png)
 
 ## Build and run
@@ -26,15 +36,12 @@ Install Qt 5 Core, Gui and Widgets development files and a C++ compiler, and Pyt
 - QMake version 3.0
 - Using Qt version 5.5.1 in /usr/lib/x86_64-linux-gnu
 
-Use a separate build copy for this version. Its original source contains Windows separators
-in quoted includes. The attached helper changes only those recorded literals, verifies each
-source file's original and prepared SHA256, and preserves the recovered snapshot's provenance.
-
 Build from this snapshot's root directory:
 
 ```sh
 python3 recovery/prepare_teleporter_serialization.py
-python3 recovery/prepare_build_sources.py
+python3 recovery/prepare_trivial_conflicts.py
+python3 recovery/prepare_pathfinder_cache.py
 qmake Game.pro QMAKE_CC=gcc-5 QMAKE_CXX=g++-5 QMAKE_LINK=g++-5 'QMAKE_CXXFLAGS+=-include functional' -after SOURCES-=buildings/teleporter.cpp 'SOURCES+=$$_PRO_FILE_PWD_/buildings/recovery_teleporter.cpp' -after TARGET=RecoveryGame DESTDIR=.
 make -j"$(nproc)"
 mkdir -p save
@@ -56,10 +63,10 @@ The genuine scene writes `save/game.sav` during shutdown. Verification prepared 
 parent directory before startup, without changing source files or replacing existing save data.
 The source call, source hash and created/preserved directory are recorded in verification metadata.
 
-compatibilityRepair: 1, exactOriginal: 60, reconstruction: 47.
+compatibilityRepair: 1, exactOriginal: 60, reconstruction: 49.
 
-- `Game.pro`: Content reconstruction of the BFG-removed original; Missing qmake project inferred from accepted #157 settings and complete same-tree source/header/resource inventory, including vendored libraries and required zlib link. Original project bytes unavailable; configuration parity not claimed. Includes all15 genuine same-tree vendored zlib C translation units; exact-readable source/header files retained unchanged.
-- `config/creatures.json`: {'evidence': ['historical image directory IDs', 'config/map.json saved creature state when present'], 'inferred': ['missing initial stats', 'levelStats encoding and progression'], 'kind': 'reconstructed-config', 'note': 'Saved state is retained; absent stats are positive synthetic defaults. Build/startup unverified.', 'sourceCommit': 'fb2bcb07e3b2267e7f24c5a7cd48604180b1be0f', 'verified': False}
+- `Game.pro`: content reconstruction of the BFG-removed original; qmake project regenerated with 85 sources inferred without a surviving object_script listing: intact 5258bb04:Game.pro SOURCES reconciled with this tree's files; settings from intact 5258bb04:Game.pro
+- `config/creatures.json`: {'evidence': ['historical image directory IDs', 'config/map.json saved creature state when present'], 'inferred': ['missing initial stats', 'levelStats encoding and progression'], 'kind': 'reconstructed-config', 'note': 'Saved state is retained; absent stats are positive synthetic defaults. Build/startup unverified.', 'sourceCommit': '7022f82ba68e4b740e85915b1710dd0502837efe', 'verified': False}
 - `config/items.json`: content reconstruction of the BFG-removed original; Adapted genuine119 config/items.json donor blob41d081fe6c796beab79afb418358b8af12cfa877 to missing original2081: adds only class Weapon/Armor/Potion from each actual legacy type, as required by surviving150 Item::getItem/QMetaType factory. Preserves every donor item name/path/stat/power/type. All lost original later item IDs, exact balance and slot metadata remain unavailable and are not invented. This is inferred missing-config compatibility, not original2081 bytes or gameplay parity. Root owns integration and affected-proof revalidation.
 - `config/map.tmx`: unverified donor reconstruction; authored Tiled geometry/object coordinates from 55e6516e:maps/map1/map.json converted to XML; missing target script reference omitted
 - `creatures/creature.cpp`: Content reconstruction of the BFG-removed original; Missing #175 body candidate inferred from earlier native API-checked donor 08ec144f196a9a5195e281997b5695828ccbd2ab; surviving headers have formatting-only changes or inline isAsync addition. Native acceptance pending; teleporter authored save defect remains separate. Missing #150 Creature body inferred from native-verified #97 body and exact surviving #150 declarations/callers/config: ListItem base, ordered sets, slot-index equipment map, collection signals, lower-case coordinates. Slot initialization follows original config/slots.json and ItemSlot::update at(). Saves subtract equipped bonuses before reload. Formula, equipment serialization and historical gameplay parity remain inferred; no surviving source edited. Corrected inferred equipment reload: legacy inventory.weapon/armor apply only if present; modern equipment slots survive save/load. Before/after native regression and revalidation required.
@@ -73,6 +80,7 @@ compatibilityRepair: 1, exactOriginal: 60, reconstruction: 47.
 - `json/value.h`: unverified upstream reconstruction; https://github.com/open-source-parsers/jsoncpp/tree/4fce396c9d3e27a8ab8fb88e94c1676e021ae3a6
 - `json/writer.h`: unverified upstream reconstruction; https://github.com/open-source-parsers/jsoncpp/tree/4fce396c9d3e27a8ab8fb88e94c1676e021ae3a6
 - `map/map.cpp`: Content reconstruction of the BFG-removed original; Missing #175 Map body inferred from native-verified #166; genuine header tokens identical apart from formatting. Missing #166 Map body inferred from native-verified #164/#165. Genuine getObjects changes from inline to external: return actual mapObjects. Added optional movement-completion callback dispatched after real animation or immediate non-silent move; base callback policy defaults to no action because no surviving #166 caller defines base effects. Genuine derived callbacks are dispatched virtually. Default policy, removed implementation changes and gameplay parity remain inferred. Missing #164 Map body inferred from accepted #163; only genuine header change adds virtual loadFromProps, now invoked with actual TMX object properties before positioning/adding each genuine object. Unknown original body behavior remains inferred. Missing body inferred by carrying accepted #161 reconstruction e197feb3953c9c65e51587a60fc2fe66155a063e; exact surviving same-path header bytes are unchanged. Unknown removed implementation changes and historical gameplay parity are unverified. Missing body inferred by carrying accepted #159 reconstruction f59850bc2948c48c34f05161ff83bf840234b80b; exact surviving same-path header bytes are unchanged. Unknown removed implementation changes and historical gameplay parity are unverified. Missing #159 Map/MapObject body inferred from accepted #150 body and genuine same-version APIs/config. Added real TMX layer/tileset/property loading and authored entry coordinates from genuine map.tmx, with available genuine object classes/configured items/creatures. Authored TMX names without a class in this revision (StartEvent, Market) are explicitly logged, not replaced by stand-ins. Object property behavior and removed body gameplay semantics remain unverified; no original edited. Corrected missing-body ownership: removeObject detaches without deleting, as genuine Item::onEnter transfers the live item to player inventory; original AnimatedObject/Destroyer retains lifetime registration. Actual QObject destroyed-signal before/after regression required.
+- `pathfinder/smartpathfinder.cpp`: unverified donor reconstruction; fb2bcb07e3b2267e7f24c5a7cd48604180b1be0f:pathfinder/smartpathfinder.cpp; headerMatch=0; apiOverlap=10000/10000; distance=1
 - `stats/stats.cpp`: Content reconstruction of the BFG-removed original; Missing #175 Stats body inferred from native-verified #150/#163 Stats body4ff9f45b2f23d26fc69280d6c0df542e02efa223; surviving #150/#175 header tokens are identical apart from formatting, including value-argument bonuses. Unknown removed-body changes and historical parity unverified.
 - `tinyxml/tinystr.h`: unverified upstream reconstruction; https://github.com/tamatias/tmxparser/tree/6fa4d38742313b6365df0d224b8978be1eb81290
 - `tinyxml/tinyxml.cpp`: unverified upstream reconstruction; https://github.com/tamatias/tmxparser/tree/6fa4d38742313b6365df0d224b8978be1eb81290
@@ -82,9 +90,10 @@ compatibilityRepair: 1, exactOriginal: 60, reconstruction: 47.
 - `tmx/TmxLayer.h`: unverified upstream reconstruction; https://github.com/tamatias/tmxparser/tree/6fa4d38742313b6365df0d224b8978be1eb81290; adapted vendored tinyxml/zlib include paths to historical directory layout
 - `tmx/TmxMap.cpp`: unverified upstream reconstruction; https://github.com/tamatias/tmxparser/tree/6fa4d38742313b6365df0d224b8978be1eb81290; adapted vendored tinyxml/zlib include paths to historical directory layout
 - `tmx/TmxMap.h`: unverified upstream reconstruction; https://github.com/tamatias/tmxparser/tree/6fa4d38742313b6365df0d224b8978be1eb81290; adapted vendored tinyxml/zlib include paths to historical directory layout
+- `tmx/TmxMapTile.h`: unverified donor reconstruction; fb2bcb07e3b2267e7f24c5a7cd48604180b1be0f:tmx/TmxMapTile.h; headerMatch=0; apiOverlap=0/10000; distance=1
 - `tmx/TmxTileset.cpp`: unverified upstream reconstruction; https://github.com/tamatias/tmxparser/tree/6fa4d38742313b6365df0d224b8978be1eb81290; adapted vendored tinyxml/zlib include paths to historical directory layout
-- `view/gamescene.cpp`: Content reconstruction of the BFG-removed original; Missing #175 body candidate inferred from earlier native API-checked donor 2e11b4ac70d1dd42150a0e3265af39cbe00d0955; surviving headers have formatting-only changes or inline isAsync addition. Native acceptance pending; teleporter authored save defect remains separate. Missing #159 GameScene body inferred from accepted #150 body and newly declared Map::loadMapFromTmx/getEntry APIs plus genuine config/map.tmx. Loads actual authored terrain and places real Sorcerer at authored x/y/z. Selection of TMX over legacy JSON, event behavior and historical gameplay parity are inference; no original edited.
-- `view/gameview.cpp`: Content reconstruction of the BFG-removed original; Missing #175 body candidate inferred from earlier native API-checked donor 6eb88a3320dbc6f6e1b994b86d9001da97fbe33b; surviving headers have formatting-only changes or inline isAsync addition. Native acceptance pending; teleporter authored save defect remains separate. Missing game view body inferred from earlier donor and exact #150 intact headers/UI sources: views are owned by GameView, constructed from surviving Creature collections, refreshed through declared signals; BackPackObject renders original PNG and emits declared clicked signal. Not exact original content; layout and gameplay parity unverified. Genuine175 Player.cpp has updateViews but no definition of declared update; inferred missing GameView refresh now calls actual updateViews and emits actual statsChanged directly, preserving earlier inferred refresh bridge without editing exact Player source.
+- `view/gamescene.cpp`: content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of 4ac65b4fa8932bcd62d9ea368cb9db5557508def (previous version of view/gamescene.cpp)
+- `view/gameview.cpp`: content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction of 9b0dfbaa8fa749b21bf55bb5b19242f32fdd1d2f (previous version of view/gameview.cpp)
 - `zlib/adler32.c`: Content reconstruction of the BFG-removed original; Unmodified official zlib1.2.5 adler32.c, upstream https://github.com/madler/zlib/tree/v1.2.5, Git blob 65ad6a5adc44c00428b35eb15ff26d16f9ef209b, coherent with exact surviving zconf.h1.2.5. Missing historical vendor bytes remain unavailable; upstream donor is inferred rather than exact original.
 - `zlib/crc32.c`: Content reconstruction of the BFG-removed original; Unmodified official zlib1.2.5 crc32.c, upstream https://github.com/madler/zlib/tree/v1.2.5, Git blob 91be372d224da6833c03bd24d7158ff622ece35f, coherent with exact surviving zconf.h1.2.5. Missing historical vendor bytes remain unavailable; upstream donor is inferred rather than exact original.
 - `zlib/crc32.h`: Content reconstruction of the BFG-removed original; Unmodified official zlib1.2.5 crc32.h, upstream https://github.com/madler/zlib/tree/v1.2.5, Git blob 8053b6117c023f64554ea783b23fa06985acff7b, coherent with exact surviving zconf.h1.2.5. Missing historical vendor bytes remain unavailable; upstream donor is inferred rather than exact original.
@@ -107,7 +116,7 @@ compatibilityRepair: 1, exactOriginal: 60, reconstruction: 47.
 - `zlib/zutil.h`: Content reconstruction of the BFG-removed original; Unmodified official zlib1.2.5 zutil.h, upstream https://github.com/madler/zlib/tree/v1.2.5, Git blob 258fa88799ad1d97e44fe1ac9df77948e82ea5c0, coherent with exact surviving zconf.h1.2.5. Missing historical vendor bytes remain unavailable; upstream donor is inferred rather than exact original.
 - `json/LICENSE`: https://github.com/open-source-parsers/jsoncpp/tree/4fce396c9d3e27a8ab8fb88e94c1676e021ae3a6 upstream distribution license
 
-Restored source fingerprint: `f3adb99a0f8e5025af0be767fb00a56edc8a90826d6786c7b230e71748d4a702`.
+Restored source fingerprint: `1a0fd13c03202220fdd0f7b8d19bbfae6fd454995f016e399e14de0bfd2b592f`.
 
 The restored source fingerprint identifies inputs before generation. The
 [source preparation metadata](recovery/source-preparation.json) records the original inputs

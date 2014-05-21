@@ -10,7 +10,7 @@ Teleporter::Teleporter() {
 Teleporter::Teleporter(const Teleporter &teleporter)
 		: Teleporter() {
 	this->moveTo(teleporter.getPosX(), teleporter.getPosY(),
-			teleporter.getPosZ());
+	        teleporter.getPosZ());
 }
 
 void Teleporter::onEnter() {
@@ -31,7 +31,7 @@ void Teleporter::onEnter() {
 		}
 		while (teleporter == this);
 		GameScene::getPlayer()->moveTo(teleporter->getPosX(),
-				teleporter->getPosY(), teleporter->getPosZ(), true);
+		        teleporter->getPosY(), teleporter->getPosZ(), true);
 		map->move(0, 0);
 	}
 }

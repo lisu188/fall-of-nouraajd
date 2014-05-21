@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 {
 	"GrassTile" : {
 		"path" : "images/tiles/grass/",
@@ -56,3 +57,63 @@
 
 	}
 }
+=======
+{
+	"GrassTile" : {
+		"path" : "images/tiles/grass/",
+		"canStep" :
+		true
+	},
+	"RoadTile" : {
+		"path" : "images/tiles/road/",
+		"canStep" :
+		true
+	},
+	"WaterTile" : {
+		"path" : "images/tiles/water/",
+		"canStep" :
+		false
+	},
+	"MountainTile" : {
+		"path" : "images/tiles/mountain/",
+		"canStep" :
+		false
+	},
+	"GroundTile" : {
+		"path" : "images/tiles/ground/",
+		"canStep" :
+		true
+	},
+	"LavaTile" : {
+		"path" : "images/tiles/lava/",
+		"canStep" :
+		true
+	},
+	"SwampTile" : {
+		"path" : "images/tiles/swamp/",
+		"canStep" :
+		true
+	},
+	"SnowTile" : {
+		"path" : "images/tiles/snow/",
+		"canStep" :
+		true
+	},
+	"WastelandTile" : {
+		"path" : "images/tiles/wasteland/",
+		"canStep" :
+		true
+	},
+	"DesertTile" : {
+		"path" : "images/tiles/desert/",
+		"canStep" :
+		true
+	},
+	"BeachTile" : {
+		"path" : "images/tiles/beach/",
+		"canStep" :
+		true
+
+	}
+}
+>>>>>>> refs/remotes/origin/master

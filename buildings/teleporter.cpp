@@ -10,6 +10,30 @@ Teleporter::Teleporter() {
 Teleporter::Teleporter(const Teleporter &teleporter)
 		: Teleporter() {
 	this->moveTo(teleporter.getPosX(), teleporter.getPosY(),
+<<<<<<< HEAD
+	        teleporter.getPosZ());
+}
+
+void Teleporter::onEnter() {
+	if (!enabled)
+		return;
+	std::set<MapObject*> *objects = this->getMap()->getObjects();
+	std::set<MapObject*>::iterator it;
+	std::vector<Teleporter*> teleporters;
+	for (it = objects->begin(); it != objects->end(); it++) {
+		if ((*it)->inherits("Teleporter")) {
+			teleporters.push_back((Teleporter*) (*it));
+		}
+	}
+	if (teleporters.size() > 1) {
+		Teleporter *teleporter;
+		do {
+			teleporter = teleporters[rand() % teleporters.size()];
+		}
+		while (teleporter == this);
+		GameScene::getPlayer()->moveTo(teleporter->getPosX(),
+		        teleporter->getPosY(), teleporter->getPosZ(), true);
+=======
 			teleporter.getPosZ());
 }
 
@@ -32,6 +56,7 @@ void Teleporter::onEnter() {
 		while (teleporter == this);
 		GameScene::getPlayer()->moveTo(teleporter->getPosX(),
 				teleporter->getPosY(), teleporter->getPosZ(), true);
+>>>>>>> refs/remotes/origin/master
 		map->move(0, 0);
 	}
 }
