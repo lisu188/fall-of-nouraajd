@@ -31,7 +31,7 @@ class ValueMapAllocator;
 class ValueInternalLink;
 class ValueInternalArray;
 class ValueInternalMap;
-#endif // #ifdef JSON_VALUE_USE_INTERNAL_MAP
+#endif // #ifdef JSON_VALUE_USE_INTERNAL_MAP
 }
  // namespace Json
 

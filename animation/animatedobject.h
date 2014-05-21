@@ -20,7 +20,14 @@ class AnimatedObject: public QWidget, public QGraphicsPixmapItem {
 	private:
 		QTimer *timer;private slots:
 		void animate();
+<<<<<<< HEAD
+		
+};
+
+#endif // ANIMATEDOBJECT_H
+=======
 
 };
 
 #endif // ANIMATEDOBJECT_H
+>>>>>>> refs/remotes/origin/master

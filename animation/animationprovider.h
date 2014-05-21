@@ -16,7 +16,14 @@ class AnimationProvider: private std::map<std::string, Animation*> {
 		void loadAnim(std::string path);
 		int tileSize;
 		static std::map<int, AnimationProvider *> instances;
+<<<<<<< HEAD
+		
+};
+
+#endif // ANIMATIONPROVIDER_H
+=======
 
 };
 
 #endif // ANIMATIONPROVIDER_H
+>>>>>>> refs/remotes/origin/master

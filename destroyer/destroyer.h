@@ -14,7 +14,14 @@ class Destroyer: private std::list<AnimatedObject*> {
 		Destroyer();
 		~Destroyer();
 		static Destroyer *instance;
+<<<<<<< HEAD
+		
+};
+
+#endif // DESTROYER_H
+=======
 
 };
 
 #endif // DESTROYER_H
+>>>>>>> refs/remotes/origin/master
