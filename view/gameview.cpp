@@ -131,7 +131,8 @@ void GameView::resizeEvent( QResizeEvent * event)
         int size=GameScene::getGame()->getMap()->getTileSize();
         Player *player=GameScene::getPlayer();
         centerOn(player->getPosX()*size+size/2,player->getPosY()*size+size/2);
-        player->update();
+        player->updateViews();
+        emit player->statsChanged();
     }
 }
 
