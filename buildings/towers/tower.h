@@ -2,7 +2,8 @@
 #define TOWE_H
 #include "buildings/building.h"
 
-class Tower: public Building {
+class Tower : public Building
+{
 
 };
 

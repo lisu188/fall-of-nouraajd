@@ -1,11 +1,11 @@
 {
   "adapter": {
-    "config": "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-z3y90g7i/observer/recovery_smoke_config.h",
+    "config": "/tmp/nouraajd-bfg-recovery/native-early/verify/snapshot-6rqis3fx/observer/recovery_smoke_config.h",
     "configSha256": "9e5d3a791bc308327147ab07ef697533c391e9e97f00313c2250e2a217da007c",
     "id": "classic-3d",
     "mode": "game",
     "overlays": [],
-    "source": "/home/andrz/nouraajd-bfg-recovery-backup-20261116/source/recovery/smoke/game_startup.cpp"
+    "source": "/tmp/nouraajd-bfg-recovery/source/recovery/smoke/game_startup.cpp"
   },
   "artifactDir": "recovery",
   "attachedScreenshot": {
@@ -14,33 +14,25 @@
     "width": 1278
   },
   "attachedSourcePreparation": {
-    "history_prepare_conflicts.py": {
-      "path": "history_prepare_conflicts.py",
-      "sha256": "7049ab6d049d61e68205eabc4ba4d6908d75449371fc762913c788ef4b4be93f"
-    },
-    "history_prepare_teleporter.py": {
-      "path": "history_prepare_teleporter.py",
-      "sha256": "de387b3a975950cd12119bd6505228f041ac4ee5869ca20aa93de9e26dc8af2c"
+    "prepare_build_sources.py": {
+      "path": "prepare_build_sources.py",
+      "sha256": "aa79da3b55a398ff88775581ff931f67f8548caf18e06718c7ff66049f336cb7"
     },
     "prepare_teleporter_serialization.py": {
       "path": "prepare_teleporter_serialization.py",
-      "sha256": "c505aff39349d0dc499d7e2e45c911d471aeff6758389151ccff3a54e318d675"
-    },
-    "prepare_trivial_conflicts.py": {
-      "path": "prepare_trivial_conflicts.py",
-      "sha256": "7049ab6d049d61e68205eabc4ba4d6908d75449371fc762913c788ef4b4be93f"
+      "sha256": "de387b3a975950cd12119bd6505228f041ac4ee5869ca20aa93de9e26dc8af2c"
     },
     "source-preparation.json": {
       "path": "source-preparation.json",
-      "sha256": "18c2d30f0e4203096fbdc17ac5d5d05997ded5a1647cf6c4d61cfa50a7785a26"
+      "sha256": "ee2843cfac0e419f2e555238b3eb5a0d47165526d6480f283797576c43f17444"
     },
     "source-preparation.log": {
       "path": "source-preparation.log",
-      "sha256": "86451be3f9aed47ac2d908f411e207d03f0db8e8dad34e609c80003e1eea7723"
+      "sha256": "c831652a145c418fac8df9515e78fb0ad82d0950dd80b8174a22c76de1e5d25d"
     },
     "teleporter_serialization.cpp": {
       "path": "teleporter_serialization.cpp",
-      "sha256": "fca4cf9cf0ccceba59a4869a6fdd80a39a8557b4579ed3c2417364ccc608692a"
+      "sha256": "67cb28924233d74992cbe9bb107043c118afd330c22c6a763747bc2a9417d7cc"
     }
   },
   "build": {
@@ -48,18 +40,17 @@
       "make",
       "-j8"
     ],
-    "log": "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-z3y90g7i/build.log",
+    "log": "/tmp/nouraajd-bfg-recovery/native-early/verify/snapshot-6rqis3fx/build.log",
     "returnCode": 0,
-    "seconds": 11.573,
+    "seconds": 12.014,
     "timedOut": false
   },
-  "buildCompatibility": "trivialConflicts",
   "configure": {
     "command": [
       "qmake",
-      "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-z3y90g7i/source/Game.pro",
+      "/tmp/nouraajd-bfg-recovery/native-early/verify/snapshot-6rqis3fx/source/Game.pro",
       "-o",
-      "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-z3y90g7i/build/Makefile",
+      "/tmp/nouraajd-bfg-recovery/native-early/verify/snapshot-6rqis3fx/build/Makefile",
       "QMAKE_CC=gcc-5",
       "QMAKE_CXX=g++-5",
       "QMAKE_LINK=g++-5",
@@ -71,16 +62,16 @@
       "TARGET=RecoveryGame",
       "DESTDIR=.",
       "CONFIG-=app_bundle",
-      "SOURCES+=/home/andrz/nouraajd-bfg-recovery-backup-20261116/source/recovery/smoke/game_startup.cpp",
-      "INCLUDEPATH+=/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-z3y90g7i/source",
-      "INCLUDEPATH+=/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-z3y90g7i/observer"
+      "SOURCES+=/tmp/nouraajd-bfg-recovery/source/recovery/smoke/game_startup.cpp",
+      "INCLUDEPATH+=/tmp/nouraajd-bfg-recovery/native-early/verify/snapshot-6rqis3fx/source",
+      "INCLUDEPATH+=/tmp/nouraajd-bfg-recovery/native-early/verify/snapshot-6rqis3fx/observer"
     ],
-    "log": "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-z3y90g7i/configure.log",
+    "log": "/tmp/nouraajd-bfg-recovery/native-early/verify/snapshot-6rqis3fx/configure.log",
     "returnCode": 0,
     "seconds": 0.064,
     "timedOut": false
   },
-  "evidenceDir": "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/evidence/d4a3e36b0e0bdaf82065057715db3461a6a7ccbad563a557d94157ed459ff344",
+  "evidenceDir": "/tmp/nouraajd-bfg-recovery/native-early/verify/evidence/40633d4968a3eaaf65804580212d17d8a93244a67875cb1515568a4676f9473d",
   "fileLookup": {
     "command": [
       "g++-5",
@@ -89,20 +80,20 @@
       "-O2",
       "-std=c++11",
       "-o",
-      "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-z3y90g7i/observer/libwindowspaths.so",
-      "/home/andrz/nouraajd-bfg-recovery-backup-20261116/source/recovery/smoke/windows_paths.cpp",
+      "/tmp/nouraajd-bfg-recovery/native-early/verify/snapshot-6rqis3fx/observer/libwindowspaths.so",
+      "/tmp/nouraajd-bfg-recovery/source/recovery/smoke/windows_paths.cpp",
       "-ldl"
     ],
-    "log": "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-z3y90g7i/file-lookup.log",
+    "log": "/tmp/nouraajd-bfg-recovery/native-early/verify/snapshot-6rqis3fx/file-lookup.log",
     "returnCode": 0,
     "seconds": 0.214,
     "semantics": "Windows-style case-insensitive file lookup for the game process",
     "timedOut": false
   },
-  "fingerprint": "d4a3e36b0e0bdaf82065057715db3461a6a7ccbad563a557d94157ed459ff344",
+  "fingerprint": "40633d4968a3eaaf65804580212d17d8a93244a67875cb1515568a4676f9473d",
   "libraryAliases": {
     "aliases": {},
-    "directory": "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-z3y90g7i/observer/library-aliases"
+    "directory": "/tmp/nouraajd-bfg-recovery/native-early/verify/snapshot-6rqis3fx/observer/library-aliases"
   },
   "project": "Game.pro",
   "recipe": {
@@ -225,15 +216,22 @@
         "reason": "generated binary, redistributable, or packaged artifact"
       }
     ],
-    "outputDir": "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-z3y90g7i/source",
+    "outputDir": "/tmp/nouraajd-bfg-recovery/native-early/verify/snapshot-6rqis3fx/source",
     "restored": [
       {
         "markerPath": "Game.pro.REMOVED.git-id",
         "method": "reconstruction",
-        "originalBlob": "9f8f35763618c76bb647e63c047b76712fee89b8",
+        "originalBlob": "f06f96f36581bf03a51550e23149d1fb1a47afa6",
         "path": "Game.pro",
-        "provenance": "working reconstruction",
-        "replacementBlob": "f57ad0e4f76207008634b291359cd43c3bcc9bb5"
+        "provenance": "Content reconstruction of the BFG-removed original; Missing qmake project inferred from accepted #157 settings and complete same-tree source/header/resource inventory, including vendored libraries and required zlib link. Original project bytes unavailable; configuration parity not claimed. Includes all15 genuine same-tree vendored zlib C translation units; exact-readable source/header files retained unchanged.",
+        "replacementBlob": "5c6047785f3c1edf39c586f89eb6854787dd27f6"
+      },
+      {
+        "markerPath": "base64/base64.cpp.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "50006d4f36e0b37d7c2aba3e2706dd427734dafb",
+        "path": "base64/base64.cpp",
+        "replacementBlob": "50006d4f36e0b37d7c2aba3e2706dd427734dafb"
       },
       {
         "markerPath": "config/creatures.json.REMOVED.git-id",
@@ -251,7 +249,7 @@
           ],
           "kind": "reconstructed-config",
           "note": "Saved state is retained; absent stats are positive synthetic defaults. Build/startup unverified.",
-          "sourceCommit": "779fb803ff021de5e74ed3b24d7c31a9adcaa236",
+          "sourceCommit": "b79e759b0babe370c4cee4508ba9c5cb566d9d33",
           "verified": false
         },
         "replacementBlob": "b0a928006abf104b29e0c9bbabd93a30a63cd3aa"
@@ -261,7 +259,7 @@
         "method": "reconstruction",
         "originalBlob": "2081d2dea252a6a38259edabea59e26fb74c6726",
         "path": "config/items.json",
-        "provenance": "working reconstruction",
+        "provenance": "content reconstruction of the BFG-removed original; Adapted genuine119 config/items.json donor blob41d081fe6c796beab79afb418358b8af12cfa877 to missing original2081: adds only class Weapon/Armor/Potion from each actual legacy type, as required by surviving150 Item::getItem/QMetaType factory. Preserves every donor item name/path/stat/power/type. All lost original later item IDs, exact balance and slot metadata remain unavailable and are not invented. This is inferred missing-config compatibility, not original2081 bytes or gameplay parity. Root owns integration and affected-proof revalidation.",
         "replacementBlob": "b482b536045ab11d3feed4916010352bf1bf36c5"
       },
       {
@@ -282,10 +280,18 @@
       {
         "markerPath": "creatures/creature.cpp.REMOVED.git-id",
         "method": "reconstruction",
-        "originalBlob": "e18254b9bf0b4774ead0d6df3ad36139bd5562dd",
+        "originalBlob": "2dc6c061b755dc9b315049a10c3a28145960a4d5",
         "path": "creatures/creature.cpp",
-        "provenance": "Content reconstruction of the BFG-removed original; Missing #175 body candidate inferred from earlier native API-checked donor 08ec144f196a9a5195e281997b5695828ccbd2ab; surviving headers have formatting-only changes or inline isAsync addition. Native acceptance pending; teleporter authored save defect remains separate. Missing #150 Creature body inferred from native-verified #97 body and exact surviving #150 declarations/callers/config: ListItem base, ordered sets, slot-index equipment map, collection signals, lower-case coordinates. Slot initialization follows original config/slots.json and ItemSlot::update at(). Saves subtract equipped bonuses before reload. Formula, equipment serialization and historical gameplay parity remain inferred; no surviving source edited. Corrected inferred equipment reload: legacy inventory.weapon/armor apply only if present; modern equipment slots survive save/load. Before/after native regression and revalidation required.",
+        "provenance": "working reconstruction",
         "replacementBlob": "fa60819dd9356038aaa2b18be237279d0960901c"
+      },
+      {
+        "markerPath": "creatures/player.cpp.REMOVED.git-id",
+        "method": "reconstruction",
+        "originalBlob": "c548ce5f125c54267f1484b032cc96d30efb5cf1",
+        "path": "creatures/player.cpp",
+        "provenance": "Content reconstruction of the BFG-removed original; Missing #174 Player body candidate adapted from restored same-version compatible donor and accepted #150 Player refresh bridge: missing update() calls actual updateViews and emits genuine statsChanged. Unknown original body behavior/parity remains inferred.",
+        "replacementBlob": "73404f87ec7b4cf5a15c692986ac29f470aa5387"
       },
       {
         "markerPath": "images/arrows/left/0.png.REMOVED.git-id",
@@ -683,15 +689,15 @@
       {
         "markerPath": "interactions/interaction.cpp.REMOVED.git-id",
         "method": "reconstruction",
-        "originalBlob": "ca33fb5631a7c6e900c514d01ef7fe9155f35efb",
+        "originalBlob": "e7502246c05f13dc3707a19c6b8ae564f62dcfa1",
         "path": "interactions/interaction.cpp",
-        "provenance": "Content reconstruction of the BFG-removed original; Missing #175 body candidate inferred from earlier native API-checked donor 0b0a9c19112914c23dcd4a6e2e032f335f7abf76; surviving headers have formatting-only changes or inline isAsync addition. Native acceptance pending; teleporter authored save defect remains separate. Missing #150 Interaction body inferred from native-verified #97 implementation and exact #150 surviving header: public/default/copy constructors, ListItem ordering and Effect state serialization added. Removed undeclared legacy setAnimation override, retaining inherited real resource loading. Historical ordering/effect persistence parity unverified.",
+        "provenance": "working reconstruction",
         "replacementBlob": "4407036d97c31cfc977a71a25b88a1761033bbc8"
       },
       {
         "markerPath": "json/json_batchallocator.h.REMOVED.git-id",
         "method": "reconstruction",
-        "originalBlob": "42508f11c1246bc11a430fe3122a608b3dd565fc",
+        "originalBlob": "66cb117a2777beb98242c62e3e2251fe32be7b21",
         "path": "json/json_batchallocator.h",
         "provenance": "unverified upstream reconstruction; https://github.com/open-source-parsers/jsoncpp/tree/4fce396c9d3e27a8ab8fb88e94c1676e021ae3a6",
         "replacementBlob": "87ea5ed80785bb82eda9ae4df1177bc58e1f0c41"
@@ -713,7 +719,7 @@
       {
         "markerPath": "json/json_reader.cpp.REMOVED.git-id",
         "method": "reconstruction",
-        "originalBlob": "0323f4ae887196084c02f96525010860055454db",
+        "originalBlob": "747ff61ca4584f1f590e1b53cde7d8c76f7c233b",
         "path": "json/json_reader.cpp",
         "provenance": "unverified upstream reconstruction; https://github.com/open-source-parsers/jsoncpp/tree/4fce396c9d3e27a8ab8fb88e94c1676e021ae3a6",
         "replacementBlob": "4eb2d11fd3150081a7a80c2e1bf137cc052049c6"
@@ -721,7 +727,7 @@
       {
         "markerPath": "json/json_value.cpp.REMOVED.git-id",
         "method": "reconstruction",
-        "originalBlob": "fbcc3fd9782b105b30b7c18e42793c5c9ebb2f52",
+        "originalBlob": "a4d8a073ec7f9740f34934d641d03dad185f1116",
         "path": "json/json_value.cpp",
         "provenance": "unverified upstream reconstruction; https://github.com/open-source-parsers/jsoncpp/tree/4fce396c9d3e27a8ab8fb88e94c1676e021ae3a6",
         "replacementBlob": "573205f13e2cb4a98262c9b5f563de7264660fb6"
@@ -736,135 +742,118 @@
       {
         "markerPath": "json/json_writer.cpp.REMOVED.git-id",
         "method": "reconstruction",
-        "originalBlob": "29f09f14d0ca16253ccedfd3fff1d287b0ea72a9",
+        "originalBlob": "764261ab77886a275a2cbf7bf3a622d13355d97e",
         "path": "json/json_writer.cpp",
         "provenance": "unverified upstream reconstruction; https://github.com/open-source-parsers/jsoncpp/tree/4fce396c9d3e27a8ab8fb88e94c1676e021ae3a6",
         "replacementBlob": "cdf4188f2ec9be07e3bb7b248ff48ac98f71e497"
       },
       {
         "markerPath": "json/reader.h.REMOVED.git-id",
-        "method": "reconstruction",
-        "originalBlob": "80c31d99f6c21212ac5856b7d98c5ba6200b5420",
+        "method": "exactOriginal",
+        "originalBlob": "dee0c8893d79ca7f1b1e3f8f19d79c045ddfb818",
         "path": "json/reader.h",
-        "provenance": "unverified upstream reconstruction; https://github.com/open-source-parsers/jsoncpp/tree/4fce396c9d3e27a8ab8fb88e94c1676e021ae3a6",
-        "replacementBlob": "ee1d6a2444a8e92d20c98a08643b538923c0d06e"
+        "replacementBlob": "dee0c8893d79ca7f1b1e3f8f19d79c045ddfb818"
       },
       {
         "markerPath": "json/value.h.REMOVED.git-id",
-        "method": "reconstruction",
-        "originalBlob": "03ef4f3ce375e9a0a0bcc5991935d9a94b108d78",
+        "method": "exactOriginal",
+        "originalBlob": "f1726ae68dff3dc215acfae830c2643ce26af1b5",
         "path": "json/value.h",
-        "provenance": "unverified upstream reconstruction; https://github.com/open-source-parsers/jsoncpp/tree/4fce396c9d3e27a8ab8fb88e94c1676e021ae3a6",
-        "replacementBlob": "58bfd88e7a1dfc21a79d05da5f8a5cba81920db2"
+        "replacementBlob": "f1726ae68dff3dc215acfae830c2643ce26af1b5"
       },
       {
         "markerPath": "json/writer.h.REMOVED.git-id",
-        "method": "reconstruction",
-        "originalBlob": "8b18e00a22ac26942631d1e5d7c750a64ec8ac8e",
+        "method": "exactOriginal",
+        "originalBlob": "98c613957f29174649c620f16c67fa001989a613",
         "path": "json/writer.h",
-        "provenance": "unverified upstream reconstruction; https://github.com/open-source-parsers/jsoncpp/tree/4fce396c9d3e27a8ab8fb88e94c1676e021ae3a6",
-        "replacementBlob": "5f4b83be418329cb9210d47144b672913fa3c769"
+        "replacementBlob": "98c613957f29174649c620f16c67fa001989a613"
       },
       {
         "markerPath": "map/map.cpp.REMOVED.git-id",
         "method": "reconstruction",
-        "originalBlob": "4e9febdaeecdae22e84141df72b76832da4a5d90",
+        "originalBlob": "e68747958a819c2970e08a08a025e8818bca5f13",
         "path": "map/map.cpp",
-        "provenance": "Content reconstruction of the BFG-removed original; Missing #175 Map body inferred from native-verified #166; genuine header tokens identical apart from formatting. Missing #166 Map body inferred from native-verified #164/#165. Genuine getObjects changes from inline to external: return actual mapObjects. Added optional movement-completion callback dispatched after real animation or immediate non-silent move; base callback policy defaults to no action because no surviving #166 caller defines base effects. Genuine derived callbacks are dispatched virtually. Default policy, removed implementation changes and gameplay parity remain inferred. Missing #164 Map body inferred from accepted #163; only genuine header change adds virtual loadFromProps, now invoked with actual TMX object properties before positioning/adding each genuine object. Unknown original body behavior remains inferred. Missing body inferred by carrying accepted #161 reconstruction e197feb3953c9c65e51587a60fc2fe66155a063e; exact surviving same-path header bytes are unchanged. Unknown removed implementation changes and historical gameplay parity are unverified. Missing body inferred by carrying accepted #159 reconstruction f59850bc2948c48c34f05161ff83bf840234b80b; exact surviving same-path header bytes are unchanged. Unknown removed implementation changes and historical gameplay parity are unverified. Missing #159 Map/MapObject body inferred from accepted #150 body and genuine same-version APIs/config. Added real TMX layer/tileset/property loading and authored entry coordinates from genuine map.tmx, with available genuine object classes/configured items/creatures. Authored TMX names without a class in this revision (StartEvent, Market) are explicitly logged, not replaced by stand-ins. Object property behavior and removed body gameplay semantics remain unverified; no original edited. Corrected missing-body ownership: removeObject detaches without deleting, as genuine Item::onEnter transfers the live item to player inventory; original AnimatedObject/Destroyer retains lifetime registration. Actual QObject destroyed-signal before/after regression required.",
+        "provenance": "Content reconstruction of the BFG-removed original; Missing body inferred by carrying accepted #173 reconstruction d02cbf0787a6f7b53b8f64abdd9f27f7f28e3524; exact surviving same-path header bytes are unchanged. Unknown removed implementation changes and historical gameplay parity are unverified. Missing body inferred by carrying accepted #170 reconstruction 6b6244e51180200914bebe6d31d0fc5f372d925b; exact surviving same-path header bytes are unchanged. Unknown removed implementation changes and historical gameplay parity are unverified. Missing #166 Map body inferred from native-verified #164/#165. Genuine getObjects changes from inline to external: return actual mapObjects. Added optional movement-completion callback dispatched after real animation or immediate non-silent move; base callback policy defaults to no action because no surviving #166 caller defines base effects. Genuine derived callbacks are dispatched virtually. Default policy, removed implementation changes and gameplay parity remain inferred. Missing #164 Map body inferred from accepted #163; only genuine header change adds virtual loadFromProps, now invoked with actual TMX object properties before positioning/adding each genuine object. Unknown original body behavior remains inferred. Missing body inferred by carrying accepted #161 reconstruction e197feb3953c9c65e51587a60fc2fe66155a063e; exact surviving same-path header bytes are unchanged. Unknown removed implementation changes and historical gameplay parity are unverified. Missing body inferred by carrying accepted #159 reconstruction f59850bc2948c48c34f05161ff83bf840234b80b; exact surviving same-path header bytes are unchanged. Unknown removed implementation changes and historical gameplay parity are unverified. Missing #159 Map/MapObject body inferred from accepted #150 body and genuine same-version APIs/config. Added real TMX layer/tileset/property loading and authored entry coordinates from genuine map.tmx, with available genuine object classes/configured items/creatures. Authored TMX names without a class in this revision (StartEvent, Market) are explicitly logged, not replaced by stand-ins. Object property behavior and removed body gameplay semantics remain unverified; no original edited. Corrected missing-body ownership: removeObject detaches without deleting, as genuine Item::onEnter transfers the live item to player inventory; original AnimatedObject/Destroyer retains lifetime registration. Actual QObject destroyed-signal before/after regression required.",
         "replacementBlob": "3016ce6dd58ba40d6ee784e7981329694c285c98"
-      },
-      {
-        "markerPath": "pathfinder/smartpathfinder.cpp.REMOVED.git-id",
-        "method": "reconstruction",
-        "originalBlob": "55cf392154670da51be8c6cee2c7bffa2dc4d606",
-        "path": "pathfinder/smartpathfinder.cpp",
-        "provenance": "unverified donor reconstruction; b79e759b0babe370c4cee4508ba9c5cb566d9d33:pathfinder/smartpathfinder.cpp; headerMatch=0; apiOverlap=10000/10000; distance=1",
-        "replacementBlob": "ce0fc3c35cb7fb3e04015c7f2ee50ca5a1b38226"
       },
       {
         "markerPath": "stats/stats.cpp.REMOVED.git-id",
         "method": "reconstruction",
-        "originalBlob": "ec45d6c6ea8a63a9aa3ad66a938c2d777bee71f0",
+        "originalBlob": "31d93d430a64c7dac29bce51a7a4c1b025ae6bd0",
         "path": "stats/stats.cpp",
-        "provenance": "Content reconstruction of the BFG-removed original; Missing #175 Stats body inferred from native-verified #150/#163 Stats body4ff9f45b2f23d26fc69280d6c0df542e02efa223; surviving #150/#175 header tokens are identical apart from formatting, including value-argument bonuses. Unknown removed-body changes and historical parity unverified.",
+        "provenance": "working reconstruction",
         "replacementBlob": "b54bd87d6d0b399fdf29f58ed03a2637aeaf24c0"
       },
       {
         "markerPath": "tinyxml/tinystr.h.REMOVED.git-id",
-        "method": "reconstruction",
-        "originalBlob": "cbc6aaddf5af3f60fe908fb2c68d04a1b57ef56a",
+        "method": "exactOriginal",
+        "originalBlob": "74b6b7e8150d6cd516a1b1450f3f66333e70bcc1",
         "path": "tinyxml/tinystr.h",
-        "provenance": "unverified upstream reconstruction; https://github.com/tamatias/tmxparser/tree/6fa4d38742313b6365df0d224b8978be1eb81290",
-        "replacementBlob": "3c2aa9d54daa7ddafe718a35e54d465479d8caa1"
+        "replacementBlob": "74b6b7e8150d6cd516a1b1450f3f66333e70bcc1"
       },
       {
         "markerPath": "tinyxml/tinyxml.cpp.REMOVED.git-id",
-        "method": "reconstruction",
-        "originalBlob": "9df321b0d9863d406e31a632c5e2c26e794db6d4",
+        "method": "exactOriginal",
+        "originalBlob": "9be6c6a66c3e357784c10541eca82ba64a715f28",
         "path": "tinyxml/tinyxml.cpp",
-        "provenance": "unverified upstream reconstruction; https://github.com/tamatias/tmxparser/tree/6fa4d38742313b6365df0d224b8978be1eb81290",
         "replacementBlob": "9be6c6a66c3e357784c10541eca82ba64a715f28"
       },
       {
         "markerPath": "tinyxml/tinyxml.h.REMOVED.git-id",
-        "method": "reconstruction",
-        "originalBlob": "dc536bfa5c65f8fe057411f364c4e86c8e385d46",
+        "method": "exactOriginal",
+        "originalBlob": "01822911c75d4abb27e6d53b74ca053a6e3d3e94",
         "path": "tinyxml/tinyxml.h",
-        "provenance": "unverified upstream reconstruction; https://github.com/tamatias/tmxparser/tree/6fa4d38742313b6365df0d224b8978be1eb81290",
         "replacementBlob": "01822911c75d4abb27e6d53b74ca053a6e3d3e94"
       },
       {
         "markerPath": "tinyxml/tinyxmlparser.cpp.REMOVED.git-id",
-        "method": "reconstruction",
-        "originalBlob": "6bee3f2c370a18c5e30646ab7ba3f33c5228b448",
+        "method": "exactOriginal",
+        "originalBlob": "666a4f757c4040247444d5fc3f3231d2efea7e21",
         "path": "tinyxml/tinyxmlparser.cpp",
-        "provenance": "unverified upstream reconstruction; https://github.com/tamatias/tmxparser/tree/6fa4d38742313b6365df0d224b8978be1eb81290",
         "replacementBlob": "666a4f757c4040247444d5fc3f3231d2efea7e21"
       },
       {
         "markerPath": "tmx/TmxLayer.cpp.REMOVED.git-id",
         "method": "reconstruction",
-        "originalBlob": "df73dd6d63043aa624c684c40a344823764dcd22",
+        "originalBlob": "7ba2df8788b29183cd197cbe7f6e72eed6b7d6ee",
         "path": "tmx/TmxLayer.cpp",
         "provenance": "unverified upstream reconstruction; https://github.com/tamatias/tmxparser/tree/6fa4d38742313b6365df0d224b8978be1eb81290; adapted vendored tinyxml/zlib include paths to historical directory layout",
         "replacementBlob": "6708bc608f2945a2bf0a9eeea4dac621c214889f"
       },
       {
         "markerPath": "tmx/TmxLayer.h.REMOVED.git-id",
-        "method": "reconstruction",
-        "originalBlob": "7ca362de5654fed786e70e92644380f343183ccb",
+        "method": "exactOriginal",
+        "originalBlob": "18a62795338e2cc9516fb408ebe2f9a65ad5fcba",
         "path": "tmx/TmxLayer.h",
-        "provenance": "unverified upstream reconstruction; https://github.com/tamatias/tmxparser/tree/6fa4d38742313b6365df0d224b8978be1eb81290; adapted vendored tinyxml/zlib include paths to historical directory layout",
-        "replacementBlob": "9f6306f92ede5ae27106ed2aeaa27526f6331a23"
+        "replacementBlob": "18a62795338e2cc9516fb408ebe2f9a65ad5fcba"
       },
       {
         "markerPath": "tmx/TmxMap.cpp.REMOVED.git-id",
         "method": "reconstruction",
-        "originalBlob": "513bd09c15cf3146da6d8572f7d03f8b402c1ec2",
+        "originalBlob": "161e2ff066c7bb30a3af77d4848d9c21bfad5361",
         "path": "tmx/TmxMap.cpp",
         "provenance": "unverified upstream reconstruction; https://github.com/tamatias/tmxparser/tree/6fa4d38742313b6365df0d224b8978be1eb81290; adapted vendored tinyxml/zlib include paths to historical directory layout",
         "replacementBlob": "fbe002069ca4209c0304e1e3c2004e7b860dc330"
       },
       {
         "markerPath": "tmx/TmxMap.h.REMOVED.git-id",
-        "method": "reconstruction",
-        "originalBlob": "2c0a3b0079300f8b2e0e303a33127b0d7e8d049c",
+        "method": "exactOriginal",
+        "originalBlob": "a370874cccd93c210ee0b8c1e0b8d2b95059fee5",
         "path": "tmx/TmxMap.h",
-        "provenance": "unverified upstream reconstruction; https://github.com/tamatias/tmxparser/tree/6fa4d38742313b6365df0d224b8978be1eb81290; adapted vendored tinyxml/zlib include paths to historical directory layout",
-        "replacementBlob": "1b8ad28413c5c823f125f76ee755573476a35234"
+        "replacementBlob": "a370874cccd93c210ee0b8c1e0b8d2b95059fee5"
       },
       {
-        "markerPath": "tmx/TmxMapTile.h.REMOVED.git-id",
+        "markerPath": "tmx/TmxObject.cpp.REMOVED.git-id",
         "method": "reconstruction",
-        "originalBlob": "ba8932ad6d5630b4e0d4657eb13fc5391a6bdb78",
-        "path": "tmx/TmxMapTile.h",
-        "provenance": "unverified donor reconstruction; b79e759b0babe370c4cee4508ba9c5cb566d9d33:tmx/TmxMapTile.h; headerMatch=0; apiOverlap=0/10000; distance=1",
-        "replacementBlob": "30d4a5e15094dce1c473e4f4dec3c58e26f92ef3"
+        "originalBlob": "4488271486a09a2db1e09a32453b00f436138e19",
+        "path": "tmx/TmxObject.cpp",
+        "provenance": "unverified donor reconstruction; 779fb803ff021de5e74ed3b24d7c31a9adcaa236:tmx/TmxObject.cpp; headerMatch=0; apiOverlap=10000/10000; distance=1",
+        "replacementBlob": "a5c4c3bb3e27a463bd9d8c8b652fb8ae621aa85f"
       },
       {
         "markerPath": "tmx/TmxTileset.cpp.REMOVED.git-id",
         "method": "reconstruction",
-        "originalBlob": "325f185b880f1a621c3b4136b3d36c878aaf2d4b",
+        "originalBlob": "4de2fd40684d00a908bd03aa16a7e7e8c79efbd3",
         "path": "tmx/TmxTileset.cpp",
         "provenance": "unverified upstream reconstruction; https://github.com/tamatias/tmxparser/tree/6fa4d38742313b6365df0d224b8978be1eb81290; adapted vendored tinyxml/zlib include paths to historical directory layout",
         "replacementBlob": "3beb0ae515164836d8bba2c3c71b8355282fdde0"
@@ -872,184 +861,164 @@
       {
         "markerPath": "view/gamescene.cpp.REMOVED.git-id",
         "method": "reconstruction",
-        "originalBlob": "7d0f8490a8e5373b35a12ad2f7753af0c293b7a9",
+        "originalBlob": "505c83cd030ea813067aad1b8edae31fd4d2e6ac",
         "path": "view/gamescene.cpp",
-        "provenance": "working reconstruction",
-        "replacementBlob": "f349bf0de1fe0dfbe46162da90daf57a221e39ed"
+        "provenance": "Content reconstruction of the BFG-removed original; Missing body inferred by carrying accepted #173 reconstruction 38e482ddb223b7f3e4c6fe6392186bda488ccda4; exact surviving same-path header bytes are unchanged. Unknown removed implementation changes and historical gameplay parity are unverified. Missing body inferred by carrying accepted #166 reconstruction f50450a42a588a0a036ebff412b6ff245a8222cc; exact surviving same-path header bytes are unchanged. Unknown removed implementation changes and historical gameplay parity are unverified. Missing body inferred by carrying accepted #159 reconstruction 2e11b4ac70d1dd42150a0e3265af39cbe00d0955; exact surviving same-path header bytes are unchanged. Unknown removed implementation changes and historical gameplay parity are unverified. Missing #159 GameScene body inferred from accepted #150 body and newly declared Map::loadMapFromTmx/getEntry APIs plus genuine config/map.tmx. Loads actual authored terrain and places real Sorcerer at authored x/y/z. Selection of TMX over legacy JSON, event behavior and historical gameplay parity are inference; no original edited.",
+        "replacementBlob": "80c78303f59aec1fe3ab0ff91f089214609349b8"
       },
       {
         "markerPath": "view/gameview.cpp.REMOVED.git-id",
         "method": "reconstruction",
-        "originalBlob": "4500f0f5f0d2177da49c640db7bd17ae785186b2",
+        "originalBlob": "1e915bbeb635f5cae348e89c34bc8034497edc83",
         "path": "view/gameview.cpp",
         "provenance": "working reconstruction",
         "replacementBlob": "98834eee3c3c6c914d1db9e6eca905ad4d70157c"
       },
       {
         "markerPath": "zlib/adler32.c.REMOVED.git-id",
-        "method": "reconstruction",
-        "originalBlob": "4116f85eb06c6aa2dff8d1446fcf34cbadd24f54",
+        "method": "exactOriginal",
+        "originalBlob": "65ad6a5adc44c00428b35eb15ff26d16f9ef209b",
         "path": "zlib/adler32.c",
-        "provenance": "Content reconstruction of the BFG-removed original; Unmodified official zlib1.2.5 adler32.c, upstream https://github.com/madler/zlib/tree/v1.2.5, Git blob 65ad6a5adc44c00428b35eb15ff26d16f9ef209b, coherent with exact surviving zconf.h1.2.5. Missing historical vendor bytes remain unavailable; upstream donor is inferred rather than exact original.",
         "replacementBlob": "65ad6a5adc44c00428b35eb15ff26d16f9ef209b"
       },
       {
         "markerPath": "zlib/crc32.c.REMOVED.git-id",
-        "method": "reconstruction",
-        "originalBlob": "95181809996076cf7af987a303f8a9e2b96c3d45",
+        "method": "exactOriginal",
+        "originalBlob": "91be372d224da6833c03bd24d7158ff622ece35f",
         "path": "zlib/crc32.c",
-        "provenance": "Content reconstruction of the BFG-removed original; Unmodified official zlib1.2.5 crc32.c, upstream https://github.com/madler/zlib/tree/v1.2.5, Git blob 91be372d224da6833c03bd24d7158ff622ece35f, coherent with exact surviving zconf.h1.2.5. Missing historical vendor bytes remain unavailable; upstream donor is inferred rather than exact original.",
         "replacementBlob": "91be372d224da6833c03bd24d7158ff622ece35f"
       },
       {
         "markerPath": "zlib/crc32.h.REMOVED.git-id",
-        "method": "reconstruction",
-        "originalBlob": "c5abd900fff26dbe06467767173744f8dce89a77",
+        "method": "exactOriginal",
+        "originalBlob": "8053b6117c023f64554ea783b23fa06985acff7b",
         "path": "zlib/crc32.h",
-        "provenance": "Content reconstruction of the BFG-removed original; Unmodified official zlib1.2.5 crc32.h, upstream https://github.com/madler/zlib/tree/v1.2.5, Git blob 8053b6117c023f64554ea783b23fa06985acff7b, coherent with exact surviving zconf.h1.2.5. Missing historical vendor bytes remain unavailable; upstream donor is inferred rather than exact original.",
         "replacementBlob": "8053b6117c023f64554ea783b23fa06985acff7b"
       },
       {
         "markerPath": "zlib/deflate.c.REMOVED.git-id",
-        "method": "reconstruction",
-        "originalBlob": "2e8bb0148763ac006b3dcb005c7a351093873c3c",
+        "method": "exactOriginal",
+        "originalBlob": "5c4022f3d4774b98bb22104890b04a7d3f7f4aec",
         "path": "zlib/deflate.c",
-        "provenance": "Content reconstruction of the BFG-removed original; Unmodified official zlib1.2.5 deflate.c, upstream https://github.com/madler/zlib/tree/v1.2.5, Git blob 5c4022f3d4774b98bb22104890b04a7d3f7f4aec, coherent with exact surviving zconf.h1.2.5. Missing historical vendor bytes remain unavailable; upstream donor is inferred rather than exact original.",
         "replacementBlob": "5c4022f3d4774b98bb22104890b04a7d3f7f4aec"
       },
       {
         "markerPath": "zlib/deflate.h.REMOVED.git-id",
-        "method": "reconstruction",
-        "originalBlob": "f69bb1d95c102f288498717b97282870e87b4f14",
+        "method": "exactOriginal",
+        "originalBlob": "cbf0d1ea5d966e572c4d3ae24d334c1ff1789169",
         "path": "zlib/deflate.h",
-        "provenance": "Content reconstruction of the BFG-removed original; Unmodified official zlib1.2.5 deflate.h, upstream https://github.com/madler/zlib/tree/v1.2.5, Git blob cbf0d1ea5d966e572c4d3ae24d334c1ff1789169, coherent with exact surviving zconf.h1.2.5. Missing historical vendor bytes remain unavailable; upstream donor is inferred rather than exact original.",
         "replacementBlob": "cbf0d1ea5d966e572c4d3ae24d334c1ff1789169"
       },
       {
         "markerPath": "zlib/gzguts.h.REMOVED.git-id",
-        "method": "reconstruction",
-        "originalBlob": "6de9ebae9f3a3952ff310a6310d78fc06eee05d5",
+        "method": "exactOriginal",
+        "originalBlob": "0f8fb79f87d4f65e7f5667129c763e3a361199f2",
         "path": "zlib/gzguts.h",
-        "provenance": "Content reconstruction of the BFG-removed original; Unmodified official zlib1.2.5 gzguts.h, upstream https://github.com/madler/zlib/tree/v1.2.5, Git blob 0f8fb79f87d4f65e7f5667129c763e3a361199f2, coherent with exact surviving zconf.h1.2.5. Missing historical vendor bytes remain unavailable; upstream donor is inferred rather than exact original.",
         "replacementBlob": "0f8fb79f87d4f65e7f5667129c763e3a361199f2"
       },
       {
         "markerPath": "zlib/gzlib.c.REMOVED.git-id",
-        "method": "reconstruction",
-        "originalBlob": "f7426f062de89a07c138bcafff755c431358d5ce",
+        "method": "exactOriginal",
+        "originalBlob": "603e60ed5444e0e7a2ed9590a9d9a73ce7cc97bf",
         "path": "zlib/gzlib.c",
-        "provenance": "Content reconstruction of the BFG-removed original; Unmodified official zlib1.2.5 gzlib.c, upstream https://github.com/madler/zlib/tree/v1.2.5, Git blob 603e60ed5444e0e7a2ed9590a9d9a73ce7cc97bf, coherent with exact surviving zconf.h1.2.5. Missing historical vendor bytes remain unavailable; upstream donor is inferred rather than exact original.",
         "replacementBlob": "603e60ed5444e0e7a2ed9590a9d9a73ce7cc97bf"
       },
       {
         "markerPath": "zlib/gzread.c.REMOVED.git-id",
-        "method": "reconstruction",
-        "originalBlob": "5c1404362cf971997102a11955ab86bf33c14c57",
+        "method": "exactOriginal",
+        "originalBlob": "548201ab0099b51556da32c4873d1dbb2d211b5a",
         "path": "zlib/gzread.c",
-        "provenance": "Content reconstruction of the BFG-removed original; Unmodified official zlib1.2.5 gzread.c, upstream https://github.com/madler/zlib/tree/v1.2.5, Git blob 548201ab0099b51556da32c4873d1dbb2d211b5a, coherent with exact surviving zconf.h1.2.5. Missing historical vendor bytes remain unavailable; upstream donor is inferred rather than exact original.",
         "replacementBlob": "548201ab0099b51556da32c4873d1dbb2d211b5a"
       },
       {
         "markerPath": "zlib/gzwrite.c.REMOVED.git-id",
-        "method": "reconstruction",
-        "originalBlob": "ef56c58d92b4c756d35ecd0c0dfe871ac5fc2fc1",
+        "method": "exactOriginal",
+        "originalBlob": "e8defc6887a186055f17597968c4fc5791332811",
         "path": "zlib/gzwrite.c",
-        "provenance": "Content reconstruction of the BFG-removed original; Unmodified official zlib1.2.5 gzwrite.c, upstream https://github.com/madler/zlib/tree/v1.2.5, Git blob e8defc6887a186055f17597968c4fc5791332811, coherent with exact surviving zconf.h1.2.5. Missing historical vendor bytes remain unavailable; upstream donor is inferred rather than exact original.",
         "replacementBlob": "e8defc6887a186055f17597968c4fc5791332811"
       },
       {
         "markerPath": "zlib/infback.c.REMOVED.git-id",
-        "method": "reconstruction",
-        "originalBlob": "50acc91a1023e2f85b1e43af099fe448c21c6e8c",
+        "method": "exactOriginal",
+        "originalBlob": "af3a8c965d50cc6ac05c6c844a8f79e2cdc9f3c1",
         "path": "zlib/infback.c",
-        "provenance": "Content reconstruction of the BFG-removed original; Unmodified official zlib1.2.5 infback.c, upstream https://github.com/madler/zlib/tree/v1.2.5, Git blob af3a8c965d50cc6ac05c6c844a8f79e2cdc9f3c1, coherent with exact surviving zconf.h1.2.5. Missing historical vendor bytes remain unavailable; upstream donor is inferred rather than exact original.",
         "replacementBlob": "af3a8c965d50cc6ac05c6c844a8f79e2cdc9f3c1"
       },
       {
         "markerPath": "zlib/inffast.c.REMOVED.git-id",
-        "method": "reconstruction",
-        "originalBlob": "66d70d59796abb847009bf50d37c3a563a1a00b5",
+        "method": "exactOriginal",
+        "originalBlob": "2f1d60b43b8a9deacf22bb5526a979dcc219a68f",
         "path": "zlib/inffast.c",
-        "provenance": "Content reconstruction of the BFG-removed original; Unmodified official zlib1.2.5 inffast.c, upstream https://github.com/madler/zlib/tree/v1.2.5, Git blob 2f1d60b43b8a9deacf22bb5526a979dcc219a68f, coherent with exact surviving zconf.h1.2.5. Missing historical vendor bytes remain unavailable; upstream donor is inferred rather than exact original.",
         "replacementBlob": "2f1d60b43b8a9deacf22bb5526a979dcc219a68f"
       },
       {
         "markerPath": "zlib/inffixed.h.REMOVED.git-id",
-        "method": "reconstruction",
-        "originalBlob": "a5ca43e840160670ffdad89c8f9d1cbd792e2c66",
+        "method": "exactOriginal",
+        "originalBlob": "75ed4b5978de4be3c44ad48a060b75500f17a0a2",
         "path": "zlib/inffixed.h",
-        "provenance": "Content reconstruction of the BFG-removed original; Unmodified official zlib1.2.5 inffixed.h, upstream https://github.com/madler/zlib/tree/v1.2.5, Git blob 75ed4b5978de4be3c44ad48a060b75500f17a0a2, coherent with exact surviving zconf.h1.2.5. Missing historical vendor bytes remain unavailable; upstream donor is inferred rather than exact original.",
         "replacementBlob": "75ed4b5978de4be3c44ad48a060b75500f17a0a2"
       },
       {
         "markerPath": "zlib/inflate.c.REMOVED.git-id",
-        "method": "reconstruction",
-        "originalBlob": "bc6246d9bad95561f4f72507be04f02cbea5f4c5",
+        "method": "exactOriginal",
+        "originalBlob": "a8431abeacffd97e5028a9e54135a5f173528960",
         "path": "zlib/inflate.c",
-        "provenance": "Content reconstruction of the BFG-removed original; Unmodified official zlib1.2.5 inflate.c, upstream https://github.com/madler/zlib/tree/v1.2.5, Git blob a8431abeacffd97e5028a9e54135a5f173528960, coherent with exact surviving zconf.h1.2.5. Missing historical vendor bytes remain unavailable; upstream donor is inferred rather than exact original.",
         "replacementBlob": "a8431abeacffd97e5028a9e54135a5f173528960"
       },
       {
         "markerPath": "zlib/inflate.h.REMOVED.git-id",
-        "method": "reconstruction",
-        "originalBlob": "1cc108ec73db7e06d8798c8563b9eaf978665552",
+        "method": "exactOriginal",
+        "originalBlob": "95f4986d400223bad542e5b34a7e6284a039425e",
         "path": "zlib/inflate.h",
-        "provenance": "Content reconstruction of the BFG-removed original; Unmodified official zlib1.2.5 inflate.h, upstream https://github.com/madler/zlib/tree/v1.2.5, Git blob 95f4986d400223bad542e5b34a7e6284a039425e, coherent with exact surviving zconf.h1.2.5. Missing historical vendor bytes remain unavailable; upstream donor is inferred rather than exact original.",
         "replacementBlob": "95f4986d400223bad542e5b34a7e6284a039425e"
       },
       {
         "markerPath": "zlib/inftrees.c.REMOVED.git-id",
-        "method": "reconstruction",
-        "originalBlob": "8f1e4e08d786739153e2692ff06427895feff871",
+        "method": "exactOriginal",
+        "originalBlob": "11e9c52accbe8e2cf4e502f88ce89ccfa4f992e5",
         "path": "zlib/inftrees.c",
-        "provenance": "Content reconstruction of the BFG-removed original; Unmodified official zlib1.2.5 inftrees.c, upstream https://github.com/madler/zlib/tree/v1.2.5, Git blob 11e9c52accbe8e2cf4e502f88ce89ccfa4f992e5, coherent with exact surviving zconf.h1.2.5. Missing historical vendor bytes remain unavailable; upstream donor is inferred rather than exact original.",
         "replacementBlob": "11e9c52accbe8e2cf4e502f88ce89ccfa4f992e5"
       },
       {
         "markerPath": "zlib/trees.c.REMOVED.git-id",
-        "method": "reconstruction",
-        "originalBlob": "a1aa1d8382f03a846400b832a1ae404cdbffa388",
+        "method": "exactOriginal",
+        "originalBlob": "56e9bb1c115e81082f58a89b003b766760e12a12",
         "path": "zlib/trees.c",
-        "provenance": "Content reconstruction of the BFG-removed original; Unmodified official zlib1.2.5 trees.c, upstream https://github.com/madler/zlib/tree/v1.2.5, Git blob 56e9bb1c115e81082f58a89b003b766760e12a12, coherent with exact surviving zconf.h1.2.5. Missing historical vendor bytes remain unavailable; upstream donor is inferred rather than exact original.",
         "replacementBlob": "56e9bb1c115e81082f58a89b003b766760e12a12"
       },
       {
         "markerPath": "zlib/trees.h.REMOVED.git-id",
-        "method": "reconstruction",
-        "originalBlob": "57e65278e453bd68826ff53160af36c6ba3400ed",
+        "method": "exactOriginal",
+        "originalBlob": "d35639d82a27807e49ea35c334f8bbcf64720f82",
         "path": "zlib/trees.h",
-        "provenance": "Content reconstruction of the BFG-removed original; Unmodified official zlib1.2.5 trees.h, upstream https://github.com/madler/zlib/tree/v1.2.5, Git blob d35639d82a27807e49ea35c334f8bbcf64720f82, coherent with exact surviving zconf.h1.2.5. Missing historical vendor bytes remain unavailable; upstream donor is inferred rather than exact original.",
         "replacementBlob": "d35639d82a27807e49ea35c334f8bbcf64720f82"
       },
       {
         "markerPath": "zlib/zconf.h.REMOVED.git-id",
         "method": "exactOriginal",
-        "originalBlob": "0831ac7f0278d1bb315da4d91e40e562d4288529",
+        "originalBlob": "02ce56c4313b7e7490c0416ed52bfd9c65694553",
         "path": "zlib/zconf.h",
-        "replacementBlob": "0831ac7f0278d1bb315da4d91e40e562d4288529"
+        "replacementBlob": "02ce56c4313b7e7490c0416ed52bfd9c65694553"
       },
       {
         "markerPath": "zlib/zlib.h.REMOVED.git-id",
-        "method": "reconstruction",
-        "originalBlob": "03f8b557ce8844bb38d604f3d0c08d881d2136d0",
+        "method": "exactOriginal",
+        "originalBlob": "bfbba83e8ee0902abe8bcbfab8bdebbbc07dca69",
         "path": "zlib/zlib.h",
-        "provenance": "Content reconstruction of the BFG-removed original; Unmodified official zlib1.2.5 zlib.h, upstream https://github.com/madler/zlib/tree/v1.2.5, Git blob bfbba83e8ee0902abe8bcbfab8bdebbbc07dca69, coherent with exact surviving zconf.h1.2.5. Missing historical vendor bytes remain unavailable; upstream donor is inferred rather than exact original.",
         "replacementBlob": "bfbba83e8ee0902abe8bcbfab8bdebbbc07dca69"
       },
       {
         "markerPath": "zlib/zutil.c.REMOVED.git-id",
-        "method": "reconstruction",
-        "originalBlob": "4cc43311cb53094c515ed78d63f9aac6de653e9e",
+        "method": "exactOriginal",
+        "originalBlob": "898ed345b0e3ef23ce5aaba1eb6307b5b113d6b1",
         "path": "zlib/zutil.c",
-        "provenance": "Content reconstruction of the BFG-removed original; Unmodified official zlib1.2.5 zutil.c, upstream https://github.com/madler/zlib/tree/v1.2.5, Git blob 898ed345b0e3ef23ce5aaba1eb6307b5b113d6b1, coherent with exact surviving zconf.h1.2.5. Missing historical vendor bytes remain unavailable; upstream donor is inferred rather than exact original.",
         "replacementBlob": "898ed345b0e3ef23ce5aaba1eb6307b5b113d6b1"
       },
       {
         "markerPath": "zlib/zutil.h.REMOVED.git-id",
-        "method": "reconstruction",
-        "originalBlob": "937dbb85cd5b5aedfd49dcae0ce30988041b31af",
+        "method": "exactOriginal",
+        "originalBlob": "258fa88799ad1d97e44fe1ac9df77948e82ea5c0",
         "path": "zlib/zutil.h",
-        "provenance": "Content reconstruction of the BFG-removed original; Unmodified official zlib1.2.5 zutil.h, upstream https://github.com/madler/zlib/tree/v1.2.5, Git blob 258fa88799ad1d97e44fe1ac9df77948e82ea5c0, coherent with exact surviving zconf.h1.2.5. Missing historical vendor bytes remain unavailable; upstream donor is inferred rather than exact original.",
         "replacementBlob": "258fa88799ad1d97e44fe1ac9df77948e82ea5c0"
       },
       {
@@ -1059,9 +1028,9 @@
         "replacementBlob": "d20fb29a7e23828c15487438c93ae790d2045707"
       }
     ],
-    "restoredFilesFingerprint": "a76c9952bcd22e6303cf096a5450b55ceee7eb1b3b3b743d6256f24160ac73ef",
-    "sourceCommit": "779fb803ff021de5e74ed3b24d7c31a9adcaa236",
-    "sourceTree": "a9d54b7182ba8f32a34de4760d53601cd25f8b30",
+    "restoredFilesFingerprint": "65d7a6ebf2f297582a04bc26e23daeb54bdd6c9b26a275136195ad279cfcb116",
+    "sourceCommit": "b79e759b0babe370c4cee4508ba9c5cb566d9d33",
+    "sourceTree": "089c528a35d35bd8552372f851b19db02097104f",
     "status": "complete",
     "submodules": [],
     "unresolved": []
@@ -1097,12 +1066,12 @@
       "-a",
       "--server-args=-screen 0 1920x1080x24",
       "env",
-      "LD_PRELOAD=/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-z3y90g7i/observer/libwindowspaths.so",
-      "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-z3y90g7i/build/RecoveryGame"
+      "LD_PRELOAD=/tmp/nouraajd-bfg-recovery/native-early/verify/snapshot-6rqis3fx/observer/libwindowspaths.so",
+      "/tmp/nouraajd-bfg-recovery/native-early/verify/snapshot-6rqis3fx/build/RecoveryGame"
     ],
-    "log": "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-z3y90g7i/smoke/startup.log",
+    "log": "/tmp/nouraajd-bfg-recovery/native-early/verify/snapshot-6rqis3fx/smoke/startup.log",
     "returnCode": 0,
-    "seconds": 0.565,
+    "seconds": 0.515,
     "startup": {
       "checks": {
         "eventLoop": true,
@@ -1113,7 +1082,7 @@
       "frame": {
         "height": 718,
         "path": "startup.png",
-        "sha256": "d6b8f7dea715c68c9e4f5e16b00265281fc73e32cf12a2ea2ceaa7921a189abd",
+        "sha256": "eae63896ad434dc703d3d1b15045b69f0d9c195f0d1b7c7adcabd85be4e36584",
         "width": 1278
       },
       "mode": "game",
@@ -1124,42 +1093,34 @@
     "status": "success",
     "timedOut": false
   },
-  "sourceCommit": "779fb803ff021de5e74ed3b24d7c31a9adcaa236",
+  "sourceCommit": "b79e759b0babe370c4cee4508ba9c5cb566d9d33",
   "sourceCommits": [
-    "779fb803ff021de5e74ed3b24d7c31a9adcaa236"
+    "b79e759b0babe370c4cee4508ba9c5cb566d9d33"
   ],
   "sourcePreparation": {
     "identity": {
       "implementationSha256": "f5d590fce22ba637484bb95ca1b13091a246aa4d7d0747c7e112aa968dd1d092",
+      "includeReplaySha256": "aa79da3b55a398ff88775581ff931f67f8548caf18e06718c7ff66049f336cb7",
+      "includeSeparators": [
+        {
+          "afterSha256": "10e5d6bae2b827282e81c61b797b66665aa8c927c0762ad99ef275fc3742adf4",
+          "beforeSha256": "36f343a29f069a2c3ddccfbd66a71ca35b4eacc22000cc49ae21e0a7825de29f",
+          "includes": [
+            {
+              "line": 13,
+              "originalInclude": "view\\playerlistview.h",
+              "preparedInclude": "view/playerlistview.h",
+              "resolvedHeader": "view/playerlistview.h"
+            }
+          ],
+          "path": "view/gamescene.cpp"
+        }
+      ],
       "outputs": [
         {
           "after": {
             "kind": "file",
-            "sha256": "1085453e4e5b77f6d4cf6bd99ae0422fb49d1784d1fc8114256cbc33f51cbcd6"
-          },
-          "before": {
-            "kind": "file",
-            "sha256": "7e85d1dcb2ebed205c5c6aaeff309284812c0176ce0a798e87075f7c85ab1c9d"
-          },
-          "path": "animation/animatedobject.h",
-          "purpose": "exact-pinned whitespace-only conflict resolution"
-        },
-        {
-          "after": {
-            "kind": "file",
-            "sha256": "08ad22e3814f5d3dd0a8c5fe1b4ca53cb9a2e91cc02136e0011e8ef653bee22e"
-          },
-          "before": {
-            "kind": "file",
-            "sha256": "f84f275c7e63b50c87509e960dc6e72146b7fcb64bfc5e67097b2ef184239cc9"
-          },
-          "path": "animation/animationprovider.h",
-          "purpose": "exact-pinned whitespace-only conflict resolution"
-        },
-        {
-          "after": {
-            "kind": "file",
-            "sha256": "fca4cf9cf0ccceba59a4869a6fdd80a39a8557b4579ed3c2417364ccc608692a"
+            "sha256": "67cb28924233d74992cbe9bb107043c118afd330c22c6a763747bc2a9417d7cc"
           },
           "before": null,
           "path": "buildings/recovery_teleporter.cpp",
@@ -1168,125 +1129,43 @@
         {
           "after": {
             "kind": "file",
-            "sha256": "75acda2316c0db4e342d950ca14d7190425db85c94822e892df3216be7a61bee"
+            "sha256": "10e5d6bae2b827282e81c61b797b66665aa8c927c0762ad99ef275fc3742adf4"
           },
           "before": {
             "kind": "file",
-            "sha256": "5cec48d3ab0a473cd2562c63a26e82f3e39455216fed13f93da57f69a6166ab8"
+            "sha256": "36f343a29f069a2c3ddccfbd66a71ca35b4eacc22000cc49ae21e0a7825de29f"
           },
-          "path": "destroyer/destroyer.h",
-          "purpose": "exact-pinned whitespace-only conflict resolution"
-        },
-        {
-          "after": {
-            "kind": "file",
-            "sha256": "858972734e993f14e0e3ee44ba6b076f139349149c2a45f704a7eae251a99157"
-          },
-          "before": {
-            "kind": "file",
-            "sha256": "8ed17c91e7cea1165dbf4e9a30ab4a54159df4f328bcaffa0b4a61bd8f3ab6e9"
-          },
-          "path": "items/belt.cpp",
-          "purpose": "exact-pinned whitespace-only conflict resolution"
-        },
-        {
-          "after": {
-            "kind": "file",
-            "sha256": "db778ffa4e04790d5ef6f06385952f0782a1cb56801dd99426e2869009c92351"
-          },
-          "before": {
-            "kind": "file",
-            "sha256": "f9b5e40641fc9f2694a918925061c739947a8eadad65c2c82ff25666c3f027d4"
-          },
-          "path": "tmx/TmxPropertySet.cpp",
-          "purpose": "exact-pinned whitespace-only conflict resolution"
+          "path": "view/gamescene.cpp",
+          "purpose": "Windows include separators on an isolated build-source copy"
         }
       ],
       "teleporterSerialization": {
-        "baseReplaySha256": "de387b3a975950cd12119bd6505228f041ac4ee5869ca20aa93de9e26dc8af2c",
-        "conflictReplaySha256": "7049ab6d049d61e68205eabc4ba4d6908d75449371fc762913c788ef4b4be93f",
         "inputs": {
-          "buildings/teleporter.cpp": "515e4087e4b9e43301c096ce0af4e271773604f6fbea60a5a8ed593e365e2258",
-          "buildings/teleporter.h": "83ba3da4c963f2c2ee135557e4f86dd06621f0a86278eb230b7cf90d03bd4064",
+          "buildings/teleporter.cpp": "9ae1cae5155437bf82b045609a46e8ccb20f13a232197ce632661f302b8ef127",
+          "buildings/teleporter.h": "44bbca334d314cca3734d12b910759719fc9def89d3c6aded3d89940b203fa6d",
           "json/json_value.cpp": "1c1a791ab8542f558b261757999067c82ce36d1d51a55323193b1a884b26f1d4"
         },
         "path": "buildings/recovery_teleporter.cpp",
         "provenance": {
           "legacyArrays": "Retain current enabled for legacy coordinate arrays; every reviewed original header initializes it to true",
           "operation": "Replace only Teleporter save/load bodies with inverse JSON object coordinate-and-enabled storage",
-          "sourceCommit": "7022f82ba68e4b740e85915b1710dd0502837efe",
-          "whitespaceConflicts": "Remove only the original whitespace-equivalent merge conflict from the derived translation unit"
+          "sourceCommit": "b79e759b0babe370c4cee4508ba9c5cb566d9d33"
         },
         "qmakeArguments": [
           "-after",
           "SOURCES-=buildings/teleporter.cpp",
           "SOURCES+=$$_PRO_FILE_PWD_/buildings/recovery_teleporter.cpp"
         ],
-        "replaySha256": "c505aff39349d0dc499d7e2e45c911d471aeff6758389151ccff3a54e318d675",
-        "sha256": "fca4cf9cf0ccceba59a4869a6fdd80a39a8557b4579ed3c2417364ccc608692a",
+        "replaySha256": "de387b3a975950cd12119bd6505228f041ac4ee5869ca20aa93de9e26dc8af2c",
+        "sha256": "67cb28924233d74992cbe9bb107043c118afd330c22c6a763747bc2a9417d7cc",
         "validationBoundary": "Game startup and shutdown with coordinate-and-enabled teleporter serialization compatibility; original sources unchanged"
-      },
-      "trivialConflicts": {
-        "files": {
-          "animation/animatedobject.h": {
-            "afterSha256": "1085453e4e5b77f6d4cf6bd99ae0422fb49d1784d1fc8114256cbc33f51cbcd6",
-            "beforeSha256": "7e85d1dcb2ebed205c5c6aaeff309284812c0176ce0a798e87075f7c85ab1c9d"
-          },
-          "animation/animationprovider.h": {
-            "afterSha256": "08ad22e3814f5d3dd0a8c5fe1b4ca53cb9a2e91cc02136e0011e8ef653bee22e",
-            "beforeSha256": "f84f275c7e63b50c87509e960dc6e72146b7fcb64bfc5e67097b2ef184239cc9"
-          },
-          "destroyer/destroyer.h": {
-            "afterSha256": "75acda2316c0db4e342d950ca14d7190425db85c94822e892df3216be7a61bee",
-            "beforeSha256": "5cec48d3ab0a473cd2562c63a26e82f3e39455216fed13f93da57f69a6166ab8"
-          },
-          "items/belt.cpp": {
-            "afterSha256": "858972734e993f14e0e3ee44ba6b076f139349149c2a45f704a7eae251a99157",
-            "beforeSha256": "8ed17c91e7cea1165dbf4e9a30ab4a54159df4f328bcaffa0b4a61bd8f3ab6e9"
-          },
-          "tmx/TmxPropertySet.cpp": {
-            "afterSha256": "db778ffa4e04790d5ef6f06385952f0782a1cb56801dd99426e2869009c92351",
-            "beforeSha256": "f9b5e40641fc9f2694a918925061c739947a8eadad65c2c82ff25666c3f027d4"
-          }
-        },
-        "provenance": {
-          "operation": "Retain HEAD alternatives only after exact input pins and whitespace-equivalence checks",
-          "originals": "Original Git inputs remain unchanged; only the isolated build copy is prepared",
-          "sourceCommit": "7022f82ba68e4b740e85915b1710dd0502837efe"
-        },
-        "replaySha256": "7049ab6d049d61e68205eabc4ba4d6908d75449371fc762913c788ef4b4be93f",
-        "validationBoundary": "Build with exact-pinned whitespace-only conflict resolution on an isolated source copy"
       }
     },
     "outputs": [
       {
         "after": {
           "kind": "file",
-          "sha256": "1085453e4e5b77f6d4cf6bd99ae0422fb49d1784d1fc8114256cbc33f51cbcd6"
-        },
-        "before": {
-          "kind": "file",
-          "sha256": "7e85d1dcb2ebed205c5c6aaeff309284812c0176ce0a798e87075f7c85ab1c9d"
-        },
-        "path": "animation/animatedobject.h",
-        "purpose": "exact-pinned whitespace-only conflict resolution"
-      },
-      {
-        "after": {
-          "kind": "file",
-          "sha256": "08ad22e3814f5d3dd0a8c5fe1b4ca53cb9a2e91cc02136e0011e8ef653bee22e"
-        },
-        "before": {
-          "kind": "file",
-          "sha256": "f84f275c7e63b50c87509e960dc6e72146b7fcb64bfc5e67097b2ef184239cc9"
-        },
-        "path": "animation/animationprovider.h",
-        "purpose": "exact-pinned whitespace-only conflict resolution"
-      },
-      {
-        "after": {
-          "kind": "file",
-          "sha256": "fca4cf9cf0ccceba59a4869a6fdd80a39a8557b4579ed3c2417364ccc608692a"
+          "sha256": "67cb28924233d74992cbe9bb107043c118afd330c22c6a763747bc2a9417d7cc"
         },
         "before": null,
         "path": "buildings/recovery_teleporter.cpp",
@@ -1295,38 +1174,14 @@
       {
         "after": {
           "kind": "file",
-          "sha256": "75acda2316c0db4e342d950ca14d7190425db85c94822e892df3216be7a61bee"
+          "sha256": "10e5d6bae2b827282e81c61b797b66665aa8c927c0762ad99ef275fc3742adf4"
         },
         "before": {
           "kind": "file",
-          "sha256": "5cec48d3ab0a473cd2562c63a26e82f3e39455216fed13f93da57f69a6166ab8"
+          "sha256": "36f343a29f069a2c3ddccfbd66a71ca35b4eacc22000cc49ae21e0a7825de29f"
         },
-        "path": "destroyer/destroyer.h",
-        "purpose": "exact-pinned whitespace-only conflict resolution"
-      },
-      {
-        "after": {
-          "kind": "file",
-          "sha256": "858972734e993f14e0e3ee44ba6b076f139349149c2a45f704a7eae251a99157"
-        },
-        "before": {
-          "kind": "file",
-          "sha256": "8ed17c91e7cea1165dbf4e9a30ab4a54159df4f328bcaffa0b4a61bd8f3ab6e9"
-        },
-        "path": "items/belt.cpp",
-        "purpose": "exact-pinned whitespace-only conflict resolution"
-      },
-      {
-        "after": {
-          "kind": "file",
-          "sha256": "db778ffa4e04790d5ef6f06385952f0782a1cb56801dd99426e2869009c92351"
-        },
-        "before": {
-          "kind": "file",
-          "sha256": "f9b5e40641fc9f2694a918925061c739947a8eadad65c2c82ff25666c3f027d4"
-        },
-        "path": "tmx/TmxPropertySet.cpp",
-        "purpose": "exact-pinned whitespace-only conflict resolution"
+        "path": "view/gamescene.cpp",
+        "purpose": "Windows include separators on an isolated build-source copy"
       }
     ],
     "qmakeArguments": [
@@ -1341,7 +1196,7 @@
           "history_source_prep.py",
           "prepare-teleporter-serialization"
         ],
-        "log": "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-z3y90g7i/preparation/teleporter-serialization.log",
+        "log": "/tmp/nouraajd-bfg-recovery/native-early/verify/snapshot-6rqis3fx/preparation/teleporter-serialization.log",
         "name": "teleporterSerialization",
         "returnCode": 0,
         "timedOut": false
@@ -1349,16 +1204,16 @@
       {
         "command": [
           "history_source_prep.py",
-          "resolve-reviewed-whitespace-conflicts"
+          "normalize-quoted-includes"
         ],
-        "log": "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-z3y90g7i/preparation/trivial-conflicts.log",
-        "name": "trivialConflicts",
+        "log": "/tmp/nouraajd-bfg-recovery/native-early/verify/snapshot-6rqis3fx/preparation/include-separators.log",
+        "name": "windowsIncludeSeparators",
         "returnCode": 0,
         "timedOut": false
       }
     ]
   },
-  "sourceTree": "a9d54b7182ba8f32a34de4760d53601cd25f8b30",
+  "sourceTree": "089c528a35d35bd8552372f851b19db02097104f",
   "startupCompatibility": "teleporterSerialization",
   "startupMode": "game",
   "startupSelection": {
@@ -1381,5 +1236,5 @@
     }
   },
   "toolchainImage": "sha256:d3f59ec1d12297ee8091fbea687aa619275fc92b3fd426560e0a1fa40715afc8",
-  "verifiedFromCommit": "779fb803ff021de5e74ed3b24d7c31a9adcaa236"
+  "verifiedFromCommit": "b79e759b0babe370c4cee4508ba9c5cb566d9d33"
 }

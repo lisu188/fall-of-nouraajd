@@ -5,13 +5,14 @@
 #ifndef ARMOR_H
 #define ARMOR_H
 
-class Armor: public Item {
-		Q_OBJECT
-	public:
-		Armor();
-		Armor(const Armor &armor);
-		Armor(std::string name);
-		Interaction *getInteraction();
+class Armor : public Item
+{
+    Q_OBJECT
+public:
+    Armor();
+    Armor(const Armor &armor);
+    Armor(std::string name);
+    Interaction *getInteraction();
 };
 Q_DECLARE_METATYPE(Armor)
 

@@ -10,33 +10,33 @@ class Creature;
 class QGraphicsSceneMouseEvent;
 class Stats;
 
-class Interaction: public ListItem {
-	public:
-		Interaction(std::string name);
-		Interaction();
-		Interaction(const Interaction& interaction);
-		void onAction(Creature *first, Creature *second);
-		int getManaCost();
-		static Interaction *getInteraction(std::string name);
-		virtual void onEnter();
-		virtual void onMove();
-		virtual void loadFromJson(Json::Value config);
-		virtual Json::Value saveToJson();
-		virtual bool canSave();
-		virtual bool compare(ListItem *item);
-	protected:
-		void mousePressEvent(QGraphicsSceneMouseEvent *event);
-		int manaCost;
-	private:
-		static std::unordered_map<std::string,
-				std::function<void(Creature *, Creature *)>> actions;
-		std::string effect;
-		QGraphicsSimpleTextItem statsView;
+class Interaction : public ListItem
+{
+public:
+    Interaction(std::string name);
+    Interaction();
+    Interaction(const Interaction& interaction);
+    void onAction(Creature *first,Creature *second);
+    int getManaCost();
+    static Interaction *getInteraction(std::string name);
+    virtual void onEnter();
+    virtual void onMove();
+    virtual void loadFromJson(Json::Value config);
+    virtual Json::Value saveToJson();
+    virtual bool canSave();
+    virtual bool compare(ListItem *item);
+protected:
+    void mousePressEvent(QGraphicsSceneMouseEvent *event);
+    int manaCost;
+private:
+    static std::unordered_map<std::string,std::function<void (Creature *, Creature *)>> actions;
+    std::string effect;
+    QGraphicsSimpleTextItem statsView;
 };
-Q_DECLARE_METATYPE (Interaction)
+Q_DECLARE_METATYPE(Interaction)
 
-void Attack(Creature *first, Creature *second);
-void ElemStaff(Creature *first, Creature *second);
+void Attack(Creature *first,Creature *second);
+void ElemStaff(Creature *first,Creature *second);
 void DoubleAttack(Creature *first, Creature *second);
 void SneakAttack(Creature *first, Creature *second);
 void Strike(Creature *first, Creature *second);
@@ -54,34 +54,35 @@ void DeathStrike(Creature *first, Creature *second);
 void Barrier(Creature *first, Creature *second);
 void BloodThirst(Creature *first, Creature *second);
 
-class Effect {
-	public:
-		Effect(std::string type, Creature *caster);
-		int getTimeLeft();
-		int getTimeTotal();
-		Creature *getCaster();
-		bool apply(Creature *creature);
-		std::string className;
-		Stats *getBonus();
-		void setBonus(Stats *value);
-		Json::Value saveToJson();
-	private:
-		static std::unordered_map<std::string,
-				std::function<bool(Effect *effect, Creature *)>> effects;
-		int timeLeft;
-		int timeTotal;
-		Stats *bonus;
-		Creature *caster;
+class Effect
+{
+public:
+    Effect(std::string type, Creature *caster);
+    int getTimeLeft();
+    int getTimeTotal();
+    Creature *getCaster();
+    bool apply(Creature *creature);
+    std::string className;
+    Stats *getBonus();
+    void setBonus(Stats *value);
+    Json::Value saveToJson();
+private:
+    static std::unordered_map<std::string,std::function<bool (Effect *effect, Creature *)>> effects;
+    int timeLeft;
+    int timeTotal;
+    Stats *bonus;
+    Creature *caster;
 
 };
 bool Stun(Effect *effect, Creature *creature);
 bool EndlessPainEffect(Effect *effect, Creature *creature);
 bool AbyssalShadowsEffect(Effect *effect, Creature *creature);
-bool ArmorOfEndlessWinterEffect(Effect *effect, Creature *creature);
-bool MutilationEffect(Effect *effect, Creature *creature);
-bool LethalPoisonEffect(Effect *effect, Creature *creature);
+bool ArmorOfEndlessWinterEffect(Effect *effect,Creature *creature);
+bool MutilationEffect(Effect *effect,Creature *creature);
+bool LethalPoisonEffect(Effect *effect,Creature *creature);
 bool ChloroformEffect(Effect *effect, Creature *creature);
 bool BloodlashEffect(Effect *effect, Creature *creature);
 bool BarrierEffect(Effect *effect, Creature *creature);
+
 
 #endif // INTERACTION_H

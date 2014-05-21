@@ -10,7 +10,7 @@
 #include <buildings/dungeon.h>
 #include <QApplication>
 #include <QDesktopWidget>
-#include "view/playerlistview.h"
+#include "view\playerlistview.h"
 #include <animation/animationprovider.h>
 #include <configuration/configurationprovider.h>
 #include <destroyer/destroyer.h>
