@@ -57,18 +57,3 @@
   "replaySha256": "7049ab6d049d61e68205eabc4ba4d6908d75449371fc762913c788ef4b4be93f",
   "validationBoundary": "Build with exact-pinned whitespace-only conflict resolution on an isolated source copy"
 }
-
-=== childPathfinderCache ===
-{
-  "donorBlob": "312d41bd4abc4ad98ea62978f07fc628b6a4946f",
-  "donorCommit": "779fb803ff021de5e74ed3b24d7c31a9adcaa236",
-  "inputs": {
-    "Game.pro": "e2b7c8cc57f98bdf564df7b6528ab5138a8e52380460d24d28d4b2493b43439b",
-    "pathfinder/pathfindercache.h": "3a8fcc728b96d82063854563cf5eaa3323980bd79b35245976e16a1c856d5044"
-  },
-  "path": "pathfinder/pathfindercache.cpp",
-  "replaySha256": "3ad23a6b8d0fb4218f5508205dbddcb9ff9e8c164f84204263014718b3b07447",
-  "sha256": "21621e8fa9f86452560abf98530a3bd094691e8d59a53ba9da10fb92b5dd3f92",
-  "sourceCommit": "7022f82ba68e4b740e85915b1710dd0502837efe",
-  "validationBoundary": "Pathfinder cache implementation from the immediate child on the isolated build copy"
-}
