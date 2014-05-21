@@ -174,3 +174,5 @@ void Player::fight(Creature *creature) {
 	}
 }
 
+
+void Player::update() { updateViews(); emit statsChanged(); }

@@ -2,7 +2,8 @@
 #define TOWN_H
 #include "buildings/building.h"
 
-class Town: Building {
+class Town : Building
+{
 
 };
 
