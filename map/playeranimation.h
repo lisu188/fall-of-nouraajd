@@ -3,12 +3,11 @@
 
 #include <QGraphicsItemAnimation>
 
-class PlayerAnimation : public QGraphicsItemAnimation
-{
-public:
-    explicit PlayerAnimation(QObject *parent = 0);
-protected:
-    virtual void	afterAnimationStep ( qreal step );
+class PlayerAnimation: public QGraphicsItemAnimation {
+	public:
+		explicit PlayerAnimation(QObject *parent = 0);
+	protected:
+		virtual void afterAnimationStep(qreal step);
 };
 
-#endif // MAPOBJECTANIMATION_H
+#endif // MAPOBJECTANIMATION_H

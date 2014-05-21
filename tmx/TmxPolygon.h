@@ -33,26 +33,29 @@
 
 class TiXmlNode;
 
-namespace Tmx
-{
+namespace Tmx {
 	//-------------------------------------------------------------------------
 	// Class to store a Polygon of an Object.
 	//-------------------------------------------------------------------------
-	class Polygon
-	{
-	public:
-		Polygon();
+	class Polygon {
+		public:
+			Polygon();
 
-		// Parse the polygon node.
-		void Parse(const TiXmlNode *polygonNode);
+			// Parse the polygon node.
+			void Parse(const TiXmlNode *polygonNode);
 
-		// Get one of the vertices.
-		const Tmx::Point &GetPoint(int index) const { return points[index]; }
-
-		// Get the number of vertices.
-		int GetNumPoints() const { return points.size(); }
-
-	private:
-		std::vector< Tmx::Point > points;
+			// Get one of the vertices.
+			const Tmx::Point &GetPoint(int index) const {
+				return points[index];
+			}
+			
+			// Get the number of vertices.
+			int GetNumPoints() const {
+				return points.size();
+			}
+			
+		private:
+			std::vector<Tmx::Point> points;
 	};
-};
+}
+;
