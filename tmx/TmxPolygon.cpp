@@ -29,28 +29,25 @@
 
 #include "TmxPolygon.h"
 
-namespace Tmx
-{
-    Polygon::Polygon()
-        : points()
-    {
-    }
-
-    void Polygon::Parse(const TiXmlNode *polygonNode)
-    {
-        char *pointsLine = strdup(polygonNode->ToElement()->Attribute("points"));
-
-        char *token = strtok(pointsLine, " ");
-        while (token)
-        {
-            Point point;
-            sscanf(token, "%d,%d", &point.x, &point.y);
-
-            points.push_back(point);
-
-            token = strtok(0, " ");
-        }
-
-        free(pointsLine);
-    }
+namespace Tmx {
+	Polygon::Polygon()
+			: points() {
+	}
+	
+	void Polygon::Parse(const TiXmlNode *polygonNode) {
+		char *pointsLine = strdup(
+				polygonNode->ToElement()->Attribute("points"));
+		
+		char *token = strtok(pointsLine, " ");
+		while (token) {
+			Point point;
+			sscanf(token, "%d,%d", &point.x, &point.y);
+			
+			points.push_back(point);
+			
+			token = strtok(0, " ");
+		}
+		
+		free(pointsLine);
+	}
 }

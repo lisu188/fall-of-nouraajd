@@ -2,52 +2,48 @@
 
 #include <view/gamescene.h>
 
-Teleporter::Teleporter()
-{
-    className="Teleporter";
-    this->setAnimation("images/buildings/teleporter/");
+Teleporter::Teleporter() {
+	className = "Teleporter";
+	this->setAnimation("images/buildings/teleporter/");
 }
 
-Teleporter::Teleporter(const Teleporter &teleporter):Teleporter()
-{
-    this->moveTo(teleporter.getPosX(),teleporter.getPosY(),teleporter.getPosZ());
+Teleporter::Teleporter(const Teleporter &teleporter)
+		: Teleporter() {
+	this->moveTo(teleporter.getPosX(), teleporter.getPosY(),
+			teleporter.getPosZ());
 }
 
-void Teleporter::onEnter()
-{
-    if(!enabled)return;
-    std::set<MapObject*> *objects=this->getMap()->getObjects();
-    std::set<MapObject*>::iterator it;
-    std::vector<Teleporter*> teleporters;
-    for(it=objects->begin(); it!=objects->end(); it++)
-    {
-        if((*it)->inherits("Teleporter"))
-        {
-            teleporters.push_back((Teleporter*)(*it));
-        }
-    }
-    if(teleporters.size()>1) {
-        Teleporter *teleporter;
-        do
-        {
-            teleporter=teleporters[rand()%teleporters.size()];
-        } while(teleporter==this);
-        GameScene::getPlayer()->moveTo(teleporter->getPosX(),teleporter->getPosY(),teleporter->getPosZ(),true);
-        map->move(0,0);
-    }
+void Teleporter::onEnter() {
+	if (!enabled)
+		return;
+	std::set<MapObject*> *objects = this->getMap()->getObjects();
+	std::set<MapObject*>::iterator it;
+	std::vector<Teleporter*> teleporters;
+	for (it = objects->begin(); it != objects->end(); it++) {
+		if ((*it)->inherits("Teleporter")) {
+			teleporters.push_back((Teleporter*) (*it));
+		}
+	}
+	if (teleporters.size() > 1) {
+		Teleporter *teleporter;
+		do {
+			teleporter = teleporters[rand() % teleporters.size()];
+		}
+		while (teleporter == this);
+		GameScene::getPlayer()->moveTo(teleporter->getPosX(),
+				teleporter->getPosY(), teleporter->getPosZ(), true);
+		map->move(0, 0);
+	}
 }
 
-void Teleporter::onMove()
-{
+void Teleporter::onMove() {
 }
 
-bool Teleporter::canSave()
-{
-    return true;
+bool Teleporter::canSave() {
+	return true;
 }
 
-Json::Value Teleporter::saveToJson()
-{
+Json::Value Teleporter::saveToJson() {
     Json::Value config;
     config["x"] = getPosX();
     config["y"] = getPosY();
@@ -56,8 +52,7 @@ Json::Value Teleporter::saveToJson()
     return config;
 }
 
-void Teleporter::loadFromJson(Json::Value config)
-{
+void Teleporter::loadFromJson(Json::Value config) {
     if (config.isArray()) {
         this->moveTo(config[(unsigned int)0].asInt(), config[(unsigned int)1].asInt(),
                      config[(unsigned int)2].asInt(), true);
@@ -70,7 +65,6 @@ void Teleporter::loadFromJson(Json::Value config)
     this->moveTo(x, y, z, true);
 }
 
-void Teleporter::loadFromProps(Tmx::PropertySet set)
-{
-    enabled=(set.GetLiteralProperty("enabled").compare("true")==0);
+void Teleporter::loadFromProps(Tmx::PropertySet set) {
+	enabled = (set.GetLiteralProperty("enabled").compare("true") == 0);
 }
