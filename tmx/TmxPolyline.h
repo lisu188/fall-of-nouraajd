@@ -33,29 +33,26 @@
 
 class TiXmlNode;
 
-namespace Tmx {
+namespace Tmx
+{
 	//-------------------------------------------------------------------------
 	// Class to store a Polyline of an Object.
 	//-------------------------------------------------------------------------
-	class Polyline {
-		public:
-			Polyline();
+	class Polyline
+	{
+	public:
+		Polyline();
 
-			// Parse the polyline node.
-			void Parse(const TiXmlNode *polylineNode);
+		// Parse the polyline node.
+		void Parse(const TiXmlNode *polylineNode);
 
-			// Get one of the vertices.
-			const Tmx::Point &GetPoint(int index) const {
-				return points[index];
-			}
-			
-			// Get the number of vertices.
-			int GetNumPoints() const {
-				return points.size();
-			}
-			
-		private:
-			std::vector<Tmx::Point> points;
+		// Get one of the vertices.
+		const Tmx::Point &GetPoint(int index) const { return points[index]; }
+
+		// Get the number of vertices.
+		int GetNumPoints() const { return points.size(); }
+
+	private:
+		std::vector< Tmx::Point > points;
 	};
-}
-;
+};

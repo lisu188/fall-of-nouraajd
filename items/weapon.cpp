@@ -5,20 +5,22 @@
 #include <view/gameview.h>
 #include <configuration/configurationprovider.h>
 
-Weapon::Weapon() {
+
+Weapon::Weapon()
+{
 }
 
-Weapon::Weapon(const Weapon &weapon) {
-	className = weapon.className;
-	Json::Value config =
-			(*ConfigurationProvider::getConfig("config/items.json"))[className];
-	loadFromJson(config);
+Weapon::Weapon(const Weapon &weapon)
+{
+    className=weapon.className;
+    Json::Value config=(*ConfigurationProvider::getConfig("config/items.json"))[className];
+    loadFromJson(config);
 }
 
 Interaction *Weapon::getInteraction() {
-	return interaction;
+    return interaction;
 }
 
 Stats *Weapon::getStats() {
-	return &bonus;
+    return &bonus;
 }

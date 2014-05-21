@@ -1,4 +1,5 @@
 #include "pathfinder.h"
 
-PathFinder::PathFinder() {
+PathFinder::PathFinder()
+{
 }

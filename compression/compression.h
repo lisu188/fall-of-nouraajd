@@ -2,8 +2,8 @@
 #define COMPRESSION_H
 #include <string>
 namespace Compression {
-	void compressFile(std::string path);
-	void decompressFile(std::string path);
+void compressFile(std::string path);
+void decompressFile(std::string path);
 }
 
 #endif // COMPRESSION_H
