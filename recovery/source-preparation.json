@@ -97,7 +97,7 @@
         "history_source_prep.py",
         "prepare-teleporter-serialization"
       ],
-      "log": "/tmp/nouraajd-bfg-recovery/native-early/verify/snapshot-6rqis3fx/preparation/teleporter-serialization.log",
+      "log": "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-cewd9a9v/preparation/teleporter-serialization.log",
       "name": "teleporterSerialization",
       "returnCode": 0,
       "timedOut": false
@@ -107,7 +107,7 @@
         "history_source_prep.py",
         "normalize-quoted-includes"
       ],
-      "log": "/tmp/nouraajd-bfg-recovery/native-early/verify/snapshot-6rqis3fx/preparation/include-separators.log",
+      "log": "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-cewd9a9v/preparation/include-separators.log",
       "name": "windowsIncludeSeparators",
       "returnCode": 0,
       "timedOut": false
