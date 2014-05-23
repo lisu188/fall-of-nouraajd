@@ -45,6 +45,16 @@ void Monster::onMove()
     }
     */
     this->addExp(rand()%25);
+    std::thread fillCache([](Coords a,Coords b)->void{
+        SmartPathFinder finder;
+        for(int i=-1;i<=1;i++)
+            for(int j=-1;j<=1;j++)
+                for(int k=-1;k<=1;k++)
+                    for(int l=-1;l<=1;l++){
+                      finder.findPath(Coords(a.x+i,a.y+j,a.z),Coords(b.x+i,b.y+j,b.z));
+                    }
+    },this->getCoords(),GameScene::getPlayer()->getCoords());
+    fillCache.detach();
 }
 
 void Monster::onEnter()
