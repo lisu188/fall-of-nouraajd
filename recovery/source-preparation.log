@@ -1,40 +1,33 @@
 
-=== teleporterSerialization ===
+=== mergedHeaders ===
 {
+  "donorCommit": "d07f08fe3e53a161b193f4d7bf1ebabc3ee59aa9",
   "inputs": {
-    "buildings/teleporter.cpp": "9ae1cae5155437bf82b045609a46e8ccb20f13a232197ce632661f302b8ef127",
-    "buildings/teleporter.h": "44bbca334d314cca3734d12b910759719fc9def89d3c6aded3d89940b203fa6d",
-    "json/json_value.cpp": "1c1a791ab8542f558b261757999067c82ce36d1d51a55323193b1a884b26f1d4"
+    "lib/json/json_value.cpp": "cd68d881764d28c310351545d30c317253bb8e3b032a4bef3db7f29d08c295c2",
+    "src/buildings/building.h": "102b07e24a3f7d4be7fbf31ab900ad7dd886838d6bd20c7f134c496220a07967",
+    "src/interactions/interaction.h": "19085596af03c3fd9f6399dc57b43b41d5e627bdca6ba803116a5a77e283c0e7",
+    "src/items/item.h": "9c8004f44df254caf6df774149dcd7062c1ef015fd5a0147ef14ad42a092c3db",
+    "src/main.cpp": "43c3b43b1ce639f8aba3c524230058b212f85bcef60fcadbb22b2bc2e6a017ff",
+    "src/pathfinder/pathfinder.h": "15d65f217389f8961857e43c6ac3f4b28d3f37e66ef76014a3d0617e3deadf64"
   },
-  "path": "buildings/recovery_teleporter.cpp",
-  "provenance": {
-    "legacyArrays": "Retain current enabled for legacy coordinate arrays; every reviewed original header initializes it to true",
-    "operation": "Replace only Teleporter save/load bodies with inverse JSON object coordinate-and-enabled storage",
-    "sourceCommit": "b79e759b0babe370c4cee4508ba9c5cb566d9d33"
+  "outputs": {
+    "lib/json/json_internalarray.inl": "1485f419dfb5a1dac1660ce6bfa7eaf86151e729e0c5c7222a993b7a7ee410a1",
+    "lib/json/json_internalmap.inl": "b22ffa1d13f98c2478d4c0c80d7d58fb57c619c7c1c420d846453b593ee0e73c",
+    "lib/json/json_valueiterator.inl": "3de2050b9aa170dfb0ee9caa37e482193bdc6ac140ed21262eba410bbb5d45dc",
+    "src/buildings/cave.h": "3273d835ca9951166a51c2647a49a343dc17420e28d449285ec16f689b9786c1",
+    "src/buildings/dungeon.h": "29e40e86447b93a8382b46612166ca55d74807db9e489abb75261a9d3ca1b652",
+    "src/buildings/teleporter.h": "29e40e86447b93a8382b46612166ca55d74807db9e489abb75261a9d3ca1b652",
+    "src/items/armor.h": "9dae658c684a616171993cd65b7dc3c39fe61ba7a853b7410ae011277d17ada1",
+    "src/items/belt.h": "9dae658c684a616171993cd65b7dc3c39fe61ba7a853b7410ae011277d17ada1",
+    "src/items/boots.h": "9dae658c684a616171993cd65b7dc3c39fe61ba7a853b7410ae011277d17ada1",
+    "src/items/gloves.h": "9dae658c684a616171993cd65b7dc3c39fe61ba7a853b7410ae011277d17ada1",
+    "src/items/helmet.h": "9dae658c684a616171993cd65b7dc3c39fe61ba7a853b7410ae011277d17ada1",
+    "src/items/smallweapon.h": "9dae658c684a616171993cd65b7dc3c39fe61ba7a853b7410ae011277d17ada1",
+    "src/items/weapon.h": "9dae658c684a616171993cd65b7dc3c39fe61ba7a853b7410ae011277d17ada1",
+    "src/pathfinder/dumbpathfinder.h": "2efb2850f37fd6fa57379055a082577a185f6c4ac18b770b5471fe9ff39744ae",
+    "src/pathfinder/randompathfinder.h": "2efb2850f37fd6fa57379055a082577a185f6c4ac18b770b5471fe9ff39744ae",
+    "src/pathfinder/smartpathfinder.h": "2efb2850f37fd6fa57379055a082577a185f6c4ac18b770b5471fe9ff39744ae"
   },
-  "qmakeArguments": [
-    "-after",
-    "SOURCES-=buildings/teleporter.cpp",
-    "SOURCES+=$$_PRO_FILE_PWD_/buildings/recovery_teleporter.cpp"
-  ],
-  "replaySha256": "de387b3a975950cd12119bd6505228f041ac4ee5869ca20aa93de9e26dc8af2c",
-  "sha256": "67cb28924233d74992cbe9bb107043c118afd330c22c6a763747bc2a9417d7cc",
-  "validationBoundary": "Game startup and shutdown with coordinate-and-enabled teleporter serialization compatibility; original sources unchanged"
+  "replaySha256": "2c508b5aef0177ff121cf8eb66cf14a37127bd791fb261b8b1e186a36cd18157",
+  "sourceCommit": "6cc78c34d64fdee43adca1b829ccf687daa62ced"
 }
-
-=== windowsIncludeSeparators ===
-[
-  {
-    "afterSha256": "10e5d6bae2b827282e81c61b797b66665aa8c927c0762ad99ef275fc3742adf4",
-    "beforeSha256": "36f343a29f069a2c3ddccfbd66a71ca35b4eacc22000cc49ae21e0a7825de29f",
-    "includes": [
-      {
-        "line": 13,
-        "originalInclude": "view\\playerlistview.h",
-        "preparedInclude": "view/playerlistview.h",
-        "resolvedHeader": "view/playerlistview.h"
-      }
-    ],
-    "path": "view/gamescene.cpp"
-  }
-]

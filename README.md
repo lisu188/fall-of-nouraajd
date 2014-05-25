@@ -1,41 +1,29 @@
 # Recovered game snapshot
 
-Original commit: `ebf0a64b9759e8a74655159986b8dfb1e85a3686`. Original tree: `b000ee9fde782fbcd92d8f91f3a2b8ff411ddb17`.
-Startup was verified from identical recovered sources at `ebf0a64b9759e8a74655159986b8dfb1e85a3686`.
+Original commit: `6cc78c34d64fdee43adca1b829ccf687daa62ced`. Original tree: `87ea8580651c311e0a64397425faa080539fb701`.
+Startup was verified from identical recovered sources at `6cc78c34d64fdee43adca1b829ccf687daa62ced`.
 
 This recovered version compiled and linked on Linux, started the real game on an isolated Xvfb display,
 loaded its map and a healthy player, rendered the screenshot below, and exited normally.
 
-Startup and shutdown used explicit teleporter serialization compatibility. The original save
-method writes coordinate array entries and then a named enabled field, which its JsonCpp rejects.
-A separate derived translation unit changes only the save/load bodies to inverse JSON objects
-containing x, y, z and enabled. All other teleporter methods retain their original bytes; the original
-source file and header remain unchanged. Legacy coordinate arrays preserve the current enabled value,
-initialized to true by every reviewed original header. The attached hash-pinned helper selects only
-that derived unit after reading the project, preserving teleporting and ordinary save/shutdown paths.
-Exact source/header/JsonCpp hashes and the semantic compatibility boundary are attached.
-This establishes startup and shutdown with that compatibility step; gameplay parity is unverified.
+The isolated build supplies the missing jsoncpp companions restored at #183.
+Where needed, forwarding headers expose declarations from the merged headers.
 
 ![Actual startup of this recovered game](recovery/startup.png)
 
 ## Build and run
 
-Install Qt 5 Core, Gui and Widgets development files and a C++ compiler, and Python 3 for the hash-pinned build-source preparation helper. The verified tool versions were:
+Install Qt 5 Core, Gui and Widgets development files and a C++ compiler. The verified tool versions were:
 
 - g++-5 (Ubuntu 5.4.0-6ubuntu1~16.04.12) 5.4.0 20160609
 - QMake version 3.0
 - Using Qt version 5.5.1 in /usr/lib/x86_64-linux-gnu
 
-Use a separate build copy for this version. Its original source contains Windows separators
-in quoted includes. The attached helper changes only those recorded literals, verifies each
-source file's original and prepared SHA256, and preserves the recovered snapshot's provenance.
-
 Build from this snapshot's root directory:
 
 ```sh
-python3 recovery/prepare_teleporter_serialization.py
-python3 recovery/prepare_build_sources.py
-qmake Game.pro QMAKE_CC=gcc-5 QMAKE_CXX=g++-5 QMAKE_LINK=g++-5 'QMAKE_CXXFLAGS+=-include functional' -after SOURCES-=buildings/teleporter.cpp 'SOURCES+=$$_PRO_FILE_PWD_/buildings/recovery_teleporter.cpp' -after TARGET=RecoveryGame DESTDIR=.
+python3 recovery/prepare_merged_headers.py
+qmake Game.pro QMAKE_CC=gcc-5 QMAKE_CXX=g++-5 QMAKE_LINK=g++-5 'QMAKE_CXXFLAGS+=-include functional' -after TARGET=RecoveryGame DESTDIR=.
 make -j"$(nproc)"
 mkdir -p save
 ./RecoveryGame
@@ -56,32 +44,59 @@ The genuine scene writes `save/game.sav` during shutdown. Verification prepared 
 parent directory before startup, without changing source files or replacing existing save data.
 The source call, source hash and created/preserved directory are recorded in verification metadata.
 
-compatibilityRepair: 1, exactOriginal: 90, reconstruction: 21.
+compatibilityRepair: 1, exactOriginal: 62, reconstruction: 48.
 
-- `Game.pro`: working reconstruction
-- `config/creatures.json`: {'evidence': ['historical image directory IDs', 'config/map.json saved creature state when present'], 'inferred': ['missing initial stats', 'levelStats encoding and progression'], 'kind': 'reconstructed-config', 'note': 'Saved state is retained; absent stats are positive synthetic defaults. Build/startup unverified.', 'sourceCommit': 'ebf0a64b9759e8a74655159986b8dfb1e85a3686', 'verified': False}
-- `config/items.json`: working reconstruction
+- `Game.pro`: content reconstruction of the BFG-removed original; qmake source and header lists follow the surviving relocated tree
+- `config/creatures.json`: {'evidence': ['historical image directory IDs', 'config/map.json saved creature state when present'], 'inferred': ['missing initial stats', 'levelStats encoding and progression'], 'kind': 'reconstructed-config', 'note': 'Saved state is retained; absent stats are positive synthetic defaults. Build/startup unverified.', 'sourceCommit': '6cc78c34d64fdee43adca1b829ccf687daa62ced', 'verified': False}
+- `config/items.json`: content reconstruction of the BFG-removed original; Adapted genuine119 config/items.json donor blob41d081fe6c796beab79afb418358b8af12cfa877 to missing original2081: adds only class Weapon/Armor/Potion from each actual legacy type, as required by surviving150 Item::getItem/QMetaType factory. Preserves every donor item name/path/stat/power/type. All lost original later item IDs, exact balance and slot metadata remain unavailable and are not invented. This is inferred missing-config compatibility, not original2081 bytes or gameplay parity. Root owns integration and affected-proof revalidation.
 - `config/map.tmx`: unverified donor reconstruction; authored Tiled geometry/object coordinates from 55e6516e:maps/map1/map.json converted to XML; missing target script reference omitted
-- `creatures/creature.cpp`: working reconstruction
-- `creatures/player.cpp`: Content reconstruction of the BFG-removed original; Missing #174 Player body candidate adapted from restored same-version compatible donor and accepted #150 Player refresh bridge: missing update() calls actual updateViews and emits genuine statsChanged. Unknown original body behavior/parity remains inferred.
 - `images/loading.png`: synthesized visible 32px placeholder; original artwork unavailable; unverified
-- `interactions/interaction.cpp`: working reconstruction
-- `json/json_batchallocator.h`: unverified upstream reconstruction; https://github.com/open-source-parsers/jsoncpp/tree/4fce396c9d3e27a8ab8fb88e94c1676e021ae3a6
-- `json/json_reader.cpp`: unverified upstream reconstruction; https://github.com/open-source-parsers/jsoncpp/tree/4fce396c9d3e27a8ab8fb88e94c1676e021ae3a6
-- `json/json_value.cpp`: unverified upstream reconstruction; https://github.com/open-source-parsers/jsoncpp/tree/4fce396c9d3e27a8ab8fb88e94c1676e021ae3a6
-- `json/json_writer.cpp`: unverified upstream reconstruction; https://github.com/open-source-parsers/jsoncpp/tree/4fce396c9d3e27a8ab8fb88e94c1676e021ae3a6
-- `map/map.cpp`: Content reconstruction of the BFG-removed original; Missing body inferred by carrying accepted #173 reconstruction d02cbf0787a6f7b53b8f64abdd9f27f7f28e3524; exact surviving same-path header bytes are unchanged. Unknown removed implementation changes and historical gameplay parity are unverified. Missing body inferred by carrying accepted #170 reconstruction 6b6244e51180200914bebe6d31d0fc5f372d925b; exact surviving same-path header bytes are unchanged. Unknown removed implementation changes and historical gameplay parity are unverified. Missing #166 Map body inferred from native-verified #164/#165. Genuine getObjects changes from inline to external: return actual mapObjects. Added optional movement-completion callback dispatched after real animation or immediate non-silent move; base callback policy defaults to no action because no surviving #166 caller defines base effects. Genuine derived callbacks are dispatched virtually. Default policy, removed implementation changes and gameplay parity remain inferred. Missing #164 Map body inferred from accepted #163; only genuine header change adds virtual loadFromProps, now invoked with actual TMX object properties before positioning/adding each genuine object. Unknown original body behavior remains inferred. Missing body inferred by carrying accepted #161 reconstruction e197feb3953c9c65e51587a60fc2fe66155a063e; exact surviving same-path header bytes are unchanged. Unknown removed implementation changes and historical gameplay parity are unverified. Missing body inferred by carrying accepted #159 reconstruction f59850bc2948c48c34f05161ff83bf840234b80b; exact surviving same-path header bytes are unchanged. Unknown removed implementation changes and historical gameplay parity are unverified. Missing #159 Map/MapObject body inferred from accepted #150 body and genuine same-version APIs/config. Added real TMX layer/tileset/property loading and authored entry coordinates from genuine map.tmx, with available genuine object classes/configured items/creatures. Authored TMX names without a class in this revision (StartEvent, Market) are explicitly logged, not replaced by stand-ins. Object property behavior and removed body gameplay semantics remain unverified; no original edited. Corrected missing-body ownership: removeObject detaches without deleting, as genuine Item::onEnter transfers the live item to player inventory; original AnimatedObject/Destroyer retains lifetime registration. Actual QObject destroyed-signal before/after regression required.
-- `pathfinder/smartpathfinder.cpp`: unverified donor reconstruction; b79e759b0babe370c4cee4508ba9c5cb566d9d33:pathfinder/smartpathfinder.cpp; headerMatch=0; apiOverlap=2142/10000; distance=1
-- `stats/stats.cpp`: working reconstruction
-- `tmx/TmxLayer.cpp`: unverified upstream reconstruction; https://github.com/tamatias/tmxparser/tree/6fa4d38742313b6365df0d224b8978be1eb81290; adapted vendored tinyxml/zlib include paths to historical directory layout
-- `tmx/TmxMap.cpp`: unverified upstream reconstruction; https://github.com/tamatias/tmxparser/tree/6fa4d38742313b6365df0d224b8978be1eb81290; adapted vendored tinyxml/zlib include paths to historical directory layout
-- `tmx/TmxObject.cpp`: unverified donor reconstruction; 779fb803ff021de5e74ed3b24d7c31a9adcaa236:tmx/TmxObject.cpp; headerMatch=0; apiOverlap=10000/10000; distance=2
-- `tmx/TmxTileset.cpp`: unverified upstream reconstruction; https://github.com/tamatias/tmxparser/tree/6fa4d38742313b6365df0d224b8978be1eb81290; adapted vendored tinyxml/zlib include paths to historical directory layout
-- `view/gamescene.cpp`: Content reconstruction of the BFG-removed original; Missing body inferred by carrying accepted #173 reconstruction 38e482ddb223b7f3e4c6fe6392186bda488ccda4; exact surviving same-path header bytes are unchanged. Unknown removed implementation changes and historical gameplay parity are unverified. Missing body inferred by carrying accepted #166 reconstruction f50450a42a588a0a036ebff412b6ff245a8222cc; exact surviving same-path header bytes are unchanged. Unknown removed implementation changes and historical gameplay parity are unverified. Missing body inferred by carrying accepted #159 reconstruction 2e11b4ac70d1dd42150a0e3265af39cbe00d0955; exact surviving same-path header bytes are unchanged. Unknown removed implementation changes and historical gameplay parity are unverified. Missing #159 GameScene body inferred from accepted #150 body and newly declared Map::loadMapFromTmx/getEntry APIs plus genuine config/map.tmx. Loads actual authored terrain and places real Sorcerer at authored x/y/z. Selection of TMX over legacy JSON, event behavior and historical gameplay parity are inference; no original edited.
-- `view/gameview.cpp`: working reconstruction
-- `json/LICENSE`: https://github.com/open-source-parsers/jsoncpp/tree/4fce396c9d3e27a8ab8fb88e94c1676e021ae3a6 upstream distribution license
+- `lib/base64/base64.cpp`: unverified donor reconstruction; 779fb803ff021de5e74ed3b24d7c31a9adcaa236:base64/base64.cpp; headerMatch=0; apiOverlap=10000/10000; distance=3
+- `lib/json/json_batchallocator.h`: unverified upstream reconstruction; https://github.com/open-source-parsers/jsoncpp/tree/4fce396c9d3e27a8ab8fb88e94c1676e021ae3a6; adapted json include prefix to historical lib/json layout
+- `lib/json/json_reader.cpp`: unverified upstream reconstruction; https://github.com/open-source-parsers/jsoncpp/tree/4fce396c9d3e27a8ab8fb88e94c1676e021ae3a6; adapted json include prefix to historical lib/json layout
+- `lib/json/json_value.cpp`: unverified upstream reconstruction; https://github.com/open-source-parsers/jsoncpp/tree/4fce396c9d3e27a8ab8fb88e94c1676e021ae3a6; adapted json include prefix to historical lib/json layout
+- `lib/json/json_writer.cpp`: unverified upstream reconstruction; https://github.com/open-source-parsers/jsoncpp/tree/4fce396c9d3e27a8ab8fb88e94c1676e021ae3a6; adapted json include prefix to historical lib/json layout
+- `lib/json/reader.h`: unverified upstream reconstruction; https://github.com/open-source-parsers/jsoncpp/tree/4fce396c9d3e27a8ab8fb88e94c1676e021ae3a6; adapted json include prefix to historical lib/json layout
+- `lib/json/value.h`: unverified upstream reconstruction; https://github.com/open-source-parsers/jsoncpp/tree/4fce396c9d3e27a8ab8fb88e94c1676e021ae3a6; adapted json include prefix to historical lib/json layout
+- `lib/json/writer.h`: unverified upstream reconstruction; https://github.com/open-source-parsers/jsoncpp/tree/4fce396c9d3e27a8ab8fb88e94c1676e021ae3a6; adapted json include prefix to historical lib/json layout
+- `lib/tinyxml/tinystr.h`: unverified upstream reconstruction; https://github.com/tamatias/tmxparser/tree/6fa4d38742313b6365df0d224b8978be1eb81290
+- `lib/tinyxml/tinyxml.cpp`: unverified upstream reconstruction; https://github.com/tamatias/tmxparser/tree/6fa4d38742313b6365df0d224b8978be1eb81290
+- `lib/tinyxml/tinyxml.h`: unverified upstream reconstruction; https://github.com/tamatias/tmxparser/tree/6fa4d38742313b6365df0d224b8978be1eb81290
+- `lib/tinyxml/tinyxmlparser.cpp`: unverified upstream reconstruction; https://github.com/tamatias/tmxparser/tree/6fa4d38742313b6365df0d224b8978be1eb81290
+- `lib/tmx/TmxLayer.cpp`: unverified upstream reconstruction; https://github.com/tamatias/tmxparser/tree/6fa4d38742313b6365df0d224b8978be1eb81290; adapted vendored tinyxml/zlib include paths to historical directory layout
+- `lib/tmx/TmxLayer.h`: unverified upstream reconstruction; https://github.com/tamatias/tmxparser/tree/6fa4d38742313b6365df0d224b8978be1eb81290; adapted vendored tinyxml/zlib include paths to historical directory layout
+- `lib/tmx/TmxMap.cpp`: unverified upstream reconstruction; https://github.com/tamatias/tmxparser/tree/6fa4d38742313b6365df0d224b8978be1eb81290; adapted vendored tinyxml/zlib include paths to historical directory layout
+- `lib/tmx/TmxMap.h`: unverified upstream reconstruction; https://github.com/tamatias/tmxparser/tree/6fa4d38742313b6365df0d224b8978be1eb81290; adapted vendored tinyxml/zlib include paths to historical directory layout
+- `lib/tmx/TmxObject.cpp`: unverified donor reconstruction; 181f31e1e9a7f3516c7fbd3d4400aa0822c1d387:lib/tmx/TmxObject.cpp; headerMatch=0; apiOverlap=10000/10000; distance=55
+- `lib/tmx/TmxTileset.cpp`: unverified upstream reconstruction; https://github.com/tamatias/tmxparser/tree/6fa4d38742313b6365df0d224b8978be1eb81290; adapted vendored tinyxml/zlib include paths to historical directory layout
+- `lib/zlib/adler32.c`: Unmodified official zlib v1.2.5 adler32.c; Git blob verified against official tag tree 9712272c78b9d9c93746d9c8e156a3728c65ca72. Coherent same-version donor replaces mixed1.2.5/1.2.5 fallback; exact original only when originalHashMatches=true.
+- `lib/zlib/crc32.c`: Unmodified official zlib v1.2.5 crc32.c; Git blob verified against official tag tree 9712272c78b9d9c93746d9c8e156a3728c65ca72. Coherent same-version donor replaces mixed1.2.5/1.2.5 fallback; exact original only when originalHashMatches=true.
+- `lib/zlib/deflate.c`: Unmodified official zlib v1.2.5 deflate.c; Git blob verified against official tag tree 9712272c78b9d9c93746d9c8e156a3728c65ca72. Coherent same-version donor replaces mixed1.2.5/1.2.5 fallback; exact original only when originalHashMatches=true.
+- `lib/zlib/deflate.h`: Unmodified official zlib v1.2.5 deflate.h; Git blob verified against official tag tree 9712272c78b9d9c93746d9c8e156a3728c65ca72. Coherent same-version donor replaces mixed1.2.5/1.2.5 fallback; exact original only when originalHashMatches=true.
+- `lib/zlib/gzlib.c`: Unmodified official zlib v1.2.5 gzlib.c; Git blob verified against official tag tree 9712272c78b9d9c93746d9c8e156a3728c65ca72. Coherent same-version donor replaces mixed1.2.5/1.2.5 fallback; exact original only when originalHashMatches=true.
+- `lib/zlib/gzread.c`: Unmodified official zlib v1.2.5 gzread.c; Git blob verified against official tag tree 9712272c78b9d9c93746d9c8e156a3728c65ca72. Coherent same-version donor replaces mixed1.2.5/1.2.5 fallback; exact original only when originalHashMatches=true.
+- `lib/zlib/gzwrite.c`: Unmodified official zlib v1.2.5 gzwrite.c; Git blob verified against official tag tree 9712272c78b9d9c93746d9c8e156a3728c65ca72. Coherent same-version donor replaces mixed1.2.5/1.2.5 fallback; exact original only when originalHashMatches=true.
+- `lib/zlib/infback.c`: Unmodified official zlib v1.2.5 infback.c; Git blob verified against official tag tree 9712272c78b9d9c93746d9c8e156a3728c65ca72. Coherent same-version donor replaces mixed1.2.5/1.2.5 fallback; exact original only when originalHashMatches=true.
+- `lib/zlib/inffast.c`: Unmodified official zlib v1.2.5 inffast.c; Git blob verified against official tag tree 9712272c78b9d9c93746d9c8e156a3728c65ca72. Coherent same-version donor replaces mixed1.2.5/1.2.5 fallback; exact original only when originalHashMatches=true.
+- `lib/zlib/inflate.c`: Unmodified official zlib v1.2.5 inflate.c; Git blob verified against official tag tree 9712272c78b9d9c93746d9c8e156a3728c65ca72. Coherent same-version donor replaces mixed1.2.5/1.2.5 fallback; exact original only when originalHashMatches=true.
+- `lib/zlib/inftrees.c`: Unmodified official zlib v1.2.5 inftrees.c; Git blob verified against official tag tree 9712272c78b9d9c93746d9c8e156a3728c65ca72. Coherent same-version donor replaces mixed1.2.5/1.2.5 fallback; exact original only when originalHashMatches=true.
+- `lib/zlib/trees.c`: Unmodified official zlib v1.2.5 trees.c; Git blob verified against official tag tree 9712272c78b9d9c93746d9c8e156a3728c65ca72. Coherent same-version donor replaces mixed1.2.5/1.2.5 fallback; exact original only when originalHashMatches=true.
+- `lib/zlib/zlib.h`: Unmodified official zlib v1.2.5 zlib.h; Git blob verified against official tag tree 9712272c78b9d9c93746d9c8e156a3728c65ca72. Coherent same-version donor replaces mixed1.2.5/1.2.5 fallback; exact original only when originalHashMatches=true.
+- `lib/zlib/zutil.c`: Unmodified official zlib v1.2.5 zutil.c; Git blob verified against official tag tree 9712272c78b9d9c93746d9c8e156a3728c65ca72. Coherent same-version donor replaces mixed1.2.5/1.2.5 fallback; exact original only when originalHashMatches=true.
+- `lib/zlib/zutil.h`: Unmodified official zlib v1.2.5 zutil.h; Git blob verified against official tag tree 9712272c78b9d9c93746d9c8e156a3728c65ca72. Coherent same-version donor replaces mixed1.2.5/1.2.5 fallback; exact original only when originalHashMatches=true.
+- `src/buildings/building.cpp`: content reconstruction of the BFG-removed original; #180 refactor merged the per-class sources into this unit, matching the same-commit merged header; bodies concatenated verbatim from the #179 restored building.cpp, cave.cpp, dungeon.cpp and teleporter.cpp (accepted #179 tree), includes rewritten to the #180 src/ layout; merge order and include set inferred; missing virtual methods inferred from the #182 reconstruction; matching #182 teleporter coordinates and enabled-state object avoids mixing JSON arrays and objects on shutdown
+- `src/creatures/creature.cpp`: content reconstruction of the BFG-removed original; moved by the #180 refactor; carried from the accepted #179 reconstruction of the same file with includes rewritten to the #180 src/ layout and merged headers. The #180 tree itself does not build: its surviving main.cpp includes deleted headers and registers Interaction without its declaration
+- `src/creatures/player.cpp`: content reconstruction of the BFG-removed original; moved by the #180 refactor; carried from the accepted #179 reconstruction of the same file with includes rewritten to the #180 src/ layout and merged headers; interaction.h included directly because the merged item.h no longer provides it. The #180 tree itself does not build: its surviving main.cpp includes deleted headers and registers Interaction without its declaration
+- `src/interactions/interaction.cpp`: content reconstruction of the BFG-removed original; moved by the #180 refactor; carried from the accepted #179 reconstruction of the same file with includes rewritten to the #180 src/ layout and merged headers. The #180 tree itself does not build: its surviving main.cpp includes deleted headers and registers Interaction without its declaration
+- `src/items/item.cpp`: content reconstruction of the BFG-removed original; #180 refactor merged the per-class sources into this unit, matching the same-commit merged header; bodies concatenated verbatim from the #179 restored item.cpp, armor.cpp, belt.cpp, helmet.cpp, boots.cpp, gloves.cpp, weapon.cpp and smallweapon.cpp (accepted #179 tree), includes rewritten to the #180 src/ layout; merge order and include set inferred; missing virtual methods inferred from the #182 reconstruction
+- `src/map/map.cpp`: content reconstruction of the BFG-removed original; moved by the #180 refactor; carried from the accepted #179 reconstruction of the same file with includes rewritten to the #180 src/ layout and merged headers; MapObject animation member renamed dynamicAnimation and onMoveEnd removed to match the same-commit map.h. The #180 tree itself does not build: its surviving main.cpp includes deleted headers and registers Interaction without its declaration
+- `src/pathfinder/pathfinder.cpp`: content reconstruction of the BFG-removed original; #180 refactor merged the per-class sources into this unit, matching the same-commit merged header; bodies concatenated verbatim from the #179 restored pathfinder.cpp, dumbpathfinder.cpp, randompathfinder.cpp and smartpathfinder.cpp (accepted #179 tree), includes rewritten to the #180 src/ layout; merge order and include set inferred
+- `src/stats/stats.cpp`: content reconstruction of the BFG-removed original; moved by the #180 refactor; carried from the accepted #179 reconstruction of the same file with includes rewritten to the #180 src/ layout and merged headers. The #180 tree itself does not build: its surviving main.cpp includes deleted headers and registers Interaction without its declaration
+- `src/view/gamescene.cpp`: content reconstruction of the BFG-removed original; moved by the #180 refactor; carried from the accepted #179 reconstruction of the same file with includes rewritten to the #180 src/ layout and merged headers; removed compression/compression.h include (directory deleted in #180, unused). The #180 tree itself does not build: its surviving main.cpp includes deleted headers and registers Interaction without its declaration
+- `src/view/gameview.cpp`: content reconstruction of the BFG-removed original; moved by the #180 refactor; carried from the accepted #179 reconstruction of the same file with includes rewritten to the #180 src/ layout and merged headers. The #180 tree itself does not build: its surviving main.cpp includes deleted headers and registers Interaction without its declaration
+- `lib/json/LICENSE`: https://github.com/open-source-parsers/jsoncpp/tree/4fce396c9d3e27a8ab8fb88e94c1676e021ae3a6 upstream distribution license
 
-Restored source fingerprint: `8bac6630e69e3f079a5cc136ab31e350e0285e1e9b2d16be35f34a0eccad014d`.
+Restored source fingerprint: `f4b7e0dc6c1f960e86b64460704001cdbc96cb583223cd1318550d6808dbdc43`.
 
 The restored source fingerprint identifies inputs before generation. The
 [source preparation metadata](recovery/source-preparation.json) records the original inputs
