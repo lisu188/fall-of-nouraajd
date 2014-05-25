@@ -8,7 +8,9 @@
     "src/interactions/interaction.h": "19085596af03c3fd9f6399dc57b43b41d5e627bdca6ba803116a5a77e283c0e7",
     "src/items/item.h": "9c8004f44df254caf6df774149dcd7062c1ef015fd5a0147ef14ad42a092c3db",
     "src/main.cpp": "43c3b43b1ce639f8aba3c524230058b212f85bcef60fcadbb22b2bc2e6a017ff",
-    "src/pathfinder/pathfinder.h": "15d65f217389f8961857e43c6ac3f4b28d3f37e66ef76014a3d0617e3deadf64"
+    "src/map/map.h": "c8116f101a6955bf14e40a0c22408e5321209f25c0682f0399e4bff2e61403cd",
+    "src/pathfinder/pathfinder.h": "3455f3b943ce96f8c1d9882742fe1d6d6144ab6e054db963163aaae26b897743",
+    "src/stats/stats.h": "462ead5a1e2f69858c6574e13efeb3dcc157d82f48dbf6d7968335f6af0d8bef"
   },
   "outputs": {
     "lib/json/json_internalarray.inl": "1485f419dfb5a1dac1660ce6bfa7eaf86151e729e0c5c7222a993b7a7ee410a1",
@@ -24,10 +26,13 @@
     "src/items/helmet.h": "9dae658c684a616171993cd65b7dc3c39fe61ba7a853b7410ae011277d17ada1",
     "src/items/smallweapon.h": "9dae658c684a616171993cd65b7dc3c39fe61ba7a853b7410ae011277d17ada1",
     "src/items/weapon.h": "9dae658c684a616171993cd65b7dc3c39fe61ba7a853b7410ae011277d17ada1",
+    "src/map/coords.h": "64accb8e980f14f386e4d24105d40b3322518b3ba8aa8e5917d5c27c8a3d7a53",
+    "src/map/playeranimation.h": "64accb8e980f14f386e4d24105d40b3322518b3ba8aa8e5917d5c27c8a3d7a53",
     "src/pathfinder/dumbpathfinder.h": "2efb2850f37fd6fa57379055a082577a185f6c4ac18b770b5471fe9ff39744ae",
     "src/pathfinder/randompathfinder.h": "2efb2850f37fd6fa57379055a082577a185f6c4ac18b770b5471fe9ff39744ae",
-    "src/pathfinder/smartpathfinder.h": "2efb2850f37fd6fa57379055a082577a185f6c4ac18b770b5471fe9ff39744ae"
+    "src/pathfinder/smartpathfinder.h": "2efb2850f37fd6fa57379055a082577a185f6c4ac18b770b5471fe9ff39744ae",
+    "src/stats/damage.h": "64b9c10e5d8d61cb11a5dafce486f7870acfd767eea4b159eefe8e0bbacec7fb"
   },
   "replaySha256": "2c508b5aef0177ff121cf8eb66cf14a37127bd791fb261b8b1e186a36cd18157",
-  "sourceCommit": "6cc78c34d64fdee43adca1b829ccf687daa62ced"
+  "sourceCommit": "8d1b776c2730296dd7f1ed3b3918e83bcb3a4ab6"
 }

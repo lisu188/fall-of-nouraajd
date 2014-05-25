@@ -2,7 +2,6 @@
 #define TILE_H
 
 #include <QGraphicsPixmapItem>
-#include <src/map/coords.h>
 #include <src/map/map.h>
 #include <lib/json/json.h>
 #include <unordered_map>
