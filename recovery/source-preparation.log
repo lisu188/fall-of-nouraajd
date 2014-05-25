@@ -3,36 +3,13 @@
 {
   "donorCommit": "d07f08fe3e53a161b193f4d7bf1ebabc3ee59aa9",
   "inputs": {
-    "lib/json/json_value.cpp": "cd68d881764d28c310351545d30c317253bb8e3b032a4bef3db7f29d08c295c2",
-    "src/buildings/building.h": "102b07e24a3f7d4be7fbf31ab900ad7dd886838d6bd20c7f134c496220a07967",
-    "src/interactions/interaction.h": "19085596af03c3fd9f6399dc57b43b41d5e627bdca6ba803116a5a77e283c0e7",
-    "src/items/item.h": "9c8004f44df254caf6df774149dcd7062c1ef015fd5a0147ef14ad42a092c3db",
-    "src/main.cpp": "43c3b43b1ce639f8aba3c524230058b212f85bcef60fcadbb22b2bc2e6a017ff",
-    "src/map/map.h": "c8116f101a6955bf14e40a0c22408e5321209f25c0682f0399e4bff2e61403cd",
-    "src/pathfinder/pathfinder.h": "3455f3b943ce96f8c1d9882742fe1d6d6144ab6e054db963163aaae26b897743",
-    "src/stats/stats.h": "462ead5a1e2f69858c6574e13efeb3dcc157d82f48dbf6d7968335f6af0d8bef"
+    "lib/json/json_value.cpp": "cd68d881764d28c310351545d30c317253bb8e3b032a4bef3db7f29d08c295c2"
   },
   "outputs": {
     "lib/json/json_internalarray.inl": "1485f419dfb5a1dac1660ce6bfa7eaf86151e729e0c5c7222a993b7a7ee410a1",
     "lib/json/json_internalmap.inl": "b22ffa1d13f98c2478d4c0c80d7d58fb57c619c7c1c420d846453b593ee0e73c",
-    "lib/json/json_valueiterator.inl": "3de2050b9aa170dfb0ee9caa37e482193bdc6ac140ed21262eba410bbb5d45dc",
-    "src/buildings/cave.h": "3273d835ca9951166a51c2647a49a343dc17420e28d449285ec16f689b9786c1",
-    "src/buildings/dungeon.h": "29e40e86447b93a8382b46612166ca55d74807db9e489abb75261a9d3ca1b652",
-    "src/buildings/teleporter.h": "29e40e86447b93a8382b46612166ca55d74807db9e489abb75261a9d3ca1b652",
-    "src/items/armor.h": "9dae658c684a616171993cd65b7dc3c39fe61ba7a853b7410ae011277d17ada1",
-    "src/items/belt.h": "9dae658c684a616171993cd65b7dc3c39fe61ba7a853b7410ae011277d17ada1",
-    "src/items/boots.h": "9dae658c684a616171993cd65b7dc3c39fe61ba7a853b7410ae011277d17ada1",
-    "src/items/gloves.h": "9dae658c684a616171993cd65b7dc3c39fe61ba7a853b7410ae011277d17ada1",
-    "src/items/helmet.h": "9dae658c684a616171993cd65b7dc3c39fe61ba7a853b7410ae011277d17ada1",
-    "src/items/smallweapon.h": "9dae658c684a616171993cd65b7dc3c39fe61ba7a853b7410ae011277d17ada1",
-    "src/items/weapon.h": "9dae658c684a616171993cd65b7dc3c39fe61ba7a853b7410ae011277d17ada1",
-    "src/map/coords.h": "64accb8e980f14f386e4d24105d40b3322518b3ba8aa8e5917d5c27c8a3d7a53",
-    "src/map/playeranimation.h": "64accb8e980f14f386e4d24105d40b3322518b3ba8aa8e5917d5c27c8a3d7a53",
-    "src/pathfinder/dumbpathfinder.h": "2efb2850f37fd6fa57379055a082577a185f6c4ac18b770b5471fe9ff39744ae",
-    "src/pathfinder/randompathfinder.h": "2efb2850f37fd6fa57379055a082577a185f6c4ac18b770b5471fe9ff39744ae",
-    "src/pathfinder/smartpathfinder.h": "2efb2850f37fd6fa57379055a082577a185f6c4ac18b770b5471fe9ff39744ae",
-    "src/stats/damage.h": "64b9c10e5d8d61cb11a5dafce486f7870acfd767eea4b159eefe8e0bbacec7fb"
+    "lib/json/json_valueiterator.inl": "3de2050b9aa170dfb0ee9caa37e482193bdc6ac140ed21262eba410bbb5d45dc"
   },
   "replaySha256": "2c508b5aef0177ff121cf8eb66cf14a37127bd791fb261b8b1e186a36cd18157",
-  "sourceCommit": "8d1b776c2730296dd7f1ed3b3918e83bcb3a4ab6"
+  "sourceCommit": "09df518e2037d12f912da6c774635a91c886c097"
 }

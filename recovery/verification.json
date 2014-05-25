@@ -1,7 +1,7 @@
 {
   "adapter": {
-    "config": "/tmp/nouraajd-final181/verify/snapshot-xnkdcnnc/observer/recovery_smoke_config.h",
-    "configSha256": "ac13630bb0444dfc9a00b06c33fa5fa9605ac924993749e26dfdbfda18c7e359",
+    "config": "/tmp/nouraajd-final182/verify/snapshot-69bjqohq/observer/recovery_smoke_config.h",
+    "configSha256": "fff0c7e3dfe94019a1a0dd37faf5745089f45df514b6a1e7d81ba0f0a9eb8465",
     "id": "classic-3d",
     "mode": "game",
     "overlays": [],
@@ -32,11 +32,11 @@
     },
     "source-preparation.json": {
       "path": "source-preparation.json",
-      "sha256": "d7753d393edcd27c9de9818e14bc307d9d5b65476c356d3dc15830e18e0efe7d"
+      "sha256": "f2cfd63fe27f0e403f63cd4fcfcfdbcf0db883acb1e04457049485485679196b"
     },
     "source-preparation.log": {
       "path": "source-preparation.log",
-      "sha256": "97991127e981156ed4708e0f543c725e65dd2f44803311d2a438676e0b5e8f65"
+      "sha256": "e998c149266d1eb9ea5ffc41840e261d231e1309352dff413740dbeec9c6ecec"
     }
   },
   "build": {
@@ -44,17 +44,17 @@
       "make",
       "-j8"
     ],
-    "log": "/tmp/nouraajd-final181/verify/snapshot-xnkdcnnc/build.log",
+    "log": "/tmp/nouraajd-final182/verify/snapshot-69bjqohq/build.log",
     "returnCode": 0,
-    "seconds": 14.265,
+    "seconds": 14.05,
     "timedOut": false
   },
   "configure": {
     "command": [
       "qmake",
-      "/tmp/nouraajd-final181/verify/snapshot-xnkdcnnc/source/Game.pro",
+      "/tmp/nouraajd-final182/verify/snapshot-69bjqohq/source/Game.pro",
       "-o",
-      "/tmp/nouraajd-final181/verify/snapshot-xnkdcnnc/build/Makefile",
+      "/tmp/nouraajd-final182/verify/snapshot-69bjqohq/build/Makefile",
       "QMAKE_CC=gcc-5",
       "QMAKE_CXX=g++-5",
       "QMAKE_LINK=g++-5",
@@ -64,15 +64,15 @@
       "DESTDIR=.",
       "CONFIG-=app_bundle",
       "SOURCES+=/tmp/nouraajd-next180/recovery/smoke/game_startup.cpp",
-      "INCLUDEPATH+=/tmp/nouraajd-final181/verify/snapshot-xnkdcnnc/source",
-      "INCLUDEPATH+=/tmp/nouraajd-final181/verify/snapshot-xnkdcnnc/observer"
+      "INCLUDEPATH+=/tmp/nouraajd-final182/verify/snapshot-69bjqohq/source",
+      "INCLUDEPATH+=/tmp/nouraajd-final182/verify/snapshot-69bjqohq/observer"
     ],
-    "log": "/tmp/nouraajd-final181/verify/snapshot-xnkdcnnc/configure.log",
+    "log": "/tmp/nouraajd-final182/verify/snapshot-69bjqohq/configure.log",
     "returnCode": 0,
-    "seconds": 0.064,
+    "seconds": 0.173,
     "timedOut": false
   },
-  "evidenceDir": "/tmp/nouraajd-final181/verify/evidence/6659d3938910aee89bd4bdf78143eab1ee2b518bd1134172ee45bfcc9f3e4c71",
+  "evidenceDir": "/tmp/nouraajd-final182/verify/evidence/42e85bf79f07ce41cb8b1e18cb630bd49cf5f9637d8c5f8ff7ca9985ae9fbdca",
   "fileLookup": {
     "command": [
       "g++-5",
@@ -81,20 +81,20 @@
       "-O2",
       "-std=c++11",
       "-o",
-      "/tmp/nouraajd-final181/verify/snapshot-xnkdcnnc/observer/libwindowspaths.so",
+      "/tmp/nouraajd-final182/verify/snapshot-69bjqohq/observer/libwindowspaths.so",
       "/tmp/nouraajd-next180/recovery/smoke/windows_paths.cpp",
       "-ldl"
     ],
-    "log": "/tmp/nouraajd-final181/verify/snapshot-xnkdcnnc/file-lookup.log",
+    "log": "/tmp/nouraajd-final182/verify/snapshot-69bjqohq/file-lookup.log",
     "returnCode": 0,
-    "seconds": 0.517,
+    "seconds": 0.165,
     "semantics": "Windows-style case-insensitive file lookup for the game process",
     "timedOut": false
   },
-  "fingerprint": "6659d3938910aee89bd4bdf78143eab1ee2b518bd1134172ee45bfcc9f3e4c71",
+  "fingerprint": "42e85bf79f07ce41cb8b1e18cb630bd49cf5f9637d8c5f8ff7ca9985ae9fbdca",
   "libraryAliases": {
     "aliases": {},
-    "directory": "/tmp/nouraajd-final181/verify/snapshot-xnkdcnnc/observer/library-aliases"
+    "directory": "/tmp/nouraajd-final182/verify/snapshot-69bjqohq/observer/library-aliases"
   },
   "project": "Game.pro",
   "recipe": {
@@ -214,15 +214,15 @@
         "reason": "generated binary, redistributable, or packaged artifact"
       }
     ],
-    "outputDir": "/tmp/nouraajd-final181/verify/snapshot-xnkdcnnc/source",
+    "outputDir": "/tmp/nouraajd-final182/verify/snapshot-69bjqohq/source",
     "restored": [
       {
         "markerPath": "Game.pro.REMOVED.git-id",
         "method": "reconstruction",
-        "originalBlob": "9bb700ac866acc7a994ecd4a2bba0e9dcd566398",
+        "originalBlob": "e53eac1625cfdc41a4406407100b5ed4b8bc2d59",
         "path": "Game.pro",
-        "provenance": "content reconstruction of the BFG-removed original; qmake source and header lists follow the surviving relocated tree",
-        "replacementBlob": "8e7837686821c1cc8ab3e42ad3a37f11c080d463"
+        "provenance": "content reconstruction of the BFG-removed original; qmake project regenerated with 65 sources inferred without a surviving object_script listing: reconstructed 6465fa10:Game.pro SOURCES reconciled with this tree's files; QT_NO_KEYWORDS dropped because this tree uses bare Qt keywords; Python libraries dropped because this tree does not include Python; settings from reconstructed 6465fa10:Game.pro",
+        "replacementBlob": "156d397d6ea584b7e31174bc330bfb64a699392c"
       },
       {
         "markerPath": "config/creatures.json.REMOVED.git-id",
@@ -240,7 +240,7 @@
           ],
           "kind": "reconstructed-config",
           "note": "Saved state is retained; absent stats are positive synthetic defaults. Build/startup unverified.",
-          "sourceCommit": "8d1b776c2730296dd7f1ed3b3918e83bcb3a4ab6",
+          "sourceCommit": "09df518e2037d12f912da6c774635a91c886c097",
           "verified": false
         },
         "replacementBlob": "b0a928006abf104b29e0c9bbabd93a30a63cd3aa"
@@ -666,7 +666,7 @@
         "method": "reconstruction",
         "originalBlob": "41a50c87bd079c82680581fb517b23a993bcdab7",
         "path": "lib/base64/base64.cpp",
-        "provenance": "unverified donor reconstruction; 779fb803ff021de5e74ed3b24d7c31a9adcaa236:base64/base64.cpp; headerMatch=0; apiOverlap=10000/10000; distance=4",
+        "provenance": "unverified donor reconstruction; 779fb803ff021de5e74ed3b24d7c31a9adcaa236:base64/base64.cpp; headerMatch=0; apiOverlap=10000/10000; distance=5",
         "replacementBlob": "07e5caa3e0fad17acd31b769f08db8887a1ed9b4"
       },
       {
@@ -794,7 +794,7 @@
         "method": "reconstruction",
         "originalBlob": "41448b96d7c0a16fe6d3a6ed356849010bf07996",
         "path": "lib/tmx/TmxObject.cpp",
-        "provenance": "unverified donor reconstruction; 181f31e1e9a7f3516c7fbd3d4400aa0822c1d387:lib/tmx/TmxObject.cpp; headerMatch=0; apiOverlap=10000/10000; distance=54",
+        "provenance": "unverified donor reconstruction; 181f31e1e9a7f3516c7fbd3d4400aa0822c1d387:lib/tmx/TmxObject.cpp; headerMatch=0; apiOverlap=10000/10000; distance=53",
         "replacementBlob": "151143c8df9052f2e35fa6c00cbaff54fba81fbd"
       },
       {
@@ -968,84 +968,84 @@
         "replacementBlob": "258fa88799ad1d97e44fe1ac9df77948e82ea5c0"
       },
       {
-        "markerPath": "src/buildings/building.cpp.REMOVED.git-id",
+        "markerPath": "src/building.cpp.REMOVED.git-id",
         "method": "reconstruction",
-        "originalBlob": "b47d2dc98cdce3f50c0d2d4eea0c84190a2ef420",
-        "path": "src/buildings/building.cpp",
-        "provenance": "content reconstruction of the BFG-removed original; #180 refactor merged the per-class sources into this unit, matching the same-commit merged header; bodies concatenated verbatim from the #179 restored building.cpp, cave.cpp, dungeon.cpp and teleporter.cpp (accepted #179 tree), includes rewritten to the #180 src/ layout; merge order and include set inferred; missing virtual methods inferred from the #182 reconstruction; matching #182 teleporter coordinates and enabled-state object avoids mixing JSON arrays and objects on shutdown",
-        "replacementBlob": "285f49529aed2ce9dec9f779223dc7a3851869ef"
+        "originalBlob": "26fe417cd979cab018ea99ebfd138bbb4a60bacb",
+        "path": "src/building.cpp",
+        "provenance": "content reconstruction of the BFG-removed original; flattened by the #182 refactor; carried from the #180 reconstruction (merged #179 building/cave/dungeon/teleporter sources) with includes rewritten to the flat src/ layout and MapObject::className renamed typeName; Cave::loadFromProps (optional enabled/monster/chance TMX properties) and Cave::saveToJson (Building position array, matching Cave::loadFromJson) inferred for declarations added in #180; Teleporter::saveToJson/loadFromJson inferred in the reviewed coordinate-and-enabled object form (also reading legacy arrays) because the genuine #179 array-plus-field form aborts jsoncpp on save and the developer's later form is lost",
+        "replacementBlob": "13ea63719dfcf186b201d2d7689a79bace65d415"
       },
       {
-        "markerPath": "src/creatures/creature.cpp.REMOVED.git-id",
+        "markerPath": "src/creature.cpp.REMOVED.git-id",
         "method": "reconstruction",
-        "originalBlob": "fffd50650ef8a19a9b23b080045f915b2a03b664",
-        "path": "src/creatures/creature.cpp",
-        "provenance": "content reconstruction of the BFG-removed original; moved by the #180 refactor; carried from the accepted #179 reconstruction of the same file with includes rewritten to the #180 src/ layout and merged headers. The #180 tree itself does not build: its surviving main.cpp includes deleted headers and registers Interaction without its declaration",
-        "replacementBlob": "62fe71e0354c20d44cd72a3bbd313ca2c8e99760"
+        "originalBlob": "43b946a46394e80dddc4af9fe853eb87e8824dd8",
+        "path": "src/creature.cpp",
+        "provenance": "content reconstruction of the BFG-removed original; flattened by the #182 refactor; carried from the #180 reconstruction with includes rewritten to the flat src/ layout, MapObject::className renamed typeName to match the same-commit map.h (Effect keeps className)",
+        "replacementBlob": "4407c63c17920987bfeec84e5b5ce208d0f4cf74"
       },
       {
-        "markerPath": "src/creatures/player.cpp.REMOVED.git-id",
+        "markerPath": "src/gamescene.cpp.REMOVED.git-id",
         "method": "reconstruction",
-        "originalBlob": "09ca56f5dc5f07894d1d716d4b0643e94d7cb513",
-        "path": "src/creatures/player.cpp",
-        "provenance": "content reconstruction of the BFG-removed original; moved by the #180 refactor; carried from the accepted #179 reconstruction of the same file with includes rewritten to the #180 src/ layout and merged headers; interaction.h included directly because the merged item.h no longer provides it. The #180 tree itself does not build: its surviving main.cpp includes deleted headers and registers Interaction without its declaration",
-        "replacementBlob": "845d7282ebd583af6af54e6115ebefc5057d5408"
+        "originalBlob": "1f3ca121d4c0093f1cc3487e9e18fdd043c5130a",
+        "path": "src/gamescene.cpp",
+        "provenance": "content reconstruction of the BFG-removed original; flattened by the #182 refactor; carried from the #180 reconstruction with includes rewritten to the flat src/ layout, MapObject::className renamed typeName to match the same-commit map.h (Effect keeps className); Destroyer::terminate() call removed because the same-commit Destroyer cleans up in its static instance destructor",
+        "replacementBlob": "9150bbbef42a0dfaf6446d34bd29205828bb095b"
       },
       {
-        "markerPath": "src/interactions/interaction.cpp.REMOVED.git-id",
+        "markerPath": "src/gameview.cpp.REMOVED.git-id",
         "method": "reconstruction",
-        "originalBlob": "585498d4381893b5f1f1f1f0b33f357df0444623",
-        "path": "src/interactions/interaction.cpp",
-        "provenance": "content reconstruction of the BFG-removed original; moved by the #180 refactor; carried from the accepted #179 reconstruction of the same file with includes rewritten to the #180 src/ layout and merged headers. The #180 tree itself does not build: its surviving main.cpp includes deleted headers and registers Interaction without its declaration",
-        "replacementBlob": "e926150fd8cd2debd7c3933db9be34b99acbcdce"
+        "originalBlob": "6b37e7a600dbf205575b09580259e6999bf124e2",
+        "path": "src/gameview.cpp",
+        "provenance": "content reconstruction of the BFG-removed original; flattened by the #182 refactor; carried from the #180 reconstruction with includes rewritten to the flat src/ layout, MapObject::className renamed typeName to match the same-commit map.h (Effect keeps className)",
+        "replacementBlob": "4d34db144cd4e1b1d7654b80db04b6d2ff6f7a76"
       },
       {
-        "markerPath": "src/items/item.cpp.REMOVED.git-id",
+        "markerPath": "src/interaction.cpp.REMOVED.git-id",
         "method": "reconstruction",
-        "originalBlob": "14e4eb8ad61882fe7b5aa0005901bcfea811904e",
-        "path": "src/items/item.cpp",
-        "provenance": "content reconstruction of the BFG-removed original; #180 refactor merged the per-class sources into this unit, matching the same-commit merged header; bodies concatenated verbatim from the #179 restored item.cpp, armor.cpp, belt.cpp, helmet.cpp, boots.cpp, gloves.cpp, weapon.cpp and smallweapon.cpp (accepted #179 tree), includes rewritten to the #180 src/ layout; merge order and include set inferred; missing virtual methods inferred from the #182 reconstruction",
-        "replacementBlob": "b6d7b90f33559c5c115de4a09c7b49a64937dff8"
+        "originalBlob": "fd3967eaae84a1021dbd387790ef6198dbeb2195",
+        "path": "src/interaction.cpp",
+        "provenance": "content reconstruction of the BFG-removed original; flattened by the #182 refactor; carried from the #180 reconstruction with includes rewritten to the flat src/ layout, MapObject::className renamed typeName to match the same-commit map.h (Effect keeps className)",
+        "replacementBlob": "d93a1054fbd39567fa33fde9ebfc0859881b2aa5"
       },
       {
-        "markerPath": "src/map/map.cpp.REMOVED.git-id",
+        "markerPath": "src/item.cpp.REMOVED.git-id",
         "method": "reconstruction",
-        "originalBlob": "d19dbcf7f0bc3ceaf42d15963e254f9450b9c4b9",
-        "path": "src/map/map.cpp",
-        "provenance": "The #180 map reconstruction with the surviving #180 Coords and PlayerAnimation bodies merged into the #181 translation unit as indicated by the surviving header.",
-        "replacementBlob": "33e56e0c49d081afe660a1c6b8302ee829515d18"
+        "originalBlob": "2aec4097a94cc4f377c8857dfbacc2c46cde252d",
+        "path": "src/item.cpp",
+        "provenance": "content reconstruction of the BFG-removed original; flattened by the #182 refactor; carried from the #180 reconstruction with includes rewritten to the flat src/ layout, MapObject::className renamed typeName to match the same-commit map.h (Effect keeps className); empty Item::onMove (inline no-op at #179) and empty Item::loadFromProps (map loader configures items via Item::getItem) inferred for declarations added in #180",
+        "replacementBlob": "2212ccf3dd940be0654308ad3aa65faaa6b65642"
       },
       {
-        "markerPath": "src/pathfinder/pathfinder.cpp.REMOVED.git-id",
+        "markerPath": "src/map.cpp.REMOVED.git-id",
         "method": "reconstruction",
-        "originalBlob": "6cf08a9efddb72851fdebb3a181ffce5717e37ac",
-        "path": "src/pathfinder/pathfinder.cpp",
-        "provenance": "content reconstruction of the BFG-removed original; #180 refactor merged the per-class sources into this unit, matching the same-commit merged header; bodies concatenated verbatim from the #179 restored pathfinder.cpp, dumbpathfinder.cpp, randompathfinder.cpp and smartpathfinder.cpp (accepted #179 tree), includes rewritten to the #180 src/ layout; merge order and include set inferred",
-        "replacementBlob": "87975d373d7be94da5bbf5cfff160273fa9394a5"
+        "originalBlob": "53004ed2b3a5d1935de3fcf883287ff257dc6841",
+        "path": "src/map.cpp",
+        "provenance": "content reconstruction of the BFG-removed original; flattened by the #182 refactor; carried from the #180 reconstruction with includes rewritten to the flat src/ layout, MapObject::className renamed typeName to match the same-commit map.h (Effect keeps className); the #180 surviving coords.cpp and playeranimation.cpp bodies appended verbatim because #182 merged Coords and PlayerAnimation into map.h; Map::getEntryX/Y/Z defined out of line as the same-commit header now only declares them",
+        "replacementBlob": "ca30ddc2e370c460e66f4d353f242c8b3741e0ff"
       },
       {
-        "markerPath": "src/stats/stats.cpp.REMOVED.git-id",
+        "markerPath": "src/pathfinder.cpp.REMOVED.git-id",
+        "method": "reconstruction",
+        "originalBlob": "461080b5ce84d104c3df3ad553aaa99d5b5044de",
+        "path": "src/pathfinder.cpp",
+        "provenance": "content reconstruction of the BFG-removed original; flattened by the #182 refactor; carried from the #180 reconstruction with includes rewritten to the flat src/ layout, MapObject::className renamed typeName to match the same-commit map.h (Effect keeps className)",
+        "replacementBlob": "2b45549f0843e5ee1bc6931dc85030f4d12cb1ab"
+      },
+      {
+        "markerPath": "src/player.cpp.REMOVED.git-id",
+        "method": "reconstruction",
+        "originalBlob": "0c45984cfe838c4252e6bac450b4d7961fc24bc3",
+        "path": "src/player.cpp",
+        "provenance": "content reconstruction of the BFG-removed original; flattened by the #182 refactor; carried from the #180 reconstruction with includes rewritten to the flat src/ layout, MapObject::className renamed typeName to match the same-commit map.h (Effect keeps className)",
+        "replacementBlob": "143cc2dd2bfac2717b811825b6e856369056978a"
+      },
+      {
+        "markerPath": "src/stats.cpp.REMOVED.git-id",
         "method": "reconstruction",
         "originalBlob": "5170bfc60a8b4b8a5023e10bd1a7cedf1dc84029",
-        "path": "src/stats/stats.cpp",
+        "path": "src/stats.cpp",
         "provenance": "content reconstruction of the BFG-removed original; flattened by the #182 refactor; carried from the #180 reconstruction with includes rewritten to the flat src/ layout, MapObject::className renamed typeName to match the same-commit map.h (Effect keeps className)",
         "replacementBlob": "8fdfbc41221153beac60c040649af6328f93cdd5"
-      },
-      {
-        "markerPath": "src/view/gamescene.cpp.REMOVED.git-id",
-        "method": "reconstruction",
-        "originalBlob": "0f40a613a006e72cd85f2316beaab3823dc4b5d5",
-        "path": "src/view/gamescene.cpp",
-        "provenance": "content reconstruction of the BFG-removed original; moved by the #180 refactor; carried from the accepted #179 reconstruction of the same file with includes rewritten to the #180 src/ layout and merged headers; removed compression/compression.h include (directory deleted in #180, unused). The #180 tree itself does not build: its surviving main.cpp includes deleted headers and registers Interaction without its declaration",
-        "replacementBlob": "5adc1c8fc6b740efad517be8c6eaaa64432a8e50"
-      },
-      {
-        "markerPath": "src/view/gameview.cpp.REMOVED.git-id",
-        "method": "reconstruction",
-        "originalBlob": "f59e788e08acb9e22ca1f4e0e7c98dcaaaa39f9c",
-        "path": "src/view/gameview.cpp",
-        "provenance": "content reconstruction of the BFG-removed original; moved by the #180 refactor; carried from the accepted #179 reconstruction of the same file with includes rewritten to the #180 src/ layout and merged headers. The #180 tree itself does not build: its surviving main.cpp includes deleted headers and registers Interaction without its declaration",
-        "replacementBlob": "f25aefb1d8bd514d45cbe3b51e11b9b3e0761677"
       },
       {
         "method": "compatibilityRepair",
@@ -1054,9 +1054,9 @@
         "replacementBlob": "d20fb29a7e23828c15487438c93ae790d2045707"
       }
     ],
-    "restoredFilesFingerprint": "3ff48f40b24a078a016f9d8938d8cfdb882cb763b74311539e7cd5ffcf9ef45c",
-    "sourceCommit": "8d1b776c2730296dd7f1ed3b3918e83bcb3a4ab6",
-    "sourceTree": "2484bd2bc42338d995b06301f834ca2641fe5d5a",
+    "restoredFilesFingerprint": "e41da09367195376d8514ad57f4c191ecea6b2013fbfbaa36000c6dbb22a6386",
+    "sourceCommit": "09df518e2037d12f912da6c774635a91c886c097",
+    "sourceTree": "7db1a3f10ff2e6bb5c24f0219cde54e3ed76c133",
     "status": "complete",
     "submodules": [],
     "unresolved": []
@@ -1077,8 +1077,8 @@
             {
               "line": 54,
               "operation": "fopen(\"save/game.sav\", \"w+\")",
-              "sha256": "baa1a27f2f03e604074b43b8a9d45d46d3032b1c53d959b1f0c4f98cf7b2ae61",
-              "source": "src/view/gamescene.cpp"
+              "sha256": "cf4b28e540694ba5ab1f006f3c7165968bfda61b267a2ec968217a07b6efc28d",
+              "source": "src/gamescene.cpp"
             }
           ]
         }
@@ -1092,12 +1092,12 @@
       "-a",
       "--server-args=-screen 0 1920x1080x24",
       "env",
-      "LD_PRELOAD=/tmp/nouraajd-final181/verify/snapshot-xnkdcnnc/observer/libwindowspaths.so",
-      "/tmp/nouraajd-final181/verify/snapshot-xnkdcnnc/build/RecoveryGame"
+      "LD_PRELOAD=/tmp/nouraajd-final182/verify/snapshot-69bjqohq/observer/libwindowspaths.so",
+      "/tmp/nouraajd-final182/verify/snapshot-69bjqohq/build/RecoveryGame"
     ],
-    "log": "/tmp/nouraajd-final181/verify/snapshot-xnkdcnnc/smoke/startup.log",
+    "log": "/tmp/nouraajd-final182/verify/snapshot-69bjqohq/smoke/startup.log",
     "returnCode": 0,
-    "seconds": 0.773,
+    "seconds": 0.415,
     "startup": {
       "checks": {
         "eventLoop": true,
@@ -1119,9 +1119,9 @@
     "status": "success",
     "timedOut": false
   },
-  "sourceCommit": "8d1b776c2730296dd7f1ed3b3918e83bcb3a4ab6",
+  "sourceCommit": "09df518e2037d12f912da6c774635a91c886c097",
   "sourceCommits": [
-    "8d1b776c2730296dd7f1ed3b3918e83bcb3a4ab6"
+    "09df518e2037d12f912da6c774635a91c886c097"
   ],
   "sourcePreparation": {
     "identity": {
@@ -1129,38 +1129,15 @@
       "mergedHeaders": {
         "donorCommit": "d07f08fe3e53a161b193f4d7bf1ebabc3ee59aa9",
         "inputs": {
-          "lib/json/json_value.cpp": "cd68d881764d28c310351545d30c317253bb8e3b032a4bef3db7f29d08c295c2",
-          "src/buildings/building.h": "102b07e24a3f7d4be7fbf31ab900ad7dd886838d6bd20c7f134c496220a07967",
-          "src/interactions/interaction.h": "19085596af03c3fd9f6399dc57b43b41d5e627bdca6ba803116a5a77e283c0e7",
-          "src/items/item.h": "9c8004f44df254caf6df774149dcd7062c1ef015fd5a0147ef14ad42a092c3db",
-          "src/main.cpp": "43c3b43b1ce639f8aba3c524230058b212f85bcef60fcadbb22b2bc2e6a017ff",
-          "src/map/map.h": "c8116f101a6955bf14e40a0c22408e5321209f25c0682f0399e4bff2e61403cd",
-          "src/pathfinder/pathfinder.h": "3455f3b943ce96f8c1d9882742fe1d6d6144ab6e054db963163aaae26b897743",
-          "src/stats/stats.h": "462ead5a1e2f69858c6574e13efeb3dcc157d82f48dbf6d7968335f6af0d8bef"
+          "lib/json/json_value.cpp": "cd68d881764d28c310351545d30c317253bb8e3b032a4bef3db7f29d08c295c2"
         },
         "outputs": {
           "lib/json/json_internalarray.inl": "1485f419dfb5a1dac1660ce6bfa7eaf86151e729e0c5c7222a993b7a7ee410a1",
           "lib/json/json_internalmap.inl": "b22ffa1d13f98c2478d4c0c80d7d58fb57c619c7c1c420d846453b593ee0e73c",
-          "lib/json/json_valueiterator.inl": "3de2050b9aa170dfb0ee9caa37e482193bdc6ac140ed21262eba410bbb5d45dc",
-          "src/buildings/cave.h": "3273d835ca9951166a51c2647a49a343dc17420e28d449285ec16f689b9786c1",
-          "src/buildings/dungeon.h": "29e40e86447b93a8382b46612166ca55d74807db9e489abb75261a9d3ca1b652",
-          "src/buildings/teleporter.h": "29e40e86447b93a8382b46612166ca55d74807db9e489abb75261a9d3ca1b652",
-          "src/items/armor.h": "9dae658c684a616171993cd65b7dc3c39fe61ba7a853b7410ae011277d17ada1",
-          "src/items/belt.h": "9dae658c684a616171993cd65b7dc3c39fe61ba7a853b7410ae011277d17ada1",
-          "src/items/boots.h": "9dae658c684a616171993cd65b7dc3c39fe61ba7a853b7410ae011277d17ada1",
-          "src/items/gloves.h": "9dae658c684a616171993cd65b7dc3c39fe61ba7a853b7410ae011277d17ada1",
-          "src/items/helmet.h": "9dae658c684a616171993cd65b7dc3c39fe61ba7a853b7410ae011277d17ada1",
-          "src/items/smallweapon.h": "9dae658c684a616171993cd65b7dc3c39fe61ba7a853b7410ae011277d17ada1",
-          "src/items/weapon.h": "9dae658c684a616171993cd65b7dc3c39fe61ba7a853b7410ae011277d17ada1",
-          "src/map/coords.h": "64accb8e980f14f386e4d24105d40b3322518b3ba8aa8e5917d5c27c8a3d7a53",
-          "src/map/playeranimation.h": "64accb8e980f14f386e4d24105d40b3322518b3ba8aa8e5917d5c27c8a3d7a53",
-          "src/pathfinder/dumbpathfinder.h": "2efb2850f37fd6fa57379055a082577a185f6c4ac18b770b5471fe9ff39744ae",
-          "src/pathfinder/randompathfinder.h": "2efb2850f37fd6fa57379055a082577a185f6c4ac18b770b5471fe9ff39744ae",
-          "src/pathfinder/smartpathfinder.h": "2efb2850f37fd6fa57379055a082577a185f6c4ac18b770b5471fe9ff39744ae",
-          "src/stats/damage.h": "64b9c10e5d8d61cb11a5dafce486f7870acfd767eea4b159eefe8e0bbacec7fb"
+          "lib/json/json_valueiterator.inl": "3de2050b9aa170dfb0ee9caa37e482193bdc6ac140ed21262eba410bbb5d45dc"
         },
         "replaySha256": "2c508b5aef0177ff121cf8eb66cf14a37127bd791fb261b8b1e186a36cd18157",
-        "sourceCommit": "8d1b776c2730296dd7f1ed3b3918e83bcb3a4ab6"
+        "sourceCommit": "09df518e2037d12f912da6c774635a91c886c097"
       },
       "outputs": [
         {
@@ -1188,150 +1165,6 @@
           },
           "before": null,
           "path": "lib/json/json_valueiterator.inl",
-          "purpose": "Merged-header and jsoncpp compatibility on an isolated build-source copy"
-        },
-        {
-          "after": {
-            "kind": "file",
-            "sha256": "3273d835ca9951166a51c2647a49a343dc17420e28d449285ec16f689b9786c1"
-          },
-          "before": null,
-          "path": "src/buildings/cave.h",
-          "purpose": "Merged-header and jsoncpp compatibility on an isolated build-source copy"
-        },
-        {
-          "after": {
-            "kind": "file",
-            "sha256": "29e40e86447b93a8382b46612166ca55d74807db9e489abb75261a9d3ca1b652"
-          },
-          "before": null,
-          "path": "src/buildings/dungeon.h",
-          "purpose": "Merged-header and jsoncpp compatibility on an isolated build-source copy"
-        },
-        {
-          "after": {
-            "kind": "file",
-            "sha256": "29e40e86447b93a8382b46612166ca55d74807db9e489abb75261a9d3ca1b652"
-          },
-          "before": null,
-          "path": "src/buildings/teleporter.h",
-          "purpose": "Merged-header and jsoncpp compatibility on an isolated build-source copy"
-        },
-        {
-          "after": {
-            "kind": "file",
-            "sha256": "9dae658c684a616171993cd65b7dc3c39fe61ba7a853b7410ae011277d17ada1"
-          },
-          "before": null,
-          "path": "src/items/armor.h",
-          "purpose": "Merged-header and jsoncpp compatibility on an isolated build-source copy"
-        },
-        {
-          "after": {
-            "kind": "file",
-            "sha256": "9dae658c684a616171993cd65b7dc3c39fe61ba7a853b7410ae011277d17ada1"
-          },
-          "before": null,
-          "path": "src/items/belt.h",
-          "purpose": "Merged-header and jsoncpp compatibility on an isolated build-source copy"
-        },
-        {
-          "after": {
-            "kind": "file",
-            "sha256": "9dae658c684a616171993cd65b7dc3c39fe61ba7a853b7410ae011277d17ada1"
-          },
-          "before": null,
-          "path": "src/items/boots.h",
-          "purpose": "Merged-header and jsoncpp compatibility on an isolated build-source copy"
-        },
-        {
-          "after": {
-            "kind": "file",
-            "sha256": "9dae658c684a616171993cd65b7dc3c39fe61ba7a853b7410ae011277d17ada1"
-          },
-          "before": null,
-          "path": "src/items/gloves.h",
-          "purpose": "Merged-header and jsoncpp compatibility on an isolated build-source copy"
-        },
-        {
-          "after": {
-            "kind": "file",
-            "sha256": "9dae658c684a616171993cd65b7dc3c39fe61ba7a853b7410ae011277d17ada1"
-          },
-          "before": null,
-          "path": "src/items/helmet.h",
-          "purpose": "Merged-header and jsoncpp compatibility on an isolated build-source copy"
-        },
-        {
-          "after": {
-            "kind": "file",
-            "sha256": "9dae658c684a616171993cd65b7dc3c39fe61ba7a853b7410ae011277d17ada1"
-          },
-          "before": null,
-          "path": "src/items/smallweapon.h",
-          "purpose": "Merged-header and jsoncpp compatibility on an isolated build-source copy"
-        },
-        {
-          "after": {
-            "kind": "file",
-            "sha256": "9dae658c684a616171993cd65b7dc3c39fe61ba7a853b7410ae011277d17ada1"
-          },
-          "before": null,
-          "path": "src/items/weapon.h",
-          "purpose": "Merged-header and jsoncpp compatibility on an isolated build-source copy"
-        },
-        {
-          "after": {
-            "kind": "file",
-            "sha256": "64accb8e980f14f386e4d24105d40b3322518b3ba8aa8e5917d5c27c8a3d7a53"
-          },
-          "before": null,
-          "path": "src/map/coords.h",
-          "purpose": "Merged-header and jsoncpp compatibility on an isolated build-source copy"
-        },
-        {
-          "after": {
-            "kind": "file",
-            "sha256": "64accb8e980f14f386e4d24105d40b3322518b3ba8aa8e5917d5c27c8a3d7a53"
-          },
-          "before": null,
-          "path": "src/map/playeranimation.h",
-          "purpose": "Merged-header and jsoncpp compatibility on an isolated build-source copy"
-        },
-        {
-          "after": {
-            "kind": "file",
-            "sha256": "2efb2850f37fd6fa57379055a082577a185f6c4ac18b770b5471fe9ff39744ae"
-          },
-          "before": null,
-          "path": "src/pathfinder/dumbpathfinder.h",
-          "purpose": "Merged-header and jsoncpp compatibility on an isolated build-source copy"
-        },
-        {
-          "after": {
-            "kind": "file",
-            "sha256": "2efb2850f37fd6fa57379055a082577a185f6c4ac18b770b5471fe9ff39744ae"
-          },
-          "before": null,
-          "path": "src/pathfinder/randompathfinder.h",
-          "purpose": "Merged-header and jsoncpp compatibility on an isolated build-source copy"
-        },
-        {
-          "after": {
-            "kind": "file",
-            "sha256": "2efb2850f37fd6fa57379055a082577a185f6c4ac18b770b5471fe9ff39744ae"
-          },
-          "before": null,
-          "path": "src/pathfinder/smartpathfinder.h",
-          "purpose": "Merged-header and jsoncpp compatibility on an isolated build-source copy"
-        },
-        {
-          "after": {
-            "kind": "file",
-            "sha256": "64b9c10e5d8d61cb11a5dafce486f7870acfd767eea4b159eefe8e0bbacec7fb"
-          },
-          "before": null,
-          "path": "src/stats/damage.h",
           "purpose": "Merged-header and jsoncpp compatibility on an isolated build-source copy"
         }
       ]
@@ -1363,150 +1196,6 @@
         "before": null,
         "path": "lib/json/json_valueiterator.inl",
         "purpose": "Merged-header and jsoncpp compatibility on an isolated build-source copy"
-      },
-      {
-        "after": {
-          "kind": "file",
-          "sha256": "3273d835ca9951166a51c2647a49a343dc17420e28d449285ec16f689b9786c1"
-        },
-        "before": null,
-        "path": "src/buildings/cave.h",
-        "purpose": "Merged-header and jsoncpp compatibility on an isolated build-source copy"
-      },
-      {
-        "after": {
-          "kind": "file",
-          "sha256": "29e40e86447b93a8382b46612166ca55d74807db9e489abb75261a9d3ca1b652"
-        },
-        "before": null,
-        "path": "src/buildings/dungeon.h",
-        "purpose": "Merged-header and jsoncpp compatibility on an isolated build-source copy"
-      },
-      {
-        "after": {
-          "kind": "file",
-          "sha256": "29e40e86447b93a8382b46612166ca55d74807db9e489abb75261a9d3ca1b652"
-        },
-        "before": null,
-        "path": "src/buildings/teleporter.h",
-        "purpose": "Merged-header and jsoncpp compatibility on an isolated build-source copy"
-      },
-      {
-        "after": {
-          "kind": "file",
-          "sha256": "9dae658c684a616171993cd65b7dc3c39fe61ba7a853b7410ae011277d17ada1"
-        },
-        "before": null,
-        "path": "src/items/armor.h",
-        "purpose": "Merged-header and jsoncpp compatibility on an isolated build-source copy"
-      },
-      {
-        "after": {
-          "kind": "file",
-          "sha256": "9dae658c684a616171993cd65b7dc3c39fe61ba7a853b7410ae011277d17ada1"
-        },
-        "before": null,
-        "path": "src/items/belt.h",
-        "purpose": "Merged-header and jsoncpp compatibility on an isolated build-source copy"
-      },
-      {
-        "after": {
-          "kind": "file",
-          "sha256": "9dae658c684a616171993cd65b7dc3c39fe61ba7a853b7410ae011277d17ada1"
-        },
-        "before": null,
-        "path": "src/items/boots.h",
-        "purpose": "Merged-header and jsoncpp compatibility on an isolated build-source copy"
-      },
-      {
-        "after": {
-          "kind": "file",
-          "sha256": "9dae658c684a616171993cd65b7dc3c39fe61ba7a853b7410ae011277d17ada1"
-        },
-        "before": null,
-        "path": "src/items/gloves.h",
-        "purpose": "Merged-header and jsoncpp compatibility on an isolated build-source copy"
-      },
-      {
-        "after": {
-          "kind": "file",
-          "sha256": "9dae658c684a616171993cd65b7dc3c39fe61ba7a853b7410ae011277d17ada1"
-        },
-        "before": null,
-        "path": "src/items/helmet.h",
-        "purpose": "Merged-header and jsoncpp compatibility on an isolated build-source copy"
-      },
-      {
-        "after": {
-          "kind": "file",
-          "sha256": "9dae658c684a616171993cd65b7dc3c39fe61ba7a853b7410ae011277d17ada1"
-        },
-        "before": null,
-        "path": "src/items/smallweapon.h",
-        "purpose": "Merged-header and jsoncpp compatibility on an isolated build-source copy"
-      },
-      {
-        "after": {
-          "kind": "file",
-          "sha256": "9dae658c684a616171993cd65b7dc3c39fe61ba7a853b7410ae011277d17ada1"
-        },
-        "before": null,
-        "path": "src/items/weapon.h",
-        "purpose": "Merged-header and jsoncpp compatibility on an isolated build-source copy"
-      },
-      {
-        "after": {
-          "kind": "file",
-          "sha256": "64accb8e980f14f386e4d24105d40b3322518b3ba8aa8e5917d5c27c8a3d7a53"
-        },
-        "before": null,
-        "path": "src/map/coords.h",
-        "purpose": "Merged-header and jsoncpp compatibility on an isolated build-source copy"
-      },
-      {
-        "after": {
-          "kind": "file",
-          "sha256": "64accb8e980f14f386e4d24105d40b3322518b3ba8aa8e5917d5c27c8a3d7a53"
-        },
-        "before": null,
-        "path": "src/map/playeranimation.h",
-        "purpose": "Merged-header and jsoncpp compatibility on an isolated build-source copy"
-      },
-      {
-        "after": {
-          "kind": "file",
-          "sha256": "2efb2850f37fd6fa57379055a082577a185f6c4ac18b770b5471fe9ff39744ae"
-        },
-        "before": null,
-        "path": "src/pathfinder/dumbpathfinder.h",
-        "purpose": "Merged-header and jsoncpp compatibility on an isolated build-source copy"
-      },
-      {
-        "after": {
-          "kind": "file",
-          "sha256": "2efb2850f37fd6fa57379055a082577a185f6c4ac18b770b5471fe9ff39744ae"
-        },
-        "before": null,
-        "path": "src/pathfinder/randompathfinder.h",
-        "purpose": "Merged-header and jsoncpp compatibility on an isolated build-source copy"
-      },
-      {
-        "after": {
-          "kind": "file",
-          "sha256": "2efb2850f37fd6fa57379055a082577a185f6c4ac18b770b5471fe9ff39744ae"
-        },
-        "before": null,
-        "path": "src/pathfinder/smartpathfinder.h",
-        "purpose": "Merged-header and jsoncpp compatibility on an isolated build-source copy"
-      },
-      {
-        "after": {
-          "kind": "file",
-          "sha256": "64b9c10e5d8d61cb11a5dafce486f7870acfd767eea4b159eefe8e0bbacec7fb"
-        },
-        "before": null,
-        "path": "src/stats/damage.h",
-        "purpose": "Merged-header and jsoncpp compatibility on an isolated build-source copy"
       }
     ],
     "status": "success",
@@ -1516,14 +1205,14 @@
           "history_source_prep.py",
           "prepare-merged-headers"
         ],
-        "log": "/tmp/nouraajd-final181/verify/snapshot-xnkdcnnc/preparation/merged-headers.log",
+        "log": "/tmp/nouraajd-final182/verify/snapshot-69bjqohq/preparation/merged-headers.log",
         "name": "mergedHeaders",
         "returnCode": 0,
         "timedOut": false
       }
     ]
   },
-  "sourceTree": "2484bd2bc42338d995b06301f834ca2641fe5d5a",
+  "sourceTree": "7db1a3f10ff2e6bb5c24f0219cde54e3ed76c133",
   "startupMode": "game",
   "startupSelection": {
     "mode": "game"
@@ -1544,5 +1233,5 @@
     }
   },
   "toolchainImage": "sha256:d3f59ec1d12297ee8091fbea687aa619275fc92b3fd426560e0a1fa40715afc8",
-  "verifiedFromCommit": "8d1b776c2730296dd7f1ed3b3918e83bcb3a4ab6"
+  "verifiedFromCommit": "09df518e2037d12f912da6c774635a91c886c097"
 }
