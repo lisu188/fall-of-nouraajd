@@ -1,24 +1,14 @@
-#include "view/gameview.h"
+#include <src/gameview.h>
 
 #include <QApplication>
 #include <QDebug>
-#include <src/map/tile.h>
-#include <src/items/armor.h>
-#include <src/items/weapon.h>
-#include <src/items/potion.h>
-#include <src/items/smallweapon.h>
-#include <src/items/helmet.h>
-#include <src/items/boots.h>
-#include <src/items/belt.h>
-#include <src/items/gloves.h>
-#include <src/configuration/configurationprovider.h>
-#include <src/buildings/cave.h>
-#include <src/buildings/dungeon.h>
-#include <src/buildings/teleporter.h>
-#include <src/creatures/monster.h>
-#include <src/pathfinder/dumbpathfinder.h>
-#include <src/pathfinder/randompathfinder.h>
-#include <src/pathfinder/smartpathfinder.h>
+#include <src/tile.h>
+#include <src/potion.h>
+#include <src/configurationprovider.h>
+#include <src/monster.h>
+#include <src/building.h>
+#include <src/pathfinder.h>
+#include <src/interaction.h>
 
 std::set<int> qMetaTypesRegister;
 
@@ -50,10 +40,8 @@ void registerMetaTypes()
 int main(int argc, char *argv[])
 {
     QApplication a(argc, argv);
-    QGraphicsView *view;
     registerMetaTypes();
-    view = new GameView();
+    GameView view;
     int ret = a.exec();
-    delete view;
     return ret;
 }

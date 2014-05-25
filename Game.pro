@@ -41,34 +41,35 @@ SOURCES += lib/base64/base64.cpp \
     lib/zlib/trees.c \
     lib/zlib/uncompr.c \
     lib/zlib/zutil.c \
+    src/animatedobject.cpp \
+    src/animation.cpp \
+    src/animationprovider.cpp \
+    src/building.cpp \
+    src/charview.cpp \
+    src/configurationprovider.cpp \
+    src/creature.cpp \
+    src/destroyer.cpp \
+    src/fightview.cpp \
+    src/gamescene.cpp \
+    src/gameview.cpp \
+    src/interaction.cpp \
+    src/item.cpp \
+    src/itemslot.cpp \
+    src/listitem.cpp \
+    src/lootprovider.cpp \
     src/main.cpp \
-    src/view/charview.cpp \
-    src/view/fightview.cpp \
-    src/view/gamescene.cpp \
-    src/view/gameview.cpp \
-    src/view/itemslot.cpp \
-    src/view/listitem.cpp \
-    src/view/playerequippedview.cpp \
-    src/view/playerlistview.cpp \
-    src/view/playerstatsview.cpp \
-    src/view/scrollobject.cpp \
-    src/map/map.cpp \
-    src/map/tile.cpp \
-    src/items/item.cpp \
-    src/items/lootprovider.cpp \
-    src/items/potion.cpp \
-    src/configuration/configurationprovider.cpp \
-    src/creatures/creature.cpp \
-    src/creatures/monster.cpp \
-    src/creatures/player.cpp \
-    src/interactions/interaction.cpp \
-    src/stats/stats.cpp \
-    src/animation/animatedobject.cpp \
-    src/animation/animation.cpp \
-    src/animation/animationprovider.cpp \
-    src/destroyer/destroyer.cpp \
-    src/pathfinder/pathfinder.cpp \
-    src/buildings/building.cpp
+    src/map.cpp \
+    src/monster.cpp \
+    src/pathfinder.cpp \
+    src/player.cpp \
+    src/playerequippedview.cpp \
+    src/playerlistview.cpp \
+    src/playerstatsview.cpp \
+    src/potion.cpp \
+    src/scriptmanager.cpp \
+    src/scrollobject.cpp \
+    src/stats.cpp \
+    src/tile.cpp
 
 HEADERS  += \
     lib/base64/base64.h \
@@ -110,34 +111,35 @@ HEADERS  += \
     lib/zlib/zconf.h \
     lib/zlib/zlib.h \
     lib/zlib/zutil.h \
-    src/animation/animatedobject.h \
-    src/animation/animation.h \
-    src/animation/animationprovider.h \
-    src/buildings/building.h \
-    src/configuration/configurationprovider.h \
-    src/creatures/creature.h \
-    src/creatures/monster.h \
-    src/creatures/player.h \
-    src/destroyer/destroyer.h \
-    src/interactions/interaction.h \
-    src/items/item.h \
-    src/items/lootprovider.h \
-    src/items/potion.h \
-    src/map/map.h \
-    src/map/tile.h \
-    src/pathfinder/pathfinder.h \
-    src/stats/stats.h \
-    src/util/patch.h \
-    src/view/charview.h \
-    src/view/fightview.h \
-    src/view/gamescene.h \
-    src/view/gameview.h \
-    src/view/itemslot.h \
-    src/view/listitem.h \
-    src/view/playerequippedview.h \
-    src/view/playerlistview.h \
-    src/view/playerstatsview.h \
-    src/view/scrollobject.h
+    src/animatedobject.h \
+    src/animation.h \
+    src/animationprovider.h \
+    src/building.h \
+    src/charview.h \
+    src/configurationprovider.h \
+    src/creature.h \
+    src/destroyer.h \
+    src/fightview.h \
+    src/gamescene.h \
+    src/gameview.h \
+    src/interaction.h \
+    src/item.h \
+    src/itemslot.h \
+    src/listitem.h \
+    src/lootprovider.h \
+    src/map.h \
+    src/monster.h \
+    src/patch.h \
+    src/pathfinder.h \
+    src/player.h \
+    src/playerequippedview.h \
+    src/playerlistview.h \
+    src/playerstatsview.h \
+    src/potion.h \
+    src/scriptmanager.h \
+    src/scrollobject.h \
+    src/stats.h \
+    src/tile.h
 
 RESOURCES += \
     armors.qrc \
