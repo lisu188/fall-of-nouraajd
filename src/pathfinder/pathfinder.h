@@ -1,6 +1,6 @@
 #ifndef PATHFINDER_H
 #define PATHFINDER_H
-#include <src/map/coords.h>
+#include <src/map/map.h>
 #include <QObject>
 #include <unordered_map>
 #include <unordered_set>
