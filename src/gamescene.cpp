@@ -75,10 +75,7 @@ GameScene *GameScene::getGame()
     return game;
 }
 
-void GameScene::addObject(MapObject *mapObject)
-{
-    map->addObject(mapObject);
-}
+Map *GameScene::map = 0;
 
 Map *GameScene::getMap() { return map; }
 
