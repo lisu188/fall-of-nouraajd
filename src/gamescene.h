@@ -8,7 +8,6 @@
 #include <list>
 #include <random>
 #include <time.h>
-
 #include <src/player.h>
 
 class GameView;
@@ -23,10 +22,9 @@ public:
     static GameScene* getGame();
     static GameView *getView();
     static unsigned int getStep();
-    Map *getMap();
+    static Map *getMap();
     void playerMove(int dirx, int diry);
     void startGame();
-
 protected:
     void keyPressEvent(QKeyEvent *keyEvent);
     virtual void mousePressEvent(QGraphicsSceneMouseEvent *event);
@@ -34,12 +32,9 @@ protected:
     virtual void mouseReleaseEvent(QGraphicsSceneMouseEvent *event);
 private:
     void adjustStepTimer(QGraphicsSceneMouseEvent *event);
-    Map *map;
+    static Map *map;
     static Player *player;
     static GameScene *game;
-    void addRandomTile(int x, int y);
-    void addTile(Tile *tile);
-    void addObject(MapObject *mapObject);
     unsigned int click = 0;
     class StepTimer: public QTimer
     {
