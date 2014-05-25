@@ -1,7 +1,6 @@
 #ifndef MAP_H
 #define MAP_H
 
-#include "src/map/coords.h"
 #include <list>
 #include <QTimer>
 #include <QObject>
@@ -17,6 +16,20 @@
 class MapObject;
 class Tile;
 class Player;
+class Coords
+{
+public:
+    Coords();
+    Coords(int x, int y, int z);
+    int x, y, z;
+    bool operator==(const Coords &other) const;
+    bool operator<(const Coords &other) const;
+    int getDist(Coords a);
+};
+
+struct CoordsHasher {
+    std::size_t operator()(const Coords& coords) const;
+};
 
 class Map : public std::unordered_map<Coords, std::string, CoordsHasher>
 {
@@ -101,6 +114,14 @@ protected:
     QGraphicsItemAnimation *dynamicAnimation = 0;
     QTimeLine *timer = 0;
     QGraphicsSimpleTextItem statsView;
+};
+
+class PlayerAnimation : public QGraphicsItemAnimation
+{
+public:
+    explicit PlayerAnimation(QObject *parent = 0);
+protected:
+    virtual void    afterAnimationStep(qreal step);
 };
 
 #endif // MAP_H

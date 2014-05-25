@@ -52,9 +52,7 @@ SOURCES += lib/base64/base64.cpp \
     src/view/playerlistview.cpp \
     src/view/playerstatsview.cpp \
     src/view/scrollobject.cpp \
-    src/map/coords.cpp \
     src/map/map.cpp \
-    src/map/playeranimation.cpp \
     src/map/tile.cpp \
     src/items/item.cpp \
     src/items/lootprovider.cpp \
@@ -64,7 +62,6 @@ SOURCES += lib/base64/base64.cpp \
     src/creatures/monster.cpp \
     src/creatures/player.cpp \
     src/interactions/interaction.cpp \
-    src/stats/damage.cpp \
     src/stats/stats.cpp \
     src/animation/animatedobject.cpp \
     src/animation/animation.cpp \
@@ -126,12 +123,9 @@ HEADERS  += \
     src/items/item.h \
     src/items/lootprovider.h \
     src/items/potion.h \
-    src/map/coords.h \
     src/map/map.h \
-    src/map/playeranimation.h \
     src/map/tile.h \
     src/pathfinder/pathfinder.h \
-    src/stats/damage.h \
     src/stats/stats.h \
     src/util/patch.h \
     src/view/charview.h \
