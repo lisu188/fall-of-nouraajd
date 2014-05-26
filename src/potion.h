@@ -7,10 +7,9 @@ class Potion : public Item
     Q_OBJECT
 public:
     Potion();
-    Potion(const Potion& potion);
-    Potion(std::string name);
+    Potion(const Potion&);
     virtual void onUse(Creature *creature);
-    void loadFromJson(Json::Value config);
+    virtual void loadFromJson(std::string name);
 private:
     std::function<void (Creature *, int)> effect;
 };

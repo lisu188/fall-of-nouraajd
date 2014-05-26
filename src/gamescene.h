@@ -16,7 +16,6 @@ class GameScene : public QGraphicsScene
 {
     Q_OBJECT
 public:
-    ~GameScene();
     static Player* getPlayer();
     static void setPlayer(Player *pla);
     static GameScene* getGame();
@@ -41,10 +40,8 @@ private:
     public:
         int getDirx() const;
         void setDirx(int value);
-
         int getDiry() const;
         void setDiry(int value);
-
     private:
         int dirx, diry;
     }

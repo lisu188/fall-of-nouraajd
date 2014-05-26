@@ -25,8 +25,7 @@ public:
     static Tile *getTile(std::string type, int x, int y, int z);
     void addToScene(QGraphicsScene *scene);
     void removeFromScene(QGraphicsScene *scene);
-    void loadFromJson(Json::Value config);
-    Json::Value saveToJson();
+    void loadFromJson(std::string name);
     void setDraggable();
     virtual void onEnter() {}
     virtual void onMove() {}

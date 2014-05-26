@@ -21,23 +21,15 @@ public:
     virtual void onUse(Creature *creature);
     virtual void onEnter();
     virtual void onMove();
-    virtual Json::Value saveToJson();
-    virtual bool canSave();
 protected:
     virtual void mousePressEvent(QGraphicsSceneMouseEvent *event);
     bool singleUse;
     Stats bonus;
-    void loadFromJson(Json::Value config);
+    void loadFromJson(std::string name);
     Interaction *interaction;
     int power;
 private:
     int slot = 0;
-
-    // MapObject interface
-public:
-    virtual void loadFromProps(Tmx::PropertySet props);
-
-    // QGraphicsItem interface
 };
 Q_DECLARE_METATYPE(Item)
 

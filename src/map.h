@@ -48,14 +48,8 @@ public:
     void addRoad(int length, int startx, int starty, int startz);
     void addDungeon(Coords enter, Coords exit, int width, int height);
     void removeObject(MapObject *mapObject);
-    void loadMapFromJson(Json::Value config);
-    Json::Value saveMapToJson();
-    void loadFromJson(Json::Value config);
-    Json::Value saveToJson();
     void ensureSize(Player *player);
     void hide();
-    Json::Value saveStateToJson();
-    void loadStateFromJson(Json::Value config);
     QGraphicsScene *getScene() const;
     void showAll();
     void mapUp();
@@ -82,6 +76,7 @@ class MapObject : public AnimatedObject
 {
     Q_OBJECT
 public:
+    static MapObject* getMapObject(std::string name);
     MapObject();
     MapObject(int x, int y, int z, int v);
     ~MapObject();
@@ -96,10 +91,8 @@ public:
     virtual void onEnter() = 0;
     virtual void onMove() = 0;
     void move(int x, int y);
-    virtual void loadFromJson(Json::Value config) = 0;
+    virtual void loadFromJson(std::string name) = 0;
     virtual void loadFromProps(Tmx::PropertySet) {}
-    virtual Json::Value saveToJson() = 0;
-    virtual bool canSave() = 0;
     virtual void setMap(Map *map);
     Map *getMap();
     void setVisible(bool vis);

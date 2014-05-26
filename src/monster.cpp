@@ -5,19 +5,11 @@
 #include <QDebug>
 #include <src/configurationprovider.h>
 
-Monster::Monster(std::string name, Json::Value config): Creature(name, config)
-{
-}
-
-Monster::Monster(std::string name): Creature(name)
-{
-}
-
 Monster::Monster(): Creature()
 {
 }
 
-Monster::Monster(const Monster &monster): Monster(monster.typeName)
+Monster::Monster(const Monster &monster)
 {
 }
 
@@ -61,14 +53,4 @@ void Monster::levelUp()
 std::set<Item *> *Monster::getLoot()
 {
     return LootProvider::getLoot(getScale());
-}
-
-
-void Monster::loadFromProps(Tmx::PropertySet props)
-{
-    std::string name = props.GetLiteralProperty("type");
-    alive = true;
-    typeName = name;
-    Json::Value config = *ConfigurationProvider::getConfig("config/creatures.json");
-    loadFromJson(config[name]);
 }
