@@ -8,11 +8,9 @@ Potion::Potion()
 {
 }
 
-Potion::Potion(const Potion &potion)
+Potion::Potion(const Potion &)
 {
-    typeName = potion.typeName;
-    Json::Value config = (*ConfigurationProvider::getConfig("config/items.json"))[typeName];
-    loadFromJson(config);
+
 }
 
 void Potion::onUse(Creature *creature)
@@ -21,9 +19,9 @@ void Potion::onUse(Creature *creature)
     effect(creature, power);
 }
 
-void Potion::loadFromJson(Json::Value config)
+void Potion::loadFromJson(std::string name)
 {
-    Item::loadFromJson(config);
+    Item::loadFromJson(name);
     if ((std::string(typeName).find("LifePotion") != std::string::npos)) {
         effect = &LifeEffect;
     } else if (std::string(typeName).find("ManaPotion") != std::string::npos) {

@@ -5,9 +5,9 @@
         <file>config/init.json</file>
         <file>config/interactions.json</file>
         <file>config/items.json</file>
-        <file>config/map.json</file>
         <file>config/tiles.json</file>
         <file>config/slots.json</file>
         <file>config/map.tmx</file>
+        <file>config/buildings.json</file>
     </qresource>
 </RCC>

@@ -10,10 +10,8 @@ std::unordered_map<std::string, std::function<void()>> Tile::steps {
 
 Tile::Tile(std::string name, int x, int y, int z) : ListItem(x, y, z, 1)
 {
-    typeName = name;
     setXYZ(x, y, z);
-    Json::Value config = (*ConfigurationProvider::getConfig("config/tiles.json"))[typeName];
-    loadFromJson(config);
+    loadFromJson(name);
 }
 
 Tile::Tile()
@@ -77,18 +75,12 @@ void Tile::removeFromScene(QGraphicsScene *scene)
     scene->removeItem(this);
 }
 
-void Tile::loadFromJson(Json::Value config)
+void Tile::loadFromJson(std::string name)
 {
+    this->typeName = name;
+    Json::Value config = (*ConfigurationProvider::getConfig("config/tiles.json"))[typeName];
     step = config.get("canStep", true).asBool();
     setAnimation(config.get("path", "").asCString());
-}
-
-Json::Value Tile::saveToJson()
-{
-    Json::Value config;
-    config[(unsigned int)0] = posx;
-    config[(unsigned int)1] = posy;
-    return config;
 }
 
 void Tile::setDraggable()

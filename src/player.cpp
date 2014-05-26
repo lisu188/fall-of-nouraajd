@@ -42,11 +42,6 @@ void Player::updateViews() {
 	}
 }
 
-Player::Player(std::string name, Json::Value config)
-		: Creature(name, config) {
-	init();
-}
-
 void Player::init() {
 	gold = 0;
 	turn = 0;
@@ -74,16 +69,16 @@ bool Player::event(QEvent *event) {
 	return false;
 }
 
-Player::Player(std::string name)
-		: Creature(name) {
+Player::Player(std::string name) {
+	loadFromJson(name);
 	init();
 }
 
 Player::Player() {
+	init();
 }
 
-Player::Player(const Player &player)
-		: Player(player.typeName) {
+Player::Player(const Player &) {
 }
 
 Player::~Player() {

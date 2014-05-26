@@ -14,7 +14,6 @@ class Interaction : public ListItem
 {
     Q_OBJECT
 public:
-    Interaction(std::string name);
     Interaction();
     Interaction(const Interaction& interaction);
     void onAction(Creature *first, Creature *second);
@@ -22,9 +21,7 @@ public:
     static Interaction *getInteraction(std::string name);
     virtual void onEnter();
     virtual void onMove();
-    virtual void loadFromJson(Json::Value config);
-    virtual Json::Value saveToJson();
-    virtual bool canSave();
+    virtual void loadFromJson(std::string name);
     virtual bool compare(ListItem *item);
 protected:
     void mousePressEvent(QGraphicsSceneMouseEvent *event);
