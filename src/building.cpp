@@ -64,7 +64,7 @@ void Cave::onEnter()
                 if (j == 0 && i == 0) {
                     continue;
                 }
-                Monster *monster = (Monster*)Creature::getCreature(this->monster);
+                Monster *monster = (Monster*)Creature::getCreature(this->monster.toStdString());
                 map->addObject(monster);
                 monster->moveTo(getPosX() + 1 * i, getPosY() + 1 * j, getPosZ(), true);
             }
@@ -75,11 +75,31 @@ void Cave::onEnter()
 void Cave::onMove()
 {
     if (enabled && ((rand() % 100) < chance)) {
-        Monster *monster = (Monster*)Creature::getCreature(this->monster);
+        Monster *monster = (Monster*)Creature::getCreature(this->monster.toStdString());
         map->addObject(monster);
         monster->moveTo(getPosX(), getPosY(), getPosZ(), true);
     }
 }
+QString Cave::getMonster() const
+{
+    return monster;
+}
+
+void Cave::setMonster(const QString &value)
+{
+    monster = value;
+}
+int Cave::getChance() const
+{
+    return chance;
+}
+
+void Cave::setChance(int value)
+{
+    chance = value;
+}
+
+
 
 Teleporter::Teleporter()
 {
@@ -106,7 +126,6 @@ void Teleporter::onEnter()
             teleporter = teleporters[rand() % teleporters.size()];
         } while (teleporter == this);
         GameScene::getPlayer()->moveTo(teleporter->getPosX(), teleporter->getPosY(), teleporter->getPosZ(), true);
-        map->move(0, 0);
     }
 }
 

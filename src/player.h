@@ -30,14 +30,10 @@ public:
     std::list<MapObject *> *getEntered();
     void init();
     virtual void setMap(Map *map);
-    bool event(QEvent *event);
-    bool getCanMove() const;
-    void setCanMove(bool value);
 private:
     std::list<Creature *> fightList;
     int turn;
     std::list<MapObject *> entered;
-    bool canMove = true;
 };
 Q_DECLARE_METATYPE(Player)
 

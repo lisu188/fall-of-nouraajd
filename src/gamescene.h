@@ -34,7 +34,6 @@ private:
     static Map *map;
     static Player *player;
     static GameScene *game;
-    unsigned int click = 0;
     class StepTimer: public QTimer
     {
     public:
