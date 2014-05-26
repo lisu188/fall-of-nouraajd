@@ -7,20 +7,10 @@
 
 Building *Building::getBuilding(std::string name)
 {
-    Building * building = NULL;
-    Json::Value config = (*ConfigurationProvider::getConfig("config/buildings.json"))[name];
-    if (config.isNull()) {
-        return NULL;
-    }
-    std::string className = config.get("class", "").asString();
-    int typeId = QMetaType::type(className.c_str());
-    if (typeId == 0)return NULL;
-    building = (Building*)QMetaType::create(typeId);
-    building->loadFromJson(name);
-    return building;
+    return dynamic_cast<Building*>(MapObject::getMapObject(name));
 }
 
-Building::Building()
+Building::Building():ListItem(0,0,0,2)
 {
 
 }
@@ -41,8 +31,18 @@ void Building::onMove()
 void Building::loadFromJson(std::string name)
 {
     this->typeName = name;
-    Json::Value config = (*ConfigurationProvider::getConfig("config/buildings.json"))[name];
+    Json::Value config = (*ConfigurationProvider::getConfig("config/object.json"))[name];
     this->setAnimation(config.get("path", "").asString());
+}
+
+bool Building::isEnabled()
+{
+    return enabled;
+}
+
+void Building::setEnabled(bool enabled)
+{
+    this->enabled = enabled;
 }
 
 Cave::Cave()
@@ -81,16 +81,6 @@ void Cave::onMove()
     }
 }
 
-void Cave::loadFromProps(Tmx::PropertySet set)
-{
-    if (set.HasProperty("monster")) {
-        monster = set.GetLiteralProperty("monster");
-    }
-    if (set.HasProperty("chance")) {
-        chance = set.GetNumericProperty("chance");
-    }
-}
-
 Teleporter::Teleporter()
 {
 }
@@ -122,11 +112,4 @@ void Teleporter::onEnter()
 
 void Teleporter::onMove()
 {
-}
-
-void Teleporter::loadFromProps(Tmx::PropertySet set)
-{
-    if (set.HasProperty("enabled")) {
-        enabled = (set.GetLiteralProperty("enabled").compare("true") == 0);
-    }
 }

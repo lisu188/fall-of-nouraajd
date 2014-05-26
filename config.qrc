@@ -1,13 +1,11 @@
 <RCC>
     <qresource prefix="/">
-        <file>config/creatures.json</file>
+        <file>config/object.json</file>
         <file>config/effects.json</file>
         <file>config/init.json</file>
         <file>config/interactions.json</file>
-        <file>config/items.json</file>
         <file>config/tiles.json</file>
         <file>config/slots.json</file>
         <file>config/map.tmx</file>
-        <file>config/buildings.json</file>
     </qresource>
 </RCC>
