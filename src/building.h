@@ -29,13 +29,20 @@ Q_DECLARE_METATYPE(Building)
 class Cave : public Building
 {
     Q_OBJECT
+    Q_PROPERTY(int chance READ getChance WRITE setChance)
+    Q_PROPERTY(QString monster READ getMonster WRITE setMonster)
 public:
     Cave();
     Cave(const Cave& cave);
     virtual void onEnter();
     virtual void onMove();
+    QString getMonster() const;
+    void setMonster(const QString &value);
+    int getChance() const;
+    void setChance(int value);
+
 private:
-    std::string monster = "Pritz";
+    QString monster = "Pritz";
     int chance = 15;
 };
 Q_DECLARE_METATYPE(Cave)
@@ -48,7 +55,6 @@ public:
     Teleporter(const Teleporter& teleporter);
     virtual void onEnter();
     virtual void onMove();
-    bool canSave();
 };
 Q_DECLARE_METATYPE(Teleporter)
 #endif // BUILDING_H

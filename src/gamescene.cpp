@@ -95,12 +95,6 @@ void GameScene::keyPressEvent(QKeyEvent * keyEvent)
 
 void GameScene::playerMove(int dirx,int diry)
 {
-    unsigned int curClick=(unsigned int)QDateTime::currentMSecsSinceEpoch();
-    if(curClick-click<=(getStep()*1.5))
-    {
-        return;
-    }
-    click=QDateTime::currentMSecsSinceEpoch();
     if(player->getFightList()->size()>0) {
         return;
     }
