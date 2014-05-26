@@ -16,10 +16,9 @@ class Creature : public ListItem
 {
     Q_OBJECT
 public:
-    Creature(std::string name, Json::Value config);
-    Creature(std::string name);
-    Creature(const Creature &creature);
+    static Creature *getCreature(std::string name);
     Creature();
+    Creature(const Creature &creature);
     ~Creature();
     int getExp();
     int getExpRatio();
@@ -60,9 +59,7 @@ public:
     void loseItem(Item *item);
     std::set<Item *> *getInventory();
     std::map<int, Item*> *getEquipped();
-    void loadFromJson(Json::Value config);
-    Json::Value saveToJson();
-    bool canSave();
+    void loadFromJson(std::string name);
     bool applyEffects();
     std::set<Interaction *> *getActions();
     virtual void onEnter();

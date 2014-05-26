@@ -32,11 +32,8 @@ void GameScene::startGame()
     stepTimer.setInterval(getStep());
     connect(&stepTimer, SIGNAL(timeout()), this, SLOT(clickMove()));
     map=new Map(this);
-    map->loadFromJson(*ConfigurationProvider::getConfig("save/game.sav"));
     if(!player)
     {
-        delete map;
-        map=new Map(this);
         Tmx::Map authored;
         authored.ParseFile("config/map.tmx");
         map->loadMapFromTmx(authored);
@@ -47,18 +44,6 @@ void GameScene::startGame()
     player->updateViews();
     map->ensureSize(player);
     int size=map->getTileSize();
-}
-
-GameScene::~GameScene()
-{
-    FILE *infile = fopen("save/game.sav", "w+");
-    fclose(infile);
-    std::fstream jsonFileStream;
-    Json::FastWriter writer;
-    jsonFileStream.open ("save/game.sav");
-    jsonFileStream << writer.write(map->saveToJson());
-    jsonFileStream.close();
-    delete map;
 }
 
 Player *GameScene::getPlayer()

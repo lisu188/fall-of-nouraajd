@@ -1,0 +1,10 @@
+{
+	"Cave" : {
+		"path" : "images/buildings/cave/",
+		"class" : "Cave"
+	},
+	"Teleporter" : {
+		"path" : "images/buildings/teleporter/",
+		"class" : "Teleporter"
+	}
+}

@@ -32,60 +32,6 @@ namespace {
 int tile_size = 50;
 const int animation_step_ms = 100;
 
-Json::Value to_coords_json(int x, int y, int z) {
-  Json::Value entry;
-  entry[(unsigned int)0] = x;
-  entry[(unsigned int)1] = y;
-  entry[(unsigned int)2] = z;
-  return entry;
-}
-
-MapObject *create_object(const std::string &type_name,
-                         const std::string &class_name, Json::Value config) {
-  if (type_name == "Player") {
-    return new Player(class_name, config);
-  }
-  if (type_name == "Monster" || type_name == "Creature") {
-    return new Monster(class_name, config);
-  }
-  if (type_name == "Interaction") {
-    Interaction *interaction = Interaction::getInteraction(class_name);
-    if (interaction) {
-      interaction->loadFromJson(config);
-    }
-    return interaction;
-  }
-  if (type_name == "Item" || type_name == "Weapon" || type_name == "Armor" ||
-      type_name == "Potion" || type_name == "SmallWeapon" ||
-      type_name == "Helmet" || type_name == "Boots" || type_name == "Belt" ||
-      type_name == "Gloves") {
-    Item *item = Item::getItem(class_name);
-    if (item) {
-      item->moveTo(config.get((unsigned int)0, 0).asInt(),
-                   config.get((unsigned int)1, 0).asInt(),
-                   config.get((unsigned int)2, 0).asInt(), true);
-    }
-    return item;
-  }
-
-  int type_id = QMetaType::type(type_name.c_str());
-  if (type_id == QMetaType::UnknownType) {
-    type_id = QMetaType::type(class_name.c_str());
-  }
-  if (type_id == QMetaType::UnknownType) {
-    return 0;
-  }
-
-  MapObject *object = (MapObject *)QMetaType::create(type_id);
-  if (object) {
-    if (object->typeName.compare("") == 0) {
-      object->typeName = class_name;
-    }
-    object->loadFromJson(config);
-  }
-  return object;
-}
-
 bool contains_object(std::list<MapObject *> *objects, MapObject *object) {
   return std::find(objects->begin(), objects->end(), object) != objects->end();
 }
@@ -348,21 +294,6 @@ void Map::addDungeon(Coords enter, Coords exit, int width, int height) {
     }
   }
 
-  Json::Value enter_config = to_coords_json(enter.x, enter.y, enter.z);
-  enter_config[(unsigned int)3] = exit.x;
-  enter_config[(unsigned int)4] = exit.y;
-  enter_config[(unsigned int)5] = exit.z;
-  Dungeon *entrance = new Dungeon();
-  entrance->loadFromJson(enter_config);
-  addObject(entrance);
-
-  Json::Value exit_config = to_coords_json(exit.x, exit.y, exit.z);
-  exit_config[(unsigned int)3] = enter.x;
-  exit_config[(unsigned int)4] = enter.y;
-  exit_config[(unsigned int)5] = enter.z;
-  Dungeon *return_gate = new Dungeon();
-  return_gate->loadFromJson(exit_config);
-  addObject(return_gate);
 }
 
 void Map::removeObject(MapObject *mapObject) {
@@ -376,82 +307,6 @@ void Map::removeObject(MapObject *mapObject) {
   if (mapObject->scene()) {
     mapObject->scene()->removeItem(mapObject);
   }
-}
-
-void Map::loadMapFromJson(Json::Value config) {
-  if (config.isNull()) {
-    return;
-  }
-
-  defaultTiles.clear();
-  Json::Value defaults = config["default"];
-  Json::Value::iterator default_it = defaults.begin();
-  for (; default_it != defaults.end(); ++default_it) {
-    defaultTiles[atoi(default_it.memberName())] = (*default_it).asString();
-  }
-  if (defaultTiles.size() == 0) {
-    defaultTiles[0] = "GrassTile";
-  }
-
-  Json::Value::iterator it = config.begin();
-  for (; it != config.end(); ++it) {
-    std::string tile_name = it.memberName();
-    if (tile_name.compare("default") == 0) {
-      continue;
-    }
-    for (unsigned int i = 0; i < (*it).size(); ++i) {
-      Json::Value entry = (*it)[i];
-      addTile(tile_name, entry.get((unsigned int)0, 0).asInt(),
-              entry.get((unsigned int)1, 0).asInt(),
-              entry.get((unsigned int)2, 0).asInt());
-    }
-  }
-}
-
-Json::Value Map::saveMapToJson() {
-  Json::Value config;
-  for (std::map<int, std::string>::iterator it = defaultTiles.begin();
-       it != defaultTiles.end(); ++it) {
-    config["default"][std::to_string((*it).first).c_str()] = (*it).second;
-  }
-
-  for (std::map<Coords, Tile *>::iterator it = tiles.begin(); it != tiles.end();
-       ++it) {
-    Tile *tile = (*it).second;
-    if (!tile) {
-      continue;
-    }
-    config[tile->typeName.c_str()].append(
-        to_coords_json(tile->getPosX(), tile->getPosY(), tile->getPosZ()));
-  }
-  return config;
-}
-
-void Map::loadFromJson(Json::Value config) {
-  if (config.isNull()) {
-    return;
-  }
-
-  if (config["gameSize"].isInt()) {
-    tile_size = config["gameSize"].asInt() > 0 ? config["gameSize"].asInt() : 50;
-  }
-
-  loadMapFromJson(config["map"].isObject() ? config["map"] : config);
-  GameScene::setPlayer(0);
-  loadStateFromJson(config["state"]);
-
-  if (GameScene::getPlayer()) {
-    currentMap = GameScene::getPlayer()->getPosZ();
-  }
-  showAll();
-}
-
-Json::Value Map::saveToJson() {
-  Json::Value config;
-  config["gameSize"] = getTileSize();
-  config["map"] = saveMapToJson();
-  config["state"] = saveStateToJson();
-  return config;
 }
 
 void Map::ensureSize(Player *player) {
@@ -492,43 +347,6 @@ void Map::hide() {
        it != mapObjects.end(); ++it) {
     if (*it) {
       (*it)->QGraphicsItem::setVisible(false);
-    }
-  }
-}
-
-Json::Value Map::saveStateToJson() {
-  Json::Value config;
-  for (std::set<MapObject *>::iterator it = mapObjects.begin();
-       it != mapObjects.end(); ++it) {
-    MapObject *object = *it;
-    if (!object || !object->canSave()) {
-      continue;
-    }
-    config[object->metaObject()->className()][object->typeName.c_str()].append(
-        object->saveToJson());
-  }
-  return config;
-}
-
-void Map::loadStateFromJson(Json::Value config) {
-  if (config.isNull()) {
-    return;
-  }
-
-  Json::Value::iterator type_it = config.begin();
-  for (; type_it != config.end(); ++type_it) {
-    std::string type_name = type_it.memberName();
-    Json::Value::iterator class_it = (*type_it).begin();
-    for (; class_it != (*type_it).end(); ++class_it) {
-      std::string class_name = class_it.memberName();
-      for (unsigned int i = 0; i < (*class_it).size(); ++i) {
-        MapObject *object =
-            create_object(type_name, class_name, (*class_it)[i]);
-        if (!object) {
-          continue;
-        }
-        addObject(object);
-      }
     }
   }
 }
@@ -726,21 +544,12 @@ void Map::loadMapFromTmx(Tmx::Map &source) {
             }
         }
     }
-    const Json::Value &items = *ConfigurationProvider::getConfig("config/items.json");
-    const Json::Value &creatures = *ConfigurationProvider::getConfig("config/creatures.json");
     for (int group = 0; group < source.GetNumObjectGroups(); ++group) {
         const Tmx::ObjectGroup *objects = source.GetObjectGroup(group);
         for (int index = 0; index < objects->GetNumObjects(); ++index) {
             const Tmx::Object *authored = objects->GetObject(index);
             std::string type = authored->GetType();
-            MapObject *object = 0;
-            if (items.isMember(type)) object = Item::getItem(type);
-            else if (creatures.isMember(type)) object = new Monster(type);
-            else {
-                int registered = QMetaType::type(type.c_str());
-                if (registered != QMetaType::UnknownType)
-                    object = static_cast<MapObject *>(QMetaType::create(registered));
-            }
+            MapObject *object = MapObject::getMapObject(type);
             if (!object) {
                 qWarning() << "TMX object has no genuine class in this revision:" << type.c_str();
                 continue;
@@ -843,4 +652,14 @@ int Map::getEntryY()
 int Map::getEntryZ()
 {
     return entryz;
+}
+
+MapObject *MapObject::getMapObject(std::string name) {
+  if ((*ConfigurationProvider::getConfig("config/items.json")).isMember(name)) {
+    return Item::getItem(name);
+  }
+  if ((*ConfigurationProvider::getConfig("config/creatures.json")).isMember(name)) {
+    return Creature::getCreature(name);
+  }
+  return Building::getBuilding(name);
 }

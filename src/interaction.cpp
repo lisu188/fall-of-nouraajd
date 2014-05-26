@@ -36,17 +36,9 @@ std::unordered_map<std::string, std::function<void(Creature *, Creature *)>> Int
     {"Barrier", Barrier},
     {"BloodThirst", BloodThirst}};
 
-Interaction::Interaction(std::string name) {
+void Interaction::loadFromJson(std::string name) {
     typeName = name;
-    MapObject::typeName = name;
-    loadFromJson((*ConfigurationProvider::getConfig("config/interactions.json"))[name]);
-}
-
-void Interaction::loadFromJson(Json::Value config) {
-    if (config.isArray() && config.size() >= 3) {
-        moveTo(config[(unsigned int)0].asInt(), config[(unsigned int)1].asInt(), config[(unsigned int)2].asInt(), true);
-        return;
-    }
+    Json::Value config = (*ConfigurationProvider::getConfig("config/interactions.json"))[name];
     manaCost = config.get("manaCost", 0).asInt();
     effect = config.get("effect", "").asString();
     std::string anim = config.get("anim", "").asString();
@@ -72,10 +64,10 @@ Interaction *Interaction::getInteraction(std::string name) {
     if (name.compare("") == 0) {
         return 0;
     }
-    return new Interaction(name);
+    Interaction *interaction = new Interaction();
+    interaction->loadFromJson(name);
+    return interaction;
 }
-
-
 
 void Interaction::mousePressEvent(QGraphicsSceneMouseEvent *event) {
     Player *player = GameScene::getPlayer();
@@ -303,18 +295,8 @@ void Interaction::onEnter() {
 
 void Interaction::onMove() {}
 
-Json::Value Interaction::saveToJson() {
-    Json::Value config(Json::arrayValue);
-    config.append(getPosX());
-    config.append(getPosY());
-    config.append(getPosZ());
-    return config;
-}
-
-bool Interaction::canSave() { return true; }
-
-Interaction::Interaction() : Interaction("") {}
-Interaction::Interaction(const Interaction &interaction) : Interaction(interaction.typeName) {}
+Interaction::Interaction() { manaCost = 0; }
+Interaction::Interaction(const Interaction &) : Interaction() {}
 bool Interaction::compare(ListItem *item) { return ListItem::compare(item); }
 Json::Value Effect::saveToJson() {
     Json::Value config;

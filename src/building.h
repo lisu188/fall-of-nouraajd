@@ -2,19 +2,20 @@
 #define BUILDING_H
 #include "src/building.h"
 
+#include "configurationprovider.h"
+
 #include <src/listitem.h>
 
 class Building : public ListItem
 {
     Q_OBJECT
 public:
+    static Building *getBuilding(std::string name);
     Building();
     Building(const Building&);
     virtual void onEnter();
-    virtual bool canSave();
-    void onMove();
-    virtual void loadFromJson(Json::Value config);
-    virtual Json::Value saveToJson();
+    virtual void onMove();
+    virtual void loadFromJson(std::string name);
 };
 Q_DECLARE_METATYPE(Building)
 
@@ -26,39 +27,13 @@ public:
     Cave(const Cave& cave);
     virtual void onEnter();
     virtual void onMove();
-    bool canSave();
-    void loadFromJson(Json::Value config);
+    virtual void loadFromProps(Tmx::PropertySet set);
 private:
-    bool enabled;
+    bool enabled = true;
     std::string monster = "Pritz";
     int chance = 15;
-
-    // MapObject interface
-public:
-    virtual void loadFromProps(Tmx::PropertySet set);
-
-    // MapObject interface
-public:
-    virtual Json::Value saveToJson();
 };
 Q_DECLARE_METATYPE(Cave)
-
-class Dungeon : public Building
-{
-    Q_OBJECT
-public:
-    Dungeon();
-    Dungeon(const Dungeon& dungeon);
-    virtual void onEnter();
-    virtual void onMove();
-    bool canSave();
-    Json::Value saveToJson();
-    void loadFromJson(Json::Value config);
-    Coords getExit()const;
-private:
-    Coords exit;
-};
-Q_DECLARE_METATYPE(Dungeon)
 
 class Teleporter : public Building
 {
@@ -69,8 +44,6 @@ public:
     virtual void onEnter();
     virtual void onMove();
     bool canSave();
-    Json::Value saveToJson();
-    void loadFromJson(Json::Value config);
     void loadFromProps(Tmx::PropertySet set);
 private:
     bool enabled = true;

@@ -28,20 +28,6 @@ void Item::onEnter()
     GameScene::getPlayer()->addItem(this);
 }
 
-Json::Value Item::saveToJson()
-{
-    Json::Value config;
-    config[(unsigned int)0]=getPosX();
-    config[(unsigned int)1]=getPosY();
-    config[(unsigned int)2]=getPosZ();
-    return config;
-}
-
-bool Item::canSave()
-{
-    return true;
-}
-
 bool Item::isSingleUse() {
     return singleUse;
 }
@@ -70,9 +56,7 @@ Item *Item::getItem(std::string name)
     int id=QMetaType::type(Class.c_str());
     item=(Item*)QMetaType::create(id);
     if(item) {
-        Json::Value config;
-        item->typeName=name;
-        item->loadFromJson(config);
+        item->loadFromJson(name);
     }
     return item;
 }
@@ -116,13 +100,10 @@ void Item::mousePressEvent(QGraphicsSceneMouseEvent *event)
         }
 }
 
-void Item::loadFromJson(Json::Value config)
+void Item::loadFromJson(std::string name)
 {
-    this->moveTo(config.isNull()?0:config[(unsigned int)0].asInt(),
-                 config.isNull()?0:config[(unsigned int)1].asInt(),
-                 config.isNull()?0:config[(unsigned int)2].asInt()
-                 ,true);
-    config=(*ConfigurationProvider::getConfig("config/items.json"))[typeName];
+    this->typeName=name;
+    Json::Value config=(*ConfigurationProvider::getConfig("config/items.json"))[name];
     bonus.loadFromJson(config["bonus"]);
     interaction=Interaction::getInteraction(config.get("interaction","").asString());
     setAnimation(config.get("path","").asCString());
@@ -139,18 +120,13 @@ Armor::Armor()
 {
 }
 
-Armor::Armor(const Armor &armor)
+Armor::Armor(const Armor &)
 {
-    typeName=armor.typeName;
-    Json::Value config=(*ConfigurationProvider::getConfig("config/items.json"))[typeName];
-    loadFromJson(config);
 }
 
 Armor::Armor(std::string name)
 {
-    typeName=name;
-    Json::Value config=(*ConfigurationProvider::getConfig("config/items.json"))[name];
-    loadFromJson(config);
+    loadFromJson(name);
 }
 
 Interaction *Armor::getInteraction() {
@@ -161,55 +137,40 @@ Belt::Belt()
 {
 }
 
-Belt::Belt(const Belt &belt)
+Belt::Belt(const Belt &)
 {
-    typeName=belt.typeName;
-    Json::Value config=(*ConfigurationProvider::getConfig("config/items.json"))[typeName];
-    loadFromJson(config);
 }
 
 Helmet::Helmet()
 {
 }
 
-Helmet::Helmet(const Helmet &helmet)
+Helmet::Helmet(const Helmet &)
 {
-    typeName=helmet.typeName;
-    Json::Value config=(*ConfigurationProvider::getConfig("config/items.json"))[typeName];
-    loadFromJson(config);
 }
 
 Boots::Boots()
 {
 }
 
-Boots::Boots(const Boots &boots)
+Boots::Boots(const Boots &)
 {
-    typeName=boots.typeName;
-    Json::Value config=(*ConfigurationProvider::getConfig("config/items.json"))[typeName];
-    loadFromJson(config);
 }
 
 Gloves::Gloves()
 {
 }
 
-Gloves::Gloves(const Gloves &gloves)
+Gloves::Gloves(const Gloves &)
 {
-    typeName=gloves.typeName;
-    Json::Value config=(*ConfigurationProvider::getConfig("config/items.json"))[typeName];
-    loadFromJson(config);
 }
 
 Weapon::Weapon()
 {
 }
 
-Weapon::Weapon(const Weapon &weapon)
+Weapon::Weapon(const Weapon &)
 {
-    typeName=weapon.typeName;
-    Json::Value config=(*ConfigurationProvider::getConfig("config/items.json"))[typeName];
-    loadFromJson(config);
 }
 
 Interaction *Weapon::getInteraction() {
@@ -224,17 +185,11 @@ SmallWeapon::SmallWeapon()
 {
 }
 
-SmallWeapon::SmallWeapon(const SmallWeapon &weapon)
+SmallWeapon::SmallWeapon(const SmallWeapon &)
 {
-    typeName=weapon.typeName;
-    Json::Value config=(*ConfigurationProvider::getConfig("config/items.json"))[typeName];
-    loadFromJson(config);
 }
 
 void Item::onMove()
 {
 }
 
-void Item::loadFromProps(Tmx::PropertySet)
-{
-}

@@ -30,8 +30,7 @@ int stat_resisted(int value, int resist) {
 
 } // namespace
 
-Creature::Creature(std::string name, Json::Value config) : ListItem(0, 0, 0, 2) {
-    typeName = name;
+Creature::Creature() : ListItem(0, 0, 0, 2) {
     exp = 0;
     level = 0;
     sw = 0;
@@ -47,12 +46,6 @@ Creature::Creature(std::string name, Json::Value config) : ListItem(0, 0, 0, 2) 
     Json::Value equipment_config = *ConfigurationProvider::getConfig("config/slots.json");
     for (Json::Value::iterator it = equipment_config.begin(); it != equipment_config.end(); ++it)
         equipped[std::atoi(it.memberName())] = 0;
-    loadFromJson(config);
-}
-
-Creature::Creature(std::string name)
-    : Creature(name, (*ConfigurationProvider::getConfig("config/creatures.json"))[name]) {
-    typeName = name;
 }
 
 Creature::~Creature() {
@@ -207,8 +200,7 @@ bool Creature::hasItem(Item *item) { return hasInInventory(item) || hasEquipped(
 Coords Creature::getCoords() { return Coords(getPosX(), getPosY(), getPosZ()); }
 void Creature::onEnter() {}
 void Creature::onMove() {}
-Creature::Creature() : Creature("Creature", Json::Value()) {}
-Creature::Creature(const Creature &creature) : Creature(creature.typeName) {}
+Creature::Creature(const Creature &) : Creature() {}
 int Creature::getExp() { return exp; }
 Stats *Creature::getStats() { return &stats; }
 
@@ -226,8 +218,9 @@ bool Creature::isAlive() const { return alive; }
 
 void Creature::setAlive() { alive = true; }
 
-// Creatures are described by a configuration or a saved game: both use the same keys.
-void Creature::loadFromJson(Json::Value config) {
+void Creature::loadFromJson(std::string name) {
+    typeName = name;
+    Json::Value config = (*ConfigurationProvider::getConfig("config/creatures.json"))[name];
     animPath = config.get("path", "").asString();
     setAnimation(animPath);
     sw = config.get("sw", 0).asInt();
@@ -271,42 +264,6 @@ void Creature::loadFromJson(Json::Value config) {
         addMana(0);
         levelUp();
     }
-}
-
-// Defeated creatures are left out of saved games.
-bool Creature::canSave() { return alive; }
-
-Json::Value Creature::saveToJson() {
-    Json::Value config;
-    config["path"] = animPath;
-    config["sw"] = sw;
-    config["level"] = level;
-    config["exp"] = exp;
-    config["hp"] = hp;
-    config["mana"] = mana;
-    Stats initialStats;
-    initialStats.loadFromJson(stats.saveToJson());
-    for (const auto &entry : equipped) {
-        if (!entry.second) continue;
-        Stats bonus;
-        bonus.loadFromJson((*ConfigurationProvider::getConfig("config/items.json"))[entry.second->typeName]["bonus"]);
-        initialStats.removeBonus(bonus);
-    }
-    config["initStats"] = initialStats.saveToJson();
-    config["coords"]["x"] = getPosX();
-    config["coords"]["y"] = getPosY();
-    config["coords"]["z"] = getPosZ();
-    Json::Value names(Json::arrayValue);
-    for (auto it = actions.begin(); it != actions.end(); ++it)
-        names.append((*it)->typeName);
-    config["actions"] = names;
-    Json::Value items(Json::arrayValue);
-    for (auto it = inventory.begin(); it != inventory.end(); ++it)
-        items.append((*it)->typeName);
-    config["items"] = items;
-    for (const auto &entry : equipped)
-        if (entry.second) config["equipment"][std::to_string(entry.first)] = entry.second->typeName;
-    return config;
 }
 
 int Creature::getHp() { return hp; }
@@ -375,3 +332,17 @@ void Creature::hoverEnterEvent(QGraphicsSceneHoverEvent *event) {
         event->accept();
 }
 
+Creature *Creature::getCreature(std::string name) {
+    Json::Value config = (*ConfigurationProvider::getConfig("config/creatures.json"))[name];
+    if (config.isNull()) {
+        return NULL;
+    }
+    std::string className = config.get("class", config.get("isPlayer", false).asBool() ? "Player" : "Monster").asString();
+    int typeId = QMetaType::type(className.c_str());
+    if (typeId == 0) {
+        return NULL;
+    }
+    Creature *creature = (Creature *)QMetaType::create(typeId);
+    creature->loadFromJson(name);
+    return creature;
+}
