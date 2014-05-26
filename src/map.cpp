@@ -404,48 +404,11 @@ MapObject::MapObject(int x, int y, int z, int v) {
   statsView.setVisible(false);
 }
 
-MapObject::~MapObject() {
-  if (timer) {
-    timer->stop();
-    delete timer;
-  }
-  if (dynamicAnimation) {
-    delete dynamicAnimation;
-  }
-}
-
 void MapObject::moveTo(int x, int y, int z, bool silent) {
-  QPointF from = QGraphicsItem::pos();
   posx = x;
   posy = y;
   posz = z;
-  QPointF to(x * Map::getTileSize(), y * Map::getTileSize());
-
-  if (timer) {
-    timer->stop();
-    delete timer;
-    timer = 0;
-  }
-  if (dynamicAnimation) {
-    delete dynamicAnimation;
-    dynamicAnimation = 0;
-  }
-
-  if (!silent && map && GameScene::getView() && from != to) {
-    if (inherits("Player")) {
-      dynamicAnimation = new PlayerAnimation();
-    } else {
-      dynamicAnimation = new QGraphicsItemAnimation();
-    }
-    timer = new QTimeLine(animation_step_ms);
-    dynamicAnimation->setItem(this);
-    dynamicAnimation->setTimeLine(timer);
-    dynamicAnimation->setPosAt(0, from);
-    dynamicAnimation->setPosAt(1, to);
-    timer->start();
-  } else {
-    setPos(to);
-  }
+  setPos(x * Map::getTileSize(), y * Map::getTileSize());
 
   if (map) {
     QGraphicsItem::setVisible(posz == map->getCurrentMap());
@@ -556,9 +519,6 @@ void Map::loadMapFromTmx(Tmx::Map &source) {
             }
             object->loadFromProps(authored->GetProperties());
             object->setObjectName(QString::fromStdString(authored->GetName()));
-            std::map<std::string, std::string> properties = authored->GetProperties().GetList();
-            for (auto property : properties)
-                object->setProperty(property.first.c_str(), QString::fromStdString(property.second));
             object->moveTo(authored->GetX() / source.GetTileWidth(),
                            authored->GetY() / source.GetTileHeight(), entryz, true);
             addObject(object);
@@ -613,32 +573,6 @@ std::size_t CoordsHasher::operator()(const Coords &coords) const
     return (size_t)(a ^ b) ^ (b ^ c) ^ (a ^ c);
 }
 
-PlayerAnimation::PlayerAnimation(QObject *parent) :
-    QGraphicsItemAnimation(parent)
-{
-}
-
-void PlayerAnimation::afterAnimationStep(qreal step)
-{
-    Player *player = GameScene::getPlayer();
-    GameView *view = GameScene::getView();
-    view->centerOn(player);
-    if (step >= 1) {
-        std::list<MapObject *> entered(*player->getEntered());
-        for (std::list<MapObject *>::iterator it = entered.begin();
-             it != entered.end(); it++) {
-            (*it)->onEnter();
-            if (player != GameScene::getPlayer()) {
-                return;
-            }
-        }
-        player->getEntered()->clear();
-        if (player->getFightList()->size() > 0) {
-            view->showFightView();
-        }
-    }
-}
-
 int Map::getEntryX()
 {
     return entryx;
@@ -655,11 +589,20 @@ int Map::getEntryZ()
 }
 
 MapObject *MapObject::getMapObject(std::string name) {
-  if ((*ConfigurationProvider::getConfig("config/items.json")).isMember(name)) {
-    return Item::getItem(name);
+  Json::Value config = (*ConfigurationProvider::getConfig("config/object.json"))[name];
+  std::string className = config.get("class", "").asString();
+  int typeId = QMetaType::type(className.c_str());
+  if (typeId == 0) {
+    return NULL;
   }
-  if ((*ConfigurationProvider::getConfig("config/creatures.json")).isMember(name)) {
-    return Creature::getCreature(name);
+  MapObject *object = (MapObject *)QMetaType::create(typeId);
+  object->loadFromJson(name);
+  return object;
+}
+
+void MapObject::loadFromProps(Tmx::PropertySet set) {
+  std::map<std::string, std::string> properties = set.GetList();
+  for (auto property : properties) {
+    setProperty(property.first.c_str(), QString::fromStdString(property.second));
   }
-  return Building::getBuilding(name);
 }

@@ -142,13 +142,9 @@ HEADERS  += \
     src/tile.h
 
 RESOURCES += \
-    armors.qrc \
-    buildings.qrc \
     config.qrc \
     creatures.qrc \
     images.qrc \
     items.qrc \
     iteractions.qrc \
-    potions.qrc \
-    tiles.qrc \
-    weapons.qrc
+    tiles.qrc

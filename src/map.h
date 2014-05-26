@@ -79,7 +79,6 @@ public:
     static MapObject* getMapObject(std::string name);
     MapObject();
     MapObject(int x, int y, int z, int v);
-    ~MapObject();
     std::string typeName;
     std::string name;
     int posx, posy, posz;
@@ -92,7 +91,7 @@ public:
     virtual void onMove() = 0;
     void move(int x, int y);
     virtual void loadFromJson(std::string name) = 0;
-    virtual void loadFromProps(Tmx::PropertySet) {}
+    void loadFromProps(Tmx::PropertySet set);
     virtual void setMap(Map *map);
     Map *getMap();
     void setVisible(bool vis);
@@ -100,17 +99,6 @@ protected:
     virtual void mousePressEvent(QGraphicsSceneMouseEvent *event);
     void setAnimation(std::string path);
     Map *map = 0;
-    QGraphicsItemAnimation *dynamicAnimation = 0;
-    QTimeLine *timer = 0;
     QGraphicsSimpleTextItem statsView;
 };
-
-class PlayerAnimation : public QGraphicsItemAnimation
-{
-public:
-    explicit PlayerAnimation(QObject *parent = 0);
-protected:
-    virtual void    afterAnimationStep(qreal step);
-};
-
 #endif // MAP_H

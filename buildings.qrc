@@ -1,7 +1,0 @@
-<RCC>
-    <qresource prefix="/">
-        <file>images/buildings/dungeon/0.png</file>
-        <file>images/buildings/cave/0.png</file>
-        <file>images/buildings/teleporter/0.png</file>
-    </qresource>
-</RCC>

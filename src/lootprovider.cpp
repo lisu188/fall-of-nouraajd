@@ -10,11 +10,17 @@ std::set<Item *> *LootProvider::getLoot(int value)
 
 LootProvider::LootProvider()
 {
-    Json::Value config = *ConfigurationProvider::getConfig("config/items.json");
+    Json::Value config = *ConfigurationProvider::getConfig("config/object.json");
     Json::Value::iterator it = config.begin();
     for (; it != config.end(); it++) {
-        this->insert(std::pair<std::string, int>
-                     (it.memberName(), (*it).get("power", 1).asInt()));
+        MapObject *object = MapObject::getMapObject(it.memberName());
+        if (object && object->inherits("Item")) {
+            this->insert(std::pair<std::string, int>
+                         (it.memberName(), (*it).get("power", 1).asInt()));
+        }
+        if (object) {
+            delete object;
+        }
     }
 }
 
