@@ -5,5 +5,33 @@
         <file>images/items/gloves/glovesoftheassasin/0.png</file>
         <file>images/items/helmets/crownofnightmares/0.png</file>
         <file>images/items/scroll/0.png</file>
+		 <file>images/buildings/dungeon/0.png</file>
+        <file>images/buildings/cave/0.png</file>
+        <file>images/buildings/teleporter/0.png</file>
+		 <file>images/items/armors/robe/0.png</file>
+        <file>images/items/armors/platearmor/0.png</file>
+        <file>images/items/armors/leatherarmor/0.png</file>
+        <file>images/items/armors/chestplateofnorth/0.png</file>
+		 <file>images/items/weapons/void/0.png</file>
+        <file>images/items/weapons/valkyrie/0.png</file>
+        <file>images/items/weapons/shadowblade/0.png</file>
+        <file>images/items/weapons/staffoftheabyss/0.png</file>
+        <file>images/items/weapons/daggerofvileheart/0.png</file>
+        <file>images/items/weapons/bladeofdarkdreams/0.png</file>
+        <file>images/items/weapons/wand/0.png</file>
+        <file>images/items/weapons/stiletto/0.png</file>
+        <file>images/items/weapons/broadsword/0.png</file>
+        <file>images/items/weapons/longsword/0.png</file>
+        <file>images/items/weapons/shortstaff/0.png</file>
+        <file>images/items/weapons/knife/0.png</file>
+        <file>images/items/weapons/shortsword/0.png</file>
+        <file>images/items/weapons/sword/0.png</file>
+        <file>images/items/weapons/staff/0.png</file>
+        <file>images/items/weapons/dagger/0.png</file>
+        <file>images/items/weapons/chaossword/0.png</file>
+		   <file>images/items/potions/poison/0.png</file>
+        <file>images/items/potions/mana/0.png</file>
+        <file>images/items/potions/life/0.png</file>
+        <file>images/items/potions/bless/0.png</file>
     </qresource>
 </RCC>

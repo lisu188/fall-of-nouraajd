@@ -210,7 +210,7 @@ int Creature::getScale() { return level + sw; }
 Interaction *Creature::getLevelAction() {
     std::ostringstream key;
     key << level;
-    Json::Value config = (*ConfigurationProvider::getConfig("config/creatures.json"))[typeName];
+    Json::Value config = (*ConfigurationProvider::getConfig("config/object.json"))[typeName];
     return Interaction::getInteraction(config["levelling"].get(key.str(), "").asString());
 }
 
@@ -220,7 +220,7 @@ void Creature::setAlive() { alive = true; }
 
 void Creature::loadFromJson(std::string name) {
     typeName = name;
-    Json::Value config = (*ConfigurationProvider::getConfig("config/creatures.json"))[name];
+    Json::Value config = (*ConfigurationProvider::getConfig("config/object.json"))[name];
     animPath = config.get("path", "").asString();
     setAnimation(animPath);
     sw = config.get("sw", 0).asInt();
@@ -317,7 +317,7 @@ Interaction *Creature::selectAction() {
 
 Stats Creature::getLevelStats() {
     Stats bonus;
-    Json::Value config = (*ConfigurationProvider::getConfig("config/creatures.json"))[typeName];
+    Json::Value config = (*ConfigurationProvider::getConfig("config/object.json"))[typeName];
     bonus.loadFromJson(config["levelStats"]);
     return bonus;
 }
@@ -333,7 +333,7 @@ void Creature::hoverEnterEvent(QGraphicsSceneHoverEvent *event) {
 }
 
 Creature *Creature::getCreature(std::string name) {
-    Json::Value config = (*ConfigurationProvider::getConfig("config/creatures.json"))[name];
+    Json::Value config = (*ConfigurationProvider::getConfig("config/object.json"))[name];
     if (config.isNull()) {
         return NULL;
     }

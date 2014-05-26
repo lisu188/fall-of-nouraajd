@@ -9,6 +9,7 @@
 class Building : public ListItem
 {
     Q_OBJECT
+    Q_PROPERTY(bool enabled READ isEnabled WRITE setEnabled)
 public:
     static Building *getBuilding(std::string name);
     Building();
@@ -16,6 +17,12 @@ public:
     virtual void onEnter();
     virtual void onMove();
     virtual void loadFromJson(std::string name);
+
+    bool isEnabled();
+    void setEnabled(bool enabled);
+
+protected:
+    bool enabled = true;
 };
 Q_DECLARE_METATYPE(Building)
 
@@ -27,9 +34,7 @@ public:
     Cave(const Cave& cave);
     virtual void onEnter();
     virtual void onMove();
-    virtual void loadFromProps(Tmx::PropertySet set);
 private:
-    bool enabled = true;
     std::string monster = "Pritz";
     int chance = 15;
 };
@@ -44,9 +49,6 @@ public:
     virtual void onEnter();
     virtual void onMove();
     bool canSave();
-    void loadFromProps(Tmx::PropertySet set);
-private:
-    bool enabled = true;
 };
 Q_DECLARE_METATYPE(Teleporter)
 #endif // BUILDING_H
