@@ -3,7 +3,10 @@ QT += core gui widgets
 TARGET = Game
 TEMPLATE = app
 CONFIG += c++11
+DEFINES += QT_NO_KEYWORDS
 INCLUDEPATH += . src lib lib/tmx lib/tinyxml lib/base64 lib/zlib
+unix:LIBS += -lpython3.4m -ldl -lutil
+win32:LIBS += -lpython34
 
 SOURCES += lib/base64/base64.cpp \
     lib/json/json_reader.cpp \
@@ -49,8 +52,10 @@ SOURCES += lib/base64/base64.cpp \
     src/configurationprovider.cpp \
     src/creature.cpp \
     src/destroyer.cpp \
+    src/event.cpp \
     src/fightview.cpp \
     src/gamescene.cpp \
+    src/gamescript.cpp \
     src/gameview.cpp \
     src/interaction.cpp \
     src/item.cpp \
@@ -119,8 +124,10 @@ HEADERS  += \
     src/configurationprovider.h \
     src/creature.h \
     src/destroyer.h \
+    src/event.h \
     src/fightview.h \
     src/gamescene.h \
+    src/gamescript.h \
     src/gameview.h \
     src/interaction.h \
     src/item.h \

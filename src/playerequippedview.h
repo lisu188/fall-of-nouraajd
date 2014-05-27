@@ -16,8 +16,7 @@ public:
 private:
     std::map<int, Item*>*equipped;
     std::list<ItemSlot*> itemSlots;
-public slots:
-    virtual void update();
+    Q_SLOT virtual void update();
 };
 
 #endif // PLAYEREQUIPPEDVIEW_H

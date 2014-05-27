@@ -109,7 +109,7 @@ void Player::removeFromFightList(Creature *creature)
         FightView::selected = getFightList()->front();
     }
     GameScene::getView()->getFightView()->update();
-    emit statsChanged();
+    Q_EMIT statsChanged();
 }
 
 void Player::performAction(Interaction *action, Creature *creature)

@@ -21,8 +21,7 @@ protected:
 private:
     QPixmap pixmap;
     unsigned int time = 0;
-signals:
-    void clicked();
+    Q_SIGNAL void clicked();
 };
 
 class GameView : public QGraphicsView
@@ -34,6 +33,8 @@ public:
     FightView *getFightView();
     CharView *getCharView();
     void showFightView();
+    Q_SLOT void showCharView();
+    Q_SLOT void start();
 protected:
     void mouseDoubleClickEvent(QMouseEvent *e);
     void resizeEvent(QResizeEvent *event);
@@ -51,9 +52,5 @@ private:
     PlayerListView *playerInventoryView;
     PlayerListView *playerSkillsView;
     PlayerEquippedView *playerEquippedView;
-public slots:
-    void showCharView();
-private slots:
-    void start();
 };
 #endif // GAMEVIEW_H
