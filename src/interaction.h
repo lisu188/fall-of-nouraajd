@@ -72,7 +72,7 @@ private:
     Creature *caster;
 
 };
-bool Stun(Effect *effect, Creature *creature);
+bool StunEffect(Effect *effect, Creature *creature);
 bool EndlessPainEffect(Effect *effect, Creature *creature);
 bool AbyssalShadowsEffect(Effect *effect, Creature *creature);
 bool ArmorOfEndlessWinterEffect(Effect *effect, Creature *creature);

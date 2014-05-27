@@ -2,7 +2,9 @@
 #define GAMESCRIPT_H
 #include "gamescene.h"
 
-PyObject *Game_addObject(PyObject *, PyObject *args);
+PyObject *addObject(PyObject *, PyObject *args);
+PyObject *replaceTile(PyObject *, PyObject *args);
+PyObject *setProperty(PyObject *, PyObject *args);
 
 extern PyMethodDef GameMethods[];
 
