@@ -606,3 +606,12 @@ void MapObject::loadFromProps(Tmx::PropertySet set) {
     setProperty(property.first.c_str(), QString::fromStdString(property.second));
   }
 }
+
+MapObject *Map::getObjectByName(std::string name) {
+  for (MapObject *object : mapObjects) {
+    if (object->objectName().toStdString() == name) {
+      return object;
+    }
+  }
+  return NULL;
+}
