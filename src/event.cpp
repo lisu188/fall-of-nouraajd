@@ -13,7 +13,9 @@ Event::Event(const Event &)
 
 void Event::onEnter()
 {
-    ScriptManager::getInstance().executeScript(script.toStdString());
+    if (this->isEnabled()) {
+        ScriptManager::getInstance().executeScript(script.toStdString());
+    }
 }
 
 void Event::onMove()
@@ -33,5 +35,15 @@ QString Event::getScript() const
 void Event::setScript(const QString &value)
 {
     script = value;
+}
+
+bool Event::isEnabled()
+{
+    return enabled;
+}
+
+void Event::setEnabled(bool enabled)
+{
+    this->enabled = enabled;
 }
 

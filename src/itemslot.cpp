@@ -5,7 +5,7 @@
 #include <qpainter.h>
 #include <src/configurationprovider.h>
 #include <src/creature.h>
-#include <src/patch.h>
+#include "util.h"
 
 ItemSlot::ItemSlot(int number, std::map<int, Item *> *equipped): number(number), equipped(equipped)
 {
@@ -30,7 +30,7 @@ bool ItemSlot::checkType(int slot, QWidget *widget)
     if (widget) {
         Json::Value config = (*ConfigurationProvider::
                               getConfig("config/slots.json"))
-                             [patch::to_string(slot).c_str()]["types"];
+                             [util::to_string(slot).c_str()]["types"];
         for (int i = 0; i < config.size(); i++) {
             if (widget->inherits(config[i].asCString())) {
                 return true;

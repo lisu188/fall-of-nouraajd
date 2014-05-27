@@ -9,6 +9,8 @@
 #include <src/fightview.h>
 
 #include <src/item.h>
+#include <src/item.h>
+#include <src/stats.h>
 #include <src/stats.h>
 #include <src/configurationprovider.h>
 
@@ -36,9 +38,16 @@ std::unordered_map<std::string, std::function<void(Creature *, Creature *)>> Int
     {"Barrier", Barrier},
     {"BloodThirst", BloodThirst}};
 
+
+
 void Interaction::loadFromJson(std::string name) {
     typeName = name;
-    Json::Value config = (*ConfigurationProvider::getConfig("config/interactions.json"))[name];
+    Json::Value config = (*ConfigurationProvider::getConfig("config/object.json"))[name];
+    tooltip = config.get("tooltip", name).asString();
+    if (config.isArray() && config.size() >= 3) {
+        moveTo(config[(unsigned int)0].asInt(), config[(unsigned int)1].asInt(), config[(unsigned int)2].asInt(), true);
+        return;
+    }
     manaCost = config.get("manaCost", 0).asInt();
     effect = config.get("effect", "").asString();
     std::string anim = config.get("anim", "").asString();
@@ -64,10 +73,12 @@ Interaction *Interaction::getInteraction(std::string name) {
     if (name.compare("") == 0) {
         return 0;
     }
-    Interaction *interaction = new Interaction();
-    interaction->loadFromJson(name);
-    return interaction;
+    Interaction *result = new Interaction();
+    result->loadFromJson(name);
+    return result;
 }
+
+
 
 void Interaction::mousePressEvent(QGraphicsSceneMouseEvent *event) {
     Player *player = GameScene::getPlayer();
@@ -193,9 +204,11 @@ void BloodThirst(Creature *first, Creature *second) {
     first->heal(damage);
 }
 
+#include <QDebug>
+#include <src/creature.h>
 
 std::unordered_map<std::string, std::function<bool(Effect *effects, Creature *)>> Effect::effects{
-    {"Stun", &Stun},
+    {"Stun", &StunEffect},
     {"EndlessPainEffect", &EndlessPainEffect},
     {"MutilationEffect", &MutilationEffect},
     {"AbyssalShadowsEffect", &AbyssalShadowsEffect},
@@ -237,7 +250,7 @@ Stats *Effect::getBonus() { return bonus; }
 
 void Effect::setBonus(Stats *value) { bonus = value; }
 
-bool Stun(Effect *effect, Creature *creature) { return true; }
+bool StunEffect(Effect *effect, Creature *creature) { return true; }
 
 bool EndlessPainEffect(Effect *effect, Creature *creature) {
     creature->hurt(effect->getCaster()->getDmg() * 15.0 / 100.0);
@@ -295,8 +308,12 @@ void Interaction::onEnter() {
 
 void Interaction::onMove() {}
 
-Interaction::Interaction() { manaCost = 0; }
-Interaction::Interaction(const Interaction &) : Interaction() {}
+
+
+
+
+Interaction::Interaction() : ListItem(0, 0, 0, 2), manaCost(0) {}
+Interaction::Interaction(const Interaction &interaction) : Interaction() { loadFromJson(interaction.typeName); }
 bool Interaction::compare(ListItem *item) { return ListItem::compare(item); }
 Json::Value Effect::saveToJson() {
     Json::Value config;

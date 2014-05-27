@@ -136,7 +136,6 @@ HEADERS  += \
     src/lootprovider.h \
     src/map.h \
     src/monster.h \
-    src/patch.h \
     src/pathfinder.h \
     src/player.h \
     src/playerequippedview.h \
@@ -146,7 +145,8 @@ HEADERS  += \
     src/scriptmanager.h \
     src/scrollobject.h \
     src/stats.h \
-    src/tile.h
+    src/tile.h \
+    src/util.h
 
 RESOURCES += \
     config.qrc \

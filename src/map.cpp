@@ -615,3 +615,21 @@ MapObject *Map::getObjectByName(std::string name) {
   }
   return NULL;
 }
+
+bool Map::removeTile(int x, int y, int z) {
+  Coords coords(x, y, z);
+  std::map<Coords, Tile *>::iterator existing = tiles.find(coords);
+  if (existing == tiles.end()) {
+    return false;
+  }
+  if (existing->second && existing->second->scene()) {
+    existing->second->scene()->removeItem(existing->second);
+  }
+  delete existing->second;
+  tiles.erase(existing);
+  std::unordered_map<Coords, std::string, CoordsHasher>::iterator map_it = find(coords);
+  if (map_it != end()) {
+    erase(map_it);
+  }
+  return true;
+}
