@@ -1,14 +1,14 @@
 #ifndef GAMESCENE_H
 #define GAMESCENE_H
-
 #include <QGraphicsScene>
+#include "Python.h"
 #include <QGraphicsSceneMouseEvent>
 #include <QKeyEvent>
-#include "src/map.h"
+#include "map.h"
 #include <list>
 #include <random>
 #include <time.h>
-#include <src/player.h>
+#include "player.h"
 
 class GameView;
 class FightView;
@@ -45,8 +45,7 @@ private:
         int dirx, diry;
     }
     stepTimer;
-private slots:
-    void clickMove();
+    Q_SLOT void clickMove();
 };
 
 #endif // GAMESCENE_H

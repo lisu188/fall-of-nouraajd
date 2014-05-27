@@ -141,7 +141,7 @@ void Creature::addAction(Interaction *action) {
     if (!action)
         return;
     actions.insert(action);
-    emit skillsChanged();
+    Q_EMIT skillsChanged();
 }
 
 void Creature::addEffect(std::string type, Creature *caster) {
@@ -152,10 +152,10 @@ void Creature::addEffect(std::string type, Creature *caster) {
 
 void Creature::addItem(std::set<Item *> *items) {
     for (Item *item : *items) if (item) inventory.insert(item);
-    emit inventoryChanged();
+    Q_EMIT inventoryChanged();
 }
-void Creature::addItem(Item *item) { if (item) inventory.insert(item); emit inventoryChanged(); }
-void Creature::loseItem(Item *item) { inventory.erase(item); emit inventoryChanged(); }
+void Creature::addItem(Item *item) { if (item) inventory.insert(item); Q_EMIT inventoryChanged(); }
+void Creature::loseItem(Item *item) { inventory.erase(item); Q_EMIT inventoryChanged(); }
 std::set<Item *> *Creature::getInventory() { return (std::set<Item *> *)&inventory; }
 std::map<int, Item *> *Creature::getEquipped() { return &equipped; }
 std::set<Interaction *> *Creature::getActions() { return (std::set<Interaction *> *)&actions; }
@@ -184,8 +184,8 @@ void Creature::setItem(int slot, Item *item) {
     if (previous) previous->onUnequip(this);
     equipped[slot] = item;
     if (item) item->onEquip(this);
-    emit equippedChanged();
-    emit statsChanged();
+    Q_EMIT equippedChanged();
+    Q_EMIT statsChanged();
 }
 void Creature::setWeapon(Weapon *weapon) { setItem(0, weapon); }
 void Creature::setArmor(Armor *armor) { setItem(3, armor); }
@@ -346,3 +346,9 @@ Creature *Creature::getCreature(std::string name) {
     creature->loadFromJson(name);
     return creature;
 }
+
+void Creature::setExp(int exp) { this->exp = exp; }
+
+int Creature::getGold() const { return gold; }
+
+void Creature::setGold(int value) { gold = value; }

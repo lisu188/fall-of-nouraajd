@@ -132,7 +132,6 @@ void GameView::resizeEvent( QResizeEvent * event)
         Player *player=GameScene::getPlayer();
         centerOn(player->getPosX()*size+size/2,player->getPosY()*size+size/2);
         player->updateViews();
-        emit player->statsChanged();
     }
 }
 
@@ -157,7 +156,7 @@ void BackPackObject::paintEvent(QPaintEvent *) {
 }
 void BackPackObject::mousePressEvent(QMouseEvent *event) {
     if (event->button() == Qt::LeftButton) {
-        emit clicked();
+        Q_EMIT clicked();
         event->accept();
     } else {
         QWidget::mousePressEvent(event);

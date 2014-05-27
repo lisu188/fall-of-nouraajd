@@ -20,8 +20,7 @@ protected:
     virtual void mousePressEvent(QGraphicsSceneMouseEvent *);
 private:
     QTimer *timer;
-private slots:
-    void animate();
+    Q_SLOT void animate();
 
 };
 
