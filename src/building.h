@@ -9,7 +9,7 @@
 class Building : public ListItem
 {
     Q_OBJECT
-    Q_PROPERTY(bool enabled READ isEnabled WRITE setEnabled)
+    Q_PROPERTY(bool enabled READ isEnabled WRITE setEnabled USER true)
 public:
     static Building *getBuilding(std::string name);
     Building();
@@ -17,7 +17,7 @@ public:
     virtual void onEnter();
     virtual void onMove();
     virtual void loadFromJson(std::string name);
-
+        //PROPERTIES
     bool isEnabled();
     void setEnabled(bool enabled);
 
@@ -29,13 +29,14 @@ Q_DECLARE_METATYPE(Building)
 class Cave : public Building
 {
     Q_OBJECT
-    Q_PROPERTY(int chance READ getChance WRITE setChance)
-    Q_PROPERTY(QString monster READ getMonster WRITE setMonster)
+    Q_PROPERTY(int chance READ getChance WRITE setChance USER true)
+    Q_PROPERTY(QString monster READ getMonster WRITE setMonster USER true)
 public:
     Cave();
     Cave(const Cave& cave);
     virtual void onEnter();
     virtual void onMove();
+    //PROPERTIES
     QString getMonster() const;
     void setMonster(const QString &value);
     int getChance() const;
@@ -50,11 +51,17 @@ Q_DECLARE_METATYPE(Cave)
 class Teleporter : public Building
 {
     Q_OBJECT
+    Q_PROPERTY(QString exit READ getExit WRITE setExit USER true)
 public:
     Teleporter();
     Teleporter(const Teleporter& teleporter);
     virtual void onEnter();
     virtual void onMove();
+    //PROPERTIES
+    QString getExit() const;
+    void setExit(const QString &value);
+private:
+    QString exit;
 };
 Q_DECLARE_METATYPE(Teleporter)
 #endif // BUILDING_H

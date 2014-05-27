@@ -112,23 +112,24 @@ Teleporter::Teleporter(const Teleporter &teleporter): Teleporter()
 void Teleporter::onEnter()
 {
     if (!enabled)return;
-    std::set<MapObject*> *objects = this->getMap()->getObjects();
-    std::set<MapObject*>::iterator it;
-    std::vector<Teleporter*> teleporters;
-    for (it = objects->begin(); it != objects->end(); it++) {
-        if ((*it)->inherits("Teleporter")) {
-            teleporters.push_back((Teleporter*)(*it));
+        Teleporter *teleporter=dynamic_cast<Teleporter*>(getMap()->getObjectByName(exit.toStdString()));
+        if(!teleporter){return;
+         qDebug()<<"Teleporter exit configured to"<<exit<<"but don`t exist!"<<"\n";
         }
-    }
-    if (teleporters.size() > 1) {
-        Teleporter *teleporter;
-        do {
-            teleporter = teleporters[rand() % teleporters.size()];
-        } while (teleporter == this);
         GameScene::getPlayer()->moveTo(teleporter->getPosX(), teleporter->getPosY(), teleporter->getPosZ(), true);
-    }
 }
 
 void Teleporter::onMove()
 {
 }
+
+QString Teleporter::getExit() const
+{
+    return exit;
+}
+
+void Teleporter::setExit(const QString &value)
+{
+    exit = value;
+}
+
