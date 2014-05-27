@@ -1,7 +1,8 @@
-#ifndef PATCH_H
-#define PATCH_H
+#ifndef UTIL_H
+#define UTIL_H
 #include <sstream>
-namespace patch
+#include <QVariant>
+namespace util
 {
 template < typename T > std::string to_string(const T& n)
 {
@@ -10,4 +11,4 @@ template < typename T > std::string to_string(const T& n)
     return stm.str() ;
 }
 }
-#endif // PATCH_H
+#endif // UTIL_H
