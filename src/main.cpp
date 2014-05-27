@@ -1,5 +1,6 @@
-#include <src/gameview.h>
+#include "event.h"
 
+#include <src/gameview.h>
 #include <QApplication>
 #include <QDebug>
 #include <src/tile.h>
@@ -34,6 +35,7 @@ void registerMetaTypes()
     qMetaTypesRegister.insert(qRegisterMetaType<DumbPathFinder>());
     qMetaTypesRegister.insert(qRegisterMetaType<SmartPathFinder>());
     qMetaTypesRegister.insert(qRegisterMetaType<RandomPathFinder>());
+    qMetaTypesRegister.insert(qRegisterMetaType<Event>());
 }
 
 int main(int argc, char *argv[])

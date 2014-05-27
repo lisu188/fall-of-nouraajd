@@ -29,8 +29,7 @@ private:
     QPixmap pixmap;
 protected:
     virtual void dropEvent(QGraphicsSceneDragDropEvent *event);
-public slots:
-    void update();
+    Q_SLOT void update();
 };
 
 #endif // PLAYERINVENTORYVIEW_H

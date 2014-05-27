@@ -15,12 +15,16 @@ class Stats;
 class Creature : public ListItem
 {
     Q_OBJECT
+    Q_PROPERTY(int exp READ getExp WRITE setExp USER true)
+    Q_PROPERTY(int gold READ getGold WRITE setGold USER true)
 public:
+    int getExp();
+    void setExp(int exp);
     static Creature *getCreature(std::string name);
     Creature();
     Creature(const Creature &creature);
     ~Creature();
-    int getExp();
+    int getExpReward();
     int getExpRatio();
     void attribChange();
     void heal(int i);
@@ -69,6 +73,9 @@ public:
     bool hasInInventory(Item *item);
     bool hasItem(Item *item);
     Coords getCoords();
+    int getGold() const;
+    void setGold(int value);
+
 protected:
     void hoverEnterEvent(QGraphicsSceneHoverEvent *event);
     std::set<Item*, Comparer> inventory;
@@ -88,11 +95,10 @@ protected:
     void takeDamage(int i);
     Interaction *getLevelAction();
     Stats getLevelStats();
-signals:
-    void statsChanged();
-    void skillsChanged();
-    void inventoryChanged();
-    void equippedChanged();
+    Q_SIGNAL void statsChanged();
+    Q_SIGNAL void skillsChanged();
+    Q_SIGNAL void inventoryChanged();
+    Q_SIGNAL void equippedChanged();
 };
 Q_DECLARE_METATYPE(Creature)
 
