@@ -1,6 +1,6 @@
 {
   "adapter": {
-    "config": "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-pw03idi1/observer/recovery_smoke_config.h",
+    "config": "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-w9tib423/observer/recovery_smoke_config.h",
     "configSha256": "338403e2741ea15045f583732bc52a7efc27f4a8829b9fb2783fe2d73aff367e",
     "id": "classic-3d",
     "mode": "game",
@@ -18,17 +18,17 @@
       "make",
       "-j8"
     ],
-    "log": "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-pw03idi1/build.log",
+    "log": "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-w9tib423/build.log",
     "returnCode": 0,
-    "seconds": 11.011,
+    "seconds": 9.658,
     "timedOut": false
   },
   "configure": {
     "command": [
       "qmake",
-      "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-pw03idi1/source/Game.pro",
+      "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-w9tib423/source/Game.pro",
       "-o",
-      "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-pw03idi1/build/Makefile",
+      "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-w9tib423/build/Makefile",
       "QMAKE_CC=gcc-5",
       "QMAKE_CXX=g++-5",
       "QMAKE_LINK=g++-5",
@@ -38,15 +38,15 @@
       "DESTDIR=.",
       "CONFIG-=app_bundle",
       "SOURCES+=/home/andrz/nouraajd-bfg-recovery-backup-20261116/source/recovery/smoke/game_startup.cpp",
-      "INCLUDEPATH+=/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-pw03idi1/source",
-      "INCLUDEPATH+=/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-pw03idi1/observer"
+      "INCLUDEPATH+=/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-w9tib423/source",
+      "INCLUDEPATH+=/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-w9tib423/observer"
     ],
-    "log": "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-pw03idi1/configure.log",
+    "log": "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-w9tib423/configure.log",
     "returnCode": 0,
     "seconds": 0.064,
     "timedOut": false
   },
-  "evidenceDir": "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/evidence/84ebd796ad1038affe42509c2ec030d9a430d05f1a8e084f7e555769ba9c837f",
+  "evidenceDir": "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/evidence/7cebf078699b97e9bb5ecc181b3e421f9325dfc6bbb6656e409fa1eb53f540cf",
   "fileLookup": {
     "command": [
       "g++-5",
@@ -55,20 +55,20 @@
       "-O2",
       "-std=c++11",
       "-o",
-      "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-pw03idi1/observer/libwindowspaths.so",
+      "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-w9tib423/observer/libwindowspaths.so",
       "/home/andrz/nouraajd-bfg-recovery-backup-20261116/source/recovery/smoke/windows_paths.cpp",
       "-ldl"
     ],
-    "log": "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-pw03idi1/file-lookup.log",
+    "log": "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-w9tib423/file-lookup.log",
     "returnCode": 0,
-    "seconds": 0.215,
+    "seconds": 0.214,
     "semantics": "Windows-style case-insensitive file lookup for the game process",
     "timedOut": false
   },
-  "fingerprint": "84ebd796ad1038affe42509c2ec030d9a430d05f1a8e084f7e555769ba9c837f",
+  "fingerprint": "7cebf078699b97e9bb5ecc181b3e421f9325dfc6bbb6656e409fa1eb53f540cf",
   "libraryAliases": {
     "aliases": {},
-    "directory": "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-pw03idi1/observer/library-aliases"
+    "directory": "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-w9tib423/observer/library-aliases"
   },
   "project": "Game.pro",
   "recipe": {
@@ -121,7 +121,7 @@
       },
       {
         "markerPath": "Game.pro.user.REMOVED.git-id",
-        "originalBlob": "1381fd3d66bbfbb04fca574c466b10bcf410f65a",
+        "originalBlob": "5ec2cfd933e698d5ceb4916323b834b9a562747c",
         "path": "Game.pro.user",
         "reason": "machine-specific IDE state"
       },
@@ -186,14 +186,14 @@
         "reason": "generated binary, redistributable, or packaged artifact"
       }
     ],
-    "outputDir": "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-pw03idi1/source",
+    "outputDir": "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-w9tib423/source",
     "restored": [
       {
         "markerPath": "Game.pro.REMOVED.git-id",
         "method": "reconstruction",
-        "originalBlob": "e53cc0bde800c6d39a4e0b71b24fbb603481ebeb",
+        "originalBlob": "9a73eafe9aa59798195c6e3a76b8cbb71fcf69aa",
         "path": "Game.pro",
-        "provenance": "Missing #195 project reconstructed from all52 actual C++ and15 C translation units, all same-commit headers and6 surviving resource manifests under src/lib/res. Preserves every original game/library TU; declares supported CPython3.4 ABI for genuine Python3 C API, not claimed exact historical original flags. Replaces stale unverified pre-layout donor; pending native proof. JSON headers retain qualified lib/json or local includes; adding lib/json globally would shadow glibc features.h and is intentionally avoided. Defines QT_NO_KEYWORDS consistently with surviving Q_SLOT/Q_SIGNAL/Q_EMIT usage, preventing Qt slots macro from altering original Python3 PyType_Slot field.",
+        "provenance": "Missing #196 body carried from native-verified #195 reconstruction e53cc0bde800c6d39a4e0b71b24fbb603481ebeb with byte-identical corresponding original header (or identical complete project TU/header/resource path inventory). Missing original body delta remains unknown; actual native startup checked separately. Missing #195 project reconstructed from all52 actual C++ and15 C translation units, all same-commit headers and6 surviving resource manifests under src/lib/res. Preserves every original game/library TU; declares supported CPython3.4 ABI for genuine Python3 C API, not claimed exact historical original flags. Replaces stale unverified pre-layout donor; pending native proof. JSON headers retain qualified lib/json or local includes; adding lib/json globally would shadow glibc features.h and is intentionally avoided. Defines QT_NO_KEYWORDS consistently with surviving Q_SLOT/Q_SIGNAL/Q_EMIT usage, preventing Qt slots macro from altering original Python3 PyType_Slot field.",
         "replacementBlob": "bac20af6a49ba41c9fa11450800cefd8ce65d75c"
       },
       {
@@ -201,7 +201,7 @@
         "method": "reconstruction",
         "originalBlob": "41a50c87bd079c82680581fb517b23a993bcdab7",
         "path": "lib/base64/base64.cpp",
-        "provenance": "unverified donor reconstruction; 779fb803ff021de5e74ed3b24d7c31a9adcaa236:base64/base64.cpp; headerMatch=0; apiOverlap=10000/10000; distance=18",
+        "provenance": "unverified donor reconstruction; 779fb803ff021de5e74ed3b24d7c31a9adcaa236:base64/base64.cpp; headerMatch=0; apiOverlap=10000/10000; distance=19",
         "replacementBlob": "07e5caa3e0fad17acd31b769f08db8887a1ed9b4"
       },
       {
@@ -350,7 +350,7 @@
         "method": "reconstruction",
         "originalBlob": "41448b96d7c0a16fe6d3a6ed356849010bf07996",
         "path": "lib/tmx/TmxObject.cpp",
-        "provenance": "unverified donor reconstruction; 181f31e1e9a7f3516c7fbd3d4400aa0822c1d387:lib/tmx/TmxObject.cpp; headerMatch=0; apiOverlap=10000/10000; distance=40",
+        "provenance": "unverified donor reconstruction; 181f31e1e9a7f3516c7fbd3d4400aa0822c1d387:lib/tmx/TmxObject.cpp; headerMatch=0; apiOverlap=10000/10000; distance=39",
         "replacementBlob": "151143c8df9052f2e35fa6c00cbaff54fba81fbd"
       },
       {
@@ -966,9 +966,9 @@
       {
         "markerPath": "src/gameview.cpp.REMOVED.git-id",
         "method": "reconstruction",
-        "originalBlob": "fae8263548d0f71e1f752718d15c1803db5d47fd",
+        "originalBlob": "909fe69c1c44ab07cbaa303798240d5f5d481e56",
         "path": "src/gameview.cpp",
-        "provenance": "Missing body adapted from accepted earlier QWidget backpack/stats/list layout to exact #195 src paths, typeName and genuine PlayerEquippedView map constructor. Preserves real inventory, actions, character and combat views/signals; not exact original. Inputs: [{\"path\": \"/tmp/nouraajd-bfg-recovery/source/recovery/payloads/reconstructions/0f/0f1d12502ec20d26023cc1d8a777880d473f1dcb-gameview.cpp\", \"sha256\": \"935518bc40dd5b43bcebb5dec1e64149f2aab9ef63db89ae9fdfb54f68dc89d7\"}, {\"path\": \"src/gameview.h\", \"sha256\": \"02fdf02391f19861c882585ec81dec73dceeedab8c81c3e2d2a229d007a822bf\"}] Uses original protected/private Qt signals and slots through the supported metadata connection/invoke API and a local missing-TU QObject refresher, without changing genuine declarations.",
+        "provenance": "Missing #196 body carried from native-verified #195 reconstruction fae8263548d0f71e1f752718d15c1803db5d47fd with byte-identical corresponding original header (or identical complete project TU/header/resource path inventory). Missing original body delta remains unknown; actual native startup checked separately. Missing body adapted from accepted earlier QWidget backpack/stats/list layout to exact #195 src paths, typeName and genuine PlayerEquippedView map constructor. Preserves real inventory, actions, character and combat views/signals; not exact original. Inputs: [{\"path\": \"/tmp/nouraajd-bfg-recovery/source/recovery/payloads/reconstructions/0f/0f1d12502ec20d26023cc1d8a777880d473f1dcb-gameview.cpp\", \"sha256\": \"935518bc40dd5b43bcebb5dec1e64149f2aab9ef63db89ae9fdfb54f68dc89d7\"}, {\"path\": \"src/gameview.h\", \"sha256\": \"02fdf02391f19861c882585ec81dec73dceeedab8c81c3e2d2a229d007a822bf\"}] Uses original protected/private Qt signals and slots through the supported metadata connection/invoke API and a local missing-TU QObject refresher, without changing genuine declarations.",
         "replacementBlob": "43b2637d61e10666f4471d5b3316d77ca9f2a408"
       },
       {
@@ -982,9 +982,9 @@
       {
         "markerPath": "src/map.cpp.REMOVED.git-id",
         "method": "reconstruction",
-        "originalBlob": "42e7bd06f1d9c1ef12947df5fc216c8b6a337bc1",
+        "originalBlob": "1635542d44e479a5f3e54a6210ca74cf8cde3e42",
         "path": "src/map.cpp",
-        "provenance": "Missing combined Map/MapObject/Coords body adapted from accepted #159 real TMX reconstruction and surviving #150 coordinate implementation to exact #195 src/consolidated config/factory/property APIs. Removed obsolete JSON save methods absent from genuine header; retains full authored TMX geometry, entries, objects/properties, real movement/collision/turns and procedural generation. Removed obsolete member animation fields using QObject-owned timeline/animation; generated dungeon uses genuine Teleporter API instead of removed Dungeon class. Unknown unavailable authored object classes are logged. These API adaptations are inferred, not original bytes or parity. Inputs: [{\"path\": \"/tmp/nouraajd-bfg-recovery/native-middle/recon/f59850bc2948c48c34f05161ff83bf840234b80b\", \"sha256\": \"4857ab512f60d7ca9eba3f5a8506b54bf2ee11dd6767466342a0d70597a02722\"}, {\"path\": \"/tmp/nouraajd-bfg-recovery/native-middle/src/70449d6d/map/coords.cpp\", \"sha256\": \"64acf00cab276e850f453b2a7bc5b0cd5f8162d43f46e7288f8354f605fbefd3\"}, {\"path\": \"src/map.h\", \"sha256\": \"c099f25d41447d89115b6e026121ea8f82eef72a2dba433d0ab267a1e7537274\"}] Map::removeObject detaches without deleting, required by surviving #195 Item::onEnter which immediately passes the same pointer to Player::addItem; genuine AnimatedObject/Destroyer owns lifetime. Earlier donor delete-on-remove would make pickups use freed memory; not propagated. Preserve the exact original #150 PlayerAnimation::afterAnimationStep callback body in a local derived animation, restoring entry actions/fight UI and viewport centering at real timeline completion after the original standalone class was removed from #195 headers. Donor /tmp/nouraajd-bfg-recovery/native-middle/src/70449d6d/map/playeranimation.cpp SHA256 7075f62c953976c8704621896d078d044bf06a95ee9a3153d9342d3dd41ba945. Generic timeline alone had omitted these callbacks; causal before/after timer regression accompanies fresh proof.",
+        "provenance": "Missing #196 body carried from native-verified #195 reconstruction 42e7bd06f1d9c1ef12947df5fc216c8b6a337bc1 with byte-identical corresponding original header (or identical complete project TU/header/resource path inventory). Missing original body delta remains unknown; actual native startup checked separately. Missing combined Map/MapObject/Coords body adapted from accepted #159 real TMX reconstruction and surviving #150 coordinate implementation to exact #195 src/consolidated config/factory/property APIs. Removed obsolete JSON save methods absent from genuine header; retains full authored TMX geometry, entries, objects/properties, real movement/collision/turns and procedural generation. Removed obsolete member animation fields using QObject-owned timeline/animation; generated dungeon uses genuine Teleporter API instead of removed Dungeon class. Unknown unavailable authored object classes are logged. These API adaptations are inferred, not original bytes or parity. Inputs: [{\"path\": \"/tmp/nouraajd-bfg-recovery/native-middle/recon/f59850bc2948c48c34f05161ff83bf840234b80b\", \"sha256\": \"4857ab512f60d7ca9eba3f5a8506b54bf2ee11dd6767466342a0d70597a02722\"}, {\"path\": \"/tmp/nouraajd-bfg-recovery/native-middle/src/70449d6d/map/coords.cpp\", \"sha256\": \"64acf00cab276e850f453b2a7bc5b0cd5f8162d43f46e7288f8354f605fbefd3\"}, {\"path\": \"src/map.h\", \"sha256\": \"c099f25d41447d89115b6e026121ea8f82eef72a2dba433d0ab267a1e7537274\"}] Map::removeObject detaches without deleting, required by surviving #195 Item::onEnter which immediately passes the same pointer to Player::addItem; genuine AnimatedObject/Destroyer owns lifetime. Earlier donor delete-on-remove would make pickups use freed memory; not propagated. Preserve the exact original #150 PlayerAnimation::afterAnimationStep callback body in a local derived animation, restoring entry actions/fight UI and viewport centering at real timeline completion after the original standalone class was removed from #195 headers. Donor /tmp/nouraajd-bfg-recovery/native-middle/src/70449d6d/map/playeranimation.cpp SHA256 7075f62c953976c8704621896d078d044bf06a95ee9a3153d9342d3dd41ba945. Generic timeline alone had omitted these callbacks; causal before/after timer regression accompanies fresh proof.",
         "replacementBlob": "7908d2b3b7914e1f1a37ddce632dc363c594aa10"
       },
       {
@@ -1011,8 +1011,8 @@
       }
     ],
     "restoredFilesFingerprint": "b03763af59e0f571a597734faac10e22a35b40f6f25f726d9ee3b382d646ee64",
-    "sourceCommit": "17760db4ce0810e9d1f145e916f1ba78988c7149",
-    "sourceTree": "e32fb6d1f416bc264911c953505ace448054db47",
+    "sourceCommit": "4d5f3ced5a05313d45df60ea8ee262a81899ceee",
+    "sourceTree": "5134f6b3c3489e982b96b8e5968f7ce8d880c00b",
     "status": "complete",
     "submodules": [],
     "unresolved": []
@@ -1023,12 +1023,12 @@
       "-a",
       "--server-args=-screen 0 1920x1080x24",
       "env",
-      "LD_PRELOAD=/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-pw03idi1/observer/libwindowspaths.so",
-      "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-pw03idi1/build/RecoveryGame"
+      "LD_PRELOAD=/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-w9tib423/observer/libwindowspaths.so",
+      "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-w9tib423/build/RecoveryGame"
     ],
-    "log": "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-pw03idi1/smoke/startup.log",
+    "log": "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-w9tib423/smoke/startup.log",
     "returnCode": 0,
-    "seconds": 0.414,
+    "seconds": 0.422,
     "startup": {
       "checks": {
         "eventLoop": true,
@@ -1050,9 +1050,9 @@
     "status": "success",
     "timedOut": false
   },
-  "sourceCommit": "17760db4ce0810e9d1f145e916f1ba78988c7149",
+  "sourceCommit": "4d5f3ced5a05313d45df60ea8ee262a81899ceee",
   "sourceCommits": [
-    "17760db4ce0810e9d1f145e916f1ba78988c7149"
+    "4d5f3ced5a05313d45df60ea8ee262a81899ceee"
   ],
   "sourcePreparation": {
     "identity": {
@@ -1062,7 +1062,7 @@
     "status": "not-required",
     "steps": []
   },
-  "sourceTree": "e32fb6d1f416bc264911c953505ace448054db47",
+  "sourceTree": "5134f6b3c3489e982b96b8e5968f7ce8d880c00b",
   "startupMode": "game",
   "startupSelection": {
     "mode": "game"
@@ -1083,5 +1083,5 @@
     }
   },
   "toolchainImage": "sha256:d3f59ec1d12297ee8091fbea687aa619275fc92b3fd426560e0a1fa40715afc8",
-  "verifiedFromCommit": "17760db4ce0810e9d1f145e916f1ba78988c7149"
+  "verifiedFromCommit": "4d5f3ced5a05313d45df60ea8ee262a81899ceee"
 }
