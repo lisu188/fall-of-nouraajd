@@ -1,6 +1,6 @@
 #include "map.h"
 
-#include <src/map.h>
+
 #include "tile.h"
 
 #include <src/building.h>
@@ -16,6 +16,7 @@
 #include <QDesktopWidget>
 #include <QGraphicsSceneMouseEvent>
 #include <QMetaType>
+#include <QMetaProperty>
 #include <QWidget>
 #include <algorithm>
 #include <cstdlib>
@@ -32,11 +33,46 @@ namespace {
 int tile_size = 50;
 const int animation_step_ms = 100;
 
+
+
+
+
 bool contains_object(std::list<MapObject *> *objects, MapObject *object) {
   return std::find(objects->begin(), objects->end(), object) != objects->end();
 }
 
 } // namespace
+
+class ReconstructedPlayerAnimation : public QGraphicsItemAnimation {
+public:
+    explicit ReconstructedPlayerAnimation(QObject *parent) : QGraphicsItemAnimation(parent) {}
+protected:
+    void afterAnimationStep(qreal step) override;
+};
+
+void ReconstructedPlayerAnimation::afterAnimationStep(qreal step)
+{
+    Player *player=GameScene::getPlayer();
+    GameView *view=GameScene::getView();
+    view->centerOn(player);
+    if(step>=1)
+    {
+        std::list<MapObject *> entered(*player->getEntered());
+        for(std::list<MapObject *>::iterator it=entered.begin();
+                it!=entered.end(); it++)
+        {
+            (*it)->onEnter();
+            if(player!=GameScene::getPlayer()) {
+                return;
+            }
+        }
+        player->getEntered()->clear();
+        if(player->getFightList()->size()>0)
+        {
+            view->showFightView();
+        }
+    }
+}
 
 Map::Map(QGraphicsScene *scene) : scene(scene), entryx(0), entryz(0), entryy(0) {
   defaultTiles[0] = "GrassTile";
@@ -288,12 +324,19 @@ void Map::addRoad(int length, int startx, int starty, int startz) {
 }
 
 void Map::addDungeon(Coords enter, Coords exit, int width, int height) {
-  for (int x = 0; x < width; ++x) {
-    for (int y = 0; y < height; ++y) {
-      addTile("GroundTile", exit.x + x, exit.y + y, exit.z);
-    }
-  }
-
+    for (int x = 0; x < width; ++x) for (int y = 0; y < height; ++y)
+        addTile("GroundTile", exit.x + x, exit.y + y, exit.z);
+    Teleporter *entrance = new Teleporter();
+    Teleporter *return_gate = new Teleporter();
+    entrance->loadFromJson("Teleporter");
+    return_gate->loadFromJson("Teleporter");
+    entrance->name = "generatedEntrance" + std::to_string(enter.x) + "_" + std::to_string(enter.y);
+    return_gate->name = "generatedExit" + std::to_string(exit.x) + "_" + std::to_string(exit.y);
+    entrance->setExit(QString::fromStdString(return_gate->name));
+    return_gate->setExit(QString::fromStdString(entrance->name));
+    entrance->moveTo(enter.x, enter.y, enter.z, true);
+    return_gate->moveTo(exit.x, exit.y, exit.z, true);
+    addObject(entrance); addObject(return_gate);
 }
 
 void Map::removeObject(MapObject *mapObject) {
@@ -307,7 +350,17 @@ void Map::removeObject(MapObject *mapObject) {
   if (mapObject->scene()) {
     mapObject->scene()->removeItem(mapObject);
   }
+  // Original Item::onEnter transfers this same object into the player inventory.
+  // AnimatedObject registers its lifetime with the genuine Destroyer.
 }
+
+
+
+
+
+
+
+
 
 void Map::ensureSize(Player *player) {
   if (!player || defaultTiles.find(player->getPosZ()) == defaultTiles.end()) {
@@ -350,6 +403,10 @@ void Map::hide() {
     }
   }
 }
+
+
+
+
 
 QGraphicsScene *Map::getScene() const { return scene; }
 
@@ -404,23 +461,29 @@ MapObject::MapObject(int x, int y, int z, int v) {
   statsView.setVisible(false);
 }
 
+
+
 void MapObject::moveTo(int x, int y, int z, bool silent) {
-  posx = x;
-  posy = y;
-  posz = z;
-  setPos(x * Map::getTileSize(), y * Map::getTileSize());
-
-  if (map) {
-    QGraphicsItem::setVisible(posz == map->getCurrentMap());
-  }
-
-  if (!silent) {
-    Player *player = GameScene::getPlayer();
-    if (player && player != this && player->getPosX() == posx &&
-        player->getPosY() == posy && player->getPosZ() == posz) {
-      player->addEntered(this);
+    QPointF from = QGraphicsItem::pos();
+    posx = x; posy = y; posz = z;
+    QPointF to(x * Map::getTileSize(), y * Map::getTileSize());
+    if (!silent && map && GameScene::getView() && from != to) {
+        QGraphicsItemAnimation *animation = inherits("Player")
+            ? static_cast<QGraphicsItemAnimation *>(new ReconstructedPlayerAnimation(this))
+            : new QGraphicsItemAnimation(this);
+        QTimeLine *timeline = new QTimeLine(animation_step_ms, animation);
+        animation->setItem(this);
+        animation->setTimeLine(timeline);
+        animation->setPosAt(0, from); animation->setPosAt(1, to);
+        connect(timeline, &QTimeLine::finished, animation, &QObject::deleteLater);
+        timeline->start();
+    } else { setPos(to); }
+    if (map) QGraphicsItem::setVisible(posz == map->getCurrentMap());
+    if (!silent) {
+        Player *player = GameScene::getPlayer();
+        if (player && player != this && player->getPosX() == posx && player->getPosY() == posy && player->getPosZ() == posz)
+            player->addEntered(this);
     }
-  }
 }
 
 int MapObject::getPosX() const { return posx; }
@@ -490,146 +553,106 @@ void MapObject::setAnimation(std::string path) {
 }
 
 void Map::loadMapFromTmx(Tmx::Map &source) {
-    if (source.HasError()) qFatal("TMX reconstruction could not parse the authored map");
+    if (source.HasError() || source.GetTileWidth() <= 0 || source.GetTileHeight() <= 0)
+        qFatal("TMX reconstruction could not parse the authored map");
     entryx = source.GetProperties().GetNumericProperty("x");
     entryy = source.GetProperties().GetNumericProperty("y");
     entryz = source.GetProperties().GetNumericProperty("z");
     for (int z = 0; z < source.GetNumLayers(); ++z) {
         const Tmx::Layer *layer = source.GetLayer(z);
-        for (int y = 0; y < layer->GetHeight(); ++y) {
-            for (int x = 0; x < layer->GetWidth(); ++x) {
-                int set = layer->GetTileTilesetIndex(x, y);
-                if (set < 0 || set >= source.GetNumTilesets()) continue;
-                const Tmx::Tile *tile = source.GetTileset(set)->GetTile(layer->GetTileId(x, y));
-                if (!tile) continue;
-                std::string type = tile->GetProperties().GetLiteralProperty("type");
-                if (!type.empty()) addTile(type, x, y, z);
-            }
+        for (int y = 0; y < layer->GetHeight(); ++y) for (int x = 0; x < layer->GetWidth(); ++x) {
+            int index = layer->GetTileTilesetIndex(x, y);
+            if (index < 0 || index >= source.GetNumTilesets()) continue;
+            const Tmx::Tile *tile = source.GetTileset(index)->GetTile(layer->GetTileId(x, y));
+            if (!tile) continue;
+            std::string type = tile->GetProperties().GetLiteralProperty("type");
+            if (!type.empty()) addTile(type, x, y, z);
         }
     }
     for (int group = 0; group < source.GetNumObjectGroups(); ++group) {
         const Tmx::ObjectGroup *objects = source.GetObjectGroup(group);
         for (int index = 0; index < objects->GetNumObjects(); ++index) {
             const Tmx::Object *authored = objects->GetObject(index);
-            std::string type = authored->GetType();
-            MapObject *object = MapObject::getMapObject(type);
-            if (!object) {
-                qWarning() << "TMX object has no genuine class in this revision:" << type.c_str();
-                continue;
-            }
+            MapObject *object = MapObject::createMapObject(authored->GetType());
+            if (!object) { qWarning() << "TMX object type unavailable in this revision:" << authored->GetType().c_str(); continue; }
+            object->name = authored->GetName();
+            object->setObjectName(QString::fromStdString(object->name));
             object->loadFromProps(authored->GetProperties());
-            object->setObjectName(QString::fromStdString(authored->GetName()));
-            object->moveTo(authored->GetX() / source.GetTileWidth(),
-                           authored->GetY() / source.GetTileHeight(), entryz, true);
+            object->moveTo(authored->GetX() / source.GetTileWidth(), authored->GetY() / source.GetTileHeight(), entryz, true);
             addObject(object);
         }
     }
 }
 
+int Map::getEntryX() { return entryx; }
+int Map::getEntryY() { return entryy; }
+int Map::getEntryZ() { return entryz; }
 std::set<MapObject *> *Map::getObjects() { return &mapObjects; }
+MapObject *Map::getObjectByName(std::string name) {
+    for (MapObject *object : mapObjects) if (object->name == name) return object;
+    return 0;
+}
+bool Map::removeTile(int x, int y, int z) {
+    Coords coords(x, y, z); auto tile = tiles.find(coords);
+    if (tile == tiles.end()) return false;
+    if (tile->second->scene()) tile->second->scene()->removeItem(tile->second);
+    delete tile->second; tiles.erase(tile); erase(coords); return true;
+}
+MapObject *MapObject::createMapObject(std::string name) {
+    Json::Value config = (*ConfigurationProvider::getConfig("config/object.json"))[name];
+    std::string class_name = config.get("class", name).asString();
+    int registered = QMetaType::type(class_name.c_str());
+    if (registered == QMetaType::UnknownType) return 0;
+    MapObject *object = static_cast<MapObject *>(QMetaType::create(registered));
+    if (object) object->loadFromJson(name);
+    return object;
+}
+void MapObject::loadFromProps(Tmx::PropertySet properties) {
+    for (auto property : properties.GetList()) {
+        int index = metaObject()->indexOfProperty(property.first.c_str());
+        if (index < 0 || !metaObject()->property(index).isUser()) continue;
+        QMetaProperty metadata = metaObject()->property(index);
+        QVariant value(QString::fromStdString(property.second));
+        if (!value.convert(metadata.type()) || !metadata.write(this, value))
+            qWarning() << "Could not apply authored TMX property" << property.first.c_str();
+    }
+}
+
 
 
 Coords::Coords()
 {
-    x = y = z = 0;
+    x=y=z=0;
 }
 
-Coords::Coords(int x, int y, int z): x(x), y(y), z(z) {}
+Coords::Coords(int x, int y,int z):x(x),y(y),z(z) {}
 
 bool Coords::operator==(const Coords &other) const
 {
-    return (x == other.x && y == other.y && z == other.z);
+    return (x==other.x&&y==other.y&&z==other.z);
 }
 
 bool Coords::operator<(const Coords &other) const
 {
-    if (x < other.x) {
+    if(x<other.x) {
         return true;
     }
-    if (y < other.y && x == other.x) {
+    if(y<other.y&&x==other.x) {
         return true;
     }
-    if (z < other.z && x == other.x && y == other.y) {
+    if(z<other.z&&x==other.x&&y==other.y) {
         return true;
     }
     return false;
-}
-
-int Coords::getDist(Coords a)
-{
-    double x = this->x - a.x;
-    x *= x;
-    double y = this->y - a.y;
-    y *= y;
-    return sqrt(x + y);
 }
 
 std::size_t CoordsHasher::operator()(const Coords &coords) const
 {
     using std::size_t;
-    int a = (size_t)coords.x;
-    int b = (size_t)coords.y;
-    int c = (size_t)coords.z;
-    return (size_t)(a ^ b) ^ (b ^ c) ^ (a ^ c);
+    int a=(size_t)coords.x;
+    int b=(size_t)coords.y;
+    int c=(size_t)coords.z;
+    return (size_t)(a^b)^(b^c)^(a^c);
 }
 
-int Map::getEntryX()
-{
-    return entryx;
-}
-
-int Map::getEntryY()
-{
-    return entryy;
-}
-
-int Map::getEntryZ()
-{
-    return entryz;
-}
-
-MapObject *MapObject::getMapObject(std::string name) {
-  Json::Value config = (*ConfigurationProvider::getConfig("config/object.json"))[name];
-  std::string className = config.get("class", "").asString();
-  int typeId = QMetaType::type(className.c_str());
-  if (typeId == 0) {
-    return NULL;
-  }
-  MapObject *object = (MapObject *)QMetaType::create(typeId);
-  object->loadFromJson(name);
-  return object;
-}
-
-void MapObject::loadFromProps(Tmx::PropertySet set) {
-  std::map<std::string, std::string> properties = set.GetList();
-  for (auto property : properties) {
-    setProperty(property.first.c_str(), QString::fromStdString(property.second));
-  }
-}
-
-MapObject *Map::getObjectByName(std::string name) {
-  for (MapObject *object : mapObjects) {
-    if (object->objectName().toStdString() == name) {
-      return object;
-    }
-  }
-  return NULL;
-}
-
-bool Map::removeTile(int x, int y, int z) {
-  Coords coords(x, y, z);
-  std::map<Coords, Tile *>::iterator existing = tiles.find(coords);
-  if (existing == tiles.end()) {
-    return false;
-  }
-  if (existing->second && existing->second->scene()) {
-    existing->second->scene()->removeItem(existing->second);
-  }
-  delete existing->second;
-  tiles.erase(existing);
-  std::unordered_map<Coords, std::string, CoordsHasher>::iterator map_it = find(coords);
-  if (map_it != end()) {
-    erase(map_it);
-  }
-  return true;
-}
+int Coords::getDist(Coords other) { return std::abs(x-other.x)+std::abs(y-other.y)+std::abs(z-other.z); }

@@ -5,9 +5,9 @@
 #include <src/monster.h>
 #include <src/configurationprovider.h>
 
-Building *Building::getBuilding(std::string name)
+Building *Building::createBuilding(std::string name)
 {
-    return dynamic_cast<Building*>(MapObject::getMapObject(name));
+    return dynamic_cast<Building*>(MapObject::createMapObject(name));
 }
 
 Building::Building():ListItem(0,0,0,2)
@@ -64,7 +64,7 @@ void Cave::onEnter()
                 if (j == 0 && i == 0) {
                     continue;
                 }
-                Monster *monster = (Monster*)Creature::getCreature(this->monster.toStdString());
+                Monster *monster = (Monster*)Creature::createCreature(this->monster.toStdString());
                 map->addObject(monster);
                 monster->moveTo(getPosX() + 1 * i, getPosY() + 1 * j, getPosZ(), true);
             }
@@ -75,7 +75,7 @@ void Cave::onEnter()
 void Cave::onMove()
 {
     if (enabled && ((rand() % 100) < chance)) {
-        Monster *monster = (Monster*)Creature::getCreature(this->monster.toStdString());
+        Monster *monster = (Monster*)Creature::createCreature(this->monster.toStdString());
         map->addObject(monster);
         monster->moveTo(getPosX(), getPosY(), getPosZ(), true);
     }

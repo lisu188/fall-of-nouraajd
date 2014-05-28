@@ -9,6 +9,7 @@
 #include <random>
 #include <time.h>
 #include "player.h"
+#include <QDateTime>
 
 class GameView;
 class FightView;

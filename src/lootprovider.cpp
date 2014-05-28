@@ -13,7 +13,7 @@ LootProvider::LootProvider()
     Json::Value config = *ConfigurationProvider::getConfig("config/object.json");
     Json::Value::iterator it = config.begin();
     for (; it != config.end(); it++) {
-        MapObject *object = MapObject::getMapObject(it.memberName());
+        MapObject *object = MapObject::createMapObject(it.memberName());
         if (object && object->inherits("Item")) {
             this->insert(std::pair<std::string, int>
                          (it.memberName(), (*it).get("power", 1).asInt()));
@@ -39,7 +39,7 @@ std::set<Item *> *LootProvider::calculateLoot(int value)
         int power = (*it).second;
         std::string name = (*it).first;
         if (power <= value) {
-            loot->insert(Item::getItem(name));
+            loot->insert(Item::createItem(name));
             value -= power;
         }
     }

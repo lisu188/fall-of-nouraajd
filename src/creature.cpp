@@ -1,6 +1,7 @@
 #include "creature.h"
 
 #include <QGraphicsSceneHoverEvent>
+#include <src/lootprovider.h>
 #include <algorithm>
 #include <cstdlib>
 #include <fstream>
@@ -8,6 +9,7 @@
 
 #include <src/interaction.h>
 #include <src/configurationprovider.h>
+#include <src/item.h>
 #include <src/item.h>
 #include <src/stats.h>
 #include <src/gamescene.h>
@@ -31,23 +33,14 @@ int stat_resisted(int value, int resist) {
 } // namespace
 
 Creature::Creature() : ListItem(0, 0, 0, 2) {
-    exp = 0;
-    level = 0;
-    sw = 0;
-    mana = 0;
-    manaMax = 0;
+    gold = exp = level = sw = mana = manaMax = hpMax = hp = 0;
     manaRegRate = 1;
-    hpMax = 0;
-    hp = 0;
-    alive = true;
-    gold = 0;
     setAcceptHoverEvents(true);
-
-    Json::Value equipment_config = *ConfigurationProvider::getConfig("config/slots.json");
-    for (Json::Value::iterator it = equipment_config.begin(); it != equipment_config.end(); ++it)
-        equipped[std::atoi(it.memberName())] = 0;
+    Json::Value slots = *ConfigurationProvider::getConfig("config/slots.json");
+    for (auto it = slots.begin(); it != slots.end(); ++it) equipped[std::atoi(it.memberName())] = 0;
 }
-
+Creature::Creature(const Creature &other) : Creature() { if (!other.typeName.empty()) loadFromJson(other.typeName); }
+Creature *Creature::createCreature(std::string name) { return dynamic_cast<Creature *>(MapObject::createMapObject(name)); }
 Creature::~Creature() {
     actions.clear();
     effects.clear();
@@ -135,7 +128,7 @@ void Creature::levelUp() {
     addMana(0);
 }
 
-std::set<Item *> *Creature::getLoot() { return new std::set<Item *>(); }
+std::set<Item *> *Creature::getLoot() { return LootProvider::getLoot(std::max(0, getScale())); }
 
 void Creature::addAction(Interaction *action) {
     if (!action)
@@ -172,9 +165,7 @@ void Creature::addManaProc(float i) { addMana(static_cast<int>(manaMax * i / 100
 
 void Creature::takeMana(int i) { mana = std::max(0, mana - i); }
 
-bool Creature::isPlayer() {
-    return typeName == "Player" || typeName == "Mage" || typeName == "Warrior" || typeName == "Rogue";
-}
+bool Creature::isPlayer() { return inherits("Player"); }
 
 int Creature::getHpRatio() { return clamp_ratio(hp, hpMax); }
 
@@ -200,7 +191,8 @@ bool Creature::hasItem(Item *item) { return hasInInventory(item) || hasEquipped(
 Coords Creature::getCoords() { return Coords(getPosX(), getPosY(), getPosZ()); }
 void Creature::onEnter() {}
 void Creature::onMove() {}
-Creature::Creature(const Creature &) : Creature() {}
+
+
 int Creature::getExp() { return exp; }
 Stats *Creature::getStats() { return &stats; }
 
@@ -218,6 +210,7 @@ bool Creature::isAlive() const { return alive; }
 
 void Creature::setAlive() { alive = true; }
 
+// Creatures are described by a configuration or a saved game: both use the same keys.
 void Creature::loadFromJson(std::string name) {
     typeName = name;
     Json::Value config = (*ConfigurationProvider::getConfig("config/object.json"))[name];
@@ -233,7 +226,7 @@ void Creature::loadFromJson(std::string name) {
     std::set<Item *> items;
     names = config["items"];
     for (unsigned int i = 0; i < names.size(); i++) {
-        Item *item = Item::getItem(names[i].asCString());
+        Item *item = Item::createItem(names[i].asCString());
         if (item)
             items.insert(item);
     }
@@ -241,12 +234,10 @@ void Creature::loadFromJson(std::string name) {
 
     Json::Value equipment_config = config["equipment"];
     for (Json::Value::iterator it = equipment_config.begin(); it != equipment_config.end(); ++it)
-        setItem(std::atoi(it.memberName()), Item::getItem((*it).asCString()));
+        setItem(std::atoi(it.memberName()), Item::createItem((*it).asCString()));
     Json::Value equipment = config["inventory"];
-    if (equipment.isMember("weapon"))
-        setWeapon(dynamic_cast<Weapon *>(Item::getItem(equipment["weapon"].asCString())));
-    if (equipment.isMember("armor"))
-        setArmor(dynamic_cast<Armor *>(Item::getItem(equipment["armor"].asCString())));
+    if (equipment.isMember("weapon")) setWeapon(dynamic_cast<Weapon *>(Item::createItem(equipment["weapon"].asString())));
+    if (equipment.isMember("armor")) setArmor(dynamic_cast<Armor *>(Item::createItem(equipment["armor"].asString())));
 
     if (config.isMember("coords"))
         moveTo(config["coords"].get("x", 0).asInt(), config["coords"].get("y", 0).asInt(),
@@ -265,6 +256,11 @@ void Creature::loadFromJson(std::string name) {
         levelUp();
     }
 }
+
+// Defeated creatures are left out of saved games.
+
+
+
 
 int Creature::getHp() { return hp; }
 
@@ -332,23 +328,8 @@ void Creature::hoverEnterEvent(QGraphicsSceneHoverEvent *event) {
         event->accept();
 }
 
-Creature *Creature::getCreature(std::string name) {
-    Json::Value config = (*ConfigurationProvider::getConfig("config/object.json"))[name];
-    if (config.isNull()) {
-        return NULL;
-    }
-    std::string className = config.get("class", config.get("isPlayer", false).asBool() ? "Player" : "Monster").asString();
-    int typeId = QMetaType::type(className.c_str());
-    if (typeId == 0) {
-        return NULL;
-    }
-    Creature *creature = (Creature *)QMetaType::create(typeId);
-    creature->loadFromJson(name);
-    return creature;
-}
 
-void Creature::setExp(int exp) { this->exp = exp; }
-
+void Creature::setExp(int value) { exp = value; Q_EMIT statsChanged(); }
+int Creature::getExpReward() { return std::max(1, getScale()) * 150; }
 int Creature::getGold() const { return gold; }
-
-void Creature::setGold(int value) { gold = value; }
+void Creature::setGold(int value) { gold = value; Q_EMIT statsChanged(); }
