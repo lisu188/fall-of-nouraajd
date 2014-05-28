@@ -13,6 +13,7 @@ PyObject *addObject(PyObject *, PyObject *args)
         GameScene::getMap()->addObject(object);
         object->moveTo(x, y, z);
     }
+    qDebug() << "Added object"<<object->typeName.c_str()<<"with name"<<object->name.c_str()<<"on"<<x<<y<<z<<"\n";
     Py_RETURN_NONE;
 }
 
