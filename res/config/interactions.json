@@ -1,0 +1,149 @@
+{
+"Attack" :
+    {
+"anim" : "images/interactions/attack/"
+        ,
+"tooltip" : "Standard Attack"
+    },
+"ElemStaff" :
+    {},
+"DoubleAttack" :
+    {
+"anim" : "images/interactions/doubleattack/"
+        ,
+        "manaCost" : 50
+    },
+"SneakAttack" :
+    {
+"anim" : "images/interactions/sneakattack/"
+        ,
+        "manaCost" : 15
+    },
+"Strike" :
+    {
+"anim" : "images/interactions/strike/"
+        ,
+        "manaCost" : 25
+    },
+"Stunner" :
+    {
+"anim" : "images/interactions/stun/"
+        ,
+"effect" : "Stun"
+        ,
+        "manaCost" : 40
+    },
+"AbyssalShadows" :
+    {
+"anim" : "images/interactions/abyssalshadows/"
+        ,
+"effect" : "AbyssalShadowsEffect"
+        ,
+        "manaCost" : 15
+    },
+"ArmorOfEndlessWinter" :
+    {
+"anim" : "images/interactions/armorofendlesswinter/"
+        ,
+"effect" : "ArmorOfEndlessWinterEffect"
+        ,
+        "manaCost" : 60
+    },
+"ChaosBlast" :
+    {
+"anim" : "images/interactions/chaosblast/"
+        ,
+        "manaCost" : 150
+    },
+"Devour" :
+    {
+"anim" : "images/interactions/devour/"
+        ,
+        "manaCost" : 75
+    },
+"EndlessPain" :
+    {
+"anim" : "images/interactions/endlesspain/"
+        ,
+"effect" : "EndlessPainEffect"
+        ,
+        "manaCost" : 25
+    },
+"FrostBolt" :
+    {
+"anim" : "images/interactions/frostbolt/"
+        ,
+        "manaCost" : 20
+    },
+"MagicMissile" :
+    {
+"anim" : "images/interactions/magicmissile/"
+        ,
+        "manaCost" : 5,
+"tooltip" : "Magic Missile"
+    },
+"ShadowBolt" :
+    {
+"anim" : "images/interactions/shadowbolt/"
+        ,
+        "manaCost" : 45
+    },
+"Mutilation" :
+    {
+"anim" : "images/interactions/mutilation/"
+        ,
+"effect" : "MutilationEffect"
+        ,
+        "manaCost" : 15
+    },
+"LethalPoison" :
+    {
+"anim" : "images/interactions/lethalpoison/"
+        ,
+"effect" : "LethalPoisonEffect"
+        ,
+        "manaCost" : 20
+    },
+"Chloroform" :
+    {
+"anim" : "images/interactions/chloroform/"
+        ,
+"effect" : "ChloroformEffect"
+        ,
+        "manaCost" : 25
+    },
+"Backstab" :
+    {
+"anim" : "images/interactions/backstab/"
+        ,
+        "manaCost" : 40
+    },
+"Bloodlash" :
+    {
+"anim" : "images/interactions/bloodlash/"
+        ,
+"effect" : "BloodlashEffect"
+        ,
+        "manaCost" : 30
+    },
+"DeathStrike" :
+    {
+"anim" : "images/interactions/deathstrike/"
+        ,
+        "manaCost" : 45
+    },
+"Barrier" :
+    {
+"anim" : "images/interactions/barrier/"
+        ,
+"effect" : "BarrierEffect"
+        ,
+        "manaCost" : 17
+    },
+"BloodThirst" :
+    {
+"anim" : "images/interactions/bloodthirst/"
+        ,
+        "manaCost" : 35
+    }
+}
