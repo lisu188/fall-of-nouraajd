@@ -11,7 +11,7 @@ class Building : public ListItem
     Q_OBJECT
     Q_PROPERTY(bool enabled READ isEnabled WRITE setEnabled USER true)
 public:
-    static Building *getBuilding(std::string name);
+    static Building *createBuilding(std::string name);
     Building();
     Building(const Building&);
     virtual void onEnter();

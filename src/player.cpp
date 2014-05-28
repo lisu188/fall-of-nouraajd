@@ -51,6 +51,7 @@ void Player::setMap(Map *map)
 Player::Player(std::string name)
 {
     init();
+    this->name="PLAYER";
     this->loadFromJson(name);
 }
 

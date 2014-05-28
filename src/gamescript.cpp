@@ -8,7 +8,7 @@ PyObject *addObject(PyObject *, PyObject *args)
     const char *name;
     int x, y, z;
     PyArg_ParseTuple(args, "siii", &name, &x, &y, &z);
-    MapObject *object = MapObject::getMapObject(name);
+    MapObject *object = MapObject::createMapObject(name);
     if (object) {
         GameScene::getMap()->addObject(object);
         object->moveTo(x, y, z);

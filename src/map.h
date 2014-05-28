@@ -76,7 +76,7 @@ class MapObject : public AnimatedObject
 {
     Q_OBJECT
 public:
-    static MapObject* getMapObject(std::string name);
+    static MapObject* createMapObject(std::string name);
     MapObject();
     MapObject(int x, int y, int z, int v);
     std::string typeName;
@@ -89,7 +89,7 @@ public:
     void removeFromGame();
     virtual void onEnter() = 0;
     virtual void onMove() = 0;
-    void move(int x, int y);
+    Q_SLOT void move(int x, int y);
     virtual void loadFromJson(std::string name) = 0;
     void loadFromProps(Tmx::PropertySet set);
     virtual void setMap(Map *map);
@@ -101,4 +101,5 @@ protected:
     Map *map = 0;
     QGraphicsSimpleTextItem statsView;
 };
+
 #endif // MAP_H
