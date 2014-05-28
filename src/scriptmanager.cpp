@@ -1,5 +1,6 @@
 #include "scriptmanager.h"
 #include "gamescript.h"
+#include <QString>
 
 ScriptManager::ScriptManager(ScriptManager &)
 {
@@ -16,6 +17,30 @@ ScriptManager &ScriptManager::getInstance()
 void ScriptManager::executeScript(std::string script)
 {
     PyRun_SimpleString(script.c_str());
+}
+
+void ScriptManager::executeCommand(std::initializer_list<std::string> list){
+    QString command;
+    int pos=0;
+    for(auto it=list.begin();it!=list.end();it++,pos++){
+        QString part=(QString::fromStdString(*it));
+        part.replace("\"","\\\"");
+        if(pos==0){
+            command.append("Game.");
+            command.append(part);
+            command.append("(");
+        }else{
+            command.append("\"");
+            command.append(part);
+            command.append("\"");
+            if(pos<list.size()-1){
+                command.append(",");
+            }else{
+                command.append(")");
+            }
+        }
+    }
+    executeScript(command.toStdString());
 }
 
 PyMODINIT_FUNC

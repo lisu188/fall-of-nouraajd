@@ -4,6 +4,7 @@
 #include "src/creature.h"
 #include <src/item.h>
 #include <queue>
+#include <QDateTime>
 
 class PlayerStatsView;
 
@@ -33,6 +34,7 @@ public:
 private:
     std::list<Creature *> fightList;
     int turn;
+    qint64 date=QDateTime::currentMSecsSinceEpoch();
     std::list<MapObject *> entered;
 };
 Q_DECLARE_METATYPE(Player)

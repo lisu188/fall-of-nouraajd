@@ -1,7 +1,10 @@
 #ifndef PATHFINDER_H
 #define PATHFINDER_H
+#include "creature.h"
+
 #include <src/map.h>
 #include <QObject>
+#include <QRunnable>
 #include <unordered_map>
 #include <unordered_set>
 
@@ -68,4 +71,15 @@ private:
     bool canStep(int x, int y , int z);
 };
 Q_DECLARE_METATYPE(SmartPathFinder)
+
+class PathFinderWorker : public QObject,public QRunnable{
+    Q_OBJECT
+public:
+    PathFinderWorker(Creature *creature,PathFinder *finder);
+    void run();
+private:
+    Q_SIGNAL void complete(int x,int y);
+    Creature *creature;
+    PathFinder *finder;
+};
 #endif // PATHFINDER_H

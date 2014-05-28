@@ -4,6 +4,7 @@
 #include <src/pathfinder.h>
 #include <QDebug>
 #include <src/configurationprovider.h>
+#include <QThreadPool>
 
 Monster::Monster(): Creature()
 {
@@ -24,15 +25,8 @@ void Monster::onMove()
     } else {
         finder = new RandomPathFinder();
     }
-    Coords path = finder->findPath(this->getCoords(), GameScene::getPlayer()->getCoords());
-    delete finder;
-    move(path.x, path.y);
-    /*
-    if(rand()%20==0) {
-        onMove();
-    }
-    */
     this->addExp(rand() % 25);
+    QThreadPool::globalInstance()->start(new PathFinderWorker(this,finder));
 }
 
 void Monster::onEnter()

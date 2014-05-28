@@ -10,6 +10,7 @@
 #include <src/building.h>
 #include <src/pathfinder.h>
 #include <src/interaction.h>
+#include <QThreadPool>
 
 std::set<int> qMetaTypesRegister;
 
@@ -41,6 +42,8 @@ void registerMetaTypes()
 int main(int argc, char *argv[])
 {
     QApplication a(argc, argv);
+    QThreadPool::globalInstance()->setMaxThreadCount(16);
+    QThreadPool::globalInstance()->setExpiryTimeout(0);
     registerMetaTypes();
     GameView view;
     int ret = a.exec();

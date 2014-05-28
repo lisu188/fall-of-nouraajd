@@ -20,7 +20,7 @@ class Creature : public ListItem
 public:
     int getExp();
     void setExp(int exp);
-    static Creature *getCreature(std::string name);
+    static Creature *createCreature(std::string name);
     Creature();
     Creature(const Creature &creature);
     ~Creature();

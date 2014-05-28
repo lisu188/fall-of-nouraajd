@@ -17,7 +17,7 @@ public:
     bool isSingleUse();
     virtual void onEquip(Creature *creature);
     virtual void onUnequip(Creature *creature);
-    static Item *getItem(std::string name);
+    static Item *createItem(std::string name);
     virtual void onUse(Creature *creature);
     virtual void onEnter();
     virtual void onMove();
