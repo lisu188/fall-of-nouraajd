@@ -1,7 +1,7 @@
 # Recovered game snapshot
 
-Original commit: `6465fa1050850af1836a4327c4edb14aceb7cd69`. Original tree: `01d9145c5d6863a582d645b874cde73b5d9f21db`.
-Startup was verified from identical recovered sources at `6465fa1050850af1836a4327c4edb14aceb7cd69`.
+Original commit: `17760db4ce0810e9d1f145e916f1ba78988c7149`. Original tree: `e32fb6d1f416bc264911c953505ace448054db47`.
+Startup was verified from identical recovered sources at `17760db4ce0810e9d1f145e916f1ba78988c7149`.
 
 This recovered version compiled and linked on Linux, started the real game on an isolated Xvfb display,
 loaded its map and a healthy player, rendered the screenshot below, and exited normally.
@@ -37,11 +37,8 @@ launches run the game's original entry point. Startup evidence does not establis
 
 compatibilityRepair: 1, exactOriginal: 65, reconstruction: 45.
 
-- `Game.pro`: working reconstruction
-- `config/map.tmx`: unverified donor reconstruction; authored Tiled geometry/object coordinates from 55e6516e:maps/map1/map.json converted to XML; missing target script reference omitted
-- `config/object.json`: unverified donor reconstruction; split object descriptors e8b7c3d0e6da989122a0587943a98504342da3cd:config/objects flattened to observed legacy class/path API; target tile/interaction entries preserved; species stats retain uncertainty of reconstructed creatures catalog
-- `images/loading.png`: synthesized visible 32px placeholder; original artwork unavailable; unverified
-- `lib/base64/base64.cpp`: unverified donor reconstruction; 779fb803ff021de5e74ed3b24d7c31a9adcaa236:base64/base64.cpp; headerMatch=0; apiOverlap=10000/10000; distance=17
+- `Game.pro`: Missing #195 project reconstructed from all52 actual C++ and15 C translation units, all same-commit headers and6 surviving resource manifests under src/lib/res. Preserves every original game/library TU; declares supported CPython3.4 ABI for genuine Python3 C API, not claimed exact historical original flags. Replaces stale unverified pre-layout donor; pending native proof. JSON headers retain qualified lib/json or local includes; adding lib/json globally would shadow glibc features.h and is intentionally avoided. Defines QT_NO_KEYWORDS consistently with surviving Q_SLOT/Q_SIGNAL/Q_EMIT usage, preventing Qt slots macro from altering original Python3 PyType_Slot field.
+- `lib/base64/base64.cpp`: unverified donor reconstruction; 779fb803ff021de5e74ed3b24d7c31a9adcaa236:base64/base64.cpp; headerMatch=0; apiOverlap=10000/10000; distance=18
 - `lib/json/json_batchallocator.h`: unverified upstream reconstruction; https://github.com/open-source-parsers/jsoncpp/tree/4fce396c9d3e27a8ab8fb88e94c1676e021ae3a6; adapted json include prefix to historical lib/json layout
 - `lib/json/json_reader.cpp`: unverified upstream reconstruction; https://github.com/open-source-parsers/jsoncpp/tree/4fce396c9d3e27a8ab8fb88e94c1676e021ae3a6; adapted json include prefix to historical lib/json layout
 - `lib/json/json_value.cpp`: unverified upstream reconstruction; https://github.com/open-source-parsers/jsoncpp/tree/4fce396c9d3e27a8ab8fb88e94c1676e021ae3a6; adapted json include prefix to historical lib/json layout
@@ -57,7 +54,7 @@ compatibilityRepair: 1, exactOriginal: 65, reconstruction: 45.
 - `lib/tmx/TmxLayer.h`: unverified upstream reconstruction; https://github.com/tamatias/tmxparser/tree/6fa4d38742313b6365df0d224b8978be1eb81290; adapted vendored tinyxml/zlib include paths to historical directory layout
 - `lib/tmx/TmxMap.cpp`: unverified upstream reconstruction; https://github.com/tamatias/tmxparser/tree/6fa4d38742313b6365df0d224b8978be1eb81290; adapted vendored tinyxml/zlib include paths to historical directory layout
 - `lib/tmx/TmxMap.h`: unverified upstream reconstruction; https://github.com/tamatias/tmxparser/tree/6fa4d38742313b6365df0d224b8978be1eb81290; adapted vendored tinyxml/zlib include paths to historical directory layout
-- `lib/tmx/TmxObject.cpp`: unverified donor reconstruction; 181f31e1e9a7f3516c7fbd3d4400aa0822c1d387:lib/tmx/TmxObject.cpp; headerMatch=0; apiOverlap=10000/10000; distance=41
+- `lib/tmx/TmxObject.cpp`: unverified donor reconstruction; 181f31e1e9a7f3516c7fbd3d4400aa0822c1d387:lib/tmx/TmxObject.cpp; headerMatch=0; apiOverlap=10000/10000; distance=40
 - `lib/tmx/TmxTileset.cpp`: unverified upstream reconstruction; https://github.com/tamatias/tmxparser/tree/6fa4d38742313b6365df0d224b8978be1eb81290; adapted vendored tinyxml/zlib include paths to historical directory layout
 - `lib/zlib/adler32.c`: Unmodified official zlib v1.2.5 adler32.c; Git blob verified against official tag tree 9712272c78b9d9c93746d9c8e156a3728c65ca72. Coherent same-version donor replaces mixed1.2.5/1.2.5 fallback; exact original only when originalHashMatches=true.
 - `lib/zlib/crc32.c`: Unmodified official zlib v1.2.5 crc32.c; Git blob verified against official tag tree 9712272c78b9d9c93746d9c8e156a3728c65ca72. Coherent same-version donor replaces mixed1.2.5/1.2.5 fallback; exact original only when originalHashMatches=true.
@@ -74,6 +71,9 @@ compatibilityRepair: 1, exactOriginal: 65, reconstruction: 45.
 - `lib/zlib/zlib.h`: Unmodified official zlib v1.2.5 zlib.h; Git blob verified against official tag tree 9712272c78b9d9c93746d9c8e156a3728c65ca72. Coherent same-version donor replaces mixed1.2.5/1.2.5 fallback; exact original only when originalHashMatches=true.
 - `lib/zlib/zutil.c`: Unmodified official zlib v1.2.5 zutil.c; Git blob verified against official tag tree 9712272c78b9d9c93746d9c8e156a3728c65ca72. Coherent same-version donor replaces mixed1.2.5/1.2.5 fallback; exact original only when originalHashMatches=true.
 - `lib/zlib/zutil.h`: Unmodified official zlib v1.2.5 zutil.h; Git blob verified against official tag tree 9712272c78b9d9c93746d9c8e156a3728c65ca72. Coherent same-version donor replaces mixed1.2.5/1.2.5 fallback; exact original only when originalHashMatches=true.
+- `res/config/map.tmx`: unverified donor reconstruction; authored Tiled geometry/object coordinates from 55e6516e:maps/map1/map.json converted to XML; missing target script reference omitted
+- `res/config/object.json`: unverified donor reconstruction; split object descriptors e8b7c3d0e6da989122a0587943a98504342da3cd:config/objects flattened to observed legacy class/path API; target tile/interaction entries preserved; species stats retain uncertainty of reconstructed creatures catalog
+- `res/images/loading.png`: synthesized visible 32px placeholder; original artwork unavailable; unverified
 - `src/creature.cpp`: Missing body adapted from accepted #150 reconstruction to exact #195 default/copy/factory and string-key load API, consolidated object config, src paths and genuine Qt signals. Preserves real combat/actions/inventory/equipment/level mechanics; legacy equipment setters only run when explicitly present, preserving restored slot entries. Loot delegates the surviving same-commit LootProvider. Formulas and absent original body remain inferred; not a parity claim. Inputs: [{"path": "/tmp/nouraajd-bfg-recovery/native-middle/recon/08ec144f196a9a5195e281997b5695828ccbd2ab", "sha256": "ed9e1bc1401e2c6dcb98cc025f4773e6d5277f674ce9dc808bf1c9d04c1296d1"}, {"path": "src/creature.h", "sha256": "627da3d68dec495fcdb4ec747e8c7fb09bbb0804eca3417fdfe015109eadb161"}]
 - `src/gamescene.cpp`: Missing #195 scene uses surviving #197 authored TMX startup donor with removed future CompletionListener guard (not declared in #195), plus accepted earlier click/hold StepTimer implementation matching surviving #195 declarations. Executes original authored map/player startup and ordinary keyboard/mouse movement; no substitute main. Not exact original. Inputs: [{"path": "/tmp/nouraajd-bfg-recovery/native-upper-middle/verify/snapshot-awzoo2ty/source/src/gamescene.cpp", "sha256": "e02c0c9103348c7bf348bb61e65437f11a2f9017eea8885ea90db0a735425640"}, {"path": "/tmp/nouraajd-bfg-recovery/native-middle/recon/2e11b4ac70d1dd42150a0e3265af39cbe00d0955", "sha256": "36f343a29f069a2c3ddccfbd66a71ca35b4eacc22000cc49ae21e0a7825de29f"}, {"path": "src/gamescene.h", "sha256": "23f71d24ca32487047bf5d22f8e420b43ab98576a30ceeee20a66c07ec10a1a0"}]
 - `src/gamescript.cpp`: Surviving nearby historical Python3 C API donor adapted only from former getMapObject to exact #195 declared createMapObject name; preserved actual original source cohort addObject/replaceTile/setProperty functions. No future Boost binding used; source reconstruction not parity. Inputs: [{"path": "/tmp/nouraajd-bfg-recovery/native-upper-middle/verify/snapshot-awzoo2ty/source/src/gamescript.cpp", "sha256": "1393d839a74dff59cc81afc99ca59ff473812afaf1f34573c70682cf1cb1dd03"}, {"path": "src/gamescript.h", "sha256": "85a75c2e41c9dcb45e3a473a9aa53184e83fd0c3332997a0ca3ac7584afafa79"}]
@@ -84,7 +84,7 @@ compatibilityRepair: 1, exactOriginal: 65, reconstruction: 45.
 - `src/stats.cpp`: Missing merged Stats/Damage TU assembled from accepted plain #150 Stats reconstruction and surviving #150 Damage implementation for exact #195 merged declarations; no QObject/future API donor retained. Not exact original. Inputs: [{"path": "/tmp/nouraajd-bfg-recovery/source/recovery/payloads/reconstructions/4f/4ff9f45b2f23d26fc69280d6c0df542e02efa223-stats.cpp", "sha256": "bff0757ad033b37841a3a1e0ffa12abbb78dae7250c3ef4f9f26dd7c331cefbd"}, {"path": "/tmp/nouraajd-bfg-recovery/native-middle/src/70449d6d/stats/damage.cpp", "sha256": "de430be10d1a6f3f174a2efa9f0604743aff9601c0ab5fb2c9e3eeddf01ff6df"}, {"path": "src/stats.h", "sha256": "462ead5a1e2f69858c6574e13efeb3dcc157d82f48dbf6d7968335f6af0d8bef"}]
 - `lib/json/LICENSE`: https://github.com/open-source-parsers/jsoncpp/tree/4fce396c9d3e27a8ab8fb88e94c1676e021ae3a6 upstream distribution license
 
-Restored source fingerprint: `d6abc3283dbf6c8da1bf65f2a15b48ac5eee964bd7edd23e589587972dbd2e61`.
+Restored source fingerprint: `b03763af59e0f571a597734faac10e22a35b40f6f25f726d9ee3b382d646ee64`.
 
 The actual 1278 × 718 screenshot and [verification metadata](recovery/verification.json) belong to
 this source version. Reconstructed code and borrowed assets are identified in that metadata; they are
