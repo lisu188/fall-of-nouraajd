@@ -16,7 +16,6 @@ Destroyer::~Destroyer()
         delete *this->begin();
     }
     this->clear();
-    AnimationProvider::terminate();
 }
 
 void Destroyer::add(AnimatedObject *object)

@@ -28,8 +28,6 @@ void GameScene::startGame()
 {
     srand(time(0));
     game = this;
-    stepTimer.setDirx(0); stepTimer.setDiry(0); stepTimer.setInterval(getStep());
-    connect(&stepTimer, SIGNAL(timeout()), this, SLOT(clickMove()));
     map = new Map(this);
     Tmx::Map tmxMap;
     QFile file(":/config/map.tmx");
@@ -94,6 +92,9 @@ void GameScene::keyPressEvent(QKeyEvent * keyEvent)
 
 void GameScene::playerMove(int dirx, int diry)
 {
+    if(!CompletionListener::getInstance()->isCompleted()){
+        return;
+    }
     if (player->getFightList()->size() > 0 || getView()->getCharView()->isVisible()) {
         return;
     }
@@ -126,31 +127,17 @@ Map *GameScene::getMap()
     return map;
 }
 
-int GameScene::StepTimer::getDirx() const { return dirx; }
-void GameScene::StepTimer::setDirx(int value) { dirx = value; }
-int GameScene::StepTimer::getDiry() const { return diry; }
-void GameScene::StepTimer::setDiry(int value) { diry = value; }
-void GameScene::adjustStepTimer(QGraphicsSceneMouseEvent *event) {
-    if (!player) return;
-    QPointF delta = event->scenePos() - player->QGraphicsItem::pos();
-    stepTimer.setDirx(qAbs(delta.x()) >= qAbs(delta.y()) ? (delta.x() > 0 ? 1 : -1) : 0);
-    stepTimer.setDiry(qAbs(delta.y()) > qAbs(delta.x()) ? (delta.y() > 0 ? 1 : -1) : 0);
-}
-void GameScene::clickMove() { playerMove(stepTimer.getDirx(), stepTimer.getDiry()); }
-void GameScene::mousePressEvent(QGraphicsSceneMouseEvent *event) {
+void GameScene::mousePressEvent(QGraphicsSceneMouseEvent *event)
+{
     QGraphicsScene::mousePressEvent(event);
-    if (!event->isAccepted() && event->button() == Qt::LeftButton) {
-        adjustStepTimer(event);
-        clickMove();
-        stepTimer.start();
-        event->accept();
-    }
 }
-void GameScene::mouseMoveEvent(QGraphicsSceneMouseEvent *event) {
-    QGraphicsScene::mouseMoveEvent(event);
-    if (stepTimer.isActive()) adjustStepTimer(event);
+
+void GameScene::mouseMoveEvent(QGraphicsSceneMouseEvent *event)
+{
+        QGraphicsScene::mouseMoveEvent(event);
 }
-void GameScene::mouseReleaseEvent(QGraphicsSceneMouseEvent *event) {
-    stepTimer.stop();
+
+void GameScene::mouseReleaseEvent(QGraphicsSceneMouseEvent *event)
+{
     QGraphicsScene::mouseReleaseEvent(event);
 }
