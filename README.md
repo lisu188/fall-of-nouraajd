@@ -1,7 +1,7 @@
 # Recovered game snapshot
 
-Original commit: `50cecd11c3bcf6e1fa6f9450626a1795c0e41fdb`. Original tree: `c6b7e935bed34fa316636826d7e283521aa5b1df`.
-Startup was verified from identical recovered sources at `50cecd11c3bcf6e1fa6f9450626a1795c0e41fdb`.
+Original commit: `7c1127cf428ae90028e13005e7fe4a78d727c678`. Original tree: `70cf9e3f6be89e501a0a74f6c5ec6a742d08c028`.
+Startup was verified from identical recovered sources at `7c1127cf428ae90028e13005e7fe4a78d727c678`.
 
 This recovered version compiled and linked on Linux, started the real game on an isolated Xvfb display,
 loaded its map and a healthy player, rendered the screenshot below, and exited normally.
@@ -38,7 +38,7 @@ launches run the game's original entry point. Startup evidence does not establis
 compatibilityRepair: 1, exactOriginal: 65, reconstruction: 44.
 
 - `Game.pro`: Missing #196 body carried from native-verified #195 reconstruction e53cc0bde800c6d39a4e0b71b24fbb603481ebeb with byte-identical corresponding original header (or identical complete project TU/header/resource path inventory). Missing original body delta remains unknown; actual native startup checked separately. Missing #195 project reconstructed from all52 actual C++ and15 C translation units, all same-commit headers and6 surviving resource manifests under src/lib/res. Preserves every original game/library TU; declares supported CPython3.4 ABI for genuine Python3 C API, not claimed exact historical original flags. Replaces stale unverified pre-layout donor; pending native proof. JSON headers retain qualified lib/json or local includes; adding lib/json globally would shadow glibc features.h and is intentionally avoided. Defines QT_NO_KEYWORDS consistently with surviving Q_SLOT/Q_SIGNAL/Q_EMIT usage, preventing Qt slots macro from altering original Python3 PyType_Slot field.
-- `lib/base64/base64.cpp`: unverified donor reconstruction; 779fb803ff021de5e74ed3b24d7c31a9adcaa236:base64/base64.cpp; headerMatch=0; apiOverlap=10000/10000; distance=21
+- `lib/base64/base64.cpp`: unverified donor reconstruction; 779fb803ff021de5e74ed3b24d7c31a9adcaa236:base64/base64.cpp; headerMatch=0; apiOverlap=10000/10000; distance=22
 - `lib/json/json_batchallocator.h`: unverified upstream reconstruction; https://github.com/open-source-parsers/jsoncpp/tree/4fce396c9d3e27a8ab8fb88e94c1676e021ae3a6; adapted json include prefix to historical lib/json layout
 - `lib/json/json_reader.cpp`: unverified upstream reconstruction; https://github.com/open-source-parsers/jsoncpp/tree/4fce396c9d3e27a8ab8fb88e94c1676e021ae3a6; adapted json include prefix to historical lib/json layout
 - `lib/json/json_value.cpp`: unverified upstream reconstruction; https://github.com/open-source-parsers/jsoncpp/tree/4fce396c9d3e27a8ab8fb88e94c1676e021ae3a6; adapted json include prefix to historical lib/json layout
@@ -54,7 +54,7 @@ compatibilityRepair: 1, exactOriginal: 65, reconstruction: 44.
 - `lib/tmx/TmxLayer.h`: unverified upstream reconstruction; https://github.com/tamatias/tmxparser/tree/6fa4d38742313b6365df0d224b8978be1eb81290; adapted vendored tinyxml/zlib include paths to historical directory layout
 - `lib/tmx/TmxMap.cpp`: unverified upstream reconstruction; https://github.com/tamatias/tmxparser/tree/6fa4d38742313b6365df0d224b8978be1eb81290; adapted vendored tinyxml/zlib include paths to historical directory layout
 - `lib/tmx/TmxMap.h`: unverified upstream reconstruction; https://github.com/tamatias/tmxparser/tree/6fa4d38742313b6365df0d224b8978be1eb81290; adapted vendored tinyxml/zlib include paths to historical directory layout
-- `lib/tmx/TmxObject.cpp`: unverified donor reconstruction; 181f31e1e9a7f3516c7fbd3d4400aa0822c1d387:lib/tmx/TmxObject.cpp; headerMatch=0; apiOverlap=10000/10000; distance=37
+- `lib/tmx/TmxObject.cpp`: unverified donor reconstruction; 181f31e1e9a7f3516c7fbd3d4400aa0822c1d387:lib/tmx/TmxObject.cpp; headerMatch=0; apiOverlap=10000/10000; distance=36
 - `lib/tmx/TmxTileset.cpp`: unverified upstream reconstruction; https://github.com/tamatias/tmxparser/tree/6fa4d38742313b6365df0d224b8978be1eb81290; adapted vendored tinyxml/zlib include paths to historical directory layout
 - `lib/zlib/adler32.c`: Unmodified official zlib v1.2.5 adler32.c; Git blob verified against official tag tree 9712272c78b9d9c93746d9c8e156a3728c65ca72. Coherent same-version donor replaces mixed1.2.5/1.2.5 fallback; exact original only when originalHashMatches=true.
 - `lib/zlib/crc32.c`: Unmodified official zlib v1.2.5 crc32.c; Git blob verified against official tag tree 9712272c78b9d9c93746d9c8e156a3728c65ca72. Coherent same-version donor replaces mixed1.2.5/1.2.5 fallback; exact original only when originalHashMatches=true.
