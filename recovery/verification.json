@@ -1,6 +1,6 @@
 {
   "adapter": {
-    "config": "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-w9tib423/observer/recovery_smoke_config.h",
+    "config": "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-va64ia1r/observer/recovery_smoke_config.h",
     "configSha256": "338403e2741ea15045f583732bc52a7efc27f4a8829b9fb2783fe2d73aff367e",
     "id": "classic-3d",
     "mode": "game",
@@ -18,17 +18,17 @@
       "make",
       "-j8"
     ],
-    "log": "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-w9tib423/build.log",
+    "log": "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-va64ia1r/build.log",
     "returnCode": 0,
-    "seconds": 9.658,
+    "seconds": 9.008,
     "timedOut": false
   },
   "configure": {
     "command": [
       "qmake",
-      "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-w9tib423/source/Game.pro",
+      "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-va64ia1r/source/Game.pro",
       "-o",
-      "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-w9tib423/build/Makefile",
+      "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-va64ia1r/build/Makefile",
       "QMAKE_CC=gcc-5",
       "QMAKE_CXX=g++-5",
       "QMAKE_LINK=g++-5",
@@ -38,15 +38,15 @@
       "DESTDIR=.",
       "CONFIG-=app_bundle",
       "SOURCES+=/home/andrz/nouraajd-bfg-recovery-backup-20261116/source/recovery/smoke/game_startup.cpp",
-      "INCLUDEPATH+=/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-w9tib423/source",
-      "INCLUDEPATH+=/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-w9tib423/observer"
+      "INCLUDEPATH+=/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-va64ia1r/source",
+      "INCLUDEPATH+=/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-va64ia1r/observer"
     ],
-    "log": "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-w9tib423/configure.log",
+    "log": "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-va64ia1r/configure.log",
     "returnCode": 0,
     "seconds": 0.064,
     "timedOut": false
   },
-  "evidenceDir": "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/evidence/7cebf078699b97e9bb5ecc181b3e421f9325dfc6bbb6656e409fa1eb53f540cf",
+  "evidenceDir": "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/evidence/4a323b3b3610676ec9cbf3fe0097a451cc3e432f5ea198680620d517cf96a831",
   "fileLookup": {
     "command": [
       "g++-5",
@@ -55,20 +55,20 @@
       "-O2",
       "-std=c++11",
       "-o",
-      "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-w9tib423/observer/libwindowspaths.so",
+      "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-va64ia1r/observer/libwindowspaths.so",
       "/home/andrz/nouraajd-bfg-recovery-backup-20261116/source/recovery/smoke/windows_paths.cpp",
       "-ldl"
     ],
-    "log": "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-w9tib423/file-lookup.log",
+    "log": "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-va64ia1r/file-lookup.log",
     "returnCode": 0,
     "seconds": 0.214,
     "semantics": "Windows-style case-insensitive file lookup for the game process",
     "timedOut": false
   },
-  "fingerprint": "7cebf078699b97e9bb5ecc181b3e421f9325dfc6bbb6656e409fa1eb53f540cf",
+  "fingerprint": "4a323b3b3610676ec9cbf3fe0097a451cc3e432f5ea198680620d517cf96a831",
   "libraryAliases": {
     "aliases": {},
-    "directory": "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-w9tib423/observer/library-aliases"
+    "directory": "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-va64ia1r/observer/library-aliases"
   },
   "project": "Game.pro",
   "recipe": {
@@ -121,7 +121,7 @@
       },
       {
         "markerPath": "Game.pro.user.REMOVED.git-id",
-        "originalBlob": "5ec2cfd933e698d5ceb4916323b834b9a562747c",
+        "originalBlob": "b7512edd7cce783040848721da3b3622e42a117e",
         "path": "Game.pro.user",
         "reason": "machine-specific IDE state"
       },
@@ -186,7 +186,7 @@
         "reason": "generated binary, redistributable, or packaged artifact"
       }
     ],
-    "outputDir": "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-w9tib423/source",
+    "outputDir": "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-va64ia1r/source",
     "restored": [
       {
         "markerPath": "Game.pro.REMOVED.git-id",
@@ -201,7 +201,7 @@
         "method": "reconstruction",
         "originalBlob": "41a50c87bd079c82680581fb517b23a993bcdab7",
         "path": "lib/base64/base64.cpp",
-        "provenance": "unverified donor reconstruction; 779fb803ff021de5e74ed3b24d7c31a9adcaa236:base64/base64.cpp; headerMatch=0; apiOverlap=10000/10000; distance=19",
+        "provenance": "unverified donor reconstruction; 779fb803ff021de5e74ed3b24d7c31a9adcaa236:base64/base64.cpp; headerMatch=0; apiOverlap=10000/10000; distance=20",
         "replacementBlob": "07e5caa3e0fad17acd31b769f08db8887a1ed9b4"
       },
       {
@@ -350,7 +350,7 @@
         "method": "reconstruction",
         "originalBlob": "41448b96d7c0a16fe6d3a6ed356849010bf07996",
         "path": "lib/tmx/TmxObject.cpp",
-        "provenance": "unverified donor reconstruction; 181f31e1e9a7f3516c7fbd3d4400aa0822c1d387:lib/tmx/TmxObject.cpp; headerMatch=0; apiOverlap=10000/10000; distance=39",
+        "provenance": "unverified donor reconstruction; 181f31e1e9a7f3516c7fbd3d4400aa0822c1d387:lib/tmx/TmxObject.cpp; headerMatch=0; apiOverlap=10000/10000; distance=38",
         "replacementBlob": "151143c8df9052f2e35fa6c00cbaff54fba81fbd"
       },
       {
@@ -948,14 +948,6 @@
         "replacementBlob": "c62bf6335b279d1e94b3238b4840fad320e94207"
       },
       {
-        "markerPath": "src/gamescene.cpp.REMOVED.git-id",
-        "method": "reconstruction",
-        "originalBlob": "43ef0bfcbd2e0638159429d359e5e8027f4f535a",
-        "path": "src/gamescene.cpp",
-        "provenance": "Missing #195 scene uses surviving #197 authored TMX startup donor with removed future CompletionListener guard (not declared in #195), plus accepted earlier click/hold StepTimer implementation matching surviving #195 declarations. Executes original authored map/player startup and ordinary keyboard/mouse movement; no substitute main. Not exact original. Inputs: [{\"path\": \"/tmp/nouraajd-bfg-recovery/native-upper-middle/verify/snapshot-awzoo2ty/source/src/gamescene.cpp\", \"sha256\": \"e02c0c9103348c7bf348bb61e65437f11a2f9017eea8885ea90db0a735425640\"}, {\"path\": \"/tmp/nouraajd-bfg-recovery/native-middle/recon/2e11b4ac70d1dd42150a0e3265af39cbe00d0955\", \"sha256\": \"36f343a29f069a2c3ddccfbd66a71ca35b4eacc22000cc49ae21e0a7825de29f\"}, {\"path\": \"src/gamescene.h\", \"sha256\": \"23f71d24ca32487047bf5d22f8e420b43ab98576a30ceeee20a66c07ec10a1a0\"}]",
-        "replacementBlob": "23c5f0d9f5369a8acf7a64de72530e9eff844fa7"
-      },
-      {
         "markerPath": "src/gamescript.cpp.REMOVED.git-id",
         "method": "reconstruction",
         "originalBlob": "a1f41460b8cd1fcfd1e9166184ef858275c34ce9",
@@ -982,18 +974,18 @@
       {
         "markerPath": "src/map.cpp.REMOVED.git-id",
         "method": "reconstruction",
-        "originalBlob": "1635542d44e479a5f3e54a6210ca74cf8cde3e42",
+        "originalBlob": "4db6a1b87f6ff850612d815ffa96ecde2bd6faac",
         "path": "src/map.cpp",
-        "provenance": "Missing #196 body carried from native-verified #195 reconstruction 42e7bd06f1d9c1ef12947df5fc216c8b6a337bc1 with byte-identical corresponding original header (or identical complete project TU/header/resource path inventory). Missing original body delta remains unknown; actual native startup checked separately. Missing combined Map/MapObject/Coords body adapted from accepted #159 real TMX reconstruction and surviving #150 coordinate implementation to exact #195 src/consolidated config/factory/property APIs. Removed obsolete JSON save methods absent from genuine header; retains full authored TMX geometry, entries, objects/properties, real movement/collision/turns and procedural generation. Removed obsolete member animation fields using QObject-owned timeline/animation; generated dungeon uses genuine Teleporter API instead of removed Dungeon class. Unknown unavailable authored object classes are logged. These API adaptations are inferred, not original bytes or parity. Inputs: [{\"path\": \"/tmp/nouraajd-bfg-recovery/native-middle/recon/f59850bc2948c48c34f05161ff83bf840234b80b\", \"sha256\": \"4857ab512f60d7ca9eba3f5a8506b54bf2ee11dd6767466342a0d70597a02722\"}, {\"path\": \"/tmp/nouraajd-bfg-recovery/native-middle/src/70449d6d/map/coords.cpp\", \"sha256\": \"64acf00cab276e850f453b2a7bc5b0cd5f8162d43f46e7288f8354f605fbefd3\"}, {\"path\": \"src/map.h\", \"sha256\": \"c099f25d41447d89115b6e026121ea8f82eef72a2dba433d0ab267a1e7537274\"}] Map::removeObject detaches without deleting, required by surviving #195 Item::onEnter which immediately passes the same pointer to Player::addItem; genuine AnimatedObject/Destroyer owns lifetime. Earlier donor delete-on-remove would make pickups use freed memory; not propagated. Preserve the exact original #150 PlayerAnimation::afterAnimationStep callback body in a local derived animation, restoring entry actions/fight UI and viewport centering at real timeline completion after the original standalone class was removed from #195 headers. Donor /tmp/nouraajd-bfg-recovery/native-middle/src/70449d6d/map/playeranimation.cpp SHA256 7075f62c953976c8704621896d078d044bf06a95ee9a3153d9342d3dd41ba945. Generic timeline alone had omitted these callbacks; causal before/after timer regression accompanies fresh proof.",
-        "replacementBlob": "7908d2b3b7914e1f1a37ddce632dc363c594aa10"
+        "provenance": "Missing #197 Map implementation follows genuine new QObject/Map::moveCompleted and exact GameScene CompletionListener gating. Preserves native #196 map/factory/TMX/property/collision/turn implementation; worker movement is queued first, completion rebuilds overlapping entries and fires real onEnter/combat once after all worker results. Pixel interpolation retains original viewport centering while logical completion owns entry callbacks to avoid duplicates. No surviving source/header edits; asynchronous callback adaptation inferred from actual new API, not exact body or gameplay parity. Inputs: [{\"path\": \"/tmp/nouraajd-bfg-recovery/native-upper-middle/recon/1635542d44e479a5f3e54a6210ca74cf8cde3e42\", \"sha256\": \"236bede65f5f4a0cac5d37e9ad84a35c17882399963a5996b7bd0e1b083afb7f\"}, {\"path\": \"src/map.h\", \"sha256\": \"c099f25d41447d89115b6e026121ea8f82eef72a2dba433d0ab267a1e7537274\"}]",
+        "replacementBlob": "80ae4238e4c456b0315b5dc48eac650e9435878a"
       },
       {
         "markerPath": "src/pathfinder.cpp.REMOVED.git-id",
         "method": "reconstruction",
-        "originalBlob": "a66abb977d8290f3e46b61e4b2a9708a87ba6630",
+        "originalBlob": "e3894cafc3fcf8170dd3ed83c40088e3c268d130",
         "path": "src/pathfinder.cpp",
-        "provenance": "Missing merged pathfinder TU retains all four exact available #175 original algorithm bodies (base, dumb, random, smart), with includes adapted to surviving #195 combined header/src layout. Worker follows genuine #195 Monster call sites and declared queued complete(int,int) movement signal; no empty pathfinding stub. Header private helper declarations unused by original algorithm require no invented implementation. Worker adaptation inferred, not exact source or gameplay parity. Inputs: [{\"path\": \"/tmp/nouraajd-bfg-recovery/native-upper-middle/donors195/e73ad17734119400fe123b4a15e775f9d409c58c\", \"sha256\": \"13273adcbfbeee38d206033be8057c41156275456bff6014eca4ef60b50f8509\"}, {\"path\": \"/tmp/nouraajd-bfg-recovery/native-upper-middle/donors195/fef6ace149e37bf01bfc5a9c50004565bae173ad\", \"sha256\": \"ad7eb2927a931002a8ebbe979f1f933bfc661baa3bb529a60bf289f79b8100da\"}, {\"path\": \"/tmp/nouraajd-bfg-recovery/native-upper-middle/donors195/08ebd4e8e9304e67aadbb24279c95d67b4ad66b9\", \"sha256\": \"f3a5d98a943158f8f605e3879e05de2ffa5c3a00f30871cddfb6106f4e108223\"}, {\"path\": \"/tmp/nouraajd-bfg-recovery/native-upper-middle/donors195/a8ebaab4a1fe1b10c68440ba7b9c55c02633db6c\", \"sha256\": \"422b0e15eec3a32a08e1a370d336c771a00c2c71436f67370023ae62a870f492\"}, {\"path\": \"src/pathfinder.h\", \"sha256\": \"5176d4852a684c173bea481e2027b407d7fb3d224ad65806a1227a326c5d0c10\"}]",
-        "replacementBlob": "25fd8b768e9396a841f4464dc32a9651f5932625"
+        "provenance": "Missing #197 merged pathfinder preserves exact older original base/dumb/random/smart algorithms from native #195/196 cohort, adapting only worker signal names and genuine new CompletionListener API. Constructor counts queued workers before main turn ends; completed movement arrives before ended/deregister; final worker emits Map completion once. Singleton static initialization zeroes genuine workers/started fields. No fabricated completion result, no omitted AI; inferred worker body, not parity. Inputs: [{\"path\": \"/tmp/nouraajd-bfg-recovery/native-upper-middle/recon/a66abb977d8290f3e46b61e4b2a9708a87ba6630\", \"sha256\": \"ccfeaa238eeb5a20f078ae42af8642001f597c8c62d96392f1feac8361dd8a38\"}, {\"path\": \"src/pathfinder.h\", \"sha256\": \"5176d4852a684c173bea481e2027b407d7fb3d224ad65806a1227a326c5d0c10\"}]",
+        "replacementBlob": "ee2d7cc7f411a4443d5def19b0092a99ae99b2cb"
       },
       {
         "markerPath": "src/stats.cpp.REMOVED.git-id",
@@ -1010,9 +1002,9 @@
         "replacementBlob": "d20fb29a7e23828c15487438c93ae790d2045707"
       }
     ],
-    "restoredFilesFingerprint": "b03763af59e0f571a597734faac10e22a35b40f6f25f726d9ee3b382d646ee64",
-    "sourceCommit": "4d5f3ced5a05313d45df60ea8ee262a81899ceee",
-    "sourceTree": "5134f6b3c3489e982b96b8e5968f7ce8d880c00b",
+    "restoredFilesFingerprint": "7af880ce9afd6ded91eab6cdf9367b4b4fee8ff97aed5056b3447f0b6fc571d1",
+    "sourceCommit": "7555be4552788be476084397738baf36ca8cac95",
+    "sourceTree": "c2046a70f7f1d7b0fe279bc7e8e48c1a1a844d14",
     "status": "complete",
     "submodules": [],
     "unresolved": []
@@ -1023,12 +1015,12 @@
       "-a",
       "--server-args=-screen 0 1920x1080x24",
       "env",
-      "LD_PRELOAD=/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-w9tib423/observer/libwindowspaths.so",
-      "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-w9tib423/build/RecoveryGame"
+      "LD_PRELOAD=/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-va64ia1r/observer/libwindowspaths.so",
+      "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-va64ia1r/build/RecoveryGame"
     ],
-    "log": "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-w9tib423/smoke/startup.log",
+    "log": "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-va64ia1r/smoke/startup.log",
     "returnCode": 0,
-    "seconds": 0.422,
+    "seconds": 0.364,
     "startup": {
       "checks": {
         "eventLoop": true,
@@ -1050,9 +1042,9 @@
     "status": "success",
     "timedOut": false
   },
-  "sourceCommit": "4d5f3ced5a05313d45df60ea8ee262a81899ceee",
+  "sourceCommit": "7555be4552788be476084397738baf36ca8cac95",
   "sourceCommits": [
-    "4d5f3ced5a05313d45df60ea8ee262a81899ceee"
+    "7555be4552788be476084397738baf36ca8cac95"
   ],
   "sourcePreparation": {
     "identity": {
@@ -1062,7 +1054,7 @@
     "status": "not-required",
     "steps": []
   },
-  "sourceTree": "5134f6b3c3489e982b96b8e5968f7ce8d880c00b",
+  "sourceTree": "c2046a70f7f1d7b0fe279bc7e8e48c1a1a844d14",
   "startupMode": "game",
   "startupSelection": {
     "mode": "game"
@@ -1083,5 +1075,5 @@
     }
   },
   "toolchainImage": "sha256:d3f59ec1d12297ee8091fbea687aa619275fc92b3fd426560e0a1fa40715afc8",
-  "verifiedFromCommit": "4d5f3ced5a05313d45df60ea8ee262a81899ceee"
+  "verifiedFromCommit": "7555be4552788be476084397738baf36ca8cac95"
 }

@@ -183,10 +183,26 @@ Coords SmartPathFinder::findPath(Coords start, Coords goal) {
 
 PathFinderWorker::PathFinderWorker(Creature *creature, PathFinder *finder) : creature(creature), finder(finder) {
     setAutoDelete(true);
-    connect(this, SIGNAL(complete(int,int)), creature, SLOT(move(int,int)));
+    connect(this, SIGNAL(completed(int,int)), creature, SLOT(move(int,int)));
+    connect(this, SIGNAL(started()), CompletionListener::getInstance(), SLOT(registerWorker()));
+    connect(this, SIGNAL(ended()), CompletionListener::getInstance(), SLOT(deregisterWorker()));
+    Q_EMIT started();
 }
 void PathFinderWorker::run() {
     Coords delta = finder->findPath(creature->getCoords(), GameScene::getPlayer()->getCoords());
-    Q_EMIT complete(delta.x, delta.y);
+    Q_EMIT completed(delta.x, delta.y);
+    Q_EMIT ended();
     finder->deleteLater();
+}
+
+void CompletionListener::run() {
+    if (started && workers == 0) {
+        started = false;
+        Q_EMIT completed();
+    }
+}
+void CompletionListener::registerWorker() { ++workers; }
+void CompletionListener::deregisterWorker() {
+    if (workers > 0) --workers;
+    run();
 }

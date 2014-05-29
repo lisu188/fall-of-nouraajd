@@ -72,13 +72,43 @@ private:
 };
 Q_DECLARE_METATYPE(SmartPathFinder)
 
+class CompletionListener: public QObject{
+    Q_OBJECT
+public:
+    static CompletionListener *getInstance(){
+        static CompletionListener instance;
+        return &instance;
+    }
+    void start(){
+        started=true;
+    }
+
+    void stop(){
+        started=false;
+    }
+
+    bool isCompleted(){
+        return workers==0;
+    }
+
+    void run();
+    Q_SIGNAL void completed();
+    Q_SLOT void registerWorker();
+    Q_SLOT void deregisterWorker();
+private:
+    int workers;
+    bool started;
+};
+
 class PathFinderWorker : public QObject,public QRunnable{
     Q_OBJECT
 public:
     PathFinderWorker(Creature *creature,PathFinder *finder);
     void run();
 private:
-    Q_SIGNAL void complete(int x,int y);
+    Q_SIGNAL void completed(int x,int y);
+    Q_SIGNAL void started();
+    Q_SIGNAL void ended();
     Creature *creature;
     PathFinder *finder;
 };

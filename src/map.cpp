@@ -4,6 +4,7 @@
 #include "tile.h"
 
 #include <src/building.h>
+#include <src/pathfinder.h>
 #include <src/configurationprovider.h>
 #include <src/monster.h>
 #include <src/player.h>
@@ -50,31 +51,14 @@ protected:
     void afterAnimationStep(qreal step) override;
 };
 
-void ReconstructedPlayerAnimation::afterAnimationStep(qreal step)
-{
-    Player *player=GameScene::getPlayer();
-    GameView *view=GameScene::getView();
-    view->centerOn(player);
-    if(step>=1)
-    {
-        std::list<MapObject *> entered(*player->getEntered());
-        for(std::list<MapObject *>::iterator it=entered.begin();
-                it!=entered.end(); it++)
-        {
-            (*it)->onEnter();
-            if(player!=GameScene::getPlayer()) {
-                return;
-            }
-        }
-        player->getEntered()->clear();
-        if(player->getFightList()->size()>0)
-        {
-            view->showFightView();
-        }
-    }
+void ReconstructedPlayerAnimation::afterAnimationStep(qreal) {
+    Player *player = GameScene::getPlayer();
+    GameView *view = GameScene::getView();
+    if (player && view) view->centerOn(player);
 }
 
 Map::Map(QGraphicsScene *scene) : scene(scene), entryx(0), entryz(0), entryy(0) {
+  connect(CompletionListener::getInstance(), SIGNAL(completed()), this, SLOT(moveCompleted()));
   defaultTiles[0] = "GrassTile";
 }
 
@@ -150,6 +134,7 @@ void Map::move(int x, int y) {
     return;
   }
 
+  CompletionListener::getInstance()->stop();
   currentMap = player->getPosZ();
   ensureSize(player);
 
@@ -211,6 +196,15 @@ void Map::move(int x, int y) {
     object->onMove();
   }
 
+  CompletionListener::getInstance()->start();
+  CompletionListener::getInstance()->run();
+}
+
+void Map::moveCompleted() {
+  CompletionListener::getInstance()->stop();
+  Player *player = GameScene::getPlayer();
+  if (!player) return;
+  std::vector<MapObject *> objects;
   objects.assign(mapObjects.begin(), mapObjects.end());
   for (std::vector<MapObject *>::iterator it = objects.begin();
        it != objects.end(); ++it) {
@@ -231,7 +225,7 @@ void Map::move(int x, int y) {
     GameScene::getView()->centerOn(player);
   }
 
-  if (!moving || !GameScene::getView()) {
+  {
     std::list<MapObject *> entered(*player->getEntered());
     for (std::list<MapObject *>::iterator it = entered.begin();
          it != entered.end(); ++it) {

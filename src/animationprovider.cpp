@@ -9,28 +9,21 @@
 #include <map>
 #include <src/configurationprovider.h>
 
-std::map<int, AnimationProvider *> AnimationProvider::instances;
+std::map<int, AnimationProvider> AnimationProvider::instances;
 
 Animation *AnimationProvider::getAnim(std::string path, int size)
 {
     path = ":/" + path;
     if (instances.find(size) == instances.end()) {
-        instances.insert(std::pair<int, AnimationProvider *>
-                         (size, new AnimationProvider(size)));
+        instances.insert(std::pair<int, AnimationProvider>
+                         (size, AnimationProvider(size)));
     }
-    return instances.at(size)->getAnimation(path);
-}
-
-void AnimationProvider::terminate()
-{
-    for (std::map<int, AnimationProvider *>::iterator it = instances.begin(); it != instances.end(); it++) {
-        delete(*it).second;
-    }
-    instances.clear();
+    return instances.at(size).getAnimation(path);
 }
 
 AnimationProvider::AnimationProvider(int size): tileSize(size)
 {
+
 }
 
 AnimationProvider::~AnimationProvider()

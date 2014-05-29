@@ -7,16 +7,13 @@ class AnimationProvider : private std::map<std::string, Animation*>
 {
 public:
     static Animation* getAnim(std::string path, int size);
-    static void terminate();
-
+    virtual ~AnimationProvider();
 private:
     AnimationProvider(int size);
-    ~AnimationProvider();
     Animation * getAnimation(std::string path);
-
     void loadAnim(std::string path);
     int tileSize;
-    static std::map<int, AnimationProvider *> instances;
+    static std::map<int, AnimationProvider> instances;
 
 };
 
