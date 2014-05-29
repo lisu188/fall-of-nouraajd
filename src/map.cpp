@@ -64,7 +64,7 @@ Map::Map(QGraphicsScene *scene) : scene(scene), entryx(0), entryz(0), entryy(0) 
 
 Map::~Map() {
   std::vector<Tile *> tile_list;
-  for (std::map<Coords, Tile *>::iterator it = tiles.begin(); it != tiles.end();
+  for (std::unordered_map<Coords, Tile *, CoordsHasher>::iterator it = tiles.begin(); it != tiles.end();
        ++it) {
     tile_list.push_back((*it).second);
   }
@@ -91,7 +91,7 @@ Map::~Map() {
 
 bool Map::addTile(std::string name, int x, int y, int z) {
   Coords coords(x, y, z);
-  std::map<Coords, Tile *>::iterator existing = tiles.find(coords);
+  std::unordered_map<Coords, Tile *, CoordsHasher>::iterator existing = tiles.find(coords);
   if (existing != tiles.end()) {
     if (existing->second && existing->second->typeName.compare(name) == 0) {
       return true;
@@ -151,7 +151,7 @@ void Map::move(int x, int y) {
       }
     }
 
-    std::map<Coords, Tile *>::iterator tile_it =
+    std::unordered_map<Coords, Tile *, CoordsHasher>::iterator tile_it =
         tiles.find(Coords(next_x, next_y, next_z));
     if (tile_it == tiles.end() || !tile_it->second->canStep()) {
       return;
@@ -180,7 +180,7 @@ void Map::move(int x, int y) {
     }
   }
 
-  std::map<Coords, Tile *>::iterator current_tile = tiles.find(player_coords);
+  std::unordered_map<Coords, Tile *, CoordsHasher>::iterator current_tile = tiles.find(player_coords);
   if (current_tile != tiles.end()) {
     current_tile->second->onStep();
   }
@@ -375,16 +375,21 @@ void Map::ensureSize(Player *player) {
        ++x) {
     for (int y = player->getPosY() - size_y; y <= player->getPosY() + size_y;
          ++y) {
-      if (tiles.find(Coords(x, y, player->getPosZ())) == tiles.end()) {
-        const std::string background = defaultTiles[player->getPosZ()];
-        addTile(background.empty() ? "GrassTile" : background, x, y, player->getPosZ());
-      }
+      ensureTile(x, y);
     }
   }
 }
 
+void Map::ensureTile(int i, int j) {
+  if (tiles.find(Coords(i, j, currentMap)) != tiles.end()) {
+    return;
+  }
+  const std::string tile_name = getTile(i, j, currentMap);
+  addTile(tile_name.empty() ? "GrassTile" : tile_name, i, j, currentMap);
+}
+
 void Map::hide() {
-  for (std::map<Coords, Tile *>::iterator it = tiles.begin(); it != tiles.end();
+  for (std::unordered_map<Coords, Tile *, CoordsHasher>::iterator it = tiles.begin(); it != tiles.end();
        ++it) {
     if ((*it).second) {
       (*it).second->QGraphicsItem::setVisible(false);
@@ -405,7 +410,7 @@ void Map::hide() {
 QGraphicsScene *Map::getScene() const { return scene; }
 
 void Map::showAll() {
-  for (std::map<Coords, Tile *>::iterator it = tiles.begin(); it != tiles.end();
+  for (std::unordered_map<Coords, Tile *, CoordsHasher>::iterator it = tiles.begin(); it != tiles.end();
        ++it) {
     Tile *tile = (*it).second;
     if (!tile) {
