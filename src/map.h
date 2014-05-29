@@ -63,12 +63,11 @@ public:
     int getEntryZ();
     MapObject *getObjectByName(std::string name);
     Q_SLOT void moveCompleted();
-
-    void ensureTile(int i, int j);
+    Q_INVOKABLE void ensureTile(int i, int j);
+    std::unordered_map<Coords, Tile *,CoordsHasher> tiles;
 private:
     std::set<MapObject*> mapObjects;
     void randomDir(int *tab, int rule);
-    std::map<Coords, Tile *> tiles;
     QGraphicsScene *scene;
     int currentMap = 0;
     std::map<int, std::string> defaultTiles;
