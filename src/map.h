@@ -31,8 +31,9 @@ struct CoordsHasher {
     std::size_t operator()(const Coords& coords) const;
 };
 
-class Map : public std::unordered_map<Coords, std::string, CoordsHasher>
+class Map : public QObject,public std::unordered_map<Coords, std::string, CoordsHasher>
 {
+    Q_OBJECT
 public:
     Map(QGraphicsScene *scene);
     ~Map();
@@ -61,6 +62,7 @@ public:
     int getEntryY();
     int getEntryZ();
     MapObject *getObjectByName(std::string name);
+    Q_SLOT void moveCompleted();
 
 private:
     std::set<MapObject*> mapObjects;
