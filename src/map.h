@@ -64,6 +64,7 @@ public:
     MapObject *getObjectByName(std::string name);
     Q_SLOT void moveCompleted();
 
+    void ensureTile(int i, int j);
 private:
     std::set<MapObject*> mapObjects;
     void randomDir(int *tab, int rule);
