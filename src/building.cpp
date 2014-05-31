@@ -5,7 +5,7 @@
 #include <src/monster.h>
 #include <src/configurationprovider.h>
 
-Building *Building::createBuilding(std::string name)
+Building *Building::createBuilding(QString name)
 {
     return dynamic_cast<Building*>(MapObject::createMapObject(name));
 }
@@ -64,7 +64,7 @@ void Cave::onEnter()
                 if (j == 0 && i == 0) {
                     continue;
                 }
-                Monster *monster = (Monster*)Creature::createCreature(this->monster.toStdString());
+                Monster *monster = (Monster*)Creature::createCreature(this->monster);
                 map->addObject(monster);
                 monster->moveTo(getPosX() + 1 * i, getPosY() + 1 * j, getPosZ(), true);
             }
@@ -75,7 +75,7 @@ void Cave::onEnter()
 void Cave::onMove()
 {
     if (enabled && ((rand() % 100) < chance)&&monsters>0) {
-        Monster *monster = (Monster*)Creature::createCreature(this->monster.toStdString());
+        Monster *monster = (Monster*)Creature::createCreature(this->monster);
         map->addObject(monster);
         monster->moveTo(getPosX(), getPosY(), getPosZ(), true);
         monsters--;

@@ -563,7 +563,7 @@ void Map::loadMapFromTmx(Tmx::Map &source) {
         const Tmx::ObjectGroup *objects = source.GetObjectGroup(group);
         for (int index = 0; index < objects->GetNumObjects(); ++index) {
             const Tmx::Object *authored = objects->GetObject(index);
-            MapObject *object = MapObject::createMapObject(authored->GetType());
+            MapObject *object = MapObject::createMapObject(QString::fromStdString(authored->GetType()));
             if (!object) { qWarning() << "TMX object type unavailable in this revision:" << authored->GetType().c_str(); continue; }
             object->name = authored->GetName();
             object->setObjectName(QString::fromStdString(object->name));
@@ -588,7 +588,8 @@ bool Map::removeTile(int x, int y, int z) {
     if (tile->second->scene()) tile->second->scene()->removeItem(tile->second);
     delete tile->second; tiles.erase(tile); erase(coords); return true;
 }
-MapObject *MapObject::createMapObject(std::string name) {
+MapObject *MapObject::createMapObject(QString qname) {
+    std::string name = qname.toStdString();
     Json::Value config = (*ConfigurationProvider::getConfig("config/object.json"))[name];
     std::string class_name = config.get("class", name).asString();
     int registered = QMetaType::type(class_name.c_str());

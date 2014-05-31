@@ -6,9 +6,12 @@
 #include <src/gamescene.h>
 #include <QDrag>
 #include <QMimeData>
+#include <QThread>
+#include <QApplication>
 
 AnimatedObject::AnimatedObject()
 {
+    this->moveToThread(QApplication::instance()->thread());
     Destroyer::add(this);
     timer = 0;
     setShapeMode(QGraphicsPixmapItem::BoundingRectShape);
