@@ -20,7 +20,7 @@ public:
     void setSingleUse(bool singleUse);
     virtual void onEquip(Creature *creature);
     virtual void onUnequip(Creature *creature);
-    static Item *createItem(std::string name);
+    static Item *createItem(QString name);
     virtual void onUse(Creature *creature);
     virtual void onEnter();
     virtual void onMove();
@@ -37,6 +37,7 @@ private:
     int slot = 0;
 };
 Q_DECLARE_METATYPE(Item)
+Q_DECLARE_METATYPE(Item*)
 
 class Armor : public Item
 {
@@ -48,6 +49,7 @@ public:
     Interaction *getInteraction();
 };
 Q_DECLARE_METATYPE(Armor)
+Q_DECLARE_METATYPE(Armor*)
 
 class Belt : public Item
 {
@@ -57,6 +59,7 @@ public:
     Belt(const Belt& belt);
 };
 Q_DECLARE_METATYPE(Belt)
+Q_DECLARE_METATYPE(Belt*)
 
 class Helmet : public Item
 {
@@ -66,6 +69,7 @@ public:
     Helmet(const Helmet& helmet);
 };
 Q_DECLARE_METATYPE(Helmet)
+Q_DECLARE_METATYPE(Helmet*)
 
 class Boots : public Item
 {
@@ -75,6 +79,7 @@ public:
     Boots(const Boots& boots);
 };
 Q_DECLARE_METATYPE(Boots)
+Q_DECLARE_METATYPE(Boots*)
 
 class Gloves : public Item
 {
@@ -84,6 +89,7 @@ public:
     Gloves(const Gloves& gloves);
 };
 Q_DECLARE_METATYPE(Gloves)
+Q_DECLARE_METATYPE(Gloves*)
 
 class Weapon : public Item
 {
@@ -95,6 +101,7 @@ public:
     Stats *getStats();
 };
 Q_DECLARE_METATYPE(Weapon)
+Q_DECLARE_METATYPE(Weapon*)
 
 class SmallWeapon : public Weapon
 {
@@ -104,5 +111,6 @@ public:
     SmallWeapon(const SmallWeapon &weapon);
 };
 Q_DECLARE_METATYPE(SmallWeapon)
+Q_DECLARE_METATYPE(SmallWeapon*)
 
 #endif // ITEM_H
