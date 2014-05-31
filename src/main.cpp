@@ -74,14 +74,6 @@ int main(int argc, char *argv[])
     QThreadPool::globalInstance()->setExpiryTimeout(0);
     registerMetaTypes();
     GameView view;
-    QThreadPool::globalInstance()->start(new GameTask([]()->void{
-        QTextStream streamIn(stdin);
-        QString script;
-        while((!GameScene::getView())||GameScene::getView()->isVisible()){
-            streamIn>>script;
-            ScriptManager::getInstance().executeScript(script.toStdString());
-        }
-    }));
     int ret = a.exec();
     return ret;
 }

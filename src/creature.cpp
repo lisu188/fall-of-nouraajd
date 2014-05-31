@@ -40,7 +40,7 @@ Creature::Creature() : ListItem(0, 0, 0, 2) {
     for (auto it = slots.begin(); it != slots.end(); ++it) equipped[std::atoi(it.memberName())] = 0;
 }
 Creature::Creature(const Creature &other) : Creature() { if (!other.typeName.empty()) loadFromJson(other.typeName); }
-Creature *Creature::createCreature(std::string name) { return dynamic_cast<Creature *>(MapObject::createMapObject(name)); }
+Creature *Creature::createCreature(QString name) { return dynamic_cast<Creature *>(MapObject::createMapObject(name)); }
 Creature::~Creature() {
     actions.clear();
     effects.clear();
@@ -236,8 +236,8 @@ void Creature::loadFromJson(std::string name) {
     for (Json::Value::iterator it = equipment_config.begin(); it != equipment_config.end(); ++it)
         setItem(std::atoi(it.memberName()), Item::createItem((*it).asCString()));
     Json::Value equipment = config["inventory"];
-    if (equipment.isMember("weapon")) setWeapon(dynamic_cast<Weapon *>(Item::createItem(equipment["weapon"].asString())));
-    if (equipment.isMember("armor")) setArmor(dynamic_cast<Armor *>(Item::createItem(equipment["armor"].asString())));
+    if (equipment.isMember("weapon")) setWeapon(dynamic_cast<Weapon *>(Item::createItem(QString::fromStdString(equipment["weapon"].asString()))));
+    if (equipment.isMember("armor")) setArmor(dynamic_cast<Armor *>(Item::createItem(QString::fromStdString(equipment["armor"].asString()))));
 
     if (config.isMember("coords"))
         moveTo(config["coords"].get("x", 0).asInt(), config["coords"].get("y", 0).asInt(),

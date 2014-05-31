@@ -26,7 +26,7 @@ class Creature : public ListItem
 public:
     int getExp();
     void setExp(int exp);
-    static Creature *createCreature(std::string name);
+    static Creature *createCreature(QString name);
     Creature();
     Creature(const Creature &creature);
     ~Creature();

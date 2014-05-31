@@ -4,14 +4,25 @@
 #include <QVariant>
 #include <QRunnable>
 #include <functional>
-namespace util
-{
-template < typename T > std::string to_string(const T& n)
+#include <string>
+template < typename T > inline std::string to_string(const T& n)
 {
     std::ostringstream stm ;
     stm << n ;
     return stm.str() ;
 }
+
+inline bool checkInheritance(std::string base,std::string inherited){
+    int classId=QMetaType::type(inherited.append("*").c_str());
+    const QMetaObject *metaObject=QMetaType::metaObjectForType(classId);
+    while(metaObject){
+          std::string className=metaObject->className();
+          if(className.compare(base)==0){
+                break;
+          }
+          metaObject=metaObject->superClass();
+    }
+    return metaObject!=0;
 }
 
 class GameTask : public QObject,public QRunnable{

@@ -30,7 +30,7 @@ bool ItemSlot::checkType(int slot, QWidget *widget)
     if (widget) {
         Json::Value config = (*ConfigurationProvider::
                               getConfig("config/slots.json"))
-                             [util::to_string(slot).c_str()]["types"];
+                             [to_string(slot).c_str()]["types"];
         for (int i = 0; i < config.size(); i++) {
             if (widget->inherits(config[i].asCString())) {
                 return true;

@@ -14,6 +14,7 @@ private:
     std::function<void (Creature *, int)> effect;
 };
 Q_DECLARE_METATYPE(Potion)
+Q_DECLARE_METATYPE(Potion*)
 
 void LifeEffect(Creature *creature, int power);
 void ManaEffect(Creature *creature, int power);

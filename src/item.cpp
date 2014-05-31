@@ -54,7 +54,7 @@ void Item::onUnequip(Creature *creature)
     qDebug() << creature->typeName.c_str() << "unequipped" << typeName.c_str() << "\n";
 }
 
-Item *Item::createItem(std::string name)
+Item *Item::createItem(QString name)
 {
     return dynamic_cast<Item*>(MapObject::createMapObject(name));
 }

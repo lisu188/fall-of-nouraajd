@@ -12,6 +12,7 @@
 #include <set>
 #include <lib/json/json.h>
 #include <lib/tmx/TmxMap.h>
+#include <QString>
 
 class MapObject;
 class Tile;
@@ -77,7 +78,7 @@ class MapObject : public AnimatedObject
 {
     Q_OBJECT
 public:
-    static MapObject* createMapObject(std::string name);
+    static MapObject* createMapObject(QString name);
     MapObject();
     MapObject(int x, int y, int z, int v);
     std::string typeName;
