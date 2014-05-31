@@ -1,6 +1,7 @@
 #ifndef STATS_H
 #define STATS_H
 #include <lib/json/json.h>
+#include <QMetaType>
 
 class Stats
 {
@@ -122,5 +123,8 @@ private:
     int normal = 0;
     int shadow = 0;
 };
+
+Q_DECLARE_METATYPE(Stats)
+Q_DECLARE_METATYPE(Damage)
 
 #endif // STATS_H

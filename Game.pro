@@ -7,6 +7,7 @@ DEFINES += QT_NO_KEYWORDS
 INCLUDEPATH += . src lib lib/tmx lib/tinyxml lib/base64 lib/zlib
 unix:LIBS += -lpython3.4m -ldl -lutil
 win32:LIBS += -lpython34
+
 SOURCES += lib/base64/base64.cpp \
     lib/json/json_reader.cpp \
     lib/json/json_value.cpp \
@@ -74,7 +75,9 @@ SOURCES += lib/base64/base64.cpp \
     src/scrollobject.cpp \
     src/stats.cpp \
     src/tile.cpp
-HEADERS += lib/base64/base64.h \
+
+HEADERS  += \
+    lib/base64/base64.h \
     lib/json/autolink.h \
     lib/json/config.h \
     lib/json/features.h \
@@ -144,7 +147,9 @@ HEADERS += lib/base64/base64.h \
     src/stats.h \
     src/tile.h \
     src/util.h
-RESOURCES += res/config.qrc \
+
+RESOURCES += \
+    res/config.qrc \
     res/creatures.qrc \
     res/images.qrc \
     res/items.qrc \

@@ -38,6 +38,10 @@ bool Item::isSingleUse()
     return singleUse;
 }
 
+void Item::setSingleUse(bool singleUse){
+    this->singleUse=singleUse;
+}
+
 void Item::onEquip(Creature *creature)
 {
     creature->getStats()->addBonus(bonus);
@@ -106,6 +110,16 @@ void Item::loadFromJson(std::string name)
         tooltip = typeName;
     }
 }
+int Item::getPower() const
+{
+    return power;
+}
+
+void Item::setPower(int value)
+{
+    power = value;
+}
+
 
 Armor::Armor()
 {

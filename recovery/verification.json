@@ -1,11 +1,11 @@
 {
   "adapter": {
-    "config": "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-yznt3mv1/observer/recovery_smoke_config.h",
-    "configSha256": "338403e2741ea15045f583732bc52a7efc27f4a8829b9fb2783fe2d73aff367e",
+    "config": "/tmp/nouraajd-204-checkpoint/verify/snapshot-or502k7u/observer/recovery_smoke_config.h",
+    "configSha256": "fff0c7e3dfe94019a1a0dd37faf5745089f45df514b6a1e7d81ba0f0a9eb8465",
     "id": "classic-3d",
     "mode": "game",
     "overlays": [],
-    "source": "/home/andrz/nouraajd-bfg-recovery-backup-20261116/source/recovery/smoke/game_startup.cpp"
+    "source": "/tmp/nouraajd-next204/recovery/smoke/game_startup.cpp"
   },
   "artifactDir": "recovery",
   "attachedScreenshot": {
@@ -13,22 +13,36 @@
     "path": "startup.png",
     "width": 1278
   },
+  "attachedSourcePreparation": {
+    "prepare_console_reader.py": {
+      "path": "prepare_console_reader.py",
+      "sha256": "7401e37c9df078873e491fcb75fd61a7c9c401e153bb393985f0fd85ce042d37"
+    },
+    "source-preparation.json": {
+      "path": "source-preparation.json",
+      "sha256": "eee9a67c8d815965bd1914ae6acd89a894ea9040ca52a0199a943fe5a5299525"
+    },
+    "source-preparation.log": {
+      "path": "source-preparation.log",
+      "sha256": "0a0b89a4c78668fea2812f3269c4bbbc2ceb10bf2d83825ec0cc1fd8b81d9b2b"
+    }
+  },
   "build": {
     "command": [
       "make",
       "-j8"
     ],
-    "log": "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-yznt3mv1/build.log",
+    "log": "/tmp/nouraajd-204-checkpoint/verify/snapshot-or502k7u/build.log",
     "returnCode": 0,
-    "seconds": 10.27,
+    "seconds": 16.228,
     "timedOut": false
   },
   "configure": {
     "command": [
       "qmake",
-      "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-yznt3mv1/source/Game.pro",
+      "/tmp/nouraajd-204-checkpoint/verify/snapshot-or502k7u/source/Game.pro",
       "-o",
-      "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-yznt3mv1/build/Makefile",
+      "/tmp/nouraajd-204-checkpoint/verify/snapshot-or502k7u/build/Makefile",
       "QMAKE_CC=gcc-5",
       "QMAKE_CXX=g++-5",
       "QMAKE_LINK=g++-5",
@@ -37,16 +51,16 @@
       "TARGET=RecoveryGame",
       "DESTDIR=.",
       "CONFIG-=app_bundle",
-      "SOURCES+=/home/andrz/nouraajd-bfg-recovery-backup-20261116/source/recovery/smoke/game_startup.cpp",
-      "INCLUDEPATH+=/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-yznt3mv1/source",
-      "INCLUDEPATH+=/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-yznt3mv1/observer"
+      "SOURCES+=/tmp/nouraajd-next204/recovery/smoke/game_startup.cpp",
+      "INCLUDEPATH+=/tmp/nouraajd-204-checkpoint/verify/snapshot-or502k7u/source",
+      "INCLUDEPATH+=/tmp/nouraajd-204-checkpoint/verify/snapshot-or502k7u/observer"
     ],
-    "log": "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-yznt3mv1/configure.log",
+    "log": "/tmp/nouraajd-204-checkpoint/verify/snapshot-or502k7u/configure.log",
     "returnCode": 0,
     "seconds": 0.064,
     "timedOut": false
   },
-  "evidenceDir": "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/evidence/f99c8bc8ab07cc0371522b272e46e8bd311ef4ce14cb851784fac863a03cf56d",
+  "evidenceDir": "/tmp/nouraajd-204-checkpoint/verify/evidence/3984e4033dce5c51309b6c95da29bc5cd9c89c78bc3e026e3d55ab6591a44443",
   "fileLookup": {
     "command": [
       "g++-5",
@@ -55,20 +69,20 @@
       "-O2",
       "-std=c++11",
       "-o",
-      "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-yznt3mv1/observer/libwindowspaths.so",
-      "/home/andrz/nouraajd-bfg-recovery-backup-20261116/source/recovery/smoke/windows_paths.cpp",
+      "/tmp/nouraajd-204-checkpoint/verify/snapshot-or502k7u/observer/libwindowspaths.so",
+      "/tmp/nouraajd-next204/recovery/smoke/windows_paths.cpp",
       "-ldl"
     ],
-    "log": "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-yznt3mv1/file-lookup.log",
+    "log": "/tmp/nouraajd-204-checkpoint/verify/snapshot-or502k7u/file-lookup.log",
     "returnCode": 0,
     "seconds": 0.215,
     "semantics": "Windows-style case-insensitive file lookup for the game process",
     "timedOut": false
   },
-  "fingerprint": "f99c8bc8ab07cc0371522b272e46e8bd311ef4ce14cb851784fac863a03cf56d",
+  "fingerprint": "3984e4033dce5c51309b6c95da29bc5cd9c89c78bc3e026e3d55ab6591a44443",
   "libraryAliases": {
     "aliases": {},
-    "directory": "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-yznt3mv1/observer/library-aliases"
+    "directory": "/tmp/nouraajd-204-checkpoint/verify/snapshot-or502k7u/observer/library-aliases"
   },
   "project": "Game.pro",
   "recipe": {
@@ -121,7 +135,7 @@
       },
       {
         "markerPath": "Game.pro.user.REMOVED.git-id",
-        "originalBlob": "dfe55a7425be9c64f74108d8761d28487df1ea49",
+        "originalBlob": "1bd8fbcfa9ef0a84cbca85965a9a6a7ba46b13de",
         "path": "Game.pro.user",
         "reason": "machine-specific IDE state"
       },
@@ -192,22 +206,22 @@
         "reason": "generated binary, redistributable, or packaged artifact"
       }
     ],
-    "outputDir": "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-yznt3mv1/source",
+    "outputDir": "/tmp/nouraajd-204-checkpoint/verify/snapshot-or502k7u/source",
     "restored": [
       {
         "markerPath": "Game.pro.REMOVED.git-id",
         "method": "reconstruction",
-        "originalBlob": "9a73eafe9aa59798195c6e3a76b8cbb71fcf69aa",
+        "originalBlob": "0fc948f562f96549ee9e4ad85e00e2771e046673",
         "path": "Game.pro",
-        "provenance": "Missing #196 body carried from native-verified #195 reconstruction e53cc0bde800c6d39a4e0b71b24fbb603481ebeb with byte-identical corresponding original header (or identical complete project TU/header/resource path inventory). Missing original body delta remains unknown; actual native startup checked separately. Missing #195 project reconstructed from all52 actual C++ and15 C translation units, all same-commit headers and6 surviving resource manifests under src/lib/res. Preserves every original game/library TU; declares supported CPython3.4 ABI for genuine Python3 C API, not claimed exact historical original flags. Replaces stale unverified pre-layout donor; pending native proof. JSON headers retain qualified lib/json or local includes; adding lib/json globally would shadow glibc features.h and is intentionally avoided. Defines QT_NO_KEYWORDS consistently with surviving Q_SLOT/Q_SIGNAL/Q_EMIT usage, preventing Qt slots macro from altering original Python3 PyType_Slot field.",
-        "replacementBlob": "bac20af6a49ba41c9fa11450800cefd8ce65d75c"
+        "provenance": "content reconstruction of the BFG-removed original; qmake project regenerated with 67 sources inferred without a surviving object_script listing: reconstructed e00a7c3e:Game.pro SOURCES reconciled with this tree's files; settings from reconstructed e00a7c3e:Game.pro",
+        "replacementBlob": "d53408b36f438c7d622d80128bb3ce7b2d65275d"
       },
       {
         "markerPath": "lib/base64/base64.cpp.REMOVED.git-id",
         "method": "reconstruction",
         "originalBlob": "41a50c87bd079c82680581fb517b23a993bcdab7",
         "path": "lib/base64/base64.cpp",
-        "provenance": "unverified donor reconstruction; 779fb803ff021de5e74ed3b24d7c31a9adcaa236:base64/base64.cpp; headerMatch=0; apiOverlap=10000/10000; distance=26",
+        "provenance": "unverified donor reconstruction; 779fb803ff021de5e74ed3b24d7c31a9adcaa236:base64/base64.cpp; headerMatch=0; apiOverlap=10000/10000; distance=27",
         "replacementBlob": "07e5caa3e0fad17acd31b769f08db8887a1ed9b4"
       },
       {
@@ -356,7 +370,7 @@
         "method": "reconstruction",
         "originalBlob": "41448b96d7c0a16fe6d3a6ed356849010bf07996",
         "path": "lib/tmx/TmxObject.cpp",
-        "provenance": "unverified donor reconstruction; 181f31e1e9a7f3516c7fbd3d4400aa0822c1d387:lib/tmx/TmxObject.cpp; headerMatch=0; apiOverlap=10000/10000; distance=32",
+        "provenance": "unverified donor reconstruction; 181f31e1e9a7f3516c7fbd3d4400aa0822c1d387:lib/tmx/TmxObject.cpp; headerMatch=0; apiOverlap=10000/10000; distance=31",
         "replacementBlob": "151143c8df9052f2e35fa6c00cbaff54fba81fbd"
       },
       {
@@ -948,25 +962,33 @@
       {
         "markerPath": "src/creature.cpp.REMOVED.git-id",
         "method": "reconstruction",
-        "originalBlob": "d24f984fc8a37f0d3c14c160bb78a3e42848210e",
+        "originalBlob": "589f6cf886e2c02b679872108d2ccd000b93d95c",
         "path": "src/creature.cpp",
-        "provenance": "Missing body adapted from accepted #150 reconstruction to exact #195 default/copy/factory and string-key load API, consolidated object config, src paths and genuine Qt signals. Preserves real combat/actions/inventory/equipment/level mechanics; legacy equipment setters only run when explicitly present, preserving restored slot entries. Loot delegates the surviving same-commit LootProvider. Formulas and absent original body remain inferred; not a parity claim. Inputs: [{\"path\": \"/tmp/nouraajd-bfg-recovery/native-middle/recon/08ec144f196a9a5195e281997b5695828ccbd2ab\", \"sha256\": \"ed9e1bc1401e2c6dcb98cc025f4773e6d5277f674ce9dc808bf1c9d04c1296d1\"}, {\"path\": \"src/creature.h\", \"sha256\": \"627da3d68dec495fcdb4ec747e8c7fb09bbb0804eca3417fdfe015109eadb161\"}]",
-        "replacementBlob": "c62bf6335b279d1e94b3238b4840fad320e94207"
+        "provenance": "content reconstruction of the BFG-removed original; carried from the #203 reconstruction; isAlive and getGold lose const and plain accessors setMana/setManaMax/getManaRegRate/setManaRegRate/setHp/setHpMax are inferred for the USER Q_PROPERTYs declared in #204",
+        "replacementBlob": "9284141f0f7d6c34043722da8d6f57e97176edc0"
+      },
+      {
+        "markerPath": "src/gamescene.cpp.REMOVED.git-id",
+        "method": "reconstruction",
+        "originalBlob": "18be8bbf5eb090a0c93864ff87bebc281751d218",
+        "path": "src/gamescene.cpp",
+        "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the surviving original src/gamescene.cpp at e00a7c3e (previous version of src/gamescene.cpp)",
+        "replacementBlob": "a9883f575801e5d8d73197e14d700b4d9069e376"
       },
       {
         "markerPath": "src/gamescript.cpp.REMOVED.git-id",
         "method": "reconstruction",
-        "originalBlob": "a1f41460b8cd1fcfd1e9166184ef858275c34ce9",
+        "originalBlob": "834bd0b2705b7c5bd284702b5c38711de9744991",
         "path": "src/gamescript.cpp",
-        "provenance": "Surviving nearby historical Python3 C API donor adapted only from former getMapObject to exact #195 declared createMapObject name; preserved actual original source cohort addObject/replaceTile/setProperty functions. No future Boost binding used; source reconstruction not parity. Inputs: [{\"path\": \"/tmp/nouraajd-bfg-recovery/native-upper-middle/verify/snapshot-awzoo2ty/source/src/gamescript.cpp\", \"sha256\": \"1393d839a74dff59cc81afc99ca59ff473812afaf1f34573c70682cf1cb1dd03\"}, {\"path\": \"src/gamescript.h\", \"sha256\": \"85a75c2e41c9dcb45e3a473a9aa53184e83fd0c3332997a0ca3ac7584afafa79\"}]",
+        "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction a1f41460b8 (previous version of src/gamescript.cpp)",
         "replacementBlob": "7df0b6739fb4566191eec1632ec9e9c5cd152f71"
       },
       {
         "markerPath": "src/gameview.cpp.REMOVED.git-id",
         "method": "reconstruction",
-        "originalBlob": "adcbe3a18c46dd564e8c2f9086d638c3510ecfa9",
+        "originalBlob": "2120c237f34b407648bd3502e788def68c74c960",
         "path": "src/gameview.cpp",
-        "provenance": "working reconstruction",
+        "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction adcbe3a18c (previous version of src/gameview.cpp)",
         "replacementBlob": "43b2637d61e10666f4471d5b3316d77ca9f2a408"
       },
       {
@@ -980,10 +1002,10 @@
       {
         "markerPath": "src/map.cpp.REMOVED.git-id",
         "method": "reconstruction",
-        "originalBlob": "4adae28cb3992fe92de902d86b5d3619aaf01297",
+        "originalBlob": "2e59130c5e07d3adfde1a4bc90bab2c6a2d98f03",
         "path": "src/map.cpp",
-        "provenance": "working reconstruction",
-        "replacementBlob": "b4585cdccf1ee746ee59e868605161f8ed3e2328"
+        "provenance": "content reconstruction of the BFG-removed original; carried from the #203 reconstruction; Map::isEditor removed with its declaration, so map objects no longer take editor mouse presses",
+        "replacementBlob": "1437f6a3734960ef0ec0a5245ab4eaf22a683cf3"
       },
       {
         "markerPath": "src/pathfinder.cpp.REMOVED.git-id",
@@ -996,10 +1018,18 @@
       {
         "markerPath": "src/stats.cpp.REMOVED.git-id",
         "method": "reconstruction",
-        "originalBlob": "5170bfc60a8b4b8a5023e10bd1a7cedf1dc84029",
+        "originalBlob": "01848b9eddc854adb2f4b1fd10a614bca9079ab8",
         "path": "src/stats.cpp",
-        "provenance": "Missing merged Stats/Damage TU assembled from accepted plain #150 Stats reconstruction and surviving #150 Damage implementation for exact #195 merged declarations; no QObject/future API donor retained. Not exact original. Inputs: [{\"path\": \"/tmp/nouraajd-bfg-recovery/source/recovery/payloads/reconstructions/4f/4ff9f45b2f23d26fc69280d6c0df542e02efa223-stats.cpp\", \"sha256\": \"bff0757ad033b37841a3a1e0ffa12abbb78dae7250c3ef4f9f26dd7c331cefbd\"}, {\"path\": \"/tmp/nouraajd-bfg-recovery/native-middle/src/70449d6d/stats/damage.cpp\", \"sha256\": \"de430be10d1a6f3f174a2efa9f0604743aff9601c0ab5fb2c9e3eeddf01ff6df\"}, {\"path\": \"src/stats.h\", \"sha256\": \"462ead5a1e2f69858c6574e13efeb3dcc157d82f48dbf6d7968335f6af0d8bef\"}]",
+        "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the reconstruction 5170bfc60a (previous version of src/stats.cpp)",
         "replacementBlob": "8fdfbc41221153beac60c040649af6328f93cdd5"
+      },
+      {
+        "markerPath": "src/stats.h.REMOVED.git-id",
+        "method": "reconstruction",
+        "originalBlob": "11042d29411da627c4906ac77fa1af756c1428f9",
+        "path": "src/stats.h",
+        "provenance": "content reconstruction of the BFG-removed original; seeded from the surviving #203 stats.h; #204 (stats properties) registers Stats and Damage as Qt metatypes in its surviving main.cpp, so Q_DECLARE_METATYPE(Stats) and Q_DECLARE_METATYPE(Damage) are inferred",
+        "replacementBlob": "e3c8d498c46e67b35dfac2ac9c2e11b8822b7954"
       },
       {
         "method": "compatibilityRepair",
@@ -1008,9 +1038,9 @@
         "replacementBlob": "d20fb29a7e23828c15487438c93ae790d2045707"
       }
     ],
-    "restoredFilesFingerprint": "4e9534d2be8af5faec0f61b2a5ed5e61edae21bf8eaf2ceac965b853d18832cb",
-    "sourceCommit": "e00a7c3e7babb948012584b298fab2f1e5abe351",
-    "sourceTree": "8d5e571ff54c8bce2a5588efe01b59647e790e55",
+    "restoredFilesFingerprint": "279cd32c597c4488db955b2aef037b1fb0cdf93fa8296dca81fd9859f7b0da92",
+    "sourceCommit": "c577f6225739c5e3e1cf90081a92e997eaed65a4",
+    "sourceTree": "ee1adf0173187c0be99237bcc4fdeb2fc3ff68bc",
     "status": "complete",
     "submodules": [],
     "unresolved": []
@@ -1021,12 +1051,12 @@
       "-a",
       "--server-args=-screen 0 1920x1080x24",
       "env",
-      "LD_PRELOAD=/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-yznt3mv1/observer/libwindowspaths.so",
-      "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-yznt3mv1/build/RecoveryGame"
+      "LD_PRELOAD=/tmp/nouraajd-204-checkpoint/verify/snapshot-or502k7u/observer/libwindowspaths.so",
+      "/tmp/nouraajd-204-checkpoint/verify/snapshot-or502k7u/build/RecoveryGame"
     ],
-    "log": "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-yznt3mv1/smoke/startup.log",
+    "log": "/tmp/nouraajd-204-checkpoint/verify/snapshot-or502k7u/smoke/startup.log",
     "returnCode": 0,
-    "seconds": 0.615,
+    "seconds": 0.716,
     "startup": {
       "checks": {
         "eventLoop": true,
@@ -1048,19 +1078,63 @@
     "status": "success",
     "timedOut": false
   },
-  "sourceCommit": "e00a7c3e7babb948012584b298fab2f1e5abe351",
+  "sourceCommit": "c577f6225739c5e3e1cf90081a92e997eaed65a4",
   "sourceCommits": [
-    "e00a7c3e7babb948012584b298fab2f1e5abe351"
+    "c577f6225739c5e3e1cf90081a92e997eaed65a4"
   ],
   "sourcePreparation": {
     "identity": {
-      "implementationSha256": "f5d590fce22ba637484bb95ca1b13091a246aa4d7d0747c7e112aa968dd1d092"
+      "consoleReader": {
+        "inputSha256": "afcbca06c54f7e48aeb125cca228287b4b49ced0ead968b3a7c74def3311f589",
+        "outputSha256": "f9d901efbaee53e5c818fc9f2144ed5ec5fcb39b5e34406663178492d7162377",
+        "replaySha256": "7401e37c9df078873e491fcb75fd61a7c9c401e153bb393985f0fd85ce042d37",
+        "sourceCommit": "c577f6225739c5e3e1cf90081a92e997eaed65a4"
+      },
+      "implementationSha256": "c3e7f4865006ea9a5b18a5f4813c999ab3063575e86ed5ea9cc25a3bdc11aab1",
+      "outputs": [
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "f9d901efbaee53e5c818fc9f2144ed5ec5fcb39b5e34406663178492d7162377"
+          },
+          "before": {
+            "kind": "file",
+            "sha256": "afcbca06c54f7e48aeb125cca228287b4b49ced0ead968b3a7c74def3311f589"
+          },
+          "path": "src/main.cpp",
+          "purpose": "Read console commands on stdin readiness and release the reader at shutdown"
+        }
+      ]
     },
-    "outputs": [],
-    "status": "not-required",
-    "steps": []
+    "outputs": [
+      {
+        "after": {
+          "kind": "file",
+          "sha256": "f9d901efbaee53e5c818fc9f2144ed5ec5fcb39b5e34406663178492d7162377"
+        },
+        "before": {
+          "kind": "file",
+          "sha256": "afcbca06c54f7e48aeb125cca228287b4b49ced0ead968b3a7c74def3311f589"
+        },
+        "path": "src/main.cpp",
+        "purpose": "Read console commands on stdin readiness and release the reader at shutdown"
+      }
+    ],
+    "status": "success",
+    "steps": [
+      {
+        "command": [
+          "history_source_prep.py",
+          "prepare-console-reader"
+        ],
+        "log": "/tmp/nouraajd-204-checkpoint/verify/snapshot-or502k7u/preparation/console-reader.log",
+        "name": "consoleReader",
+        "returnCode": 0,
+        "timedOut": false
+      }
+    ]
   },
-  "sourceTree": "8d5e571ff54c8bce2a5588efe01b59647e790e55",
+  "sourceTree": "ee1adf0173187c0be99237bcc4fdeb2fc3ff68bc",
   "startupMode": "game",
   "startupSelection": {
     "mode": "game"
@@ -1081,5 +1155,5 @@
     }
   },
   "toolchainImage": "sha256:d3f59ec1d12297ee8091fbea687aa619275fc92b3fd426560e0a1fa40715afc8",
-  "verifiedFromCommit": "e00a7c3e7babb948012584b298fab2f1e5abe351"
+  "verifiedFromCommit": "c577f6225739c5e3e1cf90081a92e997eaed65a4"
 }

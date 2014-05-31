@@ -1,0 +1,8 @@
+
+=== consoleReader ===
+{
+  "inputSha256": "afcbca06c54f7e48aeb125cca228287b4b49ced0ead968b3a7c74def3311f589",
+  "outputSha256": "f9d901efbaee53e5c818fc9f2144ed5ec5fcb39b5e34406663178492d7162377",
+  "replaySha256": "7401e37c9df078873e491fcb75fd61a7c9c401e153bb393985f0fd85ce042d37",
+  "sourceCommit": "c577f6225739c5e3e1cf90081a92e997eaed65a4"
+}

@@ -123,10 +123,6 @@ bool Map::addTile(std::string name, int x, int y, int z) {
 int Map::getTileSize() { return tile_size; }
 
 
-bool Map::isEditor() {
-  return GameScene::getGame() == 0 || GameScene::getView() == 0;
-}
-
 void Map::move(int x, int y) {
   Player *player = GameScene::getPlayer();
   if (!player) {
@@ -539,11 +535,6 @@ Map *MapObject::getMap() { return map; }
 void MapObject::setVisible(bool vis) { QGraphicsItem::setVisible(vis); }
 
 void MapObject::mousePressEvent(QGraphicsSceneMouseEvent *event) {
-  if (Map::isEditor()) {
-    AnimatedObject::mousePressEvent(event);
-    event->accept();
-    return;
-  }
   event->ignore();
 }
 
