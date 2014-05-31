@@ -31,6 +31,7 @@ class Cave : public Building
     Q_OBJECT
     Q_PROPERTY(int chance READ getChance WRITE setChance USER true)
     Q_PROPERTY(QString monster READ getMonster WRITE setMonster USER true)
+    Q_PROPERTY(int monsters READ getMonsters WRITE setMonsters USER true)
 public:
     Cave();
     Cave(const Cave& cave);
@@ -41,10 +42,13 @@ public:
     void setMonster(const QString &value);
     int getChance() const;
     void setChance(int value);
+    int getMonsters() const;
+    void setMonsters(int value);
 
 private:
     QString monster = "Pritz";
     int chance = 15;
+    int monsters=5;
 };
 Q_DECLARE_METATYPE(Cave)
 

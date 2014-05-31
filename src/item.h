@@ -11,16 +11,21 @@ class Interaction;
 class Item : public ListItem
 {
     Q_OBJECT
+    Q_PROPERTY(int power READ getPower WRITE setPower USER true)
+    Q_PROPERTY(bool singleUse READ isSingleUse WRITE setSingleUse USER true)
 public:
     Item();
     Item(const Item&);
     bool isSingleUse();
+    void setSingleUse(bool singleUse);
     virtual void onEquip(Creature *creature);
     virtual void onUnequip(Creature *creature);
     static Item *createItem(std::string name);
     virtual void onUse(Creature *creature);
     virtual void onEnter();
     virtual void onMove();
+    int getPower() const;
+    void setPower(int value);
 protected:
     virtual void mousePressEvent(QGraphicsSceneMouseEvent *event);
     bool singleUse;

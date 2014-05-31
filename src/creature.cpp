@@ -206,7 +206,7 @@ Interaction *Creature::getLevelAction() {
     return Interaction::getInteraction(config["levelling"].get(key.str(), "").asString());
 }
 
-bool Creature::isAlive() const { return alive; }
+bool Creature::isAlive() { return alive; }
 
 void Creature::setAlive() { alive = true; }
 
@@ -331,5 +331,17 @@ void Creature::hoverEnterEvent(QGraphicsSceneHoverEvent *event) {
 
 void Creature::setExp(int value) { exp = value; Q_EMIT statsChanged(); }
 int Creature::getExpReward() { return std::max(1, getScale()) * 150; }
-int Creature::getGold() const { return gold; }
+int Creature::getGold() { return gold; }
 void Creature::setGold(int value) { gold = value; Q_EMIT statsChanged(); }
+
+void Creature::setMana(int mana) { this->mana = mana; }
+
+void Creature::setManaMax(int value) { manaMax = value; }
+
+int Creature::getManaRegRate() { return manaRegRate; }
+
+void Creature::setManaRegRate(int value) { manaRegRate = value; }
+
+void Creature::setHp(int value) { hp = value; }
+
+void Creature::setHpMax(int value) { hpMax = value; }
