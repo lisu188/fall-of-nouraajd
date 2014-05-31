@@ -17,6 +17,12 @@ class Creature : public ListItem
     Q_OBJECT
     Q_PROPERTY(int exp READ getExp WRITE setExp USER true)
     Q_PROPERTY(int gold READ getGold WRITE setGold USER true)
+    Q_PROPERTY(int level READ getLevel USER true)
+    Q_PROPERTY(int mana READ getMana WRITE setMana USER true)
+    Q_PROPERTY(int manaMax READ getManaMax WRITE setManaMax USER true)
+    Q_PROPERTY(int manaRegRate READ getManaRegRate WRITE setManaRegRate USER true)
+    Q_PROPERTY(int hp READ getHp WRITE setHp USER true)
+    Q_PROPERTY(int hpMax READ getHpMax WRITE setHpMax USER true)
 public:
     int getExp();
     void setExp(int exp);
@@ -33,7 +39,7 @@ public:
     void hurt(int i);
     int getDmg();
     int getScale();
-    bool isAlive() const;
+    bool isAlive();
     void setAlive();
     virtual void fight(Creature *creature);
     virtual void levelUp();
@@ -41,6 +47,7 @@ public:
     void addAction(Interaction *action);
     void addEffect(std::string type, Creature *caster);
     int getMana();
+    void setMana(int mana);
     void addMana(int i);
     void addManaProc(float i);
     void takeMana(int i);
@@ -52,9 +59,6 @@ public:
     Armor *getArmor();
     Stats *getStats();
     int getManaRatio();
-    int getHp();
-    int getHpMax();
-    int getManaMax();
     int getLevel();
     void addExpScaled(int scale);
     void addExp(int exp);
@@ -73,8 +77,16 @@ public:
     bool hasInInventory(Item *item);
     bool hasItem(Item *item);
     Coords getCoords();
-    int getGold() const;
+    int getGold() ;
     void setGold(int value);
+    int getManaMax() ;
+    void setManaMax(int value);
+    int getManaRegRate() ;
+    void setManaRegRate(int value);
+    int getHp();
+    void setHp(int value);
+    int getHpMax();
+    void setHpMax(int value);
 
 protected:
     void hoverEnterEvent(QGraphicsSceneHoverEvent *event);
@@ -87,8 +99,11 @@ protected:
     int level;
     int sw;
     std::string animPath;
-    int mana, manaMax, manaRegRate;
-    int hpMax, hp;
+    int mana;
+    int manaMax;
+    int manaRegRate;
+    int hpMax;
+    int hp;
     bool alive = true;
     Stats stats;
     Interaction *selectAction();

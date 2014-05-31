@@ -1,4 +1,6 @@
 #include "event.h"
+#include "scriptmanager.h"
+#include "util.h"
 
 #include <src/gameview.h>
 #include <QApplication>
@@ -12,11 +14,14 @@
 #include <src/interaction.h>
 #include <QThreadPool>
 #include <QtGlobal>
+#include <mutex>
 
 std::set<int> qMetaTypesRegister;
 
 void messageHandler(QtMsgType type, const QMessageLogContext &context, const QString &msg)
 {
+    static std::mutex mutex;
+    std::unique_lock<std::mutex> lock(mutex);
     QByteArray localMsg = msg.toLocal8Bit();
     switch (type) {
     case QtDebugMsg:
@@ -57,6 +62,8 @@ void registerMetaTypes()
     qMetaTypesRegister.insert(qRegisterMetaType<SmartPathFinder>());
     qMetaTypesRegister.insert(qRegisterMetaType<RandomPathFinder>());
     qMetaTypesRegister.insert(qRegisterMetaType<Event>());
+    qMetaTypesRegister.insert(qRegisterMetaType<Damage>());
+    qMetaTypesRegister.insert(qRegisterMetaType<Stats>());
 }
 
 int main(int argc, char *argv[])
@@ -67,6 +74,14 @@ int main(int argc, char *argv[])
     QThreadPool::globalInstance()->setExpiryTimeout(0);
     registerMetaTypes();
     GameView view;
+    QThreadPool::globalInstance()->start(new GameTask([]()->void{
+        QTextStream streamIn(stdin);
+        QString script;
+        while((!GameScene::getView())||GameScene::getView()->isVisible()){
+            streamIn>>script;
+            ScriptManager::getInstance().executeScript(script.toStdString());
+        }
+    }));
     int ret = a.exec();
     return ret;
 }

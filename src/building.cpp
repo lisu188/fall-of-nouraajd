@@ -74,10 +74,11 @@ void Cave::onEnter()
 
 void Cave::onMove()
 {
-    if (enabled && ((rand() % 100) < chance)) {
+    if (enabled && ((rand() % 100) < chance)&&monsters>0) {
         Monster *monster = (Monster*)Creature::createCreature(this->monster.toStdString());
         map->addObject(monster);
         monster->moveTo(getPosX(), getPosY(), getPosZ(), true);
+        monsters--;
     }
 }
 QString Cave::getMonster() const
@@ -98,8 +99,15 @@ void Cave::setChance(int value)
 {
     chance = value;
 }
+int Cave::getMonsters() const
+{
+    return monsters;
+}
 
-
+void Cave::setMonsters(int value)
+{
+    monsters = value;
+}
 
 Teleporter::Teleporter()
 {

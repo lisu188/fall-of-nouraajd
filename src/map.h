@@ -40,7 +40,6 @@ public:
     bool addTile(std::string name, int x, int y, int z);
     bool removeTile(int x, int y, int z);
     static int getTileSize();
-    static bool isEditor();
     void move(int x, int y);
     std::string getTile(int x, int y, int z);
     bool contains(int x, int y, int z);
