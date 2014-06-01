@@ -5,26 +5,28 @@
 class CreatureFightView;
 class Creature;
 
-class FightView : public QGraphicsItem
-{
+class FightView : public QGraphicsItem {
 public:
-    FightView();
-    static Creature *selected;
-    void update();
-    virtual QRectF boundingRect() const;
-    virtual void paint(QPainter *painter, const QStyleOptionGraphicsItem *, QWidget *);
+  FightView();
+  static Creature *selected;
+  void update();
+  virtual QRectF boundingRect() const;
+  virtual void paint(QPainter *painter, const QStyleOptionGraphicsItem *,
+                     QWidget *);
 };
 
-class CreatureFightView : public QGraphicsItem
-{
+class CreatureFightView : public QGraphicsItem {
 private:
-    Creature *creature;
+  Creature *creature;
+
 public:
-    CreatureFightView(Creature *creature);
-    virtual QRectF boundingRect() const;
-    virtual void paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget);
+  CreatureFightView(Creature *creature);
+  virtual QRectF boundingRect() const;
+  virtual void paint(QPainter *painter, const QStyleOptionGraphicsItem *option,
+                     QWidget *widget);
+
 protected:
-    virtual void mousePressEvent(QGraphicsSceneMouseEvent *event);
+  virtual void mousePressEvent(QGraphicsSceneMouseEvent *event);
 };
 
 #endif // FIGHTVIEW_H

@@ -1,7 +1,7 @@
 # Recovered game snapshot
 
-Original commit: `07af2054088cb3aa440ef5594d2caa0179c420b6`. Original tree: `e7ba7d0616017f0411fc573dd57ea42ec47faf22`.
-Startup was verified from identical recovered sources at `07af2054088cb3aa440ef5594d2caa0179c420b6`.
+Original commit: `3b0df86767a7483056dd3bfe71d3a19bf6268874`. Original tree: `fd2b561df769eb7cd05a5b24810dc5354c9778ea`.
+Startup was verified from identical recovered sources at `3b0df86767a7483056dd3bfe71d3a19bf6268874`.
 
 This recovered version compiled and linked on Linux, started the real game on an isolated Xvfb display,
 loaded its map and a healthy player, rendered the screenshot below, and exited normally.
@@ -35,10 +35,10 @@ launches run the game's original entry point. Startup evidence does not establis
 
 ## Recovery provenance
 
-compatibilityRepair: 1, exactOriginal: 65, reconstruction: 47.
+compatibilityRepair: 1, exactOriginal: 65, reconstruction: 46.
 
 - `Game.pro`: working reconstruction
-- `lib/base64/base64.cpp`: unverified donor reconstruction; 779fb803ff021de5e74ed3b24d7c31a9adcaa236:base64/base64.cpp; headerMatch=0; apiOverlap=10000/10000; distance=29
+- `lib/base64/base64.cpp`: unverified donor reconstruction; 779fb803ff021de5e74ed3b24d7c31a9adcaa236:base64/base64.cpp; headerMatch=0; apiOverlap=10000/10000; distance=30
 - `lib/json/json_batchallocator.h`: unverified upstream reconstruction; https://github.com/open-source-parsers/jsoncpp/tree/4fce396c9d3e27a8ab8fb88e94c1676e021ae3a6; adapted json include prefix to historical lib/json layout
 - `lib/json/json_reader.cpp`: unverified upstream reconstruction; https://github.com/open-source-parsers/jsoncpp/tree/4fce396c9d3e27a8ab8fb88e94c1676e021ae3a6; adapted json include prefix to historical lib/json layout
 - `lib/json/json_value.cpp`: unverified upstream reconstruction; https://github.com/open-source-parsers/jsoncpp/tree/4fce396c9d3e27a8ab8fb88e94c1676e021ae3a6; adapted json include prefix to historical lib/json layout
@@ -54,7 +54,7 @@ compatibilityRepair: 1, exactOriginal: 65, reconstruction: 47.
 - `lib/tmx/TmxLayer.h`: unverified upstream reconstruction; https://github.com/tamatias/tmxparser/tree/6fa4d38742313b6365df0d224b8978be1eb81290; adapted vendored tinyxml/zlib include paths to historical directory layout
 - `lib/tmx/TmxMap.cpp`: unverified upstream reconstruction; https://github.com/tamatias/tmxparser/tree/6fa4d38742313b6365df0d224b8978be1eb81290; adapted vendored tinyxml/zlib include paths to historical directory layout
 - `lib/tmx/TmxMap.h`: unverified upstream reconstruction; https://github.com/tamatias/tmxparser/tree/6fa4d38742313b6365df0d224b8978be1eb81290; adapted vendored tinyxml/zlib include paths to historical directory layout
-- `lib/tmx/TmxObject.cpp`: unverified donor reconstruction; 181f31e1e9a7f3516c7fbd3d4400aa0822c1d387:lib/tmx/TmxObject.cpp; headerMatch=0; apiOverlap=10000/10000; distance=29
+- `lib/tmx/TmxObject.cpp`: unverified donor reconstruction; 181f31e1e9a7f3516c7fbd3d4400aa0822c1d387:lib/tmx/TmxObject.cpp; headerMatch=0; apiOverlap=10000/10000; distance=28
 - `lib/tmx/TmxTileset.cpp`: unverified upstream reconstruction; https://github.com/tamatias/tmxparser/tree/6fa4d38742313b6365df0d224b8978be1eb81290; adapted vendored tinyxml/zlib include paths to historical directory layout
 - `lib/zlib/adler32.c`: Unmodified official zlib v1.2.5 adler32.c; Git blob verified against official tag tree 9712272c78b9d9c93746d9c8e156a3728c65ca72. Coherent same-version donor replaces mixed1.2.5/1.2.5 fallback; exact original only when originalHashMatches=true.
 - `lib/zlib/crc32.c`: Unmodified official zlib v1.2.5 crc32.c; Git blob verified against official tag tree 9712272c78b9d9c93746d9c8e156a3728c65ca72. Coherent same-version donor replaces mixed1.2.5/1.2.5 fallback; exact original only when originalHashMatches=true.
@@ -75,18 +75,17 @@ compatibilityRepair: 1, exactOriginal: 65, reconstruction: 47.
 - `res/config/object.json`: unverified donor reconstruction; split object descriptors e8b7c3d0e6da989122a0587943a98504342da3cd:config/objects flattened to observed legacy class/path API; target tile/interaction entries preserved; species stats retain uncertainty of reconstructed creatures catalog
 - `res/images/loading.png`: synthesized visible 32px placeholder; original artwork unavailable; unverified
 - `src/creature.cpp`: working reconstruction
-- `src/gamescene.cpp`: working reconstruction
 - `src/gamescript.cpp`: working reconstruction
 - `src/gameview.cpp`: working reconstruction
-- `src/interaction.cpp`: Missing body adapted from accepted #150 std::string native action/effect reconstruction to exact #195 default/copy/load-by-name API, typeName and consolidated config. Retains all native action/effect bodies; removes only save methods absent from surviving class declarations. Not exact source or gameplay parity. Inputs: [{"path": "/tmp/nouraajd-bfg-recovery/source/recovery/payloads/reconstructions/0b/0b0a9c19112914c23dcd4a6e2e032f335f7abf76-interaction.cpp", "sha256": "58c845dc10998af9d2593755795e2cbfce4f8fdd9e05369db918e2212cc511ec"}, {"path": "src/interaction.h", "sha256": "10c5b800cf7fa1d21c48f7b8d546fb337322e4c7bb75cb5418ace80b51b61b7b"}]
+- `src/interaction.cpp`: working reconstruction
 - `src/main.cpp`: working reconstruction
 - `src/map.cpp`: working reconstruction
-- `src/pathfinder.cpp`: Missing #197 merged pathfinder preserves exact older original base/dumb/random/smart algorithms from native #195/196 cohort, adapting only worker signal names and genuine new CompletionListener API. Constructor counts queued workers before main turn ends; completed movement arrives before ended/deregister; final worker emits Map completion once. Singleton static initialization zeroes genuine workers/started fields. No fabricated completion result, no omitted AI; inferred worker body, not parity. Inputs: [{"path": "/tmp/nouraajd-bfg-recovery/native-upper-middle/recon/a66abb977d8290f3e46b61e4b2a9708a87ba6630", "sha256": "ccfeaa238eeb5a20f078ae42af8642001f597c8c62d96392f1feac8361dd8a38"}, {"path": "src/pathfinder.h", "sha256": "5176d4852a684c173bea481e2027b407d7fb3d224ad65806a1227a326c5d0c10"}]
+- `src/pathfinder.cpp`: working reconstruction
 - `src/stats.cpp`: working reconstruction
 - `src/stats.h`: working reconstruction
 - `lib/json/LICENSE`: https://github.com/open-source-parsers/jsoncpp/tree/4fce396c9d3e27a8ab8fb88e94c1676e021ae3a6 upstream distribution license
 
-Restored source fingerprint: `aeb84beb83b0fbfda98485b978d7a74571a3680ad466ce0426881f390cfc4bdf`.
+Restored source fingerprint: `bf34a922ef26a06e73949e18586294a62fe213a295e578ea8716721a022ba60c`.
 
 The actual 1278 × 718 screenshot and [verification metadata](recovery/verification.json) belong to
 this source version. Reconstructed code and borrowed assets are identified in that metadata; they are

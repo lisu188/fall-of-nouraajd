@@ -8,108 +8,98 @@
 #include <unordered_map>
 #include <unordered_set>
 
-class PathFinder: public QObject
-{
+class PathFinder : public QObject {
 public:
-    PathFinder();
-    virtual Coords findPath(Coords start, Coords goal) = 0;
+  PathFinder();
+  virtual Coords findPath(Coords start, Coords goal) = 0;
 };
 
-class DumbPathFinder : public PathFinder
-{
-    Q_OBJECT
+class DumbPathFinder : public PathFinder {
+  Q_OBJECT
 public:
-    DumbPathFinder();
-    DumbPathFinder(const DumbPathFinder &);
+  DumbPathFinder();
+  DumbPathFinder(const DumbPathFinder &);
 
-    // PathFinder interface
+  // PathFinder interface
 public:
-    Coords findPath(Coords start, Coords goal);
+  Coords findPath(Coords start, Coords goal);
 };
 Q_DECLARE_METATYPE(DumbPathFinder)
 
-class RandomPathFinder : public PathFinder
-{
-    Q_OBJECT
+class RandomPathFinder : public PathFinder {
+  Q_OBJECT
 public:
-    RandomPathFinder();
-    RandomPathFinder(const RandomPathFinder &);
-    // PathFinder interface
+  RandomPathFinder();
+  RandomPathFinder(const RandomPathFinder &);
+  // PathFinder interface
 public:
-    Coords findPath(Coords, Coords);
+  Coords findPath(Coords, Coords);
 };
 Q_DECLARE_METATYPE(RandomPathFinder)
 
-class Cell
-{
+class Cell {
 public:
-    int x, y;
-    Coords goal;
-    Cell(int x, int y, Coords goal): x(x), y(y), goal(goal) {}
-    Coords toCoords()
-    {
-        return Coords(x, y, goal.z);
-    }
+  int x, y;
+  Coords goal;
+  Cell(int x, int y, Coords goal) : x(x), y(y), goal(goal) {}
+  Coords toCoords() { return Coords(x, y, goal.z); }
 };
 
-class SmartPathFinder : public PathFinder
-{
-    Q_OBJECT
+class SmartPathFinder : public PathFinder {
+  Q_OBJECT
 public:
-    SmartPathFinder();
-    SmartPathFinder(const SmartPathFinder &);
+  SmartPathFinder();
+  SmartPathFinder(const SmartPathFinder &);
 
-    // PathFinder interface
+  // PathFinder interface
 public:
-    Coords findPath(Coords start, Coords goal);
+  Coords findPath(Coords start, Coords goal);
+
 private:
-    int getCost(Coords coords);
-    std::list<Coords> getNearCells(Coords coords);
-    std::unordered_map<Coords, int, CoordsHasher> values;
-    Coords getNearestCell(Coords start);
-    void processNode(Coords start, std::list<Cell> &nodes, std::unordered_set<Coords, CoordsHasher> &marked);
-    bool canStep(int x, int y , int z);
+  int getCost(Coords coords);
+  std::list<Coords> getNearCells(Coords coords);
+  std::unordered_map<Coords, int, CoordsHasher> values;
+  Coords getNearestCell(Coords start);
+  void processNode(Coords start, std::list<Cell> &nodes,
+                   std::unordered_set<Coords, CoordsHasher> &marked);
+  bool canStep(int x, int y, int z);
 };
 Q_DECLARE_METATYPE(SmartPathFinder)
 
-class CompletionListener: public QObject{
-    Q_OBJECT
+class CompletionListener : public QObject {
+  Q_OBJECT
 public:
-    static CompletionListener *getInstance(){
-        static CompletionListener instance;
-        return &instance;
-    }
-    void start(){
-        started=true;
-    }
+  static CompletionListener *getInstance() {
+    static CompletionListener instance;
+    return &instance;
+  }
+  void start() { started = true; }
 
-    void stop(){
-        started=false;
-    }
+  void stop() { started = false; }
 
-    bool isCompleted(){
-        return workers==0;
-    }
+  bool isCompleted() { return workers == 0; }
 
-    void run();
-    Q_SIGNAL void completed();
-    Q_SLOT void registerWorker();
-    Q_SLOT void deregisterWorker();
+  void run();
+  Q_SIGNAL void completed();
+  Q_SLOT void registerWorker();
+  Q_SLOT void deregisterWorker();
+
 private:
-    int workers;
-    bool started;
+  int workers;
+  bool started;
 };
 
-class PathFinderWorker : public QObject,public QRunnable{
-    Q_OBJECT
+class PathFinderWorker : public QObject, public QRunnable {
+  Q_OBJECT
 public:
-    PathFinderWorker(Creature *creature,PathFinder *finder);
-    void run();
+  PathFinderWorker(Creature *creature, PathFinder *finder);
+  void run();
+
 private:
-    Q_SIGNAL void completed(int x,int y);
-    Q_SIGNAL void started();
-    Q_SIGNAL void ended();
-    Creature *creature;
-    PathFinder *finder;
+  Q_SIGNAL void completed(int x, int y);
+  Q_SIGNAL void started();
+  Q_SIGNAL void ended();
+  Creature *creature;
+  PathFinder *finder;
 };
 #endif // PATHFINDER_H
