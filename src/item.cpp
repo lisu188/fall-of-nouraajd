@@ -84,7 +84,7 @@ void Item::loadFromJson(std::string name) {
   bonus.loadFromJson(config["bonus"]);
   interaction =
       Interaction::getInteraction(config.get("interaction", "").asString());
-  setAnimation(config.get("path", "").asCString());
+  setAnimation(config.get("animation", "").asCString());
   power = config.get("power", 1).asInt();
   singleUse = config.get("singleUse", false).asBool();
   tooltip = config.get("tooltip", "").asString();

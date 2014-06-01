@@ -643,3 +643,11 @@ std::size_t CoordsHasher::operator()(const Coords &coords) const
 }
 
 int Coords::getDist(Coords other) { return std::abs(x-other.x)+std::abs(y-other.y)+std::abs(z-other.z); }
+
+void MapObject::onEnter() {}
+
+void MapObject::onMove() {}
+
+void MapObject::onCreate() {}
+
+void MapObject::onDestroy() {}
