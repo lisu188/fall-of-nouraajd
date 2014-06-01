@@ -21,7 +21,7 @@ void Building::loadFromJson(std::string name) {
   this->typeName = name;
   Json::Value config =
       (*ConfigurationProvider::getConfig("config/object.json"))[name];
-  this->setAnimation(config.get("path", "").asString());
+  this->setAnimation(config.get("animation", "").asString());
 }
 
 bool Building::isEnabled() { return enabled; }

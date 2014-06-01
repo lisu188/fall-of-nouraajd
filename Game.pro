@@ -154,4 +154,5 @@ RESOURCES += \
     res/images.qrc \
     res/items.qrc \
     res/iteractions.qrc \
+    res/scripts.qrc \
     res/tiles.qrc
