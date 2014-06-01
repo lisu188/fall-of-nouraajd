@@ -54,4 +54,12 @@ ScriptManager::ScriptManager()
     PyImport_AppendInittab("Game", PyInit_Game);
     Py_Initialize();
     PyRun_SimpleString("import Game");
+    PyMethodDef method;
+    for(int i=0;true;i++){
+        method=GameMethods[i];
+        if(method.ml_name==0){
+            break;
+        }
+        executeScript(std::string(method.ml_name).append("=Game.").append(method.ml_name));
+    }
 }
