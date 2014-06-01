@@ -13,27 +13,28 @@
 
 class GameView;
 class FightView;
-class GameScene : public QGraphicsScene
-{
-    Q_OBJECT
+class GameScene : public QGraphicsScene {
+  Q_OBJECT
 public:
-    static Player* getPlayer();
-    static void setPlayer(Player *pla);
-    static GameScene* getGame();
-    static GameView *getView();
-    static unsigned int getStep();
-    static Map *getMap();
-    void playerMove(int dirx, int diry);
-    void startGame();
+  static Player *getPlayer();
+  static void setPlayer(Player *pla);
+  static GameScene *getGame();
+  static GameView *getView();
+  static unsigned int getStep();
+  static Map *getMap();
+  void playerMove(int dirx, int diry);
+  void startGame();
+
 protected:
-    void keyPressEvent(QKeyEvent *keyEvent);
-    virtual void mousePressEvent(QGraphicsSceneMouseEvent *event);
-    virtual void mouseMoveEvent(QGraphicsSceneMouseEvent *event);
-    virtual void mouseReleaseEvent(QGraphicsSceneMouseEvent *event);
+  void keyPressEvent(QKeyEvent *keyEvent);
+  virtual void mousePressEvent(QGraphicsSceneMouseEvent *event);
+  virtual void mouseMoveEvent(QGraphicsSceneMouseEvent *event);
+  virtual void mouseReleaseEvent(QGraphicsSceneMouseEvent *event);
+
 private:
-    static Map *map;
-    static Player *player;
-    static GameScene *game;
+  static Map *map;
+  static Player *player;
+  static GameScene *game;
 };
 
 #endif // GAMESCENE_H

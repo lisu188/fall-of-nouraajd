@@ -6,17 +6,18 @@
 #include <QGraphicsObject>
 
 class Item;
-class PlayerEquippedView : public QGraphicsObject
-{
-    Q_OBJECT
+class PlayerEquippedView : public QGraphicsObject {
+  Q_OBJECT
 public:
-    PlayerEquippedView(std::map<int, Item*>*equipped);
-    QRectF boundingRect() const;
-    void paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget);
+  PlayerEquippedView(std::map<int, Item *> *equipped);
+  QRectF boundingRect() const;
+  void paint(QPainter *painter, const QStyleOptionGraphicsItem *option,
+             QWidget *widget);
+
 private:
-    std::map<int, Item*>*equipped;
-    std::list<ItemSlot*> itemSlots;
-    Q_SLOT virtual void update();
+  std::map<int, Item *> *equipped;
+  std::list<ItemSlot *> itemSlots;
+  Q_SLOT virtual void update();
 };
 
 #endif // PLAYEREQUIPPEDVIEW_H

@@ -1,49 +1,23 @@
 #include "event.h"
 #include "scriptmanager.h"
 
-Event::Event()
-{
+Event::Event() {}
 
+Event::Event(const Event &) {}
+
+void Event::onEnter() {
+  if (this->isEnabled()) {
+    ScriptManager::getInstance()->executeScript(script);
+  }
 }
 
-Event::Event(const Event &)
-{
+void Event::onMove() {}
 
-}
+void Event::loadFromJson(std::string name) {}
+QString Event::getScript() const { return script; }
 
-void Event::onEnter()
-{
-    if (this->isEnabled()) {
-        ScriptManager::getInstance().executeScript(script.toStdString());
-    }
-}
+void Event::setScript(const QString &value) { script = value; }
 
-void Event::onMove()
-{
+bool Event::isEnabled() { return enabled; }
 
-}
-
-void Event::loadFromJson(std::string name)
-{
-
-}
-QString Event::getScript() const
-{
-    return script;
-}
-
-void Event::setScript(const QString &value)
-{
-    script = value;
-}
-
-bool Event::isEnabled()
-{
-    return enabled;
-}
-
-void Event::setEnabled(bool enabled)
-{
-    this->enabled = enabled;
-}
-
+void Event::setEnabled(bool enabled) { this->enabled = enabled; }
