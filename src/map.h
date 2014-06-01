@@ -88,8 +88,10 @@ public:
   int getPosY() const;
   int getPosZ() const;
   void removeFromGame();
-  virtual void onEnter() = 0;
-  virtual void onMove() = 0;
+  virtual void onEnter();
+  virtual void onMove();
+  virtual void onCreate();
+  virtual void onDestroy();
   Q_SLOT void move(int x, int y);
   virtual void loadFromJson(std::string name) = 0;
   void loadFromProps(Tmx::PropertySet set);
