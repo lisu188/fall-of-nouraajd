@@ -6,45 +6,37 @@
 #include <src/configurationprovider.h>
 #include <QThreadPool>
 
-Monster::Monster(): Creature()
-{
+Monster::Monster() : Creature() {}
+
+Monster::Monster(const Monster &monster) {}
+
+void Monster::onMove() {
+  if (!isAlive()) {
+    return;
+  }
+  PathFinder *finder;
+  if ((this->getCoords().getDist(GameScene::getPlayer()->getCoords())) < 25) {
+    finder = new SmartPathFinder();
+  } else {
+    finder = new RandomPathFinder();
+  }
+  this->addExp(rand() % 25);
+  QThreadPool::globalInstance()->start(new PathFinderWorker(this, finder));
 }
 
-Monster::Monster(const Monster &monster)
-{
+void Monster::onEnter() {
+  if (!isAlive()) {
+    return;
+  }
+  GameScene::getPlayer()->addToFightList(this);
 }
 
-void Monster::onMove()
-{
-    if (!isAlive()) {
-        return;
-    }
-    PathFinder *finder;
-    if ((this->getCoords().getDist(GameScene::getPlayer()->getCoords())) < 25) {
-        finder = new SmartPathFinder();
-    } else {
-        finder = new RandomPathFinder();
-    }
-    this->addExp(rand() % 25);
-    QThreadPool::globalInstance()->start(new PathFinderWorker(this,finder));
+void Monster::levelUp() {
+  Creature::levelUp();
+  heal(0);
+  addMana(0);
 }
 
-void Monster::onEnter()
-{
-    if (!isAlive()) {
-        return;
-    }
-    GameScene::getPlayer()->addToFightList(this);
-}
-
-void Monster::levelUp()
-{
-    Creature::levelUp();
-    heal(0);
-    addMana(0);
-}
-
-std::set<Item *> *Monster::getLoot()
-{
-    return LootProvider::getLoot(getScale());
+std::set<Item *> *Monster::getLoot() {
+  return LootProvider::getLoot(getScale());
 }

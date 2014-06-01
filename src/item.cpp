@@ -12,191 +12,121 @@
 #include <src/potion.h>
 #include <src/configurationprovider.h>
 
-Item::Item(): ListItem(0, 0, 0, 2)
-{
+Item::Item() : ListItem(0, 0, 0, 2) {}
 
+Item::Item(const Item &item) : Item() { this->loadFromJson(item.name); }
+
+void Item::onEnter() {
+  this->getMap()->removeObject(this);
+  GameScene::getPlayer()->addItem(this);
 }
 
-Item::Item(const Item &item): Item()
-{
-    this->loadFromJson(item.name);
+void Item::onMove() {}
+
+bool Item::isSingleUse() { return singleUse; }
+
+void Item::setSingleUse(bool singleUse) { this->singleUse = singleUse; }
+
+void Item::onEquip(Creature *creature) {
+  creature->getStats()->addBonus(bonus);
+  qDebug() << creature->typeName.c_str() << "equipped" << typeName.c_str()
+           << "\n";
 }
 
-void Item::onEnter()
-{
-    this->getMap()->removeObject(this);
-    GameScene::getPlayer()->addItem(this);
+void Item::onUnequip(Creature *creature) {
+  creature->getStats()->removeBonus(bonus);
+  qDebug() << creature->typeName.c_str() << "unequipped" << typeName.c_str()
+           << "\n";
 }
 
-void Item::onMove()
-{
-
+Item *Item::createItem(QString name) {
+  return dynamic_cast<Item *>(MapObject::createMapObject(name));
 }
 
-bool Item::isSingleUse()
-{
-    return singleUse;
+void Item::onUse(Creature *creature) {
+  ItemSlot *parent = (ItemSlot *)this->parentItem();
+  if (!parent) {
+    qDebug() << "Parentless item dropped";
+    return;
+  }
+  int slot = parent->getNumber();
+  creature->setItem(slot, this);
 }
 
-void Item::setSingleUse(bool singleUse){
-    this->singleUse=singleUse;
+void Item::mousePressEvent(QGraphicsSceneMouseEvent *event) {
+  if (singleUse && GameScene::getPlayer()) {
+    GameScene::getPlayer()->loseItem(this);
+    onUse(GameScene::getPlayer());
+    delete this;
+    return;
+  }
+  ListItem::mousePressEvent(event);
+  if (event->isAccepted()) {
+    return;
+  }
+  if (GameScene::getPlayer() && !GameScene::getPlayer()->hasItem(this)) {
+    return;
+  }
+  QGraphicsObject *parent = this->parentObject();
+  if (parent) {
+    parent->setAcceptDrops(false);
+  }
+  AnimatedObject::mousePressEvent(event);
+  if (parent) {
+    parent->setAcceptDrops(true);
+  }
 }
 
-void Item::onEquip(Creature *creature)
-{
-    creature->getStats()->addBonus(bonus);
-    qDebug() << creature->typeName.c_str() << "equipped" << typeName.c_str() << "\n";
+void Item::loadFromJson(std::string name) {
+  this->typeName = name;
+  Json::Value config =
+      (*ConfigurationProvider::getConfig("config/object.json"))[typeName];
+  bonus.loadFromJson(config["bonus"]);
+  interaction =
+      Interaction::getInteraction(config.get("interaction", "").asString());
+  setAnimation(config.get("path", "").asCString());
+  power = config.get("power", 1).asInt();
+  singleUse = config.get("singleUse", false).asBool();
+  tooltip = config.get("tooltip", "").asString();
+  slot = config.get("slot", 0).asInt();
+  if (tooltip.compare("") == 0) {
+    tooltip = typeName;
+  }
 }
+int Item::getPower() const { return power; }
 
-void Item::onUnequip(Creature *creature)
-{
-    creature->getStats()->removeBonus(bonus);
-    qDebug() << creature->typeName.c_str() << "unequipped" << typeName.c_str() << "\n";
-}
+void Item::setPower(int value) { power = value; }
 
-Item *Item::createItem(QString name)
-{
-    return dynamic_cast<Item*>(MapObject::createMapObject(name));
-}
+Armor::Armor() {}
 
-void Item::onUse(Creature *creature)
-{
-    ItemSlot *parent = (ItemSlot *)this->parentItem();
-    if (!parent) {
-        qDebug() << "Parentless item dropped";
-        return;
-    }
-    int slot = parent->getNumber();
-    creature->setItem(slot, this);
-}
+Armor::Armor(const Armor &armor) {}
 
-void Item::mousePressEvent(QGraphicsSceneMouseEvent *event)
-{
-    if (singleUse && GameScene::getPlayer()) {
-        GameScene::getPlayer()->loseItem(this);
-        onUse(GameScene::getPlayer());
-        delete this;
-        return;
-    }
-    ListItem::mousePressEvent(event);
-    if (event->isAccepted()) {
-        return;
-    }
-    if (GameScene::getPlayer() && !GameScene::getPlayer()->hasItem(this)) {
-        return;
-    }
-    QGraphicsObject *parent = this->parentObject();
-    if (parent) {
-        parent->setAcceptDrops(false);
-    }
-    AnimatedObject::mousePressEvent(event);
-    if (parent) {
-        parent->setAcceptDrops(true);
-    }
-}
+Interaction *Armor::getInteraction() { return interaction; }
 
-void Item::loadFromJson(std::string name)
-{
-    this->typeName = name;
-    Json::Value config = (*ConfigurationProvider::getConfig("config/object.json"))[typeName];
-    bonus.loadFromJson(config["bonus"]);
-    interaction = Interaction::getInteraction(config.get("interaction", "").asString());
-    setAnimation(config.get("path", "").asCString());
-    power = config.get("power", 1).asInt();
-    singleUse = config.get("singleUse", false).asBool();
-    tooltip = config.get("tooltip", "").asString();
-    slot = config.get("slot", 0).asInt();
-    if (tooltip.compare("") == 0) {
-        tooltip = typeName;
-    }
-}
-int Item::getPower() const
-{
-    return power;
-}
+Belt::Belt() {}
 
-void Item::setPower(int value)
-{
-    power = value;
-}
+Belt::Belt(const Belt &belt) {}
 
+Boots::Boots() {}
 
-Armor::Armor()
-{
-}
+Boots::Boots(const Boots &boots) {}
 
-Armor::Armor(const Armor &armor)
-{
+Gloves::Gloves() {}
 
-}
+Gloves::Gloves(const Gloves &gloves) {}
 
-Interaction *Armor::getInteraction()
-{
-    return interaction;
-}
+Helmet::Helmet() {}
 
-Belt::Belt()
-{
-}
+Helmet::Helmet(const Helmet &helmet) {}
 
-Belt::Belt(const Belt &belt)
-{
+SmallWeapon::SmallWeapon() {}
 
-}
+SmallWeapon::SmallWeapon(const SmallWeapon &weapon) {}
 
-Boots::Boots()
-{
-}
+Weapon::Weapon() : Item() {}
 
-Boots::Boots(const Boots &boots)
-{
+Weapon::Weapon(const Weapon &weapon) {}
 
-}
+Interaction *Weapon::getInteraction() { return interaction; }
 
-Gloves::Gloves()
-{
-
-}
-
-Gloves::Gloves(const Gloves &gloves)
-{
-
-}
-
-Helmet::Helmet()
-{
-}
-
-Helmet::Helmet(const Helmet &helmet)
-{
-
-}
-
-SmallWeapon::SmallWeapon()
-{
-
-}
-
-SmallWeapon::SmallWeapon(const SmallWeapon &weapon)
-{
-
-}
-
-Weapon::Weapon(): Item()
-{
-}
-
-Weapon::Weapon(const Weapon &weapon)
-{
-
-}
-
-Interaction *Weapon::getInteraction()
-{
-    return interaction;
-}
-
-Stats *Weapon::getStats()
-{
-    return &bonus;
-}
+Stats *Weapon::getStats() { return &bonus; }

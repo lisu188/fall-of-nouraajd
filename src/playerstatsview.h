@@ -6,17 +6,17 @@
 #include <QGraphicsItem>
 #include <src/player.h>
 
-class PlayerStatsView : public QWidget
-{
-    Q_OBJECT
+class PlayerStatsView : public QWidget {
+  Q_OBJECT
 public:
-    explicit PlayerStatsView();
-    void setPlayer(Player *value);
+  explicit PlayerStatsView();
+  void setPlayer(Player *value);
 
 protected:
-    void paintEvent(QPaintEvent *);
+  void paintEvent(QPaintEvent *);
+
 private:
-    Player* player = 0;
+  Player *player = 0;
 };
 
 #endif // PLAYERSTATSVIEW_H

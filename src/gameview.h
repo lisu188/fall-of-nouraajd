@@ -10,47 +10,49 @@
 #include <src/playerstatsview.h>
 #include <src/fightview.h>
 
-class BackPackObject: public QWidget
-{
-    Q_OBJECT
+class BackPackObject : public QWidget {
+  Q_OBJECT
 public:
-    BackPackObject();
+  BackPackObject();
+
 protected:
-    void mousePressEvent(QMouseEvent *);
-    void paintEvent(QPaintEvent *event);
+  void mousePressEvent(QMouseEvent *);
+  void paintEvent(QPaintEvent *event);
+
 private:
-    QPixmap pixmap;
-    unsigned int time = 0;
-    Q_SIGNAL void clicked();
+  QPixmap pixmap;
+  unsigned int time = 0;
+  Q_SIGNAL void clicked();
 };
 
-class GameView : public QGraphicsView
-{
-    Q_OBJECT
+class GameView : public QGraphicsView {
+  Q_OBJECT
 public:
-    GameView();
-    ~GameView();
-    FightView *getFightView();
-    CharView *getCharView();
-    void showFightView();
-    Q_SLOT void showCharView();
-    Q_SLOT void start();
+  GameView();
+  ~GameView();
+  FightView *getFightView();
+  CharView *getCharView();
+  void showFightView();
+  Q_SLOT void showCharView();
+  Q_SLOT void start();
+
 protected:
-    void mouseDoubleClickEvent(QMouseEvent *e);
-    void resizeEvent(QResizeEvent *event);
-    virtual void wheelEvent(QWheelEvent *);
-    virtual void dragMoveEvent(QDragMoveEvent *e);
+  void mouseDoubleClickEvent(QMouseEvent *e);
+  void resizeEvent(QResizeEvent *event);
+  virtual void wheelEvent(QWheelEvent *);
+  virtual void dragMoveEvent(QDragMoveEvent *e);
+
 private:
-    GameScene *scene;
-    FightView *fightView;
-    CharView *charView;
-    static bool init;
-    QTimer timer;
-    QGraphicsPixmapItem loading;
-    BackPackObject backpack;
-    PlayerStatsView playerStatsView;
-    PlayerListView *playerInventoryView;
-    PlayerListView *playerSkillsView;
-    PlayerEquippedView *playerEquippedView;
+  GameScene *scene;
+  FightView *fightView;
+  CharView *charView;
+  static bool init;
+  QTimer timer;
+  QGraphicsPixmapItem loading;
+  BackPackObject backpack;
+  PlayerStatsView playerStatsView;
+  PlayerListView *playerInventoryView;
+  PlayerListView *playerSkillsView;
+  PlayerEquippedView *playerEquippedView;
 };
 #endif // GAMEVIEW_H

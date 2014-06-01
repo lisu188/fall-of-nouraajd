@@ -534,10 +534,6 @@ Map *MapObject::getMap() { return map; }
 
 void MapObject::setVisible(bool vis) { QGraphicsItem::setVisible(vis); }
 
-void MapObject::mousePressEvent(QGraphicsSceneMouseEvent *event) {
-  event->ignore();
-}
-
 void MapObject::setAnimation(std::string path) {
   AnimatedObject::setAnimation(path, Map::getTileSize());
 }
