@@ -316,14 +316,17 @@ void Map::addRoad(int length, int startx, int starty, int startz) {
 void Map::addDungeon(Coords enter, Coords exit, int width, int height) {
     for (int x = 0; x < width; ++x) for (int y = 0; y < height; ++y)
         addTile("GroundTile", exit.x + x, exit.y + y, exit.z);
-    Teleporter *entrance = new Teleporter();
-    Teleporter *return_gate = new Teleporter();
-    entrance->loadFromJson("Teleporter");
-    return_gate->loadFromJson("Teleporter");
+    MapObject *entrance = MapObject::createMapObject("Teleporter");
+    MapObject *return_gate = MapObject::createMapObject("Teleporter");
+    if (!entrance || !return_gate) {
+        delete entrance;
+        delete return_gate;
+        return;
+    }
     entrance->name = "generatedEntrance" + std::to_string(enter.x) + "_" + std::to_string(enter.y);
     return_gate->name = "generatedExit" + std::to_string(exit.x) + "_" + std::to_string(exit.y);
-    entrance->setExit(QString::fromStdString(return_gate->name));
-    return_gate->setExit(QString::fromStdString(entrance->name));
+    entrance->setProperty("exit", QString::fromStdString(return_gate->name));
+    return_gate->setProperty("exit", QString::fromStdString(entrance->name));
     entrance->moveTo(enter.x, enter.y, enter.z, true);
     return_gate->moveTo(exit.x, exit.y, exit.z, true);
     addObject(entrance); addObject(return_gate);
