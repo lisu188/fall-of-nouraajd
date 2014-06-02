@@ -9,6 +9,16 @@ ScriptManager *ScriptManager::getInstance() {
   return &instance;
 }
 
+void ScriptManager::executeFile(std::string path)
+{
+    QFile file((std::string(":/scripts/").append(path)).c_str());
+    if (file.open(QIODevice::ReadOnly)) {
+      QByteArray data = file.readAll();
+      PyRun_SimpleString(data.data());
+      file.close();
+    }
+}
+
 void ScriptManager::executeScript(QString script) {
   PyRun_SimpleString(script.toStdString().c_str());
 }
@@ -47,6 +57,7 @@ PyMODINIT_FUNC PyInit_Game(void) { return PyModule_Create(&GameModule); }
 ScriptManager::ScriptManager() {
   PyImport_AppendInittab("Game", PyInit_Game);
   Py_Initialize();
+  PySys_SetPath(L"./scripts");
   PyRun_SimpleString("import Game");
   PyMethodDef method;
   for (int i = 0; true; i++) {
