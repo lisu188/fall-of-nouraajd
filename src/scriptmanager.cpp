@@ -21,6 +21,7 @@ void ScriptManager::executeFile(std::string path)
 
 void ScriptManager::executeScript(QString script) {
   PyRun_SimpleString(script.toStdString().append("\n").c_str());
+  PyErr_Print();
 }
 
 QString ScriptManager::buildCommand(std::initializer_list<std::string> list) {

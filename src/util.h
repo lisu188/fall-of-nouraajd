@@ -24,6 +24,18 @@ inline bool checkInheritance(std::string base, std::string inherited) {
   return metaObject != 0;
 }
 
+inline bool str2int (int &i, char const *s)
+{
+    char              c;
+    std::stringstream ss(s);
+    ss >> i;
+    if (ss.fail() || ss.get(c)) {
+        // not an integer
+        return false;
+    }
+    return true;
+}
+
 class GameTask : public QObject, public QRunnable {
   Q_OBJECT
 public:
