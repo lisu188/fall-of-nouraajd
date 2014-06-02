@@ -50,7 +50,6 @@ void registerMetaTypes()
     qMetaTypesRegister.insert(qRegisterMetaType<Player>());
     qMetaTypesRegister.insert(qRegisterMetaType<Monster>());
     qMetaTypesRegister.insert(qRegisterMetaType<Tile>());
-    qMetaTypesRegister.insert(qRegisterMetaType<Teleporter>());
     qMetaTypesRegister.insert(qRegisterMetaType<Interaction>());
     qMetaTypesRegister.insert(qRegisterMetaType<SmallWeapon>());
     qMetaTypesRegister.insert(qRegisterMetaType<Helmet>());
