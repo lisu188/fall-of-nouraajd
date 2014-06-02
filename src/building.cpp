@@ -4,6 +4,7 @@
 #include <src/playerstatsview.h>
 #include <src/monster.h>
 #include <src/configurationprovider.h>
+#include <src/scriptmanager.h>
 
 Building *Building::createBuilding(QString name) {
   return dynamic_cast<Building *>(MapObject::createMapObject(name));
@@ -50,12 +51,17 @@ void Cave::onEnter() {
 }
 
 void Cave::onMove() {
+   ScriptManager::getInstance()->executeFile("cave.py");
+   ScriptManager::getInstance()->executeScript(QString("THIS=\"").append(QString::fromStdString(name)).append("\""));
+   ScriptManager::getInstance()->executeScript("onMove()");
+  /*
   if (enabled && ((rand() % 100) < chance) && monsters > 0) {
     Monster *monster = (Monster *)Creature::createCreature(this->monster);
     map->addObject(monster);
     monster->moveTo(getPosX(), getPosY(), getPosZ(), true);
     monsters--;
   }
+  */
 }
 QString Cave::getMonster() const { return monster; }
 

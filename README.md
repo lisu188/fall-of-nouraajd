@@ -1,7 +1,7 @@
 # Recovered game snapshot
 
-Original commit: `1209b99fb504d5015ad2202f561c84f857cab44e`. Original tree: `32368c76d49dce6cedaa5102a7b3b1738cb6d6e4`.
-Startup was verified from identical recovered sources at `1209b99fb504d5015ad2202f561c84f857cab44e`.
+Original commit: `76f6d79cfe9f016ccd9973965b6c68de4a544bde`. Original tree: `4e0ebf6407cafcaffdbdd9944008bba9ce6c3e4e`.
+Startup was verified from identical recovered sources at `76f6d79cfe9f016ccd9973965b6c68de4a544bde`.
 
 This recovered version compiled and linked on Linux, started the real game on an isolated Xvfb display,
 loaded its map and a healthy player, rendered the screenshot below, and exited normally.
@@ -35,10 +35,10 @@ launches run the game's original entry point. Startup evidence does not establis
 
 ## Recovery provenance
 
-compatibilityRepair: 1, exactOriginal: 65, reconstruction: 46.
+compatibilityRepair: 2, exactOriginal: 69, reconstruction: 46.
 
 - `Game.pro`: working reconstruction
-- `lib/base64/base64.cpp`: unverified donor reconstruction; 779fb803ff021de5e74ed3b24d7c31a9adcaa236:base64/base64.cpp; headerMatch=0; apiOverlap=10000/10000; distance=32
+- `lib/base64/base64.cpp`: unverified donor reconstruction; 779fb803ff021de5e74ed3b24d7c31a9adcaa236:base64/base64.cpp; headerMatch=0; apiOverlap=10000/10000; distance=33
 - `lib/json/json_batchallocator.h`: unverified upstream reconstruction; https://github.com/open-source-parsers/jsoncpp/tree/4fce396c9d3e27a8ab8fb88e94c1676e021ae3a6; adapted json include prefix to historical lib/json layout
 - `lib/json/json_reader.cpp`: unverified upstream reconstruction; https://github.com/open-source-parsers/jsoncpp/tree/4fce396c9d3e27a8ab8fb88e94c1676e021ae3a6; adapted json include prefix to historical lib/json layout
 - `lib/json/json_value.cpp`: unverified upstream reconstruction; https://github.com/open-source-parsers/jsoncpp/tree/4fce396c9d3e27a8ab8fb88e94c1676e021ae3a6; adapted json include prefix to historical lib/json layout
@@ -54,7 +54,7 @@ compatibilityRepair: 1, exactOriginal: 65, reconstruction: 46.
 - `lib/tmx/TmxLayer.h`: unverified upstream reconstruction; https://github.com/tamatias/tmxparser/tree/6fa4d38742313b6365df0d224b8978be1eb81290; adapted vendored tinyxml/zlib include paths to historical directory layout
 - `lib/tmx/TmxMap.cpp`: unverified upstream reconstruction; https://github.com/tamatias/tmxparser/tree/6fa4d38742313b6365df0d224b8978be1eb81290; adapted vendored tinyxml/zlib include paths to historical directory layout
 - `lib/tmx/TmxMap.h`: unverified upstream reconstruction; https://github.com/tamatias/tmxparser/tree/6fa4d38742313b6365df0d224b8978be1eb81290; adapted vendored tinyxml/zlib include paths to historical directory layout
-- `lib/tmx/TmxObject.cpp`: unverified donor reconstruction; 181f31e1e9a7f3516c7fbd3d4400aa0822c1d387:lib/tmx/TmxObject.cpp; headerMatch=0; apiOverlap=10000/10000; distance=26
+- `lib/tmx/TmxObject.cpp`: unverified donor reconstruction; 181f31e1e9a7f3516c7fbd3d4400aa0822c1d387:lib/tmx/TmxObject.cpp; headerMatch=0; apiOverlap=10000/10000; distance=25
 - `lib/tmx/TmxTileset.cpp`: unverified upstream reconstruction; https://github.com/tamatias/tmxparser/tree/6fa4d38742313b6365df0d224b8978be1eb81290; adapted vendored tinyxml/zlib include paths to historical directory layout
 - `lib/zlib/adler32.c`: Unmodified official zlib v1.2.5 adler32.c; Git blob verified against official tag tree 9712272c78b9d9c93746d9c8e156a3728c65ca72. Coherent same-version donor replaces mixed1.2.5/1.2.5 fallback; exact original only when originalHashMatches=true.
 - `lib/zlib/crc32.c`: Unmodified official zlib v1.2.5 crc32.c; Git blob verified against official tag tree 9712272c78b9d9c93746d9c8e156a3728c65ca72. Coherent same-version donor replaces mixed1.2.5/1.2.5 fallback; exact original only when originalHashMatches=true.
@@ -84,8 +84,9 @@ compatibilityRepair: 1, exactOriginal: 65, reconstruction: 46.
 - `src/stats.cpp`: working reconstruction
 - `src/stats.h`: working reconstruction
 - `lib/json/LICENSE`: https://github.com/open-source-parsers/jsoncpp/tree/4fce396c9d3e27a8ab8fb88e94c1676e021ae3a6 upstream distribution license
+- `scripts/PSF_LICENSE`: https://www.python.org/ftp/python/3.3.7/Python-3.3.7.tar.xz upstream Python distribution license
 
-Restored source fingerprint: `dc2f530c829706defac4efc9112483925d14c8c7870c8adcb71d6a86e8c50022`.
+Restored source fingerprint: `5e69f60a718fa74150fe42500d5ea96e52359a8b4308e3707fe9f61f97e26f7c`.
 
 The actual 1278 × 718 screenshot and [verification metadata](recovery/verification.json) belong to
 this source version. Reconstructed code and borrowed assets are identified in that metadata; they are
