@@ -64,27 +64,3 @@ void Building::setScript(const QString &value)
 {
     script = value;
 }
-
-Teleporter::Teleporter() {}
-
-Teleporter::Teleporter(const Teleporter &teleporter) : Teleporter() {}
-
-void Teleporter::onEnter() {
-  if (!enabled)
-    return;
-  Teleporter *teleporter =
-      dynamic_cast<Teleporter *>(getMap()->getObjectByName(exit.toStdString()));
-  if (!teleporter) {
-    return;
-    qDebug() << "Teleporter exit configured to" << exit << "but don`t exist!"
-             << "\n";
-  }
-  GameScene::getPlayer()->moveTo(teleporter->getPosX(), teleporter->getPosY(),
-                                 teleporter->getPosZ(), true);
-}
-
-void Teleporter::onMove() {}
-
-QString Teleporter::getExit() const { return exit; }
-
-void Teleporter::setExit(const QString &value) { exit = value; }

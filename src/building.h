@@ -31,20 +31,4 @@ protected:
 };
 Q_DECLARE_METATYPE(Building)
 
-class Teleporter : public Building {
-  Q_OBJECT
-  Q_PROPERTY(QString exit READ getExit WRITE setExit USER true)
-public:
-  Teleporter();
-  Teleporter(const Teleporter &teleporter);
-  virtual void onEnter();
-  virtual void onMove();
-  // PROPERTIES
-  QString getExit() const;
-  void setExit(const QString &value);
-
-private:
-  QString exit;
-};
-Q_DECLARE_METATYPE(Teleporter)
 #endif // BUILDING_H

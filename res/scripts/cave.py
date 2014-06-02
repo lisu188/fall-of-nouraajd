@@ -11,6 +11,7 @@ def onEnter():
     if getProperty(THIS,"enabled"):
         setProperty(THIS,"enabled",False);
         location=getLocation(THIS);
+        monster=getProperty(THIS,"monster")
         for i in range(-1,2):
             for j in range(-1,2):
                 if j == 0 and i == 0:
