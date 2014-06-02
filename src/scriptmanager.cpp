@@ -20,7 +20,7 @@ void ScriptManager::executeFile(std::string path)
 }
 
 void ScriptManager::executeScript(QString script) {
-  PyRun_SimpleString(script.toStdString().c_str());
+  PyRun_SimpleString(script.toStdString().append("\n").c_str());
 }
 
 QString ScriptManager::buildCommand(std::initializer_list<std::string> list) {
@@ -30,7 +30,6 @@ QString ScriptManager::buildCommand(std::initializer_list<std::string> list) {
     QString part = (QString::fromStdString(*it));
     part.replace("\"", "\\\"");
     if (pos == 0) {
-      command.append("Game.");
       command.append(part);
       command.append("(");
     } else {
@@ -45,7 +44,6 @@ QString ScriptManager::buildCommand(std::initializer_list<std::string> list) {
     }
   }
   return command;
-
 }
 
 void ScriptManager::executeCommand(std::initializer_list<std::string> list) {

@@ -4,12 +4,12 @@ def onCreate():
     setProperty(THIS,"monster","Pritz");
     setProperty(THIS,"chance",15);
     setProperty(THIS,"monsters",5);
-    setProperty(THIS,"enabled",true);
-    return;
+    setProperty(THIS,"enabled",True);
+    return
 
 def onEnter():
     if getProperty(THIS,"enabled"):
-        setProperty(THIS,"enabled",false);
+        setProperty(THIS,"enabled",False);
         location=getLocation(THIS);
         for i in range(-1,2):
             for j in range(-1,2):
@@ -17,19 +17,20 @@ def onEnter():
                     continue;
                 addObject(monster,location[0]+i,location[1]+j,location[2]);
         removeObject(THIS);
-    return;
+    return
 
 def onMove():
     chance=getProperty(THIS,"chance");
     monsters=getProperty(THIS,"monsters");
     monster=getProperty(THIS,"monster");
     enabled=getProperty(THIS,"enabled");
-    if enabled and monsters >0 and (random.randint(0,99)) <= chance and monsters > 0:
+    if enabled and monsters >0 and (random.randint(1,100)) <= chance:
         location=getLocation(THIS);
         addObject(monster,location[0],location[1],location[2]);
         incProperty(THIS,"monsters",-1);
-    return;
+    return
 
 def onDestroy():
-    return;
+    return
+
 

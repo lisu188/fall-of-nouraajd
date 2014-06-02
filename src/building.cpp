@@ -14,64 +14,56 @@ Building::Building() : ListItem(0, 0, 0, 2) {}
 
 Building::Building(const Building &) {}
 
-void Building::onEnter() { qDebug() << "Entered" << typeName.c_str() << "\n"; }
+void Building::onEnter() {
+    if(script.isEmpty())return;
+    ScriptManager::getInstance()->executeFile(script.toStdString());
+    ScriptManager::getInstance()->executeScript(QString("THIS=\"").append(QString::fromStdString(name)).append("\""));
+    ScriptManager::getInstance()->executeScript("onEnter()");
+}
 
-void Building::onMove() {}
+void Building::onMove() {
+    if(script.isEmpty())return;
+    ScriptManager::getInstance()->executeFile(script.toStdString());
+    ScriptManager::getInstance()->executeScript(QString("THIS=\"").append(QString::fromStdString(name)).append("\""));
+    ScriptManager::getInstance()->executeScript("onMove()");
+}
+
+void Building::onCreate()
+{
+    if(script.isEmpty())return;
+    ScriptManager::getInstance()->executeFile(script.toStdString());
+    ScriptManager::getInstance()->executeScript(QString("THIS=\"").append(QString::fromStdString(name)).append("\""));
+    ScriptManager::getInstance()->executeScript("onCreate()");
+}
+
+void Building::onDestroy()
+{
+    if(script.isEmpty())return;
+    ScriptManager::getInstance()->executeFile(script.toStdString());
+    ScriptManager::getInstance()->executeScript(QString("THIS=\"").append(QString::fromStdString(name)).append("\""));
+    ScriptManager::getInstance()->executeScript("onDestroy()");
+}
 
 void Building::loadFromJson(std::string name) {
   this->typeName = name;
   Json::Value config =
       (*ConfigurationProvider::getConfig("config/object.json"))[name];
   this->setAnimation(config.get("animation", "").asString());
+  script=config.get("script","").asCString();
 }
 
 bool Building::isEnabled() { return enabled; }
 
 void Building::setEnabled(bool enabled) { this->enabled = enabled; }
-
-Cave::Cave() {}
-
-Cave::Cave(const Cave &cave) {}
-
-void Cave::onEnter() {
-  Building::onEnter();
-  if (enabled) {
-    enabled = false;
-    for (int i = -1; i < 2; i++)
-      for (int j = -1; j < 2; j++) {
-        if (j == 0 && i == 0) {
-          continue;
-        }
-        Monster *monster = (Monster *)Creature::createCreature(this->monster);
-        map->addObject(monster);
-        monster->moveTo(getPosX() + 1 * i, getPosY() + 1 * j, getPosZ(), true);
-      }
-    this->removeFromGame();
-  }
+QString Building::getScript() const
+{
+    return script;
 }
 
-void Cave::onMove() {
-   ScriptManager::getInstance()->executeFile("cave.py");
-   ScriptManager::getInstance()->executeScript(QString("THIS=\"").append(QString::fromStdString(name)).append("\""));
-   ScriptManager::getInstance()->executeScript("onMove()");
-  /*
-  if (enabled && ((rand() % 100) < chance) && monsters > 0) {
-    Monster *monster = (Monster *)Creature::createCreature(this->monster);
-    map->addObject(monster);
-    monster->moveTo(getPosX(), getPosY(), getPosZ(), true);
-    monsters--;
-  }
-  */
+void Building::setScript(const QString &value)
+{
+    script = value;
 }
-QString Cave::getMonster() const { return monster; }
-
-void Cave::setMonster(const QString &value) { monster = value; }
-int Cave::getChance() const { return chance; }
-
-void Cave::setChance(int value) { chance = value; }
-int Cave::getMonsters() const { return monsters; }
-
-void Cave::setMonsters(int value) { monsters = value; }
 
 Teleporter::Teleporter() {}
 
