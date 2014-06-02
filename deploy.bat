@@ -1,7 +1,7 @@
 rmdir /s /q ".\official"
 
 mkdir ".\official"
-rem mkdir ".\official\save"
+mkdir ".\official\scripts"
 
 xcopy /s ".\libraries" ".\official"
 xcopy /s ".\scripts" ".\official\scripts"

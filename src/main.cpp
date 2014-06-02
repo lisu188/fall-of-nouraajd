@@ -44,7 +44,6 @@ void registerMetaTypes()
     qMetaTypesRegister.insert(qRegisterMetaType<Weapon>());
     qMetaTypesRegister.insert(qRegisterMetaType<Armor>());
     qMetaTypesRegister.insert(qRegisterMetaType<Potion>());
-    qMetaTypesRegister.insert(qRegisterMetaType<Cave>());
     qMetaTypesRegister.insert(qRegisterMetaType<Building>());
     qMetaTypesRegister.insert(qRegisterMetaType<Item>());
     qMetaTypesRegister.insert(qRegisterMetaType<Creature>());
