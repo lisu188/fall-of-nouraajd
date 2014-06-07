@@ -148,7 +148,6 @@ void Creature::addItem(std::set<Item *> *items) {
     Q_EMIT inventoryChanged();
 }
 void Creature::addItem(Item *item) { if (item) inventory.insert(item); Q_EMIT inventoryChanged(); }
-void Creature::loseItem(Item *item) { inventory.erase(item); Q_EMIT inventoryChanged(); }
 std::set<Item *> *Creature::getInventory() { return (std::set<Item *> *)&inventory; }
 std::map<int, Item *> *Creature::getEquipped() { return &equipped; }
 std::set<Interaction *> *Creature::getActions() { return (std::set<Interaction *> *)&actions; }
@@ -345,3 +344,39 @@ void Creature::setManaRegRate(int value) { manaRegRate = value; }
 void Creature::setHp(int value) { hp = value; }
 
 void Creature::setHpMax(int value) { hpMax = value; }
+
+void Creature::removeFromInventory(Item *item) {
+    inventory.erase(item);
+    Q_EMIT inventoryChanged();
+}
+
+Item *Creature::getItemAtSlot(int slot) {
+    std::map<int, Item *>::iterator it = equipped.find(slot);
+    return it == equipped.end() ? NULL : it->second;
+}
+
+int Creature::getSlotWithItem(Item *item) {
+    for (std::map<int, Item *>::iterator it = equipped.begin(); it != equipped.end(); ++it) {
+        if (it->second == item) {
+            return it->first;
+        }
+    }
+    return -1;
+}
+
+void Creature::removeFromEquipped(Item *item) {
+    int slot = getSlotWithItem(item);
+    if (slot != -1) {
+        setItem(slot, NULL);
+    }
+}
+
+std::set<Item *> Creature::getAllItems() {
+    std::set<Item *> items(inventory.begin(), inventory.end());
+    for (std::map<int, Item *>::iterator it = equipped.begin(); it != equipped.end(); ++it) {
+        if (it->second) {
+            items.insert(it->second);
+        }
+    }
+    return items;
+}

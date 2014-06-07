@@ -55,7 +55,7 @@ void Item::onUse(Creature *creature) {
 
 void Item::mousePressEvent(QGraphicsSceneMouseEvent *event) {
   if (singleUse && GameScene::getPlayer()) {
-    GameScene::getPlayer()->loseItem(this);
+    GameScene::getPlayer()->removeFromInventory(this);
     onUse(GameScene::getPlayer());
     delete this;
     return;
