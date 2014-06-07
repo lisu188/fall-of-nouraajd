@@ -43,6 +43,7 @@ public:
   virtual void fight(Creature *creature);
   virtual void levelUp();
   virtual std::set<Item *> *getLoot();
+  virtual std::set<Item *> getAllItems();
   void addAction(Interaction *action);
   void addEffect(std::string type, Creature *caster);
   int getMana();
@@ -63,7 +64,8 @@ public:
   void addExp(int exp);
   void addItem(std::set<Item *> *items);
   void addItem(Item *item);
-  void loseItem(Item *item);
+  void removeFromInventory(Item *item);
+  void removeFromEquipped(Item *item);
   std::set<Item *> *getInventory();
   std::map<int, Item *> *getEquipped();
   void loadFromJson(std::string name);
@@ -86,6 +88,8 @@ public:
   void setHp(int value);
   int getHpMax();
   void setHpMax(int value);
+  Item *getItemAtSlot(int slot);
+  int getSlotWithItem(Item *item);
 
 protected:
   void hoverEnterEvent(QGraphicsSceneHoverEvent *event);

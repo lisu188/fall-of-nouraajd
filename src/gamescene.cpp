@@ -42,6 +42,10 @@ void GameScene::startGame() {
   QTimer *timer = new QTimer();
   timer->setInterval(0);
   timer->setSingleShot(true);
+  for (int i = -10; i < map->getCurrentXBound() + 10; i++)
+    for (int j = -10; j < map->getCurrentYBound() + 10; j++) {
+          map->ensureTile(i,j);
+      }
   connect(timer, &QTimer::timeout, []()->void {
     GameScene::getMap()->ensureSize(GameScene::getPlayer());
   });
