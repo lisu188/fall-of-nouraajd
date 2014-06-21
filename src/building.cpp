@@ -15,33 +15,28 @@ Building::Building() : ListItem(0, 0, 0, 2) {}
 Building::Building(const Building &) {}
 
 void Building::onEnter() {
-    if(script.isEmpty())return;
-    ScriptManager::getInstance()->executeFile(script.toStdString());
-    ScriptManager::getInstance()->executeScript(QString("THIS=\"").append(QString::fromStdString(name)).append("\""));
-    ScriptManager::getInstance()->executeScript("onEnter()");
+    ScriptManager::getInstance()->executeScript(QString("import ").append(this->typeName.c_str()));
+    ScriptManager::getInstance()->executeCommand({this->typeName+".onEnter",this->name});
+
 }
 
 void Building::onMove() {
-    if(script.isEmpty())return;
-    ScriptManager::getInstance()->executeFile(script.toStdString());
-    ScriptManager::getInstance()->executeScript(QString("THIS=\"").append(QString::fromStdString(name)).append("\""));
-    ScriptManager::getInstance()->executeScript("onMove()");
+    ScriptManager::getInstance()->executeScript(QString("import ").append(this->typeName.c_str()));
+    ScriptManager::getInstance()->executeCommand({this->typeName+".onMove",this->name});
+
 }
 
 void Building::onCreate()
 {
-    if(script.isEmpty())return;
-    ScriptManager::getInstance()->executeFile(script.toStdString());
-    ScriptManager::getInstance()->executeScript(QString("THIS=\"").append(QString::fromStdString(name)).append("\""));
-    ScriptManager::getInstance()->executeScript("onCreate()");
+    ScriptManager::getInstance()->executeScript(QString("import ").append(this->typeName.c_str()));
+    ScriptManager::getInstance()->executeCommand({this->typeName+".onCreate",this->name});
+
 }
 
 void Building::onDestroy()
 {
-    if(script.isEmpty())return;
-    ScriptManager::getInstance()->executeFile(script.toStdString());
-    ScriptManager::getInstance()->executeScript(QString("THIS=\"").append(QString::fromStdString(name)).append("\""));
-    ScriptManager::getInstance()->executeScript("onDestroy()");
+    ScriptManager::getInstance()->executeScript(QString("import ").append(this->typeName.c_str()));
+    ScriptManager::getInstance()->executeCommand({this->typeName+".onDestroy",this->name});
 }
 
 void Building::loadFromJson(std::string name) {
@@ -49,18 +44,9 @@ void Building::loadFromJson(std::string name) {
   Json::Value config =
       (*ConfigurationProvider::getConfig("config/object.json"))[name];
   this->setAnimation(config.get("animation", "").asString());
-  script=config.get("script","").asCString();
 }
 
 bool Building::isEnabled() { return enabled; }
 
 void Building::setEnabled(bool enabled) { this->enabled = enabled; }
-QString Building::getScript() const
-{
-    return script;
-}
 
-void Building::setScript(const QString &value)
-{
-    script = value;
-}

@@ -9,7 +9,6 @@
 class Building : public ListItem {
   Q_OBJECT
   Q_PROPERTY(bool enabled READ isEnabled WRITE setEnabled USER true)
-  Q_PROPERTY(QString script READ getScript WRITE setScript USER true)
 public:
   static Building *createBuilding(QString name);
   Building();
@@ -22,12 +21,9 @@ public:
   // PROPERTIES
   bool isEnabled();
   void setEnabled(bool enabled);
-  QString getScript() const;
-  void setScript(const QString &value);
 
 protected:
   bool enabled = true;
-  QString script;
 };
 Q_DECLARE_METATYPE(Building)
 
