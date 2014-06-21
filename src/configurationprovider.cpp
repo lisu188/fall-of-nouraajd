@@ -8,9 +8,6 @@ Json::Value *ConfigurationProvider::getConfig(std::string path) {
   static std::mutex mutex;
   std::unique_lock<std::mutex> lock(mutex);
   static ConfigurationProvider instance;
-  if (path.find(":/") == std::string::npos) {
-    path = ":/" + path;
-  }
   return instance.getConfiguration(path);
 }
 
