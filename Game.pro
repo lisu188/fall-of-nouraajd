@@ -147,10 +147,3 @@ HEADERS  += \
     src/stats.h \
     src/tile.h \
     src/util.h
-
-RESOURCES += \
-    res/creatures.qrc \
-    res/images.qrc \
-    res/items.qrc \
-    res/iteractions.qrc \
-    res/tiles.qrc
