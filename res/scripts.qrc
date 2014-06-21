@@ -1,6 +1,0 @@
-<RCC>
-    <qresource prefix="/">
-        <file>scripts/cave.py</file>
-        <file>scripts/teleporter.py</file>
-    </qresource>
-</RCC>

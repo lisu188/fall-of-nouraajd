@@ -1,7 +1,7 @@
 # Recovered game snapshot
 
-Original commit: `6bf599c01d6f92fa9809dfb753ac7a42dc85a2b9`. Original tree: `e2e5b8fe893865e14a6034c2d58a17f9210a64df`.
-Startup was verified from identical recovered sources at `6bf599c01d6f92fa9809dfb753ac7a42dc85a2b9`.
+Original commit: `b20a2bce816b58cae9d510bfdc390aaa2e4d73ec`. Original tree: `fa43f0fed2916f0f7d21a50ec61f1cd20111875c`.
+Startup was verified from identical recovered sources at `b20a2bce816b58cae9d510bfdc390aaa2e4d73ec`.
 
 This recovered version compiled and linked on Linux, started the real game on an isolated Xvfb display,
 loaded its map and a healthy player, rendered the screenshot below, and exited normally.
@@ -37,10 +37,11 @@ launches run the game's original entry point. Startup evidence does not establis
 
 compatibilityRepair: 2, exactOriginal: 69, reconstruction: 46.
 
-- `Game.pro`: working reconstruction
+- `Game.pro`: content reconstruction of the BFG-removed original; qmake project regenerated with 67 sources inferred without a surviving object_script listing: reconstructed 6bf599c0:Game.pro SOURCES reconciled with this tree's files; settings from reconstructed 6bf599c0:Game.pro
 - `config/map.tmx`: unverified donor reconstruction; authored Tiled geometry/object coordinates from 55e6516e:maps/map1/map.json converted to XML; missing target script reference omitted
 - `config/object.json`: unverified donor reconstruction; split object descriptors e8b7c3d0e6da989122a0587943a98504342da3cd:config/objects flattened to observed legacy class/path API; target tile/interaction entries preserved; species stats retain uncertainty of reconstructed creatures catalog
-- `lib/base64/base64.cpp`: unverified donor reconstruction; 779fb803ff021de5e74ed3b24d7c31a9adcaa236:base64/base64.cpp; headerMatch=0; apiOverlap=10000/10000; distance=44
+- `images/loading.png`: synthesized visible 32px placeholder; original artwork unavailable; unverified
+- `lib/base64/base64.cpp`: unverified donor reconstruction; 779fb803ff021de5e74ed3b24d7c31a9adcaa236:base64/base64.cpp; headerMatch=0; apiOverlap=10000/10000; distance=45
 - `lib/json/json_batchallocator.h`: unverified upstream reconstruction; https://github.com/open-source-parsers/jsoncpp/tree/4fce396c9d3e27a8ab8fb88e94c1676e021ae3a6; adapted json include prefix to historical lib/json layout
 - `lib/json/json_reader.cpp`: unverified upstream reconstruction; https://github.com/open-source-parsers/jsoncpp/tree/4fce396c9d3e27a8ab8fb88e94c1676e021ae3a6; adapted json include prefix to historical lib/json layout
 - `lib/json/json_value.cpp`: unverified upstream reconstruction; https://github.com/open-source-parsers/jsoncpp/tree/4fce396c9d3e27a8ab8fb88e94c1676e021ae3a6; adapted json include prefix to historical lib/json layout
@@ -56,7 +57,7 @@ compatibilityRepair: 2, exactOriginal: 69, reconstruction: 46.
 - `lib/tmx/TmxLayer.h`: unverified upstream reconstruction; https://github.com/tamatias/tmxparser/tree/6fa4d38742313b6365df0d224b8978be1eb81290; adapted vendored tinyxml/zlib include paths to historical directory layout
 - `lib/tmx/TmxMap.cpp`: unverified upstream reconstruction; https://github.com/tamatias/tmxparser/tree/6fa4d38742313b6365df0d224b8978be1eb81290; adapted vendored tinyxml/zlib include paths to historical directory layout
 - `lib/tmx/TmxMap.h`: unverified upstream reconstruction; https://github.com/tamatias/tmxparser/tree/6fa4d38742313b6365df0d224b8978be1eb81290; adapted vendored tinyxml/zlib include paths to historical directory layout
-- `lib/tmx/TmxObject.cpp`: unverified donor reconstruction; 181f31e1e9a7f3516c7fbd3d4400aa0822c1d387:lib/tmx/TmxObject.cpp; headerMatch=0; apiOverlap=10000/10000; distance=14
+- `lib/tmx/TmxObject.cpp`: unverified donor reconstruction; 181f31e1e9a7f3516c7fbd3d4400aa0822c1d387:lib/tmx/TmxObject.cpp; headerMatch=0; apiOverlap=10000/10000; distance=13
 - `lib/tmx/TmxTileset.cpp`: unverified upstream reconstruction; https://github.com/tamatias/tmxparser/tree/6fa4d38742313b6365df0d224b8978be1eb81290; adapted vendored tinyxml/zlib include paths to historical directory layout
 - `lib/zlib/adler32.c`: Unmodified official zlib v1.2.5 adler32.c; Git blob verified against official tag tree 9712272c78b9d9c93746d9c8e156a3728c65ca72. Coherent same-version donor replaces mixed1.2.5/1.2.5 fallback; exact original only when originalHashMatches=true.
 - `lib/zlib/crc32.c`: Unmodified official zlib v1.2.5 crc32.c; Git blob verified against official tag tree 9712272c78b9d9c93746d9c8e156a3728c65ca72. Coherent same-version donor replaces mixed1.2.5/1.2.5 fallback; exact original only when originalHashMatches=true.
@@ -73,20 +74,19 @@ compatibilityRepair: 2, exactOriginal: 69, reconstruction: 46.
 - `lib/zlib/zlib.h`: Unmodified official zlib v1.2.5 zlib.h; Git blob verified against official tag tree 9712272c78b9d9c93746d9c8e156a3728c65ca72. Coherent same-version donor replaces mixed1.2.5/1.2.5 fallback; exact original only when originalHashMatches=true.
 - `lib/zlib/zutil.c`: Unmodified official zlib v1.2.5 zutil.c; Git blob verified against official tag tree 9712272c78b9d9c93746d9c8e156a3728c65ca72. Coherent same-version donor replaces mixed1.2.5/1.2.5 fallback; exact original only when originalHashMatches=true.
 - `lib/zlib/zutil.h`: Unmodified official zlib v1.2.5 zutil.h; Git blob verified against official tag tree 9712272c78b9d9c93746d9c8e156a3728c65ca72. Coherent same-version donor replaces mixed1.2.5/1.2.5 fallback; exact original only when originalHashMatches=true.
-- `res/images/loading.png`: synthesized visible 32px placeholder; original artwork unavailable; unverified
-- `src/creature.cpp`: working reconstruction
-- `src/gamescript.cpp`: working reconstruction
-- `src/gameview.cpp`: working reconstruction
-- `src/interaction.cpp`: working reconstruction
-- `src/main.cpp`: working reconstruction
-- `src/map.cpp`: working reconstruction
-- `src/pathfinder.cpp`: working reconstruction
+- `src/creature.cpp`: content reconstruction of the BFG-removed original; carried from the #214 reconstruction; loseItem is renamed removeFromInventory, and removeFromEquipped/getItemAtSlot/getSlotWithItem/getAllItems are inferred for the declarations added in #215
+- `src/gamescript.cpp`: content reconstruction of the BFG-removed original; carried forward unchanged from the previous reconstruction of src/gamescript.cpp
+- `src/gameview.cpp`: content reconstruction of the BFG-removed original; carried forward unchanged from the previous reconstruction of src/gameview.cpp
+- `src/interaction.cpp`: content reconstruction of the BFG-removed original; carried forward unchanged from the previous reconstruction of src/interaction.cpp
+- `src/main.cpp`: content reconstruction of the BFG-removed original; carried forward unchanged from the previous reconstruction of src/main.cpp
+- `src/map.cpp`: content reconstruction of the BFG-removed original; carried forward unchanged from the previous reconstruction of src/map.cpp
+- `src/pathfinder.cpp`: content reconstruction of the BFG-removed original; carried forward unchanged from the previous reconstruction of src/pathfinder.cpp
 - `src/stats.cpp`: working reconstruction
 - `src/stats.h`: working reconstruction
 - `lib/json/LICENSE`: https://github.com/open-source-parsers/jsoncpp/tree/4fce396c9d3e27a8ab8fb88e94c1676e021ae3a6 upstream distribution license
 - `scripts/PSF_LICENSE`: https://www.python.org/ftp/python/3.3.7/Python-3.3.7.tar.xz upstream Python distribution license
 
-Restored source fingerprint: `5f71323e68815ab443cf91775b9d651de22419d01704231238c02bc1c49d3968`.
+Restored source fingerprint: `52be55e9e02a910ac71eb5c7ace6a37919602845b9978b3edc0b0f11f2af09c3`.
 
 The actual 1278 × 718 screenshot and [verification metadata](recovery/verification.json) belong to
 this source version. Reconstructed code and borrowed assets are identified in that metadata; they are
