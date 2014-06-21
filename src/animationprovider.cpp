@@ -15,7 +15,6 @@ std::map<int, AnimationProvider> AnimationProvider::instances;
 Animation *AnimationProvider::getAnim(std::string path, int size) {
   static std::mutex mutex;
   std::unique_lock<std::mutex> lock(mutex);
-  path = ":/" + path;
   if (instances.find(size) == instances.end()) {
     instances.insert(
         std::pair<int, AnimationProvider>(size, AnimationProvider(size)));
