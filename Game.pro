@@ -149,10 +149,8 @@ HEADERS  += \
     src/util.h
 
 RESOURCES += \
-    res/config.qrc \
     res/creatures.qrc \
     res/images.qrc \
     res/items.qrc \
     res/iteractions.qrc \
-    res/scripts.qrc \
     res/tiles.qrc
