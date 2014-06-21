@@ -1,16 +1,18 @@
-def onCreate():
+import Game
+
+def onCreate(this):
     return
 
-def onEnter():
-    if getProperty(THIS,"enabled"):
-        loc=getLocation(getProperty(THIS,"exit"))
-        moveObject("PLAYER",loc[0],loc[1],loc[2])
+def onEnter(this):
+    if Game.getProperty(this,"enabled"):
+        loc=Game.getLocation(Game.getProperty(this,"exit"))
+        Game.moveObject("PLAYER",loc[0],loc[1],loc[2])
     return
 
-def onMove():
+def onMove(this):
     return
 
-def onDestroy():
+def onDestroy(this):
     return
 
 
