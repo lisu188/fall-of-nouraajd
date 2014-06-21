@@ -11,7 +11,7 @@ ScriptManager *ScriptManager::getInstance() {
 
 void ScriptManager::executeFile(std::string path)
 {
-    QFile file((std::string(":/scripts/").append(path)).c_str());
+    QFile file((std::string("scripts/").append(path)).c_str());
     if (file.open(QIODevice::ReadOnly)) {
       QByteArray data = file.readAll();
       PyRun_SimpleString(data.data());

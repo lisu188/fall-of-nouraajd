@@ -28,7 +28,7 @@ void GameScene::startGame() {
   game = this;
   map = new Map(this);
   Tmx::Map tmxMap;
-  QFile file(":/config/map.tmx");
+  QFile file("config/map.tmx");
   file.open(QIODevice::ReadOnly);
   QByteArray data = file.readAll();
   std::string dataString = data.data();
