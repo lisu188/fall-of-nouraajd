@@ -12,8 +12,11 @@
 #include <set>
 #include <lib/json/json.h>
 #include <lib/tmx/TmxMap.h>
+#include <QGraphicsScene>
 #include <QString>
+#include <string>
 
+class GameScene;
 class MapObject;
 class Tile;
 class Player;
@@ -35,7 +38,7 @@ class Map : public QObject,
             public std::unordered_map<Coords, std::string, CoordsHasher> {
   Q_OBJECT
 public:
-  Map(QGraphicsScene *scene);
+    Map(QGraphicsScene *scene,std::string file);
   ~Map();
   bool addTile(std::string name, int x, int y, int z);
   bool removeTile(int x, int y, int z);
@@ -48,9 +51,9 @@ public:
   void addRoad(int length, int startx, int starty, int startz);
   void addDungeon(Coords enter, Coords exit, int width, int height);
   void removeObject(MapObject *mapObject);
-  void ensureSize(Player *player);
+  Q_SLOT void ensureSize();
   void hide();
-  QGraphicsScene *getScene() const;
+  GameScene *getScene() const;
   void showAll();
   void mapUp();
   void mapDown();
@@ -75,7 +78,7 @@ public:
 private:
   std::set<MapObject *> mapObjects;
   void randomDir(int *tab, int rule);
-  QGraphicsScene *scene;
+  GameScene *scene;
   int currentMap = 0;
   std::map<int, std::string> defaultTiles;
   std::map<int, std::pair<int, int> > boundaries;

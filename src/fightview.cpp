@@ -13,7 +13,7 @@ FightView::FightView() {
 }
 
 void FightView::update() {
-  Player *player = GameScene::getPlayer();
+  Player *player = dynamic_cast<GameScene*>(this->scene())->getPlayer();
   std::list<Creature *> *creatures = player->getFightList();
   std::list<Creature *>::iterator it;
   int i = 0;

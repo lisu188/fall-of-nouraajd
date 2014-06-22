@@ -86,12 +86,12 @@ void Player::removeFromFightList(Creature *creature) {
   creature->removeFromGame();
   getFightList()->remove(creature);
   if (getFightList()->size() == 0) {
-    GameScene::getView()->getFightView()->setVisible(false);
+    map->getScene()->getView()->getFightView()->setVisible(false);
     FightView::selected = 0;
   } else {
     FightView::selected = getFightList()->front();
   }
-  GameScene::getView()->getFightView()->update();
+ map->getScene()->getView()->getFightView()->update();
   Q_EMIT statsChanged();
 }
 
@@ -115,9 +115,9 @@ void Player::performAction(Interaction *action, Creature *creature) {
       (*it)->fight(this);
     }
   }
-  GameScene::getView()->getFightView()->update();
+  map->getScene()->getView()->getFightView()->update();
   if (!isAlive()) {
-    GameScene::getView()->close();
+   map->getScene()->getView()->close();
   }
 }
 

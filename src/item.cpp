@@ -18,7 +18,7 @@ Item::Item(const Item &item) : Item() { this->loadFromJson(item.name); }
 
 void Item::onEnter() {
   this->getMap()->removeObject(this);
-  GameScene::getPlayer()->addItem(this);
+  this->getMap()->getScene()->getPlayer()->addItem(this);
 }
 
 void Item::onMove() {}
@@ -54,9 +54,9 @@ void Item::onUse(Creature *creature) {
 }
 
 void Item::mousePressEvent(QGraphicsSceneMouseEvent *event) {
-  if (singleUse && GameScene::getPlayer()) {
-    GameScene::getPlayer()->removeFromInventory(this);
-    onUse(GameScene::getPlayer());
+  if (singleUse && this->getMap()->getScene()->getPlayer()) {
+    this->getMap()->getScene()->getPlayer()->removeFromInventory(this);
+    onUse(this->getMap()->getScene()->getPlayer());
     delete this;
     return;
   }
@@ -64,7 +64,7 @@ void Item::mousePressEvent(QGraphicsSceneMouseEvent *event) {
   if (event->isAccepted()) {
     return;
   }
-  if (GameScene::getPlayer() && !GameScene::getPlayer()->hasItem(this)) {
+  if (this->getMap()->getScene()->getPlayer() && !this->getMap()->getScene()->getPlayer()->hasItem(this)) {
     return;
   }
   QGraphicsObject *parent = this->parentObject();

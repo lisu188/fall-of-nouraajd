@@ -57,7 +57,7 @@ void ItemSlot::dragMoveEvent(QGraphicsSceneDragDropEvent *event) {
 void ItemSlot::dropEvent(QGraphicsSceneDragDropEvent *event) {
   QGraphicsObject::dropEvent(event);
   if (checkType(number, event->source())) {
-    GameScene::getPlayer()->setItem(number, (Item *)event->source());
+   dynamic_cast<GameScene*>(this->scene())->getPlayer()->setItem(number, (Item *)event->source());
   }
   event->acceptProposedAction();
   event->accept();

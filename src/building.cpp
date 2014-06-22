@@ -15,13 +15,11 @@ Building::Building() : ListItem(0, 0, 0, 2) {}
 Building::Building(const Building &) {}
 
 void Building::onEnter() {
-    ScriptManager::getInstance()->executeScript(QString("import ").append(this->typeName.c_str()));
     ScriptManager::getInstance()->executeCommand({this->typeName+".onEnter",this->name});
 
 }
 
 void Building::onMove() {
-    ScriptManager::getInstance()->executeScript(QString("import ").append(this->typeName.c_str()));
     ScriptManager::getInstance()->executeCommand({this->typeName+".onMove",this->name});
 
 }
@@ -35,7 +33,6 @@ void Building::onCreate()
 
 void Building::onDestroy()
 {
-    ScriptManager::getInstance()->executeScript(QString("import ").append(this->typeName.c_str()));
     ScriptManager::getInstance()->executeCommand({this->typeName+".onDestroy",this->name});
 }
 

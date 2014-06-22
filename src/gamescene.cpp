@@ -19,22 +19,9 @@
 #include <vector>
 #include <QThreadPool>
 
-Player *GameScene::player = 0;
-GameScene *GameScene::game = 0;
-Map *GameScene::map = 0;
-
-void GameScene::startGame() {
+void GameScene::startGame(std::string file) {
   srand(time(0));
-  game = this;
-  map = new Map(this);
-  Tmx::Map tmxMap;
-  QFile file("config/map.tmx");
-  file.open(QIODevice::ReadOnly);
-  QByteArray data = file.readAll();
-  std::string dataString = data.data();
-  tmxMap.ParseText(dataString);
-  file.close();
-  map->loadMapFromTmx(tmxMap);
+  map = new Map(this,file);
   player = new Player("Sorcerer");
   map->addObject(player);
   player->moveTo(map->getEntryX(), map->getEntryY(), map->getEntryZ(), true);
@@ -46,18 +33,10 @@ void GameScene::startGame() {
     for (int j = -10; j < map->getCurrentYBound() + 10; j++) {
           map->ensureTile(i,j);
       }
-  connect(timer, &QTimer::timeout, []()->void {
-    GameScene::getMap()->ensureSize(GameScene::getPlayer());
-  });
+  connect(timer, &QTimer::timeout, map,&Map::ensureSize);
   connect(timer, SIGNAL(timeout()), timer, SLOT(deleteLater()));
   timer->start();
 }
-
-Player *GameScene::getPlayer() { return player; }
-
-void GameScene::setPlayer(Player *pla) { player = pla; }
-
-GameScene *GameScene::getGame() { return game; }
 
 void GameScene::keyPressEvent(QKeyEvent *keyEvent) {
   if (keyEvent) {
@@ -106,17 +85,6 @@ void GameScene::playerMove(int dirx, int diry) {
   map->move(dirx, diry);
 }
 
-GameView *GameScene::getView() {
-  if (!GameScene::getGame() || !GameScene::getGame()->views().size()) {
-    return 0;
-  }
-  return dynamic_cast<GameView *>((*GameScene::getGame()->views().begin()));
-}
-
-unsigned int GameScene::getStep() { return 250; }
-
-Map *GameScene::getMap() { return map; }
-
 void GameScene::mousePressEvent(QGraphicsSceneMouseEvent *event) {
   QGraphicsScene::mousePressEvent(event);
 }
@@ -128,3 +96,27 @@ void GameScene::mouseMoveEvent(QGraphicsSceneMouseEvent *event) {
 void GameScene::mouseReleaseEvent(QGraphicsSceneMouseEvent *event) {
   QGraphicsScene::mouseReleaseEvent(event);
 }
+Map *GameScene::getMap() const
+{
+    return map;
+}
+
+void GameScene::setMap(Map *value)
+{
+    map = value;
+}
+
+GameView *GameScene::getView(){
+    return dynamic_cast<GameView*>(this->views()[0]);
+}
+
+Player *GameScene::getPlayer() const
+{
+    return player;
+}
+
+void GameScene::setPlayer(Player *value)
+{
+    player = value;
+}
+
