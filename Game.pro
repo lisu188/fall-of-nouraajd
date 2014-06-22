@@ -74,7 +74,9 @@ SOURCES += lib/base64/base64.cpp \
     src/scriptmanager.cpp \
     src/scrollobject.cpp \
     src/stats.cpp \
-    src/tile.cpp
+    src/tile.cpp \
+    src/mainwindow.cpp \
+    src/playerabstractview.cpp
 
 HEADERS  += \
     lib/base64/base64.h \
@@ -134,10 +136,12 @@ HEADERS  += \
     src/itemslot.h \
     src/listitem.h \
     src/lootprovider.h \
+    src/mainwindow.h \
     src/map.h \
     src/monster.h \
     src/pathfinder.h \
     src/player.h \
+    src/playerabstractview.h \
     src/playerequippedview.h \
     src/playerlistview.h \
     src/playerstatsview.h \
@@ -147,3 +151,6 @@ HEADERS  += \
     src/stats.h \
     src/tile.h \
     src/util.h
+
+FORMS += \
+    src/mainwindow.ui

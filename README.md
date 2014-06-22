@@ -1,10 +1,12 @@
 # Recovered game snapshot
 
-Original commit: `b20a2bce816b58cae9d510bfdc390aaa2e4d73ec`. Original tree: `fa43f0fed2916f0f7d21a50ec61f1cd20111875c`.
-Startup was verified from identical recovered sources at `b20a2bce816b58cae9d510bfdc390aaa2e4d73ec`.
+Original commit: `39356696f34ba87148a75f7ca6b8f808edf6303d`. Original tree: `76c32234a6944d6c2edf810df8c1db13de10c43c`.
+Startup was verified from identical recovered sources at `39356696f34ba87148a75f7ca6b8f808edf6303d`.
 
 This recovered version compiled and linked on Linux, started the real game on an isolated Xvfb display,
 loaded its map and a healthy player, rendered the screenshot below, and exited normally.
+
+The isolated Linux build updates the surviving scene or tile call sites for this revision.
 
 ![Actual startup of this recovered game](recovery/startup.png)
 
@@ -19,6 +21,7 @@ Install Qt 5 Core, Gui and Widgets development files and a C++ compiler, with CP
 Build from this snapshot's root directory:
 
 ```sh
+python3 recovery/prepare_scene_transition.py
 qmake Game.pro QMAKE_CC=gcc-5 QMAKE_CXX=g++-5 QMAKE_LINK=g++-5 'QMAKE_CXXFLAGS+=-include functional' -after TARGET=RecoveryGame DESTDIR=.
 make -j"$(nproc)"
 ./RecoveryGame
@@ -37,11 +40,10 @@ launches run the game's original entry point. Startup evidence does not establis
 
 compatibilityRepair: 2, exactOriginal: 69, reconstruction: 46.
 
-- `Game.pro`: content reconstruction of the BFG-removed original; qmake project regenerated with 67 sources inferred without a surviving object_script listing: reconstructed 6bf599c0:Game.pro SOURCES reconciled with this tree's files; settings from reconstructed 6bf599c0:Game.pro
-- `config/map.tmx`: unverified donor reconstruction; authored Tiled geometry/object coordinates from 55e6516e:maps/map1/map.json converted to XML; missing target script reference omitted
+- `Game.pro`: content reconstruction of the BFG-removed original; qmake project regenerated without a surviving object_script listing from the best-matching nearby reconstructed project, with the tree's Qt Designer form (src/mainwindow.ui) listed in FORMS
 - `config/object.json`: unverified donor reconstruction; split object descriptors e8b7c3d0e6da989122a0587943a98504342da3cd:config/objects flattened to observed legacy class/path API; target tile/interaction entries preserved; species stats retain uncertainty of reconstructed creatures catalog
 - `images/loading.png`: synthesized visible 32px placeholder; original artwork unavailable; unverified
-- `lib/base64/base64.cpp`: unverified donor reconstruction; 779fb803ff021de5e74ed3b24d7c31a9adcaa236:base64/base64.cpp; headerMatch=0; apiOverlap=10000/10000; distance=45
+- `lib/base64/base64.cpp`: unverified donor reconstruction; 779fb803ff021de5e74ed3b24d7c31a9adcaa236:base64/base64.cpp; headerMatch=0; apiOverlap=10000/10000; distance=46
 - `lib/json/json_batchallocator.h`: unverified upstream reconstruction; https://github.com/open-source-parsers/jsoncpp/tree/4fce396c9d3e27a8ab8fb88e94c1676e021ae3a6; adapted json include prefix to historical lib/json layout
 - `lib/json/json_reader.cpp`: unverified upstream reconstruction; https://github.com/open-source-parsers/jsoncpp/tree/4fce396c9d3e27a8ab8fb88e94c1676e021ae3a6; adapted json include prefix to historical lib/json layout
 - `lib/json/json_value.cpp`: unverified upstream reconstruction; https://github.com/open-source-parsers/jsoncpp/tree/4fce396c9d3e27a8ab8fb88e94c1676e021ae3a6; adapted json include prefix to historical lib/json layout
@@ -57,7 +59,7 @@ compatibilityRepair: 2, exactOriginal: 69, reconstruction: 46.
 - `lib/tmx/TmxLayer.h`: unverified upstream reconstruction; https://github.com/tamatias/tmxparser/tree/6fa4d38742313b6365df0d224b8978be1eb81290; adapted vendored tinyxml/zlib include paths to historical directory layout
 - `lib/tmx/TmxMap.cpp`: unverified upstream reconstruction; https://github.com/tamatias/tmxparser/tree/6fa4d38742313b6365df0d224b8978be1eb81290; adapted vendored tinyxml/zlib include paths to historical directory layout
 - `lib/tmx/TmxMap.h`: unverified upstream reconstruction; https://github.com/tamatias/tmxparser/tree/6fa4d38742313b6365df0d224b8978be1eb81290; adapted vendored tinyxml/zlib include paths to historical directory layout
-- `lib/tmx/TmxObject.cpp`: unverified donor reconstruction; 181f31e1e9a7f3516c7fbd3d4400aa0822c1d387:lib/tmx/TmxObject.cpp; headerMatch=0; apiOverlap=10000/10000; distance=13
+- `lib/tmx/TmxObject.cpp`: unverified donor reconstruction; 181f31e1e9a7f3516c7fbd3d4400aa0822c1d387:lib/tmx/TmxObject.cpp; headerMatch=0; apiOverlap=10000/10000; distance=12
 - `lib/tmx/TmxTileset.cpp`: unverified upstream reconstruction; https://github.com/tamatias/tmxparser/tree/6fa4d38742313b6365df0d224b8978be1eb81290; adapted vendored tinyxml/zlib include paths to historical directory layout
 - `lib/zlib/adler32.c`: Unmodified official zlib v1.2.5 adler32.c; Git blob verified against official tag tree 9712272c78b9d9c93746d9c8e156a3728c65ca72. Coherent same-version donor replaces mixed1.2.5/1.2.5 fallback; exact original only when originalHashMatches=true.
 - `lib/zlib/crc32.c`: Unmodified official zlib v1.2.5 crc32.c; Git blob verified against official tag tree 9712272c78b9d9c93746d9c8e156a3728c65ca72. Coherent same-version donor replaces mixed1.2.5/1.2.5 fallback; exact original only when originalHashMatches=true.
@@ -74,20 +76,26 @@ compatibilityRepair: 2, exactOriginal: 69, reconstruction: 46.
 - `lib/zlib/zlib.h`: Unmodified official zlib v1.2.5 zlib.h; Git blob verified against official tag tree 9712272c78b9d9c93746d9c8e156a3728c65ca72. Coherent same-version donor replaces mixed1.2.5/1.2.5 fallback; exact original only when originalHashMatches=true.
 - `lib/zlib/zutil.c`: Unmodified official zlib v1.2.5 zutil.c; Git blob verified against official tag tree 9712272c78b9d9c93746d9c8e156a3728c65ca72. Coherent same-version donor replaces mixed1.2.5/1.2.5 fallback; exact original only when originalHashMatches=true.
 - `lib/zlib/zutil.h`: Unmodified official zlib v1.2.5 zutil.h; Git blob verified against official tag tree 9712272c78b9d9c93746d9c8e156a3728c65ca72. Coherent same-version donor replaces mixed1.2.5/1.2.5 fallback; exact original only when originalHashMatches=true.
-- `src/creature.cpp`: content reconstruction of the BFG-removed original; carried from the #214 reconstruction; loseItem is renamed removeFromInventory, and removeFromEquipped/getItemAtSlot/getSlotWithItem/getAllItems are inferred for the declarations added in #215
-- `src/gamescript.cpp`: content reconstruction of the BFG-removed original; carried forward unchanged from the previous reconstruction of src/gamescript.cpp
-- `src/gameview.cpp`: content reconstruction of the BFG-removed original; carried forward unchanged from the previous reconstruction of src/gameview.cpp
-- `src/interaction.cpp`: content reconstruction of the BFG-removed original; carried forward unchanged from the previous reconstruction of src/interaction.cpp
-- `src/main.cpp`: content reconstruction of the BFG-removed original; carried forward unchanged from the previous reconstruction of src/main.cpp
-- `src/map.cpp`: content reconstruction of the BFG-removed original; carried forward unchanged from the previous reconstruction of src/map.cpp
-- `src/pathfinder.cpp`: content reconstruction of the BFG-removed original; carried forward unchanged from the previous reconstruction of src/pathfinder.cpp
-- `src/stats.cpp`: working reconstruction
-- `src/stats.h`: working reconstruction
+- `maps/map.tmx`: unverified donor reconstruction; authored Tiled geometry/object coordinates from 55e6516e:maps/map1/map.json converted to XML; missing target script reference omitted
+- `src/creature.cpp`: content reconstruction of the BFG-removed original; initial donor from adjacent verified #226 aligned to Creature headers; pending #224–#225 API review
+- `src/gamescript.cpp`: content reconstruction of the BFG-removed original; bind the existing singleton ScriptManager functions to the map constructed by the instance scene
+- `src/gameview.cpp`: content reconstruction of the BFG-removed original; adapt the #226 GameView reconstruction to the surviving #224 view declarations and instance scene ownership
+- `src/interaction.cpp`: content reconstruction of the BFG-removed original; carried from the #223 reconstruction and adapted to the #226 instance-based GameScene (static scene accessors removed): the player is taken from the item's own GameScene
+- `src/main.cpp`: content reconstruction of the BFG-removed original; retain the observed MainWindow entrypoint, attach the instance GameView as central widget, and register surviving types
+- `src/map.cpp`: content reconstruction of the BFG-removed original; adapted adjacent #226 reconstruction to surviving scene, map, and view declarations before the ScriptEngine refactor
+- `src/pathfinder.cpp`: content reconstruction of the BFG-removed original; preserve the Coords worker interface and resolve the active map/player from the moving creature
+- `src/stats.cpp`: content reconstruction of the BFG-removed original; carried forward unchanged from the previous reconstruction of src/stats.cpp
+- `src/stats.h`: content reconstruction of the BFG-removed original; carried forward unchanged from the previous reconstruction of src/stats.h
 - `lib/json/LICENSE`: https://github.com/open-source-parsers/jsoncpp/tree/4fce396c9d3e27a8ab8fb88e94c1676e021ae3a6 upstream distribution license
 - `scripts/PSF_LICENSE`: https://www.python.org/ftp/python/3.3.7/Python-3.3.7.tar.xz upstream Python distribution license
 
-Restored source fingerprint: `52be55e9e02a910ac71eb5c7ace6a37919602845b9978b3edc0b0f11f2af09c3`.
+Restored source fingerprint: `00a766a8289e4d3e37d0f3a93c5eb41887015656f90dd15a419a78bffd6b81fa`.
 
-The actual 1278 × 718 screenshot and [verification metadata](recovery/verification.json) belong to
+The restored source fingerprint identifies inputs before generation. The
+[source preparation metadata](recovery/source-preparation.json) records the original inputs
+and every generated or modified file's before/after hashes; the
+[preparation log](recovery/source-preparation.log) retains the actual preparation steps.
+
+The actual 1278 × 696 screenshot and [verification metadata](recovery/verification.json) belong to
 this source version. Reconstructed code and borrowed assets are identified in that metadata; they are
 not claimed to be the original deleted bytes. BFG removal-marker files are absent from this snapshot.

@@ -81,7 +81,8 @@ Interaction *Interaction::getInteraction(std::string name) {
 
 
 void Interaction::mousePressEvent(QGraphicsSceneMouseEvent *event) {
-    Player *player = GameScene::getPlayer();
+    GameScene *gameScene = dynamic_cast<GameScene *>(this->scene());
+    Player *player = gameScene ? gameScene->getPlayer() : NULL;
     if (player->getFightList()->size() == 0) {
         return;
     }
@@ -297,7 +298,8 @@ bool BloodlashEffect(Effect *effect, Creature *creature) {
 bool BarrierEffect(Effect *effect, Creature *creature) { return false; }
 
 void Interaction::onEnter() {
-    Player *player = GameScene::getPlayer();
+    GameScene *gameScene = dynamic_cast<GameScene *>(this->scene());
+    Player *player = gameScene ? gameScene->getPlayer() : NULL;
     if (!player)
         return;
     if (getMap())
