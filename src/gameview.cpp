@@ -47,8 +47,8 @@ bool GameView::init = false;
 
 void GameView::start() {
 
-    scene->startGame();
-    Player *player = GameScene::getPlayer();
+    scene->startGame("maps/map.tmx");
+    Player *player = scene->getPlayer();
     ViewLists &lists = viewLists[this];
     copyPlayerLists(player, lists);
     playerInventoryView = new PlayerListView(&lists.inventory);
@@ -66,7 +66,7 @@ void GameView::start() {
     connect(player, SIGNAL(inventoryChanged()), refresher, SLOT(refresh()));
     connect(player, SIGNAL(skillsChanged()), refresher, SLOT(refresh()));
     connect(player, SIGNAL(equippedChanged()), refresher, SLOT(refresh()));
-    playerStatsView.setPlayer(GameScene::getPlayer());
+    playerStatsView.setPlayer(scene->getPlayer());
     playerStatsView.update();
     scene->removeItem(&loading);
     init = true;
@@ -76,7 +76,6 @@ GameView::GameView() {
     playerInventoryView = 0;
     playerSkillsView = 0;
     playerEquippedView = 0;
-    showFullScreen();
     setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
     setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
     setViewportUpdateMode(QGraphicsView::BoundingRectViewportUpdate);
@@ -130,7 +129,7 @@ void GameView::showCharView() {
         charView->setPos(mapToScene(this->width() / 2 - charView->boundingRect().width() / 2,
                                     this->height() / 2 - charView->boundingRect().height() / 2));
         playerInventoryView->setPos(0, 0);
-        playerEquippedView->setPos(GameScene::getView()->getCharView()->boundingRect().width() -
+        playerEquippedView->setPos(this->getCharView()->boundingRect().width() -
                                        playerEquippedView->boundingRect().width(),
                                    0);
         charView->update();
@@ -140,10 +139,10 @@ void GameView::showCharView() {
 }
 
 void GameView::showFightView() {
-    std::list<Creature *> *fightlist = GameScene::getPlayer()->getFightList();
+    std::list<Creature *> *fightlist = scene->getPlayer()->getFightList();
     FightView::selected = fightlist->front();
     for (std::list<Creature *>::iterator it = fightlist->begin(); it != fightlist->end(); it++) {
-        qDebug() << (*it)->typeName.c_str() << "attacked" << GameScene::getPlayer()->typeName.c_str();
+        qDebug() << (*it)->typeName.c_str() << "attacked" << scene->getPlayer()->typeName.c_str();
     }
     qDebug() << "";
     fightView->setVisible(true);
@@ -171,8 +170,8 @@ void GameView::resizeEvent(QResizeEvent *event) {
     backpack.move((width() - backpack.width()) / 2, 0);
     playerStatsView.move(0, 0);
     if (init) {
-        int size = GameScene::getGame()->getMap()->getTileSize();
-        Player *player = GameScene::getPlayer();
+        int size = scene->getMap()->getTileSize();
+        Player *player = scene->getPlayer();
         centerOn(player->getPosX() * size + size / 2, player->getPosY() * size + size / 2);
         playerSkillsView->setPos(mapToScene(width() - playerSkillsView->boundingRect().width(),
                                             height() - playerSkillsView->boundingRect().height()));

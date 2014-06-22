@@ -12,6 +12,9 @@
 #include <src/item.h>
 #include <src/gamescene.h>
 #include <src/gameview.h>
+#include <src/scriptmanager.h>
+
+void setScriptMap(Map *map);
 
 #include <QApplication>
 #include <QDesktopWidget>
@@ -52,14 +55,18 @@ protected:
 };
 
 void ReconstructedPlayerAnimation::afterAnimationStep(qreal) {
-    Player *player = GameScene::getPlayer();
-    GameView *view = GameScene::getView();
-    if (player && view) view->centerOn(player);
+    QGraphicsItem *animated = item();
+    GameScene *scene = animated ? dynamic_cast<GameScene *>(animated->scene()) : NULL;
+    if (scene && scene->getView()) scene->getView()->centerOn(animated);
 }
 
-Map::Map(QGraphicsScene *scene) : scene(scene), entryx(0), entryz(0), entryy(0) {
+Map::Map(QGraphicsScene *scene, std::string file) : scene(static_cast<GameScene *>(scene)), entryx(0), entryz(0), entryy(0) {
   connect(CompletionListener::getInstance(), SIGNAL(completed()), this, SLOT(moveCompleted()));
   defaultTiles[0] = "GrassTile";
+  setScriptMap(this);
+  Tmx::Map authored;
+  authored.ParseFile(file);
+  loadMapFromTmx(authored);
 }
 
 Map::~Map() {
@@ -124,7 +131,7 @@ int Map::getTileSize() { return tile_size; }
 
 
 void Map::move(int x, int y) {
-  Player *player = GameScene::getPlayer();
+  Player *player = scene->getPlayer();
   if (!player) {
     showAll();
     return;
@@ -132,7 +139,7 @@ void Map::move(int x, int y) {
 
   CompletionListener::getInstance()->stop();
   currentMap = player->getPosZ();
-  ensureSize(player);
+  ensureSize();
 
   const int next_x = player->getPosX() + x;
   const int next_y = player->getPosY() + y;
@@ -158,7 +165,7 @@ void Map::move(int x, int y) {
   }
 
   currentMap = player->getPosZ();
-  ensureSize(player);
+  ensureSize();
   player->getEntered()->clear();
 
   Coords player_coords(player->getPosX(), player->getPosY(), player->getPosZ());
@@ -198,7 +205,7 @@ void Map::move(int x, int y) {
 
 void Map::moveCompleted() {
   CompletionListener::getInstance()->stop();
-  Player *player = GameScene::getPlayer();
+  Player *player = scene->getPlayer();
   if (!player) return;
   std::vector<MapObject *> objects;
   objects.assign(mapObjects.begin(), mapObjects.end());
@@ -217,8 +224,8 @@ void Map::moveCompleted() {
   }
 
   showAll();
-  if (GameScene::getView()) {
-    GameScene::getView()->centerOn(player);
+  if (scene->getView()) {
+    scene->getView()->centerOn(player);
   }
 
   {
@@ -226,13 +233,13 @@ void Map::moveCompleted() {
     for (std::list<MapObject *>::iterator it = entered.begin();
          it != entered.end(); ++it) {
       (*it)->onEnter();
-      if (GameScene::getPlayer() != player) {
+      if (scene->getPlayer() != player) {
         return;
       }
     }
     player->getEntered()->clear();
-    if (GameScene::getView() && player->getFightList()->size() > 0) {
-      GameScene::getView()->showFightView();
+    if (scene->getView() && player->getFightList()->size() > 0) {
+      scene->getView()->showFightView();
     }
   }
 }
@@ -260,7 +267,7 @@ void Map::addObject(MapObject *mapObject) {
   mapObjects.insert(mapObject);
   mapObject->setMap(this);
   if (mapObject->inherits("Player")) {
-    GameScene::setPlayer((Player *)mapObject);
+    scene->setPlayer((Player *)mapObject);
     currentMap = mapObject->getPosZ();
   }
 }
@@ -337,8 +344,8 @@ void Map::removeObject(MapObject *mapObject) {
     return;
   }
   mapObjects.erase(mapObject);
-  if (GameScene::getPlayer()) {
-    GameScene::getPlayer()->getEntered()->remove(mapObject);
+  if (scene->getPlayer()) {
+    scene->getPlayer()->getEntered()->remove(mapObject);
   }
   if (mapObject->scene()) {
     mapObject->scene()->removeItem(mapObject);
@@ -355,16 +362,17 @@ void Map::removeObject(MapObject *mapObject) {
 
 
 
-void Map::ensureSize(Player *player) {
+void Map::ensureSize() {
+  Player *player = scene->getPlayer();
   if (!player || defaultTiles.find(player->getPosZ()) == defaultTiles.end()) {
     return;
   }
 
   int size_x = 20;
   int size_y = 15;
-  if (GameScene::getView()) {
-    size_x = GameScene::getView()->width() / getTileSize() + 2;
-    size_y = GameScene::getView()->height() / getTileSize() + 2;
+  if (scene->getView()) {
+    size_x = scene->getView()->width() / getTileSize() + 2;
+    size_y = scene->getView()->height() / getTileSize() + 2;
   } else {
     size_x = QApplication::desktop()->width() / getTileSize() + 2;
     size_y = QApplication::desktop()->height() / getTileSize() + 2;
@@ -406,7 +414,7 @@ void Map::hide() {
 
 
 
-QGraphicsScene *Map::getScene() const { return scene; }
+GameScene *Map::getScene() const { return scene; }
 
 void Map::showAll() {
   for (std::unordered_map<Coords, Tile *, CoordsHasher>::iterator it = tiles.begin(); it != tiles.end();
@@ -465,7 +473,7 @@ void MapObject::moveTo(int x, int y, int z, bool silent) {
     QPointF from = QGraphicsItem::pos();
     posx = x; posy = y; posz = z;
     QPointF to(x * Map::getTileSize(), y * Map::getTileSize());
-    if (!silent && map && GameScene::getView() && from != to) {
+    if (!silent && map && map->getScene()->getView() && from != to) {
         QGraphicsItemAnimation *animation = inherits("Player")
             ? static_cast<QGraphicsItemAnimation *>(new ReconstructedPlayerAnimation(this))
             : new QGraphicsItemAnimation(this);
@@ -478,7 +486,7 @@ void MapObject::moveTo(int x, int y, int z, bool silent) {
     } else { setPos(to); }
     if (map) QGraphicsItem::setVisible(posz == map->getCurrentMap());
     if (!silent) {
-        Player *player = GameScene::getPlayer();
+        Player *player = map ? map->getScene()->getPlayer() : NULL;
         if (player && player != this && player->getPosX() == posx && player->getPosY() == posy && player->getPosZ() == posz)
             player->addEntered(this);
     }
@@ -549,6 +557,7 @@ void Map::loadMapFromTmx(Tmx::Map &source) {
     entryz = source.GetProperties().GetNumericProperty("z");
     for (int z = 0; z < source.GetNumLayers(); ++z) {
         const Tmx::Layer *layer = source.GetLayer(z);
+        boundaries[z] = std::make_pair(layer->GetWidth(), layer->GetHeight());
         for (int y = 0; y < layer->GetHeight(); ++y) for (int x = 0; x < layer->GetWidth(); ++x) {
             int index = layer->GetTileTilesetIndex(x, y);
             if (index < 0 || index >= source.GetNumTilesets()) continue;
@@ -654,3 +663,5 @@ void MapObject::onMove() {}
 void MapObject::onCreate() {}
 
 void MapObject::onDestroy() {}
+
+std::map<int, std::pair<int, int> > Map::getBounds() { return boundaries; }
