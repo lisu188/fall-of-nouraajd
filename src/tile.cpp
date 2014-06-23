@@ -84,4 +84,4 @@ void Tile::setMap(Map *map) {
   addToScene(map->getScene());
 }
 
-void RoadTile() { GameScene::getPlayer()->heal(1); }
+//void RoadTile() { GameScene::getPlayer()->heal(1); }

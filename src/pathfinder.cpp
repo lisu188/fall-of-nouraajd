@@ -15,9 +15,9 @@ DumbPathFinder::DumbPathFinder() {
 DumbPathFinder::DumbPathFinder(const DumbPathFinder&) {
 }
 
-namespace { thread_local Map *workerMap = nullptr; }
-
-Coords DumbPathFinder::findPath(Coords start, Coords goal) {
+Coords DumbPathFinder::findPath(Creature *first, Creature *second) {
+    Coords start = first->getCoords();
+    Coords goal = second->getCoords();
 	int px = goal.x;
 	int py = goal.y;
 	int dirx = px - start.x;
@@ -62,7 +62,7 @@ RandomPathFinder::RandomPathFinder() {
 RandomPathFinder::RandomPathFinder(const RandomPathFinder &) {
 }
 
-Coords RandomPathFinder::findPath(Coords, Coords) {
+Coords RandomPathFinder::findPath(Creature *, Creature *) {
 	int a = rand() % 3 - 1;
 	int b = rand() % 3 - 1;
 	return Coords(a, b, 0);
@@ -77,7 +77,9 @@ SmartPathFinder::SmartPathFinder(const SmartPathFinder &) {
 	
 }
 
-Coords SmartPathFinder::findPath(Coords start, Coords goal) {
+Coords SmartPathFinder::findPath(Creature *first, Creature *second) {
+    Coords start = first->getCoords();
+    Coords goal = second->getCoords();
 	if (start.z != goal.z) {
 		qDebug() << "Changing Level Not Supported Yet.";
 		throw new std::exception();
@@ -112,7 +114,7 @@ Coords SmartPathFinder::findPath(Coords start, Coords goal) {
 	int level = start.z;
 	nodes.insert(Cell(goal.x, goal.y, start));
 	values.insert(std::pair<Cell, int>(Cell(goal.x, goal.y, start), 0));
-	Map *map = workerMap;
+	Map *map = first->getMap();
 	while (!nodes.empty()) {
 		Cell currentCell = *nodes.begin();
 		nodes.erase(nodes.begin());
@@ -167,7 +169,7 @@ Coords SmartPathFinder::findPath(Coords start, Coords goal) {
 		}
 	if (list.size() == 0) {
 		DumbPathFinder finder;
-		return finder.findPath(start, goal);
+		return finder.findPath(first, second);
 	}
 	int cost = (*values.find(*list.begin())).second;
 	Cell target = (*values.find(*list.begin())).first;
@@ -183,18 +185,15 @@ Coords SmartPathFinder::findPath(Coords start, Coords goal) {
 
 
 
-PathFinderWorker::PathFinderWorker(Creature *creature, PathFinder *finder) : creature(creature), finder(finder) {
+PathFinderWorker::PathFinderWorker(Creature *first, Creature *second, PathFinder *finder) : first(first), second(second), finder(finder) {
     setAutoDelete(true);
-    connect(this, SIGNAL(completed(int,int)), creature, SLOT(move(int,int)));
+    connect(this, SIGNAL(completed(int,int)), first, SLOT(move(int,int)));
     connect(this, SIGNAL(started()), CompletionListener::getInstance(), SLOT(registerWorker()));
     connect(this, SIGNAL(ended()), CompletionListener::getInstance(), SLOT(deregisterWorker()));
     Q_EMIT started();
 }
 void PathFinderWorker::run() {
-    workerMap = creature->getMap();
-    Player *player = workerMap->getScene()->getPlayer();
-    Coords delta = finder->findPath(creature->getCoords(), player->getCoords());
-    workerMap = nullptr;
+    Coords delta = finder->findPath(first, second);
     Q_EMIT completed(delta.x, delta.y);
     Q_EMIT ended();
     finder->deleteLater();
