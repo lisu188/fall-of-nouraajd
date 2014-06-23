@@ -38,7 +38,7 @@ class Map : public QObject,
             public std::unordered_map<Coords, std::string, CoordsHasher> {
   Q_OBJECT
 public:
-    Map(QGraphicsScene *scene,std::string file);
+    Map(GameScene *scene, std::string file);
   ~Map();
   bool addTile(std::string name, int x, int y, int z);
   bool removeTile(int x, int y, int z);

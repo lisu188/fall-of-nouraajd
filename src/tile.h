@@ -42,5 +42,5 @@ private:
   bool init = false;
 };
 Q_DECLARE_METATYPE(Tile)
-void RoadTile();
+//void RoadTile();
 #endif // TILE_H

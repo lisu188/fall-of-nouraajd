@@ -15,20 +15,20 @@ void Monster::onMove() {
     return;
   }
   PathFinder *finder;
-  if ((this->getCoords().getDist(GameScene::getPlayer()->getCoords())) < 25) {
+  if ((this->getCoords().getDist(this->getMap()->getScene()->getPlayer()->getCoords())) < 25) {
     finder = new SmartPathFinder();
   } else {
     finder = new RandomPathFinder();
   }
   this->addExp(rand() % 25);
-  QThreadPool::globalInstance()->start(new PathFinderWorker(this, finder));
+  QThreadPool::globalInstance()->start(new PathFinderWorker(this,map->getScene()->getPlayer(), finder));
 }
 
 void Monster::onEnter() {
   if (!isAlive()) {
     return;
   }
-  GameScene::getPlayer()->addToFightList(this);
+  map->getScene()->getPlayer()->addToFightList(this);
 }
 
 void Monster::levelUp() {

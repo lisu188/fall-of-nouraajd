@@ -11,7 +11,7 @@
 class PathFinder : public QObject {
 public:
   PathFinder();
-  virtual Coords findPath(Coords start, Coords goal) = 0;
+  virtual Coords findPath(Creature *first, Creature *second) = 0;
 };
 
 class DumbPathFinder : public PathFinder {
@@ -22,7 +22,7 @@ public:
 
   // PathFinder interface
 public:
-  Coords findPath(Coords start, Coords goal);
+  Coords findPath(Creature *first, Creature *second);
 };
 Q_DECLARE_METATYPE(DumbPathFinder)
 
@@ -33,7 +33,7 @@ public:
   RandomPathFinder(const RandomPathFinder &);
   // PathFinder interface
 public:
-  Coords findPath(Coords, Coords);
+  Coords findPath(Creature *first, Creature *second);
 };
 Q_DECLARE_METATYPE(RandomPathFinder)
 
@@ -53,16 +53,16 @@ public:
 
   // PathFinder interface
 public:
-  Coords findPath(Coords start, Coords goal);
+  Coords findPath(Creature *first, Creature *second);
 
 private:
   int getCost(Coords coords);
   std::list<Coords> getNearCells(Coords coords);
   std::unordered_map<Coords, int, CoordsHasher> values;
   Coords getNearestCell(Coords start);
-  void processNode(Coords start, std::list<Cell> &nodes,
+  void processNode(Creature *first, std::list<Cell> &nodes,
                    std::unordered_set<Coords, CoordsHasher> &marked);
-  bool canStep(int x, int y, int z);
+  bool canStep(Map *map, int x, int y, int z);
 };
 Q_DECLARE_METATYPE(SmartPathFinder)
 
@@ -92,14 +92,15 @@ private:
 class PathFinderWorker : public QObject, public QRunnable {
   Q_OBJECT
 public:
-  PathFinderWorker(Creature *creature, PathFinder *finder);
+  PathFinderWorker(Creature *first, Creature *second, PathFinder *finder);
   void run();
 
 private:
   Q_SIGNAL void completed(int x, int y);
   Q_SIGNAL void started();
   Q_SIGNAL void ended();
-  Creature *creature;
+  Creature *first;
+  Creature *second;
   PathFinder *finder;
 };
 #endif // PATHFINDER_H
