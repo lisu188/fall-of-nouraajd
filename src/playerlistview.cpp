@@ -5,6 +5,7 @@
 #include <QWidget>
 #include <QDrag>
 #include <QMimeData>
+#include <src/gamescene.h>
 
 PlayerListView::PlayerListView(std::set<ListItem *, Comparer> *listItems)
     : items(listItems) {
@@ -41,10 +42,9 @@ void PlayerListView::update() {
   int i = 0;
   for (itemIter = items->begin(); itemIter != items->end(); i++, itemIter++) {
     ListItem *item = *itemIter;
-    if (GameScene::getPlayer() &&
-        item->getMap() != GameScene::getPlayer()->getMap()) {
-      item->setMap(GameScene::getPlayer()->getMap());
-    }
+    if (item->getMap()->getScene()->getPlayer()) {
+      item->setMap(item->getMap()->getScene()->getPlayer()->getMap());
+  }
     item->setVisible(false);
     item->setParentItem(0);
     int position = i - curPosition;
@@ -105,5 +105,5 @@ void PlayerListView::setItems(std::set<ListItem *, Comparer> *value) {
 void PlayerListView::dropEvent(QGraphicsSceneDragDropEvent *event) {
   Item *item = (Item *)(event->source());
   event->acceptProposedAction();
-  item->onUse(GameScene::getPlayer());
+  item->onUse(this->getMap()->getScene()->getPlayer());
 }

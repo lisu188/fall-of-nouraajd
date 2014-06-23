@@ -60,7 +60,7 @@ void ReconstructedPlayerAnimation::afterAnimationStep(qreal) {
     if (scene && scene->getView()) scene->getView()->centerOn(animated);
 }
 
-Map::Map(QGraphicsScene *scene, std::string file) : scene(static_cast<GameScene *>(scene)), entryx(0), entryz(0), entryy(0) {
+Map::Map(GameScene *scene, std::string file) : scene(scene), entryx(0), entryz(0), entryy(0) {
   connect(CompletionListener::getInstance(), SIGNAL(completed()), this, SLOT(moveCompleted()));
   defaultTiles[0] = "GrassTile";
   setScriptMap(this);
