@@ -1,15 +1,14 @@
 #include "scriptmanager.h"
 #include "gamescript.h"
 #include <QString>
+#include <sstream>
 
-ScriptManager::ScriptManager(ScriptManager &) {}
-
-ScriptManager *ScriptManager::getInstance() {
-  static ScriptManager instance;
-  return &instance;
+ScriptEngine::~ScriptEngine()
+{
+    Py_Finalize();
 }
 
-void ScriptManager::executeFile(std::string path)
+void ScriptEngine::executeFile(std::string path)
 {
     QFile file((std::string("scripts/").append(path)).c_str());
     if (file.open(QIODevice::ReadOnly)) {
@@ -19,12 +18,12 @@ void ScriptManager::executeFile(std::string path)
     }
 }
 
-void ScriptManager::executeScript(QString script) {
+void ScriptEngine::executeScript(QString script) {
   PyRun_SimpleString(script.toStdString().append("\n").c_str());
   PyErr_Print();
 }
 
-QString ScriptManager::buildCommand(std::initializer_list<std::string> list) {
+QString ScriptEngine::buildCommand(std::initializer_list<std::string> list) {
   QString command;
   int pos = 0;
   for (auto it = list.begin(); it != list.end(); it++, pos++) {
@@ -47,24 +46,26 @@ QString ScriptManager::buildCommand(std::initializer_list<std::string> list) {
   return command;
 }
 
-void ScriptManager::executeCommand(std::initializer_list<std::string> list) {
+void ScriptEngine::executeCommand(std::initializer_list<std::string> list) {
     executeScript(buildCommand(list));
 }
 
 PyMODINIT_FUNC PyInit_Game(void) { return PyModule_Create(&GameModule); }
 
-ScriptManager::ScriptManager() {
+ScriptEngine::ScriptEngine(Map *map) {
   PyImport_AppendInittab("Game", PyInit_Game);
   Py_Initialize();
   PySys_SetPath(L"./scripts");
-  PyRun_SimpleString("import Game");
+  PyRun_SimpleString("from Game import *");
+  std::stringstream stream;
+  stream << std::hex << (unsigned long)map;
+  std::string result(stream.str());
+  PyObject_SetAttrString(PyImport_ImportModule("__main__"),"map",Py_BuildValue("s",result.c_str()));
   PyMethodDef method;
   for (int i = 0; true; i++) {
     method = GameMethods[i];
     if (method.ml_name == 0) {
       break;
     }
-    executeScript(QString::fromStdString(
-        std::string(method.ml_name).append("=Game.").append(method.ml_name)));
   }
 }

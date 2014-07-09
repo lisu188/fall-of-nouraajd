@@ -7,7 +7,7 @@ Event::Event(const Event &) {}
 
 void Event::onEnter() {
   if (this->isEnabled()) {
-    ScriptManager::getInstance()->executeScript(script);
+   map->getEngine()->executeScript(script);
   }
 }
 

@@ -205,3 +205,7 @@ void BackPackObject::paintEvent(QPaintEvent *) {
 }
 
 #include "gameview.moc"
+
+void GameView::show() {
+    showFullScreen();
+}

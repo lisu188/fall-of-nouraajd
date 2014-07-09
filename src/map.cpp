@@ -14,8 +14,6 @@
 #include <src/gameview.h>
 #include <src/scriptmanager.h>
 
-void setScriptMap(Map *map);
-
 #include <QApplication>
 #include <QDesktopWidget>
 #include <QGraphicsSceneMouseEvent>
@@ -63,7 +61,7 @@ void ReconstructedPlayerAnimation::afterAnimationStep(qreal) {
 Map::Map(GameScene *scene, std::string file) : scene(scene), entryx(0), entryz(0), entryy(0) {
   connect(CompletionListener::getInstance(), SIGNAL(completed()), this, SLOT(moveCompleted()));
   defaultTiles[0] = "GrassTile";
-  setScriptMap(this);
+  engine = new ScriptEngine(this);
   Tmx::Map authored;
   authored.ParseFile(file);
   loadMapFromTmx(authored);
@@ -665,3 +663,9 @@ void MapObject::onCreate() {}
 void MapObject::onDestroy() {}
 
 std::map<int, std::pair<int, int> > Map::getBounds() { return boundaries; }
+
+int Map::getCurrentXBound() { return boundaries[currentMap].first; }
+
+int Map::getCurrentYBound() { return boundaries[currentMap].second; }
+
+ScriptEngine *Map::getEngine() { return engine; }
