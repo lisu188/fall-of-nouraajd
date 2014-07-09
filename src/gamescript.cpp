@@ -1,9 +1,23 @@
 #include "gamescript.h"
+#include <string>
 #include <QDebug>
 #include <QMetaProperty>
-namespace { Map *currentScriptMap = nullptr; }
-void setScriptMap(Map *map) { currentScriptMap = map; }
 #define METHOD(name) {#name,name,METH_VARARGS,NULL}
+
+namespace {
+// The ScriptEngine publishes its Map as a hexadecimal pointer string in __main__.map.
+Map *scriptMap() {
+    PyObject *main = PyImport_ImportModule("__main__");
+    PyObject *value = main ? PyObject_GetAttrString(main, "map") : NULL;
+    Map *map = NULL;
+    if (value && PyUnicode_Check(value)) {
+        map = (Map *)std::stoul(PyUnicode_AsUTF8(value), 0, 16);
+    }
+    Py_XDECREF(value);
+    Py_XDECREF(main);
+    return map;
+}
+}
 
 PyObject *addObject(PyObject *, PyObject *args)
 {
@@ -12,7 +26,7 @@ PyObject *addObject(PyObject *, PyObject *args)
     PyArg_ParseTuple(args, "siii", &name, &x, &y, &z);
     MapObject *object = MapObject::createMapObject(name);
     if (object) {
-        currentScriptMap->addObject(object);
+        scriptMap()->addObject(object);
         object->moveTo(x, y, z);
     }
     qDebug() << "Added object"<<object->typeName.c_str()<<"with name"<<object->name.c_str()<<"on"<<x<<y<<z<<"\n";
@@ -24,8 +38,8 @@ PyObject *replaceTile(PyObject *, PyObject *args)
     const char *name;
     int x, y, z;
     PyArg_ParseTuple(args, "siii", &name, &x, &y, &z);
-    currentScriptMap->removeTile(x, y, z);
-    currentScriptMap->addTile(name, x, y, z);
+    scriptMap()->removeTile(x, y, z);
+    scriptMap()->addTile(name, x, y, z);
     Py_RETURN_NONE;
 }
 
@@ -37,7 +51,7 @@ PyObject *setProperty(PyObject *, PyObject *args)
     PyArg_ParseTuple(args, "sss",&objectName, &propertyName, &propertyValue);
     std::string propName=propertyName;
     std::string propValue=propertyValue;
-    MapObject *object=currentScriptMap->getObjectByName(objectName);
+    MapObject *object=scriptMap()->getObjectByName(objectName);
     if(!object){
         Py_RETURN_NONE;
     }

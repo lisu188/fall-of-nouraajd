@@ -2,17 +2,17 @@
 #define SCRIPTMANAGER_H
 #include <QObject>
 #include <string>
-class ScriptManager : public QObject {
-  Q_OBJECT
+
+class Map;
+
+class ScriptEngine {
 public:
-  static ScriptManager *getInstance();
-  Q_INVOKABLE void executeFile(std::string path);
-  Q_INVOKABLE void executeScript(QString script);
-  Q_INVOKABLE void executeCommand(std::initializer_list<std::string> list);
-  Q_INVOKABLE QString buildCommand(std::initializer_list<std::string> list);
-private:
-  ScriptManager();
-  ScriptManager(ScriptManager &);
+  void executeFile(std::string path);
+  void executeScript(QString script);
+  void executeCommand(std::initializer_list<std::string> list);
+  QString buildCommand(std::initializer_list<std::string> list);
+  ScriptEngine(Map *map);
+  ~ScriptEngine();
 };
 
 #endif // SCRIPTMANAGER_H

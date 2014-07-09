@@ -15,25 +15,23 @@ Building::Building() : ListItem(0, 0, 0, 2) {}
 Building::Building(const Building &) {}
 
 void Building::onEnter() {
-    ScriptManager::getInstance()->executeCommand({this->typeName+".onEnter",this->name});
+    map->getEngine()->executeCommand({this->typeName+".onEnter",this->name});
 
 }
 
 void Building::onMove() {
-    ScriptManager::getInstance()->executeCommand({this->typeName+".onMove",this->name});
-
+    map->getEngine()->executeCommand({this->typeName+".onMove",this->name});
 }
 
 void Building::onCreate()
 {
-    ScriptManager::getInstance()->executeScript(QString("import ").append(this->typeName.c_str()));
-    ScriptManager::getInstance()->executeCommand({this->typeName+".onCreate",this->name});
-
+    map->getEngine()->executeScript(QString("import ").append(this->typeName.c_str()));
+    map->getEngine()->executeCommand({this->typeName+".onCreate",this->name});
 }
 
 void Building::onDestroy()
 {
-    ScriptManager::getInstance()->executeCommand({this->typeName+".onDestroy",this->name});
+    map->getEngine()->executeCommand({this->typeName+".onDestroy",this->name});
 }
 
 void Building::loadFromJson(std::string name) {
