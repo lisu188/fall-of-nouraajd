@@ -5,7 +5,7 @@
 #include <src/destroyer.h>
 
 std::unordered_map<std::string, std::function<void()> > Tile::steps{
-  { "RoadTile", &RoadTile }
+  { "RoadTile", RoadTile }
 };
 
 Tile::Tile(std::string name, int x, int y, int z) : ListItem(x, y, z, 1) {
@@ -84,4 +84,4 @@ void Tile::setMap(Map *map) {
   addToScene(map->getScene());
 }
 
-//void RoadTile() { GameScene::getPlayer()->heal(1); }
+void RoadTile() { /*GameScene::getPlayer()->heal(1); */}

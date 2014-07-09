@@ -35,6 +35,7 @@ public:
   void showFightView();
   Q_SLOT void showCharView();
   Q_SLOT void start();
+  Q_INVOKABLE void show();
 
 protected:
   void mouseDoubleClickEvent(QMouseEvent *e);

@@ -1,6 +1,7 @@
 #include "gamescene.h"
 #include "gameview.h"
 #include "pathfinder.h"
+#include "util.h"
 
 #include <QGraphicsView>
 #include <QPointF>
@@ -19,6 +20,24 @@
 #include <vector>
 #include <QThreadPool>
 
+class LoadGameTask  : public QRunnable{
+public:
+    LoadGameTask(Map *map):map(map){}
+    void run(){
+        for (int i = -10; i < map->getCurrentXBound() + 10; i++)
+          for (int j = -10; j < map->getCurrentYBound() + 10; j++) {
+              QMetaObject::invokeMethod(map, "ensureTile",
+                              Qt::ConnectionType::BlockingQueuedConnection,
+                               Q_ARG(int, i),Q_ARG(int, j));
+            }
+        QMetaObject::invokeMethod(map, "ensureSize",
+                        Qt::ConnectionType::BlockingQueuedConnection);
+        QMetaObject::invokeMethod(map->getScene()->getView(),"show");
+    }
+private:
+    Map *map;
+};
+
 void GameScene::startGame(std::string file) {
   srand(time(0));
   map = new Map(this,file);
@@ -26,16 +45,7 @@ void GameScene::startGame(std::string file) {
   map->addObject(player);
   player->moveTo(map->getEntryX(), map->getEntryY(), map->getEntryZ(), true);
   player->updateViews();
-  QTimer *timer = new QTimer();
-  timer->setInterval(0);
-  timer->setSingleShot(true);
-  for (int i = -10; i < map->getCurrentXBound() + 10; i++)
-    for (int j = -10; j < map->getCurrentYBound() + 10; j++) {
-          map->ensureTile(i,j);
-      }
-  connect(timer, &QTimer::timeout, map,&Map::ensureSize);
-  connect(timer, SIGNAL(timeout()), timer, SLOT(deleteLater()));
-  timer->start();
+  QThreadPool::globalInstance()->start(new LoadGameTask(map));
 }
 
 void GameScene::keyPressEvent(QKeyEvent *keyEvent) {

@@ -1,6 +1,8 @@
 #ifndef MAP_H
 #define MAP_H
 
+#include "scriptmanager.h"
+
 #include <list>
 #include <QTimer>
 #include <QObject>
@@ -68,12 +70,9 @@ public:
   Q_INVOKABLE void ensureTile(int i, int j);
   std::unordered_map<Coords, Tile *, CoordsHasher> tiles;
   std::map<int, std::pair<int, int> > getBounds();
-  int getCurrentXBound(){
-      return boundaries[currentMap].first;
-  }
-  int getCurrentYBound(){
-      return boundaries[currentMap].second;
-  }
+  int getCurrentXBound();
+  int getCurrentYBound();
+  ScriptEngine *getEngine();
 
 private:
   std::set<MapObject *> mapObjects;
@@ -83,6 +82,7 @@ private:
   std::map<int, std::string> defaultTiles;
   std::map<int, std::pair<int, int> > boundaries;
   int entryx, entryz, entryy;
+  ScriptEngine *engine;
 };
 
 class MapObject : public AnimatedObject {
