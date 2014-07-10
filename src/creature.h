@@ -12,7 +12,7 @@ class Weapon;
 class Armor;
 class Stats;
 
-class Creature : public ListItem {
+class Creature : public MapObject {
   Q_OBJECT
   Q_PROPERTY(int exp READ getExp WRITE setExp USER true)
   Q_PROPERTY(int gold READ getGold WRITE setGold USER true)
