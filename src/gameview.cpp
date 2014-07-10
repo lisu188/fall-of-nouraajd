@@ -9,9 +9,9 @@
 
 namespace {
 struct ViewLists {
-    std::set<ListItem *, Comparer> inventory;
-    std::set<ListItem *, Comparer> skills;
-    std::set<ListItem *, Comparer> equipped;
+    std::set<MapObject *, Comparer> inventory;
+    std::set<MapObject *, Comparer> skills;
+    std::set<MapObject *, Comparer> equipped;
 };
 std::map<GameView *, ViewLists> viewLists;
 

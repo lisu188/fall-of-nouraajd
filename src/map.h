@@ -114,6 +114,27 @@ protected:
   void setAnimation(std::string path);
   Map *map = 0;
   QGraphicsSimpleTextItem statsView;
+
+public:
+  void setNumber(int i, int x);
+  virtual bool compare(MapObject *item);
+
+protected:
+  std::string tooltip;
+  virtual void hoverEnterEvent(QGraphicsSceneHoverEvent *event);
+  virtual void hoverLeaveEvent(QGraphicsSceneHoverEvent *event);
 };
 
+class Comparer {
+public:
+  bool operator()(MapObject *first, MapObject *second) {
+    if (!first) {
+      return false;
+    }
+    if (!second) {
+      return true;
+    }
+    return first->compare(second);
+  }
+};
 #endif // MAP_H

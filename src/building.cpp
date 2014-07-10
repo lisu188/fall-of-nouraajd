@@ -10,7 +10,7 @@ Building *Building::createBuilding(QString name) {
   return dynamic_cast<Building *>(MapObject::createMapObject(name));
 }
 
-Building::Building() : ListItem(0, 0, 0, 2) {}
+Building::Building() : MapObject(0, 0, 0, 2) {}
 
 Building::Building(const Building &) {}
 

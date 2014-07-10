@@ -1,16 +1,14 @@
 #ifndef INTERACTION_H
 #define INTERACTION_H
-
 #include <string>
 #include <functional>
 #include <unordered_map>
-#include <src/listitem.h>
-
+#include <src/map.h>
 class Creature;
 class QGraphicsSceneMouseEvent;
 class Stats;
 
-class Interaction : public ListItem {
+class Interaction : public MapObject {
   Q_OBJECT
 public:
   Interaction();
@@ -21,7 +19,7 @@ public:
   virtual void onEnter();
   virtual void onMove();
   virtual void loadFromJson(std::string name);
-  virtual bool compare(ListItem *item);
+  virtual bool compare(MapObject *item);
 
 protected:
   void mousePressEvent(QGraphicsSceneMouseEvent *event);
