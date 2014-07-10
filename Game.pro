@@ -5,8 +5,8 @@ TEMPLATE = app
 CONFIG += c++11
 DEFINES += QT_NO_KEYWORDS
 INCLUDEPATH += . src lib lib/tmx lib/tinyxml lib/base64 lib/zlib
-unix:LIBS += -lpython3.4m -ldl -lutil
-win32:LIBS += -lpython34
+unix:LIBS += -lpython2.7 -ldl -lutil
+win32:LIBS += -lpython27
 
 SOURCES += lib/base64/base64.cpp \
     lib/json/json_reader.cpp \

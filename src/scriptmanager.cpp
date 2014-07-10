@@ -50,22 +50,14 @@ void ScriptEngine::executeCommand(std::initializer_list<std::string> list) {
     executeScript(buildCommand(list));
 }
 
-PyMODINIT_FUNC PyInit_Game(void) { return PyModule_Create(&GameModule); }
-
 ScriptEngine::ScriptEngine(Map *map) {
-  PyImport_AppendInittab("Game", PyInit_Game);
   Py_Initialize();
-  PySys_SetPath(L"./scripts");
+  Py_InitModule("Game",GameMethods);
+  PyRun_SimpleString("import sys");
+  PyRun_SimpleString("sys.path.append('./scripts')");
   PyRun_SimpleString("from Game import *");
   std::stringstream stream;
   stream << std::hex << (unsigned long)map;
   std::string result(stream.str());
   PyObject_SetAttrString(PyImport_ImportModule("__main__"),"map",Py_BuildValue("s",result.c_str()));
-  PyMethodDef method;
-  for (int i = 0; true; i++) {
-    method = GameMethods[i];
-    if (method.ml_name == 0) {
-      break;
-    }
-  }
 }

@@ -9,8 +9,8 @@ Map *scriptMap() {
     PyObject *main = PyImport_ImportModule("__main__");
     PyObject *value = main ? PyObject_GetAttrString(main, "map") : NULL;
     Map *map = NULL;
-    if (value && PyUnicode_Check(value)) {
-        map = (Map *)std::stoul(PyUnicode_AsUTF8(value), 0, 16);
+    if (value && PyString_Check(value)) {
+        map = (Map *)std::stoul(PyString_AsString(value), 0, 16);
     }
     Py_XDECREF(value);
     Py_XDECREF(main);
@@ -85,4 +85,3 @@ PyObject *setProperty(PyObject *, PyObject *args)
 PyMethodDef GameMethods[] = {
     METHOD(addObject), METHOD(replaceTile), METHOD(setProperty),{NULL, NULL, NULL, NULL}
 };
-PyModuleDef GameModule = {PyModuleDef_HEAD_INIT, "Game", NULL, -1, GameMethods};
