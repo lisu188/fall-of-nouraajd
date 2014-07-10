@@ -1,6 +1,5 @@
 #include "gamescript.h"
 #include <string>
-#include <QDebug>
 #include <QMetaProperty>
 #define METHOD(name) {#name,name,METH_VARARGS,NULL}
 
@@ -29,7 +28,6 @@ PyObject *addObject(PyObject *, PyObject *args)
         scriptMap()->addObject(object);
         object->moveTo(x, y, z);
     }
-    qDebug() << "Added object"<<object->typeName.c_str()<<"with name"<<object->name.c_str()<<"on"<<x<<y<<z<<"\n";
     Py_RETURN_NONE;
 }
 
@@ -71,7 +69,6 @@ PyObject *setProperty(PyObject *, PyObject *args)
         } else if (propValue.find("false") == 0) {
             value = false;
         } else {
-            qDebug() << "Failed to set property" << propertyName << "of" << objectName << "to" << propertyValue << "\n";
             Py_RETURN_NONE;
         }
         break;
@@ -80,9 +77,7 @@ PyObject *setProperty(PyObject *, PyObject *args)
         break;
     }
     if (object->setProperty(propName.c_str(), value)) {
-        qDebug() << "Set property" << propertyName << "of" << objectName << "to" << propertyValue << "\n";
     } else {
-        qDebug() << "Failed to set property" << propertyName << "of" << objectName << "to" << propertyValue << "\n";
     }
     Py_RETURN_NONE;
 }
