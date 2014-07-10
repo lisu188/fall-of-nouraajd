@@ -15,7 +15,7 @@ PyObject *moveObject(PyObject *self, PyObject *args);
 
 extern PyMethodDef GameMethods[];
 
-extern PyModuleDef GameModule;
-
-extern void init_Game();
+extern "C"{
+    extern void init_Game();
+}
 #endif // GAMESCRIPT_H
