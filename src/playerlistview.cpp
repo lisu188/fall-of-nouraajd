@@ -7,8 +7,8 @@
 #include <QMimeData>
 #include <src/gamescene.h>
 
-PlayerListView::PlayerListView(std::set<ListItem *, Comparer> *listItems)
-    : items(listItems) {
+PlayerListView::PlayerListView(std::set<MapObject *, Comparer> *MapObjects)
+    : items(MapObjects) {
   this->setZValue(3);
   curPosition = 0;
   right = new ScrollObject(this, true);
@@ -38,10 +38,10 @@ void PlayerListView::update() {
     (*childIter)->setParentItem(0);
     (*childIter)->setVisible(false);
   }
-  std::set<ListItem *, Comparer>::iterator itemIter;
+  std::set<MapObject *, Comparer>::iterator itemIter;
   int i = 0;
   for (itemIter = items->begin(); itemIter != items->end(); i++, itemIter++) {
-    ListItem *item = *itemIter;
+    MapObject *item = *itemIter;
     if (item->getMap()->getScene()->getPlayer()) {
       item->setMap(item->getMap()->getScene()->getPlayer()->getMap());
   }
@@ -92,11 +92,11 @@ void PlayerListView::setXY(int x, int y) {
   this->x = x;
   this->y = y;
 }
-std::set<ListItem *, Comparer> *PlayerListView::getItems() const {
+std::set<MapObject *, Comparer> *PlayerListView::getItems() const {
   return items;
 }
 
-void PlayerListView::setItems(std::set<ListItem *, Comparer> *value) {
+void PlayerListView::setItems(std::set<MapObject *, Comparer> *value) {
   items = value;
   curPosition = 0;
   update();

@@ -1,12 +1,10 @@
 #ifndef BUILDING_H
 #define BUILDING_H
 #include "src/building.h"
-
 #include "configurationprovider.h"
+#include <src/map.h>
 
-#include <src/listitem.h>
-
-class Building : public ListItem {
+class Building : public MapObject {
   Q_OBJECT
   Q_PROPERTY(bool enabled READ isEnabled WRITE setEnabled USER true)
 public:

@@ -1,14 +1,11 @@
 #include <src/animatedobject.h>
-
-#include <src/listitem.h>
-
 #include <src/stats.h>
-
+#include <src/map.h>
 #ifndef ITEM_H
 #define ITEM_H
 class Creature;
 class Interaction;
-class Item : public ListItem {
+class Item : public MapObject {
   Q_OBJECT
   Q_PROPERTY(int power READ getPower WRITE setPower USER true)
   Q_PROPERTY(bool singleUse READ isSingleUse WRITE setSingleUse USER true)

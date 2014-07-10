@@ -314,9 +314,9 @@ void Interaction::onMove() {}
 
 
 
-Interaction::Interaction() : ListItem(0, 0, 0, 2), manaCost(0) {}
+Interaction::Interaction() : MapObject(0, 0, 0, 2), manaCost(0) {}
 Interaction::Interaction(const Interaction &interaction) : Interaction() { loadFromJson(interaction.typeName); }
-bool Interaction::compare(ListItem *item) { return ListItem::compare(item); }
+bool Interaction::compare(MapObject *item) { return MapObject::compare(item); }
 Json::Value Effect::saveToJson() {
     Json::Value config;
     config["type"] = className;

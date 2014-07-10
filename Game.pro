@@ -7,6 +7,7 @@ DEFINES += QT_NO_KEYWORDS
 INCLUDEPATH += . src lib lib/tmx lib/tinyxml lib/base64 lib/zlib
 unix:LIBS += -lpython2.7 -ldl -lutil
 win32:LIBS += -lpython27
+unix:LIBS += -lboost_python
 
 SOURCES += lib/base64/base64.cpp \
     lib/json/json_reader.cpp \
@@ -60,7 +61,6 @@ SOURCES += lib/base64/base64.cpp \
     src/interaction.cpp \
     src/item.cpp \
     src/itemslot.cpp \
-    src/listitem.cpp \
     src/lootprovider.cpp \
     src/main.cpp \
     src/map.cpp \
@@ -134,7 +134,6 @@ HEADERS  += \
     src/interaction.h \
     src/item.h \
     src/itemslot.h \
-    src/listitem.h \
     src/lootprovider.h \
     src/mainwindow.h \
     src/map.h \

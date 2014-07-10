@@ -1,3 +1,5 @@
+#include <locale>
+#include <QGraphicsSceneHoverEvent>
 #include "map.h"
 
 
@@ -462,10 +464,10 @@ MapObject::MapObject(int x, int y, int z, int v) {
   setZValue(v);
   setAcceptHoverEvents(true);
   statsView.setParentItem(this);
-  statsView.setVisible(false);
+  statsView.setVisible(true);
+  statsView.setText(" ");
+  statsView.setPos(-this->mapToParent(0, 0).x(), -statsView.boundingRect().height());
 }
-
-
 
 void MapObject::moveTo(int x, int y, int z, bool silent) {
     QPointF from = QGraphicsItem::pos();
@@ -669,3 +671,41 @@ int Map::getCurrentXBound() { return boundaries[currentMap].first; }
 int Map::getCurrentYBound() { return boundaries[currentMap].second; }
 
 ScriptEngine *Map::getEngine() { return engine; }
+
+namespace {
+std::string toLower(const std::string &s) {
+  std::string result;
+  std::locale loc;
+  for (unsigned int i = 0; i < s.length(); ++i) {
+    result += std::tolower(s.at(i), loc);
+  }
+  return result;
+}
+}
+
+void MapObject::setNumber(int i, int x) {
+  this->QGraphicsItem::setVisible(true);
+  int px = i % x * Map::getTileSize();
+  int py = i / x * Map::getTileSize();
+  this->QGraphicsItem::setPos(px, py);
+}
+
+bool MapObject::compare(MapObject *item) {
+  int value = toLower(typeName).compare(toLower(item->typeName));
+  if (value == 0) {
+    return this < item;
+  }
+  return value < 0;
+}
+
+void MapObject::hoverEnterEvent(QGraphicsSceneHoverEvent *event) {
+  statsView.setVisible(true);
+  statsView.setText(tooltip.c_str());
+  statsView.setPos(0, 0 - statsView.boundingRect().height());
+  event->setAccepted(true);
+}
+
+void MapObject::hoverLeaveEvent(QGraphicsSceneHoverEvent *event) {
+  statsView.setVisible(false);
+  event->setAccepted(true);
+}

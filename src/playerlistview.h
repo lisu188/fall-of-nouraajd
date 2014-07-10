@@ -11,7 +11,7 @@ class PlayerListView : public QGraphicsObject {
   friend class ScrollObject;
 
 public:
-  PlayerListView(std::set<ListItem *, Comparer> *listItems);
+  PlayerListView(std::set<MapObject *, Comparer> *MapObjects);
   Map *getMap();
   void setDraggable();
   virtual QRectF boundingRect() const;
@@ -19,14 +19,14 @@ public:
                      QWidget *widget);
   void updatePosition(int i);
   void setXY(int x, int y);
-  std::set<ListItem *, Comparer> *getItems() const;
-  void setItems(std::set<ListItem *, Comparer> *value);
+  std::set<MapObject *, Comparer> *getItems() const;
+  void setItems(std::set<MapObject *, Comparer> *value);
 
 private:
   int curPosition;
   int x, y;
   ScrollObject *right, *left;
-  std::set<ListItem *, Comparer> *items;
+  std::set<MapObject *, Comparer> *items;
   QPixmap pixmap;
 
 protected:

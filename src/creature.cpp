@@ -32,7 +32,7 @@ int stat_resisted(int value, int resist) {
 
 } // namespace
 
-Creature::Creature() : ListItem(0, 0, 0, 2) {
+Creature::Creature() : MapObject(0, 0, 0, 2) {
     gold = exp = level = sw = mana = manaMax = hpMax = hp = 0;
     manaRegRate = 1;
     setAcceptHoverEvents(true);

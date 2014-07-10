@@ -12,7 +12,7 @@
 #include <src/potion.h>
 #include <src/configurationprovider.h>
 
-Item::Item() : ListItem(0, 0, 0, 2) {}
+Item::Item() : MapObject(0, 0, 0, 2) {}
 
 Item::Item(const Item &item) : Item() { this->loadFromJson(item.name); }
 
@@ -60,7 +60,7 @@ void Item::mousePressEvent(QGraphicsSceneMouseEvent *event) {
     delete this;
     return;
   }
-  ListItem::mousePressEvent(event);
+  MapObject::mousePressEvent(event);
   if (event->isAccepted()) {
     return;
   }

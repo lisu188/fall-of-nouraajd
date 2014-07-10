@@ -1,4 +1,6 @@
+#include <boost/python.hpp>
 #include "gamescript.h"
+#include <src/building.h>
 #include <string>
 #include <QMetaProperty>
 #define METHOD(name) {#name,name,METH_VARARGS,NULL}
@@ -85,3 +87,8 @@ PyObject *setProperty(PyObject *, PyObject *args)
 PyMethodDef GameMethods[] = {
     METHOD(addObject), METHOD(replaceTile), METHOD(setProperty),{NULL, NULL, NULL, NULL}
 };
+
+BOOST_PYTHON_MODULE(_Game)
+{
+    boost::python::class_<Building, boost::noncopyable>("Building", boost::python::no_init);
+}

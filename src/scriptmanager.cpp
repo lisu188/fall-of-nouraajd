@@ -8,16 +8,6 @@ ScriptEngine::~ScriptEngine()
     Py_Finalize();
 }
 
-void ScriptEngine::executeFile(std::string path)
-{
-    QFile file((std::string("scripts/").append(path)).c_str());
-    if (file.open(QIODevice::ReadOnly)) {
-      QByteArray data = file.readAll();
-      PyRun_SimpleString(data.data());
-      file.close();
-    }
-}
-
 void ScriptEngine::executeScript(QString script) {
   PyRun_SimpleString(script.toStdString().append("\n").c_str());
   PyErr_Print();
@@ -53,6 +43,7 @@ void ScriptEngine::executeCommand(std::initializer_list<std::string> list) {
 ScriptEngine::ScriptEngine(Map *map) {
   Py_Initialize();
   Py_InitModule("Game",GameMethods);
+  init_Game();
   PyRun_SimpleString("import sys");
   PyRun_SimpleString("sys.path.append('./scripts')");
   PyRun_SimpleString("from Game import *");

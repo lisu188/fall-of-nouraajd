@@ -7,9 +7,8 @@
 #include <unordered_map>
 #include <string>
 #include <functional>
-#include <src/listitem.h>
 
-class Tile : public ListItem {
+class Tile : public MapObject {
   Q_OBJECT
 public:
   Tile(std::string name, int x = 0, int y = 0, int z = 0);

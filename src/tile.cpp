@@ -8,7 +8,7 @@ std::unordered_map<std::string, std::function<void()> > Tile::steps{
   { "RoadTile", RoadTile }
 };
 
-Tile::Tile(std::string name, int x, int y, int z) : ListItem(x, y, z, 1) {
+Tile::Tile(std::string name, int x, int y, int z) : MapObject(x, y, z, 1) {
   setXYZ(x, y, z);
   loadFromJson(name);
 }
