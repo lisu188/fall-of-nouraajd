@@ -46,6 +46,7 @@ ScriptEngine::ScriptEngine(Map *map) {
   init_Game();
   PyRun_SimpleString("import sys");
   PyRun_SimpleString("sys.path.append('./scripts')");
+  PyRun_SimpleString("import Game");
   PyRun_SimpleString("from Game import *");
   std::stringstream stream;
   stream << std::hex << (unsigned long)map;
