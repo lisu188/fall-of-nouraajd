@@ -4,11 +4,11 @@
 #include <src/util.h>
 
 std::set<Item *> *LootProvider::getLoot(int value) {
-  static LootProvider instance;
-  return instance.calculateLoot(value);
+  return calculateLoot(value);
 }
 
-LootProvider::LootProvider() {
+LootProvider::LootProvider(Map *map) {
+    this->map=map;
   Json::Value config = *ConfigurationProvider::getConfig("config/object.json");
   Json::Value::iterator it = config.begin();
   for (; it != config.end(); it++) {
@@ -31,7 +31,7 @@ std::set<Item *> *LootProvider::calculateLoot(int value) {
     int power = (*it).second;
     std::string name = (*it).first;
     if (power <= value) {
-      loot->insert(Item::createItem(QString::fromStdString(name)));
+      loot->insert(map->createMapObject<Item*>(QString::fromStdString(name)));
       value -= power;
     }
   }

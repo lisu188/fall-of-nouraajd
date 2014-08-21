@@ -13,7 +13,7 @@ class Player : public Creature {
   friend class PlayerStatsView;
 
 public:
-  Player(std::string name);
+  Player(Map*map,std::string name);
   Player();
   Player(const Player &player);
   ~Player();

@@ -9,8 +9,7 @@ ScriptEngine::~ScriptEngine()
 }
 
 void ScriptEngine::executeScript(QString script) {
-  PyRun_SimpleString(script.toStdString().append("\n").c_str());
-  PyErr_Print();
+  boost::python::exec(script.toStdString().append("\n").c_str(),main_namespace);
 }
 
 QString ScriptEngine::buildCommand(std::initializer_list<std::string> list) {
@@ -48,8 +47,12 @@ ScriptEngine::ScriptEngine(Map *map) {
   PyRun_SimpleString("sys.path.append('./scripts')");
   PyRun_SimpleString("import Game");
   PyRun_SimpleString("from Game import *");
+  PyRun_SimpleString("from Objects import *");
+  PyRun_SimpleString("objects=[]");
   std::stringstream stream;
   stream << std::hex << (unsigned long)map;
   std::string result(stream.str());
   PyObject_SetAttrString(PyImport_ImportModule("__main__"),"map",Py_BuildValue("s",result.c_str()));
+  main_module=boost::python::object(boost::python::handle<>(PyImport_ImportModule("__main__")));
+  main_namespace=main_module.attr("__dict__");
 }
