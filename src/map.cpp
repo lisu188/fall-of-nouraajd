@@ -1,3 +1,4 @@
+#include <src/lootprovider.h>
 #include <locale>
 #include <QGraphicsSceneHoverEvent>
 #include "map.h"
@@ -64,6 +65,7 @@ Map::Map(GameScene *scene, std::string file) : scene(scene), entryx(0), entryz(0
   connect(CompletionListener::getInstance(), SIGNAL(completed()), this, SLOT(moveCompleted()));
   defaultTiles[0] = "GrassTile";
   engine = new ScriptEngine(this);
+  lootProvider = new LootProvider(this);
   Tmx::Map authored;
   authored.ParseFile(file);
   loadMapFromTmx(authored);
@@ -709,3 +711,5 @@ void MapObject::hoverLeaveEvent(QGraphicsSceneHoverEvent *event) {
   statsView.setVisible(false);
   event->setAccepted(true);
 }
+
+LootProvider *Map::getLootProvider() { return lootProvider; }

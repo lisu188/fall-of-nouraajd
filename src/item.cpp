@@ -39,10 +39,6 @@ void Item::onUnequip(Creature *creature) {
            << "\n";
 }
 
-Item *Item::createItem(QString name) {
-  return dynamic_cast<Item *>(MapObject::createMapObject(name));
-}
-
 void Item::onUse(Creature *creature) {
   ItemSlot *parent = (ItemSlot *)this->parentItem();
   if (!parent) {

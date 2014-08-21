@@ -36,6 +36,7 @@ struct CoordsHasher {
   std::size_t operator()(const Coords &coords) const;
 };
 
+class LootProvider;
 class Map : public QObject,
             public std::unordered_map<Coords, std::string, CoordsHasher> {
   Q_OBJECT
@@ -73,6 +74,8 @@ public:
   int getCurrentXBound();
   int getCurrentYBound();
   ScriptEngine *getEngine();
+  LootProvider *getLootProvider();
+  template <typename T> T createMapObject(QString name);
 
 private:
   std::set<MapObject *> mapObjects;
@@ -83,6 +86,7 @@ private:
   std::map<int, std::pair<int, int> > boundaries;
   int entryx, entryz, entryy;
   ScriptEngine *engine;
+  LootProvider *lootProvider;
 };
 
 class MapObject : public AnimatedObject {
@@ -137,4 +141,8 @@ public:
     return first->compare(second);
   }
 };
+template <typename T> T Map::createMapObject(QString name) {
+  return dynamic_cast<T>(MapObject::createMapObject(name));
+}
+
 #endif // MAP_H

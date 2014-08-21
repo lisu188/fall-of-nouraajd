@@ -48,7 +48,8 @@ void Player::setMap(Map *map) {
   updateViews();
 }
 
-Player::Player(std::string name) {
+Player::Player(Map *map, std::string name) {
+  this->map=map;
   init();
   this->name = "PLAYER";
   this->loadFromJson(name);

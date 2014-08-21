@@ -47,7 +47,7 @@ private:
 void GameScene::startGame(std::string file) {
   srand(time(0));
   map = new Map(this,file);
-  player = new Player("Sorcerer");
+  player = new Player(map,"Sorcerer");
   map->addObject(player);
   player->moveTo(map->getEntryX(), map->getEntryY(), map->getEntryZ(), true);
   player->updateViews();
