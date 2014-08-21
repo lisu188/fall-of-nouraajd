@@ -38,5 +38,5 @@ void Monster::levelUp() {
 }
 
 std::set<Item *> *Monster::getLoot() {
-  return LootProvider::getLoot(getScale());
+  return this->getMap()->getLootProvider()->getLoot(getScale());
 }
