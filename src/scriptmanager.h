@@ -23,7 +23,7 @@ public:
           executeScript("objects.append(object)");
           return boost::python::extract<T>(main_namespace["object"]);
      }catch(...){
-
+        PyErr_Print();
      }
      return NULL;
   }
