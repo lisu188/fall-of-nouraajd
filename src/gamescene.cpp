@@ -20,119 +20,115 @@
 #include <vector>
 #include <QThreadPool>
 
-class LoadGameTask  : public QRunnable{
+class LoadGameTask  : public QRunnable {
 public:
-    LoadGameTask(Map *map):map(map){}
-    void run(){
-        QMetaObject::invokeMethod(map, "ensureSize",
-                        Qt::ConnectionType::BlockingQueuedConnection);
-        QMetaObject::invokeMethod(map->getScene()->getView(),"show");
-        double all=(map->getCurrentXBound() + 20)*(map->getCurrentYBound() + 20);
-        double loaded=0;
-        for (int i = -10; i < map->getCurrentXBound() + 10; i++)
-          for (int j = -10; j < map->getCurrentYBound() + 10; j++) {
-              QMetaObject::invokeMethod(map, "ensureTile",
-                              Qt::ConnectionType::BlockingQueuedConnection,
-                               Q_ARG(int, i),Q_ARG(int, j));
-              loaded++;
-              if(((int)loaded)%100==0){
-                //qDebug()<<loaded/all*100<<"%";
-              }
-            }
-    }
+	LoadGameTask ( Map *map ) :map ( map ) {}
+	void run() {
+		QMetaObject::invokeMethod ( map, "ensureSize",
+		                            Qt::ConnectionType::BlockingQueuedConnection );
+		QMetaObject::invokeMethod ( map->getScene()->getView(),"show" );
+		double all= ( map->getCurrentXBound() + 20 ) * ( map->getCurrentYBound() + 20 );
+		double loaded=0;
+		for ( int i = -10; i < map->getCurrentXBound() + 10; i++ )
+			for ( int j = -10; j < map->getCurrentYBound() + 10; j++ ) {
+				QMetaObject::invokeMethod ( map, "ensureTile",
+				                            Qt::ConnectionType::BlockingQueuedConnection,
+				                            Q_ARG ( int, i ),Q_ARG ( int, j ) );
+				loaded++;
+				if ( ( ( int ) loaded ) %100==0 ) {
+					//qDebug()<<loaded/all*100<<"%";
+				}
+			}
+	}
 private:
-    Map *map;
+	Map *map;
 };
 
-void GameScene::startGame(std::string file) {
-  srand(time(0));
-  map = new Map(this,file);
-  player = new Player(map,"Sorcerer");
-  map->addObject(player);
-  player->moveTo(map->getEntryX(), map->getEntryY(), map->getEntryZ(), true);
-  player->updateViews();
-  QThreadPool::globalInstance()->start(new LoadGameTask(map));
+void GameScene::startGame ( std::string file ) {
+	srand ( time ( 0 ) );
+	map = new Map ( this,file );
+	player = new Player ( map,"Sorcerer" );
+	map->addObject ( player );
+	player->moveTo ( map->getEntryX(), map->getEntryY(), map->getEntryZ(), true );
+	player->updateViews();
+	QThreadPool::globalInstance()->start ( new LoadGameTask ( map ) );
 }
 
-void GameScene::keyPressEvent(QKeyEvent *keyEvent) {
-  if (keyEvent) {
-    keyEvent->setAccepted(false);
-    switch (keyEvent->key()) {
-    case Qt::Key_Up:
-      playerMove(0, -1);
-      keyEvent->setAccepted(true);
-      break;
-    case Qt::Key_Down:
-      playerMove(0, 1);
-      keyEvent->setAccepted(true);
-      break;
-    case Qt::Key_Left:
-      playerMove(-1, 0);
-      keyEvent->setAccepted(true);
-      break;
-    case Qt::Key_Right:
-      playerMove(1, 0);
-      keyEvent->setAccepted(true);
-      break;
-    case Qt::Key_C:
-      getView()->showCharView();
-      keyEvent->setAccepted(true);
-      break;
-    }
-  }
+void GameScene::keyPressEvent ( QKeyEvent *keyEvent ) {
+	if ( keyEvent ) {
+		keyEvent->setAccepted ( false );
+		switch ( keyEvent->key() ) {
+		case Qt::Key_Up:
+			playerMove ( 0, -1 );
+			keyEvent->setAccepted ( true );
+			break;
+		case Qt::Key_Down:
+			playerMove ( 0, 1 );
+			keyEvent->setAccepted ( true );
+			break;
+		case Qt::Key_Left:
+			playerMove ( -1, 0 );
+			keyEvent->setAccepted ( true );
+			break;
+		case Qt::Key_Right:
+			playerMove ( 1, 0 );
+			keyEvent->setAccepted ( true );
+			break;
+		case Qt::Key_C:
+			getView()->showCharView();
+			keyEvent->setAccepted ( true );
+			break;
+		}
+	}
 }
 
-void GameScene::playerMove(int dirx, int diry) {
-  if (!CompletionListener::getInstance()->isCompleted()) {
-    return;
-  }
-  if (player->getFightList()->size() > 0 ||
-      getView()->getCharView()->isVisible()) {
-    return;
-  }
-  int sizex, sizey;
-  if (getView()) {
-    sizex = getView()->width() / map->getTileSize() + 1;
-    sizey = getView()->height() / map->getTileSize() + 1;
-  } else {
-    sizex = QApplication::desktop()->width() / map->getTileSize() + 1;
-    sizey = QApplication::desktop()->height() / map->getTileSize() + 1;
-  }
-  map->move(dirx, diry);
+void GameScene::playerMove ( int dirx, int diry ) {
+	if ( !CompletionListener::getInstance()->isCompleted() ) {
+		return;
+	}
+	if ( player->getFightList()->size() > 0 ||
+	        getView()->getCharView()->isVisible() ) {
+		return;
+	}
+	int sizex, sizey;
+	if ( getView() ) {
+		sizex = getView()->width() / map->getTileSize() + 1;
+		sizey = getView()->height() / map->getTileSize() + 1;
+	} else {
+		sizex = QApplication::desktop()->width() / map->getTileSize() + 1;
+		sizey = QApplication::desktop()->height() / map->getTileSize() + 1;
+	}
+	map->move ( dirx, diry );
 }
 
-void GameScene::mousePressEvent(QGraphicsSceneMouseEvent *event) {
-  QGraphicsScene::mousePressEvent(event);
+void GameScene::mousePressEvent ( QGraphicsSceneMouseEvent *event ) {
+	QGraphicsScene::mousePressEvent ( event );
 }
 
-void GameScene::mouseMoveEvent(QGraphicsSceneMouseEvent *event) {
-  QGraphicsScene::mouseMoveEvent(event);
+void GameScene::mouseMoveEvent ( QGraphicsSceneMouseEvent *event ) {
+	QGraphicsScene::mouseMoveEvent ( event );
 }
 
-void GameScene::mouseReleaseEvent(QGraphicsSceneMouseEvent *event) {
-  QGraphicsScene::mouseReleaseEvent(event);
+void GameScene::mouseReleaseEvent ( QGraphicsSceneMouseEvent *event ) {
+	QGraphicsScene::mouseReleaseEvent ( event );
 }
-Map *GameScene::getMap() const
-{
-    return map;
-}
-
-void GameScene::setMap(Map *value)
-{
-    map = value;
+Map *GameScene::getMap() const {
+	return map;
 }
 
-GameView *GameScene::getView(){
-    return dynamic_cast<GameView*>(this->views()[0]);
+void GameScene::setMap ( Map *value ) {
+	map = value;
 }
 
-Player *GameScene::getPlayer() const
-{
-    return player;
+GameView *GameScene::getView() {
+	return dynamic_cast<GameView*> ( this->views() [0] );
 }
 
-void GameScene::setPlayer(Player *value)
-{
-    player = value;
+Player *GameScene::getPlayer() const {
+	return player;
+}
+
+void GameScene::setPlayer ( Player *value ) {
+	player = value;
 }
 

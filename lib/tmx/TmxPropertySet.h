@@ -32,50 +32,45 @@
 
 class TiXmlNode;
 
-namespace Tmx
-{
+namespace Tmx {
 //-----------------------------------------------------------------------------
 // This class contains a map of properties.
 //-----------------------------------------------------------------------------
-class PropertySet
-{
+class PropertySet {
 public:
-    PropertySet();
-    ~PropertySet();
+	PropertySet();
+	~PropertySet();
 
-    // Parse a node containing all the property nodes.
-    void Parse(const TiXmlNode *propertiesNode);
+	// Parse a node containing all the property nodes.
+	void Parse ( const TiXmlNode *propertiesNode );
 
-    // Get a numeric property (integer).
-    int GetNumericProperty(const std::string &name) const;
-    // Get a numeric property (float).
-    float GetFloatProperty(const std::string &name) const;
+	// Get a numeric property (integer).
+	int GetNumericProperty ( const std::string &name ) const;
+	// Get a numeric property (float).
+	float GetFloatProperty ( const std::string &name ) const;
 
-    // Get a literal property (string).
-    std::string GetLiteralProperty(const std::string &name) const;
+	// Get a literal property (string).
+	std::string GetLiteralProperty ( const std::string &name ) const;
 
-    // Returns the amount of properties.
-    int GetSize() const
-    {
-        return properties.size();
-    }
+	// Returns the amount of properties.
+	int GetSize() const {
+		return properties.size();
+	}
 
-    bool HasProperty(const std::string& name) const;
+	bool HasProperty ( const std::string& name ) const;
 
-    // Returns the STL map of the properties.
-    std::map< std::string, std::string > GetList() const
-    {
-        return properties;
-    }
+	// Returns the STL map of the properties.
+	std::map< std::string, std::string > GetList() const {
+		return properties;
+	}
 
-    // Returns whether there are no properties.
-    bool Empty() const
-    {
-        return properties.empty();
-    }
+	// Returns whether there are no properties.
+	bool Empty() const {
+		return properties.empty();
+	}
 
 private:
-    std::map< std::string, std::string > properties;
+	std::map< std::string, std::string > properties;
 
 };
 };

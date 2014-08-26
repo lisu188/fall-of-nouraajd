@@ -7,13 +7,13 @@
 
 class Destroyer : private std::list<AnimatedObject *> {
 public:
-  static void add(AnimatedObject *object);
-  static void remove(AnimatedObject *object);
+	static void add ( AnimatedObject *object );
+	static void remove ( AnimatedObject *object );
 
 private:
-  Destroyer();
-  ~Destroyer();
-  static Destroyer instance;
+	Destroyer();
+	~Destroyer();
+	static Destroyer instance;
 };
 
 #endif // DESTROYER_H
