@@ -1,42 +1,31 @@
 {
-"Stun" :
-    {
-        "duration" : 2
-    },
-"AbyssalShadowsEffect" :
-    {
-        "duration" : 4
-    },
-"ArmorOfEndlessWinterEffect" :
-    {
-        "duration" : 3,
-"buff" :
-        true
-    },
-"EndlessPainEffect" :
-    {
-        "duration" : 2
-    },
-"MutilationEffect" :
-    {
-        "duration" : 3
-    },
-"LethalPoisonEffect" :
-    {
-        "duration" : 6
-    },
-"ChloroformEffect" :
-    {
-        "duration" : 4
-    },
-"BloodlashEffect" :
-    {
-        "duration" : 3
-    },
-"BarrierEffect" :
-    {
-        "duration" : 3,
-"buff" :
-        true
+    "AbyssalShadowsEffect": {
+        "duration": 4
+    }, 
+    "ArmorOfEndlessWinterEffect": {
+        "buff": true, 
+        "duration": 3
+    }, 
+    "BarrierEffect": {
+        "buff": true, 
+        "duration": 3
+    }, 
+    "BloodlashEffect": {
+        "duration": 3
+    }, 
+    "ChloroformEffect": {
+        "duration": 4
+    }, 
+    "EndlessPainEffect": {
+        "duration": 2
+    }, 
+    "LethalPoisonEffect": {
+        "duration": 6
+    }, 
+    "MutilationEffect": {
+        "duration": 3
+    }, 
+    "Stun": {
+        "duration": 2
     }
 }
