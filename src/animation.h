@@ -6,17 +6,17 @@
 
 class Animation : private std::map<int, std::pair<QPixmap *, int> > {
 public:
-  Animation();
-  ~Animation();
-  QPixmap *getImage();
-  int getTime();
-  int size();
+	Animation();
+	~Animation();
+	QPixmap *getImage();
+	int getTime();
+	int size();
 
-  void next();
-  void add(QPixmap *img, int time);
+	void next();
+	void add ( QPixmap *img, int time );
 
 private:
-  int actual;
+	int actual;
 };
 
 #endif // ANIMATION_H

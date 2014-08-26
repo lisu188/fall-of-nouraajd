@@ -14,25 +14,25 @@
 class GameView;
 class FightView;
 class GameScene : public QGraphicsScene {
-  Q_OBJECT
+	Q_OBJECT
 public:
-  void playerMove(int dirx, int diry);
-  void startGame(std::string file);
-  Player *getPlayer() const;
-  void setPlayer(Player *value);
-  Map *getMap() const;
-  void setMap(Map *value);
-  GameView *getView();
+	void playerMove ( int dirx, int diry );
+	void startGame ( std::string file );
+	Player *getPlayer() const;
+	void setPlayer ( Player *value );
+	Map *getMap() const;
+	void setMap ( Map *value );
+	GameView *getView();
 
 protected:
-  void keyPressEvent(QKeyEvent *keyEvent);
-  virtual void mousePressEvent(QGraphicsSceneMouseEvent *event);
-  virtual void mouseMoveEvent(QGraphicsSceneMouseEvent *event);
-  virtual void mouseReleaseEvent(QGraphicsSceneMouseEvent *event);
+	void keyPressEvent ( QKeyEvent *keyEvent );
+	virtual void mousePressEvent ( QGraphicsSceneMouseEvent *event );
+	virtual void mouseMoveEvent ( QGraphicsSceneMouseEvent *event );
+	virtual void mouseReleaseEvent ( QGraphicsSceneMouseEvent *event );
 
 private:
-  Map *map;
-  Player *player;
+	Map *map;
+	Player *player;
 };
 
 #endif // GAMESCENE_H

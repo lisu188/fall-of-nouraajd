@@ -3,8 +3,7 @@
 
 # include "config.h"
 
-namespace Json
-{
+namespace Json {
 
 // writer.h
 class FastWriter;
