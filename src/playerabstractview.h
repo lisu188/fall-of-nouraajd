@@ -3,11 +3,10 @@
 
 #include <QWidget>
 
-class PlayerAbstractView : public QWidget
-{
-    Q_OBJECT
+class PlayerAbstractView : public QWidget {
+	Q_OBJECT
 public:
-    explicit PlayerAbstractView(QWidget *parent = 0);
+	explicit PlayerAbstractView ( QWidget *parent = 0 );
 
 };
 

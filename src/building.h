@@ -5,24 +5,24 @@
 #include <src/map.h>
 
 class Building : public MapObject {
-  Q_OBJECT
-  Q_PROPERTY(bool enabled READ isEnabled WRITE setEnabled USER true)
+	Q_OBJECT
+	Q_PROPERTY ( bool enabled READ isEnabled WRITE setEnabled USER true )
 public:
-  static Building *createBuilding(QString name);
-  Building();
-  Building(const Building &);
-  virtual void onEnter();
-  virtual void onMove();
-  virtual void onCreate();
-  virtual void onDestroy();
-  virtual void loadFromJson(std::string name);
-  // PROPERTIES
-  bool isEnabled();
-  void setEnabled(bool enabled);
+	static Building *createBuilding ( QString name );
+	Building();
+	Building ( const Building & );
+	virtual void onEnter();
+	virtual void onMove();
+	virtual void onCreate();
+	virtual void onDestroy();
+	virtual void loadFromJson ( std::string name );
+	// PROPERTIES
+	bool isEnabled();
+	void setEnabled ( bool enabled );
 
 protected:
-  bool enabled = true;
+	bool enabled = true;
 };
-Q_DECLARE_METATYPE(Building)
+Q_DECLARE_METATYPE ( Building )
 
 #endif // BUILDING_H

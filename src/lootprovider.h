@@ -4,12 +4,12 @@
 
 class LootProvider : private std::map<std::string, int> {
 public:
-  std::set<Item *> *getLoot(int value);
-  LootProvider(Map *map);
-  ~LootProvider();
+	std::set<Item *> *getLoot ( int value );
+	LootProvider ( Map *map );
+	~LootProvider();
 private:
-  std::set<Item *> *calculateLoot(int value);
-  Map* map;
+	std::set<Item *> *calculateLoot ( int value );
+	Map* map;
 };
 
 #endif // LOOTPROVIDER_H

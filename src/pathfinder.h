@@ -10,97 +10,97 @@
 
 class PathFinder : public QObject {
 public:
-  PathFinder();
-  virtual Coords findPath(Creature *first, Creature *second) = 0;
+	PathFinder();
+	virtual Coords findPath ( Creature *first, Creature *second ) = 0;
 };
 
 class DumbPathFinder : public PathFinder {
-  Q_OBJECT
+	Q_OBJECT
 public:
-  DumbPathFinder();
-  DumbPathFinder(const DumbPathFinder &);
+	DumbPathFinder();
+	DumbPathFinder ( const DumbPathFinder & );
 
-  // PathFinder interface
+	// PathFinder interface
 public:
-  Coords findPath(Creature *first, Creature *second);
+	Coords findPath ( Creature *first, Creature *second );
 };
-Q_DECLARE_METATYPE(DumbPathFinder)
+Q_DECLARE_METATYPE ( DumbPathFinder )
 
 class RandomPathFinder : public PathFinder {
-  Q_OBJECT
+	Q_OBJECT
 public:
-  RandomPathFinder();
-  RandomPathFinder(const RandomPathFinder &);
-  // PathFinder interface
+	RandomPathFinder();
+	RandomPathFinder ( const RandomPathFinder & );
+	// PathFinder interface
 public:
-  Coords findPath(Creature *first, Creature *second);
+	Coords findPath ( Creature *first, Creature *second );
 };
-Q_DECLARE_METATYPE(RandomPathFinder)
+Q_DECLARE_METATYPE ( RandomPathFinder )
 
 class Cell {
 public:
-  int x, y;
-  Coords goal;
-  Cell(int x, int y, Coords goal) : x(x), y(y), goal(goal) {}
-  Coords toCoords() { return Coords(x, y, goal.z); }
+	int x, y;
+	Coords goal;
+	Cell ( int x, int y, Coords goal ) : x ( x ), y ( y ), goal ( goal ) {}
+	Coords toCoords() { return Coords ( x, y, goal.z ); }
 };
 
 class SmartPathFinder : public PathFinder {
-  Q_OBJECT
+	Q_OBJECT
 public:
-  SmartPathFinder();
-  SmartPathFinder(const SmartPathFinder &);
+	SmartPathFinder();
+	SmartPathFinder ( const SmartPathFinder & );
 
-  // PathFinder interface
+	// PathFinder interface
 public:
-  Coords findPath(Creature *first, Creature *second);
+	Coords findPath ( Creature *first, Creature *second );
 
 private:
-  int getCost(Coords coords);
-  std::list<Coords> getNearCells(Coords coords);
-  std::unordered_map<Coords, int, CoordsHasher> values;
-  Coords getNearestCell(Coords start);
-  void processNode(Creature *first, std::list<Cell> &nodes,
-                   std::unordered_set<Coords, CoordsHasher> &marked);
-  bool canStep(Map *map, int x, int y, int z);
+	int getCost ( Coords coords );
+	std::list<Coords> getNearCells ( Coords coords );
+	std::unordered_map<Coords, int, CoordsHasher> values;
+	Coords getNearestCell ( Coords start );
+	void processNode ( Creature *first, std::list<Cell> &nodes,
+	                   std::unordered_set<Coords, CoordsHasher> &marked );
+	bool canStep ( Map *map, int x, int y, int z );
 };
-Q_DECLARE_METATYPE(SmartPathFinder)
+Q_DECLARE_METATYPE ( SmartPathFinder )
 
 class CompletionListener : public QObject {
-  Q_OBJECT
+	Q_OBJECT
 public:
-  static CompletionListener *getInstance() {
-    static CompletionListener instance;
-    return &instance;
-  }
-  void start() { started = true; }
+	static CompletionListener *getInstance() {
+		static CompletionListener instance;
+		return &instance;
+	}
+	void start() { started = true; }
 
-  void stop() { started = false; }
+	void stop() { started = false; }
 
-  bool isCompleted() { return workers == 0; }
+	bool isCompleted() { return workers == 0; }
 
-  void run();
-  Q_SIGNAL void completed();
-  Q_SLOT void registerWorker();
-  Q_SLOT void deregisterWorker();
+	void run();
+	Q_SIGNAL void completed();
+	Q_SLOT void registerWorker();
+	Q_SLOT void deregisterWorker();
 
 private:
-  int workers;
-  bool started;
+	int workers;
+	bool started;
 };
 
 class PathFinderWorker : public QObject, public QRunnable {
-  Q_OBJECT
+	Q_OBJECT
 public:
-  PathFinderWorker(Creature *first, Creature *second, PathFinder *finder);
-  void run();
+	PathFinderWorker ( Creature *first, Creature *second, PathFinder *finder );
+	void run();
 
 private:
-  Q_SIGNAL void completed(int x, int y);
-  Q_SIGNAL void started();
-  Q_SIGNAL void ended();
-  Creature *first;
-  Creature *second;
-  PathFinder *finder;
+	Q_SIGNAL void completed ( int x, int y );
+	Q_SIGNAL void started();
+	Q_SIGNAL void ended();
+	Creature *first;
+	Creature *second;
+	PathFinder *finder;
 };
 #endif // PATHFINDER_H
