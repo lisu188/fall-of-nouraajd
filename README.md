@@ -1,7 +1,7 @@
 # Recovered game snapshot
 
-Original commit: `181f31e1e9a7f3516c7fbd3d4400aa0822c1d387`. Original tree: `07db997d47b27ffafa47a068acfaf2bfa31a997c`.
-Startup was verified from identical recovered sources at `181f31e1e9a7f3516c7fbd3d4400aa0822c1d387`.
+Original commit: `c1d177cb26e2e664ce4f603d823a2fea059d9386`. Original tree: `10bca83d0f0cc98e901f206b7a7d1fa5c35a7399`.
+Startup was verified from identical recovered sources at `c1d177cb26e2e664ce4f603d823a2fea059d9386`.
 
 This recovered version compiled and linked on Linux, started the real game on an isolated Xvfb display,
 loaded its map and a healthy player, rendered the screenshot below, and exited normally.
@@ -35,13 +35,13 @@ launches run the game's original entry point. Startup evidence does not establis
 
 ## Recovery provenance
 
-compatibilityRepair: 2, exactOriginal: 65, reconstruction: 48.
+compatibilityRepair: 2, exactOriginal: 64, reconstruction: 48.
 
 - `Game.pro`: working reconstruction
 - `config/object.json`: unverified donor reconstruction; split object descriptors e8b7c3d0e6da989122a0587943a98504342da3cd:config/objects flattened to observed legacy class/path API; target tile/interaction entries preserved; species stats retain uncertainty of reconstructed creatures catalog
-- `format.py`: unverified donor reconstruction; 033454720855389e3a77640ca1d93bbe94d5a999:format.py; headerMatch=0; apiOverlap=0/10000; distance=1
+- `format.py`: unverified donor reconstruction; 033454720855389e3a77640ca1d93bbe94d5a999:format.py; headerMatch=0; apiOverlap=0/10000; distance=2
 - `images/loading.png`: synthesized visible 32px placeholder; original artwork unavailable; unverified
-- `lib/base64/base64.cpp`: unverified donor reconstruction; 779fb803ff021de5e74ed3b24d7c31a9adcaa236:base64/base64.cpp; headerMatch=0; apiOverlap=10000/10000; distance=58
+- `lib/base64/base64.cpp`: unverified donor reconstruction; 779fb803ff021de5e74ed3b24d7c31a9adcaa236:base64/base64.cpp; headerMatch=0; apiOverlap=10000/10000; distance=59
 - `lib/json/json_batchallocator.h`: unverified upstream reconstruction; https://github.com/open-source-parsers/jsoncpp/tree/4fce396c9d3e27a8ab8fb88e94c1676e021ae3a6; adapted json include prefix to historical lib/json layout
 - `lib/json/json_reader.cpp`: unverified upstream reconstruction; https://github.com/open-source-parsers/jsoncpp/tree/4fce396c9d3e27a8ab8fb88e94c1676e021ae3a6; adapted json include prefix to historical lib/json layout
 - `lib/json/json_value.cpp`: unverified upstream reconstruction; https://github.com/open-source-parsers/jsoncpp/tree/4fce396c9d3e27a8ab8fb88e94c1676e021ae3a6; adapted json include prefix to historical lib/json layout
@@ -88,7 +88,7 @@ compatibilityRepair: 2, exactOriginal: 65, reconstruction: 48.
 - `lib/json/LICENSE`: https://github.com/open-source-parsers/jsoncpp/tree/4fce396c9d3e27a8ab8fb88e94c1676e021ae3a6 upstream distribution license
 - `scripts/PSF_LICENSE`: https://www.python.org/ftp/python/3.3.7/Python-3.3.7.tar.xz upstream Python distribution license
 
-Restored source fingerprint: `656762346c80e39c6c169f00768f60dab2956ca6299206bfc0a33ab6ced048ac`.
+Restored source fingerprint: `e30d4a5fb5c2ace7d8331a7c2ebea0359b8cd66db8288735100da0144518b734`.
 
 The actual 1278 × 718 screenshot and [verification metadata](recovery/verification.json) belong to
 this source version. Reconstructed code and borrowed assets are identified in that metadata; they are

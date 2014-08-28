@@ -19,11 +19,6 @@
 #include <src/creature.h>
 
 std::unordered_map<std::string, std::function<void(Creature *, Creature *)>> Interaction::actions = {
-    {"Attack", Attack},
-    {"ElemStaff", ElemStaff},
-    {"DoubleAttack", DoubleAttack},
-    {"SneakAttack", SneakAttack},
-    {"Strike", Strike},
     {"ArmorOfEndlessWinter", ArmorOfEndlessWinter},
     {"ChaosBlast", ChaosBlast},
     {"Devour", Devour},
@@ -56,10 +51,37 @@ void Interaction::loadFromJson(std::string name) {
     }
 }
 
+// From #237 some actions are Python functions in scripts/Interactions.py, looked up by
+// name in the map's ScriptEngine namespace (inferred from ScriptEngine::getObject).
+namespace {
+bool runPythonAction(Interaction *self, Creature *first, Creature *second) {
+    GameScene *gameScene = dynamic_cast<GameScene *>(self->scene());
+    Map *actionMap = self->getMap() ? self->getMap() : (gameScene ? gameScene->getMap() : NULL);
+    if (!actionMap && first) {
+        actionMap = first->getMap();
+    }
+    if (!actionMap || !actionMap->getEngine()) {
+        return false;
+    }
+    boost::python::object action = actionMap->getEngine()->getObject(self->typeName);
+    if (action.is_none()) {
+        return false;
+    }
+    try {
+        action(boost::python::ptr(first), boost::python::ptr(second));
+    } catch (boost::python::error_already_set &) {
+        PyErr_Print();
+    }
+    return true;
+}
+}
+
 void Interaction::onAction(Creature *first, Creature *second) {
     qDebug() << first->typeName.c_str() << "used" << this->typeName.c_str() << "against" << second->typeName.c_str();
     if (actions[typeName]) {
         actions[typeName](first, second);
+    } else if (runPythonAction(this, first, second)) {
+        return;
     } else if (!effect.empty()) {
         Json::Value config = (*ConfigurationProvider::getConfig("config/effects.json"))[effect];
         Creature *target = config.get("buff", false).asBool() ? first : second;
