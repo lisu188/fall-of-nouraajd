@@ -33,11 +33,6 @@ private:
 };
 Q_DECLARE_METATYPE ( Interaction )
 
-void Attack ( Creature *first, Creature *second );
-void ElemStaff ( Creature *first, Creature *second );
-void DoubleAttack ( Creature *first, Creature *second );
-void SneakAttack ( Creature *first, Creature *second );
-void Strike ( Creature *first, Creature *second );
 void ArmorOfEndlessWinter ( Creature *first, Creature *second );
 void ChaosBlast ( Creature *first, Creature *second );
 void Devour ( Creature *first, Creature *second );
