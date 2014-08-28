@@ -34,6 +34,14 @@ QString ScriptEngine::buildCommand ( std::initializer_list<std::string> list ) {
 	return command;
 }
 
+boost::python::object ScriptEngine::getObject ( std::string name ) {
+	if ( !main_namespace.contains ( name.c_str() ) ) {
+		boost::python::object object;
+		return object;
+	}
+	return main_namespace[name.c_str()];
+}
+
 void ScriptEngine::executeCommand ( std::initializer_list<std::string> list ) {
 	executeScript ( buildCommand ( list ) );
 }
@@ -47,6 +55,7 @@ ScriptEngine::ScriptEngine ( Map *map ) {
 	PyRun_SimpleString ( "import Game" );
 	PyRun_SimpleString ( "from Game import *" );
 	PyRun_SimpleString ( "from Objects import *" );
+	PyRun_SimpleString ( "from Interactions import *" );
 	PyRun_SimpleString ( "objects=[]" );
 	std::stringstream stream;
 	stream << std::hex << ( unsigned long ) map;

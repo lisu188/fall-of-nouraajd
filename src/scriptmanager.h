@@ -11,11 +11,15 @@ public:
 	void executeScript ( QString script );
 	void executeCommand ( std::initializer_list<std::string> list );
 	QString buildCommand ( std::initializer_list<std::string> list );
+	boost::python::object getObject ( std::string name );
 	ScriptEngine ( Map *map );
 	~ScriptEngine();
 	template<typename T>
-	T getObject ( std::string clas ) {
+	T createObject ( std::string clas ) {
 		try {
+			if ( !main_namespace.contains ( clas.c_str() ) ) {
+				return NULL;
+			}
 			std::string script="object=";
 			script=script.append ( clas );
 			script=script.append ( "()" );
