@@ -47,7 +47,7 @@ bool GameView::init = false;
 
 void GameView::start() {
 
-    scene->startGame("maps/map.tmx");
+    scene->startGame(mapName);
     Player *player = scene->getPlayer();
     ViewLists &lists = viewLists[this];
     copyPlayerLists(player, lists);
@@ -72,7 +72,7 @@ void GameView::start() {
     init = true;
 }
 
-GameView::GameView() {
+GameView::GameView(std::string mapName) : mapName(mapName) {
     playerInventoryView = 0;
     playerSkillsView = 0;
     playerEquippedView = 0;

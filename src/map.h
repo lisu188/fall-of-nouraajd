@@ -68,6 +68,7 @@ public:
   int getEntryZ();
   MapObject *getObjectByName(std::string name);
   Q_SLOT void moveCompleted();
+  Q_SIGNAL void loadingComplete();
   Q_INVOKABLE void ensureTile(int i, int j);
   std::unordered_map<Coords, Tile *, CoordsHasher> tiles;
   std::map<int, std::pair<int, int> > getBounds();

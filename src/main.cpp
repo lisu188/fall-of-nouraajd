@@ -71,7 +71,7 @@ int main(int argc, char *argv[])
     QThreadPool::globalInstance()->setMaxThreadCount(16);
     QThreadPool::globalInstance()->setExpiryTimeout(0);
     registerMetaTypes();
-    GameView view;
+    GameView view("maps/map.tmx");
     int ret = a.exec();
     return ret;
 }

@@ -52,7 +52,6 @@ SOURCES += lib/base64/base64.cpp \
     src/charview.cpp \
     src/configurationprovider.cpp \
     src/creature.cpp \
-    src/destroyer.cpp \
     src/event.cpp \
     src/fightview.cpp \
     src/gamescene.cpp \
@@ -125,7 +124,6 @@ HEADERS  += \
     src/charview.h \
     src/configurationprovider.h \
     src/creature.h \
-    src/destroyer.h \
     src/event.h \
     src/fightview.h \
     src/gamescene.h \
