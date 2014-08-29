@@ -24,8 +24,9 @@ public:
 			script=script.append ( clas );
 			script=script.append ( "()" );
 			executeScript ( QString::fromStdString ( script ) );
-			executeScript ( "objects.append(object)" );
-			return boost::python::extract<T> ( main_namespace["object"] );
+			boost::python::object object= main_namespace["object"];
+			boost::python::incref ( object.ptr() );
+			return boost::python::extract<T> ( object );
 		} catch ( ... ) {
 			PyErr_Print();
 		}

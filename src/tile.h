@@ -12,6 +12,7 @@ class Tile : public MapObject {
 	Q_OBJECT
 public:
 	Tile ( std::string name, int x = 0, int y = 0, int z = 0 );
+	Tile ( QString name, int x = 0, int y = 0, int z = 0 );
 	Tile();
 	Tile ( const Tile &tile );
 	~Tile();
@@ -21,8 +22,8 @@ public:
 	void onStep();
 	bool canStep() const;
 	static Tile *getTile ( std::string type, int x, int y, int z );
-	void addToScene ( QGraphicsScene *scene );
-	void removeFromScene ( QGraphicsScene *scene );
+	void addToScene ( GameScene *scene );
+	void removeFromScene ( GameScene *scene );
 	void loadFromJson ( std::string name );
 	void setDraggable();
 	virtual void onEnter() {}
