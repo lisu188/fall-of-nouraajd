@@ -2,7 +2,6 @@
 
 #include <src/gamescene.h>
 #include <src/configurationprovider.h>
-#include <src/destroyer.h>
 
 std::unordered_map<std::string, std::function<void() > > Tile::steps {
 	{ "RoadTile", RoadTile }
@@ -11,6 +10,10 @@ std::unordered_map<std::string, std::function<void() > > Tile::steps {
 Tile::Tile ( std::string name, int x, int y, int z ) : MapObject ( x, y, z, 1 ) {
 	setXYZ ( x, y, z );
 	loadFromJson ( name );
+}
+
+Tile::Tile ( QString name, int x, int y, int z ) :Tile ( name.toStdString(),x,y,z ) {
+
 }
 
 Tile::Tile() {}
@@ -47,12 +50,12 @@ Tile *Tile::getTile ( std::string type, int x, int y, int z ) {
 	return new Tile ( type, x, y, z );
 }
 
-void Tile::addToScene ( QGraphicsScene *scene ) {
+void Tile::addToScene ( GameScene *scene ) {
 	setPos ( posx * Map::getTileSize(), posy * Map::getTileSize() );
-	MapObject::setMap ( dynamic_cast<GameScene *> ( scene )->getMap() );
+	MapObject::setMap (  scene ->getMap() );
 }
 
-void Tile::removeFromScene ( QGraphicsScene *scene ) { scene->removeItem ( this ); }
+void Tile::removeFromScene ( GameScene *scene ) { scene->removeItem ( this ); }
 
 void Tile::loadFromJson ( std::string name ) {
 	this->typeName = name;

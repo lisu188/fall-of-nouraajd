@@ -41,6 +41,5 @@ class Cave(Building):
         enabled=self.getBoolProperty("enabled");
         if enabled and monsters >0 and (random.randint(1,100)) <= chance:
             location=self.getCoords()
-            print location.x,location.y,location.z
             Game.addObject(monster,location.x,location.y,location.z);
             self.incProperty("monsters",-1);

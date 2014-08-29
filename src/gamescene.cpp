@@ -11,7 +11,6 @@
 #include <src/playerlistview.h>
 #include <src/animationprovider.h>
 #include <src/configurationprovider.h>
-#include <src/destroyer.h>
 #include <src/fightview.h>
 #include <fstream>
 #include <lib/json/json.h>
@@ -39,6 +38,7 @@ public:
 					//qDebug()<<loaded/all*100<<"%";
 				}
 			}
+		map->loadingComplete();
 	}
 private:
 	Map *map;

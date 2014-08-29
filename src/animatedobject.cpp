@@ -1,8 +1,5 @@
 #include "animatedobject.h"
 #include "animationprovider.h"
-
-#include <src/destroyer.h>
-
 #include <src/gamescene.h>
 #include <QDrag>
 #include <QMimeData>
@@ -11,13 +8,11 @@
 
 AnimatedObject::AnimatedObject() {
 	this->moveToThread ( QApplication::instance()->thread() );
-	Destroyer::add ( this );
 	timer = 0;
 	setShapeMode ( QGraphicsPixmapItem::BoundingRectShape );
 }
 
 AnimatedObject::~AnimatedObject() {
-	Destroyer::remove ( this );
 	if ( timer ) {
 		delete timer;
 	}
