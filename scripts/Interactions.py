@@ -34,3 +34,8 @@ def Strike ( first, second ):
         if dmg:
             second.hurt ( dmg + first.getStats().getDamage())
 
+def ChaosBlast (first, second ):
+    damage=Damage()
+    damage.setFire ( first.getMana() / 2 );
+    damage.setThunder ( first.getMana() / 2 );
+    second.hurt ( damage );
