@@ -20,7 +20,6 @@
 
 std::unordered_map<std::string, std::function<void(Creature *, Creature *)>> Interaction::actions = {
     {"ArmorOfEndlessWinter", ArmorOfEndlessWinter},
-    {"ChaosBlast", ChaosBlast},
     {"Devour", Devour},
     {"FrostBolt", FrostBolt},
     {"MagicMissile", MagicMissile},
@@ -31,7 +30,8 @@ std::unordered_map<std::string, std::function<void(Creature *, Creature *)>> Int
     {"Bloodlash", Bloodlash},
     {"DeathStrike", DeathStrike},
     {"Barrier", Barrier},
-    {"BloodThirst", BloodThirst}};
+    {"BloodThirst", BloodThirst}
+};
 
 
 

@@ -3,6 +3,7 @@
 #include <QObject>
 #include <string>
 #include <boost/python.hpp>
+#define PY_UNSAFE(FUNC) try{FUNC}catch(...){PyErr_Print();throw;}
 
 class Map;
 
@@ -16,21 +17,17 @@ public:
 	~ScriptEngine();
 	template<typename T>
 	T createObject ( std::string clas ) {
-		try {
-			if ( !main_namespace.contains ( clas.c_str() ) ) {
-				return NULL;
-			}
-			std::string script="object=";
-			script=script.append ( clas );
-			script=script.append ( "()" );
-			executeScript ( QString::fromStdString ( script ) );
-			boost::python::object object= main_namespace["object"];
-			boost::python::incref ( object.ptr() );
-			return boost::python::extract<T> ( object );
-		} catch ( ... ) {
-			PyErr_Print();
-		}
+		PY_UNSAFE (
+		if ( !main_namespace.contains ( clas.c_str() ) ) {
 		return NULL;
+	}
+	std::string script="object=";
+	                   script=script.append ( clas );
+	                   script=script.append ( "()" );
+	                   executeScript ( QString::fromStdString ( script ) );
+	                   boost::python::object object= main_namespace["object"];
+	                   boost::python::incref ( object.ptr() );
+	                   return boost::python::extract<T> ( object ); )
 	}
 private:
 	boost::python::object main_module;

@@ -100,4 +100,8 @@ BOOST_PYTHON_MODULE(_Game)
         .add_property("normal", &Damage::getNormal, &Damage::setNormal)
         .add_property("shadow", &Damage::getShadow, &Damage::setShadow);
     boost::python::class_<Interaction, boost::noncopyable>("Interaction", boost::python::no_init);
+    boost::python::class_<Coords>("Coords", boost::python::init<int, int, int>())
+        .def_readwrite("x", &Coords::x)
+        .def_readwrite("y", &Coords::y)
+        .def_readwrite("z", &Coords::z);
 }
