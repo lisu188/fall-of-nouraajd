@@ -1,6 +1,6 @@
-import Game
 import random
 from _Game import Building
+from _Game import Coords
 
 class Teleporter(Building):
     def __init__(self):
@@ -31,8 +31,8 @@ class Cave(Building):
                 for j in range(-1,2):
                     if j == 0 and i == 0:
                         continue;
-                    Game.addObject(monster,location.x+i,location.y+j,location.z);
-            Game.removeObject(self.name);
+                    self.getMap().addObjectByName(monster,Coords(location.x+i,location.y+j,location.z));
+            self.getMap().removeObjectByName(self.name);
 
     def onMove(self):
         chance=self.getNumericProperty("chance");
@@ -41,5 +41,5 @@ class Cave(Building):
         enabled=self.getBoolProperty("enabled");
         if enabled and monsters >0 and (random.randint(1,100)) <= chance:
             location=self.getCoords()
-            Game.addObject(monster,location.x,location.y,location.z);
+            self.getMap().addObjectByName(monster,Coords(location.x,location.y,location.z));
             self.incProperty("monsters",-1);
