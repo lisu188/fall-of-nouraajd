@@ -1,6 +1,6 @@
 {
   "AbyssalShadows": {
-    "anim": "images/interactions/abyssalshadows/",
+    "anim": "images/interactions/abyssalshadows",
     "effect": "AbyssalShadowsEffect",
     "manaCost": 15
   },
@@ -9,7 +9,7 @@
     "handler": "CTypeHandler"
   },
   "ArmorOfEndlessWinter": {
-    "anim": "images/interactions/armorofendlesswinter/",
+    "anim": "images/interactions/armorofendlesswinter",
     "effect": "ArmorOfEndlessWinterEffect",
     "manaCost": 60
   },
@@ -68,15 +68,15 @@
     "type": "Player"
   },
   "Attack": {
-    "anim": "images/interactions/attack/",
+    "anim": "images/interactions/attack",
     "tooltip": "Standard Attack"
   },
   "Backstab": {
-    "anim": "images/interactions/backstab/",
+    "anim": "images/interactions/backstab",
     "manaCost": 40
   },
   "Barrier": {
-    "anim": "images/interactions/barrier/",
+    "anim": "images/interactions/barrier",
     "effect": "BarrierEffect",
     "manaCost": 17
   },
@@ -90,15 +90,15 @@
     "canStep": true,
     "class": "Tile",
     "handler": "CTypeHandler",
-    "path": "images/tiles/beach/",
+    "path": "images/tiles/beach",
     "type": "Tile"
   },
   "BloodThirst": {
-    "anim": "images/interactions/bloodthirst/",
+    "anim": "images/interactions/bloodthirst",
     "manaCost": 35
   },
   "Bloodlash": {
-    "anim": "images/interactions/bloodlash/",
+    "anim": "images/interactions/bloodlash",
     "effect": "BloodlashEffect",
     "manaCost": 30
   },
@@ -118,7 +118,7 @@
     "type": "Cave"
   },
   "ChaosBlast": {
-    "anim": "images/interactions/chaosblast/",
+    "anim": "images/interactions/chaosblast",
     "manaCost": 150
   },
   "ChestPlateOfTheNorth": {
@@ -138,7 +138,7 @@
     "type": "Armor"
   },
   "Chloroform": {
-    "anim": "images/interactions/chloroform/",
+    "anim": "images/interactions/chloroform",
     "effect": "ChloroformEffect",
     "manaCost": 25
   },
@@ -163,7 +163,7 @@
     "type": "Helmet"
   },
   "DeathStrike": {
-    "anim": "images/interactions/deathstrike/",
+    "anim": "images/interactions/deathstrike",
     "manaCost": 45
   },
   "DesertTile": {
@@ -171,20 +171,20 @@
     "canStep": true,
     "class": "Tile",
     "handler": "CTypeHandler",
-    "path": "images/tiles/desert/",
+    "path": "images/tiles/desert",
     "type": "Tile"
   },
   "Devour": {
-    "anim": "images/interactions/devour/",
+    "anim": "images/interactions/devour",
     "manaCost": 75
   },
   "DoubleAttack": {
-    "anim": "images/interactions/doubleattack/",
+    "anim": "images/interactions/doubleattack",
     "manaCost": 50
   },
   "ElemStaff": {},
   "EndlessPain": {
-    "anim": "images/interactions/endlesspain/",
+    "anim": "images/interactions/endlesspain",
     "effect": "EndlessPainEffect",
     "manaCost": 25
   },
@@ -213,7 +213,7 @@
     "type": "Event"
   },
   "FrostBolt": {
-    "anim": "images/interactions/frostbolt/",
+    "anim": "images/interactions/frostbolt",
     "manaCost": 20
   },
   "FullLifePotion": {
@@ -255,7 +255,7 @@
     "canStep": true,
     "class": "Tile",
     "handler": "CTypeHandler",
-    "path": "images/tiles/grass/",
+    "path": "images/tiles/grass",
     "type": "Tile"
   },
   "GreaterLifePotion": {
@@ -281,7 +281,7 @@
     "canStep": true,
     "class": "Tile",
     "handler": "CTypeHandler",
-    "path": "images/tiles/ground/",
+    "path": "images/tiles/ground",
     "type": "Tile"
   },
   "LavaTile": {
@@ -289,7 +289,7 @@
     "canStep": true,
     "class": "Tile",
     "handler": "CTypeHandler",
-    "path": "images/tiles/lava/",
+    "path": "images/tiles/lava",
     "type": "Tile"
   },
   "LeatherArmor": {
@@ -325,7 +325,7 @@
     "type": "Potion"
   },
   "LethalPoison": {
-    "anim": "images/interactions/lethalpoison/",
+    "anim": "images/interactions/lethalpoison",
     "effect": "LethalPoisonEffect",
     "manaCost": 20
   },
@@ -343,7 +343,7 @@
     "type": "Potion"
   },
   "MagicMissile": {
-    "anim": "images/interactions/magicmissile/",
+    "anim": "images/interactions/magicmissile",
     "manaCost": 5,
     "tooltip": "Magic Missile"
   },
@@ -379,11 +379,11 @@
     "canStep": false,
     "class": "Tile",
     "handler": "CTypeHandler",
-    "path": "images/tiles/mountain/",
+    "path": "images/tiles/mountain",
     "type": "Tile"
   },
   "Mutilation": {
-    "anim": "images/interactions/mutilation/",
+    "anim": "images/interactions/mutilation",
     "effect": "MutilationEffect",
     "manaCost": 15
   },
@@ -556,7 +556,7 @@
     "canStep": true,
     "class": "Tile",
     "handler": "CTypeHandler",
-    "path": "images/tiles/road/",
+    "path": "images/tiles/road",
     "type": "Tile"
   },
   "Robe": {
@@ -582,11 +582,11 @@
     "type": "Item"
   },
   "ShadowBolt": {
-    "anim": "images/interactions/shadowbolt/",
+    "anim": "images/interactions/shadowbolt",
     "manaCost": 45
   },
   "SneakAttack": {
-    "anim": "images/interactions/sneakattack/",
+    "anim": "images/interactions/sneakattack",
     "manaCost": 15
   },
   "SnowTile": {
@@ -594,7 +594,7 @@
     "canStep": true,
     "class": "Tile",
     "handler": "CTypeHandler",
-    "path": "images/tiles/snow/",
+    "path": "images/tiles/snow",
     "type": "Tile"
   },
   "Sorcerer": {
@@ -647,7 +647,7 @@
     "type": "Player"
   },
   "Strike": {
-    "anim": "images/interactions/strike/",
+    "anim": "images/interactions/strike",
     "manaCost": 25
   },
   "Stun": {
@@ -655,7 +655,7 @@
     "handler": "CTypeHandler"
   },
   "Stunner": {
-    "anim": "images/interactions/stun/",
+    "anim": "images/interactions/stun",
     "effect": "Stun",
     "manaCost": 40
   },
@@ -664,7 +664,7 @@
     "canStep": true,
     "class": "Tile",
     "handler": "CTypeHandler",
-    "path": "images/tiles/swamp/",
+    "path": "images/tiles/swamp",
     "type": "Tile"
   },
   "Teleporter": {
@@ -744,7 +744,7 @@
     "canStep": true,
     "class": "Tile",
     "handler": "CTypeHandler",
-    "path": "images/tiles/wasteland/",
+    "path": "images/tiles/wasteland",
     "type": "Tile"
   },
   "WaterTile": {
@@ -752,7 +752,7 @@
     "canStep": false,
     "class": "Tile",
     "handler": "CTypeHandler",
-    "path": "images/tiles/water/",
+    "path": "images/tiles/water",
     "type": "Tile"
   }
 }

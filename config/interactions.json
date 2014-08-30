@@ -1,96 +1,96 @@
 {
     "AbyssalShadows": {
-        "anim": "images/interactions/abyssalshadows/", 
+        "anim": "images/interactions/abyssalshadows", 
         "effect": "AbyssalShadowsEffect", 
         "manaCost": 15
     }, 
     "ArmorOfEndlessWinter": {
-        "anim": "images/interactions/armorofendlesswinter/", 
+        "anim": "images/interactions/armorofendlesswinter", 
         "effect": "ArmorOfEndlessWinterEffect", 
         "manaCost": 60
     }, 
     "Attack": {
-        "anim": "images/interactions/attack/", 
+        "anim": "images/interactions/attack", 
         "tooltip": "Standard Attack"
     }, 
     "Backstab": {
-        "anim": "images/interactions/backstab/", 
+        "anim": "images/interactions/backstab", 
         "manaCost": 40
     }, 
     "Barrier": {
-        "anim": "images/interactions/barrier/", 
+        "anim": "images/interactions/barrier", 
         "effect": "BarrierEffect", 
         "manaCost": 17
     }, 
     "BloodThirst": {
-        "anim": "images/interactions/bloodthirst/", 
+        "anim": "images/interactions/bloodthirst", 
         "manaCost": 35
     }, 
     "Bloodlash": {
-        "anim": "images/interactions/bloodlash/", 
+        "anim": "images/interactions/bloodlash", 
         "effect": "BloodlashEffect", 
         "manaCost": 30
     }, 
     "ChaosBlast": {
-        "anim": "images/interactions/chaosblast/", 
+        "anim": "images/interactions/chaosblast", 
         "manaCost": 150
     }, 
     "Chloroform": {
-        "anim": "images/interactions/chloroform/", 
+        "anim": "images/interactions/chloroform", 
         "effect": "ChloroformEffect", 
         "manaCost": 25
     }, 
     "DeathStrike": {
-        "anim": "images/interactions/deathstrike/", 
+        "anim": "images/interactions/deathstrike", 
         "manaCost": 45
     }, 
     "Devour": {
-        "anim": "images/interactions/devour/", 
+        "anim": "images/interactions/devour", 
         "manaCost": 75
     }, 
     "DoubleAttack": {
-        "anim": "images/interactions/doubleattack/", 
+        "anim": "images/interactions/doubleattack", 
         "manaCost": 50
     }, 
     "ElemStaff": {}, 
     "EndlessPain": {
-        "anim": "images/interactions/endlesspain/", 
+        "anim": "images/interactions/endlesspain", 
         "effect": "EndlessPainEffect", 
         "manaCost": 25
     }, 
     "FrostBolt": {
-        "anim": "images/interactions/frostbolt/", 
+        "anim": "images/interactions/frostbolt", 
         "manaCost": 20
     }, 
     "LethalPoison": {
-        "anim": "images/interactions/lethalpoison/", 
+        "anim": "images/interactions/lethalpoison", 
         "effect": "LethalPoisonEffect", 
         "manaCost": 20
     }, 
     "MagicMissile": {
-        "anim": "images/interactions/magicmissile/", 
+        "anim": "images/interactions/magicmissile", 
         "manaCost": 5, 
         "tooltip": "Magic Missile"
     }, 
     "Mutilation": {
-        "anim": "images/interactions/mutilation/", 
+        "anim": "images/interactions/mutilation", 
         "effect": "MutilationEffect", 
         "manaCost": 15
     }, 
     "ShadowBolt": {
-        "anim": "images/interactions/shadowbolt/", 
+        "anim": "images/interactions/shadowbolt", 
         "manaCost": 45
     }, 
     "SneakAttack": {
-        "anim": "images/interactions/sneakattack/", 
+        "anim": "images/interactions/sneakattack", 
         "manaCost": 15
     }, 
     "Strike": {
-        "anim": "images/interactions/strike/", 
+        "anim": "images/interactions/strike", 
         "manaCost": 25
     }, 
     "Stunner": {
-        "anim": "images/interactions/stun/", 
+        "anim": "images/interactions/stun", 
         "effect": "Stun", 
         "manaCost": 40
     }
