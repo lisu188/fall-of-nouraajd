@@ -1,46 +1,46 @@
 {
     "BeachTile": {
         "canStep": true, 
-        "path": "images/tiles/beach/"
+        "path": "images/tiles/beach"
     }, 
     "DesertTile": {
         "canStep": true, 
-        "path": "images/tiles/desert/"
+        "path": "images/tiles/desert"
     }, 
     "GrassTile": {
         "canStep": true, 
-        "path": "images/tiles/grass/"
+        "path": "images/tiles/grass"
     }, 
     "GroundTile": {
         "canStep": true, 
-        "path": "images/tiles/ground/"
+        "path": "images/tiles/ground"
     }, 
     "LavaTile": {
         "canStep": true, 
-        "path": "images/tiles/lava/"
+        "path": "images/tiles/lava"
     }, 
     "MountainTile": {
         "canStep": false, 
-        "path": "images/tiles/mountain/"
+        "path": "images/tiles/mountain"
     }, 
     "RoadTile": {
         "canStep": true, 
-        "path": "images/tiles/road/"
+        "path": "images/tiles/road"
     }, 
     "SnowTile": {
         "canStep": true, 
-        "path": "images/tiles/snow/"
+        "path": "images/tiles/snow"
     }, 
     "SwampTile": {
         "canStep": true, 
-        "path": "images/tiles/swamp/"
+        "path": "images/tiles/swamp"
     }, 
     "WastelandTile": {
         "canStep": true, 
-        "path": "images/tiles/wasteland/"
+        "path": "images/tiles/wasteland"
     }, 
     "WaterTile": {
         "canStep": false, 
-        "path": "images/tiles/water/"
+        "path": "images/tiles/water"
     }
 }

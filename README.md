@@ -1,7 +1,7 @@
 # Recovered game snapshot
 
-Original commit: `2a7848bbc88570b6b7a805ff1d382290b11f0804`. Original tree: `3d8f3ee723e9148f3769c38c9bc6d76790d4be49`.
-Startup was verified from identical recovered sources at `2a7848bbc88570b6b7a805ff1d382290b11f0804`.
+Original commit: `e0c118c4e58bd1d1758271f32243b66e2950c13c`. Original tree: `6472dafcfb7af4573ee1ed408d0bdea80a47c705`.
+Startup was verified from identical recovered sources at `e0c118c4e58bd1d1758271f32243b66e2950c13c`.
 
 This recovered version compiled and linked on Linux, started the real game on an isolated Xvfb display,
 loaded its map and a healthy player, rendered the screenshot below, and exited normally.
@@ -39,7 +39,7 @@ compatibilityRepair: 2, exactOriginal: 64, reconstruction: 48.
 
 - `Game.pro`: working reconstruction
 - `config/object.json`: unverified donor reconstruction; split object descriptors e8b7c3d0e6da989122a0587943a98504342da3cd:config/objects flattened to observed legacy class/path API; target tile/interaction entries preserved; species stats retain uncertainty of reconstructed creatures catalog
-- `format.py`: unverified donor reconstruction; 51c2e9b0b64c86a8e593a5231c3ef9e44efc5af1:format.py; headerMatch=0; apiOverlap=0/10000; distance=4
+- `format.py`: unverified donor reconstruction; 51c2e9b0b64c86a8e593a5231c3ef9e44efc5af1:format.py; headerMatch=0; apiOverlap=0/10000; distance=3
 - `images/loading.png`: synthesized visible 32px placeholder; original artwork unavailable; unverified
 - `lib/base64/base64.cpp`: unverified donor reconstruction; 779fb803ff021de5e74ed3b24d7c31a9adcaa236:base64/base64.cpp; headerMatch=0; apiOverlap=10000/10000; distance=61
 - `lib/json/json_batchallocator.h`: unverified upstream reconstruction; https://github.com/open-source-parsers/jsoncpp/tree/4fce396c9d3e27a8ab8fb88e94c1676e021ae3a6; adapted json include prefix to historical lib/json layout
@@ -88,7 +88,7 @@ compatibilityRepair: 2, exactOriginal: 64, reconstruction: 48.
 - `lib/json/LICENSE`: https://github.com/open-source-parsers/jsoncpp/tree/4fce396c9d3e27a8ab8fb88e94c1676e021ae3a6 upstream distribution license
 - `scripts/PSF_LICENSE`: https://www.python.org/ftp/python/3.3.7/Python-3.3.7.tar.xz upstream Python distribution license
 
-Restored source fingerprint: `64607750227683b4417a33d09e65d9fbb69ecc086d53f7b231270bed952bb14e`.
+Restored source fingerprint: `f8ce0cf33e832f7707c99c8d9b6b805b8ef45bf4395faf96a939fff151799b63`.
 
 The actual 1278 × 718 screenshot and [verification metadata](recovery/verification.json) belong to
 this source version. Reconstructed code and borrowed assets are identified in that metadata; they are

@@ -1,6 +1,6 @@
 {
   "adapter": {
-    "config": "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-hglhunl2/observer/recovery_smoke_config.h",
+    "config": "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-lfolmj1z/observer/recovery_smoke_config.h",
     "configSha256": "81d0d8facb58281ff895eec0c0f31a33511094410a169ce05e041e27d0c62127",
     "id": "classic-3d",
     "mode": "game",
@@ -18,17 +18,17 @@
       "make",
       "-j8"
     ],
-    "log": "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-hglhunl2/build.log",
+    "log": "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-lfolmj1z/build.log",
     "returnCode": 0,
-    "seconds": 19.034,
+    "seconds": 19.19,
     "timedOut": false
   },
   "configure": {
     "command": [
       "qmake",
-      "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-hglhunl2/source/Game.pro",
+      "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-lfolmj1z/source/Game.pro",
       "-o",
-      "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-hglhunl2/build/Makefile",
+      "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-lfolmj1z/build/Makefile",
       "QMAKE_CC=gcc-5",
       "QMAKE_CXX=g++-5",
       "QMAKE_LINK=g++-5",
@@ -38,15 +38,15 @@
       "DESTDIR=.",
       "CONFIG-=app_bundle",
       "SOURCES+=/home/andrz/nouraajd-bfg-recovery-backup-20261116/source/recovery/smoke/game_startup.cpp",
-      "INCLUDEPATH+=/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-hglhunl2/source",
-      "INCLUDEPATH+=/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-hglhunl2/observer"
+      "INCLUDEPATH+=/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-lfolmj1z/source",
+      "INCLUDEPATH+=/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-lfolmj1z/observer"
     ],
-    "log": "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-hglhunl2/configure.log",
+    "log": "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-lfolmj1z/configure.log",
     "returnCode": 0,
     "seconds": 0.032,
     "timedOut": false
   },
-  "evidenceDir": "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/evidence/4f9a0643f1936f8ce260177c34b5d2b7a2fab42e762db98022d4961524656f09",
+  "evidenceDir": "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/evidence/14a03a3e987d117f4cd4a6b68c0d4f78f75d147f29b20c262ee6982a7de7dd1e",
   "fileLookup": {
     "command": [
       "g++-5",
@@ -55,20 +55,20 @@
       "-O2",
       "-std=c++11",
       "-o",
-      "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-hglhunl2/observer/libwindowspaths.so",
+      "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-lfolmj1z/observer/libwindowspaths.so",
       "/home/andrz/nouraajd-bfg-recovery-backup-20261116/source/recovery/smoke/windows_paths.cpp",
       "-ldl"
     ],
-    "log": "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-hglhunl2/file-lookup.log",
+    "log": "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-lfolmj1z/file-lookup.log",
     "returnCode": 0,
     "seconds": 0.164,
     "semantics": "Windows-style case-insensitive file lookup for the game process",
     "timedOut": false
   },
-  "fingerprint": "4f9a0643f1936f8ce260177c34b5d2b7a2fab42e762db98022d4961524656f09",
+  "fingerprint": "14a03a3e987d117f4cd4a6b68c0d4f78f75d147f29b20c262ee6982a7de7dd1e",
   "libraryAliases": {
     "aliases": {},
-    "directory": "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-hglhunl2/observer/library-aliases"
+    "directory": "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-lfolmj1z/observer/library-aliases"
   },
   "project": "Game.pro",
   "recipe": {
@@ -107,7 +107,7 @@
   },
   "restoration": {
     "excluded": [],
-    "outputDir": "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-hglhunl2/source",
+    "outputDir": "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-lfolmj1z/source",
     "restored": [
       {
         "markerPath": "Game.pro.REMOVED.git-id",
@@ -120,17 +120,17 @@
       {
         "markerPath": "config/object.json.REMOVED.git-id",
         "method": "reconstruction",
-        "originalBlob": "72fd85123c09dac1d525a45216a28eaa07f6be29",
+        "originalBlob": "872055ff5ff379ac643bdee7337d8f0960a14c40",
         "path": "config/object.json",
         "provenance": "unverified donor reconstruction; split object descriptors e8b7c3d0e6da989122a0587943a98504342da3cd:config/objects flattened to observed legacy class/path API; target tile/interaction entries preserved; species stats retain uncertainty of reconstructed creatures catalog",
-        "replacementBlob": "dd018f58dbfe4608c042e019417c69a95945d841"
+        "replacementBlob": "0ef94cde9d999b933780398641e9bc89e42a0d54"
       },
       {
         "markerPath": "format.py.REMOVED.git-id",
         "method": "reconstruction",
         "originalBlob": "549aafdf3b0e8fbf2d5640d4adfd39af08dafdfe",
         "path": "format.py",
-        "provenance": "unverified donor reconstruction; 51c2e9b0b64c86a8e593a5231c3ef9e44efc5af1:format.py; headerMatch=0; apiOverlap=0/10000; distance=4",
+        "provenance": "unverified donor reconstruction; 51c2e9b0b64c86a8e593a5231c3ef9e44efc5af1:format.py; headerMatch=0; apiOverlap=0/10000; distance=3",
         "replacementBlob": "aafd49b43ba2d56af3910f6b57b1cd2e856ff429"
       },
       {
@@ -148,122 +148,122 @@
         "replacementBlob": "eb4f989a3580dd77c019b096fbdfc502e30b6297"
       },
       {
-        "markerPath": "images/interactions/abyssalshadows/0.png.REMOVED.git-id",
+        "markerPath": "images/interactions/abyssalshadows.png.REMOVED.git-id",
         "method": "exactOriginal",
         "originalBlob": "4b3fb16a201148fe34892e241f4bfbdbcbe2e94a",
-        "path": "images/interactions/abyssalshadows/0.png",
+        "path": "images/interactions/abyssalshadows.png",
         "replacementBlob": "4b3fb16a201148fe34892e241f4bfbdbcbe2e94a"
       },
       {
-        "markerPath": "images/interactions/armorofendlesswinter/0.png.REMOVED.git-id",
+        "markerPath": "images/interactions/armorofendlesswinter.png.REMOVED.git-id",
         "method": "exactOriginal",
         "originalBlob": "96de0a08a3042187bd88c740ebcf9b4bfc8b5f19",
-        "path": "images/interactions/armorofendlesswinter/0.png",
+        "path": "images/interactions/armorofendlesswinter.png",
         "replacementBlob": "96de0a08a3042187bd88c740ebcf9b4bfc8b5f19"
       },
       {
-        "markerPath": "images/interactions/attack/0.png.REMOVED.git-id",
+        "markerPath": "images/interactions/attack.png.REMOVED.git-id",
         "method": "exactOriginal",
         "originalBlob": "1854502273891b7647172605d57723c57803b0b8",
-        "path": "images/interactions/attack/0.png",
+        "path": "images/interactions/attack.png",
         "replacementBlob": "1854502273891b7647172605d57723c57803b0b8"
       },
       {
-        "markerPath": "images/interactions/backstab/0.png.REMOVED.git-id",
+        "markerPath": "images/interactions/backstab.png.REMOVED.git-id",
         "method": "exactOriginal",
         "originalBlob": "a5147cb235381591c29f813ced3d3ffb4dcbcd1c",
-        "path": "images/interactions/backstab/0.png",
+        "path": "images/interactions/backstab.png",
         "replacementBlob": "a5147cb235381591c29f813ced3d3ffb4dcbcd1c"
       },
       {
-        "markerPath": "images/interactions/barrier/0.png.REMOVED.git-id",
+        "markerPath": "images/interactions/barrier.png.REMOVED.git-id",
         "method": "exactOriginal",
         "originalBlob": "39725a3b048d62ede255579cdddb7e12a7c46b04",
-        "path": "images/interactions/barrier/0.png",
+        "path": "images/interactions/barrier.png",
         "replacementBlob": "39725a3b048d62ede255579cdddb7e12a7c46b04"
       },
       {
-        "markerPath": "images/interactions/bloodlash/0.png.REMOVED.git-id",
+        "markerPath": "images/interactions/bloodlash.png.REMOVED.git-id",
         "method": "exactOriginal",
         "originalBlob": "b474f7ca3dd8dd088e4baa69b9f55ba44b5010d5",
-        "path": "images/interactions/bloodlash/0.png",
+        "path": "images/interactions/bloodlash.png",
         "replacementBlob": "b474f7ca3dd8dd088e4baa69b9f55ba44b5010d5"
       },
       {
-        "markerPath": "images/interactions/bloodthirst/0.png.REMOVED.git-id",
+        "markerPath": "images/interactions/bloodthirst.png.REMOVED.git-id",
         "method": "exactOriginal",
         "originalBlob": "fbb552b780851651f574f49d1394b110f15feba2",
-        "path": "images/interactions/bloodthirst/0.png",
+        "path": "images/interactions/bloodthirst.png",
         "replacementBlob": "fbb552b780851651f574f49d1394b110f15feba2"
       },
       {
-        "markerPath": "images/interactions/chloroform/0.png.REMOVED.git-id",
+        "markerPath": "images/interactions/chloroform.png.REMOVED.git-id",
         "method": "exactOriginal",
         "originalBlob": "9da5cc06457dbe26b6312d92a37b232c151e7ca8",
-        "path": "images/interactions/chloroform/0.png",
+        "path": "images/interactions/chloroform.png",
         "replacementBlob": "9da5cc06457dbe26b6312d92a37b232c151e7ca8"
       },
       {
-        "markerPath": "images/interactions/deathstrike/0.png.REMOVED.git-id",
+        "markerPath": "images/interactions/deathstrike.png.REMOVED.git-id",
         "method": "exactOriginal",
         "originalBlob": "2dc8f90b4c690c2dccd1131e2d8f46cacb134044",
-        "path": "images/interactions/deathstrike/0.png",
+        "path": "images/interactions/deathstrike.png",
         "replacementBlob": "2dc8f90b4c690c2dccd1131e2d8f46cacb134044"
       },
       {
-        "markerPath": "images/interactions/devour/0.png.REMOVED.git-id",
+        "markerPath": "images/interactions/devour.png.REMOVED.git-id",
         "method": "exactOriginal",
         "originalBlob": "093e992fc7ae93204b5156521a9fb2b43a9a4369",
-        "path": "images/interactions/devour/0.png",
+        "path": "images/interactions/devour.png",
         "replacementBlob": "093e992fc7ae93204b5156521a9fb2b43a9a4369"
       },
       {
-        "markerPath": "images/interactions/doubleattack/0.png.REMOVED.git-id",
+        "markerPath": "images/interactions/doubleattack.png.REMOVED.git-id",
         "method": "exactOriginal",
         "originalBlob": "ca123044e5969d98cb4b2d6e858d155bd1e1a981",
-        "path": "images/interactions/doubleattack/0.png",
+        "path": "images/interactions/doubleattack.png",
         "replacementBlob": "ca123044e5969d98cb4b2d6e858d155bd1e1a981"
       },
       {
-        "markerPath": "images/interactions/endlesspain/0.png.REMOVED.git-id",
+        "markerPath": "images/interactions/endlesspain.png.REMOVED.git-id",
         "method": "exactOriginal",
         "originalBlob": "191dfd23ff17d5ed4bd2b43fbae5a35913ef95de",
-        "path": "images/interactions/endlesspain/0.png",
+        "path": "images/interactions/endlesspain.png",
         "replacementBlob": "191dfd23ff17d5ed4bd2b43fbae5a35913ef95de"
       },
       {
-        "markerPath": "images/interactions/lethalpoison/0.png.REMOVED.git-id",
+        "markerPath": "images/interactions/lethalpoison.png.REMOVED.git-id",
         "method": "exactOriginal",
         "originalBlob": "c55e747ae01b910aa6eef40982f68d9f53673a85",
-        "path": "images/interactions/lethalpoison/0.png",
+        "path": "images/interactions/lethalpoison.png",
         "replacementBlob": "c55e747ae01b910aa6eef40982f68d9f53673a85"
       },
       {
-        "markerPath": "images/interactions/magicmissile/0.png.REMOVED.git-id",
+        "markerPath": "images/interactions/magicmissile.png.REMOVED.git-id",
         "method": "exactOriginal",
         "originalBlob": "674269a5d6d1ceff668e00ee470a73805de2b770",
-        "path": "images/interactions/magicmissile/0.png",
+        "path": "images/interactions/magicmissile.png",
         "replacementBlob": "674269a5d6d1ceff668e00ee470a73805de2b770"
       },
       {
-        "markerPath": "images/interactions/shadowbolt/0.png.REMOVED.git-id",
+        "markerPath": "images/interactions/shadowbolt.png.REMOVED.git-id",
         "method": "exactOriginal",
         "originalBlob": "0e4f805756032062f5a20d4a593378cf7b2d1f2a",
-        "path": "images/interactions/shadowbolt/0.png",
+        "path": "images/interactions/shadowbolt.png",
         "replacementBlob": "0e4f805756032062f5a20d4a593378cf7b2d1f2a"
       },
       {
-        "markerPath": "images/interactions/sneakattack/0.png.REMOVED.git-id",
+        "markerPath": "images/interactions/sneakattack.png.REMOVED.git-id",
         "method": "exactOriginal",
         "originalBlob": "444e2618bd7d8022d53e66ec95a5c80671b8d50a",
-        "path": "images/interactions/sneakattack/0.png",
+        "path": "images/interactions/sneakattack.png",
         "replacementBlob": "444e2618bd7d8022d53e66ec95a5c80671b8d50a"
       },
       {
-        "markerPath": "images/interactions/strike/0.png.REMOVED.git-id",
+        "markerPath": "images/interactions/strike.png.REMOVED.git-id",
         "method": "exactOriginal",
         "originalBlob": "a0de9d6d3b04922561d7fbcff9a71afefc51838d",
-        "path": "images/interactions/strike/0.png",
+        "path": "images/interactions/strike.png",
         "replacementBlob": "a0de9d6d3b04922561d7fbcff9a71afefc51838d"
       },
       {
@@ -274,171 +274,171 @@
         "replacementBlob": "21983e50f30024b0333356c7a20193d283d487e3"
       },
       {
-        "markerPath": "images/items/armors/chestplateofnorth/0.png.REMOVED.git-id",
+        "markerPath": "images/items/armors/chestplateofnorth.png.REMOVED.git-id",
         "method": "exactOriginal",
         "originalBlob": "47675214733ae35679eed0082b10008b312c3055",
-        "path": "images/items/armors/chestplateofnorth/0.png",
+        "path": "images/items/armors/chestplateofnorth.png",
         "replacementBlob": "47675214733ae35679eed0082b10008b312c3055"
       },
       {
-        "markerPath": "images/items/belts/undestructiblebelt/0.png.REMOVED.git-id",
+        "markerPath": "images/items/belts/undestructiblebelt.png.REMOVED.git-id",
         "method": "exactOriginal",
         "originalBlob": "3ad7119804b816c72822eed8451a1bb1300ab11a",
-        "path": "images/items/belts/undestructiblebelt/0.png",
+        "path": "images/items/belts/undestructiblebelt.png",
         "replacementBlob": "3ad7119804b816c72822eed8451a1bb1300ab11a"
       },
       {
-        "markerPath": "images/items/boots/eradicatorsboots/0.png.REMOVED.git-id",
+        "markerPath": "images/items/boots/eradicatorsboots.png.REMOVED.git-id",
         "method": "exactOriginal",
         "originalBlob": "7159cddaef89234c8e6b2ff1091e3b39008ea5d1",
-        "path": "images/items/boots/eradicatorsboots/0.png",
+        "path": "images/items/boots/eradicatorsboots.png",
         "replacementBlob": "7159cddaef89234c8e6b2ff1091e3b39008ea5d1"
       },
       {
-        "markerPath": "images/items/gloves/glovesoftheassasin/0.png.REMOVED.git-id",
+        "markerPath": "images/items/gloves/glovesoftheassasin.png.REMOVED.git-id",
         "method": "exactOriginal",
         "originalBlob": "dcf0ee27c2c20a364319f922529ff749c2fe3435",
-        "path": "images/items/gloves/glovesoftheassasin/0.png",
+        "path": "images/items/gloves/glovesoftheassasin.png",
         "replacementBlob": "dcf0ee27c2c20a364319f922529ff749c2fe3435"
       },
       {
-        "markerPath": "images/items/helmets/crownofnightmares/0.png.REMOVED.git-id",
+        "markerPath": "images/items/helmets/crownofnightmares.png.REMOVED.git-id",
         "method": "exactOriginal",
         "originalBlob": "caeb5680ab9f1145fdf1efadcad4342ec43936e9",
-        "path": "images/items/helmets/crownofnightmares/0.png",
+        "path": "images/items/helmets/crownofnightmares.png",
         "replacementBlob": "caeb5680ab9f1145fdf1efadcad4342ec43936e9"
       },
       {
-        "markerPath": "images/items/potions/bless/0.png.REMOVED.git-id",
+        "markerPath": "images/items/potions/bless.png.REMOVED.git-id",
         "method": "exactOriginal",
         "originalBlob": "b376e0642913165abcb73d2a76fde4d51d950527",
-        "path": "images/items/potions/bless/0.png",
+        "path": "images/items/potions/bless.png",
         "replacementBlob": "b376e0642913165abcb73d2a76fde4d51d950527"
       },
       {
-        "markerPath": "images/items/potions/life/0.png.REMOVED.git-id",
+        "markerPath": "images/items/potions/life.png.REMOVED.git-id",
         "method": "exactOriginal",
         "originalBlob": "6a0a6da5afb8a7a7f55306e449435bdb1cacc664",
-        "path": "images/items/potions/life/0.png",
+        "path": "images/items/potions/life.png",
         "replacementBlob": "6a0a6da5afb8a7a7f55306e449435bdb1cacc664"
       },
       {
-        "markerPath": "images/items/potions/mana/0.png.REMOVED.git-id",
+        "markerPath": "images/items/potions/mana.png.REMOVED.git-id",
         "method": "exactOriginal",
         "originalBlob": "5d521d61e9bb5cf6c9f628c19746baaaa7d9e1bf",
-        "path": "images/items/potions/mana/0.png",
+        "path": "images/items/potions/mana.png",
         "replacementBlob": "5d521d61e9bb5cf6c9f628c19746baaaa7d9e1bf"
       },
       {
-        "markerPath": "images/items/potions/poison/0.png.REMOVED.git-id",
+        "markerPath": "images/items/potions/poison.png.REMOVED.git-id",
         "method": "exactOriginal",
         "originalBlob": "0ad9f545d8487e93c37094f9fccdcb37e1811db8",
-        "path": "images/items/potions/poison/0.png",
+        "path": "images/items/potions/poison.png",
         "replacementBlob": "0ad9f545d8487e93c37094f9fccdcb37e1811db8"
       },
       {
-        "markerPath": "images/items/scroll/0.png.REMOVED.git-id",
+        "markerPath": "images/items/scroll.png.REMOVED.git-id",
         "method": "exactOriginal",
         "originalBlob": "dea10d8587cba6db383b22badc3496ef94519def",
-        "path": "images/items/scroll/0.png",
+        "path": "images/items/scroll.png",
         "replacementBlob": "dea10d8587cba6db383b22badc3496ef94519def"
       },
       {
-        "markerPath": "images/items/weapons/bladeofdarkdreams/0.png.REMOVED.git-id",
+        "markerPath": "images/items/weapons/bladeofdarkdreams.png.REMOVED.git-id",
         "method": "exactOriginal",
         "originalBlob": "947d302ae5b0f2a1abd057386ff86177b41bf434",
-        "path": "images/items/weapons/bladeofdarkdreams/0.png",
+        "path": "images/items/weapons/bladeofdarkdreams.png",
         "replacementBlob": "947d302ae5b0f2a1abd057386ff86177b41bf434"
       },
       {
-        "markerPath": "images/items/weapons/broadsword/0.png.REMOVED.git-id",
+        "markerPath": "images/items/weapons/broadsword.png.REMOVED.git-id",
         "method": "exactOriginal",
         "originalBlob": "8dc40a7fa0f3080409cbabd4ab2d3c1c318bd666",
-        "path": "images/items/weapons/broadsword/0.png",
+        "path": "images/items/weapons/broadsword.png",
         "replacementBlob": "8dc40a7fa0f3080409cbabd4ab2d3c1c318bd666"
       },
       {
-        "markerPath": "images/items/weapons/dagger/0.png.REMOVED.git-id",
+        "markerPath": "images/items/weapons/dagger.png.REMOVED.git-id",
         "method": "exactOriginal",
         "originalBlob": "90cc01a10e0a8206048d88da4122ebb910559fa7",
-        "path": "images/items/weapons/dagger/0.png",
+        "path": "images/items/weapons/dagger.png",
         "replacementBlob": "90cc01a10e0a8206048d88da4122ebb910559fa7"
       },
       {
-        "markerPath": "images/items/weapons/daggerofvileheart/0.png.REMOVED.git-id",
+        "markerPath": "images/items/weapons/daggerofvileheart.png.REMOVED.git-id",
         "method": "exactOriginal",
         "originalBlob": "51e254e364a33007dba5512a76cda69986c998c0",
-        "path": "images/items/weapons/daggerofvileheart/0.png",
+        "path": "images/items/weapons/daggerofvileheart.png",
         "replacementBlob": "51e254e364a33007dba5512a76cda69986c998c0"
       },
       {
-        "markerPath": "images/items/weapons/knife/0.png.REMOVED.git-id",
+        "markerPath": "images/items/weapons/knife.png.REMOVED.git-id",
         "method": "exactOriginal",
         "originalBlob": "f66d560da00a647405ff5e71ea424f8702f6e804",
-        "path": "images/items/weapons/knife/0.png",
+        "path": "images/items/weapons/knife.png",
         "replacementBlob": "f66d560da00a647405ff5e71ea424f8702f6e804"
       },
       {
-        "markerPath": "images/items/weapons/longsword/0.png.REMOVED.git-id",
+        "markerPath": "images/items/weapons/longsword.png.REMOVED.git-id",
         "method": "exactOriginal",
         "originalBlob": "c12ce2a162fd9f6371333697f8d35e2db6e97b65",
-        "path": "images/items/weapons/longsword/0.png",
+        "path": "images/items/weapons/longsword.png",
         "replacementBlob": "c12ce2a162fd9f6371333697f8d35e2db6e97b65"
       },
       {
-        "markerPath": "images/items/weapons/shadowblade/0.png.REMOVED.git-id",
+        "markerPath": "images/items/weapons/shadowblade.png.REMOVED.git-id",
         "method": "exactOriginal",
         "originalBlob": "a97aad74c237a557366d26980b894f240b399c68",
-        "path": "images/items/weapons/shadowblade/0.png",
+        "path": "images/items/weapons/shadowblade.png",
         "replacementBlob": "a97aad74c237a557366d26980b894f240b399c68"
       },
       {
-        "markerPath": "images/items/weapons/shortstaff/0.png.REMOVED.git-id",
+        "markerPath": "images/items/weapons/shortstaff.png.REMOVED.git-id",
         "method": "exactOriginal",
         "originalBlob": "fbc4537cc5e185169dc2ec5f514af866939bf3e4",
-        "path": "images/items/weapons/shortstaff/0.png",
+        "path": "images/items/weapons/shortstaff.png",
         "replacementBlob": "fbc4537cc5e185169dc2ec5f514af866939bf3e4"
       },
       {
-        "markerPath": "images/items/weapons/shortsword/0.png.REMOVED.git-id",
+        "markerPath": "images/items/weapons/shortsword.png.REMOVED.git-id",
         "method": "exactOriginal",
         "originalBlob": "fed1f8ed826387842228997efe12b0602dfda251",
-        "path": "images/items/weapons/shortsword/0.png",
+        "path": "images/items/weapons/shortsword.png",
         "replacementBlob": "fed1f8ed826387842228997efe12b0602dfda251"
       },
       {
-        "markerPath": "images/items/weapons/staff/0.png.REMOVED.git-id",
+        "markerPath": "images/items/weapons/staff.png.REMOVED.git-id",
         "method": "exactOriginal",
         "originalBlob": "f8cab353fddc4c409c19384b84c5f328b79d7e2d",
-        "path": "images/items/weapons/staff/0.png",
+        "path": "images/items/weapons/staff.png",
         "replacementBlob": "f8cab353fddc4c409c19384b84c5f328b79d7e2d"
       },
       {
-        "markerPath": "images/items/weapons/staffoftheabyss/0.png.REMOVED.git-id",
+        "markerPath": "images/items/weapons/staffoftheabyss.png.REMOVED.git-id",
         "method": "exactOriginal",
         "originalBlob": "72313651579cc1056e4054b28eb9ec96c71c20c5",
-        "path": "images/items/weapons/staffoftheabyss/0.png",
+        "path": "images/items/weapons/staffoftheabyss.png",
         "replacementBlob": "72313651579cc1056e4054b28eb9ec96c71c20c5"
       },
       {
-        "markerPath": "images/items/weapons/stiletto/0.png.REMOVED.git-id",
+        "markerPath": "images/items/weapons/stiletto.png.REMOVED.git-id",
         "method": "exactOriginal",
         "originalBlob": "5d7967ab3018c01d77d1dc217073f98e87679e90",
-        "path": "images/items/weapons/stiletto/0.png",
+        "path": "images/items/weapons/stiletto.png",
         "replacementBlob": "5d7967ab3018c01d77d1dc217073f98e87679e90"
       },
       {
-        "markerPath": "images/items/weapons/void/0.png.REMOVED.git-id",
+        "markerPath": "images/items/weapons/void.png.REMOVED.git-id",
         "method": "exactOriginal",
         "originalBlob": "1189b28a25fe495552b95a28f217b456e1c3efd7",
-        "path": "images/items/weapons/void/0.png",
+        "path": "images/items/weapons/void.png",
         "replacementBlob": "1189b28a25fe495552b95a28f217b456e1c3efd7"
       },
       {
-        "markerPath": "images/items/weapons/wand/0.png.REMOVED.git-id",
+        "markerPath": "images/items/weapons/wand.png.REMOVED.git-id",
         "method": "exactOriginal",
         "originalBlob": "ae4c98f1d3830258b4520d859b4e9d577f03995f",
-        "path": "images/items/weapons/wand/0.png",
+        "path": "images/items/weapons/wand.png",
         "replacementBlob": "ae4c98f1d3830258b4520d859b4e9d577f03995f"
       },
       {
@@ -506,24 +506,24 @@
         "replacementBlob": "dcbad6fb928551df2ef6510e9db0cc1c94aebf8a"
       },
       {
-        "markerPath": "images/players/assasin/0.png.REMOVED.git-id",
+        "markerPath": "images/players/assasin.png.REMOVED.git-id",
         "method": "exactOriginal",
         "originalBlob": "92a8721bf1f53874071c7a90cba25f2acf64f650",
-        "path": "images/players/assasin/0.png",
+        "path": "images/players/assasin.png",
         "replacementBlob": "92a8721bf1f53874071c7a90cba25f2acf64f650"
       },
       {
-        "markerPath": "images/players/sorcerer/0.png.REMOVED.git-id",
+        "markerPath": "images/players/sorcerer.png.REMOVED.git-id",
         "method": "exactOriginal",
         "originalBlob": "e45a6d42d76401250bfea5b838193ed4ed424f8d",
-        "path": "images/players/sorcerer/0.png",
+        "path": "images/players/sorcerer.png",
         "replacementBlob": "e45a6d42d76401250bfea5b838193ed4ed424f8d"
       },
       {
-        "markerPath": "images/players/warrior/0.png.REMOVED.git-id",
+        "markerPath": "images/players/warrior.png.REMOVED.git-id",
         "method": "exactOriginal",
         "originalBlob": "fa8a69b5c4b0b0f303daeca4a2be16841682a88c",
-        "path": "images/players/warrior/0.png",
+        "path": "images/players/warrior.png",
         "replacementBlob": "fa8a69b5c4b0b0f303daeca4a2be16841682a88c"
       },
       {
@@ -849,7 +849,7 @@
       {
         "markerPath": "maps/map.tmx.REMOVED.git-id",
         "method": "reconstruction",
-        "originalBlob": "b6def30a654e9c45c80593c05e7ebf0dcc8226cb",
+        "originalBlob": "5c3ddd444967c208d984a9230ebf5a018e5a219f",
         "path": "maps/map.tmx",
         "provenance": "unverified donor reconstruction; authored Tiled geometry/object coordinates from 55e6516e:maps/map1/map.json converted to XML; missing target script reference omitted",
         "replacementBlob": "b79e5cfa51eaf3d529cf347da8141f9eaddf82fd"
@@ -872,10 +872,10 @@
       {
         "markerPath": "src/gamescript.cpp.REMOVED.git-id",
         "method": "reconstruction",
-        "originalBlob": "5350385f44c78269db75ebd21e99e935f2eb3c96",
+        "originalBlob": "faf42f873d667f44e1937e5db65d8c9f673557a1",
         "path": "src/gamescript.cpp",
         "provenance": "working reconstruction",
-        "replacementBlob": "4af2e3be3b1dcedb295c655cbc0d5ae70be80f8b"
+        "replacementBlob": "a1ec7f581ffdecbe93e1a8973e14fff51239873f"
       },
       {
         "markerPath": "src/gameview.cpp.REMOVED.git-id",
@@ -920,7 +920,7 @@
       {
         "markerPath": "src/pathfinder.cpp.REMOVED.git-id",
         "method": "reconstruction",
-        "originalBlob": "0d43afd19b6309fc621b099890fc68db304130bf",
+        "originalBlob": "293b4f5db544adc5eacdfd0f9b1d903ce4218555",
         "path": "src/pathfinder.cpp",
         "provenance": "working reconstruction",
         "replacementBlob": "944d38b1e1dfd4255a79290161869baa46a3c03a"
@@ -954,9 +954,9 @@
         "replacementBlob": "f5d0b39a0cdddb91a31a537052b7d8d31a4aa79f"
       }
     ],
-    "restoredFilesFingerprint": "64607750227683b4417a33d09e65d9fbb69ecc086d53f7b231270bed952bb14e",
-    "sourceCommit": "2a7848bbc88570b6b7a805ff1d382290b11f0804",
-    "sourceTree": "3d8f3ee723e9148f3769c38c9bc6d76790d4be49",
+    "restoredFilesFingerprint": "f8ce0cf33e832f7707c99c8d9b6b805b8ef45bf4395faf96a939fff151799b63",
+    "sourceCommit": "e0c118c4e58bd1d1758271f32243b66e2950c13c",
+    "sourceTree": "6472dafcfb7af4573ee1ed408d0bdea80a47c705",
     "status": "complete",
     "submodules": [],
     "unresolved": []
@@ -967,12 +967,12 @@
       "-a",
       "--server-args=-screen 0 1920x1080x24",
       "env",
-      "LD_PRELOAD=/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-hglhunl2/observer/libwindowspaths.so",
-      "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-hglhunl2/build/RecoveryGame"
+      "LD_PRELOAD=/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-lfolmj1z/observer/libwindowspaths.so",
+      "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-lfolmj1z/build/RecoveryGame"
     ],
-    "log": "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-hglhunl2/smoke/startup.log",
+    "log": "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-lfolmj1z/smoke/startup.log",
     "returnCode": 0,
-    "seconds": 745.927,
+    "seconds": 732.976,
     "startup": {
       "checks": {
         "eventLoop": true,
@@ -983,7 +983,7 @@
       "frame": {
         "height": 718,
         "path": "startup.png",
-        "sha256": "cbd61f1765bf4a9e094a7427a996cc2ec93f10981b8388bc2189617090b70bfa",
+        "sha256": "d930eb4cc19d2b0094547cd20fb4fbf7ee3bdb1a9aa349d36aa1e23380bf9cb0",
         "width": 1278
       },
       "mode": "game",
@@ -994,9 +994,9 @@
     "status": "success",
     "timedOut": false
   },
-  "sourceCommit": "2a7848bbc88570b6b7a805ff1d382290b11f0804",
+  "sourceCommit": "e0c118c4e58bd1d1758271f32243b66e2950c13c",
   "sourceCommits": [
-    "2a7848bbc88570b6b7a805ff1d382290b11f0804"
+    "e0c118c4e58bd1d1758271f32243b66e2950c13c"
   ],
   "sourcePreparation": {
     "identity": {
@@ -1006,7 +1006,7 @@
     "status": "not-required",
     "steps": []
   },
-  "sourceTree": "3d8f3ee723e9148f3769c38c9bc6d76790d4be49",
+  "sourceTree": "6472dafcfb7af4573ee1ed408d0bdea80a47c705",
   "startupMode": "game",
   "startupSelection": {
     "mode": "game"
@@ -1027,5 +1027,5 @@
     }
   },
   "toolchainImage": "sha256:d3f59ec1d12297ee8091fbea687aa619275fc92b3fd426560e0a1fa40715afc8",
-  "verifiedFromCommit": "2a7848bbc88570b6b7a805ff1d382290b11f0804"
+  "verifiedFromCommit": "e0c118c4e58bd1d1758271f32243b66e2950c13c"
 }

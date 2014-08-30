@@ -10,6 +10,13 @@
 #include <src/configurationprovider.h>
 #include <mutex>
 
+static inline bool endswith ( std::string const &fullString, std::string const &ending ) {
+	if ( fullString.length() >= ending.length() ) {
+		return ( 0 == fullString.compare ( fullString.length() - ending.length(), ending.length(), ending ) );
+	} else {
+		return false;
+	}
+}
 std::map<int, AnimationProvider> AnimationProvider::instances;
 
 Animation *AnimationProvider::getAnim ( std::string path, int size ) {
@@ -54,28 +61,29 @@ void AnimationProvider::loadAnim ( std::string path ) {
 	} else {
 		timemap.insert ( std::pair<int, int> ( 0, 250 ) );
 	}
-	for ( int i = 0; true; i++ ) {
-		std::string result;
-		std::ostringstream convert;
-		convert << i;
-		result = convert.str();
-		QPixmap image ( ( path + result + ".png" ).c_str() );
-		if ( !image.hasAlphaChannel() && path.find ( "tiles" ) == std::string::npos ) {
-			image.setMask ( image.createHeuristicMask() );
+	if ( !endswith ( path,"/" ) ) {
+		img=getImage ( path+".png" );
+		if ( img ) {
+			anim->add ( img, timemap.at ( 0 ) );
 		}
-		if ( !image.isNull() ) {
-			img = new QPixmap ( image.scaled ( tileSize, tileSize, Qt::IgnoreAspectRatio,
-			                                   Qt::SmoothTransformation ) );
-		} else {
-			break;
+	} else {
+		for ( int i = 0; true; i++ ) {
+			std::string result;
+			std::ostringstream convert;
+			convert << i;
+			result = convert.str();
+			img=getImage ( path + result + ".png" );
+			if ( !img ) {
+				break;
+			}
+			int frame;
+			if ( timemap.size() == 1 ) {
+				frame = timemap.at ( 0 );
+			} else {
+				frame = timemap.at ( i );
+			}
+			anim->add ( img, frame );
 		}
-		int frame;
-		if ( timemap.size() == 1 ) {
-			frame = timemap.at ( 0 );
-		} else {
-			frame = timemap.at ( i );
-		}
-		anim->add ( img, frame );
 	}
 	if ( anim->size() == 0 ) {
 		return;
@@ -83,3 +91,18 @@ void AnimationProvider::loadAnim ( std::string path ) {
 	this->insert ( std::pair<std::string, Animation *> ( path, anim ) );
 	qDebug() << "Loaded animation:" << path.c_str() << "\n";
 }
+
+QPixmap *AnimationProvider::getImage ( std::string path ) {
+	QPixmap image ( path.c_str() );
+	if ( !image.hasAlphaChannel() && path.find ( "tiles" ) == std::string::npos ) {
+		image.setMask ( image.createHeuristicMask() );
+	}
+	if ( !image.isNull() ) {
+		return new QPixmap ( image.scaled ( tileSize, tileSize, Qt::IgnoreAspectRatio,
+		                                    Qt::SmoothTransformation ) );
+	} else {
+		return NULL;
+	}
+}
+
+
