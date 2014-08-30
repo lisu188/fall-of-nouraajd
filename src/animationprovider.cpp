@@ -9,14 +9,8 @@
 #include <map>
 #include <src/configurationprovider.h>
 #include <mutex>
+#include "util.h"
 
-static inline bool endswith ( std::string const &fullString, std::string const &ending ) {
-	if ( fullString.length() >= ending.length() ) {
-		return ( 0 == fullString.compare ( fullString.length() - ending.length(), ending.length(), ending ) );
-	} else {
-		return false;
-	}
-}
 std::map<int, AnimationProvider> AnimationProvider::instances;
 
 Animation *AnimationProvider::getAnim ( std::string path, int size ) {

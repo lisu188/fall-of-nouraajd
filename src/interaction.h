@@ -34,7 +34,6 @@ private:
 Q_DECLARE_METATYPE ( Interaction )
 
 void ArmorOfEndlessWinter ( Creature *first, Creature *second );
-void Devour ( Creature *first, Creature *second );
 void FrostBolt ( Creature *first, Creature *second );
 void MagicMissile ( Creature *first, Creature *second );
 void ShadowBolt ( Creature *first, Creature *second );
