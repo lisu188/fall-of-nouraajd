@@ -17,6 +17,7 @@
 #include <QGraphicsScene>
 #include <QString>
 #include <string>
+#include <src/util.h>
 
 class GameScene;
 class MapObject;
@@ -93,6 +94,7 @@ private:
 class MapObject : public AnimatedObject {
   Q_OBJECT
 public:
+  PROPERTY_ACCESSOR
   static MapObject *createMapObject(QString name);
   MapObject();
   MapObject(int x, int y, int z, int v);

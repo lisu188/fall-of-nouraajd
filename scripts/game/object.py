@@ -1,6 +1,6 @@
 import random
-from _Game import Building
-from _Game import Coords
+from game import Building
+from game import Coords
 
 class Teleporter(Building):
     def __init__(self):

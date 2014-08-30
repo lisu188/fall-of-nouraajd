@@ -1,5 +1,5 @@
-from _Game import Damage
-from _Game import Interaction
+from game import Damage
+from game import Interaction
 from random import randint
 
 def Attack(first,second):
@@ -14,9 +14,9 @@ def Attack(first,second):
 
 def ElemStaff(first,second):
     damage=Damage()
-    damage.fire=1
-    damage.frost=1
-    damage.thunder=1
+    damage.setNumericProperty('fire',1)
+    damage.setNumericProperty('frost',1)
+    damage.setNumericProperty('thunder',1)
     second.hurt ( damage )
 
 def DoubleAttack ( first,second ):
@@ -36,6 +36,15 @@ def Strike ( first, second ):
 
 def ChaosBlast (first, second ):
     damage=Damage()
-    damage.setFire ( first.getMana() / 2 );
-    damage.setThunder ( first.getMana() / 2 );
+    damage.setNumericProperty('fire',first.getMana() / 2)
+    damage.setNumericProperty('thunder',first.getMana() / 2)
     second.hurt ( damage );
+
+def Devour ( first, second ):
+    crit = first.getStats().getNumericProperty('crit')
+    first.getStats().setNumericProperty('crit', 0 )
+    dmg = first.getDmg()
+    if  dmg :
+        second.hurt ( dmg )
+        first.healProc ( ( dmg * 0.75 ) / first.getHpMax() * 100 )
+    first.getStats().setNumericProperty('crit', crit )

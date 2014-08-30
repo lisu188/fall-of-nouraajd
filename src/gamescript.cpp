@@ -1,12 +1,14 @@
 #include <boost/python.hpp>
 #include "gamescript.h"
+#include <src/util.h>
 #include <src/building.h>
 #include <src/interaction.h>
 #include <src/stats.h>
 #include <string>
-BOOST_PYTHON_MODULE(_Game)
+BOOST_PYTHON_MODULE(_game)
 {
-    boost::python::class_<Building, boost::noncopyable>("Building", boost::python::no_init);
+    boost::python::class_<Building, boost::noncopyable>("Building", boost::python::no_init)
+    PY_PROPERTY_ACCESSOR(Building);
     boost::python::class_<Damage>("Damage")
         .add_property("fire", &Damage::getFire, &Damage::setFire)
         .add_property("frost", &Damage::getFrost, &Damage::setFrost)
