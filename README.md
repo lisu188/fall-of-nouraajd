@@ -1,6 +1,6 @@
 # Recovered game snapshot
 
-Original commit: `122754e530d7bf0814f7a2edad57aa9981ad6429`. Original tree: `d46010557a52f0891c2d2b87c78ea18166e67a71`.
+Original commit: `21c04c61c564bb91953b90218c6cf4bed54417a9`. Original tree: `d46010557a52f0891c2d2b87c78ea18166e67a71`.
 Startup was verified from identical recovered sources at `122754e530d7bf0814f7a2edad57aa9981ad6429`.
 
 This recovered version compiled and linked on Linux, started the real game on an isolated Xvfb display,
