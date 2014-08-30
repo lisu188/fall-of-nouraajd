@@ -12,6 +12,7 @@ private:
 	AnimationProvider ( int size );
 	Animation *getAnimation ( std::string path );
 	void loadAnim ( std::string path );
+	QPixmap * getImage ( std::string path );
 	int tileSize;
 	static std::map<int, AnimationProvider> instances;
 };

@@ -54,14 +54,11 @@ void ScriptEngine::executeCommand ( std::initializer_list<std::string> list ) {
 ScriptEngine::ScriptEngine ( Map *map ) {
 	PY_UNSAFE (
 	    Py_Initialize();
-	    Py_InitModule ( "Game",GameMethods );
 	    init_Game();
 	    main_module=boost::python::object ( boost::python::handle<> ( PyImport_ImportModule ( "__main__" ) ) ) ;
 	    main_namespace=main_module.attr ( "__dict__" );
 	    executeScript ( "import sys" );
 	    executeScript ( "sys.path.append('./scripts')" );
-	    executeScript ( "import Game" );
-	    executeScript ( "from Game import *" );
 	    executeScript ( "from Objects import *" );
 	    executeScript ( "from Interactions import *" ); )
 }
