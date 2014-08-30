@@ -5,6 +5,46 @@
 #include <QRunnable>
 #include <functional>
 #include <string>
+#define PROPERTY_ACCESSOR \
+void setStringProperty ( std::string name,std::string value ) {\
+    this->setProperty ( name.c_str(),QString::fromStdString ( value ) );\
+}\
+void setBoolProperty ( std::string name,bool value ) {\
+    this->setProperty ( name.c_str(),value );\
+}\
+void setNumericProperty ( std::string name,int value ) {\
+    this->setProperty ( name.c_str(),value );\
+}\
+std::string getStringProperty ( std::string name ) {\
+    return this->property ( name.c_str() ).toString().toStdString();\
+}\
+bool getBoolProperty ( std::string name ) {\
+    return this->property ( name.c_str() ).toBool();\
+}\
+int getNumericProperty ( std::string name ) {\
+    return this->property ( name.c_str() ).toInt();\
+}\
+void incProperty ( std::string name,int value ) {\
+    this->setNumericProperty ( name,this->getNumericProperty ( name )+value );\
+}\
+ 
+#define PY_PROPERTY_ACCESSOR(CLASS)\
+.def ( "getStringProperty",&CLASS::getStringProperty )\
+.def ( "getNumericProperty",&CLASS::getNumericProperty )\
+.def ( "getBoolProperty",&CLASS::getBoolProperty )\
+.def ( "setStringProperty",&CLASS::setStringProperty )\
+.def ( "setNumericProperty",&CLASS::setNumericProperty )\
+.def ( "setBoolProperty",&CLASS::setBoolProperty )\
+.def ( "incProperty",&CLASS::incProperty )\
+ 
+inline bool endswith ( std::string const &fullString, std::string const &ending ) {
+	if ( fullString.length() >= ending.length() ) {
+		return ( 0 == fullString.compare ( fullString.length() - ending.length(), ending.length(), ending ) );
+	} else {
+		return false;
+	}
+}
+
 template <typename T> inline std::string to_string ( const T &n ) {
 	std::ostringstream stm;
 	stm << n;

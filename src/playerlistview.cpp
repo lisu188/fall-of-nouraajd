@@ -42,7 +42,7 @@ void PlayerListView::update() {
 	int i = 0;
 	for ( itemIter = items->begin(); itemIter != items->end(); i++, itemIter++ ) {
 		MapObject *item = *itemIter;
-		if ( item->getMap()->getScene()->getPlayer() ) {
+		if ( item->getMap() ) { //SigSegv for interaction
 			item->setMap ( item->getMap()->getScene()->getPlayer()->getMap() );
 		}
 		item->setVisible ( false );
