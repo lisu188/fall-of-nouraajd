@@ -1,3 +1,4 @@
+#include "gameview.h"
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
 
@@ -9,4 +10,9 @@ MainWindow::MainWindow ( QWidget *parent ) :
 
 MainWindow::~MainWindow() {
 	delete ui;
+}
+
+void MainWindow::on_pushButton_clicked() {
+	GameView*view=new GameView ( this->ui->mapType->text().toStdString(),this->ui->playerType->text().toStdString() );
+	this->hide();
 }
