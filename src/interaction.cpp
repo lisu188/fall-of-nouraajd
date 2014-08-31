@@ -18,19 +18,6 @@
 #include <list>
 #include <src/creature.h>
 
-std::unordered_map<std::string, std::function<void(Creature *, Creature *)>> Interaction::actions = {
-    {"ArmorOfEndlessWinter", ArmorOfEndlessWinter},
-    {"FrostBolt", FrostBolt},
-    {"MagicMissile", MagicMissile},
-    {"ShadowBolt", ShadowBolt},
-    {"Mutilation", Mutilation},
-    {"LethalPoison", LethalPoison},
-    {"Backstab", Backstab},
-    {"Bloodlash", Bloodlash},
-    {"DeathStrike", DeathStrike},
-    {"Barrier", Barrier},
-    {"BloodThirst", BloodThirst}
-};
 
 
 
@@ -43,7 +30,6 @@ void Interaction::loadFromJson(std::string name) {
         return;
     }
     manaCost = config.get("manaCost", 0).asInt();
-    effect = config.get("effect", "").asString();
     std::string anim = config.get("anim", "").asString();
     if (anim.compare("") != 0) {
         setAnimation(anim);
@@ -77,15 +63,7 @@ bool runPythonAction(Interaction *self, Creature *first, Creature *second) {
 
 void Interaction::onAction(Creature *first, Creature *second) {
     qDebug() << first->typeName.c_str() << "used" << this->typeName.c_str() << "against" << second->typeName.c_str();
-    if (actions[typeName]) {
-        actions[typeName](first, second);
-    } else if (runPythonAction(this, first, second)) {
-        return;
-    } else if (!effect.empty()) {
-        Json::Value config = (*ConfigurationProvider::getConfig("config/effects.json"))[effect];
-        Creature *target = config.get("buff", false).asBool() ? first : second;
-        target->addEffect(effect, first);
-    }
+    runPythonAction(this, first, second);
 }
 
 int Interaction::getManaCost() { return manaCost; }
@@ -115,115 +93,6 @@ void Interaction::mousePressEvent(QGraphicsSceneMouseEvent *event) {
         return;
     }
     player->performAction(this, creature);
-}
-
-void Attack(Creature *first, Creature *second) {
-    int dmg = first->getDmg();
-    if (dmg) {
-        second->hurt(dmg);
-        Weapon *weapon = first->getWeapon();
-        if (weapon) {
-            Interaction *interaction = weapon->getInteraction();
-            if (interaction) {
-                interaction->onAction(first, second);
-            }
-        }
-    }
-}
-
-void ElemStaff(Creature *first, Creature *second) {
-    Damage damage;
-    damage.setFire(1);
-    damage.setFrost(1);
-    damage.setThunder(1);
-    second->hurt(damage);
-}
-
-void DoubleAttack(Creature *first, Creature *second) {
-    Attack(first, second);
-    Attack(first, second);
-}
-
-void SneakAttack(Creature *first, Creature *second) {
-    Attack(first, second);
-    if (rand() % 100 > (100 - second->getHpRatio())) {
-        if (second->isAlive()) {
-            Attack(first, second);
-        }
-    }
-}
-
-void Strike(Creature *first, Creature *second) {
-    if (first->getWeapon()) {
-        int dmg = first->getDmg();
-        if (dmg) {
-            second->hurt(dmg + first->getStats()->getDamage());
-        }
-    }
-}
-
-void ArmorOfEndlessWinter(Creature *first, Creature *second) { first->addEffect("ArmorOfEndlessWinterEffect", first); }
-
-void ChaosBlast(Creature *first, Creature *second) {
-    Damage damage;
-    damage.setFire(first->getMana() / 2);
-    damage.setThunder(first->getMana() / 2);
-    second->hurt(damage);
-}
-
-void Devour(Creature *first, Creature *second) {
-    int crit = first->getStats()->getCrit();
-    first->getStats()->setCrit(0);
-    int dmg = first->getDmg();
-    if (dmg) {
-        second->hurt(dmg);
-        first->heal(dmg * 0.75);
-    }
-    first->getStats()->setCrit(crit);
-}
-
-void FrostBolt(Creature *first, Creature *second) {
-    Attack(first, second);
-    Damage damage;
-    damage.setFrost(first->getStats()->getIntelligence() * 75.0 / 100.0);
-    second->hurt(damage);
-    // change to ice
-}
-
-void MagicMissile(Creature *first, Creature *second) {
-    int dmg = 0;
-    for (int i = 0; i < first->getMana() / 10 + 1; i++) {
-        dmg += rand() % 4 + 1;
-    }
-    second->hurt(dmg);
-}
-
-void ShadowBolt(Creature *first, Creature *second) {
-    Damage damage;
-    damage.setShadow(first->getDmg() * 2.25);
-    second->hurt(damage);
-    if (rand() % 2 == 0) {
-        damage.setShadow(first->getWeapon()->getStats()->getDamage());
-        second->addEffect("AbyssalShadowsEffect", first);
-    }
-}
-
-void Mutilation(Creature *first, Creature *second) { second->addEffect("MutilationEffect", first); }
-
-void LethalPoison(Creature *first, Creature *second) { second->addEffect("LethalPoisonEffect", first); }
-
-void Backstab(Creature *first, Creature *second) { second->hurt(first->getDmg() * 2); }
-
-void Bloodlash(Creature *first, Creature *second) { second->addEffect("BloodlashEffect", first); }
-
-void DeathStrike(Creature *first, Creature *second) { Attack(first, second); }
-
-void Barrier(Creature *first, Creature *second) { first->addEffect("BarrierEffect", first); }
-
-void BloodThirst(Creature *first, Creature *second) {
-    int damage = first->getDmg();
-    second->hurt(damage);
-    first->heal(damage);
 }
 
 #include <QDebug>

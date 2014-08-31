@@ -77,7 +77,6 @@
   },
   "Barrier": {
     "anim": "images/interactions/barrier",
-    "effect": "BarrierEffect",
     "manaCost": 17
   },
   "BarrierEffect": {
@@ -99,7 +98,6 @@
   },
   "Bloodlash": {
     "anim": "images/interactions/bloodlash",
-    "effect": "BloodlashEffect",
     "manaCost": 30
   },
   "BloodlashEffect": {
@@ -139,7 +137,6 @@
   },
   "Chloroform": {
     "anim": "images/interactions/chloroform",
-    "effect": "ChloroformEffect",
     "manaCost": 25
   },
   "ChloroformEffect": {
@@ -185,7 +182,6 @@
   "ElemStaff": {},
   "EndlessPain": {
     "anim": "images/interactions/endlesspain",
-    "effect": "EndlessPainEffect",
     "manaCost": 25
   },
   "EndlessPainEffect": {
@@ -326,7 +322,6 @@
   },
   "LethalPoison": {
     "anim": "images/interactions/lethalpoison",
-    "effect": "LethalPoisonEffect",
     "manaCost": 20
   },
   "LethalPoisonEffect": {
@@ -384,7 +379,6 @@
   },
   "Mutilation": {
     "anim": "images/interactions/mutilation",
-    "effect": "MutilationEffect",
     "manaCost": 15
   },
   "MutilationEffect": {
@@ -656,7 +650,6 @@
   },
   "Stunner": {
     "anim": "images/interactions/stun",
-    "effect": "Stun",
     "manaCost": 40
   },
   "SwampTile": {
