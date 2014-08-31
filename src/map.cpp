@@ -325,8 +325,8 @@ void Map::addRoad(int length, int startx, int starty, int startz) {
 void Map::addDungeon(Coords enter, Coords exit, int width, int height) {
     for (int x = 0; x < width; ++x) for (int y = 0; y < height; ++y)
         addTile("GroundTile", exit.x + x, exit.y + y, exit.z);
-    MapObject *entrance = MapObject::createMapObject("Teleporter");
-    MapObject *return_gate = MapObject::createMapObject("Teleporter");
+    MapObject *entrance = createMapObject<MapObject *>(std::string("Teleporter"));
+    MapObject *return_gate = createMapObject<MapObject *>(std::string("Teleporter"));
     if (!entrance || !return_gate) {
         delete entrance;
         delete return_gate;
@@ -573,7 +573,7 @@ void Map::loadMapFromTmx(Tmx::Map &source) {
         const Tmx::ObjectGroup *objects = source.GetObjectGroup(group);
         for (int index = 0; index < objects->GetNumObjects(); ++index) {
             const Tmx::Object *authored = objects->GetObject(index);
-            MapObject *object = MapObject::createMapObject(QString::fromStdString(authored->GetType()));
+            MapObject *object = createMapObject<MapObject *>(authored->GetType());
             if (!object) { qWarning() << "TMX object type unavailable in this revision:" << authored->GetType().c_str(); continue; }
             object->name = authored->GetName();
             object->setObjectName(QString::fromStdString(object->name));
@@ -598,14 +598,18 @@ bool Map::removeTile(int x, int y, int z) {
     if (tile->second->scene()) tile->second->scene()->removeItem(tile->second);
     delete tile->second; tiles.erase(tile); erase(coords); return true;
 }
-MapObject *MapObject::createMapObject(QString qname) {
+MapObject *MapObject::createMapObject(QString qname) { return createMapObject(qname, NULL); }
+
+// The map is attached before loadFromJson because, from #245, items create their
+// interaction through getMap() while loading (genuine item.cpp).
+MapObject *MapObject::createMapObject(QString qname, Map *map) {
     std::string name = qname.toStdString();
     Json::Value config = (*ConfigurationProvider::getConfig("config/object.json"))[name];
     std::string class_name = config.get("class", name).asString();
     int registered = QMetaType::type(class_name.c_str());
     if (registered == QMetaType::UnknownType) return 0;
     MapObject *object = static_cast<MapObject *>(QMetaType::create(registered));
-    if (object) object->loadFromJson(name);
+    if (object) { object->map = map; object->loadFromJson(name); };
     return object;
 }
 void MapObject::loadFromProps(Tmx::PropertySet properties) {

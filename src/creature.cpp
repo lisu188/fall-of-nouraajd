@@ -36,8 +36,8 @@ Creature::Creature() : MapObject(0, 0, 0, 2) {
     gold = exp = level = sw = mana = manaMax = hpMax = hp = 0;
     manaRegRate = 1;
     setAcceptHoverEvents(true);
-    Json::Value slots = *ConfigurationProvider::getConfig("config/slots.json");
-    for (auto it = slots.begin(); it != slots.end(); ++it) equipped[std::atoi(it.memberName())] = 0;
+    Json::Value slotConfig = *ConfigurationProvider::getConfig("config/slots.json");
+    for (auto it = slotConfig.begin(); it != slotConfig.end(); ++it) equipped[std::atoi(it.memberName())] = 0;
 }
 Creature::Creature(const Creature &other) : Creature() { if (!other.typeName.empty()) loadFromJson(other.typeName); }
 Creature *Creature::createCreature(QString name) { return dynamic_cast<Creature *>(MapObject::createMapObject(name)); }
@@ -202,7 +202,7 @@ Interaction *Creature::getLevelAction() {
     std::ostringstream key;
     key << level;
     Json::Value config = (*ConfigurationProvider::getConfig("config/object.json"))[typeName];
-    return Interaction::getInteraction(config["levelling"].get(key.str(), "").asString());
+    return getMap()->createMapObject<Interaction *>(config["levelling"].get(key.str(), "").asString());
 }
 
 bool Creature::isAlive() { return alive; }
@@ -220,12 +220,12 @@ void Creature::loadFromJson(std::string name) {
 
     Json::Value names = config["actions"];
     for (unsigned int i = 0; i < names.size(); i++)
-        addAction(Interaction::getInteraction(names[i].asString()));
+        addAction(getMap()->createMapObject<Interaction *>(names[i].asString()));
 
     std::set<Item *> items;
     names = config["items"];
     for (unsigned int i = 0; i < names.size(); i++) {
-        Item *item = dynamic_cast<Item *>(MapObject::createMapObject(names[i].asCString()));
+        Item *item = getMap()->createMapObject<Item *>(std::string(names[i].asCString()));
         if (item)
             items.insert(item);
     }
@@ -233,10 +233,10 @@ void Creature::loadFromJson(std::string name) {
 
     Json::Value equipment_config = config["equipment"];
     for (Json::Value::iterator it = equipment_config.begin(); it != equipment_config.end(); ++it)
-        setItem(std::atoi(it.memberName()), dynamic_cast<Item *>(MapObject::createMapObject((*it).asCString())));
+        setItem(std::atoi(it.memberName()), getMap()->createMapObject<Item *>(std::string((*it).asCString())));
     Json::Value equipment = config["inventory"];
-    if (equipment.isMember("weapon")) setWeapon(dynamic_cast<Weapon *>(dynamic_cast<Item *>(MapObject::createMapObject(QString::fromStdString(equipment["weapon"].asString())))));
-    if (equipment.isMember("armor")) setArmor(dynamic_cast<Armor *>(dynamic_cast<Item *>(MapObject::createMapObject(QString::fromStdString(equipment["armor"].asString())))));
+    if (equipment.isMember("weapon")) setWeapon(dynamic_cast<Weapon *>(getMap()->createMapObject<Item *>((QString::fromStdString(equipment["weapon"].asString())))));
+    if (equipment.isMember("armor")) setArmor(dynamic_cast<Armor *>(getMap()->createMapObject<Item *>((QString::fromStdString(equipment["armor"].asString())))));
 
     if (config.isMember("coords"))
         moveTo(config["coords"].get("x", 0).asInt(), config["coords"].get("y", 0).asInt(),
