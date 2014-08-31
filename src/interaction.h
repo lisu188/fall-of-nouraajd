@@ -7,6 +7,7 @@
 class Creature;
 class QGraphicsSceneMouseEvent;
 class Stats;
+class Effect;
 
 class Interaction : public MapObject {
 	Q_OBJECT
@@ -26,24 +27,10 @@ protected:
 	int manaCost;
 
 private:
-	static std::unordered_map<
-	std::string, std::function<void ( Creature *, Creature * ) > > actions;
-	std::string effect;
 	QGraphicsSimpleTextItem statsView;
 };
 Q_DECLARE_METATYPE ( Interaction )
 
-void ArmorOfEndlessWinter ( Creature *first, Creature *second );
-void FrostBolt ( Creature *first, Creature *second );
-void MagicMissile ( Creature *first, Creature *second );
-void ShadowBolt ( Creature *first, Creature *second );
-void Mutilation ( Creature *first, Creature *second );
-void LethalPoison ( Creature *first, Creature *second );
-void Backstab ( Creature *first, Creature *second );
-void Bloodlash ( Creature *first, Creature *second );
-void DeathStrike ( Creature *first, Creature *second );
-void Barrier ( Creature *first, Creature *second );
-void BloodThirst ( Creature *first, Creature *second );
 
 class Effect {
 public:

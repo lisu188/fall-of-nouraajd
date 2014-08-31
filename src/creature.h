@@ -45,7 +45,7 @@ public:
 	virtual std::set<Item *> *getLoot();
 	virtual std::set<Item *> getAllItems();
 	void addAction ( Interaction *action );
-	void addEffect ( std::string type, Creature *caster );
+	void addEffect ( Effect *effect );
 	int getMana();
 	void setMana ( int mana );
 	void addMana ( int i );

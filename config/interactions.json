@@ -19,7 +19,6 @@
     }, 
     "Barrier": {
         "anim": "images/interactions/barrier", 
-        "effect": "BarrierEffect", 
         "manaCost": 17
     }, 
     "BloodThirst": {
@@ -28,7 +27,6 @@
     }, 
     "Bloodlash": {
         "anim": "images/interactions/bloodlash", 
-        "effect": "BloodlashEffect", 
         "manaCost": 30
     }, 
     "ChaosBlast": {
@@ -37,7 +35,6 @@
     }, 
     "Chloroform": {
         "anim": "images/interactions/chloroform", 
-        "effect": "ChloroformEffect", 
         "manaCost": 25
     }, 
     "DeathStrike": {
@@ -55,7 +52,6 @@
     "ElemStaff": {}, 
     "EndlessPain": {
         "anim": "images/interactions/endlesspain", 
-        "effect": "EndlessPainEffect", 
         "manaCost": 25
     }, 
     "FrostBolt": {
@@ -64,7 +60,6 @@
     }, 
     "LethalPoison": {
         "anim": "images/interactions/lethalpoison", 
-        "effect": "LethalPoisonEffect", 
         "manaCost": 20
     }, 
     "MagicMissile": {
@@ -74,7 +69,6 @@
     }, 
     "Mutilation": {
         "anim": "images/interactions/mutilation", 
-        "effect": "MutilationEffect", 
         "manaCost": 15
     }, 
     "ShadowBolt": {
@@ -91,7 +85,6 @@
     }, 
     "Stunner": {
         "anim": "images/interactions/stun", 
-        "effect": "Stun", 
         "manaCost": 40
     }
 }
