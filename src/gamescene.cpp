@@ -43,13 +43,13 @@ private:
 	Map *map;
 };
 
-void GameScene::startGame ( std::string file ) {
+void GameScene::startGame ( std::string file ,std::string player ) {
 	srand ( time ( 0 ) );
 	map = new Map ( this,file );
-	player = new Player ( map,"Sorcerer" );
-	map->addObject ( player );
-	player->moveTo ( map->getEntryX(), map->getEntryY(), map->getEntryZ(), true );
-	player->updateViews();
+	this->player = new Player ( map,player );
+	map->addObject ( this->player );
+	this->player->moveTo ( map->getEntryX(), map->getEntryY(), map->getEntryZ(), true );
+	this->player->updateViews();
 	QThreadPool::globalInstance()->start ( new LoadGameTask ( map ) );
 }
 
