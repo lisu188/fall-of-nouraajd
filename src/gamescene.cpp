@@ -26,19 +26,18 @@ public:
 		QMetaObject::invokeMethod ( map, "ensureSize",
 		                            Qt::ConnectionType::BlockingQueuedConnection );
 		QMetaObject::invokeMethod ( map->getScene()->getView(),"show" );
-		double all= ( map->getCurrentXBound() + 20 ) * ( map->getCurrentYBound() + 20 );
-		double loaded=0;
-		for ( int i = -10; i < map->getCurrentXBound() + 10; i++ )
-			for ( int j = -10; j < map->getCurrentYBound() + 10; j++ ) {
-				QMetaObject::invokeMethod ( map, "ensureTile",
-				                            Qt::ConnectionType::BlockingQueuedConnection,
-				                            Q_ARG ( int, i ),Q_ARG ( int, j ) );
-				loaded++;
-				if ( ( ( int ) loaded ) %100==0 ) {
-					//qDebug()<<loaded/all*100<<"%";
-				}
-			}
-		map->loadingComplete();
+//		double all= ( map->getCurrentXBound() + 20 ) * ( map->getCurrentYBound() + 20 );
+//		double loaded=0;
+//		for ( int i = -10; i < map->getCurrentXBound() + 10; i++ )
+//			for ( int j = -10; j < map->getCurrentYBound() + 10; j++ ) {
+//				QMetaObject::invokeMethod ( map, "ensureTile",
+//				                            Qt::ConnectionType::BlockingQueuedConnection,
+//				                            Q_ARG ( int, i ),Q_ARG ( int, j ) );
+//				loaded++;
+//				if ( ( ( int ) loaded ) %100==0 ) {
+//					//qDebug()<<loaded/all*100<<"%";
+//				}
+//			}
 	}
 private:
 	Map *map;

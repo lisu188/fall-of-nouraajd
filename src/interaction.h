@@ -16,15 +16,17 @@ public:
 	Interaction ( const Interaction &interaction );
 	void onAction ( Creature *first, Creature *second );
 	int getManaCost();
-	static Interaction *getInteraction ( std::string name );
 	virtual void onEnter();
 	virtual void onMove();
 	virtual void loadFromJson ( std::string name );
 	virtual bool compare ( MapObject *item );
+	virtual void performAction ( Creature*first,Creature*second );
+	virtual bool configureEffect ( Effect*effect );
 
 protected:
 	void mousePressEvent ( QGraphicsSceneMouseEvent *event );
 	int manaCost;
+	std::string effect;
 
 private:
 	QGraphicsSimpleTextItem statsView;
@@ -34,10 +36,11 @@ Q_DECLARE_METATYPE ( Interaction )
 
 class Effect {
 public:
-	Effect ( std::string type, Creature *caster );
+	Effect ( std::string type, Creature *caster ,Creature * victim );
 	int getTimeLeft();
 	int getTimeTotal();
 	Creature *getCaster();
+	Creature *getVictim();
 	bool apply ( Creature *creature );
 	std::string className;
 	Stats *getBonus();
@@ -51,6 +54,7 @@ private:
 	int timeTotal;
 	Stats *bonus;
 	Creature *caster;
+	Creature *victim;
 };
 bool StunEffect ( Effect *effect, Creature *creature );
 bool EndlessPainEffect ( Effect *effect, Creature *creature );
