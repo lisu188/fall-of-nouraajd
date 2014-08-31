@@ -78,6 +78,7 @@ public:
   ScriptEngine *getEngine();
   LootProvider *getLootProvider();
   template <typename T> T createMapObject(QString name);
+  template <typename T> T createMapObject(std::string name);
 
 private:
   std::set<MapObject *> mapObjects;
@@ -96,6 +97,7 @@ class MapObject : public AnimatedObject {
 public:
   PROPERTY_ACCESSOR
   static MapObject *createMapObject(QString name);
+  static MapObject *createMapObject(QString name, Map *map);
   MapObject();
   MapObject(int x, int y, int z, int v);
   std::string typeName;
@@ -145,7 +147,11 @@ public:
   }
 };
 template <typename T> T Map::createMapObject(QString name) {
-  return dynamic_cast<T>(MapObject::createMapObject(name));
+  return dynamic_cast<T>(MapObject::createMapObject(name, this));
+}
+
+template <typename T> T Map::createMapObject(std::string name) {
+  return createMapObject<T>(QString::fromStdString(name));
 }
 
 #endif // MAP_H

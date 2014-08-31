@@ -30,54 +30,28 @@ void Interaction::loadFromJson(std::string name) {
         return;
     }
     manaCost = config.get("manaCost", 0).asInt();
+    effect = config.get("effect", "").asString();
     std::string anim = config.get("anim", "").asString();
     if (anim.compare("") != 0) {
         setAnimation(anim);
     }
 }
 
-// From #237 some actions are Python functions in scripts/Interactions.py, looked up by
-// name in the map's ScriptEngine namespace (inferred from ScriptEngine::getObject).
-namespace {
-bool runPythonAction(Interaction *self, Creature *first, Creature *second) {
-    GameScene *gameScene = dynamic_cast<GameScene *>(self->scene());
-    Map *actionMap = self->getMap() ? self->getMap() : (gameScene ? gameScene->getMap() : NULL);
-    if (!actionMap && first) {
-        actionMap = first->getMap();
-    }
-    if (!actionMap || !actionMap->getEngine()) {
-        return false;
-    }
-    boost::python::object action = actionMap->getEngine()->getObject(self->typeName);
-    if (action.is_none()) {
-        return false;
-    }
-    try {
-        action(boost::python::ptr(first), boost::python::ptr(second));
-    } catch (boost::python::error_already_set &) {
-        PyErr_Print();
-    }
-    return true;
-}
-}
 
 void Interaction::onAction(Creature *first, Creature *second) {
     qDebug() << first->typeName.c_str() << "used" << this->typeName.c_str() << "against" << second->typeName.c_str();
-    runPythonAction(this, first, second);
+    performAction(first, second);
+    if (!effect.empty()) {
+        Effect *created = new Effect(effect, first, second);
+        if (configureEffect(created)) {
+            second->addEffect(created);
+        } else {
+            delete created;
+        }
+    }
 }
 
 int Interaction::getManaCost() { return manaCost; }
-
-Interaction *Interaction::getInteraction(std::string name) {
-    if (name.compare("") == 0) {
-        return 0;
-    }
-    Interaction *result = new Interaction();
-    result->loadFromJson(name);
-    return result;
-}
-
-
 
 void Interaction::mousePressEvent(QGraphicsSceneMouseEvent *event) {
     GameScene *gameScene = dynamic_cast<GameScene *>(this->scene());
@@ -109,7 +83,7 @@ std::unordered_map<std::string, std::function<bool(Effect *effects, Creature *)>
     {"BloodlashEffect", &BloodlashEffect},
     {"BarrierEffect", &BarrierEffect}};
 
-Effect::Effect(std::string type, Creature *caster) : caster(caster) {
+Effect::Effect(std::string type, Creature *caster, Creature *victim) : caster(caster), victim(victim) {
     bonus = 0;
     className = type;
     Json::Value config = (*ConfigurationProvider::getConfig("config/effects.json"))[type];
@@ -214,3 +188,10 @@ Json::Value Effect::saveToJson() {
     config["timeTotal"] = timeTotal;
     return config;
 }
+
+Creature *Effect::getVictim() { return victim; }
+
+// Python interaction classes override these (#245); the C++ base does nothing itself.
+void Interaction::performAction(Creature *, Creature *) {}
+
+bool Interaction::configureEffect(Effect *) { return true; }
