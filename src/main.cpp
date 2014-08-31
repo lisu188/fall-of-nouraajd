@@ -3,6 +3,7 @@
 #include "util.h"
 
 #include <src/gameview.h>
+#include "mainwindow.h"
 #include <QApplication>
 #include <QDebug>
 #include <src/tile.h>
@@ -71,7 +72,8 @@ int main(int argc, char *argv[])
     QThreadPool::globalInstance()->setMaxThreadCount(16);
     QThreadPool::globalInstance()->setExpiryTimeout(0);
     registerMetaTypes();
-    GameView view("maps/map.tmx");
+    MainWindow window;
+    window.show();
     int ret = a.exec();
     return ret;
 }

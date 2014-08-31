@@ -17,7 +17,7 @@ class GameScene : public QGraphicsScene {
 	Q_OBJECT
 public:
 	void playerMove ( int dirx, int diry );
-	void startGame ( std::string file );
+	void startGame ( std::string file ,std::string player );
 	Player *getPlayer() const;
 	void setPlayer ( Player *value );
 	Map *getMap() const;

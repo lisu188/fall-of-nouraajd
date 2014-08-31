@@ -28,7 +28,7 @@ private:
 class GameView : public QGraphicsView {
 	Q_OBJECT
 public:
-	GameView ( std::string mapName );
+	GameView ( std::string mapName,std::string playerType );
 	~GameView();
 	FightView *getFightView();
 	CharView *getCharView();
@@ -56,5 +56,6 @@ private:
 	PlayerListView *playerSkillsView;
 	PlayerEquippedView *playerEquippedView;
 	std::string mapName;
+	std::string playerType;
 };
 #endif // GAMEVIEW_H
