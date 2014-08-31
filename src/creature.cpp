@@ -137,10 +137,10 @@ void Creature::addAction(Interaction *action) {
     Q_EMIT skillsChanged();
 }
 
-void Creature::addEffect(std::string type, Creature *caster) {
-    if (type.empty())
+void Creature::addEffect(Effect *effect) {
+    if (!effect)
         return;
-    effects.insert(new Effect(type, caster));
+    effects.insert(effect);
 }
 
 void Creature::addItem(std::set<Item *> *items) {
