@@ -1,7 +1,5 @@
-#ifndef PLAYER_H
-#define PLAYER_H
-
-#include "src/creature.h"
+#pragma once
+#include "creature.h"
 #include <src/item.h>
 #include <queue>
 #include <QDateTime>
@@ -11,7 +9,6 @@ class PlayerStatsView;
 class Player : public Creature {
 	Q_OBJECT
 	friend class PlayerStatsView;
-
 public:
 	Player ( Map*map,std::string name );
 	Player();
@@ -38,6 +35,4 @@ private:
 	qint64 date = QDateTime::currentMSecsSinceEpoch();
 	std::list<MapObject *> entered;
 };
-Q_DECLARE_METATYPE ( Player )
 
-#endif // PLAYER_H

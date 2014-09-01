@@ -1,38 +1,38 @@
-#include "animationprovider.h"
+#include "CAnimationProvider.h"
 
-#include <src/animation.h>
+#include "CAnimation.h"
 #include <sstream>
 #include <fstream>
 #include <QBitmap>
 #include <QDebug>
 #include <src/tile.h>
 #include <map>
-#include <src/configurationprovider.h>
+#include "CConfigurationProvider.h"
 #include <mutex>
 #include "util.h"
 
-std::map<int, AnimationProvider> AnimationProvider::instances;
+std::map<int, CAnimationProvider> CAnimationProvider::instances;
 
-Animation *AnimationProvider::getAnim ( std::string path, int size ) {
+CAnimation *CAnimationProvider::getAnim ( std::string path, int size ) {
 	static std::mutex mutex;
 	std::unique_lock<std::mutex> lock ( mutex );
 	if ( instances.find ( size ) == instances.end() ) {
 		instances.insert (
-		    std::pair<int, AnimationProvider> ( size, AnimationProvider ( size ) ) );
+		    std::pair<int, CAnimationProvider> ( size, CAnimationProvider ( size ) ) );
 	}
 	return instances.at ( size ).getAnimation ( path );
 }
 
-AnimationProvider::AnimationProvider ( int size ) : tileSize ( size ) {}
+CAnimationProvider::CAnimationProvider ( int size ) : tileSize ( size ) {}
 
-AnimationProvider::~AnimationProvider() {
+CAnimationProvider::~CAnimationProvider() {
 	for ( iterator it = begin(); it != end(); it++ ) {
 		delete ( *it ).second;
 	}
 	clear();
 }
 
-Animation *AnimationProvider::getAnimation ( std::string path ) {
+CAnimation *CAnimationProvider::getAnimation ( std::string path ) {
 	if ( this->find ( path ) != this->end() ) {
 		return this->at ( path );
 	}
@@ -43,11 +43,11 @@ Animation *AnimationProvider::getAnimation ( std::string path ) {
 	return getAnimation ( path );
 }
 
-void AnimationProvider::loadAnim ( std::string path ) {
-	Animation *anim = new Animation();
+void CAnimationProvider::loadAnim ( std::string path ) {
+	CAnimation *anim = new CAnimation();
 	QPixmap *img = 0;
 	std::map<int, int> timemap;
-	Json::Value config = *ConfigurationProvider::getConfig ( path + "time.json" );
+	Json::Value config = *CConfigurationProvider::getConfig ( path + "time.json" );
 	if ( !config.isNull() ) {
 		for ( int i = 0; i < config.size(); i++ ) {
 			timemap.insert ( std::pair<int, int> ( i, config[i].asInt() ) );
@@ -82,11 +82,11 @@ void AnimationProvider::loadAnim ( std::string path ) {
 	if ( anim->size() == 0 ) {
 		return;
 	}
-	this->insert ( std::pair<std::string, Animation *> ( path, anim ) );
+	this->insert ( std::pair<std::string, CAnimation *> ( path, anim ) );
 	qDebug() << "Loaded animation:" << path.c_str() << "\n";
 }
 
-QPixmap *AnimationProvider::getImage ( std::string path ) {
+QPixmap *CAnimationProvider::getImage ( std::string path ) {
 	QPixmap image ( path.c_str() );
 	if ( !image.hasAlphaChannel() && path.find ( "tiles" ) == std::string::npos ) {
 		image.setMask ( image.createHeuristicMask() );

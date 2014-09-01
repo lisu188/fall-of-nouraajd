@@ -6,13 +6,13 @@
 #include <src/gameview.h>
 
 #include <src/playerstatsview.h>
-#include <src/fightview.h>
+#include <src/gamepanel.h>
 
 #include <src/item.h>
 #include <src/item.h>
 #include <src/stats.h>
 #include <src/stats.h>
-#include <src/configurationprovider.h>
+#include <src/CConfigurationProvider.h>
 
 #include <QDebug>
 #include <list>
@@ -23,7 +23,7 @@
 
 void Interaction::loadFromJson(std::string name) {
     typeName = name;
-    Json::Value config = (*ConfigurationProvider::getConfig("config/object.json"))[name];
+    Json::Value config = (*CConfigurationProvider::getConfig("config/object.json"))[name];
     tooltip = config.get("tooltip", name).asString();
     if (config.isArray() && config.size() >= 3) {
         moveTo(config[(unsigned int)0].asInt(), config[(unsigned int)1].asInt(), config[(unsigned int)2].asInt(), true);
@@ -62,7 +62,7 @@ void Interaction::mousePressEvent(QGraphicsSceneMouseEvent *event) {
     if (manaCost > player->getMana()) {
         return;
     }
-    Creature *creature = FightView::selected;
+    Creature *creature = FightPanel::selected;
     if (!creature) {
         return;
     }
@@ -86,7 +86,7 @@ std::unordered_map<std::string, std::function<bool(Effect *effects, Creature *)>
 Effect::Effect(std::string type, Creature *caster, Creature *victim) : caster(caster), victim(victim) {
     bonus = 0;
     className = type;
-    Json::Value config = (*ConfigurationProvider::getConfig("config/effects.json"))[type];
+    Json::Value config = (*CConfigurationProvider::getConfig("config/effects.json"))[type];
     timeLeft = timeTotal = config.get("duration", 1).asInt();
 }
 

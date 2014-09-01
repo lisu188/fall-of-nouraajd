@@ -46,15 +46,8 @@ SOURCES += lib/base64/base64.cpp \
     lib/zlib/trees.c \
     lib/zlib/uncompr.c \
     lib/zlib/zutil.c \
-    src/animatedobject.cpp \
-    src/animation.cpp \
-    src/animationprovider.cpp \
-    src/building.cpp \
-    src/charview.cpp \
-    src/configurationprovider.cpp \
     src/creature.cpp \
     src/event.cpp \
-    src/fightview.cpp \
     src/gamescene.cpp \
     src/gamescript.cpp \
     src/gameview.cpp \
@@ -76,7 +69,14 @@ SOURCES += lib/base64/base64.cpp \
     src/stats.cpp \
     src/tile.cpp \
     src/mainwindow.cpp \
-    src/playerabstractview.cpp
+    src/CAnimatedObject.cpp \
+    src/CAnimation.cpp \
+    src/CAnimationProvider.cpp \
+    src/CBuilding.cpp \
+    src/CConfigurationProvider.cpp \
+    src/CReflection.cpp \
+    src/ReflectTypes.cpp \
+    src/gamepanel.cpp
 
 HEADERS  += \
     lib/base64/base64.h \
@@ -118,17 +118,16 @@ HEADERS  += \
     lib/zlib/zconf.h \
     lib/zlib/zlib.h \
     lib/zlib/zutil.h \
-    src/animatedobject.h \
-    src/animation.h \
-    src/animationprovider.h \
-    src/building.h \
-    src/charview.h \
-    src/configurationprovider.h \
+    src/CAnimatedObject.h \
+    src/CAnimation.h \
+    src/CAnimationProvider.h \
+    src/CBuilding.h \
+    src/CConfigurationProvider.h \
+    src/CReflection.h \
     src/creature.h \
     src/event.h \
-    src/fightview.h \
+    src/gamepanel.h \
     src/gamescene.h \
-    src/gamescript.h \
     src/gameview.h \
     src/interaction.h \
     src/item.h \
@@ -139,7 +138,6 @@ HEADERS  += \
     src/monster.h \
     src/pathfinder.h \
     src/player.h \
-    src/playerabstractview.h \
     src/playerequippedview.h \
     src/playerlistview.h \
     src/playerstatsview.h \

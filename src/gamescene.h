@@ -1,7 +1,7 @@
 #ifndef GAMESCENE_H
 #define GAMESCENE_H
-#include <QGraphicsScene>
 #include "Python.h"
+#include <QGraphicsScene>
 #include <QGraphicsSceneMouseEvent>
 #include <QKeyEvent>
 #include "map.h"
@@ -12,7 +12,7 @@
 #include <QDateTime>
 
 class GameView;
-class FightView;
+class FightPanel;
 class GameScene : public QGraphicsScene {
 	Q_OBJECT
 public:

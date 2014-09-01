@@ -124,7 +124,5 @@ private:
     int shadow = 0;
 };
 
-Q_DECLARE_METATYPE(Stats)
-Q_DECLARE_METATYPE(Damage)
 
 #endif // STATS_H

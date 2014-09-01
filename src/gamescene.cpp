@@ -9,9 +9,9 @@
 #include <QApplication>
 #include <QDesktopWidget>
 #include <src/playerlistview.h>
-#include <src/animationprovider.h>
-#include <src/configurationprovider.h>
-#include <src/fightview.h>
+#include <src/CAnimationProvider.h>
+#include <src/CConfigurationProvider.h>
+#include <src/gamepanel.h>
 #include <fstream>
 #include <lib/json/json.h>
 #include <QDateTime>

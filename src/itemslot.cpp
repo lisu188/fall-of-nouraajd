@@ -3,7 +3,7 @@
 #include <src/map.h>
 #include <QGraphicsSceneDragDropEvent>
 #include <qpainter.h>
-#include <src/configurationprovider.h>
+#include "CConfigurationProvider.h"
 #include <src/creature.h>
 #include "util.h"
 
@@ -27,7 +27,7 @@ void ItemSlot::paint ( QPainter *painter, const QStyleOptionGraphicsItem *,
 bool ItemSlot::checkType ( int slot, QWidget *widget ) {
 	if ( widget ) {
 		Json::Value config =
-		    ( *ConfigurationProvider::getConfig (
+		    ( *CConfigurationProvider::getConfig (
 		          "config/slots.json" ) ) [to_string ( slot ).c_str()]["types"];
 		for ( int i = 0; i < config.size(); i++ ) {
 			if ( widget->inherits ( config[i].asCString() ) ) {

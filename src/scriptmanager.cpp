@@ -1,5 +1,4 @@
 #include "scriptmanager.h"
-#include "gamescript.h"
 #include <QString>
 #include <sstream>
 

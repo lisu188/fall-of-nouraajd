@@ -2,7 +2,7 @@
 #include <QDebug>
 #include <math.h>
 #include <src/gamescene.h>
-#include <src/configurationprovider.h>
+#include <src/CConfigurationProvider.h>
 
 PathFinder::PathFinder() {
 }
@@ -134,7 +134,7 @@ Coords SmartPathFinder::findPath(Creature *first, Creature *second) {
 				if (i == 0 && j == 0)
 					continue;
 				Cell tmpCell(currentCell.x + i, currentCell.y + j, start);
-				bool canStep = (*ConfigurationProvider::getConfig(
+				bool canStep = (*CConfigurationProvider::getConfig(
 						"config/tiles.json"))[map->getTile(tmpCell.x, tmpCell.y,
 						level)].get("canStep", true).asBool();
 				if (!canStep) {
@@ -210,3 +210,7 @@ void CompletionListener::deregisterWorker() {
     if (workers > 0) --workers;
     run();
 }
+
+// #247 made the base finder concrete (reflection constructs it); it stays in place.
+Coords PathFinder::findPath(Creature *, Creature *) { return Coords(0, 0, 0); }
+PathFinder::PathFinder(const PathFinder &) {}

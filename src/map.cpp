@@ -6,9 +6,9 @@
 
 #include "tile.h"
 
-#include <src/building.h>
+#include <src/CBuilding.h>
 #include <src/pathfinder.h>
-#include <src/configurationprovider.h>
+#include <src/CConfigurationProvider.h>
 #include <src/monster.h>
 #include <src/player.h>
 #include <src/interaction.h>
@@ -353,7 +353,7 @@ void Map::removeObject(MapObject *mapObject) {
     mapObject->scene()->removeItem(mapObject);
   }
   // Original Item::onEnter transfers this same object into the player inventory.
-  // AnimatedObject registers its lifetime with the genuine Destroyer.
+  // CAnimatedObject registers its lifetime with the genuine Destroyer.
 }
 
 
@@ -548,7 +548,7 @@ Map *MapObject::getMap() { return map; }
 void MapObject::setVisible(bool vis) { QGraphicsItem::setVisible(vis); }
 
 void MapObject::setAnimation(std::string path) {
-  AnimatedObject::setAnimation(path, Map::getTileSize());
+  CAnimatedObject::setAnimation(path, Map::getTileSize());
 }
 
 void Map::loadMapFromTmx(Tmx::Map &source) {
@@ -604,7 +604,7 @@ MapObject *MapObject::createMapObject(QString qname) { return createMapObject(qn
 // interaction through getMap() while loading (genuine item.cpp).
 MapObject *MapObject::createMapObject(QString qname, Map *map) {
     std::string name = qname.toStdString();
-    Json::Value config = (*ConfigurationProvider::getConfig("config/object.json"))[name];
+    Json::Value config = (*CConfigurationProvider::getConfig("config/object.json"))[name];
     std::string class_name = config.get("class", name).asString();
     int registered = QMetaType::type(class_name.c_str());
     if (registered == QMetaType::UnknownType) return 0;

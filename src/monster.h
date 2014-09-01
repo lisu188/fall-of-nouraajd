@@ -12,6 +12,5 @@ public:
 	virtual void levelUp();
 	virtual std::set<Item *> *getLoot();
 };
-Q_DECLARE_METATYPE ( Monster )
 
 #endif // MONSTER_H

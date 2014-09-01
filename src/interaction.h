@@ -31,7 +31,6 @@ protected:
 private:
 	QGraphicsSimpleTextItem statsView;
 };
-Q_DECLARE_METATYPE ( Interaction )
 
 
 class Effect {
