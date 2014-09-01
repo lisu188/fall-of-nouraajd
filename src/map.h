@@ -8,8 +8,8 @@
 #include <QObject>
 #include <qgraphicsitemanimation.h>
 #include <QTimeLine>
-#include <src/animation.h>
-#include <src/animatedobject.h>
+#include <src/CAnimation.h>
+#include <src/CAnimatedObject.h>
 #include <unordered_map>
 #include <set>
 #include <lib/json/json.h>
@@ -92,7 +92,7 @@ private:
   LootProvider *lootProvider;
 };
 
-class MapObject : public AnimatedObject {
+class MapObject : public CAnimatedObject {
   Q_OBJECT
 public:
   PROPERTY_ACCESSOR

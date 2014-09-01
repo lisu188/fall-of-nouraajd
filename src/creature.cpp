@@ -8,7 +8,7 @@
 #include <sstream>
 
 #include <src/interaction.h>
-#include <src/configurationprovider.h>
+#include <src/CConfigurationProvider.h>
 #include <src/item.h>
 #include <src/item.h>
 #include <src/stats.h>
@@ -36,7 +36,7 @@ Creature::Creature() : MapObject(0, 0, 0, 2) {
     gold = exp = level = sw = mana = manaMax = hpMax = hp = 0;
     manaRegRate = 1;
     setAcceptHoverEvents(true);
-    Json::Value slotConfig = *ConfigurationProvider::getConfig("config/slots.json");
+    Json::Value slotConfig = *CConfigurationProvider::getConfig("config/slots.json");
     for (auto it = slotConfig.begin(); it != slotConfig.end(); ++it) equipped[std::atoi(it.memberName())] = 0;
 }
 Creature::Creature(const Creature &other) : Creature() { if (!other.typeName.empty()) loadFromJson(other.typeName); }
@@ -201,7 +201,7 @@ int Creature::getScale() { return level + sw; }
 Interaction *Creature::getLevelAction() {
     std::ostringstream key;
     key << level;
-    Json::Value config = (*ConfigurationProvider::getConfig("config/object.json"))[typeName];
+    Json::Value config = (*CConfigurationProvider::getConfig("config/object.json"))[typeName];
     return getMap()->createMapObject<Interaction *>(config["levelling"].get(key.str(), "").asString());
 }
 
@@ -212,7 +212,7 @@ void Creature::setAlive() { alive = true; }
 // Creatures are described by a configuration or a saved game: both use the same keys.
 void Creature::loadFromJson(std::string name) {
     typeName = name;
-    Json::Value config = (*ConfigurationProvider::getConfig("config/object.json"))[name];
+    Json::Value config = (*CConfigurationProvider::getConfig("config/object.json"))[name];
     animPath = config.get("path", "").asString();
     setAnimation(animPath);
     sw = config.get("sw", 0).asInt();
@@ -312,7 +312,7 @@ Interaction *Creature::selectAction() {
 
 Stats Creature::getLevelStats() {
     Stats bonus;
-    Json::Value config = (*ConfigurationProvider::getConfig("config/object.json"))[typeName];
+    Json::Value config = (*CConfigurationProvider::getConfig("config/object.json"))[typeName];
     bonus.loadFromJson(config["levelStats"]);
     return bonus;
 }

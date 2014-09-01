@@ -3,7 +3,7 @@
 #include <src/gamescene.h>
 #include <qpainter.h>
 #include <sstream>
-#include <src/building.h>
+#include "CBuilding.h"
 
 PlayerStatsView::PlayerStatsView() {
 	this->player = player;

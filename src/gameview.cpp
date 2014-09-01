@@ -7,65 +7,13 @@
 #include <QMouseEvent>
 #include <src/playerlistview.h>
 
-namespace {
-struct ViewLists {
-    std::set<MapObject *, Comparer> inventory;
-    std::set<MapObject *, Comparer> skills;
-    std::set<MapObject *, Comparer> equipped;
-};
-std::map<GameView *, ViewLists> viewLists;
-
-void copyPlayerLists(Player *player, ViewLists &lists) {
-    lists.inventory.clear();
-    lists.skills.clear();
-    lists.equipped.clear();
-    for (Item *item : *player->getInventory())
-        lists.inventory.insert(item);
-    for (Interaction *action : *player->getActions())
-        lists.skills.insert(action);
-    for (auto entry : *player->getEquipped())
-        if (entry.second) lists.equipped.insert(entry.second);
-}
-} // namespace
-
-class ViewRefresher : public QObject {
-    Q_OBJECT
-public:
-    ViewRefresher(Player *player, ViewLists &lists, std::initializer_list<QObject *> views, QObject *parent)
-        : QObject(parent), player(player), lists(lists), views(views) {}
-    Q_SLOT void refresh() {
-        copyPlayerLists(player, lists);
-        for (QObject *view : views) QMetaObject::invokeMethod(view, "update", Qt::DirectConnection);
-    }
-private:
-    Player *player;
-    ViewLists &lists;
-    std::vector<QObject *> views;
-};
 
 bool GameView::init = false;
 
 void GameView::start() {
-
     scene->startGame(mapName, playerType);
-    Player *player = scene->getPlayer();
-    ViewLists &lists = viewLists[this];
-    copyPlayerLists(player, lists);
-    playerInventoryView = new PlayerListView(&lists.inventory);
-    playerSkillsView = new PlayerListView(&lists.skills);
-    playerEquippedView = new PlayerEquippedView(player->getEquipped());
-    playerInventoryView->setParentItem(charView);
-    playerEquippedView->setParentItem(charView);
-    scene->addItem(playerSkillsView);
-    playerInventoryView->setPos(0, 0);
-    playerEquippedView->setPos(charView->boundingRect().width() - playerEquippedView->boundingRect().width(), 0);
-    playerSkillsView->setPos(mapToScene(width() - playerSkillsView->boundingRect().width(),
-                                        height() - playerSkillsView->boundingRect().height()));
-    ViewRefresher *refresher = new ViewRefresher(player, viewLists[this],
-        {playerInventoryView, playerSkillsView, playerEquippedView}, this);
-    connect(player, SIGNAL(inventoryChanged()), refresher, SLOT(refresh()));
-    connect(player, SIGNAL(skillsChanged()), refresher, SLOT(refresh()));
-    connect(player, SIGNAL(equippedChanged()), refresher, SLOT(refresh()));
+    charView->setUpPanel(this);
+    fightView->setUpPanel(this);
     playerStatsView.setPlayer(scene->getPlayer());
     playerStatsView.update();
     scene->removeItem(&loading);
@@ -73,9 +21,6 @@ void GameView::start() {
 }
 
 GameView::GameView(std::string mapName, std::string playerType) : mapName(mapName), playerType(playerType) {
-    playerInventoryView = 0;
-    playerSkillsView = 0;
-    playerEquippedView = 0;
     setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
     setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
     setViewportUpdateMode(QGraphicsView::BoundingRectViewportUpdate);
@@ -91,8 +36,8 @@ GameView::GameView(std::string mapName, std::string playerType) : mapName(mapNam
     loading.setPixmap(pixmap.scaled(this->width(), this->height(), Qt::IgnoreAspectRatio, Qt::SmoothTransformation));
     scene->addItem(&loading);
 
-    fightView = new FightView();
-    charView = new CharView();
+    fightView = new FightPanel();
+    charView = new CharPanel();
 
     scene->addItem(fightView);
     scene->addItem(charView);
@@ -113,42 +58,18 @@ GameView::GameView(std::string mapName, std::string playerType) : mapName(mapNam
 
 GameView::~GameView() {
     delete scene;
-    viewLists.erase(this);
 }
 
-FightView *GameView::getFightView() { return fightView; }
+FightPanel *GameView::getFightView() { return fightView; }
 
-CharView *GameView::getCharView() { return charView; }
+CharPanel *GameView::getCharView() { return charView; }
 
 void GameView::showCharView() {
-    if (!playerInventoryView || !playerEquippedView)
-        return;
-    if (!charView->isVisible()) {
-
-        charView->setVisible(true);
-        charView->setPos(mapToScene(this->width() / 2 - charView->boundingRect().width() / 2,
-                                    this->height() / 2 - charView->boundingRect().height() / 2));
-        playerInventoryView->setPos(0, 0);
-        playerEquippedView->setPos(this->getCharView()->boundingRect().width() -
-                                       playerEquippedView->boundingRect().width(),
-                                   0);
-        charView->update();
-    } else {
-        charView->setVisible(false);
-    }
+    charView->showPanel(this);
 }
 
 void GameView::showFightView() {
-    std::list<Creature *> *fightlist = scene->getPlayer()->getFightList();
-    FightView::selected = fightlist->front();
-    for (std::list<Creature *>::iterator it = fightlist->begin(); it != fightlist->end(); it++) {
-        qDebug() << (*it)->typeName.c_str() << "attacked" << scene->getPlayer()->typeName.c_str();
-    }
-    qDebug() << "";
-    fightView->setVisible(true);
-    fightView->setPos(mapToScene(this->width() / 2 - fightView->boundingRect().width() / 2,
-                                 this->height() / 2 - fightView->boundingRect().height() / 2));
-    fightView->update();
+    fightView->showPanel(this);
 }
 
 void GameView::mouseDoubleClickEvent(QMouseEvent *e) {
@@ -173,8 +94,6 @@ void GameView::resizeEvent(QResizeEvent *event) {
         int size = scene->getMap()->getTileSize();
         Player *player = scene->getPlayer();
         centerOn(player->getPosX() * size + size / 2, player->getPosY() * size + size / 2);
-        playerSkillsView->setPos(mapToScene(width() - playerSkillsView->boundingRect().width(),
-                                            height() - playerSkillsView->boundingRect().height()));
     }
 }
 
@@ -204,8 +123,14 @@ void BackPackObject::paintEvent(QPaintEvent *) {
     painter.drawPixmap(0, 0, pixmap);
 }
 
-#include "gameview.moc"
 
 void GameView::show() {
     showFullScreen();
+}
+
+GameScene *GameView::getScene() const { return scene; }
+
+void GameView::setScene(GameScene *value) {
+    scene = value;
+    QGraphicsView::setScene(value);
 }

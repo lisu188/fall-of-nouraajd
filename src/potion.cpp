@@ -1,6 +1,6 @@
 #include "potion.h"
 #include <QDebug>
-#include <src/configurationprovider.h>
+#include "CConfigurationProvider.h"
 #include <src/creature.h>
 #include <src/gamescene.h>
 

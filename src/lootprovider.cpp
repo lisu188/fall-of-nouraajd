@@ -1,6 +1,6 @@
 #include "lootprovider.h"
-
-#include <src/configurationprovider.h>
+#include "CReflection.h"
+#include "CConfigurationProvider.h"
 #include <src/util.h>
 
 std::set<Item *> *LootProvider::getLoot ( int value ) {
@@ -9,10 +9,10 @@ std::set<Item *> *LootProvider::getLoot ( int value ) {
 
 LootProvider::LootProvider ( Map *map ) {
 	this->map=map;
-	Json::Value config = *ConfigurationProvider::getConfig ( "config/object.json" );
+	Json::Value config = *CConfigurationProvider::getConfig ( "config/object.json" );
 	Json::Value::iterator it = config.begin();
 	for ( ; it != config.end(); it++ ) {
-		if ( checkInheritance ( "Item", ( *it ).get ( "class", "" ).asCString() ) ) {
+		if ( CReflection::getInstance()->checkInheritance ( "Item", ( *it ).get ( "class", "" ).asCString() ) ) {
 			this->insert ( std::pair<std::string, int> ( it.memberName(),
 			               ( *it ).get ( "power", 1 ).asInt() ) );
 		}
