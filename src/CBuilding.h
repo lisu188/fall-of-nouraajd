@@ -1,16 +1,14 @@
-#ifndef BUILDING_H
-#define BUILDING_H
-#include "src/building.h"
-#include "configurationprovider.h"
+#pragma once
+#include "CConfigurationProvider.h"
 #include <src/map.h>
 
-class Building : public MapObject {
+class CBuilding : public MapObject {
 	Q_OBJECT
 	Q_PROPERTY ( bool enabled READ isEnabled WRITE setEnabled USER true )
 public:
-	static Building *createBuilding ( QString name );
-	Building();
-	Building ( const Building & );
+	static CBuilding *createBuilding ( QString name );
+	CBuilding();
+	CBuilding ( const CBuilding & );
 	virtual void onEnter();
 	virtual void onMove();
 	virtual void onCreate();
@@ -23,6 +21,3 @@ public:
 protected:
 	bool enabled = true;
 };
-Q_DECLARE_METATYPE ( Building )
-
-#endif // BUILDING_H

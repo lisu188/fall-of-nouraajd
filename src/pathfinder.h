@@ -9,9 +9,11 @@
 #include <unordered_set>
 
 class PathFinder : public QObject {
+	Q_OBJECT
 public:
 	PathFinder();
-	virtual Coords findPath ( Creature *first, Creature *second ) = 0;
+	PathFinder ( const PathFinder& );
+	virtual Coords findPath ( Creature *first, Creature *second );
 };
 
 class DumbPathFinder : public PathFinder {
@@ -24,7 +26,6 @@ public:
 public:
 	Coords findPath ( Creature *first, Creature *second );
 };
-Q_DECLARE_METATYPE ( DumbPathFinder )
 
 class RandomPathFinder : public PathFinder {
 	Q_OBJECT
@@ -35,7 +36,6 @@ public:
 public:
 	Coords findPath ( Creature *first, Creature *second );
 };
-Q_DECLARE_METATYPE ( RandomPathFinder )
 
 class Cell {
 public:
@@ -64,7 +64,6 @@ private:
 	                   std::unordered_set<Coords, CoordsHasher> &marked );
 	bool canStep ( Map *map, int x, int y, int z );
 };
-Q_DECLARE_METATYPE ( SmartPathFinder )
 
 class CompletionListener : public QObject {
 	Q_OBJECT

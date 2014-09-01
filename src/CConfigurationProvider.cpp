@@ -1,26 +1,26 @@
-#include "configurationprovider.h"
+#include "CConfigurationProvider.h"
 #include <QDebug>
 #include <QFile>
 #include <fstream>
 #include <mutex>
 
-Json::Value *ConfigurationProvider::getConfig ( std::string path ) {
+Json::Value *CConfigurationProvider::getConfig ( std::string path ) {
 	static std::mutex mutex;
 	std::unique_lock<std::mutex> lock ( mutex );
-	static ConfigurationProvider instance;
+	static CConfigurationProvider instance;
 	return instance.getConfiguration ( path );
 }
 
-ConfigurationProvider::ConfigurationProvider() {}
+CConfigurationProvider::CConfigurationProvider() {}
 
-ConfigurationProvider::~ConfigurationProvider() {
+CConfigurationProvider::~CConfigurationProvider() {
 	for ( iterator it = begin(); it != end(); it++ ) {
 		delete ( *it ).second;
 	}
 	clear();
 }
 
-Json::Value *ConfigurationProvider::getConfiguration ( std::string path ) {
+Json::Value *CConfigurationProvider::getConfiguration ( std::string path ) {
 	if ( this->find ( path ) != this->end() ) {
 		return this->at ( path );
 	}
@@ -28,7 +28,7 @@ Json::Value *ConfigurationProvider::getConfiguration ( std::string path ) {
 	return getConfiguration ( path );
 }
 
-void ConfigurationProvider::loadConfig ( std::string path ) {
+void CConfigurationProvider::loadConfig ( std::string path ) {
 	QFile file ( path.c_str() );
 	Json::Value *config = new Json::Value();
 	if ( file.open ( QIODevice::ReadOnly ) ) {

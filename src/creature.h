@@ -1,10 +1,8 @@
+#pragma once
 #include <QGraphicsPixmapItem>
 #include <src/item.h>
 #include <src/map.h>
 #include <src/stats.h>
-
-#ifndef CREATURE_H
-#define CREATURE_H
 
 class Interaction;
 class Effect;
@@ -118,6 +116,3 @@ protected:
 	Q_SIGNAL void inventoryChanged();
 	Q_SIGNAL void equippedChanged();
 };
-Q_DECLARE_METATYPE ( Creature )
-
-#endif // CREATURE_H

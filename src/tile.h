@@ -41,6 +41,5 @@ private:
 	static std::unordered_map<std::string, std::function<void() > > steps;
 	bool init = false;
 };
-Q_DECLARE_METATYPE ( Tile )
 void RoadTile();
 #endif // TILE_H

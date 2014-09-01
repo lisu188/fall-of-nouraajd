@@ -1,21 +1,18 @@
-#ifndef ANIMATEDOBJECT_H
-#define ANIMATEDOBJECT_H
-
-#include "animation.h"
-
+#pragma once
 #include <QGraphicsPixmapItem>
 #include <QTimer>
 #include <QWidget>
+#include "CAnimation.h"
 
-class AnimatedObject : public QWidget, public QGraphicsPixmapItem {
+class CAnimatedObject : public QWidget, public QGraphicsPixmapItem {
 	Q_OBJECT
 public:
-	explicit AnimatedObject();
-	~AnimatedObject();
+	explicit CAnimatedObject();
+	~CAnimatedObject();
 	QPointF mapToParent ( int a, int b );
 
 protected:
-	Animation *staticAnimation;
+	CAnimation *staticAnimation;
 	void setAnimation ( std::string path, int size );
 	virtual void mousePressEvent ( QGraphicsSceneMouseEvent * );
 
@@ -23,5 +20,3 @@ private:
 	QTimer *timer;
 	Q_SLOT void animate();
 };
-
-#endif // ANIMATEDOBJECT_H

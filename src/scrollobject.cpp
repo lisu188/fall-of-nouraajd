@@ -3,7 +3,7 @@
 
 #include <src/playerlistview.h>
 
-#include <src/configurationprovider.h>
+#include "CConfigurationProvider.h"
 
 ScrollObject::ScrollObject ( PlayerListView *stats, bool isRight ) {
 	this->isRight = isRight;

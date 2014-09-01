@@ -23,5 +23,4 @@ private:
 	bool enabled = true;
 	QString script;
 };
-Q_DECLARE_METATYPE ( Event )
 #endif // EVENT_H

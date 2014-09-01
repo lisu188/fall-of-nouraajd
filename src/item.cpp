@@ -10,7 +10,7 @@
 #include <fstream>
 #include <src/interaction.h>
 #include <src/potion.h>
-#include <src/configurationprovider.h>
+#include "CConfigurationProvider.h"
 
 Item::Item() : MapObject ( 0, 0, 0, 2 ) {}
 
@@ -67,7 +67,7 @@ void Item::mousePressEvent ( QGraphicsSceneMouseEvent *event ) {
 	if ( parent ) {
 		parent->setAcceptDrops ( false );
 	}
-	AnimatedObject::mousePressEvent ( event );
+	CAnimatedObject::mousePressEvent ( event );
 	if ( parent ) {
 		parent->setAcceptDrops ( true );
 	}
@@ -76,7 +76,7 @@ void Item::mousePressEvent ( QGraphicsSceneMouseEvent *event ) {
 void Item::loadFromJson ( std::string name ) {
 	this->typeName = name;
 	Json::Value config =
-	    ( *ConfigurationProvider::getConfig ( "config/object.json" ) ) [typeName];
+	    ( *CConfigurationProvider::getConfig ( "config/object.json" ) ) [typeName];
 	bonus.loadFromJson ( config["bonus"] );
 	interaction =
 	    this->getMap()->createMapObject<Interaction*>  ( config.get ( "interaction", "" ).asString() );

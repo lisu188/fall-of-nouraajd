@@ -88,9 +88,9 @@ void Player::removeFromFightList ( Creature *creature ) {
 	getFightList()->remove ( creature );
 	if ( getFightList()->size() == 0 ) {
 		map->getScene()->getView()->getFightView()->setVisible ( false );
-		FightView::selected = 0;
+		FightPanel::selected = 0;
 	} else {
-		FightView::selected = getFightList()->front();
+		FightPanel::selected = getFightList()->front();
 	}
 	map->getScene()->getView()->getFightView()->update();
 	Q_EMIT statsChanged();

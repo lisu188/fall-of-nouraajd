@@ -1,14 +1,11 @@
 #ifndef GAMEVIEW_H
 #define GAMEVIEW_H
-
-#include <src/charview.h>
 #include "gamescene.h"
 #include "playerequippedview.h"
-
 #include <QGraphicsView>
 #include <QThread>
 #include <src/playerstatsview.h>
-#include <src/fightview.h>
+#include "gamepanel.h"
 
 class BackPackObject : public QWidget {
 	Q_OBJECT
@@ -30,12 +27,15 @@ class GameView : public QGraphicsView {
 public:
 	GameView ( std::string mapName,std::string playerType );
 	~GameView();
-	FightView *getFightView();
-	CharView *getCharView();
+	FightPanel *getFightView();
+	CharPanel *getCharView();
 	void showFightView();
 	Q_SLOT void showCharView();
 	Q_SLOT void start();
 	Q_INVOKABLE void show();
+
+	GameScene *getScene() const;
+	void setScene ( GameScene *value );
 
 protected:
 	void mouseDoubleClickEvent ( QMouseEvent *e );
@@ -45,16 +45,13 @@ protected:
 
 private:
 	GameScene *scene;
-	FightView *fightView;
-	CharView *charView;
+	FightPanel *fightView;
+	CharPanel *charView;
 	static bool init;
 	QTimer timer;
 	QGraphicsPixmapItem loading;
 	BackPackObject backpack;
 	PlayerStatsView playerStatsView;
-	PlayerListView *playerInventoryView;
-	PlayerListView *playerSkillsView;
-	PlayerEquippedView *playerEquippedView;
 	std::string mapName;
 	std::string playerType;
 };

@@ -1,7 +1,7 @@
 #include "tile.h"
 
 #include <src/gamescene.h>
-#include <src/configurationprovider.h>
+#include "CConfigurationProvider.h"
 
 std::unordered_map<std::string, std::function<void() > > Tile::steps {
 	{ "RoadTile", RoadTile }
@@ -60,7 +60,7 @@ void Tile::removeFromScene ( GameScene *scene ) { scene->removeItem ( this ); }
 void Tile::loadFromJson ( std::string name ) {
 	this->typeName = name;
 	Json::Value config =
-	    ( *ConfigurationProvider::getConfig ( "config/tiles.json" ) ) [typeName];
+	    ( *CConfigurationProvider::getConfig ( "config/tiles.json" ) ) [typeName];
 	step = config.get ( "canStep", true ).asBool();
 	setAnimation ( config.get ( "path", "" ).asCString() );
 }
@@ -75,7 +75,7 @@ void Tile::setXYZ ( int x, int y, int z ) {
 
 void Tile::mousePressEvent ( QGraphicsSceneMouseEvent *event ) {
 	if ( draggable ) {
-		AnimatedObject::mousePressEvent ( event );
+		CAnimatedObject::mousePressEvent ( event );
 	}
 	event->setAccepted ( draggable );
 }

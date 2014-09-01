@@ -1,35 +1,35 @@
-#include "animatedobject.h"
-#include "animationprovider.h"
-#include <src/gamescene.h>
 #include <QDrag>
 #include <QMimeData>
 #include <QThread>
 #include <QApplication>
+#include "CAnimatedObject.h"
+#include "CAnimationProvider.h"
+#include "gamescene.h"
 
-AnimatedObject::AnimatedObject() {
+CAnimatedObject::CAnimatedObject() {
 	this->moveToThread ( QApplication::instance()->thread() );
 	timer = 0;
 	setShapeMode ( QGraphicsPixmapItem::BoundingRectShape );
 }
 
-AnimatedObject::~AnimatedObject() {
+CAnimatedObject::~CAnimatedObject() {
 	if ( timer ) {
 		delete timer;
 	}
 }
 
-QPointF AnimatedObject::mapToParent ( int a, int b ) {
+QPointF CAnimatedObject::mapToParent ( int a, int b ) {
 	return QGraphicsItem::mapToParent ( QPointF ( a, b ) );
 }
 
-void AnimatedObject::setAnimation ( std::string path, int size ) {
-	staticAnimation = AnimationProvider::getAnim ( path, size );
+void CAnimatedObject::setAnimation ( std::string path, int size ) {
+	staticAnimation = CAnimationProvider::getAnim ( path, size );
 	if ( staticAnimation ) {
 		animate();
 	}
 }
 
-void AnimatedObject::animate() {
+void CAnimatedObject::animate() {
 	int time = staticAnimation->getTime();
 	setPixmap ( *staticAnimation->getImage() );
 	if ( time == -1 ) {
@@ -48,7 +48,7 @@ void AnimatedObject::animate() {
 	staticAnimation->next();
 }
 
-void AnimatedObject::mousePressEvent ( QGraphicsSceneMouseEvent * ) {
+void CAnimatedObject::mousePressEvent ( QGraphicsSceneMouseEvent * ) {
 	QDrag *drag = new QDrag ( this );
 	QMimeData *mimeData = new QMimeData();
 	drag->setMimeData ( mimeData );

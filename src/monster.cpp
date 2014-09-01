@@ -3,7 +3,7 @@
 #include <src/lootprovider.h>
 #include <src/pathfinder.h>
 #include <QDebug>
-#include <src/configurationprovider.h>
+#include "CConfigurationProvider.h"
 #include <QThreadPool>
 
 Monster::Monster() : Creature() {}
