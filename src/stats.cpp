@@ -200,56 +200,33 @@ void Stats::setShadowResist(int value) { shadowResist = value; }
 
 
 
-Damage::Damage()
-{
-}
-int Damage::getFire() const
-{
-    return fire;
+
+Stats::Stats(const Stats &other) : QObject() {
+    strength = other.strength;
+    stamina = other.stamina;
+    agility = other.agility;
+    intelligence = other.intelligence;
+    armor = other.armor;
+    block = other.block;
+    dmgMin = other.dmgMin;
+    dmgMax = other.dmgMax;
+    hit = other.hit;
+    crit = other.crit;
+    fireResist = other.fireResist;
+    thunderResist = other.thunderResist;
+    frostResist = other.frostResist;
+    normalResist = other.normalResist;
+    damage = other.damage;
+    attack = other.attack;
+    shadowResist = other.shadowResist;
+    setMain(other.mainS.c_str());
 }
 
-void Damage::setFire(int value)
-{
-    fire = value;
+Damage::Damage() {}
+Damage::Damage(const Damage &other) : QObject() {
+    fire = other.fire;
+    thunder = other.thunder;
+    frost = other.frost;
+    normal = other.normal;
+    shadow = other.shadow;
 }
-int Damage::getThunder() const
-{
-    return thunder;
-}
-
-void Damage::setThunder(int value)
-{
-    thunder = value;
-}
-int Damage::getFrost() const
-{
-    return frost;
-}
-
-void Damage::setFrost(int value)
-{
-    frost = value;
-}
-int Damage::getNormal() const
-{
-    return normal;
-}
-
-void Damage::setNormal(int value)
-{
-    normal = value;
-}
-int Damage::getShadow() const
-{
-    return shadow;
-}
-
-void Damage::setShadow(int value)
-{
-    shadow = value;
-}
-
-
-
-
-

@@ -1,6 +1,6 @@
 #include "CGamePanel.h"
-#include "gameview.h"
-#include "gamescene.h"
+#include "CGameView.h"
+#include "CGameScene.h"
 #include <src/CInteraction.h>
 #include <src/item.h>
 #include <src/CCreature.h>

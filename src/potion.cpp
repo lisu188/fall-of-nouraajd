@@ -2,7 +2,7 @@
 #include <QDebug>
 #include "CConfigurationProvider.h"
 #include "CCreature.h"
-#include <src/gamescene.h>
+#include "CGameScene.h"
 
 Potion::Potion() {}
 

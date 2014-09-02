@@ -4,7 +4,7 @@
 #include <QApplication>
 #include "CAnimatedObject.h"
 #include "CAnimationProvider.h"
-#include "gamescene.h"
+#include "CGameScene.h"
 
 CAnimatedObject::CAnimatedObject() {
 	this->moveToThread ( QApplication::instance()->thread() );

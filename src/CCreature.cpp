@@ -1,7 +1,7 @@
 #include "CCreature.h"
 
 #include <QGraphicsSceneHoverEvent>
-#include <src/lootprovider.h>
+#include <src/CLootProvider.h>
 #include <algorithm>
 #include <cstdlib>
 #include <fstream>
@@ -11,8 +11,8 @@
 #include <src/CConfigurationProvider.h>
 #include <src/item.h>
 #include <src/stats.h>
-#include <src/gamescene.h>
-#include <src/gameview.h>
+#include <src/CGameScene.h>
+#include <src/CGameView.h>
 
 namespace {
 

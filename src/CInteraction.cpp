@@ -2,8 +2,8 @@
 
 #include <src/CCreature.h>
 
-#include <src/gamescene.h>
-#include <src/gameview.h>
+#include <src/CGameScene.h>
+#include <src/CGameView.h>
 
 #include <src/playerstatsview.h>
 #include <src/CGamePanel.h>

@@ -1,7 +1,7 @@
 #include "CPathFinder.h"
 #include <QDebug>
 #include <math.h>
-#include <src/gamescene.h>
+#include <src/CGameScene.h>
 #include <src/CConfigurationProvider.h>
 
 

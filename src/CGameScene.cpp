@@ -1,5 +1,5 @@
-#include "gamescene.h"
-#include "gameview.h"
+#include "CGameScene.h"
+#include "CGameView.h"
 #include "CPathFinder.h"
 #include "util.h"
 #include <QGraphicsView>

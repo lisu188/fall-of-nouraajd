@@ -1,4 +1,4 @@
-#include "gameview.h"
+#include "CGameView.h"
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
 
