@@ -7,7 +7,7 @@ std::unordered_map<std::string, std::function<void() > > Tile::steps {
 	{ "RoadTile", RoadTile }
 };
 
-Tile::Tile ( std::string name, int x, int y, int z ) : MapObject ( x, y, z, 1 ) {
+Tile::Tile ( std::string name, int x, int y, int z ) : CMapObject ( x, y, z, 1 ) {
 	setXYZ ( x, y, z );
 	loadFromJson ( name );
 }
@@ -32,7 +32,7 @@ void Tile::moveTo ( int x, int y, int z, bool silent ) {
 		map->insert (
 		    std::pair<Coords, std::string> ( Coords ( posx, posy, posz ), typeName ) );
 	}
-	MapObject::moveTo ( x, y, z, silent );
+	CMapObject::moveTo ( x, y, z, silent );
 	init = true;
 }
 
@@ -50,12 +50,12 @@ Tile *Tile::getTile ( std::string type, int x, int y, int z ) {
 	return new Tile ( type, x, y, z );
 }
 
-void Tile::addToScene ( GameScene *scene ) {
-	setPos ( posx * Map::getTileSize(), posy * Map::getTileSize() );
-	MapObject::setMap (  scene ->getMap() );
+void Tile::addToScene ( CGameScene *scene ) {
+	setPos ( posx * CMap::getTileSize(), posy * CMap::getTileSize() );
+	CMapObject::setMap (  scene ->getMap() );
 }
 
-void Tile::removeFromScene ( GameScene *scene ) { scene->removeItem ( this ); }
+void Tile::removeFromScene ( CGameScene *scene ) { scene->removeItem ( this ); }
 
 void Tile::loadFromJson ( std::string name ) {
 	this->typeName = name;
@@ -82,7 +82,7 @@ void Tile::mousePressEvent ( QGraphicsSceneMouseEvent *event ) {
 
 bool Tile::canSave() { return false; }
 
-void Tile::setMap ( Map *map ) {
+void Tile::setMap ( CMap *map ) {
 	this->map = map;
 	addToScene ( map->getScene() );
 }

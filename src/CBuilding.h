@@ -1,8 +1,8 @@
 #pragma once
 #include "CConfigurationProvider.h"
-#include <src/map.h>
+#include"CMap.h"
 
-class CBuilding : public MapObject {
+class CBuilding : public CMapObject {
 	Q_OBJECT
 	Q_PROPERTY ( bool enabled READ isEnabled WRITE setEnabled USER true )
 public:

@@ -4,29 +4,28 @@
 #include "scrollobject.h"
 
 #include <QGraphicsItem>
-#include <src/player.h>
-
+#include "CCreature.h"
 class PlayerListView : public QGraphicsObject {
 	Q_OBJECT
 	friend class ScrollObject;
 
 public:
-	PlayerListView ( std::set<MapObject *, Comparer> *MapObjects );
-	Map *getMap();
+	PlayerListView ( std::set<CMapObject *, Comparer> *MapObjects );
+	CMap *getMap();
 	void setDraggable();
 	virtual QRectF boundingRect() const;
 	virtual void paint ( QPainter *painter, const QStyleOptionGraphicsItem *option,
 	                     QWidget *widget );
 	void updatePosition ( int i );
 	void setXY ( int x, int y );
-	std::set<MapObject *, Comparer> *getItems() const;
-	void setItems ( std::set<MapObject *, Comparer> *value );
+	std::set<CMapObject *, Comparer> *getItems() const;
+	void setItems ( std::set<CMapObject *, Comparer> *value );
 
 private:
 	int curPosition;
 	int x, y;
 	ScrollObject *right, *left;
-	std::set<MapObject *, Comparer> *items;
+	std::set<CMapObject *, Comparer> *items;
 	QPixmap pixmap;
 
 protected:

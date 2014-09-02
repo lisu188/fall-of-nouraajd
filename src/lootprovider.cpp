@@ -1,13 +1,15 @@
 #include "lootprovider.h"
 #include "CReflection.h"
 #include "CConfigurationProvider.h"
-#include <src/util.h>
+#include "util.h"
+#include "item.h"
+#include "CMap.h"
 
-std::set<Item *> *LootProvider::getLoot ( int value ) {
+std::set<Item *> *CLootProvider::getLoot ( int value ) {
 	return calculateLoot ( value );
 }
 
-LootProvider::LootProvider ( Map *map ) {
+CLootProvider::CLootProvider ( CMap *map ) {
 	this->map=map;
 	Json::Value config = *CConfigurationProvider::getConfig ( "config/object.json" );
 	Json::Value::iterator it = config.begin();
@@ -19,13 +21,13 @@ LootProvider::LootProvider ( Map *map ) {
 	}
 }
 
-LootProvider::~LootProvider() { erase ( begin(), end() ); }
+CLootProvider::~CLootProvider() { erase ( begin(), end() ); }
 
-std::set<Item *> *LootProvider::calculateLoot ( int value ) {
+std::set<Item *> *CLootProvider::calculateLoot ( int value ) {
 	std::set<Item *> *loot = new std::set<Item *>();
 	while ( value ) {
 		int dice = rand() % this->size();
-		LootProvider::iterator it = begin();
+		CLootProvider::iterator it = begin();
 		for ( int i = 0; i < dice; i++, it++ )
 			;
 		int power = ( *it ).second;

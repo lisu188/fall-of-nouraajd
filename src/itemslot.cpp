@@ -1,30 +1,30 @@
 #include "gamescene.h"
 #include "itemslot.h"
-#include <src/map.h>
+#include"CMap.h"
 #include <QGraphicsSceneDragDropEvent>
 #include <qpainter.h>
 #include "CConfigurationProvider.h"
-#include <src/creature.h>
+#include "CCreature.h"
 #include "util.h"
 
-ItemSlot::ItemSlot ( int number, std::map<int, Item *> *equipped )
+CItemSlot::CItemSlot ( int number, std::map<int, Item *> *equipped )
 	: number ( number ), equipped ( equipped ) {
 	pixmap.load ( ":/images/item.png" ); // change to slot items path in json
-	pixmap = pixmap.scaled ( Map::getTileSize(), Map::getTileSize(),
+	pixmap = pixmap.scaled ( CMap::getTileSize(), CMap::getTileSize(),
 	                         Qt::IgnoreAspectRatio, Qt::SmoothTransformation );
 	this->setAcceptDrops ( true );
 }
 
-QRectF ItemSlot::boundingRect() const {
-	return QRectF ( 0, 0, Map::getTileSize(), Map::getTileSize() );
+QRectF CItemSlot::boundingRect() const {
+	return QRectF ( 0, 0, CMap::getTileSize(), CMap::getTileSize() );
 }
 
-void ItemSlot::paint ( QPainter *painter, const QStyleOptionGraphicsItem *,
-                       QWidget * ) {
+void CItemSlot::paint ( QPainter *painter, const QStyleOptionGraphicsItem *,
+                        QWidget * ) {
 	painter->drawPixmap ( 0, 0, pixmap );
 }
 
-bool ItemSlot::checkType ( int slot, QWidget *widget ) {
+bool CItemSlot::checkType ( int slot, QWidget *widget ) {
 	if ( widget ) {
 		Json::Value config =
 		    ( *CConfigurationProvider::getConfig (
@@ -38,7 +38,7 @@ bool ItemSlot::checkType ( int slot, QWidget *widget ) {
 	return false;
 }
 
-void ItemSlot::update() {
+void CItemSlot::update() {
 	Item *item = equipped->at ( number );
 	if ( item ) {
 		item->setParentItem ( this );
@@ -49,15 +49,15 @@ void ItemSlot::update() {
 	QGraphicsObject::update();
 }
 
-void ItemSlot::dragMoveEvent ( QGraphicsSceneDragDropEvent *event ) {
+void CItemSlot::dragMoveEvent ( QGraphicsSceneDragDropEvent *event ) {
 	QGraphicsObject::dragMoveEvent ( event );
 	event->setAccepted ( checkType ( number, event->source() ) );
 }
 
-void ItemSlot::dropEvent ( QGraphicsSceneDragDropEvent *event ) {
+void CItemSlot::dropEvent ( QGraphicsSceneDragDropEvent *event ) {
 	QGraphicsObject::dropEvent ( event );
 	if ( checkType ( number, event->source() ) ) {
-		dynamic_cast<GameScene*> ( this->scene() )->getPlayer()->setItem ( number, ( Item * ) event->source() );
+		dynamic_cast<CGameScene*> ( this->scene() )->getPlayer()->setItem ( number, ( Item * ) event->source() );
 	}
 	event->acceptProposedAction();
 	event->accept();

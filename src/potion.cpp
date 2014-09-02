@@ -1,14 +1,14 @@
 #include "potion.h"
 #include <QDebug>
 #include "CConfigurationProvider.h"
-#include <src/creature.h>
+#include "CCreature.h"
 #include <src/gamescene.h>
 
 Potion::Potion() {}
 
 Potion::Potion ( const Potion & ) {}
 
-void Potion::onUse ( Creature *creature ) {
+void Potion::onUse ( CCreature *creature ) {
 	qDebug() << creature->typeName.c_str() << "used" << typeName.c_str();
 	effect ( creature, power );
 }
@@ -22,10 +22,10 @@ void Potion::loadFromJson ( std::string name ) {
 	}
 }
 
-void LifeEffect ( Creature *creature, int power ) {
+void LifeEffect ( CCreature *creature, int power ) {
 	creature->healProc ( power * 20 );
 }
 
-void ManaEffect ( Creature *creature, int power ) {
+void ManaEffect ( CCreature *creature, int power ) {
 	creature->addManaProc ( power * 20 );
 }

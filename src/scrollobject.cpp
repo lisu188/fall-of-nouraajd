@@ -9,7 +9,7 @@ ScrollObject::ScrollObject ( PlayerListView *stats, bool isRight ) {
 	this->isRight = isRight;
 	this->setZValue ( 1 );
 	this->stats = stats;
-	int size = Map::getTileSize();
+	int size = CMap::getTileSize();
 	if ( !isRight ) {
 		this->setAnimation ( "images/arrows/left/", size );
 	} else {

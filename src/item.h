@@ -1,10 +1,11 @@
 #pragma once
-#include "CAnimatedObject.h"
-#include <src/stats.h>
-#include <src/map.h>
-class Creature;
-class Interaction;
-class Item : public MapObject {
+#include "CMapObject.h"
+#include "stats.h"
+
+class CCreature;
+class CInteraction;
+
+class Item : public CMapObject {
 	Q_OBJECT
 	Q_PROPERTY ( int power READ getPower WRITE setPower USER true )
 	Q_PROPERTY ( bool singleUse READ isSingleUse WRITE setSingleUse USER true )
@@ -13,10 +14,10 @@ public:
 	Item ( const Item & );
 	bool isSingleUse();
 	void setSingleUse ( bool singleUse );
-	virtual void onEquip ( Creature *creature );
-	virtual void onUnequip ( Creature *creature );
+	virtual void onEquip ( CCreature *creature );
+	virtual void onUnequip ( CCreature *creature );
 	static Item *createItem ( QString name );
-	virtual void onUse ( Creature *creature );
+	virtual void onUse ( CCreature *creature );
 	virtual void onEnter();
 	virtual void onMove();
 	int getPower() const;
@@ -27,7 +28,7 @@ protected:
 	bool singleUse;
 	Stats bonus;
 	void loadFromJson ( std::string name );
-	Interaction *interaction;
+	CInteraction *interaction;
 	int power;
 
 private:
@@ -40,7 +41,7 @@ public:
 	Armor();
 	Armor ( const Armor &armor );
 	Armor ( std::string name );
-	Interaction *getInteraction();
+	CInteraction *getInteraction();
 };
 
 class Belt : public Item {
@@ -76,7 +77,7 @@ class Weapon : public Item {
 public:
 	Weapon();
 	Weapon ( const Weapon &weapon );
-	Interaction *getInteraction();
+	CInteraction *getInteraction();
 	Stats *getStats();
 };
 

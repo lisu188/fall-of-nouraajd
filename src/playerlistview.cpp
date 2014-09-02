@@ -7,7 +7,7 @@
 #include <QMimeData>
 #include <src/gamescene.h>
 
-PlayerListView::PlayerListView ( std::set<MapObject *, Comparer> *MapObjects )
+PlayerListView::PlayerListView ( std::set<CMapObject *, Comparer> *MapObjects )
 	: items ( MapObjects ) {
 	this->setZValue ( 3 );
 	curPosition = 0;
@@ -15,10 +15,10 @@ PlayerListView::PlayerListView ( std::set<MapObject *, Comparer> *MapObjects )
 	left = new ScrollObject ( this, false );
 	x = 4, y = 4;
 	pixmap.load ( ":/images/item.png" );
-	pixmap = pixmap.scaled ( Map::getTileSize(), Map::getTileSize(),
+	pixmap = pixmap.scaled ( CMap::getTileSize(), CMap::getTileSize(),
 	                         Qt::IgnoreAspectRatio, Qt::SmoothTransformation );
-	left->setPos ( 0, y * Map::getTileSize() );
-	right->setPos ( ( x - 1 ) * Map::getTileSize(), y * Map::getTileSize() );
+	left->setPos ( 0, y * CMap::getTileSize() );
+	right->setPos ( ( x - 1 ) * CMap::getTileSize(), y * CMap::getTileSize() );
 	update();
 }
 
@@ -38,10 +38,10 @@ void PlayerListView::update() {
 		( *childIter )->setParentItem ( 0 );
 		( *childIter )->setVisible ( false );
 	}
-	std::set<MapObject *, Comparer>::iterator itemIter;
+	std::set<CMapObject *, Comparer>::iterator itemIter;
 	int i = 0;
 	for ( itemIter = items->begin(); itemIter != items->end(); i++, itemIter++ ) {
-		MapObject *item = *itemIter;
+		CMapObject *item = *itemIter;
 		if ( item->getMap() ) { //SigSegv for interaction
 			item->setMap ( item->getMap()->getScene()->getPlayer()->getMap() );
 		}
@@ -57,7 +57,7 @@ void PlayerListView::update() {
 	left->setVisible ( items->size() > x * y );
 }
 
-Map *PlayerListView::getMap() {
+CMap *PlayerListView::getMap() {
 	if ( items->size() ) {
 		return ( *items->begin() )->getMap();
 	}
@@ -78,7 +78,7 @@ void PlayerListView::paint ( QPainter *painter,
                              QWidget *widget ) {
 	for ( int i = 0; i < x; i++ )
 		for ( int j = 0; j < y; j++ ) {
-			painter->drawPixmap ( i * Map::getTileSize(), j * Map::getTileSize(),
+			painter->drawPixmap ( i * CMap::getTileSize(), j * CMap::getTileSize(),
 			                      pixmap );
 		}
 }
@@ -92,11 +92,11 @@ void PlayerListView::setXY ( int x, int y ) {
 	this->x = x;
 	this->y = y;
 }
-std::set<MapObject *, Comparer> *PlayerListView::getItems() const {
+std::set<CMapObject *, Comparer> *PlayerListView::getItems() const {
 	return items;
 }
 
-void PlayerListView::setItems ( std::set<MapObject *, Comparer> *value ) {
+void PlayerListView::setItems ( std::set<CMapObject *, Comparer> *value ) {
 	items = value;
 	curPosition = 0;
 	update();

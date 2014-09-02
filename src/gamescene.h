@@ -1,28 +1,25 @@
-#ifndef GAMESCENE_H
-#define GAMESCENE_H
-#include "Python.h"
+#pragma once
 #include <QGraphicsScene>
 #include <QGraphicsSceneMouseEvent>
 #include <QKeyEvent>
-#include "map.h"
 #include <list>
 #include <random>
 #include <time.h>
-#include "player.h"
 #include <QDateTime>
 
-class GameView;
-class FightPanel;
-class GameScene : public QGraphicsScene {
+class CGameView;
+class Player;
+class CMap;
+class CGameScene : public QGraphicsScene {
 	Q_OBJECT
 public:
 	void playerMove ( int dirx, int diry );
 	void startGame ( std::string file ,std::string player );
 	Player *getPlayer() const;
 	void setPlayer ( Player *value );
-	Map *getMap() const;
-	void setMap ( Map *value );
-	GameView *getView();
+	CMap *getMap() const;
+	void setMap ( CMap *value );
+	CGameView *getView();
 
 protected:
 	void keyPressEvent ( QKeyEvent *keyEvent );
@@ -31,8 +28,7 @@ protected:
 	virtual void mouseReleaseEvent ( QGraphicsSceneMouseEvent *event );
 
 private:
-	Map *map;
+	CMap *map;
 	Player *player;
 };
 
-#endif // GAMESCENE_H
