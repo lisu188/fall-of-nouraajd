@@ -1,4 +1,4 @@
-#include <src/lootprovider.h>
+#include <src/CLootProvider.h>
 #include <locale>
 #include <QGraphicsSceneHoverEvent>
 #include "CMap.h"
@@ -12,9 +12,9 @@
 #include <src/CCreature.h>
 #include <src/CInteraction.h>
 #include <src/item.h>
-#include <src/gamescene.h>
-#include <src/gameview.h>
-#include <src/scriptmanager.h>
+#include <src/CGameScene.h>
+#include <src/CGameView.h>
+#include <src/CScriptEngine.h>
 
 #include <QApplication>
 #include <QDesktopWidget>
@@ -48,7 +48,7 @@ bool contains_object(std::list<CMapObject *> *objects, CMapObject *object) {
 CMap::CMap(CGameScene *scene, std::string file) : scene(scene), entryx(0), entryz(0), entryy(0) {
   connect(CompletionListener::getInstance(), SIGNAL(completed()), this, SLOT(moveCompleted()));
   defaultTiles[0] = "GrassTile";
-  engine = new ScriptEngine(this);
+  engine = new CScriptEngine(this);
   lootProvider = new CLootProvider(this);
   Tmx::Map authored;
   authored.ParseFile(file);
@@ -494,7 +494,7 @@ int CMap::getCurrentXBound() { return boundaries[currentMap].first; }
 
 int CMap::getCurrentYBound() { return boundaries[currentMap].second; }
 
-ScriptEngine *CMap::getEngine() { return engine; }
+CScriptEngine *CMap::getEngine() { return engine; }
 CLootProvider *CMap::getLootProvider() { return lootProvider; }
 
 bool CMap::removeObjectByName(std::string name) {

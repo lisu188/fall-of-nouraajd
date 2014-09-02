@@ -1,7 +1,7 @@
 # Recovered game snapshot
 
-Original commit: `4dbeceedaa54e91e473259343c9abd4ff2fb3eb9`. Original tree: `3e9513ae5d2f7b62e85fc13336f1dcc666ef9565`.
-Startup was verified from identical recovered sources at `4dbeceedaa54e91e473259343c9abd4ff2fb3eb9`.
+Original commit: `f873badeef24b84b8940982d21a2a9b87545fb30`. Original tree: `f5e5d612f795ff2794cd4bc10a08bf27ba3e1240`.
+Startup was verified from identical recovered sources at `f873badeef24b84b8940982d21a2a9b87545fb30`.
 
 This recovered version compiled and linked on Linux, started the real game on an isolated Xvfb display,
 loaded its map and a healthy player, rendered the screenshot below, and exited normally.
@@ -35,14 +35,14 @@ launches run the game's original entry point. Startup evidence does not establis
 
 ## Recovery provenance
 
-compatibilityRepair: 2, exactOriginal: 64, reconstruction: 52.
+compatibilityRepair: 2, exactOriginal: 65, reconstruction: 52.
 
 - `Game.pro`: content reconstruction of the BFG-removed original; carried forward unchanged from the previous reconstruction of Game.pro
 - `config/object.json`: unverified donor reconstruction; split object descriptors e8b7c3d0e6da989122a0587943a98504342da3cd:config/objects flattened to observed legacy class/path API; target tile/interaction entries preserved; species stats retain uncertainty of reconstructed creatures catalog
-- `format.py`: unverified donor reconstruction; 51c2e9b0b64c86a8e593a5231c3ef9e44efc5af1:format.py; headerMatch=0; apiOverlap=0/10000; distance=6
-- `game.pro`: working reconstruction
+- `format.py`: unverified donor reconstruction; 51c2e9b0b64c86a8e593a5231c3ef9e44efc5af1:format.py; headerMatch=0; apiOverlap=0/10000; distance=7
+- `game.pro`: content reconstruction of the BFG-removed original; Ported verified #248 project rules through the #249 source and header renames, removed the merged scrollobject unit and selected the prefixed scene header in the shared Python module.
 - `images/loading.png`: synthesized visible 32px placeholder; original artwork unavailable; unverified
-- `lib/base64/base64.cpp`: unverified donor reconstruction; 779fb803ff021de5e74ed3b24d7c31a9adcaa236:base64/base64.cpp; headerMatch=0; apiOverlap=10000/10000; distance=64
+- `lib/base64/base64.cpp`: unverified donor reconstruction; 779fb803ff021de5e74ed3b24d7c31a9adcaa236:base64/base64.cpp; headerMatch=0; apiOverlap=10000/10000; distance=65
 - `lib/json/json_batchallocator.h`: unverified upstream reconstruction; https://github.com/open-source-parsers/jsoncpp/tree/4fce396c9d3e27a8ab8fb88e94c1676e021ae3a6; adapted json include prefix to historical lib/json layout
 - `lib/json/json_reader.cpp`: unverified upstream reconstruction; https://github.com/open-source-parsers/jsoncpp/tree/4fce396c9d3e27a8ab8fb88e94c1676e021ae3a6; adapted json include prefix to historical lib/json layout
 - `lib/json/json_value.cpp`: unverified upstream reconstruction; https://github.com/open-source-parsers/jsoncpp/tree/4fce396c9d3e27a8ab8fb88e94c1676e021ae3a6; adapted json include prefix to historical lib/json layout
@@ -76,23 +76,23 @@ compatibilityRepair: 2, exactOriginal: 64, reconstruction: 52.
 - `lib/zlib/zutil.c`: Unmodified official zlib v1.2.5 zutil.c; Git blob verified against official tag tree 9712272c78b9d9c93746d9c8e156a3728c65ca72. Coherent same-version donor replaces mixed1.2.5/1.2.5 fallback; exact original only when originalHashMatches=true.
 - `lib/zlib/zutil.h`: Missing vendored zlib source reconstructed from official zlib1.2.5 fossil archive. The exact surviving zconf.h, inflate.h, inftrees.h and other vendor files match1.2.5 ignoring whitespace; prior1.2.7 donor fails real TMX compilation on missing z_const/Z_ARG/z_crc_t. Official source bytes preserved; original historical file bytes unavailable and not claimed exact. Raw official Git blob differs from original BFG ID; classification remains inferred, not exactOriginal. All16 replacements linked in native #260.
 - `maps/map.tmx`: Missing TMX map reconstructed from the prior converted later-map donor, removing only Market and StartEvent objects unsupported by the genuine 2014-09-09 target APIs/configuration/scripts. The original target misc.json defines Event only, buildings.json defines Cave/Teleporter, CBuilding.h has no Market, and the original scripts/game/object.py defines Cave/Teleporter only. No fake classes/events or empty script substitutes. All tile geometry, tilesets, layer metadata, entry coordinates and six supported Cave/Teleporter/ChaosSword objects are preserved. Exact original map bytes and its lost event content remain unavailable; this is an inferred donor adaptation.
-- `scripts/game/interaction.py`: unverified donor reconstruction; 21c04c61c564bb91953b90218c6cf4bed54417a9:scripts/game/interaction.py; headerMatch=0; apiOverlap=0/10000; distance=5
-- `src/CCreature.cpp`: working reconstruction
+- `scripts/game/interaction.py`: unverified donor reconstruction; 21c04c61c564bb91953b90218c6cf4bed54417a9:scripts/game/interaction.py; headerMatch=0; apiOverlap=0/10000; distance=6
+- `src/CCreature.cpp`: content reconstruction of the BFG-removed original; Ported the verified #248 sources through the #249 scene, view, slot, script engine and loot provider renames; retained the surviving parent scene implementation. Shared CMapObject includes the renamed tile header when present at #252.
 - `src/CCreature.h`: Reconstructed combined CCreature/player/monster declarations from intact #247 separate headers, same-commit surviving APIs/callers, and the #331 split CPlayer/CMonster declarations; original bytes and unspecified internal deltas unavailable. No compilation/runtime validation.
-- `src/CGamePanel.cpp`: working reconstruction
-- `src/CIteraction.cpp`: working reconstruction
-- `src/CMap.cpp`: working reconstruction
-- `src/CMap.h`: working reconstruction
+- `src/CGamePanel.cpp`: content reconstruction of the BFG-removed original; Ported the verified #248 sources through the #249 scene, view, slot, script engine and loot provider renames; retained the surviving parent scene implementation. Shared CMapObject includes the renamed tile header when present at #252.
+- `src/CGameView.cpp`: content reconstruction of the BFG-removed original; Ported the verified #248 sources through the #249 scene, view, slot, script engine and loot provider renames; retained the surviving parent scene implementation. Shared CMapObject includes the renamed tile header when present at #252.
+- `src/CInteraction.cpp`: content reconstruction of the BFG-removed original; Ported the verified #248 sources through the #249 scene, view, slot, script engine and loot provider renames; retained the surviving parent scene implementation. Shared CMapObject includes the renamed tile header when present at #252.
+- `src/CMap.cpp`: content reconstruction of the BFG-removed original; Ported the verified #248 sources through the #249 scene, view, slot, script engine and loot provider renames; retained the surviving parent scene implementation. Shared CMapObject includes the renamed tile header when present at #252.
+- `src/CMap.h`: content reconstruction of the BFG-removed original; Ported the verified #248 sources through the #249 scene, view, slot, script engine and loot provider renames; retained the surviving parent scene implementation. Shared CMapObject includes the renamed tile header when present at #252.
 - `src/CMapObject.cpp`: working reconstruction
-- `src/CPathFinder.cpp`: working reconstruction
-- `src/GameScript.cpp`: working reconstruction
-- `src/gameview.cpp`: working reconstruction
-- `src/stats.cpp`: content reconstruction of the BFG-removed original; carried forward unchanged from the previous reconstruction of src/stats.cpp
-- `src/stats.h`: content reconstruction of the BFG-removed original; carried from the previous reconstruction and adapted to the #247 C-prefixed renames (CAnimatedObject, CAnimation, CAnimationProvider, CBuilding, CConfigurationProvider and their headers); Stats/Damage metatypes are now declared by the surviving ReflectTypes.cpp REFLECT list, so the header no longer declares them
+- `src/CPathFinder.cpp`: content reconstruction of the BFG-removed original; Ported the verified #248 sources through the #249 scene, view, slot, script engine and loot provider renames; retained the surviving parent scene implementation. Shared CMapObject includes the renamed tile header when present at #252.
+- `src/GameScript.cpp`: content reconstruction of the BFG-removed original; Adapted the Boost.Python module donor to the surviving #248 Python 2 scriptmanager, game/object.py and interaction.py imports, string-keyed numeric Stats and Damage accessors and explicit Interaction alias; callback bodies are inferred.
+- `src/playerlistview.cpp`: content reconstruction of the BFG-removed original; Reassembled #248 player-list and scroll implementations in their merged #249 unit. Stats retains typed accessors and copies declared members into a fresh QObject; the Damage macro in the surviving header supplies its accessors.
+- `src/stats.cpp`: content reconstruction of the BFG-removed original; Reassembled #248 player-list and scroll implementations in their merged #249 unit. Stats retains typed accessors and copies declared members into a fresh QObject; the Damage macro in the surviving header supplies its accessors.
 - `lib/json/LICENSE`: https://github.com/open-source-parsers/jsoncpp/tree/4fce396c9d3e27a8ab8fb88e94c1676e021ae3a6 upstream distribution license
 - `scripts/PSF_LICENSE`: https://www.python.org/ftp/python/3.3.7/Python-3.3.7.tar.xz upstream Python distribution license
 
-Restored source fingerprint: `01cadd8da273453cb1430786c9c0ea58e8e2426fbbde6dcc7929cebcdd12f10d`.
+Restored source fingerprint: `4201f49eb23a9108bc55b9e1c553d21de233c1b77d6762bf1684280c9a9a1e80`.
 
 The actual 1278 × 718 screenshot and [verification metadata](recovery/verification.json) belong to
 this source version. Reconstructed code and borrowed assets are identified in that metadata; they are

@@ -1,7 +1,7 @@
 #ifndef PLAYEREQUIPPEDVIEW_H
 #define PLAYEREQUIPPEDVIEW_H
 
-#include "itemslot.h"
+#include "CItemSlot.h"
 
 #include <QGraphicsObject>
 

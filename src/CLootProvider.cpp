@@ -1,4 +1,4 @@
-#include "lootprovider.h"
+#include "CLootProvider.h"
 #include "CReflection.h"
 #include "CConfigurationProvider.h"
 #include "util.h"

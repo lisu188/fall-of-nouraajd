@@ -1,11 +1,11 @@
-#include "gamescene.h"
+#include "CGameScene.h"
 #include "playerlistview.h"
 
 #include <qpainter.h>
 #include <QWidget>
 #include <QDrag>
 #include <QMimeData>
-#include <src/gamescene.h>
+#include <src/CGameScene.h>
 
 PlayerListView::PlayerListView ( std::set<CMapObject *, Comparer> *MapObjects )
 	: items ( MapObjects ) {
@@ -106,4 +106,40 @@ void PlayerListView::dropEvent ( QGraphicsSceneDragDropEvent *event ) {
 	Item *item = ( Item * ) ( event->source() );
 	event->acceptProposedAction();
 	item->onUse ( this->getMap()->getScene()->getPlayer() );
+}
+
+#include "CGameScene.h"
+#include "playerlistview.h"
+
+#include <src/playerlistview.h>
+
+#include "CConfigurationProvider.h"
+
+ScrollObject::ScrollObject ( PlayerListView *stats, bool isRight ) {
+	this->isRight = isRight;
+	this->setZValue ( 1 );
+	this->stats = stats;
+	int size = CMap::getTileSize();
+	if ( !isRight ) {
+		this->setAnimation ( "images/arrows/left/", size );
+	} else {
+		this->setAnimation ( "images/arrows/right/", size );
+	}
+	setParentItem ( stats );
+}
+
+void ScrollObject::setVisible ( bool visible ) {
+	if ( visible && this->scene() != stats->scene() ) {
+		stats->scene()->addItem ( this );
+	}
+	QGraphicsItem::setVisible ( visible );
+}
+
+void ScrollObject::mousePressEvent ( QGraphicsSceneMouseEvent *event ) {
+	if ( isRight ) {
+		stats->updatePosition ( 1 );
+	}
+	if ( !isRight ) {
+		stats->updatePosition ( -1 );
+	}
 }

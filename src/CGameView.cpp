@@ -1,4 +1,4 @@
-#include "gameview.h"
+#include "CGameView.h"
 #include <src/CInteraction.h>
 #include <QDebug>
 #include <vector>

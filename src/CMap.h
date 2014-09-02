@@ -1,5 +1,5 @@
 #pragma once
-#include "scriptmanager.h"
+#include "CScriptEngine.h"
 #include <list>
 #include <type_traits>
 #include <QTimer>
@@ -73,7 +73,7 @@ class CMap : public QObject, public std::unordered_map<Coords, std::string, Coor
     std::map<int, std::pair<int, int>> getBounds();
     int getCurrentXBound();
     int getCurrentYBound();
-    ScriptEngine *getEngine();
+    CScriptEngine *getEngine();
     bool removeObjectByName(std::string name);
     std::string addObjectByName(std::string name, Coords coords);
     void replaceTile(std::string name, Coords coords);
@@ -118,6 +118,6 @@ class CMap : public QObject, public std::unordered_map<Coords, std::string, Coor
     std::map<int, std::string> defaultTiles;
     std::map<int, std::pair<int, int>> boundaries;
     int entryx, entryz, entryy;
-    ScriptEngine *engine;
+    CScriptEngine *engine;
     CLootProvider *lootProvider;
 };

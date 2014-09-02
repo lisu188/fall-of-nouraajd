@@ -1,9 +1,9 @@
 #include "CBuilding.h"
 #include <QDebug>
-#include <src/gamescene.h>
+#include "CGameScene.h"
 #include <src/playerstatsview.h>
 #include "CConfigurationProvider.h"
-#include <src/scriptmanager.h>
+#include "CScriptEngine.h"
 
 CBuilding::CBuilding() : CMapObject ( 0, 0, 0, 2 ) {}
 

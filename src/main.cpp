@@ -4,7 +4,7 @@
 #include <QtGlobal>
 #include <mutex>
 #include "mainwindow.h"
-#include "gameview.h"
+#include "CGameView.h"
 
 
 void messageHandler ( QtMsgType type, const QMessageLogContext &context,

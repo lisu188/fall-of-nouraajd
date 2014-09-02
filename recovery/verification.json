@@ -1,7 +1,7 @@
 {
   "adapter": {
-    "config": "/tmp/nouraajd-walk248/verify/snapshot-x9otnd0q/observer/recovery_smoke_config.h",
-    "configSha256": "489cbb0b4c4fb74f42db8063fea2a3fe78171a0eab182a67451e41d76b9f3bd5",
+    "config": "/tmp/nouraajd-walk248/verify/snapshot-y3q5wop6/observer/recovery_smoke_config.h",
+    "configSha256": "b1d700a6f87c9d7ae2783737bb343e6d8d44196ee70298a83ce388b25c154445",
     "id": "prefixed-3d",
     "mode": "game",
     "overlays": [],
@@ -18,17 +18,17 @@
       "make",
       "-j8"
     ],
-    "log": "/tmp/nouraajd-walk248/verify/snapshot-x9otnd0q/build.log",
+    "log": "/tmp/nouraajd-walk248/verify/snapshot-y3q5wop6/build.log",
     "returnCode": 0,
-    "seconds": 20.54,
+    "seconds": 15.94,
     "timedOut": false
   },
   "configure": {
     "command": [
       "qmake",
-      "/tmp/nouraajd-walk248/verify/snapshot-x9otnd0q/source/game.pro",
+      "/tmp/nouraajd-walk248/verify/snapshot-y3q5wop6/source/game.pro",
       "-o",
-      "/tmp/nouraajd-walk248/verify/snapshot-x9otnd0q/build/Makefile",
+      "/tmp/nouraajd-walk248/verify/snapshot-y3q5wop6/build/Makefile",
       "QMAKE_CC=gcc-5",
       "QMAKE_CXX=g++-5",
       "QMAKE_LINK=g++-5",
@@ -38,15 +38,15 @@
       "DESTDIR=.",
       "CONFIG-=app_bundle",
       "SOURCES+=/tmp/nouraajd-bfg-delivery/recovery/smoke/game_startup.cpp",
-      "INCLUDEPATH+=/tmp/nouraajd-walk248/verify/snapshot-x9otnd0q/source",
-      "INCLUDEPATH+=/tmp/nouraajd-walk248/verify/snapshot-x9otnd0q/observer"
+      "INCLUDEPATH+=/tmp/nouraajd-walk248/verify/snapshot-y3q5wop6/source",
+      "INCLUDEPATH+=/tmp/nouraajd-walk248/verify/snapshot-y3q5wop6/observer"
     ],
-    "log": "/tmp/nouraajd-walk248/verify/snapshot-x9otnd0q/configure.log",
+    "log": "/tmp/nouraajd-walk248/verify/snapshot-y3q5wop6/configure.log",
     "returnCode": 0,
-    "seconds": 0.064,
+    "seconds": 0.032,
     "timedOut": false
   },
-  "evidenceDir": "/tmp/nouraajd-walk248/verify/evidence/16f9c21b0c19f2b84aa99693d3144c734297db04b086ac675e23011f1a18574c",
+  "evidenceDir": "/tmp/nouraajd-walk248/verify/evidence/eebf1ca10efc84238bdd3e2ab8302b8e59dba6312aa433418340b5e76baf6dcb",
   "fileLookup": {
     "command": [
       "g++-5",
@@ -55,20 +55,20 @@
       "-O2",
       "-std=c++11",
       "-o",
-      "/tmp/nouraajd-walk248/verify/snapshot-x9otnd0q/observer/libwindowspaths.so",
+      "/tmp/nouraajd-walk248/verify/snapshot-y3q5wop6/observer/libwindowspaths.so",
       "/tmp/nouraajd-bfg-delivery/recovery/smoke/windows_paths.cpp",
       "-ldl"
     ],
-    "log": "/tmp/nouraajd-walk248/verify/snapshot-x9otnd0q/file-lookup.log",
+    "log": "/tmp/nouraajd-walk248/verify/snapshot-y3q5wop6/file-lookup.log",
     "returnCode": 0,
-    "seconds": 0.215,
+    "seconds": 0.164,
     "semantics": "Windows-style case-insensitive file lookup for the game process",
     "timedOut": false
   },
-  "fingerprint": "16f9c21b0c19f2b84aa99693d3144c734297db04b086ac675e23011f1a18574c",
+  "fingerprint": "eebf1ca10efc84238bdd3e2ab8302b8e59dba6312aa433418340b5e76baf6dcb",
   "libraryAliases": {
     "aliases": {},
-    "directory": "/tmp/nouraajd-walk248/verify/snapshot-x9otnd0q/observer/library-aliases"
+    "directory": "/tmp/nouraajd-walk248/verify/snapshot-y3q5wop6/observer/library-aliases"
   },
   "project": "game.pro",
   "recipe": {
@@ -107,7 +107,7 @@
   },
   "restoration": {
     "excluded": [],
-    "outputDir": "/tmp/nouraajd-walk248/verify/snapshot-x9otnd0q/source",
+    "outputDir": "/tmp/nouraajd-walk248/verify/snapshot-y3q5wop6/source",
     "restored": [
       {
         "markerPath": "Game.pro.REMOVED.git-id",
@@ -130,16 +130,16 @@
         "method": "reconstruction",
         "originalBlob": "3f85aee6bad0b9d54e328ba01adcfd3cae345a18",
         "path": "format.py",
-        "provenance": "unverified donor reconstruction; 51c2e9b0b64c86a8e593a5231c3ef9e44efc5af1:format.py; headerMatch=0; apiOverlap=0/10000; distance=6",
+        "provenance": "unverified donor reconstruction; 51c2e9b0b64c86a8e593a5231c3ef9e44efc5af1:format.py; headerMatch=0; apiOverlap=0/10000; distance=7",
         "replacementBlob": "aafd49b43ba2d56af3910f6b57b1cd2e856ff429"
       },
       {
         "markerPath": "game.pro.REMOVED.git-id",
         "method": "reconstruction",
-        "originalBlob": "10f8eb76c4cd1283cbe17dcd3b1c2f1a6df7096d",
+        "originalBlob": "70d87918c1d7c24681e98a3d8e860b33f0f42451",
         "path": "game.pro",
-        "provenance": "working reconstruction",
-        "replacementBlob": "61cf7a7eb81bdf74d70de9ecc1ee931097527ea4"
+        "provenance": "content reconstruction of the BFG-removed original; Ported verified #248 project rules through the #249 source and header renames, removed the merged scrollobject unit and selected the prefixed scene header in the shared Python module.",
+        "replacementBlob": "cf2baf4de29fb81c5ab47d9932318f3d2bab114b"
       },
       {
         "markerPath": "images/arrows/left/0.png.REMOVED.git-id",
@@ -546,7 +546,7 @@
         "method": "reconstruction",
         "originalBlob": "7875ce8a1b581263e214bff6a4d69b0aa216427d",
         "path": "lib/base64/base64.cpp",
-        "provenance": "unverified donor reconstruction; 779fb803ff021de5e74ed3b24d7c31a9adcaa236:base64/base64.cpp; headerMatch=0; apiOverlap=10000/10000; distance=64",
+        "provenance": "unverified donor reconstruction; 779fb803ff021de5e74ed3b24d7c31a9adcaa236:base64/base64.cpp; headerMatch=0; apiOverlap=10000/10000; distance=65",
         "replacementBlob": "07e5caa3e0fad17acd31b769f08db8887a1ed9b4"
       },
       {
@@ -874,16 +874,16 @@
         "method": "reconstruction",
         "originalBlob": "bde36436bdd7e697d509bfd8c2f90a634ec3cfb0",
         "path": "scripts/game/interaction.py",
-        "provenance": "unverified donor reconstruction; 21c04c61c564bb91953b90218c6cf4bed54417a9:scripts/game/interaction.py; headerMatch=0; apiOverlap=0/10000; distance=5",
+        "provenance": "unverified donor reconstruction; 21c04c61c564bb91953b90218c6cf4bed54417a9:scripts/game/interaction.py; headerMatch=0; apiOverlap=0/10000; distance=6",
         "replacementBlob": "d322178361a44d5e95d5d5f8d55aace2c91dc2c4"
       },
       {
         "markerPath": "src/CCreature.cpp.REMOVED.git-id",
         "method": "reconstruction",
-        "originalBlob": "ae9056e513d2e8fcf9871bb0c71b462d8da8351d",
+        "originalBlob": "47ed7d4d521be2c8da51522d20d61ec3054592f3",
         "path": "src/CCreature.cpp",
-        "provenance": "working reconstruction",
-        "replacementBlob": "8f010b70c0da9bd1871e8dc5b8b726d1d25dd1a7"
+        "provenance": "content reconstruction of the BFG-removed original; Ported the verified #248 sources through the #249 scene, view, slot, script engine and loot provider renames; retained the surviving parent scene implementation. Shared CMapObject includes the renamed tile header when present at #252.",
+        "replacementBlob": "45db680cf4de764ab0a9f8084c53212c9cf94b08"
       },
       {
         "markerPath": "src/CCreature.h.REMOVED.git-id",
@@ -896,82 +896,89 @@
       {
         "markerPath": "src/CGamePanel.cpp.REMOVED.git-id",
         "method": "reconstruction",
-        "originalBlob": "1b95f2c96b6ba020bfdeed9c70bca0783d9bf6c3",
+        "originalBlob": "c681391fe4b6b44f1e0781c8ca9bc051b88ee7c5",
         "path": "src/CGamePanel.cpp",
-        "provenance": "working reconstruction",
-        "replacementBlob": "41335ae4f00a674126dc420cd0dc8d9a6878d915"
+        "provenance": "content reconstruction of the BFG-removed original; Ported the verified #248 sources through the #249 scene, view, slot, script engine and loot provider renames; retained the surviving parent scene implementation. Shared CMapObject includes the renamed tile header when present at #252.",
+        "replacementBlob": "cd031405b339ca83e04718ec52c931fa02f08a4b"
       },
       {
-        "markerPath": "src/CIteraction.cpp.REMOVED.git-id",
+        "markerPath": "src/CGameScene.cpp.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "563affb785571c034699de3fc17378524cbbfbc2",
+        "path": "src/CGameScene.cpp",
+        "replacementBlob": "563affb785571c034699de3fc17378524cbbfbc2"
+      },
+      {
+        "markerPath": "src/CGameView.cpp.REMOVED.git-id",
         "method": "reconstruction",
-        "originalBlob": "d6e669a738d4c1fa2868220a66b9a717872b9e58",
-        "path": "src/CIteraction.cpp",
-        "provenance": "working reconstruction",
-        "replacementBlob": "92b45fb86610867a6e0c2e0f331e21389ae244a8"
+        "originalBlob": "4b8ef52756b3ff39840321e72889bdbdd6a1b84c",
+        "path": "src/CGameView.cpp",
+        "provenance": "content reconstruction of the BFG-removed original; Ported the verified #248 sources through the #249 scene, view, slot, script engine and loot provider renames; retained the surviving parent scene implementation. Shared CMapObject includes the renamed tile header when present at #252.",
+        "replacementBlob": "cfc2261a4cb2e99b83d0f337d3705c4a0b67e39a"
+      },
+      {
+        "markerPath": "src/CInteraction.cpp.REMOVED.git-id",
+        "method": "reconstruction",
+        "originalBlob": "b30458919497353ac7d0475c092d9a04c77c5f7c",
+        "path": "src/CInteraction.cpp",
+        "provenance": "content reconstruction of the BFG-removed original; Ported the verified #248 sources through the #249 scene, view, slot, script engine and loot provider renames; retained the surviving parent scene implementation. Shared CMapObject includes the renamed tile header when present at #252.",
+        "replacementBlob": "eab26ccf08a2c6b43e24e647136caa02c914804f"
       },
       {
         "markerPath": "src/CMap.cpp.REMOVED.git-id",
         "method": "reconstruction",
-        "originalBlob": "0951670bf901a367677da025e8cdce8d13082b74",
+        "originalBlob": "26f151c5892bbc6ab40bef29d6e98038cb3a5f8b",
         "path": "src/CMap.cpp",
-        "provenance": "working reconstruction",
-        "replacementBlob": "4266eff0b350acbf8fa748d6ebdc765dbfb5e436"
+        "provenance": "content reconstruction of the BFG-removed original; Ported the verified #248 sources through the #249 scene, view, slot, script engine and loot provider renames; retained the surviving parent scene implementation. Shared CMapObject includes the renamed tile header when present at #252.",
+        "replacementBlob": "18df8ab43afb994378a879bf4f4ff4ba01e7343f"
       },
       {
         "markerPath": "src/CMap.h.REMOVED.git-id",
         "method": "reconstruction",
-        "originalBlob": "113b26e2759a004a20050f4801e3230168443adb",
+        "originalBlob": "8555a7eabd08c3b4e44f2e5ffb72c03bf6bb3a0c",
         "path": "src/CMap.h",
-        "provenance": "working reconstruction",
-        "replacementBlob": "f2910334d248f3c7ff965a794992203cc2d80062"
+        "provenance": "content reconstruction of the BFG-removed original; Ported the verified #248 sources through the #249 scene, view, slot, script engine and loot provider renames; retained the surviving parent scene implementation. Shared CMapObject includes the renamed tile header when present at #252.",
+        "replacementBlob": "7e96ae0b772ac1164423e98d7bb6fb4b23cecc98"
       },
       {
         "markerPath": "src/CMapObject.cpp.REMOVED.git-id",
         "method": "reconstruction",
-        "originalBlob": "c2537515dd82480844311709ca91808be656e331",
+        "originalBlob": "c6445a9bf10ebcd369aa42c3937bedf5c60ee72e",
         "path": "src/CMapObject.cpp",
         "provenance": "working reconstruction",
-        "replacementBlob": "da932dc13100d668ce12051409baaa0bf4375136"
+        "replacementBlob": "41a8fd4713591301e745224fed1227bb4cf0682f"
       },
       {
         "markerPath": "src/CPathFinder.cpp.REMOVED.git-id",
         "method": "reconstruction",
-        "originalBlob": "81b202e1c507103d1650e4f3160ff3988c86b1a7",
+        "originalBlob": "2379fed70583ae71d38a793b8e52178a5e9bea34",
         "path": "src/CPathFinder.cpp",
-        "provenance": "working reconstruction",
-        "replacementBlob": "b33ec33e8ec503c359d5b6b05b3306f7424008a2"
+        "provenance": "content reconstruction of the BFG-removed original; Ported the verified #248 sources through the #249 scene, view, slot, script engine and loot provider renames; retained the surviving parent scene implementation. Shared CMapObject includes the renamed tile header when present at #252.",
+        "replacementBlob": "28b5f49aeb1f08e119a4894a95f93608123d2f2a"
       },
       {
         "markerPath": "src/GameScript.cpp.REMOVED.git-id",
         "method": "reconstruction",
         "originalBlob": "915429f2a1120af6bc034ec44568fd2eeb6f7965",
         "path": "src/GameScript.cpp",
-        "provenance": "working reconstruction",
+        "provenance": "content reconstruction of the BFG-removed original; Adapted the Boost.Python module donor to the surviving #248 Python 2 scriptmanager, game/object.py and interaction.py imports, string-keyed numeric Stats and Damage accessors and explicit Interaction alias; callback bodies are inferred.",
         "replacementBlob": "3489addd452e562ec90bf08c44ba27ea09f2f628"
       },
       {
-        "markerPath": "src/gameview.cpp.REMOVED.git-id",
+        "markerPath": "src/playerlistview.cpp.REMOVED.git-id",
         "method": "reconstruction",
-        "originalBlob": "dae218334a21f4d2df8bd12c1043e9b51f1ab107",
-        "path": "src/gameview.cpp",
-        "provenance": "working reconstruction",
-        "replacementBlob": "89f993a14dea40e11bfab970919eb0a60ce1262a"
+        "originalBlob": "83ebcca0146d7186eb2df4909221ca233590a17b",
+        "path": "src/playerlistview.cpp",
+        "provenance": "content reconstruction of the BFG-removed original; Reassembled #248 player-list and scroll implementations in their merged #249 unit. Stats retains typed accessors and copies declared members into a fresh QObject; the Damage macro in the surviving header supplies its accessors.",
+        "replacementBlob": "ad384f6e647523a2f6982bf51a335fd936b704af"
       },
       {
         "markerPath": "src/stats.cpp.REMOVED.git-id",
         "method": "reconstruction",
-        "originalBlob": "bb50b7d400edb5379f649404e5dcd54c0afed0f9",
+        "originalBlob": "038a50c1ec93b9f1622a3dc7d3f2bbc016d21526",
         "path": "src/stats.cpp",
-        "provenance": "content reconstruction of the BFG-removed original; carried forward unchanged from the previous reconstruction of src/stats.cpp",
-        "replacementBlob": "8fdfbc41221153beac60c040649af6328f93cdd5"
-      },
-      {
-        "markerPath": "src/stats.h.REMOVED.git-id",
-        "method": "reconstruction",
-        "originalBlob": "e431caa556fe48da103be6bf09fa91b842bfca96",
-        "path": "src/stats.h",
-        "provenance": "content reconstruction of the BFG-removed original; carried from the previous reconstruction and adapted to the #247 C-prefixed renames (CAnimatedObject, CAnimation, CAnimationProvider, CBuilding, CConfigurationProvider and their headers); Stats/Damage metatypes are now declared by the surviving ReflectTypes.cpp REFLECT list, so the header no longer declares them",
-        "replacementBlob": "27874e827344ca909dd5a742b29c27a3cdcfe188"
+        "provenance": "content reconstruction of the BFG-removed original; Reassembled #248 player-list and scroll implementations in their merged #249 unit. Stats retains typed accessors and copies declared members into a fresh QObject; the Damage macro in the surviving header supplies its accessors.",
+        "replacementBlob": "d12c51e5972fe2ae0e0a1446a0438d9cfe560dd0"
       },
       {
         "method": "compatibilityRepair",
@@ -986,9 +993,9 @@
         "replacementBlob": "f5d0b39a0cdddb91a31a537052b7d8d31a4aa79f"
       }
     ],
-    "restoredFilesFingerprint": "01cadd8da273453cb1430786c9c0ea58e8e2426fbbde6dcc7929cebcdd12f10d",
-    "sourceCommit": "4dbeceedaa54e91e473259343c9abd4ff2fb3eb9",
-    "sourceTree": "3e9513ae5d2f7b62e85fc13336f1dcc666ef9565",
+    "restoredFilesFingerprint": "4201f49eb23a9108bc55b9e1c553d21de233c1b77d6762bf1684280c9a9a1e80",
+    "sourceCommit": "f873badeef24b84b8940982d21a2a9b87545fb30",
+    "sourceTree": "f5e5d612f795ff2794cd4bc10a08bf27ba3e1240",
     "status": "complete",
     "submodules": [],
     "unresolved": []
@@ -999,12 +1006,12 @@
       "-a",
       "--server-args=-screen 0 1920x1080x24",
       "env",
-      "LD_PRELOAD=/tmp/nouraajd-walk248/verify/snapshot-x9otnd0q/observer/libwindowspaths.so",
-      "/tmp/nouraajd-walk248/verify/snapshot-x9otnd0q/build/RecoveryGame"
+      "LD_PRELOAD=/tmp/nouraajd-walk248/verify/snapshot-y3q5wop6/observer/libwindowspaths.so",
+      "/tmp/nouraajd-walk248/verify/snapshot-y3q5wop6/build/RecoveryGame"
     ],
-    "log": "/tmp/nouraajd-walk248/verify/snapshot-x9otnd0q/smoke/startup.log",
+    "log": "/tmp/nouraajd-walk248/verify/snapshot-y3q5wop6/smoke/startup.log",
     "returnCode": 0,
-    "seconds": 0.366,
+    "seconds": 0.364,
     "startup": {
       "checks": {
         "eventLoop": true,
@@ -1026,9 +1033,9 @@
     "status": "success",
     "timedOut": false
   },
-  "sourceCommit": "4dbeceedaa54e91e473259343c9abd4ff2fb3eb9",
+  "sourceCommit": "f873badeef24b84b8940982d21a2a9b87545fb30",
   "sourceCommits": [
-    "4dbeceedaa54e91e473259343c9abd4ff2fb3eb9"
+    "f873badeef24b84b8940982d21a2a9b87545fb30"
   ],
   "sourcePreparation": {
     "identity": {
@@ -1038,7 +1045,7 @@
     "status": "not-required",
     "steps": []
   },
-  "sourceTree": "3e9513ae5d2f7b62e85fc13336f1dcc666ef9565",
+  "sourceTree": "f5e5d612f795ff2794cd4bc10a08bf27ba3e1240",
   "startupMode": "game",
   "startupSelection": {
     "mode": "game"
@@ -1059,5 +1066,5 @@
     }
   },
   "toolchainImage": "sha256:d3f59ec1d12297ee8091fbea687aa619275fc92b3fd426560e0a1fa40715afc8",
-  "verifiedFromCommit": "4dbeceedaa54e91e473259343c9abd4ff2fb3eb9"
+  "verifiedFromCommit": "f873badeef24b84b8940982d21a2a9b87545fb30"
 }

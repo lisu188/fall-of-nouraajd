@@ -1,5 +1,5 @@
-#include "gamescene.h"
-#include "itemslot.h"
+#include "CGameScene.h"
+#include "CItemSlot.h"
 #include"CMap.h"
 #include <QGraphicsSceneDragDropEvent>
 #include <qpainter.h>

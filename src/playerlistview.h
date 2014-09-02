@@ -1,10 +1,7 @@
-#ifndef PLAYERINVENTORYVIEW_H
-#define PLAYERINVENTORYVIEW_H
-
-#include "scrollobject.h"
-
+#pragma once
 #include <QGraphicsItem>
 #include "CCreature.h"
+class ScrollObject;
 class PlayerListView : public QGraphicsObject {
 	Q_OBJECT
 	friend class ScrollObject;
@@ -33,4 +30,15 @@ protected:
 	Q_SLOT void update();
 };
 
-#endif // PLAYERINVENTORYVIEW_H
+class ScrollObject : public CAnimatedObject {
+public:
+	ScrollObject ( PlayerListView *stats, bool isRight );
+	void setVisible ( bool visible );
+
+private:
+	bool isRight;
+	PlayerListView *stats;
+
+protected:
+	virtual void mousePressEvent ( QGraphicsSceneMouseEvent *event );
+};

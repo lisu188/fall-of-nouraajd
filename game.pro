@@ -44,19 +44,18 @@ SOURCES += lib/base64/base64.cpp \
     lib/zlib/trees.c \
     lib/zlib/uncompr.c \
     lib/zlib/zutil.c \
-    src/gamescene.cpp \
+    src/CGameScene.cpp \
     src/GameScript.cpp \
-    src/gameview.cpp \
+    src/CGameView.cpp \
     src/item.cpp \
-    src/itemslot.cpp \
-    src/lootprovider.cpp \
+    src/CItemSlot.cpp \
+    src/CLootProvider.cpp \
     src/main.cpp \
     src/playerequippedview.cpp \
     src/playerlistview.cpp \
     src/playerstatsview.cpp \
     src/potion.cpp \
-    src/scriptmanager.cpp \
-    src/scrollobject.cpp \
+    src/CScriptEngine.cpp \
     src/stats.cpp \
     src/tile.cpp \
     src/mainwindow.cpp \
@@ -67,7 +66,7 @@ SOURCES += lib/base64/base64.cpp \
     src/CConfigurationProvider.cpp \
     src/CCreature.cpp \
     src/CGamePanel.cpp \
-    src/CIteraction.cpp \
+    src/CInteraction.cpp \
     src/CMap.cpp \
     src/CMapObject.cpp \
     src/CPathFinder.cpp \
@@ -126,21 +125,22 @@ HEADERS  += \
     src/CMapObject.h \
     src/CPathFinder.h \
     src/CReflection.h \
-    src/gamescene.h \
-    src/gameview.h \
+    src/CGameScene.h \
+    src/CGameView.h \
     src/item.h \
-    src/itemslot.h \
-    src/lootprovider.h \
+    src/CItemSlot.h \
+    src/CLootProvider.h \
     src/mainwindow.h \
     src/playerequippedview.h \
     src/playerlistview.h \
     src/playerstatsview.h \
     src/potion.h \
-    src/scriptmanager.h \
-    src/scrollobject.h \
+    src/CScriptEngine.h \
     src/stats.h \
     src/tile.h \
     src/util.h
 
 FORMS += \
     src/mainwindow.ui
+
+DEFINES += GAME_RECOVERY_PREFIXED_SCENE_HEADER

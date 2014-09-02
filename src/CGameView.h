@@ -1,6 +1,6 @@
 #ifndef GAMEVIEW_H
 #define GAMEVIEW_H
-#include "gamescene.h"
+#include "CGameScene.h"
 #include "playerequippedview.h"
 #include <QGraphicsView>
 #include <QThread>
