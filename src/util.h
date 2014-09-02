@@ -5,10 +5,10 @@
 #include <functional>
 #include <string>
 
-#define PROP(type,name,def,bean) \
+#define PROP(type,name,bean) \
     private:\
     Q_PROPERTY(type name READ get##bean WRITE set##bean USER true)\
-    type name=0;\
+    type name;\
     public:\
     type get##bean(){return name ;}\
     void set##bean( type name){this-> name = name ;}\

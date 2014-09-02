@@ -1,8 +1,9 @@
 #pragma once
 #include <lib/json/json.h>
 #include "util.h"
-
 #include <QObject>
+
+#include "../gen/prop.h"
 
 class Stats : public QObject {
 	Q_OBJECT
@@ -124,9 +125,10 @@ public:
 	Damage ( const Damage &dmg );
 	PROPERTY_ACCESSOR
 private:
-	PROP ( int,fire,0 ,Fire )
-	PROP ( int,thunder,0,Thunder )
-	PROP ( int,frost,0,Frost )
-	PROP ( int,normal,0 ,Normal )
-	PROP ( int,shadow,0 ,Shadow )
+	_Damage
+//	PROP ( int,fire,Fire )
+//	PROP ( int,thunder,Thunder )
+//	PROP ( int,frost,Frost )
+//	PROP ( int,normal ,Normal )
+//	PROP ( int,shadow ,Shadow )
 };
