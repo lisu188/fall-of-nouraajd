@@ -1,6 +1,6 @@
 #include "tile.h"
 
-#include <src/gamescene.h>
+#include "CGameScene.h"
 #include "CConfigurationProvider.h"
 
 std::unordered_map<std::string, std::function<void() > > Tile::steps {

@@ -1,6 +1,6 @@
 #include "playerstatsview.h"
 
-#include <src/gamescene.h>
+#include "CGameScene.h"
 #include <qpainter.h>
 #include <sstream>
 #include "CBuilding.h"

@@ -1,5 +1,4 @@
-#ifndef SCRIPTMANAGER_H
-#define SCRIPTMANAGER_H
+#pragma once
 #include <QObject>
 #include <string>
 #include <boost/python.hpp>
@@ -7,14 +6,14 @@
 
 class CMap;
 
-class ScriptEngine {
+class CScriptEngine {
 public:
 	void executeScript ( QString script );
 	void executeCommand ( std::initializer_list<std::string> list );
 	QString buildCommand ( std::initializer_list<std::string> list );
 	boost::python::object getObject ( std::string name );
-	ScriptEngine ( CMap *map );
-	~ScriptEngine();
+	CScriptEngine ( CMap *map );
+	~CScriptEngine();
 	template<typename T>
 	T createObject ( std::string clas ) {
 		PY_UNSAFE (
@@ -36,4 +35,3 @@ private:
 extern "C" {
 	extern void init_game();
 }
-#endif // SCRIPTMANAGER_H

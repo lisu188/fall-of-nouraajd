@@ -4,6 +4,16 @@
 #include <QRunnable>
 #include <functional>
 #include <string>
+
+#define PROP(type,name,def,bean) \
+    private:\
+    Q_PROPERTY(type name READ get##bean WRITE set##bean USER true)\
+    type name=0;\
+    public:\
+    type get##bean(){return name ;}\
+    void set##bean( type name){this-> name = name ;}\
+    private:
+
 #define PROPERTY_ACCESSOR \
 void setStringProperty ( std::string name,std::string value ) {\
     this->setProperty ( name.c_str(),QString::fromStdString ( value ) );\

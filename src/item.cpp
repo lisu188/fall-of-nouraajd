@@ -1,6 +1,6 @@
 #include "item.h"
-#include "gamescene.h"
-#include <src/itemslot.h>
+#include "CGameScene.h"
+#include"CItemSlot.h"
 #include <src/stats.h>
 #include <QDebug>
 #include <QDrag>

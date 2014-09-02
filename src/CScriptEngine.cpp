@@ -1,18 +1,17 @@
-#include "scriptmanager.h"
+#include "CScriptEngine.h"
 #include <QString>
-#include <sstream>
 
-ScriptEngine::~ScriptEngine() {
+CScriptEngine::~CScriptEngine() {
 	PY_UNSAFE (
 	    Py_Finalize(); )
 }
 
-void ScriptEngine::executeScript ( QString script ) {
+void CScriptEngine::executeScript ( QString script ) {
 	PY_UNSAFE (
 	    boost::python::exec ( script.toStdString().append ( "\n" ).c_str(),main_namespace ); )
 }
 
-QString ScriptEngine::buildCommand ( std::initializer_list<std::string> list ) {
+QString CScriptEngine::buildCommand ( std::initializer_list<std::string> list ) {
 	PY_UNSAFE (
 	    QString command;
 	    int pos = 0;
@@ -36,7 +35,7 @@ QString ScriptEngine::buildCommand ( std::initializer_list<std::string> list ) {
 	return command; )
 }
 
-boost::python::object ScriptEngine::getObject ( std::string name ) {
+boost::python::object CScriptEngine::getObject ( std::string name ) {
 	PY_UNSAFE (
 	if ( !main_namespace.contains ( name.c_str() ) ) {
 	boost::python::object object;
@@ -45,12 +44,12 @@ boost::python::object ScriptEngine::getObject ( std::string name ) {
 return main_namespace[name.c_str()]; )
 }
 
-void ScriptEngine::executeCommand ( std::initializer_list<std::string> list ) {
+void CScriptEngine::executeCommand ( std::initializer_list<std::string> list ) {
 	PY_UNSAFE (
 	    executeScript ( buildCommand ( list ) ); )
 }
 
-ScriptEngine::ScriptEngine ( CMap *map ) {
+CScriptEngine::CScriptEngine ( CMap *map ) {
 	PY_UNSAFE (
 	    Py_Initialize();
 	    init_game();

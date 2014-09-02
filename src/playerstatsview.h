@@ -1,8 +1,4 @@
-#ifndef PLAYERSTATSVIEW_H
-#define PLAYERSTATSVIEW_H
-
-#include "scrollobject.h"
-
+#pragma once
 #include <QGraphicsItem>
 #include "CCreature.h"
 
@@ -18,5 +14,3 @@ protected:
 private:
 	Player *player = 0;
 };
-
-#endif // PLAYERSTATSVIEW_H
