@@ -1,5 +1,5 @@
 #include "gameview.h"
-#include <src/interaction.h>
+#include <src/CInteraction.h>
 #include <QDebug>
 #include <vector>
 #include <initializer_list>
@@ -8,9 +8,9 @@
 #include <src/playerlistview.h>
 
 
-bool GameView::init = false;
+bool CGameView::init = false;
 
-void GameView::start() {
+void CGameView::start() {
     scene->startGame(mapName, playerType);
     charView->setUpPanel(this);
     fightView->setUpPanel(this);
@@ -20,7 +20,7 @@ void GameView::start() {
     init = true;
 }
 
-GameView::GameView(std::string mapName, std::string playerType) : mapName(mapName), playerType(playerType) {
+CGameView::CGameView(std::string mapName, std::string playerType) : mapName(mapName), playerType(playerType) {
     setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
     setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
     setViewportUpdateMode(QGraphicsView::BoundingRectViewportUpdate);
@@ -30,14 +30,14 @@ GameView::GameView(std::string mapName, std::string playerType) : mapName(mapNam
     view.setViewportUpdateMode(
              QGraphicsView::FullViewportUpdate);
     */
-    scene = new GameScene();
+    scene = new CGameScene();
     setScene(scene);
     QPixmap pixmap(":/images/loading.png");
     loading.setPixmap(pixmap.scaled(this->width(), this->height(), Qt::IgnoreAspectRatio, Qt::SmoothTransformation));
     scene->addItem(&loading);
 
-    fightView = new FightPanel();
-    charView = new CharPanel();
+    fightView = new CFightPanel();
+    charView = new CCharPanel();
 
     scene->addItem(fightView);
     scene->addItem(charView);
@@ -56,23 +56,23 @@ GameView::GameView(std::string mapName, std::string playerType) : mapName(mapNam
     timer.start();
 }
 
-GameView::~GameView() {
+CGameView::~CGameView() {
     delete scene;
 }
 
-FightPanel *GameView::getFightView() { return fightView; }
+CFightPanel *CGameView::getFightView() { return fightView; }
 
-CharPanel *GameView::getCharView() { return charView; }
+CCharPanel *CGameView::getCharView() { return charView; }
 
-void GameView::showCharView() {
+void CGameView::showCharView() {
     charView->showPanel(this);
 }
 
-void GameView::showFightView() {
+void CGameView::showFightView() {
     fightView->showPanel(this);
 }
 
-void GameView::mouseDoubleClickEvent(QMouseEvent *e) {
+void CGameView::mouseDoubleClickEvent(QMouseEvent *e) {
     QWidget::mouseDoubleClickEvent(e);
     if (e->button() == Qt::MouseButton::LeftButton || !init) {
         return;
@@ -84,7 +84,7 @@ void GameView::mouseDoubleClickEvent(QMouseEvent *e) {
     }
 }
 
-void GameView::resizeEvent(QResizeEvent *event) {
+void CGameView::resizeEvent(QResizeEvent *event) {
     if (event) {
         QWidget::resizeEvent(event);
     }
@@ -97,9 +97,9 @@ void GameView::resizeEvent(QResizeEvent *event) {
     }
 }
 
-void GameView::wheelEvent(QWheelEvent *) {}
+void CGameView::wheelEvent(QWheelEvent *) {}
 
-void GameView::dragMoveEvent(QDragMoveEvent *e) {
+void CGameView::dragMoveEvent(QDragMoveEvent *e) {
     QGraphicsView::dragMoveEvent(e);
     repaint();
 }
@@ -124,13 +124,13 @@ void BackPackObject::paintEvent(QPaintEvent *) {
 }
 
 
-void GameView::show() {
+void CGameView::show() {
     showFullScreen();
 }
 
-GameScene *GameView::getScene() const { return scene; }
+CGameScene *CGameView::getScene() const { return scene; }
 
-void GameView::setScene(GameScene *value) {
+void CGameView::setScene(CGameScene *value) {
     scene = value;
     QGraphicsView::setScene(value);
 }

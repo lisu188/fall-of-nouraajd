@@ -1,40 +1,33 @@
 #ifndef PATHFINDER_H
 #define PATHFINDER_H
-#include "creature.h"
+#include "CCreature.h"
 
-#include <src/map.h>
+#include"CMap.h"
 #include <QObject>
 #include <QRunnable>
 #include <unordered_map>
 #include <unordered_set>
 
-class PathFinder : public QObject {
+class APathFinder : public QObject {
 	Q_OBJECT
 public:
-	PathFinder();
-	PathFinder ( const PathFinder& );
-	virtual Coords findPath ( Creature *first, Creature *second );
+	virtual Coords findPath ( CCreature *first, CCreature *second ) =0;
 };
 
-class DumbPathFinder : public PathFinder {
+class CDumbPathFinder : public APathFinder {
 	Q_OBJECT
 public:
-	DumbPathFinder();
-	DumbPathFinder ( const DumbPathFinder & );
-
-	// PathFinder interface
-public:
-	Coords findPath ( Creature *first, Creature *second );
+	CDumbPathFinder();
+	CDumbPathFinder ( const CDumbPathFinder & );
+	Coords findPath ( CCreature *first, CCreature *second );
 };
 
-class RandomPathFinder : public PathFinder {
+class CRandomPathFinder : public APathFinder {
 	Q_OBJECT
 public:
-	RandomPathFinder();
-	RandomPathFinder ( const RandomPathFinder & );
-	// PathFinder interface
-public:
-	Coords findPath ( Creature *first, Creature *second );
+	CRandomPathFinder();
+	CRandomPathFinder ( const CRandomPathFinder & );
+	Coords findPath ( CCreature *first, CCreature *second );
 };
 
 class Cell {
@@ -45,24 +38,20 @@ public:
 	Coords toCoords() { return Coords ( x, y, goal.z ); }
 };
 
-class SmartPathFinder : public PathFinder {
+class CSmartPathFinder : public APathFinder {
 	Q_OBJECT
 public:
-	SmartPathFinder();
-	SmartPathFinder ( const SmartPathFinder & );
-
-	// PathFinder interface
-public:
-	Coords findPath ( Creature *first, Creature *second );
-
+	CSmartPathFinder();
+	CSmartPathFinder ( const CSmartPathFinder & );
+	Coords findPath ( CCreature *first, CCreature *second );
 private:
 	int getCost ( Coords coords );
 	std::list<Coords> getNearCells ( Coords coords );
 	std::unordered_map<Coords, int, CoordsHasher> values;
 	Coords getNearestCell ( Coords start );
-	void processNode ( Creature *first, std::list<Cell> &nodes,
+	void processNode ( CCreature *first, std::list<Cell> &nodes,
 	                   std::unordered_set<Coords, CoordsHasher> &marked );
-	bool canStep ( Map *map, int x, int y, int z );
+	bool canStep ( CMap *map, int x, int y, int z );
 };
 
 class CompletionListener : public QObject {
@@ -91,15 +80,15 @@ private:
 class PathFinderWorker : public QObject, public QRunnable {
 	Q_OBJECT
 public:
-	PathFinderWorker ( Creature *first, Creature *second, PathFinder *finder );
+	PathFinderWorker ( CCreature *first, CCreature *second, APathFinder *finder );
 	void run();
 
 private:
 	Q_SIGNAL void completed ( int x, int y );
 	Q_SIGNAL void started();
 	Q_SIGNAL void ended();
-	Creature *first;
-	Creature *second;
-	PathFinder *finder;
+	CCreature *first;
+	CCreature *second;
+	APathFinder *finder;
 };
 #endif // PATHFINDER_H

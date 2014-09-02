@@ -1,17 +1,16 @@
 #include <src/lootprovider.h>
 #include <locale>
 #include <QGraphicsSceneHoverEvent>
-#include "map.h"
+#include "CMap.h"
 
 
 #include "tile.h"
 
 #include <src/CBuilding.h>
-#include <src/pathfinder.h>
+#include <src/CPathFinder.h>
 #include <src/CConfigurationProvider.h>
-#include <src/monster.h>
-#include <src/player.h>
-#include <src/interaction.h>
+#include <src/CCreature.h>
+#include <src/CInteraction.h>
 #include <src/item.h>
 #include <src/gamescene.h>
 #include <src/gameview.h>
@@ -36,42 +35,27 @@
 namespace {
 
 int tile_size = 50;
-const int animation_step_ms = 100;
 
 
 
 
 
-bool contains_object(std::list<MapObject *> *objects, MapObject *object) {
+bool contains_object(std::list<CMapObject *> *objects, CMapObject *object) {
   return std::find(objects->begin(), objects->end(), object) != objects->end();
 }
 
 } // namespace
-
-class ReconstructedPlayerAnimation : public QGraphicsItemAnimation {
-public:
-    explicit ReconstructedPlayerAnimation(QObject *parent) : QGraphicsItemAnimation(parent) {}
-protected:
-    void afterAnimationStep(qreal step) override;
-};
-
-void ReconstructedPlayerAnimation::afterAnimationStep(qreal) {
-    QGraphicsItem *animated = item();
-    GameScene *scene = animated ? dynamic_cast<GameScene *>(animated->scene()) : NULL;
-    if (scene && scene->getView()) scene->getView()->centerOn(animated);
-}
-
-Map::Map(GameScene *scene, std::string file) : scene(scene), entryx(0), entryz(0), entryy(0) {
+CMap::CMap(CGameScene *scene, std::string file) : scene(scene), entryx(0), entryz(0), entryy(0) {
   connect(CompletionListener::getInstance(), SIGNAL(completed()), this, SLOT(moveCompleted()));
   defaultTiles[0] = "GrassTile";
   engine = new ScriptEngine(this);
-  lootProvider = new LootProvider(this);
+  lootProvider = new CLootProvider(this);
   Tmx::Map authored;
   authored.ParseFile(file);
   loadMapFromTmx(authored);
 }
 
-Map::~Map() {
+CMap::~CMap() {
   std::vector<Tile *> tile_list;
   for (std::unordered_map<Coords, Tile *, CoordsHasher>::iterator it = tiles.begin(); it != tiles.end();
        ++it) {
@@ -87,9 +71,9 @@ Map::~Map() {
     delete *it;
   }
 
-  std::vector<MapObject *> objects(mapObjects.begin(), mapObjects.end());
+  std::vector<CMapObject *> objects(mapObjects.begin(), mapObjects.end());
   mapObjects.clear();
-  for (std::vector<MapObject *>::iterator it = objects.begin();
+  for (std::vector<CMapObject *>::iterator it = objects.begin();
        it != objects.end(); ++it) {
     if ((*it)->scene()) {
       (*it)->scene()->removeItem(*it);
@@ -98,7 +82,7 @@ Map::~Map() {
   }
 }
 
-bool Map::addTile(std::string name, int x, int y, int z) {
+bool CMap::addTile(std::string name, int x, int y, int z) {
   Coords coords(x, y, z);
   std::unordered_map<Coords, Tile *, CoordsHasher>::iterator existing = tiles.find(coords);
   if (existing != tiles.end()) {
@@ -121,7 +105,7 @@ bool Map::addTile(std::string name, int x, int y, int z) {
   if (!tile) {
     return false;
   }
-  tile->MapObject::setMap(this);
+  tile->CMapObject::setMap(this);
   tile->moveTo(x, y, z, true);
   tile->QGraphicsItem::setVisible(z == currentMap);
   tiles.insert(std::pair<Coords, Tile *>(coords, tile));
@@ -129,10 +113,10 @@ bool Map::addTile(std::string name, int x, int y, int z) {
   return true;
 }
 
-int Map::getTileSize() { return tile_size; }
+int CMap::getTileSize() { return tile_size; }
 
 
-void Map::move(int x, int y) {
+void CMap::move(int x, int y) {
   Player *player = scene->getPlayer();
   if (!player) {
     showAll();
@@ -171,10 +155,10 @@ void Map::move(int x, int y) {
   player->getEntered()->clear();
 
   Coords player_coords(player->getPosX(), player->getPosY(), player->getPosZ());
-  std::vector<MapObject *> objects(mapObjects.begin(), mapObjects.end());
-  for (std::vector<MapObject *>::iterator it = objects.begin();
+  std::vector<CMapObject *> objects(mapObjects.begin(), mapObjects.end());
+  for (std::vector<CMapObject *>::iterator it = objects.begin();
        it != objects.end(); ++it) {
-    MapObject *object = *it;
+    CMapObject *object = *it;
     if (!object || object == player) {
       continue;
     }
@@ -191,9 +175,9 @@ void Map::move(int x, int y) {
   }
 
   objects.assign(mapObjects.begin(), mapObjects.end());
-  for (std::vector<MapObject *>::iterator it = objects.begin();
+  for (std::vector<CMapObject *>::iterator it = objects.begin();
        it != objects.end(); ++it) {
-    MapObject *object = *it;
+    CMapObject *object = *it;
     if (!object || object == player ||
         contains_object(player->getEntered(), object)) {
       continue;
@@ -205,15 +189,15 @@ void Map::move(int x, int y) {
   CompletionListener::getInstance()->run();
 }
 
-void Map::moveCompleted() {
+void CMap::moveCompleted() {
   CompletionListener::getInstance()->stop();
   Player *player = scene->getPlayer();
   if (!player) return;
-  std::vector<MapObject *> objects;
+  std::vector<CMapObject *> objects;
   objects.assign(mapObjects.begin(), mapObjects.end());
-  for (std::vector<MapObject *>::iterator it = objects.begin();
+  for (std::vector<CMapObject *>::iterator it = objects.begin();
        it != objects.end(); ++it) {
-    MapObject *object = *it;
+    CMapObject *object = *it;
     if (!object || object == player ||
         contains_object(player->getEntered(), object)) {
       continue;
@@ -231,8 +215,8 @@ void Map::moveCompleted() {
   }
 
   {
-    std::list<MapObject *> entered(*player->getEntered());
-    for (std::list<MapObject *>::iterator it = entered.begin();
+    std::list<CMapObject *> entered(*player->getEntered());
+    for (std::list<CMapObject *>::iterator it = entered.begin();
          it != entered.end(); ++it) {
       (*it)->onEnter();
       if (scene->getPlayer() != player) {
@@ -246,7 +230,7 @@ void Map::moveCompleted() {
   }
 }
 
-std::string Map::getTile(int x, int y, int z) {
+std::string CMap::getTile(int x, int y, int z) {
   std::unordered_map<Coords, std::string, CoordsHasher>::iterator it =
       find(Coords(x, y, z));
   if (it != end()) {
@@ -258,11 +242,11 @@ std::string Map::getTile(int x, int y, int z) {
   return "";
 }
 
-bool Map::contains(int x, int y, int z) {
+bool CMap::contains(int x, int y, int z) {
   return getTile(x, y, z).compare("") != 0;
 }
 
-void Map::addObject(MapObject *mapObject) {
+void CMap::addObject(CMapObject *mapObject) {
   if (!mapObject) {
     return;
   }
@@ -274,7 +258,7 @@ void Map::addObject(MapObject *mapObject) {
   }
 }
 
-void Map::randomDir(int *tab, int) {
+void CMap::randomDir(int *tab, int) {
   tab[0] = 0;
   tab[1] = 1;
   tab[2] = 2;
@@ -285,7 +269,7 @@ void Map::randomDir(int *tab, int) {
   }
 }
 
-void Map::addRiver(int length, int startx, int starty, int startz) {
+void CMap::addRiver(int length, int startx, int starty, int startz) {
   int x = startx;
   int y = starty;
   for (int i = 0; i < length; ++i) {
@@ -309,7 +293,7 @@ void Map::addRiver(int length, int startx, int starty, int startz) {
   }
 }
 
-void Map::addRoad(int length, int startx, int starty, int startz) {
+void CMap::addRoad(int length, int startx, int starty, int startz) {
   int x = startx;
   int y = starty;
   for (int i = 0; i < length; ++i) {
@@ -322,11 +306,11 @@ void Map::addRoad(int length, int startx, int starty, int startz) {
   }
 }
 
-void Map::addDungeon(Coords enter, Coords exit, int width, int height) {
+void CMap::addDungeon(Coords enter, Coords exit, int width, int height) {
     for (int x = 0; x < width; ++x) for (int y = 0; y < height; ++y)
         addTile("GroundTile", exit.x + x, exit.y + y, exit.z);
-    MapObject *entrance = createMapObject<MapObject *>(std::string("Teleporter"));
-    MapObject *return_gate = createMapObject<MapObject *>(std::string("Teleporter"));
+    CMapObject *entrance = createMapObject<CMapObject *>(std::string("Teleporter"));
+    CMapObject *return_gate = createMapObject<CMapObject *>(std::string("Teleporter"));
     if (!entrance || !return_gate) {
         delete entrance;
         delete return_gate;
@@ -341,7 +325,7 @@ void Map::addDungeon(Coords enter, Coords exit, int width, int height) {
     addObject(entrance); addObject(return_gate);
 }
 
-void Map::removeObject(MapObject *mapObject) {
+void CMap::removeObject(CMapObject *mapObject) {
   if (!mapObject) {
     return;
   }
@@ -364,7 +348,7 @@ void Map::removeObject(MapObject *mapObject) {
 
 
 
-void Map::ensureSize() {
+void CMap::ensureSize() {
   Player *player = scene->getPlayer();
   if (!player || defaultTiles.find(player->getPosZ()) == defaultTiles.end()) {
     return;
@@ -389,7 +373,7 @@ void Map::ensureSize() {
   }
 }
 
-void Map::ensureTile(int i, int j) {
+void CMap::ensureTile(int i, int j) {
   if (tiles.find(Coords(i, j, currentMap)) != tiles.end()) {
     return;
   }
@@ -397,14 +381,14 @@ void Map::ensureTile(int i, int j) {
   addTile(tile_name.empty() ? "GrassTile" : tile_name, i, j, currentMap);
 }
 
-void Map::hide() {
+void CMap::hide() {
   for (std::unordered_map<Coords, Tile *, CoordsHasher>::iterator it = tiles.begin(); it != tiles.end();
        ++it) {
     if ((*it).second) {
       (*it).second->QGraphicsItem::setVisible(false);
     }
   }
-  for (std::set<MapObject *>::iterator it = mapObjects.begin();
+  for (std::set<CMapObject *>::iterator it = mapObjects.begin();
        it != mapObjects.end(); ++it) {
     if (*it) {
       (*it)->QGraphicsItem::setVisible(false);
@@ -416,9 +400,9 @@ void Map::hide() {
 
 
 
-GameScene *Map::getScene() const { return scene; }
+CGameScene *CMap::getScene() const { return scene; }
 
-void Map::showAll() {
+void CMap::showAll() {
   for (std::unordered_map<Coords, Tile *, CoordsHasher>::iterator it = tiles.begin(); it != tiles.end();
        ++it) {
     Tile *tile = (*it).second;
@@ -433,9 +417,9 @@ void Map::showAll() {
     tile->QGraphicsItem::setVisible(tile->getPosZ() == currentMap);
   }
 
-  for (std::set<MapObject *>::iterator it = mapObjects.begin();
+  for (std::set<CMapObject *>::iterator it = mapObjects.begin();
        it != mapObjects.end(); ++it) {
-    MapObject *object = *it;
+    CMapObject *object = *it;
     if (!object) {
       continue;
     }
@@ -450,108 +434,14 @@ void Map::showAll() {
   }
 }
 
-void Map::mapUp() { ++currentMap; }
+void CMap::mapUp() { ++currentMap; }
 
-void Map::mapDown() { --currentMap; }
+void CMap::mapDown() { --currentMap; }
 
-int Map::getCurrentMap() { return currentMap; }
+int CMap::getCurrentMap() { return currentMap; }
 
 
-MapObject::MapObject() : MapObject(0, 0, 0, 0) {}
-
-MapObject::MapObject(int x, int y, int z, int v) {
-  posx = x;
-  posy = y;
-  posz = z;
-  setZValue(v);
-  setAcceptHoverEvents(true);
-  statsView.setParentItem(this);
-  statsView.setVisible(true);
-  statsView.setText(" ");
-  statsView.setPos(-this->mapToParent(0, 0).x(), -statsView.boundingRect().height());
-}
-
-void MapObject::moveTo(int x, int y, int z, bool silent) {
-    QPointF from = QGraphicsItem::pos();
-    posx = x; posy = y; posz = z;
-    QPointF to(x * Map::getTileSize(), y * Map::getTileSize());
-    if (!silent && map && map->getScene()->getView() && from != to) {
-        QGraphicsItemAnimation *animation = inherits("Player")
-            ? static_cast<QGraphicsItemAnimation *>(new ReconstructedPlayerAnimation(this))
-            : new QGraphicsItemAnimation(this);
-        QTimeLine *timeline = new QTimeLine(animation_step_ms, animation);
-        animation->setItem(this);
-        animation->setTimeLine(timeline);
-        animation->setPosAt(0, from); animation->setPosAt(1, to);
-        connect(timeline, &QTimeLine::finished, animation, &QObject::deleteLater);
-        timeline->start();
-    } else { setPos(to); }
-    if (map) QGraphicsItem::setVisible(posz == map->getCurrentMap());
-    if (!silent) {
-        Player *player = map ? map->getScene()->getPlayer() : NULL;
-        if (player && player != this && player->getPosX() == posx && player->getPosY() == posy && player->getPosZ() == posz)
-            player->addEntered(this);
-    }
-}
-
-int MapObject::getPosX() const { return posx; }
-
-int MapObject::getPosY() const { return posy; }
-
-int MapObject::getPosZ() const { return posz; }
-
-void MapObject::removeFromGame() {
-  if (map) {
-    Map *owner = map;
-    map = 0;
-    owner->removeObject(this);
-  }
-}
-
-void MapObject::move(int x, int y) {
-  if (!map) {
-    return;
-  }
-
-  int next_x = posx + x;
-  int next_y = posy + y;
-  int next_z = posz;
-  std::string tile_name = map->getTile(next_x, next_y, next_z);
-  if (tile_name.compare("") == 0) {
-    return;
-  }
-
-  Tile *tile = Tile::getTile(tile_name, next_x, next_y, next_z);
-  bool can_step = tile && tile->canStep();
-  delete tile;
-  if (!can_step) {
-    return;
-  }
-
-  moveTo(next_x, next_y, next_z);
-}
-
-void MapObject::setMap(Map *map) {
-  this->map = map;
-  if (!map) {
-    return;
-  }
-  if (scene() != map->getScene()) {
-    map->getScene()->addItem(this);
-  }
-  setPos(posx * Map::getTileSize(), posy * Map::getTileSize());
-  QGraphicsItem::setVisible(posz == map->getCurrentMap());
-}
-
-Map *MapObject::getMap() { return map; }
-
-void MapObject::setVisible(bool vis) { QGraphicsItem::setVisible(vis); }
-
-void MapObject::setAnimation(std::string path) {
-  CAnimatedObject::setAnimation(path, Map::getTileSize());
-}
-
-void Map::loadMapFromTmx(Tmx::Map &source) {
+void CMap::loadMapFromTmx(Tmx::Map &source) {
     if (source.HasError() || source.GetTileWidth() <= 0 || source.GetTileHeight() <= 0)
         qFatal("TMX reconstruction could not parse the authored map");
     entryx = source.GetProperties().GetNumericProperty("x");
@@ -573,7 +463,7 @@ void Map::loadMapFromTmx(Tmx::Map &source) {
         const Tmx::ObjectGroup *objects = source.GetObjectGroup(group);
         for (int index = 0; index < objects->GetNumObjects(); ++index) {
             const Tmx::Object *authored = objects->GetObject(index);
-            MapObject *object = createMapObject<MapObject *>(authored->GetType());
+            CMapObject *object = createMapObject<CMapObject *>(authored->GetType());
             if (!object) { qWarning() << "TMX object type unavailable in this revision:" << authored->GetType().c_str(); continue; }
             object->name = authored->GetName();
             object->setObjectName(QString::fromStdString(object->name));
@@ -584,136 +474,48 @@ void Map::loadMapFromTmx(Tmx::Map &source) {
     }
 }
 
-int Map::getEntryX() { return entryx; }
-int Map::getEntryY() { return entryy; }
-int Map::getEntryZ() { return entryz; }
-std::set<MapObject *> *Map::getObjects() { return &mapObjects; }
-MapObject *Map::getObjectByName(std::string name) {
-    for (MapObject *object : mapObjects) if (object->name == name) return object;
+int CMap::getEntryX() { return entryx; }
+int CMap::getEntryY() { return entryy; }
+int CMap::getEntryZ() { return entryz; }
+std::set<CMapObject *> *CMap::getObjects() { return &mapObjects; }
+CMapObject *CMap::getObjectByName(std::string name) {
+    for (CMapObject *object : mapObjects) if (object->name == name) return object;
     return 0;
 }
-bool Map::removeTile(int x, int y, int z) {
+bool CMap::removeTile(int x, int y, int z) {
     Coords coords(x, y, z); auto tile = tiles.find(coords);
     if (tile == tiles.end()) return false;
     if (tile->second->scene()) tile->second->scene()->removeItem(tile->second);
     delete tile->second; tiles.erase(tile); erase(coords); return true;
 }
-MapObject *MapObject::createMapObject(QString qname) { return createMapObject(qname, NULL); }
+std::map<int, std::pair<int, int> > CMap::getBounds() { return boundaries; }
 
-// The map is attached before loadFromJson because, from #245, items create their
-// interaction through getMap() while loading (genuine item.cpp).
-MapObject *MapObject::createMapObject(QString qname, Map *map) {
-    std::string name = qname.toStdString();
-    Json::Value config = (*CConfigurationProvider::getConfig("config/object.json"))[name];
-    std::string class_name = config.get("class", name).asString();
-    int registered = QMetaType::type(class_name.c_str());
-    if (registered == QMetaType::UnknownType) return 0;
-    MapObject *object = static_cast<MapObject *>(QMetaType::create(registered));
-    if (object) { object->map = map; object->loadFromJson(name); };
-    return object;
+int CMap::getCurrentXBound() { return boundaries[currentMap].first; }
+
+int CMap::getCurrentYBound() { return boundaries[currentMap].second; }
+
+ScriptEngine *CMap::getEngine() { return engine; }
+CLootProvider *CMap::getLootProvider() { return lootProvider; }
+
+bool CMap::removeObjectByName(std::string name) {
+    CMapObject *object = getObjectByName(name);
+    if (!object) return false;
+    removeObject(object);
+    return true;
 }
-void MapObject::loadFromProps(Tmx::PropertySet properties) {
-    for (auto property : properties.GetList()) {
-        int index = metaObject()->indexOfProperty(property.first.c_str());
-        if (index < 0 || !metaObject()->property(index).isUser()) continue;
-        QMetaProperty metadata = metaObject()->property(index);
-        QVariant value(QString::fromStdString(property.second));
-        if (!value.convert(metadata.type()) || !metadata.write(this, value))
-            qWarning() << "Could not apply authored TMX property" << property.first.c_str();
-    }
+std::string CMap::addObjectByName(std::string name, Coords coords) {
+    CMapObject *object = createMapObject<CMapObject *>(name);
+    if (!object) return "";
+    object->moveTo(coords.x, coords.y, coords.z, true);
+    addObject(object);
+    return object->name;
 }
-
-
-
-Coords::Coords()
-{
-    x=y=z=0;
+void CMap::replaceTile(std::string name, Coords coords) {
+    removeTile(coords.x, coords.y, coords.z);
+    addTile(name, coords.x, coords.y, coords.z);
 }
-
-Coords::Coords(int x, int y,int z):x(x),y(y),z(z) {}
-
-bool Coords::operator==(const Coords &other) const
-{
-    return (x==other.x&&y==other.y&&z==other.z);
+Coords CMap::getLocationByName(std::string name) {
+    CMapObject *object = getObjectByName(name);
+    return object ? object->getCoords() : Coords();
 }
-
-bool Coords::operator<(const Coords &other) const
-{
-    if(x<other.x) {
-        return true;
-    }
-    if(y<other.y&&x==other.x) {
-        return true;
-    }
-    if(z<other.z&&x==other.x&&y==other.y) {
-        return true;
-    }
-    return false;
-}
-
-std::size_t CoordsHasher::operator()(const Coords &coords) const
-{
-    using std::size_t;
-    int a=(size_t)coords.x;
-    int b=(size_t)coords.y;
-    int c=(size_t)coords.z;
-    return (size_t)(a^b)^(b^c)^(a^c);
-}
-
-int Coords::getDist(Coords other) { return std::abs(x-other.x)+std::abs(y-other.y)+std::abs(z-other.z); }
-
-void MapObject::onEnter() {}
-
-void MapObject::onMove() {}
-
-void MapObject::onCreate() {}
-
-void MapObject::onDestroy() {}
-
-std::map<int, std::pair<int, int> > Map::getBounds() { return boundaries; }
-
-int Map::getCurrentXBound() { return boundaries[currentMap].first; }
-
-int Map::getCurrentYBound() { return boundaries[currentMap].second; }
-
-ScriptEngine *Map::getEngine() { return engine; }
-
-namespace {
-std::string toLower(const std::string &s) {
-  std::string result;
-  std::locale loc;
-  for (unsigned int i = 0; i < s.length(); ++i) {
-    result += std::tolower(s.at(i), loc);
-  }
-  return result;
-}
-}
-
-void MapObject::setNumber(int i, int x) {
-  this->QGraphicsItem::setVisible(true);
-  int px = i % x * Map::getTileSize();
-  int py = i / x * Map::getTileSize();
-  this->QGraphicsItem::setPos(px, py);
-}
-
-bool MapObject::compare(MapObject *item) {
-  int value = toLower(typeName).compare(toLower(item->typeName));
-  if (value == 0) {
-    return this < item;
-  }
-  return value < 0;
-}
-
-void MapObject::hoverEnterEvent(QGraphicsSceneHoverEvent *event) {
-  statsView.setVisible(true);
-  statsView.setText(tooltip.c_str());
-  statsView.setPos(0, 0 - statsView.boundingRect().height());
-  event->setAccepted(true);
-}
-
-void MapObject::hoverLeaveEvent(QGraphicsSceneHoverEvent *event) {
-  statsView.setVisible(false);
-  event->setAccepted(true);
-}
-
-LootProvider *Map::getLootProvider() { return lootProvider; }
+Player *CMap::getPlayer() { return scene->getPlayer(); }

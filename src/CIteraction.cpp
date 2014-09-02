@@ -1,27 +1,24 @@
-#include "interaction.h"
+#include "CInteraction.h"
 
-#include <src/player.h>
+#include <src/CCreature.h>
 
 #include <src/gamescene.h>
 #include <src/gameview.h>
 
 #include <src/playerstatsview.h>
-#include <src/gamepanel.h>
+#include <src/CGamePanel.h>
 
 #include <src/item.h>
-#include <src/item.h>
-#include <src/stats.h>
 #include <src/stats.h>
 #include <src/CConfigurationProvider.h>
 
 #include <QDebug>
 #include <list>
-#include <src/creature.h>
 
 
 
 
-void Interaction::loadFromJson(std::string name) {
+void CInteraction::loadFromJson(std::string name) {
     typeName = name;
     Json::Value config = (*CConfigurationProvider::getConfig("config/object.json"))[name];
     tooltip = config.get("tooltip", name).asString();
@@ -38,7 +35,7 @@ void Interaction::loadFromJson(std::string name) {
 }
 
 
-void Interaction::onAction(Creature *first, Creature *second) {
+void CInteraction::onAction(CCreature *first, CCreature *second) {
     qDebug() << first->typeName.c_str() << "used" << this->typeName.c_str() << "against" << second->typeName.c_str();
     performAction(first, second);
     if (!effect.empty()) {
@@ -51,10 +48,10 @@ void Interaction::onAction(Creature *first, Creature *second) {
     }
 }
 
-int Interaction::getManaCost() { return manaCost; }
+int CInteraction::getManaCost() { return manaCost; }
 
-void Interaction::mousePressEvent(QGraphicsSceneMouseEvent *event) {
-    GameScene *gameScene = dynamic_cast<GameScene *>(this->scene());
+void CInteraction::mousePressEvent(QGraphicsSceneMouseEvent *event) {
+    CGameScene *gameScene = dynamic_cast<CGameScene *>(this->scene());
     Player *player = gameScene ? gameScene->getPlayer() : NULL;
     if (player->getFightList()->size() == 0) {
         return;
@@ -62,17 +59,15 @@ void Interaction::mousePressEvent(QGraphicsSceneMouseEvent *event) {
     if (manaCost > player->getMana()) {
         return;
     }
-    Creature *creature = FightPanel::selected;
+    CCreature *creature = CFightPanel::selected;
     if (!creature) {
         return;
     }
     player->performAction(this, creature);
 }
 
-#include <QDebug>
-#include <src/creature.h>
 
-std::unordered_map<std::string, std::function<bool(Effect *effects, Creature *)>> Effect::effects{
+std::unordered_map<std::string, std::function<bool(Effect *effects, CCreature *)>> Effect::effects{
     {"Stun", &StunEffect},
     {"EndlessPainEffect", &EndlessPainEffect},
     {"MutilationEffect", &MutilationEffect},
@@ -83,7 +78,7 @@ std::unordered_map<std::string, std::function<bool(Effect *effects, Creature *)>
     {"BloodlashEffect", &BloodlashEffect},
     {"BarrierEffect", &BarrierEffect}};
 
-Effect::Effect(std::string type, Creature *caster, Creature *victim) : caster(caster), victim(victim) {
+Effect::Effect(std::string type, CCreature *caster, CCreature *victim) : caster(caster), victim(victim) {
     bonus = 0;
     className = type;
     Json::Value config = (*CConfigurationProvider::getConfig("config/effects.json"))[type];
@@ -94,9 +89,9 @@ int Effect::getTimeLeft() { return timeLeft; }
 
 int Effect::getTimeTotal() { return timeTotal; }
 
-Creature *Effect::getCaster() { return caster; }
+CCreature *Effect::getCaster() { return caster; }
 
-bool Effect::apply(Creature *creature) {
+bool Effect::apply(CCreature *creature) {
     if (bonus)
         if (timeTotal == timeLeft) {
             creature->getStats()->addBonus(*bonus);
@@ -115,14 +110,14 @@ Stats *Effect::getBonus() { return bonus; }
 
 void Effect::setBonus(Stats *value) { bonus = value; }
 
-bool StunEffect(Effect *effect, Creature *creature) { return true; }
+bool StunEffect(Effect *effect, CCreature *creature) { return true; }
 
-bool EndlessPainEffect(Effect *effect, Creature *creature) {
+bool EndlessPainEffect(Effect *effect, CCreature *creature) {
     creature->hurt(effect->getCaster()->getDmg() * 15.0 / 100.0);
     return true;
 }
 
-bool AbyssalShadowsEffect(Effect *effect, Creature *creature) {
+bool AbyssalShadowsEffect(Effect *effect, CCreature *creature) {
     if (effect->getTimeLeft() > 1) {
         Damage tmp;
         tmp.setShadow(effect->getCaster()->getDmg() * 45.0 / 100.0);
@@ -135,34 +130,34 @@ bool AbyssalShadowsEffect(Effect *effect, Creature *creature) {
     return false;
 }
 
-bool ArmorOfEndlessWinterEffect(Effect *effect, Creature *creature) {
+bool ArmorOfEndlessWinterEffect(Effect *effect, CCreature *creature) {
     creature->healProc(20);
     return false; // must implement ban to other skills
 }
 
-bool MutilationEffect(Effect *effect, Creature *creature) {
+bool MutilationEffect(Effect *effect, CCreature *creature) {
     creature->hurt(effect->getCaster()->getStats()->getAgility() * 0.25);
     return false;
 }
 
-bool LethalPoisonEffect(Effect *effect, Creature *creature) {
+bool LethalPoisonEffect(Effect *effect, CCreature *creature) {
     creature->hurt(effect->getCaster()->getDmg() * 4.0 / 6.0);
     return false;
 }
 
-bool ChloroformEffect(Effect *effect, Creature *creature) {
+bool ChloroformEffect(Effect *effect, CCreature *creature) {
     return creature->getHpRatio() > 25; // must discuss going to sleep again
 }
 
-bool BloodlashEffect(Effect *effect, Creature *creature) {
+bool BloodlashEffect(Effect *effect, CCreature *creature) {
     creature->hurt(effect->getCaster()->getDmg() * 0.75);
     return false;
 }
 
-bool BarrierEffect(Effect *effect, Creature *creature) { return false; }
+bool BarrierEffect(Effect *effect, CCreature *creature) { return false; }
 
-void Interaction::onEnter() {
-    GameScene *gameScene = dynamic_cast<GameScene *>(this->scene());
+void CInteraction::onEnter() {
+    CGameScene *gameScene = dynamic_cast<CGameScene *>(this->scene());
     Player *player = gameScene ? gameScene->getPlayer() : NULL;
     if (!player)
         return;
@@ -172,15 +167,15 @@ void Interaction::onEnter() {
     player->updateViews();
 }
 
-void Interaction::onMove() {}
+void CInteraction::onMove() {}
 
 
 
 
 
-Interaction::Interaction() : MapObject(0, 0, 0, 2), manaCost(0) {}
-Interaction::Interaction(const Interaction &interaction) : Interaction() { loadFromJson(interaction.typeName); }
-bool Interaction::compare(MapObject *item) { return MapObject::compare(item); }
+CInteraction::CInteraction() : CMapObject(0, 0, 0, 2), manaCost(0) {}
+CInteraction::CInteraction(const CInteraction &interaction) : CInteraction() { loadFromJson(interaction.typeName); }
+bool CInteraction::compare(CMapObject *item) { return CMapObject::compare(item); }
 Json::Value Effect::saveToJson() {
     Json::Value config;
     config["type"] = className;
@@ -189,9 +184,14 @@ Json::Value Effect::saveToJson() {
     return config;
 }
 
-Creature *Effect::getVictim() { return victim; }
+CCreature *Effect::getVictim() { return victim; }
 
 // Python interaction classes override these (#245); the C++ base does nothing itself.
-void Interaction::performAction(Creature *, Creature *) {}
+void CInteraction::performAction(CCreature *first, CCreature *second) {
+    boost::python::object action = map->getEngine()->getObject(typeName);
+    if (!action.is_none() && PyCallable_Check(action.ptr())) {
+        action(boost::python::ptr(first), boost::python::ptr(second));
+    }
+}
 
-bool Interaction::configureEffect(Effect *) { return true; }
+bool CInteraction::configureEffect(Effect *) { return true; }

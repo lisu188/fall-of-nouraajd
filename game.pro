@@ -2,8 +2,6 @@
 QT += core gui widgets
 TARGET = Game
 TEMPLATE = app
-# Recovery marker: the active application after the case-only Game.pro -> game.pro rename.
-GAME_RECOVERY_APPLICATION = true
 CONFIG += c++11
 INCLUDEPATH += . src lib lib/tmx lib/tinyxml lib/base64 lib/zlib
 unix:LIBS += -lpython2.7 -ldl -lutil
@@ -46,20 +44,13 @@ SOURCES += lib/base64/base64.cpp \
     lib/zlib/trees.c \
     lib/zlib/uncompr.c \
     lib/zlib/zutil.c \
-    src/creature.cpp \
-    src/event.cpp \
     src/gamescene.cpp \
-    src/gamescript.cpp \
+    src/GameScript.cpp \
     src/gameview.cpp \
-    src/interaction.cpp \
     src/item.cpp \
     src/itemslot.cpp \
     src/lootprovider.cpp \
     src/main.cpp \
-    src/map.cpp \
-    src/monster.cpp \
-    src/pathfinder.cpp \
-    src/player.cpp \
     src/playerequippedview.cpp \
     src/playerlistview.cpp \
     src/playerstatsview.cpp \
@@ -74,9 +65,14 @@ SOURCES += lib/base64/base64.cpp \
     src/CAnimationProvider.cpp \
     src/CBuilding.cpp \
     src/CConfigurationProvider.cpp \
+    src/CCreature.cpp \
+    src/CGamePanel.cpp \
+    src/CIteraction.cpp \
+    src/CMap.cpp \
+    src/CMapObject.cpp \
+    src/CPathFinder.cpp \
     src/CReflection.cpp \
-    src/ReflectTypes.cpp \
-    src/gamepanel.cpp
+    src/ReflectTypes.cpp
 
 HEADERS  += \
     lib/base64/base64.h \
@@ -123,21 +119,19 @@ HEADERS  += \
     src/CAnimationProvider.h \
     src/CBuilding.h \
     src/CConfigurationProvider.h \
+    src/CCreature.h \
+    src/CGamePanel.h \
+    src/CInteraction.h \
+    src/CMap.h \
+    src/CMapObject.h \
+    src/CPathFinder.h \
     src/CReflection.h \
-    src/creature.h \
-    src/event.h \
-    src/gamepanel.h \
     src/gamescene.h \
     src/gameview.h \
-    src/interaction.h \
     src/item.h \
     src/itemslot.h \
     src/lootprovider.h \
     src/mainwindow.h \
-    src/map.h \
-    src/monster.h \
-    src/pathfinder.h \
-    src/player.h \
     src/playerequippedview.h \
     src/playerlistview.h \
     src/playerstatsview.h \

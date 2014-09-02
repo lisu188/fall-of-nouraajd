@@ -4,7 +4,7 @@
 #include "scrollobject.h"
 
 #include <QGraphicsItem>
-#include <src/player.h>
+#include "CCreature.h"
 
 class PlayerStatsView : public QWidget {
 	Q_OBJECT

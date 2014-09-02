@@ -7,14 +7,14 @@ class Potion : public Item {
 public:
 	Potion();
 	Potion ( const Potion & );
-	virtual void onUse ( Creature *creature );
+	virtual void onUse ( CCreature *creature );
 	virtual void loadFromJson ( std::string name );
 
 private:
-	std::function<void ( Creature *, int ) > effect;
+	std::function<void ( CCreature *, int ) > effect;
 };
 
-void LifeEffect ( Creature *creature, int power );
-void ManaEffect ( Creature *creature, int power );
+void LifeEffect ( CCreature *creature, int power );
+void ManaEffect ( CCreature *creature, int power );
 
 #endif // POTION_H

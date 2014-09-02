@@ -50,7 +50,7 @@ void ScriptEngine::executeCommand ( std::initializer_list<std::string> list ) {
 	    executeScript ( buildCommand ( list ) ); )
 }
 
-ScriptEngine::ScriptEngine ( Map *map ) {
+ScriptEngine::ScriptEngine ( CMap *map ) {
 	PY_UNSAFE (
 	    Py_Initialize();
 	    init_game();

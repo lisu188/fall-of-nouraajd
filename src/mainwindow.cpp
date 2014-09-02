@@ -13,6 +13,6 @@ MainWindow::~MainWindow() {
 }
 
 void MainWindow::on_pushButton_clicked() {
-	GameView*view=new GameView ( this->ui->mapType->text().toStdString(),this->ui->playerType->text().toStdString() );
+	CGameView*view=new CGameView ( this->ui->mapType->text().toStdString(),this->ui->playerType->text().toStdString() );
 	this->hide();
 }
