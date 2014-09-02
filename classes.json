@@ -1,0 +1,24 @@
+{
+    "Damage": [
+        {
+            "name": "fire", 
+            "type": "int"
+        }, 
+        {
+            "name": "thunder", 
+            "type": "int"
+        }, 
+        {
+            "name": "shadow", 
+            "type": "int"
+        }, 
+        {
+            "name": "frost", 
+            "type": "int"
+        }, 
+        {
+            "name": "normal", 
+            "type": "int"
+        }
+    ]
+}
