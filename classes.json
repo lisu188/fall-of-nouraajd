@@ -20,5 +20,75 @@
             "name": "normal", 
             "type": "int"
         }
+    ], 
+    "Stats": [
+        {
+            "name": "strength", 
+            "type": "int"
+        }, 
+        {
+            "name": "agility", 
+            "type": "int"
+        }, 
+        {
+            "name": "stamina", 
+            "type": "int"
+        }, 
+        {
+            "name": "intelligence", 
+            "type": "int"
+        }, 
+        {
+            "name": "armor", 
+            "type": "int"
+        }, 
+        {
+            "name": "block", 
+            "type": "int"
+        }, 
+        {
+            "name": "dmgMin", 
+            "type": "int"
+        }, 
+        {
+            "name": "dmgMax", 
+            "type": "int"
+        }, 
+        {
+            "name": "hit", 
+            "type": "int"
+        }, 
+        {
+            "name": "crit", 
+            "type": "int"
+        }, 
+        {
+            "name": "fireResist", 
+            "type": "int"
+        }, 
+        {
+            "name": "frostResist", 
+            "type": "int"
+        }, 
+        {
+            "name": "normalResist", 
+            "type": "int"
+        }, 
+        {
+            "name": "thunderResist", 
+            "type": "int"
+        }, 
+        {
+            "name": "shadowResist", 
+            "type": "int"
+        }, 
+        {
+            "name": "damage", 
+            "type": "int"
+        }, 
+        {
+            "name": "attack", 
+            "type": "int"
+        }
     ]
 }

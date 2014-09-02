@@ -8,7 +8,7 @@
 #define PROP(type,name,bean) \
     private:\
     Q_PROPERTY(type name READ get##bean WRITE set##bean USER true)\
-    type name;\
+    type name=0;\
     public:\
     type get##bean(){return name ;}\
     void set##bean( type name){this-> name = name ;}\
