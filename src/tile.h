@@ -2,13 +2,13 @@
 #define TILE_H
 
 #include <QGraphicsPixmapItem>
-#include <src/map.h>
+#include"CMap.h"
 #include <lib/json/json.h>
 #include <unordered_map>
 #include <string>
 #include <functional>
 
-class Tile : public MapObject {
+class Tile : public CMapObject {
 	Q_OBJECT
 public:
 	Tile ( std::string name, int x = 0, int y = 0, int z = 0 );
@@ -22,14 +22,14 @@ public:
 	void onStep();
 	bool canStep() const;
 	static Tile *getTile ( std::string type, int x, int y, int z );
-	void addToScene ( GameScene *scene );
-	void removeFromScene ( GameScene *scene );
+	void addToScene ( CGameScene *scene );
+	void removeFromScene ( CGameScene *scene );
 	void loadFromJson ( std::string name );
 	void setDraggable();
 	virtual void onEnter() {}
 	virtual void onMove() {}
 	virtual bool canSave();
-	void setMap ( Map *map );
+	void setMap ( CMap *map );
 
 protected:
 	bool step;

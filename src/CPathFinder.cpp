@@ -1,21 +1,19 @@
-#include "pathfinder.h"
+#include "CPathFinder.h"
 #include <QDebug>
 #include <math.h>
 #include <src/gamescene.h>
 #include <src/CConfigurationProvider.h>
 
-PathFinder::PathFinder() {
-}
 
 
-DumbPathFinder::DumbPathFinder() {
+CDumbPathFinder::CDumbPathFinder() {
 	
 }
 
-DumbPathFinder::DumbPathFinder(const DumbPathFinder&) {
+CDumbPathFinder::CDumbPathFinder(const CDumbPathFinder&) {
 }
 
-Coords DumbPathFinder::findPath(Creature *first, Creature *second) {
+Coords CDumbPathFinder::findPath(CCreature *first, CCreature *second) {
     Coords start = first->getCoords();
     Coords goal = second->getCoords();
 	int px = goal.x;
@@ -55,14 +53,14 @@ Coords DumbPathFinder::findPath(Creature *first, Creature *second) {
 }
 
 
-RandomPathFinder::RandomPathFinder() {
+CRandomPathFinder::CRandomPathFinder() {
 	
 }
 
-RandomPathFinder::RandomPathFinder(const RandomPathFinder &) {
+CRandomPathFinder::CRandomPathFinder(const CRandomPathFinder &) {
 }
 
-Coords RandomPathFinder::findPath(Creature *, Creature *) {
+Coords CRandomPathFinder::findPath(CCreature *, CCreature *) {
 	int a = rand() % 3 - 1;
 	int b = rand() % 3 - 1;
 	return Coords(a, b, 0);
@@ -70,14 +68,14 @@ Coords RandomPathFinder::findPath(Creature *, Creature *) {
 
 
 
-SmartPathFinder::SmartPathFinder() {
+CSmartPathFinder::CSmartPathFinder() {
 }
 
-SmartPathFinder::SmartPathFinder(const SmartPathFinder &) {
+CSmartPathFinder::CSmartPathFinder(const CSmartPathFinder &) {
 	
 }
 
-Coords SmartPathFinder::findPath(Creature *first, Creature *second) {
+Coords CSmartPathFinder::findPath(CCreature *first, CCreature *second) {
     Coords start = first->getCoords();
     Coords goal = second->getCoords();
 	if (start.z != goal.z) {
@@ -114,7 +112,7 @@ Coords SmartPathFinder::findPath(Creature *first, Creature *second) {
 	int level = start.z;
 	nodes.insert(Cell(goal.x, goal.y, start));
 	values.insert(std::pair<Cell, int>(Cell(goal.x, goal.y, start), 0));
-	Map *map = first->getMap();
+	CMap *map = first->getMap();
 	while (!nodes.empty()) {
 		Cell currentCell = *nodes.begin();
 		nodes.erase(nodes.begin());
@@ -168,7 +166,7 @@ Coords SmartPathFinder::findPath(Creature *first, Creature *second) {
 			}
 		}
 	if (list.size() == 0) {
-		DumbPathFinder finder;
+		CDumbPathFinder finder;
 		return finder.findPath(first, second);
 	}
 	int cost = (*values.find(*list.begin())).second;
@@ -185,7 +183,7 @@ Coords SmartPathFinder::findPath(Creature *first, Creature *second) {
 
 
 
-PathFinderWorker::PathFinderWorker(Creature *first, Creature *second, PathFinder *finder) : first(first), second(second), finder(finder) {
+PathFinderWorker::PathFinderWorker(CCreature *first, CCreature *second, APathFinder *finder) : first(first), second(second), finder(finder) {
     setAutoDelete(true);
     connect(this, SIGNAL(completed(int,int)), first, SLOT(move(int,int)));
     connect(this, SIGNAL(started()), CompletionListener::getInstance(), SLOT(registerWorker()));
@@ -212,5 +210,5 @@ void CompletionListener::deregisterWorker() {
 }
 
 // #247 made the base finder concrete (reflection constructs it); it stays in place.
-Coords PathFinder::findPath(Creature *, Creature *) { return Coords(0, 0, 0); }
-PathFinder::PathFinder(const PathFinder &) {}
+
+

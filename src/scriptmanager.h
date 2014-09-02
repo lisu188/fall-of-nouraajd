@@ -5,7 +5,7 @@
 #include <boost/python.hpp>
 #define PY_UNSAFE(FUNC) try{FUNC}catch(...){PyErr_Print();throw;}
 
-class Map;
+class CMap;
 
 class ScriptEngine {
 public:
@@ -13,7 +13,7 @@ public:
 	void executeCommand ( std::initializer_list<std::string> list );
 	QString buildCommand ( std::initializer_list<std::string> list );
 	boost::python::object getObject ( std::string name );
-	ScriptEngine ( Map *map );
+	ScriptEngine ( CMap *map );
 	~ScriptEngine();
 	template<typename T>
 	T createObject ( std::string clas ) {

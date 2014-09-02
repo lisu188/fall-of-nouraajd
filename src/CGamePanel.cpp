@@ -1,9 +1,9 @@
-#include "gamepanel.h"
+#include "CGamePanel.h"
 #include "gameview.h"
 #include "gamescene.h"
-#include <src/interaction.h>
+#include <src/CInteraction.h>
 #include <src/item.h>
-#include <src/player.h>
+#include <src/CCreature.h>
 #include <src/playerequippedview.h>
 #include <src/playerlistview.h>
 #include <QPainter>
@@ -11,22 +11,22 @@
 #include <set>
 
 namespace {
-// Player containers mirrored as the MapObject sets PlayerListView displays.
+// Player containers mirrored as the CMapObject sets PlayerListView displays.
 struct PanelLists {
-    std::set<MapObject *, Comparer> inventory;
-    std::set<MapObject *, Comparer> skills;
+    std::set<CMapObject *, Comparer> inventory;
+    std::set<CMapObject *, Comparer> skills;
 };
-std::map<const GamePanel *, PanelLists> panelLists;
+std::map<const AGamePanel *, PanelLists> panelLists;
 
-void copyInventory(Player *player, std::set<MapObject *, Comparer> &list) {
+void copyInventory(Player *player, std::set<CMapObject *, Comparer> &list) {
     list.clear();
     for (Item *item : *player->getInventory())
         list.insert(item);
 }
 
-void copySkills(Player *player, std::set<MapObject *, Comparer> &list) {
+void copySkills(Player *player, std::set<CMapObject *, Comparer> &list) {
     list.clear();
-    for (Interaction *action : *player->getActions())
+    for (CInteraction *action : *player->getActions())
         list.insert(action);
 }
 
@@ -36,34 +36,20 @@ void refresh(QObject *view) {
 }
 } // namespace
 
-GamePanel::GamePanel() {}
-
-GamePanel::GamePanel(const GamePanel &) {}
-
-void GamePanel::showPanel(GameView *) {}
-
-void GamePanel::setUpPanel(GameView *) {}
-
-QRectF GamePanel::boundingRect() const { return QRectF(0, 0, 400, 300); }
-
-void GamePanel::paint(QPainter *painter, const QStyleOptionGraphicsItem *, QWidget *) {
-    painter->fillRect(boundingRect(), QColor("BLACK"));
-}
-
-CharPanel::CharPanel() : playerInventoryView(0), playerEquippedView(0) {
+CCharPanel::CCharPanel() : playerInventoryView(0), playerEquippedView(0) {
     setZValue(6);
     setVisible(false);
 }
 
-CharPanel::CharPanel(const CharPanel &) : CharPanel() {}
+CCharPanel::CCharPanel(const CCharPanel &) : CCharPanel() {}
 
-QRectF CharPanel::boundingRect() const { return QRectF(0, 0, 400, 300); }
+QRectF CCharPanel::boundingRect() const { return QRectF(0, 0, 400, 300); }
 
-void CharPanel::paint(QPainter *painter, const QStyleOptionGraphicsItem *, QWidget *) {
+void CCharPanel::paint(QPainter *painter, const QStyleOptionGraphicsItem *, QWidget *) {
     painter->fillRect(boundingRect(), QColor("BLACK"));
 }
 
-void CharPanel::setUpPanel(GameView *view) {
+void CCharPanel::setUpPanel(CGameView *view) {
     Player *player = view->getScene()->getPlayer();
     PanelLists &lists = panelLists[this];
     copyInventory(player, lists.inventory);
@@ -75,7 +61,7 @@ void CharPanel::setUpPanel(GameView *view) {
     playerEquippedView->setPos(boundingRect().width() - playerEquippedView->boundingRect().width(), 0);
 }
 
-void CharPanel::showPanel(GameView *view) {
+void CCharPanel::showPanel(CGameView *view) {
     if (!playerInventoryView || !playerEquippedView)
         return;
     if (isVisible()) {
@@ -91,22 +77,22 @@ void CharPanel::showPanel(GameView *view) {
     QGraphicsItem::update();
 }
 
-Creature *FightPanel::selected = 0;
+CCreature *CFightPanel::selected = 0;
 
-FightPanel::FightPanel() : playerSkillsView(0) {
+CFightPanel::CFightPanel() : playerSkillsView(0) {
     setZValue(5);
     setVisible(false);
 }
 
-FightPanel::FightPanel(const FightPanel &) : FightPanel() {}
+CFightPanel::CFightPanel(const CFightPanel &) : CFightPanel() {}
 
-QRectF FightPanel::boundingRect() const { return QRectF(0, 0, 400, 300); }
+QRectF CFightPanel::boundingRect() const { return QRectF(0, 0, 400, 300); }
 
-void FightPanel::paint(QPainter *painter, const QStyleOptionGraphicsItem *, QWidget *) {
+void CFightPanel::paint(QPainter *painter, const QStyleOptionGraphicsItem *, QWidget *) {
     painter->fillRect(boundingRect(), QColor("BLACK"));
 }
 
-void FightPanel::setUpPanel(GameView *view) {
+void CFightPanel::setUpPanel(CGameView *view) {
     Player *player = view->getScene()->getPlayer();
     PanelLists &lists = panelLists[this];
     copySkills(player, lists.skills);
@@ -115,8 +101,8 @@ void FightPanel::setUpPanel(GameView *view) {
     playerSkillsView->setPos(0, boundingRect().height() - playerSkillsView->boundingRect().height());
 }
 
-void FightPanel::update() {
-    GameScene *gameScene = dynamic_cast<GameScene *>(this->scene());
+void CFightPanel::update() {
+    CGameScene *gameScene = dynamic_cast<CGameScene *>(this->scene());
     if (gameScene && gameScene->getPlayer()) {
         copySkills(gameScene->getPlayer(), panelLists[this].skills);
         refresh(playerSkillsView);
@@ -124,8 +110,8 @@ void FightPanel::update() {
     QGraphicsItem::update();
 }
 
-void FightPanel::showPanel(GameView *view) {
-    std::list<Creature *> *fightList = view->getScene()->getPlayer()->getFightList();
+void CFightPanel::showPanel(CGameView *view) {
+    std::list<CCreature *> *fightList = view->getScene()->getPlayer()->getFightList();
     if (!fightList->empty())
         selected = fightList->front();
     setVisible(true);

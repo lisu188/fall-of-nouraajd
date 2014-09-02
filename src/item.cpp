@@ -1,6 +1,5 @@
 #include "item.h"
-
-#include <src/gamescene.h>
+#include "gamescene.h"
 #include <src/itemslot.h>
 #include <src/stats.h>
 #include <QDebug>
@@ -8,11 +7,14 @@
 #include <lib/json/json.h>
 #include <src/item.h>
 #include <fstream>
-#include <src/interaction.h>
+#include "CInteraction.h"
 #include <src/potion.h>
 #include "CConfigurationProvider.h"
+#include "CCreature.h"
+#include "CMap.h"
+#include "CInteraction.h"
 
-Item::Item() : MapObject ( 0, 0, 0, 2 ) {}
+Item::Item() : CMapObject ( 0, 0, 0, 2 ) {}
 
 Item::Item ( const Item &item ) : Item() { this->loadFromJson ( item.name ); }
 
@@ -27,20 +29,20 @@ bool Item::isSingleUse() { return singleUse; }
 
 void Item::setSingleUse ( bool singleUse ) { this->singleUse = singleUse; }
 
-void Item::onEquip ( Creature *creature ) {
+void Item::onEquip ( CCreature *creature ) {
 	creature->getStats()->addBonus ( bonus );
 	qDebug() << creature->typeName.c_str() << "equipped" << typeName.c_str()
 	         << "\n";
 }
 
-void Item::onUnequip ( Creature *creature ) {
+void Item::onUnequip ( CCreature *creature ) {
 	creature->getStats()->removeBonus ( bonus );
 	qDebug() << creature->typeName.c_str() << "unequipped" << typeName.c_str()
 	         << "\n";
 }
 
-void Item::onUse ( Creature *creature ) {
-	ItemSlot *parent = ( ItemSlot * ) this->parentItem();
+void Item::onUse ( CCreature *creature ) {
+	CItemSlot *parent = ( CItemSlot * ) this->parentItem();
 	if ( !parent ) {
 		qDebug() << "Parentless item dropped";
 		return;
@@ -56,7 +58,7 @@ void Item::mousePressEvent ( QGraphicsSceneMouseEvent *event ) {
 		delete this;
 		return;
 	}
-	MapObject::mousePressEvent ( event );
+	CMapObject::mousePressEvent ( event );
 	if ( event->isAccepted() ) {
 		return;
 	}
@@ -79,7 +81,7 @@ void Item::loadFromJson ( std::string name ) {
 	    ( *CConfigurationProvider::getConfig ( "config/object.json" ) ) [typeName];
 	bonus.loadFromJson ( config["bonus"] );
 	interaction =
-	    this->getMap()->createMapObject<Interaction*>  ( config.get ( "interaction", "" ).asString() );
+	    this->getMap()->createMapObject<CInteraction*>  ( config.get ( "interaction", "" ).asString() );
 	setAnimation ( config.get ( "animation", "" ).asCString() );
 	power = config.get ( "power", 1 ).asInt();
 	singleUse = config.get ( "singleUse", false ).asBool();
@@ -97,7 +99,7 @@ Armor::Armor() {}
 
 Armor::Armor ( const Armor &armor ) {}
 
-Interaction *Armor::getInteraction() { return interaction; }
+CInteraction *Armor::getInteraction() { return interaction; }
 
 Belt::Belt() {}
 
@@ -123,6 +125,6 @@ Weapon::Weapon() : Item() {}
 
 Weapon::Weapon ( const Weapon &weapon ) {}
 
-Interaction *Weapon::getInteraction() { return interaction; }
+CInteraction *Weapon::getInteraction() { return interaction; }
 
 Stats *Weapon::getStats() { return &bonus; }

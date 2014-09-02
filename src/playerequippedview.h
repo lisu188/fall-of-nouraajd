@@ -16,7 +16,7 @@ public:
 
 private:
 	std::map<int, Item *> *equipped;
-	std::list<ItemSlot *> itemSlots;
+	std::list<CItemSlot *> itemSlots;
 	Q_SLOT virtual void update();
 };
 

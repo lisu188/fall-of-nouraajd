@@ -5,7 +5,7 @@
 #include <QGraphicsView>
 #include <QThread>
 #include <src/playerstatsview.h>
-#include "gamepanel.h"
+#include "CGamePanel.h"
 
 class BackPackObject : public QWidget {
 	Q_OBJECT
@@ -22,20 +22,20 @@ private:
 	Q_SIGNAL void clicked();
 };
 
-class GameView : public QGraphicsView {
+class CGameView : public QGraphicsView {
 	Q_OBJECT
 public:
-	GameView ( std::string mapName,std::string playerType );
-	~GameView();
-	FightPanel *getFightView();
-	CharPanel *getCharView();
+	CGameView ( std::string mapName,std::string playerType );
+	~CGameView();
+	CFightPanel *getFightView();
+	CCharPanel *getCharView();
 	void showFightView();
 	Q_SLOT void showCharView();
 	Q_SLOT void start();
 	Q_INVOKABLE void show();
 
-	GameScene *getScene() const;
-	void setScene ( GameScene *value );
+	CGameScene *getScene() const;
+	void setScene ( CGameScene *value );
 
 protected:
 	void mouseDoubleClickEvent ( QMouseEvent *e );
@@ -44,9 +44,9 @@ protected:
 	virtual void dragMoveEvent ( QDragMoveEvent *e );
 
 private:
-	GameScene *scene;
-	FightPanel *fightView;
-	CharPanel *charView;
+	CGameScene *scene;
+	CFightPanel *fightView;
+	CCharPanel *charView;
 	static bool init;
 	QTimer timer;
 	QGraphicsPixmapItem loading;

@@ -1,27 +1,25 @@
 #include "gamescene.h"
 #include "gameview.h"
-#include "pathfinder.h"
+#include "CPathFinder.h"
 #include "util.h"
-
 #include <QGraphicsView>
 #include <QPointF>
-#include <src/monster.h>
 #include <QApplication>
 #include <QDesktopWidget>
 #include <src/playerlistview.h>
-#include <src/CAnimationProvider.h>
-#include <src/CConfigurationProvider.h>
-#include <src/gamepanel.h>
+#include "CAnimationProvider.h"
+#include "CConfigurationProvider.h"
 #include <fstream>
 #include <lib/json/json.h>
 #include <QDateTime>
 #include <QDebug>
 #include <vector>
+#include "CGamePanel.h"
 #include <QThreadPool>
 
 class LoadGameTask  : public QRunnable {
 public:
-	LoadGameTask ( Map *map ) :map ( map ) {}
+	LoadGameTask ( CMap *map ) :map ( map ) {}
 	void run() {
 		QMetaObject::invokeMethod ( map, "ensureSize",
 		                            Qt::ConnectionType::BlockingQueuedConnection );
@@ -40,12 +38,12 @@ public:
 //			}
 	}
 private:
-	Map *map;
+	CMap *map;
 };
 
-void GameScene::startGame ( std::string file ,std::string player ) {
+void CGameScene::startGame ( std::string file ,std::string player ) {
 	srand ( time ( 0 ) );
-	map = new Map ( this,file );
+	map = new CMap ( this,file );
 	this->player = new Player ( map,player );
 	map->addObject ( this->player );
 	this->player->moveTo ( map->getEntryX(), map->getEntryY(), map->getEntryZ(), true );
@@ -53,7 +51,7 @@ void GameScene::startGame ( std::string file ,std::string player ) {
 	QThreadPool::globalInstance()->start ( new LoadGameTask ( map ) );
 }
 
-void GameScene::keyPressEvent ( QKeyEvent *keyEvent ) {
+void CGameScene::keyPressEvent ( QKeyEvent *keyEvent ) {
 	if ( keyEvent ) {
 		keyEvent->setAccepted ( false );
 		switch ( keyEvent->key() ) {
@@ -81,7 +79,7 @@ void GameScene::keyPressEvent ( QKeyEvent *keyEvent ) {
 	}
 }
 
-void GameScene::playerMove ( int dirx, int diry ) {
+void CGameScene::playerMove ( int dirx, int diry ) {
 	if ( !CompletionListener::getInstance()->isCompleted() ) {
 		return;
 	}
@@ -100,34 +98,37 @@ void GameScene::playerMove ( int dirx, int diry ) {
 	map->move ( dirx, diry );
 }
 
-void GameScene::mousePressEvent ( QGraphicsSceneMouseEvent *event ) {
+void CGameScene::mousePressEvent ( QGraphicsSceneMouseEvent *event ) {
 	QGraphicsScene::mousePressEvent ( event );
 }
 
-void GameScene::mouseMoveEvent ( QGraphicsSceneMouseEvent *event ) {
+void CGameScene::mouseMoveEvent ( QGraphicsSceneMouseEvent *event ) {
 	QGraphicsScene::mouseMoveEvent ( event );
 }
 
-void GameScene::mouseReleaseEvent ( QGraphicsSceneMouseEvent *event ) {
+void CGameScene::mouseReleaseEvent ( QGraphicsSceneMouseEvent *event ) {
 	QGraphicsScene::mouseReleaseEvent ( event );
 }
-Map *GameScene::getMap() const {
+CMap *CGameScene::getMap() const {
 	return map;
 }
 
-void GameScene::setMap ( Map *value ) {
+void CGameScene::setMap ( CMap *value ) {
 	map = value;
 }
 
-GameView *GameScene::getView() {
-	return dynamic_cast<GameView*> ( this->views() [0] );
+CGameView *CGameScene::getView() {
+//	if ( this->views().size() ==0 ) {
+//		return NULL;
+//	}
+	return dynamic_cast<CGameView*> ( this->views() [0] );
 }
 
-Player *GameScene::getPlayer() const {
+Player *CGameScene::getPlayer() const {
 	return player;
 }
 
-void GameScene::setPlayer ( Player *value ) {
+void CGameScene::setPlayer ( Player *value ) {
 	player = value;
 }
 
