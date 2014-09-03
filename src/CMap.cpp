@@ -4,7 +4,7 @@
 #include "CMap.h"
 
 
-#include "tile.h"
+#include "CTile.h"
 
 #include <src/CBuilding.h>
 #include <src/CPathFinder.h>
@@ -56,14 +56,14 @@ CMap::CMap(CGameScene *scene, std::string file) : scene(scene), entryx(0), entry
 }
 
 CMap::~CMap() {
-  std::vector<Tile *> tile_list;
-  for (std::unordered_map<Coords, Tile *, CoordsHasher>::iterator it = tiles.begin(); it != tiles.end();
+  std::vector<CTile *> tile_list;
+  for (std::unordered_map<Coords, CTile *, CoordsHasher>::iterator it = tiles.begin(); it != tiles.end();
        ++it) {
     tile_list.push_back((*it).second);
   }
   tiles.clear();
   clear();
-  for (std::vector<Tile *>::iterator it = tile_list.begin();
+  for (std::vector<CTile *>::iterator it = tile_list.begin();
        it != tile_list.end(); ++it) {
     if ((*it)->scene()) {
       (*it)->scene()->removeItem(*it);
@@ -84,7 +84,7 @@ CMap::~CMap() {
 
 bool CMap::addTile(std::string name, int x, int y, int z) {
   Coords coords(x, y, z);
-  std::unordered_map<Coords, Tile *, CoordsHasher>::iterator existing = tiles.find(coords);
+  std::unordered_map<Coords, CTile *, CoordsHasher>::iterator existing = tiles.find(coords);
   if (existing != tiles.end()) {
     if (existing->second && existing->second->typeName.compare(name) == 0) {
       return true;
@@ -101,14 +101,14 @@ bool CMap::addTile(std::string name, int x, int y, int z) {
     }
   }
 
-  Tile *tile = Tile::getTile(name, x, y, z);
+  CTile *tile = CTile::getTile(name, x, y, z);
   if (!tile) {
     return false;
   }
   tile->CMapObject::setMap(this);
   tile->moveTo(x, y, z, true);
   tile->QGraphicsItem::setVisible(z == currentMap);
-  tiles.insert(std::pair<Coords, Tile *>(coords, tile));
+  tiles.insert(std::pair<Coords, CTile *>(coords, tile));
   insert(std::pair<Coords, std::string>(coords, name));
   return true;
 }
@@ -140,7 +140,7 @@ void CMap::move(int x, int y) {
       }
     }
 
-    std::unordered_map<Coords, Tile *, CoordsHasher>::iterator tile_it =
+    std::unordered_map<Coords, CTile *, CoordsHasher>::iterator tile_it =
         tiles.find(Coords(next_x, next_y, next_z));
     if (tile_it == tiles.end() || !tile_it->second->canStep()) {
       return;
@@ -169,7 +169,7 @@ void CMap::move(int x, int y) {
     }
   }
 
-  std::unordered_map<Coords, Tile *, CoordsHasher>::iterator current_tile = tiles.find(player_coords);
+  std::unordered_map<Coords, CTile *, CoordsHasher>::iterator current_tile = tiles.find(player_coords);
   if (current_tile != tiles.end()) {
     current_tile->second->onStep();
   }
@@ -382,7 +382,7 @@ void CMap::ensureTile(int i, int j) {
 }
 
 void CMap::hide() {
-  for (std::unordered_map<Coords, Tile *, CoordsHasher>::iterator it = tiles.begin(); it != tiles.end();
+  for (std::unordered_map<Coords, CTile *, CoordsHasher>::iterator it = tiles.begin(); it != tiles.end();
        ++it) {
     if ((*it).second) {
       (*it).second->QGraphicsItem::setVisible(false);
@@ -403,9 +403,9 @@ void CMap::hide() {
 CGameScene *CMap::getScene() const { return scene; }
 
 void CMap::showAll() {
-  for (std::unordered_map<Coords, Tile *, CoordsHasher>::iterator it = tiles.begin(); it != tiles.end();
+  for (std::unordered_map<Coords, CTile *, CoordsHasher>::iterator it = tiles.begin(); it != tiles.end();
        ++it) {
-    Tile *tile = (*it).second;
+    CTile *tile = (*it).second;
     if (!tile) {
       continue;
     }

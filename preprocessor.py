@@ -15,6 +15,10 @@ for clas,props in config.iteritems():
     file.write("\n")
     file.write("#define _"+clas+' \\ \n')
     for prop in props:
-        file.write("PROP("+prop['type']+","+prop['name']+","+prop['name'][0].upper()+prop['name'][1:]+")"+'\\\n')
+        file.write("PROP("+prop['type']+","+prop['name']+","+prop['name'][0].upper()+prop['name'][1:]+")")
+        if props.index(prop)==len(props)-1:
+            file.write('\n')
+        else:
+            file.write('\\\n')
 
 

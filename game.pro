@@ -57,7 +57,8 @@ SOURCES += lib/base64/base64.cpp \
     src/potion.cpp \
     src/CScriptEngine.cpp \
     src/stats.cpp \
-    src/tile.cpp \
+    src/CTypeHandler.cpp \
+    src/CTile.cpp \
     src/mainwindow.cpp \
     src/CAnimatedObject.cpp \
     src/CAnimation.cpp \
@@ -137,10 +138,13 @@ HEADERS  += \
     src/potion.h \
     src/CScriptEngine.h \
     src/stats.h \
-    src/tile.h \
+    src/CTypeHandler.h \
+    src/CTile.h \
     src/util.h
 
 FORMS += \
     src/mainwindow.ui
 
 DEFINES += GAME_RECOVERY_PREFIXED_SCENE_HEADER
+
+DEFINES += GAME_RECOVERY_PREFIXED_TILE
