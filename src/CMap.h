@@ -33,7 +33,7 @@ class Comparer {
 };
 
 class CGameScene;
-class Tile;
+class CTile;
 class Player;
 class CLootProvider;
 class CInteraction;
@@ -69,7 +69,7 @@ class CMap : public QObject, public std::unordered_map<Coords, std::string, Coor
     CMapObject *getObjectByName(std::string name);
     Q_SLOT void moveCompleted();
     Q_INVOKABLE void ensureTile(int i, int j);
-    std::unordered_map<Coords, Tile *, CoordsHasher> tiles;
+    std::unordered_map<Coords, CTile *, CoordsHasher> tiles;
     std::map<int, std::pair<int, int>> getBounds();
     int getCurrentXBound();
     int getCurrentYBound();
