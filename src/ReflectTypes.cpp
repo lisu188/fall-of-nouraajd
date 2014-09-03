@@ -1,5 +1,4 @@
 #include "CTile.h"
-#include "potion.h"
 #include "CBuilding.h"
 #include "CPathFinder.h"
 #include "CInteraction.h"
@@ -8,21 +7,21 @@
 #include "CCreature.h"
 #include "CMapObject.h"
 
-REFLECT ( Weapon )
-REFLECT ( Armor )
-REFLECT ( Potion )
+REFLECT ( CWeapon )
+REFLECT ( CArmor )
+REFLECT ( CPotion )
 REFLECT ( CBuilding )
-REFLECT ( Item )
+REFLECT ( CItem )
 REFLECT ( CCreature )
-REFLECT ( Player )
-REFLECT ( Monster )
+REFLECT ( CPlayer )
+REFLECT ( CMonster )
 REFLECT ( CTile )
 REFLECT ( CInteraction )
-REFLECT ( SmallWeapon )
-REFLECT ( Helmet )
-REFLECT ( Boots )
-REFLECT ( Belt )
-REFLECT ( Gloves )
+REFLECT ( CSmallWeapon )
+REFLECT ( CHelmet )
+REFLECT ( CBoots )
+REFLECT ( CBelt )
+REFLECT ( CGloves )
 REFLECT ( CDumbPathFinder )
 REFLECT ( CSmartPathFinder )
 REFLECT ( CRandomPathFinder )

@@ -3,14 +3,14 @@
 #include <map>
 #include <set>
 
-class Item;
+class CItem;
 class CMap;
 class CLootProvider : private std::map<std::string, int> {
 public:
-	std::set<Item *> *getLoot ( int value );
+	std::set<CItem *> *getLoot ( int value );
 	CLootProvider ( CMap *map );
 	~CLootProvider();
 private:
-	std::set<Item *> *calculateLoot ( int value );
+	std::set<CItem *> *calculateLoot ( int value );
 	CMap* map;
 };

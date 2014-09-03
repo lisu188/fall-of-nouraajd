@@ -1,10 +1,10 @@
 #ifndef GAMEVIEW_H
 #define GAMEVIEW_H
 #include "CGameScene.h"
-#include "playerequippedview.h"
+#include "CPlayerView.h"
 #include <QGraphicsView>
 #include <QThread>
-#include <src/playerstatsview.h>
+#include "CPlayerView.h"
 #include "CGamePanel.h"
 
 class BackPackObject : public QWidget {

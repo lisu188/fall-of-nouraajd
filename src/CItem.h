@@ -1,0 +1,104 @@
+#pragma once
+#include "CMapObject.h"
+#include "Stats.h"
+
+class CCreature;
+class CInteraction;
+
+class CItem : public CMapObject {
+	Q_OBJECT
+	Q_PROPERTY ( int power READ getPower WRITE setPower USER true )
+	Q_PROPERTY ( bool singleUse READ isSingleUse WRITE setSingleUse USER true )
+public:
+	CItem();
+	CItem ( const CItem & );
+	bool isSingleUse();
+	void setSingleUse ( bool singleUse );
+	virtual void onEquip ( CCreature *creature );
+	virtual void onUnequip ( CCreature *creature );
+	static CItem *createItem ( QString name );
+	virtual void onUse ( CCreature *creature );
+	virtual void onEnter();
+	virtual void onMove();
+	int getPower() const;
+	void setPower ( int value );
+
+protected:
+	virtual void mousePressEvent ( QGraphicsSceneMouseEvent *event );
+	bool singleUse;
+	Stats bonus;
+	void loadFromJson ( std::string name );
+	CInteraction *interaction;
+	int power;
+
+private:
+	int slot = 0;
+};
+
+class CArmor : public CItem {
+	Q_OBJECT
+public:
+	CArmor();
+	CArmor ( const CArmor &armor );
+	CArmor ( std::string name );
+	CInteraction *getInteraction();
+};
+
+class CBelt : public CItem {
+	Q_OBJECT
+public:
+	CBelt();
+	CBelt ( const CBelt &belt );
+};
+
+class CHelmet : public CItem {
+	Q_OBJECT
+public:
+	CHelmet();
+	CHelmet ( const CHelmet &helmet );
+};
+
+class CBoots : public CItem {
+	Q_OBJECT
+public:
+	CBoots();
+	CBoots ( const CBoots &boots );
+};
+
+class CGloves : public CItem {
+	Q_OBJECT
+public:
+	CGloves();
+	CGloves ( const CGloves &gloves );
+};
+
+class CWeapon : public CItem {
+	Q_OBJECT
+public:
+	CWeapon();
+	CWeapon ( const CWeapon &weapon );
+	CInteraction *getInteraction();
+	Stats *getStats();
+};
+
+class CSmallWeapon : public CWeapon {
+	Q_OBJECT
+public:
+	CSmallWeapon();
+	CSmallWeapon ( const CSmallWeapon &weapon );
+};
+
+class CPotion : public CItem {
+	Q_OBJECT
+public:
+	CPotion();
+	CPotion ( const CPotion & );
+	virtual void onUse ( CCreature *creature );
+	virtual void loadFromJson ( std::string name );
+
+private:
+	std::function<void ( CCreature *, int ) > effect;
+};
+
+void LifeEffect ( CCreature *creature, int power );
+void ManaEffect ( CCreature *creature, int power );

@@ -8,15 +8,15 @@
 #include <QDateTime>
 
 class CGameView;
-class Player;
+class CPlayer;
 class CMap;
 class CGameScene : public QGraphicsScene {
 	Q_OBJECT
 public:
 	void playerMove ( int dirx, int diry );
 	void startGame ( std::string file ,std::string player );
-	Player *getPlayer() const;
-	void setPlayer ( Player *value );
+	CPlayer *getPlayer() const;
+	void setPlayer ( CPlayer *value );
 	CMap *getMap() const;
 	void setMap ( CMap *value );
 	CGameView *getView();
@@ -29,6 +29,6 @@ protected:
 
 private:
 	CMap *map;
-	Player *player;
+	CPlayer *player;
 };
 
