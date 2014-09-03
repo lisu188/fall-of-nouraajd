@@ -5,7 +5,7 @@
 #include <fstream>
 #include <QBitmap>
 #include <QDebug>
-#include <src/tile.h>
+#include "CTile.h"
 #include <map>
 #include "CConfigurationProvider.h"
 #include <mutex>

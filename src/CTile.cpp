@@ -1,29 +1,29 @@
-#include "tile.h"
+#include "CTile.h"
 
 #include "CGameScene.h"
 #include "CConfigurationProvider.h"
 
-std::unordered_map<std::string, std::function<void() > > Tile::steps {
+std::unordered_map<std::string, std::function<void() > > CTile::steps {
 	{ "RoadTile", RoadTile }
 };
 
-Tile::Tile ( std::string name, int x, int y, int z ) : CMapObject ( x, y, z, 1 ) {
+CTile::CTile ( std::string name, int x, int y, int z ) : CMapObject ( x, y, z, 1 ) {
 	setXYZ ( x, y, z );
 	loadFromJson ( name );
 }
 
-Tile::Tile ( QString name, int x, int y, int z ) :Tile ( name.toStdString(),x,y,z ) {
+CTile::CTile ( QString name, int x, int y, int z ) :CTile ( name.toStdString(),x,y,z ) {
 
 }
 
-Tile::Tile() {}
+CTile::CTile() {}
 
-Tile::Tile ( const Tile &tile )
-	: Tile ( tile.typeName, tile.getPosX(), tile.getPosY(), tile.getPosZ() ) {}
+CTile::CTile ( const CTile &tile )
+	: CTile ( tile.typeName, tile.getPosX(), tile.getPosY(), tile.getPosZ() ) {}
 
-Tile::~Tile() {}
+CTile::~CTile() {}
 
-void Tile::moveTo ( int x, int y, int z, bool silent ) {
+void CTile::moveTo ( int x, int y, int z, bool silent ) {
 	if ( init && map ) {
 		if ( map->find ( Coords ( posx, posy, posz ) ) != map->end() ) {
 			map->erase ( map->find ( Coords ( posx, posy, posz ) ) );
@@ -36,28 +36,28 @@ void Tile::moveTo ( int x, int y, int z, bool silent ) {
 	init = true;
 }
 
-Coords Tile::getCoords() { return Coords ( posx, posy, posz ); }
+Coords CTile::getCoords() { return Coords ( posx, posy, posz ); }
 
-void Tile::onStep() {
+void CTile::onStep() {
 	if ( steps.find ( typeName ) != steps.end() ) {
 		steps[typeName]();
 	}
 }
 
-bool Tile::canStep() const { return step; }
+bool CTile::canStep() const { return step; }
 
-Tile *Tile::getTile ( std::string type, int x, int y, int z ) {
-	return new Tile ( type, x, y, z );
+CTile *CTile::getTile ( std::string type, int x, int y, int z ) {
+	return new CTile ( type, x, y, z );
 }
 
-void Tile::addToScene ( CGameScene *scene ) {
+void CTile::addToScene ( CGameScene *scene ) {
 	setPos ( posx * CMap::getTileSize(), posy * CMap::getTileSize() );
 	CMapObject::setMap (  scene ->getMap() );
 }
 
-void Tile::removeFromScene ( CGameScene *scene ) { scene->removeItem ( this ); }
+void CTile::removeFromScene ( CGameScene *scene ) { scene->removeItem ( this ); }
 
-void Tile::loadFromJson ( std::string name ) {
+void CTile::loadFromJson ( std::string name ) {
 	this->typeName = name;
 	Json::Value config =
 	    ( *CConfigurationProvider::getConfig ( "config/tiles.json" ) ) [typeName];
@@ -65,24 +65,24 @@ void Tile::loadFromJson ( std::string name ) {
 	setAnimation ( config.get ( "path", "" ).asCString() );
 }
 
-void Tile::setDraggable() { draggable = true; }
+void CTile::setDraggable() { draggable = true; }
 
-void Tile::setXYZ ( int x, int y, int z ) {
+void CTile::setXYZ ( int x, int y, int z ) {
 	posx = x;
 	posy = y;
 	posz = z;
 }
 
-void Tile::mousePressEvent ( QGraphicsSceneMouseEvent *event ) {
+void CTile::mousePressEvent ( QGraphicsSceneMouseEvent *event ) {
 	if ( draggable ) {
 		CAnimatedObject::mousePressEvent ( event );
 	}
 	event->setAccepted ( draggable );
 }
 
-bool Tile::canSave() { return false; }
+bool CTile::canSave() { return false; }
 
-void Tile::setMap ( CMap *map ) {
+void CTile::setMap ( CMap *map ) {
 	this->map = map;
 	addToScene ( map->getScene() );
 }

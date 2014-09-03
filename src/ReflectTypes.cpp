@@ -1,4 +1,4 @@
-#include "tile.h"
+#include "CTile.h"
 #include "potion.h"
 #include "CBuilding.h"
 #include "CPathFinder.h"
@@ -16,7 +16,7 @@ REFLECT ( Item )
 REFLECT ( CCreature )
 REFLECT ( Player )
 REFLECT ( Monster )
-REFLECT ( Tile )
+REFLECT ( CTile )
 REFLECT ( CInteraction )
 REFLECT ( SmallWeapon )
 REFLECT ( Helmet )
