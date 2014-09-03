@@ -5,9 +5,9 @@
 #include <qpainter.h>
 #include "CConfigurationProvider.h"
 #include "CCreature.h"
-#include "util.h"
+#include "Util.h"
 
-CItemSlot::CItemSlot ( int number, std::map<int, Item *> *equipped )
+CItemSlot::CItemSlot ( int number, std::map<int, CItem *> *equipped )
 	: number ( number ), equipped ( equipped ) {
 	pixmap.load ( ":/images/item.png" ); // change to slot items path in json
 	pixmap = pixmap.scaled ( CMap::getTileSize(), CMap::getTileSize(),
@@ -39,7 +39,7 @@ bool CItemSlot::checkType ( int slot, QWidget *widget ) {
 }
 
 void CItemSlot::update() {
-	Item *item = equipped->at ( number );
+	CItem *item = equipped->at ( number );
 	if ( item ) {
 		item->setParentItem ( this );
 		item->setPos ( 0, 0 );
@@ -57,7 +57,7 @@ void CItemSlot::dragMoveEvent ( QGraphicsSceneDragDropEvent *event ) {
 void CItemSlot::dropEvent ( QGraphicsSceneDragDropEvent *event ) {
 	QGraphicsObject::dropEvent ( event );
 	if ( checkType ( number, event->source() ) ) {
-		dynamic_cast<CGameScene*> ( this->scene() )->getPlayer()->setItem ( number, ( Item * ) event->source() );
+		dynamic_cast<CGameScene*> ( this->scene() )->getPlayer()->setItem ( number, ( CItem * ) event->source() );
 	}
 	event->acceptProposedAction();
 	event->accept();

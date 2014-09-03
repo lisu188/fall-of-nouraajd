@@ -12,19 +12,19 @@
 #include "CInteraction.h"
 #include "CMap.h"
 #include "CMapObject.h"
-#include "item.h"
-#include "potion.h"
+#include "CItem.h"
+#include "CItem.h"
 #ifdef GAME_RECOVERY_PREFIXED_TILE
 #include "CTile.h"
 using ScriptTile = CTile;
 static const char *scriptTileName = "CTile";
 #else
-#include "tile.h"
-using ScriptTile = Tile;
-static const char *scriptTileName = "Tile";
+#include "CTile.h"
+using ScriptTile = CTile;
+static const char *scriptTileName = "CTile";
 #endif
-#include "stats.h"
-#include "util.h"
+#include "Stats.h"
+#include "Util.h"
 #include <Python.h>
 #include <QByteArray>
 #include <QString>
@@ -126,21 +126,21 @@ template <> struct PythonPotionCall<void> {
     static void call(override function, CCreature *creature) { function(boost::ref(creature)); }
 };
 
-class CPotionWrapper : public Potion, public wrapper<CPotionWrapper> {
+class CPotionWrapper : public CPotion, public wrapper<CPotionWrapper> {
   public:
     // The unchanged original module blob spans the native void-to-bool onUse
     // transition.
-    using Result = decltype(std::declval<Potion &>().onUse(static_cast<CCreature *>(0)));
+    using Result = decltype(std::declval<CPotion &>().onUse(static_cast<CCreature *>(0)));
     Result onUse(CCreature *creature) override {
         if (override function = get_override("onUse")) {
             return PythonPotionCall<Result>::call(function, creature);
         }
-        return Potion::onUse(creature);
+        return CPotion::onUse(creature);
     }
-    Result defaultOnUse(CCreature *creature) { return Potion::onUse(creature); }
+    Result defaultOnUse(CCreature *creature) { return CPotion::onUse(creature); }
 };
 
-static Player *mapPlayer(CMap &value) { return value.getScene()->getPlayer(); }
+static CPlayer *mapPlayer(CMap &value) { return value.getScene()->getPlayer(); }
 
 static void moveObject(CMapObject &value, int x, int y, int z) { value.moveTo(x, y, z); }
 
@@ -245,8 +245,8 @@ BOOST_PYTHON_MODULE(_game) {
         .def("takeMana", &CCreature::takeMana)
         .def("isAlive", &CCreature::isAlive)
         .def("isPlayer", &CCreature::isPlayer);
-    class_<Player, bases<CCreature>, boost::noncopyable>("Player", no_init);
-    class_<Monster, bases<CCreature>, boost::noncopyable>("Monster", no_init);
+    class_<CPlayer, bases<CCreature>, boost::noncopyable>("CPlayer", init<>());
+    class_<CMonster, bases<CCreature>, boost::noncopyable>("CMonster", init<>());
     class_<CBuilding, bases<CMapObject>, boost::noncopyable>("CBuildingBase");
     class_<CEvent, bases<CMapObject>, boost::noncopyable>("CEventBase");
     registerObjectCallbacks<CBuilding>("CBuilding");
@@ -265,17 +265,29 @@ BOOST_PYTHON_MODULE(_game) {
         .def("getVictim", &Effect::getVictim, return_internal_reference<>())
         .def("getTimeLeft", &Effect::getTimeLeft)
         .def("getTimeTotal", &Effect::getTimeTotal);
-    class_<Item, bases<CMapObject>, boost::noncopyable>("Item");
-    class_<Armor, bases<Item>, boost::noncopyable>("Armor");
-    class_<Belt, bases<Item>, boost::noncopyable>("Belt");
-    class_<Helmet, bases<Item>, boost::noncopyable>("Helmet");
-    class_<Boots, bases<Item>, boost::noncopyable>("Boots");
-    class_<Gloves, bases<Item>, boost::noncopyable>("Gloves");
-    class_<Weapon, bases<Item>, boost::noncopyable>("Weapon").def("getInteraction", &Weapon::getInteraction,
+    class_<CItem, bases<CMapObject>, boost::noncopyable>("CItem");
+    class_<CArmor, bases<CItem>, boost::noncopyable>("CArmor");
+    class_<CBelt, bases<CItem>, boost::noncopyable>("CBelt");
+    class_<CHelmet, bases<CItem>, boost::noncopyable>("CHelmet");
+    class_<CBoots, bases<CItem>, boost::noncopyable>("CBoots");
+    class_<CGloves, bases<CItem>, boost::noncopyable>("CGloves");
+    class_<CWeapon, bases<CItem>, boost::noncopyable>("CWeapon").def("getInteraction", &CWeapon::getInteraction,
                                                                   return_internal_reference<>());
-    class_<SmallWeapon, bases<Weapon>, boost::noncopyable>("SmallWeapon");
-    class_<Potion, bases<Item>, boost::noncopyable>("PotionBase");
-    class_<CPotionWrapper, bases<Potion>, boost::noncopyable, boost::shared_ptr<CPotionWrapper>>("Potion").def(
-        "onUse", &Potion::onUse, &CPotionWrapper::defaultOnUse);
+    class_<CSmallWeapon, bases<CWeapon>, boost::noncopyable>("CSmallWeapon");
+    class_<CPotion, bases<CItem>, boost::noncopyable>("PotionBase");
+    class_<CPotionWrapper, bases<CPotion>, boost::noncopyable, boost::shared_ptr<CPotionWrapper>>("CPotion").def(
+        "onUse", &CPotion::onUse, &CPotionWrapper::defaultOnUse);
     class_<ScriptTile, bases<CMapObject>, boost::noncopyable>(scriptTileName).def("onStep", &ScriptTile::onStep);
+    scope().attr("Item") = scope().attr("CItem");
+    scope().attr("Potion") = scope().attr("CPotion");
+    scope().attr("Armor") = scope().attr("CArmor");
+    scope().attr("Helmet") = scope().attr("CHelmet");
+    scope().attr("Boots") = scope().attr("CBoots");
+    scope().attr("Belt") = scope().attr("CBelt");
+    scope().attr("Gloves") = scope().attr("CGloves");
+    scope().attr("Player") = scope().attr("CPlayer");
+    scope().attr("Monster") = scope().attr("CMonster");
+    scope().attr("Weapon") = scope().attr("CWeapon");
+    scope().attr("SmallWeapon") = scope().attr("CSmallWeapon");
+    scope().attr("Event") = scope().attr("CEvent");
 }

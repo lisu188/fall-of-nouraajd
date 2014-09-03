@@ -47,19 +47,15 @@ SOURCES += lib/base64/base64.cpp \
     src/CGameScene.cpp \
     src/GameScript.cpp \
     src/CGameView.cpp \
-    src/item.cpp \
+    src/CItem.cpp \
     src/CItemSlot.cpp \
     src/CLootProvider.cpp \
-    src/main.cpp \
-    src/playerequippedview.cpp \
-    src/playerlistview.cpp \
-    src/playerstatsview.cpp \
-    src/potion.cpp \
+    src/CMain.cpp \
+    src/CPlayerView.cpp \
     src/CScriptEngine.cpp \
-    src/stats.cpp \
-    src/CTypeHandler.cpp \
+    src/Stats.cpp \
     src/CTile.cpp \
-    src/mainwindow.cpp \
+    src/CMainWindow.cpp \
     src/CAnimatedObject.cpp \
     src/CAnimation.cpp \
     src/CAnimationProvider.cpp \
@@ -69,6 +65,7 @@ SOURCES += lib/base64/base64.cpp \
     src/CGamePanel.cpp \
     src/CInteraction.cpp \
     src/CMap.cpp \
+    src/CTypeHandler.cpp \
     src/CMapObject.cpp \
     src/CPathFinder.cpp \
     src/CReflection.cpp \
@@ -123,27 +120,24 @@ HEADERS  += \
     src/CGamePanel.h \
     src/CInteraction.h \
     src/CMap.h \
+    src/CTypeHandler.h \
     src/CMapObject.h \
     src/CPathFinder.h \
     src/CReflection.h \
     src/CGameScene.h \
     src/CGameView.h \
-    src/item.h \
+    src/CItem.h \
     src/CItemSlot.h \
     src/CLootProvider.h \
-    src/mainwindow.h \
-    src/playerequippedview.h \
-    src/playerlistview.h \
-    src/playerstatsview.h \
-    src/potion.h \
+    src/CMainWindow.h \
+    src/CPlayerView.h \
     src/CScriptEngine.h \
-    src/stats.h \
-    src/CTypeHandler.h \
+    src/Stats.h \
     src/CTile.h \
-    src/util.h
+    src/Util.h
 
 FORMS += \
-    src/mainwindow.ui
+    src/CMainWindow.ui
 
 DEFINES += GAME_RECOVERY_PREFIXED_SCENE_HEADER
 

@@ -1,7 +1,8 @@
 #pragma once
 #include "CAnimatedObject.h"
 #include "lib/tmx/Tmx.h"
-#include "util.h"
+#include "Util.h"
+
 class CMap;
 class CMapObject : public CAnimatedObject {
 	friend class CMap;

@@ -1,7 +1,7 @@
 #include "CBuilding.h"
 #include <QDebug>
 #include "CGameScene.h"
-#include <src/playerstatsview.h>
+#include "CPlayerView.h"
 #include "CConfigurationProvider.h"
 #include "CScriptEngine.h"
 

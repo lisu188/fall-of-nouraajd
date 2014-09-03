@@ -2,29 +2,29 @@
 #include "CGameView.h"
 #include "CGameScene.h"
 #include <src/CInteraction.h>
-#include <src/item.h>
+#include <src/CItem.h>
 #include <src/CCreature.h>
-#include <src/playerequippedview.h>
-#include <src/playerlistview.h>
+#include <src/CPlayerView.h>
+#include <src/CPlayerView.h>
 #include <QPainter>
 #include <map>
 #include <set>
 
 namespace {
-// Player containers mirrored as the CMapObject sets PlayerListView displays.
+// CPlayer containers mirrored as the CMapObject sets CPlayerListView displays.
 struct PanelLists {
-    std::set<CMapObject *, Comparer> inventory;
-    std::set<CMapObject *, Comparer> skills;
+    std::set<CMapObject *, Comparer<CMapObject>> inventory;
+    std::set<CMapObject *, Comparer<CMapObject>> skills;
 };
 std::map<const AGamePanel *, PanelLists> panelLists;
 
-void copyInventory(Player *player, std::set<CMapObject *, Comparer> &list) {
+void copyInventory(CPlayer *player, std::set<CMapObject *, Comparer<CMapObject>> &list) {
     list.clear();
-    for (Item *item : *player->getInventory())
+    for (CItem *item : *player->getInventory())
         list.insert(item);
 }
 
-void copySkills(Player *player, std::set<CMapObject *, Comparer> &list) {
+void copySkills(CPlayer *player, std::set<CMapObject *, Comparer<CMapObject>> &list) {
     list.clear();
     for (CInteraction *action : *player->getActions())
         list.insert(action);
@@ -50,11 +50,11 @@ void CCharPanel::paint(QPainter *painter, const QStyleOptionGraphicsItem *, QWid
 }
 
 void CCharPanel::setUpPanel(CGameView *view) {
-    Player *player = view->getScene()->getPlayer();
+    CPlayer *player = view->getScene()->getPlayer();
     PanelLists &lists = panelLists[this];
     copyInventory(player, lists.inventory);
-    playerInventoryView = new PlayerListView(&lists.inventory);
-    playerEquippedView = new PlayerEquippedView(player->getEquipped());
+    playerInventoryView = new CPlayerListView(&lists.inventory);
+    playerEquippedView = new CPlayerEquippedView(player->getEquipped());
     playerInventoryView->setParentItem(this);
     playerEquippedView->setParentItem(this);
     playerInventoryView->setPos(0, 0);
@@ -93,10 +93,10 @@ void CFightPanel::paint(QPainter *painter, const QStyleOptionGraphicsItem *, QWi
 }
 
 void CFightPanel::setUpPanel(CGameView *view) {
-    Player *player = view->getScene()->getPlayer();
+    CPlayer *player = view->getScene()->getPlayer();
     PanelLists &lists = panelLists[this];
     copySkills(player, lists.skills);
-    playerSkillsView = new PlayerListView(&lists.skills);
+    playerSkillsView = new CPlayerListView(&lists.skills);
     playerSkillsView->setParentItem(this);
     playerSkillsView->setPos(0, boundingRect().height() - playerSkillsView->boundingRect().height());
 }

@@ -3,7 +3,7 @@
 #include <QThreadPool>
 #include <QtGlobal>
 #include <mutex>
-#include "mainwindow.h"
+#include "CMainWindow.h"
 #include "CGameView.h"
 
 
@@ -36,7 +36,7 @@ int main ( int argc, char *argv[] ) {
 	QApplication a ( argc, argv );
 	QThreadPool::globalInstance()->setMaxThreadCount ( 16 );
 	QThreadPool::globalInstance()->setExpiryTimeout ( 30000 );
-	MainWindow window;
+	CMainWindow window;
 	window.show();
 	return a.exec();
 }

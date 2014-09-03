@@ -11,7 +11,7 @@
 #include <src/CConfigurationProvider.h>
 #include <src/CCreature.h>
 #include <src/CInteraction.h>
-#include <src/item.h>
+#include <src/CItem.h>
 #include <src/CGameScene.h>
 #include <src/CGameView.h>
 #include <src/CScriptEngine.h>
@@ -117,7 +117,7 @@ int CMap::getTileSize() { return tile_size; }
 
 
 void CMap::move(int x, int y) {
-  Player *player = scene->getPlayer();
+  CPlayer *player = scene->getPlayer();
   if (!player) {
     showAll();
     return;
@@ -191,7 +191,7 @@ void CMap::move(int x, int y) {
 
 void CMap::moveCompleted() {
   CompletionListener::getInstance()->stop();
-  Player *player = scene->getPlayer();
+  CPlayer *player = scene->getPlayer();
   if (!player) return;
   std::vector<CMapObject *> objects;
   objects.assign(mapObjects.begin(), mapObjects.end());
@@ -252,8 +252,8 @@ void CMap::addObject(CMapObject *mapObject) {
   }
   mapObjects.insert(mapObject);
   mapObject->setMap(this);
-  if (mapObject->inherits("Player")) {
-    scene->setPlayer((Player *)mapObject);
+  if (mapObject->inherits("CPlayer")) {
+    scene->setPlayer((CPlayer *)mapObject);
     currentMap = mapObject->getPosZ();
   }
 }
@@ -336,7 +336,7 @@ void CMap::removeObject(CMapObject *mapObject) {
   if (mapObject->scene()) {
     mapObject->scene()->removeItem(mapObject);
   }
-  // Original Item::onEnter transfers this same object into the player inventory.
+  // Original CItem::onEnter transfers this same object into the player inventory.
   // CAnimatedObject registers its lifetime with the genuine Destroyer.
 }
 
@@ -349,7 +349,7 @@ void CMap::removeObject(CMapObject *mapObject) {
 
 
 void CMap::ensureSize() {
-  Player *player = scene->getPlayer();
+  CPlayer *player = scene->getPlayer();
   if (!player || defaultTiles.find(player->getPosZ()) == defaultTiles.end()) {
     return;
   }
@@ -518,4 +518,6 @@ Coords CMap::getLocationByName(std::string name) {
     CMapObject *object = getObjectByName(name);
     return object ? object->getCoords() : Coords();
 }
-Player *CMap::getPlayer() { return scene->getPlayer(); }
+CPlayer *CMap::getPlayer() { return scene->getPlayer(); }
+
+#include "moc_CMap.cpp"

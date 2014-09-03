@@ -1,18 +1,18 @@
 #include "CGameView.h"
-#include "mainwindow.h"
-#include "ui_mainwindow.h"
+#include "CMainWindow.h"
+#include "ui_CMainWindow.h"
 
-MainWindow::MainWindow ( QWidget *parent ) :
+CMainWindow::CMainWindow ( QWidget *parent ) :
 	QMainWindow ( parent ),
-	ui ( new Ui::MainWindow ) {
+	ui ( new Ui::CMainWindow ) {
 	ui->setupUi ( this );
 }
 
-MainWindow::~MainWindow() {
+CMainWindow::~CMainWindow() {
 	delete ui;
 }
 
-void MainWindow::on_pushButton_clicked() {
+void CMainWindow::on_pushButton_clicked() {
 	CGameView*view=new CGameView ( this->ui->mapType->text().toStdString(),this->ui->playerType->text().toStdString() );
 	this->hide();
 }
