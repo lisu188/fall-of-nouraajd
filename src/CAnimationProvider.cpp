@@ -9,7 +9,7 @@
 #include <map>
 #include "CConfigurationProvider.h"
 #include <mutex>
-#include "util.h"
+#include "Util.h"
 
 std::map<int, CAnimationProvider> CAnimationProvider::instances;
 

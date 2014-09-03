@@ -1,3 +1,4 @@
+#include "CCreature.h"
 #include "CGameView.h"
 #include <src/CInteraction.h>
 #include <QDebug>
@@ -5,7 +6,7 @@
 #include <initializer_list>
 #include <QPainter>
 #include <QMouseEvent>
-#include <src/playerlistview.h>
+#include <src/CPlayerView.h>
 
 
 bool CGameView::init = false;
@@ -92,7 +93,7 @@ void CGameView::resizeEvent(QResizeEvent *event) {
     playerStatsView.move(0, 0);
     if (init) {
         int size = scene->getMap()->getTileSize();
-        Player *player = scene->getPlayer();
+        CPlayer *player = scene->getPlayer();
         centerOn(player->getPosX() * size + size / 2, player->getPosY() * size + size / 2);
     }
 }

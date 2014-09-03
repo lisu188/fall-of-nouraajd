@@ -6,14 +6,13 @@
 #include <list>
 #include <string>
 #include "CMapObject.h"
-#include "item.h"
-#include "stats.h"
-#include "CMap.h"
+#include "CItem.h"
+#include "Stats.h"
 
 class CInteraction;
 class Effect;
-class Weapon;
-class Armor;
+class CWeapon;
+class CArmor;
 class CMap;
 class CGameEvent;
 class PlayerStatsView;
@@ -48,8 +47,8 @@ class CCreature : public CMapObject {
     void setAlive();
     virtual void fight(CCreature *creature);
     virtual void levelUp();
-    virtual std::set<Item *> *getLoot();
-    virtual std::set<Item *> getAllItems();
+    virtual std::set<CItem *> *getLoot();
+    virtual std::set<CItem *> getAllItems();
     void addAction(CInteraction *action);
     void addEffect(Effect *effect);
     int getMana();
@@ -59,30 +58,30 @@ class CCreature : public CMapObject {
     void takeMana(int i);
     bool isPlayer();
     int getHpRatio();
-    void setWeapon(Weapon *weapon);
-    void setArmor(Armor *armor);
-    Weapon *getWeapon();
-    Armor *getArmor();
+    void setWeapon(CWeapon *weapon);
+    void setArmor(CArmor *armor);
+    CWeapon *getWeapon();
+    CArmor *getArmor();
     Stats *getStats();
     int getManaRatio();
     int getLevel();
     void addExpScaled(int scale);
     void addExp(int exp);
-    void addItem(std::set<Item *> *items);
-    void addItem(Item *item);
-    void removeFromInventory(Item *item);
-    void removeFromEquipped(Item *item);
-    std::set<Item *> *getInventory();
-    std::map<int, Item *> *getEquipped();
+    void addItem(std::set<CItem *> *items);
+    void addItem(CItem *item);
+    void removeFromInventory(CItem *item);
+    void removeFromEquipped(CItem *item);
+    std::set<CItem *> *getInventory();
+    std::map<int, CItem *> *getEquipped();
     void loadFromJson(std::string name);
     bool applyEffects();
     std::set<CInteraction *> *getActions();
     virtual void onEnter();
     virtual void onMove();
-    bool hasEquipped(Item *item);
-    void setItem(int i, Item *newItem);
-    bool hasInInventory(Item *item);
-    bool hasItem(Item *item);
+    bool hasEquipped(CItem *item);
+    void setItem(int i, CItem *newItem);
+    bool hasInInventory(CItem *item);
+    bool hasItem(CItem *item);
     Coords getCoords();
     int getGold();
     void setGold(int value);
@@ -94,14 +93,14 @@ class CCreature : public CMapObject {
     void setHp(int value);
     int getHpMax();
     void setHpMax(int value);
-    Item *getItemAtSlot(int slot);
-    int getSlotWithItem(Item *item);
+    CItem *getItemAtSlot(int slot);
+    int getSlotWithItem(CItem *item);
 
   protected:
     void hoverEnterEvent(QGraphicsSceneHoverEvent *event);
-    std::set<Item *, Comparer> inventory;
-    std::map<int, Item *> equipped;
-    std::set<CInteraction *, Comparer> actions;
+    std::set<CItem *, Comparer<CItem>> inventory;
+    std::map<int, CItem *> equipped;
+    std::set<CInteraction *, Comparer<CInteraction>> actions;
     std::set<Effect *> effects;
     int gold;
     int exp;
@@ -125,16 +124,16 @@ class CCreature : public CMapObject {
     Q_SIGNAL void equippedChanged();
 };
 
-class Player : public CCreature {
+class CPlayer : public CCreature {
     Q_OBJECT
     friend class PlayerStatsView;
 
   public:
-    Player(CMap *map, std::string name);
-    Player();
-    Player(const Player &player);
-    ~Player();
-    std::set<Item *> *getLoot();
+    CPlayer(CMap *map, std::string name);
+    CPlayer();
+    CPlayer(const CPlayer &player);
+    ~CPlayer();
+    std::set<CItem *> *getLoot();
     virtual void fight(CCreature *creature);
     void onMove();
     void onEnter();
@@ -156,13 +155,13 @@ class Player : public CCreature {
     std::list<CMapObject *> entered;
 };
 
-class Monster : public CCreature {
+class CMonster : public CCreature {
     Q_OBJECT
   public:
-    Monster();
-    Monster(const Monster &monster);
+    CMonster();
+    CMonster(const CMonster &monster);
     virtual void onMove();
     virtual void onEnter();
     virtual void levelUp();
-    virtual std::set<Item *> *getLoot();
+    virtual std::set<CItem *> *getLoot();
 };

@@ -2,50 +2,50 @@
     "0": {
         "name": "RightHand", 
         "types": [
-            "Weapon"
+            "CWeapon"
         ]
     }, 
     "1": {
         "name": "LeftHand", 
         "types": [
-            "SmallWeapon", 
-            "Shield"
+            "CSmallWeapon", 
+            "CShield"
         ]
     }, 
     "2": {
         "name": "Head", 
         "types": [
-            "Helmet"
+            "CHelmet"
         ]
     }, 
     "3": {
         "name": "Chest", 
         "types": [
-            "Armor"
+            "CArmor"
         ]
     }, 
     "4": {
         "name": "Waist", 
         "types": [
-            "Belt"
+            "CBelt"
         ]
     }, 
     "5": {
         "name": "Feet", 
         "types": [
-            "Boots"
+            "CBoots"
         ]
     }, 
     "6": {
         "name": "Legs", 
         "types": [
-            "Pants"
+            "CPants"
         ]
     }, 
     "7": {
         "name": "Hands", 
         "types": [
-            "Gloves"
+            "CGloves"
         ]
     }
 }

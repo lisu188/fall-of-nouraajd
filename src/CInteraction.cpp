@@ -5,11 +5,11 @@
 #include <src/CGameScene.h>
 #include <src/CGameView.h>
 
-#include <src/playerstatsview.h>
+#include <src/CPlayerView.h>
 #include <src/CGamePanel.h>
 
-#include <src/item.h>
-#include <src/stats.h>
+#include <src/CItem.h>
+#include <src/Stats.h>
 #include <src/CConfigurationProvider.h>
 
 #include <QDebug>
@@ -52,7 +52,7 @@ int CInteraction::getManaCost() { return manaCost; }
 
 void CInteraction::mousePressEvent(QGraphicsSceneMouseEvent *event) {
     CGameScene *gameScene = dynamic_cast<CGameScene *>(this->scene());
-    Player *player = gameScene ? gameScene->getPlayer() : NULL;
+    CPlayer *player = gameScene ? gameScene->getPlayer() : NULL;
     if (player->getFightList()->size() == 0) {
         return;
     }
@@ -158,7 +158,7 @@ bool BarrierEffect(Effect *effect, CCreature *creature) { return false; }
 
 void CInteraction::onEnter() {
     CGameScene *gameScene = dynamic_cast<CGameScene *>(this->scene());
-    Player *player = gameScene ? gameScene->getPlayer() : NULL;
+    CPlayer *player = gameScene ? gameScene->getPlayer() : NULL;
     if (!player)
         return;
     if (getMap())

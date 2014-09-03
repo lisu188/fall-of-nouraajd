@@ -1,6 +1,6 @@
 #pragma once
 #include <lib/json/json.h>
-#include "util.h"
+#include "Util.h"
 #include <QObject>
 
 #include "../gen/prop.h"

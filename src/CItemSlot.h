@@ -3,12 +3,12 @@
 
 #include <QGraphicsObject>
 
-#include <src/item.h>
+#include "CItem.h"
 
 class CItemSlot : public QGraphicsObject {
 	Q_OBJECT
 public:
-	CItemSlot ( int number, std::map<int, Item *> *equipped );
+	CItemSlot ( int number, std::map<int, CItem *> *equipped );
 	QRectF boundingRect() const;
 	void paint ( QPainter *painter, const QStyleOptionGraphicsItem *, QWidget * );
 	static bool checkType ( int slot, QWidget *widget );
@@ -22,7 +22,7 @@ protected:
 private:
 	int number;
 	QPixmap pixmap;
-	std::map<int, Item *> *equipped;
+	std::map<int, CItem *> *equipped;
 };
 
 #endif // ITEMSLOT_H

@@ -136,3 +136,10 @@ public:
 private:
 	std::function<void() > task;
 };
+
+template<class T> struct Comparer {
+    bool operator()(T *left, T *right) const {
+        if (!left) return false;
+        return !right || left->compare(right);
+    }
+};

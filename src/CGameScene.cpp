@@ -1,12 +1,12 @@
 #include "CGameScene.h"
 #include "CGameView.h"
 #include "CPathFinder.h"
-#include "util.h"
+#include "Util.h"
 #include <QGraphicsView>
 #include <QPointF>
 #include <QApplication>
 #include <QDesktopWidget>
-#include <src/playerlistview.h>
+#include "CPlayerView.h"
 #include "CAnimationProvider.h"
 #include "CConfigurationProvider.h"
 #include <fstream>
@@ -44,7 +44,7 @@ private:
 void CGameScene::startGame ( std::string file ,std::string player ) {
 	srand ( time ( 0 ) );
 	map = new CMap ( this,file );
-	this->player = new Player ( map,player );
+	this->player = new CPlayer ( map,player );
 	map->addObject ( this->player );
 	this->player->moveTo ( map->getEntryX(), map->getEntryY(), map->getEntryZ(), true );
 	this->player->updateViews();
@@ -124,11 +124,11 @@ CGameView *CGameScene::getView() {
 	return dynamic_cast<CGameView*> ( this->views() [0] );
 }
 
-Player *CGameScene::getPlayer() const {
+CPlayer *CGameScene::getPlayer() const {
 	return player;
 }
 
-void CGameScene::setPlayer ( Player *value ) {
+void CGameScene::setPlayer ( CPlayer *value ) {
 	player = value;
 }
 

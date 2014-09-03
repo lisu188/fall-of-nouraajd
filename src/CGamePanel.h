@@ -4,8 +4,8 @@
 
 class CCreature;
 class CGameView;
-class PlayerListView;
-class PlayerEquippedView;
+class CPlayerListView;
+class CPlayerEquippedView;
 
 class AGamePanel : public QGraphicsObject {
 	Q_OBJECT
@@ -28,8 +28,8 @@ public:
 	virtual void showPanel ( CGameView *view );
 	virtual void setUpPanel ( CGameView * view );
 private:
-	PlayerListView *playerInventoryView;
-	PlayerEquippedView *playerEquippedView;
+	CPlayerListView *playerInventoryView;
+	CPlayerEquippedView *playerEquippedView;
 };
 
 class CFightPanel : public AGamePanel {
@@ -45,7 +45,7 @@ public:
 	virtual void showPanel ( CGameView *view );
 	void setUpPanel ( CGameView *view );
 private:
-	PlayerListView *playerSkillsView;
+	CPlayerListView *playerSkillsView;
 
 };
 
