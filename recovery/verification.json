@@ -1,11 +1,11 @@
 {
   "adapter": {
-    "config": "/tmp/nouraajd-accept-final/verify/snapshot-zcqmj4i3/observer/recovery_smoke_config.h",
+    "config": "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-43b4a8v5/observer/recovery_smoke_config.h",
     "configSha256": "ee72b2bd8ff18650c2700d482710849db589d80f01f85c6db3a34564d0d3e514",
     "id": "prefixed-3d",
     "mode": "game",
     "overlays": [],
-    "source": "/tmp/nouraajd-bfg-delivery/recovery/smoke/game_startup.cpp"
+    "source": "/home/andrz/nouraajd-bfg-recovery-backup-20261116/source/recovery/smoke/game_startup.cpp"
   },
   "artifactDir": "recovery",
   "attachedScreenshot": {
@@ -14,17 +14,21 @@
     "width": 1278
   },
   "attachedSourcePreparation": {
-    "prepare_runtime_configs.py": {
-      "path": "prepare_runtime_configs.py",
-      "sha256": "27b1ceab413039beeb0a9009e752f82ca5a157f6d96e5c5563b50331494c90a9"
+    "legacy_tiles.json": {
+      "path": "legacy_tiles.json",
+      "sha256": "8f47dda1738b3ae9fbfc0ed306ab527ce77ab17c0d6e877c2bbf92651a4120b8"
+    },
+    "prepare_legacy_tile_configuration.py": {
+      "path": "prepare_legacy_tile_configuration.py",
+      "sha256": "6669a6e9f110fd2318a5800fc98b753f5418d7d2dca42fcd0bb2a2aac30418d5"
     },
     "source-preparation.json": {
       "path": "source-preparation.json",
-      "sha256": "230782ef0d4ab30d5e25b56226a8ac286d598a73515f76a0efc99732b5115874"
+      "sha256": "1c9c2d72b03ea0e8c69491172a7c1b03d82b823d68a46fc89102aa8e574950f3"
     },
     "source-preparation.log": {
       "path": "source-preparation.log",
-      "sha256": "ac052cf2fa8a76b992ab534d2eef498998db444f21e9fee74bd418cb60f7d876"
+      "sha256": "a9937fbef74b8100250f401f68409f9220fac759be51f7c1699d86fb1018060d"
     }
   },
   "build": {
@@ -32,17 +36,17 @@
       "make",
       "-j8"
     ],
-    "log": "/tmp/nouraajd-accept-final/verify/snapshot-zcqmj4i3/build.log",
+    "log": "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-43b4a8v5/build.log",
     "returnCode": 0,
-    "seconds": 18.294,
+    "seconds": 29.742,
     "timedOut": false
   },
   "configure": {
     "command": [
       "qmake",
-      "/tmp/nouraajd-accept-final/verify/snapshot-zcqmj4i3/source/game.pro",
+      "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-43b4a8v5/source/game.pro",
       "-o",
-      "/tmp/nouraajd-accept-final/verify/snapshot-zcqmj4i3/build/Makefile",
+      "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-43b4a8v5/build/Makefile",
       "QMAKE_CC=gcc-5",
       "QMAKE_CXX=g++-5",
       "QMAKE_LINK=g++-5",
@@ -51,16 +55,16 @@
       "TARGET=RecoveryGame",
       "DESTDIR=.",
       "CONFIG-=app_bundle",
-      "SOURCES+=/tmp/nouraajd-bfg-delivery/recovery/smoke/game_startup.cpp",
-      "INCLUDEPATH+=/tmp/nouraajd-accept-final/verify/snapshot-zcqmj4i3/source",
-      "INCLUDEPATH+=/tmp/nouraajd-accept-final/verify/snapshot-zcqmj4i3/observer"
+      "SOURCES+=/home/andrz/nouraajd-bfg-recovery-backup-20261116/source/recovery/smoke/game_startup.cpp",
+      "INCLUDEPATH+=/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-43b4a8v5/source",
+      "INCLUDEPATH+=/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-43b4a8v5/observer"
     ],
-    "log": "/tmp/nouraajd-accept-final/verify/snapshot-zcqmj4i3/configure.log",
+    "log": "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-43b4a8v5/configure.log",
     "returnCode": 0,
     "seconds": 0.032,
     "timedOut": false
   },
-  "evidenceDir": "/tmp/nouraajd-accept-final/verify/evidence/8d31ad506538de77658176115b8aef7f055affc40d73d80438d7ce517cf86b79",
+  "evidenceDir": "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/evidence/ab002c2a32de8df278c0a0566aa9e9b61a99b344e1834f40b0ac9a6948361dd1",
   "fileLookup": {
     "command": [
       "g++-5",
@@ -69,20 +73,20 @@
       "-O2",
       "-std=c++11",
       "-o",
-      "/tmp/nouraajd-accept-final/verify/snapshot-zcqmj4i3/observer/libwindowspaths.so",
-      "/tmp/nouraajd-bfg-delivery/recovery/smoke/windows_paths.cpp",
+      "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-43b4a8v5/observer/libwindowspaths.so",
+      "/home/andrz/nouraajd-bfg-recovery-backup-20261116/source/recovery/smoke/windows_paths.cpp",
       "-ldl"
     ],
-    "log": "/tmp/nouraajd-accept-final/verify/snapshot-zcqmj4i3/file-lookup.log",
+    "log": "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-43b4a8v5/file-lookup.log",
     "returnCode": 0,
-    "seconds": 0.164,
+    "seconds": 0.214,
     "semantics": "Windows-style case-insensitive file lookup for the game process",
     "timedOut": false
   },
-  "fingerprint": "8d31ad506538de77658176115b8aef7f055affc40d73d80438d7ce517cf86b79",
+  "fingerprint": "ab002c2a32de8df278c0a0566aa9e9b61a99b344e1834f40b0ac9a6948361dd1",
   "libraryAliases": {
     "aliases": {},
-    "directory": "/tmp/nouraajd-accept-final/verify/snapshot-zcqmj4i3/observer/library-aliases"
+    "directory": "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-43b4a8v5/observer/library-aliases"
   },
   "project": "game.pro",
   "recipe": {
@@ -121,7 +125,7 @@
   },
   "restoration": {
     "excluded": [],
-    "outputDir": "/tmp/nouraajd-accept-final/verify/snapshot-zcqmj4i3/source",
+    "outputDir": "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-43b4a8v5/source",
     "restored": [
       {
         "markerPath": "Game.pro.REMOVED.git-id",
@@ -134,9 +138,9 @@
       {
         "markerPath": "config/objects/monsters.json.REMOVED.git-id",
         "method": "reconstruction",
-        "originalBlob": "4a23d85c586bbf644e66e7f9c1b6b77a43b83ec5",
+        "originalBlob": "3b8e88cd7324d903dece79d8dbcbe9df621a9efd",
         "path": "config/objects/monsters.json",
-        "provenance": "unverified donor reconstruction; 55e6516eb91b739e899df1ef8d72116da44fec49:config/monsters.json; headerMatch=0; apiOverlap=0/10000; distance=110",
+        "provenance": "unverified donor reconstruction; 55e6516eb91b739e899df1ef8d72116da44fec49:config/monsters.json; headerMatch=0; apiOverlap=0/10000; distance=109",
         "replacementBlob": "b6b5708a1c0683d8ca6d9c395ee31e4742bdd39e"
       },
       {
@@ -152,7 +156,7 @@
         "method": "reconstruction",
         "originalBlob": "97025274f3aa23a921256c4aaada67cd54a257cb",
         "path": "format.py",
-        "provenance": "unverified donor reconstruction; 51c2e9b0b64c86a8e593a5231c3ef9e44efc5af1:format.py; headerMatch=0; apiOverlap=0/10000; distance=13",
+        "provenance": "unverified donor reconstruction; 51c2e9b0b64c86a8e593a5231c3ef9e44efc5af1:format.py; headerMatch=0; apiOverlap=0/10000; distance=14",
         "replacementBlob": "aafd49b43ba2d56af3910f6b57b1cd2e856ff429"
       },
       {
@@ -568,7 +572,7 @@
         "method": "reconstruction",
         "originalBlob": "7875ce8a1b581263e214bff6a4d69b0aa216427d",
         "path": "lib/base64/base64.cpp",
-        "provenance": "unverified donor reconstruction; 779fb803ff021de5e74ed3b24d7c31a9adcaa236:base64/base64.cpp; headerMatch=0; apiOverlap=10000/10000; distance=71",
+        "provenance": "unverified donor reconstruction; 779fb803ff021de5e74ed3b24d7c31a9adcaa236:base64/base64.cpp; headerMatch=0; apiOverlap=10000/10000; distance=72",
         "replacementBlob": "07e5caa3e0fad17acd31b769f08db8887a1ed9b4"
       },
       {
@@ -819,16 +823,16 @@
         "method": "reconstruction",
         "originalBlob": "bde36436bdd7e697d509bfd8c2f90a634ec3cfb0",
         "path": "scripts/game/interaction.py",
-        "provenance": "unverified donor reconstruction; 21c04c61c564bb91953b90218c6cf4bed54417a9:scripts/game/interaction.py; headerMatch=0; apiOverlap=0/10000; distance=12",
+        "provenance": "unverified donor reconstruction; 21c04c61c564bb91953b90218c6cf4bed54417a9:scripts/game/interaction.py; headerMatch=0; apiOverlap=0/10000; distance=13",
         "replacementBlob": "d322178361a44d5e95d5d5f8d55aace2c91dc2c4"
       },
       {
         "markerPath": "src/CCreature.cpp.REMOVED.git-id",
         "method": "reconstruction",
-        "originalBlob": "98bb6539ea18f6a938806ce229f5e7267e78092c",
+        "originalBlob": "3a08b2a33b8737e6e57b7c595eea6fdb5e10d9eb",
         "path": "src/CCreature.cpp",
-        "provenance": "content reconstruction of the BFG-removed original; Adapted the verified child #256 bodies to the surviving #255 map-owned script engine, draft CObjectHandler and CTypeHandler create signatures; Qt JSON tables retain their flat layouts where present.",
-        "replacementBlob": "caf38a140eceb438de32ba632d44c7a7196763aa"
+        "provenance": "Inferred missing #256 implementation from native-verified #257 bodies and same-commit surviving declarations/callers; surviving source bytes are unchanged. Use genuine #256 Stats::loadFromJson and copy construction rather than the future assignment operator. Preserve actual combined CCreature/CPlayer/CMonster API, slot-map invariant, item/action mechanics and authored configuration; no fake class or callback.",
+        "replacementBlob": "b1715e68d8b545ce26bcfea90d3be09488e85cde"
       },
       {
         "markerPath": "src/CCreature.h.REMOVED.git-id",
@@ -859,32 +863,32 @@
         "method": "reconstruction",
         "originalBlob": "550c392a23335bc697ffd40d24f13426dc905724",
         "path": "src/CInteraction.cpp",
-        "provenance": "The #255 map owns CScriptEngine, as at #254. Use the same script callback lookup. Later revisions use a singleton.",
-        "replacementBlob": "b9cc21b3e997ebc3948f32f56ffdf33805b4e241"
+        "provenance": "Infer missing #257 body from native-verified #259 reconstruction, adapted only to same-commit original declarations/callers; preserve every surviving input. Original interaction header still declares loadFromJson/non-const getManaCost and has no later effect/mana setters; load its intact flat configuration. Preserve genuine earlier effect functions and Python function namespace, not later event types.",
+        "replacementBlob": "8939f63b0143c4cc2818065269d4255dd8657f8a"
       },
       {
         "markerPath": "src/CItem.cpp.REMOVED.git-id",
         "method": "reconstruction",
         "originalBlob": "8c63003f5470c2c430d3c9f7f6ff998a78f5a137",
         "path": "src/CItem.cpp",
-        "provenance": "Adapt the #256 item donor to the original #255 two-argument CTypeHandler::create. The shared original-blob reconstruction remains available for the later one-argument API.",
-        "replacementBlob": "47bb5b57265c366c2c4adb1c352382c3eb8d0bd4"
+        "provenance": "Inferred missing #256 implementation from native-verified #257 bodies and same-commit surviving declarations/callers; surviving source bytes are unchanged. Same-commit CItem.h lacks future bonus getters/setters and still requires CWeapon::getStats()->Stats*. Restore only this genuine API and real static item/potion factory mechanics; all action/equipment configuration remains actual.",
+        "replacementBlob": "561809ff3e3bb5ad3c7366f2bff41350b8c59fa4"
       },
       {
         "markerPath": "src/CMap.cpp.REMOVED.git-id",
         "method": "reconstruction",
-        "originalBlob": "5aef9b8af955e09d3c07ee1d6aa851993ec589a8",
+        "originalBlob": "400123949e1706dcafd13a78e5c41d55bffb8150",
         "path": "src/CMap.cpp",
-        "provenance": "content reconstruction of the BFG-removed original; Inferred transitional dispatch from #254, #256 and the surviving #255 APIs: invoke the map-owned script engine for classes in buildings.json, then load their authored properties, create weapon placements with the item factory and use CObjectHandler for other types. The handler-only donor aborts on the authored Cave; no map actors are removed.",
-        "replacementBlob": "a20db1346a6bf82674dff9010595f70bcbfff336"
+        "provenance": "Infer missing #257 monolithic TMX map from native-verified #259 reconstruction, adapted to genuine original CMap.h: base dictionary holds tile-name QString values and separate tiles cache owns rendered CTile instances. Restore getTileSize/hide/showAll and lazy visible-tile construction using original CTile API. Keep exact Tmx property guards, direct set of world objects, no-argument callbacks and real map entry/geometry. Flat weapon map object uses actual static CItem factory. Procedural/pathfinding and exact historical source behavior remain inferred; native unverified.",
+        "replacementBlob": "b8044d32fdd3095dcd1eaa3e6c782a1ea3399b93"
       },
       {
         "markerPath": "src/CMapObject.cpp.REMOVED.git-id",
         "method": "reconstruction",
-        "originalBlob": "8239a3221a75f680553d29c86b497101103e7810",
+        "originalBlob": "22700125b9dc9ae0f25de5d84653f45c86bcbc54",
         "path": "src/CMapObject.cpp",
-        "provenance": "content reconstruction of the BFG-removed original; Reconciled the later verified Qt implementation with #254 map object name, animation and engine APIs, original include set and qmake sources before CObjectHandler existed; tile configs use the flat moved layout.",
-        "replacementBlob": "92193e9ce494f5437a2752bac81b754290d8fca8"
+        "provenance": "Infer missing #257 body from native-verified #259 reconstruction, adapted only to same-commit original declarations/callers; preserve every surviving input. Original CMapObject lacks future typeName/tooltip getters; preserve public field and pure loadFromJson base definition. Initialize genuine position fields; movement queries original string-valued map plus actual nested tile config. Real QWidget owner uses game view in this older inheritance era. Actual signal trace places the factory-era fault in QWidget::setParent: original factory first assigns a non-widget QObject parent. Clear that QObject relationship explicitly before assigning the valid game-view QWidget, within this missing body; original factory bytes and behavior remain exercised.",
+        "replacementBlob": "e0324cd957dbe894914ffbb748e60fd4e896cb3c"
       },
       {
         "markerPath": "src/CPathFinder.cpp.REMOVED.git-id",
@@ -905,10 +909,10 @@
       {
         "markerPath": "src/GameScript.cpp.REMOVED.git-id",
         "method": "reconstruction",
-        "originalBlob": "6c4a05d9307920fb93dce4771e2ecd5de069e25f",
+        "originalBlob": "b0889f1267acbdf651ee1e12b839906be46d25b9",
         "path": "src/GameScript.cpp",
-        "provenance": "content reconstruction of the BFG-removed original; Adapted the Python 2 module, qmake source list and generated stats API to #253 main, ReflectTypes, Python imports and original property generator. Inferred templated comparator from ordered pointer containers; script aliases preserve config class names.",
-        "replacementBlob": "ee695d246118a6eb8aa38be93b153d622e55bd2b"
+        "provenance": "Retain reconstructed missing #257 Boost module and exact init_game/Python2.7 ABI, exposing genuine CInteraction alias and generated Stats::getDamage required by actual script. No fake class/binding.",
+        "replacementBlob": "15beba69e1ca585dae1827e4b742a9ad5713ad3c"
       },
       {
         "markerPath": "src/Stats.cpp.REMOVED.git-id",
@@ -921,9 +925,9 @@
       {
         "markerPath": "src/Util.h.REMOVED.git-id",
         "method": "reconstruction",
-        "originalBlob": "326f551ca1f338b2d7e5080c92f60331cbdee456",
+        "originalBlob": "7d48e90904e9a7409a0f220a668824bb36344f38",
         "path": "src/Util.h",
-        "provenance": "content reconstruction of the BFG-removed original; Reconciled the later verified Qt implementation with #254 map object name, animation and engine APIs, original include set and qmake sources before CObjectHandler existed; tile configs use the flat moved layout.",
+        "provenance": "Inferred missing #256 implementation from native-verified #257 bodies and same-commit surviving declarations/callers; surviving source bytes are unchanged. Restore PROPERTY_ACCESSOR as a real Qt property macro from the immediately following intact macro.conf; #257 removes this macro from Util and expands exactly these real methods into original headers. Same Coords, task, comparer and PROP helpers from intact #257 Util. This is a donor adaptation, not exact original bytes.",
         "replacementBlob": "ea3801f84535e97b6fa939877442688b6cec3145"
       },
       {
@@ -933,37 +937,12 @@
         "replacementBlob": "f5d0b39a0cdddb91a31a537052b7d8d31a4aa79f"
       }
     ],
-    "restoredFilesFingerprint": "8f8688c18e800e4394a563baa848c654dfb5af2424a3a336d90934c058bf0dee",
-    "sourceCommit": "d1a71d9688c4c1df824ec5b1661a6855e82ba5d9",
-    "sourceTree": "3469da8cf33982cef7b981c69098aad13167b2b9",
+    "restoredFilesFingerprint": "ea8662c8a7704e00df25aa94474e12bd88337bb767fd9a052c0695dd212d6894",
+    "sourceCommit": "99979aa8abd08c9fcccb17277873beb1b204d8e1",
+    "sourceTree": "ad9a1d245766b1f0c7ab688deb0d8896353af3c9",
     "status": "complete",
     "submodules": [],
     "unresolved": []
-  },
-  "runtimeConfiguration": {
-    "inputsSha256": "db7c16e2a6995c3f2d1656e16d9c02d0a39fa983cea02ca0a6b0697939e3ce94",
-    "outputs": {
-      "config/object.json": "e764691ee886a92b520d4b1939b2e22dae2139af376d83dbe5e77987c3fa8078",
-      "config/tiles.json": "9a107c60a4a7e80495b31b82d5f10ae6a9ef87f1754a74ec08530cfc87317eb4",
-      "images/arrows/left/time.json": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
-      "images/arrows/right/time.json": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
-      "images/buildings/cavetime.json": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
-      "images/buildings/teleportertime.json": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
-      "images/interactions/attacktime.json": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
-      "images/interactions/chaosblasttime.json": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
-      "images/interactions/sneakattacktime.json": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
-      "images/items/armors/leatherarmortime.json": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
-      "images/items/potions/lifetime.json": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
-      "images/items/potions/manatime.json": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
-      "images/items/weapons/chaosswordtime.json": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
-      "images/items/weapons/daggertime.json": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
-      "images/players/assasintime.json": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
-      "images/tiles/grasstime.json": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
-      "images/tiles/roadtime.json": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570"
-    },
-    "replaySha256": "27b1ceab413039beeb0a9009e752f82ca5a157f6d96e5c5563b50331494c90a9",
-    "sourceCommit": "d1a71d9688c4c1df824ec5b1661a6855e82ba5d9",
-    "validationBoundary": "Game startup with derived legacy configuration paths and default animation timings"
   },
   "smoke": {
     "command": [
@@ -971,12 +950,12 @@
       "-a",
       "--server-args=-screen 0 1920x1080x24",
       "env",
-      "LD_PRELOAD=/tmp/nouraajd-accept-final/verify/snapshot-zcqmj4i3/observer/libwindowspaths.so",
-      "/tmp/nouraajd-accept-final/verify/snapshot-zcqmj4i3/build/RecoveryGame"
+      "LD_PRELOAD=/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-43b4a8v5/observer/libwindowspaths.so",
+      "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-43b4a8v5/build/RecoveryGame"
     ],
-    "log": "/tmp/nouraajd-accept-final/verify/snapshot-zcqmj4i3/smoke/startup.log",
+    "log": "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-43b4a8v5/smoke/startup.log",
     "returnCode": 0,
-    "seconds": 0.715,
+    "seconds": 1.167,
     "startup": {
       "checks": {
         "eventLoop": true,
@@ -998,13 +977,13 @@
     "status": "success",
     "timedOut": false
   },
-  "sourceCommit": "d1a71d9688c4c1df824ec5b1661a6855e82ba5d9",
+  "sourceCommit": "99979aa8abd08c9fcccb17277873beb1b204d8e1",
   "sourceCommits": [
-    "d1a71d9688c4c1df824ec5b1661a6855e82ba5d9"
+    "99979aa8abd08c9fcccb17277873beb1b204d8e1"
   ],
   "sourcePreparation": {
     "identity": {
-      "implementationSha256": "048a14360d36125a1a49c58d4f5ac8a5fd61cfa6431c74b18dd57a89de454520",
+      "implementationSha256": "f5d590fce22ba637484bb95ca1b13091a246aa4d7d0747c7e112aa968dd1d092",
       "inputs": {
         "classes.json": {
           "kind": "file",
@@ -1016,7 +995,32 @@
         }
       },
       "interpreter": "Python 2.7.18",
+      "legacyTileConfiguration": {
+        "inputs": {
+          "config/objects/tiles.json": "b95264f9ddef82b4196f80b823c161978fa6d11b3d3329964ab23254f0874b71",
+          "src/CTile.cpp": "885fe0cd8557ef7ef8e0c8e8a7e8910a31e10321ae7eda82ef1c952f72650124"
+        },
+        "path": "config/tiles.json",
+        "provenance": {
+          "inferredCompatibility": true,
+          "operation": "Flatten each original properties object; rename animation to path and preserve canStep",
+          "reason": "Original CTile::loadFromJson still reads config/tiles.json after configuration moved to config/objects",
+          "sourceCommit": "9fc9416b1025044633a6b789212f67c56ecaafba"
+        },
+        "replaySha256": "6669a6e9f110fd2318a5800fc98b753f5418d7d2dca42fcd0bb2a2aac30418d5",
+        "sha256": "8f47dda1738b3ae9fbfc0ed306ab527ce77ab17c0d6e877c2bbf92651a4120b8",
+        "validationBoundary": "Game startup with legacy tile configuration derived from unchanged original object configuration; original loader and configuration bytes remain unchanged"
+      },
       "outputs": [
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "8f47dda1738b3ae9fbfc0ed306ab527ce77ab17c0d6e877c2bbf92651a4120b8"
+          },
+          "before": null,
+          "path": "config/tiles.json",
+          "purpose": "legacy tile configuration derived from original object configuration"
+        },
         {
           "after": {
             "kind": "file",
@@ -1032,6 +1036,15 @@
       {
         "after": {
           "kind": "file",
+          "sha256": "8f47dda1738b3ae9fbfc0ed306ab527ce77ab17c0d6e877c2bbf92651a4120b8"
+        },
+        "before": null,
+        "path": "config/tiles.json",
+        "purpose": "legacy tile configuration derived from original object configuration"
+      },
+      {
+        "after": {
+          "kind": "file",
           "sha256": "348b8176f5eb2cba4b42509ec9f4fc1ad7fef10cd0d4bbd819728fc5eae44d7c"
         },
         "before": null,
@@ -1043,34 +1056,44 @@
     "steps": [
       {
         "command": [
+          "history_source_prep.py",
+          "prepare-legacy-tile-configuration"
+        ],
+        "log": "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-43b4a8v5/preparation/legacy-tile-configuration.log",
+        "name": "legacyTileConfiguration",
+        "returnCode": 0,
+        "timedOut": false
+      },
+      {
+        "command": [
           "/opt/recovery/python/2.7.18/bin/python2.7",
           "--version"
         ],
-        "log": "/tmp/nouraajd-accept-final/verify/snapshot-zcqmj4i3/preparation/interpreter.log",
+        "log": "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-43b4a8v5/preparation/interpreter.log",
         "name": "interpreter",
         "returnCode": 0,
-        "seconds": 0.001,
+        "seconds": 0.002,
         "timedOut": false
       },
       {
         "command": [
           "/opt/recovery/python/2.7.18/bin/python2.7",
           "-B",
-          "/tmp/nouraajd-accept-final/verify/snapshot-zcqmj4i3/source/preprocessor.py"
+          "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-43b4a8v5/source/preprocessor.py"
         ],
-        "log": "/tmp/nouraajd-accept-final/verify/snapshot-zcqmj4i3/preparation/generator.log",
+        "log": "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-43b4a8v5/preparation/generator.log",
         "name": "generator",
         "returnCode": 0,
-        "seconds": 0.008,
+        "seconds": 0.032,
         "timedOut": false
       }
     ]
   },
-  "sourceTree": "3469da8cf33982cef7b981c69098aad13167b2b9",
-  "startupCompatibility": "transitionalRuntimeConfiguration",
+  "sourceTree": "ad9a1d245766b1f0c7ab688deb0d8896353af3c9",
+  "startupCompatibility": "legacyTileConfiguration",
   "startupMode": "game",
   "startupSelection": {
-    "boundary": "Game startup with derived legacy configuration paths and default animation timings",
+    "boundary": "Game startup with legacy tile configuration derived from unchanged original object configuration; original loader and configuration bytes remain unchanged",
     "mode": "game"
   },
   "status": "success",
@@ -1089,5 +1112,5 @@
     }
   },
   "toolchainImage": "sha256:d3f59ec1d12297ee8091fbea687aa619275fc92b3fd426560e0a1fa40715afc8",
-  "verifiedFromCommit": "d1a71d9688c4c1df824ec5b1661a6855e82ba5d9"
+  "verifiedFromCommit": "99979aa8abd08c9fcccb17277873beb1b204d8e1"
 }

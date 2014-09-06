@@ -19,6 +19,7 @@ namespace {
 bool mapTileCanStep(CMap *map, int x, int y, int z) {
   return CConfigurationProvider::getConfig("config/objects/tiles.json")
       .toObject()[map->getTile(x, y, z)]
+      .toObject()["properties"]
       .toObject()["canStep"]
       .toBool();
 }
@@ -73,7 +74,6 @@ void CMapObject::setMap(CMap *value) {
     map->getScene()->addItem(this);
   }
 }
-void CMapObject::setAnimation(QString path) { CAnimatedObject::setAnimation(path, CMap::getTileSize()); }
 CMap *CMapObject::getMap() { return map; }
 void CMapObject::setVisible(bool value) {
   QGraphicsPixmapItem::setVisible(value);
@@ -104,7 +104,7 @@ CEvent::CEvent(const CEvent &event) : CEvent() {
 }
 void CEvent::onEnter() {
   if (enabled) {
-    map->getEngine()->executeScript(script);
+    CScriptEngine::getInstance()->executeScript(script);
   }
 }
 void CEvent::onMove() {}

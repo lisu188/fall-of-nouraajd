@@ -47,7 +47,10 @@ void CInteraction::onAction(CCreature *first, CCreature *second) {
 }
 void CInteraction::performAction(CCreature *first, CCreature *second) {
   PY_UNSAFE(boost::python::object function =
-                getMap()->getEngine()->getObject(typeName);
+                CScriptEngine::getInstance()
+                    ->getObject("game")
+                    .attr("interaction")
+                    .attr(typeName.toStdString().c_str());
             function(boost::python::ptr(first), boost::python::ptr(second));)
 }
 bool CInteraction::configureEffect(Effect *) { return true; }

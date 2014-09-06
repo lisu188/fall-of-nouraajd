@@ -17,33 +17,16 @@ namespace {
 bool mapTileCanStep(CMap *map, int x, int y, int z) {
   return CConfigurationProvider::getConfig("config/objects/tiles.json")
       .toObject()[map->getTile(x, y, z)]
+      .toObject()["properties"]
       .toObject()["canStep"]
       .toBool();
 }
 } // namespace
 
-// The surviving script engine still constructs the Python building subclasses.
-static CMapObject *createPlacedObject(CMap *map, const QString &type) {
-  QJsonObject buildings = CConfigurationProvider::getConfig("config/objects/buildings.json").toObject();
-  const QString buildingClass = buildings.value(type).toObject().value("class").toString();
-  if (!buildingClass.isEmpty()) {
-    CMapObject *building = map->getEngine()->createObject<CMapObject *>(buildingClass);
-    if (building) {
-      building->setMap(map);
-      building->loadFromJson(type);
-      return building;
-    }
-  }
-  if (CConfigurationProvider::getConfig("config/objects/weapons.json").toObject().contains(type))
-    return CItem::createItem(type);
-  return map->getObjectHandler()->createMapObject<CMapObject *>(type);
-}
-
 CMap::CMap(CGameScene *scene, QString file)
     : QObject(scene), scene(scene), entryx(0), entryz(0), entryy(0),
       lootProvider(nullptr), handler(nullptr) {
   scene->setMap(this);
-  engine = new CScriptEngine(this);
   handler = new CObjectHandler(this);
   connect(CompletionListener::getInstance(), SIGNAL(completed()), this,
           SLOT(moveCompleted()));
@@ -118,12 +101,14 @@ void CMap::loadMapFromTmx(Tmx::Map &loaded) {
     for (const Tmx::Object *definition : group->GetObjects()) {
       QString type = QString::fromStdString(definition->GetType());
       CMapObject *object =
-          createPlacedObject(this, type);
+          (type == "ChaosSword")
+              ? static_cast<CMapObject *>(CItem::createItem(type))
+              : handler->createMapObject<CMapObject *>(type);
       if (!object) {
         qFatal("Cannot construct authored map object %s", qPrintable(type));
       }
       if (!definition->GetName().empty()) {
-        object->name = QString::fromStdString(definition->GetName());
+        object->setObjectName(QString::fromStdString(definition->GetName()));
       }
       object->loadFromProps(definition->GetProperties());
       addObject(object);
@@ -212,7 +197,7 @@ void CMap::removeObject(CMapObject *object) {
 std::set<CMapObject *> *CMap::getObjects() { return &mapObjects; }
 CMapObject *CMap::getObjectByName(QString name) {
   for (CMapObject *object : mapObjects) {
-    if (object->name == name) {
+    if (object->objectName() == name) {
       return object;
     }
   }
@@ -225,13 +210,13 @@ QString CMap::addObjectByName(QString name, Coords coords) {
   if (!mapTileCanStep(this, coords.x, coords.y, coords.z)) {
     return QString();
   }
-  CMapObject *object = createPlacedObject(this, name);
+  CMapObject *object = handler->createMapObject<CMapObject *>(name);
   if (!object) {
     return QString();
   }
   addObject(object);
   object->moveTo(coords.x, coords.y, coords.z, true);
-  return object->name;
+  return object->objectName();
 }
 void CMap::replaceTile(QString name, Coords coords) {
   removeTile(coords.x, coords.y, coords.z);
@@ -330,7 +315,6 @@ void CMap::addRoad(int length, int x, int y, int z) {
     y += direction[1];
   }
 }
-CScriptEngine *CMap::getEngine() { return engine; }
 CGameScene *CMap::getScene() const { return scene; }
 void CMap::mapUp() { --currentMap; }
 void CMap::mapDown() { ++currentMap; }

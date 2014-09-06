@@ -10,7 +10,7 @@ public:
 	static ATypeHandler* getHandler ( QString name );
 	ATypeHandler();
 	ATypeHandler ( const ATypeHandler& );
-	virtual CMapObject *create ( QString ,QJsonObject * );
+	virtual CMapObject *create ( QString );
 };
 
 class CTypeHandler : public ATypeHandler {
@@ -18,5 +18,13 @@ class CTypeHandler : public ATypeHandler {
 public:
 	CTypeHandler();
 	CTypeHandler ( const CTypeHandler& );
-	virtual CMapObject *create ( QString name,QJsonObject *config );
+	virtual CMapObject *create ( QString name );
+};
+
+class PyTypeHandler : public ATypeHandler {
+	Q_OBJECT
+public:
+	PyTypeHandler();
+	PyTypeHandler ( const PyTypeHandler& );
+	virtual CMapObject *create ( QString name );
 };
