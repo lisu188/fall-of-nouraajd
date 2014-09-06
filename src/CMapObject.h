@@ -5,7 +5,7 @@
 
 class CMap;
 class CMapObject : public CAnimatedObject {
-	friend class CMap;
+	friend class CObjectHandler;
 	Q_OBJECT
 public:
 	CMapObject();

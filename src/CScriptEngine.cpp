@@ -1,5 +1,6 @@
 #include "CScriptEngine.h"
 #include <QString>
+#include "CMap.h"
 
 CScriptEngine::~CScriptEngine() {
 	PY_UNSAFE (
@@ -49,7 +50,7 @@ void CScriptEngine::executeCommand ( std::initializer_list<QString> list ) {
 	    executeScript ( buildCommand ( list ) ); )
 }
 
-CScriptEngine::CScriptEngine (  ) {
+CScriptEngine::CScriptEngine ( CMap *map ) :QObject ( map ) {
 	PY_UNSAFE (
 	    Py_Initialize();
 	    init_game();

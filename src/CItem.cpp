@@ -4,8 +4,8 @@
 #include "CInteraction.h"
 #include "CItem.h"
 #include "CItemSlot.h"
-
-#include <QMetaType>
+#include "CObjectHandler.h"
+#include "CTypeHandler.h"
 #include <QDebug>
 #include <QDirIterator>
 #include <QFileInfo>
@@ -150,7 +150,7 @@ CItem *CItem::createItem(QString name) {
     class_name.prepend("C");
   }
   QJsonObject config = itemConfiguration(name);
-  CItem *item = static_cast<CItem *>(QMetaType::create(QMetaType::type(class_name.toStdString().c_str())));
+  CItem *item = dynamic_cast<CItem *>(CTypeHandler().create(class_name, &config));
   if (item) {
     item->loadFromJson(name);
   }

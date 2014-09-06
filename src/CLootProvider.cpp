@@ -4,12 +4,13 @@
 #include "Util.h"
 #include "CItem.h"
 #include "CMap.h"
+#include "CObjectHandler.h"
 
 std::set<CItem *> *CLootProvider::getLoot ( int value ) {
 	return calculateLoot ( value );
 }
 
-CLootProvider::CLootProvider ( CMap *map ) {
+CLootProvider::CLootProvider ( CMap *map ) :QObject ( map ) {
 	this->map=map;
 	QJsonObject config = CConfigurationProvider::getConfig ( "config/object.json" ).toObject();
 	QJsonObject::iterator it = config.begin();
@@ -33,7 +34,7 @@ std::set<CItem *> *CLootProvider::calculateLoot ( int value ) {
 		int power = ( *it ).second;
 		QString name = ( *it ).first;
 		if ( power <= value ) {
-			loot->insert ( map->createMapObject<CItem*> (  name )  );
+			loot->insert ( map->getObjectHandler()->createMapObject<CItem*> (  name )  );
 			value -= power;
 		}
 	}
