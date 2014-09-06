@@ -61,7 +61,6 @@ public:
 	std::map<int, std::pair<int, int> > getBounds();
 	int getCurrentXBound();
 	int getCurrentYBound();
-	CScriptEngine *getEngine();
 	void removeObjectByName ( QString name );
 	QString addObjectByName ( QString name,Coords coords );
 	void replaceTile ( QString name,Coords coords );
@@ -78,7 +77,6 @@ private:
 	std::map<int, QString> defaultTiles;
 	std::map<int, std::pair<int, int> > boundaries;
 	int entryx, entryz, entryy;
-	CScriptEngine *engine;
 	CLootProvider *lootProvider;
 	CObjectHandler *handler;
 };

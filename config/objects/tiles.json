@@ -1,46 +1,68 @@
 {
     "BeachTile": {
-        "canStep": true, 
-        "path": "images/tiles/beach"
+        "properties": {
+            "animation": "images/tiles/beach", 
+            "canStep": true
+        }
     }, 
     "DesertTile": {
-        "canStep": true, 
-        "path": "images/tiles/desert"
+        "properties": {
+            "animation": "images/tiles/desert", 
+            "canStep": true
+        }
     }, 
     "GrassTile": {
-        "canStep": true, 
-        "path": "images/tiles/grass"
+        "properties": {
+            "animation": "images/tiles/grass", 
+            "canStep": true
+        }
     }, 
     "GroundTile": {
-        "canStep": true, 
-        "path": "images/tiles/ground"
+        "properties": {
+            "animation": "images/tiles/ground", 
+            "canStep": true
+        }
     }, 
     "LavaTile": {
-        "canStep": true, 
-        "path": "images/tiles/lava"
+        "properties": {
+            "animation": "images/tiles/lava", 
+            "canStep": true
+        }
     }, 
     "MountainTile": {
-        "canStep": false, 
-        "path": "images/tiles/mountain"
+        "properties": {
+            "animation": "images/tiles/mountain", 
+            "canStep": false
+        }
     }, 
     "RoadTile": {
-        "canStep": true, 
-        "path": "images/tiles/road"
+        "properties": {
+            "animation": "images/tiles/road", 
+            "canStep": true
+        }
     }, 
     "SnowTile": {
-        "canStep": true, 
-        "path": "images/tiles/snow"
+        "properties": {
+            "animation": "images/tiles/snow", 
+            "canStep": true
+        }
     }, 
     "SwampTile": {
-        "canStep": true, 
-        "path": "images/tiles/swamp"
+        "properties": {
+            "animation": "images/tiles/swamp", 
+            "canStep": true
+        }
     }, 
     "WastelandTile": {
-        "canStep": true, 
-        "path": "images/tiles/wasteland"
+        "properties": {
+            "animation": "images/tiles/wasteland", 
+            "canStep": true
+        }
     }, 
     "WaterTile": {
-        "canStep": false, 
-        "path": "images/tiles/water"
+        "properties": {
+            "animation": "images/tiles/water", 
+            "canStep": false
+        }
     }
 }

@@ -7,6 +7,11 @@ CScriptEngine::~CScriptEngine() {
 	    Py_Finalize(); )
 }
 
+CScriptEngine *CScriptEngine::getInstance() {
+	static CScriptEngine instance;
+	return &instance;
+}
+
 void CScriptEngine::executeScript ( QString script ) {
 	PY_UNSAFE (
 	    boost::python::exec ( script.toStdString().append ( "\n" ).c_str(),main_namespace ); )
@@ -50,7 +55,7 @@ void CScriptEngine::executeCommand ( std::initializer_list<QString> list ) {
 	    executeScript ( buildCommand ( list ) ); )
 }
 
-CScriptEngine::CScriptEngine ( CMap *map ) :QObject ( map ) {
+CScriptEngine::CScriptEngine () {
 	PY_UNSAFE (
 	    Py_Initialize();
 	    init_game();
@@ -58,5 +63,5 @@ CScriptEngine::CScriptEngine ( CMap *map ) :QObject ( map ) {
 	    main_namespace=main_module.attr ( "__dict__" );
 	    executeScript ( "import sys" );
 	    executeScript ( "sys.path.append('./scripts')" );
-	    executeScript ( "from game import *" ); )
+	    executeScript ( "import game" ); )
 }

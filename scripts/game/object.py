@@ -16,12 +16,6 @@ class Cave(CBuilding):
     def __init__(self):
         super(Cave,self).__init__()
 
-    def onCreate(self):
-        self.setStringProperty("monster","Pritz");
-        self.setNumericProperty("chance",15);
-        self.setNumericProperty("monsters",5);
-        self.setBoolProperty("enabled",True);
-
     def onEnter(self):
         if self.getBoolProperty("enabled"):
             self.setBoolProperty("enabled",False);

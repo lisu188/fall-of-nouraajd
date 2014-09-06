@@ -1,12 +1,20 @@
 {
     "Cave": {
-        "animation": "images/buildings/cave", 
-        "class": "Cave", 
-        "handler": "CTypeHandler"
+        "class": "game.object.Cave", 
+        "handler": "PyTypeHandler", 
+        "properties": {
+            "animation": "images/buildings/cave", 
+            "chance": 15, 
+            "enabled": true, 
+            "monster": "Pritz", 
+            "monsters": 5
+        }
     }, 
     "Teleporter": {
-        "animation": "images/buildings/teleporter", 
-        "class": "Teleporter", 
-        "handler": "CTypeHandler"
+        "class": "game.object.Teleporter", 
+        "handler": "PyTypeHandler", 
+        "properties": {
+            "animation": "images/buildings/teleporter"
+        }
     }
 }

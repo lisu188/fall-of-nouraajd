@@ -41,6 +41,7 @@ void CConfigurationProvider::loadConfig ( QString path ) {
 		file.close();
 		qDebug() << "Loaded configuration:" << path << "\n";
 	} else {
-		qFatal ( ( "Cannot load file:"+ path ).toStdString().c_str() );
+		qDebug ( ( "Cannot load file:"+ path ).toStdString().c_str() );
+		this->insert ( std::pair<QString, QJsonValue > ( path,QJsonValue() ) );
 	}
 }
