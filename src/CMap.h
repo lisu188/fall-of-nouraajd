@@ -9,7 +9,7 @@
 #include "CAnimatedObject.h"
 #include <unordered_map>
 #include <set>
-#include <lib/json/json.h>
+#include <QJsonObject>
 #include <lib/tmx/TmxMap.h>
 #include <QGraphicsScene>
 #include <QString>
@@ -26,21 +26,20 @@ class CInteraction;
 
 
 class CMap : public QObject,
-	public std::unordered_map<Coords, std::string, CoordsHasher> {
+	public std::unordered_map<Coords, QString, CoordsHasher> {
 	Q_OBJECT
 public:
-	CMap ( CGameScene *scene, std::string file );
+	CMap ( CGameScene *scene, QString file );
 	~CMap();
-	bool addTile ( std::string name, int x, int y, int z );
-	bool removeTile ( int x, int y, int z );
+	bool addTile ( QString name, int x, int y, int z );
+	void removeTile ( int x, int y, int z );
 	static int getTileSize();
 	void move ( int x, int y );
-	std::string getTile ( int x, int y, int z );
+	QString getTile ( int x, int y, int z );
 	bool contains ( int x, int y, int z );
 	void addObject ( CMapObject *mapObject );
 	void addRiver ( int length, int startx, int starty, int startz );
 	void addRoad ( int length, int startx, int starty, int startz );
-	void addDungeon ( Coords enter, Coords exit, int width, int height );
 	void removeObject ( CMapObject *mapObject );
 	Q_SLOT void ensureSize();
 	void hide();
@@ -54,52 +53,48 @@ public:
 	int getEntryX();
 	int getEntryY();
 	int getEntryZ();
-	CMapObject *getObjectByName ( std::string name );
+	CMapObject *getObjectByName ( QString name );
 	Q_SLOT void moveCompleted();
-	Q_INVOKABLE inline void ensureTile ( int i, int j );
+	Q_INVOKABLE void ensureTile ( int i, int j );
 	std::unordered_map<Coords, CTile *, CoordsHasher> tiles;
 	std::map<int, std::pair<int, int> > getBounds();
 	int getCurrentXBound();
 	int getCurrentYBound();
 	CScriptEngine *getEngine();
-	bool removeObjectByName ( std::string name );
-	std::string addObjectByName ( std::string name,Coords coords );
-	void replaceTile ( std::string name,Coords coords );
-	Coords getLocationByName ( std::string name );
+	void removeObjectByName ( QString name );
+	QString addObjectByName ( QString name,Coords coords );
+	void replaceTile ( QString name,Coords coords );
+	Coords getLocationByName ( QString name );
 	CPlayer *getPlayer();
 	CLootProvider *getLootProvider();
 	void loadingComplete();
 	template<typename T>
-	T createMapObject ( std::string name ) {
-		return createMapObject<T> ( QString::fromStdString ( name ) );
-	}
-	template<typename T>
-	std::string getClassName ( QString name ) {
-		Json::Value config = ( *CConfigurationProvider::getConfig (
-		                           "config/object.json" ) ) [name.toStdString()];
-		if ( config.isNull() ) {
+	QString getClassName ( QString name ) {
+		QJsonObject config = CConfigurationProvider::getConfig (
+		                         "config/object.json" ).toObject() [name].toObject();
+		if ( config.isEmpty() ) {
 			return "";
 		}
-		return config.get ( "class", "" ).asString();
+		return config[ "class" ].toString();
 	}
 	template<typename T>
 	T createMapObject ( QString name ) {
 		CMapObject *object = NULL;
-		std::string className = getClassName<T> ( name );
+		QString className = getClassName<T> ( name );
 		object=this->engine->createObject<CMapObject*> ( className );
 		if ( object==NULL ) {
-			int typeId = QMetaType::type ( className.c_str() );
+			int typeId = QMetaType::type ( className.toStdString().c_str() );
 			if ( typeId == 0 ) {
 				return NULL;
 			}
 			object = ( CMapObject * ) QMetaType::create ( typeId );
 		}
 		std::stringstream stream;
-		stream << std::hex << ( unsigned long ) object;
-		std::string result ( stream.str() );
+		stream << std::hex << (   long ) object;
+		QString result ( stream.str().c_str() );
 		object->name = result;
 		object->map=this;
-		object->loadFromJson ( name.toStdString() );
+		object->loadFromJson ( name );
 		return dynamic_cast<T> ( object );
 	}
 private:
@@ -107,7 +102,7 @@ private:
 	void randomDir ( int *tab, int rule );
 	CGameScene *scene;
 	int currentMap = 0;
-	std::map<int, std::string> defaultTiles;
+	std::map<int, QString> defaultTiles;
 	std::map<int, std::pair<int, int> > boundaries;
 	int entryx, entryz, entryy;
 	CScriptEngine *engine;

@@ -7,13 +7,13 @@
 class CAnimatedObject : public QWidget, public QGraphicsPixmapItem {
 	Q_OBJECT
 public:
-	explicit CAnimatedObject();
+	CAnimatedObject();
 	~CAnimatedObject();
 	QPointF mapToParent ( int a, int b );
 
 protected:
 	CAnimation *staticAnimation;
-	void setAnimation ( std::string path, int size );
+	void setAnimation ( QString path, int size );
 	virtual void mousePressEvent ( QGraphicsSceneMouseEvent * );
 
 private:

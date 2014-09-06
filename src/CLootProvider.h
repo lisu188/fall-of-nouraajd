@@ -2,10 +2,11 @@
 #include <string>
 #include <map>
 #include <set>
+#include <QString>
 
 class CItem;
 class CMap;
-class CLootProvider : private std::map<std::string, int> {
+class CLootProvider : private std::map<QString, int> {
 public:
 	std::set<CItem *> *getLoot ( int value );
 	CLootProvider ( CMap *map );

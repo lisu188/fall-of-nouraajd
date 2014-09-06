@@ -3,17 +3,13 @@
 #include "CGameScene.h"
 #include "CConfigurationProvider.h"
 
-std::unordered_map<std::string, std::function<void() > > CTile::steps {
+std::map<QString, std::function<void() > > CTile::steps {
 	{ "RoadTile", RoadTile }
 };
 
-CTile::CTile ( std::string name, int x, int y, int z ) : CMapObject ( x, y, z, 1 ) {
+CTile::CTile ( QString name, int x, int y, int z ) {
 	setXYZ ( x, y, z );
 	loadFromJson ( name );
-}
-
-CTile::CTile ( QString name, int x, int y, int z ) :CTile ( name.toStdString(),x,y,z ) {
-
 }
 
 CTile::CTile() {}
@@ -30,7 +26,7 @@ void CTile::moveTo ( int x, int y, int z, bool silent ) {
 		}
 		setXYZ ( x, y, z );
 		map->insert (
-		    std::pair<Coords, std::string> ( Coords ( posx, posy, posz ), typeName ) );
+		    std::pair<Coords, QString> ( Coords ( posx, posy, posz ), typeName ) );
 	}
 	CMapObject::moveTo ( x, y, z, silent );
 	init = true;
@@ -46,7 +42,7 @@ void CTile::onStep() {
 
 bool CTile::canStep() const { return step; }
 
-CTile *CTile::getTile ( std::string type, int x, int y, int z ) {
+CTile *CTile::getTile ( QString type, int x, int y, int z ) {
 	return new CTile ( type, x, y, z );
 }
 
@@ -57,12 +53,12 @@ void CTile::addToScene ( CGameScene *scene ) {
 
 void CTile::removeFromScene ( CGameScene *scene ) { scene->removeItem ( this ); }
 
-void CTile::loadFromJson ( std::string name ) {
+void CTile::loadFromJson ( QString name ) {
 	this->typeName = name;
-	Json::Value config =
-	    ( *CConfigurationProvider::getConfig ( "config/tiles.json" ) ) [typeName];
-	step = config.get ( "canStep", true ).asBool();
-	setAnimation ( config.get ( "path", "" ).asCString() );
+	QJsonObject config =
+	    CConfigurationProvider::getConfig ( "config/tiles.json" ).toObject() [typeName].toObject();
+	step = config["canStep"].toBool();
+	setAnimation ( config["path"].toString() );
 }
 
 void CTile::setDraggable() { draggable = true; }

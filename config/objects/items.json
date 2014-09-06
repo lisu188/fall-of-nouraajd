@@ -1,0 +1,59 @@
+{
+    "CrownOfNightmares": {
+        "animation": "images/items/helmets/crownofnightmares", 
+        "bonus": {
+            "agility": 7, 
+            "armor": 280, 
+            "crit": 5, 
+            "intelligence": 12, 
+            "stamina": 14, 
+            "strength": 4
+        }, 
+        "class": "Helmet", 
+        "power": 18
+    }, 
+    "EradicatorsBoots": {
+        "animation": "images/items/boots/eradicatorsboots", 
+        "bonus": {
+            "agility": 0, 
+            "armor": 170, 
+            "intelligence": 7, 
+            "stamina": 8, 
+            "strength": 10
+        }, 
+        "class": "Boots", 
+        "power": 14
+    }, 
+    "GlovesOfTheAssasin": {
+        "animation": "images/items/gloves/glovesoftheassasin", 
+        "bonus": {
+            "agility": 15, 
+            "armor": 295, 
+            "crit": 2, 
+            "intelligence": 9, 
+            "stamina": 13, 
+            "strength": 8
+        }, 
+        "class": "Gloves", 
+        "power": 11
+    }, 
+    "Scroll": {
+        "animation": "images/items/scroll", 
+        "class": "Item", 
+        "power": 1, 
+        "singleUse": false
+    }, 
+    "UndestructibleBelt": {
+        "animation": "images/items/belts/undestructiblebelt", 
+        "bonus": {
+            "agility": 14, 
+            "armor": 300, 
+            "block": 6, 
+            "intelligence": 14, 
+            "stamina": 14, 
+            "strength": 14
+        }, 
+        "class": "Belt", 
+        "power": 20
+    }
+}

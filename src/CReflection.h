@@ -19,7 +19,7 @@ CReflectionHelper<CLASS*> UNIQUE_NAME(CReflectionHelper##CLASS##POINTER) ; \
 class CReflection {
 public:
 	static CReflection * getInstance();
-	bool checkInheritance ( std::string base, std::string inherited );
+	bool checkInheritance ( QString base, QString inherited );
 	template<typename T>
 	void registerType() {
 		static std::mutex mutex;
@@ -31,12 +31,12 @@ public:
 		std::list<T> objects;
 		const QMetaObject *mObject=QMetaType::metaObjectForType ( qRegisterMetaType<T>() );
 		if ( mObject ) {
-			std::string base=mObject->className();
+			QString base=mObject->className();
 			for ( auto it=metaTypes.begin(); it!=metaTypes.end(); it++ ) {
 				mObject=QMetaType::metaObjectForType ( *it );
 				if ( mObject && checkInheritance ( base,mObject->className() ) ) {
-					std::string typeName=mObject->className();
-					int typeId=QMetaType::type ( typeName.c_str() );
+					QString typeName=mObject->className();
+					int typeId=QMetaType::type ( typeName.toStdString().c_str() );
 					T object= ( T ) QMetaType::create ( typeId );
 					objects.push_back (  object );
 				}

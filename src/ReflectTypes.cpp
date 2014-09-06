@@ -6,6 +6,7 @@
 #include "CGamePanel.h"
 #include "CCreature.h"
 #include "CMapObject.h"
+#include "CTypeHandler.h"
 
 REFLECT ( CWeapon )
 REFLECT ( CArmor )
@@ -30,3 +31,4 @@ REFLECT ( Damage )
 REFLECT ( Stats )
 REFLECT ( CCharPanel )
 REFLECT ( CFightPanel )
+REFLECT ( CTypeHandler )

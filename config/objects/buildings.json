@@ -1,0 +1,10 @@
+{
+    "Cave": {
+        "animation": "images/buildings/cave", 
+        "class": "Cave"
+    }, 
+    "Teleporter": {
+        "animation": "images/buildings/teleporter", 
+        "class": "Teleporter"
+    }
+}

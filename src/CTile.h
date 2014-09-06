@@ -3,15 +3,14 @@
 
 #include <QGraphicsPixmapItem>
 #include"CMap.h"
-#include <lib/json/json.h>
-#include <unordered_map>
+#include <QJsonObject>
+#include <map>
 #include <string>
 #include <functional>
 
 class CTile : public CMapObject {
 	Q_OBJECT
 public:
-	CTile ( std::string name, int x = 0, int y = 0, int z = 0 );
 	CTile ( QString name, int x = 0, int y = 0, int z = 0 );
 	CTile();
 	CTile ( const CTile &tile );
@@ -21,10 +20,10 @@ public:
 	void move ( int x, int y );
 	void onStep();
 	bool canStep() const;
-	static CTile *getTile ( std::string type, int x, int y, int z );
+	static CTile *getTile ( QString type, int x, int y, int z );
 	void addToScene ( CGameScene *scene );
 	void removeFromScene ( CGameScene *scene );
-	void loadFromJson ( std::string name );
+	void loadFromJson ( QString name );
 	void setDraggable();
 	virtual void onEnter() {}
 	virtual void onMove() {}
@@ -38,7 +37,7 @@ protected:
 private:
 	void setXYZ ( int x, int y, int z );
 	bool draggable = false;
-	static std::unordered_map<std::string, std::function<void() > > steps;
+	static std::map<QString, std::function<void() > > steps;
 	bool init = false;
 };
 void RoadTile();

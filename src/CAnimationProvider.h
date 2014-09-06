@@ -1,18 +1,18 @@
 #pragma once
-#include <string>
+#include <QString>
 #include <map>
 class CAnimation;
 class QPixmap;
-class CAnimationProvider : private std::map<std::string, CAnimation *> {
+class CAnimationProvider : private std::map<QString, CAnimation *> {
 public:
-	static CAnimation *getAnim ( std::string path, int size );
+	static CAnimation *getAnim ( QString path, int size );
 	virtual ~CAnimationProvider();
 
 private:
 	CAnimationProvider ( int size );
-	CAnimation *getAnimation ( std::string path );
-	void loadAnim ( std::string path );
-	QPixmap * getImage ( std::string path );
+	CAnimation *getAnimation ( QString path );
+	void loadAnim ( QString path );
+	QPixmap * getImage ( QString path );
 	int tileSize;
 	static std::map<int, CAnimationProvider> instances;
 };

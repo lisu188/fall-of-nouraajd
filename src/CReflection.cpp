@@ -6,14 +6,14 @@ CReflection *CReflection::getInstance() {
 	return &instance;
 }
 
-bool CReflection::checkInheritance ( std::string base, std::string inherited ) {
+bool CReflection::checkInheritance ( QString base, QString inherited ) {
 	if ( base.compare ( inherited ) ==0 ) {
 		return false;
 	}
-	int classId = QMetaType::type ( inherited.append ( "*" ).c_str() );
+	int classId = QMetaType::type ( inherited.append ( "*" ).toStdString().c_str() );
 	const QMetaObject *metaObject = QMetaType::metaObjectForType ( classId );
 	while ( metaObject ) {
-		std::string className = metaObject->className();
+		QString className = metaObject->className();
 		if ( className.compare ( base ) == 0 ) {
 			break;
 		}

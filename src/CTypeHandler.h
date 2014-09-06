@@ -1,11 +1,25 @@
-#ifndef CTYPEHANDLER_H
-#define CTYPEHANDLER_H
-
+#pragma once
 #include <QObject>
+#include <QJsonObject>
 
-class CTypeHandler : public QObject {
+class MapObject;
+class ATypeHandler : public QObject {
 	Q_OBJECT
-public:
+protected:
+	virtual MapObject *create ( QString name ) =0;
+	virtual void configure ( MapObject* object ) =0;
+	virtual QJsonObject save ( QJsonObject jsonConfig ) =0;
+	virtual void load ( MapObject* object ) =0;
 };
 
-#endif // CTYPEHANDLER_H
+class CTypeHandler : public ATypeHandler {
+	Q_OBJECT
+public:
+	CTypeHandler();
+	CTypeHandler ( const CTypeHandler& );
+protected:
+	virtual MapObject *create ( QString name );
+	virtual void configure ( MapObject *object );
+	virtual QJsonObject save ( QJsonObject jsonConfig );
+	virtual void load ( MapObject *object );
+};

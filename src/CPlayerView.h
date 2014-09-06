@@ -16,8 +16,7 @@ class CPlayerEquippedView : public QGraphicsObject {
 public:
 	CPlayerEquippedView ( std::map<int, CItem *> *equipped );
 	QRectF boundingRect() const;
-	void paint ( QPainter *painter, const QStyleOptionGraphicsItem *option,
-	             QWidget *widget );
+	void paint ( QPainter *, const QStyleOptionGraphicsItem *, QWidget * );
 
 private:
 	std::map<int, CItem *> *equipped;
@@ -48,16 +47,15 @@ public:
 	CMap *getMap();
 	void setDraggable();
 	virtual QRectF boundingRect() const;
-	virtual void paint ( QPainter *painter, const QStyleOptionGraphicsItem *option,
-	                     QWidget *widget );
+	virtual void paint ( QPainter *painter, const QStyleOptionGraphicsItem *, QWidget * );
 	void updatePosition ( int i );
 	void setXY ( int x, int y );
 	std::set<CMapObject *, Comparer<CMapObject>> *getItems() const;
 	void setItems ( std::set<CMapObject *, Comparer<CMapObject>> *value );
 
 private:
-	int curPosition;
-	int x, y;
+	unsigned int curPosition;
+	unsigned int x, y;
 	CScrollObject *right, *left;
 	std::set<CMapObject *, Comparer<CMapObject>> *items;
 	QPixmap pixmap;
@@ -77,6 +75,6 @@ private:
 	CPlayerListView *stats;
 
 protected:
-	virtual void mousePressEvent ( QGraphicsSceneMouseEvent *event );
+	virtual void mousePressEvent ( QGraphicsSceneMouseEvent * );
 };
 

@@ -3,8 +3,9 @@
 #include <QFile>
 #include <fstream>
 #include <mutex>
+#include <QJsonDocument>
 
-Json::Value *CConfigurationProvider::getConfig ( std::string path ) {
+QJsonValue CConfigurationProvider::getConfig ( QString path ) {
 	static std::mutex mutex;
 	std::unique_lock<std::mutex> lock ( mutex );
 	static CConfigurationProvider instance;
@@ -14,13 +15,10 @@ Json::Value *CConfigurationProvider::getConfig ( std::string path ) {
 CConfigurationProvider::CConfigurationProvider() {}
 
 CConfigurationProvider::~CConfigurationProvider() {
-	for ( iterator it = begin(); it != end(); it++ ) {
-		delete ( *it ).second;
-	}
 	clear();
 }
 
-Json::Value *CConfigurationProvider::getConfiguration ( std::string path ) {
+QJsonValue CConfigurationProvider::getConfiguration ( QString path ) {
 	if ( this->find ( path ) != this->end() ) {
 		return this->at ( path );
 	}
@@ -28,16 +26,21 @@ Json::Value *CConfigurationProvider::getConfiguration ( std::string path ) {
 	return getConfiguration ( path );
 }
 
-void CConfigurationProvider::loadConfig ( std::string path ) {
-	QFile file ( path.c_str() );
-	Json::Value *config = new Json::Value();
+void CConfigurationProvider::loadConfig ( QString path ) {
+	QFile file ( path );
 	if ( file.open ( QIODevice::ReadOnly ) ) {
-		Json::Reader reader;
 		QByteArray data = file.readAll();
-		std::string dataString = data.data();
-		reader.parse ( dataString, *config );
+		auto json=QJsonDocument::fromJson ( data );
+		QJsonValue value;
+		if ( json.isObject() ) {
+			value=json.object();
+		} else if ( json.isArray() ) {
+			value=json.array();
+		}
+		this->insert ( std::pair<QString, QJsonValue > ( path,value ) );
 		file.close();
-		qDebug() << "Loaded configuration:" << path.c_str() << "\n";
+		qDebug() << "Loaded configuration:" << path << "\n";
+	} else {
+		qFatal ( ( "Cannot load file:"+ path ).toStdString().c_str() );
 	}
-	this->insert ( std::pair<std::string, Json::Value *> ( path, config ) );
 }

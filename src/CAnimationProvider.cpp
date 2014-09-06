@@ -13,7 +13,7 @@
 
 std::map<int, CAnimationProvider> CAnimationProvider::instances;
 
-CAnimation *CAnimationProvider::getAnim ( std::string path, int size ) {
+CAnimation *CAnimationProvider::getAnim ( QString path, int size ) {
 	static std::mutex mutex;
 	std::unique_lock<std::mutex> lock ( mutex );
 	if ( instances.find ( size ) == instances.end() ) {
@@ -32,7 +32,7 @@ CAnimationProvider::~CAnimationProvider() {
 	clear();
 }
 
-CAnimation *CAnimationProvider::getAnimation ( std::string path ) {
+CAnimation *CAnimationProvider::getAnimation ( QString path ) {
 	if ( this->find ( path ) != this->end() ) {
 		return this->at ( path );
 	}
@@ -43,29 +43,29 @@ CAnimation *CAnimationProvider::getAnimation ( std::string path ) {
 	return getAnimation ( path );
 }
 
-void CAnimationProvider::loadAnim ( std::string path ) {
+void CAnimationProvider::loadAnim ( QString path ) {
 	CAnimation *anim = new CAnimation();
 	QPixmap *img = 0;
 	std::map<int, int> timemap;
-	Json::Value config = *CConfigurationProvider::getConfig ( path + "time.json" );
-	if ( !config.isNull() ) {
-		for ( int i = 0; i < config.size(); i++ ) {
-			timemap.insert ( std::pair<int, int> ( i, config[i].asInt() ) );
+	QJsonArray config = CConfigurationProvider::getConfig ( path + "time.json" ).toArray();
+	if ( !config.isEmpty() ) {
+		for (  int i = 0; i < config.size(); i++ ) {
+			timemap.insert ( std::pair<int, int> ( i, config[i].toInt() ) );
 		}
 	} else {
 		timemap.insert ( std::pair<int, int> ( 0, 250 ) );
 	}
-	if ( !endswith ( path,"/" ) ) {
+	if ( ! path.endsWith ( "/" ) ) {
 		img=getImage ( path+".png" );
 		if ( img ) {
 			anim->add ( img, timemap.at ( 0 ) );
 		}
 	} else {
 		for ( int i = 0; true; i++ ) {
-			std::string result;
 			std::ostringstream convert;
 			convert << i;
-			result = convert.str();
+			QString result
+			    = QString::fromStdString ( convert.str() );
 			img=getImage ( path + result + ".png" );
 			if ( !img ) {
 				break;
@@ -82,13 +82,13 @@ void CAnimationProvider::loadAnim ( std::string path ) {
 	if ( anim->size() == 0 ) {
 		return;
 	}
-	this->insert ( std::pair<std::string, CAnimation *> ( path, anim ) );
-	qDebug() << "Loaded animation:" << path.c_str() << "\n";
+	this->insert ( std::pair<QString, CAnimation *> ( path, anim ) );
+	qDebug() << "Loaded animation:" << path   << "\n";
 }
 
-QPixmap *CAnimationProvider::getImage ( std::string path ) {
-	QPixmap image ( path.c_str() );
-	if ( !image.hasAlphaChannel() && path.find ( "tiles" ) == std::string::npos ) {
+QPixmap *CAnimationProvider::getImage ( QString path ) {
+	QPixmap image ( path );
+	if ( !image.hasAlphaChannel() && !path.contains ( "tiles" ) ) {
 		image.setMask ( image.createHeuristicMask() );
 	}
 	if ( !image.isNull() ) {

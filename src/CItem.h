@@ -27,7 +27,7 @@ protected:
 	virtual void mousePressEvent ( QGraphicsSceneMouseEvent *event );
 	bool singleUse;
 	Stats bonus;
-	void loadFromJson ( std::string name );
+	void loadFromJson ( QString name );
 	CInteraction *interaction;
 	int power;
 
@@ -39,8 +39,8 @@ class CArmor : public CItem {
 	Q_OBJECT
 public:
 	CArmor();
-	CArmor ( const CArmor &armor );
-	CArmor ( std::string name );
+	CArmor ( const CArmor & );
+	CArmor ( QString name );
 	CInteraction *getInteraction();
 };
 
@@ -48,35 +48,35 @@ class CBelt : public CItem {
 	Q_OBJECT
 public:
 	CBelt();
-	CBelt ( const CBelt &belt );
+	CBelt ( const CBelt & );
 };
 
 class CHelmet : public CItem {
 	Q_OBJECT
 public:
 	CHelmet();
-	CHelmet ( const CHelmet &helmet );
+	CHelmet ( const CHelmet & );
 };
 
 class CBoots : public CItem {
 	Q_OBJECT
 public:
 	CBoots();
-	CBoots ( const CBoots &boots );
+	CBoots ( const CBoots & );
 };
 
 class CGloves : public CItem {
 	Q_OBJECT
 public:
 	CGloves();
-	CGloves ( const CGloves &gloves );
+	CGloves ( const CGloves & );
 };
 
 class CWeapon : public CItem {
 	Q_OBJECT
 public:
 	CWeapon();
-	CWeapon ( const CWeapon &weapon );
+	CWeapon ( const CWeapon & );
 	CInteraction *getInteraction();
 	Stats *getStats();
 };
@@ -85,7 +85,7 @@ class CSmallWeapon : public CWeapon {
 	Q_OBJECT
 public:
 	CSmallWeapon();
-	CSmallWeapon ( const CSmallWeapon &weapon );
+	CSmallWeapon ( const CSmallWeapon & );
 };
 
 class CPotion : public CItem {
@@ -94,7 +94,7 @@ public:
 	CPotion();
 	CPotion ( const CPotion & );
 	virtual void onUse ( CCreature *creature );
-	virtual void loadFromJson ( std::string name );
+	virtual void loadFromJson ( QString name );
 
 private:
 	std::function<void ( CCreature *, int ) > effect;

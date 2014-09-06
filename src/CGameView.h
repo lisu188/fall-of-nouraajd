@@ -14,18 +14,18 @@ public:
 
 protected:
 	void mousePressEvent ( QMouseEvent * );
-	void paintEvent ( QPaintEvent *event );
+	void paintEvent ( QPaintEvent * );
 
 private:
 	QPixmap pixmap;
-	unsigned int time = 0;
+	int time = 0;
 	Q_SIGNAL void clicked();
 };
 
 class CGameView : public QGraphicsView {
 	Q_OBJECT
 public:
-	CGameView ( std::string mapName,std::string playerType );
+	CGameView ( QString mapName,QString playerType );
 	~CGameView();
 	CFightPanel *getFightView();
 	CCharPanel *getCharView();
@@ -52,7 +52,7 @@ private:
 	QGraphicsPixmapItem loading;
 	BackPackObject backpack;
 	PlayerStatsView playerStatsView;
-	std::string mapName;
-	std::string playerType;
+	QString mapName;
+	QString playerType;
 };
 #endif // GAMEVIEW_H

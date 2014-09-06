@@ -22,7 +22,7 @@ QPointF CAnimatedObject::mapToParent ( int a, int b ) {
 	return QGraphicsItem::mapToParent ( QPointF ( a, b ) );
 }
 
-void CAnimatedObject::setAnimation ( std::string path, int size ) {
+void CAnimatedObject::setAnimation ( QString path, int size ) {
 	staticAnimation = CAnimationProvider::getAnim ( path, size );
 	if ( staticAnimation ) {
 		animate();

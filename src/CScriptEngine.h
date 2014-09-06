@@ -9,24 +9,24 @@ class CMap;
 class CScriptEngine {
 public:
 	void executeScript ( QString script );
-	void executeCommand ( std::initializer_list<std::string> list );
-	QString buildCommand ( std::initializer_list<std::string> list );
-	boost::python::object getObject ( std::string name );
-	CScriptEngine ( CMap *map );
+	void executeCommand ( std::initializer_list<QString> list );
+	QString buildCommand ( std::initializer_list<QString> list );
+	boost::python::object getObject ( QString name );
+	CScriptEngine ();
 	~CScriptEngine();
 	template<typename T>
-	T createObject ( std::string clas ) {
+	T createObject ( QString clas ) {
 		PY_UNSAFE (
-		if ( !main_namespace.contains ( clas.c_str() ) ) {
+		if ( !main_namespace.contains ( clas.toStdString().c_str() ) ) {
 		return NULL;
 	}
-	std::string script="object=";
-	                   script=script.append ( clas );
-	                   script=script.append ( "()" );
-	                   executeScript ( QString::fromStdString ( script ) );
-	                   boost::python::object object= main_namespace["object"];
-	                   boost::python::incref ( object.ptr() );
-	                   return boost::python::extract<T> ( object ); )
+	QString script="object=";
+	               script=script.append ( clas );
+	               script=script.append ( "()" );
+	               executeScript (  script );
+	               boost::python::object object= main_namespace["object"];
+	               boost::python::incref ( object.ptr() );
+	               return boost::python::extract<T> ( object ); )
 	}
 private:
 	boost::python::object main_module;
