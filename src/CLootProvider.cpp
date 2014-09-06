@@ -11,12 +11,12 @@ std::set<CItem *> *CLootProvider::getLoot ( int value ) {
 
 CLootProvider::CLootProvider ( CMap *map ) {
 	this->map=map;
-	Json::Value config = *CConfigurationProvider::getConfig ( "config/object.json" );
-	Json::Value::iterator it = config.begin();
+	QJsonObject config = CConfigurationProvider::getConfig ( "config/object.json" ).toObject();
+	QJsonObject::iterator it = config.begin();
 	for ( ; it != config.end(); it++ ) {
-		if ( CReflection::getInstance()->checkInheritance ( "CItem", ( *it ).get ( "class", "" ).asCString() ) ) {
-			this->insert ( std::pair<std::string, int> ( it.memberName(),
-			               ( *it ).get ( "power", 1 ).asInt() ) );
+		if ( CReflection::getInstance()->checkInheritance ( "CItem", ( *it ).toObject() ["class"].toString() ) ) {
+			this->insert ( std::pair<QString, int> ( it.key(),
+			               ( *it ).toObject() ["power"].toInt()  ) );
 		}
 	}
 }
@@ -31,9 +31,9 @@ std::set<CItem *> *CLootProvider::calculateLoot ( int value ) {
 		for ( int i = 0; i < dice; i++, it++ )
 			;
 		int power = ( *it ).second;
-		std::string name = ( *it ).first;
+		QString name = ( *it ).first;
 		if ( power <= value ) {
-			loot->insert ( map->createMapObject<CItem*> ( QString::fromStdString ( name ) ) );
+			loot->insert ( map->createMapObject<CItem*> (  name )  );
 			value -= power;
 		}
 	}

@@ -5,7 +5,7 @@
 #include "CConfigurationProvider.h"
 #include "CScriptEngine.h"
 
-CBuilding::CBuilding() : CMapObject ( 0, 0, 0, 2 ) {}
+CBuilding::CBuilding() {}
 
 CBuilding::CBuilding ( const CBuilding & ) {}
 
@@ -25,11 +25,11 @@ void CBuilding::onDestroy() {
 
 }
 
-void CBuilding::loadFromJson ( std::string name ) {
+void CBuilding::loadFromJson ( QString name ) {
 	this->typeName = name;
-	Json::Value config =
-	    ( *CConfigurationProvider::getConfig ( "config/object.json" ) ) [name];
-	this->setAnimation ( config.get ( "animation", "" ).asString() );
+	QJsonObject config =
+	    CConfigurationProvider::getConfig ( "config/object.json" ).toObject() [name].toObject();
+	this->setAnimation ( config["animation"].toString() );
 }
 
 bool CBuilding::isEnabled() { return enabled; }

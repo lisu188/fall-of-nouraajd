@@ -27,7 +27,7 @@ class CRandomPathFinder : public APathFinder {
 public:
 	CRandomPathFinder();
 	CRandomPathFinder ( const CRandomPathFinder & );
-	Coords findPath ( CCreature *first, CCreature *second );
+	Coords findPath ( CCreature *, CCreature * );
 };
 
 class Cell {

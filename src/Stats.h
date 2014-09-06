@@ -1,5 +1,5 @@
 #pragma once
-#include <lib/json/json.h>
+#include <QJsonObject>
 #include "Util.h"
 #include <QObject>
 
@@ -11,20 +11,20 @@ class Stats : public QObject {
 public:
 	Stats();
 	Stats ( const Stats &stats );
-	void setMain ( const char *stat );
+	void setMain ( QString stat );
 	int getMain();
 
 	void addBonus ( Stats stats );
 	void removeBonus ( Stats stats );
 
 	const char *getText ( int level );
-	void loadFromJson ( Json::Value config );
-	Json::Value saveToJson();
+	void loadFromJson ( QJsonObject config );
+	QJsonObject saveToJson();
 
 	PROPERTY_ACCESSOR
 private:
 	int *main = 0;
-	std::string mainS;
+	QString mainS;
 };
 
 class Damage : public QObject {

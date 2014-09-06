@@ -1,10 +1,13 @@
 # Recovered game snapshot
 
-Original commit: `a9534481e30ae59be3bee52c6ff23aaba2dbae48`. Original tree: `a9f6f99b6673e05c472f29ce72026ac08e985002`.
-Startup was verified from identical recovered sources at `a9534481e30ae59be3bee52c6ff23aaba2dbae48`.
+Original commit: `70dc75ede4bbdda080775689a32f1f9edfe75ffa`. Original tree: `2b219a3e180b7e37daf103cb8c01167f7b31fcbd`.
+Startup was verified from identical recovered sources at `70dc75ede4bbdda080775689a32f1f9edfe75ffa`.
 
 This recovered version compiled and linked on Linux, started the real game on an isolated Xvfb display,
 loaded its map and a healthy player, rendered the screenshot below, and exited normally.
+
+The runtime copy combines the split object tables, copies the flat tile table to its legacy path,
+and supplies empty arrays for missing timing files so the original animation loader selects 250 ms.
 
 ![Actual startup of this recovered game](recovery/startup.png)
 
@@ -26,6 +29,7 @@ Build from this snapshot's root directory:
 python2.7 -B preprocessor.py
 qmake game.pro QMAKE_CC=gcc-5 QMAKE_CXX=g++-5 QMAKE_LINK=g++-5 'QMAKE_CXXFLAGS+=-include functional' -after TARGET=RecoveryGame DESTDIR=.
 make -j"$(nproc)"
+python3 recovery/prepare_runtime_configs.py
 ./RecoveryGame
 ```
 
@@ -40,21 +44,15 @@ launches run the game's original entry point. Startup evidence does not establis
 
 ## Recovery provenance
 
-compatibilityRepair: 2, exactOriginal: 64, reconstruction: 53.
+compatibilityRepair: 1, exactOriginal: 61, reconstruction: 47.
 
 - `Game.pro`: content reconstruction of the BFG-removed original; carried forward unchanged from the previous reconstruction of Game.pro
-- `config/object.json`: unverified donor reconstruction; split object descriptors e8b7c3d0e6da989122a0587943a98504342da3cd:config/objects flattened to observed legacy class/path API; target tile/interaction entries preserved; species stats retain uncertainty of reconstructed creatures catalog
-- `format.py`: unverified donor reconstruction; 51c2e9b0b64c86a8e593a5231c3ef9e44efc5af1:format.py; headerMatch=0; apiOverlap=0/10000; distance=11
-- `game.pro`: working reconstruction
+- `config/objects/monsters.json`: unverified donor reconstruction; 55e6516eb91b739e899df1ef8d72116da44fec49:config/monsters.json; headerMatch=0; apiOverlap=0/10000; distance=111
+- `config/objects/weapons.json`: Inferred missing #256 implementation from native-verified #257 bodies and same-commit surviving declarations/callers; surviving source bytes are unchanged. Use the explicit #257 reconstruction with the same surviving weapon class declarations and genuine item/interaction configuration schema; item balance values remain inferred donor data, not exact recovery.
+- `format.py`: unverified donor reconstruction; 51c2e9b0b64c86a8e593a5231c3ef9e44efc5af1:format.py; headerMatch=0; apiOverlap=0/10000; distance=12
+- `game.pro`: content reconstruction of the BFG-removed original; Reconciled the later verified Qt implementation with #254 map object name, animation and engine APIs, original include set and qmake sources before CObjectHandler existed; tile configs use the flat moved layout.
 - `images/loading.png`: synthesized visible 32px placeholder; original artwork unavailable; unverified
-- `lib/base64/base64.cpp`: unverified donor reconstruction; 779fb803ff021de5e74ed3b24d7c31a9adcaa236:base64/base64.cpp; headerMatch=0; apiOverlap=10000/10000; distance=69
-- `lib/json/json_batchallocator.h`: unverified upstream reconstruction; https://github.com/open-source-parsers/jsoncpp/tree/4fce396c9d3e27a8ab8fb88e94c1676e021ae3a6; adapted json include prefix to historical lib/json layout
-- `lib/json/json_reader.cpp`: unverified upstream reconstruction; https://github.com/open-source-parsers/jsoncpp/tree/4fce396c9d3e27a8ab8fb88e94c1676e021ae3a6; adapted json include prefix to historical lib/json layout
-- `lib/json/json_value.cpp`: unverified upstream reconstruction; https://github.com/open-source-parsers/jsoncpp/tree/4fce396c9d3e27a8ab8fb88e94c1676e021ae3a6; adapted json include prefix to historical lib/json layout
-- `lib/json/json_writer.cpp`: unverified upstream reconstruction; https://github.com/open-source-parsers/jsoncpp/tree/4fce396c9d3e27a8ab8fb88e94c1676e021ae3a6; adapted json include prefix to historical lib/json layout
-- `lib/json/reader.h`: unverified upstream reconstruction; https://github.com/open-source-parsers/jsoncpp/tree/4fce396c9d3e27a8ab8fb88e94c1676e021ae3a6; adapted json include prefix to historical lib/json layout
-- `lib/json/value.h`: unverified upstream reconstruction; https://github.com/open-source-parsers/jsoncpp/tree/4fce396c9d3e27a8ab8fb88e94c1676e021ae3a6; adapted json include prefix to historical lib/json layout
-- `lib/json/writer.h`: unverified upstream reconstruction; https://github.com/open-source-parsers/jsoncpp/tree/4fce396c9d3e27a8ab8fb88e94c1676e021ae3a6; adapted json include prefix to historical lib/json layout
+- `lib/base64/base64.cpp`: unverified donor reconstruction; 779fb803ff021de5e74ed3b24d7c31a9adcaa236:base64/base64.cpp; headerMatch=0; apiOverlap=10000/10000; distance=70
 - `lib/tinyxml/tinystr.h`: unverified upstream reconstruction; https://github.com/tamatias/tmxparser/tree/6fa4d38742313b6365df0d224b8978be1eb81290
 - `lib/tinyxml/tinyxml.cpp`: unverified upstream reconstruction; https://github.com/tamatias/tmxparser/tree/6fa4d38742313b6365df0d224b8978be1eb81290
 - `lib/tinyxml/tinyxml.h`: unverified upstream reconstruction; https://github.com/tamatias/tmxparser/tree/6fa4d38742313b6365df0d224b8978be1eb81290
@@ -81,24 +79,23 @@ compatibilityRepair: 2, exactOriginal: 64, reconstruction: 53.
 - `lib/zlib/zutil.c`: Unmodified official zlib v1.2.5 zutil.c; Git blob verified against official tag tree 9712272c78b9d9c93746d9c8e156a3728c65ca72. Coherent same-version donor replaces mixed1.2.5/1.2.5 fallback; exact original only when originalHashMatches=true.
 - `lib/zlib/zutil.h`: Missing vendored zlib source reconstructed from official zlib1.2.5 fossil archive. The exact surviving zconf.h, inflate.h, inftrees.h and other vendor files match1.2.5 ignoring whitespace; prior1.2.7 donor fails real TMX compilation on missing z_const/Z_ARG/z_crc_t. Official source bytes preserved; original historical file bytes unavailable and not claimed exact. Raw official Git blob differs from original BFG ID; classification remains inferred, not exactOriginal. All16 replacements linked in native #260.
 - `maps/map.tmx`: Missing TMX map reconstructed from the prior converted later-map donor, removing only Market and StartEvent objects unsupported by the genuine 2014-09-09 target APIs/configuration/scripts. The original target misc.json defines Event only, buildings.json defines Cave/Teleporter, CBuilding.h has no Market, and the original scripts/game/object.py defines Cave/Teleporter only. No fake classes/events or empty script substitutes. All tile geometry, tilesets, layer metadata, entry coordinates and six supported Cave/Teleporter/ChaosSword objects are preserved. Exact original map bytes and its lost event content remain unavailable; this is an inferred donor adaptation.
-- `scripts/game/interaction.py`: unverified donor reconstruction; 21c04c61c564bb91953b90218c6cf4bed54417a9:scripts/game/interaction.py; headerMatch=0; apiOverlap=0/10000; distance=10
-- `src/CCreature.cpp`: working reconstruction
+- `scripts/game/interaction.py`: unverified donor reconstruction; 21c04c61c564bb91953b90218c6cf4bed54417a9:scripts/game/interaction.py; headerMatch=0; apiOverlap=0/10000; distance=11
+- `src/CCreature.cpp`: content reconstruction of the BFG-removed original; Adapted the adjacent Qt JSON era creature/item/map bodies to the surviving #254 QMetaType registrations, object configuration, template map factory and parameterless script-engine constructor. Panels follow the #253 abstract panel interface.
 - `src/CCreature.h`: Reconstructed combined CCreature/player/monster declarations from intact #247 separate headers, same-commit surviving APIs/callers, and the #331 split CPlayer/CMonster declarations; original bytes and unspecified internal deltas unavailable. No compilation/runtime validation.
-- `src/CGamePanel.cpp`: working reconstruction
-- `src/CGameView.cpp`: working reconstruction
-- `src/CInteraction.cpp`: working reconstruction
-- `src/CItem.cpp`: working reconstruction
-- `src/CMap.cpp`: working reconstruction
-- `src/CMapObject.cpp`: content reconstruction of the BFG-removed original; Split the #247 map and event sources at the #248 class rename. The unchanged #249–253 blob follows the scene player through getPlayer(), and selects the renamed tile header using project path evidence.
-- `src/CPathFinder.cpp`: content reconstruction of the BFG-removed original; Ported the verified #248 sources through the #249 scene, view, slot, script engine and loot provider renames; retained the surviving parent scene implementation. Shared CMapObject includes the renamed tile header when present at #252.
-- `src/CPlayerView.cpp`: working reconstruction
-- `src/GameScript.cpp`: working reconstruction
-- `src/Stats.cpp`: working reconstruction
-- `src/Util.h`: working reconstruction
-- `lib/json/LICENSE`: https://github.com/open-source-parsers/jsoncpp/tree/4fce396c9d3e27a8ab8fb88e94c1676e021ae3a6 upstream distribution license
+- `src/CGamePanel.cpp`: content reconstruction of the BFG-removed original; Adapted the adjacent Qt JSON era creature/item/map bodies to the surviving #254 QMetaType registrations, object configuration, template map factory and parameterless script-engine constructor. Panels follow the #253 abstract panel interface.
+- `src/CGameView.cpp`: Inferred reconstruction adapted from intact CGameView.cpp donors and same-commit CGameView.h/CGameScene.cpp. The genuine #257 menu makes the view a QWidget child and hides itself; #258 changes to QObject parenting. Reconstructed show() promotes only a non-window child to Qt::Window before showNormal(), preserving the menu and all surviving source bytes. Actual #257 before/after frame plus new #258/#259 ordinary native proofs are attached. Both fresh adjacent proofs pass full compile/link and map/player/frame/clean exit; gameplay and exact source remain unverified.
+- `src/CInteraction.cpp`: Revision-scoped reconstruction from the validated #256 interaction: #254 uses the map-owned CScriptEngine and its getObject lookup, as declared by the surviving headers.
+- `src/CItem.cpp`: content reconstruction of the BFG-removed original; Adapted the adjacent Qt JSON era creature/item/map bodies to the surviving #254 QMetaType registrations, object configuration, template map factory and parameterless script-engine constructor. Panels follow the #253 abstract panel interface.
+- `src/CMap.cpp`: content reconstruction of the BFG-removed original; Adapted the adjacent Qt JSON era creature/item/map bodies to the surviving #254 QMetaType registrations, object configuration, template map factory and parameterless script-engine constructor. Panels follow the #253 abstract panel interface.
+- `src/CMapObject.cpp`: content reconstruction of the BFG-removed original; Reconciled the later verified Qt implementation with #254 map object name, animation and engine APIs, original include set and qmake sources before CObjectHandler existed; tile configs use the flat moved layout.
+- `src/CPathFinder.cpp`: Infer missing #257 body from native-verified #259 reconstruction, adapted only to same-commit original declarations/callers; preserve every surviving input. Adapt verified cost-field/cardinal/random implementation to original string-valued tile map and its declared CSmartPathFinder::canStep method using real nested passability metadata. No pathfinding gameplay/performance acceptance yet.
+- `src/CPlayerView.cpp`: Infer missing #257 body from native-verified #259 reconstruction, adapted only to same-commit original declarations/callers; preserve every surviving input. Original CPlayerView.h is unchanged; preserve real arrow directory assets and initialized stats widget.
+- `src/GameScript.cpp`: content reconstruction of the BFG-removed original; Adapted the Python 2 module, qmake source list and generated stats API to #253 main, ReflectTypes, Python imports and original property generator. Inferred templated comparator from ordered pointer containers; script aliases preserve config class names.
+- `src/Stats.cpp`: Inferred missing #256 implementation from native-verified #257 bodies and same-commit surviving declarations/callers; surviving source bytes are unchanged. Actual original Stats.h predates copy assignment and still declares JSON load/save. Keep real generated numeric properties, add/remove bonuses and main-stat pointer, implementing those genuine JSON methods; copy constructor rebinds the main pointer to this object. Normalize the lower-case main names present in intact configuration. Preserve returned stat text lifetime within its const-char API rather than import the donor temporary-string lifetime error. Balance/gameplay parity remains unverified.
+- `src/Util.h`: content reconstruction of the BFG-removed original; Reconciled the later verified Qt implementation with #254 map object name, animation and engine APIs, original include set and qmake sources before CObjectHandler existed; tile configs use the flat moved layout.
 - `scripts/PSF_LICENSE`: https://www.python.org/ftp/python/3.3.7/Python-3.3.7.tar.xz upstream Python distribution license
 
-Restored source fingerprint: `6302dd122aa24cce8cb3c0b2d15931eaaa6f99f2a3cda6174bfb1b788e3eade9`.
+Restored source fingerprint: `41a6bb37aa8007d48908c660e7e9591d89b197c7430fc4f7204fa68aad3daefb`.
 
 The restored source fingerprint identifies inputs before generation. The
 [source preparation metadata](recovery/source-preparation.json) records the original inputs
