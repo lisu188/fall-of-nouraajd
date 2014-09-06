@@ -73,7 +73,7 @@ class CCreature : public CMapObject {
     void removeFromEquipped(CItem *item);
     std::set<CItem *> *getInventory();
     std::map<int, CItem *> *getEquipped();
-    void loadFromJson(std::string name);
+    void loadFromJson(QString name);
     bool applyEffects();
     std::set<CInteraction *> *getActions();
     virtual void onEnter();
@@ -106,7 +106,7 @@ class CCreature : public CMapObject {
     int exp;
     int level;
     int sw;
-    std::string animPath;
+    QString animPath;
     int mana;
     int manaMax;
     int manaRegRate;
@@ -129,7 +129,7 @@ class CPlayer : public CCreature {
     friend class PlayerStatsView;
 
   public:
-    CPlayer(CMap *map, std::string name);
+    CPlayer(CMap *map, QString name);
     CPlayer();
     CPlayer(const CPlayer &player);
     ~CPlayer();

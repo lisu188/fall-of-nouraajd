@@ -13,7 +13,7 @@ public:
 	virtual void onMove();
 	virtual void onCreate();
 	virtual void onDestroy();
-	virtual void loadFromJson ( std::string name );
+	virtual void loadFromJson ( QString name );
 	// PROPERTIES
 	bool isEnabled();
 	void setEnabled ( bool enabled );

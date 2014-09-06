@@ -1,556 +1,692 @@
+#include "CConfigurationProvider.h"
 #include "CCreature.h"
+#include "CGamePanel.h"
+#include "CGameScene.h"
+#include "CGameView.h"
+#include "CInteraction.h"
+#include "CItemSlot.h"
+#include "CLootProvider.h"
 
+#include "CPathFinder.h"
+#include "CPlayerView.h"
+#include <QMetaType>
+#include <QDebug>
 #include <QGraphicsSceneHoverEvent>
-#include <src/CLootProvider.h>
-#include <algorithm>
-#include <cstdlib>
-#include <fstream>
-#include <sstream>
-
-#include <src/CInteraction.h>
-#include <src/CConfigurationProvider.h>
-#include <src/CItem.h>
-#include <src/Stats.h>
-#include <src/CGameScene.h>
-#include <src/CGameView.h>
+#include <QJsonArray>
+#include <QThreadPool>
+#include <cmath>
 
 namespace {
-CInteraction *loadAction(CMap *map, const std::string &name) {
-    if (name.empty()) return nullptr;
-    const Json::Value &config = (*CConfigurationProvider::getConfig("config/object.json"))[name];
-    if (config.isNull()) return nullptr;
-    if (config.isMember("class")) return map->createMapObject<CInteraction *>(name);
-    CInteraction *action = new CInteraction();
-    action->setMap(map);
-    action->loadFromJson(name);
-    return action;
+QJsonObject creatureProperties(QString name) {
+  return CConfigurationProvider::getConfig("config/objects/monsters.json")
+      .toObject()[name]
+      .toObject()["properties"]
+      .toObject();
 }
 
-
-int clamp_ratio(int value, int maximum) {
-    if (maximum <= 0)
-        return 100;
-    if (value <= 0)
-        return 0;
-    return std::min(100, value * 100 / maximum);
+Stats readStats(QJsonObject properties) {
+  Stats value;
+  for (auto it = properties.begin(); it != properties.end(); ++it) {
+    if (it.key() == "main") {
+      value.setMain(it.value().toString());
+    } else {
+      value.setProperty(it.key(), it.value().toVariant());
+    }
+  }
+  return value;
 }
-
-int stat_resisted(int value, int resist) {
-    const int clamped = std::max(0, std::min(90, resist));
-    return value * (100 - clamped) / 100;
-}
-
 } // namespace
 
-CCreature::CCreature() : CMapObject(0, 0, 0, 2) {
-    gold = exp = level = sw = mana = manaMax = hpMax = hp = 0;
-    manaRegRate = 1;
-    setAcceptHoverEvents(true);
-    Json::Value slotConfig = *CConfigurationProvider::getConfig("config/slots.json");
-    for (auto it = slotConfig.begin(); it != slotConfig.end(); ++it) equipped[std::atoi(it.memberName())] = 0;
+namespace {
+CInteraction *createConfiguredAction(CMap *map, QString name) {
+  CInteraction *action = new CInteraction();
+  action->setMap(map);
+  action->loadFromJson(name);
+  return action;
 }
-CCreature::CCreature(const CCreature &other) : CCreature() { if (!other.typeName.empty()) loadFromJson(other.typeName); }
-CCreature::~CCreature() {
-    actions.clear();
-    effects.clear();
-}
+} // namespace
 
-int CCreature::getExpRatio() {
-    const int required = std::max(1, level * (level + 1) * 500);
-    return clamp_ratio(exp, required);
-}
-
-// Stats are loaded from the creature's JSON configuration and grow by the
-// configured per-level bonus; derived pools follow the current stats.
-void CCreature::attribChange() {
-    const int oldHpMax = std::max(1, hpMax);
-    const int oldManaMax = std::max(1, manaMax);
-    const float hpRatio = hpMax > 0 ? static_cast<float>(hp) / oldHpMax : 1.0f;
-    const float manaRatio = manaMax > 0 ? static_cast<float>(mana) / oldManaMax : 1.0f;
-
-    hpMax = 60 + stats.getStamina() * 15;
-    manaMax = 20 + stats.getIntelligence() * 12;
-    manaRegRate = std::max(1, stats.getIntelligence() / 4);
-
-    hp = std::max(1, static_cast<int>(hpRatio * hpMax));
-    mana = std::max(0, static_cast<int>(manaRatio * manaMax));
+CCreature::CCreature()
+    : gold(0), exp(0), level(0), sw(0), mana(0), manaMax(0), manaRegRate(0),
+      hpMax(0), hp(0) {
+  setZValue(2);
+  QJsonObject slot_config =
+      CConfigurationProvider::getConfig("config/slots.json").toObject();
+  for (auto it = slot_config.begin(); it != slot_config.end(); ++it) {
+    equipped[it.key().toInt()] = nullptr;
+  }
 }
 
-void CCreature::heal(int i) {
-    if (i <= 0)
-        hp = hpMax;
-    else
-        hp = std::min(hpMax, hp + i);
-    alive = hp > 0;
+CCreature::CCreature(const CCreature &creature) : stats(creature.stats) {
+  setZValue(2);
+  QJsonObject slot_config =
+      CConfigurationProvider::getConfig("config/slots.json").toObject();
+  for (auto it = slot_config.begin(); it != slot_config.end(); ++it)
+    equipped[it.key().toInt()] = nullptr;
+  typeName = creature.typeName;
+  gold = creature.gold;
+  exp = creature.exp;
+  level = creature.level;
+  sw = creature.sw;
+  mana = creature.mana;
+  manaMax = creature.manaMax;
+  manaRegRate = creature.manaRegRate;
+  hpMax = creature.hpMax;
+  hp = creature.hp;
+  alive = creature.alive;
 }
 
-void CCreature::healProc(float i) { heal(static_cast<int>(hpMax * i / 100.0f)); }
+CCreature::~CCreature() { actions.clear(); }
 
-void CCreature::takeDamage(int i) {
-    hp = std::max(0, hp - i);
-    if (hp == 0)
-        alive = false;
+CCreature *CCreature::createCreature(QString name) {
+  QJsonObject config =
+      CConfigurationProvider::getConfig("config/objects/monsters.json")
+          .toObject()[name]
+          .toObject();
+  CCreature *creature = static_cast<CCreature *>(QMetaType::create(QMetaType::type(config["class"].toString().toStdString().c_str())));
+  if (creature) {
+    creature->loadFromJson(name);
+  }
+  return creature;
 }
 
-void CCreature::hurt(Damage damage) {
-    int total = 0;
-    total += stat_resisted(damage.getNormal(), stats.getNormalResist());
-    total += stat_resisted(damage.getFire(), stats.getFireResist());
-    total += stat_resisted(damage.getFrost(), stats.getFrostResist());
-    total += stat_resisted(damage.getThunder(), stats.getThunderResist());
-    hurt(total);
+void CCreature::loadFromJson(QString name) {
+  typeName = name;
+  QJsonObject properties = creatureProperties(name);
+  stats.loadFromJson(properties["stats"].toObject());
+  sw = properties["sw"].toInt();
+  setAnimation(properties["animation"].toString());
+  attribChange();
+  if (map) {
+    for (QJsonValue action : properties["actions"].toArray()) {
+      CInteraction *created = new CInteraction();
+      created->setMap(map);
+      created->loadFromJson(action.toString());
+      addAction(created);
+    }
+    for (QJsonValue item : properties["items"].toArray()) {
+      CItem *created = CItem::createItem(item.toString());
+      if (!created) {
+        qFatal("Cannot create authored item");
+      }
+      created->setMap(map);
+      addItem(created);
+    }
+    QJsonObject initial_equipment = properties["inventory"].toObject();
+    for (auto it = initial_equipment.begin(); it != initial_equipment.end();
+         ++it) {
+      CItem *created = CItem::createItem(it.value().toString());
+      if (!created) {
+        qFatal("Cannot create authored equipment");
+      }
+      created->setMap(map);
+      setItem(it.key().toInt(), created);
+    }
+    if (!level) {
+      levelUp();
+    }
+  }
+  heal(0);
+  addMana(0);
 }
 
-void CCreature::hurt(int i) {
-    const int blocked = std::max(0, i - stats.getArmor() / 8);
-    takeDamage(blocked);
+void CCreature::setAlive() { alive = true; }
+Stats *CCreature::getStats() { return &stats; }
+std::set<CItem *> *CCreature::getInventory() {
+  return reinterpret_cast<std::set<CItem *> *>(&inventory);
+}
+std::set<CInteraction *> *CCreature::getActions() {
+  return reinterpret_cast<std::set<CInteraction *> *>(&actions);
+}
+std::map<int, CItem *> *CCreature::getEquipped() { return &equipped; }
+std::set<CItem *> *CCreature::getLoot() { return getInventory(); }
+
+void CCreature::addItem(CItem *item) {
+  if (item) {
+    inventory.insert(item);
+    Q_EMIT inventoryChanged();
+  }
+}
+void CCreature::addItem(std::set<CItem *> *items) {
+  if (items) {
+    inventory.insert(items->begin(), items->end());
+    Q_EMIT inventoryChanged();
+  }
 }
 
-int CCreature::getDmg() {
-    if (!alive)
-        return 0;
-    const int minDamage = std::max(1, stats.getDmgMin());
-    const int maxDamage = std::max(minDamage, stats.getDmgMax());
-    return minDamage + rand() % (maxDamage - minDamage + 1);
+CInteraction *CCreature::getLevelAction() {
+  QString name = creatureProperties(typeName)["levelling"]
+                     .toObject()[QString::number(level)]
+                     .toString();
+  return map && !name.isEmpty() ? createConfiguredAction(map, name) : nullptr;
+}
+Stats CCreature::getLevelStats() {
+  return readStats(creatureProperties(typeName)["levelStats"].toObject());
+}
+
+void CCreature::setItem(int slot, CItem *item) {
+  if (item && !CItemSlot::checkType(slot, item)) {
+    qFatal("Item has the wrong equipment slot");
+  }
+  CItem *previous = getItemAtSlot(slot);
+  if (previous) {
+    previous->onUnequip(this);
+    addItem(previous);
+    if (previous == item) {
+      item = nullptr;
+    }
+  }
+  if (item) {
+    item->onEquip(this);
+    removeFromInventory(item);
+  }
+  equipped[slot] = item;
+  attribChange();
+  Q_EMIT equippedChanged();
+  Q_EMIT statsChanged();
 }
 
 void CCreature::fight(CCreature *creature) {
-    if (!alive || !creature || !creature->isAlive())
-        return;
-    if (applyEffects())
-        return;
-
-    CInteraction *action = selectAction();
-    if (action) {
-        action->onAction(this, creature);
+  if (applyEffects()) {
+    return;
+  }
+  if (!isAlive()) {
+    if (CPlayer *player = dynamic_cast<CPlayer *>(creature)) {
+      player->removeFromFightList(this);
     }
-}
-
-void CCreature::levelUp() {
-    level++;
-    stats.addBonus(getLevelStats());
-    CInteraction *action = getLevelAction();
-    if (action)
-        addAction(action);
-    attribChange();
-    heal(0);
-    addMana(0);
-}
-
-std::set<CItem *> *CCreature::getLoot() { return getMap()->getLootProvider()->getLoot(std::max(0, getScale())); }
-
-void CCreature::addAction(CInteraction *action) {
-    if (!action)
-        return;
-    actions.insert(action);
-    Q_EMIT skillsChanged();
+    return;
+  }
+  CInteraction *action = selectAction();
+  if (action) {
+    action->onAction(this, creature);
+    if (creature->getArmor() && creature->getArmor()->getInteraction()) {
+      creature->getArmor()->getInteraction()->onAction(creature, this);
+    }
+  }
+  creature->fight(this);
 }
 
 void CCreature::addEffect(Effect *effect) {
-    if (!effect)
-        return;
+  if (effect) {
     effects.insert(effect);
+  }
+}
+bool CCreature::applyEffects() {
+  for (auto it = effects.begin(); it != effects.end();) {
+    if ((*it)->getTimeLeft() == 0) {
+      it = effects.erase(it);
+    } else {
+      ++it;
+    }
+  }
+  bool stopped = false;
+  for (Effect *effect : effects) {
+    stopped = effect->apply(this) || stopped;
+    if (!isAlive()) {
+      if (CPlayer *player = dynamic_cast<CPlayer *>(effect->getCaster())) {
+        player->removeFromFightList(this);
+      }
+      return true;
+    }
+  }
+  return stopped;
 }
 
-void CCreature::addItem(std::set<CItem *> *items) {
-    for (CItem *item : *items) if (item) inventory.insert(item);
-    Q_EMIT inventoryChanged();
+void CCreature::onEnter() { CMapObject::onEnter(); }
+void CCreature::onMove() { CMapObject::onMove(); }
+void CCreature::hoverEnterEvent(QGraphicsSceneHoverEvent *event) {
+  CMapObject::hoverEnterEvent(event);
 }
-void CCreature::addItem(CItem *item) { if (item) inventory.insert(item); Q_EMIT inventoryChanged(); }
-std::set<CItem *> *CCreature::getInventory() { return (std::set<CItem *> *)&inventory; }
-std::map<int, CItem *> *CCreature::getEquipped() { return &equipped; }
-std::set<CInteraction *> *CCreature::getActions() { return (std::set<CInteraction *> *)&actions; }
-int CCreature::getMana() { return mana; }
-
-void CCreature::addMana(int i) {
-    if (i <= 0)
-        mana = manaMax;
-    else
-        mana = std::min(manaMax, mana + i);
-}
-
-void CCreature::addManaProc(float i) { addMana(static_cast<int>(manaMax * i / 100.0f)); }
-
-void CCreature::takeMana(int i) { mana = std::max(0, mana - i); }
-
-bool CCreature::isPlayer() { return inherits("CPlayer"); }
-
-int CCreature::getHpRatio() { return clamp_ratio(hp, hpMax); }
-
-void CCreature::setItem(int slot, CItem *item) {
-    CItem *previous = equipped[slot];
-    if (previous == item) return;
-    if (previous) previous->onUnequip(this);
-    equipped[slot] = item;
-    if (item) item->onEquip(this);
-    Q_EMIT equippedChanged();
-    Q_EMIT statsChanged();
-}
-void CCreature::setWeapon(CWeapon *weapon) { setItem(0, weapon); }
-void CCreature::setArmor(CArmor *armor) { setItem(3, armor); }
-CWeapon *CCreature::getWeapon() { return dynamic_cast<CWeapon *>(equipped[0]); }
-CArmor *CCreature::getArmor() { return dynamic_cast<CArmor *>(equipped[3]); }
-bool CCreature::hasEquipped(CItem *item) {
-    for (const auto &entry : equipped) if (entry.second == item) return true;
-    return false;
-}
-bool CCreature::hasInInventory(CItem *item) { return inventory.find(item) != inventory.end(); }
-bool CCreature::hasItem(CItem *item) { return hasInInventory(item) || hasEquipped(item); }
-Coords CCreature::getCoords() { return Coords(getPosX(), getPosY(), getPosZ()); }
-void CCreature::onEnter() {}
-void CCreature::onMove() {}
-
-
 int CCreature::getExp() { return exp; }
-Stats *CCreature::getStats() { return &stats; }
+
+void CCreature::setExp(int exp) {
+  this->exp = exp;
+  this->addExp(0);
+}
+
+int CCreature::getExpReward() { return level * 750; }
+
+void CCreature::addExpScaled(int scale) {
+  int rank = level - scale;
+  this->addExp(250 * pow(2, -rank));
+}
+
+void CCreature::addExp(int exp) {
+  if (!isAlive()) {
+    return;
+  }
+  this->exp += exp;
+  while (this->exp >= level * (level + 1) * 500) {
+    this->levelUp();
+  }
+  Q_EMIT statsChanged();
+}
+
+void CCreature::removeFromInventory(CItem *item) {
+  if (inventory.find(item) != inventory.end()) {
+    inventory.erase(inventory.find(item));
+  }
+  Q_EMIT inventoryChanged();
+}
+
+void CCreature::removeFromEquipped(CItem *item) {
+  if (hasEquipped(item)) {
+    setItem(getSlotWithItem(item), nullptr);
+  }
+  removeFromInventory(item);
+}
+
+void CCreature::heal(int i) {
+  if (i < 0) {
+    throw 0;
+  }
+  if (hp > hpMax) {
+    return;
+  }
+  if (i == 0) {
+    hp = hpMax;
+  } else {
+    hp += i;
+  }
+  if (hp > hpMax) {
+    hp = hpMax;
+  }
+  Q_EMIT statsChanged();
+}
+
+void CCreature::healProc(float i) {
+  int tmp = hp;
+  heal(i / 100.0 * hpMax);
+  qDebug() << typeName << "restored" << hp - tmp << "hp" << "\n";
+}
+
+void CCreature::hurt(int i) {
+  Damage damage;
+  damage.setNormal(i);
+  hurt(damage);
+}
+
+int CCreature::getExpRatio() {
+  return (float)((exp - level * (level - 1) * 500)) /
+         (float)(level * (level + 1) * 500 - level * (level - 1) * 500) * 100.0;
+}
+
+void CCreature::takeDamage(int i) {
+  if (rand() < stats.getBlock()) {
+    return;
+  }
+  if (i < 0) {
+    qFatal("damage less than 0 taken");
+    return;
+  }
+  hp -= i * ((100 - stats.getArmor()) / 100.0);
+  Q_EMIT statsChanged();
+}
+
+int CCreature::getDmg() {
+  int critDice = rand() % 100;
+  int attDice = rand() % 100;
+  int dmg =
+      rand() % (stats.getDmgMax() + 1 - stats.getDmgMin()) + stats.getDmgMin();
+  dmg += stats.getDamage();
+  attDice -= stats.getAttack();
+  if (attDice < stats.getHit()) {
+    if (critDice < stats.getCrit()) {
+      dmg *= 2;
+      qDebug() << "Critical hit";
+    }
+    return dmg;
+  } else {
+    qDebug() << "Missed";
+    return 0;
+  }
+}
 
 int CCreature::getScale() { return level + sw; }
 
-// The consolidated creature template owns the level-to-action table.
-CInteraction *CCreature::getLevelAction() {
-    std::ostringstream key;
-    key << level;
-    Json::Value config = (*CConfigurationProvider::getConfig("config/object.json"))[typeName];
-    return loadAction(getMap(), config["levelling"].get(key.str(), "").asString());
+bool CCreature::isAlive() { return hp >= 0; }
+
+void CCreature::addAction(CInteraction *action) {
+  if (!action) {
+    return;
+  }
+  action->setMap(this->getMap());
+  actions.insert(action);
+  Q_EMIT skillsChanged();
 }
 
-bool CCreature::isAlive() { return alive; }
+int CCreature::getMana() { return mana; }
 
-void CCreature::setAlive() { alive = true; }
+void CCreature::setMana(int mana) { this->mana = mana; }
 
-// Creatures are described by a configuration or a saved game: both use the same keys.
-void CCreature::loadFromJson(std::string name) {
-    typeName = name;
-    Json::Value config = (*CConfigurationProvider::getConfig("config/object.json"))[name];
-    animPath = config.get("path", "").asString();
-    setAnimation(animPath);
-    sw = config.get("sw", 0).asInt();
-    stats.loadFromJson(config["initStats"]);
-
-    Json::Value names = config["actions"];
-    for (unsigned int i = 0; i < names.size(); i++)
-        addAction(loadAction(getMap(), names[i].asString()));
-
-    std::set<CItem *> items;
-    names = config["items"];
-    for (unsigned int i = 0; i < names.size(); i++) {
-        CItem *item = getMap()->createMapObject<CItem *>(std::string(names[i].asCString()));
-        if (item)
-            items.insert(item);
-    }
-    addItem(&items);
-
-    Json::Value equipment_config = config["equipment"];
-    for (Json::Value::iterator it = equipment_config.begin(); it != equipment_config.end(); ++it)
-        setItem(std::atoi(it.memberName()), getMap()->createMapObject<CItem *>(std::string((*it).asCString())));
-    Json::Value equipment = config["inventory"];
-    if (equipment.isMember("weapon")) setWeapon(dynamic_cast<CWeapon *>(getMap()->createMapObject<CItem *>((QString::fromStdString(equipment["weapon"].asString())))));
-    if (equipment.isMember("armor")) setArmor(dynamic_cast<CArmor *>(getMap()->createMapObject<CItem *>((QString::fromStdString(equipment["armor"].asString())))));
-
-    if (config.isMember("coords"))
-        moveTo(config["coords"].get("x", 0).asInt(), config["coords"].get("y", 0).asInt(),
-               config["coords"].get("z", 0).asInt(), true);
-
-    attribChange();
-    if (config.isMember("level")) {
-        level = config["level"].asInt();
-        exp = config.get("exp", 0).asInt();
-        hp = config.get("hp", hpMax).asInt();
-        mana = config.get("mana", manaMax).asInt();
-        alive = hp > 0;
-    } else {
-        heal(0);
-        addMana(0);
-        levelUp();
-    }
+void CCreature::addMana(int i) {
+  if (i < 0) {
+    throw 0;
+  }
+  if (mana > manaMax) {
+    return;
+  }
+  if (i == 0) {
+    mana = manaMax;
+  } else {
+    mana += i;
+  }
+  if (mana > manaMax) {
+    mana = manaMax;
+  }
+  Q_EMIT statsChanged();
 }
 
-// Defeated creatures are left out of saved games.
+void CCreature::addManaProc(float i) {
+  int tmp = mana;
+  addMana(i / 100.0 * manaMax);
+  qDebug() << typeName << "restored" << mana - tmp << "mana" << "\n";
+}
 
+void CCreature::takeMana(int i) {
+  if (i < 0) {
+    throw 0;
+  }
+  mana -= i;
+  Q_EMIT statsChanged();
+}
 
+CInteraction *CCreature::selectAction() {
+  for (CInteraction *it : actions) {
+    if (it->getManaCost() < mana) {
+      return it;
+    }
+  }
+  return 0;
+}
 
+bool CCreature::isPlayer() { return getMap()->getPlayer() == this; }
+
+int CCreature::getHpRatio() {
+  if (hp > hpMax) {
+    return 100;
+  }
+  return (float)hp / (float)hpMax * 100.0;
+}
+
+int CCreature::getManaRatio() {
+  if (mana > manaMax) {
+    return 100;
+  }
+  if (manaMax == 0) {
+    return 100;
+  }
+  if (mana < 0) {
+    return 0;
+  }
+  return (float)mana / (float)manaMax * 100.0;
+}
 
 int CCreature::getHp() { return hp; }
-
-int CCreature::getHpMax() { return hpMax; }
 
 int CCreature::getManaMax() { return manaMax; }
 
 int CCreature::getLevel() { return level; }
 
-// Applies every active effect for this turn. Returns true when an effect (such as
-// Stun) prevents the creature from acting; finished effects are dropped.
-bool CCreature::applyEffects() {
-    bool skipTurn = false;
-    std::list<Effect *> active(effects.begin(), effects.end());
-    for (std::list<Effect *>::iterator it = active.begin(); it != active.end(); ++it) {
-        Effect *effect = *it;
-        if (effect->apply(this))
-            skipTurn = true;
-        if (effect->getTimeLeft() <= 0) {
-            effects.erase(effect);
-            delete effect;
-        }
+void CCreature::setWeapon(CWeapon *weapon) { this->setItem(0, weapon); }
+
+void CCreature::setArmor(CArmor *armor) { this->setItem(3, armor); }
+
+bool CCreature::hasInInventory(CItem *item) {
+  return inventory.find(item) != inventory.end();
+}
+
+bool CCreature::hasItem(CItem *item) {
+  return hasInInventory(item) || hasEquipped(item);
+}
+
+Coords CCreature::getCoords() {
+  Coords coords(getPosX(), getPosY(), getPosZ());
+  return coords;
+}
+
+CWeapon *CCreature::getWeapon() {
+  return dynamic_cast<CWeapon *>(getItemAtSlot(0));
+}
+
+CArmor *CCreature::getArmor() {
+  return dynamic_cast<CArmor *>(getItemAtSlot(3));
+}
+
+void CCreature::levelUp() {
+  level++;
+  stats.addBonus(getLevelStats());
+  addAction(getLevelAction());
+  attribChange();
+  if (level > 1) {
+    qDebug() << typeName << "is now level:" << level << "\n";
+  }
+}
+
+std::set<CItem *> CCreature::getAllItems() {
+  std::set<CItem *> allItems;
+  allItems.insert(inventory.begin(), inventory.end());
+  for (auto it : equipped) {
+    if (it.second) {
+      allItems.insert(it.second);
     }
-    return skipTurn;
+  }
+  return allItems;
 }
 
-int CCreature::getManaRatio() { return clamp_ratio(mana, manaMax); }
+void CCreature::attribChange() {
+  hpMax = stats.getStamina() * 7;
+  manaRegRate = stats.getMain() / 10 + 1;
+  manaMax = stats.getMain() * 7;
+}
 
-void CCreature::addExpScaled(int scale) { addExp(std::max(1, scale) * 150); }
-
-void CCreature::addExp(int exp) {
-    this->exp += exp;
-    const int required = std::max(1, level * (level + 1) * 500);
-    while (this->exp >= required) {
-        this->exp -= required;
-        levelUp();
+bool CCreature::hasEquipped(CItem *item) {
+  for (unsigned int i = 0; i < equipped.size(); i++) {
+    auto it = equipped.find(i);
+    if (it != equipped.end() && (*it).second == item) {
+      return true;
     }
+  }
+  return false;
 }
 
-CInteraction *CCreature::selectAction() {
-    if (actions.empty())
-        return 0;
+int CCreature::getHpMax() { return hpMax; }
 
-    for (auto it = actions.begin(); it != actions.end(); ++it) {
-        if ((*it)->getManaCost() <= mana)
-            return *it;
+void CCreature::setHpMax(int value) { hpMax = value; }
+
+CItem *CCreature::getItemAtSlot(int slot) {
+  if (equipped.find(slot) != equipped.end()) {
+    return equipped.at(slot);
+  }
+  return nullptr;
+}
+
+int CCreature::getSlotWithItem(CItem *item) {
+  for (auto it = equipped.begin(); it != equipped.end(); it++) {
+    if ((*it).second == item) {
+      return (*it).first;
     }
-    return *actions.begin();
+  }
+  return -1;
 }
 
-Stats CCreature::getLevelStats() {
-    Stats bonus;
-    Json::Value config = (*CConfigurationProvider::getConfig("config/object.json"))[typeName];
-    bonus.loadFromJson(config["levelStats"]);
-    return bonus;
-}
-
-void CCreature::hoverEnterEvent(QGraphicsSceneHoverEvent *event) {
-    std::ostringstream text;
-    text << typeName << "\nHP: " << hp << "/" << hpMax << "\nMana: " << mana << "/" << manaMax;
-    statsView.setText(text.str().c_str());
-    statsView.setPos(0, -statsView.boundingRect().height());
-    statsView.setVisible(true);
-    if (event)
-        event->accept();
-}
-
-
-void CCreature::setExp(int value) { exp = value; Q_EMIT statsChanged(); }
-int CCreature::getExpReward() { return std::max(1, getScale()) * 150; }
-int CCreature::getGold() { return gold; }
-void CCreature::setGold(int value) { gold = value; Q_EMIT statsChanged(); }
-
-void CCreature::setMana(int mana) { this->mana = mana; }
-
-void CCreature::setManaMax(int value) { manaMax = value; }
+void CCreature::setHp(int value) { hp = value; }
 
 int CCreature::getManaRegRate() { return manaRegRate; }
 
 void CCreature::setManaRegRate(int value) { manaRegRate = value; }
 
-void CCreature::setHp(int value) { hp = value; }
+void CCreature::setManaMax(int value) { manaMax = value; }
 
-void CCreature::setHpMax(int value) { hpMax = value; }
+int CCreature::getGold() { return gold; }
 
-void CCreature::removeFromInventory(CItem *item) {
-    inventory.erase(item);
-    Q_EMIT inventoryChanged();
+void CCreature::setGold(int value) { gold = value; }
+
+void CCreature::hurt(Damage damage) {
+  takeDamage(damage.getNormal() * (100 - stats.getNormalResist()) / 100.0);
+  takeDamage(damage.getThunder() * (100 - stats.getThunderResist()) / 100.0);
+  takeDamage(damage.getFrost() * (100 - stats.getFrostResist()) / 100.0);
+  takeDamage(damage.getFire() * (100 - stats.getFireResist()) / 100.0);
+  takeDamage(damage.getShadow() * (100 - stats.getShadowResist()) / 100.0);
+  qDebug() << typeName << "took damage:" << "normal(" << damage.getNormal()
+           << ")thunder(" << damage.getThunder() << ")frost("
+           << damage.getFrost() << ")fire(" << damage.getFire() << ")shadow("
+           << damage.getShadow() << ")";
 }
-
-CItem *CCreature::getItemAtSlot(int slot) {
-    std::map<int, CItem *>::iterator it = equipped.find(slot);
-    return it == equipped.end() ? NULL : it->second;
-}
-
-int CCreature::getSlotWithItem(CItem *item) {
-    for (std::map<int, CItem *>::iterator it = equipped.begin(); it != equipped.end(); ++it) {
-        if (it->second == item) {
-            return it->first;
-        }
-    }
-    return -1;
-}
-
-void CCreature::removeFromEquipped(CItem *item) {
-    int slot = getSlotWithItem(item);
-    if (slot != -1) {
-        setItem(slot, NULL);
-    }
-}
-
-std::set<CItem *> CCreature::getAllItems() {
-    std::set<CItem *> items(inventory.begin(), inventory.end());
-    for (std::map<int, CItem *>::iterator it = equipped.begin(); it != equipped.end(); ++it) {
-        if (it->second) {
-            items.insert(it->second);
-        }
-    }
-    return items;
-}
-
-#include <src/CPlayerView.h>
-#include <src/CPlayerView.h>
-#include <math.h>
-#include <QDebug>
-#include <QBitmap>
-#include <QEventLoop>
-#include <QApplication>
 
 void CPlayer::updateViews() {
-	for ( std::set<CItem *>::iterator it = inventory.begin(); it != inventory.end();
-	        it++ ) {
-		CItem *item = *it;
-		if ( map && item->getMap() != map ) {
-			item->setMap ( map );
-		}
-	}
-	for ( std::set<CInteraction *>::iterator it = actions.begin();
-	        it != actions.end(); it++ ) {
-		CInteraction *action = *it;
-		if ( map && action->getMap() != map ) {
-			action->setMap ( map );
-		}
-	}
-	for ( std::map<int, CItem *>::iterator it = equipped.begin();
-	        it != equipped.end(); it++ ) {
-		CItem *item = ( *it ).second;
-		if ( map && item && item->getMap() != map ) {
-			item->setMap ( map );
-		}
-	}
+  for (auto it = inventory.begin(); it != inventory.end(); it++) {
+    CItem *item = *it;
+    if (map && item->getMap() != map) {
+      item->setMap(map);
+    }
+  }
+  for (auto it = actions.begin(); it != actions.end(); it++) {
+    CInteraction *action = *it;
+    if (map && action->getMap() != map) {
+      action->setMap(map);
+    }
+  }
+  for (std::map<int, CItem *>::iterator it = equipped.begin();
+       it != equipped.end(); it++) {
+    CItem *item = (*it).second;
+    if (map && item && item->getMap() != map) {
+      item->setMap(map);
+    }
+  }
 }
 
 void CPlayer::init() {
-	gold = 0;
-	turn = 0;
+  gold = 0;
+  turn = 0;
 }
 
-void CPlayer::setMap ( CMap *map ) {
-	CMapObject::setMap ( map );
-	updateViews();
+void CPlayer::setMap(CMap *map) {
+  CMapObject::setMap(map);
+  updateViews();
 }
 
-CPlayer::CPlayer ( CMap *map, std::string name ) {
-	this->map=map;
-	init();
-	this->name = "PLAYER";
-	this->loadFromJson ( name );
-}
+CPlayer::CPlayer() { init(); }
 
-CPlayer::CPlayer() {}
-
-CPlayer::CPlayer ( const CPlayer &player ) {}
+CPlayer::CPlayer(const CPlayer &player) : CCreature(player) { init(); }
 
 CPlayer::~CPlayer() { inventory.clear(); }
 
-std::set<CItem *> *CPlayer::getLoot() { return ( std::set<CItem *> * ) &inventory; }
+std::set<CItem *> *CPlayer::getLoot() {
+  return (std::set<CItem *> *)&inventory;
+}
 
 void CPlayer::onMove() {
-	addMana ( manaRegRate );
-	turn++;
+  addMana(manaRegRate);
+  turn++;
 }
 
 void CPlayer::onEnter() {}
 
-void CPlayer::addToFightList ( CCreature *creature ) {
-	fightList.push_back ( creature );
+void CPlayer::addToFightList(CCreature *creature) {
+  fightList.push_back(creature);
 }
 
 std::list<CCreature *> *CPlayer::getFightList() { return &fightList; }
 
-void CPlayer::removeFromFightList ( CCreature *creature ) {
-	if ( creature == this ) {
-		return;
-	}
-	qDebug() << typeName.c_str() << "defeated" << creature->typeName.c_str()
-	         << "\n";
-	addExpScaled ( creature->getScale() );
-	addItem ( creature->getLoot() );
-	creature->removeFromGame();
-	getFightList()->remove ( creature );
-	if ( getFightList()->size() == 0 ) {
-		map->getScene()->getView()->getFightView()->setVisible ( false );
-		CFightPanel::selected = 0;
-	} else {
-		CFightPanel::selected = getFightList()->front();
-	}
-	map->getScene()->getView()->getFightView()->update();
-	Q_EMIT statsChanged();
+void CPlayer::removeFromFightList(CCreature *creature) {
+  if (creature == this) {
+    return;
+  }
+  qDebug() << typeName << "defeated" << creature->typeName << "\n";
+  addExpScaled(creature->getScale());
+  addItem(creature->getLoot());
+  creature->removeFromGame();
+  getFightList()->remove(creature);
+  if (getFightList()->size() == 0) {
+    map->getScene()->getView()->getFightView()->setVisible(false);
+    CFightPanel::selected = 0;
+  } else {
+    CFightPanel::selected = getFightList()->front();
+  }
+  map->getScene()->getView()->getFightView()->update();
+  Q_EMIT statsChanged();
 }
 
-void CPlayer::performAction ( CInteraction *action, CCreature *creature ) {
-	action->onAction ( this, creature );
-	takeMana ( action->getManaCost() );
-	CArmor *armor = creature->getArmor();
-	if ( armor ) {
-		CInteraction *interaction = armor->getInteraction();
-		if ( interaction ) {
-			interaction->onAction ( creature, this );
-		}
-	}
-	if ( !creature->isAlive() ) {
-		removeFromFightList ( creature );
-	} else {
-		qDebug() << "";
-		std::list<CCreature *> tmpList ( *getFightList() );
-		for ( std::list<CCreature *>::iterator it = tmpList.begin();
-		        it != tmpList.end(); it++ ) {
-			( *it )->fight ( this );
-		}
-	}
-	map->getScene()->getView()->getFightView()->update();
-	if ( !isAlive() ) {
-		map->getScene()->getView()->close();
-	}
+void CPlayer::performAction(CInteraction *action, CCreature *creature) {
+  action->onAction(this, creature);
+  takeMana(action->getManaCost());
+  CArmor *armor = creature->getArmor();
+  if (armor) {
+    CInteraction *interaction = armor->getInteraction();
+    if (interaction) {
+      interaction->onAction(creature, this);
+    }
+  }
+  if (!creature->isAlive()) {
+    removeFromFightList(creature);
+  } else {
+    qDebug() << "";
+    std::list<CCreature *> tmpList(*getFightList());
+    for (std::list<CCreature *>::iterator it = tmpList.begin();
+         it != tmpList.end(); it++) {
+      (*it)->fight(this);
+    }
+  }
+  map->getScene()->getView()->getFightView()->update();
+  if (!isAlive()) {
+    map->getScene()->getView()->close();
+  }
 }
 
-void CPlayer::addEntered ( CMapObject *object ) { entered.push_back ( object ); }
+void CPlayer::addEntered(CMapObject *object) { entered.push_back(object); }
 
 std::list<CMapObject *> *CPlayer::getEntered() { return &entered; }
 
-void CPlayer::fight ( CCreature *creature ) {
-	if ( applyEffects() ) {
-		creature->fight ( this );
-	}
+void CPlayer::fight(CCreature *creature) {
+  if (applyEffects()) {
+    creature->fight(this);
+  }
 }
 
-#include <src/CPathFinder.h>
-#include "CConfigurationProvider.h"
-#include <QThreadPool>
+void CPlayer::update() {
+  updateViews();
+  Q_EMIT statsChanged();
+}
 
 CMonster::CMonster() : CCreature() {}
 
-CMonster::CMonster ( const CMonster &monster ) {}
+CMonster::CMonster(const CMonster &monster) : CCreature(monster) {}
 
 void CMonster::onMove() {
-	if ( !isAlive() ) {
-		return;
-	}
-	APathFinder *finder;
-	if ( ( this->getCoords().getDist ( this->getMap()->getScene()->getPlayer()->getCoords() ) ) < 25 ) {
-		finder = new CSmartPathFinder();
-	} else {
-		finder = new CRandomPathFinder();
-	}
-	this->addExp ( rand() % 25 );
-	QThreadPool::globalInstance()->start ( new PathFinderWorker ( this,map->getScene()->getPlayer(), finder ) );
+  if (!isAlive()) {
+    return;
+  }
+  APathFinder *finder;
+  if ((this->getCoords().getDist(
+          this->getMap()->getScene()->getPlayer()->getCoords())) < 25) {
+    finder = new CSmartPathFinder();
+  } else {
+    finder = new CRandomPathFinder();
+  }
+  this->addExp(rand() % 25);
+  QThreadPool::globalInstance()->start(
+      new PathFinderWorker(this, map->getScene()->getPlayer(), finder));
 }
 
 void CMonster::onEnter() {
-	if ( !isAlive() ) {
-		return;
-	}
-	map->getScene()->getPlayer()->addToFightList ( this );
+  if (!isAlive()) {
+    return;
+  }
+  map->getScene()->getPlayer()->addToFightList(this);
 }
 
 void CMonster::levelUp() {
-	CCreature::levelUp();
-	heal ( 0 );
-	addMana ( 0 );
+  CCreature::levelUp();
+  heal(0);
+  addMana(0);
 }
 
 std::set<CItem *> *CMonster::getLoot() {
-	return this->getMap()->getLootProvider()->getLoot ( getScale() );
+  return this->getMap()->getLootProvider()->getLoot(getScale());
+}
+
+CPlayer::CPlayer(CMap *map, QString name) : CPlayer() {
+  setMap(map);
+  loadFromJson(name);
 }

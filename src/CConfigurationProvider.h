@@ -1,17 +1,20 @@
 #ifndef CONFIGURATIONPROVIDER_H
 #define CONFIGURATIONPROVIDER_H
-#include <lib/json/json.h>
 #include <string>
-
-class CConfigurationProvider : private std::map<std::string, Json::Value *> {
+#include <QJsonValue>
+#include <QJsonArray>
+#include <QJsonObject>
+#include <QJsonDocument>
+#include "map"
+class CConfigurationProvider : private std::map<QString, QJsonValue > {
 public:
-	static Json::Value *getConfig ( std::string path );
+	static QJsonValue getConfig ( QString path );
 
 private:
 	CConfigurationProvider();
 	~CConfigurationProvider();
-	Json::Value *getConfiguration ( std::string path );
-	void loadConfig ( std::string path );
+	QJsonValue getConfiguration ( QString path );
+	void loadConfig ( QString path );
 };
 
 #endif // CONFIGURATIONPROVIDER_H

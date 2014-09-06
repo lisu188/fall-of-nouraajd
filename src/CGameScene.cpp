@@ -10,7 +10,7 @@
 #include "CAnimationProvider.h"
 #include "CConfigurationProvider.h"
 #include <fstream>
-#include <lib/json/json.h>
+#include <QJsonObject>
 #include <QDateTime>
 #include <QDebug>
 #include <vector>
@@ -41,7 +41,7 @@ private:
 	CMap *map;
 };
 
-void CGameScene::startGame ( std::string file ,std::string player ) {
+void CGameScene::startGame ( QString file ,QString player ) {
 	srand ( time ( 0 ) );
 	map = new CMap ( this,file );
 	this->player = new CPlayer ( map,player );
@@ -86,14 +86,6 @@ void CGameScene::playerMove ( int dirx, int diry ) {
 	if ( player->getFightList()->size() > 0 ||
 	        getView()->getCharView()->isVisible() ) {
 		return;
-	}
-	int sizex, sizey;
-	if ( getView() ) {
-		sizex = getView()->width() / map->getTileSize() + 1;
-		sizey = getView()->height() / map->getTileSize() + 1;
-	} else {
-		sizex = QApplication::desktop()->width() / map->getTileSize() + 1;
-		sizey = QApplication::desktop()->height() / map->getTileSize() + 1;
 	}
 	map->move ( dirx, diry );
 }

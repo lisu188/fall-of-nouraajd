@@ -26,11 +26,11 @@ void CItemSlot::paint ( QPainter *painter, const QStyleOptionGraphicsItem *,
 
 bool CItemSlot::checkType ( int slot, QWidget *widget ) {
 	if ( widget ) {
-		Json::Value config =
-		    ( *CConfigurationProvider::getConfig (
-		          "config/slots.json" ) ) [to_string ( slot ).c_str()]["types"];
-		for ( int i = 0; i < config.size(); i++ ) {
-			if ( widget->inherits ( config[i].asCString() ) ) {
+		QJsonArray config =
+		    CConfigurationProvider::getConfig (
+		        "config/slots.json" ).toObject()  [QString::number ( slot )].toObject() ["types"].toArray();
+		for (   int i = 0; i < config.size(); i++ ) {
+			if ( widget->inherits ( config[i].toString().toStdString().c_str() ) ) {
 				return true;
 			}
 		}

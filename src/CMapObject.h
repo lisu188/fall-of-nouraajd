@@ -9,9 +9,8 @@ class CMapObject : public CAnimatedObject {
 	Q_OBJECT
 public:
 	CMapObject();
-	CMapObject ( int x, int y, int z, int v );
-	std::string typeName;
-	std::string name;
+	QString typeName;
+	QString name;
 	int posx, posy, posz;
 	virtual void moveTo ( int x, int y, int z, bool silent = false );
 	int getPosX() const;
@@ -23,16 +22,17 @@ public:
 	virtual void onCreate();
 	virtual void onDestroy();
 	Q_SLOT void move ( int x, int y );
-	virtual void loadFromJson ( std::string name ) = 0;
+	virtual void loadFromJson ( QString name ) = 0;
 	void loadFromProps ( Tmx::PropertySet set );
 	virtual void setMap ( CMap *map );
 	CMap *getMap();
 	void setVisible ( bool vis );
 	Coords getCoords();
 	void setCoords ( Coords coords );
+
 	PROPERTY_ACCESSOR
 protected:
-	void setAnimation ( std::string path );
+	void setAnimation ( QString path );
 	CMap *map = 0;
 	QGraphicsSimpleTextItem statsView;
 
@@ -41,7 +41,7 @@ public:
 	virtual bool compare ( CMapObject *item );
 
 protected:
-	std::string tooltip;
+	QString tooltip;
 	virtual void hoverEnterEvent ( QGraphicsSceneHoverEvent *event );
 	virtual void hoverLeaveEvent ( QGraphicsSceneHoverEvent *event );
 };
@@ -55,7 +55,7 @@ public:
 	CEvent ( const CEvent & );
 	void onEnter();
 	void onMove();
-	void loadFromJson ( std::string name );
+	void loadFromJson ( QString );
 	// PROPERTIES
 	QString getScript() const;
 	void setScript ( const QString &value );

@@ -14,7 +14,7 @@ class CGameScene : public QGraphicsScene {
 	Q_OBJECT
 public:
 	void playerMove ( int dirx, int diry );
-	void startGame ( std::string file ,std::string player );
+	void startGame ( QString file ,QString player );
 	CPlayer *getPlayer() const;
 	void setPlayer ( CPlayer *value );
 	CMap *getMap() const;

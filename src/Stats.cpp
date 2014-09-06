@@ -1,198 +1,113 @@
 #include "Stats.h"
 
+#include <QMetaProperty>
 #include <sstream>
-#include <string>
 
-Stats::Stats() {}
-
-void Stats::setMain(const char *stat) {
-    mainS = stat ? stat : "";
-    if (!stat || !*stat) {
-        main = &strength;
-        return;
-    }
-
-    switch (stat[0]) {
-    case 'A':
-        main = &agility;
-        break;
-    case 'I':
-        main = &intelligence;
-        break;
-    case 'S':
-    default:
-        main = &strength;
-        break;
-    }
+Stats::Stats() {
+  for (int i = 0; i < metaObject()->propertyCount(); ++i) {
+    QMetaProperty property = metaObject()->property(i);
+    if (property.isUser())
+      setNumericProperty(property.name(), 0);
+  }
 }
 
-int Stats::getMain() { return main ? *main : 0; }
+Stats::Stats(const Stats &stats) : Stats() {
+  for (int i = 0; i < metaObject()->propertyCount(); ++i) {
+    QMetaProperty property = metaObject()->property(i);
+    if (property.isUser())
+      setNumericProperty(property.name(),
+                         stats.getNumericProperty(property.name()));
+  }
+  setMain(stats.mainS);
+}
+
+void Stats::setMain(QString stat) {
+  mainS = stat;
+  main = nullptr;
+  QString normalized = stat.toLower();
+  if (normalized == "agility")
+    main = &agility;
+  else if (normalized == "intelligence")
+    main = &intelligence;
+  else if (normalized == "strength")
+    main = &strength;
+}
+
+int Stats::getMain() {
+  if (!main) {
+    return 0;
+  }
+  return *main;
+}
 
 void Stats::addBonus(Stats stats) {
-    strength += stats.getStrength();
-    stamina += stats.getStamina();
-    agility += stats.getAgility();
-    intelligence += stats.getIntelligence();
-
-    armor += stats.getArmor();
-    block += stats.getBlock();
-
-    dmgMin += stats.getDmgMin();
-    dmgMax += stats.getDmgMax();
-    hit += stats.getHit();
-    crit += stats.getCrit();
-
-    fireResist += stats.getFireResist();
-    thunderResist += stats.getThunderResist();
-    frostResist += stats.getFrostResist();
-    normalResist += stats.getNormalResist();
-
-    damage += stats.getDamage();
-    attack += stats.getAttack();
+  for (int i = 0; i < this->metaObject()->propertyCount(); i++) {
+    QMetaProperty property = this->metaObject()->property(i);
+    this->incProperty(property.name(),
+                      stats.getNumericProperty(property.name()));
+  }
 }
 
 void Stats::removeBonus(Stats stats) {
-    strength -= stats.getStrength();
-    stamina -= stats.getStamina();
-    agility -= stats.getAgility();
-    intelligence -= stats.getIntelligence();
-
-    armor -= stats.getArmor();
-    block -= stats.getBlock();
-
-    dmgMin -= stats.getDmgMin();
-    dmgMax -= stats.getDmgMax();
-    hit -= stats.getHit();
-    crit -= stats.getCrit();
-
-    fireResist -= stats.getFireResist();
-    thunderResist -= stats.getThunderResist();
-    frostResist -= stats.getFrostResist();
-    normalResist -= stats.getNormalResist();
-
-    damage -= stats.getDamage();
-    attack -= stats.getAttack();
+  for (int i = 0; i < this->metaObject()->propertyCount(); i++) {
+    QMetaProperty property = this->metaObject()->property(i);
+    this->incProperty(property.name(),
+                      -stats.getNumericProperty(property.name()));
+  }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 const char *Stats::getText(int level) {
-    static std::string text;
-    std::ostringstream stream;
-    stream << "Level " << level << " S:" << getStrength() << " A:" << getAgility() << " I:" << getIntelligence()
-           << " St:" << getStamina();
-    text = stream.str();
-    return text.c_str();
+  std::ostringstream stream;
+  stream << "Level: " << level << "\n";
+  stream << "Strength: " << strength << "\n";
+  stream << "Agility: " << agility << "\n";
+  stream << "Intelligence: " << intelligence << "\n";
+  stream << "Stamina: " << stamina << "\n";
+  stream << "Damage: " << dmgMin + damage << "-" << dmgMax + damage << "\n";
+  stream << "Hit: " << hit + attack << "%" << "\n";
+  stream << "Crit: " << crit << "%" << "\n";
+  stream << "Armor: " << armor << "%" << "\n";
+  stream << "Block: " << block << "%" << "\n";
+  static thread_local std::string text;
+  text = stream.str();
+  return text.c_str();
 }
 
-void Stats::loadFromJson(Json::Value statConfig) {
-    if (!statConfig.isObject())
-        return;
-    strength = statConfig.get("strength", strength).asInt();
-    stamina = statConfig.get("stamina", stamina).asInt();
-    agility = statConfig.get("agility", agility).asInt();
-    intelligence = statConfig.get("intelligence", intelligence).asInt();
-    armor = statConfig.get("armor", armor).asInt();
-    block = statConfig.get("block", block).asInt();
-    dmgMin = statConfig.get("dmgMin", dmgMin).asInt();
-    dmgMax = statConfig.get("dmgMax", dmgMax).asInt();
-    hit = statConfig.get("hit", hit).asInt();
-    crit = statConfig.get("crit", crit).asInt();
-    fireResist = statConfig.get("fireResist", fireResist).asInt();
-    thunderResist = statConfig.get("thunderResist", thunderResist).asInt();
-    frostResist = statConfig.get("frostResist", frostResist).asInt();
-    normalResist = statConfig.get("normalResist", normalResist).asInt();
-    shadowResist = statConfig.get("shadowResist", shadowResist).asInt();
-    damage = statConfig.get("damage", damage).asInt();
-    attack = statConfig.get("attack", attack).asInt();
-    if (statConfig.isMember("main"))
-        setMain(statConfig["main"].asString().c_str());
+Damage::Damage() {
+  for (int i = 0; i < this->metaObject()->propertyCount(); i++) {
+    QMetaProperty property = this->metaObject()->property(i);
+    this->setNumericProperty(property.name(), 0);
+  }
 }
 
-Json::Value Stats::saveToJson() {
-    Json::Value config;
-    config["strength"] = strength;
-    config["stamina"] = stamina;
-    config["agility"] = agility;
-    config["intelligence"] = intelligence;
-    config["armor"] = armor;
-    config["block"] = block;
-    config["dmgMin"] = dmgMin;
-    config["dmgMax"] = dmgMax;
-    config["hit"] = hit;
-    config["crit"] = crit;
-    config["fireResist"] = fireResist;
-    config["thunderResist"] = thunderResist;
-    config["frostResist"] = frostResist;
-    config["normalResist"] = normalResist;
-    config["shadowResist"] = shadowResist;
-    config["damage"] = damage;
-    config["attack"] = attack;
-    config["main"] = mainS;
-    return config;
+Damage::Damage(const Damage &dmg) {
+  for (int i = 0; i < this->metaObject()->propertyCount(); i++) {
+    QMetaProperty property = this->metaObject()->property(i);
+    this->setNumericProperty(property.name(),
+                             dmg.getNumericProperty(property.name()));
+  }
 }
 
-
-
-
-
-
-Stats::Stats(const Stats &other) : QObject() {
-    strength = other.strength;
-    stamina = other.stamina;
-    agility = other.agility;
-    intelligence = other.intelligence;
-    armor = other.armor;
-    block = other.block;
-    dmgMin = other.dmgMin;
-    dmgMax = other.dmgMax;
-    hit = other.hit;
-    crit = other.crit;
-    fireResist = other.fireResist;
-    thunderResist = other.thunderResist;
-    frostResist = other.frostResist;
-    normalResist = other.normalResist;
-    damage = other.damage;
-    attack = other.attack;
-    shadowResist = other.shadowResist;
-    setMain(other.mainS.c_str());
+void Stats::loadFromJson(QJsonObject config) {
+  for (auto it = config.begin(); it != config.end(); ++it) {
+    if (it.key() == "main") {
+      setMain(it.value().toString());
+      continue;
+    }
+    int index = metaObject()->indexOfProperty(it.key().toUtf8().constData());
+    if (index >= 0 && metaObject()->property(index).isUser() &&
+        it.value().isDouble())
+      setNumericProperty(it.key(), it.value().toInt());
+  }
 }
-
-Damage::Damage() {}
-Damage::Damage(const Damage &other) : QObject() {
-    fire = other.fire;
-    thunder = other.thunder;
-    frost = other.frost;
-    normal = other.normal;
-    shadow = other.shadow;
+QJsonObject Stats::saveToJson() {
+  QJsonObject result;
+  for (int i = 0; i < metaObject()->propertyCount(); ++i) {
+    QMetaProperty property = metaObject()->property(i);
+    if (property.isUser())
+      result[property.name()] = getNumericProperty(property.name());
+  }
+  if (!mainS.isEmpty())
+    result["main"] = mainS;
+  return result;
 }
