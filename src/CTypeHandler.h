@@ -1,15 +1,16 @@
 #pragma once
 #include <QObject>
 #include <QJsonObject>
-
-class MapObject;
+#include <QList>
+#include "CReflection.h"
+class CMapObject;
 class ATypeHandler : public QObject {
 	Q_OBJECT
-protected:
-	virtual MapObject *create ( QString name ) =0;
-	virtual void configure ( MapObject* object ) =0;
-	virtual QJsonObject save ( QJsonObject jsonConfig ) =0;
-	virtual void load ( MapObject* object ) =0;
+public:
+	static ATypeHandler* getHandler ( QString name );
+	ATypeHandler();
+	ATypeHandler ( const ATypeHandler& );
+	virtual CMapObject *create ( QString ,QJsonObject * );
 };
 
 class CTypeHandler : public ATypeHandler {
@@ -17,9 +18,5 @@ class CTypeHandler : public ATypeHandler {
 public:
 	CTypeHandler();
 	CTypeHandler ( const CTypeHandler& );
-protected:
-	virtual MapObject *create ( QString name );
-	virtual void configure ( MapObject *object );
-	virtual QJsonObject save ( QJsonObject jsonConfig );
-	virtual void load ( MapObject *object );
+	virtual CMapObject *create ( QString name,QJsonObject *config );
 };

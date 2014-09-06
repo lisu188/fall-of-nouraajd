@@ -10,6 +10,7 @@
             "strength": 12
         }, 
         "class": "Armor", 
+        "handler": "CTypeHandlerrr", 
         "power": 15
     }, 
     "LeatherArmor": {
@@ -21,7 +22,8 @@
             "crit": 2, 
             "stamina": 2
         }, 
-        "class": "Armor"
+        "class": "Armor", 
+        "handler": "CTypeHandlerrr"
     }, 
     "PlateArmor": {
         "animation": "images/items/armors/platearmor", 
@@ -31,7 +33,8 @@
             "stamina": 3, 
             "strength": 4
         }, 
-        "class": "Armor"
+        "class": "Armor", 
+        "handler": "CTypeHandlerrr"
     }, 
     "Robe": {
         "animation": "images/items/armors/robe", 
@@ -41,6 +44,7 @@
             "intelligence": 3, 
             "stamina": 2
         }, 
-        "class": "Armor"
+        "class": "Armor", 
+        "handler": "CTypeHandlerrr"
     }
 }

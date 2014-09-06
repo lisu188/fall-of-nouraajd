@@ -9,7 +9,6 @@
 class CConfigurationProvider : private std::map<QString, QJsonValue > {
 public:
 	static QJsonValue getConfig ( QString path );
-
 private:
 	CConfigurationProvider();
 	~CConfigurationProvider();

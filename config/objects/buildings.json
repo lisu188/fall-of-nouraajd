@@ -1,10 +1,12 @@
 {
     "Cave": {
         "animation": "images/buildings/cave", 
-        "class": "Cave"
+        "class": "Cave", 
+        "handler": "CTypeHandler"
     }, 
     "Teleporter": {
         "animation": "images/buildings/teleporter", 
-        "class": "Teleporter"
+        "class": "Teleporter", 
+        "handler": "CTypeHandler"
     }
 }

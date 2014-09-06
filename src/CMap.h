@@ -23,6 +23,7 @@ class CTile;
 class CPlayer;
 class CLootProvider;
 class CInteraction;
+class CObjectHandler;
 
 
 class CMap : public QObject,
@@ -67,36 +68,8 @@ public:
 	Coords getLocationByName ( QString name );
 	CPlayer *getPlayer();
 	CLootProvider *getLootProvider();
+	CObjectHandler *getObjectHandler();
 	void loadingComplete();
-	template<typename T>
-	QString getClassName ( QString name ) {
-		QJsonObject config = CConfigurationProvider::getConfig (
-		                         "config/object.json" ).toObject() [name].toObject();
-		if ( config.isEmpty() ) {
-			return "";
-		}
-		return config[ "class" ].toString();
-	}
-	template<typename T>
-	T createMapObject ( QString name ) {
-		CMapObject *object = NULL;
-		QString className = getClassName<T> ( name );
-		object=this->engine->createObject<CMapObject*> ( className );
-		if ( object==NULL ) {
-			int typeId = QMetaType::type ( className.toStdString().c_str() );
-			if ( typeId == 0 ) {
-				return NULL;
-			}
-			object = ( CMapObject * ) QMetaType::create ( typeId );
-		}
-		std::stringstream stream;
-		stream << std::hex << (   long ) object;
-		QString result ( stream.str().c_str() );
-		object->name = result;
-		object->map=this;
-		object->loadFromJson ( name );
-		return dynamic_cast<T> ( object );
-	}
 private:
 	std::set<CMapObject *> mapObjects;
 	void randomDir ( int *tab, int rule );
@@ -107,5 +80,6 @@ private:
 	int entryx, entryz, entryy;
 	CScriptEngine *engine;
 	CLootProvider *lootProvider;
+	CObjectHandler *handler;
 };
 
