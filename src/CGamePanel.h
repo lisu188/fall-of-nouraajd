@@ -10,10 +10,12 @@ class CPlayerEquippedView;
 class AGamePanel : public QGraphicsObject {
 	Q_OBJECT
 public:
-	virtual void showPanel ( CGameView *view ) =0;
-	virtual void setUpPanel ( CGameView * view ) =0;
-	virtual QRectF boundingRect() const=0;
-	virtual void paint ( QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget ) =0;
+	AGamePanel();
+	AGamePanel ( const AGamePanel& );
+	virtual void showPanel ( CGameView * );
+	virtual void setUpPanel ( CGameView *  );
+	virtual QRectF boundingRect() const;
+	virtual void paint ( QPainter *, const QStyleOptionGraphicsItem *, QWidget * );
 };
 
 

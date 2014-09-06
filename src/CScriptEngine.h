@@ -6,13 +6,14 @@
 
 class CMap;
 
-class CScriptEngine {
+class CScriptEngine :public QObject {
+	Q_OBJECT
 public:
 	void executeScript ( QString script );
 	void executeCommand ( std::initializer_list<QString> list );
 	QString buildCommand ( std::initializer_list<QString> list );
 	boost::python::object getObject ( QString name );
-	CScriptEngine ();
+	CScriptEngine ( CMap *map );
 	~CScriptEngine();
 	template<typename T>
 	T createObject ( QString clas ) {

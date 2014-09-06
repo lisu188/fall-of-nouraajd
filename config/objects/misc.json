@@ -1,5 +1,6 @@
 {
     "Event": {
-        "class": "Event"
+        "class": "Event", 
+        "handler": "CTypeHandlerrr"
     }
 }

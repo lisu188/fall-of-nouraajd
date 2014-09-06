@@ -6,10 +6,10 @@
 #include "CInteraction.h"
 #include "CItemSlot.h"
 #include "CLootProvider.h"
-
+#include "CObjectHandler.h"
 #include "CPathFinder.h"
 #include "CPlayerView.h"
-#include <QMetaType>
+#include "CTypeHandler.h"
 #include <QDebug>
 #include <QGraphicsSceneHoverEvent>
 #include <QJsonArray>
@@ -83,7 +83,8 @@ CCreature *CCreature::createCreature(QString name) {
       CConfigurationProvider::getConfig("config/objects/monsters.json")
           .toObject()[name]
           .toObject();
-  CCreature *creature = static_cast<CCreature *>(QMetaType::create(QMetaType::type(config["class"].toString().toStdString().c_str())));
+  CCreature *creature = dynamic_cast<CCreature *>(
+      CTypeHandler().create(config["class"].toString(), &config));
   if (creature) {
     creature->loadFromJson(name);
   }

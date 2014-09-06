@@ -51,6 +51,7 @@ SOURCES += \
     src/CMainWindow.cpp \
     src/CMap.cpp \
     src/CMapObject.cpp \
+    src/CObjectHandler.cpp \
     src/CPathFinder.cpp \
     src/CPlayerView.cpp \
     src/CReflection.cpp \
@@ -78,6 +79,7 @@ HEADERS += \
     src/CMainWindow.h \
     src/CMap.h \
     src/CMapObject.h \
+    src/CObjectHandler.h \
     src/CPathFinder.h \
     src/CPlayerView.h \
     src/CReflection.h \

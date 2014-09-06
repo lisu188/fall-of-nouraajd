@@ -5,7 +5,7 @@
 #include "CItem.h"
 #include "CLootProvider.h"
 #include "CMap.h"
-#include "CScriptEngine.h"
+#include "CObjectHandler.h"
 #include "CPathFinder.h"
 #include "CTile.h"
 #include <QDebug>
@@ -22,11 +22,29 @@ bool mapTileCanStep(CMap *map, int x, int y, int z) {
 }
 } // namespace
 
+// The surviving script engine still constructs the Python building subclasses.
+static CMapObject *createPlacedObject(CMap *map, const QString &type) {
+  QJsonObject buildings = CConfigurationProvider::getConfig("config/objects/buildings.json").toObject();
+  const QString buildingClass = buildings.value(type).toObject().value("class").toString();
+  if (!buildingClass.isEmpty()) {
+    CMapObject *building = map->getEngine()->createObject<CMapObject *>(buildingClass);
+    if (building) {
+      building->setMap(map);
+      building->loadFromJson(type);
+      return building;
+    }
+  }
+  if (CConfigurationProvider::getConfig("config/objects/weapons.json").toObject().contains(type))
+    return CItem::createItem(type);
+  return map->getObjectHandler()->createMapObject<CMapObject *>(type);
+}
+
 CMap::CMap(CGameScene *scene, QString file)
     : QObject(scene), scene(scene), entryx(0), entryz(0), entryy(0),
-      lootProvider(nullptr) {
+      lootProvider(nullptr), handler(nullptr) {
   scene->setMap(this);
-  engine = new CScriptEngine();
+  engine = new CScriptEngine(this);
+  handler = new CObjectHandler(this);
   connect(CompletionListener::getInstance(), SIGNAL(completed()), this,
           SLOT(moveCompleted()));
   Tmx::Map loaded;
@@ -100,9 +118,7 @@ void CMap::loadMapFromTmx(Tmx::Map &loaded) {
     for (const Tmx::Object *definition : group->GetObjects()) {
       QString type = QString::fromStdString(definition->GetType());
       CMapObject *object =
-          (type == "ChaosSword")
-              ? static_cast<CMapObject *>(CItem::createItem(type))
-              : createMapObject<CMapObject *>(type);
+          createPlacedObject(this, type);
       if (!object) {
         qFatal("Cannot construct authored map object %s", qPrintable(type));
       }
@@ -209,7 +225,7 @@ QString CMap::addObjectByName(QString name, Coords coords) {
   if (!mapTileCanStep(this, coords.x, coords.y, coords.z)) {
     return QString();
   }
-  CMapObject *object = createMapObject<CMapObject *>(name);
+  CMapObject *object = createPlacedObject(this, name);
   if (!object) {
     return QString();
   }
@@ -236,7 +252,7 @@ CPlayer *CMap::getPlayer() {
   }
   return nullptr;
 }
-
+CObjectHandler *CMap::getObjectHandler() { return handler; }
 CLootProvider *CMap::getLootProvider() {
   if (!lootProvider) {
     lootProvider = new CLootProvider(this);
