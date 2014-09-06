@@ -23,10 +23,15 @@ QPointF CAnimatedObject::mapToParent ( int a, int b ) {
 }
 
 void CAnimatedObject::setAnimation ( QString path, int size ) {
+	this->path=path;
 	staticAnimation = CAnimationProvider::getAnim ( path, size );
 	if ( staticAnimation ) {
 		animate();
 	}
+}
+
+QString CAnimatedObject::getAnimation() {
+	return this->path;
 }
 
 void CAnimatedObject::animate() {

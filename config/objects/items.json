@@ -10,7 +10,7 @@
             "strength": 4
         }, 
         "class": "Helmet", 
-        "handler": "CTypeHandlerrr", 
+        "handler": "CTypeHandler", 
         "power": 18
     }, 
     "EradicatorsBoots": {
@@ -23,7 +23,7 @@
             "strength": 10
         }, 
         "class": "Boots", 
-        "handler": "CTypeHandlerrr", 
+        "handler": "CTypeHandler", 
         "power": 14
     }, 
     "GlovesOfTheAssasin": {
@@ -37,13 +37,13 @@
             "strength": 8
         }, 
         "class": "Gloves", 
-        "handler": "CTypeHandlerrr", 
+        "handler": "CTypeHandler", 
         "power": 11
     }, 
     "Scroll": {
         "animation": "images/items/scroll", 
         "class": "Item", 
-        "handler": "CTypeHandlerrr", 
+        "handler": "CTypeHandler", 
         "power": 1, 
         "singleUse": false
     }, 
@@ -58,7 +58,7 @@
             "strength": 14
         }, 
         "class": "Belt", 
-        "handler": "CTypeHandlerrr", 
+        "handler": "CTypeHandler", 
         "power": 20
     }
 }

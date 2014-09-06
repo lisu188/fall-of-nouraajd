@@ -149,8 +149,7 @@ CItem *CItem::createItem(QString name) {
       QMetaType::type(("C" + class_name).toUtf8().constData())) {
     class_name.prepend("C");
   }
-  QJsonObject config = itemConfiguration(name);
-  CItem *item = dynamic_cast<CItem *>(CTypeHandler().create(class_name, &config));
+  CItem *item = dynamic_cast<CItem *>(CTypeHandler().create(class_name));
   if (item) {
     item->loadFromJson(name);
   }

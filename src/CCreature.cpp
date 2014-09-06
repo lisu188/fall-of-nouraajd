@@ -84,7 +84,7 @@ CCreature *CCreature::createCreature(QString name) {
           .toObject()[name]
           .toObject();
   CCreature *creature = dynamic_cast<CCreature *>(
-      CTypeHandler().create(config["class"].toString(), &config));
+      CTypeHandler().create(config["class"].toString()));
   if (creature) {
     creature->loadFromJson(name);
   }

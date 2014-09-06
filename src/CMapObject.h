@@ -10,7 +10,6 @@ class CMapObject : public CAnimatedObject {
 public:
 	CMapObject();
 	QString typeName;
-	QString name;
 	int posx, posy, posz;
 	virtual void moveTo ( int x, int y, int z, bool silent = false );
 	int getPosX() const;
@@ -29,10 +28,8 @@ public:
 	void setVisible ( bool vis );
 	Coords getCoords();
 	void setCoords ( Coords coords );
-
 	PROPERTY_ACCESSOR
 protected:
-	void setAnimation ( QString path );
 	CMap *map = 0;
 	QGraphicsSimpleTextItem statsView;
 
