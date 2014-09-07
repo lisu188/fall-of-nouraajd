@@ -1,38 +1,27 @@
-#include "CConfigurationProvider.h"
 #include "CCreature.h"
 #include "CGameScene.h"
-#include "CGameView.h"
 #include "CMap.h"
 #include "CMapObject.h"
 #include "CTile.h"
 #include <QGraphicsSceneHoverEvent>
 
-CMapObject::CMapObject() : posx(0), posy(0), posz(0) {
-  setAcceptHoverEvents(true);
-}
-
+CMapObject::CMapObject() { setAcceptHoverEvents(true); }
+QString CMapObject::getTypeName() const { return typeName; }
+void CMapObject::setTypeName(const QString &value) { typeName = value; }
+QString CMapObject::getTooltip() const { return tooltip; }
+void CMapObject::setTooltip(const QString &value) { tooltip = value; }
 int CMapObject::getPosX() const { return posx; }
 int CMapObject::getPosY() const { return posy; }
 int CMapObject::getPosZ() const { return posz; }
 
-namespace {
-bool mapTileCanStep(CMap *map, int x, int y, int z) {
-  return CConfigurationProvider::getConfig("config/objects/tiles.json")
-      .toObject()[map->getTile(x, y, z)]
-      .toObject()["properties"]
-      .toObject()["canStep"]
-      .toBool();
-}
-} // namespace
-
 void CMapObject::move(int x, int y) {
-  if (map && !mapTileCanStep(map, posx + x, posy + y, posz)) {
+  if (map && !map->getTile(posx + x, posy + y, posz)->canStep()) {
     return;
   }
   moveTo(posx + x, posy + y, posz, true);
 }
 void CMapObject::moveTo(int x, int y, int z, bool silent) {
-  if (map && !silent && !mapTileCanStep(map, x, y, z)) {
+  if (map && !silent && !map->getTile(x, y, z)->canStep()) {
     return;
   }
   posx = x;
@@ -49,7 +38,7 @@ void CMapObject::onEnter() {}
 void CMapObject::onMove() {}
 void CMapObject::onCreate() {}
 void CMapObject::onDestroy() {}
-void CMapObject::loadFromJson(QString name) { typeName = name; }
+void CMapObject::loadFromJson(QString name) { setTypeName(name); }
 void CMapObject::loadFromProps(Tmx::PropertySet properties) {
   for (auto &entry : properties.GetList()) {
     QString value = QString::fromStdString(entry.second);
@@ -67,8 +56,6 @@ void CMapObject::setMap(CMap *value) {
     return;
   }
   map = value;
-  QObject::setParent(nullptr);
-  QWidget::setParent(map->getScene()->getView());
   moveTo(posx, posy, posz, true);
   if (scene() != map->getScene()) {
     map->getScene()->addItem(this);

@@ -12,9 +12,11 @@ public:
 	T createMapObject ( QString type ) {
 		return dynamic_cast<T> ( _createMapObject ( type ) );
 	}
+	void logProperties ( CMapObject *object );
 private:
 	CMapObject *_createMapObject ( QString type );
 	void setProperty ( QObject * object , QString key, QJsonValue value );
+	QMetaProperty getProperty ( QObject * object ,QString name );
 	CMap *map;
 	QJsonObject objectConfig;
 };

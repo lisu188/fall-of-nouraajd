@@ -1,8 +1,6 @@
-#include "CConfigurationProvider.h"
 #include "CCreature.h"
 #include "CGameScene.h"
 #include "CGameView.h"
-#include "CItem.h"
 #include "CLootProvider.h"
 #include "CMap.h"
 #include "CObjectHandler.h"
@@ -12,16 +10,6 @@
 #include <QThreadPool>
 #include <algorithm>
 #include <cstdlib>
-
-namespace {
-bool mapTileCanStep(CMap *map, int x, int y, int z) {
-  return CConfigurationProvider::getConfig("config/objects/tiles.json")
-      .toObject()[map->getTile(x, y, z)]
-      .toObject()["properties"]
-      .toObject()["canStep"]
-      .toBool();
-}
-} // namespace
 
 CMap::CMap(CGameScene *scene, QString file)
     : QObject(scene), scene(scene), entryx(0), entryz(0), entryy(0),
@@ -42,15 +30,17 @@ CMap::~CMap() {
   QThreadPool::globalInstance()->waitForDone();
   std::set<CMapObject *> objects = mapObjects;
   mapObjects.clear();
-  for (CMapObject *object : objects)
+  for (CMapObject *object : objects) {
     delete object;
-  std::set<CTile *> rendered;
-  for (auto &entry : tiles)
-    rendered.insert(entry.second);
-  tiles.clear();
+  }
+  std::set<CTile *> tiles;
+  for (auto &entry : *this) {
+    tiles.insert(entry.second);
+  }
   clear();
-  for (CTile *tile : rendered)
+  for (CTile *tile : tiles) {
     delete tile;
+  }
 }
 
 void CMap::loadMapFromTmx(Tmx::Map &loaded) {
@@ -91,7 +81,7 @@ void CMap::loadMapFromTmx(Tmx::Map &loaded) {
                                  tile_properties.GetLiteralProperty("type"))
                            : QString();
         if (!type.isEmpty()) {
-          addTile(type, x, y, level);
+          addTile(handler->createMapObject<CTile *>(type), x, y, level);
         }
       }
     }
@@ -100,10 +90,7 @@ void CMap::loadMapFromTmx(Tmx::Map &loaded) {
     int level = group->GetProperties().GetNumericProperty("level");
     for (const Tmx::Object *definition : group->GetObjects()) {
       QString type = QString::fromStdString(definition->GetType());
-      CMapObject *object =
-          (type == "ChaosSword")
-              ? static_cast<CMapObject *>(CItem::createItem(type))
-              : handler->createMapObject<CMapObject *>(type);
+      CMapObject *object = handler->createMapObject<CMapObject *>(type);
       if (!object) {
         qFatal("Cannot construct authored map object %s", qPrintable(type));
       }
@@ -119,58 +106,66 @@ void CMap::loadMapFromTmx(Tmx::Map &loaded) {
   loadingComplete();
 }
 
-bool CMap::addTile(QString name, int x, int y, int z) {
-  Coords coords(x, y, z);
-  if (contains(x, y, z))
+bool CMap::addTile(CTile *tile, int x, int y, int z) {
+  if (!tile || contains(x, y, z)) {
     return false;
-  insert(std::make_pair(coords, name));
+  }
+  tile->posx = x;
+  tile->posy = y;
+  tile->posz = z;
+  tile->setMap(this);
+  tile->moveTo(x, y, z, true);
+  tile->setVisible(z == currentMap);
   return true;
 }
 void CMap::removeTile(int x, int y, int z) {
-  Coords coords(x, y, z);
-  erase(coords);
-  auto it = tiles.find(coords);
-  if (it != tiles.end()) {
-    CTile *tile = it->second;
-    tiles.erase(it);
-    delete tile;
+  auto it = find(Coords(x, y, z));
+  if (it == end()) {
+    return;
   }
+  CTile *tile = it->second;
+  erase(it);
+  delete tile;
 }
 bool CMap::contains(int x, int y, int z) {
   return find(Coords(x, y, z)) != end();
 }
-QString CMap::getTile(int x, int y, int z) {
+CTile *CMap::getTile(int x, int y, int z) {
   auto it = find(Coords(x, y, z));
-  if (it != end())
+  if (it != end()) {
     return it->second;
+  }
   auto bounds = boundaries[z];
-  return x < 0 || y < 0 || x >= bounds.first || y >= bounds.second
-             ? "MountainTile"
-             : defaultTiles[z];
+  QString type = x < 0 || y < 0 || x >= bounds.first || y >= bounds.second
+                     ? "MountainTile"
+                     : defaultTiles[z];
+  CTile *tile = handler->createMapObject<CTile *>(type);
+  if (!tile || !addTile(tile, x, y, z)) {
+    qFatal("Cannot construct map tile %s", qPrintable(type));
+  }
+  return tile;
 }
-void CMap::ensureTile(int x, int y) {
-  Coords coords(x, y, currentMap);
-  if (tiles.find(coords) != tiles.end())
-    return;
-  CTile *tile = CTile::getTile(getTile(x, y, currentMap), x, y, currentMap);
-  tile->setMap(this);
-  tile->setVisible(true);
-  tiles[coords] = tile;
-}
+void CMap::ensureTile(int x, int y) { getTile(x, y, currentMap); }
 void CMap::ensureSize() {
   CPlayer *player = getPlayer();
-  if (!player)
+  if (!player) {
     return;
+  }
   currentMap = player->getPosZ();
-  for (int x = -20; x < 20; ++x)
-    for (int y = -10; y < 10; ++y)
+  for (int x = -20; x < 20; ++x) {
+    for (int y = -10; y < 10; ++y) {
       ensureTile(player->getPosX() + x, player->getPosY() + y);
-  for (auto &entry : tiles)
-    entry.second->setVisible(entry.first.z == currentMap);
-  for (CMapObject *object : mapObjects)
+    }
+  }
+  for (auto &tile : *this) {
+    tile.second->setVisible(tile.first.z == currentMap);
+  }
+  for (CMapObject *object : mapObjects) {
     object->setVisible(object->getPosZ() == currentMap);
-  if (scene->getView())
+  }
+  if (scene->getView()) {
     scene->getView()->centerOn(player);
+  }
 }
 void CMap::addObject(CMapObject *object) {
   if (!object || !mapObjects.insert(object).second) {
@@ -207,7 +202,7 @@ void CMap::removeObjectByName(QString name) {
   removeObject(getObjectByName(name));
 }
 QString CMap::addObjectByName(QString name, Coords coords) {
-  if (!mapTileCanStep(this, coords.x, coords.y, coords.z)) {
+  if (!getTile(coords.x, coords.y, coords.z)->canStep()) {
     return QString();
   }
   CMapObject *object = handler->createMapObject<CMapObject *>(name);
@@ -220,7 +215,8 @@ QString CMap::addObjectByName(QString name, Coords coords) {
 }
 void CMap::replaceTile(QString name, Coords coords) {
   removeTile(coords.x, coords.y, coords.z);
-  addTile(name, coords.x, coords.y, coords.z);
+  addTile(handler->createMapObject<CTile *>(name), coords.x, coords.y,
+          coords.z);
 }
 Coords CMap::getLocationByName(QString name) {
   CMapObject *object = getObjectByName(name);
@@ -247,8 +243,9 @@ CLootProvider *CMap::getLootProvider() {
 
 void CMap::move(int x, int y) {
   CPlayer *player = getPlayer();
-  if (!player || !mapTileCanStep(this, player->getPosX() + x,
-                                 player->getPosY() + y, player->getPosZ())) {
+  if (!player ||
+      !getTile(player->getPosX() + x, player->getPosY() + y, player->getPosZ())
+           ->canStep()) {
     return;
   }
   CompletionListener::getInstance()->start();
@@ -278,8 +275,7 @@ void CMap::moveCompleted() {
     }
   }
   *player->getEntered() = entered;
-  ensureTile(player->getPosX(), player->getPosY());
-  tiles.at(player->getCoords())->onStep();
+  getTile(player->getPosX(), player->getPosY(), player->getPosZ())->onStep();
   if (!player->getFightList()->empty()) {
     scene->getView()->showFightView();
   }
@@ -325,12 +321,3 @@ int CMap::getEntryZ() { return entryz; }
 std::map<int, std::pair<int, int>> CMap::getBounds() { return boundaries; }
 int CMap::getCurrentXBound() { return boundaries[currentMap].first; }
 int CMap::getCurrentYBound() { return boundaries[currentMap].second; }
-
-int CMap::getTileSize() { return 50; }
-void CMap::hide() {
-  for (auto &entry : tiles)
-    entry.second->setVisible(false);
-  for (CMapObject *object : mapObjects)
-    object->setVisible(false);
-}
-void CMap::showAll() { ensureSize(); }

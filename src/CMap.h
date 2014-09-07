@@ -27,25 +27,22 @@ class CObjectHandler;
 
 
 class CMap : public QObject,
-	public std::unordered_map<Coords, QString, CoordsHasher> {
+	public std::unordered_map<Coords, CTile*, CoordsHasher> {
 	Q_OBJECT
 public:
 	CMap ( CGameScene *scene, QString file );
 	~CMap();
-	bool addTile ( QString name, int x, int y, int z );
+	bool addTile ( CTile *tile, int x, int y, int z );
 	void removeTile ( int x, int y, int z );
-	static int getTileSize();
 	void move ( int x, int y );
-	QString getTile ( int x, int y, int z );
+	CTile *getTile ( int x, int y, int z );
 	bool contains ( int x, int y, int z );
 	void addObject ( CMapObject *mapObject );
 	void addRiver ( int length, int startx, int starty, int startz );
 	void addRoad ( int length, int startx, int starty, int startz );
 	void removeObject ( CMapObject *mapObject );
 	Q_SLOT void ensureSize();
-	void hide();
 	CGameScene *getScene() const;
-	void showAll();
 	void mapUp();
 	void mapDown();
 	int getCurrentMap();
@@ -57,7 +54,6 @@ public:
 	CMapObject *getObjectByName ( QString name );
 	Q_SLOT void moveCompleted();
 	Q_INVOKABLE void ensureTile ( int i, int j );
-	std::unordered_map<Coords, CTile *, CoordsHasher> tiles;
 	std::map<int, std::pair<int, int> > getBounds();
 	int getCurrentXBound();
 	int getCurrentYBound();

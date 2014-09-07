@@ -122,7 +122,7 @@ CWeapon::CWeapon(const CWeapon &weapon) {}
 CInteraction *CWeapon::getInteraction() { return interaction; }
 
 void CItem::loadFromJson(QString name) {
-  typeName = name;
+  setTypeName(name);
   QJsonObject config = itemConfiguration(name);
   QJsonObject properties =
       config.contains("properties") ? config["properties"].toObject() : config;
@@ -136,20 +136,14 @@ void CItem::loadFromJson(QString name) {
   tooltip = properties["tooltip"].toString(name);
   slot = properties["slot"].toInt();
   QString action = properties["interaction"].toString();
-  interaction = nullptr;
-  if (!action.isEmpty()) {
-    interaction = new CInteraction();
-    interaction->QWidget::setParent(this);
-    interaction->loadFromJson(action);
-  }
+  interaction =
+      map && !action.isEmpty()
+          ? map->getObjectHandler()->createMapObject<CInteraction *>(action)
+          : nullptr;
 }
 CItem *CItem::createItem(QString name) {
-  QString class_name = itemConfiguration(name)["class"].toString();
-  if (!class_name.startsWith("C") &&
-      QMetaType::type(("C" + class_name).toUtf8().constData())) {
-    class_name.prepend("C");
-  }
-  CItem *item = dynamic_cast<CItem *>(CTypeHandler().create(class_name));
+  CItem *item = dynamic_cast<CItem *>(
+      CTypeHandler().create(itemConfiguration(name)["class"].toString()));
   if (item) {
     item->loadFromJson(name);
   }

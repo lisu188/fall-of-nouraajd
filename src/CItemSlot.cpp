@@ -10,13 +10,13 @@
 CItemSlot::CItemSlot ( int number, std::map<int, CItem *> *equipped )
 	: number ( number ), equipped ( equipped ) {
 	pixmap.load ( ":/images/item.png" ); // change to slot items path in json
-	pixmap = pixmap.scaled ( CMap::getTileSize(), CMap::getTileSize(),
+	pixmap = pixmap.scaled ( 50, 50,
 	                         Qt::IgnoreAspectRatio, Qt::SmoothTransformation );
 	this->setAcceptDrops ( true );
 }
 
 QRectF CItemSlot::boundingRect() const {
-	return QRectF ( 0, 0, CMap::getTileSize(), CMap::getTileSize() );
+	return QRectF ( 0, 0, 50, 50 );
 }
 
 void CItemSlot::paint ( QPainter *painter, const QStyleOptionGraphicsItem *,

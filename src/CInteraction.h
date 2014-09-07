@@ -11,17 +11,23 @@ class Effect;
 
 class CInteraction : public CMapObject {
 	Q_OBJECT
+	Q_PROPERTY ( int manaCost READ getManaCost  WRITE setManaCost USER true )
+	Q_PROPERTY ( QString effect READ getEffect WRITE setEffect USER true )
 public:
 	CInteraction();
 	CInteraction ( const CInteraction & );
 	void onAction ( CCreature *first, CCreature *second );
-	int getManaCost();
 	virtual void onEnter();
 	virtual void onMove();
-	virtual void loadFromJson ( QString name );
 	virtual bool compare ( CMapObject *item );
 	virtual void performAction ( CCreature*, CCreature* );
 	virtual bool configureEffect ( Effect* );
+
+	QString getEffect() const;
+	void setEffect ( const QString &value );
+
+	int getManaCost() const;
+	void setManaCost ( int value );
 
 protected:
 	void mousePressEvent ( QGraphicsSceneMouseEvent * );

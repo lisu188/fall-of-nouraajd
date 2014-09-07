@@ -84,7 +84,7 @@ void CFightPanel::paint(QPainter *painter, const QStyleOptionGraphicsItem *,
   painter->setPen(Qt::white);
   painter->drawText(QRectF(0, 0, 200, 50), Qt::AlignCenter,
                     QString("%1: %2/%3")
-                        .arg(selected->typeName)
+                        .arg(selected->getTypeName())
                         .arg(selected->getHp())
                         .arg(selected->getHpMax()));
 }

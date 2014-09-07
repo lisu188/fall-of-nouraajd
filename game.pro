@@ -100,8 +100,10 @@ FORMS += \
 exists($$PWD/src/CTile.h):DEFINES += GAME_RECOVERY_PREFIXED_TILE
 exists($$PWD/src/CGameScene.h):DEFINES += GAME_RECOVERY_PREFIXED_SCENE_HEADER
 
+# The reconstructed historical map calls the genuine TMX parser and its vendored dependencies.
 INCLUDEPATH += lib
-SOURCES += lib/base64/base64.cpp \
+SOURCES += \
+    lib/base64/base64.cpp \
     lib/tinyxml/tinystr.cpp \
     lib/tinyxml/tinyxml.cpp \
     lib/tinyxml/tinyxmlerror.cpp \
