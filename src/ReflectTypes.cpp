@@ -35,3 +35,4 @@ REFLECT ( CFightPanel )
 REFLECT ( ATypeHandler )
 REFLECT ( CTypeHandler )
 REFLECT ( PyTypeHandler )
+
