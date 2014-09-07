@@ -57,12 +57,7 @@ CCreature::CCreature()
   }
 }
 
-CCreature::CCreature(const CCreature &creature) : stats(creature.stats) {
-  setZValue(2);
-  QJsonObject slot_config =
-      CConfigurationProvider::getConfig("config/slots.json").toObject();
-  for (auto it = slot_config.begin(); it != slot_config.end(); ++it)
-    equipped[it.key().toInt()] = nullptr;
+CCreature::CCreature(const CCreature &creature) : CCreature() {
   typeName = creature.typeName;
   gold = creature.gold;
   exp = creature.exp;
@@ -74,6 +69,7 @@ CCreature::CCreature(const CCreature &creature) : stats(creature.stats) {
   hpMax = creature.hpMax;
   hp = creature.hp;
   alive = creature.alive;
+  stats = creature.stats;
 }
 
 CCreature::~CCreature() { actions.clear(); }
@@ -94,7 +90,7 @@ CCreature *CCreature::createCreature(QString name) {
 void CCreature::loadFromJson(QString name) {
   typeName = name;
   QJsonObject properties = creatureProperties(name);
-  stats.loadFromJson(properties["stats"].toObject());
+  stats = readStats(properties["stats"].toObject());
   sw = properties["sw"].toInt();
   setAnimation(properties["animation"].toString());
   attribChange();
