@@ -155,7 +155,8 @@ CItem *CItem::createItem(QString name) {
   }
   return item;
 }
-
+Stats CItem::getBonus() { return bonus; }
+void CItem::setBonus(Stats value) { bonus = value; }
 CArmor::CArmor(QString name) { loadFromJson(name); }
 
 CPotion::CPotion() : effect(nullptr) {}
@@ -187,5 +188,3 @@ void LifeEffect(CCreature *creature, int power) {
 void ManaEffect(CCreature *creature, int power) {
   creature->addManaProc(power * 20);
 }
-
-Stats *CWeapon::getStats() { return &bonus; }

@@ -1,6 +1,6 @@
 {
   "adapter": {
-    "config": "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-43b4a8v5/observer/recovery_smoke_config.h",
+    "config": "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-pl6d2az2/observer/recovery_smoke_config.h",
     "configSha256": "ee72b2bd8ff18650c2700d482710849db589d80f01f85c6db3a34564d0d3e514",
     "id": "prefixed-3d",
     "mode": "game",
@@ -24,7 +24,7 @@
     },
     "source-preparation.json": {
       "path": "source-preparation.json",
-      "sha256": "1c9c2d72b03ea0e8c69491172a7c1b03d82b823d68a46fc89102aa8e574950f3"
+      "sha256": "9a90c035cff74e85102b89103abc45e19284995f3f5870d5fb468ef7b4b03466"
     },
     "source-preparation.log": {
       "path": "source-preparation.log",
@@ -36,17 +36,17 @@
       "make",
       "-j8"
     ],
-    "log": "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-43b4a8v5/build.log",
+    "log": "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-pl6d2az2/build.log",
     "returnCode": 0,
-    "seconds": 29.742,
+    "seconds": 24.375,
     "timedOut": false
   },
   "configure": {
     "command": [
       "qmake",
-      "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-43b4a8v5/source/game.pro",
+      "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-pl6d2az2/source/game.pro",
       "-o",
-      "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-43b4a8v5/build/Makefile",
+      "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-pl6d2az2/build/Makefile",
       "QMAKE_CC=gcc-5",
       "QMAKE_CXX=g++-5",
       "QMAKE_LINK=g++-5",
@@ -56,15 +56,15 @@
       "DESTDIR=.",
       "CONFIG-=app_bundle",
       "SOURCES+=/home/andrz/nouraajd-bfg-recovery-backup-20261116/source/recovery/smoke/game_startup.cpp",
-      "INCLUDEPATH+=/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-43b4a8v5/source",
-      "INCLUDEPATH+=/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-43b4a8v5/observer"
+      "INCLUDEPATH+=/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-pl6d2az2/source",
+      "INCLUDEPATH+=/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-pl6d2az2/observer"
     ],
-    "log": "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-43b4a8v5/configure.log",
+    "log": "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-pl6d2az2/configure.log",
     "returnCode": 0,
     "seconds": 0.032,
     "timedOut": false
   },
-  "evidenceDir": "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/evidence/ab002c2a32de8df278c0a0566aa9e9b61a99b344e1834f40b0ac9a6948361dd1",
+  "evidenceDir": "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/evidence/5b6b4ddc959fe399cb9b95ecc76eac461e476a3fb86f041a46c16d2f14377b34",
   "fileLookup": {
     "command": [
       "g++-5",
@@ -73,20 +73,20 @@
       "-O2",
       "-std=c++11",
       "-o",
-      "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-43b4a8v5/observer/libwindowspaths.so",
+      "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-pl6d2az2/observer/libwindowspaths.so",
       "/home/andrz/nouraajd-bfg-recovery-backup-20261116/source/recovery/smoke/windows_paths.cpp",
       "-ldl"
     ],
-    "log": "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-43b4a8v5/file-lookup.log",
+    "log": "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-pl6d2az2/file-lookup.log",
     "returnCode": 0,
     "seconds": 0.214,
     "semantics": "Windows-style case-insensitive file lookup for the game process",
     "timedOut": false
   },
-  "fingerprint": "ab002c2a32de8df278c0a0566aa9e9b61a99b344e1834f40b0ac9a6948361dd1",
+  "fingerprint": "5b6b4ddc959fe399cb9b95ecc76eac461e476a3fb86f041a46c16d2f14377b34",
   "libraryAliases": {
     "aliases": {},
-    "directory": "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-43b4a8v5/observer/library-aliases"
+    "directory": "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-pl6d2az2/observer/library-aliases"
   },
   "project": "game.pro",
   "recipe": {
@@ -125,7 +125,7 @@
   },
   "restoration": {
     "excluded": [],
-    "outputDir": "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-43b4a8v5/source",
+    "outputDir": "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-pl6d2az2/source",
     "restored": [
       {
         "markerPath": "Game.pro.REMOVED.git-id",
@@ -140,31 +140,31 @@
         "method": "reconstruction",
         "originalBlob": "3b8e88cd7324d903dece79d8dbcbe9df621a9efd",
         "path": "config/objects/monsters.json",
-        "provenance": "unverified donor reconstruction; 55e6516eb91b739e899df1ef8d72116da44fec49:config/monsters.json; headerMatch=0; apiOverlap=0/10000; distance=109",
+        "provenance": "unverified donor reconstruction; 55e6516eb91b739e899df1ef8d72116da44fec49:config/monsters.json; headerMatch=0; apiOverlap=0/10000; distance=108",
         "replacementBlob": "b6b5708a1c0683d8ca6d9c395ee31e4742bdd39e"
       },
       {
         "markerPath": "config/objects/weapons.json.REMOVED.git-id",
         "method": "reconstruction",
-        "originalBlob": "0cbb51172a1cf2b13313c9283210a4b4598d867d",
+        "originalBlob": "427544d4f90d954d83734bbab810145584f46b2c",
         "path": "config/objects/weapons.json",
-        "provenance": "Inferred missing #256 implementation from native-verified #257 bodies and same-commit surviving declarations/callers; surviving source bytes are unchanged. Use the explicit #257 reconstruction with the same surviving weapon class declarations and genuine item/interaction configuration schema; item balance values remain inferred donor data, not exact recovery.",
+        "provenance": "Replace unrelated tile donor for missing #257 weapon configuration with surviving55e6516e:config/weapons.json used for native-verified #260. Same original CWeapon/Stats/item API and authored ChaosSword/Dagger references ground the adaptation; add actual CTypeHandler. Numeric donor balance remains inferred, not exact historical recovery.",
         "replacementBlob": "1101738c32845828729cefd6a24f65eca58f6faa"
       },
       {
         "markerPath": "format.py.REMOVED.git-id",
         "method": "reconstruction",
-        "originalBlob": "97025274f3aa23a921256c4aaada67cd54a257cb",
+        "originalBlob": "4f121095736ca01763ed275b37996368ede3e189",
         "path": "format.py",
-        "provenance": "unverified donor reconstruction; 51c2e9b0b64c86a8e593a5231c3ef9e44efc5af1:format.py; headerMatch=0; apiOverlap=0/10000; distance=14",
+        "provenance": "unverified donor reconstruction; 51c2e9b0b64c86a8e593a5231c3ef9e44efc5af1:format.py; headerMatch=0; apiOverlap=0/10000; distance=15",
         "replacementBlob": "aafd49b43ba2d56af3910f6b57b1cd2e856ff429"
       },
       {
         "markerPath": "game.pro.REMOVED.git-id",
         "method": "reconstruction",
-        "originalBlob": "69fd798f9c12545d2718d2787ad1ea609107a937",
+        "originalBlob": "91fe15120dd506b4a0cfabb13cbca41cd66bea7a",
         "path": "game.pro",
-        "provenance": "Inferred missing #256 implementation from native-verified #257 bodies and same-commit surviving declarations/callers; surviving source bytes are unchanged. Project selects actual same-commit application, engine sources, headers and all33 vendored TMX/non-jsoncpp C/C++ implementation units; no surviving project modified.",
+        "provenance": "Extend only missing #257 application project with all33 actually supplied Tmx/base64/tinyxml/zlib translation units plus lib include path, as required by actual reconstructed TMX loader. Preserve original ABI/project marker and every surviving project byte. Earlier donor-based project omitted these libraries because future map donor did not call Tmx.",
         "replacementBlob": "126291b60d101d7668bdb30c5685892f33fa515f"
       },
       {
@@ -572,7 +572,7 @@
         "method": "reconstruction",
         "originalBlob": "7875ce8a1b581263e214bff6a4d69b0aa216427d",
         "path": "lib/base64/base64.cpp",
-        "provenance": "unverified donor reconstruction; 779fb803ff021de5e74ed3b24d7c31a9adcaa236:base64/base64.cpp; headerMatch=0; apiOverlap=10000/10000; distance=72",
+        "provenance": "unverified donor reconstruction; 779fb803ff021de5e74ed3b24d7c31a9adcaa236:base64/base64.cpp; headerMatch=0; apiOverlap=10000/10000; distance=73",
         "replacementBlob": "07e5caa3e0fad17acd31b769f08db8887a1ed9b4"
       },
       {
@@ -823,16 +823,16 @@
         "method": "reconstruction",
         "originalBlob": "bde36436bdd7e697d509bfd8c2f90a634ec3cfb0",
         "path": "scripts/game/interaction.py",
-        "provenance": "unverified donor reconstruction; 21c04c61c564bb91953b90218c6cf4bed54417a9:scripts/game/interaction.py; headerMatch=0; apiOverlap=0/10000; distance=13",
+        "provenance": "unverified donor reconstruction; 21c04c61c564bb91953b90218c6cf4bed54417a9:scripts/game/interaction.py; headerMatch=0; apiOverlap=0/10000; distance=14",
         "replacementBlob": "d322178361a44d5e95d5d5f8d55aace2c91dc2c4"
       },
       {
         "markerPath": "src/CCreature.cpp.REMOVED.git-id",
         "method": "reconstruction",
-        "originalBlob": "3a08b2a33b8737e6e57b7c595eea6fdb5e10d9eb",
+        "originalBlob": "9a0418633ef1d063e289543f6367218b7abded87",
         "path": "src/CCreature.cpp",
-        "provenance": "Inferred missing #256 implementation from native-verified #257 bodies and same-commit surviving declarations/callers; surviving source bytes are unchanged. Use genuine #256 Stats::loadFromJson and copy construction rather than the future assignment operator. Preserve actual combined CCreature/CPlayer/CMonster API, slot-map invariant, item/action mechanics and authored configuration; no fake class or callback.",
-        "replacementBlob": "b1715e68d8b545ce26bcfea90d3be09488e85cde"
+        "provenance": "Infer missing #257 body from native-verified #259 reconstruction, adapted only to same-commit original declarations/callers; preserve every surviving input. Combined reconstructed header has the same genuine API as #259. Use original pre-migration CInteraction::loadFromJson and CItem::createItem for flat action/item configuration; retain real equipment slots and int Stats::getMain. No future factory metadata or stand-in classes.",
+        "replacementBlob": "23fa3dfd09a1bc817f226670573d4abb7fc69e77"
       },
       {
         "markerPath": "src/CCreature.h.REMOVED.git-id",
@@ -869,10 +869,10 @@
       {
         "markerPath": "src/CItem.cpp.REMOVED.git-id",
         "method": "reconstruction",
-        "originalBlob": "8c63003f5470c2c430d3c9f7f6ff998a78f5a137",
+        "originalBlob": "652f161aeebe0ccd66a9f13ef8774d121284247d",
         "path": "src/CItem.cpp",
-        "provenance": "Inferred missing #256 implementation from native-verified #257 bodies and same-commit surviving declarations/callers; surviving source bytes are unchanged. Same-commit CItem.h lacks future bonus getters/setters and still requires CWeapon::getStats()->Stats*. Restore only this genuine API and real static item/potion factory mechanics; all action/equipment configuration remains actual.",
-        "replacementBlob": "561809ff3e3bb5ad3c7366f2bff41350b8c59fa4"
+        "provenance": "Infer missing #257 body from native-verified #259 reconstruction, adapted only to same-commit original declarations/callers; preserve every surviving input. Original CItem.h matches the older static factory/potion load API. Resolve only genuinely registered C-prefixed class names; load flat/nested Stats and genuine action names directly. Item owns its real interaction QWidget; no no-op mechanics.",
+        "replacementBlob": "43180f4d9c901e5b48a2b5fa5e3dd57e57dd3b43"
       },
       {
         "markerPath": "src/CMap.cpp.REMOVED.git-id",
@@ -915,31 +915,15 @@
         "replacementBlob": "15beba69e1ca585dae1827e4b742a9ad5713ad3c"
       },
       {
-        "markerPath": "src/Stats.cpp.REMOVED.git-id",
-        "method": "reconstruction",
-        "originalBlob": "03a52f4f2e1a2d40b26f8f4df9c13923d991877e",
-        "path": "src/Stats.cpp",
-        "provenance": "Inferred missing #256 implementation from native-verified #257 bodies and same-commit surviving declarations/callers; surviving source bytes are unchanged. Actual original Stats.h predates copy assignment and still declares JSON load/save. Keep real generated numeric properties, add/remove bonuses and main-stat pointer, implementing those genuine JSON methods; copy constructor rebinds the main pointer to this object. Normalize the lower-case main names present in intact configuration. Preserve returned stat text lifetime within its const-char API rather than import the donor temporary-string lifetime error. Balance/gameplay parity remains unverified.",
-        "replacementBlob": "193457c9ce6bc1829fa7759f153fafa2412c87c5"
-      },
-      {
-        "markerPath": "src/Util.h.REMOVED.git-id",
-        "method": "reconstruction",
-        "originalBlob": "7d48e90904e9a7409a0f220a668824bb36344f38",
-        "path": "src/Util.h",
-        "provenance": "Inferred missing #256 implementation from native-verified #257 bodies and same-commit surviving declarations/callers; surviving source bytes are unchanged. Restore PROPERTY_ACCESSOR as a real Qt property macro from the immediately following intact macro.conf; #257 removes this macro from Util and expands exactly these real methods into original headers. Same Coords, task, comparer and PROP helpers from intact #257 Util. This is a donor adaptation, not exact original bytes.",
-        "replacementBlob": "ea3801f84535e97b6fa939877442688b6cec3145"
-      },
-      {
         "method": "compatibilityRepair",
         "path": "scripts/PSF_LICENSE",
         "provenance": "https://www.python.org/ftp/python/3.3.7/Python-3.3.7.tar.xz upstream Python distribution license",
         "replacementBlob": "f5d0b39a0cdddb91a31a537052b7d8d31a4aa79f"
       }
     ],
-    "restoredFilesFingerprint": "ea8662c8a7704e00df25aa94474e12bd88337bb767fd9a052c0695dd212d6894",
-    "sourceCommit": "99979aa8abd08c9fcccb17277873beb1b204d8e1",
-    "sourceTree": "ad9a1d245766b1f0c7ab688deb0d8896353af3c9",
+    "restoredFilesFingerprint": "d09e6e68b65b689f51ed7581fa50aeb613793b57bc726def6ab6416049489a1d",
+    "sourceCommit": "9fc9416b1025044633a6b789212f67c56ecaafba",
+    "sourceTree": "55859406b98cadc948b1428fce63d8eb0975ecbf",
     "status": "complete",
     "submodules": [],
     "unresolved": []
@@ -950,12 +934,12 @@
       "-a",
       "--server-args=-screen 0 1920x1080x24",
       "env",
-      "LD_PRELOAD=/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-43b4a8v5/observer/libwindowspaths.so",
-      "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-43b4a8v5/build/RecoveryGame"
+      "LD_PRELOAD=/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-pl6d2az2/observer/libwindowspaths.so",
+      "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-pl6d2az2/build/RecoveryGame"
     ],
-    "log": "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-43b4a8v5/smoke/startup.log",
+    "log": "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-pl6d2az2/smoke/startup.log",
     "returnCode": 0,
-    "seconds": 1.167,
+    "seconds": 0.866,
     "startup": {
       "checks": {
         "eventLoop": true,
@@ -977,9 +961,9 @@
     "status": "success",
     "timedOut": false
   },
-  "sourceCommit": "99979aa8abd08c9fcccb17277873beb1b204d8e1",
+  "sourceCommit": "9fc9416b1025044633a6b789212f67c56ecaafba",
   "sourceCommits": [
-    "99979aa8abd08c9fcccb17277873beb1b204d8e1"
+    "9fc9416b1025044633a6b789212f67c56ecaafba"
   ],
   "sourcePreparation": {
     "identity": {
@@ -989,9 +973,13 @@
           "kind": "file",
           "sha256": "174a45a1ed4bc03b5359c17205da277413ab292fe52d87a9b58afbec5353d252"
         },
+        "macro.conf": {
+          "kind": "file",
+          "sha256": "bed7706eb9398b225ab72df55537dcab98e78da80766ed884ea7d52fd4213ce3"
+        },
         "preprocessor.py": {
           "kind": "file",
-          "sha256": "9776cf40b38ed00621e0f12235758629c1301109ab9a4322bff8c178a742c530"
+          "sha256": "99341552a9d300e4374ad2efe3d74127e78bb91d4ce259b6aa59ea9cc4db275f"
         }
       },
       "interpreter": "Python 2.7.18",
@@ -1059,7 +1047,7 @@
           "history_source_prep.py",
           "prepare-legacy-tile-configuration"
         ],
-        "log": "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-43b4a8v5/preparation/legacy-tile-configuration.log",
+        "log": "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-pl6d2az2/preparation/legacy-tile-configuration.log",
         "name": "legacyTileConfiguration",
         "returnCode": 0,
         "timedOut": false
@@ -1069,27 +1057,27 @@
           "/opt/recovery/python/2.7.18/bin/python2.7",
           "--version"
         ],
-        "log": "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-43b4a8v5/preparation/interpreter.log",
+        "log": "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-pl6d2az2/preparation/interpreter.log",
         "name": "interpreter",
         "returnCode": 0,
-        "seconds": 0.002,
+        "seconds": 0.001,
         "timedOut": false
       },
       {
         "command": [
           "/opt/recovery/python/2.7.18/bin/python2.7",
           "-B",
-          "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-43b4a8v5/source/preprocessor.py"
+          "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-pl6d2az2/source/preprocessor.py"
         ],
-        "log": "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-43b4a8v5/preparation/generator.log",
+        "log": "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-pl6d2az2/preparation/generator.log",
         "name": "generator",
         "returnCode": 0,
-        "seconds": 0.032,
+        "seconds": 0.016,
         "timedOut": false
       }
     ]
   },
-  "sourceTree": "ad9a1d245766b1f0c7ab688deb0d8896353af3c9",
+  "sourceTree": "55859406b98cadc948b1428fce63d8eb0975ecbf",
   "startupCompatibility": "legacyTileConfiguration",
   "startupMode": "game",
   "startupSelection": {
@@ -1112,5 +1100,5 @@
     }
   },
   "toolchainImage": "sha256:d3f59ec1d12297ee8091fbea687aa619275fc92b3fd426560e0a1fa40715afc8",
-  "verifiedFromCommit": "99979aa8abd08c9fcccb17277873beb1b204d8e1"
+  "verifiedFromCommit": "9fc9416b1025044633a6b789212f67c56ecaafba"
 }

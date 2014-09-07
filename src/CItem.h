@@ -9,6 +9,7 @@ class CItem : public CMapObject {
 	Q_OBJECT
 	Q_PROPERTY ( int power READ getPower WRITE setPower USER true )
 	Q_PROPERTY ( bool singleUse READ isSingleUse WRITE setSingleUse USER true )
+    Q_PROPERTY(Stats bonus READ getBonus WRITE setBonus USER true)
 public:
 	CItem();
 	CItem ( const CItem & );
@@ -22,6 +23,8 @@ public:
 	virtual void onMove();
 	int getPower() const;
 	void setPower ( int value );
+    Stats getBonus();
+    void setBonus(Stats stats);
 
 protected:
 	virtual void mousePressEvent ( QGraphicsSceneMouseEvent *event );
@@ -78,7 +81,6 @@ public:
 	CWeapon();
 	CWeapon ( const CWeapon & );
 	CInteraction *getInteraction();
-	Stats *getStats();
 };
 
 class CSmallWeapon : public CWeapon {

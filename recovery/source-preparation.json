@@ -6,9 +6,13 @@
         "kind": "file",
         "sha256": "174a45a1ed4bc03b5359c17205da277413ab292fe52d87a9b58afbec5353d252"
       },
+      "macro.conf": {
+        "kind": "file",
+        "sha256": "bed7706eb9398b225ab72df55537dcab98e78da80766ed884ea7d52fd4213ce3"
+      },
       "preprocessor.py": {
         "kind": "file",
-        "sha256": "9776cf40b38ed00621e0f12235758629c1301109ab9a4322bff8c178a742c530"
+        "sha256": "99341552a9d300e4374ad2efe3d74127e78bb91d4ce259b6aa59ea9cc4db275f"
       }
     },
     "interpreter": "Python 2.7.18",
@@ -76,7 +80,7 @@
         "history_source_prep.py",
         "prepare-legacy-tile-configuration"
       ],
-      "log": "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-43b4a8v5/preparation/legacy-tile-configuration.log",
+      "log": "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-pl6d2az2/preparation/legacy-tile-configuration.log",
       "name": "legacyTileConfiguration",
       "returnCode": 0,
       "timedOut": false
@@ -86,22 +90,22 @@
         "/opt/recovery/python/2.7.18/bin/python2.7",
         "--version"
       ],
-      "log": "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-43b4a8v5/preparation/interpreter.log",
+      "log": "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-pl6d2az2/preparation/interpreter.log",
       "name": "interpreter",
       "returnCode": 0,
-      "seconds": 0.002,
+      "seconds": 0.001,
       "timedOut": false
     },
     {
       "command": [
         "/opt/recovery/python/2.7.18/bin/python2.7",
         "-B",
-        "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-43b4a8v5/source/preprocessor.py"
+        "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-pl6d2az2/source/preprocessor.py"
       ],
-      "log": "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-43b4a8v5/preparation/generator.log",
+      "log": "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-pl6d2az2/preparation/generator.log",
       "name": "generator",
       "returnCode": 0,
-      "seconds": 0.032,
+      "seconds": 0.016,
       "timedOut": false
     }
   ]

@@ -14,6 +14,7 @@ public:
 	}
 private:
 	CMapObject *_createMapObject ( QString type );
+	void setProperty ( QObject * object , QString key, QJsonValue value );
 	CMap *map;
 	QJsonObject objectConfig;
 };
