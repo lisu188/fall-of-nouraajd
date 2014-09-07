@@ -1,18 +1,7 @@
-#include "CConfigurationProvider.h"
 #include "CPathFinder.h"
 #include "CTile.h"
 #include <algorithm>
 #include <cstdlib>
-
-namespace {
-bool mapTileCanStep(CMap *map, int x, int y, int z) {
-  return CConfigurationProvider::getConfig("config/objects/tiles.json")
-      .toObject()[map->getTile(x, y, z)]
-      .toObject()["properties"]
-      .toObject()["canStep"]
-      .toBool();
-}
-} // namespace
 
 CDumbPathFinder::CDumbPathFinder() {}
 CDumbPathFinder::CDumbPathFinder(const CDumbPathFinder &) {}
@@ -29,12 +18,14 @@ Coords CDumbPathFinder::findPath(CCreature *first, CCreature *second) {
   }
   int x = (goal.x > current.x) - (goal.x < current.x);
   int y = (goal.y > current.y) - (goal.y < current.y);
-  if (x &&
-      mapTileCanStep(first->getMap(), current.x + x, current.y, current.z)) {
+  if (x && first->getMap()
+               ->getTile(current.x + x, current.y, current.z)
+               ->canStep()) {
     return Coords(current.x + x, current.y, current.z);
   }
-  if (y &&
-      mapTileCanStep(first->getMap(), current.x, current.y + y, current.z)) {
+  if (y && first->getMap()
+               ->getTile(current.x, current.y + y, current.z)
+               ->canStep()) {
     return Coords(current.x, current.y + y, current.z);
   }
   return current;
@@ -45,8 +36,8 @@ Coords CRandomPathFinder::findPath(CCreature *first, CCreature *) {
   Coords current = first->getCoords();
   Coords next(current.x + directions[choice][0],
               current.y + directions[choice][1], current.z);
-  return mapTileCanStep(first->getMap(), next.x, next.y, next.z) ? next
-                                                                 : current;
+  return first->getMap()->getTile(next.x, next.y, next.z)->canStep() ? next
+                                                                     : current;
 }
 
 std::list<Coords> CSmartPathFinder::getNearCells(Coords coords) {
@@ -84,7 +75,7 @@ void CSmartPathFinder::processNode(
   for (Coords next : getNearCells(current)) {
     if (next.x < 0 || next.y < 0 || next.x >= bounds.first ||
         next.y >= bounds.second ||
-        !mapTileCanStep(first->getMap(), next.x, next.y, next.z)) {
+        !first->getMap()->getTile(next.x, next.y, next.z)->canStep()) {
       continue;
     }
     int cost = getCost(current) + 1;
@@ -140,8 +131,4 @@ void PathFinderWorker::run() {
   Q_EMIT completed(next.x - first->getPosX(), next.y - first->getPosY());
   Q_EMIT ended();
   finder->deleteLater();
-}
-
-bool CSmartPathFinder::canStep(CMap *map, int x, int y, int z) {
-  return mapTileCanStep(map, x, y, z);
 }

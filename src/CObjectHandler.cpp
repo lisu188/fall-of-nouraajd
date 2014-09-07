@@ -1,81 +1,99 @@
-#include "CObjectHandler.h"
 #include "CConfigurationProvider.h"
-#include <QDirIterator>
+#include "CGameScene.h"
+#include "CGameView.h"
+#include "CInteraction.h"
 #include "CMap.h"
-#include <QMetaMethod>
+#include "CObjectHandler.h"
+#include "Stats.h"
+#include <QDebug>
+#include <QDirIterator>
+#include <QJsonArray>
+#include <QMetaProperty>
 
-CObjectHandler::CObjectHandler ( CMap *map ) :QObject ( map ) {
-	this->map=map;
-	QDirIterator dirIt ( "config/objects",QDirIterator::Subdirectories );
-	while ( dirIt.hasNext() ) {
-		dirIt.next();
-		if ( QFileInfo ( dirIt.filePath() ).isFile() )
-			if ( QFileInfo ( dirIt.filePath() ).suffix() == "json" ) {
-				QString path=dirIt.filePath();
-				QJsonObject config=CConfigurationProvider::getConfig ( path ).toObject();
-				for ( auto it=config.begin(); it!=config.end(); it++ ) {
-					objectConfig[it.key()]=it.value();
-				}
-			}
-	}
-}
-
-CMapObject *CObjectHandler::_createMapObject ( QString type ) {
-	QJsonObject config=objectConfig[type].toObject();
-	QString handlerName=config["handler"].toString();
-	QString className=config["class"].toString();
-	QJsonObject properties=config["properties"].toObject();
-	ATypeHandler *handler=ATypeHandler::getHandler ( handlerName );
-	if ( handler==NULL ) {
-		qFatal ( ( "No handler for type: "+type ).toStdString().c_str() );
-	}
-	CMapObject *object = handler->create ( className );
-	if ( object==NULL ) {
-		qFatal ( ( "No object for type: "+type ).toStdString().c_str() );
-	}
-	for ( auto it=properties.begin(); it!=properties.end(); it++ ) {
-        setProperty ( object,it.key(),it.value() );
-	}
-    for ( int i = 0; i < object->metaObject()->propertyCount(); i++ ) {
-        QMetaProperty property = object->metaObject()->property ( i );
-        if(property.isUser()){
-            qDebug()<<property.name()<<":"<<object->property(property.name());
-        }
+CObjectHandler::CObjectHandler(CMap *map) : QObject(map), map(map) {
+  QDirIterator files("config/objects", QStringList() << "*.json", QDir::Files,
+                     QDirIterator::Subdirectories);
+  while (files.hasNext()) {
+    QJsonObject config =
+        CConfigurationProvider::getConfig(files.next()).toObject();
+    for (auto it = config.begin(); it != config.end(); ++it) {
+      if (objectConfig.contains(it.key())) {
+        qFatal("Duplicate object configuration %s", qPrintable(it.key()));
+      }
+      objectConfig[it.key()] = it.value();
     }
-	std::stringstream stream;
-	stream << std::hex << (   long ) object;
-	QString result ( stream.str().c_str() );
-	object->setObjectName ( result );
-	object->map=this->map;
-	//object->loadFromJson(name);
-	object->QObject::setParent ( this );
-	return object;
+  }
 }
 
-void CObjectHandler::setProperty ( QObject *object,QString key, QJsonValue value ) {
-	switch ( value.type() ) {
-	case QJsonValue::Type::Bool:
-        QMetaObject::invokeMethod( object,"setBoolProperty",Q_ARG ( QString, key ),Q_ARG ( bool, value.toBool() ) ) ;
-		break;
-	case QJsonValue::Type::Double:
-        QMetaObject::invokeMethod(  object, "setNumericProperty",Q_ARG ( QString, key ),Q_ARG ( int,value.toInt() ) ) ;
-		break;
-	case QJsonValue::Type::String:
-        QMetaObject::invokeMethod( object,"setStringProperty" ,Q_ARG ( QString, key ),Q_ARG ( QString,value.toString() ) ) ;
-		break;
-	case QJsonValue::Type::Object:
-        QJsonObject propObject=value.toObject();
-        QString className=propObject["class"].toString();
-        propObject.remove ( "class" );
-		int typeId=QMetaType::type ( className.toStdString().c_str() );
-        QObject *qObject= ( QObject* ) QMetaType::create ( typeId );
-		if ( !qObject ) {
-			qFatal ( QString ( "Object "+className+" is null" ).toStdString().c_str() );
-		}
-        for ( auto it=propObject.begin(); it!=propObject.end(); it++ ) {
-			setProperty ( qObject,it.key(),it.value() );
-		}
-        object->setProperty(key.toStdString().c_str(),QVariant(typeId,qObject));
-		break;
-	}
+CMapObject *CObjectHandler::_createMapObject(QString type) {
+  if (!objectConfig.contains(type)) {
+    qFatal("No object configuration for %s", qPrintable(type));
+  }
+  QJsonObject config = objectConfig[type].toObject();
+  QString class_name = config["class"].toString();
+  if (class_name.isEmpty() &&
+      (config.contains("manaCost") || config.contains("effect") ||
+       config.contains("anim"))) {
+    class_name = "CInteraction";
+  }
+  QString handler_name = config["handler"].toString("CTypeHandler");
+  if (handler_name == "CTypeHandler" &&
+      !QMetaType::type(qPrintable(class_name)) &&
+      QMetaType::type(qPrintable("C" + class_name))) {
+    class_name.prepend("C");
+  }
+  ATypeHandler *type_handler = ATypeHandler::getHandler(handler_name);
+  if (!type_handler) {
+    qFatal("Unknown type handler %s", qPrintable(handler_name));
+  }
+  CMapObject *object = type_handler->create(class_name);
+  if (!object) {
+    qFatal("Cannot create object %s (%s)", qPrintable(type),
+           qPrintable(class_name));
+  }
+  object->map = map;
+  object->setTypeName(type);
+  object->setObjectName(
+      QString::number(reinterpret_cast<quintptr>(object), 16));
+  object->QWidget::setParent(map->getScene()->getView());
+  QJsonObject properties =
+      config.contains("properties") ? config["properties"].toObject() : config;
+  properties.remove("class");
+  properties.remove("handler");
+  if (properties.contains("anim") && !properties.contains("animation")) {
+    properties["animation"] = properties.take("anim");
+  }
+  for (auto it = properties.begin(); it != properties.end(); ++it) {
+    setProperty(object, it.key(), it.value());
+  }
+  object->loadFromJson(type);
+  return object;
+}
+
+void CObjectHandler::setProperty(QObject *object, QString key,
+                                 QJsonValue value) {
+  QMetaProperty property = getProperty(object, key);
+  if (value.isObject() && property.isValid() &&
+      QString(property.typeName()) == "Stats") {
+    Stats stats;
+    QJsonObject fields = value.toObject();
+    for (auto it = fields.begin(); it != fields.end(); ++it) {
+      stats.setProperty(it.key(), it.value().toVariant());
+    }
+    property.write(object, QVariant(QMetaType::type("Stats"), &stats));
+    return;
+  }
+  object->setProperty(qPrintable(key), value.toVariant());
+}
+QMetaProperty CObjectHandler::getProperty(QObject *object, QString name) {
+  int index = object->metaObject()->indexOfProperty(qPrintable(name));
+  return index < 0 ? QMetaProperty() : object->metaObject()->property(index);
+}
+void CObjectHandler::logProperties(CMapObject *object) {
+  for (int i = 0; i < object->metaObject()->propertyCount(); ++i) {
+    QMetaProperty property = object->metaObject()->property(i);
+    if (property.isUser()) {
+      qDebug() << property.name() << property.read(object);
+    }
+  }
 }

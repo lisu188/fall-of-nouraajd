@@ -37,15 +37,6 @@ Stats readStats(QJsonObject properties) {
 }
 } // namespace
 
-namespace {
-CInteraction *createConfiguredAction(CMap *map, QString name) {
-  CInteraction *action = new CInteraction();
-  action->setMap(map);
-  action->loadFromJson(name);
-  return action;
-}
-} // namespace
-
 CCreature::CCreature()
     : gold(0), exp(0), level(0), sw(0), mana(0), manaMax(0), manaRegRate(0),
       hpMax(0), hp(0) {
@@ -96,28 +87,19 @@ void CCreature::loadFromJson(QString name) {
   attribChange();
   if (map) {
     for (QJsonValue action : properties["actions"].toArray()) {
-      CInteraction *created = new CInteraction();
-      created->setMap(map);
-      created->loadFromJson(action.toString());
-      addAction(created);
+      addAction(map->getObjectHandler()->createMapObject<CInteraction *>(
+          action.toString()));
     }
     for (QJsonValue item : properties["items"].toArray()) {
-      CItem *created = CItem::createItem(item.toString());
-      if (!created) {
-        qFatal("Cannot create authored item");
-      }
-      created->setMap(map);
-      addItem(created);
+      addItem(
+          map->getObjectHandler()->createMapObject<CItem *>(item.toString()));
     }
     QJsonObject initial_equipment = properties["inventory"].toObject();
     for (auto it = initial_equipment.begin(); it != initial_equipment.end();
          ++it) {
-      CItem *created = CItem::createItem(it.value().toString());
-      if (!created) {
-        qFatal("Cannot create authored equipment");
-      }
-      created->setMap(map);
-      setItem(it.key().toInt(), created);
+      setItem(it.key().toInt(),
+              map->getObjectHandler()->createMapObject<CItem *>(
+                  it.value().toString()));
     }
     if (!level) {
       levelUp();
@@ -155,7 +137,9 @@ CInteraction *CCreature::getLevelAction() {
   QString name = creatureProperties(typeName)["levelling"]
                      .toObject()[QString::number(level)]
                      .toString();
-  return map && !name.isEmpty() ? createConfiguredAction(map, name) : nullptr;
+  return map && !name.isEmpty()
+             ? map->getObjectHandler()->createMapObject<CInteraction *>(name)
+             : nullptr;
 }
 Stats CCreature::getLevelStats() {
   return readStats(creatureProperties(typeName)["levelStats"].toObject());
@@ -294,7 +278,7 @@ void CCreature::heal(int i) {
 void CCreature::healProc(float i) {
   int tmp = hp;
   heal(i / 100.0 * hpMax);
-  qDebug() << typeName << "restored" << hp - tmp << "hp" << "\n";
+  qDebug() << getTypeName() << "restored" << hp - tmp << "hp" << "\n";
 }
 
 void CCreature::hurt(int i) {
@@ -377,7 +361,7 @@ void CCreature::addMana(int i) {
 void CCreature::addManaProc(float i) {
   int tmp = mana;
   addMana(i / 100.0 * manaMax);
-  qDebug() << typeName << "restored" << mana - tmp << "mana" << "\n";
+  qDebug() << getTypeName() << "restored" << mana - tmp << "mana" << "\n";
 }
 
 void CCreature::takeMana(int i) {
@@ -456,7 +440,7 @@ void CCreature::levelUp() {
   addAction(getLevelAction());
   attribChange();
   if (level > 1) {
-    qDebug() << typeName << "is now level:" << level << "\n";
+    qDebug() << getTypeName() << "is now level:" << level << "\n";
   }
 }
 
@@ -525,7 +509,7 @@ void CCreature::hurt(Damage damage) {
   takeDamage(damage.getFrost() * (100 - stats.getFrostResist()) / 100.0);
   takeDamage(damage.getFire() * (100 - stats.getFireResist()) / 100.0);
   takeDamage(damage.getShadow() * (100 - stats.getShadowResist()) / 100.0);
-  qDebug() << typeName << "took damage:" << "normal(" << damage.getNormal()
+  qDebug() << getTypeName() << "took damage:" << "normal(" << damage.getNormal()
            << ")thunder(" << damage.getThunder() << ")frost("
            << damage.getFrost() << ")fire(" << damage.getFire() << ")shadow("
            << damage.getShadow() << ")";

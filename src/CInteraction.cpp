@@ -31,8 +31,8 @@ CInteraction::CInteraction(const CInteraction &interaction) : CInteraction() {
   typeName = interaction.typeName;
 }
 void CInteraction::onAction(CCreature *first, CCreature *second) {
-  qDebug() << first->typeName << "used" << typeName << "against"
-           << second->typeName;
+  qDebug() << first->getTypeName() << "used" << getTypeName() << "against"
+           << second->getTypeName();
   performAction(first, second);
   if (!effect.isEmpty()) {
     CCreature *victim =
@@ -69,7 +69,13 @@ void CInteraction::mousePressEvent(QGraphicsSceneMouseEvent *event) {
   player->performAction(this, CFightPanel::selected);
   event->accept();
 }
-int CInteraction::getManaCost() { return manaCost; }
+int CInteraction::getManaCost() const { return manaCost; }
+void CInteraction::setManaCost(int value) {
+  manaCost = value;
+  statsView.setText(QString::number(value));
+}
+QString CInteraction::getEffect() const { return effect; }
+void CInteraction::setEffect(const QString &value) { effect = value; }
 
 std::map<QString, std::function<bool(Effect *, CCreature *)>> Effect::effects =
     {{"Stun", StunEffect},
@@ -151,18 +157,3 @@ bool BloodlashEffect(Effect *effect, CCreature *creature) {
   return false;
 }
 bool BarrierEffect(Effect *, CCreature *) { return false; }
-
-void CInteraction::loadFromJson(QString name) {
-  typeName = name;
-  QJsonObject config =
-      CConfigurationProvider::getConfig("config/objects/interactions.json")
-          .toObject()[name]
-          .toObject();
-  manaCost = config["manaCost"].toInt();
-  effect = config["effect"].toString();
-  tooltip = config["tooltip"].toString(name);
-  QString animation = config["anim"].toString();
-  if (!animation.isEmpty())
-    setAnimation(animation);
-  statsView.setText(QString::number(manaCost));
-}
