@@ -10,6 +10,7 @@
 
 class CTile : public CMapObject {
 	Q_OBJECT
+	Q_PROPERTY ( bool canStep READ canStep WRITE setCanStep USER true )
 public:
 	CTile ( QString name, int x = 0, int y = 0, int z = 0 );
 	CTile();
@@ -20,7 +21,7 @@ public:
 	void move ( int x, int y );
 	void onStep();
 	bool canStep() const;
-	static CTile *getTile ( QString type, int x, int y, int z );
+	void setCanStep ( bool canStep );
 	void addToScene ( CGameScene *scene );
 	void removeFromScene ( CGameScene *scene );
 	void loadFromJson ( QString name );

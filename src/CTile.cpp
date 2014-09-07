@@ -9,7 +9,7 @@ std::map<QString, std::function<void() > > CTile::steps {
 
 CTile::CTile ( QString name, int x, int y, int z ) {
 	setXYZ ( x, y, z );
-	loadFromJson ( name );
+	//loadFromJson ( name );
 }
 
 CTile::CTile() {}
@@ -26,9 +26,9 @@ void CTile::moveTo ( int x, int y, int z, bool silent ) {
 		}
 		setXYZ ( x, y, z );
 		map->insert (
-		    std::pair<Coords, QString> ( Coords ( posx, posy, posz ), typeName ) );
+		    std::pair<Coords, CTile*> ( Coords ( posx, posy, posz ), this ) );
 	}
-	CMapObject::moveTo ( x, y, z, silent );
+	//CMapObject::moveTo ( x, y, z, silent );
 	init = true;
 }
 
@@ -42,12 +42,12 @@ void CTile::onStep() {
 
 bool CTile::canStep() const { return step; }
 
-CTile *CTile::getTile ( QString type, int x, int y, int z ) {
-	return new CTile ( type, x, y, z );
+void CTile::setCanStep ( bool canStep ) {
+	this->step=canStep;
 }
 
 void CTile::addToScene ( CGameScene *scene ) {
-	setPos ( posx * CMap::getTileSize(), posy * CMap::getTileSize() );
+	setPos ( posx *50, posy *50 );
 	CMapObject::setMap (  scene ->getMap() );
 }
 
@@ -67,6 +67,7 @@ void CTile::setXYZ ( int x, int y, int z ) {
 	posx = x;
 	posy = y;
 	posz = z;
+	setPos ( x*50,y*50 );
 }
 
 void CTile::mousePressEvent ( QGraphicsSceneMouseEvent *event ) {

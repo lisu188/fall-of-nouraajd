@@ -14,6 +14,6 @@ CMainWindow::~CMainWindow() {
 
 void CMainWindow::on_pushButton_clicked() {
 	CGameView*view=new CGameView ( this->ui->mapType->text(),this->ui->playerType->text() );
-	view->setParent ( this );
+	view->QObject::setParent ( this );
 	this->hide();
 }

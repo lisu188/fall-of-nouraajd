@@ -51,7 +51,6 @@ private:
 	Coords getNearestCell ( Coords start );
 	void processNode ( CCreature *first, std::list<Cell> &nodes,
 	                   std::unordered_set<Coords, CoordsHasher> &marked );
-	bool canStep ( CMap *map, int x, int y, int z );
 };
 
 class CompletionListener : public QObject {
