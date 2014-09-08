@@ -12,7 +12,6 @@ class CTile : public CMapObject {
 	Q_OBJECT
 	Q_PROPERTY ( bool canStep READ canStep WRITE setCanStep USER true )
 public:
-	CTile ( QString name, int x = 0, int y = 0, int z = 0 );
 	CTile();
 	CTile ( const CTile &tile );
 	~CTile();
@@ -24,10 +23,9 @@ public:
 	void setCanStep ( bool canStep );
 	void addToScene ( CGameScene *scene );
 	void removeFromScene ( CGameScene *scene );
-	void loadFromJson ( QString name );
 	void setDraggable();
-	virtual void onEnter() {}
-	virtual void onMove() {}
+	virtual void onEnter();
+	virtual void onMove();
 	virtual bool canSave();
 	void setMap ( CMap *map );
 
@@ -39,7 +37,6 @@ private:
 	void setXYZ ( int x, int y, int z );
 	bool draggable = false;
 	static std::map<QString, std::function<void() > > steps;
-	bool init = false;
 };
 void RoadTile();
 #endif // TILE_H
