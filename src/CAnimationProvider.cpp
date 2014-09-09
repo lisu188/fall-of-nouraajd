@@ -47,7 +47,13 @@ void CAnimationProvider::loadAnim ( QString path ) {
 	CAnimation *anim = new CAnimation();
 	QPixmap *img = 0;
 	std::map<int, int> timemap;
-	QJsonArray config = CConfigurationProvider::getConfig ( path + "time.json" ).toArray();
+	QString time="time.json";
+
+
+	QJsonArray config;
+	if ( path.endsWith ( "/" ) ) {
+		CConfigurationProvider::getConfig ( path + time ).toArray();
+	}
 	if ( !config.isEmpty() ) {
 		for (  int i = 0; i < config.size(); i++ ) {
 			timemap.insert ( std::pair<int, int> ( i, config[i].toInt() ) );

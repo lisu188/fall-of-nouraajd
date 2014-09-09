@@ -6,6 +6,7 @@
 #include <QGraphicsSceneHoverEvent>
 
 CMapObject::CMapObject() { setAcceptHoverEvents(true); }
+CMapObject::~CMapObject() {}
 QString CMapObject::getTypeName() const { return typeName; }
 void CMapObject::setTypeName(const QString &value) { typeName = value; }
 QString CMapObject::getTooltip() const { return tooltip; }

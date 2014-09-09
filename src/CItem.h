@@ -28,11 +28,11 @@ public:
 
 protected:
 	virtual void mousePressEvent ( QGraphicsSceneMouseEvent *event );
-	bool singleUse;
+	bool singleUse=false;
 	Stats bonus;
 	void loadFromJson ( QString name );
 	CInteraction *interaction;
-	int power;
+	int power=0;
 
 private:
 	int slot = 0;

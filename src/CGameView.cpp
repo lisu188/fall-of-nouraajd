@@ -1,6 +1,5 @@
 #include "CCreature.h"
 #include "CGameView.h"
-#include "CMap.h"
 #include "CLootProvider.h"
 #include "CPlayerView.h"
 #include "Util.h"
@@ -28,11 +27,7 @@ void CGameView::start() {
   init = true;
 }
 
-void CGameView::show() {
-  if (parentWidget() && !isWindow())
-    setWindowFlags(windowFlags() | Qt::Window);
-  showNormal();
-}
+void CGameView::show() { showNormal(); }
 
 CGameView::CGameView(QString mapName, QString playerType) {
   this->mapName = mapName;
@@ -63,10 +58,7 @@ CGameView::CGameView(QString mapName, QString playerType) {
   timer.start();
 }
 
-CGameView::~CGameView() {
-  delete scene->getMap();
-  delete scene;
-}
+CGameView::~CGameView() { delete scene; }
 
 CFightPanel *CGameView::getFightView() { return fightView; }
 CCharPanel *CGameView::getCharView() { return charView; }

@@ -129,7 +129,6 @@ class CPlayer : public CCreature {
     friend class PlayerStatsView;
 
   public:
-    CPlayer(CMap *map, QString name);
     CPlayer();
     CPlayer(const CPlayer &player);
     ~CPlayer();

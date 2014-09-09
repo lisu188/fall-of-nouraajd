@@ -146,28 +146,11 @@ static void moveObject(CMapObject &value, int x, int y, int z) {
   value.moveTo(x, y, z);
 }
 
-template <class T>
-static auto nativeName(const T &value,
-                       int) -> decltype(QString::fromStdString(value.name)) {
-  return QString::fromStdString(value.name);
-}
-template <class T> static QString nativeName(const T &value, long) {
+static QString objectName(const CMapObject &value) {
   return value.objectName();
 }
-template <class T>
-static auto nativeName(T &value, QString name,
-                       int) -> decltype(value.name = name.toStdString(),
-                                        void()) {
-  value.name = name.toStdString();
-}
-template <class T> static void nativeName(T &value, QString name, long) {
-  value.setObjectName(name);
-}
-static QString objectName(const CMapObject &value) {
-  return nativeName(value, 0);
-}
 static void setObjectName(CMapObject &value, QString name) {
-  nativeName(value, name, 0);
+  value.setObjectName(name);
 }
 
 template <class T> static void registerObjectCallbacks(const char *name) {
@@ -243,6 +226,7 @@ BOOST_PYTHON_MODULE(_game) {
            &CInteractionWrapper::defaultPerformAction)
       .def("configureEffect", &CInteraction::configureEffect,
            &CInteractionWrapper::defaultConfigureEffect);
+  scope().attr("Interaction") = scope().attr("CInteraction");
   class_<Effect, boost::noncopyable>("Effect", no_init)
       .def("getBonus", &Effect::getBonus, return_internal_reference<>())
       .def("setBonus", &Effect::setBonus)
@@ -256,7 +240,6 @@ BOOST_PYTHON_MODULE(_game) {
   class_<CHelmet, bases<CItem>, boost::noncopyable>("CHelmet");
   class_<CBoots, bases<CItem>, boost::noncopyable>("CBoots");
   class_<CGloves, bases<CItem>, boost::noncopyable>("CGloves");
-  scope().attr("Interaction") = scope().attr("CInteraction");
   class_<CWeapon, bases<CItem>, boost::noncopyable>("CWeapon").def(
       "getInteraction", &CWeapon::getInteraction,
       return_internal_reference<>());

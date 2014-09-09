@@ -27,11 +27,7 @@ QJsonObject creatureProperties(QString name) {
 Stats readStats(QJsonObject properties) {
   Stats value;
   for (auto it = properties.begin(); it != properties.end(); ++it) {
-    if (it.key() == "main") {
-      value.setMain(it.value().toString());
-    } else {
-      value.setProperty(it.key(), it.value().toVariant());
-    }
+    value.setProperty(it.key(), it.value().toVariant());
   }
   return value;
 }
@@ -457,8 +453,8 @@ std::set<CItem *> CCreature::getAllItems() {
 
 void CCreature::attribChange() {
   hpMax = stats.getStamina() * 7;
-  manaRegRate = stats.getMain() / 10 + 1;
-  manaMax = stats.getMain() * 7;
+  manaRegRate = stats.getMainValue() / 10 + 1;
+  manaMax = stats.getMainValue() * 7;
 }
 
 bool CCreature::hasEquipped(CItem *item) {
@@ -665,9 +661,4 @@ void CMonster::levelUp() {
 
 std::set<CItem *> *CMonster::getLoot() {
   return this->getMap()->getLootProvider()->getLoot(getScale());
-}
-
-CPlayer::CPlayer(CMap *map, QString name) : CPlayer() {
-  setMap(map);
-  loadFromJson(name);
 }

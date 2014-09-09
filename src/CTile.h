@@ -14,7 +14,7 @@ class CTile : public CMapObject {
 public:
 	CTile();
 	CTile ( const CTile &tile );
-	~CTile();
+	virtual ~CTile();
 	void moveTo ( int x, int y, int z, bool silent = false );
 	Coords getCoords();
 	void move ( int x, int y );
@@ -30,7 +30,7 @@ public:
 	void setMap ( CMap *map );
 
 protected:
-	bool step;
+	bool step=false;
 	virtual void mousePressEvent ( QGraphicsSceneMouseEvent *event );
 
 private:
