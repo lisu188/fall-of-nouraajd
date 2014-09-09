@@ -194,9 +194,9 @@ CScrollObject::CScrollObject(CPlayerListView *stats, bool isRight) {
   this->stats = stats;
   int size = 50;
   if (!isRight) {
-    this->setAnimation("images/arrows/left/", size);
+    this->setAnimation("images/arrows/left", size);
   } else {
-    this->setAnimation("images/arrows/right/", size);
+    this->setAnimation("images/arrows/right", size);
   }
   setParentItem(stats);
 }

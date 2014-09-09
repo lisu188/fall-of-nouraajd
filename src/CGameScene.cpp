@@ -16,6 +16,7 @@
 #include <vector>
 #include "CGamePanel.h"
 #include <QThreadPool>
+#include "CObjectHandler.h"
 
 class LoadGameTask  : public QRunnable {
 public:
@@ -32,7 +33,7 @@ private:
 void CGameScene::startGame ( QString file ,QString player ) {
 	srand ( time ( 0 ) );
 	map = new CMap ( this,file );
-	this->player = new CPlayer ( map,player );
+	this->player = map->getObjectHandler()->createMapObject<CPlayer*> ( player );
 	map->addObject ( this->player );
 	this->player->moveTo ( map->getEntryX(), map->getEntryY(), map->getEntryZ(), true );
 	this->player->updateViews();
@@ -65,6 +66,10 @@ void CGameScene::keyPressEvent ( QKeyEvent *keyEvent ) {
 			break;
 		}
 	}
+}
+
+CGameScene::~CGameScene() {
+	delete map;
 }
 
 void CGameScene::playerMove ( int dirx, int diry ) {

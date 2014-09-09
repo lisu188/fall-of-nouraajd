@@ -1,6 +1,4 @@
 #include "CConfigurationProvider.h"
-#include "CGameScene.h"
-#include "CGameView.h"
 #include "CInteraction.h"
 #include "CMap.h"
 #include "CObjectHandler.h"
@@ -55,7 +53,7 @@ CMapObject *CObjectHandler::_createMapObject(QString type) {
   object->setTypeName(type);
   object->setObjectName(
       QString::number(reinterpret_cast<quintptr>(object), 16));
-  object->QWidget::setParent(map->getScene()->getView());
+  object->QObject::setParent(this);
   QJsonObject properties =
       config.contains("properties") ? config["properties"].toObject() : config;
   properties.remove("class");

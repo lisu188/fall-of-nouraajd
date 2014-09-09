@@ -64,8 +64,9 @@ string PropertySet::GetLiteralProperty ( const string &name ) const {
 	// Find the property in the map.
 	map< string, string >::const_iterator iter = properties.find ( name );
 
-	if ( iter == properties.end() )
+	if ( iter == properties.end() ) {
 		return std::string ( "No such property!" );
+	}
 
 	return iter->second;
 }
@@ -79,7 +80,7 @@ float PropertySet::GetFloatProperty ( const string &name ) const {
 }
 
 bool PropertySet::HasProperty ( const string& name ) const {
-	if ( properties.empty() ) return false;
+	if ( properties.empty() ) { return false; }
 	return ( properties.find ( name ) != properties.end() );
 }
 

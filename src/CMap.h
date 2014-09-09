@@ -31,7 +31,7 @@ class CMap : public QObject,
 	Q_OBJECT
 public:
 	CMap ( CGameScene *scene, QString file );
-	~CMap();
+	virtual ~CMap();
 	bool addTile ( CTile *tile, int x, int y, int z );
 	void removeTile ( int x, int y, int z );
 	void move ( int x, int y );
