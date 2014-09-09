@@ -7,12 +7,16 @@ std::map<QString, std::function<void() > > CTile::steps {
 	{ "RoadTile", RoadTile }
 };
 
-CTile::CTile() {}
+CTile::CTile() {
+	this->setZValue ( 0 );
+}
 
 CTile::CTile ( const CTile &tile )
 {}
 
-CTile::~CTile() {}
+CTile::~CTile() {
+
+}
 
 void CTile::moveTo ( int x, int y, int z, bool silent ) {
 	if (  map ) {
@@ -30,7 +34,6 @@ Coords CTile::getCoords() { return Coords ( posx, posy, posz ); }
 void CTile::onStep() {
 	if ( steps.find ( typeName ) != steps.end() ) {
 		steps[typeName]();
-		qDebug() <<typeName<<"at"<<this->QWidget::pos() <<this->QGraphicsPixmapItem::pos() <<"scene:"<<this->scene();
 	}
 }
 

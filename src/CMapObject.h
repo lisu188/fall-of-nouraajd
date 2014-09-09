@@ -11,6 +11,7 @@ class CMapObject : public CAnimatedObject {
 	Q_PROPERTY ( QString tooltip READ getTooltip WRITE setTooltip USER true )
 public:
 	CMapObject();
+	virtual ~CMapObject();
 	QString typeName;
 	int posx=0, posy=0, posz=0;
 	virtual void moveTo ( int x, int y, int z, bool silent = false );
@@ -32,10 +33,14 @@ public:
 	void setCoords ( Coords coords );
 
 	Q_INVOKABLE void setProperty ( QString name,QVariant property ) {
-		this->QObject::setProperty ( name.toStdString().c_str(),property );
+		QByteArray byteArray = name.toUtf8();
+		const char* cString = byteArray.constData();
+		this->QObject::setProperty ( cString,property );
 	}
 	Q_INVOKABLE QVariant property ( QString name ) const {
-		return this->QObject::property ( name.toStdString().c_str() );
+		QByteArray byteArray = name.toUtf8();
+		const char* cString = byteArray.constData();
+		return this->QObject::property ( cString );
 	}
 	Q_INVOKABLE void setStringProperty ( QString name,QString value ) {
 		this->setProperty ( name, value ) ;

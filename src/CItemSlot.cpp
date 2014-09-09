@@ -24,7 +24,7 @@ void CItemSlot::paint ( QPainter *painter, const QStyleOptionGraphicsItem *,
 	painter->drawPixmap ( 0, 0, pixmap );
 }
 
-bool CItemSlot::checkType ( int slot, QWidget *widget ) {
+bool CItemSlot::checkType ( int slot, QObject *widget ) {
 	if ( widget ) {
 		QJsonArray config =
 		    CConfigurationProvider::getConfig (

@@ -11,7 +11,7 @@ public:
 	CItemSlot ( int number, std::map<int, CItem *> *equipped );
 	QRectF boundingRect() const;
 	void paint ( QPainter *painter, const QStyleOptionGraphicsItem *, QWidget * );
-	static bool checkType ( int slot, QWidget *widget );
+	static bool checkType ( int slot, QObject *widget );
 	void update();
 	int getNumber() { return number; }
 

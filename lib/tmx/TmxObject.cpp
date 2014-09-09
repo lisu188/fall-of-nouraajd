@@ -69,8 +69,8 @@ void Object::Parse ( const TiXmlNode *objectNode ) {
 	const char *tempName = objectElem->Attribute ( "name" );
 	const char *tempType = objectElem->Attribute ( "type" );
 
-	if ( tempName ) name = tempName;
-	if ( tempType ) type = tempType;
+	if ( tempName ) { name = tempName; }
+	if ( tempType ) { type = tempType; }
 
 	objectElem->Attribute ( "x", &x );
 	objectElem->Attribute ( "y", &y );
@@ -81,8 +81,9 @@ void Object::Parse ( const TiXmlNode *objectNode ) {
 	// Read the ellipse of the object if there are any.
 	const TiXmlNode *ellipseNode = objectNode->FirstChild ( "ellipse" );
 	if ( ellipseNode ) {
-		if ( ellipse != 0 )
+		if ( ellipse != 0 ) {
 			delete ellipse;
+		}
 
 		ellipse = new Ellipse ( x, y, width, height );
 	}
@@ -90,16 +91,18 @@ void Object::Parse ( const TiXmlNode *objectNode ) {
 	// Read the Polygon and Polyline of the object if there are any.
 	const TiXmlNode *polygonNode = objectNode->FirstChild ( "polygon" );
 	if ( polygonNode ) {
-		if ( polygon != 0 )
+		if ( polygon != 0 ) {
 			delete polygon;
+		}
 
 		polygon = new Polygon();
 		polygon->Parse ( polygonNode );
 	}
 	const TiXmlNode *polylineNode = objectNode->FirstChild ( "polyline" );
 	if ( polylineNode ) {
-		if ( polyline != 0 )
+		if ( polyline != 0 ) {
 			delete polyline;
+		}
 
 		polyline = new Polyline();
 		polyline->Parse ( polylineNode );

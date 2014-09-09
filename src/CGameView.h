@@ -26,7 +26,7 @@ class CGameView : public QGraphicsView {
 	Q_OBJECT
 public:
 	CGameView ( QString mapName,QString playerType );
-	~CGameView();
+	virtual ~CGameView();
 	CFightPanel *getFightView();
 	CCharPanel *getCharView();
 	void showFightView();

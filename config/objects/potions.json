@@ -1,72 +1,92 @@
 {
     "FullLifePotion": {
-        "animation": "images/items/potions/life", 
-        "class": "Potion", 
+        "class": "CPotion", 
         "handler": "CTypeHandler", 
-        "power": 5, 
-        "singleUse": true
+        "properties": {
+            "animation": "images/items/potions/life", 
+            "power": 5, 
+            "singleUse": true
+        }
     }, 
     "FullManaPotion": {
-        "animation": "images/items/potions/mana", 
-        "class": "Potion", 
+        "class": "CPotion", 
         "handler": "CTypeHandler", 
-        "power": 5, 
-        "singleUse": true
+        "properties": {
+            "animation": "images/items/potions/mana", 
+            "power": 5, 
+            "singleUse": true
+        }
     }, 
     "GreaterLifePotion": {
-        "animation": "images/items/potions/life", 
-        "class": "Potion", 
+        "class": "CPotion", 
         "handler": "CTypeHandler", 
-        "power": 3, 
-        "singleUse": true
+        "properties": {
+            "animation": "images/items/potions/life", 
+            "power": 3, 
+            "singleUse": true
+        }
     }, 
     "GreaterManaPotion": {
-        "animation": "images/items/potions/mana", 
-        "class": "Potion", 
+        "class": "CPotion", 
         "handler": "CTypeHandler", 
-        "power": 3, 
-        "singleUse": true
+        "properties": {
+            "animation": "images/items/potions/mana", 
+            "power": 3, 
+            "singleUse": true
+        }
     }, 
     "LesserLifePotion": {
-        "animation": "images/items/potions/life", 
-        "class": "Potion", 
+        "class": "CPotion", 
         "handler": "CTypeHandler", 
-        "power": 1, 
-        "singleUse": true
+        "properties": {
+            "animation": "images/items/potions/life", 
+            "power": 1, 
+            "singleUse": true
+        }
     }, 
     "LesserManaPotion": {
-        "animation": "images/items/potions/mana", 
-        "class": "Potion", 
+        "class": "CPotion", 
         "handler": "CTypeHandler", 
-        "power": 1, 
-        "singleUse": true
+        "properties": {
+            "animation": "images/items/potions/mana", 
+            "power": 1, 
+            "singleUse": true
+        }
     }, 
     "LifePotion": {
-        "animation": "images/items/potions/life", 
-        "class": "Potion", 
+        "class": "CPotion", 
         "handler": "CTypeHandler", 
-        "power": 2, 
-        "singleUse": true
+        "properties": {
+            "animation": "images/items/potions/life", 
+            "power": 2, 
+            "singleUse": true
+        }
     }, 
     "ManaPotion": {
-        "animation": "images/items/potions/mana", 
-        "class": "Potion", 
+        "class": "CPotion", 
         "handler": "CTypeHandler", 
-        "power": 2, 
-        "singleUse": true
+        "properties": {
+            "animation": "images/items/potions/mana", 
+            "power": 3, 
+            "singleUse": true
+        }
     }, 
     "MaxLifePotion": {
-        "animation": "images/items/potions/life", 
-        "class": "Potion", 
+        "class": "CPotion", 
         "handler": "CTypeHandler", 
-        "power": 4, 
-        "singleUse": true
+        "properties": {
+            "animation": "images/items/potions/life", 
+            "power": 4, 
+            "singleUse": true
+        }
     }, 
     "MaxManaPotion": {
-        "animation": "images/items/potions/mana", 
-        "class": "Potion", 
+        "class": "CPotion", 
         "handler": "CTypeHandler", 
-        "power": 4, 
-        "singleUse": true
+        "properties": {
+            "animation": "images/items/potions/mana", 
+            "power": 4, 
+            "singleUse": true
+        }
     }
 }

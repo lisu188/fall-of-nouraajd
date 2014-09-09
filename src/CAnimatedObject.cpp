@@ -5,6 +5,7 @@
 #include "CAnimatedObject.h"
 #include "CAnimationProvider.h"
 #include "CGameScene.h"
+#include "QDebug"
 
 CAnimatedObject::CAnimatedObject() {
 	this->moveToThread ( QApplication::instance()->thread() );

@@ -5,9 +5,13 @@
 #include "CConfigurationProvider.h"
 #include "CScriptEngine.h"
 
-CBuilding::CBuilding() {}
+CBuilding::CBuilding() {
+	this->setZValue ( 1 );
+}
 
 CBuilding::CBuilding ( const CBuilding & ) {}
+
+CBuilding::~CBuilding() {}
 
 void CBuilding::onEnter() {
 
@@ -23,13 +27,6 @@ void CBuilding::onCreate() {
 
 void CBuilding::onDestroy() {
 
-}
-
-void CBuilding::loadFromJson ( QString name ) {
-	this->typeName = name;
-	QJsonObject config =
-	    CConfigurationProvider::getConfig ( "config/object.json" ).toObject() [name].toObject();
-	this->setAnimation ( config["animation"].toString() );
 }
 
 bool CBuilding::isEnabled() { return enabled; }
