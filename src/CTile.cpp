@@ -20,11 +20,7 @@ CTile::~CTile() {
 
 void CTile::moveTo ( int x, int y, int z, bool silent ) {
 	if (  map ) {
-		if ( map->find ( Coords ( posx, posy, posz ) ) != map->end() ) {
-			map->erase ( map->find ( Coords ( posx, posy, posz ) ) );
-		}
-		map->insert (
-		    std::pair<Coords, CTile*> ( Coords ( x, y, z ), this ) );
+		map->moveTile ( this,x,y, z );
 		setXYZ ( x, y, z );
 	}
 }

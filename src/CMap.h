@@ -17,6 +17,7 @@
 #include "CConfigurationProvider.h"
 #include "CMapObject.h"
 #include "Util.h"
+#include <mutex>
 
 class CGameScene;
 class CTile;
@@ -27,7 +28,8 @@ class CObjectHandler;
 
 
 class CMap : public QObject,
-	public std::unordered_map<Coords, CTile*, CoordsHasher> {
+	private std::unordered_map<Coords, CTile*, CoordsHasher> {
+	friend class std::unique_lock<CMap>;
 	Q_OBJECT
 public:
 	CMap ( CGameScene *scene, QString file );
@@ -36,10 +38,9 @@ public:
 	void removeTile ( int x, int y, int z );
 	void move ( int x, int y );
 	CTile *getTile ( int x, int y, int z );
+	Q_INVOKABLE bool canStep ( int x,int y,int z );
 	bool contains ( int x, int y, int z );
 	void addObject ( CMapObject *mapObject );
-	void addRiver ( int length, int startx, int starty, int startz );
-	void addRoad ( int length, int startx, int starty, int startz );
 	void removeObject ( CMapObject *mapObject );
 	Q_SLOT void ensureSize();
 	CGameScene *getScene() const;
@@ -65,6 +66,7 @@ public:
 	CLootProvider *getLootProvider();
 	CObjectHandler *getObjectHandler();
 	void loadingComplete();
+	void moveTile ( CTile* tile,int x, int y, int z );
 private:
 	std::set<CMapObject *> mapObjects;
 	void randomDir ( int *tab, int rule );
