@@ -45,7 +45,6 @@ SOURCES += \
     src/CGameView.cpp \
     src/CInteraction.cpp \
     src/CItem.cpp \
-    src/CItemSlot.cpp \
     src/CLootProvider.cpp \
     src/CMain.cpp \
     src/CMainWindow.cpp \
@@ -74,7 +73,6 @@ HEADERS += \
     src/CGameView.h \
     src/CInteraction.h \
     src/CItem.h \
-    src/CItemSlot.h \
     src/CLootProvider.h \
     src/CMainWindow.h \
     src/CMap.h \

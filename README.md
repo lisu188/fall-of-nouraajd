@@ -1,7 +1,7 @@
 # Recovered game snapshot
 
-Original commit: `b4954bbcaad2b59cd68f24beb69fe05cbbe46081`. Original tree: `7e0bd39b64f3c7650a63a5ff0ac760ee4cb0c85c`.
-Startup was verified from identical recovered sources at `b4954bbcaad2b59cd68f24beb69fe05cbbe46081`.
+Original commit: `e8b7c3d0e6da989122a0587943a98504342da3cd`. Original tree: `08b67cf8633e706371bbfd9f6fdfc735c63f5757`.
+Startup was verified from identical recovered sources at `e8b7c3d0e6da989122a0587943a98504342da3cd`.
 
 This recovered version compiled and linked on Linux, started the real game on an isolated Xvfb display,
 loaded its map and a healthy player, rendered the screenshot below, and exited normally.
@@ -37,13 +37,13 @@ launches run the game's original entry point. Startup evidence does not establis
 
 compatibilityRepair: 1, exactOriginal: 62, reconstruction: 47.
 
-- `config/objects/interactions.json`: unverified donor reconstruction; 9fc9416b1025044633a6b789212f67c56ecaafba:config/objects/interactions.json; headerMatch=0; apiOverlap=0/10000; distance=4
-- `config/objects/monsters.json`: unverified donor reconstruction; 55e6516eb91b739e899df1ef8d72116da44fec49:config/monsters.json; headerMatch=0; apiOverlap=0/10000; distance=104
+- `config/objects/interactions.json`: unverified donor reconstruction; 9fc9416b1025044633a6b789212f67c56ecaafba:config/objects/interactions.json; headerMatch=0; apiOverlap=0/10000; distance=5
+- `config/objects/monsters.json`: unverified donor reconstruction; 55e6516eb91b739e899df1ef8d72116da44fec49:config/monsters.json; headerMatch=0; apiOverlap=0/10000; distance=103
 - `config/objects/weapons.json`: working reconstruction
-- `format.py`: unverified donor reconstruction; 51c2e9b0b64c86a8e593a5231c3ef9e44efc5af1:format.py; headerMatch=0; apiOverlap=0/10000; distance=19
+- `format.py`: unverified donor reconstruction; 51c2e9b0b64c86a8e593a5231c3ef9e44efc5af1:format.py; headerMatch=0; apiOverlap=0/10000; distance=20
 - `game.pro`: working reconstruction
 - `images/loading.png`: synthesized visible 32px placeholder; original artwork unavailable; unverified
-- `lib/base64/base64.cpp`: unverified donor reconstruction; 779fb803ff021de5e74ed3b24d7c31a9adcaa236:base64/base64.cpp; headerMatch=0; apiOverlap=10000/10000; distance=77
+- `lib/base64/base64.cpp`: unverified donor reconstruction; 779fb803ff021de5e74ed3b24d7c31a9adcaa236:base64/base64.cpp; headerMatch=0; apiOverlap=10000/10000; distance=78
 - `lib/tinyxml/tinystr.h`: unverified upstream reconstruction; https://github.com/tamatias/tmxparser/tree/6fa4d38742313b6365df0d224b8978be1eb81290
 - `lib/tinyxml/tinyxml.cpp`: unverified upstream reconstruction; https://github.com/tamatias/tmxparser/tree/6fa4d38742313b6365df0d224b8978be1eb81290
 - `lib/tinyxml/tinyxml.h`: unverified upstream reconstruction; https://github.com/tamatias/tmxparser/tree/6fa4d38742313b6365df0d224b8978be1eb81290
@@ -70,7 +70,7 @@ compatibilityRepair: 1, exactOriginal: 62, reconstruction: 47.
 - `lib/zlib/zutil.c`: working reconstruction
 - `lib/zlib/zutil.h`: working reconstruction
 - `maps/map.tmx`: working reconstruction
-- `scripts/game/interaction.py`: unverified donor reconstruction; 21c04c61c564bb91953b90218c6cf4bed54417a9:scripts/game/interaction.py; headerMatch=0; apiOverlap=0/10000; distance=18
+- `scripts/game/interaction.py`: unverified donor reconstruction; 21c04c61c564bb91953b90218c6cf4bed54417a9:scripts/game/interaction.py; headerMatch=0; apiOverlap=0/10000; distance=19
 - `src/CCreature.cpp`: working reconstruction
 - `src/CCreature.h`: Reconstructed combined CCreature/player/monster declarations from intact #247 separate headers, same-commit surviving APIs/callers, and the #331 split CPlayer/CMonster declarations; original bytes and unspecified internal deltas unavailable. No compilation/runtime validation.
 - `src/CGamePanel.cpp`: working reconstruction
@@ -86,7 +86,7 @@ compatibilityRepair: 1, exactOriginal: 62, reconstruction: 47.
 - `src/Stats.h`: working reconstruction
 - `scripts/PSF_LICENSE`: https://www.python.org/ftp/python/3.3.7/Python-3.3.7.tar.xz upstream Python distribution license
 
-Restored source fingerprint: `0f19cddb8ac97bcfa39f8a39864e6e74f8c3492933f160753465b69c2c94d2f4`.
+Restored source fingerprint: `ec6803fb065fdedb4b9b2de4b431da040a62ba38a5b147cc4cdcf9e76618242e`.
 
 The actual 1278 × 718 screenshot and [verification metadata](recovery/verification.json) belong to
 this source version. Reconstructed code and borrowed assets are identified in that metadata; they are
