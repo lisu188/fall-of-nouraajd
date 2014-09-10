@@ -28,7 +28,6 @@ public:
 	virtual void onMove();
 	virtual bool canSave();
 	void setMap ( CMap *map );
-
 protected:
 	bool step=false;
 	virtual void mousePressEvent ( QGraphicsSceneMouseEvent *event );

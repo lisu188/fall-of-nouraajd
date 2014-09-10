@@ -132,3 +132,7 @@ void PathFinderWorker::run() {
   Q_EMIT ended();
   finder->deleteLater();
 }
+
+bool CSmartPathFinder::canStep(CMap *map, int x, int y, int z) {
+  return map->canStep(x, y, z);
+}
