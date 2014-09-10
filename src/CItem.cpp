@@ -141,14 +141,7 @@ void CItem::loadFromJson(QString name) {
           ? map->getObjectHandler()->createMapObject<CInteraction *>(action)
           : nullptr;
 }
-CItem *CItem::createItem(QString name) {
-  CItem *item = dynamic_cast<CItem *>(
-      CTypeHandler().create(itemConfiguration(name)["class"].toString()));
-  if (item) {
-    item->loadFromJson(name);
-  }
-  return item;
-}
+
 Stats CItem::getBonus() { return bonus; }
 void CItem::setBonus(Stats value) { bonus = value; }
 CArmor::CArmor(QString name) { loadFromJson(name); }
@@ -159,23 +152,16 @@ CPotion::CPotion(const CPotion &potion) : CPotion() {
 }
 void CPotion::onUse(CCreature *creature) {
   if (!effect) {
-    loadFromJson(typeName);
+    if (typeName.contains("LifePotion"))
+      effect = &LifeEffect;
+    else if (typeName.contains("ManaPotion"))
+      effect = &ManaEffect;
   }
-  if (!effect) {
+  if (!effect)
     qFatal("Unknown potion effect");
-  }
   effect(creature, power);
 }
-void CPotion::loadFromJson(QString name) {
-  CItem::loadFromJson(name);
-  if (name.contains("LifePotion")) {
-    effect = &LifeEffect;
-  } else if (name.contains("ManaPotion")) {
-    effect = &ManaEffect;
-  } else {
-    effect = nullptr;
-  }
-}
+
 void LifeEffect(CCreature *creature, int power) {
   creature->healProc(power * 20);
 }

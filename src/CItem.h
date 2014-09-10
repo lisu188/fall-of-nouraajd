@@ -17,7 +17,6 @@ public:
 	void setSingleUse ( bool singleUse );
 	virtual void onEquip ( CCreature *creature );
 	virtual void onUnequip ( CCreature *creature );
-	static CItem *createItem ( QString name );
 	virtual void onUse ( CCreature *creature );
 	virtual void onEnter();
 	virtual void onMove();
@@ -96,8 +95,6 @@ public:
 	CPotion();
 	CPotion ( const CPotion & );
 	virtual void onUse ( CCreature *creature );
-	virtual void loadFromJson ( QString name );
-
 private:
 	std::function<void ( CCreature *, int ) > effect;
 };

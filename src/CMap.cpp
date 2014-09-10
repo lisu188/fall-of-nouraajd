@@ -293,24 +293,7 @@ void CMap::randomDir(int *direction, int rule) {
   direction[0] = offsets[index][0];
   direction[1] = offsets[index][1];
 }
-void CMap::addRiver(int length, int x, int y, int z) {
-  for (int i = 0; i < length; ++i) {
-    replaceTile("WaterTile", Coords(x, y, z));
-    int direction[2];
-    randomDir(direction, -1);
-    x += direction[0];
-    y += direction[1];
-  }
-}
-void CMap::addRoad(int length, int x, int y, int z) {
-  for (int i = 0; i < length; ++i) {
-    replaceTile("RoadTile", Coords(x, y, z));
-    int direction[2];
-    randomDir(direction, -1);
-    x += direction[0];
-    y += direction[1];
-  }
-}
+
 CGameScene *CMap::getScene() const { return scene; }
 void CMap::mapUp() { --currentMap; }
 void CMap::mapDown() { ++currentMap; }
@@ -321,3 +304,17 @@ int CMap::getEntryZ() { return entryz; }
 std::map<int, std::pair<int, int>> CMap::getBounds() { return boundaries; }
 int CMap::getCurrentXBound() { return boundaries[currentMap].first; }
 int CMap::getCurrentYBound() { return boundaries[currentMap].second; }
+
+bool CMap::canStep(int x, int y, int z) { return getTile(x, y, z)->canStep(); }
+void CMap::moveTile(CTile *tile, int x, int y, int z) {
+  if (!tile)
+    return;
+  Coords target(x, y, z);
+  auto existing = find(target);
+  if (existing != end() && existing->second != tile)
+    qFatal("Cannot move two owned tiles to the same map coordinate");
+  auto old = find(tile->getCoords());
+  if (old != end() && old->second == tile)
+    erase(old);
+  insert(std::make_pair(target, tile));
+}
