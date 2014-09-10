@@ -4,7 +4,6 @@
 #include "CGameScene.h"
 #include "CGameView.h"
 #include "CInteraction.h"
-#include "CItemSlot.h"
 #include "CLootProvider.h"
 #include "CObjectHandler.h"
 #include "CPathFinder.h"

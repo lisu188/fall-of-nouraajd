@@ -3,8 +3,8 @@
 #include "CGameScene.h"
 #include "CInteraction.h"
 #include "CItem.h"
-#include "CItemSlot.h"
 #include "CObjectHandler.h"
+#include "CPlayerView.h"
 #include "CTypeHandler.h"
 #include <QDebug>
 #include <QDirIterator>
