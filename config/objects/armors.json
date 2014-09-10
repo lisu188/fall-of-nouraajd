@@ -33,18 +33,20 @@
             "stamina": 3, 
             "strength": 4
         }, 
-        "class": "Armor", 
+        "class": "CArmor", 
         "handler": "CTypeHandler"
     }, 
     "Robe": {
-        "animation": "images/items/armors/robe", 
-        "bonus": {
-            "armor": 10, 
-            "block": 5, 
-            "intelligence": 3, 
-            "stamina": 2
-        }, 
-        "class": "Armor", 
-        "handler": "CTypeHandler"
+        "class": "CArmor", 
+        "handler": "CTypeHandler", 
+        "properties": {
+            "animation": "images/items/armors/robe", 
+            "bonus": {
+                "armor": 10, 
+                "block": 5, 
+                "intelligence": 3, 
+                "stamina": 2
+            }
+        }
     }
 }
