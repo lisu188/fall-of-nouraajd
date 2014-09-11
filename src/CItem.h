@@ -91,6 +91,20 @@ public:
 	CSmallWeapon ( const CSmallWeapon & );
 };
 
+class CScroll : public CItem {
+	Q_OBJECT
+	Q_PROPERTY ( QString text READ getText WRITE setText USER true )
+public:
+	CScroll();
+	CScroll ( const CScroll & );
+	QString getText() const;
+	void setText ( const QString &value );
+	virtual void onUse ( CCreature *creature );
+	private
+:
+	QString text;
+};
+
 class CPotion : public CItem {
 	Q_OBJECT
 public:

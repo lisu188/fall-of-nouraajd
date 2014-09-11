@@ -15,8 +15,9 @@ CLootProvider::CLootProvider ( CMap *map ) :QObject ( map ) {
 	QJsonObject *config = map->getObjectHandler()->getObjectConfig();
 	for ( auto  it = config->begin(); it != config->end(); it++ ) {
 		if ( CReflection::getInstance()->checkInheritance ( "CItem", ( *it ).toObject() ["class"].toString() ) ) {
-			this->insert ( std::pair<QString, int> ( it.key(),
-			               ( *it ).toObject() ["properties"].toObject() ["power"].toInt()  ) );
+			int power=
+			    ( *it ).toObject() ["properties"].toObject() ["power"].toInt()   ;
+			if ( power>0 ) {this->insert ( std::pair<QString, int> ( it.key(),power ) );}
 		}
 	}
 }
