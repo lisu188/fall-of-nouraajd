@@ -1,6 +1,8 @@
 #include "CConfigurationProvider.h"
 #include "CCreature.h"
+#include "CGamePanel.h"
 #include "CGameScene.h"
+#include "CGameView.h"
 #include "CInteraction.h"
 #include "CItem.h"
 #include "CObjectHandler.h"
@@ -184,4 +186,18 @@ void CItem::setInteractionName(QString name) {
   interaction = map->getObjectHandler()->createMapObject<CInteraction *>(name);
   if (!interaction)
     qFatal("Configured item interaction is not a CInteraction");
+}
+
+CScroll::CScroll() {}
+CScroll::CScroll(const CScroll &scroll) : CItem(scroll), text(scroll.text) {}
+QString CScroll::getText() const { return text; }
+void CScroll::setText(const QString &value) { text = value; }
+void CScroll::onUse(CCreature *) {
+  CGameView *view = getMap()->getScene()->getView();
+  CScrollPanel *panel =
+      dynamic_cast<CScrollPanel *>(view->getPanel("CScrollPanel"));
+  if (!panel)
+    qFatal("Missing registered scroll text panel");
+  panel->setText(text);
+  view->showPanel("CScrollPanel");
 }

@@ -111,3 +111,29 @@ void BackPackObject::paintEvent(QPaintEvent *) {
   QPainter painter(this);
   painter.drawPixmap(0, 0, pixmap);
 }
+
+CScrollPanel::CScrollPanel() { setZValue(7); }
+CScrollPanel::CScrollPanel(const CScrollPanel &panel) : CScrollPanel() {
+  text = panel.text;
+}
+QRectF CScrollPanel::boundingRect() const { return QRectF(0, 0, 400, 300); }
+void CScrollPanel::paint(QPainter *painter, const QStyleOptionGraphicsItem *,
+                         QWidget *) {
+  painter->fillRect(boundingRect(), QColor("BLACK"));
+  painter->setPen(QColor("WHITE"));
+  painter->drawText(QRectF(0, painter->font().pointSize(), 400, 300),
+                    Qt::AlignLeft | Qt::TextWordWrap | Qt::AlignJustify, text);
+}
+void CScrollPanel::showPanel(CGameView *view) {
+  setUpPanel(view);
+  setPos(view->mapToScene(view->width() / 2 - boundingRect().width() / 2,
+                          view->height() / 2 - boundingRect().height() / 2));
+  setVisible(true);
+  update();
+}
+void CScrollPanel::setUpPanel(CGameView *view) { AGamePanel::setUpPanel(view); }
+QString CScrollPanel::getText() const { return text; }
+void CScrollPanel::setText(const QString &value) {
+  text = value;
+  update();
+}
