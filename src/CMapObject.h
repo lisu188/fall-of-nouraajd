@@ -24,7 +24,6 @@ public:
 	virtual void onCreate();
 	virtual void onDestroy();
 	Q_SLOT void move ( int x, int y );
-	virtual void loadFromJson ( QString name );
 	void loadFromProps ( Tmx::PropertySet set );
 	virtual void setMap ( CMap *map );
 	CMap *getMap();

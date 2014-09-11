@@ -1,6 +1,7 @@
 {
     "Event": {
-        "class": "Event", 
-        "handler": "CTypeHandler"
+        "class": "CEvent", 
+        "handler": "CTypeHandler", 
+        "properties": {}
     }
 }

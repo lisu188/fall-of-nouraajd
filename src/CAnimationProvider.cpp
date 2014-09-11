@@ -11,19 +11,14 @@
 #include <mutex>
 #include "Util.h"
 
-std::map<int, CAnimationProvider> CAnimationProvider::instances;
-
-CAnimation *CAnimationProvider::getAnim ( QString path, int size ) {
+CAnimation *CAnimationProvider::getAnim ( QString path ) {
 	static std::mutex mutex;
+	static CAnimationProvider instance;
 	std::unique_lock<std::mutex> lock ( mutex );
-	if ( instances.find ( size ) == instances.end() ) {
-		instances.insert (
-		    std::pair<int, CAnimationProvider> ( size, CAnimationProvider ( size ) ) );
-	}
-	return instances.at ( size ).getAnimation ( path );
+	return instance.getAnimation ( path );
 }
 
-CAnimationProvider::CAnimationProvider ( int size ) : tileSize ( size ) {}
+CAnimationProvider::CAnimationProvider ( )  {}
 
 CAnimationProvider::~CAnimationProvider() {
 	for ( iterator it = begin(); it != end(); it++ ) {
@@ -98,11 +93,41 @@ QPixmap *CAnimationProvider::getImage ( QString path ) {
 		image.setMask ( image.createHeuristicMask() );
 	}
 	if ( !image.isNull() ) {
-		return new QPixmap ( image.scaled ( tileSize, tileSize, Qt::IgnoreAspectRatio,
+		return new QPixmap ( image.scaled ( 50, 50, Qt::IgnoreAspectRatio,
 		                                    Qt::SmoothTransformation ) );
 	} else {
 		return NULL;
 	}
 }
 
+CAnimation::CAnimation() { actual = 0; }
 
+CAnimation::~CAnimation() {
+	for ( iterator it = begin(); it != end(); it++ ) {
+		delete ( *it ).second.first;
+	}
+	clear();
+}
+
+QPixmap *CAnimation::getImage() { return at ( actual ).first; }
+
+int CAnimation::getTime() {
+	if ( size() == 1 ) {
+		return -1;
+	}
+	return at ( actual ).second;
+}
+
+int CAnimation::size() {
+	return std::map<int, std::pair<QPixmap *, int> >::size();
+}
+
+void CAnimation::next() {
+	actual++;
+	actual = actual % size();
+}
+
+void CAnimation::add ( QPixmap *img, int time ) {
+	insert ( std::pair<int, std::pair<QPixmap *, int> > (
+	             size(), std::pair<QPixmap *, int> ( img, time ) ) );
+}

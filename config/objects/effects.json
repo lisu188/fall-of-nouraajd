@@ -1,40 +1,58 @@
 {
     "AbyssalShadowsEffect": {
-        "duration": 4, 
-        "handler": "CTypeHandler"
+        "handler": "CTypeHandler", 
+        "properties": {
+            "duration": 4
+        }
     }, 
     "ArmorOfEndlessWinterEffect": {
-        "buff": true, 
-        "duration": 3, 
-        "handler": "CTypeHandler"
+        "handler": "CTypeHandler", 
+        "properties": {
+            "buff": true, 
+            "duration": 3
+        }
     }, 
     "BarrierEffect": {
-        "buff": true, 
-        "duration": 3, 
-        "handler": "CTypeHandler"
+        "handler": "CTypeHandler", 
+        "properties": {
+            "buff": true, 
+            "duration": 3
+        }
     }, 
     "BloodlashEffect": {
-        "duration": 3, 
-        "handler": "CTypeHandler"
+        "handler": "CTypeHandler", 
+        "properties": {
+            "duration": 3
+        }
     }, 
     "ChloroformEffect": {
-        "duration": 4, 
-        "handler": "CTypeHandler"
+        "handler": "CTypeHandler", 
+        "properties": {
+            "duration": 4
+        }
     }, 
     "EndlessPainEffect": {
-        "duration": 2, 
-        "handler": "CTypeHandler"
+        "handler": "CTypeHandler", 
+        "properties": {
+            "duration": 2
+        }
     }, 
     "LethalPoisonEffect": {
-        "duration": 6, 
-        "handler": "CTypeHandler"
+        "handler": "CTypeHandler", 
+        "properties": {
+            "duration": 6
+        }
     }, 
     "MutilationEffect": {
-        "duration": 3, 
-        "handler": "CTypeHandler"
+        "handler": "CTypeHandler", 
+        "properties": {
+            "duration": 3
+        }
     }, 
     "Stun": {
-        "duration": 2, 
-        "handler": "CTypeHandler"
+        "handler": "CTypeHandler", 
+        "properties": {
+            "duration": 2
+        }
     }
 }

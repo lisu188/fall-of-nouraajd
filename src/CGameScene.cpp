@@ -61,7 +61,7 @@ void CGameScene::keyPressEvent ( QKeyEvent *keyEvent ) {
 			keyEvent->setAccepted ( true );
 			break;
 		case Qt::Key_C:
-			getView()->showCharView();
+			getView()->showPanel ( "CCharPanel" );
 			keyEvent->setAccepted ( true );
 			break;
 		}
@@ -77,7 +77,7 @@ void CGameScene::playerMove ( int dirx, int diry ) {
 		return;
 	}
 	if ( player->getFightList()->size() > 0 ||
-	        getView()->getCharView()->isVisible() ) {
+	        getView()->getPanel ( "CCharPanel" )->isVisible() ) {
 		return;
 	}
 	map->move ( dirx, diry );

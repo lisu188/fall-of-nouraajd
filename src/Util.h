@@ -1,4 +1,5 @@
 #pragma once
+#include <QMimeData>
 
 #define PY_PROPERTY_ACCESSOR(CLASS)\
 .def ( "getStringProperty",&CLASS::getStringProperty )\
@@ -59,5 +60,18 @@ public:
 			return true;
 		}
 		return first->compare ( second );
+	}
+};
+
+class QObject;
+class CObjectData:public QMimeData {
+	Q_OBJECT
+public:
+	QObject *source;
+	CObjectData ( QObject *source ) {
+		this->source=source;
+	}
+	QObject *getSource() const {
+		return source;
 	}
 };

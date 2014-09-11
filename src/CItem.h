@@ -10,6 +10,7 @@ class CItem : public CMapObject {
 	Q_PROPERTY ( int power READ getPower WRITE setPower USER true )
 	Q_PROPERTY ( bool singleUse READ isSingleUse WRITE setSingleUse USER true )
 	Q_PROPERTY ( Stats bonus READ getBonus WRITE setBonus USER true )
+	Q_PROPERTY ( QString interaction READ getInteractionName WRITE setInteractionName )
 public:
 	CItem();
 	CItem ( const CItem & );
@@ -24,13 +25,14 @@ public:
 	void setPower ( int value );
 	Stats getBonus();
 	void setBonus ( Stats stats );
-
+	QString getInteractionName();
+	void setInteractionName ( QString name );
 protected:
 	virtual void mousePressEvent ( QGraphicsSceneMouseEvent *event );
 	bool singleUse=false;
 	Stats bonus;
 	void loadFromJson ( QString name );
-	CInteraction *interaction;
+	CInteraction *interaction=0;
 	int power=0;
 
 private:

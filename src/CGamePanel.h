@@ -1,11 +1,13 @@
 #pragma once
 #include <QGraphicsItem>
 #include "CReflection.h"
+#include <QWidget>
 
 class CCreature;
 class CGameView;
 class CPlayerListView;
 class CPlayerEquippedView;
+class CCharPanel;
 
 class AGamePanel : public QGraphicsObject {
 	Q_OBJECT
@@ -18,6 +20,21 @@ public:
 	virtual void paint ( QPainter *, const QStyleOptionGraphicsItem *, QWidget * );
 };
 
+
+class BackPackObject : public QWidget {
+	Q_OBJECT
+public:
+	BackPackObject ( CGameView* view ) ;
+
+protected:
+	void mousePressEvent ( QMouseEvent * );
+	void paintEvent ( QPaintEvent * );
+
+private:
+	QPixmap pixmap;
+	int time = 0;
+	CGameView *view;
+};
 
 class CCharPanel : public AGamePanel {
 	Q_OBJECT
@@ -32,6 +49,7 @@ public:
 private:
 	CPlayerListView *playerInventoryView;
 	CPlayerEquippedView *playerEquippedView;
+	BackPackObject *backpack;
 };
 
 class CFightPanel : public AGamePanel {

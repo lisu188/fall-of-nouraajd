@@ -6,6 +6,7 @@
 #include "CAnimationProvider.h"
 #include "CGameScene.h"
 #include "QDebug"
+#include "Util.h"
 
 CAnimatedObject::CAnimatedObject() {
 	this->moveToThread ( QApplication::instance()->thread() );
@@ -23,9 +24,9 @@ QPointF CAnimatedObject::mapToParent ( int a, int b ) {
 	return QGraphicsItem::mapToParent ( QPointF ( a, b ) );
 }
 
-void CAnimatedObject::setAnimation ( QString path, int size ) {
+void CAnimatedObject::setAnimation ( QString path ) {
 	this->path=path;
-	staticAnimation = CAnimationProvider::getAnim ( path, size );
+	staticAnimation = CAnimationProvider::getAnim ( path );
 	if ( staticAnimation ) {
 		animate();
 	}
@@ -56,8 +57,7 @@ void CAnimatedObject::animate() {
 
 void CAnimatedObject::mousePressEvent ( QGraphicsSceneMouseEvent * ) {
 	QDrag *drag = new QDrag ( this );
-	QMimeData *mimeData = new QMimeData();
-	drag->setMimeData ( mimeData );
+	drag->setMimeData ( new CObjectData ( this ) );
 	drag->setPixmap ( this->pixmap() );
 	drag->exec();
 }
