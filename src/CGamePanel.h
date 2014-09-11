@@ -69,3 +69,19 @@ private:
 
 };
 
+class CScrollPanel:public AGamePanel {
+	Q_OBJECT
+public:
+	CScrollPanel();
+	CScrollPanel ( const CScrollPanel& );
+	virtual QRectF boundingRect() const;
+	virtual void paint ( QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget );
+	virtual void showPanel ( CGameView * );
+	virtual void setUpPanel ( CGameView * );
+	QString getText() const;
+	void setText ( const QString &value );
+
+private:
+	QString text;
+};
+

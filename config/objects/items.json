@@ -47,12 +47,12 @@
         }
     }, 
     "Scroll": {
-        "class": "CItem", 
+        "class": "CScroll", 
         "handler": "CTypeHandler", 
         "properties": {
             "animation": "images/items/scroll", 
-            "power": 1, 
-            "singleUse": false
+            "power": 0, 
+            "singleUse": true
         }
     }, 
     "UndestructibleBelt": {
