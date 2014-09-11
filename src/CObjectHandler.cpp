@@ -1,4 +1,5 @@
 #include "CConfigurationProvider.h"
+#include "CCreature.h"
 #include "CInteraction.h"
 #include "CMap.h"
 #include "CObjectHandler.h"
@@ -40,6 +41,17 @@ CMapObject *CObjectHandler::_createMapObject(QString type) {
       QMetaType::type(qPrintable("C" + class_name))) {
     class_name.prepend("C");
   }
+  if (class_name.startsWith("game.interaction.")) {
+    PY_UNSAFE(boost::python::object definition =
+                  CScriptEngine::getInstance()
+                      ->getObject("game")
+                      .attr("interaction")
+                      .attr(class_name.section('.', -1).toStdString().c_str());
+              if (PyFunction_Check(definition.ptr())) {
+                class_name = "CInteraction";
+                handler_name = "CTypeHandler";
+              })
+  }
   ATypeHandler *type_handler = ATypeHandler::getHandler(handler_name);
   if (!type_handler) {
     qFatal("Unknown type handler %s", qPrintable(handler_name));
@@ -64,7 +76,8 @@ CMapObject *CObjectHandler::_createMapObject(QString type) {
   for (auto it = properties.begin(); it != properties.end(); ++it) {
     setProperty(object, it.key(), it.value());
   }
-  object->loadFromJson(type);
+  if (CCreature *creature = dynamic_cast<CCreature *>(object))
+    creature->loadFromJson(type);
   return object;
 }
 
@@ -94,4 +107,9 @@ void CObjectHandler::logProperties(CMapObject *object) {
       qDebug() << property.name() << property.read(object);
     }
   }
+}
+
+QJsonObject *CObjectHandler::getObjectConfig() { return &objectConfig; }
+void CObjectHandler::setObjectConfig(const QJsonObject &value) {
+  objectConfig = value;
 }

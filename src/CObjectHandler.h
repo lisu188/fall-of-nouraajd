@@ -13,6 +13,8 @@ public:
 		return dynamic_cast<T> ( _createMapObject ( type ) );
 	}
 	void logProperties ( CMapObject *object );
+	QJsonObject *getObjectConfig() ;
+	void setObjectConfig ( const QJsonObject &value );
 private:
 	CMapObject *_createMapObject ( QString type );
 	void setProperty ( QObject * object , QString key, QJsonValue value );

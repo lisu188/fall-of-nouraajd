@@ -12,12 +12,11 @@ std::set<CItem *> *CLootProvider::getLoot ( int value ) {
 
 CLootProvider::CLootProvider ( CMap *map ) :QObject ( map ) {
 	this->map=map;
-	QJsonObject config = CConfigurationProvider::getConfig ( "config/object.json" ).toObject();
-	QJsonObject::iterator it = config.begin();
-	for ( ; it != config.end(); it++ ) {
+	QJsonObject *config = map->getObjectHandler()->getObjectConfig();
+	for ( auto  it = config->begin(); it != config->end(); it++ ) {
 		if ( CReflection::getInstance()->checkInheritance ( "CItem", ( *it ).toObject() ["class"].toString() ) ) {
 			this->insert ( std::pair<QString, int> ( it.key(),
-			               ( *it ).toObject() ["power"].toInt()  ) );
+			               ( *it ).toObject() ["properties"].toObject() ["power"].toInt()  ) );
 		}
 	}
 }
