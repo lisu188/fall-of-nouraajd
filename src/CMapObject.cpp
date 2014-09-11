@@ -39,7 +39,6 @@ void CMapObject::onEnter() {}
 void CMapObject::onMove() {}
 void CMapObject::onCreate() {}
 void CMapObject::onDestroy() {}
-void CMapObject::loadFromJson(QString name) { setTypeName(name); }
 void CMapObject::loadFromProps(Tmx::PropertySet properties) {
   for (auto &entry : properties.GetList()) {
     QString value = QString::fromStdString(entry.second);
@@ -96,7 +95,7 @@ void CEvent::onEnter() {
   }
 }
 void CEvent::onMove() {}
-void CEvent::loadFromJson(QString name) { CMapObject::loadFromJson(name); }
+void CEvent::loadFromJson(QString name) { setTypeName(name); }
 QString CEvent::getScript() const { return script; }
 void CEvent::setScript(const QString &value) { script = value; }
 bool CEvent::isEnabled() { return enabled; }

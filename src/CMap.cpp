@@ -277,7 +277,7 @@ void CMap::moveCompleted() {
   *player->getEntered() = entered;
   getTile(player->getPosX(), player->getPosY(), player->getPosZ())->onStep();
   if (!player->getFightList()->empty()) {
-    scene->getView()->showFightView();
+    scene->getView()->showPanel("CFightPanel");
   }
   ensureSize();
   player->updateViews();

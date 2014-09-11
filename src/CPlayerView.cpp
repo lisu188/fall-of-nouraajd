@@ -9,6 +9,14 @@
 #include <QPainter>
 #include <sstream>
 
+namespace {
+CItem *draggedItem(QGraphicsSceneDragDropEvent *event) {
+  const CObjectData *data =
+      dynamic_cast<const CObjectData *>(event->mimeData());
+  return data ? dynamic_cast<CItem *>(data->getSource()) : nullptr;
+}
+} // namespace
+
 CPlayerListView::CPlayerListView(
     std::set<CMapObject *, Comparer<CMapObject>> *MapObjects)
     : items(MapObjects) {
@@ -107,7 +115,11 @@ void CPlayerListView::setItems(
 }
 
 void CPlayerListView::dropEvent(QGraphicsSceneDragDropEvent *event) {
-  CItem *item = (CItem *)(event->source());
+  CItem *item = draggedItem(event);
+  if (!item) {
+    event->ignore();
+    return;
+  }
   event->acceptProposedAction();
   item->onUse(this->getMap()->getScene()->getPlayer());
 }
@@ -193,9 +205,9 @@ CScrollObject::CScrollObject(CPlayerListView *stats, bool isRight) {
   this->stats = stats;
   int size = 50;
   if (!isRight) {
-    this->setAnimation("images/arrows/left", size);
+    this->setAnimation("images/arrows/left");
   } else {
-    this->setAnimation("images/arrows/right", size);
+    this->setAnimation("images/arrows/right");
   }
   setParentItem(stats);
 }
@@ -240,7 +252,7 @@ void CItemSlot::paint(QPainter *painter, const QStyleOptionGraphicsItem *,
   painter->drawPixmap(0, 0, pixmap);
 }
 
-bool CItemSlot::checkType(int slot, QObject *widget) {
+bool CItemSlot::checkType(int slot, CItem *widget) {
   if (widget) {
     QJsonArray config = CConfigurationProvider::getConfig("config/slots.json")
                             .toObject()[QString::number(slot)]
@@ -268,15 +280,15 @@ void CItemSlot::update() {
 
 void CItemSlot::dragMoveEvent(QGraphicsSceneDragDropEvent *event) {
   QGraphicsObject::dragMoveEvent(event);
-  event->setAccepted(checkType(number, event->source()));
+  event->setAccepted(checkType(number, draggedItem(event)));
 }
 
 void CItemSlot::dropEvent(QGraphicsSceneDragDropEvent *event) {
   QGraphicsObject::dropEvent(event);
-  if (checkType(number, event->source())) {
+  if (checkType(number, draggedItem(event))) {
     dynamic_cast<CGameScene *>(this->scene())
         ->getPlayer()
-        ->setItem(number, (CItem *)event->source());
+        ->setItem(number, draggedItem(event));
   }
   event->acceptProposedAction();
   event->accept();

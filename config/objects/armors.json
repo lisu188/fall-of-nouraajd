@@ -1,40 +1,46 @@
 {
     "ChestPlateOfTheNorth": {
-        "animation": "images/items/armors/chestplateofnorth", 
-        "bonus": {
-            "agility": 8, 
-            "armor": 375, 
-            "block": 2, 
-            "intelligence": 4, 
-            "stamina": 15, 
-            "strength": 12
-        }, 
-        "class": "Armor", 
+        "class": "CArmor", 
         "handler": "CTypeHandler", 
-        "power": 15
+        "properties": {
+            "animation": "images/items/armors/chestplateofnorth", 
+            "bonus": {
+                "agility": 8, 
+                "armor": 375, 
+                "block": 2, 
+                "intelligence": 4, 
+                "stamina": 15, 
+                "strength": 12
+            }, 
+            "power": 15
+        }
     }, 
     "LeatherArmor": {
-        "animation": "images/items/armors/leatherarmor", 
-        "bonus": {
-            "agility": 5, 
-            "armor": 10, 
-            "block": 5, 
-            "crit": 2, 
-            "stamina": 2
-        }, 
-        "class": "Armor", 
-        "handler": "CTypeHandler"
+        "class": "CArmor", 
+        "handler": "CTypeHandler", 
+        "properties": {
+            "animation": "images/items/armors/leatherarmor", 
+            "bonus": {
+                "agility": 5, 
+                "armor": 10, 
+                "block": 5, 
+                "crit": 2, 
+                "stamina": 2
+            }
+        }
     }, 
     "PlateArmor": {
-        "animation": "images/items/armors/platearmor", 
-        "bonus": {
-            "armor": 10, 
-            "block": 5, 
-            "stamina": 3, 
-            "strength": 4
-        }, 
         "class": "CArmor", 
-        "handler": "CTypeHandler"
+        "handler": "CTypeHandler", 
+        "properties": {
+            "animation": "images/items/armors/platearmor", 
+            "bonus": {
+                "armor": 10, 
+                "block": 5, 
+                "stamina": 3, 
+                "strength": 4
+            }
+        }
     }, 
     "Robe": {
         "class": "CArmor", 

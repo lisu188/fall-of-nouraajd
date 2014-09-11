@@ -168,3 +168,20 @@ void LifeEffect(CCreature *creature, int power) {
 void ManaEffect(CCreature *creature, int power) {
   creature->addManaProc(power * 20);
 }
+
+QString CItem::getInteractionName() {
+  return interaction ? interaction->getTypeName() : QString();
+}
+void CItem::setInteractionName(QString name) {
+  if (getInteractionName() == name)
+    return;
+  if (name.isEmpty()) {
+    interaction = nullptr;
+    return;
+  }
+  if (!map)
+    qFatal("Cannot resolve item interaction without its map");
+  interaction = map->getObjectHandler()->createMapObject<CInteraction *>(name);
+  if (!interaction)
+    qFatal("Configured item interaction is not a CInteraction");
+}
