@@ -2,6 +2,7 @@
 #include "CGamePanel.h"
 #include "CGameScene.h"
 #include "CGameView.h"
+#include "CMap.h"
 #include "CMapObject.h"
 #include "CPlayerView.h"
 #include <QMouseEvent>
@@ -39,9 +40,15 @@ void CCharPanel::setUpPanel(CGameView *view) {
   AGamePanel::setUpPanel(view);
   if (playerInventoryView)
     return;
-  CPlayer *player = view->getScene()->getPlayer();
-  backpack = new BackPackObject(view);
-  backpack->show();
+  if (!backpack) {
+    backpack = new BackPackObject(view);
+    backpack->show();
+  }
+  CMap *map = view->getScene()->findChild<CMap *>(QString(),
+                                                  Qt::FindDirectChildrenOnly);
+  CPlayer *player = map ? map->getPlayer() : nullptr;
+  if (!player)
+    return;
   playerInventoryView = new CPlayerListView(
       (std::set<CMapObject *, Comparer<CMapObject>> *)player->getInventory());
   playerInventoryView->setParentItem(this);
@@ -53,7 +60,11 @@ void CCharPanel::setUpPanel(CGameView *view) {
   connect(player, SIGNAL(equippedChanged()), playerEquippedView,
           SLOT(update()));
 }
-void CCharPanel::showPanel(CGameView *view) { AGamePanel::showPanel(view); }
+void CCharPanel::showPanel(CGameView *view) {
+  AGamePanel::showPanel(view);
+  if (backpack)
+    backpack->move(view->width() - backpack->width(), 0);
+}
 
 CCreature *CFightPanel::selected = nullptr;
 CFightPanel::CFightPanel() : playerSkillsView(nullptr) {}
