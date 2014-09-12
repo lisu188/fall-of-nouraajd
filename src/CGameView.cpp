@@ -88,8 +88,11 @@ void CGameView::resizeEvent ( QResizeEvent *event ) {
 	if ( event ) {
 		QWidget::resizeEvent ( event );
 		playerStatsView.move ( 0, 0 );
+		AGamePanel *panel=getPanel ( "CCharPanel" );
+		panel->showPanel ( this );
+		panel->setVisible ( false );
 	}
-	if ( init ) {
+    if (    init ) {
 		CPlayer *player =scene->getPlayer();
 		centerOn ( player );
 	}
