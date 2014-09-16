@@ -1,7 +1,7 @@
 # Recovered game snapshot
 
-Original commit: `f2c254b087ffa7ab035dc86946997dbb5a4fe6c0`. Original tree: `1c67009e0d2ca3dff5d2eee03e98137625109848`.
-Startup was verified from identical recovered sources at `f2c254b087ffa7ab035dc86946997dbb5a4fe6c0`.
+Original commit: `a43f8e4b3bb03491b0b64b5fc0bb3e33fe127073`. Original tree: `cfa5daf3063627fe1245d248937884f6833320f2`.
+Startup was verified from identical recovered sources at `a43f8e4b3bb03491b0b64b5fc0bb3e33fe127073`.
 
 This recovered version compiled and linked on Linux, started the real game on an isolated Xvfb display,
 loaded its map and a healthy player, rendered the screenshot below, and exited normally.
@@ -35,14 +35,14 @@ launches run the game's original entry point. Startup evidence does not establis
 
 ## Recovery provenance
 
-compatibilityRepair: 1, exactOriginal: 57, reconstruction: 17.
+compatibilityRepair: 1, exactOriginal: 58, reconstruction: 17.
 
 - `config/objects/interactions.json`: Missing interaction configuration reconstructed from donor properties plus actual matching Python class names, genuine #331 config/tiles.json handler/class schema and CTypeHandler.cpp PyTypeHandler qualified-name construction. Restores game.interaction class qualification and PyTypeHandler selection; preserves donor action properties. Not an exact original.
-- `config/objects/monsters.json`: unverified donor reconstruction; 55e6516eb91b739e899df1ef8d72116da44fec49:config/monsters.json; headerMatch=0; apiOverlap=0/10000; distance=98
+- `config/objects/monsters.json`: unverified donor reconstruction; 55e6516eb91b739e899df1ef8d72116da44fec49:config/monsters.json; headerMatch=0; apiOverlap=0/10000; distance=97
 - `config/objects/weapons.json`: working reconstruction
-- `format.py`: unverified donor reconstruction; 18f71340e6334db61d3abc88ac99ac118270d7d1:format.py; headerMatch=0; apiOverlap=0/10000; distance=21
+- `format.py`: unverified donor reconstruction; 18f71340e6334db61d3abc88ac99ac118270d7d1:format.py; headerMatch=0; apiOverlap=0/10000; distance=20
 - `maps/map.json`: working reconstruction
-- `scripts/game/interaction.py`: unverified donor reconstruction; 21c04c61c564bb91953b90218c6cf4bed54417a9:scripts/game/interaction.py; headerMatch=0; apiOverlap=0/10000; distance=24
+- `scripts/game/interaction.py`: unverified donor reconstruction; 21c04c61c564bb91953b90218c6cf4bed54417a9:scripts/game/interaction.py; headerMatch=0; apiOverlap=0/10000; distance=25
 - `src/CCreature.cpp`: working reconstruction
 - `src/CCreature.h`: Reconstructed combined CCreature/player/monster declarations from intact #247 separate headers, same-commit surviving APIs/callers, and the #331 split CPlayer/CMonster declarations; original bytes and unspecified internal deltas unavailable. No compilation/runtime validation.
 - `src/CGamePanel.cpp`: working reconstruction
@@ -56,7 +56,7 @@ compatibilityRepair: 1, exactOriginal: 57, reconstruction: 17.
 - `src/Stats.h`: working reconstruction
 - `scripts/PSF_LICENSE`: https://www.python.org/ftp/python/3.3.7/Python-3.3.7.tar.xz upstream Python distribution license
 
-Restored source fingerprint: `d88a7752abe8eabe2dd17e4e8d999d08f5d69942590a0f9ab4465204418f748b`.
+Restored source fingerprint: `7f9e531f1b1e30aeccc09ae277d5058307b98b5c23f84cb6627979f7901cbe2e`.
 
 The actual 1278 × 718 screenshot and [verification metadata](recovery/verification.json) belong to
 this source version. Reconstructed code and borrowed assets are identified in that metadata; they are
