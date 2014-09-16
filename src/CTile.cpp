@@ -11,14 +11,14 @@ CTile::CTile() {
 	this->setZValue ( 0 );
 }
 
-CTile::CTile ( const CTile &tile )
+CTile::CTile ( const CTile & )
 {}
 
 CTile::~CTile() {
 
 }
 
-void CTile::moveTo ( int x, int y, int z, bool silent ) {
+void CTile::moveTo ( int x, int y, int z ) {
 	if (  map ) {
 		map->moveTile ( this,x,y, z );
 		setXYZ ( x, y, z );

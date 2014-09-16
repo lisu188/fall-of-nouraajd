@@ -23,9 +23,6 @@ public:
 	CGameView *getView();
 protected:
 	void keyPressEvent ( QKeyEvent *keyEvent );
-	virtual void mousePressEvent ( QGraphicsSceneMouseEvent *event );
-	virtual void mouseMoveEvent ( QGraphicsSceneMouseEvent *event );
-	virtual void mouseReleaseEvent ( QGraphicsSceneMouseEvent *event );
 
 private:
 	CMap *map;

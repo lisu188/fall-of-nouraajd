@@ -73,7 +73,6 @@ class CCreature : public CMapObject {
     void removeFromEquipped(CItem *item);
     std::set<CItem *> *getInventory();
     std::map<int, CItem *> *getEquipped();
-    void loadFromJson(QString name);
     bool applyEffects();
     std::set<CInteraction *> *getActions();
     virtual void onEnter();

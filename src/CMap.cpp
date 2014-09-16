@@ -7,6 +7,7 @@
 #include "CPathFinder.h"
 #include "CTile.h"
 #include <QDebug>
+#include <QJsonArray>
 #include <QThreadPool>
 #include <algorithm>
 #include <cstdlib>
@@ -18,12 +19,7 @@ CMap::CMap(CGameScene *scene, QString file)
   handler = new CObjectHandler(this);
   connect(CompletionListener::getInstance(), SIGNAL(completed()), this,
           SLOT(moveCompleted()));
-  Tmx::Map loaded;
-  loaded.ParseFile(file.toStdString());
-  if (loaded.HasError()) {
-    qFatal("Cannot load TMX map: %s", loaded.GetErrorText().c_str());
-  }
-  loadMapFromTmx(loaded);
+  loadMap(CConfigurationProvider::getConfig(file).toObject());
 }
 
 CMap::~CMap() {
@@ -43,67 +39,100 @@ CMap::~CMap() {
   }
 }
 
-void CMap::loadMapFromTmx(Tmx::Map &loaded) {
-  const Tmx::PropertySet &properties = loaded.GetProperties();
-  entryx = properties.GetNumericProperty("x");
-  entryy = properties.GetNumericProperty("y");
-  entryz = properties.GetNumericProperty("z");
-  for (const Tmx::Layer *layer : loaded.GetLayers()) {
-    const Tmx::PropertySet &layer_properties = layer->GetProperties();
-    int level = layer_properties.GetNumericProperty("level");
-    QString default_tile =
-        layer_properties.HasProperty("default")
-            ? QString::fromStdString(
-                  layer_properties.GetLiteralProperty("default"))
-            : QString();
-    defaultTiles[level] = default_tile.isEmpty() ? "GrassTile" : default_tile;
-    boundaries[level] =
-        std::make_pair(layer_properties.HasProperty("xBound")
-                           ? layer_properties.GetNumericProperty("xBound")
-                           : layer->GetWidth(),
-                       layer_properties.HasProperty("yBound")
-                           ? layer_properties.GetNumericProperty("yBound")
-                           : layer->GetHeight());
-    for (int y = 0; y < layer->GetHeight(); ++y) {
-      for (int x = 0; x < layer->GetWidth(); ++x) {
-        int set = layer->GetTileTilesetIndex(x, y);
-        if (set < 0) {
-          continue;
-        }
-        const Tmx::Tile *definition =
-            loaded.GetTileset(set)->GetTile(layer->GetTileId(x, y));
-        if (!definition) {
-          continue;
-        }
-        const Tmx::PropertySet &tile_properties = definition->GetProperties();
-        QString type = tile_properties.HasProperty("type")
-                           ? QString::fromStdString(
-                                 tile_properties.GetLiteralProperty("type"))
-                           : QString();
-        if (!type.isEmpty()) {
-          addTile(handler->createMapObject<CTile *>(type), x, y, level);
-        }
-      }
-    }
+namespace {
+int mapInteger(const QJsonValue &value, int fallback = 0) {
+  return value.isUndefined() || value.isNull() ? fallback
+                                               : value.toVariant().toInt();
+}
+} // namespace
+void CMap::loadMap(const QJsonObject &map) {
+  if (!map.contains("layers") || !map.contains("tilesets"))
+    qFatal("Expected the historical Tiled JSON map schema");
+  QJsonObject properties = map["properties"].toObject();
+  entryx = mapInteger(properties["x"]);
+  entryy = mapInteger(properties["y"]);
+  entryz = mapInteger(properties["z"]);
+  QObject::setProperty("recoveryTileWidth", mapInteger(map["tilewidth"], 32));
+  QObject::setProperty("recoveryTileHeight", mapInteger(map["tileheight"], 32));
+  QJsonObject tiles;
+  for (QJsonValue value : map["tilesets"].toArray()) {
+    QJsonObject set = value.toObject();
+    int first = mapInteger(set["firstgid"], 1);
+    QJsonObject definitions = set["tileproperties"].toObject();
+    for (auto it = definitions.begin(); it != definitions.end(); ++it)
+      tiles[QString::number(first + it.key().toInt())] = it.value();
   }
-  for (const Tmx::ObjectGroup *group : loaded.GetObjectGroups()) {
-    int level = group->GetProperties().GetNumericProperty("level");
-    for (const Tmx::Object *definition : group->GetObjects()) {
-      QString type = QString::fromStdString(definition->GetType());
-      CMapObject *object = handler->createMapObject<CMapObject *>(type);
-      if (!object) {
-        qFatal("Cannot construct authored map object %s", qPrintable(type));
-      }
-      if (!definition->GetName().empty()) {
-        object->setObjectName(QString::fromStdString(definition->GetName()));
-      }
-      object->loadFromProps(definition->GetProperties());
-      addObject(object);
-      object->moveTo(definition->GetX() / loaded.GetTileWidth(),
-                     definition->GetY() / loaded.GetTileHeight(), level, true);
-    }
+  QJsonArray layers = map["layers"].toArray();
+  for (QJsonValue value : layers) {
+    QJsonObject layer = value.toObject();
+    if (layer["type"].toString() == "tilelayer")
+      handleTileLayer(tiles, layer);
+  }
+  for (QJsonValue value : layers) {
+    QJsonObject layer = value.toObject();
+    if (layer["type"].toString() == "objectgroup")
+      handleObjectLayer(layer);
   }
   loadingComplete();
+}
+void CMap::handleTileLayer(const QJsonObject &tileset,
+                           const QJsonObject &layer) {
+  QJsonObject properties = layer["properties"].toObject();
+  int level = mapInteger(properties["level"]);
+  int width = layer["width"].toInt();
+  int height = layer["height"].toInt();
+  QJsonArray data = layer["data"].toArray();
+  if (width <= 0 || height <= 0 || data.size() != width * height)
+    qFatal("Invalid historical tile-layer dimensions");
+  defaultTiles[level] = properties["default"].toString("GrassTile");
+  boundaries[level] = std::make_pair(mapInteger(properties["xBound"], width),
+                                     mapInteger(properties["yBound"], height));
+  for (int y = 0; y < height; ++y)
+    for (int x = 0; x < width; ++x) {
+      int id = data[x + y * width].toInt();
+      if (!id)
+        continue;
+      QString type = tileset[QString::number(id)].toObject()["type"].toString();
+      if (type.isEmpty())
+        qFatal("Missing historical tile definition");
+      if (!addTile(handler->createMapObject<CTile *>(type), x, y, level))
+        qFatal("Cannot add configured tile");
+    }
+}
+void CMap::handleObjectLayer(const QJsonObject &layer) {
+  int level = mapInteger(layer["properties"].toObject()["level"]);
+  int width = QObject::property("recoveryTileWidth").toInt();
+  int height = QObject::property("recoveryTileHeight").toInt();
+  if (width <= 0 || height <= 0)
+    qFatal("Invalid historical map tile size");
+  for (QJsonValue value : layer["objects"].toArray()) {
+    QJsonObject definition = value.toObject();
+    QString type = definition["type"].toString();
+    CMapObject *object = handler->createMapObject<CMapObject *>(type);
+    if (!object)
+      qFatal("Cannot construct configured map object");
+    QString name = definition["name"].toString();
+    if (!name.isEmpty())
+      object->setObjectName(name);
+    QJsonObject properties = definition["properties"].toObject();
+    for (auto it = properties.begin(); it != properties.end(); ++it) {
+      QJsonValue raw = it.value();
+      QVariant property = raw.toVariant();
+      if (raw.isString()) {
+        QString text = raw.toString();
+        bool integer = false;
+        int number = text.toInt(&integer);
+        property = integer           ? QVariant(number)
+                   : text == "true"  ? QVariant(true)
+                   : text == "false" ? QVariant(false)
+                                     : QVariant(text);
+      }
+      object->setProperty(it.key(), property);
+    }
+    addObject(object);
+    object->moveTo(mapInteger(definition["x"]) / width,
+                   mapInteger(definition["y"]) / height, level);
+  }
 }
 
 bool CMap::addTile(CTile *tile, int x, int y, int z) {
@@ -114,7 +143,7 @@ bool CMap::addTile(CTile *tile, int x, int y, int z) {
   tile->posy = y;
   tile->posz = z;
   tile->setMap(this);
-  tile->moveTo(x, y, z, true);
+  tile->moveTo(x, y, z);
   tile->setVisible(z == currentMap);
   return true;
 }
@@ -210,7 +239,7 @@ QString CMap::addObjectByName(QString name, Coords coords) {
     return QString();
   }
   addObject(object);
-  object->moveTo(coords.x, coords.y, coords.z, true);
+  object->moveTo(coords.x, coords.y, coords.z);
   return object->objectName();
 }
 void CMap::replaceTile(QString name, Coords coords) {

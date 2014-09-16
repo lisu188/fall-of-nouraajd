@@ -68,40 +68,16 @@ CCreature *CCreature::createCreature(QString name) {
   CCreature *creature = dynamic_cast<CCreature *>(
       CTypeHandler().create(config["class"].toString()));
   if (creature) {
-    creature->loadFromJson(name);
+    creature->typeName = name;
+    QJsonObject properties = creatureProperties(name);
+    creature->stats = readStats(properties["stats"].toObject());
+    creature->sw = properties["sw"].toInt();
+    creature->setAnimation(properties["animation"].toString());
+    creature->attribChange();
+    creature->heal(0);
+    creature->addMana(0);
   }
   return creature;
-}
-
-void CCreature::loadFromJson(QString name) {
-  typeName = name;
-  QJsonObject properties = creatureProperties(name);
-  stats = readStats(properties["stats"].toObject());
-  sw = properties["sw"].toInt();
-  setAnimation(properties["animation"].toString());
-  attribChange();
-  if (map) {
-    for (QJsonValue action : properties["actions"].toArray()) {
-      addAction(map->getObjectHandler()->createMapObject<CInteraction *>(
-          action.toString()));
-    }
-    for (QJsonValue item : properties["items"].toArray()) {
-      addItem(
-          map->getObjectHandler()->createMapObject<CItem *>(item.toString()));
-    }
-    QJsonObject initial_equipment = properties["inventory"].toObject();
-    for (auto it = initial_equipment.begin(); it != initial_equipment.end();
-         ++it) {
-      setItem(it.key().toInt(),
-              map->getObjectHandler()->createMapObject<CItem *>(
-                  it.value().toString()));
-    }
-    if (!level) {
-      levelUp();
-    }
-  }
-  heal(0);
-  addMana(0);
 }
 
 void CCreature::setAlive() { alive = true; }
@@ -318,7 +294,10 @@ int CCreature::getDmg() {
   }
 }
 
-int CCreature::getScale() { return level + sw; }
+int CCreature::getScale() {
+  QVariant configured_scale = property("sw");
+  return level + (configured_scale.isValid() ? configured_scale.toInt() : sw);
+}
 
 bool CCreature::isAlive() { return hp >= 0; }
 

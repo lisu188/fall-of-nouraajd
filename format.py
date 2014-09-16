@@ -1,18 +1,30 @@
-#! /usr/bin/python
-
+#! /usr/bin/python3
 from __future__ import print_function
 
+import tokenize
 import os
 import platform
 import subprocess
 import sys
 import json
+import py_compile
+sys.dont_write_bytecode=True
+
+os.chdir(os.path.dirname(os.path.realpath(__file__)))
+
+DIR="."
 # -----------------------------------------------------------------------------
 
 def formatJson(files):
     for file in files:
-        out=json.dumps(json.loads(open(file).read()), sort_keys = True, indent = 4)
-        open(file,"w").write(out)
+        text=open(file).read()
+        out=json.dumps(json.loads(text), sort_keys = True, indent = 4)
+        if(out!=text):
+            open(file,"w").write(out)
+
+def formatPython(files):
+    for file in files:
+        py_compile.compile(file,doraise=True)
 
 def getFileList(dir,ext):
     list=[]
@@ -23,48 +35,16 @@ def getFileList(dir,ext):
     return list
 
 def main():
-    """Main processing function.
-    """
-    files = getFileList(".","cpp")+getFileList(".","h")
-    options = "-A2tOP"
-
-    jsonFiles=getFileList(".","json")
-    formatJson(jsonFiles)
-
-    #initialization
-    print("ExampleExe",
-          platform.python_implementation(),
-          platform.python_version(),
-          platform.architecture()[0])
+    files = getFileList(DIR,"cpp")+getFileList(DIR,"h")
+    formatJson(getFileList(DIR,"json"))
+    formatPython(getFileList(DIR,"py"))
     exe = initialize_exe()
-    display_astyle_version(exe)
-    # process the input files
     for file_path in files:
-        format_source_code(exe, file_path, options)
-
-# -----------------------------------------------------------------------------
-
-def display_astyle_version(exe):
-    """Display the version number from the AStyle executable.
-       This will not display when run from a Windows editor.
-    """
-    astyle = [exe, "--version"]
-    retval = subprocess.call(astyle)
-    if retval:
-        print("Bad astyle return: " + str(retval))
-        sys.exit(1)
-
-# -----------------------------------------------------------------------------
+        format_source_code(exe, file_path, ["-A2tOPj"])
 
 def format_source_code(exe, file_path, options):
-    astyle = [exe, options, file_path]
-    retval = subprocess.call(astyle)
-    if retval:
-        print("Bad astyle return: " + str(retval))
-        sys.exit(1)
-
-
-# -----------------------------------------------------------------------------
+    astyle = [exe]+options+[file_path]
+    subprocess.Popen(astyle,stdout=subprocess.PIPE)
 
 def initialize_exe():
     pydir = sys.path[0]
@@ -78,9 +58,6 @@ def initialize_exe():
         sys.exit(1)
     return exe
 
-# -----------------------------------------------------------------------------
-
-# make the module executable
 if __name__ == "__main__":
     main()
     sys.exit(0)

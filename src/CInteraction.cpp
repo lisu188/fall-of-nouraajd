@@ -117,13 +117,6 @@ bool Effect::apply(CCreature *creature) {
   }
   return effects.at(className)(this, creature);
 }
-QJsonObject Effect::saveToJson() {
-  QJsonObject saved;
-  saved["className"] = className;
-  saved["timeLeft"] = timeLeft;
-  saved["timeTotal"] = timeTotal;
-  return saved;
-}
 
 bool StunEffect(Effect *, CCreature *) { return true; }
 bool EndlessPainEffect(Effect *effect, CCreature *creature) {
