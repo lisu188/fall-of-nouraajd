@@ -18,7 +18,7 @@ public:
 	void setSingleUse ( bool singleUse );
 	virtual void onEquip ( CCreature *creature );
 	virtual void onUnequip ( CCreature *creature );
-	virtual void onUse ( CCreature *creature );
+	virtual bool onUse ( CCreature *creature );
 	virtual void onEnter();
 	virtual void onMove();
 	int getPower() const;
@@ -31,7 +31,6 @@ protected:
 	virtual void mousePressEvent ( QGraphicsSceneMouseEvent *event );
 	bool singleUse=false;
 	Stats bonus;
-	void loadFromJson ( QString name );
 	CInteraction *interaction=0;
 	int power=0;
 
@@ -99,7 +98,7 @@ public:
 	CScroll ( const CScroll & );
 	QString getText() const;
 	void setText ( const QString &value );
-	virtual void onUse ( CCreature *creature );
+	virtual bool onUse ( CCreature *creature );
 	private
 :
 	QString text;
@@ -110,7 +109,7 @@ class CPotion : public CItem {
 public:
 	CPotion();
 	CPotion ( const CPotion & );
-	virtual void onUse ( CCreature *creature );
+	virtual bool onUse ( CCreature *creature );
 private:
 	std::function<void ( CCreature *, int ) > effect;
 };

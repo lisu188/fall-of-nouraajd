@@ -1,6 +1,5 @@
 #pragma once
 #include "CAnimatedObject.h"
-#include "lib/tmx/Tmx.h"
 #include "Util.h"
 
 class CMap;
@@ -14,7 +13,7 @@ public:
 	virtual ~CMapObject();
 	QString typeName;
 	int posx=0, posy=0, posz=0;
-	virtual void moveTo ( int x, int y, int z, bool silent = false );
+	virtual void moveTo ( int x, int y, int z );
 	int getPosX() const;
 	int getPosY() const;
 	int getPosZ() const;
@@ -24,7 +23,6 @@ public:
 	virtual void onCreate();
 	virtual void onDestroy();
 	Q_SLOT void move ( int x, int y );
-	void loadFromProps ( Tmx::PropertySet set );
 	virtual void setMap ( CMap *map );
 	CMap *getMap();
 	void setVisible ( bool vis );
@@ -92,7 +90,6 @@ public:
 	CEvent ( const CEvent & );
 	void onEnter();
 	void onMove();
-	void loadFromJson ( QString );
 	// PROPERTIES
 	QString getScript() const;
 	void setScript ( const QString &value );

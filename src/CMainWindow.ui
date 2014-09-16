@@ -27,7 +27,7 @@
      <item>
       <widget class="QLineEdit" name="mapType">
        <property name="text">
-        <string>maps/map.tmx</string>
+        <string>maps/map.json</string>
        </property>
       </widget>
      </item>

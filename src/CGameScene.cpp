@@ -35,7 +35,7 @@ void CGameScene::startGame ( QString file ,QString player ) {
 	map = new CMap ( this,file );
 	this->player = map->getObjectHandler()->createMapObject<CPlayer*> ( player );
 	map->addObject ( this->player );
-	this->player->moveTo ( map->getEntryX(), map->getEntryY(), map->getEntryZ(), true );
+	this->player->moveTo ( map->getEntryX(), map->getEntryY(), map->getEntryZ() );
 	this->player->updateViews();
 	QThreadPool::globalInstance()->start ( new LoadGameTask ( map ) );
 }
@@ -83,17 +83,6 @@ void CGameScene::playerMove ( int dirx, int diry ) {
 	map->move ( dirx, diry );
 }
 
-void CGameScene::mousePressEvent ( QGraphicsSceneMouseEvent *event ) {
-	QGraphicsScene::mousePressEvent ( event );
-}
-
-void CGameScene::mouseMoveEvent ( QGraphicsSceneMouseEvent *event ) {
-	QGraphicsScene::mouseMoveEvent ( event );
-}
-
-void CGameScene::mouseReleaseEvent ( QGraphicsSceneMouseEvent *event ) {
-	QGraphicsScene::mouseReleaseEvent ( event );
-}
 CMap *CGameScene::getMap() const {
 	return map;
 }

@@ -5,7 +5,7 @@
 #include <mutex>
 #include <QJsonDocument>
 
-QJsonValue CConfigurationProvider::getConfig ( QString path ) {
+QJsonValue &CConfigurationProvider::getConfig ( QString path ) {
 	static std::mutex mutex;
 	std::unique_lock<std::mutex> lock ( mutex );
 	static CConfigurationProvider instance;
@@ -18,7 +18,7 @@ CConfigurationProvider::~CConfigurationProvider() {
 	clear();
 }
 
-QJsonValue CConfigurationProvider::getConfiguration ( QString path ) {
+QJsonValue &CConfigurationProvider::getConfiguration ( QString path ) {
 	if ( this->find ( path ) != this->end() ) {
 		return this->at ( path );
 	}

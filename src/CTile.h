@@ -15,7 +15,7 @@ public:
 	CTile();
 	CTile ( const CTile &tile );
 	virtual ~CTile();
-	void moveTo ( int x, int y, int z, bool silent = false );
+	virtual void moveTo ( int x, int y, int z );
 	Coords getCoords();
 	void move ( int x, int y );
 	void onStep();

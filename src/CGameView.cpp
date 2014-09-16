@@ -20,6 +20,7 @@ void CGameView::start() {
 	playerStatsView.show();
 	playerStatsView.setPlayer ( player );
 	for ( auto it=panels.begin(); it!=panels.end(); it++ ) {
+		( *it ).second->setVisible ( false );
 		( *it ).second->setUpPanel ( this );
 	}
 	init = true;
@@ -47,11 +48,6 @@ CGameView::CGameView ( QString mapName , QString playerType ) {
 	setViewportUpdateMode ( QGraphicsView::FullViewportUpdate );
 	scene = new CGameScene();
 	setScene ( scene );
-	QPixmap pixmap ( "images/loading.png" );
-	loading.setPixmap ( pixmap.scaled ( this->width(), this->height(),
-	                                    Qt::IgnoreAspectRatio,
-	                                    Qt::SmoothTransformation ) );
-	scene->addItem ( &loading );
 	timer.setSingleShot ( true );
 	timer.setInterval ( 250 );
 	connect ( &timer, SIGNAL ( timeout() ), this, SLOT ( start() ) );
@@ -92,7 +88,7 @@ void CGameView::resizeEvent ( QResizeEvent *event ) {
 		panel->showPanel ( this );
 		panel->setVisible ( false );
 	}
-    if (    init ) {
+	if (    init ) {
 		CPlayer *player =scene->getPlayer();
 		centerOn ( player );
 	}

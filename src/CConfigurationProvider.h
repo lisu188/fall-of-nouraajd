@@ -8,11 +8,11 @@
 #include "map"
 class CConfigurationProvider : private std::map<QString, QJsonValue > {
 public:
-	static QJsonValue getConfig ( QString path );
+	static QJsonValue& getConfig ( QString path );
 private:
 	CConfigurationProvider();
 	~CConfigurationProvider();
-	QJsonValue getConfiguration ( QString path );
+	QJsonValue &getConfiguration ( QString path );
 	void loadConfig ( QString path );
 };
 

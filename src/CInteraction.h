@@ -50,7 +50,6 @@ public:
 	QString className;
 	Stats *getBonus();
 	void setBonus ( Stats *value );
-	QJsonObject saveToJson();
 
 private:
 	static std::map<

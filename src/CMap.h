@@ -10,7 +10,6 @@
 #include <unordered_map>
 #include <set>
 #include <QJsonObject>
-#include <lib/tmx/TmxMap.h>
 #include <QGraphicsScene>
 #include <QString>
 #include <string>
@@ -48,7 +47,6 @@ public:
 	void mapDown();
 	int getCurrentMap();
 	std::set<CMapObject *> *getObjects();
-	void loadMapFromTmx ( Tmx::Map &map );
 	int getEntryX();
 	int getEntryY();
 	int getEntryZ();
@@ -67,6 +65,9 @@ public:
 	CObjectHandler *getObjectHandler();
 	void loadingComplete();
 	void moveTile ( CTile* tile,int x, int y, int z );
+	void loadMap ( const QJsonObject &map );
+	void handleTileLayer ( const QJsonObject& tileset,const QJsonObject& layer );
+	void handleObjectLayer ( const QJsonObject &layer );
 private:
 	std::set<CMapObject *> mapObjects;
 	void randomDir ( int *tab, int rule );
