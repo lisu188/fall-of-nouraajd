@@ -5,6 +5,7 @@
 #include "CMap.h"
 #include "CMapObject.h"
 #include "CPlayerView.h"
+#include <QGraphicsSceneMouseEvent>
 #include <QMouseEvent>
 #include <QPainter>
 
@@ -147,4 +148,9 @@ QString CScrollPanel::getText() const { return text; }
 void CScrollPanel::setText(const QString &value) {
   text = value;
   update();
+}
+
+void CScrollPanel::mousePressEvent(QGraphicsSceneMouseEvent *event) {
+  setVisible(false);
+  event->accept();
 }

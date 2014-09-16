@@ -1,7 +1,7 @@
 # Recovered game snapshot
 
-Original commit: `cce51b01010c31cc69119e695dc3133c8c372210`. Original tree: `65355be56cf913888c639b7ed0a894d2d4519d62`.
-Startup was verified from identical recovered sources at `cce51b01010c31cc69119e695dc3133c8c372210`.
+Original commit: `6367c6918ce9c141e0863d4e193fbd4a9e647ebb`. Original tree: `2d5da79ad5abe56d2b00cc04952d73e71dc30bf2`.
+Startup was verified from identical recovered sources at `6367c6918ce9c141e0863d4e193fbd4a9e647ebb`.
 
 This recovered version compiled and linked on Linux, started the real game on an isolated Xvfb display,
 loaded its map and a healthy player, rendered the screenshot below, and exited normally.
@@ -35,49 +35,20 @@ launches run the game's original entry point. Startup evidence does not establis
 
 ## Recovery provenance
 
-compatibilityRepair: 1, exactOriginal: 62, reconstruction: 46.
+compatibilityRepair: 1, exactOriginal: 57, reconstruction: 17.
 
 - `config/objects/interactions.json`: Missing interaction configuration reconstructed from donor properties plus actual matching Python class names, genuine #331 config/tiles.json handler/class schema and CTypeHandler.cpp PyTypeHandler qualified-name construction. Restores game.interaction class qualification and PyTypeHandler selection; preserves donor action properties. Not an exact original.
-- `config/objects/monsters.json`: unverified donor reconstruction; 55e6516eb91b739e899df1ef8d72116da44fec49:config/monsters.json; headerMatch=0; apiOverlap=0/10000; distance=100
+- `config/objects/monsters.json`: unverified donor reconstruction; 55e6516eb91b739e899df1ef8d72116da44fec49:config/monsters.json; headerMatch=0; apiOverlap=0/10000; distance=99
 - `config/objects/weapons.json`: working reconstruction
-- `format.py`: unverified donor reconstruction; 51c2e9b0b64c86a8e593a5231c3ef9e44efc5af1:format.py; headerMatch=0; apiOverlap=0/10000; distance=23
-- `game.pro`: working reconstruction
-- `images/loading.png`: synthesized visible 32px placeholder; original artwork unavailable; unverified
-- `lib/base64/base64.cpp`: unverified donor reconstruction; 779fb803ff021de5e74ed3b24d7c31a9adcaa236:base64/base64.cpp; headerMatch=0; apiOverlap=10000/10000; distance=81
-- `lib/tinyxml/tinystr.h`: unverified upstream reconstruction; https://github.com/tamatias/tmxparser/tree/6fa4d38742313b6365df0d224b8978be1eb81290
-- `lib/tinyxml/tinyxml.cpp`: unverified upstream reconstruction; https://github.com/tamatias/tmxparser/tree/6fa4d38742313b6365df0d224b8978be1eb81290
-- `lib/tinyxml/tinyxml.h`: unverified upstream reconstruction; https://github.com/tamatias/tmxparser/tree/6fa4d38742313b6365df0d224b8978be1eb81290
-- `lib/tinyxml/tinyxmlparser.cpp`: unverified upstream reconstruction; https://github.com/tamatias/tmxparser/tree/6fa4d38742313b6365df0d224b8978be1eb81290
-- `lib/tmx/TmxLayer.cpp`: unverified upstream reconstruction; https://github.com/tamatias/tmxparser/tree/6fa4d38742313b6365df0d224b8978be1eb81290; adapted vendored tinyxml/zlib include paths to historical directory layout
-- `lib/tmx/TmxLayer.h`: unverified upstream reconstruction; https://github.com/tamatias/tmxparser/tree/6fa4d38742313b6365df0d224b8978be1eb81290; adapted vendored tinyxml/zlib include paths to historical directory layout
-- `lib/tmx/TmxMap.cpp`: unverified upstream reconstruction; https://github.com/tamatias/tmxparser/tree/6fa4d38742313b6365df0d224b8978be1eb81290; adapted vendored tinyxml/zlib include paths to historical directory layout
-- `lib/tmx/TmxMap.h`: unverified upstream reconstruction; https://github.com/tamatias/tmxparser/tree/6fa4d38742313b6365df0d224b8978be1eb81290; adapted vendored tinyxml/zlib include paths to historical directory layout
-- `lib/tmx/TmxTileset.cpp`: unverified upstream reconstruction; https://github.com/tamatias/tmxparser/tree/6fa4d38742313b6365df0d224b8978be1eb81290; adapted vendored tinyxml/zlib include paths to historical directory layout
-- `lib/zlib/adler32.c`: working reconstruction
-- `lib/zlib/crc32.c`: working reconstruction
-- `lib/zlib/deflate.c`: working reconstruction
-- `lib/zlib/deflate.h`: working reconstruction
-- `lib/zlib/gzguts.h`: working reconstruction
-- `lib/zlib/gzlib.c`: working reconstruction
-- `lib/zlib/gzread.c`: working reconstruction
-- `lib/zlib/gzwrite.c`: working reconstruction
-- `lib/zlib/infback.c`: working reconstruction
-- `lib/zlib/inffast.c`: working reconstruction
-- `lib/zlib/inflate.c`: working reconstruction
-- `lib/zlib/inftrees.c`: working reconstruction
-- `lib/zlib/trees.c`: working reconstruction
-- `lib/zlib/zlib.h`: working reconstruction
-- `lib/zlib/zutil.c`: working reconstruction
-- `lib/zlib/zutil.h`: working reconstruction
-- `maps/map.tmx`: working reconstruction
-- `scripts/game/interaction.py`: unverified donor reconstruction; 21c04c61c564bb91953b90218c6cf4bed54417a9:scripts/game/interaction.py; headerMatch=0; apiOverlap=0/10000; distance=22
+- `format.py`: unverified donor reconstruction; 18f71340e6334db61d3abc88ac99ac118270d7d1:format.py; headerMatch=0; apiOverlap=0/10000; distance=22
+- `maps/map.json`: working reconstruction
+- `scripts/game/interaction.py`: unverified donor reconstruction; 21c04c61c564bb91953b90218c6cf4bed54417a9:scripts/game/interaction.py; headerMatch=0; apiOverlap=0/10000; distance=23
 - `src/CCreature.cpp`: working reconstruction
 - `src/CCreature.h`: Reconstructed combined CCreature/player/monster declarations from intact #247 separate headers, same-commit surviving APIs/callers, and the #331 split CPlayer/CMonster declarations; original bytes and unspecified internal deltas unavailable. No compilation/runtime validation.
 - `src/CGamePanel.cpp`: working reconstruction
 - `src/CInteraction.cpp`: working reconstruction
 - `src/CItem.cpp`: working reconstruction
 - `src/CMap.cpp`: working reconstruction
-- `src/CMapObject.cpp`: working reconstruction
 - `src/CObjectHandler.cpp`: working reconstruction
 - `src/CPathFinder.cpp`: working reconstruction
 - `src/CPlayerView.cpp`: working reconstruction
@@ -85,7 +56,7 @@ compatibilityRepair: 1, exactOriginal: 62, reconstruction: 46.
 - `src/Stats.h`: working reconstruction
 - `scripts/PSF_LICENSE`: https://www.python.org/ftp/python/3.3.7/Python-3.3.7.tar.xz upstream Python distribution license
 
-Restored source fingerprint: `8a1598bfd44609438534aba282c33e2710dc6d907a1ddea8932e2b68b18463e0`.
+Restored source fingerprint: `d88a7752abe8eabe2dd17e4e8d999d08f5d69942590a0f9ab4465204418f748b`.
 
 The actual 1278 × 718 screenshot and [verification metadata](recovery/verification.json) belong to
 this source version. Reconstructed code and borrowed assets are identified in that metadata; they are

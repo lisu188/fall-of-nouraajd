@@ -29,7 +29,16 @@ QJsonObject itemConfiguration(QString name) {
 } // namespace
 CItem::CItem() : interaction(nullptr) { setZValue(2); }
 
-CItem::CItem(const CItem &item) : CItem() { this->loadFromJson(item.typeName); }
+CItem::CItem(const CItem &item) : CItem() {
+  typeName = item.typeName;
+  tooltip = item.tooltip;
+  bonus = item.bonus;
+  power = item.power;
+  singleUse = item.singleUse;
+  interaction = item.interaction;
+  slot = item.slot;
+  setAnimation(item.property("animation").toString());
+}
 
 void CItem::onEnter() {
   this->getMap()->removeObject(this);
@@ -52,21 +61,23 @@ void CItem::onUnequip(CCreature *creature) {
   qDebug() << creature->typeName << "unequipped" << typeName << "\n";
 }
 
-void CItem::onUse(CCreature *creature) {
+bool CItem::onUse(CCreature *creature) {
   CItemSlot *parent = (CItemSlot *)this->parentItem();
   if (!parent) {
     qDebug() << "Parentless item dropped";
-    return;
+    return false;
   }
   int slot = parent->getNumber();
   creature->setItem(slot, this);
+  return false;
 }
 
 void CItem::mousePressEvent(QGraphicsSceneMouseEvent *event) {
   if (singleUse && this->getMap()->getScene()->getPlayer()) {
-    this->getMap()->getScene()->getPlayer()->removeFromInventory(this);
-    onUse(this->getMap()->getScene()->getPlayer());
-    delete this;
+    if (onUse(this->getMap()->getScene()->getPlayer())) {
+      this->getMap()->getScene()->getPlayer()->removeFromInventory(this);
+      delete this;
+    }
     return;
   }
   CMapObject::mousePressEvent(event);
@@ -93,66 +104,56 @@ void CItem::setPower(int value) { power = value; }
 
 CArmor::CArmor() {}
 
-CArmor::CArmor(const CArmor &armor) {}
+CArmor::CArmor(const CArmor &armor) : CItem(armor) {}
 
 CInteraction *CArmor::getInteraction() { return interaction; }
 
 CBelt::CBelt() {}
 
-CBelt::CBelt(const CBelt &belt) {}
+CBelt::CBelt(const CBelt &belt) : CItem(belt) {}
 
 CBoots::CBoots() {}
 
-CBoots::CBoots(const CBoots &boots) {}
+CBoots::CBoots(const CBoots &boots) : CItem(boots) {}
 
 CGloves::CGloves() {}
 
-CGloves::CGloves(const CGloves &gloves) {}
+CGloves::CGloves(const CGloves &gloves) : CItem(gloves) {}
 
 CHelmet::CHelmet() {}
 
-CHelmet::CHelmet(const CHelmet &helmet) {}
+CHelmet::CHelmet(const CHelmet &helmet) : CItem(helmet) {}
 
 CSmallWeapon::CSmallWeapon() {}
 
-CSmallWeapon::CSmallWeapon(const CSmallWeapon &weapon) {}
+CSmallWeapon::CSmallWeapon(const CSmallWeapon &weapon) : CWeapon(weapon) {}
 
 CWeapon::CWeapon() : CItem() {}
 
-CWeapon::CWeapon(const CWeapon &weapon) {}
+CWeapon::CWeapon(const CWeapon &weapon) : CItem(weapon) {}
 
 CInteraction *CWeapon::getInteraction() { return interaction; }
 
-void CItem::loadFromJson(QString name) {
+Stats CItem::getBonus() { return bonus; }
+void CItem::setBonus(Stats value) { bonus = value; }
+CArmor::CArmor(QString name) {
   setTypeName(name);
   QJsonObject config = itemConfiguration(name);
   QJsonObject properties =
       config.contains("properties") ? config["properties"].toObject() : config;
-  QJsonObject stats = properties["bonus"].toObject();
-  for (auto it = stats.begin(); it != stats.end(); ++it) {
+  QJsonObject fields = properties["bonus"].toObject();
+  for (auto it = fields.begin(); it != fields.end(); ++it)
     bonus.setProperty(it.key(), it.value().toVariant());
-  }
   setAnimation(properties["animation"].toString());
-  power = properties["power"].toInt(1);
-  singleUse = properties["singleUse"].toBool(false);
+  power = properties["power"].toInt();
+  singleUse = properties["singleUse"].toBool();
   tooltip = properties["tooltip"].toString(name);
-  slot = properties["slot"].toInt();
-  QString action = properties["interaction"].toString();
-  interaction =
-      map && !action.isEmpty()
-          ? map->getObjectHandler()->createMapObject<CInteraction *>(action)
-          : nullptr;
 }
-
-Stats CItem::getBonus() { return bonus; }
-void CItem::setBonus(Stats value) { bonus = value; }
-CArmor::CArmor(QString name) { loadFromJson(name); }
 
 CPotion::CPotion() : effect(nullptr) {}
-CPotion::CPotion(const CPotion &potion) : CPotion() {
-  loadFromJson(potion.typeName);
-}
-void CPotion::onUse(CCreature *creature) {
+CPotion::CPotion(const CPotion &potion)
+    : CItem(potion), effect(potion.effect) {}
+bool CPotion::onUse(CCreature *creature) {
   if (!effect) {
     if (typeName.contains("LifePotion"))
       effect = &LifeEffect;
@@ -162,6 +163,7 @@ void CPotion::onUse(CCreature *creature) {
   if (!effect)
     qFatal("Unknown potion effect");
   effect(creature, power);
+  return true;
 }
 
 void LifeEffect(CCreature *creature, int power) {
@@ -192,7 +194,7 @@ CScroll::CScroll() {}
 CScroll::CScroll(const CScroll &scroll) : CItem(scroll), text(scroll.text) {}
 QString CScroll::getText() const { return text; }
 void CScroll::setText(const QString &value) { text = value; }
-void CScroll::onUse(CCreature *) {
+bool CScroll::onUse(CCreature *) {
   CGameView *view = getMap()->getScene()->getView();
   CScrollPanel *panel =
       dynamic_cast<CScrollPanel *>(view->getPanel("CScrollPanel"));
@@ -200,4 +202,5 @@ void CScroll::onUse(CCreature *) {
     qFatal("Missing registered scroll text panel");
   panel->setText(text);
   view->showPanel("CScrollPanel");
+  return true;
 }

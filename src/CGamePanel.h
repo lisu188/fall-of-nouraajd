@@ -63,7 +63,7 @@ public:
 	virtual void paint ( QPainter *painter, const QStyleOptionGraphicsItem *,
 	                     QWidget * );
 	virtual void showPanel ( CGameView *view );
-	void setUpPanel ( CGameView *view );
+	virtual void setUpPanel ( CGameView *view );
 private:
 	CPlayerListView *playerSkillsView;
 
@@ -75,9 +75,10 @@ public:
 	CScrollPanel();
 	CScrollPanel ( const CScrollPanel& );
 	virtual QRectF boundingRect() const;
-	virtual void paint ( QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget );
+	virtual void paint ( QPainter *painter, const QStyleOptionGraphicsItem *, QWidget * );
 	virtual void showPanel ( CGameView * );
 	virtual void setUpPanel ( CGameView * );
+	virtual void mousePressEvent ( QGraphicsSceneMouseEvent *event );
 	QString getText() const;
 	void setText ( const QString &value );
 

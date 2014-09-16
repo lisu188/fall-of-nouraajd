@@ -76,8 +76,24 @@ CMapObject *CObjectHandler::_createMapObject(QString type) {
   for (auto it = properties.begin(); it != properties.end(); ++it) {
     setProperty(object, it.key(), it.value());
   }
-  if (CCreature *creature = dynamic_cast<CCreature *>(object))
-    creature->loadFromJson(type);
+  if (CCreature *creature = dynamic_cast<CCreature *>(object)) {
+    QJsonObject stats = properties["stats"].toObject();
+    for (auto it = stats.begin(); it != stats.end(); ++it)
+      creature->getStats()->setProperty(it.key(), it.value().toVariant());
+    creature->attribChange();
+    for (QJsonValue action : properties["actions"].toArray())
+      creature->addAction(createMapObject<CInteraction *>(action.toString()));
+    for (QJsonValue item : properties["items"].toArray())
+      creature->addItem(createMapObject<CItem *>(item.toString()));
+    QJsonObject equipped = properties["inventory"].toObject();
+    for (auto it = equipped.begin(); it != equipped.end(); ++it)
+      creature->setItem(it.key().toInt(),
+                        createMapObject<CItem *>(it.value().toString()));
+    if (!creature->getLevel())
+      creature->levelUp();
+    creature->heal(0);
+    creature->addMana(0);
+  }
   return object;
 }
 
