@@ -1,3 +1,3 @@
 from _game import *
-import interaction
-import object
+from . import interaction
+from . import object
