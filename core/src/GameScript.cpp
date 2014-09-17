@@ -33,7 +33,7 @@ struct QStringFromPython {
                                    type_id<QString>());
   }
   static void *convertible(PyObject *value) {
-    return PyString_Check(value) || PyUnicode_Check(value) ? value : 0;
+    return PyBytes_Check(value) || PyUnicode_Check(value) ? value : 0;
   }
   static void construct(PyObject *value,
                         converter::rvalue_from_python_stage1_data *data) {
@@ -44,7 +44,7 @@ struct QStringFromPython {
     }
     char *bytes = 0;
     Py_ssize_t size = 0;
-    if (PyString_AsStringAndSize(value, &bytes, &size) == -1) {
+    if (PyBytes_AsStringAndSize(value, &bytes, &size) == -1) {
       throw_error_already_set();
     }
     void *storage =
