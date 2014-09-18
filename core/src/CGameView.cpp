@@ -14,99 +14,100 @@
 bool CGameView::init = false;
 
 void CGameView::start() {
-	scene->startGame ( mapName ,playerType );
-	scene->removeItem ( &loading );
-	CPlayer *player = scene->getPlayer();
-	playerStatsView.show();
-	playerStatsView.setPlayer ( player );
-	for ( auto it=panels.begin(); it!=panels.end(); it++ ) {
-		( *it ).second->setVisible ( false );
-		( *it ).second->setUpPanel ( this );
-	}
-	init = true;
+    scene->startGame ( mapName ,playerType );
+    scene->removeItem ( &loading );
+    CPlayer *player = scene->getPlayer();
+    playerStatsView.show();
+    playerStatsView.setPlayer ( player );
+    for ( auto it=panels.begin(); it!=panels.end(); it++ ) {
+        ( *it ).second->setVisible ( false );
+        ( *it ).second->setUpPanel ( this );
+    }
+    init = true;
 }
 
 void CGameView::show() {
-	showNormal();
+    showNormal();
 }
 
 void CGameView::initPanels() {
-	auto viewList=CReflection::getInstance()->getInherited<AGamePanel*>();
-	for ( auto it=viewList.begin(); it!=viewList.end(); it++ ) {
-		panels[ ( *it )->metaObject()->className()]=*it;
-		scene->addItem ( *it );
-	}
+    auto viewList=CReflection::getInstance()->getInherited<AGamePanel*>();
+    for ( auto it=viewList.begin(); it!=viewList.end(); it++ ) {
+        panels[ ( *it )->metaObject()->className()]=*it;
+        scene->addItem ( *it );
+    }
 }
 
 CGameView::CGameView ( QString mapName , QString playerType ) {
-	this->mapName=mapName;
-	this->playerType=playerType;
-	setHorizontalScrollBarPolicy ( Qt::ScrollBarAlwaysOff );
-	setVerticalScrollBarPolicy ( Qt::ScrollBarAlwaysOff );
-	setViewportUpdateMode ( QGraphicsView::BoundingRectViewportUpdate );
-	setViewport ( new QGLWidget ( QGLFormat ( QGL::SampleBuffers ) ) );
-	setViewportUpdateMode ( QGraphicsView::FullViewportUpdate );
-	scene = new CGameScene();
-	setScene ( scene );
-	timer.setSingleShot ( true );
-	timer.setInterval ( 250 );
-	connect ( &timer, SIGNAL ( timeout() ), this, SLOT ( start() ) );
-	playerStatsView.setParent ( this );
-	initPanels();
-	timer.start();
+    this->mapName=mapName;
+    this->playerType=playerType;
+    setHorizontalScrollBarPolicy ( Qt::ScrollBarAlwaysOff );
+    setVerticalScrollBarPolicy ( Qt::ScrollBarAlwaysOff );
+    setViewportUpdateMode ( QGraphicsView::BoundingRectViewportUpdate );
+    setViewport ( new QGLWidget ( QGLFormat ( QGL::SampleBuffers ) ) );
+    setViewportUpdateMode ( QGraphicsView::FullViewportUpdate );
+    scene = new CGameScene();
+    setScene ( scene );
+    timer.setSingleShot ( true );
+    timer.setInterval ( 250 );
+    connect ( &timer, SIGNAL ( timeout() ), this, SLOT ( start() ) );
+    playerStatsView.setParent ( this );
+    initPanels();
+    timer.start();
 }
 
 CGameView::~CGameView() {
-	delete scene;
+    delete scene;
 }
 
 void CGameView::showPanel ( QString panel ) {
-	panels[panel]->showPanel ( this );
+    panels[panel]->showPanel ( this );
 }
 
 AGamePanel *CGameView::getPanel ( QString panel ) {
-	return panels[panel];
+    return panels[panel];
 }
 
 void CGameView::mouseDoubleClickEvent ( QMouseEvent *e ) {
-	QWidget::mouseDoubleClickEvent ( e );
-	if ( e->button() == Qt::MouseButton::LeftButton || !init ) {
-		return;
-	}
-	if ( isFullScreen() ) {
-		this->setWindowState ( Qt::WindowNoState );
-	} else {
-		this->setWindowState ( Qt::WindowFullScreen );
-	}
+    QWidget::mouseDoubleClickEvent ( e );
+    if ( e->button() == Qt::MouseButton::LeftButton || !init ) {
+        return;
+    }
+    if ( isFullScreen() ) {
+        this->setWindowState ( Qt::WindowNoState );
+    } else {
+        this->setWindowState ( Qt::WindowFullScreen );
+    }
 }
 
 void CGameView::resizeEvent ( QResizeEvent *event ) {
-	if ( event ) {
-		QWidget::resizeEvent ( event );
-		playerStatsView.move ( 0, 0 );
-		AGamePanel *panel=getPanel ( "CCharPanel" );
-		panel->showPanel ( this );
-		panel->setVisible ( false );
-	}
-	if (    init ) {
-		CPlayer *player =scene->getPlayer();
-		centerOn ( player );
-	}
+        if (    init ) {
+    if ( event ) {
+        QWidget::resizeEvent ( event );
+        playerStatsView.move ( 0, 0 );
+        AGamePanel *panel=getPanel ( "CCharPanel" );
+        panel->showPanel ( this );
+        panel->setVisible ( false );
+    }
+
+        CPlayer *player =scene->getPlayer();
+        centerOn ( player );
+    }
 }
 
 void CGameView::wheelEvent ( QWheelEvent * ) {}
 
 void CGameView::dragMoveEvent ( QDragMoveEvent *e ) {
-	QGraphicsView::dragMoveEvent ( e );
-	repaint();
+    QGraphicsView::dragMoveEvent ( e );
+    repaint();
 }
 
 CGameScene *CGameView::getScene() const {
-	return scene;
+    return scene;
 }
 
 void CGameView::setScene ( CGameScene *value ) {
-	QGraphicsView::setScene ( value );
-	scene = value;
+    QGraphicsView::setScene ( value );
+    scene = value;
 }
 
