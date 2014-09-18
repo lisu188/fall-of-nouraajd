@@ -3,17 +3,17 @@
 #include "ui_CMainWindow.h"
 
 CMainWindow::CMainWindow ( QWidget *parent ) :
-	QMainWindow ( parent ),
-	ui ( new Ui::CMainWindow ) {
-	ui->setupUi ( this );
+    QMainWindow ( parent ),
+    ui ( new Ui::CMainWindow ) {
+    ui->setupUi ( this );
 }
 
 CMainWindow::~CMainWindow() {
-	delete ui;
+    delete view;
+    delete ui;
 }
 
 void CMainWindow::on_pushButton_clicked() {
-	CGameView*view=new CGameView ( this->ui->mapType->text(),this->ui->playerType->text() );
-	view->QObject::setParent ( this );
-	this->hide();
+    view=new CGameView ( this->ui->mapType->text(),this->ui->playerType->text() );
+    this->hide();
 }
