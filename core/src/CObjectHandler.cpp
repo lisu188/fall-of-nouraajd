@@ -1,3 +1,4 @@
+#include "CScriptEngine.h"
 #include "CConfigurationProvider.h"
 #include "CCreature.h"
 #include "CInteraction.h"

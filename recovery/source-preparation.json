@@ -19,7 +19,7 @@
       "inputSha256": "782640aad36636a8eeb9eece47ae03e2ae06b18df1e7fbfa1be25940efcb3892",
       "outputSha256": "e3c73972358732cb25915b9c734a94dda15934042ac5e77d33c76eba65a690d0",
       "replaySha256": "55d450b2e1e89d7300d8eff39fa91498d251c23f3b83df64cebe967929cf2d73",
-      "sourceCommit": "e4a4821fb1ed08fe7f72f63e49748c23390f16ac"
+      "sourceCommit": "c4d43a9f8ddd1980f4b39a659d63c68c6a2de31c"
     }
   },
   "outputs": [
@@ -43,7 +43,7 @@
         "history_source_prep.py",
         "prepare-python-shutdown"
       ],
-      "log": "/tmp/nouraajd-270-split-final/verify/snapshot-pjcr1msp/preparation/python-shutdown.log",
+      "log": "/tmp/nouraajd-271-split-final/verify/snapshot-edl9vcdv/preparation/python-shutdown.log",
       "name": "pythonShutdown",
       "returnCode": 0,
       "timedOut": false
