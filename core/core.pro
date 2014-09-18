@@ -99,8 +99,12 @@ OTHER_FILES += \
     maps/map.json
 
 
-LIBS += -L../python -lpython
-LIBS += -L/lib64/ -lpython3.3m
+unix:LIBS += -L../python -lpython
+win32:CONFIG(release,debug|release)LIBS += -L../python/release -lpython
+win32:CONFIG(debug,debug|release)LIBS += -L../python/debug -lpython
+
+unix:LIBS += -L/lib64/ -lpython3.3m
+win32:LIBS += -LC:\Python34\libs -lpython34
 
 FORMS += \
     src/CMainWindow.ui
