@@ -41,6 +41,9 @@ SOURCES += \
     converter/type_id.cpp
 
 
-LIBS += -L/lib64/ -lpython3.3m
+unix:LIBS += -L/lib64/ -lpython3.3m
+
+win32:LIBS += -LC:\Python34\libs -lpython34
+
 
 

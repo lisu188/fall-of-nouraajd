@@ -1,4 +1,4 @@
-QMAKE_CXXFLAGS += -std=c++11
+QMAKE_CXXFLAGS += -std=c++11 "-include cmath"
 QMAKE_CXXFLAGS_RELEASE -= -Os
 QMAKE_CXXFLAGS_RELEASE -= -O
 QMAKE_CXXFLAGS_RELEASE -= -O1
@@ -17,10 +17,10 @@ QMAKE_CXXFLAGS_DEBUG -= -g1
 QMAKE_CXXFLAGS_DEBUG -= -g2
 QMAKE_CXXFLAGS_DEBUG *= -g3
 
-INCLUDEPATH += /usr/include/python3.3m
-DEPENDPATH += /usr/include/python3.3m
-
-INCLUDEPATH += /usr/include
-DEPENDPATH += /usr/include
-
 DEFINES += "QT_NO_KEYWORDS"
+
+win32:INCLUDEPATH += C:\boost-include
+win32:DEPENDPATH += C:\boost-include
+
+win32:INCLUDEPATH += C:\Python34\include
+win32:DEPENDPATH += C:\Python34\include
