@@ -6,7 +6,7 @@
 #include "CScriptEngine.h"
 
 CMapObject::CMapObject() {
-    this->setAcceptHoverEvents ( true );
+	this->setAcceptHoverEvents ( true );
 //	statsView.setParentItem ( this );
 //	statsView.setVisible ( true );
 //	statsView.setText ( " " );
@@ -19,18 +19,18 @@ CMapObject::~CMapObject() {
 
 }
 QString CMapObject::getTypeName() const {
-    return typeName;
+	return typeName;
 }
 
 void CMapObject::setTypeName ( const QString &value ) {
-    typeName = value;
+	typeName = value;
 }
 QString CMapObject::getTooltip() const {
-    return tooltip;
+	return tooltip;
 }
 
 void CMapObject::setTooltip ( const QString &value ) {
-    tooltip = value;
+	tooltip = value;
 }
 
 int CMapObject::getPosY() const { return posy; }
@@ -40,26 +40,26 @@ int CMapObject::getPosZ() const { return posz; }
 int CMapObject::getPosX() const { return posx; }
 
 void CMapObject::move ( int x, int y ) {
-    bool canStep =map->getTile ( posx + x, posy + y, posz )->canStep();
-    if ( !canStep ) {
-        return;
-    }
-    if ( x == 0 && y == 0 ) {
-        return;
-    }
-    posx += x;
-    posy += y;
-    if ( map ) {
-        setPos ( posx * 50, posy * 50 );
-        if ( map->getScene()->getPlayer() ==this ) {
-            map->ensureSize();
-        }
-    }
+	bool canStep =map->getTile ( posx + x, posy + y, posz )->canStep();
+	if ( !canStep ) {
+		return;
+	}
+	if ( x == 0 && y == 0 ) {
+		return;
+	}
+	posx += x;
+	posy += y;
+	if ( map ) {
+		setPos ( posx * 50, posy * 50 );
+		if ( map->getScene()->getPlayer() ==this ) {
+			map->ensureSize();
+		}
+	}
 }
 
 void CMapObject::moveTo ( int x, int y, int z ) {
-    posz = z;
-    move ( x - posx, y - posy );
+	posz = z;
+	move ( x - posx, y - posy );
 }
 
 void CMapObject::removeFromGame() { map->getScene()->removeItem ( this ); }
@@ -73,18 +73,18 @@ void CMapObject::onCreate() {}
 void CMapObject::onDestroy() {}
 
 void CMapObject::setMap ( CMap *map ) {
-    if ( !map ) {
-        return;
-    }
-    this->map = map;
-    moveTo ( posx, posy, posz );
+	if ( !map ) {
+		return;
+	}
+	this->map = map;
+	moveTo ( posx, posy, posz );
 //	statsView.setParentItem ( this );
 //	statsView.setVisible ( false );
 //	statsView.setPos ( 50, 0 );
 //	statsView.setZValue ( this->zValue() + 1 );
-    if ( this->scene() != map->getScene() ) {
-        map->getScene()->addItem ( this );
-    }
+	if ( this->scene() != map->getScene() ) {
+		map->getScene()->addItem ( this );
+	}
 }
 
 CMap *CMapObject::getMap() { return map; }
@@ -92,38 +92,38 @@ CMap *CMapObject::getMap() { return map; }
 void CMapObject::setVisible ( bool vis ) { QGraphicsPixmapItem::setVisible ( vis ); }
 
 Coords CMapObject::getCoords() {
-    return Coords ( posx,posy,posz );
+	return Coords ( posx,posy,posz );
 }
 
 void CMapObject::setCoords ( Coords coords ) {
-    this->moveTo ( coords.x,coords.y,coords.z );
+	this->moveTo ( coords.x,coords.y,coords.z );
 }
 
 void CMapObject::setNumber ( int i, int x ) {
-    this->QGraphicsItem::setVisible ( true );
-    int px = i % x * 50;
-    int py = i / x * 50;
-    this->QGraphicsItem::setPos ( px, py );
+	this->QGraphicsItem::setVisible ( true );
+	int px = i % x * 50;
+	int py = i / x * 50;
+	this->QGraphicsItem::setPos ( px, py );
 }
 
 bool CMapObject::compare ( CMapObject *item ) {
-    int value =typeName.toLower().compare (  item->typeName.toLower() );
-    if ( value == 0 ) {
-        return this < item;
-    }
-    return value < 0;
+	int value =typeName.toLower().compare (  item->typeName.toLower() );
+	if ( value == 0 ) {
+		return this < item;
+	}
+	return value < 0;
 }
 
 void CMapObject::hoverEnterEvent ( QGraphicsSceneHoverEvent *event ) {
 //	statsView.setVisible ( true );
 //	statsView.setText ( tooltip );
 //	statsView.setPos ( 0, 0 - statsView.boundingRect().height() );
-    event->setAccepted ( true );
+	event->setAccepted ( true );
 }
 
 void CMapObject::hoverLeaveEvent ( QGraphicsSceneHoverEvent *event ) {
-    //statsView.setVisible ( false );
-    event->setAccepted ( true );
+	//statsView.setVisible ( false );
+	event->setAccepted ( true );
 }
 
 CEvent::CEvent() {}
@@ -131,9 +131,9 @@ CEvent::CEvent() {}
 CEvent::CEvent ( const CEvent & ) {}
 
 void CEvent::onEnter() {
-    if ( this->isEnabled() ) {
-        CScriptEngine::getInstance()->executeScript ( script );
-    }
+	if ( this->isEnabled() ) {
+		CScriptEngine::getInstance()->executeScript ( script );
+	}
 }
 
 void CEvent::onMove() {}

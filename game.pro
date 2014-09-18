@@ -1,6 +1,11 @@
 TEMPLATE = subdirs
+TARGET = all
 SUBDIRS = \
         python \
-        core
+        game
 
-core.depends = python
+game.depends = python
+
+OTHER_FILES += \
+    format.py
+    game.pri
