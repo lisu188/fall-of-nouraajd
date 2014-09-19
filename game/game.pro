@@ -36,7 +36,8 @@ SOURCES += \
      CItem.cpp \
      Stats.cpp \
      CMain.cpp \
-     CObjectHandler.cpp
+     CObjectHandler.cpp \
+    CGuiHandler.cpp
 
 HEADERS += \
      CReflection.h \
@@ -61,7 +62,8 @@ HEADERS += \
      CItem.h \
      Stats.h \
      Util.h \
-     CObjectHandler.h
+     CObjectHandler.h \
+    CGuiHandler.h
 
 unix:LIBS += -L../python -lpython
 win32:CONFIG(release,debug|release)LIBS += -L../python/release -lpython

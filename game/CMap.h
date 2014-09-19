@@ -24,6 +24,7 @@ class CLootProvider;
 class CInteraction;
 class CObjectHandler;
 class CScriptEngine;
+class CGuiHandler;
 
 class CMap : public QObject,
 	private std::unordered_map<Coords, CTile*, CoordsHasher> {
@@ -77,5 +78,6 @@ private:
 	int entryx, entryz, entryy;
 	CLootProvider *lootProvider;
 	CObjectHandler *handler;
+	CGuiHandler *guiHandler;
 };
 
