@@ -61,7 +61,7 @@ void CGameScene::keyPressEvent ( QKeyEvent *keyEvent ) {
 			keyEvent->setAccepted ( true );
 			break;
 		case Qt::Key_C:
-			getView()->showPanel ( "CCharPanel" );
+            getView()->getPanel ( "CCharPanel" )->showPanel();
 			keyEvent->setAccepted ( true );
 			break;
 		}

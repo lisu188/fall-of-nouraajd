@@ -15,11 +15,12 @@ AGamePanel::AGamePanel() {
 }
 AGamePanel::AGamePanel(const AGamePanel &) : AGamePanel() {}
 void AGamePanel::setUpPanel(CGameView *view) {
+  this->view = view;
   if (scene() != view->getScene())
     view->getScene()->addItem(this);
 }
-void AGamePanel::showPanel(CGameView *view) {
-  setUpPanel(view);
+void AGamePanel::showPanel() {
+  if (!view) return;
   setPos(view->mapToScene(20, 100));
   setVisible(!isVisible());
   update();
@@ -61,8 +62,8 @@ void CCharPanel::setUpPanel(CGameView *view) {
   connect(player, SIGNAL(equippedChanged()), playerEquippedView,
           SLOT(update()));
 }
-void CCharPanel::showPanel(CGameView *view) {
-  AGamePanel::showPanel(view);
+void CCharPanel::showPanel() {
+  AGamePanel::showPanel();
   if (backpack)
     backpack->move(view->width() - backpack->width(), 0);
 }
@@ -83,8 +84,8 @@ void CFightPanel::setUpPanel(CGameView *view) {
   playerSkillsView->setPos(0, 50);
   connect(player, SIGNAL(skillsChanged()), playerSkillsView, SLOT(update()));
 }
-void CFightPanel::showPanel(CGameView *view) {
-  setUpPanel(view);
+void CFightPanel::showPanel() {
+  if (!view) return;
   setPos(view->mapToScene(20, 100));
   if (!selected && !view->getScene()->getPlayer()->getFightList()->empty())
     selected = view->getScene()->getPlayer()->getFightList()->front();
@@ -113,7 +114,7 @@ BackPackObject::BackPackObject(CGameView *view)
 }
 void BackPackObject::mousePressEvent(QMouseEvent *event) {
   if (event->button() == Qt::LeftButton) {
-    view->showPanel("CCharPanel");
+    if (auto *panel = view->getPanel("CCharPanel")) panel->showPanel();
     event->accept();
   } else {
     QWidget::mousePressEvent(event);
@@ -124,33 +125,33 @@ void BackPackObject::paintEvent(QPaintEvent *) {
   painter.drawPixmap(0, 0, pixmap);
 }
 
-CScrollPanel::CScrollPanel() { setZValue(7); }
-CScrollPanel::CScrollPanel(const CScrollPanel &panel) : CScrollPanel() {
+CTextPanel::CTextPanel() { setZValue(7); }
+CTextPanel::CTextPanel(const CTextPanel &panel) : CTextPanel() {
   text = panel.text;
 }
-QRectF CScrollPanel::boundingRect() const { return QRectF(0, 0, 400, 300); }
-void CScrollPanel::paint(QPainter *painter, const QStyleOptionGraphicsItem *,
+QRectF CTextPanel::boundingRect() const { return QRectF(0, 0, 400, 300); }
+void CTextPanel::paint(QPainter *painter, const QStyleOptionGraphicsItem *,
                          QWidget *) {
   painter->fillRect(boundingRect(), QColor("BLACK"));
   painter->setPen(QColor("WHITE"));
   painter->drawText(QRectF(0, painter->font().pointSize(), 400, 300),
                     Qt::AlignLeft | Qt::TextWordWrap | Qt::AlignJustify, text);
 }
-void CScrollPanel::showPanel(CGameView *view) {
-  setUpPanel(view);
+void CTextPanel::showPanel() {
+  if (!view) return;
   setPos(view->mapToScene(view->width() / 2 - boundingRect().width() / 2,
                           view->height() / 2 - boundingRect().height() / 2));
   setVisible(true);
   update();
 }
-void CScrollPanel::setUpPanel(CGameView *view) { AGamePanel::setUpPanel(view); }
-QString CScrollPanel::getText() const { return text; }
-void CScrollPanel::setText(const QString &value) {
+void CTextPanel::setUpPanel(CGameView *view) { AGamePanel::setUpPanel(view); }
+QString CTextPanel::getText() const { return text; }
+void CTextPanel::setText(const QString &value) {
   text = value;
   update();
 }
 
-void CScrollPanel::mousePressEvent(QGraphicsSceneMouseEvent *event) {
+void CTextPanel::mousePressEvent(QGraphicsSceneMouseEvent *event) {
   setVisible(false);
   event->accept();
 }

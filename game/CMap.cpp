@@ -3,6 +3,8 @@
 #include "CGameView.h"
 #include "CLootProvider.h"
 #include "CMap.h"
+#include "CGamePanel.h"
+#include "CGuiHandler.h"
 #include "CObjectHandler.h"
 #include "CPathFinder.h"
 #include "CTile.h"
@@ -17,6 +19,8 @@ CMap::CMap(CGameScene *scene, QString file)
       lootProvider(nullptr), handler(nullptr) {
   scene->setMap(this);
   handler = new CObjectHandler(this);
+  guiHandler = new CGuiHandler(this);
+  lootProvider = new CLootProvider(this);
   connect(CompletionListener::getInstance(), SIGNAL(completed()), this,
           SLOT(moveCompleted()));
   loadMap(CConfigurationProvider::getConfig(file).toObject());
@@ -262,11 +266,8 @@ CPlayer *CMap::getPlayer() {
   }
   return nullptr;
 }
-CObjectHandler *CMap::getObjectHandler() { return handler; }
-CLootProvider *CMap::getLootProvider() {
-  if (!lootProvider) {
-    lootProvider = new CLootProvider(this);
-  }
+const CObjectHandler *CMap::getObjectHandler() const { return handler; }
+const CLootProvider *CMap::getLootProvider() const {
   return lootProvider;
 }
 
@@ -306,7 +307,7 @@ void CMap::moveCompleted() {
   *player->getEntered() = entered;
   getTile(player->getPosX(), player->getPosY(), player->getPosZ())->onStep();
   if (!player->getFightList()->empty()) {
-    scene->getView()->showPanel("CFightPanel");
+    if (auto *panel = scene->getView()->getPanel("CFightPanel")) panel->showPanel();
   }
   ensureSize();
   player->updateViews();
@@ -347,3 +348,5 @@ void CMap::moveTile(CTile *tile, int x, int y, int z) {
     erase(old);
   insert(std::make_pair(target, tile));
 }
+
+const CGuiHandler *CMap::getGuiHandler() const { return guiHandler; }

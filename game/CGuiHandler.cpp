@@ -2,5 +2,5 @@
 #include "CMap.h"
 
 CGuiHandler::CGuiHandler ( CMap *map ) :QObject ( map ) {
-
+    this->map=map;
 }
