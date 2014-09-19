@@ -196,11 +196,11 @@ QString CScroll::getText() const { return text; }
 void CScroll::setText(const QString &value) { text = value; }
 bool CScroll::onUse(CCreature *) {
   CGameView *view = getMap()->getScene()->getView();
-  CScrollPanel *panel =
-      dynamic_cast<CScrollPanel *>(view->getPanel("CScrollPanel"));
+  CTextPanel *panel =
+      dynamic_cast<CTextPanel *>(view->getPanel("CTextPanel"));
   if (!panel)
     qFatal("Missing registered scroll text panel");
   panel->setText(text);
-  view->showPanel("CScrollPanel");
+  panel->showPanel();
   return true;
 }

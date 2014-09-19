@@ -25,7 +25,7 @@ CObjectHandler::CObjectHandler(CMap *map) : QObject(map), map(map) {
   }
 }
 
-CMapObject *CObjectHandler::_createMapObject(QString type) {
+CMapObject *CObjectHandler::_createMapObject(QString type) const {
   if (!objectConfig.contains(type)) {
     qFatal("No object configuration for %s", qPrintable(type));
   }
@@ -66,7 +66,7 @@ CMapObject *CObjectHandler::_createMapObject(QString type) {
   object->setTypeName(type);
   object->setObjectName(
       QString::number(reinterpret_cast<quintptr>(object), 16));
-  object->QObject::setParent(this);
+  object->QObject::setParent(const_cast<CObjectHandler *>(this));
   QJsonObject properties =
       config.contains("properties") ? config["properties"].toObject() : config;
   properties.remove("class");
@@ -99,7 +99,7 @@ CMapObject *CObjectHandler::_createMapObject(QString type) {
 }
 
 void CObjectHandler::setProperty(QObject *object, QString key,
-                                 QJsonValue value) {
+                                 QJsonValue value) const {
   QMetaProperty property = getProperty(object, key);
   if (value.isObject() && property.isValid() &&
       QString(property.typeName()) == "Stats") {
@@ -113,11 +113,11 @@ void CObjectHandler::setProperty(QObject *object, QString key,
   }
   object->setProperty(qPrintable(key), value.toVariant());
 }
-QMetaProperty CObjectHandler::getProperty(QObject *object, QString name) {
+QMetaProperty CObjectHandler::getProperty(QObject *object, QString name) const {
   int index = object->metaObject()->indexOfProperty(qPrintable(name));
   return index < 0 ? QMetaProperty() : object->metaObject()->property(index);
 }
-void CObjectHandler::logProperties(CMapObject *object) {
+void CObjectHandler::logProperties(CMapObject *object) const {
   for (int i = 0; i < object->metaObject()->propertyCount(); ++i) {
     QMetaProperty property = object->metaObject()->property(i);
     if (property.isUser()) {
@@ -126,7 +126,5 @@ void CObjectHandler::logProperties(CMapObject *object) {
   }
 }
 
-QJsonObject *CObjectHandler::getObjectConfig() { return &objectConfig; }
-void CObjectHandler::setObjectConfig(const QJsonObject &value) {
-  objectConfig = value;
-}
+const QJsonObject *CObjectHandler::getObjectConfig() const { return &objectConfig; }
+

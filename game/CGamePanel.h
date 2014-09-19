@@ -14,10 +14,44 @@ class AGamePanel : public QGraphicsObject {
 public:
 	AGamePanel();
 	AGamePanel ( const AGamePanel& );
-	virtual void showPanel ( CGameView * );
-	virtual void setUpPanel ( CGameView *  );
+    virtual void showPanel ();
+    virtual void setUpPanel (CGameView *view);
 	virtual QRectF boundingRect() const;
 	virtual void paint ( QPainter *, const QStyleOptionGraphicsItem *, QWidget * );
+
+    Q_INVOKABLE void setProperty ( QString name,QVariant property ) {
+        QByteArray byteArray = name.toUtf8();
+        const char* cString = byteArray.constData();
+        this->QObject::setProperty ( cString,property );
+    }
+    Q_INVOKABLE QVariant property ( QString name ) const {
+        QByteArray byteArray = name.toUtf8();
+        const char* cString = byteArray.constData();
+        return this->QObject::property ( cString );
+    }
+    Q_INVOKABLE void setStringProperty ( QString name,QString value ) {
+        this->setProperty ( name, value ) ;
+    }
+    Q_INVOKABLE void setBoolProperty ( QString name,bool value ) {
+        this->setProperty ( name,value );
+    }
+    Q_INVOKABLE void setNumericProperty ( QString name,int value ) {
+        this->setProperty ( name,value );
+    }
+    Q_INVOKABLE QString getStringProperty ( QString name ) const {
+        return this->property ( name ).toString();
+    }
+    Q_INVOKABLE bool getBoolProperty ( QString name ) const {
+        return this->property ( name ).toBool();
+    }
+    Q_INVOKABLE int getNumericProperty ( QString name ) const {
+        return this->property ( name ).toInt();
+    }
+    Q_INVOKABLE void incProperty ( QString name,int value ) {
+        this->setNumericProperty ( name,this->getNumericProperty ( name )+value );
+    }
+protected:
+        CGameView *view=0;
 };
 
 
@@ -31,9 +65,9 @@ protected:
 	void paintEvent ( QPaintEvent * );
 
 private:
+    CGameView *view=0;
 	QPixmap pixmap;
 	int time = 0;
-	CGameView *view;
 };
 
 class CCharPanel : public AGamePanel {
@@ -44,8 +78,8 @@ public:
 	virtual QRectF boundingRect() const;
 	virtual void paint ( QPainter *painter, const QStyleOptionGraphicsItem *,
 	                     QWidget * );
-	virtual void showPanel ( CGameView *view );
-	virtual void setUpPanel ( CGameView * view );
+    virtual void showPanel (  );
+    virtual void setUpPanel (CGameView *view );
 private:
 	CPlayerListView *playerInventoryView;
 	CPlayerEquippedView *playerEquippedView;
@@ -62,22 +96,23 @@ public:
 	virtual QRectF boundingRect() const;
 	virtual void paint ( QPainter *painter, const QStyleOptionGraphicsItem *,
 	                     QWidget * );
-	virtual void showPanel ( CGameView *view );
+    virtual void showPanel ( );
 	virtual void setUpPanel ( CGameView *view );
 private:
 	CPlayerListView *playerSkillsView;
 
 };
 
-class CScrollPanel:public AGamePanel {
+class CTextPanel:public AGamePanel {
 	Q_OBJECT
+    Q_PROPERTY(QString text READ getText WRITE setText USER true)
 public:
-	CScrollPanel();
-	CScrollPanel ( const CScrollPanel& );
+    CTextPanel();
+    CTextPanel ( const CTextPanel& );
 	virtual QRectF boundingRect() const;
 	virtual void paint ( QPainter *painter, const QStyleOptionGraphicsItem *, QWidget * );
-	virtual void showPanel ( CGameView * );
-	virtual void setUpPanel ( CGameView * );
+    virtual void showPanel (  );
+    virtual void setUpPanel (CGameView * view);
 	virtual void mousePressEvent ( QGraphicsSceneMouseEvent *event );
 	QString getText() const;
 	void setText ( const QString &value );
