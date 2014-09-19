@@ -61,13 +61,15 @@ public:
 	void replaceTile ( QString name,Coords coords );
 	Coords getLocationByName ( QString name );
 	CPlayer *getPlayer();
-	CLootProvider *getLootProvider();
-	CObjectHandler *getObjectHandler();
 	void loadingComplete();
 	void moveTile ( CTile* tile,int x, int y, int z );
 	void loadMap ( const QJsonObject &map );
 	void handleTileLayer ( const QJsonObject& tileset,const QJsonObject& layer );
 	void handleObjectLayer ( const QJsonObject &layer );
+
+    const CLootProvider *getLootProvider() const;
+    const CObjectHandler *getObjectHandler() const;
+    const CGuiHandler *getGuiHandler() const;
 private:
 	std::set<CMapObject *> mapObjects;
 	void randomDir ( int *tab, int rule );
@@ -76,8 +78,8 @@ private:
 	std::map<int, QString> defaultTiles;
 	std::map<int, std::pair<int, int> > boundaries;
 	int entryx, entryz, entryy;
-	CLootProvider *lootProvider;
-	CObjectHandler *handler;
-	CGuiHandler *guiHandler;
+    const CLootProvider *lootProvider;
+    const CObjectHandler *handler;
+    const CGuiHandler *guiHandler;
 };
 

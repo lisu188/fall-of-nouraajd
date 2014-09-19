@@ -60,10 +60,6 @@ CGameView::~CGameView() {
 	delete scene;
 }
 
-void CGameView::showPanel ( QString panel ) {
-	panels[panel]->showPanel ( this );
-}
-
 AGamePanel *CGameView::getPanel ( QString panel ) {
 	return panels[panel];
 }
@@ -86,9 +82,9 @@ void CGameView::resizeEvent ( QResizeEvent *event ) {
 			QWidget::resizeEvent ( event );
 			playerStatsView.move ( 0, 0 );
 			for ( auto it=panels.begin(); it!=panels.end(); it++ ) {
-				AGamePanel *panel=*it;
+                AGamePanel *panel=(*it).second;
 				bool vis=panel->isVisible();
-				panel->showPanel ( this );
+                panel->showPanel ();
 				panel->setVisible ( vis );
 			}
 		}

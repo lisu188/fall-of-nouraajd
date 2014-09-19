@@ -23,7 +23,7 @@ public:
 	virtual void onCreate();
 	virtual void onDestroy();
 	Q_SLOT void move ( int x, int y );
-	virtual void setMap ( CMap *map );
+    virtual void setMap (CMap *map );
 	CMap *getMap();
 	void setVisible ( bool vis );
 	Coords getCoords();
@@ -62,7 +62,7 @@ public:
 	}
 
 protected:
-	CMap *map = 0;
+    CMap *map=0;
 	//QGraphicsSimpleTextItem statsView;
 
 public:

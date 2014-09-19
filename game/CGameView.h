@@ -13,7 +13,6 @@ class CGameView : public QGraphicsView {
 public:
 	CGameView ( QString mapName,QString playerType );
 	virtual ~CGameView();
-	void showPanel ( QString panel );
 	AGamePanel *getPanel ( QString panel );
 	Q_SLOT void start();
 	Q_INVOKABLE void show();
