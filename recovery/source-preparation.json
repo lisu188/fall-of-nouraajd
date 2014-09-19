@@ -1,7 +1,19 @@
 {
   "identity": {
-    "implementationSha256": "1b5800a44d5a44b53a22a82de98f707228763bf438ceead0a5a22d857769c5cc",
+    "implementationSha256": "7d1bc623e4b303568777816449a743e6b5f87b189d17449098c9a635bcf51788",
     "outputs": [
+      {
+        "after": {
+          "kind": "file",
+          "sha256": "09ea14b3400bd1372a57c15ba3b8a882b84455bf43322426340b7200c64c8cf3"
+        },
+        "before": {
+          "kind": "file",
+          "sha256": "625e83b50a91a2971071b874cd87bf8ba9cef0d2ad1496071c94dd5f2da14ae0"
+        },
+        "path": "game/CGameView.cpp",
+        "purpose": "Resolve the panel iterator and release the owned Python handles"
+      },
       {
         "after": {
           "kind": "file",
@@ -12,17 +24,37 @@
           "sha256": "782640aad36636a8eeb9eece47ae03e2ae06b18df1e7fbfa1be25940efcb3892"
         },
         "path": "game/CScriptEngine.cpp",
-        "purpose": "Release Boost.Python module and namespace handles before interpreter finalization"
+        "purpose": "Resolve the panel iterator and release the owned Python handles"
       }
     ],
-    "pythonShutdown": {
-      "inputSha256": "782640aad36636a8eeb9eece47ae03e2ae06b18df1e7fbfa1be25940efcb3892",
-      "outputSha256": "e3c73972358732cb25915b9c734a94dda15934042ac5e77d33c76eba65a690d0",
-      "replaySha256": "55d450b2e1e89d7300d8eff39fa91498d251c23f3b83df64cebe967929cf2d73",
-      "sourceCommit": "8d5eb7f18f89ff70ea633f463a57b72f46aaf2e4"
+    "panelTransition": {
+      "files": {
+        "game/CGameView.cpp": [
+          "625e83b50a91a2971071b874cd87bf8ba9cef0d2ad1496071c94dd5f2da14ae0",
+          "09ea14b3400bd1372a57c15ba3b8a882b84455bf43322426340b7200c64c8cf3"
+        ],
+        "game/CScriptEngine.cpp": [
+          "782640aad36636a8eeb9eece47ae03e2ae06b18df1e7fbfa1be25940efcb3892",
+          "e3c73972358732cb25915b9c734a94dda15934042ac5e77d33c76eba65a690d0"
+        ]
+      },
+      "replaySha256": "f98e03c5196ffa2392e3c07cfac80edec80dae6df9494765dd5d5eed8336672c",
+      "sourceCommit": "2017b1ead3293bf0b53bfe1a7b3804310911173b"
     }
   },
   "outputs": [
+    {
+      "after": {
+        "kind": "file",
+        "sha256": "09ea14b3400bd1372a57c15ba3b8a882b84455bf43322426340b7200c64c8cf3"
+      },
+      "before": {
+        "kind": "file",
+        "sha256": "625e83b50a91a2971071b874cd87bf8ba9cef0d2ad1496071c94dd5f2da14ae0"
+      },
+      "path": "game/CGameView.cpp",
+      "purpose": "Resolve the panel iterator and release the owned Python handles"
+    },
     {
       "after": {
         "kind": "file",
@@ -33,7 +65,7 @@
         "sha256": "782640aad36636a8eeb9eece47ae03e2ae06b18df1e7fbfa1be25940efcb3892"
       },
       "path": "game/CScriptEngine.cpp",
-      "purpose": "Release Boost.Python module and namespace handles before interpreter finalization"
+      "purpose": "Resolve the panel iterator and release the owned Python handles"
     }
   ],
   "status": "success",
@@ -41,10 +73,10 @@
     {
       "command": [
         "history_source_prep.py",
-        "prepare-python-shutdown"
+        "prepare-panel-transition"
       ],
-      "log": "/tmp/nouraajd-272-split-final/verify/snapshot-2506u3yq/preparation/python-shutdown.log",
-      "name": "pythonShutdown",
+      "log": "/tmp/nouraajd-273-final/verify/snapshot-5nxkd0ck/preparation/panel-transition.log",
+      "name": "panelTransition",
       "returnCode": 0,
       "timedOut": false
     }
