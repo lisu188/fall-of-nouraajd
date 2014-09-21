@@ -25,7 +25,7 @@ protected:
 	void keyPressEvent ( QKeyEvent *keyEvent );
 
 private:
-	CMap *map;
-	CPlayer *player;
+	CMap *map=0;
+	CPlayer *player=0;
 };
 

@@ -9,15 +9,15 @@ class CObjectHandler : public QObject {
 public:
 	CObjectHandler ( CMap *map );
 	template<typename T>
-    T createMapObject ( QString type ) const{
+	T createMapObject ( QString type ) const {
 		return dynamic_cast<T> ( _createMapObject ( type ) );
 	}
-    void logProperties ( CMapObject *object )const;
-    const QJsonObject *getObjectConfig()const;
+	void logProperties ( CMapObject *object ) const;
+	const QJsonObject *getObjectConfig() const;
 private:
-    CMapObject *_createMapObject ( QString type ) const;
-    void setProperty ( QObject * object , QString key, QJsonValue value ) const;
-    QMetaProperty getProperty ( QObject * object ,QString name ) const;
-    CMap *map=0;
-    QJsonObject objectConfig;
+	CMapObject *_createMapObject ( QString type ) const;
+	void setProperty ( QObject * object , QString key, QJsonValue value ) const;
+	QMetaProperty getProperty ( QObject * object ,QString name ) const;
+	CMap *map=0;
+	QJsonObject objectConfig;
 };

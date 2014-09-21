@@ -17,6 +17,7 @@
 #include "CGamePanel.h"
 #include <QThreadPool>
 #include "CObjectHandler.h"
+#include "CGuiHandler.h"
 
 class LoadGameTask  : public QRunnable {
 public:
@@ -61,7 +62,7 @@ void CGameScene::keyPressEvent ( QKeyEvent *keyEvent ) {
 			keyEvent->setAccepted ( true );
 			break;
 		case Qt::Key_C:
-            getView()->getPanel ( "CCharPanel" )->showPanel();
+			map->getGuiHandler()->getPanel ( "CCharPanel" )->showPanel();
 			keyEvent->setAccepted ( true );
 			break;
 		}
@@ -77,7 +78,7 @@ void CGameScene::playerMove ( int dirx, int diry ) {
 		return;
 	}
 	if ( player->getFightList()->size() > 0 ||
-	        getView()->getPanel ( "CCharPanel" )->isVisible() ) {
+	        map->getGuiHandler()->getPanel ( "CCharPanel" )->isVisible() ) {
 		return;
 	}
 	map->move ( dirx, diry );

@@ -10,6 +10,7 @@
 #include <QApplication>
 #include <QDesktopWidget>
 #include "CCreature.h"
+#include "CGuiHandler.h"
 
 bool CGameView::init = false;
 
@@ -19,10 +20,8 @@ void CGameView::start() {
 	CPlayer *player = scene->getPlayer();
 	playerStatsView.show();
 	playerStatsView.setPlayer ( player );
-	for ( auto it=panels.begin(); it!=panels.end(); it++ ) {
-		( *it ).second->setVisible ( false );
-		( *it ).second->setUpPanel ( this );
-	}
+	connect ( player,&CCreature::inventoryChanged,scene->getMap()->getGuiHandler(),&CGuiHandler::refresh );
+	connect ( player,&CCreature::equippedChanged,scene->getMap()->getGuiHandler(),&CGuiHandler::refresh );
 	init = true;
 }
 
@@ -30,13 +29,7 @@ void CGameView::show() {
 	showNormal();
 }
 
-void CGameView::initPanels() {
-	auto viewList=CReflection::getInstance()->getInherited<AGamePanel*>();
-	for ( auto it=viewList.begin(); it!=viewList.end(); it++ ) {
-		panels[ ( *it )->metaObject()->className()]=*it;
-		scene->addItem ( *it );
-	}
-}
+
 
 CGameView::CGameView ( QString mapName , QString playerType ) {
 	this->mapName=mapName;
@@ -52,7 +45,6 @@ CGameView::CGameView ( QString mapName , QString playerType ) {
 	timer.setInterval ( 250 );
 	connect ( &timer, SIGNAL ( timeout() ), this, SLOT ( start() ) );
 	playerStatsView.setParent ( this );
-	initPanels();
 	timer.start();
 }
 
@@ -60,9 +52,7 @@ CGameView::~CGameView() {
 	delete scene;
 }
 
-AGamePanel *CGameView::getPanel ( QString panel ) {
-	return panels[panel];
-}
+
 
 void CGameView::mouseDoubleClickEvent ( QMouseEvent *e ) {
 	QWidget::mouseDoubleClickEvent ( e );
@@ -81,12 +71,7 @@ void CGameView::resizeEvent ( QResizeEvent *event ) {
 		if ( event ) {
 			QWidget::resizeEvent ( event );
 			playerStatsView.move ( 0, 0 );
-			for ( auto it=panels.begin(); it!=panels.end(); it++ ) {
-                AGamePanel *panel=(*it).second;
-				bool vis=panel->isVisible();
-                panel->showPanel ();
-				panel->setVisible ( vis );
-			}
+			getScene()->getMap()->getGuiHandler()->refresh();
 		}
 
 		CPlayer *player =scene->getPlayer();

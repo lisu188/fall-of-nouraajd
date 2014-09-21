@@ -16,7 +16,9 @@ ATypeHandler::ATypeHandler() {}
 
 ATypeHandler::ATypeHandler ( const ATypeHandler & ) {}
 
-CMapObject *ATypeHandler::create ( QString ) {return NULL;}
+CMapObject *ATypeHandler::create ( QString ) {
+	return NULL;
+}
 
 CTypeHandler::CTypeHandler() {}
 
@@ -37,3 +39,4 @@ PyTypeHandler::PyTypeHandler ( const PyTypeHandler & ) {}
 CMapObject *PyTypeHandler::create ( QString name ) {
 	return CScriptEngine::getInstance()->createObject<CMapObject*> ( name );
 }
+

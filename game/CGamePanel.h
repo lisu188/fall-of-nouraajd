@@ -14,58 +14,58 @@ class AGamePanel : public QGraphicsObject {
 public:
 	AGamePanel();
 	AGamePanel ( const AGamePanel& );
-    virtual void showPanel ();
-    virtual void setUpPanel (CGameView *view);
+	virtual void showPanel ();
+	virtual void setUpPanel ( CGameView *view );
 	virtual QRectF boundingRect() const;
 	virtual void paint ( QPainter *, const QStyleOptionGraphicsItem *, QWidget * );
 
-    Q_INVOKABLE void setProperty ( QString name,QVariant property ) {
-        QByteArray byteArray = name.toUtf8();
-        const char* cString = byteArray.constData();
-        this->QObject::setProperty ( cString,property );
-    }
-    Q_INVOKABLE QVariant property ( QString name ) const {
-        QByteArray byteArray = name.toUtf8();
-        const char* cString = byteArray.constData();
-        return this->QObject::property ( cString );
-    }
-    Q_INVOKABLE void setStringProperty ( QString name,QString value ) {
-        this->setProperty ( name, value ) ;
-    }
-    Q_INVOKABLE void setBoolProperty ( QString name,bool value ) {
-        this->setProperty ( name,value );
-    }
-    Q_INVOKABLE void setNumericProperty ( QString name,int value ) {
-        this->setProperty ( name,value );
-    }
-    Q_INVOKABLE QString getStringProperty ( QString name ) const {
-        return this->property ( name ).toString();
-    }
-    Q_INVOKABLE bool getBoolProperty ( QString name ) const {
-        return this->property ( name ).toBool();
-    }
-    Q_INVOKABLE int getNumericProperty ( QString name ) const {
-        return this->property ( name ).toInt();
-    }
-    Q_INVOKABLE void incProperty ( QString name,int value ) {
-        this->setNumericProperty ( name,this->getNumericProperty ( name )+value );
-    }
+	Q_INVOKABLE void setProperty ( QString name,QVariant property ) {
+		QByteArray byteArray = name.toUtf8();
+		const char* cString = byteArray.constData();
+		this->QObject::setProperty ( cString,property );
+	}
+	Q_INVOKABLE QVariant property ( QString name ) const {
+		QByteArray byteArray = name.toUtf8();
+		const char* cString = byteArray.constData();
+		return this->QObject::property ( cString );
+	}
+	Q_INVOKABLE void setStringProperty ( QString name,QString value ) {
+		this->setProperty ( name, value ) ;
+	}
+	Q_INVOKABLE void setBoolProperty ( QString name,bool value ) {
+		this->setProperty ( name,value );
+	}
+	Q_INVOKABLE void setNumericProperty ( QString name,int value ) {
+		this->setProperty ( name,value );
+	}
+	Q_INVOKABLE QString getStringProperty ( QString name ) const {
+		return this->property ( name ).toString();
+	}
+	Q_INVOKABLE bool getBoolProperty ( QString name ) const {
+		return this->property ( name ).toBool();
+	}
+	Q_INVOKABLE int getNumericProperty ( QString name ) const {
+		return this->property ( name ).toInt();
+	}
+	Q_INVOKABLE void incProperty ( QString name,int value ) {
+		this->setNumericProperty ( name,this->getNumericProperty ( name )+value );
+	}
 protected:
-        CGameView *view=0;
+	CGameView *view=0;
 };
 
 
 class BackPackObject : public QWidget {
 	Q_OBJECT
 public:
-	BackPackObject ( CGameView* view ) ;
+	BackPackObject ( CGameView* view , CCharPanel *panel ) ;
 
 protected:
 	void mousePressEvent ( QMouseEvent * );
 	void paintEvent ( QPaintEvent * );
 
 private:
-    CGameView *view=0;
+	CCharPanel *panel=0;
 	QPixmap pixmap;
 	int time = 0;
 };
@@ -78,8 +78,8 @@ public:
 	virtual QRectF boundingRect() const;
 	virtual void paint ( QPainter *painter, const QStyleOptionGraphicsItem *,
 	                     QWidget * );
-    virtual void showPanel (  );
-    virtual void setUpPanel (CGameView *view );
+	virtual void showPanel (  );
+	virtual void setUpPanel ( CGameView *view );
 private:
 	CPlayerListView *playerInventoryView;
 	CPlayerEquippedView *playerEquippedView;
@@ -96,7 +96,7 @@ public:
 	virtual QRectF boundingRect() const;
 	virtual void paint ( QPainter *painter, const QStyleOptionGraphicsItem *,
 	                     QWidget * );
-    virtual void showPanel ( );
+	virtual void showPanel ( );
 	virtual void setUpPanel ( CGameView *view );
 private:
 	CPlayerListView *playerSkillsView;
@@ -105,14 +105,14 @@ private:
 
 class CTextPanel:public AGamePanel {
 	Q_OBJECT
-    Q_PROPERTY(QString text READ getText WRITE setText USER true)
+	Q_PROPERTY ( QString text READ getText WRITE setText USER true )
 public:
-    CTextPanel();
-    CTextPanel ( const CTextPanel& );
+	CTextPanel();
+	CTextPanel ( const CTextPanel& );
 	virtual QRectF boundingRect() const;
 	virtual void paint ( QPainter *painter, const QStyleOptionGraphicsItem *, QWidget * );
-    virtual void showPanel (  );
-    virtual void setUpPanel (CGameView * view);
+	virtual void showPanel (  );
+	virtual void setUpPanel ( CGameView * view );
 	virtual void mousePressEvent ( QGraphicsSceneMouseEvent *event );
 	QString getText() const;
 	void setText ( const QString &value );

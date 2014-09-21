@@ -72,7 +72,7 @@ void CMapObject::onCreate() {}
 
 void CMapObject::onDestroy() {}
 
-void CMapObject::setMap (CMap *map ) {
+void CMapObject::setMap ( CMap *map ) {
 	if ( !map ) {
 		return;
 	}

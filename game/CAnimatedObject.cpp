@@ -54,10 +54,3 @@ void CAnimatedObject::animate() {
 	timer->start();
 	staticAnimation->next();
 }
-
-void CAnimatedObject::mousePressEvent ( QGraphicsSceneMouseEvent * ) {
-	QDrag *drag = new QDrag ( this );
-	drag->setMimeData ( new CObjectData ( this ) );
-	drag->setPixmap ( this->pixmap() );
-	drag->exec();
-}
