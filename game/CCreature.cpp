@@ -1,4 +1,5 @@
 #include "CConfigurationProvider.h"
+#include "CGuiHandler.h"
 #include "CCreature.h"
 #include "CGamePanel.h"
 #include "CGameScene.h"
@@ -554,12 +555,12 @@ void CPlayer::removeFromFightList(CCreature *creature) {
   creature->removeFromGame();
   getFightList()->remove(creature);
   if (getFightList()->size() == 0) {
-    map->getScene()->getView()->getPanel("CFightPanel")->setVisible(false);
+    map->getGuiHandler()->getPanel("CFightPanel")->setVisible(false);
     CFightPanel::selected = 0;
   } else {
     CFightPanel::selected = getFightList()->front();
   }
-  map->getScene()->getView()->getPanel("CFightPanel")->update();
+  map->getGuiHandler()->getPanel("CFightPanel")->update();
   Q_EMIT statsChanged();
 }
 
@@ -583,7 +584,7 @@ void CPlayer::performAction(CInteraction *action, CCreature *creature) {
       (*it)->fight(this);
     }
   }
-  map->getScene()->getView()->getPanel("CFightPanel")->update();
+  map->getGuiHandler()->getPanel("CFightPanel")->update();
   if (!isAlive()) {
     map->getScene()->getView()->close();
   }

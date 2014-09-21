@@ -1,4 +1,5 @@
 #include "CCreature.h"
+#include "CGuiHandler.h"
 #include "CGamePanel.h"
 #include "CGameScene.h"
 #include "CGameView.h"
@@ -43,7 +44,7 @@ void CCharPanel::setUpPanel(CGameView *view) {
   if (playerInventoryView)
     return;
   if (!backpack) {
-    backpack = new BackPackObject(view);
+    backpack = new BackPackObject(view, this);
     backpack->show();
   }
   CMap *map = view->getScene()->findChild<CMap *>(QString(),
@@ -51,10 +52,9 @@ void CCharPanel::setUpPanel(CGameView *view) {
   CPlayer *player = map ? map->getPlayer() : nullptr;
   if (!player)
     return;
-  playerInventoryView = new CPlayerListView(
-      (std::set<CMapObject *, Comparer<CMapObject>> *)player->getInventory());
+  playerInventoryView = new CPlayerListView(view, ITEMS);
   playerInventoryView->setParentItem(this);
-  playerEquippedView = new CPlayerEquippedView(player->getEquipped());
+  playerEquippedView = new CPlayerEquippedView(view);
   playerEquippedView->setParentItem(this);
   playerEquippedView->setPos(200, 0);
   connect(player, SIGNAL(inventoryChanged()), playerInventoryView,
@@ -77,8 +77,7 @@ void CFightPanel::setUpPanel(CGameView *view) {
   if (playerSkillsView)
     return;
   CPlayer *player = view->getScene()->getPlayer();
-  playerSkillsView = new CPlayerListView(
-      (std::set<CMapObject *, Comparer<CMapObject>> *)player->getActions());
+  playerSkillsView = new CPlayerListView(view, SKILLS);
   playerSkillsView->setXY(4, 1);
   playerSkillsView->setParentItem(this);
   playerSkillsView->setPos(0, 50);
@@ -106,15 +105,15 @@ void CFightPanel::paint(QPainter *painter, const QStyleOptionGraphicsItem *,
                         .arg(selected->getHpMax()));
 }
 
-BackPackObject::BackPackObject(CGameView *view)
-    : QWidget(view), pixmap("images/backpack.png"), view(view) {
+BackPackObject::BackPackObject(CGameView *view, CCharPanel *panel)
+    : QWidget(view), panel(panel), pixmap("images/backpack.png") {
   setFixedSize(pixmap.size());
   setAttribute(Qt::WA_TranslucentBackground);
   move(view->width() - width(), 0);
 }
 void BackPackObject::mousePressEvent(QMouseEvent *event) {
   if (event->button() == Qt::LeftButton) {
-    if (auto *panel = view->getPanel("CCharPanel")) panel->showPanel();
+    if (panel) panel->showPanel();
     event->accept();
   } else {
     QWidget::mousePressEvent(event);

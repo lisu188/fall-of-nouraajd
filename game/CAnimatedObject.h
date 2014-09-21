@@ -14,7 +14,6 @@ public:
 	QString getAnimation();
 protected:
 	CAnimation *staticAnimation;
-	virtual void mousePressEvent ( QGraphicsSceneMouseEvent * );
 private:
 	QString path;
 	QTimer *timer;

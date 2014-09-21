@@ -1,4 +1,5 @@
 #include "CConfigurationProvider.h"
+#include "CGuiHandler.h"
 #include "CCreature.h"
 #include "CGamePanel.h"
 #include "CGameScene.h"
@@ -197,7 +198,7 @@ void CScroll::setText(const QString &value) { text = value; }
 bool CScroll::onUse(CCreature *) {
   CGameView *view = getMap()->getScene()->getView();
   CTextPanel *panel =
-      dynamic_cast<CTextPanel *>(view->getPanel("CTextPanel"));
+      dynamic_cast<CTextPanel *>(view->getScene()->getMap()->getGuiHandler()->getPanel("CTextPanel"));
   if (!panel)
     qFatal("Missing registered scroll text panel");
   panel->setText(text);
