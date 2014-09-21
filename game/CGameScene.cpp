@@ -77,8 +77,7 @@ void CGameScene::playerMove ( int dirx, int diry ) {
 	if ( !CompletionListener::getInstance()->isCompleted() ) {
 		return;
 	}
-	if ( player->getFightList()->size() > 0 ||
-	        map->getGuiHandler()->getPanel ( "CCharPanel" )->isVisible() ) {
+	if ( map->getGuiHandler()->isAnyPanelVisible() ) {
 		return;
 	}
 	map->move ( dirx, diry );
