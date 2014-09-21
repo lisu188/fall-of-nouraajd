@@ -1,4 +1,5 @@
 #include "CCreature.h"
+#include "CGuiHandler.h"
 #include "CGameScene.h"
 #include "CGameView.h"
 #include "CLootProvider.h"
@@ -50,6 +51,54 @@ int mapInteger(const QJsonValue &value, int fallback = 0) {
 }
 } // namespace
 void CMap::loadMap(const QJsonObject &map) {
+  if (map["map"].isObject() && map["state"].isObject()) {
+    const QJsonObject terrain = map["map"].toObject();
+    const QJsonObject defaults = terrain["default"].toObject();
+    for (auto it = defaults.begin(); it != defaults.end(); ++it)
+      defaultTiles[it.key().toInt()] = it.value().toString();
+    for (auto it = terrain.begin(); it != terrain.end(); ++it) {
+      if (it.key() == "default") continue;
+      for (const QJsonValue &tile : it.value().toArray()) {
+        const QJsonArray coords = tile.toArray();
+        if (coords.size() != 3) qFatal("Invalid historical map coordinate");
+        if (!addTile(handler->createMapObject<CTile *>(it.key()),
+                     mapInteger(coords[0]), mapInteger(coords[1]), mapInteger(coords[2])))
+          qFatal("Cannot add authored sparse map tile");
+      }
+    }
+    const QJsonObject state = map["state"].toObject();
+    for (auto group = state.begin(); group != state.end(); ++group) {
+      const QJsonObject types = group.value().toObject();
+      for (auto type = types.begin(); type != types.end(); ++type) {
+        for (const QJsonValue &record : type.value().toArray()) {
+          auto *object = handler->createMapObject<CMapObject *>(type.key());
+          if (!object) qFatal("Cannot create authored sparse map object");
+          addObject(object);
+          if (record.isArray()) {
+            const auto coords = record.toArray();
+            if (coords.size() != 3) qFatal("Invalid historical object coordinate");
+            object->moveTo(mapInteger(coords[0]), mapInteger(coords[1]), mapInteger(coords[2]));
+            continue;
+          }
+          const auto properties = record.toObject();
+          const auto coords = properties["coords"].toObject();
+          if (auto *creature = dynamic_cast<CCreature *>(object)) {
+            const auto stats = properties["initStats"].toObject();
+            for (auto stat = stats.begin(); stat != stats.end(); ++stat)
+              creature->getStats()->setProperty(stat.key(), stat.value().toVariant());
+            creature->attribChange();
+            creature->setExp(mapInteger(properties["exp"], creature->getExp()));
+            creature->setHp(mapInteger(properties["hp"], creature->getHp()));
+            creature->setMana(mapInteger(properties["mana"], creature->getMana()));
+            creature->setGold(mapInteger(properties["gold"], creature->getGold()));
+          }
+          object->moveTo(mapInteger(coords["x"]), mapInteger(coords["y"]), mapInteger(coords["z"]));
+        }
+      }
+    }
+    loadingComplete();
+    return;
+  }
   if (!map.contains("layers") || !map.contains("tilesets"))
     qFatal("Expected the historical Tiled JSON map schema");
   QJsonObject properties = map["properties"].toObject();
@@ -307,7 +356,7 @@ void CMap::moveCompleted() {
   *player->getEntered() = entered;
   getTile(player->getPosX(), player->getPosY(), player->getPosZ())->onStep();
   if (!player->getFightList()->empty()) {
-    if (auto *panel = scene->getView()->getPanel("CFightPanel")) panel->showPanel();
+    if (auto *panel = getGuiHandler()->getPanel("CFightPanel")) panel->showPanel();
   }
   ensureSize();
   player->updateViews();
@@ -349,4 +398,4 @@ void CMap::moveTile(CTile *tile, int x, int y, int z) {
   insert(std::make_pair(target, tile));
 }
 
-const CGuiHandler *CMap::getGuiHandler() const { return guiHandler; }
+CGuiHandler *CMap::getGuiHandler() const { return guiHandler; }

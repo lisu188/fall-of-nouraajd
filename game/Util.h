@@ -49,20 +49,6 @@ struct CoordsHasher {
 
 };
 
-template <class T>
-class Comparer {
-public:
-	bool operator() ( T *first, T *second ) {
-		if ( !first ) {
-			return false;
-		}
-		if ( !second ) {
-			return true;
-		}
-		return first->compare ( second );
-	}
-};
-
 class QObject;
 class CObjectData:public QMimeData {
 	Q_OBJECT

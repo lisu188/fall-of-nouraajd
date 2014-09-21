@@ -97,9 +97,9 @@ class CCreature : public CMapObject {
 
   protected:
     void hoverEnterEvent(QGraphicsSceneHoverEvent *event);
-    std::set<CItem *, Comparer<CItem>> inventory;
+    std::set<CItem *> inventory;
     std::map<int, CItem *> equipped;
-    std::set<CInteraction *, Comparer<CInteraction>> actions;
+    std::set<CInteraction *> actions;
     std::set<Effect *> effects;
     int gold;
     int exp;
