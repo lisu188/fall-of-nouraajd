@@ -1,10 +1,10 @@
 
-=== namedEventTransition ===
+=== panelRefreshTransition ===
 {
   "files": {
     "game/CGameView.cpp": [
-      "cb3371692cb0419b57061490fc5639fc2c78ffbb32a6a2672c7f18bd80526e89",
-      "0f936e9a2211aa8b4f5256b8946bddc398dafbc9cd7543031a88ede88c5ac5c9"
+      "7b5a6488507d1a46a45ad558d603541516a237a70c18f74ccbbf1b5187dc91c7",
+      "3ecb3cb16a0db911dabc522369d68df82598c6ac9b228fda0cab51e434333e38"
     ],
     "game/CMapObject.cpp": [
       "f0006dbd81a5b40f59f4b0f6b0d9d7f4bb4e42b550fefe925b39388af9ce9e84",
@@ -15,6 +15,6 @@
       "c8f89bc8530c97902f0e90d86a6edc6fd26227d1a02a1ad2893ab79c71a5f94b"
     ]
   },
-  "replaySha256": "f3274deb2b16b62f5d5065c0ec6c06f8826c0b7b8f655873a9ec58eb1556b89d",
-  "sourceCommit": "2f1b611df0ace34f501a30acdf50c0c14282cf0c"
+  "replaySha256": "e3e5f6a2f937db3db68f35b242694d5e82739a95f581b04fffe8a897d2ed6ba5",
+  "sourceCommit": "fe01b5980ebbec1a29dc3b2210597e7003ff729f"
 }

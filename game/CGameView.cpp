@@ -22,6 +22,7 @@ void CGameView::start() {
 	playerStatsView.setPlayer ( player );
 	connect ( player,&CCreature::inventoryChanged,scene->getMap()->getGuiHandler(),&CGuiHandler::refresh );
 	connect ( player,&CCreature::equippedChanged,scene->getMap()->getGuiHandler(),&CGuiHandler::refresh );
+	connect ( player,&CCreature::skillsChanged,scene->getMap()->getGuiHandler(),&CGuiHandler::refresh );
 	init = true;
 }
 
