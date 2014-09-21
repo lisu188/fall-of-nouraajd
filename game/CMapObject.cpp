@@ -132,7 +132,7 @@ CEvent::CEvent ( const CEvent & ) {}
 
 void CEvent::onEnter() {
 	if ( this->isEnabled() ) {
-		CScriptEngine::getInstance()->executeScript ( script );
+		CScriptEngine::getInstance()->callFunction ( "events",this->objectName(),boost::ref ( this ) );
 	}
 }
 

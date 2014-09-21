@@ -1,9 +1,9 @@
-"""Linux build-copy repair for the sparse-map revision’s Qt signals and Python shutdown."""
+"""Linux build-copy repair for the namespaced event revision’s object references and Python shutdown."""
 
 import hashlib
 from pathlib import Path
 
-COMMIT = "75d178f1ac4574316543e76af9234f93e38ead59"
+COMMIT = "2f1b611df0ace34f501a30acdf50c0c14282cf0c"
 PINS = {
     "game/CGameView.cpp": (
         "cb3371692cb0419b57061490fc5639fc2c78ffbb32a6a2672c7f18bd80526e89",
@@ -21,8 +21,8 @@ PINS = {
         ],
     ),
     "game/CScriptEngine.cpp": (
-        "68bdf4ba92f9c2b4f11ad495710b9231e71a48781f63b1835ccb76616b37c028",
-        "af9b8465718b0584004328ae277f53dabbc6119c996b268e2dc82c4506722f3e",
+        "ee9e9c7481c1671e0deb196a2554548669fc9bcc3f14fd46a5c98e5f88ea00e8",
+        "c8f89bc8530c97902f0e90d86a6edc6fd26227d1a02a1ad2893ab79c71a5f94b",
         [
             (
                 b"\t    Py_Finalize(); )",
@@ -30,8 +30,13 @@ PINS = {
             )
         ],
     ),
+    "game/CMapObject.cpp": (
+        "f0006dbd81a5b40f59f4b0f6b0d9d7f4bb4e42b550fefe925b39388af9ce9e84",
+        "f8fda33ba86ec6ff8beef27dbf0b1d58f1813eba8896afc47d7cda764f400de5",
+        [(b"boost::ref ( this )", b"boost::ref ( *this )")],
+    ),
 }
-PURPOSE = "Connect surviving Qt signals and release Python handles before finalization"
+PURPOSE = "Connect Qt signals, pass the named event by reference, and release the Python handles"
 
 
 def digest(data):
@@ -43,15 +48,15 @@ def apply(root):
     for name, (before, after, edits) in PINS.items():
         path = root / name
         if path.is_symlink() or path.resolve() != root.resolve() / name:
-            raise ValueError(f"Sparse map transition source traverses a symbolic link: {name}")
+            raise ValueError(f"Named event transition source traverses a symbolic link: {name}")
         data = path.read_bytes()
         if digest(data) != before:
-            raise ValueError(f"Sparse map transition input differs from the reviewed revision: {name}")
+            raise ValueError(f"Named event transition input differs from the reviewed revision: {name}")
         updated = data
         for old, new in edits:
             updated = updated.replace(old, new, 1)
         if digest(updated) != after:
-            raise ValueError(f"Sparse map transition output differs from the reviewed revision: {name}")
+            raise ValueError(f"Named event transition output differs from the reviewed revision: {name}")
         pending[path] = updated
     for path, updated in pending.items():
         path.write_bytes(updated)
@@ -76,8 +81,8 @@ def validate(preparation):
         for name, (before, after, _) in sorted(PINS.items())
     ]
     actual = [row for row in preparation.get("outputs", []) if row.get("path") in PINS]
-    if preparation.get("identity", {}).get("sparseMapTransition") != identity() or actual != rows:
-        raise ValueError("Sparse map transition evidence differs from the pinned original and repaired bytes")
+    if preparation.get("identity", {}).get("namedEventTransition") != identity() or actual != rows:
+        raise ValueError("Named event transition evidence differs from the pinned original and repaired bytes")
 
 
 if __name__ == "__main__":

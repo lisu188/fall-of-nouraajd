@@ -4,6 +4,7 @@
 // provenance.
 #include "CBuilding.h"
 #include "CCreature.h"
+#include "CGuiHandler.h"
 #include "CInteraction.h"
 #include "CItem.h"
 #include "CMap.h"
@@ -170,12 +171,15 @@ BOOST_PYTHON_MODULE(_game) {
       .def_readwrite("x", &Coords::x)
       .def_readwrite("y", &Coords::y)
       .def_readwrite("z", &Coords::z);
+  class_<CGuiHandler, boost::noncopyable>("CGuiHandler", no_init)
+      .def("showMessage", &CGuiHandler::showMessage);
   class_<CMap, boost::noncopyable>("CMap", no_init)
       .def("addObjectByName", &CMap::addObjectByName)
       .def("removeObjectByName", &CMap::removeObjectByName)
       .def("removeObject", &CMap::removeObject)
       .def("replaceTile", &CMap::replaceTile)
       .def("getPlayer", &CMap::getPlayer, return_internal_reference<>())
+      .def("getGuiHandler", &CMap::getGuiHandler, return_internal_reference<>())
       .def("getObjectByName", &CMap::getObjectByName,
            return_internal_reference<>())
       .def("getLocationByName", &CMap::getLocationByName);
