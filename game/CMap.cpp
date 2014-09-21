@@ -11,6 +11,8 @@
 #include "CTile.h"
 #include <QDebug>
 #include <QJsonArray>
+#include <QFile>
+#include "CScriptEngine.h"
 #include <QThreadPool>
 #include <algorithm>
 #include <cstdlib>
@@ -24,6 +26,10 @@ CMap::CMap(CGameScene *scene, QString file)
   lootProvider = new CLootProvider(this);
   connect(CompletionListener::getInstance(), SIGNAL(completed()), this,
           SLOT(moveCompleted()));
+  scriptPath = file.left(file.lastIndexOf('.')) + ".py";
+  QFile script(scriptPath);
+  if (script.open(QIODevice::ReadOnly))
+    CScriptEngine::getInstance()->executeScript(QString::fromUtf8(script.readAll()), "events");
   loadMap(CConfigurationProvider::getConfig(file).toObject());
 }
 

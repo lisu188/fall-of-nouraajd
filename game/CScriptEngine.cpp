@@ -12,9 +12,16 @@ CScriptEngine *CScriptEngine::getInstance() {
 	return &instance;
 }
 
-void CScriptEngine::executeScript ( QString script ) {
+void CScriptEngine::executeScript ( QString script,QString nameSpace ) {
 	PY_UNSAFE (
-	    boost::python::exec ( script.toStdString().append ( "\n" ).c_str(),main_namespace ); )
+	if ( nameSpace=="" ) {
+	boost::python::exec ( script.toStdString().append ( "\n" ).c_str(),main_namespace );
+	} else {
+		if ( !main_namespace.contains ( nameSpace.toStdString().c_str() ) ) {
+			executeScript ( nameSpace+"={}" );
+		}
+		boost::python::exec ( script.toStdString().c_str(),main_namespace[nameSpace.toStdString().c_str()] );
+	} )
 }
 
 QString CScriptEngine::buildCommand ( std::initializer_list<QString> list ) {
@@ -47,7 +54,6 @@ boost::python::object CScriptEngine::getObject ( QString name ) {
 	boost::python::object object;
 	return object;
 }
-
 return main_namespace[name.toStdString().c_str()]; )
 }
 
