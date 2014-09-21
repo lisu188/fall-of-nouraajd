@@ -10,12 +10,16 @@ class CScriptEngine :public QObject {
 	Q_OBJECT
 public:
 	static CScriptEngine *getInstance();
-	void executeScript ( QString script );
+	void executeScript ( QString script , QString nameSpace="" );
 	void executeCommand ( std::initializer_list<QString> list );
 	QString buildCommand ( std::initializer_list<QString> list );
 	boost::python::object getObject ( QString name );
 	CScriptEngine ();
 	~CScriptEngine();
+	template<typename ...T>
+	void callFunction ( QString nameSpace,QString name,T ... params ) {
+		main_namespace[nameSpace][name] ( params... );
+	}
 	template<typename T>
 	T createObject ( QString clas ) {
 		PY_UNSAFE (

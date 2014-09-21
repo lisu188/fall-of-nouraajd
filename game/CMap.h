@@ -69,6 +69,7 @@ public:
 	const CLootProvider *getLootProvider() const;
 	const CObjectHandler *getObjectHandler() const;
 	CGuiHandler *getGuiHandler() const;
+
 private:
 	std::set<CMapObject *> mapObjects;
 	void randomDir ( int *tab, int rule );
