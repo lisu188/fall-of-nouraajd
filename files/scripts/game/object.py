@@ -26,7 +26,7 @@ class Cave(CBuilding):
                     if j == 0 and i == 0:
                         continue;
                     self.getMap().addObjectByName(monster,Coords(location.x+i,location.y+j,location.z));
-            self.getMap().removeObjectByName(self.name);
+            self.getMap().removeObject(self);
 
     def onMove(self):
         chance=self.getNumericProperty("chance");
