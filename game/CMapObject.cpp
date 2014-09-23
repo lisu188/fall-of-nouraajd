@@ -106,14 +106,6 @@ void CMapObject::setNumber ( int i, int x ) {
 	this->QGraphicsItem::setPos ( px, py );
 }
 
-bool CMapObject::compare ( CMapObject *item ) {
-	int value =typeName.toLower().compare (  item->typeName.toLower() );
-	if ( value == 0 ) {
-		return this < item;
-	}
-	return value < 0;
-}
-
 void CMapObject::hoverEnterEvent ( QGraphicsSceneHoverEvent *event ) {
 //	statsView.setVisible ( true );
 //	statsView.setText ( tooltip );

@@ -67,7 +67,6 @@ protected:
 
 public:
 	void setNumber ( int i, int x );
-	virtual bool compare ( CMapObject *item );
 
 	QString getTypeName() const;
 	void setTypeName ( const QString &value );
