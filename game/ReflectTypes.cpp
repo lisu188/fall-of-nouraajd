@@ -37,4 +37,5 @@ REFLECT ( CTypeHandler )
 REFLECT ( PyTypeHandler )
 REFLECT ( CTextPanel )
 REFLECT ( CScroll )
+REFLECT ( CEffect )
 

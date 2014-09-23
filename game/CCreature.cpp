@@ -159,7 +159,7 @@ void CCreature::fight(CCreature *creature) {
   creature->fight(this);
 }
 
-void CCreature::addEffect(Effect *effect) {
+void CCreature::addEffect(CEffect *effect) {
   if (effect) {
     effects.insert(effect);
   }
@@ -173,7 +173,7 @@ bool CCreature::applyEffects() {
     }
   }
   bool stopped = false;
-  for (Effect *effect : effects) {
+  for (CEffect *effect : effects) {
     stopped = effect->apply(this) || stopped;
     if (!isAlive()) {
       if (CPlayer *player = dynamic_cast<CPlayer *>(effect->getCaster())) {

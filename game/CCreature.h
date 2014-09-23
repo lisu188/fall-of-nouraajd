@@ -10,7 +10,7 @@
 #include "Stats.h"
 
 class CInteraction;
-class Effect;
+class CEffect;
 class CWeapon;
 class CArmor;
 class CMap;
@@ -50,7 +50,7 @@ class CCreature : public CMapObject {
     virtual std::set<CItem *> *getLoot();
     virtual std::set<CItem *> getAllItems();
     void addAction(CInteraction *action);
-    void addEffect(Effect *effect);
+    void addEffect(CEffect *effect);
     int getMana();
     void setMana(int mana);
     void addMana(int i);
@@ -100,7 +100,7 @@ class CCreature : public CMapObject {
     std::set<CItem *> inventory;
     std::map<int, CItem *> equipped;
     std::set<CInteraction *> actions;
-    std::set<Effect *> effects;
+    std::set<CEffect *> effects;
     int gold;
     int exp;
     int level;

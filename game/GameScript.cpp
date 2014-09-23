@@ -102,7 +102,7 @@ public:
       CInteraction::performAction(first, second);
     }
   }
-  bool configureEffect(Effect *effect) override {
+  bool configureEffect(CEffect *effect) override {
     if (override call = get_override("configureEffect")) {
       return call(boost::ref(effect));
     }
@@ -111,7 +111,7 @@ public:
   void defaultPerformAction(CCreature *first, CCreature *second) {
     CInteraction::performAction(first, second);
   }
-  bool defaultConfigureEffect(Effect *effect) {
+  bool defaultConfigureEffect(CEffect *effect) {
     return CInteraction::configureEffect(effect);
   }
 };
@@ -231,13 +231,13 @@ BOOST_PYTHON_MODULE(_game) {
       .def("configureEffect", &CInteraction::configureEffect,
            &CInteractionWrapper::defaultConfigureEffect);
   scope().attr("Interaction") = scope().attr("CInteraction");
-  class_<Effect, boost::noncopyable>("Effect", no_init)
-      .def("getBonus", &Effect::getBonus, return_internal_reference<>())
-      .def("setBonus", &Effect::setBonus)
-      .def("getCaster", &Effect::getCaster, return_internal_reference<>())
-      .def("getVictim", &Effect::getVictim, return_internal_reference<>())
-      .def("getTimeLeft", &Effect::getTimeLeft)
-      .def("getTimeTotal", &Effect::getTimeTotal);
+  class_<CEffect, bases<CMapObject>, boost::noncopyable>("Effect", no_init)
+      .def("getBonus", &CEffect::getBonus, return_internal_reference<>())
+      .def("setBonus", &CEffect::setBonus)
+      .def("getCaster", &CEffect::getCaster, return_internal_reference<>())
+      .def("getVictim", &CEffect::getVictim, return_internal_reference<>())
+      .def("getTimeLeft", &CEffect::getTimeLeft)
+      .def("getTimeTotal", &CEffect::getTimeTotal);
   class_<CItem, bases<CMapObject>, boost::noncopyable>("CItem");
   class_<CArmor, bases<CItem>, boost::noncopyable>("CArmor");
   class_<CBelt, bases<CItem>, boost::noncopyable>("CBelt");
