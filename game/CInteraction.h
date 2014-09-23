@@ -7,7 +7,7 @@
 class CCreature;
 class QGraphicsSceneMouseEvent;
 class Stats;
-class Effect;
+class CEffect;
 
 class CInteraction : public CMapObject {
 	Q_OBJECT
@@ -17,11 +17,8 @@ public:
 	CInteraction();
 	CInteraction ( const CInteraction & );
 	void onAction ( CCreature *first, CCreature *second );
-	virtual void onEnter();
-	virtual void onMove();
-	virtual bool compare ( CMapObject *item );
 	virtual void performAction ( CCreature*, CCreature* );
-	virtual bool configureEffect ( Effect* );
+	virtual bool configureEffect ( CEffect* );
 
 	QString getEffect() const;
 	void setEffect ( const QString &value );
@@ -39,9 +36,12 @@ private:
 };
 
 
-class Effect {
+class CEffect :public CMapObject {
+	Q_OBJECT
 public:
-	Effect ( QString type, CCreature *caster ,CCreature * victim );
+	CEffect ( QString type, CCreature *caster ,CCreature * victim );
+	CEffect();
+	CEffect ( const CEffect& );
 	int getTimeLeft();
 	int getTimeTotal();
 	CCreature *getCaster();
@@ -53,21 +53,22 @@ public:
 
 private:
 	static std::map<
-	QString, std::function<bool ( Effect *effect, CCreature * ) > > effects;
+	QString, std::function<bool ( CEffect *effect, CCreature * ) > > effects;
 	int timeLeft;
 	int timeTotal;
-	Stats *bonus;
+	Stats *bonus=0;
 	CCreature *caster;
 	CCreature *victim;
 };
-bool StunEffect ( Effect *, CCreature * );
-bool EndlessPainEffect ( Effect *effect, CCreature *creature );
-bool AbyssalShadowsEffect ( Effect *effect, CCreature *creature );
-bool ArmorOfEndlessWinterEffect ( Effect *, CCreature *creature );
-bool MutilationEffect ( Effect *effect, CCreature *creature );
-bool LethalPoisonEffect ( Effect *effect, CCreature *creature );
-bool ChloroformEffect ( Effect *, CCreature *creature );
-bool BloodlashEffect ( Effect *effect, CCreature *creature );
-bool BarrierEffect ( Effect *, CCreature * );
+
+bool StunEffect ( CEffect *, CCreature * );
+bool EndlessPainEffect ( CEffect *effect, CCreature *creature );
+bool AbyssalShadowsEffect ( CEffect *effect, CCreature *creature );
+bool ArmorOfEndlessWinterEffect ( CEffect *, CCreature *creature );
+bool MutilationEffect ( CEffect *effect, CCreature *creature );
+bool LethalPoisonEffect ( CEffect *effect, CCreature *creature );
+bool ChloroformEffect ( CEffect *, CCreature *creature );
+bool BloodlashEffect ( CEffect *effect, CCreature *creature );
+bool BarrierEffect ( CEffect *, CCreature * );
 
 #endif // INTERACTION_H
