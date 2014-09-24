@@ -1,3 +1,5 @@
+#include "../resources/CResourcesHandler.h"
+#include <memory>
 // Copyright (C) 2026 Andrzej Lis
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Historical reconstruction; original bytes are unavailable. See the recovery
@@ -254,4 +256,87 @@ BOOST_PYTHON_MODULE(_game) {
       .def("onUse", &CPotion::onUse, &CPotionWrapper::defaultOnUse);
   class_<CTile, bases<CMapObject>, boost::noncopyable>("CTile").def(
       "onStep", &CTile::onStep);
+}
+
+namespace {
+PyObject *readScript(PyObject *, PyObject *arguments) {
+    const char *path;
+    if (!PyArg_ParseTuple(arguments, "s", &path)) {
+        return nullptr;
+    }
+    std::unique_ptr<QFile> file(CResourcesHandler::getInstance()->getResource(QString::fromUtf8(path)));
+    if (!file || !file->open(QIODevice::ReadOnly)) {
+        Py_RETURN_NONE;
+    }
+    QByteArray bytes = file->readAll();
+    return PyBytes_FromStringAndSize(bytes.constData(), bytes.size());
+}
+
+PyMethodDef loaderMethods[] = {
+    {"_readScript", readScript, METH_VARARGS, nullptr},
+    {nullptr, nullptr, 0, nullptr},
+};
+
+PyModuleDef loaderModule = {PyModuleDef_HEAD_INIT, "_core", nullptr, -1, loaderMethods};
+}
+
+PyMODINIT_FUNC PyInit__core() {
+    PyObject *module = PyModule_Create(&loaderModule);
+    if (!module) {
+        return nullptr;
+    }
+    PyObject *globals = PyModule_GetDict(module);
+    if (PyDict_SetItemString(globals, "__builtins__", PyEval_GetBuiltins()) < 0) {
+        Py_DECREF(module);
+        return nullptr;
+    }
+    PyObject *executed = PyRun_String(R"PY(
+import sys
+from types import ModuleType
+
+_fallback_finders = tuple(sys.meta_path)
+
+class ScriptLoader:
+    def find_module(self, name, path=None):
+        if self._script(name) is not None:
+            return self
+        for finder in _fallback_finders:
+            loader = finder.find_module(name, path)
+            if loader is not None:
+                return loader
+
+    def _script(self, name):
+        base = "scripts/" + name.replace(".", "/")
+        for path, package in ((base + "/__init__.py", True), (base + ".py", False)):
+            source = _readScript(path)
+            if source is not None:
+                return path, package, source
+
+    def load_module(self, name):
+        if name in sys.modules:
+            return sys.modules[name]
+        script = self._script(name)
+        if script is None:
+            raise ImportError(name)
+        path, package, source = script
+        module = ModuleType(name)
+        module.__file__ = path
+        module.__loader__ = self
+        module.__package__ = name if package else name.rpartition(".")[0]
+        if package:
+            module.__path__ = [path.rpartition("/")[0]]
+        sys.modules[name] = module
+        try:
+            exec(compile(source, path, "exec"), module.__dict__)
+        except BaseException:
+            del sys.modules[name]
+            raise
+        return module
+)PY", Py_file_input, globals, globals);
+    if (!executed) {
+        Py_DECREF(module);
+        return nullptr;
+    }
+    Py_DECREF(executed);
+    return module;
 }

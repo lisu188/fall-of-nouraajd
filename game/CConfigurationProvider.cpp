@@ -4,6 +4,7 @@
 #include <fstream>
 #include <mutex>
 #include <QJsonDocument>
+#include "../resources/CResourcesHandler.h"
 
 QJsonValue &CConfigurationProvider::getConfig ( QString path ) {
 	static std::mutex mutex;
@@ -27,9 +28,9 @@ QJsonValue &CConfigurationProvider::getConfiguration ( QString path ) {
 }
 
 void CConfigurationProvider::loadConfig ( QString path ) {
-	QFile file ( path );
-	if ( file.open ( QIODevice::ReadOnly ) ) {
-		QByteArray data = file.readAll();
+    QFile *file =CResourcesHandler::getInstance()->getResource(path);
+    if (file && file->open ( QIODevice::ReadOnly ) ) {
+        QByteArray data = file->readAll();
 		auto json=QJsonDocument::fromJson ( data );
 		QJsonValue value;
 		if ( json.isObject() ) {
@@ -38,7 +39,7 @@ void CConfigurationProvider::loadConfig ( QString path ) {
 			value=json.array();
 		}
 		this->insert ( std::pair<QString, QJsonValue > ( path,value ) );
-		file.close();
+        file->close();
 		qDebug() << "Loaded configuration:" << path << "\n";
 	} else {
 		qDebug ( ( "Cannot load file:"+ path ).toStdString().c_str() );
