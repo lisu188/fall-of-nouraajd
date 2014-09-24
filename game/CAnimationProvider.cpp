@@ -10,6 +10,7 @@
 #include "CConfigurationProvider.h"
 #include <mutex>
 #include "Util.h"
+#include "../resources/CResourcesHandler.h"
 
 CAnimation *CAnimationProvider::getAnim ( QString path ) {
 	static std::mutex mutex;
@@ -88,11 +89,15 @@ void CAnimationProvider::loadAnim ( QString path ) {
 }
 
 QPixmap *CAnimationProvider::getImage ( QString path ) {
-	QPixmap image ( path );
-	if ( !image.hasAlphaChannel() && !path.contains ( "tiles" ) ) {
-		image.setMask ( image.createHeuristicMask() );
+	QFile* file =CResourcesHandler::getInstance()->getResource ( path );
+	QPixmap image;
+	if ( file && file->open ( QIODevice::ReadOnly ) ) {
+		image.loadFromData ( file->readAll() );
 	}
 	if ( !image.isNull() ) {
+		if ( !image.hasAlphaChannel() && !path.contains ( "tiles" ) ) {
+			image.setMask ( image.createHeuristicMask() );
+		}
 		return new QPixmap ( image.scaled ( 50, 50, Qt::IgnoreAspectRatio,
 		                                    Qt::SmoothTransformation ) );
 	} else {

@@ -124,12 +124,7 @@ CEvent::CEvent ( const CEvent & ) {}
 
 void CEvent::onEnter() {
 	if ( this->isEnabled() ) {
-#ifdef WIN32
-         CScriptEngine::getInstance()->callFunction ( "events",this->objectName(),boost::cref ( this ) );
-#endif
-#ifdef UNIX
-           CScriptEngine::getInstance()->callFunction ( "events",this->objectName(),boost::ref ( this ) );
-#endif
+		CScriptEngine::getInstance()->callFunction ( "events",this->objectName(),boost::ref ( this ) );
 	}
 }
 
