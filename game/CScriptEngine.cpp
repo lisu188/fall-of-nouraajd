@@ -59,6 +59,10 @@ boost::python::object CScriptEngine::getObject ( QString name ) {
 return main_namespace[name.toStdString().c_str()]; )
 }
 
+boost::python::api::object CScriptEngine::getMainNamespace() {
+	return main_namespace;
+}
+
 void CScriptEngine::executeCommand ( std::initializer_list<QString> list ) {
 	PY_UNSAFE (
 	    executeScript ( buildCommand ( list ) ); )
@@ -67,10 +71,10 @@ void CScriptEngine::executeCommand ( std::initializer_list<QString> list ) {
 CScriptEngine::CScriptEngine () {
 	PY_UNSAFE (
 	    PyImport_AppendInittab ( "_game",PyInit__game );
-        PyImport_AppendInittab ( "_core",PyInit__core );
+	    PyImport_AppendInittab ( "_core",PyInit__core );
 	    Py_Initialize();
 	    main_module=boost::python::object ( boost::python::handle<> ( PyImport_ImportModule ( "__main__" ) ) ) ;
 	    main_namespace=main_module.attr ( "__dict__" );
 	    boost::python::incref ( main_module.ptr() );
-        executeScript(CResourcesHandler::getInstance()->getResourceAsString("scripts/start.py"));)
+	    executeScript ( CResourcesHandler::getInstance()->getResourceAsString ( "scripts/start.py" ) ); )
 }

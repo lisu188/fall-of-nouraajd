@@ -14,6 +14,7 @@ public:
 	void executeCommand ( std::initializer_list<QString> list );
 	QString buildCommand ( std::initializer_list<QString> list );
 	boost::python::object getObject ( QString name );
+	boost::python::object getMainNamespace();
 	CScriptEngine ();
 	~CScriptEngine();
 	template<typename ...T>
@@ -38,6 +39,5 @@ private:
 
 extern "C" {
 	PyObject* PyInit__game();
-    PyObject* PyInit__core();
+	PyObject* PyInit__core();
 }
-

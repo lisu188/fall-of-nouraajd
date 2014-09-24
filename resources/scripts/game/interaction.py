@@ -1,6 +1,6 @@
 from game import Damage
 from game import Interaction
-from random import randint
+from game import randint
 
 def Attack(first,second):
     dmg = first.getDmg()

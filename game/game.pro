@@ -71,11 +71,11 @@ unix:LIBS += -L../python -lpython
 win32:CONFIG(release,debug|release)LIBS += -L../python/release -lpython
 win32:CONFIG(debug,debug|release)LIBS += -L../python/debug -lpython
 
-unix:LIBS += -L../python -lresources
+unix:LIBS += -L../resources -lresources
 win32:CONFIG(release,debug|release)LIBS += -L../resources/release -lresources
 win32:CONFIG(debug,debug|release)LIBS += -L../resources/debug -lresources
 
-unix:LIBS += -L/lib64/ -lpython3.3m
+unix:LIBS += -L/usr/local/lib -lpython3.4m -ldl -fPIC -lutil
 win32:LIBS += -LC:\Python34\libs -lpython34
 
 FORMS += \
