@@ -20,13 +20,16 @@ QMAKE_CXXFLAGS_DEBUG *= -g3
 DEFINES += "QT_NO_KEYWORDS"
 
 win32{
-INCLUDEPATH += C:\boost-include
-DEPENDPATH += C:\boost-include
-INCLUDEPATH += C:\Python34\include
-DEPENDPATH += C:\Python34\include
+    INCLUDEPATH += C:\boost-include
+    DEPENDPATH += C:\boost-include
+    INCLUDEPATH += C:\Python34\include
+    DEPENDPATH += C:\Python34\include
+    DEFINES+=BOOST_NO_CXX11_DELETED_FUNCTIONS
+    DEFINES+=WIN
 }
 
 unix{
     INCLUDEPATH += /usr/include/python3.3m
     DEPENDPATH += /usr/include/python3.3m
+    DEFINES+=UNIX
 }

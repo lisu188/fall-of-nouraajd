@@ -1,0 +1,6 @@
+<RCC>
+    <qresource prefix="/">
+        <file>maps/map.json</file>
+        <file>maps/map.py</file>
+    </qresource>
+</RCC>

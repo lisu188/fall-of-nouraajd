@@ -1,0 +1,15 @@
+<RCC>
+    <qresource prefix="/">
+        <file>config/objects/armors.json</file>
+        <file>config/objects/buildings.json</file>
+        <file>config/objects/effects.json</file>
+        <file>config/objects/interactions.json</file>
+        <file>config/objects/items.json</file>
+        <file>config/objects/misc.json</file>
+        <file>config/objects/monsters.json</file>
+        <file>config/objects/potions.json</file>
+        <file>config/objects/tiles.json</file>
+        <file>config/objects/weapons.json</file>
+        <file>config/slots.json</file>
+    </qresource>
+</RCC>
