@@ -1,4 +1,4 @@
-import random
+from game import randint
 from game import CBuilding
 from game import Coords
 
@@ -33,7 +33,7 @@ class Cave(CBuilding):
         monsters=self.getNumericProperty("monsters");
         monster=self.getStringProperty("monster");
         enabled=self.getBoolProperty("enabled");
-        if enabled and monsters >0 and (random.randint(1,100)) <= chance:
+        if enabled and monsters >0 and (randint(1,100)) <= chance:
             location=self.getCoords()
             self.getMap().addObjectByName(monster,Coords(location.x,location.y,location.z));
             self.incProperty("monsters",-1);

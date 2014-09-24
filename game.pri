@@ -29,7 +29,9 @@ win32{
 }
 
 unix{
-    INCLUDEPATH += /usr/include/python3.3m
-    DEPENDPATH += /usr/include/python3.3m
+    INCLUDEPATH += /usr/local/include/python3.4m
+    DEPENDPATH += /usr/local/include/python3.4m
+    INCLUDEPATH += /usr/include
+    DEPENDPATH += /usr/include
     DEFINES+=UNIX
 }

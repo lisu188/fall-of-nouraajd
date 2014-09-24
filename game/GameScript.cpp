@@ -1,3 +1,5 @@
+#include <random>
+#include <stdexcept>
 #include "../resources/CResourcesHandler.h"
 #include <memory>
 // Copyright (C) 2026 Andrzej Lis
@@ -166,7 +168,18 @@ template <class T> static void registerObjectCallbacks(const char *name) {
 }
 
 // Under Python 2.7, Boost exports the init_game symbol called by CScriptEngine.
+namespace {
+int randint(int first, int last) {
+    if (first > last) {
+        throw std::invalid_argument("Invalid random integer bounds");
+    }
+    static thread_local std::mt19937 generator(std::random_device{}());
+    return std::uniform_int_distribution<int>(first, last)(generator);
+}
+}
+
 BOOST_PYTHON_MODULE(_game) {
+    def("randint", randint);
   to_python_converter<QString, QStringToPython>();
   QStringFromPython();
   class_<Coords>("Coords", init<int, int, int>())
