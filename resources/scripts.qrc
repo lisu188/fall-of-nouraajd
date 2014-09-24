@@ -1,0 +1,7 @@
+<RCC>
+    <qresource prefix="/">
+        <file>scripts/game/__init__.py</file>
+        <file>scripts/game/interaction.py</file>
+        <file>scripts/game/object.py</file>
+    </qresource>
+</RCC>
