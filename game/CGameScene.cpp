@@ -80,7 +80,7 @@ void CGameScene::playerMove ( int dirx, int diry ) {
 	if ( map->getGuiHandler()->isAnyPanelVisible() ) {
 		return;
 	}
-	map->move ( dirx, diry );
+	map->startMove ( dirx, diry );
 }
 
 CMap *CGameScene::getMap() const {

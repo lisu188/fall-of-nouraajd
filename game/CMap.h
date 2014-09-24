@@ -35,7 +35,7 @@ public:
 	virtual ~CMap();
 	bool addTile ( CTile *tile, int x, int y, int z );
 	void removeTile ( int x, int y, int z );
-	void move ( int x, int y );
+	void startMove ( int x, int y );
 	CTile *getTile ( int x, int y, int z );
 	Q_INVOKABLE bool canStep ( int x,int y,int z );
 	bool contains ( int x, int y, int z );
@@ -51,7 +51,7 @@ public:
 	int getEntryY();
 	int getEntryZ();
 	CMapObject *getObjectByName ( QString name );
-	Q_SLOT void moveCompleted();
+	Q_SLOT void endMove();
 	Q_INVOKABLE void ensureTile ( int i, int j );
 	std::map<int, std::pair<int, int> > getBounds();
 	int getCurrentXBound();

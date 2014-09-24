@@ -57,21 +57,14 @@ private:
 class CompletionListener : public QObject {
 	Q_OBJECT
 public:
-	static CompletionListener *getInstance() {
-		static CompletionListener instance;
-		return &instance;
-	}
-	void start() { started = true; }
-
-	void stop() { started = false; }
-
-	bool isCompleted() { return workers == 0; }
-
+	static CompletionListener *getInstance();
+	void start();
+	void stop();
+	bool isCompleted();
 	void run();
 	Q_SIGNAL void completed();
 	Q_SLOT void registerWorker();
 	Q_SLOT void deregisterWorker();
-
 private:
 	int workers;
 	bool started;
