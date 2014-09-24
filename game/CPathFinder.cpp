@@ -136,3 +136,13 @@ void PathFinderWorker::run() {
 bool CSmartPathFinder::canStep(CMap *map, int x, int y, int z) {
   return map->canStep(x, y, z);
 }
+
+
+CompletionListener *CompletionListener::getInstance() {
+  static CompletionListener instance;
+  return &instance;
+}
+
+void CompletionListener::start() { started = true; }
+void CompletionListener::stop() { started = false; }
+bool CompletionListener::isCompleted() { return workers == 0; }

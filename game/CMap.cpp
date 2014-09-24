@@ -25,7 +25,7 @@ CMap::CMap(CGameScene *scene, QString file)
   guiHandler = new CGuiHandler(this);
   lootProvider = new CLootProvider(this);
   connect(CompletionListener::getInstance(), SIGNAL(completed()), this,
-          SLOT(moveCompleted()));
+          SLOT(endMove()));
   scriptPath = file.left(file.lastIndexOf('.')) + ".py";
   QFile script(scriptPath);
   if (script.open(QIODevice::ReadOnly))
@@ -326,7 +326,7 @@ const CLootProvider *CMap::getLootProvider() const {
   return lootProvider;
 }
 
-void CMap::move(int x, int y) {
+void CMap::startMove(int x, int y) {
   CPlayer *player = getPlayer();
   if (!player ||
       !getTile(player->getPosX() + x, player->getPosY() + y, player->getPosZ())
@@ -341,7 +341,7 @@ void CMap::move(int x, int y) {
   }
   CompletionListener::getInstance()->run();
 }
-void CMap::moveCompleted() {
+void CMap::endMove() {
   CompletionListener::getInstance()->stop();
   CPlayer *player = getPlayer();
   if (!player) {
