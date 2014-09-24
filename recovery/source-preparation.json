@@ -1,6 +1,6 @@
 {
   "identity": {
-    "implementationSha256": "d48e57c6e773aa796a590a499b529d540b8c8ac0175e27b231fe79296190d2d0",
+    "implementationSha256": "3cc1c71cddb06d9f8b7aa587f17a868c1e909ed55a41ad612f71adfa1fcbeba7",
     "outputs": [
       {
         "after": {
@@ -29,11 +29,11 @@
       {
         "after": {
           "kind": "file",
-          "sha256": "263e2828b0a38343092589f048715de6a31a7306c8cbf58ba2fca560bd7cd001"
+          "sha256": "aa2b7d401ce1ccbd2a4e58e0d7252c863acce034bcc26666b9aedd9f57a2d921"
         },
         "before": {
           "kind": "file",
-          "sha256": "2349dd540d6dfefc3011726bd3a88fbf6d727a14dcacee0883f6ae37d366201d"
+          "sha256": "ce79f69a05e6fcb3506c31b7b7dbda0b624f11085f937d481018eab75009fe9b"
         },
         "path": "game/CScriptEngine.cpp",
         "purpose": "Link the split resource library and carry the reviewed Qt and Python build repairs"
@@ -41,17 +41,17 @@
       {
         "after": {
           "kind": "file",
-          "sha256": "c96fc2305498bcb5e7e109bc75f41b6b025491cdf94d4dbde5adcd78a3fd0599"
+          "sha256": "7c6e26f13b6cacdaaaff7ff41799239cfac9f9c446c492bf7fa4ffa37bfe3713"
         },
         "before": {
           "kind": "file",
-          "sha256": "c7c9902a08cfebf4a31f3a5395567826d9122148c9acb58de9ad1abaabe59587"
+          "sha256": "7a99b7631f1fd9498e317088154beeede88e83e4c78909563b6e2f4463dd8958"
         },
         "path": "game/game.pro",
         "purpose": "Link the split resource library and carry the reviewed Qt and Python build repairs"
       }
     ],
-    "resourcesTransition": {
+    "scriptLoader": {
       "files": {
         "game/CGameView.cpp": [
           "7b5a6488507d1a46a45ad558d603541516a237a70c18f74ccbbf1b5187dc91c7",
@@ -62,16 +62,16 @@
           "4a8462bec5abd35eb0530366897dceb934536c890a22f1a6b8593ca52d3b9e03"
         ],
         "game/CScriptEngine.cpp": [
-          "2349dd540d6dfefc3011726bd3a88fbf6d727a14dcacee0883f6ae37d366201d",
-          "263e2828b0a38343092589f048715de6a31a7306c8cbf58ba2fca560bd7cd001"
+          "ce79f69a05e6fcb3506c31b7b7dbda0b624f11085f937d481018eab75009fe9b",
+          "aa2b7d401ce1ccbd2a4e58e0d7252c863acce034bcc26666b9aedd9f57a2d921"
         ],
         "game/game.pro": [
-          "c7c9902a08cfebf4a31f3a5395567826d9122148c9acb58de9ad1abaabe59587",
-          "c96fc2305498bcb5e7e109bc75f41b6b025491cdf94d4dbde5adcd78a3fd0599"
+          "7a99b7631f1fd9498e317088154beeede88e83e4c78909563b6e2f4463dd8958",
+          "7c6e26f13b6cacdaaaff7ff41799239cfac9f9c446c492bf7fa4ffa37bfe3713"
         ]
       },
-      "replaySha256": "7fb0478d8d58034fde48e682798a484c43aa64049c384c647a7e4f72c5ac573f",
-      "sourceCommit": "9843aa0b06bc706fdaeee61f20339c29a9d3a6de"
+      "replaySha256": "37238cf98021ddd0e9f0143c186cef5b28332eb75f0c6b2da9b533ec5a8e9d44",
+      "sourceCommit": "161a04cd7a7b4e57e4170b925f32dfd5d14ee66c"
     }
   },
   "outputs": [
@@ -102,11 +102,11 @@
     {
       "after": {
         "kind": "file",
-        "sha256": "263e2828b0a38343092589f048715de6a31a7306c8cbf58ba2fca560bd7cd001"
+        "sha256": "aa2b7d401ce1ccbd2a4e58e0d7252c863acce034bcc26666b9aedd9f57a2d921"
       },
       "before": {
         "kind": "file",
-        "sha256": "2349dd540d6dfefc3011726bd3a88fbf6d727a14dcacee0883f6ae37d366201d"
+        "sha256": "ce79f69a05e6fcb3506c31b7b7dbda0b624f11085f937d481018eab75009fe9b"
       },
       "path": "game/CScriptEngine.cpp",
       "purpose": "Link the split resource library and carry the reviewed Qt and Python build repairs"
@@ -114,11 +114,11 @@
     {
       "after": {
         "kind": "file",
-        "sha256": "c96fc2305498bcb5e7e109bc75f41b6b025491cdf94d4dbde5adcd78a3fd0599"
+        "sha256": "7c6e26f13b6cacdaaaff7ff41799239cfac9f9c446c492bf7fa4ffa37bfe3713"
       },
       "before": {
         "kind": "file",
-        "sha256": "c7c9902a08cfebf4a31f3a5395567826d9122148c9acb58de9ad1abaabe59587"
+        "sha256": "7a99b7631f1fd9498e317088154beeede88e83e4c78909563b6e2f4463dd8958"
       },
       "path": "game/game.pro",
       "purpose": "Link the split resource library and carry the reviewed Qt and Python build repairs"
@@ -129,10 +129,10 @@
     {
       "command": [
         "history_source_prep.py",
-        "prepare-resources-transition"
+        "prepare-script-loader"
       ],
-      "log": "/tmp/nouraajd-282-final/verify/snapshot-sd2x0v72/preparation/resources-transition.log",
-      "name": "resourcesTransition",
+      "log": "/tmp/nouraajd-283-final/verify/snapshot-s9t7d9jv/preparation/script-loader.log",
+      "name": "scriptLoader",
       "returnCode": 0,
       "timedOut": false
     }

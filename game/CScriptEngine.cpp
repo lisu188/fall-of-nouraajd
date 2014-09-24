@@ -1,6 +1,8 @@
 #include "CScriptEngine.h"
 #include <QString>
 #include "CMap.h"
+#include "../resources/CResourcesHandler.h"
+#include "QFile"
 
 CScriptEngine::~CScriptEngine() {
 	PY_UNSAFE (
@@ -65,13 +67,10 @@ void CScriptEngine::executeCommand ( std::initializer_list<QString> list ) {
 CScriptEngine::CScriptEngine () {
 	PY_UNSAFE (
 	    PyImport_AppendInittab ( "_game",PyInit__game );
+        PyImport_AppendInittab ( "_core",PyInit__core );
 	    Py_Initialize();
 	    main_module=boost::python::object ( boost::python::handle<> ( PyImport_ImportModule ( "__main__" ) ) ) ;
 	    main_namespace=main_module.attr ( "__dict__" );
 	    boost::python::incref ( main_module.ptr() );
-	    executeScript ( "import sys" );
-	    executeScript ( "sys.dont_write_bytecode=True" );
-	    executeScript ( "sys.path.append('./scripts')" );
-	    executeScript ( "import game" );
-	)
+        executeScript(CResourcesHandler::getInstance()->getResourceAsString("scripts/start.py"));)
 }

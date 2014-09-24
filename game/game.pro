@@ -8,7 +8,9 @@ QT += core gui opengl widgets
 
 TARGET = game
 TEMPLATE = app
-
+win32{
+    CONFIG +=console
+}
 include(../game.pri)
 
 SOURCES += \
@@ -37,7 +39,7 @@ SOURCES += \
      Stats.cpp \
      CMain.cpp \
      CObjectHandler.cpp \
-    CGuiHandler.cpp
+     CGuiHandler.cpp
 
 HEADERS += \
      CReflection.h \
@@ -63,7 +65,7 @@ HEADERS += \
      Stats.h \
      Util.h \
      CObjectHandler.h \
-    CGuiHandler.h
+     CGuiHandler.h
 
 unix:LIBS += -L../python -lpython
 win32:CONFIG(release,debug|release)LIBS += -L../python/release -lpython

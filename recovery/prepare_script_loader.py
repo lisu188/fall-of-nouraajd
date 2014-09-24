@@ -1,9 +1,9 @@
-"""Linux build-copy repair for the split Qt resources project."""
+"""Linux build-copy repair for the first Qt resource-backed Python script loader."""
 
 import hashlib
 from pathlib import Path
 
-COMMITS = ("9843aa0b06bc706fdaeee61f20339c29a9d3a6de",)
+COMMITS = ("161a04cd7a7b4e57e4170b925f32dfd5d14ee66c",)
 PINS = {
     "game/CGameView.cpp": (
         "7b5a6488507d1a46a45ad558d603541516a237a70c18f74ccbbf1b5187dc91c7",
@@ -25,8 +25,8 @@ PINS = {
         ],
     ),
     "game/CScriptEngine.cpp": (
-        "2349dd540d6dfefc3011726bd3a88fbf6d727a14dcacee0883f6ae37d366201d",
-        "263e2828b0a38343092589f048715de6a31a7306c8cbf58ba2fca560bd7cd001",
+        "ce79f69a05e6fcb3506c31b7b7dbda0b624f11085f937d481018eab75009fe9b",
+        "aa2b7d401ce1ccbd2a4e58e0d7252c863acce034bcc26666b9aedd9f57a2d921",
         [
             (
                 b"\t    Py_Finalize(); )",
@@ -40,8 +40,8 @@ PINS = {
         [(b"boost::ref ( this )", b"boost::ref ( *this )")],
     ),
     "game/game.pro": (
-        "c7c9902a08cfebf4a31f3a5395567826d9122148c9acb58de9ad1abaabe59587",
-        "c96fc2305498bcb5e7e109bc75f41b6b025491cdf94d4dbde5adcd78a3fd0599",
+        "7a99b7631f1fd9498e317088154beeede88e83e4c78909563b6e2f4463dd8958",
+        "7c6e26f13b6cacdaaaff7ff41799239cfac9f9c446c492bf7fa4ffa37bfe3713",
         [(b"-L../python -lresources", b"-L../resources -lresources")],
     ),
 }
@@ -54,20 +54,20 @@ def digest(data):
 
 def apply(root, commit):
     if commit not in COMMITS:
-        raise ValueError("Unknown resources transition revision")
+        raise ValueError("Unknown script loader revision")
     pending = {}
     for name, (before, after, edits) in PINS.items():
         path = root / name
         if path.is_symlink() or path.resolve() != root.resolve() / name:
-            raise ValueError(f"Resources transition source traverses a symbolic link: {name}")
+            raise ValueError(f"Script loader source traverses a symbolic link: {name}")
         data = path.read_bytes()
         if digest(data) != before:
-            raise ValueError(f"Resources transition input differs from the reviewed revision: {name}")
+            raise ValueError(f"Script loader input differs from the reviewed revision: {name}")
         updated = data
         for old, new in edits:
             updated = updated.replace(old, new, 1)
         if digest(updated) != after:
-            raise ValueError(f"Resources transition output differs from the reviewed revision: {name}")
+            raise ValueError(f"Script loader output differs from the reviewed revision: {name}")
         pending[path] = updated
     for path, updated in pending.items():
         path.write_bytes(updated)
@@ -83,7 +83,7 @@ def identity(commit):
 
 def validate(commit, preparation):
     if commit not in COMMITS:
-        raise ValueError("Unknown resources transition revision")
+        raise ValueError("Unknown script loader revision")
     rows = [
         {
             "path": name,
@@ -94,8 +94,8 @@ def validate(commit, preparation):
         for name, (before, after, _) in sorted(PINS.items())
     ]
     actual = [row for row in preparation.get("outputs", []) if row.get("path") in PINS]
-    if preparation.get("identity", {}).get("resourcesTransition") != identity(commit) or actual != rows:
-        raise ValueError("Resources transition evidence differs from the pinned original and repaired bytes")
+    if preparation.get("identity", {}).get("scriptLoader") != identity(commit) or actual != rows:
+        raise ValueError("Script loader evidence differs from the pinned original and repaired bytes")
 
 
 if __name__ == "__main__":
@@ -103,6 +103,6 @@ if __name__ == "__main__":
 
     evidence = Path(__file__).resolve().parent
     record = json.loads((evidence / "source-preparation.json").read_bytes())
-    commit = record["identity"]["resourcesTransition"]["sourceCommit"]
+    commit = record["identity"]["scriptLoader"]["sourceCommit"]
     validate(commit, record)
     apply(evidence.parent, commit)

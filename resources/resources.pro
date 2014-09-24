@@ -14,5 +14,4 @@ RESOURCES += \
     maps.qrc \
     images.qrc
 
-OTHER_FILES += \
-    scripts/start.py
+OTHER_FILES +=
