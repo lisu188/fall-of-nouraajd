@@ -39,7 +39,8 @@ SOURCES += \
      Stats.cpp \
      CMain.cpp \
      CObjectHandler.cpp \
-     CGuiHandler.cpp
+     CGuiHandler.cpp \
+    CResourcesHandler.cpp
 
 HEADERS += \
      CReflection.h \
@@ -65,19 +66,22 @@ HEADERS += \
      Stats.h \
      Util.h \
      CObjectHandler.h \
-     CGuiHandler.h
+     CGuiHandler.h \
+    CResourcesHandler.h
 
 unix:LIBS += -L../python -lpython
 win32:CONFIG(release,debug|release)LIBS += -L../python/release -lpython
 win32:CONFIG(debug,debug|release)LIBS += -L../python/debug -lpython
-
-unix:LIBS += -L../resources -lresources
-win32:CONFIG(release,debug|release)LIBS += -L../resources/release -lresources
-win32:CONFIG(debug,debug|release)LIBS += -L../resources/debug -lresources
 
 unix:LIBS += -L/usr/local/lib -lpython3.4m -ldl -fPIC -lutil
 win32:LIBS += -LC:\Python34\libs -lpython34
 
 FORMS += \
      CMainWindow.ui
+
+RESOURCES += \
+    scripts.qrc \
+    maps.qrc \
+    images.qrc \
+    config.qrc
 

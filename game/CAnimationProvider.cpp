@@ -10,7 +10,7 @@
 #include "CConfigurationProvider.h"
 #include <mutex>
 #include "Util.h"
-#include "../resources/CResourcesHandler.h"
+#include "CResourcesHandler.h"
 
 CAnimation *CAnimationProvider::getAnim ( QString path ) {
 	static std::mutex mutex;

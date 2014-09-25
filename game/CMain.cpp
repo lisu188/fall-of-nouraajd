@@ -32,10 +32,6 @@ void messageHandler ( QtMsgType type, const QMessageLogContext &context,
 }
 
 int main ( int argc, char *argv[] ) {
-	Q_INIT_RESOURCE ( config );
-	Q_INIT_RESOURCE ( images );
-	Q_INIT_RESOURCE ( scripts );
-	Q_INIT_RESOURCE ( maps );
 	qInstallMessageHandler ( messageHandler );
 	QApplication a ( argc, argv );
 	QThreadPool::globalInstance()->setMaxThreadCount ( 16 );
