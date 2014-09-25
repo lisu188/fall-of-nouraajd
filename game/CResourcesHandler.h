@@ -8,6 +8,7 @@ public:
 	static CResourcesHandler *getInstance();
 	QFile *getResource ( QString path );
 	QString getResourceAsString ( QString path );
+	QString getPath ( QString path );
 private:
 	CResourcesHandler();
 };

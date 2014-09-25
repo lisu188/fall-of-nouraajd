@@ -1,7 +1,7 @@
 #include "CScriptEngine.h"
 #include <QString>
 #include "CMap.h"
-#include "../resources/CResourcesHandler.h"
+#include "CResourcesHandler.h"
 #include "QFile"
 
 CScriptEngine::~CScriptEngine() {
