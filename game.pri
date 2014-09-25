@@ -1,4 +1,4 @@
-QMAKE_CXXFLAGS += -std=c++11 "-include cmath"
+QMAKE_CXXFLAGS += -std=c++11 "-include cmath" -Wno-unused-local-typedefs -Wno-missing-field-initializers
 QMAKE_CXXFLAGS_RELEASE -= -Os
 QMAKE_CXXFLAGS_RELEASE -= -O
 QMAKE_CXXFLAGS_RELEASE -= -O1
@@ -24,8 +24,6 @@ win32{
     DEPENDPATH += C:\boost-include
     INCLUDEPATH += C:\Python34\include
     DEPENDPATH += C:\Python34\include
-    DEFINES+=BOOST_NO_CXX11_DELETED_FUNCTIONS
-    DEFINES+=WIN
 }
 
 unix{
@@ -33,5 +31,4 @@ unix{
     DEPENDPATH += /usr/local/include/python3.4m
     INCLUDEPATH += /usr/include
     DEPENDPATH += /usr/include
-    DEFINES+=UNIX
 }
