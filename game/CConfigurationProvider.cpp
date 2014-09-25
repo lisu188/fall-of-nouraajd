@@ -4,7 +4,7 @@
 #include <fstream>
 #include <mutex>
 #include <QJsonDocument>
-#include "../resources/CResourcesHandler.h"
+#include "CResourcesHandler.h"
 
 QJsonValue &CConfigurationProvider::getConfig ( QString path ) {
 	static std::mutex mutex;

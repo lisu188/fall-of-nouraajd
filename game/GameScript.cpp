@@ -1,6 +1,6 @@
 #include <random>
 #include <stdexcept>
-#include "../resources/CResourcesHandler.h"
+#include "CResourcesHandler.h"
 #include <memory>
 // Copyright (C) 2026 Andrzej Lis
 // SPDX-License-Identifier: GPL-3.0-or-later
