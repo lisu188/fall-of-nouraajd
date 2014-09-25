@@ -98,7 +98,7 @@ public:
 	CScroll ( const CScroll & );
 	QString getText() const;
 	void setText ( const QString &value );
-	virtual bool onUse ( CCreature *creature );
+    virtual bool onUse (CCreature *);
 	private
 :
 	QString text;
