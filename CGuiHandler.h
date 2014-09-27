@@ -9,7 +9,7 @@ public:
 	void showMessage ( QString msg );
 	AGamePanel *getPanel ( QString panel );
 	bool isAnyPanelVisible();
-	Q_SLOT void refresh();
+	void refresh();
 private:
 	std::map<QString,AGamePanel*> panels;
 	void initPanels();

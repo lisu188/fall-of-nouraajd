@@ -9,13 +9,18 @@ class CPlayerListView;
 class CPlayerEquippedView;
 class CCharPanel;
 
-class AGamePanel : public QGraphicsObject {
+class AGamePanel : public QObject, protected QGraphicsItem {
 	Q_OBJECT
+
+	friend class CGuiHandler;
 public:
 	AGamePanel();
 	AGamePanel ( const AGamePanel& );
 	virtual void showPanel ();
-	virtual void setUpPanel ( CGameView *view );
+	virtual void hidePanel();
+	virtual void update();
+	bool isShown();
+	virtual void setUpPanel ( CGameView * );
 	virtual QRectF boundingRect() const;
 	virtual void paint ( QPainter *, const QStyleOptionGraphicsItem *, QWidget * );
 
@@ -80,6 +85,7 @@ public:
 	                     QWidget * );
 	virtual void showPanel (  );
 	virtual void setUpPanel ( CGameView *view );
+	virtual void update();
 private:
 	CPlayerListView *playerInventoryView;
 	CPlayerEquippedView *playerEquippedView;
@@ -92,7 +98,7 @@ public:
 	CFightPanel();
 	CFightPanel ( const CFightPanel& );
 	static CCreature *selected;
-	void update();
+	virtual void update();
 	virtual QRectF boundingRect() const;
 	virtual void paint ( QPainter *painter, const QStyleOptionGraphicsItem *,
 	                     QWidget * );
@@ -113,7 +119,7 @@ public:
 	virtual void paint ( QPainter *painter, const QStyleOptionGraphicsItem *, QWidget * );
 	virtual void showPanel (  );
 	virtual void setUpPanel ( CGameView * view );
-	virtual void mousePressEvent ( QGraphicsSceneMouseEvent *event );
+	virtual void mousePressEvent ( QGraphicsSceneMouseEvent * );
 	QString getText() const;
 	void setText ( const QString &value );
 

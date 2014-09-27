@@ -12,6 +12,7 @@ CAnimatedObject::CAnimatedObject() {
 	this->moveToThread ( QApplication::instance()->thread() );
 	timer = 0;
 	setShapeMode ( QGraphicsPixmapItem::BoundingRectShape );
+	this->setAcceptHoverEvents ( true );
 }
 
 CAnimatedObject::~CAnimatedObject() {
@@ -45,7 +46,7 @@ void CAnimatedObject::animate() {
 	if ( !timer ) {
 		timer = new QTimer ( this );
 		timer->setSingleShot ( true );
-		connect ( timer, SIGNAL ( timeout() ), this, SLOT ( animate() ) );
+		connect ( timer,&QTimer:: timeout, this,&CAnimatedObject::animate );
 	}
 	if ( time == 0 ) {
 		time = rand() % 3000;

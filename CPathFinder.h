@@ -62,9 +62,9 @@ public:
 	void stop();
 	bool isCompleted();
 	void run();
+	void registerWorker();
+	void deregisterWorker();
 	Q_SIGNAL void completed();
-	Q_SLOT void registerWorker();
-	Q_SLOT void deregisterWorker();
 private:
 	int workers;
 	bool started;

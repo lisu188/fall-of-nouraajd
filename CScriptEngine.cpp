@@ -14,15 +14,12 @@ CScriptEngine *CScriptEngine::getInstance() {
 	return &instance;
 }
 
-void CScriptEngine::executeScript ( QString script,QString nameSpace ) {
+void CScriptEngine::executeScript ( QString script , boost::python::api::object nameSpace ) {
 	PY_UNSAFE (
-	if ( nameSpace=="" ) {
+	if ( nameSpace.is_none() ) {
 	boost::python::exec ( script.toStdString().append ( "\n" ).c_str(),main_namespace );
 	} else {
-		if ( !main_namespace.contains ( nameSpace.toStdString().c_str() ) ) {
-			executeScript ( nameSpace+"={}" );
-		}
-		boost::python::exec ( script.toStdString().c_str(),main_namespace[nameSpace.toStdString().c_str()] );
+		boost::python::exec ( script.toStdString().append ( "\n" ).c_str(),nameSpace );
 	} )
 }
 

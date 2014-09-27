@@ -3,19 +3,23 @@
 #include <QTimer>
 #include <QWidget>
 class CAnimation;
-class CAnimatedObject : public QObject, public QGraphicsPixmapItem {
+class CAnimatedObject : public QObject, protected QGraphicsPixmapItem {
 	Q_OBJECT
 	Q_PROPERTY ( QString animation READ getAnimation WRITE setAnimation USER true )
+
+	friend class CGameScene;
+	friend class CGameView;
+	friend class CPlayerListView;
+	friend class CItemSlot;
 public:
 	CAnimatedObject();
 	virtual ~CAnimatedObject();
 	QPointF mapToParent ( int a, int b );
 	void setAnimation ( QString path );
 	QString getAnimation();
-protected:
-	CAnimation *staticAnimation;
 private:
 	QString path;
 	QTimer *timer;
-	Q_SLOT void animate();
+	CAnimation *staticAnimation;
+	void animate();
 };

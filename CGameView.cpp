@@ -16,7 +16,6 @@ bool CGameView::init = false;
 
 void CGameView::start() {
 	scene->startGame ( mapName ,playerType );
-	scene->removeItem ( &loading );
 	CPlayer *player = scene->getPlayer();
 	playerStatsView.show();
 	playerStatsView.setPlayer ( player );
@@ -30,8 +29,6 @@ void CGameView::show() {
 	showNormal();
 }
 
-
-
 CGameView::CGameView ( QString mapName , QString playerType ) {
 	this->mapName=mapName;
 	this->playerType=playerType;
@@ -44,7 +41,7 @@ CGameView::CGameView ( QString mapName , QString playerType ) {
 	setScene ( scene );
 	timer.setSingleShot ( true );
 	timer.setInterval ( 250 );
-	connect ( &timer, SIGNAL ( timeout() ), this, SLOT ( start() ) );
+	connect ( &timer,&QTimer::timeout, this, &CGameView::start );
 	playerStatsView.setParent ( this );
 	timer.start();
 }
@@ -94,5 +91,9 @@ CGameScene *CGameView::getScene() const {
 void CGameView::setScene ( CGameScene *value ) {
 	QGraphicsView::setScene ( value );
 	scene = value;
+}
+
+void CGameView::centerOn ( CPlayer *player ) {
+	this->QGraphicsView::centerOn ( player );
 }
 

@@ -10,7 +10,7 @@ class CScriptEngine :public QObject {
 	Q_OBJECT
 public:
 	static CScriptEngine *getInstance();
-	void executeScript ( QString script , QString nameSpace="" );
+	void executeScript ( QString script ,boost::python::object nameSpace=boost::python::object() );
 	void executeCommand ( std::initializer_list<QString> list );
 	QString buildCommand ( std::initializer_list<QString> list );
 	boost::python::object getObject ( QString name );
