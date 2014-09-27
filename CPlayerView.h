@@ -17,7 +17,7 @@ public:
 	CPlayerEquippedView ( CGameView *view );
 	QRectF boundingRect() const;
 	void paint ( QPainter *, const QStyleOptionGraphicsItem *, QWidget * );
-	Q_SLOT void update();
+	void update();
 private:
 	std::list<CItemSlot *> itemSlots;
 };
@@ -27,7 +27,7 @@ class PlayerStatsView : public QWidget {
 public:
 	explicit PlayerStatsView();
 	void setPlayer ( CPlayer *value );
-
+	void update();
 protected:
 	void paintEvent ( QPaintEvent * );
 
@@ -50,7 +50,7 @@ public:
 	virtual void paint ( QPainter *painter, const QStyleOptionGraphicsItem *, QWidget * );
 	void updatePosition ( int i );
 	void setXY ( int x, int y );
-	Q_SLOT void update();
+	void update();
 private:
 	unsigned int curPosition;
 	unsigned int x, y;

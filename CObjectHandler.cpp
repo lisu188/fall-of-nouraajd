@@ -3,6 +3,7 @@
 #include "CCreature.h"
 #include "CInteraction.h"
 #include "CMap.h"
+#include "CResourcesHandler.h"
 #include "CObjectHandler.h"
 #include "Stats.h"
 #include <QDebug>
@@ -11,11 +12,14 @@
 #include <QMetaProperty>
 
 CObjectHandler::CObjectHandler(CMap *map) : QObject(map), map(map) {
-  QDirIterator files("config/objects", QStringList() << "*.json", QDir::Files,
-                     QDirIterator::Subdirectories);
-  while (files.hasNext()) {
-    QJsonObject config =
-        CConfigurationProvider::getConfig(files.next()).toObject();
+  QSet<QString> files;
+  for (QString path : CResourcesHandler::getInstance()->getFiles(CONFIG)) {
+    if (path.endsWith(".json")) {
+      files.insert(path.startsWith(":/") ? path.mid(2) : path);
+    }
+  }
+  for (const auto &path : files) {
+    QJsonObject config = CConfigurationProvider::getConfig(path).toObject();
     for (auto it = config.begin(); it != config.end(); ++it) {
       if (objectConfig.contains(it.key())) {
         qFatal("Duplicate object configuration %s", qPrintable(it.key()));
@@ -43,7 +47,7 @@ CMapObject *CObjectHandler::_createMapObject(QString type) const {
     class_name.prepend("C");
   }
   if (class_name.startsWith("game.interaction.")) {
-    PY_UNSAFE(boost::python::object definition =
+    boost::python::object definition =
                   CScriptEngine::getInstance()
                       ->getObject("game")
                       .attr("interaction")
@@ -51,7 +55,7 @@ CMapObject *CObjectHandler::_createMapObject(QString type) const {
               if (PyFunction_Check(definition.ptr())) {
                 class_name = "CInteraction";
                 handler_name = "CTypeHandler";
-              })
+              }
   }
   ATypeHandler *type_handler = ATypeHandler::getHandler(handler_name);
   if (!type_handler) {

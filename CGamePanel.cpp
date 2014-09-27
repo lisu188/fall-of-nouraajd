@@ -20,6 +20,9 @@ void AGamePanel::setUpPanel(CGameView *view) {
   if (scene() != view->getScene())
     view->getScene()->addItem(this);
 }
+void AGamePanel::hidePanel() { setVisible(false); }
+bool AGamePanel::isShown() { return isVisible(); }
+void AGamePanel::update() { QGraphicsItem::update(); }
 void AGamePanel::showPanel() {
   if (!view) return;
   setPos(view->mapToScene(20, 100));
@@ -57,10 +60,11 @@ void CCharPanel::setUpPanel(CGameView *view) {
   playerEquippedView = new CPlayerEquippedView(view);
   playerEquippedView->setParentItem(this);
   playerEquippedView->setPos(200, 0);
-  connect(player, SIGNAL(inventoryChanged()), playerInventoryView,
-          SLOT(update()));
-  connect(player, SIGNAL(equippedChanged()), playerEquippedView,
-          SLOT(update()));
+}
+void CCharPanel::update() {
+  if (playerInventoryView) playerInventoryView->update();
+  if (playerEquippedView) playerEquippedView->update();
+  AGamePanel::update();
 }
 void CCharPanel::showPanel() {
   AGamePanel::showPanel();
@@ -81,7 +85,6 @@ void CFightPanel::setUpPanel(CGameView *view) {
   playerSkillsView->setXY(4, 1);
   playerSkillsView->setParentItem(this);
   playerSkillsView->setPos(0, 50);
-  connect(player, SIGNAL(skillsChanged()), playerSkillsView, SLOT(update()));
 }
 void CFightPanel::showPanel() {
   if (!view) return;
@@ -91,7 +94,10 @@ void CFightPanel::showPanel() {
   setVisible(true);
   update();
 }
-void CFightPanel::update() { QGraphicsObject::update(); }
+void CFightPanel::update() {
+  if (playerSkillsView) playerSkillsView->update();
+  AGamePanel::update();
+}
 void CFightPanel::paint(QPainter *painter, const QStyleOptionGraphicsItem *,
                         QWidget *) {
   painter->fillRect(boundingRect(), QColor(30, 30, 30, 230));

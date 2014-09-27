@@ -205,6 +205,8 @@ CScrollObject::CScrollObject(CPlayerListView *stats, bool isRight) {
   setParentItem(stats);
 }
 
+void PlayerStatsView::update() { QWidget::update(); }
+
 void CScrollObject::setVisible(bool visible) {
   if (visible && this->scene() != stats->scene()) {
     stats->scene()->addItem(this);
@@ -247,7 +249,7 @@ void CItemSlot::paint(QPainter *painter, const QStyleOptionGraphicsItem *,
 
 bool CItemSlot::checkType(int slot, CItem *widget) {
   if (widget) {
-    QJsonArray config = CConfigurationProvider::getConfig("config/slots.json")
+    QJsonArray config = CConfigurationProvider::getConfig("slots.json")
                             .toObject()[QString::number(slot)]
                             .toObject()["types"]
                             .toArray();
