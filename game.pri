@@ -1,4 +1,4 @@
-QMAKE_CXXFLAGS += -std=c++11 "-include cmath" -Wno-unused-local-typedefs -Wno-missing-field-initializers
+QMAKE_CXXFLAGS += -std=c++11 "-include cmath" -Wno-unused-local-typedefs -Wno-missing-field-initializers -Wno-type-limits
 QMAKE_CXXFLAGS_RELEASE -= -Os
 QMAKE_CXXFLAGS_RELEASE -= -O
 QMAKE_CXXFLAGS_RELEASE -= -O1

@@ -16,6 +16,7 @@
 #include "CMapObject.h"
 #include "Util.h"
 #include <mutex>
+#include <boost/python.hpp>
 
 class CGameScene;
 class CTile;
@@ -28,20 +29,18 @@ class CGuiHandler;
 
 class CMap : public QObject,
 	private std::unordered_map<Coords, CTile*, CoordsHasher> {
-	friend class std::unique_lock<CMap>;
 	Q_OBJECT
 public:
-	CMap ( CGameScene *scene, QString file );
+	CMap ( CGameScene *scene, QString mapPath );
 	virtual ~CMap();
 	bool addTile ( CTile *tile, int x, int y, int z );
 	void removeTile ( int x, int y, int z );
 	void startMove ( int x, int y );
 	CTile *getTile ( int x, int y, int z );
-	Q_INVOKABLE bool canStep ( int x,int y,int z );
 	bool contains ( int x, int y, int z );
 	void addObject ( CMapObject *mapObject );
 	void removeObject ( CMapObject *mapObject );
-	Q_SLOT void ensureSize();
+	void ensureSize();
 	CGameScene *getScene() const;
 	void mapUp();
 	void mapDown();
@@ -51,8 +50,8 @@ public:
 	int getEntryY();
 	int getEntryZ();
 	CMapObject *getObjectByName ( QString name );
-	Q_SLOT void endMove();
-	Q_INVOKABLE void ensureTile ( int i, int j );
+	void endMove();
+	void ensureTile ( int i, int j );
 	std::map<int, std::pair<int, int> > getBounds();
 	int getCurrentXBound();
 	int getCurrentYBound();
@@ -63,13 +62,14 @@ public:
 	CPlayer *getPlayer();
 	void loadingComplete();
 	void moveTile ( CTile* tile,int x, int y, int z );
-	void loadMap ( const QJsonObject &map );
+	void loadMap ( QString mapPath );
 	void handleTileLayer ( const QJsonObject& tileset,const QJsonObject& layer );
 	void handleObjectLayer ( const QJsonObject &layer );
 	const CLootProvider *getLootProvider() const;
 	const CObjectHandler *getObjectHandler() const;
 	CGuiHandler *getGuiHandler() const;
-
+	boost::python::dict getEvents() const;
+	Q_INVOKABLE bool canStep ( int x,int y,int z );
 private:
 	std::set<CMapObject *> mapObjects;
 	void randomDir ( int *tab, int rule );
@@ -81,6 +81,7 @@ private:
 	const CLootProvider *lootProvider;
 	const CObjectHandler *handler;
 	CGuiHandler *guiHandler;
-	QString scriptPath;
+	QString mapPath;
+	boost::python::dict events;
 };
 

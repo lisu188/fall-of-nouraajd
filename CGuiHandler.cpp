@@ -20,7 +20,7 @@ AGamePanel *CGuiHandler::getPanel ( QString panel ) {
 
 bool CGuiHandler::isAnyPanelVisible() {
 	for ( auto it=panels.begin(); it!=panels.end(); it++ ) {
-		if ( ( *it ).second->isVisible() ) {
+		if ( ( *it ).second->isShown() ) {
 			return true;
 		}
 	}
@@ -30,9 +30,7 @@ bool CGuiHandler::isAnyPanelVisible() {
 void CGuiHandler::refresh() {
 	for ( auto it=panels.begin(); it!=panels.end(); it++ ) {
 		AGamePanel *panel= ( *it ).second;
-		bool vis=panel->isVisible();
-		panel->showPanel ();
-		panel->setVisible ( vis );
+		panel->update();
 	}
 }
 
@@ -42,6 +40,6 @@ void CGuiHandler::initPanels() {
 		panels[ ( *it )->metaObject()->className()]=*it;
 		map->getScene()->addItem ( *it );
 		( *it )->setUpPanel ( map->getScene()->getView() );
-		( *it )->setVisible ( false );
+		( *it )->hidePanel ( );
 	}
 }

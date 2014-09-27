@@ -13,24 +13,21 @@
 #include <QJsonArray>
 #include <QFile>
 #include "CScriptEngine.h"
+#include "CResourcesHandler.h"
 #include <QThreadPool>
 #include <algorithm>
 #include <cstdlib>
 
-CMap::CMap(CGameScene *scene, QString file)
+CMap::CMap(CGameScene *scene, QString mapPath)
     : QObject(scene), scene(scene), entryx(0), entryz(0), entryy(0),
-      lootProvider(nullptr), handler(nullptr) {
+      lootProvider(nullptr), handler(nullptr), mapPath(mapPath),
+      events((CScriptEngine::getInstance(), boost::python::dict())) {
   scene->setMap(this);
   handler = new CObjectHandler(this);
   guiHandler = new CGuiHandler(this);
   lootProvider = new CLootProvider(this);
-  connect(CompletionListener::getInstance(), SIGNAL(completed()), this,
-          SLOT(endMove()));
-  scriptPath = file.left(file.lastIndexOf('.')) + ".py";
-  QFile script(scriptPath);
-  if (script.open(QIODevice::ReadOnly))
-    CScriptEngine::getInstance()->executeScript(QString::fromUtf8(script.readAll()), "events");
-  loadMap(CConfigurationProvider::getConfig(file).toObject());
+  connect(CompletionListener::getInstance(), &CompletionListener::completed, this, &CMap::endMove);
+  loadMap(mapPath);
 }
 
 CMap::~CMap() {
@@ -56,7 +53,12 @@ int mapInteger(const QJsonValue &value, int fallback = 0) {
                                                : value.toVariant().toInt();
 }
 } // namespace
-void CMap::loadMap(const QJsonObject &map) {
+boost::python::dict CMap::getEvents() const { return events; }
+void CMap::loadMap(QString mapPath) {
+  const auto script = CResourcesHandler::getInstance()->getResourceAsString(mapPath + "/map.py");
+  if (!script.isEmpty())
+    CScriptEngine::getInstance()->executeScript(script, events);
+  const auto map = CConfigurationProvider::getConfig(mapPath + "/map.json").toObject();
   if (map["map"].isObject() && map["state"].isObject()) {
     const QJsonObject terrain = map["map"].toObject();
     const QJsonObject defaults = terrain["default"].toObject();
@@ -273,9 +275,7 @@ void CMap::removeObject(CMapObject *object) {
     return;
   }
   object->onDestroy();
-  if (object->scene()) {
-    object->scene()->removeItem(object);
-  }
+  object->removeFromGame();
 }
 std::set<CMapObject *> *CMap::getObjects() { return &mapObjects; }
 CMapObject *CMap::getObjectByName(QString name) {

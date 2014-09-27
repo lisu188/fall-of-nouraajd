@@ -18,7 +18,7 @@
 
 namespace {
 QJsonObject creatureProperties(QString name) {
-  return CConfigurationProvider::getConfig("config/objects/monsters.json")
+  return CConfigurationProvider::getConfig("config/monsters.json")
       .toObject()[name]
       .toObject()["properties"]
       .toObject();
@@ -38,7 +38,7 @@ CCreature::CCreature()
       hpMax(0), hp(0) {
   setZValue(2);
   QJsonObject slot_config =
-      CConfigurationProvider::getConfig("config/slots.json").toObject();
+      CConfigurationProvider::getConfig("slots.json").toObject();
   for (auto it = slot_config.begin(); it != slot_config.end(); ++it) {
     equipped[it.key().toInt()] = nullptr;
   }
@@ -63,7 +63,7 @@ CCreature::~CCreature() { actions.clear(); }
 
 CCreature *CCreature::createCreature(QString name) {
   QJsonObject config =
-      CConfigurationProvider::getConfig("config/objects/monsters.json")
+      CConfigurationProvider::getConfig("config/monsters.json")
           .toObject()[name]
           .toObject();
   CCreature *creature = dynamic_cast<CCreature *>(
@@ -555,7 +555,7 @@ void CPlayer::removeFromFightList(CCreature *creature) {
   creature->removeFromGame();
   getFightList()->remove(creature);
   if (getFightList()->size() == 0) {
-    map->getGuiHandler()->getPanel("CFightPanel")->setVisible(false);
+    map->getGuiHandler()->getPanel("CFightPanel")->hidePanel();
     CFightPanel::selected = 0;
   } else {
     CFightPanel::selected = getFightList()->front();

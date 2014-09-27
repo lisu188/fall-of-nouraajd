@@ -6,7 +6,6 @@
 #include "CScriptEngine.h"
 
 CMapObject::CMapObject() {
-	this->setAcceptHoverEvents ( true );
 //	statsView.setParentItem ( this );
 //	statsView.setVisible ( true );
 //	statsView.setText ( " " );
@@ -124,7 +123,9 @@ CEvent::CEvent ( const CEvent & ) {}
 
 void CEvent::onEnter() {
 	if ( this->isEnabled() ) {
-		CScriptEngine::getInstance()->callFunction ( "events",this->objectName(),boost::ref ( *this ) );
+		PY_UNSAFE (
+		    map->getEvents() [this->objectName().toStdString().c_str()] ( boost::ref ( this ) );
+		)
 	}
 }
 

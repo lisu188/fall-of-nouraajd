@@ -119,10 +119,10 @@ PathFinderWorker::PathFinderWorker(CCreature *first, CCreature *second,
                                    APathFinder *finder)
     : first(first), second(second), finder(finder) {
   setAutoDelete(true);
-  connect(this, SIGNAL(started()), CompletionListener::getInstance(),
-          SLOT(registerWorker()));
-  connect(this, SIGNAL(ended()), CompletionListener::getInstance(),
-          SLOT(deregisterWorker()));
+  connect(this, &PathFinderWorker::started, CompletionListener::getInstance(),
+          &CompletionListener::registerWorker);
+  connect(this, &PathFinderWorker::ended, CompletionListener::getInstance(),
+          &CompletionListener::deregisterWorker);
   connect(this, SIGNAL(completed(int, int)), first, SLOT(move(int, int)));
   Q_EMIT started();
 }

@@ -1,5 +1,5 @@
-#ifndef GAMEVIEW_H
-#define GAMEVIEW_H
+#pragma once
+
 #include "CGameScene.h"
 #include "CPlayerView.h"
 #include <QGraphicsView>
@@ -7,30 +7,33 @@
 #include "CPlayerView.h"
 #include "CGamePanel.h"
 
-
+class CPlayer;
 class CGameView : public QGraphicsView {
 	Q_OBJECT
 public:
 	CGameView ( QString mapName,QString playerType );
 	virtual ~CGameView();
 
-	Q_SLOT void start();
+	void start();
 	Q_INVOKABLE void show();
+
 	CGameScene *getScene() const;
 	void setScene ( CGameScene *value );
+
+	void centerOn ( CPlayer *player );
+
 protected:
-	void mouseDoubleClickEvent ( QMouseEvent *e );
-	void resizeEvent ( QResizeEvent *event );
+	virtual void mouseDoubleClickEvent ( QMouseEvent *e );
+	virtual void resizeEvent ( QResizeEvent *event );
 	virtual void wheelEvent ( QWheelEvent * );
 	virtual void dragMoveEvent ( QDragMoveEvent *e );
 private:
 	CGameScene *scene;
 	static bool init;
 	QTimer timer;
-	QGraphicsPixmapItem loading;
 	PlayerStatsView playerStatsView;
 	QString mapName;
 	QString playerType;
 
 };
-#endif // GAMEVIEW_H
+
