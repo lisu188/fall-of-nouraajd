@@ -123,9 +123,7 @@ CEvent::CEvent ( const CEvent & ) {}
 
 void CEvent::onEnter() {
 	if ( this->isEnabled() ) {
-		PY_UNSAFE (
-		    map->getEvents() [this->objectName().toStdString().c_str()] ( boost::ref ( this ) );
-		)
+		map->getEvents() [this->objectName().toStdString().c_str()] ( boost::ref ( this ) );
 	}
 }
 
