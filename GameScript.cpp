@@ -252,7 +252,10 @@ BOOST_PYTHON_MODULE(_game) {
       .def("getCaster", &CEffect::getCaster, return_internal_reference<>())
       .def("getVictim", &CEffect::getVictim, return_internal_reference<>())
       .def("getTimeLeft", &CEffect::getTimeLeft)
-      .def("getTimeTotal", &CEffect::getTimeTotal);
+      .def("getTimeTotal", &CEffect::getTimeTotal)
+      .def("getDuration", &CEffect::getDuration)
+      .def("setDuration", &CEffect::setDuration)
+      .def("onEffect", &CEffect::onEffect);
   class_<CItem, bases<CMapObject>, boost::noncopyable>("CItem");
   class_<CArmor, bases<CItem>, boost::noncopyable>("CArmor");
   class_<CBelt, bases<CItem>, boost::noncopyable>("CBelt");
