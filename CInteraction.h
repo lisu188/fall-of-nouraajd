@@ -38,7 +38,7 @@ private:
 class CEffect :public CMapObject {
 	Q_OBJECT
 	Q_PROPERTY ( int duration READ getDuration WRITE setDuration )
-    Q_PROPERTY(bool buff READ isBuff WRITE setBuff)
+	Q_PROPERTY ( bool buff READ isBuff WRITE setBuff )
 public:
 	CEffect();
 	CEffect ( const CEffect& );
@@ -49,13 +49,13 @@ public:
 	void setBonus ( Stats *value );
 	int getDuration();
 	void setDuration ( int duration );
-    virtual bool onEffect();
-    bool isBuff() const;
-    void setBuff(bool value);
-    CCreature *getCaster() ;
-    void setCaster(CCreature *value);
-    CCreature *getVictim() ;
-    void setVictim(CCreature *value);
+	virtual bool onEffect();
+	bool isBuff() const;
+	void setBuff ( bool value );
+	CCreature *getCaster() ;
+	void setCaster ( CCreature *value );
+	CCreature *getVictim() ;
+	void setVictim ( CCreature *value );
 private:
 	int timeLeft=0;
 	int timeTotal=0;
@@ -63,6 +63,6 @@ private:
 	CCreature *caster=0;
 	CCreature *victim=0;
 	int duration=0;
-    bool buff=false;
+	bool buff=false;
 };
 

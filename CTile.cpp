@@ -19,8 +19,8 @@ CTile::~CTile() {
 }
 
 void CTile::moveTo ( int x, int y, int z ) {
-    if (  getMap() ) {
-        getMap()->moveTile ( this,x,y, z );
+	if (  getMap() ) {
+		getMap()->moveTile ( this,x,y, z );
 		setXYZ ( x, y, z );
 	}
 }
@@ -28,13 +28,13 @@ void CTile::moveTo ( int x, int y, int z ) {
 Coords CTile::getCoords() { return Coords ( posx, posy, posz ); }
 
 void CTile::onStep() {
-    if ( steps.find ( getTypeName() ) != steps.end() ) {
-        steps[getTypeName()]();
+	if ( steps.find ( getTypeName() ) != steps.end() ) {
+		steps[getTypeName()]();
 	}
 }
 
 bool CTile::canStep() const {
-    return step;
+	return step;
 }
 
 void CTile::setCanStep ( bool canStep ) {
@@ -44,7 +44,7 @@ void CTile::setCanStep ( bool canStep ) {
 void CTile::addToScene ( CGameScene *scene ) {
 	scene->addItem ( this );
 	setPos ( posx *50, posy *50 );
-    setMap (  scene ->getMap() );
+	setMap (  scene ->getMap() );
 }
 
 void CTile::removeFromScene ( CGameScene *scene ) { scene->removeItem ( this ); }
