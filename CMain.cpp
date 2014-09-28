@@ -5,6 +5,7 @@
 #include <mutex>
 #include "CMainWindow.h"
 #include "CGameView.h"
+#include "CScriptEngine.h"
 #include <stdio.h>
 
 void messageHandler ( QtMsgType type, const QMessageLogContext &context,
@@ -31,7 +32,13 @@ void messageHandler ( QtMsgType type, const QMessageLogContext &context,
 	}
 }
 
+void terminateHandler () {
+	PyErr_Print();
+	abort();
+}
+
 int main ( int argc, char *argv[] ) {
+	std::set_terminate ( terminateHandler );
 	qInstallMessageHandler ( messageHandler );
 	QApplication a ( argc, argv );
 	QThreadPool::globalInstance()->setMaxThreadCount ( 16 );

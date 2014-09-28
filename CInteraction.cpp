@@ -11,7 +11,7 @@
 namespace {
 QJsonObject effectConfiguration(QString type) {
   QJsonObject effects =
-      CConfigurationProvider::getConfig("config/objects/effects.json")
+      CConfigurationProvider::getConfig("config/effects.json")
           .toObject();
   if (type == "StunEffect" && !effects.contains(type)) {
     type = "Stun";
@@ -46,12 +46,12 @@ void CInteraction::onAction(CCreature *first, CCreature *second) {
   }
 }
 void CInteraction::performAction(CCreature *first, CCreature *second) {
-  PY_UNSAFE(boost::python::object function =
+  boost::python::object function =
                 CScriptEngine::getInstance()
                     ->getObject("game")
                     .attr("interaction")
                     .attr(typeName.toStdString().c_str());
-            function(boost::python::ptr(first), boost::python::ptr(second));)
+            function(boost::python::ptr(first), boost::python::ptr(second));
 }
 bool CInteraction::configureEffect(CEffect *) { return true; }
 void CInteraction::mousePressEvent(QGraphicsSceneMouseEvent *event) {
@@ -72,7 +72,7 @@ void CInteraction::setManaCost(int value) {
 QString CInteraction::getEffect() const { return effect; }
 void CInteraction::setEffect(const QString &value) { effect = value; }
 
-std::map<QString, std::function<bool(CEffect *, CCreature *)>> CEffect::effects =
+std::map<QString, std::function<bool(CEffect *)>> CEffect::effects =
     {{"Stun", StunEffect},
      {"StunEffect", StunEffect},
      {"EndlessPainEffect", EndlessPainEffect},
@@ -90,6 +90,7 @@ CEffect::CEffect(const CEffect &effect) : CEffect() {
   timeTotal = effect.timeTotal;
   caster = effect.caster;
   victim = effect.victim;
+  duration = effect.duration;
 }
 
 CEffect::CEffect(QString type, CCreature *caster, CCreature *victim)
@@ -100,8 +101,14 @@ CEffect::CEffect(QString type, CCreature *caster, CCreature *victim)
   if (effects.find(type) == effects.end()) {
     qFatal("Unknown historical effect callback");
   }
-  timeLeft = timeTotal = effectConfiguration(type)["duration"].toInt();
+  setDuration(effectConfiguration(type)["duration"].toInt());
 }
+int CEffect::getDuration() { return duration; }
+void CEffect::setDuration(int value) {
+  duration = value;
+  timeLeft = timeTotal = value;
+}
+void CEffect::onEffect() {}
 int CEffect::getTimeLeft() { return timeLeft; }
 int CEffect::getTimeTotal() { return timeTotal; }
 CCreature *CEffect::getCaster() { return caster; }
@@ -122,38 +129,46 @@ bool CEffect::apply(CCreature *creature) {
     }
     return false;
   }
-  return effects.at(className)(this, creature);
+  onEffect();
+  return effects.at(className)(this);
 }
 
-bool StunEffect(CEffect *, CCreature *) { return true; }
-bool EndlessPainEffect(CEffect *effect, CCreature *creature) {
+bool StunEffect(CEffect *) { return true; }
+bool EndlessPainEffect(CEffect *effect) {
+  CCreature *creature = effect->getVictim();
   creature->hurt(effect->getCaster()->getDmg() * 15 / 100);
   return true;
 }
-bool AbyssalShadowsEffect(CEffect *effect, CCreature *creature) {
+bool AbyssalShadowsEffect(CEffect *effect) {
+  CCreature *creature = effect->getVictim();
   Damage damage;
   int amount = effect->getCaster()->getDmg();
   damage.setShadow(effect->getTimeLeft() > 1 ? amount * 45 / 100 : amount);
   creature->hurt(damage);
   return false;
 }
-bool ArmorOfEndlessWinterEffect(CEffect *, CCreature *creature) {
+bool ArmorOfEndlessWinterEffect(CEffect *effect) {
+  CCreature *creature = effect->getVictim();
   creature->healProc(20);
   return false;
 }
-bool MutilationEffect(CEffect *effect, CCreature *creature) {
+bool MutilationEffect(CEffect *effect) {
+  CCreature *creature = effect->getVictim();
   creature->hurt(effect->getCaster()->getStats()->getAgility() / 4);
   return false;
 }
-bool LethalPoisonEffect(CEffect *effect, CCreature *creature) {
+bool LethalPoisonEffect(CEffect *effect) {
+  CCreature *creature = effect->getVictim();
   creature->hurt(effect->getCaster()->getDmg() * 4 / 6);
   return false;
 }
-bool ChloroformEffect(CEffect *, CCreature *creature) {
+bool ChloroformEffect(CEffect *effect) {
+  CCreature *creature = effect->getVictim();
   return creature->getHpRatio() > 25;
 }
-bool BloodlashEffect(CEffect *effect, CCreature *creature) {
+bool BloodlashEffect(CEffect *effect) {
+  CCreature *creature = effect->getVictim();
   creature->hurt(effect->getCaster()->getDmg() * 0.75);
   return false;
 }
-bool BarrierEffect(CEffect *, CCreature *) { return false; }
+bool BarrierEffect(CEffect *) { return false; }
