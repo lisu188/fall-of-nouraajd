@@ -21,16 +21,16 @@ public:
 	virtual void onCreate();
 	virtual void onDestroy();
 	Q_SLOT void move ( int x, int y );
-    void setMap ( CMap *map );
+	void setMap ( CMap *map );
 	CMap *getMap();
 	void setVisible ( bool vis );
 	Coords getCoords();
 	void setCoords ( Coords coords );
-    void setNumber ( int i, int x );
-    QString getTypeName() const;
-    void setTypeName ( const QString &value );
-    QString getTooltip() const;
-    void setTooltip ( const QString &value );
+	void setNumber ( int i, int x );
+	QString getTypeName() const;
+	void setTypeName ( const QString &value );
+	QString getTooltip() const;
+	void setTooltip ( const QString &value );
 
 	Q_INVOKABLE void setProperty ( QString name,QVariant property ) {
 		QByteArray byteArray = name.toUtf8();
@@ -65,13 +65,13 @@ public:
 	}
 
 protected:
-    QString tooltip;
-    virtual void hoverEnterEvent ( QGraphicsSceneHoverEvent *event );
-    virtual void hoverLeaveEvent ( QGraphicsSceneHoverEvent *event );
+	QString tooltip;
+	virtual void hoverEnterEvent ( QGraphicsSceneHoverEvent *event );
+	virtual void hoverLeaveEvent ( QGraphicsSceneHoverEvent *event );
 	//QGraphicsSimpleTextItem statsView;
 private:
-    CMap *map=0;
-    QString typeName;
+	CMap *map=0;
+	QString typeName;
 };
 
 class CEvent : public CMapObject {
@@ -81,7 +81,7 @@ public:
 	CEvent();
 	CEvent ( const CEvent & );
 
-    virtual void onEnter();
+	virtual void onEnter();
 
 	bool isEnabled();
 	void setEnabled ( bool enabled );
