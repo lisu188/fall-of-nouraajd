@@ -95,7 +95,7 @@ void CMapObject::setMap ( CMap *map ) {
 CMap *CMapObject::getMap() { return map; }
 
 void CMapObject::setVisible ( bool vis ) {
-    QGraphicsPixmapItem::setVisible ( vis );
+	QGraphicsPixmapItem::setVisible ( vis );
 }
 
 Coords CMapObject::getCoords() {
@@ -135,15 +135,16 @@ CEvent::CEvent ( const CEvent & ) {
 
 void CEvent::onEnter() {
 	if ( this->isEnabled() ) {
-        CEvent* event=this;
-        getMap()->getEvents() [this->objectName().toStdString().c_str()] ( boost::ref ( event ) );
+		CEvent* event=this;
+		getMap()->getEvents() [this->objectName().toStdString().c_str()] ( boost::ref ( event ) );
 	}
 }
 
 bool CEvent::isEnabled() {
-    return enabled; }
+	return enabled;
+}
 
 void CEvent::setEnabled ( bool enabled ) {
-    this->enabled = enabled;
+	this->enabled = enabled;
 }
 

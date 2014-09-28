@@ -22,7 +22,7 @@ public:
 	CMap *getMap() const;
 	void setMap ( CMap *value );
 	CGameView *getView();
-    void removeObject(CMapObject *object);
+	void removeObject ( CMapObject *object );
 protected:
 	void keyPressEvent ( QKeyEvent *keyEvent );
 

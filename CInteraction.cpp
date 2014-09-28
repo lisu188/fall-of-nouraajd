@@ -15,23 +15,23 @@ CInteraction::CInteraction() { setVisible ( false ); }
 CInteraction::CInteraction ( const CInteraction & ) {}
 
 void CInteraction::onAction ( CCreature *first, CCreature *second ) {
-    qDebug() << first->getTypeName()   << "used" << this->getTypeName()
-             << "against" << second->getTypeName()  ;
+	qDebug() << first->getTypeName()   << "used" << this->getTypeName()
+	         << "against" << second->getTypeName()  ;
 	this->performAction ( first , second  );
 
 	if ( this->effect.length() >0 ) {
-        CEffect *effect=getMap()->getObjectHandler()->createMapObject<CEffect*> ( this->effect);
-        effect->setCaster(first);
-        if ( this->configureEffect ( effect  ) ) {
-            CCreature *victim;
-            if ( effect->isBuff() ) {
-                victim=first;
-            } else {
-                victim=second;
-            }
-            effect->setVictim(victim);
-            victim->addEffect(effect);
-        }
+		CEffect *effect=getMap()->getObjectHandler()->createMapObject<CEffect*> ( this->effect );
+		effect->setCaster ( first );
+		if ( this->configureEffect ( effect  ) ) {
+			CCreature *victim;
+			if ( effect->isBuff() ) {
+				victim=first;
+			} else {
+				victim=second;
+			}
+			effect->setVictim ( victim );
+			victim->addEffect ( effect );
+		}
 	}
 }
 
@@ -102,7 +102,7 @@ bool CEffect::apply ( CCreature *creature ) {
 		}
 		return false;
 	}
-    return onEffect();
+	return onEffect();
 }
 
 Stats *CEffect::getBonus() {
@@ -123,27 +123,23 @@ void CEffect::setDuration ( int duration ) {
 }
 
 bool CEffect::onEffect() {
-    return false;
+	return false;
 }
 
-bool CEffect::isBuff() const
-{
-    return buff;
+bool CEffect::isBuff() const {
+	return buff;
 }
 
-void CEffect::setBuff(bool value)
-{
-    buff = value;
+void CEffect::setBuff ( bool value ) {
+	buff = value;
 }
 
-void CEffect::setCaster(CCreature *value)
-{
-    caster = value;
+void CEffect::setCaster ( CCreature *value ) {
+	caster = value;
 }
 
-void CEffect::setVictim(CCreature *value)
-{
-    victim = value;
+void CEffect::setVictim ( CCreature *value ) {
+	victim = value;
 }
 
 void CInteraction::performAction ( CCreature *, CCreature * ) {

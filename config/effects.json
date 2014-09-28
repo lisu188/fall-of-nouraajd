@@ -1,58 +1,65 @@
 {
     "AbyssalShadowsEffect": {
-        "handler": "PyTypeHandler",
-        "class":"game.effect.AbyssalShadowsEffect",
+        "class": "game.effect.AbyssalShadowsEffect", 
+        "handler": "PyTypeHandler", 
         "properties": {
             "duration": 4
         }
     }, 
     "ArmorOfEndlessWinterEffect": {
-        "handler": "PyTypeHandler",
-             "class":"game.effect.ArmorOfEndlessWinterEffect",
+        "class": "game.effect.ArmorOfEndlessWinterEffect", 
+        "handler": "PyTypeHandler", 
         "properties": {
             "buff": true, 
             "duration": 3
         }
     }, 
     "BarrierEffect": {
-        "handler": "PyTypeHandler",     "class":"game.effect.BarrierEffect",
+        "class": "game.effect.BarrierEffect", 
+        "handler": "PyTypeHandler", 
         "properties": {
             "buff": true, 
             "duration": 3
         }
     }, 
     "BloodlashEffect": {
-        "handler": "PyTypeHandler",     "class":"game.effect.BloodlashEffect",
+        "class": "game.effect.BloodlashEffect", 
+        "handler": "PyTypeHandler", 
         "properties": {
             "duration": 3
         }
     }, 
     "ChloroformEffect": {
-        "handler": "PyTypeHandler",     "class":"game.effect.ChloroformEffect",
+        "class": "game.effect.ChloroformEffect", 
+        "handler": "PyTypeHandler", 
         "properties": {
             "duration": 4
         }
     }, 
     "EndlessPainEffect": {
-        "handler": "PyTypeHandler",     "class":"game.effect.EndlessPainEffect",
+        "class": "game.effect.EndlessPainEffect", 
+        "handler": "PyTypeHandler", 
         "properties": {
             "duration": 2
         }
     }, 
     "LethalPoisonEffect": {
-        "handler": "PyTypeHandler",     "class":"game.effect.LethalPoisonEffect",
+        "class": "game.effect.LethalPoisonEffect", 
+        "handler": "PyTypeHandler", 
         "properties": {
             "duration": 6
         }
     }, 
     "MutilationEffect": {
-        "handler": "PyTypeHandler",     "class":"game.effect.MutilationEffect",
+        "class": "game.effect.MutilationEffect", 
+        "handler": "PyTypeHandler", 
         "properties": {
             "duration": 3
         }
     }, 
     "Stun": {
-        "handler": "PyTypeHandler",     "class":"game.effect.Stun",
+        "class": "game.effect.Stun", 
+        "handler": "PyTypeHandler", 
         "properties": {
             "duration": 2
         }
