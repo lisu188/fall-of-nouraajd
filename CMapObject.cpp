@@ -61,22 +61,28 @@ void CMapObject::moveTo ( int x, int y, int z ) {
 	move ( x - posx, y - posy );
 }
 
-void CMapObject::removeFromGame() { map->getScene()->removeItem ( this ); }
 
-void CMapObject::onEnter() {}
+void CMapObject::onEnter() {
 
-void CMapObject::onMove() {}
+}
 
-void CMapObject::onCreate() {}
+void CMapObject::onMove() {
 
-void CMapObject::onDestroy() {}
+}
+
+void CMapObject::onCreate() {
+
+}
+
+void CMapObject::onDestroy() {
+
+}
 
 void CMapObject::setMap ( CMap *map ) {
 	if ( !map ) {
 		return;
 	}
 	this->map = map;
-	moveTo ( posx, posy, posz );
 //	statsView.setParentItem ( this );
 //	statsView.setVisible ( false );
 //	statsView.setPos ( 50, 0 );
@@ -88,7 +94,9 @@ void CMapObject::setMap ( CMap *map ) {
 
 CMap *CMapObject::getMap() { return map; }
 
-void CMapObject::setVisible ( bool vis ) { QGraphicsPixmapItem::setVisible ( vis ); }
+void CMapObject::setVisible ( bool vis ) {
+    QGraphicsPixmapItem::setVisible ( vis );
+}
 
 Coords CMapObject::getCoords() {
 	return Coords ( posx,posy,posz );
@@ -117,23 +125,25 @@ void CMapObject::hoverLeaveEvent ( QGraphicsSceneHoverEvent *event ) {
 	event->setAccepted ( true );
 }
 
-CEvent::CEvent() {}
+CEvent::CEvent() {
 
-CEvent::CEvent ( const CEvent & ) {}
+}
+
+CEvent::CEvent ( const CEvent & ) {
+
+}
 
 void CEvent::onEnter() {
 	if ( this->isEnabled() ) {
-		map->getEvents() [this->objectName().toStdString().c_str()] ( boost::ref ( this ) );
+        CEvent* event=this;
+        getMap()->getEvents() [this->objectName().toStdString().c_str()] ( boost::ref ( event ) );
 	}
 }
 
-void CEvent::onMove() {}
+bool CEvent::isEnabled() {
+    return enabled; }
 
-QString CEvent::getScript() const { return script; }
-
-void CEvent::setScript ( const QString &value ) { script = value; }
-
-bool CEvent::isEnabled() { return enabled; }
-
-void CEvent::setEnabled ( bool enabled ) { this->enabled = enabled; }
+void CEvent::setEnabled ( bool enabled ) {
+    this->enabled = enabled;
+}
 

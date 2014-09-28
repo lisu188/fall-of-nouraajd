@@ -31,7 +31,7 @@ QJsonObject itemConfiguration(QString name) {
 CItem::CItem() : interaction(nullptr) { setZValue(2); }
 
 CItem::CItem(const CItem &item) : CItem() {
-  typeName = item.typeName;
+  setTypeName(item.getTypeName());
   tooltip = item.tooltip;
   bonus = item.bonus;
   power = item.power;
@@ -54,12 +54,12 @@ void CItem::setSingleUse(bool singleUse) { this->singleUse = singleUse; }
 
 void CItem::onEquip(CCreature *creature) {
   creature->getStats()->addBonus(bonus);
-  qDebug() << creature->typeName << "equipped" << typeName << "\n";
+  qDebug() << creature->getTypeName() << "equipped" << getTypeName() << "\n";
 }
 
 void CItem::onUnequip(CCreature *creature) {
   creature->getStats()->removeBonus(bonus);
-  qDebug() << creature->typeName << "unequipped" << typeName << "\n";
+  qDebug() << creature->getTypeName() << "unequipped" << getTypeName() << "\n";
 }
 
 bool CItem::onUse(CCreature *creature) {
@@ -156,9 +156,9 @@ CPotion::CPotion(const CPotion &potion)
     : CItem(potion), effect(potion.effect) {}
 bool CPotion::onUse(CCreature *creature) {
   if (!effect) {
-    if (typeName.contains("LifePotion"))
+    if (getTypeName().contains("LifePotion"))
       effect = &LifeEffect;
-    else if (typeName.contains("ManaPotion"))
+    else if (getTypeName().contains("ManaPotion"))
       effect = &ManaEffect;
   }
   if (!effect)
@@ -184,9 +184,9 @@ void CItem::setInteractionName(QString name) {
     interaction = nullptr;
     return;
   }
-  if (!map)
+  if (!getMap())
     qFatal("Cannot resolve item interaction without its map");
-  interaction = map->getObjectHandler()->createMapObject<CInteraction *>(name);
+  interaction = getMap()->getObjectHandler()->createMapObject<CInteraction *>(name);
   if (!interaction)
     qFatal("Configured item interaction is not a CInteraction");
 }

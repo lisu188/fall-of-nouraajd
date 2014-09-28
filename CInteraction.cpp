@@ -1,174 +1,155 @@
-#include "CConfigurationProvider.h"
+#include "CInteraction.h"
 #include "CCreature.h"
-#include "CGamePanel.h"
 #include "CGameScene.h"
 #include "CGameView.h"
-#include "CInteraction.h"
-#include "CScriptEngine.h"
+#include  "CPlayerView.h"
 #include <QDebug>
-#include <QGraphicsSceneMouseEvent>
+#include "CItem.h"
+#include "CCreature.h"
+#include "CConfigurationProvider.h"
+#include "CGamePanel.h"
+#include "CObjectHandler.h"
 
-namespace {
-QJsonObject effectConfiguration(QString type) {
-  QJsonObject effects =
-      CConfigurationProvider::getConfig("config/effects.json")
-          .toObject();
-  if (type == "StunEffect" && !effects.contains(type)) {
-    type = "Stun";
-  }
-  return effects[type].toObject();
-}
-} // namespace
+CInteraction::CInteraction() { setVisible ( false ); }
 
-CInteraction::CInteraction() : manaCost(0) {
-  setVisible(false);
-  statsView.setParentItem(this);
-  statsView.setPos(0, 50);
-}
-CInteraction::CInteraction(const CInteraction &interaction) : CInteraction() {
-  manaCost = interaction.manaCost;
-  effect = interaction.effect;
-  typeName = interaction.typeName;
-}
-void CInteraction::onAction(CCreature *first, CCreature *second) {
-  qDebug() << first->getTypeName() << "used" << getTypeName() << "against"
-           << second->getTypeName();
-  performAction(first, second);
-  if (!effect.isEmpty()) {
-    CCreature *victim =
-        effectConfiguration(effect)["buff"].toBool() ? first : second;
-    CEffect *active = new CEffect(effect, first, victim);
-    if (configureEffect(active)) {
-      victim->addEffect(active);
-    } else {
-      delete active;
-    }
-  }
-}
-void CInteraction::performAction(CCreature *first, CCreature *second) {
-  boost::python::object function =
-                CScriptEngine::getInstance()
-                    ->getObject("game")
-                    .attr("interaction")
-                    .attr(typeName.toStdString().c_str());
-            function(boost::python::ptr(first), boost::python::ptr(second));
-}
-bool CInteraction::configureEffect(CEffect *) { return true; }
-void CInteraction::mousePressEvent(QGraphicsSceneMouseEvent *event) {
-  CPlayer *player = map->getPlayer();
-  if (!player || player->getFightList()->empty() ||
-      manaCost > player->getMana() || !CFightPanel::selected) {
-    event->ignore();
-    return;
-  }
-  player->performAction(this, CFightPanel::selected);
-  event->accept();
-}
-int CInteraction::getManaCost() const { return manaCost; }
-void CInteraction::setManaCost(int value) {
-  manaCost = value;
-  statsView.setText(QString::number(value));
-}
-QString CInteraction::getEffect() const { return effect; }
-void CInteraction::setEffect(const QString &value) { effect = value; }
+CInteraction::CInteraction ( const CInteraction & ) {}
 
-std::map<QString, std::function<bool(CEffect *)>> CEffect::effects =
-    {{"Stun", StunEffect},
-     {"StunEffect", StunEffect},
-     {"EndlessPainEffect", EndlessPainEffect},
-     {"AbyssalShadowsEffect", AbyssalShadowsEffect},
-     {"ArmorOfEndlessWinterEffect", ArmorOfEndlessWinterEffect},
-     {"MutilationEffect", MutilationEffect},
-     {"LethalPoisonEffect", LethalPoisonEffect},
-     {"ChloroformEffect", ChloroformEffect},
-     {"BloodlashEffect", BloodlashEffect},
-     {"BarrierEffect", BarrierEffect}};
-CEffect::CEffect() : timeLeft(0), timeTotal(0), caster(nullptr), victim(nullptr) {}
-CEffect::CEffect(const CEffect &effect) : CEffect() {
-  className = effect.className;
-  timeLeft = effect.timeLeft;
-  timeTotal = effect.timeTotal;
-  caster = effect.caster;
-  victim = effect.victim;
-  duration = effect.duration;
+void CInteraction::onAction ( CCreature *first, CCreature *second ) {
+    qDebug() << first->getTypeName()   << "used" << this->getTypeName()
+             << "against" << second->getTypeName()  ;
+	this->performAction ( first , second  );
+
+	if ( this->effect.length() >0 ) {
+        CEffect *effect=getMap()->getObjectHandler()->createMapObject<CEffect*> ( this->effect);
+        effect->setCaster(first);
+        if ( this->configureEffect ( effect  ) ) {
+            CCreature *victim;
+            if ( effect->isBuff() ) {
+                victim=first;
+            } else {
+                victim=second;
+            }
+            effect->setVictim(victim);
+            victim->addEffect(effect);
+        }
+	}
 }
 
-CEffect::CEffect(QString type, CCreature *caster, CCreature *victim)
-    : CEffect() {
-  className = type;
-  this->caster = caster;
-  this->victim = victim;
-  if (effects.find(type) == effects.end()) {
-    qFatal("Unknown historical effect callback");
-  }
-  setDuration(effectConfiguration(type)["duration"].toInt());
+void CInteraction::mousePressEvent ( QGraphicsSceneMouseEvent * ) {
+	CPlayer *player =this->getMap()->getScene()->getPlayer();
+	if ( player->getFightList()->size() == 0 ) {
+		return;
+	}
+	if ( manaCost > player->getMana() ) {
+		return;
+	}
+	CCreature *creature = CFightPanel::selected;
+	if ( !creature ) {
+		return;
+	}
+	player->performAction ( this, creature );
 }
-int CEffect::getDuration() { return duration; }
-void CEffect::setDuration(int value) {
-  duration = value;
-  timeLeft = timeTotal = value;
+
+int CInteraction::getManaCost() const {
+	return manaCost;
 }
-void CEffect::onEffect() {}
-int CEffect::getTimeLeft() { return timeLeft; }
-int CEffect::getTimeTotal() { return timeTotal; }
-CCreature *CEffect::getCaster() { return caster; }
-CCreature *CEffect::getVictim() { return victim; }
-Stats *CEffect::getBonus() { return bonus; }
-void CEffect::setBonus(Stats *value) { bonus = value; }
-bool CEffect::apply(CCreature *creature) {
-  if (timeLeft <= 0) {
+
+void CInteraction::setManaCost ( int value ) {
+	manaCost = value;
+}
+
+QString CInteraction::getEffect() const {
+	return effect;
+}
+
+void CInteraction::setEffect ( const QString &value ) {
+	effect = value;
+}
+
+CEffect::CEffect() {
+
+}
+
+CEffect::CEffect ( const CEffect & ) {
+
+}
+
+int CEffect::getTimeLeft() {
+	return timeLeft;
+}
+
+int CEffect::getTimeTotal() {
+	return timeTotal;
+}
+
+CCreature *CEffect::getCaster() {
+	return caster;
+}
+
+CCreature *CEffect::getVictim() {
+	return victim;
+}
+
+bool CEffect::apply ( CCreature *creature ) {
+	if ( bonus )
+		if ( timeTotal == timeLeft ) {
+			creature->addBonus ( *bonus );
+		}
+	timeLeft--;
+	if ( timeLeft == 0 ) {
+		if ( bonus ) {
+			creature->removeBonus ( *bonus );
+		}
+		return false;
+	}
+    return onEffect();
+}
+
+Stats *CEffect::getBonus() {
+	return bonus;
+}
+
+void CEffect::setBonus ( Stats *value ) {
+	bonus = value;
+}
+
+int CEffect::getDuration() {
+	return duration;
+}
+
+void CEffect::setDuration ( int duration ) {
+	this->duration=duration;
+	timeLeft = timeTotal =duration;
+}
+
+bool CEffect::onEffect() {
     return false;
-  }
-  if (bonus && timeLeft == timeTotal) {
-    creature->getStats()->addBonus(*bonus);
-  }
-  --timeLeft;
-  if (!timeLeft) {
-    if (bonus) {
-      creature->getStats()->removeBonus(*bonus);
-    }
-    return false;
-  }
-  onEffect();
-  return effects.at(className)(this);
 }
 
-bool StunEffect(CEffect *) { return true; }
-bool EndlessPainEffect(CEffect *effect) {
-  CCreature *creature = effect->getVictim();
-  creature->hurt(effect->getCaster()->getDmg() * 15 / 100);
-  return true;
+bool CEffect::isBuff() const
+{
+    return buff;
 }
-bool AbyssalShadowsEffect(CEffect *effect) {
-  CCreature *creature = effect->getVictim();
-  Damage damage;
-  int amount = effect->getCaster()->getDmg();
-  damage.setShadow(effect->getTimeLeft() > 1 ? amount * 45 / 100 : amount);
-  creature->hurt(damage);
-  return false;
+
+void CEffect::setBuff(bool value)
+{
+    buff = value;
 }
-bool ArmorOfEndlessWinterEffect(CEffect *effect) {
-  CCreature *creature = effect->getVictim();
-  creature->healProc(20);
-  return false;
+
+void CEffect::setCaster(CCreature *value)
+{
+    caster = value;
 }
-bool MutilationEffect(CEffect *effect) {
-  CCreature *creature = effect->getVictim();
-  creature->hurt(effect->getCaster()->getStats()->getAgility() / 4);
-  return false;
+
+void CEffect::setVictim(CCreature *value)
+{
+    victim = value;
 }
-bool LethalPoisonEffect(CEffect *effect) {
-  CCreature *creature = effect->getVictim();
-  creature->hurt(effect->getCaster()->getDmg() * 4 / 6);
-  return false;
+
+void CInteraction::performAction ( CCreature *, CCreature * ) {
+
 }
-bool ChloroformEffect(CEffect *effect) {
-  CCreature *creature = effect->getVictim();
-  return creature->getHpRatio() > 25;
+
+bool CInteraction::configureEffect ( CEffect * ) {
+	return true;
 }
-bool BloodlashEffect(CEffect *effect) {
-  CCreature *creature = effect->getVictim();
-  creature->hurt(effect->getCaster()->getDmg() * 0.75);
-  return false;
-}
-bool BarrierEffect(CEffect *) { return false; }

@@ -63,6 +63,8 @@ class CCreature : public CMapObject {
     CWeapon *getWeapon();
     CArmor *getArmor();
     Stats *getStats();
+    void addBonus(const Stats &bonus);
+    void removeBonus(const Stats &bonus);
     int getManaRatio();
     int getLevel();
     void addExpScaled(int scale);
@@ -145,7 +147,6 @@ class CPlayer : public CCreature {
     void addEntered(CMapObject *object);
     std::list<CMapObject *> *getEntered();
     void init();
-    virtual void setMap(CMap *map);
 
   private:
     std::list<CCreature *> fightList;

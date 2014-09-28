@@ -45,7 +45,7 @@ CCreature::CCreature()
 }
 
 CCreature::CCreature(const CCreature &creature) : CCreature() {
-  typeName = creature.typeName;
+  setTypeName(creature.getTypeName());
   gold = creature.gold;
   exp = creature.exp;
   level = creature.level;
@@ -69,7 +69,7 @@ CCreature *CCreature::createCreature(QString name) {
   CCreature *creature = dynamic_cast<CCreature *>(
       CTypeHandler().create(config["class"].toString()));
   if (creature) {
-    creature->typeName = name;
+    creature->setTypeName(name);
     QJsonObject properties = creatureProperties(name);
     creature->stats = readStats(properties["stats"].toObject());
     creature->sw = properties["sw"].toInt();
@@ -106,15 +106,15 @@ void CCreature::addItem(std::set<CItem *> *items) {
 }
 
 CInteraction *CCreature::getLevelAction() {
-  QString name = creatureProperties(typeName)["levelling"]
+  QString name = creatureProperties(getTypeName())["levelling"]
                      .toObject()[QString::number(level)]
                      .toString();
-  return map && !name.isEmpty()
-             ? map->getObjectHandler()->createMapObject<CInteraction *>(name)
+  return getMap() && !name.isEmpty()
+             ? getMap()->getObjectHandler()->createMapObject<CInteraction *>(name)
              : nullptr;
 }
 Stats CCreature::getLevelStats() {
-  return readStats(creatureProperties(typeName)["levelStats"].toObject());
+  return readStats(creatureProperties(getTypeName())["levelStats"].toObject());
 }
 
 void CCreature::setItem(int slot, CItem *item) {
@@ -493,21 +493,21 @@ void CCreature::hurt(Damage damage) {
 void CPlayer::updateViews() {
   for (auto it = inventory.begin(); it != inventory.end(); it++) {
     CItem *item = *it;
-    if (map && item->getMap() != map) {
-      item->setMap(map);
+    if (getMap() && item->getMap() != getMap()) {
+      item->setMap(getMap());
     }
   }
   for (auto it = actions.begin(); it != actions.end(); it++) {
     CInteraction *action = *it;
-    if (map && action->getMap() != map) {
-      action->setMap(map);
+    if (getMap() && action->getMap() != getMap()) {
+      action->setMap(getMap());
     }
   }
   for (std::map<int, CItem *>::iterator it = equipped.begin();
        it != equipped.end(); it++) {
     CItem *item = (*it).second;
-    if (map && item && item->getMap() != map) {
-      item->setMap(map);
+    if (getMap() && item && item->getMap() != getMap()) {
+      item->setMap(getMap());
     }
   }
 }
@@ -517,10 +517,6 @@ void CPlayer::init() {
   turn = 0;
 }
 
-void CPlayer::setMap(CMap *map) {
-  CMapObject::setMap(map);
-  updateViews();
-}
 
 CPlayer::CPlayer() { init(); }
 
@@ -549,18 +545,18 @@ void CPlayer::removeFromFightList(CCreature *creature) {
   if (creature == this) {
     return;
   }
-  qDebug() << typeName << "defeated" << creature->typeName << "\n";
+  qDebug() << getTypeName() << "defeated" << creature->getTypeName() << "\n";
   addExpScaled(creature->getScale());
   addItem(creature->getLoot());
-  creature->removeFromGame();
+  getMap()->removeObject(creature);
   getFightList()->remove(creature);
   if (getFightList()->size() == 0) {
-    map->getGuiHandler()->getPanel("CFightPanel")->hidePanel();
+    getMap()->getGuiHandler()->getPanel("CFightPanel")->hidePanel();
     CFightPanel::selected = 0;
   } else {
     CFightPanel::selected = getFightList()->front();
   }
-  map->getGuiHandler()->getPanel("CFightPanel")->update();
+  getMap()->getGuiHandler()->getPanel("CFightPanel")->update();
   Q_EMIT statsChanged();
 }
 
@@ -584,9 +580,9 @@ void CPlayer::performAction(CInteraction *action, CCreature *creature) {
       (*it)->fight(this);
     }
   }
-  map->getGuiHandler()->getPanel("CFightPanel")->update();
+  getMap()->getGuiHandler()->getPanel("CFightPanel")->update();
   if (!isAlive()) {
-    map->getScene()->getView()->close();
+    getMap()->getScene()->getView()->close();
   }
 }
 
@@ -622,14 +618,14 @@ void CMonster::onMove() {
   }
   this->addExp(rand() % 25);
   QThreadPool::globalInstance()->start(
-      new PathFinderWorker(this, map->getScene()->getPlayer(), finder));
+      new PathFinderWorker(this, getMap()->getScene()->getPlayer(), finder));
 }
 
 void CMonster::onEnter() {
   if (!isAlive()) {
     return;
   }
-  map->getScene()->getPlayer()->addToFightList(this);
+  getMap()->getScene()->getPlayer()->addToFightList(this);
 }
 
 void CMonster::levelUp() {
@@ -640,4 +636,13 @@ void CMonster::levelUp() {
 
 std::set<CItem *> *CMonster::getLoot() {
   return this->getMap()->getLootProvider()->getLoot(getScale());
+}
+
+void CCreature::addBonus(const Stats &bonus) {
+  stats.addBonus(bonus);
+  attribChange();
+}
+void CCreature::removeBonus(const Stats &bonus) {
+  stats.removeBonus(bonus);
+  attribChange();
 }

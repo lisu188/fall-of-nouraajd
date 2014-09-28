@@ -178,6 +178,15 @@ int randint(int first, int last) {
 }
 }
 
+class CEffectWrapper : public CEffect, public wrapper<CEffect> {
+public:
+  bool onEffect() override {
+    if (override call = get_override("onEffect")) return call();
+    return CEffect::onEffect();
+  }
+  bool defaultOnEffect() { return CEffect::onEffect(); }
+};
+
 BOOST_PYTHON_MODULE(_game) {
     def("randint", randint);
   to_python_converter<QString, QStringToPython>();
@@ -204,7 +213,6 @@ BOOST_PYTHON_MODULE(_game) {
       .def("moveTo", &moveObject)
       .def("getCoords", &CMapObject::getCoords)
       .def("setCoords", &CMapObject::setCoords)
-      .def("removeFromGame", &CMapObject::removeFromGame)
           PY_PROPERTY_ACCESSOR(CMapObject);
   class_<Stats>("Stats").def("getDamage", &Stats::getDamage)
       PY_PROPERTY_ACCESSOR(Stats);
@@ -246,7 +254,7 @@ BOOST_PYTHON_MODULE(_game) {
       .def("configureEffect", &CInteraction::configureEffect,
            &CInteractionWrapper::defaultConfigureEffect);
   scope().attr("Interaction") = scope().attr("CInteraction");
-  class_<CEffect, bases<CMapObject>, boost::noncopyable>("Effect", no_init)
+  class_<CEffectWrapper, bases<CMapObject>, boost::noncopyable>("CEffect")
       .def("getBonus", &CEffect::getBonus, return_internal_reference<>())
       .def("setBonus", &CEffect::setBonus)
       .def("getCaster", &CEffect::getCaster, return_internal_reference<>())
@@ -255,7 +263,7 @@ BOOST_PYTHON_MODULE(_game) {
       .def("getTimeTotal", &CEffect::getTimeTotal)
       .def("getDuration", &CEffect::getDuration)
       .def("setDuration", &CEffect::setDuration)
-      .def("onEffect", &CEffect::onEffect);
+      .def("onEffect", &CEffect::onEffect, &CEffectWrapper::defaultOnEffect);
   class_<CItem, bases<CMapObject>, boost::noncopyable>("CItem");
   class_<CArmor, bases<CItem>, boost::noncopyable>("CArmor");
   class_<CBelt, bases<CItem>, boost::noncopyable>("CBelt");

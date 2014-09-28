@@ -12,17 +12,25 @@ ATypeHandler *ATypeHandler::getHandler ( QString name ) {
 	return NULL;
 }
 
-ATypeHandler::ATypeHandler() {}
+ATypeHandler::ATypeHandler() {
 
-ATypeHandler::ATypeHandler ( const ATypeHandler & ) {}
+}
+
+ATypeHandler::ATypeHandler ( const ATypeHandler & ) {
+
+}
 
 CMapObject *ATypeHandler::create ( QString ) {
 	return NULL;
 }
 
-CTypeHandler::CTypeHandler() {}
+CTypeHandler::CTypeHandler() {
 
-CTypeHandler::CTypeHandler ( const CTypeHandler & ) {}
+}
+
+CTypeHandler::CTypeHandler ( const CTypeHandler & ) {
+
+}
 
 CMapObject *CTypeHandler::create ( QString name ) {
 	CMapObject *object = NULL;
@@ -32,11 +40,12 @@ CMapObject *CTypeHandler::create ( QString name ) {
 }
 
 
-PyTypeHandler::PyTypeHandler() {}
+PyTypeHandler::PyTypeHandler() {
+
+}
 
 PyTypeHandler::PyTypeHandler ( const PyTypeHandler & ) {}
 
 CMapObject *PyTypeHandler::create ( QString name ) {
 	return CScriptEngine::getInstance()->createObject<CMapObject*> ( name );
 }
-
