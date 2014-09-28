@@ -19,8 +19,8 @@ CTile::~CTile() {
 }
 
 void CTile::moveTo ( int x, int y, int z ) {
-	if (  map ) {
-		map->moveTile ( this,x,y, z );
+    if (  getMap() ) {
+        getMap()->moveTile ( this,x,y, z );
 		setXYZ ( x, y, z );
 	}
 }
@@ -28,12 +28,14 @@ void CTile::moveTo ( int x, int y, int z ) {
 Coords CTile::getCoords() { return Coords ( posx, posy, posz ); }
 
 void CTile::onStep() {
-	if ( steps.find ( typeName ) != steps.end() ) {
-		steps[typeName]();
+    if ( steps.find ( getTypeName() ) != steps.end() ) {
+        steps[getTypeName()]();
 	}
 }
 
-bool CTile::canStep() const { return step; }
+bool CTile::canStep() const {
+    return step;
+}
 
 void CTile::setCanStep ( bool canStep ) {
 	this->step=canStep;
@@ -42,7 +44,7 @@ void CTile::setCanStep ( bool canStep ) {
 void CTile::addToScene ( CGameScene *scene ) {
 	scene->addItem ( this );
 	setPos ( posx *50, posy *50 );
-	CMapObject::setMap (  scene ->getMap() );
+    setMap (  scene ->getMap() );
 }
 
 void CTile::removeFromScene ( CGameScene *scene ) { scene->removeItem ( this ); }
@@ -65,13 +67,6 @@ void CTile::mousePressEvent ( QGraphicsSceneMouseEvent *event ) {
 		CAnimatedObject::mousePressEvent ( event );
 	}
 	event->setAccepted ( draggable );
-}
-
-bool CTile::canSave() { return false; }
-
-void CTile::setMap ( CMap *map ) {
-	this->map = map;
-	addToScene ( map->getScene() );
 }
 
 void RoadTile() { /*GameScene::getPlayer()->heal(1); */}

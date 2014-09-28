@@ -11,23 +11,26 @@ class CMapObject : public CAnimatedObject {
 public:
 	CMapObject();
 	virtual ~CMapObject();
-	QString typeName;
 	int posx=0, posy=0, posz=0;
 	virtual void moveTo ( int x, int y, int z );
 	int getPosX() const;
 	int getPosY() const;
 	int getPosZ() const;
-	void removeFromGame();
 	virtual void onEnter();
 	virtual void onMove();
 	virtual void onCreate();
 	virtual void onDestroy();
 	Q_SLOT void move ( int x, int y );
-	virtual void setMap ( CMap *map );
+    void setMap ( CMap *map );
 	CMap *getMap();
 	void setVisible ( bool vis );
 	Coords getCoords();
 	void setCoords ( Coords coords );
+    void setNumber ( int i, int x );
+    QString getTypeName() const;
+    void setTypeName ( const QString &value );
+    QString getTooltip() const;
+    void setTooltip ( const QString &value );
 
 	Q_INVOKABLE void setProperty ( QString name,QVariant property ) {
 		QByteArray byteArray = name.toUtf8();
@@ -62,40 +65,27 @@ public:
 	}
 
 protected:
-	CMap *map=0;
+    QString tooltip;
+    virtual void hoverEnterEvent ( QGraphicsSceneHoverEvent *event );
+    virtual void hoverLeaveEvent ( QGraphicsSceneHoverEvent *event );
 	//QGraphicsSimpleTextItem statsView;
-
-public:
-	void setNumber ( int i, int x );
-
-	QString getTypeName() const;
-	void setTypeName ( const QString &value );
-
-	QString getTooltip() const;
-	void setTooltip ( const QString &value );
-
-protected:
-	QString tooltip;
-	virtual void hoverEnterEvent ( QGraphicsSceneHoverEvent *event );
-	virtual void hoverLeaveEvent ( QGraphicsSceneHoverEvent *event );
+private:
+    CMap *map=0;
+    QString typeName;
 };
 
 class CEvent : public CMapObject {
 	Q_OBJECT
-	Q_PROPERTY ( QString script READ getScript WRITE setScript USER true )
 	Q_PROPERTY ( bool enabled READ isEnabled WRITE setEnabled USER true )
 public:
 	CEvent();
 	CEvent ( const CEvent & );
-	void onEnter();
-	void onMove();
-	// PROPERTIES
-	QString getScript() const;
-	void setScript ( const QString &value );
+
+    virtual void onEnter();
+
 	bool isEnabled();
 	void setEnabled ( bool enabled );
 
 private:
 	bool enabled = true;
-	QString script;
 };

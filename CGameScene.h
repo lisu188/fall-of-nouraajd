@@ -10,6 +10,7 @@
 class CGameView;
 class CPlayer;
 class CMap;
+class CMapObject;
 class CGameScene : public QGraphicsScene {
 	Q_OBJECT
 public:
@@ -21,6 +22,7 @@ public:
 	CMap *getMap() const;
 	void setMap ( CMap *value );
 	CGameView *getView();
+    void removeObject(CMapObject *object);
 protected:
 	void keyPressEvent ( QKeyEvent *keyEvent );
 

@@ -1,5 +1,4 @@
-#ifndef INTERACTION_H
-#define INTERACTION_H
+#pragma once
 #include <string>
 #include <functional>
 #include <map>
@@ -39,40 +38,31 @@ private:
 class CEffect :public CMapObject {
 	Q_OBJECT
 	Q_PROPERTY ( int duration READ getDuration WRITE setDuration )
+    Q_PROPERTY(bool buff READ isBuff WRITE setBuff)
 public:
-	CEffect ( QString type, CCreature *caster ,CCreature * victim );
 	CEffect();
 	CEffect ( const CEffect& );
 	int getTimeLeft();
 	int getTimeTotal();
-	CCreature *getCaster();
-	CCreature *getVictim();
 	bool apply ( CCreature *creature );
-	QString className;
 	Stats *getBonus();
 	void setBonus ( Stats *value );
 	int getDuration();
 	void setDuration ( int duration );
-	virtual void onEffect();
+    virtual bool onEffect();
+    bool isBuff() const;
+    void setBuff(bool value);
+    CCreature *getCaster() ;
+    void setCaster(CCreature *value);
+    CCreature *getVictim() ;
+    void setVictim(CCreature *value);
 private:
-	static std::map<
-	QString, std::function<bool ( CEffect *effect ) > > effects;
 	int timeLeft=0;
 	int timeTotal=0;
 	Stats *bonus=0;
 	CCreature *caster=0;
 	CCreature *victim=0;
 	int duration=0;
+    bool buff=false;
 };
 
-bool StunEffect ( CEffect * );
-bool EndlessPainEffect ( CEffect *effect );
-bool AbyssalShadowsEffect ( CEffect *effect );
-bool ArmorOfEndlessWinterEffect ( CEffect * );
-bool MutilationEffect ( CEffect *effect );
-bool LethalPoisonEffect ( CEffect *effect );
-bool ChloroformEffect ( CEffect * );
-bool BloodlashEffect ( CEffect *effect );
-bool BarrierEffect ( CEffect * );
-
-#endif // INTERACTION_H

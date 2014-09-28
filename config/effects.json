@@ -1,56 +1,58 @@
 {
     "AbyssalShadowsEffect": {
-        "handler": "CTypeHandler", 
+        "handler": "PyTypeHandler",
+        "class":"game.effect.AbyssalShadowsEffect",
         "properties": {
             "duration": 4
         }
     }, 
     "ArmorOfEndlessWinterEffect": {
-        "handler": "CTypeHandler", 
+        "handler": "PyTypeHandler",
+             "class":"game.effect.ArmorOfEndlessWinterEffect",
         "properties": {
             "buff": true, 
             "duration": 3
         }
     }, 
     "BarrierEffect": {
-        "handler": "CTypeHandler", 
+        "handler": "PyTypeHandler",     "class":"game.effect.BarrierEffect",
         "properties": {
             "buff": true, 
             "duration": 3
         }
     }, 
     "BloodlashEffect": {
-        "handler": "CTypeHandler", 
+        "handler": "PyTypeHandler",     "class":"game.effect.BloodlashEffect",
         "properties": {
             "duration": 3
         }
     }, 
     "ChloroformEffect": {
-        "handler": "CTypeHandler", 
+        "handler": "PyTypeHandler",     "class":"game.effect.ChloroformEffect",
         "properties": {
             "duration": 4
         }
     }, 
     "EndlessPainEffect": {
-        "handler": "CTypeHandler", 
+        "handler": "PyTypeHandler",     "class":"game.effect.EndlessPainEffect",
         "properties": {
             "duration": 2
         }
     }, 
     "LethalPoisonEffect": {
-        "handler": "CTypeHandler", 
+        "handler": "PyTypeHandler",     "class":"game.effect.LethalPoisonEffect",
         "properties": {
             "duration": 6
         }
     }, 
     "MutilationEffect": {
-        "handler": "CTypeHandler", 
+        "handler": "PyTypeHandler",     "class":"game.effect.MutilationEffect",
         "properties": {
             "duration": 3
         }
     }, 
     "Stun": {
-        "handler": "CTypeHandler", 
+        "handler": "PyTypeHandler",     "class":"game.effect.Stun",
         "properties": {
             "duration": 2
         }

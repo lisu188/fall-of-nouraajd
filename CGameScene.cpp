@@ -98,8 +98,12 @@ CGameView *CGameScene::getView() {
 	return dynamic_cast<CGameView*> ( this->views() [0] );
 }
 
+void CGameScene::removeObject(CMapObject *object){
+    this->removeItem(object);
+}
+
 CPlayer *CGameScene::getPlayer() const {
-	return player;
+    return player;
 }
 
 void CGameScene::setPlayer ( CPlayer *value ) {
