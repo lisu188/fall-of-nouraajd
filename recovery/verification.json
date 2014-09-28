@@ -1,11 +1,11 @@
 {
   "adapter": {
-    "config": "/tmp/nouraajd-289-map-final/verify/snapshot-ykbsh0mu/observer/recovery_smoke_config.h",
+    "config": "/tmp/nouraajd-290-effects-final/verify/snapshot-b9jj_9hj/observer/recovery_smoke_config.h",
     "configSha256": "9be3f337a65cbdc9e904583c2f34d5620212a9800b2908da01bfecca6dd0f814",
     "id": "prefixed-3d",
     "mode": "game",
     "overlays": [],
-    "source": "/tmp/nouraajd-next288/recovery/smoke/game_startup.cpp"
+    "source": "/tmp/nouraajd-next290/recovery/smoke/game_startup.cpp"
   },
   "artifactDir": "recovery",
   "attachedScreenshot": {
@@ -14,17 +14,17 @@
     "width": 1278
   },
   "attachedSourcePreparation": {
-    "prepare_map_events.py": {
-      "path": "prepare_map_events.py",
-      "sha256": "a4d0155d104e42404db484cc0f360d1c24feaed256198913e22d02e789ff7e16"
+    "prepare_python_effects.py": {
+      "path": "prepare_python_effects.py",
+      "sha256": "187ec0830d5915d4278b79a8d5ada4bbec22f4e7f31df708a20c30d64f8006a9"
     },
     "source-preparation.json": {
       "path": "source-preparation.json",
-      "sha256": "aa03eeb64b53ed03e2285f15b8b0438db2df3e6a6159e19107bbceea57b5ba01"
+      "sha256": "05a7e98dde0e9796951b2014bd35eb662e8776aa9f7773ec9c4720a712679ae2"
     },
     "source-preparation.log": {
       "path": "source-preparation.log",
-      "sha256": "0b920aaa1085af5378c675e7a6f93bfac9452ceffbea765bf240f5b973a15744"
+      "sha256": "26c3bd302d6bf92e9fe13d411a57d510399ed6e9e8d87c90de33cc65207786ce"
     }
   },
   "build": {
@@ -32,17 +32,17 @@
       "make",
       "-j3"
     ],
-    "log": "/tmp/nouraajd-289-map-final/verify/snapshot-ykbsh0mu/build.log",
+    "log": "/tmp/nouraajd-290-effects-final/verify/snapshot-b9jj_9hj/build.log",
     "returnCode": 0,
-    "seconds": 51.414,
+    "seconds": 87.978,
     "timedOut": false
   },
   "configure": {
     "command": [
       "qmake",
-      "/tmp/nouraajd-289-map-final/verify/snapshot-ykbsh0mu/source/game.pro",
+      "/tmp/nouraajd-290-effects-final/verify/snapshot-b9jj_9hj/source/game.pro",
       "-o",
-      "/tmp/nouraajd-289-map-final/verify/snapshot-ykbsh0mu/build/Makefile",
+      "/tmp/nouraajd-290-effects-final/verify/snapshot-b9jj_9hj/build/Makefile",
       "QMAKE_CC=gcc-5",
       "QMAKE_CXX=g++-5",
       "QMAKE_LINK=g++-5",
@@ -51,16 +51,16 @@
       "TARGET=RecoveryGame",
       "DESTDIR=.",
       "CONFIG-=app_bundle",
-      "SOURCES+=/tmp/nouraajd-next288/recovery/smoke/game_startup.cpp",
-      "INCLUDEPATH+=/tmp/nouraajd-289-map-final/verify/snapshot-ykbsh0mu/source",
-      "INCLUDEPATH+=/tmp/nouraajd-289-map-final/verify/snapshot-ykbsh0mu/observer"
+      "SOURCES+=/tmp/nouraajd-next290/recovery/smoke/game_startup.cpp",
+      "INCLUDEPATH+=/tmp/nouraajd-290-effects-final/verify/snapshot-b9jj_9hj/source",
+      "INCLUDEPATH+=/tmp/nouraajd-290-effects-final/verify/snapshot-b9jj_9hj/observer"
     ],
-    "log": "/tmp/nouraajd-289-map-final/verify/snapshot-ykbsh0mu/configure.log",
+    "log": "/tmp/nouraajd-290-effects-final/verify/snapshot-b9jj_9hj/configure.log",
     "returnCode": 0,
     "seconds": 0.064,
     "timedOut": false
   },
-  "evidenceDir": "/tmp/nouraajd-289-map-final/verify/evidence/437ae3a3e57a31e6c322454eecbe1bf0e76ae1a9b11f9cc501f6e18d3d97ff64",
+  "evidenceDir": "/tmp/nouraajd-290-effects-final/verify/evidence/52c3b49823f1f1799e5cf0446a6eec1afcc39b701d461bd467151d76e3ce937d",
   "fileLookup": {
     "command": [
       "g++-5",
@@ -69,20 +69,20 @@
       "-O2",
       "-std=c++11",
       "-o",
-      "/tmp/nouraajd-289-map-final/verify/snapshot-ykbsh0mu/observer/libwindowspaths.so",
-      "/tmp/nouraajd-next288/recovery/smoke/windows_paths.cpp",
+      "/tmp/nouraajd-290-effects-final/verify/snapshot-b9jj_9hj/observer/libwindowspaths.so",
+      "/tmp/nouraajd-next290/recovery/smoke/windows_paths.cpp",
       "-ldl"
     ],
-    "log": "/tmp/nouraajd-289-map-final/verify/snapshot-ykbsh0mu/file-lookup.log",
+    "log": "/tmp/nouraajd-290-effects-final/verify/snapshot-b9jj_9hj/file-lookup.log",
     "returnCode": 0,
-    "seconds": 0.214,
+    "seconds": 0.269,
     "semantics": "Windows-style case-insensitive file lookup for the game process",
     "timedOut": false
   },
-  "fingerprint": "437ae3a3e57a31e6c322454eecbe1bf0e76ae1a9b11f9cc501f6e18d3d97ff64",
+  "fingerprint": "52c3b49823f1f1799e5cf0446a6eec1afcc39b701d461bd467151d76e3ce937d",
   "libraryAliases": {
     "aliases": {},
-    "directory": "/tmp/nouraajd-289-map-final/verify/snapshot-ykbsh0mu/observer/library-aliases"
+    "directory": "/tmp/nouraajd-290-effects-final/verify/snapshot-b9jj_9hj/observer/library-aliases"
   },
   "project": "game.pro",
   "recipe": {
@@ -121,55 +121,47 @@
   },
   "restoration": {
     "excluded": [],
-    "outputDir": "/tmp/nouraajd-289-map-final/verify/snapshot-ykbsh0mu/source",
+    "outputDir": "/tmp/nouraajd-290-effects-final/verify/snapshot-b9jj_9hj/source",
     "restored": [
       {
         "markerPath": "CCreature.cpp.REMOVED.git-id",
         "method": "reconstruction",
-        "originalBlob": "d03396c8b4fc6f5bca4250c1429129d13d21da2a",
+        "originalBlob": "811e3df4b54860ac651d768f1ace778f2a1de82e",
         "path": "CCreature.cpp",
-        "provenance": "content reconstruction of the BFG-removed original; Carry creature behavior to the authored config paths and use the new panel hide API.",
-        "replacementBlob": "46f6b3f4785ce5a692fef688d914e58ce3ab69fd"
+        "provenance": "content reconstruction of the BFG-removed original; Use the surviving object accessors and route bonus application and removal through Stats and attribute refresh.",
+        "replacementBlob": "63e13595daa169b03ae6ec4ef0185c8ae565eb83"
       },
       {
         "markerPath": "CCreature.h.REMOVED.git-id",
         "method": "reconstruction",
-        "originalBlob": "f31f0f27e62808f4afd70e284d765d5a1bc18e0c",
+        "originalBlob": "b01b2b509e98c766caeacb4cb1ad46529ad0944b",
         "path": "CCreature.h",
-        "provenance": "content reconstruction of the BFG-removed original; Retain the creature interface and grant the view access to the signals used by the surviving typed connections.",
-        "replacementBlob": "96979a1e0c6e9f0a21c73ae7497477916a4f1db1"
+        "provenance": "content reconstruction of the BFG-removed original; Declare stat bonus methods used by the surviving effect callback and follow nonvirtual map ownership.",
+        "replacementBlob": "499323915f45f1d8fe7c1ae031c09a53f7b2ddfa"
       },
       {
         "markerPath": "CGamePanel.cpp.REMOVED.git-id",
         "method": "reconstruction",
-        "originalBlob": "35c03dccffbdb390cf14dd9218570363e6a02aeb",
+        "originalBlob": "97544359c44b1c3e80b4922fd3dbdbe0e3a72e99",
         "path": "CGamePanel.cpp",
-        "provenance": "content reconstruction of the BFG-removed original; Implement visibility and refresh under protected graphics-item inheritance, forwarding refresh to the child views.",
+        "provenance": "content reconstruction of the BFG-removed original; Carry the working panel refresh implementation against the unchanged declarations.",
         "replacementBlob": "2d629026b8c893e28fc6c205731f91caa88f6048"
-      },
-      {
-        "markerPath": "CInteraction.cpp.REMOVED.git-id",
-        "method": "reconstruction",
-        "originalBlob": "80ea265f057ba8d0ebb2f84f28584fdcd329b014",
-        "path": "CInteraction.cpp",
-        "provenance": "content reconstruction of the BFG-removed original; Carry effect callbacks to the one-argument signature and expose authored duration and onEffect methods.",
-        "replacementBlob": "46eca8a257c44afd94f44e465f6da9cf2fd83179"
       },
       {
         "markerPath": "CItem.cpp.REMOVED.git-id",
         "method": "reconstruction",
-        "originalBlob": "aa7bfb98a9fe4960522c505d54a214652243925f",
+        "originalBlob": "3417e5b8c814787931049960b6e747dddf8cfc97",
         "path": "CItem.cpp",
-        "provenance": "content reconstruction of the BFG-removed original; Carry the verified item body across the root project move. CScroll::onUse keeps the same signature despite the unnamed parameter in the header.",
-        "replacementBlob": "79dbf2b83acaec36aaeb157c749cf2ccf168aeca"
+        "provenance": "content reconstruction of the BFG-removed original; Use the surviving object and map accessors in the carried item code.",
+        "replacementBlob": "3bcd99ae7d14ede74975953552a3207f83bae10a"
       },
       {
         "markerPath": "CMap.cpp.REMOVED.git-id",
         "method": "reconstruction",
-        "originalBlob": "4ea9275bb78d3824afdfe42331d10856093fd36c",
+        "originalBlob": "b03c764bcd08f6885ec113a924f0738c8968f1d6",
         "path": "CMap.cpp",
-        "provenance": "content reconstruction of the BFG-removed original; Load map directories and run each companion script in its own Python event dictionary. Use the surviving movement and object-removal interfaces.",
-        "replacementBlob": "04929277bb0350e86d3187e642fe2c7e89c982fc"
+        "provenance": "content reconstruction of the BFG-removed original; Carry map loading and events and route removal through the surviving scene interface.",
+        "replacementBlob": "89bbc82807d819af286130a511b4470e2db3c7d2"
       },
       {
         "markerPath": "CObjectHandler.cpp.REMOVED.git-id",
@@ -198,10 +190,10 @@
       {
         "markerPath": "GameScript.cpp.REMOVED.git-id",
         "method": "reconstruction",
-        "originalBlob": "7bf060a37e58b618095847e3e638f684fa6ba737",
+        "originalBlob": "51c95fbc7c773b715d06aa0cc9e38d1ccf10cfcd",
         "path": "GameScript.cpp",
-        "provenance": "content reconstruction of the BFG-removed original; Carry the bindings and expose the new CEffect duration and callback methods.",
-        "replacementBlob": "6e50580247451844241dcdc15d81103f41ffcd89"
+        "provenance": "content reconstruction of the BFG-removed original; Carry the Python bindings and expose the effect subclass with its authored virtual callback and duration API.",
+        "replacementBlob": "4e07c1da21f036ed3e4949fc523604ab9cf84961"
       },
       {
         "markerPath": "Stats.cpp.REMOVED.git-id",
@@ -319,7 +311,7 @@
         "method": "reconstruction",
         "originalBlob": "1b3aa2bf2cce5cd06a478f1fbf4367a4c2002143",
         "path": "boost/python/object/inheritance.cpp",
-        "provenance": "unverified donor reconstruction; 4b3902d44f874a1fae86054d7240a2af76901bb4:boost/python/object/inheritance.cpp; headerMatch=0; apiOverlap=0/10000; distance=75",
+        "provenance": "unverified donor reconstruction; 4b3902d44f874a1fae86054d7240a2af76901bb4:boost/python/object/inheritance.cpp; headerMatch=0; apiOverlap=0/10000; distance=74",
         "replacementBlob": "70feba5fcd280139933f29b9179b0ed00eed75f8"
       },
       {
@@ -335,7 +327,7 @@
         "method": "reconstruction",
         "originalBlob": "0d39c3d1478c19a891acce327ddf81990724ace2",
         "path": "boost/python/object_operators.cpp",
-        "provenance": "unverified donor reconstruction; 70d0d690df45877698cb094405e25be00a8139fd:boost/python/object_operators.cpp; headerMatch=0; apiOverlap=0/10000; distance=67",
+        "provenance": "unverified donor reconstruction; 70d0d690df45877698cb094405e25be00a8139fd:boost/python/object_operators.cpp; headerMatch=0; apiOverlap=0/10000; distance=66",
         "replacementBlob": "43d2109b7fbee7a405e4e445aff17714078b1631"
       },
       {
@@ -351,7 +343,7 @@
         "method": "reconstruction",
         "originalBlob": "0f46652b2ab25b823980b32afec490a51470fa02",
         "path": "boost/python/str.cpp",
-        "provenance": "unverified donor reconstruction; 4b3902d44f874a1fae86054d7240a2af76901bb4:boost/python/str.cpp; headerMatch=0; apiOverlap=0/10000; distance=75",
+        "provenance": "unverified donor reconstruction; 4b3902d44f874a1fae86054d7240a2af76901bb4:boost/python/str.cpp; headerMatch=0; apiOverlap=0/10000; distance=74",
         "replacementBlob": "37642738eae0bee1bbcf50cbc12d1c57e227602f"
       },
       {
@@ -367,7 +359,7 @@
         "method": "reconstruction",
         "originalBlob": "2f79f3a7b4e72640e404b1c2d442208127eb6557",
         "path": "config/monsters.json",
-        "provenance": "unverified donor reconstruction; 55e6516eb91b739e899df1ef8d72116da44fec49:config/monsters.json; headerMatch=0; apiOverlap=0/10000; distance=76",
+        "provenance": "unverified donor reconstruction; 55e6516eb91b739e899df1ef8d72116da44fec49:config/monsters.json; headerMatch=0; apiOverlap=0/10000; distance=75",
         "replacementBlob": "b6b5708a1c0683d8ca6d9c395ee31e4742bdd39e"
       },
       {
@@ -796,9 +788,9 @@
       {
         "markerPath": "scripts/game/interaction.py.REMOVED.git-id",
         "method": "reconstruction",
-        "originalBlob": "ecdaf5898510f3f82418e3494ab2044368ebd6d6",
+        "originalBlob": "c9832ae9927663e029301801764672d62a10be6a",
         "path": "scripts/game/interaction.py",
-        "provenance": "content reconstruction of the BFG-removed original; Carry the preceding working interactions and use game.randint, matching the authored import transition in object.py.",
+        "provenance": "content reconstruction of the BFG-removed original; Carry the preceding interaction definitions across the Python effect transition. The exact removed script is unknown.",
         "replacementBlob": "2b6d50a2d0b3bd7865c73df5d3efc4a6e70fb375"
       },
       {
@@ -814,9 +806,9 @@
         "replacementBlob": "f5d0b39a0cdddb91a31a537052b7d8d31a4aa79f"
       }
     ],
-    "restoredFilesFingerprint": "042c0453fa7fd8baa7eaa3be17fc308196db7eae4bd7261d136eb8865c0e9b77",
-    "sourceCommit": "712b84e04439d96e4baeb4a9b739895370185682",
-    "sourceTree": "3bc8800f427fdd6b0a069c5a56d3f8fb27c91196",
+    "restoredFilesFingerprint": "a0f9852c865ce913319d9b8ff36ff818c7a01d21ad09861988367f2887879954",
+    "sourceCommit": "9968ca5001e0a5844399ae8c2a2134c9798ce039",
+    "sourceTree": "c2201969faef0878f4dcbaa76bea32a988340191",
     "status": "complete",
     "submodules": [],
     "unresolved": []
@@ -827,12 +819,12 @@
       "-a",
       "--server-args=-screen 0 1920x1080x24",
       "env",
-      "LD_PRELOAD=/tmp/nouraajd-289-map-final/verify/snapshot-ykbsh0mu/observer/libwindowspaths.so",
-      "/tmp/nouraajd-289-map-final/verify/snapshot-ykbsh0mu/build/RecoveryGame"
+      "LD_PRELOAD=/tmp/nouraajd-290-effects-final/verify/snapshot-b9jj_9hj/observer/libwindowspaths.so",
+      "/tmp/nouraajd-290-effects-final/verify/snapshot-b9jj_9hj/build/RecoveryGame"
     ],
-    "log": "/tmp/nouraajd-289-map-final/verify/snapshot-ykbsh0mu/smoke/startup.log",
+    "log": "/tmp/nouraajd-290-effects-final/verify/snapshot-b9jj_9hj/smoke/startup.log",
     "returnCode": 0,
-    "seconds": 0.515,
+    "seconds": 0.676,
     "startup": {
       "checks": {
         "eventLoop": true,
@@ -854,31 +846,13 @@
     "status": "success",
     "timedOut": false
   },
-  "sourceCommit": "712b84e04439d96e4baeb4a9b739895370185682",
+  "sourceCommit": "9968ca5001e0a5844399ae8c2a2134c9798ce039",
   "sourceCommits": [
-    "712b84e04439d96e4baeb4a9b739895370185682"
+    "9968ca5001e0a5844399ae8c2a2134c9798ce039"
   ],
   "sourcePreparation": {
     "identity": {
-      "implementationSha256": "b525d1d71370c9a485e29dc7eda6b8eb098b252c4c217f8928aefd7550a050dc",
-      "mapEvents": {
-        "files": {
-          "CGameView.cpp": [
-            "c744328939671011bb8ccf1436c1957f9dfae7bf911e50821fa0de7af5445179",
-            "ee71e30959da3274a4b4d9cd307346655962fcc036af0913efd3e7c2680e398a"
-          ],
-          "CMapObject.cpp": [
-            "fbea8ea978946da128f53e36d9421d219463c9e7a2a8accc71eeb287399a594d",
-            "099d65a949fc5bba49acf49e7d557d276873b9425e957c85b0b4b30460676b8d"
-          ],
-          "CScriptEngine.cpp": [
-            "0b0052b4d226433d983f8746ca714c0eb42ccb5d92b3f64ee1e56fe951882267",
-            "557009619927f7fae3b0e850cad460411d63d58ec8b7976c9c8462ee85029719"
-          ]
-        },
-        "replaySha256": "a4d0155d104e42404db484cc0f360d1c24feaed256198913e22d02e789ff7e16",
-        "sourceCommit": "712b84e04439d96e4baeb4a9b739895370185682"
-      },
+      "implementationSha256": "263928550144e6d74abee297abb57035e16936b4283ee8d6e669b7faba2bf9a8",
       "outputs": [
         {
           "after": {
@@ -895,18 +869,6 @@
         {
           "after": {
             "kind": "file",
-            "sha256": "099d65a949fc5bba49acf49e7d557d276873b9425e957c85b0b4b30460676b8d"
-          },
-          "before": {
-            "kind": "file",
-            "sha256": "fbea8ea978946da128f53e36d9421d219463c9e7a2a8accc71eeb287399a594d"
-          },
-          "path": "CMapObject.cpp",
-          "purpose": "Carry forward reviewed Qt signal and Python lifetime repairs"
-        },
-        {
-          "after": {
-            "kind": "file",
             "sha256": "557009619927f7fae3b0e850cad460411d63d58ec8b7976c9c8462ee85029719"
           },
           "before": {
@@ -916,7 +878,21 @@
           "path": "CScriptEngine.cpp",
           "purpose": "Carry forward reviewed Qt signal and Python lifetime repairs"
         }
-      ]
+      ],
+      "pythonEffects": {
+        "files": {
+          "CGameView.cpp": [
+            "c744328939671011bb8ccf1436c1957f9dfae7bf911e50821fa0de7af5445179",
+            "ee71e30959da3274a4b4d9cd307346655962fcc036af0913efd3e7c2680e398a"
+          ],
+          "CScriptEngine.cpp": [
+            "0b0052b4d226433d983f8746ca714c0eb42ccb5d92b3f64ee1e56fe951882267",
+            "557009619927f7fae3b0e850cad460411d63d58ec8b7976c9c8462ee85029719"
+          ]
+        },
+        "replaySha256": "187ec0830d5915d4278b79a8d5ada4bbec22f4e7f31df708a20c30d64f8006a9",
+        "sourceCommit": "9968ca5001e0a5844399ae8c2a2134c9798ce039"
+      }
     },
     "outputs": [
       {
@@ -929,18 +905,6 @@
           "sha256": "c744328939671011bb8ccf1436c1957f9dfae7bf911e50821fa0de7af5445179"
         },
         "path": "CGameView.cpp",
-        "purpose": "Carry forward reviewed Qt signal and Python lifetime repairs"
-      },
-      {
-        "after": {
-          "kind": "file",
-          "sha256": "099d65a949fc5bba49acf49e7d557d276873b9425e957c85b0b4b30460676b8d"
-        },
-        "before": {
-          "kind": "file",
-          "sha256": "fbea8ea978946da128f53e36d9421d219463c9e7a2a8accc71eeb287399a594d"
-        },
-        "path": "CMapObject.cpp",
         "purpose": "Carry forward reviewed Qt signal and Python lifetime repairs"
       },
       {
@@ -961,16 +925,16 @@
       {
         "command": [
           "history_source_prep.py",
-          "prepare-map-events"
+          "prepare-python-effects"
         ],
-        "log": "/tmp/nouraajd-289-map-final/verify/snapshot-ykbsh0mu/preparation/map-events.log",
-        "name": "mapEvents",
+        "log": "/tmp/nouraajd-290-effects-final/verify/snapshot-b9jj_9hj/preparation/python-effects.log",
+        "name": "pythonEffects",
         "returnCode": 0,
         "timedOut": false
       }
     ]
   },
-  "sourceTree": "3bc8800f427fdd6b0a069c5a56d3f8fb27c91196",
+  "sourceTree": "c2201969faef0878f4dcbaa76bea32a988340191",
   "startupMode": "game",
   "startupSelection": {
     "mode": "game"
@@ -991,5 +955,5 @@
     }
   },
   "toolchainImage": "sha256:d3f59ec1d12297ee8091fbea687aa619275fc92b3fd426560e0a1fa40715afc8",
-  "verifiedFromCommit": "712b84e04439d96e4baeb4a9b739895370185682"
+  "verifiedFromCommit": "9968ca5001e0a5844399ae8c2a2134c9798ce039"
 }

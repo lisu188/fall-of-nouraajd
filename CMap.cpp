@@ -275,7 +275,7 @@ void CMap::removeObject(CMapObject *object) {
     return;
   }
   object->onDestroy();
-  object->removeFromGame();
+  scene->removeObject(object);
 }
 std::set<CMapObject *> *CMap::getObjects() { return &mapObjects; }
 CMapObject *CMap::getObjectByName(QString name) {
