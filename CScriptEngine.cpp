@@ -44,18 +44,9 @@ QString CScriptEngine::buildCommand ( std::initializer_list<QString> list ) {
 	return command;
 }
 
-boost::python::object CScriptEngine::getObject ( QString name ) {
-	if ( !main_namespace.contains ( name.toStdString().c_str() ) ) {
-		boost::python::object object;
-		return object;
-	}
 
-	return main_namespace[name.toStdString().c_str()];
-}
 
-boost::python::api::object CScriptEngine::getMainNamespace() {
-	return main_namespace;
-}
+
 
 void CScriptEngine::executeCommand ( std::initializer_list<QString> list ) {
 	executeScript ( buildCommand ( list ) );
@@ -68,5 +59,5 @@ CScriptEngine::CScriptEngine () {
 	main_module=boost::python::object ( boost::python::handle<> ( PyImport_ImportModule ( "__main__" ) ) ) ;
 	main_namespace=main_module.attr ( "__dict__" );
 	boost::python::incref ( main_module.ptr() );
-	executeScript ( CResourcesHandler::getInstance()->getResourceAsString ( "scripts/start.py" ) );
+    executeScript ( CResourcesHandler::getInstance()->getResourceAsString ( "scripts/start.py" ) );
 }

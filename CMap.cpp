@@ -20,8 +20,7 @@
 
 CMap::CMap(CGameScene *scene, QString mapPath)
     : QObject(scene), scene(scene), entryx(0), entryz(0), entryy(0),
-      lootProvider(nullptr), handler(nullptr), mapPath(mapPath),
-      events((CScriptEngine::getInstance(), boost::python::dict())) {
+      lootProvider(nullptr), handler(nullptr), mapPath(mapPath) {
   scene->setMap(this);
   handler = new CObjectHandler(this);
   guiHandler = new CGuiHandler(this);
@@ -53,11 +52,10 @@ int mapInteger(const QJsonValue &value, int fallback = 0) {
                                                : value.toVariant().toInt();
 }
 } // namespace
-boost::python::dict CMap::getEvents() const { return events; }
 void CMap::loadMap(QString mapPath) {
   const auto script = CResourcesHandler::getInstance()->getResourceAsString(mapPath + "/map.py");
   if (!script.isEmpty())
-    CScriptEngine::getInstance()->executeScript(script, events);
+    CScriptEngine::getInstance()->executeScript(script);
   const auto map = CConfigurationProvider::getConfig(mapPath + "/map.json").toObject();
   if (map["map"].isObject() && map["state"].isObject()) {
     const QJsonObject terrain = map["map"].toObject();
