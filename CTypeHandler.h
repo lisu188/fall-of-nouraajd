@@ -28,4 +28,3 @@ public:
 	PyTypeHandler ( const PyTypeHandler& );
 	virtual CMapObject *create ( QString name );
 };
-
