@@ -1,4 +1,5 @@
-def event1(event):
-	event.getMap().getGuiHandler().showMessage("dupa")
+class event1(game.CEvent):
+    def onEnter(self):
+        self.getMap().getGuiHandler().showMessage("dupa")
 
 

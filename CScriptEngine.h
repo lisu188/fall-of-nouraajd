@@ -12,13 +12,28 @@ public:
 	void executeScript ( QString script ,boost::python::object nameSpace=boost::python::object() );
 	void executeCommand ( std::initializer_list<QString> list );
 	QString buildCommand ( std::initializer_list<QString> list );
-	boost::python::object getObject ( QString name );
-	boost::python::object getMainNamespace();
 	CScriptEngine ();
 	~CScriptEngine();
+    template<typename T=boost::python::object>
+    T getObject ( QString name ) {
+        try{
+           QString script="object=";
+           script=script.append ( name );
+           executeScript (  script );
+           boost::python::object object= main_namespace["object"];
+           return boost::python::extract<T> ( object );
+       }catch(...){
+            PyErr_Clear();
+            return boost::python::object();
+       }
+    }
 	template<typename ...T>
-	void callFunction ( QString nameSpace,QString name,T ... params ) {
-		main_namespace[nameSpace][name] ( params... );
+    void callFunction ( QString name,T ... params ) {
+        QString script="object=";
+        script=script.append ( name );
+        executeScript (  script );
+        boost::python::object object= main_namespace["object"];
+        object ( params... );
 	}
 	template<typename T>
 	T createObject ( QString clas ) {

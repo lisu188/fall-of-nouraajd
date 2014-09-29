@@ -9,10 +9,7 @@ public:
 	CBuilding();
 	CBuilding ( const CBuilding & );
 	virtual ~CBuilding();
-	virtual void onEnter();
-	virtual void onMove();
-	virtual void onCreate();
-	virtual void onDestroy();
+
 	// PROPERTIES
 	bool isEnabled();
 	void setEnabled ( bool enabled );

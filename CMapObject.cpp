@@ -17,6 +17,7 @@ CMapObject::CMapObject() {
 CMapObject::~CMapObject() {
 
 }
+
 QString CMapObject::getTypeName() const {
 	return typeName;
 }
@@ -126,18 +127,11 @@ void CMapObject::hoverLeaveEvent ( QGraphicsSceneHoverEvent *event ) {
 }
 
 CEvent::CEvent() {
-
+    connect(this,&QObject::objectNameChanged,this,&CEvent::setClass);
 }
 
 CEvent::CEvent ( const CEvent & ) {
 
-}
-
-void CEvent::onEnter() {
-	if ( this->isEnabled() ) {
-		CEvent* event=this;
-		getMap()->getEvents() [this->objectName().toStdString().c_str()] ( boost::ref ( event ) );
-	}
 }
 
 bool CEvent::isEnabled() {
@@ -147,4 +141,11 @@ bool CEvent::isEnabled() {
 void CEvent::setEnabled ( bool enabled ) {
 	this->enabled = enabled;
 }
+
+void CEvent::setClass(const QString &value)
+{
+    CEvent* event=this;
+    CScriptEngine::getInstance()->callFunction("game.switchClass", boost::ref ( event ),CScriptEngine::getInstance()->getObject (value.toStdString().c_str())  );
+}
+
 

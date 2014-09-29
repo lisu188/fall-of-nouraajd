@@ -81,11 +81,10 @@ public:
 	CEvent();
 	CEvent ( const CEvent & );
 
-	virtual void onEnter();
-
 	bool isEnabled();
 	void setEnabled ( bool enabled );
 
 private:
-	bool enabled = true;
+    bool enabled = true;
+    void setClass(const QString &value);
 };

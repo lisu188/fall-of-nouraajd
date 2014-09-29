@@ -68,7 +68,6 @@ public:
 	const CLootProvider *getLootProvider() const;
 	const CObjectHandler *getObjectHandler() const;
 	CGuiHandler *getGuiHandler() const;
-	boost::python::dict getEvents() const;
 	Q_INVOKABLE bool canStep ( int x,int y,int z );
 private:
 	std::set<CMapObject *> mapObjects;
@@ -82,6 +81,5 @@ private:
 	const CObjectHandler *handler;
 	CGuiHandler *guiHandler;
 	QString mapPath;
-	boost::python::dict events;
 };
 
