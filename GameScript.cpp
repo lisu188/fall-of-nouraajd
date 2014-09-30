@@ -1,3 +1,4 @@
+#include "CLoader.h"
 #include <random>
 #include <stdexcept>
 #include "CResourcesHandler.h"
@@ -281,86 +282,33 @@ BOOST_PYTHON_MODULE(_game) {
   class_<CTile, bases<CMapObject>, boost::noncopyable>("CTile").def(
       "onStep", &CTile::onStep);
 }
-
 namespace {
-PyObject *readScript(PyObject *, PyObject *arguments) {
-    const char *path;
-    if (!PyArg_ParseTuple(arguments, "s", &path)) {
-        return nullptr;
-    }
-    std::unique_ptr<QFile> file(CResourcesHandler::getInstance()->getResource(QString::fromUtf8(path)));
-    if (!file || !file->open(QIODevice::ReadOnly)) {
-        Py_RETURN_NONE;
-    }
-    QByteArray bytes = file->readAll();
-    return PyBytes_FromStringAndSize(bytes.constData(), bytes.size());
+bool loaderPackage(const std::string &name) {
+  QString path=QString::fromStdString(name).replace(".", "/");
+  return !CResourcesHandler::getInstance()->getPath("scripts/" + path + "/__init__.py").isEmpty();
+}
 }
 
-PyMethodDef loaderMethods[] = {
-    {"_readScript", readScript, METH_VARARGS, nullptr},
-    {nullptr, nullptr, 0, nullptr},
-};
+BOOST_PYTHON_MODULE(_core) {
+  class_<ALoader, boost::noncopyable>("ALoader", no_init)
+      .def("checkModule", static_cast<bool (ALoader::*)(std::string)>(&ALoader::checkModule))
+      .def("exec_module", &ALoader::exec_module);
+  class_<CGeneralLoader, bases<ALoader>, boost::noncopyable>("_NativeGeneralLoader");
+  def("_loaderPackage", loaderPackage);
 
-PyModuleDef loaderModule = {PyModuleDef_HEAD_INIT, "_core", nullptr, -1, loaderMethods};
-}
+  scope module;
+  PyObject *globals=PyModule_GetDict(module.ptr());
+  if (PyDict_SetItemString(globals, "__builtins__", PyEval_GetBuiltins()) < 0)
+      throw_error_already_set();
+  PyObject *result=PyRun_String(R"PY(
+from importlib.machinery import ModuleSpec
 
-PyMODINIT_FUNC PyInit__core() {
-    PyObject *module = PyModule_Create(&loaderModule);
-    if (!module) {
-        return nullptr;
-    }
-    PyObject *globals = PyModule_GetDict(module);
-    if (PyDict_SetItemString(globals, "__builtins__", PyEval_GetBuiltins()) < 0) {
-        Py_DECREF(module);
-        return nullptr;
-    }
-    PyObject *executed = PyRun_String(R"PY(
-import sys
-from types import ModuleType
-
-_fallback_finders = tuple(sys.meta_path)
-
-class ScriptLoader:
-    def find_module(self, name, path=None):
-        if self._script(name) is not None:
-            return self
-        for finder in _fallback_finders:
-            loader = finder.find_module(name, path)
-            if loader is not None:
-                return loader
-
-    def _script(self, name):
-        base = "scripts/" + name.replace(".", "/")
-        for path, package in ((base + "/__init__.py", True), (base + ".py", False)):
-            source = _readScript(path)
-            if source is not None:
-                return path, package, source
-
-    def load_module(self, name):
-        if name in sys.modules:
-            return sys.modules[name]
-        script = self._script(name)
-        if script is None:
-            raise ImportError(name)
-        path, package, source = script
-        module = ModuleType(name)
-        module.__file__ = path
-        module.__loader__ = self
-        module.__package__ = name if package else name.rpartition(".")[0]
-        if package:
-            module.__path__ = [path.rpartition("/")[0]]
-        sys.modules[name] = module
-        try:
-            exec(compile(source, path, "exec"), module.__dict__)
-        except BaseException:
-            del sys.modules[name]
-            raise
-        return module
+class CGeneralLoader(_NativeGeneralLoader):
+    def find_spec(self, name, path=None, target=None):
+        if self.checkModule(name):
+            return ModuleSpec(name, self, is_package=_loaderPackage(name))
 )PY", Py_file_input, globals, globals);
-    if (!executed) {
-        Py_DECREF(module);
-        return nullptr;
-    }
-    Py_DECREF(executed);
-    return module;
+  if (!result)
+      throw_error_already_set();
+  Py_DECREF(result);
 }
