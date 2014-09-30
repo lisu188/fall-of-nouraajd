@@ -85,6 +85,6 @@ public:
 	void setEnabled ( bool enabled );
 
 private:
-    bool enabled = true;
-    void setClass(const QString &value);
+	bool enabled = true;
+	void setClass ( const QString &value );
 };

@@ -4,5 +4,5 @@ from . import object
 from . import effect
 
 def switchClass(object,cls):
-    if(cls):
+    if cls and type(cls) != float:
         object.__class__=cls

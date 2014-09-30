@@ -69,7 +69,8 @@ SOURCES += \
     boost/python/object/iterator.cpp \
     boost/python/object/life_support.cpp \
     boost/python/object/pickle_support.cpp \
-    boost/python/object/stl_iterator.cpp
+    boost/python/object/stl_iterator.cpp \
+    CLoader.cpp
 
 HEADERS += \
      CReflection.h \
@@ -96,7 +97,8 @@ HEADERS += \
      Util.h \
      CObjectHandler.h \
      CGuiHandler.h \
-    CResourcesHandler.h
+    CResourcesHandler.h \
+    CLoader.h
 
 unix:LIBS += -L/usr/local/lib -lpython3.4m -ldl -fPIC -lutil
 win32:LIBS += -LC:\Python34\libs -lpython34

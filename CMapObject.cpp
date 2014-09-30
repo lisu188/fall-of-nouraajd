@@ -127,7 +127,7 @@ void CMapObject::hoverLeaveEvent ( QGraphicsSceneHoverEvent *event ) {
 }
 
 CEvent::CEvent() {
-    connect(this,&QObject::objectNameChanged,this,&CEvent::setClass);
+	connect ( this,&QObject::objectNameChanged,this,&CEvent::setClass );
 }
 
 CEvent::CEvent ( const CEvent & ) {
@@ -142,10 +142,9 @@ void CEvent::setEnabled ( bool enabled ) {
 	this->enabled = enabled;
 }
 
-void CEvent::setClass(const QString &value)
-{
-    CEvent* event=this;
-    CScriptEngine::getInstance()->callFunction("game.switchClass", boost::ref ( event ),CScriptEngine::getInstance()->getObject (value.toStdString().c_str())  );
+void CEvent::setClass ( const QString &value ) {
+	CEvent* event=this;
+	CScriptEngine::getInstance()->callFunction ( "game.switchClass", boost::ref ( event ),CScriptEngine::getInstance()->getObject ( value.toStdString().c_str() )  );
 }
 
 
