@@ -1,21 +1,24 @@
 #pragma once
 #include <QString>
+#include <QObject>
 #include <boost/python.hpp>
+class CMap;
+class AScriptLoader;
 
-class ALoader;
 class ModuleSpec {
 public:
-	ModuleSpec ( ALoader *loader,std::string name );
-	ALoader *loader();
+    ModuleSpec ( AScriptLoader *loader,std::string name );
+    AScriptLoader *loader();
 	std::string name;
 	std::string subModuleSearch;
 	bool hasLocation=true;
 	bool cached=false;
 private:
-	ALoader *scriptLoader=0;
+    AScriptLoader *scriptLoader=0;
 };
 
-class ALoader {
+class AScriptLoader :public QObject{
+    Q_OBJECT
 public:
 	virtual QString findModule ( QString modName ) =0;
 
@@ -31,8 +34,19 @@ public:
 
 };
 
-class CGeneralLoader :public ALoader {
+class CScriptLoader :public AScriptLoader {
+    Q_OBJECT
+public:
 	virtual QString findModule ( QString modName );
+};
+
+class CMapScriptLoader :public AScriptLoader {
+    Q_OBJECT
+public:
+    CMapScriptLoader(CMap*map);
+    virtual QString findModule ( QString modName );
+private:
+    CMap* map=0;
 };
 
 

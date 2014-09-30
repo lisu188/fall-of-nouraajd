@@ -1,6 +1,6 @@
 <RCC>
     <qresource prefix="/">
-        <file>maps/1/map.json</file>
-        <file>maps/1/map.py</file>
+        <file>maps/map1/event.py</file>
+        <file>maps/map1/map.json</file>
     </qresource>
 </RCC>

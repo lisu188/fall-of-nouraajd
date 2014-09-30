@@ -27,7 +27,7 @@
      <item>
       <widget class="QLineEdit" name="mapType">
        <property name="text">
-        <string>maps/1</string>
+        <string>maps/map1</string>
        </property>
       </widget>
      </item>

@@ -1,4 +1,4 @@
-#include "CLoader.h"
+#include "CScriptLoader.h"
 #include <random>
 #include <stdexcept>
 #include "CResourcesHandler.h"
@@ -281,8 +281,7 @@ BOOST_PYTHON_MODULE(_game) {
       .def("onUse", &CPotion::onUse, &CPotionWrapper::defaultOnUse);
   class_<CTile, bases<CMapObject>, boost::noncopyable>("CTile").def(
       "onStep", &CTile::onStep);
-}
-namespace {
+}namespace {
 bool loaderPackage(const std::string &name) {
   QString path=QString::fromStdString(name).replace(".", "/");
   return !CResourcesHandler::getInstance()->getPath("scripts/" + path + "/__init__.py").isEmpty();
@@ -290,12 +289,12 @@ bool loaderPackage(const std::string &name) {
 }
 
 BOOST_PYTHON_MODULE(_core) {
-  class_<ALoader, boost::noncopyable>("ALoader", no_init)
-      .def("checkModule", static_cast<bool (ALoader::*)(std::string)>(&ALoader::checkModule))
-      .def("exec_module", &ALoader::exec_module);
-  class_<CGeneralLoader, bases<ALoader>, boost::noncopyable>("_NativeGeneralLoader");
+  class_<AScriptLoader, boost::noncopyable>("AScriptLoader", no_init)
+      .def("checkModule", static_cast<bool (AScriptLoader::*)(std::string)>(&AScriptLoader::checkModule))
+      .def("exec_module", &AScriptLoader::exec_module);
+  class_<CScriptLoader, bases<AScriptLoader>, boost::noncopyable>("_NativeScriptLoader");
+  class_<CMapScriptLoader, bases<AScriptLoader>, boost::noncopyable>("_NativeMapScriptLoader", init<CMap *>());
   def("_loaderPackage", loaderPackage);
-
   scope module;
   PyObject *globals=PyModule_GetDict(module.ptr());
   if (PyDict_SetItemString(globals, "__builtins__", PyEval_GetBuiltins()) < 0)
@@ -303,10 +302,15 @@ BOOST_PYTHON_MODULE(_core) {
   PyObject *result=PyRun_String(R"PY(
 from importlib.machinery import ModuleSpec
 
-class CGeneralLoader(_NativeGeneralLoader):
+class CScriptLoader(_NativeScriptLoader):
     def find_spec(self, name, path=None, target=None):
         if self.checkModule(name):
             return ModuleSpec(name, self, is_package=_loaderPackage(name))
+
+class CMapScriptLoader(_NativeMapScriptLoader):
+    def find_spec(self, name, path=None, target=None):
+        if self.checkModule(name):
+            return ModuleSpec(name, self)
 )PY", Py_file_input, globals, globals);
   if (!result)
       throw_error_already_set();

@@ -1,17 +1,18 @@
-#include "CLoader.h"
+#include "CScriptLoader.h"
 #include "CResourcesHandler.h"
+#include "CMap.h"
 
 using namespace boost::python;
 
-ModuleSpec::ModuleSpec ( ALoader *loader, std::string name ) :name ( name ) ,scriptLoader ( loader ) {
+ModuleSpec::ModuleSpec ( AScriptLoader *loader, std::string name ) :name ( name ) ,scriptLoader ( loader ) {
 
 }
 
-ALoader *ModuleSpec::loader() {
+AScriptLoader *ModuleSpec::loader() {
 	return scriptLoader;
 }
 
-QString CGeneralLoader::findModule ( QString modName ) {
+QString CScriptLoader::findModule ( QString modName ) {
 	modName=modName.replace ( ".","/" );
 	QString modData=CResourcesHandler::getInstance()->getResourceAsString ( "scripts/"+modName+".py" );
 	if ( modData=="" ) {
@@ -20,15 +21,15 @@ QString CGeneralLoader::findModule ( QString modName ) {
 	return modData;
 }
 
-QString ALoader::findModule ( std::string modName ) {
+QString AScriptLoader::findModule ( std::string modName ) {
 	return findModule ( QString::fromStdString ( modName ) );
 }
 
-bool ALoader::checkModule ( std::string modName ) {
+bool AScriptLoader::checkModule ( std::string modName ) {
 	return findModule ( modName ) !="";
 }
 
-void ALoader::exec_module ( object module ) {
+void AScriptLoader::exec_module ( object module ) {
 	QString modName=QString::fromStdString ( boost::python::extract<std::string> ( module.attr ( "__name__" ) ) );
 	QString modData = findModule ( modName );
 	object main_module=boost::python::object ( boost::python::handle<> ( PyImport_ImportModule ( "__main__" ) ) ) ;
@@ -37,7 +38,7 @@ void ALoader::exec_module ( object module ) {
 	exec ( modData.toStdString().c_str(),module.attr ( "__dict__" ) );
 }
 
-ModuleSpec *ALoader::find_spec ( object name, object, object ) {
+ModuleSpec *AScriptLoader::find_spec ( object name, object, object ) {
 	std::string modName=boost::python::extract<std::string> ( name ) ;
 	if ( !checkModule ( modName ) ) {
 		return NULL;
@@ -47,6 +48,20 @@ ModuleSpec *ALoader::find_spec ( object name, object, object ) {
 }
 
 
-bool ALoader::checkModule ( QString modName ) {
+bool AScriptLoader::checkModule ( QString modName ) {
 	return findModule ( modName ) !="";
+}
+
+
+CMapScriptLoader::CMapScriptLoader(CMap *map):map(map)
+{
+    
+}
+
+QString CMapScriptLoader::findModule(QString modName)
+{
+    if(modName==map->getMapName()){
+        return CResourcesHandler::getInstance()->getResourceAsString(map->getMapPath()+"/event.py");
+    }
+    return QString();
 }
