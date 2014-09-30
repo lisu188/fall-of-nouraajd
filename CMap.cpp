@@ -53,9 +53,18 @@ int mapInteger(const QJsonValue &value, int fallback = 0) {
 }
 } // namespace
 void CMap::loadMap(QString mapPath) {
-  const auto script = CResourcesHandler::getInstance()->getResourceAsString(mapPath + "/map.py");
-  if (!script.isEmpty())
-    CScriptEngine::getInstance()->executeScript(script);
+  namespace py = boost::python;
+  auto *engine = CScriptEngine::getInstance();
+  py::object mapLoader = py::import("_core").attr("CMapScriptLoader")(py::ptr(this));
+  py::object finders = py::import("sys").attr("meta_path");
+  finders.attr("append")(mapLoader);
+  try {
+    engine->executeScript("import " + getMapName());
+  } catch (...) {
+    finders.attr("remove")(mapLoader);
+    throw;
+  }
+  finders.attr("remove")(mapLoader);
   const auto map = CConfigurationProvider::getConfig(mapPath + "/map.json").toObject();
   if (map["map"].isObject() && map["state"].isObject()) {
     const QJsonObject terrain = map["map"].toObject();
@@ -203,7 +212,7 @@ bool CMap::addTile(CTile *tile, int x, int y, int z) {
   tile->posz = z;
   tile->setMap(this);
   tile->moveTo(x, y, z);
-  tile->setVisible(z == currentMap);
+  tile->setVisible(z == currentLevel);
   return true;
 }
 void CMap::removeTile(int x, int y, int z) {
@@ -233,23 +242,23 @@ CTile *CMap::getTile(int x, int y, int z) {
   }
   return tile;
 }
-void CMap::ensureTile(int x, int y) { getTile(x, y, currentMap); }
+void CMap::ensureTile(int x, int y) { getTile(x, y, currentLevel); }
 void CMap::ensureSize() {
   CPlayer *player = getPlayer();
   if (!player) {
     return;
   }
-  currentMap = player->getPosZ();
+  currentLevel = player->getPosZ();
   for (int x = -20; x < 20; ++x) {
     for (int y = -10; y < 10; ++y) {
       ensureTile(player->getPosX() + x, player->getPosY() + y);
     }
   }
   for (auto &tile : *this) {
-    tile.second->setVisible(tile.first.z == currentMap);
+    tile.second->setVisible(tile.first.z == currentLevel);
   }
   for (CMapObject *object : mapObjects) {
-    object->setVisible(object->getPosZ() == currentMap);
+    object->setVisible(object->getPosZ() == currentLevel);
   }
   if (scene->getView()) {
     scene->getView()->centerOn(player);
@@ -367,7 +376,7 @@ void CMap::endMove() {
 }
 void CMap::loadingComplete() {
   for (CMapObject *object : mapObjects) {
-    object->setVisible(object->getPosZ() == currentMap);
+    object->setVisible(object->getPosZ() == currentLevel);
   }
 }
 void CMap::randomDir(int *direction, int rule) {
@@ -378,15 +387,15 @@ void CMap::randomDir(int *direction, int rule) {
 }
 
 CGameScene *CMap::getScene() const { return scene; }
-void CMap::mapUp() { --currentMap; }
-void CMap::mapDown() { ++currentMap; }
-int CMap::getCurrentMap() { return currentMap; }
+void CMap::mapUp() { --currentLevel; }
+void CMap::mapDown() { ++currentLevel; }
+int CMap::getCurrentMap() { return currentLevel; }
 int CMap::getEntryX() { return entryx; }
 int CMap::getEntryY() { return entryy; }
 int CMap::getEntryZ() { return entryz; }
 std::map<int, std::pair<int, int>> CMap::getBounds() { return boundaries; }
-int CMap::getCurrentXBound() { return boundaries[currentMap].first; }
-int CMap::getCurrentYBound() { return boundaries[currentMap].second; }
+int CMap::getCurrentXBound() { return boundaries[currentLevel].first; }
+int CMap::getCurrentYBound() { return boundaries[currentLevel].second; }
 
 bool CMap::canStep(int x, int y, int z) { return getTile(x, y, z)->canStep(); }
 void CMap::moveTile(CTile *tile, int x, int y, int z) {
@@ -403,3 +412,6 @@ void CMap::moveTile(CTile *tile, int x, int y, int z) {
 }
 
 CGuiHandler *CMap::getGuiHandler() const { return guiHandler; }
+
+QString CMap::getMapPath() const { return mapPath; }
+QString CMap::getMapName() { return mapPath.section("/", -1); }

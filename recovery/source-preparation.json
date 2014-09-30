@@ -1,6 +1,7 @@
 {
   "identity": {
-    "classLoaders": {
+    "implementationSha256": "c25c6953c387517704fb973a3ce92499aedbbb6443ea819ecbb6e5ac493b4498",
+    "mapPackages": {
       "files": {
         "CGameView.cpp": [
           "c744328939671011bb8ccf1436c1957f9dfae7bf911e50821fa0de7af5445179",
@@ -11,10 +12,9 @@
           "586922933de9b2d73bc3527cf2de0ea6d6473d9ef38180d34d8f0a295f7c2bb3"
         ]
       },
-      "replaySha256": "7a73dcb9f88b8014d21b09047dac2e51abe52ce74bcccdb4816efdc195b2eb1a",
-      "sourceCommit": "104edb40b2c18764b57630d15a6e1c12630752da"
+      "replaySha256": "141d129887818584a5fde8dca0342b9c4b8561c16b05f29e079246831a1a5be5",
+      "sourceCommit": "a2567aac4099cd68008bbd8390d6cf8a02b6bc81"
     },
-    "implementationSha256": "f6419094c111aa97cd482d79d88644a85deeac2fa3eddf0eb9037e1de0f6dee3",
     "outputs": [
       {
         "after": {
@@ -73,10 +73,10 @@
     {
       "command": [
         "history_source_prep.py",
-        "prepare-class-loaders"
+        "prepare-map-packages"
       ],
-      "log": "/tmp/nouraajd-294-loader-final/verify/snapshot-3vpk0fcq/preparation/class-loaders.log",
-      "name": "classLoaders",
+      "log": "/tmp/nouraajd-295-package-final/verify/snapshot-kx4hcwrm/preparation/map-packages.log",
+      "name": "mapPackages",
       "returnCode": 0,
       "timedOut": false
     }
