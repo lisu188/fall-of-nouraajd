@@ -17,6 +17,7 @@
 #include "Util.h"
 #include <mutex>
 #include <boost/python.hpp>
+#include "CScriptLoader.h"
 
 class CGameScene;
 class CTile;
@@ -69,11 +70,13 @@ public:
 	const CObjectHandler *getObjectHandler() const;
 	CGuiHandler *getGuiHandler() const;
 	Q_INVOKABLE bool canStep ( int x,int y,int z );
+    QString getMapPath() const;
+    QString getMapName();
 private:
-	std::set<CMapObject *> mapObjects;
-	void randomDir ( int *tab, int rule );
+    std::set<CMapObject *> mapObjects;
+    void randomDir ( int *tab, int rule );
 	CGameScene *scene;
-	int currentMap = 0;
+    int currentLevel = 0;
 	std::map<int, QString> defaultTiles;
 	std::map<int, std::pair<int, int> > boundaries;
 	int entryx, entryz, entryy;
@@ -81,5 +84,6 @@ private:
 	const CObjectHandler *handler;
 	CGuiHandler *guiHandler;
 	QString mapPath;
+    CMapScriptLoader *loader=0;
 };
 

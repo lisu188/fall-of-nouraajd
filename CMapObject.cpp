@@ -143,8 +143,10 @@ void CEvent::setEnabled ( bool enabled ) {
 }
 
 void CEvent::setClass ( const QString &value ) {
-	CEvent* event=this;
-	CScriptEngine::getInstance()->callFunction ( "game.switchClass", boost::ref ( event ),CScriptEngine::getInstance()->getObject ( value.toStdString().c_str() )  );
+    if(getMap()){
+        CEvent* event=this;
+        CScriptEngine::getInstance()->callFunction ( "game.switchClass", boost::ref ( event ),CScriptEngine::getInstance()->getObject ( getMap()->getMapName()+"."+value )  );
+    }
 }
 
 
