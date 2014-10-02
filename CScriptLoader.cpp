@@ -53,15 +53,13 @@ bool AScriptLoader::checkModule ( QString modName ) {
 }
 
 
-CMapScriptLoader::CMapScriptLoader(CMap *map):map(map)
-{
-    this->QObject::setParent(map);
+CMapScriptLoader::CMapScriptLoader ( CMap *map ) :map ( map ) {
+	this->QObject::setParent ( map );
 }
 
-QString CMapScriptLoader::findModule(QString modName)
-{
-    if(modName==map->getMapName()){
-        return CResourcesHandler::getInstance()->getResourceAsString(map->getMapPath()+"/script.py");
-    }
-    return QString();
+QString CMapScriptLoader::findModule ( QString modName ) {
+	if ( modName==map->getMapName() ) {
+		return CResourcesHandler::getInstance()->getResourceAsString ( map->getMapPath()+"/script.py" );
+	}
+	return QString();
 }

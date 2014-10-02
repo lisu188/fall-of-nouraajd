@@ -142,14 +142,14 @@ void CEvent::setEnabled ( bool enabled ) {
 	this->enabled = enabled;
 }
 
-QString CEvent::getEventClass(){
-    return eventClass;
+QString CEvent::getEventClass() {
+	return eventClass;
 }
 
 void CEvent::setEventClass ( const QString &value ) {
-    this->eventClass=value;
-        CEvent* event=this;
-        CScriptEngine::getInstance()->callFunction ( "game.switchClass", boost::ref ( event ),CScriptEngine::getInstance()->getObject ( getMap()->getMapName()+"."+value )  );
+	this->eventClass=value;
+	CEvent* event=this;
+	CScriptEngine::getInstance()->callFunction ( "game.switchClass", boost::ref ( event ),CScriptEngine::getInstance()->getObject ( getMap()->getMapName()+"."+value )  );
 }
 
 

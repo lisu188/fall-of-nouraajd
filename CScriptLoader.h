@@ -7,18 +7,18 @@ class AScriptLoader;
 
 class ModuleSpec {
 public:
-    ModuleSpec ( AScriptLoader *loader,std::string name );
-    AScriptLoader *loader();
+	ModuleSpec ( AScriptLoader *loader,std::string name );
+	AScriptLoader *loader();
 	std::string name;
 	std::string subModuleSearch;
 	bool hasLocation=true;
 	bool cached=false;
 private:
-    AScriptLoader *scriptLoader=0;
+	AScriptLoader *scriptLoader=0;
 };
 
-class AScriptLoader :public QObject{
-    Q_OBJECT
+class AScriptLoader :public QObject {
+	Q_OBJECT
 public:
 	virtual QString findModule ( QString modName ) =0;
 
@@ -35,18 +35,18 @@ public:
 };
 
 class CScriptLoader :public AScriptLoader {
-    Q_OBJECT
+	Q_OBJECT
 public:
 	virtual QString findModule ( QString modName );
 };
 
 class CMapScriptLoader :public AScriptLoader {
-    Q_OBJECT
+	Q_OBJECT
 public:
-    CMapScriptLoader(CMap*map);
-    virtual QString findModule ( QString modName );
+	CMapScriptLoader ( CMap*map );
+	virtual QString findModule ( QString modName );
 private:
-    CMap* map=0;
+	CMap* map=0;
 };
 
 
