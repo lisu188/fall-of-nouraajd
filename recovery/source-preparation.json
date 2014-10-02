@@ -1,20 +1,6 @@
 {
   "identity": {
-    "implementationSha256": "c25c6953c387517704fb973a3ce92499aedbbb6443ea819ecbb6e5ac493b4498",
-    "mapPackages": {
-      "files": {
-        "CGameView.cpp": [
-          "c744328939671011bb8ccf1436c1957f9dfae7bf911e50821fa0de7af5445179",
-          "ee71e30959da3274a4b4d9cd307346655962fcc036af0913efd3e7c2680e398a"
-        ],
-        "CScriptEngine.cpp": [
-          "06575b2705261b4b69b3852a6311b633ae506afbbced636a63570971751a23b2",
-          "586922933de9b2d73bc3527cf2de0ea6d6473d9ef38180d34d8f0a295f7c2bb3"
-        ]
-      },
-      "replaySha256": "141d129887818584a5fde8dca0342b9c4b8561c16b05f29e079246831a1a5be5",
-      "sourceCommit": "e899bef6df6f290bc79088296a169152ece3f10a"
-    },
+    "implementationSha256": "7275cf63b84ba66338b210a8d8d2f767eb4dbd06ce3d15163684cd260a8341e8",
     "outputs": [
       {
         "after": {
@@ -40,7 +26,21 @@
         "path": "CScriptEngine.cpp",
         "purpose": "Carry forward reviewed Qt signal and Python lifetime repairs"
       }
-    ]
+    ],
+    "potionMovement": {
+      "files": {
+        "CGameView.cpp": [
+          "c744328939671011bb8ccf1436c1957f9dfae7bf911e50821fa0de7af5445179",
+          "ee71e30959da3274a4b4d9cd307346655962fcc036af0913efd3e7c2680e398a"
+        ],
+        "CScriptEngine.cpp": [
+          "06575b2705261b4b69b3852a6311b633ae506afbbced636a63570971751a23b2",
+          "586922933de9b2d73bc3527cf2de0ea6d6473d9ef38180d34d8f0a295f7c2bb3"
+        ]
+      },
+      "replaySha256": "96aa1c83d4e389e224ef222a25d70c7cfb4da02f03afb3151842f1bb9646024f",
+      "sourceCommit": "a5fc4556044a945e8c88d949177499a9ff7c95de"
+    }
   },
   "outputs": [
     {
@@ -73,10 +73,10 @@
     {
       "command": [
         "history_source_prep.py",
-        "prepare-map-packages"
+        "prepare-potion-movement"
       ],
-      "log": "/tmp/nouraajd-297-package-fixed/verify/snapshot-9boumnrg/preparation/map-packages.log",
-      "name": "mapPackages",
+      "log": "/tmp/nouraajd-298-potion-final/verify/snapshot-73h8lmbf/preparation/potion-movement.log",
+      "name": "potionMovement",
       "returnCode": 0,
       "timedOut": false
     }

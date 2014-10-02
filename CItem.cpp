@@ -152,22 +152,7 @@ CArmor::CArmor(QString name) {
 
 CPotion::CPotion() {}
 CPotion::CPotion(const CPotion &potion) : CItem(potion) {}
-bool CPotion::onUse(CCreature *creature) {
-  if (getTypeName().contains("LifePotion"))
-    LifeEffect(creature, power);
-  else if (getTypeName().contains("ManaPotion"))
-    ManaEffect(creature, power);
-  else
-    qFatal("Unknown potion effect");
-  return true;
-}
-
-void LifeEffect(CCreature *creature, int power) {
-  creature->healProc(power * 20);
-}
-void ManaEffect(CCreature *creature, int power) {
-  creature->addManaProc(power * 20);
-}
+bool CPotion::onUse(CCreature *) { return false; }
 
 QString CItem::getInteractionName() {
   return interaction ? interaction->getTypeName() : QString();

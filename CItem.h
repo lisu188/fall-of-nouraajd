@@ -106,8 +106,5 @@ class CPotion : public CItem {
 public:
 	CPotion();
 	CPotion ( const CPotion & );
-	virtual bool onUse ( CCreature *creature );
+	virtual bool onUse ( CCreature * );
 };
-
-void LifeEffect ( CCreature *creature, int power );
-void ManaEffect ( CCreature *creature, int power );
