@@ -21,10 +21,10 @@ void CTile::moveTo ( int x, int y, int z ) {
 }
 
 Coords CTile::getCoords() {
-    return Coords ( posx, posy, posz );
+	return Coords ( posx, posy, posz );
 }
 
-void CTile::onStep(CCreature *) {
+void CTile::onStep ( CCreature * ) {
 
 }
 
@@ -43,7 +43,7 @@ void CTile::addToScene ( CGameScene *scene ) {
 }
 
 void CTile::removeFromScene ( CGameScene *scene ) {
-    scene->removeItem ( this );
+	scene->removeItem ( this );
 }
 
 void CTile::setXYZ ( int x, int y, int z ) {

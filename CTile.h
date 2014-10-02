@@ -17,7 +17,7 @@ public:
 	virtual ~CTile();
 	virtual void moveTo ( int x, int y, int z );
 	Coords getCoords();
-    virtual void onStep(CCreature *);
+	virtual void onStep ( CCreature * );
 	bool canStep() const;
 	void setCanStep ( bool canStep );
 	void addToScene ( CGameScene *scene );

@@ -68,33 +68,33 @@ public:
 	const CObjectHandler *getObjectHandler() const;
 	CGuiHandler *getGuiHandler() const;
 	Q_INVOKABLE bool canStep ( int x,int y,int z );
-    QString getMapPath() const;
-    QString getMapName();
-    CMapObject *getObjectByName ( QString name );
-    template<typename T>
-    void forAll(T func){
-        for(auto it=mapObjects.begin();it!=mapObjects.end();it++){
-            func(*it);
-        }
-    }
-    template<typename T>
-    void removeAll(T func){
-        QList<CMapObject*> objects;
-        for(auto it=mapObjects.begin();it!=mapObjects.end();it++){
-            if(func(*it)){
-                objects.append(*it);
-            }
-        }
-        for(auto it=objects.begin();it!=objects.end();it++){
-            removeObject(*it);
-        }
-    }
+	QString getMapPath() const;
+	QString getMapName();
+	CMapObject *getObjectByName ( QString name );
+	template<typename T>
+	void forAll ( T func ) {
+		for ( auto it=mapObjects.begin(); it!=mapObjects.end(); it++ ) {
+			func ( *it );
+		}
+	}
+	template<typename T>
+	void removeAll ( T func ) {
+		QList<CMapObject*> objects;
+		for ( auto it=mapObjects.begin(); it!=mapObjects.end(); it++ ) {
+			if ( func ( *it ) ) {
+				objects.append ( *it );
+			}
+		}
+		for ( auto it=objects.begin(); it!=objects.end(); it++ ) {
+			removeObject ( *it );
+		}
+	}
 private:
-    void loadMap ( QString mapPath );
-    std::set<CMapObject *> mapObjects;
-    void randomDir ( int *tab, int rule );
+	void loadMap ( QString mapPath );
+	std::set<CMapObject *> mapObjects;
+	void randomDir ( int *tab, int rule );
 	CGameScene *scene;
-    int currentLevel = 0;
+	int currentLevel = 0;
 	std::map<int, QString> defaultTiles;
 	std::map<int, std::pair<int, int> > boundaries;
 	int entryx, entryz, entryy;
@@ -102,6 +102,6 @@ private:
 	const CObjectHandler *handler;
 	CGuiHandler *guiHandler;
 	QString mapPath;
-    CMapScriptLoader *loader=0;
+	CMapScriptLoader *loader=0;
 };
 
