@@ -188,6 +188,18 @@ public:
   bool defaultOnEffect() { return CEffect::onEffect(); }
 };
 
+class CTileWrapper : public CTile, public wrapper<CTile> {
+public:
+  void onStep(CCreature *creature) override {
+    if (override call = get_override("onStep")) {
+      call(ptr(creature));
+    } else {
+      CTile::onStep(creature);
+    }
+  }
+  void defaultOnStep(CCreature *creature) { CTile::onStep(creature); }
+};
+
 BOOST_PYTHON_MODULE(_game) {
     def("randint", randint);
   to_python_converter<QString, QStringToPython>();
@@ -199,6 +211,7 @@ BOOST_PYTHON_MODULE(_game) {
   class_<CGuiHandler, boost::noncopyable>("CGuiHandler", no_init)
       .def("showMessage", &CGuiHandler::showMessage);
   class_<CMap, boost::noncopyable>("CMap", no_init)
+      .def("removeAll", &CMap::removeAll<boost::python::object>)
       .def("addObjectByName", &CMap::addObjectByName)
       .def("removeObjectByName", &CMap::removeObjectByName)
       .def("removeObject", &CMap::removeObject)
@@ -279,8 +292,8 @@ BOOST_PYTHON_MODULE(_game) {
   class_<CPotionWrapper, bases<CPotion>, boost::noncopyable,
          boost::shared_ptr<CPotionWrapper>>("CPotion")
       .def("onUse", &CPotion::onUse, &CPotionWrapper::defaultOnUse);
-  class_<CTile, bases<CMapObject>, boost::noncopyable>("CTile").def(
-      "onStep", &CTile::onStep);
+  class_<CTileWrapper, bases<CMapObject>, boost::noncopyable, boost::shared_ptr<CTileWrapper>>("CTile")
+      .def("onStep", &CTile::onStep, &CTileWrapper::defaultOnStep);
 }namespace {
 bool loaderPackage(const std::string &name) {
   QString path=QString::fromStdString(name).replace(".", "/");

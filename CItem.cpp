@@ -46,7 +46,6 @@ void CItem::onEnter() {
   this->getMap()->getScene()->getPlayer()->addItem(this);
 }
 
-void CItem::onMove() {}
 
 bool CItem::isSingleUse() { return singleUse; }
 
@@ -151,19 +150,15 @@ CArmor::CArmor(QString name) {
   tooltip = properties["tooltip"].toString(name);
 }
 
-CPotion::CPotion() : effect(nullptr) {}
-CPotion::CPotion(const CPotion &potion)
-    : CItem(potion), effect(potion.effect) {}
+CPotion::CPotion() {}
+CPotion::CPotion(const CPotion &potion) : CItem(potion) {}
 bool CPotion::onUse(CCreature *creature) {
-  if (!effect) {
-    if (getTypeName().contains("LifePotion"))
-      effect = &LifeEffect;
-    else if (getTypeName().contains("ManaPotion"))
-      effect = &ManaEffect;
-  }
-  if (!effect)
+  if (getTypeName().contains("LifePotion"))
+    LifeEffect(creature, power);
+  else if (getTypeName().contains("ManaPotion"))
+    ManaEffect(creature, power);
+  else
     qFatal("Unknown potion effect");
-  effect(creature, power);
   return true;
 }
 

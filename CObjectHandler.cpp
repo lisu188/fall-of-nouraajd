@@ -18,6 +18,7 @@ CObjectHandler::CObjectHandler(CMap *map) : QObject(map), map(map) {
       files.insert(path.startsWith(":/") ? path.mid(2) : path);
     }
   }
+  files.insert(map->getMapPath() + "/config.json");
   for (const auto &path : files) {
     QJsonObject config = CConfigurationProvider::getConfig(path).toObject();
     for (auto it = config.begin(); it != config.end(); ++it) {
