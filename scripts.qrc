@@ -6,5 +6,6 @@
         <file>scripts/game/effect.py</file>
         <file>scripts/start.py</file>
         <file>scripts/game/tile.py</file>
+        <file>scripts/game/potion.py</file>
     </qresource>
 </RCC>

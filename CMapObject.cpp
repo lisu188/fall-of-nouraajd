@@ -33,26 +33,24 @@ void CMapObject::setTooltip ( const QString &value ) {
 	tooltip = value;
 }
 
-int CMapObject::getPosY() const { return posy; }
-
-int CMapObject::getPosZ() const { return posz; }
-
-int CMapObject::getPosX() const { return posx; }
-
 void CMapObject::move ( int x, int y ) {
-	bool canStep =map->getTile ( posx + x, posy + y, posz )->canStep();
-	if ( !canStep ) {
-		return;
+	if ( CCreature *creature=dynamic_cast<CCreature*> ( this ) ) {
+		CTile*tile=getMap()->getTile ( posx + x, posy + y, posz );
+		if ( tile->canStep() ) {
+			tile->onStep ( creature );
+		} else {
+			return;
+		}
 	}
 	if ( x == 0 && y == 0 ) {
 		return;
 	}
 	posx += x;
 	posy += y;
-	if ( map ) {
+	if ( getMap() ) {
 		setPos ( posx * 50, posy * 50 );
-		if ( map->getScene()->getPlayer() ==this ) {
-			map->ensureSize();
+		if (  dynamic_cast<CPlayer*> ( this ) ) {
+			getMap()->ensureSize();
 		}
 	}
 }
@@ -62,6 +60,17 @@ void CMapObject::moveTo ( int x, int y, int z ) {
 	move ( x - posx, y - posy );
 }
 
+int CMapObject::getPosY() const {
+	return posy;
+}
+
+int CMapObject::getPosZ() const {
+	return posz;
+}
+
+int CMapObject::getPosX() const {
+	return posx;
+}
 
 void CMapObject::onEnter() {
 
@@ -84,16 +93,18 @@ void CMapObject::setMap ( CMap *map ) {
 		return;
 	}
 	this->map = map;
-//	statsView.setParentItem ( this );
-//	statsView.setVisible ( false );
-//	statsView.setPos ( 50, 0 );
+	//	statsView.setParentItem ( this );
+	//	statsView.setVisible ( false );
+	//	statsView.setPos ( 50, 0 );
 //	statsView.setZValue ( this->zValue() + 1 );
 	if ( this->scene() != map->getScene() ) {
 		map->getScene()->addItem ( this );
 	}
 }
 
-CMap *CMapObject::getMap() { return map; }
+CMap *CMapObject::getMap() {
+	return map;
+}
 
 void CMapObject::setVisible ( bool vis ) {
 	QGraphicsPixmapItem::setVisible ( vis );

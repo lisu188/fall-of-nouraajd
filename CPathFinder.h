@@ -1,12 +1,11 @@
-#ifndef PATHFINDER_H
-#define PATHFINDER_H
+#pragma once
 #include "CCreature.h"
-
 #include"CMap.h"
 #include <QObject>
 #include <QRunnable>
 #include <unordered_map>
 #include <unordered_set>
+#define MOVE_TIMEOUT 500
 
 class APathFinder : public QObject {
 	Q_OBJECT
@@ -34,8 +33,12 @@ class Cell {
 public:
 	int x, y;
 	Coords goal;
-	Cell ( int x, int y, Coords goal ) : x ( x ), y ( y ), goal ( goal ) {}
-	Coords toCoords() { return Coords ( x, y, goal.z ); }
+	Cell ( int x, int y, Coords goal ) : x ( x ), y ( y ), goal ( goal ) {
+
+	}
+	Coords toCoords() {
+		return Coords ( x, y, goal.z );
+	}
 };
 
 class CSmartPathFinder : public APathFinder {
@@ -84,4 +87,4 @@ private:
 	CCreature *second;
 	APathFinder *finder;
 };
-#endif // PATHFINDER_H
+
