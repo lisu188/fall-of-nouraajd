@@ -12,7 +12,6 @@ public:
 	CMapObject();
 	virtual ~CMapObject();
 	int posx=0, posy=0, posz=0;
-	virtual void moveTo ( int x, int y, int z );
 	int getPosX() const;
 	int getPosY() const;
 	int getPosZ() const;
@@ -20,7 +19,6 @@ public:
 	virtual void onMove();
 	virtual void onCreate();
 	virtual void onDestroy();
-	Q_SLOT void move ( int x, int y );
 	void setMap ( CMap *map );
 	CMap *getMap();
 	void setVisible ( bool vis );
@@ -31,6 +29,8 @@ public:
 	void setTypeName ( const QString &value );
 	QString getTooltip() const;
 	void setTooltip ( const QString &value );
+	Q_SLOT virtual void move ( int x, int y );
+	Q_SLOT virtual void moveTo ( int x, int y, int z );
 
 	Q_INVOKABLE void setProperty ( QString name,QVariant property ) {
 		QByteArray byteArray = name.toUtf8();

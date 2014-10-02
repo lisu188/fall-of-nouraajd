@@ -15,6 +15,7 @@ public:
 	CTile();
 	CTile ( const CTile &tile );
 	virtual ~CTile();
+	virtual void move ( int , int );
 	virtual void moveTo ( int x, int y, int z );
 	Coords getCoords();
 	virtual void onStep ( CCreature * );

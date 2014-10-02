@@ -6,10 +6,15 @@ CTile::CTile() {
 	this->setZValue ( 0 );
 }
 
-CTile::CTile ( const CTile & )
-{}
+CTile::CTile ( const CTile & ) {
+
+}
 
 CTile::~CTile() {
+
+}
+
+void CTile::move ( int, int ) {
 
 }
 
