@@ -1,11 +1,6 @@
 #include "CTile.h"
 #include "CGameScene.h"
-#include "CConfigurationProvider.h"
-#include <QDebug>
-
-std::map<QString, std::function<void() > > CTile::steps {
-	{ "RoadTile", RoadTile }
-};
+#include "CMap.h"
 
 CTile::CTile() {
 	this->setZValue ( 0 );
@@ -25,12 +20,12 @@ void CTile::moveTo ( int x, int y, int z ) {
 	}
 }
 
-Coords CTile::getCoords() { return Coords ( posx, posy, posz ); }
+Coords CTile::getCoords() {
+    return Coords ( posx, posy, posz );
+}
 
-void CTile::onStep() {
-	if ( steps.find ( getTypeName() ) != steps.end() ) {
-		steps[getTypeName()]();
-	}
+void CTile::onStep(CCreature *) {
+
 }
 
 bool CTile::canStep() const {
@@ -47,13 +42,9 @@ void CTile::addToScene ( CGameScene *scene ) {
 	setMap (  scene ->getMap() );
 }
 
-void CTile::removeFromScene ( CGameScene *scene ) { scene->removeItem ( this ); }
-
-void CTile::setDraggable() { draggable = true; }
-
-void CTile::onEnter() {}
-
-void CTile::onMove() {}
+void CTile::removeFromScene ( CGameScene *scene ) {
+    scene->removeItem ( this );
+}
 
 void CTile::setXYZ ( int x, int y, int z ) {
 	posx = x;
@@ -62,11 +53,3 @@ void CTile::setXYZ ( int x, int y, int z ) {
 	setPos ( x*50,y*50 );
 }
 
-void CTile::mousePressEvent ( QGraphicsSceneMouseEvent *event ) {
-	if ( draggable ) {
-		CAnimatedObject::mousePressEvent ( event );
-	}
-	event->setAccepted ( draggable );
-}
-
-void RoadTile() { /*GameScene::getPlayer()->heal(1); */}

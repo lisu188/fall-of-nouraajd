@@ -56,6 +56,7 @@ void CMap::loadMap(QString mapPath) {
   namespace py = boost::python;
   auto *engine = CScriptEngine::getInstance();
   py::object mapLoader = py::import("_core").attr("CMapScriptLoader")(py::ptr(this));
+  py::extract<CMapScriptLoader *>(mapLoader)()->setParent(nullptr);
   py::object finders = py::import("sys").attr("meta_path");
   finders.attr("append")(mapLoader);
   try {
@@ -367,7 +368,7 @@ void CMap::endMove() {
     }
   }
   *player->getEntered() = entered;
-  getTile(player->getPosX(), player->getPosY(), player->getPosZ())->onStep();
+  getTile(player->getPosX(), player->getPosY(), player->getPosZ())->onStep(player);
   if (!player->getFightList()->empty()) {
     if (auto *panel = getGuiHandler()->getPanel("CFightPanel")) panel->showPanel();
   }

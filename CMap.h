@@ -50,7 +50,6 @@ public:
 	int getEntryX();
 	int getEntryY();
 	int getEntryZ();
-	CMapObject *getObjectByName ( QString name );
 	void endMove();
 	void ensureTile ( int i, int j );
 	std::map<int, std::pair<int, int> > getBounds();
@@ -63,7 +62,6 @@ public:
 	CPlayer *getPlayer();
 	void loadingComplete();
 	void moveTile ( CTile* tile,int x, int y, int z );
-	void loadMap ( QString mapPath );
 	void handleTileLayer ( const QJsonObject& tileset,const QJsonObject& layer );
 	void handleObjectLayer ( const QJsonObject &layer );
 	const CLootProvider *getLootProvider() const;
@@ -72,7 +70,27 @@ public:
 	Q_INVOKABLE bool canStep ( int x,int y,int z );
     QString getMapPath() const;
     QString getMapName();
+    CMapObject *getObjectByName ( QString name );
+    template<typename T>
+    void forAll(T func){
+        for(auto it=mapObjects.begin();it!=mapObjects.end();it++){
+            func(*it);
+        }
+    }
+    template<typename T>
+    void removeAll(T func){
+        QList<CMapObject*> objects;
+        for(auto it=mapObjects.begin();it!=mapObjects.end();it++){
+            if(func(*it)){
+                objects.append(*it);
+            }
+        }
+        for(auto it=objects.begin();it!=objects.end();it++){
+            removeObject(*it);
+        }
+    }
 private:
+    void loadMap ( QString mapPath );
     std::set<CMapObject *> mapObjects;
     void randomDir ( int *tab, int rule );
 	CGameScene *scene;

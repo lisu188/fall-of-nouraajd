@@ -3,7 +3,8 @@
         <file>scripts/game/__init__.py</file>
         <file>scripts/game/interaction.py</file>
         <file>scripts/game/object.py</file>
-         <file>scripts/game/effect.py</file>
+        <file>scripts/game/effect.py</file>
         <file>scripts/start.py</file>
+        <file>scripts/game/tile.py</file>
     </qresource>
 </RCC>
