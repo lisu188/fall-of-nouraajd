@@ -48,8 +48,8 @@
         }
     }, 
     "RoadTile": {
-        "class": "game.tile.RoadTile",
-        "handler": "PyTypeHandler",
+        "class": "game.tile.RoadTile", 
+        "handler": "PyTypeHandler", 
         "properties": {
             "animation": "images/tiles/road", 
             "canStep": true
