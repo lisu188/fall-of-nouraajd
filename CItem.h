@@ -20,7 +20,6 @@ public:
 	virtual void onUnequip ( CCreature *creature );
 	virtual bool onUse ( CCreature *creature );
 	virtual void onEnter();
-	virtual void onMove();
 	int getPower() const;
 	void setPower ( int value );
 	Stats getBonus();
@@ -33,7 +32,6 @@ protected:
 	Stats bonus;
 	CInteraction *interaction=0;
 	int power=0;
-
 private:
 	int slot = 0;
 };
@@ -99,8 +97,7 @@ public:
 	QString getText() const;
 	void setText ( const QString &value );
 	virtual bool onUse ( CCreature * );
-	private
-:
+private:
 	QString text;
 };
 
@@ -110,8 +107,6 @@ public:
 	CPotion();
 	CPotion ( const CPotion & );
 	virtual bool onUse ( CCreature *creature );
-private:
-	std::function<void ( CCreature *, int ) > effect;
 };
 
 void LifeEffect ( CCreature *creature, int power );

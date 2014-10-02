@@ -115,4 +115,3 @@ RESOURCES += \
 OTHER_FILES += \
     format.py
 
-
