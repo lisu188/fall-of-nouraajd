@@ -14,15 +14,11 @@ CTile::~CTile() {
 
 }
 
-void CTile::move ( int, int ) {
-
-}
-
-void CTile::moveTo ( int x, int y, int z ) {
-	if (  getMap() ) {
-		getMap()->moveTile ( this,x,y, z );
-		setXYZ ( x, y, z );
-	}
+void CTile::move ( int x, int y, int z ){
+    if (  getMap() ) {
+        getMap()->moveTile ( this,posx+x,posy+y, posz+z );
+        setXYZ ( posx+x,posy+y, posz+z);
+    }
 }
 
 Coords CTile::getCoords() {
@@ -43,7 +39,7 @@ void CTile::setCanStep ( bool canStep ) {
 
 void CTile::addToScene ( CGameScene *scene ) {
 	scene->addItem ( this );
-	setPos ( posx *50, posy *50 );
+    setXYZ(  posx , posy,posz );
 	setMap (  scene ->getMap() );
 }
 

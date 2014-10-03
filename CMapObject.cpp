@@ -33,7 +33,7 @@ void CMapObject::setTooltip ( const QString &value ) {
 	tooltip = value;
 }
 
-void CMapObject::move ( int x, int y ) {
+void CMapObject::move ( int x, int y ,int z) {
 	if ( CCreature *creature=dynamic_cast<CCreature*> ( this ) ) {
 		CTile*tile=getMap()->getTile ( posx + x, posy + y, posz );
 		if ( tile->canStep() ) {
@@ -47,6 +47,7 @@ void CMapObject::move ( int x, int y ) {
 	}
 	posx += x;
 	posy += y;
+    posz += z;
 	if ( getMap() ) {
 		setPos ( posx * 50, posy * 50 );
 		if (  dynamic_cast<CPlayer*> ( this ) ) {
@@ -56,8 +57,7 @@ void CMapObject::move ( int x, int y ) {
 }
 
 void CMapObject::moveTo ( int x, int y, int z ) {
-	posz = z;
-	move ( x - posx, y - posy );
+    move ( x - posx, y - posy ,z-posz);
 }
 
 int CMapObject::getPosY() const {

@@ -22,6 +22,7 @@ void CGameView::start() {
 	connect ( player,&CCreature::inventoryChanged,scene->getMap()->getGuiHandler(),&CGuiHandler::refresh );
 	connect ( player,&CCreature::equippedChanged,scene->getMap()->getGuiHandler(),&CGuiHandler::refresh );
 	connect ( player,&CCreature::skillsChanged,scene->getMap()->getGuiHandler(),&CGuiHandler::refresh );
+    connect ( player,&CPlayer::dead,this,&CGameView::close );
 	init = true;
 }
 

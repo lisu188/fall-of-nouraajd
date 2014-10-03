@@ -29,8 +29,8 @@ public:
 	void setTypeName ( const QString &value );
 	QString getTooltip() const;
 	void setTooltip ( const QString &value );
-	Q_SLOT virtual void move ( int x, int y );
-	Q_SLOT virtual void moveTo ( int x, int y, int z );
+    Q_SLOT virtual void move (int x, int y , int z);
+    Q_SLOT void moveTo ( int x, int y, int z );
 
 	Q_INVOKABLE void setProperty ( QString name,QVariant property ) {
 		QByteArray byteArray = name.toUtf8();
