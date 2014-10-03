@@ -21,17 +21,11 @@ class AScriptLoader :public QObject {
 	Q_OBJECT
 public:
 	virtual QString findModule ( QString modName ) =0;
-
 	QString findModule ( std::string modName );
-
 	bool checkModule ( QString modName );
-
 	bool checkModule ( std::string modName );
-
 	void exec_module ( boost::python::object module );
-
 	ModuleSpec *find_spec ( boost::python::object  name,boost::python::object  ,boost::python::object  );
-
 };
 
 class CScriptLoader :public AScriptLoader {

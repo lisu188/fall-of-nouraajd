@@ -123,12 +123,12 @@ PathFinderWorker::PathFinderWorker(CCreature *first, CCreature *second,
           &CompletionListener::registerWorker);
   connect(this, &PathFinderWorker::ended, CompletionListener::getInstance(),
           &CompletionListener::deregisterWorker);
-  connect(this, SIGNAL(completed(int, int)), first, SLOT(move(int, int)));
+  connect(this, SIGNAL(completed(int, int, int)), first, SLOT(move(int, int, int)));
   Q_EMIT started();
 }
 void PathFinderWorker::run() {
   Coords next = finder->findPath(first, second);
-  Q_EMIT completed(next.x - first->getPosX(), next.y - first->getPosY());
+  Q_EMIT completed(next.x - first->getPosX(), next.y - first->getPosY(), next.z - first->getPosZ());
   Q_EMIT ended();
   finder->deleteLater();
 }

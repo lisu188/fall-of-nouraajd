@@ -15,17 +15,14 @@ public:
 	CTile();
 	CTile ( const CTile &tile );
 	virtual ~CTile();
-	virtual void move ( int , int );
-	virtual void moveTo ( int x, int y, int z );
+    virtual void onStep ( CCreature * );
+    virtual void move ( int x, int y, int z );
 	Coords getCoords();
-	virtual void onStep ( CCreature * );
 	bool canStep() const;
 	void setCanStep ( bool canStep );
 	void addToScene ( CGameScene *scene );
 	void removeFromScene ( CGameScene *scene );
-protected:
-	bool step=false;
-
 private:
+    bool step=false;
 	void setXYZ ( int x, int y, int z );
 };

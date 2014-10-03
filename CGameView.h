@@ -13,15 +13,11 @@ class CGameView : public QGraphicsView {
 public:
 	CGameView ( QString mapName,QString playerType );
 	virtual ~CGameView();
-
 	void start();
-	Q_INVOKABLE void show();
-
 	CGameScene *getScene() const;
 	void setScene ( CGameScene *value );
-
 	void centerOn ( CPlayer *player );
-
+    Q_INVOKABLE void show();
 protected:
 	virtual void mouseDoubleClickEvent ( QMouseEvent *e );
 	virtual void resizeEvent ( QResizeEvent *event );

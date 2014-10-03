@@ -61,20 +61,21 @@ void CItem::onUnequip(CCreature *creature) {
   qDebug() << creature->getTypeName() << "unequipped" << getTypeName() << "\n";
 }
 
-bool CItem::onUse(CCreature *creature) {
+void CItem::onUse(CCreature *creature) {
   CItemSlot *parent = (CItemSlot *)this->parentItem();
   if (!parent) {
     qDebug() << "Parentless item dropped";
-    return false;
+    return;
   }
   int slot = parent->getNumber();
   creature->setItem(slot, this);
-  return false;
+  return;
 }
 
 void CItem::mousePressEvent(QGraphicsSceneMouseEvent *event) {
   if (singleUse && this->getMap()->getScene()->getPlayer()) {
-    if (onUse(this->getMap()->getScene()->getPlayer())) {
+    onUse(this->getMap()->getScene()->getPlayer());
+    {
       this->getMap()->getScene()->getPlayer()->removeFromInventory(this);
       delete this;
     }
@@ -152,7 +153,7 @@ CArmor::CArmor(QString name) {
 
 CPotion::CPotion() {}
 CPotion::CPotion(const CPotion &potion) : CItem(potion) {}
-bool CPotion::onUse(CCreature *) { return false; }
+void CPotion::onUse(CCreature *) { return; }
 
 QString CItem::getInteractionName() {
   return interaction ? interaction->getTypeName() : QString();
@@ -175,7 +176,7 @@ CScroll::CScroll() {}
 CScroll::CScroll(const CScroll &scroll) : CItem(scroll), text(scroll.text) {}
 QString CScroll::getText() const { return text; }
 void CScroll::setText(const QString &value) { text = value; }
-bool CScroll::onUse(CCreature *) {
+void CScroll::onUse(CCreature *) {
   CGameView *view = getMap()->getScene()->getView();
   CTextPanel *panel =
       dynamic_cast<CTextPanel *>(view->getScene()->getMap()->getGuiHandler()->getPanel("CTextPanel"));
@@ -183,5 +184,5 @@ bool CScroll::onUse(CCreature *) {
     qFatal("Missing registered scroll text panel");
   panel->setText(text);
   panel->showPanel();
-  return true;
+  return;
 }
