@@ -342,7 +342,7 @@ void CMap::startMove(int x, int y) {
     return;
   }
   CompletionListener::getInstance()->start();
-  player->move(x, y);
+  player->move(x, y, 0);
   std::set<CMapObject *> objects = mapObjects;
   for (CMapObject *object : objects) {
     object->onMove();

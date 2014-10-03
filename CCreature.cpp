@@ -582,7 +582,7 @@ void CPlayer::performAction(CInteraction *action, CCreature *creature) {
   }
   getMap()->getGuiHandler()->getPanel("CFightPanel")->update();
   if (!isAlive()) {
-    getMap()->getScene()->getView()->close();
+    Q_EMIT dead();
   }
 }
 
