@@ -1,6 +1,6 @@
 {
   "adapter": {
-    "config": "/tmp/nouraajd-299-potion-final/verify/snapshot-hg03nav7/observer/recovery_smoke_config.h",
+    "config": "/tmp/nouraajd-300-potion-fixed/verify/snapshot-smpjoh3a/observer/recovery_smoke_config.h",
     "configSha256": "9be3f337a65cbdc9e904583c2f34d5620212a9800b2908da01bfecca6dd0f814",
     "id": "prefixed-3d",
     "mode": "game",
@@ -20,11 +20,11 @@
     },
     "source-preparation.json": {
       "path": "source-preparation.json",
-      "sha256": "b4f259471c610bba3bd3d1000f0564deca4df2853a9c29fb83951fe1ec7d7e67"
+      "sha256": "32c291b46cb40a57f261637a74ad969140b0c4bf0053a447d28e10aada82556a"
     },
     "source-preparation.log": {
       "path": "source-preparation.log",
-      "sha256": "c42045e3a975ee797b86f287b7950c3be0af33a2eab442ad419c58b9b0872937"
+      "sha256": "00cdec510ab8e7fb888332beefbdfac11bcd6935724aa196bb4b5417b2c3b685"
     }
   },
   "build": {
@@ -32,17 +32,17 @@
       "make",
       "-j3"
     ],
-    "log": "/tmp/nouraajd-299-potion-final/verify/snapshot-hg03nav7/build.log",
+    "log": "/tmp/nouraajd-300-potion-fixed/verify/snapshot-smpjoh3a/build.log",
     "returnCode": 0,
-    "seconds": 108.675,
+    "seconds": 44.857,
     "timedOut": false
   },
   "configure": {
     "command": [
       "qmake",
-      "/tmp/nouraajd-299-potion-final/verify/snapshot-hg03nav7/source/game.pro",
+      "/tmp/nouraajd-300-potion-fixed/verify/snapshot-smpjoh3a/source/game.pro",
       "-o",
-      "/tmp/nouraajd-299-potion-final/verify/snapshot-hg03nav7/build/Makefile",
+      "/tmp/nouraajd-300-potion-fixed/verify/snapshot-smpjoh3a/build/Makefile",
       "QMAKE_CC=gcc-5",
       "QMAKE_CXX=g++-5",
       "QMAKE_LINK=g++-5",
@@ -52,15 +52,15 @@
       "DESTDIR=.",
       "CONFIG-=app_bundle",
       "SOURCES+=/tmp/nouraajd-next298/recovery/smoke/game_startup.cpp",
-      "INCLUDEPATH+=/tmp/nouraajd-299-potion-final/verify/snapshot-hg03nav7/source",
-      "INCLUDEPATH+=/tmp/nouraajd-299-potion-final/verify/snapshot-hg03nav7/observer"
+      "INCLUDEPATH+=/tmp/nouraajd-300-potion-fixed/verify/snapshot-smpjoh3a/source",
+      "INCLUDEPATH+=/tmp/nouraajd-300-potion-fixed/verify/snapshot-smpjoh3a/observer"
     ],
-    "log": "/tmp/nouraajd-299-potion-final/verify/snapshot-hg03nav7/configure.log",
+    "log": "/tmp/nouraajd-300-potion-fixed/verify/snapshot-smpjoh3a/configure.log",
     "returnCode": 0,
     "seconds": 0.064,
     "timedOut": false
   },
-  "evidenceDir": "/tmp/nouraajd-299-potion-final/verify/evidence/34cd878297447937fe7d8c792b36ad57b1510d9c1f7db08c90c1f6b27cbb410f",
+  "evidenceDir": "/tmp/nouraajd-300-potion-fixed/verify/evidence/0dba42ad8d09969f1a33ba23fa6f9303628487cf9010c462bb38c65b71a12860",
   "fileLookup": {
     "command": [
       "g++-5",
@@ -69,20 +69,20 @@
       "-O2",
       "-std=c++11",
       "-o",
-      "/tmp/nouraajd-299-potion-final/verify/snapshot-hg03nav7/observer/libwindowspaths.so",
+      "/tmp/nouraajd-300-potion-fixed/verify/snapshot-smpjoh3a/observer/libwindowspaths.so",
       "/tmp/nouraajd-next298/recovery/smoke/windows_paths.cpp",
       "-ldl"
     ],
-    "log": "/tmp/nouraajd-299-potion-final/verify/snapshot-hg03nav7/file-lookup.log",
+    "log": "/tmp/nouraajd-300-potion-fixed/verify/snapshot-smpjoh3a/file-lookup.log",
     "returnCode": 0,
-    "seconds": 0.215,
+    "seconds": 0.214,
     "semantics": "Windows-style case-insensitive file lookup for the game process",
     "timedOut": false
   },
-  "fingerprint": "34cd878297447937fe7d8c792b36ad57b1510d9c1f7db08c90c1f6b27cbb410f",
+  "fingerprint": "0dba42ad8d09969f1a33ba23fa6f9303628487cf9010c462bb38c65b71a12860",
   "libraryAliases": {
     "aliases": {},
-    "directory": "/tmp/nouraajd-299-potion-final/verify/snapshot-hg03nav7/observer/library-aliases"
+    "directory": "/tmp/nouraajd-300-potion-fixed/verify/snapshot-smpjoh3a/observer/library-aliases"
   },
   "project": "game.pro",
   "recipe": {
@@ -121,12 +121,12 @@
   },
   "restoration": {
     "excluded": [],
-    "outputDir": "/tmp/nouraajd-299-potion-final/verify/snapshot-hg03nav7/source",
+    "outputDir": "/tmp/nouraajd-300-potion-fixed/verify/snapshot-smpjoh3a/source",
     "restored": [
       {
         "markerPath": "CCreature.cpp.REMOVED.git-id",
         "method": "reconstruction",
-        "originalBlob": "4370fe0c241540425e086f9d2593a9a657c4452f",
+        "originalBlob": "22ee7ef76ce1626eeed006b7067e1eee94080992",
         "path": "CCreature.cpp",
         "provenance": "content reconstruction of the BFG-removed original; Carry the creature body and emit the authored death notification instead of closing the view directly.",
         "replacementBlob": "4bf4ece11089ba762416822242bf4f3387975552"
@@ -134,7 +134,7 @@
       {
         "markerPath": "CCreature.h.REMOVED.git-id",
         "method": "reconstruction",
-        "originalBlob": "8d524333f93f73034534e142f3d9b1778269d518",
+        "originalBlob": "aee8eac00794009cfea9f53df2e7ab20c862ed6c",
         "path": "CCreature.h",
         "provenance": "content reconstruction of the BFG-removed original; Carry the creature declarations and add the player death signal where the surviving view connects to it.",
         "replacementBlob": "d5a9611896f00cbe5f156a19ab877350c86db8aa"
@@ -142,15 +142,15 @@
       {
         "markerPath": "CGamePanel.cpp.REMOVED.git-id",
         "method": "reconstruction",
-        "originalBlob": "1816d8306e91ba1d317e8e9c93254a7f1dbe819e",
+        "originalBlob": "56dca5a09b983b8073f0dcced3f288a32c85b8e3",
         "path": "CGamePanel.cpp",
         "provenance": "content reconstruction of the BFG-removed original; Carry panel behavior and use the separate inventory and interaction views once their authored types appear.",
-        "replacementBlob": "2d629026b8c893e28fc6c205731f91caa88f6048"
+        "replacementBlob": "9bb08b81abbbfd31a7308428b2c197c6a9449275"
       },
       {
         "markerPath": "CItem.cpp.REMOVED.git-id",
         "method": "reconstruction",
-        "originalBlob": "b391be8ce8e3c2011ece26528041ce476b8d2073",
+        "originalBlob": "f150b3c608b93d9c7aa55b2fd39243ae6a2ccb2e",
         "path": "CItem.cpp",
         "provenance": "content reconstruction of the BFG-removed original; Follow the surviving potion API and dispatch authored Python potion callbacks through the carried wrapper.",
         "replacementBlob": "0d02424a649145fef42b9270d6fc40f01ecfac68"
@@ -158,7 +158,7 @@
       {
         "markerPath": "CMap.cpp.REMOVED.git-id",
         "method": "reconstruction",
-        "originalBlob": "1538557c98a91f3819010c40f8b408eea0d20973",
+        "originalBlob": "21f668e740539bc6c79378ec7666c123ab4c6590",
         "path": "CMap.cpp",
         "provenance": "content reconstruction of the BFG-removed original; Carry the map loader and use the surviving movement signature.",
         "replacementBlob": "ecff181449b4136a037cb05e309e63485dc01ad5"
@@ -174,7 +174,7 @@
       {
         "markerPath": "CPathFinder.cpp.REMOVED.git-id",
         "method": "reconstruction",
-        "originalBlob": "898bec277e2a0df07ca69af2c28645f880bf7f40",
+        "originalBlob": "786f0ae6644e6183a3c1a4e5228edd3d1ee1ee7c",
         "path": "CPathFinder.cpp",
         "provenance": "content reconstruction of the BFG-removed original; Carry the pathfinder and emit three-dimensional movement where required by the surviving completion signal.",
         "replacementBlob": "2f59d68d48c7dd1404c68ae03a261d41524944f9"
@@ -182,15 +182,15 @@
       {
         "markerPath": "CPlayerView.cpp.REMOVED.git-id",
         "method": "reconstruction",
-        "originalBlob": "10d732e8c9b545d47c0b00b4b0a56cb7e7b22d9b",
+        "originalBlob": "2609cd0e6cf4a4201e4dbd113ae163218df137a6",
         "path": "CPlayerView.cpp",
-        "provenance": "content reconstruction of the BFG-removed original; Carry the player view against the revised slot path and QWidget refresh interface.",
-        "replacementBlob": "0aa13be3e293c1f0c610c82c17f512b8c6f0b318"
+        "provenance": "content reconstruction of the BFG-removed original; Implement the authored inventory and interaction list subclasses with the shared list rendering behavior.",
+        "replacementBlob": "8eb93b885cc7d45ec5a4f00f412b3f659dbdab7c"
       },
       {
         "markerPath": "GameScript.cpp.REMOVED.git-id",
         "method": "reconstruction",
-        "originalBlob": "52ab07cbdee844641acfa20bfc63a73130cfcf47",
+        "originalBlob": "87f7d776de8d92d533af95360b3a770291229a67",
         "path": "GameScript.cpp",
         "provenance": "content reconstruction of the BFG-removed original; Carry the resource, tile and potion bindings through the changed interfaces.",
         "replacementBlob": "6cfc215ad4c21984d172de3c7305ac552a0a2b27"
@@ -293,7 +293,7 @@
       {
         "markerPath": "boost/python/object/function.cpp.REMOVED.git-id",
         "method": "reconstruction",
-        "originalBlob": "d4567bf5e41097c74eaec8bb96da290518f3d63f",
+        "originalBlob": "daea5290f6dfb796d2bf30f3b1832b204def7d8e",
         "path": "boost/python/object/function.cpp",
         "provenance": "unverified upstream reconstruction; https://github.com/boostorg/python/tree/32ba64a8248d99b1852e77ff4388d9d8a991c4a9",
         "replacementBlob": "5c59cc7798d0f2e7b917deea81971865a09e0301"
@@ -301,7 +301,7 @@
       {
         "markerPath": "boost/python/object/function_doc_signature.cpp.REMOVED.git-id",
         "method": "reconstruction",
-        "originalBlob": "7c10d3783708a393ea372660e12a73ddccb25c2b",
+        "originalBlob": "13475fe649e8ae16b499829a867c39698ae360a7",
         "path": "boost/python/object/function_doc_signature.cpp",
         "provenance": "unverified upstream reconstruction; https://github.com/boostorg/python/tree/32ba64a8248d99b1852e77ff4388d9d8a991c4a9",
         "replacementBlob": "41695285ac1f3fea63c79b8a9e5df7caa0270ab5"
@@ -311,7 +311,7 @@
         "method": "reconstruction",
         "originalBlob": "1b3aa2bf2cce5cd06a478f1fbf4367a4c2002143",
         "path": "boost/python/object/inheritance.cpp",
-        "provenance": "unverified donor reconstruction; 4b3902d44f874a1fae86054d7240a2af76901bb4:boost/python/object/inheritance.cpp; headerMatch=0; apiOverlap=0/10000; distance=65",
+        "provenance": "unverified donor reconstruction; 4b3902d44f874a1fae86054d7240a2af76901bb4:boost/python/object/inheritance.cpp; headerMatch=0; apiOverlap=0/10000; distance=64",
         "replacementBlob": "70feba5fcd280139933f29b9179b0ed00eed75f8"
       },
       {
@@ -327,7 +327,7 @@
         "method": "reconstruction",
         "originalBlob": "0d39c3d1478c19a891acce327ddf81990724ace2",
         "path": "boost/python/object_operators.cpp",
-        "provenance": "unverified donor reconstruction; 70d0d690df45877698cb094405e25be00a8139fd:boost/python/object_operators.cpp; headerMatch=0; apiOverlap=0/10000; distance=57",
+        "provenance": "unverified donor reconstruction; 70d0d690df45877698cb094405e25be00a8139fd:boost/python/object_operators.cpp; headerMatch=0; apiOverlap=0/10000; distance=56",
         "replacementBlob": "43d2109b7fbee7a405e4e445aff17714078b1631"
       },
       {
@@ -343,7 +343,7 @@
         "method": "reconstruction",
         "originalBlob": "0f46652b2ab25b823980b32afec490a51470fa02",
         "path": "boost/python/str.cpp",
-        "provenance": "unverified donor reconstruction; 4b3902d44f874a1fae86054d7240a2af76901bb4:boost/python/str.cpp; headerMatch=0; apiOverlap=0/10000; distance=65",
+        "provenance": "unverified donor reconstruction; 4b3902d44f874a1fae86054d7240a2af76901bb4:boost/python/str.cpp; headerMatch=0; apiOverlap=0/10000; distance=64",
         "replacementBlob": "37642738eae0bee1bbcf50cbc12d1c57e227602f"
       },
       {
@@ -359,7 +359,7 @@
         "method": "reconstruction",
         "originalBlob": "2f79f3a7b4e72640e404b1c2d442208127eb6557",
         "path": "config/monsters.json",
-        "provenance": "unverified donor reconstruction; 55e6516eb91b739e899df1ef8d72116da44fec49:config/monsters.json; headerMatch=0; apiOverlap=0/10000; distance=66",
+        "provenance": "unverified donor reconstruction; 55e6516eb91b739e899df1ef8d72116da44fec49:config/monsters.json; headerMatch=0; apiOverlap=0/10000; distance=65",
         "replacementBlob": "b6b5708a1c0683d8ca6d9c395ee31e4742bdd39e"
       },
       {
@@ -786,11 +786,18 @@
         "replacementBlob": "b6c37f51cc506bf02bd6ea2fcdd573ee7d339550"
       },
       {
+        "markerPath": "reindent.py.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "94d147f730a56cd0a463cbb293d773856b6f9604",
+        "path": "reindent.py",
+        "replacementBlob": "94d147f730a56cd0a463cbb293d773856b6f9604"
+      },
+      {
         "markerPath": "scripts/game/interaction.py.REMOVED.git-id",
         "method": "reconstruction",
-        "originalBlob": "c9832ae9927663e029301801764672d62a10be6a",
+        "originalBlob": "8f918e9115dc949bea6ca4f4da7ddea39ce5a5a5",
         "path": "scripts/game/interaction.py",
-        "provenance": "content reconstruction of the BFG-removed original; Carry the preceding interaction definitions across the Python effect transition. The exact removed script is unknown.",
+        "provenance": "content reconstruction of the BFG-removed original; Carry the preceding working Python interaction definitions alongside the split player views. The default donor aborts during the authored package import.",
         "replacementBlob": "2b6d50a2d0b3bd7865c73df5d3efc4a6e70fb375"
       },
       {
@@ -806,9 +813,9 @@
         "replacementBlob": "f5d0b39a0cdddb91a31a537052b7d8d31a4aa79f"
       }
     ],
-    "restoredFilesFingerprint": "ced90d055c96b0f8e424d122cccfc4e3c12d6618dc950991e78e0510bf62f129",
-    "sourceCommit": "eae1adecf2efe90f29c1b9b4a136c82de041a796",
-    "sourceTree": "a55ed08bb2f89439ff567f2b73f7dfa25be4fa22",
+    "restoredFilesFingerprint": "f1381eaf4304decfdea55d84f9b6ae135010121de8f186ca36df8f40ea92f623",
+    "sourceCommit": "b544b03385befb58c2f805109ebafecd632cdef0",
+    "sourceTree": "f7b0d4341d077c3bb2e45734a580b02feaf53d0f",
     "status": "complete",
     "submodules": [],
     "unresolved": []
@@ -819,12 +826,12 @@
       "-a",
       "--server-args=-screen 0 1920x1080x24",
       "env",
-      "LD_PRELOAD=/tmp/nouraajd-299-potion-final/verify/snapshot-hg03nav7/observer/libwindowspaths.so",
-      "/tmp/nouraajd-299-potion-final/verify/snapshot-hg03nav7/build/RecoveryGame"
+      "LD_PRELOAD=/tmp/nouraajd-300-potion-fixed/verify/snapshot-smpjoh3a/observer/libwindowspaths.so",
+      "/tmp/nouraajd-300-potion-fixed/verify/snapshot-smpjoh3a/build/RecoveryGame"
     ],
-    "log": "/tmp/nouraajd-299-potion-final/verify/snapshot-hg03nav7/smoke/startup.log",
+    "log": "/tmp/nouraajd-300-potion-fixed/verify/snapshot-smpjoh3a/smoke/startup.log",
     "returnCode": 0,
-    "seconds": 0.618,
+    "seconds": 0.515,
     "startup": {
       "checks": {
         "eventLoop": true,
@@ -846,9 +853,9 @@
     "status": "success",
     "timedOut": false
   },
-  "sourceCommit": "eae1adecf2efe90f29c1b9b4a136c82de041a796",
+  "sourceCommit": "b544b03385befb58c2f805109ebafecd632cdef0",
   "sourceCommits": [
-    "eae1adecf2efe90f29c1b9b4a136c82de041a796"
+    "b544b03385befb58c2f805109ebafecd632cdef0"
   ],
   "sourcePreparation": {
     "identity": {
@@ -857,11 +864,11 @@
         {
           "after": {
             "kind": "file",
-            "sha256": "132376c51990a0f49bf7f4b966161f9844be78dfd336a65b914c3feb74d58e7c"
+            "sha256": "706b041b742cd767410d9bc9034d2be26345509d3baa5b3a2989d01c5ddbf11d"
           },
           "before": {
             "kind": "file",
-            "sha256": "2d2e5f25f5470845e72312e4c0c6866523ff0ae455ef01611e36eb3196f73e46"
+            "sha256": "66cf029497fc319eb87200150081041261e9cf674a9d431dd4f9c33a48ce4ec3"
           },
           "path": "CGameView.cpp",
           "purpose": "Carry forward reviewed Qt signal and Python lifetime repairs"
@@ -882,8 +889,8 @@
       "potionMovement": {
         "files": {
           "CGameView.cpp": [
-            "2d2e5f25f5470845e72312e4c0c6866523ff0ae455ef01611e36eb3196f73e46",
-            "132376c51990a0f49bf7f4b966161f9844be78dfd336a65b914c3feb74d58e7c"
+            "66cf029497fc319eb87200150081041261e9cf674a9d431dd4f9c33a48ce4ec3",
+            "706b041b742cd767410d9bc9034d2be26345509d3baa5b3a2989d01c5ddbf11d"
           ],
           "CScriptEngine.cpp": [
             "06575b2705261b4b69b3852a6311b633ae506afbbced636a63570971751a23b2",
@@ -891,18 +898,18 @@
           ]
         },
         "replaySha256": "96aa1c83d4e389e224ef222a25d70c7cfb4da02f03afb3151842f1bb9646024f",
-        "sourceCommit": "eae1adecf2efe90f29c1b9b4a136c82de041a796"
+        "sourceCommit": "b544b03385befb58c2f805109ebafecd632cdef0"
       }
     },
     "outputs": [
       {
         "after": {
           "kind": "file",
-          "sha256": "132376c51990a0f49bf7f4b966161f9844be78dfd336a65b914c3feb74d58e7c"
+          "sha256": "706b041b742cd767410d9bc9034d2be26345509d3baa5b3a2989d01c5ddbf11d"
         },
         "before": {
           "kind": "file",
-          "sha256": "2d2e5f25f5470845e72312e4c0c6866523ff0ae455ef01611e36eb3196f73e46"
+          "sha256": "66cf029497fc319eb87200150081041261e9cf674a9d431dd4f9c33a48ce4ec3"
         },
         "path": "CGameView.cpp",
         "purpose": "Carry forward reviewed Qt signal and Python lifetime repairs"
@@ -927,14 +934,14 @@
           "history_source_prep.py",
           "prepare-potion-movement"
         ],
-        "log": "/tmp/nouraajd-299-potion-final/verify/snapshot-hg03nav7/preparation/potion-movement.log",
+        "log": "/tmp/nouraajd-300-potion-fixed/verify/snapshot-smpjoh3a/preparation/potion-movement.log",
         "name": "potionMovement",
         "returnCode": 0,
         "timedOut": false
       }
     ]
   },
-  "sourceTree": "a55ed08bb2f89439ff567f2b73f7dfa25be4fa22",
+  "sourceTree": "f7b0d4341d077c3bb2e45734a580b02feaf53d0f",
   "startupMode": "game",
   "startupSelection": {
     "mode": "game"
@@ -955,5 +962,5 @@
     }
   },
   "toolchainImage": "sha256:d3f59ec1d12297ee8091fbea687aa619275fc92b3fd426560e0a1fa40715afc8",
-  "verifiedFromCommit": "eae1adecf2efe90f29c1b9b4a136c82de041a796"
+  "verifiedFromCommit": "b544b03385befb58c2f805109ebafecd632cdef0"
 }

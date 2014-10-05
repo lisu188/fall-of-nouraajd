@@ -80,7 +80,7 @@ public:
 	void run();
 
 private:
-    Q_SIGNAL void completed ( int x, int y,int z );
+	Q_SIGNAL void completed ( int x, int y,int z );
 	Q_SIGNAL void started();
 	Q_SIGNAL void ended();
 	CCreature *first;

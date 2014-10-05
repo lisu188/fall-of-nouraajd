@@ -35,15 +35,12 @@ private:
 	CPlayer *player = 0;
 };
 
-enum ListType {
-	ITEMS,SKILLS
-};
 class CScrollObject;
 class CPlayerListView : public QGraphicsObject {
 	Q_OBJECT
 	friend class CScrollObject;
 public:
-	CPlayerListView ( CGameView *view,ListType type );
+	CPlayerListView ( CGameView *view );
 	CMap *getMap();
 	void setDraggable();
 	virtual QRectF boundingRect() const;
@@ -51,17 +48,31 @@ public:
 	void updatePosition ( int i );
 	void setXY ( int x, int y );
 	void update();
+protected:
+	virtual void dropEvent ( QGraphicsSceneDragDropEvent *event );
+	virtual std::set<CMapObject *> getItems() const=0;
+	CGameView *view=0;
 private:
 	unsigned int curPosition;
 	unsigned int x, y;
 	CScrollObject *right, *left;
 	QPixmap pixmap;
-	ListType type;
-	CGameView *view=0;
-	std::set<CMapObject *> getItems() const;
-protected:
-	virtual void dropEvent ( QGraphicsSceneDragDropEvent *event );
+};
 
+class CPlayerInventoryrView:public CPlayerListView {
+	Q_OBJECT
+public:
+	CPlayerInventoryrView ( CGameView *view );
+protected:
+	virtual std::set<CMapObject *> getItems() const;
+};
+
+class CPlayerIteractionView:public CPlayerListView {
+	Q_OBJECT
+public:
+	CPlayerIteractionView ( CGameView *view );
+protected:
+	virtual std::set<CMapObject *> getItems() const;
 };
 
 class CScrollObject : public CAnimatedObject {

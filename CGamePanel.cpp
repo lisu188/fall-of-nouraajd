@@ -55,7 +55,7 @@ void CCharPanel::setUpPanel(CGameView *view) {
   CPlayer *player = map ? map->getPlayer() : nullptr;
   if (!player)
     return;
-  playerInventoryView = new CPlayerListView(view, ITEMS);
+  playerInventoryView = new CPlayerInventoryrView(view);
   playerInventoryView->setParentItem(this);
   playerEquippedView = new CPlayerEquippedView(view);
   playerEquippedView->setParentItem(this);
@@ -81,7 +81,7 @@ void CFightPanel::setUpPanel(CGameView *view) {
   if (playerSkillsView)
     return;
   CPlayer *player = view->getScene()->getPlayer();
-  playerSkillsView = new CPlayerListView(view, SKILLS);
+  playerSkillsView = new CPlayerIteractionView(view);
   playerSkillsView->setXY(4, 1);
   playerSkillsView->setParentItem(this);
   playerSkillsView->setPos(0, 50);

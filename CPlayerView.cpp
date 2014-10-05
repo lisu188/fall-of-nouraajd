@@ -19,8 +19,7 @@ CItem *draggedItem(QGraphicsSceneDragDropEvent *event) {
 }
 } // namespace
 
-CPlayerListView::CPlayerListView(CGameView *view, ListType type)
-    : type(type), view(view) {
+CPlayerListView::CPlayerListView(CGameView *view) : view(view) {
   this->setZValue(3);
   curPosition = 0;
   right = new CScrollObject(this, true);
@@ -31,7 +30,6 @@ CPlayerListView::CPlayerListView(CGameView *view, ListType type)
       pixmap.scaled(50, 50, Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
   left->setPos(0, y * 50);
   right->setPos((x - 1) * 50, y * 50);
-  update();
 }
 
 void CPlayerListView::update() {
@@ -96,13 +94,19 @@ void CPlayerListView::setXY(int x, int y) {
   this->x = x;
   this->y = y;
 }
-std::set<CMapObject *> CPlayerListView::getItems() const {
-  CPlayer *player = view->getScene()->getPlayer();
+CPlayerInventoryrView::CPlayerInventoryrView(CGameView *view) : CPlayerListView(view) { update(); }
+CPlayerIteractionView::CPlayerIteractionView(CGameView *view) : CPlayerListView(view) { update(); }
+
+std::set<CMapObject *> CPlayerInventoryrView::getItems() const {
+  auto *player = view->getScene()->getPlayer();
   if (!player) return {};
-  if (type == ITEMS) {
-    auto *inventory = player->getInventory();
-    return {inventory->begin(), inventory->end()};
-  }
+  auto *inventory = player->getInventory();
+  return {inventory->begin(), inventory->end()};
+}
+
+std::set<CMapObject *> CPlayerIteractionView::getItems() const {
+  auto *player = view->getScene()->getPlayer();
+  if (!player) return {};
   auto *actions = player->getActions();
   return {actions->begin(), actions->end()};
 }
