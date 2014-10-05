@@ -11,7 +11,7 @@
 #include "CObjectHandler.h"
 
 CInteraction::CInteraction() {
-    setVisible ( false );
+	setVisible ( false );
 }
 
 CInteraction::CInteraction ( const CInteraction & ) {
@@ -22,7 +22,7 @@ void CInteraction::onAction ( CCreature *first, CCreature *second ) {
 	qDebug() << first->getTypeName()   << "used" << this->getTypeName()
 	         << "against" << second->getTypeName()  ;
 
-    first->takeMana ( this->getManaCost() );
+	first->takeMana ( this->getManaCost() );
 
 	this->performAction ( first , second  );
 
