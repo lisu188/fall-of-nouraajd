@@ -17,7 +17,7 @@ public:
 	CGameScene *getScene() const;
 	void setScene ( CGameScene *value );
 	void centerOn ( CPlayer *player );
-    Q_INVOKABLE void show();
+	Q_INVOKABLE void show();
 protected:
 	virtual void mouseDoubleClickEvent ( QMouseEvent *e );
 	virtual void resizeEvent ( QResizeEvent *event );

@@ -18,7 +18,7 @@ public:
 	void setSingleUse ( bool singleUse );
 	virtual void onEquip ( CCreature *creature );
 	virtual void onUnequip ( CCreature *creature );
-    virtual void onUse ( CCreature *creature );
+	virtual void onUse ( CCreature *creature );
 	virtual void onEnter();
 	int getPower() const;
 	void setPower ( int value );
@@ -96,7 +96,7 @@ public:
 	CScroll ( const CScroll & );
 	QString getText() const;
 	void setText ( const QString &value );
-    virtual void onUse ( CCreature * );
+	virtual void onUse ( CCreature * );
 private:
 	QString text;
 };
@@ -106,5 +106,5 @@ class CPotion : public CItem {
 public:
 	CPotion();
 	CPotion ( const CPotion & );
-    virtual void onUse ( CCreature * );
+	virtual void onUse ( CCreature * );
 };

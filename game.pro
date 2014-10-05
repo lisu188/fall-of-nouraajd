@@ -113,5 +113,6 @@ RESOURCES += \
     config.qrc
 
 OTHER_FILES += \
-    format.py
+    format.py \
+    reindent.py
 

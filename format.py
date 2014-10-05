@@ -8,6 +8,7 @@ import sys
 import json
 import py_compile
 sys.dont_write_bytecode=True
+from reindent import check
 
 os.chdir(os.path.dirname(os.path.realpath(__file__)))
 
@@ -24,6 +25,7 @@ def formatJson(files):
 def formatPython(files):
     for file in files:
         py_compile.compile(file,doraise=True)
+        check(file)
 
 def getFileList(dir,ext):
     list=[]
