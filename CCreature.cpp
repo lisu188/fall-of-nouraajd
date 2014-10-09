@@ -552,9 +552,7 @@ void CPlayer::removeFromFightList(CCreature *creature) {
   getFightList()->remove(creature);
   if (getFightList()->size() == 0) {
     getMap()->getGuiHandler()->getPanel("CFightPanel")->hidePanel();
-    CFightPanel::selected = 0;
-  } else {
-    CFightPanel::selected = getFightList()->front();
+    selectedAction = nullptr;
   }
   getMap()->getGuiHandler()->getPanel("CFightPanel")->update();
   Q_EMIT statsChanged();
@@ -562,7 +560,6 @@ void CPlayer::removeFromFightList(CCreature *creature) {
 
 void CPlayer::performAction(CInteraction *action, CCreature *creature) {
   action->onAction(this, creature);
-  takeMana(action->getManaCost());
   CArmor *armor = creature->getArmor();
   if (armor) {
     CInteraction *interaction = armor->getInteraction();

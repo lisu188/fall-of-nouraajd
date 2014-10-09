@@ -1,6 +1,7 @@
 {
     "BladeOfDarkDreams": {
         "class": "CWeapon",
+        "handler": "CTypeHandler",
         "properties": {
             "animation": "images/items/weapons/bladeofdarkdreams",
             "bonus": {
@@ -13,11 +14,11 @@
                 "strength": 13
             },
             "power": 9
-        },
-        "handler": "CTypeHandler"
+        }
     },
     "BroadSword": {
         "class": "CWeapon",
+        "handler": "CTypeHandler",
         "properties": {
             "animation": "images/items/weapons/broadsword",
             "bonus": {
@@ -29,11 +30,11 @@
                 "strength": 5
             },
             "power": 5
-        },
-        "handler": "CTypeHandler"
+        }
     },
     "ChaosSword": {
         "class": "CWeapon",
+        "handler": "CTypeHandler",
         "properties": {
             "animation": "images/items/weapons/chaossword",
             "bonus": {
@@ -42,11 +43,11 @@
             },
             "interaction": "ChaosBlast",
             "power": 18
-        },
-        "handler": "CTypeHandler"
+        }
     },
     "Dagger": {
         "class": "CWeapon",
+        "handler": "CTypeHandler",
         "properties": {
             "animation": "images/items/weapons/dagger",
             "bonus": {
@@ -56,11 +57,11 @@
                 "stamina": 2
             },
             "power": 3
-        },
-        "handler": "CTypeHandler"
+        }
     },
     "DaggerOfVileHeart": {
         "class": "CWeapon",
+        "handler": "CTypeHandler",
         "properties": {
             "animation": "images/items/weapons/daggerofvileheart",
             "bonus": {
@@ -73,11 +74,11 @@
                 "strength": 5
             },
             "power": 9
-        },
-        "handler": "CTypeHandler"
+        }
     },
     "Knife": {
         "class": "CWeapon",
+        "handler": "CTypeHandler",
         "properties": {
             "animation": "images/items/weapons/knife",
             "bonus": {
@@ -86,11 +87,11 @@
                 "dmgMin": 5,
                 "stamina": 1
             }
-        },
-        "handler": "CTypeHandler"
+        }
     },
     "LongSword": {
         "class": "CWeapon",
+        "handler": "CTypeHandler",
         "properties": {
             "animation": "images/items/weapons/longsword",
             "bonus": {
@@ -100,11 +101,11 @@
                 "strength": 1
             },
             "power": 3
-        },
-        "handler": "CTypeHandler"
+        }
     },
     "ShadowBlade": {
         "class": "CWeapon",
+        "handler": "CTypeHandler",
         "properties": {
             "animation": "images/items/weapons/shadowblade",
             "bonus": {
@@ -117,11 +118,11 @@
                 "strength": 10
             },
             "power": 25
-        },
-        "handler": "CTypeHandler"
+        }
     },
     "ShortStaff": {
         "class": "CWeapon",
+        "handler": "CTypeHandler",
         "properties": {
             "animation": "images/items/weapons/shortstaff",
             "bonus": {
@@ -130,11 +131,11 @@
                 "intelligence": 1,
                 "stamina": 1
             }
-        },
-        "handler": "CTypeHandler"
+        }
     },
     "ShortSword": {
         "class": "CWeapon",
+        "handler": "CTypeHandler",
         "properties": {
             "animation": "images/items/weapons/shortsword",
             "bonus": {
@@ -143,11 +144,11 @@
                 "stamina": 1,
                 "strength": 1
             }
-        },
-        "handler": "CTypeHandler"
+        }
     },
     "Staff": {
         "class": "CWeapon",
+        "handler": "CTypeHandler",
         "properties": {
             "animation": "images/items/weapons/staff",
             "bonus": {
@@ -158,11 +159,11 @@
             },
             "interaction": "ElemStaff",
             "power": 3
-        },
-        "handler": "CTypeHandler"
+        }
     },
     "StaffOfTheAbyss": {
         "class": "CWeapon",
+        "handler": "CTypeHandler",
         "properties": {
             "animation": "images/items/weapons/staffoftheabyss",
             "bonus": {
@@ -174,11 +175,11 @@
                 "strength": 4
             },
             "power": 9
-        },
-        "handler": "CTypeHandler"
+        }
     },
     "Stiletto": {
         "class": "CWeapon",
+        "handler": "CTypeHandler",
         "properties": {
             "animation": "images/items/weapons/stiletto",
             "bonus": {
@@ -190,22 +191,22 @@
                 "strength": 3
             },
             "power": 5
-        },
-        "handler": "CTypeHandler"
+        }
     },
     "Sword": {
         "class": "CWeapon",
+        "handler": "CTypeHandler",
         "properties": {
             "animation": "images/items/weapons/sword",
             "bonus": {
                 "attack": 5,
                 "damage": 10
             }
-        },
-        "handler": "CTypeHandler"
+        }
     },
     "Valkyrie": {
         "class": "CWeapon",
+        "handler": "CTypeHandler",
         "properties": {
             "animation": "images/items/weapons/valkyrie",
             "bonus": {
@@ -218,11 +219,11 @@
                 "strength": 8
             },
             "power": 25
-        },
-        "handler": "CTypeHandler"
+        }
     },
     "Void": {
         "class": "CWeapon",
+        "handler": "CTypeHandler",
         "properties": {
             "animation": "images/items/weapons/void",
             "bonus": {
@@ -236,11 +237,11 @@
                 "strength": 15
             },
             "power": 25
-        },
-        "handler": "CTypeHandler"
+        }
     },
     "Wand": {
         "class": "CWeapon",
+        "handler": "CTypeHandler",
         "properties": {
             "animation": "images/items/weapons/wand",
             "bonus": {
@@ -252,7 +253,6 @@
                 "strength": 1
             },
             "power": 5
-        },
-        "handler": "CTypeHandler"
+        }
     }
 }

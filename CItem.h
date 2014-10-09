@@ -26,6 +26,7 @@ public:
 	void setBonus ( Stats stats );
 	QString getInteractionName();
 	void setInteractionName ( QString name );
+	CInteraction *getInteraction();
 protected:
 	virtual void mousePressEvent ( QGraphicsSceneMouseEvent *event );
 	bool singleUse=false;
@@ -42,7 +43,6 @@ public:
 	CArmor();
 	CArmor ( const CArmor & );
 	CArmor ( QString name );
-	CInteraction *getInteraction();
 };
 
 class CBelt : public CItem {
@@ -78,7 +78,6 @@ class CWeapon : public CItem {
 public:
 	CWeapon();
 	CWeapon ( const CWeapon & );
-	CInteraction *getInteraction();
 };
 
 class CSmallWeapon : public CWeapon {

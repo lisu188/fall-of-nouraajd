@@ -24,7 +24,6 @@ CMap::CMap(CGameScene *scene, QString mapPath)
   scene->setMap(this);
   handler = new CObjectHandler(this);
   guiHandler = new CGuiHandler(this);
-  lootProvider = new CLootProvider(this);
   connect(CompletionListener::getInstance(), &CompletionListener::completed, this, &CMap::endMove);
   loadMap(mapPath);
 }
@@ -66,6 +65,7 @@ void CMap::loadMap(QString mapPath) {
     throw;
   }
   finders.attr("remove")(mapLoader);
+  lootProvider = new CLootProvider(this);
   const auto map = CConfigurationProvider::getConfig(mapPath + "/map.json").toObject();
   if (map["map"].isObject() && map["state"].isObject()) {
     const QJsonObject terrain = map["map"].toObject();

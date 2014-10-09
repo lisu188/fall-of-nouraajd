@@ -268,7 +268,7 @@ BOOST_PYTHON_MODULE(_game) {
       .def("configureEffect", &CInteraction::configureEffect,
            &CInteractionWrapper::defaultConfigureEffect);
   scope().attr("Interaction") = scope().attr("CInteraction");
-  class_<CEffectWrapper, bases<CMapObject>, boost::noncopyable>("CEffect")
+  class_<CEffectWrapper, bases<CMapObject>, boost::noncopyable, boost::shared_ptr<CEffectWrapper>>("CEffect")
       .def("getBonus", &CEffect::getBonus, return_internal_reference<>())
       .def("setBonus", &CEffect::setBonus)
       .def("getCaster", &CEffect::getCaster, return_internal_reference<>())

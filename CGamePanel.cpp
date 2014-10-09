@@ -72,7 +72,6 @@ void CCharPanel::showPanel() {
     backpack->move(view->width() - backpack->width(), 0);
 }
 
-CCreature *CFightPanel::selected = nullptr;
 CFightPanel::CFightPanel() : playerSkillsView(nullptr) {}
 CFightPanel::CFightPanel(const CFightPanel &) : CFightPanel() {}
 QRectF CFightPanel::boundingRect() const { return QRectF(0, 0, 200, 150); }
@@ -89,8 +88,6 @@ void CFightPanel::setUpPanel(CGameView *view) {
 void CFightPanel::showPanel() {
   if (!view) return;
   setPos(view->mapToScene(20, 100));
-  if (!selected && !view->getScene()->getPlayer()->getFightList()->empty())
-    selected = view->getScene()->getPlayer()->getFightList()->front();
   setVisible(true);
   update();
 }
@@ -101,6 +98,8 @@ void CFightPanel::update() {
 void CFightPanel::paint(QPainter *painter, const QStyleOptionGraphicsItem *,
                         QWidget *) {
   painter->fillRect(boundingRect(), QColor(30, 30, 30, 230));
+  auto *player = view->getScene()->getPlayer();
+  auto *selected = player && !player->getFightList()->empty() ? player->getFightList()->front() : nullptr;
   if (!selected)
     return;
   painter->setPen(Qt::white);
