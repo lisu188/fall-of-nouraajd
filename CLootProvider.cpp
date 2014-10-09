@@ -14,15 +14,20 @@ CLootProvider::CLootProvider ( CMap *map ) :QObject ( map ) {
 	this->map=map;
 	const QJsonObject *config = map->getObjectHandler()->getObjectConfig();
 	for ( auto  it = config->begin(); it != config->end(); it++ ) {
-		if ( CReflection::getInstance()->checkInheritance ( "CItem", ( *it ).toObject() ["class"].toString() ) ) {
-			int power=
-			    ( *it ).toObject() ["properties"].toObject() ["power"].toInt()   ;
-			if ( power>0 ) {this->insert ( std::pair<QString, int> ( it.key(),power ) );}
+		CItem *item=map->getObjectHandler()->createMapObject<CItem*> ( it.key() ) ;
+		if ( item ) {
+			int power=item->getPower() ;
+			if ( power>0 ) {
+				this->insert ( std::pair<QString, int> ( it.key(),power ) );
+			}
+			delete item;
 		}
 	}
 }
 
-CLootProvider::~CLootProvider() { erase ( begin(), end() ); }
+CLootProvider::~CLootProvider() {
+	erase ( begin(), end() );
+}
 
 std::set<CItem *> *CLootProvider::calculateLoot ( int value ) const {
 	std::set<CItem *> *loot = new std::set<CItem *>();

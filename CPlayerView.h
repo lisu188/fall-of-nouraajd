@@ -96,14 +96,14 @@ public:
 	void paint ( QPainter *painter, const QStyleOptionGraphicsItem *, QWidget * );
 	static bool checkType ( int slot, CItem *item );
 	void update();
-    int getNumber();
+	int getNumber();
 
 protected:
 	void dragMoveEvent ( QGraphicsSceneDragDropEvent *event );
 	void dropEvent ( QGraphicsSceneDragDropEvent *event );
 
 private:
-    int number=-1;
+	int number=-1;
 	QPixmap pixmap;
 	CGameView *view;
 };

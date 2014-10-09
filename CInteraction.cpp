@@ -44,17 +44,10 @@ void CInteraction::onAction ( CCreature *first, CCreature *second ) {
 
 void CInteraction::mousePressEvent ( QGraphicsSceneMouseEvent * ) {
 	CPlayer *player =this->getMap()->getScene()->getPlayer();
-	if ( player->getFightList()->size() == 0 ) {
-		return;
-	}
 	if ( manaCost > player->getMana() ) {
 		return;
 	}
-	CCreature *creature = CFightPanel::selected;
-	if ( !creature ) {
-		return;
-	}
-	player->performAction ( this, creature );
+	player->setSelectedAction ( this );
 }
 
 int CInteraction::getManaCost() const {
@@ -78,6 +71,10 @@ CEffect::CEffect() {
 }
 
 CEffect::CEffect ( const CEffect & ) {
+
+}
+
+CEffect::~CEffect() {
 
 }
 

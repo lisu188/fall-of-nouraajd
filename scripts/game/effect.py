@@ -1,7 +1,7 @@
 from game import CEffect
 from game import Damage
 
-class StunEffect(CEffect):
+class Stun(CEffect):
     def onEffect(self):
         return True
 

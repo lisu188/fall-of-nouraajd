@@ -97,13 +97,14 @@ class CFightPanel : public AGamePanel {
 public:
 	CFightPanel();
 	CFightPanel ( const CFightPanel& );
-	static CCreature *selected;
+
 	virtual void update();
 	virtual QRectF boundingRect() const;
 	virtual void paint ( QPainter *painter, const QStyleOptionGraphicsItem *,
 	                     QWidget * );
 	virtual void showPanel ( );
 	virtual void setUpPanel ( CGameView *view );
+
 private:
 	CPlayerListView *playerSkillsView;
 
