@@ -107,7 +107,7 @@ CArmor::CArmor() {}
 
 CArmor::CArmor(const CArmor &armor) : CItem(armor) {}
 
-CInteraction *CArmor::getInteraction() { return interaction; }
+CInteraction *CItem::getInteraction() { return interaction; }
 
 CBelt::CBelt() {}
 
@@ -133,7 +133,6 @@ CWeapon::CWeapon() : CItem() {}
 
 CWeapon::CWeapon(const CWeapon &weapon) : CItem(weapon) {}
 
-CInteraction *CWeapon::getInteraction() { return interaction; }
 
 Stats CItem::getBonus() { return bonus; }
 void CItem::setBonus(Stats value) { bonus = value; }

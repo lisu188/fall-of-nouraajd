@@ -42,6 +42,7 @@ class CEffect :public CMapObject {
 public:
 	CEffect();
 	CEffect ( const CEffect& );
+	virtual ~CEffect();
 	int getTimeLeft();
 	int getTimeTotal();
 	bool apply ( CCreature *creature );

@@ -10,7 +10,12 @@ public:
 	CObjectHandler ( CMap *map );
 	template<typename T>
 	T createMapObject ( QString type ) const {
-		return dynamic_cast<T> ( _createMapObject ( type ) );
+		CMapObject *object= _createMapObject ( type ) ;
+		T casted=dynamic_cast<T> ( object );
+		if ( casted==NULL ) {
+			delete object;
+		}
+		return casted;
 	}
 	void logProperties ( CMapObject *object ) const;
 	const QJsonObject *getObjectConfig() const;

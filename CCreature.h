@@ -145,6 +145,10 @@ class CPlayer : public CCreature {
     void removeFromFightList(CCreature *creature);
     std::list<CCreature *> *getFightList();
     void performAction(CInteraction *action, CCreature *creature);
+    void setSelectedAction(CInteraction *action) { selectedAction = action; }
+private:
+    CInteraction *selectedAction = nullptr;
+public:
     void addEntered(CMapObject *object);
     std::list<CMapObject *> *getEntered();
     void init();
