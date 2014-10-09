@@ -1,6 +1,6 @@
 {
   "adapter": {
-    "config": "/tmp/nouraajd-301-fight-final/verify/snapshot-fd0zlh77/observer/recovery_smoke_config.h",
+    "config": "/tmp/nouraajd-302-fight-final/verify/snapshot-qwy1o511/observer/recovery_smoke_config.h",
     "configSha256": "9be3f337a65cbdc9e904583c2f34d5620212a9800b2908da01bfecca6dd0f814",
     "id": "prefixed-3d",
     "mode": "game",
@@ -20,11 +20,11 @@
     },
     "source-preparation.json": {
       "path": "source-preparation.json",
-      "sha256": "93a6bf5ec773ad29dc1853f8bdb18c5c47e736dc2cd746c7054f7246eddfcad7"
+      "sha256": "88500d9693ada3895bc0d22100f6ece8519884f5a1edd51369d2ade1eeaf26ac"
     },
     "source-preparation.log": {
       "path": "source-preparation.log",
-      "sha256": "7581640208df2260c7657f75e290b8518c5a670eabed755ba0634e22a1997097"
+      "sha256": "3d900eb041e35d747dc8ea79c7a1028b8e915939c10ae82c5bc37b9514f7073d"
     }
   },
   "build": {
@@ -32,17 +32,17 @@
       "make",
       "-j3"
     ],
-    "log": "/tmp/nouraajd-301-fight-final/verify/snapshot-fd0zlh77/build.log",
+    "log": "/tmp/nouraajd-302-fight-final/verify/snapshot-qwy1o511/build.log",
     "returnCode": 0,
-    "seconds": 57.34,
+    "seconds": 57.014,
     "timedOut": false
   },
   "configure": {
     "command": [
       "qmake",
-      "/tmp/nouraajd-301-fight-final/verify/snapshot-fd0zlh77/source/game.pro",
+      "/tmp/nouraajd-302-fight-final/verify/snapshot-qwy1o511/source/game.pro",
       "-o",
-      "/tmp/nouraajd-301-fight-final/verify/snapshot-fd0zlh77/build/Makefile",
+      "/tmp/nouraajd-302-fight-final/verify/snapshot-qwy1o511/build/Makefile",
       "QMAKE_CC=gcc-5",
       "QMAKE_CXX=g++-5",
       "QMAKE_LINK=g++-5",
@@ -52,15 +52,15 @@
       "DESTDIR=.",
       "CONFIG-=app_bundle",
       "SOURCES+=/tmp/nouraajd-next301/recovery/smoke/game_startup.cpp",
-      "INCLUDEPATH+=/tmp/nouraajd-301-fight-final/verify/snapshot-fd0zlh77/source",
-      "INCLUDEPATH+=/tmp/nouraajd-301-fight-final/verify/snapshot-fd0zlh77/observer"
+      "INCLUDEPATH+=/tmp/nouraajd-302-fight-final/verify/snapshot-qwy1o511/source",
+      "INCLUDEPATH+=/tmp/nouraajd-302-fight-final/verify/snapshot-qwy1o511/observer"
     ],
-    "log": "/tmp/nouraajd-301-fight-final/verify/snapshot-fd0zlh77/configure.log",
+    "log": "/tmp/nouraajd-302-fight-final/verify/snapshot-qwy1o511/configure.log",
     "returnCode": 0,
     "seconds": 0.064,
     "timedOut": false
   },
-  "evidenceDir": "/tmp/nouraajd-301-fight-final/verify/evidence/8f22e689bba90d250ee5fca1d728694cd320517e3751d65170112e28946f1f28",
+  "evidenceDir": "/tmp/nouraajd-302-fight-final/verify/evidence/12bdfd6c918d432a87f7495aa71c41d01d17ad8fa9d6a4cfab1ffda9dfc65282",
   "fileLookup": {
     "command": [
       "g++-5",
@@ -69,20 +69,20 @@
       "-O2",
       "-std=c++11",
       "-o",
-      "/tmp/nouraajd-301-fight-final/verify/snapshot-fd0zlh77/observer/libwindowspaths.so",
+      "/tmp/nouraajd-302-fight-final/verify/snapshot-qwy1o511/observer/libwindowspaths.so",
       "/tmp/nouraajd-next301/recovery/smoke/windows_paths.cpp",
       "-ldl"
     ],
-    "log": "/tmp/nouraajd-301-fight-final/verify/snapshot-fd0zlh77/file-lookup.log",
+    "log": "/tmp/nouraajd-302-fight-final/verify/snapshot-qwy1o511/file-lookup.log",
     "returnCode": 0,
-    "seconds": 0.316,
+    "seconds": 0.268,
     "semantics": "Windows-style case-insensitive file lookup for the game process",
     "timedOut": false
   },
-  "fingerprint": "8f22e689bba90d250ee5fca1d728694cd320517e3751d65170112e28946f1f28",
+  "fingerprint": "12bdfd6c918d432a87f7495aa71c41d01d17ad8fa9d6a4cfab1ffda9dfc65282",
   "libraryAliases": {
     "aliases": {},
-    "directory": "/tmp/nouraajd-301-fight-final/verify/snapshot-fd0zlh77/observer/library-aliases"
+    "directory": "/tmp/nouraajd-302-fight-final/verify/snapshot-qwy1o511/observer/library-aliases"
   },
   "project": "game.pro",
   "recipe": {
@@ -121,12 +121,12 @@
   },
   "restoration": {
     "excluded": [],
-    "outputDir": "/tmp/nouraajd-301-fight-final/verify/snapshot-fd0zlh77/source",
+    "outputDir": "/tmp/nouraajd-302-fight-final/verify/snapshot-qwy1o511/source",
     "restored": [
       {
         "markerPath": "CCreature.cpp.REMOVED.git-id",
         "method": "reconstruction",
-        "originalBlob": "185b32a81bb2003f0e74f2d0ead5b9eccd0ee27a",
+        "originalBlob": "24467ceb6d0669364a4d421e689c90d23fdfd1dd",
         "path": "CCreature.cpp",
         "provenance": "content reconstruction of the BFG-removed original; Carry the creature body and emit the authored death notification instead of closing the view directly.",
         "replacementBlob": "4bf4ece11089ba762416822242bf4f3387975552"
@@ -311,7 +311,7 @@
         "method": "reconstruction",
         "originalBlob": "1b3aa2bf2cce5cd06a478f1fbf4367a4c2002143",
         "path": "boost/python/object/inheritance.cpp",
-        "provenance": "unverified donor reconstruction; 4b3902d44f874a1fae86054d7240a2af76901bb4:boost/python/object/inheritance.cpp; headerMatch=0; apiOverlap=0/10000; distance=63",
+        "provenance": "unverified donor reconstruction; 4b3902d44f874a1fae86054d7240a2af76901bb4:boost/python/object/inheritance.cpp; headerMatch=0; apiOverlap=0/10000; distance=62",
         "replacementBlob": "70feba5fcd280139933f29b9179b0ed00eed75f8"
       },
       {
@@ -327,7 +327,7 @@
         "method": "reconstruction",
         "originalBlob": "0d39c3d1478c19a891acce327ddf81990724ace2",
         "path": "boost/python/object_operators.cpp",
-        "provenance": "unverified donor reconstruction; 70d0d690df45877698cb094405e25be00a8139fd:boost/python/object_operators.cpp; headerMatch=0; apiOverlap=0/10000; distance=55",
+        "provenance": "unverified donor reconstruction; 70d0d690df45877698cb094405e25be00a8139fd:boost/python/object_operators.cpp; headerMatch=0; apiOverlap=0/10000; distance=54",
         "replacementBlob": "43d2109b7fbee7a405e4e445aff17714078b1631"
       },
       {
@@ -343,7 +343,7 @@
         "method": "reconstruction",
         "originalBlob": "0f46652b2ab25b823980b32afec490a51470fa02",
         "path": "boost/python/str.cpp",
-        "provenance": "unverified donor reconstruction; 4b3902d44f874a1fae86054d7240a2af76901bb4:boost/python/str.cpp; headerMatch=0; apiOverlap=0/10000; distance=63",
+        "provenance": "unverified donor reconstruction; 4b3902d44f874a1fae86054d7240a2af76901bb4:boost/python/str.cpp; headerMatch=0; apiOverlap=0/10000; distance=62",
         "replacementBlob": "37642738eae0bee1bbcf50cbc12d1c57e227602f"
       },
       {
@@ -359,7 +359,7 @@
         "method": "reconstruction",
         "originalBlob": "2f79f3a7b4e72640e404b1c2d442208127eb6557",
         "path": "config/monsters.json",
-        "provenance": "unverified donor reconstruction; 55e6516eb91b739e899df1ef8d72116da44fec49:config/monsters.json; headerMatch=0; apiOverlap=0/10000; distance=64",
+        "provenance": "unverified donor reconstruction; 55e6516eb91b739e899df1ef8d72116da44fec49:config/monsters.json; headerMatch=0; apiOverlap=0/10000; distance=63",
         "replacementBlob": "b6b5708a1c0683d8ca6d9c395ee31e4742bdd39e"
       },
       {
@@ -814,8 +814,8 @@
       }
     ],
     "restoredFilesFingerprint": "65cd2bba8b8803746133ac49049c696c99fa597bdf9986a0b5b8bcf83029bb81",
-    "sourceCommit": "229ade513a8962ea399d9cc4251f0968acdd62b1",
-    "sourceTree": "3747c3436136c81c0012882a8a6a4b5eeaeb58dd",
+    "sourceCommit": "6a4fb27c9b7c70e38d99eafb3cb1b207a27522e5",
+    "sourceTree": "d3d45ec630cb791b12e4b50e7e998a02057a2bbd",
     "status": "complete",
     "submodules": [],
     "unresolved": []
@@ -826,12 +826,12 @@
       "-a",
       "--server-args=-screen 0 1920x1080x24",
       "env",
-      "LD_PRELOAD=/tmp/nouraajd-301-fight-final/verify/snapshot-fd0zlh77/observer/libwindowspaths.so",
-      "/tmp/nouraajd-301-fight-final/verify/snapshot-fd0zlh77/build/RecoveryGame"
+      "LD_PRELOAD=/tmp/nouraajd-302-fight-final/verify/snapshot-qwy1o511/observer/libwindowspaths.so",
+      "/tmp/nouraajd-302-fight-final/verify/snapshot-qwy1o511/build/RecoveryGame"
     ],
-    "log": "/tmp/nouraajd-301-fight-final/verify/snapshot-fd0zlh77/smoke/startup.log",
+    "log": "/tmp/nouraajd-302-fight-final/verify/snapshot-qwy1o511/smoke/startup.log",
     "returnCode": 0,
-    "seconds": 0.621,
+    "seconds": 0.619,
     "startup": {
       "checks": {
         "eventLoop": true,
@@ -853,9 +853,9 @@
     "status": "success",
     "timedOut": false
   },
-  "sourceCommit": "229ade513a8962ea399d9cc4251f0968acdd62b1",
+  "sourceCommit": "6a4fb27c9b7c70e38d99eafb3cb1b207a27522e5",
   "sourceCommits": [
-    "229ade513a8962ea399d9cc4251f0968acdd62b1"
+    "6a4fb27c9b7c70e38d99eafb3cb1b207a27522e5"
   ],
   "sourcePreparation": {
     "identity": {
@@ -871,7 +871,7 @@
           ]
         },
         "replaySha256": "bac55a903172fcbfc5ce0d9576b21a0174b3124d581bf629af6170b84099ba8f",
-        "sourceCommit": "229ade513a8962ea399d9cc4251f0968acdd62b1"
+        "sourceCommit": "6a4fb27c9b7c70e38d99eafb3cb1b207a27522e5"
       },
       "implementationSha256": "a9313e253259f18e2dd2bddf89483cc44e996e3557f960d3671a1c352fd49a74",
       "outputs": [
@@ -934,14 +934,14 @@
           "history_source_prep.py",
           "prepare-fight-system"
         ],
-        "log": "/tmp/nouraajd-301-fight-final/verify/snapshot-fd0zlh77/preparation/fight-system.log",
+        "log": "/tmp/nouraajd-302-fight-final/verify/snapshot-qwy1o511/preparation/fight-system.log",
         "name": "fightSystem",
         "returnCode": 0,
         "timedOut": false
       }
     ]
   },
-  "sourceTree": "3747c3436136c81c0012882a8a6a4b5eeaeb58dd",
+  "sourceTree": "d3d45ec630cb791b12e4b50e7e998a02057a2bbd",
   "startupMode": "game",
   "startupSelection": {
     "mode": "game"
@@ -962,5 +962,5 @@
     }
   },
   "toolchainImage": "sha256:d3f59ec1d12297ee8091fbea687aa619275fc92b3fd426560e0a1fa40715afc8",
-  "verifiedFromCommit": "229ade513a8962ea399d9cc4251f0968acdd62b1"
+  "verifiedFromCommit": "6a4fb27c9b7c70e38d99eafb3cb1b207a27522e5"
 }
