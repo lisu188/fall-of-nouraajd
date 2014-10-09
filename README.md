@@ -1,7 +1,7 @@
 # Recovered game snapshot
 
-Original commit: `b544b03385befb58c2f805109ebafecd632cdef0`. Original tree: `f7b0d4341d077c3bb2e45734a580b02feaf53d0f`.
-Startup was verified from identical recovered sources at `b544b03385befb58c2f805109ebafecd632cdef0`.
+Original commit: `229ade513a8962ea399d9cc4251f0968acdd62b1`. Original tree: `3747c3436136c81c0012882a8a6a4b5eeaeb58dd`.
+Startup was verified from identical recovered sources at `229ade513a8962ea399d9cc4251f0968acdd62b1`.
 
 This recovered version compiled and linked on Linux, started the real game on an isolated Xvfb display,
 loaded its map and a healthy player, rendered the screenshot below, and exited normally.
@@ -19,7 +19,7 @@ Install Qt 5 Core, Gui and Widgets development files and a C++ compiler, with CP
 Build from this snapshot's root directory:
 
 ```sh
-python3 recovery/prepare_potion_movement.py
+python3 recovery/prepare_fight_system.py
 qmake game.pro QMAKE_CC=gcc-5 QMAKE_CXX=g++-5 QMAKE_LINK=g++-5 'QMAKE_CXXFLAGS+=-include functional' -after TARGET=RecoveryGame DESTDIR=.
 make -j"$(nproc)"
 ./RecoveryGame
@@ -45,7 +45,7 @@ compatibilityRepair: 2, exactOriginal: 59, reconstruction: 33.
 - `CMap.cpp`: content reconstruction of the BFG-removed original; Carry the map loader and use the surviving movement signature.
 - `CObjectHandler.cpp`: content reconstruction of the BFG-removed original; Load the authored map-local configuration along with global resource definitions.
 - `CPathFinder.cpp`: content reconstruction of the BFG-removed original; Carry the pathfinder and emit three-dimensional movement where required by the surviving completion signal.
-- `CPlayerView.cpp`: content reconstruction of the BFG-removed original; Implement the authored inventory and interaction list subclasses with the shared list rendering behavior.
+- `CPlayerView.cpp`: content reconstruction of the BFG-removed original; Carry both player lists and implement the equipment-slot number getter moved out of line.
 - `GameScript.cpp`: content reconstruction of the BFG-removed original; Carry the resource, tile and potion bindings through the changed interfaces.
 - `Stats.h`: Content reconstruction matching exact original #260 Stats.cpp e9d15a08d8073b9ec1462a7e542db131edd1314f: const numeric getter declarations, out-of-line setters, QString main/getMainValue. Use intact55e6516e:Stats.h property/declaration layout and zero initialized fields, retain era-correct QObject base and original257 PROPERTY_ACCESSOR semantics. Include QVariant/cmath explicitly for complete genuine APIs and Util::Coords::getDist. Metatype declarations remain owned by exact same-commit ReflectTypes.cpp; no surviving source modified.
 - `boost/python/converter/builtin_converters.cpp`: unverified upstream reconstruction; https://github.com/boostorg/python/tree/32ba64a8248d99b1852e77ff4388d9d8a991c4a9
@@ -60,13 +60,13 @@ compatibilityRepair: 2, exactOriginal: 59, reconstruction: 33.
 - `boost/python/object/enum.cpp`: unverified upstream reconstruction; https://github.com/boostorg/python/tree/32ba64a8248d99b1852e77ff4388d9d8a991c4a9
 - `boost/python/object/function.cpp`: unverified upstream reconstruction; https://github.com/boostorg/python/tree/32ba64a8248d99b1852e77ff4388d9d8a991c4a9
 - `boost/python/object/function_doc_signature.cpp`: unverified upstream reconstruction; https://github.com/boostorg/python/tree/32ba64a8248d99b1852e77ff4388d9d8a991c4a9
-- `boost/python/object/inheritance.cpp`: unverified donor reconstruction; 4b3902d44f874a1fae86054d7240a2af76901bb4:boost/python/object/inheritance.cpp; headerMatch=0; apiOverlap=0/10000; distance=64
+- `boost/python/object/inheritance.cpp`: unverified donor reconstruction; 4b3902d44f874a1fae86054d7240a2af76901bb4:boost/python/object/inheritance.cpp; headerMatch=0; apiOverlap=0/10000; distance=63
 - `boost/python/object/life_support.cpp`: unverified upstream reconstruction; https://github.com/boostorg/python/tree/32ba64a8248d99b1852e77ff4388d9d8a991c4a9
-- `boost/python/object_operators.cpp`: unverified donor reconstruction; 70d0d690df45877698cb094405e25be00a8139fd:boost/python/object_operators.cpp; headerMatch=0; apiOverlap=0/10000; distance=56
+- `boost/python/object_operators.cpp`: unverified donor reconstruction; 70d0d690df45877698cb094405e25be00a8139fd:boost/python/object_operators.cpp; headerMatch=0; apiOverlap=0/10000; distance=55
 - `boost/python/object_protocol.cpp`: unverified upstream reconstruction; https://github.com/boostorg/python/tree/32ba64a8248d99b1852e77ff4388d9d8a991c4a9
-- `boost/python/str.cpp`: unverified donor reconstruction; 4b3902d44f874a1fae86054d7240a2af76901bb4:boost/python/str.cpp; headerMatch=0; apiOverlap=0/10000; distance=64
+- `boost/python/str.cpp`: unverified donor reconstruction; 4b3902d44f874a1fae86054d7240a2af76901bb4:boost/python/str.cpp; headerMatch=0; apiOverlap=0/10000; distance=63
 - `config/interactions.json`: Missing interaction configuration reconstructed from donor properties plus actual matching Python class names, genuine #331 config/tiles.json handler/class schema and CTypeHandler.cpp PyTypeHandler qualified-name construction. Restores game.interaction class qualification and PyTypeHandler selection; preserves donor action properties. Not an exact original.
-- `config/monsters.json`: unverified donor reconstruction; 55e6516eb91b739e899df1ef8d72116da44fec49:config/monsters.json; headerMatch=0; apiOverlap=0/10000; distance=65
+- `config/monsters.json`: unverified donor reconstruction; 55e6516eb91b739e899df1ef8d72116da44fec49:config/monsters.json; headerMatch=0; apiOverlap=0/10000; distance=64
 - `config/weapons.json`: Inferred missing #263 implementation from native-verified #260–262 reconstructions and actual same-commit original headers/callers; surviving original bytes remain unchanged. Replace demonstrably wrong future donor containing duplicate tile definitions with the nearest native-verified262 weapon configuration, retaining actual weapon ids, bonuses, interactions and original263 declared Qt property schema. Inferred data, not recovered original balancing/layout.
 - `images.qrc`: Carry the verified split-project image reconstruction along the surviving resource directory rename.
 - `maps/map1/map.json`: content reconstruction of the BFG-removed original; Carry the preceding reconstructed sparse map across the map directory transition. Original placements, including the new StartEvent, are unavailable.
@@ -74,7 +74,7 @@ compatibilityRepair: 2, exactOriginal: 59, reconstruction: 33.
 - `boost/python/LICENSE_1_0.txt`: https://github.com/boostorg/python/tree/32ba64a8248d99b1852e77ff4388d9d8a991c4a9 upstream distribution license
 - `scripts/PSF_LICENSE`: https://www.python.org/ftp/python/3.3.7/Python-3.3.7.tar.xz upstream Python distribution license
 
-Restored source fingerprint: `f1381eaf4304decfdea55d84f9b6ae135010121de8f186ca36df8f40ea92f623`.
+Restored source fingerprint: `65cd2bba8b8803746133ac49049c696c99fa597bdf9986a0b5b8bcf83029bb81`.
 
 The restored source fingerprint identifies inputs before generation. The
 [source preparation metadata](recovery/source-preparation.json) records the original inputs

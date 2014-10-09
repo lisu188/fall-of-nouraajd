@@ -294,3 +294,5 @@ void CItemSlot::dropEvent(QGraphicsSceneDragDropEvent *event) {
   event->acceptProposedAction();
   event->accept();
 }
+
+int CItemSlot::getNumber() { return number; }

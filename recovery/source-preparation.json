@@ -1,6 +1,20 @@
 {
   "identity": {
-    "implementationSha256": "7275cf63b84ba66338b210a8d8d2f767eb4dbd06ce3d15163684cd260a8341e8",
+    "fightSystem": {
+      "files": {
+        "CGameView.cpp": [
+          "66cf029497fc319eb87200150081041261e9cf674a9d431dd4f9c33a48ce4ec3",
+          "706b041b742cd767410d9bc9034d2be26345509d3baa5b3a2989d01c5ddbf11d"
+        ],
+        "CScriptEngine.cpp": [
+          "06575b2705261b4b69b3852a6311b633ae506afbbced636a63570971751a23b2",
+          "586922933de9b2d73bc3527cf2de0ea6d6473d9ef38180d34d8f0a295f7c2bb3"
+        ]
+      },
+      "replaySha256": "bac55a903172fcbfc5ce0d9576b21a0174b3124d581bf629af6170b84099ba8f",
+      "sourceCommit": "229ade513a8962ea399d9cc4251f0968acdd62b1"
+    },
+    "implementationSha256": "a9313e253259f18e2dd2bddf89483cc44e996e3557f960d3671a1c352fd49a74",
     "outputs": [
       {
         "after": {
@@ -26,21 +40,7 @@
         "path": "CScriptEngine.cpp",
         "purpose": "Carry forward reviewed Qt signal and Python lifetime repairs"
       }
-    ],
-    "potionMovement": {
-      "files": {
-        "CGameView.cpp": [
-          "66cf029497fc319eb87200150081041261e9cf674a9d431dd4f9c33a48ce4ec3",
-          "706b041b742cd767410d9bc9034d2be26345509d3baa5b3a2989d01c5ddbf11d"
-        ],
-        "CScriptEngine.cpp": [
-          "06575b2705261b4b69b3852a6311b633ae506afbbced636a63570971751a23b2",
-          "586922933de9b2d73bc3527cf2de0ea6d6473d9ef38180d34d8f0a295f7c2bb3"
-        ]
-      },
-      "replaySha256": "96aa1c83d4e389e224ef222a25d70c7cfb4da02f03afb3151842f1bb9646024f",
-      "sourceCommit": "b544b03385befb58c2f805109ebafecd632cdef0"
-    }
+    ]
   },
   "outputs": [
     {
@@ -73,10 +73,10 @@
     {
       "command": [
         "history_source_prep.py",
-        "prepare-potion-movement"
+        "prepare-fight-system"
       ],
-      "log": "/tmp/nouraajd-300-potion-fixed/verify/snapshot-smpjoh3a/preparation/potion-movement.log",
-      "name": "potionMovement",
+      "log": "/tmp/nouraajd-301-fight-final/verify/snapshot-fd0zlh77/preparation/fight-system.log",
+      "name": "fightSystem",
       "returnCode": 0,
       "timedOut": false
     }
