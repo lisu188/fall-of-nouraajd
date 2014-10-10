@@ -63,11 +63,11 @@ struct QStringFromPython {
 
 template <class T> class CWrapper : public T, public wrapper<CWrapper<T>> {
 public:
-  void onEnter() override {
+  void onEnter(CCreature *creature) override {
     if (override call = this->get_override("onEnter")) {
-      call();
+      call(ptr(creature));
     } else {
-      T::onEnter();
+      T::onEnter(creature);
     }
   }
   void onMove() override {
@@ -91,7 +91,7 @@ public:
       T::onDestroy();
     }
   }
-  void defaultOnEnter() { T::onEnter(); }
+  void defaultOnEnter(CCreature *creature) { T::onEnter(creature); }
   void defaultOnMove() { T::onMove(); }
   void defaultOnCreate() { T::onCreate(); }
   void defaultOnDestroy() { T::onDestroy(); }

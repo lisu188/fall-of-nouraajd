@@ -185,7 +185,7 @@ bool CCreature::applyEffects() {
   return stopped;
 }
 
-void CCreature::onEnter() { CMapObject::onEnter(); }
+void CCreature::onEnter(CCreature *creature) { CMapObject::onEnter(creature); }
 void CCreature::onMove() { CMapObject::onMove(); }
 void CCreature::hoverEnterEvent(QGraphicsSceneHoverEvent *event) {
   CMapObject::hoverEnterEvent(event);
@@ -533,7 +533,7 @@ void CPlayer::onMove() {
   turn++;
 }
 
-void CPlayer::onEnter() {}
+void CPlayer::onEnter(CCreature *creature) {}
 
 void CPlayer::addToFightList(CCreature *creature) {
   fightList.push_back(creature);
@@ -618,11 +618,11 @@ void CMonster::onMove() {
       new PathFinderWorker(this, getMap()->getScene()->getPlayer(), finder));
 }
 
-void CMonster::onEnter() {
+void CMonster::onEnter(CCreature *creature) {
   if (!isAlive()) {
     return;
   }
-  getMap()->getScene()->getPlayer()->addToFightList(this);
+  if (auto *player = dynamic_cast<CPlayer *>(creature)) player->addToFightList(this);
 }
 
 void CMonster::levelUp() {

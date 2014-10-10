@@ -364,7 +364,7 @@ void CMap::endMove() {
     entered.push_back(object);
     if (std::find(player->getEntered()->begin(), player->getEntered()->end(),
                   object) == player->getEntered()->end()) {
-      object->onEnter();
+      object->onEnter(player);
     }
   }
   *player->getEntered() = entered;

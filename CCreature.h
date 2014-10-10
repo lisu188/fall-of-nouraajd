@@ -77,7 +77,7 @@ class CCreature : public CMapObject {
     std::map<int, CItem *> *getEquipped();
     bool applyEffects();
     std::set<CInteraction *> *getActions();
-    virtual void onEnter();
+    virtual void onEnter(CCreature *creature);
     virtual void onMove();
     bool hasEquipped(CItem *item);
     void setItem(int i, CItem *newItem);
@@ -138,7 +138,7 @@ class CPlayer : public CCreature {
     std::set<CItem *> *getLoot();
     virtual void fight(CCreature *creature);
     void onMove();
-    void onEnter();
+    void onEnter(CCreature *creature);
     void update();
     void updateViews();
     void addToFightList(CCreature *creature);
@@ -166,7 +166,7 @@ class CMonster : public CCreature {
     CMonster();
     CMonster(const CMonster &monster);
     virtual void onMove();
-    virtual void onEnter();
+    virtual void onEnter(CCreature *creature);
     virtual void levelUp();
     virtual std::set<CItem *> *getLoot();
 };
