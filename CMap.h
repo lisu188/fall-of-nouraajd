@@ -73,20 +73,20 @@ public:
 	CMapObject *getObjectByName ( QString name );
 	template<typename T>
 	void forAll ( T func ) {
-		for ( auto it=mapObjects.begin(); it!=mapObjects.end(); it++ ) {
-			func ( *it );
+        for ( auto it : mapObjects ) {
+            func ( it );
 		}
 	}
 	template<typename T>
 	void removeAll ( T func ) {
 		QList<CMapObject*> objects;
-		for ( auto it=mapObjects.begin(); it!=mapObjects.end(); it++ ) {
-			if ( func ( *it ) ) {
-				objects.append ( *it );
+        for (auto it : mapObjects ) {
+            if ( func ( it ) ) {
+                objects.append ( it );
 			}
 		}
-		for ( auto it=objects.begin(); it!=objects.end(); it++ ) {
-			removeObject ( *it );
+        for (auto it : objects) {
+            removeObject ( it );
 		}
 	}
 private:

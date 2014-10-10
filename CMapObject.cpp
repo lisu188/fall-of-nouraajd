@@ -72,7 +72,7 @@ int CMapObject::getPosX() const {
 	return posx;
 }
 
-void CMapObject::onEnter() {
+void CMapObject::onEnter(CCreature *creature) {
 
 }
 

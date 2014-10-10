@@ -18,7 +18,7 @@ class CDumbPathFinder : public APathFinder {
 public:
 	CDumbPathFinder();
 	CDumbPathFinder ( const CDumbPathFinder & );
-	Coords findPath ( CCreature *first, CCreature *second );
+    virtual Coords findPath ( CCreature *first, CCreature *second )override final;
 };
 
 class CRandomPathFinder : public APathFinder {
@@ -26,7 +26,7 @@ class CRandomPathFinder : public APathFinder {
 public:
 	CRandomPathFinder();
 	CRandomPathFinder ( const CRandomPathFinder & );
-	Coords findPath ( CCreature *, CCreature * );
+    virtual Coords findPath ( CCreature *, CCreature * ) override final;
 };
 
 class Cell {
@@ -46,7 +46,7 @@ class CSmartPathFinder : public APathFinder {
 public:
 	CSmartPathFinder();
 	CSmartPathFinder ( const CSmartPathFinder & );
-	Coords findPath ( CCreature *first, CCreature *second );
+    virtual Coords findPath ( CCreature *first, CCreature *second ) override final;
 private:
 	int getCost ( Coords coords );
 	std::list<Coords> getNearCells ( Coords coords );
@@ -77,7 +77,7 @@ class PathFinderWorker : public QObject, public QRunnable {
 	Q_OBJECT
 public:
 	PathFinderWorker ( CCreature *first, CCreature *second, APathFinder *finder );
-	void run();
+    virtual void run() override;
 
 private:
 	Q_SIGNAL void completed ( int x, int y,int z );

@@ -19,7 +19,7 @@ public:
 	virtual void onEquip ( CCreature *creature );
 	virtual void onUnequip ( CCreature *creature );
 	virtual void onUse ( CCreature *creature );
-	virtual void onEnter();
+    virtual void onEnter(CCreature *creature);
 	int getPower() const;
 	void setPower ( int value );
 	Stats getBonus();
