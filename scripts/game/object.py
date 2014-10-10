@@ -6,17 +6,17 @@ class Teleporter(CBuilding):
     def __init__(self):
         super(Teleporter,self).__init__()
 
-    def onEnter(self):
+    def onEnter(self,creature):
         if self.getBoolProperty("enabled"):
             exit=self.getStringProperty("exit")
             loc=self.getMap().getLocationByName(exit)
-            self.getMap().getPlayer().setCoords(loc)
+            creature.setCoords(loc)
 
 class Cave(CBuilding):
     def __init__(self):
         super(Cave,self).__init__()
 
-    def onEnter(self):
+    def onEnter(self,creature):
         if self.getBoolProperty("enabled"):
             self.setBoolProperty("enabled",False);
             location=self.getCoords()

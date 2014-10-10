@@ -3,6 +3,7 @@
 #include "Util.h"
 
 class CMap;
+class CCreature;
 class CMapObject : public CAnimatedObject {
 	friend class CObjectHandler;
 	Q_OBJECT
@@ -15,7 +16,7 @@ public:
 	int getPosX() const;
 	int getPosY() const;
 	int getPosZ() const;
-	virtual void onEnter();
+    virtual void onEnter(CCreature *creature);
 	virtual void onMove();
 	virtual void onCreate();
 	virtual void onDestroy();

@@ -1,7 +1,7 @@
 # Recovered game snapshot
 
-Original commit: `30f2226a11e58b114692d6990323f26af5646e58`. Original tree: `9bffc72b7581fca0e94b6e47ad6e42660744097b`.
-Startup was verified from identical recovered sources at `30f2226a11e58b114692d6990323f26af5646e58`.
+Original commit: `8c67b6c5800deaa0bd6b95d636e4e9de72b80490`. Original tree: `0d724be5c1ca694caf39cca17888684642282f90`.
+Startup was verified from identical recovered sources at `8c67b6c5800deaa0bd6b95d636e4e9de72b80490`.
 
 This recovered version compiled and linked on Linux, started the real game on an isolated Xvfb display,
 loaded its map and a healthy player, rendered the screenshot below, and exited normally.
@@ -41,7 +41,7 @@ compatibilityRepair: 2, exactOriginal: 59, reconstruction: 33.
 - `CCreature.cpp`: content reconstruction of the BFG-removed original; Follow the surviving combat interfaces and charge mana in the authored interaction. Pass the entering creature through the revised event callbacks.
 - `CCreature.h`: content reconstruction of the BFG-removed original; Carry creature declarations with the action-selection method used by the authored interaction and the creature-aware event signature where present.
 - `CGamePanel.cpp`: content reconstruction of the BFG-removed original; Read the active opponent from the player fight list after removal of the static panel selection.
-- `CItem.cpp`: content reconstruction of the BFG-removed original; Move the interaction accessor to the base item as required by the surviving header.
+- `CGamePanel.h`: content reconstruction of the BFG-removed original; Carry the nearest surviving panel declarations across the unchanged callers.
 - `CMap.cpp`: content reconstruction of the BFG-removed original; Import the map-local script before the authored loot factory enumerates object classes. Pass the entering creature to map objects where required by the header.
 - `CObjectHandler.cpp`: content reconstruction of the BFG-removed original; Load the authored map-local configuration along with global resource definitions.
 - `CPathFinder.cpp`: content reconstruction of the BFG-removed original; Carry the pathfinder and emit three-dimensional movement where required by the surviving completion signal.
@@ -60,13 +60,13 @@ compatibilityRepair: 2, exactOriginal: 59, reconstruction: 33.
 - `boost/python/object/enum.cpp`: unverified upstream reconstruction; https://github.com/boostorg/python/tree/32ba64a8248d99b1852e77ff4388d9d8a991c4a9
 - `boost/python/object/function.cpp`: unverified upstream reconstruction; https://github.com/boostorg/python/tree/32ba64a8248d99b1852e77ff4388d9d8a991c4a9
 - `boost/python/object/function_doc_signature.cpp`: unverified upstream reconstruction; https://github.com/boostorg/python/tree/32ba64a8248d99b1852e77ff4388d9d8a991c4a9
-- `boost/python/object/inheritance.cpp`: unverified donor reconstruction; 4b3902d44f874a1fae86054d7240a2af76901bb4:boost/python/object/inheritance.cpp; headerMatch=0; apiOverlap=0/10000; distance=61
+- `boost/python/object/inheritance.cpp`: unverified donor reconstruction; 4b3902d44f874a1fae86054d7240a2af76901bb4:boost/python/object/inheritance.cpp; headerMatch=0; apiOverlap=0/10000; distance=60
 - `boost/python/object/life_support.cpp`: unverified upstream reconstruction; https://github.com/boostorg/python/tree/32ba64a8248d99b1852e77ff4388d9d8a991c4a9
-- `boost/python/object_operators.cpp`: unverified donor reconstruction; 70d0d690df45877698cb094405e25be00a8139fd:boost/python/object_operators.cpp; headerMatch=0; apiOverlap=0/10000; distance=53
+- `boost/python/object_operators.cpp`: unverified donor reconstruction; 70d0d690df45877698cb094405e25be00a8139fd:boost/python/object_operators.cpp; headerMatch=0; apiOverlap=0/10000; distance=52
 - `boost/python/object_protocol.cpp`: unverified upstream reconstruction; https://github.com/boostorg/python/tree/32ba64a8248d99b1852e77ff4388d9d8a991c4a9
-- `boost/python/str.cpp`: unverified donor reconstruction; 4b3902d44f874a1fae86054d7240a2af76901bb4:boost/python/str.cpp; headerMatch=0; apiOverlap=0/10000; distance=61
+- `boost/python/str.cpp`: unverified donor reconstruction; 4b3902d44f874a1fae86054d7240a2af76901bb4:boost/python/str.cpp; headerMatch=0; apiOverlap=0/10000; distance=60
 - `config/interactions.json`: Missing interaction configuration reconstructed from donor properties plus actual matching Python class names, genuine #331 config/tiles.json handler/class schema and CTypeHandler.cpp PyTypeHandler qualified-name construction. Restores game.interaction class qualification and PyTypeHandler selection; preserves donor action properties. Not an exact original.
-- `config/monsters.json`: unverified donor reconstruction; 55e6516eb91b739e899df1ef8d72116da44fec49:config/monsters.json; headerMatch=0; apiOverlap=0/10000; distance=62
+- `config/monsters.json`: unverified donor reconstruction; 55e6516eb91b739e899df1ef8d72116da44fec49:config/monsters.json; headerMatch=0; apiOverlap=0/10000; distance=61
 - `config/weapons.json`: Missing weapon config reconstructed from intact 55e6516eb91b739e899df1ef8d72116da44fec49:config/weapons.json Git blob0a32d5f0cc003ae07cfd43d092921d76ec82f3e5; its genuine ChaosSword/other authored item IDs and flat Stats bonus shape match #331 CItem.h, native loader/property contracts and original weapon image path identities (ChaosSword also occurs in the existing reconstructed map), and CObjectHandler deserialization. Original CTypeHandler field restored consistently with genuine config/tiles.json. Replaces unrelated tile-config donor; not an exact original.
 - `images.qrc`: Carry the verified split-project image reconstruction along the surviving resource directory rename.
 - `maps/map1/map.json`: content reconstruction of the BFG-removed original; Carry the preceding reconstructed sparse map across the map directory transition. Original placements, including the new StartEvent, are unavailable.
@@ -74,7 +74,7 @@ compatibilityRepair: 2, exactOriginal: 59, reconstruction: 33.
 - `boost/python/LICENSE_1_0.txt`: https://github.com/boostorg/python/tree/32ba64a8248d99b1852e77ff4388d9d8a991c4a9 upstream distribution license
 - `scripts/PSF_LICENSE`: https://www.python.org/ftp/python/3.3.7/Python-3.3.7.tar.xz upstream Python distribution license
 
-Restored source fingerprint: `7ced476add0c2c65abe66c4eb96117aab31b64370dd0702a88b89c7437c9469f`.
+Restored source fingerprint: `5853d7864dee38ca4d419159b6c5331eb8c3d70c1b1b7bf50914936711154547`.
 
 The restored source fingerprint identifies inputs before generation. The
 [source preparation metadata](recovery/source-preparation.json) records the original inputs

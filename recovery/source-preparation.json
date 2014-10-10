@@ -12,7 +12,7 @@
         ]
       },
       "replaySha256": "56b9c659a91fa2936c1e7a7bb0c3d9dd83c4fbcef5af0bb90cad9448c7a9355a",
-      "sourceCommit": "30f2226a11e58b114692d6990323f26af5646e58"
+      "sourceCommit": "8c67b6c5800deaa0bd6b95d636e4e9de72b80490"
     },
     "implementationSha256": "ccf6ab7ee9e9dca6b0cb4f7c01b3b72d0dec5f26d0acf3bf85c216ea8686c49c",
     "outputs": [
@@ -75,7 +75,7 @@
         "history_source_prep.py",
         "prepare-creature-events"
       ],
-      "log": "/tmp/nouraajd-303-events-batch/verify/snapshot-4b3mn_ts/preparation/creature-events.log",
+      "log": "/tmp/nouraajd-304-events-batch/verify/snapshot-565divz6/preparation/creature-events.log",
       "name": "creatureEvents",
       "returnCode": 0,
       "timedOut": false
