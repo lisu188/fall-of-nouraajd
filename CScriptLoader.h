@@ -26,22 +26,22 @@ public:
 	bool checkModule ( std::string modName );
 	void exec_module ( boost::python::object module );
 	ModuleSpec *find_spec ( boost::python::object  name,boost::python::object  ,boost::python::object  );
-    //android
-    AScriptLoader *find_module(boost::python::object name, boost::python::object );
-    boost::python::object load_module(boost::python::object name);
+	//android
+	AScriptLoader *find_module ( boost::python::object name, boost::python::object );
+	boost::python::object load_module ( boost::python::object name );
 };
 
 class CScriptLoader :public AScriptLoader {
 	Q_OBJECT
 public:
-    virtual QString findModule ( QString modName ) override;
+	virtual QString findModule ( QString modName ) override;
 };
 
 class CMapScriptLoader :public AScriptLoader {
 	Q_OBJECT
 public:
 	CMapScriptLoader ( CMap*map );
-    virtual QString findModule ( QString modName ) override;
+	virtual QString findModule ( QString modName ) override;
 private:
 	CMap* map=0;
 };

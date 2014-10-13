@@ -16,7 +16,7 @@ public:
 	int getPosX() const;
 	int getPosY() const;
 	int getPosZ() const;
-    virtual void onEnter(CCreature *creature);
+	virtual void onEnter ( CCreature *creature );
 	virtual void onMove();
 	virtual void onCreate();
 	virtual void onDestroy();
