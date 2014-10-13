@@ -33,3 +33,16 @@ unix{
     INCLUDEPATH += /usr/include
     DEPENDPATH += /usr/include
 }
+
+android{
+    QMAKE_CXXFLAGS_RELEASE -= -flto -march=native
+    QMAKE_LFLAGS_RELEASE -= -flto -march=native
+    INCLUDEPATH += /home/andrzejlis/python3-android/build/9d-19-arm-linux-androideabi-4.8/include/python3.3m
+    DEPENDPATH += /home/andrzejlis/python3-android/build/9d-19-arm-linux-androideabi-4.8/include/python3.3m
+    INCLUDEPATH -= /usr/include
+    DEPENDPATH -= /usr/include
+    INCLUDEPATH -= /usr/local/include/python3.4m
+    DEPENDPATH -= /usr/local/include/python3.4m
+    INCLUDEPATH += /usr/local/include
+    DEPENDPATH += /usr/local/include
+}

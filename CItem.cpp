@@ -21,9 +21,9 @@ CItem::CItem()  {
 
 CItem::CItem ( const CItem & )  { }
 
-void CItem::onEnter(CCreature * creature) {
+void CItem::onEnter ( CCreature * creature ) {
 	this->getMap()->removeObject ( this );
-    creature->addItem ( this );
+	creature->addItem ( this );
 }
 
 bool CItem::isSingleUse() {
