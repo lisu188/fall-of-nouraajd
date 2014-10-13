@@ -41,5 +41,6 @@ void CGuiHandler::initPanels() {
 		map->getScene()->addItem ( *it );
 		( *it )->setUpPanel ( map->getScene()->getView() );
 		( *it )->hidePanel ( );
+		qDebug() <<"Initialized panel:"<< ( *it )->metaObject()->className() <<"\n";
 	}
 }

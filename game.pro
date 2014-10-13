@@ -11,6 +11,9 @@ TEMPLATE = app
 win32{
     CONFIG +=console
 }
+android{
+    DEFINES+=ANDROID
+}
 
 include(game.pri)
 
@@ -100,8 +103,18 @@ HEADERS += \
     CResourcesHandler.h \
     CScriptLoader.h
 
+
+android{
+    SOURCES += android/posix.c
+    HEADERS += android/posix.h
+}
+
 unix:LIBS += -L/usr/local/lib -lpython3.4m -ldl -fPIC -lutil
 win32:LIBS += -LC:\Python34\libs -lpython34
+android{
+    LIBS -= -L/usr/local/lib -lpython3.4m -ldl -fPIC -lutil
+    LIBS += -L/home/andrzejlis/python3-android/build/9d-19-arm-linux-androideabi-4.8/lib -lpython3.3m
+}
 
 FORMS += \
      CMainWindow.ui

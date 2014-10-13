@@ -44,33 +44,31 @@ ModuleSpec *AScriptLoader::find_spec ( object name, object, object ) {
 		return NULL;
 	}
 	ModuleSpec* spec= new ModuleSpec ( this ,  modName );
-    return boost::ref ( spec );
+	return boost::ref ( spec );
 }
 
-AScriptLoader *AScriptLoader::find_module(boost::python::object name, boost::python::object)
-{
-    std::string modName=boost::python::extract<std::string> ( name ) ;
-    if(checkModule(modName)){
-        AScriptLoader *loader=this;
-        return boost::ref(loader);
-    }else{
-        return NULL;
-    }
+AScriptLoader *AScriptLoader::find_module ( boost::python::object name, boost::python::object ) {
+	std::string modName=boost::python::extract<std::string> ( name ) ;
+	if ( checkModule ( modName ) ) {
+		AScriptLoader *loader=this;
+		return boost::ref ( loader );
+	} else {
+		return NULL;
+	}
 }
 
-boost::python::object AScriptLoader::load_module(boost::python::object name)
-{
-    std::string modName=boost::python::extract<std::string> ( name ) ;
-    object sys=boost::python::object ( boost::python::handle<> ( PyImport_ImportModule ( "sys" ) ) ) ;
-    object sysModules=sys.attr("modules");
-    if(sysModules.contains(name)){
-        return sysModules[name];
-    }
-    boost::python::object module=boost::python::object ( boost::python::handle<> ( PyImport_AddModule ( modName.c_str()) ) ) ;
-    module.attr("__name__")=name;
-    sysModules[name]=module;
-    exec_module(module);
-    return module;
+boost::python::object AScriptLoader::load_module ( boost::python::object name ) {
+	std::string modName=boost::python::extract<std::string> ( name ) ;
+	object sys=boost::python::object ( boost::python::handle<> ( PyImport_ImportModule ( "sys" ) ) ) ;
+	object sysModules=sys.attr ( "modules" );
+	if ( sysModules.contains ( name ) ) {
+		return sysModules[name];
+	}
+	boost::python::object module=boost::python::object ( boost::python::handle<> ( PyImport_AddModule ( modName.c_str() ) ) ) ;
+	module.attr ( "__name__" ) =name;
+	sysModules[name]=module;
+	exec_module ( module );
+	return module;
 }
 
 
