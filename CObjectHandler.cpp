@@ -68,7 +68,7 @@ CMapObject *CObjectHandler::_createMapObject(QString type) const {
            qPrintable(class_name));
   }
   object->map = map;
-  object->setTypeName(type);
+  object->setObjectType(type);
   object->setObjectName(
       QString::number(reinterpret_cast<quintptr>(object), 16));
   object->QObject::setParent(const_cast<CObjectHandler *>(this));

@@ -14,13 +14,13 @@ class CMapObject;
 class CGameScene : public QGraphicsScene {
 	Q_OBJECT
 public:
+    CGameScene(QObject *parent);
 	virtual ~CGameScene();
 	void playerMove ( int dirx, int diry );
 	void startGame ( QString file ,QString player );
 	CPlayer *getPlayer() const;
 	void setPlayer ( CPlayer *value );
 	CMap *getMap() const;
-	void setMap ( CMap *value );
 	CGameView *getView();
 	void removeObject ( CMapObject *object );
 protected:

@@ -32,8 +32,8 @@ public:
 		const QMetaObject *mObject=QMetaType::metaObjectForType ( qRegisterMetaType<T>() );
 		if ( mObject ) {
 			QString base=mObject->className();
-			for ( auto it=metaTypes.begin(); it!=metaTypes.end(); it++ ) {
-				mObject=QMetaType::metaObjectForType ( *it );
+            for ( int type:metaTypes) {
+                mObject=QMetaType::metaObjectForType ( type );
 				if ( mObject && checkInheritance ( base,mObject->className() ) ) {
 					QString typeName=mObject->className();
 					int typeId=QMetaType::type ( typeName.toStdString().c_str() );
@@ -42,7 +42,7 @@ public:
 				}
 			}
 		} else {
-			qDebug() <<"No registered object";
+            qFatal("No registered object");
 		}
 		return objects;
 	}

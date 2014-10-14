@@ -1,71 +1,99 @@
 {
   "identity": {
-    "creatureEvents": {
-      "files": {
-        "CGameView.cpp": [
-          "66cf029497fc319eb87200150081041261e9cf674a9d431dd4f9c33a48ce4ec3",
-          "706b041b742cd767410d9bc9034d2be26345509d3baa5b3a2989d01c5ddbf11d"
-        ],
-        "CScriptEngine.cpp": [
-          "06575b2705261b4b69b3852a6311b633ae506afbbced636a63570971751a23b2",
-          "586922933de9b2d73bc3527cf2de0ea6d6473d9ef38180d34d8f0a295f7c2bb3"
-        ]
-      },
-      "replaySha256": "56b9c659a91fa2936c1e7a7bb0c3d9dd83c4fbcef5af0bb90cad9448c7a9355a",
-      "sourceCommit": "471be57fbbd86d75c56133e610a1f28bb68446bb"
-    },
-    "implementationSha256": "ccf6ab7ee9e9dca6b0cb4f7c01b3b72d0dec5f26d0acf3bf85c216ea8686c49c",
+    "implementationSha256": "72372a54cb587e3f5b9ddf93fc2e063da68d3ffe282f7963a118cf8445567899",
     "outputs": [
       {
         "after": {
           "kind": "file",
-          "sha256": "706b041b742cd767410d9bc9034d2be26345509d3baa5b3a2989d01c5ddbf11d"
+          "sha256": "56d51702c432c6d57a1a916e1c50b45a1c6dc15bab2d00519148ce24a03a61d9"
         },
         "before": {
           "kind": "file",
-          "sha256": "66cf029497fc319eb87200150081041261e9cf674a9d431dd4f9c33a48ce4ec3"
+          "sha256": "ebf81a980024bc6be61956698953a8b89776f5c7567a723e24ad3e4fb65e0318"
         },
-        "path": "CGameView.cpp",
-        "purpose": "Carry forward reviewed Qt signal and Python lifetime repairs"
+        "path": "CGameScene.cpp",
+        "purpose": "Include the map declaration and release map and Python state before their owning runtimes"
       },
       {
         "after": {
           "kind": "file",
-          "sha256": "586922933de9b2d73bc3527cf2de0ea6d6473d9ef38180d34d8f0a295f7c2bb3"
+          "sha256": "09af51dc2112f684603ecbe347aa4d59b1bc07019df9873d2efceeaa7c4e6209"
         },
         "before": {
           "kind": "file",
-          "sha256": "06575b2705261b4b69b3852a6311b633ae506afbbced636a63570971751a23b2"
+          "sha256": "e4dea2cc362f4efc898f313db765302bc73a3da82f8924317e2af315884489cd"
+        },
+        "path": "CGameView.cpp",
+        "purpose": "Include the map declaration and release map and Python state before their owning runtimes"
+      },
+      {
+        "after": {
+          "kind": "file",
+          "sha256": "99bbe98b12e94cee9b67a59323e01cb1b747a0d827cc863eb08961ffcdc38df3"
+        },
+        "before": {
+          "kind": "file",
+          "sha256": "7b2d4e8bd567e4211ceeb14b29362e24554701e653a9bac0b0f16ff36201910a"
         },
         "path": "CScriptEngine.cpp",
-        "purpose": "Carry forward reviewed Qt signal and Python lifetime repairs"
+        "purpose": "Include the map declaration and release map and Python state before their owning runtimes"
       }
-    ]
+    ],
+    "visitorCallbacks": {
+      "files": {
+        "CGameScene.cpp": [
+          "ebf81a980024bc6be61956698953a8b89776f5c7567a723e24ad3e4fb65e0318",
+          "56d51702c432c6d57a1a916e1c50b45a1c6dc15bab2d00519148ce24a03a61d9"
+        ],
+        "CGameView.cpp": [
+          "e4dea2cc362f4efc898f313db765302bc73a3da82f8924317e2af315884489cd",
+          "09af51dc2112f684603ecbe347aa4d59b1bc07019df9873d2efceeaa7c4e6209"
+        ],
+        "CScriptEngine.cpp": [
+          "7b2d4e8bd567e4211ceeb14b29362e24554701e653a9bac0b0f16ff36201910a",
+          "99bbe98b12e94cee9b67a59323e01cb1b747a0d827cc863eb08961ffcdc38df3"
+        ]
+      },
+      "replaySha256": "cdf5851089696019266a88c2da75dedd6ed5ab2d87ab8c6b2cc774ae593a7636",
+      "sourceCommit": "3439d0c4e5572aa51cd1ba324b0e844a9633bc82"
+    }
   },
   "outputs": [
     {
       "after": {
         "kind": "file",
-        "sha256": "706b041b742cd767410d9bc9034d2be26345509d3baa5b3a2989d01c5ddbf11d"
+        "sha256": "56d51702c432c6d57a1a916e1c50b45a1c6dc15bab2d00519148ce24a03a61d9"
       },
       "before": {
         "kind": "file",
-        "sha256": "66cf029497fc319eb87200150081041261e9cf674a9d431dd4f9c33a48ce4ec3"
+        "sha256": "ebf81a980024bc6be61956698953a8b89776f5c7567a723e24ad3e4fb65e0318"
       },
-      "path": "CGameView.cpp",
-      "purpose": "Carry forward reviewed Qt signal and Python lifetime repairs"
+      "path": "CGameScene.cpp",
+      "purpose": "Include the map declaration and release map and Python state before their owning runtimes"
     },
     {
       "after": {
         "kind": "file",
-        "sha256": "586922933de9b2d73bc3527cf2de0ea6d6473d9ef38180d34d8f0a295f7c2bb3"
+        "sha256": "09af51dc2112f684603ecbe347aa4d59b1bc07019df9873d2efceeaa7c4e6209"
       },
       "before": {
         "kind": "file",
-        "sha256": "06575b2705261b4b69b3852a6311b633ae506afbbced636a63570971751a23b2"
+        "sha256": "e4dea2cc362f4efc898f313db765302bc73a3da82f8924317e2af315884489cd"
+      },
+      "path": "CGameView.cpp",
+      "purpose": "Include the map declaration and release map and Python state before their owning runtimes"
+    },
+    {
+      "after": {
+        "kind": "file",
+        "sha256": "99bbe98b12e94cee9b67a59323e01cb1b747a0d827cc863eb08961ffcdc38df3"
+      },
+      "before": {
+        "kind": "file",
+        "sha256": "7b2d4e8bd567e4211ceeb14b29362e24554701e653a9bac0b0f16ff36201910a"
       },
       "path": "CScriptEngine.cpp",
-      "purpose": "Carry forward reviewed Qt signal and Python lifetime repairs"
+      "purpose": "Include the map declaration and release map and Python state before their owning runtimes"
     }
   ],
   "status": "success",
@@ -73,10 +101,10 @@
     {
       "command": [
         "history_source_prep.py",
-        "prepare-creature-events"
+        "prepare-visitor-callbacks"
       ],
-      "log": "/tmp/nouraajd-305-events-batch/verify/snapshot-7fck001m/preparation/creature-events.log",
-      "name": "creatureEvents",
+      "log": "/tmp/nouraajd-306-visitors-batch/verify/snapshot-nfc28vrz/preparation/visitor-callbacks.log",
+      "name": "visitorCallbacks",
       "returnCode": 0,
       "timedOut": false
     }

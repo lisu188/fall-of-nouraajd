@@ -1,16 +1,20 @@
 
-=== creatureEvents ===
+=== visitorCallbacks ===
 {
   "files": {
+    "CGameScene.cpp": [
+      "ebf81a980024bc6be61956698953a8b89776f5c7567a723e24ad3e4fb65e0318",
+      "56d51702c432c6d57a1a916e1c50b45a1c6dc15bab2d00519148ce24a03a61d9"
+    ],
     "CGameView.cpp": [
-      "66cf029497fc319eb87200150081041261e9cf674a9d431dd4f9c33a48ce4ec3",
-      "706b041b742cd767410d9bc9034d2be26345509d3baa5b3a2989d01c5ddbf11d"
+      "e4dea2cc362f4efc898f313db765302bc73a3da82f8924317e2af315884489cd",
+      "09af51dc2112f684603ecbe347aa4d59b1bc07019df9873d2efceeaa7c4e6209"
     ],
     "CScriptEngine.cpp": [
-      "06575b2705261b4b69b3852a6311b633ae506afbbced636a63570971751a23b2",
-      "586922933de9b2d73bc3527cf2de0ea6d6473d9ef38180d34d8f0a295f7c2bb3"
+      "7b2d4e8bd567e4211ceeb14b29362e24554701e653a9bac0b0f16ff36201910a",
+      "99bbe98b12e94cee9b67a59323e01cb1b747a0d827cc863eb08961ffcdc38df3"
     ]
   },
-  "replaySha256": "56b9c659a91fa2936c1e7a7bb0c3d9dd83c4fbcef5af0bb90cad9448c7a9355a",
-  "sourceCommit": "471be57fbbd86d75c56133e610a1f28bb68446bb"
+  "replaySha256": "cdf5851089696019266a88c2da75dedd6ed5ab2d87ab8c6b2cc774ae593a7636",
+  "sourceCommit": "3439d0c4e5572aa51cd1ba324b0e844a9633bc82"
 }

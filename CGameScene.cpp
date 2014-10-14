@@ -69,8 +69,12 @@ void CGameScene::keyPressEvent ( QKeyEvent *keyEvent ) {
 	}
 }
 
+CGameScene::CGameScene(QObject *parent):QGraphicsScene(parent){
+
+}
+
 CGameScene::~CGameScene() {
-	delete map;
+
 }
 
 void CGameScene::playerMove ( int dirx, int diry ) {
@@ -87,13 +91,11 @@ CMap *CGameScene::getMap() const {
 	return map;
 }
 
-void CGameScene::setMap ( CMap *value ) {
-	map = value;
-}
+
 
 CGameView *CGameScene::getView() {
 //	if ( this->views().size() ==0 ) {
-//		return NULL;
+//		return nullptr;
 //	}
 	return dynamic_cast<CGameView*> ( this->views() [0] );
 }

@@ -64,7 +64,7 @@ Coords CSmartPathFinder::getNearestCell(Coords start) {
 }
 void CSmartPathFinder::processNode(
     CCreature *first, std::list<Cell> &nodes,
-    std::unordered_set<Coords, CoordsHasher> &marked) {
+    std::unordered_set<Coords> &marked) {
   Cell cell = nodes.front();
   nodes.pop_front();
   Coords current = cell.toCoords();
@@ -95,7 +95,7 @@ Coords CSmartPathFinder::findPath(CCreature *first, CCreature *second) {
   values.clear();
   values[goal] = 0;
   std::list<Cell> nodes{Cell(goal.x, goal.y, goal)};
-  std::unordered_set<Coords, CoordsHasher> marked;
+  std::unordered_set<Coords> marked;
   while (!nodes.empty() && marked.find(start) == marked.end()) {
     processNode(first, nodes, marked);
   }

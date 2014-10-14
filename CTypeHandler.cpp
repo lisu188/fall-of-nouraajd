@@ -4,12 +4,12 @@
 
 ATypeHandler *ATypeHandler::getHandler ( QString name ) {
 	static  std::list<ATypeHandler*> handlers=CReflection::getInstance()->getInherited<ATypeHandler*>();
-	for ( auto it=handlers.begin(); it!=handlers.end(); it++ ) {
-		if ( ( *it )->metaObject()->className() ==name ) {
-			return *it;
+    for ( auto it:handlers ) {
+        if ( it ->metaObject()->className() ==name ) {
+            return it;
 		}
 	}
-	return NULL;
+	return nullptr;
 }
 
 ATypeHandler::ATypeHandler() {
@@ -21,7 +21,7 @@ ATypeHandler::ATypeHandler ( const ATypeHandler & ) {
 }
 
 CMapObject *ATypeHandler::create ( QString ) {
-	return NULL;
+	return nullptr;
 }
 
 
@@ -34,7 +34,7 @@ CTypeHandler::CTypeHandler ( const CTypeHandler & ) {
 }
 
 CMapObject *CTypeHandler::create ( QString name ) {
-	CMapObject *object = NULL;
+	CMapObject *object = nullptr;
 	int typeId = QMetaType::type ( name.toStdString().c_str() );
 	object = ( CMapObject * ) QMetaType::create ( typeId );
 	return  object ;

@@ -12,16 +12,14 @@
 #include "CCreature.h"
 #include "CGuiHandler.h"
 
-bool CGameView::init = false;
-
 void CGameView::start() {
-	scene->startGame ( mapName ,playerType );
-	CPlayer *player = scene->getPlayer();
+    getScene()->startGame ( mapName ,playerType );
+    CPlayer *player = getScene()->getPlayer();
 	playerStatsView.show();
 	playerStatsView.setPlayer ( player );
-	connect ( player,&CCreature::inventoryChanged,scene->getMap()->getGuiHandler(),&CGuiHandler::refresh );
-	connect ( player,&CCreature::equippedChanged,scene->getMap()->getGuiHandler(),&CGuiHandler::refresh );
-	connect ( player,&CCreature::skillsChanged,scene->getMap()->getGuiHandler(),&CGuiHandler::refresh );
+    connect ( player,&CCreature::inventoryChanged,getScene()->getMap()->getGuiHandler(),&CGuiHandler::refresh );
+    connect ( player,&CCreature::equippedChanged,getScene()->getMap()->getGuiHandler(),&CGuiHandler::refresh );
+    connect ( player,&CCreature::skillsChanged,getScene()->getMap()->getGuiHandler(),&CGuiHandler::refresh );
 	connect ( player,&CPlayer::dead,this,&CGameView::close );
 	init = true;
 }
@@ -38,8 +36,7 @@ CGameView::CGameView ( QString mapName , QString playerType ) {
 	setViewportUpdateMode ( QGraphicsView::BoundingRectViewportUpdate );
 	setViewport ( new QGLWidget ( QGLFormat ( QGL::SampleBuffers ) ) );
 	setViewportUpdateMode ( QGraphicsView::FullViewportUpdate );
-	scene = new CGameScene();
-	setScene ( scene );
+    setScene ( new CGameScene(this) );
 	timer.setSingleShot ( true );
 	timer.setInterval ( 250 );
 	connect ( &timer,&QTimer::timeout, this, &CGameView::start );
@@ -48,10 +45,8 @@ CGameView::CGameView ( QString mapName , QString playerType ) {
 }
 
 CGameView::~CGameView() {
-	delete scene;
+
 }
-
-
 
 void CGameView::mouseDoubleClickEvent ( QMouseEvent *e ) {
 	QWidget::mouseDoubleClickEvent ( e );
@@ -73,12 +68,14 @@ void CGameView::resizeEvent ( QResizeEvent *event ) {
 			getScene()->getMap()->getGuiHandler()->refresh();
 		}
 
-		CPlayer *player =scene->getPlayer();
+        CPlayer *player =getScene()->getPlayer();
 		centerOn ( player );
 	}
 }
 
-void CGameView::wheelEvent ( QWheelEvent * ) {}
+void CGameView::wheelEvent ( QWheelEvent * ) {
+
+}
 
 void CGameView::dragMoveEvent ( QDragMoveEvent *e ) {
 	QGraphicsView::dragMoveEvent ( e );
@@ -86,12 +83,7 @@ void CGameView::dragMoveEvent ( QDragMoveEvent *e ) {
 }
 
 CGameScene *CGameView::getScene() const {
-	return scene;
-}
-
-void CGameView::setScene ( CGameScene *value ) {
-	QGraphicsView::setScene ( value );
-	scene = value;
+    return dynamic_cast<CGameScene *>(scene());
 }
 
 void CGameView::centerOn ( CPlayer *player ) {

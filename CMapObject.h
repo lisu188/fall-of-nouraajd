@@ -7,7 +7,7 @@ class CCreature;
 class CMapObject : public CAnimatedObject {
 	friend class CObjectHandler;
 	Q_OBJECT
-	Q_PROPERTY ( QString typeName READ getTypeName WRITE setTypeName USER true )
+    Q_PROPERTY ( QString objectType READ getObjectType WRITE setObjectType USER true )
 	Q_PROPERTY ( QString tooltip READ getTooltip WRITE setTooltip USER true )
 public:
 	CMapObject();
@@ -16,7 +16,7 @@ public:
 	int getPosX() const;
 	int getPosY() const;
 	int getPosZ() const;
-	virtual void onEnter ( CCreature *creature );
+    virtual void onEnter ();
 	virtual void onMove();
 	virtual void onCreate();
 	virtual void onDestroy();
@@ -26,10 +26,12 @@ public:
 	Coords getCoords();
 	void setCoords ( Coords coords );
 	void setNumber ( int i, int x );
-	QString getTypeName() const;
-	void setTypeName ( const QString &value );
+    QString getObjectType() const;
+    void setObjectType ( const QString &value );
 	QString getTooltip() const;
-	void setTooltip ( const QString &value );
+    void setTooltip ( const QString &value );
+    void setVisitor( CMapObject * visitor);
+    CMapObject *getVisitor();
 	Q_SLOT virtual void move ( int x, int y , int z );
 	Q_SLOT void moveTo ( int x, int y, int z );
 
@@ -71,8 +73,9 @@ protected:
 	virtual void hoverLeaveEvent ( QGraphicsSceneHoverEvent *event );
 	//QGraphicsSimpleTextItem statsView;
 private:
-	CMap *map=0;
-	QString typeName;
+    CMapObject *visitor=nullptr;
+    CMap *map=nullptr;
+    QString objectType;
 };
 
 class CEvent : public CMapObject {

@@ -15,7 +15,6 @@ public:
 	virtual ~CGameView();
 	void start();
 	CGameScene *getScene() const;
-	void setScene ( CGameScene *value );
 	void centerOn ( CPlayer *player );
 	Q_INVOKABLE void show();
 protected:
@@ -24,8 +23,7 @@ protected:
 	virtual void wheelEvent ( QWheelEvent * );
 	virtual void dragMoveEvent ( QDragMoveEvent *e );
 private:
-	CGameScene *scene;
-	static bool init;
+    bool init=false;
 	QTimer timer;
 	PlayerStatsView playerStatsView;
 	QString mapName;

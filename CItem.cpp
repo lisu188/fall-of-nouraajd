@@ -21,7 +21,9 @@ CItem::CItem()  {
 
 CItem::CItem ( const CItem & )  { }
 
-void CItem::onEnter ( CCreature * creature ) {
+void CItem::onEnter() {
+  auto *creature = dynamic_cast<CCreature *>(getVisitor());
+  if (!creature) return;
 	this->getMap()->removeObject ( this );
 	creature->addItem ( this );
 }
@@ -36,13 +38,13 @@ void CItem::setSingleUse ( bool singleUse ) {
 
 void CItem::onEquip ( CCreature *creature ) {
 	creature->addBonus ( bonus );
-	qDebug() << creature->getTypeName()  << "equipped" << getTypeName()
+	qDebug() << creature->getObjectType()  << "equipped" << getObjectType()
 	         << "\n";
 }
 
 void CItem::onUnequip ( CCreature *creature ) {
 	creature->removeBonus ( bonus );
-	qDebug() << creature->getTypeName()  << "unequipped" << getTypeName()
+	qDebug() << creature->getObjectType()  << "unequipped" << getObjectType()
 	         << "\n";
 }
 
@@ -166,7 +168,7 @@ void CItem::setBonus ( Stats stats ) {
 
 QString CItem::getInteractionName() {
 	if ( interaction ) {
-		return interaction->getTypeName();
+		return interaction->getObjectType();
 	}
 	return "";
 }
