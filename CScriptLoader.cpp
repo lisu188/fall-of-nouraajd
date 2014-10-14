@@ -37,7 +37,7 @@ void AScriptLoader::exec_module ( object module ) {
 	object main_namespace=main_module.attr ( "__dict__" );
 	module.attr ( "__dict__" ) ["__builtins__"]=main_namespace["__builtins__"];
 	exec ( modData.toStdString().c_str(),module.attr ( "__dict__" ) );
-    qDebug()<<"Loaded module:"<<modName;
+	qDebug() <<"Loaded module:"<<modName<<"\n";
 }
 
 ModuleSpec *AScriptLoader::find_spec ( object name, object, object ) {

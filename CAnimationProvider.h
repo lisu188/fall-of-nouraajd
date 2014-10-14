@@ -7,7 +7,7 @@ class QPixmap;
 class CAnimation : public QObject,private std::map<int, std::pair<QPixmap *, int> > {
 	Q_OBJECT
 public:
-    CAnimation(QObject *parent);
+	CAnimation ( QObject *parent );
 	~CAnimation();
 	QPixmap *getImage();
 	int getTime();
@@ -16,7 +16,7 @@ public:
 	void add ( QPixmap *img, int time );
 
 private:
-    int actual=0;
+	int actual=0;
 };
 class CAnimationProvider : public QObject,private std::map<QString, CAnimation *> {
 	Q_OBJECT
