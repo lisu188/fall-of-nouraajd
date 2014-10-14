@@ -4,9 +4,9 @@
 
 ATypeHandler *ATypeHandler::getHandler ( QString name ) {
 	static  std::list<ATypeHandler*> handlers=CReflection::getInstance()->getInherited<ATypeHandler*>();
-    for ( auto it:handlers ) {
-        if ( it ->metaObject()->className() ==name ) {
-            return it;
+	for ( auto it:handlers ) {
+		if ( it ->metaObject()->className() ==name ) {
+			return it;
 		}
 	}
 	return nullptr;

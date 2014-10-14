@@ -69,7 +69,7 @@ void CGameScene::keyPressEvent ( QKeyEvent *keyEvent ) {
 	}
 }
 
-CGameScene::CGameScene(QObject *parent):QGraphicsScene(parent){
+CGameScene::CGameScene ( QObject *parent ) :QGraphicsScene ( parent ) {
 
 }
 

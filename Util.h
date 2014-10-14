@@ -38,27 +38,25 @@ struct Coords {
 	}
 };
 
-namespace std{
-    template<>
-    struct hash<Coords>
-    {
-        std::size_t operator() ( const Coords &coords ) const {
-            using std::size_t;
-            int a = ( size_t ) coords.x;
-            int b = ( size_t ) coords.y;
-            int c = ( size_t ) coords.z;
-            return ( size_t ) ( a ^ b ) ^ ( b ^ c ) ^ ( a ^ c );
-        }
-    };
+namespace std {
+template<>
+struct hash<Coords> {
+	std::size_t operator() ( const Coords &coords ) const {
+		using std::size_t;
+		int a = ( size_t ) coords.x;
+		int b = ( size_t ) coords.y;
+		int c = ( size_t ) coords.z;
+		return ( size_t ) ( a ^ b ) ^ ( b ^ c ) ^ ( a ^ c );
+	}
+};
 
-    template<>
-    struct hash<QString>
-    {
-        std::hash<std::string> stringHash;
-        std::size_t operator() ( const QString &string ) const {
-            return stringHash(string.toStdString());
-        }
-    };
+template<>
+struct hash<QString> {
+	std::hash<std::string> stringHash;
+	std::size_t operator() ( const QString &string ) const {
+		return stringHash ( string.toStdString() );
+	}
+};
 }
 
 class QObject;

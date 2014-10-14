@@ -39,7 +39,7 @@ CAnimation *CAnimationProvider::getAnimation ( QString path ) {
 }
 
 void CAnimationProvider::loadAnim ( QString path ) {
-    CAnimation *anim = new CAnimation(this);
+	CAnimation *anim = new CAnimation ( this );
 	QPixmap *img = 0;
 	std::map<int, int> timemap;
 	QString time="time.json";
@@ -104,7 +104,7 @@ QPixmap *CAnimationProvider::getImage ( QString path ) {
 	}
 }
 
-CAnimation::CAnimation(QObject *parent) :QObject(parent){
+CAnimation::CAnimation ( QObject *parent ) :QObject ( parent ) {
 }
 
 CAnimation::~CAnimation() {
@@ -115,7 +115,7 @@ CAnimation::~CAnimation() {
 }
 
 QPixmap *CAnimation::getImage() {
-    return at ( actual ).first;
+	return at ( actual ).first;
 }
 
 int CAnimation::getTime() {

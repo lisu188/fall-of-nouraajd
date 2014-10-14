@@ -57,11 +57,11 @@ CScriptEngine::CScriptEngine () {
 	PyImport_AppendInittab ( "_game",PyInit__game );
 	PyImport_AppendInittab ( "_core",PyInit__core );
 	Py_Initialize();
-    qDebug()<<"Initialized python interpreter.";
+	qDebug() <<"Initialized python interpreter."<<"\n";
 	main_module=boost::python::object ( boost::python::handle<> ( PyImport_ImportModule ( "__main__" ) ) ) ;
 	main_namespace=main_module.attr ( "__dict__" );
 	boost::python::incref ( main_module.ptr() );
-    qDebug()<<"Imported main module.";
+	qDebug() <<"Imported main module."<<"\n";
 	executeScript ( CResourcesHandler::getInstance()->getResourceAsString ( "scripts/start.py" ) );
-    qDebug()<<"Executed starting scripts.";
+	qDebug() <<"Executed starting scripts."<<"\n";
 }

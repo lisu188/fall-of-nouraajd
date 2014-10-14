@@ -20,11 +20,11 @@ QMAKE_RESOURCE_FLAGS += -threshold 0 -compress 9
 
 DEFINES += "QT_NO_KEYWORDS"
 
-CONFIG(release){
+CONFIG(release,debug|release){
     DEFINES += "QT_NO_DEBUG_OUTPUT"
 }
 
-CONFIG(debug){
+CONFIG(debug,debug|release){
     CONFIG +=console
 }
 
