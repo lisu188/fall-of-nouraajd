@@ -13,13 +13,13 @@
 #include "CGuiHandler.h"
 
 void CGameView::start() {
-    getScene()->startGame ( mapName ,playerType );
-    CPlayer *player = getScene()->getPlayer();
+	getScene()->startGame ( mapName ,playerType );
+	CPlayer *player = getScene()->getPlayer();
 	playerStatsView.show();
 	playerStatsView.setPlayer ( player );
-    connect ( player,&CCreature::inventoryChanged,getScene()->getMap()->getGuiHandler(),&CGuiHandler::refresh );
-    connect ( player,&CCreature::equippedChanged,getScene()->getMap()->getGuiHandler(),&CGuiHandler::refresh );
-    connect ( player,&CCreature::skillsChanged,getScene()->getMap()->getGuiHandler(),&CGuiHandler::refresh );
+	connect ( player,&CCreature::inventoryChanged,getScene()->getMap()->getGuiHandler(),&CGuiHandler::refresh );
+	connect ( player,&CCreature::equippedChanged,getScene()->getMap()->getGuiHandler(),&CGuiHandler::refresh );
+	connect ( player,&CCreature::skillsChanged,getScene()->getMap()->getGuiHandler(),&CGuiHandler::refresh );
 	connect ( player,&CPlayer::dead,this,&CGameView::close );
 	init = true;
 }
@@ -36,7 +36,7 @@ CGameView::CGameView ( QString mapName , QString playerType ) {
 	setViewportUpdateMode ( QGraphicsView::BoundingRectViewportUpdate );
 	setViewport ( new QGLWidget ( QGLFormat ( QGL::SampleBuffers ) ) );
 	setViewportUpdateMode ( QGraphicsView::FullViewportUpdate );
-    setScene ( new CGameScene(this) );
+	setScene ( new CGameScene ( this ) );
 	timer.setSingleShot ( true );
 	timer.setInterval ( 250 );
 	connect ( &timer,&QTimer::timeout, this, &CGameView::start );
@@ -68,7 +68,7 @@ void CGameView::resizeEvent ( QResizeEvent *event ) {
 			getScene()->getMap()->getGuiHandler()->refresh();
 		}
 
-        CPlayer *player =getScene()->getPlayer();
+		CPlayer *player =getScene()->getPlayer();
 		centerOn ( player );
 	}
 }
@@ -83,7 +83,7 @@ void CGameView::dragMoveEvent ( QDragMoveEvent *e ) {
 }
 
 CGameScene *CGameView::getScene() const {
-    return dynamic_cast<CGameScene *>(scene());
+	return dynamic_cast<CGameScene *> ( scene() );
 }
 
 void CGameView::centerOn ( CPlayer *player ) {

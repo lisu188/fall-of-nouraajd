@@ -19,8 +19,8 @@ AGamePanel *CGuiHandler::getPanel ( QString panel ) {
 }
 
 bool CGuiHandler::isAnyPanelVisible() {
-    for ( auto it:panels) {
-        if ( it .second->isShown() ) {
+	for ( auto it:panels ) {
+		if ( it .second->isShown() ) {
 			return true;
 		}
 	}
@@ -28,19 +28,19 @@ bool CGuiHandler::isAnyPanelVisible() {
 }
 
 void CGuiHandler::refresh() {
-    for ( auto it:panels) {
-        AGamePanel *panel= it.second;
+	for ( auto it:panels ) {
+		AGamePanel *panel= it.second;
 		panel->update();
 	}
 }
 
 void CGuiHandler::initPanels() {
 	auto viewList=CReflection::getInstance()->getInherited<AGamePanel*>();
-    for ( auto it:viewList ) {
-        panels[ it ->metaObject()->className()]=it;
-        map->getScene()->addItem (it );
-        it ->setUpPanel ( map->getScene()->getView() );
-        it ->hidePanel ( );
-        qDebug() <<"Initialized panel:"<<  it->metaObject()->className() <<"\n";
-    }
+	for ( auto it:viewList ) {
+		panels[ it ->metaObject()->className()]=it;
+		map->getScene()->addItem ( it );
+		it ->setUpPanel ( map->getScene()->getView() );
+		it ->hidePanel ( );
+		qDebug() <<"Initialized panel:"<<  it->metaObject()->className() <<"\n";
+	}
 }

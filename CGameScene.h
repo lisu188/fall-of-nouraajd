@@ -14,7 +14,7 @@ class CMapObject;
 class CGameScene : public QGraphicsScene {
 	Q_OBJECT
 public:
-    CGameScene(QObject *parent);
+	CGameScene ( QObject *parent );
 	virtual ~CGameScene();
 	void playerMove ( int dirx, int diry );
 	void startGame ( QString file ,QString player );

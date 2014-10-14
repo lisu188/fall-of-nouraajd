@@ -25,10 +25,10 @@ QString CResourcesHandler::getResourceAsString ( QString path ) {
 }
 
 QString CResourcesHandler::getPath ( QString path ) {
-    for ( auto it:searchPath) {
-        QFile fileRes ( it+path );
+	for ( auto it:searchPath ) {
+		QFile fileRes ( it+path );
 		if ( fileRes.exists() ) {
-            return it+path;
+			return it+path;
 		}
 	}
 	return QString();

@@ -23,7 +23,7 @@ protected:
 	virtual void wheelEvent ( QWheelEvent * );
 	virtual void dragMoveEvent ( QDragMoveEvent *e );
 private:
-    bool init=false;
+	bool init=false;
 	QTimer timer;
 	PlayerStatsView playerStatsView;
 	QString mapName;

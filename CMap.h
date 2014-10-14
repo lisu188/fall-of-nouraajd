@@ -29,7 +29,7 @@ class CScriptEngine;
 class CGuiHandler;
 
 class CMap : public QObject,
-    private std::unordered_map<Coords, CTile*> {
+	private std::unordered_map<Coords, CTile*> {
 	Q_OBJECT
 public:
 	CMap ( CGameScene *scene, QString mapPath );
@@ -67,22 +67,22 @@ public:
 	const CObjectHandler *getObjectHandler() const;
 	CGuiHandler *getGuiHandler() const;
 	Q_INVOKABLE bool canStep ( int x,int y,int z );
-    bool canStep (Coords &coords );
+	bool canStep ( Coords &coords );
 	QString getMapPath() const;
 	QString getMapName();
 	CMapObject *getObjectByName ( QString name );
 	template<typename T>
 	void forAll ( T func ) {
 		for ( auto it : mapObjects ) {
-            func ( it.second  );
+			func ( it.second  );
 		}
 	}
 	template<typename T>
 	void removeAll ( T func ) {
 		QList<CMapObject*> objects;
-        for ( auto it : mapObjects ) {
-            if ( func ( it.second ) ) {
-                objects.append ( it.second  );
+		for ( auto it : mapObjects ) {
+			if ( func ( it.second ) ) {
+				objects.append ( it.second  );
 			}
 		}
 		for ( auto it : objects ) {
@@ -91,7 +91,7 @@ public:
 	}
 private:
 	void loadMap ( QString mapPath );
-    std::unordered_map<QString,CMapObject *> mapObjects;
+	std::unordered_map<QString,CMapObject *> mapObjects;
 	void randomDir ( int *tab, int rule );
 	CGameScene *scene;
 	int currentLevel = 0;
