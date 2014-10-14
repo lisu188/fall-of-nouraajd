@@ -12,7 +12,7 @@ public:
 	T createMapObject ( QString type ) const {
 		CMapObject *object= _createMapObject ( type ) ;
 		T casted=dynamic_cast<T> ( object );
-		if ( casted==NULL ) {
+		if ( casted==nullptr ) {
 			delete object;
 		}
 		return casted;

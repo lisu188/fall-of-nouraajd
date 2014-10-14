@@ -10,15 +10,12 @@
 
 CAnimatedObject::CAnimatedObject() {
 	this->moveToThread ( QApplication::instance()->thread() );
-	timer = 0;
 	setShapeMode ( QGraphicsPixmapItem::BoundingRectShape );
 	this->setAcceptHoverEvents ( true );
 }
 
 CAnimatedObject::~CAnimatedObject() {
-	if ( timer ) {
-		delete timer;
-	}
+
 }
 
 QPointF CAnimatedObject::mapToParent ( int a, int b ) {

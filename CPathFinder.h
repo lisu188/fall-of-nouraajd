@@ -50,10 +50,10 @@ public:
 private:
 	int getCost ( Coords coords );
 	std::list<Coords> getNearCells ( Coords coords );
-	std::unordered_map<Coords, int, CoordsHasher> values;
+    std::unordered_map<Coords, int> values;
 	Coords getNearestCell ( Coords start );
 	void processNode ( CCreature *first, std::list<Cell> &nodes,
-	                   std::unordered_set<Coords, CoordsHasher> &marked );
+                       std::unordered_set<Coords> &marked );
 	bool canStep ( CMap *map, int x, int y, int z );
 };
 

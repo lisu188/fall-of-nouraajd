@@ -1,6 +1,7 @@
 #include "CScriptLoader.h"
 #include "CResourcesHandler.h"
 #include "CMap.h"
+#include <QDebug>
 
 using namespace boost::python;
 
@@ -36,12 +37,13 @@ void AScriptLoader::exec_module ( object module ) {
 	object main_namespace=main_module.attr ( "__dict__" );
 	module.attr ( "__dict__" ) ["__builtins__"]=main_namespace["__builtins__"];
 	exec ( modData.toStdString().c_str(),module.attr ( "__dict__" ) );
+    qDebug()<<"Loaded module:"<<modName;
 }
 
 ModuleSpec *AScriptLoader::find_spec ( object name, object, object ) {
 	std::string modName=boost::python::extract<std::string> ( name ) ;
 	if ( !checkModule ( modName ) ) {
-		return NULL;
+		return nullptr;
 	}
 	ModuleSpec* spec= new ModuleSpec ( this ,  modName );
 	return boost::ref ( spec );
@@ -53,7 +55,7 @@ AScriptLoader *AScriptLoader::find_module ( boost::python::object name, boost::p
 		AScriptLoader *loader=this;
 		return boost::ref ( loader );
 	} else {
-		return NULL;
+		return nullptr;
 	}
 }
 

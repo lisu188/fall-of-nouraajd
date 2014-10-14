@@ -19,8 +19,8 @@ CInteraction::CInteraction ( const CInteraction & ) {
 }
 
 void CInteraction::onAction ( CCreature *first, CCreature *second ) {
-	qDebug() << first->getTypeName()   << "used" << this->getTypeName()
-	         << "against" << second->getTypeName()  ;
+	qDebug() << first->getObjectType()   << "used" << this->getObjectType()
+	         << "against" << second->getObjectType()  ;
 
 	first->takeMana ( this->getManaCost() );
 

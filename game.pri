@@ -20,6 +20,14 @@ QMAKE_RESOURCE_FLAGS += -threshold 0 -compress 9
 
 DEFINES += "QT_NO_KEYWORDS"
 
+CONFIG(release){
+    DEFINES += "QT_NO_DEBUG_OUTPUT"
+}
+
+CONFIG(debug){
+    CONFIG +=console
+}
+
 win32{
     INCLUDEPATH += C:\boost-include
     DEPENDPATH += C:\boost-include
@@ -45,4 +53,5 @@ android{
     DEPENDPATH -= /usr/local/include/python3.4m
     INCLUDEPATH += /usr/local/include
     DEPENDPATH += /usr/local/include
+    DEFINES+=ANDROID
 }

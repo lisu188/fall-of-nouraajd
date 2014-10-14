@@ -19,7 +19,7 @@ public:
 	QString getAnimation();
 private:
 	QString path;
-	QTimer *timer;
-	CAnimation *staticAnimation;
+    QTimer *timer=0;
+    CAnimation *staticAnimation=0;
 	void animate();
 };

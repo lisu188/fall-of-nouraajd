@@ -18,13 +18,14 @@ CMapObject::~CMapObject() {
 
 }
 
-QString CMapObject::getTypeName() const {
-	return typeName;
+QString CMapObject::getObjectType() const {
+    return objectType;
 }
 
-void CMapObject::setTypeName ( const QString &value ) {
-	typeName = value;
+void CMapObject::setObjectType ( const QString &value ) {
+    objectType = value;
 }
+
 QString CMapObject::getTooltip() const {
 	return tooltip;
 }
@@ -33,8 +34,16 @@ void CMapObject::setTooltip ( const QString &value ) {
 	tooltip = value;
 }
 
+void CMapObject::setVisitor(CMapObject *visitor){
+    this->visitor=visitor;
+}
+
+CMapObject *CMapObject::getVisitor(){
+    return visitor;
+}
+
 void CMapObject::move ( int x, int y ,int z ) {
-	if ( CCreature *creature=dynamic_cast<CCreature*> ( this ) ) {
+    if ( CCreature *creature=dynamic_cast<CCreature*> ( this ) ) {
 		CTile*tile=getMap()->getTile ( posx + x, posy + y, posz );
 		if ( tile->canStep() ) {
 			tile->onStep ( creature );
@@ -72,7 +81,7 @@ int CMapObject::getPosX() const {
 	return posx;
 }
 
-void CMapObject::onEnter ( CCreature *creature ) {
+void CMapObject::onEnter () {
 
 }
 
