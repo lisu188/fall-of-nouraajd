@@ -13,7 +13,7 @@ QFile *CResourcesHandler::getResource ( QString path ) {
 	if ( fileSys.exists() ) {
 		return new QFile ( path,this );
 	}
-	return NULL;
+	return nullptr;
 }
 
 QString CResourcesHandler::getResourceAsString ( QString path ) {
@@ -25,10 +25,10 @@ QString CResourcesHandler::getResourceAsString ( QString path ) {
 }
 
 QString CResourcesHandler::getPath ( QString path ) {
-	for ( auto it=searchPath.begin(); it!=searchPath.end(); it++ ) {
-		QFile fileRes ( *it+path );
+    for ( auto it:searchPath) {
+        QFile fileRes ( it+path );
 		if ( fileRes.exists() ) {
-			return *it+path;
+            return it+path;
 		}
 	}
 	return QString();

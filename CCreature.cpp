@@ -45,7 +45,7 @@ CCreature::CCreature()
 }
 
 CCreature::CCreature(const CCreature &creature) : CCreature() {
-  setTypeName(creature.getTypeName());
+  setObjectType(creature.getObjectType());
   gold = creature.gold;
   exp = creature.exp;
   level = creature.level;
@@ -69,7 +69,7 @@ CCreature *CCreature::createCreature(QString name) {
   CCreature *creature = dynamic_cast<CCreature *>(
       CTypeHandler().create(config["class"].toString()));
   if (creature) {
-    creature->setTypeName(name);
+    creature->setObjectType(name);
     QJsonObject properties = creatureProperties(name);
     creature->stats = readStats(properties["stats"].toObject());
     creature->sw = properties["sw"].toInt();
@@ -106,7 +106,7 @@ void CCreature::addItem(std::set<CItem *> *items) {
 }
 
 CInteraction *CCreature::getLevelAction() {
-  QString name = creatureProperties(getTypeName())["levelling"]
+  QString name = creatureProperties(getObjectType())["levelling"]
                      .toObject()[QString::number(level)]
                      .toString();
   return getMap() && !name.isEmpty()
@@ -114,7 +114,7 @@ CInteraction *CCreature::getLevelAction() {
              : nullptr;
 }
 Stats CCreature::getLevelStats() {
-  return readStats(creatureProperties(getTypeName())["levelStats"].toObject());
+  return readStats(creatureProperties(getObjectType())["levelStats"].toObject());
 }
 
 void CCreature::setItem(int slot, CItem *item) {
@@ -144,7 +144,7 @@ void CCreature::fight(CCreature *creature) {
     return;
   }
   if (!isAlive()) {
-    if (CPlayer *player = dynamic_cast<CPlayer *>(creature)) {
+    if (CPlayer *player = dynamic_cast<CPlayer *>(getVisitor())) {
       player->removeFromFightList(this);
     }
     return;
@@ -185,7 +185,7 @@ bool CCreature::applyEffects() {
   return stopped;
 }
 
-void CCreature::onEnter(CCreature *creature) { CMapObject::onEnter(creature); }
+void CCreature::onEnter() { CMapObject::onEnter(); }
 void CCreature::onMove() { CMapObject::onMove(); }
 void CCreature::hoverEnterEvent(QGraphicsSceneHoverEvent *event) {
   CMapObject::hoverEnterEvent(event);
@@ -250,7 +250,7 @@ void CCreature::heal(int i) {
 void CCreature::healProc(float i) {
   int tmp = hp;
   heal(i / 100.0 * hpMax);
-  qDebug() << getTypeName() << "restored" << hp - tmp << "hp" << "\n";
+  qDebug() << getObjectType() << "restored" << hp - tmp << "hp" << "\n";
 }
 
 void CCreature::hurt(int i) {
@@ -336,7 +336,7 @@ void CCreature::addMana(int i) {
 void CCreature::addManaProc(float i) {
   int tmp = mana;
   addMana(i / 100.0 * manaMax);
-  qDebug() << getTypeName() << "restored" << mana - tmp << "mana" << "\n";
+  qDebug() << getObjectType() << "restored" << mana - tmp << "mana" << "\n";
 }
 
 void CCreature::takeMana(int i) {
@@ -415,7 +415,7 @@ void CCreature::levelUp() {
   addAction(getLevelAction());
   attribChange();
   if (level > 1) {
-    qDebug() << getTypeName() << "is now level:" << level << "\n";
+    qDebug() << getObjectType() << "is now level:" << level << "\n";
   }
 }
 
@@ -484,7 +484,7 @@ void CCreature::hurt(Damage damage) {
   takeDamage(damage.getFrost() * (100 - stats.getFrostResist()) / 100.0);
   takeDamage(damage.getFire() * (100 - stats.getFireResist()) / 100.0);
   takeDamage(damage.getShadow() * (100 - stats.getShadowResist()) / 100.0);
-  qDebug() << getTypeName() << "took damage:" << "normal(" << damage.getNormal()
+  qDebug() << getObjectType() << "took damage:" << "normal(" << damage.getNormal()
            << ")thunder(" << damage.getThunder() << ")frost("
            << damage.getFrost() << ")fire(" << damage.getFire() << ")shadow("
            << damage.getShadow() << ")";
@@ -533,7 +533,7 @@ void CPlayer::onMove() {
   turn++;
 }
 
-void CPlayer::onEnter(CCreature *creature) {}
+void CPlayer::onEnter() {}
 
 void CPlayer::addToFightList(CCreature *creature) {
   fightList.push_back(creature);
@@ -545,7 +545,7 @@ void CPlayer::removeFromFightList(CCreature *creature) {
   if (creature == this) {
     return;
   }
-  qDebug() << getTypeName() << "defeated" << creature->getTypeName() << "\n";
+  qDebug() << getObjectType() << "defeated" << creature->getObjectType() << "\n";
   addExpScaled(creature->getScale());
   addItem(creature->getLoot());
   getMap()->removeObject(creature);
@@ -618,11 +618,11 @@ void CMonster::onMove() {
       new PathFinderWorker(this, getMap()->getScene()->getPlayer(), finder));
 }
 
-void CMonster::onEnter(CCreature *creature) {
+void CMonster::onEnter() {
   if (!isAlive()) {
     return;
   }
-  if (auto *player = dynamic_cast<CPlayer *>(creature)) player->addToFightList(this);
+  if (auto *player = dynamic_cast<CPlayer *>(getVisitor())) player->addToFightList(this);
 }
 
 void CMonster::levelUp() {

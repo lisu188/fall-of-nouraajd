@@ -8,12 +8,6 @@ QT += core gui opengl widgets
 
 TARGET = game
 TEMPLATE = app
-win32{
-    CONFIG +=console
-}
-android{
-    DEFINES+=ANDROID
-}
 
 include(game.pri)
 

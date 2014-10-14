@@ -3,21 +3,15 @@ from game import CBuilding
 from game import Coords
 
 class Teleporter(CBuilding):
-    def __init__(self):
-        super(Teleporter,self).__init__()
-
-    def onEnter(self,creature):
+    def onEnter(self):
         if self.getBoolProperty("enabled"):
             exit=self.getStringProperty("exit")
             loc=self.getMap().getLocationByName(exit)
-            creature.setCoords(loc)
+            self.getVisitor().setCoords(loc)
 
 class Cave(CBuilding):
-    def __init__(self):
-        super(Cave,self).__init__()
-
     def onEnter(self,creature):
-        if self.getBoolProperty("enabled"):
+        if self.getBoolProperty("enabled") and self.getVisitor().isPlayer():
             self.setBoolProperty("enabled",False);
             location=self.getCoords()
             monster=self.getStringProperty("monster")

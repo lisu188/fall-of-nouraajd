@@ -34,8 +34,7 @@ std::set<CItem *> *CLootProvider::calculateLoot ( int value ) const {
 	while ( value ) {
 		int dice = rand() % this->size();
 		auto it = begin();
-		for ( int i = 0; i < dice; i++, it++ )
-			;
+		for ( int i = 0; i < dice; i++, it++ );
 		int power = ( *it ).second;
 		QString name = ( *it ).first;
 		if ( power <= value ) {

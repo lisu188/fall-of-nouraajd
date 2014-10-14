@@ -21,7 +21,6 @@
 CMap::CMap(CGameScene *scene, QString mapPath)
     : QObject(scene), scene(scene), entryx(0), entryz(0), entryy(0),
       lootProvider(nullptr), handler(nullptr), mapPath(mapPath) {
-  scene->setMap(this);
   handler = new CObjectHandler(this);
   guiHandler = new CGuiHandler(this);
   connect(CompletionListener::getInstance(), &CompletionListener::completed, this, &CMap::endMove);
@@ -30,7 +29,8 @@ CMap::CMap(CGameScene *scene, QString mapPath)
 
 CMap::~CMap() {
   QThreadPool::globalInstance()->waitForDone();
-  std::set<CMapObject *> objects = mapObjects;
+  std::set<CMapObject *> objects;
+  for (const auto &entry : mapObjects) objects.insert(entry.second);
   mapObjects.clear();
   for (CMapObject *object : objects) {
     delete object;
@@ -258,7 +258,8 @@ void CMap::ensureSize() {
   for (auto &tile : *this) {
     tile.second->setVisible(tile.first.z == currentLevel);
   }
-  for (CMapObject *object : mapObjects) {
+  for (const auto &entry : mapObjects) {
+    auto *object = entry.second;
     object->setVisible(object->getPosZ() == currentLevel);
   }
   if (scene->getView()) {
@@ -266,7 +267,7 @@ void CMap::ensureSize() {
   }
 }
 void CMap::addObject(CMapObject *object) {
-  if (!object || !mapObjects.insert(object).second) {
+  if (!object || !mapObjects.emplace(object->objectName(), object).second) {
     return;
   }
   object->setMap(this);
@@ -279,15 +280,15 @@ void CMap::addObject(CMapObject *object) {
   object->onCreate();
 }
 void CMap::removeObject(CMapObject *object) {
-  if (!object || !mapObjects.erase(object)) {
+  if (!object || !mapObjects.erase(object->objectName())) {
     return;
   }
   object->onDestroy();
   scene->removeObject(object);
 }
-std::set<CMapObject *> *CMap::getObjects() { return &mapObjects; }
 CMapObject *CMap::getObjectByName(QString name) {
-  for (CMapObject *object : mapObjects) {
+  for (const auto &entry : mapObjects) {
+    auto *object = entry.second;
     if (object->objectName() == name) {
       return object;
     }
@@ -322,7 +323,8 @@ Coords CMap::getLocationByName(QString name) {
   return object->getCoords();
 }
 CPlayer *CMap::getPlayer() {
-  for (CMapObject *object : mapObjects) {
+  for (const auto &entry : mapObjects) {
+    auto *object = entry.second;
     if (CPlayer *player = dynamic_cast<CPlayer *>(object)) {
       return player;
     }
@@ -343,7 +345,8 @@ void CMap::startMove(int x, int y) {
   }
   CompletionListener::getInstance()->start();
   player->move(x, y, 0);
-  std::set<CMapObject *> objects = mapObjects;
+  std::set<CMapObject *> objects;
+  for (const auto &entry : mapObjects) objects.insert(entry.second);
   for (CMapObject *object : objects) {
     object->onMove();
   }
@@ -356,7 +359,8 @@ void CMap::endMove() {
     return;
   }
   std::list<CMapObject *> entered;
-  std::set<CMapObject *> objects = mapObjects;
+  std::set<CMapObject *> objects;
+  for (const auto &entry : mapObjects) objects.insert(entry.second);
   for (CMapObject *object : objects) {
     if (object == player || !(object->getCoords() == player->getCoords())) {
       continue;
@@ -364,7 +368,9 @@ void CMap::endMove() {
     entered.push_back(object);
     if (std::find(player->getEntered()->begin(), player->getEntered()->end(),
                   object) == player->getEntered()->end()) {
-      object->onEnter(player);
+      object->setVisitor(player);
+      object->onEnter();
+      object->setVisitor(nullptr);
     }
   }
   *player->getEntered() = entered;
@@ -376,7 +382,8 @@ void CMap::endMove() {
   player->updateViews();
 }
 void CMap::loadingComplete() {
-  for (CMapObject *object : mapObjects) {
+  for (const auto &entry : mapObjects) {
+    auto *object = entry.second;
     object->setVisible(object->getPosZ() == currentLevel);
   }
 }
@@ -416,3 +423,5 @@ CGuiHandler *CMap::getGuiHandler() const { return guiHandler; }
 
 QString CMap::getMapPath() const { return mapPath; }
 QString CMap::getMapName() { return mapPath.section("/", -1); }
+
+bool CMap::canStep(Coords &coords) { return canStep(coords.x, coords.y, coords.z); }

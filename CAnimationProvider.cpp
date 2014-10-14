@@ -19,13 +19,12 @@ CAnimation *CAnimationProvider::getAnim ( QString path ) {
 	return instance.getAnimation ( path );
 }
 
-CAnimationProvider::CAnimationProvider ( )  {}
+CAnimationProvider::CAnimationProvider ( )  {
+
+}
 
 CAnimationProvider::~CAnimationProvider() {
-	for ( iterator it = begin(); it != end(); it++ ) {
-		delete ( *it ).second;
-	}
-	clear();
+
 }
 
 CAnimation *CAnimationProvider::getAnimation ( QString path ) {
@@ -40,7 +39,7 @@ CAnimation *CAnimationProvider::getAnimation ( QString path ) {
 }
 
 void CAnimationProvider::loadAnim ( QString path ) {
-	CAnimation *anim = new CAnimation();
+    CAnimation *anim = new CAnimation(this);
 	QPixmap *img = 0;
 	std::map<int, int> timemap;
 	QString time="time.json";
@@ -101,11 +100,12 @@ QPixmap *CAnimationProvider::getImage ( QString path ) {
 		return new QPixmap ( image.scaled ( 50, 50, Qt::IgnoreAspectRatio,
 		                                    Qt::SmoothTransformation ) );
 	} else {
-		return NULL;
+		return nullptr;
 	}
 }
 
-CAnimation::CAnimation() { actual = 0; }
+CAnimation::CAnimation(QObject *parent) :QObject(parent){
+}
 
 CAnimation::~CAnimation() {
 	for ( iterator it = begin(); it != end(); it++ ) {
@@ -114,7 +114,9 @@ CAnimation::~CAnimation() {
 	clear();
 }
 
-QPixmap *CAnimation::getImage() { return at ( actual ).first; }
+QPixmap *CAnimation::getImage() {
+    return at ( actual ).first;
+}
 
 int CAnimation::getTime() {
 	if ( size() == 1 ) {
