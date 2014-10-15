@@ -10,7 +10,9 @@ class Teleporter(CBuilding):
             self.getVisitor().setCoords(loc)
 
 class Cave(CBuilding):
-    def onEnter(self,creature):
+    def onEnter(self):
+        if not self.getVisitor().isPlayer():
+            return
         if self.getBoolProperty("enabled") and self.getVisitor().isPlayer():
             self.setBoolProperty("enabled",False);
             location=self.getCoords()
