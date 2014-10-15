@@ -55,7 +55,7 @@
         ]
       },
       "replaySha256": "cdf5851089696019266a88c2da75dedd6ed5ab2d87ab8c6b2cc774ae593a7636",
-      "sourceCommit": "3a87a3a1483b24b496abcd2f849ed45b8ea6e36d"
+      "sourceCommit": "86dedc767b8d8012c8b20121feb74a0d4bf810f4"
     }
   },
   "outputs": [
@@ -103,7 +103,7 @@
         "history_source_prep.py",
         "prepare-visitor-callbacks"
       ],
-      "log": "/tmp/nouraajd-307-visitors-batch/verify/snapshot-2rr6e4fa/preparation/visitor-callbacks.log",
+      "log": "/tmp/nouraajd-308-visitors-batch/verify/snapshot-16mjke_8/preparation/visitor-callbacks.log",
       "name": "visitorCallbacks",
       "returnCode": 0,
       "timedOut": false
