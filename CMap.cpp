@@ -358,22 +358,34 @@ void CMap::endMove() {
   if (!player) {
     return;
   }
-  std::list<CMapObject *> entered;
-  std::set<CMapObject *> objects;
-  for (const auto &entry : mapObjects) objects.insert(entry.second);
-  for (CMapObject *object : objects) {
-    if (object == player || !(object->getCoords() == player->getCoords())) {
+  std::vector<CMapObject *> objects;
+  for (const auto &entry : mapObjects) objects.push_back(entry.second);
+  for (auto *object : objects) {
+    auto *visitor = dynamic_cast<CCreature *>(object);
+    if (!visitor || getObjectByName(visitor->objectName()) != visitor)
       continue;
+    QStringList prior = visitor->QObject::property("recoveredEnterContacts").toStringList();
+    QStringList current;
+    for (auto *target : objects) {
+      if (target == visitor || getObjectByName(target->objectName()) != target ||
+          !(target->getCoords() == visitor->getCoords()))
+        continue;
+      current.push_back(target->objectName());
+      if (prior.contains(target->objectName()))
+        continue;
+      target->setVisitor(visitor);
+      try {
+        target->onEnter();
+      } catch (...) {
+        target->setVisitor(nullptr);
+        throw;
+      }
+      target->setVisitor(nullptr);
+      if (getObjectByName(visitor->objectName()) != visitor)
+        break;
     }
-    entered.push_back(object);
-    if (std::find(player->getEntered()->begin(), player->getEntered()->end(),
-                  object) == player->getEntered()->end()) {
-      object->setVisitor(player);
-      object->onEnter();
-      object->setVisitor(nullptr);
-    }
+    visitor->QObject::setProperty("recoveredEnterContacts", current);
   }
-  *player->getEntered() = entered;
   getTile(player->getPosX(), player->getPosY(), player->getPosZ())->onStep(player);
   if (!player->getFightList()->empty()) {
     if (auto *panel = getGuiHandler()->getPanel("CFightPanel")) panel->showPanel();
