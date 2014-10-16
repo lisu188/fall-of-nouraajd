@@ -579,7 +579,20 @@ void CPlayer::performAction(CInteraction *action, CCreature *creature) {
   }
   getMap()->getGuiHandler()->getPanel("CFightPanel")->update();
   if (!isAlive()) {
-    Q_EMIT dead();
+    auto *map = getMap();
+    getFightList()->clear();
+    getEntered()->clear();
+    selectedAction = nullptr;
+    setAlive();
+    heal(0);
+    addMana(0);
+    posx = map->getEntryX();
+    posy = map->getEntryY();
+    posz = map->getEntryZ();
+    setPos(posx * 50, posy * 50);
+    map->getGuiHandler()->getPanel("CFightPanel")->hidePanel();
+    map->ensureSize();
+    update();
   }
 }
 
