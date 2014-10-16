@@ -20,7 +20,6 @@ void CGameView::start() {
 	connect ( player,&CCreature::inventoryChanged,getScene()->getMap()->getGuiHandler(),&CGuiHandler::refresh );
 	connect ( player,&CCreature::equippedChanged,getScene()->getMap()->getGuiHandler(),&CGuiHandler::refresh );
 	connect ( player,&CCreature::skillsChanged,getScene()->getMap()->getGuiHandler(),&CGuiHandler::refresh );
-	connect ( player,&CPlayer::dead,this,&CGameView::close );
 	init = true;
 }
 

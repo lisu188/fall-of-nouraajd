@@ -131,7 +131,6 @@ class CPlayer : public CCreature {
     friend class PlayerStatsView;
 
   public:
-    Q_SIGNAL void dead();
     CPlayer();
     CPlayer(const CPlayer &player);
     ~CPlayer();

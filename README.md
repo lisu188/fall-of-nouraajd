@@ -1,7 +1,7 @@
 # Recovered game snapshot
 
-Original commit: `86dedc767b8d8012c8b20121feb74a0d4bf810f4`. Original tree: `d2ea65d407e070e7db63f43ae052c91216649308`.
-Startup was verified from identical recovered sources at `86dedc767b8d8012c8b20121feb74a0d4bf810f4`.
+Original commit: `6eb12953a0d2c7ec9eebe1ea778b93d93b221f9e`. Original tree: `777fd6482406600aab6929bcee0033865501387e`.
+Startup was verified from identical recovered sources at `6eb12953a0d2c7ec9eebe1ea778b93d93b221f9e`.
 
 This recovered version compiled and linked on Linux, started the real game on an isolated Xvfb display,
 loaded its map and a healthy player, rendered the screenshot below, and exited normally.
@@ -19,7 +19,7 @@ Install Qt 5 Core, Gui and Widgets development files and a C++ compiler, with CP
 Build from this snapshot's root directory:
 
 ```sh
-python3 recovery/prepare_visitor_callbacks.py
+python3 recovery/prepare_respawn.py
 qmake game.pro QMAKE_CC=gcc-5 QMAKE_CXX=g++-5 QMAKE_LINK=g++-5 'QMAKE_CXXFLAGS+=-include functional' -after TARGET=RecoveryGame DESTDIR=.
 make -j"$(nproc)"
 ./RecoveryGame
@@ -38,8 +38,8 @@ launches run the game's original entry point. Startup evidence does not establis
 
 compatibilityRepair: 3, exactOriginal: 59, reconstruction: 35.
 
-- `CCreature.cpp`: content reconstruction of the BFG-removed original; Use the surviving object type and visitor accessors in the carried creature implementation.
-- `CCreature.h`: content reconstruction of the BFG-removed original; Follow the surviving visitor callback without a creature argument.
+- `CCreature.cpp`: content reconstruction of the BFG-removed original; Reconstruct player respawn with restored resources and direct return to the map entry.
+- `CCreature.h`: content reconstruction of the BFG-removed original; Carry the recovered interface and creature respawn support.
 - `CGamePanel.cpp`: Adapt the shared missing panel body to the surviving object type accessor. Earlier revisions retain their preceding reconstruction.
 - `CGamePanel.h`: content reconstruction of the BFG-removed original; Carry the compatible #304 implementation across the #305 formatting and platform changes.
 - `CItem.cpp`: content reconstruction of the BFG-removed original; Resolve the visiting creature through the surviving object accessor.
@@ -62,22 +62,22 @@ compatibilityRepair: 3, exactOriginal: 59, reconstruction: 35.
 - `boost/python/object/enum.cpp`: content reconstruction of the BFG-removed original; Carry the working bundled Boost.Python translation unit through the formatting or platform transition.
 - `boost/python/object/function.cpp`: content reconstruction of the BFG-removed original; Carry the working bundled Boost.Python translation unit through the formatting or platform transition.
 - `boost/python/object/function_doc_signature.cpp`: unverified upstream reconstruction; https://github.com/boostorg/python/tree/32ba64a8248d99b1852e77ff4388d9d8a991c4a9
-- `boost/python/object/inheritance.cpp`: unverified donor reconstruction; 4b3902d44f874a1fae86054d7240a2af76901bb4:boost/python/object/inheritance.cpp; headerMatch=0; apiOverlap=0/10000; distance=56
+- `boost/python/object/inheritance.cpp`: unverified donor reconstruction; 4b3902d44f874a1fae86054d7240a2af76901bb4:boost/python/object/inheritance.cpp; headerMatch=0; apiOverlap=0/10000; distance=55
 - `boost/python/object/life_support.cpp`: content reconstruction of the BFG-removed original; Carry the working bundled Boost.Python translation unit through the formatting or platform transition.
-- `boost/python/object_operators.cpp`: unverified donor reconstruction; 70d0d690df45877698cb094405e25be00a8139fd:boost/python/object_operators.cpp; headerMatch=0; apiOverlap=0/10000; distance=48
+- `boost/python/object_operators.cpp`: unverified donor reconstruction; 70d0d690df45877698cb094405e25be00a8139fd:boost/python/object_operators.cpp; headerMatch=0; apiOverlap=0/10000; distance=47
 - `boost/python/object_protocol.cpp`: content reconstruction of the BFG-removed original; Carry the working bundled Boost.Python translation unit through the formatting or platform transition.
-- `boost/python/str.cpp`: unverified donor reconstruction; 4b3902d44f874a1fae86054d7240a2af76901bb4:boost/python/str.cpp; headerMatch=0; apiOverlap=0/10000; distance=56
+- `boost/python/str.cpp`: unverified donor reconstruction; 4b3902d44f874a1fae86054d7240a2af76901bb4:boost/python/str.cpp; headerMatch=0; apiOverlap=0/10000; distance=55
 - `config/interactions.json`: Missing interaction configuration reconstructed from donor properties plus actual matching Python class names, genuine #331 config/tiles.json handler/class schema and CTypeHandler.cpp PyTypeHandler qualified-name construction. Restores game.interaction class qualification and PyTypeHandler selection; preserves donor action properties. Not an exact original.
-- `config/monsters.json`: unverified donor reconstruction; 55e6516eb91b739e899df1ef8d72116da44fec49:config/monsters.json; headerMatch=0; apiOverlap=0/10000; distance=57
+- `config/monsters.json`: unverified donor reconstruction; 55e6516eb91b739e899df1ef8d72116da44fec49:config/monsters.json; headerMatch=0; apiOverlap=0/10000; distance=56
 - `config/weapons.json`: Missing weapon config reconstructed from intact 55e6516eb91b739e899df1ef8d72116da44fec49:config/weapons.json Git blob0a32d5f0cc003ae07cfd43d092921d76ec82f3e5; its genuine ChaosSword/other authored item IDs and flat Stats bonus shape match #331 CItem.h, native loader/property contracts and original weapon image path identities (ChaosSword also occurs in the existing reconstructed map), and CObjectHandler deserialization. Original CTypeHandler field restored consistently with genuine config/tiles.json. Replaces unrelated tile-config donor; not an exact original.
 - `images.qrc`: Carry the verified split-project image reconstruction along the surviving resource directory rename.
-- `maps/map1/map.json`: content reconstruction of the BFG-removed original; Carry the preceding reconstructed sparse map. The exact removed map geometry remains unavailable.
+- `maps/map1/map.json`: Carry #306’s sparse map reconstruction through the formatting and visitor revisions. Preserve the separate Tiled donor used by later revisions.
 - `scripts/game/interaction.py`: Missing interaction script reconstructed from surviving later action bodies by removing later-only game_object registry decorators. Genuine #331 scripts/game/__init__.py imports game.interaction and genuine PyTypeHandler constructs qualified Python classes directly. Action implementations preserved; Python syntax checked. Not an exact original.
 - `android/PSF_LICENSE`: https://www.python.org/ftp/python/3.3.7/Python-3.3.7.tar.xz upstream Python distribution license
 - `boost/python/LICENSE_1_0.txt`: https://github.com/boostorg/python/tree/32ba64a8248d99b1852e77ff4388d9d8a991c4a9 upstream distribution license
 - `scripts/PSF_LICENSE`: https://www.python.org/ftp/python/3.3.7/Python-3.3.7.tar.xz upstream Python distribution license
 
-Restored source fingerprint: `b8a14cad61494044524af9da988bdda30cdeaaa82f9f19d85fa50ef44e85e121`.
+Restored source fingerprint: `3a46b593d53a31bb4632708d5dbe587f6eb1557f40a73acc52089a1a78422c9e`.
 
 The restored source fingerprint identifies inputs before generation. The
 [source preparation metadata](recovery/source-preparation.json) records the original inputs
