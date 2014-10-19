@@ -6,6 +6,7 @@
 #include <QTimeLine>
 #include "CAnimation.h"
 #include "CAnimatedObject.h"
+#include "CEventHandler.h"
 #include <unordered_map>
 #include <set>
 #include <QJsonObject>
@@ -59,7 +60,6 @@ public:
 	void replaceTile ( QString name,Coords coords );
 	Coords getLocationByName ( QString name );
 	CPlayer *getPlayer();
-	void loadingComplete();
 	void moveTile ( CTile* tile,int x, int y, int z );
 	void handleTileLayer ( const QJsonObject& tileset,const QJsonObject& layer );
 	void handleObjectLayer ( const QJsonObject &layer );
@@ -71,6 +71,16 @@ public:
 	QString getMapPath() const;
 	QString getMapName();
 	CMapObject *getObjectByName ( QString name );
+	template<typename T>
+	std::set<CMapObject *> getIf ( T func ) {
+		std::set<CMapObject *> objects;
+		for ( auto it : mapObjects ) {
+			if ( func ( it.second  ) ) {
+				objects.insert ( it.second );
+			}
+		}
+		return objects;
+	}
 	template<typename T>
 	void forAll ( T func ) {
 		for ( auto it : mapObjects ) {
@@ -89,19 +99,20 @@ public:
 			removeObject ( it );
 		}
 	}
+	std::set<CMapObject *> getMapObjectsClone();
 private:
 	void loadMap ( QString mapPath );
 	std::unordered_map<QString,CMapObject *> mapObjects;
-	void randomDir ( int *tab, int rule );
-	CGameScene *scene;
+	CGameScene *scene=0;
 	int currentLevel = 0;
 	std::map<int, QString> defaultTiles;
 	std::map<int, std::pair<int, int> > boundaries;
 	int entryx, entryz, entryy;
-	const CLootProvider *lootProvider;
-	const CObjectHandler *handler;
-	CGuiHandler *guiHandler;
-	QString mapPath;
+	CLootProvider *lootProvider=0;
+	CObjectHandler *handler=0;
+	CEventHandler *eventHandler=0;
+	CGuiHandler *guiHandler=0;
 	CMapScriptLoader *loader=0;
+	QString mapPath;
 };
 
