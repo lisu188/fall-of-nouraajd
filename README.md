@@ -1,7 +1,7 @@
 # Recovered game snapshot
 
-Original commit: `d9cc0f0666ba2908f25e4d7a6c45c54e631a9b66`. Original tree: `96c884d022ce2917144579ee3c129a480942400d`.
-Startup was verified from identical recovered sources at `d9cc0f0666ba2908f25e4d7a6c45c54e631a9b66`.
+Original commit: `ecbdb64eaa2d637c78155e3d2b1d3eb834cdd2f2`. Original tree: `baff63e2bc59ff86e6dd34096fbcdabf554a3a12`.
+Startup was verified from identical recovered sources at `ecbdb64eaa2d637c78155e3d2b1d3eb834cdd2f2`.
 
 This recovered version compiled and linked on Linux, started the real game on an isolated Xvfb display,
 loaded its map and a healthy player, rendered the screenshot below, and exited normally.
@@ -19,7 +19,7 @@ Install Qt 5 Core, Gui and Widgets development files and a C++ compiler, with CP
 Build from this snapshot's root directory:
 
 ```sh
-python3 recovery/prepare_respawn.py
+python3 recovery/prepare_dispatch_events.py
 qmake game.pro QMAKE_CC=gcc-5 QMAKE_CXX=g++-5 QMAKE_LINK=g++-5 'QMAKE_CXXFLAGS+=-include functional' -after TARGET=RecoveryGame DESTDIR=.
 make -j"$(nproc)"
 ./RecoveryGame
@@ -38,10 +38,10 @@ launches run the game's original entry point. Startup evidence does not establis
 
 compatibilityRepair: 3, exactOriginal: 59, reconstruction: 35.
 
-- `CCreature.cpp`: content reconstruction of the BFG-removed original; Reconstruct player respawn with restored resources and direct return to the map entry.
-- `CCreature.h`: content reconstruction of the BFG-removed original; Carry the recovered interface and creature respawn support.
-- `CGamePanel.cpp`: Adapt the shared missing panel body to the surviving object type accessor. Earlier revisions retain their preceding reconstruction.
-- `CGamePanel.h`: content reconstruction of the BFG-removed original; Carry the compatible #304 implementation across the #305 formatting and platform changes.
+- `CCreature.cpp`: content reconstruction of the BFG-removed original; Carry the preceding fight reconstruction. A focused probe confirmed that a surviving opponent stays indexed and in the fight.
+- `CCreature.h`: content reconstruction of the BFG-removed original; Carry the preceding creature interface across the fight fix.
+- `CGamePanel.cpp`: content reconstruction of the BFG-removed original; Carry the preceding fight panel, which displays the active opponent.
+- `CGamePanel.h`: content reconstruction of the BFG-removed original; Carry the preceding panel declarations and creature accessors.
 - `CItem.cpp`: content reconstruction of the BFG-removed original; Resolve the visiting creature through the surviving object accessor.
 - `CMap.cpp`: content reconstruction of the BFG-removed original; Dispatch onEnter to contacts for each creature visitor, preserving the preceding map and tile behavior. Track contact names per visitor so stationary overlap does not repeat entry.
 - `CObjectHandler.cpp`: content reconstruction of the BFG-removed original; Use the renamed object type setter while carrying the configuration factory.
@@ -62,13 +62,13 @@ compatibilityRepair: 3, exactOriginal: 59, reconstruction: 35.
 - `boost/python/object/enum.cpp`: content reconstruction of the BFG-removed original; Carry the working bundled Boost.Python translation unit through the formatting or platform transition.
 - `boost/python/object/function.cpp`: content reconstruction of the BFG-removed original; Carry the working bundled Boost.Python translation unit through the formatting or platform transition.
 - `boost/python/object/function_doc_signature.cpp`: unverified upstream reconstruction; https://github.com/boostorg/python/tree/32ba64a8248d99b1852e77ff4388d9d8a991c4a9
-- `boost/python/object/inheritance.cpp`: unverified donor reconstruction; 4b3902d44f874a1fae86054d7240a2af76901bb4:boost/python/object/inheritance.cpp; headerMatch=0; apiOverlap=0/10000; distance=54
+- `boost/python/object/inheritance.cpp`: unverified donor reconstruction; 4b3902d44f874a1fae86054d7240a2af76901bb4:boost/python/object/inheritance.cpp; headerMatch=0; apiOverlap=0/10000; distance=53
 - `boost/python/object/life_support.cpp`: content reconstruction of the BFG-removed original; Carry the working bundled Boost.Python translation unit through the formatting or platform transition.
-- `boost/python/object_operators.cpp`: unverified donor reconstruction; 70d0d690df45877698cb094405e25be00a8139fd:boost/python/object_operators.cpp; headerMatch=0; apiOverlap=0/10000; distance=46
+- `boost/python/object_operators.cpp`: unverified donor reconstruction; 70d0d690df45877698cb094405e25be00a8139fd:boost/python/object_operators.cpp; headerMatch=0; apiOverlap=0/10000; distance=45
 - `boost/python/object_protocol.cpp`: content reconstruction of the BFG-removed original; Carry the working bundled Boost.Python translation unit through the formatting or platform transition.
-- `boost/python/str.cpp`: unverified donor reconstruction; 4b3902d44f874a1fae86054d7240a2af76901bb4:boost/python/str.cpp; headerMatch=0; apiOverlap=0/10000; distance=54
+- `boost/python/str.cpp`: unverified donor reconstruction; 4b3902d44f874a1fae86054d7240a2af76901bb4:boost/python/str.cpp; headerMatch=0; apiOverlap=0/10000; distance=53
 - `config/interactions.json`: Missing interaction configuration reconstructed from donor properties plus actual matching Python class names, genuine #331 config/tiles.json handler/class schema and CTypeHandler.cpp PyTypeHandler qualified-name construction. Restores game.interaction class qualification and PyTypeHandler selection; preserves donor action properties. Not an exact original.
-- `config/monsters.json`: unverified donor reconstruction; 55e6516eb91b739e899df1ef8d72116da44fec49:config/monsters.json; headerMatch=0; apiOverlap=0/10000; distance=55
+- `config/monsters.json`: unverified donor reconstruction; 55e6516eb91b739e899df1ef8d72116da44fec49:config/monsters.json; headerMatch=0; apiOverlap=0/10000; distance=54
 - `config/weapons.json`: Missing weapon config reconstructed from intact 55e6516eb91b739e899df1ef8d72116da44fec49:config/weapons.json Git blob0a32d5f0cc003ae07cfd43d092921d76ec82f3e5; its genuine ChaosSword/other authored item IDs and flat Stats bonus shape match #331 CItem.h, native loader/property contracts and original weapon image path identities (ChaosSword also occurs in the existing reconstructed map), and CObjectHandler deserialization. Original CTypeHandler field restored consistently with genuine config/tiles.json. Replaces unrelated tile-config donor; not an exact original.
 - `images.qrc`: Carry the verified split-project image reconstruction along the surviving resource directory rename.
 - `maps/map1/map.json`: Carry #306’s sparse map reconstruction through the formatting and visitor revisions. Preserve the separate Tiled donor used by later revisions.
