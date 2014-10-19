@@ -20,6 +20,7 @@ public:
 	virtual void onMove();
 	virtual void onCreate();
 	virtual void onDestroy();
+	virtual void onLeave();
 	void setMap ( CMap *map );
 	CMap *getMap();
 	void setVisible ( bool vis );

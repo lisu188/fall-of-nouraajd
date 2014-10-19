@@ -97,6 +97,10 @@ void CMapObject::onDestroy() {
 
 }
 
+void CMapObject::onLeave() {
+
+}
+
 void CMapObject::setMap ( CMap *map ) {
 	if ( !map ) {
 		return;

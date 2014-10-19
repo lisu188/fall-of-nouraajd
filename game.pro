@@ -67,7 +67,8 @@ SOURCES += \
     boost/python/object/life_support.cpp \
     boost/python/object/pickle_support.cpp \
     boost/python/object/stl_iterator.cpp \
-    CScriptLoader.cpp
+    CScriptLoader.cpp \
+    CEventHandler.cpp
 
 HEADERS += \
      CReflection.h \
@@ -95,7 +96,8 @@ HEADERS += \
      CObjectHandler.h \
      CGuiHandler.h \
     CResourcesHandler.h \
-    CScriptLoader.h
+    CScriptLoader.h \
+    CEventHandler.h
 
 
 android{

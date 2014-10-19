@@ -23,6 +23,7 @@ CMap::CMap(CGameScene *scene, QString mapPath)
       lootProvider(nullptr), handler(nullptr), mapPath(mapPath) {
   handler = new CObjectHandler(this);
   guiHandler = new CGuiHandler(this);
+  eventHandler = new CEventHandler(this);
   connect(CompletionListener::getInstance(), &CompletionListener::completed, this, &CMap::endMove);
   loadMap(mapPath);
 }
@@ -52,6 +53,12 @@ int mapInteger(const QJsonValue &value, int fallback = 0) {
 }
 } // namespace
 void CMap::loadMap(QString mapPath) {
+  auto finishLoading = [this]() {
+    for (const auto &entry : mapObjects) {
+      auto *object = entry.second;
+      object->setVisible(object->getPosZ() == currentLevel);
+    }
+  };
   namespace py = boost::python;
   auto *engine = CScriptEngine::getInstance();
   py::object mapLoader = py::import("_core").attr("CMapScriptLoader")(py::ptr(this));
@@ -112,7 +119,7 @@ void CMap::loadMap(QString mapPath) {
         }
       }
     }
-    loadingComplete();
+    finishLoading();
     return;
   }
   if (!map.contains("layers") || !map.contains("tilesets"))
@@ -142,7 +149,7 @@ void CMap::loadMap(QString mapPath) {
     if (layer["type"].toString() == "objectgroup")
       handleObjectLayer(layer);
   }
-  loadingComplete();
+  finishLoading();
 }
 void CMap::handleTileLayer(const QJsonObject &tileset,
                            const QJsonObject &layer) {
@@ -277,13 +284,13 @@ void CMap::addObject(CMapObject *object) {
     creature->heal(0);
     creature->addMana(0);
   }
-  object->onCreate();
+  eventHandler->gameEvent(CEventHandler::onCreate, object);
 }
 void CMap::removeObject(CMapObject *object) {
   if (!object || !mapObjects.erase(object->objectName())) {
     return;
   }
-  object->onDestroy();
+  eventHandler->gameEvent(CEventHandler::onDestroy, object);
   scene->removeObject(object);
 }
 CMapObject *CMap::getObjectByName(QString name) {
@@ -348,7 +355,7 @@ void CMap::startMove(int x, int y) {
   std::set<CMapObject *> objects;
   for (const auto &entry : mapObjects) objects.insert(entry.second);
   for (CMapObject *object : objects) {
-    object->onMove();
+    eventHandler->gameEvent(CEventHandler::onMove, object);
   }
   CompletionListener::getInstance()->run();
 }
@@ -358,33 +365,10 @@ void CMap::endMove() {
   if (!player) {
     return;
   }
-  std::vector<CMapObject *> objects;
-  for (const auto &entry : mapObjects) objects.push_back(entry.second);
-  for (auto *object : objects) {
-    auto *visitor = dynamic_cast<CCreature *>(object);
-    if (!visitor || getObjectByName(visitor->objectName()) != visitor)
-      continue;
-    QStringList prior = visitor->QObject::property("recoveredEnterContacts").toStringList();
-    QStringList current;
-    for (auto *target : objects) {
-      if (target == visitor || getObjectByName(target->objectName()) != target ||
-          !(target->getCoords() == visitor->getCoords()))
-        continue;
-      current.push_back(target->objectName());
-      if (prior.contains(target->objectName()))
-        continue;
-      target->setVisitor(visitor);
-      try {
-        target->onEnter();
-      } catch (...) {
-        target->setVisitor(nullptr);
-        throw;
-      }
-      target->setVisitor(nullptr);
-      if (getObjectByName(visitor->objectName()) != visitor)
-        break;
+  for (auto *object : getMapObjectsClone()) {
+    if (getObjectByName(object->objectName()) == object) {
+      eventHandler->gameEvent(CEventHandler::onEnter, object);
     }
-    visitor->QObject::setProperty("recoveredEnterContacts", current);
   }
   getTile(player->getPosX(), player->getPosY(), player->getPosZ())->onStep(player);
   if (!player->getFightList()->empty()) {
@@ -393,17 +377,8 @@ void CMap::endMove() {
   ensureSize();
   player->updateViews();
 }
-void CMap::loadingComplete() {
-  for (const auto &entry : mapObjects) {
-    auto *object = entry.second;
-    object->setVisible(object->getPosZ() == currentLevel);
-  }
-}
-void CMap::randomDir(int *direction, int rule) {
-  const int offsets[4][2] = {{1, 0}, {-1, 0}, {0, 1}, {0, -1}};
-  int index = rule >= 0 && rule < 4 ? rule : rand() % 4;
-  direction[0] = offsets[index][0];
-  direction[1] = offsets[index][1];
+std::set<CMapObject *> CMap::getMapObjectsClone() {
+  return getIf([](CMapObject *) { return true; });
 }
 
 CGameScene *CMap::getScene() const { return scene; }
