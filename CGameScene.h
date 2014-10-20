@@ -23,7 +23,7 @@ public:
 	CGameView *getView();
 	void removeObject ( CMapObject *object );
 protected:
-    virtual void keyPressEvent(QKeyEvent *event);
+	virtual void keyPressEvent ( QKeyEvent *event );
 private:
 	CMap *map=0;
 	CPlayer *player=0;

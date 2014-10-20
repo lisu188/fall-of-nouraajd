@@ -18,17 +18,15 @@ CBuilding::~CBuilding() {
 }
 
 bool CBuilding::isEnabled() {
-    return enabled;
+	return enabled;
 }
 
 void CBuilding::setEnabled ( bool enabled ) {
-    this->enabled = enabled;
+	this->enabled = enabled;
 }
 
-void CBuilding::onEnter(CGameEvent *)
-{
+void CBuilding::onEnter ( CGameEvent * ) {
 }
 
-void CBuilding::onLeave(CGameEvent *)
-{
+void CBuilding::onLeave ( CGameEvent * ) {
 }

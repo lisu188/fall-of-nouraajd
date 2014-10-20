@@ -20,8 +20,8 @@ public:
 	virtual void onUnequip ( CCreature *creature );
 	virtual void onUse ( CCreature *creature );
 
-    virtual void onEnter (CGameEvent *event ) override;
-    virtual void onLeave (CGameEvent * ) override;
+	virtual void onEnter ( CGameEvent *event ) override;
+	virtual void onLeave ( CGameEvent * ) override;
 
 	int getPower() const;
 	void setPower ( int value );

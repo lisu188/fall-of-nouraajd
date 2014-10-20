@@ -5,11 +5,11 @@
       {
         "after": {
           "kind": "file",
-          "sha256": "094b09f8e9b8630f8a3ed781ee5ab738995bcbc6dae882389a23145f32750219"
+          "sha256": "b3331fd102b90741eb26b75834e9bd193ff7430d4b82b92440c7acc3c0c4f92b"
         },
         "before": {
           "kind": "file",
-          "sha256": "abb8f922b177f3eb7c8f5745674dce62a3bd2743a550023b0070102c5b61a06c"
+          "sha256": "7aab95314daec4f0b7efefecd196704ece62c53abe4cee9bf257b618bfda390e"
         },
         "path": "CGameScene.cpp",
         "purpose": "Preserve map and Python lifetimes and bridge the surviving event and view interfaces"
@@ -54,8 +54,8 @@
     "typedEvents": {
       "files": {
         "CGameScene.cpp": [
-          "abb8f922b177f3eb7c8f5745674dce62a3bd2743a550023b0070102c5b61a06c",
-          "094b09f8e9b8630f8a3ed781ee5ab738995bcbc6dae882389a23145f32750219"
+          "7aab95314daec4f0b7efefecd196704ece62c53abe4cee9bf257b618bfda390e",
+          "b3331fd102b90741eb26b75834e9bd193ff7430d4b82b92440c7acc3c0c4f92b"
         ],
         "CGameView.cpp": [
           "3c1d43ba889c7cfbc7620956f6600630f9e29457e89dbb318c15dc7565b3e1ec",
@@ -71,18 +71,18 @@
         ]
       },
       "replaySha256": "5d4e272ccfc113445242d654e64604ba4f5299e59873bbca09e03c69ed064e49",
-      "sourceCommit": "45e6a749a37b534f9c7edf3df6d536fa0bf3cc9d"
+      "sourceCommit": "34edc762d65df823025750663241ff65fd6c060d"
     }
   },
   "outputs": [
     {
       "after": {
         "kind": "file",
-        "sha256": "094b09f8e9b8630f8a3ed781ee5ab738995bcbc6dae882389a23145f32750219"
+        "sha256": "b3331fd102b90741eb26b75834e9bd193ff7430d4b82b92440c7acc3c0c4f92b"
       },
       "before": {
         "kind": "file",
-        "sha256": "abb8f922b177f3eb7c8f5745674dce62a3bd2743a550023b0070102c5b61a06c"
+        "sha256": "7aab95314daec4f0b7efefecd196704ece62c53abe4cee9bf257b618bfda390e"
       },
       "path": "CGameScene.cpp",
       "purpose": "Preserve map and Python lifetimes and bridge the surviving event and view interfaces"
@@ -131,7 +131,7 @@
         "history_source_prep.py",
         "prepare-typed-events"
       ],
-      "log": "/tmp/nouraajd-314-typed-final/verify/snapshot-j5j1pwxw/preparation/typed-events.log",
+      "log": "/tmp/nouraajd-315-typed-final/verify/snapshot-s0z73svs/preparation/typed-events.log",
       "name": "typedEvents",
       "returnCode": 0,
       "timedOut": false
