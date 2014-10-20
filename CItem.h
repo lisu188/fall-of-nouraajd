@@ -5,7 +5,7 @@
 class CCreature;
 class CInteraction;
 
-class CItem : public CMapObject {
+class CItem : public CMapObject,public Visitable {
 	Q_OBJECT
 	Q_PROPERTY ( int power READ getPower WRITE setPower USER true )
 	Q_PROPERTY ( bool singleUse READ isSingleUse WRITE setSingleUse USER true )
@@ -19,7 +19,10 @@ public:
 	virtual void onEquip ( CCreature *creature );
 	virtual void onUnequip ( CCreature *creature );
 	virtual void onUse ( CCreature *creature );
-	virtual void onEnter ( ) override;
+
+    virtual void onEnter (CGameEvent *event ) override;
+    virtual void onLeave (CGameEvent * ) override;
+
 	int getPower() const;
 	void setPower ( int value );
 	Stats getBonus();

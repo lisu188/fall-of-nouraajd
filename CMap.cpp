@@ -24,7 +24,6 @@ CMap::CMap(CGameScene *scene, QString mapPath)
   handler = new CObjectHandler(this);
   guiHandler = new CGuiHandler(this);
   eventHandler = new CEventHandler(this);
-  connect(CompletionListener::getInstance(), &CompletionListener::completed, this, &CMap::endMove);
   loadMap(mapPath);
 }
 
@@ -284,13 +283,13 @@ void CMap::addObject(CMapObject *object) {
     creature->heal(0);
     creature->addMana(0);
   }
-  eventHandler->gameEvent(CEventHandler::onCreate, object);
+  eventHandler->gameEvent(new CGameEvent(CGameEvent::onCreate), object);
 }
 void CMap::removeObject(CMapObject *object) {
   if (!object || !mapObjects.erase(object->objectName())) {
     return;
   }
-  eventHandler->gameEvent(CEventHandler::onDestroy, object);
+  eventHandler->gameEvent(new CGameEvent(CGameEvent::onDestroy), object);
   scene->removeObject(object);
 }
 CMapObject *CMap::getObjectByName(QString name) {
@@ -343,40 +342,55 @@ const CLootProvider *CMap::getLootProvider() const {
   return lootProvider;
 }
 
-void CMap::startMove(int x, int y) {
-  CPlayer *player = getPlayer();
-  if (!player ||
-      !getTile(player->getPosX() + x, player->getPosY() + y, player->getPosZ())
-           ->canStep()) {
-    return;
-  }
-  CompletionListener::getInstance()->start();
-  player->move(x, y, 0);
-  std::set<CMapObject *> objects;
-  for (const auto &entry : mapObjects) objects.insert(entry.second);
-  for (CMapObject *object : objects) {
-    eventHandler->gameEvent(CEventHandler::onMove, object);
-  }
-  CompletionListener::getInstance()->run();
-}
-void CMap::endMove() {
-  CompletionListener::getInstance()->stop();
-  CPlayer *player = getPlayer();
-  if (!player) {
-    return;
-  }
+const CEventHandler *CMap::getEventHandler() const { return eventHandler; }
+
+void CMap::applyEffects() {
   for (auto *object : getMapObjectsClone()) {
-    if (getObjectByName(object->objectName()) == object) {
-      eventHandler->gameEvent(CEventHandler::onEnter, object);
-    }
+    if (auto *creature = dynamic_cast<CCreature *>(object)) creature->applyEffects();
   }
-  getTile(player->getPosX(), player->getPosY(), player->getPosZ())->onStep(player);
-  if (!player->getFightList()->empty()) {
+}
+
+void CMap::resolveFights() {
+  auto *player = getPlayer();
+  if (player && !player->getFightList()->empty()) {
     if (auto *panel = getGuiHandler()->getPanel("CFightPanel")) panel->showPanel();
   }
+}
+
+void CMap::move() {
+  auto *player = getPlayer();
+  if (!player) return;
+  const auto objects = getMapObjectsClone();
+  for (auto *object : objects) {
+    if (getObjectByName(object->objectName()) == object)
+      eventHandler->gameEvent(new CGameEvent(CGameEvent::onMove, player), object);
+  }
+  for (auto *object : objects) {
+    auto *visitor = dynamic_cast<CCreature *>(object);
+    if (!visitor || getObjectByName(visitor->objectName()) != visitor) continue;
+    QStringList prior = visitor->QObject::property("recoveredEnterContacts").toStringList();
+    QStringList current;
+    for (auto *target : objects) {
+      if (target == visitor || !dynamic_cast<Visitable *>(target) ||
+          getObjectByName(target->objectName()) != target) continue;
+      QString name = target->objectName();
+      if (target->getCoords() == visitor->getCoords()) {
+        current.push_back(name);
+        if (!prior.contains(name))
+          eventHandler->gameEvent(new CGameEvent(CGameEvent::onEnter, visitor), target);
+      } else if (prior.contains(name)) {
+        eventHandler->gameEvent(new CGameEvent(CGameEvent::onLeave, visitor), target);
+      }
+      if (getObjectByName(visitor->objectName()) != visitor) break;
+    }
+    visitor->QObject::setProperty("recoveredEnterContacts", current);
+  }
+  resolveFights();
   ensureSize();
   player->updateViews();
+  Q_EMIT nextMove();
 }
+
 std::set<CMapObject *> CMap::getMapObjectsClone() {
   return getIf([](CMapObject *) { return true; });
 }

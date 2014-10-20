@@ -34,14 +34,6 @@ void CMapObject::setTooltip ( const QString &value ) {
 	tooltip = value;
 }
 
-void CMapObject::setVisitor ( CMapObject *visitor ) {
-	this->visitor=visitor;
-}
-
-CMapObject *CMapObject::getVisitor() {
-	return visitor;
-}
-
 void CMapObject::move ( int x, int y ,int z ) {
 	if ( CCreature *creature=dynamic_cast<CCreature*> ( this ) ) {
 		CTile*tile=getMap()->getTile ( posx + x, posy + y, posz );
@@ -81,25 +73,19 @@ int CMapObject::getPosX() const {
 	return posx;
 }
 
-void CMapObject::onEnter () {
+
+void CMapObject::onMove(CGameEvent *) {
 
 }
 
-void CMapObject::onMove() {
+void CMapObject::onCreate(CGameEvent *) {
 
 }
 
-void CMapObject::onCreate() {
+void CMapObject::onDestroy(CGameEvent *) {
 
 }
 
-void CMapObject::onDestroy() {
-
-}
-
-void CMapObject::onLeave() {
-
-}
 
 void CMapObject::setMap ( CMap *map ) {
 	if ( !map ) {
@@ -177,3 +163,6 @@ void CEvent::setEventClass ( const QString &value ) {
 }
 
 
+
+void CEvent::onEnter(CGameEvent *) {}
+void CEvent::onLeave(CGameEvent *) {}

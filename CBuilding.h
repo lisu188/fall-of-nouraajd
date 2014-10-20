@@ -2,7 +2,7 @@
 #include "CConfigurationProvider.h"
 #include"CMap.h"
 
-class CBuilding : public CMapObject {
+class CBuilding : public CMapObject,public Visitable {
 	Q_OBJECT
 	Q_PROPERTY ( bool enabled READ isEnabled WRITE setEnabled USER true )
 public:
@@ -10,9 +10,11 @@ public:
 	CBuilding ( const CBuilding & );
 	virtual ~CBuilding();
 
-	// PROPERTIES
 	bool isEnabled();
 	void setEnabled ( bool enabled );
+
+    virtual void onEnter(CGameEvent *);
+    virtual void onLeave(CGameEvent *);
 
 protected:
 	bool enabled = true;

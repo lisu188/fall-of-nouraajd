@@ -54,37 +54,4 @@ private:
 	Coords getNearestCell ( Coords start );
 	void processNode ( CCreature *first, std::list<Cell> &nodes,
 	                   std::unordered_set<Coords> &marked );
-	bool canStep ( CMap *map, int x, int y, int z );
 };
-
-class CompletionListener : public QObject {
-	Q_OBJECT
-public:
-	static CompletionListener *getInstance();
-	void start();
-	void stop();
-	bool isCompleted();
-	void run();
-	void registerWorker();
-	void deregisterWorker();
-	Q_SIGNAL void completed();
-private:
-	int workers;
-	bool started;
-};
-
-class PathFinderWorker : public QObject, public QRunnable {
-	Q_OBJECT
-public:
-	PathFinderWorker ( CCreature *first, CCreature *second, APathFinder *finder );
-	virtual void run() override;
-
-private:
-	Q_SIGNAL void completed ( int x, int y,int z );
-	Q_SIGNAL void started();
-	Q_SIGNAL void ended();
-	CCreature *first;
-	CCreature *second;
-	APathFinder *finder;
-};
-

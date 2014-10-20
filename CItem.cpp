@@ -21,8 +21,8 @@ CItem::CItem()  {
 
 CItem::CItem ( const CItem & )  { }
 
-void CItem::onEnter() {
-  auto *creature = dynamic_cast<CCreature *>(getVisitor());
+void CItem::onEnter(CGameEvent *event) {
+  auto *creature = dynamic_cast<CCreature *>(event->getCause());
   if (!creature) return;
 	this->getMap()->removeObject ( this );
 	creature->addItem ( this );
@@ -209,3 +209,5 @@ void CScroll::setText ( const QString &value ) {
 void CScroll::onUse ( CCreature * ) {
 	getMap()->getGuiHandler()->showMessage ( text );
 }
+
+void CItem::onLeave(CGameEvent *) {}

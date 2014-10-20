@@ -8,6 +8,7 @@
 // Historical reconstruction; original bytes are unavailable. See the recovery
 // provenance.
 #include "CBuilding.h"
+#include "CEventHandler.h"
 #include "CCreature.h"
 #include "CGuiHandler.h"
 #include "CInteraction.h"
@@ -63,38 +64,38 @@ struct QStringFromPython {
 
 template <class T> class CWrapper : public T, public wrapper<CWrapper<T>> {
 public:
-  void onEnter() override {
+  void onEnter(CGameEvent *event) override {
     if (override call = this->get_override("onEnter")) {
-      call();
+      call(ptr(event));
     } else {
-      T::onEnter();
+      T::onEnter(event);
     }
   }
-  void onMove() override {
+  void onMove(CGameEvent *event) override {
     if (override call = this->get_override("onMove")) {
-      call();
+      call(ptr(event));
     } else {
-      T::onMove();
+      T::onMove(event);
     }
   }
-  void onCreate() override {
+  void onCreate(CGameEvent *event) override {
     if (override call = this->get_override("onCreate")) {
-      call();
+      call(ptr(event));
     } else {
-      T::onCreate();
+      T::onCreate(event);
     }
   }
-  void onDestroy() override {
+  void onDestroy(CGameEvent *event) override {
     if (override call = this->get_override("onDestroy")) {
-      call();
+      call(ptr(event));
     } else {
-      T::onDestroy();
+      T::onDestroy(event);
     }
   }
-  void defaultOnEnter() { T::onEnter(); }
-  void defaultOnMove() { T::onMove(); }
-  void defaultOnCreate() { T::onCreate(); }
-  void defaultOnDestroy() { T::onDestroy(); }
+  void defaultOnEnter(CGameEvent *event) { T::onEnter(event); }
+  void defaultOnMove(CGameEvent *event) { T::onMove(event); }
+  void defaultOnCreate(CGameEvent *event) { T::onCreate(event); }
+  void defaultOnDestroy(CGameEvent *event) { T::onDestroy(event); }
 };
 
 class CInteractionWrapper : public CInteraction,
@@ -200,6 +201,12 @@ public:
   void defaultOnStep(CCreature *creature) { CTile::onStep(creature); }
 };
 
+static void removeMatchingObjects(CMap &map, object predicate) {
+  map.removeAll([&](CMapObject *candidate) -> bool {
+    return extract<bool>(predicate(ptr(candidate)));
+  });
+}
+
 BOOST_PYTHON_MODULE(_game) {
     def("randint", randint);
   to_python_converter<QString, QStringToPython>();
@@ -211,7 +218,7 @@ BOOST_PYTHON_MODULE(_game) {
   class_<CGuiHandler, boost::noncopyable>("CGuiHandler", no_init)
       .def("showMessage", &CGuiHandler::showMessage);
   class_<CMap, boost::noncopyable>("CMap", no_init)
-      .def("removeAll", &CMap::removeAll<boost::python::object>)
+      .def("removeAll", &removeMatchingObjects)
       .def("addObjectByName", &CMap::addObjectByName)
       .def("removeObjectByName", &CMap::removeObjectByName)
       .def("removeObject", &CMap::removeObject)
@@ -221,6 +228,8 @@ BOOST_PYTHON_MODULE(_game) {
       .def("getObjectByName", &CMap::getObjectByName,
            return_internal_reference<>())
       .def("getLocationByName", &CMap::getLocationByName);
+  class_<CGameEvent, boost::noncopyable>("CGameEvent", no_init)
+      .def("getCause", &CGameEvent::getCause, return_value_policy<reference_existing_object>());
   class_<CMapObject, boost::noncopyable>("CMapObject", no_init)
       .add_property("name", &objectName, &setObjectName)
       .def("getMap", &CMapObject::getMap, return_internal_reference<>())
