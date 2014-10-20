@@ -83,8 +83,8 @@ public:
 	}
 	template<typename T>
 	void forAll ( T func ) {
-		for ( auto it : mapObjects ) {
-			func ( it.second  );
+		for ( CMapObject* object : getMapObjectsClone() ) {
+			func ( object  );
 		}
 	}
 	template<typename T>

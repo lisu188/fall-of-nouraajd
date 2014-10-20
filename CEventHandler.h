@@ -12,6 +12,7 @@ public:
 		onEnter,onMove,onCreate,onDestroy,onLeave
 	};
 	CEventHandler ( CMap *map );
+	void dispatchEvent ( GameEvent type );
 	void gameEvent ( GameEvent type,CMapObject * source );
 private:
 	void onEnterEvent ( CMapObject *mapObject );
