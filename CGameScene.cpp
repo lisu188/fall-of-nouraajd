@@ -65,14 +65,25 @@ void CGameScene::removeObject ( CMapObject *object ) {
 }
 
 void CGameScene::keyPressEvent ( QKeyEvent *event ) {
+	if ( map->getGuiHandler()->isAnyPanelVisible() ) {
+		return;
+	}
 	switch ( event->key() ) {
 	case Qt::Key_Up:
+		this->getPlayer()->setNextMove ( Coords ( 0,-1 ,0 ) );
+		map->move();
 		break;
 	case Qt::Key_Down:
+		this->getPlayer()->setNextMove ( Coords ( 0,1,0 ) );
+		map->move();
 		break;
 	case Qt::Key_Left:
+		this->getPlayer()->setNextMove ( Coords ( -1,0,0 ) );
+		map->move();
 		break;
 	case Qt::Key_Right:
+		this->getPlayer()->setNextMove ( Coords ( 1,0,0 ) );
+		map->move();
 		break;
 	}
 }

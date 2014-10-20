@@ -5,27 +5,19 @@
 #include <QRunnable>
 #include <unordered_map>
 #include <unordered_set>
-#define MOVE_TIMEOUT 500
 
-class APathFinder : public QObject {
-	Q_OBJECT
+class IPathFinder {
 public:
 	virtual Coords findPath ( CCreature *first, CCreature *second ) =0;
 };
 
-class CDumbPathFinder : public APathFinder {
-	Q_OBJECT
+class CDumbPathFinder : public IPathFinder {
 public:
-	CDumbPathFinder();
-	CDumbPathFinder ( const CDumbPathFinder & );
 	virtual Coords findPath ( CCreature *first, CCreature *second ) override final;
 };
 
-class CRandomPathFinder : public APathFinder {
-	Q_OBJECT
+class CRandomPathFinder : public IPathFinder {
 public:
-	CRandomPathFinder();
-	CRandomPathFinder ( const CRandomPathFinder & );
 	virtual Coords findPath ( CCreature *, CCreature * ) override final;
 };
 
@@ -41,11 +33,8 @@ public:
 	}
 };
 
-class CSmartPathFinder : public APathFinder {
-	Q_OBJECT
+class CSmartPathFinder : public IPathFinder {
 public:
-	CSmartPathFinder();
-	CSmartPathFinder ( const CSmartPathFinder & );
 	virtual Coords findPath ( CCreature *first, CCreature *second ) override final;
 private:
 	int getCost ( Coords coords );

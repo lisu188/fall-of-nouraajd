@@ -127,7 +127,8 @@ class CCreature : public CMapObject, public Visitable {
     Q_SIGNAL void equippedChanged();
 };
 
-class CPlayer : public CCreature {
+class CPlayer : public CCreature, public Moveable {
+    Coords nextMove{0, 0, 0};
     Q_OBJECT
     friend class PlayerStatsView;
 
@@ -138,6 +139,8 @@ class CPlayer : public CCreature {
     std::set<CItem *> *getLoot();
     virtual void fight(CCreature *creature);
     void onMove(CGameEvent *);
+    void setNextMove(Coords move);
+    Coords getNextMove() override;
     void onEnter(CGameEvent *);
     void update();
     void updateViews();
@@ -160,12 +163,13 @@ public:
     std::list<CMapObject *> entered;
 };
 
-class CMonster : public CCreature {
+class CMonster : public CCreature, public Moveable {
     Q_OBJECT
   public:
     CMonster();
     CMonster(const CMonster &monster);
     virtual void onMove(CGameEvent *);
+    Coords getNextMove() override;
     virtual void onEnter(CGameEvent *);
     virtual void levelUp();
     virtual std::set<CItem *> *getLoot();

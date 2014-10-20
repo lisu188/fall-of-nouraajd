@@ -362,6 +362,13 @@ void CMap::move() {
   if (!player) return;
   const auto objects = getMapObjectsClone();
   for (auto *object : objects) {
+    if (getObjectByName(object->objectName()) != object) continue;
+    if (auto *moveable = dynamic_cast<Moveable *>(object)) {
+      auto step = moveable->getNextMove();
+      if (step.x || step.y || step.z) object->move(step);
+    }
+  }
+  for (auto *object : objects) {
     if (getObjectByName(object->objectName()) == object)
       eventHandler->gameEvent(new CGameEvent(CGameEvent::onMove, player), object);
   }

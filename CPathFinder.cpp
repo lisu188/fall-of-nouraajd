@@ -3,12 +3,6 @@
 #include <algorithm>
 #include <cstdlib>
 
-CDumbPathFinder::CDumbPathFinder() {}
-CDumbPathFinder::CDumbPathFinder(const CDumbPathFinder &) {}
-CRandomPathFinder::CRandomPathFinder() {}
-CRandomPathFinder::CRandomPathFinder(const CRandomPathFinder &) {}
-CSmartPathFinder::CSmartPathFinder() {}
-CSmartPathFinder::CSmartPathFinder(const CSmartPathFinder &) {}
 
 Coords CDumbPathFinder::findPath(CCreature *first, CCreature *second) {
   Coords current = first->getCoords();

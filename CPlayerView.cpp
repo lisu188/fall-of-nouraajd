@@ -46,26 +46,26 @@ void CPlayerListView::update() {
     (*childIter)->setParentItem(0);
     (*childIter)->setVisible(false);
   }
-  std::set<CMapObject *>::iterator itemIter;
+  std::set<QGraphicsItem *>::iterator itemIter;
   int i = 0;
   for (itemIter = entries.begin(); itemIter != entries.end(); i++, itemIter++) {
-    CMapObject *item = *itemIter;
-    if (item->getMap()) { // SigSegv for interaction
-      item->setMap(item->getMap()->getScene()->getPlayer()->getMap());
-    }
+    QGraphicsItem *item = *itemIter;
     item->setVisible(false);
     item->setParentItem(0);
     int position = i - curPosition;
     if (position >= 0 && position < x * y) {
       item->setParentItem(this);
-      item->setNumber(position, x);
+      setNumber(item, position, x);
     }
   }
   right->setVisible(entries.size() > x * y);
   left->setVisible(entries.size() > x * y);
 }
 
-CMap *CPlayerListView::getMap() { return view->getScene()->getMap(); }
+void CPlayerListView::setNumber(QGraphicsItem *item, int position, int columns) {
+  item->setVisible(true);
+  item->setPos(position % columns * 50, position / columns * 50);
+}
 
 void CPlayerListView::setDraggable() {
   this->setFlag(QGraphicsItem::ItemIsMovable);
@@ -97,18 +97,22 @@ void CPlayerListView::setXY(int x, int y) {
 CPlayerInventoryrView::CPlayerInventoryrView(CGameView *view) : CPlayerListView(view) { update(); }
 CPlayerIteractionView::CPlayerIteractionView(CGameView *view) : CPlayerListView(view) { update(); }
 
-std::set<CMapObject *> CPlayerInventoryrView::getItems() const {
+std::set<QGraphicsItem *> CPlayerInventoryrView::getItems() const {
   auto *player = view->getScene()->getPlayer();
   if (!player) return {};
   auto *inventory = player->getInventory();
-  return {inventory->begin(), inventory->end()};
+  std::set<QGraphicsItem *> items;
+  for (auto *item : *inventory) items.insert(item->toGraphicsItem());
+  return items;
 }
 
-std::set<CMapObject *> CPlayerIteractionView::getItems() const {
+std::set<QGraphicsItem *> CPlayerIteractionView::getItems() const {
   auto *player = view->getScene()->getPlayer();
   if (!player) return {};
   auto *actions = player->getActions();
-  return {actions->begin(), actions->end()};
+  std::set<QGraphicsItem *> items;
+  for (auto *action : *actions) items.insert(action->toGraphicsItem());
+  return items;
 }
 
 void CPlayerListView::dropEvent(QGraphicsSceneDragDropEvent *event) {
@@ -118,7 +122,7 @@ void CPlayerListView::dropEvent(QGraphicsSceneDragDropEvent *event) {
     return;
   }
   event->acceptProposedAction();
-  item->onUse(this->getMap()->getScene()->getPlayer());
+  item->onUse(view->getScene()->getPlayer());
 }
 
 CPlayerEquippedView::CPlayerEquippedView(CGameView *view) {
