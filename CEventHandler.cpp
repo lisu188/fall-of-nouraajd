@@ -10,6 +10,10 @@ CEventHandler::CEventHandler ( CMap *map ) {
 	this->map=map;
 }
 
+void CEventHandler::dispatchEvent ( CEventHandler::GameEvent type ) {
+
+}
+
 void CEventHandler::onEnterEvent ( CMapObject *mapObject ) {
 	std::set<CMapObject *> objects=map->getIf ( [&mapObject] ( CMapObject *visitor ) {
 		return mapObject != visitor && mapObject->getCoords() == visitor->getCoords() ;
