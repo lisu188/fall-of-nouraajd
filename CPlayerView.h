@@ -41,7 +41,6 @@ class CPlayerListView : public QGraphicsObject {
 	friend class CScrollObject;
 public:
 	CPlayerListView ( CGameView *view );
-	CMap *getMap();
 	void setDraggable();
 	virtual QRectF boundingRect() const;
 	virtual void paint ( QPainter *painter, const QStyleOptionGraphicsItem *, QWidget * );
@@ -50,9 +49,10 @@ public:
 	void update();
 protected:
 	virtual void dropEvent ( QGraphicsSceneDragDropEvent *event );
-	virtual std::set<CMapObject *> getItems() const=0;
+	virtual std::set<QGraphicsItem *> getItems() const=0;
 	CGameView *view=0;
 private:
+	void setNumber ( QGraphicsItem *item,int i, int x );
 	unsigned int curPosition;
 	unsigned int x, y;
 	CScrollObject *right, *left;
@@ -64,7 +64,7 @@ class CPlayerInventoryrView:public CPlayerListView {
 public:
 	CPlayerInventoryrView ( CGameView *view );
 protected:
-	virtual std::set<CMapObject *> getItems() const;
+	virtual std::set<QGraphicsItem *> getItems() const;
 };
 
 class CPlayerIteractionView:public CPlayerListView {
@@ -72,7 +72,7 @@ class CPlayerIteractionView:public CPlayerListView {
 public:
 	CPlayerIteractionView ( CGameView *view );
 protected:
-	virtual std::set<CMapObject *> getItems() const;
+	virtual std::set<QGraphicsItem *> getItems() const;
 };
 
 class CScrollObject : public CAnimatedObject {

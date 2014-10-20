@@ -82,10 +82,12 @@ public:
 		}
 		return objects;
 	}
-	template<typename T>
-	void forAll ( T func ) {
+	template<typename T,typename U=bool ( CMapObject* ) >
+	void forAll ( T func ,U predicate=[] ( CMapObject* ) {return true;} ) {
 		for ( CMapObject* object : getMapObjectsClone() ) {
-			func ( object  );
+			if ( predicate ( object ) ) {
+				func ( object  );
+			}
 		}
 	}
 	template<typename T>
