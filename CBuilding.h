@@ -13,8 +13,8 @@ public:
 	bool isEnabled();
 	void setEnabled ( bool enabled );
 
-    virtual void onEnter(CGameEvent *);
-    virtual void onLeave(CGameEvent *);
+	virtual void onEnter ( CGameEvent * );
+	virtual void onLeave ( CGameEvent * );
 
 protected:
 	bool enabled = true;
