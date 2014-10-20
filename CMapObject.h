@@ -5,10 +5,10 @@ class CGameEvent;
 class CMap;
 class CCreature;
 
-class Visitable{
+class Visitable {
 public:
-    virtual void onEnter (CGameEvent *)=0;
-    virtual void onLeave(CGameEvent *)=0;
+	virtual void onEnter ( CGameEvent * ) =0;
+	virtual void onLeave ( CGameEvent * ) =0;
 };
 
 class CMapObject : public CAnimatedObject {
@@ -24,10 +24,10 @@ public:
 	int getPosY() const;
 	int getPosZ() const;
 
-    virtual void onMove(CGameEvent *);
+	virtual void onMove ( CGameEvent * );
 
-    virtual void onCreate(CGameEvent *);
-    virtual void onDestroy(CGameEvent *);
+	virtual void onCreate ( CGameEvent * );
+	virtual void onDestroy ( CGameEvent * );
 
 	void setMap ( CMap *map );
 	CMap *getMap();
@@ -97,8 +97,8 @@ public:
 	QString getEventClass();
 	void setEventClass ( const QString &value );
 
-    virtual void onEnter(CGameEvent *);
-    virtual void onLeave(CGameEvent *);
+	virtual void onEnter ( CGameEvent * );
+	virtual void onLeave ( CGameEvent * );
 private:
 	QString eventClass;
 	bool enabled = true;

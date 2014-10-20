@@ -61,21 +61,20 @@ CGameView *CGameScene::getView() {
 }
 
 void CGameScene::removeObject ( CMapObject *object ) {
-    this->removeItem ( object );
+	this->removeItem ( object );
 }
 
-void CGameScene::keyPressEvent(QKeyEvent *event)
-{
-    switch(event->key()){
-        case Qt::Key_Up:
-         break;
-        case Qt::Key_Down:
-         break;
-        case Qt::Key_Left:
-         break;
-        case Qt::Key_Right:
-         break;
-    }
+void CGameScene::keyPressEvent ( QKeyEvent *event ) {
+	switch ( event->key() ) {
+	case Qt::Key_Up:
+		break;
+	case Qt::Key_Down:
+		break;
+	case Qt::Key_Left:
+		break;
+	case Qt::Key_Right:
+		break;
+	}
 }
 
 CPlayer *CGameScene::getPlayer() const {
