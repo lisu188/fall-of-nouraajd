@@ -1,36 +1,18 @@
 {
   "identity": {
-    "dispatchEvents": {
-      "files": {
-        "CGameScene.cpp": [
-          "8c98327a87c8d55bd30c05abd2e2f0c8b6db3789d615600f5740dd17d408b557",
-          "c55555aeb7406205132066cf3afe0f425a3b346b921a88b68e431b66f54388d3"
-        ],
-        "CGameView.cpp": [
-          "3c1d43ba889c7cfbc7620956f6600630f9e29457e89dbb318c15dc7565b3e1ec",
-          "e59eb1034b607134ee90d56c0af643fc7dafb2d34b11fb7c1188cf3c7a8b19da"
-        ],
-        "CScriptEngine.cpp": [
-          "38fe619e7738ddf7453d15f4ad14f26c97cfbb1bfc0bd181bc8f35567e8e8f00",
-          "9a032d901ac3ab7357f07ca279cf324934bec551639f63b7cc407acbccf12a8f"
-        ]
-      },
-      "replaySha256": "ffc63162d6c61a3840e06c4d705aa9749e5fbb1d97e6cb9cdd46f10d315c3d66",
-      "sourceCommit": "bf5670cf24fbfe04f4c3b1be827a94a593230bb5"
-    },
-    "implementationSha256": "2e1571969160cbea5359ad58b08df1f6b6053f344de3fd0abac15053051d58c0",
+    "implementationSha256": "1ac92e93e18b8230eee08b340fb1c11ac03ecc36477ac3b503113df5c48f6732",
     "outputs": [
       {
         "after": {
           "kind": "file",
-          "sha256": "c55555aeb7406205132066cf3afe0f425a3b346b921a88b68e431b66f54388d3"
+          "sha256": "094b09f8e9b8630f8a3ed781ee5ab738995bcbc6dae882389a23145f32750219"
         },
         "before": {
           "kind": "file",
-          "sha256": "8c98327a87c8d55bd30c05abd2e2f0c8b6db3789d615600f5740dd17d408b557"
+          "sha256": "abb8f922b177f3eb7c8f5745674dce62a3bd2743a550023b0070102c5b61a06c"
         },
         "path": "CGameScene.cpp",
-        "purpose": "Include the map declaration and release map and Python state before their owning runtimes"
+        "purpose": "Preserve map and Python lifetimes and bridge the surviving event and view interfaces"
       },
       {
         "after": {
@@ -42,7 +24,7 @@
           "sha256": "3c1d43ba889c7cfbc7620956f6600630f9e29457e89dbb318c15dc7565b3e1ec"
         },
         "path": "CGameView.cpp",
-        "purpose": "Include the map declaration and release map and Python state before their owning runtimes"
+        "purpose": "Preserve map and Python lifetimes and bridge the surviving event and view interfaces"
       },
       {
         "after": {
@@ -54,22 +36,56 @@
           "sha256": "38fe619e7738ddf7453d15f4ad14f26c97cfbb1bfc0bd181bc8f35567e8e8f00"
         },
         "path": "CScriptEngine.cpp",
-        "purpose": "Include the map declaration and release map and Python state before their owning runtimes"
+        "purpose": "Preserve map and Python lifetimes and bridge the surviving event and view interfaces"
+      },
+      {
+        "after": {
+          "kind": "file",
+          "sha256": "8ba5ee3cc1fc598ec35c68a1c29f07a996eb33696fe9c8e96300c20291662f4e"
+        },
+        "before": {
+          "kind": "file",
+          "sha256": "367e026670b6bdbe9f71ed02d5aa3948f76a16149fd67856c546ce907ecd80f8"
+        },
+        "path": "scripts/game/object.py",
+        "purpose": "Preserve map and Python lifetimes and bridge the surviving event and view interfaces"
       }
-    ]
+    ],
+    "typedEvents": {
+      "files": {
+        "CGameScene.cpp": [
+          "abb8f922b177f3eb7c8f5745674dce62a3bd2743a550023b0070102c5b61a06c",
+          "094b09f8e9b8630f8a3ed781ee5ab738995bcbc6dae882389a23145f32750219"
+        ],
+        "CGameView.cpp": [
+          "3c1d43ba889c7cfbc7620956f6600630f9e29457e89dbb318c15dc7565b3e1ec",
+          "e59eb1034b607134ee90d56c0af643fc7dafb2d34b11fb7c1188cf3c7a8b19da"
+        ],
+        "CScriptEngine.cpp": [
+          "38fe619e7738ddf7453d15f4ad14f26c97cfbb1bfc0bd181bc8f35567e8e8f00",
+          "9a032d901ac3ab7357f07ca279cf324934bec551639f63b7cc407acbccf12a8f"
+        ],
+        "scripts/game/object.py": [
+          "367e026670b6bdbe9f71ed02d5aa3948f76a16149fd67856c546ce907ecd80f8",
+          "8ba5ee3cc1fc598ec35c68a1c29f07a996eb33696fe9c8e96300c20291662f4e"
+        ]
+      },
+      "replaySha256": "5d4e272ccfc113445242d654e64604ba4f5299e59873bbca09e03c69ed064e49",
+      "sourceCommit": "45e6a749a37b534f9c7edf3df6d536fa0bf3cc9d"
+    }
   },
   "outputs": [
     {
       "after": {
         "kind": "file",
-        "sha256": "c55555aeb7406205132066cf3afe0f425a3b346b921a88b68e431b66f54388d3"
+        "sha256": "094b09f8e9b8630f8a3ed781ee5ab738995bcbc6dae882389a23145f32750219"
       },
       "before": {
         "kind": "file",
-        "sha256": "8c98327a87c8d55bd30c05abd2e2f0c8b6db3789d615600f5740dd17d408b557"
+        "sha256": "abb8f922b177f3eb7c8f5745674dce62a3bd2743a550023b0070102c5b61a06c"
       },
       "path": "CGameScene.cpp",
-      "purpose": "Include the map declaration and release map and Python state before their owning runtimes"
+      "purpose": "Preserve map and Python lifetimes and bridge the surviving event and view interfaces"
     },
     {
       "after": {
@@ -81,7 +97,7 @@
         "sha256": "3c1d43ba889c7cfbc7620956f6600630f9e29457e89dbb318c15dc7565b3e1ec"
       },
       "path": "CGameView.cpp",
-      "purpose": "Include the map declaration and release map and Python state before their owning runtimes"
+      "purpose": "Preserve map and Python lifetimes and bridge the surviving event and view interfaces"
     },
     {
       "after": {
@@ -93,7 +109,19 @@
         "sha256": "38fe619e7738ddf7453d15f4ad14f26c97cfbb1bfc0bd181bc8f35567e8e8f00"
       },
       "path": "CScriptEngine.cpp",
-      "purpose": "Include the map declaration and release map and Python state before their owning runtimes"
+      "purpose": "Preserve map and Python lifetimes and bridge the surviving event and view interfaces"
+    },
+    {
+      "after": {
+        "kind": "file",
+        "sha256": "8ba5ee3cc1fc598ec35c68a1c29f07a996eb33696fe9c8e96300c20291662f4e"
+      },
+      "before": {
+        "kind": "file",
+        "sha256": "367e026670b6bdbe9f71ed02d5aa3948f76a16149fd67856c546ce907ecd80f8"
+      },
+      "path": "scripts/game/object.py",
+      "purpose": "Preserve map and Python lifetimes and bridge the surviving event and view interfaces"
     }
   ],
   "status": "success",
@@ -101,10 +129,10 @@
     {
       "command": [
         "history_source_prep.py",
-        "prepare-dispatch-events"
+        "prepare-typed-events"
       ],
-      "log": "/tmp/nouraajd-313-events-final/verify/snapshot-9potnce6/preparation/dispatch-events.log",
-      "name": "dispatchEvents",
+      "log": "/tmp/nouraajd-314-typed-final/verify/snapshot-j5j1pwxw/preparation/typed-events.log",
+      "name": "typedEvents",
       "returnCode": 0,
       "timedOut": false
     }

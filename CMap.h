@@ -37,7 +37,7 @@ public:
 	virtual ~CMap();
 	bool addTile ( CTile *tile, int x, int y, int z );
 	void removeTile ( int x, int y, int z );
-	void startMove ( int x, int y );
+    void move ();
 	CTile *getTile ( int x, int y, int z );
 	bool contains ( int x, int y, int z );
 	void addObject ( CMapObject *mapObject );
@@ -50,7 +50,6 @@ public:
 	int getEntryX();
 	int getEntryY();
 	int getEntryZ();
-	void endMove();
 	void ensureTile ( int i, int j );
 	std::map<int, std::pair<int, int> > getBounds();
 	int getCurrentXBound();
@@ -65,8 +64,10 @@ public:
 	void handleObjectLayer ( const QJsonObject &layer );
 	const CLootProvider *getLootProvider() const;
 	const CObjectHandler *getObjectHandler() const;
+    const CEventHandler *getEventHandler() const;
 	CGuiHandler *getGuiHandler() const;
 	Q_INVOKABLE bool canStep ( int x,int y,int z );
+    Q_SIGNAL void nextMove();
 	bool canStep ( Coords &coords );
 	QString getMapPath() const;
 	QString getMapName();
@@ -99,8 +100,10 @@ public:
 			removeObject ( it );
 		}
 	}
-	std::set<CMapObject *> getMapObjectsClone();
+    void applyEffects();
 private:
+    std::set<CMapObject *> getMapObjectsClone();
+    void resolveFights();
 	void loadMap ( QString mapPath );
 	std::unordered_map<QString,CMapObject *> mapObjects;
 	CGameScene *scene=0;

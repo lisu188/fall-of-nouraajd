@@ -16,7 +16,6 @@ class CGameScene : public QGraphicsScene {
 public:
 	CGameScene ( QObject *parent );
 	virtual ~CGameScene();
-	void playerMove ( int dirx, int diry );
 	void startGame ( QString file ,QString player );
 	CPlayer *getPlayer() const;
 	void setPlayer ( CPlayer *value );
@@ -24,8 +23,7 @@ public:
 	CGameView *getView();
 	void removeObject ( CMapObject *object );
 protected:
-	void keyPressEvent ( QKeyEvent *keyEvent );
-
+    virtual void keyPressEvent(QKeyEvent *event);
 private:
 	CMap *map=0;
 	CPlayer *player=0;

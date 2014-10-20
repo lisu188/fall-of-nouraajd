@@ -1,6 +1,7 @@
 #include "CConfigurationProvider.h"
 #include "CGuiHandler.h"
 #include "CCreature.h"
+#include "CEventHandler.h"
 #include "CGamePanel.h"
 #include "CGameScene.h"
 #include "CGameView.h"
@@ -144,7 +145,7 @@ void CCreature::fight(CCreature *creature) {
     return;
   }
   if (!isAlive()) {
-    if (CPlayer *player = dynamic_cast<CPlayer *>(getVisitor())) {
+    if (CPlayer *player = dynamic_cast<CPlayer *>(creature)) {
       player->removeFromFightList(this);
     }
     return;
@@ -185,8 +186,8 @@ bool CCreature::applyEffects() {
   return stopped;
 }
 
-void CCreature::onEnter() { CMapObject::onEnter(); }
-void CCreature::onMove() { CMapObject::onMove(); }
+void CCreature::onEnter(CGameEvent *) {}
+void CCreature::onMove(CGameEvent *) {}
 void CCreature::hoverEnterEvent(QGraphicsSceneHoverEvent *event) {
   CMapObject::hoverEnterEvent(event);
 }
@@ -528,12 +529,12 @@ std::set<CItem *> *CPlayer::getLoot() {
   return (std::set<CItem *> *)&inventory;
 }
 
-void CPlayer::onMove() {
+void CPlayer::onMove(CGameEvent *) {
   addMana(manaRegRate);
   turn++;
 }
 
-void CPlayer::onEnter() {}
+void CPlayer::onEnter(CGameEvent *) {}
 
 void CPlayer::addToFightList(CCreature *creature) {
   fightList.push_back(creature);
@@ -615,27 +616,25 @@ CMonster::CMonster() : CCreature() {}
 
 CMonster::CMonster(const CMonster &monster) : CCreature(monster) {}
 
-void CMonster::onMove() {
+void CMonster::onMove(CGameEvent *) {
   if (!isAlive()) {
     return;
   }
-  APathFinder *finder;
-  if ((this->getCoords().getDist(
-          this->getMap()->getScene()->getPlayer()->getCoords())) < 25) {
-    finder = new CSmartPathFinder();
-  } else {
-    finder = new CRandomPathFinder();
-  }
-  this->addExp(rand() % 25);
-  QThreadPool::globalInstance()->start(
-      new PathFinderWorker(this, getMap()->getScene()->getPlayer(), finder));
+  auto *player = getMap()->getPlayer();
+  if (!player) return;
+  addExp(rand() % 25);
+  CSmartPathFinder nearby;
+  CRandomPathFinder distant;
+  auto next = getCoords().getDist(player->getCoords()) < 25
+                  ? nearby.findPath(this, player) : distant.findPath(this, player);
+  setCoords(next);
 }
 
-void CMonster::onEnter() {
+void CMonster::onEnter(CGameEvent *event) {
   if (!isAlive()) {
     return;
   }
-  if (auto *player = dynamic_cast<CPlayer *>(getVisitor())) player->addToFightList(this);
+  if (auto *player = dynamic_cast<CPlayer *>(event->getCause())) player->addToFightList(this);
 }
 
 void CMonster::levelUp() {

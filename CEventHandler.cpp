@@ -10,59 +10,38 @@ CEventHandler::CEventHandler ( CMap *map ) {
 	this->map=map;
 }
 
-void CEventHandler::dispatchEvent ( CEventHandler::GameEvent type ) {
-
-}
-
-void CEventHandler::onEnterEvent ( CMapObject *mapObject ) {
-	std::set<CMapObject *> objects=map->getIf ( [&mapObject] ( CMapObject *visitor ) {
-		return mapObject != visitor && mapObject->getCoords() == visitor->getCoords() ;
-	} );
-	for ( CMapObject *visitor:objects  ) {
-		if ( map->getObjectByName ( mapObject->objectName() ) && map->getObjectByName ( visitor->objectName() ) ) {
-			mapObject->setVisitor ( visitor );
-			mapObject->onEnter();
-			mapObject->setVisitor ( nullptr );
-		}
-	}
-}
-
-void CEventHandler::onMoveEvent ( CMapObject *mapObject ) {
-	mapObject->onMove();
-}
-
-void CEventHandler::onDestroyEvent ( CMapObject *mapObject ) {
-	mapObject->onDestroy();
-}
-
-void CEventHandler::onCreateEvent ( CMapObject *mapObject ) {
-	mapObject->onCreate();
-}
-
-void CEventHandler::onLeaveEvent ( CMapObject *mapObject ) {
-	mapObject->onLeave();
-}
-
-void CEventHandler::gameEvent ( GameEvent type, CMapObject *mapObject ) {
-	switch ( type ) {
-	case onEnter:
-		onEnterEvent ( mapObject );
+void CEventHandler::gameEvent (CGameEvent *event, CMapObject *mapObject ) const {
+    switch ( event->getType() ) {
+    case CGameEvent::onEnter:
+        dynamic_cast<Visitable*>(mapObject)->onEnter(event);
 		break;
-	case onLeave:
-		onLeaveEvent ( mapObject );
+    case CGameEvent::onLeave:
+        dynamic_cast<Visitable*>(mapObject)->onLeave(event);
 		break;
-	case onMove:
-		onMoveEvent ( mapObject );
+    case CGameEvent::onMove:
+        mapObject->onMove(event);
 		break;
-	case onDestroy:
-		onDestroyEvent ( mapObject );
+    case CGameEvent::onDestroy:
+        mapObject->onDestroy(event);
 		break;
-	case onCreate:
-		onCreateEvent ( mapObject );
+    case CGameEvent::onCreate:
+        mapObject->onCreate(event);
 		break;
 	}
-
-	int enumId=this->metaObject()->indexOfEnumerator ( "GameEvent" );
-	QMetaEnum metaEnum = this->metaObject()->enumerator ( enumId );
-	qDebug() <<metaEnum.valueToKey ( type ) <<mapObject->getObjectType() <<mapObject->objectName() <<"\n";
+    delete event;
 }
+
+
+CGameEvent::CGameEvent(CGameEvent::Type type, CMapObject *cause):type(type),cause(cause){}
+
+CGameEvent::Type CGameEvent::getType() const
+{
+    return type;
+}
+CMapObject *CGameEvent::getCause() const
+{
+    return cause;
+}
+
+
+

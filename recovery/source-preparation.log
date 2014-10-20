@@ -1,10 +1,10 @@
 
-=== dispatchEvents ===
+=== typedEvents ===
 {
   "files": {
     "CGameScene.cpp": [
-      "8c98327a87c8d55bd30c05abd2e2f0c8b6db3789d615600f5740dd17d408b557",
-      "c55555aeb7406205132066cf3afe0f425a3b346b921a88b68e431b66f54388d3"
+      "abb8f922b177f3eb7c8f5745674dce62a3bd2743a550023b0070102c5b61a06c",
+      "094b09f8e9b8630f8a3ed781ee5ab738995bcbc6dae882389a23145f32750219"
     ],
     "CGameView.cpp": [
       "3c1d43ba889c7cfbc7620956f6600630f9e29457e89dbb318c15dc7565b3e1ec",
@@ -13,8 +13,12 @@
     "CScriptEngine.cpp": [
       "38fe619e7738ddf7453d15f4ad14f26c97cfbb1bfc0bd181bc8f35567e8e8f00",
       "9a032d901ac3ab7357f07ca279cf324934bec551639f63b7cc407acbccf12a8f"
+    ],
+    "scripts/game/object.py": [
+      "367e026670b6bdbe9f71ed02d5aa3948f76a16149fd67856c546ce907ecd80f8",
+      "8ba5ee3cc1fc598ec35c68a1c29f07a996eb33696fe9c8e96300c20291662f4e"
     ]
   },
-  "replaySha256": "ffc63162d6c61a3840e06c4d705aa9749e5fbb1d97e6cb9cdd46f10d315c3d66",
-  "sourceCommit": "bf5670cf24fbfe04f4c3b1be827a94a593230bb5"
+  "replaySha256": "5d4e272ccfc113445242d654e64604ba4f5299e59873bbca09e03c69ed064e49",
+  "sourceCommit": "45e6a749a37b534f9c7edf3df6d536fa0bf3cc9d"
 }

@@ -17,7 +17,7 @@ class CMap;
 class CGameEvent;
 class PlayerStatsView;
 
-class CCreature : public CMapObject {
+class CCreature : public CMapObject, public Visitable {
     Q_OBJECT
     Q_PROPERTY(int exp READ getExp WRITE setExp USER true)
     Q_PROPERTY(int gold READ getGold WRITE setGold USER true)
@@ -77,8 +77,9 @@ class CCreature : public CMapObject {
     std::map<int, CItem *> *getEquipped();
     bool applyEffects();
     std::set<CInteraction *> *getActions();
-    virtual void onEnter();
-    virtual void onMove();
+    virtual void onEnter(CGameEvent *);
+    void onLeave(CGameEvent *) override {}
+    virtual void onMove(CGameEvent *);
     bool hasEquipped(CItem *item);
     void setItem(int i, CItem *newItem);
     bool hasInInventory(CItem *item);
@@ -136,8 +137,8 @@ class CPlayer : public CCreature {
     ~CPlayer();
     std::set<CItem *> *getLoot();
     virtual void fight(CCreature *creature);
-    void onMove();
-    void onEnter();
+    void onMove(CGameEvent *);
+    void onEnter(CGameEvent *);
     void update();
     void updateViews();
     void addToFightList(CCreature *creature);
@@ -164,8 +165,8 @@ class CMonster : public CCreature {
   public:
     CMonster();
     CMonster(const CMonster &monster);
-    virtual void onMove();
-    virtual void onEnter();
+    virtual void onMove(CGameEvent *);
+    virtual void onEnter(CGameEvent *);
     virtual void levelUp();
     virtual std::set<CItem *> *getLoot();
 };
