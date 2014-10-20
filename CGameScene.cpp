@@ -1,11 +1,11 @@
 #include "CGameScene.h"
 #include "CGameView.h"
-#include "CPathFinder.h"
 #include "Util.h"
 #include <QGraphicsView>
 #include <QPointF>
 #include <QApplication>
 #include <QDesktopWidget>
+#include <QKeyEvent>
 #include "CPlayerView.h"
 #include "CAnimationProvider.h"
 #include "CConfigurationProvider.h"
@@ -18,6 +18,9 @@
 #include <QThreadPool>
 #include "CObjectHandler.h"
 #include "CGuiHandler.h"
+#include "CMap.h"
+#include "CCreature.h"
+#include "CPathFinder.h"
 
 class LoadGameTask  : public QRunnable {
 public:
@@ -41,34 +44,6 @@ void CGameScene::startGame ( QString file ,QString player ) {
 	QThreadPool::globalInstance()->start ( new LoadGameTask ( map ) );
 }
 
-void CGameScene::keyPressEvent ( QKeyEvent *keyEvent ) {
-	if ( keyEvent ) {
-		keyEvent->setAccepted ( false );
-		switch ( keyEvent->key() ) {
-		case Qt::Key_Up:
-			playerMove ( 0, -1 );
-			keyEvent->setAccepted ( true );
-			break;
-		case Qt::Key_Down:
-			playerMove ( 0, 1 );
-			keyEvent->setAccepted ( true );
-			break;
-		case Qt::Key_Left:
-			playerMove ( -1, 0 );
-			keyEvent->setAccepted ( true );
-			break;
-		case Qt::Key_Right:
-			playerMove ( 1, 0 );
-			keyEvent->setAccepted ( true );
-			break;
-		case Qt::Key_C:
-			map->getGuiHandler()->getPanel ( "CCharPanel" )->showPanel();
-			keyEvent->setAccepted ( true );
-			break;
-		}
-	}
-}
-
 CGameScene::CGameScene ( QObject *parent ) :QGraphicsScene ( parent ) {
 
 }
@@ -77,31 +52,30 @@ CGameScene::~CGameScene() {
 
 }
 
-void CGameScene::playerMove ( int dirx, int diry ) {
-	if ( !CompletionListener::getInstance()->isCompleted() ) {
-		return;
-	}
-	if ( map->getGuiHandler()->isAnyPanelVisible() ) {
-		return;
-	}
-	map->startMove ( dirx, diry );
-}
-
 CMap *CGameScene::getMap() const {
 	return map;
 }
 
-
-
 CGameView *CGameScene::getView() {
-//	if ( this->views().size() ==0 ) {
-//		return nullptr;
-//	}
 	return dynamic_cast<CGameView*> ( this->views() [0] );
 }
 
 void CGameScene::removeObject ( CMapObject *object ) {
-	this->removeItem ( object );
+    this->removeItem ( object );
+}
+
+void CGameScene::keyPressEvent(QKeyEvent *event)
+{
+    switch(event->key()){
+        case Qt::Key_Up:
+         break;
+        case Qt::Key_Down:
+         break;
+        case Qt::Key_Left:
+         break;
+        case Qt::Key_Right:
+         break;
+    }
 }
 
 CPlayer *CGameScene::getPlayer() const {

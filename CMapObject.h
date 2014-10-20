@@ -1,9 +1,16 @@
 #pragma once
 #include "CAnimatedObject.h"
 #include "Util.h"
-
+class CGameEvent;
 class CMap;
 class CCreature;
+
+class Visitable{
+public:
+    virtual void onEnter (CGameEvent *)=0;
+    virtual void onLeave(CGameEvent *)=0;
+};
+
 class CMapObject : public CAnimatedObject {
 	friend class CObjectHandler;
 	Q_OBJECT
@@ -16,11 +23,12 @@ public:
 	int getPosX() const;
 	int getPosY() const;
 	int getPosZ() const;
-	virtual void onEnter ();
-	virtual void onMove();
-	virtual void onCreate();
-	virtual void onDestroy();
-	virtual void onLeave();
+
+    virtual void onMove(CGameEvent *);
+
+    virtual void onCreate(CGameEvent *);
+    virtual void onDestroy(CGameEvent *);
+
 	void setMap ( CMap *map );
 	CMap *getMap();
 	void setVisible ( bool vis );
@@ -31,8 +39,6 @@ public:
 	void setObjectType ( const QString &value );
 	QString getTooltip() const;
 	void setTooltip ( const QString &value );
-	void setVisitor ( CMapObject * visitor );
-	CMapObject *getVisitor();
 	Q_SLOT virtual void move ( int x, int y , int z );
 	Q_SLOT void moveTo ( int x, int y, int z );
 
@@ -74,12 +80,11 @@ protected:
 	virtual void hoverLeaveEvent ( QGraphicsSceneHoverEvent *event );
 	//QGraphicsSimpleTextItem statsView;
 private:
-	CMapObject *visitor=nullptr;
 	CMap *map=nullptr;
 	QString objectType;
 };
 
-class CEvent : public CMapObject {
+class CEvent : public CMapObject,public Visitable {
 	Q_OBJECT
 	Q_PROPERTY ( bool enabled READ isEnabled WRITE setEnabled USER true )
 	Q_PROPERTY ( QString eventClass READ getEventClass WRITE setEventClass USER true )
@@ -91,6 +96,9 @@ public:
 	void setEnabled ( bool enabled );
 	QString getEventClass();
 	void setEventClass ( const QString &value );
+
+    virtual void onEnter(CGameEvent *);
+    virtual void onLeave(CGameEvent *);
 private:
 	QString eventClass;
 	bool enabled = true;

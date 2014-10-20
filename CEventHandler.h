@@ -4,24 +4,30 @@
 
 class CMapObject;
 class CMap;
+
+class CGameEvent:public QObject{
+    Q_OBJECT
+    Q_ENUMS ( CGameEvent )
+public:
+    enum Type {
+        onEnter,onMove,onCreate,onDestroy,onLeave
+    };
+    CGameEvent(Type type,CMapObject *cause=0);
+    Type getType() const;
+    CMapObject *getCause() const;
+
+private:
+    const Type type;
+    CMapObject *cause=0;
+};
+
 class CEventHandler : public QObject {
 	Q_OBJECT
-	Q_ENUMS ( GameEvent )
 public:
-	enum GameEvent {
-		onEnter,onMove,onCreate,onDestroy,onLeave
-	};
 	CEventHandler ( CMap *map );
-	void dispatchEvent ( GameEvent type );
-	void gameEvent ( GameEvent type,CMapObject * source );
+    void gameEvent ( CGameEvent *event,CMapObject * mapObject ) const;
 private:
-	void onEnterEvent ( CMapObject *mapObject );
-	void onMoveEvent ( CMapObject *mapObject );
-	void onDestroyEvent ( CMapObject *mapObject );
-	void onCreateEvent ( CMapObject *mapObject );
-	void onLeaveEvent ( CMapObject *mapObject );
 	CMap*map=0;
 };
 
-typedef CEventHandler::GameEvent GameEvent;
 
