@@ -11,6 +11,11 @@ public:
 	virtual void onLeave ( CGameEvent * ) =0;
 };
 
+class Moveable {
+public:
+	virtual Coords getNextMove() =0;
+};
+
 class CMapObject : public CAnimatedObject {
 	friend class CObjectHandler;
 	Q_OBJECT
@@ -34,13 +39,14 @@ public:
 	void setVisible ( bool vis );
 	Coords getCoords();
 	void setCoords ( Coords coords );
-	void setNumber ( int i, int x );
 	QString getObjectType() const;
 	void setObjectType ( const QString &value );
 	QString getTooltip() const;
 	void setTooltip ( const QString &value );
-	Q_SLOT virtual void move ( int x, int y , int z );
-	Q_SLOT void moveTo ( int x, int y, int z );
+	virtual void move ( int x, int y , int z );
+	virtual void move ( Coords coords );
+	void moveTo ( int x, int y, int z );
+	void moveTo ( Coords coords );
 
 	Q_INVOKABLE void setProperty ( QString name,QVariant property ) {
 		QByteArray byteArray = name.toUtf8();

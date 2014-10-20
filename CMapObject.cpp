@@ -117,11 +117,12 @@ void CMapObject::setCoords ( Coords coords ) {
 	this->moveTo ( coords.x,coords.y,coords.z );
 }
 
-void CMapObject::setNumber ( int i, int x ) {
-	this->QGraphicsItem::setVisible ( true );
-	int px = i % x * 50;
-	int py = i / x * 50;
-	this->QGraphicsItem::setPos ( px, py );
+void CMapObject::move(Coords coords) {
+    move(coords.x, coords.y, coords.z);
+}
+
+void CMapObject::moveTo(Coords coords) {
+    moveTo(coords.x, coords.y, coords.z);
 }
 
 void CMapObject::hoverEnterEvent ( QGraphicsSceneHoverEvent *event ) {

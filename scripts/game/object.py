@@ -13,7 +13,7 @@ class Cave(CBuilding):
     def onEnter(self,event):
         if not event.getCause().isPlayer():
             return
-        if self.getBoolProperty("enabled") and self.getVisitor().isPlayer():
+        if self.getBoolProperty("enabled"):
             self.setBoolProperty("enabled",False);
             location=self.getCoords()
             monster=self.getStringProperty("monster")

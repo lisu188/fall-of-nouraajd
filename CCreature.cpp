@@ -534,6 +534,14 @@ void CPlayer::onMove(CGameEvent *) {
   turn++;
 }
 
+void CPlayer::setNextMove(Coords move) { nextMove = move; }
+
+Coords CPlayer::getNextMove() {
+  Coords move = nextMove;
+  nextMove = Coords(0, 0, 0);
+  return move;
+}
+
 void CPlayer::onEnter(CGameEvent *) {}
 
 void CPlayer::addToFightList(CCreature *creature) {
@@ -617,17 +625,18 @@ CMonster::CMonster() : CCreature() {}
 CMonster::CMonster(const CMonster &monster) : CCreature(monster) {}
 
 void CMonster::onMove(CGameEvent *) {
-  if (!isAlive()) {
-    return;
-  }
+  if (isAlive()) addExp(rand() % 25);
+}
+
+Coords CMonster::getNextMove() {
   auto *player = getMap()->getPlayer();
-  if (!player) return;
-  addExp(rand() % 25);
+  if (!isAlive() || !player) return Coords(0, 0, 0);
+  auto from = getCoords();
   CSmartPathFinder nearby;
   CRandomPathFinder distant;
-  auto next = getCoords().getDist(player->getCoords()) < 25
+  auto next = from.getDist(player->getCoords()) < 25
                   ? nearby.findPath(this, player) : distant.findPath(this, player);
-  setCoords(next);
+  return Coords(next.x - from.x, next.y - from.y, next.z - from.z);
 }
 
 void CMonster::onEnter(CGameEvent *event) {
