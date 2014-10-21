@@ -74,7 +74,7 @@ int CMapObject::getPosX() const {
 }
 
 
-void CMapObject::onMove(CGameEvent *) {
+void CMapObject::onTurn(CGameEvent *) {
 
 }
 

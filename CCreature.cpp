@@ -187,7 +187,7 @@ bool CCreature::applyEffects() {
 }
 
 void CCreature::onEnter(CGameEvent *) {}
-void CCreature::onMove(CGameEvent *) {}
+void CCreature::onTurn(CGameEvent *) {}
 void CCreature::hoverEnterEvent(QGraphicsSceneHoverEvent *event) {
   CMapObject::hoverEnterEvent(event);
 }
@@ -529,7 +529,7 @@ std::set<CItem *> *CPlayer::getLoot() {
   return (std::set<CItem *> *)&inventory;
 }
 
-void CPlayer::onMove(CGameEvent *) {
+void CPlayer::onTurn(CGameEvent *) {
   addMana(manaRegRate);
   turn++;
 }
@@ -624,7 +624,7 @@ CMonster::CMonster() : CCreature() {}
 
 CMonster::CMonster(const CMonster &monster) : CCreature(monster) {}
 
-void CMonster::onMove(CGameEvent *) {
+void CMonster::onTurn(CGameEvent *) {
   if (isAlive()) addExp(rand() % 25);
 }
 

@@ -370,7 +370,7 @@ void CMap::move() {
   }
   for (auto *object : objects) {
     if (getObjectByName(object->objectName()) == object)
-      eventHandler->gameEvent(new CGameEvent(CGameEvent::onMove, player), object);
+      eventHandler->gameEvent(new CGameEvent(CGameEvent::onTurn, player), object);
   }
   for (auto *object : objects) {
     auto *visitor = dynamic_cast<CCreature *>(object);

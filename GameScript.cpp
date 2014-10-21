@@ -71,11 +71,11 @@ public:
       T::onEnter(event);
     }
   }
-  void onMove(CGameEvent *event) override {
-    if (override call = this->get_override("onMove")) {
+  void onTurn(CGameEvent *event) override {
+    if (override call = this->get_override("onTurn")) {
       call(ptr(event));
     } else {
-      T::onMove(event);
+      T::onTurn(event);
     }
   }
   void onCreate(CGameEvent *event) override {
@@ -93,7 +93,7 @@ public:
     }
   }
   void defaultOnEnter(CGameEvent *event) { T::onEnter(event); }
-  void defaultOnMove(CGameEvent *event) { T::onMove(event); }
+  void defaultOnTurn(CGameEvent *event) { T::onTurn(event); }
   void defaultOnCreate(CGameEvent *event) { T::onCreate(event); }
   void defaultOnDestroy(CGameEvent *event) { T::onDestroy(event); }
 };
@@ -164,7 +164,7 @@ template <class T> static void registerObjectCallbacks(const char *name) {
   class_<CWrapper<T>, bases<T>, boost::noncopyable,
          boost::shared_ptr<CWrapper<T>>>(name)
       .def("onEnter", &T::onEnter, &CWrapper<T>::defaultOnEnter)
-      .def("onMove", &T::onMove, &CWrapper<T>::defaultOnMove)
+      .def("onTurn", &T::onTurn, &CWrapper<T>::defaultOnTurn)
       .def("onCreate", &T::onCreate, &CWrapper<T>::defaultOnCreate)
       .def("onDestroy", &T::onDestroy, &CWrapper<T>::defaultOnDestroy);
 }
