@@ -2,10 +2,6 @@
 === typedEvents ===
 {
   "files": {
-    "CAnimatedObject.h": [
-      "9b9da24e06f101502a7f9edc394859765604d59b7ae85117c5887fae346e366d",
-      "522bff353e14c398cf09039342c5fe13262e74eb5f39ebc2e7d580e19c02886e"
-    ],
     "CGameScene.cpp": [
       "d71895c9b668ad3b616bbeb81995b24fd01b3b24ccda8ad518ca27a27f16ddb6",
       "ac6bb906f168c4265ac4cbed6c9c8782ce316a3b80a9eaee198fcc067ba6343c"
@@ -20,5 +16,5 @@
     ]
   },
   "replaySha256": "5d4e272ccfc113445242d654e64604ba4f5299e59873bbca09e03c69ed064e49",
-  "sourceCommit": "b26490a1d5564b1e59a32bbd9feee48cbf800ff8"
+  "sourceCommit": "a763a6322c2e2d3dc7785ffbb04fc54f1e71c2e3"
 }
