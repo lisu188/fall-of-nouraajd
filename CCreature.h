@@ -79,7 +79,7 @@ class CCreature : public CMapObject, public Visitable {
     std::set<CInteraction *> *getActions();
     virtual void onEnter(CGameEvent *);
     void onLeave(CGameEvent *) override {}
-    virtual void onMove(CGameEvent *);
+    virtual void onTurn(CGameEvent *);
     bool hasEquipped(CItem *item);
     void setItem(int i, CItem *newItem);
     bool hasInInventory(CItem *item);
@@ -138,7 +138,7 @@ class CPlayer : public CCreature, public Moveable {
     ~CPlayer();
     std::set<CItem *> *getLoot();
     virtual void fight(CCreature *creature);
-    void onMove(CGameEvent *);
+    void onTurn(CGameEvent *);
     void setNextMove(Coords move);
     Coords getNextMove() override;
     void onEnter(CGameEvent *);
@@ -168,7 +168,7 @@ class CMonster : public CCreature, public Moveable {
   public:
     CMonster();
     CMonster(const CMonster &monster);
-    virtual void onMove(CGameEvent *);
+    virtual void onTurn(CGameEvent *);
     Coords getNextMove() override;
     virtual void onEnter(CGameEvent *);
     virtual void levelUp();

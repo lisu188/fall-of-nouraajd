@@ -24,7 +24,7 @@ class Cave(CBuilding):
                     self.getMap().addObjectByName(monster,Coords(location.x+i,location.y+j,location.z));
             self.getMap().removeObject(self);
 
-    def onMove(self,event):
+    def onTurn(self,event):
         chance=self.getNumericProperty("chance");
         monsters=self.getNumericProperty("monsters");
         monster=self.getStringProperty("monster");

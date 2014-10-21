@@ -18,8 +18,8 @@ void CEventHandler::gameEvent ( CGameEvent *event, CMapObject *mapObject ) const
 	case CGameEvent::onLeave:
 		dynamic_cast<Visitable*> ( mapObject )->onLeave ( event );
 		break;
-	case CGameEvent::onMove:
-		mapObject->onMove ( event );
+	case CGameEvent::onTurn:
+		mapObject->onTurn ( event );
 		break;
 	case CGameEvent::onDestroy:
 		mapObject->onDestroy ( event );
