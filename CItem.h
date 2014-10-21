@@ -5,7 +5,7 @@
 class CCreature;
 class CInteraction;
 
-class CItem : public CMapObject,public Visitable {
+class CItem : public CMapObject,public Visitable,public Wearable,public Usable {
 	Q_OBJECT
 	Q_PROPERTY ( int power READ getPower WRITE setPower USER true )
 	Q_PROPERTY ( bool singleUse READ isSingleUse WRITE setSingleUse USER true )
@@ -16,9 +16,11 @@ public:
 	CItem ( const CItem & );
 	bool isSingleUse();
 	void setSingleUse ( bool singleUse );
-	virtual void onEquip ( CCreature *creature );
-	virtual void onUnequip ( CCreature *creature );
-	virtual void onUse ( CCreature *creature );
+
+	virtual void onEquip ( CCreature *creature ) override;
+	virtual void onUnequip ( CCreature *creature ) override;
+
+	virtual void onUse ( CCreature *creature ) override;
 
 	virtual void onEnter ( CGameEvent *event ) override;
 	virtual void onLeave ( CGameEvent * ) override;
@@ -98,7 +100,7 @@ public:
 	CScroll ( const CScroll & );
 	QString getText() const;
 	void setText ( const QString &value );
-	virtual void onUse ( CCreature * );
+	virtual void onUse ( CCreature * ) override;
 private:
 	QString text;
 };
@@ -108,5 +110,5 @@ class CPotion : public CItem {
 public:
 	CPotion();
 	CPotion ( const CPotion & );
-	virtual void onUse ( CCreature * );
+	virtual void onUse ( CCreature * ) override;
 };

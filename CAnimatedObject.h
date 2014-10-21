@@ -17,6 +17,7 @@ public:
 	QPointF mapToParent ( int a, int b );
 	void setAnimation ( QString path );
 	QString getAnimation();
+	QGraphicsItem *toGraphicsItem();
 private:
 	QString path;
 	QTimer *timer=0;

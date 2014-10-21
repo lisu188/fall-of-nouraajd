@@ -34,6 +34,10 @@ QString CAnimatedObject::getAnimation() {
 	return this->path;
 }
 
+QGraphicsItem *CAnimatedObject::toGraphicsItem() {
+	return dynamic_cast<QGraphicsItem*> ( this );
+}
+
 void CAnimatedObject::animate() {
 	int time = staticAnimation->getTime();
 	setPixmap ( *staticAnimation->getImage() );

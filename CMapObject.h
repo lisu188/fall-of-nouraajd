@@ -14,6 +14,17 @@ public:
 class Moveable {
 public:
 	virtual Coords getNextMove() =0;
+//    virtual void beforeMove()=0;
+//    virtual void afterMove()=0;
+};
+
+class Wearable {
+	virtual void onEquip ( CCreature *creature ) =0;
+	virtual void onUnequip ( CCreature *creature ) =0;
+};
+
+class Usable {
+	virtual void onUse ( CCreature *creature ) =0;
 };
 
 class CMapObject : public CAnimatedObject {
@@ -44,7 +55,7 @@ public:
 	QString getTooltip() const;
 	void setTooltip ( const QString &value );
 	virtual void move ( int x, int y , int z );
-	virtual void move ( Coords coords );
+	void move ( Coords coords );
 	void moveTo ( int x, int y, int z );
 	void moveTo ( Coords coords );
 
