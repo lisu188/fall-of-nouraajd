@@ -40,7 +40,7 @@ public:
 	int getPosY() const;
 	int getPosZ() const;
 
-	virtual void onMove ( CGameEvent * );
+	virtual void onTurn ( CGameEvent * );
 
 	virtual void onCreate ( CGameEvent * );
 	virtual void onDestroy ( CGameEvent * );
