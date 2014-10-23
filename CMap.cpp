@@ -214,12 +214,10 @@ bool CMap::addTile(CTile *tile, int x, int y, int z) {
   if (!tile || contains(x, y, z)) {
     return false;
   }
-  tile->posx = x;
-  tile->posy = y;
-  tile->posz = z;
   tile->setMap(this);
   tile->moveTo(x, y, z);
-  tile->setVisible(z == currentLevel);
+  tile->addToScene(scene);
+  tile->toGraphicsItem()->setVisible(z == currentLevel);
   return true;
 }
 void CMap::removeTile(int x, int y, int z) {
@@ -262,7 +260,7 @@ void CMap::ensureSize() {
     }
   }
   for (auto &tile : *this) {
-    tile.second->setVisible(tile.first.z == currentLevel);
+    tile.second->toGraphicsItem()->setVisible(tile.first.z == currentLevel);
   }
   for (const auto &entry : mapObjects) {
     auto *object = entry.second;

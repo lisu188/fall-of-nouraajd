@@ -10,7 +10,7 @@ public:
 	CObjectHandler ( CMap *map );
 	template<typename T>
 	T createMapObject ( QString type ) const {
-        Constructible *object= _createObject ( type ) ;
+		Constructible *object= _createObject ( type ) ;
 		T casted=dynamic_cast<T> ( object );
 		if ( casted==nullptr ) {
 			delete object;
@@ -20,7 +20,7 @@ public:
 	void logProperties ( CMapObject *object ) const;
 	const QJsonObject *getObjectConfig() const;
 private:
-    Constructible *_createObject ( QString type ) const;
+	Constructible *_createObject ( QString type ) const;
 	void setProperty ( QObject * object , QString key, QJsonValue value ) const;
 	QMetaProperty getProperty ( QObject * object ,QString name ) const;
 	CMap *map=0;

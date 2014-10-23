@@ -18,12 +18,11 @@ void CTile::move ( int x, int y, int z ) {
 	if (  getMap() ) {
 		getMap()->moveTile ( this,posx+x,posy+y, posz+z );
 		setXYZ ( posx+x,posy+y, posz+z );
-    }
+	}
 }
 
-void CTile::moveTo(int x, int y, int z)
-{
-    move ( x - posx, y - posy ,z-posz );
+void CTile::moveTo ( int x, int y, int z ) {
+	move ( x - posx, y - posy ,z-posz );
 }
 
 Coords CTile::getCoords() {
@@ -45,7 +44,6 @@ void CTile::setCanStep ( bool canStep ) {
 void CTile::addToScene ( CGameScene *scene ) {
 	scene->addItem ( this );
 	setXYZ (  posx , posy,posz );
-	setMap (  scene ->getMap() );
 }
 
 void CTile::removeFromScene ( CGameScene *scene ) {
@@ -74,13 +72,11 @@ QString CTile::getObjectName() const {
 QString CTile::getObjectType() const {
 	return this->objectType;
 }
-CMap *CTile::getMap()
-{
-    return map;
+CMap *CTile::getMap() {
+	return map;
 }
 
-void CTile::setMap(CMap *value)
-{
-    map = value;
+void CTile::setMap ( CMap *value ) {
+	map = value;
 }
 
