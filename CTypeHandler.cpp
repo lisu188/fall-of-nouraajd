@@ -36,8 +36,9 @@ CTypeHandler::CTypeHandler ( const CTypeHandler & ) {
 Constructible *CTypeHandler::create ( QString name ) {
 	Constructible *object = nullptr;
 	int typeId = QMetaType::type ( name.toStdString().c_str() );
-    void *raw=QMetaType::create ( typeId );
-    object = dynamic_cast<Constructible*>((Constructible*)raw);
+	void *raw=QMetaType::create ( typeId );
+	QObject * rawQobject=static_cast<QObject*> ( raw );
+	object = dynamic_cast<Constructible*> ( rawQobject );
 	return  object ;
 }
 
