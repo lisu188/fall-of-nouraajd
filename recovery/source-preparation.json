@@ -11,13 +11,29 @@
           "3c1d43ba889c7cfbc7620956f6600630f9e29457e89dbb318c15dc7565b3e1ec",
           "e59eb1034b607134ee90d56c0af643fc7dafb2d34b11fb7c1188cf3c7a8b19da"
         ],
+        "CObjectHandler.h": [
+          "92c87a9cb388bf4b3a1e5172d9a871558870fd5ae73e3ea921c2b7179fd41438",
+          "57294ba4bbb600ba2db20780a4b9ab784d6e54fad2edb6c3b42706c5645ef7d0"
+        ],
         "CScriptEngine.cpp": [
           "38fe619e7738ddf7453d15f4ad14f26c97cfbb1bfc0bd181bc8f35567e8e8f00",
           "9a032d901ac3ab7357f07ca279cf324934bec551639f63b7cc407acbccf12a8f"
+        ],
+        "CTile.cpp": [
+          "4fedbe248aa7cb00b5a2a78c6471f813013ee9e4d8de437c0742677a9f0ec9c1",
+          "e2c6116c47141e8783edf9abe2119ab8b4e86adf87afe8c8094e28a76c5dfa83"
+        ],
+        "CTile.h": [
+          "2987720e206e6ab9c56817b78a06f0689a4386c134beaa8cf749c1a00507508a",
+          "4d68da40372e472b73f623c966569d5253814c553e7be99182132d871b76c8e0"
+        ],
+        "CTypeHandler.cpp": [
+          "b35e7e42020acd1997d2dff9b300bd653a318792dec0390bdb47933bf557bca9",
+          "c1a3e23c65ba3b7bae3b12bfdbd1feec1a02765e8f6aad68e22838741b1942a6"
         ]
       },
       "replaySha256": "3b2c67a4d1890cc1e1bed06aadfde89cd12e3ff4e8ab039a6502c841e4b60dc6",
-      "sourceCommit": "75c6918509bb39a489d979fb0dfcdfd103fcfbf6"
+      "sourceCommit": "f6b016214b3367ba302c2a6ed47face5d27f3c13"
     },
     "outputs": [
       {
@@ -47,6 +63,18 @@
       {
         "after": {
           "kind": "file",
+          "sha256": "57294ba4bbb600ba2db20780a4b9ab784d6e54fad2edb6c3b42706c5645ef7d0"
+        },
+        "before": {
+          "kind": "file",
+          "sha256": "92c87a9cb388bf4b3a1e5172d9a871558870fd5ae73e3ea921c2b7179fd41438"
+        },
+        "path": "CObjectHandler.h",
+        "purpose": "Preserve map and Python lifetimes and repair the split tile factory interface"
+      },
+      {
+        "after": {
+          "kind": "file",
           "sha256": "9a032d901ac3ab7357f07ca279cf324934bec551639f63b7cc407acbccf12a8f"
         },
         "before": {
@@ -54,6 +82,42 @@
           "sha256": "38fe619e7738ddf7453d15f4ad14f26c97cfbb1bfc0bd181bc8f35567e8e8f00"
         },
         "path": "CScriptEngine.cpp",
+        "purpose": "Preserve map and Python lifetimes and repair the split tile factory interface"
+      },
+      {
+        "after": {
+          "kind": "file",
+          "sha256": "e2c6116c47141e8783edf9abe2119ab8b4e86adf87afe8c8094e28a76c5dfa83"
+        },
+        "before": {
+          "kind": "file",
+          "sha256": "4fedbe248aa7cb00b5a2a78c6471f813013ee9e4d8de437c0742677a9f0ec9c1"
+        },
+        "path": "CTile.cpp",
+        "purpose": "Preserve map and Python lifetimes and repair the split tile factory interface"
+      },
+      {
+        "after": {
+          "kind": "file",
+          "sha256": "4d68da40372e472b73f623c966569d5253814c553e7be99182132d871b76c8e0"
+        },
+        "before": {
+          "kind": "file",
+          "sha256": "2987720e206e6ab9c56817b78a06f0689a4386c134beaa8cf749c1a00507508a"
+        },
+        "path": "CTile.h",
+        "purpose": "Preserve map and Python lifetimes and repair the split tile factory interface"
+      },
+      {
+        "after": {
+          "kind": "file",
+          "sha256": "c1a3e23c65ba3b7bae3b12bfdbd1feec1a02765e8f6aad68e22838741b1942a6"
+        },
+        "before": {
+          "kind": "file",
+          "sha256": "b35e7e42020acd1997d2dff9b300bd653a318792dec0390bdb47933bf557bca9"
+        },
+        "path": "CTypeHandler.cpp",
         "purpose": "Preserve map and Python lifetimes and repair the split tile factory interface"
       }
     ]
@@ -86,6 +150,18 @@
     {
       "after": {
         "kind": "file",
+        "sha256": "57294ba4bbb600ba2db20780a4b9ab784d6e54fad2edb6c3b42706c5645ef7d0"
+      },
+      "before": {
+        "kind": "file",
+        "sha256": "92c87a9cb388bf4b3a1e5172d9a871558870fd5ae73e3ea921c2b7179fd41438"
+      },
+      "path": "CObjectHandler.h",
+      "purpose": "Preserve map and Python lifetimes and repair the split tile factory interface"
+    },
+    {
+      "after": {
+        "kind": "file",
         "sha256": "9a032d901ac3ab7357f07ca279cf324934bec551639f63b7cc407acbccf12a8f"
       },
       "before": {
@@ -93,6 +169,42 @@
         "sha256": "38fe619e7738ddf7453d15f4ad14f26c97cfbb1bfc0bd181bc8f35567e8e8f00"
       },
       "path": "CScriptEngine.cpp",
+      "purpose": "Preserve map and Python lifetimes and repair the split tile factory interface"
+    },
+    {
+      "after": {
+        "kind": "file",
+        "sha256": "e2c6116c47141e8783edf9abe2119ab8b4e86adf87afe8c8094e28a76c5dfa83"
+      },
+      "before": {
+        "kind": "file",
+        "sha256": "4fedbe248aa7cb00b5a2a78c6471f813013ee9e4d8de437c0742677a9f0ec9c1"
+      },
+      "path": "CTile.cpp",
+      "purpose": "Preserve map and Python lifetimes and repair the split tile factory interface"
+    },
+    {
+      "after": {
+        "kind": "file",
+        "sha256": "4d68da40372e472b73f623c966569d5253814c553e7be99182132d871b76c8e0"
+      },
+      "before": {
+        "kind": "file",
+        "sha256": "2987720e206e6ab9c56817b78a06f0689a4386c134beaa8cf749c1a00507508a"
+      },
+      "path": "CTile.h",
+      "purpose": "Preserve map and Python lifetimes and repair the split tile factory interface"
+    },
+    {
+      "after": {
+        "kind": "file",
+        "sha256": "c1a3e23c65ba3b7bae3b12bfdbd1feec1a02765e8f6aad68e22838741b1942a6"
+      },
+      "before": {
+        "kind": "file",
+        "sha256": "b35e7e42020acd1997d2dff9b300bd653a318792dec0390bdb47933bf557bca9"
+      },
+      "path": "CTypeHandler.cpp",
       "purpose": "Preserve map and Python lifetimes and repair the split tile factory interface"
     }
   ],
@@ -103,7 +215,7 @@
         "history_source_prep.py",
         "prepare-object-factories"
       ],
-      "log": "/tmp/nouraajd-318-factory-final/verify/snapshot-ky0g_qb5/preparation/object-factories.log",
+      "log": "/tmp/nouraajd-319-factory-final/verify/snapshot-kks4bwtf/preparation/object-factories.log",
       "name": "objectFactories",
       "returnCode": 0,
       "timedOut": false

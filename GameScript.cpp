@@ -230,7 +230,8 @@ BOOST_PYTHON_MODULE(_game) {
       .def("getLocationByName", &CMap::getLocationByName);
   class_<CGameEvent, boost::noncopyable>("CGameEvent", no_init)
       .def("getCause", &CGameEvent::getCause, return_value_policy<reference_existing_object>());
-  class_<CMapObject, boost::noncopyable>("CMapObject", no_init)
+  class_<Constructible, boost::noncopyable>("Constructible", no_init);
+  class_<CMapObject, bases<Constructible>, boost::noncopyable>("CMapObject", no_init)
       .add_property("name", &objectName, &setObjectName)
       .def("getMap", &CMapObject::getMap, return_internal_reference<>())
       .def("moveTo", &moveObject)
@@ -301,7 +302,7 @@ BOOST_PYTHON_MODULE(_game) {
   class_<CPotionWrapper, bases<CPotion>, boost::noncopyable,
          boost::shared_ptr<CPotionWrapper>>("CPotion")
       .def("onUse", &CPotion::onUse, &CPotionWrapper::defaultOnUse);
-  class_<CTileWrapper, bases<CMapObject>, boost::noncopyable, boost::shared_ptr<CTileWrapper>>("CTile")
+  class_<CTileWrapper, bases<Constructible>, boost::noncopyable, boost::shared_ptr<CTileWrapper>>("CTile")
       .def("onStep", &CTile::onStep, &CTileWrapper::defaultOnStep);
 }namespace {
 bool loaderPackage(const std::string &name) {
