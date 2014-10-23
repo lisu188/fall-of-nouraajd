@@ -8,6 +8,8 @@ class CCreature;
 class Constructible {
 public:
   virtual ~Constructible() = default;
+  virtual CMap *getMap() = 0;
+  virtual void setMap(CMap *map) = 0;
   virtual void setObjectName(const QString &name) = 0;
   virtual void setObjectType(const QString &type) = 0;
   virtual QString getObjectName() const = 0;

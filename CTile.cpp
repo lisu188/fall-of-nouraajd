@@ -18,7 +18,12 @@ void CTile::move ( int x, int y, int z ) {
 	if (  getMap() ) {
 		getMap()->moveTile ( this,posx+x,posy+y, posz+z );
 		setXYZ ( posx+x,posy+y, posz+z );
-	}
+    }
+}
+
+void CTile::moveTo(int x, int y, int z)
+{
+    move ( x - posx, y - posy ,z-posz );
 }
 
 Coords CTile::getCoords() {
@@ -69,3 +74,13 @@ QString CTile::getObjectName() const {
 QString CTile::getObjectType() const {
 	return this->objectType;
 }
+CMap *CTile::getMap()
+{
+    return map;
+}
+
+void CTile::setMap(CMap *value)
+{
+    map = value;
+}
+
