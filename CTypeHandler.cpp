@@ -20,7 +20,7 @@ ATypeHandler::ATypeHandler ( const ATypeHandler & ) {
 
 }
 
-CMapObject *ATypeHandler::create ( QString ) {
+Constructible *ATypeHandler::create ( QString ) {
 	return nullptr;
 }
 
@@ -33,10 +33,10 @@ CTypeHandler::CTypeHandler ( const CTypeHandler & ) {
 
 }
 
-CMapObject *CTypeHandler::create ( QString name ) {
-	CMapObject *object = nullptr;
+Constructible *CTypeHandler::create ( QString name ) {
+	Constructible *object = nullptr;
 	int typeId = QMetaType::type ( name.toStdString().c_str() );
-	object = ( CMapObject * ) QMetaType::create ( typeId );
+	object = dynamic_cast<Constructible * > ( QMetaType::create ( typeId ) );
 	return  object ;
 }
 
@@ -47,8 +47,8 @@ PyTypeHandler::PyTypeHandler() {
 
 PyTypeHandler::PyTypeHandler ( const PyTypeHandler & ) {}
 
-CMapObject *PyTypeHandler::create ( QString name ) {
-	return CScriptEngine::getInstance()->createObject<CMapObject*> ( name );
+Constructible *PyTypeHandler::create ( QString name ) {
+	return CScriptEngine::getInstance()->createObject<Constructible*> ( name );
 }
 
 

@@ -3,14 +3,14 @@
 #include <QJsonObject>
 #include <QList>
 #include "CReflection.h"
-class CMapObject;
+class Constructible;
 class ATypeHandler : public QObject {
 	Q_OBJECT
 public:
 	static ATypeHandler* getHandler ( QString name );
 	ATypeHandler();
 	ATypeHandler ( const ATypeHandler& );
-	virtual CMapObject *create ( QString );
+	virtual Constructible *create ( QString );
 };
 
 class CTypeHandler : public ATypeHandler {
@@ -18,7 +18,7 @@ class CTypeHandler : public ATypeHandler {
 public:
 	CTypeHandler();
 	CTypeHandler ( const CTypeHandler& );
-	virtual CMapObject *create ( QString name );
+	virtual Constructible *create ( QString name ) override;
 };
 
 class PyTypeHandler : public ATypeHandler {
@@ -26,5 +26,5 @@ class PyTypeHandler : public ATypeHandler {
 public:
 	PyTypeHandler();
 	PyTypeHandler ( const PyTypeHandler& );
-	virtual CMapObject *create ( QString name );
+	virtual Constructible *create ( QString name ) override;
 };
