@@ -1,6 +1,6 @@
 {
   "adapter": {
-    "config": "/tmp/nouraajd-319-factory-final/verify/snapshot-kks4bwtf/observer/recovery_smoke_config.h",
+    "config": "/tmp/nouraajd-320-factory-final/verify/snapshot-0t3tjkd9/observer/recovery_smoke_config.h",
     "configSha256": "9be3f337a65cbdc9e904583c2f34d5620212a9800b2908da01bfecca6dd0f814",
     "id": "prefixed-3d",
     "mode": "game",
@@ -20,11 +20,11 @@
     },
     "source-preparation.json": {
       "path": "source-preparation.json",
-      "sha256": "9ddfb0ca3037f98651fc3df729cf6ab7a40e628b671a2ad572194ee560a3d268"
+      "sha256": "ed3e2830dfe032fa24a204b8474055157d1f399d6fdf4ff5b42692ca852e43e6"
     },
     "source-preparation.log": {
       "path": "source-preparation.log",
-      "sha256": "d41468696f85a7696bcedfd5709e366098d2f9b10a4446539a8aefea4d2a1157"
+      "sha256": "2f88dce79042adbef8a5ce4808e5d85391f58e5a11c642b9a041894aa1d85975"
     }
   },
   "build": {
@@ -32,17 +32,17 @@
       "make",
       "-j2"
     ],
-    "log": "/tmp/nouraajd-319-factory-final/verify/snapshot-kks4bwtf/build.log",
+    "log": "/tmp/nouraajd-320-factory-final/verify/snapshot-0t3tjkd9/build.log",
     "returnCode": 0,
-    "seconds": 93.364,
+    "seconds": 90.896,
     "timedOut": false
   },
   "configure": {
     "command": [
       "qmake",
-      "/tmp/nouraajd-319-factory-final/verify/snapshot-kks4bwtf/source/game.pro",
+      "/tmp/nouraajd-320-factory-final/verify/snapshot-0t3tjkd9/source/game.pro",
       "-o",
-      "/tmp/nouraajd-319-factory-final/verify/snapshot-kks4bwtf/build/Makefile",
+      "/tmp/nouraajd-320-factory-final/verify/snapshot-0t3tjkd9/build/Makefile",
       "QMAKE_CC=gcc-5",
       "QMAKE_CXX=g++-5",
       "QMAKE_LINK=g++-5",
@@ -52,15 +52,15 @@
       "DESTDIR=.",
       "CONFIG-=app_bundle",
       "SOURCES+=/tmp/nouraajd-next318/recovery/smoke/game_startup.cpp",
-      "INCLUDEPATH+=/tmp/nouraajd-319-factory-final/verify/snapshot-kks4bwtf/source",
-      "INCLUDEPATH+=/tmp/nouraajd-319-factory-final/verify/snapshot-kks4bwtf/observer"
+      "INCLUDEPATH+=/tmp/nouraajd-320-factory-final/verify/snapshot-0t3tjkd9/source",
+      "INCLUDEPATH+=/tmp/nouraajd-320-factory-final/verify/snapshot-0t3tjkd9/observer"
     ],
-    "log": "/tmp/nouraajd-319-factory-final/verify/snapshot-kks4bwtf/configure.log",
+    "log": "/tmp/nouraajd-320-factory-final/verify/snapshot-0t3tjkd9/configure.log",
     "returnCode": 0,
     "seconds": 0.064,
     "timedOut": false
   },
-  "evidenceDir": "/tmp/nouraajd-319-factory-final/verify/evidence/6eb4edadb0291ceac9079f48f82a5aea4e238b513349a60c89a5bdbfad7ab365",
+  "evidenceDir": "/tmp/nouraajd-320-factory-final/verify/evidence/59eaa4207cd3da3de8f1320f9e69ba92e9436622247ed6f4931d7ffbf4e4f014",
   "fileLookup": {
     "command": [
       "g++-5",
@@ -69,20 +69,20 @@
       "-O2",
       "-std=c++11",
       "-o",
-      "/tmp/nouraajd-319-factory-final/verify/snapshot-kks4bwtf/observer/libwindowspaths.so",
+      "/tmp/nouraajd-320-factory-final/verify/snapshot-0t3tjkd9/observer/libwindowspaths.so",
       "/tmp/nouraajd-next318/recovery/smoke/windows_paths.cpp",
       "-ldl"
     ],
-    "log": "/tmp/nouraajd-319-factory-final/verify/snapshot-kks4bwtf/file-lookup.log",
+    "log": "/tmp/nouraajd-320-factory-final/verify/snapshot-0t3tjkd9/file-lookup.log",
     "returnCode": 0,
-    "seconds": 0.266,
+    "seconds": 0.268,
     "semantics": "Windows-style case-insensitive file lookup for the game process",
     "timedOut": false
   },
-  "fingerprint": "6eb4edadb0291ceac9079f48f82a5aea4e238b513349a60c89a5bdbfad7ab365",
+  "fingerprint": "59eaa4207cd3da3de8f1320f9e69ba92e9436622247ed6f4931d7ffbf4e4f014",
   "libraryAliases": {
     "aliases": {},
-    "directory": "/tmp/nouraajd-319-factory-final/verify/snapshot-kks4bwtf/observer/library-aliases"
+    "directory": "/tmp/nouraajd-320-factory-final/verify/snapshot-0t3tjkd9/observer/library-aliases"
   },
   "project": "game.pro",
   "recipe": {
@@ -121,7 +121,7 @@
   },
   "restoration": {
     "excluded": [],
-    "outputDir": "/tmp/nouraajd-319-factory-final/verify/snapshot-kks4bwtf/source",
+    "outputDir": "/tmp/nouraajd-320-factory-final/verify/snapshot-0t3tjkd9/source",
     "restored": [
       {
         "markerPath": "CCreature.cpp.REMOVED.git-id",
@@ -174,7 +174,7 @@
       {
         "markerPath": "CMapObject.cpp.REMOVED.git-id",
         "method": "reconstruction",
-        "originalBlob": "8e677d7fe72f13874a8e54d977438dd2d05a330b",
+        "originalBlob": "0deba35859882a256e7820ff49fa5958dde590ca",
         "path": "CMapObject.cpp",
         "provenance": "content reconstruction of the BFG-removed original; Carry map-object methods through the surviving turn and factory interfaces.",
         "replacementBlob": "2ebc1234d02e50cb9a311f0c1fde25ac0506df01"
@@ -182,15 +182,15 @@
       {
         "markerPath": "CMapObject.h.REMOVED.git-id",
         "method": "reconstruction",
-        "originalBlob": "f377a56b6511ff42ef78f7a359868ca27875b977",
+        "originalBlob": "73059270e3a7cdb65f7b9e9a98876277a7cbe162",
         "path": "CMapObject.h",
         "provenance": "content reconstruction of the BFG-removed original; Reconstruct the common Constructible interface from the tile declarations and factory callers.",
-        "replacementBlob": "ed402c77d0c792140bc0fac613466ceaee7d657d"
+        "replacementBlob": "5c736bb4e4c1f318274a930e88ddcfb30b47f29c"
       },
       {
         "markerPath": "CObjectHandler.cpp.REMOVED.git-id",
         "method": "reconstruction",
-        "originalBlob": "af3484f5ef03b9774dfc272b3248107cfa7e235b",
+        "originalBlob": "60da308ca570f72a80f9544fe3e2d4a43f7cb13a",
         "path": "CObjectHandler.cpp",
         "provenance": "content reconstruction of the BFG-removed original; Configure QObject properties on objects from the surviving Constructible factory.",
         "replacementBlob": "2925395736bfa16aff5ca35626398037787610ab"
@@ -214,9 +214,9 @@
       {
         "markerPath": "GameScript.cpp.REMOVED.git-id",
         "method": "reconstruction",
-        "originalBlob": "f6906d606c479c52ef1c841ddd2e2e0ea6c73de6",
+        "originalBlob": "ec296ca0b74bc548ecf35b902eea622a11b308fa",
         "path": "GameScript.cpp",
-        "provenance": "Bind the common factory interface for the separately inherited tile and map classes.",
+        "provenance": "content reconstruction of the BFG-removed original; Expose turn callbacks and register the shared object and tile factory interface where present.",
         "replacementBlob": "73598bde14eca70e6d0cb841703ecb9ba5ed1c7a"
       },
       {
@@ -343,7 +343,7 @@
         "method": "reconstruction",
         "originalBlob": "1b3aa2bf2cce5cd06a478f1fbf4367a4c2002143",
         "path": "boost/python/object/inheritance.cpp",
-        "provenance": "unverified donor reconstruction; 4b3902d44f874a1fae86054d7240a2af76901bb4:boost/python/object/inheritance.cpp; headerMatch=0; apiOverlap=0/10000; distance=45",
+        "provenance": "unverified donor reconstruction; 4b3902d44f874a1fae86054d7240a2af76901bb4:boost/python/object/inheritance.cpp; headerMatch=0; apiOverlap=0/10000; distance=44",
         "replacementBlob": "70feba5fcd280139933f29b9179b0ed00eed75f8"
       },
       {
@@ -359,7 +359,7 @@
         "method": "reconstruction",
         "originalBlob": "0d39c3d1478c19a891acce327ddf81990724ace2",
         "path": "boost/python/object_operators.cpp",
-        "provenance": "unverified donor reconstruction; 70d0d690df45877698cb094405e25be00a8139fd:boost/python/object_operators.cpp; headerMatch=0; apiOverlap=0/10000; distance=37",
+        "provenance": "unverified donor reconstruction; 70d0d690df45877698cb094405e25be00a8139fd:boost/python/object_operators.cpp; headerMatch=0; apiOverlap=0/10000; distance=36",
         "replacementBlob": "43d2109b7fbee7a405e4e445aff17714078b1631"
       },
       {
@@ -375,7 +375,7 @@
         "method": "reconstruction",
         "originalBlob": "0f46652b2ab25b823980b32afec490a51470fa02",
         "path": "boost/python/str.cpp",
-        "provenance": "unverified donor reconstruction; 4b3902d44f874a1fae86054d7240a2af76901bb4:boost/python/str.cpp; headerMatch=0; apiOverlap=0/10000; distance=45",
+        "provenance": "unverified donor reconstruction; 4b3902d44f874a1fae86054d7240a2af76901bb4:boost/python/str.cpp; headerMatch=0; apiOverlap=0/10000; distance=44",
         "replacementBlob": "37642738eae0bee1bbcf50cbc12d1c57e227602f"
       },
       {
@@ -391,7 +391,7 @@
         "method": "reconstruction",
         "originalBlob": "2f79f3a7b4e72640e404b1c2d442208127eb6557",
         "path": "config/monsters.json",
-        "provenance": "unverified donor reconstruction; 55e6516eb91b739e899df1ef8d72116da44fec49:config/monsters.json; headerMatch=0; apiOverlap=0/10000; distance=46",
+        "provenance": "unverified donor reconstruction; 55e6516eb91b739e899df1ef8d72116da44fec49:config/monsters.json; headerMatch=0; apiOverlap=0/10000; distance=45",
         "replacementBlob": "b6b5708a1c0683d8ca6d9c395ee31e4742bdd39e"
       },
       {
@@ -851,9 +851,9 @@
         "replacementBlob": "f5d0b39a0cdddb91a31a537052b7d8d31a4aa79f"
       }
     ],
-    "restoredFilesFingerprint": "56c8e03a097ff5d6a349a9828f686d226234fb19119b45143f6ec7f568342c45",
-    "sourceCommit": "f6b016214b3367ba302c2a6ed47face5d27f3c13",
-    "sourceTree": "4d869a17f3b4e14d58e28ff4c2acfe7834edb232",
+    "restoredFilesFingerprint": "0a9109fcc67efc2361680f18fcd1d3d6d86344b2b03e721048ae48214bc6feba",
+    "sourceCommit": "a64e71fc174103f81e7f3ef44ab8a79a312ea18b",
+    "sourceTree": "41c22ff791d77441044e5d0f5f87cecdf582901c",
     "status": "complete",
     "submodules": [],
     "unresolved": []
@@ -864,12 +864,12 @@
       "-a",
       "--server-args=-screen 0 1920x1080x24",
       "env",
-      "LD_PRELOAD=/tmp/nouraajd-319-factory-final/verify/snapshot-kks4bwtf/observer/libwindowspaths.so",
-      "/tmp/nouraajd-319-factory-final/verify/snapshot-kks4bwtf/build/RecoveryGame"
+      "LD_PRELOAD=/tmp/nouraajd-320-factory-final/verify/snapshot-0t3tjkd9/observer/libwindowspaths.so",
+      "/tmp/nouraajd-320-factory-final/verify/snapshot-0t3tjkd9/build/RecoveryGame"
     ],
-    "log": "/tmp/nouraajd-319-factory-final/verify/snapshot-kks4bwtf/smoke/startup.log",
+    "log": "/tmp/nouraajd-320-factory-final/verify/snapshot-0t3tjkd9/smoke/startup.log",
     "returnCode": 0,
-    "seconds": 0.966,
+    "seconds": 1.016,
     "startup": {
       "checks": {
         "eventLoop": true,
@@ -891,9 +891,9 @@
     "status": "success",
     "timedOut": false
   },
-  "sourceCommit": "f6b016214b3367ba302c2a6ed47face5d27f3c13",
+  "sourceCommit": "a64e71fc174103f81e7f3ef44ab8a79a312ea18b",
   "sourceCommits": [
-    "f6b016214b3367ba302c2a6ed47face5d27f3c13"
+    "a64e71fc174103f81e7f3ef44ab8a79a312ea18b"
   ],
   "sourcePreparation": {
     "identity": {
@@ -908,29 +908,25 @@
             "3c1d43ba889c7cfbc7620956f6600630f9e29457e89dbb318c15dc7565b3e1ec",
             "e59eb1034b607134ee90d56c0af643fc7dafb2d34b11fb7c1188cf3c7a8b19da"
           ],
-          "CObjectHandler.h": [
-            "92c87a9cb388bf4b3a1e5172d9a871558870fd5ae73e3ea921c2b7179fd41438",
-            "57294ba4bbb600ba2db20780a4b9ab784d6e54fad2edb6c3b42706c5645ef7d0"
-          ],
           "CScriptEngine.cpp": [
             "38fe619e7738ddf7453d15f4ad14f26c97cfbb1bfc0bd181bc8f35567e8e8f00",
             "9a032d901ac3ab7357f07ca279cf324934bec551639f63b7cc407acbccf12a8f"
           ],
           "CTile.cpp": [
-            "4fedbe248aa7cb00b5a2a78c6471f813013ee9e4d8de437c0742677a9f0ec9c1",
-            "e2c6116c47141e8783edf9abe2119ab8b4e86adf87afe8c8094e28a76c5dfa83"
+            "6ad0aa23fbb69e4be79ea407bb57c20d95d26970861c0c4b3b7f5cfbd7ffdb71",
+            "6f72cdd422245b7c1e6395191f3c30dfb496ef56654e5b2300d83c39fa6d9400"
           ],
           "CTile.h": [
-            "2987720e206e6ab9c56817b78a06f0689a4386c134beaa8cf749c1a00507508a",
-            "4d68da40372e472b73f623c966569d5253814c553e7be99182132d871b76c8e0"
+            "35d8654e774ddafc1e60f34b2a5e1ffd9b3df53fc153eed20224e11d06606683",
+            "af7138a1ea192a2e1b7f487b6dee93cffbe0f914d748aee79ecc4629d7b75e3d"
           ],
           "CTypeHandler.cpp": [
-            "b35e7e42020acd1997d2dff9b300bd653a318792dec0390bdb47933bf557bca9",
-            "c1a3e23c65ba3b7bae3b12bfdbd1feec1a02765e8f6aad68e22838741b1942a6"
+            "e3eb28c3ea1ddf149f03e041d405a616de2ef738347a472443c3f6decc0d7aba",
+            "d31d3481e6a37113f7a810942caa069714ea6295c460dc099e986bcd5713d356"
           ]
         },
         "replaySha256": "3b2c67a4d1890cc1e1bed06aadfde89cd12e3ff4e8ab039a6502c841e4b60dc6",
-        "sourceCommit": "f6b016214b3367ba302c2a6ed47face5d27f3c13"
+        "sourceCommit": "a64e71fc174103f81e7f3ef44ab8a79a312ea18b"
       },
       "outputs": [
         {
@@ -960,18 +956,6 @@
         {
           "after": {
             "kind": "file",
-            "sha256": "57294ba4bbb600ba2db20780a4b9ab784d6e54fad2edb6c3b42706c5645ef7d0"
-          },
-          "before": {
-            "kind": "file",
-            "sha256": "92c87a9cb388bf4b3a1e5172d9a871558870fd5ae73e3ea921c2b7179fd41438"
-          },
-          "path": "CObjectHandler.h",
-          "purpose": "Preserve map and Python lifetimes and repair the split tile factory interface"
-        },
-        {
-          "after": {
-            "kind": "file",
             "sha256": "9a032d901ac3ab7357f07ca279cf324934bec551639f63b7cc407acbccf12a8f"
           },
           "before": {
@@ -984,11 +968,11 @@
         {
           "after": {
             "kind": "file",
-            "sha256": "e2c6116c47141e8783edf9abe2119ab8b4e86adf87afe8c8094e28a76c5dfa83"
+            "sha256": "6f72cdd422245b7c1e6395191f3c30dfb496ef56654e5b2300d83c39fa6d9400"
           },
           "before": {
             "kind": "file",
-            "sha256": "4fedbe248aa7cb00b5a2a78c6471f813013ee9e4d8de437c0742677a9f0ec9c1"
+            "sha256": "6ad0aa23fbb69e4be79ea407bb57c20d95d26970861c0c4b3b7f5cfbd7ffdb71"
           },
           "path": "CTile.cpp",
           "purpose": "Preserve map and Python lifetimes and repair the split tile factory interface"
@@ -996,11 +980,11 @@
         {
           "after": {
             "kind": "file",
-            "sha256": "4d68da40372e472b73f623c966569d5253814c553e7be99182132d871b76c8e0"
+            "sha256": "af7138a1ea192a2e1b7f487b6dee93cffbe0f914d748aee79ecc4629d7b75e3d"
           },
           "before": {
             "kind": "file",
-            "sha256": "2987720e206e6ab9c56817b78a06f0689a4386c134beaa8cf749c1a00507508a"
+            "sha256": "35d8654e774ddafc1e60f34b2a5e1ffd9b3df53fc153eed20224e11d06606683"
           },
           "path": "CTile.h",
           "purpose": "Preserve map and Python lifetimes and repair the split tile factory interface"
@@ -1008,11 +992,11 @@
         {
           "after": {
             "kind": "file",
-            "sha256": "c1a3e23c65ba3b7bae3b12bfdbd1feec1a02765e8f6aad68e22838741b1942a6"
+            "sha256": "d31d3481e6a37113f7a810942caa069714ea6295c460dc099e986bcd5713d356"
           },
           "before": {
             "kind": "file",
-            "sha256": "b35e7e42020acd1997d2dff9b300bd653a318792dec0390bdb47933bf557bca9"
+            "sha256": "e3eb28c3ea1ddf149f03e041d405a616de2ef738347a472443c3f6decc0d7aba"
           },
           "path": "CTypeHandler.cpp",
           "purpose": "Preserve map and Python lifetimes and repair the split tile factory interface"
@@ -1047,18 +1031,6 @@
       {
         "after": {
           "kind": "file",
-          "sha256": "57294ba4bbb600ba2db20780a4b9ab784d6e54fad2edb6c3b42706c5645ef7d0"
-        },
-        "before": {
-          "kind": "file",
-          "sha256": "92c87a9cb388bf4b3a1e5172d9a871558870fd5ae73e3ea921c2b7179fd41438"
-        },
-        "path": "CObjectHandler.h",
-        "purpose": "Preserve map and Python lifetimes and repair the split tile factory interface"
-      },
-      {
-        "after": {
-          "kind": "file",
           "sha256": "9a032d901ac3ab7357f07ca279cf324934bec551639f63b7cc407acbccf12a8f"
         },
         "before": {
@@ -1071,11 +1043,11 @@
       {
         "after": {
           "kind": "file",
-          "sha256": "e2c6116c47141e8783edf9abe2119ab8b4e86adf87afe8c8094e28a76c5dfa83"
+          "sha256": "6f72cdd422245b7c1e6395191f3c30dfb496ef56654e5b2300d83c39fa6d9400"
         },
         "before": {
           "kind": "file",
-          "sha256": "4fedbe248aa7cb00b5a2a78c6471f813013ee9e4d8de437c0742677a9f0ec9c1"
+          "sha256": "6ad0aa23fbb69e4be79ea407bb57c20d95d26970861c0c4b3b7f5cfbd7ffdb71"
         },
         "path": "CTile.cpp",
         "purpose": "Preserve map and Python lifetimes and repair the split tile factory interface"
@@ -1083,11 +1055,11 @@
       {
         "after": {
           "kind": "file",
-          "sha256": "4d68da40372e472b73f623c966569d5253814c553e7be99182132d871b76c8e0"
+          "sha256": "af7138a1ea192a2e1b7f487b6dee93cffbe0f914d748aee79ecc4629d7b75e3d"
         },
         "before": {
           "kind": "file",
-          "sha256": "2987720e206e6ab9c56817b78a06f0689a4386c134beaa8cf749c1a00507508a"
+          "sha256": "35d8654e774ddafc1e60f34b2a5e1ffd9b3df53fc153eed20224e11d06606683"
         },
         "path": "CTile.h",
         "purpose": "Preserve map and Python lifetimes and repair the split tile factory interface"
@@ -1095,11 +1067,11 @@
       {
         "after": {
           "kind": "file",
-          "sha256": "c1a3e23c65ba3b7bae3b12bfdbd1feec1a02765e8f6aad68e22838741b1942a6"
+          "sha256": "d31d3481e6a37113f7a810942caa069714ea6295c460dc099e986bcd5713d356"
         },
         "before": {
           "kind": "file",
-          "sha256": "b35e7e42020acd1997d2dff9b300bd653a318792dec0390bdb47933bf557bca9"
+          "sha256": "e3eb28c3ea1ddf149f03e041d405a616de2ef738347a472443c3f6decc0d7aba"
         },
         "path": "CTypeHandler.cpp",
         "purpose": "Preserve map and Python lifetimes and repair the split tile factory interface"
@@ -1112,14 +1084,14 @@
           "history_source_prep.py",
           "prepare-object-factories"
         ],
-        "log": "/tmp/nouraajd-319-factory-final/verify/snapshot-kks4bwtf/preparation/object-factories.log",
+        "log": "/tmp/nouraajd-320-factory-final/verify/snapshot-0t3tjkd9/preparation/object-factories.log",
         "name": "objectFactories",
         "returnCode": 0,
         "timedOut": false
       }
     ]
   },
-  "sourceTree": "4d869a17f3b4e14d58e28ff4c2acfe7834edb232",
+  "sourceTree": "41c22ff791d77441044e5d0f5f87cecdf582901c",
   "startupMode": "game",
   "startupSelection": {
     "mode": "game"
@@ -1140,5 +1112,5 @@
     }
   },
   "toolchainImage": "sha256:d3f59ec1d12297ee8091fbea687aa619275fc92b3fd426560e0a1fa40715afc8",
-  "verifiedFromCommit": "f6b016214b3367ba302c2a6ed47face5d27f3c13"
+  "verifiedFromCommit": "a64e71fc174103f81e7f3ef44ab8a79a312ea18b"
 }
