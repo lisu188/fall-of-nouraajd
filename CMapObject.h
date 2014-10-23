@@ -5,6 +5,15 @@ class CGameEvent;
 class CMap;
 class CCreature;
 
+class Constructible {
+public:
+  virtual ~Constructible() = default;
+  virtual void setObjectName(const QString &name) = 0;
+  virtual void setObjectType(const QString &type) = 0;
+  virtual QString getObjectName() const = 0;
+  virtual QString getObjectType() const = 0;
+};
+
 class Visitable {
 public:
 	virtual void onEnter ( CGameEvent * ) =0;
@@ -27,7 +36,7 @@ class Usable {
 	virtual void onUse ( CCreature *creature ) =0;
 };
 
-class CMapObject : public CAnimatedObject {
+class CMapObject : public CAnimatedObject, public Constructible {
 	friend class CObjectHandler;
 	Q_OBJECT
 	Q_PROPERTY ( QString objectType READ getObjectType WRITE setObjectType USER true )
@@ -50,7 +59,9 @@ public:
 	void setVisible ( bool vis );
 	Coords getCoords();
 	void setCoords ( Coords coords );
-	QString getObjectType() const;
+	QString getObjectType() const override;
+    QString getObjectName() const override { return QObject::objectName(); }
+    void setObjectName(const QString &name) override { QObject::setObjectName(name); }
 	void setObjectType ( const QString &value );
 	QString getTooltip() const;
 	void setTooltip ( const QString &value );

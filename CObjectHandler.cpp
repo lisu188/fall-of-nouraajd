@@ -5,6 +5,7 @@
 #include "CMap.h"
 #include "CResourcesHandler.h"
 #include "CObjectHandler.h"
+#include "CTile.h"
 #include "Stats.h"
 #include <QDebug>
 #include <QDirIterator>
@@ -30,7 +31,7 @@ CObjectHandler::CObjectHandler(CMap *map) : QObject(map), map(map) {
   }
 }
 
-CMapObject *CObjectHandler::_createMapObject(QString type) const {
+Constructible *CObjectHandler::_createObject(QString type) const {
   if (!objectConfig.contains(type)) {
     qFatal("No object configuration for %s", qPrintable(type));
   }
@@ -62,16 +63,18 @@ CMapObject *CObjectHandler::_createMapObject(QString type) const {
   if (!type_handler) {
     qFatal("Unknown type handler %s", qPrintable(handler_name));
   }
-  CMapObject *object = type_handler->create(class_name);
+  Constructible *object = type_handler->create(class_name);
   if (!object) {
     qFatal("Cannot create object %s (%s)", qPrintable(type),
            qPrintable(class_name));
   }
-  object->map = map;
+  auto *qtObject = dynamic_cast<QObject *>(object);
+  if (!qtObject) qFatal("Configured type lacks QObject properties");
+  if (auto *mapObject = dynamic_cast<CMapObject *>(object)) mapObject->map = map;
   object->setObjectType(type);
   object->setObjectName(
       QString::number(reinterpret_cast<quintptr>(object), 16));
-  object->QObject::setParent(const_cast<CObjectHandler *>(this));
+  qtObject->setParent(const_cast<CObjectHandler *>(this));
   QJsonObject properties =
       config.contains("properties") ? config["properties"].toObject() : config;
   properties.remove("class");
@@ -80,7 +83,7 @@ CMapObject *CObjectHandler::_createMapObject(QString type) const {
     properties["animation"] = properties.take("anim");
   }
   for (auto it = properties.begin(); it != properties.end(); ++it) {
-    setProperty(object, it.key(), it.value());
+    setProperty(qtObject, it.key(), it.value());
   }
   if (CCreature *creature = dynamic_cast<CCreature *>(object)) {
     QJsonObject stats = properties["stats"].toObject();
