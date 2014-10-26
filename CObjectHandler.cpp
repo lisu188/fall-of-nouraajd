@@ -31,7 +31,7 @@ CObjectHandler::CObjectHandler(CMap *map) : QObject(map), map(map) {
   }
 }
 
-Constructible *CObjectHandler::_createObject(QString type) const {
+CGameObject *CObjectHandler::_createObject(QString type) const {
   if (!objectConfig.contains(type)) {
     qFatal("No object configuration for %s", qPrintable(type));
   }
@@ -63,14 +63,14 @@ Constructible *CObjectHandler::_createObject(QString type) const {
   if (!type_handler) {
     qFatal("Unknown type handler %s", qPrintable(handler_name));
   }
-  Constructible *object = type_handler->create(class_name);
+  CGameObject *object = type_handler->create(class_name);
   if (!object) {
     qFatal("Cannot create object %s (%s)", qPrintable(type),
            qPrintable(class_name));
   }
-  auto *qtObject = dynamic_cast<QObject *>(object);
-  if (!qtObject) qFatal("Configured type lacks QObject properties");
+  QObject *qtObject = object;
   if (auto *mapObject = dynamic_cast<CMapObject *>(object)) mapObject->map = map;
+  else object->setMap(map);
   object->setObjectType(type);
   object->setObjectName(
       QString::number(reinterpret_cast<quintptr>(object), 16));

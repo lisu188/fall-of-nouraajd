@@ -33,12 +33,12 @@ CTypeHandler::CTypeHandler ( const CTypeHandler & ) {
 
 }
 
-Constructible *CTypeHandler::create ( QString name ) {
-	Constructible *object = nullptr;
+CGameObject *CTypeHandler::create ( QString name ) {
+	CGameObject *object = nullptr;
 	int typeId = QMetaType::type ( name.toStdString().c_str() );
 	void *raw=QMetaType::create ( typeId );
-	QObject * rawQobject=static_cast<QObject*> ( raw );
-	object = dynamic_cast<Constructible*> ( rawQobject );
+	CGameObject * rawQobject=static_cast<CGameObject*> ( raw );
+	object = dynamic_cast<CGameObject*> ( rawQobject );
 	return  object ;
 }
 
@@ -49,8 +49,8 @@ PyTypeHandler::PyTypeHandler() {
 
 PyTypeHandler::PyTypeHandler ( const PyTypeHandler & ) {}
 
-Constructible *PyTypeHandler::create ( QString name ) {
-	return CScriptEngine::getInstance()->createObject<Constructible*> ( name );
+CGameObject *PyTypeHandler::create ( QString name ) {
+	return CScriptEngine::getInstance()->createObject<CGameObject*> ( name );
 }
 
 

@@ -5,17 +5,6 @@ class CGameEvent;
 class CMap;
 class CCreature;
 
-class Constructible {
-public:
-  virtual ~Constructible() = default;
-  virtual CMap *getMap() = 0;
-  virtual void setMap(CMap *map) = 0;
-  virtual void setObjectName(const QString &name) = 0;
-  virtual void setObjectType(const QString &type) = 0;
-  virtual QString getObjectName() const = 0;
-  virtual QString getObjectType() const = 0;
-};
-
 class Visitable {
 public:
 	virtual void onEnter ( CGameEvent * ) =0;
@@ -30,47 +19,23 @@ public:
 };
 
 class Wearable {
-	virtual void onEquip ( CCreature *creature ) =0;
-	virtual void onUnequip ( CCreature *creature ) =0;
+	virtual void onEquip ( CCreature * ) =0;
+	virtual void onUnequip ( CCreature * ) =0;
 };
 
 class Usable {
-	virtual void onUse ( CCreature *creature ) =0;
+	virtual void onUse ( CCreature * ) =0;
 };
 
-class CMapObject : public CAnimatedObject, public Constructible {
-	friend class CObjectHandler;
+class CGameObject : public QObject {
 	Q_OBJECT
 	Q_PROPERTY ( QString objectType READ getObjectType WRITE setObjectType USER true )
-	Q_PROPERTY ( QString tooltip READ getTooltip WRITE setTooltip USER true )
 public:
-	CMapObject();
-	virtual ~CMapObject();
-	int posx=0, posy=0, posz=0;
-	int getPosX() const;
-	int getPosY() const;
-	int getPosZ() const;
+	QString getObjectType() const ;
+	void setObjectType ( const QString &value ) ;
 
-	virtual void onTurn ( CGameEvent * );
-
-	virtual void onCreate ( CGameEvent * );
-	virtual void onDestroy ( CGameEvent * );
-
-	void setMap ( CMap *map );
-	CMap *getMap();
-	void setVisible ( bool vis );
-	Coords getCoords();
-	void setCoords ( Coords coords );
-	QString getObjectType() const override;
-    QString getObjectName() const override { return QObject::objectName(); }
-    void setObjectName(const QString &name) override { QObject::setObjectName(name); }
-	void setObjectType ( const QString &value );
-	QString getTooltip() const;
-	void setTooltip ( const QString &value );
-	virtual void move ( int x, int y , int z );
-	void move ( Coords coords );
-	void moveTo ( int x, int y, int z );
-	void moveTo ( Coords coords );
+	virtual CMap* getMap() =0;
+	virtual void setMap ( CMap *map ) =0;
 
 	Q_INVOKABLE void setProperty ( QString name,QVariant property ) {
 		QByteArray byteArray = name.toUtf8();
@@ -104,6 +69,40 @@ public:
 		this->setNumericProperty ( name,this->getNumericProperty ( name )+value );
 	}
 
+	virtual ~CGameObject() =0;
+private:
+	QString objectType;
+};
+
+class CMapObject : public CGameObject,public CAnimatedObject {
+	friend class CObjectHandler;
+	Q_OBJECT
+	Q_PROPERTY ( QString tooltip READ getTooltip WRITE setTooltip USER true )
+public:
+	CMapObject();
+	virtual ~CMapObject();
+	int posx=0, posy=0, posz=0;
+	int getPosX() const;
+	int getPosY() const;
+	int getPosZ() const;
+
+	virtual void onTurn ( CGameEvent * );
+
+	virtual void onCreate ( CGameEvent * );
+	virtual void onDestroy ( CGameEvent * );
+
+	void setMap ( CMap *map );
+	CMap *getMap();
+	void setVisible ( bool vis );
+	Coords getCoords();
+	void setCoords ( Coords coords );
+	QString getTooltip() const;
+	void setTooltip ( const QString &value );
+	virtual void move ( int x, int y , int z );
+	void move ( Coords coords );
+	void moveTo ( int x, int y, int z );
+	void moveTo ( Coords coords );
+
 protected:
 	QString tooltip;
 	virtual void hoverEnterEvent ( QGraphicsSceneHoverEvent *event );
@@ -111,7 +110,6 @@ protected:
 	//QGraphicsSimpleTextItem statsView;
 private:
 	CMap *map=nullptr;
-	QString objectType;
 };
 
 class CEvent : public CMapObject,public Visitable {
