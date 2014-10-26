@@ -20,7 +20,7 @@ ATypeHandler::ATypeHandler ( const ATypeHandler & ) {
 
 }
 
-Constructible *ATypeHandler::create ( QString ) {
+CGameObject *ATypeHandler::create ( QString ) {
 	return nullptr;
 }
 

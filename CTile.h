@@ -8,7 +8,7 @@
 
 class CGameScene;
 class CCreature;
-class CTile : public CGameObject,public CAnimatedObject {
+class CTile : public CGameObject {
 	Q_OBJECT
 	Q_PROPERTY ( bool canStep READ canStep WRITE setCanStep USER true )
 public:
@@ -23,13 +23,8 @@ public:
 	void addToScene ( CGameScene *scene );
 	void removeFromScene ( CGameScene *scene );
 
-	virtual CMap *getMap() override;
-	virtual void setMap ( CMap *value ) override;
-
 	virtual ~CTile();
-
 private:
-	CMap * map=0;
 	bool step=false;
 	int posx=0,posy=0,posz=0;
 	void setXYZ ( int x, int y, int z );
