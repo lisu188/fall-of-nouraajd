@@ -8,7 +8,7 @@ class QGraphicsSceneMouseEvent;
 class Stats;
 class CEffect;
 
-class CInteraction : public CMapObject {
+class CInteraction : public CGameObject,public CAnimatedObject {
 	Q_OBJECT
 	Q_PROPERTY ( int manaCost READ getManaCost  WRITE setManaCost USER true )
 	Q_PROPERTY ( QString effect READ getEffect WRITE setEffect USER true )
@@ -35,7 +35,7 @@ private:
 };
 
 
-class CEffect :public CMapObject {
+class CEffect :public CGameObject {
 	Q_OBJECT
 	Q_PROPERTY ( int duration READ getDuration WRITE setDuration )
 	Q_PROPERTY ( bool buff READ isBuff WRITE setBuff )
