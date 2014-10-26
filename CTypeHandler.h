@@ -3,7 +3,7 @@
 #include <QJsonObject>
 #include <QList>
 #include "CReflection.h"
-class Constructible;
+class CGameObject;
 class ATypeHandler : public QObject {
 	Q_OBJECT
 public:

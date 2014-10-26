@@ -1,6 +1,6 @@
 {
   "adapter": {
-    "config": "/tmp/nouraajd-322-gameobjects-final/verify/snapshot-fp_i5r6f/observer/recovery_smoke_config.h",
+    "config": "/tmp/nouraajd-323-gameobjects-final/verify/snapshot-ynctjdtl/observer/recovery_smoke_config.h",
     "configSha256": "9be3f337a65cbdc9e904583c2f34d5620212a9800b2908da01bfecca6dd0f814",
     "id": "prefixed-3d",
     "mode": "game",
@@ -20,11 +20,11 @@
     },
     "source-preparation.json": {
       "path": "source-preparation.json",
-      "sha256": "683851b4970dac2b7c2bcc0ead1f42cbe86d9c1253a7519b2be02a6df7f329e2"
+      "sha256": "c67f6f07a2995d515a9725329a24caa573899d077910d4ead54aee56581315e1"
     },
     "source-preparation.log": {
       "path": "source-preparation.log",
-      "sha256": "91272eaded30edf293bf6ca4a11e6142ebd8b69a221c10a7598943124ddc92fc"
+      "sha256": "edc2b186fc8ffc776954d29dac5d9497dfaeb561ec615b7e05bac1bb22c7bce4"
     }
   },
   "build": {
@@ -32,17 +32,17 @@
       "make",
       "-j2"
     ],
-    "log": "/tmp/nouraajd-322-gameobjects-final/verify/snapshot-fp_i5r6f/build.log",
+    "log": "/tmp/nouraajd-323-gameobjects-final/verify/snapshot-ynctjdtl/build.log",
     "returnCode": 0,
-    "seconds": 119.21,
+    "seconds": 120.326,
     "timedOut": false
   },
   "configure": {
     "command": [
       "qmake",
-      "/tmp/nouraajd-322-gameobjects-final/verify/snapshot-fp_i5r6f/source/game.pro",
+      "/tmp/nouraajd-323-gameobjects-final/verify/snapshot-ynctjdtl/source/game.pro",
       "-o",
-      "/tmp/nouraajd-322-gameobjects-final/verify/snapshot-fp_i5r6f/build/Makefile",
+      "/tmp/nouraajd-323-gameobjects-final/verify/snapshot-ynctjdtl/build/Makefile",
       "QMAKE_CC=gcc-5",
       "QMAKE_CXX=g++-5",
       "QMAKE_LINK=g++-5",
@@ -52,15 +52,15 @@
       "DESTDIR=.",
       "CONFIG-=app_bundle",
       "SOURCES+=/tmp/nouraajd-next322/recovery/smoke/game_startup.cpp",
-      "INCLUDEPATH+=/tmp/nouraajd-322-gameobjects-final/verify/snapshot-fp_i5r6f/source",
-      "INCLUDEPATH+=/tmp/nouraajd-322-gameobjects-final/verify/snapshot-fp_i5r6f/observer"
+      "INCLUDEPATH+=/tmp/nouraajd-323-gameobjects-final/verify/snapshot-ynctjdtl/source",
+      "INCLUDEPATH+=/tmp/nouraajd-323-gameobjects-final/verify/snapshot-ynctjdtl/observer"
     ],
-    "log": "/tmp/nouraajd-322-gameobjects-final/verify/snapshot-fp_i5r6f/configure.log",
+    "log": "/tmp/nouraajd-323-gameobjects-final/verify/snapshot-ynctjdtl/configure.log",
     "returnCode": 0,
-    "seconds": 0.167,
+    "seconds": 0.128,
     "timedOut": false
   },
-  "evidenceDir": "/tmp/nouraajd-322-gameobjects-final/verify/evidence/3ab9a8b05dbc46c3d688e3ae065da73efdbd168ccfe0887d11f2b2a81b55a6c7",
+  "evidenceDir": "/tmp/nouraajd-323-gameobjects-final/verify/evidence/bdc70450ee3ecb8ca621d90fc93c9d9129635d7fb720cdeaa8aacb200ee5be8f",
   "fileLookup": {
     "command": [
       "g++-5",
@@ -69,20 +69,20 @@
       "-O2",
       "-std=c++11",
       "-o",
-      "/tmp/nouraajd-322-gameobjects-final/verify/snapshot-fp_i5r6f/observer/libwindowspaths.so",
+      "/tmp/nouraajd-323-gameobjects-final/verify/snapshot-ynctjdtl/observer/libwindowspaths.so",
       "/tmp/nouraajd-next322/recovery/smoke/windows_paths.cpp",
       "-ldl"
     ],
-    "log": "/tmp/nouraajd-322-gameobjects-final/verify/snapshot-fp_i5r6f/file-lookup.log",
+    "log": "/tmp/nouraajd-323-gameobjects-final/verify/snapshot-ynctjdtl/file-lookup.log",
     "returnCode": 0,
-    "seconds": 0.272,
+    "seconds": 0.317,
     "semantics": "Windows-style case-insensitive file lookup for the game process",
     "timedOut": false
   },
-  "fingerprint": "3ab9a8b05dbc46c3d688e3ae065da73efdbd168ccfe0887d11f2b2a81b55a6c7",
+  "fingerprint": "bdc70450ee3ecb8ca621d90fc93c9d9129635d7fb720cdeaa8aacb200ee5be8f",
   "libraryAliases": {
     "aliases": {},
-    "directory": "/tmp/nouraajd-322-gameobjects-final/verify/snapshot-fp_i5r6f/observer/library-aliases"
+    "directory": "/tmp/nouraajd-323-gameobjects-final/verify/snapshot-ynctjdtl/observer/library-aliases"
   },
   "project": "game.pro",
   "recipe": {
@@ -121,7 +121,7 @@
   },
   "restoration": {
     "excluded": [],
-    "outputDir": "/tmp/nouraajd-322-gameobjects-final/verify/snapshot-fp_i5r6f/source",
+    "outputDir": "/tmp/nouraajd-323-gameobjects-final/verify/snapshot-ynctjdtl/source",
     "restored": [
       {
         "markerPath": "CCreature.cpp.REMOVED.git-id",
@@ -174,10 +174,18 @@
       {
         "markerPath": "CMapObject.cpp.REMOVED.git-id",
         "method": "reconstruction",
-        "originalBlob": "5dda1a9d58106454807980ae00d0817d284fbcce",
+        "originalBlob": "4124e759820d0122418008e44058fd3224812e57",
         "path": "CMapObject.cpp",
         "provenance": "content reconstruction of the BFG-removed original; Place object type and map access on the common game-object base.",
         "replacementBlob": "d91343b582d9299e908dbf2831bfea11f230e2b8"
+      },
+      {
+        "markerPath": "CMapObject.h.REMOVED.git-id",
+        "method": "reconstruction",
+        "originalBlob": "5effdbe24714e9da257cc85156cfc6687dd702f1",
+        "path": "CMapObject.h",
+        "provenance": "content reconstruction of the BFG-removed original; Carry the common Qt game-object base and apply the surviving item-event interface.",
+        "replacementBlob": "00543ef1d6687d5a5c4b4f7cbb2ff30164cb445f"
       },
       {
         "markerPath": "CObjectHandler.cpp.REMOVED.git-id",
@@ -206,9 +214,9 @@
       {
         "markerPath": "GameScript.cpp.REMOVED.git-id",
         "method": "reconstruction",
-        "originalBlob": "fdd111df4d25cf44409e0466e57da2479d33946c",
+        "originalBlob": "0cbdeaab29da592c24a4832c22e94cc2a1253f13",
         "path": "GameScript.cpp",
-        "provenance": "Bind the shared Qt game-object base for map objects, tiles, effects and interactions.",
+        "provenance": "content reconstruction of the BFG-removed original; Bind game objects and pass the authored event cause to potion scripts.",
         "replacementBlob": "61f9a53f8f3c0b4fb06ae110cce71d1f64c7966b"
       },
       {
@@ -221,9 +229,9 @@
       {
         "markerPath": "Stats.h.REMOVED.git-id",
         "method": "reconstruction",
-        "originalBlob": "e1bea3909cf0eee7e9747634da4aeca6f130903c",
+        "originalBlob": "ca4cb9f0b52d233543cac522cf8ca78b334fd063",
         "path": "Stats.h",
-        "provenance": "Content reconstruction matching exact original #260 Stats.cpp e9d15a08d8073b9ec1462a7e542db131edd1314f: const numeric getter declarations, out-of-line setters, QString main/getMainValue. Use intact55e6516e:Stats.h property/declaration layout and zero initialized fields, retain era-correct QObject base and original257 PROPERTY_ACCESSOR semantics. Include QVariant/cmath explicitly for complete genuine APIs and Util::Coords::getDist. Metatype declarations remain owned by exact same-commit ReflectTypes.cpp; no surviving source modified.",
+        "provenance": "content reconstruction of the BFG-removed original; Carry the verified historical Stats declarations through the refactor.",
         "replacementBlob": "49d29f3fcab16fbf51922a8d8411afbd97e5a605"
       },
       {
@@ -335,7 +343,7 @@
         "method": "reconstruction",
         "originalBlob": "1b3aa2bf2cce5cd06a478f1fbf4367a4c2002143",
         "path": "boost/python/object/inheritance.cpp",
-        "provenance": "unverified donor reconstruction; 4b3902d44f874a1fae86054d7240a2af76901bb4:boost/python/object/inheritance.cpp; headerMatch=0; apiOverlap=0/10000; distance=42",
+        "provenance": "unverified donor reconstruction; 4b3902d44f874a1fae86054d7240a2af76901bb4:boost/python/object/inheritance.cpp; headerMatch=0; apiOverlap=0/10000; distance=41",
         "replacementBlob": "70feba5fcd280139933f29b9179b0ed00eed75f8"
       },
       {
@@ -351,7 +359,7 @@
         "method": "reconstruction",
         "originalBlob": "0d39c3d1478c19a891acce327ddf81990724ace2",
         "path": "boost/python/object_operators.cpp",
-        "provenance": "unverified donor reconstruction; 70d0d690df45877698cb094405e25be00a8139fd:boost/python/object_operators.cpp; headerMatch=0; apiOverlap=0/10000; distance=34",
+        "provenance": "unverified donor reconstruction; 70d0d690df45877698cb094405e25be00a8139fd:boost/python/object_operators.cpp; headerMatch=0; apiOverlap=0/10000; distance=33",
         "replacementBlob": "43d2109b7fbee7a405e4e445aff17714078b1631"
       },
       {
@@ -367,7 +375,7 @@
         "method": "reconstruction",
         "originalBlob": "0f46652b2ab25b823980b32afec490a51470fa02",
         "path": "boost/python/str.cpp",
-        "provenance": "unverified donor reconstruction; 4b3902d44f874a1fae86054d7240a2af76901bb4:boost/python/str.cpp; headerMatch=0; apiOverlap=0/10000; distance=42",
+        "provenance": "unverified donor reconstruction; 4b3902d44f874a1fae86054d7240a2af76901bb4:boost/python/str.cpp; headerMatch=0; apiOverlap=0/10000; distance=41",
         "replacementBlob": "37642738eae0bee1bbcf50cbc12d1c57e227602f"
       },
       {
@@ -383,7 +391,7 @@
         "method": "reconstruction",
         "originalBlob": "2f79f3a7b4e72640e404b1c2d442208127eb6557",
         "path": "config/monsters.json",
-        "provenance": "unverified donor reconstruction; 55e6516eb91b739e899df1ef8d72116da44fec49:config/monsters.json; headerMatch=0; apiOverlap=0/10000; distance=43",
+        "provenance": "unverified donor reconstruction; 55e6516eb91b739e899df1ef8d72116da44fec49:config/monsters.json; headerMatch=0; apiOverlap=0/10000; distance=42",
         "replacementBlob": "b6b5708a1c0683d8ca6d9c395ee31e4742bdd39e"
       },
       {
@@ -843,9 +851,9 @@
         "replacementBlob": "f5d0b39a0cdddb91a31a537052b7d8d31a4aa79f"
       }
     ],
-    "restoredFilesFingerprint": "d35389ec178e1f8274e165af02b58d5f3c3ca767f201e68fd937884464ba8fd1",
-    "sourceCommit": "8ccff81bf2bb22a0d526742eaef570653e47e63c",
-    "sourceTree": "cc4d10d933b41fa763a878dc4f71ad01e61c31db",
+    "restoredFilesFingerprint": "98546bd84e85b83cdd68b511130ec72bc8c2c488d514eb74fb4784fc9c3431a6",
+    "sourceCommit": "74594f17271a871a3241e60f19aaa8f5c587409e",
+    "sourceTree": "8c2632f19b9cba7f066827f7d5a301b5b703cf26",
     "status": "complete",
     "submodules": [],
     "unresolved": []
@@ -856,12 +864,12 @@
       "-a",
       "--server-args=-screen 0 1920x1080x24",
       "env",
-      "LD_PRELOAD=/tmp/nouraajd-322-gameobjects-final/verify/snapshot-fp_i5r6f/observer/libwindowspaths.so",
-      "/tmp/nouraajd-322-gameobjects-final/verify/snapshot-fp_i5r6f/build/RecoveryGame"
+      "LD_PRELOAD=/tmp/nouraajd-323-gameobjects-final/verify/snapshot-ynctjdtl/observer/libwindowspaths.so",
+      "/tmp/nouraajd-323-gameobjects-final/verify/snapshot-ynctjdtl/build/RecoveryGame"
     ],
-    "log": "/tmp/nouraajd-322-gameobjects-final/verify/snapshot-fp_i5r6f/smoke/startup.log",
+    "log": "/tmp/nouraajd-323-gameobjects-final/verify/snapshot-ynctjdtl/smoke/startup.log",
     "returnCode": 0,
-    "seconds": 1.473,
+    "seconds": 1.371,
     "startup": {
       "checks": {
         "eventLoop": true,
@@ -883,9 +891,9 @@
     "status": "success",
     "timedOut": false
   },
-  "sourceCommit": "8ccff81bf2bb22a0d526742eaef570653e47e63c",
+  "sourceCommit": "74594f17271a871a3241e60f19aaa8f5c587409e",
   "sourceCommits": [
-    "8ccff81bf2bb22a0d526742eaef570653e47e63c"
+    "74594f17271a871a3241e60f19aaa8f5c587409e"
   ],
   "sourcePreparation": {
     "identity": {
@@ -899,37 +907,13 @@
             "3c1d43ba889c7cfbc7620956f6600630f9e29457e89dbb318c15dc7565b3e1ec",
             "e59eb1034b607134ee90d56c0af643fc7dafb2d34b11fb7c1188cf3c7a8b19da"
           ],
-          "CInteraction.h": [
-            "b068fe93e30847bae4e4fc58a8b61bfe1e891d1d4b9b966a388d661b46c3e9cb",
-            "f88b0a5687b57ecf0cf9b939f2e0d625199d714739739ab33e67a71a3b2e4e11"
-          ],
-          "CMapObject.h": [
-            "38f50725cc2d4c9a846484d1688313021e13d850e8d5f90b9644f39c5b83c6b4",
-            "e9bc75294c2421cb1b11209342ffb485e08d8c076ee43019d59c7d9b82f5f3db"
-          ],
           "CScriptEngine.cpp": [
             "38fe619e7738ddf7453d15f4ad14f26c97cfbb1bfc0bd181bc8f35567e8e8f00",
             "9a032d901ac3ab7357f07ca279cf324934bec551639f63b7cc407acbccf12a8f"
-          ],
-          "CTile.cpp": [
-            "01e4eccf20b29e7f31361826561feec3218a3f55e3f291a90592c0f307921dc4",
-            "e7a6319328b9c40a8cac5c78351e2a34a31d53daf9834bf74cedb9d4db9aee97"
-          ],
-          "CTile.h": [
-            "7c3e73192190cd0171670b2133e9ed26f31aac07cfd5752efb204882806c0ade",
-            "a4e3e86139732e8c3cf05378f2773f3b197e032187aa78861993e08b17fa2910"
-          ],
-          "CTypeHandler.cpp": [
-            "a44c66e5dcd7bcafc7c1b1f655638cbf98b003236ce93ab8800c2686a359a007",
-            "af943b5c62fd2dc1ae2ccb1dff20cc5953fd72f204008c9a3d687aa0ca7c870b"
-          ],
-          "CTypeHandler.h": [
-            "e01f40298e5f472777c3a420d390bc65a7b1a9bff7181a5295e303a763d05602",
-            "3b0cb0650bbed8b9506aac9fa0759d84c214d1ee93f2f46fb14a02b4a4473d07"
           ]
         },
         "replaySha256": "84e6053bd21ceb1eac9cba5f53821999de225bca6908f11cc6b6c2e5117e49c2",
-        "sourceCommit": "8ccff81bf2bb22a0d526742eaef570653e47e63c"
+        "sourceCommit": "74594f17271a871a3241e60f19aaa8f5c587409e"
       },
       "implementationSha256": "dc767cd812a864fa30270a1cd8f583a243c1d6956da5ba5d31676fee8938ac46",
       "outputs": [
@@ -960,30 +944,6 @@
         {
           "after": {
             "kind": "file",
-            "sha256": "f88b0a5687b57ecf0cf9b939f2e0d625199d714739739ab33e67a71a3b2e4e11"
-          },
-          "before": {
-            "kind": "file",
-            "sha256": "b068fe93e30847bae4e4fc58a8b61bfe1e891d1d4b9b966a388d661b46c3e9cb"
-          },
-          "path": "CInteraction.h",
-          "purpose": "Preserve runtime lifetimes and reconcile the transitional common Qt object base"
-        },
-        {
-          "after": {
-            "kind": "file",
-            "sha256": "e9bc75294c2421cb1b11209342ffb485e08d8c076ee43019d59c7d9b82f5f3db"
-          },
-          "before": {
-            "kind": "file",
-            "sha256": "38f50725cc2d4c9a846484d1688313021e13d850e8d5f90b9644f39c5b83c6b4"
-          },
-          "path": "CMapObject.h",
-          "purpose": "Preserve runtime lifetimes and reconcile the transitional common Qt object base"
-        },
-        {
-          "after": {
-            "kind": "file",
             "sha256": "9a032d901ac3ab7357f07ca279cf324934bec551639f63b7cc407acbccf12a8f"
           },
           "before": {
@@ -991,54 +951,6 @@
             "sha256": "38fe619e7738ddf7453d15f4ad14f26c97cfbb1bfc0bd181bc8f35567e8e8f00"
           },
           "path": "CScriptEngine.cpp",
-          "purpose": "Preserve runtime lifetimes and reconcile the transitional common Qt object base"
-        },
-        {
-          "after": {
-            "kind": "file",
-            "sha256": "e7a6319328b9c40a8cac5c78351e2a34a31d53daf9834bf74cedb9d4db9aee97"
-          },
-          "before": {
-            "kind": "file",
-            "sha256": "01e4eccf20b29e7f31361826561feec3218a3f55e3f291a90592c0f307921dc4"
-          },
-          "path": "CTile.cpp",
-          "purpose": "Preserve runtime lifetimes and reconcile the transitional common Qt object base"
-        },
-        {
-          "after": {
-            "kind": "file",
-            "sha256": "a4e3e86139732e8c3cf05378f2773f3b197e032187aa78861993e08b17fa2910"
-          },
-          "before": {
-            "kind": "file",
-            "sha256": "7c3e73192190cd0171670b2133e9ed26f31aac07cfd5752efb204882806c0ade"
-          },
-          "path": "CTile.h",
-          "purpose": "Preserve runtime lifetimes and reconcile the transitional common Qt object base"
-        },
-        {
-          "after": {
-            "kind": "file",
-            "sha256": "af943b5c62fd2dc1ae2ccb1dff20cc5953fd72f204008c9a3d687aa0ca7c870b"
-          },
-          "before": {
-            "kind": "file",
-            "sha256": "a44c66e5dcd7bcafc7c1b1f655638cbf98b003236ce93ab8800c2686a359a007"
-          },
-          "path": "CTypeHandler.cpp",
-          "purpose": "Preserve runtime lifetimes and reconcile the transitional common Qt object base"
-        },
-        {
-          "after": {
-            "kind": "file",
-            "sha256": "3b0cb0650bbed8b9506aac9fa0759d84c214d1ee93f2f46fb14a02b4a4473d07"
-          },
-          "before": {
-            "kind": "file",
-            "sha256": "e01f40298e5f472777c3a420d390bc65a7b1a9bff7181a5295e303a763d05602"
-          },
-          "path": "CTypeHandler.h",
           "purpose": "Preserve runtime lifetimes and reconcile the transitional common Qt object base"
         }
       ]
@@ -1071,30 +983,6 @@
       {
         "after": {
           "kind": "file",
-          "sha256": "f88b0a5687b57ecf0cf9b939f2e0d625199d714739739ab33e67a71a3b2e4e11"
-        },
-        "before": {
-          "kind": "file",
-          "sha256": "b068fe93e30847bae4e4fc58a8b61bfe1e891d1d4b9b966a388d661b46c3e9cb"
-        },
-        "path": "CInteraction.h",
-        "purpose": "Preserve runtime lifetimes and reconcile the transitional common Qt object base"
-      },
-      {
-        "after": {
-          "kind": "file",
-          "sha256": "e9bc75294c2421cb1b11209342ffb485e08d8c076ee43019d59c7d9b82f5f3db"
-        },
-        "before": {
-          "kind": "file",
-          "sha256": "38f50725cc2d4c9a846484d1688313021e13d850e8d5f90b9644f39c5b83c6b4"
-        },
-        "path": "CMapObject.h",
-        "purpose": "Preserve runtime lifetimes and reconcile the transitional common Qt object base"
-      },
-      {
-        "after": {
-          "kind": "file",
           "sha256": "9a032d901ac3ab7357f07ca279cf324934bec551639f63b7cc407acbccf12a8f"
         },
         "before": {
@@ -1102,54 +990,6 @@
           "sha256": "38fe619e7738ddf7453d15f4ad14f26c97cfbb1bfc0bd181bc8f35567e8e8f00"
         },
         "path": "CScriptEngine.cpp",
-        "purpose": "Preserve runtime lifetimes and reconcile the transitional common Qt object base"
-      },
-      {
-        "after": {
-          "kind": "file",
-          "sha256": "e7a6319328b9c40a8cac5c78351e2a34a31d53daf9834bf74cedb9d4db9aee97"
-        },
-        "before": {
-          "kind": "file",
-          "sha256": "01e4eccf20b29e7f31361826561feec3218a3f55e3f291a90592c0f307921dc4"
-        },
-        "path": "CTile.cpp",
-        "purpose": "Preserve runtime lifetimes and reconcile the transitional common Qt object base"
-      },
-      {
-        "after": {
-          "kind": "file",
-          "sha256": "a4e3e86139732e8c3cf05378f2773f3b197e032187aa78861993e08b17fa2910"
-        },
-        "before": {
-          "kind": "file",
-          "sha256": "7c3e73192190cd0171670b2133e9ed26f31aac07cfd5752efb204882806c0ade"
-        },
-        "path": "CTile.h",
-        "purpose": "Preserve runtime lifetimes and reconcile the transitional common Qt object base"
-      },
-      {
-        "after": {
-          "kind": "file",
-          "sha256": "af943b5c62fd2dc1ae2ccb1dff20cc5953fd72f204008c9a3d687aa0ca7c870b"
-        },
-        "before": {
-          "kind": "file",
-          "sha256": "a44c66e5dcd7bcafc7c1b1f655638cbf98b003236ce93ab8800c2686a359a007"
-        },
-        "path": "CTypeHandler.cpp",
-        "purpose": "Preserve runtime lifetimes and reconcile the transitional common Qt object base"
-      },
-      {
-        "after": {
-          "kind": "file",
-          "sha256": "3b0cb0650bbed8b9506aac9fa0759d84c214d1ee93f2f46fb14a02b4a4473d07"
-        },
-        "before": {
-          "kind": "file",
-          "sha256": "e01f40298e5f472777c3a420d390bc65a7b1a9bff7181a5295e303a763d05602"
-        },
-        "path": "CTypeHandler.h",
         "purpose": "Preserve runtime lifetimes and reconcile the transitional common Qt object base"
       }
     ],
@@ -1160,14 +1000,14 @@
           "history_source_prep.py",
           "prepare-game-objects"
         ],
-        "log": "/tmp/nouraajd-322-gameobjects-final/verify/snapshot-fp_i5r6f/preparation/game-objects.log",
+        "log": "/tmp/nouraajd-323-gameobjects-final/verify/snapshot-ynctjdtl/preparation/game-objects.log",
         "name": "gameObjects",
         "returnCode": 0,
         "timedOut": false
       }
     ]
   },
-  "sourceTree": "cc4d10d933b41fa763a878dc4f71ad01e61c31db",
+  "sourceTree": "8c2632f19b9cba7f066827f7d5a301b5b703cf26",
   "startupMode": "game",
   "startupSelection": {
     "mode": "game"
@@ -1188,5 +1028,5 @@
     }
   },
   "toolchainImage": "sha256:d3f59ec1d12297ee8091fbea687aa619275fc92b3fd426560e0a1fa40715afc8",
-  "verifiedFromCommit": "8ccff81bf2bb22a0d526742eaef570653e47e63c"
+  "verifiedFromCommit": "74594f17271a871a3241e60f19aaa8f5c587409e"
 }

@@ -27,15 +27,15 @@ class Usable {
 	virtual void onUse ( CCreature * ) =0;
 };
 
-class CGameObject : public QObject {
+class CGameObject : public CAnimatedObject {
 	Q_OBJECT
 	Q_PROPERTY ( QString objectType READ getObjectType WRITE setObjectType USER true )
 public:
 	QString getObjectType() const ;
 	void setObjectType ( const QString &value ) ;
 
-	virtual CMap* getMap() =0;
-	virtual void setMap ( CMap *map ) =0;
+	virtual CMap* getMap();
+	virtual void setMap ( CMap *map );
 
 	Q_INVOKABLE void setProperty ( QString name,QVariant property ) {
 		QByteArray byteArray = name.toUtf8();
@@ -71,10 +71,11 @@ public:
 
 	virtual ~CGameObject() =0;
 private:
+	CMap *map=nullptr;
 	QString objectType;
 };
 
-class CMapObject : public CGameObject,public CAnimatedObject {
+class CMapObject : public CGameObject {
 	friend class CObjectHandler;
 	Q_OBJECT
 	Q_PROPERTY ( QString tooltip READ getTooltip WRITE setTooltip USER true )

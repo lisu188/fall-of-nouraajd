@@ -56,27 +56,3 @@ void CTile::setXYZ ( int x, int y, int z ) {
 	posz = z;
 	setPos ( x*50,y*50 );
 }
-
-void CTile::setObjectName ( const QString &name ) {
-	this->QObject::setObjectName ( name );
-}
-
-void CTile::setObjectType ( const QString &type ) {
-	this->objectType=type;
-}
-
-QString CTile::getObjectName() const {
-	return this->QObject::objectName();
-}
-
-QString CTile::getObjectType() const {
-	return this->objectType;
-}
-CMap *CTile::getMap() {
-	return map;
-}
-
-void CTile::setMap ( CMap *value ) {
-	map = value;
-}
-

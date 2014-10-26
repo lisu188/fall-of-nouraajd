@@ -10,37 +10,13 @@
           "3c1d43ba889c7cfbc7620956f6600630f9e29457e89dbb318c15dc7565b3e1ec",
           "e59eb1034b607134ee90d56c0af643fc7dafb2d34b11fb7c1188cf3c7a8b19da"
         ],
-        "CInteraction.h": [
-          "b068fe93e30847bae4e4fc58a8b61bfe1e891d1d4b9b966a388d661b46c3e9cb",
-          "f88b0a5687b57ecf0cf9b939f2e0d625199d714739739ab33e67a71a3b2e4e11"
-        ],
-        "CMapObject.h": [
-          "38f50725cc2d4c9a846484d1688313021e13d850e8d5f90b9644f39c5b83c6b4",
-          "e9bc75294c2421cb1b11209342ffb485e08d8c076ee43019d59c7d9b82f5f3db"
-        ],
         "CScriptEngine.cpp": [
           "38fe619e7738ddf7453d15f4ad14f26c97cfbb1bfc0bd181bc8f35567e8e8f00",
           "9a032d901ac3ab7357f07ca279cf324934bec551639f63b7cc407acbccf12a8f"
-        ],
-        "CTile.cpp": [
-          "01e4eccf20b29e7f31361826561feec3218a3f55e3f291a90592c0f307921dc4",
-          "e7a6319328b9c40a8cac5c78351e2a34a31d53daf9834bf74cedb9d4db9aee97"
-        ],
-        "CTile.h": [
-          "7c3e73192190cd0171670b2133e9ed26f31aac07cfd5752efb204882806c0ade",
-          "a4e3e86139732e8c3cf05378f2773f3b197e032187aa78861993e08b17fa2910"
-        ],
-        "CTypeHandler.cpp": [
-          "a44c66e5dcd7bcafc7c1b1f655638cbf98b003236ce93ab8800c2686a359a007",
-          "af943b5c62fd2dc1ae2ccb1dff20cc5953fd72f204008c9a3d687aa0ca7c870b"
-        ],
-        "CTypeHandler.h": [
-          "e01f40298e5f472777c3a420d390bc65a7b1a9bff7181a5295e303a763d05602",
-          "3b0cb0650bbed8b9506aac9fa0759d84c214d1ee93f2f46fb14a02b4a4473d07"
         ]
       },
       "replaySha256": "84e6053bd21ceb1eac9cba5f53821999de225bca6908f11cc6b6c2e5117e49c2",
-      "sourceCommit": "8ccff81bf2bb22a0d526742eaef570653e47e63c"
+      "sourceCommit": "74594f17271a871a3241e60f19aaa8f5c587409e"
     },
     "implementationSha256": "dc767cd812a864fa30270a1cd8f583a243c1d6956da5ba5d31676fee8938ac46",
     "outputs": [
@@ -71,30 +47,6 @@
       {
         "after": {
           "kind": "file",
-          "sha256": "f88b0a5687b57ecf0cf9b939f2e0d625199d714739739ab33e67a71a3b2e4e11"
-        },
-        "before": {
-          "kind": "file",
-          "sha256": "b068fe93e30847bae4e4fc58a8b61bfe1e891d1d4b9b966a388d661b46c3e9cb"
-        },
-        "path": "CInteraction.h",
-        "purpose": "Preserve runtime lifetimes and reconcile the transitional common Qt object base"
-      },
-      {
-        "after": {
-          "kind": "file",
-          "sha256": "e9bc75294c2421cb1b11209342ffb485e08d8c076ee43019d59c7d9b82f5f3db"
-        },
-        "before": {
-          "kind": "file",
-          "sha256": "38f50725cc2d4c9a846484d1688313021e13d850e8d5f90b9644f39c5b83c6b4"
-        },
-        "path": "CMapObject.h",
-        "purpose": "Preserve runtime lifetimes and reconcile the transitional common Qt object base"
-      },
-      {
-        "after": {
-          "kind": "file",
           "sha256": "9a032d901ac3ab7357f07ca279cf324934bec551639f63b7cc407acbccf12a8f"
         },
         "before": {
@@ -102,54 +54,6 @@
           "sha256": "38fe619e7738ddf7453d15f4ad14f26c97cfbb1bfc0bd181bc8f35567e8e8f00"
         },
         "path": "CScriptEngine.cpp",
-        "purpose": "Preserve runtime lifetimes and reconcile the transitional common Qt object base"
-      },
-      {
-        "after": {
-          "kind": "file",
-          "sha256": "e7a6319328b9c40a8cac5c78351e2a34a31d53daf9834bf74cedb9d4db9aee97"
-        },
-        "before": {
-          "kind": "file",
-          "sha256": "01e4eccf20b29e7f31361826561feec3218a3f55e3f291a90592c0f307921dc4"
-        },
-        "path": "CTile.cpp",
-        "purpose": "Preserve runtime lifetimes and reconcile the transitional common Qt object base"
-      },
-      {
-        "after": {
-          "kind": "file",
-          "sha256": "a4e3e86139732e8c3cf05378f2773f3b197e032187aa78861993e08b17fa2910"
-        },
-        "before": {
-          "kind": "file",
-          "sha256": "7c3e73192190cd0171670b2133e9ed26f31aac07cfd5752efb204882806c0ade"
-        },
-        "path": "CTile.h",
-        "purpose": "Preserve runtime lifetimes and reconcile the transitional common Qt object base"
-      },
-      {
-        "after": {
-          "kind": "file",
-          "sha256": "af943b5c62fd2dc1ae2ccb1dff20cc5953fd72f204008c9a3d687aa0ca7c870b"
-        },
-        "before": {
-          "kind": "file",
-          "sha256": "a44c66e5dcd7bcafc7c1b1f655638cbf98b003236ce93ab8800c2686a359a007"
-        },
-        "path": "CTypeHandler.cpp",
-        "purpose": "Preserve runtime lifetimes and reconcile the transitional common Qt object base"
-      },
-      {
-        "after": {
-          "kind": "file",
-          "sha256": "3b0cb0650bbed8b9506aac9fa0759d84c214d1ee93f2f46fb14a02b4a4473d07"
-        },
-        "before": {
-          "kind": "file",
-          "sha256": "e01f40298e5f472777c3a420d390bc65a7b1a9bff7181a5295e303a763d05602"
-        },
-        "path": "CTypeHandler.h",
         "purpose": "Preserve runtime lifetimes and reconcile the transitional common Qt object base"
       }
     ]
@@ -182,30 +86,6 @@
     {
       "after": {
         "kind": "file",
-        "sha256": "f88b0a5687b57ecf0cf9b939f2e0d625199d714739739ab33e67a71a3b2e4e11"
-      },
-      "before": {
-        "kind": "file",
-        "sha256": "b068fe93e30847bae4e4fc58a8b61bfe1e891d1d4b9b966a388d661b46c3e9cb"
-      },
-      "path": "CInteraction.h",
-      "purpose": "Preserve runtime lifetimes and reconcile the transitional common Qt object base"
-    },
-    {
-      "after": {
-        "kind": "file",
-        "sha256": "e9bc75294c2421cb1b11209342ffb485e08d8c076ee43019d59c7d9b82f5f3db"
-      },
-      "before": {
-        "kind": "file",
-        "sha256": "38f50725cc2d4c9a846484d1688313021e13d850e8d5f90b9644f39c5b83c6b4"
-      },
-      "path": "CMapObject.h",
-      "purpose": "Preserve runtime lifetimes and reconcile the transitional common Qt object base"
-    },
-    {
-      "after": {
-        "kind": "file",
         "sha256": "9a032d901ac3ab7357f07ca279cf324934bec551639f63b7cc407acbccf12a8f"
       },
       "before": {
@@ -213,54 +93,6 @@
         "sha256": "38fe619e7738ddf7453d15f4ad14f26c97cfbb1bfc0bd181bc8f35567e8e8f00"
       },
       "path": "CScriptEngine.cpp",
-      "purpose": "Preserve runtime lifetimes and reconcile the transitional common Qt object base"
-    },
-    {
-      "after": {
-        "kind": "file",
-        "sha256": "e7a6319328b9c40a8cac5c78351e2a34a31d53daf9834bf74cedb9d4db9aee97"
-      },
-      "before": {
-        "kind": "file",
-        "sha256": "01e4eccf20b29e7f31361826561feec3218a3f55e3f291a90592c0f307921dc4"
-      },
-      "path": "CTile.cpp",
-      "purpose": "Preserve runtime lifetimes and reconcile the transitional common Qt object base"
-    },
-    {
-      "after": {
-        "kind": "file",
-        "sha256": "a4e3e86139732e8c3cf05378f2773f3b197e032187aa78861993e08b17fa2910"
-      },
-      "before": {
-        "kind": "file",
-        "sha256": "7c3e73192190cd0171670b2133e9ed26f31aac07cfd5752efb204882806c0ade"
-      },
-      "path": "CTile.h",
-      "purpose": "Preserve runtime lifetimes and reconcile the transitional common Qt object base"
-    },
-    {
-      "after": {
-        "kind": "file",
-        "sha256": "af943b5c62fd2dc1ae2ccb1dff20cc5953fd72f204008c9a3d687aa0ca7c870b"
-      },
-      "before": {
-        "kind": "file",
-        "sha256": "a44c66e5dcd7bcafc7c1b1f655638cbf98b003236ce93ab8800c2686a359a007"
-      },
-      "path": "CTypeHandler.cpp",
-      "purpose": "Preserve runtime lifetimes and reconcile the transitional common Qt object base"
-    },
-    {
-      "after": {
-        "kind": "file",
-        "sha256": "3b0cb0650bbed8b9506aac9fa0759d84c214d1ee93f2f46fb14a02b4a4473d07"
-      },
-      "before": {
-        "kind": "file",
-        "sha256": "e01f40298e5f472777c3a420d390bc65a7b1a9bff7181a5295e303a763d05602"
-      },
-      "path": "CTypeHandler.h",
       "purpose": "Preserve runtime lifetimes and reconcile the transitional common Qt object base"
     }
   ],
@@ -271,7 +103,7 @@
         "history_source_prep.py",
         "prepare-game-objects"
       ],
-      "log": "/tmp/nouraajd-322-gameobjects-final/verify/snapshot-fp_i5r6f/preparation/game-objects.log",
+      "log": "/tmp/nouraajd-323-gameobjects-final/verify/snapshot-ynctjdtl/preparation/game-objects.log",
       "name": "gameObjects",
       "returnCode": 0,
       "timedOut": false
