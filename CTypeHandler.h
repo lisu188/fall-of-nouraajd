@@ -10,7 +10,7 @@ public:
 	static ATypeHandler* getHandler ( QString name );
 	ATypeHandler();
 	ATypeHandler ( const ATypeHandler& );
-	virtual Constructible *create ( QString );
+	virtual CGameObject *create ( QString );
 };
 
 class CTypeHandler : public ATypeHandler {
@@ -18,7 +18,7 @@ class CTypeHandler : public ATypeHandler {
 public:
 	CTypeHandler();
 	CTypeHandler ( const CTypeHandler& );
-	virtual Constructible *create ( QString name ) override;
+	virtual CGameObject *create ( QString name ) override;
 };
 
 class PyTypeHandler : public ATypeHandler {
@@ -26,5 +26,5 @@ class PyTypeHandler : public ATypeHandler {
 public:
 	PyTypeHandler();
 	PyTypeHandler ( const PyTypeHandler& );
-	virtual Constructible *create ( QString name ) override;
+	virtual CGameObject *create ( QString name ) override;
 };

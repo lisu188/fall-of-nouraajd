@@ -1,5 +1,5 @@
 
-=== objectFactories ===
+=== gameObjects ===
 {
   "files": {
     "CGameScene.cpp": [
@@ -10,11 +10,35 @@
       "3c1d43ba889c7cfbc7620956f6600630f9e29457e89dbb318c15dc7565b3e1ec",
       "e59eb1034b607134ee90d56c0af643fc7dafb2d34b11fb7c1188cf3c7a8b19da"
     ],
+    "CInteraction.h": [
+      "b068fe93e30847bae4e4fc58a8b61bfe1e891d1d4b9b966a388d661b46c3e9cb",
+      "f88b0a5687b57ecf0cf9b939f2e0d625199d714739739ab33e67a71a3b2e4e11"
+    ],
+    "CMapObject.h": [
+      "38f50725cc2d4c9a846484d1688313021e13d850e8d5f90b9644f39c5b83c6b4",
+      "e9bc75294c2421cb1b11209342ffb485e08d8c076ee43019d59c7d9b82f5f3db"
+    ],
     "CScriptEngine.cpp": [
       "38fe619e7738ddf7453d15f4ad14f26c97cfbb1bfc0bd181bc8f35567e8e8f00",
       "9a032d901ac3ab7357f07ca279cf324934bec551639f63b7cc407acbccf12a8f"
+    ],
+    "CTile.cpp": [
+      "01e4eccf20b29e7f31361826561feec3218a3f55e3f291a90592c0f307921dc4",
+      "e7a6319328b9c40a8cac5c78351e2a34a31d53daf9834bf74cedb9d4db9aee97"
+    ],
+    "CTile.h": [
+      "7c3e73192190cd0171670b2133e9ed26f31aac07cfd5752efb204882806c0ade",
+      "a4e3e86139732e8c3cf05378f2773f3b197e032187aa78861993e08b17fa2910"
+    ],
+    "CTypeHandler.cpp": [
+      "a44c66e5dcd7bcafc7c1b1f655638cbf98b003236ce93ab8800c2686a359a007",
+      "af943b5c62fd2dc1ae2ccb1dff20cc5953fd72f204008c9a3d687aa0ca7c870b"
+    ],
+    "CTypeHandler.h": [
+      "e01f40298e5f472777c3a420d390bc65a7b1a9bff7181a5295e303a763d05602",
+      "3b0cb0650bbed8b9506aac9fa0759d84c214d1ee93f2f46fb14a02b4a4473d07"
     ]
   },
-  "replaySha256": "3b2c67a4d1890cc1e1bed06aadfde89cd12e3ff4e8ab039a6502c841e4b60dc6",
-  "sourceCommit": "ead6e0b8498679734b6a4d05b88884a810527fed"
+  "replaySha256": "84e6053bd21ceb1eac9cba5f53821999de225bca6908f11cc6b6c2e5117e49c2",
+  "sourceCommit": "8ccff81bf2bb22a0d526742eaef570653e47e63c"
 }

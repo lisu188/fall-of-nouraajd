@@ -18,11 +18,11 @@ CMapObject::~CMapObject() {
 
 }
 
-QString CMapObject::getObjectType() const {
+QString CGameObject::getObjectType() const {
 	return objectType;
 }
 
-void CMapObject::setObjectType ( const QString &value ) {
+void CGameObject::setObjectType ( const QString &value ) {
 	objectType = value;
 }
 
@@ -167,3 +167,7 @@ void CEvent::setEventClass ( const QString &value ) {
 
 void CEvent::onEnter(CGameEvent *) {}
 void CEvent::onLeave(CGameEvent *) {}
+
+CGameObject::~CGameObject() = default;
+CMap *CGameObject::getMap() { return map; }
+void CGameObject::setMap(CMap *value) { map = value; }
