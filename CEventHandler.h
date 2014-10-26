@@ -25,7 +25,7 @@ class CEventHandler : public QObject {
 	Q_OBJECT
 public:
 	CEventHandler ( CMap *map );
-	void gameEvent ( CGameEvent *event,CMapObject * mapObject ) const;
+	void gameEvent ( CGameEvent *event, CMapObject *mapObject ) const;
 private:
 	CMap*map=0;
 };
