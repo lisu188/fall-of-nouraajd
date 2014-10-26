@@ -1,6 +1,7 @@
 #pragma once
 #include <QGraphicsItem>
 #include "CReflection.h"
+#include "CMapObject.h"
 #include <QWidget>
 
 class CCreature;
@@ -9,7 +10,7 @@ class CPlayerListView;
 class CPlayerEquippedView;
 class CCharPanel;
 
-class AGamePanel : public QObject, protected QGraphicsItem {
+class AGamePanel : public CGameObject {
 	Q_OBJECT
 
 	friend class CGuiHandler;
@@ -24,37 +25,6 @@ public:
 	virtual QRectF boundingRect() const;
 	virtual void paint ( QPainter *, const QStyleOptionGraphicsItem *, QWidget * );
 
-	Q_INVOKABLE void setProperty ( QString name,QVariant property ) {
-		QByteArray byteArray = name.toUtf8();
-		const char* cString = byteArray.constData();
-		this->QObject::setProperty ( cString,property );
-	}
-	Q_INVOKABLE QVariant property ( QString name ) const {
-		QByteArray byteArray = name.toUtf8();
-		const char* cString = byteArray.constData();
-		return this->QObject::property ( cString );
-	}
-	Q_INVOKABLE void setStringProperty ( QString name,QString value ) {
-		this->setProperty ( name, value ) ;
-	}
-	Q_INVOKABLE void setBoolProperty ( QString name,bool value ) {
-		this->setProperty ( name,value );
-	}
-	Q_INVOKABLE void setNumericProperty ( QString name,int value ) {
-		this->setProperty ( name,value );
-	}
-	Q_INVOKABLE QString getStringProperty ( QString name ) const {
-		return this->property ( name ).toString();
-	}
-	Q_INVOKABLE bool getBoolProperty ( QString name ) const {
-		return this->property ( name ).toBool();
-	}
-	Q_INVOKABLE int getNumericProperty ( QString name ) const {
-		return this->property ( name ).toInt();
-	}
-	Q_INVOKABLE void incProperty ( QString name,int value ) {
-		this->setNumericProperty ( name,this->getNumericProperty ( name )+value );
-	}
 protected:
 	CGameView *view=0;
 };

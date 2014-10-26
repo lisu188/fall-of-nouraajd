@@ -9,7 +9,6 @@
 #include "Util.h"
 
 CAnimatedObject::CAnimatedObject() {
-	this->moveToThread ( QApplication::instance()->thread() );
 	setShapeMode ( QGraphicsPixmapItem::BoundingRectShape );
 	this->setAcceptHoverEvents ( true );
 }
