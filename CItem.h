@@ -20,7 +20,7 @@ public:
 	virtual void onEquip ( CCreature *creature ) override;
 	virtual void onUnequip ( CCreature *creature ) override;
 
-	virtual void onUse ( CCreature *creature ) override;
+	virtual void onUse ( CGameEvent *event ) override;
 
 	virtual void onEnter ( CGameEvent *event ) override;
 	virtual void onLeave ( CGameEvent * ) override;
@@ -100,7 +100,7 @@ public:
 	CScroll ( const CScroll & );
 	QString getText() const;
 	void setText ( const QString &value );
-	virtual void onUse ( CCreature * ) override;
+	virtual void onUse ( CGameEvent * ) override;
 private:
 	QString text;
 };
@@ -110,5 +110,4 @@ class CPotion : public CItem {
 public:
 	CPotion();
 	CPotion ( const CPotion & );
-	virtual void onUse ( CCreature * ) override;
 };

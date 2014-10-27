@@ -2,12 +2,12 @@ from game import CPotion
 
 
 class LifePotion(CPotion):
-    def onUse(self,creature):
+    def onUse(self,event):
         power=self.getNumericProperty('power')
-        creature.healProc ( power * 20 );
+        event.getCause().healProc ( power * 20 );
 
 
 class ManaPotion(CPotion):
-    def onUse(self,creature):
+    def onUse(self,event):
         power=self.getNumericProperty('power')
-        creature.addManaProc ( power * 20 );
+        event.getCause().addManaProc ( power * 20 );
