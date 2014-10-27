@@ -48,7 +48,9 @@ void CItem::onUnequip ( CCreature *creature ) {
 	         << "\n";
 }
 
-void CItem::onUse ( CCreature *creature ) {
+void CItem::onUse ( CGameEvent *event ) {
+    auto *creature = dynamic_cast<CCreature *>(event->getCause());
+    if (!creature) return;
 	CItemSlot *parent = dynamic_cast<CItemSlot *> ( this->parentItem() );
 	if ( !parent ) {
 		return;
@@ -62,7 +64,7 @@ void CItem::onUse ( CCreature *creature ) {
 
 void CItem::mousePressEvent ( QGraphicsSceneMouseEvent *event ) {
 	if ( singleUse && this->getMap()->getScene()->getPlayer() ) {
-		onUse ( this->getMap()->getScene()->getPlayer() );
+		getMap()->getEventHandler()->gameEvent(new CGameEvent(CGameEvent::onUse, getMap()->getPlayer()), this);
 		this->getMap()->getScene()->getPlayer()->removeFromInventory ( this );
 		delete this;
 		return;
@@ -186,9 +188,6 @@ CPotion::CPotion ( const CPotion & ) {
 
 }
 
-void CPotion::onUse ( CCreature * ) {
-
-}
 
 CScroll::CScroll() {
 
@@ -206,7 +205,7 @@ void CScroll::setText ( const QString &value ) {
 	text = value;
 }
 
-void CScroll::onUse ( CCreature * ) {
+void CScroll::onUse ( CGameEvent * ) {
 	getMap()->getGuiHandler()->showMessage ( text );
 }
 

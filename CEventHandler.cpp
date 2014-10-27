@@ -10,7 +10,7 @@ CEventHandler::CEventHandler ( CMap *map ) {
 	this->map=map;
 }
 
-void CEventHandler::gameEvent ( CGameEvent *event, CMapObject *mapObject ) const {
+void CEventHandler::gameEvent ( CGameEvent *event, CGameObject *mapObject ) const {
 	switch ( event->getType() ) {
 	case CGameEvent::onEnter:
 		dynamic_cast<Visitable*> ( mapObject )->onEnter ( event );
@@ -19,27 +19,30 @@ void CEventHandler::gameEvent ( CGameEvent *event, CMapObject *mapObject ) const
 		dynamic_cast<Visitable*> ( mapObject )->onLeave ( event );
 		break;
 	case CGameEvent::onTurn:
-		mapObject->onTurn ( event );
+		dynamic_cast<CMapObject*> ( mapObject )->onTurn ( event );//change
 		break;
 	case CGameEvent::onDestroy:
-		mapObject->onDestroy ( event );
+		dynamic_cast<Creatable*> ( mapObject )->onDestroy ( event );
 		break;
 	case CGameEvent::onCreate:
-		mapObject->onCreate ( event );
+		dynamic_cast<Creatable*> ( mapObject )->onCreate ( event );
+		break;
+	case CGameEvent::onUse:
+		dynamic_cast<Usable*> ( mapObject )->onUse ( event );
 		break;
 	}
 	delete event;
 }
 
 
-CGameEvent::CGameEvent ( CGameEvent::Type type, CMapObject *cause ) :type ( type ),cause ( cause ) {
+CGameEvent::CGameEvent ( CGameEvent::Type type, CGameObject *cause ) :type ( type ),cause ( cause ) {
 
 }
 
 CGameEvent::Type CGameEvent::getType() const {
 	return type;
 }
-CMapObject *CGameEvent::getCause() const {
+CGameObject *CGameEvent::getCause() const {
 	return cause;
 }
 

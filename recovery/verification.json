@@ -1,6 +1,6 @@
 {
   "adapter": {
-    "config": "/tmp/nouraajd-324-gameobjects-final/verify/snapshot-2b8in3kb/observer/recovery_smoke_config.h",
+    "config": "/tmp/nouraajd-325-gameobjects-final/verify/snapshot-cacgsaw3/observer/recovery_smoke_config.h",
     "configSha256": "9be3f337a65cbdc9e904583c2f34d5620212a9800b2908da01bfecca6dd0f814",
     "id": "prefixed-3d",
     "mode": "game",
@@ -20,11 +20,11 @@
     },
     "source-preparation.json": {
       "path": "source-preparation.json",
-      "sha256": "b9a7684eb976b1c525149b346c514a95737bdcf7b2850aaa563f45fb0a3c2395"
+      "sha256": "95f7da745f41385e9cb4c0dd5fe0517ab97262135fcb02e7dbfc0b0c1083900c"
     },
     "source-preparation.log": {
       "path": "source-preparation.log",
-      "sha256": "40ee1d268c61223f6295180fad5c9ea4e1a081d01ca1ca51bf2c9afe8d577191"
+      "sha256": "9f8792231e0663ebde25480bc4165a87f4f78915039af8b6bfe24c1f35c772fc"
     }
   },
   "build": {
@@ -32,17 +32,17 @@
       "make",
       "-j2"
     ],
-    "log": "/tmp/nouraajd-324-gameobjects-final/verify/snapshot-2b8in3kb/build.log",
+    "log": "/tmp/nouraajd-325-gameobjects-final/verify/snapshot-cacgsaw3/build.log",
     "returnCode": 0,
-    "seconds": 119.783,
+    "seconds": 100.362,
     "timedOut": false
   },
   "configure": {
     "command": [
       "qmake",
-      "/tmp/nouraajd-324-gameobjects-final/verify/snapshot-2b8in3kb/source/game.pro",
+      "/tmp/nouraajd-325-gameobjects-final/verify/snapshot-cacgsaw3/source/game.pro",
       "-o",
-      "/tmp/nouraajd-324-gameobjects-final/verify/snapshot-2b8in3kb/build/Makefile",
+      "/tmp/nouraajd-325-gameobjects-final/verify/snapshot-cacgsaw3/build/Makefile",
       "QMAKE_CC=gcc-5",
       "QMAKE_CXX=g++-5",
       "QMAKE_LINK=g++-5",
@@ -52,15 +52,15 @@
       "DESTDIR=.",
       "CONFIG-=app_bundle",
       "SOURCES+=/tmp/nouraajd-next322/recovery/smoke/game_startup.cpp",
-      "INCLUDEPATH+=/tmp/nouraajd-324-gameobjects-final/verify/snapshot-2b8in3kb/source",
-      "INCLUDEPATH+=/tmp/nouraajd-324-gameobjects-final/verify/snapshot-2b8in3kb/observer"
+      "INCLUDEPATH+=/tmp/nouraajd-325-gameobjects-final/verify/snapshot-cacgsaw3/source",
+      "INCLUDEPATH+=/tmp/nouraajd-325-gameobjects-final/verify/snapshot-cacgsaw3/observer"
     ],
-    "log": "/tmp/nouraajd-324-gameobjects-final/verify/snapshot-2b8in3kb/configure.log",
+    "log": "/tmp/nouraajd-325-gameobjects-final/verify/snapshot-cacgsaw3/configure.log",
     "returnCode": 0,
-    "seconds": 0.121,
+    "seconds": 0.071,
     "timedOut": false
   },
-  "evidenceDir": "/tmp/nouraajd-324-gameobjects-final/verify/evidence/4627d7802a86a925253536d8a7205e4431abeaf7a82de440b7cbc4ce4ba69df7",
+  "evidenceDir": "/tmp/nouraajd-325-gameobjects-final/verify/evidence/252ce8bde44dbcbd8633d26dfdc9b5db235d1b29869de1d2738cd3e00a0310ec",
   "fileLookup": {
     "command": [
       "g++-5",
@@ -69,20 +69,20 @@
       "-O2",
       "-std=c++11",
       "-o",
-      "/tmp/nouraajd-324-gameobjects-final/verify/snapshot-2b8in3kb/observer/libwindowspaths.so",
+      "/tmp/nouraajd-325-gameobjects-final/verify/snapshot-cacgsaw3/observer/libwindowspaths.so",
       "/tmp/nouraajd-next322/recovery/smoke/windows_paths.cpp",
       "-ldl"
     ],
-    "log": "/tmp/nouraajd-324-gameobjects-final/verify/snapshot-2b8in3kb/file-lookup.log",
+    "log": "/tmp/nouraajd-325-gameobjects-final/verify/snapshot-cacgsaw3/file-lookup.log",
     "returnCode": 0,
-    "seconds": 0.421,
+    "seconds": 0.272,
     "semantics": "Windows-style case-insensitive file lookup for the game process",
     "timedOut": false
   },
-  "fingerprint": "4627d7802a86a925253536d8a7205e4431abeaf7a82de440b7cbc4ce4ba69df7",
+  "fingerprint": "252ce8bde44dbcbd8633d26dfdc9b5db235d1b29869de1d2738cd3e00a0310ec",
   "libraryAliases": {
     "aliases": {},
-    "directory": "/tmp/nouraajd-324-gameobjects-final/verify/snapshot-2b8in3kb/observer/library-aliases"
+    "directory": "/tmp/nouraajd-325-gameobjects-final/verify/snapshot-cacgsaw3/observer/library-aliases"
   },
   "project": "game.pro",
   "recipe": {
@@ -121,7 +121,7 @@
   },
   "restoration": {
     "excluded": [],
-    "outputDir": "/tmp/nouraajd-324-gameobjects-final/verify/snapshot-2b8in3kb/source",
+    "outputDir": "/tmp/nouraajd-325-gameobjects-final/verify/snapshot-cacgsaw3/source",
     "restored": [
       {
         "markerPath": "CCreature.cpp.REMOVED.git-id",
@@ -158,10 +158,10 @@
       {
         "markerPath": "CItem.cpp.REMOVED.git-id",
         "method": "reconstruction",
-        "originalBlob": "91f18ad2f8b8d71e6c0d3a06ebcbf874204be605",
+        "originalBlob": "e027f546a54e0671d75d5ad8682dad678581276e",
         "path": "CItem.cpp",
-        "provenance": "content reconstruction of the BFG-removed original; Resolve a visiting creature through the event cause supplied by the surviving handler.",
-        "replacementBlob": "a08ee03f4ba7e024c3e186c584add0a425eb4870"
+        "provenance": "content reconstruction of the BFG-removed original; Dispatch item-use events and preserve equipment, scroll and inventory behavior.",
+        "replacementBlob": "b1a425d63d55d8184047a299a09ca479612dce9f"
       },
       {
         "markerPath": "CMap.cpp.REMOVED.git-id",
@@ -182,18 +182,18 @@
       {
         "markerPath": "CMapObject.h.REMOVED.git-id",
         "method": "reconstruction",
-        "originalBlob": "d2c976612adcde304b222d308713c2cb7c97662c",
+        "originalBlob": "e5209fe3c6b81df2cb9fedc1dd4ff9d20e5eedda",
         "path": "CMapObject.h",
         "provenance": "content reconstruction of the BFG-removed original; Carry the common Qt game-object base and apply the surviving item-event interface.",
-        "replacementBlob": "00543ef1d6687d5a5c4b4f7cbb2ff30164cb445f"
+        "replacementBlob": "9af27dfc7a51208399000167038dc492b1651443"
       },
       {
         "markerPath": "CObjectHandler.cpp.REMOVED.git-id",
         "method": "reconstruction",
-        "originalBlob": "0f02a9cdecc149093409730da85b4ce40f6e35f1",
+        "originalBlob": "16507e33a4ab0f7c54270ccc116c719fbb39bc65",
         "path": "CObjectHandler.cpp",
         "provenance": "content reconstruction of the BFG-removed original; Create the common game-object type and configure its historical properties.",
-        "replacementBlob": "d4d465689ed6a5d74172bfdb0f6192fa4554be24"
+        "replacementBlob": "0b64278e47561ecf2c7ee8e6805e72b2ea301824"
       },
       {
         "markerPath": "CPathFinder.cpp.REMOVED.git-id",
@@ -206,18 +206,18 @@
       {
         "markerPath": "CPlayerView.cpp.REMOVED.git-id",
         "method": "reconstruction",
-        "originalBlob": "e06452de22b80d65db896b8d5a3c8cb06ff0b536",
+        "originalBlob": "35ca7e2aaf319ac473284827806eb665c6409e92",
         "path": "CPlayerView.cpp",
-        "provenance": "content reconstruction of the BFG-removed original; Lay out generic graphics items using the accessor introduced by the surviving animation class.",
-        "replacementBlob": "ad5fc2372b28fd4fd49c20be81b8c2b200f8feb0"
+        "provenance": "content reconstruction of the BFG-removed original; Route item drops through the historical item-use dispatcher.",
+        "replacementBlob": "113ea45b17fcc7b879ab0f4dd47fee554e75afe1"
       },
       {
         "markerPath": "GameScript.cpp.REMOVED.git-id",
         "method": "reconstruction",
-        "originalBlob": "7a66bd6c7afb93ae8f021296eef6ea088d536b2c",
+        "originalBlob": "38035a91963e074687eda2a2bf0df52a381bfedd",
         "path": "GameScript.cpp",
         "provenance": "content reconstruction of the BFG-removed original; Bind game objects and pass the authored event cause to potion scripts.",
-        "replacementBlob": "61f9a53f8f3c0b4fb06ae110cce71d1f64c7966b"
+        "replacementBlob": "1ca6869970a09f436dae7069ad3c9a843240e9a5"
       },
       {
         "markerPath": "Stats.cpp.REMOVED.git-id",
@@ -343,7 +343,7 @@
         "method": "reconstruction",
         "originalBlob": "1b3aa2bf2cce5cd06a478f1fbf4367a4c2002143",
         "path": "boost/python/object/inheritance.cpp",
-        "provenance": "unverified donor reconstruction; 4b3902d44f874a1fae86054d7240a2af76901bb4:boost/python/object/inheritance.cpp; headerMatch=0; apiOverlap=0/10000; distance=40",
+        "provenance": "unverified donor reconstruction; 4b3902d44f874a1fae86054d7240a2af76901bb4:boost/python/object/inheritance.cpp; headerMatch=0; apiOverlap=0/10000; distance=39",
         "replacementBlob": "70feba5fcd280139933f29b9179b0ed00eed75f8"
       },
       {
@@ -359,7 +359,7 @@
         "method": "reconstruction",
         "originalBlob": "0d39c3d1478c19a891acce327ddf81990724ace2",
         "path": "boost/python/object_operators.cpp",
-        "provenance": "unverified donor reconstruction; 70d0d690df45877698cb094405e25be00a8139fd:boost/python/object_operators.cpp; headerMatch=0; apiOverlap=0/10000; distance=32",
+        "provenance": "unverified donor reconstruction; 70d0d690df45877698cb094405e25be00a8139fd:boost/python/object_operators.cpp; headerMatch=0; apiOverlap=0/10000; distance=31",
         "replacementBlob": "43d2109b7fbee7a405e4e445aff17714078b1631"
       },
       {
@@ -375,7 +375,7 @@
         "method": "reconstruction",
         "originalBlob": "0f46652b2ab25b823980b32afec490a51470fa02",
         "path": "boost/python/str.cpp",
-        "provenance": "unverified donor reconstruction; 4b3902d44f874a1fae86054d7240a2af76901bb4:boost/python/str.cpp; headerMatch=0; apiOverlap=0/10000; distance=40",
+        "provenance": "unverified donor reconstruction; 4b3902d44f874a1fae86054d7240a2af76901bb4:boost/python/str.cpp; headerMatch=0; apiOverlap=0/10000; distance=39",
         "replacementBlob": "37642738eae0bee1bbcf50cbc12d1c57e227602f"
       },
       {
@@ -391,7 +391,7 @@
         "method": "reconstruction",
         "originalBlob": "2f79f3a7b4e72640e404b1c2d442208127eb6557",
         "path": "config/monsters.json",
-        "provenance": "unverified donor reconstruction; 55e6516eb91b739e899df1ef8d72116da44fec49:config/monsters.json; headerMatch=0; apiOverlap=0/10000; distance=41",
+        "provenance": "unverified donor reconstruction; 55e6516eb91b739e899df1ef8d72116da44fec49:config/monsters.json; headerMatch=0; apiOverlap=0/10000; distance=40",
         "replacementBlob": "b6b5708a1c0683d8ca6d9c395ee31e4742bdd39e"
       },
       {
@@ -851,9 +851,9 @@
         "replacementBlob": "f5d0b39a0cdddb91a31a537052b7d8d31a4aa79f"
       }
     ],
-    "restoredFilesFingerprint": "c634fac76bedf839b3cfd6f6ce5750f25281596468f4f3c7b9d75fdc7154e50f",
-    "sourceCommit": "cc9bd684ba8fd530ea8369e4f5bf248c43c9e139",
-    "sourceTree": "7620736bef709f4d419d986a6f98e231c83a1e4e",
+    "restoredFilesFingerprint": "b422041be3fc99bc7ddbd46e8290e23c8beb01310dbe2865ece3f862360697ba",
+    "sourceCommit": "61369722a47d404eddf30cd505d82066af4f9b6e",
+    "sourceTree": "132147a66e77c37739ef85b479ec70babaa1021f",
     "status": "complete",
     "submodules": [],
     "unresolved": []
@@ -864,12 +864,12 @@
       "-a",
       "--server-args=-screen 0 1920x1080x24",
       "env",
-      "LD_PRELOAD=/tmp/nouraajd-324-gameobjects-final/verify/snapshot-2b8in3kb/observer/libwindowspaths.so",
-      "/tmp/nouraajd-324-gameobjects-final/verify/snapshot-2b8in3kb/build/RecoveryGame"
+      "LD_PRELOAD=/tmp/nouraajd-325-gameobjects-final/verify/snapshot-cacgsaw3/observer/libwindowspaths.so",
+      "/tmp/nouraajd-325-gameobjects-final/verify/snapshot-cacgsaw3/build/RecoveryGame"
     ],
-    "log": "/tmp/nouraajd-324-gameobjects-final/verify/snapshot-2b8in3kb/smoke/startup.log",
+    "log": "/tmp/nouraajd-325-gameobjects-final/verify/snapshot-cacgsaw3/smoke/startup.log",
     "returnCode": 0,
-    "seconds": 1.326,
+    "seconds": 1.024,
     "startup": {
       "checks": {
         "eventLoop": true,
@@ -891,9 +891,9 @@
     "status": "success",
     "timedOut": false
   },
-  "sourceCommit": "cc9bd684ba8fd530ea8369e4f5bf248c43c9e139",
+  "sourceCommit": "61369722a47d404eddf30cd505d82066af4f9b6e",
   "sourceCommits": [
-    "cc9bd684ba8fd530ea8369e4f5bf248c43c9e139"
+    "61369722a47d404eddf30cd505d82066af4f9b6e"
   ],
   "sourcePreparation": {
     "identity": {
@@ -913,7 +913,7 @@
           ]
         },
         "replaySha256": "84e6053bd21ceb1eac9cba5f53821999de225bca6908f11cc6b6c2e5117e49c2",
-        "sourceCommit": "cc9bd684ba8fd530ea8369e4f5bf248c43c9e139"
+        "sourceCommit": "61369722a47d404eddf30cd505d82066af4f9b6e"
       },
       "implementationSha256": "dc767cd812a864fa30270a1cd8f583a243c1d6956da5ba5d31676fee8938ac46",
       "outputs": [
@@ -1000,14 +1000,14 @@
           "history_source_prep.py",
           "prepare-game-objects"
         ],
-        "log": "/tmp/nouraajd-324-gameobjects-final/verify/snapshot-2b8in3kb/preparation/game-objects.log",
+        "log": "/tmp/nouraajd-325-gameobjects-final/verify/snapshot-cacgsaw3/preparation/game-objects.log",
         "name": "gameObjects",
         "returnCode": 0,
         "timedOut": false
       }
     ]
   },
-  "sourceTree": "7620736bef709f4d419d986a6f98e231c83a1e4e",
+  "sourceTree": "132147a66e77c37739ef85b479ec70babaa1021f",
   "startupMode": "game",
   "startupSelection": {
     "mode": "game"
@@ -1028,5 +1028,5 @@
     }
   },
   "toolchainImage": "sha256:d3f59ec1d12297ee8091fbea687aa619275fc92b3fd426560e0a1fa40715afc8",
-  "verifiedFromCommit": "cc9bd684ba8fd530ea8369e4f5bf248c43c9e139"
+  "verifiedFromCommit": "61369722a47d404eddf30cd505d82066af4f9b6e"
 }

@@ -16,7 +16,7 @@
         ]
       },
       "replaySha256": "84e6053bd21ceb1eac9cba5f53821999de225bca6908f11cc6b6c2e5117e49c2",
-      "sourceCommit": "cc9bd684ba8fd530ea8369e4f5bf248c43c9e139"
+      "sourceCommit": "61369722a47d404eddf30cd505d82066af4f9b6e"
     },
     "implementationSha256": "dc767cd812a864fa30270a1cd8f583a243c1d6956da5ba5d31676fee8938ac46",
     "outputs": [
@@ -103,7 +103,7 @@
         "history_source_prep.py",
         "prepare-game-objects"
       ],
-      "log": "/tmp/nouraajd-324-gameobjects-final/verify/snapshot-2b8in3kb/preparation/game-objects.log",
+      "log": "/tmp/nouraajd-325-gameobjects-final/verify/snapshot-cacgsaw3/preparation/game-objects.log",
       "name": "gameObjects",
       "returnCode": 0,
       "timedOut": false

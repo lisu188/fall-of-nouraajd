@@ -68,13 +68,12 @@ CGameObject *CObjectHandler::_createObject(QString type) const {
     qFatal("Cannot create object %s (%s)", qPrintable(type),
            qPrintable(class_name));
   }
-  QObject *qtObject = object;
-  if (auto *mapObject = dynamic_cast<CMapObject *>(object)) mapObject->map = map;
+    if (auto *mapObject = dynamic_cast<CMapObject *>(object)) mapObject->map = map;
   else object->setMap(map);
   object->setObjectType(type);
   object->setObjectName(
       QString::number(reinterpret_cast<quintptr>(object), 16));
-  qtObject->setParent(const_cast<CObjectHandler *>(this));
+  object->setParent(const_cast<CObjectHandler *>(this));
   QJsonObject properties =
       config.contains("properties") ? config["properties"].toObject() : config;
   properties.remove("class");
@@ -83,7 +82,7 @@ CGameObject *CObjectHandler::_createObject(QString type) const {
     properties["animation"] = properties.take("anim");
   }
   for (auto it = properties.begin(); it != properties.end(); ++it) {
-    setProperty(qtObject, it.key(), it.value());
+    setProperty(object, it.key(), it.value());
   }
   if (CCreature *creature = dynamic_cast<CCreature *>(object)) {
     QJsonObject stats = properties["stats"].toObject();
@@ -106,7 +105,7 @@ CGameObject *CObjectHandler::_createObject(QString type) const {
   return object;
 }
 
-void CObjectHandler::setProperty(QObject *object, QString key,
+void CObjectHandler::setProperty(CGameObject *object, QString key,
                                  QJsonValue value) const {
   QMetaProperty property = getProperty(object, key);
   if (value.isObject() && property.isValid() &&
@@ -121,11 +120,11 @@ void CObjectHandler::setProperty(QObject *object, QString key,
   }
   object->setProperty(qPrintable(key), value.toVariant());
 }
-QMetaProperty CObjectHandler::getProperty(QObject *object, QString name) const {
+QMetaProperty CObjectHandler::getProperty(CGameObject *object, QString name) const {
   int index = object->metaObject()->indexOfProperty(qPrintable(name));
   return index < 0 ? QMetaProperty() : object->metaObject()->property(index);
 }
-void CObjectHandler::logProperties(CMapObject *object) const {
+void CObjectHandler::logProperties(CGameObject *object) const {
   for (int i = 0; i < object->metaObject()->propertyCount(); ++i) {
     QMetaProperty property = object->metaObject()->property(i);
     if (property.isUser()) {
