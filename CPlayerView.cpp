@@ -122,7 +122,8 @@ void CPlayerListView::dropEvent(QGraphicsSceneDragDropEvent *event) {
     return;
   }
   event->acceptProposedAction();
-  item->onUse(view->getScene()->getPlayer());
+  auto *map = view->getScene()->getMap();
+  map->getEventHandler()->gameEvent(new CGameEvent(CGameEvent::onUse, view->getScene()->getPlayer()), item);
 }
 
 CPlayerEquippedView::CPlayerEquippedView(CGameView *view) {

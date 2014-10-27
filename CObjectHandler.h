@@ -17,12 +17,12 @@ public:
 		}
 		return casted;
 	}
-	void logProperties ( CMapObject *object ) const;
+	void logProperties ( CGameObject *object ) const;
 	const QJsonObject *getObjectConfig() const;
 private:
 	CGameObject *_createObject ( QString type ) const;
-	void setProperty ( QObject * object , QString key, QJsonValue value ) const;
-	QMetaProperty getProperty ( QObject * object ,QString name ) const;
+	void setProperty ( CGameObject * object , QString key, QJsonValue value ) const;
+	QMetaProperty getProperty ( CGameObject * object ,QString name ) const;
 	CMap *map=0;
 	QJsonObject objectConfig;
 };

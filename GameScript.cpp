@@ -122,31 +122,16 @@ public:
   }
 };
 
-template <class Result> struct PythonPotionCall {
-  static Result call(override function, CCreature *creature) {
-    return function(boost::ref(creature)).template as<Result>();
-  }
-};
-
-template <> struct PythonPotionCall<void> {
-  static void call(override function, CCreature *creature) {
-    function(boost::ref(creature));
-  }
-};
-
 class CPotionWrapper : public CPotion, public wrapper<CPotionWrapper> {
 public:
-  // The unchanged original module blob spans the native void-to-bool onUse
-  // transition.
-  using Result =
-      decltype(std::declval<CPotion &>().onUse(static_cast<CCreature *>(0)));
-  Result onUse(CCreature *creature) override {
+  void onUse(CGameEvent *event) override {
     if (override function = get_override("onUse")) {
-      return PythonPotionCall<Result>::call(function, creature);
+      function(ptr(event));
+    } else {
+      CPotion::onUse(event);
     }
-    return CPotion::onUse(creature);
   }
-  Result defaultOnUse(CCreature *creature) { return CPotion::onUse(creature); }
+  void defaultOnUse(CGameEvent *event) { CPotion::onUse(event); }
 };
 
 static void moveObject(CMapObject &value, int x, int y, int z) {

@@ -24,7 +24,14 @@ class Wearable {
 };
 
 class Usable {
-	virtual void onUse ( CCreature * ) =0;
+public:
+	virtual void onUse ( CGameEvent * ) =0;
+};
+
+class Creatable {
+public:
+    virtual void onCreate(CGameEvent *) = 0;
+    virtual void onDestroy(CGameEvent *) = 0;
 };
 
 class CGameObject : public CAnimatedObject {
@@ -75,7 +82,7 @@ private:
 	QString objectType;
 };
 
-class CMapObject : public CGameObject {
+class CMapObject : public CGameObject, public Creatable {
 	friend class CObjectHandler;
 	Q_OBJECT
 	Q_PROPERTY ( QString tooltip READ getTooltip WRITE setTooltip USER true )

@@ -2,30 +2,30 @@
 
 #include <QObject>
 
-class CMapObject;
+class CGameObject;
 class CMap;
 
 class CGameEvent:public QObject {
 	Q_OBJECT
-	Q_ENUMS ( CGameEvent )
+	Q_ENUMS ( Type )
 public:
 	enum Type {
-		onEnter,onTurn,onCreate,onDestroy,onLeave
+		onEnter,onTurn,onCreate,onDestroy,onLeave,onUse
 	};
-	CGameEvent ( Type type,CMapObject *cause=0 );
+	CGameEvent ( Type type,CGameObject *cause=0 );
 	Type getType() const;
-	CMapObject *getCause() const;
+	CGameObject *getCause() const;
 
 private:
 	const Type type;
-	CMapObject *cause=0;
+	CGameObject *cause=0;
 };
 
 class CEventHandler : public QObject {
 	Q_OBJECT
 public:
 	CEventHandler ( CMap *map );
-	void gameEvent ( CGameEvent *event, CMapObject *mapObject ) const;
+	void gameEvent ( CGameEvent *event, CGameObject *mapObject ) const;
 private:
 	CMap*map=0;
 };
