@@ -19,8 +19,9 @@ public:
 };
 
 class Wearable {
-	virtual void onEquip ( CCreature * ) =0;
-	virtual void onUnequip ( CCreature * ) =0;
+public:
+	virtual void onEquip ( CGameEvent * ) =0;
+	virtual void onUnequip ( CGameEvent * ) =0;
 };
 
 class Usable {

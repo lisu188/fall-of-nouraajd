@@ -8,23 +8,20 @@ class ATypeHandler : public QObject {
 	Q_OBJECT
 public:
 	static ATypeHandler* getHandler ( QString name );
-	ATypeHandler();
-	ATypeHandler ( const ATypeHandler& );
-	virtual CGameObject *create ( QString );
+	virtual CGameObject *create ( QString ) =0;
+	virtual QString getHandlerName() =0;
 };
 
 class CTypeHandler : public ATypeHandler {
 	Q_OBJECT
 public:
-	CTypeHandler();
-	CTypeHandler ( const CTypeHandler& );
 	virtual CGameObject *create ( QString name ) override;
+	virtual QString getHandlerName() override;
 };
 
 class PyTypeHandler : public ATypeHandler {
 	Q_OBJECT
 public:
-	PyTypeHandler();
-	PyTypeHandler ( const PyTypeHandler& );
 	virtual CGameObject *create ( QString name ) override;
+	virtual QString getHandlerName() override;
 };

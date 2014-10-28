@@ -36,13 +36,17 @@ void CItem::setSingleUse ( bool singleUse ) {
 	this->singleUse = singleUse;
 }
 
-void CItem::onEquip ( CCreature *creature ) {
+void CItem::onEquip ( CGameEvent *event ) {
+    auto *creature = dynamic_cast<CCreature *>(event->getCause());
+    if (!creature) return;
 	creature->addBonus ( bonus );
 	qDebug() << creature->getObjectType()  << "equipped" << getObjectType()
 	         << "\n";
 }
 
-void CItem::onUnequip ( CCreature *creature ) {
+void CItem::onUnequip ( CGameEvent *event ) {
+    auto *creature = dynamic_cast<CCreature *>(event->getCause());
+    if (!creature) return;
 	creature->removeBonus ( bonus );
 	qDebug() << creature->getObjectType()  << "unequipped" << getObjectType()
 	         << "\n";

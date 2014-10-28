@@ -124,14 +124,14 @@ void CCreature::setItem(int slot, CItem *item) {
   }
   CItem *previous = getItemAtSlot(slot);
   if (previous) {
-    previous->onUnequip(this);
+    getMap()->getEventHandler()->gameEvent(new CGameEvent(CGameEvent::onUnequip, this), previous);
     addItem(previous);
     if (previous == item) {
       item = nullptr;
     }
   }
   if (item) {
-    item->onEquip(this);
+    getMap()->getEventHandler()->gameEvent(new CGameEvent(CGameEvent::onEquip, this), item);
     removeFromInventory(item);
   }
   equipped[slot] = item;

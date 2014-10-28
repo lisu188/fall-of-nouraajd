@@ -1,6 +1,6 @@
 {
   "identity": {
-    "gameObjects": {
+    "historicalHandlers": {
       "files": {
         "CGameScene.cpp": [
           "d71895c9b668ad3b616bbeb81995b24fd01b3b24ccda8ad518ca27a27f16ddb6",
@@ -15,10 +15,10 @@
           "9a032d901ac3ab7357f07ca279cf324934bec551639f63b7cc407acbccf12a8f"
         ]
       },
-      "replaySha256": "84e6053bd21ceb1eac9cba5f53821999de225bca6908f11cc6b6c2e5117e49c2",
-      "sourceCommit": "61369722a47d404eddf30cd505d82066af4f9b6e"
+      "replaySha256": "1ed87e5c2bdea47c8cb0e5a4b67f5f36a061e50e70736d0cdd2c6ccbea3ee9b7",
+      "sourceCommit": "35b69687549d2b68864d26b1711931835b819670"
     },
-    "implementationSha256": "dc767cd812a864fa30270a1cd8f583a243c1d6956da5ba5d31676fee8938ac46",
+    "implementationSha256": "192c29a332eb1840c7f74d258ac05ba6bad1010b24186d06bae1360b6fdbda59",
     "outputs": [
       {
         "after": {
@@ -30,7 +30,7 @@
           "sha256": "d71895c9b668ad3b616bbeb81995b24fd01b3b24ccda8ad518ca27a27f16ddb6"
         },
         "path": "CGameScene.cpp",
-        "purpose": "Preserve runtime lifetimes and reconcile the transitional common Qt object base"
+        "purpose": "Preserve runtime lifetimes and reconcile the surviving folder, handler and configuration interfaces"
       },
       {
         "after": {
@@ -42,7 +42,7 @@
           "sha256": "3c1d43ba889c7cfbc7620956f6600630f9e29457e89dbb318c15dc7565b3e1ec"
         },
         "path": "CGameView.cpp",
-        "purpose": "Preserve runtime lifetimes and reconcile the transitional common Qt object base"
+        "purpose": "Preserve runtime lifetimes and reconcile the surviving folder, handler and configuration interfaces"
       },
       {
         "after": {
@@ -54,7 +54,7 @@
           "sha256": "38fe619e7738ddf7453d15f4ad14f26c97cfbb1bfc0bd181bc8f35567e8e8f00"
         },
         "path": "CScriptEngine.cpp",
-        "purpose": "Preserve runtime lifetimes and reconcile the transitional common Qt object base"
+        "purpose": "Preserve runtime lifetimes and reconcile the surviving folder, handler and configuration interfaces"
       }
     ]
   },
@@ -69,7 +69,7 @@
         "sha256": "d71895c9b668ad3b616bbeb81995b24fd01b3b24ccda8ad518ca27a27f16ddb6"
       },
       "path": "CGameScene.cpp",
-      "purpose": "Preserve runtime lifetimes and reconcile the transitional common Qt object base"
+      "purpose": "Preserve runtime lifetimes and reconcile the surviving folder, handler and configuration interfaces"
     },
     {
       "after": {
@@ -81,7 +81,7 @@
         "sha256": "3c1d43ba889c7cfbc7620956f6600630f9e29457e89dbb318c15dc7565b3e1ec"
       },
       "path": "CGameView.cpp",
-      "purpose": "Preserve runtime lifetimes and reconcile the transitional common Qt object base"
+      "purpose": "Preserve runtime lifetimes and reconcile the surviving folder, handler and configuration interfaces"
     },
     {
       "after": {
@@ -93,7 +93,7 @@
         "sha256": "38fe619e7738ddf7453d15f4ad14f26c97cfbb1bfc0bd181bc8f35567e8e8f00"
       },
       "path": "CScriptEngine.cpp",
-      "purpose": "Preserve runtime lifetimes and reconcile the transitional common Qt object base"
+      "purpose": "Preserve runtime lifetimes and reconcile the surviving folder, handler and configuration interfaces"
     }
   ],
   "status": "success",
@@ -101,10 +101,10 @@
     {
       "command": [
         "history_source_prep.py",
-        "prepare-game-objects"
+        "prepare-historical-handlers"
       ],
-      "log": "/tmp/nouraajd-325-gameobjects-final/verify/snapshot-cacgsaw3/preparation/game-objects.log",
-      "name": "gameObjects",
+      "log": "/tmp/nouraajd-326-handlers-final/verify/snapshot-aoypr062/preparation/historical-handlers.log",
+      "name": "historicalHandlers",
       "returnCode": 0,
       "timedOut": false
     }
