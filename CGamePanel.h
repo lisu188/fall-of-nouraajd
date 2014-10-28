@@ -21,6 +21,7 @@ public:
 	virtual void hidePanel();
 	virtual void update();
 	bool isShown();
+    QString getPanelName() const;
 	virtual void setUpPanel ( CGameView * );
 	virtual QRectF boundingRect() const;
 	virtual void paint ( QPainter *, const QStyleOptionGraphicsItem *, QWidget * );
