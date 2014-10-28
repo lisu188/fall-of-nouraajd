@@ -5,7 +5,7 @@
 ATypeHandler *ATypeHandler::getHandler ( QString name ) {
 	static  std::list<ATypeHandler*> handlers {new CTypeHandler(),new PyTypeHandler() };
 	for ( ATypeHandler* it:handlers ) {
-        if ( it->getHandlerName() == name ) {
+		if ( it->getHandlerName() == name ) {
 			return it;
 		}
 	}

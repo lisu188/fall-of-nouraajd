@@ -35,9 +35,9 @@ void CGuiHandler::refresh() {
 }
 
 void CGuiHandler::initPanels() {
-	auto viewList=CReflection::getInstance()->getInherited<AGamePanel*>();
-	for ( auto it:viewList ) {
-		panels[ it ->metaObject()->className()]=it;
+	std::list<AGamePanel*> viewList {new CFightPanel(),new CCharPanel(),new CTextPanel() };
+	for ( AGamePanel* it:viewList ) {
+		panels[it->getPanelName()]=it;
 		map->getScene()->addItem ( it );
 		it ->setUpPanel ( map->getScene()->getView() );
 		it ->hidePanel ( );
