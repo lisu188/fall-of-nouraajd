@@ -10,7 +10,7 @@ class CGameEvent:public QObject {
 	Q_ENUMS ( Type )
 public:
 	enum Type {
-		onEnter,onTurn,onCreate,onDestroy,onLeave,onUse
+		onEnter,onTurn,onCreate,onDestroy,onLeave,onUse,onEquip,onUnequip
 	};
 	CGameEvent ( Type type,CGameObject *cause=0 );
 	Type getType() const;

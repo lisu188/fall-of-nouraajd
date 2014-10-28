@@ -17,8 +17,8 @@ public:
 	bool isSingleUse();
 	void setSingleUse ( bool singleUse );
 
-	virtual void onEquip ( CCreature *creature ) override;
-	virtual void onUnequip ( CCreature *creature ) override;
+	virtual void onEquip ( CGameEvent *event ) override;
+	virtual void onUnequip ( CGameEvent *event ) override;
 
 	virtual void onUse ( CGameEvent *event ) override;
 

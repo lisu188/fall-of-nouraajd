@@ -3,34 +3,13 @@
 #include "CScriptEngine.h"
 
 ATypeHandler *ATypeHandler::getHandler ( QString name ) {
-	static  std::list<ATypeHandler*> handlers=CReflection::getInstance()->getInherited<ATypeHandler*>();
-	for ( auto it:handlers ) {
-		if ( it ->metaObject()->className() ==name ) {
+	static  std::list<ATypeHandler*> handlers {new CTypeHandler(),new PyTypeHandler() };
+	for ( ATypeHandler* it:handlers ) {
+        if ( it->getHandlerName() == name ) {
 			return it;
 		}
 	}
 	return nullptr;
-}
-
-ATypeHandler::ATypeHandler() {
-
-}
-
-ATypeHandler::ATypeHandler ( const ATypeHandler & ) {
-
-}
-
-CGameObject *ATypeHandler::create ( QString ) {
-	return nullptr;
-}
-
-
-CTypeHandler::CTypeHandler() {
-
-}
-
-CTypeHandler::CTypeHandler ( const CTypeHandler & ) {
-
 }
 
 CGameObject *CTypeHandler::create ( QString name ) {
@@ -42,15 +21,14 @@ CGameObject *CTypeHandler::create ( QString name ) {
 	return  object ;
 }
 
-
-PyTypeHandler::PyTypeHandler() {
-
-}
-
-PyTypeHandler::PyTypeHandler ( const PyTypeHandler & ) {}
-
 CGameObject *PyTypeHandler::create ( QString name ) {
 	return CScriptEngine::getInstance()->createObject<CGameObject*> ( name );
 }
 
+QString PyTypeHandler::getHandlerName() {
+	return "PyTypeHandler";
+}
 
+QString CTypeHandler::getHandlerName() {
+	return "CTypeHandler";
+}

@@ -30,6 +30,12 @@ void CEventHandler::gameEvent ( CGameEvent *event, CGameObject *mapObject ) cons
 	case CGameEvent::onUse:
 		dynamic_cast<Usable*> ( mapObject )->onUse ( event );
 		break;
+	case CGameEvent::onEquip:
+		dynamic_cast<Wearable*> ( mapObject )->onEquip ( event );
+		break;
+	case CGameEvent::onUnequip:
+		dynamic_cast<Wearable*> ( mapObject )->onUnequip (  event );
+		break;
 	}
 	delete event;
 }
