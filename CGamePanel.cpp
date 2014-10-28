@@ -22,6 +22,7 @@ void AGamePanel::setUpPanel(CGameView *view) {
 }
 void AGamePanel::hidePanel() { setVisible(false); }
 bool AGamePanel::isShown() { return isVisible(); }
+QString AGamePanel::getPanelName() const { return metaObject()->className(); }
 void AGamePanel::update() { QGraphicsItem::update(); }
 void AGamePanel::showPanel() {
   if (!view) return;

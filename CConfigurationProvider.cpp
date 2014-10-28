@@ -13,7 +13,9 @@ QJsonValue &CConfigurationProvider::getConfig ( QString path ) {
 	return instance.getConfiguration ( path );
 }
 
-CConfigurationProvider::CConfigurationProvider() {}
+CConfigurationProvider::CConfigurationProvider() {
+
+}
 
 CConfigurationProvider::~CConfigurationProvider() {
 	clear();
