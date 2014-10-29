@@ -6,7 +6,7 @@
 #include <QTimeLine>
 #include "CAnimation.h"
 #include "CAnimatedObject.h"
-#include "CEventHandler.h"
+#include "handler/CHandler.h"
 #include <unordered_map>
 #include <set>
 #include <QJsonObject>

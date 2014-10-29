@@ -1,4 +1,4 @@
-#include "CTypeHandler.h"
+#include "CHandler.h"
 #include "CMapObject.h"
 #include "CScriptEngine.h"
 

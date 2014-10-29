@@ -1,5 +1,9 @@
-#include "CResourcesHandler.h"
+#include "CHandler.h"
 #include <QDirIterator>
+#include <QSet>
+#include <QList>
+#include <QString>
+
 QList<QString> CResourcesHandler::searchPath= {"",":/"};
 
 CResourcesHandler *CResourcesHandler::getInstance() {

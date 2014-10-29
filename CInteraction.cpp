@@ -8,7 +8,7 @@
 #include "CCreature.h"
 #include "CConfigurationProvider.h"
 #include "CGamePanel.h"
-#include "CObjectHandler.h"
+#include "handler/CHandler.h"
 
 CInteraction::CInteraction() {
 	setVisible ( false );
