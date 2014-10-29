@@ -14,12 +14,8 @@ include(game.pri)
 SOURCES += \
      CReflection.cpp \
      ReflectTypes.cpp \
-     CAnimatedObject.cpp \
      CAnimationProvider.cpp \
-     CBuilding.cpp \
      CConfigurationProvider.cpp \
-     CCreature.cpp \
-     CMapObject.cpp \
      CPathFinder.cpp \
      CGamePanel.cpp \
      GameScript.cpp \
@@ -30,15 +26,11 @@ SOURCES += \
      CInteraction.cpp \
      CScriptEngine.cpp \
      CTile.cpp \
-     CTypeHandler.cpp \
      CMainWindow.cpp \
      CPlayerView.cpp \
      CItem.cpp \
      Stats.cpp \
      CMain.cpp \
-     CObjectHandler.cpp \
-     CGuiHandler.cpp \
-    CResourcesHandler.cpp \
     boost/python/dict.cpp \
     boost/python/errors.cpp \
     boost/python/exec.cpp \
@@ -68,7 +60,15 @@ SOURCES += \
     boost/python/object/pickle_support.cpp \
     boost/python/object/stl_iterator.cpp \
     CScriptLoader.cpp \
-    CEventHandler.cpp
+    mapObjects/CMapObject.cpp \
+    mapObjects/CCreature.cpp \
+    mapObjects/CBuilding.cpp \
+    mapObjects/CAnimatedObject.cpp \
+    handlers/CTypeHandler.cpp \
+    handlers/CResourcesHandler.cpp \
+    handlers/CObjectHandler.cpp \
+    handlers/CEventHandler.cpp \
+    handlers/CGuiHandler.cpp
 
 HEADERS += \
      CReflection.h \
