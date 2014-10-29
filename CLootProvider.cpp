@@ -4,7 +4,7 @@
 #include "Util.h"
 #include "CItem.h"
 #include "CMap.h"
-#include "CObjectHandler.h"
+#include "handler/CHandler.h"
 
 std::set<CItem *> *CLootProvider::getLoot ( int value ) const {
 	return calculateLoot ( value );

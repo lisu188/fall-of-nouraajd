@@ -17,7 +17,6 @@ SOURCES += \
      CAnimationProvider.cpp \
      CConfigurationProvider.cpp \
      CPathFinder.cpp \
-     CGamePanel.cpp \
      GameScript.cpp \
      CMap.cpp \
      CGameScene.cpp \
@@ -60,15 +59,18 @@ SOURCES += \
     boost/python/object/pickle_support.cpp \
     boost/python/object/stl_iterator.cpp \
     CScriptLoader.cpp \
-    mapObjects/CMapObject.cpp \
-    mapObjects/CCreature.cpp \
-    mapObjects/CBuilding.cpp \
-    mapObjects/CAnimatedObject.cpp \
-    handlers/CTypeHandler.cpp \
-    handlers/CResourcesHandler.cpp \
-    handlers/CObjectHandler.cpp \
-    handlers/CEventHandler.cpp \
-    handlers/CGuiHandler.cpp
+    mapObject/CMapObject.cpp \
+    mapObject/CCreature.cpp \
+    mapObject/CBuilding.cpp \
+    mapObject/CAnimatedObject.cpp \
+    handler/CTypeHandler.cpp \
+    handler/CResourcesHandler.cpp \
+    handler/CObjectHandler.cpp \
+    handler/CEventHandler.cpp \
+    handler/CGuiHandler.cpp \
+    panel/CFightPanel.cpp \
+    panel/CTextPanel.cpp \
+    panel/CCharPanel.cpp
 
 HEADERS += \
      CReflection.h \
@@ -87,17 +89,13 @@ HEADERS += \
      CLootProvider.h \
      CScriptEngine.h \
      CTile.h \
-     CTypeHandler.h \
      CMainWindow.h \
      CPlayerView.h \
      CItem.h \
      Stats.h \
      Util.h \
-     CObjectHandler.h \
-     CGuiHandler.h \
-    CResourcesHandler.h \
     CScriptLoader.h \
-    CEventHandler.h
+    handler/CHandler.h
 
 
 android{

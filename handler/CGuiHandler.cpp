@@ -1,4 +1,4 @@
-#include "CGuiHandler.h"
+#include "CHandler.h"
 #include "CMap.h"
 #include "CGamePanel.h"
 #include "CGameScene.h"

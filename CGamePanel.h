@@ -21,7 +21,7 @@ public:
 	virtual void hidePanel();
 	virtual void update();
 	bool isShown();
-    QString getPanelName() const;
+    virtual QString getPanelName();
 	virtual void setUpPanel ( CGameView * );
 	virtual QRectF boundingRect() const;
 	virtual void paint ( QPainter *, const QStyleOptionGraphicsItem *, QWidget * );
@@ -49,6 +49,8 @@ private:
 class CCharPanel : public AGamePanel {
 	Q_OBJECT
 public:
+    QString getPanelName() override;
+    void hidePanel() override;
 	CCharPanel();
 	CCharPanel ( const CCharPanel& );
 	virtual QRectF boundingRect() const;
@@ -58,9 +60,9 @@ public:
 	virtual void setUpPanel ( CGameView *view );
 	virtual void update();
 private:
-	CPlayerListView *playerInventoryView;
-	CPlayerEquippedView *playerEquippedView;
-	BackPackObject *backpack;
+	CPlayerListView *playerInventoryView = nullptr;
+	CPlayerEquippedView *playerEquippedView = nullptr;
+	BackPackObject *backpack = nullptr;
 };
 
 class CFightPanel : public AGamePanel {
@@ -85,6 +87,9 @@ class CTextPanel:public AGamePanel {
 	Q_OBJECT
 	Q_PROPERTY ( QString text READ getText WRITE setText USER true )
 public:
+    QString getPanelName() override;
+    void hidePanel() override;
+    void update() override;
 	CTextPanel();
 	CTextPanel ( const CTextPanel& );
 	virtual QRectF boundingRect() const;

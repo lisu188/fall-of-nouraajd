@@ -29,6 +29,11 @@ public:
 	virtual void onUse ( CGameEvent * ) =0;
 };
 
+class Turnable {
+public:
+    virtual void onTurn(CGameEvent *) = 0;
+};
+
 class Creatable {
 public:
     virtual void onCreate(CGameEvent *) = 0;
@@ -83,7 +88,7 @@ private:
 	QString objectType;
 };
 
-class CMapObject : public CGameObject, public Creatable {
+class CMapObject : public CGameObject, public Creatable, public Turnable {
 	friend class CObjectHandler;
 	Q_OBJECT
 	Q_PROPERTY ( QString tooltip READ getTooltip WRITE setTooltip USER true )

@@ -1,4 +1,4 @@
-#include "CEventHandler.h"
+#include "CHandler.h"
 #include "CMap.h"
 #include "CMapObject.h"
 
@@ -19,7 +19,7 @@ void CEventHandler::gameEvent ( CGameEvent *event, CGameObject *mapObject ) cons
 		dynamic_cast<Visitable*> ( mapObject )->onLeave ( event );
 		break;
 	case CGameEvent::onTurn:
-		dynamic_cast<CMapObject*> ( mapObject )->onTurn ( event );//change
+		dynamic_cast<Turnable*> ( mapObject )->onTurn ( event );
 		break;
 	case CGameEvent::onDestroy:
 		dynamic_cast<Creatable*> ( mapObject )->onDestroy ( event );

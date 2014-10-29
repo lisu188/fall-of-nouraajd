@@ -1,5 +1,4 @@
 #include "CAnimationProvider.h"
-
 #include "CAnimation.h"
 #include <sstream>
 #include <fstream>
@@ -10,7 +9,7 @@
 #include "CConfigurationProvider.h"
 #include <mutex>
 #include "Util.h"
-#include "CResourcesHandler.h"
+#include "handler/CHandler.h"
 
 CAnimation *CAnimationProvider::getAnim ( QString path ) {
 	static std::mutex mutex;
