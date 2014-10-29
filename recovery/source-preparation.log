@@ -3,18 +3,34 @@
 {
   "files": {
     "CGameScene.cpp": [
-      "d71895c9b668ad3b616bbeb81995b24fd01b3b24ccda8ad518ca27a27f16ddb6",
-      "ac6bb906f168c4265ac4cbed6c9c8782ce316a3b80a9eaee198fcc067ba6343c"
+      "8c8843f9c20aa4c712287f665be95053c37b8e91095403aa6afca979cecdf0f9",
+      "25dc52e59724b02747acdbb7f7d680bc501a5982081d1b53406a3d988fa8a1da"
     ],
     "CGameView.cpp": [
       "3c1d43ba889c7cfbc7620956f6600630f9e29457e89dbb318c15dc7565b3e1ec",
       "e59eb1034b607134ee90d56c0af643fc7dafb2d34b11fb7c1188cf3c7a8b19da"
     ],
+    "CGuiHandler.h": [
+      "f9ebe0575fd003e012a3de929ee3c19891f2af35372745a4c48fbcd14103ccc9",
+      "98b586071db06a9981f87bfb98f98c23839725a164999b9e7d03b14a68bbee52"
+    ],
+    "CResourcesHandler.h": [
+      "8dc5c05cf18fce641ecd2861b09be4698e5320773c94b9d8c4300c6b615c49fe",
+      "7d255cbf2dda61e262c05896912682a276f72d20fdc8fe5bc55750a9bb3e5ec9"
+    ],
     "CScriptEngine.cpp": [
       "38fe619e7738ddf7453d15f4ad14f26c97cfbb1bfc0bd181bc8f35567e8e8f00",
       "9a032d901ac3ab7357f07ca279cf324934bec551639f63b7cc407acbccf12a8f"
+    ],
+    "CTypeHandler.h": [
+      "b3adf106d95b8934f690943f2921308b90be5b766c4c8ba250c792de56400201",
+      "cb5929275d85c5ed5a33da485a5353558bdd6f654448c609a79726c8d3449102"
+    ],
+    "panel/CCharPanel.cpp": [
+      "ca6e05ce586c606bc05cd492466f3f999c6d84f346f049e02ec7f23137485f2d",
+      "d0c87899580f638ad1dbce2ec763cacd57226efdb8391712cd4375c16940cea8"
     ]
   },
   "replaySha256": "1ed87e5c2bdea47c8cb0e5a4b67f5f36a061e50e70736d0cdd2c6ccbea3ee9b7",
-  "sourceCommit": "d732bf46e0b8a059330fdcbf4619ee7caf1c8381"
+  "sourceCommit": "8998701baa7ee3659346922c4dc2f143d619eeb1"
 }

@@ -1,6 +1,6 @@
 {
   "adapter": {
-    "config": "/tmp/nouraajd-328-handlers-final/verify/snapshot-tjbz356o/observer/recovery_smoke_config.h",
+    "config": "/tmp/nouraajd-329-handlers-scoped/verify/snapshot-gpxsurao/observer/recovery_smoke_config.h",
     "configSha256": "9be3f337a65cbdc9e904583c2f34d5620212a9800b2908da01bfecca6dd0f814",
     "id": "prefixed-3d",
     "mode": "game",
@@ -20,11 +20,11 @@
     },
     "source-preparation.json": {
       "path": "source-preparation.json",
-      "sha256": "974d627aa3937a25a4006148b31de6c41aaf411dfa2676b5352d4b8e6e24cfd5"
+      "sha256": "d8b802dc745b3f7f722c84f653f9e51e554b102dc7aaac9b6e58b42f3703c548"
     },
     "source-preparation.log": {
       "path": "source-preparation.log",
-      "sha256": "e1e068d0b7397454696804f1735831d9e76f20488a7346f4aef6c24345e3341a"
+      "sha256": "487bac78bda2e8d95d68dbc386ad71c6cc6912859f7665134cc62f9c9997f670"
     }
   },
   "build": {
@@ -32,17 +32,17 @@
       "make",
       "-j2"
     ],
-    "log": "/tmp/nouraajd-328-handlers-final/verify/snapshot-tjbz356o/build.log",
+    "log": "/tmp/nouraajd-329-handlers-scoped/verify/snapshot-gpxsurao/build.log",
     "returnCode": 0,
-    "seconds": 92.81,
+    "seconds": 118.791,
     "timedOut": false
   },
   "configure": {
     "command": [
       "qmake",
-      "/tmp/nouraajd-328-handlers-final/verify/snapshot-tjbz356o/source/game.pro",
+      "/tmp/nouraajd-329-handlers-scoped/verify/snapshot-gpxsurao/source/game.pro",
       "-o",
-      "/tmp/nouraajd-328-handlers-final/verify/snapshot-tjbz356o/build/Makefile",
+      "/tmp/nouraajd-329-handlers-scoped/verify/snapshot-gpxsurao/build/Makefile",
       "QMAKE_CC=gcc-5",
       "QMAKE_CXX=g++-5",
       "QMAKE_LINK=g++-5",
@@ -52,15 +52,15 @@
       "DESTDIR=.",
       "CONFIG-=app_bundle",
       "SOURCES+=/tmp/nouraajd-next326/recovery/smoke/game_startup.cpp",
-      "INCLUDEPATH+=/tmp/nouraajd-328-handlers-final/verify/snapshot-tjbz356o/source",
-      "INCLUDEPATH+=/tmp/nouraajd-328-handlers-final/verify/snapshot-tjbz356o/observer"
+      "INCLUDEPATH+=/tmp/nouraajd-329-handlers-scoped/verify/snapshot-gpxsurao/source",
+      "INCLUDEPATH+=/tmp/nouraajd-329-handlers-scoped/verify/snapshot-gpxsurao/observer"
     ],
-    "log": "/tmp/nouraajd-328-handlers-final/verify/snapshot-tjbz356o/configure.log",
+    "log": "/tmp/nouraajd-329-handlers-scoped/verify/snapshot-gpxsurao/configure.log",
     "returnCode": 0,
     "seconds": 0.064,
     "timedOut": false
   },
-  "evidenceDir": "/tmp/nouraajd-328-handlers-final/verify/evidence/b597ea98d1298b93c0958cc9bee493b9b8b115741b77bcdacef3c564b31225c0",
+  "evidenceDir": "/tmp/nouraajd-329-handlers-scoped/verify/evidence/721ea36497bfc49b134381521e9357fce2a568188ff44ec7bbe328381ac495ec",
   "fileLookup": {
     "command": [
       "g++-5",
@@ -69,20 +69,20 @@
       "-O2",
       "-std=c++11",
       "-o",
-      "/tmp/nouraajd-328-handlers-final/verify/snapshot-tjbz356o/observer/libwindowspaths.so",
+      "/tmp/nouraajd-329-handlers-scoped/verify/snapshot-gpxsurao/observer/libwindowspaths.so",
       "/tmp/nouraajd-next326/recovery/smoke/windows_paths.cpp",
       "-ldl"
     ],
-    "log": "/tmp/nouraajd-328-handlers-final/verify/snapshot-tjbz356o/file-lookup.log",
+    "log": "/tmp/nouraajd-329-handlers-scoped/verify/snapshot-gpxsurao/file-lookup.log",
     "returnCode": 0,
-    "seconds": 0.218,
+    "seconds": 0.321,
     "semantics": "Windows-style case-insensitive file lookup for the game process",
     "timedOut": false
   },
-  "fingerprint": "b597ea98d1298b93c0958cc9bee493b9b8b115741b77bcdacef3c564b31225c0",
+  "fingerprint": "721ea36497bfc49b134381521e9357fce2a568188ff44ec7bbe328381ac495ec",
   "libraryAliases": {
     "aliases": {},
-    "directory": "/tmp/nouraajd-328-handlers-final/verify/snapshot-tjbz356o/observer/library-aliases"
+    "directory": "/tmp/nouraajd-329-handlers-scoped/verify/snapshot-gpxsurao/observer/library-aliases"
   },
   "project": "game.pro",
   "recipe": {
@@ -121,7 +121,7 @@
   },
   "restoration": {
     "excluded": [],
-    "outputDir": "/tmp/nouraajd-328-handlers-final/verify/snapshot-tjbz356o/source",
+    "outputDir": "/tmp/nouraajd-329-handlers-scoped/verify/snapshot-gpxsurao/source",
     "restored": [
       {
         "markerPath": "CCreature.h.REMOVED.git-id",
@@ -132,25 +132,17 @@
         "replacementBlob": "c810ebc738691fa901873f1220056a43513f2b5a"
       },
       {
-        "markerPath": "CGamePanel.cpp.REMOVED.git-id",
-        "method": "reconstruction",
-        "originalBlob": "0be726181eb8fb46c3225bf5209d8187ba03a9ca",
-        "path": "CGamePanel.cpp",
-        "provenance": "content reconstruction of the BFG-removed original; Retain common panel behavior and the combat panel across the file split.",
-        "replacementBlob": "ac7637339150587a3e332d2d6690d9dbba48eeb5"
-      },
-      {
         "markerPath": "CGamePanel.h.REMOVED.git-id",
         "method": "reconstruction",
-        "originalBlob": "ae0bd0051ce0b9bcb7369e515935ae3e53338f84",
+        "originalBlob": "9ca07123c6442a112b2570ed5a7b76862a6ba908",
         "path": "CGamePanel.h",
         "provenance": "content reconstruction of the BFG-removed original; Keep named panel declarations and defer character panel children until a player exists.",
-        "replacementBlob": "2773113ba549b6606ed1f1600bf177be6ae08670"
+        "replacementBlob": "4ce016f2dbf02d2ac32bbf01bf5c8f698abc6529"
       },
       {
         "markerPath": "CItem.cpp.REMOVED.git-id",
         "method": "reconstruction",
-        "originalBlob": "145d0664bbdca6b4a431737240fdfb735c043870",
+        "originalBlob": "9b3de7d201e2362efbb503e596fc27d2298e925f",
         "path": "CItem.cpp",
         "provenance": "content reconstruction of the BFG-removed original; Resolve the creature from the equip and unequip event cause.",
         "replacementBlob": "c4ff7b2370c9cdc88e98f465f766968f3f009ae4"
@@ -158,9 +150,9 @@
       {
         "markerPath": "CMap.cpp.REMOVED.git-id",
         "method": "reconstruction",
-        "originalBlob": "2b13a3f780da7896ca68af4c66f641a67d3c3f1a",
+        "originalBlob": "699585d7f5ee45288d6ebe1f59fa357d1f11b2b7",
         "path": "CMap.cpp",
-        "provenance": "content reconstruction of the BFG-removed original; Dispatch turn events and attach tiles through their surviving scene and graphics interfaces.",
+        "provenance": "content reconstruction of the BFG-removed original; Keep map object and tile ownership, and follow the surviving map and script interfaces.",
         "replacementBlob": "c0362161191a83c8b8c9c390882408b195db07c3"
       },
       {
@@ -168,8 +160,8 @@
         "method": "reconstruction",
         "originalBlob": "8a5528225ffe07f58a0c4df111adc4398bdc20a3",
         "path": "CMapObject.h",
-        "provenance": "content reconstruction of the BFG-removed original; Fit the named event, game-object and moveable interfaces to surviving bodies.",
-        "replacementBlob": "90f15324dda3c705ec342fb9871d6c2ebdea8aff"
+        "provenance": "Declare Turnable for the surviving grouped event dispatcher while preserving the preceding folder revision.",
+        "replacementBlob": "812631db2af41b1ac02daf98c17000b0c4886a7b"
       },
       {
         "markerPath": "CPathFinder.cpp.REMOVED.git-id",
@@ -190,7 +182,7 @@
       {
         "markerPath": "GameScript.cpp.REMOVED.git-id",
         "method": "reconstruction",
-        "originalBlob": "c942ca452cda0e04e0553b3cc8b09ec2b2016d1a",
+        "originalBlob": "ecb6dbdd8fab1d0f16f31a9e368fe997256b70d3",
         "path": "GameScript.cpp",
         "provenance": "content reconstruction of the BFG-removed original; Connect surviving Python scripts to native item, turn, and tile events.",
         "replacementBlob": "1ca6869970a09f436dae7069ad3c9a843240e9a5"
@@ -319,7 +311,7 @@
         "method": "reconstruction",
         "originalBlob": "1b3aa2bf2cce5cd06a478f1fbf4367a4c2002143",
         "path": "boost/python/object/inheritance.cpp",
-        "provenance": "unverified donor reconstruction; 4b3902d44f874a1fae86054d7240a2af76901bb4:boost/python/object/inheritance.cpp; headerMatch=0; apiOverlap=0/10000; distance=36",
+        "provenance": "unverified donor reconstruction; 4b3902d44f874a1fae86054d7240a2af76901bb4:boost/python/object/inheritance.cpp; headerMatch=0; apiOverlap=0/10000; distance=35",
         "replacementBlob": "70feba5fcd280139933f29b9179b0ed00eed75f8"
       },
       {
@@ -335,7 +327,7 @@
         "method": "reconstruction",
         "originalBlob": "0d39c3d1478c19a891acce327ddf81990724ace2",
         "path": "boost/python/object_operators.cpp",
-        "provenance": "unverified donor reconstruction; 70d0d690df45877698cb094405e25be00a8139fd:boost/python/object_operators.cpp; headerMatch=0; apiOverlap=0/10000; distance=28",
+        "provenance": "unverified donor reconstruction; 70d0d690df45877698cb094405e25be00a8139fd:boost/python/object_operators.cpp; headerMatch=0; apiOverlap=0/10000; distance=27",
         "replacementBlob": "43d2109b7fbee7a405e4e445aff17714078b1631"
       },
       {
@@ -351,7 +343,7 @@
         "method": "reconstruction",
         "originalBlob": "0f46652b2ab25b823980b32afec490a51470fa02",
         "path": "boost/python/str.cpp",
-        "provenance": "unverified donor reconstruction; 4b3902d44f874a1fae86054d7240a2af76901bb4:boost/python/str.cpp; headerMatch=0; apiOverlap=0/10000; distance=36",
+        "provenance": "unverified donor reconstruction; 4b3902d44f874a1fae86054d7240a2af76901bb4:boost/python/str.cpp; headerMatch=0; apiOverlap=0/10000; distance=35",
         "replacementBlob": "37642738eae0bee1bbcf50cbc12d1c57e227602f"
       },
       {
@@ -367,7 +359,7 @@
         "method": "reconstruction",
         "originalBlob": "2f79f3a7b4e72640e404b1c2d442208127eb6557",
         "path": "config/monsters.json",
-        "provenance": "unverified donor reconstruction; 55e6516eb91b739e899df1ef8d72116da44fec49:config/monsters.json; headerMatch=0; apiOverlap=0/10000; distance=37",
+        "provenance": "unverified donor reconstruction; 55e6516eb91b739e899df1ef8d72116da44fec49:config/monsters.json; headerMatch=0; apiOverlap=0/10000; distance=36",
         "replacementBlob": "b6b5708a1c0683d8ca6d9c395ee31e4742bdd39e"
       },
       {
@@ -379,11 +371,11 @@
         "replacementBlob": "5e7717d09f072bab9c53878acd48f9c30ca12865"
       },
       {
-        "markerPath": "handlers/CObjectHandler.cpp.REMOVED.git-id",
+        "markerPath": "handler/CObjectHandler.cpp.REMOVED.git-id",
         "method": "reconstruction",
-        "originalBlob": "16507e33a4ab0f7c54270ccc116c719fbb39bc65",
-        "path": "handlers/CObjectHandler.cpp",
-        "provenance": "content reconstruction of the BFG-removed original; Create the common game-object type and configure its historical properties.",
+        "originalBlob": "928646b1d2e3b4ba3411c1ecf945f46a6864668b",
+        "path": "handler/CObjectHandler.cpp",
+        "provenance": "content reconstruction of the BFG-removed original; Carry the configuration factory through the dispatcher and folder transitions.",
         "replacementBlob": "0b64278e47561ecf2c7ee8e6805e72b2ea301824"
       },
       {
@@ -794,18 +786,18 @@
         "replacementBlob": "af256839abbe479e65cd3f07ecbbdbed15c389d9"
       },
       {
-        "markerPath": "mapObjects/CCreature.cpp.REMOVED.git-id",
+        "markerPath": "mapObject/CCreature.cpp.REMOVED.git-id",
         "method": "reconstruction",
-        "originalBlob": "b66181bf4e074c5ebc425e5a9146dfb24c5aa4db",
-        "path": "mapObjects/CCreature.cpp",
+        "originalBlob": "cc627a84da721ffe6cc0f66cd67a453b358b113d",
+        "path": "mapObject/CCreature.cpp",
         "provenance": "content reconstruction of the BFG-removed original; Route equipment and tile-step events through the surviving dispatcher.",
         "replacementBlob": "3c206b8fb44d8e78ad42a167cc7845b71e9a6183"
       },
       {
-        "markerPath": "mapObjects/CMapObject.cpp.REMOVED.git-id",
+        "markerPath": "mapObject/CMapObject.cpp.REMOVED.git-id",
         "method": "reconstruction",
         "originalBlob": "7f050d7d4f256df8c7f6fc44d72be0483b1c9cac",
-        "path": "mapObjects/CMapObject.cpp",
+        "path": "mapObject/CMapObject.cpp",
         "provenance": "content reconstruction of the BFG-removed original; Place object type and map access on the common game-object base.",
         "replacementBlob": "d91343b582d9299e908dbf2831bfea11f230e2b8"
       },
@@ -816,6 +808,14 @@
         "path": "maps/map1/map.json",
         "provenance": "Carry #306\u2019s sparse map reconstruction through the formatting and visitor revisions. Preserve the separate Tiled donor used by later revisions.",
         "replacementBlob": "b6c37f51cc506bf02bd6ea2fcdd573ee7d339550"
+      },
+      {
+        "markerPath": "panel/CFightPanel.cpp.REMOVED.git-id",
+        "method": "reconstruction",
+        "originalBlob": "335a552a3f46fe3e16dd4bf02e54b248e3d744e3",
+        "path": "panel/CFightPanel.cpp",
+        "provenance": "content reconstruction of the BFG-removed original; Retain common panel behavior and the combat panel across the file split.",
+        "replacementBlob": "1a39394158872175f2c75cfe16aa55187fdaa1bd"
       },
       {
         "markerPath": "reindent.py.REMOVED.git-id",
@@ -834,6 +834,18 @@
       },
       {
         "method": "compatibilityRepair",
+        "path": "CEventHandler.h",
+        "provenance": "Forward surviving include sites to the grouped handler declarations.",
+        "replacementBlob": "225e464e70e24059ee9d50bbdee2770708cc9fb0"
+      },
+      {
+        "method": "compatibilityRepair",
+        "path": "CObjectHandler.h",
+        "provenance": "Forward surviving include sites to the grouped handler declarations.",
+        "replacementBlob": "225e464e70e24059ee9d50bbdee2770708cc9fb0"
+      },
+      {
+        "method": "compatibilityRepair",
         "path": "android/PSF_LICENSE",
         "provenance": "https://www.python.org/ftp/python/3.3.7/Python-3.3.7.tar.xz upstream Python distribution license",
         "replacementBlob": "f5d0b39a0cdddb91a31a537052b7d8d31a4aa79f"
@@ -846,20 +858,14 @@
       },
       {
         "method": "compatibilityRepair",
-        "path": "handlers/CEventHandler.cpp",
-        "provenance": "Carry the preceding dispatcher to the path named by the surviving qmake project.",
-        "replacementBlob": "9123cf9c817a2d2367970ecff3864b13be72a8c8"
-      },
-      {
-        "method": "compatibilityRepair",
         "path": "scripts/PSF_LICENSE",
         "provenance": "https://www.python.org/ftp/python/3.3.7/Python-3.3.7.tar.xz upstream Python distribution license",
         "replacementBlob": "f5d0b39a0cdddb91a31a537052b7d8d31a4aa79f"
       }
     ],
-    "restoredFilesFingerprint": "745ef32221c729e6bb0e6c4a870b0ebb1c7295607ab955e9ac3f79e0e95c913e",
-    "sourceCommit": "d732bf46e0b8a059330fdcbf4619ee7caf1c8381",
-    "sourceTree": "b3a8b6c9d560b800f34b7c0b4961e10344a42e8e",
+    "restoredFilesFingerprint": "afdce5ba96b88a18634188c305270023dc2f2b8df4e93d40bdd2d017178d6cb2",
+    "sourceCommit": "8998701baa7ee3659346922c4dc2f143d619eeb1",
+    "sourceTree": "ffce08d6c82e5416923e74e9e5bba9645909136d",
     "status": "complete",
     "submodules": [],
     "unresolved": []
@@ -870,12 +876,12 @@
       "-a",
       "--server-args=-screen 0 1920x1080x24",
       "env",
-      "LD_PRELOAD=/tmp/nouraajd-328-handlers-final/verify/snapshot-tjbz356o/observer/libwindowspaths.so",
-      "/tmp/nouraajd-328-handlers-final/verify/snapshot-tjbz356o/build/RecoveryGame"
+      "LD_PRELOAD=/tmp/nouraajd-329-handlers-scoped/verify/snapshot-gpxsurao/observer/libwindowspaths.so",
+      "/tmp/nouraajd-329-handlers-scoped/verify/snapshot-gpxsurao/build/RecoveryGame"
     ],
-    "log": "/tmp/nouraajd-328-handlers-final/verify/snapshot-tjbz356o/smoke/startup.log",
+    "log": "/tmp/nouraajd-329-handlers-scoped/verify/snapshot-gpxsurao/smoke/startup.log",
     "returnCode": 0,
-    "seconds": 1.023,
+    "seconds": 1.999,
     "startup": {
       "checks": {
         "eventLoop": true,
@@ -886,7 +892,7 @@
       "frame": {
         "height": 718,
         "path": "startup.png",
-        "sha256": "1902e201879ac2b4511427be2facc66221970a5128611a0b0e827ccad0a82d0c",
+        "sha256": "1ffff7b58a05e2fc261e0a6f29ae801d38952692964a29bc2f082d616501f403",
         "width": 1278
       },
       "mode": "game",
@@ -897,40 +903,56 @@
     "status": "success",
     "timedOut": false
   },
-  "sourceCommit": "d732bf46e0b8a059330fdcbf4619ee7caf1c8381",
+  "sourceCommit": "8998701baa7ee3659346922c4dc2f143d619eeb1",
   "sourceCommits": [
-    "d732bf46e0b8a059330fdcbf4619ee7caf1c8381"
+    "8998701baa7ee3659346922c4dc2f143d619eeb1"
   ],
   "sourcePreparation": {
     "identity": {
       "historicalHandlers": {
         "files": {
           "CGameScene.cpp": [
-            "d71895c9b668ad3b616bbeb81995b24fd01b3b24ccda8ad518ca27a27f16ddb6",
-            "ac6bb906f168c4265ac4cbed6c9c8782ce316a3b80a9eaee198fcc067ba6343c"
+            "8c8843f9c20aa4c712287f665be95053c37b8e91095403aa6afca979cecdf0f9",
+            "25dc52e59724b02747acdbb7f7d680bc501a5982081d1b53406a3d988fa8a1da"
           ],
           "CGameView.cpp": [
             "3c1d43ba889c7cfbc7620956f6600630f9e29457e89dbb318c15dc7565b3e1ec",
             "e59eb1034b607134ee90d56c0af643fc7dafb2d34b11fb7c1188cf3c7a8b19da"
           ],
+          "CGuiHandler.h": [
+            "f9ebe0575fd003e012a3de929ee3c19891f2af35372745a4c48fbcd14103ccc9",
+            "98b586071db06a9981f87bfb98f98c23839725a164999b9e7d03b14a68bbee52"
+          ],
+          "CResourcesHandler.h": [
+            "8dc5c05cf18fce641ecd2861b09be4698e5320773c94b9d8c4300c6b615c49fe",
+            "7d255cbf2dda61e262c05896912682a276f72d20fdc8fe5bc55750a9bb3e5ec9"
+          ],
           "CScriptEngine.cpp": [
             "38fe619e7738ddf7453d15f4ad14f26c97cfbb1bfc0bd181bc8f35567e8e8f00",
             "9a032d901ac3ab7357f07ca279cf324934bec551639f63b7cc407acbccf12a8f"
+          ],
+          "CTypeHandler.h": [
+            "b3adf106d95b8934f690943f2921308b90be5b766c4c8ba250c792de56400201",
+            "cb5929275d85c5ed5a33da485a5353558bdd6f654448c609a79726c8d3449102"
+          ],
+          "panel/CCharPanel.cpp": [
+            "ca6e05ce586c606bc05cd492466f3f999c6d84f346f049e02ec7f23137485f2d",
+            "d0c87899580f638ad1dbce2ec763cacd57226efdb8391712cd4375c16940cea8"
           ]
         },
         "replaySha256": "1ed87e5c2bdea47c8cb0e5a4b67f5f36a061e50e70736d0cdd2c6ccbea3ee9b7",
-        "sourceCommit": "d732bf46e0b8a059330fdcbf4619ee7caf1c8381"
+        "sourceCommit": "8998701baa7ee3659346922c4dc2f143d619eeb1"
       },
       "implementationSha256": "192c29a332eb1840c7f74d258ac05ba6bad1010b24186d06bae1360b6fdbda59",
       "outputs": [
         {
           "after": {
             "kind": "file",
-            "sha256": "ac6bb906f168c4265ac4cbed6c9c8782ce316a3b80a9eaee198fcc067ba6343c"
+            "sha256": "25dc52e59724b02747acdbb7f7d680bc501a5982081d1b53406a3d988fa8a1da"
           },
           "before": {
             "kind": "file",
-            "sha256": "d71895c9b668ad3b616bbeb81995b24fd01b3b24ccda8ad518ca27a27f16ddb6"
+            "sha256": "8c8843f9c20aa4c712287f665be95053c37b8e91095403aa6afca979cecdf0f9"
           },
           "path": "CGameScene.cpp",
           "purpose": "Preserve runtime lifetimes and reconcile the surviving folder, handler and configuration interfaces"
@@ -950,6 +972,30 @@
         {
           "after": {
             "kind": "file",
+            "sha256": "98b586071db06a9981f87bfb98f98c23839725a164999b9e7d03b14a68bbee52"
+          },
+          "before": {
+            "kind": "file",
+            "sha256": "f9ebe0575fd003e012a3de929ee3c19891f2af35372745a4c48fbcd14103ccc9"
+          },
+          "path": "CGuiHandler.h",
+          "purpose": "Preserve runtime lifetimes and reconcile the surviving folder, handler and configuration interfaces"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "7d255cbf2dda61e262c05896912682a276f72d20fdc8fe5bc55750a9bb3e5ec9"
+          },
+          "before": {
+            "kind": "file",
+            "sha256": "8dc5c05cf18fce641ecd2861b09be4698e5320773c94b9d8c4300c6b615c49fe"
+          },
+          "path": "CResourcesHandler.h",
+          "purpose": "Preserve runtime lifetimes and reconcile the surviving folder, handler and configuration interfaces"
+        },
+        {
+          "after": {
+            "kind": "file",
             "sha256": "9a032d901ac3ab7357f07ca279cf324934bec551639f63b7cc407acbccf12a8f"
           },
           "before": {
@@ -958,6 +1004,30 @@
           },
           "path": "CScriptEngine.cpp",
           "purpose": "Preserve runtime lifetimes and reconcile the surviving folder, handler and configuration interfaces"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "cb5929275d85c5ed5a33da485a5353558bdd6f654448c609a79726c8d3449102"
+          },
+          "before": {
+            "kind": "file",
+            "sha256": "b3adf106d95b8934f690943f2921308b90be5b766c4c8ba250c792de56400201"
+          },
+          "path": "CTypeHandler.h",
+          "purpose": "Preserve runtime lifetimes and reconcile the surviving folder, handler and configuration interfaces"
+        },
+        {
+          "after": {
+            "kind": "file",
+            "sha256": "d0c87899580f638ad1dbce2ec763cacd57226efdb8391712cd4375c16940cea8"
+          },
+          "before": {
+            "kind": "file",
+            "sha256": "ca6e05ce586c606bc05cd492466f3f999c6d84f346f049e02ec7f23137485f2d"
+          },
+          "path": "panel/CCharPanel.cpp",
+          "purpose": "Preserve runtime lifetimes and reconcile the surviving folder, handler and configuration interfaces"
         }
       ]
     },
@@ -965,11 +1035,11 @@
       {
         "after": {
           "kind": "file",
-          "sha256": "ac6bb906f168c4265ac4cbed6c9c8782ce316a3b80a9eaee198fcc067ba6343c"
+          "sha256": "25dc52e59724b02747acdbb7f7d680bc501a5982081d1b53406a3d988fa8a1da"
         },
         "before": {
           "kind": "file",
-          "sha256": "d71895c9b668ad3b616bbeb81995b24fd01b3b24ccda8ad518ca27a27f16ddb6"
+          "sha256": "8c8843f9c20aa4c712287f665be95053c37b8e91095403aa6afca979cecdf0f9"
         },
         "path": "CGameScene.cpp",
         "purpose": "Preserve runtime lifetimes and reconcile the surviving folder, handler and configuration interfaces"
@@ -989,6 +1059,30 @@
       {
         "after": {
           "kind": "file",
+          "sha256": "98b586071db06a9981f87bfb98f98c23839725a164999b9e7d03b14a68bbee52"
+        },
+        "before": {
+          "kind": "file",
+          "sha256": "f9ebe0575fd003e012a3de929ee3c19891f2af35372745a4c48fbcd14103ccc9"
+        },
+        "path": "CGuiHandler.h",
+        "purpose": "Preserve runtime lifetimes and reconcile the surviving folder, handler and configuration interfaces"
+      },
+      {
+        "after": {
+          "kind": "file",
+          "sha256": "7d255cbf2dda61e262c05896912682a276f72d20fdc8fe5bc55750a9bb3e5ec9"
+        },
+        "before": {
+          "kind": "file",
+          "sha256": "8dc5c05cf18fce641ecd2861b09be4698e5320773c94b9d8c4300c6b615c49fe"
+        },
+        "path": "CResourcesHandler.h",
+        "purpose": "Preserve runtime lifetimes and reconcile the surviving folder, handler and configuration interfaces"
+      },
+      {
+        "after": {
+          "kind": "file",
           "sha256": "9a032d901ac3ab7357f07ca279cf324934bec551639f63b7cc407acbccf12a8f"
         },
         "before": {
@@ -996,6 +1090,30 @@
           "sha256": "38fe619e7738ddf7453d15f4ad14f26c97cfbb1bfc0bd181bc8f35567e8e8f00"
         },
         "path": "CScriptEngine.cpp",
+        "purpose": "Preserve runtime lifetimes and reconcile the surviving folder, handler and configuration interfaces"
+      },
+      {
+        "after": {
+          "kind": "file",
+          "sha256": "cb5929275d85c5ed5a33da485a5353558bdd6f654448c609a79726c8d3449102"
+        },
+        "before": {
+          "kind": "file",
+          "sha256": "b3adf106d95b8934f690943f2921308b90be5b766c4c8ba250c792de56400201"
+        },
+        "path": "CTypeHandler.h",
+        "purpose": "Preserve runtime lifetimes and reconcile the surviving folder, handler and configuration interfaces"
+      },
+      {
+        "after": {
+          "kind": "file",
+          "sha256": "d0c87899580f638ad1dbce2ec763cacd57226efdb8391712cd4375c16940cea8"
+        },
+        "before": {
+          "kind": "file",
+          "sha256": "ca6e05ce586c606bc05cd492466f3f999c6d84f346f049e02ec7f23137485f2d"
+        },
+        "path": "panel/CCharPanel.cpp",
         "purpose": "Preserve runtime lifetimes and reconcile the surviving folder, handler and configuration interfaces"
       }
     ],
@@ -1006,14 +1124,14 @@
           "history_source_prep.py",
           "prepare-historical-handlers"
         ],
-        "log": "/tmp/nouraajd-328-handlers-final/verify/snapshot-tjbz356o/preparation/historical-handlers.log",
+        "log": "/tmp/nouraajd-329-handlers-scoped/verify/snapshot-gpxsurao/preparation/historical-handlers.log",
         "name": "historicalHandlers",
         "returnCode": 0,
         "timedOut": false
       }
     ]
   },
-  "sourceTree": "b3a8b6c9d560b800f34b7c0b4961e10344a42e8e",
+  "sourceTree": "ffce08d6c82e5416923e74e9e5bba9645909136d",
   "startupMode": "game",
   "startupSelection": {
     "mode": "game"
@@ -1034,5 +1152,5 @@
     }
   },
   "toolchainImage": "sha256:d3f59ec1d12297ee8091fbea687aa619275fc92b3fd426560e0a1fa40715afc8",
-  "verifiedFromCommit": "d732bf46e0b8a059330fdcbf4619ee7caf1c8381"
+  "verifiedFromCommit": "8998701baa7ee3659346922c4dc2f143d619eeb1"
 }

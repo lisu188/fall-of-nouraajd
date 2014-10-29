@@ -16,8 +16,7 @@
 #include <vector>
 #include "CGamePanel.h"
 #include <QThreadPool>
-#include "CObjectHandler.h"
-#include "CGuiHandler.h"
+#include "handler/CHandler.h"
 #include "CMap.h"
 #include "CCreature.h"
 #include "CPathFinder.h"
