@@ -64,7 +64,7 @@ void CGameScene::removeObject ( CMapObject *object ) {
 }
 
 void CGameScene::keyPressEvent ( QKeyEvent *event ) {
-	if ( map->getGuiHandler()->isAnyPanelVisible() ) {
+	if ( map->getGuiHandler()->isAnyPanelVisible() ||map->isMoving() ) {
 		return;
 	}
 	switch ( event->key() ) {

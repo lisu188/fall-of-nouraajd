@@ -29,7 +29,7 @@ Coords CTile::getCoords() {
 	return Coords ( posx, posy, posz );
 }
 
-void CTile::onStep ( CCreature * ) {
+void CTile::onStep ( CGameEvent * ) {
 
 }
 

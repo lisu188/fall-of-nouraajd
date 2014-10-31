@@ -8,6 +8,7 @@
 
 
 class CGameObject;
+class ATypeHandler;
 class CMap;
 
 class CGameEvent:public QObject {
@@ -15,7 +16,7 @@ class CGameEvent:public QObject {
 	Q_ENUMS ( Type )
 public:
 	enum Type {
-		onEnter,onTurn,onCreate,onDestroy,onLeave,onUse,onEquip,onUnequip
+		onEnter,onTurn,onCreate,onDestroy,onLeave,onUse,onEquip,onUnequip,onStep
 	};
 	CGameEvent ( Type type,CGameObject *cause=0 );
 	Type getType() const;
@@ -48,9 +49,14 @@ public:
 		}
 		return casted;
 	}
+    void registerHandler(ATypeHandler *handler);
 	void logProperties ( CGameObject *object ) const;
 	const QJsonObject *getObjectConfig() const;
+    CMap *getMap();
+
+    std::list<ATypeHandler*> handlers;
 private:
+    ATypeHandler *getHandler ( QString name )const;
 	CGameObject *_createObject ( QString type ) const;
 	void setProperty ( CGameObject * object , QString key, QJsonValue value ) const;
 	QMetaProperty getProperty ( CGameObject * object ,QString name ) const;
@@ -80,9 +86,10 @@ class CGameObject;
 class ATypeHandler : public QObject {
 	Q_OBJECT
 public:
-	static ATypeHandler* getHandler ( QString name );
 	virtual CGameObject *create ( QString ) =0;
 	virtual QString getHandlerName() =0;
+protected:
+    CObjectHandler *getObjectHandler();
 };
 
 class CTypeHandler : public ATypeHandler {
@@ -113,5 +120,6 @@ private:
 	void initPanels();
 	CMap*map;
 };
+
 
 

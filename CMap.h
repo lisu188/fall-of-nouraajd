@@ -39,6 +39,7 @@ public:
 	void removeTile ( int x, int y, int z );
 	void move ();
 	CTile *getTile ( int x, int y, int z );
+	CTile *getTile ( Coords coords );
 	bool contains ( int x, int y, int z );
 	void addObject ( CMapObject *mapObject );
 	void removeObject ( CMapObject *mapObject );
@@ -65,13 +66,15 @@ public:
 	const CLootProvider *getLootProvider() const;
 	const CObjectHandler *getObjectHandler() const;
 	const CEventHandler *getEventHandler() const;
+    CScriptEngine *getScriptEngine() const;
 	CGuiHandler *getGuiHandler() const;
 	Q_INVOKABLE bool canStep ( int x,int y,int z );
-	Q_SIGNAL void nextMove();
 	bool canStep ( Coords &coords );
 	QString getMapPath() const;
 	QString getMapName();
 	CMapObject *getObjectByName ( QString name );
+	bool isMoving();
+
 	template<typename T>
 	std::set<CMapObject *> getIf ( T func ) {
 		std::set<CMapObject *> objects;
@@ -117,7 +120,9 @@ private:
 	CObjectHandler *handler=0;
 	CEventHandler *eventHandler=0;
 	CGuiHandler *guiHandler=0;
+    CScriptEngine *scriptEngine=0;
 	CMapScriptLoader *loader=0;
 	QString mapPath;
+	bool moving=false;
 };
 

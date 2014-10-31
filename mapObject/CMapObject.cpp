@@ -6,6 +6,7 @@
 #include "CScriptEngine.h"
 
 CMapObject::CMapObject() {
+	connect ( this,&CGameObject::mapChanged,this,&CMapObject::onMapChanged );
 //	statsView.setParentItem ( this );
 //	statsView.setVisible ( true );
 //	statsView.setText ( " " );
@@ -13,17 +14,12 @@ CMapObject::CMapObject() {
 //	                   -statsView.boundingRect().height() );
 }
 
-
 CMapObject::~CMapObject() {
 
 }
 
-QString CGameObject::getObjectType() const {
-	return objectType;
-}
+CGameObject::~CGameObject() {
 
-void CGameObject::setObjectType ( const QString &value ) {
-	objectType = value;
 }
 
 QString CMapObject::getTooltip() const {
@@ -35,30 +31,33 @@ void CMapObject::setTooltip ( const QString &value ) {
 }
 
 void CMapObject::move ( int x, int y ,int z ) {
-	if ( CCreature *creature=dynamic_cast<CCreature*> ( this ) ) {
-		CTile*tile=getMap()->getTile ( posx + x, posy + y, posz );
-		if ( tile->canStep() ) {
-			tile->onStep ( creature );
-		} else {
+	if ( dynamic_cast<Moveable*> ( this ) ) {
+		if ( !getMap()->getTile ( posx + x, posy + y, posz )->canStep() ) {
 			return;
 		}
+		dynamic_cast<Moveable*> ( this ) ->beforeMove();
 	}
-	if ( x == 0 && y == 0 ) {
-		return;
-	}
+
 	posx += x;
 	posy += y;
 	posz += z;
-	if ( getMap() ) {
-		setPos ( posx * 50, posy * 50 );
-		if (  dynamic_cast<CPlayer*> ( this ) ) {
-			getMap()->ensureSize();
-		}
+	setPos ( posx * 50, posy * 50 );
+
+	if ( dynamic_cast<Moveable*> ( this ) ) {
+		dynamic_cast<Moveable*> ( this ) ->afterMove();
 	}
+}
+
+void CMapObject::move ( Coords coords ) {
+	this->move ( coords.x,coords.y,coords.z );
 }
 
 void CMapObject::moveTo ( int x, int y, int z ) {
 	move ( x - posx, y - posy ,z-posz );
+}
+
+void CMapObject::moveTo ( Coords coords ) {
+	this->moveTo ( coords.x,coords.y,coords.z );
 }
 
 int CMapObject::getPosY() const {
@@ -73,36 +72,27 @@ int CMapObject::getPosX() const {
 	return posx;
 }
 
-
-void CMapObject::onTurn(CGameEvent *) {
-
-}
-
-void CMapObject::onCreate(CGameEvent *) {
+void CMapObject::onTurn ( CGameEvent * ) {
 
 }
 
-void CMapObject::onDestroy(CGameEvent *) {
+void CMapObject::onCreate ( CGameEvent * ) {
 
 }
 
+void CMapObject::onDestroy ( CGameEvent * ) {
 
-void CMapObject::setMap ( CMap *map ) {
-	if ( !map ) {
-		return;
-	}
-	this->map = map;
+}
+
+void CMapObject::onMapChanged() {
+	this->QObject::setParent ( getMap() );
 	//	statsView.setParentItem ( this );
 	//	statsView.setVisible ( false );
 	//	statsView.setPos ( 50, 0 );
-//	statsView.setZValue ( this->zValue() + 1 );
-	if ( this->scene() != map->getScene() ) {
-		map->getScene()->addItem ( this );
+	//	statsView.setZValue ( this->zValue() + 1 );
+	if ( this->scene() != getMap()->getScene() ) {
+		getMap()->getScene()->addItem ( this );
 	}
-}
-
-CMap *CMapObject::getMap() {
-	return map;
 }
 
 void CMapObject::setVisible ( bool vis ) {
@@ -117,18 +107,10 @@ void CMapObject::setCoords ( Coords coords ) {
 	this->moveTo ( coords.x,coords.y,coords.z );
 }
 
-void CMapObject::move(Coords coords) {
-    move(coords.x, coords.y, coords.z);
-}
-
-void CMapObject::moveTo(Coords coords) {
-    moveTo(coords.x, coords.y, coords.z);
-}
-
 void CMapObject::hoverEnterEvent ( QGraphicsSceneHoverEvent *event ) {
-//	statsView.setVisible ( true );
-//	statsView.setText ( tooltip );
-//	statsView.setPos ( 0, 0 - statsView.boundingRect().height() );
+	//	statsView.setVisible ( true );
+	//	statsView.setText ( tooltip );
+	//	statsView.setPos ( 0, 0 - statsView.boundingRect().height() );
 	event->setAccepted ( true );
 }
 
@@ -160,14 +142,30 @@ QString CEvent::getEventClass() {
 void CEvent::setEventClass ( const QString &value ) {
 	this->eventClass=value;
 	CEvent* event=this;
-	CScriptEngine::getInstance()->callFunction ( "game.switchClass", boost::ref ( event ),CScriptEngine::getInstance()->getObject ( getMap()->getMapName()+"."+value )  );
+    getMap()->getScriptEngine()->callFunction ( "game.switchClass", boost::ref ( event ),getMap()->getScriptEngine()->getObject ( getMap()->getMapName()+"."+value )  );
 }
 
+void CEvent::onEnter ( CGameEvent * ) {
 
+}
 
-void CEvent::onEnter(CGameEvent *) {}
-void CEvent::onLeave(CGameEvent *) {}
+void CEvent::onLeave ( CGameEvent * ) {
 
-CGameObject::~CGameObject() = default;
-CMap *CGameObject::getMap() { return map; }
-void CGameObject::setMap(CMap *value) { map = value; }
+}
+
+QString CGameObject::getObjectType() const {
+	return this->objectType;
+}
+
+void CGameObject::setObjectType ( const QString &value ) {
+	this->objectType=value;
+}
+
+CMap *CGameObject::getMap() {
+	return this->map;
+}
+
+void CGameObject::setMap ( CMap *map ) {
+	this->map=map;
+	Q_EMIT mapChanged();
+}

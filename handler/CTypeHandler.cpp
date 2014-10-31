@@ -1,15 +1,10 @@
 #include "CHandler.h"
 #include "CMapObject.h"
+#include "CMap.h"
 #include "CScriptEngine.h"
 
-ATypeHandler *ATypeHandler::getHandler ( QString name ) {
-	static  std::list<ATypeHandler*> handlers {new CTypeHandler(),new PyTypeHandler() };
-	for ( ATypeHandler* it:handlers ) {
-		if ( it->getHandlerName() == name ) {
-			return it;
-		}
-	}
-	return nullptr;
+CObjectHandler* ATypeHandler::getObjectHandler(){
+    return dynamic_cast<CObjectHandler*>(this->parent());
 }
 
 CGameObject *CTypeHandler::create ( QString name ) {
@@ -22,7 +17,7 @@ CGameObject *CTypeHandler::create ( QString name ) {
 }
 
 CGameObject *PyTypeHandler::create ( QString name ) {
-	return CScriptEngine::getInstance()->createObject<CGameObject*> ( name );
+    return getObjectHandler()->getMap()->getScriptEngine()->createObject<CGameObject*> ( name );
 }
 
 QString PyTypeHandler::getHandlerName() {

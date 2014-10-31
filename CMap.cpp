@@ -1,3 +1,4 @@
+#include <QScopedValueRollback>
 #include "CCreature.h"
 #include "CGuiHandler.h"
 #include "CGameScene.h"
@@ -21,6 +22,7 @@
 CMap::CMap(CGameScene *scene, QString mapPath)
     : QObject(scene), scene(scene), entryx(0), entryz(0), entryy(0),
       lootProvider(nullptr), handler(nullptr), mapPath(mapPath) {
+  scriptEngine = new CScriptEngine(this);
   handler = new CObjectHandler(this);
   guiHandler = new CGuiHandler(this);
   eventHandler = new CEventHandler(this);
@@ -59,7 +61,7 @@ void CMap::loadMap(QString mapPath) {
     }
   };
   namespace py = boost::python;
-  auto *engine = CScriptEngine::getInstance();
+  auto *engine = getScriptEngine();
   py::object mapLoader = py::import("_core").attr("CMapScriptLoader")(py::ptr(this));
   py::extract<CMapScriptLoader *>(mapLoader)()->setParent(nullptr);
   py::object finders = py::import("sys").attr("meta_path");
@@ -355,7 +357,13 @@ void CMap::resolveFights() {
   }
 }
 
+bool CMap::isMoving() { return moving; }
+CScriptEngine *CMap::getScriptEngine() const { return scriptEngine; }
+CTile *CMap::getTile(Coords coords) { return getTile(coords.x, coords.y, coords.z); }
+
 void CMap::move() {
+  if (moving) return;
+  QScopedValueRollback<bool> turn(moving, true);
   auto *player = getPlayer();
   if (!player) return;
   const auto objects = getMapObjectsClone();
@@ -393,7 +401,6 @@ void CMap::move() {
   resolveFights();
   ensureSize();
   player->updateViews();
-  Q_EMIT nextMove();
 }
 
 std::set<CMapObject *> CMap::getMapObjectsClone() {
