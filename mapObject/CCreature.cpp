@@ -1,3 +1,4 @@
+#include "CTile.h"
 #include "CConfigurationProvider.h"
 #include "CGuiHandler.h"
 #include "CCreature.h"
@@ -663,4 +664,14 @@ void CCreature::addBonus(const Stats &bonus) {
 void CCreature::removeBonus(const Stats &bonus) {
   stats.removeBonus(bonus);
   attribChange();
+}
+
+void CPlayer::afterMove() {
+    auto *map = getMap();
+    map->getEventHandler()->gameEvent(new CGameEvent(CGameEvent::onStep, this), map->getTile(getCoords()));
+}
+
+void CMonster::afterMove() {
+    auto *map = getMap();
+    map->getEventHandler()->gameEvent(new CGameEvent(CGameEvent::onStep, this), map->getTile(getCoords()));
 }

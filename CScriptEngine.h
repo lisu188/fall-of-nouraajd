@@ -8,11 +8,10 @@ class CMap;
 class CScriptEngine :public QObject {
 	Q_OBJECT
 public:
-	static CScriptEngine *getInstance();
 	void executeScript ( QString script ,boost::python::object nameSpace=boost::python::object() );
 	void executeCommand ( std::initializer_list<QString> list );
 	QString buildCommand ( std::initializer_list<QString> list );
-	CScriptEngine ();
+    CScriptEngine (CMap *map);
 	~CScriptEngine();
 	template<typename T=boost::python::object>
 	T getObject ( QString name ) {
@@ -46,6 +45,7 @@ public:
 		return boost::python::extract<T> ( object );
 	}
 private:
+    CMap*map=0;
 	boost::python::object main_module;
 	boost::python::object main_namespace;
 };

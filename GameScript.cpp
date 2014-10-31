@@ -176,14 +176,14 @@ public:
 
 class CTileWrapper : public CTile, public wrapper<CTile> {
 public:
-  void onStep(CCreature *creature) override {
+  void onStep(CGameEvent *event) override {
     if (override call = get_override("onStep")) {
-      call(ptr(creature));
+      call(ptr(event));
     } else {
-      CTile::onStep(creature);
+      CTile::onStep(event);
     }
   }
-  void defaultOnStep(CCreature *creature) { CTile::onStep(creature); }
+  void defaultOnStep(CGameEvent *event) { CTile::onStep(event); }
 };
 
 static void removeMatchingObjects(CMap &map, object predicate) {

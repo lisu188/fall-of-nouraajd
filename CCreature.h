@@ -141,6 +141,7 @@ class CPlayer : public CCreature, public Moveable {
     void onTurn(CGameEvent *);
     void setNextMove(Coords move);
     Coords getNextMove() override;
+    void afterMove() override;
     void onEnter(CGameEvent *);
     void update();
     void updateViews();
@@ -170,6 +171,7 @@ class CMonster : public CCreature, public Moveable {
     CMonster(const CMonster &monster);
     virtual void onTurn(CGameEvent *);
     Coords getNextMove() override;
+    void afterMove() override;
     virtual void onEnter(CGameEvent *);
     virtual void levelUp();
     virtual std::set<CItem *> *getLoot();

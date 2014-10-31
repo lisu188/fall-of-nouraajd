@@ -1,7 +1,7 @@
 # Recovered game snapshot
 
-Original commit: `8998701baa7ee3659346922c4dc2f143d619eeb1`. Original tree: `ffce08d6c82e5416923e74e9e5bba9645909136d`.
-Startup was verified from identical recovered sources at `8998701baa7ee3659346922c4dc2f143d619eeb1`.
+Original commit: `ee6512a07829eaf651364996d604b043bfcdee8f`. Original tree: `e755d745b4e54f291c487cd494af1a4ab19bd729`.
+Startup was verified from identical recovered sources at `ee6512a07829eaf651364996d604b043bfcdee8f`.
 
 This recovered version compiled and linked on Linux, started the real game on an isolated Xvfb display,
 loaded its map and a healthy player, rendered the screenshot below, and exited normally.
@@ -36,13 +36,13 @@ launches run the game's original entry point. Startup evidence does not establis
 
 ## Recovery provenance
 
-compatibilityRepair: 5, exactOriginal: 59, reconstruction: 37.
+compatibilityRepair: 5, exactOriginal: 59, reconstruction: 36.
 
-- `CCreature.h`: content reconstruction of the BFG-removed original; Follow the surviving onTurn event callback.
+- `CCreature.h`: content reconstruction of the BFG-removed original; Declare the movement hooks used by the authored map-object implementation.
 - `CGamePanel.h`: content reconstruction of the BFG-removed original; Keep named panel declarations and defer character panel children until a player exists.
 - `CItem.cpp`: content reconstruction of the BFG-removed original; Resolve the creature from the equip and unequip event cause.
 - `CMap.cpp`: content reconstruction of the BFG-removed original; Keep map object and tile ownership, and follow the surviving map and script interfaces.
-- `CMapObject.h`: Declare Turnable for the surviving grouped event dispatcher while preserving the preceding folder revision.
+- `CMapObject.h`: content reconstruction of the BFG-removed original; Fit the named event, game-object and moveable interfaces to surviving bodies.
 - `CPathFinder.cpp`: content reconstruction of the BFG-removed original; Fit the preceding pathfinders to the surviving synchronous movement interface.
 - `CPlayerView.cpp`: content reconstruction of the BFG-removed original; Route item drops through the historical item-use dispatcher.
 - `GameScript.cpp`: content reconstruction of the BFG-removed original; Connect surviving Python scripts to native item, turn, and tile events.
@@ -60,18 +60,17 @@ compatibilityRepair: 5, exactOriginal: 59, reconstruction: 37.
 - `boost/python/object/enum.cpp`: content reconstruction of the BFG-removed original; Carry the working bundled Boost.Python translation unit through the formatting or platform transition.
 - `boost/python/object/function.cpp`: content reconstruction of the BFG-removed original; Carry the working bundled Boost.Python translation unit through the formatting or platform transition.
 - `boost/python/object/function_doc_signature.cpp`: unverified upstream reconstruction; https://github.com/boostorg/python/tree/32ba64a8248d99b1852e77ff4388d9d8a991c4a9
-- `boost/python/object/inheritance.cpp`: unverified donor reconstruction; 4b3902d44f874a1fae86054d7240a2af76901bb4:boost/python/object/inheritance.cpp; headerMatch=0; apiOverlap=0/10000; distance=35
+- `boost/python/object/inheritance.cpp`: unverified donor reconstruction; 4b3902d44f874a1fae86054d7240a2af76901bb4:boost/python/object/inheritance.cpp; headerMatch=0; apiOverlap=0/10000; distance=34
 - `boost/python/object/life_support.cpp`: content reconstruction of the BFG-removed original; Carry the working bundled Boost.Python translation unit through the formatting or platform transition.
-- `boost/python/object_operators.cpp`: unverified donor reconstruction; 70d0d690df45877698cb094405e25be00a8139fd:boost/python/object_operators.cpp; headerMatch=0; apiOverlap=0/10000; distance=27
+- `boost/python/object_operators.cpp`: unverified donor reconstruction; 70d0d690df45877698cb094405e25be00a8139fd:boost/python/object_operators.cpp; headerMatch=0; apiOverlap=0/10000; distance=26
 - `boost/python/object_protocol.cpp`: content reconstruction of the BFG-removed original; Carry the working bundled Boost.Python translation unit through the formatting or platform transition.
-- `boost/python/str.cpp`: unverified donor reconstruction; 4b3902d44f874a1fae86054d7240a2af76901bb4:boost/python/str.cpp; headerMatch=0; apiOverlap=0/10000; distance=35
+- `boost/python/str.cpp`: unverified donor reconstruction; 4b3902d44f874a1fae86054d7240a2af76901bb4:boost/python/str.cpp; headerMatch=0; apiOverlap=0/10000; distance=34
 - `config/interactions.json`: Missing interaction configuration reconstructed from donor properties plus actual matching Python class names, genuine #331 config/tiles.json handler/class schema and CTypeHandler.cpp PyTypeHandler qualified-name construction. Restores game.interaction class qualification and PyTypeHandler selection; preserves donor action properties. Not an exact original.
-- `config/monsters.json`: unverified donor reconstruction; 55e6516eb91b739e899df1ef8d72116da44fec49:config/monsters.json; headerMatch=0; apiOverlap=0/10000; distance=36
+- `config/monsters.json`: unverified donor reconstruction; 55e6516eb91b739e899df1ef8d72116da44fec49:config/monsters.json; headerMatch=0; apiOverlap=0/10000; distance=35
 - `config/weapons.json`: Missing weapon config reconstructed from intact 55e6516eb91b739e899df1ef8d72116da44fec49:config/weapons.json Git blob0a32d5f0cc003ae07cfd43d092921d76ec82f3e5; its genuine ChaosSword/other authored item IDs and flat Stats bonus shape match #331 CItem.h, native loader/property contracts and original weapon image path identities (ChaosSword also occurs in the existing reconstructed map), and CObjectHandler deserialization. Original CTypeHandler field restored consistently with genuine config/tiles.json. Replaces unrelated tile-config donor; not an exact original.
 - `handler/CObjectHandler.cpp`: content reconstruction of the BFG-removed original; Carry the configuration factory through the dispatcher and folder transitions.
 - `images.qrc`: Carry the verified split-project image reconstruction along the surviving resource directory rename.
 - `mapObject/CCreature.cpp`: content reconstruction of the BFG-removed original; Route equipment and tile-step events through the surviving dispatcher.
-- `mapObject/CMapObject.cpp`: content reconstruction of the BFG-removed original; Place object type and map access on the common game-object base.
 - `maps/map1/map.json`: Carry #306’s sparse map reconstruction through the formatting and visitor revisions. Preserve the separate Tiled donor used by later revisions.
 - `panel/CFightPanel.cpp`: content reconstruction of the BFG-removed original; Retain common panel behavior and the combat panel across the file split.
 - `scripts/game/interaction.py`: Missing interaction script reconstructed from surviving later action bodies by removing later-only game_object registry decorators. Genuine #331 scripts/game/__init__.py imports game.interaction and genuine PyTypeHandler constructs qualified Python classes directly. Action implementations preserved; Python syntax checked. Not an exact original.
@@ -81,7 +80,7 @@ compatibilityRepair: 5, exactOriginal: 59, reconstruction: 37.
 - `boost/python/LICENSE_1_0.txt`: https://github.com/boostorg/python/tree/32ba64a8248d99b1852e77ff4388d9d8a991c4a9 upstream distribution license
 - `scripts/PSF_LICENSE`: https://www.python.org/ftp/python/3.3.7/Python-3.3.7.tar.xz upstream Python distribution license
 
-Restored source fingerprint: `afdce5ba96b88a18634188c305270023dc2f2b8df4e93d40bdd2d017178d6cb2`.
+Restored source fingerprint: `58bfc09447fde02d6d260ca1c3a75fb2bcc830134c5467e471f06b0929a33986`.
 
 The restored source fingerprint identifies inputs before generation. The
 [source preparation metadata](recovery/source-preparation.json) records the original inputs

@@ -14,8 +14,8 @@ public:
 class Moveable {
 public:
 	virtual Coords getNextMove() =0;
-//    virtual void beforeMove()=0;
-//    virtual void afterMove()=0;
+virtual void beforeMove() {}
+    virtual void afterMove() {}
 };
 
 class Wearable {
@@ -27,6 +27,11 @@ public:
 class Usable {
 public:
 	virtual void onUse ( CGameEvent * ) =0;
+};
+
+class Steppable {
+public:
+    virtual void onStep(CGameEvent *) = 0;
 };
 
 class Turnable {
@@ -47,8 +52,9 @@ public:
 	QString getObjectType() const ;
 	void setObjectType ( const QString &value ) ;
 
-	virtual CMap* getMap();
-	virtual void setMap ( CMap *map );
+	CMap* getMap();
+	void setMap ( CMap *map );
+    Q_SIGNAL void mapChanged();
 
 	Q_INVOKABLE void setProperty ( QString name,QVariant property ) {
 		QByteArray byteArray = name.toUtf8();
@@ -105,8 +111,7 @@ public:
 	virtual void onCreate ( CGameEvent * );
 	virtual void onDestroy ( CGameEvent * );
 
-	void setMap ( CMap *map );
-	CMap *getMap();
+    Q_SLOT void onMapChanged();
 	void setVisible ( bool vis );
 	Coords getCoords();
 	void setCoords ( Coords coords );
@@ -122,8 +127,6 @@ protected:
 	virtual void hoverEnterEvent ( QGraphicsSceneHoverEvent *event );
 	virtual void hoverLeaveEvent ( QGraphicsSceneHoverEvent *event );
 	//QGraphicsSimpleTextItem statsView;
-private:
-	CMap *map=nullptr;
 };
 
 class CEvent : public CMapObject,public Visitable {

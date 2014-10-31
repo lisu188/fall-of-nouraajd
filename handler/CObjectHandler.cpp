@@ -13,6 +13,8 @@
 #include <QMetaProperty>
 
 CObjectHandler::CObjectHandler(CMap *map) : QObject(map), map(map) {
+  registerHandler(new CTypeHandler());
+  registerHandler(new PyTypeHandler());
   QSet<QString> files;
   for (QString path : CResourcesHandler::getInstance()->getFiles(CONFIG)) {
     if (path.endsWith(".json")) {
@@ -50,7 +52,7 @@ CGameObject *CObjectHandler::_createObject(QString type) const {
   }
   if (class_name.startsWith("game.interaction.")) {
     boost::python::object definition =
-                  CScriptEngine::getInstance()
+                  map->getScriptEngine()
                       ->getObject("game")
                       .attr("interaction")
                       .attr(class_name.section('.', -1).toStdString().c_str());
@@ -59,7 +61,7 @@ CGameObject *CObjectHandler::_createObject(QString type) const {
                 handler_name = "CTypeHandler";
               }
   }
-  ATypeHandler *type_handler = ATypeHandler::getHandler(handler_name);
+  ATypeHandler *type_handler = getHandler(handler_name);
   if (!type_handler) {
     qFatal("Unknown type handler %s", qPrintable(handler_name));
   }
@@ -68,8 +70,7 @@ CGameObject *CObjectHandler::_createObject(QString type) const {
     qFatal("Cannot create object %s (%s)", qPrintable(type),
            qPrintable(class_name));
   }
-    if (auto *mapObject = dynamic_cast<CMapObject *>(object)) mapObject->map = map;
-  else object->setMap(map);
+    object->setMap(map);
   object->setObjectType(type);
   object->setObjectName(
       QString::number(reinterpret_cast<quintptr>(object), 16));
@@ -135,3 +136,15 @@ void CObjectHandler::logProperties(CGameObject *object) const {
 
 const QJsonObject *CObjectHandler::getObjectConfig() const { return &objectConfig; }
 
+
+CMap *CObjectHandler::getMap() { return map; }
+void CObjectHandler::registerHandler(ATypeHandler *handler) {
+    handler->setParent(this);
+    handlers.push_back(handler);
+}
+ATypeHandler *CObjectHandler::getHandler(QString name) const {
+    for (auto *candidate : handlers) {
+        if (candidate->getHandlerName() == name) return candidate;
+    }
+    return nullptr;
+}
