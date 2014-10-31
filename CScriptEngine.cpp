@@ -9,11 +9,6 @@ CScriptEngine::~CScriptEngine() {
 	Py_Finalize();
 }
 
-CScriptEngine *CScriptEngine::getInstance() {
-	static CScriptEngine instance;
-	return &instance;
-}
-
 void CScriptEngine::executeScript ( QString script , boost::python::api::object nameSpace ) {
 	if ( nameSpace.is_none() ) {
 		boost::python::exec ( script.toStdString().append ( "\n" ).c_str(),main_namespace );
@@ -53,7 +48,8 @@ void CScriptEngine::executeCommand ( std::initializer_list<QString> list ) {
 	executeScript ( buildCommand ( list ) );
 }
 
-CScriptEngine::CScriptEngine () {
+CScriptEngine::CScriptEngine (CMap *map):QObject(map) {
+    this->map=map;
 	PyImport_AppendInittab ( "_game",PyInit__game );
 	PyImport_AppendInittab ( "_core",PyInit__core );
 	Py_Initialize();

@@ -36,6 +36,9 @@ void CEventHandler::gameEvent ( CGameEvent *event, CGameObject *mapObject ) cons
 	case CGameEvent::onUnequip:
 		dynamic_cast<Wearable*> ( mapObject )->onUnequip (  event );
 		break;
+	case CGameEvent::onStep:
+		dynamic_cast<Steppable*> ( mapObject )->onStep (  event );
+		break;
 	}
 	delete event;
 }
