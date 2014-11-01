@@ -1,5 +1,4 @@
 ﻿#include "CGameView.h"
-#include "CLootProvider.h"
 #include "Util.h"
 #include <QDebug>
 #include "CPlayerView.h"
@@ -9,8 +8,8 @@
 #include <QThreadPool>
 #include <QApplication>
 #include <QDesktopWidget>
-#include "CCreature.h"
-#include "CGuiHandler.h"
+#include "object/CObject.h"
+#include "handler/CHandler.h"
 
 void CGameView::start() {
 	getScene()->startGame ( mapName ,playerType );

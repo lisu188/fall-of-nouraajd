@@ -5,16 +5,15 @@
 #include <qgraphicsitemanimation.h>
 #include <QTimeLine>
 #include "CAnimation.h"
-#include "CAnimatedObject.h"
+#include "object/CObject.h"
 #include "handler/CHandler.h"
+#include "provider/CProvider.h"
 #include <unordered_map>
 #include <set>
 #include <QJsonObject>
 #include <QGraphicsScene>
 #include <QString>
 #include <string>
-#include "CConfigurationProvider.h"
-#include "CMapObject.h"
 #include "Util.h"
 #include <mutex>
 #include <boost/python.hpp>
@@ -23,7 +22,7 @@
 class CGameScene;
 class CTile;
 class CPlayer;
-class CLootProvider;
+class CLootHandler;
 class CInteraction;
 class CObjectHandler;
 class CScriptEngine;
@@ -43,7 +42,7 @@ public:
 	bool contains ( int x, int y, int z );
 	void addObject ( CMapObject *mapObject );
 	void removeObject ( CMapObject *mapObject );
-	void ensureSize();
+	Q_INVOKABLE void ensureSize();
 	CGameScene *getScene() const;
 	void mapUp();
 	void mapDown();
@@ -63,10 +62,10 @@ public:
 	void moveTile ( CTile* tile,int x, int y, int z );
 	void handleTileLayer ( const QJsonObject& tileset,const QJsonObject& layer );
 	void handleObjectLayer ( const QJsonObject &layer );
-	const CLootProvider *getLootProvider() const;
+	const CLootHandler *getLootProvider() const;
 	const CObjectHandler *getObjectHandler() const;
 	const CEventHandler *getEventHandler() const;
-    CScriptEngine *getScriptEngine() const;
+	CScriptEngine *getScriptEngine() const;
 	CGuiHandler *getGuiHandler() const;
 	Q_INVOKABLE bool canStep ( int x,int y,int z );
 	bool canStep ( Coords &coords );
@@ -116,11 +115,11 @@ private:
 	std::map<int, QString> defaultTiles;
 	std::map<int, std::pair<int, int> > boundaries;
 	int entryx, entryz, entryy;
-	CLootProvider *lootProvider=0;
+	CLootHandler *lootProvider=0;
 	CObjectHandler *handler=0;
 	CEventHandler *eventHandler=0;
 	CGuiHandler *guiHandler=0;
-    CScriptEngine *scriptEngine=0;
+	CScriptEngine *scriptEngine=0;
 	CMapScriptLoader *loader=0;
 	QString mapPath;
 	bool moving=false;

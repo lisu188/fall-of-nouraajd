@@ -1,10 +1,9 @@
-#include "CHandler.h"
-#include "CMapObject.h"
+#include "handler/CHandler.h"
+#include "object/CObject.h"
 #include "CMap.h"
-#include "CScriptEngine.h"
 
-CObjectHandler* ATypeHandler::getObjectHandler(){
-    return dynamic_cast<CObjectHandler*>(this->parent());
+CObjectHandler* ATypeHandler::getObjectHandler() {
+	return dynamic_cast<CObjectHandler*> ( this->parent() );
 }
 
 CGameObject *CTypeHandler::create ( QString name ) {
@@ -17,7 +16,7 @@ CGameObject *CTypeHandler::create ( QString name ) {
 }
 
 CGameObject *PyTypeHandler::create ( QString name ) {
-    return getObjectHandler()->getMap()->getScriptEngine()->createObject<CGameObject*> ( name );
+	return getObjectHandler()->getMap()->getScriptEngine()->createObject<CGameObject*> ( name );
 }
 
 QString PyTypeHandler::getHandlerName() {

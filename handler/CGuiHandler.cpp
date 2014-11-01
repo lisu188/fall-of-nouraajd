@@ -1,6 +1,6 @@
-#include "CHandler.h"
+#include "handler/CHandler.h"
 #include "CMap.h"
-#include "CGamePanel.h"
+#include "panel/CPanel.h"
 #include "CGameScene.h"
 
 CGuiHandler::CGuiHandler ( CMap *map ) :QObject ( map ) {

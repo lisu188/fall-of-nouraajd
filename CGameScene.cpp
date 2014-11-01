@@ -7,18 +7,16 @@
 #include <QDesktopWidget>
 #include <QKeyEvent>
 #include "CPlayerView.h"
-#include "CAnimationProvider.h"
-#include "CConfigurationProvider.h"
 #include <fstream>
 #include <QJsonObject>
 #include <QDateTime>
 #include <QDebug>
 #include <vector>
-#include "CGamePanel.h"
+#include "panel/CPanel.h"
 #include <QThreadPool>
 #include "handler/CHandler.h"
 #include "CMap.h"
-#include "CCreature.h"
+#include "object/CObject.h"
 #include "CPathFinder.h"
 
 class LoadGameTask  : public QRunnable {
@@ -39,7 +37,6 @@ void CGameScene::startGame ( QString file ,QString player ) {
 	this->player = map->getObjectHandler()->createMapObject<CPlayer*> ( player );
 	map->addObject ( this->player );
 	this->player->moveTo ( map->getEntryX(), map->getEntryY(), map->getEntryZ() );
-	this->player->updateViews();
 	QThreadPool::globalInstance()->start ( new LoadGameTask ( map ) );
 }
 

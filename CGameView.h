@@ -4,8 +4,7 @@
 #include "CPlayerView.h"
 #include <QGraphicsView>
 #include <QThread>
-#include "CPlayerView.h"
-#include "CGamePanel.h"
+#include "panel/CPanel.h"
 
 class CPlayer;
 class CGameView : public QGraphicsView {
