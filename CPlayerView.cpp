@@ -1,303 +1,279 @@
-#include "CInteraction.h"
-#include <algorithm>
-#include "CCreature.h"
 #include "CGameScene.h"
 #include "CGameView.h"
-#include "CItem.h"
 #include "CMap.h"
 #include "CPlayerView.h"
-#include <QGraphicsSceneDragDropEvent>
-#include <QGraphicsSceneMouseEvent>
-#include <QPainter>
+#include "handler/CHandler.h"
+#include "object/CObject.h"
+#include <QDrag>
+#include <QMimeData>
+#include <QWidget>
+#include <qpainter.h>
 #include <sstream>
 
-namespace {
-CItem *draggedItem(QGraphicsSceneDragDropEvent *event) {
-  const CObjectData *data =
-      dynamic_cast<const CObjectData *>(event->mimeData());
-  return data ? dynamic_cast<CItem *>(data->getSource()) : nullptr;
-}
-} // namespace
-
-CPlayerListView::CPlayerListView(CGameView *view) : view(view) {
-  this->setZValue(3);
-  curPosition = 0;
-  right = new CScrollObject(this, true);
-  left = new CScrollObject(this, false);
-  x = 4, y = 4;
-  pixmap.load("images/item.png");
-  pixmap =
-      pixmap.scaled(50, 50, Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
-  left->setPos(0, y * 50);
-  right->setPos((x - 1) * 50, y * 50);
-}
-
-void CPlayerListView::update() {
-  auto entries = getItems();
-  const auto capacity = x * y;
-  curPosition = std::min(curPosition, entries.size() > capacity
-                                        ? static_cast<unsigned>(entries.size() - capacity) : 0u);
-  QList<QGraphicsItem *> list = childItems();
-  QList<QGraphicsItem *>::Iterator childIter;
-  for (childIter = list.begin(); childIter != list.end(); childIter++) {
-    if (*childIter == right || *childIter == left) {
-      continue;
-    }
-    (*childIter)->setParentItem(0);
-    (*childIter)->setVisible(false);
-  }
-  std::set<QGraphicsItem *>::iterator itemIter;
-  int i = 0;
-  for (itemIter = entries.begin(); itemIter != entries.end(); i++, itemIter++) {
-    QGraphicsItem *item = *itemIter;
-    item->setVisible(false);
-    item->setParentItem(0);
-    int position = i - curPosition;
-    if (position >= 0 && position < x * y) {
-      item->setParentItem(this);
-      setNumber(item, position, x);
-    }
-  }
-  right->setVisible(entries.size() > x * y);
-  left->setVisible(entries.size() > x * y);
-}
-
-void CPlayerListView::setNumber(QGraphicsItem *item, int position, int columns) {
-  item->setVisible(true);
-  item->setPos(position % columns * 50, position / columns * 50);
-}
-
-void CPlayerListView::setDraggable() {
-  this->setFlag(QGraphicsItem::ItemIsMovable);
-}
-
-QRectF CPlayerListView::boundingRect() const {
-  return QRect(0, 0, pixmap.size().width() * x,
-               pixmap.size().height() * (getItems().size() > x * y ? y + 1 : y));
-}
-
-void CPlayerListView::paint(QPainter *painter,
-                            const QStyleOptionGraphicsItem *option,
-                            QWidget *widget) {
-  for (int i = 0; i < x; i++)
-    for (int j = 0; j < y; j++) {
-      painter->drawPixmap(i * 50, j * 50, pixmap);
-    }
-}
-
-void CPlayerListView::updatePosition(int i) {
-  curPosition = static_cast<unsigned>(std::max(0, static_cast<int>(curPosition) + i));
-  update();
-}
-
-void CPlayerListView::setXY(int x, int y) {
-  this->x = x;
-  this->y = y;
-}
-CPlayerInventoryrView::CPlayerInventoryrView(CGameView *view) : CPlayerListView(view) { update(); }
-CPlayerIteractionView::CPlayerIteractionView(CGameView *view) : CPlayerListView(view) { update(); }
-
-std::set<QGraphicsItem *> CPlayerInventoryrView::getItems() const {
-  auto *player = view->getScene()->getPlayer();
-  if (!player) return {};
-  auto *inventory = player->getInventory();
-  std::set<QGraphicsItem *> items;
-  for (auto *item : *inventory) items.insert(item->toGraphicsItem());
-  return items;
-}
-
-std::set<QGraphicsItem *> CPlayerIteractionView::getItems() const {
-  auto *player = view->getScene()->getPlayer();
-  if (!player) return {};
-  auto *actions = player->getActions();
-  std::set<QGraphicsItem *> items;
-  for (auto *action : *actions) items.insert(action->toGraphicsItem());
-  return items;
-}
-
-void CPlayerListView::dropEvent(QGraphicsSceneDragDropEvent *event) {
-  CItem *item = draggedItem(event);
-  if (!item) {
-    event->ignore();
-    return;
-  }
-  event->acceptProposedAction();
-  auto *map = view->getScene()->getMap();
-  map->getEventHandler()->gameEvent(new CGameEvent(CGameEvent::onUse, view->getScene()->getPlayer()), item);
-}
-
-CPlayerEquippedView::CPlayerEquippedView(CGameView *view) {
-  auto *equipped = view->getScene()->getPlayer()->getEquipped();
-  for (int i = 0; i < equipped->size(); i++) {
-    CItemSlot *slot = new CItemSlot(i, view);
-    slot->setParentItem(this);
-    slot->setPos(i % 4 * 50, i / 4 * 50);
-    itemSlots.push_back(slot);
-  }
-  update();
-}
-
-QRectF CPlayerEquippedView::boundingRect() const {
-  return QRectF(0, 0, 4 * 50, 2 * 50);
-}
-
-void CPlayerEquippedView::paint(QPainter *painter,
-                                const QStyleOptionGraphicsItem *option,
-                                QWidget *widget) {}
-
-void CPlayerEquippedView::update() {
-  for (std::list<CItemSlot *>::iterator it = itemSlots.begin();
-       it != itemSlots.end(); it++) {
-    (*it)->update();
-  }
-  QGraphicsObject::update();
-}
-
 PlayerStatsView::PlayerStatsView() {
-  this->player = nullptr;
-  setFixedSize(250, 75);
+    this->player = player;
+    setFixedSize(250, 75);
 }
 
 void PlayerStatsView::paintEvent(QPaintEvent *) {
-  if (!player) {
-    return;
-  }
-  QPainter painter;
-  painter.begin(this);
-  painter.setRenderHint(QPainter::Antialiasing);
-  QTextOption opt(Qt::AlignCenter);
-  float barx = 250;
-  float bary = 25;
-  painter.fillRect(0, 0, barx, bary * 3, QColor("GREEN"));
-  std::ostringstream hpStream;
-  hpStream << player->hp;
-  hpStream << "/";
-  hpStream << player->hpMax;
-  painter.fillRect(0, bary * 0, barx * player->getHpRatio() / 100.0, bary,
-                   QColor("RED"));
-  painter.drawText(QRectF(0, bary * 0, barx, bary), hpStream.str().c_str(),
-                   opt);
-  std::ostringstream manaStream;
-  manaStream << player->mana;
-  manaStream << "/";
-  manaStream << player->manaMax;
-  painter.fillRect(0, bary * 1, barx * player->getManaRatio() / 100.0, bary,
-                   QColor("BLUE"));
-  painter.drawText(QRectF(0, bary * 1, barx, bary), manaStream.str().c_str(),
-                   opt);
-  std::ostringstream expStream;
-  expStream << player->exp;
-  expStream << "/";
-  expStream << (player->level) * (player->level + 1) * 500;
-  painter.fillRect(0, bary * 2, barx * player->getExpRatio() / 100.0, bary,
-                   QColor("YELLOW"));
-  painter.drawText(QRectF(0, bary * 2, barx, bary), expStream.str().c_str(),
-                   opt);
-  painter.end();
+    if (!player) {
+        return;
+    }
+    QPainter painter;
+    painter.begin(this);
+    painter.setRenderHint(QPainter::Antialiasing);
+    QTextOption opt(Qt::AlignCenter);
+    float barx = 250;
+    float bary = 25;
+    painter.fillRect(0, 0, barx, bary * 3, QColor("GREEN"));
+    std::ostringstream hpStream;
+    hpStream << player->hp;
+    hpStream << "/";
+    hpStream << player->hpMax;
+    painter.fillRect(0, bary * 0, barx * player->getHpRatio() / 100.0, bary, QColor("RED"));
+    painter.drawText(QRectF(0, bary * 0, barx, bary), hpStream.str().c_str(), opt);
+    std::ostringstream manaStream;
+    manaStream << player->mana;
+    manaStream << "/";
+    manaStream << player->manaMax;
+    painter.fillRect(0, bary * 1, barx * player->getManaRatio() / 100.0, bary, QColor("BLUE"));
+    painter.drawText(QRectF(0, bary * 1, barx, bary), manaStream.str().c_str(), opt);
+    std::ostringstream expStream;
+    expStream << player->exp;
+    expStream << "/";
+    expStream << (player->level) * (player->level + 1) * 500;
+    painter.fillRect(0, bary * 2, barx * player->getExpRatio() / 100.0, bary, QColor("YELLOW"));
+    painter.drawText(QRectF(0, bary * 2, barx, bary), expStream.str().c_str(), opt);
+    painter.end();
 }
 
 void PlayerStatsView::setPlayer(CPlayer *value) {
-  player = value;
-  connect(player, SIGNAL(statsChanged()), this, SLOT(update()));
-}
-
-CScrollObject::CScrollObject(CPlayerListView *stats, bool isRight) {
-  this->isRight = isRight;
-  this->setZValue(1);
-  this->stats = stats;
-  int size = 50;
-  if (!isRight) {
-    this->setAnimation("images/arrows/left");
-  } else {
-    this->setAnimation("images/arrows/right");
-  }
-  setParentItem(stats);
+    player = value;
+    connect(player, &CPlayer::statsChanged, this, &PlayerStatsView::update);
 }
 
 void PlayerStatsView::update() { QWidget::update(); }
 
+CPlayerListView::CPlayerListView(CGameView *view) : QGraphicsObject(), view(view) {
+    this->setZValue(3);
+    curPosition = 0;
+    right = new CScrollObject(this, true);
+    left = new CScrollObject(this, false);
+    x = 4, y = 4;
+    pixmap.load(CResourcesProvider::getInstance()->getPath("images/item.png"));
+    pixmap = pixmap.scaled(50, 50, Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
+    left->setPos(0, y * 50);
+    right->setPos((x - 1) * 50, y * 50);
+}
+
+void CPlayerListView::update() {
+    this->QGraphicsObject::update();
+    auto items = getItems();
+    if (curPosition > (items.size() > x * y ? items.size() - x * y : 0)) {
+        curPosition = items.size() > x * y ? items.size() - x * y : 0;
+    }
+    QList<QGraphicsItem *> list = childItems();
+    for (auto childIter = list.begin(); childIter != list.end(); childIter++) {
+        if (*childIter == right || *childIter == left) {
+            continue;
+        }
+        (*childIter)->setParentItem(0);
+        (*childIter)->setVisible(false);
+    }
+    int i = 0;
+    for (auto itemIter = items.begin(); itemIter != items.end(); i++, itemIter++) {
+        QGraphicsItem *item = *itemIter;
+        item->setVisible(false);
+        item->setParentItem(0);
+        unsigned int position = i - curPosition;
+        if (position < x * y) {
+            item->setParentItem(this);
+            item->setVisible(true);
+            setNumber(item, position, x);
+        }
+    }
+    right->setVisible(items.size() > x * y);
+    left->setVisible(items.size() > x * y);
+}
+
+QRectF CPlayerListView::boundingRect() const {
+    auto items = getItems();
+    return QRect(0, 0, pixmap.size().width() * x, pixmap.size().height() * (items.size() > x * y ? y + 1 : y));
+}
+
+void CPlayerListView::paint(QPainter *painter, const QStyleOptionGraphicsItem *, QWidget *) {
+    for (unsigned int i = 0; i < x; i++)
+        for (unsigned int j = 0; j < y; j++) {
+            painter->drawPixmap(i * 50, j * 50, pixmap);
+        }
+}
+
+void CPlayerListView::updatePosition(int i) {
+    if (curPosition == 0 && i < 0) {
+        return;
+    }
+    curPosition += i;
+    update();
+}
+
+void CPlayerListView::setXY(int x, int y) {
+    this->x = x;
+    this->y = y;
+}
+
+void CPlayerListView::dropEvent(QGraphicsSceneDragDropEvent *event) {
+    const CObjectData *helper = dynamic_cast<const CObjectData *>(event->mimeData());
+    CItem *item = helper ? dynamic_cast<CItem *>(helper->getSource()) : nullptr;
+    CPlayer *player = view->getScene()->getPlayer();
+    if (item && player && player->hasEquipped(item)) {
+        player->removeFromEquipped(item);
+        player->addItem(item);
+        event->acceptProposedAction();
+        update();
+    }
+}
+
+CScrollObject::CScrollObject(CPlayerListView *stats, bool isRight) {
+    this->isRight = isRight;
+    this->setZValue(1);
+    this->stats = stats;
+    if (!isRight) {
+        this->setAnimation("images/arrows/left");
+    } else {
+        this->setAnimation("images/arrows/right");
+    }
+    setParentItem(stats);
+}
+
 void CScrollObject::setVisible(bool visible) {
-  if (visible && this->scene() != stats->scene()) {
-    stats->scene()->addItem(this);
-  }
-  QGraphicsItem::setVisible(visible);
+    if (visible && this->scene() != stats->scene()) {
+        stats->scene()->addItem(this);
+    }
+    QGraphicsItem::setVisible(visible);
 }
 
-void CScrollObject::mousePressEvent(QGraphicsSceneMouseEvent *event) {
-  if (isRight) {
-    stats->updatePosition(1);
-  }
-  if (!isRight) {
-    stats->updatePosition(-1);
-  }
+void CScrollObject::mousePressEvent(QGraphicsSceneMouseEvent *) {
+    if (isRight) {
+        stats->updatePosition(1);
+    } else {
+        stats->updatePosition(-1);
+    }
 }
 
-#include "CConfigurationProvider.h"
-#include "CCreature.h"
-#include "CGameScene.h"
-#include "CMap.h"
-#include "CPlayerView.h"
-#include "Util.h"
-#include <QGraphicsSceneDragDropEvent>
-#include <qpainter.h>
+CPlayerEquippedView::CPlayerEquippedView(CGameView *view) : QGraphicsObject() {
+    for (unsigned int i = 0; i < 8; i++) {
+        CItemSlot *slot = new CItemSlot(i, view);
+        slot->setParentItem(this);
+        slot->setPos(i % 4 * 50, i / 4 * 50);
+        itemSlots.push_back(slot);
+    }
+}
 
-CItemSlot::CItemSlot(int number, CGameView *view)
-    : number(number), view(view) {
-  pixmap.load(":/images/item.png"); // change to slot items path in json
-  pixmap =
-      pixmap.scaled(50, 50, Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
-  this->setAcceptDrops(true);
+CItemSlot::CItemSlot(int number, CGameView *view) : number(number), view(view) {
+    pixmap.load(CResourcesProvider::getInstance()->getPath("images/item.png"));
+    pixmap = pixmap.scaled(50, 50, Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
+    this->setAcceptDrops(true);
 }
 
 QRectF CItemSlot::boundingRect() const { return QRectF(0, 0, 50, 50); }
 
-void CItemSlot::paint(QPainter *painter, const QStyleOptionGraphicsItem *,
-                      QWidget *) {
-  painter->drawPixmap(0, 0, pixmap);
+void CItemSlot::paint(QPainter *painter, const QStyleOptionGraphicsItem *, QWidget *) {
+    painter->drawPixmap(0, 0, pixmap);
 }
 
-bool CItemSlot::checkType(int slot, CItem *widget) {
-  if (widget) {
-    QJsonArray config = CConfigurationProvider::getConfig("slots.json")
-                            .toObject()[QString::number(slot)]
-                            .toObject()["types"]
-                            .toArray();
+bool CItemSlot::checkType(int slot, CItem *item) {
+    QJsonArray config =
+        CConfigurationProvider::getConfig("slots.json").toObject()[QString::number(slot)].toObject()["types"].toArray();
     for (int i = 0; i < config.size(); i++) {
-      if (widget->inherits(config[i].toString().toStdString().c_str())) {
-        return true;
-      }
+        if (item->inherits(config[i].toString().toStdString().c_str())) {
+            return true;
+        }
     }
-  }
-  return false;
+    return false;
 }
 
 void CItemSlot::update() {
-  auto *equipped = view->getScene()->getPlayer()->getEquipped();
-  auto slot = equipped->find(number);
-  CItem *item = slot == equipped->end() ? nullptr : slot->second;
-  if (item) {
-    item->setParentItem(this);
-    item->setPos(0, 0);
-    item->setVisible(true);
-    item->QGraphicsItem::update();
-  }
-  QGraphicsObject::update();
-}
-
-void CItemSlot::dragMoveEvent(QGraphicsSceneDragDropEvent *event) {
-  QGraphicsObject::dragMoveEvent(event);
-  event->setAccepted(checkType(number, draggedItem(event)));
-}
-
-void CItemSlot::dropEvent(QGraphicsSceneDragDropEvent *event) {
-  QGraphicsObject::dropEvent(event);
-  if (checkType(number, draggedItem(event))) {
-    dynamic_cast<CGameScene *>(this->scene())
-        ->getPlayer()
-        ->setItem(number, draggedItem(event));
-  }
-  event->acceptProposedAction();
-  event->accept();
+    auto player = view->getScene()->getMap()->getPlayer();
+    if (!player) {
+        return;
+    }
+    auto equipped = player->getEquipped();
+    if (equipped.find(number) != equipped.end()) {
+        CItem *item = equipped.at(number);
+        if (item) {
+            item->setParentItem(this);
+            item->setPos(0, 0);
+            item->setVisible(true);
+            item->QGraphicsItem::update();
+        }
+    }
+    QGraphicsObject::update();
 }
 
 int CItemSlot::getNumber() { return number; }
+
+void CItemSlot::dragMoveEvent(QGraphicsSceneDragDropEvent *event) {
+    QGraphicsObject::dragMoveEvent(event);
+    const CObjectData *helper = dynamic_cast<const CObjectData *>(event->mimeData());
+    CItem *item = dynamic_cast<CItem *>(helper->getSource());
+    event->setAccepted(checkType(number, item));
+}
+
+void CItemSlot::dropEvent(QGraphicsSceneDragDropEvent *event) {
+    QGraphicsObject::dropEvent(event);
+    const CObjectData *helper = dynamic_cast<const CObjectData *>(event->mimeData());
+    CItem *item = dynamic_cast<CItem *>(helper->getSource());
+    if (checkType(number, item)) {
+        dynamic_cast<CGameScene *>(this->scene())->getMap()->getPlayer()->setItem(number, item);
+    }
+    event->acceptProposedAction();
+    event->accept();
+}
+
+QRectF CPlayerEquippedView::boundingRect() const { return QRectF(0, 0, 4 * 50, 2 * 50); }
+
+void CPlayerEquippedView::paint(QPainter *, const QStyleOptionGraphicsItem *, QWidget *) {}
+
+void CPlayerEquippedView::update() {
+    for (std::list<CItemSlot *>::iterator it = itemSlots.begin(); it != itemSlots.end(); it++) {
+        (*it)->update();
+    }
+    QGraphicsObject::update();
+}
+
+CPlayerInventoryrView::CPlayerInventoryrView(CGameView *view) : CPlayerListView(view) {}
+
+std::set<QGraphicsItem *> CPlayerInventoryrView::getItems() const {
+    std::set<QGraphicsItem *> set;
+    auto player = view->getScene()->getMap()->getPlayer();
+    if (!player) {
+        return set;
+    }
+    for (CItem *it : player->getInInventory()) {
+        set.insert(it->toGraphicsItem());
+    }
+    return set;
+}
+
+CPlayerIteractionView::CPlayerIteractionView(CGameView *view) : CPlayerListView(view) {}
+
+std::set<QGraphicsItem *> CPlayerIteractionView::getItems() const {
+    std::set<QGraphicsItem *> set;
+    auto player = view->getScene()->getMap()->getPlayer();
+    if (!player) {
+        return set;
+    }
+    for (CInteraction *it : player->getInteractions()) {
+        set.insert(it->toGraphicsItem());
+    }
+    return set;
+}
+
+void CPlayerListView::setNumber(QGraphicsItem *item, int i, int x) {
+    item->setVisible(true);
+    int px = i % x * 50;
+    int py = i / x * 50;
+    item->setPos(px, py);
+}
+
+void CPlayerListView::setDraggable() { setFlag(QGraphicsItem::ItemIsMovable, true); }

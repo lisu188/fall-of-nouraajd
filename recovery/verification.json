@@ -1,11 +1,11 @@
 {
   "adapter": {
-    "config": "/tmp/nouraajd-330-handlers-final/verify/snapshot-49gu2k8f/observer/recovery_smoke_config.h",
-    "configSha256": "9be3f337a65cbdc9e904583c2f34d5620212a9800b2908da01bfecca6dd0f814",
+    "config": "/tmp/nouraajd-bfg-recovery/native-latest/verify/snapshot-_erby8va/observer/recovery_smoke_config.h",
+    "configSha256": "3245a398f2451eb366f8b2913824f4911188406c29671588deee0a8f3776893e",
     "id": "prefixed-3d",
     "mode": "game",
     "overlays": [],
-    "source": "/tmp/nouraajd-next326/recovery/smoke/game_startup.cpp"
+    "source": "/tmp/nouraajd-bfg-recovery/source/recovery/smoke/game_startup.cpp"
   },
   "artifactDir": "recovery",
   "attachedScreenshot": {
@@ -13,54 +13,41 @@
     "path": "startup.png",
     "width": 1278
   },
-  "attachedSourcePreparation": {
-    "prepare_historical_handlers.py": {
-      "path": "prepare_historical_handlers.py",
-      "sha256": "1ed87e5c2bdea47c8cb0e5a4b67f5f36a061e50e70736d0cdd2c6ccbea3ee9b7"
-    },
-    "source-preparation.json": {
-      "path": "source-preparation.json",
-      "sha256": "f4ffbc0e6334e11a65aa0b67f1c928023155be58b96911e91fd92fb4ef2cced7"
-    },
-    "source-preparation.log": {
-      "path": "source-preparation.log",
-      "sha256": "37cae453b593560fbab9ad7b62a4c465ef45e5df32fd57b257b05c02c80282ad"
-    }
-  },
   "build": {
     "command": [
       "make",
-      "-j2"
+      "-j4"
     ],
-    "log": "/tmp/nouraajd-330-handlers-final/verify/snapshot-49gu2k8f/build.log",
+    "log": "/tmp/nouraajd-bfg-recovery/native-latest/verify/snapshot-_erby8va/build.log",
     "returnCode": 0,
-    "seconds": 107.533,
+    "seconds": 56.037,
     "timedOut": false
   },
   "configure": {
     "command": [
       "qmake",
-      "/tmp/nouraajd-330-handlers-final/verify/snapshot-49gu2k8f/source/game.pro",
+      "/tmp/nouraajd-bfg-recovery/native-latest/verify/snapshot-_erby8va/source/game.pro",
       "-o",
-      "/tmp/nouraajd-330-handlers-final/verify/snapshot-49gu2k8f/build/Makefile",
+      "/tmp/nouraajd-bfg-recovery/native-latest/verify/snapshot-_erby8va/build/Makefile",
       "QMAKE_CC=gcc-5",
       "QMAKE_CXX=g++-5",
       "QMAKE_LINK=g++-5",
       "QMAKE_CXXFLAGS+=-include functional",
+      "INCLUDEPATH+=$$_PRO_FILE_PWD_/provider",
       "-after",
       "TARGET=RecoveryGame",
       "DESTDIR=.",
       "CONFIG-=app_bundle",
-      "SOURCES+=/tmp/nouraajd-next326/recovery/smoke/game_startup.cpp",
-      "INCLUDEPATH+=/tmp/nouraajd-330-handlers-final/verify/snapshot-49gu2k8f/source",
-      "INCLUDEPATH+=/tmp/nouraajd-330-handlers-final/verify/snapshot-49gu2k8f/observer"
+      "SOURCES+=/tmp/nouraajd-bfg-recovery/source/recovery/smoke/game_startup.cpp",
+      "INCLUDEPATH+=/tmp/nouraajd-bfg-recovery/native-latest/verify/snapshot-_erby8va/source",
+      "INCLUDEPATH+=/tmp/nouraajd-bfg-recovery/native-latest/verify/snapshot-_erby8va/observer"
     ],
-    "log": "/tmp/nouraajd-330-handlers-final/verify/snapshot-49gu2k8f/configure.log",
+    "log": "/tmp/nouraajd-bfg-recovery/native-latest/verify/snapshot-_erby8va/configure.log",
     "returnCode": 0,
-    "seconds": 0.067,
+    "seconds": 0.064,
     "timedOut": false
   },
-  "evidenceDir": "/tmp/nouraajd-330-handlers-final/verify/evidence/e75e92fec765262d801423da610842fab3277826b9067aac911df308c437bd99",
+  "evidenceDir": "/tmp/nouraajd-bfg-recovery/native-latest/verify/evidence/8539fdfc571e1d31f27a9588ed4138a8d14494e026bffe971d49c496fbf2dfe2",
   "fileLookup": {
     "command": [
       "g++-5",
@@ -69,20 +56,20 @@
       "-O2",
       "-std=c++11",
       "-o",
-      "/tmp/nouraajd-330-handlers-final/verify/snapshot-49gu2k8f/observer/libwindowspaths.so",
-      "/tmp/nouraajd-next326/recovery/smoke/windows_paths.cpp",
+      "/tmp/nouraajd-bfg-recovery/native-latest/verify/snapshot-_erby8va/observer/libwindowspaths.so",
+      "/tmp/nouraajd-bfg-recovery/source/recovery/smoke/windows_paths.cpp",
       "-ldl"
     ],
-    "log": "/tmp/nouraajd-330-handlers-final/verify/snapshot-49gu2k8f/file-lookup.log",
+    "log": "/tmp/nouraajd-bfg-recovery/native-latest/verify/snapshot-_erby8va/file-lookup.log",
     "returnCode": 0,
-    "seconds": 0.336,
+    "seconds": 0.214,
     "semantics": "Windows-style case-insensitive file lookup for the game process",
     "timedOut": false
   },
-  "fingerprint": "e75e92fec765262d801423da610842fab3277826b9067aac911df308c437bd99",
+  "fingerprint": "8539fdfc571e1d31f27a9588ed4138a8d14494e026bffe971d49c496fbf2dfe2",
   "libraryAliases": {
     "aliases": {},
-    "directory": "/tmp/nouraajd-330-handlers-final/verify/snapshot-49gu2k8f/observer/library-aliases"
+    "directory": "/tmp/nouraajd-bfg-recovery/native-latest/verify/snapshot-_erby8va/observer/library-aliases"
   },
   "project": "game.pro",
   "recipe": {
@@ -104,7 +91,8 @@
       "QMAKE_CC=gcc-5",
       "QMAKE_CXX=g++-5",
       "QMAKE_LINK=g++-5",
-      "QMAKE_CXXFLAGS+=-include functional"
+      "QMAKE_CXXFLAGS+=-include functional",
+      "INCLUDEPATH+=$$_PRO_FILE_PWD_/provider"
     ],
     "qmakeCommand": "qmake",
     "toolchainLock": {
@@ -120,72 +108,47 @@
     }
   },
   "restoration": {
-    "excluded": [],
-    "outputDir": "/tmp/nouraajd-330-handlers-final/verify/snapshot-49gu2k8f/source",
+    "excluded": [
+      {
+        "markerPath": "game.pro.user.REMOVED.git-id",
+        "originalBlob": "921383ce7a504e676e05e3f4694928b46f88d4eb",
+        "path": "game.pro.user",
+        "reason": "machine-specific IDE state"
+      }
+    ],
+    "outputDir": "/tmp/nouraajd-bfg-recovery/native-latest/verify/snapshot-_erby8va/source",
     "restored": [
-      {
-        "markerPath": "CCreature.h.REMOVED.git-id",
-        "method": "reconstruction",
-        "originalBlob": "ed39bc74efac2e60bcec9bb857ab74cb026436e8",
-        "path": "CCreature.h",
-        "provenance": "content reconstruction of the BFG-removed original; Declare the movement hooks used by the authored map-object implementation.",
-        "replacementBlob": "07e53171a9537117a58c47b4bc5cc9cf38049cc4"
-      },
-      {
-        "markerPath": "CGamePanel.h.REMOVED.git-id",
-        "method": "reconstruction",
-        "originalBlob": "9ca07123c6442a112b2570ed5a7b76862a6ba908",
-        "path": "CGamePanel.h",
-        "provenance": "content reconstruction of the BFG-removed original; Keep named panel declarations and defer character panel children until a player exists.",
-        "replacementBlob": "4ce016f2dbf02d2ac32bbf01bf5c8f698abc6529"
-      },
-      {
-        "markerPath": "CItem.cpp.REMOVED.git-id",
-        "method": "reconstruction",
-        "originalBlob": "9b3de7d201e2362efbb503e596fc27d2298e925f",
-        "path": "CItem.cpp",
-        "provenance": "content reconstruction of the BFG-removed original; Resolve the creature from the equip and unequip event cause.",
-        "replacementBlob": "c4ff7b2370c9cdc88e98f465f766968f3f009ae4"
-      },
       {
         "markerPath": "CMap.cpp.REMOVED.git-id",
         "method": "reconstruction",
-        "originalBlob": "d9ca2ddfa330e238b5fe9ce2bf8d355ee3b12b8c",
+        "originalBlob": "42f81787de92365ab5cd295cec1cdd8b504cf864",
         "path": "CMap.cpp",
-        "provenance": "content reconstruction of the BFG-removed original; Keep map object and tile ownership, and follow the surviving map and script interfaces.",
-        "replacementBlob": "c7ee7516eba85162d36e86ab558c8e28b6da25df"
-      },
-      {
-        "markerPath": "CMapObject.h.REMOVED.git-id",
-        "method": "reconstruction",
-        "originalBlob": "d03dbc3588df91bf72ca5094627ec78bbca19141",
-        "path": "CMapObject.h",
-        "provenance": "content reconstruction of the BFG-removed original; Fit the named event, game-object and moveable interfaces to surviving bodies.",
-        "replacementBlob": "d616d9426404ece0272291801a88ee9fb4dce0a9"
+        "provenance": "working reconstruction",
+        "replacementBlob": "e0e04608c8b1ab3717c221cca959fb18e5511da2"
       },
       {
         "markerPath": "CPathFinder.cpp.REMOVED.git-id",
         "method": "reconstruction",
-        "originalBlob": "7dfd0f71a162cd688a3b5f8d1c539c3c8e2f5dc4",
+        "originalBlob": "67bb4e2fdd17b413feb555c9aca56c41af6ec3a7",
         "path": "CPathFinder.cpp",
-        "provenance": "content reconstruction of the BFG-removed original; Fit the preceding pathfinders to the surviving synchronous movement interface.",
-        "replacementBlob": "1fd89ec53323cd0d3e384d40a2b812ffdab74387"
+        "provenance": "working reconstruction",
+        "replacementBlob": "c0e0b43f779d62b0e0f7ccd04cb37117b16ebf4a"
       },
       {
         "markerPath": "CPlayerView.cpp.REMOVED.git-id",
         "method": "reconstruction",
-        "originalBlob": "35ca7e2aaf319ac473284827806eb665c6409e92",
+        "originalBlob": "d7954a7210e9568a081e0cb6cde93d596f6e4db2",
         "path": "CPlayerView.cpp",
-        "provenance": "content reconstruction of the BFG-removed original; Route item drops through the historical item-use dispatcher.",
-        "replacementBlob": "113ea45b17fcc7b879ab0f4dd47fee554e75afe1"
+        "provenance": "working reconstruction",
+        "replacementBlob": "ad6e411d7b14b4649ef9437d563509bf6d079df4"
       },
       {
         "markerPath": "GameScript.cpp.REMOVED.git-id",
         "method": "reconstruction",
-        "originalBlob": "f558e3cb11cb9ffd2447c4dedccd2a0241fb356d",
+        "originalBlob": "dc1cb1fd36dd93090daa5dce452dee558a70dcab",
         "path": "GameScript.cpp",
-        "provenance": "content reconstruction of the BFG-removed original; Connect surviving Python scripts to native item, turn, and tile events.",
-        "replacementBlob": "bb514ac2ac3230d8dea3a72aa7e7753348689018"
+        "provenance": "working reconstruction",
+        "replacementBlob": "091778badeb9f3fc9703a3b0710b1ea6ab04d55e"
       },
       {
         "markerPath": "Stats.cpp.REMOVED.git-id",
@@ -197,18 +160,10 @@
       {
         "markerPath": "Stats.h.REMOVED.git-id",
         "method": "reconstruction",
-        "originalBlob": "ca4cb9f0b52d233543cac522cf8ca78b334fd063",
+        "originalBlob": "f14276a39034a1f6965200d2efcba6d9d68e02c2",
         "path": "Stats.h",
-        "provenance": "content reconstruction of the BFG-removed original; Carry the verified historical Stats declarations through the refactor.",
-        "replacementBlob": "49d29f3fcab16fbf51922a8d8411afbd97e5a605"
-      },
-      {
-        "markerPath": "android/posix.c.REMOVED.git-id",
-        "method": "reconstruction",
-        "originalBlob": "81b50cc793a258a61c66a3b19f3fe142063e7f86",
-        "path": "android/posix.c",
-        "provenance": "unverified upstream reconstruction; https://www.python.org/ftp/python/3.3.7/Python-3.3.7.tar.xz; renamed posixmodule header to existing android/posix.h; Android compatibility unverified; Linux excludes this source",
-        "replacementBlob": "419380d5cc663a06b7364584ddba2a0b9dcb7e0d"
+        "provenance": "working reconstruction",
+        "replacementBlob": "52155f1fb8ae81731faf6a2a7786796374a0457a"
       },
       {
         "markerPath": "boost/python/converter/builtin_converters.cpp.REMOVED.git-id",
@@ -231,7 +186,7 @@
         "method": "reconstruction",
         "originalBlob": "3ff537d08743655e263bbd9de316250340e0605b",
         "path": "boost/python/converter/registry.cpp",
-        "provenance": "content reconstruction of the BFG-removed original; Carry the working bundled Boost.Python translation unit through the formatting or platform transition.",
+        "provenance": "unverified upstream reconstruction; https://github.com/boostorg/python/tree/32ba64a8248d99b1852e77ff4388d9d8a991c4a9",
         "replacementBlob": "aa20c3f6852faa93a379b60253a0fcc080b1216f"
       },
       {
@@ -279,7 +234,7 @@
         "method": "reconstruction",
         "originalBlob": "04288d69f5dfdd673118061444bea77bd5022fbe",
         "path": "boost/python/object/class.cpp",
-        "provenance": "content reconstruction of the BFG-removed original; Carry the working bundled Boost.Python translation unit through the formatting or platform transition.",
+        "provenance": "unverified upstream reconstruction; https://github.com/boostorg/python/tree/32ba64a8248d99b1852e77ff4388d9d8a991c4a9",
         "replacementBlob": "aeef688e28692a8ad333caa98169909ca021c74c"
       },
       {
@@ -287,7 +242,7 @@
         "method": "reconstruction",
         "originalBlob": "762ff8d4f5538085015478837284d3a7662a87d4",
         "path": "boost/python/object/enum.cpp",
-        "provenance": "content reconstruction of the BFG-removed original; Carry the working bundled Boost.Python translation unit through the formatting or platform transition.",
+        "provenance": "unverified upstream reconstruction; https://github.com/boostorg/python/tree/32ba64a8248d99b1852e77ff4388d9d8a991c4a9",
         "replacementBlob": "3063320cb05ffc68b922a84c966c77b8c8748409"
       },
       {
@@ -295,7 +250,7 @@
         "method": "reconstruction",
         "originalBlob": "6ce018326efcf18be04792893b0fc712cd9c9d25",
         "path": "boost/python/object/function.cpp",
-        "provenance": "content reconstruction of the BFG-removed original; Carry the working bundled Boost.Python translation unit through the formatting or platform transition.",
+        "provenance": "unverified upstream reconstruction; https://github.com/boostorg/python/tree/32ba64a8248d99b1852e77ff4388d9d8a991c4a9",
         "replacementBlob": "5c59cc7798d0f2e7b917deea81971865a09e0301"
       },
       {
@@ -311,7 +266,7 @@
         "method": "reconstruction",
         "originalBlob": "1b3aa2bf2cce5cd06a478f1fbf4367a4c2002143",
         "path": "boost/python/object/inheritance.cpp",
-        "provenance": "unverified donor reconstruction; 4b3902d44f874a1fae86054d7240a2af76901bb4:boost/python/object/inheritance.cpp; headerMatch=0; apiOverlap=0/10000; distance=34",
+        "provenance": "unverified donor reconstruction; 4b3902d44f874a1fae86054d7240a2af76901bb4:boost/python/object/inheritance.cpp; headerMatch=0; apiOverlap=0/10000; distance=33",
         "replacementBlob": "70feba5fcd280139933f29b9179b0ed00eed75f8"
       },
       {
@@ -319,7 +274,7 @@
         "method": "reconstruction",
         "originalBlob": "0819146304ec6a0ead5f70b890311d56dcd4b794",
         "path": "boost/python/object/life_support.cpp",
-        "provenance": "content reconstruction of the BFG-removed original; Carry the working bundled Boost.Python translation unit through the formatting or platform transition.",
+        "provenance": "unverified upstream reconstruction; https://github.com/boostorg/python/tree/32ba64a8248d99b1852e77ff4388d9d8a991c4a9",
         "replacementBlob": "b7e9aa861e4ecb9fefe00a466053dcef6dc540e1"
       },
       {
@@ -327,7 +282,7 @@
         "method": "reconstruction",
         "originalBlob": "0d39c3d1478c19a891acce327ddf81990724ace2",
         "path": "boost/python/object_operators.cpp",
-        "provenance": "unverified donor reconstruction; 70d0d690df45877698cb094405e25be00a8139fd:boost/python/object_operators.cpp; headerMatch=0; apiOverlap=0/10000; distance=26",
+        "provenance": "unverified donor reconstruction; 70d0d690df45877698cb094405e25be00a8139fd:boost/python/object_operators.cpp; headerMatch=0; apiOverlap=0/10000; distance=25",
         "replacementBlob": "43d2109b7fbee7a405e4e445aff17714078b1631"
       },
       {
@@ -335,7 +290,7 @@
         "method": "reconstruction",
         "originalBlob": "388bcb6b78befc18a504db4f2bef24de86dae841",
         "path": "boost/python/object_protocol.cpp",
-        "provenance": "content reconstruction of the BFG-removed original; Carry the working bundled Boost.Python translation unit through the formatting or platform transition.",
+        "provenance": "unverified upstream reconstruction; https://github.com/boostorg/python/tree/32ba64a8248d99b1852e77ff4388d9d8a991c4a9",
         "replacementBlob": "95c8c73ee66b7b0147e65fb4d2813ebbe44bbd26"
       },
       {
@@ -343,7 +298,7 @@
         "method": "reconstruction",
         "originalBlob": "0f46652b2ab25b823980b32afec490a51470fa02",
         "path": "boost/python/str.cpp",
-        "provenance": "unverified donor reconstruction; 4b3902d44f874a1fae86054d7240a2af76901bb4:boost/python/str.cpp; headerMatch=0; apiOverlap=0/10000; distance=34",
+        "provenance": "unverified donor reconstruction; 4b3902d44f874a1fae86054d7240a2af76901bb4:boost/python/str.cpp; headerMatch=0; apiOverlap=0/10000; distance=33",
         "replacementBlob": "37642738eae0bee1bbcf50cbc12d1c57e227602f"
       },
       {
@@ -351,7 +306,7 @@
         "method": "reconstruction",
         "originalBlob": "202d142b9e80bf811f778c3ef44b96d31b17d5ca",
         "path": "config/interactions.json",
-        "provenance": "Missing interaction configuration reconstructed from donor properties plus actual matching Python class names, genuine #331 config/tiles.json handler/class schema and CTypeHandler.cpp PyTypeHandler qualified-name construction. Restores game.interaction class qualification and PyTypeHandler selection; preserves donor action properties. Not an exact original.",
+        "provenance": "working reconstruction",
         "replacementBlob": "1c96439799a185d95dc050d30e6ca91dc6d616d4"
       },
       {
@@ -359,7 +314,7 @@
         "method": "reconstruction",
         "originalBlob": "2f79f3a7b4e72640e404b1c2d442208127eb6557",
         "path": "config/monsters.json",
-        "provenance": "unverified donor reconstruction; 55e6516eb91b739e899df1ef8d72116da44fec49:config/monsters.json; headerMatch=0; apiOverlap=0/10000; distance=35",
+        "provenance": "unverified donor reconstruction; 55e6516eb91b739e899df1ef8d72116da44fec49:config/monsters.json; headerMatch=0; apiOverlap=0/10000; distance=34",
         "replacementBlob": "b6b5708a1c0683d8ca6d9c395ee31e4742bdd39e"
       },
       {
@@ -367,24 +322,24 @@
         "method": "reconstruction",
         "originalBlob": "280a964a7f31847bef6aa86dd60608313ab10f7e",
         "path": "config/weapons.json",
-        "provenance": "Missing weapon config reconstructed from intact 55e6516eb91b739e899df1ef8d72116da44fec49:config/weapons.json Git blob0a32d5f0cc003ae07cfd43d092921d76ec82f3e5; its genuine ChaosSword/other authored item IDs and flat Stats bonus shape match #331 CItem.h, native loader/property contracts and original weapon image path identities (ChaosSword also occurs in the existing reconstructed map), and CObjectHandler deserialization. Original CTypeHandler field restored consistently with genuine config/tiles.json. Replaces unrelated tile-config donor; not an exact original.",
+        "provenance": "working reconstruction",
         "replacementBlob": "5e7717d09f072bab9c53878acd48f9c30ca12865"
       },
       {
         "markerPath": "handler/CObjectHandler.cpp.REMOVED.git-id",
         "method": "reconstruction",
-        "originalBlob": "8f240327ee7ed5b9b7ff9824fbf37abb971578ba",
+        "originalBlob": "0fc1adae937602f1debd4a06e417481ad6d84ca3",
         "path": "handler/CObjectHandler.cpp",
-        "provenance": "content reconstruction of the BFG-removed original; Carry the configuration factory through the dispatcher and folder transitions.",
-        "replacementBlob": "c69b12a740b7ec77dd47a27d8d84d2bd0bf2cce7"
+        "provenance": "working reconstruction",
+        "replacementBlob": "34bc14cc1e31c9017cae273f35dd8fd6b0470968"
       },
       {
         "markerPath": "images.qrc.REMOVED.git-id",
         "method": "reconstruction",
         "originalBlob": "d7689ea5fab1282d3a9b9599a2815a92ac0f1813",
         "path": "images.qrc",
-        "provenance": "Carry the verified split-project image reconstruction along the surviving resource directory rename.",
-        "replacementBlob": "22d9e66bc23141cf91cfe7f374b1db4333fa0a17"
+        "provenance": "Missing Qt manifest reconstructed from exact original tree image path identities; scoped to this tree because unchanged missing manifest pointer spans different historical asset layouts. All existing image bytes preserved; later donor-only market.png references removed. Not an exact original manifest.",
+        "replacementBlob": "9d779501c2f6710c05899694e51967b34706f895"
       },
       {
         "markerPath": "images/arrows/left.png.REMOVED.git-id",
@@ -786,28 +741,44 @@
         "replacementBlob": "af256839abbe479e65cd3f07ecbbdbed15c389d9"
       },
       {
-        "markerPath": "mapObject/CCreature.cpp.REMOVED.git-id",
-        "method": "reconstruction",
-        "originalBlob": "54c501b27f8de59f4abbc544e90765f5bfd3dfe2",
-        "path": "mapObject/CCreature.cpp",
-        "provenance": "content reconstruction of the BFG-removed original; Route equipment and tile-step events through the surviving dispatcher.",
-        "replacementBlob": "af1094b38c6f55278d3e40b66502b9659ab76caa"
-      },
-      {
         "markerPath": "maps/map1/map.json.REMOVED.git-id",
         "method": "reconstruction",
         "originalBlob": "71bf6f468f812262bf46a24ca77fbdad44af400c",
         "path": "maps/map1/map.json",
-        "provenance": "Carry #306\u2019s sparse map reconstruction through the formatting and visitor revisions. Preserve the separate Tiled donor used by later revisions.",
-        "replacementBlob": "b6c37f51cc506bf02bd6ea2fcdd573ee7d339550"
+        "provenance": "working reconstruction",
+        "replacementBlob": "14a71e6bab85b066c9aa88985b932f0e489b92e6"
+      },
+      {
+        "markerPath": "object/CCreature.cpp.REMOVED.git-id",
+        "method": "reconstruction",
+        "originalBlob": "d012b3fe46dd6c99693ca2e8c009c059d44300bd",
+        "path": "object/CCreature.cpp",
+        "provenance": "working reconstruction",
+        "replacementBlob": "f86b7477065cd4c7d53780e3ab16a5212a77a37e"
+      },
+      {
+        "markerPath": "object/CCreature.h.REMOVED.git-id",
+        "method": "reconstruction",
+        "originalBlob": "66a619dda06d2ce324d16ccc050c4c28df8bcc55",
+        "path": "object/CCreature.h",
+        "provenance": "unverified donor reconstruction; 55e6516eb91b739e899df1ef8d72116da44fec49:object/CCreature.h; headerMatch=0; apiOverlap=0/10000; distance=34",
+        "replacementBlob": "2cee8bf3589421fb07cfdc4f760d9cf9aef57782"
+      },
+      {
+        "markerPath": "object/CItem.cpp.REMOVED.git-id",
+        "method": "reconstruction",
+        "originalBlob": "0ba99be1c6b144da69abe645e40b20496bfbfc80",
+        "path": "object/CItem.cpp",
+        "provenance": "working reconstruction",
+        "replacementBlob": "de101c4661ce846942e90d7371340e33d4e1a8c8"
       },
       {
         "markerPath": "panel/CFightPanel.cpp.REMOVED.git-id",
         "method": "reconstruction",
-        "originalBlob": "335a552a3f46fe3e16dd4bf02e54b248e3d744e3",
+        "originalBlob": "e736945b32a50d9e162ef1f63290d74c8b6fe136",
         "path": "panel/CFightPanel.cpp",
-        "provenance": "content reconstruction of the BFG-removed original; Retain common panel behavior and the combat panel across the file split.",
-        "replacementBlob": "1a39394158872175f2c75cfe16aa55187fdaa1bd"
+        "provenance": "working reconstruction",
+        "replacementBlob": "7df058936ed609274e72f75256acd21554f361a3"
       },
       {
         "markerPath": "reindent.py.REMOVED.git-id",
@@ -821,26 +792,8 @@
         "method": "reconstruction",
         "originalBlob": "e586ef8f0a7e62fc4e4fefff7e9b294032cd2d04",
         "path": "scripts/game/interaction.py",
-        "provenance": "Missing interaction script reconstructed from surviving later action bodies by removing later-only game_object registry decorators. Genuine #331 scripts/game/__init__.py imports game.interaction and genuine PyTypeHandler constructs qualified Python classes directly. Action implementations preserved; Python syntax checked. Not an exact original.",
+        "provenance": "working reconstruction",
         "replacementBlob": "7fe5797edafbc9498c78797ec88efb7304a8685e"
-      },
-      {
-        "method": "compatibilityRepair",
-        "path": "CEventHandler.h",
-        "provenance": "Forward surviving include sites to the grouped handler declarations.",
-        "replacementBlob": "225e464e70e24059ee9d50bbdee2770708cc9fb0"
-      },
-      {
-        "method": "compatibilityRepair",
-        "path": "CObjectHandler.h",
-        "provenance": "Forward surviving include sites to the grouped handler declarations.",
-        "replacementBlob": "225e464e70e24059ee9d50bbdee2770708cc9fb0"
-      },
-      {
-        "method": "compatibilityRepair",
-        "path": "android/PSF_LICENSE",
-        "provenance": "https://www.python.org/ftp/python/3.3.7/Python-3.3.7.tar.xz upstream Python distribution license",
-        "replacementBlob": "f5d0b39a0cdddb91a31a537052b7d8d31a4aa79f"
       },
       {
         "method": "compatibilityRepair",
@@ -855,9 +808,9 @@
         "replacementBlob": "f5d0b39a0cdddb91a31a537052b7d8d31a4aa79f"
       }
     ],
-    "restoredFilesFingerprint": "58bfc09447fde02d6d260ca1c3a75fb2bcc830134c5467e471f06b0929a33986",
-    "sourceCommit": "ee6512a07829eaf651364996d604b043bfcdee8f",
-    "sourceTree": "e755d745b4e54f291c487cd494af1a4ab19bd729",
+    "restoredFilesFingerprint": "a162b274af62ff5b1fcc1972b7419d4c140ac20fe9f0adbe1c4a3e5f40ac512a",
+    "sourceCommit": "beef9d877e9f594fbcc0792794379070921ded15",
+    "sourceTree": "8016ebd2e7fba6fb81c0e34d57fd729556e1ab29",
     "status": "complete",
     "submodules": [],
     "unresolved": []
@@ -868,12 +821,12 @@
       "-a",
       "--server-args=-screen 0 1920x1080x24",
       "env",
-      "LD_PRELOAD=/tmp/nouraajd-330-handlers-final/verify/snapshot-49gu2k8f/observer/libwindowspaths.so",
-      "/tmp/nouraajd-330-handlers-final/verify/snapshot-49gu2k8f/build/RecoveryGame"
+      "LD_PRELOAD=/tmp/nouraajd-bfg-recovery/native-latest/verify/snapshot-_erby8va/observer/libwindowspaths.so",
+      "/tmp/nouraajd-bfg-recovery/native-latest/verify/snapshot-_erby8va/build/RecoveryGame"
     ],
-    "log": "/tmp/nouraajd-330-handlers-final/verify/snapshot-49gu2k8f/smoke/startup.log",
+    "log": "/tmp/nouraajd-bfg-recovery/native-latest/verify/snapshot-_erby8va/smoke/startup.log",
     "returnCode": 0,
-    "seconds": 1.73,
+    "seconds": 0.665,
     "startup": {
       "checks": {
         "eventLoop": true,
@@ -884,7 +837,7 @@
       "frame": {
         "height": 718,
         "path": "startup.png",
-        "sha256": "c93076299d57bd50d6c07b9058ed4dd2bdc64a023815bd127764e40582b12eee",
+        "sha256": "c3d15d123ca42d918becdb4c99c11523b7bac18ca098e37783874bde41cd0100",
         "width": 1278
       },
       "mode": "game",
@@ -895,235 +848,19 @@
     "status": "success",
     "timedOut": false
   },
-  "sourceCommit": "ee6512a07829eaf651364996d604b043bfcdee8f",
+  "sourceCommit": "beef9d877e9f594fbcc0792794379070921ded15",
   "sourceCommits": [
-    "ee6512a07829eaf651364996d604b043bfcdee8f"
+    "beef9d877e9f594fbcc0792794379070921ded15"
   ],
   "sourcePreparation": {
     "identity": {
-      "historicalHandlers": {
-        "files": {
-          "CGameScene.cpp": [
-            "3ca3c73492c3b3853e63a009722678610882fd7a5ae7a792a39b5a2d7c875ddf",
-            "6f8f4c590ed8709e2059498b09759af5f91b53e5b9b35071a287f928e8c8d9be"
-          ],
-          "CGameView.cpp": [
-            "3c1d43ba889c7cfbc7620956f6600630f9e29457e89dbb318c15dc7565b3e1ec",
-            "e59eb1034b607134ee90d56c0af643fc7dafb2d34b11fb7c1188cf3c7a8b19da"
-          ],
-          "CGuiHandler.h": [
-            "f9ebe0575fd003e012a3de929ee3c19891f2af35372745a4c48fbcd14103ccc9",
-            "98b586071db06a9981f87bfb98f98c23839725a164999b9e7d03b14a68bbee52"
-          ],
-          "CResourcesHandler.h": [
-            "8dc5c05cf18fce641ecd2861b09be4698e5320773c94b9d8c4300c6b615c49fe",
-            "7d255cbf2dda61e262c05896912682a276f72d20fdc8fe5bc55750a9bb3e5ec9"
-          ],
-          "CScriptEngine.cpp": [
-            "6ebd16f042ccb9e36ac801c9954cc061322911e85478eb064fbf6b91c8186be7",
-            "28abf1907d3bb5ee311a0b5304e9861f67df712557115479358a9d5810d3438d"
-          ],
-          "CTypeHandler.h": [
-            "b3adf106d95b8934f690943f2921308b90be5b766c4c8ba250c792de56400201",
-            "cb5929275d85c5ed5a33da485a5353558bdd6f654448c609a79726c8d3449102"
-          ],
-          "panel/CCharPanel.cpp": [
-            "ca6e05ce586c606bc05cd492466f3f999c6d84f346f049e02ec7f23137485f2d",
-            "d0c87899580f638ad1dbce2ec763cacd57226efdb8391712cd4375c16940cea8"
-          ]
-        },
-        "replaySha256": "1ed87e5c2bdea47c8cb0e5a4b67f5f36a061e50e70736d0cdd2c6ccbea3ee9b7",
-        "sourceCommit": "ee6512a07829eaf651364996d604b043bfcdee8f"
-      },
-      "implementationSha256": "192c29a332eb1840c7f74d258ac05ba6bad1010b24186d06bae1360b6fdbda59",
-      "outputs": [
-        {
-          "after": {
-            "kind": "file",
-            "sha256": "6f8f4c590ed8709e2059498b09759af5f91b53e5b9b35071a287f928e8c8d9be"
-          },
-          "before": {
-            "kind": "file",
-            "sha256": "3ca3c73492c3b3853e63a009722678610882fd7a5ae7a792a39b5a2d7c875ddf"
-          },
-          "path": "CGameScene.cpp",
-          "purpose": "Preserve runtime lifetimes and reconcile the surviving folder, handler and configuration interfaces"
-        },
-        {
-          "after": {
-            "kind": "file",
-            "sha256": "e59eb1034b607134ee90d56c0af643fc7dafb2d34b11fb7c1188cf3c7a8b19da"
-          },
-          "before": {
-            "kind": "file",
-            "sha256": "3c1d43ba889c7cfbc7620956f6600630f9e29457e89dbb318c15dc7565b3e1ec"
-          },
-          "path": "CGameView.cpp",
-          "purpose": "Preserve runtime lifetimes and reconcile the surviving folder, handler and configuration interfaces"
-        },
-        {
-          "after": {
-            "kind": "file",
-            "sha256": "98b586071db06a9981f87bfb98f98c23839725a164999b9e7d03b14a68bbee52"
-          },
-          "before": {
-            "kind": "file",
-            "sha256": "f9ebe0575fd003e012a3de929ee3c19891f2af35372745a4c48fbcd14103ccc9"
-          },
-          "path": "CGuiHandler.h",
-          "purpose": "Preserve runtime lifetimes and reconcile the surviving folder, handler and configuration interfaces"
-        },
-        {
-          "after": {
-            "kind": "file",
-            "sha256": "7d255cbf2dda61e262c05896912682a276f72d20fdc8fe5bc55750a9bb3e5ec9"
-          },
-          "before": {
-            "kind": "file",
-            "sha256": "8dc5c05cf18fce641ecd2861b09be4698e5320773c94b9d8c4300c6b615c49fe"
-          },
-          "path": "CResourcesHandler.h",
-          "purpose": "Preserve runtime lifetimes and reconcile the surviving folder, handler and configuration interfaces"
-        },
-        {
-          "after": {
-            "kind": "file",
-            "sha256": "28abf1907d3bb5ee311a0b5304e9861f67df712557115479358a9d5810d3438d"
-          },
-          "before": {
-            "kind": "file",
-            "sha256": "6ebd16f042ccb9e36ac801c9954cc061322911e85478eb064fbf6b91c8186be7"
-          },
-          "path": "CScriptEngine.cpp",
-          "purpose": "Preserve runtime lifetimes and reconcile the surviving folder, handler and configuration interfaces"
-        },
-        {
-          "after": {
-            "kind": "file",
-            "sha256": "cb5929275d85c5ed5a33da485a5353558bdd6f654448c609a79726c8d3449102"
-          },
-          "before": {
-            "kind": "file",
-            "sha256": "b3adf106d95b8934f690943f2921308b90be5b766c4c8ba250c792de56400201"
-          },
-          "path": "CTypeHandler.h",
-          "purpose": "Preserve runtime lifetimes and reconcile the surviving folder, handler and configuration interfaces"
-        },
-        {
-          "after": {
-            "kind": "file",
-            "sha256": "d0c87899580f638ad1dbce2ec763cacd57226efdb8391712cd4375c16940cea8"
-          },
-          "before": {
-            "kind": "file",
-            "sha256": "ca6e05ce586c606bc05cd492466f3f999c6d84f346f049e02ec7f23137485f2d"
-          },
-          "path": "panel/CCharPanel.cpp",
-          "purpose": "Preserve runtime lifetimes and reconcile the surviving folder, handler and configuration interfaces"
-        }
-      ]
+      "implementationSha256": "f21efdf77813bc85d5d62ac79a8d5a8350d7f0a8d276cb934a9b1b67d1bf3ae7"
     },
-    "outputs": [
-      {
-        "after": {
-          "kind": "file",
-          "sha256": "6f8f4c590ed8709e2059498b09759af5f91b53e5b9b35071a287f928e8c8d9be"
-        },
-        "before": {
-          "kind": "file",
-          "sha256": "3ca3c73492c3b3853e63a009722678610882fd7a5ae7a792a39b5a2d7c875ddf"
-        },
-        "path": "CGameScene.cpp",
-        "purpose": "Preserve runtime lifetimes and reconcile the surviving folder, handler and configuration interfaces"
-      },
-      {
-        "after": {
-          "kind": "file",
-          "sha256": "e59eb1034b607134ee90d56c0af643fc7dafb2d34b11fb7c1188cf3c7a8b19da"
-        },
-        "before": {
-          "kind": "file",
-          "sha256": "3c1d43ba889c7cfbc7620956f6600630f9e29457e89dbb318c15dc7565b3e1ec"
-        },
-        "path": "CGameView.cpp",
-        "purpose": "Preserve runtime lifetimes and reconcile the surviving folder, handler and configuration interfaces"
-      },
-      {
-        "after": {
-          "kind": "file",
-          "sha256": "98b586071db06a9981f87bfb98f98c23839725a164999b9e7d03b14a68bbee52"
-        },
-        "before": {
-          "kind": "file",
-          "sha256": "f9ebe0575fd003e012a3de929ee3c19891f2af35372745a4c48fbcd14103ccc9"
-        },
-        "path": "CGuiHandler.h",
-        "purpose": "Preserve runtime lifetimes and reconcile the surviving folder, handler and configuration interfaces"
-      },
-      {
-        "after": {
-          "kind": "file",
-          "sha256": "7d255cbf2dda61e262c05896912682a276f72d20fdc8fe5bc55750a9bb3e5ec9"
-        },
-        "before": {
-          "kind": "file",
-          "sha256": "8dc5c05cf18fce641ecd2861b09be4698e5320773c94b9d8c4300c6b615c49fe"
-        },
-        "path": "CResourcesHandler.h",
-        "purpose": "Preserve runtime lifetimes and reconcile the surviving folder, handler and configuration interfaces"
-      },
-      {
-        "after": {
-          "kind": "file",
-          "sha256": "28abf1907d3bb5ee311a0b5304e9861f67df712557115479358a9d5810d3438d"
-        },
-        "before": {
-          "kind": "file",
-          "sha256": "6ebd16f042ccb9e36ac801c9954cc061322911e85478eb064fbf6b91c8186be7"
-        },
-        "path": "CScriptEngine.cpp",
-        "purpose": "Preserve runtime lifetimes and reconcile the surviving folder, handler and configuration interfaces"
-      },
-      {
-        "after": {
-          "kind": "file",
-          "sha256": "cb5929275d85c5ed5a33da485a5353558bdd6f654448c609a79726c8d3449102"
-        },
-        "before": {
-          "kind": "file",
-          "sha256": "b3adf106d95b8934f690943f2921308b90be5b766c4c8ba250c792de56400201"
-        },
-        "path": "CTypeHandler.h",
-        "purpose": "Preserve runtime lifetimes and reconcile the surviving folder, handler and configuration interfaces"
-      },
-      {
-        "after": {
-          "kind": "file",
-          "sha256": "d0c87899580f638ad1dbce2ec763cacd57226efdb8391712cd4375c16940cea8"
-        },
-        "before": {
-          "kind": "file",
-          "sha256": "ca6e05ce586c606bc05cd492466f3f999c6d84f346f049e02ec7f23137485f2d"
-        },
-        "path": "panel/CCharPanel.cpp",
-        "purpose": "Preserve runtime lifetimes and reconcile the surviving folder, handler and configuration interfaces"
-      }
-    ],
-    "status": "success",
-    "steps": [
-      {
-        "command": [
-          "history_source_prep.py",
-          "prepare-historical-handlers"
-        ],
-        "log": "/tmp/nouraajd-330-handlers-final/verify/snapshot-49gu2k8f/preparation/historical-handlers.log",
-        "name": "historicalHandlers",
-        "returnCode": 0,
-        "timedOut": false
-      }
-    ]
+    "outputs": [],
+    "status": "not-required",
+    "steps": []
   },
-  "sourceTree": "e755d745b4e54f291c487cd494af1a4ab19bd729",
+  "sourceTree": "8016ebd2e7fba6fb81c0e34d57fd729556e1ab29",
   "startupMode": "game",
   "startupSelection": {
     "mode": "game"
@@ -1144,5 +881,5 @@
     }
   },
   "toolchainImage": "sha256:d3f59ec1d12297ee8091fbea687aa619275fc92b3fd426560e0a1fa40715afc8",
-  "verifiedFromCommit": "ee6512a07829eaf651364996d604b043bfcdee8f"
+  "verifiedFromCommit": "beef9d877e9f594fbcc0792794379070921ded15"
 }

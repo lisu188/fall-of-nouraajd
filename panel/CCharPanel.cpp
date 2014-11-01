@@ -6,10 +6,10 @@
 #include <qpainter.h>
 #include "CGameView.h"
 #include "CPlayerView.h"
-#include "CCreature.h"
+#include "object/CObject.h"
 #include <QBitmap>
 #include <QFont>
-#include "CResourcesHandler.h"
+#include "handler/CHandler.h"
 
 
 CCharPanel::CCharPanel() {
@@ -76,7 +76,7 @@ QString CCharPanel::getPanelName() {
 
 BackPackObject::BackPackObject ( CGameView* view ,CCharPanel *panel ) :QWidget ( view ) {
 	this->panel=panel;
-	pixmap.load ( CResourcesHandler::getInstance()->getPath ( "images/backpack.png" ) );
+	pixmap.load ( CResourcesProvider::getInstance()->getPath ( "images/backpack.png" ) );
 	pixmap.setMask ( pixmap.createHeuristicMask() );
 	pixmap =
 	    pixmap.scaled ( 75, 75, Qt::IgnoreAspectRatio, Qt::SmoothTransformation );

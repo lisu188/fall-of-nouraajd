@@ -1,6 +1,6 @@
-#include "CHandler.h"
+#include "handler/CHandler.h"
+#include "object/CObject.h"
 #include "CMap.h"
-#include "CMapObject.h"
 
 #include <QMetaEnum>
 #include <QDebug>
@@ -35,9 +35,6 @@ void CEventHandler::gameEvent ( CGameEvent *event, CGameObject *mapObject ) cons
 		break;
 	case CGameEvent::onUnequip:
 		dynamic_cast<Wearable*> ( mapObject )->onUnequip (  event );
-		break;
-	case CGameEvent::onStep:
-		dynamic_cast<Steppable*> ( mapObject )->onStep (  event );
 		break;
 	}
 	delete event;

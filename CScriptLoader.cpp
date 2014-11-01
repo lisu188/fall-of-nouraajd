@@ -1,5 +1,5 @@
 #include "CScriptLoader.h"
-#include "CResourcesHandler.h"
+#include "handler/CHandler.h"
 #include "CMap.h"
 #include <QDebug>
 
@@ -15,9 +15,9 @@ AScriptLoader *ModuleSpec::loader() {
 
 QString CScriptLoader::findModule ( QString modName ) {
 	modName=modName.replace ( ".","/" );
-	QString modData=CResourcesHandler::getInstance()->getResourceAsString ( "scripts/"+modName+".py" );
+	QString modData=CResourcesProvider::getInstance()->getResourceAsString ( "scripts/"+modName+".py" );
 	if ( modData=="" ) {
-		modData=CResourcesHandler::getInstance()->getResourceAsString ( "scripts/"+modName +"/__init__.py" );
+		modData=CResourcesProvider::getInstance()->getResourceAsString ( "scripts/"+modName +"/__init__.py" );
 	}
 	return modData;
 }
@@ -85,7 +85,7 @@ CMapScriptLoader::CMapScriptLoader ( CMap *map ) :map ( map ) {
 
 QString CMapScriptLoader::findModule ( QString modName ) {
 	if ( modName==map->getMapName() ) {
-		return CResourcesHandler::getInstance()->getResourceAsString ( map->getMapPath()+"/script.py" );
+		return CResourcesProvider::getInstance()->getResourceAsString ( map->getMapPath()+"/script.py" );
 	}
 	return QString();
 }
