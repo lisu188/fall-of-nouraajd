@@ -14,20 +14,13 @@ include(game.pri)
 SOURCES += \
      CReflection.cpp \
      ReflectTypes.cpp \
-     CAnimationProvider.cpp \
-     CConfigurationProvider.cpp \
      CPathFinder.cpp \
      GameScript.cpp \
      CMap.cpp \
      CGameScene.cpp \
      CGameView.cpp \
-     CLootProvider.cpp \
-     CInteraction.cpp \
-     CScriptEngine.cpp \
-     CTile.cpp \
      CMainWindow.cpp \
      CPlayerView.cpp \
-     CItem.cpp \
      Stats.cpp \
      CMain.cpp \
     boost/python/dict.cpp \
@@ -59,56 +52,75 @@ SOURCES += \
     boost/python/object/pickle_support.cpp \
     boost/python/object/stl_iterator.cpp \
     CScriptLoader.cpp \
-    mapObject/CMapObject.cpp \
-    mapObject/CCreature.cpp \
-    mapObject/CBuilding.cpp \
-    mapObject/CAnimatedObject.cpp \
     handler/CTypeHandler.cpp \
-    handler/CResourcesHandler.cpp \
     handler/CObjectHandler.cpp \
     handler/CEventHandler.cpp \
     handler/CGuiHandler.cpp \
     panel/CFightPanel.cpp \
     panel/CTextPanel.cpp \
-    panel/CCharPanel.cpp
+    panel/CCharPanel.cpp \
+    object/CTile.cpp \
+    object/CMapObject.cpp \
+    object/CItem.cpp \
+    object/CInteraction.cpp \
+    object/CCreature.cpp \
+    object/CBuilding.cpp \
+    object/CAnimatedObject.cpp \
+    handler/CScriptHandler.cpp \
+    provider/CResourcesProvider.cpp \
+    provider/CConfigurationProvider.cpp \
+    provider/CAnimationProvider.cpp \
+    handler/CLootHandler.cpp \
+    object/CPlayer.cpp \
+    object/CMonster.cpp \
+    object/CEffect.cpp \
+    object/CGameObject.cpp \
+    object/CEvent.cpp
 
 HEADERS += \
-     CReflection.h \
-     CAnimatedObject.h \
-     CAnimationProvider.h \
-     CBuilding.h \
-     CConfigurationProvider.h \
-     CCreature.h \
-     CMapObject.h \
      CPathFinder.h \
-     CGamePanel.h \
-     CInteraction.h \
      CMap.h \
      CGameScene.h \
      CGameView.h \
-     CLootProvider.h \
-     CScriptEngine.h \
-     CTile.h \
      CMainWindow.h \
      CPlayerView.h \
-     CItem.h \
      Stats.h \
      Util.h \
     CScriptLoader.h \
-    handler/CHandler.h
+    handler/CHandler.h \
+    handler/CObjectHandler.h \
+    handler/CEventHandler.h \
+    handler/CTypeHandler.h \
+    handler/CGuiHandler.h \
+    object/CObject.h \
+    object/CTile.h \
+    object/CMapObject.h \
+    object/CItem.h \
+    object/CInteraction.h \
+    object/CCreature.h \
+    object/CBuilding.h \
+    object/CAnimatedObject.h \
+    panel/CPanel.h \
+    panel/CTextPanel.h \
+    panel/CFightPanel.h \
+    panel/CCharPanel.h \
+    panel/CGamePanel.h \
+    handler/CScriptHandler.h \
+    handler/CLootHandler.h \
+    provider/CResourcesProvider.h \
+    provider/CConfigurationProvider.h \
+    provider/CAnimationProvider.h \
+    provider/CProvider.h \
+    CReflection.h \
+    object/CPlayer.h \
+    object/CMonster.h \
+    object/CEffect.h \
+    object/CGameObject.h \
+    object/CEvent.h
 
-
-android{
-    SOURCES += android/posix.c
-    HEADERS += android/posix.h
-}
 
 unix:LIBS += -L/usr/local/lib -lpython3.4m -ldl -fPIC -lutil
 win32:LIBS += -LC:\Python34\libs -lpython34
-android{
-    LIBS -= -L/usr/local/lib -lpython3.4m -ldl -fPIC -lutil
-    LIBS += -L/home/andrzejlis/python3-android/build/9d-19-arm-linux-androideabi-4.8/lib -lpython3.3m
-}
 
 FORMS += \
      CMainWindow.ui

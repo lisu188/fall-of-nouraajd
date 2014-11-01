@@ -2,7 +2,7 @@
 #include <QGraphicsObject>
 #include <QWidget>
 #include <set>
-#include "CAnimatedObject.h"
+#include "object/CObject.h"
 
 class CMapObject;
 class CMap;

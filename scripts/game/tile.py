@@ -1,5 +1,5 @@
 from game import CTile
 
 class RoadTile(CTile):
-    def onStep(self,event):
-        event.getCause().heal(1)
+    def onStep(self,creature):
+        creature.heal(1)

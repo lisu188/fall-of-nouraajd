@@ -1,174 +1,147 @@
 #pragma once
-#include <QJsonObject>
-#include <cmath>
 #include "Util.h"
-#include <QVariant>
+#include "object/CMapObject.h"
+#include <QJsonObject>
 #include <QObject>
+#include <QVariant>
 
+class Stats : public CGameObject {
+    Q_OBJECT
+    Q_PROPERTY(int strength READ getStrength WRITE setStrength USER true)
+    Q_PROPERTY(int agility READ getAgility WRITE setAgility USER true)
+    Q_PROPERTY(int stamina READ getStamina WRITE setStamina USER true)
+    Q_PROPERTY(int intelligence READ getIntelligence WRITE setIntelligence USER true)
+    Q_PROPERTY(int armor READ getArmor WRITE setArmor USER true)
+    Q_PROPERTY(int block READ getBlock WRITE setBlock USER true)
+    Q_PROPERTY(int dmgMin READ getDmgMin WRITE setDmgMin USER true)
+    Q_PROPERTY(int dmgMax READ getDmgMax WRITE setDmgMax USER true)
+    Q_PROPERTY(int hit READ getHit WRITE setHit USER true)
+    Q_PROPERTY(int crit READ getCrit WRITE setCrit USER true)
+    Q_PROPERTY(int fireResist READ getFireResist WRITE setFireResist USER true)
+    Q_PROPERTY(int frostResist READ getFrostResist WRITE setFrostResist USER true)
+    Q_PROPERTY(int normalResist READ getNormalResist WRITE setNormalResist USER true)
+    Q_PROPERTY(int thunderResist READ getThunderResist WRITE setThunderResist USER true)
+    Q_PROPERTY(int shadowResist READ getShadowResist WRITE setShadowResist USER true)
+    Q_PROPERTY(int damage READ getDamage WRITE setDamage USER true)
+    Q_PROPERTY(int attack READ getAttack WRITE setAttack USER true)
+    Q_PROPERTY(QString main READ getMain WRITE setMain USER true)
+    int attack = 0;
+    int damage = 0;
+    int shadowResist = 0;
+    int thunderResist = 0;
+    int normalResist = 0;
+    int frostResist = 0;
+    int fireResist = 0;
+    int crit = 0;
+    int hit = 0;
+    int dmgMax = 0;
+    int dmgMin = 0;
+    int block = 0;
+    int armor = 0;
+    int intelligence = 0;
+    int stamina = 0;
+    int agility = 0;
+    int strength = 0;
 
-class Stats : public QObject {
-	Q_OBJECT
-	Q_PROPERTY ( int strength READ getStrength WRITE setStrength USER true )
-	Q_PROPERTY ( int agility READ getAgility WRITE setAgility USER true )
-	Q_PROPERTY ( int stamina READ getStamina WRITE setStamina USER true )
-	Q_PROPERTY ( int intelligence READ getIntelligence WRITE setIntelligence USER true )
-	Q_PROPERTY ( int armor READ getArmor WRITE setArmor USER true )
-	Q_PROPERTY ( int block READ getBlock WRITE setBlock USER true )
-	Q_PROPERTY ( int dmgMin READ getDmgMin WRITE setDmgMin USER true )
-	Q_PROPERTY ( int dmgMax READ getDmgMax WRITE setDmgMax USER true )
-	Q_PROPERTY ( int hit READ getHit WRITE setHit USER true )
-	Q_PROPERTY ( int crit READ getCrit WRITE setCrit USER true )
-	Q_PROPERTY ( int fireResist READ getFireResist WRITE setFireResist USER true )
-	Q_PROPERTY ( int frostResist READ getFrostResist WRITE setFrostResist USER true )
-	Q_PROPERTY ( int normalResist READ getNormalResist WRITE setNormalResist USER true )
-	Q_PROPERTY ( int thunderResist READ getThunderResist WRITE setThunderResist USER true )
-	Q_PROPERTY ( int shadowResist READ getShadowResist WRITE setShadowResist USER true )
-	Q_PROPERTY ( int damage READ getDamage WRITE setDamage USER true )
-	Q_PROPERTY ( int attack READ getAttack WRITE setAttack USER true )
-	Q_PROPERTY ( QString main READ getMain WRITE setMain USER true )
-	int attack=0;
-	int damage=0;
-	int shadowResist=0;
-	int thunderResist=0;
-	int normalResist=0;
-	int frostResist=0;
-	int fireResist=0;
-	int crit=0;
-	int hit=0;
-	int dmgMax=0;
-	int dmgMin=0;
-	int block=0;
-	int armor=0;
-	int intelligence=0;
-	int stamina=0;
-	int agility=0;
-	int strength=0;
-public:
-	Stats();
-	Stats ( const Stats &stats );
-	void operator= ( const Stats &stats );
+  public:
+    Stats();
+    Stats(const Stats &stats);
+    void operator=(const Stats &stats);
 
-	void addBonus ( Stats stats );
-	void removeBonus ( Stats stats );
+    void addBonus(Stats stats);
+    void removeBonus(Stats stats);
 
-	const char *getText ( int level );
+    const char *getText(int level);
 
-	int getAttack() const;
-	void setAttack ( int value );
+    int getAttack() const;
+    void setAttack(int value);
 
-	int getDamage() const;
-	void setDamage ( int value );
+    int getDamage() const;
+    void setDamage(int value);
 
-	int getShadowResist() const;
-	void setShadowResist ( int value );
+    int getShadowResist() const;
+    void setShadowResist(int value);
 
-	int getThunderResist() const;
-	void setThunderResist ( int value );
+    int getThunderResist() const;
+    void setThunderResist(int value);
 
-	int getNormalResist() const;
-	void setNormalResist ( int value );
+    int getNormalResist() const;
+    void setNormalResist(int value);
 
-	int getFrostResist() const;
-	void setFrostResist ( int value );
+    int getFrostResist() const;
+    void setFrostResist(int value);
 
-	int getFireResist() const;
-	void setFireResist ( int value );
+    int getFireResist() const;
+    void setFireResist(int value);
 
-	int getCrit() const;
-	void setCrit ( int value );
+    int getCrit() const;
+    void setCrit(int value);
 
-	int getHit() const;
-	void setHit ( int value );
+    int getHit() const;
+    void setHit(int value);
 
-	int getDmgMax() const;
-	void setDmgMax ( int value );
+    int getDmgMax() const;
+    void setDmgMax(int value);
 
-	int getDmgMin() const;
-	void setDmgMin ( int value );
+    int getDmgMin() const;
+    void setDmgMin(int value);
 
-	int getBlock() const;
-	void setBlock ( int value );
+    int getBlock() const;
+    void setBlock(int value);
 
-	int getArmor() const;
-	void setArmor ( int value );
+    int getArmor() const;
+    void setArmor(int value);
 
-	int getIntelligence() const;
-	void setIntelligence ( int value );
+    int getIntelligence() const;
+    void setIntelligence(int value);
 
-	int getStamina() const;
-	void setStamina ( int value );
+    int getStamina() const;
+    void setStamina(int value);
 
-	int getAgility() const;
-	void setAgility ( int value );
+    int getAgility() const;
+    void setAgility(int value);
 
-	int getStrength() const;
-	void setStrength ( int value );
+    int getStrength() const;
+    void setStrength(int value);
 
-	QString getMain() const;
-	void setMain ( const QString &value );
+    QString getMain() const;
+    void setMain(const QString &value);
 
-	int getMainValue();
+    int getMainValue();
 
-private:
-	QString main;
-public:
-    Q_INVOKABLE void setProperty(QString name, QVariant property) {
-        this->QObject::setProperty(name.toStdString().c_str(), property);
-    }
-    Q_INVOKABLE QVariant property(QString name) const { return this->QObject::property(name.toStdString().c_str()); }
-    Q_INVOKABLE void setStringProperty(QString name, QString value) { this->setProperty(name, value); }
-    Q_INVOKABLE void setBoolProperty(QString name, bool value) { this->setProperty(name, value); }
-    Q_INVOKABLE void setNumericProperty(QString name, int value) { this->setProperty(name, value); }
-    Q_INVOKABLE QString getStringProperty(QString name) const { return this->property(name).toString(); }
-    Q_INVOKABLE bool getBoolProperty(QString name) const { return this->property(name).toBool(); }
-    Q_INVOKABLE int getNumericProperty(QString name) const { return this->property(name).toInt(); }
-    Q_INVOKABLE void incProperty(QString name, int value) {
-        this->setNumericProperty(name, this->getNumericProperty(name) + value);
-    }
+  private:
+    QString main;
 };
 
-class Damage : public QObject {
-	Q_OBJECT
-	Q_PROPERTY ( int fire READ getFire WRITE setFire USER true )
-	Q_PROPERTY ( int thunder READ getThunder WRITE setThunder USER true )
-	Q_PROPERTY ( int shadow READ getShadow WRITE setShadow USER true )
-	Q_PROPERTY ( int frost READ getFrost WRITE setFrost USER true )
-	Q_PROPERTY ( int normal READ getNormal WRITE setNormal USER true )
-	int fire=0;
-	int frost=0;
-	int thunder=0;
-	int shadow=0;
-	int normal=0;
-public:
-	Damage();
-	Damage ( const Damage &dmg );
+class Damage : public CGameObject {
+    Q_OBJECT
+    Q_PROPERTY(int fire READ getFire WRITE setFire USER true)
+    Q_PROPERTY(int thunder READ getThunder WRITE setThunder USER true)
+    Q_PROPERTY(int shadow READ getShadow WRITE setShadow USER true)
+    Q_PROPERTY(int frost READ getFrost WRITE setFrost USER true)
+    Q_PROPERTY(int normal READ getNormal WRITE setNormal USER true)
+    int fire = 0;
+    int frost = 0;
+    int thunder = 0;
+    int shadow = 0;
+    int normal = 0;
 
-	int getFire() const;
-	void setFire ( int value );
+  public:
+    Damage();
+    Damage(const Damage &dmg);
 
-	int getFrost() const;
-	void setFrost ( int value );
+    int getFire() const;
+    void setFire(int value);
 
-	int getThunder() const;
-	void setThunder ( int value );
+    int getFrost() const;
+    void setFrost(int value);
 
-	int getShadow() const;
-	void setShadow ( int value );
+    int getThunder() const;
+    void setThunder(int value);
 
-	int getNormal() const;
-	void setNormal ( int value );
-public:
-    Q_INVOKABLE void setProperty(QString name, QVariant property) {
-        this->QObject::setProperty(name.toStdString().c_str(), property);
-    }
-    Q_INVOKABLE QVariant property(QString name) const { return this->QObject::property(name.toStdString().c_str()); }
-    Q_INVOKABLE void setStringProperty(QString name, QString value) { this->setProperty(name, value); }
-    Q_INVOKABLE void setBoolProperty(QString name, bool value) { this->setProperty(name, value); }
-    Q_INVOKABLE void setNumericProperty(QString name, int value) { this->setProperty(name, value); }
-    Q_INVOKABLE QString getStringProperty(QString name) const { return this->property(name).toString(); }
-    Q_INVOKABLE bool getBoolProperty(QString name) const { return this->property(name).toBool(); }
-    Q_INVOKABLE int getNumericProperty(QString name) const { return this->property(name).toInt(); }
-    Q_INVOKABLE void incProperty(QString name, int value) {
-        this->setNumericProperty(name, this->getNumericProperty(name) + value);
-    }
+    int getShadow() const;
+    void setShadow(int value);
+
+    int getNormal() const;
+    void setNormal(int value);
 };

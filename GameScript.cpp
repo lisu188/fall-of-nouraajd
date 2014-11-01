@@ -1,326 +1,279 @@
-#include "CScriptLoader.h"
-#include <random>
-#include <stdexcept>
-#include "CResourcesHandler.h"
-#include <memory>
-// Copyright (C) 2026 Andrzej Lis
-// SPDX-License-Identifier: GPL-3.0-or-later
-// Historical reconstruction; original bytes are unavailable. See the recovery
-// provenance.
-#include "CBuilding.h"
-#include "CEventHandler.h"
-#include "CCreature.h"
-#include "CGuiHandler.h"
-#include "CInteraction.h"
-#include "CItem.h"
 #include "CMap.h"
-#include "CMapObject.h"
-#include "CTile.h"
-#include "Stats.h"
+#include "CScriptLoader.h"
 #include "Util.h"
+#include "handler/CHandler.h"
+#include "object/CObject.h"
+#include "panel/CPanel.h"
 #include <Python.h>
-#include <QByteArray>
-#include <QString>
+#include <QDebug>
+#include <QMetaProperty>
 #include <boost/python.hpp>
-#include <boost/shared_ptr.hpp>
-#include <utility>
+#include <sstream>
 
 using namespace boost::python;
 
-struct QStringToPython {
-  static PyObject *convert(const QString &value) {
-    QByteArray bytes = value.toUtf8();
-    return PyUnicode_DecodeUTF8(bytes.constData(), bytes.size(), "strict");
-  }
+template <> void CMap::removeAll(object func) {
+    QList<CMapObject *> objects;
+    for (auto it : mapObjects) {
+        if (func(boost::ref(it.second))) {
+            objects.append(it.second);
+        }
+    }
+    for (auto it : objects) {
+        removeObject(it);
+    }
+}
+
+struct QString_to_python_str {
+    static PyObject *convert(QString const &s) {
+        return boost::python::incref(boost::python::object(s.toLatin1().constData()).ptr());
+    }
 };
 
-struct QStringFromPython {
-  QStringFromPython() {
-    converter::registry::push_back(&convertible, &construct,
-                                   type_id<QString>());
-  }
-  static void *convertible(PyObject *value) {
-    return PyBytes_Check(value) || PyUnicode_Check(value) ? value : 0;
-  }
-  static void construct(PyObject *value,
-                        converter::rvalue_from_python_stage1_data *data) {
-    handle<> encoded;
-    if (PyUnicode_Check(value)) {
-      encoded = handle<>(PyUnicode_AsUTF8String(value));
-      value = encoded.get();
+struct QString_from_python_str {
+    QString_from_python_str() {
+        boost::python::converter::registry::push_back(&convertible, &construct, boost::python::type_id<QString>());
     }
-    char *bytes = 0;
-    Py_ssize_t size = 0;
-    if (PyBytes_AsStringAndSize(value, &bytes, &size) == -1) {
-      throw_error_already_set();
+
+    // Determine if obj_ptr can be converted in a QString
+    static void *convertible(PyObject *obj_ptr) {
+        if (!PyUnicode_Check(obj_ptr)) {
+            return 0;
+        }
+        return obj_ptr;
     }
-    void *storage =
-        reinterpret_cast<converter::rvalue_from_python_storage<QString> *>(data)
-            ->storage.bytes;
-    new (storage) QString(QString::fromUtf8(bytes, size));
-    data->convertible = storage;
-  }
+
+    // Convert obj_ptr into a QString
+    static void construct(PyObject *obj_ptr, boost::python::converter::rvalue_from_python_stage1_data *data) {
+        // Extract the character data from the python string
+        const char *value = _PyUnicode_AsString(obj_ptr);
+
+        // Verify that obj_ptr is a string (should be ensured by convertible())
+        assert(value);
+
+        // Grab pointer to memory into which to construct the new QString
+        void *storage = ((boost::python::converter::rvalue_from_python_storage<QString> *)data)->storage.bytes;
+
+        // in-place construct the new QString using the character data
+        // extraced from the python object
+        new (storage) QString(value);
+
+        // Stash the memory chunk pointer for later use by boost.python
+        data->convertible = storage;
+    }
 };
+
+static void initializeConverters() {
+    using namespace boost::python;
+
+    // register the to-python converter
+    to_python_converter<QString, QString_to_python_str>();
+
+    // register the from-python converter
+    QString_from_python_str();
+}
 
 template <class T> class CWrapper : public T, public wrapper<CWrapper<T>> {
-public:
-  void onEnter(CGameEvent *event) override {
-    if (override call = this->get_override("onEnter")) {
-      call(ptr(event));
-    } else {
-      T::onEnter(event);
+  public:
+    virtual void onEnter(CGameEvent *event) override final {
+        if (auto f = this->get_override("onEnter")) {
+            f(boost::ref(event));
+        } else {
+            this->T::onEnter(event);
+        }
     }
-  }
-  void onTurn(CGameEvent *event) override {
-    if (override call = this->get_override("onTurn")) {
-      call(ptr(event));
-    } else {
-      T::onTurn(event);
+    virtual void onTurn(CGameEvent *event) override final {
+        if (auto f = this->get_override("onTurn")) {
+            f(boost::ref(event));
+        } else {
+            this->T::onTurn(event);
+        }
     }
-  }
-  void onCreate(CGameEvent *event) override {
-    if (override call = this->get_override("onCreate")) {
-      call(ptr(event));
-    } else {
-      T::onCreate(event);
+
+    virtual void onCreate(CGameEvent *event) override final {
+        if (auto f = this->get_override("onCreate")) {
+            f(boost::ref(event));
+        } else {
+            this->T::onCreate(event);
+        }
     }
-  }
-  void onDestroy(CGameEvent *event) override {
-    if (override call = this->get_override("onDestroy")) {
-      call(ptr(event));
-    } else {
-      T::onDestroy(event);
+    virtual void onDestroy(CGameEvent *event) override final {
+        if (auto f = this->get_override("onDestroy")) {
+            f(boost::ref(event));
+        } else {
+            this->T::onDestroy(event);
+        }
     }
-  }
-  void defaultOnEnter(CGameEvent *event) { T::onEnter(event); }
-  void defaultOnTurn(CGameEvent *event) { T::onTurn(event); }
-  void defaultOnCreate(CGameEvent *event) { T::onCreate(event); }
-  void defaultOnDestroy(CGameEvent *event) { T::onDestroy(event); }
+    virtual void onLeave(CGameEvent *event) override final {
+        if (auto f = this->get_override("onLeave")) {
+            f(boost::ref(event));
+        } else {
+            this->T::onLeave(event);
+        }
+    }
 };
 
-class CInteractionWrapper : public CInteraction,
-                            public wrapper<CInteractionWrapper> {
-public:
-  void performAction(CCreature *first, CCreature *second) override {
-    if (override call = get_override("performAction")) {
-      call(boost::ref(first), boost::ref(second));
-    } else {
-      CInteraction::performAction(first, second);
+class CInteractionWrapper : public CInteraction, public wrapper<CInteractionWrapper> {
+  public:
+    virtual void performAction(CCreature *first, CCreature *second) override final {
+        if (auto f = this->get_override("performAction")) {
+            f(boost::ref(first), boost::ref(second));
+        } else {
+            this->CInteraction::performAction(first, second);
+        }
     }
-  }
-  bool configureEffect(CEffect *effect) override {
-    if (override call = get_override("configureEffect")) {
-      return call(boost::ref(effect));
+    virtual bool configureEffect(CEffect *effect) override final {
+        if (auto f = this->get_override("configureEffect")) {
+            return f(boost::ref(effect));
+        } else {
+            return this->CInteraction::configureEffect(effect);
+        }
     }
-    return CInteraction::configureEffect(effect);
-  }
-  void defaultPerformAction(CCreature *first, CCreature *second) {
-    CInteraction::performAction(first, second);
-  }
-  bool defaultConfigureEffect(CEffect *effect) {
-    return CInteraction::configureEffect(effect);
-  }
+};
+
+class CEffectWrapper : public CEffect, public wrapper<CEffectWrapper> {
+  public:
+    virtual bool onEffect() override final {
+        if (auto f = this->get_override("onEffect")) {
+            return f();
+        } else {
+            return this->CEffect::onEffect();
+        }
+    }
+};
+
+class CTileWrapper : public CTile, public wrapper<CTileWrapper> {
+  public:
+    virtual void onStep(CCreature *creature) override final {
+        if (auto f = this->get_override("onStep")) {
+            f(boost::ref(creature));
+        } else {
+            this->CTile::onStep(creature);
+        }
+    }
 };
 
 class CPotionWrapper : public CPotion, public wrapper<CPotionWrapper> {
-public:
-  void onUse(CGameEvent *event) override {
-    if (override function = get_override("onUse")) {
-      function(ptr(event));
-    } else {
-      CPotion::onUse(event);
+  public:
+    virtual void onUse(CGameEvent *event) override final {
+        if (auto f = this->get_override("onUse")) {
+            f(boost::ref(event));
+        } else {
+            this->CPotion::onUse(event);
+        }
     }
-  }
-  void defaultOnUse(CGameEvent *event) { CPotion::onUse(event); }
 };
-
-static void moveObject(CMapObject &value, int x, int y, int z) {
-  value.moveTo(x, y, z);
-}
-
-static QString objectName(const CMapObject &value) {
-  return value.objectName();
-}
-static void setObjectName(CMapObject &value, QString name) {
-  value.setObjectName(name);
-}
-
-template <class T> static void registerObjectCallbacks(const char *name) {
-  class_<CWrapper<T>, bases<T>, boost::noncopyable,
-         boost::shared_ptr<CWrapper<T>>>(name)
-      .def("onEnter", &T::onEnter, &CWrapper<T>::defaultOnEnter)
-      .def("onTurn", &T::onTurn, &CWrapper<T>::defaultOnTurn)
-      .def("onCreate", &T::onCreate, &CWrapper<T>::defaultOnCreate)
-      .def("onDestroy", &T::onDestroy, &CWrapper<T>::defaultOnDestroy);
-}
-
-// Under Python 2.7, Boost exports the init_game symbol called by CScriptEngine.
-namespace {
-int randint(int first, int last) {
-    if (first > last) {
-        throw std::invalid_argument("Invalid random integer bounds");
-    }
-    static thread_local std::mt19937 generator(std::random_device{}());
-    return std::uniform_int_distribution<int>(first, last)(generator);
-}
-}
-
-class CEffectWrapper : public CEffect, public wrapper<CEffect> {
-public:
-  bool onEffect() override {
-    if (override call = get_override("onEffect")) return call();
-    return CEffect::onEffect();
-  }
-  bool defaultOnEffect() { return CEffect::onEffect(); }
-};
-
-class CTileWrapper : public CTile, public wrapper<CTile> {
-public:
-  void onStep(CGameEvent *event) override {
-    if (override call = get_override("onStep")) {
-      call(ptr(event));
-    } else {
-      CTile::onStep(event);
-    }
-  }
-  void defaultOnStep(CGameEvent *event) { CTile::onStep(event); }
-};
-
-static void removeMatchingObjects(CMap &map, object predicate) {
-  map.removeAll([&](CMapObject *candidate) -> bool {
-    return extract<bool>(predicate(ptr(candidate)));
-  });
-}
-
-BOOST_PYTHON_MODULE(_game) {
-    def("randint", randint);
-  to_python_converter<QString, QStringToPython>();
-  QStringFromPython();
-  class_<Coords>("Coords", init<int, int, int>())
-      .def_readwrite("x", &Coords::x)
-      .def_readwrite("y", &Coords::y)
-      .def_readwrite("z", &Coords::z);
-  class_<CGuiHandler, boost::noncopyable>("CGuiHandler", no_init)
-      .def("showMessage", &CGuiHandler::showMessage);
-  class_<CMap, boost::noncopyable>("CMap", no_init)
-      .def("removeAll", &removeMatchingObjects)
-      .def("addObjectByName", &CMap::addObjectByName)
-      .def("removeObjectByName", &CMap::removeObjectByName)
-      .def("removeObject", &CMap::removeObject)
-      .def("replaceTile", &CMap::replaceTile)
-      .def("getPlayer", &CMap::getPlayer, return_internal_reference<>())
-      .def("getGuiHandler", &CMap::getGuiHandler, return_internal_reference<>())
-      .def("getObjectByName", &CMap::getObjectByName,
-           return_internal_reference<>())
-      .def("getLocationByName", &CMap::getLocationByName);
-  class_<CGameEvent, boost::noncopyable>("CGameEvent", no_init)
-      .def("getCause", &CGameEvent::getCause, return_value_policy<reference_existing_object>());
-  class_<CGameObject, boost::noncopyable>("CGameObject", no_init);
-  class_<CMapObject, bases<CGameObject>, boost::noncopyable>("CMapObject", no_init)
-      .add_property("name", &objectName, &setObjectName)
-      .def("getMap", &CMapObject::getMap, return_internal_reference<>())
-      .def("moveTo", &moveObject)
-      .def("getCoords", &CMapObject::getCoords)
-      .def("setCoords", &CMapObject::setCoords)
-          PY_PROPERTY_ACCESSOR(CMapObject);
-  class_<Stats>("Stats").def("getDamage", &Stats::getDamage)
-      PY_PROPERTY_ACCESSOR(Stats);
-  class_<Damage>("Damage") PY_PROPERTY_ACCESSOR(Damage);
-  class_<CCreature, bases<CMapObject>, boost::noncopyable>("CCreature", no_init)
-      .def("getDmg", &CCreature::getDmg)
-      .def("hurt", static_cast<void (CCreature::*)(int)>(&CCreature::hurt))
-      .def("hurt", static_cast<void (CCreature::*)(Damage)>(&CCreature::hurt))
-      .def("getWeapon", &CCreature::getWeapon, return_internal_reference<>())
-      .def("getArmor", &CCreature::getArmor, return_internal_reference<>())
-      .def("getStats", &CCreature::getStats, return_internal_reference<>())
-      .def("getHp", &CCreature::getHp)
-      .def("getHpMax", &CCreature::getHpMax)
-      .def("getHpRatio", &CCreature::getHpRatio)
-      .def("getMana", &CCreature::getMana)
-      .def("getManaMax", &CCreature::getManaMax)
-      .def("getManaRatio", &CCreature::getManaRatio)
-      .def("getLevel", &CCreature::getLevel)
-      .def("heal", &CCreature::heal)
-      .def("healProc", &CCreature::healProc)
-      .def("addMana", &CCreature::addMana)
-      .def("addManaProc", &CCreature::addManaProc)
-      .def("takeMana", &CCreature::takeMana)
-      .def("isAlive", &CCreature::isAlive)
-      .def("isPlayer", &CCreature::isPlayer);
-  class_<CPlayer, bases<CCreature>, boost::noncopyable>("CPlayer", no_init);
-  class_<CMonster, bases<CCreature>, boost::noncopyable>("CMonster", no_init);
-  class_<CBuilding, bases<CMapObject>, boost::noncopyable>("CBuildingBase");
-  class_<CEvent, bases<CMapObject>, boost::noncopyable>("CEventBase");
-  registerObjectCallbacks<CBuilding>("CBuilding");
-  registerObjectCallbacks<CEvent>("CEvent");
-  class_<CInteraction, bases<CGameObject>, boost::noncopyable>(
-      "CInteractionBase")
-      .def("onAction", &CInteraction::onAction);
-  class_<CInteractionWrapper, bases<CInteraction>, boost::noncopyable,
-         boost::shared_ptr<CInteractionWrapper>>("CInteraction")
-      .def("performAction", &CInteraction::performAction,
-           &CInteractionWrapper::defaultPerformAction)
-      .def("configureEffect", &CInteraction::configureEffect,
-           &CInteractionWrapper::defaultConfigureEffect);
-  scope().attr("Interaction") = scope().attr("CInteraction");
-  class_<CEffectWrapper, bases<CGameObject>, boost::noncopyable, boost::shared_ptr<CEffectWrapper>>("CEffect")
-      .def("getBonus", &CEffect::getBonus, return_internal_reference<>())
-      .def("setBonus", &CEffect::setBonus)
-      .def("getCaster", &CEffect::getCaster, return_internal_reference<>())
-      .def("getVictim", &CEffect::getVictim, return_internal_reference<>())
-      .def("getTimeLeft", &CEffect::getTimeLeft)
-      .def("getTimeTotal", &CEffect::getTimeTotal)
-      .def("getDuration", &CEffect::getDuration)
-      .def("setDuration", &CEffect::setDuration)
-      .def("onEffect", &CEffect::onEffect, &CEffectWrapper::defaultOnEffect);
-  class_<CItem, bases<CMapObject>, boost::noncopyable>("CItem");
-  class_<CArmor, bases<CItem>, boost::noncopyable>("CArmor");
-  class_<CBelt, bases<CItem>, boost::noncopyable>("CBelt");
-  class_<CHelmet, bases<CItem>, boost::noncopyable>("CHelmet");
-  class_<CBoots, bases<CItem>, boost::noncopyable>("CBoots");
-  class_<CGloves, bases<CItem>, boost::noncopyable>("CGloves");
-  class_<CWeapon, bases<CItem>, boost::noncopyable>("CWeapon").def(
-      "getInteraction", &CWeapon::getInteraction,
-      return_internal_reference<>());
-  class_<CSmallWeapon, bases<CWeapon>, boost::noncopyable>("CSmallWeapon");
-  class_<CPotion, bases<CItem>, boost::noncopyable>("CPotionBase");
-  class_<CPotionWrapper, bases<CPotion>, boost::noncopyable,
-         boost::shared_ptr<CPotionWrapper>>("CPotion")
-      .def("onUse", &CPotion::onUse, &CPotionWrapper::defaultOnUse);
-  class_<CTileWrapper, bases<CGameObject>, boost::noncopyable, boost::shared_ptr<CTileWrapper>>("CTile")
-      .def("onStep", &CTile::onStep, &CTileWrapper::defaultOnStep);
-}namespace {
-bool loaderPackage(const std::string &name) {
-  QString path=QString::fromStdString(name).replace(".", "/");
-  return !CResourcesHandler::getInstance()->getPath("scripts/" + path + "/__init__.py").isEmpty();
-}
-}
 
 BOOST_PYTHON_MODULE(_core) {
-  class_<AScriptLoader, boost::noncopyable>("AScriptLoader", no_init)
-      .def("checkModule", static_cast<bool (AScriptLoader::*)(std::string)>(&AScriptLoader::checkModule))
-      .def("exec_module", &AScriptLoader::exec_module);
-  class_<CScriptLoader, bases<AScriptLoader>, boost::noncopyable>("_NativeScriptLoader");
-  class_<CMapScriptLoader, bases<AScriptLoader>, boost::noncopyable>("_NativeMapScriptLoader", init<CMap *>());
-  def("_loaderPackage", loaderPackage);
-  scope module;
-  PyObject *globals=PyModule_GetDict(module.ptr());
-  if (PyDict_SetItemString(globals, "__builtins__", PyEval_GetBuiltins()) < 0)
-      throw_error_already_set();
-  PyObject *result=PyRun_String(R"PY(
-from importlib.machinery import ModuleSpec
+    class_<ModuleSpec, boost::noncopyable>("ModuleSpec", no_init)
+        .add_property("loader", make_function(&ModuleSpec::loader, return_internal_reference<>()))
+        .def_readonly("name", &ModuleSpec::name)
+        .def_readonly("submodule_search_locations", &ModuleSpec::subModuleSearch)
+        .def_readonly("has_location", &ModuleSpec::hasLocation)
+        .def_readonly("cached", &ModuleSpec::cached);
+    class_<AScriptLoader, boost::noncopyable>("AScriptLoader", no_init)
+        .def("exec_module", &AScriptLoader::exec_module)
+        .def("find_spec", &AScriptLoader::find_spec, return_internal_reference<>());
+    class_<CScriptLoader, bases<AScriptLoader>, boost::noncopyable>("CScriptLoader");
+    class_<CMapScriptLoader, bases<AScriptLoader>, boost::noncopyable>("CMapScriptLoader", no_init);
+}
 
-class CScriptLoader(_NativeScriptLoader):
-    def find_spec(self, name, path=None, target=None):
-        if self.checkModule(name):
-            return ModuleSpec(name, self, is_package=_loaderPackage(name))
+static int randint(int i, int j) { return rand() % (j - i + 1) + i; }
 
-class CMapScriptLoader(_NativeMapScriptLoader):
-    def find_spec(self, name, path=None, target=None):
-        if self.checkModule(name):
-            return ModuleSpec(name, self)
-)PY", Py_file_input, globals, globals);
-  if (!result)
-      throw_error_already_set();
-  Py_DECREF(result);
+BOOST_PYTHON_MODULE(_game) {
+    initializeConverters();
+    def("randint", randint);
+    class_<CGameObject, boost::noncopyable>("CGameObject", no_init) PY_PROPERTY_ACCESSOR(CGameObject);
+    class_<Coords>("Coords", init<int, int, int>())
+        .def_readonly("x", &Coords::x)
+        .def_readonly("y", &Coords::y)
+        .def_readonly("z", &Coords::z);
+    class_<CMap, boost::noncopyable>("CMap", no_init)
+        .def("addObjectByName", &CMap::addObjectByName)
+        .def("removeObjectByName", &CMap::removeObjectByName)
+        .def("removeObject", &CMap::removeObject)
+        .def("replaceTile", &CMap::replaceTile)
+        .def("getPlayer", &CMap::getPlayer, return_internal_reference<>())
+        .def("getLocationByName", &CMap::getLocationByName)
+        .def("getGuiHandler", &CMap::getGuiHandler, return_internal_reference<>())
+        .def("removeAll", &CMap::removeAll<object>)
+        .def("getObjectHandler", &CMap::getObjectHandler, return_internal_reference<>())
+        .def("addObject", &CMap::addObject);
+    class_<CObjectHandler, boost::noncopyable>("CObjectHandler", no_init)
+        .def("createObject", &CObjectHandler::createMapObject<CGameObject *>, return_internal_reference<>());
+    void (CMapObject::*moveTo)(int, int, int) = &CMapObject::moveTo;
+    class_<CMapObject, bases<CGameObject>, boost::noncopyable>("CMapObject", no_init)
+        .def("getMap", &CMapObject::getMap, return_internal_reference<>())
+        .def("moveTo", moveTo)
+        .def("getCoords", &CMapObject::getCoords)
+        .def("setCoords", &CMapObject::setCoords);
+    class_<CEvent, bases<CMapObject>, boost::noncopyable>("CEventBase");
+    class_<CInteraction, bases<CGameObject>, boost::noncopyable>("CInteraction")
+        .def("onAction", &CInteraction::onAction, return_internal_reference<>());
+    class_<CEffect, bases<CGameObject>, boost::noncopyable>("CEffectBase")
+        .def("getBonus", &CEffect::getBonus, return_internal_reference<>())
+        .def("setBonus", &CEffect::setBonus)
+        .def("getCaster", &CEffect::getCaster, return_internal_reference<>())
+        .def("getVictim", &CEffect::getVictim, return_internal_reference<>())
+        .def("getTimeLeft", &CEffect::getTimeLeft);
+    class_<CEffectWrapper, bases<CEffect>, boost::noncopyable, boost::shared_ptr<CEffectWrapper>>("CEffect").def(
+        "onEffect", &CEffectWrapper::onEffect);
+    class_<CItem, bases<CMapObject>, boost::noncopyable>("CItem");
+    class_<CWeapon, bases<CItem>, boost::noncopyable>("CWeapon").def("getInteraction", &CWeapon::getInteraction,
+                                                                     return_internal_reference<>());
+    class_<CBuilding, bases<CMapObject>, boost::noncopyable>("CBuildingBase");
+    void (CCreature::*hurtInt)(int) = &CCreature::hurt;
+    void (CCreature::*hurtDmg)(Damage) = &CCreature::hurt;
+    class_<CCreature, bases<CMapObject>, boost::noncopyable>("CCreature", no_init)
+        .def("getDmg", &CCreature::getDmg)
+        .def("hurt", hurtInt)
+        .def("hurt", hurtDmg)
+        .def("getWeapon", &CCreature::getWeapon, return_internal_reference<>())
+        .def("getHpRatio", &CCreature::getHpRatio)
+        .def("isAlive", &CCreature::isAlive)
+        .def("getMana", &CCreature::getMana)
+        .def("healProc", &CCreature::healProc)
+        .def("heal", &CCreature::heal)
+        .def("getHpMax", &CCreature::getHpMax)
+        .def("getLevel", &CCreature::getLevel)
+        .def("getStats", &CCreature::getStats)
+        .def("addManaProc", &CCreature::addManaProc)
+        .def("isPlayer", &CCreature::isPlayer)
+        .def("trade", &CCreature::trade);
+    class_<CPlayer, bases<CCreature>, boost::noncopyable>("CPlayer");
+    class_<CMonster, bases<CCreature>, boost::noncopyable>("CMonster");
+    class_<CWrapper<CBuilding>, bases<CBuilding>, boost::noncopyable, boost::shared_ptr<CWrapper<CBuilding>>>(
+        "CBuilding")
+        .def("onCreate", &CWrapper<CBuilding>::onCreate)
+        .def("onTurn", &CWrapper<CBuilding>::onTurn)
+        .def("onDestroy", &CWrapper<CBuilding>::onDestroy)
+        .def("onLeave", &CWrapper<CBuilding>::onLeave)
+        .def("onEnter", &CWrapper<CBuilding>::onEnter);
+    class_<CWrapper<CEvent>, bases<CEvent>, boost::noncopyable, boost::shared_ptr<CWrapper<CEvent>>>("CEvent")
+        .def("onCreate", &CWrapper<CEvent>::onCreate)
+        .def("onTurn", &CWrapper<CEvent>::onTurn)
+        .def("onLeave", &CWrapper<CEvent>::onLeave)
+        .def("onDestroy", &CWrapper<CEvent>::onDestroy)
+        .def("onEnter", &CWrapper<CEvent>::onEnter);
+    class_<CInteractionWrapper, bases<CInteraction>, boost::noncopyable, boost::shared_ptr<CInteractionWrapper>>(
+        "CInteraction")
+        .def("performAction", &CInteractionWrapper::performAction)
+        .def("configureEffect", &CInteractionWrapper::configureEffect);
+    class_<Damage, bases<CGameObject>>("Damage");
+    class_<Stats, bases<CGameObject>>("Stats");
+    class_<AGamePanel, boost::noncopyable>("AGamePanel", no_init).def("showPanel", &AGamePanel::showPanel);
+    class_<CTextPanel, bases<AGamePanel>, boost::noncopyable>("CTextPanel");
+    class_<CFightPanel, bases<AGamePanel>, boost::noncopyable>("CFightPanel");
+    class_<CCharPanel, bases<AGamePanel>, boost::noncopyable>("CCharPanel");
+    class_<CGuiHandler, boost::noncopyable>("CGuiHandler", no_init)
+        .def("showMessage", &CGuiHandler::showMessage)
+        .def("getPanel", &CGuiHandler::getPanel, return_internal_reference<>());
+    class_<CTile, bases<CGameObject>, boost::noncopyable>("CTileBase");
+    class_<CTileWrapper, bases<CTile>, boost::noncopyable, boost::shared_ptr<CTileWrapper>>("CTile").def(
+        "onStep", &CTileWrapper::onStep);
+    class_<CPotion, bases<CItem>, boost::noncopyable>("CItemBase");
+    class_<CPotionWrapper, bases<CPotion>, boost::noncopyable, boost::shared_ptr<CPotionWrapper>>("CPotion").def(
+        "onUse", &CPotionWrapper::onUse);
+    class_<CGameEvent, boost::noncopyable>("CGameEvent", no_init)
+        .def("getCause", &CGameEvent::getCause, return_internal_reference<>());
 }

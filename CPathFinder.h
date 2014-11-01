@@ -1,5 +1,5 @@
 #pragma once
-#include "CCreature.h"
+#include "object/CObject.h"
 #include"CMap.h"
 #include <QObject>
 #include <QRunnable>

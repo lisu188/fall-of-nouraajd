@@ -6,10 +6,10 @@
 #include <qpainter.h>
 #include "CGameView.h"
 #include "CPlayerView.h"
-#include "CCreature.h"
+#include "object/CObject.h"
 #include <QBitmap>
 #include <QFont>
-#include "CResourcesHandler.h"
+#include "handler/CHandler.h"
 
 CTextPanel::CTextPanel() {
 	this->setZValue ( 7 );
