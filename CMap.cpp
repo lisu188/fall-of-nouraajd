@@ -267,12 +267,12 @@ const CEventHandler *CMap::getEventHandler() const {
     return eventHandler;
 }
 
-CScriptEngine *CMap::getScriptEngine() const {
-    if (!scriptEngine) {
+CScriptHandler *CMap::getScriptHandler() const {
+    if (!scriptHandler) {
         auto self = const_cast<CMap *>(this);
-        self->scriptEngine = new CScriptEngine(self);
+        self->scriptHandler = new CScriptHandler(self);
     }
-    return scriptEngine;
+    return scriptHandler;
 }
 
 CGuiHandler *CMap::getGuiHandler() const {
@@ -284,11 +284,7 @@ CGuiHandler *CMap::getGuiHandler() const {
 }
 
 void CMap::loadMap(QString mapPath) {
-    getScriptEngine();
-    loader = new CMapScriptLoader(this);
-    boost::python::object sys(boost::python::handle<>(PyImport_ImportModule("sys")));
-    sys.attr("meta_path").attr("append")(boost::python::ptr(loader));
-    getScriptEngine()->executeScript("import " + getMapName());
+    getScriptHandler();
     QJsonObject mapc = CConfigurationProvider::getConfig(mapPath + "/map.json").toObject();
     const QJsonObject &mapProperties = mapc["properties"].toObject();
     const QJsonArray &mapLayers = mapc["layers"].toArray();

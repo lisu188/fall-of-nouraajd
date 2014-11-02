@@ -15,6 +15,15 @@
 #include <iostream>
 #include <string>
 
+namespace {
+template <typename Map> auto lootHandlerFor(Map *map, int) -> decltype(map->getLootHandler()) {
+    return map->getLootHandler();
+}
+template <typename Map> auto lootHandlerFor(Map *map, long) -> decltype(map->getLootProvider()) {
+    return map->getLootProvider();
+}
+} // namespace
+
 void CCreature::setActions(QVariantList &value) {
     for (auto it = value.begin(); it != value.end(); it++) {
         this->actions.insert(this->getMap()->getObjectHandler()->createMapObject<CInteraction *>((*it).toString()));
@@ -401,7 +410,7 @@ void CCreature::levelUp() {
 }
 
 std::set<CItem *> CCreature::getLoot() {
-    std::set<CItem *> items = this->getMap()->getLootProvider()->getLoot(getScale());
+    std::set<CItem *> items = lootHandlerFor(this->getMap(), 0)->getLoot(getScale());
     for (CItem *item : getInInventory()) {
         this->removeFromInventory(item);
         items.insert(item);
