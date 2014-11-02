@@ -41,7 +41,7 @@ def main():
     formatPython(getFileList(DIR,"py"))
     exe = initialize_exe()
     for file_path in files:
-        format_source_code(exe, file_path, ["-A2tOPj"])
+        format_source_code(exe, file_path, ["-A2tOPjn"])
 
 def format_source_code(exe, file_path, options):
     astyle = [exe]+options+[file_path]

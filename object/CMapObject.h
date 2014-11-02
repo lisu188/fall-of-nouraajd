@@ -23,8 +23,6 @@ public:
 	virtual void onCreate ( CGameEvent * ) override;
 	virtual void onDestroy ( CGameEvent * ) override;
 
-	void setVisible ( bool vis );
-
 	Coords getCoords();
 	void setCoords ( Coords coords );
 

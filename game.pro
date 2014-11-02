@@ -75,7 +75,8 @@ SOURCES += \
     object/CMonster.cpp \
     object/CEffect.cpp \
     object/CGameObject.cpp \
-    object/CEvent.cpp
+    object/CEvent.cpp \
+    object/CTrigger.cpp
 
 HEADERS += \
      CPathFinder.h \
@@ -116,7 +117,8 @@ HEADERS += \
     object/CMonster.h \
     object/CEffect.h \
     object/CGameObject.h \
-    object/CEvent.h
+    object/CEvent.h \
+    object/CTrigger.h
 
 
 unix:LIBS += -L/usr/local/lib -lpython3.4m -ldl -fPIC -lutil

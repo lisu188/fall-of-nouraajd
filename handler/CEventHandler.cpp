@@ -10,47 +10,56 @@ CEventHandler::CEventHandler ( CMap *map ) {
 	this->map=map;
 }
 
-void CEventHandler::gameEvent ( CGameEvent *event, CGameObject *mapObject ) const {
+void CEventHandler::gameEvent (  CGameObject *object ,CGameEvent *event ) const {
 	switch ( event->getType() ) {
 	case CGameEvent::onEnter:
-		dynamic_cast<Visitable*> ( mapObject )->onEnter ( event );
+		dynamic_cast<Visitable*> ( object )->onEnter ( event );
 		break;
 	case CGameEvent::onLeave:
-		dynamic_cast<Visitable*> ( mapObject )->onLeave ( event );
+		dynamic_cast<Visitable*> ( object )->onLeave ( event );
 		break;
 	case CGameEvent::onTurn:
-		dynamic_cast<Turnable*> ( mapObject )->onTurn ( event );
+		dynamic_cast<Turnable*> ( object )->onTurn ( event );
 		break;
 	case CGameEvent::onDestroy:
-		dynamic_cast<Creatable*> ( mapObject )->onDestroy ( event );
+		dynamic_cast<Creatable*> ( object )->onDestroy ( event );
 		break;
 	case CGameEvent::onCreate:
-		dynamic_cast<Creatable*> ( mapObject )->onCreate ( event );
+		dynamic_cast<Creatable*> ( object )->onCreate ( event );
 		break;
 	case CGameEvent::onUse:
-		dynamic_cast<Usable*> ( mapObject )->onUse ( event );
+		dynamic_cast<Usable*> ( object )->onUse ( event );
 		break;
 	case CGameEvent::onEquip:
-		dynamic_cast<Wearable*> ( mapObject )->onEquip ( event );
+		dynamic_cast<Wearable*> ( object )->onEquip ( event );
 		break;
 	case CGameEvent::onUnequip:
-		dynamic_cast<Wearable*> ( mapObject )->onUnequip (  event );
+		dynamic_cast<Wearable*> ( object )->onUnequip (  event );
 		break;
+	}
+	auto it=triggers.find ( TriggerKey ( object->objectName(),event->getType() ) ) ;
+	if ( it!=triggers.end() ) {
+		std::list<CTrigger*> triggerList= ( *it ).second;
+		for ( CTrigger * trigger:triggerList ) {
+			trigger->trigger ( object,event );
+		}
 	}
 	delete event;
 }
 
 
-CGameEvent::CGameEvent ( CGameEvent::Type type, CGameObject *cause ) :type ( type ),cause ( cause ) {
+CGameEvent::CGameEvent ( CGameEvent::Type type ) :type ( type ) {
 
 }
 
 CGameEvent::Type CGameEvent::getType() const {
 	return type;
 }
-CGameObject *CGameEvent::getCause() const {
+
+CGameObject *CGameEventCaused::getCause() const {
 	return cause;
 }
 
+CGameEventCaused::CGameEventCaused ( CGameEvent::Type type, CGameObject *cause ) :CGameEvent ( type ),cause ( cause ) {
 
-
+}

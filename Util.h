@@ -1,5 +1,6 @@
 #pragma once
 #include <QMimeData>
+#include <QString>
 
 #define PY_PROPERTY_ACCESSOR(CLASS)\
 .def ( "getStringProperty",&CLASS::getStringProperty )\

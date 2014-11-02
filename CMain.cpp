@@ -32,37 +32,20 @@ void messageHandler ( QtMsgType type, const QMessageLogContext &context,
 		abort();
 	}
 }
-#ifndef ANDROID
+
 void terminateHandler () {
 	PyErr_Print();
 	abort();
 }
-#else
-void terminateHandler ( int ) {
-	PyObject *ptype, *pvalue, *ptraceback;
-	PyErr_Fetch ( &ptype, &pvalue, &ptraceback );
-	std::string pStrErrorMessage = boost::python::extract<std::string> ( pvalue );
-	qWarning ( pStrErrorMessage.c_str() );
-	abort();
-}
-#endif
 
-#ifndef ANDROID
 void installHandler() {
 	qInstallMessageHandler ( messageHandler );
 	std::set_terminate ( terminateHandler );
 }
-#else
-void installHandler() {
-	signal ( SIGABRT, terminateHandler );
-}
-#endif
 
 int main ( int argc, char *argv[] ) {
 	installHandler();
 	QApplication a ( argc, argv );
-	QThreadPool::globalInstance()->setMaxThreadCount ( 16 );
-	QThreadPool::globalInstance()->setExpiryTimeout ( 30000 );
 	CMainWindow window;
 	window.show();
 	return a.exec();

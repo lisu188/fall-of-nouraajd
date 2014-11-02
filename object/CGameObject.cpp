@@ -39,6 +39,10 @@ void CGameObject::setTooltip ( const QString &value ) {
 	tooltip = value;
 }
 
+void CGameObject::setVisible ( bool vis ) {
+	QGraphicsPixmapItem::setVisible ( vis );
+}
+
 void CGameObject::hoverEnterEvent ( QGraphicsSceneHoverEvent *event ) {
 	statsView.setVisible ( true );
 	statsView.setText ( getTooltip() );

@@ -11,3 +11,4 @@
 #include "CEffect.h"
 #include "CGameObject.h"
 #include "CEvent.h"
+#include "CTrigger.h"
