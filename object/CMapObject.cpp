@@ -73,9 +73,7 @@ void CMapObject::onMapChanged() {
 	}
 }
 
-void CMapObject::setVisible ( bool vis ) {
-	QGraphicsPixmapItem::setVisible ( vis );
-}
+
 
 Coords CMapObject::getCoords() {
 	return Coords ( posx,posy,posz );

@@ -360,14 +360,14 @@ void CCreature::setItem(int i, CItem *newItem) {
     }
     CItem *oldItem = equipped.at(i);
     if (oldItem) {
-        getMap()->getEventHandler()->gameEvent(new CGameEvent(CGameEvent::onUnequip, this), oldItem);
+        getMap()->getEventHandler()->gameEvent(oldItem, new CGameEventCaused(CGameEvent::onUnequip, this));
         this->addItem(oldItem);
         if (newItem == oldItem) {
             newItem = 0;
         }
     }
     if (newItem) {
-        getMap()->getEventHandler()->gameEvent(new CGameEvent(CGameEvent::onEquip, this), newItem);
+        getMap()->getEventHandler()->gameEvent(newItem, new CGameEventCaused(CGameEvent::onEquip, this));
     }
     removeFromInventory(newItem);
     attribChange();
@@ -490,7 +490,7 @@ void CCreature::beforeMove() {
     };
 
     auto func = [this](CMapObject *object) {
-        this->getMap()->getEventHandler()->gameEvent(new CGameEvent(CGameEvent::Type::onLeave, this), object);
+        this->getMap()->getEventHandler()->gameEvent(object, new CGameEventCaused(CGameEvent::Type::onLeave, this));
     };
 
     this->getMap()->forAll(func, pred);
@@ -502,7 +502,7 @@ void CCreature::afterMove() {
     };
 
     auto func = [this](CMapObject *object) {
-        this->getMap()->getEventHandler()->gameEvent(new CGameEvent(CGameEvent::Type::onEnter, this), object);
+        this->getMap()->getEventHandler()->gameEvent(object, new CGameEventCaused(CGameEvent::Type::onEnter, this));
     };
 
     this->getMap()->forAll(func, pred);
