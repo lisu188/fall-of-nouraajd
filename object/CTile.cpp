@@ -4,6 +4,7 @@
 
 CTile::CTile() {
 	this->setZValue ( 0 );
+	this->hasTooltip=false;
 }
 
 CTile::CTile ( const CTile & ) {

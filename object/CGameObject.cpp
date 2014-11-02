@@ -44,10 +44,16 @@ void CGameObject::setVisible ( bool vis ) {
 }
 
 void CGameObject::hoverEnterEvent ( QGraphicsSceneHoverEvent *event ) {
-	statsView.setVisible ( true );
-	statsView.setText ( getTooltip() );
-	statsView.setPos ( 0, 0 - statsView.boundingRect().height() );
-	event->setAccepted ( true );
+	if ( hasTooltip ) {
+		statsView.setVisible ( true );
+		QString tooltipText=getTooltip();
+		if ( tooltipText=="" ) {
+			tooltipText=getObjectType();
+		}
+		statsView.setText ( tooltipText );
+		statsView.setPos ( 0, 0 - statsView.boundingRect().height() );
+		event->setAccepted ( true );
+	}
 }
 
 void CGameObject::hoverLeaveEvent ( QGraphicsSceneHoverEvent *event ) {

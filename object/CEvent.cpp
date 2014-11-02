@@ -25,7 +25,7 @@ QString CEvent::getEventClass() {
 void CEvent::setEventClass ( const QString &value ) {
 	this->eventClass=value;
 	CEvent* event=this;
-	getMap()->getScriptEngine()->callFunction ( "game.switchClass", boost::ref ( event ),getMap()->getScriptEngine()->getObject ( getMap()->getMapName()+"."+value )  );
+	getMap()->getScriptHandler()->callFunction ( "game.switchClass", boost::ref ( event ),getMap()->getScriptHandler()->getObject ( getMap()->getMapName()+"."+value )  );
 }
 
 void CEvent::onEnter ( CGameEvent * ) {

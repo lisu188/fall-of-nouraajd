@@ -25,7 +25,7 @@ class CPlayer;
 class CLootHandler;
 class CInteraction;
 class CObjectHandler;
-class CScriptEngine;
+class CScriptHandler;
 class CGuiHandler;
 
 class CMap : public QObject,
@@ -65,7 +65,7 @@ public:
 	const CLootHandler *getLootProvider() const;
 	const CObjectHandler *getObjectHandler() const;
 	const CEventHandler *getEventHandler() const;
-	CScriptEngine *getScriptEngine() const;
+	CScriptHandler *getScriptHandler() const;
 	CGuiHandler *getGuiHandler() const;
 	Q_INVOKABLE bool canStep ( int x,int y,int z );
 	bool canStep ( Coords &coords );
@@ -119,8 +119,7 @@ private:
 	CObjectHandler *handler=0;
 	CEventHandler *eventHandler=0;
 	CGuiHandler *guiHandler=0;
-	CScriptEngine *scriptEngine=0;
-	CMapScriptLoader *loader=0;
+	CScriptHandler *scriptHandler=0;
 	QString mapPath;
 	bool moving=false;
 };

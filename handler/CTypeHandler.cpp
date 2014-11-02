@@ -16,7 +16,7 @@ CGameObject *CTypeHandler::create ( QString name ) {
 }
 
 CGameObject *PyTypeHandler::create ( QString name ) {
-	return getObjectHandler()->getMap()->getScriptEngine()->createObject<CGameObject*> ( name );
+	return getObjectHandler()->getMap()->getScriptHandler()->createObject<CGameObject*> ( name );
 }
 
 QString PyTypeHandler::getHandlerName() {

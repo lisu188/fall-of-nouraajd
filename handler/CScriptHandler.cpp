@@ -4,11 +4,11 @@
 #include "QFile"
 #include <QDebug>
 
-CScriptEngine::~CScriptEngine() {
+CScriptHandler::~CScriptHandler() {
 	Py_Finalize();
 }
 
-void CScriptEngine::executeScript ( QString script , boost::python::api::object nameSpace ) {
+void CScriptHandler::executeScript ( QString script , boost::python::api::object nameSpace ) {
 	if ( nameSpace.is_none() ) {
 		boost::python::exec ( script.toStdString().append ( "\n" ).c_str(),main_namespace );
 	} else {
@@ -16,7 +16,7 @@ void CScriptEngine::executeScript ( QString script , boost::python::api::object 
 	}
 }
 
-QString CScriptEngine::buildCommand ( std::initializer_list<QString> list ) {
+QString CScriptHandler::buildCommand ( std::initializer_list<QString> list ) {
 	QString command;
 	unsigned int pos = 0;
 	for ( auto it = list.begin(); it != list.end(); it++, pos++ ) {
@@ -43,11 +43,11 @@ QString CScriptEngine::buildCommand ( std::initializer_list<QString> list ) {
 
 
 
-void CScriptEngine::executeCommand ( std::initializer_list<QString> list ) {
+void CScriptHandler::executeCommand ( std::initializer_list<QString> list ) {
 	executeScript ( buildCommand ( list ) );
 }
 
-CScriptEngine::CScriptEngine ( CMap *map ) :QObject ( map ) {
+CScriptHandler::CScriptHandler ( CMap *map ) :QObject ( map ) {
 	this->map=map;
 	PyImport_AppendInittab ( "_game",PyInit__game );
 	PyImport_AppendInittab ( "_core",PyInit__core );
@@ -59,4 +59,9 @@ CScriptEngine::CScriptEngine ( CMap *map ) :QObject ( map ) {
 	qDebug() <<"Imported main module."<<"\n";
 	executeScript ( CResourcesProvider::getInstance()->getResourceAsString ( "scripts/start.py" ) );
 	qDebug() <<"Executed starting scripts."<<"\n";
+	CMapScriptLoader *loader=new CMapScriptLoader ( map ) ;
+	this->callFunction ( "sys.meta_path.append",boost::ref ( loader ) );
+	qDebug() <<"Added loader to meta path"<<"\n";
+	this->executeScript ( "import "+map->getMapName() );
+	qDebug() <<"Imported map script"<<"\n";
 }

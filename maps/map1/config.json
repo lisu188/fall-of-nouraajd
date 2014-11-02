@@ -1,4 +1,8 @@
 {
+    "GoobyTrigger": {
+        "class": "map1.GoobyTrigger", 
+        "handler": "PyTypeHandler"
+    }, 
     "StartEvent": {
         "class": "map1.StartEvent", 
         "handler": "PyTypeHandler", 
