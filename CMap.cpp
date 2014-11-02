@@ -163,7 +163,7 @@ void CMap::addObject(CMapObject *mapObject) {
         creature->addExp(0);
     }
     mapObjects.insert(std::make_pair(mapObject->objectName(), mapObject));
-    getEventHandler()->gameEvent(new CGameEvent(CGameEvent::Type::onCreate), mapObject);
+    getEventHandler()->gameEvent(mapObject, new CGameEvent(CGameEvent::Type::onCreate));
 }
 
 void CMap::removeObject(CMapObject *mapObject) {
@@ -171,7 +171,7 @@ void CMap::removeObject(CMapObject *mapObject) {
         getScene()->removeObject(mapObject);
     }
     mapObjects.erase(mapObjects.find(mapObject->objectName()));
-    getEventHandler()->gameEvent(new CGameEvent(CGameEvent::Type::onDestroy), mapObject);
+    getEventHandler()->gameEvent(mapObject, new CGameEvent(CGameEvent::Type::onDestroy));
 }
 
 int CMap::getEntryX() { return entryx; }
@@ -201,7 +201,7 @@ void CMap::move() {
     applyEffects();
 
     forAll([this](CMapObject *mapObject) {
-        getEventHandler()->gameEvent(new CGameEvent(CGameEvent::Type::onTurn), mapObject);
+        getEventHandler()->gameEvent(mapObject, new CGameEvent(CGameEvent::Type::onTurn));
     });
 
     auto func = [](CMapObject *object) {

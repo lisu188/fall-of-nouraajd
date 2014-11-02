@@ -164,6 +164,17 @@ class CPotionWrapper : public CPotion, public wrapper<CPotionWrapper> {
     }
 };
 
+class CTriggerWrapper : public CTrigger, public wrapper<CTriggerWrapper> {
+  public:
+    virtual void trigger(CGameObject *object, CGameEvent *event) override final {
+        if (auto f = this->get_override("trigger")) {
+            f(boost::ref(object), boost::ref(event));
+        } else {
+            this->CTrigger::trigger(object, event);
+        }
+    }
+};
+
 BOOST_PYTHON_MODULE(_core) {
     class_<ModuleSpec, boost::noncopyable>("ModuleSpec", no_init)
         .add_property("loader", make_function(&ModuleSpec::loader, return_internal_reference<>()))
@@ -274,6 +285,10 @@ BOOST_PYTHON_MODULE(_game) {
     class_<CPotion, bases<CItem>, boost::noncopyable>("CItemBase");
     class_<CPotionWrapper, bases<CPotion>, boost::noncopyable, boost::shared_ptr<CPotionWrapper>>("CPotion").def(
         "onUse", &CPotionWrapper::onUse);
-    class_<CGameEvent, boost::noncopyable>("CGameEvent", no_init)
-        .def("getCause", &CGameEvent::getCause, return_internal_reference<>());
+    class_<CGameEvent, boost::noncopyable>("CGameEvent", no_init);
+    class_<CGameEventCaused, bases<CGameEvent>, boost::noncopyable>("CGameEventCaused", no_init)
+        .def("getCause", &CGameEventCaused::getCause, return_internal_reference<>());
+    class_<CTrigger, bases<CGameObject>, boost::noncopyable>("CTriggerBase", no_init);
+    class_<CTriggerWrapper, bases<CTrigger>, boost::noncopyable, boost::shared_ptr<CTriggerWrapper>>("CTrigger")
+        .def("trigger", &CTriggerWrapper::trigger);
 }

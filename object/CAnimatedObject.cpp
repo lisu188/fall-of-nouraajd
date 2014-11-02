@@ -2,10 +2,10 @@
 #include <QMimeData>
 #include <QThread>
 #include <QApplication>
-#include "CAnimatedObject.h"
-#include "CAnimationProvider.h"
+#include <QDebug>
+#include "object/CObject.h"
+#include "provider/CProvider.h"
 #include "CGameScene.h"
-#include "QDebug"
 #include "Util.h"
 
 CAnimatedObject::CAnimatedObject() {

@@ -56,6 +56,8 @@ public:
 	virtual QString getTooltip() const;
 	virtual void setTooltip ( const QString &value );
 
+	void setVisible ( bool vis );
+
 	virtual ~CGameObject() =0;
 protected:
 	virtual void hoverEnterEvent ( QGraphicsSceneHoverEvent *event ) override;

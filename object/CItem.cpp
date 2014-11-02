@@ -17,7 +17,7 @@ CItem::CItem(const CItem &) {}
 CItem::~CItem() {}
 
 void CItem::onEnter(CGameEvent *event) {
-    if (auto visitor = dynamic_cast<CCreature *>(event->getCause())) {
+    if (auto visitor = dynamic_cast<CCreature *>(dynamic_cast<CGameEventCaused *>(event)->getCause())) {
         this->getMap()->removeObject(this);
         visitor->addItem(this);
     }
@@ -30,13 +30,15 @@ bool CItem::isSingleUse() { return singleUse; }
 void CItem::setSingleUse(bool singleUse) { this->singleUse = singleUse; }
 
 void CItem::onEquip(CGameEvent *event) {
-    dynamic_cast<CCreature *>(event->getCause())->addBonus(bonus);
-    qDebug() << event->getCause()->getObjectType() << "equipped" << getObjectType() << "\n";
+    dynamic_cast<CCreature *>(dynamic_cast<CGameEventCaused *>(event)->getCause())->addBonus(bonus);
+    qDebug() << dynamic_cast<CGameEventCaused *>(event)->getCause()->getObjectType() << "equipped" << getObjectType()
+             << "\n";
 }
 
 void CItem::onUnequip(CGameEvent *event) {
-    dynamic_cast<CCreature *>(event->getCause())->removeBonus(bonus);
-    qDebug() << event->getCause()->getObjectType() << "unequipped" << getObjectType() << "\n";
+    dynamic_cast<CCreature *>(dynamic_cast<CGameEventCaused *>(event)->getCause())->removeBonus(bonus);
+    qDebug() << dynamic_cast<CGameEventCaused *>(event)->getCause()->getObjectType() << "unequipped" << getObjectType()
+             << "\n";
 }
 
 void CItem::onUse(CGameEvent *event) {
@@ -48,7 +50,7 @@ void CItem::onUse(CGameEvent *event) {
     if (slot == -1) {
         return;
     }
-    dynamic_cast<CCreature *>(event->getCause())->setItem(slot, this);
+    dynamic_cast<CCreature *>(dynamic_cast<CGameEventCaused *>(event)->getCause())->setItem(slot, this);
 }
 
 int CItem::getPower() const { return power; }
@@ -125,7 +127,7 @@ void CItem::mousePressEvent(QGraphicsSceneMouseEvent *event) {
     }
     if (singleUse) {
         player->removeFromInventory(this);
-        getMap()->getEventHandler()->gameEvent(new CGameEvent(CGameEvent::onUse, player), this);
+        getMap()->getEventHandler()->gameEvent(this, new CGameEventCaused(CGameEvent::onUse, player));
         event->accept();
         delete this;
         return;
