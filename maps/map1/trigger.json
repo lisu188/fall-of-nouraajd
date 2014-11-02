@@ -1,0 +1,7 @@
+[
+    {
+        "event": "onDestroy", 
+        "object": "gooby1", 
+        "trigger": "GoobyTrigger"
+    }
+]

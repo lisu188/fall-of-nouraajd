@@ -62,6 +62,7 @@ public:
 protected:
 	virtual void hoverEnterEvent ( QGraphicsSceneHoverEvent *event ) override;
 	virtual void hoverLeaveEvent ( QGraphicsSceneHoverEvent *event ) override;
+	bool hasTooltip=true;
 private:
 	QString tooltip;
 	QGraphicsSimpleTextItem statsView;
