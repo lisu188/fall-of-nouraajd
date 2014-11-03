@@ -137,3 +137,6 @@ OTHER_FILES += \
     format.py \
     reindent.py
 
+
+SOURCES += handler/CQuestHandler.cpp object/CQuest.cpp
+HEADERS += handler/CQuestHandler.h object/CQuest.h
