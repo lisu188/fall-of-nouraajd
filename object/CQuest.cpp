@@ -1,15 +1,12 @@
 #include "CQuest.h"
 
-CQuest::CQuest()
-{
+CQuest::CQuest() {
 }
 
-bool CQuest::isCompleted()
-{
+bool CQuest::isCompleted() {
 
 }
 
-QString CQuest::getDescription()
-{
+QString CQuest::getDescription() {
 
 }

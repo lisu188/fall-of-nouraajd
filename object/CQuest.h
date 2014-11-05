@@ -1,11 +1,10 @@
 #pragma once
 #include "CGameObject.h"
 
-class CQuest : public CGameObject
-{
+class CQuest : public CGameObject {
 public:
-    CQuest();
-    virtual bool isCompleted();
-    virtual QString getDescription();
+	CQuest();
+	virtual bool isCompleted();
+	virtual QString getDescription();
 };
 
