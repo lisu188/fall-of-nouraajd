@@ -1,10 +1,9 @@
 #ifndef CQUESTHANDLER_H
 #define CQUESTHANDLER_H
 
-class CQuestHandler
-{
+class CQuestHandler {
 public:
-    CQuestHandler();
+	CQuestHandler();
 };
 
 #endif // CQUESTHANDLER_H

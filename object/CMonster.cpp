@@ -9,7 +9,7 @@ void CMonster::levelUp() {
 }
 
 std::set<CItem *> CMonster::getLoot() {
-	return this->getMap()->getLootProvider()->getLoot ( getScale() );
+	return this->getMap()->getLootHandler()->getLoot ( getScale() );
 }
 
 Coords CMonster::getNextMove() {
