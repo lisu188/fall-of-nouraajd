@@ -1,5 +1,4 @@
 #include "CQuestHandler.h"
 
-CQuestHandler::CQuestHandler()
-{
+CQuestHandler::CQuestHandler() {
 }

@@ -14,5 +14,5 @@ public:
 	~CLootHandler();
 private:
 	std::set<CItem *> calculateLoot ( int value ) const;
-	const CMap* map;
+	CMap* map;
 };

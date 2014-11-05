@@ -243,23 +243,23 @@ void CMap::resolveFights() {
     });
 }
 
-const CLootHandler *CMap::getLootProvider() const {
-    if (!lootProvider) {
+const CLootHandler *CMap::getLootHandler() {
+    if (!lootHandler) {
         auto self = const_cast<CMap *>(this);
-        self->lootProvider = new CLootHandler(self);
+        self->lootHandler = new CLootHandler(self);
     }
-    return lootProvider;
+    return lootHandler;
 }
 
-const CObjectHandler *CMap::getObjectHandler() const {
-    if (!handler) {
+const CObjectHandler *CMap::getObjectHandler() {
+    if (!objectHandler) {
         auto self = const_cast<CMap *>(this);
-        self->handler = new CObjectHandler(self);
+        self->objectHandler = new CObjectHandler(self);
     }
-    return handler;
+    return objectHandler;
 }
 
-const CEventHandler *CMap::getEventHandler() const {
+const CEventHandler *CMap::getEventHandler() {
     if (!eventHandler) {
         auto self = const_cast<CMap *>(this);
         self->eventHandler = new CEventHandler(self);
@@ -267,7 +267,7 @@ const CEventHandler *CMap::getEventHandler() const {
     return eventHandler;
 }
 
-CScriptHandler *CMap::getScriptHandler() const {
+CScriptHandler *CMap::getScriptHandler() {
     if (!scriptHandler) {
         auto self = const_cast<CMap *>(this);
         self->scriptHandler = new CScriptHandler(self);
@@ -275,7 +275,7 @@ CScriptHandler *CMap::getScriptHandler() const {
     return scriptHandler;
 }
 
-CGuiHandler *CMap::getGuiHandler() const {
+CGuiHandler *CMap::getGuiHandler() {
     if (!guiHandler) {
         auto self = const_cast<CMap *>(this);
         self->guiHandler = new CGuiHandler(self);

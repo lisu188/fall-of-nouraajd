@@ -62,11 +62,11 @@ public:
 	void moveTile ( CTile* tile,int x, int y, int z );
 	void handleTileLayer ( const QJsonObject& tileset,const QJsonObject& layer );
 	void handleObjectLayer ( const QJsonObject &layer );
-	const CLootHandler *getLootProvider() const;
-	const CObjectHandler *getObjectHandler() const;
-	const CEventHandler *getEventHandler() const;
-	CScriptHandler *getScriptHandler() const;
-	CGuiHandler *getGuiHandler() const;
+	const CLootHandler *getLootHandler();
+	const CObjectHandler *getObjectHandler() ;
+	const CEventHandler *getEventHandler() ;
+	CScriptHandler *getScriptHandler() ;
+	CGuiHandler *getGuiHandler() ;
 	Q_INVOKABLE bool canStep ( int x,int y,int z );
 	bool canStep ( Coords &coords );
 	QString getMapPath() const;
@@ -115,8 +115,8 @@ private:
 	std::map<int, QString> defaultTiles;
 	std::map<int, std::pair<int, int> > boundaries;
 	int entryx, entryz, entryy;
-	CLootHandler *lootProvider=0;
-	CObjectHandler *handler=0;
+	CLootHandler *lootHandler=0;
+	CObjectHandler *objectHandler=0;
 	CEventHandler *eventHandler=0;
 	CGuiHandler *guiHandler=0;
 	CScriptHandler *scriptHandler=0;
