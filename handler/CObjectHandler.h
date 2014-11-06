@@ -10,7 +10,7 @@ class CObjectHandler : public QObject {
 public:
 	CObjectHandler ( CMap *map );
 	template<typename T>
-	T createMapObject ( QString type ) const {
+	T createObject ( QString type ) const {
 		CGameObject *object= _createObject ( type ) ;
 		T casted=dynamic_cast<T> ( object );
 		if ( casted==nullptr ) {

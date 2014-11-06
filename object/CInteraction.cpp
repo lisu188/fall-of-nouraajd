@@ -26,7 +26,7 @@ void CInteraction::onAction ( CCreature *first, CCreature *second ) {
 	this->performAction ( first , second  );
 
 	if ( this->effect.length() >0 ) {
-		CEffect *effect=getMap()->getObjectHandler()->createMapObject<CEffect*> ( this->effect );
+		CEffect *effect=getMap()->getObjectHandler()->createObject<CEffect*> ( this->effect );
 		effect->setCaster ( first );
 		if ( this->configureEffect ( effect  ) ) {
 			CCreature *victim;

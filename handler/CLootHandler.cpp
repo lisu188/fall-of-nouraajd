@@ -13,7 +13,7 @@ CLootHandler::CLootHandler ( CMap *map ) :QObject ( map ) {
 	this->map=map;
 	const QJsonObject *config = map->getObjectHandler()->getObjectConfig();
 	for ( auto  it = config->begin(); it != config->end(); it++ ) {
-		CItem *item=map->getObjectHandler()->createMapObject<CItem*> ( it.key() ) ;
+		CItem *item=map->getObjectHandler()->createObject<CItem*> ( it.key() ) ;
 		if ( item ) {
 			int power=item->getPower() ;
 			if ( power>0 ) {
@@ -37,7 +37,7 @@ std::set<CItem *> CLootHandler::calculateLoot ( int value ) const {
 		int power = ( *it ).second;
 		QString name = ( *it ).first;
 		if ( power <= value ) {
-			CItem *item=map->getObjectHandler()->createMapObject<CItem*> (  name );
+			CItem *item=map->getObjectHandler()->createObject<CItem*> (  name );
 			loot.insert ( item );
 			value -= power;
 		}
