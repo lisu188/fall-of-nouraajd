@@ -211,7 +211,7 @@ BOOST_PYTHON_MODULE(_game) {
         .def("getObjectHandler", &CMap::getObjectHandler, return_internal_reference<>())
         .def("addObject", &CMap::addObject);
     class_<CObjectHandler, boost::noncopyable>("CObjectHandler", no_init)
-        .def("createObject", &CObjectHandler::createMapObject<CGameObject *>, return_internal_reference<>());
+        .def("createObject", &CObjectHandler::createObject<CGameObject *>, return_internal_reference<>());
     void (CMapObject::*moveTo)(int, int, int) = &CMapObject::moveTo;
     class_<CMapObject, bases<CGameObject>, boost::noncopyable>("CMapObject", no_init)
         .def("getMap", &CMapObject::getMap, return_internal_reference<>())

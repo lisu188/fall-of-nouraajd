@@ -85,7 +85,7 @@ QString CItem::getInteractionName() {
 }
 
 void CItem::setInteractionName(QString name) {
-    interaction = this->getMap()->getObjectHandler()->createMapObject<CInteraction *>(name);
+    interaction = this->getMap()->getObjectHandler()->createObject<CInteraction *>(name);
     interaction->setManaCost(0);
 }
 

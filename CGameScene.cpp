@@ -34,7 +34,7 @@ private:
 void CGameScene::startGame ( QString file ,QString player ) {
 	srand ( time ( 0 ) );
 	map = new CMap ( this,file );
-	this->player = map->getObjectHandler()->createMapObject<CPlayer*> ( player );
+	this->player = map->getObjectHandler()->createObject<CPlayer*> ( player );
 	map->addObject ( this->player );
 	this->player->moveTo ( map->getEntryX(), map->getEntryY(), map->getEntryZ() );
 	QThreadPool::globalInstance()->start ( new LoadGameTask ( map ) );
