@@ -1,4 +1,8 @@
 {
+    "CaveTrigger": {
+        "class": "map1.CaveTrigger", 
+        "handler": "PyTypeHandler"
+    }, 
     "GoobyTrigger": {
         "class": "map1.GoobyTrigger", 
         "handler": "PyTypeHandler"

@@ -26,7 +26,7 @@ template <typename Map> auto lootHandlerFor(Map *map, long) -> decltype(map->get
 
 void CCreature::setActions(QVariantList &value) {
     for (auto it = value.begin(); it != value.end(); it++) {
-        this->actions.insert(this->getMap()->getObjectHandler()->createMapObject<CInteraction *>((*it).toString()));
+        this->actions.insert(this->getMap()->getObjectHandler()->createObject<CInteraction *>((*it).toString()));
     }
 }
 
@@ -64,7 +64,7 @@ void CCreature::addExp(int exp) {
 CInteraction *CCreature::getLevelAction() {
     QString levelString = QString::number(level);
     if (levelling.contains(levelString)) {
-        return this->getMap()->getObjectHandler()->createMapObject<CInteraction *>(levelling[levelString].toString());
+        return this->getMap()->getObjectHandler()->createObject<CInteraction *>(levelling[levelString].toString());
     } else {
         return nullptr;
     }
@@ -167,14 +167,14 @@ QVariantMap CCreature::getInventory() const { return QVariantMap(); }
 void CCreature::setInventory(const QVariantMap &value) {
     for (auto it = value.begin(); it != value.end(); it++) {
         int slot = it.key().toInt();
-        CItem *item = getMap()->getObjectHandler()->createMapObject<CItem *>(it.value().toString());
+        CItem *item = getMap()->getObjectHandler()->createObject<CItem *>(it.value().toString());
         this->setItem(slot, item);
     }
 }
 
 void CCreature::setItems(QVariantList &value) {
     for (auto it = value.begin(); it != value.end(); it++) {
-        CItem *item = this->getMap()->getObjectHandler()->createMapObject<CItem *>((*it).toString());
+        CItem *item = this->getMap()->getObjectHandler()->createObject<CItem *>((*it).toString());
         this->addItem(item);
     }
 }

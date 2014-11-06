@@ -14,7 +14,7 @@ CEventHandler::CEventHandler ( CMap *map ) :QObject ( map ) {
 		QString objectName=triggerConfig["object"].toString();
 		QString eventType=triggerConfig["event"].toString();
 		QString triggerType=triggerConfig["trigger"].toString();
-		CTrigger*trigger=map->getObjectHandler()->createMapObject<CTrigger*> ( triggerType );
+		CTrigger*trigger=map->getObjectHandler()->createObject<CTrigger*> ( triggerType );
 		CGameEvent::Type type=static_cast <CGameEvent::Type> ( typeEnum.keyToValue ( eventType.toStdString().c_str() ) );
 		TriggerKey key ( objectName,type );
 		if ( triggers.find ( key ) ==triggers.end() ) {

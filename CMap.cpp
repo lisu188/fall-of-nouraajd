@@ -42,7 +42,7 @@ void CMap::removeObjectByName(QString name) { this->removeObject(this->getObject
 
 QString CMap::addObjectByName(QString name, Coords coords) {
     if (this->canStep(coords)) {
-        CMapObject *object = getObjectHandler()->createMapObject<CMapObject *>(name);
+        CMapObject *object = getObjectHandler()->createObject<CMapObject *>(name);
         if (object) {
             addObject(object);
             object->moveTo(coords.x, coords.y, coords.z);
@@ -56,7 +56,7 @@ QString CMap::addObjectByName(QString name, Coords coords) {
 
 void CMap::replaceTile(QString name, Coords coords) {
     removeTile(coords.x, coords.y, coords.z);
-    addTile(getObjectHandler()->createMapObject<CTile *>(name), coords.x, coords.y, coords.z);
+    addTile(getObjectHandler()->createObject<CTile *>(name), coords.x, coords.y, coords.z);
 }
 
 Coords CMap::getLocationByName(QString name) { return this->getObjectByName(name)->getCoords(); }
@@ -122,9 +122,9 @@ CTile *CMap::getTile(int x, int y, int z) {
     if (it == this->end()) {
         auto bound = boundaries[z];
         if (x < 0 || y < 0 || x > bound.first || y > bound.second) {
-            tile = getObjectHandler()->createMapObject<CTile *>("MountainTile");
+            tile = getObjectHandler()->createObject<CTile *>("MountainTile");
         } else {
-            tile = getObjectHandler()->createMapObject<CTile *>(defaultTiles[z]);
+            tile = getObjectHandler()->createObject<CTile *>(defaultTiles[z]);
         }
         this->addTile(tile, x, y, z);
     } else {
@@ -325,7 +325,7 @@ void CMap::handleTileLayer(const QJsonObject &tileset, const QJsonObject &layer)
             id--;
             QString tileId = QString::number(id);
             QString tileType = tileset[tileId].toObject()["type"].toString();
-            addTile(getObjectHandler()->createMapObject<CTile *>(tileType), x, y, level);
+            addTile(getObjectHandler()->createObject<CTile *>(tileType), x, y, level);
         }
 }
 
@@ -339,7 +339,7 @@ void CMap::handleObjectLayer(const QJsonObject &layer) {
 
         int xPos = object["x"].toInt() / object["width"].toInt();
         int yPos = object["y"].toInt() / object["height"].toInt();
-        CMapObject *mapObject = getObjectHandler()->createMapObject<CMapObject *>(objectType);
+        CMapObject *mapObject = getObjectHandler()->createObject<CMapObject *>(objectType);
         if (mapObject == nullptr) {
             qDebug() << "Failed to load object:" << objectType << objectName << "\n";
             continue;
