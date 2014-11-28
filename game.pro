@@ -140,3 +140,6 @@ OTHER_FILES += \
 
 SOURCES += handler/CQuestHandler.cpp object/CQuest.cpp
 HEADERS += handler/CQuestHandler.h object/CQuest.h
+
+SOURCES += panel/CTradePanel.cpp
+HEADERS += panel/CTradePanel.h

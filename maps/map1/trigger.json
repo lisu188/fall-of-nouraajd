@@ -1,12 +1,12 @@
 [
     {
-        "event": "onDestroy", 
-        "object": "gooby1", 
+        "event": "onDestroy",
+        "object": "gooby1",
         "trigger": "GoobyTrigger"
-    }, 
+    },
     {
-        "event": "onDestroy", 
-        "object": "cave1", 
+        "event": "onDestroy",
+        "object": "cave1",
         "trigger": "CaveTrigger"
     }
 ]

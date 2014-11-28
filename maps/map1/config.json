@@ -1,15 +1,15 @@
 {
     "CaveTrigger": {
-        "class": "map1.CaveTrigger", 
+        "class": "map1.CaveTrigger",
         "handler": "PyTypeHandler"
-    }, 
+    },
     "GoobyTrigger": {
-        "class": "map1.GoobyTrigger", 
+        "class": "map1.GoobyTrigger",
         "handler": "PyTypeHandler"
-    }, 
+    },
     "StartEvent": {
-        "class": "map1.StartEvent", 
-        "handler": "PyTypeHandler", 
+        "class": "map1.StartEvent",
+        "handler": "PyTypeHandler",
         "properties": {
             "text": "Lord Commander, These terrifying creatures keep attacking us all the time, locals call them  Pritschers. Our scout reports that Pritschers have their lair in ruins of Nouraayd, but we can't do anything about it - we don't have enough men. We're barely able to defend village. We won't survive much longer. We need reinforcements. Sergeant Rolf."
         }
