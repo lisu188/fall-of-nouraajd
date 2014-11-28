@@ -1,49 +1,49 @@
 {
     "0": {
-        "name": "RightHand", 
+        "name": "RightHand",
         "types": [
             "CWeapon"
         ]
-    }, 
+    },
     "1": {
-        "name": "LeftHand", 
+        "name": "LeftHand",
         "types": [
-            "CSmallWeapon", 
+            "CSmallWeapon",
             "CShield"
         ]
-    }, 
+    },
     "2": {
-        "name": "Head", 
+        "name": "Head",
         "types": [
             "CHelmet"
         ]
-    }, 
+    },
     "3": {
-        "name": "Chest", 
+        "name": "Chest",
         "types": [
             "CArmor"
         ]
-    }, 
+    },
     "4": {
-        "name": "Waist", 
+        "name": "Waist",
         "types": [
             "CBelt"
         ]
-    }, 
+    },
     "5": {
-        "name": "Feet", 
+        "name": "Feet",
         "types": [
             "CBoots"
         ]
-    }, 
+    },
     "6": {
-        "name": "Legs", 
+        "name": "Legs",
         "types": [
             "CPants"
         ]
-    }, 
+    },
     "7": {
-        "name": "Hands", 
+        "name": "Hands",
         "types": [
             "CGloves"
         ]

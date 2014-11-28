@@ -3,3 +3,4 @@
 #include "CTextPanel.h"
 #include "CFightPanel.h"
 #include "CCharPanel.h"
+#include "CTradePanel.h"
