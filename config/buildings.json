@@ -1,18 +1,18 @@
 {
     "Cave": {
-        "class": "game.object.Cave", 
-        "handler": "PyTypeHandler", 
+        "class": "game.object.Cave",
+        "handler": "PyTypeHandler",
         "properties": {
-            "animation": "images/buildings/cave", 
-            "chance": 15, 
-            "enabled": true, 
-            "monster": "Pritz", 
+            "animation": "images/buildings/cave",
+            "chance": 15,
+            "enabled": true,
+            "monster": "Pritz",
             "monsters": 5
         }
-    }, 
+    },
     "Teleporter": {
-        "class": "game.object.Teleporter", 
-        "handler": "PyTypeHandler", 
+        "class": "game.object.Teleporter",
+        "handler": "PyTypeHandler",
         "properties": {
             "animation": "images/buildings/teleporter"
         }

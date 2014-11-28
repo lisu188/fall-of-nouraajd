@@ -35,7 +35,7 @@ void CGuiHandler::refresh() {
 }
 
 void CGuiHandler::initPanels() {
-	std::list<AGamePanel*> viewList {new CFightPanel(),new CCharPanel(),new CTextPanel() };
+	std::list<AGamePanel*> viewList {new CFightPanel(),new CCharPanel(),new CTextPanel(),new CTradePanel() };
 	for ( AGamePanel* it:viewList ) {
 		panels[it->getPanelName()]=it;
 		map->getScene()->addItem ( it );

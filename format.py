@@ -45,7 +45,7 @@ def main():
 
 def format_source_code(exe, file_path, options):
     astyle = [exe]+options+[file_path]
-    subprocess.Popen(astyle,stdout=subprocess.PIPE)
+    subprocess.Popen(astyle,stdout=subprocess.PIPE).communicate()
 
 def initialize_exe():
     pydir = sys.path[0]

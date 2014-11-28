@@ -1,91 +1,91 @@
 {
     "FullLifePotion": {
-        "class": "game.potion.LifePotion", 
-        "handler": "PyTypeHandler", 
+        "class": "game.potion.LifePotion",
+        "handler": "PyTypeHandler",
         "properties": {
-            "animation": "images/items/potions/life", 
-            "power": 5, 
+            "animation": "images/items/potions/life",
+            "power": 5,
             "singleUse": true
         }
-    }, 
+    },
     "FullManaPotion": {
-        "class": "game.potion.ManaPotion", 
-        "handler": "PyTypeHandler", 
+        "class": "game.potion.ManaPotion",
+        "handler": "PyTypeHandler",
         "properties": {
-            "animation": "images/items/potions/mana", 
-            "power": 5, 
+            "animation": "images/items/potions/mana",
+            "power": 5,
             "singleUse": true
         }
-    }, 
+    },
     "GreaterLifePotion": {
-        "class": "game.potion.LifePotion", 
-        "handler": "PyTypeHandler", 
+        "class": "game.potion.LifePotion",
+        "handler": "PyTypeHandler",
         "properties": {
-            "animation": "images/items/potions/life", 
-            "power": 3, 
+            "animation": "images/items/potions/life",
+            "power": 3,
             "singleUse": true
         }
-    }, 
+    },
     "GreaterManaPotion": {
-        "class": "game.potion.ManaPotion", 
-        "handler": "PyTypeHandler", 
+        "class": "game.potion.ManaPotion",
+        "handler": "PyTypeHandler",
         "properties": {
-            "animation": "images/items/potions/mana", 
-            "power": 3, 
+            "animation": "images/items/potions/mana",
+            "power": 3,
             "singleUse": true
         }
-    }, 
+    },
     "LesserLifePotion": {
-        "class": "game.potion.LifePotion", 
-        "handler": "PyTypeHandler", 
+        "class": "game.potion.LifePotion",
+        "handler": "PyTypeHandler",
         "properties": {
-            "animation": "images/items/potions/life", 
-            "power": 1, 
+            "animation": "images/items/potions/life",
+            "power": 1,
             "singleUse": true
         }
-    }, 
+    },
     "LesserManaPotion": {
-        "class": "game.potion.ManaPotion", 
-        "handler": "PyTypeHandler", 
+        "class": "game.potion.ManaPotion",
+        "handler": "PyTypeHandler",
         "properties": {
-            "animation": "images/items/potions/mana", 
-            "power": 1, 
+            "animation": "images/items/potions/mana",
+            "power": 1,
             "singleUse": true
         }
-    }, 
+    },
     "LifePotion": {
-        "class": "game.potion.LifePotion", 
-        "handler": "PyTypeHandler", 
+        "class": "game.potion.LifePotion",
+        "handler": "PyTypeHandler",
         "properties": {
-            "animation": "images/items/potions/life", 
-            "power": 2, 
+            "animation": "images/items/potions/life",
+            "power": 2,
             "singleUse": true
         }
-    }, 
+    },
     "ManaPotion": {
-        "class": "game.potion.ManaPotion", 
-        "handler": "PyTypeHandler", 
+        "class": "game.potion.ManaPotion",
+        "handler": "PyTypeHandler",
         "properties": {
-            "animation": "images/items/potions/mana", 
-            "power": 3, 
+            "animation": "images/items/potions/mana",
+            "power": 3,
             "singleUse": true
         }
-    }, 
+    },
     "MaxLifePotion": {
-        "class": "game.potion.LifePotion", 
-        "handler": "PyTypeHandler", 
+        "class": "game.potion.LifePotion",
+        "handler": "PyTypeHandler",
         "properties": {
-            "animation": "images/items/potions/life", 
-            "power": 4, 
+            "animation": "images/items/potions/life",
+            "power": 4,
             "singleUse": true
         }
-    }, 
+    },
     "MaxManaPotion": {
-        "class": "game.potion.ManaPotion", 
-        "handler": "PyTypeHandler", 
+        "class": "game.potion.ManaPotion",
+        "handler": "PyTypeHandler",
         "properties": {
-            "animation": "images/items/potions/mana", 
-            "power": 4, 
+            "animation": "images/items/potions/mana",
+            "power": 4,
             "singleUse": true
         }
     }
