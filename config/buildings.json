@@ -10,6 +10,13 @@
             "monsters": 5
         }
     },
+    "Market": {
+        "class": "game.object.Market",
+        "handler": "PyTypeHandler",
+        "properties": {
+            "animation": "images/buildings/market"
+        }
+    },
     "Teleporter": {
         "class": "game.object.Teleporter",
         "handler": "PyTypeHandler",
