@@ -9,7 +9,7 @@ public:
 	virtual void showPanel();
 	virtual void hidePanel();
 	virtual void update();
-	virtual void setUpPanel ( CGameView * );
+	virtual void setUpPanel ( CGameView * view );
 	virtual QString getPanelName();
 	virtual QRectF boundingRect() const;
 	virtual void paint ( QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget );
