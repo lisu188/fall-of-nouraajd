@@ -186,6 +186,20 @@
                     "width": 32,
                     "x": 3488,
                     "y": 3552
+                },
+                {
+                    "height": 32,
+                    "id": 15,
+                    "name": "market1",
+                    "properties": {
+                        "market": "exampleMarket"
+                    },
+                    "rotation": 0,
+                    "type": "Market",
+                    "visible": true,
+                    "width": 32,
+                    "x": 800,
+                    "y": 3456
                 }
             ],
             "opacity": 1,

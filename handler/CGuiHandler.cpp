@@ -18,6 +18,10 @@ AGamePanel *CGuiHandler::getPanel ( QString panel ) {
 	return panels[panel];
 }
 
+void CGuiHandler::showPanel ( QString panel ) {
+	panels[panel]->showPanel();
+}
+
 bool CGuiHandler::isAnyPanelVisible() {
 	for ( auto it:panels ) {
 		if ( it .second->isShown() ) {
