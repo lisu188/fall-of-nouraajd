@@ -22,6 +22,7 @@ public:
 	CMap *getMap() const;
 	CGameView *getView();
 	void removeObject ( CMapObject *object );
+	void arrowPress();
 protected:
 	virtual void keyPressEvent ( QKeyEvent *event );
 private:

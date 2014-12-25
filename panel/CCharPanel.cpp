@@ -42,7 +42,7 @@ void CCharPanel::hidePanel() {
 
 void CCharPanel::setUpPanel ( CGameView *view ) {
 	this->view=view;
-	playerInventoryView = new CPlayerInventoryrView ( view );
+	playerInventoryView = new CPlayerInventoryView ( view );
 	playerInventoryView->setZValue ( 3 );
 	playerInventoryView->setParentItem ( this );
 	playerInventoryView->setAcceptDrops ( true );
@@ -51,8 +51,6 @@ void CCharPanel::setUpPanel ( CGameView *view ) {
 	playerEquippedView->setZValue ( 3 );
 	playerEquippedView->setParentItem ( this );
 	view->getScene()->addItem ( playerEquippedView );
-	backpack=new BackPackObject ( view ,this );
-	backpack->show();
 }
 
 void CCharPanel::update() {
@@ -64,7 +62,6 @@ void CCharPanel::update() {
 	    this->boundingRect().width() -
 	    playerEquippedView->boundingRect().width(),
 	    0 );
-	backpack->move ( 0, view->size().height() - backpack->height() );
 	playerInventoryView->update();
 	playerEquippedView->update();
 	QGraphicsItem::update();
@@ -73,34 +70,3 @@ void CCharPanel::update() {
 QString CCharPanel::getPanelName() {
 	return "CCharPanel";
 }
-
-BackPackObject::BackPackObject ( CGameView* view ,CCharPanel *panel ) :QWidget ( view ) {
-	this->panel=panel;
-	pixmap.load ( CResourcesProvider::getInstance()->getPath ( "images/backpack.png" ) );
-	pixmap.setMask ( pixmap.createHeuristicMask() );
-	pixmap =
-	    pixmap.scaled ( 75, 75, Qt::IgnoreAspectRatio, Qt::SmoothTransformation );
-	setFixedSize ( 75, 75 );
-	time = QDateTime::currentMSecsSinceEpoch();
-}
-
-void BackPackObject::mousePressEvent ( QMouseEvent * ) {
-	if ( (   int ) QDateTime::currentMSecsSinceEpoch() - time >
-	        (   int ) 500 ) {
-		if ( !panel->isShown() ) {
-			panel->showPanel();
-		} else {
-			panel->hidePanel();
-		}
-		time = QDateTime::currentMSecsSinceEpoch();
-	}
-}
-
-void BackPackObject::paintEvent ( QPaintEvent * ) {
-	QPainter painter;
-	painter.begin ( this );
-	painter.setRenderHint ( QPainter::Antialiasing );
-	painter.drawPixmap ( 0, 0, 75, 75, pixmap );
-	painter.end();
-}
-

@@ -22,6 +22,15 @@ void CGuiHandler::showPanel ( QString panel ) {
 	panels[panel]->showPanel();
 }
 
+void CGuiHandler::flipPanel ( QString panelName ) {
+	AGamePanel *panel=getPanel ( panelName );
+	if ( panel->isShown() ) {
+		panel->hidePanel();
+	} else {
+		panel->showPanel();
+	}
+}
+
 bool CGuiHandler::isAnyPanelVisible() {
 	for ( auto it:panels ) {
 		if ( it .second->isShown() ) {
@@ -34,7 +43,9 @@ bool CGuiHandler::isAnyPanelVisible() {
 void CGuiHandler::refresh() {
 	for ( auto it:panels ) {
 		AGamePanel *panel= it.second;
-		panel->update();
+		if ( panel->isShown() ) {
+			panel->update();
+		}
 	}
 }
 

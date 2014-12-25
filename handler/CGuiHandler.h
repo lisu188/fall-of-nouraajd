@@ -14,6 +14,7 @@ public:
 	void showMessage ( QString msg );
 	AGamePanel *getPanel ( QString panel );
 	void showPanel ( QString panel );
+	void flipPanel ( QString panel );
 	bool isAnyPanelVisible();
 	void refresh();
 private:

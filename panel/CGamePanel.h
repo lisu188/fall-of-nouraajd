@@ -7,7 +7,7 @@
 
 class CCreature;
 class CGameView;
-class CPlayerListView;
+class CListView;
 class CPlayerEquippedView;
 class CCharPanel;
 
@@ -26,7 +26,9 @@ public:
 	bool isShown() {
 		return this->isVisible();
 	}
-
+	virtual void mousePressEvent ( QGraphicsSceneMouseEvent * ) override {
+		this->hidePanel ( );
+	}
 	Q_INVOKABLE void setProperty ( QString name,QVariant property ) {
 		QByteArray byteArray = name.toUtf8();
 		const char* cString = byteArray.constData();

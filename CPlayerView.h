@@ -11,6 +11,8 @@ class CPlayer;
 class CItem;
 class CItemSlot;
 class CGameView;
+class CTradePanel;
+
 class CPlayerEquippedView : public QGraphicsObject {
 	Q_OBJECT
 public:
@@ -36,11 +38,11 @@ private:
 };
 
 class CScrollObject;
-class CPlayerListView : public QGraphicsObject {
+class CListView : public QGraphicsObject {
 	Q_OBJECT
 	friend class CScrollObject;
 public:
-	CPlayerListView ( CGameView *view );
+	CListView ( CGameView *view );
 	void setDraggable();
 	virtual QRectF boundingRect() const;
 	virtual void paint ( QPainter *painter, const QStyleOptionGraphicsItem *, QWidget * );
@@ -59,15 +61,15 @@ private:
 	QPixmap pixmap;
 };
 
-class CPlayerInventoryrView:public CPlayerListView {
+class CPlayerInventoryView:public CListView {
 	Q_OBJECT
 public:
-	CPlayerInventoryrView ( CGameView *view );
+	CPlayerInventoryView ( CGameView *view );
 protected:
 	virtual std::set<QGraphicsItem *> getItems() const;
 };
 
-class CPlayerIteractionView:public CPlayerListView {
+class CPlayerIteractionView:public CListView {
 	Q_OBJECT
 public:
 	CPlayerIteractionView ( CGameView *view );
@@ -75,14 +77,22 @@ protected:
 	virtual std::set<QGraphicsItem *> getItems() const;
 };
 
+class CTradeItemsView : public CListView {
+	Q_OBJECT
+public:
+	CTradeItemsView ( CGameView *view );
+protected:
+	virtual std::set<QGraphicsItem *> getItems() const;
+};
+
 class CScrollObject : public CAnimatedObject {
 public:
-	CScrollObject ( CPlayerListView *stats, bool isRight );
+	CScrollObject ( CListView *stats, bool isRight );
 	void setVisible ( bool visible );
 
 private:
 	bool isRight;
-	CPlayerListView *stats;
+	CListView *stats;
 
 protected:
 	virtual void mousePressEvent ( QGraphicsSceneMouseEvent * );

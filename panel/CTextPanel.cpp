@@ -60,10 +60,6 @@ void CTextPanel::setText ( const QString &value ) {
 	text = value;
 }
 
-void CTextPanel::mousePressEvent ( QGraphicsSceneMouseEvent * ) {
-	this->hidePanel (  );
-}
-
 QString CTextPanel::getPanelName() {
 	return "CTextPanel";
 }

@@ -9,7 +9,7 @@ class CAnimatedObject : public QObject, protected QGraphicsPixmapItem {
 
 	friend class CGameScene;
 	friend class CGameView;
-	friend class CPlayerListView;
+	friend class CListView;
 	friend class CItemSlot;
 public:
 	CAnimatedObject();
