@@ -143,3 +143,6 @@ HEADERS += handler/CQuestHandler.h object/CQuest.h
 
 SOURCES += panel/CTradePanel.cpp
 HEADERS += panel/CTradePanel.h
+
+SOURCES += handler/CMouseHandler.cpp
+HEADERS += handler/CMouseHandler.h

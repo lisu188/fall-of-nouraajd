@@ -12,7 +12,6 @@ public:
 	virtual void hidePanel() override;
 	virtual void update() override;
 	virtual void setUpPanel ( CGameView * view  ) override;
-	virtual void mousePressEvent ( QGraphicsSceneMouseEvent * ) override;
 	virtual QString getPanelName() override;
 	QString getText() const;
 	void setText ( const QString &value );

@@ -119,16 +119,26 @@ CPotion::CPotion(const CPotion &other) : CItem(other) {}
 
 #include <QDrag>
 #include <QGraphicsSceneMouseEvent>
+CClickAction *CItem::getClickAction() { return this; }
+
 void CItem::mousePressEvent(QGraphicsSceneMouseEvent *event) {
     CPlayer *player = getMap() ? getMap()->getPlayer() : nullptr;
     if (!player || !player->hasItem(this)) {
         event->ignore();
         return;
     }
+    event->accept();
+    CMouseHandler::handleClick(this);
+}
+
+void CItem::onClickAction(CMouseHandler *) {
+    CPlayer *player = getMap() ? getMap()->getPlayer() : nullptr;
+    if (!player || !player->hasItem(this)) {
+        return;
+    }
     if (singleUse) {
         player->removeFromInventory(this);
         getMap()->getEventHandler()->gameEvent(this, new CGameEventCaused(CGameEvent::onUse, player));
-        event->accept();
         delete this;
         return;
     }
@@ -141,5 +151,4 @@ void CItem::mousePressEvent(QGraphicsSceneMouseEvent *event) {
     drag.exec();
     if (parent)
         parent->setAcceptDrops(true);
-    event->accept();
 }
