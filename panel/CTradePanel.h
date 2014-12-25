@@ -1,7 +1,11 @@
 #pragma once
 #include "CGamePanel.h"
+#include "handler/CMouseHandler.h"
 
-class CTradePanel : public AGamePanel {
+class CPlayerInventoryView;
+class CTradeItemsView;
+
+class CTradePanel : public AGamePanel,public CMouseHandler ,public CClickAction {
 	Q_OBJECT
 public:
 	CTradePanel();
@@ -12,5 +16,13 @@ public:
 	virtual void setUpPanel ( CGameView * view );
 	virtual QString getPanelName();
 	virtual QRectF boundingRect() const;
-	virtual void paint ( QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget );
+	virtual void paint ( QPainter *painter, const QStyleOptionGraphicsItem *, QWidget * );
+
+	std::set<CItem*> *getItems();
+	virtual CClickAction *getClickAction();
+	virtual void onClickAction ( CMouseHandler *object );
+private:
+	CPlayerInventoryView *playerInventoryView=0;
+	CTradeItemsView *tradeItemsView=0;
+	std::set<CItem*> items;
 };

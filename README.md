@@ -1,7 +1,7 @@
 # Recovered game snapshot
 
-Original commit: `4954fe8532bfca5b22e98de2a528ab128b659ff5`. Original tree: `fc84a2ec513ed3d42f29b2fa122a47d67473197b`.
-Startup was verified from identical recovered sources at `4954fe8532bfca5b22e98de2a528ab128b659ff5`.
+Original commit: `ae762f9c3572c5384c143690da32f8364fa39bcc`. Original tree: `83d448c9b5cf93ff9fd6a27d8c07a4870ef363ee`.
+Startup was verified from identical recovered sources at `ae762f9c3572c5384c143690da32f8364fa39bcc`.
 
 This recovered version compiled and linked on Linux, started the real game on an isolated Xvfb display,
 loaded its map and a healthy player, rendered the screenshot below, and exited normally.
@@ -35,7 +35,7 @@ launches run the game's original entry point. Startup evidence does not establis
 
 ## Recovery provenance
 
-compatibilityRepair: 2, exactOriginal: 60, reconstruction: 34.
+compatibilityRepair: 2, exactOriginal: 61, reconstruction: 33.
 
 - `CMap.cpp`: working reconstruction
 - `CPathFinder.cpp`: working reconstruction
@@ -54,17 +54,16 @@ compatibilityRepair: 2, exactOriginal: 60, reconstruction: 34.
 - `boost/python/object/enum.cpp`: unverified upstream reconstruction; https://github.com/boostorg/python/tree/32ba64a8248d99b1852e77ff4388d9d8a991c4a9
 - `boost/python/object/function.cpp`: unverified upstream reconstruction; https://github.com/boostorg/python/tree/32ba64a8248d99b1852e77ff4388d9d8a991c4a9
 - `boost/python/object/function_doc_signature.cpp`: unverified upstream reconstruction; https://github.com/boostorg/python/tree/32ba64a8248d99b1852e77ff4388d9d8a991c4a9
-- `boost/python/object/inheritance.cpp`: unverified donor reconstruction; 4b3902d44f874a1fae86054d7240a2af76901bb4:boost/python/object/inheritance.cpp; headerMatch=0; apiOverlap=0/10000; distance=26
+- `boost/python/object/inheritance.cpp`: unverified donor reconstruction; 4b3902d44f874a1fae86054d7240a2af76901bb4:boost/python/object/inheritance.cpp; headerMatch=0; apiOverlap=0/10000; distance=25
 - `boost/python/object/life_support.cpp`: unverified upstream reconstruction; https://github.com/boostorg/python/tree/32ba64a8248d99b1852e77ff4388d9d8a991c4a9
-- `boost/python/object_operators.cpp`: unverified donor reconstruction; 70d0d690df45877698cb094405e25be00a8139fd:boost/python/object_operators.cpp; headerMatch=0; apiOverlap=0/10000; distance=18
+- `boost/python/object_operators.cpp`: unverified donor reconstruction; 70d0d690df45877698cb094405e25be00a8139fd:boost/python/object_operators.cpp; headerMatch=0; apiOverlap=0/10000; distance=17
 - `boost/python/object_protocol.cpp`: unverified upstream reconstruction; https://github.com/boostorg/python/tree/32ba64a8248d99b1852e77ff4388d9d8a991c4a9
-- `boost/python/str.cpp`: unverified donor reconstruction; 4b3902d44f874a1fae86054d7240a2af76901bb4:boost/python/str.cpp; headerMatch=0; apiOverlap=0/10000; distance=26
+- `boost/python/str.cpp`: unverified donor reconstruction; 4b3902d44f874a1fae86054d7240a2af76901bb4:boost/python/str.cpp; headerMatch=0; apiOverlap=0/10000; distance=25
 - `config/interactions.json`: working reconstruction
 - `config/monsters.json`: working reconstruction
 - `config/weapons.json`: working reconstruction
 - `game.pro`: working reconstruction
 - `handler/CObjectHandler.cpp`: working reconstruction
-- `images.qrc`: Missing Qt manifest reconstructed from exact original tree image path identities; scoped to this tree because unchanged missing manifest pointer spans different historical asset layouts. All existing image bytes preserved; later donor-only market.png references removed. Not an exact original manifest.
 - `maps/map1/map.json`: working reconstruction
 - `object/CCreature.cpp`: working reconstruction
 - `object/CCreature.h`: working reconstruction
@@ -74,7 +73,7 @@ compatibilityRepair: 2, exactOriginal: 60, reconstruction: 34.
 - `boost/python/LICENSE_1_0.txt`: https://github.com/boostorg/python/tree/32ba64a8248d99b1852e77ff4388d9d8a991c4a9 upstream distribution license
 - `scripts/PSF_LICENSE`: https://www.python.org/ftp/python/3.3.7/Python-3.3.7.tar.xz upstream Python distribution license
 
-Restored source fingerprint: `9344f870528d4727981f21c247d981852a47716c3f20d639d656ea3031f9fe3d`.
+Restored source fingerprint: `8a71672ed39d90d4d2cf207906489a811adafbf7a2a291762975061cab8a41fc`.
 
 The actual 1278 × 718 screenshot and [verification metadata](recovery/verification.json) belong to
 this source version. Reconstructed code and borrowed assets are identified in that metadata; they are

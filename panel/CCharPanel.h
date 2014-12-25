@@ -3,21 +3,6 @@
 #include "CGamePanel.h"
 #include <QWidget>
 
-class BackPackObject : public QWidget {
-	Q_OBJECT
-public:
-	BackPackObject ( CGameView* view , CCharPanel *panel ) ;
-
-protected:
-	void mousePressEvent ( QMouseEvent * ) override;
-	void paintEvent ( QPaintEvent * ) override;
-
-private:
-	CCharPanel *panel=0;
-	QPixmap pixmap;
-	int time = 0;
-};
-
 class CCharPanel : public AGamePanel {
 	Q_OBJECT
 public:
@@ -32,7 +17,6 @@ public:
 	virtual void update() override;
 	virtual QString getPanelName() override;
 private:
-	CPlayerListView *playerInventoryView;
+	CListView *playerInventoryView;
 	CPlayerEquippedView *playerEquippedView;
-	BackPackObject *backpack;
 };

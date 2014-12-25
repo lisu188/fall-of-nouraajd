@@ -1,3 +1,4 @@
+#include "panel/CTradePanel.h"
 #include "CGameScene.h"
 #include "CGameView.h"
 #include "CMap.h"
@@ -54,7 +55,7 @@ void PlayerStatsView::setPlayer(CPlayer *value) {
 
 void PlayerStatsView::update() { QWidget::update(); }
 
-CPlayerListView::CPlayerListView(CGameView *view) : QGraphicsObject(), view(view) {
+CListView::CListView(CGameView *view) : QGraphicsObject(), view(view) {
     this->setZValue(3);
     curPosition = 0;
     right = new CScrollObject(this, true);
@@ -66,7 +67,7 @@ CPlayerListView::CPlayerListView(CGameView *view) : QGraphicsObject(), view(view
     right->setPos((x - 1) * 50, y * 50);
 }
 
-void CPlayerListView::update() {
+void CListView::update() {
     this->QGraphicsObject::update();
     auto items = getItems();
     if (curPosition > (items.size() > x * y ? items.size() - x * y : 0)) {
@@ -96,19 +97,19 @@ void CPlayerListView::update() {
     left->setVisible(items.size() > x * y);
 }
 
-QRectF CPlayerListView::boundingRect() const {
+QRectF CListView::boundingRect() const {
     auto items = getItems();
     return QRect(0, 0, pixmap.size().width() * x, pixmap.size().height() * (items.size() > x * y ? y + 1 : y));
 }
 
-void CPlayerListView::paint(QPainter *painter, const QStyleOptionGraphicsItem *, QWidget *) {
+void CListView::paint(QPainter *painter, const QStyleOptionGraphicsItem *, QWidget *) {
     for (unsigned int i = 0; i < x; i++)
         for (unsigned int j = 0; j < y; j++) {
             painter->drawPixmap(i * 50, j * 50, pixmap);
         }
 }
 
-void CPlayerListView::updatePosition(int i) {
+void CListView::updatePosition(int i) {
     if (curPosition == 0 && i < 0) {
         return;
     }
@@ -116,12 +117,12 @@ void CPlayerListView::updatePosition(int i) {
     update();
 }
 
-void CPlayerListView::setXY(int x, int y) {
+void CListView::setXY(int x, int y) {
     this->x = x;
     this->y = y;
 }
 
-void CPlayerListView::dropEvent(QGraphicsSceneDragDropEvent *event) {
+void CListView::dropEvent(QGraphicsSceneDragDropEvent *event) {
     const CObjectData *helper = dynamic_cast<const CObjectData *>(event->mimeData());
     CItem *item = helper ? dynamic_cast<CItem *>(helper->getSource()) : nullptr;
     CPlayer *player = view->getScene()->getPlayer();
@@ -133,7 +134,7 @@ void CPlayerListView::dropEvent(QGraphicsSceneDragDropEvent *event) {
     }
 }
 
-CScrollObject::CScrollObject(CPlayerListView *stats, bool isRight) {
+CScrollObject::CScrollObject(CListView *stats, bool isRight) {
     this->isRight = isRight;
     this->setZValue(1);
     this->stats = stats;
@@ -241,9 +242,9 @@ void CPlayerEquippedView::update() {
     QGraphicsObject::update();
 }
 
-CPlayerInventoryrView::CPlayerInventoryrView(CGameView *view) : CPlayerListView(view) {}
+CPlayerInventoryView::CPlayerInventoryView(CGameView *view) : CListView(view) {}
 
-std::set<QGraphicsItem *> CPlayerInventoryrView::getItems() const {
+std::set<QGraphicsItem *> CPlayerInventoryView::getItems() const {
     std::set<QGraphicsItem *> set;
     auto player = view->getScene()->getMap()->getPlayer();
     if (!player) {
@@ -255,7 +256,7 @@ std::set<QGraphicsItem *> CPlayerInventoryrView::getItems() const {
     return set;
 }
 
-CPlayerIteractionView::CPlayerIteractionView(CGameView *view) : CPlayerListView(view) {}
+CPlayerIteractionView::CPlayerIteractionView(CGameView *view) : CListView(view) {}
 
 std::set<QGraphicsItem *> CPlayerIteractionView::getItems() const {
     std::set<QGraphicsItem *> set;
@@ -269,11 +270,25 @@ std::set<QGraphicsItem *> CPlayerIteractionView::getItems() const {
     return set;
 }
 
-void CPlayerListView::setNumber(QGraphicsItem *item, int i, int x) {
+void CListView::setNumber(QGraphicsItem *item, int i, int x) {
     item->setVisible(true);
     int px = i % x * 50;
     int py = i / x * 50;
     item->setPos(px, py);
 }
 
-void CPlayerListView::setDraggable() { setFlag(QGraphicsItem::ItemIsMovable, true); }
+void CListView::setDraggable() { setFlag(QGraphicsItem::ItemIsMovable, true); }
+
+CTradeItemsView::CTradeItemsView(CGameView *view) : CListView(view) {}
+
+std::set<QGraphicsItem *> CTradeItemsView::getItems() const {
+    std::set<QGraphicsItem *> result;
+    auto panel = dynamic_cast<CTradePanel *>(parentItem());
+    if (!panel) {
+        return result;
+    }
+    for (CItem *item : *panel->getItems()) {
+        result.insert(item->toGraphicsItem());
+    }
+    return result;
+}

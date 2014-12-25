@@ -3,7 +3,7 @@
 #include "CGamePanel.h"
 class CCreature;
 class CFightPanel;
-class CPlayerListView;
+class CListView;
 class CCreatureFightView : public QGraphicsObject {
 	Q_OBJECT
 	friend class CFightPanel;
@@ -32,7 +32,7 @@ public:
 	virtual QString getPanelName() override;
 
 private:
-	CPlayerListView *playerSkillsView;
+	CListView *playerSkillsView;
 	CCreatureFightView *fightView;
 
 };

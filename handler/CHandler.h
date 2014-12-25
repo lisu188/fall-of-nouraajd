@@ -5,3 +5,4 @@
 #include "CEventHandler.h"
 #include "CScriptHandler.h"
 #include "CLootHandler.h"
+#include "CMouseHandler.h"
