@@ -65,6 +65,7 @@ public:
 	const CLootHandler *getLootHandler();
 	const CObjectHandler *getObjectHandler() ;
 	const CEventHandler *getEventHandler() ;
+	CMouseHandler *getMouseHandler() ;
 	CScriptHandler *getScriptHandler() ;
 	CGuiHandler *getGuiHandler() ;
 	Q_INVOKABLE bool canStep ( int x,int y,int z );
@@ -120,6 +121,7 @@ private:
 	CEventHandler *eventHandler=0;
 	CGuiHandler *guiHandler=0;
 	CScriptHandler *scriptHandler=0;
+	CMouseHandler *mouseHandler=0;
 	QString mapPath;
 	bool moving=false;
 };

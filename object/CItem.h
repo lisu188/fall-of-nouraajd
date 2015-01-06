@@ -6,7 +6,7 @@
 class CCreature;
 class CInteraction;
 
-class CItem : public CMapObject,public Visitable,public Wearable,public Usable,public CMouseHandler,public CClickAction {
+class CItem : public CMapObject,public Visitable,public Wearable,public Usable {
 	Q_OBJECT
 	Q_PROPERTY ( int power READ getPower WRITE setPower USER true )
 	Q_PROPERTY ( bool singleUse READ isSingleUse WRITE setSingleUse USER true )
@@ -34,10 +34,7 @@ public:
 	QString getInteractionName();
 	void setInteractionName ( QString name );
 	CInteraction *getInteraction();
-	virtual CClickAction *getClickAction();
-	virtual void onClickAction ( CMouseHandler *object );
 protected:
-	virtual void mousePressEvent ( QGraphicsSceneMouseEvent * );
 	bool singleUse=false;
 	Stats bonus;
 	CInteraction *interaction=0;

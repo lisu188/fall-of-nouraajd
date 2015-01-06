@@ -1,14 +1,18 @@
 #pragma once
+#include <QObject>
 
-class CMouseHandler;
-
+class CGameObject;
+class CMap;
 class CClickAction {
 public:
-	virtual void onClickAction ( CMouseHandler *object ) =0;
+	virtual void onClickAction ( CGameObject *object ) =0;
 };
 
-class CMouseHandler {
+class CMouseHandler : public QObject {
+	Q_OBJECT
 public:
-	static void handleClick ( CMouseHandler *object );
-	virtual CClickAction *getClickAction() =0;
+	CMouseHandler ( CMap*map );
+	void handleClick ( CGameObject *object );
+private:
+	CClickAction *getClickAction ( CGameObject *object );
 };

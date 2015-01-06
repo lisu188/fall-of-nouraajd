@@ -33,7 +33,6 @@ void CTextPanel:: paint ( QPainter *painter, const QStyleOptionGraphicsItem *, Q
 
 void CTextPanel::showPanel () {
 	this->setVisible ( true );
-
 	this->setPos (
 	    this->view->mapToScene ( view->width() / 2 - this->boundingRect().width() / 2,
 	                             view->height() / 2 - this->boundingRect().height() / 2 ) );

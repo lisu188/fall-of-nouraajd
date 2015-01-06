@@ -73,11 +73,9 @@ boost::python::object AScriptLoader::load_module ( boost::python::object name ) 
 	return module;
 }
 
-
 bool AScriptLoader::checkModule ( QString modName ) {
 	return findModule ( modName ) !="";
 }
-
 
 CMapScriptLoader::CMapScriptLoader ( CMap *map ) :map ( map ) {
 	this->QObject::setParent ( map );

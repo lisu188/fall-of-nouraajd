@@ -2,6 +2,7 @@
 #include "CMap.h"
 #include "panel/CPanel.h"
 #include "CGameScene.h"
+#include <QDebug>
 
 CGuiHandler::CGuiHandler ( CMap *map ) :QObject ( map ) {
 	this->map=map;

@@ -7,10 +7,6 @@ CPlayer::CPlayer() {
 
 }
 
-CPlayer::CPlayer ( const CPlayer & ) {
-
-}
-
 CPlayer::~CPlayer() {
 	inventory.clear();
 }

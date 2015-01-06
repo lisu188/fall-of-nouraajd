@@ -24,10 +24,6 @@ CMonster::CMonster() {
 
 }
 
-CMonster::CMonster ( const CMonster & ) {
-
-}
-
 CMonster::~CMonster() {
 
 }

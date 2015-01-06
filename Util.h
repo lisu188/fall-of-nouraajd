@@ -66,6 +66,7 @@ class CObjectData:public QMimeData {
 public:
 	QObject *source;
 	CObjectData ( QObject *source ) {
+		setParent ( source );
 		this->source=source;
 	}
 	QObject *getSource() const {

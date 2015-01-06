@@ -66,12 +66,7 @@ std::set<CItem *> *CTradePanel::getItems() {
 	return &items;
 }
 
-
-CClickAction *CTradePanel::getClickAction() {
-	return this;
-}
-
-
-void CTradePanel::onClickAction ( CMouseHandler *object ) {
-	qDebug() <<dynamic_cast<QObject*> ( object )->metaObject()->className();
+void CTradePanel::onClickAction ( CGameObject *object ) {
+	qDebug() <<dynamic_cast<CListView*> ( object->toGraphicsItem()->parentItem() )->metaObject()->className() <<":"
+	         <<dynamic_cast<QObject*> ( object )->metaObject()->className() <<"\n";
 }
