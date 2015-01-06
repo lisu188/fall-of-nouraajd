@@ -1,4 +1,5 @@
 #include "CGameObject.h"
+#include "CMap.h"
 #include <QGraphicsSceneHoverEvent>
 
 CGameObject::~CGameObject() {
@@ -61,3 +62,6 @@ void CGameObject::hoverLeaveEvent ( QGraphicsSceneHoverEvent *event ) {
 	event->setAccepted ( true );
 }
 
+void CGameObject::mousePressEvent ( QGraphicsSceneMouseEvent * ) {
+	getMap()->getMouseHandler()->handleClick ( this );
+}

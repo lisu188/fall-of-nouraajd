@@ -1,11 +1,11 @@
 {
   "adapter": {
-    "config": "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-ilkds_e0/observer/recovery_smoke_config.h",
-    "configSha256": "2503611ae33c1c06d0043ab91d6f881b4bc1ad7f8fa0f206d51e1a61b4f523f0",
+    "config": "/tmp/nouraajd-bfg-recovery/native-latest/verify/snapshot-oz7m6wn0/observer/recovery_smoke_config.h",
+    "configSha256": "3245a398f2451eb366f8b2913824f4911188406c29671588deee0a8f3776893e",
     "id": "prefixed-3d",
     "mode": "game",
     "overlays": [],
-    "source": "/home/andrz/nouraajd-bfg-recovery-backup-20261116/source/recovery/smoke/game_startup.cpp"
+    "source": "/tmp/nouraajd-bfg-recovery/source/recovery/smoke/game_startup.cpp"
   },
   "artifactDir": "recovery",
   "attachedScreenshot": {
@@ -13,59 +13,40 @@
     "path": "startup.png",
     "width": 1278
   },
-  "attachedSourcePreparation": {
-    "prepare_reflection_registration.py": {
-      "path": "prepare_reflection_registration.py",
-      "sha256": "f833097b36fadb5cbd9aededca66afb8153d1fd1b276caf9735f3b26fd667311"
-    },
-    "reflection_registration.h": {
-      "path": "reflection_registration.h",
-      "sha256": "b084ee3394c3339e4207b44dc543dec825ead40fc68381e17493e350df00601b"
-    },
-    "source-preparation.json": {
-      "path": "source-preparation.json",
-      "sha256": "d364547293bcf35a2a42134edffcd32bcbc7e8c91995eaebf1ef97d729113b8e"
-    },
-    "source-preparation.log": {
-      "path": "source-preparation.log",
-      "sha256": "e8f605754d578daa61105a1311ec12d8ce11ce63a0a557dc27c9b4a9869ab6c1"
-    }
-  },
   "build": {
     "command": [
       "make",
-      "-j8"
+      "-j4"
     ],
-    "log": "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-ilkds_e0/build.log",
+    "log": "/tmp/nouraajd-bfg-recovery/native-latest/verify/snapshot-oz7m6wn0/build.log",
     "returnCode": 0,
-    "seconds": 48.498,
+    "seconds": 47.93,
     "timedOut": false
   },
   "configure": {
     "command": [
       "qmake",
-      "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-ilkds_e0/source/game.pro",
+      "/tmp/nouraajd-bfg-recovery/native-latest/verify/snapshot-oz7m6wn0/source/game.pro",
       "-o",
-      "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-ilkds_e0/build/Makefile",
+      "/tmp/nouraajd-bfg-recovery/native-latest/verify/snapshot-oz7m6wn0/build/Makefile",
       "QMAKE_CC=gcc-5",
       "QMAKE_CXX=g++-5",
       "QMAKE_LINK=g++-5",
       "QMAKE_CXXFLAGS+=-include functional",
-      "QMAKE_CXXFLAGS+=-include $$_PRO_FILE_PWD_/recovery_reflection_registration.h",
       "-after",
       "TARGET=RecoveryGame",
       "DESTDIR=.",
       "CONFIG-=app_bundle",
-      "SOURCES+=/home/andrz/nouraajd-bfg-recovery-backup-20261116/source/recovery/smoke/game_startup.cpp",
-      "INCLUDEPATH+=/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-ilkds_e0/source",
-      "INCLUDEPATH+=/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-ilkds_e0/observer"
+      "SOURCES+=/tmp/nouraajd-bfg-recovery/source/recovery/smoke/game_startup.cpp",
+      "INCLUDEPATH+=/tmp/nouraajd-bfg-recovery/native-latest/verify/snapshot-oz7m6wn0/source",
+      "INCLUDEPATH+=/tmp/nouraajd-bfg-recovery/native-latest/verify/snapshot-oz7m6wn0/observer"
     ],
-    "log": "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-ilkds_e0/configure.log",
+    "log": "/tmp/nouraajd-bfg-recovery/native-latest/verify/snapshot-oz7m6wn0/configure.log",
     "returnCode": 0,
     "seconds": 0.064,
     "timedOut": false
   },
-  "evidenceDir": "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/evidence/68366e3b4b23a5f986b237b637ae90301b6db7350e4e577fb12916c767f613d6",
+  "evidenceDir": "/tmp/nouraajd-bfg-recovery/native-latest/verify/evidence/31c9983e7fc7aad49547d9070886543eb5bb5682e837ce82b8c35c664036dde5",
   "fileLookup": {
     "command": [
       "g++-5",
@@ -74,20 +55,20 @@
       "-O2",
       "-std=c++11",
       "-o",
-      "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-ilkds_e0/observer/libwindowspaths.so",
-      "/home/andrz/nouraajd-bfg-recovery-backup-20261116/source/recovery/smoke/windows_paths.cpp",
+      "/tmp/nouraajd-bfg-recovery/native-latest/verify/snapshot-oz7m6wn0/observer/libwindowspaths.so",
+      "/tmp/nouraajd-bfg-recovery/source/recovery/smoke/windows_paths.cpp",
       "-ldl"
     ],
-    "log": "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-ilkds_e0/file-lookup.log",
+    "log": "/tmp/nouraajd-bfg-recovery/native-latest/verify/snapshot-oz7m6wn0/file-lookup.log",
     "returnCode": 0,
-    "seconds": 0.215,
+    "seconds": 0.214,
     "semantics": "Windows-style case-insensitive file lookup for the game process",
     "timedOut": false
   },
-  "fingerprint": "68366e3b4b23a5f986b237b637ae90301b6db7350e4e577fb12916c767f613d6",
+  "fingerprint": "31c9983e7fc7aad49547d9070886543eb5bb5682e837ce82b8c35c664036dde5",
   "libraryAliases": {
     "aliases": {},
-    "directory": "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-ilkds_e0/observer/library-aliases"
+    "directory": "/tmp/nouraajd-bfg-recovery/native-latest/verify/snapshot-oz7m6wn0/observer/library-aliases"
   },
   "project": "game.pro",
   "recipe": {
@@ -109,8 +90,7 @@
       "QMAKE_CC=gcc-5",
       "QMAKE_CXX=g++-5",
       "QMAKE_LINK=g++-5",
-      "QMAKE_CXXFLAGS+=-include functional",
-      "QMAKE_CXXFLAGS+=-include $$_PRO_FILE_PWD_/recovery_reflection_registration.h"
+      "QMAKE_CXXFLAGS+=-include functional"
     ],
     "qmakeCommand": "qmake",
     "toolchainLock": {
@@ -129,27 +109,27 @@
     "excluded": [
       {
         "markerPath": "game.pro.user.REMOVED.git-id",
-        "originalBlob": "7d876fd12953574198cc9db1944cea99f4ccb9fd",
+        "originalBlob": "00fb34ef005fa71ca0cc822d58a04af955763d4a",
         "path": "game.pro.user",
         "reason": "machine-specific IDE state"
       }
     ],
-    "outputDir": "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-ilkds_e0/source",
+    "outputDir": "/tmp/nouraajd-bfg-recovery/native-latest/verify/snapshot-oz7m6wn0/source",
     "restored": [
       {
         "markerPath": "CMap.cpp.REMOVED.git-id",
         "method": "reconstruction",
-        "originalBlob": "c99c3fab51c9cd0e5c4e08eeb8976a1dcc23f9fe",
+        "originalBlob": "3968c09b12382444650ad9713871a9e86728ca7e",
         "path": "CMap.cpp",
-        "provenance": "Missing #336 implementation reconstructed from prior staged native-era payload with only factory createMapObject\u2192createObject update matching genuine same-commit CObjectHandler.h and Event/LootHandler.cpp; genuine maps/map1/script.py explicitly calls createObject. Native behavior otherwise retained; awaiting native verification. Not an exact original.",
-        "replacementBlob": "6714587e3d1b4eee159a63d96245663f338d3d6f"
+        "provenance": "working reconstruction",
+        "replacementBlob": "97a20698df5319db38847420641881307f5b4337"
       },
       {
         "markerPath": "CPathFinder.cpp.REMOVED.git-id",
         "method": "reconstruction",
         "originalBlob": "67bb4e2fdd17b413feb555c9aca56c41af6ec3a7",
         "path": "CPathFinder.cpp",
-        "provenance": "Reconstructed missing three pathfinders from genuine #331 CPathFinder.h methods, Cell and values storage, CMonster.cpp caller, and CMapObject.cpp relative-move contract. Cardinal passability and reverse cost propagation follow intact later ca0995d7 donor; native random and greedy variants are implemented. Original source hash unavailable; reconstruction, not exact recovery.",
+        "provenance": "working reconstruction",
         "replacementBlob": "c0e0b43f779d62b0e0f7ccd04cb37117b16ebf4a"
       },
       {
@@ -157,7 +137,7 @@
         "method": "reconstruction",
         "originalBlob": "58f1cf45ae3026623441be92e48d25049a215288",
         "path": "CPlayerView.cpp",
-        "provenance": "Missing #339 reconstruction, not exact original. Carries prior inventory implementation with genuine CPlayerView.h CListView/CPlayerInventoryView renames; new CTradeItemsView iterates actual genuine parent CTradePanel::getItems() set, preserving item rendering rather than inventing player-market API. No surviving originals changed; pending native build/startup.",
+        "provenance": "working reconstruction",
         "replacementBlob": "9939df09c802cdb633f50ac3bb5406c3da488c70"
       },
       {
@@ -165,7 +145,7 @@
         "method": "reconstruction",
         "originalBlob": "c93d43ffc6a48ffd8cc4cbe460eacef4387d8b6a",
         "path": "GameScript.cpp",
-        "provenance": "Missing #338 module carried from prior staged candidate plus binding to genuine same-commit CGuiHandler::showPanel(QString), called by original scripts/game/object.py Market class. Pending native verification; no surviving original bytes changed.",
+        "provenance": "working reconstruction",
         "replacementBlob": "71189f60ef1e9bbd5c03eaf8915a686731f246ee"
       },
       {
@@ -177,11 +157,10 @@
       },
       {
         "markerPath": "Stats.h.REMOVED.git-id",
-        "method": "reconstruction",
-        "originalBlob": "f14276a39034a1f6965200d2efcba6d9d68e02c2",
+        "method": "exactOriginal",
+        "originalBlob": "b58516d941a4d39dbc556b216ea60cbede4f6534",
         "path": "Stats.h",
-        "provenance": "Missing Stats header reconstructed from intact Stats.cpp properties and existing donor b58516d9; metatypes declared by genuine same-commit ReflectTypes.cpp REFLECT(Stats/Damage), not twice.",
-        "replacementBlob": "52155f1fb8ae81731faf6a2a7786796374a0457a"
+        "replacementBlob": "b58516d941a4d39dbc556b216ea60cbede4f6534"
       },
       {
         "markerPath": "boost/python/converter/builtin_converters.cpp.REMOVED.git-id",
@@ -284,7 +263,7 @@
         "method": "reconstruction",
         "originalBlob": "1b3aa2bf2cce5cd06a478f1fbf4367a4c2002143",
         "path": "boost/python/object/inheritance.cpp",
-        "provenance": "unverified donor reconstruction; 4b3902d44f874a1fae86054d7240a2af76901bb4:boost/python/object/inheritance.cpp; headerMatch=0; apiOverlap=0/10000; distance=24",
+        "provenance": "unverified donor reconstruction; 4b3902d44f874a1fae86054d7240a2af76901bb4:boost/python/object/inheritance.cpp; headerMatch=0; apiOverlap=0/10000; distance=23",
         "replacementBlob": "70feba5fcd280139933f29b9179b0ed00eed75f8"
       },
       {
@@ -300,7 +279,7 @@
         "method": "reconstruction",
         "originalBlob": "0d39c3d1478c19a891acce327ddf81990724ace2",
         "path": "boost/python/object_operators.cpp",
-        "provenance": "unverified donor reconstruction; 70d0d690df45877698cb094405e25be00a8139fd:boost/python/object_operators.cpp; headerMatch=0; apiOverlap=0/10000; distance=16",
+        "provenance": "unverified donor reconstruction; 70d0d690df45877698cb094405e25be00a8139fd:boost/python/object_operators.cpp; headerMatch=0; apiOverlap=0/10000; distance=15",
         "replacementBlob": "43d2109b7fbee7a405e4e445aff17714078b1631"
       },
       {
@@ -316,7 +295,7 @@
         "method": "reconstruction",
         "originalBlob": "0f46652b2ab25b823980b32afec490a51470fa02",
         "path": "boost/python/str.cpp",
-        "provenance": "unverified donor reconstruction; 4b3902d44f874a1fae86054d7240a2af76901bb4:boost/python/str.cpp; headerMatch=0; apiOverlap=0/10000; distance=24",
+        "provenance": "unverified donor reconstruction; 4b3902d44f874a1fae86054d7240a2af76901bb4:boost/python/str.cpp; headerMatch=0; apiOverlap=0/10000; distance=23",
         "replacementBlob": "37642738eae0bee1bbcf50cbc12d1c57e227602f"
       },
       {
@@ -324,7 +303,7 @@
         "method": "reconstruction",
         "originalBlob": "e002f325958d029c4230c7f2cdf61efd9cf9029a",
         "path": "config/interactions.json",
-        "provenance": "Missing #337 content carried from prior reconstructed era payload (not exact original). Genuine surviving configurations show formatting-only edits while genuine CTradePanel.h/.cpp and CGuiHandler.cpp add the trade panel; project lists add only those two actual same-commit paths. Native script/factory/handler contracts retained. The map is still a later donor backport with only unsupported future Market object removed, not a recovered original map. Pending native verification.",
+        "provenance": "working reconstruction",
         "replacementBlob": "1c96439799a185d95dc050d30e6ca91dc6d616d4"
       },
       {
@@ -332,7 +311,7 @@
         "method": "reconstruction",
         "originalBlob": "37dc13de6694265ff593d0e474a6946704f45e25",
         "path": "config/monsters.json",
-        "provenance": "Missing #337 content carried from prior reconstructed era payload (not exact original). Genuine surviving configurations show formatting-only edits while genuine CTradePanel.h/.cpp and CGuiHandler.cpp add the trade panel; project lists add only those two actual same-commit paths. Native script/factory/handler contracts retained. The map is still a later donor backport with only unsupported future Market object removed, not a recovered original map. Pending native verification.",
+        "provenance": "working reconstruction",
         "replacementBlob": "b6b5708a1c0683d8ca6d9c395ee31e4742bdd39e"
       },
       {
@@ -340,23 +319,23 @@
         "method": "reconstruction",
         "originalBlob": "60fcbe36a016804c1addc17f0695be9d0ddac77e",
         "path": "config/weapons.json",
-        "provenance": "Missing #337 content carried from prior reconstructed era payload (not exact original). Genuine surviving configurations show formatting-only edits while genuine CTradePanel.h/.cpp and CGuiHandler.cpp add the trade panel; project lists add only those two actual same-commit paths. Native script/factory/handler contracts retained. The map is still a later donor backport with only unsupported future Market object removed, not a recovered original map. Pending native verification.",
+        "provenance": "working reconstruction",
         "replacementBlob": "5e7717d09f072bab9c53878acd48f9c30ca12865"
       },
       {
         "markerPath": "game.pro.REMOVED.git-id",
         "method": "reconstruction",
-        "originalBlob": "097236850e1feffb0c0d53a3c12b41eda31dcd3c",
+        "originalBlob": "e0aa328ce54cf3f590714b0645b3708318005de1",
         "path": "game.pro",
-        "provenance": "Missing #339 reconstruction, not exact original. Prior reconstructed project plus only two genuine newly added CMouseHandler source/header paths. No surviving originals changed; pending native build/startup.",
-        "replacementBlob": "0f82d7252e2e25aa21e7b37ded32da7a4659cf40"
+        "provenance": "working reconstruction",
+        "replacementBlob": "d319380b49f648307595a6bb47fff65c6a042b2e"
       },
       {
         "markerPath": "handler/CObjectHandler.cpp.REMOVED.git-id",
         "method": "reconstruction",
-        "originalBlob": "d28ea8454c9af1b3fa778242a7b6d04ac9fbe60a",
+        "originalBlob": "71b1304e8d51e21d427cfafd57b55242bff69b1a",
         "path": "handler/CObjectHandler.cpp",
-        "provenance": "Missing #332 content reconstructed from verified #331 candidate; updated against original #332 CEventHandler.h/.cpp event-first-to-object-first transition, CGameEventCaused split, and original CTrigger.h/.cpp contract. Trigger/module registration donor55e6516 retained only where the genuine interface exists. Other bodies preserved from verified #331 reconstruction.",
+        "provenance": "working reconstruction",
         "replacementBlob": "34bc14cc1e31c9017cae273f35dd8fd6b0470968"
       },
       {
@@ -777,15 +756,15 @@
         "method": "reconstruction",
         "originalBlob": "76588b5f1d2753a8dde9c8fc67cf596b10d07a67",
         "path": "maps/map1/map.json",
-        "provenance": "Missing #338 map uses the intact later donor JSON including its original market1/Market object and all layer/object coordinates. Unlike #331\u2013337, genuine same-commit scripts/game/object.py now declares Market(CBuilding), config/buildings.json selects game.object.Market, and market.png original pointer exists; therefore the earlier-era unsupported-object removal is not carried here. This remains a donor-backed reconstructed map, not recovered original map content. Pending native verification; no surviving original bytes changed.",
+        "provenance": "working reconstruction",
         "replacementBlob": "4f4bdafc5546bde4ff57612a93e1f387f5e198da"
       },
       {
         "markerPath": "object/CCreature.cpp.REMOVED.git-id",
         "method": "reconstruction",
-        "originalBlob": "21ed4813a35777a6e054c870bf06295fdf1e986b",
+        "originalBlob": "f66ce18162e34a082260dd41a7f9370fa69e83f2",
         "path": "object/CCreature.cpp",
-        "provenance": "Missing #336 implementation reconstructed from prior staged native-era payload with only factory createMapObject\u2192createObject update matching genuine same-commit CObjectHandler.h and Event/LootHandler.cpp; genuine maps/map1/script.py explicitly calls createObject. Native behavior otherwise retained; awaiting native verification. Not an exact original.",
+        "provenance": "working reconstruction",
         "replacementBlob": "2a16acb40a1ff29c9a45a0f56869beb6e389059c"
       },
       {
@@ -793,24 +772,16 @@
         "method": "reconstruction",
         "originalBlob": "d0f1d2f0038e37a409c5e2c8fa62711da7322e69",
         "path": "object/CCreature.h",
-        "provenance": "Missing #332 content reconstructed from verified #331 candidate; updated against original #332 CEventHandler.h/.cpp event-first-to-object-first transition, CGameEventCaused split, and original CTrigger.h/.cpp contract. Trigger/module registration donor55e6516 retained only where the genuine interface exists. Other bodies preserved from verified #331 reconstruction.",
+        "provenance": "working reconstruction",
         "replacementBlob": "4be41f076cf83faad79cf5abe09d670bdd2a61db"
-      },
-      {
-        "markerPath": "object/CItem.cpp.REMOVED.git-id",
-        "method": "reconstruction",
-        "originalBlob": "841fb7d442db3ed84e5e83cbd103336c4d8a52d0",
-        "path": "object/CItem.cpp",
-        "provenance": "Missing #340 CItem body carried from #339 reconstructed real inventory/use/drag/click behavior because same-commit genuine CItem.h and mouse-action contracts are unchanged. This does not repair or conceal the separate surviving CReflection.h constructor/metatype mismatch; native verification must expose that issue. Not exact original; pending native verification.",
-        "replacementBlob": "26cb3a94296c42190cee7507cc002b7afb4427c3"
       },
       {
         "markerPath": "panel/CFightPanel.cpp.REMOVED.git-id",
         "method": "reconstruction",
-        "originalBlob": "e736945b32a50d9e162ef1f63290d74c8b6fe136",
+        "originalBlob": "93f2b270b116a4f949ae106b2fec56a0ae2bc285",
         "path": "panel/CFightPanel.cpp",
-        "provenance": "Missing fight panel reconstructed from intact donor painting/combat status bodies and genuine #331 CFightPanel.h plus CPlayerView.h view constructor; later undeclared click handlers removed, public native graphics bridge used, empty child list checked before accessing its first member.",
-        "replacementBlob": "7df058936ed609274e72f75256acd21554f361a3"
+        "provenance": "working reconstruction",
+        "replacementBlob": "e9f22a682233e2b616bb668c14547b176fb6eadc"
       },
       {
         "markerPath": "reindent.py.REMOVED.git-id",
@@ -824,7 +795,7 @@
         "method": "reconstruction",
         "originalBlob": "e586ef8f0a7e62fc4e4fefff7e9b294032cd2d04",
         "path": "scripts/game/interaction.py",
-        "provenance": "Missing interaction script reconstructed from surviving later action bodies by removing later-only game_object registry decorators. Genuine #331 scripts/game/__init__.py imports game.interaction and genuine PyTypeHandler constructs qualified Python classes directly. Action implementations preserved; Python syntax checked. Not an exact original.",
+        "provenance": "working reconstruction",
         "replacementBlob": "7fe5797edafbc9498c78797ec88efb7304a8685e"
       },
       {
@@ -840,9 +811,9 @@
         "replacementBlob": "f5d0b39a0cdddb91a31a537052b7d8d31a4aa79f"
       }
     ],
-    "restoredFilesFingerprint": "3ee9d3fa0db319cce4318172d66fee7f1ee95733ac6a162e2243e0d4e73ce3f2",
-    "sourceCommit": "71ceeb3834f44a22d5683e0eb2a5623c333dbd0f",
-    "sourceTree": "4bbb080d2497e1f9bf2bffa0ac27ce54a4744589",
+    "restoredFilesFingerprint": "d4c08accc709f8f4704b0af3c15d2dc25e88038553af3881c0e10a43b5babac1",
+    "sourceCommit": "2cb5d7432de904c89cb7868b487c00f6cca5b283",
+    "sourceTree": "c57ee901e77b1288117b56605bffeda22e2746c4",
     "status": "complete",
     "submodules": [],
     "unresolved": []
@@ -853,12 +824,12 @@
       "-a",
       "--server-args=-screen 0 1920x1080x24",
       "env",
-      "LD_PRELOAD=/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-ilkds_e0/observer/libwindowspaths.so",
-      "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-ilkds_e0/build/RecoveryGame"
+      "LD_PRELOAD=/tmp/nouraajd-bfg-recovery/native-latest/verify/snapshot-oz7m6wn0/observer/libwindowspaths.so",
+      "/tmp/nouraajd-bfg-recovery/native-latest/verify/snapshot-oz7m6wn0/build/RecoveryGame"
     ],
-    "log": "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-ilkds_e0/smoke/startup.log",
+    "log": "/tmp/nouraajd-bfg-recovery/native-latest/verify/snapshot-oz7m6wn0/smoke/startup.log",
     "returnCode": 0,
-    "seconds": 0.717,
+    "seconds": 0.615,
     "startup": {
       "checks": {
         "eventLoop": true,
@@ -869,7 +840,7 @@
       "frame": {
         "height": 718,
         "path": "startup.png",
-        "sha256": "d208b66c54154d3ab45b9c12b8bad2cb650a7c9aae4af0f8e8d4f6df604e1010",
+        "sha256": "c3d15d123ca42d918becdb4c99c11523b7bac18ca098e37783874bde41cd0100",
         "width": 1278
       },
       "mode": "game",
@@ -880,76 +851,21 @@
     "status": "success",
     "timedOut": false
   },
-  "sourceCommit": "71ceeb3834f44a22d5683e0eb2a5623c333dbd0f",
+  "sourceCommit": "2cb5d7432de904c89cb7868b487c00f6cca5b283",
   "sourceCommits": [
-    "71ceeb3834f44a22d5683e0eb2a5623c333dbd0f"
+    "2cb5d7432de904c89cb7868b487c00f6cca5b283"
   ],
   "sourcePreparation": {
     "identity": {
-      "implementationSha256": "f5d590fce22ba637484bb95ca1b13091a246aa4d7d0747c7e112aa968dd1d092",
-      "outputs": [
-        {
-          "after": {
-            "kind": "file",
-            "sha256": "b084ee3394c3339e4207b44dc543dec825ead40fc68381e17493e350df00601b"
-          },
-          "before": null,
-          "path": "recovery_reflection_registration.h",
-          "purpose": "immediate-parent reflection registration compatibility"
-        }
-      ],
-      "reflectionRegistration": {
-        "inputs": {
-          "CReflection.h": "524490e5a60d8bd94d9ff85c95d6e5f2c33d3961daa8430d4b0a7c0d98169035",
-          "ReflectTypes.cpp": "96e2d7dde59798f88f1c2d11501d97e83d944e41a74fc5edf0580c9326a73487",
-          "handler/CTypeHandler.cpp": "4f97d9857f4e4a21ab825e5077d5ab9d54ca73b6597dfd0aa91067f31506c1dd"
-        },
-        "path": "recovery_reflection_registration.h",
-        "provenance": {
-          "donorCommit": "ae762f9c3572c5384c143690da32f8364fa39bcc",
-          "donorHeaderBlob": "5a2c17e7095979cc8675a8cf5da9fadedc7ba737",
-          "operation": "Restore only the immediate-parent REFLECT macro through a compiler forced include",
-          "sourceCommit": "71ceeb3834f44a22d5683e0eb2a5623c333dbd0f"
-        },
-        "qmakeArgument": "QMAKE_CXXFLAGS+=-include $$_PRO_FILE_PWD_/recovery_reflection_registration.h",
-        "replaySha256": "f833097b36fadb5cbd9aededca66afb8153d1fd1b276caf9735f3b26fd667311",
-        "sha256": "b084ee3394c3339e4207b44dc543dec825ead40fc68381e17493e350df00601b",
-        "validationBoundary": "Game startup with immediate-parent reflection registration compatibility; original sources unchanged"
-      }
+      "implementationSha256": "3446c99a1abfb69a52ab271ee37b7933f5e7c0cb9b433a163fc5d6b357590d96"
     },
-    "outputs": [
-      {
-        "after": {
-          "kind": "file",
-          "sha256": "b084ee3394c3339e4207b44dc543dec825ead40fc68381e17493e350df00601b"
-        },
-        "before": null,
-        "path": "recovery_reflection_registration.h",
-        "purpose": "immediate-parent reflection registration compatibility"
-      }
-    ],
-    "qmakeArguments": [
-      "QMAKE_CXXFLAGS+=-include $$_PRO_FILE_PWD_/recovery_reflection_registration.h"
-    ],
-    "status": "success",
-    "steps": [
-      {
-        "command": [
-          "history_source_prep.py",
-          "prepare-reflection-registration"
-        ],
-        "log": "/home/andrz/nouraajd-bfg-recovery-backup-20261116/native-early/verify/snapshot-ilkds_e0/preparation/reflection-registration.log",
-        "name": "reflectionRegistration",
-        "returnCode": 0,
-        "timedOut": false
-      }
-    ]
+    "outputs": [],
+    "status": "not-required",
+    "steps": []
   },
-  "sourceTree": "4bbb080d2497e1f9bf2bffa0ac27ce54a4744589",
-  "startupCompatibility": "parentReflectionRegistration",
+  "sourceTree": "c57ee901e77b1288117b56605bffeda22e2746c4",
   "startupMode": "game",
   "startupSelection": {
-    "boundary": "Game startup with immediate-parent reflection registration compatibility; original sources unchanged",
     "mode": "game"
   },
   "status": "success",
@@ -968,5 +884,5 @@
     }
   },
   "toolchainImage": "sha256:d3f59ec1d12297ee8091fbea687aa619275fc92b3fd426560e0a1fa40715afc8",
-  "verifiedFromCommit": "71ceeb3834f44a22d5683e0eb2a5623c333dbd0f"
+  "verifiedFromCommit": "2cb5d7432de904c89cb7868b487c00f6cca5b283"
 }

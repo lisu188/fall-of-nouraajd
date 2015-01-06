@@ -370,3 +370,10 @@ void CMap::handleObjectLayer(const QJsonObject &layer) {
         qDebug() << "Loaded object:" << objectType << objectName << "\n";
     }
 }
+
+CMouseHandler *CMap::getMouseHandler() {
+    if (!mouseHandler) {
+        mouseHandler = new CMouseHandler(this);
+    }
+    return mouseHandler;
+}

@@ -12,11 +12,13 @@ public:
 	void setCreature ( CCreature * creature );
 	virtual QRectF boundingRect() const;
 	virtual void paint ( QPainter *painter, const QStyleOptionGraphicsItem *, QWidget * );
+
 private:
 	CCreature *creature=0;
+
 };
 
-class CFightPanel : public AGamePanel {
+class CFightPanel : public AGamePanel,public CClickAction {
 	Q_OBJECT
 public:
 	CFightPanel();
@@ -30,11 +32,12 @@ public:
 	virtual void setUpPanel ( CGameView *view  ) override;
 	virtual void hidePanel() override;
 	virtual QString getPanelName() override;
-
+	virtual void onClickAction ( CGameObject *object ) override;
+protected:
+	virtual void mousePressEvent ( QGraphicsSceneMouseEvent * );
 private:
 	CListView *playerSkillsView;
 	CCreatureFightView *fightView;
-
 };
 
 

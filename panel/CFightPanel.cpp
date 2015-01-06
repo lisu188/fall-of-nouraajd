@@ -102,3 +102,16 @@ void CCreatureFightView::paint(QPainter *painter, const QStyleOptionGraphicsItem
     painter->drawText(QRectF(0, boundingRect().height() - 25, boundingRect().width(), 25),
                       QString::fromStdString(manaStream.str()), opt);
 }
+
+void CFightPanel::onClickAction(CGameObject *object) {
+    CInteraction *interaction = dynamic_cast<CInteraction *>(object);
+    if (interaction) {
+        CPlayer *player = interaction->getMap()->getPlayer();
+        if (interaction->getManaCost() > player->getMana()) {
+            return;
+        }
+        player->setSelectedAction(interaction);
+    }
+}
+
+void CFightPanel::mousePressEvent(QGraphicsSceneMouseEvent *) {}

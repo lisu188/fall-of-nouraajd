@@ -33,19 +33,19 @@ void messageHandler ( QtMsgType type, const QMessageLogContext &context,
 	}
 }
 
-void terminateHandler () {
-	PyErr_Print();
-	abort();
-}
-
-void installHandler() {
-	qInstallMessageHandler ( messageHandler );
-	std::set_terminate ( terminateHandler );
+void registerMetaTypes() {
+	qRegisterMetaType<Stats>();
+	qRegisterMetaType<Damage>();
 }
 
 int main ( int argc, char *argv[] ) {
-	installHandler();
+	qInstallMessageHandler ( messageHandler );
+	std::set_terminate ( [] (  )-> void {
+		PyErr_Print();
+		abort();
+	} );
 	QApplication a ( argc, argv );
+	registerMetaTypes();
 	CMainWindow window;
 	window.show();
 	return a.exec();

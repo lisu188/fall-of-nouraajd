@@ -18,6 +18,7 @@ public:
 	void setAnimation ( QString path );
 	QString getAnimation();
 	QGraphicsItem *toGraphicsItem();
+	void drag();
 private:
 	QString path;
 	QTimer *timer=0;

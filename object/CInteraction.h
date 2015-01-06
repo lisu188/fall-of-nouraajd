@@ -25,8 +25,6 @@ public:
 	int getManaCost() const;
 	void setManaCost ( int value );
 
-protected:
-	void mousePressEvent ( QGraphicsSceneMouseEvent * );
 	int manaCost;
 	QString effect;
 
