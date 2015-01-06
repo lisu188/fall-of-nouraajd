@@ -60,8 +60,9 @@ public:
 
 	virtual ~CGameObject() =0;
 protected:
-	virtual void hoverEnterEvent ( QGraphicsSceneHoverEvent *event ) override;
-	virtual void hoverLeaveEvent ( QGraphicsSceneHoverEvent *event ) override;
+	virtual void hoverEnterEvent ( QGraphicsSceneHoverEvent *event ) override final ;
+	virtual void hoverLeaveEvent ( QGraphicsSceneHoverEvent *event ) override final;
+	virtual void mousePressEvent ( QGraphicsSceneMouseEvent * ) override final;
 	bool hasTooltip=true;
 private:
 	QString tooltip;

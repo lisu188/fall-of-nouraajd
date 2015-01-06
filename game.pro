@@ -12,8 +12,6 @@ TEMPLATE = app
 include(game.pri)
 
 SOURCES += \
-     CReflection.cpp \
-     ReflectTypes.cpp \
      CPathFinder.cpp \
      GameScript.cpp \
      CMap.cpp \
@@ -112,7 +110,6 @@ HEADERS += \
     provider/CConfigurationProvider.h \
     provider/CAnimationProvider.h \
     provider/CProvider.h \
-    CReflection.h \
     object/CPlayer.h \
     object/CMonster.h \
     object/CEffect.h \

@@ -5,7 +5,7 @@
 class CPlayerInventoryView;
 class CTradeItemsView;
 
-class CTradePanel : public AGamePanel,public CMouseHandler ,public CClickAction {
+class CTradePanel : public AGamePanel,public CClickAction {
 	Q_OBJECT
 public:
 	CTradePanel();
@@ -19,8 +19,7 @@ public:
 	virtual void paint ( QPainter *painter, const QStyleOptionGraphicsItem *, QWidget * );
 
 	std::set<CItem*> *getItems();
-	virtual CClickAction *getClickAction();
-	virtual void onClickAction ( CMouseHandler *object );
+	virtual void onClickAction ( CGameObject *object );
 private:
 	CPlayerInventoryView *playerInventoryView=0;
 	CTradeItemsView *tradeItemsView=0;

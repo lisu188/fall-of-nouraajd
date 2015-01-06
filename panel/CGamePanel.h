@@ -1,7 +1,6 @@
 #pragma once
 
 #include <QGraphicsItem>
-#include "CReflection.h"
 #include "object/CObject.h"
 #include <QWidget>
 

@@ -3,6 +3,7 @@
 #include <qpainter.h>
 #include <sstream>
 #include <QDebug>
+#include <QDrag>
 #include <qpainter.h>
 #include "CGameView.h"
 #include "CPlayerView.h"
@@ -69,4 +70,17 @@ void CCharPanel::update() {
 
 QString CCharPanel::getPanelName() {
 	return "CCharPanel";
+}
+
+void CCharPanel::onClickAction ( CGameObject *object ) {
+	CItem*item=dynamic_cast<CItem*> ( object );
+	if ( item ) {
+		if ( item->isSingleUse() ) {
+			item->getMap()->getEventHandler()->gameEvent ( item,  new CGameEventCaused ( CGameEvent::onUse,item->getMap()->getScene()->getPlayer() ) );
+			item->getMap()->getScene()->getPlayer()->removeFromInventory ( item );
+			delete item;
+		} else {
+			item->drag();
+		}
+	}
 }
