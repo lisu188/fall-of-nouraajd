@@ -1,7 +1,7 @@
 # Recovered game snapshot
 
-Original commit: `2cb5d7432de904c89cb7868b487c00f6cca5b283`. Original tree: `c57ee901e77b1288117b56605bffeda22e2746c4`.
-Startup was verified from identical recovered sources at `2cb5d7432de904c89cb7868b487c00f6cca5b283`.
+Original commit: `1053935294dfb5dd9ddfb38c1213f53fad8685e9`. Original tree: `9fb78b53eab4d1ca9d6711ba39225335d0ee88d5`.
+Startup was verified from identical recovered sources at `1053935294dfb5dd9ddfb38c1213f53fad8685e9`.
 
 This recovered version compiled and linked on Linux, started the real game on an isolated Xvfb display,
 loaded its map and a healthy player, rendered the screenshot below, and exited normally.
@@ -53,11 +53,11 @@ compatibilityRepair: 2, exactOriginal: 62, reconstruction: 31.
 - `boost/python/object/enum.cpp`: unverified upstream reconstruction; https://github.com/boostorg/python/tree/32ba64a8248d99b1852e77ff4388d9d8a991c4a9
 - `boost/python/object/function.cpp`: unverified upstream reconstruction; https://github.com/boostorg/python/tree/32ba64a8248d99b1852e77ff4388d9d8a991c4a9
 - `boost/python/object/function_doc_signature.cpp`: unverified upstream reconstruction; https://github.com/boostorg/python/tree/32ba64a8248d99b1852e77ff4388d9d8a991c4a9
-- `boost/python/object/inheritance.cpp`: unverified donor reconstruction; 4b3902d44f874a1fae86054d7240a2af76901bb4:boost/python/object/inheritance.cpp; headerMatch=0; apiOverlap=0/10000; distance=23
+- `boost/python/object/inheritance.cpp`: unverified donor reconstruction; 4b3902d44f874a1fae86054d7240a2af76901bb4:boost/python/object/inheritance.cpp; headerMatch=0; apiOverlap=0/10000; distance=22
 - `boost/python/object/life_support.cpp`: unverified upstream reconstruction; https://github.com/boostorg/python/tree/32ba64a8248d99b1852e77ff4388d9d8a991c4a9
-- `boost/python/object_operators.cpp`: unverified donor reconstruction; 70d0d690df45877698cb094405e25be00a8139fd:boost/python/object_operators.cpp; headerMatch=0; apiOverlap=0/10000; distance=15
+- `boost/python/object_operators.cpp`: unverified donor reconstruction; 70d0d690df45877698cb094405e25be00a8139fd:boost/python/object_operators.cpp; headerMatch=0; apiOverlap=0/10000; distance=14
 - `boost/python/object_protocol.cpp`: unverified upstream reconstruction; https://github.com/boostorg/python/tree/32ba64a8248d99b1852e77ff4388d9d8a991c4a9
-- `boost/python/str.cpp`: unverified donor reconstruction; 4b3902d44f874a1fae86054d7240a2af76901bb4:boost/python/str.cpp; headerMatch=0; apiOverlap=0/10000; distance=23
+- `boost/python/str.cpp`: unverified donor reconstruction; 4b3902d44f874a1fae86054d7240a2af76901bb4:boost/python/str.cpp; headerMatch=0; apiOverlap=0/10000; distance=22
 - `config/interactions.json`: working reconstruction
 - `config/monsters.json`: working reconstruction
 - `config/weapons.json`: working reconstruction
@@ -71,7 +71,7 @@ compatibilityRepair: 2, exactOriginal: 62, reconstruction: 31.
 - `boost/python/LICENSE_1_0.txt`: https://github.com/boostorg/python/tree/32ba64a8248d99b1852e77ff4388d9d8a991c4a9 upstream distribution license
 - `scripts/PSF_LICENSE`: https://www.python.org/ftp/python/3.3.7/Python-3.3.7.tar.xz upstream Python distribution license
 
-Restored source fingerprint: `d4c08accc709f8f4704b0af3c15d2dc25e88038553af3881c0e10a43b5babac1`.
+Restored source fingerprint: `58b322f484796d25f805ab984d5f52b5cf122598f8fcbab3191bc4f5a69760c5`.
 
 The actual 1278 × 718 screenshot and [verification metadata](recovery/verification.json) belong to
 this source version. Reconstructed code and borrowed assets are identified in that metadata; they are
