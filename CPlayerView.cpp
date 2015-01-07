@@ -277,8 +277,6 @@ void CListView::setNumber(QGraphicsItem *item, int i, int x) {
     item->setPos(px, py);
 }
 
-void CListView::setDraggable() { setFlag(QGraphicsItem::ItemIsMovable, true); }
-
 CTradeItemsView::CTradeItemsView(CGameView *view) : CListView(view) {}
 
 std::set<QGraphicsItem *> CTradeItemsView::getItems() const {
