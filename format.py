@@ -7,10 +7,9 @@ import subprocess
 import sys
 import json
 import py_compile
+from itertools import chain
 sys.dont_write_bytecode=True
 from reindent import check
-
-os.chdir(os.path.dirname(os.path.realpath(__file__)))
 
 DIR="."
 # -----------------------------------------------------------------------------
@@ -28,15 +27,13 @@ def formatPython(files):
         check(file)
 
 def getFileList(dir,ext):
-    list=[]
     for root, dirs, files in os.walk(dir):
         for file in files:
             if file.endswith("."+ext):
-                list.append(os.path.join(root, file))
-    return list
+                yield os.path.join(root, file)
 
 def main():
-    files = getFileList(DIR,"cpp")+getFileList(DIR,"h")
+    files = chain(getFileList(DIR,"cpp"),getFileList(DIR,"h"))
     formatJson(getFileList(DIR,"json"))
     formatPython(getFileList(DIR,"py"))
     exe = initialize_exe()
