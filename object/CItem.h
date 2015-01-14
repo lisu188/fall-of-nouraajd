@@ -1,7 +1,6 @@
 #pragma once
 #include "CMapObject.h"
 #include "Stats.h"
-#include "handler/CMouseHandler.h"
 
 class CCreature;
 class CInteraction;

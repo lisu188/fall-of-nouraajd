@@ -1,4 +1,5 @@
 #include "panel/CTradePanel.h"
+#include "panel/CGamePanel.h"
 #include "CGameScene.h"
 #include "CGameView.h"
 #include "CMap.h"
@@ -55,7 +56,7 @@ void PlayerStatsView::setPlayer(CPlayer *value) {
 
 void PlayerStatsView::update() { QWidget::update(); }
 
-CListView::CListView(CGameView *view) : QGraphicsObject(), view(view) {
+CListView::CListView(AGamePanel *panel) : CPlayerView(panel) {
     this->setZValue(3);
     curPosition = 0;
     right = new CScrollObject(this, true);
@@ -122,18 +123,6 @@ void CListView::setXY(int x, int y) {
     this->y = y;
 }
 
-void CListView::dropEvent(QGraphicsSceneDragDropEvent *event) {
-    const CObjectData *helper = dynamic_cast<const CObjectData *>(event->mimeData());
-    CItem *item = helper ? dynamic_cast<CItem *>(helper->getSource()) : nullptr;
-    CPlayer *player = view->getScene()->getPlayer();
-    if (item && player && player->hasEquipped(item)) {
-        player->removeFromEquipped(item);
-        player->addItem(item);
-        event->acceptProposedAction();
-        update();
-    }
-}
-
 CScrollObject::CScrollObject(CListView *stats, bool isRight) {
     this->isRight = isRight;
     this->setZValue(1);
@@ -161,16 +150,16 @@ void CScrollObject::mousePressEvent(QGraphicsSceneMouseEvent *) {
     }
 }
 
-CPlayerEquippedView::CPlayerEquippedView(CGameView *view) : QGraphicsObject() {
+CPlayerEquippedView::CPlayerEquippedView(AGamePanel *panel) : CPlayerView(panel) {
     for (unsigned int i = 0; i < 8; i++) {
-        CItemSlot *slot = new CItemSlot(i, view);
+        CItemSlot *slot = new CItemSlot(i, panel);
         slot->setParentItem(this);
         slot->setPos(i % 4 * 50, i / 4 * 50);
         itemSlots.push_back(slot);
     }
 }
 
-CItemSlot::CItemSlot(int number, CGameView *view) : number(number), view(view) {
+CItemSlot::CItemSlot(int number, AGamePanel *panel) : number(number), panel(panel) {
     pixmap.load(CResourcesProvider::getInstance()->getPath("images/item.png"));
     pixmap = pixmap.scaled(50, 50, Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
     this->setAcceptDrops(true);
@@ -194,7 +183,7 @@ bool CItemSlot::checkType(int slot, CItem *item) {
 }
 
 void CItemSlot::update() {
-    auto player = view->getScene()->getMap()->getPlayer();
+    auto player = panel->getView()->getScene()->getMap()->getPlayer();
     if (!player) {
         return;
     }
@@ -242,11 +231,11 @@ void CPlayerEquippedView::update() {
     QGraphicsObject::update();
 }
 
-CPlayerInventoryView::CPlayerInventoryView(CGameView *view) : CListView(view) {}
+CPlayerInventoryView::CPlayerInventoryView(AGamePanel *panel) : CListView(panel) {}
 
 std::set<QGraphicsItem *> CPlayerInventoryView::getItems() const {
     std::set<QGraphicsItem *> set;
-    auto player = view->getScene()->getMap()->getPlayer();
+    auto player = panel->getView()->getScene()->getMap()->getPlayer();
     if (!player) {
         return set;
     }
@@ -256,11 +245,11 @@ std::set<QGraphicsItem *> CPlayerInventoryView::getItems() const {
     return set;
 }
 
-CPlayerIteractionView::CPlayerIteractionView(CGameView *view) : CListView(view) {}
+CPlayerIteractionView::CPlayerIteractionView(AGamePanel *panel) : CListView(panel) {}
 
 std::set<QGraphicsItem *> CPlayerIteractionView::getItems() const {
     std::set<QGraphicsItem *> set;
-    auto player = view->getScene()->getMap()->getPlayer();
+    auto player = panel->getView()->getScene()->getMap()->getPlayer();
     if (!player) {
         return set;
     }
@@ -277,7 +266,7 @@ void CListView::setNumber(QGraphicsItem *item, int i, int x) {
     item->setPos(px, py);
 }
 
-CTradeItemsView::CTradeItemsView(CGameView *view) : CListView(view) {}
+CTradeItemsView::CTradeItemsView(AGamePanel *panel) : CListView(panel) {}
 
 std::set<QGraphicsItem *> CTradeItemsView::getItems() const {
     std::set<QGraphicsItem *> result;
@@ -289,4 +278,10 @@ std::set<QGraphicsItem *> CTradeItemsView::getItems() const {
         result.insert(item->toGraphicsItem());
     }
     return result;
+}
+
+CPlayerView::CPlayerView(AGamePanel *panel) : panel(panel) {}
+void CPlayerView::dropEvent(QGraphicsSceneDragDropEvent *event) {
+    const CObjectData *helper = dynamic_cast<const CObjectData *>(event->mimeData());
+    panel->handleDrop(this, helper->getSource());
 }

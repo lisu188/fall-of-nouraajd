@@ -43,12 +43,12 @@ void CCharPanel::hidePanel() {
 
 void CCharPanel::setUpPanel ( CGameView *view ) {
 	this->view=view;
-	playerInventoryView = new CPlayerInventoryView ( view );
+	playerInventoryView = new CPlayerInventoryView ( this );
 	playerInventoryView->setZValue ( 3 );
 	playerInventoryView->setParentItem ( this );
 	playerInventoryView->setAcceptDrops ( true );
 	view->getScene()->addItem ( playerInventoryView );
-	playerEquippedView = new CPlayerEquippedView ( view );
+	playerEquippedView = new CPlayerEquippedView ( this );
 	playerEquippedView->setZValue ( 3 );
 	playerEquippedView->setParentItem ( this );
 	view->getScene()->addItem ( playerEquippedView );
@@ -81,6 +81,15 @@ void CCharPanel::onClickAction ( CGameObject *object ) {
 			delete item;
 		} else {
 			item->drag();
+		}
+	}
+}
+
+void CCharPanel::handleDrop ( CPlayerView *view, CGameObject *object ) {
+	if ( view==playerInventoryView ) {
+		CItem *item = dynamic_cast<CItem*> (  object );
+		if ( item ) {
+			item->getMap()->getEventHandler()->gameEvent ( item , new CGameEventCaused ( CGameEvent::onUse,item->getMap()->getPlayer() ) );
 		}
 	}
 }

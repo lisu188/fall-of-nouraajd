@@ -9,6 +9,7 @@ class CGameView;
 class CListView;
 class CPlayerEquippedView;
 class CCharPanel;
+class CPlayerView;
 
 class AGamePanel : public QGraphicsObject {
 	Q_OBJECT
@@ -22,43 +23,19 @@ public:
 	virtual QRectF boundingRect() const=0;
 	virtual void paint ( QPainter *, const QStyleOptionGraphicsItem *, QWidget * ) =0;
 	virtual QString getPanelName() =0;
-	bool isShown() {
-		return this->isVisible();
-	}
-	virtual void mousePressEvent ( QGraphicsSceneMouseEvent * ) override {
-		this->hidePanel ( );
-	}
-	Q_INVOKABLE void setProperty ( QString name,QVariant property ) {
-		QByteArray byteArray = name.toUtf8();
-		const char* cString = byteArray.constData();
-		this->QObject::setProperty ( cString,property );
-	}
-	Q_INVOKABLE QVariant property ( QString name ) const {
-		QByteArray byteArray = name.toUtf8();
-		const char* cString = byteArray.constData();
-		return this->QObject::property ( cString );
-	}
-	Q_INVOKABLE void setStringProperty ( QString name,QString value ) {
-		this->setProperty ( name, value ) ;
-	}
-	Q_INVOKABLE void setBoolProperty ( QString name,bool value ) {
-		this->setProperty ( name,value );
-	}
-	Q_INVOKABLE void setNumericProperty ( QString name,int value ) {
-		this->setProperty ( name,value );
-	}
-	Q_INVOKABLE QString getStringProperty ( QString name ) const {
-		return this->property ( name ).toString();
-	}
-	Q_INVOKABLE bool getBoolProperty ( QString name ) const {
-		return this->property ( name ).toBool();
-	}
-	Q_INVOKABLE int getNumericProperty ( QString name ) const {
-		return this->property ( name ).toInt();
-	}
-	Q_INVOKABLE void incProperty ( QString name,int value ) {
-		this->setNumericProperty ( name,this->getNumericProperty ( name )+value );
-	}
+	virtual void handleDrop ( CPlayerView* ,CGameObject * );
+	bool isShown();
+	CGameView *getView();
+	virtual void mousePressEvent ( QGraphicsSceneMouseEvent * ) override;
+	Q_INVOKABLE void setProperty ( QString name,QVariant property );
+	Q_INVOKABLE QVariant property ( QString name ) const;
+	Q_INVOKABLE void setStringProperty ( QString name,QString value );
+	Q_INVOKABLE void setBoolProperty ( QString name,bool value );
+	Q_INVOKABLE void setNumericProperty ( QString name,int value );
+	Q_INVOKABLE QString getStringProperty ( QString name ) const;
+	Q_INVOKABLE bool getBoolProperty ( QString name ) const;
+	Q_INVOKABLE int getNumericProperty ( QString name ) const;
+	Q_INVOKABLE void incProperty ( QString name,int value );
 protected:
 	CGameView *view=0;
 };

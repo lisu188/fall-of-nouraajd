@@ -35,8 +35,8 @@ void CTradePanel::update() {
 
 void CTradePanel::setUpPanel ( CGameView *view ) {
 	this->view=view;
-	this->playerInventoryView= new CPlayerInventoryView ( view );
-	this->tradeItemsView=new CTradeItemsView ( view );
+	this->playerInventoryView= new CPlayerInventoryView ( this );
+	this->tradeItemsView=new CTradeItemsView ( this );
 
 	playerInventoryView->setZValue ( 3 );
 	playerInventoryView->setParentItem ( this );

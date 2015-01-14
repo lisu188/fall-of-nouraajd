@@ -44,7 +44,7 @@ void CFightPanel::showPanel() {
 
 void CFightPanel::setUpPanel(CGameView *view) {
     this->view = view;
-    playerSkillsView = new CPlayerIteractionView(view);
+    playerSkillsView = new CPlayerIteractionView(this);
     playerSkillsView->setZValue(3);
     view->getScene()->addItem(playerSkillsView);
     playerSkillsView->setParentItem(this);
