@@ -21,4 +21,8 @@ public:
 private:
 	CListView *playerInventoryView;
 	CPlayerEquippedView *playerEquippedView;
+
+	// AGamePanel interface
+public:
+	virtual void handleDrop ( CPlayerView *view, CGameObject *object );
 };

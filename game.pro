@@ -143,3 +143,5 @@ HEADERS += panel/CTradePanel.h
 
 SOURCES += handler/CMouseHandler.cpp
 HEADERS += handler/CMouseHandler.h
+
+SOURCES += Util.cpp panel/CGamePanel.cpp
