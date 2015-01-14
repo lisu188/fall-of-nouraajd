@@ -23,7 +23,7 @@ CClickAction *CMouseHandler::getClickAction ( CGameObject *object ) {
 		parent=parent->parentItem();
 	}
 	if ( QObject *object=dynamic_cast<QObject*> ( potentialAction ) ) {
-		qDebug() <<"Delegating action to "<<object->metaObject()->className() <<"\n";
+		qDebug() <<"Delegating click action to "<<object->metaObject()->className() <<"\n";
 	}
 	return potentialAction;
 }

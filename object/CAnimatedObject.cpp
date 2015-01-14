@@ -38,10 +38,12 @@ QGraphicsItem *CAnimatedObject::toGraphicsItem() {
 }
 
 void CAnimatedObject::drag() {
-	QDrag *drag = new QDrag ( this );
-	drag->setMimeData ( new CObjectData ( this ) );
-	drag->setPixmap ( this->pixmap() );
-	drag->exec();
+	if ( CGameObject *object=dynamic_cast<CGameObject*> ( this ) ) {
+		QDrag *drag = new QDrag ( this );
+		drag->setMimeData ( new CObjectData ( object ) );
+		drag->setPixmap ( this->pixmap() );
+		drag->exec();
+	}
 }
 
 void CAnimatedObject::animate() {

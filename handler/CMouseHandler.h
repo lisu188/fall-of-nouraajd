@@ -3,6 +3,7 @@
 
 class CGameObject;
 class CMap;
+
 class CClickAction {
 public:
 	virtual void onClickAction ( CGameObject *object ) =0;
