@@ -26,6 +26,7 @@ CTypeHandler::CTypeHandler() {
 	REGISTER ( CEvent )
 	REGISTER ( CScroll )
 	REGISTER ( CEffect )
+	REGISTER ( CMarket )
 }
 
 #undef REGISTER

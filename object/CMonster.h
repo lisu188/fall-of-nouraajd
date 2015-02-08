@@ -10,6 +10,5 @@ public:
 	virtual ~CMonster();
 	virtual void onTurn ( CGameEvent * ) override;
 	virtual void levelUp() override;
-	virtual std::set<CItem *> getLoot() override;
 	virtual Coords getNextMove();
 };

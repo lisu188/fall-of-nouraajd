@@ -8,10 +8,6 @@ void CMonster::levelUp() {
 	addMana ( 0 );
 }
 
-std::set<CItem *> CMonster::getLoot() {
-	return this->getMap()->getLootHandler()->getLoot ( getScale() );
-}
-
 Coords CMonster::getNextMove() {
 	if ( this->getCoords().getDist ( this->getMap()->getPlayer()->getCoords() ) <25 ) {
 		return CSmartPathFinder().findPath ( this,this->getMap()->getPlayer() );

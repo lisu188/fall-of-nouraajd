@@ -40,6 +40,20 @@ void CPlayer::fight ( CCreature *creature ) {
 	setEnemy ( nullptr );
 }
 
+void CPlayer::trade ( CGameObject *object ) {
+	if ( CMarket * market=dynamic_cast<CMarket*> ( object ) ) {
+		setMarket ( market );
+		AGamePanel*panel=getMap()->getGuiHandler()->getPanel ( "CTradePanel" );
+		panel->showPanel();
+		while ( panel->isVisible() ) {
+			QApplication::processEvents ( QEventLoop::WaitForMoreEvents );
+		}
+		setMarket ( nullptr );
+	} else {
+		qFatal ( "Called trade with not a CMarket" );
+	}
+}
+
 Coords CPlayer::getNextMove() {
 	return next;
 }
@@ -54,6 +68,14 @@ CCreature *CPlayer::getEnemy() const {
 
 void CPlayer::setEnemy ( CCreature *value ) {
 	enemy = value;
+}
+
+CMarket *CPlayer::getMarket() const {
+	return market;
+}
+
+void CPlayer::setMarket ( CMarket *value ) {
+	market = value;
 }
 
 void CPlayer::setNextMove ( Coords coords ) {
