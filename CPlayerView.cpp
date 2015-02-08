@@ -269,15 +269,16 @@ void CListView::setNumber(QGraphicsItem *item, int i, int x) {
 CTradeItemsView::CTradeItemsView(AGamePanel *panel) : CListView(panel) {}
 
 std::set<QGraphicsItem *> CTradeItemsView::getItems() const {
-    std::set<QGraphicsItem *> result;
-    auto panel = dynamic_cast<CTradePanel *>(parentItem());
-    if (!panel) {
-        return result;
+    std::set<QGraphicsItem *> set;
+    CGameScene *scene = panel->getView()->getScene();
+    CPlayer *player = scene->getMap()->getPlayer();
+    if (!player || !player->getMarket()) {
+        return set;
     }
-    for (CItem *item : *panel->getItems()) {
-        result.insert(item->toGraphicsItem());
+    for (CItem *it : player->getMarket()->getTradeItems()) {
+        set.insert(it->toGraphicsItem());
     }
-    return result;
+    return set;
 }
 
 CPlayerView::CPlayerView(AGamePanel *panel) : panel(panel) {}

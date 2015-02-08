@@ -10,8 +10,11 @@ class Teleporter(CBuilding):
             event.getCause().setCoords(loc)
 
 class Market(CBuilding):
+    market=None
     def onEnter(self,event):
-        self.getMap().getGuiHandler().showPanel("CTradePanel")
+        if not self.market:
+            self.market=self.getMap().getObjectHandler().createObject(self.getStringProperty('market'))
+        self.getMap().getPlayer().trade(self.market)
 
 class Cave(CBuilding):
     def onEnter(self,event):

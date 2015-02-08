@@ -62,11 +62,31 @@ void CTradePanel::paint ( QPainter *painter, const QStyleOptionGraphicsItem *, Q
 	painter->fillRect ( boundingRect(), QColor ( "BLACK" ) );
 }
 
-std::set<CItem *> *CTradePanel::getItems() {
-	return &items;
+void CTradePanel::onClickAction ( CGameObject *object ) {
+	if ( CItem*item=dynamic_cast<CItem*> ( object ) ) {
+		item->drag();
+	}
 }
 
-void CTradePanel::onClickAction ( CGameObject *object ) {
-	qDebug() <<dynamic_cast<CListView*> ( object->toGraphicsItem()->parentItem() )->metaObject()->className() <<":"
-	         <<dynamic_cast<QObject*> ( object )->metaObject()->className() <<"\n";
+void CTradePanel::handleDrop ( CPlayerView *view, CGameObject *object ) {
+	CPlayerView *view2=dynamic_cast<CPlayerView*> ( object->toGraphicsItem()->parentItem() );
+	if ( CItem *item=dynamic_cast<CItem*> ( object ) ) {
+		CPlayer*player=   this->getView()->getScene()->getMap()->getPlayer();
+		if ( player&&player->getMarket() ) {
+			int cost=item->getPower() * ( item->getPower()+1 ) *100 ;
+			if ( view==playerInventoryView&&view2==tradeItemsView ) {
+				if ( player->getGold() >=cost ) {
+					player->addItem ( item );
+					player->getMarket()->remove ( item );
+					player->takeGold ( cost );
+				}
+			} else  if ( view==tradeItemsView&&view2==playerInventoryView ) {
+				player->removeFromInventory ( item );
+				player->getMarket()->add ( item );
+				player->addGold ( cost );
+			}
+			qDebug() <<player->getGold() <<"\n";
+			this->update();
+		}
+	}
 }
