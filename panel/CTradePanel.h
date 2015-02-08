@@ -17,11 +17,9 @@ public:
 	virtual QString getPanelName();
 	virtual QRectF boundingRect() const;
 	virtual void paint ( QPainter *painter, const QStyleOptionGraphicsItem *, QWidget * );
-
-	std::set<CItem*> *getItems();
+	virtual void handleDrop ( CPlayerView *, CGameObject * );
 	virtual void onClickAction ( CGameObject *object );
 private:
 	CPlayerInventoryView *playerInventoryView=0;
 	CTradeItemsView *tradeItemsView=0;
-	std::set<CItem*> items;
 };

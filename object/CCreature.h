@@ -1,8 +1,8 @@
 #pragma once
+#include <QGraphicsPixmapItem>
+#include <QDateTime>
 #include "CMapObject.h"
 #include "Stats.h"
-#include <QDateTime>
-#include <QGraphicsPixmapItem>
 #include <set>
 
 class CInteraction;
