@@ -1,6 +1,6 @@
 #pragma once
 #include "CCreature.h"
-
+class CQuest;
 class CPlayer : public CCreature {
 	Q_OBJECT
 	friend class PlayerStatsView;
@@ -21,10 +21,14 @@ public:
 	virtual Coords getNextMove() override;
 	CMarket *getMarket() const;
 	void setMarket ( CMarket *value );
+	void addQuest ( QString questName );
 private:
+	void checkQuests();
 	CInteraction *selectedAction=0;
 	CCreature *enemy=0;
 	CMarket *market=0;
 	int turn=0;
 	Coords next;
+	std::set<CQuest*> quests;
+
 };
