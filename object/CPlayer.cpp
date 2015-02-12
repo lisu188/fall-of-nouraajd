@@ -2,6 +2,7 @@
 #include "CMap.h"
 #include "panel/CPanel.h"
 #include <QApplication>
+#include <QDebug>
 
 CPlayer::CPlayer() {
 
@@ -14,6 +15,15 @@ CPlayer::~CPlayer() {
 void CPlayer::onTurn ( CGameEvent * ) {
 	addMana ( manaRegRate );
 	turn++;
+	checkQuests();
+}
+
+void CPlayer::checkQuests() {
+	for ( CQuest *quest:quests ) {
+		if ( quest->isCompleted() ) {
+			qDebug() <<"Completed quest:"<<quest->getDescription();
+		}
+	}
 }
 
 void CPlayer::onDestroy ( CGameEvent * ) {
@@ -76,6 +86,13 @@ CMarket *CPlayer::getMarket() const {
 
 void CPlayer::setMarket ( CMarket *value ) {
 	market = value;
+}
+
+void CPlayer::addQuest ( QString questName ) {
+	CQuest *quest=getMap()->getObjectHandler()->createObject<CQuest*> ( questName );
+	if ( quest ) {
+		quests.insert ( quest );
+	}
 }
 
 void CPlayer::setNextMove ( Coords coords ) {

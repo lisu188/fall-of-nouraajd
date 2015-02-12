@@ -1,5 +1,8 @@
 from game import CEvent
 from game import CTrigger
+from game import CQuest
+
+completed = False
 
 class StartEvent(CEvent):
     def onEnter(self,event):
@@ -10,6 +13,8 @@ class StartEvent(CEvent):
 class GoobyTrigger(CTrigger):
     def trigger(self,object,event):
         object.getMap().getGuiHandler().showMessage("Gooby killed!!!")
+        global completed
+        completed=True
 
 class CaveTrigger(CTrigger):
     def trigger(self,object,event):
@@ -18,3 +23,8 @@ class CaveTrigger(CTrigger):
         gooby.setStringProperty("objectName","gooby1")
         object.getMap().addObject(gooby)
         gooby.moveTo(100,100,0)
+        self.getMap().getPlayer().addQuest("mainQuest")
+
+class MainQuest(CQuest):
+    def isCompleted(self):
+        return complseted

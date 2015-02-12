@@ -22,5 +22,12 @@
                 "DaggerOfVileHeart"
             ]
         }
+    },
+    "mainQuest": {
+        "class": "map1.MainQuest",
+        "handler": "PyTypeHandler",
+        "properties": {
+            "description": "HiHo"
+        }
     }
 }

@@ -71,22 +71,26 @@ void CTradePanel::onClickAction ( CGameObject *object ) {
 void CTradePanel::handleDrop ( CPlayerView *view, CGameObject *object ) {
 	CPlayerView *view2=dynamic_cast<CPlayerView*> ( object->toGraphicsItem()->parentItem() );
 	if ( CItem *item=dynamic_cast<CItem*> ( object ) ) {
-		CPlayer*player=   this->getView()->getScene()->getMap()->getPlayer();
-		if ( player&&player->getMarket() ) {
-			int cost=item->getPower() * ( item->getPower()+1 ) *100 ;
-			if ( view==playerInventoryView&&view2==tradeItemsView ) {
-				if ( player->getGold() >=cost ) {
-					player->addItem ( item );
-					player->getMarket()->remove ( item );
-					player->takeGold ( cost );
+		CPlayer*player=this->getView()->getScene()->getMap()->getPlayer();
+		if ( player ) {
+			CMarket*market=player->getMarket();
+			if ( market ) {
+				if ( view==playerInventoryView&&view2==tradeItemsView ) {
+					int cost=item->getPower() * ( item->getPower()+1 ) *market->getSell() ;
+					if ( player->getGold() >=cost ) {
+						player->addItem ( item );
+						market->remove ( item );
+						player->takeGold ( cost );
+					}
+				} else  if ( view==tradeItemsView&&view2==playerInventoryView ) {
+					int cost=item->getPower() * ( item->getPower()+1 ) *market->getBuy() ;
+					player->removeFromInventory ( item );
+					market->add ( item );
+					player->addGold ( cost );
 				}
-			} else  if ( view==tradeItemsView&&view2==playerInventoryView ) {
-				player->removeFromInventory ( item );
-				player->getMarket()->add ( item );
-				player->addGold ( cost );
+				qDebug() <<player->getGold() <<"\n";
+				this->update();
 			}
-			qDebug() <<player->getGold() <<"\n";
-			this->update();
 		}
 	}
 }

@@ -35,4 +35,20 @@ void CMarket::setItems ( QVariantList items ) {
 QVariantList CMarket::getItems() {
 	return QVariantList();
 }
+int CMarket::getSell() const {
+	return sell;
+}
+
+void CMarket::setSell ( int value ) {
+	sell = value;
+}
+int CMarket::getBuy() const {
+	return buy;
+}
+
+void CMarket::setBuy ( int value ) {
+	buy = value;
+}
+
+
 
