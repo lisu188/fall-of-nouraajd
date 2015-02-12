@@ -12,4 +12,5 @@
 #include "CGameObject.h"
 #include "CEvent.h"
 #include "CTrigger.h"
+#include "CQuest.h"
 #include "CMarket.h"

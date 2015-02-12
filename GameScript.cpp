@@ -175,6 +175,16 @@ class CTriggerWrapper : public CTrigger, public wrapper<CTriggerWrapper> {
     }
 };
 
+class CQuestWrapper : public CQuest, public wrapper<CQuestWrapper> {
+  public:
+    virtual bool isCompleted() override final {
+        if (auto f = this->get_override("isCompleted")) {
+            return f();
+        }
+        return this->CQuest::isCompleted();
+    }
+};
+
 BOOST_PYTHON_MODULE(_core) {
     class_<ModuleSpec, boost::noncopyable>("ModuleSpec", no_init)
         .add_property("loader", make_function(&ModuleSpec::loader, return_internal_reference<>()))
@@ -251,7 +261,7 @@ BOOST_PYTHON_MODULE(_game) {
         .def("addManaProc", &CCreature::addManaProc)
         .def("isPlayer", &CCreature::isPlayer)
         .def("trade", &CCreature::trade);
-    class_<CPlayer, bases<CCreature>, boost::noncopyable>("CPlayer");
+    class_<CPlayer, bases<CCreature>, boost::noncopyable>("CPlayer").def("addQuest", &CPlayer::addQuest);
     class_<CMonster, bases<CCreature>, boost::noncopyable>("CMonster");
     class_<CWrapper<CBuilding>, bases<CBuilding>, boost::noncopyable, boost::shared_ptr<CWrapper<CBuilding>>>(
         "CBuilding")
@@ -292,4 +302,7 @@ BOOST_PYTHON_MODULE(_game) {
     class_<CTrigger, bases<CGameObject>, boost::noncopyable>("CTriggerBase", no_init);
     class_<CTriggerWrapper, bases<CTrigger>, boost::noncopyable, boost::shared_ptr<CTriggerWrapper>>("CTrigger")
         .def("trigger", &CTriggerWrapper::trigger);
+    class_<CQuest, bases<CGameObject>, boost::noncopyable>("CQuestBase", no_init);
+    class_<CQuestWrapper, bases<CQuest>, boost::noncopyable, boost::shared_ptr<CQuestWrapper>>("CQuest").def(
+        "isCompleted", &CQuestWrapper::isCompleted);
 }
