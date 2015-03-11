@@ -9,11 +9,14 @@ void CMonster::levelUp() {
 }
 
 Coords CMonster::getNextMove() {
+	return CSmartPathFinder().findPath ( this,this->getMap()->getPlayer() );
+	/*
 	if ( this->getCoords().getDist ( this->getMap()->getPlayer()->getCoords() ) <25 ) {
-		return CSmartPathFinder().findPath ( this,this->getMap()->getPlayer() );
+	    return CSmartPathFinder().findPath ( this,this->getMap()->getPlayer() );
 	} else {
-		return CRandomPathFinder().findPath ( this,this->getMap()->getPlayer() );
+	    return CRandomPathFinder().findPath ( this,this->getMap()->getPlayer() );
 	}
+	*/
 }
 
 CMonster::CMonster() {

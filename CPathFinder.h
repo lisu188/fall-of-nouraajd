@@ -36,11 +36,4 @@ public:
 class CSmartPathFinder : public IPathFinder {
 public:
 	virtual Coords findPath ( CCreature *first, CCreature *second ) override final;
-private:
-	int getCost ( Coords coords );
-	std::list<Coords> getNearCells ( Coords coords );
-	std::unordered_map<Coords, int> values;
-	Coords getNearestCell ( Coords start );
-	void processNode ( CCreature *first, std::list<Cell> &nodes,
-	                   std::unordered_set<Coords> &marked );
 };

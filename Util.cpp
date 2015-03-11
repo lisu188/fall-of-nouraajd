@@ -1,5 +1,6 @@
 #include "Util.h"
 #include "object/CGameObject.h"
+#include <QDebug>
 
 CObjectData::CObjectData ( CGameObject *source ) {
 	setParent ( source );
@@ -15,15 +16,13 @@ std::size_t std::hash<QString>::operator() ( const QString &string ) const {
 	return stringHash ( string.toStdString() );
 }
 
-
 std::size_t std::hash<Coords>::operator() ( const Coords &coords ) const {
 	using std::size_t;
-	int a = ( size_t ) coords.x;
-	int b = ( size_t ) coords.y;
-	int c = ( size_t ) coords.z;
-	return ( size_t ) ( a ^ b ) ^ ( b ^ c ) ^ ( a ^ c );
+	size_t hash =coords.x*13;
+	hash=hash*17+coords.y;
+	hash=hash*31+coords.z;
+	return hash;
 }
-
 
 Coords::Coords() { x = y = z = 0; }
 
