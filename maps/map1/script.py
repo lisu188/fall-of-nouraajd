@@ -23,8 +23,8 @@ class CaveTrigger(CTrigger):
         gooby.setStringProperty("objectName","gooby1")
         object.getMap().addObject(gooby)
         gooby.moveTo(100,100,0)
-        self.getMap().getPlayer().addQuest("mainQuest")
+        object.getMap().getPlayer().addQuest("mainQuest")
 
 class MainQuest(CQuest):
     def isCompleted(self):
-        return complseted
+        return completed
