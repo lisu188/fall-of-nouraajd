@@ -137,7 +137,7 @@ CTile *CMap::getTile(Coords coords) { return this->getTile(coords.x, coords.y, c
 
 bool CMap::canStep(int x, int y, int z) { return getTile(x, y, z)->canStep(); }
 
-bool CMap::canStep(Coords &coords) { return canStep(coords.x, coords.y, coords.z); }
+bool CMap::canStep(const Coords &coords) { return canStep(coords.x, coords.y, coords.z); }
 QString CMap::getMapPath() const { return mapPath; }
 
 QString CMap::getMapName() { return mapPath.replace("\\", "/").split("/").last(); }

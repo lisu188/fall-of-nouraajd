@@ -180,8 +180,16 @@ class CQuestWrapper : public CQuest, public wrapper<CQuestWrapper> {
     virtual bool isCompleted() override final {
         if (auto f = this->get_override("isCompleted")) {
             return f();
+        } else {
+            return this->CQuest::isCompleted();
         }
-        return this->CQuest::isCompleted();
+    }
+    virtual void onComplete() override final {
+        if (auto f = this->get_override("onComplete")) {
+            f();
+        } else {
+            this->CQuest::onComplete();
+        }
     }
 };
 
@@ -303,6 +311,7 @@ BOOST_PYTHON_MODULE(_game) {
     class_<CTriggerWrapper, bases<CTrigger>, boost::noncopyable, boost::shared_ptr<CTriggerWrapper>>("CTrigger")
         .def("trigger", &CTriggerWrapper::trigger);
     class_<CQuest, bases<CGameObject>, boost::noncopyable>("CQuestBase", no_init);
-    class_<CQuestWrapper, bases<CQuest>, boost::noncopyable, boost::shared_ptr<CQuestWrapper>>("CQuest").def(
-        "isCompleted", &CQuestWrapper::isCompleted);
+    class_<CQuestWrapper, bases<CQuest>, boost::noncopyable, boost::shared_ptr<CQuestWrapper>>("CQuest")
+        .def("isCompleted", &CQuestWrapper::isCompleted)
+        .def("onComplete", &CQuestWrapper::onComplete);
 }

@@ -45,6 +45,10 @@ bool Coords::operator< ( const Coords &other ) const {
 	return false;
 }
 
+Coords Coords::operator- ( const Coords &other ) const {
+	return Coords ( x-other.x,y-other.y,z-other.z );
+}
+
 int Coords::getDist ( Coords a ) {
 	double x = this->x - a.x;
 	x *= x;
