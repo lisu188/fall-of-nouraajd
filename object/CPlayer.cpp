@@ -19,9 +19,11 @@ void CPlayer::onTurn ( CGameEvent * ) {
 }
 
 void CPlayer::checkQuests() {
-	for ( CQuest *quest:quests ) {
+	std::set<CQuest*> set=quests;
+	for ( CQuest *quest:set ) {
 		if ( quest->isCompleted() ) {
-			qDebug() <<"Completed quest:"<<quest->getDescription();
+			quest->onComplete();
+			quests.erase ( quests.find ( quest ) );
 		}
 	}
 }

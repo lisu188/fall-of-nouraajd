@@ -28,3 +28,6 @@ class CaveTrigger(CTrigger):
 class MainQuest(CQuest):
     def isCompleted(self):
         return completed
+
+    def onComplete(self):
+        pass

@@ -68,8 +68,8 @@ public:
 	CMouseHandler *getMouseHandler() ;
 	CScriptHandler *getScriptHandler() ;
 	CGuiHandler *getGuiHandler() ;
-	Q_INVOKABLE bool canStep ( int x,int y,int z );
-	bool canStep ( Coords &coords );
+	bool canStep ( int x,int y,int z );
+	bool canStep ( const Coords &coords );
 	QString getMapPath() const;
 	QString getMapName();
 	CMapObject *getObjectByName ( QString name );

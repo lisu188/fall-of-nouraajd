@@ -19,6 +19,7 @@ struct Coords {
 	int x, y, z;
 	bool operator== ( const Coords &other ) const;
 	bool operator< ( const Coords &other ) const;
+	Coords operator- ( const Coords &other ) const;
 	int getDist ( Coords a );
 };
 
