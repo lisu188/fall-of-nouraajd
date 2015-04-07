@@ -8,3 +8,5 @@ from . import potion
 def switchClass(object,cls):
     if cls and type(cls) != float:
         object.__class__=cls
+
+print(__path__)

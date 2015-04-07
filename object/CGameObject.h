@@ -9,7 +9,6 @@ class CMap;
 class CGameObject : public CAnimatedObject {
 	Q_OBJECT
 	Q_PROPERTY ( QString objectType READ getObjectType WRITE setObjectType USER true )
-	Q_PROPERTY ( CMap * map READ getMap WRITE setMap )
 	Q_PROPERTY ( QString tooltip READ getTooltip WRITE setTooltip USER true )
 public:
 	CGameObject();

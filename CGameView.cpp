@@ -1,4 +1,4 @@
-﻿#include "CGameView.h"
+#include "CGameView.h"
 #include "Util.h"
 #include <QDebug>
 #include "CPlayerView.h"
@@ -13,7 +13,7 @@
 
 void CGameView::start() {
 	getScene()->startGame ( mapName ,playerType );
-	CPlayer *player = getScene()->getPlayer();
+	CPlayer *player = getScene()->getMap()->getPlayer();
 	playerStatsView.show();
 	playerStatsView.setPlayer ( player );
 	connect ( player,&CCreature::inventoryChanged,getScene()->getMap()->getGuiHandler(),&CGuiHandler::refresh );
@@ -66,7 +66,7 @@ void CGameView::resizeEvent ( QResizeEvent *event ) {
 			getScene()->getMap()->getGuiHandler()->refresh();
 		}
 
-		CPlayer *player =getScene()->getPlayer();
+		CPlayer *player =getScene()->getMap()->getPlayer();
 		centerOn ( player );
 	}
 }

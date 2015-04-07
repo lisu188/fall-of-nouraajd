@@ -59,6 +59,7 @@ public:
 	void replaceTile ( QString name,Coords coords );
 	Coords getLocationByName ( QString name );
 	CPlayer *getPlayer();
+	void setPlayer ( QString playerName );
 	void moveTile ( CTile* tile,int x, int y, int z );
 	void handleTileLayer ( const QJsonObject& tileset,const QJsonObject& layer );
 	void handleObjectLayer ( const QJsonObject &layer );
@@ -112,6 +113,7 @@ private:
 	void loadMap ( QString mapPath );
 	std::unordered_map<QString,CMapObject *> mapObjects;
 	CGameScene *scene=0;
+	CPlayer *player=0;
 	int currentLevel = 0;
 	std::map<int, QString> defaultTiles;
 	std::map<int, std::pair<int, int> > boundaries;

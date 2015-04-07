@@ -6,5 +6,5 @@ class CCreature;
 
 class CSmartPathFinder {
 public:
-	static Coords findPath  ( Coords  start, Coords  goal,std::function<bool ( const Coords& ) > canStep )  ;
+	static Coords findPath  ( const Coords &start, const Coords &goal, std::function<bool ( const Coords& ) > canStep )  ;
 };

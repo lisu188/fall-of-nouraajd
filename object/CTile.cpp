@@ -43,12 +43,16 @@ void CTile::setCanStep ( bool canStep ) {
 }
 
 void CTile::addToScene ( CGameScene *scene ) {
-	scene->addItem ( this );
+	if ( scene ) {
+		scene->addItem ( this );
+	}
 	setXYZ (  posx , posy,posz );
 }
 
 void CTile::removeFromScene ( CGameScene *scene ) {
-	scene->removeItem ( this );
+	if ( scene ) {
+		scene->removeItem ( this );
+	}
 }
 
 void CTile::setXYZ ( int x, int y, int z ) {

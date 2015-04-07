@@ -9,7 +9,7 @@ void CMonster::levelUp() {
 }
 
 Coords CMonster::getNextMove() {
-	return CSmartPathFinder::findPath ( this->getCoords(),this->getMap()->getPlayer()->getCoords() ,[this] ( const Coords& coords ) {
+	return CSmartPathFinder::findPath ( this->getCoords(),this->getMap()->getPlayer() ?this->getMap()->getPlayer()->getCoords() :this->getCoords(),[this] ( const Coords& coords ) {
 		return this->getMap()->canStep ( coords );
 	} )-this->getCoords();
 }
