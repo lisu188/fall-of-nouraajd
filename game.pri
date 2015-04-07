@@ -28,13 +28,6 @@ CONFIG(debug,debug|release){
     CONFIG +=console
 }
 
-win32{
-    INCLUDEPATH += C:\boost-include
-    DEPENDPATH += C:\boost-include
-    INCLUDEPATH += C:\Python34\include
-    DEPENDPATH += C:\Python34\include
-}
-
 unix{
     INCLUDEPATH += /usr/local/include/python3.4m
     DEPENDPATH += /usr/local/include/python3.4m

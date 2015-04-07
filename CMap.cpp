@@ -1,3 +1,4 @@
+#include <cassert>
 #include "CGameScene.h"
 #include "CGameView.h"
 #include "CMap.h"
@@ -61,7 +62,7 @@ void CMap::replaceTile(QString name, Coords coords) {
 
 Coords CMap::getLocationByName(QString name) { return this->getObjectByName(name)->getCoords(); }
 
-CPlayer *CMap::getPlayer() { return scene ? scene->getPlayer() : nullptr; }
+CPlayer *CMap::getPlayer() { return player; }
 
 void CMap::moveTile(CTile *tile, int x, int y, int z) {
     Coords coords = tile->getCoords();
@@ -376,4 +377,12 @@ CMouseHandler *CMap::getMouseHandler() {
         mouseHandler = new CMouseHandler(this);
     }
     return mouseHandler;
+}
+
+void CMap::setPlayer(QString playerName) {
+    assert(!this->player);
+    CPlayer *player = getObjectHandler()->createObject<CPlayer *>(playerName);
+    addObject(player);
+    player->moveTo(entryx, entryy, entryz);
+    this->player = player;
 }
