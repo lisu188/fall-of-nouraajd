@@ -34,9 +34,7 @@ private:
 void CGameScene::startGame ( QString file ,QString player ) {
 	srand ( time ( 0 ) );
 	map = new CMap ( this,file );
-	this->player = map->getObjectHandler()->createObject<CPlayer*> ( player );
-	map->addObject ( this->player );
-	this->player->moveTo ( map->getEntryX(), map->getEntryY(), map->getEntryZ() );
+	map->setPlayer ( player  );
 	QThreadPool::globalInstance()->start ( new LoadGameTask ( map ) );
 }
 
@@ -67,31 +65,31 @@ void CGameScene::keyPressEvent ( QKeyEvent *event ) {
 	switch ( event->key() ) {
 	case Qt::Key_Up:
 		if ( !map->getGuiHandler()->isAnyPanelVisible() ) {
-			this->getPlayer()->setNextMove ( Coords ( 0,-1 ,0 ) );
+			map->getPlayer()->setNextMove ( Coords ( 0,-1 ,0 ) );
 			map->move();
 		}
 		break;
 	case Qt::Key_Down:
 		if ( !map->getGuiHandler()->isAnyPanelVisible() ) {
-			this->getPlayer()->setNextMove ( Coords ( 0,1,0 ) );
+			map->getPlayer()->setNextMove ( Coords ( 0,1,0 ) );
 			map->move();
 		}
 		break;
 	case Qt::Key_Left:
 		if ( !map->getGuiHandler()->isAnyPanelVisible() ) {
-			this->getPlayer()->setNextMove ( Coords ( -1,0,0 ) );
+			map->getPlayer()->setNextMove ( Coords ( -1,0,0 ) );
 			map->move();
 		}
 		break;
 	case Qt::Key_Right:
 		if ( !map->getGuiHandler()->isAnyPanelVisible() ) {
-			this->getPlayer()->setNextMove ( Coords ( 1,0,0 ) );
+			map->getPlayer()->setNextMove ( Coords ( 1,0,0 ) );
 			map->move();
 		}
 		break;
 	case Qt::Key_Space:
 		if ( !map->getGuiHandler()->isAnyPanelVisible() ) {
-			this->getPlayer()->setNextMove ( Coords ( 0,0,0 ) );
+			map->getPlayer()->setNextMove ( Coords ( 0,0,0 ) );
 			map->move();
 		}
 		break;
@@ -101,11 +99,4 @@ void CGameScene::keyPressEvent ( QKeyEvent *event ) {
 	}
 }
 
-CPlayer *CGameScene::getPlayer() const {
-	return player;
-}
-
-void CGameScene::setPlayer ( CPlayer *value ) {
-	player = value;
-}
 

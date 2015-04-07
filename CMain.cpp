@@ -9,8 +9,8 @@
 #include <stdio.h>
 #include <signal.h>
 
-void messageHandler ( QtMsgType type, const QMessageLogContext &context,
-                      const QString &msg ) {
+static void messageHandler ( QtMsgType type, const QMessageLogContext &context,
+                             const QString &msg ) {
 	static std::mutex mutex;
 	std::unique_lock<std::mutex> lock ( mutex );
 	QByteArray localMsg = msg.toLocal8Bit();
@@ -19,8 +19,8 @@ void messageHandler ( QtMsgType type, const QMessageLogContext &context,
 		fprintf ( stderr, "%s\n", localMsg.constData() );
 		break;
 	case QtWarningMsg:
-		// fprintf(stderr, "Warning: %s (%s:%u, %s)\n", localMsg.constData(),
-		// context.file, context.line, context.function);
+		fprintf ( stderr, "Warning: %s (%s:%u, %s)\n", localMsg.constData(),
+		          context.file, context.line, context.function );
 		break;
 	case QtCriticalMsg:
 		fprintf ( stderr, "Critical: %s (%s:%u, %s)\n", localMsg.constData(),
@@ -33,10 +33,18 @@ void messageHandler ( QtMsgType type, const QMessageLogContext &context,
 	}
 }
 
-void registerMetaTypes() {
+static void registerMetaTypes() {
 	qRegisterMetaType<Stats>();
 	qRegisterMetaType<Damage>();
 }
+
+static class init {
+public:
+	init() {
+		registerMetaTypes();
+	}
+} a;
+
 
 int main ( int argc, char *argv[] ) {
 	qInstallMessageHandler ( messageHandler );
@@ -45,7 +53,6 @@ int main ( int argc, char *argv[] ) {
 		abort();
 	} );
 	QApplication a ( argc, argv );
-	registerMetaTypes();
 	CMainWindow window;
 	window.show();
 	return a.exec();
