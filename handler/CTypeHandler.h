@@ -1,6 +1,6 @@
 #pragma once
 #include <QObject>
-#include <mutex>
+#include <functional>
 #include <unordered_map>
 #include "Util.h"
 
@@ -34,9 +34,9 @@ public:
 	CTypeHandler();
 	virtual CGameObject *create ( QString name ) override;
 	virtual QString getHandlerName() override;
-	void registerType ( QString name, CGameObject* ( *constructor ) () );
+	static void registerType ( QString name, std::function<CGameObject*() > constructor );
 private:
-	std::unordered_map<QString,CGameObject* ( * ) () > constructors;
+	static std::unordered_map<QString,std::function<CGameObject*() > > constructors;
 };
 
 class PyTypeHandler : public ATypeHandler {

@@ -10,17 +10,18 @@ TARGET = game
 TEMPLATE = app
 
 include(game.pri)
+unix:LIBS += -lboost_python3 -lpython3.4m
+INCLUDEPATH += /usr/local/include/python3.4m
 
-SOURCES += \
-     CPathFinder.cpp \
-     GameScript.cpp \
-     CMap.cpp \
-     CGameScene.cpp \
-     CGameView.cpp \
-     CMainWindow.cpp \
-     CPlayerView.cpp \
-     Stats.cpp \
-     CMain.cpp \
+SOURCES += CPathFinder.cpp \
+    GameScript.cpp \
+    CMap.cpp \
+    CGameScene.cpp \
+    CGameView.cpp \
+    CMainWindow.cpp \
+    CPlayerView.cpp \
+    Stats.cpp \
+    CMain.cpp \
     boost/python/dict.cpp \
     boost/python/errors.cpp \
     boost/python/exec.cpp \
@@ -74,77 +75,68 @@ SOURCES += \
     object/CEffect.cpp \
     object/CGameObject.cpp \
     object/CEvent.cpp \
-    object/CTrigger.cpp
+    object/CTrigger.cpp \
+    handler/CQuestHandler.cpp \
+    object/CQuest.cpp \
+    panel/CTradePanel.cpp \
+    handler/CMouseHandler.cpp \
+    Util.cpp \
+    panel/CGamePanel.cpp \
+    object/CMarket.cpp \
+    CAnimation.cpp
 
-HEADERS += \
-     CPathFinder.h \
-     CMap.h \
-     CGameScene.h \
-     CGameView.h \
-     CMainWindow.h \
-     CPlayerView.h \
-     Stats.h \
-     Util.h \
+HEADERS  += \
+    CAnimation.h \
+    CGameScene.h \
+    CGameView.h \
+    CMainWindow.h \
+    CMap.h \
+    CPathFinder.h \
+    CPlayerView.h \
     CScriptLoader.h \
-    handler/CHandler.h \
-    handler/CObjectHandler.h \
+    Stats.h \
+    Util.h \
     handler/CEventHandler.h \
-    handler/CTypeHandler.h \
     handler/CGuiHandler.h \
-    object/CObject.h \
-    object/CTile.h \
-    object/CMapObject.h \
-    object/CItem.h \
-    object/CInteraction.h \
-    object/CCreature.h \
-    object/CBuilding.h \
+    handler/CHandler.h \
+    handler/CLootHandler.h \
+    handler/CMouseHandler.h \
+    handler/CObjectHandler.h \
+    handler/CQuestHandler.h \
+    handler/CScriptHandler.h \
+    handler/CTypeHandler.h \
     object/CAnimatedObject.h \
+    object/CBuilding.h \
+    object/CCreature.h \
+    object/CEffect.h \
+    object/CEvent.h \
+    object/CGameObject.h \
+    object/CInteraction.h \
+    object/CItem.h \
+    object/CMapObject.h \
+    object/CMarket.h \
+    object/CMonster.h \
+    object/CObject.h \
+    object/CPlayer.h \
+    object/CQuest.h \
+    object/CTile.h \
+    object/CTrigger.h \
+    panel/CCharPanel.h \
+    panel/CFightPanel.h \
+    panel/CGamePanel.h \
     panel/CPanel.h \
     panel/CTextPanel.h \
-    panel/CFightPanel.h \
-    panel/CCharPanel.h \
-    panel/CGamePanel.h \
-    handler/CScriptHandler.h \
-    handler/CLootHandler.h \
-    provider/CResourcesProvider.h \
-    provider/CConfigurationProvider.h \
+    panel/CTradePanel.h \
     provider/CAnimationProvider.h \
+    provider/CConfigurationProvider.h \
     provider/CProvider.h \
-    object/CPlayer.h \
-    object/CMonster.h \
-    object/CEffect.h \
-    object/CGameObject.h \
-    object/CEvent.h \
-    object/CTrigger.h
-
-
-unix:LIBS += -L/usr/local/lib -lpython3.4m -ldl -fPIC -lutil
-win32:LIBS += -LC:\Python34\libs -lpython34
-
-FORMS += \
-     CMainWindow.ui
+    provider/CResourcesProvider.h
 
 RESOURCES += \
-    scripts.qrc \
-    maps.qrc \
+    config.qrc \
     images.qrc \
-    config.qrc
+    maps.qrc \
+    scripts.qrc
 
-OTHER_FILES += \
-    format.py \
-    reindent.py
-
-
-SOURCES += handler/CQuestHandler.cpp object/CQuest.cpp
-HEADERS += handler/CQuestHandler.h object/CQuest.h
-
-SOURCES += panel/CTradePanel.cpp
-HEADERS += panel/CTradePanel.h
-
-SOURCES += handler/CMouseHandler.cpp
-HEADERS += handler/CMouseHandler.h
-
-SOURCES += Util.cpp panel/CGamePanel.cpp
-
-SOURCES += object/CMarket.cpp
-HEADERS += object/CMarket.h
+FORMS += \
+    CMainWindow.ui

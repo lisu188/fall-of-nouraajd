@@ -1,6 +1,7 @@
 from game import CEvent
 from game import CTrigger
 from game import CQuest
+from game import trigger
 
 completed = False
 
@@ -10,12 +11,14 @@ class StartEvent(CEvent):
             self.getMap().getGuiHandler().showMessage(self.getStringProperty('text'))
             self.getMap().removeAll(lambda ob: ob.getStringProperty('objectType')==self.getStringProperty('objectType'))
 
+@trigger
 class GoobyTrigger(CTrigger):
     def trigger(self,object,event):
         object.getMap().getGuiHandler().showMessage("Gooby killed!!!")
         global completed
         completed=True
 
+@trigger
 class CaveTrigger(CTrigger):
     def trigger(self,object,event):
         object.getMap().getGuiHandler().showMessage("You feel the ground shaking, and see the ratmen all around you!!! But the one part is missing in this puzzle. Letter said about the ratmen who was much bigger than the other. These here are just ordinary pritschers.")
