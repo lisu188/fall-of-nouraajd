@@ -32,7 +32,7 @@ CGameObject *CObjectHandler::_createObject ( QString type ) const {
 	QJsonObject config=objectConfig[type].toObject();
 	QString className=config["class"].toString();
 	QJsonObject properties=config["properties"].toObject();
-	CGameObject *object = CTypeHandler::create ( className.startsWith('.') ? className.section('.', -1) : className );
+	CGameObject *object = CTypeHandler::create ( className );
 	if ( object==nullptr ) {
 		qFatal ( ( "No object for type: "+type ).toStdString().c_str() );
 	}
