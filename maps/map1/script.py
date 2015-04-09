@@ -36,4 +36,3 @@ class MainQuest(CQuest):
 
     def onComplete(self):
         pass
-
