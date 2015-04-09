@@ -1,65 +1,56 @@
 {
     "AbyssalShadowsEffect": {
-        "class": "game.effect.AbyssalShadowsEffect",
-        "handler": "PyTypeHandler",
+        "class": "AbyssalShadowsEffect",
         "properties": {
             "duration": 4
         }
     },
     "ArmorOfEndlessWinterEffect": {
-        "class": "game.effect.ArmorOfEndlessWinterEffect",
-        "handler": "PyTypeHandler",
+        "class": "ArmorOfEndlessWinterEffect",
         "properties": {
             "buff": true,
             "duration": 3
         }
     },
     "BarrierEffect": {
-        "class": "game.effect.BarrierEffect",
-        "handler": "PyTypeHandler",
+        "class": "BarrierEffect",
         "properties": {
             "buff": true,
             "duration": 3
         }
     },
     "BloodlashEffect": {
-        "class": "game.effect.BloodlashEffect",
-        "handler": "PyTypeHandler",
+        "class": "BloodlashEffect",
         "properties": {
             "duration": 3
         }
     },
     "ChloroformEffect": {
-        "class": "game.effect.ChloroformEffect",
-        "handler": "PyTypeHandler",
+        "class": "ChloroformEffect",
         "properties": {
             "duration": 4
         }
     },
     "EndlessPainEffect": {
-        "class": "game.effect.EndlessPainEffect",
-        "handler": "PyTypeHandler",
+        "class": "EndlessPainEffect",
         "properties": {
             "duration": 2
         }
     },
     "LethalPoisonEffect": {
-        "class": "game.effect.LethalPoisonEffect",
-        "handler": "PyTypeHandler",
+        "class": "LethalPoisonEffect",
         "properties": {
             "duration": 6
         }
     },
     "MutilationEffect": {
-        "class": "game.effect.MutilationEffect",
-        "handler": "PyTypeHandler",
+        "class": "MutilationEffect",
         "properties": {
             "duration": 3
         }
     },
     "Stun": {
-        "class": "game.effect.Stun",
-        "handler": "PyTypeHandler",
+        "class": "Stun",
         "properties": {
             "duration": 2
         }

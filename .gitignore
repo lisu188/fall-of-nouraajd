@@ -8,3 +8,4 @@ gen/
 *.swp
 *.pyo
 *.user
+.project

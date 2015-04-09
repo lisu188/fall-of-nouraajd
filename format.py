@@ -17,7 +17,10 @@ DIR="."
 def formatJson(files):
     for file in files:
         text=open(file).read()
-        out=json.dumps(json.loads(text), sort_keys = True, indent = 4)
+        try:
+            out=json.dumps(json.loads(text), sort_keys = True, indent = 4)
+        except:
+            print("Error:",file)
         if(out!=text):
             open(file,"w").write(out)
 

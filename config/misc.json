@@ -1,7 +1,6 @@
 {
     "Event": {
-        "class": "game.CEvent",
-        "handler": "PyTypeHandler",
+        "class": "CEvent",
         "properties": {}
     }
 }
