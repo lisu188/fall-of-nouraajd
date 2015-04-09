@@ -2,7 +2,6 @@
 #include"CMap.h"
 #include "object/CObject.h"
 
-#include <unordered_map>
 #include <unordered_set>
 
 #include <queue>
@@ -59,7 +58,7 @@ static inline Coords getNearestCell ( const Coords & start ,const Coords &goal,s
 	return queue.top();
 }
 
-Coords CSmartPathFinder::findPath ( const Coords &  start, const Coords &  goal, std::function<bool ( const Coords& ) > canStep ) {
+std::unordered_map<Coords, int> CSmartPathFinder::fillValues ( const Coords&  goal, const Coords&  start, std::function<bool ( const Coords& ) > canStep ) {
 	Queue nodes (  std::bind ( cellCompare,std::placeholders::_1,std::placeholders::_2,start ) );
 	std::unordered_set<Coords> marked;
 	nodes.push ( goal );
@@ -86,5 +85,11 @@ Coords CSmartPathFinder::findPath ( const Coords &  start, const Coords &  goal,
 			}
 		}
 	}
+
+	return values;
+}
+
+Coords CSmartPathFinder::findNextStep ( const Coords &  start, const Coords &  goal, std::function<bool ( const Coords& ) > canStep ) {
+	std::unordered_map<Coords, int> values = fillValues ( goal, start, canStep );
 	return getNearestCell ( start ,goal,values );
 }

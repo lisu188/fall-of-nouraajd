@@ -9,4 +9,6 @@ def switchClass(object,cls):
     if cls and type(cls) != float:
         object.__class__=cls
 
-print(__path__)
+def trigger(tr):
+    from _core import registerType
+    registerType(tr.__name__,tr)

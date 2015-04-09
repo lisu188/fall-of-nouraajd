@@ -2,6 +2,8 @@
 #include "object/CObject.h"
 #include "CMap.h"
 
+std::unordered_map<QString,std::function<CGameObject*() > > CTypeHandler::constructors;
+
 CObjectHandler* ATypeHandler::getObjectHandler() {
 	return dynamic_cast<CObjectHandler*> ( this->parent() );
 }
@@ -51,6 +53,8 @@ QString CTypeHandler::getHandlerName() {
 	return "CTypeHandler";
 }
 
-void CTypeHandler::registerType ( QString name,  CGameObject* ( *constructor ) () ) {
+void CTypeHandler::registerType ( QString name, std::function<CGameObject*() > constructor ) {
 	constructors.insert ( std::make_pair ( name,constructor ) );
 }
+
+
