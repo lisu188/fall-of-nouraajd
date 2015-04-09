@@ -1,258 +1,79 @@
 {
-    "BladeOfDarkDreams": {
-        "class": "CWeapon",
-        "handler": "CTypeHandler",
+    "BeachTile": {
+        "class": "CTile",
         "properties": {
-            "animation": "images/items/weapons/bladeofdarkdreams",
-            "bonus": {
-                "agility": 7,
-                "crit": 3,
-                "dmgMax": 42,
-                "dmgMin": 35,
-                "intelligence": 5,
-                "stamina": 12,
-                "strength": 13
-            },
-            "power": 9
+            "animation": "images/tiles/beach",
+            "canStep": true
         }
     },
-    "BroadSword": {
-        "class": "CWeapon",
-        "handler": "CTypeHandler",
+    "DesertTile": {
+        "class": "CTile",
         "properties": {
-            "animation": "images/items/weapons/broadsword",
-            "bonus": {
-                "agility": 2,
-                "dmgMax": 18,
-                "dmgMin": 15,
-                "intelligence": 1,
-                "stamina": 4,
-                "strength": 5
-            },
-            "power": 5
+            "animation": "images/tiles/desert",
+            "canStep": true
         }
     },
-    "ChaosSword": {
-        "class": "CWeapon",
-        "handler": "CTypeHandler",
+    "GrassTile": {
+        "class": "CTile",
         "properties": {
-            "animation": "images/items/weapons/chaossword",
-            "bonus": {
-                "attack": 15,
-                "damage": 25
-            },
-            "interaction": "ChaosBlast",
-            "power": 18
+            "animation": "images/tiles/grass",
+            "canStep": true
         }
     },
-    "Dagger": {
-        "class": "CWeapon",
-        "handler": "CTypeHandler",
+    "GroundTile": {
+        "class": "CTile",
         "properties": {
-            "animation": "images/items/weapons/dagger",
-            "bonus": {
-                "agility": 4,
-                "dmgMax": 11,
-                "dmgMin": 8,
-                "stamina": 2
-            },
-            "power": 3
+            "animation": "images/tiles/ground",
+            "canStep": true
         }
     },
-    "DaggerOfVileHeart": {
-        "class": "CWeapon",
-        "handler": "CTypeHandler",
+    "LavaTile": {
+        "class": "CTile",
         "properties": {
-            "animation": "images/items/weapons/daggerofvileheart",
-            "bonus": {
-                "agility": 15,
-                "crit": 6,
-                "dmgMax": 37,
-                "dmgMin": 33,
-                "intelligence": 8,
-                "stamina": 11,
-                "strength": 5
-            },
-            "power": 9
+            "animation": "images/tiles/lava",
+            "canStep": true
         }
     },
-    "Knife": {
-        "class": "CWeapon",
-        "handler": "CTypeHandler",
+    "MountainTile": {
+        "class": "CTile",
         "properties": {
-            "animation": "images/items/weapons/knife",
-            "bonus": {
-                "agility": 1,
-                "dmgMax": 7,
-                "dmgMin": 5,
-                "stamina": 1
-            }
+            "animation": "images/tiles/mountain",
+            "canStep": false
         }
     },
-    "LongSword": {
-        "class": "CWeapon",
-        "handler": "CTypeHandler",
+    "RoadTile": {
+        "class": "RoadTile",
         "properties": {
-            "animation": "images/items/weapons/longsword",
-            "bonus": {
-                "dmgMax": 14,
-                "dmgMin": 12,
-                "stamina": 2,
-                "strength": 1
-            },
-            "power": 3
+            "animation": "images/tiles/road",
+            "canStep": true
         }
     },
-    "ShadowBlade": {
-        "class": "CWeapon",
-        "handler": "CTypeHandler",
+    "SnowTile": {
+        "class": "CTile",
         "properties": {
-            "animation": "images/items/weapons/shadowblade",
-            "bonus": {
-                "agility": 18,
-                "crit": 6,
-                "dmgMax": 60,
-                "dmgMin": 54,
-                "intelligence": 17,
-                "stamina": 12,
-                "strength": 10
-            },
-            "power": 25
+            "animation": "images/tiles/snow",
+            "canStep": true
         }
     },
-    "ShortStaff": {
-        "class": "CWeapon",
-        "handler": "CTypeHandler",
+    "SwampTile": {
+        "class": "CTile",
         "properties": {
-            "animation": "images/items/weapons/shortstaff",
-            "bonus": {
-                "dmgMax": 7,
-                "dmgMin": 5,
-                "intelligence": 1,
-                "stamina": 1
-            }
+            "animation": "images/tiles/swamp",
+            "canStep": true
         }
     },
-    "ShortSword": {
-        "class": "CWeapon",
-        "handler": "CTypeHandler",
+    "WastelandTile": {
+        "class": "CTile",
         "properties": {
-            "animation": "images/items/weapons/shortsword",
-            "bonus": {
-                "dmgMax": 7,
-                "dmgMin": 5,
-                "stamina": 1,
-                "strength": 1
-            }
+            "animation": "images/tiles/wasteland",
+            "canStep": true
         }
     },
-    "Staff": {
-        "class": "CWeapon",
-        "handler": "CTypeHandler",
+    "WaterTile": {
+        "class": "CTile",
         "properties": {
-            "animation": "images/items/weapons/staff",
-            "bonus": {
-                "dmgMax": 10,
-                "dmgMin": 7,
-                "intelligence": 5,
-                "stamina": 2
-            },
-            "interaction": "ElemStaff",
-            "power": 3
-        }
-    },
-    "StaffOfTheAbyss": {
-        "class": "CWeapon",
-        "handler": "CTypeHandler",
-        "properties": {
-            "animation": "images/items/weapons/staffoftheabyss",
-            "bonus": {
-                "agility": 10,
-                "dmgMax": 41,
-                "dmgMin": 34,
-                "intelligence": 12,
-                "stamina": 8,
-                "strength": 4
-            },
-            "power": 9
-        }
-    },
-    "Stiletto": {
-        "class": "CWeapon",
-        "handler": "CTypeHandler",
-        "properties": {
-            "animation": "images/items/weapons/stiletto",
-            "bonus": {
-                "agility": 4,
-                "dmgMax": 17,
-                "dmgMin": 14,
-                "intelligence": 0,
-                "stamina": 5,
-                "strength": 3
-            },
-            "power": 5
-        }
-    },
-    "Sword": {
-        "class": "CWeapon",
-        "handler": "CTypeHandler",
-        "properties": {
-            "animation": "images/items/weapons/sword",
-            "bonus": {
-                "attack": 5,
-                "damage": 10
-            }
-        }
-    },
-    "Valkyrie": {
-        "class": "CWeapon",
-        "handler": "CTypeHandler",
-        "properties": {
-            "animation": "images/items/weapons/valkyrie",
-            "bonus": {
-                "agility": 17,
-                "crit": 1,
-                "dmgMax": 59,
-                "dmgMin": 52,
-                "intelligence": 20,
-                "stamina": 14,
-                "strength": 8
-            },
-            "power": 25
-        }
-    },
-    "Void": {
-        "class": "CWeapon",
-        "handler": "CTypeHandler",
-        "properties": {
-            "animation": "images/items/weapons/void",
-            "bonus": {
-                "agility": 12,
-                "block": 4,
-                "crit": 3,
-                "dmgMax": 65,
-                "dmgMin": 62,
-                "intelligence": 8,
-                "stamina": 17,
-                "strength": 15
-            },
-            "power": 25
-        }
-    },
-    "Wand": {
-        "class": "CWeapon",
-        "handler": "CTypeHandler",
-        "properties": {
-            "animation": "images/items/weapons/wand",
-            "bonus": {
-                "agility": 2,
-                "dmgMax": 17,
-                "dmgMin": 13,
-                "intelligence": 7,
-                "stamina": 2,
-                "strength": 1
-            },
-            "power": 5
+            "animation": "images/tiles/water",
+            "canStep": false
         }
     }
 }

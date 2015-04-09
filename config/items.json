@@ -1,7 +1,6 @@
 {
     "CrownOfNightmares": {
         "class": "CHelmet",
-        "handler": "CTypeHandler",
         "properties": {
             "animation": "images/items/helmets/crownofnightmares",
             "bonus": {
@@ -17,7 +16,6 @@
     },
     "EradicatorsBoots": {
         "class": "CBoots",
-        "handler": "CTypeHandler",
         "properties": {
             "animation": "images/items/boots/eradicatorsboots",
             "bonus": {
@@ -32,7 +30,6 @@
     },
     "GlovesOfTheAssasin": {
         "class": "CGloves",
-        "handler": "CTypeHandler",
         "properties": {
             "animation": "images/items/gloves/glovesoftheassasin",
             "bonus": {
@@ -48,7 +45,6 @@
     },
     "Scroll": {
         "class": "CScroll",
-        "handler": "CTypeHandler",
         "properties": {
             "animation": "images/items/scroll",
             "power": 0,
@@ -57,7 +53,6 @@
     },
     "UndestructibleBelt": {
         "class": "CBelt",
-        "handler": "CTypeHandler",
         "properties": {
             "animation": "images/items/belts/undestructiblebelt",
             "bonus": {

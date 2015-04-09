@@ -9,6 +9,12 @@ def switchClass(object,cls):
     if cls and type(cls) != float:
         object.__class__=cls
 
-def trigger(tr):
+def game_object(object):
     from _core import registerType
-    registerType(tr.__name__,tr)
+    registerType(object.__name__,object)
+    return object
+
+def game_trigger(event,object):
+    def trigger_wrapper(f):
+        pass
+    return trigger_wrapper

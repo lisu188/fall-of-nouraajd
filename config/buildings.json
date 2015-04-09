@@ -1,7 +1,6 @@
 {
     "Cave": {
-        "class": "game.object.Cave",
-        "handler": "PyTypeHandler",
+        "class": "Cave",
         "properties": {
             "animation": "images/buildings/cave",
             "chance": 15,
@@ -11,15 +10,13 @@
         }
     },
     "Market": {
-        "class": "game.object.Market",
-        "handler": "PyTypeHandler",
+        "class": "Market",
         "properties": {
             "animation": "images/buildings/market"
         }
     },
     "Teleporter": {
-        "class": "game.object.Teleporter",
-        "handler": "PyTypeHandler",
+        "class": "Teleporter",
         "properties": {
             "animation": "images/buildings/teleporter"
         }

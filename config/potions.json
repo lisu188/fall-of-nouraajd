@@ -1,7 +1,6 @@
 {
     "FullLifePotion": {
-        "class": "game.potion.LifePotion",
-        "handler": "PyTypeHandler",
+        "class": ".potion.LifePotion",
         "properties": {
             "animation": "images/items/potions/life",
             "power": 5,
@@ -9,8 +8,7 @@
         }
     },
     "FullManaPotion": {
-        "class": "game.potion.ManaPotion",
-        "handler": "PyTypeHandler",
+        "class": ".potion.ManaPotion",
         "properties": {
             "animation": "images/items/potions/mana",
             "power": 5,
@@ -18,8 +16,7 @@
         }
     },
     "GreaterLifePotion": {
-        "class": "game.potion.LifePotion",
-        "handler": "PyTypeHandler",
+        "class": ".potion.LifePotion",
         "properties": {
             "animation": "images/items/potions/life",
             "power": 3,
@@ -27,8 +24,7 @@
         }
     },
     "GreaterManaPotion": {
-        "class": "game.potion.ManaPotion",
-        "handler": "PyTypeHandler",
+        "class": ".potion.ManaPotion",
         "properties": {
             "animation": "images/items/potions/mana",
             "power": 3,
@@ -36,8 +32,7 @@
         }
     },
     "LesserLifePotion": {
-        "class": "game.potion.LifePotion",
-        "handler": "PyTypeHandler",
+        "class": ".potion.LifePotion",
         "properties": {
             "animation": "images/items/potions/life",
             "power": 1,
@@ -45,8 +40,7 @@
         }
     },
     "LesserManaPotion": {
-        "class": "game.potion.ManaPotion",
-        "handler": "PyTypeHandler",
+        "class": ".potion.ManaPotion",
         "properties": {
             "animation": "images/items/potions/mana",
             "power": 1,
@@ -54,8 +48,7 @@
         }
     },
     "LifePotion": {
-        "class": "game.potion.LifePotion",
-        "handler": "PyTypeHandler",
+        "class": ".potion.LifePotion",
         "properties": {
             "animation": "images/items/potions/life",
             "power": 2,
@@ -63,8 +56,7 @@
         }
     },
     "ManaPotion": {
-        "class": "game.potion.ManaPotion",
-        "handler": "PyTypeHandler",
+        "class": ".potion.ManaPotion",
         "properties": {
             "animation": "images/items/potions/mana",
             "power": 3,
@@ -72,8 +64,7 @@
         }
     },
     "MaxLifePotion": {
-        "class": "game.potion.LifePotion",
-        "handler": "PyTypeHandler",
+        "class": ".potion.LifePotion",
         "properties": {
             "animation": "images/items/potions/life",
             "power": 4,
@@ -81,8 +72,7 @@
         }
     },
     "MaxManaPotion": {
-        "class": "game.potion.ManaPotion",
-        "handler": "PyTypeHandler",
+        "class": ".potion.ManaPotion",
         "properties": {
             "animation": "images/items/potions/mana",
             "power": 4,
