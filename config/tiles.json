@@ -1,7 +1,6 @@
 {
     "BeachTile": {
         "class": "CTile",
-        "handler": "CTypeHandler",
         "properties": {
             "animation": "images/tiles/beach",
             "canStep": true
@@ -9,7 +8,6 @@
     },
     "DesertTile": {
         "class": "CTile",
-        "handler": "CTypeHandler",
         "properties": {
             "animation": "images/tiles/desert",
             "canStep": true
@@ -17,7 +15,6 @@
     },
     "GrassTile": {
         "class": "CTile",
-        "handler": "CTypeHandler",
         "properties": {
             "animation": "images/tiles/grass",
             "canStep": true
@@ -25,7 +22,6 @@
     },
     "GroundTile": {
         "class": "CTile",
-        "handler": "CTypeHandler",
         "properties": {
             "animation": "images/tiles/ground",
             "canStep": true
@@ -33,7 +29,6 @@
     },
     "LavaTile": {
         "class": "CTile",
-        "handler": "CTypeHandler",
         "properties": {
             "animation": "images/tiles/lava",
             "canStep": true
@@ -41,15 +36,13 @@
     },
     "MountainTile": {
         "class": "CTile",
-        "handler": "CTypeHandler",
         "properties": {
             "animation": "images/tiles/mountain",
             "canStep": false
         }
     },
     "RoadTile": {
-        "class": "game.tile.RoadTile",
-        "handler": "PyTypeHandler",
+        "class": "RoadTile",
         "properties": {
             "animation": "images/tiles/road",
             "canStep": true
@@ -57,7 +50,6 @@
     },
     "SnowTile": {
         "class": "CTile",
-        "handler": "CTypeHandler",
         "properties": {
             "animation": "images/tiles/snow",
             "canStep": true
@@ -65,7 +57,6 @@
     },
     "SwampTile": {
         "class": "CTile",
-        "handler": "CTypeHandler",
         "properties": {
             "animation": "images/tiles/swamp",
             "canStep": true
@@ -73,7 +64,6 @@
     },
     "WastelandTile": {
         "class": "CTile",
-        "handler": "CTypeHandler",
         "properties": {
             "animation": "images/tiles/wasteland",
             "canStep": true
@@ -81,7 +71,6 @@
     },
     "WaterTile": {
         "class": "CTile",
-        "handler": "CTypeHandler",
         "properties": {
             "animation": "images/tiles/water",
             "canStep": false

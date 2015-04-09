@@ -1,7 +1,6 @@
 {
     "AbyssalShadows": {
-        "class": "game.interaction.AbyssalShadows",
-        "handler": "PyTypeHandler",
+        "class": "AbyssalShadows",
         "properties": {
             "animation": "images/interactions/abyssalshadows",
             "effect": "AbyssalShadowsEffect",
@@ -9,8 +8,7 @@
         }
     },
     "ArmorOfEndlessWinter": {
-        "class": "game.interaction.ArmorOfEndlessWinter",
-        "handler": "PyTypeHandler",
+        "class": "ArmorOfEndlessWinter",
         "properties": {
             "animation": "images/interactions/armorofendlesswinter",
             "effect": "ArmorOfEndlessWinterEffect",
@@ -18,16 +16,14 @@
         }
     },
     "Attack": {
-        "class": "game.interaction.Attack",
-        "handler": "PyTypeHandler",
+        "class": "Attack",
         "properties": {
             "animation": "images/interactions/attack",
             "tooltip": "Standard Attack"
         }
     },
     "Backstab": {
-        "class": "game.interaction.Backstab",
-        "handler": "PyTypeHandler",
+        "class": "Backstab",
         "properties": {
             "animationation": "images/interactions/backstab",
             "effect": "StunEffect",
@@ -35,8 +31,7 @@
         }
     },
     "Barrier": {
-        "class": "game.interaction.Barrier",
-        "handler": "PyTypeHandler",
+        "class": "Barrier",
         "properties": {
             "animation": "images/interactions/barrier",
             "effect": "BarrierEffect",
@@ -44,16 +39,14 @@
         }
     },
     "BloodThirst": {
-        "class": "game.interaction.BloodThirst",
-        "handler": "PyTypeHandler",
+        "class": "BloodThirst",
         "properties": {
             "animation": "images/interactions/bloodthirst",
             "manaCost": 35
         }
     },
     "Bloodlash": {
-        "class": "game.interaction.Bloodlash",
-        "handler": "PyTypeHandler",
+        "class": "Bloodlash",
         "properties": {
             "animation": "images/interactions/bloodlash",
             "effect": "BloodlashEffect",
@@ -61,16 +54,14 @@
         }
     },
     "ChaosBlast": {
-        "class": "game.interaction.ChaosBlast",
-        "handler": "PyTypeHandler",
+        "class": "ChaosBlast",
         "properties": {
             "animation": "images/interactions/chaosblast",
             "manaCost": 150
         }
     },
     "Chloroform": {
-        "class": "game.interaction.Chloroform",
-        "handler": "PyTypeHandler",
+        "class": "Chloroform",
         "properties": {
             "animation": "images/interactions/chloroform",
             "effect": "ChloroformEffect",
@@ -78,37 +69,32 @@
         }
     },
     "DeathStrike": {
-        "class": "game.interaction.DeathStrike",
-        "handler": "PyTypeHandler",
+        "class": "DeathStrike",
         "properties": {
             "animation": "images/interactions/deathstrike",
             "manaCost": 45
         }
     },
     "Devour": {
-        "class": "game.interaction.Devour",
-        "handler": "PyTypeHandler",
+        "class": "Devour",
         "properties": {
             "animation": "images/interactions/devour",
             "manaCost": 75
         }
     },
     "DoubleAttack": {
-        "class": "game.interaction.DoubleAttack",
-        "handler": "PyTypeHandler",
+        "class": "DoubleAttack",
         "properties": {
             "animation": "images/interactions/doubleattack",
             "manaCost": 50
         }
     },
     "ElemStaff": {
-        "class": "game.interaction.ElemStaff",
-        "handler": "PyTypeHandler",
+        "class": "ElemStaff",
         "properties": {}
     },
     "EndlessPain": {
-        "class": "game.interaction.EndlessPain",
-        "handler": "PyTypeHandler",
+        "class": "EndlessPain",
         "properties": {
             "animation": "images/interactions/endlesspain",
             "effect": "EndlessPainEffect",
@@ -116,16 +102,14 @@
         }
     },
     "FrostBolt": {
-        "class": "game.interaction.FrostBolt",
-        "handler": "PyTypeHandler",
+        "class": "FrostBolt",
         "properties": {
             "animation": "images/interactions/frostbolt",
             "manaCost": 20
         }
     },
     "LethalPoison": {
-        "class": "game.interaction.LethalPoison",
-        "handler": "PyTypeHandler",
+        "class": "LethalPoison",
         "properties": {
             "animation": "images/interactions/lethalpoison",
             "effect": "LethalPoisonEffect",
@@ -133,8 +117,7 @@
         }
     },
     "MagicMissile": {
-        "class": "game.interaction.MagicMissile",
-        "handler": "PyTypeHandler",
+        "class": "MagicMissile",
         "properties": {
             "animation": "images/interactions/magicmissile",
             "manaCost": 5,
@@ -142,8 +125,7 @@
         }
     },
     "Mutilation": {
-        "class": "game.interaction.Mutilation",
-        "handler": "PyTypeHandler",
+        "class": "Mutilation",
         "properties": {
             "animation": "images/interactions/mutilation",
             "effect": "MutilationEffect",
@@ -151,8 +133,7 @@
         }
     },
     "ShadowBolt": {
-        "class": "game.interaction.ShadowBolt",
-        "handler": "PyTypeHandler",
+        "class": "ShadowBolt",
         "properties": {
             "animation": "images/interactions/shadowbolt",
             "effect": "AbyssalShadowsEffect",
@@ -160,24 +141,21 @@
         }
     },
     "SneakAttack": {
-        "class": "game.interaction.SneakAttack",
-        "handler": "PyTypeHandler",
+        "class": "SneakAttack",
         "properties": {
             "animation": "images/interactions/sneakattack",
             "manaCost": 15
         }
     },
     "Strike": {
-        "class": "game.interaction.Strike",
-        "handler": "PyTypeHandler",
+        "class": "Strike",
         "properties": {
             "animation": "images/interactions/strike",
             "manaCost": 25
         }
     },
     "Stunner": {
-        "class": "game.interaction.Stunner",
-        "handler": "PyTypeHandler",
+        "class": "Stunner",
         "properties": {
             "animation": "images/interactions/stun",
             "effect": "Stun",

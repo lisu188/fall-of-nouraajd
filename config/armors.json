@@ -1,7 +1,6 @@
 {
     "ChestPlateOfTheNorth": {
         "class": "CArmor",
-        "handler": "CTypeHandler",
         "properties": {
             "animation": "images/items/armors/chestplateofnorth",
             "bonus": {
@@ -17,7 +16,6 @@
     },
     "LeatherArmor": {
         "class": "CArmor",
-        "handler": "CTypeHandler",
         "properties": {
             "animation": "images/items/armors/leatherarmor",
             "bonus": {
@@ -31,7 +29,6 @@
     },
     "PlateArmor": {
         "class": "CArmor",
-        "handler": "CTypeHandler",
         "properties": {
             "animation": "images/items/armors/platearmor",
             "bonus": {
@@ -44,7 +41,6 @@
     },
     "Robe": {
         "class": "CArmor",
-        "handler": "CTypeHandler",
         "properties": {
             "animation": "images/items/armors/robe",
             "bonus": {

@@ -1,7 +1,9 @@
 from game import randint
 from game import CBuilding
 from game import Coords
+from game import game_object
 
+@game_object
 class Teleporter(CBuilding):
     def onEnter(self,event):
         if self.getBoolProperty("enabled"):
@@ -9,6 +11,7 @@ class Teleporter(CBuilding):
             loc=self.getMap().getLocationByName(exit)
             event.getCause().setCoords(loc)
 
+@game_object
 class Market(CBuilding):
     market=None
     def onEnter(self,event):
@@ -16,6 +19,7 @@ class Market(CBuilding):
             self.market=self.getMap().getObjectHandler().createObject(self.getStringProperty('market'))
         self.getMap().getPlayer().trade(self.market)
 
+@game_object
 class Cave(CBuilding):
     def onEnter(self,event):
         if not event.getCause().isPlayer():

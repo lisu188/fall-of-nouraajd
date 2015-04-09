@@ -1,8 +1,43 @@
 
-=== triggerDecorator ===
+=== mapsManifest ===
 {
-  "inputSha256": "d33fbe171fadebafc6c54b8c74e3ba2e9b8f949beb1669149598a9bd62f89b06",
-  "outputSha256": "17b426746455720c21e236e156e8fd7e28323a387451c277d36abd8a09510fcf",
-  "replaySha256": "96dc6463bd3c2fd68658917442ebe75b89cd72373c5199cd8f4adb581c3d8136",
-  "sourceCommit": "4c0be0149008787ff79b4479307f1945b28c9507"
+  "absentInputs": [
+    "maps/map1/trigger.json"
+  ],
+  "inputs": {
+    "maps.qrc": "d4ddf84877d2e3ec3214c8609ad16346a79875fe61b0d2c063cfbd35c87b4d46"
+  },
+  "path": "recovery_maps.qrc",
+  "provenance": {
+    "operation": "Use the authored maps.qrc deletion of only the genuinely absent maps/map1/trigger.json entry",
+    "sourceCommit": "3858af6ada96f937e75eadc42785b9b17d586caf"
+  },
+  "qmakeArguments": [
+    "-after",
+    "RESOURCES-=maps.qrc",
+    "RESOURCES+=$$_PRO_FILE_PWD_/recovery_maps.qrc"
+  ],
+  "replaySha256": "2fa011f77f7806545b1ec99a0211e1af2824543576a328debac9f16747ecf036",
+  "sha256": "dcd6a9f30facdd3f9329cf456aa61c66012b803b399607ae88a6fa67834cb3e5",
+  "validationBoundary": "Game startup with the authored removal of a deleted trigger resource; original sources unchanged"
+}
+
+=== historicalHandlers ===
+{
+  "files": {
+    "config/weapons.json": [
+      "38c8c8ff0f7716c9f91ff74f57fed247588c44a6abb52c1277f3e6211e83bb89",
+      "779dbfda47308db6bdd052e459011da176549df6e92a124f7e5a1c03fcf23980"
+    ],
+    "handler/CTypeHandler.cpp": [
+      "91c1598943e7c353e21cca66398e7d4dee3e76d7d28ecd8fb82cd1f2f3978c89",
+      "e61d72e4024e8a3eb242a40c78d064e27e7bb310d1d31743e512ea86b27b214f"
+    ],
+    "scripts/game/__init__.py": [
+      "aa6c7734dd7f8977f9654c1581ee33b9199033da5ce1145298a6d279ec520283",
+      "4c68be44d6d0fc771361bf8c9f2c45d29e7b9aa677ad5b855f3c54956df7f651"
+    ]
+  },
+  "replaySha256": "1ed87e5c2bdea47c8cb0e5a4b67f5f36a061e50e70736d0cdd2c6ccbea3ee9b7",
+  "sourceCommit": "1e91cc7c3b84d79b6442e341453d729bfa4af802"
 }
