@@ -2,59 +2,41 @@
 #include "object/CObject.h"
 #include "CMap.h"
 
-std::unordered_map<QString,std::function<CGameObject*() > > CTypeHandler::constructors;
+#define REGISTER(clas) std::make_pair(#clas,[]()->CGameObject*{return new clas();})
 
-CObjectHandler* ATypeHandler::getObjectHandler() {
-	return dynamic_cast<CObjectHandler*> ( this->parent() );
-}
-
-#define REGISTER(clas) registerType(#clas,[]()->CGameObject*{return new clas();});
-
-CTypeHandler::CTypeHandler() {
-	REGISTER ( CWeapon )
-	REGISTER ( CArmor )
-	REGISTER ( CPotion )
-	REGISTER ( CBuilding )
-	REGISTER ( CItem )
-	REGISTER ( CPlayer )
-	REGISTER ( CMonster )
-	REGISTER ( CTile )
-	REGISTER ( CInteraction )
-	REGISTER ( CSmallWeapon )
-	REGISTER ( CHelmet )
-	REGISTER ( CBoots )
-	REGISTER ( CBelt )
-	REGISTER ( CGloves )
-	REGISTER ( CEvent )
-	REGISTER ( CScroll )
-	REGISTER ( CEffect )
-	REGISTER ( CMarket )
-}
+std::unordered_map<QString,std::function<CGameObject*() > > CTypeHandler::constructors{
+    REGISTER ( CWeapon ),
+    REGISTER ( CArmor ),
+    REGISTER ( CPotion ),
+    REGISTER ( CBuilding ),
+    REGISTER ( CItem ),
+    REGISTER ( CPlayer ),
+    REGISTER ( CMonster ),
+    REGISTER ( CTile ),
+    REGISTER ( CInteraction ),
+    REGISTER ( CSmallWeapon ),
+    REGISTER ( CHelmet ),
+    REGISTER ( CBoots ),
+    REGISTER ( CBelt ),
+    REGISTER ( CGloves ),
+    REGISTER ( CEvent ),
+    REGISTER ( CScroll ),
+    REGISTER ( CEffect ),
+    REGISTER ( CMarket )
+};
 
 #undef REGISTER
 
 CGameObject *CTypeHandler::create ( QString name ) {
-	auto it=constructors.find ( name );
-	if ( it !=constructors.end() ) {
-		return ( ( *it ).second ) ();
-	}
-	return nullptr;
-}
-
-CGameObject *PyTypeHandler::create ( QString name ) {
-	return getObjectHandler()->getMap()->getScriptHandler()->createObject<CGameObject*> ( name );
-}
-
-QString PyTypeHandler::getHandlerName() {
-	return "PyTypeHandler";
-}
-
-QString CTypeHandler::getHandlerName() {
-	return "CTypeHandler";
+    auto it=constructors.find ( name );
+    if ( it !=constructors.end() ) {
+        return ( ( *it ).second ) ();
+    }
+    return nullptr;
 }
 
 void CTypeHandler::registerType ( QString name, std::function<CGameObject*() > constructor ) {
-	constructors.insert ( std::make_pair ( name,constructor ) );
+    constructors.insert ( std::make_pair ( name,constructor ) );
 }
 
 
