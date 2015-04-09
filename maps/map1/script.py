@@ -37,5 +37,3 @@ class MainQuest(CQuest):
     def onComplete(self):
         pass
 
-def onStart(self):
-    pass
