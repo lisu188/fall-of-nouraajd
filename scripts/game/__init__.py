@@ -1,9 +1,4 @@
 from _game import *
-from . import interaction
-from . import object
-from . import effect
-from . import tile
-from . import potion
 
 def switchClass(object,cls):
     if cls and type(cls) != float:
@@ -18,3 +13,9 @@ def game_trigger(event,object):
     def trigger_wrapper(f):
         pass
     return trigger_wrapper
+
+from . import interaction
+from . import object
+from . import effect
+from . import tile
+from . import potion

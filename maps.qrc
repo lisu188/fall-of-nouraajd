@@ -3,6 +3,5 @@
         <file>maps/map1/script.py</file>
         <file>maps/map1/map.json</file>
         <file>maps/map1/config.json</file>
-        <file>maps/map1/trigger.json</file>
     </qresource>
 </RCC>
