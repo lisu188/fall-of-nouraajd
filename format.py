@@ -19,10 +19,10 @@ def formatJson(files):
         text=open(file).read()
         try:
             out=json.dumps(json.loads(text), sort_keys = True, indent = 4)
+            if out!=text:
+                open(file,"w").write(out)
         except:
             print("Error:",file)
-        if(out!=text):
-            open(file,"w").write(out)
 
 def formatPython(files):
     for file in files:
