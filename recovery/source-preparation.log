@@ -25,10 +25,6 @@
 === historicalHandlers ===
 {
   "files": {
-    "config/weapons.json": [
-      "38c8c8ff0f7716c9f91ff74f57fed247588c44a6abb52c1277f3e6211e83bb89",
-      "779dbfda47308db6bdd052e459011da176549df6e92a124f7e5a1c03fcf23980"
-    ],
     "handler/CTypeHandler.cpp": [
       "91c1598943e7c353e21cca66398e7d4dee3e76d7d28ecd8fb82cd1f2f3978c89",
       "e61d72e4024e8a3eb242a40c78d064e27e7bb310d1d31743e512ea86b27b214f"
@@ -39,5 +35,5 @@
     ]
   },
   "replaySha256": "1ed87e5c2bdea47c8cb0e5a4b67f5f36a061e50e70736d0cdd2c6ccbea3ee9b7",
-  "sourceCommit": "dc3f989ddf8cdcbf6af1302823c0ce653f546baa"
+  "sourceCommit": "ddb05027fb3e831cbef7f16f1dea58f519c1756c"
 }
