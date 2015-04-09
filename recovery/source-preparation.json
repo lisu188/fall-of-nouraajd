@@ -12,7 +12,7 @@
         ]
       },
       "replaySha256": "1ed87e5c2bdea47c8cb0e5a4b67f5f36a061e50e70736d0cdd2c6ccbea3ee9b7",
-      "sourceCommit": "ddb05027fb3e831cbef7f16f1dea58f519c1756c"
+      "sourceCommit": "70d0d690df45877698cb094405e25be00a8139fd"
     },
     "implementationSha256": "192c29a332eb1840c7f74d258ac05ba6bad1010b24186d06bae1360b6fdbda59",
     "mapsManifest": {
@@ -119,7 +119,7 @@
         "history_source_prep.py",
         "prepare-maps-manifest"
       ],
-      "log": "/tmp/nouraajd-356-handlers-final/verify/snapshot-wu1ulo6u/preparation/maps-manifest.log",
+      "log": "/tmp/nouraajd-357-handlers-final/verify/snapshot-w1gcye6d/preparation/maps-manifest.log",
       "name": "mapsManifest",
       "returnCode": 0,
       "timedOut": false
@@ -129,7 +129,7 @@
         "history_source_prep.py",
         "prepare-historical-handlers"
       ],
-      "log": "/tmp/nouraajd-356-handlers-final/verify/snapshot-wu1ulo6u/preparation/historical-handlers.log",
+      "log": "/tmp/nouraajd-357-handlers-final/verify/snapshot-w1gcye6d/preparation/historical-handlers.log",
       "name": "historicalHandlers",
       "returnCode": 0,
       "timedOut": false

@@ -1,6 +1,6 @@
 {
   "adapter": {
-    "config": "/tmp/nouraajd-356-handlers-final/verify/snapshot-wu1ulo6u/observer/recovery_smoke_config.h",
+    "config": "/tmp/nouraajd-357-handlers-final/verify/snapshot-w1gcye6d/observer/recovery_smoke_config.h",
     "configSha256": "c40e04090a6ced270f4731eebfcc68cf9ab0cae6c801adcc7fb1a512b2b3a20a",
     "id": "prefixed-3d",
     "mode": "game",
@@ -28,11 +28,11 @@
     },
     "source-preparation.json": {
       "path": "source-preparation.json",
-      "sha256": "b8b9e278f3e38a574a8254f9086b33113f4f99f07a1f4f7b22525aab1297a404"
+      "sha256": "dfd83c30bab9d5ca5e2c7657eb1dcc581c329f7b9e6ccce5fa99b5880c13e140"
     },
     "source-preparation.log": {
       "path": "source-preparation.log",
-      "sha256": "a08c0243e72bf287f91b04550ee998ed02cb08851f10a737b0b6424a8541f967"
+      "sha256": "b3e3473642d4edf02d46c9be51dc7b52e0108486f2885485feb3f6c0474676d5"
     }
   },
   "build": {
@@ -40,17 +40,17 @@
       "make",
       "-j2"
     ],
-    "log": "/tmp/nouraajd-356-handlers-final/verify/snapshot-wu1ulo6u/build.log",
+    "log": "/tmp/nouraajd-357-handlers-final/verify/snapshot-w1gcye6d/build.log",
     "returnCode": 0,
-    "seconds": 137.405,
+    "seconds": 116.051,
     "timedOut": false
   },
   "configure": {
     "command": [
       "qmake",
-      "/tmp/nouraajd-356-handlers-final/verify/snapshot-wu1ulo6u/source/game.pro",
+      "/tmp/nouraajd-357-handlers-final/verify/snapshot-w1gcye6d/source/game.pro",
       "-o",
-      "/tmp/nouraajd-356-handlers-final/verify/snapshot-wu1ulo6u/build/Makefile",
+      "/tmp/nouraajd-357-handlers-final/verify/snapshot-w1gcye6d/build/Makefile",
       "QMAKE_CC=gcc-5",
       "QMAKE_CXX=g++-5",
       "QMAKE_LINK=g++-5",
@@ -63,15 +63,15 @@
       "DESTDIR=.",
       "CONFIG-=app_bundle",
       "SOURCES+=/tmp/nouraajd-next326/recovery/smoke/game_startup.cpp",
-      "INCLUDEPATH+=/tmp/nouraajd-356-handlers-final/verify/snapshot-wu1ulo6u/source",
-      "INCLUDEPATH+=/tmp/nouraajd-356-handlers-final/verify/snapshot-wu1ulo6u/observer"
+      "INCLUDEPATH+=/tmp/nouraajd-357-handlers-final/verify/snapshot-w1gcye6d/source",
+      "INCLUDEPATH+=/tmp/nouraajd-357-handlers-final/verify/snapshot-w1gcye6d/observer"
     ],
-    "log": "/tmp/nouraajd-356-handlers-final/verify/snapshot-wu1ulo6u/configure.log",
+    "log": "/tmp/nouraajd-357-handlers-final/verify/snapshot-w1gcye6d/configure.log",
     "returnCode": 0,
-    "seconds": 0.174,
+    "seconds": 0.065,
     "timedOut": false
   },
-  "evidenceDir": "/tmp/nouraajd-356-handlers-final/verify/evidence/0015648319f9278da280022a57667751ad89ebd8c89ddb11a86eb4d52759e2cb",
+  "evidenceDir": "/tmp/nouraajd-357-handlers-final/verify/evidence/39af7ff55e40f4b9a87039f9f7fd7291660c48564a10be116d08e673ca23257b",
   "fileLookup": {
     "command": [
       "g++-5",
@@ -80,20 +80,20 @@
       "-O2",
       "-std=c++11",
       "-o",
-      "/tmp/nouraajd-356-handlers-final/verify/snapshot-wu1ulo6u/observer/libwindowspaths.so",
+      "/tmp/nouraajd-357-handlers-final/verify/snapshot-w1gcye6d/observer/libwindowspaths.so",
       "/tmp/nouraajd-next326/recovery/smoke/windows_paths.cpp",
       "-ldl"
     ],
-    "log": "/tmp/nouraajd-356-handlers-final/verify/snapshot-wu1ulo6u/file-lookup.log",
+    "log": "/tmp/nouraajd-357-handlers-final/verify/snapshot-w1gcye6d/file-lookup.log",
     "returnCode": 0,
-    "seconds": 0.266,
+    "seconds": 0.214,
     "semantics": "Windows-style case-insensitive file lookup for the game process",
     "timedOut": false
   },
-  "fingerprint": "0015648319f9278da280022a57667751ad89ebd8c89ddb11a86eb4d52759e2cb",
+  "fingerprint": "39af7ff55e40f4b9a87039f9f7fd7291660c48564a10be116d08e673ca23257b",
   "libraryAliases": {
     "aliases": {},
-    "directory": "/tmp/nouraajd-356-handlers-final/verify/snapshot-wu1ulo6u/observer/library-aliases"
+    "directory": "/tmp/nouraajd-357-handlers-final/verify/snapshot-w1gcye6d/observer/library-aliases"
   },
   "project": "game.pro",
   "recipe": {
@@ -135,7 +135,7 @@
   },
   "restoration": {
     "excluded": [],
-    "outputDir": "/tmp/nouraajd-356-handlers-final/verify/snapshot-wu1ulo6u/source",
+    "outputDir": "/tmp/nouraajd-357-handlers-final/verify/snapshot-w1gcye6d/source",
     "restored": [
       {
         "markerPath": "CMap.cpp.REMOVED.git-id",
@@ -157,7 +157,7 @@
         "method": "reconstruction",
         "originalBlob": "b9b1dc7cffe734ecfb2c6dfb4cf94629e8141502",
         "path": "GameScript.cpp",
-        "provenance": "unverified donor reconstruction; 55e6516eb91b739e899df1ef8d72116da44fec49:GameScript.cpp; headerMatch=0; apiOverlap=0/10000; distance=10",
+        "provenance": "unverified donor reconstruction; 55e6516eb91b739e899df1ef8d72116da44fec49:GameScript.cpp; headerMatch=0; apiOverlap=0/10000; distance=9",
         "replacementBlob": "8881340f8acf7f3670641b9e45301132ce31331a"
       },
       {
@@ -177,7 +177,7 @@
       {
         "markerPath": "boost/python/converter/builtin_converters.cpp.REMOVED.git-id",
         "method": "reconstruction",
-        "originalBlob": "a8d3fb4573b0f3e3ff47213a3382249405bf559c",
+        "originalBlob": "406045f02002c09018fae05ad98e60dcf552855e",
         "path": "boost/python/converter/builtin_converters.cpp",
         "provenance": "unverified upstream reconstruction; https://github.com/boostorg/python/tree/32ba64a8248d99b1852e77ff4388d9d8a991c4a9",
         "replacementBlob": "9900602b776aaec64ccb3a7bdc3612c44d276077"
@@ -185,7 +185,7 @@
       {
         "markerPath": "boost/python/converter/from_python.cpp.REMOVED.git-id",
         "method": "reconstruction",
-        "originalBlob": "f656731a9437dd0126e98dfcb35f90622e5f2636",
+        "originalBlob": "e9267b9060aef328fe7e63ba3fcc9bf46cb5da24",
         "path": "boost/python/converter/from_python.cpp",
         "provenance": "unverified upstream reconstruction; https://github.com/boostorg/python/tree/32ba64a8248d99b1852e77ff4388d9d8a991c4a9",
         "replacementBlob": "9678be1cb6995d57d03426991f3502ffb8b8c812"
@@ -193,7 +193,7 @@
       {
         "markerPath": "boost/python/converter/registry.cpp.REMOVED.git-id",
         "method": "reconstruction",
-        "originalBlob": "2edbe23558834fa312e39fd6de66edf5fdc67228",
+        "originalBlob": "f27191afa2c0497a6c35241ecbcb5291d6482d56",
         "path": "boost/python/converter/registry.cpp",
         "provenance": "unverified upstream reconstruction; https://github.com/boostorg/python/tree/32ba64a8248d99b1852e77ff4388d9d8a991c4a9",
         "replacementBlob": "aa20c3f6852faa93a379b60253a0fcc080b1216f"
@@ -201,7 +201,7 @@
       {
         "markerPath": "boost/python/converter/type_id.cpp.REMOVED.git-id",
         "method": "reconstruction",
-        "originalBlob": "ffaaab7f26d8b01aca547f4086c30f416548b52f",
+        "originalBlob": "bde0598c11a2b3fbf69b908a51396b86a78530e5",
         "path": "boost/python/converter/type_id.cpp",
         "provenance": "unverified upstream reconstruction; https://github.com/boostorg/python/tree/32ba64a8248d99b1852e77ff4388d9d8a991c4a9",
         "replacementBlob": "c6a8bf7a04e7379f9d29e5ba0e3498fe4637bdd1"
@@ -209,7 +209,7 @@
       {
         "markerPath": "boost/python/dict.cpp.REMOVED.git-id",
         "method": "reconstruction",
-        "originalBlob": "d9aa999013c9f5452ed0aa8462e7d2f8cd7bc6d0",
+        "originalBlob": "36179d2608a29cb1d369679325f912a03ed8e1bf",
         "path": "boost/python/dict.cpp",
         "provenance": "unverified upstream reconstruction; https://github.com/boostorg/python/tree/32ba64a8248d99b1852e77ff4388d9d8a991c4a9",
         "replacementBlob": "77d840d45522c9d63bbff2c9fc4f21aea6a2d98d"
@@ -217,7 +217,7 @@
       {
         "markerPath": "boost/python/exec.cpp.REMOVED.git-id",
         "method": "reconstruction",
-        "originalBlob": "1af95c3bd66b9fa425e3ed2aacc86f7f2494b389",
+        "originalBlob": "205977da472b829b132c61b7b4eb5e9e818ca5eb",
         "path": "boost/python/exec.cpp",
         "provenance": "unverified upstream reconstruction; https://github.com/boostorg/python/tree/32ba64a8248d99b1852e77ff4388d9d8a991c4a9",
         "replacementBlob": "9fe1b23b7fbe9587b7543ec32089cd6337808bcf"
@@ -225,7 +225,7 @@
       {
         "markerPath": "boost/python/list.cpp.REMOVED.git-id",
         "method": "reconstruction",
-        "originalBlob": "d90de90a463470538ac905621a6ebb9fbf7928dc",
+        "originalBlob": "f5dd90ee7262a92799a19b1696d505d0516475ae",
         "path": "boost/python/list.cpp",
         "provenance": "unverified upstream reconstruction; https://github.com/boostorg/python/tree/32ba64a8248d99b1852e77ff4388d9d8a991c4a9",
         "replacementBlob": "77e616881ab02cb0bce99bcbb9ccb9b550c67297"
@@ -233,7 +233,7 @@
       {
         "markerPath": "boost/python/numeric.cpp.REMOVED.git-id",
         "method": "reconstruction",
-        "originalBlob": "ef8b00a50575c915960d3d8ece4e224e48f3c04f",
+        "originalBlob": "25c4cfa8fececff42ce148abfe09e77158bfcc89",
         "path": "boost/python/numeric.cpp",
         "provenance": "unverified upstream reconstruction; https://github.com/boostorg/python/tree/32ba64a8248d99b1852e77ff4388d9d8a991c4a9",
         "replacementBlob": "c8a5f071d92404c6f7267e06fbec14c6d360a702"
@@ -241,31 +241,31 @@
       {
         "markerPath": "boost/python/object/class.cpp.REMOVED.git-id",
         "method": "reconstruction",
-        "originalBlob": "04288d69f5dfdd673118061444bea77bd5022fbe",
+        "originalBlob": "cb9bdc72de15d22b792665620a7981b5b7bfbcfb",
         "path": "boost/python/object/class.cpp",
-        "provenance": "content reconstruction of the BFG-removed original; Carry the working bundled Boost.Python translation unit through the formatting or platform transition.",
+        "provenance": "unverified upstream reconstruction; https://github.com/boostorg/python/tree/32ba64a8248d99b1852e77ff4388d9d8a991c4a9",
         "replacementBlob": "aeef688e28692a8ad333caa98169909ca021c74c"
       },
       {
         "markerPath": "boost/python/object/enum.cpp.REMOVED.git-id",
         "method": "reconstruction",
-        "originalBlob": "762ff8d4f5538085015478837284d3a7662a87d4",
+        "originalBlob": "9eb57e629413325bb763e63a46171d9cda39f07c",
         "path": "boost/python/object/enum.cpp",
-        "provenance": "content reconstruction of the BFG-removed original; Carry the working bundled Boost.Python translation unit through the formatting or platform transition.",
+        "provenance": "unverified upstream reconstruction; https://github.com/boostorg/python/tree/32ba64a8248d99b1852e77ff4388d9d8a991c4a9",
         "replacementBlob": "3063320cb05ffc68b922a84c966c77b8c8748409"
       },
       {
         "markerPath": "boost/python/object/function.cpp.REMOVED.git-id",
         "method": "reconstruction",
-        "originalBlob": "6ce018326efcf18be04792893b0fc712cd9c9d25",
+        "originalBlob": "a745c30d9c16ac76091916c86aa4254b9cee94f0",
         "path": "boost/python/object/function.cpp",
-        "provenance": "content reconstruction of the BFG-removed original; Carry the working bundled Boost.Python translation unit through the formatting or platform transition.",
+        "provenance": "unverified upstream reconstruction; https://github.com/boostorg/python/tree/32ba64a8248d99b1852e77ff4388d9d8a991c4a9",
         "replacementBlob": "5c59cc7798d0f2e7b917deea81971865a09e0301"
       },
       {
         "markerPath": "boost/python/object/function_doc_signature.cpp.REMOVED.git-id",
         "method": "reconstruction",
-        "originalBlob": "13475fe649e8ae16b499829a867c39698ae360a7",
+        "originalBlob": "974549397eda7d2517fcd4d44011043415eb5250",
         "path": "boost/python/object/function_doc_signature.cpp",
         "provenance": "unverified upstream reconstruction; https://github.com/boostorg/python/tree/32ba64a8248d99b1852e77ff4388d9d8a991c4a9",
         "replacementBlob": "41695285ac1f3fea63c79b8a9e5df7caa0270ab5"
@@ -273,41 +273,33 @@
       {
         "markerPath": "boost/python/object/inheritance.cpp.REMOVED.git-id",
         "method": "reconstruction",
-        "originalBlob": "1b3aa2bf2cce5cd06a478f1fbf4367a4c2002143",
+        "originalBlob": "c1bd98886302850a1a0d71bd56bf81c27116d254",
         "path": "boost/python/object/inheritance.cpp",
-        "provenance": "unverified donor reconstruction; 4b3902d44f874a1fae86054d7240a2af76901bb4:boost/python/object/inheritance.cpp; headerMatch=0; apiOverlap=0/10000; distance=9",
+        "provenance": "unverified donor reconstruction; 4b3902d44f874a1fae86054d7240a2af76901bb4:boost/python/object/inheritance.cpp; headerMatch=0; apiOverlap=0/10000; distance=8",
         "replacementBlob": "70feba5fcd280139933f29b9179b0ed00eed75f8"
       },
       {
         "markerPath": "boost/python/object/life_support.cpp.REMOVED.git-id",
         "method": "reconstruction",
-        "originalBlob": "0819146304ec6a0ead5f70b890311d56dcd4b794",
+        "originalBlob": "1afb749fea9fb2dc7809d761fec3ae3bfcb34165",
         "path": "boost/python/object/life_support.cpp",
-        "provenance": "content reconstruction of the BFG-removed original; Carry the working bundled Boost.Python translation unit through the formatting or platform transition.",
+        "provenance": "unverified upstream reconstruction; https://github.com/boostorg/python/tree/32ba64a8248d99b1852e77ff4388d9d8a991c4a9",
         "replacementBlob": "b7e9aa861e4ecb9fefe00a466053dcef6dc540e1"
-      },
-      {
-        "markerPath": "boost/python/object_operators.cpp.REMOVED.git-id",
-        "method": "reconstruction",
-        "originalBlob": "0d39c3d1478c19a891acce327ddf81990724ace2",
-        "path": "boost/python/object_operators.cpp",
-        "provenance": "unverified donor reconstruction; 70d0d690df45877698cb094405e25be00a8139fd:boost/python/object_operators.cpp; headerMatch=0; apiOverlap=0/10000; distance=1",
-        "replacementBlob": "43d2109b7fbee7a405e4e445aff17714078b1631"
       },
       {
         "markerPath": "boost/python/object_protocol.cpp.REMOVED.git-id",
         "method": "reconstruction",
-        "originalBlob": "388bcb6b78befc18a504db4f2bef24de86dae841",
+        "originalBlob": "c05168f37d8ec0b3f319aa414db1cad29a57de1b",
         "path": "boost/python/object_protocol.cpp",
-        "provenance": "content reconstruction of the BFG-removed original; Carry the working bundled Boost.Python translation unit through the formatting or platform transition.",
+        "provenance": "unverified upstream reconstruction; https://github.com/boostorg/python/tree/32ba64a8248d99b1852e77ff4388d9d8a991c4a9",
         "replacementBlob": "95c8c73ee66b7b0147e65fb4d2813ebbe44bbd26"
       },
       {
         "markerPath": "boost/python/str.cpp.REMOVED.git-id",
         "method": "reconstruction",
-        "originalBlob": "0f46652b2ab25b823980b32afec490a51470fa02",
+        "originalBlob": "cc717d6c1ce4158335469fba4f4bae3190888801",
         "path": "boost/python/str.cpp",
-        "provenance": "unverified donor reconstruction; 4b3902d44f874a1fae86054d7240a2af76901bb4:boost/python/str.cpp; headerMatch=0; apiOverlap=0/10000; distance=9",
+        "provenance": "unverified donor reconstruction; 4b3902d44f874a1fae86054d7240a2af76901bb4:boost/python/str.cpp; headerMatch=0; apiOverlap=0/10000; distance=8",
         "replacementBlob": "37642738eae0bee1bbcf50cbc12d1c57e227602f"
       },
       {
@@ -802,7 +794,7 @@
         "method": "reconstruction",
         "originalBlob": "aeb5237cfc426f30a3fabb189fdc2968ca1aff95",
         "path": "scripts/game/interaction.py",
-        "provenance": "unverified donor reconstruction; 4b3902d44f874a1fae86054d7240a2af76901bb4:scripts/game/interaction.py; headerMatch=0; apiOverlap=0/10000; distance=9",
+        "provenance": "unverified donor reconstruction; 4b3902d44f874a1fae86054d7240a2af76901bb4:scripts/game/interaction.py; headerMatch=0; apiOverlap=0/10000; distance=8",
         "replacementBlob": "d8195dcef9067e7fa153e6b93abf9a2ed9492ff5"
       },
       {
@@ -818,9 +810,9 @@
         "replacementBlob": "f5d0b39a0cdddb91a31a537052b7d8d31a4aa79f"
       }
     ],
-    "restoredFilesFingerprint": "7bb9f1c0261ea8f0521983e87c8b76ae783f340297f9d96c449680716b278285",
-    "sourceCommit": "ddb05027fb3e831cbef7f16f1dea58f519c1756c",
-    "sourceTree": "ae2e73fdd7400feff1b9c9c90c5b8205c5356378",
+    "restoredFilesFingerprint": "f9fe7abb308c35128b60c85b681d23e4fde18fed747bf55e65c0dfc0988cc37d",
+    "sourceCommit": "70d0d690df45877698cb094405e25be00a8139fd",
+    "sourceTree": "a0c62711cdc97b4bfe91652c5977a1f33260875d",
     "status": "complete",
     "submodules": [],
     "unresolved": []
@@ -831,12 +823,12 @@
       "-a",
       "--server-args=-screen 0 1920x1080x24",
       "env",
-      "LD_PRELOAD=/tmp/nouraajd-356-handlers-final/verify/snapshot-wu1ulo6u/observer/libwindowspaths.so",
-      "/tmp/nouraajd-356-handlers-final/verify/snapshot-wu1ulo6u/build/RecoveryGame"
+      "LD_PRELOAD=/tmp/nouraajd-357-handlers-final/verify/snapshot-w1gcye6d/observer/libwindowspaths.so",
+      "/tmp/nouraajd-357-handlers-final/verify/snapshot-w1gcye6d/build/RecoveryGame"
     ],
-    "log": "/tmp/nouraajd-356-handlers-final/verify/snapshot-wu1ulo6u/smoke/startup.log",
+    "log": "/tmp/nouraajd-357-handlers-final/verify/snapshot-w1gcye6d/smoke/startup.log",
     "returnCode": 0,
-    "seconds": 0.625,
+    "seconds": 0.566,
     "startup": {
       "checks": {
         "eventLoop": true,
@@ -858,9 +850,9 @@
     "status": "success",
     "timedOut": false
   },
-  "sourceCommit": "ddb05027fb3e831cbef7f16f1dea58f519c1756c",
+  "sourceCommit": "70d0d690df45877698cb094405e25be00a8139fd",
   "sourceCommits": [
-    "ddb05027fb3e831cbef7f16f1dea58f519c1756c"
+    "70d0d690df45877698cb094405e25be00a8139fd"
   ],
   "sourcePreparation": {
     "identity": {
@@ -876,7 +868,7 @@
           ]
         },
         "replaySha256": "1ed87e5c2bdea47c8cb0e5a4b67f5f36a061e50e70736d0cdd2c6ccbea3ee9b7",
-        "sourceCommit": "ddb05027fb3e831cbef7f16f1dea58f519c1756c"
+        "sourceCommit": "70d0d690df45877698cb094405e25be00a8139fd"
       },
       "implementationSha256": "192c29a332eb1840c7f74d258ac05ba6bad1010b24186d06bae1360b6fdbda59",
       "mapsManifest": {
@@ -983,7 +975,7 @@
           "history_source_prep.py",
           "prepare-maps-manifest"
         ],
-        "log": "/tmp/nouraajd-356-handlers-final/verify/snapshot-wu1ulo6u/preparation/maps-manifest.log",
+        "log": "/tmp/nouraajd-357-handlers-final/verify/snapshot-w1gcye6d/preparation/maps-manifest.log",
         "name": "mapsManifest",
         "returnCode": 0,
         "timedOut": false
@@ -993,14 +985,14 @@
           "history_source_prep.py",
           "prepare-historical-handlers"
         ],
-        "log": "/tmp/nouraajd-356-handlers-final/verify/snapshot-wu1ulo6u/preparation/historical-handlers.log",
+        "log": "/tmp/nouraajd-357-handlers-final/verify/snapshot-w1gcye6d/preparation/historical-handlers.log",
         "name": "historicalHandlers",
         "returnCode": 0,
         "timedOut": false
       }
     ]
   },
-  "sourceTree": "ae2e73fdd7400feff1b9c9c90c5b8205c5356378",
+  "sourceTree": "a0c62711cdc97b4bfe91652c5977a1f33260875d",
   "startupCompatibility": "authoredMapsManifest",
   "startupMode": "game",
   "startupSelection": {
@@ -1023,5 +1015,5 @@
     }
   },
   "toolchainImage": "sha256:d3f59ec1d12297ee8091fbea687aa619275fc92b3fd426560e0a1fa40715afc8",
-  "verifiedFromCommit": "ddb05027fb3e831cbef7f16f1dea58f519c1756c"
+  "verifiedFromCommit": "70d0d690df45877698cb094405e25be00a8139fd"
 }
