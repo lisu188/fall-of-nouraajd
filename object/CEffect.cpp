@@ -5,10 +5,6 @@ CEffect::CEffect() {
 
 }
 
-CEffect::CEffect ( const CEffect & ) {
-
-}
-
 CEffect::~CEffect() {
 
 }

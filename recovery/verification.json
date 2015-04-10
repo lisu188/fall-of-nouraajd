@@ -1,11 +1,11 @@
 {
   "adapter": {
-    "config": "/tmp/nouraajd-359-handlers-final/verify/snapshot-xjbs5i_t/observer/recovery_smoke_config.h",
-    "configSha256": "c40e04090a6ced270f4731eebfcc68cf9ab0cae6c801adcc7fb1a512b2b3a20a",
+    "config": "/tmp/nouraajd-bfg-recovery/native-latest/verify/snapshot-ivn719xr/observer/recovery_smoke_config.h",
+    "configSha256": "3245a398f2451eb366f8b2913824f4911188406c29671588deee0a8f3776893e",
     "id": "prefixed-3d",
     "mode": "game",
     "overlays": [],
-    "source": "/tmp/nouraajd-next326/recovery/smoke/game_startup.cpp"
+    "source": "/tmp/nouraajd-bfg-recovery/source/recovery/smoke/game_startup.cpp"
   },
   "artifactDir": "recovery",
   "attachedScreenshot": {
@@ -13,36 +13,22 @@
     "path": "startup.png",
     "width": 1278
   },
-  "attachedSourcePreparation": {
-    "prepare_historical_handlers.py": {
-      "path": "prepare_historical_handlers.py",
-      "sha256": "1ed87e5c2bdea47c8cb0e5a4b67f5f36a061e50e70736d0cdd2c6ccbea3ee9b7"
-    },
-    "source-preparation.json": {
-      "path": "source-preparation.json",
-      "sha256": "912514fbf4c3b656e6e2a0bc99521c5fd05c84d23c8ac10bb8948f74e1e69d5c"
-    },
-    "source-preparation.log": {
-      "path": "source-preparation.log",
-      "sha256": "68ab51931a6b532d3b4dc925cd1d36f9e83c007efe58eaff1001626f08160b91"
-    }
-  },
   "build": {
     "command": [
       "make",
-      "-j2"
+      "-j4"
     ],
-    "log": "/tmp/nouraajd-359-handlers-final/verify/snapshot-xjbs5i_t/build.log",
+    "log": "/tmp/nouraajd-bfg-recovery/native-latest/verify/snapshot-ivn719xr/build.log",
     "returnCode": 0,
-    "seconds": 113.364,
+    "seconds": 55.016,
     "timedOut": false
   },
   "configure": {
     "command": [
       "qmake",
-      "/tmp/nouraajd-359-handlers-final/verify/snapshot-xjbs5i_t/source/game.pro",
+      "/tmp/nouraajd-bfg-recovery/native-latest/verify/snapshot-ivn719xr/source/game.pro",
       "-o",
-      "/tmp/nouraajd-359-handlers-final/verify/snapshot-xjbs5i_t/build/Makefile",
+      "/tmp/nouraajd-bfg-recovery/native-latest/verify/snapshot-ivn719xr/build/Makefile",
       "QMAKE_CC=gcc-5",
       "QMAKE_CXX=g++-5",
       "QMAKE_LINK=g++-5",
@@ -51,16 +37,16 @@
       "TARGET=RecoveryGame",
       "DESTDIR=.",
       "CONFIG-=app_bundle",
-      "SOURCES+=/tmp/nouraajd-next326/recovery/smoke/game_startup.cpp",
-      "INCLUDEPATH+=/tmp/nouraajd-359-handlers-final/verify/snapshot-xjbs5i_t/source",
-      "INCLUDEPATH+=/tmp/nouraajd-359-handlers-final/verify/snapshot-xjbs5i_t/observer"
+      "SOURCES+=/tmp/nouraajd-bfg-recovery/source/recovery/smoke/game_startup.cpp",
+      "INCLUDEPATH+=/tmp/nouraajd-bfg-recovery/native-latest/verify/snapshot-ivn719xr/source",
+      "INCLUDEPATH+=/tmp/nouraajd-bfg-recovery/native-latest/verify/snapshot-ivn719xr/observer"
     ],
-    "log": "/tmp/nouraajd-359-handlers-final/verify/snapshot-xjbs5i_t/configure.log",
+    "log": "/tmp/nouraajd-bfg-recovery/native-latest/verify/snapshot-ivn719xr/configure.log",
     "returnCode": 0,
-    "seconds": 0.07,
+    "seconds": 0.064,
     "timedOut": false
   },
-  "evidenceDir": "/tmp/nouraajd-359-handlers-final/verify/evidence/11d9ada761c79f3461192766399cf4e9e3d0c6077503f840ef97c734f46d636c",
+  "evidenceDir": "/tmp/nouraajd-bfg-recovery/native-latest/verify/evidence/7281a1c8aa9410b5f6b139c0eebd0fa830f61032bc653a18f01f984ce735f441",
   "fileLookup": {
     "command": [
       "g++-5",
@@ -69,20 +55,20 @@
       "-O2",
       "-std=c++11",
       "-o",
-      "/tmp/nouraajd-359-handlers-final/verify/snapshot-xjbs5i_t/observer/libwindowspaths.so",
-      "/tmp/nouraajd-next326/recovery/smoke/windows_paths.cpp",
+      "/tmp/nouraajd-bfg-recovery/native-latest/verify/snapshot-ivn719xr/observer/libwindowspaths.so",
+      "/tmp/nouraajd-bfg-recovery/source/recovery/smoke/windows_paths.cpp",
       "-ldl"
     ],
-    "log": "/tmp/nouraajd-359-handlers-final/verify/snapshot-xjbs5i_t/file-lookup.log",
+    "log": "/tmp/nouraajd-bfg-recovery/native-latest/verify/snapshot-ivn719xr/file-lookup.log",
     "returnCode": 0,
-    "seconds": 0.164,
+    "seconds": 0.214,
     "semantics": "Windows-style case-insensitive file lookup for the game process",
     "timedOut": false
   },
-  "fingerprint": "11d9ada761c79f3461192766399cf4e9e3d0c6077503f840ef97c734f46d636c",
+  "fingerprint": "7281a1c8aa9410b5f6b139c0eebd0fa830f61032bc653a18f01f984ce735f441",
   "libraryAliases": {
     "aliases": {},
-    "directory": "/tmp/nouraajd-359-handlers-final/verify/snapshot-xjbs5i_t/observer/library-aliases"
+    "directory": "/tmp/nouraajd-bfg-recovery/native-latest/verify/snapshot-ivn719xr/observer/library-aliases"
   },
   "project": "game.pro",
   "recipe": {
@@ -121,14 +107,14 @@
   },
   "restoration": {
     "excluded": [],
-    "outputDir": "/tmp/nouraajd-359-handlers-final/verify/snapshot-xjbs5i_t/source",
+    "outputDir": "/tmp/nouraajd-bfg-recovery/native-latest/verify/snapshot-ivn719xr/source",
     "restored": [
       {
         "markerPath": "CMap.cpp.REMOVED.git-id",
         "method": "reconstruction",
         "originalBlob": "b96a40c8a6ea6adcf4d8a31bc9741f56e32a53fd",
         "path": "CMap.cpp",
-        "provenance": "Missing #359 map reconstruction, not exact original. Preserves verified351 JSON loader/map ownership because genuine CMap.h remains byte-identical; genuine359 handler implementation is restored exact original. Pending ordinary native verification.",
+        "provenance": "working reconstruction",
         "replacementBlob": "fe97182bf2b1900256048d874a7a20b279b3b0de"
       },
       {
@@ -140,10 +126,9 @@
       },
       {
         "markerPath": "GameScript.cpp.REMOVED.git-id",
-        "method": "reconstruction",
-        "originalBlob": "b9b1dc7cffe734ecfb2c6dfb4cf94629e8141502",
+        "method": "exactOriginal",
+        "originalBlob": "8881340f8acf7f3670641b9e45301132ce31331a",
         "path": "GameScript.cpp",
-        "provenance": "unverified donor reconstruction; 55e6516eb91b739e899df1ef8d72116da44fec49:GameScript.cpp; headerMatch=0; apiOverlap=0/10000; distance=7",
         "replacementBlob": "8881340f8acf7f3670641b9e45301132ce31331a"
       },
       {
@@ -261,7 +246,7 @@
         "method": "reconstruction",
         "originalBlob": "c1bd98886302850a1a0d71bd56bf81c27116d254",
         "path": "boost/python/object/inheritance.cpp",
-        "provenance": "unverified donor reconstruction; 4b3902d44f874a1fae86054d7240a2af76901bb4:boost/python/object/inheritance.cpp; headerMatch=0; apiOverlap=0/10000; distance=6",
+        "provenance": "unverified donor reconstruction; 4b3902d44f874a1fae86054d7240a2af76901bb4:boost/python/object/inheritance.cpp; headerMatch=0; apiOverlap=0/10000; distance=3",
         "replacementBlob": "70feba5fcd280139933f29b9179b0ed00eed75f8"
       },
       {
@@ -285,7 +270,7 @@
         "method": "reconstruction",
         "originalBlob": "cc717d6c1ce4158335469fba4f4bae3190888801",
         "path": "boost/python/str.cpp",
-        "provenance": "unverified donor reconstruction; 4b3902d44f874a1fae86054d7240a2af76901bb4:boost/python/str.cpp; headerMatch=0; apiOverlap=0/10000; distance=6",
+        "provenance": "unverified donor reconstruction; 4b3902d44f874a1fae86054d7240a2af76901bb4:boost/python/str.cpp; headerMatch=0; apiOverlap=0/10000; distance=3",
         "replacementBlob": "37642738eae0bee1bbcf50cbc12d1c57e227602f"
       },
       {
@@ -314,7 +299,7 @@
         "method": "reconstruction",
         "originalBlob": "b383f9b8c860de19efc1dda19a379169f46d577e",
         "path": "game.pro",
-        "provenance": "Missing #358 reconstruction, not exact original. Preserves all prior game and bundled Boost translation units; already inlined historical Boost source list, so deletion of boost/python/python.pro needs no source exclusion or external Boost replacement. Pending real native verification.",
+        "provenance": "working reconstruction",
         "replacementBlob": "ded2604f3b28a75a809f8259c8cdb4e883a16abf"
       },
       {
@@ -746,19 +731,17 @@
       },
       {
         "markerPath": "object/CCreature.cpp.REMOVED.git-id",
-        "method": "reconstruction",
-        "originalBlob": "a8ab7c56aa4ba14aec16f31ef6abd6dc4ae79820",
+        "method": "exactOriginal",
+        "originalBlob": "da9332ee6b2b5ed712a6de6bd6eaccdd43f959f3",
         "path": "object/CCreature.cpp",
-        "provenance": "Missing #351 reconstruction, not exact original. Prior actual creature combat/inventory bodies already obtain player through map, consistent with genuine removal of CGameScene::getPlayer; missing exact implementation unknown. Pending native verification; surviving original bytes retained.",
-        "replacementBlob": "2a16acb40a1ff29c9a45a0f56869beb6e389059c"
+        "replacementBlob": "da9332ee6b2b5ed712a6de6bd6eaccdd43f959f3"
       },
       {
         "markerPath": "object/CCreature.h.REMOVED.git-id",
-        "method": "reconstruction",
-        "originalBlob": "f338285e3b3947e1e20f8dd1a49a7c8be92d054c",
+        "method": "exactOriginal",
+        "originalBlob": "2cee8bf3589421fb07cfdc4f760d9cf9aef57782",
         "path": "object/CCreature.h",
-        "provenance": "Missing #348 reconstruction, not exact original. Preserves prior creature implementation/header donor and actual existing callbacks; same-commit genuine Monster changes only smart-finder selection. Exact missing changes unknown; native compilation/startup provides bounded validation. Pending native verification; no gameplay/path parity claim.",
-        "replacementBlob": "784177b59a011f71bc4185696b33bcf9638154f3"
+        "replacementBlob": "2cee8bf3589421fb07cfdc4f760d9cf9aef57782"
       },
       {
         "markerPath": "panel/CFightPanel.cpp.REMOVED.git-id",
@@ -777,9 +760,9 @@
       {
         "markerPath": "scripts/game/interaction.py.REMOVED.git-id",
         "method": "reconstruction",
-        "originalBlob": "d1c83bc0fe30b8ec2bf5c5b60cc68735a2c3e9cd",
+        "originalBlob": "06114efa94e9b30aa367f0ec89ee44aaa9fc483c",
         "path": "scripts/game/interaction.py",
-        "provenance": "content reconstruction of the BFG-removed original; Carry the adjacent handler and registry implementation with the surviving script and configuration interfaces.",
+        "provenance": "working reconstruction",
         "replacementBlob": "d8195dcef9067e7fa153e6b93abf9a2ed9492ff5"
       },
       {
@@ -795,9 +778,9 @@
         "replacementBlob": "f5d0b39a0cdddb91a31a537052b7d8d31a4aa79f"
       }
     ],
-    "restoredFilesFingerprint": "058ff52837dc551415610ab713ae221c5dd9390adf36da05a22e1a78b851ee68",
-    "sourceCommit": "2d45bf477dde4ad9f196d3ba6e440dbeea7b4234",
-    "sourceTree": "fe44df6a93f886a76fdfecfcdf5b70d9e7ff1749",
+    "restoredFilesFingerprint": "6847524e310787f3536c4de137134ec32cc52c52a312591004b77a3b99b93998",
+    "sourceCommit": "0a5919fc203684c6b5ba1c443c1a7708d0212c39",
+    "sourceTree": "68e8923fb35c01e4cd759311e25067f3d9972bd8",
     "status": "complete",
     "submodules": [],
     "unresolved": []
@@ -808,10 +791,10 @@
       "-a",
       "--server-args=-screen 0 1920x1080x24",
       "env",
-      "LD_PRELOAD=/tmp/nouraajd-359-handlers-final/verify/snapshot-xjbs5i_t/observer/libwindowspaths.so",
-      "/tmp/nouraajd-359-handlers-final/verify/snapshot-xjbs5i_t/build/RecoveryGame"
+      "LD_PRELOAD=/tmp/nouraajd-bfg-recovery/native-latest/verify/snapshot-ivn719xr/observer/libwindowspaths.so",
+      "/tmp/nouraajd-bfg-recovery/native-latest/verify/snapshot-ivn719xr/build/RecoveryGame"
     ],
-    "log": "/tmp/nouraajd-359-handlers-final/verify/snapshot-xjbs5i_t/smoke/startup.log",
+    "log": "/tmp/nouraajd-bfg-recovery/native-latest/verify/snapshot-ivn719xr/smoke/startup.log",
     "returnCode": 0,
     "seconds": 0.565,
     "startup": {
@@ -824,7 +807,7 @@
       "frame": {
         "height": 718,
         "path": "startup.png",
-        "sha256": "d208b66c54154d3ab45b9c12b8bad2cb650a7c9aae4af0f8e8d4f6df604e1010",
+        "sha256": "c3d15d123ca42d918becdb4c99c11523b7bac18ca098e37783874bde41cd0100",
         "width": 1278
       },
       "mode": "game",
@@ -835,67 +818,19 @@
     "status": "success",
     "timedOut": false
   },
-  "sourceCommit": "2d45bf477dde4ad9f196d3ba6e440dbeea7b4234",
+  "sourceCommit": "0a5919fc203684c6b5ba1c443c1a7708d0212c39",
   "sourceCommits": [
-    "2d45bf477dde4ad9f196d3ba6e440dbeea7b4234"
+    "0a5919fc203684c6b5ba1c443c1a7708d0212c39"
   ],
   "sourcePreparation": {
     "identity": {
-      "historicalHandlers": {
-        "files": {
-          "handler/CObjectHandler.cpp": [
-            "00ad8ad3ae7df79512565d3c98abae17e4e13afa45353e54183012c395ef2066",
-            "7cfcb1868f6a27b6cd2e6c462552a9eae35d5e4fb0e2ed08a0c7b1d110cecef3"
-          ]
-        },
-        "replaySha256": "1ed87e5c2bdea47c8cb0e5a4b67f5f36a061e50e70736d0cdd2c6ccbea3ee9b7",
-        "sourceCommit": "2d45bf477dde4ad9f196d3ba6e440dbeea7b4234"
-      },
-      "implementationSha256": "192c29a332eb1840c7f74d258ac05ba6bad1010b24186d06bae1360b6fdbda59",
-      "outputs": [
-        {
-          "after": {
-            "kind": "file",
-            "sha256": "7cfcb1868f6a27b6cd2e6c462552a9eae35d5e4fb0e2ed08a0c7b1d110cecef3"
-          },
-          "before": {
-            "kind": "file",
-            "sha256": "00ad8ad3ae7df79512565d3c98abae17e4e13afa45353e54183012c395ef2066"
-          },
-          "path": "handler/CObjectHandler.cpp",
-          "purpose": "Preserve runtime lifetimes and reconcile the surviving folder, handler and configuration interfaces"
-        }
-      ]
+      "implementationSha256": "2ce6f08f4127a903ed0dae25db9bd46ffa10b52fbaab9bef40b66c675dbe5f9d"
     },
-    "outputs": [
-      {
-        "after": {
-          "kind": "file",
-          "sha256": "7cfcb1868f6a27b6cd2e6c462552a9eae35d5e4fb0e2ed08a0c7b1d110cecef3"
-        },
-        "before": {
-          "kind": "file",
-          "sha256": "00ad8ad3ae7df79512565d3c98abae17e4e13afa45353e54183012c395ef2066"
-        },
-        "path": "handler/CObjectHandler.cpp",
-        "purpose": "Preserve runtime lifetimes and reconcile the surviving folder, handler and configuration interfaces"
-      }
-    ],
-    "status": "success",
-    "steps": [
-      {
-        "command": [
-          "history_source_prep.py",
-          "prepare-historical-handlers"
-        ],
-        "log": "/tmp/nouraajd-359-handlers-final/verify/snapshot-xjbs5i_t/preparation/historical-handlers.log",
-        "name": "historicalHandlers",
-        "returnCode": 0,
-        "timedOut": false
-      }
-    ]
+    "outputs": [],
+    "status": "not-required",
+    "steps": []
   },
-  "sourceTree": "fe44df6a93f886a76fdfecfcdf5b70d9e7ff1749",
+  "sourceTree": "68e8923fb35c01e4cd759311e25067f3d9972bd8",
   "startupMode": "game",
   "startupSelection": {
     "mode": "game"
@@ -916,5 +851,5 @@
     }
   },
   "toolchainImage": "sha256:d3f59ec1d12297ee8091fbea687aa619275fc92b3fd426560e0a1fa40715afc8",
-  "verifiedFromCommit": "2d45bf477dde4ad9f196d3ba6e440dbeea7b4234"
+  "verifiedFromCommit": "0a5919fc203684c6b5ba1c443c1a7708d0212c39"
 }

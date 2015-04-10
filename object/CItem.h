@@ -13,7 +13,6 @@ class CItem : public CMapObject,public Visitable,public Wearable,public Usable {
 	Q_PROPERTY ( QString interaction READ getInteractionName WRITE setInteractionName )
 public:
 	CItem();
-	CItem ( const CItem & );
 	virtual ~CItem();
 	bool isSingleUse();
 	void setSingleUse ( bool singleUse );

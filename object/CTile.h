@@ -13,7 +13,6 @@ class CTile : public CGameObject {
 	Q_PROPERTY ( bool canStep READ canStep WRITE setCanStep USER true )
 public:
 	CTile();
-	CTile ( const CTile &tile );
 	virtual void onStep ( CCreature * );
 	void move ( int x, int y, int z ) ;
 	void moveTo ( int x,int y,int z );

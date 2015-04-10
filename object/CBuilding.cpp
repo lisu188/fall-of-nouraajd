@@ -7,10 +7,6 @@ CBuilding::CBuilding() {
 	this->setZValue ( 1 );
 }
 
-CBuilding::CBuilding ( const CBuilding & ) {
-
-}
-
 CBuilding::~CBuilding() {
 
 }
