@@ -10,7 +10,6 @@ class CEffect :public CGameObject {
 	Q_PROPERTY ( bool buff READ isBuff WRITE setBuff )
 public:
 	CEffect();
-	CEffect ( const CEffect& );
 	virtual ~CEffect();
 	int getTimeLeft();
 	int getTimeTotal();

@@ -13,10 +13,6 @@ CInteraction::CInteraction() {
 	setVisible ( false );
 }
 
-CInteraction::CInteraction ( const CInteraction & ) {
-
-}
-
 void CInteraction::onAction ( CCreature *first, CCreature *second ) {
 	qDebug() << first->getObjectType()   << "used" << this->getObjectType()
 	         << "against" << second->getObjectType()  ;
