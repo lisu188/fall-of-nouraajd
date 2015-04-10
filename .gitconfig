@@ -1,0 +1,5 @@
+[core]
+	autocrlf = true
+[user]
+	name = Andrzej Lis
+	email = andrzej.lis3@gmail.com
