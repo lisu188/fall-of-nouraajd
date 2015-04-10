@@ -47,8 +47,7 @@ void CScriptHandler::executeCommand ( std::initializer_list<QString> list ) {
 	executeScript ( buildCommand ( list ) );
 }
 
-CScriptHandler::CScriptHandler ( CMap *map ) :QObject ( map ) {
-	this->map=map;
+CScriptHandler::CScriptHandler ( CMap *map ) :QObject ( map ),map ( map ) {
 	PyImport_AppendInittab ( "_game",PyInit__game );
 	PyImport_AppendInittab ( "_core",PyInit__core );
 	Py_Initialize();

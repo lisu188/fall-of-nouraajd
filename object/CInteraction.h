@@ -14,7 +14,6 @@ class CInteraction : public CGameObject {
 	Q_PROPERTY ( QString effect READ getEffect WRITE setEffect USER true )
 public:
 	CInteraction();
-	CInteraction ( const CInteraction & );
 	void onAction ( CCreature *first, CCreature *second );
 	virtual void performAction ( CCreature*, CCreature* );
 	virtual bool configureEffect ( CEffect* );

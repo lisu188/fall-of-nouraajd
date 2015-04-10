@@ -7,10 +7,6 @@ CTile::CTile() {
 	this->hasTooltip=false;
 }
 
-CTile::CTile ( const CTile & ) {
-
-}
-
 CTile::~CTile() {
 
 }

@@ -16,7 +16,7 @@ CLootHandler::CLootHandler ( CMap *map ) :QObject ( map ) {
 		if ( item ) {
 			int power=item->getPower() ;
 			if ( power>0 ) {
-				this->insert ( std::pair<QString, int> ( it.key(),power ) );
+				this->insert ( std::make_pair ( it.key(),power ) );
 			}
 			delete item;
 		}

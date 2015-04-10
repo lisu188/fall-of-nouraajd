@@ -9,21 +9,17 @@ completed = False
 class StartEvent(CEvent):
     def onEnter(self,event):
         if event.getCause().isPlayer():
-
             self.getMap().removeAll(lambda ob: ob.getStringProperty('objectType')==self.getStringProperty('objectType'))
 
 @game_trigger(event="onDestroy",object="gooby1")
 class GoobyTrigger(CTrigger):
     def trigger(self,object,event):
-
         global completed
         completed=True
 
 @game_trigger(event="onDestroy",object="cave1")
 class CaveTrigger(CTrigger):
     def trigger(self,object,event):
-
-
         gooby.setStringProperty("objectName","gooby1")
         object.getMap().addObject(gooby)
         gooby.moveTo(100,100,0)

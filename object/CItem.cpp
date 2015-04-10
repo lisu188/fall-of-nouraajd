@@ -14,9 +14,6 @@ CItem::CItem()  {
 	this->setZValue ( 2 );
 }
 
-CItem::CItem ( const CItem & )  {
-}
-
 CItem::~CItem() {
 
 }

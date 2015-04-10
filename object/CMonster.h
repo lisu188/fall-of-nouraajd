@@ -6,7 +6,6 @@ class CMonster : public CCreature {
 	Q_OBJECT
 public:
 	CMonster();
-	CMonster ( const CMonster & );
 	virtual ~CMonster();
 	virtual void onTurn ( CGameEvent * ) override;
 	virtual void levelUp() override;

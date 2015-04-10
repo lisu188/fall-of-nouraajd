@@ -7,7 +7,6 @@ class CBuilding : public CMapObject,public Visitable {
 	Q_PROPERTY ( bool enabled READ isEnabled WRITE setEnabled USER true )
 public:
 	CBuilding();
-	CBuilding ( const CBuilding & );
 	virtual ~CBuilding();
 
 	bool isEnabled();
