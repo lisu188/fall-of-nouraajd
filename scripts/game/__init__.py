@@ -1,9 +1,5 @@
 from _game import *
 
-def switchClass(object,cls):
-    if cls and type(cls) != float:
-        object.__class__=cls
-
 def game_object(object):
     from _core import registerType
     registerType(object.__name__,object)
