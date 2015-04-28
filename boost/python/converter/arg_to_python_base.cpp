@@ -22,7 +22,7 @@ arg_to_python_base::arg_to_python_base (
 	:
 	m_ptr
 # endif
-	( converters.to_python ( source ) ) {
+	  ( converters.to_python ( source ) ) {
 }
 }
 

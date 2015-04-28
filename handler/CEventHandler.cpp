@@ -5,24 +5,8 @@
 #include <QMetaEnum>
 #include <QDebug>
 
-CEventHandler::CEventHandler ( CMap *map ) :QObject ( map ) {
-	this->map=map;
+CEventHandler::CEventHandler ( CMap *map ) :QObject ( map ),map ( map ) {
 	QMetaEnum typeEnum=CGameEvent::staticMetaObject.enumerator ( CGameEvent::staticMetaObject.indexOfEnumerator ( "Type" ) );
-	QJsonArray config=CConfigurationProvider::getConfig ( map->getMapPath()+"/trigger.json" ).toArray();
-	for ( auto it=config.begin(); it!=config.end(); it++ ) {
-		QJsonObject triggerConfig= ( *it ).toObject();
-		QString objectName=triggerConfig["object"].toString();
-		QString eventType=triggerConfig["event"].toString();
-		QString triggerType=triggerConfig["trigger"].toString();
-		CTrigger*trigger=map->getObjectHandler()->createObject<CTrigger*> ( triggerType );
-		CGameEvent::Type type=static_cast <CGameEvent::Type> ( typeEnum.keyToValue ( eventType.toStdString().c_str() ) );
-		TriggerKey key ( objectName,type );
-		if ( triggers.find ( key ) ==triggers.end() ) {
-			std::list<CTrigger*> list;
-			triggers[key]=list;
-		}
-		triggers.at ( key ).push_back ( trigger );
-	}
 }
 
 void CEventHandler::gameEvent (  CGameObject *object ,CGameEvent *event ) const {
