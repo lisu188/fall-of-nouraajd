@@ -12,7 +12,7 @@ class CGameObject;
 .def ( "setNumericProperty",&CLASS::setNumericProperty )\
 .def ( "setBoolProperty",&CLASS::setBoolProperty )\
 .def ( "incProperty",&CLASS::incProperty )\
- 
+
 struct Coords {
 	Coords();
 	Coords ( int x, int y, int z );
