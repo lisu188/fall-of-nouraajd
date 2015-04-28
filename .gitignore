@@ -1,0 +1,11 @@
+*.pyc
+*.user*
+*.orig
+*.bak
+*.pre
+*~
+gen/
+*.swp
+*.pyo
+*.user
+.project

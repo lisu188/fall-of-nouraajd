@@ -1,0 +1,54 @@
+{
+    "ChestPlateOfTheNorth": {
+        "class": "CArmor",
+        "properties": {
+            "animation": "images/items/armors/chestplateofnorth",
+            "bonus": {
+                "agility": 8,
+                "armor": 375,
+                "block": 2,
+                "intelligence": 4,
+                "stamina": 15,
+                "strength": 12
+            },
+            "power": 15
+        }
+    },
+    "LeatherArmor": {
+        "class": "CArmor",
+        "properties": {
+            "animation": "images/items/armors/leatherarmor",
+            "bonus": {
+                "agility": 5,
+                "armor": 10,
+                "block": 5,
+                "crit": 2,
+                "stamina": 2
+            }
+        }
+    },
+    "PlateArmor": {
+        "class": "CArmor",
+        "properties": {
+            "animation": "images/items/armors/platearmor",
+            "bonus": {
+                "armor": 10,
+                "block": 5,
+                "stamina": 3,
+                "strength": 4
+            }
+        }
+    },
+    "Robe": {
+        "class": "CArmor",
+        "properties": {
+            "animation": "images/items/armors/robe",
+            "bonus": {
+                "armor": 10,
+                "block": 5,
+                "intelligence": 3,
+                "stamina": 2
+            }
+        }
+    }
+}

@@ -1,0 +1,786 @@
+{
+  "adapter": {
+    "config": "/home/alis3/git/fall-of-nouraajd/.cache/history-recovery/late2015/snapshot-voofo94t/observer/recovery_smoke_config.h",
+    "configSha256": "e79338b9dce2d619aa0198f074e6d8141781918c6adee2915c340d44147fdd49",
+    "id": "prefixed-3d",
+    "overlays": [],
+    "source": "/home/alis3/git/fall-of-nouraajd/recovery/smoke/game_startup.cpp"
+  },
+  "artifactDir": "recovery",
+  "attachedScreenshot": {
+    "height": 718,
+    "path": "startup.png",
+    "width": 1278
+  },
+  "build": {
+    "command": [
+      "make",
+      "-j8"
+    ],
+    "log": "/home/alis3/git/fall-of-nouraajd/.cache/history-recovery/late2015/snapshot-voofo94t/build.log",
+    "returnCode": 0,
+    "seconds": 29.623,
+    "timedOut": false
+  },
+  "configure": {
+    "command": [
+      "qmake",
+      "/home/alis3/git/fall-of-nouraajd/.cache/history-recovery/late2015/snapshot-voofo94t/source/game.pro",
+      "-o",
+      "/home/alis3/git/fall-of-nouraajd/.cache/history-recovery/late2015/snapshot-voofo94t/build/Makefile",
+      "QMAKE_CC=gcc-5",
+      "QMAKE_CXX=g++-5",
+      "QMAKE_LINK=g++-5",
+      "-after",
+      "TARGET=RecoveryGame",
+      "DESTDIR=.",
+      "CONFIG-=app_bundle",
+      "SOURCES+=/home/alis3/git/fall-of-nouraajd/recovery/smoke/game_startup.cpp",
+      "INCLUDEPATH+=/home/alis3/git/fall-of-nouraajd/.cache/history-recovery/late2015/snapshot-voofo94t/source",
+      "INCLUDEPATH+=/home/alis3/git/fall-of-nouraajd/.cache/history-recovery/late2015/snapshot-voofo94t/observer"
+    ],
+    "log": "/home/alis3/git/fall-of-nouraajd/.cache/history-recovery/late2015/snapshot-voofo94t/configure.log",
+    "returnCode": 0,
+    "seconds": 0.032,
+    "timedOut": false
+  },
+  "evidenceDir": "/home/alis3/git/fall-of-nouraajd/.cache/history-recovery/late2015/evidence/747980ba5c6da1c0cd4ef1154451e5ca801e02d49584a3540eaba7f77a9de728/4b3902d44f874a1fae86054d7240a2af76901bb4",
+  "fingerprint": "747980ba5c6da1c0cd4ef1154451e5ca801e02d49584a3540eaba7f77a9de728",
+  "recipe": {
+    "compilerCommand": "g++-5",
+    "environment": {
+      "CPATH": "/opt/recovery/boost/py34/include:/opt/recovery/python/3.4.10/include/python3.4m",
+      "LD_LIBRARY_PATH": "/opt/recovery/boost/py34/lib:/opt/recovery/python/3.4.10/lib",
+      "LIBGL_ALWAYS_SOFTWARE": "1",
+      "LIBRARY_PATH": "/opt/recovery/boost/py34/lib:/opt/recovery/python/3.4.10/lib",
+      "PATH": "/opt/recovery/python/3.4.10/bin:/usr/lib/x86_64-linux-gnu/qt5/bin:/usr/bin:/bin",
+      "PYTHONHOME": "/opt/recovery/python/3.4.10",
+      "QT_OPENGL": "software",
+      "QT_X11_NO_MITSHM": "1"
+    },
+    "id": "qt5-python34",
+    "makeCommand": "make",
+    "pythonAbi": "3.4",
+    "qmakeArguments": [
+      "QMAKE_CC=gcc-5",
+      "QMAKE_CXX=g++-5",
+      "QMAKE_LINK=g++-5"
+    ],
+    "qmakeCommand": "qmake",
+    "toolchainLock": {
+      "compilerVersion": "5.4.0-6ubuntu1~16.04.12",
+      "image": "ubuntu@sha256:a3785f78ab8547ae2710c89e627783cfa7ee7824d3468cae6835c9f4eae23ff7",
+      "qtVersion": "5.5.1+dfsg-16ubuntu7.7",
+      "schemaVersion": 1,
+      "sourceLock": "recovery/toolchains/sources.json",
+      "sourceLockSha256": "b11e0935abc411ccde18c5c25787f945c2392a64c399337136d85a3a812c8da7"
+    }
+  },
+  "restoration": {
+    "excluded": [],
+    "outputDir": "/home/alis3/git/fall-of-nouraajd/.cache/history-recovery/late2015/snapshot-voofo94t/source",
+    "restored": [
+      {
+        "markerPath": "CMap.cpp.REMOVED.git-id",
+        "method": "reconstruction",
+        "originalBlob": "b96a40c8a6ea6adcf4d8a31bc9741f56e32a53fd",
+        "path": "CMap.cpp",
+        "provenance": "Unverified late-April2015 reconstruction from55e6516e:CMap.cpp andCMapLoader.cpp: loader methods restored to original CMap API; original CMap.h retained",
+        "replacementBlob": "76b44c5bc061e70a6bdb57f49a8702de4ef8357f"
+      },
+      {
+        "markerPath": "CPlayerView.cpp.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "3cd3a106046a3e1c74c13465c7fd0fe113d819de",
+        "path": "CPlayerView.cpp",
+        "replacementBlob": "3cd3a106046a3e1c74c13465c7fd0fe113d819de"
+      },
+      {
+        "markerPath": "GameScript.cpp.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "8881340f8acf7f3670641b9e45301132ce31331a",
+        "path": "GameScript.cpp",
+        "replacementBlob": "8881340f8acf7f3670641b9e45301132ce31331a"
+      },
+      {
+        "markerPath": "Stats.cpp.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "e9d15a08d8073b9ec1462a7e542db131edd1314f",
+        "path": "Stats.cpp",
+        "replacementBlob": "e9d15a08d8073b9ec1462a7e542db131edd1314f"
+      },
+      {
+        "markerPath": "Stats.h.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "b58516d941a4d39dbc556b216ea60cbede4f6534",
+        "path": "Stats.h",
+        "replacementBlob": "b58516d941a4d39dbc556b216ea60cbede4f6534"
+      },
+      {
+        "markerPath": "boost/python/converter/builtin_converters.cpp.REMOVED.git-id",
+        "method": "reconstruction",
+        "originalBlob": "406045f02002c09018fae05ad98e60dcf552855e",
+        "path": "boost/python/converter/builtin_converters.cpp",
+        "provenance": "unverified upstream reconstruction; https://github.com/boostorg/python/tree/32ba64a8248d99b1852e77ff4388d9d8a991c4a9",
+        "replacementBlob": "9900602b776aaec64ccb3a7bdc3612c44d276077"
+      },
+      {
+        "markerPath": "boost/python/converter/from_python.cpp.REMOVED.git-id",
+        "method": "reconstruction",
+        "originalBlob": "e9267b9060aef328fe7e63ba3fcc9bf46cb5da24",
+        "path": "boost/python/converter/from_python.cpp",
+        "provenance": "unverified upstream reconstruction; https://github.com/boostorg/python/tree/32ba64a8248d99b1852e77ff4388d9d8a991c4a9",
+        "replacementBlob": "9678be1cb6995d57d03426991f3502ffb8b8c812"
+      },
+      {
+        "markerPath": "boost/python/converter/registry.cpp.REMOVED.git-id",
+        "method": "reconstruction",
+        "originalBlob": "f27191afa2c0497a6c35241ecbcb5291d6482d56",
+        "path": "boost/python/converter/registry.cpp",
+        "provenance": "unverified upstream reconstruction; https://github.com/boostorg/python/tree/32ba64a8248d99b1852e77ff4388d9d8a991c4a9",
+        "replacementBlob": "aa20c3f6852faa93a379b60253a0fcc080b1216f"
+      },
+      {
+        "markerPath": "boost/python/converter/type_id.cpp.REMOVED.git-id",
+        "method": "reconstruction",
+        "originalBlob": "bde0598c11a2b3fbf69b908a51396b86a78530e5",
+        "path": "boost/python/converter/type_id.cpp",
+        "provenance": "unverified upstream reconstruction; https://github.com/boostorg/python/tree/32ba64a8248d99b1852e77ff4388d9d8a991c4a9",
+        "replacementBlob": "c6a8bf7a04e7379f9d29e5ba0e3498fe4637bdd1"
+      },
+      {
+        "markerPath": "boost/python/dict.cpp.REMOVED.git-id",
+        "method": "reconstruction",
+        "originalBlob": "36179d2608a29cb1d369679325f912a03ed8e1bf",
+        "path": "boost/python/dict.cpp",
+        "provenance": "unverified upstream reconstruction; https://github.com/boostorg/python/tree/32ba64a8248d99b1852e77ff4388d9d8a991c4a9",
+        "replacementBlob": "77d840d45522c9d63bbff2c9fc4f21aea6a2d98d"
+      },
+      {
+        "markerPath": "boost/python/exec.cpp.REMOVED.git-id",
+        "method": "reconstruction",
+        "originalBlob": "205977da472b829b132c61b7b4eb5e9e818ca5eb",
+        "path": "boost/python/exec.cpp",
+        "provenance": "unverified upstream reconstruction; https://github.com/boostorg/python/tree/32ba64a8248d99b1852e77ff4388d9d8a991c4a9",
+        "replacementBlob": "9fe1b23b7fbe9587b7543ec32089cd6337808bcf"
+      },
+      {
+        "markerPath": "boost/python/list.cpp.REMOVED.git-id",
+        "method": "reconstruction",
+        "originalBlob": "f5dd90ee7262a92799a19b1696d505d0516475ae",
+        "path": "boost/python/list.cpp",
+        "provenance": "unverified upstream reconstruction; https://github.com/boostorg/python/tree/32ba64a8248d99b1852e77ff4388d9d8a991c4a9",
+        "replacementBlob": "77e616881ab02cb0bce99bcbb9ccb9b550c67297"
+      },
+      {
+        "markerPath": "boost/python/numeric.cpp.REMOVED.git-id",
+        "method": "reconstruction",
+        "originalBlob": "25c4cfa8fececff42ce148abfe09e77158bfcc89",
+        "path": "boost/python/numeric.cpp",
+        "provenance": "unverified upstream reconstruction; https://github.com/boostorg/python/tree/32ba64a8248d99b1852e77ff4388d9d8a991c4a9",
+        "replacementBlob": "c8a5f071d92404c6f7267e06fbec14c6d360a702"
+      },
+      {
+        "markerPath": "boost/python/object/class.cpp.REMOVED.git-id",
+        "method": "reconstruction",
+        "originalBlob": "cb9bdc72de15d22b792665620a7981b5b7bfbcfb",
+        "path": "boost/python/object/class.cpp",
+        "provenance": "unverified upstream reconstruction; https://github.com/boostorg/python/tree/32ba64a8248d99b1852e77ff4388d9d8a991c4a9",
+        "replacementBlob": "aeef688e28692a8ad333caa98169909ca021c74c"
+      },
+      {
+        "markerPath": "boost/python/object/enum.cpp.REMOVED.git-id",
+        "method": "reconstruction",
+        "originalBlob": "9eb57e629413325bb763e63a46171d9cda39f07c",
+        "path": "boost/python/object/enum.cpp",
+        "provenance": "unverified upstream reconstruction; https://github.com/boostorg/python/tree/32ba64a8248d99b1852e77ff4388d9d8a991c4a9",
+        "replacementBlob": "3063320cb05ffc68b922a84c966c77b8c8748409"
+      },
+      {
+        "markerPath": "boost/python/object/function.cpp.REMOVED.git-id",
+        "method": "reconstruction",
+        "originalBlob": "a745c30d9c16ac76091916c86aa4254b9cee94f0",
+        "path": "boost/python/object/function.cpp",
+        "provenance": "unverified upstream reconstruction; https://github.com/boostorg/python/tree/32ba64a8248d99b1852e77ff4388d9d8a991c4a9",
+        "replacementBlob": "5c59cc7798d0f2e7b917deea81971865a09e0301"
+      },
+      {
+        "markerPath": "boost/python/object/function_doc_signature.cpp.REMOVED.git-id",
+        "method": "reconstruction",
+        "originalBlob": "974549397eda7d2517fcd4d44011043415eb5250",
+        "path": "boost/python/object/function_doc_signature.cpp",
+        "provenance": "unverified upstream reconstruction; https://github.com/boostorg/python/tree/32ba64a8248d99b1852e77ff4388d9d8a991c4a9",
+        "replacementBlob": "41695285ac1f3fea63c79b8a9e5df7caa0270ab5"
+      },
+      {
+        "markerPath": "boost/python/object/life_support.cpp.REMOVED.git-id",
+        "method": "reconstruction",
+        "originalBlob": "1afb749fea9fb2dc7809d761fec3ae3bfcb34165",
+        "path": "boost/python/object/life_support.cpp",
+        "provenance": "unverified upstream reconstruction; https://github.com/boostorg/python/tree/32ba64a8248d99b1852e77ff4388d9d8a991c4a9",
+        "replacementBlob": "b7e9aa861e4ecb9fefe00a466053dcef6dc540e1"
+      },
+      {
+        "markerPath": "boost/python/object_protocol.cpp.REMOVED.git-id",
+        "method": "reconstruction",
+        "originalBlob": "c05168f37d8ec0b3f319aa414db1cad29a57de1b",
+        "path": "boost/python/object_protocol.cpp",
+        "provenance": "unverified upstream reconstruction; https://github.com/boostorg/python/tree/32ba64a8248d99b1852e77ff4388d9d8a991c4a9",
+        "replacementBlob": "95c8c73ee66b7b0147e65fb4d2813ebbe44bbd26"
+      },
+      {
+        "markerPath": "config/interactions.json.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "767d08ee1b8a3a1d7d3ff21e161bb50057fcd123",
+        "path": "config/interactions.json",
+        "replacementBlob": "767d08ee1b8a3a1d7d3ff21e161bb50057fcd123"
+      },
+      {
+        "markerPath": "config/monsters.json.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "b6b5708a1c0683d8ca6d9c395ee31e4742bdd39e",
+        "path": "config/monsters.json",
+        "replacementBlob": "b6b5708a1c0683d8ca6d9c395ee31e4742bdd39e"
+      },
+      {
+        "markerPath": "config/weapons.json.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "0a32d5f0cc003ae07cfd43d092921d76ec82f3e5",
+        "path": "config/weapons.json",
+        "replacementBlob": "0a32d5f0cc003ae07cfd43d092921d76ec82f3e5"
+      },
+      {
+        "markerPath": "game.pro.REMOVED.git-id",
+        "method": "reconstruction",
+        "originalBlob": "b383f9b8c860de19efc1dda19a379169f46d577e",
+        "path": "game.pro",
+        "provenance": "Unverified matching55e6516e qmake donor adapted to pre-extraction CMap API: removed future CMapLoader source/header entries; existing engine source list retained",
+        "replacementBlob": "90251a1339305f31f3356f20a6b72d9f220cec20"
+      },
+      {
+        "markerPath": "handler/CObjectHandler.cpp.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "71839f4e25ccccc530e2224f4ca5c43af863c847",
+        "path": "handler/CObjectHandler.cpp",
+        "replacementBlob": "71839f4e25ccccc530e2224f4ca5c43af863c847"
+      },
+      {
+        "markerPath": "images.qrc.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "a769c4e5d7244ab38c9c95ed2595fa84853d0a24",
+        "path": "images.qrc",
+        "replacementBlob": "a769c4e5d7244ab38c9c95ed2595fa84853d0a24"
+      },
+      {
+        "markerPath": "images/arrows/left.png.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "81eb88e6be1e37926a629a710e52872cfb1df0f8",
+        "path": "images/arrows/left.png",
+        "replacementBlob": "81eb88e6be1e37926a629a710e52872cfb1df0f8"
+      },
+      {
+        "markerPath": "images/arrows/right.png.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "eb4f989a3580dd77c019b096fbdfc502e30b6297",
+        "path": "images/arrows/right.png",
+        "replacementBlob": "eb4f989a3580dd77c019b096fbdfc502e30b6297"
+      },
+      {
+        "markerPath": "images/buildings/market.png.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "582116f62b14e4b883f2b219376660cebe65cd4c",
+        "path": "images/buildings/market.png",
+        "replacementBlob": "582116f62b14e4b883f2b219376660cebe65cd4c"
+      },
+      {
+        "markerPath": "images/interactions/abyssalshadows.png.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "4b3fb16a201148fe34892e241f4bfbdbcbe2e94a",
+        "path": "images/interactions/abyssalshadows.png",
+        "replacementBlob": "4b3fb16a201148fe34892e241f4bfbdbcbe2e94a"
+      },
+      {
+        "markerPath": "images/interactions/armorofendlesswinter.png.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "96de0a08a3042187bd88c740ebcf9b4bfc8b5f19",
+        "path": "images/interactions/armorofendlesswinter.png",
+        "replacementBlob": "96de0a08a3042187bd88c740ebcf9b4bfc8b5f19"
+      },
+      {
+        "markerPath": "images/interactions/attack.png.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "1854502273891b7647172605d57723c57803b0b8",
+        "path": "images/interactions/attack.png",
+        "replacementBlob": "1854502273891b7647172605d57723c57803b0b8"
+      },
+      {
+        "markerPath": "images/interactions/backstab.png.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "a5147cb235381591c29f813ced3d3ffb4dcbcd1c",
+        "path": "images/interactions/backstab.png",
+        "replacementBlob": "a5147cb235381591c29f813ced3d3ffb4dcbcd1c"
+      },
+      {
+        "markerPath": "images/interactions/barrier.png.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "39725a3b048d62ede255579cdddb7e12a7c46b04",
+        "path": "images/interactions/barrier.png",
+        "replacementBlob": "39725a3b048d62ede255579cdddb7e12a7c46b04"
+      },
+      {
+        "markerPath": "images/interactions/bloodlash.png.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "b474f7ca3dd8dd088e4baa69b9f55ba44b5010d5",
+        "path": "images/interactions/bloodlash.png",
+        "replacementBlob": "b474f7ca3dd8dd088e4baa69b9f55ba44b5010d5"
+      },
+      {
+        "markerPath": "images/interactions/bloodthirst.png.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "fbb552b780851651f574f49d1394b110f15feba2",
+        "path": "images/interactions/bloodthirst.png",
+        "replacementBlob": "fbb552b780851651f574f49d1394b110f15feba2"
+      },
+      {
+        "markerPath": "images/interactions/chloroform.png.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "9da5cc06457dbe26b6312d92a37b232c151e7ca8",
+        "path": "images/interactions/chloroform.png",
+        "replacementBlob": "9da5cc06457dbe26b6312d92a37b232c151e7ca8"
+      },
+      {
+        "markerPath": "images/interactions/deathstrike.png.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "2dc8f90b4c690c2dccd1131e2d8f46cacb134044",
+        "path": "images/interactions/deathstrike.png",
+        "replacementBlob": "2dc8f90b4c690c2dccd1131e2d8f46cacb134044"
+      },
+      {
+        "markerPath": "images/interactions/devour.png.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "093e992fc7ae93204b5156521a9fb2b43a9a4369",
+        "path": "images/interactions/devour.png",
+        "replacementBlob": "093e992fc7ae93204b5156521a9fb2b43a9a4369"
+      },
+      {
+        "markerPath": "images/interactions/doubleattack.png.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "ca123044e5969d98cb4b2d6e858d155bd1e1a981",
+        "path": "images/interactions/doubleattack.png",
+        "replacementBlob": "ca123044e5969d98cb4b2d6e858d155bd1e1a981"
+      },
+      {
+        "markerPath": "images/interactions/endlesspain.png.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "191dfd23ff17d5ed4bd2b43fbae5a35913ef95de",
+        "path": "images/interactions/endlesspain.png",
+        "replacementBlob": "191dfd23ff17d5ed4bd2b43fbae5a35913ef95de"
+      },
+      {
+        "markerPath": "images/interactions/lethalpoison.png.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "c55e747ae01b910aa6eef40982f68d9f53673a85",
+        "path": "images/interactions/lethalpoison.png",
+        "replacementBlob": "c55e747ae01b910aa6eef40982f68d9f53673a85"
+      },
+      {
+        "markerPath": "images/interactions/magicmissile.png.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "674269a5d6d1ceff668e00ee470a73805de2b770",
+        "path": "images/interactions/magicmissile.png",
+        "replacementBlob": "674269a5d6d1ceff668e00ee470a73805de2b770"
+      },
+      {
+        "markerPath": "images/interactions/shadowbolt.png.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "0e4f805756032062f5a20d4a593378cf7b2d1f2a",
+        "path": "images/interactions/shadowbolt.png",
+        "replacementBlob": "0e4f805756032062f5a20d4a593378cf7b2d1f2a"
+      },
+      {
+        "markerPath": "images/interactions/sneakattack.png.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "444e2618bd7d8022d53e66ec95a5c80671b8d50a",
+        "path": "images/interactions/sneakattack.png",
+        "replacementBlob": "444e2618bd7d8022d53e66ec95a5c80671b8d50a"
+      },
+      {
+        "markerPath": "images/interactions/strike.png.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "a0de9d6d3b04922561d7fbcff9a71afefc51838d",
+        "path": "images/interactions/strike.png",
+        "replacementBlob": "a0de9d6d3b04922561d7fbcff9a71afefc51838d"
+      },
+      {
+        "markerPath": "images/item.png.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "21983e50f30024b0333356c7a20193d283d487e3",
+        "path": "images/item.png",
+        "replacementBlob": "21983e50f30024b0333356c7a20193d283d487e3"
+      },
+      {
+        "markerPath": "images/items/armors/chestplateofnorth.png.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "47675214733ae35679eed0082b10008b312c3055",
+        "path": "images/items/armors/chestplateofnorth.png",
+        "replacementBlob": "47675214733ae35679eed0082b10008b312c3055"
+      },
+      {
+        "markerPath": "images/items/belts/undestructiblebelt.png.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "3ad7119804b816c72822eed8451a1bb1300ab11a",
+        "path": "images/items/belts/undestructiblebelt.png",
+        "replacementBlob": "3ad7119804b816c72822eed8451a1bb1300ab11a"
+      },
+      {
+        "markerPath": "images/items/boots/eradicatorsboots.png.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "7159cddaef89234c8e6b2ff1091e3b39008ea5d1",
+        "path": "images/items/boots/eradicatorsboots.png",
+        "replacementBlob": "7159cddaef89234c8e6b2ff1091e3b39008ea5d1"
+      },
+      {
+        "markerPath": "images/items/gloves/glovesoftheassasin.png.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "dcf0ee27c2c20a364319f922529ff749c2fe3435",
+        "path": "images/items/gloves/glovesoftheassasin.png",
+        "replacementBlob": "dcf0ee27c2c20a364319f922529ff749c2fe3435"
+      },
+      {
+        "markerPath": "images/items/helmets/crownofnightmares.png.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "caeb5680ab9f1145fdf1efadcad4342ec43936e9",
+        "path": "images/items/helmets/crownofnightmares.png",
+        "replacementBlob": "caeb5680ab9f1145fdf1efadcad4342ec43936e9"
+      },
+      {
+        "markerPath": "images/items/potions/bless.png.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "b376e0642913165abcb73d2a76fde4d51d950527",
+        "path": "images/items/potions/bless.png",
+        "replacementBlob": "b376e0642913165abcb73d2a76fde4d51d950527"
+      },
+      {
+        "markerPath": "images/items/potions/life.png.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "6a0a6da5afb8a7a7f55306e449435bdb1cacc664",
+        "path": "images/items/potions/life.png",
+        "replacementBlob": "6a0a6da5afb8a7a7f55306e449435bdb1cacc664"
+      },
+      {
+        "markerPath": "images/items/potions/mana.png.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "5d521d61e9bb5cf6c9f628c19746baaaa7d9e1bf",
+        "path": "images/items/potions/mana.png",
+        "replacementBlob": "5d521d61e9bb5cf6c9f628c19746baaaa7d9e1bf"
+      },
+      {
+        "markerPath": "images/items/potions/poison.png.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "0ad9f545d8487e93c37094f9fccdcb37e1811db8",
+        "path": "images/items/potions/poison.png",
+        "replacementBlob": "0ad9f545d8487e93c37094f9fccdcb37e1811db8"
+      },
+      {
+        "markerPath": "images/items/scroll.png.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "dea10d8587cba6db383b22badc3496ef94519def",
+        "path": "images/items/scroll.png",
+        "replacementBlob": "dea10d8587cba6db383b22badc3496ef94519def"
+      },
+      {
+        "markerPath": "images/items/weapons/bladeofdarkdreams.png.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "947d302ae5b0f2a1abd057386ff86177b41bf434",
+        "path": "images/items/weapons/bladeofdarkdreams.png",
+        "replacementBlob": "947d302ae5b0f2a1abd057386ff86177b41bf434"
+      },
+      {
+        "markerPath": "images/items/weapons/broadsword.png.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "8dc40a7fa0f3080409cbabd4ab2d3c1c318bd666",
+        "path": "images/items/weapons/broadsword.png",
+        "replacementBlob": "8dc40a7fa0f3080409cbabd4ab2d3c1c318bd666"
+      },
+      {
+        "markerPath": "images/items/weapons/dagger.png.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "90cc01a10e0a8206048d88da4122ebb910559fa7",
+        "path": "images/items/weapons/dagger.png",
+        "replacementBlob": "90cc01a10e0a8206048d88da4122ebb910559fa7"
+      },
+      {
+        "markerPath": "images/items/weapons/daggerofvileheart.png.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "51e254e364a33007dba5512a76cda69986c998c0",
+        "path": "images/items/weapons/daggerofvileheart.png",
+        "replacementBlob": "51e254e364a33007dba5512a76cda69986c998c0"
+      },
+      {
+        "markerPath": "images/items/weapons/knife.png.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "f66d560da00a647405ff5e71ea424f8702f6e804",
+        "path": "images/items/weapons/knife.png",
+        "replacementBlob": "f66d560da00a647405ff5e71ea424f8702f6e804"
+      },
+      {
+        "markerPath": "images/items/weapons/longsword.png.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "c12ce2a162fd9f6371333697f8d35e2db6e97b65",
+        "path": "images/items/weapons/longsword.png",
+        "replacementBlob": "c12ce2a162fd9f6371333697f8d35e2db6e97b65"
+      },
+      {
+        "markerPath": "images/items/weapons/shadowblade.png.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "a97aad74c237a557366d26980b894f240b399c68",
+        "path": "images/items/weapons/shadowblade.png",
+        "replacementBlob": "a97aad74c237a557366d26980b894f240b399c68"
+      },
+      {
+        "markerPath": "images/items/weapons/shortstaff.png.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "fbc4537cc5e185169dc2ec5f514af866939bf3e4",
+        "path": "images/items/weapons/shortstaff.png",
+        "replacementBlob": "fbc4537cc5e185169dc2ec5f514af866939bf3e4"
+      },
+      {
+        "markerPath": "images/items/weapons/shortsword.png.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "fed1f8ed826387842228997efe12b0602dfda251",
+        "path": "images/items/weapons/shortsword.png",
+        "replacementBlob": "fed1f8ed826387842228997efe12b0602dfda251"
+      },
+      {
+        "markerPath": "images/items/weapons/staff.png.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "f8cab353fddc4c409c19384b84c5f328b79d7e2d",
+        "path": "images/items/weapons/staff.png",
+        "replacementBlob": "f8cab353fddc4c409c19384b84c5f328b79d7e2d"
+      },
+      {
+        "markerPath": "images/items/weapons/staffoftheabyss.png.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "72313651579cc1056e4054b28eb9ec96c71c20c5",
+        "path": "images/items/weapons/staffoftheabyss.png",
+        "replacementBlob": "72313651579cc1056e4054b28eb9ec96c71c20c5"
+      },
+      {
+        "markerPath": "images/items/weapons/stiletto.png.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "5d7967ab3018c01d77d1dc217073f98e87679e90",
+        "path": "images/items/weapons/stiletto.png",
+        "replacementBlob": "5d7967ab3018c01d77d1dc217073f98e87679e90"
+      },
+      {
+        "markerPath": "images/items/weapons/void.png.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "1189b28a25fe495552b95a28f217b456e1c3efd7",
+        "path": "images/items/weapons/void.png",
+        "replacementBlob": "1189b28a25fe495552b95a28f217b456e1c3efd7"
+      },
+      {
+        "markerPath": "images/items/weapons/wand.png.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "ae4c98f1d3830258b4520d859b4e9d577f03995f",
+        "path": "images/items/weapons/wand.png",
+        "replacementBlob": "ae4c98f1d3830258b4520d859b4e9d577f03995f"
+      },
+      {
+        "markerPath": "images/monsters/gooby.png.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "7eaf4c11556fa8a1c978583c6cccd1c1dac02abd",
+        "path": "images/monsters/gooby.png",
+        "replacementBlob": "7eaf4c11556fa8a1c978583c6cccd1c1dac02abd"
+      },
+      {
+        "markerPath": "images/monsters/octobogz/0.png.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "5f06daf397276dc5e6d23caadd25ae65076434cb",
+        "path": "images/monsters/octobogz/0.png",
+        "replacementBlob": "5f06daf397276dc5e6d23caadd25ae65076434cb"
+      },
+      {
+        "markerPath": "images/monsters/octobogz/1.png.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "e93d2d3d5167abf3dfe9e86f6a87e98124521f0d",
+        "path": "images/monsters/octobogz/1.png",
+        "replacementBlob": "e93d2d3d5167abf3dfe9e86f6a87e98124521f0d"
+      },
+      {
+        "markerPath": "images/monsters/pritz/0.png.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "c83284cea55bcbb2fcd7765df7df6be1d002efb9",
+        "path": "images/monsters/pritz/0.png",
+        "replacementBlob": "c83284cea55bcbb2fcd7765df7df6be1d002efb9"
+      },
+      {
+        "markerPath": "images/monsters/pritz/1.png.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "6d561f5c13d294e48755f01179d973f628ef9cfc",
+        "path": "images/monsters/pritz/1.png",
+        "replacementBlob": "6d561f5c13d294e48755f01179d973f628ef9cfc"
+      },
+      {
+        "markerPath": "images/monsters/pritzmage/0.png.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "f572fb72d4f971bf5861589c3f564a5b2fd66dcf",
+        "path": "images/monsters/pritzmage/0.png",
+        "replacementBlob": "f572fb72d4f971bf5861589c3f564a5b2fd66dcf"
+      },
+      {
+        "markerPath": "images/monsters/pritzmage/1.png.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "2d8bd66481b709af6b6b10323c348ae0de332563",
+        "path": "images/monsters/pritzmage/1.png",
+        "replacementBlob": "2d8bd66481b709af6b6b10323c348ae0de332563"
+      },
+      {
+        "markerPath": "images/monsters/pritzmage/2.png.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "72553fb5737309749539c6a2cc74022b2a11844c",
+        "path": "images/monsters/pritzmage/2.png",
+        "replacementBlob": "72553fb5737309749539c6a2cc74022b2a11844c"
+      },
+      {
+        "markerPath": "images/monsters/pritzmage/3.png.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "dcbad6fb928551df2ef6510e9db0cc1c94aebf8a",
+        "path": "images/monsters/pritzmage/3.png",
+        "replacementBlob": "dcbad6fb928551df2ef6510e9db0cc1c94aebf8a"
+      },
+      {
+        "markerPath": "images/players/assasin.png.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "92a8721bf1f53874071c7a90cba25f2acf64f650",
+        "path": "images/players/assasin.png",
+        "replacementBlob": "92a8721bf1f53874071c7a90cba25f2acf64f650"
+      },
+      {
+        "markerPath": "images/players/sorcerer.png.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "e45a6d42d76401250bfea5b838193ed4ed424f8d",
+        "path": "images/players/sorcerer.png",
+        "replacementBlob": "e45a6d42d76401250bfea5b838193ed4ed424f8d"
+      },
+      {
+        "markerPath": "images/players/warrior.png.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "fa8a69b5c4b0b0f303daeca4a2be16841682a88c",
+        "path": "images/players/warrior.png",
+        "replacementBlob": "fa8a69b5c4b0b0f303daeca4a2be16841682a88c"
+      },
+      {
+        "markerPath": "images/terrain.png.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "af256839abbe479e65cd3f07ecbbdbed15c389d9",
+        "path": "images/terrain.png",
+        "replacementBlob": "af256839abbe479e65cd3f07ecbbdbed15c389d9"
+      },
+      {
+        "markerPath": "maps/map1/map.json.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "4f4bdafc5546bde4ff57612a93e1f387f5e198da",
+        "path": "maps/map1/map.json",
+        "replacementBlob": "4f4bdafc5546bde4ff57612a93e1f387f5e198da"
+      },
+      {
+        "markerPath": "object/CCreature.cpp.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "da9332ee6b2b5ed712a6de6bd6eaccdd43f959f3",
+        "path": "object/CCreature.cpp",
+        "replacementBlob": "da9332ee6b2b5ed712a6de6bd6eaccdd43f959f3"
+      },
+      {
+        "markerPath": "object/CCreature.h.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "2cee8bf3589421fb07cfdc4f760d9cf9aef57782",
+        "path": "object/CCreature.h",
+        "replacementBlob": "2cee8bf3589421fb07cfdc4f760d9cf9aef57782"
+      },
+      {
+        "markerPath": "panel/CFightPanel.cpp.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "8d7dcd697b27d50802b154e5812315e0e41bdbaf",
+        "path": "panel/CFightPanel.cpp",
+        "replacementBlob": "8d7dcd697b27d50802b154e5812315e0e41bdbaf"
+      },
+      {
+        "markerPath": "reindent.py.REMOVED.git-id",
+        "method": "exactOriginal",
+        "originalBlob": "94d147f730a56cd0a463cbb293d773856b6f9604",
+        "path": "reindent.py",
+        "replacementBlob": "94d147f730a56cd0a463cbb293d773856b6f9604"
+      },
+      {
+        "method": "compatibilityRepair",
+        "path": "boost/python/LICENSE_1_0.txt",
+        "provenance": "https://github.com/boostorg/python/tree/32ba64a8248d99b1852e77ff4388d9d8a991c4a9 upstream distribution license",
+        "replacementBlob": "36b7cd93cdfbac762f5be4c6ce276df2ea6305c2"
+      },
+      {
+        "method": "compatibilityRepair",
+        "path": "scripts/PSF_LICENSE",
+        "provenance": "https://www.python.org/ftp/python/3.3.7/Python-3.3.7.tar.xz upstream Python distribution license",
+        "replacementBlob": "f5d0b39a0cdddb91a31a537052b7d8d31a4aa79f"
+      }
+    ],
+    "restoredFilesFingerprint": "43179c5c31644c329c1e63ea96077854fbb371efd3145d53c1301838d6075962",
+    "sourceCommit": "4b3902d44f874a1fae86054d7240a2af76901bb4",
+    "sourceTree": "1cbea618228ae2ccfe403974781f0d171c089189",
+    "status": "complete",
+    "submodules": [],
+    "unresolved": []
+  },
+  "smoke": {
+    "command": [
+      "xvfb-run",
+      "-a",
+      "--server-args=-screen 0 1920x1080x24",
+      "/home/alis3/git/fall-of-nouraajd/.cache/history-recovery/late2015/snapshot-voofo94t/build/RecoveryGame"
+    ],
+    "log": "/home/alis3/git/fall-of-nouraajd/.cache/history-recovery/late2015/snapshot-voofo94t/smoke/startup.log",
+    "returnCode": 0,
+    "seconds": 0.517,
+    "startup": {
+      "checks": {
+        "eventLoop": true,
+        "map": true,
+        "player": true,
+        "renderedFrame": true
+      },
+      "frame": {
+        "height": 718,
+        "path": "startup.png",
+        "sha256": "c3d15d123ca42d918becdb4c99c11523b7bac18ca098e37783874bde41cd0100",
+        "width": 1278
+      },
+      "reason": "",
+      "schemaVersion": 1,
+      "status": "ready"
+    },
+    "status": "success",
+    "timedOut": false
+  },
+  "sourceCommit": "4b3902d44f874a1fae86054d7240a2af76901bb4",
+  "sourceCommits": [
+    "4b3902d44f874a1fae86054d7240a2af76901bb4"
+  ],
+  "sourceTree": "1cbea618228ae2ccfe403974781f0d171c089189",
+  "status": "success",
+  "toolchain": {
+    "compilerCommand": {
+      "path": "/usr/bin/g++-5",
+      "version": "g++-5 (Ubuntu 5.4.0-6ubuntu1~16.04.12) 5.4.0 20160609\nCopyright (C) 2015 Free Software Foundation, Inc.\nThis is free software; see the source for copying conditions.  There is NO\nwarranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.\n\n"
+    },
+    "makeCommand": {
+      "path": "/usr/bin/make",
+      "version": "GNU Make 4.1\nBuilt for x86_64-pc-linux-gnu\nCopyright (C) 1988-2014 Free Software Foundation, Inc.\nLicense GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>\nThis is free software: you are free to change and redistribute it.\nThere is NO WARRANTY, to the extent permitted by law.\n"
+    },
+    "qmakeCommand": {
+      "path": "/usr/lib/x86_64-linux-gnu/qt5/bin/qmake",
+      "version": "QMake version 3.0\nUsing Qt version 5.5.1 in /usr/lib/x86_64-linux-gnu\n"
+    }
+  },
+  "verifiedFromCommit": "4b3902d44f874a1fae86054d7240a2af76901bb4"
+}
