@@ -22,9 +22,9 @@ new_non_null_reference long_base::call ( object const& arg_, object const& base 
 
 long_base::long_base()
 	: object (
-	    detail::new_reference (
-	        PyObject_CallFunction ( ( PyObject* ) &PyLong_Type, const_cast<char*> ( "()" ) ) )
-	)
+	      detail::new_reference (
+	          PyObject_CallFunction ( ( PyObject* ) &PyLong_Type, const_cast<char*> ( "()" ) ) )
+	  )
 {}
 
 long_base::long_base ( object_cref arg )
