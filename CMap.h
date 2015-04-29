@@ -1,23 +1,18 @@
 #pragma once
 #include <list>
-#include <QTimer>
+#include <unordered_map>
+#include <set>
+
 #include <QObject>
-#include <qgraphicsitemanimation.h>
-#include <QTimeLine>
+#include <QGraphicsScene>
+#include <QString>
+
+#include "Util.h"
+#include "CScriptLoader.h"
 #include "CAnimation.h"
 #include "object/CObject.h"
 #include "handler/CHandler.h"
 #include "provider/CProvider.h"
-#include <unordered_map>
-#include <set>
-#include <QJsonObject>
-#include <QGraphicsScene>
-#include <QString>
-#include <string>
-#include "Util.h"
-#include <mutex>
-#include <boost/python.hpp>
-#include "CScriptLoader.h"
 
 class CGameScene;
 class CTile;
@@ -30,6 +25,7 @@ class CGuiHandler;
 
 class CMap : public QObject,
 	private std::unordered_map<Coords, CTile*> {
+	friend class CMapLoader;
 	Q_OBJECT
 public:
 	CMap ( CGameScene *scene, QString mapPath );
@@ -61,8 +57,6 @@ public:
 	CPlayer *getPlayer();
 	void setPlayer ( QString playerName );
 	void moveTile ( CTile* tile,int x, int y, int z );
-	void handleTileLayer ( const QJsonObject& tileset,const QJsonObject& layer );
-	void handleObjectLayer ( const QJsonObject &layer );
 	const CLootHandler *getLootHandler();
 	const CObjectHandler *getObjectHandler() ;
 	const CEventHandler *getEventHandler() ;
@@ -75,6 +69,7 @@ public:
 	QString getMapName();
 	CMapObject *getObjectByName ( QString name );
 	bool isMoving();
+	void applyEffects();
 
 	template<typename T>
 	std::set<CMapObject *> getIf ( T func ) {
@@ -106,11 +101,10 @@ public:
 			removeObject ( it );
 		}
 	}
-	void applyEffects();
+
 private:
 	std::set<CMapObject *> getMapObjectsClone();
 	void resolveFights();
-	void loadMap ( QString mapPath );
 	std::unordered_map<QString,CMapObject *> mapObjects;
 	CGameScene *scene=0;
 	CPlayer *player=0;
