@@ -1,0 +1,283 @@
+{
+    "Assasin": {
+        "class": "CPlayer",
+        "properties": {
+            "actions": [
+                "Attack"
+            ],
+            "animation": "images/players/assasin",
+            "inventory": {
+                "0": "Dagger",
+                "3": "LeatherArmor"
+            },
+            "items": [
+                "LifePotion",
+                "ManaPotion"
+            ],
+            "levelStats": {
+                "agility": 3,
+                "crit": 2,
+                "dmgMax": 2,
+                "dmgMin": 1,
+                "hit": 3,
+                "intelligence": 2,
+                "stamina": 1,
+                "strength": 1
+            },
+            "levelling": {
+                "1": "SneakAttack",
+                "2": "Mutilation",
+                "3": "LethalPoison",
+                "4": "Chloroform",
+                "5": "Stunner",
+                "6": "Backstab"
+            },
+            "stats": {
+                "agility": 5,
+                "crit": 10,
+                "dmgMax": 12,
+                "dmgMin": 10,
+                "hit": 75,
+                "intelligence": 5,
+                "main": "agility",
+                "stamina": 5,
+                "strength": 5
+            }
+        }
+    },
+    "Gooby": {
+        "class": "CMonster",
+        "properties": {
+            "actions": [
+                "Attack"
+            ],
+            "animation": "images/monsters/gooby",
+            "levelStats": {
+                "agility": 2,
+                "crit": 1,
+                "dmgMax": 3,
+                "dmgMin": 2,
+                "hit": 3,
+                "intelligence": 1,
+                "normalResist": 5,
+                "stamina": 2,
+                "strength": 3
+            },
+            "levelling": {
+                "4": "DoubleAttack"
+            },
+            "stats": {
+                "agility": 5,
+                "crit": 10,
+                "dmgMax": 12,
+                "dmgMin": 10,
+                "hit": 75,
+                "intelligence": 5,
+                "main": "strength",
+                "stamina": 5,
+                "strength": 5
+            },
+            "sw": 1
+        }
+    },
+    "OctoBogz": {
+        "class": "CMonster",
+        "properties": {
+            "actions": [
+                "Attack"
+            ],
+            "animation": "images/monsters/octobogz/",
+            "levelStats": {
+                "agility": 3,
+                "crit": 2,
+                "dmgMax": 5,
+                "dmgMin": 4,
+                "hit": 4,
+                "intelligence": 2,
+                "normalResist": 7,
+                "stamina": 3,
+                "strength": 5
+            },
+            "levelling": {
+                "2": "AbyssalShadows"
+            },
+            "stats": {
+                "agility": 10,
+                "crit": 20,
+                "dmgMax": 21,
+                "dmgMin": 17,
+                "hit": 80,
+                "intelligence": 10,
+                "main": "strength",
+                "stamina": 10,
+                "strength": 10
+            },
+            "sw": 2
+        }
+    },
+    "Pritz": {
+        "class": "CMonster",
+        "properties": {
+            "actions": [
+                "Attack"
+            ],
+            "animation": "images/monsters/pritz/",
+            "levelStats": {
+                "agility": 2,
+                "crit": 1,
+                "dmgMax": 3,
+                "dmgMin": 2,
+                "hit": 3,
+                "intelligence": 1,
+                "normalResist": 5,
+                "stamina": 2,
+                "strength": 3
+            },
+            "levelling": {
+                "4": "DoubleAttack"
+            },
+            "stats": {
+                "agility": 5,
+                "crit": 10,
+                "dmgMax": 12,
+                "dmgMin": 10,
+                "hit": 75,
+                "intelligence": 5,
+                "main": "strength",
+                "stamina": 5,
+                "strength": 5
+            },
+            "sw": 1
+        }
+    },
+    "PritzMage": {
+        "class": "CMonster",
+        "properties": {
+            "actions": [
+                "Attack"
+            ],
+            "animation": "images/monsters/pritzmage/",
+            "levelStats": {
+                "agility": 2,
+                "crit": 1,
+                "dmgMax": 3,
+                "dmgMin": 2,
+                "hit": 3,
+                "intelligence": 3,
+                "normalResist": 5,
+                "stamina": 2,
+                "strength": 3
+            },
+            "levelling": {
+                "2": "MagicMissile",
+                "3": "FrostBolt"
+            },
+            "stats": {
+                "agility": 5,
+                "crit": 10,
+                "dmgMax": 12,
+                "dmgMin": 10,
+                "hit": 75,
+                "intelligence": 5,
+                "main": "intelligence",
+                "stamina": 5,
+                "strength": 5
+            },
+            "sw": 2
+        }
+    },
+    "Sorcerer": {
+        "class": "CPlayer",
+        "properties": {
+            "actions": [
+                "Attack"
+            ],
+            "animation": "images/players/sorcerer",
+            "inventory": {
+                "0": "Staff",
+                "3": "Robe"
+            },
+            "items": [
+                "LifePotion",
+                "ManaPotion"
+            ],
+            "levelStats": {
+                "agility": 2,
+                "crit": 1,
+                "dmgMax": 1,
+                "dmgMin": 1,
+                "hit": 1,
+                "intelligence": 3,
+                "stamina": 1,
+                "strength": 1
+            },
+            "levelling": {
+                "1": "MagicMissile",
+                "10": "ChaosBlast",
+                "2": "AbyssalShadows",
+                "3": "FrostBolt",
+                "4": "EndlessPain",
+                "5": "ArmorOfEndlessWinter",
+                "7": "ShadowBolt",
+                "8": "Devour"
+            },
+            "stats": {
+                "agility": 5,
+                "crit": 10,
+                "dmgMax": 12,
+                "dmgMin": 10,
+                "hit": 75,
+                "intelligence": 5,
+                "main": "intelligence",
+                "stamina": 5,
+                "strength": 5
+            }
+        }
+    },
+    "Warrior": {
+        "class": "CPlayer",
+        "properties": {
+            "actions": [
+                "Attack"
+            ],
+            "animation": "images/players/warrior",
+            "inventory": {
+                "0": "Sword",
+                "3": "PlateArmor"
+            },
+            "items": [
+                "LifePotion",
+                "ManaPotion"
+            ],
+            "levelStats": {
+                "agility": 2,
+                "crit": 1,
+                "dmgMax": 3,
+                "dmgMin": 2,
+                "hit": 3,
+                "intelligence": 1,
+                "stamina": 2,
+                "strength": 3
+            },
+            "levelling": {
+                "1": "Strike",
+                "2": "Barrier",
+                "3": "BloodThirst",
+                "4": "Bloodlash",
+                "5": "DeathStrike",
+                "6": "DoubleAttack"
+            },
+            "stats": {
+                "agility": 5,
+                "crit": 10,
+                "dmgMax": 12,
+                "dmgMin": 10,
+                "hit": 75,
+                "intelligence": 5,
+                "main": "strength",
+                "stamina": 5,
+                "strength": 5
+            }
+        }
+    }
+}
