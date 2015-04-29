@@ -1,15 +1,7 @@
- # ------------------------------------------------ -
- #
- # Project created by QtCreator 2013 - 10 - 30T13 : 16 : 43
- #
- # ------------------------------------------------ -
-
 QT += core gui opengl widgets
 
 TARGET = game
 TEMPLATE = app
-
-include(game.pri)
 
 SOURCES += \
      CPathFinder.cpp \
@@ -21,34 +13,6 @@ SOURCES += \
      CPlayerView.cpp \
      Stats.cpp \
      CMain.cpp \
-    boost/python/dict.cpp \
-    boost/python/errors.cpp \
-    boost/python/exec.cpp \
-    boost/python/import.cpp \
-    boost/python/list.cpp \
-    boost/python/long.cpp \
-    boost/python/module.cpp \
-    boost/python/numeric.cpp \
-    boost/python/object_operators.cpp \
-    boost/python/object_protocol.cpp \
-    boost/python/slice.cpp \
-    boost/python/str.cpp \
-    boost/python/tuple.cpp \
-    boost/python/wrapper.cpp \
-    boost/python/converter/arg_to_python_base.cpp \
-    boost/python/converter/builtin_converters.cpp \
-    boost/python/converter/from_python.cpp \
-    boost/python/converter/registry.cpp \
-    boost/python/converter/type_id.cpp \
-    boost/python/object/class.cpp \
-    boost/python/object/enum.cpp \
-    boost/python/object/function.cpp \
-    boost/python/object/function_doc_signature.cpp \
-    boost/python/object/inheritance.cpp \
-    boost/python/object/iterator.cpp \
-    boost/python/object/life_support.cpp \
-    boost/python/object/pickle_support.cpp \
-    boost/python/object/stl_iterator.cpp \
     CScriptLoader.cpp \
     handler/CTypeHandler.cpp \
     handler/CObjectHandler.cpp \
@@ -74,7 +38,15 @@ SOURCES += \
     object/CEffect.cpp \
     object/CGameObject.cpp \
     object/CEvent.cpp \
-    object/CTrigger.cpp
+    object/CTrigger.cpp \
+    object/CQuest.cpp \
+    handler/CQuestHandler.cpp \
+    panel/CTradePanel.cpp \
+    handler/CMouseHandler.cpp \
+    panel/CGamePanel.cpp \
+    Util.cpp \
+    object/CMarket.cpp \
+    CMapLoader.cpp
 
 HEADERS += \
      CPathFinder.h \
@@ -115,11 +87,13 @@ HEADERS += \
     object/CEffect.h \
     object/CGameObject.h \
     object/CEvent.h \
-    object/CTrigger.h
-
-
-unix:LIBS += -L/usr/local/lib -lpython3.4m -ldl -fPIC -lutil
-win32:LIBS += -LC:\Python34\libs -lpython34
+    object/CTrigger.h \
+    object/CQuest.h \
+    handler/CQuestHandler.h \
+    panel/CTradePanel.h \
+    handler/CMouseHandler.h \
+    object/CMarket.h \
+    CMapLoader.h
 
 FORMS += \
      CMainWindow.ui
@@ -134,17 +108,28 @@ OTHER_FILES += \
     format.py \
     reindent.py
 
+QMAKE_CXXFLAGS = -std=c++11 "-include cmath" -Wno-deprecated-declarations -Wno-unused-local-typedefs
+QMAKE_CXXFLAGS_RELEASE = -O3 -flto -march=native
+QMAKE_LFLAGS_RELEASE = -O3 -flto -march=native
+QMAKE_CXXFLAGS_DEBUG = -g3
+QMAKE_RESOURCE_FLAGS = -threshold 0 -compress 9
 
-SOURCES += handler/CQuestHandler.cpp object/CQuest.cpp
-HEADERS += handler/CQuestHandler.h object/CQuest.h
+DEFINES += "QT_NO_KEYWORDS"
 
-SOURCES += panel/CTradePanel.cpp
-HEADERS += panel/CTradePanel.h
+CONFIG(release,debug|release){
+    DEFINES += "QT_NO_DEBUG_OUTPUT"
+}
 
-SOURCES += handler/CMouseHandler.cpp
-HEADERS += handler/CMouseHandler.h
+CONFIG(debug,debug|release){
+    CONFIG +=console
+}
 
-SOURCES += Util.cpp panel/CGamePanel.cpp
+LIBS += -L/usr/local/lib -L/home/andrzejlis/boost_1_58_0/stage/lib -lpython3.4m -ldl -fPIC -lutil -lboost_python3
 
-SOURCES += object/CMarket.cpp
-HEADERS += object/CMarket.h
+INCLUDEPATH += /usr/local/include/python3.4m
+DEPENDPATH += /usr/local/include/python3.4m
+INCLUDEPATH += /home/andrzejlis/boost_1_58_0
+DEPENDPATH += /home/andrzejlis/boost_1_58_0
+
+
+
