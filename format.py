@@ -12,6 +12,8 @@ sys.dont_write_bytecode=True
 from reindent import check
 
 DIR="."
+IGNORED=["map.json"]
+
 # -----------------------------------------------------------------------------
 
 def formatJson(files):
@@ -32,7 +34,7 @@ def formatPython(files):
 def getFileList(dir,ext):
     for root, dirs, files in os.walk(dir):
         for file in files:
-            if file.endswith("."+ext):
+            if file.endswith("."+ext) and not file in IGNORED:
                 yield os.path.join(root, file)
 
 def main():
