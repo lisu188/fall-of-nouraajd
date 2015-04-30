@@ -114,13 +114,6 @@ CMouseHandler *CMap::getMouseHandler()  {
 	}
 	return mouseHandler;
 }
-CScriptHandler *CMap::getScriptHandler()  {
-	if ( scriptHandler==0 ) {
-		scriptHandler=new CScriptHandler ( this );
-		qDebug() <<"Initialized script handler"<<"\n";
-	}
-	return this->scriptHandler;
-}
 
 CGuiHandler *CMap::getGuiHandler()  {
 	if ( guiHandler==0 ) {

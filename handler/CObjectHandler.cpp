@@ -30,18 +30,21 @@ void CObjectHandler::logProperties ( CGameObject *object ) const {
 
 CGameObject *CObjectHandler::_createObject ( QString type ) const {
 	QJsonObject config=objectConfig[type].toObject();
-	QString className=config["class"].toString();
-	QJsonObject properties=config["properties"].toObject();
+	QString className=config.isEmpty() ?type:config["class"].toString();
+
 	CGameObject *object = CTypeHandler::create ( className );
 	if ( object==nullptr ) {
 		qFatal ( ( "No object for type: "+type ).toStdString().c_str() );
 	}
+
 	std::stringstream stream;
 	stream << std::hex << ( long ) object;
 	QString result ( stream.str().c_str() );
 	object->setObjectName ( result );
 	object->setObjectType ( type );
 	object->setMap ( this->map );
+
+	QJsonObject properties=config["properties"].toObject();
 	for ( auto it=properties.begin(); it!=properties.end(); it++ ) {
 		setProperty ( object ,it.key(),it.value() );
 	}

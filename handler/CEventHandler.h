@@ -46,18 +46,21 @@ struct hash<TriggerKey> {
 	std::size_t operator() ( const TriggerKey &triggerKey ) const {
 		using std::size_t;
 		int hash=stringHash ( triggerKey.name );
-		int type=static_cast<int> ( triggerKey.type ) *31;
-		return ( size_t ) ( hash^type );
+		hash+=static_cast<int> ( triggerKey.type ) *31;
+		return hash;
 	}
 };
 }
+
+typedef std::unordered_multimap<TriggerKey, CTrigger*> TriggerMap ;
 
 class CEventHandler : public QObject {
 	Q_OBJECT
 public:
 	CEventHandler ( CMap *map );
 	void gameEvent ( CGameObject *mapObject , CGameEvent *event ) const;
+	void registerTrigger ( QString name,QString type,CTrigger *trigger );
 private:
-	std::unordered_map<TriggerKey, std::list<CTrigger*>> triggers;
+	TriggerMap triggers;
 	CMap*map=0;
 };
