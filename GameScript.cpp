@@ -219,9 +219,10 @@ BOOST_PYTHON_MODULE ( _core ) {
 	.def_readonly ( "cached",&ModuleSpec::cached );
 	class_<AScriptLoader,boost::noncopyable> ( "AScriptLoader" ,no_init )
 	.def ( "exec_module",&AScriptLoader::exec_module )
-	.def ( "find_spec",&AScriptLoader::find_spec ,return_internal_reference<>() );
+	.def ( "find_spec",&AScriptLoader::find_spec ,return_internal_reference<>() )
+	.def ( "__eq__",&AScriptLoader::__eq__ );
 	class_<CScriptLoader,bases<AScriptLoader>,boost::noncopyable> ( "CScriptLoader" );
-	class_<CMapScriptLoader,bases<AScriptLoader>,boost::noncopyable> ( "CMapScriptLoader",no_init );
+	class_<CCustomScriptLoader,bases<AScriptLoader>,boost::noncopyable> ( "CCustomScriptLoader",no_init );
 	def ( "registerType",registerType );
 }
 
@@ -248,6 +249,7 @@ BOOST_PYTHON_MODULE ( _game ) {
 	.def ( "getGuiHandler",&CMap::getGuiHandler,return_internal_reference<>() )
 	.def ( "removeAll",&CMap::removeAll<object> )
 	.def ( "getObjectHandler",&CMap::getObjectHandler,return_internal_reference<>() )
+	.def ( "getEventHandler",&CMap::getEventHandler,return_internal_reference<>() )
 	.def ( "addObject",&CMap::addObject );
 	class_<CObjectHandler,boost::noncopyable> ( "CObjectHandler",no_init )
 	.def ( "createObject",&CObjectHandler::createObject<CGameObject*>,return_internal_reference<>() );
@@ -334,4 +336,5 @@ BOOST_PYTHON_MODULE ( _game ) {
 	class_<CQuestWrapper,bases<CQuest>,boost::noncopyable,boost::shared_ptr<CQuestWrapper>> ( "CQuest" )
 	        .def ( "isCompleted",&CQuestWrapper::isCompleted )
 	        .def ( "onComplete",&CQuestWrapper::onComplete );
+	class_<CEventHandler,boost::noncopyable> ( "CEventHandler",no_init ).def ( "registerTrigger",&CEventHandler::registerTrigger );
 }

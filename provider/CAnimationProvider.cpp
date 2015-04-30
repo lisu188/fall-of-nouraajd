@@ -12,9 +12,7 @@
 #include "handler/CHandler.h"
 
 CAnimation *CAnimationProvider::getAnim ( QString path ) {
-	static std::mutex mutex;
 	static CAnimationProvider instance;
-	std::unique_lock<std::mutex> lock ( mutex );
 	return instance.getAnimation ( path );
 }
 
@@ -50,10 +48,10 @@ void CAnimationProvider::loadAnim ( QString path ) {
 	}
 	if ( !config.isEmpty() ) {
 		for (  int i = 0; i < config.size(); i++ ) {
-			timemap.insert ( std::pair<int, int> ( i, config[i].toInt() ) );
+			timemap.insert ( std::make_pair ( i, config[i].toInt() ) );
 		}
 	} else {
-		timemap.insert ( std::pair<int, int> ( 0, 250 ) );
+		timemap.insert (  std::make_pair ( 0, 250 ) );
 	}
 	if ( ! path.endsWith ( "/" ) ) {
 		img=getImage ( path+".png" );
@@ -134,6 +132,6 @@ void CAnimation::next() {
 }
 
 void CAnimation::add ( QPixmap *img, int time ) {
-	insert ( std::pair<int, std::pair<QPixmap *, int> > (
-	             size(), std::pair<QPixmap *, int> ( img, time ) ) );
+	insert (  std::make_pair (
+	              size(),  std::make_pair ( img, time ) ) );
 }

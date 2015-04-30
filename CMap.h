@@ -61,7 +61,6 @@ public:
 	const CObjectHandler *getObjectHandler() ;
 	const CEventHandler *getEventHandler() ;
 	CMouseHandler *getMouseHandler() ;
-	CScriptHandler *getScriptHandler() ;
 	CGuiHandler *getGuiHandler() ;
 	bool canStep ( int x,int y,int z );
 	bool canStep ( const Coords &coords );
@@ -116,7 +115,6 @@ private:
 	CObjectHandler *objectHandler=0;
 	CEventHandler *eventHandler=0;
 	CGuiHandler *guiHandler=0;
-	CScriptHandler *scriptHandler=0;
 	CMouseHandler *mouseHandler=0;
 	QString mapPath;
 	bool moving=false;

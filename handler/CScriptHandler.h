@@ -1,18 +1,13 @@
 #pragma once
-#include <QObject>
-#include <string>
 #include <boost/python.hpp>
 
-class CMap;
-
-class CScriptHandler :public QObject {
-	Q_OBJECT
+class CScriptHandler {
 public:
+	static CScriptHandler* getInstance();
 	void executeScript ( QString script ,boost::python::object nameSpace=boost::python::object() );
 	void executeCommand ( std::initializer_list<QString> list );
 	QString buildCommand ( std::initializer_list<QString> list );
-	CScriptHandler ( CMap *map );
-	~CScriptHandler();
+	void addModule ( QString modName,QString path );
 	template<typename T=boost::python::object>
 	T getObject ( QString name ) {
 		try {
@@ -45,7 +40,8 @@ public:
 		return boost::python::extract<T> ( object );
 	}
 private:
-	CMap*map=0;
+	CScriptHandler (  );
+	~CScriptHandler();
 	boost::python::object main_module;
 	boost::python::object main_namespace;
 };

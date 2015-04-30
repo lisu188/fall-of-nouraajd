@@ -49,41 +49,26 @@ ModuleSpec *AScriptLoader::find_spec ( object name, object, object ) {
 	return boost::ref ( spec );
 }
 
-AScriptLoader *AScriptLoader::find_module ( boost::python::object name, boost::python::object ) {
-	std::string modName=boost::python::extract<std::string> ( name ) ;
-	if ( checkModule ( modName ) ) {
-		AScriptLoader *loader=this;
-		return boost::ref ( loader );
-	} else {
-		return nullptr;
+bool AScriptLoader::__eq__ ( boost::python::api::object object ) {
+	try {
+		return boost::python::extract<AScriptLoader*> ( object ) ==this;
+	} catch ( ... ) {
+		PyErr_Clear();
+		return false;
 	}
-}
-
-boost::python::object AScriptLoader::load_module ( boost::python::object name ) {
-	std::string modName=boost::python::extract<std::string> ( name ) ;
-	object sys=boost::python::object ( boost::python::handle<> ( PyImport_ImportModule ( "sys" ) ) ) ;
-	object sysModules=sys.attr ( "modules" );
-	if ( sysModules.contains ( name ) ) {
-		return sysModules[name];
-	}
-	boost::python::object module=boost::python::object ( boost::python::handle<> ( PyImport_AddModule ( modName.c_str() ) ) ) ;
-	module.attr ( "__name__" ) =name;
-	sysModules[name]=module;
-	exec_module ( module );
-	return module;
 }
 
 bool AScriptLoader::checkModule ( QString modName ) {
 	return findModule ( modName ) !="";
 }
 
-CMapScriptLoader::CMapScriptLoader ( CMap *map ) :map ( map ) {
-	this->QObject::setParent ( map );
+CCustomScriptLoader::CCustomScriptLoader ( QString name,QString path ) :name ( name ),path ( path ) {
+
 }
 
-QString CMapScriptLoader::findModule ( QString modName ) {
-	if ( modName==map->getMapName() ) {
-		return CResourcesProvider::getInstance()->getResourceAsString ( map->getMapPath()+"/script.py" );
+QString CCustomScriptLoader::findModule ( QString modName ) {
+	if ( modName==name ) {
+		return CResourcesProvider::getInstance()->getResourceAsString ( path );
 	}
 	return QString();
 }

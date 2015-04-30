@@ -8,8 +8,6 @@
 #include "CResourcesProvider.h"
 
 QJsonValue &CConfigurationProvider::getConfig ( QString path ) {
-	static std::mutex mutex;
-	std::unique_lock<std::mutex> lock ( mutex );
 	static CConfigurationProvider instance;
 	return instance.getConfiguration ( path );
 }
@@ -41,11 +39,11 @@ void CConfigurationProvider::loadConfig ( QString path ) {
 		} else if ( json.isArray() ) {
 			value=json.array();
 		}
-		this->insert ( std::pair<QString, QJsonValue > ( path,value ) );
+		this->insert (  std::make_pair ( path,value ) );
 		file->close();
 		qDebug() << "Loaded configuration:" << path << "\n";
 	} else {
 		qDebug ( ( "Cannot load file:"+ path ).toStdString().c_str() );
-		this->insert ( std::pair<QString, QJsonValue > ( path,QJsonValue() ) );
+		this->insert ( std::make_pair ( path,QJsonValue() ) );
 	}
 }
