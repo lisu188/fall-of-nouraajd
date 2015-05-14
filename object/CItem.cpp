@@ -1,5 +1,5 @@
 #include "CItem.h"
-#include "CGameScene.h"
+#include "CGame.h"
 #include "Stats.h"
 #include <QDebug>
 #include <QJsonObject>

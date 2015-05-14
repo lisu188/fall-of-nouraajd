@@ -6,7 +6,7 @@
 #include <functional>
 #include "CMapObject.h"
 
-class CGameScene;
+class CGame;
 class CCreature;
 class CTile : public CGameObject {
 	Q_OBJECT
@@ -19,8 +19,8 @@ public:
 	Coords getCoords();
 	bool canStep() const;
 	void setCanStep ( bool canStep );
-	void addToScene ( CGameScene *scene );
-	void removeFromScene ( CGameScene *scene );
+	void addToScene ( CGame *scene );
+	void removeFromScene ( CGame *scene );
 
 	virtual ~CTile();
 private:

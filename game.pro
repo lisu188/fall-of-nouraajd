@@ -7,7 +7,6 @@ SOURCES += \
      CPathFinder.cpp \
      GameScript.cpp \
      CMap.cpp \
-     CGameScene.cpp \
      CGameView.cpp \
      CMainWindow.cpp \
      CPlayerView.cpp \
@@ -46,12 +45,12 @@ SOURCES += \
     panel/CGamePanel.cpp \
     Util.cpp \
     object/CMarket.cpp \
-    CMapLoader.cpp
+    CMapLoader.cpp \
+    CGame.cpp
 
 HEADERS += \
      CPathFinder.h \
      CMap.h \
-     CGameScene.h \
      CGameView.h \
      CMainWindow.h \
      CPlayerView.h \
@@ -93,7 +92,8 @@ HEADERS += \
     panel/CTradePanel.h \
     handler/CMouseHandler.h \
     object/CMarket.h \
-    CMapLoader.h
+    CMapLoader.h \
+    CGame.h
 
 FORMS += \
      CMainWindow.ui

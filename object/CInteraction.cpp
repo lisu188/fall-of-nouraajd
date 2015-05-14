@@ -1,6 +1,6 @@
 #include "CInteraction.h"
 #include "CCreature.h"
-#include "CGameScene.h"
+#include "CGame.h"
 #include "CGameView.h"
 #include  "CPlayerView.h"
 #include <QDebug>

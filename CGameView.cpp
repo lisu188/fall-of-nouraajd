@@ -34,7 +34,7 @@ CGameView::CGameView ( QString mapName , QString playerType ) {
 	setViewportUpdateMode ( QGraphicsView::BoundingRectViewportUpdate );
 	setViewport ( new QGLWidget ( QGLFormat ( QGL::SampleBuffers ) ) );
 	setViewportUpdateMode ( QGraphicsView::FullViewportUpdate );
-	setScene ( new CGameScene ( this ) );
+	setScene ( new CGame ( this ) );
 	timer.setSingleShot ( true );
 	timer.setInterval ( 250 );
 	connect ( &timer,&QTimer::timeout, this, &CGameView::start );
@@ -80,8 +80,8 @@ void CGameView::dragMoveEvent ( QDragMoveEvent *e ) {
 	repaint();
 }
 
-CGameScene *CGameView::getScene() const {
-	return dynamic_cast<CGameScene *> ( scene() );
+CGame *CGameView::getScene() const {
+	return dynamic_cast<CGame *> ( scene() );
 }
 
 void CGameView::centerOn ( CPlayer *player ) {

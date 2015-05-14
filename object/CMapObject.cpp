@@ -1,6 +1,6 @@
 #include "CMapObject.h"
 #include "CMap.h"
-#include "CGameScene.h"
+#include "CGame.h"
 #include "CCreature.h"
 #include "CTile.h"
 
@@ -68,8 +68,8 @@ void CMapObject::onDestroy ( CGameEvent * ) {
 
 void CMapObject::onMapChanged() {
 	this->QObject::setParent ( getMap() );
-	if ( this->scene() != getMap()->getScene() ) {
-		getMap()->getScene()->addItem ( this );
+	if ( this->scene() != getMap()->getGame() ) {
+		getMap()->getGame()->addItem ( this );
 	}
 }
 

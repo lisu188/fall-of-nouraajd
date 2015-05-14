@@ -1,5 +1,5 @@
 #include "CGamePanel.h"
-#include "CGameScene.h"
+#include "CGame.h"
 #include <qpainter.h>
 #include <sstream>
 #include <QDebug>
@@ -17,11 +17,6 @@ CCharPanel::CCharPanel() {
 	setZValue ( 6 );
 	setVisible ( false );
 }
-
-CCharPanel::CCharPanel ( const CCharPanel & ) {
-
-}
-
 
 QRectF CCharPanel::boundingRect() const {
 	return QRectF ( 0, 0, 400, 300 );

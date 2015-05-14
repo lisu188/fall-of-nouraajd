@@ -1,5 +1,5 @@
 #include "CGamePanel.h"
-#include "CGameScene.h"
+#include "CGame.h"
 #include <qpainter.h>
 #include <sstream>
 #include <QDebug>
@@ -13,10 +13,6 @@
 
 CTextPanel::CTextPanel() {
 	this->setZValue ( 7 );
-}
-
-CTextPanel::CTextPanel ( const CTextPanel & ) {
-
 }
 
 QRectF CTextPanel::boundingRect() const {

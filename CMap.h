@@ -14,7 +14,7 @@
 #include "handler/CHandler.h"
 #include "provider/CProvider.h"
 
-class CGameScene;
+class CGame;
 class CTile;
 class CPlayer;
 class CLootHandler;
@@ -28,7 +28,7 @@ class CMap : public QObject,
 	friend class CMapLoader;
 	Q_OBJECT
 public:
-	CMap ( CGameScene *scene, QString mapPath );
+	CMap ( CGame *scene, QString mapPath );
 	virtual ~CMap();
 	bool addTile ( CTile *tile, int x, int y, int z );
 	void removeTile ( int x, int y, int z );
@@ -39,7 +39,7 @@ public:
 	void addObject ( CMapObject *mapObject );
 	void removeObject ( CMapObject *mapObject );
 	Q_INVOKABLE void ensureSize();
-	CGameScene *getScene() const;
+	CGame *getGame() const;
 	void mapUp();
 	void mapDown();
 	int getCurrentMap();
@@ -105,17 +105,17 @@ private:
 	std::set<CMapObject *> getMapObjectsClone();
 	void resolveFights();
 	std::unordered_map<QString,CMapObject *> mapObjects;
-	CGameScene *scene=0;
+	CGame *scene=0;
 	CPlayer *player=0;
 	int currentLevel = 0;
 	std::map<int, QString> defaultTiles;
 	std::map<int, std::pair<int, int> > boundaries;
 	int entryx, entryz, entryy;
-	CLootHandler *lootHandler=0;
-	CObjectHandler *objectHandler=0;
-	CEventHandler *eventHandler=0;
-	CGuiHandler *guiHandler=0;
-	CMouseHandler *mouseHandler=0;
+	Lazy<CLootHandler,CMap> lootHandler;
+	Lazy<CObjectHandler,CMap> objectHandler;
+	Lazy<CEventHandler,CMap> eventHandler;
+	Lazy<CGuiHandler,CMap> guiHandler;
+	Lazy<CMouseHandler,CMap> mouseHandler;
 	QString mapPath;
 	bool moving=false;
 };
