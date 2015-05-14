@@ -1,7 +1,7 @@
 #include "CCreature.h"
 #include "CPathFinder.h"
 #include "CInteraction.h"
-#include "CGameScene.h"
+#include "CGame.h"
 #include "CPlayerView.h"
 #include "Stats.h"
 #include <QDebug>

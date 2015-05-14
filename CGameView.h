@@ -1,6 +1,6 @@
 #pragma once
 
-#include "CGameScene.h"
+#include "CGame.h"
 #include "CPlayerView.h"
 #include <QGraphicsView>
 #include <QThread>
@@ -13,7 +13,7 @@ public:
 	CGameView ( QString mapName,QString playerType );
 	virtual ~CGameView();
 	void start();
-	CGameScene *getScene() const;
+	CGame *getScene() const;
 	void centerOn ( CPlayer *player );
 	Q_INVOKABLE void show();
 protected:

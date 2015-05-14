@@ -22,7 +22,6 @@ class CFightPanel : public AGamePanel,public CClickAction {
 	Q_OBJECT
 public:
 	CFightPanel();
-	CFightPanel ( const CFightPanel& );
 
 	virtual void update() override;
 	virtual QRectF boundingRect() const override;

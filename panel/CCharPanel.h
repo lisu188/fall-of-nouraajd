@@ -8,7 +8,6 @@ class CCharPanel : public AGamePanel,public CClickAction {
 	Q_OBJECT
 public:
 	CCharPanel();
-	CCharPanel ( const CCharPanel& );
 	virtual QRectF boundingRect() const override;
 	virtual void paint ( QPainter *painter, const QStyleOptionGraphicsItem *,
 	                     QWidget * ) override;

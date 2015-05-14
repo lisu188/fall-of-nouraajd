@@ -1,5 +1,5 @@
 #include "CGamePanel.h"
-#include "CGameScene.h"
+#include "CGame.h"
 #include <qpainter.h>
 #include <sstream>
 #include <QDebug>
@@ -17,10 +17,6 @@ CFightPanel::CFightPanel() {
 	setVisible ( false );
 	fightView =new CCreatureFightView ( this );
 	fightView->setParentItem ( this );
-}
-
-CFightPanel::CFightPanel ( const CFightPanel & ) {
-
 }
 
 void CFightPanel::update() {

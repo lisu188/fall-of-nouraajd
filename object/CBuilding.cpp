@@ -1,6 +1,6 @@
 #include "CBuilding.h"
 #include <QDebug>
-#include "CGameScene.h"
+#include "CGame.h"
 #include "CPlayerView.h"
 
 CBuilding::CBuilding() {
