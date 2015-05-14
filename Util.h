@@ -44,3 +44,16 @@ public:
 	CObjectData ( CGameObject *source );
 	CGameObject *getSource() const;
 };
+
+template<typename T,typename U>
+class Lazy {
+public:
+	T*get ( U*parent ) {
+		if ( ptr ) {
+			return ptr;
+		}
+		return ptr=new T ( parent );
+	}
+private :
+	T*ptr=nullptr;
+};

@@ -1,4 +1,4 @@
-#include "CGameScene.h"
+#include "CGame.h"
 #include "CGameView.h"
 #include "Util.h"
 #include <QGraphicsView>
@@ -25,40 +25,40 @@ public:
 	void run() {
 		QMetaObject::invokeMethod ( map, "ensureSize",
 		                            Qt::ConnectionType::BlockingQueuedConnection );
-		QMetaObject::invokeMethod ( map->getScene()->getView(),"show" );
+		QMetaObject::invokeMethod ( map->getGame()->getView(),"show" );
 	}
 private:
 	CMap *map;
 };
 
-void CGameScene::startGame ( QString file ,QString player ) {
+void CGame::startGame ( QString file ,QString player ) {
 	srand ( time ( 0 ) );
 	map = new CMap ( this,file );
 	map->setPlayer ( player  );
 	QThreadPool::globalInstance()->start ( new LoadGameTask ( map ) );
 }
 
-CGameScene::CGameScene ( QObject *parent ) :QGraphicsScene ( parent ) {
+CGame::CGame ( QObject *parent ) :QGraphicsScene ( parent ) {
 
 }
 
-CGameScene::~CGameScene() {
+CGame::~CGame() {
 
 }
 
-CMap *CGameScene::getMap() const {
+CMap *CGame::getMap() const {
 	return map;
 }
 
-CGameView *CGameScene::getView() {
+CGameView *CGame::getView() {
 	return dynamic_cast<CGameView*> ( this->views() [0] );
 }
 
-void CGameScene::removeObject ( CMapObject *object ) {
+void CGame::removeObject ( CMapObject *object ) {
 	this->removeItem ( object );
 }
 
-void CGameScene::keyPressEvent ( QKeyEvent *event ) {
+void CGame::keyPressEvent ( QKeyEvent *event ) {
 	if ( map->isMoving() ) {
 		return;
 	}

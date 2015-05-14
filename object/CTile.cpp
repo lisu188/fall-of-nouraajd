@@ -1,5 +1,5 @@
 #include "CTile.h"
-#include "CGameScene.h"
+#include "CGame.h"
 #include "CMap.h"
 
 CTile::CTile() {
@@ -38,14 +38,14 @@ void CTile::setCanStep ( bool canStep ) {
 	this->step=canStep;
 }
 
-void CTile::addToScene ( CGameScene *scene ) {
+void CTile::addToScene ( CGame *scene ) {
 	if ( scene ) {
 		scene->addItem ( this );
 	}
 	setXYZ (  posx , posy,posz );
 }
 
-void CTile::removeFromScene ( CGameScene *scene ) {
+void CTile::removeFromScene ( CGame *scene ) {
 	if ( scene ) {
 		scene->removeItem ( this );
 	}

@@ -6,7 +6,7 @@
 #include <QWidget>
 #include <QDrag>
 #include <QMimeData>
-#include "CGameScene.h"
+#include "CGame.h"
 #include <qpainter.h>
 #include <sstream>
 #include "CGameView.h"
@@ -243,7 +243,7 @@ void CItemSlot::dropEvent ( QGraphicsSceneDragDropEvent *event ) {
 	const CObjectData *helper=dynamic_cast<const CObjectData*> ( event->mimeData() );
 	CItem *item = dynamic_cast<CItem*> (  helper->getSource() );
 	if ( checkType ( number, item ) ) {
-		dynamic_cast<CGameScene*> ( this->scene() )->getMap()->getPlayer()->setItem ( number, item );
+		dynamic_cast<CGame*> ( this->scene() )->getMap()->getPlayer()->setItem ( number, item );
 	}
 	event->acceptProposedAction();
 	event->accept();
@@ -311,7 +311,7 @@ CTradeItemsView::CTradeItemsView ( AGamePanel *panel  ) :CListView ( panel ) {
 
 std::set<QGraphicsItem *> CTradeItemsView::getItems() const {
 	std::set<QGraphicsItem *> set;
-	CGameScene *scene=panel->getView()->getScene();
+	CGame *scene=panel->getView()->getScene();
 	CPlayer* player=scene->getMap()->getPlayer();
 	if ( !player || !player->getMarket() ) {
 		return set;

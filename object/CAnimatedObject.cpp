@@ -5,7 +5,7 @@
 #include <QDebug>
 #include "object/CObject.h"
 #include "provider/CProvider.h"
-#include "CGameScene.h"
+#include "CGame.h"
 #include "Util.h"
 
 CAnimatedObject::CAnimatedObject() {

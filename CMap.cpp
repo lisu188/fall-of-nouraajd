@@ -1,6 +1,6 @@
 #include "CMap.h"
 #include "CPathFinder.h"
-#include "CGameScene.h"
+#include "CGame.h"
 #include "object/CObject.h"
 #include "provider/CProvider.h"
 #include "CGameView.h"
@@ -17,7 +17,7 @@
 #include "handler/CHandler.h"
 #include "CMapLoader.h"
 
-CMap::CMap ( CGameScene *scene, QString mapPath ) :QObject ( scene ), scene ( scene ),mapPath ( mapPath ) {
+CMap::CMap ( CGame *scene, QString mapPath ) :QObject ( scene ), scene ( scene ),mapPath ( mapPath ) {
 	qDebug() <<"Initializing map"<<"\n";
 	CMapLoader::loadMap ( this, mapPath );
 	qDebug() <<"Loaded map"<<"\n";
@@ -84,43 +84,23 @@ void CMap::setPlayer ( QString playerName ) {
 }
 
 const CLootHandler *CMap::getLootHandler()  {
-	if ( lootHandler==0 ) {
-		lootHandler=new CLootHandler ( this );
-		qDebug() <<"Initialized loot handler"<<"\n";
-	}
-	return lootHandler;
+	return lootHandler.get ( this );
 }
 
 const CObjectHandler *CMap::getObjectHandler()  {
-	if ( objectHandler==0 ) {
-		objectHandler=new CObjectHandler ( this );
-		qDebug() <<"Initialized object handler"<<"\n";
-	}
-	return objectHandler;
+	return objectHandler.get ( this );
 }
 
 const CEventHandler *CMap::getEventHandler()  {
-	if ( eventHandler==0 ) {
-		eventHandler=new CEventHandler ( this );
-		qDebug() <<"Initialized event handler"<<"\n";
-	}
-	return eventHandler;
+	return eventHandler.get ( this );
 }
 
 CMouseHandler *CMap::getMouseHandler()  {
-	if ( mouseHandler==0 ) {
-		mouseHandler=new CMouseHandler ( this );
-		qDebug() <<"Initialized mouse handler"<<"\n";
-	}
-	return mouseHandler;
+	return mouseHandler.get ( this );
 }
 
 CGuiHandler *CMap::getGuiHandler()  {
-	if ( guiHandler==0 ) {
-		guiHandler=new CGuiHandler ( this );
-		qDebug() <<"Initialized GUI handler"<<"\n";
-	}
-	return guiHandler;
+	return guiHandler.get ( this );
 }
 
 void CMap::moveTile ( CTile *tile, int x, int y, int z ) {
@@ -134,7 +114,7 @@ void CMap::moveTile ( CTile *tile, int x, int y, int z ) {
 
 void CMap::ensureSize() {
 	CPlayer * player=nullptr;
-	if ( !this->getScene() ||! ( player=this->getScene()->getMap() ->getPlayer() ) ) {
+	if ( !this->getGame() ||! ( player=this->getGame()->getMap() ->getPlayer() ) ) {
 		return;
 	}
 
@@ -173,7 +153,7 @@ int CMap::getCurrentMap() {
 	return currentLevel;
 }
 
-CGameScene *CMap::getScene() const {
+CGame *CMap::getGame() const {
 	return scene;
 }
 
@@ -247,8 +227,8 @@ void CMap::addObject ( CMapObject *mapObject ) {
 }
 
 void CMap::removeObject ( CMapObject *mapObject ) {
-	if ( getScene() ) {
-		getScene()->removeObject ( mapObject );
+	if ( getGame() ) {
+		getGame()->removeObject ( mapObject );
 	}
 	mapObjects.erase ( mapObjects.find ( mapObject->objectName() ) );
 	getEventHandler()->gameEvent ( mapObject, new CGameEvent ( CGameEvent::Type::onDestroy ) );

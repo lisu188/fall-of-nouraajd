@@ -7,7 +7,7 @@ class CAnimatedObject : public QObject, protected QGraphicsPixmapItem {
 	Q_OBJECT
 	Q_PROPERTY ( QString animation READ getAnimation WRITE setAnimation USER true )
 
-	friend class CGameScene;
+	friend class CGame;
 	friend class CGameView;
 	friend class CListView;
 	friend class CItemSlot;
