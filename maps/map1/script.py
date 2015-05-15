@@ -14,6 +14,11 @@ def beforeLoad(map):
                 self.getMap().removeAll(lambda ob: ob.getStringProperty('objectType')==self.getStringProperty('objectType'))
 
     @game_object
+    class ChangeMap(CEvent):
+        def onEnter(self,event):
+            self.getMap().getGame().changeMap("maps/map2")
+
+    @game_object
     class MainQuest(CQuest):
         def isCompleted(self):
             return completed
