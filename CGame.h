@@ -12,17 +12,18 @@ class CPlayer;
 class CMap;
 class CMapObject;
 class CGame : public QGraphicsScene {
-	Q_OBJECT
+    Q_OBJECT
 public:
-	CGame ( QObject *parent );
-	virtual ~CGame();
-	void startGame ( QString file ,QString player );
-	CMap *getMap() const;
-	CGameView *getView();
-	void removeObject ( CMapObject *object );
+    CGame ( QObject *parent );
+    virtual ~CGame();
+    void startGame ( QString file ,QString player );
+    void changeMap(QString file);
+    CMap *getMap() const;
+    CGameView *getView();
+    void removeObject ( CMapObject *object );
 protected:
-	virtual void keyPressEvent ( QKeyEvent *event );
+    virtual void keyPressEvent ( QKeyEvent *event );
 private:
-	CMap *map=0;
+    CMap *map=0;
 };
 

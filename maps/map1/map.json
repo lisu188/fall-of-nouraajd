@@ -232,6 +232,21 @@
                  "width":32,
                  "x":3328,
                  "y":3392
+                }, 
+                {
+                 "height":32,
+                 "id":16,
+                 "name":"",
+                 "properties":
+                    {
+
+                    },
+                 "rotation":0,
+                 "type":"ChangeMap",
+                 "visible":true,
+                 "width":32,
+                 "x":3840,
+                 "y":3424
                 }],
          "opacity":1,
          "properties":
@@ -262,7 +277,7 @@
          "x":0,
          "y":0
         }],
- "nextobjectid":16,
+ "nextobjectid":17,
  "orientation":"orthogonal",
  "properties":
     {
