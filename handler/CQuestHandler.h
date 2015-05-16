@@ -3,7 +3,7 @@
 
 class CQuestHandler {
 public:
-	CQuestHandler();
+    CQuestHandler();
 };
 
 #endif // CQUESTHANDLER_H

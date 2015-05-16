@@ -4,7 +4,7 @@
 #include "CPlayerView.h"
 
 CBuilding::CBuilding() {
-	this->setZValue ( 1 );
+    this->setZValue ( 1 );
 }
 
 CBuilding::~CBuilding() {
@@ -12,11 +12,11 @@ CBuilding::~CBuilding() {
 }
 
 bool CBuilding::isEnabled() {
-	return enabled;
+    return enabled;
 }
 
 void CBuilding::setEnabled ( bool enabled ) {
-	this->enabled = enabled;
+    this->enabled = enabled;
 }
 
 void CBuilding::onEnter ( CGameEvent * ) {

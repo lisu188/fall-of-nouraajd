@@ -4,7 +4,7 @@ CQuest::CQuest() {
 }
 
 bool CQuest::isCompleted() {
-	return false;
+    return false;
 }
 
 void CQuest::onComplete() {
