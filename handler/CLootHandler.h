@@ -7,12 +7,12 @@
 class CItem;
 class CMap;
 class CLootHandler : public QObject,private std::map<QString, int> {
-	Q_OBJECT
+    Q_OBJECT
 public:
-	std::set<CItem *> getLoot ( int value ) const;
-	CLootHandler ( CMap *map ) ;
-	~CLootHandler();
+    std::set<CItem *> getLoot ( int value ) const;
+    CLootHandler ( CMap *map ) ;
+    ~CLootHandler();
 private:
-	std::set<CItem *> calculateLoot ( int value ) const;
-	CMap* map;
+    std::set<CItem *> calculateLoot ( int value ) const;
+    CMap* map;
 };

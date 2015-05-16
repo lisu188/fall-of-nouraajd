@@ -5,150 +5,150 @@
 #include "Util.h"
 
 int Stats::getAttack() const {
-	return attack;
+    return attack;
 }
 
 void Stats::setAttack ( int value ) {
-	attack = value;
+    attack = value;
 }
 
 int Stats::getDamage() const {
-	return damage;
+    return damage;
 }
 
 void Stats::setDamage ( int value ) {
-	damage = value;
+    damage = value;
 }
 
 int Stats::getShadowResist() const {
-	return shadowResist;
+    return shadowResist;
 }
 
 void Stats::setShadowResist ( int value ) {
-	shadowResist = value;
+    shadowResist = value;
 }
 
 int Stats::getThunderResist() const {
-	return thunderResist;
+    return thunderResist;
 }
 
 void Stats::setThunderResist ( int value ) {
-	thunderResist = value;
+    thunderResist = value;
 }
 
 int Stats::getNormalResist() const {
-	return normalResist;
+    return normalResist;
 }
 
 void Stats::setNormalResist ( int value ) {
-	normalResist = value;
+    normalResist = value;
 }
 
 int Stats::getFrostResist() const {
-	return frostResist;
+    return frostResist;
 }
 
 void Stats::setFrostResist ( int value ) {
-	frostResist = value;
+    frostResist = value;
 }
 
 int Stats::getFireResist() const {
-	return fireResist;
+    return fireResist;
 }
 
 void Stats::setFireResist ( int value ) {
-	fireResist = value;
+    fireResist = value;
 }
 
 int Stats::getCrit() const {
-	return crit;
+    return crit;
 }
 
 void Stats::setCrit ( int value ) {
-	crit = value;
+    crit = value;
 }
 
 int Stats::getHit() const {
-	return hit;
+    return hit;
 }
 
 void Stats::setHit ( int value ) {
-	hit = value;
+    hit = value;
 }
 
 int Stats::getDmgMax() const {
-	return dmgMax;
+    return dmgMax;
 }
 
 void Stats::setDmgMax ( int value ) {
-	dmgMax = value;
+    dmgMax = value;
 }
 
 int Stats::getDmgMin() const {
-	return dmgMin;
+    return dmgMin;
 }
 
 void Stats::setDmgMin ( int value ) {
-	dmgMin = value;
+    dmgMin = value;
 }
 
 int Stats::getBlock() const {
-	return block;
+    return block;
 }
 
 void Stats::setBlock ( int value ) {
-	block = value;
+    block = value;
 }
 
 int Stats::getArmor() const {
-	return armor;
+    return armor;
 }
 
 void Stats::setArmor ( int value ) {
-	armor = value;
+    armor = value;
 }
 
 int Stats::getIntelligence() const {
-	return intelligence;
+    return intelligence;
 }
 
 void Stats::setIntelligence ( int value ) {
-	intelligence = value;
+    intelligence = value;
 }
 
 int Stats::getStamina() const {
-	return stamina;
+    return stamina;
 }
 
 void Stats::setStamina ( int value ) {
-	stamina = value;
+    stamina = value;
 }
 
 int Stats::getAgility() const {
-	return agility;
+    return agility;
 }
 
 void Stats::setAgility ( int value ) {
-	agility = value;
+    agility = value;
 }
 
 int Stats::getStrength() const {
-	return strength;
+    return strength;
 }
 
 void Stats::setStrength ( int value ) {
-	strength = value;
+    strength = value;
 }
 QString Stats::getMain() const {
-	return main;
+    return main;
 }
 
 void Stats::setMain ( const QString &value ) {
-	main = value;
+    main = value;
 }
 
 int Stats::getMainValue() {
-	return this->getNumericProperty ( main );
+    return this->getNumericProperty ( main );
 }
 
 Stats::Stats() {
@@ -156,54 +156,54 @@ Stats::Stats() {
 }
 
 Stats::Stats ( const Stats &stats ) {
-	for ( int i = 0; i < this->metaObject()->propertyCount(); i++ ) {
-		QMetaProperty property = this->metaObject()->property ( i );
-		this->QObject::setProperty ( property.name(),stats.QObject::property ( property.name() ) );
-	}
+    for ( int i = 0; i < this->metaObject()->propertyCount(); i++ ) {
+        QMetaProperty property = this->metaObject()->property ( i );
+        this->QObject::setProperty ( property.name(),stats.QObject::property ( property.name() ) );
+    }
 }
 
 void Stats::operator= ( const Stats &stats ) {
-	for ( int i = 0; i < this->metaObject()->propertyCount(); i++ ) {
-		QMetaProperty property = this->metaObject()->property ( i );
-		this->QObject::setProperty ( property.name(),stats.QObject::property ( property.name() ) );
-	}
+    for ( int i = 0; i < this->metaObject()->propertyCount(); i++ ) {
+        QMetaProperty property = this->metaObject()->property ( i );
+        this->QObject::setProperty ( property.name(),stats.QObject::property ( property.name() ) );
+    }
 }
 
 void Stats::addBonus ( Stats stats ) {
-	for ( int i = 0; i < this->metaObject()->propertyCount(); i++ ) {
-		QMetaProperty property = this->metaObject()->property ( i );
-		if ( property.type() ==QVariant::Int ) {
-			this->incProperty ( property.name(), stats.getNumericProperty ( property.name() ) );
-		}
-	}
+    for ( int i = 0; i < this->metaObject()->propertyCount(); i++ ) {
+        QMetaProperty property = this->metaObject()->property ( i );
+        if ( property.type() ==QVariant::Int ) {
+            this->incProperty ( property.name(), stats.getNumericProperty ( property.name() ) );
+        }
+    }
 }
 
 void Stats::removeBonus ( Stats stats ) {
-	for ( int i = 0; i < this->metaObject()->propertyCount(); i++ ) {
-		QMetaProperty property = this->metaObject()->property ( i );
-		if ( property.type() ==QVariant::Int ) {
-			this->incProperty ( property.name(), -stats.getNumericProperty ( property.name() ) );
-		}
-	}
+    for ( int i = 0; i < this->metaObject()->propertyCount(); i++ ) {
+        QMetaProperty property = this->metaObject()->property ( i );
+        if ( property.type() ==QVariant::Int ) {
+            this->incProperty ( property.name(), -stats.getNumericProperty ( property.name() ) );
+        }
+    }
 }
 
 const char *Stats::getText ( int level ) {
-	std::ostringstream stream;
-	stream << "Level: " << level << "\n";
-	stream << "Strength: " << strength << "\n";
-	stream << "Agility: " << agility << "\n";
-	stream << "Intelligence: " << intelligence << "\n";
-	stream << "Stamina: " << stamina << "\n";
-	stream << "Damage: " << dmgMin + damage << "-" << dmgMax + damage << "\n";
-	stream << "Hit: " << hit + attack << "%"
-	       << "\n";
-	stream << "Crit: " << crit << "%"
-	       << "\n";
-	stream << "Armor: " << armor << "%"
-	       << "\n";
-	stream << "Block: " << block << "%"
-	       << "\n";
-	return stream.str().c_str();
+    std::ostringstream stream;
+    stream << "Level: " << level << "\n";
+    stream << "Strength: " << strength << "\n";
+    stream << "Agility: " << agility << "\n";
+    stream << "Intelligence: " << intelligence << "\n";
+    stream << "Stamina: " << stamina << "\n";
+    stream << "Damage: " << dmgMin + damage << "-" << dmgMax + damage << "\n";
+    stream << "Hit: " << hit + attack << "%"
+           << "\n";
+    stream << "Crit: " << crit << "%"
+           << "\n";
+    stream << "Armor: " << armor << "%"
+           << "\n";
+    stream << "Block: " << block << "%"
+           << "\n";
+    return stream.str().c_str();
 }
 
 
@@ -212,45 +212,45 @@ Damage::Damage() {
 }
 
 Damage::Damage ( const Damage &dmg ) {
-	for ( int i = 0; i < this->metaObject()->propertyCount(); i++ ) {
-		QMetaProperty property = this->metaObject()->property ( i );
-		this->setNumericProperty ( property.name(), dmg.getNumericProperty ( property.name() ) );
-	}
+    for ( int i = 0; i < this->metaObject()->propertyCount(); i++ ) {
+        QMetaProperty property = this->metaObject()->property ( i );
+        this->setNumericProperty ( property.name(), dmg.getNumericProperty ( property.name() ) );
+    }
 }
 int Damage::getFire() const {
-	return fire;
+    return fire;
 }
 
 void Damage::setFire ( int value ) {
-	fire = value;
+    fire = value;
 }
 int Damage::getFrost() const {
-	return frost;
+    return frost;
 }
 
 void Damage::setFrost ( int value ) {
-	frost = value;
+    frost = value;
 }
 int Damage::getThunder() const {
-	return thunder;
+    return thunder;
 }
 
 void Damage::setThunder ( int value ) {
-	thunder = value;
+    thunder = value;
 }
 int Damage::getShadow() const {
-	return shadow;
+    return shadow;
 }
 
 void Damage::setShadow ( int value ) {
-	shadow = value;
+    shadow = value;
 }
 int Damage::getNormal() const {
-	return normal;
+    return normal;
 }
 
 void Damage::setNormal ( int value ) {
-	normal = value;
+    normal = value;
 }
 
 

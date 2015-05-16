@@ -17,7 +17,7 @@ public:
     CGame ( QObject *parent );
     virtual ~CGame();
     void startGame ( QString file ,QString player );
-    void changeMap(QString file);
+    void changeMap ( QString file );
     CMap *getMap() const;
     CGameView *getView();
     void removeObject ( CMapObject *object );

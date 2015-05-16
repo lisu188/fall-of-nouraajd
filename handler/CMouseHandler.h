@@ -6,14 +6,14 @@ class CMap;
 
 class CClickAction {
 public:
-	virtual void onClickAction ( CGameObject *object ) =0;
+    virtual void onClickAction ( CGameObject *object ) =0;
 };
 
 class CMouseHandler : public QObject {
-	Q_OBJECT
+    Q_OBJECT
 public:
-	CMouseHandler ( CMap*map );
-	void handleClick ( CGameObject *object );
+    CMouseHandler ( CMap*map );
+    void handleClick ( CGameObject *object );
 private:
-	CClickAction *getClickAction ( CGameObject *object );
+    CClickAction *getClickAction ( CGameObject *object );
 };

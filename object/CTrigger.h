@@ -3,7 +3,7 @@
 
 class CTrigger : public CGameObject {
 public:
-	CTrigger();
-	virtual void trigger ( CGameObject *,CGameEvent * );
+    CTrigger();
+    virtual void trigger ( CGameObject *,CGameEvent * );
 };
 

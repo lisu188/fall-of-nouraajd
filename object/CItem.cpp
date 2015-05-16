@@ -11,7 +11,7 @@
 #include "CGameView.h"
 
 CItem::CItem()  {
-	this->setZValue ( 2 );
+    this->setZValue ( 2 );
 }
 
 CItem::~CItem() {
@@ -19,10 +19,10 @@ CItem::~CItem() {
 }
 
 void CItem::onEnter ( CGameEvent *event ) {
-	if ( auto visitor=dynamic_cast<CCreature*> ( dynamic_cast<CGameEventCaused*> ( event )->getCause() ) ) {
-		this->getMap()->removeObject ( this );
-		visitor->addItem ( this );
-	}
+    if ( auto visitor=dynamic_cast<CCreature*> ( dynamic_cast<CGameEventCaused*> ( event )->getCause() ) ) {
+        this->getMap()->removeObject ( this );
+        visitor->addItem ( this );
+    }
 }
 
 void CItem::onLeave ( CGameEvent * ) {
@@ -30,43 +30,43 @@ void CItem::onLeave ( CGameEvent * ) {
 }
 
 bool CItem::isSingleUse() {
-	return singleUse;
+    return singleUse;
 }
 
 void CItem::setSingleUse ( bool singleUse ) {
-	this->singleUse = singleUse;
+    this->singleUse = singleUse;
 }
 
 void CItem::onEquip ( CGameEvent *event ) {
-	dynamic_cast<CCreature*> ( dynamic_cast<CGameEventCaused*> ( event )->getCause() )->addBonus ( bonus );
-	qDebug() << dynamic_cast<CGameEventCaused*> ( event )->getCause()->getObjectType()  << "equipped" << getObjectType()
-	         << "\n";
+    dynamic_cast<CCreature*> ( dynamic_cast<CGameEventCaused*> ( event )->getCause() )->addBonus ( bonus );
+    qDebug() << dynamic_cast<CGameEventCaused*> ( event )->getCause()->getObjectType()  << "equipped" << getObjectType()
+             << "\n";
 }
 
 void CItem::onUnequip ( CGameEvent *event ) {
-	dynamic_cast<CCreature*> ( dynamic_cast<CGameEventCaused*> ( event )->getCause() )->removeBonus ( bonus );
-	qDebug() << dynamic_cast<CGameEventCaused*> ( event )->getCause()->getObjectType()  << "unequipped" << getObjectType()
-	         << "\n";
+    dynamic_cast<CCreature*> ( dynamic_cast<CGameEventCaused*> ( event )->getCause() )->removeBonus ( bonus );
+    qDebug() << dynamic_cast<CGameEventCaused*> ( event )->getCause()->getObjectType()  << "unequipped" << getObjectType()
+             << "\n";
 }
 
 void CItem::onUse ( CGameEvent * event ) {
-	CItemSlot *parent = dynamic_cast<CItemSlot *> ( this->parentItem() );
-	if ( !parent ) {
-		return;
-	}
-	int slot = parent->getNumber();
-	if ( slot==-1 ) {
-		return;
-	}
-	dynamic_cast<CCreature*> ( dynamic_cast<CGameEventCaused*> ( event )->getCause() )->setItem ( slot, this );
+    CItemSlot *parent = dynamic_cast<CItemSlot *> ( this->parentItem() );
+    if ( !parent ) {
+        return;
+    }
+    int slot = parent->getNumber();
+    if ( slot==-1 ) {
+        return;
+    }
+    dynamic_cast<CCreature*> ( dynamic_cast<CGameEventCaused*> ( event )->getCause() )->setItem ( slot, this );
 }
 
 int CItem::getPower() const {
-	return power;
+    return power;
 }
 
 void CItem::setPower ( int value ) {
-	power = value;
+    power = value;
 }
 
 CArmor::CArmor() {
@@ -74,7 +74,7 @@ CArmor::CArmor() {
 }
 
 CInteraction *CItem::getInteraction() {
-	return interaction;
+    return interaction;
 }
 
 CBelt::CBelt() {
@@ -102,23 +102,23 @@ CWeapon::CWeapon() : CItem() {
 }
 
 Stats CItem::getBonus() {
-	return bonus;
+    return bonus;
 }
 
 void CItem::setBonus ( Stats stats ) {
-	this->bonus=stats;
+    this->bonus=stats;
 }
 
 QString CItem::getInteractionName() {
-	if ( interaction ) {
-		return interaction->getObjectType();
-	}
-	return "";
+    if ( interaction ) {
+        return interaction->getObjectType();
+    }
+    return "";
 }
 
 void CItem::setInteractionName ( QString name ) {
-	interaction=this->getMap()->getObjectHandler()->createObject<CInteraction*> ( name );
-	interaction->setManaCost ( 0 );
+    interaction=this->getMap()->getObjectHandler()->createObject<CInteraction*> ( name );
+    interaction->setManaCost ( 0 );
 }
 
 CPotion::CPotion() {
@@ -130,14 +130,14 @@ CScroll::CScroll() {
 }
 
 QString CScroll::getText() const {
-	return text;
+    return text;
 }
 
 void CScroll::setText ( const QString &value ) {
-	text = value;
+    text = value;
 }
 
 void CScroll::onUse ( CGameEvent * ) {
-	getMap()->getGuiHandler()->showMessage ( text );
+    getMap()->getGuiHandler()->showMessage ( text );
 }
 

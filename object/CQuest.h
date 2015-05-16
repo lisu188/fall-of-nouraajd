@@ -3,8 +3,8 @@
 
 class CQuest : public CGameObject {
 public:
-	CQuest();
-	virtual bool isCompleted();
-	virtual void onComplete();
+    CQuest();
+    virtual bool isCompleted();
+    virtual void onComplete();
 };
 

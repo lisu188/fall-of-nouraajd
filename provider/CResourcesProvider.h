@@ -4,19 +4,19 @@
 #include <QString>
 
 enum CResType {
-	CONFIG,MAP,SCRIPT,IMAGE
+    CONFIG,MAP,SCRIPT,IMAGE
 };
 
 class CResourcesProvider : public QObject {
-	Q_OBJECT
+    Q_OBJECT
 public:
-	static CResourcesProvider *getInstance();
-	QFile *getResource ( QString path );
-	QString getResourceAsString ( QString path );
-	QString getPath ( QString path );
-	QSet<QString> getFiles ( CResType type );
+    static CResourcesProvider *getInstance();
+    QFile *getResource ( QString path );
+    QString getResourceAsString ( QString path );
+    QString getPath ( QString path );
+    QSet<QString> getFiles ( CResType type );
 
 private:
-	static QList<QString> searchPath;
-	CResourcesProvider();
+    static QList<QString> searchPath;
+    CResourcesProvider();
 };

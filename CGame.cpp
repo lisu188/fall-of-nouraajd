@@ -19,33 +19,26 @@
 #include "object/CObject.h"
 #include "CPathFinder.h"
 
-class LoadGameTask  : public QRunnable {
-public:
-    LoadGameTask ( CMap *map ) :map ( map ) {}
-    void run() {
-        QMetaObject::invokeMethod ( map, "ensureSize",
-                                    Qt::ConnectionType::BlockingQueuedConnection );
-        QMetaObject::invokeMethod ( map->getGame()->getView(),"show" );
-    }
-private:
-    CMap *map;
-};
 
 void CGame::startGame ( QString file ,QString player ) {
     srand ( time ( 0 ) );
     map = new CMap ( this,file );
     map->setPlayer ( map->getObjectHandler()->createObject<CPlayer*> ( player )  );
-    QThreadPool::globalInstance()->start ( new LoadGameTask ( map ) );
+    AsyncTask::async ( [this]() {
+        map->ensureSize();
+        map->getGame()->getView()->show();
+    } );
 }
 
-void CGame::changeMap(QString file)
-{
-    CPlayer *player=map->getPlayer();
-    player->setMap(0);
-    map->deleteLater();
-    map=new CMap(this,file);
-    map->setPlayer(player);
-    QThreadPool::globalInstance()->start ( new LoadGameTask ( map ) );
+void CGame::changeMap ( QString file ) {
+    AsyncTask::async ( [this,file]() {
+        CPlayer *player=map->getPlayer();
+        player->setMap ( 0 );
+        delete map;
+        map=new CMap ( this,file );
+        map->setPlayer ( player );
+        map->ensureSize();
+    } );
 }
 
 CGame::CGame ( QObject *parent ) :QGraphicsScene ( parent ) {
@@ -108,5 +101,8 @@ void CGame::keyPressEvent ( QKeyEvent *event ) {
         break;
     }
 }
+
+
+
 
 

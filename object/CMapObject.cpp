@@ -68,7 +68,7 @@ void CMapObject::onDestroy ( CGameEvent * ) {
 
 void CMapObject::onMapChanged() {
     this->QObject::setParent ( getMap() );
-    if (getMap()&&getMap()->getGame()&& this->scene() != getMap()->getGame() ) {
+    if ( getMap() &&getMap()->getGame() && this->scene() != getMap()->getGame() ) {
         getMap()->getGame()->addItem ( this );
     }
 }

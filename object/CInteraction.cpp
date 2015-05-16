@@ -10,47 +10,47 @@
 #include "handler/CHandler.h"
 
 CInteraction::CInteraction() {
-	setVisible ( false );
+    setVisible ( false );
 }
 
 void CInteraction::onAction ( CCreature *first, CCreature *second ) {
-	qDebug() << first->getObjectType()   << "used" << this->getObjectType()
-	         << "against" << second->getObjectType()  ;
+    qDebug() << first->getObjectType()   << "used" << this->getObjectType()
+             << "against" << second->getObjectType()  ;
 
-	first->takeMana ( this->getManaCost() );
+    first->takeMana ( this->getManaCost() );
 
-	this->performAction ( first , second  );
+    this->performAction ( first , second  );
 
-	if ( this->effect.length() >0 ) {
-		CEffect *effect=getMap()->getObjectHandler()->createObject<CEffect*> ( this->effect );
-		effect->setCaster ( first );
-		if ( this->configureEffect ( effect  ) ) {
-			CCreature *victim;
-			if ( effect->isBuff() ) {
-				victim=first;
-			} else {
-				victim=second;
-			}
-			effect->setVictim ( victim );
-			victim->addEffect ( effect );
-		}
-	}
+    if ( this->effect.length() >0 ) {
+        CEffect *effect=getMap()->getObjectHandler()->createObject<CEffect*> ( this->effect );
+        effect->setCaster ( first );
+        if ( this->configureEffect ( effect  ) ) {
+            CCreature *victim;
+            if ( effect->isBuff() ) {
+                victim=first;
+            } else {
+                victim=second;
+            }
+            effect->setVictim ( victim );
+            victim->addEffect ( effect );
+        }
+    }
 }
 
 int CInteraction::getManaCost() const {
-	return manaCost;
+    return manaCost;
 }
 
 void CInteraction::setManaCost ( int value ) {
-	manaCost = value;
+    manaCost = value;
 }
 
 QString CInteraction::getEffect() const {
-	return effect;
+    return effect;
 }
 
 void CInteraction::setEffect ( const QString &value ) {
-	effect = value;
+    effect = value;
 }
 
 void CInteraction::performAction ( CCreature *, CCreature * ) {
@@ -58,5 +58,5 @@ void CInteraction::performAction ( CCreature *, CCreature * ) {
 }
 
 bool CInteraction::configureEffect ( CEffect * ) {
-	return true;
+    return true;
 }

@@ -116,9 +116,8 @@ void CMap::ensureSize() {
     if ( !this->getGame() ||! ( player=this->getGame()->getMap() ->getPlayer() ) ) {
         return;
     }
-
-    for ( int i=-20; i<20; i++ ) {
-        for ( int j=-10; j<10; j++ ) {
+    for ( int i=-25; i<25; i++ ) {
+        for ( int j=-15; j<15; j++ ) {
             ensureTile ( player->getPosX()+i,player->getPosY()+j );
         }
     }
@@ -233,12 +232,6 @@ void CMap::removeObject ( CMapObject *mapObject ) {
     getEventHandler()->gameEvent ( mapObject, new CGameEvent ( CGameEvent::Type::onDestroy ) );
 }
 
-
-
-
-
-
-
 int CMap::getEntryX() {
     return entryx;
 }
@@ -284,7 +277,6 @@ void CMap::move () {
     auto func=[] ( CMapObject *object ) {
         Coords coords=dynamic_cast<Moveable*> ( object )->getNextMove();
         object->move ( coords );
-        QApplication::processEvents();
     };
 
     auto pred=[] ( CMapObject *object ) {

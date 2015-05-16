@@ -55,7 +55,7 @@ public:
     void replaceTile ( QString name,Coords coords );
     Coords getLocationByName ( QString name );
     CPlayer *getPlayer();
-    void setPlayer (CPlayer *player );
+    void setPlayer ( CPlayer *player );
     void moveTile ( CTile* tile,int x, int y, int z );
     const CLootHandler *getLootHandler();
     const CObjectHandler *getObjectHandler() ;

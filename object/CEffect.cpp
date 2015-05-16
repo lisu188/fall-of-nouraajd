@@ -10,70 +10,70 @@ CEffect::~CEffect() {
 }
 
 int CEffect::getTimeLeft() {
-	return timeLeft;
+    return timeLeft;
 }
 
 int CEffect::getTimeTotal() {
-	return timeTotal;
+    return timeTotal;
 }
 
 CCreature *CEffect::getCaster() {
-	return caster;
+    return caster;
 }
 
 CCreature *CEffect::getVictim() {
-	return victim;
+    return victim;
 }
 
 bool CEffect::apply ( CCreature *creature ) {
-	if ( bonus )
-		if ( timeTotal == timeLeft ) {
-			creature->addBonus ( *bonus );
-		}
-	timeLeft--;
-	if ( timeLeft == 0 ) {
-		if ( bonus ) {
-			creature->removeBonus ( *bonus );
-		}
-		return false;
-	}
-	return onEffect();
+    if ( bonus )
+        if ( timeTotal == timeLeft ) {
+            creature->addBonus ( *bonus );
+        }
+    timeLeft--;
+    if ( timeLeft == 0 ) {
+        if ( bonus ) {
+            creature->removeBonus ( *bonus );
+        }
+        return false;
+    }
+    return onEffect();
 }
 
 Stats *CEffect::getBonus() {
-	return bonus;
+    return bonus;
 }
 
 void CEffect::setBonus ( Stats *value ) {
-	bonus = value;
+    bonus = value;
 }
 
 int CEffect::getDuration() {
-	return duration;
+    return duration;
 }
 
 void CEffect::setDuration ( int duration ) {
-	this->duration=duration;
-	timeLeft = timeTotal =duration;
+    this->duration=duration;
+    timeLeft = timeTotal =duration;
 }
 
 bool CEffect::onEffect() {
-	return false;
+    return false;
 }
 
 bool CEffect::isBuff() const {
-	return buff;
+    return buff;
 }
 
 void CEffect::setBuff ( bool value ) {
-	buff = value;
+    buff = value;
 }
 
 void CEffect::setCaster ( CCreature *value ) {
-	caster = value;
+    caster = value;
 }
 
 void CEffect::setVictim ( CCreature *value ) {
-	victim = value;
+    victim = value;
 }
 
