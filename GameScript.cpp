@@ -252,7 +252,7 @@ BOOST_PYTHON_MODULE ( _game ) {
     .def ( "getObjectHandler",&CMap::getObjectHandler,return_internal_reference<>() )
     .def ( "getEventHandler",&CMap::getEventHandler,return_internal_reference<>() )
     .def ( "addObject",&CMap::addObject )
-            .def("getGame",&CMap::getGame, return_internal_reference<>());
+    .def ( "getGame",&CMap::getGame, return_internal_reference<>() );
     class_<CObjectHandler,boost::noncopyable> ( "CObjectHandler",no_init )
     .def ( "createObject",&CObjectHandler::createObject<CGameObject*>,return_internal_reference<>() );
     void ( CMapObject::*moveTo ) ( int,int,int ) =&CMapObject::moveTo ;
@@ -339,6 +339,6 @@ BOOST_PYTHON_MODULE ( _game ) {
             .def ( "isCompleted",&CQuestWrapper::isCompleted )
             .def ( "onComplete",&CQuestWrapper::onComplete );
     class_<CEventHandler,boost::noncopyable> ( "CEventHandler",no_init ).def ( "registerTrigger",&CEventHandler::registerTrigger );
-    class_<CGame,boost::noncopyable>("CGame",no_init)
-            .def ("changeMap",&CGame::changeMap);
+    class_<CGame,boost::noncopyable> ( "CGame",no_init )
+    .def ( "changeMap",&CGame::changeMap );
 }

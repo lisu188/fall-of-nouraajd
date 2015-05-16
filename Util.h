@@ -1,7 +1,8 @@
 #pragma once
 #include <QMimeData>
 #include <QString>
-
+#include <QThreadPool>
+#include <functional>
 class CGameObject;
 
 #define PY_PROPERTY_ACCESSOR(CLASS)\
@@ -14,49 +15,57 @@ class CGameObject;
 .def ( "incProperty",&CLASS::incProperty )\
 
 struct Coords {
-	Coords();
-	Coords ( int x, int y, int z );
-	int x, y, z;
-	bool operator== ( const Coords &other ) const;
-	bool operator< ( const Coords &other ) const;
-	Coords operator- ( const Coords &other ) const;
-	int getDist ( Coords a );
+    Coords();
+    Coords ( int x, int y, int z );
+    int x, y, z;
+    bool operator== ( const Coords &other ) const;
+    bool operator< ( const Coords &other ) const;
+    Coords operator- ( const Coords &other ) const;
+    int getDist ( Coords a );
 };
 
 namespace std {
 template<>
 struct hash<Coords> {
-	std::size_t operator() ( const Coords &coords ) const;
+    std::size_t operator() ( const Coords &coords ) const;
 };
 
 template<>
 struct hash<QString> {
-	std::hash<std::string> stringHash;
-	std::size_t operator() ( const QString &string ) const;
+    std::hash<std::string> stringHash;
+    std::size_t operator() ( const QString &string ) const;
 };
 }
 
 class QObject;
 class CObjectData:public QMimeData {
-	Q_OBJECT
+    Q_OBJECT
 public:
-	CGameObject *source;
-	CObjectData ( CGameObject *source );
-	CGameObject *getSource() const;
+    CGameObject *source;
+    CObjectData ( CGameObject *source );
+    CGameObject *getSource() const;
 };
 
 template<typename T,typename U>
 class Lazy {
 public:
-	T*get ( U*parent ) {
-		if ( ptr ) {
-			return ptr;
-		}
-		return ptr=new T ( parent );
-	}
-	T& operator->() {
-		return *get();
-	}
+    T*get ( U*parent ) {
+        if ( ptr ) {
+            return ptr;
+        }
+        return ptr=new T ( parent );
+    }
 private :
-	T*ptr=nullptr;
+    T*ptr=nullptr;
+};
+
+class AsyncTask  : public QObject,public QRunnable {
+    Q_OBJECT
+public:
+    static void async ( std::function<void() > target );
+    void run() override;
+private:
+    AsyncTask ( std::function<void() > target );
+    Q_INVOKABLE void call();
+    std::function<void() > target;
 };

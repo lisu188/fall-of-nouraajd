@@ -7,11 +7,11 @@ CEvent::CEvent() {
 }
 
 bool CEvent::isEnabled() {
-	return enabled;
+    return enabled;
 }
 
 void CEvent::setEnabled ( bool enabled ) {
-	this->enabled = enabled;
+    this->enabled = enabled;
 }
 
 void CEvent::onEnter ( CGameEvent * ) {
