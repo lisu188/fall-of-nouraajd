@@ -1,4 +1,4 @@
-QT += core gui opengl widgets concurrent
+QT += core gui opengl widgets
 
 TARGET = game
 TEMPLATE = app
