@@ -16,6 +16,7 @@
 #include "Util.h"
 #include "handler/CHandler.h"
 #include "CMapLoader.h"
+#include "CThreadUtil.h"
 
 CMap::CMap ( CGame *game, QString mapPath ) :game ( game ),mapPath ( mapPath ) {
     qDebug() <<"Initializing map"<<"\n";
@@ -188,7 +189,13 @@ CTile *CMap::getTile ( Coords coords ) {
 }
 
 bool CMap::canStep ( int x, int y, int z ) {
-    return getTile ( x,y,z )->canStep();
+    Coords coords ( x, y, z );
+    auto it=this->find ( coords );
+    if ( it!=this->end() ) {
+        return ( *it ).second->canStep();
+    }
+    std::pair<int,int> bound = boundaries[z];
+    return ! ( x < 0 || y < 0 || x > bound.first || y > bound.second );
 }
 
 bool CMap::canStep ( const Coords &coords ) {
@@ -270,28 +277,34 @@ void CMap::applyEffects() {
 
 void CMap::move () {
     this->moving=true;
+
     applyEffects();
 
     forAll ( [this] ( CMapObject*  mapObject ) {
         getEventHandler()->gameEvent ( mapObject , new CGameEvent ( CGameEvent::Type::onTurn ) );
     } );
 
-    auto func=[] ( CMapObject *object ) {
-        Coords coords=dynamic_cast<Moveable*> ( object )->getNextMove();
-        object->move ( coords );
+    auto target=[] ( CMapObject *object ) {
+        return std::make_pair ( object,dynamic_cast<Moveable*> ( object )->getNextMove() );
+    };
+
+    auto callback=[] ( std::pair<CMapObject*,Coords> arg ) {
+        arg.first->move ( arg.second );
     };
 
     auto pred=[] ( CMapObject *object ) {
         return dynamic_cast<Moveable*> ( object );
     };
 
-    forAll ( func,pred );
+    auto end_callback=[this]() {
+        resolveFights();
 
-    resolveFights();
+        ensureSize();
 
-    ensureSize();
+        this->moving=false;
+    };
 
-    this->moving=false;
+    CThreadUtil::invoke_all ( getIf ( pred ),target,callback,end_callback );
 }
 
 std::set<CMapObject *> CMap::getMapObjectsClone() {

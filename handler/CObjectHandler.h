@@ -18,6 +18,7 @@ public:
         }
         return casted;
     }
+    bool isFlagSet ( QString type,QString property );
     void logProperties ( CGameObject *object ) const;
     const QJsonObject *getObjectConfig() const;
     CMap *getMap();

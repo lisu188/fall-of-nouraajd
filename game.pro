@@ -1,4 +1,4 @@
-QT += core gui opengl widgets
+QT += core gui opengl widgets concurrent
 
 TARGET = game
 TEMPLATE = app
@@ -46,7 +46,8 @@ SOURCES += \
     Util.cpp \
     object/CMarket.cpp \
     CMapLoader.cpp \
-    CGame.cpp
+    CGame.cpp \
+    CThreadUtil.cpp
 
 HEADERS += \
      CPathFinder.h \
@@ -93,7 +94,8 @@ HEADERS += \
     handler/CMouseHandler.h \
     object/CMarket.h \
     CMapLoader.h \
-    CGame.h
+    CGame.h \
+    CThreadUtil.h
 
 FORMS += \
      CMainWindow.ui
@@ -108,7 +110,7 @@ OTHER_FILES += \
     format.py \
     reindent.py
 
-QMAKE_CXXFLAGS = -std=c++11 "-include cmath" -Wno-deprecated-declarations -Wno-unused-local-typedefs
+QMAKE_CXXFLAGS = -std=c++14 "-include cmath" -Wno-deprecated-declarations -Wno-unused-local-typedefs -Wno-attributes
 QMAKE_CXXFLAGS_RELEASE = -O3 -flto -march=native
 QMAKE_LFLAGS_RELEASE = -O3 -flto -march=native
 QMAKE_CXXFLAGS_DEBUG = -g3
