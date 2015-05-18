@@ -6,11 +6,10 @@
 class CLaterCall:public QObject,public QRunnable {
     Q_OBJECT
     friend class CThreadUtil;
-private:
     CLaterCall ( std::function<void () > target );
     void run() override;
-    Q_INVOKABLE void call();
     std::function<void() > target;
+    Q_INVOKABLE void call();
 };
 
 class CThreadUtil  {
@@ -28,13 +27,14 @@ public:
         typedef typename Collection::value_type Result;
         typedef typename function_traits<Function>::result_type Return;
         call_later ( [all,target,callback,end_callback]() {
-            int *called=new int ( all.size() );
+            int *called=new int[1];
+            called[0]=all.size();
             for ( Result t:all ) {
                 std::function<Return() > real_function=std::bind ( target,t );
                 std::function<void ( Return ) > real_callback=[called,callback,end_callback] ( Return r ) {
                     callback ( r );
-                    if ( -- ( *called ) ) {
-                        delete called;
+                    if ( --called[0]<=0 ) {
+                        delete [] called;
                         call_later ( end_callback );
                     }
                 };
@@ -49,9 +49,9 @@ private:
     private:
         CAsyncCall ( Function target,Callback callback ) :target ( target ),callback ( callback ) {}
         void run() override {
-            call_later ( [this] ( typename function_traits<Function>::result_type result ) {
-                callback ( result );
-            },target() );
+            call_later ( [this] ( typename function_traits<Function>::result_type result,Callback cb ) {
+                cb( result );
+            },target(),callback );
         }
         Function target;
         Callback callback;
