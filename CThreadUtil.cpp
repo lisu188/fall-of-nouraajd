@@ -1,11 +1,12 @@
 #include "CThreadUtil.h"
+#include <QApplication>
 
 CLaterCall::CLaterCall ( std::function<void () > target ) :target ( target ) {
-
+    this->moveToThread(QApplication::instance()->thread());
 }
 
 void CLaterCall::run() {
-    QMetaObject::invokeMethod ( this,"call",Qt::ConnectionType::QueuedConnection );
+    QMetaObject::invokeMethod ( this,"call",Qt::ConnectionType::BlockingQueuedConnection );
 }
 
 void CLaterCall::call() {
