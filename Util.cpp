@@ -48,6 +48,10 @@ Coords Coords::operator- ( const Coords &other ) const {
     return Coords ( x-other.x,y-other.y,z-other.z );
 }
 
+Coords Coords::operator*() const {
+    return Coords ( x,y,z );
+}
+
 int Coords::getDist ( Coords a ) {
     double x = this->x - a.x;
     x *= x;
