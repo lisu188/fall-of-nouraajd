@@ -4,7 +4,7 @@
 #include "handler/CMouseHandler.h"
 #include <QWidget>
 
-class CCharPanel : public AGamePanel,public CClickAction {
+class CCharPanel : public AGamePanel {
     Q_OBJECT
 public:
     CCharPanel();

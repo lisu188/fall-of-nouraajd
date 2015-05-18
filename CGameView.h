@@ -13,7 +13,7 @@ public:
     CGameView ( QString mapName,QString playerType );
     virtual ~CGameView();
     void start();
-    CGame *getScene() const;
+    CGame *getGame() const;
     void centerOn ( CPlayer *player );
     Q_INVOKABLE void show();
 protected:
@@ -27,6 +27,6 @@ private:
     PlayerStatsView playerStatsView;
     QString mapName;
     QString playerType;
-
+    CGame *game=nullptr;
 };
 

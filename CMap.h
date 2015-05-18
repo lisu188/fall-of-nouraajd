@@ -28,7 +28,7 @@ class CMap : public QObject,
     friend class CMapLoader;
     Q_OBJECT
 public:
-    CMap ( CGame *scene, QString mapPath );
+    CMap ( CGame *game, QString mapPath );
     virtual ~CMap();
     bool addTile ( CTile *tile, int x, int y, int z );
     void removeTile ( int x, int y, int z );
@@ -105,7 +105,7 @@ private:
     std::set<CMapObject *> getMapObjectsClone();
     void resolveFights();
     std::unordered_map<QString,CMapObject *> mapObjects;
-    CGame *scene=0;
+    CGame *game=0;
     CPlayer *player=0;
     int currentLevel = 0;
     std::map<int, QString> defaultTiles;

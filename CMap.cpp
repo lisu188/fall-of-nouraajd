@@ -17,7 +17,7 @@
 #include "handler/CHandler.h"
 #include "CMapLoader.h"
 
-CMap::CMap ( CGame *scene, QString mapPath ) :QObject ( scene ), scene ( scene ),mapPath ( mapPath ) {
+CMap::CMap ( CGame *game, QString mapPath ) :game ( game ),mapPath ( mapPath ) {
     qDebug() <<"Initializing map"<<"\n";
     CMapLoader::loadMap ( this, mapPath );
     qDebug() <<"Loaded map"<<"\n";
@@ -34,7 +34,9 @@ void CMap::ensureTile ( int i, int j ) {
     }
 }
 
-std::map<int, std::pair<int, int> > CMap::getBounds() { return boundaries; }
+std::map<int, std::pair<int, int> > CMap::getBounds() {
+    return boundaries;
+}
 
 int CMap::getCurrentXBound() {
     return boundaries[currentLevel].first;
@@ -128,8 +130,8 @@ void CMap::ensureSize() {
         ( it.second )->setVisible ( ( it.second )->getPosZ() == currentLevel );
     }
 
-    if ( scene->getView() ) {
-        scene->getView()->centerOn ( player );
+    if ( game->getView() ) {
+        game->getView()->centerOn ( player );
     }
 }
 
@@ -137,7 +139,7 @@ bool CMap::addTile ( CTile * tile, int x, int y, int z ) {
     if ( this->contains ( x, y, z ) ) {
         return false;
     }
-    tile->addToScene ( this->scene );
+    tile->addToScene ( this->game );
     tile->moveTo ( x,y,z );
     tile->setVisible ( true );
     return true;
@@ -152,7 +154,7 @@ int CMap::getCurrentMap() {
 }
 
 CGame *CMap::getGame() const {
-    return scene;
+    return game;
 }
 
 void CMap::mapUp() {

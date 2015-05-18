@@ -57,7 +57,7 @@ void CPlayer::trade ( CGameObject *object ) {
         setMarket ( market );
         AGamePanel*panel=getMap()->getGuiHandler()->getPanel ( "CTradePanel" );
         panel->showPanel();
-        while ( panel->isVisible() ) {
+        while ( panel->isShown() ) {
             QApplication::processEvents ( QEventLoop::WaitForMoreEvents );
         }
         setMarket ( nullptr );

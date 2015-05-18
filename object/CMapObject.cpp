@@ -66,14 +66,13 @@ void CMapObject::onDestroy ( CGameEvent * ) {
 
 }
 
+//inline this slot
 void CMapObject::onMapChanged() {
     this->QObject::setParent ( getMap() );
-    if ( getMap() &&getMap()->getGame() && this->scene() != getMap()->getGame() ) {
-        getMap()->getGame()->addItem ( this );
+    if ( getMap() &&getMap()->getGame() ) { // && this->getGame() != getMap()->getGame() ) { //see if still works
+        getMap()->getGame()->addObject ( this );
     }
 }
-
-
 
 Coords CMapObject::getCoords() {
     return Coords ( posx,posy,posz );

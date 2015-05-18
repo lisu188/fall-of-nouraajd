@@ -69,7 +69,7 @@ void CTradePanel::onClickAction ( CGameObject *object ) {
 void CTradePanel::handleDrop ( CPlayerView *view, CGameObject *object ) {
     CPlayerView *view2=dynamic_cast<CPlayerView*> ( object->toGraphicsItem()->parentItem() );
     if ( CItem *item=dynamic_cast<CItem*> ( object ) ) {
-        CPlayer*player=this->getView()->getScene()->getMap()->getPlayer();
+        CPlayer*player=this->getView()->getGame()->getMap()->getPlayer();
         if ( player ) {
             CMarket*market=player->getMarket();
             if ( market ) {

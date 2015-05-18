@@ -5,7 +5,7 @@
 class CPlayerInventoryView;
 class CTradeItemsView;
 
-class CTradePanel : public AGamePanel,public CClickAction {
+class CTradePanel : public AGamePanel {
     Q_OBJECT
 public:
     CTradePanel();
@@ -17,8 +17,8 @@ public:
     virtual QString getPanelName();
     virtual QRectF boundingRect() const;
     virtual void paint ( QPainter *painter, const QStyleOptionGraphicsItem *, QWidget * );
-    virtual void handleDrop ( CPlayerView *, CGameObject * );
-    virtual void onClickAction ( CGameObject *object );
+    virtual void handleDrop ( CPlayerView *, CGameObject * ) override;
+    virtual void onClickAction ( CGameObject *object ) override;
 private:
     CPlayerInventoryView *playerInventoryView=0;
     CTradeItemsView *tradeItemsView=0;
