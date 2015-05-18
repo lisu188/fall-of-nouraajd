@@ -13,11 +13,9 @@
 #include <QDebug>
 #include <vector>
 #include "panel/CPanel.h"
-#include <QThreadPool>
 #include "handler/CHandler.h"
 #include "CMap.h"
 #include "object/CObject.h"
-#include "CPathFinder.h"
 
 
 void CGame::startGame ( QString file ,QString player ) {
@@ -57,8 +55,12 @@ CGameView *CGame::getView() {
     return dynamic_cast<CGameView*> ( this->views() [0] );
 }
 
-void CGame::removeObject ( CMapObject *object ) {
+void CGame::removeObject ( CGameObject *object ) {
     this->removeItem ( object );
+}
+
+void CGame::addObject ( CGameObject *object ) {
+    this->addItem ( object );
 }
 
 void CGame::keyPressEvent ( QKeyEvent *event ) {

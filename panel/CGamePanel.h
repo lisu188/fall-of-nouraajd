@@ -11,9 +11,8 @@ class CPlayerEquippedView;
 class CCharPanel;
 class CPlayerView;
 
-class AGamePanel : public QGraphicsObject {
+class AGamePanel : public CGameObject,public CClickAction {
     Q_OBJECT
-
     friend class CGuiHandler;
 public:
     virtual void showPanel() =0;
@@ -24,9 +23,10 @@ public:
     virtual void paint ( QPainter *, const QStyleOptionGraphicsItem *, QWidget * ) =0;
     virtual QString getPanelName() =0;
     virtual void handleDrop ( CPlayerView* ,CGameObject * );
+    virtual void onClickAction ( CGameObject * ) override;
     bool isShown();
     CGameView *getView();
-    virtual void mousePressEvent ( QGraphicsSceneMouseEvent * ) override;
+
     Q_INVOKABLE void setProperty ( QString name,QVariant property );
     Q_INVOKABLE QVariant property ( QString name ) const;
     Q_INVOKABLE void setStringProperty ( QString name,QString value );
@@ -39,3 +39,5 @@ public:
 protected:
     CGameView *view=0;
 };
+
+

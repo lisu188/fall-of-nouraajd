@@ -20,8 +20,8 @@ CFightPanel::CFightPanel() {
 }
 
 void CFightPanel::update() {
-    if ( this->view->getScene()->getMap()->getPlayer() ) {
-        fightView->setCreature ( this->view->getScene()->getMap()->getPlayer()->getEnemy() );
+    if ( this->view->getGame()->getMap()->getPlayer() ) {
+        fightView->setCreature ( this->view->getGame()->getMap()->getPlayer()->getEnemy() );
     }
     playerSkillsView->update();
     QGraphicsItem::update();
@@ -51,7 +51,6 @@ void CFightPanel::setUpPanel ( CGameView *view ) {
     this->view=view;
     playerSkillsView = new CPlayerIteractionView ( this );
     playerSkillsView->setZValue ( 3 );
-    view->getScene()->addItem ( playerSkillsView );
     playerSkillsView->setParentItem ( this );
     playerSkillsView->setXY ( 4, 1 );
 }
@@ -130,8 +129,4 @@ void CFightPanel::onClickAction ( CGameObject *object ) {
         }
         player->setSelectedAction ( interaction );
     }
-}
-
-
-void CFightPanel::mousePressEvent ( QGraphicsSceneMouseEvent * ) {
 }
