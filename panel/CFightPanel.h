@@ -18,7 +18,7 @@ private:
 
 };
 
-class CFightPanel : public AGamePanel,public CClickAction {
+class CFightPanel : public AGamePanel {
     Q_OBJECT
 public:
     CFightPanel();
@@ -32,8 +32,6 @@ public:
     virtual void hidePanel() override;
     virtual QString getPanelName() override;
     virtual void onClickAction ( CGameObject *object ) override;
-protected:
-    virtual void mousePressEvent ( QGraphicsSceneMouseEvent * );
 private:
     CListView *playerSkillsView;
     CCreatureFightView *fightView;

@@ -210,7 +210,7 @@ bool CItemSlot::checkType ( int slot,CItem *item ) {
 }
 
 void CItemSlot::update() {
-    auto player=panel->getView()->getScene()->getMap()->getPlayer();
+    auto player=panel->getView()->getGame()->getMap()->getPlayer();
     if ( !player ) {
         return;
     }
@@ -272,7 +272,7 @@ CPlayerInventoryView::CPlayerInventoryView ( AGamePanel *panel ) :CListView ( pa
 
 std::set<QGraphicsItem *> CPlayerInventoryView::getItems() const {
     std::set<QGraphicsItem *> set;
-    auto player=panel->getView()->getScene()->getMap()->getPlayer();
+    auto player=panel->getView()->getGame()->getMap()->getPlayer();
     if ( !player ) {
         return set;
     }
@@ -289,7 +289,7 @@ CPlayerIteractionView::CPlayerIteractionView ( AGamePanel *panel ) :CListView ( 
 
 std::set<QGraphicsItem *> CPlayerIteractionView::getItems() const {
     std::set<QGraphicsItem *> set;
-    auto player=panel->getView()->getScene()->getMap()->getPlayer();
+    auto player=panel->getView()->getGame()->getMap()->getPlayer();
     if ( !player ) {
         return set;
     }
@@ -311,7 +311,7 @@ CTradeItemsView::CTradeItemsView ( AGamePanel *panel  ) :CListView ( panel ) {
 
 std::set<QGraphicsItem *> CTradeItemsView::getItems() const {
     std::set<QGraphicsItem *> set;
-    CGame *scene=panel->getView()->getScene();
+    CGame *scene=panel->getView()->getGame();
     CPlayer* player=scene->getMap()->getPlayer();
     if ( !player || !player->getMarket() ) {
         return set;

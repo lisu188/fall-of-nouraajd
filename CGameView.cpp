@@ -12,13 +12,13 @@
 #include "handler/CHandler.h"
 
 void CGameView::start() {
-    getScene()->startGame ( mapName ,playerType );
-    CPlayer *player = getScene()->getMap()->getPlayer();
+    getGame()->startGame ( mapName ,playerType );
+    CPlayer *player = getGame()->getMap()->getPlayer();
     playerStatsView.show();
     playerStatsView.setPlayer ( player );
-    connect ( player,&CCreature::inventoryChanged,getScene()->getMap()->getGuiHandler(),&CGuiHandler::refresh );
-    connect ( player,&CCreature::equippedChanged,getScene()->getMap()->getGuiHandler(),&CGuiHandler::refresh );
-    connect ( player,&CCreature::skillsChanged,getScene()->getMap()->getGuiHandler(),&CGuiHandler::refresh );
+    connect ( player,&CCreature::inventoryChanged,getGame()->getMap()->getGuiHandler(),&CGuiHandler::refresh );
+    connect ( player,&CCreature::equippedChanged,getGame()->getMap()->getGuiHandler(),&CGuiHandler::refresh );
+    connect ( player,&CCreature::skillsChanged,getGame()->getMap()->getGuiHandler(),&CGuiHandler::refresh );
     init = true;
 }
 
@@ -26,15 +26,14 @@ void CGameView::show() {
     showNormal();
 }
 
-CGameView::CGameView ( QString mapName , QString playerType ) {
-    this->mapName=mapName;
-    this->playerType=playerType;
+CGameView::CGameView ( QString mapName , QString playerType ) :mapName ( mapName ),playerType ( playerType ) {
+    game=new CGame ( this );
     setHorizontalScrollBarPolicy ( Qt::ScrollBarAlwaysOff );
     setVerticalScrollBarPolicy ( Qt::ScrollBarAlwaysOff );
     setViewportUpdateMode ( QGraphicsView::BoundingRectViewportUpdate );
     setViewport ( new QGLWidget ( QGLFormat ( QGL::SampleBuffers ) ) );
     setViewportUpdateMode ( QGraphicsView::FullViewportUpdate );
-    setScene ( new CGame ( this ) );
+    setScene ( game );
     timer.setSingleShot ( true );
     timer.setInterval ( 250 );
     connect ( &timer,&QTimer::timeout, this, &CGameView::start );
@@ -63,10 +62,10 @@ void CGameView::resizeEvent ( QResizeEvent *event ) {
         if ( event ) {
             QWidget::resizeEvent ( event );
             playerStatsView.move ( 0, 0 );
-            getScene()->getMap()->getGuiHandler()->refresh();
+            getGame()->getMap()->getGuiHandler()->refresh();
         }
 
-        CPlayer *player =getScene()->getMap()->getPlayer();
+        CPlayer *player =getGame()->getMap()->getPlayer();
         centerOn ( player );
     }
 }
@@ -80,8 +79,8 @@ void CGameView::dragMoveEvent ( QDragMoveEvent *e ) {
     repaint();
 }
 
-CGame *CGameView::getScene() const {
-    return dynamic_cast<CGame *> ( scene() );
+CGame *CGameView::getGame() const {
+    return game;
 }
 
 void CGameView::centerOn ( CPlayer *player ) {
