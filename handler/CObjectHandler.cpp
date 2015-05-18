@@ -19,6 +19,10 @@ CObjectHandler::CObjectHandler ( CMap *map ) :QObject ( map ),map ( map ) {
     }
 }
 
+bool CObjectHandler::isFlagSet ( QString type, QString property ) {
+    return objectConfig[type].toObject() [property].toBool();
+}
+
 void CObjectHandler::logProperties ( CGameObject *object ) const {
     for ( int i = 0; i < object->metaObject()->propertyCount(); i++ ) {
         QMetaProperty property = object->metaObject()->property ( i );
