@@ -110,7 +110,7 @@ OTHER_FILES += \
     format.py \
     reindent.py
 
-QMAKE_CXXFLAGS = -std=c++11 "-include cmath" -Wno-deprecated-declarations -Wno-unused-local-typedefs -Wno-attributes
+QMAKE_CXXFLAGS = -std=c++14 "-include cmath" -Wno-deprecated-declarations -Wno-unused-local-typedefs -Wno-attributes
 QMAKE_CXXFLAGS_RELEASE = -O3 -flto -march=native
 QMAKE_LFLAGS_RELEASE = -O3 -flto -march=native
 QMAKE_CXXFLAGS_DEBUG = -g3

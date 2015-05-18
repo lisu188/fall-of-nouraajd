@@ -5,13 +5,9 @@ CLaterCall::CLaterCall(std::function<void ()> target) :target ( target ) {
 }
 
 void CLaterCall::run(){
-    QMetaObject::invokeMethod ( this,"call",Qt::ConnectionType::BlockingQueuedConnection );
+    QMetaObject::invokeMethod ( this,"call",Qt::ConnectionType::QueuedConnection );
 }
 
 void CLaterCall::call(){
     target();
-}
-
-void CThreadUtil::call_later(std::function<void ()> target) {
-    QThreadPool::globalInstance()->start( new CLaterCall (target));
 }
