@@ -18,20 +18,20 @@
 #include "CMap.h"
 #include "object/CObject.h"
 #include "CPathFinder.h"
-
+#include "CThreadUtil.h"
 
 void CGame::startGame ( QString file ,QString player ) {
     srand ( time ( 0 ) );
     map = new CMap ( this,file );
     map->setPlayer ( map->getObjectHandler()->createObject<CPlayer*> ( player )  );
-    AsyncTask::async ( [this]() {
+    CThreadUtil::call_later ( [this]() {
         map->ensureSize();
         map->getGame()->getView()->show();
-    } );
+    });
 }
 
 void CGame::changeMap ( QString file ) {
-    AsyncTask::async ( [this,file]() {
+    CThreadUtil::call_later ( [this,file]() {
         CPlayer *player=map->getPlayer();
         player->setMap ( 0 );
         delete map;

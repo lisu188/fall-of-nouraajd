@@ -1,7 +1,6 @@
 #include "Util.h"
 #include "object/CGameObject.h"
 #include <QDebug>
-#include <QThreadPool>
 
 CObjectData::CObjectData ( CGameObject *source ) {
     setParent ( source );
@@ -11,7 +10,6 @@ CObjectData::CObjectData ( CGameObject *source ) {
 CGameObject *CObjectData::getSource() const {
     return source;
 }
-
 
 std::size_t std::hash<QString>::operator() ( const QString &string ) const {
     return stringHash ( string.toStdString() );
@@ -56,21 +54,4 @@ int Coords::getDist ( Coords a ) {
     double y = this->y - a.y;
     y *= y;
     return sqrt ( x + y );
-}
-
-
-void AsyncTask::async ( std::function<void () > target ) {
-    QThreadPool::globalInstance()->start ( new AsyncTask ( target ) );
-}
-
-void AsyncTask::run() {
-    QMetaObject::invokeMethod ( this,"call",Qt::ConnectionType::BlockingQueuedConnection );
-}
-
-AsyncTask::AsyncTask ( std::function<void () > target ) :target ( target ) {
-
-}
-
-void  AsyncTask::call() {
-    target();
 }

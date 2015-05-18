@@ -58,14 +58,3 @@ public:
 private :
     T*ptr=nullptr;
 };
-
-class AsyncTask  : public QObject,public QRunnable {
-    Q_OBJECT
-public:
-    static void async ( std::function<void() > target );
-    void run() override;
-private:
-    AsyncTask ( std::function<void() > target );
-    Q_INVOKABLE void call();
-    std::function<void() > target;
-};
