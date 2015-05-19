@@ -1,7 +1,6 @@
 #pragma once
-#include <QThreadPool>
-#include <functional>
-#include "Util.h"
+#include "CGlobal.h"
+#include "CUtil.h"
 
 class CLaterCall:public QObject,public QRunnable {
     Q_OBJECT

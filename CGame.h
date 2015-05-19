@@ -1,11 +1,7 @@
 #pragma once
-#include <QGraphicsScene>
-#include <QGraphicsSceneMouseEvent>
-#include <QKeyEvent>
-#include <list>
-#include <random>
-#include <time.h>
-#include <QDateTime>
+#include "CGlobal.h"
+#include "CUtil.h"
+#include "handler/CHandler.h"
 
 class CGameView;
 class CPlayer;
@@ -23,9 +19,15 @@ public:
     CGameView *getView();
     void removeObject ( CGameObject *object );
     void addObject ( CGameObject *object );
+    CGuiHandler *getGuiHandler();
+    CConfigHandler *getConfigHandler();
+     CScriptHandler *getScriptHandler();
 protected:
     virtual void keyPressEvent ( QKeyEvent *event );
 private:
+    Lazy<CGuiHandler,CGame*> guiHandler;
+    Lazy<CScriptHandler> scriptHandler;
+    Lazy<CConfigHandler,std::set<QString>> configHandler;
     CMap *map=0;
 };
 

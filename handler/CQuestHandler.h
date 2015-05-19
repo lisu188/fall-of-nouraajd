@@ -1,9 +1,7 @@
-#ifndef CQUESTHANDLER_H
-#define CQUESTHANDLER_H
+#pragma once
 
 class CQuestHandler {
 public:
     CQuestHandler();
 };
 
-#endif // CQUESTHANDLER_H

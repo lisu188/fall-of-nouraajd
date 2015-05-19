@@ -1,5 +1,5 @@
 #include "provider/CProvider.h"
-#include "Util.h"
+#include "CUtil.h"
 #include "object/CObject.h"
 #include "CMap.h"
 #include "handler/CHandler.h"
@@ -8,15 +8,13 @@ std::set<CItem *> CLootHandler::getLoot ( int value ) const {
     return calculateLoot ( value );
 }
 
-CLootHandler::CLootHandler ( CMap *map ) :QObject ( map ) {
-    this->map=map;
-    const QJsonObject *config = map->getObjectHandler()->getObjectConfig();
-    for ( auto  it = config->begin(); it != config->end(); it++ ) {
-        CItem *item=map->getObjectHandler()->createObject<CItem*> ( it.key() ) ;
+CLootHandler::CLootHandler ( CMap *map ) :map(map) {
+    for ( QString  type : map->getConfigHandler()->getAllTypes()) {
+        CItem *item=map->getObjectHandler()->createObject<CItem*> ( type ) ;
         if ( item ) {
             int power=item->getPower() ;
             if ( power>0 ) {
-                this->insert ( std::make_pair ( it.key(),power ) );
+                this->insert ( std::make_pair ( type,power ) );
             }
             delete item;
         }

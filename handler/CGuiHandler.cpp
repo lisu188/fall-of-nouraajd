@@ -1,11 +1,10 @@
 #include "handler/CHandler.h"
-#include "CMap.h"
+#include "CGame.h"
 #include "panel/CPanel.h"
 #include "CGame.h"
 #include <QDebug>
 
-CGuiHandler::CGuiHandler ( CMap *map ) :QObject ( map ) {
-    this->map=map;
+CGuiHandler::CGuiHandler (CGame *game ) :game(game){
     initPanels();
 }
 
@@ -54,8 +53,8 @@ void CGuiHandler::initPanels() {
     std::list<AGamePanel*> viewList {new CFightPanel(),new CCharPanel(),new CTextPanel(),new CTradePanel() };
     for ( AGamePanel* it:viewList ) {
         panels[it->getPanelName()]=it;
-        map->getGame()->addObject ( it );
-        it ->setUpPanel ( map->getGame()->getView() );
+        game->addObject ( it );
+        it ->setUpPanel ( game->getView() );
         it ->hidePanel ( );
         qDebug() <<"Initialized panel:"<<  it->metaObject()->className() <<"\n";
     }

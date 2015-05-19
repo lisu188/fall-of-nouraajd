@@ -1,8 +1,4 @@
 #include "CResourcesProvider.h"
-#include <QDirIterator>
-#include <QSet>
-#include <QList>
-#include <QString>
 
 QList<QString> CResourcesProvider::searchPath= {"",":/"};
 
@@ -11,17 +7,17 @@ CResourcesProvider *CResourcesProvider::getInstance() {
     return &instance;
 }
 
-QFile *CResourcesProvider::getResource ( QString path ) {
+std::shared_ptr<QFile> CResourcesProvider::getResource ( QString path ) {
     path=getPath ( path );
-    QFile fileSys ( path );
-    if ( fileSys.exists() ) {
-        return new QFile ( path,this );
+    std::shared_ptr<QFile> ptr(new QFile ( path));
+    if ( ptr->exists() ) {
+        return ptr;
     }
     return nullptr;
 }
 
 QString CResourcesProvider::getResourceAsString ( QString path ) {
-    QFile *file=getResource ( path );
+    std::shared_ptr<QFile> file=getResource ( path );
     if ( file && file->open ( QIODevice::ReadOnly ) ) {
         return QString ( file->readAll() );
     }
@@ -38,8 +34,8 @@ QString CResourcesProvider::getPath ( QString path ) {
     return QString();
 }
 
-QSet<QString> CResourcesProvider::getFiles ( CResType type ) {
-    QSet<QString> retValue;
+std::set<QString> CResourcesProvider::getFiles ( CResType type ) {
+    std::set<QString> retValue;
     QString folderName;
     QDirIterator::IteratorFlag flag=QDirIterator::NoIteratorFlags;
     switch ( type ) {

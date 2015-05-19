@@ -1,7 +1,5 @@
 #include "CTradePanel.h"
-#include "CGameView.h"
-#include "CPlayerView.h"
-#include <QDebug>
+#include "gui/CGui.h"
 
 CTradePanel::CTradePanel() {
     this->setZValue ( 8 );

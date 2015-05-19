@@ -5,12 +5,11 @@
 
 class CGameObject;
 class ATypeHandler;
-class CMap;
+class CGame;
 class AGamePanel;
-class CGuiHandler:public QObject {
-    Q_OBJECT
+class CGuiHandler {
 public:
-    CGuiHandler ( CMap*map );
+    CGuiHandler ( CGame *game );
     void showMessage ( QString msg );
     AGamePanel *getPanel ( QString panel );
     void showPanel ( QString panel );
@@ -20,5 +19,5 @@ public:
 private:
     std::map<QString,AGamePanel*> panels;
     void initPanels();
-    CMap*map;
+    CGame *game;
 };

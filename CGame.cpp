@@ -1,23 +1,11 @@
 #include "CGame.h"
-#include "CGameView.h"
-#include "Util.h"
-#include <QGraphicsView>
-#include <QPointF>
-#include <QApplication>
-#include <QDesktopWidget>
-#include <QKeyEvent>
-#include "CPlayerView.h"
-#include <fstream>
-#include <QJsonObject>
-#include <QDateTime>
-#include <QDebug>
-#include <vector>
+#include "CUtil.h"
+#include "CMap.h"
+#include "CThreadUtil.h"
+#include "gui/CGui.h"
+#include "object/CObject.h"
 #include "panel/CPanel.h"
 #include "handler/CHandler.h"
-#include "CMap.h"
-#include "object/CObject.h"
-#include "CThreadUtil.h"
-
 
 void CGame::startGame ( QString file ,QString player ) {
     srand ( time ( 0 ) );
@@ -64,43 +52,57 @@ void CGame::addObject ( CGameObject *object ) {
     this->addItem ( object );
 }
 
+CConfigHandler *CGame::getConfigHandler()
+{
+    return configHandler.get(convert<std::set<QString>>(CResourcesProvider::getInstance()->getFiles ( CONFIG )));
+}
+
+CGuiHandler *CGame::getGuiHandler()   {
+    return guiHandler.get ( this );
+}
+
+CScriptHandler *CGame::getScriptHandler()
+{
+   return scriptHandler.get();
+}
+
 void CGame::keyPressEvent ( QKeyEvent *event ) {
     if ( map->isMoving() ) {
         return;
     }
     switch ( event->key() ) {
     case Qt::Key_Up:
-        if ( !map->getGuiHandler()->isAnyPanelVisible() ) {
+        if ( !getGuiHandler()->isAnyPanelVisible() ) {
             map->getPlayer()->setNextMove ( Coords ( 0,-1 ,0 ) );
             map->move();
         }
         break;
     case Qt::Key_Down:
-        if ( !map->getGuiHandler()->isAnyPanelVisible() ) {
+        if ( !getGuiHandler()->isAnyPanelVisible() ) {
             map->getPlayer()->setNextMove ( Coords ( 0,1,0 ) );
             map->move();
         }
         break;
     case Qt::Key_Left:
-        if ( !map->getGuiHandler()->isAnyPanelVisible() ) {
+        if ( !getGuiHandler()->isAnyPanelVisible() ) {
             map->getPlayer()->setNextMove ( Coords ( -1,0,0 ) );
             map->move();
         }
         break;
     case Qt::Key_Right:
-        if ( !map->getGuiHandler()->isAnyPanelVisible() ) {
+        if ( !getGuiHandler()->isAnyPanelVisible() ) {
             map->getPlayer()->setNextMove ( Coords ( 1,0,0 ) );
             map->move();
         }
         break;
     case Qt::Key_Space:
-        if ( !map->getGuiHandler()->isAnyPanelVisible() ) {
+        if ( !getGuiHandler()->isAnyPanelVisible() ) {
             map->getPlayer()->setNextMove ( Coords ( 0,0,0 ) );
             map->move();
         }
         break;
     case Qt::Key_I:
-        this->getMap()->getGuiHandler()->flipPanel ( "CCharPanel" );
+        getGuiHandler()->flipPanel ( "CCharPanel" );
         break;
     }
 }

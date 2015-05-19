@@ -1,15 +1,8 @@
 #include "CAnimationProvider.h"
-#include "CAnimation.h"
-#include <sstream>
-#include <fstream>
-#include <QBitmap>
-#include <QDebug>
-#include "object/CObject.h"
-#include <map>
-#include "CConfigurationProvider.h"
-#include <mutex>
-#include "Util.h"
+#include "CUtil.h"
+#include "provider/CProvider.h"
 #include "handler/CHandler.h"
+#include "object/CObject.h"
 
 CAnimation *CAnimationProvider::getAnim ( QString path ) {
     static CAnimationProvider instance;
@@ -36,7 +29,7 @@ CAnimation *CAnimationProvider::getAnimation ( QString path ) {
 }
 
 void CAnimationProvider::loadAnim ( QString path ) {
-    CAnimation *anim = new CAnimation ( this );
+    CAnimation *anim = new CAnimation ( );
     QPixmap *img = 0;
     std::map<int, int> timemap;
     QString time="time.json";
@@ -80,12 +73,12 @@ void CAnimationProvider::loadAnim ( QString path ) {
     if ( anim->size() == 0 ) {
         return;
     }
-    this->insert ( std::pair<QString, CAnimation *> ( path, anim ) );
+    this->insert ( std::make_pair ( path, anim ) );
     qDebug() << "Loaded animation:" << path   << "\n";
 }
 
 QPixmap *CAnimationProvider::getImage ( QString path ) {
-    QFile* file =CResourcesProvider::getInstance()->getResource ( path );
+    std::shared_ptr<QFile> file = CResourcesProvider::getInstance()->getResource ( path );
     QPixmap image;
     if ( file && file->open ( QIODevice::ReadOnly ) ) {
         image.loadFromData ( file->readAll() );
@@ -101,7 +94,7 @@ QPixmap *CAnimationProvider::getImage ( QString path ) {
     }
 }
 
-CAnimation::CAnimation ( QObject *parent ) :QObject ( parent ) {
+CAnimation::CAnimation () {
 }
 
 CAnimation::~CAnimation() {

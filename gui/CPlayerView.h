@@ -1,7 +1,5 @@
 #pragma once
-#include <QGraphicsObject>
-#include <QWidget>
-#include <set>
+#include "CGlobal.h"
 #include "object/CObject.h"
 
 class CMapObject;

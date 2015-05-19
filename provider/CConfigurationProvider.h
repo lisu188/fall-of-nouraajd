@@ -1,11 +1,5 @@
-#ifndef CONFIGURATIONPROVIDER_H
-#define CONFIGURATIONPROVIDER_H
-#include <string>
-#include <QJsonValue>
-#include <QJsonArray>
-#include <QJsonObject>
-#include <QJsonDocument>
-#include "map"
+#pragma once
+#include "CGlobal.h"
 class CConfigurationProvider : private std::map<QString, QJsonValue > {
 public:
     static QJsonValue& getConfig ( QString path );
@@ -15,5 +9,3 @@ private:
     QJsonValue &getConfiguration ( QString path );
     void loadConfig ( QString path );
 };
-
-#endif // CONFIGURATIONPROVIDER_H

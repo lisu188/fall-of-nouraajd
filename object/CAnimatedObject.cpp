@@ -1,12 +1,7 @@
-#include <QDrag>
-#include <QMimeData>
-#include <QThread>
-#include <QApplication>
-#include <QDebug>
 #include "object/CObject.h"
 #include "provider/CProvider.h"
 #include "CGame.h"
-#include "Util.h"
+#include "CUtil.h"
 
 CAnimatedObject::CAnimatedObject() {
     setShapeMode ( QGraphicsPixmapItem::BoundingRectShape );

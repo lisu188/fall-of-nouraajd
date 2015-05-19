@@ -1,6 +1,6 @@
 #pragma once
 #include "CMapObject.h"
-#include "Stats.h"
+#include "CStats.h"
 
 class CCreature;
 class CInteraction;

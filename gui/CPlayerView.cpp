@@ -2,13 +2,7 @@
 #include "object/CObject.h"
 #include "handler/CHandler.h"
 #include "CMap.h"
-#include <qpainter.h>
-#include <QWidget>
-#include <QDrag>
-#include <QMimeData>
 #include "CGame.h"
-#include <qpainter.h>
-#include <sstream>
 #include "CGameView.h"
 
 PlayerStatsView::PlayerStatsView() {

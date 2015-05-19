@@ -1,6 +1,6 @@
 #pragma once
-#include <QGraphicsObject>
 #include "CGamePanel.h"
+
 class CCreature;
 class CFightPanel;
 class CListView;

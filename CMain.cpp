@@ -1,13 +1,6 @@
-#include <QApplication>
-#include <QDebug>
-#include <QThreadPool>
-#include <QtGlobal>
-#include <mutex>
-#include "CMainWindow.h"
-#include "CGameView.h"
-#include "handler/CHandler.h"
-#include <stdio.h>
-#include <signal.h>
+#include "CGlobal.h"
+#include "gui/CGui.h"
+
 
 static void messageHandler ( QtMsgType type, const QMessageLogContext &context,
                              const QString &msg ) {

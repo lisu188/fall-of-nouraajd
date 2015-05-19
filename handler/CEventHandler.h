@@ -1,7 +1,6 @@
 #pragma once
-#include <QObject>
-#include <unordered_map>
-#include "Util.h"
+#include "CGlobal.h"
+#include "CUtil.h"
 
 class CMap;
 class CTrigger;
@@ -52,15 +51,11 @@ struct hash<TriggerKey> {
 };
 }
 
-typedef std::unordered_multimap<TriggerKey, CTrigger*> TriggerMap ;
-
-class CEventHandler : public QObject {
-    Q_OBJECT
+class CEventHandler  {
+    typedef std::unordered_multimap<TriggerKey, CTrigger*> TriggerMap ;
 public:
-    CEventHandler ( CMap *map );
     void gameEvent ( CGameObject *mapObject , CGameEvent *event ) const;
     void registerTrigger ( QString name,QString type,CTrigger *trigger );
 private:
     TriggerMap triggers;
-    CMap*map=0;
 };

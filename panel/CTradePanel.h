@@ -1,6 +1,5 @@
 #pragma once
 #include "CGamePanel.h"
-#include "handler/CMouseHandler.h"
 
 class CPlayerInventoryView;
 class CTradeItemsView;

@@ -1,7 +1,6 @@
 #pragma once
-#include <QGraphicsPixmapItem>
-#include <QTimer>
-#include <QWidget>
+#include "CGlobal.h"
+
 class CAnimation;
 class CAnimatedObject : public QObject, protected QGraphicsPixmapItem {
     Q_OBJECT

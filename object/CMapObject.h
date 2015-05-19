@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Util.h"
+#include "CUtil.h"
 #include "CGameObject.h"
 
 class CGameEvent;

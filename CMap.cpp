@@ -3,18 +3,9 @@
 #include "CGame.h"
 #include "object/CObject.h"
 #include "provider/CProvider.h"
-#include "CGameView.h"
-#include <QDateTime>
-#include <QDebug>
-#include <string>
-#include <sstream>
-#include <QApplication>
-#include <QDesktopWidget>
-#include <QTimer>
-#include <iomanip>
-#include <QThreadPool>
-#include "Util.h"
+#include "gui/CGui.h"
 #include "handler/CHandler.h"
+#include "CUtil.h"
 #include "CMapLoader.h"
 #include "CThreadUtil.h"
 
@@ -85,24 +76,25 @@ void CMap::setPlayer ( CPlayer *player ) {
     this->player=player;
 }
 
-const CLootHandler *CMap::getLootHandler()  {
+ CLootHandler *CMap::getLootHandler()  {
     return lootHandler.get ( this );
 }
 
-const CObjectHandler *CMap::getObjectHandler()  {
+ CObjectHandler *CMap::getObjectHandler()  {
     return objectHandler.get ( this );
 }
 
-const CEventHandler *CMap::getEventHandler()  {
-    return eventHandler.get ( this );
+ CEventHandler *CMap::getEventHandler()  {
+    return eventHandler.get (  );
 }
 
 CMouseHandler *CMap::getMouseHandler()  {
-    return mouseHandler.get ( this );
+    return mouseHandler.get (  );
 }
 
-CGuiHandler *CMap::getGuiHandler()  {
-    return guiHandler.get ( this );
+CConfigHandler *CMap::getConfigHandler()
+{
+    return configHandler.get({getMapPath()+"/config.json"},getGame()->getConfigHandler());
 }
 
 void CMap::moveTile ( CTile *tile, int x, int y, int z ) {
@@ -201,6 +193,7 @@ bool CMap::canStep ( int x, int y, int z ) {
 bool CMap::canStep ( const Coords &coords ) {
     return canStep ( coords.x,coords.y,coords.z );
 }
+
 QString CMap::getMapPath() const {
     return mapPath;
 }

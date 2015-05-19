@@ -6,8 +6,7 @@
 #include <QObject>
 class CItem;
 class CMap;
-class CLootHandler : public QObject,private std::map<QString, int> {
-    Q_OBJECT
+class CLootHandler :private std::map<QString, int> {
 public:
     std::set<CItem *> getLoot ( int value ) const;
     CLootHandler ( CMap *map ) ;

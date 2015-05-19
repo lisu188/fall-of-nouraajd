@@ -4,10 +4,10 @@
 #include <map>
 class CAnimation;
 class QPixmap;
-class CAnimation : public QObject,private std::map<int, std::pair<QPixmap *, int> > {
+class CAnimation :public QObject, private std::map<int, std::pair<QPixmap *, int> > {
     Q_OBJECT
 public:
-    CAnimation ( QObject *parent );
+    CAnimation ();
     ~CAnimation();
     QPixmap *getImage();
     int getTime();
@@ -18,8 +18,7 @@ public:
 private:
     int actual=0;
 };
-class CAnimationProvider : public QObject,private std::map<QString, CAnimation *> {
-    Q_OBJECT
+class CAnimationProvider : private std::map<QString, CAnimation *> {
 public:
     static CAnimation *getAnim ( QString path );
     virtual ~CAnimationProvider();

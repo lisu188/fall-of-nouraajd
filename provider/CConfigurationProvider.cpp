@@ -1,9 +1,5 @@
 #include "CConfigurationProvider.h"
 #include <QDebug>
-#include <QFile>
-#include <fstream>
-#include <mutex>
-#include <QJsonDocument>
 #include "handler/CHandler.h"
 #include "CResourcesProvider.h"
 
@@ -29,7 +25,7 @@ QJsonValue &CConfigurationProvider::getConfiguration ( QString path ) {
 }
 
 void CConfigurationProvider::loadConfig ( QString path ) {
-    QFile *file =CResourcesProvider::getInstance()->getResource ( path );
+    std::shared_ptr<QFile> file =CResourcesProvider::getInstance()->getResource ( path );
     if ( file && file->open ( QIODevice::ReadOnly ) ) {
         QByteArray data = file->readAll();
         auto json=QJsonDocument::fromJson ( data );

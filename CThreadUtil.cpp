@@ -1,5 +1,4 @@
 #include "CThreadUtil.h"
-#include <QApplication>
 
 CLaterCall::CLaterCall ( std::function<void () > target ) :target ( target ) {
     this->moveToThread(QApplication::instance()->thread());

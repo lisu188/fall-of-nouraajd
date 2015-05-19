@@ -1,8 +1,6 @@
 #pragma once
-#include <QMimeData>
-#include <QString>
-#include <QThreadPool>
-#include <functional>
+#include "CGlobal.h"
+
 class CGameObject;
 
 #define PY_PROPERTY_ACCESSOR(CLASS)\
@@ -14,6 +12,12 @@ class CGameObject;
 .def ( "setBoolProperty",&CLASS::setBoolProperty )\
 .def ( "incProperty",&CLASS::incProperty )\
 
+#define NEAR(coords) {\
+    Coords(coords.x + 1,coords.y,coords.z),\
+    Coords(coords.x - 1,coords.y,coords.z ),\
+    Coords(coords.x,coords.y + 1, coords.z ),\
+    Coords(coords.x,coords.y - 1,coords.z )}
+
 struct Coords {
     Coords();
     Coords ( int x, int y, int z );
@@ -22,7 +26,7 @@ struct Coords {
     bool operator< ( const Coords &other ) const;
     Coords operator- ( const Coords &other ) const;
     Coords operator*() const;
-    int getDist ( Coords a );
+    double getDist( Coords a );
 };
 
 namespace std {
@@ -47,17 +51,20 @@ public:
     CGameObject *getSource() const;
 };
 
-template<typename T,typename U>
+template<typename T,typename... U>
 class Lazy {
 public:
-    T*get ( U*parent ) {
+    T *get ( U... parent ) {
         if ( ptr ) {
             return ptr;
         }
-        return ptr=new T ( parent );
+        return ptr=new T ( parent... );
+    }
+    ~Lazy(){
+        delete ptr;
     }
 private :
-    T*ptr=nullptr;
+    T* ptr=nullptr;
 };
 
 template <typename T>
@@ -82,3 +89,17 @@ struct function_traits<ReturnType ( ClassType::* ) ( Args... ) const>
         // composed of those arguments.
     };
 };
+
+template <typename Container,typename Value>
+inline bool contains(Container container,Value value){
+    return container.find(value)!=container.end();
+}
+
+template <typename T,typename U>
+T convert(U c){
+    T t;
+    for(auto x:c){
+        t.insert(x);
+    }
+    return t;
+}

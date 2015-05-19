@@ -1,15 +1,8 @@
 #pragma once
-#include <list>
-#include <unordered_map>
-#include <set>
+#include "CGlobal.h"
 
-#include <QObject>
-#include <QGraphicsScene>
-#include <QString>
-
-#include "Util.h"
+#include "CUtil.h"
 #include "CScriptLoader.h"
-#include "CAnimation.h"
 #include "object/CObject.h"
 #include "handler/CHandler.h"
 #include "provider/CProvider.h"
@@ -38,7 +31,7 @@ public:
     bool contains ( int x, int y, int z );
     void addObject ( CMapObject *mapObject );
     void removeObject ( CMapObject *mapObject );
-    Q_INVOKABLE void ensureSize();
+     void ensureSize();
     CGame *getGame() const;
     void mapUp();
     void mapDown();
@@ -57,11 +50,11 @@ public:
     CPlayer *getPlayer();
     void setPlayer ( CPlayer *player );
     void moveTile ( CTile* tile,int x, int y, int z );
-    const CLootHandler *getLootHandler();
-    const CObjectHandler *getObjectHandler() ;
-    const CEventHandler *getEventHandler() ;
+    CLootHandler *getLootHandler();
+    CObjectHandler *getObjectHandler() ;
+    CEventHandler *getEventHandler() ;
     CMouseHandler *getMouseHandler() ;
-    CGuiHandler *getGuiHandler() ;
+    CConfigHandler *getConfigHandler() ;
     bool canStep ( int x,int y,int z );
     bool canStep ( const Coords &coords );
     QString getMapPath() const;
@@ -111,11 +104,11 @@ private:
     std::map<int, QString> defaultTiles;
     std::map<int, std::pair<int, int> > boundaries;
     int entryx, entryz, entryy;
-    Lazy<CLootHandler,CMap> lootHandler;
-    Lazy<CObjectHandler,CMap> objectHandler;
-    Lazy<CEventHandler,CMap> eventHandler;
-    Lazy<CGuiHandler,CMap> guiHandler;
-    Lazy<CMouseHandler,CMap> mouseHandler;
+    Lazy<CLootHandler,CMap*> lootHandler;
+    Lazy<CObjectHandler,CMap*> objectHandler;
+    Lazy<CEventHandler> eventHandler;
+    Lazy<CMouseHandler> mouseHandler;
+    Lazy<CConfigHandler,std::set<QString>,CConfigHandler*> configHandler;
     QString mapPath;
     bool moving=false;
 };

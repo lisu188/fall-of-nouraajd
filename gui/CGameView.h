@@ -1,9 +1,7 @@
 #pragma once
-
+#include "CGlobal.h"
 #include "CGame.h"
 #include "CPlayerView.h"
-#include <QGraphicsView>
-#include <QThread>
 #include "panel/CPanel.h"
 
 class CPlayer;

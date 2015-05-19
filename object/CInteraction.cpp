@@ -1,11 +1,7 @@
 #include "CInteraction.h"
-#include "CCreature.h"
 #include "CGame.h"
-#include "CGameView.h"
-#include  "CPlayerView.h"
-#include <QDebug>
-#include "CItem.h"
-#include "CCreature.h"
+#include "object/CObject.h"
+#include "handler/CHandler.h"
 #include "panel/CPanel.h"
 #include "handler/CHandler.h"
 

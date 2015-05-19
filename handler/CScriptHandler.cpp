@@ -1,20 +1,11 @@
-#include <QString>
 #include "CMap.h"
 #include "handler/CHandler.h"
-#include <QFile>
-#include <QFileInfo>
-#include <QDebug>
 
 static const char* START_SCRIPT="import sys\n"
                                 "from _core import CScriptLoader\n"
                                 "sys.path=[]\n"
                                 "sys.meta_path.append(CScriptLoader())\n"
                                 "sys.dont_write_bytecode=True";
-
-CScriptHandler *CScriptHandler::getInstance() {
-    static CScriptHandler instance;
-    return &instance;
-}
 
 CScriptHandler::CScriptHandler () {
     PyImport_AppendInittab ( "_game",PyInit__game );

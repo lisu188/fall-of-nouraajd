@@ -6,3 +6,4 @@
 #include "CScriptHandler.h"
 #include "CLootHandler.h"
 #include "CMouseHandler.h"
+#include "CConfigHandler.h"

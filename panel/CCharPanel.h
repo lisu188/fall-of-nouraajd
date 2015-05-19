@@ -1,8 +1,5 @@
 #pragma once
-
 #include "CGamePanel.h"
-#include "handler/CMouseHandler.h"
-#include <QWidget>
 
 class CCharPanel : public AGamePanel {
     Q_OBJECT

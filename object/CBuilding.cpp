@@ -1,7 +1,4 @@
 #include "CBuilding.h"
-#include <QDebug>
-#include "CGame.h"
-#include "CPlayerView.h"
 
 CBuilding::CBuilding() {
     this->setZValue ( 1 );
