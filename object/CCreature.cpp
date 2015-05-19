@@ -1,21 +1,11 @@
 #include "CCreature.h"
 #include "CPathFinder.h"
-#include "CInteraction.h"
 #include "CGame.h"
-#include "CPlayerView.h"
-#include "Stats.h"
-#include <QDebug>
-#include <iostream>
-#include <fstream>
-#include <string>
-#include <QThreadPool>
-#include <QApplication>
-#include "CGameView.h"
-#include "Util.h"
-#include "handler/CHandler.h"
-#include "CTile.h"
-#include "CPathFinder.h"
-
+#include "CMap.h"
+#include "CStats.h"
+#include "CUtil.h"
+#include "object/CObject.h"
+#include "gui/CGui.h"
 void CCreature::setActions ( QVariantList &value ) {
     for ( auto it=value.begin(); it!=value.end(); it++ ) {
         this->actions.insert ( this->getMap()->getObjectHandler()->createObject<CInteraction*> ( ( *it ).toString() ) );

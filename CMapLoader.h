@@ -1,5 +1,5 @@
 #pragma once
-#include <QString>
+#include "CGlobal.h"
 
 class CMap;
 class QJsonObject;

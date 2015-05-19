@@ -1,7 +1,6 @@
 #include "CScriptLoader.h"
 #include "handler/CHandler.h"
 #include "CMap.h"
-#include <QDebug>
 
 using namespace boost::python;
 

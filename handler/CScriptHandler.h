@@ -1,9 +1,10 @@
 #pragma once
-#include <boost/python.hpp>
+#include "CGlobal.h"
 
 class CScriptHandler {
 public:
-    static CScriptHandler* getInstance();
+    CScriptHandler ();
+    ~CScriptHandler();
     void executeScript ( QString script ,boost::python::object nameSpace=boost::python::object() );
     void executeCommand ( std::initializer_list<QString> list );
     QString buildCommand ( std::initializer_list<QString> list );
@@ -40,8 +41,6 @@ public:
         return boost::python::extract<T> ( object );
     }
 private:
-    CScriptHandler (  );
-    ~CScriptHandler();
     boost::python::object main_module;
     boost::python::object main_namespace;
 };

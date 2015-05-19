@@ -1,12 +1,10 @@
-#include <QJsonObject>
-#include <QDebug>
-
 #include "CMapLoader.h"
 #include "CMap.h"
+#include "CGame.h"
 
 void CMapLoader::loadMap ( CMap *map, QString mapPath ) {
-    CScriptHandler::getInstance()->addModule ( map->getMapName(),mapPath+"/script.py" );
-    CScriptHandler::getInstance()->callFunction ( map->getMapName()+".beforeLoad",boost::ref ( map ) );
+    map->getGame()->getScriptHandler()->addModule ( map->getMapName(),mapPath+"/script.py" );
+    map->getGame()->getScriptHandler()->callFunction ( map->getMapName()+".beforeLoad",boost::ref ( map ) );
     QJsonObject mapc=CConfigurationProvider::getConfig ( mapPath+"/map.json" ).toObject();
     const QJsonObject &mapProperties=mapc["properties"].toObject();
     const QJsonArray &mapLayers=mapc["layers"].toArray();
@@ -26,7 +24,7 @@ void CMapLoader::loadMap ( CMap *map, QString mapPath ) {
             handleObjectLayer ( map,layer );
         }
     }
-    CScriptHandler::getInstance()->callFunction ( map->getMapName()+".afterLoad",boost::ref ( map ) );
+    map->getGame()->getScriptHandler()->callFunction ( map->getMapName()+".afterLoad",boost::ref ( map ) );
 }
 
 void CMapLoader::handleTileLayer ( CMap* map,const QJsonObject &tileset, const QJsonObject &layer ) {

@@ -1,14 +1,10 @@
 #include "CItem.h"
 #include "CGame.h"
-#include "Stats.h"
-#include <QDebug>
-#include <QJsonObject>
-#include <fstream>
-#include "object/CObject.h"
+#include "CStats.h"
 #include "CMap.h"
+#include "object/CObject.h"
 #include "handler/CHandler.h"
-#include "CPlayerView.h"
-#include "CGameView.h"
+#include "gui/CGui.h"
 
 CItem::CItem()  {
     this->setZValue ( 2 );
@@ -138,6 +134,6 @@ void CScroll::setText ( const QString &value ) {
 }
 
 void CScroll::onUse ( CGameEvent * ) {
-    getMap()->getGuiHandler()->showMessage ( text );
+    getMap()->getGame()->getGuiHandler()->showMessage ( text );
 }
 

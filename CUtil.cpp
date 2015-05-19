@@ -1,6 +1,5 @@
-#include "Util.h"
+#include "CUtil.h"
 #include "object/CGameObject.h"
-#include <QDebug>
 
 CObjectData::CObjectData ( CGameObject *source ) {
     setParent ( source );
@@ -52,7 +51,7 @@ Coords Coords::operator*() const {
     return Coords ( x,y,z );
 }
 
-int Coords::getDist ( Coords a ) {
+double Coords::getDist ( Coords a ) {
     double x = this->x - a.x;
     x *= x;
     double y = this->y - a.y;

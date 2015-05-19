@@ -1,5 +1,7 @@
 #include "CPlayer.h"
 #include "CMap.h"
+#include "CGame.h"
+
 #include "panel/CPanel.h"
 #include <QApplication>
 #include <QDebug>
@@ -46,16 +48,16 @@ CInteraction *CPlayer::selectAction() {
 
 void CPlayer::fight ( CCreature *creature ) {
     setEnemy ( creature );
-    getMap()->getGuiHandler()->getPanel ( "CFightPanel" )->showPanel();
+    getMap()->getGame()->getGuiHandler()->getPanel ( "CFightPanel" )->showPanel();
     CCreature::fight ( creature );
-    getMap()->getGuiHandler()->getPanel ( "CFightPanel" )->hidePanel();
+    getMap()->getGame()->getGuiHandler()->getPanel ( "CFightPanel" )->hidePanel();
     setEnemy ( nullptr );
 }
 
 void CPlayer::trade ( CGameObject *object ) {
     if ( CMarket * market=dynamic_cast<CMarket*> ( object ) ) {
         setMarket ( market );
-        AGamePanel*panel=getMap()->getGuiHandler()->getPanel ( "CTradePanel" );
+        AGamePanel*panel=getMap()->getGame()->getGuiHandler()->getPanel ( "CTradePanel" );
         panel->showPanel();
         while ( panel->isShown() ) {
             QApplication::processEvents ( QEventLoop::WaitForMoreEvents );

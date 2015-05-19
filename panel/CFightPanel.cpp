@@ -1,14 +1,7 @@
 #include "CGamePanel.h"
 #include "CGame.h"
-#include <qpainter.h>
-#include <sstream>
-#include <QDebug>
-#include <qpainter.h>
-#include "CGameView.h"
-#include "CPlayerView.h"
+#include "gui/CGui.h"
 #include "object/CObject.h"
-#include <QBitmap>
-#include <QFont>
 #include "handler/CHandler.h"
 
 

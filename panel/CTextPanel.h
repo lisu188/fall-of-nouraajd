@@ -1,5 +1,6 @@
 #pragma once
 #include "CGamePanel.h"
+
 class CTextPanel:public AGamePanel {
     Q_OBJECT
     Q_PROPERTY ( QString text READ getText WRITE setText USER true )
