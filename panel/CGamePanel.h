@@ -1,8 +1,7 @@
 #pragma once
-
-#include <QGraphicsItem>
+#include "CGlobal.h"
 #include "object/CObject.h"
-#include <QWidget>
+#include "handler/CHandler.h"
 
 class CCreature;
 class CGameView;

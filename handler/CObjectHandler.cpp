@@ -8,20 +8,11 @@
 #include <QString>
 #include <QDebug>
 
-CObjectHandler::CObjectHandler ( CMap *map ) :QObject ( map ),map ( map ) {
-    auto configFiles=CResourcesProvider::getInstance()->getFiles ( CONFIG );
-    configFiles.insert ( map->getMapPath()+"/config.json" );
-    for ( auto it=configFiles.begin(); it!=configFiles.end(); it++ ) {
-        QJsonObject config=CConfigurationProvider::getConfig ( *it ).toObject();
-        for ( auto it=config.begin(); it!=config.end(); it++ ) {
-            objectConfig[it.key()]=it.value();
-        }
-    }
+CObjectHandler::CObjectHandler ( CMap *map ) :map ( map ) {
+
 }
 
-bool CObjectHandler::isFlagSet ( QString type, QString property ) {
-    return objectConfig[type].toObject() [property].toBool();
-}
+
 
 void CObjectHandler::logProperties ( CGameObject *object ) const {
     for ( int i = 0; i < object->metaObject()->propertyCount(); i++ ) {
@@ -33,7 +24,7 @@ void CObjectHandler::logProperties ( CGameObject *object ) const {
 }
 
 CGameObject *CObjectHandler::_createObject ( QString type ) const {
-    QJsonObject config=objectConfig[type].toObject();
+    QJsonObject config=map->getConfigHandler()->getConfig(type);
     QString className=config["class"].toString().isEmpty() ?type:config["class"].toString();
 
     CGameObject *object = CTypeHandler::create ( className );
@@ -114,12 +105,3 @@ QMetaProperty CObjectHandler::getProperty ( CGameObject *object, QString name ) 
     }
     return QMetaProperty();
 }
-
-const QJsonObject *CObjectHandler::getObjectConfig() const {
-    return &objectConfig;
-}
-
-CMap *CObjectHandler::getMap() {
-    return this->map;
-}
-

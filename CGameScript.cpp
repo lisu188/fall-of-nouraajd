@@ -1,10 +1,6 @@
-#include <boost/python.hpp>
-#include <QDebug>
-#include <QMetaProperty>
-#include <sstream>
+#include "CGlobal.h"
 #include "object/CObject.h"
-#include <Python.h>
-#include "Util.h"
+#include "CUtil.h"
 #include "CMap.h"
 #include "panel/CPanel.h"
 #include "handler/CHandler.h"
@@ -247,7 +243,6 @@ BOOST_PYTHON_MODULE ( _game ) {
     .def ( "replaceTile",&CMap::replaceTile )
     .def ( "getPlayer",&CMap::getPlayer,return_internal_reference<>() )
     .def ( "getLocationByName",&CMap::getLocationByName )
-    .def ( "getGuiHandler",&CMap::getGuiHandler,return_internal_reference<>() )
     .def ( "removeAll",&CMap::removeAll<object> )
     .def ( "getObjectHandler",&CMap::getObjectHandler,return_internal_reference<>() )
     .def ( "getEventHandler",&CMap::getEventHandler,return_internal_reference<>() )
@@ -340,5 +335,6 @@ BOOST_PYTHON_MODULE ( _game ) {
             .def ( "onComplete",&CQuestWrapper::onComplete );
     class_<CEventHandler,boost::noncopyable> ( "CEventHandler",no_init ).def ( "registerTrigger",&CEventHandler::registerTrigger );
     class_<CGame,boost::noncopyable> ( "CGame",no_init )
-    .def ( "changeMap",&CGame::changeMap );
+    .def ( "changeMap",&CGame::changeMap )
+            .def ( "getGuiHandler",&CGame::getGuiHandler,return_internal_reference<>() );
 }

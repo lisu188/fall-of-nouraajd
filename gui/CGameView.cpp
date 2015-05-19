@@ -1,5 +1,5 @@
 #include "CGameView.h"
-#include "Util.h"
+#include "CUtil.h"
 #include <QDebug>
 #include "CPlayerView.h"
 #include <QBitmap>
@@ -16,9 +16,12 @@ void CGameView::start() {
     CPlayer *player = getGame()->getMap()->getPlayer();
     playerStatsView.show();
     playerStatsView.setPlayer ( player );
-    connect ( player,&CCreature::inventoryChanged,getGame()->getMap()->getGuiHandler(),&CGuiHandler::refresh );
-    connect ( player,&CCreature::equippedChanged,getGame()->getMap()->getGuiHandler(),&CGuiHandler::refresh );
-    connect ( player,&CCreature::skillsChanged,getGame()->getMap()->getGuiHandler(),&CGuiHandler::refresh );
+    auto refresh=[this](){
+        getGame()->getGuiHandler()->refresh();
+    };
+    connect ( player,&CCreature::inventoryChanged,refresh);
+    connect ( player,&CCreature::equippedChanged,refresh);
+    connect ( player,&CCreature::skillsChanged,refresh );
     init = true;
 }
 
@@ -62,7 +65,7 @@ void CGameView::resizeEvent ( QResizeEvent *event ) {
         if ( event ) {
             QWidget::resizeEvent ( event );
             playerStatsView.move ( 0, 0 );
-            getGame()->getMap()->getGuiHandler()->refresh();
+            getGame()->getGuiHandler()->refresh();
         }
 
         CPlayer *player =getGame()->getMap()->getPlayer();

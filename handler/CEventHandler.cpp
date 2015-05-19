@@ -2,12 +2,6 @@
 #include "object/CObject.h"
 #include "CMap.h"
 
-#include <QMetaEnum>
-#include <QDebug>
-
-CEventHandler::CEventHandler ( CMap *map ) :QObject ( map ),map ( map ) {
-}
-
 void CEventHandler::gameEvent (  CGameObject *object ,CGameEvent *event ) const {
     switch ( event->getType() ) {
     case CGameEvent::onEnter:

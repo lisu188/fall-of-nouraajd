@@ -1,8 +1,5 @@
-#include "Stats.h"
-
-#include <QMetaProperty>
-#include <sstream>
-#include "Util.h"
+#include "CStats.h"
+#include "CUtil.h"
 
 int Stats::getAttack() const {
     return attack;

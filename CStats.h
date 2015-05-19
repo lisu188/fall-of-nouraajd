@@ -1,8 +1,6 @@
 #pragma once
-#include <QJsonObject>
-#include "Util.h"
-#include <QVariant>
-#include <QObject>
+#include "CGlobal.h"
+#include "CUtil.h"
 #include "object/CMapObject.h"
 
 class Stats : public CGameObject {

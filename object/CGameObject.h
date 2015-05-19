@@ -1,7 +1,7 @@
 #pragma once
 
 #include "CAnimatedObject.h"
-#include "Util.h"
+#include "CUtil.h"
 
 class CGameEvent;
 class CMap;

@@ -5,12 +5,10 @@ TEMPLATE = app
 
 SOURCES += \
      CPathFinder.cpp \
-     GameScript.cpp \
      CMap.cpp \
-     CGameView.cpp \
-     CMainWindow.cpp \
-     CPlayerView.cpp \
-     Stats.cpp \
+     gui/CGameView.cpp \
+     gui/CMainWindow.cpp \
+     gui/CPlayerView.cpp \
      CMain.cpp \
     CScriptLoader.cpp \
     handler/CTypeHandler.cpp \
@@ -43,20 +41,21 @@ SOURCES += \
     panel/CTradePanel.cpp \
     handler/CMouseHandler.cpp \
     panel/CGamePanel.cpp \
-    Util.cpp \
     object/CMarket.cpp \
     CMapLoader.cpp \
     CGame.cpp \
-    CThreadUtil.cpp
+    CThreadUtil.cpp \
+    CGameScript.cpp \
+    CStats.cpp \
+    CUtil.cpp \
+    handler/CConfigHandler.cpp
 
 HEADERS += \
      CPathFinder.h \
      CMap.h \
-     CGameView.h \
-     CMainWindow.h \
-     CPlayerView.h \
-     Stats.h \
-     Util.h \
+     gui/CGameView.h \
+     gui/CMainWindow.h \
+     gui/CPlayerView.h \
     CScriptLoader.h \
     handler/CHandler.h \
     handler/CObjectHandler.h \
@@ -95,10 +94,15 @@ HEADERS += \
     object/CMarket.h \
     CMapLoader.h \
     CGame.h \
-    CThreadUtil.h
+    CThreadUtil.h \
+    CStats.h \
+    CUtil.h \
+    handler/CConfigHandler.h \
+    CGlobal.h \
+    gui/CGui.h
 
 FORMS += \
-     CMainWindow.ui
+     gui/CMainWindow.ui
 
 RESOURCES += \
     scripts.qrc \

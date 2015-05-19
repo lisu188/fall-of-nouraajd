@@ -3,7 +3,7 @@
 #include "CMap.h"
 #include <QDebug>
 
-CMouseHandler::CMouseHandler ( CMap *map ) :QObject ( map ) {}
+CMouseHandler::CMouseHandler (  )  {}
 
 void CMouseHandler::handleClick ( CGameObject *object ) {
     CClickAction *action=getClickAction ( object );

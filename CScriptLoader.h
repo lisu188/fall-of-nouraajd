@@ -1,6 +1,6 @@
 #pragma once
-#include <QString>
-#include <boost/python.hpp>
+#include "CGlobal.h"
+
 class CMap;
 class AScriptLoader;
 

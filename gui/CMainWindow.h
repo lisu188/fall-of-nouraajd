@@ -1,5 +1,6 @@
 #pragma once
-#include <QMainWindow>
+#include "CGlobal.h"
+
 class CGameView;
 namespace Ui {
 class CMainWindow;

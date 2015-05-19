@@ -1,12 +1,11 @@
 #pragma once
-#include <QObject>
 #include <QJsonObject>
+#include <QObject>
 
 class ATypeHandler;
 class CGameObject;
 class CMap;
-class CObjectHandler : public QObject {
-    Q_OBJECT
+class CObjectHandler {
 public:
     CObjectHandler ( CMap *map );
     template<typename T>
@@ -18,15 +17,10 @@ public:
         }
         return casted;
     }
-    bool isFlagSet ( QString type,QString property );
     void logProperties ( CGameObject *object ) const;
-    const QJsonObject *getObjectConfig() const;
-    CMap *getMap();
-
 private:
     CGameObject *_createObject ( QString type ) const;
     void setProperty ( CGameObject * object , QString key, QJsonValue value ) const;
     QMetaProperty getProperty ( CGameObject * object ,QString name ) const;
     CMap *map=0;
-    QJsonObject objectConfig;
 };
