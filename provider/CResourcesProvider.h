@@ -8,7 +8,7 @@ enum CResType {
 class CResourcesProvider {
 public:
     static CResourcesProvider *getInstance();
-    std::shared_ptr<QFile> getResource( QString path );
+    std::shared_ptr<QFile> getResource ( QString path );
     QString getResourceAsString ( QString path );
     QString getPath ( QString path );
     std::set<QString> getFiles ( CResType type );

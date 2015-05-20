@@ -8,8 +8,8 @@ std::set<CItem *> CLootHandler::getLoot ( int value ) const {
     return calculateLoot ( value );
 }
 
-CLootHandler::CLootHandler ( CMap *map ) :map(map) {
-    for ( QString  type : map->getConfigHandler()->getAllTypes()) {
+CLootHandler::CLootHandler ( CMap *map ) :map ( map ) {
+    for ( QString  type : map->getConfigHandler()->getAllTypes() ) {
         CItem *item=map->getObjectHandler()->createObject<CItem*> ( type ) ;
         if ( item ) {
             int power=item->getPower() ;

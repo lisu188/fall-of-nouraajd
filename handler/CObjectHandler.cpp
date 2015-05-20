@@ -24,7 +24,7 @@ void CObjectHandler::logProperties ( CGameObject *object ) const {
 }
 
 CGameObject *CObjectHandler::_createObject ( QString type ) const {
-    QJsonObject config=map->getConfigHandler()->getConfig(type);
+    QJsonObject config=map->getConfigHandler()->getConfig ( type );
     QString className=config["class"].toString().isEmpty() ?type:config["class"].toString();
 
     CGameObject *object = CTypeHandler::create ( className );
