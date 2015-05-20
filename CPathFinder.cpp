@@ -57,16 +57,21 @@ Coords CSmartPathFinder::findNextStep ( const Coords &  start, const Coords &  g
     while ( !nodes.empty() && !contains ( marked,start ) ) {
         Coords currentCoords = nodes.top();
         nodes.pop();
-        if ( marked.insert ( currentCoords ).second  ) {
+        if ( !contains ( marked,currentCoords ) ) {
             int curValue = values[currentCoords];
+            bool mark=true;
             for ( Coords tmpCoords:NEAR ( currentCoords ) ) {
                 if ( canStep ( tmpCoords ) ) {
                     auto it=values.find ( tmpCoords );
-                    if ( it == values.end() ||it->second > curValue + 1 ) {
+                    if ( it == values.end() || it->second > curValue + 1 ) {
                         values[tmpCoords] = curValue + 1 ;
+                        mark=false;
                     }
                     nodes.push ( tmpCoords );
                 }
+            }
+            if ( mark ) {
+                marked.insert ( currentCoords );
             }
         }
     }
