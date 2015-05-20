@@ -53,25 +53,12 @@ def main():
     formatJson(getFileList(DIR,"json"))
     formatPython(getFileList(DIR,"py"))
     sortHeader()
-    exe = initialize_exe()
     for file_path in files:
-        format_source_code(exe, file_path, ["-A2s4OPjn"])
+        format_source_code("astyle", file_path, ["-A2s4OPjn"])
 
 def format_source_code(exe, file_path, options):
     astyle = [exe]+options+[file_path]
     subprocess.Popen(astyle,stdout=subprocess.PIPE).communicate()
-
-def initialize_exe():
-    pydir = sys.path[0]
-    os.chdir(pydir)
-    if os.name == "nt":
-        exe = "AStyle.exe"
-    else:
-        exe = "/usr/bin/astyle"
-    if not os.path.isfile(exe):
-        print("Cannot find", exe)
-        sys.exit(1)
-    return exe
 
 if __name__ == "__main__":
     main()
