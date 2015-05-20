@@ -12,8 +12,6 @@ CObjectHandler::CObjectHandler ( CMap *map ) :map ( map ) {
 
 }
 
-
-
 void CObjectHandler::logProperties ( CGameObject *object ) const {
     for ( int i = 0; i < object->metaObject()->propertyCount(); i++ ) {
         QMetaProperty property = object->metaObject()->property ( i );
@@ -31,11 +29,7 @@ CGameObject *CObjectHandler::_createObject ( QString type ) const {
     if ( object==nullptr ) {
         qFatal ( ( "No object for type: "+type ).toStdString().c_str() );
     }
-
-    std::stringstream stream;
-    stream << std::hex << ( long ) object;
-    QString result ( stream.str().c_str() );
-    object->setObjectName ( result );
+    object->setObjectName ( to_hex ( object ) );
     object->setObjectType ( type );
     object->setMap ( this->map );
 

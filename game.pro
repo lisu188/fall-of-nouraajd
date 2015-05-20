@@ -48,7 +48,8 @@ SOURCES += \
     CGameScript.cpp \
     CStats.cpp \
     CUtil.cpp \
-    handler/CConfigHandler.cpp
+    handler/CConfigHandler.cpp \
+    gui/CScriptWindow.cpp
 
 HEADERS += \
      CPathFinder.h \
@@ -99,10 +100,12 @@ HEADERS += \
     CUtil.h \
     handler/CConfigHandler.h \
     CGlobal.h \
-    gui/CGui.h
+    gui/CGui.h \
+    gui/CScriptWindow.h
 
 FORMS += \
-     gui/CMainWindow.ui
+     gui/CMainWindow.ui \
+    gui/CScriptWindow.ui
 
 RESOURCES += \
     scripts.qrc \
