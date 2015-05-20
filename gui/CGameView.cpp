@@ -16,11 +16,11 @@ void CGameView::start() {
     CPlayer *player = getGame()->getMap()->getPlayer();
     playerStatsView.show();
     playerStatsView.setPlayer ( player );
-    auto refresh=[this](){
+    auto refresh=[this]() {
         getGame()->getGuiHandler()->refresh();
     };
-    connect ( player,&CCreature::inventoryChanged,refresh);
-    connect ( player,&CCreature::equippedChanged,refresh);
+    connect ( player,&CCreature::inventoryChanged,refresh );
+    connect ( player,&CCreature::equippedChanged,refresh );
     connect ( player,&CCreature::skillsChanged,refresh );
     init = true;
 }

@@ -52,6 +52,7 @@ def main():
     files = chain(getFileList(DIR,"cpp"),getFileList(DIR,"h"))
     formatJson(getFileList(DIR,"json"))
     formatPython(getFileList(DIR,"py"))
+    sortHeader()
     exe = initialize_exe()
     for file_path in files:
         format_source_code(exe, file_path, ["-A2s4OPjn"])
