@@ -1,8 +1,6 @@
 #include "handler/CHandler.h"
 #include "CGame.h"
 #include "panel/CPanel.h"
-#include "CGame.h"
-#include <QDebug>
 
 CGuiHandler::CGuiHandler ( CGame *game ) :game ( game ) {
     initPanels();
@@ -20,6 +18,10 @@ AGamePanel *CGuiHandler::getPanel ( QString panel ) {
 
 void CGuiHandler::showPanel ( QString panel ) {
     panels[panel]->showPanel();
+}
+
+void CGuiHandler::hidePanel ( QString panel ) {
+    panels[panel]->hidePanel();
 }
 
 void CGuiHandler::flipPanel ( QString panelName ) {

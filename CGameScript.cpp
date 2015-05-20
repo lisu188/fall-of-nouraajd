@@ -316,7 +316,9 @@ BOOST_PYTHON_MODULE ( _game ) {
     class_<CCharPanel,bases<AGamePanel>,boost::noncopyable> ( "CCharPanel" );
     class_<CGuiHandler,boost::noncopyable> ( "CGuiHandler",no_init )
     .def ( "showMessage",&CGuiHandler::showMessage )
-    .def ( "showPanel",&CGuiHandler::showPanel );
+    .def ( "showPanel",&CGuiHandler::showPanel )
+    .def ( "hidePanel",&CGuiHandler::hidePanel )
+    .def ( "flipPanel",&CGuiHandler::flipPanel ) ;
     class_<CTile,bases<CGameObject>,boost::noncopyable> ( "CTileBase" );
     class_<CTileWrapper,bases<CTile>,boost::noncopyable,boost::shared_ptr<CTileWrapper> > ( "CTile" ).
     def ( "onStep",&CTileWrapper::onStep );
