@@ -21,7 +21,7 @@ public:
     void addObject ( CGameObject *object );
     CGuiHandler *getGuiHandler();
     CConfigHandler *getConfigHandler();
-     CScriptHandler *getScriptHandler();
+    CScriptHandler *getScriptHandler();
 protected:
     virtual void keyPressEvent ( QKeyEvent *event );
 private:

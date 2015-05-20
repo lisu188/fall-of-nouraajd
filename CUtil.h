@@ -26,7 +26,7 @@ struct Coords {
     bool operator< ( const Coords &other ) const;
     Coords operator- ( const Coords &other ) const;
     Coords operator*() const;
-    double getDist( Coords a );
+    double getDist ( Coords a );
 };
 
 namespace std {
@@ -60,7 +60,7 @@ public:
         }
         return ptr=new T ( parent... );
     }
-    ~Lazy(){
+    ~Lazy() {
         delete ptr;
     }
 private :
@@ -91,15 +91,15 @@ struct function_traits<ReturnType ( ClassType::* ) ( Args... ) const>
 };
 
 template <typename Container,typename Value>
-inline bool contains(Container container,Value value){
-    return container.find(value)!=container.end();
+inline bool contains ( Container container,Value value ) {
+    return container.find ( value ) !=container.end();
 }
 
 template <typename T,typename U>
-T convert(U c){
+T convert ( U c ) {
     T t;
-    for(auto x:c){
-        t.insert(x);
+    for ( auto x:c ) {
+        t.insert ( x );
     }
     return t;
 }

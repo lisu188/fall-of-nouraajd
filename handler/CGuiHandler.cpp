@@ -4,7 +4,7 @@
 #include "CGame.h"
 #include <QDebug>
 
-CGuiHandler::CGuiHandler (CGame *game ) :game(game){
+CGuiHandler::CGuiHandler ( CGame *game ) :game ( game ) {
     initPanels();
 }
 

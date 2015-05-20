@@ -76,15 +76,15 @@ void CMap::setPlayer ( CPlayer *player ) {
     this->player=player;
 }
 
- CLootHandler *CMap::getLootHandler()  {
+CLootHandler *CMap::getLootHandler()  {
     return lootHandler.get ( this );
 }
 
- CObjectHandler *CMap::getObjectHandler()  {
+CObjectHandler *CMap::getObjectHandler()  {
     return objectHandler.get ( this );
 }
 
- CEventHandler *CMap::getEventHandler()  {
+CEventHandler *CMap::getEventHandler()  {
     return eventHandler.get (  );
 }
 
@@ -92,9 +92,8 @@ CMouseHandler *CMap::getMouseHandler()  {
     return mouseHandler.get (  );
 }
 
-CConfigHandler *CMap::getConfigHandler()
-{
-    return configHandler.get({getMapPath()+"/config.json"},getGame()->getConfigHandler());
+CConfigHandler *CMap::getConfigHandler() {
+    return configHandler.get ( {getMapPath()+"/config.json"},getGame()->getConfigHandler() );
 }
 
 void CMap::moveTile ( CTile *tile, int x, int y, int z ) {

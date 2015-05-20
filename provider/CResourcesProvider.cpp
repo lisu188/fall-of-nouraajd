@@ -9,7 +9,7 @@ CResourcesProvider *CResourcesProvider::getInstance() {
 
 std::shared_ptr<QFile> CResourcesProvider::getResource ( QString path ) {
     path=getPath ( path );
-    std::shared_ptr<QFile> ptr(new QFile ( path));
+    std::shared_ptr<QFile> ptr ( new QFile ( path ) );
     if ( ptr->exists() ) {
         return ptr;
     }

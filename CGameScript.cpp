@@ -336,5 +336,5 @@ BOOST_PYTHON_MODULE ( _game ) {
     class_<CEventHandler,boost::noncopyable> ( "CEventHandler",no_init ).def ( "registerTrigger",&CEventHandler::registerTrigger );
     class_<CGame,boost::noncopyable> ( "CGame",no_init )
     .def ( "changeMap",&CGame::changeMap )
-            .def ( "getGuiHandler",&CGame::getGuiHandler,return_internal_reference<>() );
+    .def ( "getGuiHandler",&CGame::getGuiHandler,return_internal_reference<>() );
 }

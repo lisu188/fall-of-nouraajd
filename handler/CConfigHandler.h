@@ -1,11 +1,10 @@
 #pragma once
 #include "CGlobal.h"
 
-class CConfigHandler
-{
+class CConfigHandler {
 public:
-    CConfigHandler(std::set<QString> paths,CConfigHandler* parent=nullptr);
-    QJsonObject getConfig(QString type);
+    CConfigHandler ( std::set<QString> paths,CConfigHandler* parent=nullptr );
+    QJsonObject getConfig ( QString type );
     std::set<QString> getAllTypes();
     bool isFlagSet ( QString type,QString property );
 private:

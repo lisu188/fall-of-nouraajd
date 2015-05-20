@@ -31,7 +31,7 @@ public:
     bool contains ( int x, int y, int z );
     void addObject ( CMapObject *mapObject );
     void removeObject ( CMapObject *mapObject );
-     void ensureSize();
+    void ensureSize();
     CGame *getGame() const;
     void mapUp();
     void mapDown();

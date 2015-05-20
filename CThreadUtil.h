@@ -49,7 +49,7 @@ private:
         CAsyncCall ( Function target,Callback callback ) :target ( target ),callback ( callback ) {}
         void run() override {
             call_later ( [this] ( typename function_traits<Function>::result_type result,Callback cb ) {
-                cb( result );
+                cb ( result );
             },target(),callback );
         }
         Function target;

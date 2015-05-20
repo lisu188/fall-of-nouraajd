@@ -52,18 +52,16 @@ void CGame::addObject ( CGameObject *object ) {
     this->addItem ( object );
 }
 
-CConfigHandler *CGame::getConfigHandler()
-{
-    return configHandler.get(convert<std::set<QString>>(CResourcesProvider::getInstance()->getFiles ( CONFIG )));
+CConfigHandler *CGame::getConfigHandler() {
+    return configHandler.get ( convert<std::set<QString>> ( CResourcesProvider::getInstance()->getFiles ( CONFIG ) ) );
 }
 
 CGuiHandler *CGame::getGuiHandler()   {
     return guiHandler.get ( this );
 }
 
-CScriptHandler *CGame::getScriptHandler()
-{
-   return scriptHandler.get();
+CScriptHandler *CGame::getScriptHandler() {
+    return scriptHandler.get();
 }
 
 void CGame::keyPressEvent ( QKeyEvent *event ) {

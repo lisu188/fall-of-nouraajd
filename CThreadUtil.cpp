@@ -1,7 +1,7 @@
 #include "CThreadUtil.h"
 
 CLaterCall::CLaterCall ( std::function<void () > target ) :target ( target ) {
-    this->moveToThread(QApplication::instance()->thread());
+    this->moveToThread ( QApplication::instance()->thread() );
 }
 
 void CLaterCall::run() {
