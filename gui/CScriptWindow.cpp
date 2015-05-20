@@ -5,6 +5,7 @@
 
 CScriptWindow::CScriptWindow ( CGame *game ) :game ( game ),ui ( new Ui::CScriptWindow ) {
     ui->setupUi ( this );
+    this->setVisible ( true );
 }
 
 CScriptWindow::~CScriptWindow() {
@@ -20,4 +21,6 @@ void CScriptWindow::on_executeButton_clicked() {
     for ( QString line:functionCode.split ( "\n" ) ) {
         stream<<"\t"<<line.toStdString() <<std::endl;
     }
+    game->getScriptHandler()->executeScript ( QString::fromStdString ( stream.str() ) );
+    game->getScriptHandler()->callFunction ( functionName,boost::ref ( game ) );
 }

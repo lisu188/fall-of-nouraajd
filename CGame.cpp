@@ -102,6 +102,9 @@ void CGame::keyPressEvent ( QKeyEvent *event ) {
     case Qt::Key_I:
         getGuiHandler()->flipPanel ( "CCharPanel" );
         break;
+    case Qt::Key_S:
+        new CScriptWindow ( this );
+        break;
     }
 }
 
