@@ -103,3 +103,10 @@ T convert ( U c ) {
     }
     return t;
 }
+
+template<typename T>
+QString to_hex ( T object ) {
+    std::stringstream stream;
+    stream << std::hex << object;
+    return QString::fromStdString ( stream.str() );
+}
