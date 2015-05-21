@@ -9,8 +9,8 @@ std::set<CItem *> CLootHandler::getLoot ( int value ) const {
 }
 
 CLootHandler::CLootHandler ( CMap *map ) :map ( map ) {
-    for ( QString  type : map->getConfigHandler()->getAllTypes() ) {
-        CItem *item=map->getObjectHandler()->createObject<CItem*> ( type ) ;
+    for ( QString  type : map->getObjectHandler()->getAllTypes() ) {
+        CItem *item=map->createObject<CItem*> ( type ) ;
         if ( item ) {
             int power=item->getPower() ;
             if ( power>0 ) {
@@ -34,7 +34,7 @@ std::set<CItem *> CLootHandler::calculateLoot ( int value ) const {
         int power = ( *it ).second;
         QString name = ( *it ).first;
         if ( power <= value ) {
-            CItem *item=map->getObjectHandler()->createObject<CItem*> (  name );
+            CItem *item=map->createObject<CItem*> (  name );
             loot.insert ( item );
             value -= power;
         }
