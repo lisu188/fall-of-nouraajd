@@ -65,6 +65,8 @@ void CScriptHandler::addModule ( QString modName, QString path ) {
     callFunction ( "sys.meta_path.remove",boost::ref ( loader ) );
 }
 
+
+
 void CScriptHandler::executeCommand ( std::initializer_list<QString> list ) {
     executeScript ( buildCommand ( list ) );
 }
