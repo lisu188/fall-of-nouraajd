@@ -9,7 +9,7 @@
 void CGame::startGame ( QString file ,QString player ) {
     srand ( time ( 0 ) );
     map = new CMap ( this,file );
-    map->setPlayer ( map->getObjectHandler()->createObject<CPlayer*> ( player )  );
+    map->setPlayer ( map->createObject<CPlayer*> ( player )  );
     CThreadUtil::call_later ( [this]() {
         map->ensureSize();
         map->getGame()->getView()->show();
@@ -27,8 +27,8 @@ void CGame::changeMap ( QString file ) {
     } );
 }
 
-CGame::CGame ( QObject *parent ) :QGraphicsScene ( parent ) {
-
+CGame::CGame ()  {
+    initObjectHandler ( objectHandler.get() );
 }
 
 CGame::~CGame() {
@@ -51,16 +51,16 @@ void CGame::addObject ( CGameObject *object ) {
     this->addItem ( object );
 }
 
-CConfigHandler *CGame::getConfigHandler() {
-    return configHandler.get ( convert<std::set<QString>> ( CResourcesProvider::getInstance()->getFiles ( CONFIG ) ) );
-}
-
 CGuiHandler *CGame::getGuiHandler()   {
     return guiHandler.get ( this );
 }
 
 CScriptHandler *CGame::getScriptHandler() {
     return scriptHandler.get();
+}
+
+CObjectHandler *CGame::getObjectHandler() {
+    return objectHandler.get();
 }
 
 void CGame::keyPressEvent ( QKeyEvent *event ) {
@@ -104,6 +104,30 @@ void CGame::keyPressEvent ( QKeyEvent *event ) {
     case Qt::Key_S:
         scriptWindow.get ( this )->setVisible ( true );
         break;
+    }
+}
+
+void CGame::initObjectHandler ( CObjectHandler *handler ) {
+    handler->registerType< CWeapon>();
+    handler->registerType< CArmor >();
+    handler->registerType< CPotion >();
+    handler->registerType< CBuilding >();
+    handler->registerType< CItem >();
+    handler->registerType< CPlayer >();
+    handler->registerType< CMonster>();
+    handler->registerType< CTile >();
+    handler->registerType< CInteraction>();
+    handler->registerType< CSmallWeapon >();
+    handler->registerType< CHelmet >();
+    handler->registerType< CBoots >();
+    handler->registerType< CBelt >();
+    handler->registerType< CGloves>();
+    handler->registerType< CEvent >();
+    handler->registerType< CScroll >();
+    handler->registerType< CEffect >();
+    handler->registerType< CMarket>();
+    for ( QString path : CResourcesProvider::getInstance()->getFiles ( CONFIG ) ) {
+        handler->registerConfig ( path );
     }
 }
 

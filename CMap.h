@@ -54,7 +54,6 @@ public:
     CObjectHandler *getObjectHandler() ;
     CEventHandler *getEventHandler() ;
     CMouseHandler *getMouseHandler() ;
-    CConfigHandler *getConfigHandler() ;
     bool canStep ( int x,int y,int z );
     bool canStep ( const Coords &coords );
     QString getMapPath() const;
@@ -62,6 +61,11 @@ public:
     CMapObject *getObjectByName ( QString name );
     bool isMoving();
     void applyEffects();
+
+    template<typename T>
+    T createObject ( QString type ) {
+        return getObjectHandler()->createObject<T> ( this,type );
+    }
 
     template<typename T>
     std::set<CMapObject *> getIf ( T func ) {
@@ -105,10 +109,9 @@ private:
     std::map<int, std::pair<int, int> > boundaries;
     int entryx, entryz, entryy;
     Lazy<CLootHandler,CMap*> lootHandler;
-    Lazy<CObjectHandler,CMap*> objectHandler;
+    Lazy<CObjectHandler,CObjectHandler*> objectHandler;
     Lazy<CEventHandler> eventHandler;
     Lazy<CMouseHandler> mouseHandler;
-    Lazy<CConfigHandler,std::set<QString>,CConfigHandler*> configHandler;
     QString mapPath;
     bool moving=false;
 };

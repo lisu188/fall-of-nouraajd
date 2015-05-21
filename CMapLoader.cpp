@@ -3,6 +3,7 @@
 #include "CGame.h"
 
 void CMapLoader::loadMap ( CMap *map, QString mapPath ) {
+    map->getObjectHandler()->registerConfig ( mapPath+"/config.json" );
     map->getGame()->getScriptHandler()->addModule ( map->getMapName(),mapPath+"/script.py" );
     map->getGame()->getScriptHandler()->callFunction ( map->getMapName()+".beforeLoad",map );
     QJsonObject mapc=CConfigurationProvider::getConfig ( mapPath+"/map.json" ).toObject();
@@ -47,7 +48,7 @@ void CMapLoader::handleTileLayer ( CMap* map,const QJsonObject &tileset, const Q
             id--;
             QString tileId =QString::number ( id );
             QString tileType= tileset[tileId].toObject() ["type"].toString();
-            map->addTile ( map->getObjectHandler()->createObject<CTile*> ( tileType ), x,
+            map->addTile ( map->createObject<CTile*> ( tileType ), x,
                            y, level );
         }
 }
@@ -62,7 +63,7 @@ void CMapLoader::handleObjectLayer ( CMap* map,const QJsonObject &layer ) {
 
         int xPos=object["x"].toInt() /object["width"].toInt();
         int yPos=object["y"].toInt() /object["height"].toInt();
-        CMapObject *mapObject =map->getObjectHandler()->createObject<CMapObject*> ( objectType );
+        CMapObject *mapObject =map->createObject<CMapObject*> ( objectType );
         if ( mapObject == nullptr ) {
             qDebug() << "Failed to load object:" << objectType
                      << objectName << "\n";
