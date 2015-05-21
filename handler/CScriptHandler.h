@@ -9,6 +9,23 @@ public:
     void executeCommand ( std::initializer_list<QString> list );
     QString buildCommand ( std::initializer_list<QString> list );
     void addModule ( QString modName,QString path );
+    template <typename... Args>
+    std::function<void ( Args... ) > addFunction ( QString functionName, QString functionCode, std::initializer_list<QString> args ) {
+        if ( sizeof... ( Args ) !=args.size() ) {
+            qFatal ( "Wrong argument list!" );
+        }
+        QString def ( "def "+functionName+"("+QStringList ( args ).join ( "," )+"):" );
+        std::stringstream stream;
+        stream<<def.toStdString() <<std::endl;
+        for ( QString line:functionCode.split ( "\n" ) ) {
+            stream<<"\t"<<line.toStdString() <<std::endl;
+        }
+        executeScript ( QString::fromStdString ( stream.str() ) );
+        boost::python::object func=getObject ( functionName );
+        return [func] ( Args... args ) {
+            func ( boost::ref ( args )... );
+        };
+    }
     template<typename T=boost::python::object>
     T getObject ( QString name ) {
         try {

@@ -15,12 +15,5 @@ CScriptWindow::~CScriptWindow() {
 void CScriptWindow::on_executeButton_clicked() {
     QString functionCode=ui->scriptArea->toPlainText();
     QString functionName=QString ( "FUNC" )+to_hex ( std::hash<QString>() ( functionCode ) );
-    QString def ( "def "+functionName+"(game):" );
-    std::stringstream stream;
-    stream<<def.toStdString() <<std::endl;
-    for ( QString line:functionCode.split ( "\n" ) ) {
-        stream<<"\t"<<line.toStdString() <<std::endl;
-    }
-    game->getScriptHandler()->executeScript ( QString::fromStdString ( stream.str() ) );
-    game->getScriptHandler()->callFunction ( functionName,boost::ref ( game ) );
+    game->getScriptHandler()->addFunction<CGame*> ( functionName,functionCode, {"game"} ) ( game );
 }
