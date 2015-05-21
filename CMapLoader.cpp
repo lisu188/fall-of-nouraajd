@@ -5,7 +5,7 @@
 void CMapLoader::loadMap ( CMap *map, QString mapPath ) {
     map->getObjectHandler()->registerConfig ( mapPath+"/config.json" );
     map->getGame()->getScriptHandler()->addModule ( map->getMapName(),mapPath+"/script.py" );
-    map->getGame()->getScriptHandler()->callFunction ( map->getMapName()+".beforeLoad",map );
+    map->getGame()->getScriptHandler()->callFunction ( map->getMapName()+".load",map );
     QJsonObject mapc=CConfigurationProvider::getConfig ( mapPath+"/map.json" ).toObject();
     const QJsonObject &mapProperties=mapc["properties"].toObject();
     const QJsonArray &mapLayers=mapc["layers"].toArray();
@@ -25,7 +25,6 @@ void CMapLoader::loadMap ( CMap *map, QString mapPath ) {
             handleObjectLayer ( map,layer );
         }
     }
-    map->getGame()->getScriptHandler()->callFunction ( map->getMapName()+".afterLoad", map );
 }
 
 void CMapLoader::handleTileLayer ( CMap* map,const QJsonObject &tileset, const QJsonObject &layer ) {
