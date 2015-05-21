@@ -32,6 +32,7 @@
 #include <QMainWindow>
 #include <QMap>
 #include <QMetaEnum>
+#include <QMetaMethod>
 #include <QMimeData>
 #include <QObject>
 #include <QPainter>

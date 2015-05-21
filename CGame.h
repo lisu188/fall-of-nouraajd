@@ -12,7 +12,7 @@ class CGame : private QGraphicsScene {
     Q_OBJECT
     friend class CGameView;
 public:
-    CGame ( QObject *parent );
+    CGame (  );
     virtual ~CGame();
     void startGame ( QString file ,QString player );
     void changeMap ( QString file );
@@ -21,15 +21,16 @@ public:
     void removeObject ( CGameObject *object );
     void addObject ( CGameObject *object );
     CGuiHandler *getGuiHandler();
-    CConfigHandler *getConfigHandler();
     CScriptHandler *getScriptHandler();
+    CObjectHandler *getObjectHandler();
 protected:
     virtual void keyPressEvent ( QKeyEvent *event );
 private:
+    void initObjectHandler ( CObjectHandler *handler );
     Lazy<CGuiHandler,CGame*> guiHandler;
     Lazy<CScriptHandler> scriptHandler;
-    Lazy<CConfigHandler,std::set<QString>> configHandler;
     Lazy<CScriptWindow,CGame*> scriptWindow;
+    Lazy<CObjectHandler> objectHandler;
     CMap *map=0;
 };
 

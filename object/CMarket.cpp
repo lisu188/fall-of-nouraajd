@@ -23,7 +23,7 @@ std::set<CItem *> CMarket::getTradeItems() {
 
 void CMarket::setItems ( QVariantList items ) {
     for ( QVariant variant:items ) {
-        CItem* item=getMap()->getObjectHandler()->createObject<CItem*> ( variant.toString() );
+        CItem* item=getMap()->createObject<CItem*> ( variant.toString() );
         if ( item ) {
             add (  item );
         } else {

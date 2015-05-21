@@ -1,26 +1,44 @@
 #pragma once
-#include <QJsonObject>
-#include <QObject>
+#include "CGlobal.h"
+#include "CUtil.h"
 
 class ATypeHandler;
 class CGameObject;
 class CMap;
 class CObjectHandler {
 public:
-    CObjectHandler ( CMap *map );
+    CObjectHandler ( CObjectHandler *parent=nullptr );
     template<typename T>
-    T createObject ( QString type ) const {
-        CGameObject *object= _createObject ( type ) ;
+    T createObject ( CMap *map,QString type )  {
+        CGameObject *object= _createObject ( map, type ) ;
         T casted=dynamic_cast<T> ( object );
         if ( casted==nullptr ) {
             delete object;
         }
         return casted;
     }
-    void logProperties ( CGameObject *object ) const;
+    CGameObject *getType ( QString name );
+    QJsonObject getConfig ( QString type );
+
+    std::set<QString> getAllTypes();
+    bool isFlagSet ( QString type,QString property );
+
+    void registerConfig ( QString path );
+    void registerType ( QString name, std::function<CGameObject*() > constructor );
+    template<typename T>
+    void registerType () {
+        registerType ( T::staticMetaObject.className(),[]() {return new T();} );
+    }
 private:
-    CGameObject *_createObject ( QString type ) const;
+    CGameObject *_createObject (  CMap*map,QString type );
+
     void setProperty ( CGameObject * object , QString key, QJsonValue value ) const;
     QMetaProperty getProperty ( CGameObject * object ,QString name ) const;
-    CMap *map=0;
+
+    void logProperties ( CGameObject *object ) const;
+
+    std::unordered_map<QString,std::function<CGameObject*() > > constructors;
+    QJsonObject objectConfig;
+
+    CObjectHandler *parent=nullptr;
 };

@@ -1,14 +1,8 @@
 #include "CHandler.h"
 #include "provider/CProvider.h"
-#include <QDirIterator>
 #include "CMap.h"
-#include <QMetaMethod>
-#include <sstream>
-#include <QSet>
-#include <QString>
-#include <QDebug>
 
-CObjectHandler::CObjectHandler ( CMap *map ) :map ( map ) {
+CObjectHandler::CObjectHandler ( CObjectHandler *parent ) :parent ( parent ) {
 
 }
 
@@ -21,17 +15,48 @@ void CObjectHandler::logProperties ( CGameObject *object ) const {
     }
 }
 
-CGameObject *CObjectHandler::_createObject ( QString type ) const {
-    QJsonObject config=map->getConfigHandler()->getConfig ( type );
-    QString className=config["class"].toString().isEmpty() ?type:config["class"].toString();
+void CObjectHandler::registerConfig ( QString path ) {
+    QJsonObject config=CConfigurationProvider::getConfig ( path ).toObject();
+    for ( auto it=config.begin(); it!=config.end(); it++ ) {
+        objectConfig[it.key()]=it.value();
+    }
+}
 
-    CGameObject *object = CTypeHandler::create ( className );
+QJsonObject CObjectHandler::getConfig ( QString type ) {
+    return objectConfig[type].toObject();
+}
+
+std::set<QString> CObjectHandler::getAllTypes() {
+    return convert<std::set<QString>> ( objectConfig.keys() );
+}
+
+bool CObjectHandler::isFlagSet ( QString type, QString property ) {
+    return getConfig ( type ) [property].toBool();
+}
+
+CGameObject *CObjectHandler::getType ( QString name ) {
+    auto it=constructors.find ( name );
+    if ( it !=constructors.end() ) {
+        return ( ( *it ).second ) ();
+    }
+    return nullptr;
+}
+
+void CObjectHandler::registerType ( QString name, std::function<CGameObject *() > constructor ) {
+    constructors.insert ( std::make_pair ( name,constructor ) );
+}
+
+CGameObject *CObjectHandler::_createObject ( CMap *map, QString type ) {
+    QJsonObject config=getConfig ( type );
+    QString className=config["class"].toString().isEmpty() ? type:config["class"].toString();
+
+    CGameObject *object = getType ( className );
     if ( object==nullptr ) {
         qFatal ( ( "No object for type: "+type ).toStdString().c_str() );
     }
     object->setObjectName ( to_hex ( object ) );
     object->setObjectType ( type );
-    object->setMap ( this->map );
+    object->setMap ( map );
 
     QJsonObject properties=config["properties"].toObject();
     for ( auto it=properties.begin(); it!=properties.end(); it++ ) {

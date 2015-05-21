@@ -44,7 +44,7 @@ void CMap::removeObjectByName ( QString name ) {
 
 QString CMap::addObjectByName ( QString name, Coords coords ) {
     if (   this->canStep ( coords ) ) {
-        CMapObject *object = getObjectHandler()->createObject<CMapObject*> ( name );
+        CMapObject *object = createObject<CMapObject*> ( name );
         if ( object ) {
             addObject ( object );
             object->moveTo ( coords.x, coords.y, coords.z );
@@ -58,7 +58,7 @@ QString CMap::addObjectByName ( QString name, Coords coords ) {
 
 void CMap::replaceTile ( QString name, Coords coords ) {
     removeTile ( coords.x, coords.y, coords.z );
-    addTile ( getObjectHandler()->createObject<CTile*> ( name ), coords.x, coords.y, coords.z );
+    addTile ( createObject<CTile*> ( name ), coords.x, coords.y, coords.z );
 }
 
 Coords CMap::getLocationByName ( QString name ) {
@@ -81,7 +81,7 @@ CLootHandler *CMap::getLootHandler()  {
 }
 
 CObjectHandler *CMap::getObjectHandler()  {
-    return objectHandler.get ( this );
+    return objectHandler.get ( getGame()->getObjectHandler() );
 }
 
 CEventHandler *CMap::getEventHandler()  {
@@ -90,10 +90,6 @@ CEventHandler *CMap::getEventHandler()  {
 
 CMouseHandler *CMap::getMouseHandler()  {
     return mouseHandler.get (  );
-}
-
-CConfigHandler *CMap::getConfigHandler() {
-    return configHandler.get ( {getMapPath()+"/config.json"},getGame()->getConfigHandler() );
 }
 
 void CMap::moveTile ( CTile *tile, int x, int y, int z ) {
@@ -164,9 +160,9 @@ CTile* CMap::getTile ( int x, int y, int z ) {
     if ( it==this->end() ) {
         auto bound = boundaries[z];
         if ( x < 0 || y < 0 || x > bound.first || y > bound.second ) {
-            tile=getObjectHandler()->createObject<CTile*> ( "MountainTile" );
+            tile=createObject<CTile*> ( "MountainTile" );
         } else {
-            tile=getObjectHandler()->createObject<CTile*> ( defaultTiles[z] );
+            tile=createObject<CTile*> ( defaultTiles[z] );
         }
         this->addTile ( tile , x, y, z );
     } else {
@@ -300,8 +296,8 @@ void CMap::move () {
 }
 
 std::set<CMapObject *> CMap::getMapObjectsClone() {
-    std::set<CMapObject *> objects;
-    for ( auto it:mapObjects ) {
+    std::set<CMapObject*> objects;
+    for ( std::pair<QString,CMapObject*> it:mapObjects ) {
         objects.insert ( it.second );
     }
     return objects;

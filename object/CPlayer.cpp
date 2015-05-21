@@ -93,7 +93,7 @@ void CPlayer::setMarket ( CMarket *value ) {
 }
 
 void CPlayer::addQuest ( QString questName ) {
-    CQuest *quest=getMap()->getObjectHandler()->createObject<CQuest*> ( questName );
+    CQuest *quest=getMap()->createObject<CQuest*> ( questName );
     if ( quest ) {
         quests.insert ( quest );
     }

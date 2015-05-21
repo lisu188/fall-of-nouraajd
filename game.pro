@@ -11,7 +11,6 @@ SOURCES += \
      gui/CPlayerView.cpp \
      CMain.cpp \
     CScriptLoader.cpp \
-    handler/CTypeHandler.cpp \
     handler/CObjectHandler.cpp \
     handler/CEventHandler.cpp \
     handler/CGuiHandler.cpp \
@@ -48,7 +47,6 @@ SOURCES += \
     CGameScript.cpp \
     CStats.cpp \
     CUtil.cpp \
-    handler/CConfigHandler.cpp \
     gui/CScriptWindow.cpp
 
 HEADERS += \
@@ -61,7 +59,6 @@ HEADERS += \
     handler/CHandler.h \
     handler/CObjectHandler.h \
     handler/CEventHandler.h \
-    handler/CTypeHandler.h \
     handler/CGuiHandler.h \
     object/CObject.h \
     object/CTile.h \
@@ -98,7 +95,6 @@ HEADERS += \
     CThreadUtil.h \
     CStats.h \
     CUtil.h \
-    handler/CConfigHandler.h \
     CGlobal.h \
     gui/CGui.h \
     gui/CScriptWindow.h

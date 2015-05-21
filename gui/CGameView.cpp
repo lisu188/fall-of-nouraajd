@@ -24,7 +24,7 @@ void CGameView::show() {
 }
 
 CGameView::CGameView ( QString mapName , QString playerType ) :mapName ( mapName ),playerType ( playerType ) {
-    game=new CGame ( this );
+    game=new CGame (  );
     setHorizontalScrollBarPolicy ( Qt::ScrollBarAlwaysOff );
     setVerticalScrollBarPolicy ( Qt::ScrollBarAlwaysOff );
     setViewportUpdateMode ( QGraphicsView::BoundingRectViewportUpdate );
@@ -39,7 +39,7 @@ CGameView::CGameView ( QString mapName , QString playerType ) :mapName ( mapName
 }
 
 CGameView::~CGameView() {
-
+    delete game;
 }
 
 void CGameView::mouseDoubleClickEvent ( QMouseEvent *e ) {

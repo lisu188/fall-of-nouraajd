@@ -6,9 +6,10 @@
 #include "CUtil.h"
 #include "object/CObject.h"
 #include "gui/CGui.h"
+
 void CCreature::setActions ( QVariantList &value ) {
-    for ( auto it=value.begin(); it!=value.end(); it++ ) {
-        this->actions.insert ( this->getMap()->getObjectHandler()->createObject<CInteraction*> ( ( *it ).toString() ) );
+    for ( QVariant it:value ) {
+        this->actions.insert ( getMap()->createObject<CInteraction*> ( it.toString() ) );
     }
 }
 
@@ -54,7 +55,7 @@ void CCreature::addExp ( int exp ) {
 CInteraction *CCreature::getLevelAction() {
     QString levelString=QString::number ( level );
     if ( levelling.contains ( levelString ) ) {
-        return this->getMap()->getObjectHandler()->createObject<CInteraction*> ( levelling[levelString].toString() );
+        return this->getMap()->createObject<CInteraction*> ( levelling[levelString].toString() );
     } else {
         return nullptr;
     }
@@ -178,14 +179,14 @@ QVariantMap CCreature::getInventory() const {
 void CCreature::setInventory ( const QVariantMap &value ) {
     for ( auto it=value.begin(); it!=value.end(); it++ ) {
         int slot=it.key().toInt();
-        CItem *item=getMap()->getObjectHandler()->createObject<CItem*> ( it.value().toString() );
+        CItem *item=getMap()->createObject<CItem*> ( it.value().toString() );
         this->setItem ( slot,item );
     }
 }
 
 void CCreature::setItems ( QVariantList &value ) {
     for ( auto it=value.begin(); it!=value.end(); it++ ) {
-        CItem *item=this->getMap()->getObjectHandler()->createObject<CItem*> ( ( *it ).toString()  );
+        CItem *item=this->getMap()->createObject<CItem*> ( ( *it ).toString()  );
         this->addItem ( item  );
     }
 }

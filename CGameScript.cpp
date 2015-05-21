@@ -24,15 +24,13 @@ void CMap::removeAll ( object func ) {
 
 struct QString_to_python_str {
     static PyObject* convert ( QString const& s ) {
-        return boost::python::incref (
-                   boost::python::object (
-                       s.toLatin1().constData() ).ptr() );
+        return incref ( object ( s.toLatin1().constData() ).ptr() );
     }
 };
 
 struct QString_from_python_str {
     QString_from_python_str() {
-        boost::python::converter::registry::push_back (
+        converter::registry::push_back (
             &convertible,
             &construct,
             boost::python::type_id<QString>() );
@@ -47,7 +45,7 @@ struct QString_from_python_str {
     // Convert obj_ptr into a QString
     static void construct (
         PyObject* obj_ptr,
-        boost::python::converter::rvalue_from_python_stage1_data* data ) {
+        converter::rvalue_from_python_stage1_data* data ) {
         // Extract the character data from the python string
         const char* value = _PyUnicode_AsString ( obj_ptr );
 
@@ -56,7 +54,7 @@ struct QString_from_python_str {
 
         // Grab pointer to memory into which to construct the new QString
         void* storage = (
-                            ( boost::python::converter::rvalue_from_python_storage<QString>* )
+                            ( converter::rvalue_from_python_storage<QString>* )
                             data )->storage.bytes;
 
         // in-place construct the new QString using the character data
@@ -68,8 +66,42 @@ struct QString_from_python_str {
     }
 };
 
+struct function_constructor {
+    function_constructor() {
+        converter::registry::push_back (
+            &convertible,
+            &construct,
+            boost::python::type_id<std::function<CGameObject*() >>() );
+    }
+
+    // Determine if obj_ptr can be converted in a QString
+    static void* convertible ( PyObject* obj_ptr ) {
+        try {
+            extract<CGameObject*> ( incref ( clas().ptr() ) );
+            return obj_ptr;
+        } catch ( ... ) {
+            return nullptr;
+        }
+    }
+
+    // Convert obj_ptr into a QString
+    static void construct (
+        PyObject* obj_ptr,
+        converter::rvalue_from_python_stage1_data* data ) {
+        void* storage = ( ( converter::rvalue_from_python_storage
+                            <std::function<CGameObject*() >>* ) data )->storage.bytes;
+
+        boost::python::object clas ( obj_ptr );
+
+        new ( storage ) std::function<CGameObject*() > ( [clas]() {
+            return extract<CGameObject*> ( incref ( clas().ptr() ) );
+        } );
+
+        data->convertible = storage;
+    }
+};
+
 static void initializeConverters() {
-    using namespace boost::python;
 
     // register the to-python converter
     to_python_converter<
@@ -78,6 +110,8 @@ static void initializeConverters() {
 
     // register the from-python converter
     QString_from_python_str();
+
+    function_constructor();
 }
 
 template<class T>
@@ -201,12 +235,6 @@ public:
     }
 };
 
-static void registerType ( QString name,object constructor ) {
-    CTypeHandler::registerType ( name,[constructor] () -> CGameObject* {
-        return extract<CGameObject*> ( incref ( constructor().ptr() ) );
-    } );
-}
-
 BOOST_PYTHON_MODULE ( _core ) {
     class_<ModuleSpec,boost::noncopyable> ( "ModuleSpec",no_init )
     .add_property ( "loader",make_function ( &ModuleSpec::loader ,return_internal_reference<>() ) )
@@ -220,7 +248,6 @@ BOOST_PYTHON_MODULE ( _core ) {
     .def ( "__eq__",&AScriptLoader::__eq__ );
     class_<CScriptLoader,bases<AScriptLoader>,boost::noncopyable> ( "CScriptLoader" );
     class_<CCustomScriptLoader,bases<AScriptLoader>,boost::noncopyable> ( "CCustomScriptLoader",no_init );
-    def ( "registerType",registerType );
 }
 
 static int randint ( int i,int j ) {
@@ -247,9 +274,9 @@ BOOST_PYTHON_MODULE ( _game ) {
     .def ( "getObjectHandler",&CMap::getObjectHandler,return_internal_reference<>() )
     .def ( "getEventHandler",&CMap::getEventHandler,return_internal_reference<>() )
     .def ( "addObject",&CMap::addObject )
+    .def ( "createObject",&CMap::createObject<CGameObject*> ,return_internal_reference<>() )
     .def ( "getGame",&CMap::getGame, return_internal_reference<>() );
-    class_<CObjectHandler,boost::noncopyable> ( "CObjectHandler",no_init )
-    .def ( "createObject",&CObjectHandler::createObject<CGameObject*>,return_internal_reference<>() );
+    class_<CObjectHandler,boost::noncopyable> ( "CObjectHandler",no_init );
     void ( CMapObject::*moveTo ) ( int,int,int ) =&CMapObject::moveTo ;
     class_<CMapObject,bases<CGameObject>,boost::noncopyable> ( "CMapObject",no_init )
     .def ( "getMap",&CMapObject::getMap,return_internal_reference<>() )
