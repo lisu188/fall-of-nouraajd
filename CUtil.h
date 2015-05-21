@@ -12,12 +12,6 @@ class CGameObject;
 .def ( "setBoolProperty",&CLASS::setBoolProperty )\
 .def ( "incProperty",&CLASS::incProperty )\
 
-#define NEAR(coords) {\
-    Coords(coords.x + 1,coords.y,coords.z),\
-    Coords(coords.x - 1,coords.y,coords.z ),\
-    Coords(coords.x,coords.y + 1, coords.z ),\
-    Coords(coords.x,coords.y - 1,coords.z )}
-
 struct Coords {
     Coords();
     Coords ( int x, int y, int z );
@@ -108,5 +102,10 @@ template<typename T>
 QString to_hex ( T object ) {
     std::stringstream stream;
     stream << std::hex << object;
-    return QString::fromStdString ( stream.str() );
+    return QString::fromStdString ( stream.str() ).toUpper();
+}
+
+template<typename T>
+QString to_hex_hash ( T object ) {
+    return to_hex ( std::hash<T>() ( object ) );
 }

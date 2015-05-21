@@ -1,4 +1,5 @@
 #include "CTradePanel.h"
+#include "CGame.h"
 #include "gui/CGui.h"
 
 CTradePanel::CTradePanel() {

@@ -1,5 +1,11 @@
 #include "CPathFinder.h"
 
+#define NEAR_COORDS(coords) {\
+    Coords(coords.x + 1,coords.y,coords.z),\
+    Coords(coords.x - 1,coords.y,coords.z ),\
+    Coords(coords.x,coords.y + 1, coords.z ),\
+    Coords(coords.x,coords.y - 1,coords.z )}
+
 #ifdef DUMP_PATH
 static inline void dump ( std::unordered_map<Coords, int>& values,Coords start,Coords end ) {
     int x=0;
@@ -59,7 +65,7 @@ Coords CSmartPathFinder::findNextStep ( const Coords &  start, const Coords &  g
         nodes.pop();
         if (  marked.insert ( currentCoords ).second ) {
             int curValue = values[currentCoords];
-            for ( Coords tmpCoords:NEAR ( currentCoords ) ) {
+            for ( Coords tmpCoords:NEAR_COORDS ( currentCoords ) ) {
                 if ( canStep ( tmpCoords ) ) {
                     auto it=values.find ( tmpCoords );
                     if ( it == values.end() || it->second > curValue + 1 ) {
@@ -72,7 +78,7 @@ Coords CSmartPathFinder::findNextStep ( const Coords &  start, const Coords &  g
     }
     dump ( values,start,goal );
     Coords target=start;
-    for ( Coords coords:NEAR ( start ) ) {
+    for ( Coords coords:NEAR_COORDS ( start ) ) {
         if ( contains ( values,coords ) && ( values[coords]<values[target]|| ( values[coords]==values[target] && coords.getDist ( goal ) <target.getDist ( goal ) ) ) ) {
             target=coords;
         }

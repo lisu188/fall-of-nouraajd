@@ -1,5 +1,26 @@
 #pragma once
 #include "CGlobal.h"
+#include "CUtil.h"
+
+template<typename Return,typename... Args>
+struct wrap {
+    static std::function<Return ( Args... ) > call ( boost::python::object func ) {
+        return [func] ( Args... args ) {
+            boost::python::object ret=func ( boost::ref ( args )... );
+            boost::python::incref ( ret.ptr() );
+            return boost::python::extract<Return> ( ret );
+        };
+    }
+};
+
+template<typename... Args>
+struct wrap<void,Args...> {
+    static std::function<void ( Args... ) > call ( boost::python::object func ) {
+        return [func] ( Args... args ) {
+            func ( args... );
+        };
+    }
+};
 
 class CScriptHandler {
 public:
@@ -9,52 +30,35 @@ public:
     void executeCommand ( std::initializer_list<QString> list );
     QString buildCommand ( std::initializer_list<QString> list );
     void addModule ( QString modName,QString path );
-    template <typename... Args>
-    std::function<void ( Args... ) > addFunction ( QString functionName, QString functionCode, std::initializer_list<QString> args ) {
+    void addFunction ( QString functionName, QString functionCode, std::initializer_list<QString> args );
+    template <typename Return=void,typename...Args>
+    std::function<Return ( Args... ) > getFunction ( QString functionName ) {
+        return wrap<Return,Args...>::call ( getObject ( functionName ) );
+    }
+    template <typename Return=void,typename... Args>
+    std::function<Return ( Args... ) > createFunction ( QString functionName, QString functionCode, std::initializer_list<QString> args ) {
         if ( sizeof... ( Args ) !=args.size() ) {
             qFatal ( "Wrong argument list!" );
         }
-        QString def ( "def "+functionName+"("+QStringList ( args ).join ( "," )+"):" );
-        std::stringstream stream;
-        stream<<def.toStdString() <<std::endl;
-        for ( QString line:functionCode.split ( "\n" ) ) {
-            stream<<"\t"<<line.toStdString() <<std::endl;
-        }
-        executeScript ( QString::fromStdString ( stream.str() ) );
-        boost::python::object func=getObject ( functionName );
-        return [func] ( Args... args ) {
-            func ( boost::ref ( args )... );
-        };
+        addFunction ( functionName,functionCode,args );
+        return getFunction<Return,Args...> ( functionName );
+    }
+    template<typename Return=void,typename ...Args>
+    Return callFunction ( QString name,Args ...params ) {
+        return getFunction<Return,Args...> ( name ) ( params... );
+    }
+    template<typename Return=void,typename ...Args>
+    Return callCreatedFunction (  QString functionCode, std::initializer_list<QString> args,Args ...params ) {
+        return createFunction<Return,Args...> (
+                   "FUNC"+to_hex_hash ( functionCode ),
+                   functionCode,args ) ( params... );
     }
     template<typename T=boost::python::object>
     T getObject ( QString name ) {
-        try {
-            QString script="object=";
-            script=script.append ( name );
-            executeScript (  script );
-            boost::python::object object= main_namespace["object"];
-            return boost::python::extract<T> ( object );
-        } catch ( ... ) {
-            PyErr_Clear();
-            return boost::python::object();
-        }
-    }
-    template<typename ...T>
-    void callFunction ( QString name,T ... params ) {
         QString script="object=";
         script=script.append ( name );
         executeScript (  script );
         boost::python::object object= main_namespace["object"];
-        object ( params... );
-    }
-    template<typename T>
-    T createObject ( QString clas ) {
-        QString script="object=";
-        script=script.append ( clas );
-        script=script.append ( "()" );
-        executeScript (  script );
-        boost::python::object object= main_namespace["object"];
-        boost::python::incref ( object.ptr() );
         return boost::python::extract<T> ( object );
     }
 private:

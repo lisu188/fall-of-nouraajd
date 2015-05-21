@@ -1,6 +1,7 @@
 #pragma once
 #include "CGlobal.h"
 #include "CUtil.h"
+#include "gui/CGui.h"
 #include "handler/CHandler.h"
 
 class CGameView;
@@ -28,6 +29,7 @@ private:
     Lazy<CGuiHandler,CGame*> guiHandler;
     Lazy<CScriptHandler> scriptHandler;
     Lazy<CConfigHandler,std::set<QString>> configHandler;
+    Lazy<CScriptWindow,CGame*> scriptWindow;
     CMap *map=0;
 };
 

@@ -2,7 +2,6 @@
 #include "CUtil.h"
 #include "CMap.h"
 #include "CThreadUtil.h"
-#include "gui/CGui.h"
 #include "object/CObject.h"
 #include "panel/CPanel.h"
 #include "handler/CHandler.h"
@@ -103,7 +102,7 @@ void CGame::keyPressEvent ( QKeyEvent *event ) {
         getGuiHandler()->flipPanel ( "CCharPanel" );
         break;
     case Qt::Key_S:
-        new CScriptWindow ( this );
+        scriptWindow.get ( this )->setVisible ( true );
         break;
     }
 }
