@@ -74,24 +74,24 @@ struct function_constructor {
             boost::python::type_id<std::function<CGameObject*() >>() );
     }
 
-    // Determine if obj_ptr can be converted in a QString
     static void* convertible ( PyObject* obj_ptr ) {
         try {
-            extract<CGameObject*> ( incref ( clas().ptr() ) );
+            object clas=object ( handle<> ( obj_ptr ) );
+            object obj=clas();
+            void ( extract<CGameObject*> ( obj ) );
             return obj_ptr;
         } catch ( ... ) {
             return nullptr;
         }
     }
 
-    // Convert obj_ptr into a QString
     static void construct (
         PyObject* obj_ptr,
         converter::rvalue_from_python_stage1_data* data ) {
         void* storage = ( ( converter::rvalue_from_python_storage
                             <std::function<CGameObject*() >>* ) data )->storage.bytes;
 
-        boost::python::object clas ( obj_ptr );
+        object clas=object ( handle<> ( obj_ptr ) );
 
         new ( storage ) std::function<CGameObject*() > ( [clas]() {
             return extract<CGameObject*> ( incref ( clas().ptr() ) );
