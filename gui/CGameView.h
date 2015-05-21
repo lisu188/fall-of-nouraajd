@@ -1,10 +1,10 @@
 #pragma once
 #include "CGlobal.h"
-#include "CGame.h"
 #include "CPlayerView.h"
 #include "panel/CPanel.h"
 
 class CPlayer;
+class CGame;
 class CGameView : public QGraphicsView {
     Q_OBJECT
 public:

@@ -13,7 +13,5 @@ CScriptWindow::~CScriptWindow() {
 }
 
 void CScriptWindow::on_executeButton_clicked() {
-    QString functionCode=ui->scriptArea->toPlainText();
-    QString functionName=QString ( "FUNC" )+to_hex ( std::hash<QString>() ( functionCode ) );
-    game->getScriptHandler()->addFunction<CGame*> ( functionName,functionCode, {"game"} ) ( game );
+    game->getScriptHandler()->callCreatedFunction ( ui->scriptArea->toPlainText(), {"game"} , game );
 }

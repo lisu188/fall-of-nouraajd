@@ -43,6 +43,7 @@
 #include <QThread>
 #include <QThreadPool>
 #include <QTimer>
+#include <QtOpenGL/QGLWidget>
 #include <queue>
 #include <QVariant>
 #include <QWidget>
