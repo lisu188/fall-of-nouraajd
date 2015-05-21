@@ -1,7 +1,8 @@
 from game import CTile
-from game import game_object
+from game import register
 
-@game_object
-class RoadTile(CTile):
-    def onStep(self,creature):
-        creature.heal(1)
+def load(context):
+    @register(context)
+    class RoadTile(CTile):
+        def onStep(self,creature):
+            creature.heal(1)
