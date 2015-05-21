@@ -10,12 +10,13 @@ public:
     CObjectHandler ( CObjectHandler *parent=nullptr );
     template<typename T>
     T createObject ( CMap *map,QString type )  {
-        CGameObject *object= _createObject ( map, type ) ;
-        T casted=dynamic_cast<T> ( object );
-        if ( casted==nullptr ) {
-            delete object;
+        T object= dynamic_cast<T> ( _createObject ( map, type ) ) ;
+        if ( object ) {
+            return object;
+        } else if ( parent ) {
+            return parent->createObject<T> ( map,type );
         }
-        return casted;
+        return nullptr;
     }
     CGameObject *getType ( QString name );
     QJsonObject getConfig ( QString type );

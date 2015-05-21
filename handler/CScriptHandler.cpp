@@ -18,9 +18,6 @@ CScriptHandler::CScriptHandler () {
     qDebug() <<"Imported main module."<<"\n";
     executeScript ( START_SCRIPT );
     qDebug() <<"Executed starting scripts."<<"\n";
-    for ( QString script:CResourcesProvider::getInstance()->getFiles ( CResType::SCRIPT ) ) {
-        executeScript ( "import "+QFileInfo ( script ).baseName() );
-    }
 }
 
 CScriptHandler::~CScriptHandler() {
@@ -59,10 +56,10 @@ QString CScriptHandler::buildCommand ( std::initializer_list<QString> list ) {
 }
 
 void CScriptHandler::addModule ( QString modName, QString path ) {
-    CCustomScriptLoader loader ( modName,path );
-    callFunction ( "sys.meta_path.append", loader  );
+    std::shared_ptr<CCustomScriptLoader> loader=std::make_shared<CCustomScriptLoader> ( modName,path );
+    callFunction ( "sys.meta_path.append", loader.get()  );
     executeScript ( "import "+modName );
-    callFunction ( "sys.meta_path.remove",loader );
+    callFunction ( "sys.meta_path.remove",loader.get() );
 }
 
 void CScriptHandler::addFunction ( QString functionName, QString functionCode, std::initializer_list<QString> args ) {
@@ -75,7 +72,9 @@ void CScriptHandler::addFunction ( QString functionName, QString functionCode, s
     executeScript ( QString::fromStdString ( stream.str() ) );
 }
 
-
+void CScriptHandler::import ( QString name ) {
+    executeScript ( "import "+name );
+}
 
 void CScriptHandler::executeCommand ( std::initializer_list<QString> list ) {
     executeScript ( buildCommand ( list ) );

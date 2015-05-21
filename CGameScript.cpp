@@ -91,7 +91,7 @@ struct function_constructor {
         void* storage = ( ( converter::rvalue_from_python_storage
                             <std::function<CGameObject*() >>* ) data )->storage.bytes;
 
-        object clas=object ( handle<> ( obj_ptr ) );
+        object clas=object ( handle<> ( borrowed ( incref ( obj_ptr ) ) ) );
 
         new ( storage ) std::function<CGameObject*() > ( [clas]() {
             return extract<CGameObject*> ( incref ( clas().ptr() ) );
@@ -276,11 +276,15 @@ BOOST_PYTHON_MODULE ( _game ) {
     .def ( "addObject",&CMap::addObject )
     .def ( "createObject",&CMap::createObject<CGameObject*> ,return_internal_reference<>() )
     .def ( "getGame",&CMap::getGame, return_internal_reference<>() );
-    class_<CObjectHandler,boost::noncopyable> ( "CObjectHandler",no_init );
+    void ( CObjectHandler::*registerType ) ( QString,std::function<CGameObject*() > )  =&CObjectHandler::registerType;
+    class_<CObjectHandler,boost::noncopyable> ( "CObjectHandler",no_init )
+    .def ( "registerType",registerType );
     void ( CMapObject::*moveTo ) ( int,int,int ) =&CMapObject::moveTo ;
+    void ( CMapObject::*move ) ( int,int,int ) =&CMapObject::move ;
     class_<CMapObject,bases<CGameObject>,boost::noncopyable> ( "CMapObject",no_init )
     .def ( "getMap",&CMapObject::getMap,return_internal_reference<>() )
     .def ( "moveTo",moveTo )
+    .def ( "move",move )
     .def ( "getCoords",&CMapObject::getCoords )
     .def ( "setCoords",&CMapObject::setCoords );
     class_<CEvent,bases<CMapObject>,boost::noncopyable> ( "CEventBase" );
@@ -366,5 +370,6 @@ BOOST_PYTHON_MODULE ( _game ) {
     class_<CGame,boost::noncopyable> ( "CGame",no_init )
     .def ( "getMap",&CGame::getMap,return_internal_reference<>() )
     .def ( "changeMap",&CGame::changeMap )
-    .def ( "getGuiHandler",&CGame::getGuiHandler,return_internal_reference<>() );
+    .def ( "getGuiHandler",&CGame::getGuiHandler,return_internal_reference<>() )
+    .def ( "getObjectHandler",&CGame::getObjectHandler,return_internal_reference<>() );
 }

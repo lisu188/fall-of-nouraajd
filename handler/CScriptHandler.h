@@ -17,7 +17,7 @@ template<typename... Args>
 struct wrap<void,Args...> {
     static std::function<void ( Args... ) > call ( boost::python::object func ) {
         return [func] ( Args... args ) {
-            func ( args... );
+            func ( boost::ref ( args )... );
         };
     }
 };
@@ -31,6 +31,7 @@ public:
     QString buildCommand ( std::initializer_list<QString> list );
     void addModule ( QString modName,QString path );
     void addFunction ( QString functionName, QString functionCode, std::initializer_list<QString> args );
+    void import ( QString name );
     template <typename Return=void,typename...Args>
     std::function<Return ( Args... ) > getFunction ( QString functionName ) {
         return wrap<Return,Args...>::call ( getObject ( functionName ) );

@@ -29,6 +29,7 @@ void CGame::changeMap ( QString file ) {
 
 CGame::CGame ()  {
     initObjectHandler ( objectHandler.get() );
+    initScriptHandler ( scriptHandler.get() );
 }
 
 CGame::~CGame() {
@@ -128,6 +129,14 @@ void CGame::initObjectHandler ( CObjectHandler *handler ) {
     handler->registerType< CMarket>();
     for ( QString path : CResourcesProvider::getInstance()->getFiles ( CONFIG ) ) {
         handler->registerConfig ( path );
+    }
+}
+
+void CGame::initScriptHandler ( CScriptHandler *handler ) {
+    for ( QString script:CResourcesProvider::getInstance()->getFiles ( CResType::SCRIPT ) ) {
+        QString modName=QFileInfo ( script ).baseName();
+        handler->import ( modName );
+        handler->callFunction ( modName+".load",this );
     }
 }
 

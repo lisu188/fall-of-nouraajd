@@ -49,22 +49,21 @@ void CObjectHandler::registerType ( QString name, std::function<CGameObject *() 
 CGameObject *CObjectHandler::_createObject ( CMap *map, QString type ) {
     QJsonObject config=getConfig ( type );
     QString className=config["class"].toString().isEmpty() ? type:config["class"].toString();
-
     CGameObject *object = getType ( className );
-    if ( object==nullptr ) {
-        qFatal ( ( "No object for type: "+type ).toStdString().c_str() );
-    }
-    object->setObjectName ( to_hex ( object ) );
-    object->setObjectType ( type );
-    object->setMap ( map );
+    if ( object ) {
+        object->setObjectName ( to_hex ( object ) );
+        object->setObjectType ( type );
+        object->setMap ( map );
 
-    QJsonObject properties=config["properties"].toObject();
-    for ( auto it=properties.begin(); it!=properties.end(); it++ ) {
-        setProperty ( object ,it.key(),it.value() );
+        QJsonObject properties=config["properties"].toObject();
+        for ( auto it=properties.begin(); it!=properties.end(); it++ ) {
+            setProperty ( object ,it.key(),it.value() );
+        }
+        object->setVisible ( false );
+        //logProperties(object);
+        return object;
     }
-    object->setVisible ( false );
-    //logProperties(object);
-    return object;
+    return nullptr;
 }
 
 void CObjectHandler::setProperty ( CGameObject *object,QString key, QJsonValue value ) const {

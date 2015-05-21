@@ -27,6 +27,7 @@ protected:
     virtual void keyPressEvent ( QKeyEvent *event );
 private:
     void initObjectHandler ( CObjectHandler *handler );
+    void initScriptHandler ( CScriptHandler *handler );
     Lazy<CGuiHandler,CGame*> guiHandler;
     Lazy<CScriptHandler> scriptHandler;
     Lazy<CScriptWindow,CGame*> scriptWindow;
