@@ -60,9 +60,19 @@ QString CScriptHandler::buildCommand ( std::initializer_list<QString> list ) {
 
 void CScriptHandler::addModule ( QString modName, QString path ) {
     CCustomScriptLoader loader ( modName,path );
-    callFunction ( "sys.meta_path.append",boost::ref ( loader ) );
+    callFunction ( "sys.meta_path.append", loader  );
     executeScript ( "import "+modName );
-    callFunction ( "sys.meta_path.remove",boost::ref ( loader ) );
+    callFunction ( "sys.meta_path.remove",loader );
+}
+
+void CScriptHandler::addFunction ( QString functionName, QString functionCode, std::initializer_list<QString> args ) {
+    QString def ( "def "+functionName+"("+QStringList ( args ).join ( "," )+"):" );
+    std::stringstream stream;
+    stream<<def.toStdString() <<std::endl;
+    for ( QString line:functionCode.split ( "\n" ) ) {
+        stream<<"\t"<<line.toStdString() <<std::endl;
+    }
+    executeScript ( QString::fromStdString ( stream.str() ) );
 }
 
 

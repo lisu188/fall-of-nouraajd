@@ -1,15 +1,9 @@
 #include "CGameView.h"
 #include "CUtil.h"
-#include <QDebug>
-#include "CPlayerView.h"
-#include <QBitmap>
-#include <QDateTime>
-#include <QtOpenGL/QGLWidget>
-#include <QThreadPool>
-#include <QApplication>
-#include <QDesktopWidget>
+#include "CGame.h"
 #include "object/CObject.h"
 #include "handler/CHandler.h"
+#include "gui/CGui.h"
 
 void CGameView::start() {
     getGame()->startGame ( mapName ,playerType );
