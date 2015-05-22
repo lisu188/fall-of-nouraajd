@@ -66,8 +66,3 @@ private:
     boost::python::object main_module;
     boost::python::object main_namespace;
 };
-
-extern "C" {
-    PyObject* PyInit__game();
-    PyObject* PyInit__core();
-}

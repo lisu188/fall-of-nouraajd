@@ -1,6 +1,6 @@
 #include "CMap.h"
 #include "handler/CHandler.h"
-
+#include "scripting/CScripting.h"
 static const char* START_SCRIPT="import sys\n"
                                 "from _core import CScriptLoader\n"
                                 "sys.path=[]\n"

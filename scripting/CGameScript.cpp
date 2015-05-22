@@ -1,4 +1,5 @@
 #include "CGlobal.h"
+#include "CScripting.h"
 #include "object/CObject.h"
 #include "CUtil.h"
 #include "CMap.h"
@@ -8,199 +9,6 @@
 #include "CGame.h"
 
 using namespace boost::python;
-
-template<>
-void CMap::removeAll ( object func ) {
-    QList<CMapObject*> objects;
-    for (  auto it :mapObjects ) {
-        if ( func ( boost::ref ( it.second ) ) ) {
-            objects.append ( it.second );
-        }
-    }
-    for (  auto it :objects ) {
-        removeObject ( it );
-    }
-}
-
-struct QString_to_python_str {
-    static PyObject* convert ( QString const& s ) {
-        return incref ( object ( s.toLatin1().constData() ).ptr() );
-    }
-};
-
-struct QString_from_python_str {
-    QString_from_python_str() {
-        converter::registry::push_back (
-        [] ( PyObject* obj_ptr ) ->void* {
-            if ( !        PyUnicode_Check ( obj_ptr ) ) { return nullptr; }
-            return obj_ptr;
-        },
-        [] (
-            PyObject* obj_ptr,
-            converter::rvalue_from_python_stage1_data* data ) {
-            const char* value = _PyUnicode_AsString ( obj_ptr );
-            void* storage = ( ( converter::rvalue_from_python_storage<QString>* ) data )->storage.bytes;
-            new ( storage ) QString ( value );
-            data->convertible = storage;
-        },
-        boost::python::type_id<QString>() );
-    }
-};
-
-template<typename Return,typename... Args>
-struct function_converter {
-    function_converter() {
-        converter::registry::push_back (
-        [] ( PyObject* obj_ptr ) ->void* {
-            if ( PyCallable_Check ( obj_ptr ) ) { return obj_ptr; }
-            return nullptr;
-        },
-        [] (
-            PyObject* obj_ptr,
-            converter::rvalue_from_python_stage1_data* data ) {
-            void* storage = ( ( converter::rvalue_from_python_storage
-                                <std::function<Return ( Args... ) >>* ) data )->storage.bytes;
-            object func=object ( handle<> ( borrowed ( incref ( obj_ptr ) ) ) );
-            new ( storage ) std::function<Return ( Args... ) > ( [func] ( Args... args ) {
-                return extract<Return> ( incref ( func ( args... ).ptr() ) );
-            } );
-            data->convertible = storage;
-        },
-        boost::python::type_id<std::function<Return ( Args... ) >>() );
-    }
-};
-
-static void initializeConverters() {
-    to_python_converter<
-    QString,
-    QString_to_python_str>();
-
-    QString_from_python_str();
-
-    function_converter<CGameObject*>();
-    function_converter<CTrigger*>();
-}
-
-template<class T>
-class CWrapper :public T,public wrapper<CWrapper<T>> {
-public:
-    virtual void onEnter ( CGameEvent *event ) override final {
-        if ( auto f=this->get_override ( "onEnter" ) ) {
-            f ( boost::ref ( event ) );
-        } else {
-            this->T::onEnter ( event );
-        }
-    }
-    virtual void onTurn ( CGameEvent *event )  override final {
-        if ( auto f=this->get_override ( "onTurn" ) ) {
-            f ( boost::ref ( event ) );
-        } else {
-            this->T::onTurn ( event );
-        }
-    }
-
-    virtual void onCreate ( CGameEvent *event )  override final {
-        if ( auto f=this->get_override ( "onCreate" ) ) {
-            f ( boost::ref ( event ) );
-        } else {
-            this->T::onCreate ( event );
-        }
-    }
-    virtual void onDestroy ( CGameEvent *event )  override final {
-        if ( auto f=this->get_override ( "onDestroy" ) ) {
-            f ( boost::ref ( event ) );
-        } else {
-            this->T::onDestroy ( event );
-        }
-    }
-    virtual void onLeave ( CGameEvent *event )  override final {
-        if ( auto f=this->get_override ( "onLeave" ) ) {
-            f ( boost::ref ( event ) );
-        } else {
-            this->T::onLeave ( event );
-        }
-    }
-};
-
-class CInteractionWrapper :public CInteraction,public wrapper<CInteractionWrapper> {
-public:
-    virtual void performAction ( CCreature*first,CCreature*second )  override final {
-        if ( auto f=this->get_override ( "performAction" ) ) {
-            f ( boost::ref ( first ),boost::ref ( second ) );
-        } else {
-            this->CInteraction::performAction ( first,second );
-        }
-    }
-    virtual bool configureEffect ( CEffect*effect )  override final {
-        if ( auto f=this->get_override ( "configureEffect" ) ) {
-            return f ( boost::ref ( effect ) );
-        } else {
-            return this->CInteraction::configureEffect ( effect );
-        }
-    }
-};
-
-class CEffectWrapper :public CEffect,public wrapper<CEffectWrapper> {
-public:
-    virtual bool onEffect()  override final {
-        if ( auto f=this->get_override ( "onEffect" ) ) {
-            return f ();
-        } else {
-            return this->CEffect::onEffect() ;
-        }
-    }
-};
-
-class CTileWrapper:public CTile,public wrapper<CTileWrapper> {
-public:
-    virtual void onStep ( CCreature * creature )  override final {
-        if ( auto f=this->get_override ( "onStep" ) ) {
-            f ( boost::ref ( creature ) );
-        } else {
-            this->CTile::onStep ( creature ) ;
-        }
-    }
-};
-
-class CPotionWrapper:public CPotion,public wrapper<CPotionWrapper> {
-public:
-    virtual void onUse ( CGameEvent * event )  override final {
-        if ( auto f=this->get_override ( "onUse" ) ) {
-            f ( boost::ref ( event ) );
-        } else {
-            this->CPotion::onUse ( event ) ;
-        }
-    }
-};
-
-class CTriggerWrapper:public CTrigger,public wrapper<CTriggerWrapper> {
-public:
-    virtual void trigger ( CGameObject *object,CGameEvent * event )  override final {
-        if ( auto f=this->get_override ( "trigger" ) ) {
-            f ( boost::ref ( object ) ,boost::ref ( event ) );
-        } else {
-            this->CTrigger::trigger ( object,event ) ;
-        }
-    }
-};
-
-class CQuestWrapper:public CQuest,public wrapper<CQuestWrapper> {
-public:
-    virtual bool isCompleted()  override final {
-        if ( auto f=this->get_override ( "isCompleted" ) ) {
-            return f();
-        } else {
-            return this->CQuest::isCompleted();
-        }
-    }
-    virtual void onComplete() override final {
-        if ( auto f=this->get_override ( "onComplete" ) ) {
-            f();
-        } else {
-            this->CQuest::onComplete();
-        }
-    }
-};
 
 BOOST_PYTHON_MODULE ( _core ) {
     class_<ModuleSpec,boost::noncopyable> ( "ModuleSpec",no_init )
@@ -217,13 +25,11 @@ BOOST_PYTHON_MODULE ( _core ) {
     class_<CCustomScriptLoader,bases<AScriptLoader>,boost::noncopyable> ( "CCustomScriptLoader",no_init );
 }
 
-static int randint ( int i,int j ) {
-    return rand() % ( j-i+1 )+i;
-}
+static int randint ( int i,int j ) { return rand() % ( j-i+1 )+i; }
 
 BOOST_PYTHON_MODULE ( _game ) {
-    initializeConverters();
-    def ( "randint",randint );
+    initialize_converters();
+    def ( "randint", randint );
     class_<CGameObject,boost::noncopyable> ( "CGameObject",no_init )
     PY_PROPERTY_ACCESSOR ( CGameObject );
     class_<Coords> ( "Coords",init<int,int,int>() )
@@ -237,7 +43,7 @@ BOOST_PYTHON_MODULE ( _game ) {
     .def ( "replaceTile",&CMap::replaceTile )
     .def ( "getPlayer",&CMap::getPlayer,return_internal_reference<>() )
     .def ( "getLocationByName",&CMap::getLocationByName )
-    .def ( "removeAll",&CMap::removeAll<object> )
+    .def ( "removeAll",&CMap::removeAll )
     .def ( "getObjectHandler",&CMap::getObjectHandler,return_internal_reference<>() )
     .def ( "getEventHandler",&CMap::getEventHandler,return_internal_reference<>() )
     .def ( "addObject",&CMap::addObject )
@@ -263,7 +69,7 @@ BOOST_PYTHON_MODULE ( _game ) {
     .def ( "getCaster",&CEffect::getCaster  , return_internal_reference<>() )
     .def ( "getVictim",&CEffect::getVictim , return_internal_reference<>() )
     .def ( "getTimeLeft",&CEffect::getTimeLeft );
-    class_<CEffectWrapper,bases<CEffect>,boost::noncopyable,boost::shared_ptr<CEffectWrapper>> ( "CEffect" )
+    class_<CEffectWrapper,bases<CEffect>,boost::noncopyable,std::shared_ptr<CEffectWrapper>> ( "CEffect" )
             .def ( "onEffect",&CEffectWrapper::onEffect );
     class_<CItem,bases<CMapObject>,boost::noncopyable> ( "CItem" );
     class_<CWeapon,bases<CItem>,boost::noncopyable> ( "CWeapon" )
@@ -290,19 +96,19 @@ BOOST_PYTHON_MODULE ( _game ) {
     class_<CPlayer,bases<CCreature>,boost::noncopyable> ( "CPlayer" )
     .def ( "addQuest",&CPlayer::addQuest );
     class_<CMonster,bases<CCreature>,boost::noncopyable> ( "CMonster" );
-    class_<CWrapper<CBuilding>,bases<CBuilding>,boost::noncopyable,boost::shared_ptr<CWrapper<CBuilding>> > ( "CBuilding" )
+    class_<CWrapper<CBuilding>,bases<CBuilding>,boost::noncopyable,std::shared_ptr<CWrapper<CBuilding>> > ( "CBuilding" )
             .def ( "onCreate",&CWrapper<CBuilding>::onCreate )
             .def ( "onTurn",&CWrapper<CBuilding>::onTurn )
             .def ( "onDestroy",&CWrapper<CBuilding>::onDestroy )
             .def ( "onLeave",&CWrapper<CBuilding>::onLeave )
             .def ( "onEnter",&CWrapper<CBuilding>::onEnter );
-    class_<CWrapper<CEvent>,bases<CEvent>,boost::noncopyable,boost::shared_ptr<CWrapper<CEvent>> > ( "CEvent" )
+    class_<CWrapper<CEvent>,bases<CEvent>,boost::noncopyable,std::shared_ptr<CWrapper<CEvent>> > ( "CEvent" )
             .def ( "onCreate",&CWrapper<CEvent>::onCreate )
             .def ( "onTurn",&CWrapper<CEvent>::onTurn )
             .def ( "onLeave",&CWrapper<CEvent>::onLeave )
             .def ( "onDestroy",&CWrapper<CEvent>::onDestroy )
             .def ( "onEnter",&CWrapper<CEvent>::onEnter );
-    class_<CInteractionWrapper,bases<CInteraction>,boost::noncopyable,boost::shared_ptr<CInteractionWrapper> > ( "CInteraction" )
+    class_<CInteractionWrapper,bases<CInteraction>,boost::noncopyable,std::shared_ptr<CInteractionWrapper> > ( "CInteraction" )
     .def ( "performAction",&CInteractionWrapper::performAction )
     .def ( "configureEffect",&CInteractionWrapper::configureEffect );
     class_<Damage,bases<CGameObject>> ( "Damage" );
@@ -318,19 +124,19 @@ BOOST_PYTHON_MODULE ( _game ) {
     .def ( "hidePanel",&CGuiHandler::hidePanel )
     .def ( "flipPanel",&CGuiHandler::flipPanel ) ;
     class_<CTile,bases<CGameObject>,boost::noncopyable> ( "CTileBase" );
-    class_<CTileWrapper,bases<CTile>,boost::noncopyable,boost::shared_ptr<CTileWrapper> > ( "CTile" ).
+    class_<CTileWrapper,bases<CTile>,boost::noncopyable,std::shared_ptr<CTileWrapper> > ( "CTile" ).
     def ( "onStep",&CTileWrapper::onStep );
     class_<CPotion,bases<CItem>,boost::noncopyable> ( "CItemBase" );
-    class_<CPotionWrapper,bases<CPotion>,boost::noncopyable,boost::shared_ptr<CPotionWrapper> > ( "CPotion" ).
+    class_<CPotionWrapper,bases<CPotion>,boost::noncopyable,std::shared_ptr<CPotionWrapper> > ( "CPotion" ).
     def ( "onUse",&CPotionWrapper::onUse );
     class_<CGameEvent,boost::noncopyable> ( "CGameEvent",no_init );
     class_<CGameEventCaused,bases<CGameEvent>,boost::noncopyable> ( "CGameEventCaused",no_init )
     .def ( "getCause",&CGameEventCaused::getCause,return_internal_reference<>() );
     class_<CTrigger,bases<CGameObject>,boost::noncopyable> ( "CTriggerBase",no_init );
-    class_<CTriggerWrapper,bases<CTrigger>,boost::noncopyable,boost::shared_ptr<CTriggerWrapper>> ( "CTrigger" )
+    class_<CTriggerWrapper,bases<CTrigger>,boost::noncopyable,std::shared_ptr<CTriggerWrapper>> ( "CTrigger" )
             .def ( "trigger",&CTriggerWrapper::trigger );
     class_<CQuest,bases<CGameObject>,boost::noncopyable> ( "CQuestBase",no_init );
-    class_<CQuestWrapper,bases<CQuest>,boost::noncopyable,boost::shared_ptr<CQuestWrapper>> ( "CQuest" )
+    class_<CQuestWrapper,bases<CQuest>,boost::noncopyable,std::shared_ptr<CQuestWrapper>> ( "CQuest" )
             .def ( "isCompleted",&CQuestWrapper::isCompleted )
             .def ( "onComplete",&CQuestWrapper::onComplete );
     class_<CEventHandler,boost::noncopyable> ( "CEventHandler",no_init ).def ( "registerTrigger",&CEventHandler::registerTrigger );
