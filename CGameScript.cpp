@@ -31,87 +31,54 @@ struct QString_to_python_str {
 struct QString_from_python_str {
     QString_from_python_str() {
         converter::registry::push_back (
-            &convertible,
-            &construct,
-            boost::python::type_id<QString>() );
-    }
-
-    // Determine if obj_ptr can be converted in a QString
-    static void* convertible ( PyObject* obj_ptr ) {
-        if ( !        PyUnicode_Check ( obj_ptr ) ) { return 0; }
-        return obj_ptr;
-    }
-
-    // Convert obj_ptr into a QString
-    static void construct (
-        PyObject* obj_ptr,
-        converter::rvalue_from_python_stage1_data* data ) {
-        // Extract the character data from the python string
-        const char* value = _PyUnicode_AsString ( obj_ptr );
-
-        // Verify that obj_ptr is a string (should be ensured by convertible())
-        assert ( value );
-
-        // Grab pointer to memory into which to construct the new QString
-        void* storage = (
-                            ( converter::rvalue_from_python_storage<QString>* )
-                            data )->storage.bytes;
-
-        // in-place construct the new QString using the character data
-        // extraced from the python object
-        new ( storage ) QString ( value );
-
-        // Stash the memory chunk pointer for later use by boost.python
-        data->convertible = storage;
+        [] ( PyObject* obj_ptr ) ->void* {
+            if ( !        PyUnicode_Check ( obj_ptr ) ) { return nullptr; }
+            return obj_ptr;
+        },
+        [] (
+            PyObject* obj_ptr,
+            converter::rvalue_from_python_stage1_data* data ) {
+            const char* value = _PyUnicode_AsString ( obj_ptr );
+            void* storage = ( ( converter::rvalue_from_python_storage<QString>* ) data )->storage.bytes;
+            new ( storage ) QString ( value );
+            data->convertible = storage;
+        },
+        boost::python::type_id<QString>() );
     }
 };
 
-struct function_constructor {
-    function_constructor() {
+template<typename Return,typename... Args>
+struct function_converter {
+    function_converter() {
         converter::registry::push_back (
-            &convertible,
-            &construct,
-            boost::python::type_id<std::function<CGameObject*() >>() );
-    }
-
-    static void* convertible ( PyObject* obj_ptr ) {
-        try {
-            object clas=object ( handle<> ( obj_ptr ) );
-            object obj=clas();
-            void ( extract<CGameObject*> ( obj ) );
-            return obj_ptr;
-        } catch ( ... ) {
+        [] ( PyObject* obj_ptr ) ->void* {
+            if ( PyCallable_Check ( obj_ptr ) ) { return obj_ptr; }
             return nullptr;
-        }
-    }
-
-    static void construct (
-        PyObject* obj_ptr,
-        converter::rvalue_from_python_stage1_data* data ) {
-        void* storage = ( ( converter::rvalue_from_python_storage
-                            <std::function<CGameObject*() >>* ) data )->storage.bytes;
-
-        object clas=object ( handle<> ( borrowed ( incref ( obj_ptr ) ) ) );
-
-        new ( storage ) std::function<CGameObject*() > ( [clas]() {
-            return extract<CGameObject*> ( incref ( clas().ptr() ) );
-        } );
-
-        data->convertible = storage;
+        },
+        [] (
+            PyObject* obj_ptr,
+            converter::rvalue_from_python_stage1_data* data ) {
+            void* storage = ( ( converter::rvalue_from_python_storage
+                                <std::function<Return ( Args... ) >>* ) data )->storage.bytes;
+            object func=object ( handle<> ( borrowed ( incref ( obj_ptr ) ) ) );
+            new ( storage ) std::function<Return ( Args... ) > ( [func] ( Args... args ) {
+                return extract<Return> ( incref ( func ( args... ).ptr() ) );
+            } );
+            data->convertible = storage;
+        },
+        boost::python::type_id<std::function<Return ( Args... ) >>() );
     }
 };
 
 static void initializeConverters() {
-
-    // register the to-python converter
     to_python_converter<
     QString,
     QString_to_python_str>();
 
-    // register the from-python converter
     QString_from_python_str();
 
-    function_constructor();
+    function_converter<CGameObject*>();
+    function_converter<CTrigger*>();
 }
 
 template<class T>

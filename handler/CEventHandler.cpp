@@ -40,13 +40,13 @@ void CEventHandler::gameEvent (  CGameObject *object ,CGameEvent *event ) const 
     delete event;
 }
 
-void CEventHandler::registerTrigger ( QString name, QString type, CTrigger *trigger ) {
+void CEventHandler::registerTrigger ( QString name, QString type, std::function<CTrigger*() > trigger ) {
     bool ok;
     CGameEvent::Type tp=static_cast<CGameEvent::Type>
                         ( CGameEvent::staticMetaObject.enumerator ( CGameEvent::staticMetaObject.indexOfEnumerator ( "Type" ) )
                           .keyToValue ( type.toStdString().c_str(),&ok ) );
     if ( ok ) {
-        triggers.insert ( std::make_pair ( TriggerKey ( name,tp ),trigger ) ) ;
+        triggers.insert ( std::make_pair ( TriggerKey ( name,tp ),trigger() ) ) ;
     } else {
         //handle
     }

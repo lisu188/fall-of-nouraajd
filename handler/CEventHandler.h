@@ -55,7 +55,7 @@ class CEventHandler  {
     typedef std::unordered_multimap<TriggerKey, CTrigger*> TriggerMap ;
 public:
     void gameEvent ( CGameObject *mapObject , CGameEvent *event ) const;
-    void registerTrigger ( QString name,QString type,CTrigger *trigger );
+    void registerTrigger ( QString name,QString type,std::function<CTrigger*() > trigger );
 private:
     TriggerMap triggers;
 };
