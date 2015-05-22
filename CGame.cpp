@@ -109,24 +109,26 @@ void CGame::keyPressEvent ( QKeyEvent *event ) {
 }
 
 void CGame::initObjectHandler ( CObjectHandler *handler ) {
-    handler->registerType< CWeapon>();
+    handler->registerType< CWeapon >();
     handler->registerType< CArmor >();
     handler->registerType< CPotion >();
     handler->registerType< CBuilding >();
     handler->registerType< CItem >();
     handler->registerType< CPlayer >();
-    handler->registerType< CMonster>();
+    handler->registerType< CMonster >();
     handler->registerType< CTile >();
-    handler->registerType< CInteraction>();
+    handler->registerType< CInteraction >();
     handler->registerType< CSmallWeapon >();
     handler->registerType< CHelmet >();
     handler->registerType< CBoots >();
     handler->registerType< CBelt >();
-    handler->registerType< CGloves>();
+    handler->registerType< CGloves >();
     handler->registerType< CEvent >();
     handler->registerType< CScroll >();
     handler->registerType< CEffect >();
-    handler->registerType< CMarket>();
+    handler->registerType< CMarket >();
+    handler->registerType< CTrigger >();
+    handler->registerType< CQuest >();
     for ( QString path : CResourcesProvider::getInstance()->getFiles ( CONFIG ) ) {
         handler->registerConfig ( path );
     }
