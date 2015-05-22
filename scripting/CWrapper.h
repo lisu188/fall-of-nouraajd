@@ -1,0 +1,76 @@
+#pragma once
+#include "CGlobal.h"
+#include "object/CObject.h"
+
+class CInteractionWrapper :public CInteraction,public boost::python::wrapper<CInteractionWrapper> {
+public:
+    virtual void performAction ( CCreature*first,CCreature*second )  override final;
+    virtual bool configureEffect ( CEffect*effect )  override final;
+};
+
+class CEffectWrapper :public CEffect,public boost::python::wrapper<CEffectWrapper> {
+public:
+    virtual bool onEffect()  override final;
+};
+
+class CTileWrapper:public CTile,public boost::python::wrapper<CTileWrapper> {
+public:
+    virtual void onStep ( CCreature * creature )  override final;
+};
+
+class CPotionWrapper:public CPotion,public boost::python::wrapper<CPotionWrapper> {
+public:
+    virtual void onUse ( CGameEvent * event )  override final;
+};
+
+class CTriggerWrapper:public CTrigger,public boost::python::wrapper<CTriggerWrapper> {
+public:
+    virtual void trigger ( CGameObject *object,CGameEvent * event )  override final;
+};
+
+class CQuestWrapper:public CQuest,public boost::python::wrapper<CQuestWrapper> {
+public:
+    virtual bool isCompleted()  override final;
+    virtual void onComplete() override final;
+};
+
+template<class T>
+class CWrapper :public T,public boost::python::wrapper<CWrapper<T>> {
+public:
+    virtual void onEnter ( CGameEvent *event ) override final {
+        if ( auto f=this->get_override ( "onEnter" ) ) {
+            f ( boost::ref ( event ) );
+        } else {
+            this->T::onEnter ( event );
+        }
+    }
+    virtual void onTurn ( CGameEvent *event )  override final {
+        if ( auto f=this->get_override ( "onTurn" ) ) {
+            f ( boost::ref ( event ) );
+        } else {
+            this->T::onTurn ( event );
+        }
+    }
+
+    virtual void onCreate ( CGameEvent *event )  override final {
+        if ( auto f=this->get_override ( "onCreate" ) ) {
+            f ( boost::ref ( event ) );
+        } else {
+            this->T::onCreate ( event );
+        }
+    }
+    virtual void onDestroy ( CGameEvent *event )  override final {
+        if ( auto f=this->get_override ( "onDestroy" ) ) {
+            f ( boost::ref ( event ) );
+        } else {
+            this->T::onDestroy ( event );
+        }
+    }
+    virtual void onLeave ( CGameEvent *event )  override final {
+        if ( auto f=this->get_override ( "onLeave" ) ) {
+            f ( boost::ref ( event ) );
+        } else {
+            this->T::onLeave ( event );
+        }
+    }
+};
