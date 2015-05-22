@@ -263,6 +263,32 @@ void CMap::applyEffects() {
     }
 }
 
+std::set<CMapObject *> CMap::getIf ( std::function<bool ( CMapObject * ) > func ) {
+    std::set<CMapObject *> objects;
+    for ( auto it : mapObjects ) {
+        if ( func ( it.second  ) ) {
+            objects.insert ( it.second );
+        }
+    }
+    return objects;
+}
+
+void CMap::forAll ( std::function<void ( CMapObject * ) > func, std::function<bool ( CMapObject * ) > predicate ) {
+    for ( CMapObject* object : getMapObjectsClone() ) {
+        if ( predicate ( object ) ) {
+            func ( object  );
+        }
+    }
+}
+
+void CMap::removeAll ( std::function<bool ( CMapObject * ) > func ) {
+    for ( CMapObject*object : getMapObjectsClone() ) {
+        if ( func ( object ) ) {
+            removeObject ( object );
+        }
+    }
+}
+
 void CMap::move () {
     this->moving=true;
 
@@ -305,14 +331,15 @@ std::set<CMapObject *> CMap::getMapObjectsClone() {
 
 void CMap::resolveFights() {
     forAll ( [this] ( CMapObject *mapObject ) {
-        std::set<CMapObject *> objects=getIf ( [&mapObject] ( CMapObject *visitor ) {
-            return dynamic_cast<CCreature*> ( mapObject ) &&dynamic_cast<CCreature*> ( visitor ) &&mapObject != visitor && mapObject->getCoords() == visitor->getCoords() ;
-        } );
-        for ( CMapObject *visitor:objects  ) {
+        auto action=[this,mapObject] ( CMapObject *visitor ) {
             if ( getObjectByName ( mapObject->objectName() ) && getObjectByName ( visitor->objectName() ) ) {
                 dynamic_cast<CCreature*> ( mapObject )->fight ( dynamic_cast<CCreature*> ( visitor ) );
             }
-        }
+        };
+        auto pred=[mapObject] ( CMapObject *visitor ) {
+            return dynamic_cast<CCreature*> ( mapObject ) &&dynamic_cast<CCreature*> ( visitor ) &&mapObject != visitor && mapObject->getCoords() == visitor->getCoords() ;
+        } ;
+        forAll ( action,pred );
     } );
 }
 

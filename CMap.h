@@ -2,7 +2,6 @@
 #include "CGlobal.h"
 
 #include "CUtil.h"
-#include "CScriptLoader.h"
 #include "object/CObject.h"
 #include "handler/CHandler.h"
 #include "provider/CProvider.h"
@@ -61,43 +60,13 @@ public:
     CMapObject *getObjectByName ( QString name );
     bool isMoving();
     void applyEffects();
-
+    std::set<CMapObject *> getIf (  std::function<bool ( CMapObject* ) > func );
+    void forAll ( std::function<void ( CMapObject* ) > func , std::function<bool ( CMapObject* ) >  predicate=[] ( CMapObject* ) {return true;} );
+    void removeAll ( std::function<bool ( CMapObject* ) > func );
     template<typename T>
-    T createObject ( QString type ) {
-        return getObjectHandler()->createObject<T> ( this,type );
+    T createObject ( QString name ) {
+        return getObjectHandler()->createObject<T> ( this,name );
     }
-
-    template<typename T>
-    std::set<CMapObject *> getIf ( T func ) {
-        std::set<CMapObject *> objects;
-        for ( auto it : mapObjects ) {
-            if ( func ( it.second  ) ) {
-                objects.insert ( it.second );
-            }
-        }
-        return objects;
-    }
-    template<typename T,typename U=bool ( CMapObject* ) >
-    void forAll ( T func ,U predicate=[] ( CMapObject* ) {return true;} ) {
-        for ( CMapObject* object : getMapObjectsClone() ) {
-            if ( predicate ( object ) ) {
-                func ( object  );
-            }
-        }
-    }
-    template<typename T>
-    void removeAll ( T func ) {
-        QList<CMapObject*> objects;
-        for ( auto it : mapObjects ) {
-            if ( func ( it.second ) ) {
-                objects.append ( it.second  );
-            }
-        }
-        for ( auto it : objects ) {
-            removeObject ( it );
-        }
-    }
-
 private:
     std::set<CMapObject *> getMapObjectsClone();
     void resolveFights();
