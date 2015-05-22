@@ -116,8 +116,7 @@ RESOURCES += \
     config.qrc
 
 OTHER_FILES += \
-    format.py \
-    reindent.py
+    format.py
 
 QMAKE_CXXFLAGS = -std=c++14 "-include cmath" -Wno-deprecated-declarations -Wno-unused-local-typedefs -Wno-attributes
 QMAKE_CXXFLAGS_RELEASE = -O3 -flto -march=native
