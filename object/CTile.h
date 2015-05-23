@@ -19,8 +19,8 @@ public:
     Coords getCoords();
     bool canStep() const;
     void setCanStep ( bool canStep );
-    void addToScene ( CGame *scene );
-    void removeFromScene ( CGame *scene );
+    void addToScene ( std::shared_ptr<CGame> scene );
+    void removeFromScene ( std::shared_ptr<CGame> scene );
 
     virtual ~CTile();
 private:

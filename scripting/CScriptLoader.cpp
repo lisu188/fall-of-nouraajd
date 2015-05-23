@@ -21,6 +21,8 @@ QString CScriptLoader::findModule ( QString modName ) {
     return modData;
 }
 
+CScriptLoader::~CScriptLoader() {}
+
 QString AScriptLoader::findModule ( std::string modName ) {
     return findModule ( QString::fromStdString ( modName ) );
 }
@@ -57,6 +59,8 @@ bool AScriptLoader::__eq__ ( boost::python::api::object object ) {
     }
 }
 
+AScriptLoader::~AScriptLoader() {}
+
 bool AScriptLoader::checkModule ( QString modName ) {
     return findModule ( modName ) !="";
 }
@@ -71,3 +75,5 @@ QString CCustomScriptLoader::findModule ( QString modName ) {
     }
     return QString();
 }
+
+CCustomScriptLoader::~CCustomScriptLoader() {}
