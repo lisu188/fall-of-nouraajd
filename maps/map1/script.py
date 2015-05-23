@@ -6,7 +6,7 @@ from game import register,trigger
 completed = False
 
 def load(map):
-    @register(map)
+    #@register(map)
     class StartEvent(CEvent):
         def onEnter(self,event):
             if event.getCause().isPlayer():
@@ -16,7 +16,7 @@ def load(map):
     @register(map)
     class ChangeMap(CEvent):
         def onEnter(self,event):
-            self.getMap().getGame().changeMap("maps/map2")
+            self.getMap().getGame().changeMap("map2")
 
     @register(map)
     class MainQuest(CQuest):

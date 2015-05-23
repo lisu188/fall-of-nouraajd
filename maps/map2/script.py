@@ -1,5 +1,2 @@
-def beforeLoad(map):
-    pass
-
-def afterLoad(map):
+def load(map):
     pass

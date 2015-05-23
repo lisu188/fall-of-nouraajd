@@ -8,10 +8,9 @@ class CGame;
 class CGameView : public QGraphicsView {
     Q_OBJECT
 public:
+    //replace argument with bean
     CGameView ( QString mapName,QString playerType );
-    virtual ~CGameView();
-    void start();
-    CGame *getGame() const;
+    std::shared_ptr<CGame> getGame() const;
     void centerOn ( CPlayer *player );
     Q_INVOKABLE void show();
 protected:
@@ -21,10 +20,7 @@ protected:
     virtual void dragMoveEvent ( QDragMoveEvent *e );
 private:
     bool init=false;
-    QTimer timer;
     PlayerStatsView playerStatsView;
-    QString mapName;
-    QString playerType;
-    CGame *game=nullptr;
+    std::shared_ptr<CGame> game;
 };
 

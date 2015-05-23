@@ -9,13 +9,7 @@
 #include "CMapLoader.h"
 #include "CThreadUtil.h"
 
-CMap::CMap ( CGame *game, QString mapPath ) :game ( game ),mapPath ( mapPath ) {
-    qDebug() <<"Initializing map"<<"\n";
-    CMapLoader::loadMap ( this, mapPath );
-    qDebug() <<"Loaded map"<<"\n";
-}
-
-CMap::~CMap() {
+CMap::CMap ( std::shared_ptr<CGame> game ) :game ( game ) {
 
 }
 
@@ -118,8 +112,8 @@ void CMap::ensureSize() {
         ( it.second )->setVisible ( ( it.second )->getPosZ() == currentLevel );
     }
 
-    if ( game->getView() ) {
-        game->getView()->centerOn ( player );
+    if ( getGame()->getView() ) {
+        getGame()->getView()->centerOn ( player );
     }
 }
 
@@ -127,7 +121,7 @@ bool CMap::addTile ( CTile * tile, int x, int y, int z ) {
     if ( this->contains ( x, y, z ) ) {
         return false;
     }
-    tile->addToScene ( this->game );
+    tile->addToScene ( getGame() );
     tile->moveTo ( x,y,z );
     tile->setVisible ( true );
     return true;
@@ -141,8 +135,8 @@ int CMap::getCurrentMap() {
     return currentLevel;
 }
 
-CGame *CMap::getGame() const {
-    return game;
+std::shared_ptr<CGame> CMap::getGame() const {
+    return game.lock();
 }
 
 void CMap::mapUp() {
@@ -187,14 +181,6 @@ bool CMap::canStep ( int x, int y, int z ) {
 
 bool CMap::canStep ( const Coords &coords ) {
     return canStep ( coords.x,coords.y,coords.z );
-}
-
-QString CMap::getMapPath() const {
-    return mapPath;
-}
-
-QString CMap::getMapName() {
-    return mapPath.replace ( "\\","/" ).split ( "/" ).last();
 }
 
 bool CMap::contains ( int x, int y, int z ) {

@@ -305,8 +305,7 @@ CTradeItemsView::CTradeItemsView ( AGamePanel *panel  ) :CListView ( panel ) {
 
 std::set<QGraphicsItem *> CTradeItemsView::getItems() const {
     std::set<QGraphicsItem *> set;
-    CGame *scene=panel->getView()->getGame();
-    CPlayer* player=scene->getMap()->getPlayer();
+    CPlayer* player=panel->getView()->getGame()->getMap()->getPlayer();
     if ( !player || !player->getMarket() ) {
         return set;
     }

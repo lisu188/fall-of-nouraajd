@@ -4,10 +4,22 @@
 #include "object/CObject.h"
 #include "handler/CHandler.h"
 #include "gui/CGui.h"
+#include "CGameLoader.h"
 
-void CGameView::start() {
-    getGame()->startGame ( mapName ,playerType );
+void CGameView::show() {
+    showNormal();
+}
+
+CGameView::CGameView ( QString mapName , QString playerType ) :game ( CGameLoader::loadGame() )  {
+    setHorizontalScrollBarPolicy ( Qt::ScrollBarAlwaysOff );
+    setVerticalScrollBarPolicy ( Qt::ScrollBarAlwaysOff );
+    setViewportUpdateMode ( QGraphicsView::BoundingRectViewportUpdate );
+    setViewport ( new QGLWidget ( QGLFormat ( QGL::SampleBuffers ) ) );
+    setViewportUpdateMode ( QGraphicsView::FullViewportUpdate );
+    setScene ( game.get() );
+    CGameLoader::startGame ( game,mapName ,playerType );
     CPlayer *player = getGame()->getMap()->getPlayer();
+    playerStatsView.setParent ( this );
     playerStatsView.show();
     playerStatsView.setPlayer ( player );
     auto refresh=[this]() {
@@ -17,29 +29,6 @@ void CGameView::start() {
     connect ( player,&CCreature::equippedChanged,refresh );
     connect ( player,&CCreature::skillsChanged,refresh );
     init = true;
-}
-
-void CGameView::show() {
-    showNormal();
-}
-
-CGameView::CGameView ( QString mapName , QString playerType ) :mapName ( mapName ),playerType ( playerType ) {
-    game=new CGame (  );
-    setHorizontalScrollBarPolicy ( Qt::ScrollBarAlwaysOff );
-    setVerticalScrollBarPolicy ( Qt::ScrollBarAlwaysOff );
-    setViewportUpdateMode ( QGraphicsView::BoundingRectViewportUpdate );
-    setViewport ( new QGLWidget ( QGLFormat ( QGL::SampleBuffers ) ) );
-    setViewportUpdateMode ( QGraphicsView::FullViewportUpdate );
-    setScene ( game );
-    timer.setSingleShot ( true );
-    timer.setInterval ( 250 );
-    connect ( &timer,&QTimer::timeout, this, &CGameView::start );
-    playerStatsView.setParent ( this );
-    timer.start();
-}
-
-CGameView::~CGameView() {
-    delete game;
 }
 
 void CGameView::mouseDoubleClickEvent ( QMouseEvent *e ) {
@@ -76,7 +65,7 @@ void CGameView::dragMoveEvent ( QDragMoveEvent *e ) {
     repaint();
 }
 
-CGame *CGameView::getGame() const {
+std::shared_ptr<CGame> CGameView::getGame() const {
     return game;
 }
 

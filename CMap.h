@@ -20,8 +20,7 @@ class CMap : public QObject,
     friend class CMapLoader;
     Q_OBJECT
 public:
-    CMap ( CGame *game, QString mapPath );
-    virtual ~CMap();
+    CMap ( std::shared_ptr<CGame> game );
     bool addTile ( CTile *tile, int x, int y, int z );
     void removeTile ( int x, int y, int z );
     void move ();
@@ -31,7 +30,7 @@ public:
     void addObject ( CMapObject *mapObject );
     void removeObject ( CMapObject *mapObject );
     void ensureSize();
-    CGame *getGame() const;
+    std::shared_ptr<CGame> getGame() const;
     void mapUp();
     void mapDown();
     int getCurrentMap();
@@ -55,8 +54,6 @@ public:
     CMouseHandler *getMouseHandler() ;
     bool canStep ( int x,int y,int z );
     bool canStep ( const Coords &coords );
-    QString getMapPath() const;
-    QString getMapName();
     CMapObject *getObjectByName ( QString name );
     bool isMoving();
     void applyEffects();
@@ -71,7 +68,7 @@ private:
     std::set<CMapObject *> getMapObjectsClone();
     void resolveFights();
     std::unordered_map<QString,CMapObject *> mapObjects;
-    CGame *game=0;
+    std::weak_ptr<CGame> game;
     CPlayer *player=0;
     int currentLevel = 0;
     std::map<int, QString> defaultTiles;
@@ -81,7 +78,6 @@ private:
     Lazy<CObjectHandler,CObjectHandler*> objectHandler;
     Lazy<CEventHandler> eventHandler;
     Lazy<CMouseHandler> mouseHandler;
-    QString mapPath;
     bool moving=false;
 };
 

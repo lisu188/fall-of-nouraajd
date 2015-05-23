@@ -39,7 +39,7 @@
      <item>
       <widget class="QLineEdit" name="mapType">
        <property name="text">
-        <string>maps/map1</string>
+        <string>map1</string>
        </property>
       </widget>
      </item>

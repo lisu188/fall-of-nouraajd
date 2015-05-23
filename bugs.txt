@@ -1,0 +1,3 @@
+market bug/when configuration is present in map but type is present only in game causes load to fail
+endless loop/when enemies are around sometimes causes ui to hang
+gui panels/gui panels do not respond to input

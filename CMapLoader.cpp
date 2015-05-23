@@ -2,11 +2,13 @@
 #include "CMap.h"
 #include "CGame.h"
 
-void CMapLoader::loadMap ( CMap *map, QString mapPath ) {
-    map->getObjectHandler()->registerConfig ( mapPath+"/config.json" );
-    map->getGame()->getScriptHandler()->addModule ( map->getMapName(),mapPath+"/script.py" );
-    map->getGame()->getScriptHandler()->callFunction ( map->getMapName()+".load",map );
-    QJsonObject mapc=CConfigurationProvider::getConfig ( mapPath+"/map.json" ).toObject();
+std::shared_ptr<CMap> CMapLoader::loadMap ( std::shared_ptr<CGame> game,QString name ) {
+    std::shared_ptr<CMap> map=std::make_shared<CMap> ( game );
+    QString path="maps/"+name;
+    map->getObjectHandler()->registerConfig ( path+"/config.json" );
+    map->getGame()->getScriptHandler()->addModule ( name,path+"/script.py" );
+    map->getGame()->getScriptHandler()->callFunction ( name+".load",map );
+    QJsonObject mapc=CConfigurationProvider::getConfig ( path+"/map.json" ).toObject();
     const QJsonObject &mapProperties=mapc["properties"].toObject();
     const QJsonArray &mapLayers=mapc["layers"].toArray();
     map->entryx = mapProperties["x"].toString().toInt();
@@ -25,9 +27,16 @@ void CMapLoader::loadMap ( CMap *map, QString mapPath ) {
             handleObjectLayer ( map,layer );
         }
     }
+    return map;
 }
 
-void CMapLoader::handleTileLayer ( CMap* map,const QJsonObject &tileset, const QJsonObject &layer ) {
+std::shared_ptr<CMap> CMapLoader::loadMap ( std::shared_ptr<CGame> game, QString name, QString player ) {
+    std::shared_ptr<CMap> map = loadMap ( game,name );
+    map->setPlayer ( map->createObject<CPlayer*> ( player )  );
+    return map;
+}
+
+void CMapLoader::handleTileLayer ( std::shared_ptr<CMap> map,const QJsonObject &tileset, const QJsonObject &layer ) {
     const QJsonObject& layerProperties= layer ["properties"].toObject();
     int level =layerProperties["level"].toString().toInt();
     map->defaultTiles[level] =layerProperties["default"].toString();
@@ -52,7 +61,7 @@ void CMapLoader::handleTileLayer ( CMap* map,const QJsonObject &tileset, const Q
         }
 }
 
-void CMapLoader::handleObjectLayer ( CMap* map,const QJsonObject &layer ) {
+void CMapLoader::handleObjectLayer ( std::shared_ptr<CMap> map, const QJsonObject &layer ) {
     int level = layer["properties"].toObject() ["level"].toString().toInt();
     const QJsonArray& objects=layer["objects"].toArray();
     for ( auto it=objects.begin(); it!=objects.end(); it++ ) {
