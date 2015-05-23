@@ -49,7 +49,8 @@ SOURCES += \
      scripting/CGameScript.cpp \
      scripting/CWrapper.cpp \
      scripting/CConverter.cpp \
-     scripting/CScriptLoader.cpp
+     scripting/CScriptLoader.cpp \
+    CGameLoader.cpp
 
 HEADERS += \
      CPathFinder.h \
@@ -103,7 +104,8 @@ HEADERS += \
      scripting/CScripting.h \
      scripting/CConverter.h \
      scripting/CGameScript.h \
-     scripting/CScriptLoader.h
+     scripting/CScriptLoader.h \
+    CGameLoader.h
 
 FORMS += \
      gui/CMainWindow.ui \
@@ -140,6 +142,9 @@ INCLUDEPATH += /usr/local/include/python3.4m
 DEPENDPATH += /usr/local/include/python3.4m
 INCLUDEPATH += /home/andrzejlis/boost_1_58_0
 DEPENDPATH += /home/andrzejlis/boost_1_58_0
+
+DISTFILES += \
+    bugs.txt
 
 
 

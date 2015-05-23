@@ -57,9 +57,9 @@ QString CScriptHandler::buildCommand ( std::initializer_list<QString> list ) {
 
 void CScriptHandler::addModule ( QString modName, QString path ) {
     std::shared_ptr<CCustomScriptLoader> loader=std::make_shared<CCustomScriptLoader> ( modName,path );
-    callFunction ( "sys.meta_path.append", loader.get()  );
+    callFunction ( "sys.meta_path.append", loader  );
     executeScript ( "import "+modName );
-    callFunction ( "sys.meta_path.remove",loader.get() );
+    callFunction ( "sys.meta_path.remove",loader );
 }
 
 void CScriptHandler::addFunction ( QString functionName, QString functionCode, std::initializer_list<QString> args ) {

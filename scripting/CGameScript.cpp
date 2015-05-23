@@ -11,18 +11,18 @@
 using namespace boost::python;
 
 BOOST_PYTHON_MODULE ( _core ) {
-    class_<ModuleSpec,boost::noncopyable> ( "ModuleSpec",no_init )
-    .add_property ( "loader",make_function ( &ModuleSpec::loader ,return_internal_reference<>() ) )
-    .def_readonly ( "name",&ModuleSpec::name )
-    .def_readonly ( "submodule_search_locations",&ModuleSpec::subModuleSearch )
-    .def_readonly ( "has_location",&ModuleSpec::hasLocation )
-    .def_readonly ( "cached",&ModuleSpec::cached );
-    class_<AScriptLoader,boost::noncopyable> ( "AScriptLoader" ,no_init )
-    .def ( "exec_module",&AScriptLoader::exec_module )
-    .def ( "find_spec",&AScriptLoader::find_spec ,return_internal_reference<>() )
-    .def ( "__eq__",&AScriptLoader::__eq__ );
-    class_<CScriptLoader,bases<AScriptLoader>,boost::noncopyable> ( "CScriptLoader" );
-    class_<CCustomScriptLoader,bases<AScriptLoader>,boost::noncopyable> ( "CCustomScriptLoader",no_init );
+    class_<ModuleSpec,boost::noncopyable,std::shared_ptr<ModuleSpec>> ( "ModuleSpec",no_init )
+            .add_property ( "loader",make_function ( &ModuleSpec::loader ,return_internal_reference<>() ) )
+            .def_readonly ( "name",&ModuleSpec::name )
+            .def_readonly ( "submodule_search_locations",&ModuleSpec::subModuleSearch )
+            .def_readonly ( "has_location",&ModuleSpec::hasLocation )
+            .def_readonly ( "cached",&ModuleSpec::cached );
+    class_<AScriptLoader,boost::noncopyable,std::shared_ptr<AScriptLoader>> ( "AScriptLoader" ,no_init )
+            .def ( "exec_module",&AScriptLoader::exec_module )
+            .def ( "find_spec",&AScriptLoader::find_spec ,return_internal_reference<>() )
+            .def ( "__eq__",&AScriptLoader::__eq__ );
+    class_<CScriptLoader,bases<AScriptLoader>,boost::noncopyable,std::shared_ptr<CScriptLoader>> ( "CScriptLoader" );
+    class_<CCustomScriptLoader,bases<AScriptLoader>,boost::noncopyable,std::shared_ptr<CCustomScriptLoader>> ( "CCustomScriptLoader",no_init );
 }
 
 static int randint ( int i,int j ) { return rand() % ( j-i+1 )+i; }
@@ -36,19 +36,19 @@ BOOST_PYTHON_MODULE ( _game ) {
     .def_readonly ( "x",&Coords::x )
     .def_readonly ( "y",&Coords::y )
     .def_readonly ( "z",&Coords::z );
-    class_<CMap,boost::noncopyable> ( "CMap",no_init )
-    .def ( "addObjectByName",&CMap::addObjectByName )
-    .def ( "removeObjectByName",&CMap::removeObjectByName )
-    .def ( "removeObject",&CMap::removeObject )
-    .def ( "replaceTile",&CMap::replaceTile )
-    .def ( "getPlayer",&CMap::getPlayer,return_internal_reference<>() )
-    .def ( "getLocationByName",&CMap::getLocationByName )
-    .def ( "removeAll",&CMap::removeAll )
-    .def ( "getObjectHandler",&CMap::getObjectHandler,return_internal_reference<>() )
-    .def ( "getEventHandler",&CMap::getEventHandler,return_internal_reference<>() )
-    .def ( "addObject",&CMap::addObject )
-    .def ( "createObject",&CMap::createObject<CGameObject*> ,return_internal_reference<>() )
-    .def ( "getGame",&CMap::getGame, return_internal_reference<>() );
+    class_<CMap,boost::noncopyable,std::shared_ptr<CMap>> ( "CMap",no_init )
+            .def ( "addObjectByName",&CMap::addObjectByName )
+            .def ( "removeObjectByName",&CMap::removeObjectByName )
+            .def ( "removeObject",&CMap::removeObject )
+            .def ( "replaceTile",&CMap::replaceTile )
+            .def ( "getPlayer",&CMap::getPlayer,return_internal_reference<>() )
+            .def ( "getLocationByName",&CMap::getLocationByName )
+            .def ( "removeAll",&CMap::removeAll )
+            .def ( "getObjectHandler",&CMap::getObjectHandler,return_internal_reference<>() )
+            .def ( "getEventHandler",&CMap::getEventHandler,return_internal_reference<>() )
+            .def ( "addObject",&CMap::addObject )
+            .def ( "createObject",&CMap::createObject<CGameObject*> ,return_internal_reference<>() )
+            .def ( "getGame",&CMap::getGame );
     void ( CObjectHandler::*registerType ) ( QString,std::function<CGameObject*() > )  =&CObjectHandler::registerType;
     class_<CObjectHandler,boost::noncopyable> ( "CObjectHandler",no_init )
     .def ( "registerType",registerType );
@@ -140,9 +140,9 @@ BOOST_PYTHON_MODULE ( _game ) {
             .def ( "isCompleted",&CQuestWrapper::isCompleted )
             .def ( "onComplete",&CQuestWrapper::onComplete );
     class_<CEventHandler,boost::noncopyable> ( "CEventHandler",no_init ).def ( "registerTrigger",&CEventHandler::registerTrigger );
-    class_<CGame,boost::noncopyable> ( "CGame",no_init )
-    .def ( "getMap",&CGame::getMap,return_internal_reference<>() )
-    .def ( "changeMap",&CGame::changeMap )
-    .def ( "getGuiHandler",&CGame::getGuiHandler,return_internal_reference<>() )
-    .def ( "getObjectHandler",&CGame::getObjectHandler,return_internal_reference<>() );
+    class_<CGame,boost::noncopyable,std::shared_ptr<CGame>> ( "CGame",no_init )
+            .def ( "getMap",&CGame::getMap )
+            .def ( "changeMap",&CGame::changeMap )
+            .def ( "getGuiHandler",&CGame::getGuiHandler,return_internal_reference<>() )
+            .def ( "getObjectHandler",&CGame::getObjectHandler,return_internal_reference<>() );
 }

@@ -5,39 +5,22 @@
 #include "object/CObject.h"
 #include "panel/CPanel.h"
 #include "handler/CHandler.h"
+#include "CGameLoader.h"
 
-void CGame::startGame ( QString file ,QString player ) {
-    srand ( time ( 0 ) );
-    map = new CMap ( this,file );
-    map->setPlayer ( map->createObject<CPlayer*> ( player )  );
-    CThreadUtil::call_later ( [this]() {
-        map->ensureSize();
-        map->getGame()->getView()->show();
-    } );
+CGame::CGame ()  {
+
 }
 
 void CGame::changeMap ( QString file ) {
-    CThreadUtil::call_later ( [this,file]() {
-        CPlayer *player=map->getPlayer();
-        player->setMap ( 0 );
-        delete map;
-        map=new CMap ( this,file );
-        map->setPlayer ( player );
-        map->ensureSize();
-    } );
+    CGameLoader::changeMap ( std::shared_ptr<CGame> ( this ),file );
 }
 
-CGame::CGame ()  {
-    initObjectHandler ( objectHandler.get() );
-    initScriptHandler ( scriptHandler.get() );
-}
-
-CGame::~CGame() {
-
-}
-
-CMap *CGame::getMap() const {
+std::shared_ptr<CMap> CGame::getMap() const {
     return map;
+}
+
+void CGame::setMap ( std::shared_ptr<CMap> map ) {
+    this->map=map;
 }
 
 CGameView *CGame::getView() {
@@ -103,44 +86,14 @@ void CGame::keyPressEvent ( QKeyEvent *event ) {
         getGuiHandler()->flipPanel ( "CCharPanel" );
         break;
     case Qt::Key_S:
-        scriptWindow.get ( this )->setVisible ( true );
+        scriptWindow.get ( std::shared_ptr<CGame> ( this ) )->setVisible ( true );
         break;
     }
 }
 
-void CGame::initObjectHandler ( CObjectHandler *handler ) {
-    handler->registerType< CWeapon >();
-    handler->registerType< CArmor >();
-    handler->registerType< CPotion >();
-    handler->registerType< CBuilding >();
-    handler->registerType< CItem >();
-    handler->registerType< CPlayer >();
-    handler->registerType< CMonster >();
-    handler->registerType< CTile >();
-    handler->registerType< CInteraction >();
-    handler->registerType< CSmallWeapon >();
-    handler->registerType< CHelmet >();
-    handler->registerType< CBoots >();
-    handler->registerType< CBelt >();
-    handler->registerType< CGloves >();
-    handler->registerType< CEvent >();
-    handler->registerType< CScroll >();
-    handler->registerType< CEffect >();
-    handler->registerType< CMarket >();
-    handler->registerType< CTrigger >();
-    handler->registerType< CQuest >();
-    for ( QString path : CResourcesProvider::getInstance()->getFiles ( CONFIG ) ) {
-        handler->registerConfig ( path );
-    }
-}
 
-void CGame::initScriptHandler ( CScriptHandler *handler ) {
-    for ( QString script:CResourcesProvider::getInstance()->getFiles ( CResType::SCRIPT ) ) {
-        QString modName=QFileInfo ( script ).baseName();
-        handler->import ( modName );
-        handler->callFunction ( modName+".load",this );
-    }
-}
+
+
 
 
 

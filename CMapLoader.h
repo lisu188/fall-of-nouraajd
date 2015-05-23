@@ -1,14 +1,13 @@
 #pragma once
 #include "CGlobal.h"
-
-class CMap;
-class QJsonObject;
+#include "CMap.h"
 
 class CMapLoader {
 public:
-    static  void loadMap ( CMap* map,QString mapPath );
+    static std::shared_ptr<CMap> loadMap ( std::shared_ptr<CGame> game, QString name );
+    static std::shared_ptr<CMap> loadMap ( std::shared_ptr<CGame> game, QString name, QString player );
 private:
-    static void handleTileLayer ( CMap* map,const QJsonObject& tileset,const QJsonObject& layer );
-    static void handleObjectLayer ( CMap* map,const QJsonObject &layer );
+    static void handleTileLayer ( std::shared_ptr<CMap> map, const QJsonObject& tileset, const QJsonObject& layer );
+    static void handleObjectLayer ( std::shared_ptr<CMap> map,const QJsonObject &layer );
 };
 

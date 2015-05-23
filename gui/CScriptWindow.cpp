@@ -3,7 +3,7 @@
 #include "CGlobal.h"
 #include "CGame.h"
 
-CScriptWindow::CScriptWindow ( CGame *game ) :game ( game ),ui ( new Ui::CScriptWindow ) {
+CScriptWindow::CScriptWindow ( std::shared_ptr<CGame> game ) :game ( game ),ui ( new Ui::CScriptWindow ) {
     ui->setupUi ( this );
     this->setVisible ( true );
 }
