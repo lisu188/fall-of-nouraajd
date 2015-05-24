@@ -1,32 +1,33 @@
 #include "handler/CHandler.h"
 #include "object/CObject.h"
+#include "CUtil.h"
 #include "CMap.h"
 
 void CEventHandler::gameEvent (  std::shared_ptr<CMapObject> object ,std::shared_ptr<CGameEvent> event ) const {
     switch ( event->getType() ) {
     case CGameEvent::onEnter:
-        dynamic_cast<Visitable*> ( object.get() )->onEnter ( event );
+        cast<Visitable > ( object )->onEnter ( event );
         break;
     case CGameEvent::onLeave:
-        dynamic_cast<Visitable*> ( object.get() )->onLeave ( event );
+        cast<Visitable > ( object )->onLeave ( event );
         break;
     case CGameEvent::onTurn:
-        dynamic_cast<Turnable*> ( object.get() )->onTurn ( event );
+        cast<Turnable > ( object )->onTurn ( event );
         break;
     case CGameEvent::onDestroy:
-        dynamic_cast<Creatable*> ( object.get() )->onDestroy ( event );
+        cast<Creatable > ( object )->onDestroy ( event );
         break;
     case CGameEvent::onCreate:
-        dynamic_cast<Creatable*> ( object.get() )->onCreate ( event );
+        cast<Creatable > ( object )->onCreate ( event );
         break;
     case CGameEvent::onUse:
-        dynamic_cast<Usable*> ( object.get() )->onUse ( event );
+        cast<Usable > ( object )->onUse ( event );
         break;
     case CGameEvent::onEquip:
-        dynamic_cast<Wearable*> ( object.get() )->onEquip ( event );
+        cast<Wearable > ( object )->onEquip ( event );
         break;
     case CGameEvent::onUnequip:
-        dynamic_cast<Wearable*> ( object.get() )->onUnequip (  event );
+        cast<Wearable > ( object )->onUnequip (  event );
         break;
     }
     auto range = triggers.equal_range ( TriggerKey ( object->objectName(),event->getType() ) );
@@ -39,7 +40,7 @@ void CEventHandler::gameEvent (  std::shared_ptr<CMapObject> object ,std::shared
     );
 }
 
-void CEventHandler::registerTrigger ( QString name, QString type, std::function<CTrigger*() > trigger ) {
+void CEventHandler::registerTrigger ( QString name, QString type, std::function<CTrigger* () > trigger ) {
     bool ok;
     CGameEvent::Type tp=static_cast<CGameEvent::Type>
                         ( CGameEvent::staticMetaObject.enumerator ( CGameEvent::staticMetaObject.indexOfEnumerator ( "Type" ) )
@@ -79,6 +80,6 @@ bool TriggerKey::operator== ( const TriggerKey &other ) const {
 std::size_t std::hash<TriggerKey>::operator() ( const TriggerKey &triggerKey ) const {
     using std::size_t;
     int hash=stringHash ( triggerKey.name );
-    hash+=static_cast<int> ( triggerKey.type ) *31;
+    hash+=static_cast<int> ( triggerKey.type ) * 31;
     return hash;
 }

@@ -40,7 +40,6 @@ SOURCES += \
      handler/CMouseHandler.cpp \
      panel/CGamePanel.cpp \
      object/CMarket.cpp \
-     CMapLoader.cpp \
      CGame.cpp \
      CThreadUtil.cpp \
      CStats.cpp \
@@ -50,7 +49,8 @@ SOURCES += \
      scripting/CWrapper.cpp \
      scripting/CConverter.cpp \
      scripting/CScriptLoader.cpp \
-    CGameLoader.cpp
+    loader/CGameLoader.cpp \
+    loader/CMapLoader.cpp
 
 HEADERS += \
      CPathFinder.h \
@@ -92,7 +92,6 @@ HEADERS += \
      panel/CTradePanel.h \
      handler/CMouseHandler.h \
      object/CMarket.h \
-     CMapLoader.h \
      CGame.h \
      CThreadUtil.h \
      CStats.h \
@@ -105,7 +104,9 @@ HEADERS += \
      scripting/CConverter.h \
      scripting/CGameScript.h \
      scripting/CScriptLoader.h \
-    CGameLoader.h
+    loader/CMapLoader.h \
+    loader/CGameLoader.h \
+    loader/CLoader.h
 
 FORMS += \
      gui/CMainWindow.ui \

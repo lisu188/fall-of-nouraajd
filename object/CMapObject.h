@@ -30,9 +30,6 @@ public:
     void move ( Coords coords );
     void moveTo ( int x, int y, int z );
     void moveTo ( Coords coords );
-
-private:
-    void onMapChanged();
 };
 
 

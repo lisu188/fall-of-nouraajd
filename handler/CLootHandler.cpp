@@ -22,16 +22,22 @@ CLootHandler::CLootHandler ( std::shared_ptr<CMap> map ) :map ( map ) {
 
 std::set<std::shared_ptr<CItem>> CLootHandler::calculateLoot ( int value ) const {
     std::set<std::shared_ptr<CItem>> loot;
+    std::list<int> powers;
     while ( value>0 ) {
-        int dice = rand() % this->size();
-        auto it = begin();
-        for ( int i = 0; i < dice; i++, it++ );
-        int power = ( *it ).second;
-        QString name = ( *it ).first;
-        if ( power <= value ) {
-            std::shared_ptr<CItem> item=map.lock()->createObject<CItem> (  name );
-            loot.insert ( item );
-            value -= power;
+        int pow=rand() %value+1;
+        value-=pow;
+        powers.push_back ( pow );
+    }
+    for ( int val:powers ) {
+        std::vector<QString> names;
+        for ( std::pair<QString,int> it:*this ) {
+            if ( it.second==val ) {
+                names.push_back ( it.first );
+            }
+        }
+        if ( names.size() >0 ) {
+            std::random_shuffle ( names.begin(),names.end() );
+            loot.insert ( map.lock()->createObject<CItem> (  names.front() ) );
         }
     }
     return loot;

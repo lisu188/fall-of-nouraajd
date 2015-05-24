@@ -1,5 +1,5 @@
-#include "CGameLoader.h"
-#include "CMapLoader.h"
+#include "loader/CLoader.h"
+#include "loader/CLoader.h"
 #include "CThreadUtil.h"
 
 std::shared_ptr<CGame> CGameLoader::loadGame() {
