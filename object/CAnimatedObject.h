@@ -14,6 +14,6 @@ public:
 private:
     QString path;
     QTimer *timer=0;
-    CAnimation *staticAnimation=0;
+    std::shared_ptr<CAnimation> staticAnimation;
     void animate();
 };

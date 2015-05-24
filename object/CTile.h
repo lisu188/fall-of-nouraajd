@@ -13,16 +13,13 @@ class CTile : public CGameObject {
     Q_PROPERTY ( bool canStep READ canStep WRITE setCanStep USER true )
 public:
     CTile();
+    virtual ~CTile();
     virtual void onStep ( CCreature * );
     void move ( int x, int y, int z ) ;
     void moveTo ( int x,int y,int z );
     Coords getCoords();
     bool canStep() const;
     void setCanStep ( bool canStep );
-    void addToScene ( std::shared_ptr<CGame> scene );
-    void removeFromScene ( std::shared_ptr<CGame> scene );
-
-    virtual ~CTile();
 private:
     bool step=false;
     int posx=0,posy=0,posz=0;

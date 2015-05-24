@@ -71,8 +71,7 @@ CListView::CListView ( AGamePanel *panel ) :CPlayerView ( panel ) {
 }
 
 void CListView::update() {
-    this->CGameObject::update();
-    auto items=getItems();
+    items=getItems();
     if ( items.size() - x * y < curPosition ) {
         curPosition = items.size() - x * y;
     }
@@ -101,7 +100,6 @@ void CListView::update() {
 }
 
 QRectF CListView::boundingRect() const {
-    auto items=getItems();
     return QRect ( 0, 0, pixmap.size().width() * x,
                    pixmap.size().height() * ( items.size() > x * y ? y + 1 : y ) );
 }
@@ -297,7 +295,7 @@ CTradeItemsView::CTradeItemsView ( AGamePanel *panel  ) :CListView ( panel ) {
 
 std::set<std::shared_ptr<CGameObject>> CTradeItemsView::getItems() const {
     std::shared_ptr<CPlayer> player=panel->getView()->getGame()->getMap()->getPlayer();
-    if ( !player.get() || !player->getMarket() ) {
+    if ( !player|| !player->getMarket() ) {
         return std::set<std::shared_ptr<CGameObject>>();
     }
     return convert<std::set<std::shared_ptr<CGameObject>>> ( player->getMarket()->getTradeItems() );

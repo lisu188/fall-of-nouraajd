@@ -14,6 +14,7 @@ class CGame : private QGraphicsScene,public std::enable_shared_from_this<CGame> 
     friend class CGameView;
 public:
     CGame ();
+    ~CGame();
     void changeMap ( QString file );
     std::shared_ptr<CMap> getMap() const;
     void setMap ( std::shared_ptr<CMap> map );

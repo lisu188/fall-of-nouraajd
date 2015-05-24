@@ -5,7 +5,7 @@
 #include "CTile.h"
 
 CMapObject::CMapObject() {
-    connect ( this,&CGameObject::mapChanged,this,&CMapObject::onMapChanged );
+
 }
 
 CMapObject::~CMapObject() {
@@ -64,13 +64,6 @@ void CMapObject::onCreate ( std::shared_ptr<CGameEvent> ) {
 
 void CMapObject::onDestroy ( std::shared_ptr<CGameEvent> ) {
 
-}
-
-//inline this slot
-void CMapObject::onMapChanged() {
-    if ( getMap() &&getMap()->getGame() ) { // && this->getGame() != getMap()->getGame() ) { //see if still works
-        getMap()->getGame()->addObject ( this->ptr<CMapObject>() );
-    }
 }
 
 Coords CMapObject::getCoords() {
