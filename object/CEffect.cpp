@@ -17,11 +17,11 @@ int CEffect::getTimeTotal() {
     return timeTotal;
 }
 
-CCreature *CEffect::getCaster() {
+std::shared_ptr<CCreature> CEffect::getCaster() {
     return caster;
 }
 
-CCreature *CEffect::getVictim() {
+std::shared_ptr<CCreature> CEffect::getVictim() {
     return victim;
 }
 
@@ -69,11 +69,11 @@ void CEffect::setBuff ( bool value ) {
     buff = value;
 }
 
-void CEffect::setCaster ( CCreature *value ) {
+void CEffect::setCaster (  std::shared_ptr<CCreature> value ) {
     caster = value;
 }
 
-void CEffect::setVictim ( CCreature *value ) {
+void CEffect::setVictim (  std::shared_ptr<CCreature> value ) {
     victim = value;
 }
 

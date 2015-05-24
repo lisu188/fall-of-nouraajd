@@ -60,7 +60,7 @@ Coords CSmartPathFinder::findNextStep ( const Coords &  start, const Coords &  g
     nodes.push ( goal );
     values[goal]=0;
 
-    while ( !nodes.empty() && !contains ( marked,start ) ) {
+    while ( !nodes.empty() && !ctn ( marked,start ) ) {
         Coords currentCoords = nodes.top();
         nodes.pop();
         if (  marked.insert ( currentCoords ).second ) {
@@ -79,7 +79,7 @@ Coords CSmartPathFinder::findNextStep ( const Coords &  start, const Coords &  g
     dump ( values,start,goal );
     Coords target=start;
     for ( Coords coords:NEAR_COORDS ( start ) ) {
-        if ( contains ( values,coords ) && ( values[coords]<values[target]|| ( values[coords]==values[target] && coords.getDist ( goal ) <target.getDist ( goal ) ) ) ) {
+        if ( ctn ( values,coords ) && ( values[coords]<values[target]|| ( values[coords]==values[target] && coords.getDist ( goal ) <target.getDist ( goal ) ) ) ) {
             target=coords;
         }
     }

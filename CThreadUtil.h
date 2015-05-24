@@ -13,6 +13,12 @@ class CLaterCall:public QObject,public QRunnable {
 
 class CThreadUtil  {
 public:
+    template <typename Predicate>
+    static void wait_until ( Predicate pred ) {
+        while ( !pred() ) {
+            QApplication::processEvents ( QEventLoop::WaitForMoreEvents );
+        }
+    }
     template <typename Function,typename... Arguments>
     static void call_later ( Function target,Arguments... params ) {
         QThreadPool::globalInstance()->start ( new CLaterCall ( std::bind ( target,params... ) ) );

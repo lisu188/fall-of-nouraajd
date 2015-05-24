@@ -14,11 +14,11 @@ void CEvent::setEnabled ( bool enabled ) {
     this->enabled = enabled;
 }
 
-void CEvent::onEnter ( CGameEvent * ) {
+void CEvent::onEnter ( std::shared_ptr<CGameEvent> ) {
 
 }
 
-void CEvent::onLeave ( CGameEvent * ) {
+void CEvent::onLeave ( std::shared_ptr<CGameEvent> ) {
 
 }
 

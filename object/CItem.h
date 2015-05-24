@@ -17,13 +17,13 @@ public:
     bool isSingleUse();
     void setSingleUse ( bool singleUse );
 
-    virtual void onEquip ( CGameEvent *event ) override;
-    virtual void onUnequip ( CGameEvent *event ) override;
+    virtual void onEquip ( std::shared_ptr<CGameEvent> event ) override;
+    virtual void onUnequip ( std::shared_ptr<CGameEvent> event ) override;
 
-    virtual void onUse ( CGameEvent *event ) override;
+    virtual void onUse ( std::shared_ptr<CGameEvent> event ) override;
 
-    virtual void onEnter ( CGameEvent *event ) override;
-    virtual void onLeave ( CGameEvent * ) override;
+    virtual void onEnter ( std::shared_ptr<CGameEvent> event ) override;
+    virtual void onLeave ( std::shared_ptr<CGameEvent> ) override;
 
     int getPower() const;
     void setPower ( int value );
@@ -31,11 +31,11 @@ public:
     void setBonus ( Stats stats );
     QString getInteractionName();
     void setInteractionName ( QString name );
-    CInteraction *getInteraction();
+    std::shared_ptr<CInteraction> getInteraction();
 protected:
     bool singleUse=false;
     Stats bonus;
-    CInteraction *interaction=0;
+    std::shared_ptr<CInteraction> interaction;
     int power=0;
 private:
     int slot = 0;
@@ -99,7 +99,7 @@ public:
     CScroll ( const CScroll & );
     QString getText() const;
     void setText ( const QString &value );
-    virtual void onUse ( CGameEvent * ) override;
+    virtual void onUse ( std::shared_ptr<CGameEvent>  ) override;
 private:
     QString text;
 };

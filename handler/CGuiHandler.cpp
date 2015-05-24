@@ -2,17 +2,17 @@
 #include "CGame.h"
 #include "panel/CPanel.h"
 
-CGuiHandler::CGuiHandler ( CGame *game ) :game ( game ) {
+CGuiHandler::CGuiHandler ( std::shared_ptr<CGame> game ) :game ( game ) {
     initPanels();
 }
 
 void CGuiHandler::showMessage ( QString msg ) {
-    AGamePanel *panel=getPanel ( "CTextPanel" );
+    std::shared_ptr<AGamePanel> panel=getPanel ( "CTextPanel" );
     panel->setStringProperty ( "text",msg );
     panel->showPanel();
 }
 
-AGamePanel *CGuiHandler::getPanel ( QString panel ) {
+std::shared_ptr<AGamePanel> CGuiHandler::getPanel ( QString panel ) {
     return panels[panel];
 }
 
@@ -25,7 +25,7 @@ void CGuiHandler::hidePanel ( QString panel ) {
 }
 
 void CGuiHandler::flipPanel ( QString panelName ) {
-    AGamePanel *panel=getPanel ( panelName );
+    std::shared_ptr<AGamePanel> panel=getPanel ( panelName );
     if ( panel->isShown() ) {
         panel->hidePanel();
     } else {
@@ -44,7 +44,7 @@ bool CGuiHandler::isAnyPanelVisible() {
 
 void CGuiHandler::refresh() {
     for ( auto it:panels ) {
-        AGamePanel *panel= it.second;
+        std::shared_ptr<AGamePanel> panel= it.second;
         if ( panel->isShown() ) {
             panel->update();
         }
@@ -52,11 +52,15 @@ void CGuiHandler::refresh() {
 }
 
 void CGuiHandler::initPanels() {
-    std::list<AGamePanel*> viewList {new CFightPanel(),new CCharPanel(),new CTextPanel(),new CTradePanel() };
-    for ( AGamePanel* it:viewList ) {
+    std::list<std::shared_ptr<AGamePanel>> viewList {
+        std::make_shared<CFightPanel>(),
+        std::make_shared<CCharPanel>(),
+        std::make_shared<CTextPanel>(),
+        std::make_shared<CTradePanel>() };
+    for ( std::shared_ptr<AGamePanel> it:viewList ) {
         panels[it->getPanelName()]=it;
-        game->addObject ( it );
-        it ->setUpPanel ( game->getView() );
+        game.lock()->addObject ( it );
+        it ->setUpPanel ( game.lock()->getView() );
         it ->hidePanel ( );
         qDebug() <<"Initialized panel:"<<  it->metaObject()->className() <<"\n";
     }
