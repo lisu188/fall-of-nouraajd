@@ -1,6 +1,7 @@
 #pragma once
 #include "CGlobal.h"
 #include "CUtil.h"
+#include "object/CObject.h"
 
 class CMap;
 class CTrigger;
@@ -23,38 +24,31 @@ private:
 
 class CGameEventCaused : public CGameEvent {
 public:
-    CGameEventCaused ( Type type,CGameObject *cause );
-    CGameObject *getCause() const;
+    CGameEventCaused ( Type type, std::shared_ptr<CGameObject> cause );
+    std::shared_ptr<CGameObject> getCause() const;
 private:
-    CGameObject *cause=0;
+    std::shared_ptr<CGameObject> cause;
 };
 
 struct TriggerKey {
-    TriggerKey ( QString name,CGameEvent::Type type ) :name ( name ),type ( type ) {}
+    TriggerKey ( QString name,CGameEvent::Type type );
     QString name;
     CGameEvent::Type type;
-    bool operator== ( const TriggerKey &other ) const {
-        return ( type == other.type && name == other.name );
-    }
+    bool operator== ( const TriggerKey &other ) const;
 };
 
 namespace std {
 template<>
 struct hash<TriggerKey> {
     std::hash<QString> stringHash;
-    std::size_t operator() ( const TriggerKey &triggerKey ) const {
-        using std::size_t;
-        int hash=stringHash ( triggerKey.name );
-        hash+=static_cast<int> ( triggerKey.type ) *31;
-        return hash;
-    }
+    std::size_t operator() ( const TriggerKey &triggerKey ) const;
 };
 }
 
 class CEventHandler  {
     typedef std::unordered_multimap<TriggerKey, CTrigger*> TriggerMap ;
 public:
-    void gameEvent ( CGameObject *mapObject , CGameEvent *event ) const;
+    void gameEvent ( std::shared_ptr<CMapObject> mapObject , std::shared_ptr<CGameEvent> event ) const;
     void registerTrigger ( QString name,QString type,std::function<CTrigger*() > trigger );
 private:
     TriggerMap triggers;

@@ -10,11 +10,10 @@ class CMainWindow : public QMainWindow {
     Q_OBJECT
 
 public:
-    explicit CMainWindow ( QWidget *parent = 0 );
+    explicit CMainWindow ();
     ~CMainWindow();
-
 private:
     Q_SLOT void on_pushButton_clicked();
-    Ui::CMainWindow *ui;
-    CGameView*view;
+    std::shared_ptr<Ui::CMainWindow> ui;
+    std::shared_ptr<CGameView> view;
 };

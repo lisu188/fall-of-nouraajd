@@ -48,9 +48,9 @@ void PlayerStatsView::paintEvent ( QPaintEvent * ) {
     painter.end();
 }
 
-void PlayerStatsView::setPlayer ( CPlayer *value ) {
+void PlayerStatsView::setPlayer ( std::shared_ptr<CPlayer>  value ) {
     player = value;
-    connect ( player,&CPlayer::statsChanged, this,&PlayerStatsView::update );
+    connect ( player.get(),&CPlayer::statsChanged, this,&PlayerStatsView::update );
 }
 
 void PlayerStatsView::update() {
@@ -71,7 +71,7 @@ CListView::CListView ( AGamePanel *panel ) :CPlayerView ( panel ) {
 }
 
 void CListView::update() {
-    this->QGraphicsObject::update();
+    this->CGameObject::update();
     auto items=getItems();
     if ( items.size() - x * y < curPosition ) {
         curPosition = items.size() - x * y;
@@ -86,7 +86,7 @@ void CListView::update() {
     }
     int i = 0;
     for ( auto itemIter = items.begin(); itemIter != items.end(); i++, itemIter++ ) {
-        QGraphicsItem *item = *itemIter;
+        std::shared_ptr<CGameObject> item = *itemIter;
         item->setVisible ( false );
         item->setParentItem ( 0 );
         unsigned int position = i - curPosition;
@@ -157,7 +157,7 @@ void CScrollObject::setVisible ( bool visible ) {
     QGraphicsItem::setVisible ( visible );
 }
 
-void CScrollObject::mousePressEvent ( QGraphicsSceneMouseEvent * ) {
+void CScrollObject::onClickAction ( std::shared_ptr<CGameObject> ) {
     if ( isRight ) {
         stats->updatePosition ( 1 );
     } else  {
@@ -191,7 +191,7 @@ void CItemSlot::paint ( QPainter *painter, const QStyleOptionGraphicsItem *,
     painter->drawPixmap ( 0, 0, pixmap );
 }
 
-bool CItemSlot::checkType ( int slot,CItem *item ) {
+bool CItemSlot::checkType ( int slot,std::shared_ptr<CItem> item ) {
     QJsonArray config =
         CConfigurationProvider::getConfig (
             "slots.json" ).toObject()  [QString::number ( slot )].toObject() ["types"].toArray();
@@ -210,7 +210,7 @@ void CItemSlot::update() {
     }
     auto equipped=player->getEquipped();
     if ( equipped.find ( number ) !=equipped.end() ) {
-        CItem *item = equipped.at ( number );
+        std::shared_ptr<CItem>  item = equipped.at ( number );
         if ( item ) {
             item->setParentItem ( this );
             item->setPos ( 0, 0 );
@@ -218,7 +218,7 @@ void CItemSlot::update() {
             item->QGraphicsItem::update();
         }
     }
-    QGraphicsObject::update();
+    this->CGameObject::update();
 }
 
 int CItemSlot::getNumber() {
@@ -226,16 +226,16 @@ int CItemSlot::getNumber() {
 }
 
 void CItemSlot::dragMoveEvent ( QGraphicsSceneDragDropEvent *event ) {
-    QGraphicsObject::dragMoveEvent ( event );
+    this->CGameObject::dragMoveEvent ( event );
     const CObjectData *helper=dynamic_cast<const CObjectData*> ( event->mimeData() );
-    CItem *item = dynamic_cast<CItem*> (  helper->getSource() );
+    std::shared_ptr<CItem> item= cast<CItem> (  helper->getSource() );
     event->setAccepted ( checkType ( number, item ) );
 }
 
 void CItemSlot::dropEvent ( QGraphicsSceneDragDropEvent *event ) {
-    QGraphicsObject::dropEvent ( event );
+    this->CGameObject::dropEvent ( event );
     const CObjectData *helper=dynamic_cast<const CObjectData*> ( event->mimeData() );
-    CItem *item = dynamic_cast<CItem*> (  helper->getSource() );
+    std::shared_ptr<CItem> item= cast<CItem> (  helper->getSource() );
     if ( checkType ( number, item ) ) {
         dynamic_cast<CGame*> ( this->scene() )->getMap()->getPlayer()->setItem ( number, item );
     }
@@ -257,23 +257,19 @@ void CPlayerEquippedView::update() {
             it != itemSlots.end(); it++ ) {
         ( *it )->update();
     }
-    QGraphicsObject::update();
+    this->CGameObject::update();
 }
 
 CPlayerInventoryView::CPlayerInventoryView ( AGamePanel *panel ) :CListView ( panel ) {
 
 }
 
-std::set<QGraphicsItem *> CPlayerInventoryView::getItems() const {
-    std::set<QGraphicsItem *> set;
+std::set<std::shared_ptr<CGameObject> > CPlayerInventoryView::getItems() const {
     auto player=panel->getView()->getGame()->getMap()->getPlayer();
     if ( !player ) {
-        return set;
+        return std::set<std::shared_ptr<CGameObject>>();
     }
-    for ( CItem*  it:player->getInInventory() ) {
-        set.insert ( it ->toGraphicsItem() );
-    }
-    return set;
+    return convert<std::set<std::shared_ptr<CGameObject>>> ( player->getInInventory() );
 }
 
 
@@ -281,19 +277,15 @@ CPlayerIteractionView::CPlayerIteractionView ( AGamePanel *panel ) :CListView ( 
 
 }
 
-std::set<QGraphicsItem *> CPlayerIteractionView::getItems() const {
-    std::set<QGraphicsItem *> set;
+std::set<std::shared_ptr<CGameObject> > CPlayerIteractionView::getItems() const {
     auto player=panel->getView()->getGame()->getMap()->getPlayer();
     if ( !player ) {
-        return set;
+        return std::set<std::shared_ptr<CGameObject>>();
     }
-    for ( CInteraction *  it:player->getInteractions() ) {
-        set.insert ( it ->toGraphicsItem() );
-    }
-    return set;
+    return convert<std::set<std::shared_ptr<CGameObject>>> ( player->getInteractions() );
 }
 
-void CListView::setNumber ( QGraphicsItem *item, int i, int x ) {
+void CListView::setNumber ( std::shared_ptr<CGameObject> item, int i, int x ) {
     item->setVisible ( true );
     int px = i % x * 50;
     int py = i / x * 50;
@@ -303,14 +295,10 @@ void CListView::setNumber ( QGraphicsItem *item, int i, int x ) {
 CTradeItemsView::CTradeItemsView ( AGamePanel *panel  ) :CListView ( panel ) {
 }
 
-std::set<QGraphicsItem *> CTradeItemsView::getItems() const {
-    std::set<QGraphicsItem *> set;
-    CPlayer* player=panel->getView()->getGame()->getMap()->getPlayer();
-    if ( !player || !player->getMarket() ) {
-        return set;
+std::set<std::shared_ptr<CGameObject>> CTradeItemsView::getItems() const {
+    std::shared_ptr<CPlayer> player=panel->getView()->getGame()->getMap()->getPlayer();
+    if ( !player.get() || !player->getMarket() ) {
+        return std::set<std::shared_ptr<CGameObject>>();
     }
-    for ( CItem*  it:player->getMarket()->getTradeItems() ) {
-        set.insert ( it ->toGraphicsItem() );
-    }
-    return set;
+    return convert<std::set<std::shared_ptr<CGameObject>>> ( player->getMarket()->getTradeItems() );
 }

@@ -28,18 +28,7 @@ QString CAnimatedObject::getAnimation() {
     return this->path;
 }
 
-QGraphicsItem *CAnimatedObject::toGraphicsItem() {
-    return dynamic_cast<QGraphicsItem*> ( this );
-}
 
-void CAnimatedObject::drag() {
-    if ( CGameObject *object=dynamic_cast<CGameObject*> ( this ) ) {
-        QDrag *drag = new QDrag ( this );
-        drag->setMimeData ( new CObjectData ( object ) );
-        drag->setPixmap ( this->pixmap() );
-        drag->exec();
-    }
-}
 
 void CAnimatedObject::animate() {
     int time = staticAnimation->getTime();

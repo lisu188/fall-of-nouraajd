@@ -9,7 +9,11 @@ CInteraction::CInteraction() {
     setVisible ( false );
 }
 
-void CInteraction::onAction ( CCreature *first, CCreature *second ) {
+CInteraction::~CInteraction() {
+
+}
+
+void CInteraction::onAction ( std::shared_ptr<CCreature> first, std::shared_ptr<CCreature> second ) {
     qDebug() << first->getObjectType()   << "used" << this->getObjectType()
              << "against" << second->getObjectType()  ;
 
@@ -18,10 +22,10 @@ void CInteraction::onAction ( CCreature *first, CCreature *second ) {
     this->performAction ( first , second  );
 
     if ( this->effect.length() >0 ) {
-        CEffect *effect=getMap()->getObjectHandler()->createObject<CEffect*> ( getMap(),this->effect );
+        std::shared_ptr<CEffect> effect=getMap()->getObjectHandler()->createObject<CEffect> ( getMap(),this->effect );
         effect->setCaster ( first );
         if ( this->configureEffect ( effect  ) ) {
-            CCreature *victim;
+            std::shared_ptr<CCreature> victim;
             if ( effect->isBuff() ) {
                 victim=first;
             } else {
@@ -49,10 +53,10 @@ void CInteraction::setEffect ( const QString &value ) {
     effect = value;
 }
 
-void CInteraction::performAction ( CCreature *, CCreature * ) {
+void CInteraction::performAction (  std::shared_ptr<CCreature>,  std::shared_ptr<CCreature> ) {
 
 }
 
-bool CInteraction::configureEffect ( CEffect * ) {
+bool CInteraction::configureEffect ( std::shared_ptr<CEffect> ) {
     return true;
 }

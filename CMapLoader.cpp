@@ -32,7 +32,7 @@ std::shared_ptr<CMap> CMapLoader::loadMap ( std::shared_ptr<CGame> game,QString 
 
 std::shared_ptr<CMap> CMapLoader::loadMap ( std::shared_ptr<CGame> game, QString name, QString player ) {
     std::shared_ptr<CMap> map = loadMap ( game,name );
-    map->setPlayer ( map->createObject<CPlayer*> ( player )  );
+    map->setPlayer ( map->createObject<CPlayer> ( player )  );
     return map;
 }
 
@@ -56,7 +56,7 @@ void CMapLoader::handleTileLayer ( std::shared_ptr<CMap> map,const QJsonObject &
             id--;
             QString tileId =QString::number ( id );
             QString tileType= tileset[tileId].toObject() ["type"].toString();
-            map->addTile ( map->createObject<CTile*> ( tileType ), x,
+            map->addTile ( map->createObject<CTile> ( tileType ), x,
                            y, level );
         }
 }
@@ -71,7 +71,7 @@ void CMapLoader::handleObjectLayer ( std::shared_ptr<CMap> map, const QJsonObjec
 
         int xPos=object["x"].toInt() /object["width"].toInt();
         int yPos=object["y"].toInt() /object["height"].toInt();
-        CMapObject *mapObject =map->createObject<CMapObject*> ( objectType );
+        auto mapObject =map->createObject<CMapObject> ( objectType );
         if ( mapObject == nullptr ) {
             qDebug() << "Failed to load object:" << objectType
                      << objectName << "\n";

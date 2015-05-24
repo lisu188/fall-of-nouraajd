@@ -14,15 +14,16 @@ class AGamePanel : public CGameObject,public CClickAction {
     Q_OBJECT
     friend class CGuiHandler;
 public:
+    AGamePanel();
+    virtual ~AGamePanel();
     virtual void showPanel() =0;
     virtual void hidePanel() =0;
     virtual void update() =0;
     virtual void setUpPanel ( CGameView * ) =0;
-    virtual QRectF boundingRect() const=0;
     virtual void paint ( QPainter *, const QStyleOptionGraphicsItem *, QWidget * ) =0;
     virtual QString getPanelName() =0;
-    virtual void handleDrop ( CPlayerView* ,CGameObject * );
-    virtual void onClickAction ( CGameObject * ) override;
+    virtual void handleDrop ( CPlayerView* , std::shared_ptr<CGameObject> );
+    virtual void onClickAction ( std::shared_ptr<CGameObject> ) override;
     bool isShown();
     CGameView *getView();
 

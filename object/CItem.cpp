@@ -14,14 +14,14 @@ CItem::~CItem() {
 
 }
 
-void CItem::onEnter ( CGameEvent *event ) {
-    if ( auto visitor=dynamic_cast<CCreature*> ( dynamic_cast<CGameEventCaused*> ( event )->getCause() ) ) {
-        this->getMap()->removeObject ( this );
-        visitor->addItem ( this );
+void CItem::onEnter ( std::shared_ptr<CGameEvent> event ) {
+    if ( std::shared_ptr<CCreature> visitor=cast<CCreature> ( cast<CGameEventCaused> ( event )->getCause() ) ) {
+        this->getMap()->removeObject ( this->ptr<CMapObject>() );
+        visitor->addItem ( this->ptr<CItem>() );
     }
 }
 
-void CItem::onLeave ( CGameEvent * ) {
+void CItem::onLeave ( std::shared_ptr<CGameEvent> ) {
 
 }
 
@@ -33,19 +33,19 @@ void CItem::setSingleUse ( bool singleUse ) {
     this->singleUse = singleUse;
 }
 
-void CItem::onEquip ( CGameEvent *event ) {
-    dynamic_cast<CCreature*> ( dynamic_cast<CGameEventCaused*> ( event )->getCause() )->addBonus ( bonus );
-    qDebug() << dynamic_cast<CGameEventCaused*> ( event )->getCause()->getObjectType()  << "equipped" << getObjectType()
+void CItem::onEquip ( std::shared_ptr<CGameEvent> event ) {
+    cast<CCreature> ( cast<CGameEventCaused> ( event )->getCause() )->addBonus ( bonus );
+    qDebug() << cast<CGameEventCaused> ( event )->getCause()->getObjectType()  << "equipped" << getObjectType()
              << "\n";
 }
 
-void CItem::onUnequip ( CGameEvent *event ) {
-    dynamic_cast<CCreature*> ( dynamic_cast<CGameEventCaused*> ( event )->getCause() )->removeBonus ( bonus );
-    qDebug() << dynamic_cast<CGameEventCaused*> ( event )->getCause()->getObjectType()  << "unequipped" << getObjectType()
+void CItem::onUnequip ( std::shared_ptr<CGameEvent> event ) {
+    cast<CCreature> ( cast<CGameEventCaused> ( event )->getCause() )->removeBonus ( bonus );
+    qDebug() << cast<CGameEventCaused> ( event )->getCause()->getObjectType()  << "unequipped" << getObjectType()
              << "\n";
 }
 
-void CItem::onUse ( CGameEvent * event ) {
+void CItem::onUse ( std::shared_ptr<CGameEvent> event ) {
     CItemSlot *parent = dynamic_cast<CItemSlot *> ( this->parentItem() );
     if ( !parent ) {
         return;
@@ -54,7 +54,7 @@ void CItem::onUse ( CGameEvent * event ) {
     if ( slot==-1 ) {
         return;
     }
-    dynamic_cast<CCreature*> ( dynamic_cast<CGameEventCaused*> ( event )->getCause() )->setItem ( slot, this );
+    cast<CCreature> ( cast<CGameEventCaused> ( event )->getCause() )->setItem ( slot, this->ptr<CItem>() );
 }
 
 int CItem::getPower() const {
@@ -69,7 +69,7 @@ CArmor::CArmor() {
 
 }
 
-CInteraction *CItem::getInteraction() {
+std::shared_ptr<CInteraction> CItem::getInteraction() {
     return interaction;
 }
 
@@ -113,7 +113,7 @@ QString CItem::getInteractionName() {
 }
 
 void CItem::setInteractionName ( QString name ) {
-    interaction=this->getMap()->getObjectHandler()->createObject<CInteraction*> ( this->getMap(), name );
+    interaction=this->getMap()->createObject<CInteraction> (  name );
     interaction->setManaCost ( 0 );
 }
 
@@ -133,7 +133,7 @@ void CScroll::setText ( const QString &value ) {
     text = value;
 }
 
-void CScroll::onUse ( CGameEvent * ) {
+void CScroll::onUse ( std::shared_ptr<CGameEvent> ) {
     getMap()->getGame()->getGuiHandler()->showMessage ( text );
 }
 

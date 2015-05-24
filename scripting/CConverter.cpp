@@ -36,7 +36,7 @@ struct builder {
                             <std::function<Return ( Args... ) >>* ) data )->storage.bytes;
         object func=object ( handle<> ( borrowed ( incref ( obj_ptr ) ) ) );
         new ( storage ) std::function<Return ( Args... ) > ( [func] ( Args... args ) {
-            return extract<Return> ( incref ( func ( boost::ref ( args )... ).ptr() ) );
+            return extract<Return> ( incref ( func (  args...  ).ptr() ) );
         } );
         data->convertible = storage;
     }
@@ -49,7 +49,7 @@ struct builder<void,Args...> {
                             <std::function<void ( Args... ) >>* ) data )->storage.bytes;
         object func=object ( handle<> ( borrowed ( incref ( obj_ptr ) ) ) );
         new ( storage ) std::function<void ( Args... ) > ( [func] ( Args... args ) {
-            func ( boost::ref ( args )... );
+            func (  args...  );
         } );
         data->convertible = storage;
     }
@@ -62,7 +62,7 @@ struct builder<bool,Args...> {
                             <std::function<bool ( Args... ) >>* ) data )->storage.bytes;
         object func=object ( handle<> ( borrowed ( incref ( obj_ptr ) ) ) );
         new ( storage ) std::function<bool ( Args... ) > ( [func] ( Args... args ) {
-            return func ( boost::ref ( args )... ).ptr() ==Py_True;
+            return func ( args...  ).ptr() ==Py_True;
         } );
         data->convertible = storage;
     }
@@ -90,6 +90,6 @@ void initialize_converters() {
 
     function_converter<CGameObject*>();
     function_converter<CTrigger*>();
-    function_converter<void,CMapObject*>();
-    function_converter<bool,CMapObject*>();
+    function_converter<void,std::shared_ptr<CMapObject>>();
+    function_converter<bool,std::shared_ptr<CMapObject>>();
 }

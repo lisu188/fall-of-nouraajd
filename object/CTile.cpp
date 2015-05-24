@@ -13,7 +13,7 @@ CTile::~CTile() {
 
 void CTile::move ( int x, int y, int z ) {
     if (  getMap() ) {
-        getMap()->moveTile ( this,posx+x,posy+y, posz+z );
+        getMap()->moveTile ( this->ptr<CTile>(),posx+x,posy+y, posz+z );
         setXYZ ( posx+x,posy+y, posz+z );
     }
 }
@@ -39,12 +39,12 @@ void CTile::setCanStep ( bool canStep ) {
 }
 
 void CTile::addToScene ( std::shared_ptr<CGame> game ) {
-    game->addObject ( this );
+    game->addObject ( this->ptr<CTile>() );
     setXYZ (  posx , posy,posz );
 }
 
 void CTile::removeFromScene ( std::shared_ptr<CGame> game ) {
-    game->removeObject ( this );
+    game->removeObject (  this->ptr<CTile>()  );
 }
 
 void CTile::setXYZ ( int x, int y, int z ) {

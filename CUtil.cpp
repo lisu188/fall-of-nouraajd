@@ -1,12 +1,11 @@
 #include "CUtil.h"
 #include "object/CGameObject.h"
 
-CObjectData::CObjectData ( CGameObject *source ) {
-    setParent ( source );
-    this->source=source;
+CObjectData::CObjectData ( std::shared_ptr<CGameObject> object ) :source ( object ) {
+
 }
 
-CGameObject *CObjectData::getSource() const {
+std::shared_ptr<CGameObject> CObjectData::getSource() const {
     return source;
 }
 

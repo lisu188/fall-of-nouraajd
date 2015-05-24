@@ -11,7 +11,7 @@ public:
     //replace argument with bean
     CGameView ( QString mapName,QString playerType );
     std::shared_ptr<CGame> getGame() const;
-    void centerOn ( CPlayer *player );
+    void centerOn ( std::shared_ptr<CPlayer> player );
     Q_INVOKABLE void show();
 protected:
     virtual void mouseDoubleClickEvent ( QMouseEvent *e );

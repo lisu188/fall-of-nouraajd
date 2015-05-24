@@ -8,7 +8,7 @@
 CFightPanel::CFightPanel() {
     setZValue ( 5 );
     setVisible ( false );
-    fightView =new CCreatureFightView ( this );
+    fightView =new CCreatureFightView (  );
     fightView->setParentItem ( this );
 }
 
@@ -58,12 +58,11 @@ QString CFightPanel::getPanelName() {
     return "CFightPanel";
 }
 
-CCreatureFightView::CCreatureFightView ( CFightPanel *panel ) {
-    this->setParent ( panel );
+CCreatureFightView::CCreatureFightView ( ) {
     this->setPos ( 0, 0 );
 }
 
-void CCreatureFightView::setCreature ( CCreature *creature ) {
+void CCreatureFightView::setCreature ( std::shared_ptr<CCreature> creature ) {
     if ( this->creature&&this->creature!=creature ) {
         this->creature->setParentItem ( 0 );
     }
@@ -113,10 +112,10 @@ void CCreatureFightView::paint ( QPainter *painter,
         QString::fromStdString ( manaStream.str() ), opt );
 }
 
-void CFightPanel::onClickAction ( CGameObject *object ) {
-    CInteraction *interaction=dynamic_cast<CInteraction*> ( object );
+void CFightPanel::onClickAction ( std::shared_ptr<CGameObject> object ) {
+    std::shared_ptr<CInteraction> interaction=cast<CInteraction> ( object );
     if ( interaction ) {
-        CPlayer *player =interaction->getMap()->getPlayer();
+        std::shared_ptr<CPlayer>player =interaction->getMap()->getPlayer();
         if ( interaction->getManaCost() > player->getMana() ) {
             return;
         }

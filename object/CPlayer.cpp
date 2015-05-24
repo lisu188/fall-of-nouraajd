@@ -11,18 +11,18 @@ CPlayer::CPlayer() {
 }
 
 CPlayer::~CPlayer() {
-    inventory.clear();
+
 }
 
-void CPlayer::onTurn ( CGameEvent * ) {
+void CPlayer::onTurn ( std::shared_ptr<CGameEvent>  ) {
     addMana ( manaRegRate );
     turn++;
     checkQuests();
 }
 
 void CPlayer::checkQuests() {
-    std::set<CQuest*> set=quests;
-    for ( CQuest *quest:set ) {
+    auto set=quests;
+    for ( auto quest:set ) {
         if ( quest->isCompleted() ) {
             quest->onComplete();
             quests.erase ( quests.find ( quest ) );
@@ -30,23 +30,22 @@ void CPlayer::checkQuests() {
     }
 }
 
-void CPlayer::onDestroy ( CGameEvent * ) {
-    CMap* map=getMap();
-    map->addObject ( this );
-    moveTo ( map->getEntryX(),map->getEntryY(),map->getEntryZ() );
+void CPlayer::onDestroy ( std::shared_ptr<CGameEvent>  ) {
+    getMap()->addObject ( this->ptr<CPlayer>() );
+    moveTo ( getMap()->getEntryX(),getMap()->getEntryY(),getMap()->getEntryZ() );
     this->hp=1;
 }
 
-CInteraction *CPlayer::selectAction() {
-    while ( this->getSelectedAction() ==0 ) {
+std::shared_ptr<CInteraction> CPlayer::selectAction() {
+    while ( ! this->getSelectedAction() ) {
         QApplication::processEvents ( QEventLoop::WaitForMoreEvents );
     }
-    CInteraction* action=this->getSelectedAction();
+    std::shared_ptr<CInteraction> action=this->getSelectedAction();
     this->setSelectedAction ( nullptr );
     return action;
 }
 
-void CPlayer::fight ( CCreature *creature ) {
+void CPlayer::fight ( std::shared_ptr<CCreature> creature ) {
     setEnemy ( creature );
     getMap()->getGame()->getGuiHandler()->getPanel ( "CFightPanel" )->showPanel();
     CCreature::fight ( creature );
@@ -54,10 +53,10 @@ void CPlayer::fight ( CCreature *creature ) {
     setEnemy ( nullptr );
 }
 
-void CPlayer::trade ( CGameObject *object ) {
-    if ( CMarket * market=dynamic_cast<CMarket*> ( object ) ) {
+void CPlayer::trade ( std::shared_ptr<CGameObject> object ) {
+    if ( std::shared_ptr<CMarket> market=cast<CMarket> ( object ) ) {
         setMarket ( market );
-        AGamePanel*panel=getMap()->getGame()->getGuiHandler()->getPanel ( "CTradePanel" );
+        std::shared_ptr<AGamePanel> panel=getMap()->getGame()->getGuiHandler()->getPanel ( "CTradePanel" );
         panel->showPanel();
         while ( panel->isShown() ) {
             QApplication::processEvents ( QEventLoop::WaitForMoreEvents );
@@ -72,28 +71,28 @@ Coords CPlayer::getNextMove() {
     return next;
 }
 
-void CPlayer::setSelectedAction ( CInteraction *value ) {
+void CPlayer::setSelectedAction ( std::shared_ptr<CInteraction> value ) {
     selectedAction = value;
 }
 
-CCreature *CPlayer::getEnemy() const {
+std::shared_ptr<CCreature> CPlayer::getEnemy() const {
     return enemy;
 }
 
-void CPlayer::setEnemy ( CCreature *value ) {
+void CPlayer::setEnemy ( std::shared_ptr<CCreature> value ) {
     enemy = value;
 }
 
-CMarket *CPlayer::getMarket() const {
+std::shared_ptr<CMarket> CPlayer::getMarket() const {
     return market;
 }
 
-void CPlayer::setMarket ( CMarket *value ) {
+void CPlayer::setMarket ( std::shared_ptr<CMarket> value ) {
     market = value;
 }
 
 void CPlayer::addQuest ( QString questName ) {
-    CQuest *quest=getMap()->createObject<CQuest*> ( questName );
+    std::shared_ptr<CQuest> quest=getMap()->createObject<CQuest> ( questName );
     if ( quest ) {
         quests.insert ( quest );
     }
@@ -103,6 +102,6 @@ void CPlayer::setNextMove ( Coords coords ) {
     this->next=coords;
 }
 
-CInteraction *CPlayer::getSelectedAction() const {
+std::shared_ptr<CInteraction> CPlayer::getSelectedAction() const {
     return selectedAction;
 }

@@ -1,16 +1,16 @@
 #include "CWrapper.h"
 
-void CInteractionWrapper::performAction ( CCreature *first, CCreature *second ) {
+void CInteractionWrapper::performAction ( std::shared_ptr<CCreature> first, std::shared_ptr<CCreature> second ) {
     if ( auto f=this->get_override ( "performAction" ) ) {
-        f ( boost::ref ( first ),boost::ref ( second ) );
+        f ( first , second  );
     } else {
         this->CInteraction::performAction ( first,second );
     }
 }
 
-bool CInteractionWrapper::configureEffect ( CEffect *effect ) {
+bool CInteractionWrapper::configureEffect ( std::shared_ptr<CEffect> effect ) {
     if ( auto f=this->get_override ( "configureEffect" ) ) {
-        return f ( boost::ref ( effect ) );
+        return f ( effect  );
     } else {
         return this->CInteraction::configureEffect ( effect );
     }
@@ -32,17 +32,17 @@ void CTileWrapper::onStep ( CCreature *creature ) {
     }
 }
 
-void CPotionWrapper::onUse ( CGameEvent *event ) {
+void CPotionWrapper::onUse ( std::shared_ptr<CGameEvent> event ) {
     if ( auto f=this->get_override ( "onUse" ) ) {
-        f ( boost::ref ( event ) );
+        f (  event  );
     } else {
         this->CPotion::onUse ( event ) ;
     }
 }
 
-void CTriggerWrapper::trigger ( CGameObject *object, CGameEvent *event ) {
+void CTriggerWrapper::trigger ( std::shared_ptr<CGameObject> object, std::shared_ptr<CGameEvent> event ) {
     if ( auto f=this->get_override ( "trigger" ) ) {
-        f ( boost::ref ( object ) ,boost::ref ( event ) );
+        f (  object  , event );
     } else {
         this->CTrigger::trigger ( object,event ) ;
     }

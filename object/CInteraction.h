@@ -14,9 +14,10 @@ class CInteraction : public CGameObject {
     Q_PROPERTY ( QString effect READ getEffect WRITE setEffect USER true )
 public:
     CInteraction();
-    void onAction ( CCreature *first, CCreature *second );
-    virtual void performAction ( CCreature*, CCreature* );
-    virtual bool configureEffect ( CEffect* );
+    ~CInteraction();
+    void onAction ( std::shared_ptr<CCreature> first,std::shared_ptr<CCreature>  second );
+    virtual void performAction ( std::shared_ptr<CCreature>, std::shared_ptr<CCreature> );
+    virtual bool configureEffect ( std::shared_ptr<CEffect> );
 
     QString getEffect() const;
     void setEffect ( const QString &value );
@@ -26,7 +27,6 @@ public:
 
     int manaCost;
     QString effect;
-
 private:
     QGraphicsSimpleTextItem statsView;
 };

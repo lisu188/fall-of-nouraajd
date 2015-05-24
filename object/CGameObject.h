@@ -6,7 +6,7 @@
 class CGameEvent;
 class CMap;
 
-class CGameObject : public CAnimatedObject {
+class CGameObject : public CAnimatedObject,public std::enable_shared_from_this<CGameObject> {
     Q_OBJECT
     Q_PROPERTY ( QString objectType READ getObjectType WRITE setObjectType USER true )
     Q_PROPERTY ( QString tooltip READ getTooltip WRITE setTooltip USER true )
@@ -15,8 +15,13 @@ public:
     QString getObjectType() const ;
     void setObjectType ( const QString &value ) ;
 
-    CMap* getMap();
-    void setMap ( CMap *map );
+    std::shared_ptr<CMap> getMap();
+    void setMap ( std::shared_ptr<CMap> map );
+
+    template<typename T=CGameObject>
+    std::shared_ptr<T> ptr() {
+        return cast<T> ( shared_from_this() );
+    }
 
     Q_SIGNAL void mapChanged();
 
@@ -57,7 +62,9 @@ public:
 
     void setVisible ( bool vis );
 
-    virtual ~CGameObject() =0;
+    void drag();
+
+    virtual ~CGameObject() ;
 protected:
     virtual void hoverEnterEvent ( QGraphicsSceneHoverEvent *event ) override final ;
     virtual void hoverLeaveEvent ( QGraphicsSceneHoverEvent *event ) override final;
@@ -65,15 +72,15 @@ protected:
     bool hasTooltip=true;
 private:
     QString tooltip;
-    QGraphicsSimpleTextItem statsView;
-    CMap *map=nullptr;
     QString objectType;
+    QGraphicsSimpleTextItem statsView;
+    std::weak_ptr<CMap> map;
 };
 
 class Visitable {
 public:
-    virtual void onEnter ( CGameEvent * ) =0;
-    virtual void onLeave ( CGameEvent * ) =0;
+    virtual void onEnter ( std::shared_ptr<CGameEvent> ) =0;
+    virtual void onLeave ( std::shared_ptr<CGameEvent> ) =0;
 };
 
 class Moveable {
@@ -85,22 +92,22 @@ public:
 
 class Wearable {
 public:
-    virtual void onEquip ( CGameEvent * ) =0;
-    virtual void onUnequip ( CGameEvent * ) =0;
+    virtual void onEquip ( std::shared_ptr<CGameEvent> ) =0;
+    virtual void onUnequip ( std::shared_ptr<CGameEvent> ) =0;
 };
 
 class Usable {
 public:
-    virtual void onUse ( CGameEvent * ) =0;
+    virtual void onUse ( std::shared_ptr<CGameEvent> ) =0;
 };
 
 class Turnable {
 public:
-    virtual void onTurn ( CGameEvent * ) =0;
+    virtual void onTurn ( std::shared_ptr<CGameEvent> ) =0;
 };
 
 class Creatable {
 public:
-    virtual void onCreate ( CGameEvent * ) =0;
-    virtual void onDestroy ( CGameEvent * ) =0;
+    virtual void onCreate ( std::shared_ptr<CGameEvent> ) =0;
+    virtual void onDestroy ( std::shared_ptr<CGameEvent> ) =0;
 };

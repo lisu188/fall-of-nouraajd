@@ -23,11 +23,11 @@ void CGameObject::setObjectType ( const QString &value ) {
     this->objectType=value;
 }
 
-CMap *CGameObject::getMap() {
-    return this->map;
+std::shared_ptr<CMap> CGameObject::getMap() {
+    return map.lock();
 }
 
-void CGameObject::setMap ( CMap *map ) {
+void CGameObject::setMap ( std::shared_ptr<CMap> map ) {
     this->map=map;
     Q_EMIT mapChanged();
 }
@@ -42,6 +42,15 @@ void CGameObject::setTooltip ( const QString &value ) {
 
 void CGameObject::setVisible ( bool vis ) {
     QGraphicsPixmapItem::setVisible ( vis );
+}
+
+void CGameObject::drag() {
+    if ( std::shared_ptr<CGameObject> object= this->ptr()  ) {
+        QDrag *drag = new QDrag ( this );
+        drag->setMimeData ( new CObjectData ( object ) );
+        drag->setPixmap ( this->pixmap() );
+        drag->exec();
+    }
 }
 
 void CGameObject::hoverEnterEvent ( QGraphicsSceneHoverEvent *event ) {
@@ -63,5 +72,6 @@ void CGameObject::hoverLeaveEvent ( QGraphicsSceneHoverEvent *event ) {
 }
 
 void CGameObject::mousePressEvent ( QGraphicsSceneMouseEvent * ) {
-    getMap()->getMouseHandler()->handleClick ( this );
+    getMap()->getMouseHandler()->handleClick ( this->ptr() );
 }
+

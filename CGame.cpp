@@ -12,7 +12,7 @@ CGame::CGame ()  {
 }
 
 void CGame::changeMap ( QString file ) {
-    CGameLoader::changeMap ( std::shared_ptr<CGame> ( this ),file );
+    CGameLoader::changeMap ( this->ptr(),file );
 }
 
 std::shared_ptr<CMap> CGame::getMap() const {
@@ -27,24 +27,28 @@ CGameView *CGame::getView() {
     return dynamic_cast<CGameView*> ( this->views() [0] );
 }
 
-void CGame::removeObject ( CGameObject *object ) {
-    this->removeItem ( object );
+void CGame::removeObject ( std::shared_ptr<CGameObject> object ) {
+    this->removeItem ( object.get() );
 }
 
-void CGame::addObject ( CGameObject *object ) {
-    this->addItem ( object );
+void CGame::addObject ( std::shared_ptr<CGameObject> object ) {
+    this->addItem ( object.get() );
 }
 
-CGuiHandler *CGame::getGuiHandler()   {
-    return guiHandler.get ( this );
+std::shared_ptr<CGuiHandler> CGame::getGuiHandler()   {
+    return guiHandler.get ( this->ptr() );
 }
 
-CScriptHandler *CGame::getScriptHandler() {
+std::shared_ptr<CScriptHandler> CGame::getScriptHandler() {
     return scriptHandler.get();
 }
 
-CObjectHandler *CGame::getObjectHandler() {
+std::shared_ptr<CObjectHandler> CGame::getObjectHandler() {
     return objectHandler.get();
+}
+
+std::shared_ptr<CGame> CGame::ptr() {
+    return shared_from_this();
 }
 
 void CGame::keyPressEvent ( QKeyEvent *event ) {
@@ -86,16 +90,8 @@ void CGame::keyPressEvent ( QKeyEvent *event ) {
         getGuiHandler()->flipPanel ( "CCharPanel" );
         break;
     case Qt::Key_S:
-        scriptWindow.get ( std::shared_ptr<CGame> ( this ) )->setVisible ( true );
+        scriptWindow.get ( this->ptr() )->setVisible ( true );
         break;
     }
 }
-
-
-
-
-
-
-
-
 

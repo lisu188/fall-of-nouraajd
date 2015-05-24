@@ -4,8 +4,8 @@
 
 class CInteractionWrapper :public CInteraction,public boost::python::wrapper<CInteractionWrapper> {
 public:
-    virtual void performAction ( CCreature*first,CCreature*second )  override final;
-    virtual bool configureEffect ( CEffect*effect )  override final;
+    virtual void performAction ( std::shared_ptr<CCreature> first,std::shared_ptr<CCreature> second )  override final;
+    virtual bool configureEffect ( std::shared_ptr<CEffect> effect )  override final;
 };
 
 class CEffectWrapper :public CEffect,public boost::python::wrapper<CEffectWrapper> {
@@ -20,12 +20,12 @@ public:
 
 class CPotionWrapper:public CPotion,public boost::python::wrapper<CPotionWrapper> {
 public:
-    virtual void onUse ( CGameEvent * event )  override final;
+    virtual void onUse ( std::shared_ptr<CGameEvent> event )  override final;
 };
 
 class CTriggerWrapper:public CTrigger,public boost::python::wrapper<CTriggerWrapper> {
 public:
-    virtual void trigger ( CGameObject *object,CGameEvent * event )  override final;
+    virtual void trigger ( std::shared_ptr<CGameObject> object,std::shared_ptr<CGameEvent> event )  override final;
 };
 
 class CQuestWrapper:public CQuest,public boost::python::wrapper<CQuestWrapper> {
@@ -37,38 +37,38 @@ public:
 template<class T>
 class CWrapper :public T,public boost::python::wrapper<CWrapper<T>> {
 public:
-    virtual void onEnter ( CGameEvent *event ) override final {
+    virtual void onEnter ( std::shared_ptr<CGameEvent> event ) override final {
         if ( auto f=this->get_override ( "onEnter" ) ) {
-            f ( boost::ref ( event ) );
+            f ( event );
         } else {
             this->T::onEnter ( event );
         }
     }
-    virtual void onTurn ( CGameEvent *event )  override final {
+    virtual void onTurn ( std::shared_ptr<CGameEvent> event )  override final {
         if ( auto f=this->get_override ( "onTurn" ) ) {
-            f ( boost::ref ( event ) );
+            f ( event );
         } else {
             this->T::onTurn ( event );
         }
     }
 
-    virtual void onCreate ( CGameEvent *event )  override final {
+    virtual void onCreate ( std::shared_ptr<CGameEvent> event )  override final {
         if ( auto f=this->get_override ( "onCreate" ) ) {
-            f ( boost::ref ( event ) );
+            f ( event );
         } else {
             this->T::onCreate ( event );
         }
     }
-    virtual void onDestroy ( CGameEvent *event )  override final {
+    virtual void onDestroy ( std::shared_ptr<CGameEvent>  event )  override final {
         if ( auto f=this->get_override ( "onDestroy" ) ) {
-            f ( boost::ref ( event ) );
+            f ( event );
         } else {
             this->T::onDestroy ( event );
         }
     }
-    virtual void onLeave ( CGameEvent *event )  override final {
+    virtual void onLeave ( std::shared_ptr<CGameEvent>  event )  override final {
         if ( auto f=this->get_override ( "onLeave" ) ) {
-            f ( boost::ref ( event ) );
+            f ( event );
         } else {
             this->T::onLeave ( event );
         }

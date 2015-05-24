@@ -38,8 +38,8 @@ void CMap::removeObjectByName ( QString name ) {
 
 QString CMap::addObjectByName ( QString name, Coords coords ) {
     if (   this->canStep ( coords ) ) {
-        CMapObject *object = createObject<CMapObject*> ( name );
-        if ( object ) {
+        std::shared_ptr<CMapObject> object = createObject<CMapObject> ( name );
+        if ( object.get() ) {
             addObject ( object );
             object->moveTo ( coords.x, coords.y, coords.z );
             qDebug() << "Added object" << object->getObjectType() << "with name"
@@ -52,41 +52,40 @@ QString CMap::addObjectByName ( QString name, Coords coords ) {
 
 void CMap::replaceTile ( QString name, Coords coords ) {
     removeTile ( coords.x, coords.y, coords.z );
-    addTile ( createObject<CTile*> ( name ), coords.x, coords.y, coords.z );
+    addTile ( createObject<CTile> ( name ), coords.x, coords.y, coords.z );
 }
 
 Coords CMap::getLocationByName ( QString name ) {
     return this->getObjectByName ( name )->getCoords();
 }
 
-CPlayer *CMap::getPlayer() {
+std::shared_ptr<CPlayer> CMap::getPlayer() {
     return player;
 }
 
-void CMap::setPlayer ( CPlayer *player ) {
-    assert ( !this->player );
+void CMap::setPlayer ( std::shared_ptr<CPlayer> player ) {
     addObject ( player );
     player->moveTo ( entryx, entryy, entryz );
     this->player=player;
 }
 
-CLootHandler *CMap::getLootHandler()  {
-    return lootHandler.get ( this );
+std::shared_ptr<CLootHandler> CMap::getLootHandler()  {
+    return lootHandler.get ( this->ptr() );
 }
 
-CObjectHandler *CMap::getObjectHandler()  {
+std::shared_ptr<CObjectHandler> CMap::getObjectHandler()  {
     return objectHandler.get ( getGame()->getObjectHandler() );
 }
 
-CEventHandler *CMap::getEventHandler()  {
-    return eventHandler.get (  );
+std::shared_ptr<CEventHandler> CMap::getEventHandler()  {
+    return eventHandler.get ();
 }
 
-CMouseHandler *CMap::getMouseHandler()  {
-    return mouseHandler.get (  );
+std::shared_ptr<CMouseHandler> CMap::getMouseHandler()  {
+    return mouseHandler.get ();
 }
 
-void CMap::moveTile ( CTile *tile, int x, int y, int z ) {
+void CMap::moveTile ( std::shared_ptr<CTile> tile, int x, int y, int z ) {
     Coords coords=tile->getCoords();
     auto it=find ( coords ) ;
     if ( it !=end() ) {
@@ -96,8 +95,8 @@ void CMap::moveTile ( CTile *tile, int x, int y, int z ) {
 }
 
 void CMap::ensureSize() {
-    CPlayer * player=nullptr;
-    if ( !this->getGame() ||! ( player=this->getGame()->getMap() ->getPlayer() ) ) {
+    auto player=getPlayer();
+    if ( !player.get() ) {
         return;
     }
     for ( int i=-25; i<25; i++ ) {
@@ -117,7 +116,7 @@ void CMap::ensureSize() {
     }
 }
 
-bool CMap::addTile ( CTile * tile, int x, int y, int z ) {
+bool CMap::addTile ( std::shared_ptr<CTile> tile, int x, int y, int z ) {
     if ( this->contains ( x, y, z ) ) {
         return false;
     }
@@ -147,16 +146,16 @@ void CMap::mapDown() {
     currentLevel++;
 }
 
-CTile* CMap::getTile ( int x, int y, int z ) {
+std::shared_ptr<CTile> CMap::getTile ( int x, int y, int z ) {
     Coords coords ( x, y, z );
-    CTile* tile;
+    std::shared_ptr<CTile> tile;
     auto it=this->find ( coords );
     if ( it==this->end() ) {
         auto bound = boundaries[z];
         if ( x < 0 || y < 0 || x > bound.first || y > bound.second ) {
-            tile=createObject<CTile*> ( "MountainTile" );
+            tile=createObject<CTile> ( "MountainTile" );
         } else {
-            tile=createObject<CTile*> ( defaultTiles[z] );
+            tile=createObject<CTile> ( defaultTiles[z] );
         }
         this->addTile ( tile , x, y, z );
     } else {
@@ -165,7 +164,7 @@ CTile* CMap::getTile ( int x, int y, int z ) {
     return tile;
 }
 
-CTile *CMap::getTile ( Coords coords ) {
+std::shared_ptr<CTile> CMap::getTile ( Coords coords ) {
     return this->getTile ( coords.x,coords.y,coords.z );
 }
 
@@ -189,13 +188,13 @@ bool CMap::contains ( int x, int y, int z ) {
     return it != end();
 }
 
-void CMap::addObject ( CMapObject *mapObject ) {
+void CMap::addObject ( std::shared_ptr<CMapObject> mapObject ) {
     if ( mapObjects.find ( mapObject->objectName() ) !=mapObjects.end() ) {
         qFatal ( QString ( "Map object already exists: "+mapObject->objectName() ).toStdString().c_str() );
     }
-    mapObject->setMap ( this );
-    CCreature *creature =dynamic_cast<CCreature *> ( mapObject ) ;
-    if ( creature ) {
+    mapObject->setMap ( this->ptr() );
+    std::shared_ptr<CCreature> creature=cast<CCreature> ( mapObject ) ;
+    if ( creature.get() ) {
         if ( creature->getLevel() == 0 ) {
             creature->levelUp();
             creature->heal ( 0 );
@@ -204,15 +203,15 @@ void CMap::addObject ( CMapObject *mapObject ) {
         creature->addExp ( 0 );
     }
     mapObjects.insert ( std::make_pair ( mapObject->objectName(), mapObject ) );
-    getEventHandler()->gameEvent ( mapObject ,new CGameEvent ( CGameEvent::Type::onCreate ) );
+    getEventHandler()->gameEvent ( mapObject ,std::make_shared<CGameEvent> ( CGameEvent::Type::onCreate ) );
 }
 
-void CMap::removeObject ( CMapObject *mapObject ) {
+void CMap::removeObject ( std::shared_ptr<CMapObject> mapObject ) {
     if ( getGame() ) {
         getGame()->removeObject ( mapObject );
     }
     mapObjects.erase ( mapObjects.find ( mapObject->objectName() ) );
-    getEventHandler()->gameEvent ( mapObject, new CGameEvent ( CGameEvent::Type::onDestroy ) );
+    getEventHandler()->gameEvent ( mapObject, std::make_shared<CGameEvent> ( CGameEvent::Type::onDestroy ) );
 }
 
 int CMap::getEntryX() {
@@ -227,30 +226,28 @@ int CMap::getEntryZ() {
     return entryz;
 }
 
-CMapObject *CMap::getObjectByName ( QString name ) {
+std::shared_ptr<CMapObject> CMap::getObjectByName ( QString name ) {
     auto it=mapObjects.find ( name );
     if ( it!=mapObjects.end() ) {
         return ( *it ).second;
     }
-    return nullptr;
+    return std::shared_ptr<CMapObject>();
 }
 
 bool CMap::isMoving() {
     return moving;
 }
 
-
-
 void CMap::applyEffects() {
-    for ( CMapObject *object:getIf ( [] ( CMapObject* object ) {
-    return dynamic_cast<CCreature*> ( object ) !=nullptr;
+    for ( std::shared_ptr<CMapObject> object:getIf ( [] ( std::shared_ptr<CMapObject> object ) {
+    return cast<CCreature> ( object ).get();
     } ) ) {
-        dynamic_cast<CCreature*> ( object )->applyEffects();
+        cast<CCreature> ( object )->applyEffects();
     }
 }
 
-std::set<CMapObject *> CMap::getIf ( std::function<bool ( CMapObject * ) > func ) {
-    std::set<CMapObject *> objects;
+std::set<std::shared_ptr<CMapObject>> CMap::getIf ( std::function<bool ( std::shared_ptr<CMapObject> ) > func ) {
+    std::set<std::shared_ptr<CMapObject>> objects;
     for ( auto it : mapObjects ) {
         if ( func ( it.second  ) ) {
             objects.insert ( it.second );
@@ -259,16 +256,16 @@ std::set<CMapObject *> CMap::getIf ( std::function<bool ( CMapObject * ) > func 
     return objects;
 }
 
-void CMap::forAll ( std::function<void ( CMapObject * ) > func, std::function<bool ( CMapObject * ) > predicate ) {
-    for ( CMapObject* object : getMapObjectsClone() ) {
+void CMap::forAll ( std::function<void ( std::shared_ptr<CMapObject> ) > func, std::function<bool ( std::shared_ptr<CMapObject> ) > predicate ) {
+    for ( std::shared_ptr<CMapObject> object : getMapObjectsClone() ) {
         if ( predicate ( object ) ) {
             func ( object  );
         }
     }
 }
 
-void CMap::removeAll ( std::function<bool ( CMapObject * ) > func ) {
-    for ( CMapObject*object : getMapObjectsClone() ) {
+void CMap::removeAll ( std::function<bool ( std::shared_ptr<CMapObject> ) > func ) {
+    for ( std::shared_ptr<CMapObject> object : getMapObjectsClone() ) {
         if ( func ( object ) ) {
             removeObject ( object );
         }
@@ -280,53 +277,59 @@ void CMap::move () {
 
     applyEffects();
 
-    forAll ( [this] ( CMapObject*  mapObject ) {
-        getEventHandler()->gameEvent ( mapObject , new CGameEvent ( CGameEvent::Type::onTurn ) );
+    auto map=this->ptr();
+
+    forAll ( [map] ( std::shared_ptr<CMapObject> mapObject ) {
+        map->getEventHandler()->gameEvent ( mapObject , std::make_shared<CGameEvent> ( CGameEvent::Type::onTurn ) );
     } );
 
-    auto target=[] ( CMapObject *object ) {
-        return std::make_pair ( object,dynamic_cast<Moveable*> ( object )->getNextMove() );
+    auto target=[] ( std::shared_ptr<CMapObject> object ) {
+        return std::make_pair ( object,cast<Moveable> ( object )->getNextMove() );
     };
 
-    auto callback=[] ( std::pair<CMapObject*,Coords> arg ) {
+    auto callback=[] ( std::pair<std::shared_ptr<CMapObject>,Coords> arg ) {
         arg.first->move ( arg.second );
     };
 
-    auto pred=[] ( CMapObject *object ) {
-        return dynamic_cast<Moveable*> ( object );
+    auto pred=[] ( std::shared_ptr<CMapObject> object ) {
+        return cast<Moveable> ( object ).get();
     };
 
-    auto end_callback=[this]() {
-        resolveFights();
+    auto end_callback=[map]() {
+        map->resolveFights();
 
-        ensureSize();
+        map->ensureSize();
 
-        this->moving=false;
+        map->moving=false;
     };
 
     CThreadUtil::invoke_all ( getIf ( pred ),target,callback,end_callback );
 }
 
-std::set<CMapObject *> CMap::getMapObjectsClone() {
-    std::set<CMapObject*> objects;
-    for ( std::pair<QString,CMapObject*> it:mapObjects ) {
+std::set<std::shared_ptr<CMapObject>> CMap::getMapObjectsClone() {
+    std::set<std::shared_ptr<CMapObject>> objects;
+    for ( std::pair<QString,std::shared_ptr<CMapObject>> it:mapObjects ) {
         objects.insert ( it.second );
     }
     return objects;
 }
 
 void CMap::resolveFights() {
-    forAll ( [this] ( CMapObject *mapObject ) {
-        auto action=[this,mapObject] ( CMapObject *visitor ) {
+    forAll ( [this] ( std::shared_ptr<CMapObject> mapObject ) {
+        auto action=[this,mapObject] ( std::shared_ptr<CMapObject> visitor ) {
             if ( getObjectByName ( mapObject->objectName() ) && getObjectByName ( visitor->objectName() ) ) {
-                dynamic_cast<CCreature*> ( mapObject )->fight ( dynamic_cast<CCreature*> ( visitor ) );
+                cast<CCreature> ( mapObject )->fight ( cast<CCreature> ( visitor ) );
             }
         };
-        auto pred=[mapObject] ( CMapObject *visitor ) {
-            return dynamic_cast<CCreature*> ( mapObject ) &&dynamic_cast<CCreature*> ( visitor ) &&mapObject != visitor && mapObject->getCoords() == visitor->getCoords() ;
+        auto pred=[mapObject] ( std::shared_ptr<CMapObject> visitor ) {
+            return cast<CCreature> ( mapObject ) &&cast<CCreature> ( visitor ) &&mapObject != visitor && mapObject->getCoords() == visitor->getCoords() ;
         } ;
         forAll ( action,pred );
     } );
+}
+
+std::shared_ptr<CMap> CMap::ptr() {
+    return shared_from_this();
 }
 
 

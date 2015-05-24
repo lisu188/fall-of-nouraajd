@@ -9,21 +9,21 @@ CMarket::~CMarket() {
 
 }
 
-void CMarket::add ( CItem *item ) {
+void CMarket::add ( std::shared_ptr<CItem> item ) {
     items.insert ( item );
 }
 
-void CMarket::remove ( CItem *item ) {
+void CMarket::remove ( std::shared_ptr<CItem> item ) {
     items.erase ( item );
 }
 
-std::set<CItem *> CMarket::getTradeItems() {
+std::set<std::shared_ptr<CItem>> CMarket::getTradeItems() {
     return items;
 }
 
 void CMarket::setItems ( QVariantList items ) {
     for ( QVariant variant:items ) {
-        CItem* item=getMap()->createObject<CItem*> ( variant.toString() );
+        auto item=getMap()->createObject<CItem> ( variant.toString() );
         if ( item ) {
             add (  item );
         } else {

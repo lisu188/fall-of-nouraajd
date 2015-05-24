@@ -2,7 +2,7 @@
 #include "provider/CProvider.h"
 #include "CMap.h"
 
-CObjectHandler::CObjectHandler ( CObjectHandler *parent ) :parent ( parent ) {
+CObjectHandler::CObjectHandler ( std::shared_ptr<CObjectHandler> parent ) :parent ( parent ) {
 
 }
 
@@ -34,39 +34,38 @@ bool CObjectHandler::isFlagSet ( QString type, QString property ) {
     return getConfig ( type ) [property].toBool();
 }
 
-CGameObject *CObjectHandler::getType ( QString name ) {
-    auto it=constructors.find ( name );
-    if ( it !=constructors.end() ) {
-        return ( ( *it ).second ) ();
+std::shared_ptr<CGameObject> CObjectHandler::getType ( QString name ) {
+    if ( ctn ( constructors,name ) ) {
+        return std::shared_ptr<CGameObject> ( constructors[name]() );
     }
-    return nullptr;
+    return std::shared_ptr<CGameObject>();
 }
 
 void CObjectHandler::registerType ( QString name, std::function<CGameObject *() > constructor ) {
     constructors.insert ( std::make_pair ( name,constructor ) );
 }
 
-CGameObject *CObjectHandler::_createObject ( CMap *map, QString type ) {
+std::shared_ptr<CGameObject> CObjectHandler::_createObject ( std::shared_ptr<CMap> map, QString type ) {
     QJsonObject config=getConfig ( type );
     QString className=config["class"].toString().isEmpty() ? type:config["class"].toString();
-    CGameObject *object = getType ( className );
-    if ( object ) {
-        object->setObjectName ( to_hex ( object ) );
+    std::shared_ptr<CGameObject> object = getType ( className );
+    if ( object.get() ) {
+        object->setObjectName ( to_hex ( object.get() ) );
         object->setObjectType ( type );
         object->setMap ( map );
 
         QJsonObject properties=config["properties"].toObject();
         for ( auto it=properties.begin(); it!=properties.end(); it++ ) {
-            setProperty ( object ,it.key(),it.value() );
+            setProperty ( object.get() ,it.key(),it.value() );
         }
         object->setVisible ( false );
         //logProperties(object);
         return object;
     }
-    return nullptr;
+    return object;
 }
 
-void CObjectHandler::setProperty ( CGameObject *object,QString key, QJsonValue value ) const {
+void CObjectHandler::setProperty ( CGameObject * object,QString key, QJsonValue value ) const {
     QByteArray byteArray = key.toUtf8();
     const char* keyName = byteArray.constData();
     switch ( value.type() ) {
@@ -99,22 +98,22 @@ void CObjectHandler::setProperty ( CGameObject *object,QString key, QJsonValue v
             if ( typeId==QMetaType::QVariantMap ) {
                 object->setProperty ( keyName,propObject.toVariantMap() );
             } else {
-                CGameObject *qObject= dynamic_cast<CGameObject*> ( ( QObject* ) QMetaType::create ( typeId ) );
-                if ( !qObject ) {
+                CGameObject * ob=dynamic_cast<CGameObject*> ( ( QObject* ) QMetaType::create ( typeId ) );
+                if ( !ob ) {
                     qFatal ( QString ( "Object "+QString ( property.typeName() )+" is null" ).toStdString().c_str() );
                 }
-                qObject->setParent ( object );
+                ob->setParent ( object );
                 for ( auto it=propObject.begin(); it!=propObject.end(); it++ ) {
-                    setProperty ( qObject,it.key(),it.value() );
+                    setProperty ( ob,it.key(),it.value() );
                 }
-                object->setProperty ( keyName,QVariant ( typeId,qObject ) );
+                object->setProperty ( keyName,QVariant ( typeId,ob ) );
             }
         }
         break;
     }
 }
 
-QMetaProperty CObjectHandler::getProperty ( CGameObject *object, QString name ) const {
+QMetaProperty CObjectHandler::getProperty ( CGameObject * object, QString name ) const {
     for ( int i = 0; i < object->metaObject()->propertyCount(); i++ ) {
         QMetaProperty property = object->metaObject()->property ( i );
         if ( name==property.name() ) {

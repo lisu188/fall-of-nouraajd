@@ -21,16 +21,16 @@ public:
     virtual bool onEffect();
     bool isBuff() const;
     void setBuff ( bool value );
-    CCreature *getCaster() ;
-    void setCaster ( CCreature *value );
-    CCreature *getVictim() ;
-    void setVictim ( CCreature *value );
+    std::shared_ptr<CCreature> getCaster() ;
+    void setCaster ( std::shared_ptr<CCreature> value );
+    std::shared_ptr<CCreature> getVictim() ;
+    void setVictim (  std::shared_ptr<CCreature> value );
 private:
     int timeLeft=0;
     int timeTotal=0;
     Stats *bonus=0;
-    CCreature *caster=0;
-    CCreature *victim=0;
+    std::shared_ptr<CCreature> caster;
+    std::shared_ptr<CCreature> victim;
     int duration=0;
     bool buff=false;
 };

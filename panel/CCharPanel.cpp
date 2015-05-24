@@ -57,24 +57,23 @@ QString CCharPanel::getPanelName() {
     return "CCharPanel";
 }
 
-void CCharPanel::onClickAction ( CGameObject *object ) {
-    CItem*item=dynamic_cast<CItem*> ( object );
+void CCharPanel::onClickAction ( std::shared_ptr<CGameObject> object ) {
+    std::shared_ptr<CItem> item=cast<CItem> ( object );
     if ( item ) {
         if ( item->isSingleUse() ) {
-            item->getMap()->getEventHandler()->gameEvent ( item,  new CGameEventCaused ( CGameEvent::onUse,item->getMap()->getPlayer() ) );
+            item->getMap()->getEventHandler()->gameEvent ( item,  std::make_shared<CGameEventCaused> ( CGameEvent::onUse,item->getMap()->getPlayer() ) );
             item->getMap()->getPlayer()->removeFromInventory ( item );
-            delete item;
         } else {
             item->drag();
         }
     }
 }
 
-void CCharPanel::handleDrop ( CPlayerView *view, CGameObject *object ) {
+void CCharPanel::handleDrop ( CPlayerView *view, std::shared_ptr<CGameObject> object ) {
     if ( view==playerInventoryView ) {
-        CItem *item = dynamic_cast<CItem*> (  object );
+        std::shared_ptr<CItem> item=cast<CItem> ( object );
         if ( item ) {
-            item->getMap()->getEventHandler()->gameEvent ( item , new CGameEventCaused ( CGameEvent::onUse,item->getMap()->getPlayer() ) );
+            item->getMap()->getEventHandler()->gameEvent ( item ,std::make_shared<CGameEventCaused> ( CGameEvent::onUse,item->getMap()->getPlayer() ) );
         }
     }
 }

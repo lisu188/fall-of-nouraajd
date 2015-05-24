@@ -59,18 +59,18 @@ void CTradePanel::paint ( QPainter *painter, const QStyleOptionGraphicsItem *, Q
     painter->fillRect ( boundingRect(), QColor ( "BLACK" ) );
 }
 
-void CTradePanel::onClickAction ( CGameObject *object ) {
-    if ( CItem*item=dynamic_cast<CItem*> ( object ) ) {
+void CTradePanel::onClickAction ( std::shared_ptr<CGameObject> object ) {
+    if ( std::shared_ptr<CItem> item=cast<CItem> ( object ) ) {
         item->drag();
     }
 }
 
-void CTradePanel::handleDrop ( CPlayerView *view, CGameObject *object ) {
-    CPlayerView *view2=dynamic_cast<CPlayerView*> ( object->toGraphicsItem()->parentItem() );
-    if ( CItem *item=dynamic_cast<CItem*> ( object ) ) {
-        CPlayer*player=this->getView()->getGame()->getMap()->getPlayer();
+void CTradePanel::handleDrop ( CPlayerView *view, std::shared_ptr<CGameObject> object ) {
+    CPlayerView *view2=dynamic_cast<CPlayerView*> ( object->parentItem() );
+    if ( auto item=cast<CItem> ( object ) ) {
+        auto player=this->getView()->getGame()->getMap()->getPlayer();
         if ( player ) {
-            CMarket*market=player->getMarket();
+            auto market=player->getMarket();
             if ( market ) {
                 if ( view==playerInventoryView&&view2==tradeItemsView ) {
                     int cost=item->getPower() * ( item->getPower()+1 ) *market->getSell() ;

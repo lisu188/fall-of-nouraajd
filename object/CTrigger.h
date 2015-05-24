@@ -5,6 +5,6 @@ class CTrigger : public CGameObject {
     Q_OBJECT
 public:
     CTrigger();
-    virtual void trigger ( CGameObject *,CGameEvent * );
+    virtual void trigger ( std::shared_ptr<CGameObject>,std::shared_ptr<CGameEvent> );
 };
 

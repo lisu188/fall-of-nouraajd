@@ -10,8 +10,8 @@ public:
     bool isEnabled();
     void setEnabled ( bool enabled );
 
-    virtual void onEnter ( CGameEvent * );
-    virtual void onLeave ( CGameEvent * );
+    virtual void onEnter ( std::shared_ptr<CGameEvent> ) override ;
+    virtual void onLeave ( std::shared_ptr<CGameEvent> ) override ;
 private:
     bool enabled = true;
 };
