@@ -1,18 +1,10 @@
 #include "CHandler.h"
 #include "provider/CProvider.h"
 #include "CMap.h"
+#include "CGame.h"
 
 CObjectHandler::CObjectHandler ( std::shared_ptr<CObjectHandler> parent ) :parent ( parent ) {
 
-}
-
-void CObjectHandler::logProperties ( CGameObject *object ) const {
-    for ( int i = 0; i < object->metaObject()->propertyCount(); i++ ) {
-        QMetaProperty property = object->metaObject()->property ( i );
-        if ( property.isUser() ) {
-            qDebug() <<property.name() <<":"<<object->property ( property.name() );
-        }
-    }
 }
 
 void CObjectHandler::registerConfig ( QString path ) {
@@ -49,17 +41,16 @@ std::shared_ptr<CGameObject> CObjectHandler::_createObject ( std::shared_ptr<CMa
     QJsonObject config=getConfig ( type );
     QString className=config["class"].toString().isEmpty() ? type:config["class"].toString();
     std::shared_ptr<CGameObject> object = getType ( className );
-    if ( object.get() ) {
+    if ( object ) {
         object->setObjectName ( to_hex ( object.get() ) );
         object->setObjectType ( type );
         object->setMap ( map );
-
         QJsonObject properties=config["properties"].toObject();
         for ( auto it=properties.begin(); it!=properties.end(); it++ ) {
             setProperty ( object.get() ,it.key(),it.value() );
         }
+        map->getGame()->addObject ( object );
         object->setVisible ( false );
-        //logProperties(object);
         return object;
     }
     return object;

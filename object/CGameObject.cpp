@@ -29,7 +29,6 @@ std::shared_ptr<CMap> CGameObject::getMap() {
 
 void CGameObject::setMap ( std::shared_ptr<CMap> map ) {
     this->map=map;
-    Q_EMIT mapChanged();
 }
 
 QString CGameObject::getTooltip() const {

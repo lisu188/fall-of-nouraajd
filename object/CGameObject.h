@@ -12,6 +12,8 @@ class CGameObject : public CAnimatedObject,public std::enable_shared_from_this<C
     Q_PROPERTY ( QString tooltip READ getTooltip WRITE setTooltip USER true )
 public:
     CGameObject();
+    virtual ~CGameObject() ;
+
     QString getObjectType() const ;
     void setObjectType ( const QString &value ) ;
 
@@ -22,8 +24,6 @@ public:
     std::shared_ptr<T> ptr() {
         return cast<T> ( shared_from_this() );
     }
-
-    Q_SIGNAL void mapChanged();
 
     Q_INVOKABLE void setProperty ( QString name,QVariant property ) {
         QByteArray byteArray = name.toUtf8();
@@ -63,8 +63,6 @@ public:
     void setVisible ( bool vis );
 
     void drag();
-
-    virtual ~CGameObject() ;
 protected:
     virtual void hoverEnterEvent ( QGraphicsSceneHoverEvent *event ) override final ;
     virtual void hoverLeaveEvent ( QGraphicsSceneHoverEvent *event ) override final;

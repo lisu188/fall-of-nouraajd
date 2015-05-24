@@ -1,4 +1,4 @@
-#include "CMapLoader.h"
+#include "loader/CLoader.h"
 #include "CMap.h"
 #include "CGame.h"
 

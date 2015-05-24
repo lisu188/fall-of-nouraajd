@@ -49,7 +49,7 @@ template<typename T,typename... U>
 class Lazy {
 public:
     std::shared_ptr<T> get ( U... parent ) {
-        if ( ptr.get() ) {
+        if ( ptr ) {
             return ptr;
         }
         return ptr=std::make_shared<T> ( parent... );
@@ -62,22 +62,16 @@ template <typename T>
 struct function_traits
 : public function_traits<decltype ( &T::operator() ) >
   {};
-// For generic types, directly use the result of the signature of its 'operator()'
 
 template <typename ClassType, typename ReturnType, typename... Args>
-struct function_traits<ReturnType ( ClassType::* ) ( Args... ) const>
-// we specialize for pointers to member function
-{
+struct function_traits<ReturnType ( ClassType::* ) ( Args... ) const> {
     enum { arity = sizeof... ( Args ) };
-    // arity is the number of arguments.
 
     typedef ReturnType result_type;
 
     template <size_t i>
     struct arg {
         typedef typename std::tuple_element<i, std::tuple<Args...>>::type type;
-        // the i-th argument is equivalent to the i-th tuple element of a tuple
-        // composed of those arguments.
     };
 };
 
@@ -87,7 +81,7 @@ inline bool ctn ( Container &container,Value &value ) {
 }
 
 template <typename T,typename U>
-T convert ( U c ) {
+inline T convert ( U c ) {
     T t;
     for ( auto x:c ) {
         t.insert ( x );
@@ -96,18 +90,24 @@ T convert ( U c ) {
 }
 
 template<typename T>
-QString to_hex ( T object ) {
+inline QString to_hex ( T object ) {
     std::stringstream stream;
     stream << std::hex << object;
     return QString::fromStdString ( stream.str() ).toUpper();
 }
 
 template<typename T>
-QString to_hex_hash ( T object ) {
+inline QString to_hex_hash ( T object ) {
     return to_hex ( std::hash<T>() ( object ) );
 }
 
 template <typename T,typename U>
-std::shared_ptr<T> cast ( std::shared_ptr<U> ptr ) {
+inline std::shared_ptr<T> cast ( std::shared_ptr<U> ptr ) {
     return std::dynamic_pointer_cast<T> ( ptr );
 }
+
+template <typename T,typename U>
+inline bool castable ( std::shared_ptr<U> ptr ) {
+    return std::dynamic_pointer_cast<T> ( ptr ).operator bool();
+}
+

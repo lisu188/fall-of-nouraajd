@@ -36,8 +36,6 @@ private:
     void setProperty ( CGameObject *object , QString key, QJsonValue value ) const;
     QMetaProperty getProperty ( CGameObject *object , QString name ) const;
 
-    void logProperties ( CGameObject *object ) const;
-
     std::unordered_map<QString,std::function<CGameObject*() > > constructors;
     QJsonObject objectConfig;
 

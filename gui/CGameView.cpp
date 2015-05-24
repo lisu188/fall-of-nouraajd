@@ -4,7 +4,7 @@
 #include "object/CObject.h"
 #include "handler/CHandler.h"
 #include "gui/CGui.h"
-#include "CGameLoader.h"
+#include "loader/CLoader.h"
 
 void CGameView::show() {
     showNormal();

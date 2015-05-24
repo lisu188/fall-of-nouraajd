@@ -5,10 +5,16 @@
 #include "object/CObject.h"
 #include "panel/CPanel.h"
 #include "handler/CHandler.h"
-#include "CGameLoader.h"
+#include "loader/CLoader.h"
 
 CGame::CGame ()  {
 
+}
+
+CGame::~CGame() {
+    for ( QGraphicsItem* it:items() ) {
+        removeItem ( it ); //to let shared pointers do their job
+    }
 }
 
 void CGame::changeMap ( QString file ) {

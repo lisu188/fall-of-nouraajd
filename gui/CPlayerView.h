@@ -62,6 +62,7 @@ private:
     unsigned int curPosition;
     unsigned int x, y;
     CScrollObject *right, *left;
+    std::set<std::shared_ptr<CGameObject>> items;
     QPixmap pixmap;
 };
 

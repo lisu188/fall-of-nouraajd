@@ -38,15 +38,6 @@ void CTile::setCanStep ( bool canStep ) {
     this->step=canStep;
 }
 
-void CTile::addToScene ( std::shared_ptr<CGame> game ) {
-    game->addObject ( this->ptr<CTile>() );
-    setXYZ (  posx , posy,posz );
-}
-
-void CTile::removeFromScene ( std::shared_ptr<CGame> game ) {
-    game->removeObject (  this->ptr<CTile>()  );
-}
-
 void CTile::setXYZ ( int x, int y, int z ) {
     posx = x;
     posy = y;

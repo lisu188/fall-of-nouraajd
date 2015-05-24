@@ -4,7 +4,7 @@
 #include "handler/CHandler.h"
 #include "object/CObject.h"
 
-CAnimation *CAnimationProvider::getAnim ( QString path ) {
+std::shared_ptr<CAnimation> CAnimationProvider::getAnim ( QString path ) {
     static CAnimationProvider instance;
     return instance.getAnimation ( path );
 }
@@ -17,7 +17,7 @@ CAnimationProvider::~CAnimationProvider() {
 
 }
 
-CAnimation *CAnimationProvider::getAnimation ( QString path ) {
+std::shared_ptr<CAnimation> CAnimationProvider::getAnimation ( QString path ) {
     if ( this->find ( path ) != this->end() ) {
         return this->at ( path );
     }
@@ -29,11 +29,10 @@ CAnimation *CAnimationProvider::getAnimation ( QString path ) {
 }
 
 void CAnimationProvider::loadAnim ( QString path ) {
-    CAnimation *anim = new CAnimation ( );
-    QPixmap *img = 0;
+    std::shared_ptr<CAnimation> anim=std::make_shared<CAnimation>();
+    std::shared_ptr<QPixmap> img;
     std::map<int, int> timemap;
     QString time="time.json";
-
 
     QJsonArray config;
     if ( path.endsWith ( "/" ) ) {
@@ -77,7 +76,7 @@ void CAnimationProvider::loadAnim ( QString path ) {
     qDebug() << "Loaded animation:" << path   << "\n";
 }
 
-QPixmap *CAnimationProvider::getImage ( QString path ) {
+std::shared_ptr<QPixmap> CAnimationProvider::getImage ( QString path ) {
     std::shared_ptr<QFile> file = CResourcesProvider::getInstance()->getResource ( path );
     QPixmap image;
     if ( file && file->open ( QIODevice::ReadOnly ) ) {
@@ -87,24 +86,21 @@ QPixmap *CAnimationProvider::getImage ( QString path ) {
         if ( !image.hasAlphaChannel() && !path.contains ( "tiles" ) ) {
             image.setMask ( image.createHeuristicMask() );
         }
-        return new QPixmap ( image.scaled ( 50, 50, Qt::IgnoreAspectRatio,
-                                            Qt::SmoothTransformation ) );
-    } else {
-        return nullptr;
+        return std::make_shared<QPixmap> ( image.scaled ( 50, 50, Qt::IgnoreAspectRatio,
+                                           Qt::SmoothTransformation ) );
     }
+    return nullptr;
 }
 
 CAnimation::CAnimation () {
+
 }
 
 CAnimation::~CAnimation() {
-    for ( iterator it = begin(); it != end(); it++ ) {
-        delete ( *it ).second.first;
-    }
-    clear();
+
 }
 
-QPixmap *CAnimation::getImage() {
+std::shared_ptr<QPixmap> CAnimation::getImage() {
     return at ( actual ).first;
 }
 
@@ -116,7 +112,7 @@ int CAnimation::getTime() {
 }
 
 int CAnimation::size() {
-    return std::map<int, std::pair<QPixmap *, int> >::size();
+    return std::map<int, std::pair<std::shared_ptr<QPixmap>, int> >::size();
 }
 
 void CAnimation::next() {
@@ -124,7 +120,7 @@ void CAnimation::next() {
     actual = actual % size();
 }
 
-void CAnimation::add ( QPixmap *img, int time ) {
+void CAnimation::add ( std::shared_ptr<QPixmap> img, int time ) {
     insert (  std::make_pair (
                   size(),  std::make_pair ( img, time ) ) );
 }

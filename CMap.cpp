@@ -6,7 +6,7 @@
 #include "gui/CGui.h"
 #include "handler/CHandler.h"
 #include "CUtil.h"
-#include "CMapLoader.h"
+#include "loader/CLoader.h"
 #include "CThreadUtil.h"
 
 CMap::CMap ( std::shared_ptr<CGame> game ) :game ( game ) {
@@ -39,7 +39,7 @@ void CMap::removeObjectByName ( QString name ) {
 QString CMap::addObjectByName ( QString name, Coords coords ) {
     if (   this->canStep ( coords ) ) {
         std::shared_ptr<CMapObject> object = createObject<CMapObject> ( name );
-        if ( object.get() ) {
+        if ( object ) {
             addObject ( object );
             object->moveTo ( coords.x, coords.y, coords.z );
             qDebug() << "Added object" << object->getObjectType() << "with name"
@@ -96,7 +96,7 @@ void CMap::moveTile ( std::shared_ptr<CTile> tile, int x, int y, int z ) {
 
 void CMap::ensureSize() {
     auto player=getPlayer();
-    if ( !player.get() ) {
+    if ( !player ) {
         return;
     }
     for ( int i=-25; i<25; i++ ) {
@@ -120,7 +120,6 @@ bool CMap::addTile ( std::shared_ptr<CTile> tile, int x, int y, int z ) {
     if ( this->contains ( x, y, z ) ) {
         return false;
     }
-    tile->addToScene ( getGame() );
     tile->moveTo ( x,y,z );
     tile->setVisible ( true );
     return true;
@@ -207,9 +206,7 @@ void CMap::addObject ( std::shared_ptr<CMapObject> mapObject ) {
 }
 
 void CMap::removeObject ( std::shared_ptr<CMapObject> mapObject ) {
-    if ( getGame() ) {
-        getGame()->removeObject ( mapObject );
-    }
+    mapObject->setVisible ( false );
     mapObjects.erase ( mapObjects.find ( mapObject->objectName() ) );
     getEventHandler()->gameEvent ( mapObject, std::make_shared<CGameEvent> ( CGameEvent::Type::onDestroy ) );
 }
@@ -240,7 +237,7 @@ bool CMap::isMoving() {
 
 void CMap::applyEffects() {
     for ( std::shared_ptr<CMapObject> object:getIf ( [] ( std::shared_ptr<CMapObject> object ) {
-    return cast<CCreature> ( object ).get();
+    return castable<CCreature> ( object );
     } ) ) {
         cast<CCreature> ( object )->applyEffects();
     }
@@ -292,7 +289,7 @@ void CMap::move () {
     };
 
     auto pred=[] ( std::shared_ptr<CMapObject> object ) {
-        return cast<Moveable> ( object ).get();
+        return castable<Moveable> ( object );
     };
 
     auto end_callback=[map]() {
