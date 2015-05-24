@@ -16,8 +16,8 @@ void CBuilding::setEnabled ( bool enabled ) {
     this->enabled = enabled;
 }
 
-void CBuilding::onEnter ( CGameEvent * ) {
+void CBuilding::onEnter ( std::shared_ptr<CGameEvent> ) {
 }
 
-void CBuilding::onLeave ( CGameEvent * ) {
+void CBuilding::onLeave ( std::shared_ptr<CGameEvent> ) {
 }

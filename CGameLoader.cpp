@@ -20,22 +20,23 @@ void CGameLoader::startGame ( std::shared_ptr<CGame> game, QString file, QString
 
 void CGameLoader::changeMap ( std::shared_ptr<CGame> game, QString name ) {
     CThreadUtil::call_later ( [game,name]() {
-        CPlayer *player=game->getMap()->getPlayer();
-        player->setMap ( 0 );
-        std::shared_ptr<CMap> map=CMapLoader::loadMap ( game,name );
-        map->setPlayer ( player );
-        map->ensureSize();
-        game->setMap ( map );
+        CThreadUtil::wait_until ( [game]() {
+            return !game->getMap()->isMoving();
+        } );
+        std::shared_ptr<CPlayer> player=game->getMap()->getPlayer();
+        game->setMap ( CMapLoader::loadMap ( game,name ) );
+        game->getMap()->setPlayer ( player );
+        game->getMap()->ensureSize();
     } );
 }
 
-void CGameLoader::initConfigurations ( CObjectHandler *handler ) {
+void CGameLoader::initConfigurations ( std::shared_ptr<CObjectHandler> handler ) {
     for ( QString path : CResourcesProvider::getInstance()->getFiles ( CONFIG ) ) {
         handler->registerConfig ( path );
     }
 }
 
-void CGameLoader::initObjectHandler ( CObjectHandler *handler ) {
+void CGameLoader::initObjectHandler ( std::shared_ptr<CObjectHandler> handler ) {
     handler->registerType< CWeapon >();
     handler->registerType< CArmor >();
     handler->registerType< CPotion >();
@@ -59,7 +60,7 @@ void CGameLoader::initObjectHandler ( CObjectHandler *handler ) {
 
 }
 
-void CGameLoader::initScriptHandler ( CScriptHandler *handler,std::shared_ptr<CGame> game ) {
+void CGameLoader::initScriptHandler ( std::shared_ptr<CScriptHandler> handler, std::shared_ptr<CGame> game ) {
     for ( QString script:CResourcesProvider::getInstance()->getFiles ( CResType::SCRIPT ) ) {
         QString modName=QFileInfo ( script ).baseName();
         handler->import ( modName );

@@ -1,6 +1,14 @@
 #include "CGamePanel.h"
 
-void AGamePanel::handleDrop ( CPlayerView *, CGameObject * ) {
+AGamePanel::AGamePanel() {
+    this->hasTooltip=false;
+}
+
+AGamePanel::~AGamePanel() {
+
+}
+
+void AGamePanel::handleDrop ( CPlayerView *, std::shared_ptr<CGameObject>  ) {
     qFatal ( "No drop handler implemented" );
 }
 
@@ -53,6 +61,7 @@ void AGamePanel::incProperty ( QString name, int value ) {
     this->setNumericProperty ( name,this->getNumericProperty ( name )+value );
 }
 
-void AGamePanel::onClickAction ( CGameObject * ) {
+void AGamePanel::onClickAction ( std::shared_ptr<CGameObject>  ) {
     this->hidePanel();
 }
+

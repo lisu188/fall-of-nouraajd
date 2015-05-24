@@ -18,16 +18,16 @@ CGameView::CGameView ( QString mapName , QString playerType ) :game ( CGameLoade
     setViewportUpdateMode ( QGraphicsView::FullViewportUpdate );
     setScene ( game.get() );
     CGameLoader::startGame ( game,mapName ,playerType );
-    CPlayer *player = getGame()->getMap()->getPlayer();
+    std::shared_ptr<CPlayer> player= getGame()->getMap()->getPlayer();
     playerStatsView.setParent ( this );
     playerStatsView.show();
     playerStatsView.setPlayer ( player );
     auto refresh=[this]() {
         getGame()->getGuiHandler()->refresh();
     };
-    connect ( player,&CCreature::inventoryChanged,refresh );
-    connect ( player,&CCreature::equippedChanged,refresh );
-    connect ( player,&CCreature::skillsChanged,refresh );
+    connect ( player.get(),&CCreature::inventoryChanged,refresh );
+    connect ( player.get(),&CCreature::equippedChanged,refresh );
+    connect ( player.get(),&CCreature::skillsChanged,refresh );
     init = true;
 }
 
@@ -50,9 +50,7 @@ void CGameView::resizeEvent ( QResizeEvent *event ) {
             playerStatsView.move ( 0, 0 );
             getGame()->getGuiHandler()->refresh();
         }
-
-        CPlayer *player =getGame()->getMap()->getPlayer();
-        centerOn ( player );
+        centerOn ( getGame()->getMap()->getPlayer() );
     }
 }
 
@@ -69,7 +67,7 @@ std::shared_ptr<CGame> CGameView::getGame() const {
     return game;
 }
 
-void CGameView::centerOn ( CPlayer *player ) {
-    this->QGraphicsView::centerOn ( player );
+void CGameView::centerOn ( std::shared_ptr<CPlayer> player ) {
+    this->QGraphicsView::centerOn ( player.get() );
 }
 

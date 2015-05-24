@@ -30,8 +30,8 @@ static int randint ( int i,int j ) { return rand() % ( j-i+1 )+i; }
 BOOST_PYTHON_MODULE ( _game ) {
     initialize_converters();
     def ( "randint", randint );
-    class_<CGameObject,boost::noncopyable> ( "CGameObject",no_init )
-    PY_PROPERTY_ACCESSOR ( CGameObject );
+    class_<CGameObject,boost::noncopyable,std::shared_ptr<CGameObject>> ( "CGameObject",no_init )
+            PY_PROPERTY_ACCESSOR ( CGameObject );
     class_<Coords> ( "Coords",init<int,int,int>() )
     .def_readonly ( "x",&Coords::x )
     .def_readonly ( "y",&Coords::y )
@@ -41,61 +41,61 @@ BOOST_PYTHON_MODULE ( _game ) {
             .def ( "removeObjectByName",&CMap::removeObjectByName )
             .def ( "removeObject",&CMap::removeObject )
             .def ( "replaceTile",&CMap::replaceTile )
-            .def ( "getPlayer",&CMap::getPlayer,return_internal_reference<>() )
+            .def ( "getPlayer",&CMap::getPlayer )
             .def ( "getLocationByName",&CMap::getLocationByName )
             .def ( "removeAll",&CMap::removeAll )
-            .def ( "getObjectHandler",&CMap::getObjectHandler,return_internal_reference<>() )
-            .def ( "getEventHandler",&CMap::getEventHandler,return_internal_reference<>() )
+            .def ( "getObjectHandler",&CMap::getObjectHandler )
+            .def ( "getEventHandler",&CMap::getEventHandler )
             .def ( "addObject",&CMap::addObject )
-            .def ( "createObject",&CMap::createObject<CGameObject*> ,return_internal_reference<>() )
+            .def ( "createObject",&CMap::createObject<CGameObject>  )
             .def ( "getGame",&CMap::getGame );
     void ( CObjectHandler::*registerType ) ( QString,std::function<CGameObject*() > )  =&CObjectHandler::registerType;
-    class_<CObjectHandler,boost::noncopyable> ( "CObjectHandler",no_init )
-    .def ( "registerType",registerType );
+    class_<CObjectHandler,boost::noncopyable,std::shared_ptr<CObjectHandler>> ( "CObjectHandler",no_init )
+            .def ( "registerType",registerType );
     void ( CMapObject::*moveTo ) ( int,int,int ) =&CMapObject::moveTo ;
     void ( CMapObject::*move ) ( int,int,int ) =&CMapObject::move ;
-    class_<CMapObject,bases<CGameObject>,boost::noncopyable> ( "CMapObject",no_init )
-    .def ( "getMap",&CMapObject::getMap,return_internal_reference<>() )
-    .def ( "moveTo",moveTo )
-    .def ( "move",move )
-    .def ( "getCoords",&CMapObject::getCoords )
-    .def ( "setCoords",&CMapObject::setCoords );
-    class_<CEvent,bases<CMapObject>,boost::noncopyable> ( "CEventBase" );
-    class_<CInteraction,bases<CGameObject>,boost::noncopyable> ( "CInteraction" )
-    .def ( "onAction",&CInteraction::onAction , return_internal_reference<>() );
-    class_<CEffect,bases<CGameObject>,boost::noncopyable> ( "CEffectBase"  )
-    .def ( "getBonus",&CEffect::getBonus , return_internal_reference<>() )
-    .def ( "setBonus",&CEffect::setBonus )
-    .def ( "getCaster",&CEffect::getCaster  , return_internal_reference<>() )
-    .def ( "getVictim",&CEffect::getVictim , return_internal_reference<>() )
-    .def ( "getTimeLeft",&CEffect::getTimeLeft );
+    class_<CMapObject,bases<CGameObject>,boost::noncopyable,std::shared_ptr<CMapObject>> ( "CMapObject",no_init )
+            .def ( "getMap",&CMapObject::getMap )
+            .def ( "moveTo",moveTo )
+            .def ( "move",move )
+            .def ( "getCoords",&CMapObject::getCoords )
+            .def ( "setCoords",&CMapObject::setCoords );
+    class_<CEvent,bases<CMapObject>,boost::noncopyable,std::shared_ptr<CEvent>> ( "CEventBase" );
+    class_<CInteraction,bases<CGameObject>,boost::noncopyable,std::shared_ptr<CInteraction>> ( "CInteraction" )
+            .def ( "onAction",&CInteraction::onAction  );
+    class_<CEffect,bases<CGameObject>,boost::noncopyable,std::shared_ptr<CEffect>> ( "CEffectBase"  )
+            .def ( "getBonus",&CEffect::getBonus , return_internal_reference<>() )
+            .def ( "setBonus",&CEffect::setBonus )
+            .def ( "getCaster",&CEffect::getCaster  )
+            .def ( "getVictim",&CEffect::getVictim  )
+            .def ( "getTimeLeft",&CEffect::getTimeLeft );
     class_<CEffectWrapper,bases<CEffect>,boost::noncopyable,std::shared_ptr<CEffectWrapper>> ( "CEffect" )
             .def ( "onEffect",&CEffectWrapper::onEffect );
-    class_<CItem,bases<CMapObject>,boost::noncopyable> ( "CItem" );
-    class_<CWeapon,bases<CItem>,boost::noncopyable> ( "CWeapon" )
-    .def ( "getInteraction",&CWeapon::getInteraction, return_internal_reference<>() );
+    class_<CItem,bases<CMapObject>,boost::noncopyable,std::shared_ptr<CItem>> ( "CItem" );
+    class_<CWeapon,bases<CItem>,boost::noncopyable,std::shared_ptr<CWeapon>> ( "CWeapon" )
+            .def ( "getInteraction",&CWeapon::getInteraction );
     class_<CBuilding,bases<CMapObject>,boost::noncopyable> ( "CBuildingBase" );
     void ( CCreature::*hurtInt ) ( int ) = &CCreature::hurt;
     void ( CCreature::*hurtDmg ) ( Damage ) = &CCreature::hurt;
-    class_<CCreature,bases<CMapObject>,boost::noncopyable> ( "CCreature",no_init )
-    .def ( "getDmg",&CCreature::getDmg )
-    .def ( "hurt",hurtInt )
-    .def ( "hurt",hurtDmg )
-    .def ( "getWeapon",&CCreature::getWeapon, return_internal_reference<>() )
-    .def ( "getHpRatio",&CCreature::getHpRatio )
-    .def ( "isAlive",&CCreature::isAlive )
-    .def ( "getMana",&CCreature::getMana )
-    .def ( "healProc",&CCreature::healProc )
-    .def ( "heal",&CCreature::heal )
-    .def ( "getHpMax",&CCreature::getHpMax )
-    .def ( "getLevel",&CCreature::getLevel )
-    .def ( "getStats",&CCreature::getStats )
-    .def ( "addManaProc",&CCreature::addManaProc )
-    .def ( "isPlayer",&CCreature::isPlayer )
-    .def ( "trade",&CCreature::trade );
-    class_<CPlayer,bases<CCreature>,boost::noncopyable> ( "CPlayer" )
-    .def ( "addQuest",&CPlayer::addQuest );
-    class_<CMonster,bases<CCreature>,boost::noncopyable> ( "CMonster" );
+    class_<CCreature,bases<CMapObject>,boost::noncopyable,std::shared_ptr<CCreature>> ( "CCreature",no_init )
+            .def ( "getDmg",&CCreature::getDmg )
+            .def ( "hurt",hurtInt )
+            .def ( "hurt",hurtDmg )
+            .def ( "getWeapon",&CCreature::getWeapon )
+            .def ( "getHpRatio",&CCreature::getHpRatio )
+            .def ( "isAlive",&CCreature::isAlive )
+            .def ( "getMana",&CCreature::getMana )
+            .def ( "healProc",&CCreature::healProc )
+            .def ( "heal",&CCreature::heal )
+            .def ( "getHpMax",&CCreature::getHpMax )
+            .def ( "getLevel",&CCreature::getLevel )
+            .def ( "getStats",&CCreature::getStats )
+            .def ( "addManaProc",&CCreature::addManaProc )
+            .def ( "isPlayer",&CCreature::isPlayer )
+            .def ( "trade",&CCreature::trade );
+    class_<CPlayer,bases<CCreature>,boost::noncopyable,std::shared_ptr<CPlayer>> ( "CPlayer" )
+            .def ( "addQuest",&CPlayer::addQuest );
+    class_<CMonster,bases<CCreature>,boost::noncopyable,std::shared_ptr<CMonster>> ( "CMonster" );
     class_<CWrapper<CBuilding>,bases<CBuilding>,boost::noncopyable,std::shared_ptr<CWrapper<CBuilding>> > ( "CBuilding" )
             .def ( "onCreate",&CWrapper<CBuilding>::onCreate )
             .def ( "onTurn",&CWrapper<CBuilding>::onTurn )
@@ -113,36 +113,37 @@ BOOST_PYTHON_MODULE ( _game ) {
     .def ( "configureEffect",&CInteractionWrapper::configureEffect );
     class_<Damage,bases<CGameObject>> ( "Damage" );
     class_<Stats,bases<CGameObject>> ( "Stats" );
-    class_<AGamePanel,boost::noncopyable> ( "AGamePanel",no_init )
-    .def ( "showPanel",&AGamePanel::showPanel );
-    class_<CTextPanel,bases<AGamePanel>,boost::noncopyable> ( "CTextPanel" );
-    class_<CFightPanel,bases<AGamePanel>,boost::noncopyable> ( "CFightPanel" );
-    class_<CCharPanel,bases<AGamePanel>,boost::noncopyable> ( "CCharPanel" );
-    class_<CGuiHandler,boost::noncopyable> ( "CGuiHandler",no_init )
-    .def ( "showMessage",&CGuiHandler::showMessage )
-    .def ( "showPanel",&CGuiHandler::showPanel )
-    .def ( "hidePanel",&CGuiHandler::hidePanel )
-    .def ( "flipPanel",&CGuiHandler::flipPanel ) ;
-    class_<CTile,bases<CGameObject>,boost::noncopyable> ( "CTileBase" );
+    class_<AGamePanel,boost::noncopyable,std::shared_ptr<AGamePanel>> ( "AGamePanel",no_init )
+            .def ( "showPanel",&AGamePanel::showPanel );
+    class_<CTextPanel,bases<AGamePanel>,boost::noncopyable,std::shared_ptr<CTextPanel>> ( "CTextPanel" );
+    class_<CFightPanel,bases<AGamePanel>,boost::noncopyable,std::shared_ptr<CFightPanel>> ( "CFightPanel" );
+    class_<CCharPanel,bases<AGamePanel>,boost::noncopyable,std::shared_ptr<CCharPanel>> ( "CCharPanel" );
+    class_<CTradePanel,bases<AGamePanel>,boost::noncopyable,std::shared_ptr<CTradePanel>> ( "CTradePanel" );
+    class_<CGuiHandler,boost::noncopyable,std::shared_ptr<CGuiHandler>> ( "CGuiHandler",no_init )
+            .def ( "showMessage",&CGuiHandler::showMessage )
+            .def ( "showPanel",&CGuiHandler::showPanel )
+            .def ( "hidePanel",&CGuiHandler::hidePanel )
+            .def ( "flipPanel",&CGuiHandler::flipPanel ) ;
+    class_<CTile,bases<CGameObject>,boost::noncopyable,std::shared_ptr<CTile>> ( "CTileBase" );
     class_<CTileWrapper,bases<CTile>,boost::noncopyable,std::shared_ptr<CTileWrapper> > ( "CTile" ).
     def ( "onStep",&CTileWrapper::onStep );
-    class_<CPotion,bases<CItem>,boost::noncopyable> ( "CItemBase" );
+    class_<CPotion,bases<CItem>,boost::noncopyable,std::shared_ptr<CPotion>> ( "CPotionBase" );
     class_<CPotionWrapper,bases<CPotion>,boost::noncopyable,std::shared_ptr<CPotionWrapper> > ( "CPotion" ).
     def ( "onUse",&CPotionWrapper::onUse );
-    class_<CGameEvent,boost::noncopyable> ( "CGameEvent",no_init );
-    class_<CGameEventCaused,bases<CGameEvent>,boost::noncopyable> ( "CGameEventCaused",no_init )
-    .def ( "getCause",&CGameEventCaused::getCause,return_internal_reference<>() );
-    class_<CTrigger,bases<CGameObject>,boost::noncopyable> ( "CTriggerBase",no_init );
+    class_<CGameEvent,boost::noncopyable,std::shared_ptr<CGameEvent>> ( "CGameEvent",no_init );
+    class_<CGameEventCaused,bases<CGameEvent>,boost::noncopyable,std::shared_ptr<CGameEventCaused>> ( "CGameEventCaused",no_init )
+            .def ( "getCause",&CGameEventCaused::getCause );
+    class_<CTrigger,bases<CGameObject>,boost::noncopyable,std::shared_ptr<CTrigger>> ( "CTriggerBase",no_init );
     class_<CTriggerWrapper,bases<CTrigger>,boost::noncopyable,std::shared_ptr<CTriggerWrapper>> ( "CTrigger" )
             .def ( "trigger",&CTriggerWrapper::trigger );
-    class_<CQuest,bases<CGameObject>,boost::noncopyable> ( "CQuestBase",no_init );
+    class_<CQuest,bases<CGameObject>,boost::noncopyable,std::shared_ptr<CQuest>> ( "CQuestBase",no_init );
     class_<CQuestWrapper,bases<CQuest>,boost::noncopyable,std::shared_ptr<CQuestWrapper>> ( "CQuest" )
             .def ( "isCompleted",&CQuestWrapper::isCompleted )
             .def ( "onComplete",&CQuestWrapper::onComplete );
-    class_<CEventHandler,boost::noncopyable> ( "CEventHandler",no_init ).def ( "registerTrigger",&CEventHandler::registerTrigger );
+    class_<CEventHandler,boost::noncopyable,std::shared_ptr<CEventHandler>> ( "CEventHandler",no_init ).def ( "registerTrigger",&CEventHandler::registerTrigger );
     class_<CGame,boost::noncopyable,std::shared_ptr<CGame>> ( "CGame",no_init )
             .def ( "getMap",&CGame::getMap )
             .def ( "changeMap",&CGame::changeMap )
-            .def ( "getGuiHandler",&CGame::getGuiHandler,return_internal_reference<>() )
-            .def ( "getObjectHandler",&CGame::getObjectHandler,return_internal_reference<>() );
+            .def ( "getGuiHandler",&CGame::getGuiHandler )
+            .def ( "getObjectHandler",&CGame::getObjectHandler );
 }

@@ -2,7 +2,6 @@
 #include "CGlobal.h"
 
 #include "CUtil.h"
-#include "object/CObject.h"
 #include "handler/CHandler.h"
 #include "provider/CProvider.h"
 
@@ -13,22 +12,24 @@ class CLootHandler;
 class CInteraction;
 class CObjectHandler;
 class CScriptHandler;
+class CEventHandler;
+class CMouseHandler;
 class CGuiHandler;
 
 class CMap : public QObject,
-    private std::unordered_map<Coords, CTile*> {
+    private std::unordered_map<Coords, std::shared_ptr<CTile>>,public std::enable_shared_from_this<CMap> {
     friend class CMapLoader;
     Q_OBJECT
 public:
     CMap ( std::shared_ptr<CGame> game );
-    bool addTile ( CTile *tile, int x, int y, int z );
+    bool addTile ( std::shared_ptr<CTile> tile, int x, int y, int z );
     void removeTile ( int x, int y, int z );
     void move ();
-    CTile *getTile ( int x, int y, int z );
-    CTile *getTile ( Coords coords );
+    std::shared_ptr<CTile> getTile ( int x, int y, int z );
+    std::shared_ptr<CTile> getTile ( Coords coords );
     bool contains ( int x, int y, int z );
-    void addObject ( CMapObject *mapObject );
-    void removeObject ( CMapObject *mapObject );
+    void addObject ( std::shared_ptr<CMapObject> mapObject );
+    void removeObject ( std::shared_ptr<CMapObject> mapObject );
     void ensureSize();
     std::shared_ptr<CGame> getGame() const;
     void mapUp();
@@ -45,37 +46,38 @@ public:
     QString addObjectByName ( QString name,Coords coords );
     void replaceTile ( QString name,Coords coords );
     Coords getLocationByName ( QString name );
-    CPlayer *getPlayer();
-    void setPlayer ( CPlayer *player );
-    void moveTile ( CTile* tile,int x, int y, int z );
-    CLootHandler *getLootHandler();
-    CObjectHandler *getObjectHandler() ;
-    CEventHandler *getEventHandler() ;
-    CMouseHandler *getMouseHandler() ;
+    std::shared_ptr<CPlayer> getPlayer();
+    void setPlayer ( std::shared_ptr<CPlayer> player );
+    void moveTile ( std::shared_ptr<CTile> tile, int x, int y, int z );
+    std::shared_ptr<CLootHandler> getLootHandler();
+    std::shared_ptr<CObjectHandler> getObjectHandler() ;
+    std::shared_ptr<CEventHandler> getEventHandler() ;
+    std::shared_ptr<CMouseHandler> getMouseHandler() ;
     bool canStep ( int x,int y,int z );
     bool canStep ( const Coords &coords );
-    CMapObject *getObjectByName ( QString name );
+    std::shared_ptr<CMapObject> getObjectByName ( QString name );
     bool isMoving();
     void applyEffects();
-    std::set<CMapObject *> getIf (  std::function<bool ( CMapObject* ) > func );
-    void forAll ( std::function<void ( CMapObject* ) > func , std::function<bool ( CMapObject* ) >  predicate=[] ( CMapObject* ) {return true;} );
-    void removeAll ( std::function<bool ( CMapObject* ) > func );
+    std::set<std::shared_ptr<CMapObject>> getIf ( std::function<bool ( std::shared_ptr<CMapObject> ) > func );
+    void forAll ( std::function<void ( std::shared_ptr<CMapObject> ) > func , std::function<bool ( std::shared_ptr<CMapObject> ) >  predicate=[] ( std::shared_ptr<CMapObject> ) {return true;} );
+    void removeAll ( std::function<bool ( std::shared_ptr<CMapObject> ) > func );
     template<typename T>
-    T createObject ( QString name ) {
-        return getObjectHandler()->createObject<T> ( this,name );
+    std::shared_ptr<T> createObject ( QString name ) {
+        return getObjectHandler()->createObject<T> ( this->ptr(),name );
     }
+    std::shared_ptr<CMap> ptr();
 private:
-    std::set<CMapObject *> getMapObjectsClone();
+    std::set<std::shared_ptr<CMapObject> > getMapObjectsClone();
     void resolveFights();
-    std::unordered_map<QString,CMapObject *> mapObjects;
+    std::unordered_map<QString,std::shared_ptr<CMapObject>> mapObjects;
     std::weak_ptr<CGame> game;
-    CPlayer *player=0;
+    std::shared_ptr<CPlayer> player;
     int currentLevel = 0;
     std::map<int, QString> defaultTiles;
     std::map<int, std::pair<int, int> > boundaries;
     int entryx, entryz, entryy;
-    Lazy<CLootHandler,CMap*> lootHandler;
-    Lazy<CObjectHandler,CObjectHandler*> objectHandler;
+    Lazy<CLootHandler,std::shared_ptr<CMap>> lootHandler;
+    Lazy<CObjectHandler,std::shared_ptr<CObjectHandler>> objectHandler;
     Lazy<CEventHandler> eventHandler;
     Lazy<CMouseHandler> mouseHandler;
     bool moving=false;

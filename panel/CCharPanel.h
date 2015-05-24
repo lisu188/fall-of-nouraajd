@@ -13,12 +13,9 @@ public:
     virtual void setUpPanel ( CGameView *view ) override;
     virtual void update() override;
     virtual QString getPanelName() override;
-    virtual void onClickAction ( CGameObject *object ) override;
+    virtual void onClickAction ( std::shared_ptr<CGameObject> object ) override;
+    virtual void handleDrop ( CPlayerView *view, std::shared_ptr<CGameObject> object ) override;
 private:
     CListView *playerInventoryView;
     CPlayerEquippedView *playerEquippedView;
-
-    // AGamePanel interface
-public:
-    virtual void handleDrop ( CPlayerView *view, CGameObject *object );
 };

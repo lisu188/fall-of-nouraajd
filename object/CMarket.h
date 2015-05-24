@@ -10,9 +10,9 @@ class CMarket : public CGameObject {
 public:
     CMarket();
     ~CMarket();
-    void add ( CItem*item );
-    void remove ( CItem*item );
-    std::set<CItem*> getTradeItems();
+    void add ( std::shared_ptr<CItem> item );
+    void remove ( std::shared_ptr<CItem> item );
+    std::set<std::shared_ptr<CItem> > getTradeItems();
     void setItems ( QVariantList items );
     QVariantList getItems ();
     int getSell() const;
@@ -22,7 +22,7 @@ public:
     void setBuy ( int value );
 
 private:
-    std::set<CItem*> items;
+    std::set<std::shared_ptr<CItem>> items;
     int sell=100;
     int buy=80;
 };

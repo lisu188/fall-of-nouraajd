@@ -40,25 +40,22 @@ class QObject;
 class CObjectData:public QMimeData {
     Q_OBJECT
 public:
-    CGameObject *source;
-    CObjectData ( CGameObject *source );
-    CGameObject *getSource() const;
+    std::shared_ptr<CGameObject> source;
+    CObjectData ( std::shared_ptr<CGameObject> object );
+    std::shared_ptr<CGameObject> getSource() const;
 };
 
 template<typename T,typename... U>
 class Lazy {
 public:
-    T *get ( U... parent ) {
-        if ( ptr ) {
+    std::shared_ptr<T> get ( U... parent ) {
+        if ( ptr.get() ) {
             return ptr;
         }
-        return ptr=new T ( parent... );
-    }
-    ~Lazy() {
-        delete ptr;
+        return ptr=std::make_shared<T> ( parent... );
     }
 private :
-    T* ptr=nullptr;
+    std::shared_ptr<T> ptr;
 };
 
 template <typename T>
@@ -85,7 +82,7 @@ struct function_traits<ReturnType ( ClassType::* ) ( Args... ) const>
 };
 
 template <typename Container,typename Value>
-inline bool contains ( Container container,Value value ) {
+inline bool ctn ( Container &container,Value &value ) {
     return container.find ( value ) !=container.end();
 }
 
@@ -108,4 +105,9 @@ QString to_hex ( T object ) {
 template<typename T>
 QString to_hex_hash ( T object ) {
     return to_hex ( std::hash<T>() ( object ) );
+}
+
+template <typename T,typename U>
+std::shared_ptr<T> cast ( std::shared_ptr<U> ptr ) {
+    return std::dynamic_pointer_cast<T> ( ptr );
 }

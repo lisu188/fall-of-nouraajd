@@ -54,23 +54,22 @@ int CMapObject::getPosX() const {
     return posx;
 }
 
-void CMapObject::onTurn ( CGameEvent * ) {
+void CMapObject::onTurn ( std::shared_ptr<CGameEvent> ) {
 
 }
 
-void CMapObject::onCreate ( CGameEvent * ) {
+void CMapObject::onCreate ( std::shared_ptr<CGameEvent> ) {
 
 }
 
-void CMapObject::onDestroy ( CGameEvent * ) {
+void CMapObject::onDestroy ( std::shared_ptr<CGameEvent> ) {
 
 }
 
 //inline this slot
 void CMapObject::onMapChanged() {
-    this->QObject::setParent ( getMap() );
     if ( getMap() &&getMap()->getGame() ) { // && this->getGame() != getMap()->getGame() ) { //see if still works
-        getMap()->getGame()->addObject ( this );
+        getMap()->getGame()->addObject ( this->ptr<CMapObject>() );
     }
 }
 

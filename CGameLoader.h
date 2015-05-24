@@ -8,8 +8,8 @@ public:
     static void startGame ( std::shared_ptr<CGame> game, QString file ,QString player );
     static void changeMap ( std::shared_ptr<CGame> game,QString file );
 private:
-    static void initObjectHandler ( CObjectHandler *handler );
-    static void initConfigurations ( CObjectHandler *handler );
-    static void initScriptHandler ( CScriptHandler *handler,std::shared_ptr<CGame> game ) ;
+    static void initObjectHandler ( std::shared_ptr<CObjectHandler> handler );
+    static void initConfigurations ( std::shared_ptr<CObjectHandler> handler );
+    static void initScriptHandler ( std::shared_ptr<CScriptHandler> handler,std::shared_ptr<CGame> game ) ;
 };
 

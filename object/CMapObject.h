@@ -18,10 +18,10 @@ public:
     int getPosY() const;
     int getPosZ() const;
 
-    virtual void onTurn ( CGameEvent * ) override;
+    virtual void onTurn ( std::shared_ptr<CGameEvent> ) override;
 
-    virtual void onCreate ( CGameEvent * ) override;
-    virtual void onDestroy ( CGameEvent * ) override;
+    virtual void onCreate ( std::shared_ptr<CGameEvent> ) override;
+    virtual void onDestroy ( std::shared_ptr<CGameEvent> ) override;
 
     Coords getCoords();
     void setCoords ( Coords coords );

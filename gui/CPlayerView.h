@@ -11,7 +11,7 @@ class CItemSlot;
 class CGameView;
 class CTradePanel;
 
-class CPlayerView: public QGraphicsObject {
+class CPlayerView: public CGameObject {
     Q_OBJECT
 public:
     CPlayerView ( AGamePanel* panel );
@@ -35,13 +35,13 @@ class PlayerStatsView : public QWidget {
     Q_OBJECT
 public:
     explicit PlayerStatsView();
-    void setPlayer ( CPlayer *value );
+    void setPlayer ( std::shared_ptr<CPlayer> value );
     void update();
 protected:
     void paintEvent ( QPaintEvent * );
 
 private:
-    CPlayer *player = 0;
+    std::shared_ptr<CPlayer> player;
 };
 
 class CScrollObject;
@@ -56,9 +56,9 @@ public:
     void setXY ( int x, int y );
     void update();
 protected:
-    virtual std::set<QGraphicsItem *> getItems() const=0;
+    virtual std::set<std::shared_ptr<CGameObject>> getItems() const=0;
 private:
-    void setNumber ( QGraphicsItem *item,int i, int x );
+    void setNumber ( std::shared_ptr<CGameObject> item, int i, int x );
     unsigned int curPosition;
     unsigned int x, y;
     CScrollObject *right, *left;
@@ -70,7 +70,7 @@ class CPlayerInventoryView:public CListView {
 public:
     CPlayerInventoryView ( AGamePanel *panel );
 protected:
-    virtual std::set<QGraphicsItem *> getItems() const;
+    virtual std::set<std::shared_ptr<CGameObject>> getItems() const override;
 };
 
 class CPlayerIteractionView:public CListView {
@@ -78,7 +78,7 @@ class CPlayerIteractionView:public CListView {
 public:
     CPlayerIteractionView ( AGamePanel *panel );
 protected:
-    virtual std::set<QGraphicsItem *> getItems() const;
+    virtual std::set<std::shared_ptr<CGameObject>> getItems() const override;
 };
 
 class CTradeItemsView : public CListView {
@@ -86,29 +86,26 @@ class CTradeItemsView : public CListView {
 public:
     CTradeItemsView ( AGamePanel *panel  );
 protected:
-    virtual std::set<QGraphicsItem *> getItems() const;
+    virtual std::set<std::shared_ptr<CGameObject>> getItems() const override;
 };
 
-class CScrollObject : public CAnimatedObject {
+class CScrollObject : public CGameObject,public CClickAction {
 public:
     CScrollObject ( CListView *stats, bool isRight );
     void setVisible ( bool visible );
-
+    void onClickAction ( std::shared_ptr<CGameObject> ) override;
 private:
     bool isRight;
     CListView *stats;
-
-protected:
-    virtual void mousePressEvent ( QGraphicsSceneMouseEvent * );
 };
 
-class CItemSlot : public QGraphicsObject {
+class CItemSlot : public CGameObject {
     Q_OBJECT
 public:
     CItemSlot ( int number, AGamePanel *panel );
     QRectF boundingRect() const;
     void paint ( QPainter *painter, const QStyleOptionGraphicsItem *, QWidget * );
-    static bool checkType ( int slot, CItem *item );
+    static bool checkType ( int slot, std::shared_ptr<CItem> item );
     void update();
     int getNumber();
 
