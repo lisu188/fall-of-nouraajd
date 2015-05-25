@@ -9,7 +9,7 @@ class CItem : public CMapObject,public Visitable,public Wearable,public Usable {
     Q_OBJECT
     Q_PROPERTY ( int power READ getPower WRITE setPower USER true )
     Q_PROPERTY ( bool singleUse READ isSingleUse WRITE setSingleUse USER true )
-    Q_PROPERTY ( Stats bonus READ getBonus WRITE setBonus USER true )
+    Q_PROPERTY ( std::shared_ptr<Stats> bonus READ getBonus WRITE setBonus USER true )
     Q_PROPERTY ( QString interaction READ getInteractionName WRITE setInteractionName )
 public:
     CItem();
@@ -27,14 +27,14 @@ public:
 
     int getPower() const;
     void setPower ( int value );
-    Stats getBonus();
-    void setBonus ( Stats stats );
+    std::shared_ptr<Stats> getBonus();
+    void setBonus ( std::shared_ptr<Stats> stats );
     QString getInteractionName();
     void setInteractionName ( QString name );
     std::shared_ptr<CInteraction> getInteraction();
 protected:
     bool singleUse=false;
-    Stats bonus;
+    std::shared_ptr<Stats> bonus=std::make_shared<Stats>();
     std::shared_ptr<CInteraction> interaction;
     int power=0;
 private:

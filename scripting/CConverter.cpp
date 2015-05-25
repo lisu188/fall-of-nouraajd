@@ -82,9 +82,7 @@ struct function_converter {
 };
 
 void initialize_converters() {
-    to_python_converter<
-    QString,
-    QString_to_python_str>();
+    to_python_converter<QString,QString_to_python_str>();
 
     QString_from_python_str();
 

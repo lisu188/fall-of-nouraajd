@@ -1,8 +1,6 @@
 #pragma once
-
 #include "CMapObject.h"
-
-class Stats;
+#include "CStats.h"
 
 class CEffect :public CGameObject {
     Q_OBJECT
@@ -14,8 +12,8 @@ public:
     int getTimeLeft();
     int getTimeTotal();
     bool apply ( CCreature *creature );
-    Stats *getBonus();
-    void setBonus ( Stats *value );
+    std::shared_ptr<Stats> getBonus();
+    void setBonus ( std::shared_ptr<Stats> value );
     int getDuration();
     void setDuration ( int duration );
     virtual bool onEffect();
@@ -28,7 +26,7 @@ public:
 private:
     int timeLeft=0;
     int timeTotal=0;
-    Stats *bonus=0;
+    std::shared_ptr<Stats>bonus=std::make_shared<Stats>();
     std::shared_ptr<CCreature> caster;
     std::shared_ptr<CCreature> victim;
     int duration=0;

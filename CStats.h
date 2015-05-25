@@ -42,11 +42,9 @@ class Stats : public CGameObject {
     int strength=0;
 public:
     Stats();
-    Stats ( const Stats &stats );
-    void operator= ( const Stats &stats );
 
-    void addBonus ( Stats stats );
-    void removeBonus ( Stats stats );
+    void addBonus ( std::shared_ptr<Stats> stats );
+    void removeBonus ( std::shared_ptr<Stats> stats );
 
     const char *getText ( int level );
 
@@ -109,7 +107,7 @@ public:
 private:
     QString main;
 };
-Q_DECLARE_METATYPE ( Stats )
+GAME_PROPERTY ( Stats )
 
 class Damage : public CGameObject {
     Q_OBJECT
@@ -125,7 +123,6 @@ class Damage : public CGameObject {
     int normal=0;
 public:
     Damage();
-    Damage ( const Damage &dmg );
 
     int getFire() const;
     void setFire ( int value );
@@ -142,4 +139,4 @@ public:
     int getNormal() const;
     void setNormal ( int value );
 };
-Q_DECLARE_METATYPE ( Damage )
+GAME_PROPERTY ( Damage )

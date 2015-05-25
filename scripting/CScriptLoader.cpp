@@ -37,7 +37,9 @@ void AScriptLoader::exec_module ( object module ) {
     object main_module=boost::python::object ( boost::python::handle<> ( PyImport_ImportModule ( "__main__" ) ) ) ;
     object main_namespace=main_module.attr ( "__dict__" );
     module.attr ( "__dict__" ) ["__builtins__"]=main_namespace["__builtins__"];
-    exec ( modData.toStdString().c_str(),module.attr ( "__dict__" ) );
+    QByteArray byteArray = modData.toUtf8();
+    const char* cString = byteArray.constData();
+    exec ( cString,module.attr ( "__dict__" ) );
     qDebug() <<"Loaded module:"<<modName<<"\n";
 }
 

@@ -152,34 +152,20 @@ Stats::Stats() {
 
 }
 
-Stats::Stats ( const Stats &stats ) {
-    for ( int i = 0; i < this->metaObject()->propertyCount(); i++ ) {
-        QMetaProperty property = this->metaObject()->property ( i );
-        this->QObject::setProperty ( property.name(),stats.QObject::property ( property.name() ) );
-    }
-}
-
-void Stats::operator= ( const Stats &stats ) {
-    for ( int i = 0; i < this->metaObject()->propertyCount(); i++ ) {
-        QMetaProperty property = this->metaObject()->property ( i );
-        this->QObject::setProperty ( property.name(),stats.QObject::property ( property.name() ) );
-    }
-}
-
-void Stats::addBonus ( Stats stats ) {
+void Stats::addBonus (std::shared_ptr<Stats> stats ) {
     for ( int i = 0; i < this->metaObject()->propertyCount(); i++ ) {
         QMetaProperty property = this->metaObject()->property ( i );
         if ( property.type() ==QVariant::Int ) {
-            this->incProperty ( property.name(), stats.getNumericProperty ( property.name() ) );
+            this->incProperty ( property.name(), stats->getNumericProperty ( property.name() ) );
         }
     }
 }
 
-void Stats::removeBonus ( Stats stats ) {
+void Stats::removeBonus (std::shared_ptr<Stats> stats ) {
     for ( int i = 0; i < this->metaObject()->propertyCount(); i++ ) {
         QMetaProperty property = this->metaObject()->property ( i );
         if ( property.type() ==QVariant::Int ) {
-            this->incProperty ( property.name(), -stats.getNumericProperty ( property.name() ) );
+            this->incProperty ( property.name(), -stats->getNumericProperty ( property.name() ) );
         }
     }
 }
@@ -208,12 +194,6 @@ Damage::Damage() {
 
 }
 
-Damage::Damage ( const Damage &dmg ) {
-    for ( int i = 0; i < this->metaObject()->propertyCount(); i++ ) {
-        QMetaProperty property = this->metaObject()->property ( i );
-        this->setNumericProperty ( property.name(), dmg.getNumericProperty ( property.name() ) );
-    }
-}
 int Damage::getFire() const {
     return fire;
 }

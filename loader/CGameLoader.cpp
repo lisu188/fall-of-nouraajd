@@ -1,5 +1,4 @@
 #include "loader/CLoader.h"
-#include "loader/CLoader.h"
 #include "CThreadUtil.h"
 
 std::shared_ptr<CGame> CGameLoader::loadGame ( std::shared_ptr<CGameView> view ) {
@@ -38,6 +37,8 @@ void CGameLoader::initConfigurations ( std::shared_ptr<CObjectHandler> handler )
 }
 
 void CGameLoader::initObjectHandler ( std::shared_ptr<CObjectHandler> handler ) {
+    handler->registerType< Stats >();
+    handler->registerType< Damage >();
     handler->registerType< CWeapon >();
     handler->registerType< CArmor >();
     handler->registerType< CPotion >();
@@ -58,7 +59,6 @@ void CGameLoader::initObjectHandler ( std::shared_ptr<CObjectHandler> handler ) 
     handler->registerType< CMarket >();
     handler->registerType< CTrigger >();
     handler->registerType< CQuest >();
-
 }
 
 void CGameLoader::initScriptHandler ( std::shared_ptr<CScriptHandler> handler, std::shared_ptr<CGame> game ) {

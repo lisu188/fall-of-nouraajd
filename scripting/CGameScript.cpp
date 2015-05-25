@@ -49,7 +49,7 @@ BOOST_PYTHON_MODULE ( _game ) {
             .def ( "addObject",&CMap::addObject )
             .def ( "createObject",&CMap::createObject<CGameObject>  )
             .def ( "getGame",&CMap::getGame );
-    void ( CObjectHandler::*registerType ) ( QString,std::function<CGameObject*() > )  =&CObjectHandler::registerType;
+    void ( CObjectHandler::*registerType ) ( QString,std::function<CGameObject* ()> )  =&CObjectHandler::registerType;
     class_<CObjectHandler,boost::noncopyable,std::shared_ptr<CObjectHandler>> ( "CObjectHandler",no_init )
             .def ( "registerType",registerType );
     void ( CMapObject::*moveTo ) ( int,int,int ) =&CMapObject::moveTo ;
@@ -64,7 +64,7 @@ BOOST_PYTHON_MODULE ( _game ) {
     class_<CInteraction,bases<CGameObject>,boost::noncopyable,std::shared_ptr<CInteraction>> ( "CInteraction" )
             .def ( "onAction",&CInteraction::onAction  );
     class_<CEffect,bases<CGameObject>,boost::noncopyable,std::shared_ptr<CEffect>> ( "CEffectBase"  )
-            .def ( "getBonus",&CEffect::getBonus , return_internal_reference<>() )
+            .def ( "getBonus",&CEffect::getBonus  )
             .def ( "setBonus",&CEffect::setBonus )
             .def ( "getCaster",&CEffect::getCaster  )
             .def ( "getVictim",&CEffect::getVictim  )
@@ -76,7 +76,7 @@ BOOST_PYTHON_MODULE ( _game ) {
             .def ( "getInteraction",&CWeapon::getInteraction );
     class_<CBuilding,bases<CMapObject>,boost::noncopyable> ( "CBuildingBase" );
     void ( CCreature::*hurtInt ) ( int ) = &CCreature::hurt;
-    void ( CCreature::*hurtDmg ) ( Damage ) = &CCreature::hurt;
+    void ( CCreature::*hurtDmg ) ( std::shared_ptr<Damage> ) = &CCreature::hurt;
     class_<CCreature,bases<CMapObject>,boost::noncopyable,std::shared_ptr<CCreature>> ( "CCreature",no_init )
             .def ( "getDmg",&CCreature::getDmg )
             .def ( "hurt",hurtInt )
@@ -111,8 +111,8 @@ BOOST_PYTHON_MODULE ( _game ) {
     class_<CInteractionWrapper,bases<CInteraction>,boost::noncopyable,std::shared_ptr<CInteractionWrapper> > ( "CInteraction" )
     .def ( "performAction",&CInteractionWrapper::performAction )
     .def ( "configureEffect",&CInteractionWrapper::configureEffect );
-    class_<Damage,bases<CGameObject>> ( "Damage" );
-    class_<Stats,bases<CGameObject>> ( "Stats" );
+    class_<Damage,bases<CGameObject>,boost::noncopyable,std::shared_ptr<Damage>> ( "Damage" );
+    class_<Stats,bases<CGameObject>,boost::noncopyable,std::shared_ptr<Stats>> ( "Stats" );
     class_<AGamePanel,boost::noncopyable,std::shared_ptr<AGamePanel>> ( "AGamePanel",no_init )
             .def ( "showPanel",&AGamePanel::showPanel );
     class_<CTextPanel,bases<AGamePanel>,boost::noncopyable,std::shared_ptr<CTextPanel>> ( "CTextPanel" );
