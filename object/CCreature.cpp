@@ -61,20 +61,20 @@ std::shared_ptr<CInteraction> CCreature::getLevelAction() {
     }
 }
 
-Stats CCreature::getLevelStats() const {
+std::shared_ptr<Stats> CCreature::getLevelStats() const {
     return levelStats;
 }
 
-void CCreature::setLevelStats ( const Stats &value ) {
+void CCreature::setLevelStats (std::shared_ptr<Stats> value ) {
     levelStats = value;
 }
 
-void CCreature::addBonus ( Stats bonus ) {
-    this->stats.addBonus ( bonus );
+void CCreature::addBonus ( std::shared_ptr<Stats> bonus ) {
+    stats->addBonus ( bonus );
 }
 
-void CCreature::removeBonus ( Stats bonus ) {
-    this->stats.removeBonus ( bonus );
+void CCreature::removeBonus (std::shared_ptr<Stats> bonus ) {
+    stats->removeBonus ( bonus );
 }
 
 
@@ -140,8 +140,8 @@ void CCreature::healProc ( float i ) {
 }
 
 void CCreature::hurt ( int i ) {
-    Damage damage;
-    damage.setNormal ( i );
+    std::shared_ptr<Damage> damage=std::make_shared<Damage>();
+    damage->setNormal ( i );
     hurt ( damage );
 }
 
@@ -151,14 +151,14 @@ int CCreature::getExpRatio() {
 }
 
 void CCreature::takeDamage ( int i ) {
-    if ( rand() < stats.getBlock() ) {
+    if ( rand() < stats->getBlock() ) {
         return;
     }
     if ( i < 0 ) {
         qFatal ( "damage less than 0 taken" );
         return;
     }
-    hp -= i * ( ( 100 - stats.getArmor() ) / 100.0 );
+    hp -= i * ( ( 100 - stats->getArmor() ) / 100.0 );
     Q_EMIT statsChanged();
 }
 
@@ -193,27 +193,27 @@ QVariantList CCreature::getItems() {
     return QVariantList();
 }
 
-void CCreature::hurt ( Damage damage ) {
-    takeDamage ( damage.getNormal() * ( 100 - stats.getNormalResist() ) / 100.0 );
-    takeDamage ( damage.getThunder() * ( 100 - stats.getThunderResist() ) / 100.0 );
-    takeDamage ( damage.getFrost() * ( 100 - stats.getFrostResist() ) / 100.0 );
-    takeDamage ( damage.getFire() * ( 100 - stats.getFireResist() ) / 100.0 );
-    takeDamage ( damage.getShadow() * ( 100 - stats.getShadowResist() ) / 100.0 );
+void CCreature::hurt ( std::shared_ptr<Damage> damage ) {
+    takeDamage ( damage->getNormal() * ( 100 - stats->getNormalResist() ) / 100.0 );
+    takeDamage ( damage->getThunder() * ( 100 - stats->getThunderResist() ) / 100.0 );
+    takeDamage ( damage->getFrost() * ( 100 - stats->getFrostResist() ) / 100.0 );
+    takeDamage ( damage->getFire() * ( 100 - stats->getFireResist() ) / 100.0 );
+    takeDamage ( damage->getShadow() * ( 100 - stats->getShadowResist() ) / 100.0 );
     qDebug() << getObjectType() << "took damage:"
-             << "normal(" << damage.getNormal() << ")thunder("
-             << damage.getThunder() << ")frost(" << damage.getFrost() << ")fire("
-             << damage.getFire() << ")shadow(" << damage.getShadow() << ")";
+             << "normal(" << damage->getNormal() << ")thunder("
+             << damage->getThunder() << ")frost(" << damage->getFrost() << ")fire("
+             << damage->getFire() << ")shadow(" << damage->getShadow() << ")";
 }
 
 int CCreature::getDmg() {
     int critDice = rand() % 100;
     int attDice = rand() % 100;
     int dmg =
-        rand() % ( stats.getDmgMax() + 1 - stats.getDmgMin() ) + stats.getDmgMin();
-    dmg += stats.getDamage();
-    attDice -= stats.getAttack();
-    if ( attDice < stats.getHit() ) {
-        if ( critDice < stats.getCrit() ) {
+        rand() % ( stats->getDmgMax() + 1 - stats->getDmgMin() ) + stats->getDmgMin();
+    dmg += stats->getDamage();
+    attDice -= stats->getAttack();
+    if ( attDice < stats->getHit() ) {
+        if ( critDice < stats->getCrit() ) {
             dmg *= 2;
             qDebug() << "Critical hit";
         }
@@ -446,7 +446,7 @@ std::shared_ptr<CArmor> CCreature::getArmor() {
 
 void CCreature::levelUp() {
     level++;
-    stats.addBonus ( getLevelStats() );
+    stats->addBonus ( getLevelStats() );
     addAction ( getLevelAction() );
     attribChange();
     if ( level > 1 ) {
@@ -475,9 +475,9 @@ std::set<std::shared_ptr<CItem> > CCreature::getAllItems() {
 }
 
 void CCreature::attribChange() {
-    hpMax = stats.getStamina() * 7;
-    manaRegRate = stats.getMainValue() / 10 + 1;
-    manaMax = stats.getMainValue() * 7;
+    hpMax = stats->getStamina() * 7;
+    manaRegRate = stats->getMainValue() / 10 + 1;
+    manaMax = stats->getMainValue() * 7;
 }
 
 bool CCreature::hasEquipped ( std::shared_ptr<CItem>  item ) {
@@ -498,11 +498,11 @@ void CCreature::setSw ( int value ) {
     sw = value;
 }
 
-Stats CCreature::getStats() const {
+std::shared_ptr<Stats> CCreature::getStats() const {
     return stats;
 }
 
-void CCreature::setStats ( const Stats &value ) {
+void CCreature::setStats (std::shared_ptr<Stats> value ) {
     stats = value;
 }
 

@@ -2,6 +2,16 @@
 #include "CGlobal.h"
 
 class CGameObject;
+#define GAME_PROPERTY(CLASS)\
+    Q_DECLARE_METATYPE(std::shared_ptr<CLASS>)\
+    namespace{\
+        class CLASS##_X{\
+        public:\
+            CLASS##_X(){\
+                qRegisterMetaType<std::shared_ptr<CLASS>>();\
+            }\
+        } CLASS##_TMP;\
+    }\
 
 #define PY_PROPERTY_ACCESSOR(CLASS)\
 .def ( "getStringProperty",&CLASS::getStringProperty )\

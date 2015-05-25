@@ -97,12 +97,12 @@ CWeapon::CWeapon() : CItem() {
 
 }
 
-Stats CItem::getBonus() {
+std::shared_ptr<Stats> CItem::getBonus() {
     return bonus;
 }
 
-void CItem::setBonus ( Stats stats ) {
-    this->bonus=stats;
+void CItem::setBonus ( std::shared_ptr<Stats> stats ) {
+    bonus=stats;
 }
 
 QString CItem::getInteractionName() {

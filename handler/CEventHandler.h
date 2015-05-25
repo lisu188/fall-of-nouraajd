@@ -46,7 +46,7 @@ struct hash<TriggerKey> {
 }
 
 class CEventHandler  {
-    typedef std::unordered_multimap<TriggerKey, CTrigger*> TriggerMap ;
+    typedef std::unordered_multimap<TriggerKey, std::shared_ptr<CTrigger>> TriggerMap ;
 public:
     void gameEvent ( std::shared_ptr<CMapObject> mapObject , std::shared_ptr<CGameEvent> event ) const;
     void registerTrigger ( QString name,QString type,std::function<CTrigger*() > trigger );

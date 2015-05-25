@@ -26,15 +26,9 @@ static void messageHandler ( QtMsgType type, const QMessageLogContext &context,
     }
 }
 
-static void registerMetaTypes() {
-    qRegisterMetaType<Stats>();
-    qRegisterMetaType<Damage>();
-}
-
 static class init {
 public:
     init() {
-        registerMetaTypes();
         qInstallMessageHandler ( messageHandler );
         std::set_terminate ( [] (  )-> void {
             PyErr_Print();
