@@ -28,23 +28,23 @@ std::shared_ptr<CCreature> CEffect::getVictim() {
 bool CEffect::apply ( CCreature *creature ) {
     if ( bonus )
         if ( timeTotal == timeLeft ) {
-            creature->addBonus ( *bonus );
+            creature->addBonus ( bonus );
         }
     timeLeft--;
     if ( timeLeft == 0 ) {
         if ( bonus ) {
-            creature->removeBonus ( *bonus );
+            creature->removeBonus ( bonus );
         }
         return false;
     }
     return onEffect();
 }
 
-Stats *CEffect::getBonus() {
+std::shared_ptr<Stats> CEffect::getBonus() {
     return bonus;
 }
 
-void CEffect::setBonus ( Stats *value ) {
+void CEffect::setBonus (std::shared_ptr<Stats> value ) {
     bonus = value;
 }
 

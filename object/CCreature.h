@@ -29,8 +29,8 @@ class CCreature : public CMapObject, public Moveable {
     Q_PROPERTY ( int sw READ getSw WRITE setSw USER true )
     Q_PROPERTY ( QVariantMap levelling READ getLevelling WRITE setLevelling USER true )
     Q_PROPERTY ( QVariantMap inventory READ getInventory WRITE setInventory USER true )
-    Q_PROPERTY ( Stats stats READ getStats WRITE setStats USER true )
-    Q_PROPERTY ( Stats levelStats READ getLevelStats WRITE setLevelStats USER true )
+    Q_PROPERTY ( std::shared_ptr<Stats> stats READ getStats WRITE setStats USER true )
+    Q_PROPERTY ( std::shared_ptr<Stats> levelStats READ getLevelStats WRITE setLevelStats USER true )
     Q_PROPERTY ( QVariantList actions READ getActions WRITE setActions USER true )
     Q_PROPERTY ( QVariantList items READ getItems WRITE setItems USER true )
 
@@ -49,7 +49,7 @@ public:
     void attribChange();
     void heal ( int i );
     void healProc ( float i );
-    void hurt ( Damage damage );
+    void hurt (std::shared_ptr<Damage> damage );
     void hurt ( int i );
     int getDmg();
     int getScale();
@@ -106,12 +106,12 @@ public:
     void setLevelling ( const QVariantMap &value );
     QVariantMap getInventory() const;
     void setInventory ( const QVariantMap &value );
-    Stats getStats() const;
-    void setStats ( const Stats &value );
-    Stats getLevelStats() const;
-    void setLevelStats ( const Stats &value );
-    void addBonus ( Stats bonus );
-    void removeBonus ( Stats bonus );
+    std::shared_ptr<Stats> getStats() const;
+    void setStats ( std::shared_ptr<Stats> value );
+    std::shared_ptr<Stats> getLevelStats() const;
+    void setLevelStats ( std::shared_ptr<Stats> value );
+    void addBonus (std::shared_ptr<Stats> bonus );
+    void removeBonus ( std::shared_ptr<Stats> bonus );
     int getSw() const;
     void setSw ( int value );
     virtual void beforeMove();
@@ -124,7 +124,7 @@ public:
     Q_SIGNAL void inventoryChanged();
     Q_SIGNAL void equippedChanged();
 protected:
-    std::set< std::shared_ptr<CItem>> inventory;
+    std::set<std::shared_ptr<CItem>> inventory;
     std::map<int,std::shared_ptr<CItem> > equipped;
     std::set<std::shared_ptr<CInteraction>> actions;
     std::set<std::shared_ptr<CEffect>> effects;
@@ -137,12 +137,12 @@ protected:
     int manaRegRate=0;
     int hpMax=0;
     int hp=0;
-    Stats stats;
+    std::shared_ptr<Stats> stats=std::make_shared<Stats>();
+    std::shared_ptr<Stats> levelStats =std::make_shared<Stats>();
     virtual std::shared_ptr<CInteraction>  selectAction();
     void takeDamage ( int i );
     std::shared_ptr<CInteraction> getLevelAction();
     QVariantMap levelling;
-    Stats levelStats ;
     void defeatedCreature ( std::shared_ptr<CCreature> creature );
 };
 
