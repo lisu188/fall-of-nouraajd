@@ -61,7 +61,6 @@ void CGuiHandler::initPanels() {
         panels[it->getPanelName()]=it;
         game.lock()->addObject ( it );
         it ->setUpPanel ( game.lock()->getView() );
-        it ->hidePanel ( );
         qDebug() <<"Initialized panel:"<<  it->metaObject()->className() <<"\n";
     }
 }

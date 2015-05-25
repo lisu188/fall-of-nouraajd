@@ -2,8 +2,8 @@
 #include "loader/CLoader.h"
 #include "CThreadUtil.h"
 
-std::shared_ptr<CGame> CGameLoader::loadGame() {
-    std::shared_ptr<CGame> game=std::make_shared<CGame>();
+std::shared_ptr<CGame> CGameLoader::loadGame ( std::shared_ptr<CGameView> view ) {
+    std::shared_ptr<CGame> game=std::make_shared<CGame> ( view );
     initObjectHandler ( game->getObjectHandler() );
     initConfigurations ( game->getObjectHandler() );
     initScriptHandler ( game->getScriptHandler(),game );
@@ -20,6 +20,7 @@ void CGameLoader::startGame ( std::shared_ptr<CGame> game, QString file, QString
 
 void CGameLoader::changeMap ( std::shared_ptr<CGame> game, QString name ) {
     CThreadUtil::call_later ( [game,name]() {
+        //implement stop processing events here
         CThreadUtil::wait_until ( [game]() {
             return !game->getMap()->isMoving();
         } );

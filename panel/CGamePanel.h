@@ -19,13 +19,13 @@ public:
     virtual void showPanel() =0;
     virtual void hidePanel() =0;
     virtual void update() =0;
-    virtual void setUpPanel ( CGameView * ) =0;
+    virtual void setUpPanel ( std::shared_ptr<CGameView> ) =0;
     virtual void paint ( QPainter *, const QStyleOptionGraphicsItem *, QWidget * ) =0;
     virtual QString getPanelName() =0;
-    virtual void handleDrop ( CPlayerView* , std::shared_ptr<CGameObject> );
+    virtual void handleDrop ( std::shared_ptr<CPlayerView> , std::shared_ptr<CGameObject> );
     virtual void onClickAction ( std::shared_ptr<CGameObject> ) override;
     bool isShown();
-    CGameView *getView();
+    std::shared_ptr<CGameView> getView();
 
     Q_INVOKABLE void setProperty ( QString name,QVariant property );
     Q_INVOKABLE QVariant property ( QString name ) const;
@@ -37,7 +37,7 @@ public:
     Q_INVOKABLE int getNumericProperty ( QString name ) const;
     Q_INVOKABLE void incProperty ( QString name,int value );
 protected:
-    CGameView *view=0;
+    std::weak_ptr<CGameView> view;
 };
 
 

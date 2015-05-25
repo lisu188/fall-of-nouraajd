@@ -5,30 +5,38 @@
 #include "handler/CHandler.h"
 #include "gui/CGui.h"
 #include "loader/CLoader.h"
+#include "CThreadUtil.h"
 
 void CGameView::show() {
     showNormal();
 }
 
-CGameView::CGameView ( QString mapName , QString playerType ) :game ( CGameLoader::loadGame() )  {
+std::shared_ptr<CGameView> CGameView::ptr() {
+    return shared_from_this();
+}
+
+CGameView::CGameView ( QString mapName , QString playerType )  {
     setHorizontalScrollBarPolicy ( Qt::ScrollBarAlwaysOff );
     setVerticalScrollBarPolicy ( Qt::ScrollBarAlwaysOff );
     setViewportUpdateMode ( QGraphicsView::BoundingRectViewportUpdate );
     setViewport ( new QGLWidget ( QGLFormat ( QGL::SampleBuffers ) ) );
     setViewportUpdateMode ( QGraphicsView::FullViewportUpdate );
-    setScene ( game.get() );
-    CGameLoader::startGame ( game,mapName ,playerType );
-    std::shared_ptr<CPlayer> player= getGame()->getMap()->getPlayer();
-    playerStatsView.setParent ( this );
-    playerStatsView.show();
-    playerStatsView.setPlayer ( player );
-    auto refresh=[this]() {
-        getGame()->getGuiHandler()->refresh();
-    };
-    connect ( player.get(),&CCreature::inventoryChanged,refresh );
-    connect ( player.get(),&CCreature::equippedChanged,refresh );
-    connect ( player.get(),&CCreature::skillsChanged,refresh );
-    init = true;
+    CThreadUtil::call_later ( [this,mapName,playerType]() {
+        game= CGameLoader::loadGame ( this->ptr() );
+        setScene ( game.get() );
+        CGameLoader::startGame ( game,mapName ,playerType );
+        std::shared_ptr<CPlayer> player= getGame()->getMap()->getPlayer();
+        playerStatsView.setParent ( this );
+        playerStatsView.show();
+        playerStatsView.setPlayer ( player );
+        auto refresh=[this]() {
+            getGame()->getGuiHandler()->refresh();
+        };
+        connect ( player.get(),&CCreature::inventoryChanged,refresh );
+        connect ( player.get(),&CCreature::equippedChanged,refresh );
+        connect ( player.get(),&CCreature::skillsChanged,refresh );
+        init = true;
+    } );
 }
 
 void CGameView::mouseDoubleClickEvent ( QMouseEvent *e ) {

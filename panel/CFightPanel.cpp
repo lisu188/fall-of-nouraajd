@@ -8,13 +8,13 @@
 CFightPanel::CFightPanel() {
     setZValue ( 5 );
     setVisible ( false );
-    fightView =new CCreatureFightView (  );
+    fightView =std::make_shared<CCreatureFightView> ();
     fightView->setParentItem ( this );
 }
 
 void CFightPanel::update() {
-    if ( this->view->getGame()->getMap()->getPlayer() ) {
-        fightView->setCreature ( this->view->getGame()->getMap()->getPlayer()->getEnemy() );
+    if ( view.lock()->getGame()->getMap()->getPlayer() ) {
+        fightView->setCreature ( view.lock()->getGame()->getMap()->getPlayer()->getEnemy() );
     }
     playerSkillsView->update();
     QGraphicsItem::update();
@@ -32,17 +32,17 @@ void CFightPanel::paint ( QPainter *painter, const QStyleOptionGraphicsItem *,
 void CFightPanel::showPanel (  ) {
     this->setVisible ( true );
     this->setPos (
-        view->mapToScene ( view->width() / 2 - this->boundingRect().width() / 2,
-                           view->height() / 2 - this->boundingRect().height() / 2 ) );
+        view.lock()->mapToScene ( view.lock()->width() / 2 - this->boundingRect().width() / 2,
+                                  view.lock()->height() / 2 - this->boundingRect().height() / 2 ) );
     playerSkillsView->setPos ( 0, this->boundingRect().height() );
     playerSkillsView->setXY (
         this->boundingRect().width() / 50, 1 );
     this->update();
 }
 
-void CFightPanel::setUpPanel ( CGameView *view ) {
+void CFightPanel::setUpPanel ( std::shared_ptr<CGameView> view ) {
     this->view=view;
-    playerSkillsView = new CPlayerIteractionView ( this );
+    playerSkillsView = std::make_shared<CPlayerInteractionView> ( this->ptr<CFightPanel>() );
     playerSkillsView->setZValue ( 3 );
     playerSkillsView->setParentItem ( this );
     playerSkillsView->setXY ( 4, 1 );

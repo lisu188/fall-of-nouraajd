@@ -10,12 +10,12 @@ public:
                          QWidget * ) override;
     virtual void showPanel (  ) override;
     virtual void hidePanel() override;
-    virtual void setUpPanel ( CGameView *view ) override;
+    virtual void setUpPanel ( std::shared_ptr<CGameView>view ) override;
     virtual void update() override;
     virtual QString getPanelName() override;
     virtual void onClickAction ( std::shared_ptr<CGameObject> object ) override;
-    virtual void handleDrop ( CPlayerView *view, std::shared_ptr<CGameObject> object ) override;
+    virtual void handleDrop ( std::shared_ptr<CPlayerView> view, std::shared_ptr<CGameObject> object ) override;
 private:
-    CListView *playerInventoryView;
-    CPlayerEquippedView *playerEquippedView;
+    std::shared_ptr<CListView> playerInventoryView;
+    std::shared_ptr<CPlayerEquippedView> playerEquippedView;
 };

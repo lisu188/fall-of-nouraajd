@@ -28,21 +28,21 @@ void CCharPanel::hidePanel() {
     this->setVisible ( false );
 }
 
-void CCharPanel::setUpPanel ( CGameView *view ) {
+void CCharPanel::setUpPanel ( std::shared_ptr<CGameView> view ) {
     this->view=view;
-    playerInventoryView = new CPlayerInventoryView ( this );
+    playerInventoryView = std::make_shared<CPlayerInventoryView> ( this->ptr<CCharPanel>() );
     playerInventoryView->setZValue ( 3 );
     playerInventoryView->setParentItem ( this );
     playerInventoryView->setAcceptDrops ( true );
-    playerEquippedView = new CPlayerEquippedView ( this );
+    playerEquippedView = std::make_shared<CPlayerEquippedView> ( this->ptr<CCharPanel>() );
     playerEquippedView->setZValue ( 3 );
     playerEquippedView->setParentItem ( this );
 }
 
 void CCharPanel::update() {
     this->setPos (
-        view->mapToScene ( view->width() / 2 - this->boundingRect().width() / 2,
-                           view->height() / 2 - this->boundingRect().height() / 2 ) );
+        view.lock()->mapToScene ( view.lock()->width() / 2 - this->boundingRect().width() / 2,
+                                  view.lock()->height() / 2 - this->boundingRect().height() / 2 ) );
     playerInventoryView->setPos ( 0, 0 );
     playerEquippedView->setPos (
         this->boundingRect().width() -
@@ -69,7 +69,7 @@ void CCharPanel::onClickAction ( std::shared_ptr<CGameObject> object ) {
     }
 }
 
-void CCharPanel::handleDrop ( CPlayerView *view, std::shared_ptr<CGameObject> object ) {
+void CCharPanel::handleDrop ( std::shared_ptr<CPlayerView> view, std::shared_ptr<CGameObject> object ) {
     if ( view==playerInventoryView ) {
         std::shared_ptr<CItem> item=cast<CItem> ( object );
         if ( item ) {
