@@ -4,7 +4,7 @@
 class CCreature;
 class CFightPanel;
 class CListView;
-class CCreatureFightView : public QGraphicsObject {
+class CCreatureFightView : public CGameObject {
     Q_OBJECT
     friend class CFightPanel;
 public:
@@ -15,7 +15,6 @@ public:
 
 private:
     std::shared_ptr<CCreature> creature;
-
 };
 
 class CFightPanel : public AGamePanel {
@@ -28,13 +27,13 @@ public:
     virtual void paint ( QPainter *painter, const QStyleOptionGraphicsItem *,
                          QWidget * ) override;
     virtual void showPanel ( ) override;
-    virtual void setUpPanel ( CGameView *view  ) override;
+    virtual void setUpPanel ( std::shared_ptr<CGameView> view  ) override;
     virtual void hidePanel() override;
     virtual QString getPanelName() override;
     virtual void onClickAction (  std::shared_ptr<CGameObject> object ) override;
 private:
-    CListView *playerSkillsView;
-    CCreatureFightView *fightView;
+    std::shared_ptr<CListView>  playerSkillsView;
+    std::shared_ptr<CCreatureFightView> fightView;
 };
 
 

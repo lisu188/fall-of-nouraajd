@@ -7,7 +7,7 @@
 #include "handler/CHandler.h"
 #include "loader/CLoader.h"
 
-CGame::CGame ()  {
+CGame::CGame ( std::weak_ptr<CGameView> view ) :view ( view )  {
 
 }
 
@@ -29,8 +29,8 @@ void CGame::setMap ( std::shared_ptr<CMap> map ) {
     this->map=map;
 }
 
-CGameView *CGame::getView() {
-    return dynamic_cast<CGameView*> ( this->views() [0] );
+std::shared_ptr<CGameView> CGame::getView() {
+    return view.lock();
 }
 
 void CGame::removeObject ( std::shared_ptr<CGameObject> object ) {

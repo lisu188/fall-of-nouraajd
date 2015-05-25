@@ -5,7 +5,7 @@
 
 class CPlayer;
 class CGame;
-class CGameView : public QGraphicsView {
+class CGameView : public QGraphicsView,public std::enable_shared_from_this<CGameView> {
     Q_OBJECT
 public:
     //replace argument with bean
@@ -13,6 +13,7 @@ public:
     std::shared_ptr<CGame> getGame() const;
     void centerOn ( std::shared_ptr<CPlayer> player );
     Q_INVOKABLE void show();
+    std::shared_ptr<CGameView> ptr();
 protected:
     virtual void mouseDoubleClickEvent ( QMouseEvent *e );
     virtual void resizeEvent ( QResizeEvent *event );

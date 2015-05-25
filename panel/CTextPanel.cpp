@@ -23,8 +23,8 @@ void CTextPanel:: paint ( QPainter *painter, const QStyleOptionGraphicsItem *, Q
 void CTextPanel::showPanel () {
     this->setVisible ( true );
     this->setPos (
-        this->view->mapToScene ( view->width() / 2 - this->boundingRect().width() / 2,
-                                 view->height() / 2 - this->boundingRect().height() / 2 ) );
+        view.lock()->mapToScene ( view.lock()->width() / 2 - this->boundingRect().width() / 2,
+                                  view.lock()->height() / 2 - this->boundingRect().height() / 2 ) );
     this->update();
 }
 
@@ -36,7 +36,7 @@ void CTextPanel::update() {
 
 }
 
-void CTextPanel::setUpPanel ( CGameView * view ) {
+void CTextPanel::setUpPanel ( std::shared_ptr<CGameView> view ) {
     this->view=view;
 }
 

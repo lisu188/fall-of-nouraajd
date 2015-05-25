@@ -4,7 +4,7 @@
 
 class CGameLoader {
 public:
-    static std::shared_ptr<CGame> loadGame();
+    static std::shared_ptr<CGame> loadGame ( std::shared_ptr<CGameView> view );
     static void startGame ( std::shared_ptr<CGame> game, QString file ,QString player );
     static void changeMap ( std::shared_ptr<CGame> game,QString file );
 private:

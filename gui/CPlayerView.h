@@ -14,21 +14,21 @@ class CTradePanel;
 class CPlayerView: public CGameObject {
     Q_OBJECT
 public:
-    CPlayerView ( AGamePanel* panel );
+    CPlayerView ( std::shared_ptr<AGamePanel> panel );
 protected:
     virtual void dropEvent ( QGraphicsSceneDragDropEvent *event );
-    AGamePanel *panel=0;
+    std::weak_ptr<AGamePanel> panel;
 };
 
 class CPlayerEquippedView : public CPlayerView {
     Q_OBJECT
 public:
-    CPlayerEquippedView ( AGamePanel *panel );
+    CPlayerEquippedView ( std::shared_ptr<AGamePanel> panel );
     QRectF boundingRect() const;
     void paint ( QPainter *, const QStyleOptionGraphicsItem *, QWidget * );
     void update();
 private:
-    std::list<CItemSlot *> itemSlots;
+    std::list<std::shared_ptr<CItemSlot>> itemSlots;
 };
 
 class PlayerStatsView : public QWidget {
@@ -49,7 +49,7 @@ class CListView : public CPlayerView {
     Q_OBJECT
     friend class CScrollObject;
 public:
-    CListView ( AGamePanel *panel );
+    CListView ( std::shared_ptr<AGamePanel> panel );
     virtual QRectF boundingRect() const;
     virtual void paint ( QPainter *painter, const QStyleOptionGraphicsItem *, QWidget * );
     void updatePosition ( int i );
@@ -69,15 +69,15 @@ private:
 class CPlayerInventoryView:public CListView {
     Q_OBJECT
 public:
-    CPlayerInventoryView ( AGamePanel *panel );
+    CPlayerInventoryView ( std::shared_ptr<AGamePanel> panel );
 protected:
     virtual std::set<std::shared_ptr<CGameObject>> getItems() const override;
 };
 
-class CPlayerIteractionView:public CListView {
+class CPlayerInteractionView:public CListView {
     Q_OBJECT
 public:
-    CPlayerIteractionView ( AGamePanel *panel );
+    CPlayerInteractionView ( std::shared_ptr<AGamePanel> panel );
 protected:
     virtual std::set<std::shared_ptr<CGameObject>> getItems() const override;
 };
@@ -85,38 +85,35 @@ protected:
 class CTradeItemsView : public CListView {
     Q_OBJECT
 public:
-    CTradeItemsView ( AGamePanel *panel  );
+    CTradeItemsView ( std::shared_ptr<AGamePanel> panel  );
 protected:
     virtual std::set<std::shared_ptr<CGameObject>> getItems() const override;
 };
 
 class CScrollObject : public CGameObject,public CClickAction {
 public:
-    CScrollObject ( CListView *stats, bool isRight );
-    void setVisible ( bool visible );
+    CScrollObject ( std::shared_ptr<CListView> stats, bool isRight );
     void onClickAction ( std::shared_ptr<CGameObject> ) override;
 private:
+    std::weak_ptr<CListView> stats;
     bool isRight;
-    CListView *stats;
 };
 
 class CItemSlot : public CGameObject {
     Q_OBJECT
 public:
-    CItemSlot ( int number, AGamePanel *panel );
+    CItemSlot ( int number, std::shared_ptr<AGamePanel> panel );
     QRectF boundingRect() const;
     void paint ( QPainter *painter, const QStyleOptionGraphicsItem *, QWidget * );
     static bool checkType ( int slot, std::shared_ptr<CItem> item );
     void update();
     int getNumber();
-
 protected:
     void dragMoveEvent ( QGraphicsSceneDragDropEvent *event );
     void dropEvent ( QGraphicsSceneDragDropEvent *event );
-
 private:
     int number=-1;
     QPixmap pixmap;
-    AGamePanel * panel=0;
+    std::weak_ptr<AGamePanel> panel;
 };
 
