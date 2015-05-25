@@ -2,13 +2,14 @@
 
 AGamePanel::AGamePanel() {
     this->hasTooltip=false;
+    this->setVisible ( false );
 }
 
 AGamePanel::~AGamePanel() {
 
 }
 
-void AGamePanel::handleDrop ( CPlayerView *, std::shared_ptr<CGameObject>  ) {
+void AGamePanel::handleDrop ( std::shared_ptr<CPlayerView>, std::shared_ptr<CGameObject>  ) {
     qFatal ( "No drop handler implemented" );
 }
 
@@ -16,8 +17,8 @@ bool AGamePanel::isShown() {
     return this->isVisible();
 }
 
-CGameView *AGamePanel::getView() {
-    return view;
+std::shared_ptr<CGameView> AGamePanel::getView() {
+    return view.lock();
 }
 
 void AGamePanel::setProperty ( QString name, QVariant property ) {

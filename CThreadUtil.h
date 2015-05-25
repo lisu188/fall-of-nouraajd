@@ -32,14 +32,12 @@ public:
         typedef typename Collection::value_type Result;
         typedef typename function_traits<Function>::result_type Return;
         call_later ( [all,target,callback,end_callback]() {
-            int *called=new int[1];
-            called[0]=all.size();
+            std::shared_ptr<int> called=std::make_shared<int> ( all.size() );
             for ( Result t:all ) {
                 std::function<Return() > real_function=std::bind ( target,t );
                 std::function<void ( Return ) > real_callback=[called,callback,end_callback] ( Return r ) {
                     callback ( r );
-                    if ( --called[0]<=0 ) {
-                        delete [] called;
+                    if ( -- ( *called ) <=0 ) {
                         call_later ( end_callback );
                     }
                 };

@@ -9,8 +9,8 @@ CTradePanel::CTradePanel() {
 void CTradePanel::showPanel() {
     this->setVisible ( true );
     this->setPos (
-        view->mapToScene ( view->width() / 2 - this->boundingRect().width() / 2,
-                           view->height() / 2 - this->boundingRect().height() / 2 ) );
+        view.lock()->mapToScene ( view.lock()->width() / 2 - this->boundingRect().width() / 2,
+                                  view.lock()->height() / 2 - this->boundingRect().height() / 2 ) );
     this->update();
 }
 
@@ -20,8 +20,8 @@ void CTradePanel::hidePanel() {
 
 void CTradePanel::update() {
     this->setPos (
-        view->mapToScene ( view->width() / 2 - this->boundingRect().width() / 2,
-                           view->height() / 2 - this->boundingRect().height() / 2 ) );
+        view.lock()->mapToScene ( view.lock()->width() / 2 - this->boundingRect().width() / 2,
+                                  view.lock()->height() / 2 - this->boundingRect().height() / 2 ) );
     playerInventoryView->setPos ( 0, 0 );
     tradeItemsView->setPos (
         this->boundingRect().width() -
@@ -32,10 +32,10 @@ void CTradePanel::update() {
     QGraphicsItem::update();
 }
 
-void CTradePanel::setUpPanel ( CGameView *view ) {
+void CTradePanel::setUpPanel ( std::shared_ptr<CGameView> view ) {
     this->view=view;
-    this->playerInventoryView= new CPlayerInventoryView ( this );
-    this->tradeItemsView=new CTradeItemsView ( this );
+    this->playerInventoryView= std::make_shared<CPlayerInventoryView> ( this->ptr<CTradePanel>() );
+    this->tradeItemsView=std::make_shared<CTradeItemsView> ( this->ptr<CTradePanel>() );
 
     playerInventoryView->setZValue ( 3 );
     playerInventoryView->setParentItem ( this );
@@ -65,12 +65,12 @@ void CTradePanel::onClickAction ( std::shared_ptr<CGameObject> object ) {
     }
 }
 
-void CTradePanel::handleDrop ( CPlayerView *view, std::shared_ptr<CGameObject> object ) {
-    CPlayerView *view2=dynamic_cast<CPlayerView*> ( object->parentItem() );
+void CTradePanel::handleDrop ( std::shared_ptr<CPlayerView> view, std::shared_ptr<CGameObject> object ) {
+    std::shared_ptr<CPlayerView> view2= ( dynamic_cast<CPlayerView*> ( object->parentItem() ) )->ptr<CPlayerView>(); //watchout on this, shared from this may not be safe
     if ( auto item=cast<CItem> ( object ) ) {
-        auto player=this->getView()->getGame()->getMap()->getPlayer();
+        std::shared_ptr<CPlayer> player=this->getView()->getGame()->getMap()->getPlayer();
         if ( player ) {
-            auto market=player->getMarket();
+            std::shared_ptr<CMarket> market=player->getMarket();
             if ( market ) {
                 if ( view==playerInventoryView&&view2==tradeItemsView ) {
                     int cost=item->getPower() * ( item->getPower()+1 ) *market->getSell() ;
