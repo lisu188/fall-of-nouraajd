@@ -26,16 +26,6 @@ public:
     virtual void onClickAction ( std::shared_ptr<CGameObject> ) override;
     bool isShown();
     std::shared_ptr<CGameView> getView();
-
-    Q_INVOKABLE void setProperty ( QString name,QVariant property );
-    Q_INVOKABLE QVariant property ( QString name ) const;
-    Q_INVOKABLE void setStringProperty ( QString name,QString value );
-    Q_INVOKABLE void setBoolProperty ( QString name,bool value );
-    Q_INVOKABLE void setNumericProperty ( QString name,int value );
-    Q_INVOKABLE QString getStringProperty ( QString name ) const;
-    Q_INVOKABLE bool getBoolProperty ( QString name ) const;
-    Q_INVOKABLE int getNumericProperty ( QString name ) const;
-    Q_INVOKABLE void incProperty ( QString name,int value );
 protected:
     std::weak_ptr<CGameView> view;
 };

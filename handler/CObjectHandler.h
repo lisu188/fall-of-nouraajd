@@ -43,5 +43,8 @@ private:
 
     QJsonObject objectConfig;
 
+    std::shared_ptr<QJsonObject> serialize(std::shared_ptr<CGameObject> object);
+    std::shared_ptr<CGameObject> deserialize(std::shared_ptr<CMap> map,std::shared_ptr<QJsonObject> object);
+
     std::weak_ptr<CObjectHandler> parent;
 };
