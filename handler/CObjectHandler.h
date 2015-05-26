@@ -37,6 +37,8 @@ private:
     QMetaProperty getProperty (std::shared_ptr<CGameObject> object , QString name ) ;
 
     void setObjectProperty(std::shared_ptr<CGameObject> object, QMetaProperty property, QJsonObject &propObject, const char* keyName);
+    void saveVariantProperty (std::shared_ptr<QJsonObject> conf, QString propertyName,QVariant propertyValue);
+
     std::shared_ptr<CGameObject> buildObject(QJsonObject &config, std::shared_ptr<CMap> map);
 
     std::unordered_map<QString,std::function<CGameObject*() >>  constructors;
