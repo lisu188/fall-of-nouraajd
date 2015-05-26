@@ -46,7 +46,7 @@ void CEventHandler::registerTrigger ( QString name, QString type,  std::function
                         ( CGameEvent::staticMetaObject.enumerator ( CGameEvent::staticMetaObject.indexOfEnumerator ( "Type" ) )
                           .keyToValue ( type.toStdString().c_str(),&ok ) );
     if ( ok ) {
-        triggers.insert ( std::make_pair ( TriggerKey ( name,tp ),std::shared_ptr<CTrigger>(trigger()) ) ) ;
+        triggers.insert ( std::make_pair ( TriggerKey ( name,tp ),std::shared_ptr<CTrigger> ( trigger() ) ) ) ;
     } else {
         //handle
     }

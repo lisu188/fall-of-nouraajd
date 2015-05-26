@@ -33,11 +33,11 @@ private:
     std::shared_ptr<CGameObject> getType ( QString name );
     QJsonObject getConfig ( QString type );
 
-    void setProperty (std::shared_ptr<CGameObject> object , QString key, QJsonValue value );
-    QMetaProperty getProperty (std::shared_ptr<CGameObject> object , QString name ) ;
+    void setProperty ( std::shared_ptr<CGameObject> object , QString key, const QJsonValue &value );
+    QMetaProperty getProperty ( std::shared_ptr<CGameObject> object , QString name ) ;
 
-    void setObjectProperty(std::shared_ptr<CGameObject> object, QMetaProperty property, QJsonObject &propObject, const char* keyName);
-    std::shared_ptr<CGameObject> buildObject(QJsonObject &config, std::shared_ptr<CMap> map);
+    void setObjectProperty ( std::shared_ptr<CGameObject> object, QMetaProperty property, QJsonObject &propObject, const char* keyName );
+    std::shared_ptr<CGameObject> buildObject ( QJsonObject &config, std::shared_ptr<CMap> map );
 
     std::unordered_map<QString,std::function<CGameObject*() >>  constructors;
 

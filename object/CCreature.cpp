@@ -65,7 +65,7 @@ std::shared_ptr<Stats> CCreature::getLevelStats() const {
     return levelStats;
 }
 
-void CCreature::setLevelStats (std::shared_ptr<Stats> value ) {
+void CCreature::setLevelStats ( std::shared_ptr<Stats> value ) {
     levelStats = value;
 }
 
@@ -73,7 +73,7 @@ void CCreature::addBonus ( std::shared_ptr<Stats> bonus ) {
     stats->addBonus ( bonus );
 }
 
-void CCreature::removeBonus (std::shared_ptr<Stats> bonus ) {
+void CCreature::removeBonus ( std::shared_ptr<Stats> bonus ) {
     stats->removeBonus ( bonus );
 }
 
@@ -502,7 +502,7 @@ std::shared_ptr<Stats> CCreature::getStats() const {
     return stats;
 }
 
-void CCreature::setStats (std::shared_ptr<Stats> value ) {
+void CCreature::setStats ( std::shared_ptr<Stats> value ) {
     stats = value;
 }
 
