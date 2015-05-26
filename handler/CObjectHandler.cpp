@@ -64,6 +64,30 @@ std::shared_ptr<CGameObject> CObjectHandler::buildObject(QJsonObject &config, st
     return object;
 }
 
+void CObjectHandler::saveVariantProperty(std::shared_ptr<QJsonObject> conf, QString propertyName, QVariant propertyValue)
+{
+    switch(propertyValue.type()){
+        case QVariant::Int:
+            (*conf)["properties"].toObject()[propertyName]=propertyValue.toInt();
+            break;
+        case QVariant::String:
+            (*conf)["properties"].toObject()[propertyName]=propertyValue.toString();
+            break;
+        case QVariant::Bool:
+            (*conf)["properties"].toObject()[propertyName]=propertyValue.toBool();
+            break;
+        case QVariant::List:
+            (*conf)["properties"].toObject()[propertyName]=propertyValue.toJsonArray();
+            break;
+        case QVariant::Map:
+            (*conf)["properties"].toObject()[propertyName]=propertyValue.toJsonObject();
+            break;
+        default:
+            (*conf)["properties"].toObject()[propertyName]=*serialize(*reinterpret_cast<std::shared_ptr<CGameObject>*>(propertyValue.data()));
+            break;
+    }
+}
+
 std::shared_ptr<QJsonObject> CObjectHandler::serialize(std::shared_ptr<CGameObject> object)
 {
     std::shared_ptr<QJsonObject> conf=std::make_shared<QJsonObject>();
@@ -72,26 +96,11 @@ std::shared_ptr<QJsonObject> CObjectHandler::serialize(std::shared_ptr<CGameObje
     for ( int i = 0; i < object->metaObject()->propertyCount(); i++ ) {
         QMetaProperty property = object->metaObject()->property ( i );
         QString propertyName=property.name();
-        switch(property.type()){
-            case QVariant::Int:
-                (*conf)["properties"].toObject()[propertyName]=object->getNumericProperty(propertyName);
-                break;
-            case QVariant::String:
-                (*conf)["properties"].toObject()[propertyName]=object->getStringProperty(propertyName);
-                break;
-            case QVariant::Bool:
-                (*conf)["properties"].toObject()[propertyName]=object->getBoolProperty(propertyName);
-                break;
-            case QVariant::List:
-                (*conf)["properties"].toObject()[propertyName]=object->property(propertyName).toJsonArray();
-                break;
-            case QVariant::Map:
-                (*conf)["properties"].toObject()[propertyName]=object->property(propertyName).toJsonObject();
-                break;
-            default:
-                (*conf)["properties"].toObject()[propertyName]=*serialize(object->getObjectProperty(propertyName));
-                break;
-        }
+        QVariant propertyValue=object->property(propertyName);
+        saveVariantProperty(conf, propertyName, propertyValue);
+    }
+    for(QString propertyName:object->dynamicPropertyNames()){
+        saveVariantProperty(conf, propertyName, object->property(propertyName));
     }
     return conf;
 }
@@ -152,11 +161,11 @@ void CObjectHandler::setProperty (std::shared_ptr<CGameObject> object,QString ke
         QMetaProperty property=getProperty ( object,key );
         QJsonObject propObject=value.toObject();
         if ( !property.isValid() ) {
-            object->setProperty ( keyName,propObject.toVariantMap() );
-            qFatal("Invalid Property!");
+            qDebug()<<"Setting dynamic property:"<<keyName;
         } else {
-            setObjectProperty(object, property, propObject, keyName);
+            qDebug()<<"Setting static property:"<<keyName;
         }
+        setObjectProperty(object, property, propObject, keyName);
         break;
     }
 }

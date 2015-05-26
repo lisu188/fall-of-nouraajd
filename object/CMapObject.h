@@ -10,6 +10,7 @@ class CCreature;
 class CMapObject : public CGameObject ,public Creatable,public Turnable {
     friend class CObjectHandler;
     Q_OBJECT
+    //add xyz properties
 public:
     CMapObject();
     virtual ~CMapObject();
