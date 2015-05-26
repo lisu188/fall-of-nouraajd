@@ -25,37 +25,23 @@ public:
         return cast<T> ( shared_from_this() );
     }
 
-    Q_INVOKABLE void setProperty ( QString name,QVariant property ) {
-        QByteArray byteArray = name.toUtf8();
-        const char* cString = byteArray.constData();
-        this->QObject::setProperty ( cString,property );
-    }
-    Q_INVOKABLE QVariant property ( QString name ) const {
-        QByteArray byteArray = name.toUtf8();
-        const char* cString = byteArray.constData();
-        return this->QObject::property ( cString );
-    }
-    Q_INVOKABLE void setStringProperty ( QString name,QString value ) {
-        this->setProperty ( name, value ) ;
-    }
-    Q_INVOKABLE void setBoolProperty ( QString name,bool value ) {
-        this->setProperty ( name,value );
-    }
-    Q_INVOKABLE void setNumericProperty ( QString name,int value ) {
-        this->setProperty ( name,value );
-    }
-    Q_INVOKABLE QString getStringProperty ( QString name ) const {
-        return this->property ( name ).toString();
-    }
-    Q_INVOKABLE bool getBoolProperty ( QString name ) const {
-        return this->property ( name ).toBool();
-    }
-    Q_INVOKABLE int getNumericProperty ( QString name ) const {
-        return this->property ( name ).toInt();
-    }
-    Q_INVOKABLE void incProperty ( QString name,int value ) {
-        this->setNumericProperty ( name,this->getNumericProperty ( name )+value );
-    }
+     void setProperty ( QString name,QVariant property );
+     QVariant property ( QString name ) const;
+     void setStringProperty ( QString name,QString value );
+     void setBoolProperty ( QString name,bool value );
+     void setNumericProperty ( QString name,int value );
+     QString getStringProperty ( QString name ) const;
+     bool getBoolProperty ( QString name ) const;
+     int getNumericProperty ( QString name ) const;
+     template<typename T>
+     void setObjectProperty(QString name,std::shared_ptr<T> object){
+         setProperty(name,QVariant(qRegisterMetaType<std::shared_ptr<T>>(),&object));
+     }
+     template<typename T=CGameObject>
+     std::shared_ptr<T> getObjectProperty(QString name){
+         return *reinterpret_cast<std::shared_ptr<T>*>(this->property(name).data());
+     }
+     void incProperty ( QString name,int value );
 
     virtual QString getTooltip() const;
     virtual void setTooltip ( const QString &value );
