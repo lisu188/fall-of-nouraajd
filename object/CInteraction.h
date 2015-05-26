@@ -30,5 +30,5 @@ public:
 private:
     QGraphicsSimpleTextItem statsView;
 };
-
+GAME_PROPERTY ( CInteraction )
 
