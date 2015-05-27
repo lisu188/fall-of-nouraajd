@@ -186,8 +186,8 @@ void CItemSlot::paint ( QPainter *painter, const QStyleOptionGraphicsItem *,
 
 bool CItemSlot::checkType ( int slot,std::shared_ptr<CItem> item ) {
     QJsonArray config =
-        CConfigurationProvider::getConfig (
-            "slots.json" ).toObject()  [QString::number ( slot )].toObject() ["types"].toArray();
+        ( *CConfigurationProvider::getConfig (
+              "slots.json" ) ) [QString::number ( slot )].toObject() ["types"].toArray();
     for (   int i = 0; i < config.size(); i++ ) {
         if ( item->inherits ( config[i].toString().toStdString().c_str() ) ) {
             return true;

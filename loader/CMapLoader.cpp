@@ -8,13 +8,13 @@ std::shared_ptr<CMap> CMapLoader::loadMap ( std::shared_ptr<CGame> game,QString 
     map->getObjectHandler()->registerConfig ( path+"/config.json" );
     map->getGame()->getScriptHandler()->addModule ( name,path+"/script.py" );
     map->getGame()->getScriptHandler()->callFunction ( name+".load",map );
-    QJsonObject mapc=CConfigurationProvider::getConfig ( path+"/map.json" ).toObject();
-    const QJsonObject &mapProperties=mapc["properties"].toObject();
-    const QJsonArray &mapLayers=mapc["layers"].toArray();
+    std::shared_ptr<QJsonObject> mapc=CConfigurationProvider::getConfig ( path+"/map.json" );
+    const QJsonObject &mapProperties= ( *mapc ) ["properties"].toObject();
+    const QJsonArray &mapLayers= ( *mapc ) ["layers"].toArray();
     map->entryx = mapProperties["x"].toString().toInt();
     map->entryy = mapProperties["y"].toString().toInt();
     map->entryz = mapProperties ["z"].toString().toInt();
-    const	QJsonObject &tileset = mapc["tilesets"].toArray() [0].toObject() ["tileproperties"].toObject();
+    const	QJsonObject &tileset = ( *mapc ) ["tilesets"].toArray() [0].toObject() ["tileproperties"].toObject();
     for ( auto it=mapLayers.begin(); it!=mapLayers.end(); it++ ) {
         const	QJsonObject &layer= ( *it ).toObject();
         if ( layer["type"].toString() =="tilelayer" ) {

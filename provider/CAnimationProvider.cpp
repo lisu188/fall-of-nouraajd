@@ -34,13 +34,13 @@ void CAnimationProvider::loadAnim ( QString path ) {
     std::map<int, int> timemap;
     QString time="time.json";
 
-    QJsonArray config;
+    std::shared_ptr<QJsonObject> config;
     if ( path.endsWith ( "/" ) ) {
-        CConfigurationProvider::getConfig ( path + time ).toArray();
+        config=CConfigurationProvider::getConfig ( path + time );
     }
-    if ( !config.isEmpty() ) {
-        for (  int i = 0; i < config.size(); i++ ) {
-            timemap.insert ( std::make_pair ( i, config[i].toInt() ) );
+    if ( !config->isEmpty() ) {
+        for (  int i = 0; i < config->size(); i++ ) {
+            timemap.insert ( std::make_pair ( i, ( *config ) [QString::number ( i )].toInt() ) );
         }
     } else {
         timemap.insert (  std::make_pair ( 0, 250 ) );
