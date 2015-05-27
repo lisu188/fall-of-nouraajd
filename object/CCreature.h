@@ -49,7 +49,7 @@ public:
     void attribChange();
     void heal ( int i );
     void healProc ( float i );
-    void hurt (std::shared_ptr<Damage> damage );
+    void hurt ( std::shared_ptr<Damage> damage );
     void hurt ( int i );
     int getDmg();
     int getScale();
@@ -110,7 +110,7 @@ public:
     void setStats ( std::shared_ptr<Stats> value );
     std::shared_ptr<Stats> getLevelStats() const;
     void setLevelStats ( std::shared_ptr<Stats> value );
-    void addBonus (std::shared_ptr<Stats> bonus );
+    void addBonus ( std::shared_ptr<Stats> bonus );
     void removeBonus ( std::shared_ptr<Stats> bonus );
     int getSw() const;
     void setSw ( int value );
