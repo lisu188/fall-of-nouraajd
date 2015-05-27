@@ -1,11 +1,11 @@
 #pragma once
 #include "CGlobal.h"
-class CConfigurationProvider : private std::map<QString, QJsonValue > {
+class CConfigurationProvider : private std::map<QString, std::shared_ptr<QJsonObject>> {
 public:
-    static QJsonValue& getConfig ( QString path );
+    static std::shared_ptr<QJsonObject> getConfig ( QString path );
 private:
     CConfigurationProvider();
     ~CConfigurationProvider();
-    QJsonValue &getConfiguration ( QString path );
+    std::shared_ptr<QJsonObject> getConfiguration ( QString path );
     void loadConfig ( QString path );
 };
