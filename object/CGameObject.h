@@ -25,23 +25,23 @@ public:
         return cast<T> ( shared_from_this() );
     }
 
-     void setProperty ( QString name,QVariant property );
-     QVariant property ( QString name ) const;
-     void setStringProperty ( QString name,QString value );
-     void setBoolProperty ( QString name,bool value );
-     void setNumericProperty ( QString name,int value );
-     QString getStringProperty ( QString name ) const;
-     bool getBoolProperty ( QString name ) const;
-     int getNumericProperty ( QString name ) const;
-     template<typename T>
-     void setObjectProperty(QString name,std::shared_ptr<T> object){
-         setProperty(name,QVariant(qRegisterMetaType<std::shared_ptr<T>>(),&object));
-     }
-     template<typename T=CGameObject>
-     std::shared_ptr<T> getObjectProperty(QString name){
-         return *reinterpret_cast<std::shared_ptr<T>*>(this->property(name).data());
-     }
-     void incProperty ( QString name,int value );
+    void setProperty ( QString name,QVariant property );
+    QVariant property ( QString name ) const;
+    void setStringProperty ( QString name,QString value );
+    void setBoolProperty ( QString name,bool value );
+    void setNumericProperty ( QString name,int value );
+    QString getStringProperty ( QString name ) const;
+    bool getBoolProperty ( QString name ) const;
+    int getNumericProperty ( QString name ) const;
+    template<typename T>
+    void setObjectProperty ( QString name,std::shared_ptr<T> object ) {
+        setProperty ( name,QVariant ( qRegisterMetaType<std::shared_ptr<T>>(),&object ) );
+    }
+    template<typename T=CGameObject>
+    std::shared_ptr<T> getObjectProperty ( QString name ) {
+        return *reinterpret_cast<std::shared_ptr<T>*> ( this->property ( name ).data() );
+    }
+    void incProperty ( QString name,int value );
 
     virtual QString getTooltip() const;
     virtual void setTooltip ( const QString &value );

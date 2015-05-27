@@ -63,8 +63,8 @@ CListView::CListView ( std::shared_ptr<AGamePanel> panel ) :CPlayerView ( panel 
     CThreadUtil::call_later ( [this]() {
         this->setZValue ( 3 );
         curPosition = 0;
-        right = new CScrollObject ( this->ptr<CListView>(), true );
-        left = new CScrollObject ( this->ptr<CListView>(), false );
+        right = std::make_shared< CScrollObject> ( this->ptr<CListView>(), true );
+        left = std::make_shared< CScrollObject> ( this->ptr<CListView>(), false );
         x = 4, y = 4;
         pixmap.load ( CResourcesProvider::getInstance()->getPath ( "images/item.png" ) );
         pixmap = pixmap.scaled ( 50,50,
@@ -79,9 +79,9 @@ void CListView::update() {
     if ( items.size() - x * y < curPosition ) {
         curPosition = items.size() - x * y;
     }
-    QList<QGraphicsItem *> list = childItems();
+    std::set<QGraphicsItem *> list = convert<std::set<QGraphicsItem *>> ( childItems() );
     for ( auto childIter = list.begin(); childIter != list.end(); childIter++ ) {
-        if ( *childIter == right || *childIter == left ) {
+        if ( *childIter == right.get() || *childIter == left.get() ) {
             continue;
         }
         ( *childIter )->setParentItem ( 0 );

@@ -73,6 +73,11 @@ std::shared_ptr<CInteraction> CItem::getInteraction() {
     return interaction;
 }
 
+void CItem::setInteraction ( std::shared_ptr<CInteraction> interaction ) {
+    this->interaction=interaction;
+    interaction->setManaCost ( 0 );
+}
+
 CBelt::CBelt() {
 
 }
@@ -103,18 +108,6 @@ std::shared_ptr<Stats> CItem::getBonus() {
 
 void CItem::setBonus ( std::shared_ptr<Stats> stats ) {
     bonus=stats;
-}
-
-QString CItem::getInteractionName() {
-    if ( interaction ) {
-        return interaction->getObjectType();
-    }
-    return "";
-}
-
-void CItem::setInteractionName ( QString name ) {
-    interaction=this->getMap()->createObject<CInteraction> (  name );
-    interaction->setManaCost ( 0 );
 }
 
 CPotion::CPotion() {
