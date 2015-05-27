@@ -61,7 +61,7 @@ private:
     void setNumber ( std::shared_ptr<CGameObject> item, int i, int x );
     unsigned int curPosition;
     unsigned int x, y;
-    CScrollObject *right, *left;
+    std::shared_ptr<CScrollObject> right,left;
     std::set<std::shared_ptr<CGameObject>> items;
     QPixmap pixmap;
 };

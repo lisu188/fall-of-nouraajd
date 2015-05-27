@@ -44,7 +44,7 @@ std::shared_ptr<Stats> CEffect::getBonus() {
     return bonus;
 }
 
-void CEffect::setBonus (std::shared_ptr<Stats> value ) {
+void CEffect::setBonus ( std::shared_ptr<Stats> value ) {
     bonus = value;
 }
 

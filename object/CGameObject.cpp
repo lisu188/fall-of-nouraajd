@@ -31,43 +31,43 @@ void CGameObject::setMap ( std::shared_ptr<CMap> map ) {
     this->map=map;
 }
 
-void CGameObject::setProperty(QString name, QVariant property) {
+void CGameObject::setProperty ( QString name, QVariant property ) {
     QByteArray byteArray = name.toUtf8();
     const char* cString = byteArray.constData();
     this->QObject::setProperty ( cString,property );
 }
 
-QVariant CGameObject::property(QString name) const {
+QVariant CGameObject::property ( QString name ) const {
     QByteArray byteArray = name.toUtf8();
     const char* cString = byteArray.constData();
     return this->QObject::property ( cString );
 }
 
-void CGameObject::setStringProperty(QString name, QString value) {
+void CGameObject::setStringProperty ( QString name, QString value ) {
     this->setProperty ( name, value ) ;
 }
 
-void CGameObject::setBoolProperty(QString name, bool value) {
+void CGameObject::setBoolProperty ( QString name, bool value ) {
     this->setProperty ( name,value );
 }
 
-void CGameObject::setNumericProperty(QString name, int value) {
+void CGameObject::setNumericProperty ( QString name, int value ) {
     this->setProperty ( name,value );
 }
 
-QString CGameObject::getStringProperty(QString name) const {
+QString CGameObject::getStringProperty ( QString name ) const {
     return this->property ( name ).toString();
 }
 
-bool CGameObject::getBoolProperty(QString name) const {
+bool CGameObject::getBoolProperty ( QString name ) const {
     return this->property ( name ).toBool();
 }
 
-int CGameObject::getNumericProperty(QString name) const {
+int CGameObject::getNumericProperty ( QString name ) const {
     return this->property ( name ).toInt();
 }
 
-void CGameObject::incProperty(QString name, int value) {
+void CGameObject::incProperty ( QString name, int value ) {
     this->setNumericProperty ( name,this->getNumericProperty ( name )+value );
 }
 

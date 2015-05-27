@@ -4,12 +4,15 @@
         "properties": {
             "animation": "images/items/helmets/crownofnightmares",
             "bonus": {
-                "agility": 7,
-                "armor": 280,
-                "crit": 5,
-                "intelligence": 12,
-                "stamina": 14,
-                "strength": 4
+                "class": "Stats",
+                "properties": {
+                    "agility": 7,
+                    "armor": 280,
+                    "crit": 5,
+                    "intelligence": 12,
+                    "stamina": 14,
+                    "strength": 4
+                }
             },
             "power": 18
         }
@@ -19,11 +22,14 @@
         "properties": {
             "animation": "images/items/boots/eradicatorsboots",
             "bonus": {
-                "agility": 0,
-                "armor": 170,
-                "intelligence": 7,
-                "stamina": 8,
-                "strength": 10
+                "class": "Stats",
+                "properties": {
+                    "agility": 0,
+                    "armor": 170,
+                    "intelligence": 7,
+                    "stamina": 8,
+                    "strength": 10
+                }
             },
             "power": 14
         }
@@ -33,12 +39,15 @@
         "properties": {
             "animation": "images/items/gloves/glovesoftheassasin",
             "bonus": {
-                "agility": 15,
-                "armor": 295,
-                "crit": 2,
-                "intelligence": 9,
-                "stamina": 13,
-                "strength": 8
+                "class": "Stats",
+                "properties": {
+                    "agility": 15,
+                    "armor": 295,
+                    "crit": 2,
+                    "intelligence": 9,
+                    "stamina": 13,
+                    "strength": 8
+                }
             },
             "power": 11
         }
@@ -56,12 +65,15 @@
         "properties": {
             "animation": "images/items/belts/undestructiblebelt",
             "bonus": {
-                "agility": 14,
-                "armor": 300,
-                "block": 6,
-                "intelligence": 14,
-                "stamina": 14,
-                "strength": 14
+                "class": "Stats",
+                "properties": {
+                    "agility": 14,
+                    "armor": 300,
+                    "block": 6,
+                    "intelligence": 14,
+                    "stamina": 14,
+                    "strength": 14
+                }
             },
             "power": 20
         }

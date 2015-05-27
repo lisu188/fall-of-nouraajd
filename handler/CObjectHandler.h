@@ -33,20 +33,20 @@ private:
     std::shared_ptr<CGameObject> getType ( QString name );
     QJsonObject getConfig ( QString type );
 
-    void setProperty (std::shared_ptr<CGameObject> object , QString key, QJsonValue value );
-    QMetaProperty getProperty (std::shared_ptr<CGameObject> object , QString name ) ;
+    void setProperty ( std::shared_ptr<CGameObject> object , QString key, const QJsonValue &value );
+    QMetaProperty getProperty ( std::shared_ptr<CGameObject> object , QString name ) ;
 
-    void setObjectProperty(std::shared_ptr<CGameObject> object, QMetaProperty property, QJsonObject &propObject, const char* keyName);
-    void saveVariantProperty (std::shared_ptr<QJsonObject> conf, QString propertyName,QVariant propertyValue);
+    void setObjectProperty ( std::shared_ptr<CGameObject> object, QMetaProperty property, QJsonObject &propObject, const char* keyName );
+    void saveVariantProperty ( std::shared_ptr<QJsonObject> conf, QString propertyName,QVariant propertyValue );
 
-    std::shared_ptr<CGameObject> buildObject(QJsonObject &config, std::shared_ptr<CMap> map);
+    std::shared_ptr<CGameObject> buildObject ( QJsonObject &config, std::shared_ptr<CMap> map );
 
     std::unordered_map<QString,std::function<CGameObject*() >>  constructors;
 
     QJsonObject objectConfig;
 
-    std::shared_ptr<QJsonObject> serialize(std::shared_ptr<CGameObject> object);
-    std::shared_ptr<CGameObject> deserialize(std::shared_ptr<CMap> map,std::shared_ptr<QJsonObject> object);
+    std::shared_ptr<QJsonObject> serialize ( std::shared_ptr<CGameObject> object );
+    std::shared_ptr<CGameObject> deserialize ( std::shared_ptr<CMap> map,std::shared_ptr<QJsonObject> object );
 
     std::weak_ptr<CObjectHandler> parent;
 };
