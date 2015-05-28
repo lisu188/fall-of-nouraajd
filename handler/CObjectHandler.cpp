@@ -130,9 +130,24 @@ void CObjectHandler::setObjectProperty ( std::shared_ptr<CGameObject> object, QM
     }
 }
 
+void CObjectHandler::setArrayProperty ( std::shared_ptr<CGameObject> object, QMetaProperty property, std::shared_ptr<QJsonArray> arrayObject ) {
+    int typeId=QMetaType::type ( property.typeName() );
+    if ( typeId==QMetaType::QVariantList ) {
+        object->setProperty ( property.name(),arrayObject->toVariantList() );
+    } else {
+        std::set<std::shared_ptr<CGameObject>> arr;
+        for ( QJsonValue val:*arrayObject ) {
+            std::shared_ptr<CGameObject> ob=buildObject ( object->getMap(),std::make_shared<QJsonObject> ( val.toObject() ) );
+            if ( !ob ) {
+                qFatal ( QString ( "Object "+QString ( property.typeName() )+" is null" ).toStdString().c_str() );
+            }
+            arr.insert ( ob );
+        }
+        object->setProperty (  property.name(),QVariant ( typeId,&arr ) );
+    }
+}
+
 void CObjectHandler::setProperty ( std::shared_ptr<CGameObject> object,QString key, const QJsonValue &value )  {
-    QByteArray byteArray = key.toUtf8();
-    const char* keyName = byteArray.constData();
     switch ( value.type() ) {
     case QJsonValue::Null:
         qFatal ( "Null value detected." );
@@ -150,17 +165,10 @@ void CObjectHandler::setProperty ( std::shared_ptr<CGameObject> object,QString k
         object->setStringProperty ( key,value.toString() ) ;
         break;
     case QJsonValue::Type::Array:
-        object->setProperty ( keyName,value.toArray().toVariantList() );
+        setArrayProperty ( object, getProperty ( object,key ), std::make_shared<QJsonArray> ( value.toArray() ) );
         break;
     case QJsonValue::Type::Object:
-        QMetaProperty property=getProperty ( object,key );
-        std::shared_ptr<QJsonObject> propObject=std::make_shared<QJsonObject> ( value.toObject() );
-        if ( !property.isValid() ) {
-            qDebug() <<"Setting dynamic property:"<<keyName;
-        } else {
-            qDebug() <<"Setting static property:"<<keyName;
-        }
-        setObjectProperty ( object, property, propObject );
+        setObjectProperty ( object, getProperty ( object,key ), std::make_shared<QJsonObject> ( value.toObject() ) );
         break;
     }
 }
