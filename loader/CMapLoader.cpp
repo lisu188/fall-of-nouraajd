@@ -36,6 +36,19 @@ std::shared_ptr<CMap> CMapLoader::loadMap ( std::shared_ptr<CGame> game, QString
     return map;
 }
 
+void CMapLoader::saveMap ( std::shared_ptr<CMap> map, QString file ) {
+    std::shared_ptr<QJsonObject> data=std::make_shared<QJsonObject>();
+    map->forAll ( [data] ( std::shared_ptr<CMapObject> object ) {
+        ( *data ) [object->objectName()]=* ( object->getMap()->getObjectHandler()->serialize ( object ) );
+    } );
+    QFile f ( file );
+    if ( f.open ( QIODevice::WriteOnly ) ) {
+        f.write ( QJsonDocument ( *data ).toJson ( QJsonDocument::JsonFormat::Indented ) );
+    } else {
+        qFatal ( "Failed saving!" );
+    }
+}
+
 void CMapLoader::handleTileLayer ( std::shared_ptr<CMap> map,const QJsonObject &tileset, const QJsonObject &layer ) {
     const QJsonObject& layerProperties= layer ["properties"].toObject();
     int level =layerProperties["level"].toString().toInt();
