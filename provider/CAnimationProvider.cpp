@@ -38,7 +38,7 @@ void CAnimationProvider::loadAnim ( QString path ) {
     if ( path.endsWith ( "/" ) ) {
         config=CConfigurationProvider::getConfig ( path + time );
     }
-    if ( !config->isEmpty() ) {
+    if ( config && !config->isEmpty() ) {
         for (  int i = 0; i < config->size(); i++ ) {
             timemap.insert ( std::make_pair ( i, ( *config ) [QString::number ( i )].toInt() ) );
         }

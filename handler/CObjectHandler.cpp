@@ -20,7 +20,7 @@ std::shared_ptr<QJsonObject> CObjectHandler::getConfig ( QString type ) {
     } else if ( parent.lock() ) {
         return parent.lock()->getConfig ( type );
     }
-    return std::shared_ptr<QJsonObject>();
+    return std::make_shared<QJsonObject>();
 }
 
 std::set<QString> CObjectHandler::getAllTypes() {
@@ -66,22 +66,22 @@ std::shared_ptr<CGameObject> CObjectHandler::buildObject ( std::shared_ptr<CMap>
 void CObjectHandler::saveVariantProperty ( std::shared_ptr<QJsonObject> conf, QString propertyName, QVariant propertyValue ) {
     switch ( propertyValue.type() ) {
     case QVariant::Int:
-        ( *conf ) ["properties"].toObject() [propertyName]=propertyValue.toInt();
+        ( *conf ) [propertyName]=propertyValue.toInt();
         break;
     case QVariant::String:
-        ( *conf ) ["properties"].toObject() [propertyName]=propertyValue.toString();
+        ( *conf ) [propertyName]=propertyValue.toString();
         break;
     case QVariant::Bool:
-        ( *conf ) ["properties"].toObject() [propertyName]=propertyValue.toBool();
+        ( *conf ) [propertyName]=propertyValue.toBool();
         break;
     case QVariant::List:
-        ( *conf ) ["properties"].toObject() [propertyName]=propertyValue.toJsonArray();
+        ( *conf ) [propertyName]=propertyValue.toJsonArray();
         break;
     case QVariant::Map:
-        ( *conf ) ["properties"].toObject() [propertyName]=propertyValue.toJsonObject();
+        ( *conf ) [propertyName]=propertyValue.toJsonObject();
         break;
     default:
-        ( *conf ) ["properties"].toObject() [propertyName]=*serialize ( *reinterpret_cast<std::shared_ptr<CGameObject>*> ( propertyValue.data() ) );
+        ( *conf ) [propertyName]=*serialize ( *reinterpret_cast<std::shared_ptr<CGameObject>*> ( propertyValue.data() ) );
         break;
     }
 }
@@ -89,16 +89,19 @@ void CObjectHandler::saveVariantProperty ( std::shared_ptr<QJsonObject> conf, QS
 std::shared_ptr<QJsonObject> CObjectHandler::serialize ( std::shared_ptr<CGameObject> object ) {
     std::shared_ptr<QJsonObject> conf=std::make_shared<QJsonObject>();
     ( *conf ) ["class"]=object->getObjectType();
-    ( *conf ) ["properties"]=QJsonObject();
+    std::shared_ptr<QJsonObject> properties=std::make_shared<QJsonObject>();
     for ( int i = 0; i < object->metaObject()->propertyCount(); i++ ) {
         QMetaProperty property = object->metaObject()->property ( i );
         QString propertyName=property.name();
-        QVariant propertyValue=object->property ( propertyName );
-        saveVariantProperty ( conf, propertyName, propertyValue );
+        if ( propertyName!="objectName"&&propertyName!="objectType" ) {
+            QVariant propertyValue=object->property ( propertyName );
+            saveVariantProperty ( properties, propertyName, propertyValue );
+        }
     }
     for ( QString propertyName:object->dynamicPropertyNames() ) {
-        saveVariantProperty ( conf, propertyName, object->property ( propertyName ) );
+        saveVariantProperty ( properties, propertyName, object->property ( propertyName ) );
     }
+    ( *conf ) ["properties"]=*properties;
     return conf;
 }
 

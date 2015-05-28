@@ -297,6 +297,8 @@ void CMap::move () {
 
         map->ensureSize();
 
+        CMapLoader::saveMap ( map,"file.sav" );
+
         map->moving=false;
     };
 
