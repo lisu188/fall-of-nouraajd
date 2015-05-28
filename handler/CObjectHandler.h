@@ -18,7 +18,10 @@ public:
         }
         return object;
     }
-
+    template<typename T>
+    std::shared_ptr<T> clone ( std::shared_ptr<CMap> map,std::shared_ptr<T> object ) {
+        return cast<T> ( deserialize ( map,serialize ( object ) ) );
+    }
     std::set<QString> getAllTypes();
 
     std::shared_ptr<QJsonObject> serialize ( std::shared_ptr<CGameObject> object );
@@ -40,6 +43,8 @@ private:
     QMetaProperty getProperty ( std::shared_ptr<CGameObject> object , QString name ) ;
 
     void setObjectProperty ( std::shared_ptr<CGameObject> object, QMetaProperty property, std::shared_ptr<QJsonObject> propObject );
+    void setArrayProperty ( std::shared_ptr<CGameObject> object, QMetaProperty property, std::shared_ptr<QJsonArray> arrayObject );
+
     void saveVariantProperty ( std::shared_ptr<QJsonObject> conf, QString propertyName, QVariant propertyValue );
 
     std::shared_ptr<CGameObject> buildObject ( std::shared_ptr<CMap> map,std::shared_ptr<QJsonObject> config );
@@ -49,4 +54,5 @@ private:
     std::unordered_map<QString,std::shared_ptr<QJsonObject>> objectConfig;
 
     std::weak_ptr<CObjectHandler> parent;
+
 };
