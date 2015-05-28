@@ -7,7 +7,7 @@
 #include "handler/CHandler.h"
 #include "loader/CLoader.h"
 
-CGame::CGame ( std::weak_ptr<CGameView> view ) :view ( view )  {
+CGame::CGame ( std::shared_ptr<CGameView> view ) :view ( view )  {
 
 }
 

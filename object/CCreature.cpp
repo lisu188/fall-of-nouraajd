@@ -7,14 +7,12 @@
 #include "object/CObject.h"
 #include "gui/CGui.h"
 
-void CCreature::setActions ( QVariantList &value ) {
-    for ( QVariant it:value ) {
-        this->actions.insert ( getMap()->createObject<CInteraction> ( it.toString() ) );
-    }
+void CCreature::setActions ( std::set<std::shared_ptr<CInteraction>> value ) {
+    actions=value;
 }
 
-QVariantList CCreature::getActions() {
-    return QVariantList();
+std::set<std::shared_ptr<CInteraction>> CCreature::getActions() {
+    return actions;
 }
 
 int CCreature::getExp() { return exp; }
@@ -85,7 +83,7 @@ void CCreature::addItem ( std::shared_ptr<CItem> item ) {
 }
 
 void CCreature::removeFromInventory (  std::shared_ptr<CItem> item ) {
-    inventory.erase ( item );
+    items.erase ( item );
     Q_EMIT inventoryChanged();
 }
 
@@ -97,7 +95,7 @@ void CCreature::removeFromEquipped ( std::shared_ptr<CItem> item ) {
 }
 
 std::set<std::shared_ptr<CItem> > CCreature::getInInventory() {
-    return inventory;
+    return items;
 }
 
 std::set<std::shared_ptr<CInteraction>> CCreature::getInteractions() {
@@ -110,7 +108,7 @@ std::map<int, std::shared_ptr<CItem> > CCreature::getEquipped() {
 
 void CCreature::addItem ( std::set<std::shared_ptr<CItem> > items ) {
     for ( std::shared_ptr<CItem>  it : items ) {
-        inventory.insert ( it );
+        items.insert ( it );
     }
     Q_EMIT inventoryChanged();
 }
@@ -182,15 +180,12 @@ void CCreature::setInventory ( const QVariantMap &value ) {
     }
 }
 
-void CCreature::setItems ( QVariantList &value ) {
-    for ( auto it=value.begin(); it!=value.end(); it++ ) {
-        std::shared_ptr<CItem> item=this->getMap()->createObject<CItem> ( ( *it ).toString()  );
-        this->addItem ( item  );
-    }
+void CCreature::setItems ( std::set<std::shared_ptr<CItem> > value ) {
+    items=value;
 }
 
-QVariantList CCreature::getItems() {
-    return QVariantList();
+std::set<std::shared_ptr<CItem>> CCreature::getItems() {
+    return items;
 }
 
 void CCreature::hurt ( std::shared_ptr<Damage> damage ) {
@@ -424,7 +419,7 @@ void CCreature::setItem ( int i, std::shared_ptr<CItem> newItem ) {
 }
 
 bool CCreature::hasInInventory ( std::shared_ptr<CItem> item ) {
-    return ctn ( inventory,item );
+    return ctn ( items,item );
 }
 
 bool CCreature::hasItem ( std::shared_ptr<CItem> item ) {
@@ -465,7 +460,7 @@ std::set<std::shared_ptr<CItem>> CCreature::getLoot() {
 
 std::set<std::shared_ptr<CItem> > CCreature::getAllItems() {
     std::set<std::shared_ptr<CItem> > allItems;
-    allItems.insert ( inventory.begin(),inventory.end() );
+    allItems.insert ( items.begin(),items.end() );
     for ( auto it:equipped ) {
         if ( it.second ) {
             allItems.insert ( it.second );

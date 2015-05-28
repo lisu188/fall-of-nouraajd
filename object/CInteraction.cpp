@@ -21,8 +21,8 @@ void CInteraction::onAction ( std::shared_ptr<CCreature> first, std::shared_ptr<
 
     this->performAction ( first , second  );
 
-    if ( this->effect.length() >0 ) {
-        std::shared_ptr<CEffect> effect=getMap()->getObjectHandler()->createObject<CEffect> ( getMap(),this->effect );
+    if ( effect ) {
+        std::shared_ptr<CEffect> effect=getMap()->getObjectHandler()->clone ( getMap(),effect );
         effect->setCaster ( first );
         if ( this->configureEffect ( effect  ) ) {
             std::shared_ptr<CCreature> victim;
@@ -45,11 +45,11 @@ void CInteraction::setManaCost ( int value ) {
     manaCost = value;
 }
 
-QString CInteraction::getEffect() const {
+std::shared_ptr<CEffect> CInteraction::getEffect() const {
     return effect;
 }
 
-void CInteraction::setEffect ( const QString &value ) {
+void CInteraction::setEffect ( const std::shared_ptr<CEffect> value ) {
     effect = value;
 }
 

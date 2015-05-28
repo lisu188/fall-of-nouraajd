@@ -31,17 +31,17 @@ class CCreature : public CMapObject, public Moveable {
     Q_PROPERTY ( QVariantMap inventory READ getInventory WRITE setInventory USER true )
     Q_PROPERTY ( std::shared_ptr<Stats> stats READ getStats WRITE setStats USER true )
     Q_PROPERTY ( std::shared_ptr<Stats> levelStats READ getLevelStats WRITE setLevelStats USER true )
-    Q_PROPERTY ( QVariantList actions READ getActions WRITE setActions USER true )
-    Q_PROPERTY ( QVariantList items READ getItems WRITE setItems USER true )
+    Q_PROPERTY ( std::set<std::shared_ptr<CInteraction>> actions READ getActions WRITE setActions USER true )
+    Q_PROPERTY ( std::set<std::shared_ptr<CItem>> items READ getItems WRITE setItems USER true )
 
     friend class CCreatureFightView;
 public:
     CCreature();
     virtual ~CCreature();
-    void setActions ( QVariantList &value );
-    QVariantList getActions();
-    void setItems ( QVariantList &value );
-    QVariantList getItems();
+    void setActions ( std::set<std::shared_ptr<CInteraction> > value );
+    std::set<std::shared_ptr<CInteraction> > getActions();
+    void setItems ( std::set<std::shared_ptr<CItem>> value );
+    std::set<std::shared_ptr<CItem> > getItems();
     int getExp();
     void setExp ( int exp );
     int getExpReward();
@@ -124,7 +124,7 @@ public:
     Q_SIGNAL void inventoryChanged();
     Q_SIGNAL void equippedChanged();
 protected:
-    std::set<std::shared_ptr<CItem>> inventory;
+    std::set<std::shared_ptr<CItem>> items;
     std::map<int,std::shared_ptr<CItem> > equipped;
     std::set<std::shared_ptr<CInteraction>> actions;
     std::set<std::shared_ptr<CEffect>> effects;

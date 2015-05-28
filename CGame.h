@@ -13,7 +13,7 @@ class CGame : private QGraphicsScene,public std::enable_shared_from_this<CGame> 
     Q_OBJECT
     friend class CGameView;
 public:
-    CGame ( std::weak_ptr<CGameView> view );
+    CGame ( std::shared_ptr<CGameView> view );
     ~CGame();
     void changeMap ( QString file );
     std::shared_ptr<CMap> getMap() const;

@@ -4,11 +4,13 @@
 class CGameObject;
 #define GAME_PROPERTY(CLASS)\
     Q_DECLARE_METATYPE(std::shared_ptr<CLASS>)\
+    Q_DECLARE_METATYPE(std::set<std::shared_ptr<CLASS>>)\
     namespace{\
         class CLASS##_X{\
         public:\
             CLASS##_X(){\
                 qRegisterMetaType<std::shared_ptr<CLASS>>();\
+                qRegisterMetaType<std::set<std::shared_ptr<CLASS>>>();\
             }\
         } CLASS##_TMP;\
     }\
@@ -103,6 +105,20 @@ template<typename T>
 inline QString to_hex ( T object ) {
     std::stringstream stream;
     stream << std::hex << object;
+    return QString::fromStdString ( stream.str() ).toUpper();
+}
+
+template<typename T>
+inline QString to_hex ( T* object ) {
+    std::stringstream stream;
+    stream << std::hex << ( long ) object;
+    return QString::fromStdString ( stream.str() ).toUpper();
+}
+
+template<typename T>
+inline QString to_hex ( std::shared_ptr<T> object ) {
+    std::stringstream stream;
+    stream << std::hex << ( long ) object.get();
     return QString::fromStdString ( stream.str() ).toUpper();
 }
 

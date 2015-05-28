@@ -11,7 +11,7 @@ class CEffect;
 class CInteraction : public CGameObject {
     Q_OBJECT
     Q_PROPERTY ( int manaCost READ getManaCost  WRITE setManaCost USER true )
-    Q_PROPERTY ( QString effect READ getEffect WRITE setEffect USER true )
+    Q_PROPERTY ( std::shared_ptr<CEffect> effect READ getEffect WRITE setEffect USER true )
 public:
     CInteraction();
     ~CInteraction();
@@ -19,14 +19,14 @@ public:
     virtual void performAction ( std::shared_ptr<CCreature>, std::shared_ptr<CCreature> );
     virtual bool configureEffect ( std::shared_ptr<CEffect> );
 
-    QString getEffect() const;
-    void setEffect ( const QString &value );
+    std::shared_ptr<CEffect> getEffect() const;
+    void setEffect ( const std::shared_ptr<CEffect> value );
 
     int getManaCost() const;
     void setManaCost ( int value );
 
     int manaCost;
-    QString effect;
+    std::shared_ptr<CEffect> effect;
 private:
     QGraphicsSimpleTextItem statsView;
 };
