@@ -3,7 +3,9 @@
         "class": "AbyssalShadows",
         "properties": {
             "animation": "images/interactions/abyssalshadows",
-            "effect": "AbyssalShadowsEffect",
+            "effect": {
+                "ref": "AbyssalShadowsEffect"
+            },
             "manaCost": 15
         }
     },
@@ -11,7 +13,9 @@
         "class": "ArmorOfEndlessWinter",
         "properties": {
             "animation": "images/interactions/armorofendlesswinter",
-            "effect": "ArmorOfEndlessWinterEffect",
+            "effect": {
+                "ref": "ArmorOfEndlessWinterEffect"
+            },
             "manaCost": 60
         }
     },
@@ -27,7 +31,7 @@
         "properties": {
             "animationation": "images/interactions/backstab",
             "effect": {
-                "ref": "StunEffect"
+                "ref": "Stun"
             },
             "manaCost": 40
         }

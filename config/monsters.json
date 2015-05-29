@@ -9,8 +9,12 @@
             ],
             "animation": "images/players/assasin",
             "inventory": {
-                "0": "Dagger",
-                "3": "LeatherArmor"
+                "0": {
+                    "ref": "Dagger"
+                },
+                "3": {
+                    "ref": "LeatherArmor"
+                }
             },
             "items": [
                 {
@@ -34,12 +38,24 @@
                 }
             },
             "levelling": {
-                "1": "SneakAttack",
-                "2": "Mutilation",
-                "3": "LethalPoison",
-                "4": "Chloroform",
-                "5": "Stunner",
-                "6": "Backstab"
+                "1": {
+                    "ref": "SneakAttack"
+                },
+                "2": {
+                    "ref": "Mutilation"
+                },
+                "3": {
+                    "ref": "LethalPoison"
+                },
+                "4": {
+                    "ref": "Chloroform"
+                },
+                "5": {
+                    "ref": "Stunner"
+                },
+                "6": {
+                    "ref": "Backstab"
+                }
             },
             "stats": {
                 "class": "Stats",
@@ -81,7 +97,9 @@
                 }
             },
             "levelling": {
-                "4": "DoubleAttack"
+                "4": {
+                    "ref": "DoubleAttack"
+                }
             },
             "stats": {
                 "class": "Stats",
@@ -124,7 +142,9 @@
                 }
             },
             "levelling": {
-                "2": "AbyssalShadows"
+                "2": {
+                    "ref": "AbyssalShadows"
+                }
             },
             "stats": {
                 "class": "Stats",
@@ -167,7 +187,9 @@
                 }
             },
             "levelling": {
-                "4": "DoubleAttack"
+                "4": {
+                    "ref": "DoubleAttack"
+                }
             },
             "stats": {
                 "class": "Stats",
@@ -210,8 +232,12 @@
                 }
             },
             "levelling": {
-                "2": "MagicMissile",
-                "3": "FrostBolt"
+                "2": {
+                    "ref": "MagicMissile"
+                },
+                "3": {
+                    "ref": "FrostBolt"
+                }
             },
             "stats": {
                 "class": "Stats",
@@ -240,8 +266,12 @@
             ],
             "animation": "images/players/sorcerer",
             "inventory": {
-                "0": "Staff",
-                "3": "Robe"
+                "0": {
+                    "ref": "Staff"
+                },
+                "3": {
+                    "ref": "Robe"
+                }
             },
             "items": [
                 {
@@ -265,14 +295,30 @@
                 }
             },
             "levelling": {
-                "1": "MagicMissile",
-                "10": "ChaosBlast",
-                "2": "AbyssalShadows",
-                "3": "FrostBolt",
-                "4": "EndlessPain",
-                "5": "ArmorOfEndlessWinter",
-                "7": "ShadowBolt",
-                "8": "Devour"
+                "1": {
+                    "ref": "MagicMissile"
+                },
+                "10": {
+                    "ref": "ChaosBlast"
+                },
+                "2": {
+                    "ref": "AbyssalShadows"
+                },
+                "3": {
+                    "ref": "FrostBolt"
+                },
+                "4": {
+                    "ref": "EndlessPain"
+                },
+                "5": {
+                    "ref": "ArmorOfEndlessWinter"
+                },
+                "7": {
+                    "ref": "ShadowBolt"
+                },
+                "8": {
+                    "ref": "Devour"
+                }
             },
             "stats": {
                 "class": "Stats",
@@ -325,12 +371,24 @@
                 }
             },
             "levelling": {
-                "1": "Strike",
-                "2": "Barrier",
-                "3": "BloodThirst",
-                "4": "Bloodlash",
-                "5": "DeathStrike",
-                "6": "DoubleAttack"
+                "1": {
+                    "ref": "Strike"
+                },
+                "2": {
+                    "ref": "Barrier"
+                },
+                "3": {
+                    "ref": "BloodThirst"
+                },
+                "4": {
+                    "ref": "Bloodlash"
+                },
+                "5": {
+                    "ref": "DeathStrike"
+                },
+                "6": {
+                    "ref": "DoubleAttack"
+                }
             },
             "stats": {
                 "class": "Stats",

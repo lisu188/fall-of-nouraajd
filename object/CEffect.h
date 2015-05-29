@@ -32,3 +32,4 @@ private:
     int duration=0;
     bool buff=false;
 };
+GAME_PROPERTY ( CEffect )

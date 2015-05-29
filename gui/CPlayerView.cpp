@@ -61,17 +61,17 @@ void PlayerStatsView::update() {
 CListView::CListView ( std::shared_ptr<AGamePanel> panel ) :CPlayerView ( panel ) {
     //to avoid bad pointer exception, defer this until object is initialized
     CThreadUtil::call_later ( [this]() {
-        this->setZValue ( 3 );
-        curPosition = 0;
         right = std::make_shared< CScrollObject> ( this->ptr<CListView>(), true );
         left = std::make_shared< CScrollObject> ( this->ptr<CListView>(), false );
-        x = 4, y = 4;
-        pixmap.load ( CResourcesProvider::getInstance()->getPath ( "images/item.png" ) );
-        pixmap = pixmap.scaled ( 50,50,
-                                 Qt::IgnoreAspectRatio, Qt::SmoothTransformation );
         left->setPos ( 0, y *50 );
         right->setPos ( ( x - 1 ) *50, y *50 );
     } );
+    this->setZValue ( 3 );
+    curPosition = 0;
+    x = 4, y = 4;
+    pixmap.load ( CResourcesProvider::getInstance()->getPath ( "images/item.png" ) );
+    pixmap = pixmap.scaled ( 50,50,
+                             Qt::IgnoreAspectRatio, Qt::SmoothTransformation );
 }
 
 void CListView::update() {
@@ -160,14 +160,14 @@ void CScrollObject::onClickAction ( std::shared_ptr<CGameObject> ) {
 
 CPlayerEquippedView::CPlayerEquippedView ( std::shared_ptr<AGamePanel> panel ) :CPlayerView ( panel ) {
     for ( unsigned  int i = 0; i < 8; i++ ) {
-        std::shared_ptr<CItemSlot> slot = std::make_shared<CItemSlot> ( i,panel );
+        std::shared_ptr<CItemSlot> slot = std::make_shared<CItemSlot> ( QString::number ( i ),panel );
         slot->setParentItem ( this );
         slot->setPos ( i % 4 *50, i / 4 *50 );
         itemSlots.push_back ( slot );
     }
 }
 
-CItemSlot::CItemSlot ( int number, std::shared_ptr<AGamePanel> panel ) :
+CItemSlot::CItemSlot ( QString number, std::shared_ptr<AGamePanel> panel ) :
     number ( number ),panel ( panel ) {
     pixmap.load ( CResourcesProvider::getInstance()->getPath ( "images/item.png" )  );
     pixmap = pixmap.scaled ( 50, 50,
@@ -184,10 +184,10 @@ void CItemSlot::paint ( QPainter *painter, const QStyleOptionGraphicsItem *,
     painter->drawPixmap ( 0, 0, pixmap );
 }
 
-bool CItemSlot::checkType ( int slot,std::shared_ptr<CItem> item ) {
+bool CItemSlot::checkType ( QString slot,std::shared_ptr<CItem> item ) {
     QJsonArray config =
         ( *CConfigurationProvider::getConfig (
-              "slots.json" ) ) [QString::number ( slot )].toObject() ["types"].toArray();
+              "slots.json" ) ) [ slot ].toObject() ["types"].toArray();
     for (   int i = 0; i < config.size(); i++ ) {
         if ( item->inherits ( config[i].toString().toStdString().c_str() ) ) {
             return true;
@@ -202,8 +202,8 @@ void CItemSlot::update() {
         return;
     }
     auto equipped=player->getEquipped();
-    if ( equipped.find ( number ) !=equipped.end() ) {
-        std::shared_ptr<CItem>  item = equipped.at ( number );
+    if ( equipped.find ( QString ( number ) ) !=equipped.end() ) {
+        std::shared_ptr<CItem>  item = equipped.at ( QString ( number ) );
         if ( item ) {
             item->setParentItem ( this );
             item->setPos ( 0, 0 );
@@ -214,7 +214,7 @@ void CItemSlot::update() {
     this->CGameObject::update();
 }
 
-int CItemSlot::getNumber() {
+QString CItemSlot::getNumber() {
     return number;
 }
 
