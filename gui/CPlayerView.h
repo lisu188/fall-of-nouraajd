@@ -102,17 +102,17 @@ private:
 class CItemSlot : public CGameObject {
     Q_OBJECT
 public:
-    CItemSlot ( int number, std::shared_ptr<AGamePanel> panel );
+    CItemSlot ( QString number, std::shared_ptr<AGamePanel> panel );
     QRectF boundingRect() const;
     void paint ( QPainter *painter, const QStyleOptionGraphicsItem *, QWidget * );
-    static bool checkType ( int slot, std::shared_ptr<CItem> item );
+    static bool checkType ( QString slot, std::shared_ptr<CItem> item );
     void update();
-    int getNumber();
+    QString getNumber();
 protected:
     void dragMoveEvent ( QGraphicsSceneDragDropEvent *event );
     void dropEvent ( QGraphicsSceneDragDropEvent *event );
 private:
-    int number=-1;
+    QString number=QString::number ( -1 );
     QPixmap pixmap;
     std::weak_ptr<AGamePanel> panel;
 };

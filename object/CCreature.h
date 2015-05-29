@@ -1,8 +1,4 @@
 #pragma once
-#include <QGraphicsPixmapItem>
-#include <QDateTime>
-#include <set>
-
 #include "CMapObject.h"
 #include "CStats.h"
 
@@ -16,6 +12,9 @@ class IPathFinder;
 class CItem;
 class CMarket;
 
+typedef std::map<QString, std::shared_ptr<CInteraction> > CInteractionMap;
+typedef std::map<QString, std::shared_ptr<CItem> > CItemMap;
+
 class CCreature : public CMapObject, public Moveable {
     Q_OBJECT
     Q_PROPERTY ( int exp READ getExp WRITE setExp USER true )
@@ -27,8 +26,8 @@ class CCreature : public CMapObject, public Moveable {
     Q_PROPERTY ( int hp READ getHp WRITE setHp USER true )
     Q_PROPERTY ( int hpMax READ getHpMax WRITE setHpMax USER true )
     Q_PROPERTY ( int sw READ getSw WRITE setSw USER true )
-    Q_PROPERTY ( QVariantMap levelling READ getLevelling WRITE setLevelling USER true )
-    Q_PROPERTY ( QVariantMap inventory READ getInventory WRITE setInventory USER true )
+    Q_PROPERTY ( CInteractionMap levelling READ getLevelling WRITE setLevelling USER true )
+    Q_PROPERTY ( CItemMap equipped READ getEquipped WRITE setEquipped USER true )
     Q_PROPERTY ( std::shared_ptr<Stats> stats READ getStats WRITE setStats USER true )
     Q_PROPERTY ( std::shared_ptr<Stats> levelStats READ getLevelStats WRITE setLevelStats USER true )
     Q_PROPERTY ( std::set<std::shared_ptr<CInteraction>> actions READ getActions WRITE setActions USER true )
@@ -82,11 +81,12 @@ public:
     void removeFromInventory ( std::shared_ptr<CItem> item );
     void removeFromEquipped ( std::shared_ptr<CItem> item );
     std::set<std::shared_ptr<CItem> > getInInventory();
-    std::map<int, std::shared_ptr<CItem> > getEquipped();
+    CItemMap getEquipped();
+    void setEquipped ( CItemMap value );
     bool applyEffects();
     std::set<std::shared_ptr<CInteraction>> getInteractions();
     bool hasEquipped ( std::shared_ptr<CItem> item );
-    void setItem ( int i, std::shared_ptr<CItem> newItem );
+    void setItem ( QString i, std::shared_ptr<CItem> newItem );
     bool hasInInventory ( std::shared_ptr<CItem> item );
     bool hasItem ( std::shared_ptr<CItem> item );
     Coords getCoords();
@@ -100,12 +100,10 @@ public:
     void setHp ( int value );
     int getHpMax();
     void setHpMax ( int value );
-    std::shared_ptr<CItem> getItemAtSlot ( int slot );
-    int getSlotWithItem ( std::shared_ptr<CItem> item );
-    QVariantMap getLevelling() const;
-    void setLevelling ( const QVariantMap &value );
-    QVariantMap getInventory() const;
-    void setInventory ( const QVariantMap &value );
+    std::shared_ptr<CItem> getItemAtSlot ( QString slot );
+    QString getSlotWithItem ( std::shared_ptr<CItem> item );
+    CInteractionMap getLevelling() ;
+    void setLevelling ( CInteractionMap value );
     std::shared_ptr<Stats> getStats() const;
     void setStats ( std::shared_ptr<Stats> value );
     std::shared_ptr<Stats> getLevelStats() const;
@@ -125,9 +123,12 @@ public:
     Q_SIGNAL void equippedChanged();
 protected:
     std::set<std::shared_ptr<CItem>> items;
-    std::map<int,std::shared_ptr<CItem> > equipped;
     std::set<std::shared_ptr<CInteraction>> actions;
     std::set<std::shared_ptr<CEffect>> effects;
+
+    std::map<QString,std::shared_ptr<CItem> > equipped;
+    std::map<QString,std::shared_ptr<CInteraction>> levelling;
+
     int gold=0;
     int exp=0;
     int level=0;
@@ -137,12 +138,12 @@ protected:
     int manaRegRate=0;
     int hpMax=0;
     int hp=0;
+
     std::shared_ptr<Stats> stats=std::make_shared<Stats>();
     std::shared_ptr<Stats> levelStats =std::make_shared<Stats>();
     virtual std::shared_ptr<CInteraction>  selectAction();
     void takeDamage ( int i );
     std::shared_ptr<CInteraction> getLevelAction();
-    QVariantMap levelling;
     void defeatedCreature ( std::shared_ptr<CCreature> creature );
 };
 
