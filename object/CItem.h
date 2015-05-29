@@ -39,6 +39,7 @@ protected:
 private:
     int slot = 0;
 };
+GAME_PROPERTY ( CItem )
 
 class CArmor : public CItem {
     Q_OBJECT

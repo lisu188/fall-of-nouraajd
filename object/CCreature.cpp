@@ -52,8 +52,8 @@ void CCreature::addExp ( int exp ) {
 
 std::shared_ptr<CInteraction> CCreature::getLevelAction() {
     QString levelString=QString::number ( level );
-    if ( levelling.contains ( levelString ) ) {
-        return this->getMap()->createObject<CInteraction> ( levelling[levelString].toString() );
+    if ( ctn ( levelling, levelString ) ) {
+        return getMap()->getObjectHandler()->clone<CInteraction> ( getMap(), levelling[levelString] );
     } else {
         return nullptr;
     }
@@ -102,8 +102,12 @@ std::set<std::shared_ptr<CInteraction>> CCreature::getInteractions() {
     return actions;
 }
 
-std::map<int, std::shared_ptr<CItem> > CCreature::getEquipped() {
+CItemMap CCreature::getEquipped() {
     return equipped;
+}
+
+void CCreature::setEquipped ( CItemMap value ) {
+    equipped=value;
 }
 
 void CCreature::addItem ( std::set<std::shared_ptr<CItem> > items ) {
@@ -160,24 +164,12 @@ void CCreature::takeDamage ( int i ) {
     Q_EMIT statsChanged();
 }
 
-QVariantMap CCreature::getLevelling() const {
+CInteractionMap CCreature::getLevelling()  {
     return levelling;
 }
 
-void CCreature::setLevelling ( const QVariantMap &value ) {
+void CCreature::setLevelling ( CInteractionMap value ) {
     levelling = value;
-}
-
-QVariantMap CCreature::getInventory() const {
-    return QVariantMap();
-}
-
-void CCreature::setInventory ( const QVariantMap &value ) {
-    for ( auto it=value.begin(); it!=value.end(); it++ ) {
-        int slot=it.key().toInt();
-        std::shared_ptr<CItem> item=getMap()->createObject<CItem> ( it.value().toString() );
-        this->setItem ( slot,item );
-    }
 }
 
 void CCreature::setItems ( std::set<std::shared_ptr<CItem> > value ) {
@@ -385,14 +377,14 @@ int CCreature::getLevel() {
 }
 
 void CCreature::setWeapon ( std::shared_ptr<CWeapon> weapon ) {
-    this->setItem ( 0, weapon );
+    this->setItem ( QString::number ( 0 ), weapon );
 }
 
 void CCreature::setArmor ( std::shared_ptr<CArmor> armor ) {
-    this->setItem ( 3, armor );
+    this->setItem ( QString::number ( 3 ), armor );
 }
 
-void CCreature::setItem ( int i, std::shared_ptr<CItem> newItem ) {
+void CCreature::setItem ( QString i, std::shared_ptr<CItem> newItem ) {
     if ( !ctn ( equipped,i ) ) {
         equipped.insert ( std::make_pair ( i, std::shared_ptr<CItem>() ) );
     }
@@ -432,11 +424,11 @@ Coords CCreature::getCoords() {
 }
 
 std::shared_ptr<CWeapon> CCreature::getWeapon() {
-    return cast<CWeapon> ( getItemAtSlot ( 0 ) );
+    return cast<CWeapon> ( getItemAtSlot ( "0" ) );
 }
 
 std::shared_ptr<CArmor> CCreature::getArmor() {
-    return cast<CArmor> ( getItemAtSlot ( 3 ) );
+    return cast<CArmor> ( getItemAtSlot ( "3" ) );
 }
 
 void CCreature::levelUp() {
@@ -476,9 +468,8 @@ void CCreature::attribChange() {
 }
 
 bool CCreature::hasEquipped ( std::shared_ptr<CItem>  item ) {
-    for ( unsigned   int i = 0; i < equipped.size(); i++ ) {
-        auto it=equipped.find ( i );
-        if ( it!=equipped.end() && ( *it ).second == item ) {
+    for ( auto it:equipped ) {
+        if ( it.second==item ) {
             return true;
         }
     }
@@ -509,20 +500,20 @@ void CCreature::setHpMax ( int value ) {
     hpMax = value;
 }
 
-std::shared_ptr<CItem> CCreature::getItemAtSlot ( int slot ) {
-    if ( equipped.find ( slot ) !=equipped.end() ) {
+std::shared_ptr<CItem> CCreature::getItemAtSlot ( QString slot ) {
+    if ( ctn ( equipped,slot ) ) {
         return equipped.at ( slot );
     }
     return nullptr;
 }
 
-int CCreature::getSlotWithItem ( std::shared_ptr<CItem>  item ) {
+QString CCreature::getSlotWithItem ( std::shared_ptr<CItem>  item ) {
     for ( auto it=equipped.begin(); it!=equipped.end(); it++ ) {
         if ( ( *it ).second==item ) {
             return ( *it ).first;
         }
     }
-    return -1;
+    return "-1";
 }
 
 void CCreature::setHp ( int value ) {

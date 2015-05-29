@@ -50,8 +50,8 @@ void CItem::onUse ( std::shared_ptr<CGameEvent> event ) {
     if ( !parent ) {
         return;
     }
-    int slot = parent->getNumber();
-    if ( slot==-1 ) {
+    QString slot = parent->getNumber();
+    if ( slot=="-1" ) {
         return;
     }
     cast<CCreature> ( cast<CGameEventCaused> ( event )->getCause() )->setItem ( slot, this->ptr<CItem>() );
