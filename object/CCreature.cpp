@@ -53,7 +53,7 @@ void CCreature::addExp ( int exp ) {
 std::shared_ptr<CInteraction> CCreature::getLevelAction() {
     QString levelString=QString::number ( level );
     if ( ctn ( levelling, levelString ) ) {
-        return getMap()->getObjectHandler()->clone<CInteraction> ( getMap(), levelling[levelString] );
+        return getMap()->getObjectHandler()->clone<CInteraction> (  levelling[levelString] );
     } else {
         return nullptr;
     }
