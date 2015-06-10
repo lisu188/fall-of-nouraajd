@@ -124,10 +124,15 @@ OTHER_FILES += \
     format.py
 
 QMAKE_CXXFLAGS = -std=c++14 "-include cmath" -Wno-deprecated-declarations -Wno-unused-local-typedefs -Wno-attributes
-QMAKE_CXXFLAGS_RELEASE = -O3 -march=native #-flto
-QMAKE_LFLAGS_RELEASE = -O3 -march=native #-flto
+QMAKE_CXXFLAGS_RELEASE = -O3 -march=native
+QMAKE_LFLAGS_RELEASE = -O3 -march=native
 QMAKE_CXXFLAGS_DEBUG = -g3
 QMAKE_RESOURCE_FLAGS = -threshold 0 -compress 9
+
+unix{
+    QMAKE_CXXFLAGS_RELEASE += -flto
+    QMAKE_LFLAGS_RELEASE += -flto
+}
 
 DEFINES += "QT_NO_KEYWORDS"
 
