@@ -11,7 +11,7 @@ public:
     template<typename T=CGameObject>
     std::shared_ptr<T> createObject ( std::shared_ptr<CMap> map,QString type )  {
         std::shared_ptr<T> object= cast<T,CGameObject> ( _createObject ( map, type ) ) ;
-        if ( object) {
+        if ( object ) {
             return object;
         } else if ( parent.lock() ) {
             return parent.lock()->createObject<T> ( map,type );
