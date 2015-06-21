@@ -60,6 +60,7 @@ private:
     QGraphicsSimpleTextItem statsView;
     std::weak_ptr<CMap> map;
 };
+GAME_PROPERTY ( CGameObject )
 
 class Visitable {
 public:

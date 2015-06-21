@@ -40,7 +40,7 @@ std::shared_ptr<CMap> CMapLoader::loadMap ( std::shared_ptr<CGame> game, QString
 void CMapLoader::saveMap ( std::shared_ptr<CMap> map, QString file ) {
     std::shared_ptr<QJsonObject> data=std::make_shared<QJsonObject>();
     map->forAll ( [data] ( std::shared_ptr<CMapObject> object ) {
-        ( *data ) [object->objectName()]=* ( CSerialization::serialize ( object ) );
+        ( *data ) [object->objectName()]=* ( CSerialization::serialize<std::shared_ptr<QJsonObject>> ( object ) );
     } );
     QFile f ( file );
     if ( f.open ( QIODevice::WriteOnly ) ) {
