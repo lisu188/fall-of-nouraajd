@@ -1,7 +1,9 @@
 #pragma once
 #include "CGlobal.h"
+#include "CSerialization.h"
 
 class CGameObject;
+
 #define GAME_PROPERTY(CLASS)\
     Q_DECLARE_METATYPE(std::shared_ptr<CLASS>)\
     Q_DECLARE_METATYPE(std::set<std::shared_ptr<CLASS>>)\
@@ -13,10 +15,12 @@ class CGameObject;
             CLASS##_X(){\
                 qRegisterMetaType<std::shared_ptr<CLASS>>();\
                 qRegisterMetaType<std::set<std::shared_ptr<CLASS>>>();\
-                qRegisterMetaType<CLASS##Map>();\
+                qRegisterMetaType<std::map<QString,std::shared_ptr<CLASS>>>();\
+                make_serializable<CLASS>();\
             }\
         } CLASS##_TMP;\
     }\
+
 
 #define PY_PROPERTY_ACCESSOR(CLASS)\
 .def ( "getStringProperty",&CLASS::getStringProperty )\

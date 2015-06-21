@@ -46,11 +46,12 @@ std::shared_ptr<CGameObject> CObjectHandler::_createObject ( std::shared_ptr<CMa
     if ( ( *config ).isEmpty() ) {
         ( *config ) ["class"]=type;
     }
-    return CSerialization::deserialize ( map,config );
+    return CSerialization::deserialize<std::shared_ptr<QJsonObject>,std::shared_ptr<CGameObject>> ( map,config );
 }
 
 std::shared_ptr<CGameObject> CObjectHandler::_clone ( std::shared_ptr<CGameObject> object ) {
-    return CSerialization::deserialize ( object->getMap(),CSerialization::serialize ( cast<CGameObject> ( object ) ) ) ;
+    return CSerialization::deserialize<std::shared_ptr<QJsonObject>,std::shared_ptr<CGameObject>> ( object->getMap(),
+            CSerialization::serialize<std::shared_ptr<QJsonObject>,std::shared_ptr<CGameObject>> ( object ) ) ;
 }
 
 

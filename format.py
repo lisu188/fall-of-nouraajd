@@ -1,4 +1,4 @@
-#! /usr/bin/python3
+#! /usr/bin/env python
 
 import tokenize
 import os
@@ -19,11 +19,14 @@ def sortHeader():
     l=set()
     for line in lines:
         l.add(line.strip())
-    with open("CGlobal.h", "w") as sortToFile:
-        sortToFile.write("#pragma once\n")
-        for line in sorted(l, key = str.lower):
-            if len(line.strip()) >0:
-                sortToFile.write(line+"\n")
+    content=""
+    content+="#pragma once\n"
+    for line in sorted(l, key = str.lower):
+        if len(line.strip()) >0:
+            content+=(line+"\n")
+    if content != open("CGlobal.h", "r").read():
+        with open("CGlobal.h", "w") as sortToFile:
+            sortToFile.write(content)
 
 def formatJson(files):
     for file in files:

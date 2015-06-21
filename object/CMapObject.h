@@ -32,5 +32,5 @@ public:
     void moveTo ( int x, int y, int z );
     void moveTo ( Coords coords );
 };
-
+GAME_PROPERTY ( CMapObject )
 
