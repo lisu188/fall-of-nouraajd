@@ -11,20 +11,20 @@ public:
     virtual QVariant serialize ( QVariant object ) =0;
     virtual QVariant deserialize ( std::shared_ptr<CMap> map,QVariant object ) =0;
 protected:
-    static std::map<std::pair<int,int>,std::shared_ptr<CSerializerBase>> registry;
+    static std::unordered_map<std::pair<int,int>,std::shared_ptr<CSerializerBase>>& registry();
 };
 
 class CSerialization {
 public:
     template <typename Serialized,typename Deserialized>
     static Serialized serialize ( Deserialized deserialized ) {
-        QVariant variant=CSerializerBase::registry[std::make_pair ( qRegisterMetaType<Serialized>(),qRegisterMetaType<Deserialized>() )]
+        QVariant variant=CSerializerBase::registry() [std::make_pair ( qRegisterMetaType<Serialized>(),qRegisterMetaType<Deserialized>() )]
                          ->serialize ( QVariant::fromValue ( deserialized ) );
         return variant.value<Serialized>();
     }
     template <typename Serialized,typename Deserialized>
     static Deserialized deserialize ( std::shared_ptr<CMap> map, Serialized serialized ) {
-        QVariant variant=CSerializerBase::registry[std::make_pair ( qRegisterMetaType<Serialized>(),qRegisterMetaType<Deserialized>() )]
+        QVariant variant=CSerializerBase::registry() [std::make_pair ( qRegisterMetaType<Serialized>(),qRegisterMetaType<Deserialized>() )]
                          ->deserialize ( map,QVariant::fromValue ( serialized ) );
         return variant.value<Deserialized>();
     }
@@ -35,7 +35,7 @@ private:
 
     template<typename Property>
     static inline void setOtherProperty ( std::shared_ptr<CGameObject> object, QMetaProperty property, Property prop ) {
-        _setOtherProperty ( qRegisterMetaType<Property>(), QMetaType::type ( property.typeName() ), object, property, QVariant::fromValue ( prop ) );
+        _setOtherProperty (  QMetaType::type ( property.typeName() ),qRegisterMetaType<Property>(), object, property, QVariant::fromValue ( prop ) );
     }
     static inline void _setOtherProperty ( int deserializedId, int serializedId, std::shared_ptr<CGameObject> object, QMetaProperty property, QVariant variant );
 };
@@ -51,25 +51,47 @@ public:
     }
 };
 
+extern std::set<std::shared_ptr<CGameObject> > array_deserialize ( std::shared_ptr<CMap> map, std::shared_ptr<QJsonArray> object );
+extern std::shared_ptr<QJsonArray> array_serialize ( std::set<std::shared_ptr<CGameObject> > set );
+extern std::map<QString, std::shared_ptr<CGameObject> > map_deserialize ( std::shared_ptr<CMap> map, std::shared_ptr<QJsonObject> object );
+extern std::shared_ptr<QJsonObject> map_serialize ( std::map<QString, std::shared_ptr<CGameObject> > object );
+extern std::shared_ptr<CGameObject> object_deserialize ( std::shared_ptr<CMap> map, std::shared_ptr<QJsonObject> config );
+extern std::shared_ptr<QJsonObject> object_serialize ( std::shared_ptr<CGameObject> object );
+
 template<>
 class CSerializerFunction<std::shared_ptr<QJsonObject>,std::shared_ptr<CGameObject>> {
 public:
-    static std::shared_ptr<QJsonObject> serialize ( std::shared_ptr<CGameObject> object );
-    static std::shared_ptr<CGameObject> deserialize ( std::shared_ptr<CMap> map, std::shared_ptr<QJsonObject> config );
+    static std::shared_ptr<QJsonObject> serialize ( std::shared_ptr<CGameObject> object ) {
+        return object_serialize ( object );
+    }
+
+    static std::shared_ptr<CGameObject> deserialize ( std::shared_ptr<CMap> map, std::shared_ptr<QJsonObject> config ) {
+        return object_deserialize ( map,config );
+    }
 };
 
 template<>
 class CSerializerFunction<std::shared_ptr<QJsonObject>,std::map<QString, std::shared_ptr<CGameObject> >> {
 public:
-    static std::shared_ptr<QJsonObject> serialize ( std::map<QString, std::shared_ptr<CGameObject> > object );
-    static std::map<QString,std::shared_ptr<CGameObject> > deserialize ( std::shared_ptr<CMap> map,std::shared_ptr<QJsonObject> object );
+    static std::shared_ptr<QJsonObject> serialize ( std::map<QString, std::shared_ptr<CGameObject> > object ) {
+        return map_serialize ( object );
+    }
+
+    static std::map<QString,std::shared_ptr<CGameObject> > deserialize ( std::shared_ptr<CMap> map,std::shared_ptr<QJsonObject> object ) {
+        return map_deserialize ( map,object );
+    }
 };
 
 template<>
 class CSerializerFunction<std::shared_ptr<QJsonArray>,std::set<std::shared_ptr<CGameObject> >> {
 public:
-    static std::shared_ptr<QJsonArray> serialize ( std::set<std::shared_ptr<CGameObject> > set );
-    static std::set<std::shared_ptr<CGameObject> > deserialize ( std::shared_ptr<CMap> map,std::shared_ptr<QJsonArray> object );
+    static std::shared_ptr<QJsonArray> serialize ( std::set<std::shared_ptr<CGameObject> > set ) {
+        return array_serialize ( set );
+    }
+
+    static std::set<std::shared_ptr<CGameObject> > deserialize ( std::shared_ptr<CMap> map,std::shared_ptr<QJsonArray> object ) {
+        return array_deserialize ( map,object );
+    }
 };
 
 template <typename Serialized,typename Deserialized>
@@ -82,7 +104,7 @@ public:
         return QVariant::fromValue ( CSerializerFunction<Serialized,Deserialized>::deserialize ( map,object.value<Serialized>() ) );
     }
     void reg() {
-        registry[std::make_pair ( qRegisterMetaType<Serialized>(),qRegisterMetaType<Deserialized>() )]=this->shared_from_this();
+        registry() [std::make_pair ( qRegisterMetaType<Serialized>(),qRegisterMetaType<Deserialized>() )]=this->shared_from_this();
     }
 };
 

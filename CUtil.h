@@ -53,6 +53,43 @@ struct hash<QString> {
     std::hash<std::string> stringHash;
     std::size_t operator() ( const QString &string ) const;
 };
+
+template<>
+struct hash<std::pair<int,int>> {
+    std::size_t operator() ( const std::pair<int,int> &pair ) const;
+};
+}
+
+template<int n>
+struct prime {
+
+};
+
+template<>
+struct prime<0> {
+    static const int value=13;
+};
+
+template<>
+struct prime<1> {
+    static const int value=17;
+};
+
+template<>
+struct prime<2> {
+    static const int value=19;
+};
+
+template<>
+struct prime<3> {
+    static const int value=23;
+};
+
+std::size_t int_hash();
+
+template <typename F,typename ...T>
+std::size_t int_hash ( F f,T... args ) {
+    return f*prime<sizeof... ( args ) >::value*int_hash ( args... );
 }
 
 class QObject;

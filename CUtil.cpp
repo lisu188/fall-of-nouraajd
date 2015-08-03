@@ -14,11 +14,7 @@ std::size_t std::hash<QString>::operator() ( const QString &string ) const {
 }
 
 std::size_t std::hash<Coords>::operator() ( const Coords &coords ) const {
-    using std::size_t;
-    size_t hash =coords.x*13;
-    hash=hash*17+coords.y;
-    hash=hash*31+coords.z;
-    return hash;
+    return int_hash ( coords.x,coords.y,coords.z );
 }
 
 Coords::Coords() { x = y = z = 0; }
@@ -56,4 +52,14 @@ double Coords::getDist ( Coords a ) {
     double y = this->y - a.y;
     y *= y;
     return sqrt ( x + y );
+}
+
+
+std::size_t std::hash<std::pair<int, int> >::operator() ( const std::pair<int, int> &pair ) const {
+    return int_hash ( pair.first,pair.second );
+}
+
+
+std::size_t int_hash() {
+    return 1;
 }
