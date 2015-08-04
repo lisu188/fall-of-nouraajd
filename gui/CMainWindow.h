@@ -3,7 +3,7 @@
 
 class CGameView;
 namespace Ui {
-class CMainWindow;
+    class CMainWindow;
 }
 
 class CMainWindow : public QMainWindow {

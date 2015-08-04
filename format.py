@@ -55,7 +55,7 @@ def main():
     formatPython(getFileList(DIR,"py"))
     sortHeader()
     for file_path in files:
-        format_source_code("astyle", file_path, ["-A2s4OPjn"])
+        format_source_code("astyle", file_path, ["-A2s4OPjnN"])
 
 def format_source_code(exe, file_path, options):
     astyle = [exe]+options+[file_path]
