@@ -91,36 +91,21 @@ namespace std {
     };
 }
 
-template<int n>
-struct prime {
-
+template <int a,int x>
+struct power {
+    enum { value = a * power<a,x - 1>::value };
 };
 
-template<>
-struct prime<0> {
-    static const int value=13;
-};
-
-template<>
-struct prime<1> {
-    static const int value=17;
-};
-
-template<>
-struct prime<2> {
-    static const int value=19;
-};
-
-template<>
-struct prime<3> {
-    static const int value=23;
+template <int a>
+struct power<a,0> {
+    enum { value = 1 };
 };
 
 inline std::size_t int_hash();
 
 template <typename F,typename ...T>
 inline std::size_t int_hash ( F f,T... args ) {
-    return ( f!=0?f:1 ) *prime<sizeof... ( args ) >::value*int_hash ( args... );
+    return f*power<31,sizeof... ( args ) >::value+int_hash ( args... );
 }
 
 class QObject;
