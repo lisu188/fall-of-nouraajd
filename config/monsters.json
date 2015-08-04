@@ -8,7 +8,7 @@
                 }
             ],
             "animation": "images/players/assasin",
-            "inventory": {
+            "equipped": {
                 "0": {
                     "ref": "Dagger"
                 },
@@ -265,7 +265,7 @@
                 }
             ],
             "animation": "images/players/sorcerer",
-            "inventory": {
+            "equipped": {
                 "0": {
                     "ref": "Staff"
                 },
@@ -345,9 +345,13 @@
                 }
             ],
             "animation": "images/players/warrior",
-            "inventory": {
-                "0": "Sword",
-                "3": "PlateArmor"
+            "equipped": {
+                "0": {
+                    "ref": "Sword"
+                },
+                "3": {
+                    "ref": "PlateArmor"
+                }
             },
             "items": [
                 {

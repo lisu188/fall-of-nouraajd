@@ -10,7 +10,7 @@ public:
     CObjectHandler ( std::shared_ptr<CObjectHandler> parent=std::shared_ptr<CObjectHandler>() );
     template<typename T=CGameObject>
     std::shared_ptr<T> createObject ( std::shared_ptr<CMap> map,QString type )  {
-        std::shared_ptr<T> object= cast<T,CGameObject> ( _createObject ( map, type ) ) ;
+        std::shared_ptr<T> object= cast<T> ( _createObject ( map, type ) ) ;
         if ( object ) {
             return object;
         } else if ( parent.lock() ) {
