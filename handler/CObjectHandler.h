@@ -1,6 +1,7 @@
 #pragma once
 #include "CGlobal.h"
 #include "CUtil.h"
+#include "CSerialization.h"
 
 class ATypeHandler;
 class CGameObject;
@@ -28,6 +29,7 @@ public:
     void registerType ( QString name, std::function<CGameObject*() > constructor );
     template<typename T>
     void registerType () {
+        CSerialization::make_serializable<T>();
         registerType ( T::staticMetaObject.className(),[]() {return new T();} );
     }
     std::shared_ptr<CGameObject> getType ( QString name );

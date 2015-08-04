@@ -331,4 +331,12 @@ std::shared_ptr<CMap> CMap::ptr() {
     return shared_from_this();
 }
 
+std::set<std::shared_ptr<CTile>> CMap::tiles() {
+    std::set<std::shared_ptr<CTile>> val;
+    for ( auto it:*this ) {
+        val.insert ( it.second );
+    }
+    return val;
+}
+
 

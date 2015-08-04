@@ -39,9 +39,23 @@ std::shared_ptr<CMap> CMapLoader::loadMap ( std::shared_ptr<CGame> game, QString
 
 void CMapLoader::saveMap ( std::shared_ptr<CMap> map, QString file ) {
     std::shared_ptr<QJsonObject> data=std::make_shared<QJsonObject>();
-    map->forAll ( [data] ( std::shared_ptr<CMapObject> object ) {
-        ( *data ) [object->objectName()]=* ( CSerialization::serialize<std::shared_ptr<QJsonObject>> ( object ) );
+
+    std::shared_ptr<QJsonObject> objects=std::make_shared<QJsonObject>();
+    std::shared_ptr<QJsonObject> tiles=std::make_shared<QJsonObject>();
+    std::shared_ptr<QJsonObject> triggers=std::make_shared<QJsonObject>();
+
+    map->forAll ( [objects] ( std::shared_ptr<CMapObject> object ) {
+        ( *objects ) [object->objectName()]=* ( CSerialization::serialize<std::shared_ptr<QJsonObject>> ( object ) );
     } );
+
+    for ( std::shared_ptr<CTile> tile:map->tiles() ) {
+        ( *tiles ) [tile->objectName()]=* ( CSerialization::serialize<std::shared_ptr<QJsonObject>> ( tile ) );
+    }
+
+    ( *data ) ["objects"]=*objects;
+    ( *data ) ["tiles"]=*tiles;
+    ( *data ) ["triggers"]=*triggers;
+
     QFile f ( file );
     if ( f.open ( QIODevice::WriteOnly ) ) {
         f.write ( QJsonDocument ( *data ).toJson ( QJsonDocument::JsonFormat::Indented ) );

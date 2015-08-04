@@ -39,6 +39,8 @@ void CGameLoader::initConfigurations ( std::shared_ptr<CObjectHandler> handler )
 void CGameLoader::initObjectHandler ( std::shared_ptr<CObjectHandler> handler ) {
     handler->registerType< Stats >();
     handler->registerType< Damage >();
+    handler->registerType< CGameObject >();
+    handler->registerType< CMapObject >();
     handler->registerType< CWeapon >();
     handler->registerType< CArmor >();
     handler->registerType< CPotion >();

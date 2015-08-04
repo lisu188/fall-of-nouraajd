@@ -67,6 +67,7 @@ public:
         return getObjectHandler()->createObject<T> ( this->ptr(),name );
     }
     std::shared_ptr<CMap> ptr();
+    std::set<std::shared_ptr<CTile>> tiles();
 private:
     std::set<std::shared_ptr<CMapObject> > getMapObjectsClone();
     void resolveFights();
