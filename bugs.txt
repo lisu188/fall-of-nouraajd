@@ -1,2 +1,5 @@
 market bug/when configuration is present in map but type is present only in game causes load to fail
 gui panels/gui panels do not respond to input
+market bug/whole market object should be saved, not only market name
+tile saving/default tiles should not be saved
+triggers savings/maybe implement custom setattr and getattr

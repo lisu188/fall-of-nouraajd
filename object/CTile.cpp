@@ -37,6 +37,27 @@ bool CTile::canStep() const {
 void CTile::setCanStep ( bool canStep ) {
     this->step=canStep;
 }
+int CTile::getPosx() const {
+    return posx;
+}
+
+void CTile::setPosx ( int value ) {
+    posx = value;
+}
+int CTile::getPosy() const {
+    return posy;
+}
+
+void CTile::setPosy ( int value ) {
+    posy = value;
+}
+int CTile::getPosz() const {
+    return posz;
+}
+
+void CTile::setPosz ( int value ) {
+    posz = value;
+}
 
 void CTile::setXYZ ( int x, int y, int z ) {
     posx = x;

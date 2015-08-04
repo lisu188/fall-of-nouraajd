@@ -173,18 +173,3 @@ std::unordered_map<std::pair<int, int>, std::shared_ptr<CSerializerBase> > &CSer
     static std::unordered_map<std::pair<int,int>,std::shared_ptr<CSerializerBase>> reg;
     return reg;
 }
-
-namespace {
-    class init {
-    public:
-        init() {
-            make_serializable<Stats>();
-            make_serializable<Damage>();
-            make_serializable<CEffect>();
-            make_serializable<CGameObject>();
-            make_serializable<CInteraction>();
-            make_serializable<CItem>();
-            make_serializable<CMapObject>();
-        }
-    } init_tmp;
-}

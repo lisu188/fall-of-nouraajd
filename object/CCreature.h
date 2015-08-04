@@ -146,4 +146,4 @@ protected:
     std::shared_ptr<CInteraction> getLevelAction();
     void defeatedCreature ( std::shared_ptr<CCreature> creature );
 };
-
+GAME_PROPERTY ( CCreature )

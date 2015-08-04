@@ -40,13 +40,13 @@ void CEventHandler::gameEvent (  std::shared_ptr<CMapObject> object ,std::shared
     );
 }
 
-void CEventHandler::registerTrigger ( QString name, QString type,  std::function<CTrigger*() >trigger ) {
+void CEventHandler::registerTrigger ( QString name, QString type,  std::shared_ptr<CTrigger> trigger ) {
     bool ok;
     CGameEvent::Type tp=static_cast<CGameEvent::Type>
                         ( CGameEvent::staticMetaObject.enumerator ( CGameEvent::staticMetaObject.indexOfEnumerator ( "Type" ) )
                           .keyToValue ( type.toStdString().c_str(),&ok ) );
     if ( ok ) {
-        triggers.insert ( std::make_pair ( TriggerKey ( name,tp ),std::shared_ptr<CTrigger> ( trigger() ) ) ) ;
+        triggers.insert ( std::make_pair ( TriggerKey ( name,tp ),trigger ) ) ;
     } else {
         //handle
     }

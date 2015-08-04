@@ -15,3 +15,4 @@ public:
 private:
     bool enabled = true;
 };
+GAME_PROPERTY ( CEvent )

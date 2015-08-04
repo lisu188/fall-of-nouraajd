@@ -1,5 +1,6 @@
 #pragma once
 #include "CGlobal.h"
+#include "CUtil.h"
 
 class CAnimation;
 class CAnimatedObject : public QObject, public QGraphicsPixmapItem {
@@ -17,3 +18,4 @@ private:
     std::shared_ptr<CAnimation> staticAnimation;
     void animate();
 };
+GAME_PROPERTY ( CAnimatedObject )

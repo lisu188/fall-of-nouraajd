@@ -31,3 +31,4 @@ private:
     int turn=0;
     Coords next;
 };
+GAME_PROPERTY ( CPlayer )

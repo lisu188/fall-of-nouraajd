@@ -47,7 +47,8 @@ BOOST_PYTHON_MODULE ( _game ) {
             .def ( "getObjectHandler",&CMap::getObjectHandler )
             .def ( "getEventHandler",&CMap::getEventHandler )
             .def ( "addObject",&CMap::addObject )
-            .def ( "createObject",&CMap::createObject<CGameObject>  )
+            .def ( "createObject",&CMap::createObject<CGameObject> )
+            .def ( "createTrigger",&CMap::createObject<CTrigger> )
             .def ( "getGame",&CMap::getGame );
     void ( CObjectHandler::*registerType ) ( QString,std::function<CGameObject* () > )  =&CObjectHandler::registerType;
     class_<CObjectHandler,boost::noncopyable,std::shared_ptr<CObjectHandler>> ( "CObjectHandler",no_init )
@@ -140,7 +141,8 @@ BOOST_PYTHON_MODULE ( _game ) {
     class_<CQuestWrapper,bases<CQuest>,boost::noncopyable,std::shared_ptr<CQuestWrapper>> ( "CQuest" )
             .def ( "isCompleted",&CQuestWrapper::isCompleted )
             .def ( "onComplete",&CQuestWrapper::onComplete );
-    class_<CEventHandler,boost::noncopyable,std::shared_ptr<CEventHandler>> ( "CEventHandler",no_init ).def ( "registerTrigger",&CEventHandler::registerTrigger );
+    class_<CEventHandler,boost::noncopyable,std::shared_ptr<CEventHandler>> ( "CEventHandler",no_init )
+            .def ( "registerTrigger",&CEventHandler::registerTrigger );
     class_<CGame,boost::noncopyable,std::shared_ptr<CGame>> ( "CGame",no_init )
             .def ( "getMap",&CGame::getMap )
             .def ( "changeMap",&CGame::changeMap )

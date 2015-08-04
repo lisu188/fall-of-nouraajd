@@ -26,4 +26,4 @@ private:
     int sell=100;
     int buy=80;
 };
-
+GAME_PROPERTY ( CMarket )

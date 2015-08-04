@@ -15,32 +15,6 @@ protected:
     static std::unordered_map<std::pair<int,int>,std::shared_ptr<CSerializerBase>>& registry();
 };
 
-class CSerialization {
-public:
-    template <typename Serialized,typename Deserialized>
-    static Serialized serialize ( Deserialized deserialized ) {
-        QVariant variant=CSerializerBase::registry() [std::make_pair ( qRegisterMetaType<Serialized>(),qRegisterMetaType<Deserialized>() )]
-                         ->serialize ( QVariant::fromValue ( deserialized ) );
-        return variant.value<Serialized>();
-    }
-    template <typename Serialized,typename Deserialized>
-    static Deserialized deserialize ( std::shared_ptr<CMap> map, Serialized serialized ) {
-        QVariant variant=CSerializerBase::registry() [std::make_pair ( qRegisterMetaType<Serialized>(),qRegisterMetaType<Deserialized>() )]
-                         ->deserialize ( map,QVariant::fromValue ( serialized ) );
-        return variant.value<Deserialized>();
-    }
-    static void setProperty ( std::shared_ptr<CGameObject> object , QString key, const QJsonValue &value );
-    static void setProperty ( std::shared_ptr<QJsonObject> conf, QString propertyName, QVariant propertyValue );
-private:
-    static inline QMetaProperty getProperty ( std::shared_ptr<CGameObject> object , QString name );
-
-    template<typename Property>
-    static inline void setOtherProperty ( std::shared_ptr<CGameObject> object, QMetaProperty property, Property prop ) {
-        _setOtherProperty (  qRegisterMetaType<Property>(),QMetaType::type ( property.typeName() ), object, property, QVariant::fromValue ( prop ) );
-    }
-    static inline void _setOtherProperty ( int serializedId, int deserializedId,  std::shared_ptr<CGameObject> object, QMetaProperty property, QVariant variant );
-};
-
 template <typename Serialized,typename Deserialized>
 class CSerializerFunction   {
 public:
@@ -127,12 +101,37 @@ public:
     }
 };
 
-template<typename Class>
-void make_serializable() {
-    std::make_shared<CSerializer<std::shared_ptr<QJsonObject>,std::shared_ptr<Class>>>()->reg();
-    std::make_shared<CSerializer<std::shared_ptr<QJsonObject>,std::map<QString, std::shared_ptr<Class>>>>()->reg();
-    std::make_shared<CSerializer<std::shared_ptr<QJsonArray>,std::set<std::shared_ptr<Class>>>>()->reg();
-}
+class CSerialization {
+public:
+    template <typename Serialized,typename Deserialized>
+    static Serialized serialize ( Deserialized deserialized ) {
+        QVariant variant=CSerializerBase::registry() [std::make_pair ( qRegisterMetaType<Serialized>(),qRegisterMetaType<Deserialized>() )]
+                         ->serialize ( QVariant::fromValue ( deserialized ) );
+        return variant.value<Serialized>();
+    }
+    template <typename Serialized,typename Deserialized>
+    static Deserialized deserialize ( std::shared_ptr<CMap> map, Serialized serialized ) {
+        QVariant variant=CSerializerBase::registry() [std::make_pair ( qRegisterMetaType<Serialized>(),qRegisterMetaType<Deserialized>() )]
+                         ->deserialize ( map,QVariant::fromValue ( serialized ) );
+        return variant.value<Deserialized>();
+    }
+    static void setProperty ( std::shared_ptr<CGameObject> object , QString key, const QJsonValue &value );
+    static void setProperty ( std::shared_ptr<QJsonObject> conf, QString propertyName, QVariant propertyValue );
+    template<typename Class>
+    static void make_serializable() {
+        std::make_shared<CSerializer<std::shared_ptr<QJsonObject>,std::shared_ptr<Class>>>()->reg();
+        std::make_shared<CSerializer<std::shared_ptr<QJsonArray>,std::set<std::shared_ptr<Class>>>>()->reg();
+        std::make_shared<CSerializer<std::shared_ptr<QJsonObject>,std::map<QString, std::shared_ptr<Class>>>>()->reg();
+    }
+private:
+    static inline QMetaProperty getProperty ( std::shared_ptr<CGameObject> object , QString name );
+
+    template<typename Property>
+    static inline void setOtherProperty ( std::shared_ptr<CGameObject> object, QMetaProperty property, Property prop ) {
+        _setOtherProperty (  qRegisterMetaType<Property>(),QMetaType::type ( property.typeName() ), object, property, QVariant::fromValue ( prop ) );
+    }
+    static inline void _setOtherProperty ( int serializedId, int deserializedId,  std::shared_ptr<CGameObject> object, QMetaProperty property, QVariant variant );
+};
 
 Q_DECLARE_METATYPE ( std::shared_ptr<QJsonObject> )
 Q_DECLARE_METATYPE ( std::shared_ptr<QJsonArray> )

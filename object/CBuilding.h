@@ -18,3 +18,4 @@ public:
 protected:
     bool enabled = true;
 };
+GAME_PROPERTY ( CBuilding )
