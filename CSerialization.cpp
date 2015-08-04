@@ -38,8 +38,9 @@ QMetaProperty CSerialization::getProperty ( std::shared_ptr<CGameObject> object,
     return QMetaProperty();
 }
 
-void CSerialization::_setOtherProperty ( int deserializedId, int serializedId, std::shared_ptr<CGameObject> object, QMetaProperty property, QVariant variant ) {
+void CSerialization::_setOtherProperty ( int serializedId,  int deserializedId, std::shared_ptr<CGameObject> object, QMetaProperty property, QVariant variant ) {
     std::shared_ptr<CSerializerBase> serializer=CSerializerBase::registry() [std::make_pair ( serializedId,deserializedId )];
+    //handle null
     variant=serializer->deserialize ( object->getMap(),variant );
     object->setProperty (  property.name(),variant );
 }

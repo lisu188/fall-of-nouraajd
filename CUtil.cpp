@@ -60,6 +60,6 @@ std::size_t std::hash<std::pair<int, int> >::operator() ( const std::pair<int, i
 }
 
 
-std::size_t int_hash() {
+inline std::size_t int_hash() {
     return 1;
 }

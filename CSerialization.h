@@ -35,19 +35,132 @@ private:
 
     template<typename Property>
     static inline void setOtherProperty ( std::shared_ptr<CGameObject> object, QMetaProperty property, Property prop ) {
-        _setOtherProperty (  QMetaType::type ( property.typeName() ),qRegisterMetaType<Property>(), object, property, QVariant::fromValue ( prop ) );
+        _setOtherProperty (  qRegisterMetaType<Property>(),QMetaType::type ( property.typeName() ), object, property, QVariant::fromValue ( prop ) );
     }
-    static inline void _setOtherProperty ( int deserializedId, int serializedId, std::shared_ptr<CGameObject> object, QMetaProperty property, QVariant variant );
+    static inline void _setOtherProperty ( int serializedId, int deserializedId,  std::shared_ptr<CGameObject> object, QMetaProperty property, QVariant variant );
 };
 
-template <typename Serialized,typename Deserialized>
-class CSerializerFunction {
-public:
-    static Serialized serialize ( Deserialized deserialized ) {
-        return CSerializerFunction<Serialized,std::shared_ptr<CGameObject>>::serialize ( deserialized );
+namespace std {
+template<bool B, typename T = void> using disable_if = std::enable_if<!B, T>;
+}
+
+template<class T, class R = void>
+struct enable_if_type { typedef R type; };
+
+template<class T, class Enable = void>
+struct is_shared_ptr : std::false_type {};
+
+template<class T>
+struct is_shared_ptr<T, typename enable_if_type<typename T::element_type>::type> : std::true_type
+{};
+
+template<class T, class Enable = void>
+struct is_set : std::false_type {};
+
+template<class T>
+struct is_set<T, typename std::enable_if<std::is_same<typename T::key_type,typename T::value_type>::value>::type> : std::true_type
+{};
+
+template<class T, class E1 = void,class E2 = void,class E3 = void>
+struct is_map : std::false_type {};
+
+template<class T>
+struct is_map<T, typename enable_if_type<typename T::key_type>::type, typename enable_if_type<typename T::value_type>::type,typename std::disable_if<is_set<T>::value>::type> : std::true_type
+{};
+
+template<class T,  class E1 = void,class E2 = void>
+struct is_pair : std::false_type {};
+
+template<class T>
+struct is_pair<T, typename enable_if_type<typename T::first_type>::type,typename enable_if_type<typename T::first_type>::type> : std::true_type
+{};
+
+namespace std {
+template<bool B, typename T = void> using disable_if = std::enable_if<!B, T>;
+}
+
+template <typename T,typename U>
+inline T cast ( U ptr,
+                typename std::disable_if<is_shared_ptr<T>::value>::type* =0,
+                typename std::disable_if<is_shared_ptr<U>::value>::type* =0,
+                typename std::disable_if<is_pair<T>::value>::type* =0,
+                typename std::disable_if<is_pair<U>::value>::type* =0 ) {
+    return ptr;
+}
+
+template <typename T,typename U>
+inline std::shared_ptr<T> cast ( U ptr,
+                                 typename std::disable_if<is_shared_ptr<T>::value>::type* = 0,
+                                 typename std::enable_if<is_shared_ptr<U>::value>::type* = 0 ) {
+    return std::dynamic_pointer_cast<T> ( ptr );
+}
+
+template <typename T,typename U>
+inline T cast ( U ptr,
+                typename std::enable_if<is_shared_ptr<T>::value>::type* = 0,
+                typename std::enable_if<is_shared_ptr<U>::value>::type* = 0 ) {
+    return cast<typename T::element_type> ( ptr );
+}
+
+template <typename T,typename U>
+inline T cast ( U ptr,
+                typename std::enable_if<is_pair<T>::value>::type* = 0,
+                typename std::enable_if<is_pair<U>::value>::type* = 0 ) {
+    return std::make_pair ( cast<typename T::first_type> ( ptr.first ),cast<typename T::second_type> ( ptr.second ) );
+}
+
+template <typename T>
+struct function_traits
+: public function_traits<decltype ( &T::operator() ) >
+  {};
+
+template <typename ClassType, typename ReturnType, typename... Args>
+struct function_traits<ReturnType ( ClassType::* ) ( Args... ) const> {
+    enum { arity = sizeof... ( Args ) };
+
+    typedef ReturnType result_type;
+
+    template <size_t i>
+    struct arg {
+        typedef typename std::tuple_element<i, std::tuple<Args...>>::type type;
+    };
+};
+
+template <typename T,typename U>
+inline T convert ( U c ) {
+    T t;
+    for ( auto x:c ) {
+        t.insert ( cast<typename T::value_type> ( x ) );
     }
-    static Deserialized deserialize ( std::shared_ptr<CMap> map,Serialized serialized ) {
-        return std::dynamic_pointer_cast<typename Deserialized::element_type> ( CSerializerFunction<Serialized,std::shared_ptr<CGameObject>>::deserialize ( map,serialized ) );
+    return t;
+}
+
+template <typename Serialized,typename Deserialized>
+class CSerializerFunction   {
+public:
+    template<typename T=Serialized,typename V=Deserialized>
+    static T serialize ( V deserialized,typename std::enable_if<is_shared_ptr<V>::value>::type* =0 ) {
+        return CSerializerFunction<T,std::shared_ptr<CGameObject>>::serialize ( deserialized );
+    }
+    template<typename T=Serialized,typename V=Deserialized>
+    static V deserialize ( std::shared_ptr<CMap> map,T serialized,typename std::enable_if<is_shared_ptr<V>::value>::type* =0 ) {
+        return std::dynamic_pointer_cast<typename V::element_type> ( CSerializerFunction<T,std::shared_ptr<CGameObject>>::deserialize ( map,serialized ) );
+    }
+    template<typename T=Serialized,typename V=Deserialized>
+    static T serialize ( V deserialized ,typename std::enable_if<is_set<V>::value>::type* =0 ) {
+        return CSerializerFunction<T,std::set<std::shared_ptr<CGameObject>>>::serialize ( convert<std::set<std::shared_ptr<CGameObject>>> ( deserialized ) );
+    }
+    template<typename T=Serialized,typename V=Deserialized>
+    static V deserialize ( std::shared_ptr<CMap> map,T serialized,typename std::enable_if<is_set<V>::value>::type* =0 ) {
+        return convert<V> ( CSerializerFunction<T,std::set<std::shared_ptr<CGameObject>>>::deserialize ( map, serialized ) );
+    }
+    template<typename T=Serialized,typename V=Deserialized>
+    static T serialize ( V deserialized ,typename std::enable_if<is_map<V>::value>::type* =0 ) {
+        return CSerializerFunction<T,std::map<QString, std::shared_ptr<CGameObject> >>::serialize ( convert<std::map<QString, std::shared_ptr<CGameObject> >> ( deserialized ) );
+    }
+    template<typename T=Serialized,typename V=Deserialized>
+    static V deserialize ( std::shared_ptr<CMap> map,T serialized,typename std::enable_if<is_map<V>::value>::type* =0 ) {
+        return convert<V> ( CSerializerFunction<T,std::map<QString, std::shared_ptr<CGameObject> >>::deserialize ( map, serialized ) );
     }
 };
 
@@ -111,8 +224,8 @@ public:
 template<typename Class>
 void make_serializable() {
     std::make_shared<CSerializer<std::shared_ptr<QJsonObject>,std::shared_ptr<Class>>>()->reg();
-    //std::make_shared<CSerializer<std::shared_ptr<QJsonObject>,std::map<QString, std::shared_ptr<Class>>>>()->reg();
-    //std::make_shared<CSerializer<std::shared_ptr<QJsonArray>,std::set<std::shared_ptr<Class>>>>()->reg();
+    std::make_shared<CSerializer<std::shared_ptr<QJsonObject>,std::map<QString, std::shared_ptr<Class>>>>()->reg();
+    std::make_shared<CSerializer<std::shared_ptr<QJsonArray>,std::set<std::shared_ptr<Class>>>>()->reg();
 }
 
 Q_DECLARE_METATYPE ( std::shared_ptr<QJsonObject> )
