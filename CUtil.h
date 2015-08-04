@@ -85,10 +85,10 @@ struct prime<3> {
     static const int value=23;
 };
 
-std::size_t int_hash();
+inline std::size_t int_hash();
 
 template <typename F,typename ...T>
-std::size_t int_hash ( F f,T... args ) {
+inline std::size_t int_hash ( F f,T... args ) {
     return f*prime<sizeof... ( args ) >::value*int_hash ( args... );
 }
 
@@ -114,35 +114,9 @@ private :
     std::shared_ptr<T> ptr;
 };
 
-template <typename T>
-struct function_traits
-: public function_traits<decltype ( &T::operator() ) >
-  {};
-
-template <typename ClassType, typename ReturnType, typename... Args>
-struct function_traits<ReturnType ( ClassType::* ) ( Args... ) const> {
-    enum { arity = sizeof... ( Args ) };
-
-    typedef ReturnType result_type;
-
-    template <size_t i>
-    struct arg {
-        typedef typename std::tuple_element<i, std::tuple<Args...>>::type type;
-    };
-};
-
 template <typename Container,typename Value>
 inline bool ctn ( Container &container,Value &value ) {
     return container.find ( value ) !=container.end();
-}
-
-template <typename T,typename U>
-inline T convert ( U c ) {
-    T t;
-    for ( auto x:c ) {
-        t.insert ( x );
-    }
-    return t;
 }
 
 template<typename T>
@@ -169,11 +143,6 @@ inline QString to_hex ( std::shared_ptr<T> object ) {
 template<typename T>
 inline QString to_hex_hash ( T object ) {
     return to_hex ( std::hash<T>() ( object ) );
-}
-
-template <typename T,typename U>
-inline std::shared_ptr<T> cast ( std::shared_ptr<U> ptr ) {
-    return std::dynamic_pointer_cast<T> ( ptr );
 }
 
 template <typename T,typename U>
