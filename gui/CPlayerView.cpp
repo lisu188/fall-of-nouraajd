@@ -79,7 +79,7 @@ void CListView::update() {
     if ( items.size() - x * y < curPosition ) {
         curPosition = items.size() - x * y;
     }
-    std::set<QGraphicsItem *> list = convert<std::set<QGraphicsItem *>> ( childItems() );
+    std::set<QGraphicsItem *> list = cast<std::set<QGraphicsItem *>> ( childItems() );
     for ( auto childIter = list.begin(); childIter != list.end(); childIter++ ) {
         if ( *childIter == right.get() || *childIter == left.get() ) {
             continue;
@@ -261,7 +261,7 @@ std::set<std::shared_ptr<CGameObject> > CPlayerInventoryView::getItems() const {
     if ( !player ) {
         return std::set<std::shared_ptr<CGameObject>>();
     }
-    return convert<std::set<std::shared_ptr<CGameObject>>> ( player->getInInventory() );
+    return cast<std::set<std::shared_ptr<CGameObject>>> ( player->getInInventory() );
 }
 
 
@@ -274,7 +274,7 @@ std::set<std::shared_ptr<CGameObject> > CPlayerInteractionView::getItems() const
     if ( !player ) {
         return std::set<std::shared_ptr<CGameObject>>();
     }
-    return convert<std::set<std::shared_ptr<CGameObject>>> ( player->getInteractions() );
+    return cast<std::set<std::shared_ptr<CGameObject>>> ( player->getInteractions() );
 }
 
 void CListView::setNumber ( std::shared_ptr<CGameObject> item, int i, int x ) {
@@ -292,5 +292,5 @@ std::set<std::shared_ptr<CGameObject>> CTradeItemsView::getItems() const {
     if ( !player|| !player->getMarket() ) {
         return std::set<std::shared_ptr<CGameObject>>();
     }
-    return convert<std::set<std::shared_ptr<CGameObject>>> ( player->getMarket()->getTradeItems() );
+    return cast<std::set<std::shared_ptr<CGameObject>>> ( player->getMarket()->getTradeItems() );
 }
