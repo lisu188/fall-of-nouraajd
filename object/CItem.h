@@ -48,6 +48,7 @@ public:
     CArmor ( const CArmor & );
     CArmor ( QString name );
 };
+GAME_PROPERTY ( CArmor )
 
 class CBelt : public CItem {
     Q_OBJECT
@@ -55,6 +56,7 @@ public:
     CBelt();
     CBelt ( const CBelt & );
 };
+GAME_PROPERTY ( CBelt )
 
 class CHelmet : public CItem {
     Q_OBJECT
@@ -62,6 +64,7 @@ public:
     CHelmet();
     CHelmet ( const CHelmet & );
 };
+GAME_PROPERTY ( CHelmet )
 
 class CBoots : public CItem {
     Q_OBJECT
@@ -69,6 +72,7 @@ public:
     CBoots();
     CBoots ( const CBoots & );
 };
+GAME_PROPERTY ( CBoots )
 
 class CGloves : public CItem {
     Q_OBJECT
@@ -76,6 +80,7 @@ public:
     CGloves();
     CGloves ( const CGloves & );
 };
+GAME_PROPERTY ( CGloves )
 
 class CWeapon : public CItem {
     Q_OBJECT
@@ -83,6 +88,7 @@ public:
     CWeapon();
     CWeapon ( const CWeapon & );
 };
+GAME_PROPERTY ( CWeapon )
 
 class CSmallWeapon : public CWeapon {
     Q_OBJECT
@@ -90,6 +96,7 @@ public:
     CSmallWeapon();
     CSmallWeapon ( const CSmallWeapon & );
 };
+GAME_PROPERTY ( CSmallWeapon )
 
 class CScroll : public CItem {
     Q_OBJECT
@@ -103,6 +110,7 @@ public:
 private:
     QString text;
 };
+GAME_PROPERTY ( CScroll )
 
 class CPotion : public CItem {
     Q_OBJECT
@@ -110,3 +118,4 @@ public:
     CPotion();
     CPotion ( const CPotion & );
 };
+GAME_PROPERTY ( CPotion )

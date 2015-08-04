@@ -8,4 +8,4 @@ public:
     virtual bool isCompleted();
     virtual void onComplete();
 };
-
+GAME_PROPERTY ( CQuest )

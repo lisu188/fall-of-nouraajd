@@ -29,7 +29,7 @@
     "Backstab": {
         "class": "Backstab",
         "properties": {
-            "animationation": "images/interactions/backstab",
+            "animation": "images/interactions/backstab",
             "effect": {
                 "ref": "Stun"
             },
