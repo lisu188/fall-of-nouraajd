@@ -1,10 +1,10 @@
 #include "CPathFinder.h"
 
 #define NEAR_COORDS(coords) {\
-    Coords(coords.x + 1,coords.y,coords.z),\
-    Coords(coords.x - 1,coords.y,coords.z ),\
-    Coords(coords.x,coords.y + 1, coords.z ),\
-    Coords(coords.x,coords.y - 1,coords.z )}
+        Coords(coords.x + 1,coords.y,coords.z),\
+        Coords(coords.x - 1,coords.y,coords.z ),\
+        Coords(coords.x,coords.y + 1, coords.z ),\
+        Coords(coords.x,coords.y - 1,coords.z )}
 
 #ifdef DUMP_PATH
 static inline void dump ( std::unordered_map<Coords, int>& values,Coords start,Coords end ) {

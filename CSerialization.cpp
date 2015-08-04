@@ -169,8 +169,22 @@ std::set<std::shared_ptr<CGameObject> > array_deserialize ( std::shared_ptr<CMap
     return objects;
 }
 
-
 std::unordered_map<std::pair<int, int>, std::shared_ptr<CSerializerBase> > &CSerializerBase::registry() {
     static std::unordered_map<std::pair<int,int>,std::shared_ptr<CSerializerBase>> reg;
     return reg;
+}
+
+namespace {
+    class init {
+    public:
+        init() {
+            make_serializable<Stats>();
+            make_serializable<Damage>();
+            make_serializable<CEffect>();
+            make_serializable<CGameObject>();
+            make_serializable<CInteraction>();
+            make_serializable<CItem>();
+            make_serializable<CMapObject>();
+        }
+    } init_tmp;
 }

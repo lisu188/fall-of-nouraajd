@@ -108,7 +108,8 @@ HEADERS += \
     loader/CMapLoader.h \
     loader/CGameLoader.h \
     loader/CLoader.h \
-    CSerialization.h
+    CSerialization.h \
+    CTraits.h
 
 FORMS += \
      gui/CMainWindow.ui \

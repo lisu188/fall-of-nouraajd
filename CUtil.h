@@ -1,6 +1,6 @@
 #pragma once
 #include "CGlobal.h"
-#include "CSerialization.h"
+#include "CTraits.h"
 
 class CGameObject;
 
@@ -9,27 +9,58 @@ class CGameObject;
     Q_DECLARE_METATYPE(std::set<std::shared_ptr<CLASS>>)\
     typedef std::map<QString,std::shared_ptr<CLASS>> CLASS##Map;\
     Q_DECLARE_METATYPE(CLASS##Map)\
-    namespace{\
-        class CLASS##_X{\
-        public:\
-            CLASS##_X(){\
-                qRegisterMetaType<std::shared_ptr<CLASS>>();\
-                qRegisterMetaType<std::set<std::shared_ptr<CLASS>>>();\
-                qRegisterMetaType<std::map<QString,std::shared_ptr<CLASS>>>();\
-                make_serializable<CLASS>();\
-            }\
-        } CLASS##_TMP;\
-    }\
-
 
 #define PY_PROPERTY_ACCESSOR(CLASS)\
-.def ( "getStringProperty",&CLASS::getStringProperty )\
-.def ( "getNumericProperty",&CLASS::getNumericProperty )\
-.def ( "getBoolProperty",&CLASS::getBoolProperty )\
-.def ( "setStringProperty",&CLASS::setStringProperty )\
-.def ( "setNumericProperty",&CLASS::setNumericProperty )\
-.def ( "setBoolProperty",&CLASS::setBoolProperty )\
-.def ( "incProperty",&CLASS::incProperty )\
+    .def ( "getStringProperty",&CLASS::getStringProperty )\
+    .def ( "getNumericProperty",&CLASS::getNumericProperty )\
+    .def ( "getBoolProperty",&CLASS::getBoolProperty )\
+    .def ( "setStringProperty",&CLASS::setStringProperty )\
+    .def ( "setNumericProperty",&CLASS::setNumericProperty )\
+    .def ( "setBoolProperty",&CLASS::setBoolProperty )\
+    .def ( "incProperty",&CLASS::incProperty )\
+
+template <typename T,typename U>
+inline T cast ( U ptr,
+                typename vstd::disable_if<vstd::is_shared_ptr<T>::value>::type* =0,
+                typename vstd::disable_if<vstd::is_shared_ptr<U>::value>::type* =0,
+                typename vstd::disable_if<vstd::is_container<T>::value>::type* =0,
+                typename vstd::disable_if<vstd::is_container<U>::value>::type* =0,
+                typename vstd::disable_if<vstd::is_pair<T>::value>::type* =0,
+                typename vstd::disable_if<vstd::is_pair<U>::value>::type* =0 ) {
+    return ptr;
+}
+
+template <typename T,typename U>
+inline std::shared_ptr<T> cast ( U ptr,
+                                 typename vstd::disable_if<vstd::is_shared_ptr<T>::value>::type* = 0,
+                                 typename vstd::enable_if<vstd::is_shared_ptr<U>::value>::type* = 0 ) {
+    return std::dynamic_pointer_cast<T> ( ptr );
+}
+
+template <typename T,typename U>
+inline T cast ( U ptr,
+                typename vstd::enable_if<vstd::is_shared_ptr<T>::value>::type* = 0,
+                typename vstd::enable_if<vstd::is_shared_ptr<U>::value>::type* = 0 ) {
+    return cast<typename T::element_type> ( ptr );
+}
+
+template <typename T,typename U>
+inline T cast ( U ptr,
+                typename std::enable_if<vstd::is_pair<T>::value>::type* = 0,
+                typename std::enable_if<vstd::is_pair<U>::value>::type* = 0 ) {
+    return std::make_pair ( cast<typename T::first_type> ( ptr.first ),cast<typename T::second_type> ( ptr.second ) );
+}
+
+template <typename T,typename U>
+inline T cast ( U c ,
+                typename std::enable_if<vstd::is_container<T>::value>::type* = 0,
+                typename std::enable_if<vstd::is_container<U>::value>::type* = 0 ) {
+    T t;
+    for ( typename U::value_type x:c ) {
+        t.insert ( cast<typename T::value_type> ( x ) );
+    }
+    return t;
+}
 
 struct Coords {
     Coords();
@@ -43,21 +74,21 @@ struct Coords {
 };
 
 namespace std {
-template<>
-struct hash<Coords> {
-    std::size_t operator() ( const Coords &coords ) const;
-};
+    template<>
+    struct hash<Coords> {
+        std::size_t operator() ( const Coords &coords ) const;
+    };
 
-template<>
-struct hash<QString> {
-    std::hash<std::string> stringHash;
-    std::size_t operator() ( const QString &string ) const;
-};
+    template<>
+    struct hash<QString> {
+        std::hash<std::string> stringHash;
+        std::size_t operator() ( const QString &string ) const;
+    };
 
-template<>
-struct hash<std::pair<int,int>> {
-    std::size_t operator() ( const std::pair<int,int> &pair ) const;
-};
+    template<>
+    struct hash<std::pair<int,int>> {
+        std::size_t operator() ( const std::pair<int,int> &pair ) const;
+    };
 }
 
 template<int n>
@@ -89,7 +120,7 @@ inline std::size_t int_hash();
 
 template <typename F,typename ...T>
 inline std::size_t int_hash ( F f,T... args ) {
-    return f*prime<sizeof... ( args ) >::value*int_hash ( args... );
+    return ( f!=0?f:1 ) *prime<sizeof... ( args ) >::value*int_hash ( args... );
 }
 
 class QObject;

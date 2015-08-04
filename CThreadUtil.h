@@ -1,6 +1,7 @@
 #pragma once
 #include "CGlobal.h"
 #include "CUtil.h"
+#include "CTraits.h"
 
 class CLaterCall:public QObject,public QRunnable {
     Q_OBJECT
@@ -24,13 +25,13 @@ public:
         QThreadPool::globalInstance()->start ( new CLaterCall ( std::bind ( target,params... ) ) );
     }
     template <typename Function,typename Callback>
-    static void call_async ( Function target,Callback callback=[] ( function_traits<Function> ) {} ) {
+    static void call_async ( Function target,Callback callback=[] ( vstd::function_traits<Function> ) {} ) {
         QThreadPool::globalInstance()->start ( new CAsyncCall<Function,Callback> ( target,callback ) );
     }
     template <typename Collection,typename Callback,typename Function>
-    static void invoke_all ( Collection all, Function target,Callback callback=[] ( typename function_traits<Function>::result_type ) {},std::function<void() > end_callback=[]() {} ) {
+    static void invoke_all ( Collection all, Function target,Callback callback=[] ( typename vstd::function_traits<Function>::result_type ) {},std::function<void() > end_callback=[]() {} ) {
         typedef typename Collection::value_type Result;
-        typedef typename function_traits<Function>::result_type Return;
+        typedef typename vstd::function_traits<Function>::result_type Return;
         call_later ( [all,target,callback,end_callback]() {
             std::shared_ptr<int> called=std::make_shared<int> ( all.size() );
             for ( Result t:all ) {
@@ -52,7 +53,7 @@ private:
     private:
         CAsyncCall ( Function target,Callback callback ) :target ( target ),callback ( callback ) {}
         void run() override {
-            call_later ( [this] ( typename function_traits<Function>::result_type result,Callback cb ) {
+            call_later ( [this] ( typename vstd::function_traits<Function>::result_type result,Callback cb ) {
                 cb ( result );
             },target(),callback );
         }

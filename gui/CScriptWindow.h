@@ -3,7 +3,7 @@
 class CGame;
 
 namespace Ui {
-class CScriptWindow;
+    class CScriptWindow;
 }
 
 class CScriptWindow : public QWidget {

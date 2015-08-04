@@ -9,3 +9,5 @@ gen/
 *.pyo
 *.user
 .project
+*.h.*
+*.cpp.*
