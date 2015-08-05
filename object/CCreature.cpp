@@ -557,7 +557,7 @@ void CCreature::beforeMove() {
         this->getMap()->getEventHandler()->gameEvent ( object ,std::make_shared<CGameEventCaused> ( CGameEvent::Type::onLeave, this->ptr<CCreature>() ) );
     };
 
-    this->getMap()->forAll ( func,pred );
+    this->getMap()->forObjects ( func,pred );
 }
 
 void CCreature::afterMove() {
@@ -569,7 +569,7 @@ void CCreature::afterMove() {
         getMap()->getEventHandler()->gameEvent ( object, std::make_shared<CGameEventCaused> ( CGameEvent::Type::onEnter,this->ptr<CCreature>() ) );
     };
 
-    getMap()->forAll ( func,pred );
+    getMap()->forObjects ( func,pred );
 
     getMap()->getTile ( this->getCoords() )->onStep ( this );
 }

@@ -121,6 +121,7 @@ std::shared_ptr<CGameObject> object_deserialize ( std::shared_ptr<CMap> map, std
             object->setObjectName ( to_hex ( object.get() ) );
             object->setObjectType (  ( *config ) ["class"].toString() );
             object->setMap ( map );
+            map->getGame()->addObject ( object );
         }
     }
     if ( object ) {
@@ -128,7 +129,6 @@ std::shared_ptr<CGameObject> object_deserialize ( std::shared_ptr<CMap> map, std
         for ( auto it=properties.begin(); it!=properties.end(); it++ ) {
             CSerialization::setProperty ( object ,it.key(),it.value() );
         }
-        map->getGame()->addObject ( object );
         object->setVisible ( false );
     }
     return object;
