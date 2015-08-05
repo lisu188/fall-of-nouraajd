@@ -155,6 +155,7 @@ std::shared_ptr<CTile> CMap::getTile ( int x, int y, int z ) {
             tile=createObject<CTile> ( "MountainTile" );
         } else {
             tile=createObject<CTile> ( defaultTiles[z] );
+            tile->setSaved ( false );
         }
         this->addTile ( tile , x, y, z );
     } else {
@@ -253,7 +254,7 @@ std::set<std::shared_ptr<CMapObject>> CMap::getIf ( std::function<bool ( std::sh
     return objects;
 }
 
-void CMap::forAll ( std::function<void ( std::shared_ptr<CMapObject> ) > func, std::function<bool ( std::shared_ptr<CMapObject> ) > predicate ) {
+void CMap::forObjects ( std::function<void ( std::shared_ptr<CMapObject> ) > func, std::function<bool ( std::shared_ptr<CMapObject> ) > predicate ) {
     for ( std::shared_ptr<CMapObject> object : getMapObjectsClone() ) {
         if ( predicate ( object ) ) {
             func ( object  );
@@ -261,7 +262,15 @@ void CMap::forAll ( std::function<void ( std::shared_ptr<CMapObject> ) > func, s
     }
 }
 
-void CMap::removeAll ( std::function<bool ( std::shared_ptr<CMapObject> ) > func ) {
+void CMap::forTiles ( std::function<void ( std::shared_ptr<CTile> ) > func, std::function<bool ( std::shared_ptr<CTile> ) > predicate ) {
+    for ( std::pair< Coords,std::shared_ptr<CTile>> val : *this ) {
+        if ( predicate ( val.second ) ) {
+            func (  val.second   );
+        }
+    }
+}
+
+void CMap::removeObjects ( std::function<bool ( std::shared_ptr<CMapObject> ) > func ) {
     for ( std::shared_ptr<CMapObject> object : getMapObjectsClone() ) {
         if ( func ( object ) ) {
             removeObject ( object );
@@ -276,7 +285,7 @@ void CMap::move () {
 
     auto map=this->ptr();
 
-    forAll ( [map] ( std::shared_ptr<CMapObject> mapObject ) {
+    forObjects ( [map] ( std::shared_ptr<CMapObject> mapObject ) {
         map->getEventHandler()->gameEvent ( mapObject , std::make_shared<CGameEvent> ( CGameEvent::Type::onTurn ) );
     } );
 
@@ -314,7 +323,7 @@ std::set<std::shared_ptr<CMapObject>> CMap::getMapObjectsClone() {
 }
 
 void CMap::resolveFights() {
-    forAll ( [this] ( std::shared_ptr<CMapObject> mapObject ) {
+    forObjects ( [this] ( std::shared_ptr<CMapObject> mapObject ) {
         auto action=[this,mapObject] ( std::shared_ptr<CMapObject> visitor ) {
             if ( getObjectByName ( mapObject->objectName() ) && getObjectByName ( visitor->objectName() ) ) {
                 cast<CCreature> ( mapObject )->fight ( cast<CCreature> ( visitor ) );
@@ -323,20 +332,12 @@ void CMap::resolveFights() {
         auto pred=[mapObject] ( std::shared_ptr<CMapObject> visitor ) {
             return cast<CCreature> ( mapObject ) &&cast<CCreature> ( visitor ) &&mapObject != visitor && mapObject->getCoords() == visitor->getCoords() ;
         } ;
-        forAll ( action,pred );
+        forObjects ( action,pred );
     } );
 }
 
 std::shared_ptr<CMap> CMap::ptr() {
     return shared_from_this();
-}
-
-std::set<std::shared_ptr<CTile>> CMap::tiles() {
-    std::set<std::shared_ptr<CTile>> val;
-    for ( auto it:*this ) {
-        val.insert ( it.second );
-    }
-    return val;
 }
 
 

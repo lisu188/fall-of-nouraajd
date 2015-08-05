@@ -43,7 +43,7 @@ BOOST_PYTHON_MODULE ( _game ) {
             .def ( "replaceTile",&CMap::replaceTile )
             .def ( "getPlayer",&CMap::getPlayer )
             .def ( "getLocationByName",&CMap::getLocationByName )
-            .def ( "removeAll",&CMap::removeAll )
+            .def ( "removeAll",&CMap::removeObjects )
             .def ( "getObjectHandler",&CMap::getObjectHandler )
             .def ( "getEventHandler",&CMap::getEventHandler )
             .def ( "addObject",&CMap::addObject )
