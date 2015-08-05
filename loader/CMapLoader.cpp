@@ -3,13 +3,7 @@
 #include "CGame.h"
 #include "CSerialization.h"
 
-std::shared_ptr<CMap> CMapLoader::loadMap ( std::shared_ptr<CGame> game,QString name ) {
-    std::shared_ptr<CMap> map=std::make_shared<CMap> ( game );
-    QString path="maps/"+name;
-    map->getObjectHandler()->registerConfig ( path+"/config.json" );
-    map->getGame()->getScriptHandler()->addModule ( name,path+"/script.py" );
-    map->getGame()->getScriptHandler()->callFunction ( name+".load",map );
-    std::shared_ptr<QJsonObject> mapc=CConfigurationProvider::getConfig ( path+"/map.json" );
+void CMapLoader::loadFromTmx ( std::shared_ptr<CMap> map, std::shared_ptr<QJsonObject> mapc ) {
     const QJsonObject &mapProperties= ( *mapc ) ["properties"].toObject();
     const QJsonArray &mapLayers= ( *mapc ) ["layers"].toArray();
     map->entryx = mapProperties["x"].toString().toInt();
@@ -28,11 +22,32 @@ std::shared_ptr<CMap> CMapLoader::loadMap ( std::shared_ptr<CGame> game,QString 
             handleObjectLayer ( map,layer );
         }
     }
+}
+
+std::shared_ptr<CMap> CMapLoader::loadNewMap ( std::shared_ptr<CGame> game,QString name ) {
+    std::shared_ptr<CMap> map=std::make_shared<CMap> ( game );
+    QString path="maps/"+name;
+    map->getObjectHandler()->registerConfig ( path+"/config.json" );
+    map->getGame()->getScriptHandler()->addModule ( name,path+"/script.py" );
+    map->getGame()->getScriptHandler()->callFunction ( name+".load",map );
+    std::shared_ptr<QJsonObject> mapc=CConfigurationProvider::getConfig ( path+"/map.json" );
+    loadFromTmx ( map, mapc );
     return map;
 }
 
-std::shared_ptr<CMap> CMapLoader::loadMap ( std::shared_ptr<CGame> game, QString name, QString player ) {
-    std::shared_ptr<CMap> map = loadMap ( game,name );
+//std::shared_ptr<CMap> CMapLoader::loadSavedMap ( std::shared_ptr<CGame> game,QString name ) {
+//    std::shared_ptr<CMap> map=std::make_shared<CMap> ( game );
+//    QString path="save/"+name+".sav";
+//    map->getObjectHandler()->registerConfig ( path+"/config.json" );
+//    map->getGame()->getScriptHandler()->addModule ( name,path+"/script.py" );
+//    map->getGame()->getScriptHandler()->callFunction ( name+".load",map );
+//    std::shared_ptr<QJsonObject> mapc=CConfigurationProvider::getConfig ( path+"/map.json" );
+//    loadFromTmx ( map, mapc );
+//    return map;
+//}
+
+std::shared_ptr<CMap> CMapLoader::loadNewMap ( std::shared_ptr<CGame> game, QString name, QString player ) {
+    std::shared_ptr<CMap> map = loadNewMap ( game,name );
     map->setPlayer ( map->createObject<CPlayer> ( player )  );
     return map;
 }
@@ -44,13 +59,15 @@ void CMapLoader::saveMap ( std::shared_ptr<CMap> map, QString file ) {
     std::shared_ptr<QJsonObject> tiles=std::make_shared<QJsonObject>();
     std::shared_ptr<QJsonObject> triggers=std::make_shared<QJsonObject>();
 
-    map->forAll ( [objects] ( std::shared_ptr<CMapObject> object ) {
+    map->forObjects ( [objects] ( std::shared_ptr<CMapObject> object ) {
         ( *objects ) [object->objectName()]=* ( CSerialization::serialize<std::shared_ptr<QJsonObject>> ( object ) );
     } );
 
-    for ( std::shared_ptr<CTile> tile:map->tiles() ) {
+    map->forTiles ( [tiles] ( std::shared_ptr<CTile> tile ) {
         ( *tiles ) [tile->objectName()]=* ( CSerialization::serialize<std::shared_ptr<QJsonObject>> ( tile ) );
-    }
+    },[map] ( std::shared_ptr<CTile> tile ) {
+        return tile->isSaved();
+    } );
 
     ( *data ) ["objects"]=*objects;
     ( *data ) ["tiles"]=*tiles;
@@ -58,7 +75,7 @@ void CMapLoader::saveMap ( std::shared_ptr<CMap> map, QString file ) {
 
     QFile f ( file );
     if ( f.open ( QIODevice::WriteOnly ) ) {
-        f.write ( QJsonDocument ( *data ).toJson ( QJsonDocument::JsonFormat::Indented ) );
+        f.write ( QJsonDocument ( *data ).toJson ( QJsonDocument::JsonFormat::Compact ) );
     } else {
         qFatal ( "Failed saving!" );
     }

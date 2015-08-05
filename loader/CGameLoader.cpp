@@ -10,7 +10,7 @@ std::shared_ptr<CGame> CGameLoader::loadGame ( std::shared_ptr<CGameView> view )
 }
 
 void CGameLoader::startGame ( std::shared_ptr<CGame> game, QString file, QString player ) {
-    game->setMap ( CMapLoader::loadMap ( game,file,player ) );
+    game->setMap ( CMapLoader::loadNewMap ( game,file,player ) );
     CThreadUtil::call_later ( [game]() {
         game->getMap()->ensureSize();
         game->getView()->show();
@@ -24,7 +24,7 @@ void CGameLoader::changeMap ( std::shared_ptr<CGame> game, QString name ) {
             return !game->getMap()->isMoving();
         } );
         std::shared_ptr<CPlayer> player=game->getMap()->getPlayer();
-        game->setMap ( CMapLoader::loadMap ( game,name ) );
+        game->setMap ( CMapLoader::loadNewMap ( game,name ) );
         game->getMap()->setPlayer ( player );
         game->getMap()->ensureSize();
     } );
