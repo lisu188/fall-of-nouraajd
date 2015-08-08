@@ -130,6 +130,7 @@ private:
     static inline void setOtherProperty ( std::shared_ptr<CGameObject> object, QMetaProperty property, Property prop ) {
         _setOtherProperty (  qRegisterMetaType<Property>(),QMetaType::type ( property.typeName() ), object, property, QVariant::fromValue ( prop ) );
     }
+    static inline void setStringProperty ( std::shared_ptr<CGameObject> object, QMetaProperty property, QString prop );
     static inline void _setOtherProperty ( int serializedId, int deserializedId,  std::shared_ptr<CGameObject> object, QMetaProperty property, QVariant variant );
 };
 

@@ -17,7 +17,7 @@ void CSerialization::setProperty ( std::shared_ptr<CGameObject> object, QString 
         object->setNumericProperty ( key,value.toInt() ) ;
         break;
     case QJsonValue::Type::String:
-        object->setStringProperty ( key,value.toString() ) ;
+        setStringProperty ( object, getProperty ( object,key ),value.toString() ) ;
         break;
     case QJsonValue::Type::Array:
         setOtherProperty ( object, getProperty ( object,key ), std::make_shared<QJsonArray> ( value.toArray() ) );
@@ -36,6 +36,20 @@ QMetaProperty CSerialization::getProperty ( std::shared_ptr<CGameObject> object,
         }
     }
     return QMetaProperty();
+}
+
+void CSerialization::setStringProperty ( std::shared_ptr<CGameObject> object, QMetaProperty property, QString prop ) {
+    QJsonParseError err;
+    QJsonDocument doc=QJsonDocument::fromJson ( prop.toUtf8(),&err );
+    if ( err.error ) {
+        object->setStringProperty ( property.name(),prop );
+    } else if ( doc.isObject() ) {
+        setOtherProperty ( object,property,std::make_shared<QJsonObject> ( doc.object() ) );
+    } else if ( doc.isArray() ) {
+        setOtherProperty ( object,property,std::make_shared<QJsonArray> ( doc.array() ) );
+    } else {
+        qFatal ( "Error parsing string property!" );
+    }
 }
 
 void CSerialization::_setOtherProperty ( int serializedId,  int deserializedId, std::shared_ptr<CGameObject> object, QMetaProperty property, QVariant variant ) {
