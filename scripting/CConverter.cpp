@@ -6,7 +6,7 @@ using namespace boost::python;
 
 struct QString_to_python_str {
     static PyObject* convert ( QString const& s ) {
-        return incref ( object ( s.toLatin1().constData() ).ptr() );
+        return incref ( object ( s.toUtf8().constData() ).ptr() );
     }
 };
 
