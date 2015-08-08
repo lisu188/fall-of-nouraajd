@@ -14,9 +14,9 @@ AScriptLoader *ModuleSpec::loader() {
 
 QString CScriptLoader::findModule ( QString modName ) {
     modName=modName.replace ( ".","/" );
-    QString modData=CResourcesProvider::getInstance()->getResourceAsString ( "scripts/"+modName+".py" );
+    QString modData=CResourcesProvider::getInstance()->load ( "scripts/"+modName+".py" );
     if ( modData=="" ) {
-        modData=CResourcesProvider::getInstance()->getResourceAsString ( "scripts/"+modName +"/__init__.py" );
+        modData=CResourcesProvider::getInstance()->load ( "scripts/"+modName +"/__init__.py" );
     }
     return modData;
 }
@@ -73,7 +73,7 @@ CCustomScriptLoader::CCustomScriptLoader ( QString name,QString path ) :name ( n
 
 QString CCustomScriptLoader::findModule ( QString modName ) {
     if ( modName==name ) {
-        return CResourcesProvider::getInstance()->getResourceAsString ( path );
+        return CResourcesProvider::getInstance()->load ( path );
     }
     return QString();
 }
