@@ -165,4 +165,3 @@ template <typename T,typename U>
 inline bool castable ( std::shared_ptr<U> ptr ) {
     return std::dynamic_pointer_cast<T> ( ptr ).operator bool();
 }
-

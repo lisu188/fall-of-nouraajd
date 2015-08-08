@@ -65,20 +65,13 @@ void CMapLoader::saveMap ( std::shared_ptr<CMap> map, QString file ) {
 
     map->forTiles ( [tiles] ( std::shared_ptr<CTile> tile ) {
         ( *tiles ) [tile->objectName()]=* ( CSerialization::serialize<std::shared_ptr<QJsonObject>> ( tile ) );
-    },[map] ( std::shared_ptr<CTile> tile ) {
-        return tile->isSaved();
     } );
 
     ( *data ) ["objects"]=*objects;
     ( *data ) ["tiles"]=*tiles;
     ( *data ) ["triggers"]=*triggers;
 
-    QFile f ( file );
-    if ( f.open ( QIODevice::WriteOnly ) ) {
-        f.write ( QJsonDocument ( *data ).toJson ( QJsonDocument::JsonFormat::Compact ) );
-    } else {
-        qFatal ( "Failed saving!" );
-    }
+    CResourcesProvider::getInstance()->saveZip ( "save/"+file,data );
 }
 
 void CMapLoader::handleTileLayer ( std::shared_ptr<CMap> map,const QJsonObject &tileset, const QJsonObject &layer ) {

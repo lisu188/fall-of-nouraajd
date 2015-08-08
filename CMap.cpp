@@ -302,6 +302,8 @@ void CMap::move () {
     };
 
     auto end_callback=[map]() {
+        static QAtomicInt in;
+
         map->resolveFights();
 
         map->ensureSize();

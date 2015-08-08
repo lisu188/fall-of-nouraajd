@@ -39,9 +39,14 @@ public:
 
 
 int main ( int argc, char *argv[] ) {
-    QApplication a ( argc, argv );
-    CMainWindow window;
-    window.show();
-    return a.exec();
+    if ( argc==2 ) {
+        CResourcesProvider::getInstance()->save ( QString::fromUtf8 ( argv[1] ),CResourcesProvider::getInstance()->load ( QString::fromUtf8 ( argv[1] ) ) );
+    } else {
+        QApplication a ( argc, argv );
+        CMainWindow window;
+        window.show();
+        return a.exec();
+    }
+    return 0;
 }
 
