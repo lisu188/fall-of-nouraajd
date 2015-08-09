@@ -58,13 +58,6 @@ int CTile::getPosz() const {
 void CTile::setPosz ( int value ) {
     posz = value;
 }
-bool CTile::isSaved() const {
-    return saved;
-}
-
-void CTile::setSaved ( bool value ) {
-    saved = value;
-}
 
 void CTile::setXYZ ( int x, int y, int z ) {
     posx = x;
