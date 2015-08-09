@@ -14,7 +14,6 @@ class CTile : public CGameObject {
     Q_PROPERTY ( int posx READ getPosx WRITE setPosx USER true )
     Q_PROPERTY ( int posy READ getPosy WRITE setPosy USER true )
     Q_PROPERTY ( int posz READ getPosz WRITE setPosz USER true )
-    Q_PROPERTY ( bool saved READ isSaved WRITE setSaved USER true )
 public:
     CTile();
     virtual ~CTile();
@@ -32,12 +31,8 @@ public:
     int getPosz() const;
     void setPosz ( int value );
 
-    bool isSaved() const;
-    void setSaved ( bool value );
-
 private:
     bool step=false;
-    bool saved=true;
     int posx=0,posy=0,posz=0;
     void setXYZ ( int x, int y, int z );
 };
