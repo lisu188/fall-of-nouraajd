@@ -2,7 +2,7 @@
 #include "CGame.h"
 #include "CMap.h"
 
-void CSerialization::setProperty ( std::shared_ptr<CGameObject> object, QString key, const QJsonValue &value )  {
+void CSerialization::setProperty ( std::shared_ptr<CGameObject> object, QString key, const QJsonValue &value ) {
     switch ( value.type() ) {
     case QJsonValue::Null:
         qFatal ( "Null value detected." );
@@ -28,7 +28,7 @@ void CSerialization::setProperty ( std::shared_ptr<CGameObject> object, QString 
     }
 }
 
-QMetaProperty CSerialization::getProperty ( std::shared_ptr<CGameObject> object, QString name )  {
+QMetaProperty CSerialization::getProperty ( std::shared_ptr<CGameObject> object, QString name ) {
     for ( int i = 0; i < object->metaObject()->propertyCount(); i++ ) {
         QMetaProperty property = object->metaObject()->property ( i );
         if ( name==property.name() ) {
@@ -52,11 +52,11 @@ void CSerialization::setStringProperty ( std::shared_ptr<CGameObject> object, QM
     }
 }
 
-void CSerialization::_setOtherProperty ( int serializedId,  int deserializedId, std::shared_ptr<CGameObject> object, QMetaProperty property, QVariant variant ) {
+void CSerialization::_setOtherProperty ( int serializedId, int deserializedId, std::shared_ptr<CGameObject> object, QMetaProperty property, QVariant variant ) {
     std::shared_ptr<CSerializerBase> serializer=CSerializerBase::registry() [std::make_pair ( serializedId,deserializedId )];
     //handle null
     variant=serializer->deserialize ( object->getMap(),variant );
-    object->setProperty (  property.name(),variant );
+    object->setProperty ( property.name(),variant );
 }
 
 void CSerialization::setProperty ( std::shared_ptr<QJsonObject> conf, QString propertyName, QVariant propertyValue ) {
@@ -133,7 +133,7 @@ std::shared_ptr<CGameObject> object_deserialize ( std::shared_ptr<CMap> map, std
         object = map->getObjectHandler()->getType ( ( *config ) ["class"].toString() );
         if ( object ) {
             object->setObjectName ( to_hex ( object.get() ) );
-            object->setObjectType (  ( *config ) ["class"].toString() );
+            object->setObjectType ( ( *config ) ["class"].toString() );
             object->setMap ( map );
             map->getGame()->addObject ( object );
         }

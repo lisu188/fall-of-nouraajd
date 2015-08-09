@@ -84,7 +84,7 @@ void CGameObject::setVisible ( bool vis ) {
 }
 
 void CGameObject::drag() {
-    if ( std::shared_ptr<CGameObject> object= this->ptr()  ) {
+    if ( std::shared_ptr<CGameObject> object= this->ptr() ) {
         QDrag *drag = new QDrag ( this );
         drag->setMimeData ( new CObjectData ( object ) );
         drag->setPixmap ( this->pixmap() );

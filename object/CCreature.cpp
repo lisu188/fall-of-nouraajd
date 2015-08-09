@@ -53,7 +53,7 @@ void CCreature::addExp ( int exp ) {
 std::shared_ptr<CInteraction> CCreature::getLevelAction() {
     QString levelString=QString::number ( level );
     if ( ctn ( levelling, levelString ) ) {
-        return getMap()->getObjectHandler()->clone<CInteraction> (  levelling[levelString] );
+        return getMap()->getObjectHandler()->clone<CInteraction> ( levelling[levelString] );
     } else {
         return nullptr;
     }
@@ -82,7 +82,7 @@ void CCreature::addItem ( std::shared_ptr<CItem> item ) {
     addItem ( list );
 }
 
-void CCreature::removeFromInventory (  std::shared_ptr<CItem> item ) {
+void CCreature::removeFromInventory ( std::shared_ptr<CItem> item ) {
     items.erase ( item );
     Q_EMIT inventoryChanged();
 }
@@ -111,7 +111,7 @@ void CCreature::setEquipped ( CItemMap value ) {
 }
 
 void CCreature::addItem ( std::set<std::shared_ptr<CItem> > items ) {
-    for ( std::shared_ptr<CItem>  it : items ) {
+    for ( std::shared_ptr<CItem> it : items ) {
         items.insert ( it );
     }
     Q_EMIT inventoryChanged();
@@ -164,7 +164,7 @@ void CCreature::takeDamage ( int i ) {
     Q_EMIT statsChanged();
 }
 
-CInteractionMap CCreature::getLevelling()  {
+CInteractionMap CCreature::getLevelling() {
     return levelling;
 }
 
@@ -287,7 +287,7 @@ void CCreature::addMana ( int i ) {
 void CCreature::addManaProc ( float i ) {
     int tmp = mana;
     addMana ( i / 100.0 * manaMax );
-    qDebug() <<  getObjectType() << "restored" << mana - tmp << "mana"<<"\n";
+    qDebug() << getObjectType() << "restored" << mana - tmp << "mana"<<"\n";
 }
 
 void CCreature::takeMana ( int i ) {
@@ -299,7 +299,7 @@ void CCreature::takeMana ( int i ) {
 }
 
 std::shared_ptr<CInteraction> CCreature::selectAction() {
-    for ( std::shared_ptr<CInteraction>  it:actions ) {
+    for ( std::shared_ptr<CInteraction> it:actions ) {
         if ( it ->getManaCost() < mana ) {
             return it ;
         }
@@ -315,7 +315,7 @@ bool CCreature::applyEffects() {
     std::set<std::shared_ptr<CEffect> >::iterator it = effects.begin();
     for ( it = effects.begin(); it != effects.end(); ) {
         if ( ( *it )->getTimeLeft() == 0 ) {
-            qDebug() <<  getObjectType() << "is now free from"
+            qDebug() << getObjectType() << "is now free from"
                      << ( *it )->getObjectType() ;
             i++;
             effects.erase ( it );
@@ -326,11 +326,11 @@ bool CCreature::applyEffects() {
     }
     bool isStopped = false;
     for ( std::shared_ptr<CEffect> effect:effects ) {
-        qDebug() <<  getObjectType()  << "suffers from" << effect->getObjectType() ;
+        qDebug() << getObjectType() << "suffers from" << effect->getObjectType() ;
         i++;
         isStopped = isStopped || effect->apply ( this );
         if ( !isAlive() ) {
-            effect->getCaster()->defeatedCreature (  this->ptr<CCreature>() );
+            effect->getCaster()->defeatedCreature ( this->ptr<CCreature>() );
             return true;
         }
     }
@@ -437,12 +437,12 @@ void CCreature::levelUp() {
     addAction ( getLevelAction() );
     attribChange();
     if ( level > 1 ) {
-        qDebug() << getObjectType()  << "is now level:" << level << "\n";
+        qDebug() << getObjectType() << "is now level:" << level << "\n";
     }
 }
 
 std::set<std::shared_ptr<CItem>> CCreature::getLoot() {
-    std::set<std::shared_ptr<CItem>>  items= this->getMap()->getLootHandler()->getLoot ( getScale() );
+    std::set<std::shared_ptr<CItem>> items= this->getMap()->getLootHandler()->getLoot ( getScale() );
     for ( std::shared_ptr<CItem> item:getInInventory() ) {
         this->removeFromInventory ( item );
         items.insert ( item );
@@ -467,7 +467,7 @@ void CCreature::attribChange() {
     manaMax = stats->getMainValue() * 7;
 }
 
-bool CCreature::hasEquipped ( std::shared_ptr<CItem>  item ) {
+bool CCreature::hasEquipped ( std::shared_ptr<CItem> item ) {
     for ( auto it:equipped ) {
         if ( it.second==item ) {
             return true;
@@ -507,7 +507,7 @@ std::shared_ptr<CItem> CCreature::getItemAtSlot ( QString slot ) {
     return nullptr;
 }
 
-QString CCreature::getSlotWithItem ( std::shared_ptr<CItem>  item ) {
+QString CCreature::getSlotWithItem ( std::shared_ptr<CItem> item ) {
     for ( auto it=equipped.begin(); it!=equipped.end(); it++ ) {
         if ( ( *it ).second==item ) {
             return ( *it ).first;
@@ -541,7 +541,7 @@ void CCreature::setGold ( int value ) {
 }
 
 void CCreature::defeatedCreature ( std::shared_ptr<CCreature> creature ) {
-    qDebug() << getObjectType()  <<objectName() << "defeated" << creature->getObjectType() <<creature->objectName()
+    qDebug() << getObjectType() <<objectName() << "defeated" << creature->getObjectType() <<creature->objectName()
              << "\n";
     addExpScaled ( creature->getScale() );
     addItem ( creature->getLoot() );

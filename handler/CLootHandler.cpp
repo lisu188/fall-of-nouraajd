@@ -9,7 +9,7 @@ std::set<std::shared_ptr<CItem>> CLootHandler::getLoot ( int value ) const {
 }
 
 CLootHandler::CLootHandler ( std::shared_ptr<CMap> map ) :map ( map ) {
-    for ( QString  type : map->getObjectHandler()->getAllTypes() ) {
+    for ( QString type : map->getObjectHandler()->getAllTypes() ) {
         std::shared_ptr<CItem> item=map->createObject<CItem> ( type ) ;
         if ( item ) {
             int power=item->getPower() ;
@@ -37,7 +37,7 @@ std::set<std::shared_ptr<CItem>> CLootHandler::calculateLoot ( int value ) const
         }
         if ( names.size() >0 ) {
             std::random_shuffle ( names.begin(),names.end() );
-            loot.insert ( map.lock()->createObject<CItem> (  names.front() ) );
+            loot.insert ( map.lock()->createObject<CItem> ( names.front() ) );
         }
     }
     return loot;

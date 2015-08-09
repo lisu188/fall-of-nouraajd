@@ -1,13 +1,13 @@
 #include "CPathFinder.h"
 
 #define NEAR_COORDS(coords) {\
-        Coords(coords.x + 1,coords.y,coords.z),\
-        Coords(coords.x - 1,coords.y,coords.z ),\
-        Coords(coords.x,coords.y + 1, coords.z ),\
-        Coords(coords.x,coords.y - 1,coords.z )}
+    Coords(coords.x + 1,coords.y,coords.z),\
+    Coords(coords.x - 1,coords.y,coords.z ),\
+    Coords(coords.x,coords.y + 1, coords.z ),\
+    Coords(coords.x,coords.y - 1,coords.z )}
 
 #ifdef DUMP_PATH
-static inline void dump ( std::unordered_map<Coords, int>& values,Coords start,Coords end ) {
+static void dump ( std::unordered_map<Coords, int>& values,Coords start,Coords end ) {
     int x=0;
     int y=0;
     double mval=0;
@@ -34,7 +34,7 @@ static inline void dump ( std::unordered_map<Coords, int>& values,Coords start,C
     img.save ( QString::fromStdString ( stream.str() ),"png" );
 }
 #else
-static inline void dump ( std::unordered_map<Coords, int>& values,Coords start,Coords end ) {
+static void dump ( std::unordered_map<Coords, int>& values,Coords start,Coords end ) {
     Q_UNUSED ( values )
     Q_UNUSED ( start )
     Q_UNUSED ( end )
@@ -46,8 +46,8 @@ typedef std::priority_queue<Coords, std::vector<Coords>,Compare> Queue;
 
 
 
-Coords CSmartPathFinder::findNextStep ( const Coords &  start, const Coords &  goal, std::function<bool ( const Coords& ) > canStep ) {
-    Queue nodes (  [start] ( const Coords& a,const Coords& b ) {
+Coords CSmartPathFinder::findNextStep ( const Coords & start, const Coords & goal, std::function<bool ( const Coords& ) > canStep ) {
+    Queue nodes ( [start] ( const Coords& a,const Coords& b ) {
         double dista = ( a.x - start.x ) * ( a.x - start.x ) +
                        ( a.y - start.y ) * ( a.y - start.y ) ;
         double distb = ( b.x - start.x ) * ( b.x - start.x ) +
@@ -63,7 +63,7 @@ Coords CSmartPathFinder::findNextStep ( const Coords &  start, const Coords &  g
     while ( !nodes.empty() && !ctn ( marked,start ) ) {
         Coords currentCoords = nodes.top();
         nodes.pop();
-        if (  marked.insert ( currentCoords ).second ) {
+        if ( marked.insert ( currentCoords ).second ) {
             int curValue = values[currentCoords];
             for ( Coords tmpCoords:NEAR_COORDS ( currentCoords ) ) {
                 if ( canStep ( tmpCoords ) ) {

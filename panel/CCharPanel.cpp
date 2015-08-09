@@ -61,7 +61,7 @@ void CCharPanel::onClickAction ( std::shared_ptr<CGameObject> object ) {
     std::shared_ptr<CItem> item=cast<CItem> ( object );
     if ( item ) {
         if ( item->isSingleUse() ) {
-            item->getMap()->getEventHandler()->gameEvent ( item,  std::make_shared<CGameEventCaused> ( CGameEvent::onUse,item->getMap()->getPlayer() ) );
+            item->getMap()->getEventHandler()->gameEvent ( item, std::make_shared<CGameEventCaused> ( CGameEvent::onUse,item->getMap()->getPlayer() ) );
             item->getMap()->getPlayer()->removeFromInventory ( item );
         } else {
             item->drag();

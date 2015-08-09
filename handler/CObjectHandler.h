@@ -10,7 +10,7 @@ class CObjectHandler {
 public:
     CObjectHandler ( std::shared_ptr<CObjectHandler> parent=std::shared_ptr<CObjectHandler>() );
     template<typename T=CGameObject>
-    std::shared_ptr<T> createObject ( std::shared_ptr<CMap> map,QString type )  {
+    std::shared_ptr<T> createObject ( std::shared_ptr<CMap> map,QString type ) {
         std::shared_ptr<T> object= cast<T> ( _createObject ( map, type ) ) ;
         if ( object ) {
             return object;
@@ -38,7 +38,7 @@ private:
     std::shared_ptr<CGameObject> _createObject ( std::shared_ptr<CMap> map, QString type );
     std::shared_ptr<CGameObject> _clone ( std::shared_ptr<CGameObject> object );
 
-    std::unordered_map<QString,std::function<CGameObject*() >>  constructors;
+    std::unordered_map<QString,std::function<CGameObject*() >> constructors;
 
     std::unordered_map<QString,std::shared_ptr<QJsonObject>> objectConfig;
 
