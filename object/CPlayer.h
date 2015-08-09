@@ -11,7 +11,7 @@ public:
     virtual void onTurn ( std::shared_ptr<CGameEvent> ) override;
     virtual void onDestroy ( std::shared_ptr<CGameEvent> event ) override;
     virtual std::shared_ptr<CInteraction> selectAction() override;
-    virtual void fight ( std::shared_ptr<CCreature> creature  ) override;
+    virtual void fight ( std::shared_ptr<CCreature> creature ) override;
     virtual void trade ( std::shared_ptr<CGameObject> object ) override;
     std::shared_ptr<CInteraction> getSelectedAction() const;
     void setSelectedAction ( std::shared_ptr<CInteraction> value );

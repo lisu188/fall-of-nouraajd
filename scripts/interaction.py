@@ -61,7 +61,7 @@ def load(context):
             crit = first.getStats().getNumericProperty('crit')
             first.getStats().setNumericProperty('crit', 0 )
             dmg = first.getDmg()
-            if  dmg :
+            if dmg :
                 second.hurt ( dmg )
                 first.healProc ( ( dmg * 0.75 ) // first.getHpMax() * 100 )
             first.getStats().setNumericProperty('crit', crit )
@@ -126,7 +126,7 @@ def load(context):
     class DeathStrike (CInteraction):
         def performAction(self, first, second ):
             second.hurt ( first.getDmg() * 2 )
-            if  second.getHpRatio() < 20 :
+            if second.getHpRatio() < 20 :
                 second.hurt ( first.getDmg() * 1.5 );
 
     @register(context)

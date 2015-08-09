@@ -28,9 +28,9 @@ void CConfigurationProvider::loadConfig ( QString path ) {
     std::shared_ptr<QFile> file =CResourcesProvider::getInstance()->getResource ( path );
     if ( file && file->open ( QIODevice::ReadOnly ) ) {
         QByteArray data = file->readAll();
-        this->insert (  std::make_pair (
-                            path,std::make_shared<QJsonObject>
-                            ( QJsonDocument::fromJson ( data ).object() ) ) );
+        this->insert ( std::make_pair (
+                           path,std::make_shared<QJsonObject>
+                           ( QJsonDocument::fromJson ( data ).object() ) ) );
         file->close();
         qDebug() << "Loaded configuration:" << path << "\n";
     } else {

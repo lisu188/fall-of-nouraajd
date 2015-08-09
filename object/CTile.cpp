@@ -12,7 +12,7 @@ CTile::~CTile() {
 }
 
 void CTile::move ( int x, int y, int z ) {
-    if (  getMap() ) {
+    if ( getMap() ) {
         getMap()->moveTile ( this->ptr<CTile>(),posx+x,posy+y, posz+z );
         setXYZ ( posx+x,posy+y, posz+z );
     }

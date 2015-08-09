@@ -14,17 +14,17 @@ CInteraction::~CInteraction() {
 }
 
 void CInteraction::onAction ( std::shared_ptr<CCreature> first, std::shared_ptr<CCreature> second ) {
-    qDebug() << first->getObjectType()   << "used" << this->getObjectType()
-             << "against" << second->getObjectType()  ;
+    qDebug() << first->getObjectType()  << "used" << this->getObjectType()
+             << "against" << second->getObjectType() ;
 
     first->takeMana ( this->getManaCost() );
 
-    this->performAction ( first , second  );
+    this->performAction ( first , second );
 
     if ( effect ) {
         std::shared_ptr<CEffect> effect=getMap()->getObjectHandler()->clone ( effect );
         effect->setCaster ( first );
-        if ( this->configureEffect ( effect  ) ) {
+        if ( this->configureEffect ( effect ) ) {
             std::shared_ptr<CCreature> victim;
             if ( effect->isBuff() ) {
                 victim=first;
@@ -53,7 +53,7 @@ void CInteraction::setEffect ( const std::shared_ptr<CEffect> value ) {
     effect = value;
 }
 
-void CInteraction::performAction (  std::shared_ptr<CCreature>,  std::shared_ptr<CCreature> ) {
+void CInteraction::performAction ( std::shared_ptr<CCreature>, std::shared_ptr<CCreature> ) {
 
 }
 

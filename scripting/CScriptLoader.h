@@ -23,7 +23,7 @@ public:
     bool checkModule ( QString modName );
     bool checkModule ( std::string modName );
     void exec_module ( boost::python::object module );
-    ModuleSpec *find_spec ( boost::python::object  name,boost::python::object  ,boost::python::object  );
+    ModuleSpec *find_spec ( boost::python::object name,boost::python::object ,boost::python::object );
     bool __eq__ ( boost::python::object object );
     virtual ~AScriptLoader();
 };
@@ -36,7 +36,7 @@ public:
 
 class CCustomScriptLoader :public AScriptLoader {
 public:
-    CCustomScriptLoader  ( QString name,QString path ) ;
+    CCustomScriptLoader ( QString name,QString path ) ;
     virtual QString findModule ( QString modName ) override;
     virtual ~CCustomScriptLoader();
 private:

@@ -37,7 +37,7 @@ std::shared_ptr<CGameObject> CObjectHandler::getType ( QString name ) {
     return std::shared_ptr<CGameObject>();
 }
 
-void CObjectHandler::registerType ( QString name,std::function<CGameObject*() >  constructor ) {
+void CObjectHandler::registerType ( QString name,std::function<CGameObject*() > constructor ) {
     constructors.insert ( std::make_pair ( name,constructor ) );
 }
 

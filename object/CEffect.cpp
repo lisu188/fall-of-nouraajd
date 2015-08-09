@@ -69,11 +69,11 @@ void CEffect::setBuff ( bool value ) {
     buff = value;
 }
 
-void CEffect::setCaster (  std::shared_ptr<CCreature> value ) {
+void CEffect::setCaster ( std::shared_ptr<CCreature> value ) {
     caster = value;
 }
 
-void CEffect::setVictim (  std::shared_ptr<CCreature> value ) {
+void CEffect::setVictim ( std::shared_ptr<CCreature> value ) {
     victim = value;
 }
 

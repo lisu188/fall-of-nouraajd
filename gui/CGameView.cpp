@@ -15,7 +15,7 @@ std::shared_ptr<CGameView> CGameView::ptr() {
     return shared_from_this();
 }
 
-CGameView::CGameView ( QString mapName , QString playerType )  {
+CGameView::CGameView ( QString mapName , QString playerType ) {
     setHorizontalScrollBarPolicy ( Qt::ScrollBarAlwaysOff );
     setVerticalScrollBarPolicy ( Qt::ScrollBarAlwaysOff );
     setViewportUpdateMode ( QGraphicsView::BoundingRectViewportUpdate );
@@ -52,7 +52,7 @@ void CGameView::mouseDoubleClickEvent ( QMouseEvent *e ) {
 }
 
 void CGameView::resizeEvent ( QResizeEvent *event ) {
-    if (    init ) {
+    if (  init ) {
         if ( event ) {
             QWidget::resizeEvent ( event );
             playerStatsView.move ( 0, 0 );

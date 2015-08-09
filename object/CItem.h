@@ -106,7 +106,7 @@ public:
     CScroll ( const CScroll & );
     QString getText() const;
     void setText ( const QString &value );
-    virtual void onUse ( std::shared_ptr<CGameEvent>  ) override;
+    virtual void onUse ( std::shared_ptr<CGameEvent> ) override;
 private:
     QString text;
 };

@@ -3,7 +3,7 @@
 #include "CUtil.h"
 #include "CMap.h"
 
-void CEventHandler::gameEvent (  std::shared_ptr<CMapObject> object ,std::shared_ptr<CGameEvent> event ) const {
+void CEventHandler::gameEvent ( std::shared_ptr<CMapObject> object ,std::shared_ptr<CGameEvent> event ) const {
     switch ( event->getType() ) {
     case CGameEvent::onEnter:
         cast<Visitable > ( object )->onEnter ( event );
@@ -27,7 +27,7 @@ void CEventHandler::gameEvent (  std::shared_ptr<CMapObject> object ,std::shared
         cast<Wearable > ( object )->onEquip ( event );
         break;
     case CGameEvent::onUnequip:
-        cast<Wearable > ( object )->onUnequip (  event );
+        cast<Wearable > ( object )->onUnequip ( event );
         break;
     }
     auto range = triggers.equal_range ( TriggerKey ( object->objectName(),event->getType() ) );
@@ -40,7 +40,7 @@ void CEventHandler::gameEvent (  std::shared_ptr<CMapObject> object ,std::shared
     );
 }
 
-void CEventHandler::registerTrigger ( QString name, QString type,  std::shared_ptr<CTrigger> trigger ) {
+void CEventHandler::registerTrigger ( QString name, QString type, std::shared_ptr<CTrigger> trigger ) {
     bool ok;
     CGameEvent::Type tp=static_cast<CGameEvent::Type>
                         ( CGameEvent::staticMetaObject.enumerator ( CGameEvent::staticMetaObject.indexOfEnumerator ( "Type" ) )

@@ -22,6 +22,6 @@ CMonster::~CMonster() {
 
 }
 
-void CMonster::onTurn ( std::shared_ptr<CGameEvent>  ) {
+void CMonster::onTurn ( std::shared_ptr<CGameEvent> ) {
     this->addExp ( rand() % 25 );
 }

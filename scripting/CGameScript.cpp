@@ -50,7 +50,7 @@ BOOST_PYTHON_MODULE ( _game ) {
             .def ( "createObject",&CMap::createObject<CGameObject> )
             .def ( "createTrigger",&CMap::createObject<CTrigger> )
             .def ( "getGame",&CMap::getGame );
-    void ( CObjectHandler::*registerType ) ( QString,std::function<CGameObject* () > )  =&CObjectHandler::registerType;
+    void ( CObjectHandler::*registerType ) ( QString,std::function<CGameObject* () > ) =&CObjectHandler::registerType;
     class_<CObjectHandler,boost::noncopyable,std::shared_ptr<CObjectHandler>> ( "CObjectHandler",no_init )
             .def ( "registerType",registerType );
     void ( CMapObject::*moveTo ) ( int,int,int ) =&CMapObject::moveTo ;
@@ -63,12 +63,12 @@ BOOST_PYTHON_MODULE ( _game ) {
             .def ( "setCoords",&CMapObject::setCoords );
     class_<CEvent,bases<CMapObject>,boost::noncopyable,std::shared_ptr<CEvent>> ( "CEventBase" );
     class_<CInteraction,bases<CGameObject>,boost::noncopyable,std::shared_ptr<CInteraction>> ( "CInteraction" )
-            .def ( "onAction",&CInteraction::onAction  );
-    class_<CEffect,bases<CGameObject>,boost::noncopyable,std::shared_ptr<CEffect>> ( "CEffectBase"  )
-            .def ( "getBonus",&CEffect::getBonus  )
+            .def ( "onAction",&CInteraction::onAction );
+    class_<CEffect,bases<CGameObject>,boost::noncopyable,std::shared_ptr<CEffect>> ( "CEffectBase" )
+            .def ( "getBonus",&CEffect::getBonus )
             .def ( "setBonus",&CEffect::setBonus )
-            .def ( "getCaster",&CEffect::getCaster  )
-            .def ( "getVictim",&CEffect::getVictim  )
+            .def ( "getCaster",&CEffect::getCaster )
+            .def ( "getVictim",&CEffect::getVictim )
             .def ( "getTimeLeft",&CEffect::getTimeLeft );
     class_<CEffectWrapper,bases<CEffect>,boost::noncopyable,std::shared_ptr<CEffectWrapper>> ( "CEffect" )
             .def ( "onEffect",&CEffectWrapper::onEffect );

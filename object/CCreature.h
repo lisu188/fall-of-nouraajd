@@ -71,7 +71,7 @@ public:
     void setWeapon ( std::shared_ptr<CWeapon> weapon );
     void setArmor ( std::shared_ptr<CArmor> armor );
     std::shared_ptr<CWeapon> getWeapon();
-    std::shared_ptr<CArmor>  getArmor();
+    std::shared_ptr<CArmor> getArmor();
     int getManaRatio();
     int getLevel();
     void addExpScaled ( int scale );
@@ -141,7 +141,7 @@ protected:
 
     std::shared_ptr<Stats> stats=std::make_shared<Stats>();
     std::shared_ptr<Stats> levelStats =std::make_shared<Stats>();
-    virtual std::shared_ptr<CInteraction>  selectAction();
+    virtual std::shared_ptr<CInteraction> selectAction();
     void takeDamage ( int i );
     std::shared_ptr<CInteraction> getLevelAction();
     void defeatedCreature ( std::shared_ptr<CCreature> creature );

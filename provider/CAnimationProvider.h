@@ -12,7 +12,7 @@ public:
     int getTime();
     int size();
     void next();
-    void add ( std::shared_ptr<QPixmap>  img, int time );
+    void add ( std::shared_ptr<QPixmap> img, int time );
 
 private:
     int actual=0;
