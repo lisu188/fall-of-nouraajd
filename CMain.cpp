@@ -11,6 +11,9 @@ static void messageHandler ( QtMsgType type, const QMessageLogContext &context,
     case QtDebugMsg:
         fprintf ( stderr, "%s\n", localMsg.constData() );
         break;
+    case QtInfoMsg:
+        fprintf ( stderr, "%s\n", localMsg.constData() );
+        break;
     case QtWarningMsg:
         fprintf ( stderr, "Warning: %s (%s:%u, %s)\n", localMsg.constData(),
                   context.file, context.line, context.function );
