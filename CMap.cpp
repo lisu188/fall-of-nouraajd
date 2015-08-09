@@ -155,7 +155,6 @@ std::shared_ptr<CTile> CMap::getTile ( int x, int y, int z ) {
             tile=createObject<CTile> ( "MountainTile" );
         } else {
             tile=createObject<CTile> ( defaultTiles[z] );
-            tile->setSaved ( false );
         }
         this->addTile ( tile , x, y, z );
     } else {
