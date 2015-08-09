@@ -29,7 +29,7 @@ void CFightPanel::paint ( QPainter *painter, const QStyleOptionGraphicsItem *,
     painter->fillRect ( boundingRect(), QColor ( "BLACK" ) );
 }
 
-void CFightPanel::showPanel (  ) {
+void CFightPanel::showPanel ( ) {
     this->setVisible ( true );
     this->setPos (
         view.lock()->mapToScene ( view.lock()->width() / 2 - this->boundingRect().width() / 2,

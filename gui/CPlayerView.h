@@ -85,7 +85,7 @@ protected:
 class CTradeItemsView : public CListView {
     Q_OBJECT
 public:
-    CTradeItemsView ( std::shared_ptr<AGamePanel> panel  );
+    CTradeItemsView ( std::shared_ptr<AGamePanel> panel );
 protected:
     virtual std::set<std::shared_ptr<CGameObject>> getItems() const override;
 };

@@ -12,7 +12,7 @@ class CLaterCall:public QObject,public QRunnable {
     Q_INVOKABLE void call();
 };
 
-class CThreadUtil  {
+class CThreadUtil {
 public:
     template <typename Predicate>
     static void wait_until ( Predicate pred ) {

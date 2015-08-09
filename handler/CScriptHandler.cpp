@@ -36,7 +36,7 @@ QString CScriptHandler::buildCommand ( std::initializer_list<QString> list ) {
     QString command;
     unsigned int pos = 0;
     for ( auto it = list.begin(); it != list.end(); it++, pos++ ) {
-        QString part =   *it ;
+        QString part =  *it ;
         part.replace ( "\"", "\\\"" );
         if ( pos == 0 ) {
             command.append ( part );
@@ -57,7 +57,7 @@ QString CScriptHandler::buildCommand ( std::initializer_list<QString> list ) {
 
 void CScriptHandler::addModule ( QString modName, QString path ) {
     std::shared_ptr<CCustomScriptLoader> loader=std::make_shared<CCustomScriptLoader> ( modName,path );
-    callFunction ( "sys.meta_path.append", loader  );
+    callFunction ( "sys.meta_path.append", loader );
     executeScript ( "import "+modName );
     callFunction ( "sys.meta_path.remove",loader );
 }

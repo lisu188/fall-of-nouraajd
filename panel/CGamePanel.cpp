@@ -9,7 +9,7 @@ AGamePanel::~AGamePanel() {
 
 }
 
-void AGamePanel::handleDrop ( std::shared_ptr<CPlayerView>, std::shared_ptr<CGameObject>  ) {
+void AGamePanel::handleDrop ( std::shared_ptr<CPlayerView>, std::shared_ptr<CGameObject> ) {
     qFatal ( "No drop handler implemented" );
 }
 
@@ -21,7 +21,7 @@ std::shared_ptr<CGameView> AGamePanel::getView() {
     return view.lock();
 }
 
-void AGamePanel::onClickAction ( std::shared_ptr<CGameObject>  ) {
+void AGamePanel::onClickAction ( std::shared_ptr<CGameObject> ) {
     this->hidePanel();
 }
 

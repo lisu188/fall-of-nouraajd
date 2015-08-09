@@ -6,7 +6,7 @@ template<typename Return,typename... Args>
 struct wrap {
     static std::function<Return ( Args... ) > call ( boost::python::object func ) {
         return [func] ( Args... args ) {
-            boost::python::object ret=func (  args ... );
+            boost::python::object ret=func ( args ... );
             boost::python::incref ( ret.ptr() );
             return boost::python::extract<Return> ( ret );
         };
@@ -49,7 +49,7 @@ public:
         return getFunction<Return,Args...> ( name ) ( params... );
     }
     template<typename Return=void,typename ...Args>
-    Return callCreatedFunction (  QString functionCode, std::initializer_list<QString> args,Args ...params ) {
+    Return callCreatedFunction ( QString functionCode, std::initializer_list<QString> args,Args ...params ) {
         return createFunction<Return,Args...> (
                    "FUNC"+to_hex_hash ( functionCode ),
                    functionCode,args ) ( params... );
@@ -58,7 +58,7 @@ public:
     T getObject ( QString name ) {
         QString script="object=";
         script=script.append ( name );
-        executeScript (  script );
+        executeScript ( script );
         boost::python::object object= main_namespace["object"];
         return boost::python::extract<T> ( object );
     }

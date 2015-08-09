@@ -6,7 +6,7 @@
 #include "handler/CHandler.h"
 #include "gui/CGui.h"
 
-CItem::CItem()  {
+CItem::CItem() {
     this->setZValue ( 2 );
 }
 
@@ -35,13 +35,13 @@ void CItem::setSingleUse ( bool singleUse ) {
 
 void CItem::onEquip ( std::shared_ptr<CGameEvent> event ) {
     cast<CCreature> ( cast<CGameEventCaused> ( event )->getCause() )->addBonus ( bonus );
-    qDebug() << cast<CGameEventCaused> ( event )->getCause()->getObjectType()  << "equipped" << getObjectType()
+    qDebug() << cast<CGameEventCaused> ( event )->getCause()->getObjectType() << "equipped" << getObjectType()
              << "\n";
 }
 
 void CItem::onUnequip ( std::shared_ptr<CGameEvent> event ) {
     cast<CCreature> ( cast<CGameEventCaused> ( event )->getCause() )->removeBonus ( bonus );
-    qDebug() << cast<CGameEventCaused> ( event )->getCause()->getObjectType()  << "unequipped" << getObjectType()
+    qDebug() << cast<CGameEventCaused> ( event )->getCause()->getObjectType() << "unequipped" << getObjectType()
              << "\n";
 }
 

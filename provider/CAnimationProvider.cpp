@@ -9,7 +9,7 @@ std::shared_ptr<CAnimation> CAnimationProvider::getAnim ( QString path ) {
     return instance.getAnimation ( path );
 }
 
-CAnimationProvider::CAnimationProvider ( )  {
+CAnimationProvider::CAnimationProvider ( ) {
 
 }
 
@@ -39,11 +39,11 @@ void CAnimationProvider::loadAnim ( QString path ) {
         config=CConfigurationProvider::getConfig ( path + time );
     }
     if ( config && !config->isEmpty() ) {
-        for (  int i = 0; i < config->size(); i++ ) {
+        for ( int i = 0; i < config->size(); i++ ) {
             timemap.insert ( std::make_pair ( i, ( *config ) [QString::number ( i )].toInt() ) );
         }
     } else {
-        timemap.insert (  std::make_pair ( 0, 250 ) );
+        timemap.insert ( std::make_pair ( 0, 250 ) );
     }
     if ( ! path.endsWith ( "/" ) ) {
         img=getImage ( path+".png" );
@@ -73,7 +73,7 @@ void CAnimationProvider::loadAnim ( QString path ) {
         return;
     }
     this->insert ( std::make_pair ( path, anim ) );
-    qDebug() << "Loaded animation:" << path   << "\n";
+    qDebug() << "Loaded animation:" << path  << "\n";
 }
 
 std::shared_ptr<QPixmap> CAnimationProvider::getImage ( QString path ) {
@@ -121,6 +121,6 @@ void CAnimation::next() {
 }
 
 void CAnimation::add ( std::shared_ptr<QPixmap> img, int time ) {
-    insert (  std::make_pair (
-                  size(),  std::make_pair ( img, time ) ) );
+    insert ( std::make_pair (
+                 size(), std::make_pair ( img, time ) ) );
 }

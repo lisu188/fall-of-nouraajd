@@ -48,7 +48,7 @@ ModuleSpec *AScriptLoader::find_spec ( object name, object, object ) {
     if ( !checkModule ( modName ) ) {
         return nullptr;
     }
-    ModuleSpec* spec= new ModuleSpec ( this ,  modName );
+    ModuleSpec* spec= new ModuleSpec ( this , modName );
     return boost::ref ( spec );
 }
 

@@ -14,7 +14,7 @@ struct QString_from_python_str {
     QString_from_python_str() {
         converter::registry::push_back (
         [] ( PyObject* obj_ptr ) ->void* {
-            if ( !        PyUnicode_Check ( obj_ptr ) ) { return nullptr; }
+            if ( !    PyUnicode_Check ( obj_ptr ) ) { return nullptr; }
             return obj_ptr;
         },
         [] (
@@ -31,12 +31,12 @@ struct QString_from_python_str {
 
 template <typename Return,typename... Args>
 struct builder {
-    static void  build ( PyObject* obj_ptr,converter::rvalue_from_python_stage1_data* data ) {
+    static void build ( PyObject* obj_ptr,converter::rvalue_from_python_stage1_data* data ) {
         void* storage = ( ( converter::rvalue_from_python_storage
                             <std::function<Return ( Args... ) >>* ) data )->storage.bytes;
         object func=object ( handle<> ( borrowed ( incref ( obj_ptr ) ) ) );
         new ( storage ) std::function<Return ( Args... ) > ( [func] ( Args... args ) {
-            return extract<Return> ( incref ( func (  args...  ).ptr() ) );
+            return extract<Return> ( incref ( func ( args... ).ptr() ) );
         } );
         data->convertible = storage;
     }
@@ -44,12 +44,12 @@ struct builder {
 
 template <typename... Args>
 struct builder<void,Args...> {
-    static void  build ( PyObject* obj_ptr,converter::rvalue_from_python_stage1_data* data ) {
+    static void build ( PyObject* obj_ptr,converter::rvalue_from_python_stage1_data* data ) {
         void* storage = ( ( converter::rvalue_from_python_storage
                             <std::function<void ( Args... ) >>* ) data )->storage.bytes;
         object func=object ( handle<> ( borrowed ( incref ( obj_ptr ) ) ) );
         new ( storage ) std::function<void ( Args... ) > ( [func] ( Args... args ) {
-            func (  args...  );
+            func ( args... );
         } );
         data->convertible = storage;
     }
@@ -57,12 +57,12 @@ struct builder<void,Args...> {
 
 template <typename... Args>
 struct builder<bool,Args...> {
-    static void  build ( PyObject* obj_ptr,converter::rvalue_from_python_stage1_data* data ) {
+    static void build ( PyObject* obj_ptr,converter::rvalue_from_python_stage1_data* data ) {
         void* storage = ( ( converter::rvalue_from_python_storage
                             <std::function<bool ( Args... ) >>* ) data )->storage.bytes;
         object func=object ( handle<> ( borrowed ( incref ( obj_ptr ) ) ) );
         new ( storage ) std::function<bool ( Args... ) > ( [func] ( Args... args ) {
-            return func ( args...  ).ptr() ==Py_True;
+            return func ( args... ).ptr() ==Py_True;
         } );
         data->convertible = storage;
     }

@@ -28,14 +28,14 @@ namespace vstd {
     struct is_map<T, typename enable_if_type<typename T::key_type>::type, typename enable_if_type<typename T::value_type>::type,typename disable_if<is_set<T>::value>::type> : std::true_type
     {};
 
-    template<class T,  class E1 = void,class E2 = void>
+    template<class T, class E1 = void,class E2 = void>
     struct is_pair : std::false_type {};
 
     template<class T>
     struct is_pair<T, typename enable_if_type<typename T::first_type>::type,typename enable_if_type<typename T::second_type>::type> : std::true_type
     {};
 
-    template<class T,  class E1 = void,class E2=void>
+    template<class T, class E1 = void,class E2=void>
     struct is_container : std::false_type {};
 
     template<class T>

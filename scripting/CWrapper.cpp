@@ -2,7 +2,7 @@
 
 void CInteractionWrapper::performAction ( std::shared_ptr<CCreature> first, std::shared_ptr<CCreature> second ) {
     if ( auto f=this->get_override ( "performAction" ) ) {
-        f ( first , second  );
+        f ( first , second );
     } else {
         this->CInteraction::performAction ( first,second );
     }
@@ -10,7 +10,7 @@ void CInteractionWrapper::performAction ( std::shared_ptr<CCreature> first, std:
 
 bool CInteractionWrapper::configureEffect ( std::shared_ptr<CEffect> effect ) {
     if ( auto f=this->get_override ( "configureEffect" ) ) {
-        return f ( effect  );
+        return f ( effect );
     } else {
         return this->CInteraction::configureEffect ( effect );
     }
@@ -34,7 +34,7 @@ void CTileWrapper::onStep ( CCreature *creature ) {
 
 void CPotionWrapper::onUse ( std::shared_ptr<CGameEvent> event ) {
     if ( auto f=this->get_override ( "onUse" ) ) {
-        f (  event  );
+        f ( event );
     } else {
         this->CPotion::onUse ( event ) ;
     }
@@ -42,7 +42,7 @@ void CPotionWrapper::onUse ( std::shared_ptr<CGameEvent> event ) {
 
 void CTriggerWrapper::trigger ( std::shared_ptr<CGameObject> object, std::shared_ptr<CGameEvent> event ) {
     if ( auto f=this->get_override ( "trigger" ) ) {
-        f (  object  , event );
+        f ( object , event );
     } else {
         this->CTrigger::trigger ( object,event ) ;
     }

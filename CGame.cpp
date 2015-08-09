@@ -7,7 +7,7 @@
 #include "handler/CHandler.h"
 #include "loader/CLoader.h"
 
-CGame::CGame ( std::shared_ptr<CGameView> view ) :view ( view )  {
+CGame::CGame ( std::shared_ptr<CGameView> view ) :view ( view ) {
 
 }
 
@@ -41,7 +41,7 @@ void CGame::addObject ( std::shared_ptr<CGameObject> object ) {
     this->addItem ( object.get() );
 }
 
-std::shared_ptr<CGuiHandler> CGame::getGuiHandler()   {
+std::shared_ptr<CGuiHandler> CGame::getGuiHandler()  {
     return guiHandler.get ( this->ptr() );
 }
 

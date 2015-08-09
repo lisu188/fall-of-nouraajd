@@ -37,7 +37,7 @@ void CMap::removeObjectByName ( QString name ) {
 }
 
 QString CMap::addObjectByName ( QString name, Coords coords ) {
-    if (   this->canStep ( coords ) ) {
+    if (  this->canStep ( coords ) ) {
         std::shared_ptr<CMapObject> object = createObject<CMapObject> ( name );
         if ( object ) {
             addObject ( object );
@@ -69,19 +69,19 @@ void CMap::setPlayer ( std::shared_ptr<CPlayer> player ) {
     this->player=player;
 }
 
-std::shared_ptr<CLootHandler> CMap::getLootHandler()  {
+std::shared_ptr<CLootHandler> CMap::getLootHandler() {
     return lootHandler.get ( this->ptr() );
 }
 
-std::shared_ptr<CObjectHandler> CMap::getObjectHandler()  {
+std::shared_ptr<CObjectHandler> CMap::getObjectHandler() {
     return objectHandler.get ( getGame()->getObjectHandler() );
 }
 
-std::shared_ptr<CEventHandler> CMap::getEventHandler()  {
+std::shared_ptr<CEventHandler> CMap::getEventHandler() {
     return eventHandler.get ();
 }
 
-std::shared_ptr<CMouseHandler> CMap::getMouseHandler()  {
+std::shared_ptr<CMouseHandler> CMap::getMouseHandler() {
     return mouseHandler.get ();
 }
 
@@ -246,7 +246,7 @@ void CMap::applyEffects() {
 std::set<std::shared_ptr<CMapObject>> CMap::getIf ( std::function<bool ( std::shared_ptr<CMapObject> ) > func ) {
     std::set<std::shared_ptr<CMapObject>> objects;
     for ( auto it : mapObjects ) {
-        if ( func ( it.second  ) ) {
+        if ( func ( it.second ) ) {
             objects.insert ( it.second );
         }
     }
@@ -256,7 +256,7 @@ std::set<std::shared_ptr<CMapObject>> CMap::getIf ( std::function<bool ( std::sh
 void CMap::forObjects ( std::function<void ( std::shared_ptr<CMapObject> ) > func, std::function<bool ( std::shared_ptr<CMapObject> ) > predicate ) {
     for ( std::shared_ptr<CMapObject> object : getMapObjectsClone() ) {
         if ( predicate ( object ) ) {
-            func ( object  );
+            func ( object );
         }
     }
 }
@@ -264,7 +264,7 @@ void CMap::forObjects ( std::function<void ( std::shared_ptr<CMapObject> ) > fun
 void CMap::forTiles ( std::function<void ( std::shared_ptr<CTile> ) > func, std::function<bool ( std::shared_ptr<CTile> ) > predicate ) {
     for ( std::pair< Coords,std::shared_ptr<CTile>> val : *this ) {
         if ( predicate ( val.second ) ) {
-            func (  val.second   );
+            func ( val.second  );
         }
     }
 }

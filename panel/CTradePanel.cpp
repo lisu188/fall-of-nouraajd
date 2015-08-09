@@ -79,7 +79,7 @@ void CTradePanel::handleDrop ( std::shared_ptr<CPlayerView> view, std::shared_pt
                         market->remove ( item );
                         player->takeGold ( cost );
                     }
-                } else  if ( view==tradeItemsView&&view2==playerInventoryView ) {
+                } else if ( view==tradeItemsView&&view2==playerInventoryView ) {
                     int cost=item->getPower() * ( item->getPower()+1 ) *market->getBuy() ;
                     player->removeFromInventory ( item );
                     market->add ( item );

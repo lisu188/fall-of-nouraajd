@@ -22,7 +22,7 @@ public:
     std::shared_ptr<CCreature> getCaster() ;
     void setCaster ( std::shared_ptr<CCreature> value );
     std::shared_ptr<CCreature> getVictim() ;
-    void setVictim (  std::shared_ptr<CCreature> value );
+    void setVictim ( std::shared_ptr<CCreature> value );
 private:
     int timeLeft=0;
     int timeTotal=0;

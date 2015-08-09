@@ -3,9 +3,9 @@
 #include "CMap.h"
 #include <QDebug>
 
-CMouseHandler::CMouseHandler (  )  {}
+CMouseHandler::CMouseHandler ( ) {}
 
-static inline CClickAction* getClickAction ( CGameObject* parent ) {
+static CClickAction* getClickAction ( CGameObject* parent ) {
     CClickAction* potentialAction=0;
     while ( parent ) {
         qDebug() <<parent->metaObject()->className() <<"\n";
@@ -15,7 +15,7 @@ static inline CClickAction* getClickAction ( CGameObject* parent ) {
         }
         parent=dynamic_cast<CGameObject*> ( parent->parentItem() );
     }
-    if (   QObject* object=dynamic_cast<QObject*> ( potentialAction ) ) {
+    if (  QObject* object=dynamic_cast<QObject*> ( potentialAction ) ) {
         qDebug() <<"Delegating click action to "<<object->metaObject()->className() <<"\n";
     }
     return potentialAction;

@@ -25,7 +25,7 @@ void CMarket::setItems ( QVariantList items ) {
     for ( QVariant variant:items ) {
         auto item=getMap()->createObject<CItem> ( variant.toString() );
         if ( item ) {
-            add (  item );
+            add ( item );
         } else {
             qFatal ( "Object tried to put in CMarket was not a CItem" );
         }

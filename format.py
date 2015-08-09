@@ -90,7 +90,7 @@ def reindenter():
         global verbose, recurse, dryrun, makebackup, spec_newline
         try:
             opts, args = getopt.getopt(sys.argv[1:], "drnvh",
-                ["dryrun", "recurse", "nobackup", "verbose", "newline=", "help"])
+              ["dryrun", "recurse", "nobackup", "verbose", "newline=", "help"])
         except getopt.error as msg:
             usage(msg)
             return
@@ -128,9 +128,9 @@ def reindenter():
             for name in names:
                 fullname = os.path.join(file, name)
                 if ((recurse and os.path.isdir(fullname) and
-                     not os.path.islink(fullname) and
-                     not os.path.split(fullname)[1].startswith("."))
-                    or name.lower().endswith(".py")):
+                   not os.path.islink(fullname) and
+                   not os.path.split(fullname)[1].startswith("."))
+                  or name.lower().endswith(".py")):
                     check(fullname)
             return
 
@@ -185,7 +185,7 @@ def reindenter():
             self.level=0
             self.raw = f.readlines()
             self.lines = [_rstrip(line).expandtabs() + "\n"
-                          for line in self.raw]
+                   for line in self.raw]
             self.lines.insert(0, None)
             self.index = 1
             self.stats = []
@@ -224,7 +224,7 @@ def reindenter():
                                 jline, jlevel = stats[j]
                                 if jlevel >= 0:
                                     want = have + (getlspace(after[jline - 1]) -
-                                                   getlspace(lines[jline]))
+                                            getlspace(lines[jline]))
                                     break
                         if want < 0:
                             want = have
@@ -259,11 +259,11 @@ def reindenter():
             return line
 
         def tokeneater(self, type, token, slinecol, end, line,
-                       INDENT=tokenize.INDENT,
-                       DEDENT=tokenize.DEDENT,
-                       NEWLINE=tokenize.NEWLINE,
-                       COMMENT=tokenize.COMMENT,
-                       NL=tokenize.NL):
+                INDENT=tokenize.INDENT,
+                DEDENT=tokenize.DEDENT,
+                NEWLINE=tokenize.NEWLINE,
+                COMMENT=tokenize.COMMENT,
+                NL=tokenize.NL):
 
             if type == NEWLINE:
                 self.find_stmt = 1

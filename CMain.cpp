@@ -33,7 +33,7 @@ static class init {
 public:
     init() {
         qInstallMessageHandler ( messageHandler );
-        std::set_terminate ( [] (  )-> void {
+        std::set_terminate ( [] ( )-> void {
             PyErr_Print();
             abort();
         } );

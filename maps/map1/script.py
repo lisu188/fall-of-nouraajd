@@ -26,14 +26,14 @@ def load(map):
         def onComplete(self):
             pass
 
-    @trigger(map, "onDestroy",  "gooby1")
+    @trigger(map, "onDestroy", "gooby1")
     class GoobyTrigger(CTrigger):
         def trigger(self,object,event):
             object.getMap().getGuiHandler().showMessage("Gooby killed!!!")
             global completed
             completed=True
 
-    @trigger(map, "onDestroy",  "cave1")
+    @trigger(map, "onDestroy", "cave1")
     class CaveTrigger(CTrigger):
         def trigger(self,object,event):
             object.getMap().getGame().getGuiHandler().showMessage("You feel the ground shaking, and see the ratmen all around you!!! But the one part is missing in this puzzle. Letter said about the ratmen who was much bigger than the other. These here are just ordinary pritschers.")
@@ -43,7 +43,7 @@ def load(map):
             gooby.moveTo(100,100,0)
             object.getMap().getPlayer().addQuest("mainQuest")
 
-    @trigger(map, "onEnter",  "market1")
+    @trigger(map, "onEnter", "market1")
     class MarketTrigger(CTrigger):
         def trigger(self,object,event):
             print("hello")

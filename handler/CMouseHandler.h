@@ -8,7 +8,7 @@ public:
     virtual void onClickAction ( std::shared_ptr<CGameObject> object ) =0;
 };
 
-class CMouseHandler  {
+class CMouseHandler {
 public:
     CMouseHandler ();
     void handleClick ( std::shared_ptr<CGameObject> object );

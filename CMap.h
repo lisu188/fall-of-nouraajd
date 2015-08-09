@@ -60,7 +60,7 @@ public:
     bool isMoving();
     void applyEffects();
     std::set<std::shared_ptr<CMapObject>> getIf ( std::function<bool ( std::shared_ptr<CMapObject> ) > func );
-    void forObjects ( std::function<void ( std::shared_ptr<CMapObject> ) > func , std::function<bool ( std::shared_ptr<CMapObject> ) >  predicate=[] ( std::shared_ptr<CMapObject> ) {return true;} );
+    void forObjects ( std::function<void ( std::shared_ptr<CMapObject> ) > func , std::function<bool ( std::shared_ptr<CMapObject> ) > predicate=[] ( std::shared_ptr<CMapObject> ) {return true;} );
     void forTiles ( std::function<void ( std::shared_ptr<CTile> ) > func, std::function<bool ( std::shared_ptr<CTile> ) > predicate =[] ( std::shared_ptr<CTile> ) {return true;} );
     void removeObjects ( std::function<bool ( std::shared_ptr<CMapObject> ) > func );
     template<typename T>
