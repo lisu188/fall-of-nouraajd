@@ -10,6 +10,9 @@ static const char* START_SCRIPT="import sys\n"
 CScriptHandler::CScriptHandler () {
     PyImport_AppendInittab ( "_game",PyInit__game );
     PyImport_AppendInittab ( "_core",PyInit__core );
+#ifdef DEBUG_MODE
+    PyImport_AppendInittab ( "debug",PyInit_debug );
+#endif
     Py_Initialize();
     qDebug() <<"Initialized python interpreter."<<"\n";
     main_module=boost::python::object ( boost::python::handle<> ( PyImport_ImportModule ( "__main__" ) ) ) ;

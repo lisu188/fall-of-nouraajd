@@ -122,7 +122,8 @@ RESOURCES += \
   config.qrc
 
 OTHER_FILES += \
-  format.py
+  format.py \
+  bugs.txt
 
 QMAKE_CXXFLAGS = -std=c++14 "-include cmath" -Wno-deprecated-declarations -Wno-unused-local-typedefs -Wno-attributes
 QMAKE_CXXFLAGS_RELEASE = -O3 -march=native
@@ -142,7 +143,8 @@ CONFIG(release,debug|release){
 }
 
 CONFIG(debug,debug|release){
-  CONFIG +=console
+  CONFIG += console
+  DEFINES += "DEBUG_MODE"
 }
 
 unix{
@@ -167,8 +169,6 @@ win32{
   DEPENDPATH += C:\boost_1_58_0
 }
 
-DISTFILES += \
-  bugs.txt
 
 
 

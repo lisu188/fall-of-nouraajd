@@ -5,6 +5,7 @@
 
 CScriptWindow::CScriptWindow ( std::shared_ptr<CGame> game ) :game ( game ),ui ( new Ui::CScriptWindow ) {
     ui->setupUi ( this );
+    ui->executeButton->setShortcut ( QKeySequence ( Qt::Key_Control,Qt::Key_E ) );
     this->setVisible ( true );
 }
 

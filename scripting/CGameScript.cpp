@@ -27,6 +27,27 @@ BOOST_PYTHON_MODULE ( _core ) {
 
 static int randint ( int i,int j ) { return rand() % ( j-i+1 )+i; }
 
+class CDebug {
+public:
+    static void dump_path() {
+        QApplication::instance()->setProperty ( "dump_path",!QApplication::instance()->property ( "dump_path" ).toBool() );
+    }
+    static void disable_pathfinder() {
+        QApplication::instance()->setProperty ( "disable_pathfinder",!QApplication::instance()->property ( "disable_pathfinder" ).toBool() );
+    }
+    static void auto_save() {
+        QApplication::instance()->setProperty ( "auto_save",!QApplication::instance()->property ( "auto_save" ).toBool() );
+    }
+};
+
+#ifdef DEBUG_MODE
+BOOST_PYTHON_MODULE ( debug ) {
+    def ( "dump_path",CDebug::dump_path );
+    def ( "disable_pathfinder",CDebug::disable_pathfinder );
+    def ( "auto_save",CDebug::auto_save );
+}
+#endif
+
 BOOST_PYTHON_MODULE ( _game ) {
     initialize_converters();
     def ( "randint", randint );
@@ -49,7 +70,8 @@ BOOST_PYTHON_MODULE ( _game ) {
             .def ( "addObject",&CMap::addObject )
             .def ( "createObject",&CMap::createObject<CGameObject> )
             .def ( "createTrigger",&CMap::createObject<CTrigger> )
-            .def ( "getGame",&CMap::getGame );
+            .def ( "getGame",&CMap::getGame )
+            .def ( "move",&CMap::move );
     void ( CObjectHandler::*registerType ) ( QString,std::function<CGameObject* () > ) =&CObjectHandler::registerType;
     class_<CObjectHandler,boost::noncopyable,std::shared_ptr<CObjectHandler>> ( "CObjectHandler",no_init )
             .def ( "registerType",registerType );

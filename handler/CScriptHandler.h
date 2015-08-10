@@ -6,9 +6,11 @@ template<typename Return,typename... Args>
 struct wrap {
     static std::function<Return ( Args... ) > call ( boost::python::object func ) {
         return [func] ( Args... args ) {
-            boost::python::object ret=func ( args ... );
-            boost::python::incref ( ret.ptr() );
-            return boost::python::extract<Return> ( ret );
+            PY_SAFE_RET (
+                boost::python::object ret=func ( args ... );
+                boost::python::incref ( ret.ptr() );
+                return boost::python::extract<Return> ( ret );
+            )
         };
     }
 };
@@ -17,7 +19,7 @@ template<typename... Args>
 struct wrap<void,Args...> {
     static std::function<void ( Args... ) > call ( boost::python::object func ) {
         return [func] ( Args... args ) {
-            func ( args ... );
+            PY_SAFE ( func ( args ... ); )
         };
     }
 };

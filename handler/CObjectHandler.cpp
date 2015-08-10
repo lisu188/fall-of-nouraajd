@@ -25,7 +25,16 @@ std::shared_ptr<QJsonObject> CObjectHandler::getConfig ( QString type ) {
 }
 
 std::set<QString> CObjectHandler::getAllTypes() {
-    return *reinterpret_cast<std::set<QString>*> ( 0 );
+    std::set<QString> types;
+    for ( auto val:objectConfig ) {
+        types.insert ( val.first );
+    }
+    if ( parent.lock() ) {
+        for ( auto val:parent.lock()->getAllTypes() ) {
+            types.insert ( val );
+        }
+    }
+    return types;
 }
 
 std::shared_ptr<CGameObject> CObjectHandler::getType ( QString name ) {
