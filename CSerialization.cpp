@@ -35,6 +35,7 @@ QMetaProperty CSerialization::getProperty ( std::shared_ptr<CGameObject> object,
             return property;
         }
     }
+    qDebug() <<"Dynamic property ignored:"<<name;
     return QMetaProperty();
 }
 
