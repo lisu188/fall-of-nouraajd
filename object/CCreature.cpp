@@ -119,7 +119,7 @@ void CCreature::addItem ( std::set<std::shared_ptr<CItem> > items ) {
 
 void CCreature::heal ( int i ) {
     if ( i < 0 ) {
-        throw 0;
+        qFatal ( "Tried to heal negative value!" );
     }
     if ( hp > hpMax ) {
         return;
@@ -268,7 +268,7 @@ void CCreature::setMana ( int mana ) {
 
 void CCreature::addMana ( int i ) {
     if ( i < 0 ) {
-        throw 0;
+        qFatal ( "Tried to add negative mana!" );
     }
     if ( mana > manaMax ) {
         return;
@@ -292,7 +292,7 @@ void CCreature::addManaProc ( float i ) {
 
 void CCreature::takeMana ( int i ) {
     if ( i < 0 ) {
-        throw 0;
+        qFatal ( "Tried to take negative mana value!" );
     }
     mana -= i;
     Q_EMIT statsChanged();

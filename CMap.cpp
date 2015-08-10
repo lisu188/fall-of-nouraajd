@@ -278,11 +278,15 @@ void CMap::removeObjects ( std::function<bool ( std::shared_ptr<CMapObject> ) > 
 }
 
 void CMap::move () {
-    this->moving=true;
+    auto map=this->ptr();
+
+    CThreadUtil::wait_until ( [map]() {
+        return !map->moving;
+    } );
+
+    map->moving=true;
 
     applyEffects();
-
-    auto map=this->ptr();
 
     forObjects ( [map] ( std::shared_ptr<CMapObject> mapObject ) {
         map->getEventHandler()->gameEvent ( mapObject , std::make_shared<CGameEvent> ( CGameEvent::Type::onTurn ) );
@@ -301,13 +305,13 @@ void CMap::move () {
     };
 
     auto end_callback=[map]() {
-        static QAtomicInt in;
-
         map->resolveFights();
 
         map->ensureSize();
 
-        CMapLoader::saveMap ( map,"file.sav" );
+        if ( QApplication::instance()->property ( "auto_save" ).toBool() ) {
+            CMapLoader::saveMap ( map, QString::number ( QDateTime::currentMSecsSinceEpoch() )+".sav" );
+        }
 
         map->moving=false;
     };

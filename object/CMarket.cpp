@@ -21,19 +21,12 @@ std::set<std::shared_ptr<CItem>> CMarket::getTradeItems() {
     return items;
 }
 
-void CMarket::setItems ( QVariantList items ) {
-    for ( QVariant variant:items ) {
-        auto item=getMap()->createObject<CItem> ( variant.toString() );
-        if ( item ) {
-            add ( item );
-        } else {
-            qFatal ( "Object tried to put in CMarket was not a CItem" );
-        }
-    }
+void CMarket::setItems ( std::set<std::shared_ptr<CItem>> items ) {
+    this->items=items;
 }
 
-QVariantList CMarket::getItems() {
-    return QVariantList();
+std::set<std::shared_ptr<CItem>> CMarket::getItems() {
+    return items;
 }
 int CMarket::getSell() const {
     return sell;
