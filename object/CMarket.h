@@ -4,7 +4,7 @@
 class CItem;
 class CMarket : public CGameObject {
     Q_OBJECT
-    Q_PROPERTY ( QVariantList items READ getItems WRITE setItems USER true )
+    Q_PROPERTY ( std::set<std::shared_ptr<CItem>> items READ getItems WRITE setItems USER true )
     Q_PROPERTY ( int sell READ getSell WRITE setSell USER true )
     Q_PROPERTY ( int buy READ getBuy WRITE setBuy USER true )
 public:
@@ -13,8 +13,8 @@ public:
     void add ( std::shared_ptr<CItem> item );
     void remove ( std::shared_ptr<CItem> item );
     std::set<std::shared_ptr<CItem> > getTradeItems();
-    void setItems ( QVariantList items );
-    QVariantList getItems ();
+    void setItems ( std::set<std::shared_ptr<CItem>> items );
+    std::set<std::shared_ptr<CItem>> getItems ();
     int getSell() const;
     void setSell ( int value );
 

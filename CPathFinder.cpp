@@ -6,7 +6,6 @@
     Coords(coords.x,coords.y + 1, coords.z ),\
     Coords(coords.x,coords.y - 1,coords.z )}
 
-#ifdef DUMP_PATH
 static void dump ( std::unordered_map<Coords, int>& values,Coords start,Coords end ) {
     int x=0;
     int y=0;
@@ -33,55 +32,50 @@ static void dump ( std::unordered_map<Coords, int>& values,Coords start,Coords e
     stream<<"dump/dump"<<start.x<<"_"<<start.y<<"_"<<end.x<<"_"<<end.y<<".png";
     img.save ( QString::fromStdString ( stream.str() ),"png" );
 }
-#else
-static void dump ( std::unordered_map<Coords, int>& values,Coords start,Coords end ) {
-    Q_UNUSED ( values )
-    Q_UNUSED ( start )
-    Q_UNUSED ( end )
-}
-#endif
 
 typedef std::function<bool ( const Coords&,const Coords& ) > Compare ;
 typedef std::priority_queue<Coords, std::vector<Coords>,Compare> Queue;
 
-
-
 Coords CSmartPathFinder::findNextStep ( const Coords & start, const Coords & goal, std::function<bool ( const Coords& ) > canStep ) {
-    Queue nodes ( [start] ( const Coords& a,const Coords& b ) {
-        double dista = ( a.x - start.x ) * ( a.x - start.x ) +
-                       ( a.y - start.y ) * ( a.y - start.y ) ;
-        double distb = ( b.x - start.x ) * ( b.x - start.x ) +
-                       ( b.y - start.y ) * ( b.y - start.y ) ;
-        return dista > distb;
-    } );
-    std::unordered_set<Coords> marked;
-    std::unordered_map<Coords, int> values;
+    if ( QApplication::instance()->property ( "disable_pathfinder" ).toBool() ) {
+        return Coords ( 0,0,0 );
+    } else {
+        Queue nodes ( [start] ( const Coords& a,const Coords& b ) {
+            double dista = ( a.x - start.x ) * ( a.x - start.x ) +
+                           ( a.y - start.y ) * ( a.y - start.y ) ;
+            double distb = ( b.x - start.x ) * ( b.x - start.x ) +
+                           ( b.y - start.y ) * ( b.y - start.y ) ;
+            return dista > distb;
+        } );
+        std::unordered_set<Coords> marked;
+        std::unordered_map<Coords, int> values;
 
-    nodes.push ( goal );
-    values[goal]=0;
+        nodes.push ( goal );
+        values[goal]=0;
 
-    while ( !nodes.empty() && !ctn ( marked,start ) ) {
-        Coords currentCoords = nodes.top();
-        nodes.pop();
-        if ( marked.insert ( currentCoords ).second ) {
-            int curValue = values[currentCoords];
-            for ( Coords tmpCoords:NEAR_COORDS ( currentCoords ) ) {
-                if ( canStep ( tmpCoords ) ) {
-                    auto it=values.find ( tmpCoords );
-                    if ( it == values.end() || it->second > curValue + 1 ) {
-                        values[tmpCoords] = curValue + 1 ;
+        while ( !nodes.empty() && !ctn ( marked,start ) ) {
+            Coords currentCoords = nodes.top();
+            nodes.pop();
+            if ( marked.insert ( currentCoords ).second ) {
+                int curValue = values[currentCoords];
+                for ( Coords tmpCoords:NEAR_COORDS ( currentCoords ) ) {
+                    if ( canStep ( tmpCoords ) ) {
+                        auto it=values.find ( tmpCoords );
+                        if ( it == values.end() || it->second > curValue + 1 ) {
+                            values[tmpCoords] = curValue + 1 ;
+                        }
+                        nodes.push ( tmpCoords );
                     }
-                    nodes.push ( tmpCoords );
                 }
             }
         }
-    }
-    dump ( values,start,goal );
-    Coords target=start;
-    for ( Coords coords:NEAR_COORDS ( start ) ) {
-        if ( ctn ( values,coords ) && ( values[coords]<values[target]|| ( values[coords]==values[target] && coords.getDist ( goal ) <target.getDist ( goal ) ) ) ) {
-            target=coords;
+        if ( QApplication::instance()->property ( "dump_path" ).toBool() ) {dump ( values,start,goal );}
+        Coords target=start;
+        for ( Coords coords:NEAR_COORDS ( start ) ) {
+            if ( ctn ( values,coords ) && ( values[coords]<values[target]|| ( values[coords]==values[target] && coords.getDist ( goal ) <target.getDist ( goal ) ) ) ) {
+                target=coords;
+            }
         }
+        return target;
     }
-    return target;
 }
