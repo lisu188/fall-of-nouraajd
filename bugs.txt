@@ -6,3 +6,4 @@ triggers savings/maybe implement custom setattr and getattr
 when resized window with opened panel sometimes incorrect location
 bug in clone when used lethal poison
 add efects to saved game
+dynamic properties are not loaded from configuration
