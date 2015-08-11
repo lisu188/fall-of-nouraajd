@@ -25,10 +25,9 @@ public:
     int getManaCost() const;
     void setManaCost ( int value );
 
+private:
     int manaCost;
     std::shared_ptr<CEffect> effect;
-private:
-    QGraphicsSimpleTextItem statsView;
 };
 GAME_PROPERTY ( CInteraction )
 
