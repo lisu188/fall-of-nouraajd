@@ -59,17 +59,11 @@ QString CFightPanel::getPanelName() {
 }
 
 CCreatureFightView::CCreatureFightView ( ) {
-    this->setPos ( 0, 0 );
+
 }
 
 void CCreatureFightView::setCreature ( std::shared_ptr<CCreature> creature ) {
-    if ( this->creature&&this->creature!=creature ) {
-        this->creature->setParentItem ( 0 );
-    }
     this->creature = creature;
-    if ( creature ) {
-        creature->setParentItem ( this );
-    }
 }
 
 QRectF CCreatureFightView::boundingRect() const {
@@ -79,12 +73,7 @@ QRectF CCreatureFightView::boundingRect() const {
 void CCreatureFightView::paint ( QPainter *painter,
                                  const QStyleOptionGraphicsItem *,
                                  QWidget * ) {
-    QGraphicsItem *item = *childItems().begin();
-    if ( childItems().size() == 0 ) {
-        return;
-    }
-    item->setPos ( ( ( boundingRect().width() - item->boundingRect().width() ) / 2 ),
-                   0 );
+    painter->drawPixmap ( ( boundingRect().width()  - creature->boundingRect().width() ) /2,0,creature->pixmap() );
     painter->fillRect ( 0, boundingRect().height() - 50, boundingRect().width(), 25,
                         QColor ( "ORANGE" ) );
     painter->fillRect ( 0, boundingRect().height() - 50,
@@ -116,9 +105,8 @@ void CFightPanel::onClickAction ( std::shared_ptr<CGameObject> object ) {
     std::shared_ptr<CInteraction> interaction=cast<CInteraction> ( object );
     if ( interaction ) {
         std::shared_ptr<CPlayer>player =interaction->getMap()->getPlayer();
-        if ( interaction->getManaCost() > player->getMana() ) {
-            return;
+        if ( interaction->getManaCost() <= player->getMana() ) {
+            player->setSelectedAction ( interaction );
         }
-        player->setSelectedAction ( interaction );
     }
 }

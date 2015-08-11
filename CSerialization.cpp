@@ -5,10 +5,10 @@
 void CSerialization::setProperty ( std::shared_ptr<CGameObject> object, QString key, const QJsonValue &value ) {
     switch ( value.type() ) {
     case QJsonValue::Null:
-        qFatal ( "Null value detected." );
+        fail ( "Null value detected." );
         break;
     case QJsonValue::Undefined:
-        qFatal ( "Undefined value detected." );
+        fail ( "Undefined value detected." );
         break;
     case QJsonValue::Type::Bool:
         object->setBoolProperty ( key,value.toBool() ) ;
@@ -91,22 +91,18 @@ void CSerialization::setProperty ( std::shared_ptr<QJsonObject> conf, QString pr
             std::pair<int,int> types=entry.first;
             int deserialized=types.second;
             if ( deserialized==QMetaType::type ( propertyValue.typeName() ) ) {
-                if ( serializer ) {
-                    qFatal ( "Ambigous serializer!" );
-                }
+                fail_if ( serializer , "Ambigous serializer!" );
                 serializer=entry.second;
             }
         }
-        if ( !serializer ) {
-            qFatal ( "No serializer!" );
-        }
+        fail_if ( !serializer ,  "No serializer!" );
         QVariant result=serializer->serialize ( propertyValue );
         if ( result.canConvert ( qRegisterMetaType<std::shared_ptr<QJsonObject>>() ) ) {
             ( *conf ) [propertyName]=*result.value<std::shared_ptr<QJsonObject>>();
         } else if ( result.canConvert ( qRegisterMetaType<std::shared_ptr<QJsonArray>>() ) ) {
             ( *conf ) [propertyName]=*result.value<std::shared_ptr<QJsonArray>>();
         } else {
-            qFatal ( "Not an object or an array" );
+            fail ( "Not an object or an array" );
         }
     }
 }

@@ -32,8 +32,8 @@ class CCreature : public CMapObject, public Moveable {
     Q_PROPERTY ( std::shared_ptr<Stats> levelStats READ getLevelStats WRITE setLevelStats USER true )
     Q_PROPERTY ( std::set<std::shared_ptr<CInteraction>> actions READ getActions WRITE setActions USER true )
     Q_PROPERTY ( std::set<std::shared_ptr<CItem>> items READ getItems WRITE setItems USER true )
+    Q_PROPERTY ( std::set<std::shared_ptr<CEffect>> effects READ getEffects WRITE setEffects USER true )
 
-    friend class CCreatureFightView;
 public:
     CCreature();
     virtual ~CCreature();
@@ -41,6 +41,9 @@ public:
     std::set<std::shared_ptr<CInteraction> > getActions();
     void setItems ( std::set<std::shared_ptr<CItem>> value );
     std::set<std::shared_ptr<CItem> > getItems();
+    std::set<std::shared_ptr<CEffect> > getEffects() const;
+    virtual void onDestroy ( std::shared_ptr<CGameEvent> );
+    void setEffects ( const std::set<std::shared_ptr<CEffect> > &value );
     int getExp();
     void setExp ( int exp );
     int getExpReward();
@@ -50,6 +53,7 @@ public:
     void healProc ( float i );
     void hurt ( std::shared_ptr<Damage> damage );
     void hurt ( int i );
+    void hurt ( float i );
     int getDmg();
     int getScale();
     bool isAlive();
@@ -121,6 +125,7 @@ public:
     Q_SIGNAL void skillsChanged();
     Q_SIGNAL void inventoryChanged();
     Q_SIGNAL void equippedChanged();
+
 protected:
     std::set<std::shared_ptr<CItem>> items;
     std::set<std::shared_ptr<CInteraction>> actions;

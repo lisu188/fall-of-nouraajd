@@ -19,6 +19,15 @@ class CGameObject;
   .def ( "setBoolProperty",&CLASS::setBoolProperty )\
   .def ( "incProperty",&CLASS::incProperty )\
 
+void fail ( QString msg );
+
+template<typename T>
+void fail_if ( T arg,QString msg ) {
+    if ( arg ) {
+        qFatal ( msg.toStdString().c_str() );
+    }
+}
+
 #define PY_SAFE(x) try{x}catch(...){PyErr_Print();PyErr_Clear();}
 #define PY_SAFE_RET(x) try{x}catch(...){PyErr_Print();PyErr_Clear();return nullptr;}
 

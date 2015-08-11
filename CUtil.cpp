@@ -66,3 +66,7 @@ std::size_t int_hash() {
 
 
 
+
+void fail ( QString msg ) {
+    fail_if ( true,msg );
+}

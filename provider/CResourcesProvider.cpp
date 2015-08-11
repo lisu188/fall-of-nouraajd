@@ -1,4 +1,5 @@
 #include "CResourcesProvider.h"
+#include "CUtil.h"
 
 QList<QString> CResourcesProvider::searchPath= {"",":/"};
 
@@ -57,6 +58,7 @@ std::set<QString> CResourcesProvider::getFiles ( CResType type ) {
         break;
     case MAP:
         folderName="maps";
+        break;
     case SAVE:
         folderName="save";
         break;
@@ -78,7 +80,7 @@ void CResourcesProvider::save ( QString file, QByteArray data ) {
     if ( f.open ( QIODevice::WriteOnly ) ) {
         f.write ( data );
     } else {
-        qFatal ( "Failed saving!" );
+        fail ( "Failed saving!" );
     }
 }
 

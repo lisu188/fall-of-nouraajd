@@ -27,20 +27,23 @@ BOOST_PYTHON_MODULE ( _core ) {
 
 static int randint ( int i,int j ) { return rand() % ( j-i+1 )+i; }
 
+#ifdef DEBUG_MODE
 class CDebug {
 public:
-    static void dump_path() {
+    static bool dump_path() {
         QApplication::instance()->setProperty ( "dump_path",!QApplication::instance()->property ( "dump_path" ).toBool() );
+        return QApplication::instance()->property ( "dump_path" ).toBool() ;
     }
-    static void disable_pathfinder() {
+    static bool disable_pathfinder() {
         QApplication::instance()->setProperty ( "disable_pathfinder",!QApplication::instance()->property ( "disable_pathfinder" ).toBool() );
+        return QApplication::instance()->property ( "disable_pathfinder" ).toBool() ;
     }
-    static void auto_save() {
+    static bool auto_save() {
         QApplication::instance()->setProperty ( "auto_save",!QApplication::instance()->property ( "auto_save" ).toBool() );
+        return QApplication::instance()->property ( "auto_save" ).toBool() ;
     }
 };
 
-#ifdef DEBUG_MODE
 BOOST_PYTHON_MODULE ( debug ) {
     def ( "dump_path",CDebug::dump_path );
     def ( "disable_pathfinder",CDebug::disable_pathfinder );
@@ -99,11 +102,13 @@ BOOST_PYTHON_MODULE ( _game ) {
             .def ( "getInteraction",&CWeapon::getInteraction );
     class_<CBuilding,bases<CMapObject>,boost::noncopyable> ( "CBuildingBase" );
     void ( CCreature::*hurtInt ) ( int ) = &CCreature::hurt;
+    void ( CCreature::*hurtFloat ) ( float ) = &CCreature::hurt;
     void ( CCreature::*hurtDmg ) ( std::shared_ptr<Damage> ) = &CCreature::hurt;
     class_<CCreature,bases<CMapObject>,boost::noncopyable,std::shared_ptr<CCreature>> ( "CCreature",no_init )
             .def ( "getDmg",&CCreature::getDmg )
             .def ( "hurt",hurtInt )
             .def ( "hurt",hurtDmg )
+            .def ( "hurt",hurtFloat )
             .def ( "getWeapon",&CCreature::getWeapon )
             .def ( "getHpRatio",&CCreature::getHpRatio )
             .def ( "isAlive",&CCreature::isAlive )
