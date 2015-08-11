@@ -118,9 +118,7 @@ void CCreature::addItem ( std::set<std::shared_ptr<CItem> > items ) {
 }
 
 void CCreature::heal ( int i ) {
-    if ( i < 0 ) {
-        qFatal ( "Tried to heal negative value!" );
-    }
+    fail_if ( i < 0 ,"Tried to heal negative value!" );
     if ( hp > hpMax ) {
         return;
     }
@@ -147,21 +145,21 @@ void CCreature::hurt ( int i ) {
     hurt ( damage );
 }
 
+void CCreature::hurt ( float i ) {
+    hurt ( int ( round ( i ) ) );
+}
+
 int CCreature::getExpRatio() {
     return ( float ) ( ( exp - level * ( level - 1 ) * 500 ) ) /
            ( float ) ( level * ( level + 1 ) * 500 - level * ( level - 1 ) * 500 ) * 100.0;
 }
 
 void CCreature::takeDamage ( int i ) {
-    if ( rand() < stats->getBlock() ) {
-        return;
+    fail_if ( i < 0 ,"damage less than 0 taken" );
+    if ( rand() >= stats->getBlock() ) {
+        hp -= i * ( ( 100 - stats->getArmor() ) / 100.0 );
+        Q_EMIT statsChanged();
     }
-    if ( i < 0 ) {
-        qFatal ( "damage less than 0 taken" );
-        return;
-    }
-    hp -= i * ( ( 100 - stats->getArmor() ) / 100.0 );
-    Q_EMIT statsChanged();
 }
 
 CInteractionMap CCreature::getLevelling() {
@@ -267,9 +265,7 @@ void CCreature::setMana ( int mana ) {
 }
 
 void CCreature::addMana ( int i ) {
-    if ( i < 0 ) {
-        qFatal ( "Tried to add negative mana!" );
-    }
+    fail_if ( i < 0 ,"Tried to add negative mana!" );
     if ( mana > manaMax ) {
         return;
     }
@@ -291,9 +287,7 @@ void CCreature::addManaProc ( float i ) {
 }
 
 void CCreature::takeMana ( int i ) {
-    if ( i < 0 ) {
-        qFatal ( "Tried to take negative mana value!" );
-    }
+    fail_if ( i < 0,"Tried to take negative mana value!" );
     mana -= i;
     Q_EMIT statsChanged();
 }
@@ -388,10 +382,8 @@ void CCreature::setItem ( QString i, std::shared_ptr<CItem> newItem ) {
     if ( !ctn ( equipped,i ) ) {
         equipped.insert ( std::make_pair ( i, std::shared_ptr<CItem>() ) );
     }
-    if ( newItem && !CItemSlot::checkType ( i, newItem ) ) {
-        qFatal ( QString ( "Tried to insert" +newItem->getObjectType()
-                           +"into slot" + i ).toStdString().c_str() );
-    }
+    fail_if ( newItem && !CItemSlot::checkType ( i, newItem )
+              , "Tried to insert" +newItem->getObjectType() +"into slot" + i ) ;
     std::shared_ptr<CItem> oldItem = equipped.at ( i );
     if ( oldItem ) {
         getMap()->getEventHandler()->gameEvent ( oldItem,std::make_shared<CGameEventCaused> ( CGameEvent::onUnequip,this->ptr<CCreature>() ) );
@@ -588,3 +580,15 @@ void CCreature::addGold ( int gold ) {
 void CCreature::takeGold ( int gold ) {
     this->setGold ( this->getGold()-gold );
 }
+std::set<std::shared_ptr<CEffect> > CCreature::getEffects() const {
+    return effects;
+}
+
+void CCreature::onDestroy ( std::shared_ptr<CGameEvent>  ) {
+    effects.clear();
+}
+
+void CCreature::setEffects ( const std::set<std::shared_ptr<CEffect> > &value ) {
+    effects = value;
+}
+

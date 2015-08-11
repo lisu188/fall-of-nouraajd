@@ -40,9 +40,7 @@ public:
     }
     template <typename Return=void,typename... Args>
     std::function<Return ( Args... ) > createFunction ( QString functionName, QString functionCode, std::initializer_list<QString> args ) {
-        if ( sizeof... ( Args ) !=args.size() ) {
-            qFatal ( "Wrong argument list!" );
-        }
+        fail_if ( sizeof... ( Args ) !=args.size(),"Wrong argument list!" );
         addFunction ( functionName,functionCode,args );
         return getFunction<Return,Args...> ( functionName );
     }
