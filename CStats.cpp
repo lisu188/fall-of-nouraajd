@@ -136,16 +136,16 @@ int Stats::getStrength() const {
 void Stats::setStrength ( int value ) {
     strength = value;
 }
-QString Stats::getMain() const {
-    return main;
+QString Stats::getMainStat() const {
+    return mainStat;
 }
 
-void Stats::setMain ( const QString &value ) {
-    main = value;
+void Stats::setMainStat ( const QString &value ) {
+    mainStat = value;
 }
 
 int Stats::getMainValue() {
-    return this->getNumericProperty ( main );
+    return this->getNumericProperty ( mainStat );
 }
 
 Stats::Stats() {

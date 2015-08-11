@@ -22,7 +22,7 @@ class Stats : public CGameObject {
     Q_PROPERTY ( int shadowResist READ getShadowResist WRITE setShadowResist USER true )
     Q_PROPERTY ( int damage READ getDamage WRITE setDamage USER true )
     Q_PROPERTY ( int attack READ getAttack WRITE setAttack USER true )
-    Q_PROPERTY ( QString main READ getMain WRITE setMain USER true )
+    Q_PROPERTY ( QString mainStat READ getMainStat WRITE setMainStat USER true )
     int attack=0;
     int damage=0;
     int shadowResist=0;
@@ -99,13 +99,13 @@ public:
     int getStrength() const;
     void setStrength ( int value );
 
-    QString getMain() const;
-    void setMain ( const QString &value );
+    QString getMainStat() const;
+    void setMainStat ( const QString &value );
 
     int getMainValue();
 
 private:
-    QString main;
+    QString mainStat;
 };
 GAME_PROPERTY ( Stats )
 
