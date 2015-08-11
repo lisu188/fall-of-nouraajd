@@ -7,3 +7,4 @@ when resized window with opened panel sometimes incorrect location
 bug in clone when used lethal poison
 add efects to saved game
 dynamic properties are not loaded from configuration
+CCreature.hurt doesnt accept float damage

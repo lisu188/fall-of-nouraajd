@@ -17,10 +17,10 @@ void CSerialization::setProperty ( std::shared_ptr<CGameObject> object, QString 
         object->setNumericProperty ( key,value.toInt() ) ;
         break;
     case QJsonValue::Type::String:
-        setStringProperty ( object, getProperty ( object,key ),value.toString() ) ;
+        setStringProperty ( object, key,value.toString() ) ;
         break;
     case QJsonValue::Type::Array:
-        setOtherProperty ( object, getProperty ( object,key ), std::make_shared<QJsonArray> ( value.toArray() ) );
+        setOtherProperty ( object, getProperty ( object,key ), std::make_shared<QJsonArray> (  value.toArray() ) );
         break;
     case QJsonValue::Type::Object:
         setOtherProperty ( object, getProperty ( object,key ), std::make_shared<QJsonObject> ( value.toObject() ) );
@@ -39,17 +39,25 @@ QMetaProperty CSerialization::getProperty ( std::shared_ptr<CGameObject> object,
     return QMetaProperty();
 }
 
-void CSerialization::setStringProperty ( std::shared_ptr<CGameObject> object, QMetaProperty property, QString prop ) {
-    QJsonParseError err;
-    QJsonDocument doc=QJsonDocument::fromJson ( prop.toUtf8(),&err );
-    if ( err.error ) {
-        object->setStringProperty ( property.name(),prop );
-    } else if ( doc.isObject() ) {
-        setOtherProperty ( object,property,std::make_shared<QJsonObject> ( doc.object() ) );
-    } else if ( doc.isArray() ) {
-        setOtherProperty ( object,property,std::make_shared<QJsonArray> ( doc.array() ) );
-    } else {
-        qFatal ( "Error parsing string property!" );
+void CSerialization::setStringProperty ( std::shared_ptr<CGameObject> object, QString key, QString value ) {
+    if ( value.trimmed() !="" ) {
+        QJsonParseError err;
+        QJsonDocument doc=QJsonDocument::fromJson ( value.toUtf8(),&err );
+        if ( err.error ) {
+            bool ok;
+            int i=value.toInt ( &ok );
+            if ( ok ) {
+                object->setNumericProperty ( key,i );
+            } else if ( value=="true" ) {
+                object->setBoolProperty ( key,true );
+            } else if ( value=="false" ) {
+                object->setBoolProperty ( key,false );
+            } else {
+                object->setStringProperty ( key,value );
+            }
+        } else  {
+            setProperty ( object,key, doc.isArray() ?QJsonValue ( doc.array() ) :QJsonValue ( doc.object() ) );
+        }
     }
 }
 
