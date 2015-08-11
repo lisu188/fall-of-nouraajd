@@ -121,21 +121,7 @@ void CMapLoader::handleObjectLayer ( std::shared_ptr<CMap> map, const QJsonObjec
         map->addObject ( mapObject );
         const QJsonObject & objectProperties=object["properties"].toObject();
         for ( auto it=objectProperties.begin(); it!=objectProperties.end(); it++ ) {
-            QString property = it.key();
-            QString value = it.value().toString();
-            QVariant variant;
-            bool ok;
-            int i=value.toInt ( &ok );
-            if ( ok ) {
-                variant = i;
-            } else if ( value== "true" ) {
-                variant = true;
-            } else if ( value=="false" ) {
-                variant = false;
-            } else {
-                variant =value ;
-            }
-            mapObject->setProperty ( property, variant );
+            CSerialization::setProperty ( mapObject,it.key(),it.value() );
         }
         mapObject->moveTo ( xPos,
                             yPos, level );
