@@ -30,7 +30,8 @@ void CPlayer::checkQuests() {
     }
 }
 
-void CPlayer::onDestroy ( std::shared_ptr<CGameEvent> ) {
+void CPlayer::onDestroy ( std::shared_ptr<CGameEvent>  event ) {
+    CCreature::onDestroy ( event );
     getMap()->addObject ( this->ptr<CPlayer>() );
     moveTo ( getMap()->getEntryX(),getMap()->getEntryY(),getMap()->getEntryZ() );
     this->hp=1;
@@ -63,7 +64,7 @@ void CPlayer::trade ( std::shared_ptr<CGameObject> object ) {
         }
         setMarket ( nullptr );
     } else {
-        qFatal ( "Called trade with not a CMarket" );
+        fail ( "Called trade with not a CMarket" );
     }
 }
 

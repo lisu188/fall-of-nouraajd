@@ -188,9 +188,8 @@ bool CMap::contains ( int x, int y, int z ) {
 }
 
 void CMap::addObject ( std::shared_ptr<CMapObject> mapObject ) {
-    if ( mapObjects.find ( mapObject->objectName() ) !=mapObjects.end() ) {
-        qFatal ( QString ( "Map object already exists: "+mapObject->objectName() ).toStdString().c_str() );
-    }
+    fail_if ( mapObjects.find ( mapObject->objectName() ) !=mapObjects.end()
+              ,"Map object already exists: "+mapObject->objectName()  );
     mapObject->setMap ( this->ptr() );
     std::shared_ptr<CCreature> creature=cast<CCreature> ( mapObject ) ;
     if ( creature.get() ) {

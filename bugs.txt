@@ -2,9 +2,7 @@ market bug/when configuration is present in map but type is present only in game
 gui panels/gui panels do not respond to input
 market bug/whole market object should be saved, not only market name
 tile saving/default tiles should not be saved
-triggers savings/maybe implement custom setattr and getattr
+triggers savings
+maybe implement custom setattr and getattr for properties
 when resized window with opened panel sometimes incorrect location
-bug in clone when used lethal poison
-add efects to saved game
 dynamic properties are not loaded from configuration
-CCreature.hurt doesnt accept float damage
