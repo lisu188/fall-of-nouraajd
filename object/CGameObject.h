@@ -2,6 +2,7 @@
 
 #include "CAnimatedObject.h"
 #include "CUtil.h"
+#include "CCast.h"
 
 class CGameEvent;
 class CMap;
@@ -33,9 +34,9 @@ public:
     QString getStringProperty ( QString name ) const;
     bool getBoolProperty ( QString name ) const;
     int getNumericProperty ( QString name ) const;
-    template<typename T>
+    template<typename T=CGameObject>
     void setObjectProperty ( QString name,std::shared_ptr<T> object ) {
-        setProperty ( name,QVariant ( qRegisterMetaType<std::shared_ptr<T>>(),&object ) );
+        setProperty ( name,QVariant::fromValue ( object ) );
     }
     template<typename T=CGameObject>
     std::shared_ptr<T> getObjectProperty ( QString name ) {

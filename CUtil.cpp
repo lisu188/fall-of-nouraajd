@@ -10,11 +10,11 @@ std::shared_ptr<CGameObject> CObjectData::getSource() const {
 }
 
 std::size_t std::hash<QString>::operator() ( const QString &string ) const {
-    return stringHash ( string.toStdString() );
+    return hash_combine ( string.toStdString() );
 }
 
 std::size_t std::hash<Coords>::operator() ( const Coords &coords ) const {
-    return int_hash ( coords.x,coords.y,coords.z );
+    return hash_combine ( coords.x,coords.y,coords.z );
 }
 
 Coords::Coords() { x = y = z = 0; }
@@ -54,19 +54,10 @@ double Coords::getDist ( Coords a ) {
     return sqrt ( x + y );
 }
 
-
 std::size_t std::hash<std::pair<int, int> >::operator() ( const std::pair<int, int> &pair ) const {
-    return int_hash ( pair.first,pair.second );
-}
-
-
-std::size_t int_hash() {
-    return 0;
+    return hash_combine ( pair.first,pair.second );
 }
 
 
 
 
-void fail ( QString msg ) {
-    fail_if ( true,msg );
-}
