@@ -49,9 +49,10 @@ SOURCES += \
    scripting/CWrapper.cpp \
    scripting/CConverter.cpp \
    scripting/CScriptLoader.cpp \
-  loader/CGameLoader.cpp \
-  loader/CMapLoader.cpp \
-  CSerialization.cpp
+   loader/CGameLoader.cpp \
+   loader/CMapLoader.cpp \
+   CSerialization.cpp \
+   CJsonUtil.cpp
 
 HEADERS += \
    CPathFinder.h \
@@ -105,11 +106,13 @@ HEADERS += \
    scripting/CConverter.h \
    scripting/CGameScript.h \
    scripting/CScriptLoader.h \
-  loader/CMapLoader.h \
-  loader/CGameLoader.h \
-  loader/CLoader.h \
-  CSerialization.h \
-  CTraits.h
+   loader/CMapLoader.h \
+   loader/CGameLoader.h \
+   loader/CLoader.h \
+   CSerialization.h \
+   CTraits.h \
+   CCast.h \
+   CJsonUtil.h
 
 FORMS += \
    gui/CMainWindow.ui \

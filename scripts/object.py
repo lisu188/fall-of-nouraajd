@@ -14,11 +14,8 @@ def load(context):
 
     @register(context)
     class Market(CBuilding):
-        market=None
         def onEnter(self,event):
-            if not self.market:
-                self.market=self.getMap().createObject(self.getStringProperty('market'))
-            self.getMap().getPlayer().trade(self.market)
+            self.getMap().getPlayer().trade(self.getObjectProperty("market"))
 
     @register(context)
     class Cave(CBuilding):

@@ -188,7 +188,7 @@ bool CMap::contains ( int x, int y, int z ) {
 }
 
 void CMap::addObject ( std::shared_ptr<CMapObject> mapObject ) {
-    fail_if ( mapObjects.find ( mapObject->objectName() ) !=mapObjects.end()
+    fail_if ( ctn ( mapObjects,mapObject->objectName() )
               ,"Map object already exists: "+mapObject->objectName()  );
     mapObject->setMap ( this->ptr() );
     std::shared_ptr<CCreature> creature=cast<CCreature> ( mapObject ) ;

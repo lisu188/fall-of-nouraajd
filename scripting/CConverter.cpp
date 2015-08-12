@@ -32,11 +32,28 @@ struct QString_from_python_str {
 template <typename Return,typename... Args>
 struct builder {
     static void build ( PyObject* obj_ptr,converter::rvalue_from_python_stage1_data* data ) {
+        help ( obj_ptr,data );
+    }
+    template<typename R=Return>
+    static void help ( PyObject* obj_ptr,converter::rvalue_from_python_stage1_data* data,
+                       typename vstd::disable_if<vstd::is_shared_ptr<R>::value>::type* =0 ) {
         void* storage = ( ( converter::rvalue_from_python_storage
-                            <std::function<Return ( Args... ) >>* ) data )->storage.bytes;
+                            <std::function<R ( Args... ) >>* ) data )->storage.bytes;
         object func=object ( handle<> ( borrowed ( incref ( obj_ptr ) ) ) );
-        new ( storage ) std::function<Return ( Args... ) > ( [func] ( Args... args ) {
-            return extract<Return> ( incref ( func ( args... ).ptr() ) );
+        new ( storage ) std::function<R ( Args... ) > ( [func] ( Args... args ) {
+            return extract<R> ( incref ( func ( args... ).ptr() ) );
+        } );
+        data->convertible = storage;
+    }
+    template<typename R=Return>
+    static void help ( PyObject* obj_ptr,converter::rvalue_from_python_stage1_data* data,
+                       typename vstd::enable_if<vstd::is_shared_ptr<R>::value>::type* =0 ) {
+        typedef typename R::element_type* ptr_type;
+        void* storage = ( ( converter::rvalue_from_python_storage
+                            <std::function<R ( Args... ) >>* ) data )->storage.bytes;
+        object func=object ( handle<> ( borrowed ( incref ( obj_ptr ) ) ) );
+        new ( storage ) std::function<R ( Args... ) > ( [func] ( Args... args ) {
+            return R ( vstd::call<ptr_type> ( extract<ptr_type> ( incref ( func ( args... ).ptr() ) ) )  );
         } );
         data->convertible = storage;
     }
@@ -62,7 +79,7 @@ struct builder<bool,Args...> {
                             <std::function<bool ( Args... ) >>* ) data )->storage.bytes;
         object func=object ( handle<> ( borrowed ( incref ( obj_ptr ) ) ) );
         new ( storage ) std::function<bool ( Args... ) > ( [func] ( Args... args ) {
-            return func ( args... ).ptr() ==Py_True;
+            return func ( args... ).ptr() == Py_True;
         } );
         data->convertible = storage;
     }
@@ -86,8 +103,10 @@ void initialize_converters() {
 
     QString_from_python_str();
 
-    function_converter<CGameObject*>();
-    function_converter<CTrigger*>();
+    function_converter<std::shared_ptr<CGameObject>>();
+
     function_converter<void,std::shared_ptr<CMapObject>>();
     function_converter<bool,std::shared_ptr<CMapObject>>();
+
+    implicitly_convertible<std::shared_ptr<CTrigger>,std::shared_ptr<CGameObject>>();
 }

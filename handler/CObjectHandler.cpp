@@ -26,11 +26,11 @@ std::shared_ptr<QJsonObject> CObjectHandler::getConfig ( QString type ) {
 
 std::set<QString> CObjectHandler::getAllTypes() {
     std::set<QString> types;
-    for ( auto val:objectConfig ) {
-        types.insert ( val.first );
+    for ( QString val:objectConfig | boost::adaptors::map_keys ) {
+        types.insert ( val );
     }
     if ( parent.lock() ) {
-        for ( auto val:parent.lock()->getAllTypes() ) {
+        for ( QString val:parent.lock()->getAllTypes() ) {
             types.insert ( val );
         }
     }
@@ -39,14 +39,14 @@ std::set<QString> CObjectHandler::getAllTypes() {
 
 std::shared_ptr<CGameObject> CObjectHandler::getType ( QString name ) {
     if ( ctn ( constructors,name ) ) {
-        return std::shared_ptr<CGameObject> ( constructors[name]() );
+        return constructors[name]() ;
     } else if ( parent.lock() ) {
         return parent.lock()->getType ( name );
     }
     return std::shared_ptr<CGameObject>();
 }
 
-void CObjectHandler::registerType ( QString name,std::function<CGameObject*() > constructor ) {
+void CObjectHandler::registerType ( QString name,std::function<std::shared_ptr<CGameObject>() > constructor ) {
     constructors.insert ( std::make_pair ( name,constructor ) );
 }
 

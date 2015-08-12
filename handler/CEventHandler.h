@@ -40,7 +40,6 @@ struct TriggerKey {
 namespace std {
     template<>
     struct hash<TriggerKey> {
-        std::hash<QString> stringHash;
         std::size_t operator() ( const TriggerKey &triggerKey ) const;
     };
 }

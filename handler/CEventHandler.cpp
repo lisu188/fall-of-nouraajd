@@ -52,7 +52,6 @@ void CEventHandler::registerTrigger ( QString name, QString type, std::shared_pt
     }
 }
 
-
 CGameEvent::CGameEvent ( CGameEvent::Type type ) :type ( type ) {
 
 }
@@ -69,17 +68,12 @@ CGameEventCaused::CGameEventCaused ( CGameEvent::Type type, std::shared_ptr<CGam
 
 }
 
-
 TriggerKey::TriggerKey ( QString name, CGameEvent::Type type ) :name ( name ),type ( type ) {}
 
 bool TriggerKey::operator== ( const TriggerKey &other ) const {
     return ( type == other.type && name == other.name );
 }
 
-
 std::size_t std::hash<TriggerKey>::operator() ( const TriggerKey &triggerKey ) const {
-    using std::size_t;
-    int hash=stringHash ( triggerKey.name );
-    hash+=static_cast<int> ( triggerKey.type ) * 31;
-    return hash;
+    return hash_combine ( triggerKey.type , triggerKey.name );
 }

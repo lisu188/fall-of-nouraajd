@@ -55,7 +55,15 @@ BOOST_PYTHON_MODULE ( _game ) {
     initialize_converters();
     def ( "randint", randint );
     class_<CGameObject,boost::noncopyable,std::shared_ptr<CGameObject>> ( "CGameObject",no_init )
-            PY_PROPERTY_ACCESSOR ( CGameObject );
+            .def ( "getStringProperty",&CGameObject::getStringProperty )
+            .def ( "getNumericProperty",&CGameObject::getNumericProperty )
+            .def ( "getBoolProperty",&CGameObject::getBoolProperty )
+            .def ( "setStringProperty",&CGameObject::setStringProperty )
+            .def ( "setNumericProperty",&CGameObject::setNumericProperty )
+            .def ( "setBoolProperty",&CGameObject::setBoolProperty )
+            .def ( "getObjectProperty",&CGameObject::getObjectProperty<CGameObject> )
+            .def ( "setObjectProperty",&CGameObject::setObjectProperty<CGameObject> )
+            .def ( "incProperty",&CGameObject::incProperty );
     class_<Coords> ( "Coords",init<int,int,int>() )
     .def_readonly ( "x",&Coords::x )
     .def_readonly ( "y",&Coords::y )
@@ -72,10 +80,9 @@ BOOST_PYTHON_MODULE ( _game ) {
             .def ( "getEventHandler",&CMap::getEventHandler )
             .def ( "addObject",&CMap::addObject )
             .def ( "createObject",&CMap::createObject<CGameObject> )
-            .def ( "createTrigger",&CMap::createObject<CTrigger> )
             .def ( "getGame",&CMap::getGame )
             .def ( "move",&CMap::move );
-    void ( CObjectHandler::*registerType ) ( QString,std::function<CGameObject* () > ) =&CObjectHandler::registerType;
+    void ( CObjectHandler::*registerType ) ( QString,std::function<std::shared_ptr<CGameObject> () > ) =&CObjectHandler::registerType;
     class_<CObjectHandler,boost::noncopyable,std::shared_ptr<CObjectHandler>> ( "CObjectHandler",no_init )
             .def ( "registerType",registerType );
     void ( CMapObject::*moveTo ) ( int,int,int ) =&CMapObject::moveTo ;
@@ -175,4 +182,5 @@ BOOST_PYTHON_MODULE ( _game ) {
             .def ( "changeMap",&CGame::changeMap )
             .def ( "getGuiHandler",&CGame::getGuiHandler )
             .def ( "getObjectHandler",&CGame::getObjectHandler );
+    class_<CMarket,bases<CGameObject>,boost::noncopyable,std::shared_ptr<CMarket> > ( "CMarket" );
 }

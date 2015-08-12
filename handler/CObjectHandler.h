@@ -1,6 +1,7 @@
 #pragma once
 #include "CGlobal.h"
 #include "CUtil.h"
+#include "CCast.h"
 #include "CSerialization.h"
 
 class ATypeHandler;
@@ -26,11 +27,11 @@ public:
     std::set<QString> getAllTypes();
 
     void registerConfig ( QString path );
-    void registerType ( QString name, std::function<CGameObject*() > constructor );
+    void registerType ( QString name, std::function<std::shared_ptr<CGameObject>() > constructor );
     template<typename T>
     void registerType () {
         CSerialization::make_serializable<T>();
-        registerType ( T::staticMetaObject.className(),[]() {return new T();} );
+        registerType ( T::staticMetaObject.className(),[]() {return std::make_shared<T>();} );
     }
     std::shared_ptr<CGameObject> getType ( QString name );
     std::shared_ptr<QJsonObject> getConfig ( QString type );
@@ -38,7 +39,7 @@ private:
     std::shared_ptr<CGameObject> _createObject ( std::shared_ptr<CMap> map, QString type );
     std::shared_ptr<CGameObject> _clone ( std::shared_ptr<CGameObject> object );
 
-    std::unordered_map<QString,std::function<CGameObject*() >> constructors;
+    std::unordered_map<QString,std::function<std::shared_ptr<CGameObject>() >> constructors;
 
     std::unordered_map<QString,std::shared_ptr<QJsonObject>> objectConfig;
 
