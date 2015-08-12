@@ -69,7 +69,9 @@ Coords CSmartPathFinder::findNextStep ( const Coords & start, const Coords & goa
                 }
             }
         }
-        if ( QApplication::instance()->property ( "dump_path" ).toBool() ) {dump ( values,start,goal );}
+        if ( QApplication::instance()->property ( "dump_path" ).toBool() ) {
+            dump ( values,start,goal );
+        }
         Coords target=start;
         for ( Coords coords:NEAR_COORDS ( start ) ) {
             if ( ctn ( values,coords ) && ( values[coords]<values[target]|| ( values[coords]==values[target] && coords.getDist ( goal ) <target.getDist ( goal ) ) ) ) {
