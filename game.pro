@@ -53,7 +53,9 @@ SOURCES += \
    loader/CMapLoader.cpp \
    CSerialization.cpp \
    CJsonUtil.cpp \
-    CTypes.cpp
+    CTypes.cpp \
+    types/ctypes1.cpp \
+    types/ctypes2.cpp
 
 HEADERS += \
    CPathFinder.h \
