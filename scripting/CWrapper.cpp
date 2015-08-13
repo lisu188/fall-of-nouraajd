@@ -2,7 +2,7 @@
 
 void CInteractionWrapper::performAction ( std::shared_ptr<CCreature> first, std::shared_ptr<CCreature> second ) {
     if ( auto f=this->get_override ( "performAction" ) ) {
-        f ( first , second );
+        PY_SAFE ( f ( first , second ); )
     } else {
         this->CInteraction::performAction ( first,second );
     }
@@ -10,7 +10,7 @@ void CInteractionWrapper::performAction ( std::shared_ptr<CCreature> first, std:
 
 bool CInteractionWrapper::configureEffect ( std::shared_ptr<CEffect> effect ) {
     if ( auto f=this->get_override ( "configureEffect" ) ) {
-        return f ( effect );
+        PY_SAFE_RET ( return f ( effect ); )
     } else {
         return this->CInteraction::configureEffect ( effect );
     }
@@ -18,15 +18,15 @@ bool CInteractionWrapper::configureEffect ( std::shared_ptr<CEffect> effect ) {
 
 bool CEffectWrapper::onEffect() {
     if ( auto f=this->get_override ( "onEffect" ) ) {
-        return f ();
+        PY_SAFE_RET ( return f (); )
     } else {
         return this->CEffect::onEffect() ;
     }
 }
 
-void CTileWrapper::onStep ( CCreature *creature ) {
+void CTileWrapper::onStep ( std::shared_ptr<CCreature> creature ) {
     if ( auto f=this->get_override ( "onStep" ) ) {
-        f ( boost::ref ( creature ) );
+        PY_SAFE ( f ( creature  ); )
     } else {
         this->CTile::onStep ( creature ) ;
     }
@@ -34,7 +34,7 @@ void CTileWrapper::onStep ( CCreature *creature ) {
 
 void CPotionWrapper::onUse ( std::shared_ptr<CGameEvent> event ) {
     if ( auto f=this->get_override ( "onUse" ) ) {
-        f ( event );
+        PY_SAFE ( f ( event ); )
     } else {
         this->CPotion::onUse ( event ) ;
     }
@@ -42,7 +42,7 @@ void CPotionWrapper::onUse ( std::shared_ptr<CGameEvent> event ) {
 
 void CTriggerWrapper::trigger ( std::shared_ptr<CGameObject> object, std::shared_ptr<CGameEvent> event ) {
     if ( auto f=this->get_override ( "trigger" ) ) {
-        f ( object , event );
+        PY_SAFE ( f ( object , event ); )
     } else {
         this->CTrigger::trigger ( object,event ) ;
     }
@@ -50,7 +50,7 @@ void CTriggerWrapper::trigger ( std::shared_ptr<CGameObject> object, std::shared
 
 bool CQuestWrapper::isCompleted() {
     if ( auto f=this->get_override ( "isCompleted" ) ) {
-        return f();
+        PY_SAFE_RET ( return f(); )
     } else {
         return this->CQuest::isCompleted();
     }
@@ -58,7 +58,7 @@ bool CQuestWrapper::isCompleted() {
 
 void CQuestWrapper::onComplete() {
     if ( auto f=this->get_override ( "onComplete" ) ) {
-        f();
+        PY_SAFE ( f(); )
     } else {
         this->CQuest::onComplete();
     }

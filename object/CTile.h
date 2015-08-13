@@ -17,7 +17,7 @@ class CTile : public CGameObject {
 public:
     CTile();
     virtual ~CTile();
-    virtual void onStep ( CCreature * );
+    virtual void onStep ( std::shared_ptr<CCreature>  );
     void move ( int x, int y, int z ) ;
     void moveTo ( int x,int y,int z );
     Coords getCoords();

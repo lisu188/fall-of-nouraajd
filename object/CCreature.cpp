@@ -238,7 +238,7 @@ void CCreature::fight ( std::shared_ptr<CCreature> creature ) {
     creature->fight ( this->ptr<CCreature>() );
 }
 
-void CCreature::trade ( std::shared_ptr<CGameObject> ) {
+void CCreature::trade ( std::shared_ptr<CMarket> ) {
 
 }
 
@@ -563,7 +563,7 @@ void CCreature::afterMove() {
 
     getMap()->forObjects ( func,pred );
 
-    getMap()->getTile ( this->getCoords() )->onStep ( this );
+    getMap()->getTile ( this->getCoords() )->onStep ( this->ptr<CCreature>() );
 }
 
 QString CCreature::getTooltip() const {
