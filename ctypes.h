@@ -20,15 +20,15 @@ public:
     }
     template<typename T>
     static void register_predicate() {
-        function_converter<bool,std::shared_ptr<CMapObject>>();
+        function_converter<bool,std::shared_ptr<T>>();
     }
     template<typename T>
     static void register_supplier() {
-        function_converter<std::shared_ptr<CGameObject>>();
+        function_converter<std::shared_ptr<T>>();
     }
     template<typename T>
     static void register_consumer() {
-        function_converter<std::shared_ptr<CGameObject>>();
+        function_converter<std::shared_ptr<T>>();
     }
     template<typename T,typename U=CGameObject>
     static void register_cast() {

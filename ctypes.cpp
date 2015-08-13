@@ -1,30 +1,11 @@
 #include "CTypes.h"
 
+extern void initialize1();
+extern void initialize2();
+
 void CTypes::initialize() {
-    register_type< Stats >();
-    register_type< Damage >();
-    register_type< CGameObject >();
-    register_type< CMapObject >();
-    register_type< CWeapon >();
-    register_type< CArmor >();
-    register_type< CPotion >();
-    register_type< CBuilding >();
-    register_type< CItem >();
-    register_type< CPlayer >();
-    register_type< CMonster >();
-    register_type< CTile >();
-    register_type< CInteraction >();
-    register_type< CSmallWeapon >();
-    register_type< CHelmet >();
-    register_type< CBoots >();
-    register_type< CBelt >();
-    register_type< CGloves >();
-    register_type< CEvent >();
-    register_type< CScroll >();
-    register_type< CEffect >();
-    register_type< CMarket >();
-    register_type< CTrigger >();
-    register_type< CQuest >();
+    initialize1();
+    initialize2();
 }
 
 std::unordered_map<QString, std::function<std::shared_ptr<CGameObject>() >> &CTypes::builders() {
