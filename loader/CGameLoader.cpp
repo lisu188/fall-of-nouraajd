@@ -38,7 +38,7 @@ void CGameLoader::initConfigurations ( std::shared_ptr<CObjectHandler> handler )
 }
 
 void CGameLoader::initObjectHandler ( std::shared_ptr<CObjectHandler> handler ) {
-    for ( std::pair<QString, std::function<std::shared_ptr<CGameObject>() >> it:CTypes::registry() ) {
+    for ( std::pair<QString, std::function<std::shared_ptr<CGameObject>() >> it:CTypes::builders() ) {
         handler->registerType ( it.first,it.second );
     }
 }

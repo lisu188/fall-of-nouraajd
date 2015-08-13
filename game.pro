@@ -119,7 +119,8 @@ HEADERS += \
     templates/assert.h \
     templates/functional.h \
     templates/hex.h \
-    CTypes.h
+    CTypes.h \
+    templates/converter.h
 
 FORMS += \
    gui/CMainWindow.ui \

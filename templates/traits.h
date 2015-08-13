@@ -6,6 +6,7 @@ namespace vstd {
 
     using std::is_enum;
     using std::is_same;
+    using std::is_base_of;
 
     template<class T, class R = void>
     struct enable_if_type { typedef R type; };

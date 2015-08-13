@@ -54,8 +54,8 @@ void CPlayer::fight ( std::shared_ptr<CCreature> creature ) {
     setEnemy ( nullptr );
 }
 
-void CPlayer::trade ( std::shared_ptr<CGameObject> object ) {
-    if ( std::shared_ptr<CMarket> market=vstd::cast<CMarket> ( object ) ) {
+void CPlayer::trade ( std::shared_ptr<CMarket> market ) {
+    if ( market ) {
         setMarket ( market );
         std::shared_ptr<AGamePanel> panel=getMap()->getGame()->getGuiHandler()->getPanel ( "CTradePanel" );
         panel->showPanel();
@@ -63,8 +63,6 @@ void CPlayer::trade ( std::shared_ptr<CGameObject> object ) {
             QApplication::processEvents ( QEventLoop::WaitForMoreEvents );
         }
         setMarket ( nullptr );
-    } else {
-        vstd::fail ( "Called trade with not a CMarket" );
     }
 }
 

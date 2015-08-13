@@ -61,5 +61,10 @@ namespace vstd {
     bool castable ( std::shared_ptr<U> ptr ) {
         return std::dynamic_pointer_cast<T> ( ptr ).operator bool();
     }
+
+    template <typename A,typename B>
+    std::pair<int,int> type_pair() {
+        return std::make_pair ( qRegisterMetaType<A>(),qRegisterMetaType<B>() );
+    }
 }
 

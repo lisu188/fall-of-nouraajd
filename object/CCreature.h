@@ -59,7 +59,7 @@ public:
     bool isAlive();
     void setAlive();
     virtual void fight ( std::shared_ptr<CCreature> creature );
-    virtual void trade ( std::shared_ptr<CGameObject> );
+    virtual void trade ( std::shared_ptr<CMarket> );
     virtual void levelUp();
     virtual std::set<std::shared_ptr<CItem> > getLoot();
     virtual std::set<std::shared_ptr<CItem> > getAllItems();

@@ -15,7 +15,7 @@ public:
 
 class CTileWrapper:public CTile,public boost::python::wrapper<CTileWrapper> {
 public:
-    virtual void onStep ( CCreature * creature ) override final;
+    virtual void onStep ( std::shared_ptr<CCreature> creature ) override final;
 };
 
 class CPotionWrapper:public CPotion,public boost::python::wrapper<CPotionWrapper> {
@@ -39,14 +39,14 @@ class CWrapper :public T,public boost::python::wrapper<CWrapper<T>> {
 public:
     virtual void onEnter ( std::shared_ptr<CGameEvent> event ) override final {
         if ( auto f=this->get_override ( "onEnter" ) ) {
-            f ( event );
+            PY_SAFE ( f ( event ); )
         } else {
             this->T::onEnter ( event );
         }
     }
     virtual void onTurn ( std::shared_ptr<CGameEvent> event ) override final {
         if ( auto f=this->get_override ( "onTurn" ) ) {
-            f ( event );
+            PY_SAFE ( f ( event ); )
         } else {
             this->T::onTurn ( event );
         }
@@ -54,21 +54,21 @@ public:
 
     virtual void onCreate ( std::shared_ptr<CGameEvent> event ) override final {
         if ( auto f=this->get_override ( "onCreate" ) ) {
-            f ( event );
+            PY_SAFE ( f ( event ); )
         } else {
             this->T::onCreate ( event );
         }
     }
     virtual void onDestroy ( std::shared_ptr<CGameEvent> event ) override final {
         if ( auto f=this->get_override ( "onDestroy" ) ) {
-            f ( event );
+            PY_SAFE ( f ( event ); )
         } else {
             this->T::onDestroy ( event );
         }
     }
     virtual void onLeave ( std::shared_ptr<CGameEvent> event ) override final {
         if ( auto f=this->get_override ( "onLeave" ) ) {
-            f ( event );
+            PY_SAFE ( f ( event ); )
         } else {
             this->T::onLeave ( event );
         }
