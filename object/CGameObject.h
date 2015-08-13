@@ -40,7 +40,7 @@ public:
     }
     template<typename T=CGameObject>
     std::shared_ptr<T> getObjectProperty ( QString name ) {
-        return *reinterpret_cast<std::shared_ptr<T>*> ( this->property ( name ).data() );
+        return *reinterpret_cast<std::shared_ptr<T>*> ( property ( name ).data() );
     }
     void incProperty ( QString name,int value );
 

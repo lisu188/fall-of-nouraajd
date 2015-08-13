@@ -26,7 +26,7 @@ Coords CTile::getCoords() {
     return Coords ( posx, posy, posz );
 }
 
-void CTile::onStep ( CCreature * ) {
+void CTile::onStep ( std::shared_ptr<CCreature>  ) {
 
 }
 
