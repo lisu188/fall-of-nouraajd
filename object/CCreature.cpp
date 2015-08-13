@@ -52,7 +52,7 @@ void CCreature::addExp ( int exp ) {
 
 std::shared_ptr<CInteraction> CCreature::getLevelAction() {
     QString levelString=QString::number ( level );
-    if ( ctn ( levelling, levelString ) ) {
+    if ( vstd::ctn ( levelling, levelString ) ) {
         return getMap()->getObjectHandler()->clone<CInteraction> ( levelling[levelString] );
     } else {
         return nullptr;
@@ -118,7 +118,7 @@ void CCreature::addItem ( std::set<std::shared_ptr<CItem> > items ) {
 }
 
 void CCreature::heal ( int i ) {
-    fail_if ( i < 0 ,"Tried to heal negative value!" );
+    vstd::fail_if ( i < 0 ,"Tried to heal negative value!" );
     if ( hp > hpMax ) {
         return;
     }
@@ -155,7 +155,7 @@ int CCreature::getExpRatio() {
 }
 
 void CCreature::takeDamage ( int i ) {
-    fail_if ( i < 0 ,"damage less than 0 taken" );
+    vstd::fail_if ( i < 0 ,"damage less than 0 taken" );
     if ( rand() >= stats->getBlock() ) {
         hp -= i * ( ( 100 - stats->getArmor() ) / 100.0 );
         Q_EMIT statsChanged();
@@ -265,7 +265,7 @@ void CCreature::setMana ( int mana ) {
 }
 
 void CCreature::addMana ( int i ) {
-    fail_if ( i < 0 ,"Tried to add negative mana!" );
+    vstd::fail_if ( i < 0 ,"Tried to add negative mana!" );
     if ( mana > manaMax ) {
         return;
     }
@@ -287,7 +287,7 @@ void CCreature::addManaProc ( float i ) {
 }
 
 void CCreature::takeMana ( int i ) {
-    fail_if ( i < 0,"Tried to take negative mana value!" );
+    vstd::fail_if ( i < 0,"Tried to take negative mana value!" );
     mana -= i;
     Q_EMIT statsChanged();
 }
@@ -379,11 +379,11 @@ void CCreature::setArmor ( std::shared_ptr<CArmor> armor ) {
 }
 
 void CCreature::setItem ( QString i, std::shared_ptr<CItem> newItem ) {
-    if ( !ctn ( equipped,i ) ) {
+    if ( !vstd::ctn ( equipped,i ) ) {
         equipped.insert ( std::make_pair ( i, std::shared_ptr<CItem>() ) );
     }
-    fail_if ( newItem && !CItemSlot::checkType ( i, newItem )
-              , "Tried to insert" +newItem->getObjectType() +"into slot" + i ) ;
+    vstd::fail_if ( newItem && !CItemSlot::checkType ( i, newItem )
+                    , "Tried to insert" +newItem->getObjectType() +"into slot" + i ) ;
     std::shared_ptr<CItem> oldItem = equipped.at ( i );
     if ( oldItem ) {
         getMap()->getEventHandler()->gameEvent ( oldItem,std::make_shared<CGameEventCaused> ( CGameEvent::onUnequip,this->ptr<CCreature>() ) );
@@ -403,7 +403,7 @@ void CCreature::setItem ( QString i, std::shared_ptr<CItem> newItem ) {
 }
 
 bool CCreature::hasInInventory ( std::shared_ptr<CItem> item ) {
-    return ctn ( items,item );
+    return vstd::ctn ( items,item );
 }
 
 bool CCreature::hasItem ( std::shared_ptr<CItem> item ) {
@@ -416,11 +416,11 @@ Coords CCreature::getCoords() {
 }
 
 std::shared_ptr<CWeapon> CCreature::getWeapon() {
-    return cast<CWeapon> ( getItemAtSlot ( "0" ) );
+    return vstd::cast<CWeapon> ( getItemAtSlot ( "0" ) );
 }
 
 std::shared_ptr<CArmor> CCreature::getArmor() {
-    return cast<CArmor> ( getItemAtSlot ( "3" ) );
+    return vstd::cast<CArmor> ( getItemAtSlot ( "3" ) );
 }
 
 void CCreature::levelUp() {
@@ -493,7 +493,7 @@ void CCreature::setHpMax ( int value ) {
 }
 
 std::shared_ptr<CItem> CCreature::getItemAtSlot ( QString slot ) {
-    if ( ctn ( equipped,slot ) ) {
+    if ( vstd::ctn ( equipped,slot ) ) {
         return equipped.at ( slot );
     }
     return nullptr;
@@ -542,7 +542,7 @@ void CCreature::defeatedCreature ( std::shared_ptr<CCreature> creature ) {
 
 void CCreature::beforeMove() {
     auto pred=[this] ( std::shared_ptr<CMapObject> object ) {
-        return cast<Visitable> ( object ) && this->getCoords() == object->getCoords();
+        return vstd::cast<Visitable> ( object ) && this->getCoords() == object->getCoords();
     } ;
 
     auto func=[this] ( std::shared_ptr<CMapObject> object ) {
@@ -554,7 +554,7 @@ void CCreature::beforeMove() {
 
 void CCreature::afterMove() {
     auto pred=[this] ( std::shared_ptr<CMapObject> object ) {
-        return cast<Visitable> ( object ) &&this->getCoords() ==object->getCoords();
+        return vstd::cast<Visitable> ( object ) &&this->getCoords() ==object->getCoords();
     } ;
 
     auto func=[this] ( std::shared_ptr<CMapObject> object ) {

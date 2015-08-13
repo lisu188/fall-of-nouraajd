@@ -10,7 +10,7 @@ AGamePanel::~AGamePanel() {
 }
 
 void AGamePanel::handleDrop ( std::shared_ptr<CPlayerView>, std::shared_ptr<CGameObject> ) {
-    fail ( "No drop handler implemented" );
+    vstd::fail ( "No drop handler implemented" );
 }
 
 bool AGamePanel::isShown() {

@@ -28,10 +28,10 @@ public:
 protected:
     virtual void keyPressEvent ( QKeyEvent *event );
 private:
-    Lazy<CGuiHandler,std::shared_ptr<CGame>> guiHandler;
-    Lazy<CScriptHandler> scriptHandler;
-    Lazy<CScriptWindow,std::shared_ptr<CGame>> scriptWindow;
-    Lazy<CObjectHandler> objectHandler;
+    vstd::lazy<CGuiHandler,std::shared_ptr<CGame>> guiHandler;
+    vstd::lazy<CScriptHandler> scriptHandler;
+    vstd::lazy<CScriptWindow,std::shared_ptr<CGame>> scriptWindow;
+    vstd::lazy<CObjectHandler> objectHandler;
     std::shared_ptr<CMap> map;
     std::weak_ptr<CGameView> view;
 };

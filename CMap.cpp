@@ -188,10 +188,10 @@ bool CMap::contains ( int x, int y, int z ) {
 }
 
 void CMap::addObject ( std::shared_ptr<CMapObject> mapObject ) {
-    fail_if ( ctn ( mapObjects,mapObject->objectName() )
-              ,"Map object already exists: "+mapObject->objectName()  );
+    vstd::fail_if ( vstd::ctn ( mapObjects,mapObject->objectName() )
+                    ,"Map object already exists: "+mapObject->objectName()  );
     mapObject->setMap ( this->ptr() );
-    std::shared_ptr<CCreature> creature=cast<CCreature> ( mapObject ) ;
+    std::shared_ptr<CCreature> creature=vstd::cast<CCreature> ( mapObject ) ;
     if ( creature.get() ) {
         if ( creature->getLevel() == 0 ) {
             creature->levelUp();
@@ -236,9 +236,9 @@ bool CMap::isMoving() {
 
 void CMap::applyEffects() {
     for ( std::shared_ptr<CMapObject> object:getIf ( [] ( std::shared_ptr<CMapObject> object ) {
-    return castable<CCreature> ( object );
+    return vstd::castable<CCreature> ( object );
     } ) ) {
-        cast<CCreature> ( object )->applyEffects();
+        vstd::cast<CCreature> ( object )->applyEffects();
     }
 }
 
@@ -292,7 +292,7 @@ void CMap::move () {
     } );
 
     auto target=[] ( std::shared_ptr<CMapObject> object ) {
-        return std::make_pair ( object,cast<Moveable> ( object )->getNextMove() );
+        return std::make_pair ( object,vstd::cast<Moveable> ( object )->getNextMove() );
     };
 
     auto callback=[] ( std::pair<std::shared_ptr<CMapObject>,Coords> arg ) {
@@ -300,7 +300,7 @@ void CMap::move () {
     };
 
     auto pred=[] ( std::shared_ptr<CMapObject> object ) {
-        return castable<Moveable> ( object );
+        return vstd::castable<Moveable> ( object );
     };
 
     auto end_callback=[map]() {
@@ -330,11 +330,11 @@ void CMap::resolveFights() {
     forObjects ( [this] ( std::shared_ptr<CMapObject> mapObject ) {
         auto action=[this,mapObject] ( std::shared_ptr<CMapObject> visitor ) {
             if ( getObjectByName ( mapObject->objectName() ) && getObjectByName ( visitor->objectName() ) ) {
-                cast<CCreature> ( mapObject )->fight ( cast<CCreature> ( visitor ) );
+                vstd::cast<CCreature> ( mapObject )->fight ( vstd::cast<CCreature> ( visitor ) );
             }
         };
         auto pred=[mapObject] ( std::shared_ptr<CMapObject> visitor ) {
-            return cast<CCreature> ( mapObject ) &&cast<CCreature> ( visitor ) &&mapObject != visitor && mapObject->getCoords() == visitor->getCoords() ;
+            return vstd::cast<CCreature> ( mapObject ) &&vstd::cast<CCreature> ( visitor ) &&mapObject != visitor && mapObject->getCoords() == visitor->getCoords() ;
         } ;
         forObjects ( action,pred );
     } );

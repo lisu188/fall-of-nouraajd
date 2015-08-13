@@ -1,6 +1,6 @@
 #pragma once
-#include "CGamePanel.h"
-#include "CTextPanel.h"
-#include "CFightPanel.h"
-#include "CCharPanel.h"
-#include "CTradePanel.h"
+#include "panel/CGamePanel.h"
+#include "panel/CTextPanel.h"
+#include "panel/CFightPanel.h"
+#include "panel/CCharPanel.h"
+#include "panel/CTradePanel.h"

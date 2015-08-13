@@ -1,4 +1,4 @@
-#include "CGamePanel.h"
+#include "panel/CGamePanel.h"
 #include "CGame.h"
 #include "gui/CGui.h"
 #include "object/CObject.h"
@@ -58,7 +58,7 @@ QString CCharPanel::getPanelName() {
 }
 
 void CCharPanel::onClickAction ( std::shared_ptr<CGameObject> object ) {
-    std::shared_ptr<CItem> item=cast<CItem> ( object );
+    std::shared_ptr<CItem> item=vstd::cast<CItem> ( object );
     if ( item ) {
         if ( item->isSingleUse() ) {
             item->getMap()->getEventHandler()->gameEvent ( item, std::make_shared<CGameEventCaused> ( CGameEvent::onUse,item->getMap()->getPlayer() ) );
@@ -71,7 +71,7 @@ void CCharPanel::onClickAction ( std::shared_ptr<CGameObject> object ) {
 
 void CCharPanel::handleDrop ( std::shared_ptr<CPlayerView> view, std::shared_ptr<CGameObject> object ) {
     if ( view==playerInventoryView ) {
-        std::shared_ptr<CItem> item=cast<CItem> ( object );
+        std::shared_ptr<CItem> item=vstd::cast<CItem> ( object );
         if ( item ) {
             item->getMap()->getEventHandler()->gameEvent ( item ,std::make_shared<CGameEventCaused> ( CGameEvent::onUse,item->getMap()->getPlayer() ) );
         }

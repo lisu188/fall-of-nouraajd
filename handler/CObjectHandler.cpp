@@ -16,7 +16,7 @@ void CObjectHandler::registerConfig ( QString path ) {
 }
 
 std::shared_ptr<QJsonObject> CObjectHandler::getConfig ( QString type ) {
-    if ( ctn ( objectConfig,type ) ) {
+    if ( vstd::ctn ( objectConfig,type ) ) {
         return objectConfig[type];
     } else if ( parent.lock() ) {
         return parent.lock()->getConfig ( type );
@@ -38,7 +38,7 @@ std::set<QString> CObjectHandler::getAllTypes() {
 }
 
 std::shared_ptr<CGameObject> CObjectHandler::getType ( QString name ) {
-    if ( ctn ( constructors,name ) ) {
+    if ( vstd::ctn ( constructors,name ) ) {
         return constructors[name]() ;
     } else if ( parent.lock() ) {
         return parent.lock()->getType ( name );
