@@ -4,6 +4,7 @@
 #include "CUtil.h"
 #include "handler/CHandler.h"
 #include "provider/CProvider.h"
+#include "templates/lazy.h"
 
 class CGame;
 class CTile;
@@ -78,10 +79,10 @@ private:
     std::map<int, QString> defaultTiles;
     std::map<int, std::pair<int, int> > boundaries;
     int entryx, entryz, entryy;
-    Lazy<CLootHandler,std::shared_ptr<CMap>> lootHandler;
-    Lazy<CObjectHandler,std::shared_ptr<CObjectHandler>> objectHandler;
-    Lazy<CEventHandler> eventHandler;
-    Lazy<CMouseHandler> mouseHandler;
+    vstd::lazy<CLootHandler,std::shared_ptr<CMap>> lootHandler;
+    vstd::lazy<CObjectHandler,std::shared_ptr<CObjectHandler>> objectHandler;
+    vstd::lazy<CEventHandler> eventHandler;
+    vstd::lazy<CMouseHandler> mouseHandler;
     bool moving=false;
 };
 

@@ -1,7 +1,7 @@
 #pragma once
 #include "CGlobal.h"
 #include "CUtil.h"
-#include "CCast.h"
+#include "templates/cast.h"
 
 class CMap;
 class CGameObject;
@@ -29,19 +29,19 @@ public:
     }
     template<typename T=Serialized,typename V=Deserialized>
     static T serialize ( V deserialized ,typename std::enable_if<vstd::is_set<V>::value>::type* =0 ) {
-        return CSerializerFunction<T,std::set<std::shared_ptr<CGameObject>>>::serialize ( cast<std::set<std::shared_ptr<CGameObject>>> ( deserialized ) );
+        return CSerializerFunction<T,std::set<std::shared_ptr<CGameObject>>>::serialize ( vstd::cast<std::set<std::shared_ptr<CGameObject>>> ( deserialized ) );
     }
     template<typename T=Serialized,typename V=Deserialized>
     static V deserialize ( std::shared_ptr<CMap> map,T serialized,typename std::enable_if<vstd::is_set<V>::value>::type* =0 ) {
-        return cast<V> ( CSerializerFunction<T,std::set<std::shared_ptr<CGameObject>>>::deserialize ( map, serialized ) );
+        return vstd::cast<V> ( CSerializerFunction<T,std::set<std::shared_ptr<CGameObject>>>::deserialize ( map, serialized ) );
     }
     template<typename T=Serialized,typename V=Deserialized>
     static T serialize ( V deserialized ,typename std::enable_if<vstd::is_map<V>::value>::type* =0 ) {
-        return CSerializerFunction<T,std::map<QString, std::shared_ptr<CGameObject> >>::serialize ( cast<std::map<QString, std::shared_ptr<CGameObject> >> ( deserialized ) );
+        return CSerializerFunction<T,std::map<QString, std::shared_ptr<CGameObject> >>::serialize ( vstd::cast<std::map<QString, std::shared_ptr<CGameObject> >> ( deserialized ) );
     }
     template<typename T=Serialized,typename V=Deserialized>
     static V deserialize ( std::shared_ptr<CMap> map,T serialized,typename std::enable_if<vstd::is_map<V>::value>::type* =0 ) {
-        return cast<V> ( CSerializerFunction<T,std::map<QString, std::shared_ptr<CGameObject> >>::deserialize ( map, serialized ) );
+        return vstd::cast<V> ( CSerializerFunction<T,std::map<QString, std::shared_ptr<CGameObject> >>::deserialize ( map, serialized ) );
     }
 };
 
@@ -104,12 +104,6 @@ public:
     }
     static void setProperty ( std::shared_ptr<CGameObject> object , QString key, const QJsonValue &value );
     static void setProperty ( std::shared_ptr<QJsonObject> conf, QString propertyName, QVariant propertyValue );
-    template<typename Class>
-    static void make_serializable() {
-        std::make_shared<CSerializer<std::shared_ptr<QJsonObject>,std::shared_ptr<Class>>>()->reg();
-        std::make_shared<CSerializer<std::shared_ptr<QJsonArray>,std::set<std::shared_ptr<Class>>>>()->reg();
-        std::make_shared<CSerializer<std::shared_ptr<QJsonObject>,std::map<QString, std::shared_ptr<Class>>>>()->reg();
-    }
 private:
     static QMetaProperty getProperty ( std::shared_ptr<CGameObject> object , QString name );
     static int getGenericPropertyType ( std::shared_ptr<QJsonObject> object );

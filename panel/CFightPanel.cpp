@@ -102,7 +102,7 @@ void CCreatureFightView::paint ( QPainter *painter,
 }
 
 void CFightPanel::onClickAction ( std::shared_ptr<CGameObject> object ) {
-    std::shared_ptr<CInteraction> interaction=cast<CInteraction> ( object );
+    std::shared_ptr<CInteraction> interaction=vstd::cast<CInteraction> ( object );
     if ( interaction ) {
         std::shared_ptr<CPlayer>player =interaction->getMap()->getPlayer();
         if ( interaction->getManaCost() <= player->getMana() ) {

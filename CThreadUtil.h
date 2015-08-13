@@ -1,7 +1,7 @@
 #pragma once
 #include "CGlobal.h"
 #include "CUtil.h"
-#include "CTraits.h"
+#include "templates/traits.h"
 
 class CLaterCall:public QObject,public QRunnable {
     Q_OBJECT
@@ -31,7 +31,7 @@ public:
     template <typename Collection,typename Callback,typename Function>
     static void invoke_all ( Collection all, Function target,Callback callback=[] ( typename vstd::function_traits<Function>::result_type ) {},std::function<void() > end_callback=[]() {} ) {
         typedef typename Collection::value_type Result;
-        typedef typename vstd::function_traits<Function>::result_type Return;
+        typedef typename vstd::function_traits<Function>::return_type Return;
         call_later ( [all,target,callback,end_callback]() {
             std::shared_ptr<int> called=std::make_shared<int> ( all.size() );
             for ( Result t:all ) {
@@ -53,7 +53,7 @@ private:
     private:
         CAsyncCall ( Function target,Callback callback ) :target ( target ),callback ( callback ) {}
         void run() override {
-            call_later ( [this] ( typename vstd::function_traits<Function>::result_type result,Callback cb ) {
+            call_later ( [this] ( typename vstd::function_traits<Function>::return_type result,Callback cb ) {
                 cb ( result );
             },target(),callback );
         }
