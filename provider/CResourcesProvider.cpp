@@ -1,5 +1,6 @@
 #include "CResourcesProvider.h"
 #include "CUtil.h"
+#include "templates/assert.h"
 
 QList<QString> CResourcesProvider::searchPath= {"",":/"};
 
@@ -80,7 +81,7 @@ void CResourcesProvider::save ( QString file, QByteArray data ) {
     if ( f.open ( QIODevice::WriteOnly ) ) {
         f.write ( data );
     } else {
-        fail ( "Failed saving!" );
+        vstd::fail ( "Failed saving!" );
     }
 }
 

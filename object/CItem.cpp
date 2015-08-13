@@ -15,7 +15,7 @@ CItem::~CItem() {
 }
 
 void CItem::onEnter ( std::shared_ptr<CGameEvent> event ) {
-    if ( std::shared_ptr<CCreature> visitor=cast<CCreature> ( cast<CGameEventCaused> ( event )->getCause() ) ) {
+    if ( std::shared_ptr<CCreature> visitor=vstd::cast<CCreature> ( vstd::cast<CGameEventCaused> ( event )->getCause() ) ) {
         this->getMap()->removeObject ( this->ptr<CMapObject>() );
         visitor->addItem ( this->ptr<CItem>() );
     }
@@ -34,14 +34,14 @@ void CItem::setSingleUse ( bool singleUse ) {
 }
 
 void CItem::onEquip ( std::shared_ptr<CGameEvent> event ) {
-    cast<CCreature> ( cast<CGameEventCaused> ( event )->getCause() )->addBonus ( bonus );
-    qDebug() << cast<CGameEventCaused> ( event )->getCause()->getObjectType() << "equipped" << getObjectType()
+    vstd::cast<CCreature> ( vstd::cast<CGameEventCaused> ( event )->getCause() )->addBonus ( bonus );
+    qDebug() << vstd::cast<CGameEventCaused> ( event )->getCause()->getObjectType() << "equipped" << getObjectType()
              << "\n";
 }
 
 void CItem::onUnequip ( std::shared_ptr<CGameEvent> event ) {
-    cast<CCreature> ( cast<CGameEventCaused> ( event )->getCause() )->removeBonus ( bonus );
-    qDebug() << cast<CGameEventCaused> ( event )->getCause()->getObjectType() << "unequipped" << getObjectType()
+    vstd::cast<CCreature> ( vstd::cast<CGameEventCaused> ( event )->getCause() )->removeBonus ( bonus );
+    qDebug() << vstd::cast<CGameEventCaused> ( event )->getCause()->getObjectType() << "unequipped" << getObjectType()
              << "\n";
 }
 
@@ -54,7 +54,7 @@ void CItem::onUse ( std::shared_ptr<CGameEvent> event ) {
     if ( slot=="-1" ) {
         return;
     }
-    cast<CCreature> ( cast<CGameEventCaused> ( event )->getCause() )->setItem ( slot, this->ptr<CItem>() );
+    vstd::cast<CCreature> ( vstd::cast<CGameEventCaused> ( event )->getCause() )->setItem ( slot, this->ptr<CItem>() );
 }
 
 int CItem::getPower() const {

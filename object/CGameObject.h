@@ -2,7 +2,7 @@
 
 #include "CAnimatedObject.h"
 #include "CUtil.h"
-#include "CCast.h"
+#include "templates/cast.h"
 
 class CGameEvent;
 class CMap;
@@ -23,7 +23,7 @@ public:
 
     template<typename T=CGameObject>
     std::shared_ptr<T> ptr() {
-        return cast<T> ( shared_from_this() );
+        return vstd::cast<T> ( shared_from_this() );
     }
 
     void setProperty ( QString name,QVariant property );

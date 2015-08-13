@@ -53,7 +53,7 @@ Coords CSmartPathFinder::findNextStep ( const Coords & start, const Coords & goa
         nodes.push ( goal );
         values[goal]=0;
 
-        while ( !nodes.empty() && !ctn ( marked,start ) ) {
+        while ( !nodes.empty() && !vstd::ctn ( marked,start ) ) {
             Coords currentCoords = nodes.top();
             nodes.pop();
             if ( marked.insert ( currentCoords ).second ) {
@@ -74,7 +74,7 @@ Coords CSmartPathFinder::findNextStep ( const Coords & start, const Coords & goa
         }
         Coords target=start;
         for ( Coords coords:NEAR_COORDS ( start ) ) {
-            if ( ctn ( values,coords ) && ( values[coords]<values[target]|| ( values[coords]==values[target] && coords.getDist ( goal ) <target.getDist ( goal ) ) ) ) {
+            if ( vstd::ctn ( values,coords ) && ( values[coords]<values[target]|| ( values[coords]==values[target] && coords.getDist ( goal ) <target.getDist ( goal ) ) ) ) {
                 target=coords;
             }
         }

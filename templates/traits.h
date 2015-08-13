@@ -4,6 +4,9 @@ namespace vstd {
     template<bool B, typename T = void> using enable_if = std::enable_if<B, T>;
     template<bool B, typename T = void> using disable_if = std::enable_if<!B, T>;
 
+    using std::is_enum;
+    using std::is_same;
+
     template<class T, class R = void>
     struct enable_if_type { typedef R type; };
 
@@ -53,7 +56,7 @@ namespace vstd {
     struct function_traits<ReturnType ( ClassType::* ) ( Args... ) const> {
         enum { arity = sizeof... ( Args ) };
 
-        typedef ReturnType result_type;
+        typedef ReturnType return_type;
 
         template <size_t i>
         struct arg {

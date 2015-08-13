@@ -52,7 +52,8 @@ SOURCES += \
    loader/CGameLoader.cpp \
    loader/CMapLoader.cpp \
    CSerialization.cpp \
-   CJsonUtil.cpp
+   CJsonUtil.cpp \
+    CTypes.cpp
 
 HEADERS += \
    CPathFinder.h \
@@ -110,9 +111,15 @@ HEADERS += \
    loader/CGameLoader.h \
    loader/CLoader.h \
    CSerialization.h \
-   CTraits.h \
-   CCast.h \
-   CJsonUtil.h
+   CJsonUtil.h \
+    templates/cast.h \
+    templates/traits.h \
+    templates/lazy.h \
+    templates/hash.h \
+    templates/assert.h \
+    templates/functional.h \
+    templates/hex.h \
+    CTypes.h
 
 FORMS += \
    gui/CMainWindow.ui \

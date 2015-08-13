@@ -1,5 +1,5 @@
 #pragma once
-#include "CWrapper.h"
-#include "CConverter.h"
-#include "CGameScript.h"
-#include "CScriptLoader.h"
+#include "scripting/CWrapper.h"
+#include "scripting/CConverter.h"
+#include "scripting/CGameScript.h"
+#include "scripting/CScriptLoader.h"

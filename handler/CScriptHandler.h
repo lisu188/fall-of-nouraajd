@@ -1,6 +1,8 @@
 #pragma once
 #include "CGlobal.h"
 #include "CUtil.h"
+#include "templates/assert.h"
+#include "templates/hex.h"
 
 template<typename Return,typename... Args>
 struct wrap {
@@ -40,7 +42,7 @@ public:
     }
     template <typename Return=void,typename... Args>
     std::function<Return ( Args... ) > createFunction ( QString functionName, QString functionCode, std::initializer_list<QString> args ) {
-        fail_if ( sizeof... ( Args ) !=args.size(),"Wrong argument list!" );
+        vstd::fail_if ( sizeof... ( Args ) !=args.size(),"Wrong argument list!" );
         addFunction ( functionName,functionCode,args );
         return getFunction<Return,Args...> ( functionName );
     }
@@ -51,7 +53,7 @@ public:
     template<typename Return=void,typename ...Args>
     Return callCreatedFunction ( QString functionCode, std::initializer_list<QString> args,Args ...params ) {
         return createFunction<Return,Args...> (
-                   "FUNC"+to_hex_hash ( functionCode ),
+                   "FUNC"+vstd::to_hex_hash ( functionCode ),
                    functionCode,args ) ( params... );
     }
     template<typename T=boost::python::object>

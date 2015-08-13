@@ -55,7 +55,7 @@ void CPlayer::fight ( std::shared_ptr<CCreature> creature ) {
 }
 
 void CPlayer::trade ( std::shared_ptr<CGameObject> object ) {
-    if ( std::shared_ptr<CMarket> market=cast<CMarket> ( object ) ) {
+    if ( std::shared_ptr<CMarket> market=vstd::cast<CMarket> ( object ) ) {
         setMarket ( market );
         std::shared_ptr<AGamePanel> panel=getMap()->getGame()->getGuiHandler()->getPanel ( "CTradePanel" );
         panel->showPanel();
@@ -64,7 +64,7 @@ void CPlayer::trade ( std::shared_ptr<CGameObject> object ) {
         }
         setMarket ( nullptr );
     } else {
-        fail ( "Called trade with not a CMarket" );
+        vstd::fail ( "Called trade with not a CMarket" );
     }
 }
 

@@ -60,14 +60,14 @@ void CTradePanel::paint ( QPainter *painter, const QStyleOptionGraphicsItem *, Q
 }
 
 void CTradePanel::onClickAction ( std::shared_ptr<CGameObject> object ) {
-    if ( std::shared_ptr<CItem> item=cast<CItem> ( object ) ) {
+    if ( std::shared_ptr<CItem> item=vstd::cast<CItem> ( object ) ) {
         item->drag();
     }
 }
 
 void CTradePanel::handleDrop ( std::shared_ptr<CPlayerView> view, std::shared_ptr<CGameObject> object ) {
     std::shared_ptr<CPlayerView> view2= ( dynamic_cast<CPlayerView*> ( object->parentItem() ) )->ptr<CPlayerView>(); //watchout on this, shared from this may not be safe
-    if ( auto item=cast<CItem> ( object ) ) {
+    if ( auto item=vstd::cast<CItem> ( object ) ) {
         std::shared_ptr<CPlayer> player=this->getView()->getGame()->getMap()->getPlayer();
         if ( player ) {
             std::shared_ptr<CMarket> market=player->getMarket();

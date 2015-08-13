@@ -2,14 +2,15 @@
 #include "CGame.h"
 #include "CJsonUtil.h"
 #include "CMap.h"
+#include "templates/assert.h"
 
 void CSerialization::setProperty ( std::shared_ptr<CGameObject> object, QString key, const QJsonValue &value ) {
     switch ( value.type() ) {
     case QJsonValue::Null:
-        fail ( "Null value detected." );
+        vstd::fail ( "Null value detected." );
         break;
     case QJsonValue::Undefined:
-        fail ( "Undefined value detected." );
+        vstd::fail ( "Undefined value detected." );
         break;
     case QJsonValue::Type::Bool:
         object->setBoolProperty ( key,value.toBool() ) ;
@@ -106,7 +107,7 @@ void CSerialization::setProperty ( std::shared_ptr<QJsonObject> conf, QString pr
             std::pair<int,int> types=entry.first;
             int deserialized=types.second;
             if ( deserialized==QMetaType::type ( propertyValue.typeName() ) ) {
-                fail_if ( serializer , "Ambigous serializer!" );
+                vstd::fail_if ( serializer , "Ambigous serializer!" );
                 serializer=entry.second;
             }
         }
@@ -116,7 +117,7 @@ void CSerialization::setProperty ( std::shared_ptr<QJsonObject> conf, QString pr
         } else if ( result.canConvert ( qRegisterMetaType<std::shared_ptr<QJsonArray>>() ) ) {
             ( *conf ) [propertyName]=*result.value<std::shared_ptr<QJsonArray>>();
         } else {
-            fail ( "Not an object or an array" );
+            vstd::fail ( "Not an object or an array" );
         }
     }
 }
@@ -149,7 +150,7 @@ std::shared_ptr<CGameObject> object_deserialize ( std::shared_ptr<CMap> map, std
     } else if ( ! ( *config ) ["class"].toString().isEmpty() ) {
         object = map->getObjectHandler()->getType ( ( *config ) ["class"].toString() );
         if ( object ) {
-            object->setObjectName ( to_hex ( object.get() ) );
+            object->setObjectName ( vstd::to_hex ( object.get() ) );
             object->setObjectType ( ( *config ) ["class"].toString() );
             object->setMap ( map );
             map->getGame()->addObject ( object );
@@ -208,7 +209,7 @@ int CSerialization::getGenericPropertyType ( std::shared_ptr<QJsonObject> object
     } else if ( CJsonUtil::isMap ( object ) ) {
         return qRegisterMetaType<std::map<QString,std::shared_ptr<CGameObject>>>();
     }
-    return fail<int> ( "Unable to determine property type!" );
+    return vstd::fail<int> ( "Unable to determine property type!" );
 }
 
 
