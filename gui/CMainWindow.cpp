@@ -11,9 +11,11 @@ CMainWindow::CMainWindow () :
 }
 
 CMainWindow::~CMainWindow() {
-    CThreadUtil::wait_until ( [this]() {
-        return !view->getGame()->getMap()->isMoving();
-    } );
+    if ( view ) {
+        CThreadUtil::wait_until ( [this]() {
+            return !view->getGame()->getMap()->isMoving();
+        } );
+    }
 }
 
 void CMainWindow::on_pushButton_clicked() {
