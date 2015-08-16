@@ -1,8 +1,9 @@
 #pragma once
+#include "CDefines.h"
 
 namespace vstd {
     template<typename T,typename U=int>
-    U fail_if ( T arg,QString msg ) {
+    force_inline U fail_if ( T arg,QString msg ) {
         if ( arg ) {
             qFatal ( msg.toStdString().c_str() );
         }
@@ -10,12 +11,12 @@ namespace vstd {
     }
 
     template<typename T=int>
-    T fail ( QString msg ) {
+    force_inline T fail ( QString msg ) {
         return fail_if<bool,T> ( true,msg );
     }
 
     template <typename T>
-    T not_null ( T t,QString msg="" ) {
+    force_inline T not_null ( T t,QString msg="" ) {
         if ( t ) {
             return t;
         }

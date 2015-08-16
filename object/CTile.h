@@ -1,9 +1,6 @@
 #pragma once
-#include <QGraphicsPixmapItem>
-#include <QJsonObject>
-#include <map>
-#include <string>
-#include <functional>
+
+#include "CGlobal.h"
 #include "CMapObject.h"
 
 class CGame;

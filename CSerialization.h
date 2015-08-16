@@ -1,6 +1,6 @@
 #pragma once
 #include "CGlobal.h"
-#include "CUtil.h"
+#include "templates/util.h"
 #include "templates/cast.h"
 
 class CMap;
