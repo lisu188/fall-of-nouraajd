@@ -1,6 +1,7 @@
 #pragma once
+
 #include "CGlobal.h"
-#include "CUtil.h"
+#include "CDefines.h"
 
 class CAnimation;
 class CAnimatedObject : public QObject, public QGraphicsPixmapItem {
