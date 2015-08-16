@@ -122,7 +122,9 @@ HEADERS += \
     templates/functional.h \
     templates/hex.h \
     CTypes.h \
-    templates/converter.h
+    templates/converter.h \
+    CDefines.h \
+    templates/util.h
 
 FORMS += \
    gui/CMainWindow.ui \
@@ -159,6 +161,7 @@ CONFIG(debug,debug|release){
   CONFIG += console
   DEFINES += "DEBUG_MODE"
 }
+
 
 unix{
   LIBS += -L/usr/local/lib -L/home/andrzejlis/boost_1_58_0/stage/lib -lpython3.4m -ldl -fPIC -lutil -lboost_python3

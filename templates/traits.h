@@ -1,5 +1,7 @@
 #pragma once
 
+#include "CGlobal.h"
+
 namespace vstd {
     template<bool B, typename T = void> using enable_if = std::enable_if<B, T>;
     template<bool B, typename T = void> using disable_if = std::enable_if<!B, T>;
@@ -12,14 +14,16 @@ namespace vstd {
     struct enable_if_type { typedef R type; };
 
     template<class T, class Enable = void>
-    struct is_shared_ptr : std::false_type {};
+    struct is_shared_ptr : std::false_type
+    {};
 
     template<class T>
     struct is_shared_ptr<T, typename enable_if_type<typename T::element_type>::type> : std::true_type
     {};
 
     template<class T, class Enable = void>
-    struct is_set : std::false_type {};
+    struct is_set : std::false_type
+    {};
 
     template<class T>
     struct is_set<T, typename std::enable_if<std::is_same<typename T::key_type,typename T::value_type>::value>::type> : std::true_type
@@ -40,7 +44,8 @@ namespace vstd {
     {};
 
     template<class T, class E1 = void,class E2=void>
-    struct is_container : std::false_type {};
+    struct is_container : std::false_type
+    {};
 
     template<class T>
     struct is_container<T, typename enable_if_type<typename T::value_type>::type,typename disable_if<std::is_same<

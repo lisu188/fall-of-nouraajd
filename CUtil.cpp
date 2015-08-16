@@ -2,20 +2,16 @@
 #include "templates/hash.h"
 #include "object/CGameObject.h"
 
-CObjectData::CObjectData ( std::shared_ptr<CGameObject> object ) :source ( object ) {
-
-}
-
-std::shared_ptr<CGameObject> CObjectData::getSource() const {
-    return source;
-}
-
 Coords::Coords() { x = y = z = 0; }
 
 Coords::Coords ( int x, int y, int z ) : x ( x ), y ( y ), z ( z ) {}
 
 bool Coords::operator== ( const Coords &other ) const {
     return ( x == other.x && y == other.y && z == other.z );
+}
+
+bool Coords::operator!= ( const Coords &other ) const {
+    return !operator== ( other );
 }
 
 bool Coords::operator< ( const Coords &other ) const {
@@ -31,15 +27,23 @@ bool Coords::operator< ( const Coords &other ) const {
     return false;
 }
 
+bool Coords::operator> ( const Coords &other ) const {
+    return !operator< ( other );
+}
+
 Coords Coords::operator- ( const Coords &other ) const {
     return Coords ( x-other.x,y-other.y,z-other.z );
 }
 
-Coords Coords::operator*() const {
-    return Coords ( x,y,z );
+Coords Coords::operator+ ( const Coords &other ) const {
+    return Coords ( x+other.x,y+other.y,z+other.z );
 }
 
-double Coords::getDist ( Coords a ) {
+Coords Coords::operator*() const {
+    return *this;
+}
+
+double Coords::getDist ( Coords a ) const {
     double x = this->x - a.x;
     x *= x;
     double y = this->y - a.y;
@@ -47,18 +51,12 @@ double Coords::getDist ( Coords a ) {
     return sqrt ( x + y );
 }
 
-std::size_t std::hash<QString>::operator() ( const QString &string ) const {
-    return vstd::hash_combine ( string.toStdString() );
+CObjectData::CObjectData ( std::shared_ptr<CGameObject> object ) :source ( object ) {
+
 }
 
-std::size_t std::hash<Coords>::operator() ( const Coords &coords ) const {
-    return vstd::hash_combine ( coords.x,coords.y,coords.z );
+std::shared_ptr<CGameObject> CObjectData::getSource() const {
+    return source;
 }
-
-std::size_t std::hash<std::pair<int, int> >::operator() ( const std::pair<int, int> &pair ) const {
-    return vstd::hash_combine ( pair.first,pair.second );
-}
-
-
 
 
