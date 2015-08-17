@@ -55,7 +55,8 @@ SOURCES += \
    CJsonUtil.cpp \
     CTypes.cpp \
     types/ctypes1.cpp \
-    types/ctypes2.cpp
+    types/ctypes2.cpp \
+    controller/CController.cpp
 
 HEADERS += \
    CPathFinder.h \
@@ -124,7 +125,8 @@ HEADERS += \
     CTypes.h \
     templates/converter.h \
     CDefines.h \
-    templates/util.h
+    templates/util.h \
+    controller/CController.h
 
 FORMS += \
    gui/CMainWindow.ui \
