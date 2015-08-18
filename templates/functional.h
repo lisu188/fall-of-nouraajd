@@ -22,4 +22,17 @@ namespace vstd {
         }
         return ret;
     }
+
+    template<typename Ctn>
+    class stream {
+    public:
+        typename Ctn::iterator begin() {
+            return ctn.begin();
+        }
+        typename Ctn::iterator end() {
+            return ctn.end();
+        }
+    private:
+        Ctn ctn;
+    };
 }
