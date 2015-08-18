@@ -92,11 +92,14 @@ static force_inline Values fillValues ( std::function<bool ( const Coords& ) > c
     return values;
 }
 
-Coords CSmartPathFinder::findNextStep ( const Coords & start, const Coords & goal, std::function<bool ( const Coords& ) > canStep ) {
-    return getNextStep ( start,goal,fillValues ( canStep, goal, start ) );
+std::shared_ptr<vstd::future<Coords> > CSmartPathFinder::findNextStep (  Coords  start, Coords  goal, std::function<bool ( const Coords& ) > canStep ) {
+    return vstd::future<Coords>::async ( [start,goal,canStep]() {
+        return getNextStep ( start,goal,fillValues (
+                                 canStep, goal, start ) );
+    } );
 }
 
-std::list<Coords> CSmartPathFinder::findPath ( const Coords &start, const Coords &goal, std::function<bool ( const Coords & ) > canStep ) {
+std::list<Coords> CSmartPathFinder::findPath (  Coords start,  Coords goal, std::function<bool ( const Coords & ) > canStep ) {
     std::list<Coords> path;
     Values val=fillValues ( canStep,start,goal );
     Coords next=getNextStep ( next,goal,val );

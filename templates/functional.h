@@ -23,16 +23,10 @@ namespace vstd {
         return ret;
     }
 
-    template<typename Ctn>
-    class stream {
-    public:
-        typename Ctn::iterator begin() {
-            return ctn.begin();
+    template<typename Ctn,typename Func >
+    force_inline void map ( Ctn ctn,Func f ) {
+        for ( typename function_traits<Func>::return_type val:ctn ) {
+            call ( f,val ) ;
         }
-        typename Ctn::iterator end() {
-            return ctn.end();
-        }
-    private:
-        Ctn ctn;
-    };
+    }
 }

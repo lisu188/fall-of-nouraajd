@@ -1,5 +1,6 @@
 #include "CUtil.h"
 #include "templates/hash.h"
+#include "templates/util.h"
 #include "object/CGameObject.h"
 
 Coords::Coords() { x = y = z = 0; }
@@ -59,4 +60,17 @@ std::shared_ptr<CGameObject> CObjectData::getSource() const {
     return source;
 }
 
+CInvokeLater::CInvokeLater ( std::function<void () > target ) :target ( target ) {
+    this->moveToThread ( QApplication::instance()->thread() );
+}
+
+void CInvokeLater::run() {
+    QMetaObject::invokeMethod ( this,"call",vstd::is_main_thread() ?
+                                Qt::ConnectionType::DirectConnection:
+                                Qt::ConnectionType::BlockingQueuedConnection );
+}
+
+void CInvokeLater::call() {
+    target();
+}
 
