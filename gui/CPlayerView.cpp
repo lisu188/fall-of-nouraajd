@@ -4,7 +4,7 @@
 #include "CMap.h"
 #include "CGame.h"
 #include "CGameView.h"
-#include "CThreadUtil.h"
+#include "templates/thread.h"
 
 PlayerStatsView::PlayerStatsView() {
     this->player = player;
@@ -60,7 +60,7 @@ void PlayerStatsView::update() {
 
 CListView::CListView ( std::shared_ptr<AGamePanel> panel ) :CPlayerView ( panel ) {
     //to avoid bad pointer exception, defer this until object is initialized
-    CThreadUtil::call_later ( [this]() {
+    vstd::call_later ( [this]() {
         right = std::make_shared< CScrollObject> ( this->ptr<CListView>(), true );
         left = std::make_shared< CScrollObject> ( this->ptr<CListView>(), false );
         left->setPos ( 0, y *50 );

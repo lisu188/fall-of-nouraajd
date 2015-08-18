@@ -41,7 +41,6 @@ SOURCES += \
    panel/CGamePanel.cpp \
    object/CMarket.cpp \
    CGame.cpp \
-   CThreadUtil.cpp \
    CStats.cpp \
    CUtil.cpp \
    gui/CScriptWindow.cpp \
@@ -98,7 +97,6 @@ HEADERS += \
    handler/CMouseHandler.h \
    object/CMarket.h \
    CGame.h \
-   CThreadUtil.h \
    CStats.h \
    CUtil.h \
    CGlobal.h \
@@ -124,7 +122,9 @@ HEADERS += \
     CTypes.h \
     templates/converter.h \
     CDefines.h \
-    templates/util.h
+    templates/util.h \
+    templates/future.h \
+    templates/thread.h
 
 FORMS += \
    gui/CMainWindow.ui \

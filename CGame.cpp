@@ -1,7 +1,7 @@
 #include "CGame.h"
 #include "CUtil.h"
 #include "CMap.h"
-#include "CThreadUtil.h"
+#include "templates/thread.h"
 #include "object/CObject.h"
 #include "panel/CPanel.h"
 #include "handler/CHandler.h"

@@ -7,7 +7,7 @@
 #include "handler/CHandler.h"
 #include "CUtil.h"
 #include "loader/CLoader.h"
-#include "CThreadUtil.h"
+#include "templates/thread.h"
 
 CMap::CMap ( std::shared_ptr<CGame> game ) :game ( game ) {
 
@@ -279,7 +279,7 @@ void CMap::removeObjects ( std::function<bool ( std::shared_ptr<CMapObject> ) > 
 void CMap::move () {
     auto map=this->ptr();
 
-    CThreadUtil::wait_until ( [map]() {
+    vstd::wait_until ( [map]() {
         return !map->moving;
     } );
 
@@ -315,7 +315,7 @@ void CMap::move () {
         map->moving=false;
     };
 
-    CThreadUtil::invoke_all ( getIf ( pred ),target,callback,end_callback );
+    vstd::invoke_all ( getIf ( pred ),target,callback,end_callback );
 }
 
 std::set<std::shared_ptr<CMapObject>> CMap::getMapObjectsClone() {

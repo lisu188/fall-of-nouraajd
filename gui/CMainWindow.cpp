@@ -1,7 +1,7 @@
 #include "CGameView.h"
 #include "CMainWindow.h"
 #include "ui_CMainWindow.h"
-#include "CThreadUtil.h"
+#include "templates/thread.h"
 #include "CGame.h"
 #include "CMap.h"
 
@@ -12,7 +12,7 @@ CMainWindow::CMainWindow () :
 
 CMainWindow::~CMainWindow() {
     if ( view ) {
-        CThreadUtil::wait_until ( [this]() {
+        vstd::wait_until ( [this]() {
             return !view->getGame()->getMap()->isMoving();
         } );
     }
