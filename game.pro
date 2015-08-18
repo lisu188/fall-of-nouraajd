@@ -56,7 +56,8 @@ SOURCES += \
     CTypes.cpp \
     types/ctypes1.cpp \
     types/ctypes2.cpp \
-    controller/CController.cpp
+    controller/CController.cpp \
+    controller/CTargetController.cpp
 
 HEADERS += \
    CPathFinder.h \
@@ -126,7 +127,8 @@ HEADERS += \
     templates/converter.h \
     CDefines.h \
     templates/util.h \
-    controller/CController.h
+    controller/CController.h \
+    controller/CTargetController.h
 
 FORMS += \
    gui/CMainWindow.ui \
