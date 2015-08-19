@@ -129,7 +129,8 @@ HEADERS += \
     controller/CTargetController.h \
     templates/future.h \
     templates/thread.h \
-    templates/adaptors.h
+    templates/adaptors.h \
+    controller/CControllers.h
 
 FORMS += \
    gui/CMainWindow.ui \
