@@ -1,6 +1,7 @@
 #pragma once
 
 #include "templates/thread.h"
+#include "templates/util.h"
 
 namespace vstd {
     template<typename T>
@@ -201,25 +202,23 @@ namespace vstd {
 
         template<typename U=T>
         U get ( typename vstd::disable_if<std::is_same<U,void>::value>::type* =0 ) {
-            vstd::call_later_wait ( [this]() {
-                vstd::wait_until ( [this]() {
-                    return call->isCompleted();
-                } );
+            assert_main_thread();
+            vstd::wait_until ( [this]() {
+                return call->isCompleted();
             } );
             return call->getResult();
         }
         template<typename U=T>
         U get ( typename vstd::enable_if<std::is_same<U,void>::value>::type* =0 ) {
-            vstd::call_later_wait ( [this]() {
-                vstd::wait_until ( [this]() {
-                    return call->isCompleted();
-                } );
+            assert_main_thread();
+            vstd::wait_until ( [this]() {
+                return call->isCompleted();
             } );
         }
         //TODO: rethink this and move constructing static functions outside
     public:
         future ( std::shared_ptr<ccall<T>> call ) :call ( call ) {
-
+            assert_main_thread();
         }
         std::shared_ptr<future<T>> start() {
             call->call();
