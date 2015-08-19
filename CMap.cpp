@@ -280,48 +280,50 @@ void CMap::removeObjects ( std::function<bool ( std::shared_ptr<CMapObject> ) > 
 void CMap::move () {
     auto map=this->ptr();
 
-    vstd::wait_until ( [map]() {
+    vstd::call_when ( [map]() {
         return !map->moving;
+    },
+    [map]() {
+        map->moving=true;
+
+        map->applyEffects();
+
+        map->forObjects ( [map] ( std::shared_ptr<CMapObject> mapObject ) {
+            map->getEventHandler()->gameEvent ( mapObject , std::make_shared<CGameEvent> ( CGameEvent::Type::onTurn ) );
+        } );
+
+        auto pred=[] ( std::shared_ptr<CMapObject> object ) {
+            return vstd::castable<Moveable> ( object );
+        };
+
+        auto target=[] ( std::shared_ptr<CMapObject> object ) {
+            return std::make_pair ( object,vstd::cast<Moveable> ( object )->getNextMove() );
+        };
+
+        auto callback=[] ( std::pair<std::shared_ptr<CMapObject>,Coords> arg ) {
+            arg.first->move ( arg.second );
+        };
+
+        auto end_callback=[map]() {
+            map->resolveFights();
+
+            map->ensureSize();
+
+            if ( QApplication::instance()->property ( "auto_save" ).toBool() ) {
+                CMapLoader::saveMap ( map, QString::number ( QDateTime::currentMSecsSinceEpoch() )+".sav" );
+            }
+
+            map->moving=false;
+        };
+
+        vstd::future<>::when_all_done ( map->mapObjects|
+                                        boost::adaptors::map_values|
+                                        boost::adaptors::filtered ( pred ) |
+                                        boost::adaptors::transformed ( vstd::future<>::wrap_async ( target ) ) |
+                                        vstd::adaptors::add_later ( callback ),
+                                        end_callback );
     } );
 
-    map->moving=true;
-
-    applyEffects();
-
-    forObjects ( [map] ( std::shared_ptr<CMapObject> mapObject ) {
-        map->getEventHandler()->gameEvent ( mapObject , std::make_shared<CGameEvent> ( CGameEvent::Type::onTurn ) );
-    } );
-
-    auto pred=[] ( std::shared_ptr<CMapObject> object ) {
-        return vstd::castable<Moveable> ( object );
-    };
-
-    auto target=[] ( std::shared_ptr<CMapObject> object ) {
-        return std::make_pair ( object,vstd::cast<Moveable> ( object )->getNextMove() );
-    };
-
-    auto callback=[] ( std::pair<std::shared_ptr<CMapObject>,Coords> arg ) {
-        arg.first->move ( arg.second );
-    };
-
-    auto end_callback=[map]() {
-        map->resolveFights();
-
-        map->ensureSize();
-
-        if ( QApplication::instance()->property ( "auto_save" ).toBool() ) {
-            CMapLoader::saveMap ( map, QString::number ( QDateTime::currentMSecsSinceEpoch() )+".sav" );
-        }
-
-        map->moving=false;
-    };
-
-    vstd::future<>::when_all_done ( mapObjects|
-                                    boost::adaptors::map_values|
-                                    boost::adaptors::filtered ( pred ) |
-                                    boost::adaptors::transformed ( vstd::future<>::wrap_async ( target ) ) |
-                                    vstd::adaptors::add_later ( callback ),
-                                    end_callback );
 }
 
 std::set<std::shared_ptr<CMapObject>> CMap::getMapObjectsClone() {
