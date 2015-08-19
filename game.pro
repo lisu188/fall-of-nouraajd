@@ -124,7 +124,8 @@ HEADERS += \
     CDefines.h \
     templates/util.h \
     templates/future.h \
-    templates/thread.h
+    templates/thread.h \
+    templates/adaptors.h
 
 FORMS += \
    gui/CMainWindow.ui \

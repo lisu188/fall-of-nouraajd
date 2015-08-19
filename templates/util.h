@@ -23,4 +23,9 @@ namespace vstd {
     force_inline bool is_main_thread() {
         return QApplication::instance()->thread() == QThread::currentThread();
     }
+
+    template<typename F,typename... Args>
+    force_inline std::function<typename function_traits<F>::return_type() > bind ( F f,Args... args ) {
+        return std::bind ( f,args... );
+    }
 }
