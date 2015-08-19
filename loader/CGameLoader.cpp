@@ -20,14 +20,16 @@ void CGameLoader::startGame ( std::shared_ptr<CGame> game, QString file, QString
 
 void CGameLoader::changeMap ( std::shared_ptr<CGame> game, QString name ) {
     vstd::call_later ( [game,name]() {
-        //implement stop processing events here
-        vstd::wait_until ( [game]() {
+        //TODO: implement stop processing events here
+        vstd::call_when ( [game]() {
             return !game->getMap()->isMoving();
+        },
+        [game,name]() {
+            std::shared_ptr<CPlayer> player=game->getMap()->getPlayer();
+            game->setMap ( CMapLoader::loadNewMap ( game,name ) );
+            game->getMap()->setPlayer ( player );
+            game->getMap()->ensureSize();
         } );
-        std::shared_ptr<CPlayer> player=game->getMap()->getPlayer();
-        game->setMap ( CMapLoader::loadNewMap ( game,name ) );
-        game->getMap()->setPlayer ( player );
-        game->getMap()->ensureSize();
     } );
 }
 
