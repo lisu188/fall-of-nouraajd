@@ -8,6 +8,7 @@
 #include "CUtil.h"
 #include "loader/CLoader.h"
 #include "templates/thread.h"
+#include "controller/CControllers.h"
 #include "templates/adaptors.h"
 
 CMap::CMap ( std::shared_ptr<CGame> game ) :game ( game ) {
@@ -293,15 +294,11 @@ void CMap::move () {
     } );
 
     auto pred=[] ( std::shared_ptr<CMapObject> object ) {
-        return vstd::castable<Moveable> ( object );
+        return vstd::castable<Moveable> ( object ) && !vstd::castable<CPlayer> ( object );
     };
 
-    auto target=[] ( std::shared_ptr<CMapObject> object ) {
-        return std::make_pair ( object,vstd::cast<Moveable> ( object )->getNextMove() );
-    };
-
-    auto callback=[] ( std::pair<std::shared_ptr<CMapObject>,Coords> arg ) {
-        arg.first->move ( arg.second );
+    auto controller=[map] ( std::shared_ptr<CMapObject> object ) {
+        return std::make_shared<CTargetController> ( map->getPlayer() )->control ( vstd::cast<CCreature> ( object ) );
     };
 
     auto end_callback=[map]() {
@@ -316,11 +313,10 @@ void CMap::move () {
         map->moving=false;
     };
 
-    vstd::future<>::when_all_done ( mapObjects|
-                                    boost::adaptors::map_values|
+    vstd::future<>::when_all_done ( mapObjects |
+                                    boost::adaptors::map_values |
                                     boost::adaptors::filtered ( pred ) |
-                                    boost::adaptors::transformed ( vstd::future<>::wrap_async ( target ) ) |
-                                    vstd::adaptors::add_later ( callback ),
+                                    boost::adaptors::transformed ( controller ) ,
                                     end_callback );
 }
 
