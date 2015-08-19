@@ -1,5 +1,5 @@
 #include "loader/CLoader.h"
-#include "CThreadUtil.h"
+#include "templates/thread.h"
 #include "CTypes.h"
 
 std::shared_ptr<CGame> CGameLoader::loadGame ( std::shared_ptr<CGameView> view ) {
@@ -12,16 +12,16 @@ std::shared_ptr<CGame> CGameLoader::loadGame ( std::shared_ptr<CGameView> view )
 
 void CGameLoader::startGame ( std::shared_ptr<CGame> game, QString file, QString player ) {
     game->setMap ( CMapLoader::loadNewMap ( game,file,player ) );
-    CThreadUtil::call_later ( [game]() {
+    vstd::call_later ( [game]() {
         game->getMap()->ensureSize();
         game->getView()->show();
     } );
 }
 
 void CGameLoader::changeMap ( std::shared_ptr<CGame> game, QString name ) {
-    CThreadUtil::call_later ( [game,name]() {
+    vstd::call_later ( [game,name]() {
         //implement stop processing events here
-        CThreadUtil::wait_until ( [game]() {
+        vstd::wait_until ( [game]() {
             return !game->getMap()->isMoving();
         } );
         std::shared_ptr<CPlayer> player=game->getMap()->getPlayer();

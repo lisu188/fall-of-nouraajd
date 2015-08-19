@@ -7,7 +7,8 @@
 #include "handler/CHandler.h"
 #include "CUtil.h"
 #include "loader/CLoader.h"
-#include "CThreadUtil.h"
+#include "templates/thread.h"
+#include "templates/adaptors.h"
 
 CMap::CMap ( std::shared_ptr<CGame> game ) :game ( game ) {
 
@@ -279,7 +280,7 @@ void CMap::removeObjects ( std::function<bool ( std::shared_ptr<CMapObject> ) > 
 void CMap::move () {
     auto map=this->ptr();
 
-    CThreadUtil::wait_until ( [map]() {
+    vstd::wait_until ( [map]() {
         return !map->moving;
     } );
 
@@ -291,16 +292,16 @@ void CMap::move () {
         map->getEventHandler()->gameEvent ( mapObject , std::make_shared<CGameEvent> ( CGameEvent::Type::onTurn ) );
     } );
 
+    auto pred=[] ( std::shared_ptr<CMapObject> object ) {
+        return vstd::castable<Moveable> ( object );
+    };
+
     auto target=[] ( std::shared_ptr<CMapObject> object ) {
         return std::make_pair ( object,vstd::cast<Moveable> ( object )->getNextMove() );
     };
 
     auto callback=[] ( std::pair<std::shared_ptr<CMapObject>,Coords> arg ) {
         arg.first->move ( arg.second );
-    };
-
-    auto pred=[] ( std::shared_ptr<CMapObject> object ) {
-        return vstd::castable<Moveable> ( object );
     };
 
     auto end_callback=[map]() {
@@ -315,7 +316,12 @@ void CMap::move () {
         map->moving=false;
     };
 
-    CThreadUtil::invoke_all ( getIf ( pred ),target,callback,end_callback );
+    vstd::future<>::when_all_done ( mapObjects|
+                                    boost::adaptors::map_values|
+                                    boost::adaptors::filtered ( pred ) |
+                                    boost::adaptors::transformed ( vstd::future<>::wrap_async ( target ) ) |
+                                    vstd::adaptors::add_later ( callback ),
+                                    end_callback );
 }
 
 std::set<std::shared_ptr<CMapObject>> CMap::getMapObjectsClone() {

@@ -5,7 +5,7 @@
 #include "handler/CHandler.h"
 #include "gui/CGui.h"
 #include "loader/CLoader.h"
-#include "CThreadUtil.h"
+#include "templates/thread.h"
 
 void CGameView::show() {
     showNormal();
@@ -21,7 +21,7 @@ CGameView::CGameView ( QString mapName , QString playerType ) {
     setViewportUpdateMode ( QGraphicsView::BoundingRectViewportUpdate );
     setViewport ( new QGLWidget ( QGLFormat ( QGL::SampleBuffers ) ) );
     setViewportUpdateMode ( QGraphicsView::FullViewportUpdate );
-    CThreadUtil::call_later ( [this,mapName,playerType]() {
+    vstd::call_later ( [this,mapName,playerType]() {
         game= CGameLoader::loadGame ( this->ptr() );
         setScene ( game.get() );
         CGameLoader::startGame ( game,mapName ,playerType );

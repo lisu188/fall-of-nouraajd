@@ -26,3 +26,12 @@ private:
     std::shared_ptr<CGameObject> source;
 };
 
+class CInvokeLater:public QObject,public QRunnable {
+    Q_OBJECT
+public:
+    CInvokeLater ( std::function<void () > target );
+    void run() override;
+    std::function<void() > target;
+    Q_INVOKABLE void call();
+};
+

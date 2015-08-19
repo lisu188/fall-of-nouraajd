@@ -18,4 +18,14 @@ namespace vstd {
     force_inline std::pair<int,int> type_pair() {
         return std::make_pair ( qRegisterMetaType<A>(),qRegisterMetaType<B>() );
     }
+
+    template<typename T=void>
+    force_inline bool is_main_thread() {
+        return QApplication::instance()->thread() == QThread::currentThread();
+    }
+
+    template<typename F,typename... Args>
+    force_inline std::function<typename function_traits<F>::return_type() > bind ( F f,Args... args ) {
+        return std::bind ( f,args... );
+    }
 }
