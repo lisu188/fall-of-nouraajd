@@ -60,7 +60,6 @@ public:
     std::shared_ptr<CMapObject> getObjectByName ( QString name );
     bool isMoving();
     void applyEffects();
-    std::set<std::shared_ptr<CMapObject>> getIf ( std::function<bool ( std::shared_ptr<CMapObject> ) > func );
     void forObjects ( std::function<void ( std::shared_ptr<CMapObject> ) > func , std::function<bool ( std::shared_ptr<CMapObject> ) > predicate=[] ( std::shared_ptr<CMapObject> ) {return true;} );
     void forTiles ( std::function<void ( std::shared_ptr<CTile> ) > func, std::function<bool ( std::shared_ptr<CTile> ) > predicate =[] ( std::shared_ptr<CTile> ) {return true;} );
     void removeObjects ( std::function<bool ( std::shared_ptr<CMapObject> ) > func );
@@ -70,7 +69,6 @@ public:
     }
     std::shared_ptr<CMap> ptr();
 private:
-    std::set<std::shared_ptr<CMapObject> > getMapObjectsClone();
     void resolveFights();
     std::unordered_map<QString,std::shared_ptr<CMapObject>> mapObjects;
     std::weak_ptr<CGame> game;

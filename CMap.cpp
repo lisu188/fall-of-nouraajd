@@ -237,96 +237,86 @@ bool CMap::isMoving() {
 }
 
 void CMap::applyEffects() {
-    for ( std::shared_ptr<CMapObject> object:getIf ( [] ( std::shared_ptr<CMapObject> object ) {
-    return vstd::castable<CCreature> ( object );
-    } ) ) {
+    auto pred=[] ( std::shared_ptr<CMapObject> object ) {
+        return vstd::castable<CCreature> ( object );
+    };
+    for ( std::shared_ptr<CMapObject> object:mapObjects|
+            boost::adaptors::map_values|
+            boost::adaptors::filtered ( pred ) ) {
         vstd::cast<CCreature> ( object )->applyEffects();
     }
 }
 
-std::set<std::shared_ptr<CMapObject>> CMap::getIf ( std::function<bool ( std::shared_ptr<CMapObject> ) > func ) {
-    std::set<std::shared_ptr<CMapObject>> objects;
-    for ( auto it : mapObjects ) {
-        if ( func ( it.second ) ) {
-            objects.insert ( it.second );
-        }
-    }
-    return objects;
-}
-
 void CMap::forObjects ( std::function<void ( std::shared_ptr<CMapObject> ) > func, std::function<bool ( std::shared_ptr<CMapObject> ) > predicate ) {
-    for ( std::shared_ptr<CMapObject> object : getMapObjectsClone() ) {
-        if ( predicate ( object ) ) {
-            func ( object );
-        }
+    auto clone=mapObjects;
+    for ( std::shared_ptr<CMapObject> object : clone|
+            boost::adaptors::map_values |
+            boost::adaptors::filtered ( predicate )  ) {
+        func ( object );
     }
 }
 
 void CMap::forTiles ( std::function<void ( std::shared_ptr<CTile> ) > func, std::function<bool ( std::shared_ptr<CTile> ) > predicate ) {
-    for ( std::pair< Coords,std::shared_ptr<CTile>> val : *this ) {
-        if ( predicate ( val.second ) ) {
-            func ( val.second  );
-        }
+    for ( std::shared_ptr<CTile> tile:*dynamic_cast<std::unordered_map<Coords, std::shared_ptr<CTile>>*> ( this ) |
+            boost::adaptors::map_values |
+            boost::adaptors::filtered ( predicate ) ) {
+        func ( tile );
     }
 }
 
 void CMap::removeObjects ( std::function<bool ( std::shared_ptr<CMapObject> ) > func ) {
-    for ( std::shared_ptr<CMapObject> object : getMapObjectsClone() ) {
-        if ( func ( object ) ) {
-            removeObject ( object );
-        }
+    auto clone=mapObjects;
+    for ( std::shared_ptr<CMapObject> object : clone  |
+            boost::adaptors::map_values |
+            boost::adaptors::filtered ( func ) ) {
+        removeObject ( object );
     }
 }
 
 void CMap::move () {
     auto map=this->ptr();
 
-    vstd::wait_until ( [map]() {
+    vstd::call_when ( [map]() {
         return !map->moving;
+    },
+    [map]() {
+        map->moving=true;
+
+        map->applyEffects();
+
+        map->forObjects ( [map] ( std::shared_ptr<CMapObject> mapObject ) {
+            map->getEventHandler()->gameEvent ( mapObject , std::make_shared<CGameEvent> ( CGameEvent::Type::onTurn ) );
+        } );
+
+        auto pred=[] ( std::shared_ptr<CMapObject> object ) {
+            return vstd::castable<Moveable> ( object ) && !vstd::castable<CPlayer> ( object );
+        };
+
+        auto controller=[map] ( std::shared_ptr<CMapObject> object ) {
+            return std::make_shared<CTargetController> ( map->getPlayer() )->control ( vstd::cast<CCreature> ( object ) );
+        };
+
+        auto end_callback=[map]() {
+            map->resolveFights();
+
+            map->ensureSize();
+
+            if ( QApplication::instance()->property ( "auto_save" ).toBool() ) {
+                CMapLoader::saveMap ( map, QString::number ( QDateTime::currentMSecsSinceEpoch() )+".sav" );
+            }
+
+            map->moving=false;
+        };
+
+        vstd::future<>::when_all_done ( map->mapObjects |
+                                        boost::adaptors::map_values |
+                                        boost::adaptors::filtered ( pred ) |
+                                        boost::adaptors::transformed ( controller ) ,
+                                        end_callback );
     } );
-
-    map->moving=true;
-
-    applyEffects();
-
-    forObjects ( [map] ( std::shared_ptr<CMapObject> mapObject ) {
-        map->getEventHandler()->gameEvent ( mapObject , std::make_shared<CGameEvent> ( CGameEvent::Type::onTurn ) );
-    } );
-
-    auto pred=[] ( std::shared_ptr<CMapObject> object ) {
-        return vstd::castable<Moveable> ( object ) && !vstd::castable<CPlayer> ( object );
-    };
-
-    auto controller=[map] ( std::shared_ptr<CMapObject> object ) {
-        return std::make_shared<CTargetController> ( map->getPlayer() )->control ( vstd::cast<CCreature> ( object ) );
-    };
-
-    auto end_callback=[map]() {
-        map->resolveFights();
-
-        map->ensureSize();
-
-        if ( QApplication::instance()->property ( "auto_save" ).toBool() ) {
-            CMapLoader::saveMap ( map, QString::number ( QDateTime::currentMSecsSinceEpoch() )+".sav" );
-        }
-
-        map->moving=false;
-    };
-
-    vstd::future<>::when_all_done ( mapObjects |
-                                    boost::adaptors::map_values |
-                                    boost::adaptors::filtered ( pred ) |
-                                    boost::adaptors::transformed ( controller ) ,
-                                    end_callback );
 }
 
-std::set<std::shared_ptr<CMapObject>> CMap::getMapObjectsClone() {
-    std::set<std::shared_ptr<CMapObject>> objects;
-    for ( std::pair<QString,std::shared_ptr<CMapObject>> it:mapObjects ) {
-        objects.insert ( it.second );
-    }
-    return objects;
-}
+
 
 void CMap::resolveFights() {
     forObjects ( [this] ( std::shared_ptr<CMapObject> mapObject ) {

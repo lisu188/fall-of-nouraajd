@@ -1,6 +1,8 @@
 #pragma once
 #include "CGlobal.h"
 #include "templates/traits.h"
+#include "templates/future.h"
+
 namespace vstd {
     namespace adaptors {
         template<typename F>
