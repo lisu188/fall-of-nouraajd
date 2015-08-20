@@ -1,6 +1,8 @@
 #pragma once
 #include <boost/python.hpp>
 #include <boost/range/adaptors.hpp>
+#include <condition_variable>
+#include <deque>
 #include <fstream>
 #include <functional>
 #include <iomanip>

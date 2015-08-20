@@ -41,4 +41,32 @@ namespace vstd {
     force_inline std::set<Value> collect ( Range r ) {
         return cast<std::set<Value>> ( r );
     }
+
+    template<typename T>
+    force_inline typename T::value_type pop ( T &t ) {
+        auto x=t.top();
+        t.pop();
+        return x;
+    }
+
+    template <typename T>
+    class blocking_queue {
+    private:
+        std::mutex d_mutex;
+        std::condition_variable d_condition;
+        std::priority_queue<T,std::vector<T>,std::function<bool ( T,T ) >> d_queue;
+    public:
+        blocking_queue ( std::function<bool ( T,T ) > f=[] ( T t,T u ) {return true;} )
+            :d_queue ( f ) {}
+        void push ( T value ) {
+            std::unique_lock<std::mutex> lock ( d_mutex );
+            d_queue.push_front ( value );
+            d_condition.notify_one();
+        }
+        T pop() {
+            std::unique_lock<std::mutex> lock ( d_mutex );
+            d_condition.wait ( lock, [=] { return !d_queue.empty(); } );
+            return vstd::pop ( d_queue );
+        }
+    };
 }
