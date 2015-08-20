@@ -13,26 +13,27 @@ namespace vstd  {
                                   new CInvocationEvent ( vstd::bind ( target,params... ) ) );
     }
 
-    template <typename Predicate,typename Function>
-    force_inline void call_when ( Predicate pred,Function func ) {
-        if ( pred() ) {
-            func();
-        } else {
-            call_later ( [pred,func]() {
-                call_when ( pred,func );
-            } );
-        }
+    template <typename Function,typename... Arguments>
+    force_inline void call_later_block ( Function target,Arguments... params ) {
+        QApplication::sendEvent ( CInvocationHandler::instance(),
+                                  new CInvocationEvent ( vstd::bind ( target,params... ) ) );
     }
 
     template <typename Predicate>
     force_inline void wait_until ( Predicate pred ) {
-        while ( !pred() ) {
-            QApplication::processEvents ( QEventLoop::WaitForMoreEvents );
-        }
-        //wake up call for other waiting functions
-        QApplication::postEvent ( QApplication::instance(),
-                                  new QEvent ( QEvent::Type::None ) );
+        call_later_block ( [pred]() {
+            while ( !pred() ) {
+                QApplication::processEvents ( QEventLoop::WaitForMoreEvents );
+            }
+        } );
+    }
 
+    template <typename Predicate,typename Function,typename... Arguments>
+    force_inline void call_when ( Predicate pred,Function func,Arguments... params ) {
+        call_later ( [pred,func,params...]() {
+            wait_until ( pred );
+            call_later ( func,params... );
+        } );
     }
 
     template <typename Function,typename Callback>
@@ -61,7 +62,7 @@ namespace vstd  {
     };
 
     template <typename Function,typename Callback>
-    force_inline void call_async ( Function target,Callback callback=[] ( vstd::function_traits<Function> ) {} ) {
+    force_inline void call_async ( Function target,Callback callback=[] ( typename vstd::function_traits<Function>::return_type x ) {} ) {
         CThreadPool::instance()->run ( new CAsyncCall<Function,Callback> ( target,callback ) );
     }
 }
