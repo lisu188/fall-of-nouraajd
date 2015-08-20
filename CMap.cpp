@@ -308,11 +308,14 @@ void CMap::move () {
             map->moving=false;
         };
 
-        vstd::future<>::when_all_done ( map->mapObjects |
-                                        boost::adaptors::map_values |
-                                        boost::adaptors::filtered ( pred ) |
-                                        boost::adaptors::transformed ( controller ) ,
-                                        end_callback );
+
+
+
+        vstd::future<>::when_all_done (   map->mapObjects |
+                                          boost::adaptors::map_values |
+                                          boost::adaptors::filtered ( pred ) |
+                                          boost::adaptors::transformed ( controller )  ,
+                                          end_callback );
     } );
 }
 

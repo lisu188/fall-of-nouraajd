@@ -26,12 +26,20 @@ private:
     std::shared_ptr<CGameObject> source;
 };
 
-class CInvokeLater:public QObject,public QRunnable {
-    Q_OBJECT
+class CInvocationEvent:public QEvent {
 public:
-    CInvokeLater ( std::function<void () > target );
-    void run() override;
-    std::function<void() > target;
-    Q_INVOKABLE void call();
+    static const QEvent::Type TYPE=static_cast<QEvent::Type> ( 1001 );
+    CInvocationEvent ( std::function<void () > target );
+    std::function<void () > getTarget() const;
+private:
+    std::function<void() > const target;
 };
 
+class CInvocationHandler:public QObject {
+    Q_OBJECT
+public:
+    static CInvocationHandler* instance();
+    bool event ( QEvent *event ) ;
+private:
+    CInvocationHandler();
+};

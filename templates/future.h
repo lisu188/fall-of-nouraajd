@@ -1,7 +1,7 @@
 #pragma once
 
-#include "templates/thread.h"
 #include "templates/util.h"
+#include "templates/thread.h"
 
 namespace vstd {
     template<typename T>
@@ -118,9 +118,10 @@ namespace vstd {
             };
         }
 
+        //TODO: replace with method aggregating futures
         template<typename Range,typename Func>
         static void when_all_done ( Range range,Func func ) {
-            for ( auto a:range ) {
+            for ( auto a:collect ( range ) ) {
                 a->get();
             }
             call_later ( func );
@@ -141,6 +142,7 @@ namespace vstd {
                          typename vstd::enable_if<!vstd::is_same<FuncReturn,void>::value>::type* =0 ) {
             auto self=this->shared_from_this();
             return later ( [self,f]() {
+                self->get();
                 return later ( f )->get();
             } );
         }
@@ -159,6 +161,7 @@ namespace vstd {
                          typename vstd::enable_if<vstd::is_same<FuncReturn,void>::value>::type* =0 ) {
             auto self=this->shared_from_this();
             return later ( [self,f]() {
+                self->get();
                 later ( f )->get();
             } );
         }
@@ -178,6 +181,7 @@ namespace vstd {
                          typename vstd::enable_if<!vstd::is_same<FuncReturn,void>::value>::type* =0 ) {
             auto self=this->shared_from_this();
             return async ( [self,f]() {
+                self->get();
                 return async ( f )->get();
             } );
         }
@@ -196,6 +200,7 @@ namespace vstd {
                          typename vstd::enable_if<vstd::is_same<FuncReturn,void>::value>::type* =0 ) {
             auto self=this->shared_from_this();
             return async ( [self,f]() {
+                self->get();
                 async ( f )->get();
             } );
         }

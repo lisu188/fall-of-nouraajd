@@ -4,11 +4,13 @@
 #include "templates/traits.h"
 #include "templates/util.h"
 #include "CDefines.h"
+#include "CThreadPool.h"
 
 namespace vstd  {
     template <typename Function,typename... Arguments>
     force_inline void call_later ( Function target,Arguments... params ) {
-        QThreadPool::globalInstance()->start ( new CInvokeLater ( vstd::bind ( target,params... ) ) );
+        QApplication::postEvent ( CInvocationHandler::instance(),
+                                  new CInvocationEvent ( vstd::bind ( target,params... ) ) );
     }
 
     template <typename Predicate,typename Function>
@@ -60,6 +62,6 @@ namespace vstd  {
 
     template <typename Function,typename Callback>
     force_inline void call_async ( Function target,Callback callback=[] ( vstd::function_traits<Function> ) {} ) {
-        QThreadPool::globalInstance()->start ( new CAsyncCall<Function,Callback> ( target,callback ) );
+        CThreadPool::instance()->run ( new CAsyncCall<Function,Callback> ( target,callback ) );
     }
 }
