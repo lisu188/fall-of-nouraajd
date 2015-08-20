@@ -11,7 +11,8 @@
                  "name":"cave1",
                  "properties":
                     {
-                     "chance":"10"
+                        "monsters":"1000",
+                        "chance":"10"
                     },
                  "rotation":0,
                  "type":"Cave",

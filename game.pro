@@ -56,7 +56,8 @@ SOURCES += \
     types/ctypes1.cpp \
     types/ctypes2.cpp \
     controller/CController.cpp \
-    controller/CTargetController.cpp
+    controller/CTargetController.cpp \
+    CThreadPool.cpp
 
 HEADERS += \
    CPathFinder.h \
@@ -130,7 +131,8 @@ HEADERS += \
     templates/future.h \
     templates/thread.h \
     templates/adaptors.h \
-    controller/CControllers.h
+    controller/CControllers.h \
+    CThreadPool.h
 
 FORMS += \
    gui/CMainWindow.ui \

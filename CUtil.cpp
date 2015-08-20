@@ -60,17 +60,28 @@ std::shared_ptr<CGameObject> CObjectData::getSource() const {
     return source;
 }
 
-CInvokeLater::CInvokeLater ( std::function<void () > target ) :target ( target ) {
+
+CInvocationEvent::CInvocationEvent ( std::function<void () > target ) :QEvent ( TYPE ),target ( target ) {
+
+}
+std::function<void () > CInvocationEvent::getTarget() const {
+    return target;
+}
+
+
+CInvocationHandler *CInvocationHandler::instance() {
+    static CInvocationHandler self;
+    return &self;
+}
+
+bool CInvocationHandler::event ( QEvent *event ) {
+    if ( event->type() == CInvocationEvent::TYPE ) {
+        vstd::call ( static_cast<CInvocationEvent*> ( event )->getTarget() );
+        return true;
+    }
+    return false;
+}
+
+CInvocationHandler::CInvocationHandler() {
     this->moveToThread ( QApplication::instance()->thread() );
 }
-
-void CInvokeLater::run() {
-    QMetaObject::invokeMethod ( this,"call",vstd::is_main_thread() ?
-                                Qt::ConnectionType::DirectConnection:
-                                Qt::ConnectionType::BlockingQueuedConnection );
-}
-
-void CInvokeLater::call() {
-    target();
-}
-
