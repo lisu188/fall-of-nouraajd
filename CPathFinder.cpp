@@ -70,8 +70,7 @@ static force_inline Values fillValues ( std::function<bool ( const Coords& ) > c
         ( *values ) [goal]=0;
 
         while ( !nodes.empty() && !vstd::ctn ( marked,start ) ) {
-            Coords currentCoords = nodes.top();
-            nodes.pop();
+            Coords currentCoords = vstd::pop ( nodes );
             if ( marked.insert ( currentCoords ).second ) {
                 int curValue = ( *values ) [currentCoords];
                 for ( Coords tmpCoords:NEAR_COORDS ( currentCoords ) ) {
