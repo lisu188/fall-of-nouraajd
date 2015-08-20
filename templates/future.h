@@ -120,8 +120,16 @@ namespace vstd {
 
         //TODO: replace with method aggregating futures
         template<typename Range,typename Func>
-        static void when_all_done ( Range range,Func func ) {
+        static void when_all_done ( Range range,Func func,typename vstd::enable_if<vstd::is_pure_range<Range>::value>::type* =0 ) {
             for ( auto a:collect ( range ) ) {
+                a->get();
+            }
+            call_later ( func );
+        }
+
+        template<typename Range,typename Func>
+        static void when_all_done ( Range range,Func func,typename vstd::disable_if<vstd::is_pure_range<Range>::value>::type* =0 ) {
+            for ( auto a: range  ) {
                 a->get();
             }
             call_later ( func );
