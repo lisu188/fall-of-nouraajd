@@ -274,12 +274,14 @@ void CMap::removeObjects ( std::function<bool ( std::shared_ptr<CMapObject> ) > 
 }
 
 void CMap::move () {
+    static std::shared_ptr<vstd::future<>> move=vstd::future<>::later ( []() {} );
     auto map=this->ptr();
 
-    vstd::call_when ( [map]() {
-        return !map->moving;
-    },
-    [map]() {
+    move=move->thenLater ( [map]() {
+        vstd::wait_until ( [map]() {
+            return !map->moving;
+        } );
+
         map->moving=true;
 
         map->applyEffects();
@@ -308,9 +310,6 @@ void CMap::move () {
             map->moving=false;
         };
 
-
-
-
         vstd::future<>::when_all_done (   map->mapObjects |
                                           boost::adaptors::map_values |
                                           boost::adaptors::filtered ( pred ) |
@@ -318,8 +317,6 @@ void CMap::move () {
                                           end_callback );
     } );
 }
-
-
 
 void CMap::resolveFights() {
     forObjects ( [this] ( std::shared_ptr<CMapObject> mapObject ) {

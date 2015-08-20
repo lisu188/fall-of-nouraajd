@@ -215,7 +215,6 @@ namespace vstd {
 
         template<typename U=T>
         U get ( typename vstd::disable_if<std::is_same<U,void>::value>::type* =0 ) {
-            assert_main_thread();
             vstd::wait_until ( [this]() {
                 return call->isCompleted();
             } );
@@ -223,7 +222,6 @@ namespace vstd {
         }
         template<typename U=T>
         U get ( typename vstd::enable_if<std::is_same<U,void>::value>::type* =0 ) {
-            assert_main_thread();
             vstd::wait_until ( [this]() {
                 return call->isCompleted();
             } );

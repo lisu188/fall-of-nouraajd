@@ -38,6 +38,7 @@ void CPlayer::onDestroy ( std::shared_ptr<CGameEvent>  event ) {
 }
 
 std::shared_ptr<CInteraction> CPlayer::selectAction() {
+    //TODO: code with futures
     while ( ! this->getSelectedAction() ) {
         QApplication::processEvents ( QEventLoop::WaitForMoreEvents );
     }
@@ -59,6 +60,7 @@ void CPlayer::trade ( std::shared_ptr<CMarket> market ) {
         setMarket ( market );
         std::shared_ptr<AGamePanel> panel=getMap()->getGame()->getGuiHandler()->getPanel ( "CTradePanel" );
         panel->showPanel();
+        //TODO: code with futures
         while ( panel->isShown() ) {
             QApplication::processEvents ( QEventLoop::WaitForMoreEvents );
         }
