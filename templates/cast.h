@@ -9,7 +9,7 @@ namespace vstd {
                           typename vstd::disable_if<vstd::is_shared_ptr<T>::value>::type* =0,
                           typename vstd::disable_if<vstd::is_shared_ptr<U>::value>::type* =0,
                           typename vstd::disable_if<vstd::is_container<T>::value>::type* =0,
-                          typename vstd::disable_if<vstd::is_container<U>::value>::type* =0,
+                          typename vstd::disable_if<vstd::is_range<U>::value>::type* =0,
                           typename vstd::disable_if<vstd::is_pair<T>::value>::type* =0,
                           typename vstd::disable_if<vstd::is_pair<U>::value>::type* =0 ) {
         return ptr;
@@ -39,9 +39,9 @@ namespace vstd {
     template <typename T,typename U>
     force_inline T cast ( U c ,
                           typename std::enable_if<vstd::is_container<T>::value>::type* = 0,
-                          typename std::enable_if<vstd::is_container<U>::value>::type* = 0 ) {
+                          typename std::enable_if<vstd::is_range<U>::value>::type* = 0 ) {
         T t;
-        for ( typename U::value_type x:c ) {
+        for ( auto x:c ) {
             t.insert ( cast<typename T::value_type> ( x ) );
         }
         return t;
