@@ -2,6 +2,7 @@
 
 #include "templates/traits.h"
 #include "templates/hash.h"
+#include "templates/cast.h"
 
 namespace vstd {
     template <typename Container,typename Value>
@@ -36,15 +37,8 @@ namespace vstd {
         return std::bind ( f,args... );
     }
 
-    //TODO: create range traits
-    template<typename Range,
-             typename Iterator=typename vstd::function_traits<decltype ( &Range::begin ) >::return_type,
-             typename Value=typename vstd::function_traits<decltype ( &Iterator::operator* ) >::return_type>
-    std::set<Value> collect ( Range r ) {
-        std::set<Value> set;
-        for ( Value val:r ) {
-            set.insert ( val );
-        }
-        return set;
+    template<typename Range,typename Value=typename range_traits<Range>::value_type>
+    force_inline std::set<Value> collect ( Range r ) {
+        return cast<std::set<Value>> ( r );
     }
 }
