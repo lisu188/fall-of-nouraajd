@@ -8,15 +8,20 @@
 
 namespace vstd  {
     template <typename Function,typename... Arguments>
-    force_inline void call_later ( Function target,Arguments... params ) {
+    force_inline void call_later ( Function target,Arguments... args ) {
         QApplication::postEvent ( CInvocationHandler::instance(),
-                                  new CInvocationEvent ( vstd::bind ( target,params... ) ) );
+                                  new CInvocationEvent ( vstd::bind ( target,args... ) ) );
     }
 
     template <typename Function,typename... Arguments>
-    force_inline void call_later_block ( Function target,Arguments... params ) {
+    force_inline void call_async ( Function target ,Arguments... args ) {
+        CThreadPool::instance()->run ( vstd::bind ( target,args... ) );
+    }
+
+    template <typename Function,typename... Arguments>
+    force_inline void call_later_block ( Function target,Arguments... args ) {
         QApplication::sendEvent ( CInvocationHandler::instance(),
-                                  new CInvocationEvent ( vstd::bind ( target,params... ) ) );
+                                  new CInvocationEvent ( vstd::bind ( target,args... ) ) );
     }
 
     template <typename Predicate>
@@ -30,39 +35,10 @@ namespace vstd  {
 
     template <typename Predicate,typename Function,typename... Arguments>
     force_inline void call_when ( Predicate pred,Function func,Arguments... params ) {
-        call_later ( [pred,func,params...]() {
+        auto bind=vstd::bind ( func,params... );
+        call_later ( [pred,bind]() {
             wait_until ( pred );
-            call_later ( func,params... );
+            call_later ( bind );
         } );
-    }
-
-    template <typename Function,typename Callback>
-    class CAsyncCall:public QRunnable {
-    public:
-        CAsyncCall ( Function target,Callback callback ) :target ( target ),callback ( callback ) {}
-        void run() override {
-            _run();
-        }
-    private:
-        template<typename T=typename vstd::function_traits<Function>::return_type>
-        force_inline void _run ( typename vstd::enable_if<std::is_same<T,void>::value>::type* =0 ) {
-            target();
-            call_later ( [this] ( Callback cb ) {
-                cb (  );
-            },callback );
-        }
-        template<typename T=typename vstd::function_traits<Function>::return_type>
-        force_inline void _run ( typename vstd::disable_if<std::is_same<T,void>::value>::type* =0 ) {
-            call_later ( [this] ( typename function_traits<Function>::return_type result,Callback cb ) {
-                cb ( result );
-            },target(),callback );
-        }
-        Function target;
-        Callback callback;
-    };
-
-    template <typename Function,typename Callback>
-    force_inline void call_async ( Function target,Callback callback=[] ( typename vstd::function_traits<Function>::return_type x ) {} ) {
-        CThreadPool::instance()->run ( new CAsyncCall<Function,Callback> ( target,callback ) );
     }
 }

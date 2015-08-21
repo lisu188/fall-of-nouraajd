@@ -57,7 +57,7 @@ namespace vstd {
         std::condition_variable d_condition;
         Queue d_queue;
     public:
-        blocking_queue ( std::function<bool ( T,T ) > f=[] ( T t,T u ) {return true;} )
+        blocking_queue ( std::function<bool ( T,T ) > f=[] ( T , T ) {return true;} )
             :d_queue ( f ) {}
         void push ( T value ) {
             std::unique_lock<std::mutex> lock ( d_mutex );
