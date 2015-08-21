@@ -7,7 +7,8 @@ class CCreature;
 
 class CSmartPathFinder {
 public:
-    static std::shared_ptr<vstd::future<Coords>> findNextStep ( Coords start, Coords goal,
+    //TODO change naming
+    static std::shared_ptr<vstd::future<std::function<Coords() >>> findNextStep ( Coords start, Coords goal,
             std::function<bool ( const Coords& ) > canStep );
     static std::list<Coords> findPath (  Coords start,  Coords goal,
                                          std::function<bool ( const Coords& ) > canStep );

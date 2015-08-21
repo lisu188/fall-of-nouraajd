@@ -3,7 +3,6 @@
 #include <boost/range/adaptors.hpp>
 #include <condition_variable>
 #include <deque>
-#include <thread>
 #include <fstream>
 #include <functional>
 #include <iomanip>
@@ -58,6 +57,7 @@
 #include <sstream>
 #include <stdio.h>
 #include <string>
+#include <thread>
 #include <time.h>
 #include <unordered_map>
 #include <unordered_set>
