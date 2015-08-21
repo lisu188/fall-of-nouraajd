@@ -44,17 +44,18 @@ namespace vstd {
 
     template<typename T>
     force_inline typename T::value_type pop ( T &t ) {
-        auto x=t.top();
+        auto x=t.front();
         t.pop();
         return x;
     }
 
-    template <typename T>
+    //TODO: use somewhere std::priority_queue<T,std::vector<T>,std::function<bool ( T,T ) >>
+    template <typename T,typename Queue=std::deque<T>>
     class blocking_queue {
     private:
         std::mutex d_mutex;
         std::condition_variable d_condition;
-        std::priority_queue<T,std::vector<T>,std::function<bool ( T,T ) >> d_queue;
+        Queue d_queue;
     public:
         blocking_queue ( std::function<bool ( T,T ) > f=[] ( T t,T u ) {return true;} )
             :d_queue ( f ) {}

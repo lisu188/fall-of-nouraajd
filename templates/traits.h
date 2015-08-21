@@ -10,10 +10,29 @@ namespace vstd {
     using std::is_same;
     using std::is_base_of;
 
+    namespace detail {
+        template <typename T>
+        struct return_type
+        : public return_type<decltype ( &T::operator() ) > {};
+
+        template <typename ClassType, typename ReturnType, typename... Args>
+        struct return_type<ReturnType ( ClassType::* ) ( Args... ) const> {
+            typedef ReturnType type;
+        };
+
+        template<size_t i>
+        void args ( typename vstd::enable_if<i == 0>::type * = 0 ) {}
+
+        template<size_t i,typename... Args>
+        typename std::tuple_element<i, std::tuple<Args...>>::type
+        args ( typename vstd::disable_if<sizeof... ( Args ) == 0>::type * = 0 ) {
+            //return std::declval<typename std::tuple_element<i, std::tuple<Args...>>::type>() ;
+        }
+    }
+
     template <typename T>
     struct function_traits
-    : public function_traits<decltype ( &T::operator() ) >
-      {};
+    : public function_traits<decltype ( &T::operator() ) > {};
 
     template <typename ClassType, typename ReturnType, typename... Args>
     struct function_traits<ReturnType ( ClassType::* ) ( Args... ) const> {
@@ -21,9 +40,9 @@ namespace vstd {
 
         typedef ReturnType return_type;
 
-        template <size_t i>
+        template<size_t i>
         struct arg {
-            typedef typename std::tuple_element<i, std::tuple<Args...>>::type type;
+            typedef decltype ( detail::args<i,Args...>() ) type;
         };
     };
 
