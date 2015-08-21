@@ -3,6 +3,7 @@
 #include <boost/range/adaptors.hpp>
 #include <condition_variable>
 #include <deque>
+#include <thread>
 #include <fstream>
 #include <functional>
 #include <iomanip>
