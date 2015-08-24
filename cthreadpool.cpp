@@ -12,7 +12,7 @@ void CThreadPool::run ( QRunnable *runnable ) {
 }
 
 CThreadPool::CThreadPool() {
-    pool.setExpiryTimeout ( -1 );
+
 }
 
 void CThreadPool::addThreads ( int num ) {
