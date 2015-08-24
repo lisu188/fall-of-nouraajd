@@ -70,7 +70,7 @@ static force_inline Values fillValues ( std::function<bool ( const Coords& ) > c
         ( *values ) [goal]=0;
 
         while ( !nodes.empty() && !vstd::ctn ( marked,start ) ) {
-            Coords currentCoords = vstd::pop ( nodes );
+            Coords currentCoords = vstd::pop_p ( nodes );
             if ( marked.insert ( currentCoords ).second ) {
                 int curValue = ( *values ) [currentCoords];
                 for ( Coords tmpCoords:NEAR_COORDS ( currentCoords ) ) {
@@ -91,8 +91,8 @@ static force_inline Values fillValues ( std::function<bool ( const Coords& ) > c
     return values;
 }
 
-std::shared_ptr<vstd::future<std::function<Coords() >>>  CSmartPathFinder::findNextStep (  Coords  start, Coords  goal, std::function<bool ( const Coords& ) > canStep ) {
-    return vstd::future<>::async ( [start,goal,canStep]() {
+std::shared_ptr<vstd::future<Coords,void>>  CSmartPathFinder::findNextStep (  Coords  start, Coords  goal, std::function<bool ( const Coords& ) > canStep ) {
+    return vstd::async ( [start,goal,canStep]() {
         return getNextStep ( start,goal,fillValues (
                                  canStep, goal, start ) );
     } );

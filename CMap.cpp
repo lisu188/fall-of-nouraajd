@@ -274,7 +274,9 @@ void CMap::removeObjects ( std::function<bool ( std::shared_ptr<CMapObject> ) > 
 }
 
 void CMap::move () {
-    static std::shared_ptr<vstd::future<>> move=vstd::future<>::later ( []() {} );
+    static std::shared_ptr<vstd::future<void,void>> move=vstd::later ( []() {
+        qDebug() <<"hello";
+    } );
     auto map=this->ptr();
 
     move=move->thenLater ( [map]() {
@@ -298,7 +300,7 @@ void CMap::move () {
             return std::make_shared<CTargetController> ( map->getPlayer() )->control ( vstd::cast<CCreature> ( object ) );
         };
 
-        auto end_callback=[map]() {
+        auto end_callback=[map] ( std::set<void*> ) {
             map->resolveFights();
 
             map->ensureSize();
@@ -310,11 +312,11 @@ void CMap::move () {
             map->moving=false;
         };
 
-        vstd::future<>::when_all_done (   map->mapObjects |
-                                          boost::adaptors::map_values |
-                                          boost::adaptors::filtered ( pred ) |
-                                          boost::adaptors::transformed ( controller )  ,
-                                          end_callback );
+        vstd::join ( map->mapObjects |
+                     boost::adaptors::map_values |
+                     boost::adaptors::filtered ( pred ) |
+                     boost::adaptors::transformed ( controller ) )
+        ->thenLater ( end_callback );
     } );
 }
 
