@@ -72,6 +72,7 @@ namespace vstd {
 
             typedef typename function_type<return_type,argument_type>::type function_target;
             typedef typename normalized_function<function_target>::type normalized_target;
+            typedef  std::function<void ( typename function_traits<normalized_target>::return_type ) > on_result;
 
             volatile bool completed=false;
             std::condition_variable_any condition;
@@ -139,6 +140,9 @@ namespace vstd {
                     std::unique_lock<std::recursive_mutex> lock ( mutex );
                     *result=t;
                     completed=true;
+                    if ( _on_result ) {
+                        _on_result ( t );
+                    }
                 }
                 condition.notify_all();
             }
@@ -153,6 +157,9 @@ namespace vstd {
                 {
                     std::unique_lock<std::recursive_mutex> lock ( mutex );
                     completed=true;
+                    if ( _on_result ) {
+                        _on_result ( nullptr );
+                    }
                 }
                 condition.notify_all();
             }
@@ -171,14 +178,20 @@ namespace vstd {
                 } );
             }
 
-            bool isCompleted() {
+            void onResult ( on_result cb ) {
                 std::unique_lock<std::recursive_mutex> lock ( mutex );
-                return completed;
+                if ( completed ) {
+                    cb ( getResult() );
+                } else {
+                    _on_result=cb;
+                }
             }
 
         private:
 
             normalized_target _target;
+
+            on_result _on_result;
 
             std::function<void ( std::function<void() > ) > _caller;
         };
@@ -243,32 +256,22 @@ namespace vstd {
 
     private:
         const std::shared_ptr<detail::ccall<return_type,argument_type>> _call;
-        const std::shared_ptr<request_processor> _processor;
 
-        future ( std::shared_ptr<detail::ccall<return_type,argument_type>> call,std::shared_ptr<request_processor> processor ) :
-            _call ( call ),
-            _processor ( processor ) {
-
-        }
-
-        future ( std::shared_ptr<detail::ccall<return_type,argument_type>> call ) :
-            _call ( call ),
-            _processor ( std::make_shared<request_processor>() ) {
-            _processor->post ( vstd::bind ( [] ( std::shared_ptr<detail::ccall<return_type,argument_type>> c ) {
-                c->call();
-            },_call ) );
-            _processor->start();
+        future ( std::shared_ptr<detail::ccall<return_type,argument_type>> call,bool start=true ) :
+            _call ( call ) {
+            if ( start ) {
+                _call->call();
+            }
         }
 
         template<typename _return_type,typename _first_arg>
         auto chain_call ( std::shared_ptr<detail::ccall<_return_type,_first_arg>> _new_call ) {
             auto _self=this->shared_from_this();
-            _processor->post ( [_self,_new_call]() {
-                auto arg = _self->_call->getResult();
+            _self->_call->onResult ( [_new_call] ( auto arg ) {
                 _new_call->setArgument ( arg );
                 _new_call->call();
             } );
-            return std::make_shared<future<_return_type,_first_arg>> ( _new_call,_processor );
+            return std::make_shared<future<_return_type,_first_arg>> ( _new_call,false );
         }
     };
 
