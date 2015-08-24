@@ -45,7 +45,7 @@ namespace vstd {
     template<typename T>
     force_inline typename T::value_type pop ( T &t ) {
         auto x=t.front();
-        t.pop_front ();
+        t.pop();
         return x;
     }
 
@@ -71,7 +71,7 @@ namespace vstd {
     }
 
     //TODO: use somewhere std::priority_queue<T,std::vector<T>,std::function<bool ( T,T ) >>
-    template <typename T,typename Queue=std::deque<T>>
+    template <typename T,typename Queue=std::queue<T>>
     class blocking_queue {
     private:
         std::recursive_mutex d_mutex;
@@ -83,14 +83,23 @@ namespace vstd {
         void push ( T value ) {
             {
                 std::unique_lock<std::recursive_mutex> lock ( d_mutex );
-                d_queue.push_front ( value );
+                d_queue.push ( value );
             }
             d_condition.notify_one();
         }
-        T pop() {
-            std::unique_lock<std::recursive_mutex> lock ( d_mutex );
-            d_condition.wait ( lock, [=] { return !d_queue.empty(); } );
-            return vstd::pop ( d_queue );
+        void pop ( std::function<void ( T ) > callback ) {
+            T value;
+            bool result;
+            {
+                std::unique_lock<std::recursive_mutex> lock ( d_mutex );
+                result = d_condition.wait_for ( lock,std::chrono::milliseconds ( 250 ), [=] { return !d_queue.empty(); } ) ;
+                if ( result ) {
+                    value=vstd::pop ( d_queue );
+                }
+            }
+            if ( result ) {
+                callback ( value );
+            }
         }
     };
 }
