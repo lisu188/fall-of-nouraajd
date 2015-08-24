@@ -184,36 +184,25 @@ namespace vstd {
         };
     }
 
-    class request_processor:public std::enable_shared_from_this<request_processor> {
+    class request_processor : public std::enable_shared_from_this<request_processor> {
     public:
-        request_processor() :_thread ( vstd::bind ( [] ( std::shared_ptr<request_processor> self ) {
-            do {
-                vstd::call (  self->_queue.pop() );
-            } while ( self->_active );
-        },this->shared_from_this() ) ) {}
+        request_processor()  {}
 
         template<typename F,typename... Args>
         void post ( F f,Args... args ) {
             _queue.push ( vstd::bind ( f,args... ) );
         }
         void start() {
-            post ( [=]() {
-                _active=true;
-            } );
-        }
-        void stop() {
-            post ( [=]() {
-                _active=false;
-            } );
-        }
-        ~request_processor() {
-            stop();
-            _thread.join();
+            _thread=std::thread ( [] ( std::shared_ptr<request_processor> self ) {
+                do {
+                    self->_queue.pop ( vstd::call<std::function<void() >> );
+                } while ( self.use_count() > 1 );
+            },this->shared_from_this() ) ;
+            _thread.detach();
         }
     private:
         vstd::blocking_queue<std::function<void() >> _queue;
         std::thread _thread;
-        bool _active=true;
     };
 
     namespace detail {
@@ -240,9 +229,6 @@ namespace vstd {
         typedef typename detail::function_type<return_type,argument_type>::type function;
 
         auto get ( ) {
-            vstd::wait_until ( [this]() {
-                return _call->isCompleted();
-            } );
             return _call->getResult();
         }
 
@@ -271,6 +257,7 @@ namespace vstd {
             _processor->post ( vstd::bind ( [] ( std::shared_ptr<detail::ccall<return_type,argument_type>> c ) {
                 c->call();
             },_call ) );
+            _processor->start();
         }
 
         template<typename _return_type,typename _first_arg>
@@ -319,7 +306,7 @@ namespace vstd {
     template<typename Range>
     auto join ( Range range ) {
         return async ( [range]() {
-            return collect ( range |
+            return collect ( collect ( range ) |
             boost::adaptors::transformed ( [] ( auto future ) {
                 return future->get();
             } ) );
