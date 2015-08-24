@@ -34,7 +34,7 @@ struct builder {
                                        boost::python::handle<> ( boost::python::borrowed (
                                                boost::python::incref ( obj_ptr ) ) ) );
         new ( storage ) std::function<R ( Args... ) > ( [func] ( Args... args ) {
-            return R ( vstd::call<ptr_type> (
+            return R ( vstd::call (
                            boost::python::extract<ptr_type> (
                                boost::python::incref ( func ( args... ).ptr() ) ) )  );
         } );
@@ -105,7 +105,7 @@ struct implicit_cast {
         bool convertible = get_source.convertible();
         BOOST_VERIFY ( convertible );
 
-        new ( storage ) Target ( vstd::cast<Target> ( vstd::call<Source> ( get_source ) ) ) ;
+        new ( storage ) Target ( vstd::cast<Target> ( get_source() ) ) ;
 
         data->convertible = storage;
     }

@@ -45,27 +45,50 @@ namespace vstd {
     template<typename T>
     force_inline typename T::value_type pop ( T &t ) {
         auto x=t.front();
+        t.pop_front ();
+        return x;
+    }
+
+    template<typename T>
+    force_inline typename T::value_type pop_p ( T &t ) {
+        auto x=t.top();
         t.pop();
         return x;
+    }
+
+    template<typename F,
+             typename ret=typename vstd::function_traits<F>::return_type,
+             typename arg=typename vstd::function_traits<F>::template arg<0>::type>
+    force_inline std::function<ret ( arg ) > make_function ( F f,typename vstd::disable_if<std::is_void<arg>::value>::type * = 0 ) {
+        return std::function<ret ( arg ) > ( f );
+    }
+
+    template<typename F,
+             typename ret=typename vstd::function_traits<F>::return_type,
+             typename arg=typename vstd::function_traits<F>::template arg<0>::type>
+    force_inline std::function<ret () > make_function ( F f,typename vstd::enable_if<std::is_void<arg>::value>::type * = 0 ) {
+        return std::function<ret() > ( f );
     }
 
     //TODO: use somewhere std::priority_queue<T,std::vector<T>,std::function<bool ( T,T ) >>
     template <typename T,typename Queue=std::deque<T>>
     class blocking_queue {
     private:
-        std::mutex d_mutex;
-        std::condition_variable d_condition;
+        std::recursive_mutex d_mutex;
+        std::condition_variable_any d_condition;
         Queue d_queue;
     public:
-        blocking_queue ( std::function<bool ( T,T ) > f=[] ( T , T ) {return true;} )
-            :d_queue ( f ) {}
+        typedef T value_type;
+
         void push ( T value ) {
-            std::unique_lock<std::mutex> lock ( d_mutex );
-            d_queue.push_front ( value );
+            {
+                std::unique_lock<std::recursive_mutex> lock ( d_mutex );
+                d_queue.push_front ( value );
+            }
             d_condition.notify_one();
         }
         T pop() {
-            std::unique_lock<std::mutex> lock ( d_mutex );
+            std::unique_lock<std::recursive_mutex> lock ( d_mutex );
             d_condition.wait ( lock, [=] { return !d_queue.empty(); } );
             return vstd::pop ( d_queue );
         }

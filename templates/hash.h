@@ -21,7 +21,7 @@ namespace vstd {
         static force_inline std::size_t hash ( U u,
                                                typename vstd::disable_if<vstd::is_pair<U>::value>::type* =0,
                                                typename vstd::disable_if<vstd::is_enum<U>::value>::type* =0 ) {
-            return call<std::size_t> ( std::hash<U>() , u );
+            return call ( std::hash<U>() , u );
         }
         template<typename U=T>
         static force_inline std::size_t hash ( U u,
