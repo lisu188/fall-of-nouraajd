@@ -4,8 +4,8 @@
 
 static void messageHandler ( QtMsgType type, const QMessageLogContext &,
                              const QString &msg ) {
-    static std::mutex mutex;
-    std::unique_lock<std::mutex> lock ( mutex );
+    static std::recursive_mutex mutex;
+    std::unique_lock<std::recursive_mutex> lock ( mutex );
     QByteArray localMsg = msg.toLocal8Bit();
     switch ( type ) {
     case QtDebugMsg:

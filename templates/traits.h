@@ -9,6 +9,7 @@ namespace vstd {
     using std::is_enum;
     using std::is_same;
     using std::is_base_of;
+    using std::is_void;
 
     namespace detail {
         template <typename T>
@@ -44,6 +45,8 @@ namespace vstd {
         struct arg {
             typedef decltype ( detail::args<i,Args...>() ) type;
         };
+
+        typedef typename arg<0>::type first_arg;
     };
 
     template <typename T, typename... Args>

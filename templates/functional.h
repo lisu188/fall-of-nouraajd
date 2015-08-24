@@ -3,13 +3,17 @@
 #include"templates/traits.h"
 
 namespace vstd {
-    template<typename R,typename F,typename... Args>
-    force_inline R call ( F f, Args... args ) {
+    template<typename F,typename... Args>
+    force_inline
+    typename disable_if<is_void<typename function_traits<F>::return_type>::value,
+    typename function_traits<F>::return_type>::type call ( F f, Args... args ) {
         return f ( args... );
     }
 
     template<typename F,typename... Args>
-    force_inline void call ( F f, Args... args ) {
+    force_inline
+    typename enable_if<is_void<typename function_traits<F>::return_type>::value,
+    typename function_traits<F>::return_type>::type call ( F f, Args... args ) {
         f ( args... );
     }
 
