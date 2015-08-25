@@ -75,7 +75,6 @@ namespace vstd {
             typedef  std::function<void ( typename function_traits<normalized_target>::return_type ) > on_result;
 
             volatile bool completed=false;
-            std::condition_variable_any condition;
             std::recursive_mutex mutex;
             return_type* result=_new<return_type>();
             argument_type* argument=_new<argument_type>();
@@ -136,37 +135,31 @@ namespace vstd {
 
             template<typename X=return_type>
             void setResult ( X t ,typename vstd::disable_if<vstd::is_same<X,void>::value>::type * = 0 ) {
-                {
-                    std::unique_lock<std::recursive_mutex> lock ( mutex );
-                    *result=t;
-                    completed=true;
-                    if ( _on_result ) {
-                        _on_result ( t );
-                    }
+                std::unique_lock<std::recursive_mutex> lock ( mutex );
+                *result=t;
+                completed=true;
+                if ( _on_result ) {
+                    _on_result ( t );
                 }
-                condition.notify_all();
             }
             template<typename X=return_type>
             X getResult ( typename vstd::disable_if<vstd::is_same<X,void>::value>::type * = 0 ) {
                 std::unique_lock<std::recursive_mutex> lock ( mutex );
-                condition.wait ( lock,[=]() {return completed;} );
+                vstd::yield ( &lock,[=]() {return completed;} );
                 return *result;
             }
             template<typename X=return_type>
             void setResult ( typename vstd::enable_if<vstd::is_same<X,void>::value>::type * = 0 ) {
-                {
-                    std::unique_lock<std::recursive_mutex> lock ( mutex );
-                    completed=true;
-                    if ( _on_result ) {
-                        _on_result ( nullptr );
-                    }
+                std::unique_lock<std::recursive_mutex> lock ( mutex );
+                completed=true;
+                if ( _on_result ) {
+                    _on_result ( nullptr );
                 }
-                condition.notify_all();
             }
             template<typename X=return_type>
             void* getResult ( typename vstd::enable_if<vstd::is_same<X,void>::value>::type * = 0 ) {
                 std::unique_lock<std::recursive_mutex> lock ( mutex );
-                condition.wait ( lock,[=]() {return completed;} );
+                vstd::yield ( &lock,[=]() {return completed;} );
                 return nullptr;
             }
 
@@ -196,27 +189,6 @@ namespace vstd {
             std::function<void ( std::function<void() > ) > _caller;
         };
     }
-
-    class request_processor : public std::enable_shared_from_this<request_processor> {
-    public:
-        request_processor()  {}
-
-        template<typename F,typename... Args>
-        void post ( F f,Args... args ) {
-            _queue.push ( vstd::bind ( f,args... ) );
-        }
-        void start() {
-            _thread=std::thread ( [] ( std::shared_ptr<request_processor> self ) {
-                do {
-                    self->_queue.pop ( vstd::call<std::function<void() >> );
-                } while ( self.use_count() > 1 );
-            },this->shared_from_this() ) ;
-            _thread.detach();
-        }
-    private:
-        vstd::blocking_queue<std::function<void() >> _queue;
-        std::thread _thread;
-    };
 
     namespace detail {
         template<typename func>

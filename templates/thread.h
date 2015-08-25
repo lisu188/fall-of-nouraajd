@@ -1,10 +1,11 @@
 #pragma once
 #include "CGlobal.h"
 #include "CUtil.h"
+#include "CDefines.h"
+
 #include "templates/traits.h"
 #include "templates/util.h"
-#include "CDefines.h"
-#include "CThreadPool.h"
+#include "templates/threadpool.h"
 
 namespace vstd  {
     template <typename Function,typename... Arguments>
@@ -15,7 +16,8 @@ namespace vstd  {
 
     template <typename Function,typename... Arguments>
     force_inline void call_async ( Function target ,Arguments... args ) {
-        CThreadPool::instance()->run ( vstd::bind ( target,args... ) );
+        static std::shared_ptr<vstd::thread_pool<16>> pool=std::make_shared<vstd::thread_pool<16>>();
+        pool->execute (  target,args...  );
     }
 
     template <typename Function,typename... Arguments>
