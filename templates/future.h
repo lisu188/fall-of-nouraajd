@@ -141,6 +141,7 @@ namespace vstd {
                 if ( _on_result ) {
                     _on_result ( t );
                 }
+                vstd::unyield();
             }
             template<typename X=return_type>
             X getResult ( typename vstd::disable_if<vstd::is_same<X,void>::value>::type * = 0 ) {
@@ -155,6 +156,7 @@ namespace vstd {
                 if ( _on_result ) {
                     _on_result ( nullptr );
                 }
+                vstd::unyield();
             }
             template<typename X=return_type>
             void* getResult ( typename vstd::enable_if<vstd::is_same<X,void>::value>::type * = 0 ) {

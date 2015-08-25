@@ -80,6 +80,10 @@ namespace vstd {
     public:
         typedef T value_type;
 
+        void release_all() {
+            d_condition.notify_all();
+        }
+
         void push ( T value ) {
             {
                 std::unique_lock<std::recursive_mutex> lock ( d_mutex );
@@ -89,11 +93,12 @@ namespace vstd {
         }
         void pop ( std::function<void ( T ) > callback ) {
             T value;
-            bool result;
+            bool result=false;
             {
                 std::unique_lock<std::recursive_mutex> lock ( d_mutex );
-                result = d_condition.wait_for ( lock,std::chrono::milliseconds ( 250 ), [=] { return !d_queue.empty(); } ) ;
-                if ( result ) {
+                d_condition.wait ( lock );
+                if ( !d_queue.empty() ) {
+                    result=true;
                     value=vstd::pop ( d_queue );
                 }
             }
