@@ -11,6 +11,9 @@ namespace vstd {
                 vstd::register_yield ( [pool,self]() {
                     pool->_queue.pop ( vstd::call<std::function<void() >> );
                 } );
+                vstd::register_unyield ( [pool,self]() {
+                    pool->_queue.release_all();
+                } );
                 do {
                     pool->_queue.pop ( vstd::call<std::function<void() >> );
                 } while ( self.use_count() > 1 );
