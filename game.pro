@@ -131,8 +131,7 @@ HEADERS += \
     templates/thread.h \
     templates/adaptors.h \
     controller/CControllers.h \
-    templates/threadpool.h \
-    templates/yield.h
+    templates/threadpool.h
 
 FORMS += \
    gui/CMainWindow.ui \
