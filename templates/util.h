@@ -80,31 +80,22 @@ namespace vstd {
     public:
         typedef T value_type;
 
-        void release_all() {
-            d_condition.notify_all();
-        }
-
         void push ( T value ) {
-            {
-                std::unique_lock<std::recursive_mutex> lock ( d_mutex );
-                d_queue.push ( value );
-            }
+            std::unique_lock<std::recursive_mutex> lock ( d_mutex );
+            d_queue.push ( value );
             d_condition.notify_one();
         }
+
         void pop ( std::function<void ( T ) > callback ) {
             T value;
-            bool result=false;
             {
                 std::unique_lock<std::recursive_mutex> lock ( d_mutex );
-                d_condition.wait ( lock );
-                if ( !d_queue.empty() ) {
-                    result=true;
-                    value=vstd::pop ( d_queue );
-                }
+                d_condition.wait ( lock,[this]() {
+                    return !d_queue.empty();
+                } );
+                value=vstd::pop ( d_queue );
             }
-            if ( result ) {
-                callback ( value );
-            }
+            callback ( value );
         }
     };
 }
