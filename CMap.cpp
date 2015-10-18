@@ -274,9 +274,7 @@ void CMap::removeObjects ( std::function<bool ( std::shared_ptr<CMapObject> ) > 
 }
 
 void CMap::move () {
-    static std::shared_ptr<vstd::future<void,void>> move=vstd::later ( []() {
-        qDebug() <<"hello";
-    } );
+    static std::shared_ptr<vstd::future<void,void>> move=vstd::later ( []() {} );
     auto map=this->ptr();
 
     move=move->thenLater ( [map]() {

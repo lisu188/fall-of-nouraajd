@@ -76,6 +76,7 @@ namespace vstd {
 
             volatile bool completed=false;
             std::recursive_mutex mutex;
+            std::condition_variable_any _condition;
             return_type* result=_new<return_type>();
             argument_type* argument=_new<argument_type>();
 
@@ -141,12 +142,12 @@ namespace vstd {
                 if ( _on_result ) {
                     _on_result ( t );
                 }
-                vstd::unyield();
+                _condition.notify_all();
             }
             template<typename X=return_type>
             X getResult ( typename vstd::disable_if<vstd::is_same<X,void>::value>::type * = 0 ) {
                 std::unique_lock<std::recursive_mutex> lock ( mutex );
-                vstd::yield ( &lock,[=]() {return completed;} );
+                _condition.wait ( lock,[=]() {return completed;} );
                 return *result;
             }
             template<typename X=return_type>
@@ -156,12 +157,12 @@ namespace vstd {
                 if ( _on_result ) {
                     _on_result ( nullptr );
                 }
-                vstd::unyield();
+                _condition.notify_all();
             }
             template<typename X=return_type>
             void* getResult ( typename vstd::enable_if<vstd::is_same<X,void>::value>::type * = 0 ) {
                 std::unique_lock<std::recursive_mutex> lock ( mutex );
-                vstd::yield ( &lock,[=]() {return completed;} );
+                _condition.wait ( lock,[=]() {return completed;} );
                 return nullptr;
             }
 

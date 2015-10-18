@@ -16,7 +16,7 @@ namespace vstd  {
 
     template <typename Function,typename... Arguments>
     force_inline void call_async ( Function target ,Arguments... args ) {
-        static std::shared_ptr<vstd::thread_pool<16>> pool=std::make_shared<vstd::thread_pool<16>>();
+        static std::shared_ptr<vstd::thread_pool<16>> pool=std::make_shared<vstd::thread_pool<16>>()->start();
         pool->execute (  target,args...  );
     }
 
