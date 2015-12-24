@@ -1,5 +1,18 @@
 <RCC>
   <qresource prefix="/">
+    <file>maps/map1/script.py</file>
+    <file>maps/map1/map.json</file>
+    <file>maps/map1/config.json</file>
+    <file>maps/map2/map.json</file>
+    <file>maps/map2/script.py</file>
+    
+    <file>scripts/game.py</file>
+    <file>scripts/interaction.py</file>
+    <file>scripts/object.py</file>
+    <file>scripts/effect.py</file>
+    <file>scripts/tile.py</file>
+    <file>scripts/potion.py</file>
+
     <file>images/item.png</file>
     <file>images/terrain.png</file>
     <file>images/tiles/beach.png</file>
@@ -85,5 +98,17 @@
     <file>images/items/armors/platearmor.png</file>
     <file>images/items/armors/robe.png</file>
     <file>images/buildings/market.png</file>
+
+    <file>config/armors.json</file>
+    <file>config/buildings.json</file>
+    <file>config/effects.json</file>
+    <file>config/interactions.json</file>
+    <file>config/items.json</file>
+    <file>config/misc.json</file>
+    <file>config/monsters.json</file>
+    <file>config/potions.json</file>
+    <file>config/tiles.json</file>
+    <file>config/weapons.json</file>
+    <file>slots.json</file>
   </qresource>
 </RCC>
