@@ -143,13 +143,13 @@ set(SOURCE_FILES
         CSerialization.h
         CStats.cpp
         CStats.h
-        ctypes.cpp
-        ctypes.h
+        CTypes.cpp
+        CTypes.h
         CUtil.cpp
         CUtil.h)
 
 qt5_wrap_ui(FOMRS_SOURCE_FILES gui/CMainWindow.ui gui/CScriptWindow.ui)
-qt5_add_resources(RESOURCE_FILES res.qrc)
+qt5_add_resources(RESOURCE_FILES resources/resources.qrc)
 
 include_directories(${Boost_INCLUDE_DIRS})
 include_directories(${PYTHON_INCLUDE_DIRS})
