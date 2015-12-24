@@ -149,7 +149,7 @@ set(SOURCE_FILES
         CUtil.h)
 
 qt5_wrap_ui(FOMRS_SOURCE_FILES gui/CMainWindow.ui gui/CScriptWindow.ui)
-qt5_add_resources(RESOURCE_FILES config.qrc images.qrc maps.qrc scripts.qrc)
+qt5_add_resources(RESOURCE_FILES res.qrc)
 
 include_directories(${Boost_INCLUDE_DIRS})
 include_directories(${PYTHON_INCLUDE_DIRS})
