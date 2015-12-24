@@ -1,6 +1,6 @@
 {
-    "Event": {
-        "class": "CEvent",
-        "properties": {}
-    }
+  "Event": {
+    "class": "CEvent",
+    "properties": {}
+  }
 }

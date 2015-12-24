@@ -85,7 +85,7 @@ void CMapLoader::handleTileLayer ( std::shared_ptr<CMap> map,const QJsonObject &
     int yLayer=layer ["width"].toInt();
     int xLayer= layer["height"].toInt();
 
-    for ( int y = 0; y <yLayer; ++y )
+    for ( int y = 0; y <yLayer; ++y ){
         for ( int x = 0; x <xLayer ; ++x ) {
             int id = layer["data"].toArray() [x+y*xLayer].toInt();
             if ( id == 0 ) {
@@ -96,7 +96,7 @@ void CMapLoader::handleTileLayer ( std::shared_ptr<CMap> map,const QJsonObject &
             QString tileType= tileset[tileId].toObject() ["type"].toString();
             map->addTile ( map->createObject<CTile> ( tileType ), x,
                            y, level );
-        }
+        }}
 }
 
 void CMapLoader::handleObjectLayer ( std::shared_ptr<CMap> map, const QJsonObject &layer ) {
