@@ -1,51 +1,51 @@
 {
-    "0": {
-        "name": "RightHand",
-        "types": [
-            "CWeapon"
-        ]
-    },
-    "1": {
-        "name": "LeftHand",
-        "types": [
-            "CSmallWeapon",
-            "CShield"
-        ]
-    },
-    "2": {
-        "name": "Head",
-        "types": [
-            "CHelmet"
-        ]
-    },
-    "3": {
-        "name": "Chest",
-        "types": [
-            "CArmor"
-        ]
-    },
-    "4": {
-        "name": "Waist",
-        "types": [
-            "CBelt"
-        ]
-    },
-    "5": {
-        "name": "Feet",
-        "types": [
-            "CBoots"
-        ]
-    },
-    "6": {
-        "name": "Legs",
-        "types": [
-            "CPants"
-        ]
-    },
-    "7": {
-        "name": "Hands",
-        "types": [
-            "CGloves"
-        ]
-    }
+  "0": {
+    "name": "RightHand",
+    "types": [
+      "CWeapon"
+    ]
+  },
+  "1": {
+    "name": "LeftHand",
+    "types": [
+      "CSmallWeapon",
+      "CShield"
+    ]
+  },
+  "2": {
+    "name": "Head",
+    "types": [
+      "CHelmet"
+    ]
+  },
+  "3": {
+    "name": "Chest",
+    "types": [
+      "CArmor"
+    ]
+  },
+  "4": {
+    "name": "Waist",
+    "types": [
+      "CBelt"
+    ]
+  },
+  "5": {
+    "name": "Feet",
+    "types": [
+      "CBoots"
+    ]
+  },
+  "6": {
+    "name": "Legs",
+    "types": [
+      "CPants"
+    ]
+  },
+  "7": {
+    "name": "Hands",
+    "types": [
+      "CGloves"
+    ]
+  }
 }

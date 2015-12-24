@@ -111,11 +111,11 @@ QRectF CListView::boundingRect() const {
 void CListView::paint ( QPainter *painter,
                         const QStyleOptionGraphicsItem *,
                         QWidget * ) {
-    for ( unsigned int i = 0; i < x; i++ )
+    for ( unsigned int i = 0; i < x; i++ ){
         for ( unsigned int j = 0; j < y; j++ ) {
             painter->drawPixmap ( i *50, j *50,
                                   pixmap );
-        }
+        }}
 }
 
 void CListView::updatePosition ( int i ) {

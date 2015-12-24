@@ -1,81 +1,81 @@
 {
-    "CrownOfNightmares": {
-        "class": "CHelmet",
+  "CrownOfNightmares": {
+    "class": "CHelmet",
+    "properties": {
+      "animation": "images/items/helmets/crownofnightmares",
+      "bonus": {
+        "class": "Stats",
         "properties": {
-            "animation": "images/items/helmets/crownofnightmares",
-            "bonus": {
-                "class": "Stats",
-                "properties": {
-                    "agility": 7,
-                    "armor": 280,
-                    "crit": 5,
-                    "intelligence": 12,
-                    "stamina": 14,
-                    "strength": 4
-                }
-            },
-            "power": 18
+          "agility": 7,
+          "armor": 280,
+          "crit": 5,
+          "intelligence": 12,
+          "stamina": 14,
+          "strength": 4
         }
-    },
-    "EradicatorsBoots": {
-        "class": "CBoots",
-        "properties": {
-            "animation": "images/items/boots/eradicatorsboots",
-            "bonus": {
-                "class": "Stats",
-                "properties": {
-                    "agility": 0,
-                    "armor": 170,
-                    "intelligence": 7,
-                    "stamina": 8,
-                    "strength": 10
-                }
-            },
-            "power": 14
-        }
-    },
-    "GlovesOfTheAssasin": {
-        "class": "CGloves",
-        "properties": {
-            "animation": "images/items/gloves/glovesoftheassasin",
-            "bonus": {
-                "class": "Stats",
-                "properties": {
-                    "agility": 15,
-                    "armor": 295,
-                    "crit": 2,
-                    "intelligence": 9,
-                    "stamina": 13,
-                    "strength": 8
-                }
-            },
-            "power": 11
-        }
-    },
-    "Scroll": {
-        "class": "CScroll",
-        "properties": {
-            "animation": "images/items/scroll",
-            "power": 0,
-            "singleUse": true
-        }
-    },
-    "UndestructibleBelt": {
-        "class": "CBelt",
-        "properties": {
-            "animation": "images/items/belts/undestructiblebelt",
-            "bonus": {
-                "class": "Stats",
-                "properties": {
-                    "agility": 14,
-                    "armor": 300,
-                    "block": 6,
-                    "intelligence": 14,
-                    "stamina": 14,
-                    "strength": 14
-                }
-            },
-            "power": 20
-        }
+      },
+      "power": 18
     }
+  },
+  "EradicatorsBoots": {
+    "class": "CBoots",
+    "properties": {
+      "animation": "images/items/boots/eradicatorsboots",
+      "bonus": {
+        "class": "Stats",
+        "properties": {
+          "agility": 0,
+          "armor": 170,
+          "intelligence": 7,
+          "stamina": 8,
+          "strength": 10
+        }
+      },
+      "power": 14
+    }
+  },
+  "GlovesOfTheAssasin": {
+    "class": "CGloves",
+    "properties": {
+      "animation": "images/items/gloves/glovesoftheassasin",
+      "bonus": {
+        "class": "Stats",
+        "properties": {
+          "agility": 15,
+          "armor": 295,
+          "crit": 2,
+          "intelligence": 9,
+          "stamina": 13,
+          "strength": 8
+        }
+      },
+      "power": 11
+    }
+  },
+  "Scroll": {
+    "class": "CScroll",
+    "properties": {
+      "animation": "images/items/scroll",
+      "power": 0,
+      "singleUse": true
+    }
+  },
+  "UndestructibleBelt": {
+    "class": "CBelt",
+    "properties": {
+      "animation": "images/items/belts/undestructiblebelt",
+      "bonus": {
+        "class": "Stats",
+        "properties": {
+          "agility": 14,
+          "armor": 300,
+          "block": 6,
+          "intelligence": 14,
+          "stamina": 14,
+          "strength": 14
+        }
+      },
+      "power": 20
+    }
+  }
 }
