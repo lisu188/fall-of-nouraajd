@@ -171,11 +171,11 @@ CONFIG(debug,debug|release){
 
 
 unix{
-  LIBS += -L/usr/local/lib -L/home/andrzejlis/boost_1_58_0/stage/lib -lpython3.4m -ldl -fPIC -lutil -lboost_python3 -lboost_system -lboost_thread
-  INCLUDEPATH += /usr/local/include/python3.4m
-  DEPENDPATH += /usr/local/include/python3.4m
-  INCLUDEPATH += /home/andrzejlis/boost_1_58_0
-  DEPENDPATH += /home/andrzejlis/boost_1_58_0
+  LIBS += -L/usr/local/lib -L$$(BOOST_LIB) -lpython3.4m -ldl -fPIC -lutil -lboost_python3 -lboost_system -lboost_thread
+  INCLUDEPATH += $$(PYTHON_INC)
+  DEPENDPATH += $$(PYTHON_INC)
+  INCLUDEPATH += $$(BOOST_INC)
+  DEPENDPATH += $$(BOOST_INC)
 }
 
 win32{
@@ -185,11 +185,11 @@ win32{
   CONFIG(debug,debug|release){
     LIBS += -lboost_python3-mgw49-mt-d-1_58 -lboost_system-mgw49-mt-d-1_58 -lboost_thread-mgw49-mt-d-1_58
   }
-  LIBS += -LC:\boost_1_58_0\stage\lib -LC:\Python34\libs -fPIC -lpython34
-  INCLUDEPATH += C:\Python34\include
-  DEPENDPATH += C:\Python34\include
-  INCLUDEPATH += C:\boost_1_58_0
-  DEPENDPATH += C:\boost_1_58_0
+  LIBS += -L$$(BOOST_LIB)b -L$$(PYTHON_LIB) -fPIC -lpython34
+  INCLUDEPATH += $$(PYTHON_INC)
+  DEPENDPATH += $$(PYTHON_INC)
+  INCLUDEPATH += $$(BOOST_INC)
+  DEPENDPATH += $$(BOOST_INC)
 }
 
 
