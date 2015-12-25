@@ -126,6 +126,7 @@ set(SOURCE_FILES
         templates/threadpool.h
         templates/traits.h
         templates/util.h
+        templates/defines.h
         types/ctypes1.cpp
         types/ctypes2.cpp
         core/CDefines.h
