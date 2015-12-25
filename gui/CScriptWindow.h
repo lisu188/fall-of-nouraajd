@@ -9,9 +9,9 @@ namespace Ui {
 }
 
 class CScriptWindow : public QWidget {
-Q_OBJECT
+    Q_OBJECT
 public:
-    CScriptWindow(std::shared_ptr<CGame> game);
+    CScriptWindow ( std::shared_ptr<CGame> game );
 
     ~CScriptWindow();
 

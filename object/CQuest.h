@@ -3,7 +3,7 @@
 #include "CGameObject.h"
 
 class CQuest : public CGameObject {
-Q_OBJECT
+    Q_OBJECT
 public:
     CQuest();
 
@@ -12,4 +12,4 @@ public:
     virtual void onComplete();
 };
 
-GAME_PROPERTY (CQuest)
+GAME_PROPERTY ( CQuest )

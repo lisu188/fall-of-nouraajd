@@ -1,58 +1,58 @@
 {
-  "AbyssalShadowsEffect": {
-    "class": "AbyssalShadowsEffect",
-    "properties": {
-      "duration": 4
+    "AbyssalShadowsEffect": {
+        "class": "AbyssalShadowsEffect",
+        "properties": {
+            "duration": 4
+        }
+    },
+    "ArmorOfEndlessWinterEffect": {
+        "class": "ArmorOfEndlessWinterEffect",
+        "properties": {
+            "buff": true,
+            "duration": 3
+        }
+    },
+    "BarrierEffect": {
+        "class": "BarrierEffect",
+        "properties": {
+            "buff": true,
+            "duration": 3
+        }
+    },
+    "BloodlashEffect": {
+        "class": "BloodlashEffect",
+        "properties": {
+            "duration": 3
+        }
+    },
+    "ChloroformEffect": {
+        "class": "ChloroformEffect",
+        "properties": {
+            "duration": 4
+        }
+    },
+    "EndlessPainEffect": {
+        "class": "EndlessPainEffect",
+        "properties": {
+            "duration": 2
+        }
+    },
+    "LethalPoisonEffect": {
+        "class": "LethalPoisonEffect",
+        "properties": {
+            "duration": 6
+        }
+    },
+    "MutilationEffect": {
+        "class": "MutilationEffect",
+        "properties": {
+            "duration": 3
+        }
+    },
+    "Stun": {
+        "class": "Stun",
+        "properties": {
+            "duration": 2
+        }
     }
-  },
-  "ArmorOfEndlessWinterEffect": {
-    "class": "ArmorOfEndlessWinterEffect",
-    "properties": {
-      "buff": true,
-      "duration": 3
-    }
-  },
-  "BarrierEffect": {
-    "class": "BarrierEffect",
-    "properties": {
-      "buff": true,
-      "duration": 3
-    }
-  },
-  "BloodlashEffect": {
-    "class": "BloodlashEffect",
-    "properties": {
-      "duration": 3
-    }
-  },
-  "ChloroformEffect": {
-    "class": "ChloroformEffect",
-    "properties": {
-      "duration": 4
-    }
-  },
-  "EndlessPainEffect": {
-    "class": "EndlessPainEffect",
-    "properties": {
-      "duration": 2
-    }
-  },
-  "LethalPoisonEffect": {
-    "class": "LethalPoisonEffect",
-    "properties": {
-      "duration": 6
-    }
-  },
-  "MutilationEffect": {
-    "class": "MutilationEffect",
-    "properties": {
-      "duration": 3
-    }
-  },
-  "Stun": {
-    "class": "Stun",
-    "properties": {
-      "duration": 2
-    }
-  }
 }

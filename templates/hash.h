@@ -22,30 +22,30 @@ namespace vstd {
     template<typename T>
     struct hasher {
         template<typename U=T>
-        static force_inline std::size_t hash(U u,
-                                             typename vstd::disable_if<vstd::is_pair<U>::value>::type * = 0,
-                                             typename vstd::disable_if<vstd::is_enum<U>::value>::type * = 0) {
-            return call(std::hash<U>(), u);
+        static force_inline std::size_t hash ( U u,
+                                               typename vstd::disable_if<vstd::is_pair<U>::value>::type * = 0,
+                                               typename vstd::disable_if<vstd::is_enum<U>::value>::type * = 0 ) {
+            return call ( std::hash<U>(), u );
         }
 
         template<typename U=T>
-        static force_inline std::size_t hash(U u,
-                                             typename vstd::disable_if<vstd::is_pair<U>::value>::type * = 0,
-                                             typename vstd::enable_if<vstd::is_enum<U>::value>::type * = 0) {
-            return hasher<int>::hash(static_cast<int> ( u ));
+        static force_inline std::size_t hash ( U u,
+                                               typename vstd::disable_if<vstd::is_pair<U>::value>::type * = 0,
+                                               typename vstd::enable_if<vstd::is_enum<U>::value>::type * = 0 ) {
+            return hasher<int>::hash ( static_cast<int> ( u ) );
         }
     };
 
     template<typename T>
-    force_inline std::size_t hash_combine(T t) {
-        return hasher<T>::hash(t);
+    force_inline std::size_t hash_combine ( T t ) {
+        return hasher<T>::hash ( t );
     }
 
     template<typename F, typename G, typename ...T>
-    force_inline std::size_t hash_combine(F f, G g, T... args) {
-        return power<31, sizeof... (args) + 1>::value *
-               hash_combine(f) +
-               hash_combine(g, args...);
+    force_inline std::size_t hash_combine ( F f, G g, T... args ) {
+        return power<31, sizeof... ( args ) + 1>::value *
+               hash_combine ( f ) +
+               hash_combine ( g, args... );
     }
 }
 

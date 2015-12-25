@@ -12,40 +12,40 @@ namespace vstd {
     namespace detail {
         template<typename T>
         struct return_type
-                : public return_type<decltype(&T::operator())> {
-        };
+        : public return_type<decltype ( &T::operator() ) > {
+          };
 
         template<typename ClassType, typename ReturnType, typename... Args>
-        struct return_type<ReturnType (ClassType::*)(Args...) const> {
+        struct return_type<ReturnType ( ClassType::* ) ( Args... ) const> {
             typedef ReturnType type;
         };
 
         template<size_t i>
-        void args(typename vstd::enable_if<i == 0>::type * = 0) { }
+        void args ( typename vstd::enable_if<i == 0>::type * = 0 ) { }
 
         template<size_t i, typename... Args>
         typename std::tuple_element<i, std::tuple<Args...>>::type
-        args(typename vstd::disable_if<sizeof... (Args) == 0>::type * = 0) {
+        args ( typename vstd::disable_if<sizeof... ( Args ) == 0>::type * = 0 ) {
             //return std::declval<typename std::tuple_element<i, std::tuple<Args...>>::type>() ;
         }
     }
 
     template<typename T>
     struct function_traits
-            : public function_traits<decltype(&T::operator())> {
-    };
+    : public function_traits<decltype ( &T::operator() ) > {
+      };
 
     template<typename ClassType, typename ReturnType, typename... Args>
-    struct function_traits<ReturnType (ClassType::*)(Args...) const> {
+    struct function_traits<ReturnType ( ClassType::* ) ( Args... ) const> {
         enum {
-            arity = sizeof... (Args)
+            arity = sizeof... ( Args )
         };
 
         typedef ReturnType return_type;
 
         template<size_t i>
         struct arg {
-            typedef decltype(detail::args<i, Args...>()) type;
+            typedef decltype ( detail::args<i, Args...>() ) type;
         };
 
         typedef typename arg<0>::type first_arg;
@@ -54,21 +54,21 @@ namespace vstd {
     template<typename T, typename... Args>
     class has_insert {
         template<typename C,
-                typename = decltype(std::declval<C>().insert(std::declval<Args>()...))>
-        static std::true_type test(int);
+                 typename = decltype ( std::declval<C>().insert ( std::declval<Args>()... ) ) >
+        static std::true_type test ( int );
 
         template<typename C>
-        static std::false_type test(...);
+        static std::false_type test ( ... );
 
     public:
-        static constexpr bool value = decltype(test<T>(0))
-        ::value;
+        static constexpr bool value = decltype ( test<T> ( 0 ) )
+                                      ::value;
     };
 
     template<typename Range>
     struct range_traits {
-        typedef typename vstd::function_traits<decltype(&Range::begin)>::return_type iterator;
-        typedef typename vstd::function_traits<decltype(&iterator::operator*)>::return_type value_type;
+        typedef typename vstd::function_traits<decltype ( &Range::begin ) >::return_type iterator;
+        typedef typename vstd::function_traits<decltype ( &iterator::operator* ) >::return_type value_type;
     };
 
     template<typename T>
@@ -100,7 +100,7 @@ namespace vstd {
 
     template<class T>
     struct is_set<T, typename std::enable_if<std::is_same<typename T::key_type, typename T::value_type>::value>::type>
-            : std::true_type {
+        : std::true_type {
     };
 
     template<class T, class E1 = void, class E2 = void, class E3 = void>
@@ -109,7 +109,7 @@ namespace vstd {
 
     template<class T>
     struct is_map<T, typename enable_if_type<typename T::key_type>::type, typename enable_if_type<typename T::value_type>::type, typename disable_if<is_set<T>::value>::type>
-            : std::true_type {
+        : std::true_type {
     };
 
     template<class T, class E1 = void, class E2 = void>
@@ -118,7 +118,7 @@ namespace vstd {
 
     template<class T>
     struct is_pair<T, typename enable_if_type<typename T::first_type>::type, typename enable_if_type<typename T::second_type>::type>
-            : std::true_type {
+        : std::true_type {
     };
 
     template<class T, class E1 = void, class E2=void>
@@ -127,7 +127,7 @@ namespace vstd {
 
     template<class T>
     struct is_range<T, typename enable_if_type<typename T::value_type>::type,
-            typename disable_if<is_same_clear<T, QString>::value>::type> : std::true_type {
+               typename disable_if<is_same_clear<T, QString>::value>::type> : std::true_type {
     };
 
     template<class T, class E1 = void, class E2=void, class E3=void>
@@ -136,8 +136,8 @@ namespace vstd {
 
     template<class T>
     struct is_container<T, typename enable_if_type<typename T::value_type>::type,
-            typename enable_if<has_insert<T, typename T::value_type>::value>::type,
-            typename disable_if<is_same_clear<T, QString>::value>::type> : std::true_type {
+               typename enable_if<has_insert<T, typename T::value_type>::value>::type,
+               typename disable_if<is_same_clear<T, QString>::value>::type> : std::true_type {
     };
 
     template<class T, class E1 = void>
@@ -146,7 +146,7 @@ namespace vstd {
 
     template<class T>
     struct is_pure_range<T, typename std::enable_if<
-            is_range<T>::value && !is_container<T>::value>::type> : std::true_type {
+        is_range<T>::value && !is_container<T>::value>::type> : std::true_type {
     };
 }
 

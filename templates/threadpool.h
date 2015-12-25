@@ -5,10 +5,10 @@ namespace vstd {
         class worker_thread {
         public:
             template<typename thread_pool>
-            void operator()(std::shared_ptr<thread_pool> pool, std::shared_ptr<worker_thread> self) {
+            void operator() ( std::shared_ptr<thread_pool> pool, std::shared_ptr<worker_thread> self ) {
                 do {
-                    pool->_queue.pop(vstd::call<std::function<void() >>);
-                } while (self.use_count() > 1);
+                    pool->_queue.pop ( vstd::call<std::function<void() >> );
+                } while ( self.use_count() > 1 );
             }
         };
     }
@@ -18,13 +18,13 @@ namespace vstd {
         friend worker_thread;
     public:
         template<typename F, typename... Args>
-        void execute(F f, Args... args) {
-            _queue.push(vstd::bind(f, args...));
+        void execute ( F f, Args... args ) {
+            _queue.push ( vstd::bind ( f, args... ) );
         }
 
         std::shared_ptr<thread_pool> start() {
-            std::unique_lock<std::recursive_mutex> lock(_worker_lock);
-            while (_workers.size() < _worker_count) {
+            std::unique_lock<std::recursive_mutex> lock ( _worker_lock );
+            while ( _workers.size() < _worker_count ) {
                 add_worker();
             }
             return this->shared_from_this();
@@ -32,15 +32,15 @@ namespace vstd {
 
     private:
         void add_worker() {
-            std::unique_lock<std::recursive_mutex> lock(_worker_lock);
+            std::unique_lock<std::recursive_mutex> lock ( _worker_lock );
             auto worker = std::make_shared<worker_thread>();
-            _workers.insert(worker);
-            std::thread(*worker, this->shared_from_this(), worker).detach();
+            _workers.insert ( worker );
+            std::thread ( *worker, this->shared_from_this(), worker ).detach();
         }
 
         void del_worker() {
-            std::unique_lock<std::recursive_mutex> lock(_worker_lock);
-            _workers.erase(_workers.begin());
+            std::unique_lock<std::recursive_mutex> lock ( _worker_lock );
+            _workers.erase ( _workers.begin() );
         }
 
         vstd::blocking_queue<std::function<void() >> _queue;
