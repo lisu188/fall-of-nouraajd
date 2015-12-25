@@ -1,296 +1,296 @@
 {
-  "BladeOfDarkDreams": {
-    "class": "CWeapon",
-    "properties": {
-      "animation": "images/items/weapons/bladeofdarkdreams",
-      "bonus": {
-        "class": "Stats",
+    "BladeOfDarkDreams": {
+        "class": "CWeapon",
         "properties": {
-          "agility": 7,
-          "crit": 3,
-          "dmgMax": 42,
-          "dmgMin": 35,
-          "intelligence": 5,
-          "stamina": 12,
-          "strength": 13
+            "animation": "images/items/weapons/bladeofdarkdreams",
+            "bonus": {
+                "class": "Stats",
+                "properties": {
+                    "agility": 7,
+                    "crit": 3,
+                    "dmgMax": 42,
+                    "dmgMin": 35,
+                    "intelligence": 5,
+                    "stamina": 12,
+                    "strength": 13
+                }
+            },
+            "power": 9
         }
-      },
-      "power": 9
-    }
-  },
-  "BroadSword": {
-    "class": "CWeapon",
-    "properties": {
-      "animation": "images/items/weapons/broadsword",
-      "bonus": {
-        "class": "Stats",
+    },
+    "BroadSword": {
+        "class": "CWeapon",
         "properties": {
-          "agility": 2,
-          "dmgMax": 18,
-          "dmgMin": 15,
-          "intelligence": 1,
-          "stamina": 4,
-          "strength": 5
+            "animation": "images/items/weapons/broadsword",
+            "bonus": {
+                "class": "Stats",
+                "properties": {
+                    "agility": 2,
+                    "dmgMax": 18,
+                    "dmgMin": 15,
+                    "intelligence": 1,
+                    "stamina": 4,
+                    "strength": 5
+                }
+            },
+            "power": 5
         }
-      },
-      "power": 5
-    }
-  },
-  "ChaosSword": {
-    "class": "CWeapon",
-    "properties": {
-      "animation": "images/items/weapons/chaossword",
-      "bonus": {
-        "class": "Stats",
+    },
+    "ChaosSword": {
+        "class": "CWeapon",
         "properties": {
-          "attack": 15,
-          "damage": 25
+            "animation": "images/items/weapons/chaossword",
+            "bonus": {
+                "class": "Stats",
+                "properties": {
+                    "attack": 15,
+                    "damage": 25
+                }
+            },
+            "interaction": {
+                "ref": "ChaosBlast"
+            },
+            "power": 18
         }
-      },
-      "interaction": {
-        "ref": "ChaosBlast"
-      },
-      "power": 18
-    }
-  },
-  "Dagger": {
-    "class": "CWeapon",
-    "properties": {
-      "animation": "images/items/weapons/dagger",
-      "bonus": {
-        "class": "Stats",
+    },
+    "Dagger": {
+        "class": "CWeapon",
         "properties": {
-          "agility": 4,
-          "dmgMax": 11,
-          "dmgMin": 8,
-          "stamina": 2
+            "animation": "images/items/weapons/dagger",
+            "bonus": {
+                "class": "Stats",
+                "properties": {
+                    "agility": 4,
+                    "dmgMax": 11,
+                    "dmgMin": 8,
+                    "stamina": 2
+                }
+            },
+            "power": 3
         }
-      },
-      "power": 3
-    }
-  },
-  "DaggerOfVileHeart": {
-    "class": "CWeapon",
-    "properties": {
-      "animation": "images/items/weapons/daggerofvileheart",
-      "bonus": {
-        "class": "Stats",
+    },
+    "DaggerOfVileHeart": {
+        "class": "CWeapon",
         "properties": {
-          "agility": 15,
-          "crit": 6,
-          "dmgMax": 37,
-          "dmgMin": 33,
-          "intelligence": 8,
-          "stamina": 11,
-          "strength": 5
+            "animation": "images/items/weapons/daggerofvileheart",
+            "bonus": {
+                "class": "Stats",
+                "properties": {
+                    "agility": 15,
+                    "crit": 6,
+                    "dmgMax": 37,
+                    "dmgMin": 33,
+                    "intelligence": 8,
+                    "stamina": 11,
+                    "strength": 5
+                }
+            },
+            "power": 9
         }
-      },
-      "power": 9
-    }
-  },
-  "Knife": {
-    "class": "CWeapon",
-    "properties": {
-      "animation": "images/items/weapons/knife",
-      "bonus": {
-        "class": "Stats",
+    },
+    "Knife": {
+        "class": "CWeapon",
         "properties": {
-          "agility": 1,
-          "dmgMax": 7,
-          "dmgMin": 5,
-          "stamina": 1
+            "animation": "images/items/weapons/knife",
+            "bonus": {
+                "class": "Stats",
+                "properties": {
+                    "agility": 1,
+                    "dmgMax": 7,
+                    "dmgMin": 5,
+                    "stamina": 1
+                }
+            }
         }
-      }
-    }
-  },
-  "LongSword": {
-    "class": "CWeapon",
-    "properties": {
-      "animation": "images/items/weapons/longsword",
-      "bonus": {
-        "class": "Stats",
+    },
+    "LongSword": {
+        "class": "CWeapon",
         "properties": {
-          "dmgMax": 14,
-          "dmgMin": 12,
-          "stamina": 2,
-          "strength": 1
+            "animation": "images/items/weapons/longsword",
+            "bonus": {
+                "class": "Stats",
+                "properties": {
+                    "dmgMax": 14,
+                    "dmgMin": 12,
+                    "stamina": 2,
+                    "strength": 1
+                }
+            },
+            "power": 3
         }
-      },
-      "power": 3
-    }
-  },
-  "ShadowBlade": {
-    "class": "CWeapon",
-    "properties": {
-      "animation": "images/items/weapons/shadowblade",
-      "bonus": {
-        "class": "Stats",
+    },
+    "ShadowBlade": {
+        "class": "CWeapon",
         "properties": {
-          "agility": 18,
-          "crit": 6,
-          "dmgMax": 60,
-          "dmgMin": 54,
-          "intelligence": 17,
-          "stamina": 12,
-          "strength": 10
+            "animation": "images/items/weapons/shadowblade",
+            "bonus": {
+                "class": "Stats",
+                "properties": {
+                    "agility": 18,
+                    "crit": 6,
+                    "dmgMax": 60,
+                    "dmgMin": 54,
+                    "intelligence": 17,
+                    "stamina": 12,
+                    "strength": 10
+                }
+            },
+            "power": 25
         }
-      },
-      "power": 25
-    }
-  },
-  "ShortStaff": {
-    "class": "CWeapon",
-    "properties": {
-      "animation": "images/items/weapons/shortstaff",
-      "bonus": {
-        "class": "Stats",
+    },
+    "ShortStaff": {
+        "class": "CWeapon",
         "properties": {
-          "dmgMax": 7,
-          "dmgMin": 5,
-          "intelligence": 1,
-          "stamina": 1
+            "animation": "images/items/weapons/shortstaff",
+            "bonus": {
+                "class": "Stats",
+                "properties": {
+                    "dmgMax": 7,
+                    "dmgMin": 5,
+                    "intelligence": 1,
+                    "stamina": 1
+                }
+            }
         }
-      }
-    }
-  },
-  "ShortSword": {
-    "class": "CWeapon",
-    "properties": {
-      "animation": "images/items/weapons/shortsword",
-      "bonus": {
-        "class": "Stats",
+    },
+    "ShortSword": {
+        "class": "CWeapon",
         "properties": {
-          "dmgMax": 7,
-          "dmgMin": 5,
-          "stamina": 1,
-          "strength": 1
+            "animation": "images/items/weapons/shortsword",
+            "bonus": {
+                "class": "Stats",
+                "properties": {
+                    "dmgMax": 7,
+                    "dmgMin": 5,
+                    "stamina": 1,
+                    "strength": 1
+                }
+            }
         }
-      }
-    }
-  },
-  "Staff": {
-    "class": "CWeapon",
-    "properties": {
-      "animation": "images/items/weapons/staff",
-      "bonus": {
-        "class": "Stats",
+    },
+    "Staff": {
+        "class": "CWeapon",
         "properties": {
-          "dmgMax": 10,
-          "dmgMin": 7,
-          "intelligence": 5,
-          "stamina": 2
+            "animation": "images/items/weapons/staff",
+            "bonus": {
+                "class": "Stats",
+                "properties": {
+                    "dmgMax": 10,
+                    "dmgMin": 7,
+                    "intelligence": 5,
+                    "stamina": 2
+                }
+            },
+            "interaction": {
+                "ref": "ElemStaff"
+            },
+            "power": 3
         }
-      },
-      "interaction": {
-        "ref": "ElemStaff"
-      },
-      "power": 3
-    }
-  },
-  "StaffOfTheAbyss": {
-    "class": "CWeapon",
-    "properties": {
-      "animation": "images/items/weapons/staffoftheabyss",
-      "bonus": {
-        "class": "Stats",
+    },
+    "StaffOfTheAbyss": {
+        "class": "CWeapon",
         "properties": {
-          "agility": 10,
-          "dmgMax": 41,
-          "dmgMin": 34,
-          "intelligence": 12,
-          "stamina": 8,
-          "strength": 4
+            "animation": "images/items/weapons/staffoftheabyss",
+            "bonus": {
+                "class": "Stats",
+                "properties": {
+                    "agility": 10,
+                    "dmgMax": 41,
+                    "dmgMin": 34,
+                    "intelligence": 12,
+                    "stamina": 8,
+                    "strength": 4
+                }
+            },
+            "power": 9
         }
-      },
-      "power": 9
-    }
-  },
-  "Stiletto": {
-    "class": "CWeapon",
-    "properties": {
-      "animation": "images/items/weapons/stiletto",
-      "bonus": {
-        "class": "Stats",
+    },
+    "Stiletto": {
+        "class": "CWeapon",
         "properties": {
-          "agility": 4,
-          "dmgMax": 17,
-          "dmgMin": 14,
-          "intelligence": 0,
-          "stamina": 5,
-          "strength": 3
+            "animation": "images/items/weapons/stiletto",
+            "bonus": {
+                "class": "Stats",
+                "properties": {
+                    "agility": 4,
+                    "dmgMax": 17,
+                    "dmgMin": 14,
+                    "intelligence": 0,
+                    "stamina": 5,
+                    "strength": 3
+                }
+            },
+            "power": 5
         }
-      },
-      "power": 5
-    }
-  },
-  "Sword": {
-    "class": "CWeapon",
-    "properties": {
-      "animation": "images/items/weapons/sword",
-      "bonus": {
-        "class": "Stats",
+    },
+    "Sword": {
+        "class": "CWeapon",
         "properties": {
-          "attack": 5,
-          "damage": 10
+            "animation": "images/items/weapons/sword",
+            "bonus": {
+                "class": "Stats",
+                "properties": {
+                    "attack": 5,
+                    "damage": 10
+                }
+            }
         }
-      }
-    }
-  },
-  "Valkyrie": {
-    "class": "CWeapon",
-    "properties": {
-      "animation": "images/items/weapons/valkyrie",
-      "bonus": {
-        "class": "Stats",
+    },
+    "Valkyrie": {
+        "class": "CWeapon",
         "properties": {
-          "agility": 17,
-          "crit": 1,
-          "dmgMax": 59,
-          "dmgMin": 52,
-          "intelligence": 20,
-          "stamina": 14,
-          "strength": 8
+            "animation": "images/items/weapons/valkyrie",
+            "bonus": {
+                "class": "Stats",
+                "properties": {
+                    "agility": 17,
+                    "crit": 1,
+                    "dmgMax": 59,
+                    "dmgMin": 52,
+                    "intelligence": 20,
+                    "stamina": 14,
+                    "strength": 8
+                }
+            },
+            "power": 25
         }
-      },
-      "power": 25
-    }
-  },
-  "Void": {
-    "class": "CWeapon",
-    "properties": {
-      "animation": "images/items/weapons/void",
-      "bonus": {
-        "class": "Stats",
+    },
+    "Void": {
+        "class": "CWeapon",
         "properties": {
-          "agility": 12,
-          "block": 4,
-          "crit": 3,
-          "dmgMax": 65,
-          "dmgMin": 62,
-          "intelligence": 8,
-          "stamina": 17,
-          "strength": 15
+            "animation": "images/items/weapons/void",
+            "bonus": {
+                "class": "Stats",
+                "properties": {
+                    "agility": 12,
+                    "block": 4,
+                    "crit": 3,
+                    "dmgMax": 65,
+                    "dmgMin": 62,
+                    "intelligence": 8,
+                    "stamina": 17,
+                    "strength": 15
+                }
+            },
+            "power": 25
         }
-      },
-      "power": 25
-    }
-  },
-  "Wand": {
-    "class": "CWeapon",
-    "properties": {
-      "animation": "images/items/weapons/wand",
-      "bonus": {
-        "class": "Stats",
+    },
+    "Wand": {
+        "class": "CWeapon",
         "properties": {
-          "agility": 2,
-          "dmgMax": 17,
-          "dmgMin": 13,
-          "intelligence": 7,
-          "stamina": 2,
-          "strength": 1
+            "animation": "images/items/weapons/wand",
+            "bonus": {
+                "class": "Stats",
+                "properties": {
+                    "agility": 2,
+                    "dmgMax": 17,
+                    "dmgMin": 13,
+                    "intelligence": 7,
+                    "stamina": 2,
+                    "strength": 1
+                }
+            },
+            "power": 5
         }
-      },
-      "power": 5
     }
-  }
 }

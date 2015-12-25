@@ -17,7 +17,7 @@ class CCharPanel;
 class CPlayerView;
 
 class AGamePanel : public CGameObject, public CClickAction {
-Q_OBJECT
+    Q_OBJECT
 
     friend class CGuiHandler;
 
@@ -32,15 +32,15 @@ public:
 
     virtual void update() = 0;
 
-    virtual void setUpPanel(std::shared_ptr<CGameView>) = 0;
+    virtual void setUpPanel ( std::shared_ptr<CGameView> ) = 0;
 
-    virtual void paint(QPainter *, const QStyleOptionGraphicsItem *, QWidget *) = 0;
+    virtual void paint ( QPainter *, const QStyleOptionGraphicsItem *, QWidget * ) = 0;
 
     virtual QString getPanelName() = 0;
 
-    virtual void handleDrop(std::shared_ptr<CPlayerView>, std::shared_ptr<CGameObject>);
+    virtual void handleDrop ( std::shared_ptr<CPlayerView>, std::shared_ptr<CGameObject> );
 
-    virtual void onClickAction(std::shared_ptr<CGameObject>) override;
+    virtual void onClickAction ( std::shared_ptr<CGameObject> ) override;
 
     bool isShown();
 

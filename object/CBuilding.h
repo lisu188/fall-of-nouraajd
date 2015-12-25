@@ -3,14 +3,14 @@
 #include"CMapObject.h"
 
 class CBuilding : public CMapObject, public Visitable {
-Q_OBJECT
-    Q_PROPERTY (bool enabled
-                        READ
-                        isEnabled
-                        WRITE
-                        setEnabled
-                        USER
-                        true)
+    Q_OBJECT
+    Q_PROPERTY ( bool enabled
+                 READ
+                 isEnabled
+                 WRITE
+                 setEnabled
+                 USER
+                 true )
 public:
     CBuilding();
 
@@ -18,14 +18,14 @@ public:
 
     bool isEnabled();
 
-    void setEnabled(bool enabled);
+    void setEnabled ( bool enabled );
 
-    virtual void onEnter(std::shared_ptr<CGameEvent>) override;
+    virtual void onEnter ( std::shared_ptr<CGameEvent> ) override;
 
-    virtual void onLeave(std::shared_ptr<CGameEvent>) override;
+    virtual void onLeave ( std::shared_ptr<CGameEvent> ) override;
 
 protected:
     bool enabled = true;
 };
 
-GAME_PROPERTY (CBuilding)
+GAME_PROPERTY ( CBuilding )

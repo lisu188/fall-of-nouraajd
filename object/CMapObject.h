@@ -12,7 +12,7 @@ class CCreature;
 class CMapObject : public CGameObject, public Creatable, public Turnable {
     friend class CObjectHandler;
 
-Q_OBJECT
+    Q_OBJECT
     //TODO: add xyz properties
 public:
     CMapObject();
@@ -27,24 +27,24 @@ public:
 
     int getPosZ() const;
 
-    virtual void onTurn(std::shared_ptr<CGameEvent>) override;
+    virtual void onTurn ( std::shared_ptr<CGameEvent> ) override;
 
-    virtual void onCreate(std::shared_ptr<CGameEvent>) override;
+    virtual void onCreate ( std::shared_ptr<CGameEvent> ) override;
 
-    virtual void onDestroy(std::shared_ptr<CGameEvent>) override;
+    virtual void onDestroy ( std::shared_ptr<CGameEvent> ) override;
 
     Coords getCoords();
 
-    void setCoords(Coords coords);
+    void setCoords ( Coords coords );
 
-    virtual void move(int x, int y, int z);
+    virtual void move ( int x, int y, int z );
 
-    void move(Coords coords);
+    void move ( Coords coords );
 
-    void moveTo(int x, int y, int z);
+    void moveTo ( int x, int y, int z );
 
-    void moveTo(Coords coords);
+    void moveTo ( Coords coords );
 };
 
-GAME_PROPERTY (CMapObject)
+GAME_PROPERTY ( CMapObject )
 

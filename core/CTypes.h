@@ -15,14 +15,14 @@ public:
 
     template<typename Serialized, typename Deserialized>
     static void register_serializer() {
-        serializers()[vstd::type_pair<Serialized, Deserialized>()] =
-                std::make_shared<CSerializer<Serialized, Deserialized>>
-                        ();
+        serializers() [vstd::type_pair<Serialized, Deserialized>()] =
+            std::make_shared<CSerializer<Serialized, Deserialized>>
+            ();
     }
 
     template<typename T>
     static void register_builder() {
-        builders()[T::staticMetaObject.className()] = []() { return std::make_shared<T>(); };
+        builders() [T::staticMetaObject.className()] = []() { return std::make_shared<T>(); };
     }
 
     template<typename T>
@@ -54,7 +54,7 @@ public:
 
     template<typename T>
     static void register_type() {
-        static_assert(vstd::is_base_of<CGameObject, T>::value, "invalid base class");
+        static_assert ( vstd::is_base_of<CGameObject, T>::value, "invalid base class" );
         register_builder<T>();
         register_serializer<T>();
         register_consumer<T>();

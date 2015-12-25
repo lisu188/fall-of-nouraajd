@@ -7,7 +7,7 @@ class CAnimation;
 class QPixmap;
 
 class CAnimation : public QObject, private std::map<int, std::pair<std::shared_ptr<QPixmap>, int> > {
-Q_OBJECT
+    Q_OBJECT
 public:
     CAnimation();
 
@@ -21,7 +21,7 @@ public:
 
     void next();
 
-    void add(std::shared_ptr<QPixmap> img, int time);
+    void add ( std::shared_ptr<QPixmap> img, int time );
 
 private:
     int actual = 0;
@@ -29,17 +29,17 @@ private:
 
 class CAnimationProvider : private std::map<QString, std::shared_ptr<CAnimation>> {
 public:
-    static std::shared_ptr<CAnimation> getAnim(QString path);
+    static std::shared_ptr<CAnimation> getAnim ( QString path );
 
     virtual ~CAnimationProvider();
 
 private:
     CAnimationProvider();
 
-    std::shared_ptr<CAnimation> getAnimation(QString path);
+    std::shared_ptr<CAnimation> getAnimation ( QString path );
 
-    void loadAnim(QString path);
+    void loadAnim ( QString path );
 
-    std::shared_ptr<QPixmap> getImage(QString path);
+    std::shared_ptr<QPixmap> getImage ( QString path );
 };
 

@@ -1,24 +1,24 @@
 {
-  "Cave": {
-    "class": "Cave",
-    "properties": {
-      "animation": "images/buildings/cave",
-      "chance": 15,
-      "enabled": true,
-      "monster": "Pritz",
-      "monsters": 5
+    "Cave": {
+        "class": "Cave",
+        "properties": {
+            "animation": "images/buildings/cave",
+            "chance": 15,
+            "enabled": true,
+            "monster": "Pritz",
+            "monsters": 5
+        }
+    },
+    "Market": {
+        "class": "Market",
+        "properties": {
+            "animation": "images/buildings/market"
+        }
+    },
+    "Teleporter": {
+        "class": "Teleporter",
+        "properties": {
+            "animation": "images/buildings/teleporter"
+        }
     }
-  },
-  "Market": {
-    "class": "Market",
-    "properties": {
-      "animation": "images/buildings/market"
-    }
-  },
-  "Teleporter": {
-    "class": "Teleporter",
-    "properties": {
-      "animation": "images/buildings/teleporter"
-    }
-  }
 }

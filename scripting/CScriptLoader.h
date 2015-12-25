@@ -8,7 +8,7 @@ class AScriptLoader;
 
 class ModuleSpec {
 public:
-    ModuleSpec(AScriptLoader *loader, std::string name);
+    ModuleSpec ( AScriptLoader *loader, std::string name );
 
     AScriptLoader *loader();
 
@@ -22,35 +22,35 @@ private:
 
 class AScriptLoader {
 public:
-    virtual QString findModule(QString modName) = 0;
+    virtual QString findModule ( QString modName ) = 0;
 
-    QString findModule(std::string modName);
+    QString findModule ( std::string modName );
 
-    bool checkModule(QString modName);
+    bool checkModule ( QString modName );
 
-    bool checkModule(std::string modName);
+    bool checkModule ( std::string modName );
 
-    void exec_module(boost::python::object module);
+    void exec_module ( boost::python::object module );
 
-    ModuleSpec *find_spec(boost::python::object name, boost::python::object, boost::python::object);
+    ModuleSpec *find_spec ( boost::python::object name, boost::python::object, boost::python::object );
 
-    bool __eq__(boost::python::object object);
+    bool __eq__ ( boost::python::object object );
 
     virtual ~AScriptLoader();
 };
 
 class CScriptLoader : public AScriptLoader {
 public:
-    virtual QString findModule(QString modName) override;
+    virtual QString findModule ( QString modName ) override;
 
     virtual ~CScriptLoader();
 };
 
 class CCustomScriptLoader : public AScriptLoader {
 public:
-    CCustomScriptLoader(QString name, QString path);
+    CCustomScriptLoader ( QString name, QString path );
 
-    virtual QString findModule(QString modName) override;
+    virtual QString findModule ( QString modName ) override;
 
     virtual ~CCustomScriptLoader();
 
