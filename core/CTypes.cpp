@@ -1,6 +1,7 @@
-#include "CTypes.h"
+#include "core/CTypes.h"
 
 extern void initialize1();
+
 extern void initialize2();
 
 void CTypes::initialize() {
@@ -14,6 +15,6 @@ std::unordered_map<QString, std::function<std::shared_ptr<CGameObject>() >> &CTy
 }
 
 std::unordered_map<std::pair<int, int>, std::shared_ptr<CSerializerBase> > &CTypes::serializers() {
-    static std::unordered_map<std::pair<int,int>,std::shared_ptr<CSerializerBase>> reg;
+    static std::unordered_map<std::pair<int, int>, std::shared_ptr<CSerializerBase>> reg;
     return reg;
 }
