@@ -7,10 +7,10 @@
 namespace vstd {
     namespace adaptors {
         template<typename F>
-        auto add_later(F f) {
-            return boost::adaptors::transformed([f](auto future) {
-                return future->thenLater(f);
-            });
+        auto add_later ( F f ) {
+            return boost::adaptors::transformed ( [f] ( auto future ) {
+                return future->thenLater ( f );
+            } );
         }
     }
 }

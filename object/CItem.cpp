@@ -2,21 +2,21 @@
 #include "core/CGame.h"
 
 CItem::CItem() {
-    this->setZValue(2);
+    this->setZValue ( 2 );
 }
 
 CItem::~CItem() {
 
 }
 
-void CItem::onEnter(std::shared_ptr<CGameEvent> event) {
-    if (std::shared_ptr<CCreature> visitor = vstd::cast<CCreature>(vstd::cast<CGameEventCaused>(event)->getCause())) {
-        this->getMap()->removeObject(this->ptr<CMapObject>());
-        visitor->addItem(this->ptr<CItem>());
+void CItem::onEnter ( std::shared_ptr<CGameEvent> event ) {
+    if ( std::shared_ptr<CCreature> visitor = vstd::cast<CCreature> ( vstd::cast<CGameEventCaused> ( event )->getCause() ) ) {
+        this->getMap()->removeObject ( this->ptr<CMapObject>() );
+        visitor->addItem ( this->ptr<CItem>() );
     }
 }
 
-void CItem::onLeave(std::shared_ptr<CGameEvent>) {
+void CItem::onLeave ( std::shared_ptr<CGameEvent> ) {
 
 }
 
@@ -24,39 +24,39 @@ bool CItem::isSingleUse() {
     return singleUse;
 }
 
-void CItem::setSingleUse(bool singleUse) {
+void CItem::setSingleUse ( bool singleUse ) {
     this->singleUse = singleUse;
 }
 
-void CItem::onEquip(std::shared_ptr<CGameEvent> event) {
-    vstd::cast<CCreature>(vstd::cast<CGameEventCaused>(event)->getCause())->addBonus(bonus);
-    qDebug() << vstd::cast<CGameEventCaused>(event)->getCause()->getObjectType() << "equipped" << getObjectType()
-    << "\n";
+void CItem::onEquip ( std::shared_ptr<CGameEvent> event ) {
+    vstd::cast<CCreature> ( vstd::cast<CGameEventCaused> ( event )->getCause() )->addBonus ( bonus );
+    qDebug() << vstd::cast<CGameEventCaused> ( event )->getCause()->getObjectType() << "equipped" << getObjectType()
+             << "\n";
 }
 
-void CItem::onUnequip(std::shared_ptr<CGameEvent> event) {
-    vstd::cast<CCreature>(vstd::cast<CGameEventCaused>(event)->getCause())->removeBonus(bonus);
-    qDebug() << vstd::cast<CGameEventCaused>(event)->getCause()->getObjectType() << "unequipped" << getObjectType()
-    << "\n";
+void CItem::onUnequip ( std::shared_ptr<CGameEvent> event ) {
+    vstd::cast<CCreature> ( vstd::cast<CGameEventCaused> ( event )->getCause() )->removeBonus ( bonus );
+    qDebug() << vstd::cast<CGameEventCaused> ( event )->getCause()->getObjectType() << "unequipped" << getObjectType()
+             << "\n";
 }
 
-void CItem::onUse(std::shared_ptr<CGameEvent> event) {
-    CItemSlot *parent = dynamic_cast<CItemSlot *> ( this->parentItem());
-    if (!parent) {
+void CItem::onUse ( std::shared_ptr<CGameEvent> event ) {
+    CItemSlot *parent = dynamic_cast<CItemSlot *> ( this->parentItem() );
+    if ( !parent ) {
         return;
     }
     QString slot = parent->getNumber();
-    if (slot == "-1") {
+    if ( slot == "-1" ) {
         return;
     }
-    vstd::cast<CCreature>(vstd::cast<CGameEventCaused>(event)->getCause())->setItem(slot, this->ptr<CItem>());
+    vstd::cast<CCreature> ( vstd::cast<CGameEventCaused> ( event )->getCause() )->setItem ( slot, this->ptr<CItem>() );
 }
 
 int CItem::getPower() const {
     return power;
 }
 
-void CItem::setPower(int value) {
+void CItem::setPower ( int value ) {
     power = value;
 }
 
@@ -68,9 +68,9 @@ std::shared_ptr<CInteraction> CItem::getInteraction() {
     return interaction;
 }
 
-void CItem::setInteraction(std::shared_ptr<CInteraction> interaction) {
+void CItem::setInteraction ( std::shared_ptr<CInteraction> interaction ) {
     this->interaction = interaction;
-    interaction->setManaCost(0);
+    interaction->setManaCost ( 0 );
 }
 
 CBelt::CBelt() {
@@ -101,7 +101,7 @@ std::shared_ptr<Stats> CItem::getBonus() {
     return bonus;
 }
 
-void CItem::setBonus(std::shared_ptr<Stats> stats) {
+void CItem::setBonus ( std::shared_ptr<Stats> stats ) {
     bonus = stats;
 }
 
@@ -117,11 +117,11 @@ QString CScroll::getText() const {
     return text;
 }
 
-void CScroll::setText(const QString &value) {
+void CScroll::setText ( const QString &value ) {
     text = value;
 }
 
-void CScroll::onUse(std::shared_ptr<CGameEvent>) {
-    getMap()->getGame()->getGuiHandler()->showMessage(text);
+void CScroll::onUse ( std::shared_ptr<CGameEvent> ) {
+    getMap()->getGame()->getGuiHandler()->showMessage ( text );
 }
 

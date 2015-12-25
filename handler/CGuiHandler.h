@@ -12,17 +12,17 @@ class AGamePanel;
 
 class CGuiHandler {
 public:
-    CGuiHandler(std::shared_ptr<CGame> game);
+    CGuiHandler ( std::shared_ptr<CGame> game );
 
-    void showMessage(QString msg);
+    void showMessage ( QString msg );
 
-    std::shared_ptr<AGamePanel> getPanel(QString panel);
+    std::shared_ptr<AGamePanel> getPanel ( QString panel );
 
-    void showPanel(QString panel);
+    void showPanel ( QString panel );
 
-    void hidePanel(QString panel);
+    void hidePanel ( QString panel );
 
-    void flipPanel(QString panel);
+    void flipPanel ( QString panel );
 
     bool isAnyPanelVisible();
 
