@@ -1,12 +1,11 @@
 #include "CScriptWindow.h"
 #include "ui_CScriptWindow.h"
-#include "CGlobal.h"
-#include "CGame.h"
+#include "core/CGame.h"
 
-CScriptWindow::CScriptWindow ( std::shared_ptr<CGame> game ) :game ( game ),ui ( new Ui::CScriptWindow ) {
-    ui->setupUi ( this );
-    ui->executeButton->setShortcut ( QKeySequence ( "Ctrl+E" )  );
-    this->setVisible ( true );
+CScriptWindow::CScriptWindow(std::shared_ptr<CGame> game) : game(game), ui(new Ui::CScriptWindow) {
+    ui->setupUi(this);
+    ui->executeButton->setShortcut(QKeySequence("Ctrl+E"));
+    this->setVisible(true);
 }
 
 CScriptWindow::~CScriptWindow() {
@@ -14,5 +13,5 @@ CScriptWindow::~CScriptWindow() {
 }
 
 void CScriptWindow::on_executeButton_clicked() {
-    game->getScriptHandler()->callCreatedFunction ( ui->scriptArea->toPlainText(), {"game"} , game );
+    game->getScriptHandler()->callCreatedFunction(ui->scriptArea->toPlainText(), {"game"}, game);
 }

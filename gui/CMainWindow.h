@@ -1,5 +1,6 @@
 #pragma once
-#include "CGlobal.h"
+
+#include "core/CGlobal.h"
 
 class CGameView;
 namespace Ui {
@@ -7,13 +8,16 @@ namespace Ui {
 }
 
 class CMainWindow : public QMainWindow {
-    Q_OBJECT
+Q_OBJECT
 
 public:
-    explicit CMainWindow ();
+    explicit CMainWindow();
+
     ~CMainWindow();
+
 private:
     Q_SLOT void on_pushButton_clicked();
+
     std::shared_ptr<Ui::CMainWindow> ui;
     std::shared_ptr<CGameView> view;
 };

@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.3)
 project(game)
 
-set(CMAKE_SOURCE_DIR ${CMAKE_SOURCE_DIR} $ENV{QT_CMAKE})
+set(CMAKE_MODULE_DIR ${CMAKE_MODULE_DIR} $ENV{QT_CMAKE})
 
 include($ENV{COTIRE_CMAKE}/cotire.cmake)
 
@@ -128,25 +128,25 @@ set(SOURCE_FILES
         templates/util.h
         types/ctypes1.cpp
         types/ctypes2.cpp
-        CDefines.h
-        CGame.cpp
-        CGame.h
-        CGlobal.h
-        CJsonUtil.cpp
-        CJsonUtil.h
-        CMain.cpp
-        CMap.cpp
-        CMap.h
-        CPathFinder.cpp
-        CPathFinder.h
-        CSerialization.cpp
-        CSerialization.h
-        CStats.cpp
-        CStats.h
-        CTypes.cpp
-        CTypes.h
-        CUtil.cpp
-        CUtil.h)
+        core/CDefines.h
+        core/CGame.cpp
+        core/CGame.h
+        core/CGlobal.h
+        core/CJsonUtil.cpp
+        core/CJsonUtil.h
+        core/CMain.cpp
+        core/CMap.cpp
+        core/CMap.h
+        core/CPathFinder.cpp
+        core/CPathFinder.h
+        core/CSerialization.cpp
+        core/CSerialization.h
+        core/CStats.cpp
+        core/CStats.h
+        core/CTypes.cpp
+        core/CTypes.h
+        core/CUtil.cpp
+        core/CUtil.h)
 
 qt5_wrap_ui(FOMRS_SOURCE_FILES gui/CMainWindow.ui gui/CScriptWindow.ui)
 qt5_add_resources(RESOURCE_FILES resources/resources.qrc)
