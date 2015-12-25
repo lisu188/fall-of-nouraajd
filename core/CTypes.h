@@ -2,8 +2,8 @@
 
 #include "core/CGlobal.h"
 #include "object/CObject.h"
-#include "templates/traits.h"
-#include "templates/converter.h"
+#include "vstd/vstd.h"
+#include "vstd/vstd.h"
 
 class CTypes {
 public:

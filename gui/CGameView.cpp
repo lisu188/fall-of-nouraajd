@@ -1,7 +1,7 @@
 #include "CGameView.h"
 #include "core/CGame.h"
 #include "loader/CLoader.h"
-#include "templates/thread.h"
+#include "vstd/vstd.h"
 
 void CGameView::show() {
     showNormal();

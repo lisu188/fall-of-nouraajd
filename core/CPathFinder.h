@@ -2,7 +2,7 @@
 
 #include "core/CGlobal.h"
 #include "core/CUtil.h"
-#include "templates/future.h"
+#include "vstd/vstd.h"
 
 class CCreature;
 
