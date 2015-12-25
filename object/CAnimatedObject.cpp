@@ -1,25 +1,22 @@
 #include "object/CObject.h"
-#include "provider/CProvider.h"
-#include "CGame.h"
-#include "CUtil.h"
 
 CAnimatedObject::CAnimatedObject() {
-    setShapeMode ( QGraphicsPixmapItem::BoundingRectShape );
-    this->setAcceptHoverEvents ( true );
+    setShapeMode(QGraphicsPixmapItem::BoundingRectShape);
+    this->setAcceptHoverEvents(true);
 }
 
 CAnimatedObject::~CAnimatedObject() {
 
 }
 
-QPointF CAnimatedObject::mapToParent ( int a, int b ) {
-    return QGraphicsItem::mapToParent ( QPointF ( a, b ) );
+QPointF CAnimatedObject::mapToParent(int a, int b) {
+    return QGraphicsItem::mapToParent(QPointF(a, b));
 }
 
-void CAnimatedObject::setAnimation ( QString path ) {
-    this->path=path;
-    staticAnimation = CAnimationProvider::getAnim ( path );
-    if ( staticAnimation ) {
+void CAnimatedObject::setAnimation(QString path) {
+    this->path = path;
+    staticAnimation = CAnimationProvider::getAnim(path);
+    if (staticAnimation) {
         animate();
     }
 }
@@ -29,22 +26,21 @@ QString CAnimatedObject::getAnimation() {
 }
 
 
-
 void CAnimatedObject::animate() {
     int time = staticAnimation->getTime();
-    setPixmap ( *staticAnimation->getImage() );
-    if ( time == -1 ) {
+    setPixmap(*staticAnimation->getImage());
+    if (time == -1) {
         return;
     }
-    if ( !timer ) {
-        timer = new QTimer ( this );
-        timer->setSingleShot ( true );
-        connect ( timer,&QTimer:: timeout, this,&CAnimatedObject::animate );
+    if (!timer) {
+        timer = new QTimer(this);
+        timer->setSingleShot(true);
+        connect(timer, &QTimer::timeout, this, &CAnimatedObject::animate);
     }
-    if ( time == 0 ) {
+    if (time == 0) {
         time = rand() % 3000;
     }
-    timer->setInterval ( time );
+    timer->setInterval(time);
     timer->start();
     staticAnimation->next();
 }
