@@ -1,5 +1,5 @@
 #include "core/CUtil.h"
-#include "templates/util.h"
+#include "vstd/vstd.h"
 #include "object/CGameObject.h"
 
 Coords::Coords() { x = y = z = 0; }

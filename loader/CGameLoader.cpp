@@ -1,5 +1,5 @@
 #include "loader/CLoader.h"
-#include "templates/thread.h"
+#include "vstd/vstd.h"
 #include "core/CTypes.h"
 
 std::shared_ptr<CGame> CGameLoader::loadGame ( std::shared_ptr<CGameView> view ) {

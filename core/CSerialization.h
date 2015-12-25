@@ -1,8 +1,8 @@
 #pragma once
 
 #include "core/CGlobal.h"
-#include "templates/util.h"
-#include "templates/cast.h"
+#include "vstd/vstd.h"
+#include "vstd/vstd.h"
 
 class CMap;
 

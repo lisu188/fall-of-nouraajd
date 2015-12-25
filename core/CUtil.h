@@ -1,8 +1,8 @@
 #pragma once
 
 #include "core/CGlobal.h"
-#include "templates/defines.h"
-#include "templates/hash.h"
+#include "vstd/vstd.h"
+#include "vstd/vstd.h"
 
 class CGameObject;
 

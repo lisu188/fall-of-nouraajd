@@ -113,20 +113,6 @@ set(SOURCE_FILES
         scripting/CScriptLoader.h
         scripting/CWrapper.cpp
         scripting/CWrapper.h
-        templates/adaptors.h
-        templates/assert.h
-        templates/cast.h
-        templates/converter.h
-        templates/functional.h
-        templates/future.h
-        templates/hash.h
-        templates/hex.h
-        templates/lazy.h
-        templates/thread.h
-        templates/threadpool.h
-        templates/traits.h
-        templates/util.h
-        templates/defines.h
         types/ctypes1.cpp
         types/ctypes2.cpp
         core/CDefines.h
@@ -149,6 +135,8 @@ set(SOURCE_FILES
         core/CUtil.cpp
         core/CUtil.h)
 
+add_subdirectory(vstd)
+
 qt5_wrap_ui(FOMRS_SOURCE_FILES gui/CMainWindow.ui gui/CScriptWindow.ui)
 qt5_add_resources(RESOURCE_FILES resources/resources.qrc)
 
@@ -156,6 +144,8 @@ include_directories(${Boost_INCLUDE_DIRS})
 include_directories(${PYTHON_INCLUDE_DIRS})
 
 add_executable(game ${SOURCE_FILES} ${FOMRS_SOURCE_FILES} ${RESOURCE_FILES})
+
+add_custom_command(TARGET game PRE_BUILD COMMAND format.py)
 
 qt5_use_modules(game Widgets)
 qt5_use_modules(game OpenGL)

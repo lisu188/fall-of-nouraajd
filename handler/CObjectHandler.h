@@ -2,7 +2,7 @@
 
 #include "core/CGlobal.h"
 #include "core/CUtil.h"
-#include "templates/cast.h"
+#include "vstd/vstd.h"
 #include "core/CSerialization.h"
 
 class ATypeHandler;

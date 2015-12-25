@@ -1,6 +1,6 @@
 #include "CPlayerView.h"
 #include "core/CGame.h"
-#include "templates/thread.h"
+#include "vstd/vstd.h"
 
 PlayerStatsView::PlayerStatsView() {
     this->player = player;
