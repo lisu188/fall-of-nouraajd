@@ -1,5 +1,7 @@
 #pragma once
-#include "CGlobal.h"
+
+#include "core/CGlobal.h"
+
 class CGame;
 
 namespace Ui {
@@ -7,11 +9,14 @@ namespace Ui {
 }
 
 class CScriptWindow : public QWidget {
-    Q_OBJECT
+Q_OBJECT
 public:
-    CScriptWindow ( std::shared_ptr<CGame> game );
+    CScriptWindow(std::shared_ptr<CGame> game);
+
     ~CScriptWindow();
+
     Q_SLOT void on_executeButton_clicked();
+
 private:
     std::shared_ptr<CGame> game;
     Ui::CScriptWindow *ui;

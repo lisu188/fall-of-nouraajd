@@ -15,7 +15,7 @@ IGNORED=["map.json"]
 # -----------------------------------------------------------------------------
 
 def sortHeader():
-    lines=open("CGlobal.h", "r").readlines()[1:]
+    lines=open("core/CGlobal.h", "r").readlines()[1:]
     l=set()
     for line in lines:
         l.add(line.strip())
@@ -24,8 +24,8 @@ def sortHeader():
     for line in sorted(l, key = str.lower):
         if len(line.strip()) >0:
             content+=(line+"\n")
-    if content != open("CGlobal.h", "r").read():
-        with open("CGlobal.h", "w") as sortToFile:
+    if content != open("core/CGlobal.h", "r").read():
+        with open("core/CGlobal.h", "w") as sortToFile:
             sortToFile.write(content)
 
 def formatJson(files):

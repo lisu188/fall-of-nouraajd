@@ -1,28 +1,28 @@
 #include "CMouseHandler.h"
 #include "object/CGameObject.h"
-#include "CMap.h"
-#include <QDebug>
+#include "core/CMap.h"
 
-CMouseHandler::CMouseHandler ( ) {}
+CMouseHandler::CMouseHandler() { }
 
-static CClickAction* getClickAction ( CGameObject* parent ) {
-    CClickAction* potentialAction=0;
-    while ( parent ) {
-        qDebug() <<parent->metaObject()->className() <<"\n";
-        CClickAction* action=dynamic_cast<CClickAction*> ( parent );
-        if ( action ) {
-            potentialAction=action;
+static CClickAction *getClickAction(CGameObject *parent) {
+    CClickAction *potentialAction = 0;
+    while (parent) {
+        qDebug() << parent->metaObject()->className() << "\n";
+        CClickAction *action = dynamic_cast<CClickAction *> ( parent );
+        if (action) {
+            potentialAction = action;
         }
-        parent=dynamic_cast<CGameObject*> ( parent->parentItem() );
+        parent = dynamic_cast<CGameObject *> ( parent->parentItem());
     }
-    if (  QObject* object=dynamic_cast<QObject*> ( potentialAction ) ) {
-        qDebug() <<"Delegating click action to "<<object->metaObject()->className() <<"\n";
+    if (QObject *object = dynamic_cast<QObject *> ( potentialAction )) {
+        qDebug() << "Delegating click action to " << object->metaObject()->className() << "\n";
     }
     return potentialAction;
 }
-void CMouseHandler::handleClick ( std::shared_ptr<CGameObject> object ) {
-    CClickAction* action=getClickAction ( object.get() );
-    if ( action ) {
-        action->onClickAction ( object );
+
+void CMouseHandler::handleClick(std::shared_ptr<CGameObject> object) {
+    CClickAction *action = getClickAction(object.get());
+    if (action) {
+        action->onClickAction(object);
     }
 }

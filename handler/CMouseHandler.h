@@ -1,15 +1,19 @@
 #pragma once
-#include "CGlobal.h"
+
+#include "core/CGlobal.h"
+
 class CGameObject;
+
 class CMap;
 
 class CClickAction {
 public:
-    virtual void onClickAction ( std::shared_ptr<CGameObject> object ) =0;
+    virtual void onClickAction(std::shared_ptr<CGameObject> object) = 0;
 };
 
 class CMouseHandler {
 public:
-    CMouseHandler ();
-    void handleClick ( std::shared_ptr<CGameObject> object );
+    CMouseHandler();
+
+    void handleClick(std::shared_ptr<CGameObject> object);
 };

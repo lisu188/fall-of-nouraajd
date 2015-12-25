@@ -1,29 +1,60 @@
 #pragma once
+
 #include "CGameObject.h"
 #include <set>
+
 class CItem;
+
 class CMarket : public CGameObject {
-    Q_OBJECT
-    Q_PROPERTY ( std::set<std::shared_ptr<CItem>> items READ getItems WRITE setItems USER true )
-    Q_PROPERTY ( int sell READ getSell WRITE setSell USER true )
-    Q_PROPERTY ( int buy READ getBuy WRITE setBuy USER true )
+Q_OBJECT
+    Q_PROPERTY (std::set<std::shared_ptr<CItem>> items
+                        READ
+                                getItems
+                        WRITE
+                                setItems
+                        USER
+                        true)
+    Q_PROPERTY (int sell
+                        READ
+                                getSell
+                        WRITE
+                                setSell
+                        USER
+                        true)
+    Q_PROPERTY (int buy
+                        READ
+                                getBuy
+                        WRITE
+                                setBuy
+                        USER
+                        true)
 public:
     CMarket();
+
     ~CMarket();
-    void add ( std::shared_ptr<CItem> item );
-    void remove ( std::shared_ptr<CItem> item );
+
+    void add(std::shared_ptr<CItem> item);
+
+    void remove(std::shared_ptr<CItem> item);
+
     std::set<std::shared_ptr<CItem> > getTradeItems();
-    void setItems ( std::set<std::shared_ptr<CItem>> items );
-    std::set<std::shared_ptr<CItem>> getItems ();
+
+    void setItems(std::set<std::shared_ptr<CItem>> items);
+
+    std::set<std::shared_ptr<CItem>> getItems();
+
     int getSell() const;
-    void setSell ( int value );
+
+    void setSell(int value);
 
     int getBuy() const;
-    void setBuy ( int value );
+
+    void setBuy(int value);
 
 private:
     std::set<std::shared_ptr<CItem>> items;
-    int sell=100;
-    int buy=80;
+    int sell = 100;
+    int buy = 80;
 };
-GAME_PROPERTY ( CMarket )
+
+GAME_PROPERTY (CMarket)
