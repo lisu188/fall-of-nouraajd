@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.3)
 project(game)
 
-set(CMAKE_MODULE_DIR ${CMAKE_MODULE_DIR} $ENV{QT_CMAKE})
+set(Qt5_DIR $ENV{QT_CMAKE})
 
 include($ENV{COTIRE_CMAKE}/cotire.cmake)
 
@@ -12,7 +12,7 @@ find_package(Qt5 COMPONENTS Widgets OpenGL REQUIRED)
 
 set(BOOST_INCLUDEDIR $ENV{BOOST_INC})
 set(BOOST_LIBRARYDIR $ENV{BOOST_LIB})
-FIND_PACKAGE(Boost 1.58 COMPONENTS system python3 thread REQUIRED)
+find_package(Boost 1.58 COMPONENTS system python3 thread REQUIRED)
 
 set(PYTHON_LIBRARY $ENV{PYTHON_LIB}/libpython34.a)
 set(PYTHON_INCLUDE_DIR $ENV{PYTHON_INC})
@@ -145,7 +145,7 @@ include_directories(${PYTHON_INCLUDE_DIRS})
 
 add_executable(game ${SOURCE_FILES} ${FOMRS_SOURCE_FILES} ${RESOURCE_FILES})
 
-add_custom_command(TARGET game PRE_BUILD COMMAND format.py)
+add_custom_command(TARGET game PRE_BUILD COMMAND format.py WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
 
 qt5_use_modules(game Widgets)
 qt5_use_modules(game OpenGL)
