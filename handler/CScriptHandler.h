@@ -66,7 +66,7 @@ public:
     template<typename Return=void, typename ...Args>
     Return callCreatedFunction ( QString functionCode, std::initializer_list<QString> args, Args ...params ) {
         return createFunction<Return, Args...> (
-                   "FUNC" + vstd::to_hex_hash ( functionCode ),
+                   "FUNC" + vstd::to_hex_hash<QString> ( functionCode ),
                    functionCode, args ) ( params... );
     }
 
