@@ -156,7 +156,7 @@ std::shared_ptr<CGameObject> object_deserialize ( std::shared_ptr<CMap> map, std
     } else if ( ! ( *config ) ["class"].toString().isEmpty() ) {
         object = map->getObjectHandler()->getType ( ( *config ) ["class"].toString() );
         if ( object ) {
-            object->setObjectName ( vstd::to_hex ( object.get() ) );
+            object->setObjectName ( vstd::to_hex ( object) );
             object->setObjectType ( ( *config ) ["class"].toString() );
             object->setMap ( map );
             map->getGame()->addObject ( object );
