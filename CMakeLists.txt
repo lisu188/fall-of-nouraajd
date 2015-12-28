@@ -1,14 +1,10 @@
 cmake_minimum_required(VERSION 3.3)
 project(game)
 
-set(Qt5_DIR $ENV{QT_CMAKE})
-
 include($ENV{COTIRE_CMAKE}/cotire.cmake)
 
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 set(CMAKE_AUTOMOC ON)
-
-find_package(Qt5 COMPONENTS Widgets OpenGL REQUIRED)
 
 set(BOOST_INCLUDEDIR $ENV{BOOST_INC})
 set(BOOST_LIBRARYDIR $ENV{BOOST_LIB})
@@ -137,18 +133,12 @@ set(SOURCE_FILES
 
 add_subdirectory(vstd)
 
-qt5_wrap_ui(FOMRS_SOURCE_FILES gui/CMainWindow.ui gui/CScriptWindow.ui)
-qt5_add_resources(RESOURCE_FILES resources/resources.qrc)
-
 include_directories(${Boost_INCLUDE_DIRS})
 include_directories(${PYTHON_INCLUDE_DIRS})
 
-add_executable(game ${SOURCE_FILES} ${FOMRS_SOURCE_FILES} ${RESOURCE_FILES})
+add_executable(game ${SOURCE_FILES})
 
 add_custom_command(TARGET game PRE_BUILD COMMAND format.py WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
-
-qt5_use_modules(game Widgets)
-qt5_use_modules(game OpenGL)
 
 target_link_libraries(game ${Boost_LIBRARIES})
 target_link_libraries(game ${PYTHON_LIBRARIES})
