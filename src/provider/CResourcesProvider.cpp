@@ -1,6 +1,6 @@
 #include "CResourcesProvider.h"
 #include "core/CUtil.h"
-#include "vstd/vstd.h"
+#include "vstd.h"
 
 QList<QString> CResourcesProvider::searchPath = {"", ":/"};
 
