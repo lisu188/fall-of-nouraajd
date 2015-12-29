@@ -4,17 +4,12 @@ project(game)
 include($ENV{COTIRE_CMAKE}/cotire.cmake)
 
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
-set(CMAKE_AUTOMOC ON)
 
 set(BOOST_INCLUDEDIR $ENV{BOOST_INC})
 set(BOOST_LIBRARYDIR $ENV{BOOST_LIB})
-find_package(Boost 1.58 COMPONENTS system python3 thread REQUIRED)
+find_package(Boost 1.58)
 
-set(PYTHON_LIBRARY $ENV{PYTHON_LIB}/libpython34.a)
-set(PYTHON_INCLUDE_DIR $ENV{PYTHON_INC})
-find_package(PythonLibs REQUIRED)
-
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14 -include cmath -Wno-deprecated-declarations -Wno-unused-local-typedefs -Wno-attributes")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DBOOST_DISABLE_ASSERTS -std=c++14 -include cmath -Wno-deprecated-declarations -Wno-unused-local-typedefs -Wno-attributes")
 
 set(SOURCE_FILES
         controller/CController.cpp
@@ -131,16 +126,21 @@ set(SOURCE_FILES
         core/CUtil.cpp
         core/CUtil.h)
 
-add_subdirectory(vstd)
+file(GLOB_RECURSE UMOF_SRC umof/src/**.cpp umof/src/**.h)
+file(GLOB_RECURSE VSTD_SRC vstd/src/**.cpp vstd/src/**.h)
+file(GLOB_RECURSE BOOST_PYTHON_SRC python/src/**.cpp python/src/**.h)
 
 include_directories(${Boost_INCLUDE_DIRS})
-include_directories(${PYTHON_INCLUDE_DIRS})
+include_directories(C:/Users/Andrzej/AppData/Local/Programs/Python/Python35/include) #TODO: ugh!
 
-add_executable(game ${SOURCE_FILES})
+include_directories(umof/src)
+include_directories(vstd/src)
+include_directories(python/src)
+
+add_executable(game ${SOURCE_FILES} ${UMOF_SRC} ${VSTD_SRC} ${BOOST_PYTHON_SRC})
 
 add_custom_command(TARGET game PRE_BUILD COMMAND format.py WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
 
-target_link_libraries(game ${Boost_LIBRARIES})
-target_link_libraries(game ${PYTHON_LIBRARIES})
+target_link_libraries(game $ENV{PYTHON_LIB}/libpython35.a)
 
 cotire(game)
