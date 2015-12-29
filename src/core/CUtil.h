@@ -1,8 +1,8 @@
 #pragma once
 
 #include "core/CGlobal.h"
-#include "vstd/vstd.h"
-#include "vstd/vstd.h"
+#include "vstd.h"
+#include "vstd.h"
 
 class CGameObject;
 

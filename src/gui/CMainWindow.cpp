@@ -1,7 +1,7 @@
 #include "CGameView.h"
 #include "CMainWindow.h"
-#include "ui_CMainWindow.h"
-#include "vstd/vstd.h"
+//#include "ui_CMainWindow.h"
+#include "vstd.h"
 #include "core/CGame.h"
 
 CMainWindow::CMainWindow() :

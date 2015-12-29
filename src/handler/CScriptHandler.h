@@ -2,8 +2,8 @@
 
 #include "core/CGlobal.h"
 #include "core/CUtil.h"
-#include "vstd/vstd.h"
-#include "vstd/vstd.h"
+#include "vstd.h"
+#include "vstd.h"
 
 template<typename Return, typename... Args>
 struct wrap {

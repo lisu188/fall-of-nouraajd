@@ -2,7 +2,7 @@
 
 #include "core/CUtil.h"
 #include "CAnimatedObject.h"
-#include "vstd/vstd.h"
+#include "vstd.h"
 
 class CGameEvent;
 
