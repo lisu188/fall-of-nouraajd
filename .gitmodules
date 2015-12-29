@@ -1,3 +1,9 @@
 [submodule "vstd"]
 	path = vstd
 	url = https://andrzej_lis3@bitbucket.org/andrzej_lis3/vstd.git
+[submodule "umof"]
+	path = umof
+	url = https://andrzej_lis3@bitbucket.org/occash/umof.git
+[submodule "python"]
+	path = python
+	url = https://github.com/boostorg/python.git
