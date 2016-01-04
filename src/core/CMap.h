@@ -5,7 +5,7 @@
 #include "core/CUtil.h"
 #include "handler/CHandler.h"
 #include "provider/CProvider.h"
-#include "vstd.h"
+
 
 class CGame;
 

@@ -3,7 +3,7 @@
 #include "core/CGame.h"
 #include "loader/CLoader.h"
 #include "controller/CControllers.h"
-#include "vstd.h"
+
 
 CMap::CMap ( std::shared_ptr<CGame> game ) : game ( game ) {
 

@@ -2,7 +2,7 @@
 
 #include "core/CUtil.h"
 #include "core/CDefines.h"
-#include "vstd.h"
+
 
 class CGameEvent;
 

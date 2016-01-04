@@ -2,8 +2,8 @@
 
 #include "core/CGlobal.h"
 #include "object/CObject.h"
-#include "vstd.h"
-#include "vstd.h"
+
+
 
 class CTypes {
 public:
@@ -47,9 +47,9 @@ public:
 
     template<typename T>
     static void register_serializer() {
-        register_serializer<std::shared_ptr<QJsonObject>, std::shared_ptr<T>>();
-        register_serializer<std::shared_ptr<QJsonArray>, std::set<std::shared_ptr<T>>>();
-        register_serializer<std::shared_ptr<QJsonObject>, std::map<std::string, std::shared_ptr<T>>>();
+        register_serializer<std::shared_ptr<Value>, std::shared_ptr<T>>();
+        register_serializer<std::shared_ptr<Value>, std::set<std::shared_ptr<T>>>();
+        register_serializer<std::shared_ptr<Value>, std::map<std::string, std::shared_ptr<T>>>();
     }
 
     template<typename T>

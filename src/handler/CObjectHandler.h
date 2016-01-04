@@ -2,7 +2,7 @@
 
 #include "core/CGlobal.h"
 #include "core/CUtil.h"
-#include "vstd.h"
+
 #include "core/CSerialization.h"
 
 class ATypeHandler;
@@ -39,7 +39,7 @@ public:
 
     std::shared_ptr<CGameObject> getType ( std::string name );
 
-    std::shared_ptr<QJsonObject> getConfig ( std::string type );
+    std::shared_ptr<Value> getConfig ( std::string type );
 
 private:
     std::shared_ptr<CGameObject> _createObject ( std::shared_ptr<CMap> map, std::string type );
@@ -48,7 +48,7 @@ private:
 
     std::unordered_map<std::string, std::function<std::shared_ptr<CGameObject>() >> constructors;
 
-    std::unordered_map<std::string, std::shared_ptr<QJsonObject>> objectConfig;
+    std::unordered_map<std::string, std::shared_ptr<Value>> objectConfig;
 
     std::weak_ptr<CObjectHandler> parent;
 
