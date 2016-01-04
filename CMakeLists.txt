@@ -11,20 +11,18 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DBOOST_DISABLE_ASSERTS -std=c++14 -incl
 
 file(GLOB_RECURSE GAME_SRC ${CMAKE_SOURCE_DIR}/src/**.cpp ${CMAKE_SOURCE_DIR}/src/**.h)
 
-file(GLOB_RECURSE VSTD_SRC vstd/src/**.cpp vstd/src/**.h)
-file(GLOB_RECURSE BOOST_PYTHON_SRC python/src/**.cpp python/src/**.h)
+file(GLOB_RECURSE BOOST_PYTHON_SRC ${CMAKE_SOURCE_DIR}/../python/src/**.cpp)
 
 include_directories(${Boost_INCLUDE_DIRS})
 include_directories(C:/Users/Andrzej/AppData/Local/Programs/Python/Python35/include) #TODO: ugh!
 
 include_directories(${CMAKE_SOURCE_DIR}/src)
 
-include_directories(vstd/src)
-include_directories(python/src)
+include_directories(${CMAKE_SOURCE_DIR}/../vstd/src)
+include_directories(${CMAKE_SOURCE_DIR}/../python/src)
+include_directories(${CMAKE_SOURCE_DIR}/../rapidjson/include)
 
-include_directories(rapidjson/include)
-
-add_executable(game ${GAME_SRC} ${VSTD_SRC} ${BOOST_PYTHON_SRC})
+add_executable(game ${GAME_SRC} ${BOOST_PYTHON_SRC})
 
 #add_custom_command(TARGET game PRE_BUILD COMMAND format.py WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
 

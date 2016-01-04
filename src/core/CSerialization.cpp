@@ -1,34 +1,34 @@
 #include "core/CSerialization.h"
 #include "core/CGame.h"
-#include "CJsonUtil.h"
+#include "core/CJsonUtil.h"
 #include "core/CTypes.h"
 
 std::shared_ptr<CSerializerBase> CSerialization::serializer ( std::pair<int, int> key ) {
     return CTypes::serializers() [key];
 }
 
-void CSerialization::setProperty ( std::shared_ptr<CGameObject> object, std::string key, const QJsonValue &value ) {
-    switch ( value.type() ) {
-    case QJsonValue::Null:
+void CSerialization::setProperty ( std::shared_ptr<CGameObject> object, std::string key, const Value &value ) {
+    switch ( value.) {
+    case Value::Null:
         vstd::fail ( "Null value detected." );
         break;
-    case QJsonValue::Undefined:
+    case Value::Undefined:
         vstd::fail ( "Undefined value detected." );
         break;
-    case QJsonValue::Type::Bool:
+    case Value::Type::Bool:
         object->setBoolProperty ( key, value.toBool() );
         break;
-    case QJsonValue::Type::Double:
+    case Value::Type::Double:
         object->setNumericProperty ( key, value.toInt() );
         break;
-    case QJsonValue::Type::String:
+    case Value::Type::String:
         setStringProperty ( object, key, value.toString() );
         break;
-    case QJsonValue::Type::Array:
-        setArrayProperty ( object, getProperty ( object, key ), key, std::make_shared<QJsonArray> ( value.toArray() ) );
+    case Value::Type::Array:
+        setArrayProperty ( object, getProperty ( object, key ), key, std::make_shared<Value> ( value.toArray() ) );
         break;
-    case QJsonValue::Type::Object:
-        setObjectProperty ( object, getProperty ( object, key ), key, std::make_shared<QJsonObject> ( value.toObject() ) );
+    case Value::Type::Object:
+        setObjectProperty ( object, getProperty ( object, key ), key, std::make_shared<Value> ( value.toObject() ) );
         break;
     }
 }
@@ -44,8 +44,8 @@ QMetaProperty CSerialization::getProperty ( std::shared_ptr<CGameObject> object,
 }
 
 void CSerialization::setArrayProperty ( std::shared_ptr<CGameObject> object, QMetaProperty property, std::string key,
-                                        std::shared_ptr<QJsonArray> value ) {
-    setOtherProperty ( qRegisterMetaType<std::shared_ptr<QJsonArray>>(),
+                                        std::shared_ptr<Value> value ) {
+    setOtherProperty ( qRegisterMetaType<std::shared_ptr<Value>>(),
                        QMetaType::type ( property.typeName() ) ?
                        QMetaType::type ( property.typeName() ) :
                        qRegisterMetaType<std::set<std::shared_ptr<CGameObject>>>(),
@@ -53,8 +53,8 @@ void CSerialization::setArrayProperty ( std::shared_ptr<CGameObject> object, QMe
 }
 
 void CSerialization::setObjectProperty ( std::shared_ptr<CGameObject> object, QMetaProperty property, std::string key,
-        std::shared_ptr<QJsonObject> value ) {
-    setOtherProperty ( qRegisterMetaType<std::shared_ptr<QJsonObject>>(),
+        std::shared_ptr<Value> value ) {
+    setOtherProperty ( qRegisterMetaType<std::shared_ptr<Value>>(),
                        QMetaType::type ( property.typeName() ) ?
                        QMetaType::type ( property.typeName() ) :
                        getGenericPropertyType ( value ),
@@ -78,7 +78,7 @@ void CSerialization::setStringProperty ( std::shared_ptr<CGameObject> object, st
                 object->setStringProperty ( key, value );
             }
         } else {
-            setProperty ( object, key, doc.isArray() ? QJsonValue ( doc.array() ) : QJsonValue ( doc.object() ) );
+            setProperty ( object, key, doc.isArray() ? Value ( doc.array() ) : Value ( doc.object() ) );
         }
     }
 }
@@ -90,7 +90,7 @@ void CSerialization::setOtherProperty ( int serializedId, int deserializedId, st
     object->setProperty ( key, value );
 }
 
-void CSerialization::setProperty ( std::shared_ptr<QJsonObject> conf, std::string propertyName, QVariant propertyValue ) {
+void CSerialization::setProperty ( std::shared_ptr<Value> conf, std::string propertyName, QVariant propertyValue ) {
     switch ( propertyValue.type() ) {
     case QVariant::Int:
         ( *conf ) [propertyName] = propertyValue.toInt();
@@ -118,21 +118,21 @@ void CSerialization::setProperty ( std::shared_ptr<QJsonObject> conf, std::strin
             }
         }
         QVariant result = vstd::not_null ( serializer, "No serializer!" )->serialize ( propertyValue );
-        if ( result.canConvert ( qRegisterMetaType<std::shared_ptr<QJsonObject>>() ) ) {
-            ( *conf ) [propertyName] = *result.value<std::shared_ptr<QJsonObject>>();
-        } else if ( result.canConvert ( qRegisterMetaType<std::shared_ptr<QJsonArray>>() ) ) {
-            ( *conf ) [propertyName] = *result.value<std::shared_ptr<QJsonArray>>();
+        if ( result.canConvert ( qRegisterMetaType<std::shared_ptr<Value>>() ) ) {
+            ( *conf ) [propertyName] = *result.value<std::shared_ptr<Value>>();
+        } else if ( result.canConvert ( qRegisterMetaType<std::shared_ptr<Value>>() ) ) {
+            ( *conf ) [propertyName] = *result.value<std::shared_ptr<Value>>();
         } else {
             vstd::fail ( "Not an object or an array" );
         }
     }
 }
 
-std::shared_ptr<QJsonObject> object_serialize ( std::shared_ptr<CGameObject> object ) {
-    std::shared_ptr<QJsonObject> conf = std::make_shared<QJsonObject>();
+std::shared_ptr<Value> object_serialize ( std::shared_ptr<CGameObject> object ) {
+    std::shared_ptr<Value> conf = std::make_shared<Value>();
     if ( object ) {
         ( *conf ) ["class"] = object->getObjectType();
-        std::shared_ptr<QJsonObject> properties = std::make_shared<QJsonObject>();
+        std::shared_ptr<Value> properties = std::make_shared<Value>();
         for ( int i = 0; i < object->metaObject()->propertyCount(); i++ ) {
             QMetaProperty property = object->metaObject()->property ( i );
             std::string propertyName = property.name();
@@ -149,7 +149,7 @@ std::shared_ptr<QJsonObject> object_serialize ( std::shared_ptr<CGameObject> obj
     return conf;
 }
 
-std::shared_ptr<CGameObject> object_deserialize ( std::shared_ptr<CMap> map, std::shared_ptr<QJsonObject> config ) {
+std::shared_ptr<CGameObject> object_deserialize ( std::shared_ptr<CMap> map, std::shared_ptr<Value> config ) {
     std::shared_ptr<CGameObject> object;
     if ( ! ( *config ) ["ref"].toString().isEmpty() ) {
         object = map->getObjectHandler()->createObject ( map, ( *config ) ["ref"].toString() );
@@ -163,7 +163,7 @@ std::shared_ptr<CGameObject> object_deserialize ( std::shared_ptr<CMap> map, std
         }
     }
     if ( object ) {
-        QJsonObject properties = ( *config ) ["properties"].toObject();
+        Value properties = ( *config ) ["properties"].toObject();
         for ( auto it = properties.begin(); it != properties.end(); it++ ) {
             CSerialization::setProperty ( object, it.key(), it.value() );
         }
@@ -172,46 +172,46 @@ std::shared_ptr<CGameObject> object_deserialize ( std::shared_ptr<CMap> map, std
     return object;
 }
 
-std::shared_ptr<QJsonObject> map_serialize ( std::map<std::string, std::shared_ptr<CGameObject> > object ) {
-    std::shared_ptr<QJsonObject> ob = std::make_shared<QJsonObject>();
+std::shared_ptr<Value> map_serialize ( std::map<std::string, std::shared_ptr<CGameObject> > object ) {
+    std::shared_ptr<Value> ob = std::make_shared<Value>();
     for ( std::pair<std::string, std::shared_ptr<CGameObject>> it:object ) {
-        ( *ob ) [it.first] = *CSerializerFunction<std::shared_ptr<QJsonObject>, std::shared_ptr<CGameObject>>::serialize (
+        ( *ob ) [it.first] = *CSerializerFunction<std::shared_ptr<Value>, std::shared_ptr<CGameObject>>::serialize (
                                  it.second );
     }
     return ob;
 }
 
 std::map<std::string, std::shared_ptr<CGameObject> > map_deserialize ( std::shared_ptr<CMap> map,
-        std::shared_ptr<QJsonObject> object ) {
+        std::shared_ptr<Value> object ) {
     std::map<std::string, std::shared_ptr<CGameObject> > ret;
     for ( auto it = object->begin(); it != object->end(); it++ ) {
-        ret[it.key()] = CSerializerFunction<std::shared_ptr<QJsonObject>, std::shared_ptr<CGameObject>>::deserialize (
-                            map, std::make_shared<QJsonObject> ( it.value().toObject() ) );
+        ret[it.key()] = CSerializerFunction<std::shared_ptr<Value>, std::shared_ptr<CGameObject>>::deserialize (
+                            map, std::make_shared<Value> ( it.value().toObject() ) );
     }
     return ret;
 }
 
-std::shared_ptr<QJsonArray> array_serialize ( std::set<std::shared_ptr<CGameObject> > set ) {
-    std::shared_ptr<QJsonArray> arr = std::make_shared<QJsonArray>();
+std::shared_ptr<Value> array_serialize ( std::set<std::shared_ptr<CGameObject> > set ) {
+    std::shared_ptr<Value> arr = std::make_shared<Value>();
     for ( std::shared_ptr<CGameObject> ob:set ) {
-        arr->append ( *CSerializerFunction<std::shared_ptr<QJsonObject>, std::shared_ptr<CGameObject>>::serialize ( ob ) );
+        arr->append ( *CSerializerFunction<std::shared_ptr<Value>, std::shared_ptr<CGameObject>>::serialize ( ob ) );
     }
     return arr;
 }
 
 std::set<std::shared_ptr<CGameObject> > array_deserialize ( std::shared_ptr<CMap> map,
-        std::shared_ptr<QJsonArray> object ) {
+        std::shared_ptr<Value> object ) {
     std::set<std::shared_ptr<CGameObject> > objects;
-    for ( QJsonValue it:*object ) {
-        objects.insert ( CSerializerFunction<std::shared_ptr<QJsonObject>, std::shared_ptr<CGameObject>>::deserialize ( map,
-                         std::make_shared<QJsonObject> (
+    for ( Value it:*object ) {
+        objects.insert ( CSerializerFunction<std::shared_ptr<Value>, std::shared_ptr<CGameObject>>::deserialize ( map,
+                         std::make_shared<Value> (
                              it.toObject() ) ) );
     }
     return objects;
 }
 
 
-int CSerialization::getGenericPropertyType ( std::shared_ptr<QJsonObject> object ) {
+int CSerialization::getGenericPropertyType ( std::shared_ptr<Value> object ) {
     if ( CJsonUtil::isObject ( object ) ) {
         return qRegisterMetaType<std::shared_ptr<CGameObject>>();
     } else if ( CJsonUtil::isMap ( object ) ) {
@@ -221,37 +221,37 @@ int CSerialization::getGenericPropertyType ( std::shared_ptr<QJsonObject> object
 }
 
 
-std::shared_ptr<QJsonArray> CSerializerFunction<std::shared_ptr<QJsonArray>, std::set<std::shared_ptr<CGameObject> > >::serialize (
+std::shared_ptr<Value> CSerializerFunction<std::shared_ptr<Value>, std::set<std::shared_ptr<CGameObject> > >::serialize (
     std::set<std::shared_ptr<CGameObject> > set ) {
     return array_serialize ( set );
 }
 
 
-std::set<std::shared_ptr<CGameObject> > CSerializerFunction<std::shared_ptr<QJsonArray>, std::set<std::shared_ptr<CGameObject> > >::deserialize (
-    std::shared_ptr<CMap> map, std::shared_ptr<QJsonArray> object ) {
+std::set<std::shared_ptr<CGameObject> > CSerializerFunction<std::shared_ptr<Value>, std::set<std::shared_ptr<CGameObject> > >::deserialize (
+    std::shared_ptr<CMap> map, std::shared_ptr<Value> object ) {
     return array_deserialize ( map, object );
 }
 
 
-std::shared_ptr<QJsonObject> CSerializerFunction<std::shared_ptr<QJsonObject>, std::map<std::string, std::shared_ptr<CGameObject> > >::serialize (
+std::shared_ptr<Value> CSerializerFunction<std::shared_ptr<Value>, std::map<std::string, std::shared_ptr<CGameObject> > >::serialize (
     std::map<std::string, std::shared_ptr<CGameObject> > object ) {
     return map_serialize ( object );
 }
 
 
-std::map<std::string, std::shared_ptr<CGameObject> > CSerializerFunction<std::shared_ptr<QJsonObject>, std::map<std::string, std::shared_ptr<CGameObject> > >::deserialize (
-    std::shared_ptr<CMap> map, std::shared_ptr<QJsonObject> object ) {
+std::map<std::string, std::shared_ptr<CGameObject> > CSerializerFunction<std::shared_ptr<Value>, std::map<std::string, std::shared_ptr<CGameObject> > >::deserialize (
+    std::shared_ptr<CMap> map, std::shared_ptr<Value> object ) {
     return map_deserialize ( map, object );
 }
 
 
-std::shared_ptr<CGameObject> CSerializerFunction<std::shared_ptr<QJsonObject>, std::shared_ptr<CGameObject> >::deserialize (
-    std::shared_ptr<CMap> map, std::shared_ptr<QJsonObject> config ) {
+std::shared_ptr<CGameObject> CSerializerFunction<std::shared_ptr<Value>, std::shared_ptr<CGameObject> >::deserialize (
+    std::shared_ptr<CMap> map, std::shared_ptr<Value> config ) {
     return object_deserialize ( map, config );
 }
 
 
-std::shared_ptr<QJsonObject> CSerializerFunction<std::shared_ptr<QJsonObject>, std::shared_ptr<CGameObject> >::serialize (
+std::shared_ptr<Value> CSerializerFunction<std::shared_ptr<Value>, std::shared_ptr<CGameObject> >::serialize (
     std::shared_ptr<CGameObject> object ) {
     return object_serialize ( object );
 }

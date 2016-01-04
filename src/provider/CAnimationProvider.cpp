@@ -33,7 +33,7 @@ void CAnimationProvider::loadAnim ( std::string path ) {
     std::map<int, int> timemap;
     std::string time = "time.json";
 
-    std::shared_ptr<QJsonObject> config;
+    std::shared_ptr<Value> config;
     if ( path.endsWith ( "/" ) ) {
         config = CConfigurationProvider::getConfig ( path + time );
     }
