@@ -2,16 +2,16 @@
 
 #include "core/CGlobal.h"
 
-class CConfigurationProvider : private std::map<std::string, std::shared_ptr<QJsonObject>> {
+class CConfigurationProvider : private std::map<std::string, std::shared_ptr<Value>> {
 public:
-    static std::shared_ptr<QJsonObject> getConfig ( std::string path );
+    static std::shared_ptr<Value> getConfig ( std::string path );
 
 private:
     CConfigurationProvider();
 
     ~CConfigurationProvider();
 
-    std::shared_ptr<QJsonObject> getConfiguration ( std::string path );
+    std::shared_ptr<Value> getConfiguration ( std::string path );
 
     void loadConfig ( std::string path );
 };

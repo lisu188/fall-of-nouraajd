@@ -22,17 +22,17 @@ public:
 
     void save ( std::string file, std::string data );
 
-    void save ( std::string file, std::shared_ptr<QJsonObject> data );
+    void save ( std::string file, std::shared_ptr<Value> data );
 
-    void save ( std::string file, std::shared_ptr<QJsonArray> data );
+    void save ( std::string file, std::shared_ptr<Value> data );
 
     void saveZip ( std::string file, QByteArray data );
 
     void saveZip ( std::string file, std::string data );
 
-    void saveZip ( std::string file, std::shared_ptr<QJsonObject> data );
+    void saveZip ( std::string file, std::shared_ptr<Value> data );
 
-    void saveZip ( std::string file, std::shared_ptr<QJsonArray> data );
+    void saveZip ( std::string file, std::shared_ptr<Value> data );
 
 private:
     static std::list<std::string> searchPath;

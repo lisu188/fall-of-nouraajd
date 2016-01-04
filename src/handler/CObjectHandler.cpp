@@ -6,19 +6,19 @@ CObjectHandler::CObjectHandler ( std::shared_ptr<CObjectHandler> parent ) : pare
 }
 
 void CObjectHandler::registerConfig ( std::string path ) {
-    std::shared_ptr<QJsonObject> config = CConfigurationProvider::getConfig ( path );
+    std::shared_ptr<Value> config = CConfigurationProvider::getConfig ( path );
     for ( auto it = config->begin(); it != config->end(); it++ ) {
-        objectConfig[it.key()] = std::make_shared<QJsonObject> ( it.value().toObject() );
+        objectConfig[it.key()] = std::make_shared<Value> ( it.value().toObject() );
     }
 }
 
-std::shared_ptr<QJsonObject> CObjectHandler::getConfig ( std::string type ) {
+std::shared_ptr<Value> CObjectHandler::getConfig ( std::string type ) {
     if ( vstd::ctn ( objectConfig, type ) ) {
         return objectConfig[type];
     } else if ( parent.lock() ) {
         return parent.lock()->getConfig ( type );
     }
-    return std::make_shared<QJsonObject>();
+    return std::make_shared<Value>();
 }
 
 std::set<std::string> CObjectHandler::getAllTypes() {
@@ -48,16 +48,16 @@ void CObjectHandler::registerType ( std::string name, std::function<std::shared_
 }
 
 std::shared_ptr<CGameObject> CObjectHandler::_createObject ( std::shared_ptr<CMap> map, std::string type ) {
-    std::shared_ptr<QJsonObject> config = getConfig ( type );
+    std::shared_ptr<Value> config = getConfig ( type );
     if ( ( *config ).isEmpty() ) {
         ( *config ) ["class"] = type;
     }
-    return CSerialization::deserialize<std::shared_ptr<QJsonObject>, std::shared_ptr<CGameObject>> ( map, config );
+    return CSerialization::deserialize<std::shared_ptr<Value>, std::shared_ptr<CGameObject>> ( map, config );
 }
 
 std::shared_ptr<CGameObject> CObjectHandler::_clone ( std::shared_ptr<CGameObject> object ) {
-    return CSerialization::deserialize<std::shared_ptr<QJsonObject>, std::shared_ptr<CGameObject>> ( object->getMap(),
-            CSerialization::serialize<std::shared_ptr<QJsonObject>, std::shared_ptr<CGameObject>> (
+    return CSerialization::deserialize<std::shared_ptr<Value>, std::shared_ptr<CGameObject>> ( object->getMap(),
+            CSerialization::serialize<std::shared_ptr<Value>, std::shared_ptr<CGameObject>> (
                 object ) );
 }
 

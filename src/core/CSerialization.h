@@ -1,8 +1,8 @@
 #pragma once
 
 #include "core/CGlobal.h"
-#include "vstd.h"
-#include "vstd.h"
+
+
 
 class CMap;
 
@@ -63,43 +63,43 @@ public:
 
 //inline this functions
 extern std::set<std::shared_ptr<CGameObject> > array_deserialize ( std::shared_ptr<CMap> map,
-        std::shared_ptr<QJsonArray> object );
+        std::shared_ptr<Value> object );
 
-extern std::shared_ptr<QJsonArray> array_serialize ( std::set<std::shared_ptr<CGameObject> > set );
+extern std::shared_ptr<Value> array_serialize ( std::set<std::shared_ptr<CGameObject> > set );
 
 extern std::map<std::string, std::shared_ptr<CGameObject> > map_deserialize ( std::shared_ptr<CMap> map,
-        std::shared_ptr<QJsonObject> object );
+        std::shared_ptr<Value> object );
 
-extern std::shared_ptr<QJsonObject> map_serialize ( std::map<std::string, std::shared_ptr<CGameObject> > object );
+extern std::shared_ptr<Value> map_serialize ( std::map<std::string, std::shared_ptr<CGameObject> > object );
 
-extern std::shared_ptr<CGameObject> object_deserialize ( std::shared_ptr<CMap> map, std::shared_ptr<QJsonObject> config );
+extern std::shared_ptr<CGameObject> object_deserialize ( std::shared_ptr<CMap> map, std::shared_ptr<Value> config );
 
-extern std::shared_ptr<QJsonObject> object_serialize ( std::shared_ptr<CGameObject> object );
+extern std::shared_ptr<Value> object_serialize ( std::shared_ptr<CGameObject> object );
 
 template<>
-class CSerializerFunction<std::shared_ptr<QJsonObject>, std::shared_ptr<CGameObject>> {
+class CSerializerFunction<std::shared_ptr<Value>, std::shared_ptr<CGameObject>> {
 public:
-    static std::shared_ptr<QJsonObject> serialize ( std::shared_ptr<CGameObject> object );
+    static std::shared_ptr<Value> serialize ( std::shared_ptr<CGameObject> object );
 
-    static std::shared_ptr<CGameObject> deserialize ( std::shared_ptr<CMap> map, std::shared_ptr<QJsonObject> config );
+    static std::shared_ptr<CGameObject> deserialize ( std::shared_ptr<CMap> map, std::shared_ptr<Value> config );
 };
 
 template<>
-class CSerializerFunction<std::shared_ptr<QJsonObject>, std::map<std::string, std::shared_ptr<CGameObject> >> {
+class CSerializerFunction<std::shared_ptr<Value>, std::map<std::string, std::shared_ptr<CGameObject> >> {
 public:
-    static std::shared_ptr<QJsonObject> serialize ( std::map<std::string, std::shared_ptr<CGameObject> > object );
+    static std::shared_ptr<Value> serialize ( std::map<std::string, std::shared_ptr<CGameObject> > object );
 
     static std::map<std::string, std::shared_ptr<CGameObject> > deserialize ( std::shared_ptr<CMap> map,
-            std::shared_ptr<QJsonObject> object );
+            std::shared_ptr<Value> object );
 };
 
 template<>
-class CSerializerFunction<std::shared_ptr<QJsonArray>, std::set<std::shared_ptr<CGameObject> >> {
+class CSerializerFunction<std::shared_ptr<Value>, std::set<std::shared_ptr<CGameObject> >> {
 public:
-    static std::shared_ptr<QJsonArray> serialize ( std::set<std::shared_ptr<CGameObject> > set );
+    static std::shared_ptr<Value> serialize ( std::set<std::shared_ptr<CGameObject> > set );
 
     static std::set<std::shared_ptr<CGameObject> > deserialize ( std::shared_ptr<CMap> map,
-            std::shared_ptr<QJsonArray> object );
+            std::shared_ptr<Value> object );
 };
 
 template<typename Serialized, typename Deserialized>
@@ -139,20 +139,20 @@ public:
         return variant.value<Deserialized>();
     }
 
-    static void setProperty ( std::shared_ptr<CGameObject> object, std::string key, const QJsonValue &value );
+    static void setProperty ( std::shared_ptr<CGameObject> object, std::string key, const Value &value );
 
-    static void setProperty ( std::shared_ptr<QJsonObject> conf, std::string propertyName, QVariant propertyValue );
+    static void setProperty ( std::shared_ptr<Value> conf, std::string propertyName, QVariant propertyValue );
 
 private:
     static QMetaProperty getProperty ( std::shared_ptr<CGameObject> object, std::string name );
 
-    static int getGenericPropertyType ( std::shared_ptr<QJsonObject> object );
+    static int getGenericPropertyType ( std::shared_ptr<Value> object );
 
     static void setArrayProperty ( std::shared_ptr<CGameObject> object, QMetaProperty property, std::string key,
-                                   std::shared_ptr<QJsonArray> value );
+                                   std::shared_ptr<Value> value );
 
     static void setObjectProperty ( std::shared_ptr<CGameObject> object, QMetaProperty property, std::string key,
-                                    std::shared_ptr<QJsonObject> value );
+                                    std::shared_ptr<Value> value );
 
     static void setStringProperty ( std::shared_ptr<CGameObject> object, std::string key, std::string value );
 
@@ -160,7 +160,7 @@ private:
                                    QVariant value );
 };
 
-Q_DECLARE_METATYPE ( std::shared_ptr<QJsonObject> )
+Q_DECLARE_METATYPE ( std::shared_ptr<Value> )
 
-Q_DECLARE_METATYPE ( std::shared_ptr<QJsonArray> )
+Q_DECLARE_METATYPE ( std::shared_ptr<Value> )
 

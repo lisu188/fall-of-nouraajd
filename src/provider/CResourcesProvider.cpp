@@ -1,6 +1,6 @@
 #include "CResourcesProvider.h"
 #include "core/CUtil.h"
-#include "vstd.h"
+
 
 std::list<std::string> CResourcesProvider::searchPath = {"", ":/"};
 
@@ -89,11 +89,11 @@ void CResourcesProvider::save ( std::string file, std::string data ) {
     save ( file, data.toUtf8() );
 }
 
-void CResourcesProvider::save ( std::string file, std::shared_ptr<QJsonObject> data ) {
+void CResourcesProvider::save ( std::string file, std::shared_ptr<Value> data ) {
     save ( file, QJsonDocument ( *data ).toJson ( QJsonDocument::JsonFormat::Compact ) );
 }
 
-void CResourcesProvider::save ( std::string file, std::shared_ptr<QJsonArray> data ) {
+void CResourcesProvider::save ( std::string file, std::shared_ptr<Value> data ) {
     save ( file, QJsonDocument ( *data ).toJson ( QJsonDocument::JsonFormat::Compact ) );
 }
 
@@ -105,11 +105,11 @@ void CResourcesProvider::saveZip ( std::string file, std::string data ) {
     saveZip ( file, data.toUtf8() );
 }
 
-void CResourcesProvider::saveZip ( std::string file, std::shared_ptr<QJsonObject> data ) {
+void CResourcesProvider::saveZip ( std::string file, std::shared_ptr<Value> data ) {
     saveZip ( file, QJsonDocument ( *data ).toJson ( QJsonDocument::JsonFormat::Compact ) );
 }
 
-void CResourcesProvider::saveZip ( std::string file, std::shared_ptr<QJsonArray> data ) {
+void CResourcesProvider::saveZip ( std::string file, std::shared_ptr<Value> data ) {
     saveZip ( file, QJsonDocument ( *data ).toJson ( QJsonDocument::JsonFormat::Compact ) );
 }
 
