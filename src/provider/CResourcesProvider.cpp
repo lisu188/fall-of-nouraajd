@@ -2,7 +2,7 @@
 #include "core/CUtil.h"
 #include "vstd.h"
 
-QList<std::string> CResourcesProvider::searchPath = {"", ":/"};
+std::list<std::string> CResourcesProvider::searchPath = {"", ":/"};
 
 CResourcesProvider *CResourcesProvider::getInstance() {
     static CResourcesProvider instance;
