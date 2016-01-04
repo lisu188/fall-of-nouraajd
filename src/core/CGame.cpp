@@ -6,9 +6,7 @@ CGame::CGame ( std::shared_ptr<CGameView> view ) : view ( view ) {
 }
 
 CGame::~CGame() {
-    for ( QGraphicsItem *it:items() ) {
-        removeItem ( it ); //to let shared pointers do their job
-    }
+
 }
 
 void CGame::changeMap ( std::string file ) {
@@ -27,14 +25,6 @@ std::shared_ptr<CGameView> CGame::getView() {
     return view.lock();
 }
 
-void CGame::removeObject ( std::shared_ptr<CGameObject> object ) {
-    this->removeItem ( object.get() );
-}
-
-void CGame::addObject ( std::shared_ptr<CGameObject> object ) {
-    this->addItem ( object.get() );
-}
-
 std::shared_ptr<CGuiHandler> CGame::getGuiHandler() {
     return guiHandler.get ( this->ptr() );
 }
@@ -51,47 +41,47 @@ std::shared_ptr<CGame> CGame::ptr() {
     return shared_from_this();
 }
 
-void CGame::keyPressEvent ( QKeyEvent *event ) {
-    if ( map->isMoving() ) {
-        return;
-    }
-    switch ( event->key() ) {
-    case Qt::Key_Up:
-        if ( !getGuiHandler()->isAnyPanelVisible() ) {
-            map->getPlayer()->setNextMove ( Coords ( 0, -1, 0 ) );
-            map->move();
-        }
-        break;
-    case Qt::Key_Down:
-        if ( !getGuiHandler()->isAnyPanelVisible() ) {
-            map->getPlayer()->setNextMove ( Coords ( 0, 1, 0 ) );
-            map->move();
-        }
-        break;
-    case Qt::Key_Left:
-        if ( !getGuiHandler()->isAnyPanelVisible() ) {
-            map->getPlayer()->setNextMove ( Coords ( -1, 0, 0 ) );
-            map->move();
-        }
-        break;
-    case Qt::Key_Right:
-        if ( !getGuiHandler()->isAnyPanelVisible() ) {
-            map->getPlayer()->setNextMove ( Coords ( 1, 0, 0 ) );
-            map->move();
-        }
-        break;
-    case Qt::Key_Space:
-        if ( !getGuiHandler()->isAnyPanelVisible() ) {
-            map->getPlayer()->setNextMove ( Coords ( 0, 0, 0 ) );
-            map->move();
-        }
-        break;
-    case Qt::Key_I:
-        getGuiHandler()->flipPanel ( "CCharPanel" );
-        break;
-    case Qt::Key_S:
-        scriptWindow.get ( this->ptr() )->setVisible ( true );
-        break;
-    }
+void CGame::keyPressEvent ( void  * event ) { //TODO: implement
+//    if ( map->isMoving() ) {
+//        return;
+//    }
+//    switch ( event->key() ) {
+//    case Qt::Key_Up:
+//        if ( !getGuiHandler()->isAnyPanelVisible() ) {
+//            map->getPlayer()->setNextMove ( Coords ( 0, -1, 0 ) );
+//            map->move();
+//        }
+//        break;
+//    case Qt::Key_Down:
+//        if ( !getGuiHandler()->isAnyPanelVisible() ) {
+//            map->getPlayer()->setNextMove ( Coords ( 0, 1, 0 ) );
+//            map->move();
+//        }
+//        break;
+//    case Qt::Key_Left:
+//        if ( !getGuiHandler()->isAnyPanelVisible() ) {
+//            map->getPlayer()->setNextMove ( Coords ( -1, 0, 0 ) );
+//            map->move();
+//        }
+//        break;
+//    case Qt::Key_Right:
+//        if ( !getGuiHandler()->isAnyPanelVisible() ) {
+//            map->getPlayer()->setNextMove ( Coords ( 1, 0, 0 ) );
+//            map->move();
+//        }
+//        break;
+//    case Qt::Key_Space:
+//        if ( !getGuiHandler()->isAnyPanelVisible() ) {
+//            map->getPlayer()->setNextMove ( Coords ( 0, 0, 0 ) );
+//            map->move();
+//        }
+//        break;
+//    case Qt::Key_I:
+//        getGuiHandler()->flipPanel ( "CCharPanel" );
+//        break;
+//    case Qt::Key_S:
+//        scriptWindow.get ( this->ptr() )->setVisible ( true );
+//        break;
+//    }
 }
 
