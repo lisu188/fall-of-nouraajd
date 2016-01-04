@@ -50,7 +50,7 @@ void CCharPanel::update() {
     QGraphicsItem::update();
 }
 
-QString CCharPanel::getPanelName() {
+std::string CCharPanel::getPanelName() {
     return "CCharPanel";
 }
 

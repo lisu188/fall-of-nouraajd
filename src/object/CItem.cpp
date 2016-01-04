@@ -45,7 +45,7 @@ void CItem::onUse ( std::shared_ptr<CGameEvent> event ) {
     if ( !parent ) {
         return;
     }
-    QString slot = parent->getNumber();
+    std::string slot = parent->getNumber();
     if ( slot == "-1" ) {
         return;
     }
@@ -113,11 +113,11 @@ CScroll::CScroll() {
 
 }
 
-QString CScroll::getText() const {
+std::string CScroll::getText() const {
     return text;
 }
 
-void CScroll::setText ( const QString &value ) {
+void CScroll::setText ( const std::string &value ) {
     text = value;
 }
 

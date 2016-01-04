@@ -1,7 +1,7 @@
 #include "CConfigurationProvider.h"
 #include "handler/CHandler.h"
 
-std::shared_ptr<QJsonObject> CConfigurationProvider::getConfig ( QString path ) {
+std::shared_ptr<QJsonObject> CConfigurationProvider::getConfig ( std::string path ) {
     static CConfigurationProvider instance;
     return instance.getConfiguration ( path );
 }
@@ -14,7 +14,7 @@ CConfigurationProvider::~CConfigurationProvider() {
     clear();
 }
 
-std::shared_ptr<QJsonObject> CConfigurationProvider::getConfiguration ( QString path ) {
+std::shared_ptr<QJsonObject> CConfigurationProvider::getConfiguration ( std::string path ) {
     if ( this->find ( path ) != this->end() ) {
         return this->at ( path );
     }
@@ -22,7 +22,7 @@ std::shared_ptr<QJsonObject> CConfigurationProvider::getConfiguration ( QString 
     return getConfiguration ( path );
 }
 
-void CConfigurationProvider::loadConfig ( QString path ) {
+void CConfigurationProvider::loadConfig ( std::string path ) {
     std::shared_ptr<QFile> file = CResourcesProvider::getInstance()->getResource ( path );
     if ( file && file->open ( QIODevice::ReadOnly ) ) {
         QByteArray data = file->readAll();

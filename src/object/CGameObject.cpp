@@ -14,11 +14,11 @@ CGameObject::CGameObject() {
                        -statsView.boundingRect().height() );
 }
 
-QString CGameObject::getObjectType() const {
+std::string CGameObject::getObjectType() const {
     return this->objectType;
 }
 
-void CGameObject::setObjectType ( const QString &value ) {
+void CGameObject::setObjectType ( const std::string &value ) {
     this->objectType = value;
 }
 
@@ -30,51 +30,51 @@ void CGameObject::setMap ( std::shared_ptr<CMap> map ) {
     this->map = map;
 }
 
-void CGameObject::setProperty ( QString name, QVariant property ) {
+void CGameObject::setProperty ( std::string name, QVariant property ) {
     QByteArray byteArray = name.toUtf8();
     const char *cString = byteArray.constData();
     this->QObject::setProperty ( cString, property );
 }
 
-QVariant CGameObject::property ( QString name ) const {
+QVariant CGameObject::property ( std::string name ) const {
     QByteArray byteArray = name.toUtf8();
     const char *cString = byteArray.constData();
     return this->QObject::property ( cString );
 }
 
-void CGameObject::setStringProperty ( QString name, QString value ) {
+void CGameObject::setStringProperty ( std::string name, std::string value ) {
     this->setProperty ( name, value );
 }
 
-void CGameObject::setBoolProperty ( QString name, bool value ) {
+void CGameObject::setBoolProperty ( std::string name, bool value ) {
     this->setProperty ( name, value );
 }
 
-void CGameObject::setNumericProperty ( QString name, int value ) {
+void CGameObject::setNumericProperty ( std::string name, int value ) {
     this->setProperty ( name, value );
 }
 
-QString CGameObject::getStringProperty ( QString name ) const {
+std::string CGameObject::getStringProperty ( std::string name ) const {
     return this->property ( name ).toString();
 }
 
-bool CGameObject::getBoolProperty ( QString name ) const {
+bool CGameObject::getBoolProperty ( std::string name ) const {
     return this->property ( name ).toBool();
 }
 
-int CGameObject::getNumericProperty ( QString name ) const {
+int CGameObject::getNumericProperty ( std::string name ) const {
     return this->property ( name ).toInt();
 }
 
-void CGameObject::incProperty ( QString name, int value ) {
+void CGameObject::incProperty ( std::string name, int value ) {
     this->setNumericProperty ( name, this->getNumericProperty ( name ) + value );
 }
 
-QString CGameObject::getTooltip() const {
+std::string CGameObject::getTooltip() const {
     return tooltip;
 }
 
-void CGameObject::setTooltip ( const QString &value ) {
+void CGameObject::setTooltip ( const std::string &value ) {
     tooltip = value;
 }
 
@@ -94,7 +94,7 @@ void CGameObject::drag() {
 void CGameObject::hoverEnterEvent ( QGraphicsSceneHoverEvent *event ) {
     if ( hasTooltip ) {
         statsView.setVisible ( true );
-        QString tooltipText = getTooltip();
+        std::string tooltipText = getTooltip();
         if ( tooltipText == "" ) {
             tooltipText = getObjectType();
         }

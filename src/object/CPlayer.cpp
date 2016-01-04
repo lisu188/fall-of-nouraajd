@@ -88,7 +88,7 @@ void CPlayer::setMarket ( std::shared_ptr<CMarket> value ) {
     market = value;
 }
 
-void CPlayer::addQuest ( QString questName ) {
+void CPlayer::addQuest ( std::string questName ) {
     std::shared_ptr<CQuest> quest = getMap()->createObject<CQuest> ( questName );
     if ( quest ) {
         quests.insert ( quest );

@@ -14,22 +14,22 @@ class CGuiHandler {
 public:
     CGuiHandler ( std::shared_ptr<CGame> game );
 
-    void showMessage ( QString msg );
+    void showMessage ( std::string msg );
 
-    std::shared_ptr<AGamePanel> getPanel ( QString panel );
+    std::shared_ptr<AGamePanel> getPanel ( std::string panel );
 
-    void showPanel ( QString panel );
+    void showPanel ( std::string panel );
 
-    void hidePanel ( QString panel );
+    void hidePanel ( std::string panel );
 
-    void flipPanel ( QString panel );
+    void flipPanel ( std::string panel );
 
     bool isAnyPanelVisible();
 
     void refresh();
 
 private:
-    std::map<QString, std::shared_ptr<AGamePanel>> panels;
+    std::map<std::string, std::shared_ptr<AGamePanel>> panels;
 
     void initPanels();
 

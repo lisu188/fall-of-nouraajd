@@ -10,14 +10,14 @@ class CMap;
 
 class CGameObject : public CAnimatedObject, public std::enable_shared_from_this<CGameObject> {
     Q_OBJECT
-    Q_PROPERTY ( QString objectType
+    Q_PROPERTY ( std::string objectType
                  READ
                  getObjectType
                  WRITE
                  setObjectType
                  USER
                  true )
-    Q_PROPERTY ( QString tooltip
+    Q_PROPERTY ( std::string tooltip
                  READ
                  getTooltip
                  WRITE
@@ -29,9 +29,9 @@ public:
 
     virtual ~CGameObject();
 
-    QString getObjectType() const;
+    std::string getObjectType() const;
 
-    void setObjectType ( const QString &value );
+    void setObjectType ( const std::string &value );
 
     std::shared_ptr<CMap> getMap();
 
@@ -42,37 +42,37 @@ public:
         return vstd::cast<T> ( shared_from_this() );
     }
 
-    void setProperty ( QString name, QVariant property );
+    void setProperty ( std::string name, QVariant property );
 
-    QVariant property ( QString name ) const;
+    QVariant property ( std::string name ) const;
 
-    void setStringProperty ( QString name, QString value );
+    void setStringProperty ( std::string name, std::string value );
 
-    void setBoolProperty ( QString name, bool value );
+    void setBoolProperty ( std::string name, bool value );
 
-    void setNumericProperty ( QString name, int value );
+    void setNumericProperty ( std::string name, int value );
 
-    QString getStringProperty ( QString name ) const;
+    std::string getStringProperty ( std::string name ) const;
 
-    bool getBoolProperty ( QString name ) const;
+    bool getBoolProperty ( std::string name ) const;
 
-    int getNumericProperty ( QString name ) const;
+    int getNumericProperty ( std::string name ) const;
 
     template<typename T=CGameObject>
-    void setObjectProperty ( QString name, std::shared_ptr<T> object ) {
+    void setObjectProperty ( std::string name, std::shared_ptr<T> object ) {
         setProperty ( name, QVariant::fromValue ( object ) );
     }
 
     template<typename T=CGameObject>
-    std::shared_ptr<T> getObjectProperty ( QString name ) {
+    std::shared_ptr<T> getObjectProperty ( std::string name ) {
         return *reinterpret_cast<std::shared_ptr<T> *> ( property ( name ).data() );
     }
 
-    void incProperty ( QString name, int value );
+    void incProperty ( std::string name, int value );
 
-    virtual QString getTooltip() const;
+    virtual std::string getTooltip() const;
 
-    virtual void setTooltip ( const QString &value );
+    virtual void setTooltip ( const std::string &value );
 
     void setVisible ( bool vis );
 
@@ -87,8 +87,8 @@ protected:
 
     bool hasTooltip = true;
 private:
-    QString tooltip;
-    QString objectType;
+    std::string tooltip;
+    std::string objectType;
     QGraphicsSimpleTextItem statsView;
     std::weak_ptr<CMap> map;
 };

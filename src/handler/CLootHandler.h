@@ -6,7 +6,7 @@ class CItem;
 
 class CMap;
 
-class CLootHandler : private std::map<QString, int> {
+class CLootHandler : private std::map<std::string, int> {
 public:
     CLootHandler ( std::shared_ptr<CMap> map );
 
