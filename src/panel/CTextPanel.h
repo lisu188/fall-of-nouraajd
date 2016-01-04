@@ -3,7 +3,7 @@
 #include "CGamePanel.h"
 
 class CTextPanel : public AGamePanel {
-    Q_OBJECT
+
     Q_PROPERTY ( std::string text
                  READ
                  getText

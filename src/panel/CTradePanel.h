@@ -7,7 +7,7 @@ class CPlayerInventoryView;
 class CTradeItemsView;
 
 class CTradePanel : public AGamePanel {
-    Q_OBJECT
+
 public:
     CTradePanel();
 

@@ -20,7 +20,7 @@ class CGameView;
 class CTradePanel;
 
 class CPlayerView : public CGameObject {
-    Q_OBJECT
+
 public:
     CPlayerView ( std::shared_ptr<AGamePanel> panel );
 
@@ -31,7 +31,7 @@ protected:
 };
 
 class CPlayerEquippedView : public CPlayerView {
-    Q_OBJECT
+
 public:
     CPlayerEquippedView ( std::shared_ptr<AGamePanel> panel );
 
@@ -46,7 +46,7 @@ private:
 };
 
 class PlayerStatsView : public QWidget {
-    Q_OBJECT
+
 public:
     explicit PlayerStatsView();
 
@@ -64,7 +64,7 @@ private:
 class CScrollObject;
 
 class CListView : public CPlayerView {
-    Q_OBJECT
+
 
     friend class CScrollObject;
 
@@ -95,7 +95,7 @@ private:
 };
 
 class CPlayerInventoryView : public CListView {
-    Q_OBJECT
+
 public:
     CPlayerInventoryView ( std::shared_ptr<AGamePanel> panel );
 
@@ -104,7 +104,7 @@ protected:
 };
 
 class CPlayerInteractionView : public CListView {
-    Q_OBJECT
+
 public:
     CPlayerInteractionView ( std::shared_ptr<AGamePanel> panel );
 
@@ -113,7 +113,7 @@ protected:
 };
 
 class CTradeItemsView : public CListView {
-    Q_OBJECT
+
 public:
     CTradeItemsView ( std::shared_ptr<AGamePanel> panel );
 
@@ -133,7 +133,7 @@ private:
 };
 
 class CItemSlot : public CGameObject {
-    Q_OBJECT
+
 public:
     CItemSlot ( std::string number, std::shared_ptr<AGamePanel> panel );
 

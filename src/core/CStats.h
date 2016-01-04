@@ -5,7 +5,7 @@
 #include "object/CMapObject.h"
 
 class Stats : public CGameObject {
-    Q_OBJECT
+
     Q_PROPERTY ( int strength
                  READ
                  getStrength
@@ -253,7 +253,7 @@ private:
 GAME_PROPERTY ( Stats )
 
 class Damage : public CGameObject {
-    Q_OBJECT
+
     Q_PROPERTY ( int fire
                  READ
                  getFire

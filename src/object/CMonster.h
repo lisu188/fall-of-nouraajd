@@ -3,7 +3,7 @@
 #include "CCreature.h"
 
 class CMonster : public CCreature {
-    Q_OBJECT
+
 public:
     CMonster();
 

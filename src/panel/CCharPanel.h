@@ -3,7 +3,7 @@
 #include "CGamePanel.h"
 
 class CCharPanel : public AGamePanel {
-    Q_OBJECT
+
 public:
     CCharPanel();
 

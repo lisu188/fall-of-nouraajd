@@ -31,7 +31,7 @@ struct Coords {
 };
 
 class CObjectData : public QMimeData {
-    Q_OBJECT
+
 public:
     CObjectData ( std::shared_ptr<CGameObject> object );
 
@@ -54,7 +54,7 @@ private:
 };
 
 class CInvocationHandler : public QObject {
-    Q_OBJECT
+
 public:
     static CInvocationHandler *instance();
 
