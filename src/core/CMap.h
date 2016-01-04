@@ -29,11 +29,8 @@ class CGuiHandler;
 
 class CMapObject;
 
-class CMap : public QObject,
-    private std::unordered_map<Coords, std::shared_ptr<CTile>>, public std::enable_shared_from_this<CMap> {
+class CMap : private std::unordered_map<Coords, std::shared_ptr<CTile>>, public std::enable_shared_from_this<CMap> {
     friend class CMapLoader;
-
-    Q_OBJECT
 public:
     CMap ( std::shared_ptr<CGame> game );
 
