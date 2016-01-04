@@ -7,3 +7,6 @@
 [submodule "python"]
 	path = python
 	url = https://github.com/boostorg/python.git
+[submodule "rapidjson"]
+	path = rapidjson
+	url = https://github.com/miloyip/rapidjson.git

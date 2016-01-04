@@ -22,6 +22,8 @@ include_directories(${CMAKE_SOURCE_DIR}/src)
 include_directories(vstd/src)
 include_directories(python/src)
 
+include_directories(rapidjson/include)
+
 add_executable(game ${GAME_SRC} ${VSTD_SRC} ${BOOST_PYTHON_SRC})
 
 #add_custom_command(TARGET game PRE_BUILD COMMAND format.py WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
