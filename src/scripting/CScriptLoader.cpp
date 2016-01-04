@@ -12,7 +12,7 @@ AScriptLoader *ModuleSpec::loader() {
 }
 
 std::string CScriptLoader::findModule ( std::string modName ) {
-    modName = modName.replace ( ".", "/" );
+    modName = replace (modName, ".", "/" );
     std::string modData = CResourcesProvider::getInstance()->load ( "scripts/" + modName + ".py" );
     if ( modData == "" ) {
         modData = CResourcesProvider::getInstance()->load ( "scripts/" + modName + "/__init__.py" );
@@ -22,22 +22,14 @@ std::string CScriptLoader::findModule ( std::string modName ) {
 
 CScriptLoader::~CScriptLoader() { }
 
-std::string AScriptLoader::findModule ( std::string modName ) {
-    return findModule ( std::string::fromStdString ( modName ) );
-}
-
-bool AScriptLoader::checkModule ( std::string modName ) {
-    return findModule ( modName ) != "";
-}
-
 void AScriptLoader::exec_module ( object module ) {
-    std::string modName = std::string::fromStdString ( boost::python::extract<std::string> ( module.attr ( "__name__" ) ) );
+    std::string modName =  boost::python::extract<std::string> ( module.attr ( "__name__" ) ) ;
     std::string modData = findModule ( modName );
     object main_module = boost::python::object ( boost::python::handle<> ( PyImport_ImportModule ( "__main__" ) ) );
     object main_namespace = main_module.attr ( "__dict__" );
     module.attr ( "__dict__" ) ["__builtins__"] = main_namespace["__builtins__"];
-    QByteArray byteArray = modData.toUtf8();
-    const char *cString = byteArray.constData();
+
+    const char *cString = modData.c_str();
     exec ( cString, module.attr ( "__dict__" ) );
     qDebug() << "Loaded module:" << modName << "\n";
 }

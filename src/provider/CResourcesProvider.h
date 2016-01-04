@@ -35,7 +35,7 @@ public:
     void saveZip ( std::string file, std::shared_ptr<QJsonArray> data );
 
 private:
-    static QList<std::string> searchPath;
+    static std::list<std::string> searchPath;
 
     CResourcesProvider();
 };
