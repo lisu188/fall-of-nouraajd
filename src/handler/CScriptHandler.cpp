@@ -27,7 +27,7 @@ CScriptHandler::~CScriptHandler() {
     Py_Finalize();
 }
 
-void CScriptHandler::executeScript ( QString script, boost::python::api::object nameSpace ) {
+void CScriptHandler::executeScript ( std::string script, boost::python::api::object nameSpace ) {
     if ( nameSpace.is_none() ) {
         boost::python::exec ( script.toStdString().append ( "\n" ).c_str(), main_namespace );
     } else {
@@ -35,11 +35,11 @@ void CScriptHandler::executeScript ( QString script, boost::python::api::object 
     }
 }
 
-QString CScriptHandler::buildCommand ( std::initializer_list<QString> list ) {
-    QString command;
+std::string CScriptHandler::buildCommand ( std::initializer_list<std::string> list ) {
+    std::string command;
     unsigned int pos = 0;
     for ( auto it = list.begin(); it != list.end(); it++, pos++ ) {
-        QString part = *it;
+        std::string part = *it;
         part.replace ( "\"", "\\\"" );
         if ( pos == 0 ) {
             command.append ( part );
@@ -58,28 +58,28 @@ QString CScriptHandler::buildCommand ( std::initializer_list<QString> list ) {
     return command;
 }
 
-void CScriptHandler::addModule ( QString modName, QString path ) {
+void CScriptHandler::addModule ( std::string modName, std::string path ) {
     std::shared_ptr<CCustomScriptLoader> loader = std::make_shared<CCustomScriptLoader> ( modName, path );
     callFunction ( "sys.meta_path.append", loader );
     executeScript ( "import " + modName );
     callFunction ( "sys.meta_path.remove", loader );
 }
 
-void CScriptHandler::addFunction ( QString functionName, QString functionCode, std::initializer_list<QString> args ) {
-    QString def ( "def " + functionName + "(" + QStringList ( args ).join ( "," ) + "):" );
+void CScriptHandler::addFunction ( std::string functionName, std::string functionCode, std::initializer_list<std::string> args ) {
+    std::string def ( "def " + functionName + "(" + std::stringList ( args ).join ( "," ) + "):" );
     std::stringstream stream;
     stream << def.toStdString() << std::endl;
-    for ( QString line:functionCode.split ( "\n" ) ) {
+    for ( std::string line:functionCode.split ( "\n" ) ) {
         stream << "\t" << line.toStdString() << std::endl;
     }
-    executeScript ( QString::fromStdString ( stream.str() ) );
+    executeScript ( std::string::fromStdString ( stream.str() ) );
 }
 
-void CScriptHandler::import ( QString name ) {
+void CScriptHandler::import ( std::string name ) {
     executeScript ( "import " + name );
 }
 
-void CScriptHandler::executeCommand ( std::initializer_list<QString> list ) {
+void CScriptHandler::executeCommand ( std::initializer_list<std::string> list ) {
     executeScript ( buildCommand ( list ) );
 }
 

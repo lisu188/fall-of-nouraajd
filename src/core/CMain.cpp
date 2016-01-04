@@ -3,7 +3,7 @@
 #include "core/CTypes.h"
 
 static void messageHandler ( QtMsgType type, const QMessageLogContext &,
-                             const QString &msg ) {
+                             const std::string &msg ) {
     static std::recursive_mutex mutex;
     std::unique_lock<std::recursive_mutex> lock ( mutex );
     QByteArray localMsg = msg.toLocal8Bit();
@@ -63,8 +63,8 @@ int main ( int argc, char *argv[] ) {
     qInstallMessageHandler ( messageHandler );
     CTypes::initialize();
     if ( argc == 2 ) {
-        CResourcesProvider::getInstance()->save ( QString::fromUtf8 ( argv[1] ),
-                CResourcesProvider::getInstance()->load ( QString::fromUtf8 ( argv[1] ) ) );
+        CResourcesProvider::getInstance()->save ( std::string::fromUtf8 ( argv[1] ),
+                CResourcesProvider::getInstance()->load ( std::string::fromUtf8 ( argv[1] ) ) );
     } else {
         QApplication a ( argc, argv );
         CMainWindow window;

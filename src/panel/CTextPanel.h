@@ -4,7 +4,7 @@
 
 class CTextPanel : public AGamePanel {
     Q_OBJECT
-    Q_PROPERTY ( QString text
+    Q_PROPERTY ( std::string text
                  READ
                  getText
                  WRITE
@@ -26,12 +26,12 @@ public:
 
     virtual void setUpPanel ( std::shared_ptr<CGameView> view ) override;
 
-    virtual QString getPanelName() override;
+    virtual std::string getPanelName() override;
 
-    QString getText() const;
+    std::string getText() const;
 
-    void setText ( const QString &value );
+    void setText ( const std::string &value );
 
 private:
-    QString text;
+    std::string text;
 };

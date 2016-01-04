@@ -21,8 +21,8 @@ class CItem;
 
 class CMarket;
 
-typedef std::map<QString, std::shared_ptr<CInteraction> > CInteractionMap;
-typedef std::map<QString, std::shared_ptr<CItem> > CItemMap;
+typedef std::map<std::string, std::shared_ptr<CInteraction> > CInteractionMap;
+typedef std::map<std::string, std::shared_ptr<CItem> > CItemMap;
 
 class CCreature : public CMapObject, public Moveable {
     Q_OBJECT
@@ -248,7 +248,7 @@ public:
 
     bool hasEquipped ( std::shared_ptr<CItem> item );
 
-    void setItem ( QString i, std::shared_ptr<CItem> newItem );
+    void setItem ( std::string i, std::shared_ptr<CItem> newItem );
 
     bool hasInInventory ( std::shared_ptr<CItem> item );
 
@@ -276,9 +276,9 @@ public:
 
     void setHpMax ( int value );
 
-    std::shared_ptr<CItem> getItemAtSlot ( QString slot );
+    std::shared_ptr<CItem> getItemAtSlot ( std::string slot );
 
-    QString getSlotWithItem ( std::shared_ptr<CItem> item );
+    std::string getSlotWithItem ( std::shared_ptr<CItem> item );
 
     CInteractionMap getLevelling();
 
@@ -304,7 +304,7 @@ public:
 
     virtual void afterMove();
 
-    virtual QString getTooltip() const override;
+    virtual std::string getTooltip() const override;
 
     void addGold ( int gold );
 
@@ -323,8 +323,8 @@ protected:
     std::set<std::shared_ptr<CInteraction>> actions;
     std::set<std::shared_ptr<CEffect>> effects;
 
-    std::map<QString, std::shared_ptr<CItem> > equipped;
-    std::map<QString, std::shared_ptr<CInteraction>> levelling;
+    std::map<std::string, std::shared_ptr<CItem> > equipped;
+    std::map<std::string, std::shared_ptr<CInteraction>> levelling;
 
     int gold = 0;
     int exp = 0;

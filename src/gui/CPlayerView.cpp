@@ -157,14 +157,14 @@ void CScrollObject::onClickAction ( std::shared_ptr<CGameObject> ) {
 
 CPlayerEquippedView::CPlayerEquippedView ( std::shared_ptr<AGamePanel> panel ) : CPlayerView ( panel ) {
     for ( unsigned int i = 0; i < 8; i++ ) {
-        std::shared_ptr<CItemSlot> slot = std::make_shared<CItemSlot> ( QString::number ( i ), panel );
+        std::shared_ptr<CItemSlot> slot = std::make_shared<CItemSlot> ( std::string::number ( i ), panel );
         slot->setParentItem ( this );
         slot->setPos ( i % 4 * 50, i / 4 * 50 );
         itemSlots.push_back ( slot );
     }
 }
 
-CItemSlot::CItemSlot ( QString number, std::shared_ptr<AGamePanel> panel ) :
+CItemSlot::CItemSlot ( std::string number, std::shared_ptr<AGamePanel> panel ) :
     number ( number ), panel ( panel ) {
     pixmap.load ( CResourcesProvider::getInstance()->getPath ( "images/item.png" ) );
     pixmap = pixmap.scaled ( 50, 50,
@@ -181,7 +181,7 @@ void CItemSlot::paint ( QPainter *painter, const QStyleOptionGraphicsItem *,
     painter->drawPixmap ( 0, 0, pixmap );
 }
 
-bool CItemSlot::checkType ( QString slot, std::shared_ptr<CItem> item ) {
+bool CItemSlot::checkType ( std::string slot, std::shared_ptr<CItem> item ) {
     QJsonArray config =
         ( *CConfigurationProvider::getConfig (
               "config/slots.json" ) ) [slot].toObject() ["types"].toArray();
@@ -199,8 +199,8 @@ void CItemSlot::update() {
         return;
     }
     auto equipped = player->getEquipped();
-    if ( equipped.find ( QString ( number ) ) != equipped.end() ) {
-        std::shared_ptr<CItem> item = equipped.at ( QString ( number ) );
+    if ( equipped.find ( std::string ( number ) ) != equipped.end() ) {
+        std::shared_ptr<CItem> item = equipped.at ( std::string ( number ) );
         if ( item ) {
             item->setParentItem ( this );
             item->setPos ( 0, 0 );
@@ -211,7 +211,7 @@ void CItemSlot::update() {
     this->CGameObject::update();
 }
 
-QString CItemSlot::getNumber() {
+std::string CItemSlot::getNumber() {
     return number;
 }
 

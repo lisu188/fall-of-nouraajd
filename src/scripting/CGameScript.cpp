@@ -78,7 +78,7 @@ BOOST_PYTHON_MODULE ( _game ) {
             .def ( "createObject", &CMap::createObject<CGameObject> )
             .def ( "getGame", &CMap::getGame )
             .def ( "move", &CMap::move );
-    void ( CObjectHandler::*registerType ) ( QString,
+    void ( CObjectHandler::*registerType ) ( std::string,
             std::function<std::shared_ptr<CGameObject>() > ) = &CObjectHandler::registerType;
     class_<CObjectHandler, boost::noncopyable, std::shared_ptr<CObjectHandler>> ( "CObjectHandler", no_init )
             .def ( "registerType", registerType );

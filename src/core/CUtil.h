@@ -73,8 +73,8 @@ namespace std {
     };
 
     template<>
-    struct hash<QString> {
-        force_inline std::size_t operator() ( const QString &string ) const {
+    struct hash<std::string> {
+        force_inline std::size_t operator() ( const std::string &string ) const {
             return vstd::hash_combine ( string.toStdString() );
         }
     };

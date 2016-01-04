@@ -23,7 +23,7 @@ public:
 
     ~CGame();
 
-    void changeMap ( QString file );
+    void changeMap ( std::string file );
 
     std::shared_ptr<CMap> getMap() const;
 

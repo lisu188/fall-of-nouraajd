@@ -6,7 +6,7 @@ std::set<std::shared_ptr<CItem>> CLootHandler::getLoot ( int value ) const {
 }
 
 CLootHandler::CLootHandler ( std::shared_ptr<CMap> map ) : map ( map ) {
-    for ( QString type : map->getObjectHandler()->getAllTypes() ) {
+    for ( std::string type : map->getObjectHandler()->getAllTypes() ) {
         std::shared_ptr<CItem> item = map->createObject<CItem> ( type );
         if ( item ) {
             int power = item->getPower();
@@ -26,8 +26,8 @@ std::set<std::shared_ptr<CItem>> CLootHandler::calculateLoot ( int value ) const
         powers.push_back ( pow );
     }
     for ( int val:powers ) {
-        std::vector<QString> names;
-        for ( std::pair<QString, int> it:*this ) {
+        std::vector<std::string> names;
+        for ( std::pair<std::string, int> it:*this ) {
             if ( it.second == val ) {
                 names.push_back ( it.first );
             }

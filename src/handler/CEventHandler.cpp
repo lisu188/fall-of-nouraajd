@@ -37,7 +37,7 @@ void CEventHandler::gameEvent ( std::shared_ptr<CMapObject> object, std::shared_
     );
 }
 
-void CEventHandler::registerTrigger ( QString name, QString type, std::shared_ptr<CTrigger> trigger ) {
+void CEventHandler::registerTrigger ( std::string name, std::string type, std::shared_ptr<CTrigger> trigger ) {
     bool ok;
     CGameEvent::Type tp = static_cast<CGameEvent::Type>
                           ( CGameEvent::staticMetaObject.enumerator ( CGameEvent::staticMetaObject.indexOfEnumerator ( "Type" ) )
@@ -66,7 +66,7 @@ CGameEventCaused::CGameEventCaused ( CGameEvent::Type type, std::shared_ptr<CGam
 
 }
 
-TriggerKey::TriggerKey ( QString name, CGameEvent::Type type ) : name ( name ), type ( type ) { }
+TriggerKey::TriggerKey ( std::string name, CGameEvent::Type type ) : name ( name ), type ( type ) { }
 
 bool TriggerKey::operator== ( const TriggerKey &other ) const {
     return ( type == other.type && name == other.name );

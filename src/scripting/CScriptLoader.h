@@ -22,11 +22,11 @@ private:
 
 class AScriptLoader {
 public:
-    virtual QString findModule ( QString modName ) = 0;
+    virtual std::string findModule ( std::string modName ) = 0;
 
-    QString findModule ( std::string modName );
+    std::string findModule ( std::string modName );
 
-    bool checkModule ( QString modName );
+    bool checkModule ( std::string modName );
 
     bool checkModule ( std::string modName );
 
@@ -41,22 +41,22 @@ public:
 
 class CScriptLoader : public AScriptLoader {
 public:
-    virtual QString findModule ( QString modName ) override;
+    virtual std::string findModule ( std::string modName ) override;
 
     virtual ~CScriptLoader();
 };
 
 class CCustomScriptLoader : public AScriptLoader {
 public:
-    CCustomScriptLoader ( QString name, QString path );
+    CCustomScriptLoader ( std::string name, std::string path );
 
-    virtual QString findModule ( QString modName ) override;
+    virtual std::string findModule ( std::string modName ) override;
 
     virtual ~CCustomScriptLoader();
 
 private:
-    QString name;
-    QString path;
+    std::string name;
+    std::string path;
 };
 
 

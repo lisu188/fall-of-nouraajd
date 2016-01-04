@@ -5,25 +5,25 @@ CGuiHandler::CGuiHandler ( std::shared_ptr<CGame> game ) : game ( game ) {
     initPanels();
 }
 
-void CGuiHandler::showMessage ( QString msg ) {
+void CGuiHandler::showMessage ( std::string msg ) {
     std::shared_ptr<AGamePanel> panel = getPanel ( "CTextPanel" );
     panel->setStringProperty ( "text", msg );
     panel->showPanel();
 }
 
-std::shared_ptr<AGamePanel> CGuiHandler::getPanel ( QString panel ) {
+std::shared_ptr<AGamePanel> CGuiHandler::getPanel ( std::string panel ) {
     return panels[panel];
 }
 
-void CGuiHandler::showPanel ( QString panel ) {
+void CGuiHandler::showPanel ( std::string panel ) {
     panels[panel]->showPanel();
 }
 
-void CGuiHandler::hidePanel ( QString panel ) {
+void CGuiHandler::hidePanel ( std::string panel ) {
     panels[panel]->hidePanel();
 }
 
-void CGuiHandler::flipPanel ( QString panelName ) {
+void CGuiHandler::flipPanel ( std::string panelName ) {
     std::shared_ptr<AGamePanel> panel = getPanel ( panelName );
     if ( panel->isShown() ) {
         panel->hidePanel();

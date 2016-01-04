@@ -1,11 +1,11 @@
 #include "CJsonUtil.h"
 
-bool CJsonUtil::hasStringProp ( std::shared_ptr<QJsonObject> object, QString prop ) {
+bool CJsonUtil::hasStringProp ( std::shared_ptr<QJsonObject> object, std::string prop ) {
     auto it = object->find ( prop );
     return it != object->end() && it.value().isString() && it.value().toString().trimmed() != "";
 }
 
-bool CJsonUtil::hasObjectProp ( std::shared_ptr<QJsonObject> object, QString prop ) {
+bool CJsonUtil::hasObjectProp ( std::shared_ptr<QJsonObject> object, std::string prop ) {
     auto it = object->find ( prop );
     return it != object->end() && it.value().isObject();
 }

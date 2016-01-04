@@ -45,7 +45,7 @@ void CTradePanel::setUpPanel ( std::shared_ptr<CGameView> view ) {
     tradeItemsView->setAcceptDrops ( true );
 }
 
-QString CTradePanel::getPanelName() {
+std::string CTradePanel::getPanelName() {
     return "CTradePanel";
 }
 

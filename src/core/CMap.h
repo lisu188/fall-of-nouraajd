@@ -77,13 +77,13 @@ public:
 
     int getCurrentYBound();
 
-    void removeObjectByName ( QString name );
+    void removeObjectByName ( std::string name );
 
-    QString addObjectByName ( QString name, Coords coords );
+    std::string addObjectByName ( std::string name, Coords coords );
 
-    void replaceTile ( QString name, Coords coords );
+    void replaceTile ( std::string name, Coords coords );
 
-    Coords getLocationByName ( QString name );
+    Coords getLocationByName ( std::string name );
 
     std::shared_ptr<CPlayer> getPlayer();
 
@@ -103,7 +103,7 @@ public:
 
     bool canStep ( const Coords &coords );
 
-    std::shared_ptr<CMapObject> getObjectByName ( QString name );
+    std::shared_ptr<CMapObject> getObjectByName ( std::string name );
 
     bool isMoving();
 
@@ -119,7 +119,7 @@ public:
     void removeObjects ( std::function<bool ( std::shared_ptr<CMapObject> ) > func );
 
     template<typename T>
-    std::shared_ptr<T> createObject ( QString name ) {
+    std::shared_ptr<T> createObject ( std::string name ) {
         return getObjectHandler()->createObject<T> ( this->ptr(), name );
     }
 
@@ -128,11 +128,11 @@ public:
 private:
     void resolveFights();
 
-    std::unordered_map<QString, std::shared_ptr<CMapObject>> mapObjects;
+    std::unordered_map<std::string, std::shared_ptr<CMapObject>> mapObjects;
     std::weak_ptr<CGame> game;
     std::shared_ptr<CPlayer> player;
     int currentLevel = 0;
-    std::map<int, QString> defaultTiles;
+    std::map<int, std::string> defaultTiles;
     std::map<int, std::pair<int, int> > boundaries;
     int entryx, entryz, entryy;
     vstd::lazy<CLootHandler, std::shared_ptr<CMap>> lootHandler;

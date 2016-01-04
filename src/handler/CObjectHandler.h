@@ -16,7 +16,7 @@ public:
     CObjectHandler ( std::shared_ptr<CObjectHandler> parent = std::shared_ptr<CObjectHandler>() );
 
     template<typename T=CGameObject>
-    std::shared_ptr<T> createObject ( std::shared_ptr<CMap> map, QString type ) {
+    std::shared_ptr<T> createObject ( std::shared_ptr<CMap> map, std::string type ) {
         std::shared_ptr<T> object = vstd::cast<T> ( _createObject ( map, type ) );
         if ( object ) {
             return object;
@@ -31,24 +31,24 @@ public:
         return vstd::cast<T> ( _clone ( object ) );
     }
 
-    std::set<QString> getAllTypes();
+    std::set<std::string> getAllTypes();
 
-    void registerConfig ( QString path );
+    void registerConfig ( std::string path );
 
-    void registerType ( QString name, std::function<std::shared_ptr<CGameObject>() > constructor );
+    void registerType ( std::string name, std::function<std::shared_ptr<CGameObject>() > constructor );
 
-    std::shared_ptr<CGameObject> getType ( QString name );
+    std::shared_ptr<CGameObject> getType ( std::string name );
 
-    std::shared_ptr<QJsonObject> getConfig ( QString type );
+    std::shared_ptr<QJsonObject> getConfig ( std::string type );
 
 private:
-    std::shared_ptr<CGameObject> _createObject ( std::shared_ptr<CMap> map, QString type );
+    std::shared_ptr<CGameObject> _createObject ( std::shared_ptr<CMap> map, std::string type );
 
     std::shared_ptr<CGameObject> _clone ( std::shared_ptr<CGameObject> object );
 
-    std::unordered_map<QString, std::function<std::shared_ptr<CGameObject>() >> constructors;
+    std::unordered_map<std::string, std::function<std::shared_ptr<CGameObject>() >> constructors;
 
-    std::unordered_map<QString, std::shared_ptr<QJsonObject>> objectConfig;
+    std::unordered_map<std::string, std::shared_ptr<QJsonObject>> objectConfig;
 
     std::weak_ptr<CObjectHandler> parent;
 

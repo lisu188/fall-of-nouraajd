@@ -27,19 +27,19 @@ private:
     int actual = 0;
 };
 
-class CAnimationProvider : private std::map<QString, std::shared_ptr<CAnimation>> {
+class CAnimationProvider : private std::map<std::string, std::shared_ptr<CAnimation>> {
 public:
-    static std::shared_ptr<CAnimation> getAnim ( QString path );
+    static std::shared_ptr<CAnimation> getAnim ( std::string path );
 
     virtual ~CAnimationProvider();
 
 private:
     CAnimationProvider();
 
-    std::shared_ptr<CAnimation> getAnimation ( QString path );
+    std::shared_ptr<CAnimation> getAnimation ( std::string path );
 
-    void loadAnim ( QString path );
+    void loadAnim ( std::string path );
 
-    std::shared_ptr<QPixmap> getImage ( QString path );
+    std::shared_ptr<QPixmap> getImage ( std::string path );
 };
 

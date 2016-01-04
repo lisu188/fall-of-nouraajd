@@ -42,7 +42,7 @@ public:
 
     void setMarket ( std::shared_ptr<CMarket> value );
 
-    void addQuest ( QString questName );
+    void addQuest ( std::string questName );
 
 private:
     void checkQuests();

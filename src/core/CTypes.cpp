@@ -9,8 +9,8 @@ void CTypes::initialize() {
     initialize2();
 }
 
-std::unordered_map<QString, std::function<std::shared_ptr<CGameObject>() >> &CTypes::builders() {
-    static std::unordered_map<QString, std::function<std::shared_ptr<CGameObject>() >> reg;
+std::unordered_map<std::string, std::function<std::shared_ptr<CGameObject>() >> &CTypes::builders() {
+    static std::unordered_map<std::string, std::function<std::shared_ptr<CGameObject>() >> reg;
     return reg;
 }
 

@@ -10,32 +10,32 @@ class CResourcesProvider {
 public:
     static CResourcesProvider *getInstance();
 
-    std::shared_ptr<QFile> getResource ( QString path );
+    std::shared_ptr<QFile> getResource ( std::string path );
 
-    QString load ( QString path );
+    std::string load ( std::string path );
 
-    QString getPath ( QString path );
+    std::string getPath ( std::string path );
 
-    std::set<QString> getFiles ( CResType type );
+    std::set<std::string> getFiles ( CResType type );
 
-    void save ( QString file, QByteArray data );
+    void save ( std::string file, QByteArray data );
 
-    void save ( QString file, QString data );
+    void save ( std::string file, std::string data );
 
-    void save ( QString file, std::shared_ptr<QJsonObject> data );
+    void save ( std::string file, std::shared_ptr<QJsonObject> data );
 
-    void save ( QString file, std::shared_ptr<QJsonArray> data );
+    void save ( std::string file, std::shared_ptr<QJsonArray> data );
 
-    void saveZip ( QString file, QByteArray data );
+    void saveZip ( std::string file, QByteArray data );
 
-    void saveZip ( QString file, QString data );
+    void saveZip ( std::string file, std::string data );
 
-    void saveZip ( QString file, std::shared_ptr<QJsonObject> data );
+    void saveZip ( std::string file, std::shared_ptr<QJsonObject> data );
 
-    void saveZip ( QString file, std::shared_ptr<QJsonArray> data );
+    void saveZip ( std::string file, std::shared_ptr<QJsonArray> data );
 
 private:
-    static QList<QString> searchPath;
+    static QList<std::string> searchPath;
 
     CResourcesProvider();
 };
