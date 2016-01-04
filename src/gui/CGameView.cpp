@@ -11,7 +11,7 @@ std::shared_ptr<CGameView> CGameView::ptr() {
     return shared_from_this();
 }
 
-CGameView::CGameView ( QString mapName, QString playerType ) {
+CGameView::CGameView ( std::string mapName, std::string playerType ) {
     setHorizontalScrollBarPolicy ( Qt::ScrollBarAlwaysOff );
     setVerticalScrollBarPolicy ( Qt::ScrollBarAlwaysOff );
     setViewportUpdateMode ( QGraphicsView::BoundingRectViewportUpdate );

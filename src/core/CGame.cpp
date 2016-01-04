@@ -11,7 +11,7 @@ CGame::~CGame() {
     }
 }
 
-void CGame::changeMap ( QString file ) {
+void CGame::changeMap ( std::string file ) {
     CGameLoader::changeMap ( this->ptr(), file );
 }
 

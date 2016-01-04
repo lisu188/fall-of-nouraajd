@@ -135,17 +135,17 @@ private:
 class CItemSlot : public CGameObject {
     Q_OBJECT
 public:
-    CItemSlot ( QString number, std::shared_ptr<AGamePanel> panel );
+    CItemSlot ( std::string number, std::shared_ptr<AGamePanel> panel );
 
     QRectF boundingRect() const;
 
     void paint ( QPainter *painter, const QStyleOptionGraphicsItem *, QWidget * );
 
-    static bool checkType ( QString slot, std::shared_ptr<CItem> item );
+    static bool checkType ( std::string slot, std::shared_ptr<CItem> item );
 
     void update();
 
-    QString getNumber();
+    std::string getNumber();
 
 protected:
     void dragMoveEvent ( QGraphicsSceneDragDropEvent *event );
@@ -153,7 +153,7 @@ protected:
     void dropEvent ( QGraphicsSceneDragDropEvent *event );
 
 private:
-    QString number = QString::number ( -1 );
+    std::string number = std::string::number ( -1 );
     QPixmap pixmap;
     std::weak_ptr<AGamePanel> panel;
 };

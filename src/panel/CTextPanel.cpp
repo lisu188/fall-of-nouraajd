@@ -37,15 +37,15 @@ void CTextPanel::setUpPanel ( std::shared_ptr<CGameView> view ) {
     this->view = view;
 }
 
-QString CTextPanel::getText() const {
+std::string CTextPanel::getText() const {
     return text;
 }
 
-void CTextPanel::setText ( const QString &value ) {
+void CTextPanel::setText ( const std::string &value ) {
     text = value;
 }
 
-QString CTextPanel::getPanelName() {
+std::string CTextPanel::getPanelName() {
     return "CTextPanel";
 }
 

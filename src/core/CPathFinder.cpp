@@ -34,7 +34,7 @@ static force_inline void dump ( Values values, Coords start, Coords end ) {
     }
     std::stringstream stream;
     stream << "dump/dump" << start.x << "_" << start.y << "_" << end.x << "_" << end.y << ".png";
-    img.save ( QString::fromStdString ( stream.str() ), "png" );
+    img.save ( std::string::fromStdString ( stream.str() ), "png" );
 }
 
 static force_inline Coords getNextStep ( const Coords &start, const Coords &goal, Values values ) {

@@ -2,14 +2,14 @@
 #include "core/CUtil.h"
 #include "vstd.h"
 
-QList<QString> CResourcesProvider::searchPath = {"", ":/"};
+QList<std::string> CResourcesProvider::searchPath = {"", ":/"};
 
 CResourcesProvider *CResourcesProvider::getInstance() {
     static CResourcesProvider instance;
     return &instance;
 }
 
-std::shared_ptr<QFile> CResourcesProvider::getResource ( QString path ) {
+std::shared_ptr<QFile> CResourcesProvider::getResource ( std::string path ) {
     path = getPath ( path );
     std::shared_ptr<QFile> ptr ( new QFile ( path ) );
     if ( ptr->exists() ) {
@@ -18,32 +18,32 @@ std::shared_ptr<QFile> CResourcesProvider::getResource ( QString path ) {
     return nullptr;
 }
 
-QString CResourcesProvider::load ( QString path ) {
+std::string CResourcesProvider::load ( std::string path ) {
     std::shared_ptr<QFile> file = getResource ( path );
     if ( file && file->open ( QIODevice::ReadOnly ) ) {
         QByteArray data = file->readAll();
         QByteArray uncompressed = qUncompress ( data );
         if ( uncompressed.size() ) {
-            return QString::fromUtf8 ( uncompressed );
+            return std::string::fromUtf8 ( uncompressed );
         }
-        return QString::fromUtf8 ( data );
+        return std::string::fromUtf8 ( data );
     }
-    return QString();
+    return std::string();
 }
 
-QString CResourcesProvider::getPath ( QString path ) {
+std::string CResourcesProvider::getPath ( std::string path ) {
     for ( auto it:searchPath ) {
         QFile fileRes ( it + path );
         if ( fileRes.exists() ) {
             return it + path;
         }
     }
-    return QString();
+    return std::string();
 }
 
-std::set<QString> CResourcesProvider::getFiles ( CResType type ) {
-    std::set<QString> retValue;
-    QString folderName;
+std::set<std::string> CResourcesProvider::getFiles ( CResType type ) {
+    std::set<std::string> retValue;
+    std::string folderName;
     QDirIterator::IteratorFlag flag = QDirIterator::NoIteratorFlags;
     switch ( type ) {
     case CONFIG:
@@ -74,7 +74,7 @@ std::set<QString> CResourcesProvider::getFiles ( CResType type ) {
     return retValue;
 }
 
-void CResourcesProvider::save ( QString file, QByteArray data ) {
+void CResourcesProvider::save ( std::string file, QByteArray data ) {
     QFile f ( file );
     QFileInfo info ( f );
     QDir::root().mkpath ( info.absoluteDir().path() );
@@ -85,31 +85,31 @@ void CResourcesProvider::save ( QString file, QByteArray data ) {
     }
 }
 
-void CResourcesProvider::save ( QString file, QString data ) {
+void CResourcesProvider::save ( std::string file, std::string data ) {
     save ( file, data.toUtf8() );
 }
 
-void CResourcesProvider::save ( QString file, std::shared_ptr<QJsonObject> data ) {
+void CResourcesProvider::save ( std::string file, std::shared_ptr<QJsonObject> data ) {
     save ( file, QJsonDocument ( *data ).toJson ( QJsonDocument::JsonFormat::Compact ) );
 }
 
-void CResourcesProvider::save ( QString file, std::shared_ptr<QJsonArray> data ) {
+void CResourcesProvider::save ( std::string file, std::shared_ptr<QJsonArray> data ) {
     save ( file, QJsonDocument ( *data ).toJson ( QJsonDocument::JsonFormat::Compact ) );
 }
 
-void CResourcesProvider::saveZip ( QString file, QByteArray data ) {
+void CResourcesProvider::saveZip ( std::string file, QByteArray data ) {
     save ( file, qCompress ( data, 9 ) );
 }
 
-void CResourcesProvider::saveZip ( QString file, QString data ) {
+void CResourcesProvider::saveZip ( std::string file, std::string data ) {
     saveZip ( file, data.toUtf8() );
 }
 
-void CResourcesProvider::saveZip ( QString file, std::shared_ptr<QJsonObject> data ) {
+void CResourcesProvider::saveZip ( std::string file, std::shared_ptr<QJsonObject> data ) {
     saveZip ( file, QJsonDocument ( *data ).toJson ( QJsonDocument::JsonFormat::Compact ) );
 }
 
-void CResourcesProvider::saveZip ( QString file, std::shared_ptr<QJsonArray> data ) {
+void CResourcesProvider::saveZip ( std::string file, std::shared_ptr<QJsonArray> data ) {
     saveZip ( file, QJsonDocument ( *data ).toJson ( QJsonDocument::JsonFormat::Compact ) );
 }
 

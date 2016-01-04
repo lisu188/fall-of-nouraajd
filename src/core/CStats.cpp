@@ -136,11 +136,11 @@ void Stats::setStrength ( int value ) {
     strength = value;
 }
 
-QString Stats::getMainStat() const {
+std::string Stats::getMainStat() const {
     return mainStat;
 }
 
-void Stats::setMainStat ( const QString &value ) {
+void Stats::setMainStat ( const std::string &value ) {
     mainStat = value;
 }
 

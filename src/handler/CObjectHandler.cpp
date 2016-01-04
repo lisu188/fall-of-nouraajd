@@ -5,14 +5,14 @@ CObjectHandler::CObjectHandler ( std::shared_ptr<CObjectHandler> parent ) : pare
 
 }
 
-void CObjectHandler::registerConfig ( QString path ) {
+void CObjectHandler::registerConfig ( std::string path ) {
     std::shared_ptr<QJsonObject> config = CConfigurationProvider::getConfig ( path );
     for ( auto it = config->begin(); it != config->end(); it++ ) {
         objectConfig[it.key()] = std::make_shared<QJsonObject> ( it.value().toObject() );
     }
 }
 
-std::shared_ptr<QJsonObject> CObjectHandler::getConfig ( QString type ) {
+std::shared_ptr<QJsonObject> CObjectHandler::getConfig ( std::string type ) {
     if ( vstd::ctn ( objectConfig, type ) ) {
         return objectConfig[type];
     } else if ( parent.lock() ) {
@@ -21,20 +21,20 @@ std::shared_ptr<QJsonObject> CObjectHandler::getConfig ( QString type ) {
     return std::make_shared<QJsonObject>();
 }
 
-std::set<QString> CObjectHandler::getAllTypes() {
-    std::set<QString> types;
-    for ( QString val:objectConfig | boost::adaptors::map_keys ) {
+std::set<std::string> CObjectHandler::getAllTypes() {
+    std::set<std::string> types;
+    for ( std::string val:objectConfig | boost::adaptors::map_keys ) {
         types.insert ( val );
     }
     if ( parent.lock() ) {
-        for ( QString val:parent.lock()->getAllTypes() ) {
+        for ( std::string val:parent.lock()->getAllTypes() ) {
             types.insert ( val );
         }
     }
     return types;
 }
 
-std::shared_ptr<CGameObject> CObjectHandler::getType ( QString name ) {
+std::shared_ptr<CGameObject> CObjectHandler::getType ( std::string name ) {
     if ( vstd::ctn ( constructors, name ) ) {
         return constructors[name]();
     } else if ( parent.lock() ) {
@@ -43,11 +43,11 @@ std::shared_ptr<CGameObject> CObjectHandler::getType ( QString name ) {
     return std::shared_ptr<CGameObject>();
 }
 
-void CObjectHandler::registerType ( QString name, std::function<std::shared_ptr<CGameObject>() > constructor ) {
+void CObjectHandler::registerType ( std::string name, std::function<std::shared_ptr<CGameObject>() > constructor ) {
     constructors.insert ( std::make_pair ( name, constructor ) );
 }
 
-std::shared_ptr<CGameObject> CObjectHandler::_createObject ( std::shared_ptr<CMap> map, QString type ) {
+std::shared_ptr<CGameObject> CObjectHandler::_createObject ( std::shared_ptr<CMap> map, std::string type ) {
     std::shared_ptr<QJsonObject> config = getConfig ( type );
     if ( ( *config ).isEmpty() ) {
         ( *config ) ["class"] = type;

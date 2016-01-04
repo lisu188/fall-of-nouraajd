@@ -33,46 +33,46 @@ public:
 
     ~CScriptHandler();
 
-    void executeScript ( QString script, boost::python::object nameSpace = boost::python::object() );
+    void executeScript ( std::string script, boost::python::object nameSpace = boost::python::object() );
 
-    void executeCommand ( std::initializer_list<QString> list );
+    void executeCommand ( std::initializer_list<std::string> list );
 
-    QString buildCommand ( std::initializer_list<QString> list );
+    std::string buildCommand ( std::initializer_list<std::string> list );
 
-    void addModule ( QString modName, QString path );
+    void addModule ( std::string modName, std::string path );
 
-    void addFunction ( QString functionName, QString functionCode, std::initializer_list<QString> args );
+    void addFunction ( std::string functionName, std::string functionCode, std::initializer_list<std::string> args );
 
-    void import ( QString name );
+    void import ( std::string name );
 
     template<typename Return=void, typename...Args>
-    std::function<Return ( Args... ) > getFunction ( QString functionName ) {
+    std::function<Return ( Args... ) > getFunction ( std::string functionName ) {
         return wrap<Return, Args...>::call ( getObject ( functionName ) );
     }
 
     template<typename Return=void, typename... Args>
-    std::function<Return ( Args... ) > createFunction ( QString functionName, QString functionCode,
-            std::initializer_list<QString> args ) {
+    std::function<Return ( Args... ) > createFunction ( std::string functionName, std::string functionCode,
+            std::initializer_list<std::string> args ) {
         vstd::fail_if ( sizeof... ( Args ) != args.size(), "Wrong argument list!" );
         addFunction ( functionName, functionCode, args );
         return getFunction<Return, Args...> ( functionName );
     }
 
     template<typename Return=void, typename ...Args>
-    Return callFunction ( QString name, Args ...params ) {
+    Return callFunction ( std::string name, Args ...params ) {
         return getFunction<Return, Args...> ( name ) ( params... );
     }
 
     template<typename Return=void, typename ...Args>
-    Return callCreatedFunction ( QString functionCode, std::initializer_list<QString> args, Args ...params ) {
+    Return callCreatedFunction ( std::string functionCode, std::initializer_list<std::string> args, Args ...params ) {
         return createFunction<Return, Args...> (
-                   "FUNC" + vstd::to_hex_hash<QString> ( functionCode ),
+                   "FUNC" + vstd::to_hex_hash<std::string> ( functionCode ),
                    functionCode, args ) ( params... );
     }
 
     template<typename T=boost::python::object>
-    T getObject ( QString name ) {
-        QString script = "object=";
+    T getObject ( std::string name ) {
+        std::string script = "object=";
         script = script.append ( name );
         executeScript ( script );
         boost::python::object object = main_namespace["object"];

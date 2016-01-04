@@ -46,7 +46,7 @@ void CCreature::addExp ( int exp ) {
 }
 
 std::shared_ptr<CInteraction> CCreature::getLevelAction() {
-    QString levelString = QString::number ( level );
+    std::string levelString = std::string::number ( level );
     if ( vstd::ctn ( levelling, levelString ) ) {
         return getMap()->getObjectHandler()->clone<CInteraction> ( levelling[levelString] );
     } else {
@@ -368,14 +368,14 @@ int CCreature::getLevel() {
 }
 
 void CCreature::setWeapon ( std::shared_ptr<CWeapon> weapon ) {
-    this->setItem ( QString::number ( 0 ), weapon );
+    this->setItem ( std::string::number ( 0 ), weapon );
 }
 
 void CCreature::setArmor ( std::shared_ptr<CArmor> armor ) {
-    this->setItem ( QString::number ( 3 ), armor );
+    this->setItem ( std::string::number ( 3 ), armor );
 }
 
-void CCreature::setItem ( QString i, std::shared_ptr<CItem> newItem ) {
+void CCreature::setItem ( std::string i, std::shared_ptr<CItem> newItem ) {
     if ( !vstd::ctn ( equipped, i ) ) {
         equipped.insert ( std::make_pair ( i, std::shared_ptr<CItem>() ) );
     }
@@ -491,14 +491,14 @@ void CCreature::setHpMax ( int value ) {
     hpMax = value;
 }
 
-std::shared_ptr<CItem> CCreature::getItemAtSlot ( QString slot ) {
+std::shared_ptr<CItem> CCreature::getItemAtSlot ( std::string slot ) {
     if ( vstd::ctn ( equipped, slot ) ) {
         return equipped.at ( slot );
     }
     return nullptr;
 }
 
-QString CCreature::getSlotWithItem ( std::shared_ptr<CItem> item ) {
+std::string CCreature::getSlotWithItem ( std::shared_ptr<CItem> item ) {
     for ( auto it = equipped.begin(); it != equipped.end(); it++ ) {
         if ( ( *it ).second == item ) {
             return ( *it ).first;
@@ -568,10 +568,10 @@ void CCreature::afterMove() {
     getMap()->getTile ( this->getCoords() )->onStep ( this->ptr<CCreature>() );
 }
 
-QString CCreature::getTooltip() const {
-    QString tooltipText = getObjectType();
+std::string CCreature::getTooltip() const {
+    std::string tooltipText = getObjectType();
     tooltipText.append ( " " );
-    tooltipText.append ( QString::number ( level ) );
+    tooltipText.append ( std::string::number ( level ) );
     return tooltipText;
 }
 

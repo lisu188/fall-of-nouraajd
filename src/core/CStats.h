@@ -141,7 +141,7 @@ class Stats : public CGameObject {
                  setAttack USER
 
                  true )
-    Q_PROPERTY ( QString
+    Q_PROPERTY ( std::string
                  mainStat READ
                  getMainStat WRITE
                  setMainStat USER
@@ -240,14 +240,14 @@ public:
 
     void setStrength ( int value );
 
-    QString getMainStat() const;
+    std::string getMainStat() const;
 
-    void setMainStat ( const QString &value );
+    void setMainStat ( const std::string &value );
 
     int getMainValue();
 
 private:
-    QString mainStat;
+    std::string mainStat;
 };
 
 GAME_PROPERTY ( Stats )

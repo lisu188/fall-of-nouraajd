@@ -84,7 +84,7 @@ public:
 
     CArmor ( const CArmor & );
 
-    CArmor ( QString name );
+    CArmor ( std::string name );
 };
 
 GAME_PROPERTY ( CArmor )
@@ -151,7 +151,7 @@ GAME_PROPERTY ( CSmallWeapon )
 
 class CScroll : public CItem {
     Q_OBJECT
-    Q_PROPERTY ( QString text
+    Q_PROPERTY ( std::string text
                  READ
                  getText
                  WRITE
@@ -163,14 +163,14 @@ public:
 
     CScroll ( const CScroll & );
 
-    QString getText() const;
+    std::string getText() const;
 
-    void setText ( const QString &value );
+    void setText ( const std::string &value );
 
     virtual void onUse ( std::shared_ptr<CGameEvent> ) override;
 
 private:
-    QString text;
+    std::string text;
 };
 
 GAME_PROPERTY ( CScroll )

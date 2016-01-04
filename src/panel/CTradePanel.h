@@ -19,7 +19,7 @@ public:
 
     virtual void setUpPanel ( std::shared_ptr<CGameView> view ) override;
 
-    virtual QString getPanelName();
+    virtual std::string getPanelName();
 
     virtual QRectF boundingRect() const;
 

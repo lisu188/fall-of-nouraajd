@@ -36,7 +36,7 @@ public:
 
     virtual void paint ( QPainter *, const QStyleOptionGraphicsItem *, QWidget * ) = 0;
 
-    virtual QString getPanelName() = 0;
+    virtual std::string getPanelName() = 0;
 
     virtual void handleDrop ( std::shared_ptr<CPlayerView>, std::shared_ptr<CGameObject> );
 

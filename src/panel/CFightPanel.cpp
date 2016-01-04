@@ -51,7 +51,7 @@ void CFightPanel::hidePanel() {
     this->update();
 }
 
-QString CFightPanel::getPanelName() {
+std::string CFightPanel::getPanelName() {
     return "CFightPanel";
 }
 
@@ -83,7 +83,7 @@ void CCreatureFightView::paint ( QPainter *painter,
     hpStream << creature->getHpMax();
     painter->drawText (
         QRectF ( 0, boundingRect().height() - 50, boundingRect().width(), 25 ),
-        QString::fromStdString ( hpStream.str() ), opt );
+        std::string::fromStdString ( hpStream.str() ), opt );
     painter->fillRect ( 0, boundingRect().height() - 25, boundingRect().width(), 25,
                         QColor ( "CYAN" ) );
     painter->fillRect ( 0, boundingRect().height() - 25,
@@ -95,7 +95,7 @@ void CCreatureFightView::paint ( QPainter *painter,
     manaStream << creature->getManaMax();
     painter->drawText (
         QRectF ( 0, boundingRect().height() - 25, boundingRect().width(), 25 ),
-        QString::fromStdString ( manaStream.str() ), opt );
+        std::string::fromStdString ( manaStream.str() ), opt );
 }
 
 void CFightPanel::onClickAction ( std::shared_ptr<CGameObject> object ) {

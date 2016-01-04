@@ -9,7 +9,7 @@ class CTypes {
 public:
     static void initialize();
 
-    static std::unordered_map<QString, std::function<std::shared_ptr<CGameObject>() >> &builders();
+    static std::unordered_map<std::string, std::function<std::shared_ptr<CGameObject>() >> &builders();
 
     static std::unordered_map<std::pair<int, int>, std::shared_ptr<CSerializerBase>> &serializers();
 
@@ -49,7 +49,7 @@ public:
     static void register_serializer() {
         register_serializer<std::shared_ptr<QJsonObject>, std::shared_ptr<T>>();
         register_serializer<std::shared_ptr<QJsonArray>, std::set<std::shared_ptr<T>>>();
-        register_serializer<std::shared_ptr<QJsonObject>, std::map<QString, std::shared_ptr<T>>>();
+        register_serializer<std::shared_ptr<QJsonObject>, std::map<std::string, std::shared_ptr<T>>>();
     }
 
     template<typename T>

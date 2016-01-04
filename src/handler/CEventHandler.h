@@ -37,9 +37,9 @@ private:
 };
 
 struct TriggerKey {
-    TriggerKey ( QString name, CGameEvent::Type type );
+    TriggerKey ( std::string name, CGameEvent::Type type );
 
-    QString name;
+    std::string name;
     CGameEvent::Type type;
 
     bool operator== ( const TriggerKey &other ) const;
@@ -57,7 +57,7 @@ class CEventHandler {
 public:
     void gameEvent ( std::shared_ptr<CMapObject> mapObject, std::shared_ptr<CGameEvent> event ) const;
 
-    void registerTrigger ( QString name, QString type, std::shared_ptr<CTrigger> trigger );
+    void registerTrigger ( std::string name, std::string type, std::shared_ptr<CTrigger> trigger );
 
 private:
     TriggerMap triggers;

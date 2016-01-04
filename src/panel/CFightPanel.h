@@ -44,7 +44,7 @@ public:
 
     virtual void hidePanel() override;
 
-    virtual QString getPanelName() override;
+    virtual std::string getPanelName() override;
 
     virtual void onClickAction ( std::shared_ptr<CGameObject> object ) override;
 

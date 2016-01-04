@@ -21,9 +21,9 @@ void CMapLoader::loadFromTmx ( std::shared_ptr<CMap> map, std::shared_ptr<QJsonO
     }
 }
 
-std::shared_ptr<CMap> CMapLoader::loadNewMap ( std::shared_ptr<CGame> game, QString name ) {
+std::shared_ptr<CMap> CMapLoader::loadNewMap ( std::shared_ptr<CGame> game, std::string name ) {
     std::shared_ptr<CMap> map = std::make_shared<CMap> ( game );
-    QString path = "maps/" + name;
+    std::string path = "maps/" + name;
     map->getObjectHandler()->registerConfig ( path + "/config.json" );
     map->getGame()->getScriptHandler()->addModule ( name, path + "/script.py" );
     map->getGame()->getScriptHandler()->callFunction ( name + ".load", map );
@@ -32,9 +32,9 @@ std::shared_ptr<CMap> CMapLoader::loadNewMap ( std::shared_ptr<CGame> game, QStr
     return map;
 }
 
-//std::shared_ptr<CMap> CMapLoader::loadSavedMap ( std::shared_ptr<CGame> game,QString name ) {
+//std::shared_ptr<CMap> CMapLoader::loadSavedMap ( std::shared_ptr<CGame> game,std::string name ) {
 //  std::shared_ptr<CMap> map=std::make_shared<CMap> ( game );
-//  QString path="save/"+name+".sav";
+//  std::string path="save/"+name+".sav";
 //  map->getObjectHandler()->registerConfig ( path+"/config.json" );
 //  map->getGame()->getScriptHandler()->addModule ( name,path+"/script.py" );
 //  map->getGame()->getScriptHandler()->callFunction ( name+".load",map );
@@ -43,13 +43,13 @@ std::shared_ptr<CMap> CMapLoader::loadNewMap ( std::shared_ptr<CGame> game, QStr
 //  return map;
 //}
 
-std::shared_ptr<CMap> CMapLoader::loadNewMap ( std::shared_ptr<CGame> game, QString name, QString player ) {
+std::shared_ptr<CMap> CMapLoader::loadNewMap ( std::shared_ptr<CGame> game, std::string name, std::string player ) {
     std::shared_ptr<CMap> map = loadNewMap ( game, name );
     map->setPlayer ( map->createObject<CPlayer> ( player ) );
     return map;
 }
 
-void CMapLoader::saveMap ( std::shared_ptr<CMap> map, QString file ) {
+void CMapLoader::saveMap ( std::shared_ptr<CMap> map, std::string file ) {
     std::shared_ptr<QJsonObject> data = std::make_shared<QJsonObject>();
 
     std::shared_ptr<QJsonObject> objects = std::make_shared<QJsonObject>();
@@ -89,8 +89,8 @@ void CMapLoader::handleTileLayer ( std::shared_ptr<CMap> map, const QJsonObject 
                 continue;
             }
             id--;
-            QString tileId = QString::number ( id );
-            QString tileType = tileset[tileId].toObject() ["type"].toString();
+            std::string tileId = std::string::number ( id );
+            std::string tileType = tileset[tileId].toObject() ["type"].toString();
             map->addTile ( map->createObject<CTile> ( tileType ), x,
                            y, level );
         }
@@ -102,8 +102,8 @@ void CMapLoader::handleObjectLayer ( std::shared_ptr<CMap> map, const QJsonObjec
     const QJsonArray &objects = layer["objects"].toArray();
     for ( auto it = objects.begin(); it != objects.end(); it++ ) {
         const QJsonObject &object = ( *it ).toObject();
-        QString objectType = object["type"].toString();
-        QString objectName = object["name"].toString();
+        std::string objectType = object["type"].toString();
+        std::string objectName = object["name"].toString();
 
         int xPos = object["x"].toInt() / object["width"].toInt();
         int yPos = object["y"].toInt() / object["height"].toInt();

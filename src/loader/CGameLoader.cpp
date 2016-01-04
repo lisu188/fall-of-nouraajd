@@ -10,7 +10,7 @@ std::shared_ptr<CGame> CGameLoader::loadGame ( std::shared_ptr<CGameView> view )
     return game;
 }
 
-void CGameLoader::startGame ( std::shared_ptr<CGame> game, QString file, QString player ) {
+void CGameLoader::startGame ( std::shared_ptr<CGame> game, std::string file, std::string player ) {
     game->setMap ( CMapLoader::loadNewMap ( game, file, player ) );
     vstd::call_later ( [game]() {
         game->getMap()->ensureSize();
@@ -18,7 +18,7 @@ void CGameLoader::startGame ( std::shared_ptr<CGame> game, QString file, QString
     } );
 }
 
-void CGameLoader::changeMap ( std::shared_ptr<CGame> game, QString name ) {
+void CGameLoader::changeMap ( std::shared_ptr<CGame> game, std::string name ) {
     vstd::call_later ( [game, name]() {
         //TODO: implement stop processing events here
         vstd::call_when ( [game]() {
@@ -34,20 +34,20 @@ void CGameLoader::changeMap ( std::shared_ptr<CGame> game, QString name ) {
 }
 
 void CGameLoader::initConfigurations ( std::shared_ptr<CObjectHandler> handler ) {
-    for ( QString path : CResourcesProvider::getInstance()->getFiles ( CONFIG ) ) {
+    for ( std::string path : CResourcesProvider::getInstance()->getFiles ( CONFIG ) ) {
         handler->registerConfig ( path );
     }
 }
 
 void CGameLoader::initObjectHandler ( std::shared_ptr<CObjectHandler> handler ) {
-    for ( std::pair<QString, std::function<std::shared_ptr<CGameObject>() >> it:CTypes::builders() ) {
+    for ( std::pair<std::string, std::function<std::shared_ptr<CGameObject>() >> it:CTypes::builders() ) {
         handler->registerType ( it.first, it.second );
     }
 }
 
 void CGameLoader::initScriptHandler ( std::shared_ptr<CScriptHandler> handler, std::shared_ptr<CGame> game ) {
-    for ( QString script:CResourcesProvider::getInstance()->getFiles ( CResType::SCRIPT ) ) {
-        QString modName = QFileInfo ( script ).baseName();
+    for ( std::string script:CResourcesProvider::getInstance()->getFiles ( CResType::SCRIPT ) ) {
+        std::string modName = QFileInfo ( script ).baseName();
         handler->import ( modName );
         handler->callFunction ( modName + ".load", game );
     }

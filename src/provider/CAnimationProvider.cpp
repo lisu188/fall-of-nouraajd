@@ -3,7 +3,7 @@
 #include "provider/CProvider.h"
 #include "handler/CHandler.h"
 
-std::shared_ptr<CAnimation> CAnimationProvider::getAnim ( QString path ) {
+std::shared_ptr<CAnimation> CAnimationProvider::getAnim ( std::string path ) {
     static CAnimationProvider instance;
     return instance.getAnimation ( path );
 }
@@ -16,7 +16,7 @@ CAnimationProvider::~CAnimationProvider() {
 
 }
 
-std::shared_ptr<CAnimation> CAnimationProvider::getAnimation ( QString path ) {
+std::shared_ptr<CAnimation> CAnimationProvider::getAnimation ( std::string path ) {
     if ( this->find ( path ) != this->end() ) {
         return this->at ( path );
     }
@@ -27,11 +27,11 @@ std::shared_ptr<CAnimation> CAnimationProvider::getAnimation ( QString path ) {
     return getAnimation ( path );
 }
 
-void CAnimationProvider::loadAnim ( QString path ) {
+void CAnimationProvider::loadAnim ( std::string path ) {
     std::shared_ptr<CAnimation> anim = std::make_shared<CAnimation>();
     std::shared_ptr<QPixmap> img;
     std::map<int, int> timemap;
-    QString time = "time.json";
+    std::string time = "time.json";
 
     std::shared_ptr<QJsonObject> config;
     if ( path.endsWith ( "/" ) ) {
@@ -39,7 +39,7 @@ void CAnimationProvider::loadAnim ( QString path ) {
     }
     if ( config && !config->isEmpty() ) {
         for ( int i = 0; i < config->size(); i++ ) {
-            timemap.insert ( std::make_pair ( i, ( *config ) [QString::number ( i )].toInt() ) );
+            timemap.insert ( std::make_pair ( i, ( *config ) [std::string::number ( i )].toInt() ) );
         }
     } else {
         timemap.insert ( std::make_pair ( 0, 250 ) );
@@ -53,8 +53,8 @@ void CAnimationProvider::loadAnim ( QString path ) {
         for ( int i = 0; true; i++ ) {
             std::ostringstream convert;
             convert << i;
-            QString result
-                = QString::fromStdString ( convert.str() );
+            std::string result
+                = std::string::fromStdString ( convert.str() );
             img = getImage ( path + result + ".png" );
             if ( !img ) {
                 break;
@@ -75,7 +75,7 @@ void CAnimationProvider::loadAnim ( QString path ) {
     qDebug() << "Loaded animation:" << path << "\n";
 }
 
-std::shared_ptr<QPixmap> CAnimationProvider::getImage ( QString path ) {
+std::shared_ptr<QPixmap> CAnimationProvider::getImage ( std::string path ) {
     std::shared_ptr<QFile> file = CResourcesProvider::getInstance()->getResource ( path );
     QPixmap image;
     if ( file && file->open ( QIODevice::ReadOnly ) ) {

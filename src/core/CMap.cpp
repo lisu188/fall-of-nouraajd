@@ -28,11 +28,11 @@ int CMap::getCurrentYBound() {
     return boundaries[currentLevel].second;
 }
 
-void CMap::removeObjectByName ( QString name ) {
+void CMap::removeObjectByName ( std::string name ) {
     this->removeObject ( this->getObjectByName ( name ) );
 }
 
-QString CMap::addObjectByName ( QString name, Coords coords ) {
+std::string CMap::addObjectByName ( std::string name, Coords coords ) {
     if ( this->canStep ( coords ) ) {
         std::shared_ptr<CMapObject> object = createObject<CMapObject> ( name );
         if ( object ) {
@@ -46,12 +46,12 @@ QString CMap::addObjectByName ( QString name, Coords coords ) {
     return nullptr;
 }
 
-void CMap::replaceTile ( QString name, Coords coords ) {
+void CMap::replaceTile ( std::string name, Coords coords ) {
     removeTile ( coords.x, coords.y, coords.z );
     addTile ( createObject<CTile> ( name ), coords.x, coords.y, coords.z );
 }
 
-Coords CMap::getLocationByName ( QString name ) {
+Coords CMap::getLocationByName ( std::string name ) {
     return this->getObjectByName ( name )->getCoords();
 }
 
@@ -218,7 +218,7 @@ int CMap::getEntryZ() {
     return entryz;
 }
 
-std::shared_ptr<CMapObject> CMap::getObjectByName ( QString name ) {
+std::shared_ptr<CMapObject> CMap::getObjectByName ( std::string name ) {
     auto it = mapObjects.find ( name );
     if ( it != mapObjects.end() ) {
         return ( *it ).second;
@@ -300,7 +300,7 @@ void CMap::move() {
             map->ensureSize();
 
             if ( QApplication::instance()->property ( "auto_save" ).toBool() ) {
-                CMapLoader::saveMap ( map, QString::number ( QDateTime::currentMSecsSinceEpoch() ) + ".sav" );
+                CMapLoader::saveMap ( map, std::string::number ( QDateTime::currentMSecsSinceEpoch() ) + ".sav" );
             }
 
             map->moving = false;

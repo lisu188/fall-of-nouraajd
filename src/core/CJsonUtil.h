@@ -3,9 +3,9 @@
 #include "core/CGlobal.h"
 
 namespace CJsonUtil {
-    bool hasStringProp ( std::shared_ptr<QJsonObject> object, QString prop );
+    bool hasStringProp ( std::shared_ptr<QJsonObject> object, std::string prop );
 
-    bool hasObjectProp ( std::shared_ptr<QJsonObject> object, QString prop );
+    bool hasObjectProp ( std::shared_ptr<QJsonObject> object, std::string prop );
 
     bool isRef ( std::shared_ptr<QJsonObject> object );
 
