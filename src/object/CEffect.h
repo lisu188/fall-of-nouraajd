@@ -4,7 +4,7 @@
 #include "core/CStats.h"
 
 class CEffect : public CGameObject {
-    Q_OBJECT
+
     Q_PROPERTY ( int duration
                  READ
                  getDuration

@@ -6,7 +6,7 @@
 class CItem;
 
 class CMarket : public CGameObject {
-    Q_OBJECT
+
     Q_PROPERTY ( std::set<std::shared_ptr<CItem>> items
                  READ
                  getItems

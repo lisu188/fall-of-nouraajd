@@ -8,7 +8,7 @@ class CGame;
 class CCreature;
 
 class CTile : public CGameObject {
-    Q_OBJECT
+
     Q_PROPERTY ( bool canStep
                  READ
                  canStep

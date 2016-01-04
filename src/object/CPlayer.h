@@ -5,7 +5,7 @@
 class CQuest;
 
 class CPlayer : public CCreature {
-    Q_OBJECT
+
 
     friend class PlayerStatsView;
 

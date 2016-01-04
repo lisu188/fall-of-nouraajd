@@ -25,7 +25,7 @@ typedef std::map<std::string, std::shared_ptr<CInteraction> > CInteractionMap;
 typedef std::map<std::string, std::shared_ptr<CItem> > CItemMap;
 
 class CCreature : public CMapObject, public Moveable {
-    Q_OBJECT
+
     Q_PROPERTY ( int exp
                  READ
                  getExp

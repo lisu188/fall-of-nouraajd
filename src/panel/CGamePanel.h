@@ -17,7 +17,7 @@ class CCharPanel;
 class CPlayerView;
 
 class AGamePanel : public CGameObject, public CClickAction {
-    Q_OBJECT
+
 
     friend class CGuiHandler;
 

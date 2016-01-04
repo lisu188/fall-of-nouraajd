@@ -7,7 +7,7 @@ class CAnimation;
 class QPixmap;
 
 class CAnimation : public QObject, private std::map<int, std::pair<std::shared_ptr<QPixmap>, int> > {
-    Q_OBJECT
+
 public:
     CAnimation();
 

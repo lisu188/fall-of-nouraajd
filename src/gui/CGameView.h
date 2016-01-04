@@ -9,7 +9,7 @@ class CPlayer;
 class CGame;
 
 class CGameView : public QGraphicsView, public std::enable_shared_from_this<CGameView> {
-    Q_OBJECT
+
 public:
     //replace argument with bean
     CGameView ( std::string mapName, std::string playerType );

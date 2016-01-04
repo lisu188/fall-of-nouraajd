@@ -3,7 +3,7 @@
 #include"CMapObject.h"
 
 class CBuilding : public CMapObject, public Visitable {
-    Q_OBJECT
+
     Q_PROPERTY ( bool enabled
                  READ
                  isEnabled

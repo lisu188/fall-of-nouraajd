@@ -8,7 +8,7 @@ namespace Ui {
 }
 
 class CMainWindow : public QMainWindow {
-    Q_OBJECT
+
 
 public:
     explicit CMainWindow();
