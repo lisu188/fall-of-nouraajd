@@ -12,7 +12,7 @@ class CCreature;
 class CMapObject : public CGameObject, public Creatable, public Turnable {
     friend class CObjectHandler;
 
-    Q_OBJECT
+
     //TODO: add xyz properties
 public:
     CMapObject();

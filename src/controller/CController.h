@@ -4,7 +4,7 @@
 #include "core/CPathFinder.h"
 
 class CController : public CGameObject {
-    Q_OBJECT
+    
 public:
     virtual std::shared_ptr<vstd::future<void, Coords> > control ( std::shared_ptr<CCreature> c ) = 0;
 };

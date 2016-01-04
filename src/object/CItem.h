@@ -8,7 +8,7 @@ class CCreature;
 class CInteraction;
 
 class CItem : public CMapObject, public Visitable, public Wearable, public Usable {
-    Q_OBJECT
+
     Q_PROPERTY ( int power
                  READ
                  getPower
@@ -78,7 +78,7 @@ private:
 GAME_PROPERTY ( CItem )
 
 class CArmor : public CItem {
-    Q_OBJECT
+
 public:
     CArmor();
 
@@ -90,7 +90,7 @@ public:
 GAME_PROPERTY ( CArmor )
 
 class CBelt : public CItem {
-    Q_OBJECT
+
 public:
     CBelt();
 
@@ -100,7 +100,7 @@ public:
 GAME_PROPERTY ( CBelt )
 
 class CHelmet : public CItem {
-    Q_OBJECT
+
 public:
     CHelmet();
 
@@ -110,7 +110,7 @@ public:
 GAME_PROPERTY ( CHelmet )
 
 class CBoots : public CItem {
-    Q_OBJECT
+
 public:
     CBoots();
 
@@ -120,7 +120,7 @@ public:
 GAME_PROPERTY ( CBoots )
 
 class CGloves : public CItem {
-    Q_OBJECT
+
 public:
     CGloves();
 
@@ -130,7 +130,7 @@ public:
 GAME_PROPERTY ( CGloves )
 
 class CWeapon : public CItem {
-    Q_OBJECT
+
 public:
     CWeapon();
 
@@ -140,7 +140,7 @@ public:
 GAME_PROPERTY ( CWeapon )
 
 class CSmallWeapon : public CWeapon {
-    Q_OBJECT
+
 public:
     CSmallWeapon();
 
@@ -150,7 +150,7 @@ public:
 GAME_PROPERTY ( CSmallWeapon )
 
 class CScroll : public CItem {
-    Q_OBJECT
+
     Q_PROPERTY ( std::string text
                  READ
                  getText
@@ -176,7 +176,7 @@ private:
 GAME_PROPERTY ( CScroll )
 
 class CPotion : public CItem {
-    Q_OBJECT
+
 public:
     CPotion();
 

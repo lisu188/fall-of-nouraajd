@@ -9,7 +9,7 @@ class CFightPanel;
 class CListView;
 
 class CCreatureFightView : public CGameObject {
-    Q_OBJECT
+
 
     friend class CFightPanel;
 
@@ -27,7 +27,7 @@ private:
 };
 
 class CFightPanel : public AGamePanel {
-    Q_OBJECT
+
 public:
     CFightPanel();
 

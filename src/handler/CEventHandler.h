@@ -11,7 +11,7 @@ class CTrigger;
 class CGameObject;
 
 class CGameEvent : public QObject {
-    Q_OBJECT
+
     Q_ENUMS ( Type )
 public:
     enum Type {

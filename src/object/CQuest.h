@@ -3,7 +3,7 @@
 #include "CGameObject.h"
 
 class CQuest : public CGameObject {
-    Q_OBJECT
+
 public:
     CQuest();
 

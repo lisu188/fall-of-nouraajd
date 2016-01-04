@@ -12,7 +12,7 @@ class Stats;
 class CEffect;
 
 class CInteraction : public CGameObject {
-    Q_OBJECT
+
     Q_PROPERTY ( int manaCost
                  READ
                  getManaCost

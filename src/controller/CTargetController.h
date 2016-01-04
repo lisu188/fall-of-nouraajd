@@ -3,7 +3,7 @@
 #include "CController.h"
 
 class CTargetController : public CController {
-    Q_OBJECT
+
 public:
     CTargetController ( std::shared_ptr<CMapObject> target );
 

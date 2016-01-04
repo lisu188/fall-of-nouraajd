@@ -9,7 +9,7 @@ class CGameEvent;
 class CMap;
 
 class CGameObject : public CAnimatedObject, public std::enable_shared_from_this<CGameObject> {
-    Q_OBJECT
+
     Q_PROPERTY ( std::string objectType
                  READ
                  getObjectType
