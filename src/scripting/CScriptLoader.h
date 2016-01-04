@@ -24,10 +24,6 @@ class AScriptLoader {
 public:
     virtual std::string findModule ( std::string modName ) = 0;
 
-    std::string findModule ( std::string modName );
-
-    bool checkModule ( std::string modName );
-
     bool checkModule ( std::string modName );
 
     void exec_module ( boost::python::object module );
