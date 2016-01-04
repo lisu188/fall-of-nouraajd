@@ -13,11 +13,8 @@ class CMap;
 
 class CGameObject;
 
-class CGame : private QGraphicsScene, public std::enable_shared_from_this<CGame> {
-    Q_OBJECT
-
+class CGame : public std::enable_shared_from_this<CGame> {
     friend class CGameView;
-
 public:
     CGame ( std::shared_ptr<CGameView> view );
 
@@ -31,10 +28,6 @@ public:
 
     std::shared_ptr<CGameView> getView();
 
-    void removeObject ( std::shared_ptr<CGameObject> object );
-
-    void addObject ( std::shared_ptr<CGameObject> object );
-
     std::shared_ptr<CGuiHandler> getGuiHandler();
 
     std::shared_ptr<CScriptHandler> getScriptHandler();
@@ -44,7 +37,7 @@ public:
     std::shared_ptr<CGame> ptr();
 
 protected:
-    virtual void keyPressEvent ( QKeyEvent *event );
+    virtual void keyPressEvent ( void  * event ); //TODO: implement
 
 private:
     vstd::lazy<CGuiHandler, std::shared_ptr<CGame>> guiHandler;
