@@ -1,14 +1,14 @@
 #pragma once
 
 #include "core/CUtil.h"
-#include "CAnimatedObject.h"
+#include "core/CDefines.h"
 #include "vstd.h"
 
 class CGameEvent;
 
 class CMap;
 
-class CGameObject : public CAnimatedObject, public std::enable_shared_from_this<CGameObject> {
+class CGameObject : public std::enable_shared_from_this<CGameObject> {
 
     Q_PROPERTY ( std::string objectType
                  READ
@@ -79,17 +79,19 @@ public:
     void drag();
 
 protected:
-    virtual void hoverEnterEvent ( QGraphicsSceneHoverEvent *event ) override final;
-
-    virtual void hoverLeaveEvent ( QGraphicsSceneHoverEvent *event ) override final;
-
-    virtual void mousePressEvent ( QGraphicsSceneMouseEvent * ) override final;
+    //TODO: tooltip
+//    virtual void hoverEnterEvent ( QGraphicsSceneHoverEvent *event ) override final;
+//
+//    virtual void hoverLeaveEvent ( QGraphicsSceneHoverEvent *event ) override final;
+//
+//    virtual void mousePressEvent ( QGraphicsSceneMouseEvent * ) override final;
 
     bool hasTooltip = true;
 private:
     std::string tooltip;
     std::string objectType;
-    QGraphicsSimpleTextItem statsView;
+    //TODO: tooltip
+    //QGraphicsSimpleTextItem statsView;
     std::weak_ptr<CMap> map;
 };
 

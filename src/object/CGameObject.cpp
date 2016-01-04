@@ -6,12 +6,13 @@ CGameObject::~CGameObject() {
 }
 
 CGameObject::CGameObject() {
-    this->setAcceptHoverEvents ( true );
-    statsView.setParentItem ( this );
-    statsView.setVisible ( true );
-    statsView.setText ( " " );
-    statsView.setPos ( -this->mapToParent ( 0, 0 ).x(),
-                       -statsView.boundingRect().height() );
+    //TODO: tooltip
+//    this->setAcceptHoverEvents ( true );
+//    statsView.setParentItem ( this );
+//    statsView.setVisible ( true );
+//    statsView.setText ( " " );
+//    statsView.setPos ( -this->mapToParent ( 0, 0 ).x(),
+//                       -statsView.boundingRect().height() );
 }
 
 std::string CGameObject::getObjectType() const {
@@ -90,26 +91,28 @@ void CGameObject::drag() {
         drag->exec();
     }
 }
+//TODO: tooltip
+//
+//void CGameObject::hoverEnterEvent ( QGraphicsSceneHoverEvent *event ) {
+//    if ( hasTooltip ) {
+//        statsView.setVisible ( true );
+//        std::string tooltipText = getTooltip();
+//        if ( tooltipText == "" ) {
+//            tooltipText = getObjectType();
+//        }
+//        statsView.setText ( tooltipText );
+//        statsView.setPos ( 0, 0 - statsView.boundingRect().height() );
+//        event->setAccepted ( true );
+//    }
+//}
+//
+//void CGameObject::hoverLeaveEvent ( QGraphicsSceneHoverEvent *event ) {
+//    statsView.setVisible ( false );
+//    event->setAccepted ( true );
+//}
 
-void CGameObject::hoverEnterEvent ( QGraphicsSceneHoverEvent *event ) {
-    if ( hasTooltip ) {
-        statsView.setVisible ( true );
-        std::string tooltipText = getTooltip();
-        if ( tooltipText == "" ) {
-            tooltipText = getObjectType();
-        }
-        statsView.setText ( tooltipText );
-        statsView.setPos ( 0, 0 - statsView.boundingRect().height() );
-        event->setAccepted ( true );
-    }
-}
-
-void CGameObject::hoverLeaveEvent ( QGraphicsSceneHoverEvent *event ) {
-    statsView.setVisible ( false );
-    event->setAccepted ( true );
-}
-
-void CGameObject::mousePressEvent ( QGraphicsSceneMouseEvent * ) {
-    getMap()->getMouseHandler()->handleClick ( this->ptr() );
-}
+//TODO: mouse click
+//void CGameObject::mousePressEvent ( QGraphicsSceneMouseEvent * ) {
+//    getMap()->getMouseHandler()->handleClick ( this->ptr() );
+//}
 

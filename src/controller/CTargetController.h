@@ -1,5 +1,6 @@
 #pragma once
 
+#include "core/CDefines.h"
 #include "CController.h"
 
 class CTargetController : public CController {
