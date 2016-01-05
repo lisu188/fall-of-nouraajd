@@ -35,7 +35,7 @@ bool CJsonUtil::isObject ( std::shared_ptr<Value> object ) {
 
 bool CJsonUtil::isMap ( std::shared_ptr<Value> object ) {
     for ( auto it = object->MemberBegin(); it != object->MemberEnd(); it++ ) {
-        if ( !it.->value.IsObject() ||
+        if ( !it->value.IsObject() ||
                 !isObject ( std::make_shared<Value> ( it->value ) ) ) {
             return false;
         }
