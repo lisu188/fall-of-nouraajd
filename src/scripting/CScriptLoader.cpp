@@ -12,7 +12,7 @@ AScriptLoader *ModuleSpec::loader() {
 }
 
 std::string CScriptLoader::findModule ( std::string modName ) {
-    modName = replace (modName, ".", "/" );
+    modName = replace ( modName, ".", "/" );
     std::string modData = CResourcesProvider::getInstance()->load ( "scripts/" + modName + ".py" );
     if ( modData == "" ) {
         modData = CResourcesProvider::getInstance()->load ( "scripts/" + modName + "/__init__.py" );

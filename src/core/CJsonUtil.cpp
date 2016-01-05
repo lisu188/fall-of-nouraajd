@@ -3,7 +3,7 @@
 
 bool CJsonUtil::hasStringProp ( std::shared_ptr<Value> object, std::string prop ) {
     Value::ConstMemberIterator it = object->FindMember ( prop.c_str() );
-    return it != object->MemberEnd() && it->value.IsString() && vstd::trim(vstd::str(it->value.GetString())) != "";
+    return it != object->MemberEnd() && it->value.IsString() && vstd::trim ( vstd::str ( it->value.GetString() ) ) != "";
 }
 
 bool CJsonUtil::hasObjectProp ( std::shared_ptr<Value> object, std::string prop ) {

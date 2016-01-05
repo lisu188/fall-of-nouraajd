@@ -8,7 +8,7 @@ std::shared_ptr<CSerializerBase> CSerialization::serializer ( std::pair<int, int
 }
 
 void CSerialization::setProperty ( std::shared_ptr<CGameObject> object, std::string key, const Value &value ) {
-    switch ( value.) {
+    switch ( value. ) {
     case Value::Null:
         vstd::fail ( "Null value detected." );
         break;
