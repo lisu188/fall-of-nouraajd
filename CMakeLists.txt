@@ -11,7 +11,7 @@ file(GLOB_RECURSE BOOST_PYTHON_SRC $ENV{BOOST}/libs/python/src/**.cpp)
 
 set(BOOST_INCLUDEDIR $ENV{BOOST})
 set(BOOST_LIBRARYDIR $ENV{BOOST}/stage/lib)
-FIND_PACKAGE(Boost 1.58)
+FIND_PACKAGE(Boost 1.60)
 
 include_directories(${Boost_INCLUDE_DIRS})
 include_directories($ENV{PYTHON}/include)

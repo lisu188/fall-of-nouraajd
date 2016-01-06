@@ -5,16 +5,11 @@
 
 class CEffect : public CGameObject {
 
-    Q_PROPERTY ( int duration
-                 READ
-                 getDuration
-                 WRITE
-                 setDuration )
-    Q_PROPERTY ( bool buff
-                 READ
-                 isBuff
-                 WRITE
-                 setBuff )
+V_META(CEffect, CGameObject,
+       V_PROPERTY(CEffect, bool, buff, isBuff, setBuff),
+       V_PROPERTY(CEffect, int, duration, getDuration, setDuration)
+)
+
 public:
     CEffect();
 
@@ -24,29 +19,29 @@ public:
 
     int getTimeTotal();
 
-    bool apply ( CCreature *creature );
+    bool apply(CCreature *creature);
 
     std::shared_ptr<Stats> getBonus();
 
-    void setBonus ( std::shared_ptr<Stats> value );
+    void setBonus(std::shared_ptr<Stats> value);
 
     int getDuration();
 
-    void setDuration ( int duration );
+    void setDuration(int duration);
 
     virtual bool onEffect();
 
     bool isBuff() const;
 
-    void setBuff ( bool value );
+    void setBuff(bool value);
 
     std::shared_ptr<CCreature> getCaster();
 
-    void setCaster ( std::shared_ptr<CCreature> value );
+    void setCaster(std::shared_ptr<CCreature> value);
 
     std::shared_ptr<CCreature> getVictim();
 
-    void setVictim ( std::shared_ptr<CCreature> value );
+    void setVictim(std::shared_ptr<CCreature> value);
 
 private:
     int timeLeft = 0;
@@ -58,4 +53,4 @@ private:
     bool buff = false;
 };
 
-GAME_PROPERTY ( CEffect )
+GAME_PROPERTY (CEffect)

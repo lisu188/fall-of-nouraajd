@@ -4,13 +4,10 @@
 
 class CEvent : public CMapObject, public Visitable {
 
-    Q_PROPERTY ( bool enabled
-                 READ
-                 isEnabled
-                 WRITE
-                 setEnabled
-                 USER
-                 true )
+V_META(CEvent, CMapObject,
+       V_PROPERTY(CEvent, bool, enabled, isEnabled, setEnabled)
+)
+
 public:
     CEvent();
 
