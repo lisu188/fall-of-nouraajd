@@ -9,32 +9,13 @@ class CInteraction;
 
 class CItem : public CMapObject, public Visitable, public Wearable, public Usable {
 
-    Q_PROPERTY ( int power
-                 READ
-                 getPower
-                 WRITE
-                 setPower
-                 USER
-                 true )
-    Q_PROPERTY ( bool singleUse
-                 READ
-                 isSingleUse
-                 WRITE
-                 setSingleUse
-                 USER
-                 true )
-    Q_PROPERTY ( std::shared_ptr<Stats> bonus
-                 READ
-                 getBonus
-                 WRITE
-                 setBonus
-                 USER
-                 true )
-    Q_PROPERTY ( std::shared_ptr<CInteraction> interaction
-                 READ
-                 getInteraction
-                 WRITE
-                 setInteraction )
+V_META(CItem, CMapObject,
+       V_PROPERTY(CItem, int, power, getPower, setPower),
+       V_PROPERTY(CItem, std::shared_ptr<Stats>, bonus, getBonus, setBonus),
+       V_PROPERTY(CItem, bool, singleUse, isSingleUse, setSingleUse),
+       V_PROPERTY(CItem, std::shared_ptr<CInteraction>, interaction, getInteraction, setInteraction)
+)
+
 public:
     CItem();
 
@@ -42,29 +23,29 @@ public:
 
     bool isSingleUse();
 
-    void setSingleUse ( bool singleUse );
+    void setSingleUse(bool singleUse);
 
-    virtual void onEquip ( std::shared_ptr<CGameEvent> event ) override;
+    virtual void onEquip(std::shared_ptr<CGameEvent> event) override;
 
-    virtual void onUnequip ( std::shared_ptr<CGameEvent> event ) override;
+    virtual void onUnequip(std::shared_ptr<CGameEvent> event) override;
 
-    virtual void onUse ( std::shared_ptr<CGameEvent> event ) override;
+    virtual void onUse(std::shared_ptr<CGameEvent> event) override;
 
-    virtual void onEnter ( std::shared_ptr<CGameEvent> event ) override;
+    virtual void onEnter(std::shared_ptr<CGameEvent> event) override;
 
-    virtual void onLeave ( std::shared_ptr<CGameEvent> ) override;
+    virtual void onLeave(std::shared_ptr<CGameEvent>) override;
 
     int getPower() const;
 
-    void setPower ( int value );
+    void setPower(int value);
 
     std::shared_ptr<Stats> getBonus();
 
-    void setBonus ( std::shared_ptr<Stats> stats );
+    void setBonus(std::shared_ptr<Stats> stats);
 
     std::shared_ptr<CInteraction> getInteraction();
 
-    void setInteraction ( std::shared_ptr<CInteraction> interaction );
+    void setInteraction(std::shared_ptr<CInteraction> interaction);
 
 protected:
     bool singleUse = false;
@@ -75,112 +56,109 @@ private:
     int slot = 0;
 };
 
-GAME_PROPERTY ( CItem )
+GAME_PROPERTY (CItem)
 
 class CArmor : public CItem {
 
 public:
     CArmor();
 
-    CArmor ( const CArmor & );
+    CArmor(const CArmor &);
 
-    CArmor ( std::string name );
+    CArmor(std::string name);
 };
 
-GAME_PROPERTY ( CArmor )
+GAME_PROPERTY (CArmor)
 
 class CBelt : public CItem {
 
 public:
     CBelt();
 
-    CBelt ( const CBelt & );
+    CBelt(const CBelt &);
 };
 
-GAME_PROPERTY ( CBelt )
+GAME_PROPERTY (CBelt)
 
 class CHelmet : public CItem {
 
 public:
     CHelmet();
 
-    CHelmet ( const CHelmet & );
+    CHelmet(const CHelmet &);
 };
 
-GAME_PROPERTY ( CHelmet )
+GAME_PROPERTY (CHelmet)
 
 class CBoots : public CItem {
 
 public:
     CBoots();
 
-    CBoots ( const CBoots & );
+    CBoots(const CBoots &);
 };
 
-GAME_PROPERTY ( CBoots )
+GAME_PROPERTY (CBoots)
 
 class CGloves : public CItem {
 
 public:
     CGloves();
 
-    CGloves ( const CGloves & );
+    CGloves(const CGloves &);
 };
 
-GAME_PROPERTY ( CGloves )
+GAME_PROPERTY (CGloves)
 
 class CWeapon : public CItem {
 
 public:
     CWeapon();
 
-    CWeapon ( const CWeapon & );
+    CWeapon(const CWeapon &);
 };
 
-GAME_PROPERTY ( CWeapon )
+GAME_PROPERTY (CWeapon)
 
 class CSmallWeapon : public CWeapon {
 
 public:
     CSmallWeapon();
 
-    CSmallWeapon ( const CSmallWeapon & );
+    CSmallWeapon(const CSmallWeapon &);
 };
 
-GAME_PROPERTY ( CSmallWeapon )
+GAME_PROPERTY (CSmallWeapon)
 
 class CScroll : public CItem {
 
-    Q_PROPERTY ( std::string text
-                 READ
-                 getText
-                 WRITE
-                 setText
-                 USER
-                 true )
+V_META(CScroll, CItem,
+       V_PROPERTY(CItem, std::string, text, getText, setText)
+)
+
 public:
     CScroll();
 
-    CScroll ( const CScroll & );
+    CScroll(const CScroll &);
 
     std::string getText() const;
 
-    void setText ( const std::string &value );
+    void setText(const std::string &value);
 
-    virtual void onUse ( std::shared_ptr<CGameEvent> ) override;
+    virtual void onUse(std::shared_ptr<CGameEvent>) override;
 
 private:
     std::string text;
 };
 
-GAME_PROPERTY ( CScroll )
+GAME_PROPERTY (CScroll)
 
 class CPotion : public CItem {
 
 public:
     CPotion();
 
-    CPotion ( const CPotion & );
+    CPotion(const CPotion &);
 };
 
-GAME_PROPERTY ( CPotion )
+GAME_PROPERTY (CPotion)

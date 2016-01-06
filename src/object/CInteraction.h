@@ -13,41 +13,34 @@ class CEffect;
 
 class CInteraction : public CGameObject {
 
-    Q_PROPERTY ( int manaCost
-                 READ
-                 getManaCost
-                 WRITE
-                 setManaCost USER
+V_META(CInteraction, CGameObject,
+       V_PROPERTY(CInteraction, std::shared_ptr<CEffect>, effect, getEffect, setEffect),
+       V_PROPERTY(CInteraction, int, manaCost, getManaCost, setManaCost)
+)
 
-                 true )
-    Q_PROPERTY ( std::shared_ptr<CEffect>
-                 effect READ
-                 getEffect WRITE
-                 setEffect USER
-                 true )
 public:
     CInteraction();
 
     ~CInteraction();
 
-    void onAction ( std::shared_ptr<CCreature> first, std::shared_ptr<CCreature> second );
+    void onAction(std::shared_ptr<CCreature> first, std::shared_ptr<CCreature> second);
 
-    virtual void performAction ( std::shared_ptr<CCreature>, std::shared_ptr<CCreature> );
+    virtual void performAction(std::shared_ptr<CCreature>, std::shared_ptr<CCreature>);
 
-    virtual bool configureEffect ( std::shared_ptr<CEffect> );
+    virtual bool configureEffect(std::shared_ptr<CEffect>);
 
     std::shared_ptr<CEffect> getEffect() const;
 
-    void setEffect ( const std::shared_ptr<CEffect> value );
+    void setEffect(const std::shared_ptr<CEffect> value);
 
     int getManaCost() const;
 
-    void setManaCost ( int value );
+    void setManaCost(int value);
 
 private:
     int manaCost;
     std::shared_ptr<CEffect> effect;
 };
 
-GAME_PROPERTY ( CInteraction )
+GAME_PROPERTY (CInteraction)
 

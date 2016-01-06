@@ -1,7 +1,7 @@
 #include "CBuilding.h"
 
 CBuilding::CBuilding() {
-    this->setZValue ( 1 );
+//    this->setZValue ( 1 );
 }
 
 CBuilding::~CBuilding() {

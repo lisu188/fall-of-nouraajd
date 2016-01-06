@@ -25,9 +25,9 @@ std::shared_ptr<CGameView> CGame::getView() {
     return view.lock();
 }
 
-std::shared_ptr<CGuiHandler> CGame::getGuiHandler() {
-    return guiHandler.get ( this->ptr() );
-}
+//std::shared_ptr<CGuiHandler> CGame::getGuiHandler() {
+//    return guiHandler.get ( this->ptr() );
+//}
 
 std::shared_ptr<CScriptHandler> CGame::getScriptHandler() {
     return scriptHandler.get();

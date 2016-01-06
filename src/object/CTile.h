@@ -7,36 +7,15 @@ class CGame;
 
 class CCreature;
 
-class CTile : public CGameObject {
+class CTile : public CGameObject{
 
-    Q_PROPERTY ( bool canStep
-                 READ
-                 canStep
-                 WRITE
-                 setCanStep
-                 USER
-                 true )
-    Q_PROPERTY ( int posx
-                 READ
-                 getPosx
-                 WRITE
-                 setPosx
-                 USER
-                 true )
-    Q_PROPERTY ( int posy
-                 READ
-                 getPosy
-                 WRITE
-                 setPosy
-                 USER
-                 true )
-    Q_PROPERTY ( int posz
-                 READ
-                 getPosz
-                 WRITE
-                 setPosz
-                 USER
-                 true )
+V_META(CTile, CGameObject,
+       V_PROPERTY(CTile, bool, canStep, canStep, setCanStep),
+       V_PROPERTY(CTile, int, posx, getPosx, setPosx),
+       V_PROPERTY(CTile, int, posy, getPosy, setPosy),
+       V_PROPERTY(CTile, int, posz, getPosz, setPosz)
+)
+
 public:
     CTile();
 

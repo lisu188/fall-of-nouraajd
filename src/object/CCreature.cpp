@@ -132,7 +132,7 @@ void CCreature::heal ( int i ) {
 void CCreature::healProc ( float i ) {
     int tmp = hp;
     heal ( i / 100.0 * hpMax );
-    vstd::logger::debug ( getObjectType() , "restored" , hp - tmp, "hp" , "\n" );
+    vstd::logger::debug (getType() , "restored" , hp - tmp, "hp" , "\n" );
 }
 
 void CCreature::hurt ( int i ) {
@@ -182,7 +182,7 @@ void CCreature::hurt ( std::shared_ptr<Damage> damage ) {
     takeDamage ( damage->getFire() * ( 100 - stats->getFireResist() ) / 100.0 );
     takeDamage ( damage->getShadow() * ( 100 - stats->getShadowResist() ) / 100.0 );
     //TODO: generate to string from properties
-//    qDebug() << getObjectType() << "took damage:"
+//    qDebug() << getType() << "took damage:"
 //             << "normal(" << damage->getNormal() << ")thunder("
 //             << damage->getThunder() << ")frost(" << damage->getFrost() << ")fire("
 //             << damage->getFire() << ")shadow(" << damage->getShadow() << ")";
@@ -249,8 +249,8 @@ void CCreature::addAction ( std::shared_ptr<CInteraction> action ) {
 }
 
 void CCreature::addEffect ( std::shared_ptr<CEffect> effect ) {
-    vstd::logger::debug ( effect->getObjectType() , "starts for"
-                          ,this->getObjectType() );
+    vstd::logger::debug (effect->getType() , "starts for"
+                          , this->getType() );
     effects.insert ( effect );
 }
 
@@ -281,7 +281,7 @@ void CCreature::addMana ( int i ) {
 void CCreature::addManaProc ( float i ) {
     int tmp = mana;
     addMana ( i / 100.0 * manaMax );
-    vstd::logger::debug ( getObjectType() , "restored" , mana - tmp , "mana" , "\n" );
+    vstd::logger::debug (getType() , "restored" , mana - tmp , "mana" , "\n" );
 }
 
 void CCreature::takeMana ( int i ) {
@@ -307,8 +307,8 @@ bool CCreature::applyEffects() {
     std::set<std::shared_ptr<CEffect> >::iterator it = effects.begin();
     for ( it = effects.begin(); it != effects.end(); ) {
         if ( ( *it )->getTimeLeft() == 0 ) {
-            vstd::logger::debug ( getObjectType() , "is now free from"
-                                  , ( *it )->getObjectType() );
+            vstd::logger::debug (getType() , "is now free from"
+                                  , (*it)->getType() );
             i++;
             effects.erase ( it );
             it = effects.begin();
@@ -318,7 +318,7 @@ bool CCreature::applyEffects() {
     }
     bool isStopped = false;
     for ( std::shared_ptr<CEffect> effect:effects ) {
-        vstd::logger::debug ( getObjectType() , "suffers from" , effect->getObjectType() );
+        vstd::logger::debug (getType() , "suffers from" , effect->getType() );
         i++;
         isStopped = isStopped || effect->apply ( this );
         if ( !isAlive() ) {
@@ -381,7 +381,7 @@ void CCreature::setItem ( std::string i, std::shared_ptr<CItem> newItem ) {
         equipped.insert ( std::make_pair ( i, std::shared_ptr<CItem>() ) );
     }
     vstd::fail_if ( newItem && !CItemSlot::checkType ( i, newItem ),
-                    "Tried to insert" + newItem->getObjectType() + "into slot" + i );
+                    "Tried to insert" + newItem->getType() + "into slot" + i );
     std::shared_ptr<CItem> oldItem = equipped.at ( i );
     if ( oldItem ) {
         getMap()->getEventHandler()->gameEvent ( oldItem, std::make_shared<CGameEventCaused> ( CGameEvent::onUnequip,
@@ -429,7 +429,7 @@ void CCreature::levelUp() {
     addAction ( getLevelAction() );
     attribChange();
     if ( level > 1 ) {
-        vstd::logger::debug ( getObjectType() , "is now level:" , level, "\n" );
+        vstd::logger::debug (getType() , "is now level:" , level, "\n" );
     }
 }
 
@@ -533,8 +533,8 @@ void CCreature::setGold ( int value ) {
 }
 
 void CCreature::defeatedCreature ( std::shared_ptr<CCreature> creature ) {
-    vstd::logger::debug ( getObjectType() , objectName() , "defeated" , creature->getObjectType() , creature->objectName()
-                          << "\n" );
+    vstd::logger::debug (getType() , objectName() , "defeated" , creature->getType() , creature->objectName()
+                                                                                       << "\n" );
     addExpScaled ( creature->getScale() );
     addItem ( creature->getLoot() );
     getMap()->removeObject ( creature );
@@ -570,7 +570,7 @@ void CCreature::afterMove() {
 }
 
 std::string CCreature::getTooltip() const {
-    std::string tooltipText = getObjectType();
+    std::string tooltipText = getType();
     tooltipText.append ( " " );
     tooltipText.append ( std::string::number ( level ) );
     return tooltipText;

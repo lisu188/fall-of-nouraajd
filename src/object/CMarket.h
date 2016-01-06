@@ -7,27 +7,12 @@ class CItem;
 
 class CMarket : public CGameObject {
 
-    Q_PROPERTY ( std::set<std::shared_ptr<CItem>> items
-                 READ
-                 getItems
-                 WRITE
-                 setItems
-                 USER
-                 true )
-    Q_PROPERTY ( int sell
-                 READ
-                 getSell
-                 WRITE
-                 setSell
-                 USER
-                 true )
-    Q_PROPERTY ( int buy
-                 READ
-                 getBuy
-                 WRITE
-                 setBuy
-                 USER
-                 true )
+V_META(CMarket, CGameObject,
+       V_PROPERTY(CMarket,  std::set<std::shared_ptr<CItem>>, items, getItems, setItems),
+       V_PROPERTY(CMarket, int, sell, getSell, setSell),
+       V_PROPERTY(CMarket, int, buy, getBuy, setBuy)
+)
+
 public:
     CMarket();
 

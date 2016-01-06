@@ -131,7 +131,7 @@ void CSerialization::setProperty ( std::shared_ptr<Value> conf, std::string prop
 std::shared_ptr<Value> object_serialize ( std::shared_ptr<CGameObject> object ) {
     std::shared_ptr<Value> conf = std::make_shared<Value>();
     if ( object ) {
-        ( *conf ) ["class"] = object->getObjectType();
+        ( *conf ) ["class"] = object->getType();
         std::shared_ptr<Value> properties = std::make_shared<Value>();
         for ( int i = 0; i < object->metaObject()->propertyCount(); i++ ) {
             QMetaProperty property = object->metaObject()->property ( i );
@@ -156,10 +156,9 @@ std::shared_ptr<CGameObject> object_deserialize ( std::shared_ptr<CMap> map, std
     } else if ( ! ( *config ) ["class"].toString().isEmpty() ) {
         object = map->getObjectHandler()->getType ( ( *config ) ["class"].toString() );
         if ( object ) {
-            object->setObjectName ( vstd::to_hex ( object ) );
-            object->setObjectType ( ( *config ) ["class"].toString() );
+            object->setName ( vstd::to_hex ( object ) );
+            object->setType ( ( *config ) ["class"].toString() );
             object->setMap ( map );
-            map->getGame()->addObject ( object );
         }
     }
     if ( object ) {
@@ -167,7 +166,6 @@ std::shared_ptr<CGameObject> object_deserialize ( std::shared_ptr<CMap> map, std
         for ( auto it = properties.begin(); it != properties.end(); it++ ) {
             CSerialization::setProperty ( object, it.key(), it.value() );
         }
-        object->setVisible ( false );
     }
     return object;
 }

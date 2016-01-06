@@ -28,7 +28,7 @@ public:
 
     std::shared_ptr<CGameView> getView();
 
-    std::shared_ptr<CGuiHandler> getGuiHandler();
+//TODO:   std::shared_ptr<CGuiHandler> getGuiHandler();
 
     std::shared_ptr<CScriptHandler> getScriptHandler();
 
@@ -40,9 +40,9 @@ protected:
     virtual void keyPressEvent ( void  * event ); //TODO: implement
 
 private:
-    vstd::lazy<CGuiHandler, std::shared_ptr<CGame>> guiHandler;
+//TODO:    vstd::lazy<CGuiHandler, std::shared_ptr<CGame>> guiHandler;
     vstd::lazy<CScriptHandler> scriptHandler;
-    vstd::lazy<CScriptWindow, std::shared_ptr<CGame>> scriptWindow;
+//TODO:    vstd::lazy<CScriptWindow, std::shared_ptr<CGame>> scriptWindow;
     vstd::lazy<CObjectHandler> objectHandler;
     std::shared_ptr<CMap> map;
     std::weak_ptr<CGameView> view;
