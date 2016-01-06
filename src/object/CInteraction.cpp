@@ -10,8 +10,8 @@ CInteraction::~CInteraction() {
 }
 
 void CInteraction::onAction ( std::shared_ptr<CCreature> first, std::shared_ptr<CCreature> second ) {
-    qDebug() << first->getObjectType() << "used" << this->getObjectType()
-             << "against" << second->getObjectType();
+    vstd::logger::debug ( first->getObjectType(), "used" , this->getObjectType()
+                          ,"against" , second->getObjectType() );
 
     first->takeMana ( this->getManaCost() );
 

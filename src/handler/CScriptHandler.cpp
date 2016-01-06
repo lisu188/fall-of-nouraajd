@@ -14,13 +14,13 @@ CScriptHandler::CScriptHandler() {
     PyImport_AppendInittab ( "debug",PyInit_debug );
 #endif
     Py_Initialize();
-    qDebug() << "Initialized python interpreter." << "\n";
+    vstd::logger::debug ( "Initialized python interpreter." , "\n" );
     main_module = boost::python::object ( boost::python::handle<> ( PyImport_ImportModule ( "__main__" ) ) );
     main_namespace = main_module.attr ( "__dict__" );
     boost::python::incref ( main_module.ptr() );
-    qDebug() << "Imported main module." << "\n";
-    executeScript ( START_SCRIPT );
-    qDebug() << "Executed starting scripts." << "\n";
+    vstd::logger::debug ( "Imported main module." , "\n",;
+                          executeScript ( START_SCRIPT );
+                          vstd::logger::debug ( "Executed starting scripts." , "\n" );
 }
 
 CScriptHandler::~CScriptHandler() {

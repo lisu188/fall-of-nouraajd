@@ -38,8 +38,8 @@ std::string CMap::addObjectByName ( std::string name, Coords coords ) {
         if ( object ) {
             addObject ( object );
             object->moveTo ( coords.x, coords.y, coords.z );
-            qDebug() << "Added object" << object->getObjectType() << "with name"
-                     << object->objectName() << "on" << coords.x << coords.y << coords.z << "\n";
+            vstd::logger::debug ( "Added object" , object->getObjectType(), "with name"
+                                  , object->objectName() , "on", coords.x , coords.y , coords.z , "\n" );
             return name;
         }
     }
