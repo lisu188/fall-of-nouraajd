@@ -15,32 +15,12 @@ CGameObject::CGameObject() {
 //                       -statsView.boundingRect().height() );
 }
 
-std::string CGameObject::getObjectType() const {
-    return this->objectType;
-}
-
-void CGameObject::setObjectType ( const std::string &value ) {
-    this->objectType = value;
-}
-
 std::shared_ptr<CMap> CGameObject::getMap() {
     return map.lock();
 }
 
 void CGameObject::setMap ( std::shared_ptr<CMap> map ) {
     this->map = map;
-}
-
-void CGameObject::setProperty ( std::string name, QVariant property ) {
-    QByteArray byteArray = name.toUtf8();
-    const char *cString = byteArray.constData();
-    this->QObject::setProperty ( cString, property );
-}
-
-QVariant CGameObject::property ( std::string name ) const {
-    QByteArray byteArray = name.toUtf8();
-    const char *cString = byteArray.constData();
-    return this->QObject::property ( cString );
 }
 
 void CGameObject::setStringProperty ( std::string name, std::string value ) {
@@ -56,41 +36,37 @@ void CGameObject::setNumericProperty ( std::string name, int value ) {
 }
 
 std::string CGameObject::getStringProperty ( std::string name ) const {
-    return this->property ( name ).toString();
+    return this->getProperty<std::string> ( name );
 }
 
 bool CGameObject::getBoolProperty ( std::string name ) const {
-    return this->property ( name ).toBool();
+    return this->getProperty<bool> ( name );
 }
 
 int CGameObject::getNumericProperty ( std::string name ) const {
-    return this->property ( name ).toInt();
+    return this->getProperty<int> ( name );
 }
 
 void CGameObject::incProperty ( std::string name, int value ) {
     this->setNumericProperty ( name, this->getNumericProperty ( name ) + value );
 }
 
-std::string CGameObject::getTooltip() const {
-    return tooltip;
-}
-
-void CGameObject::setTooltip ( const std::string &value ) {
-    tooltip = value;
-}
-
-void CGameObject::setVisible ( bool vis ) {
-    QGraphicsPixmapItem::setVisible ( vis );
-}
-
-void CGameObject::drag() {
-    if ( std::shared_ptr<CGameObject> object = this->ptr() ) {
-        QDrag *drag = new QDrag ( this );
-        drag->setMimeData ( new CObjectData ( object ) );
-        drag->setPixmap ( this->pixmap() );
-        drag->exec();
-    }
-}
+//std::string CGameObject::getTooltip() const {
+//    return tooltip;
+//}
+//
+//void CGameObject::setTooltip ( const std::string &value ) {
+//    tooltip = value;
+//}
+//TODO: drag
+//void CGameObject::drag() {
+//    if ( std::shared_ptr<CGameObject> object = this->ptr() ) {
+//        QDrag *drag = new QDrag ( this );
+//        drag->setMimeData ( new CObjectData ( object ) );
+//        drag->setPixmap ( this->pixmap() );
+//        drag->exec();
+//    }
+//}
 //TODO: tooltip
 //
 //void CGameObject::hoverEnterEvent ( QGraphicsSceneHoverEvent *event ) {
@@ -98,7 +74,7 @@ void CGameObject::drag() {
 //        statsView.setVisible ( true );
 //        std::string tooltipText = getTooltip();
 //        if ( tooltipText == "" ) {
-//            tooltipText = getObjectType();
+//            tooltipText = getType();
 //        }
 //        statsView.setText ( tooltipText );
 //        statsView.setPos ( 0, 0 - statsView.boundingRect().height() );

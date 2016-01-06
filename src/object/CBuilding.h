@@ -4,13 +4,10 @@
 
 class CBuilding : public CMapObject, public Visitable {
 
-    Q_PROPERTY ( bool enabled
-                 READ
-                 isEnabled
-                 WRITE
-                 setEnabled
-                 USER
-                 true )
+V_META(CBuilding, CMapObject,
+       V_PROPERTY(CBuilding, bool, enabled, isEnabled, setEnabled)
+)
+
 public:
     CBuilding();
 

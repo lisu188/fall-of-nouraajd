@@ -25,8 +25,6 @@ class CEventHandler;
 
 class CMouseHandler;
 
-class CGuiHandler;
-
 class CMapObject;
 
 class CMap : private std::unordered_map<Coords, std::shared_ptr<CTile>>, public std::enable_shared_from_this<CMap> {
