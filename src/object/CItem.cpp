@@ -30,14 +30,14 @@ void CItem::setSingleUse ( bool singleUse ) {
 
 void CItem::onEquip ( std::shared_ptr<CGameEvent> event ) {
     vstd::cast<CCreature> ( vstd::cast<CGameEventCaused> ( event )->getCause() )->addBonus ( bonus );
-    qDebug() << vstd::cast<CGameEventCaused> ( event )->getCause()->getObjectType() << "equipped" << getObjectType()
-             << "\n";
+    vstd::logger::debug ( vstd::cast<CGameEventCaused> ( event )->getCause()->getObjectType() , "equipped" , getObjectType()
+                          << "\n" );
 }
 
 void CItem::onUnequip ( std::shared_ptr<CGameEvent> event ) {
     vstd::cast<CCreature> ( vstd::cast<CGameEventCaused> ( event )->getCause() )->removeBonus ( bonus );
-    qDebug() << vstd::cast<CGameEventCaused> ( event )->getCause()->getObjectType() << "unequipped" << getObjectType()
-             << "\n";
+    vstd::logger::debug ( vstd::cast<CGameEventCaused> ( event )->getCause()->getObjectType() , "unequipped" , getObjectType()
+                          , "\n" );
 }
 
 void CItem::onUse ( std::shared_ptr<CGameEvent> event ) {

@@ -72,7 +72,7 @@ void CAnimationProvider::loadAnim ( std::string path ) {
         return;
     }
     this->insert ( std::make_pair ( path, anim ) );
-    qDebug() << "Loaded animation:" << path << "\n";
+    vstd::logger::debug ( "Loaded animation:" , path ,"\n" );
 }
 
 std::shared_ptr<QPixmap> CAnimationProvider::getImage ( std::string path ) {

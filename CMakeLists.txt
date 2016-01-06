@@ -7,15 +7,19 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DRAPIDJSON_ASSERT(x) -DBOOST_DISABLE_AS
 
 file(GLOB_RECURSE GAME_SRC ${CMAKE_SOURCE_DIR}/src/**.cpp ${CMAKE_SOURCE_DIR}/src/**.h)
 
-file(GLOB_RECURSE BOOST_PYTHON_SRC ${CMAKE_SOURCE_DIR}/../python/src/**.cpp)
+file(GLOB_RECURSE BOOST_PYTHON_SRC $$ENV{BOOST}/libs/python/src/**.cpp)
 
-include_directories($ENV{BOOST})
+set(BOOST_INCLUDEDIR $ENV{BOOST})
+set(BOOST_LIBRARYDIR $ENV{BOOST}/stage/lib)
+FIND_PACKAGE(Boost 1.58)
+
+include_directories(${Boost_INCLUDE_DIRS})
 include_directories($ENV{PYTHON}/include)
 
 include_directories(${CMAKE_SOURCE_DIR}/src)
 
 include_directories(${CMAKE_SOURCE_DIR}/../vstd)
-include_directories(${CMAKE_SOURCE_DIR}/../python/src)
+include_directories($ENV{BOOST}/libs/python/src)
 include_directories(${CMAKE_SOURCE_DIR}/../rapidjson/include)
 
 add_executable(game ${GAME_SRC} ${BOOST_PYTHON_SRC})
