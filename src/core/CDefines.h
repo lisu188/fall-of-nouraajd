@@ -7,3 +7,4 @@
 //  Q_DECLARE_METATYPE(CLASS##Map)\
 
 #define GAME_PROPERTY(CLASS)
+
