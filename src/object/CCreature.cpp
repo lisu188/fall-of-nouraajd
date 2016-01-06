@@ -132,7 +132,7 @@ void CCreature::heal ( int i ) {
 void CCreature::healProc ( float i ) {
     int tmp = hp;
     heal ( i / 100.0 * hpMax );
-    qDebug() << getObjectType() << "restored" << hp - tmp << "hp" << "\n";
+    vstd::logger::debug ( getObjectType() , "restored" , hp - tmp, "hp" , "\n" );
 }
 
 void CCreature::hurt ( int i ) {
@@ -181,10 +181,11 @@ void CCreature::hurt ( std::shared_ptr<Damage> damage ) {
     takeDamage ( damage->getFrost() * ( 100 - stats->getFrostResist() ) / 100.0 );
     takeDamage ( damage->getFire() * ( 100 - stats->getFireResist() ) / 100.0 );
     takeDamage ( damage->getShadow() * ( 100 - stats->getShadowResist() ) / 100.0 );
-    qDebug() << getObjectType() << "took damage:"
-             << "normal(" << damage->getNormal() << ")thunder("
-             << damage->getThunder() << ")frost(" << damage->getFrost() << ")fire("
-             << damage->getFire() << ")shadow(" << damage->getShadow() << ")";
+    //TODO: generate to string from properties
+//    qDebug() << getObjectType() << "took damage:"
+//             << "normal(" << damage->getNormal() << ")thunder("
+//             << damage->getThunder() << ")frost(" << damage->getFrost() << ")fire("
+//             << damage->getFire() << ")shadow(" << damage->getShadow() << ")";
 }
 
 int CCreature::getDmg() {
@@ -197,11 +198,11 @@ int CCreature::getDmg() {
     if ( attDice < stats->getHit() ) {
         if ( critDice < stats->getCrit() ) {
             dmg *= 2;
-            qDebug() << "Critical hit";
+            vstd::logger::debug ( "Critical hit" );
         }
         return dmg;
     } else {
-        qDebug() << "Missed";
+        vstd::logger::debug ( "Missed" );
         return 0;
     }
 }
@@ -230,7 +231,7 @@ void CCreature::fight ( std::shared_ptr<CCreature> creature ) {
                 creature->getArmor()->getInteraction()->onAction ( creature, this->ptr<CCreature>() );
             }
         }
-        qDebug() << "";
+        vstd::logger::debug();
     }
     creature->fight ( this->ptr<CCreature>() );
 }
@@ -248,8 +249,8 @@ void CCreature::addAction ( std::shared_ptr<CInteraction> action ) {
 }
 
 void CCreature::addEffect ( std::shared_ptr<CEffect> effect ) {
-    qDebug() << effect->getObjectType() << "starts for"
-             << this->getObjectType();
+    vstd::logger::debug ( effect->getObjectType() , "starts for"
+                          ,this->getObjectType() );
     effects.insert ( effect );
 }
 
@@ -280,7 +281,7 @@ void CCreature::addMana ( int i ) {
 void CCreature::addManaProc ( float i ) {
     int tmp = mana;
     addMana ( i / 100.0 * manaMax );
-    qDebug() << getObjectType() << "restored" << mana - tmp << "mana" << "\n";
+    vstd::logger::debug ( getObjectType() , "restored" , mana - tmp , "mana" , "\n" );
 }
 
 void CCreature::takeMana ( int i ) {
@@ -306,8 +307,8 @@ bool CCreature::applyEffects() {
     std::set<std::shared_ptr<CEffect> >::iterator it = effects.begin();
     for ( it = effects.begin(); it != effects.end(); ) {
         if ( ( *it )->getTimeLeft() == 0 ) {
-            qDebug() << getObjectType() << "is now free from"
-                     << ( *it )->getObjectType();
+            vstd::logger::debug ( getObjectType() , "is now free from"
+                                  , ( *it )->getObjectType() );
             i++;
             effects.erase ( it );
             it = effects.begin();
@@ -317,7 +318,7 @@ bool CCreature::applyEffects() {
     }
     bool isStopped = false;
     for ( std::shared_ptr<CEffect> effect:effects ) {
-        qDebug() << getObjectType() << "suffers from" << effect->getObjectType();
+        vstd::logger::debug ( getObjectType() , "suffers from" , effect->getObjectType() );
         i++;
         isStopped = isStopped || effect->apply ( this );
         if ( !isAlive() ) {
@@ -326,7 +327,7 @@ bool CCreature::applyEffects() {
         }
     }
     if ( i > 0 ) {
-        qDebug() << "";
+        vstd::logger::debug();
     }
     return isStopped;
 }
@@ -428,7 +429,7 @@ void CCreature::levelUp() {
     addAction ( getLevelAction() );
     attribChange();
     if ( level > 1 ) {
-        qDebug() << getObjectType() << "is now level:" << level << "\n";
+        vstd::logger::debug ( getObjectType() , "is now level:" , level, "\n" );
     }
 }
 
@@ -532,8 +533,8 @@ void CCreature::setGold ( int value ) {
 }
 
 void CCreature::defeatedCreature ( std::shared_ptr<CCreature> creature ) {
-    qDebug() << getObjectType() << objectName() << "defeated" << creature->getObjectType() << creature->objectName()
-             << "\n";
+    vstd::logger::debug ( getObjectType() , objectName() , "defeated" , creature->getObjectType() , creature->objectName()
+                          << "\n" );
     addExpScaled ( creature->getScale() );
     addItem ( creature->getLoot() );
     getMap()->removeObject ( creature );

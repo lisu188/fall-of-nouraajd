@@ -5,6 +5,6 @@
   typedef std::map<std::string,std::shared_ptr<CLASS>> CLASS##Map;\
   Q_DECLARE_METATYPE(CLASS##Map)\
 
-#define PY_SAFE(x) try{x}catch(...){qDebug()<<"";PyErr_Print();PyErr_Clear();}
-#define PY_SAFE_RET(x) try{x}catch(...){qDebug()<<"";PyErr_Print();PyErr_Clear();return nullptr;}
+#define PY_SAFE(x) try{x}catch(...){vstd::logger::debug();PyErr_Print();PyErr_Clear();}
+#define PY_SAFE_RET(x) try{x}catch(...){vstd::logger::debug();PyErr_Print();PyErr_Clear();return nullptr;}
 

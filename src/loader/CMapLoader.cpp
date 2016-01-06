@@ -109,8 +109,8 @@ void CMapLoader::handleObjectLayer ( std::shared_ptr<CMap> map, const Value &lay
         int yPos = object["y"].toInt() / object["height"].toInt();
         auto mapObject = map->createObject<CMapObject> ( objectType );
         if ( mapObject == nullptr ) {
-            qDebug() << "Failed to load object:" << objectType
-                     << objectName << "\n";
+            vstd::logger::debug (  "Failed to load object:" , objectType
+                                   ,objectName , "\n" );
             continue;
         }
         if ( objectName != "" ) {
@@ -123,7 +123,7 @@ void CMapLoader::handleObjectLayer ( std::shared_ptr<CMap> map, const Value &lay
         }
         mapObject->moveTo ( xPos,
                             yPos, level );
-        qDebug() << "Loaded object:" << objectType
-                 << objectName << "\n";
+        vstd::logger::debug ( "Loaded object:" , objectType
+                              , objectName << "\n" );
     }
 }

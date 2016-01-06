@@ -30,9 +30,9 @@ void CConfigurationProvider::loadConfig ( std::string path ) {
                            path, std::make_shared<Value>
                            ( QJsonDocument::fromJson ( data ).object() ) ) );
         file->close();
-        qDebug() << "Loaded configuration:" << path << "\n";
+        vstd::logger::debug ( "Loaded configuration:" , path,"\n" );
     } else {
-        qDebug ( ( "Cannot load file:" + path ).toStdString().c_str() );
+        vstd::logger::debug ( "Cannot load file:" ,path );
         this->insert ( std::make_pair ( path, std::make_shared<Value>() ) );
     }
 }

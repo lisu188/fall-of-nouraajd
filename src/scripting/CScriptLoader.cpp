@@ -31,7 +31,7 @@ void AScriptLoader::exec_module ( object module ) {
 
     const char *cString = modData.c_str();
     exec ( cString, module.attr ( "__dict__" ) );
-    qDebug() << "Loaded module:" << modName << "\n";
+    vstd::logger::debug ( "Loaded module:" , modName , "\n" );
 }
 
 ModuleSpec *AScriptLoader::find_spec ( object name, object, object ) {
