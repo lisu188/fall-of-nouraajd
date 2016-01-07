@@ -14,9 +14,13 @@ class CSerializerBase {
     friend class CSerialization;
 
 public:
-    virtual QVariant serialize ( QVariant object ) = 0;
+    virtual boost::any
+            serialize(boost::any
+                      object) = 0;
 
-    virtual QVariant deserialize ( std::shared_ptr<CMap> map, QVariant object ) = 0;
+    virtual boost::any
+            deserialize(std::shared_ptr<CMap> map, boost::any
+    object) = 0;
 };
 
 template<typename Serialized, typename Deserialized>
@@ -105,13 +109,19 @@ public:
 template<typename Serialized, typename Deserialized>
 class CSerializer : public CSerializerBase {
 public:
-    virtual QVariant serialize ( QVariant object ) override final {
-        return QVariant::fromValue (
+    virtual boost::any
+    serialize(boost::any
+              object) override final {
+        return boost::any
+        ::fromValue(
                    CSerializerFunction<Serialized, Deserialized>::serialize ( object.value<Deserialized>() ) );
     }
 
-    virtual QVariant deserialize ( std::shared_ptr<CMap> map, QVariant object ) override final {
-        return QVariant::fromValue (
+    virtual boost::any
+    deserialize(std::shared_ptr<CMap> map, boost::any
+    object) override final {
+        return boost::any
+        ::fromValue(
                    CSerializerFunction<Serialized, Deserialized>::deserialize ( map, object.value<Serialized>() ) );
     }
 };
@@ -127,21 +137,26 @@ class CSerialization {
 public:
     template<typename Serialized, typename Deserialized>
     static Serialized serialize ( Deserialized deserialized ) {
-        QVariant variant = serializer<Serialized, Deserialized>()
-                           ->serialize ( QVariant::fromValue ( deserialized ) );
+        boost::any
+                variant = serializer<Serialized, Deserialized>()
+                ->serialize(boost::any
+                            ::fromValue(deserialized));
         return variant.value<Serialized>();
     }
 
     template<typename Serialized, typename Deserialized>
     static Deserialized deserialize ( std::shared_ptr<CMap> map, Serialized serialized ) {
-        QVariant variant = serializer<Serialized, Deserialized>()
-                           ->deserialize ( map, QVariant::fromValue ( serialized ) );
+        boost::any
+                variant = serializer<Serialized, Deserialized>()
+                ->deserialize(map, boost::any
+                ::fromValue(serialized));
         return variant.value<Deserialized>();
     }
 
     static void setProperty ( std::shared_ptr<CGameObject> object, std::string key, const Value &value );
 
-    static void setProperty ( std::shared_ptr<Value> conf, std::string propertyName, QVariant propertyValue );
+    static void setProperty(std::shared_ptr<Value> conf, std::string propertyName, boost::any
+    propertyValue);
 
 private:
     static QMetaProperty getProperty ( std::shared_ptr<CGameObject> object, std::string name );
@@ -156,8 +171,9 @@ private:
 
     static void setStringProperty ( std::shared_ptr<CGameObject> object, std::string key, std::string value );
 
-    static void setOtherProperty ( int serializedId, int deserializedId, std::shared_ptr<CGameObject> object, std::string key,
-                                   QVariant value );
+    static void setOtherProperty (int serializedId, int deserializedId, std::shared_ptr<CGameObject> object, std::string key,
+                                  boost::any
+                                  value);
 };
 
 Q_DECLARE_METATYPE ( std::shared_ptr<Value> )

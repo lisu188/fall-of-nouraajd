@@ -10,9 +10,9 @@ class CTrigger;
 
 class CGameObject;
 
-class CGameEvent : public QObject {
+class CGameEvent {
 
-    Q_ENUMS ( Type )
+    //TODO: Q_ENUMS ( Type )
 public:
     enum Type {
         onEnter, onTurn, onCreate, onDestroy, onLeave, onUse, onEquip, onUnequip

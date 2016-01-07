@@ -410,11 +410,6 @@ bool CCreature::hasItem ( std::shared_ptr<CItem> item ) {
     return hasInInventory ( item ) || hasEquipped ( item );
 }
 
-Coords CCreature::getCoords() {
-    Coords coords ( getPosX(), getPosY(), getPosZ() );
-    return coords;
-}
-
 std::shared_ptr<CWeapon> CCreature::getWeapon() {
     return vstd::cast<CWeapon> ( getItemAtSlot ( "0" ) );
 }
@@ -596,3 +591,6 @@ void CCreature::setEffects ( const std::set<std::shared_ptr<CEffect> > &value ) 
     effects = value;
 }
 
+Coords CCreature::getNextMove() {
+    return Coords();
+}
