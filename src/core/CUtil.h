@@ -8,25 +8,25 @@ class CGameObject;
 struct Coords {
     Coords();
 
-    Coords ( int x, int y, int z );
+    Coords(int x, int y, int z);
 
     int x, y, z;
 
-    bool operator== ( const Coords &other ) const;
+    bool operator==(const Coords &other) const;
 
-    bool operator!= ( const Coords &other ) const;
+    bool operator!=(const Coords &other) const;
 
-    bool operator< ( const Coords &other ) const;
+    bool operator<(const Coords &other) const;
 
-    bool operator> ( const Coords &other ) const;
+    bool operator>(const Coords &other) const;
 
-    Coords operator- ( const Coords &other ) const;
+    Coords operator-(const Coords &other) const;
 
-    Coords operator+ ( const Coords &other ) const;
+    Coords operator+(const Coords &other) const;
 
     Coords operator*() const;
 
-    double getDist ( Coords a ) const;
+    double getDist(Coords a) const;
 };
 
 //TODO: implement drop
@@ -68,15 +68,17 @@ struct Coords {
 namespace std {
     template<>
     struct hash<Coords> {
-        force_inline std::size_t  operator() ( const Coords &coords ) const {
-            return vstd::hash_combine ( coords.x, coords.y, coords.z );
+        force_inline std::size_t  operator()(const Coords &coords) const {
+            return vstd::hash_combine(coords.x, coords.y, coords.z);
         }
     };
 
     template<>
     struct hash<std::pair<int, int>> {
-        force_inline std::size_t operator() ( const std::pair<int, int> &pair ) const {
-            return vstd::hash_combine ( pair.first, pair.second );
+        force_inline std::size_t operator()(const std::pair<int, int> &pair) const {
+            return vstd::hash_combine(pair.first, pair.second);
         }
     };
 }
+
+int randint(int i, int j) { return rand() % (j - i + 1) + i; }

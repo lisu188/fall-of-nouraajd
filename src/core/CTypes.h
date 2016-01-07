@@ -11,13 +11,12 @@ public:
 
     static std::unordered_map<std::string, std::function<std::shared_ptr<CGameObject>() >> &builders();
 
-    static std::unordered_map<std::pair<int, int>, std::shared_ptr<CSerializerBase>> &serializers();
+    static std::unordered_map<std::pair<boost::typeindex::type_index, boost::typeindex::type_index>, std::shared_ptr<CSerializerBase>> serializers();
 
     template<typename Serialized, typename Deserialized>
     static void register_serializer() {
         serializers() [vstd::type_pair<Serialized, Deserialized>()] =
-            std::make_shared<CSerializer<Serialized, Deserialized>>
-            ();
+                std::make_shared<CSerializer<Serialized, Deserialized>>();
     }
 
     template<typename T>
