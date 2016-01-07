@@ -154,7 +154,7 @@ Stats::Stats() {
 
 void Stats::addBonus ( std::shared_ptr<Stats> stats ) {
     for ( int i = 0; i < this->metaObject()->propertyCount(); i++ ) {
-        QMetaProperty property = this->metaObject()->property ( i );
+        vstd::property property = this->metaObject()->property(i);
         if ( property.type() == QVariant::Int ) {
             this->incProperty ( property.name(), stats->getNumericProperty ( property.name() ) );
         }
@@ -163,7 +163,7 @@ void Stats::addBonus ( std::shared_ptr<Stats> stats ) {
 
 void Stats::removeBonus ( std::shared_ptr<Stats> stats ) {
     for ( int i = 0; i < this->metaObject()->propertyCount(); i++ ) {
-        QMetaProperty property = this->metaObject()->property ( i );
+        vstd::property property = this->metaObject()->property(i);
         if ( property.type() == QVariant::Int ) {
             this->incProperty ( property.name(), -stats->getNumericProperty ( property.name() ) );
         }
