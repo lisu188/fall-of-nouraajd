@@ -6,7 +6,7 @@ class CAnimation;
 
 class QPixmap;
 
-class CAnimation : public QObject, private std::map<int, std::pair<std::shared_ptr<QPixmap>, int> > {
+class CAnimation : private std::map<int, std::pair<std::shared_ptr<QPixmap>, int> > {
 
 public:
     CAnimation();
