@@ -32,7 +32,7 @@ std::unordered_map<std::string, std::function<std::shared_ptr<CGameObject>() >> 
     return reg;
 }
 
-std::unordered_map<std::pair<int, int>, std::shared_ptr<CSerializerBase> > &CTypes::serializers() {
-    static std::unordered_map<std::pair<int, int>, std::shared_ptr<CSerializerBase>> reg;
+std::unordered_map<std::pair<boost::typeindex::type_index, boost::typeindex::type_index>, std::shared_ptr<CSerializerBase>> CTypes::serializers() {
+    static std::unordered_map<std::pair<boost::typeindex::type_index, boost::typeindex::type_index>, std::shared_ptr<CSerializerBase>> reg;
     return reg;
 }

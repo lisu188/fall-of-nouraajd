@@ -1,6 +1,5 @@
 #include "core/CGlobal.h"
 #include "CScripting.h"
-#include "panel/CPanel.h"
 #include "core/CGame.h"
 
 using namespace boost::python;
@@ -21,7 +20,6 @@ BOOST_PYTHON_MODULE ( _core ) {
                 "CCustomScriptLoader", no_init );
 }
 
-static int randint ( int i, int j ) { return rand() % ( j - i + 1 ) + i; }
 
 #ifdef DEBUG_MODE
 class CDebug {
