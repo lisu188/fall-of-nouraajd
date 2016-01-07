@@ -133,7 +133,7 @@ GAME_PROPERTY (CSmallWeapon)
 class CScroll : public CItem {
 
 V_META(CScroll, CItem,
-       V_PROPERTY(CItem, std::string, text, getText, setText)
+       V_PROPERTY(CScroll, std::string, text, getText, setText)
 )
 
 public:

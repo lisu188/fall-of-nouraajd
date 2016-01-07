@@ -93,20 +93,12 @@ void CResourcesProvider::save ( std::string file, std::shared_ptr<Value> data ) 
     save ( file, QJsonDocument ( *data ).toJson ( QJsonDocument::JsonFormat::Compact ) );
 }
 
-void CResourcesProvider::save ( std::string file, std::shared_ptr<Value> data ) {
-    save ( file, QJsonDocument ( *data ).toJson ( QJsonDocument::JsonFormat::Compact ) );
-}
-
 void CResourcesProvider::saveZip ( std::string file, QByteArray data ) {
     save ( file, qCompress ( data, 9 ) );
 }
 
 void CResourcesProvider::saveZip ( std::string file, std::string data ) {
     saveZip ( file, data.toUtf8() );
-}
-
-void CResourcesProvider::saveZip ( std::string file, std::shared_ptr<Value> data ) {
-    saveZip ( file, QJsonDocument ( *data ).toJson ( QJsonDocument::JsonFormat::Compact ) );
 }
 
 void CResourcesProvider::saveZip ( std::string file, std::shared_ptr<Value> data ) {

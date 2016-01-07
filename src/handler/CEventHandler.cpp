@@ -27,7 +27,7 @@ void CEventHandler::gameEvent ( std::shared_ptr<CMapObject> object, std::shared_
         vstd::cast<Wearable> ( object )->onUnequip ( event );
         break;
     }
-    auto range = triggers.equal_range ( TriggerKey ( object->objectName(), event->getType() ) );
+    auto range = triggers.equal_range(TriggerKey(object->getName(), event->getType()));
     std::for_each (
         range.first,
         range.second,
@@ -39,13 +39,15 @@ void CEventHandler::gameEvent ( std::shared_ptr<CMapObject> object, std::shared_
 
 void CEventHandler::registerTrigger ( std::string name, std::string type, std::shared_ptr<CTrigger> trigger ) {
     bool ok;
-    CGameEvent::Type tp = static_cast<CGameEvent::Type>
-                          ( CGameEvent::staticMetaObject.enumerator ( CGameEvent::staticMetaObject.indexOfEnumerator ( "Type" ) )
-                            .keyToValue ( type.toStdString().c_str(), &ok ) );
+    CGameEvent::Type tp;
+    //TODO:
+//    CGameEvent::Type tp = static_cast<CGameEvent::Type>
+//                          ( CGameEvent::staticMetaObject.enumerator ( CGameEvent::staticMetaObject.indexOfEnumerator ( "Type" ) )
+//                            .keyToValue ( type.toStdString().c_str(), &ok ) );
     if ( ok ) {
         triggers.insert ( std::make_pair ( TriggerKey ( name, tp ), trigger ) );
     } else {
-        vstd::fail ( name + ":" + type + " wrong type" );
+        vstd::logger::fatal(name, ":", type, " wrong type");
     }
 }
 

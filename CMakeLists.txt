@@ -3,7 +3,7 @@ project(game)
 
 include($ENV{COTIRE_CMAKE}/cotire.cmake)
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DRAPIDJSON_ASSERT(x) -DBOOST_DISABLE_ASSERTS -std=c++14 -include cmath -Wno-deprecated-declarations -Wno-unused-local-typedefs -Wno-attributes")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14 -include cmath -Wno-deprecated-declarations -Wno-unused-local-typedefs -Wno-attributes")
 
 file(GLOB_RECURSE GAME_SRC ${CMAKE_SOURCE_DIR}/src/**.cpp ${CMAKE_SOURCE_DIR}/src/**.h)
 
@@ -12,6 +12,9 @@ file(GLOB_RECURSE BOOST_PYTHON_SRC $ENV{BOOST}/libs/python/src/**.cpp)
 set(BOOST_INCLUDEDIR $ENV{BOOST})
 set(BOOST_LIBRARYDIR $ENV{BOOST}/stage/lib)
 FIND_PACKAGE(Boost 1.60)
+
+add_definitions("-DRAPIDJSON_ASSERT(x)")
+add_definitions(-DBOOST_DISABLE_ASSERTS)
 
 include_directories(${Boost_INCLUDE_DIRS})
 include_directories($ENV{PYTHON}/include)
