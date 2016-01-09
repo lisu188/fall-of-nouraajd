@@ -1,6 +1,7 @@
 #pragma once
 
 #include <boost/python.hpp>
+#include <boost/filesystem.hpp>
 
 #include <condition_variable>
 #include <deque>
@@ -25,6 +26,8 @@
 #include <unordered_set>
 #include <vector>
 #include <rapidjson/document.h>
+#include <rapidjson/writer.h>
+#include <rapidjson/stringbuffer.h>
 #include <vstd.h>
 
 using namespace rapidjson;

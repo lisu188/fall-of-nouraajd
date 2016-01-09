@@ -79,6 +79,21 @@ namespace std {
             return vstd::hash_combine(pair.first, pair.second);
         }
     };
+
+    template<>
+    struct hash<std::pair<boost::typeindex::type_index, boost::typeindex::type_index>> {
+        force_inline std::size_t operator()(
+                const std::pair<boost::typeindex::type_index, boost::typeindex::type_index> &pair) const {
+            return vstd::hash_combine(pair.first, pair.second);
+        }
+    };
+
+    template<>
+    struct hash<boost::typeindex::type_index> {
+        force_inline std::size_t operator()(const boost::typeindex::type_index &ind) const {
+            return ind.hash_code();
+        }
+    };
 }
 
 int randint(int i, int j) { return rand() % (j - i + 1) + i; }
