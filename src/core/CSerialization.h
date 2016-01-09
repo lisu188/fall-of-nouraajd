@@ -125,7 +125,7 @@ public:
 };
 
 class CSerialization {
-    static std::shared_ptr<CSerializerBase> serializer(std::pair<int, int> key);
+    static std::shared_ptr<CSerializerBase> serializer(std::pair<boost::typeindex::type_index, boost::typeindex::type_index> key);
 
     template<typename Serialized, typename Deserialized>
     static std::shared_ptr<CSerializerBase> serializer() {
@@ -147,28 +147,27 @@ public:
         return boost::any_cast<Deserialized>(variant);
     }
 
-    static void setProperty(std::shared_ptr<CGameObject> object, std::string key, const Value &value);
+    static void setProperty(std::shared_ptr<CGameObject> object, std::string key, std::shared_ptr<Value> value);
 
     static void setProperty(std::shared_ptr<Value> conf, std::string propertyName, boost::any
     propertyValue);
 
 private:
-    static vstd::property getProperty(std::shared_ptr<CGameObject> object, std::string name);
+    static boost::typeindex::type_index getProperty(std::shared_ptr<CGameObject> object, std::string name);
 
-    static int getGenericPropertyType(std::shared_ptr<Value> object);
+    static boost::typeindex::type_index getGenericPropertyType(std::shared_ptr<Value> object);
 
-    static void setArrayProperty(std::shared_ptr<CGameObject> object, vstd::property property, std::string key,
+    static void setArrayProperty(std::shared_ptr<CGameObject> object, boost::typeindex::type_index property, std::string key,
                                  std::shared_ptr<Value> value);
 
-    static void setObjectProperty(std::shared_ptr<CGameObject> object, vstd::property property, std::string key,
+    static void setObjectProperty(std::shared_ptr<CGameObject> object, boost::typeindex::type_index property, std::string key,
                                   std::shared_ptr<Value> value);
 
     static void setStringProperty(std::shared_ptr<CGameObject> object, std::string key, std::string value);
 
-    static void setOtherProperty(int serializedId, int deserializedId, std::shared_ptr<CGameObject> object,
+    static void setOtherProperty(boost::typeindex::type_index serializedId, boost::typeindex::type_index deserializedId, std::shared_ptr<CGameObject> object,
                                  std::string key,
-                                 boost::any
-                                 value);
+                                 boost::any value);
 };
 
 

@@ -3,27 +3,28 @@
 #include "core/CJsonUtil.h"
 #include "core/CTypes.h"
 
-std::shared_ptr<CSerializerBase> CSerialization::serializer(std::pair<int, int> key) {
+std::shared_ptr<CSerializerBase> CSerialization::serializer(
+        std::pair<boost::typeindex::type_index, boost::typeindex::type_index> key) {
     return CTypes::serializers()[key];
 }
 
-void CSerialization::setProperty(std::shared_ptr<CGameObject> object, std::string key, const Value &value) {
-    switch (value.GetType()) {
+void CSerialization::setProperty(std::shared_ptr<CGameObject> object, std::string key, std::shared_ptr<Value> value) {
+    switch (value->GetType()) {
         case kNullType:
             vstd::fail("Null value detected.");
             break;
         case kTrueType:
         case kFalseType:
-            object->setBoolProperty(key, value.GetBool());
+            object->setBoolProperty(key, value->GetBool());
             break;
         case kNumberType:
-            object->setNumericProperty(key, value.GetInt());
+            object->setNumericProperty(key, value->GetInt());
             break;
         case kStringType:
-            setStringProperty(object, key, value.GetString());
+            setStringProperty(object, key, value->GetString());
             break;
         case kArrayType:
-            setArrayProperty(object, getProperty(object, key), key, value));
+            setArrayProperty(object, getProperty(object, key), key, value);
             break;
         case kObjectType:
             setObjectProperty(object, getProperty(object, key), key, value);
@@ -31,39 +32,35 @@ void CSerialization::setProperty(std::shared_ptr<CGameObject> object, std::strin
     }
 }
 
-vstd::property CSerialization::getProperty(std::shared_ptr<CGameObject> object, std::string name) {
-    for (int i = 0; i < object->meta()->propertyCount(); i++) {
-        vstd::property property = object->meta()->property(i);
-        if (name == property.name()) {
-            return property;
-        }
-    }
-    return vstd::property();
+boost::typeindex::type_index CSerialization::getProperty(std::shared_ptr<CGameObject> object, std::string name) {
+    return object->meta()->get_property_type(object, name);
 }
 
-void CSerialization::setArrayProperty(std::shared_ptr<CGameObject> object, vstd::property property, std::string key,
+void CSerialization::setArrayProperty(std::shared_ptr<CGameObject> object, boost::typeindex::type_index property,
+                                      std::string key,
                                       std::shared_ptr<Value> value) {
     setOtherProperty(boost::typeindex::type_id<std::shared_ptr<Value>>(),
-                     property.value_type() ?//TODO: make argument shared_ptr
-                     property.value_type() :
+                     property != V_VOID ?
+                     property :
                      boost::typeindex::type_id<std::set<std::shared_ptr<CGameObject>>>(),
                      object, key, boost::any(value));
 }
 
-void CSerialization::setObjectProperty(std::shared_ptr<CGameObject> object, vstd::property property, std::string key,
+void CSerialization::setObjectProperty(std::shared_ptr<CGameObject> object, boost::typeindex::type_index property,
+                                       std::string key,
                                        std::shared_ptr<Value> value) {
     setOtherProperty(boost::typeindex::type_id<std::shared_ptr<Value>>(),
-                     property.value_type() ?
-                     property.value_type() :
+                     property != V_VOID ?
+                     property :
                      getGenericPropertyType(value),
                      object, key, boost::any(value));
 }
 
 void CSerialization::setStringProperty(std::shared_ptr<CGameObject> object, std::string key, std::string value) {
     if (vstd::trim(value) != "") {
-        Document d;
-        d.Parse(value.c_str());
-        if (!d.HasParseError()) {
+        std::shared_ptr<Document> d=std::make_shared<Document>();
+        d->Parse(value.c_str());
+        if (!d->HasParseError()) {
             auto val = vstd::to_int(value);
             if (val.second) {
                 object->setNumericProperty(key, val.first);
@@ -80,7 +77,8 @@ void CSerialization::setStringProperty(std::shared_ptr<CGameObject> object, std:
     }
 }
 
-void CSerialization::setOtherProperty(int serializedId, int deserializedId, std::shared_ptr<CGameObject> object,
+void CSerialization::setOtherProperty(boost::typeindex::type_index serializedId,
+                                      boost::typeindex::type_index deserializedId, std::shared_ptr<CGameObject> object,
                                       std::string key, boost::any
                                       value) {
     std::shared_ptr<CSerializerBase> serializer = CTypes::serializers()[std::make_pair(serializedId, deserializedId)];
@@ -119,23 +117,15 @@ void CSerialization::setProperty(std::shared_ptr<Value> conf, std::string proper
             break;
         default:
             std::shared_ptr<CSerializerBase> serializer;
-            for (std::pair<std::pair<int, int>, std::shared_ptr<CSerializerBase>> entry:CTypes::serializers()) {
-                std::pair<int, int> types = entry.first;
-                int deserialized = types.second;
-                if (deserialized == QMetaType::type(propertyValue.typeName())) {
+            for (std::pair<std::pair<boost::typeindex::type_index, boost::typeindex::type_index>, std::shared_ptr<CSerializerBase>> entry:CTypes::serializers()) {
+                std::pair<boost::typeindex::type_index, boost::typeindex::type_index> types = entry.first;
+                if (types.second == propertyValue.type()) {
                     vstd::fail_if(serializer, "Ambigous serializer!");
                     serializer = entry.second;
                 }
             }
-            boost::any
-                    result = vstd::not_null(serializer, "No serializer!")->serialize(propertyValue);
-            if (result.canConvert(boost::typeindex::type_id<std::shared_ptr<Value>>())) {
-                (*conf)[propertyName] = *result.value<std::shared_ptr<Value>>();
-            } else if (result.canConvert(boost::typeindex::type_id<std::shared_ptr<Value>>())) {
-                (*conf)[propertyName] = *result.value<std::shared_ptr<Value>>();
-            } else {
-                vstd::fail("Not an object or an array");
-            }
+            (*conf)[propertyName] = boost::any_cast<std::shared_ptr<Value>>(
+                    vstd::not_null(serializer, "No serializer!")->serialize(propertyValue));
     }
 }
 
@@ -147,13 +137,13 @@ std::shared_ptr<Value> object_serialize(std::shared_ptr<CGameObject> object) {
         for (int i = 0; i < object->meta()->propertyCount(); i++) {
             vstd::property property = object->meta()->property(i);
             std::string propertyName = property.name();
-            if (propertyName != "objectName" && propertyName != "objectType") {
+            if (propertyName != "name" && propertyName != "type") {
                 boost::any propertyValue = object->getProperty(propertyName);
                 CSerialization::setProperty(properties, propertyName, propertyValue);
             }
         }
         for (std::string propertyName:object->dynamicPropertyNames()) {
-            CSerialization::setProperty(properties, propertyName, object->property(propertyName));
+            CSerialization::setProperty(properties, propertyName, object->meta()->get_property(object,propertyName));
         }
         (*conf)["properties"] = *properties;
     }
@@ -162,9 +152,9 @@ std::shared_ptr<Value> object_serialize(std::shared_ptr<CGameObject> object) {
 
 std::shared_ptr<CGameObject> object_deserialize(std::shared_ptr<CMap> map, std::shared_ptr<Value> config) {
     std::shared_ptr<CGameObject> object;
-    if (!(*config)["ref"].GetString().isEmpty()) {
+    if (!vstd::is_empty((*config)["ref"].GetString())) {
         object = map->getObjectHandler()->createObject(map, (*config)["ref"].GetString());
-    } else if (!(*config)["class"].GetString().isEmpty()) {
+    } else if (!vstd::is_empty((*config)["class"].GetString())) {
         object = map->getObjectHandler()->getType((*config)["class"].GetString());
         if (object) {
             object->setName(vstd::to_hex(object));
@@ -184,8 +174,7 @@ std::shared_ptr<CGameObject> object_deserialize(std::shared_ptr<CMap> map, std::
 std::shared_ptr<Value> map_serialize(std::map<std::string, std::shared_ptr<CGameObject> > object) {
     std::shared_ptr<Value> ob = std::make_shared<Value>();
     for (std::pair<std::string, std::shared_ptr<CGameObject>> it:object) {
-        (*ob)[it.first] = *CSerializerFunction<std::shared_ptr<Value>, std::shared_ptr<CGameObject>>::serialize(
-                it.second);
+        (*ob)[it.first] = *CSerializerFunction<std::shared_ptr<Value>, std::shared_ptr<CGameObject>>::serialize(it.second);
     }
     return ob;
 }
@@ -194,8 +183,7 @@ std::map<std::string, std::shared_ptr<CGameObject> > map_deserialize(std::shared
                                                                      std::shared_ptr<Value> object) {
     std::map<std::string, std::shared_ptr<CGameObject> > ret;
     for (auto it = object->MemberBegin(); it != object->MemberEnd(); it++) {
-        ret[it->name.GetString()] = CSerializerFunction<std::shared_ptr<Value>, std::shared_ptr<CGameObject>>::deserialize(
-                map, std::make_shared<Value>(it->value()));
+        ret[it->name.GetString()] = CSerializerFunction<std::shared_ptr<Value>, std::shared_ptr<CGameObject>>::deserialize( map, std::make_shared<Value>(it->value()));
     }
     return ret;
 }
@@ -212,21 +200,20 @@ std::set<std::shared_ptr<CGameObject> > array_deserialize(std::shared_ptr<CMap> 
                                                           std::shared_ptr<Value> object) {
     std::set<std::shared_ptr<CGameObject> > objects;
     for (Value it:*object) {
-        objects.insert(CSerializerFunction<std::shared_ptr<Value>, std::shared_ptr<CGameObject>>::deserialize(map,
-                                                                                                              std::make_shared<Value>(
-                                                                                                                      it.toObject())));
+        objects.insert(CSerializerFunction<std::shared_ptr<Value>, std::shared_ptr<CGameObject>>::deserialize(map,  std::make_shared<Value>(it.toObject())));
     }
     return objects;
 }
 
 
-int CSerialization::getGenericPropertyType(std::shared_ptr<Value> object) {
+boost::typeindex::type_index CSerialization::getGenericPropertyType(std::shared_ptr<Value> object) {
     if (CJsonUtil::isObject(object)) {
         return boost::typeindex::type_id<std::shared_ptr<CGameObject>>();
     } else if (CJsonUtil::isMap(object)) {
         return boost::typeindex::type_id<std::map<std::string, std::shared_ptr<CGameObject>>>();
     }
-    return vstd::fail<int>("Unable to determine property type!");
+    vstd::fail("Unable to determine property type!");
+    return nullptr;
 }
 
 
