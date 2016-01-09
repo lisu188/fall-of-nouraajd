@@ -103,7 +103,7 @@ void CMap::ensureSize() {
     currentLevel = player->getPosZ();
 
     for (auto it :mapObjects) {
-        (it.second)->setVisible((it.second)->getPosZ() == currentLevel);
+//        (it.second)->setVisible((it.second)->getPosZ() == currentLevel);
     }
 
     if (getGame()->getView()) {
