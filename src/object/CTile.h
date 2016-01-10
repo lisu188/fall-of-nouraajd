@@ -7,7 +7,7 @@ class CGame;
 
 class CCreature;
 
-class CTile : public CGameObject{
+class CTile : public CGameObject {
 
 V_META(CTile, CGameObject,
        V_PROPERTY(CTile, bool, canStep, canStep, setCanStep),
@@ -21,35 +21,35 @@ public:
 
     virtual ~CTile();
 
-    virtual void onStep ( std::shared_ptr<CCreature> );
+    virtual void onStep(std::shared_ptr<CCreature>);
 
-    void move ( int x, int y, int z );
+    void move(int x, int y, int z);
 
-    void moveTo ( int x, int y, int z );
+    void moveTo(int x, int y, int z);
 
     Coords getCoords();
 
     bool canStep() const;
 
-    void setCanStep ( bool canStep );
+    void setCanStep(bool canStep);
 
     int getPosx() const;
 
-    void setPosx ( int value );
+    void setPosx(int value);
 
     int getPosy() const;
 
-    void setPosy ( int value );
+    void setPosy(int value);
 
     int getPosz() const;
 
-    void setPosz ( int value );
+    void setPosz(int value);
 
 private:
     bool step = false;
     int posx = 0, posy = 0, posz = 0;
 
-    void setXYZ ( int x, int y, int z );
+    void setXYZ(int x, int y, int z);
 };
 
-GAME_PROPERTY ( CTile )
+GAME_PROPERTY (CTile)

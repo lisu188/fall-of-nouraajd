@@ -7,7 +7,7 @@ class CTrigger : public CGameObject {
 public:
     CTrigger();
 
-    virtual void trigger ( std::shared_ptr<CGameObject>, std::shared_ptr<CGameEvent> );
+    virtual void trigger(std::shared_ptr<CGameObject>, std::shared_ptr<CGameEvent>);
 };
 
-GAME_PROPERTY ( CTrigger )
+GAME_PROPERTY (CTrigger)

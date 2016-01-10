@@ -223,6 +223,7 @@ public:
     void takeGold(int gold);
 
     virtual Coords getNextMove();
+
 protected:
     std::set<std::shared_ptr<CItem>> items;
     std::set<std::shared_ptr<CInteraction>> actions;
