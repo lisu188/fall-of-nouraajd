@@ -14,19 +14,16 @@ class CMap;
 class CGameObject;
 
 class CGame : public std::enable_shared_from_this<CGame> {
-    friend class CGameView;
 public:
-    CGame ( std::shared_ptr<CGameView> view );
+    CGame();
 
     ~CGame();
 
-    void changeMap ( std::string file );
+    void changeMap(std::string file);
 
     std::shared_ptr<CMap> getMap() const;
 
-    void setMap ( std::shared_ptr<CMap> map );
-
-    std::shared_ptr<CGameView> getView();
+    void setMap(std::shared_ptr<CMap> map);
 
 //TODO:   std::shared_ptr<CGuiHandler> getGuiHandler();
 
@@ -37,7 +34,7 @@ public:
     std::shared_ptr<CGame> ptr();
 
 protected:
-    virtual void keyPressEvent ( void  * event ); //TODO: implement
+    virtual void keyPressEvent(void *event); //TODO: implement
 
 private:
 //TODO:    vstd::lazy<CGuiHandler, std::shared_ptr<CGame>> guiHandler;
@@ -45,6 +42,5 @@ private:
 //TODO:    vstd::lazy<CScriptWindow, std::shared_ptr<CGame>> scriptWindow;
     vstd::lazy<CObjectHandler> objectHandler;
     std::shared_ptr<CMap> map;
-    std::weak_ptr<CGameView> view;
 };
 

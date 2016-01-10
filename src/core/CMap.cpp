@@ -76,10 +76,6 @@ std::shared_ptr<CEventHandler> CMap::getEventHandler() {
     return eventHandler.get();
 }
 
-std::shared_ptr<CMouseHandler> CMap::getMouseHandler() {
-    return mouseHandler.get();
-}
-
 void CMap::moveTile(std::shared_ptr<CTile> tile, int x, int y, int z) {
     Coords coords = tile->getCoords();
     auto it = find(coords);
@@ -103,11 +99,7 @@ void CMap::ensureSize() {
     currentLevel = player->getPosZ();
 
     for (auto it :mapObjects) {
-//        (it.second)->setVisible((it.second)->getPosZ() == currentLevel);
-    }
-
-    if (getGame()->getView()) {
-//        getGame()->getView()->centerOn ( player );
+//        (it.second)->setVisible((it.second)->getPosZ() == currentLevel); //TODO:
     }
 }
 

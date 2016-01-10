@@ -2,8 +2,6 @@
 #include "core/CGame.h"
 
 CTile::CTile() {
-    this->setZValue ( 0 );
-    this->hasTooltip = false;
 }
 
 CTile::~CTile() {
@@ -65,5 +63,4 @@ void CTile::setXYZ ( int x, int y, int z ) {
     posx = x;
     posy = y;
     posz = z;
-    setPos ( x * 50, y * 50 );
 }

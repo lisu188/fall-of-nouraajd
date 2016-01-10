@@ -112,8 +112,7 @@ public:
     virtual boost::any
     serialize(boost::any
               object) override final {
-        return boost::any(
-                CSerializerFunction<Serialized, Deserialized>::serialize(boost::any_cast<Deserialized>(object)));
+        return boost::any( CSerializerFunction<Serialized, Deserialized>::serialize(boost::any_cast<Deserialized>(object)));
     }
 
     virtual boost::any
