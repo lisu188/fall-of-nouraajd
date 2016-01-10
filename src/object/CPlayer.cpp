@@ -36,7 +36,7 @@ void CPlayer::onDestroy ( std::shared_ptr<CGameEvent> event ) {
 std::shared_ptr<CInteraction> CPlayer::selectAction() {
     //TODO: code with futures
     while ( !this->getSelectedAction() ) {
-        QApplication::processEvents ( QEventLoop::WaitForMoreEvents );
+//        QApplication::processEvents ( QEventLoop::WaitForMoreEvents );
     }
     std::shared_ptr<CInteraction> action = this->getSelectedAction();
     this->setSelectedAction ( nullptr );
@@ -44,24 +44,26 @@ std::shared_ptr<CInteraction> CPlayer::selectAction() {
 }
 
 void CPlayer::fight ( std::shared_ptr<CCreature> creature ) {
+    //TODO: fight
     setEnemy ( creature );
-    getMap()->getGame()->getGuiHandler()->getPanel ( "CFightPanel" )->showPanel();
+    //getMap()->getGame()->getGuiHandler()->getPanel ( "CFightPanel" )->showPanel();
     CCreature::fight ( creature );
-    getMap()->getGame()->getGuiHandler()->getPanel ( "CFightPanel" )->hidePanel();
+    //getMap()->getGame()->getGuiHandler()->getPanel ( "CFightPanel" )->hidePanel();
     setEnemy ( nullptr );
 }
 
 void CPlayer::trade ( std::shared_ptr<CMarket> market ) {
-    if ( market ) {
-        setMarket ( market );
-        std::shared_ptr<AGamePanel> panel = getMap()->getGame()->getGuiHandler()->getPanel ( "CTradePanel" );
-        panel->showPanel();
-        //TODO: code with futures
-        while ( panel->isShown() ) {
-            QApplication::processEvents ( QEventLoop::WaitForMoreEvents );
-        }
-        setMarket ( nullptr );
-    }
+    //TODO: trade
+//    if ( market ) {
+//        setMarket ( market );
+//        std::shared_ptr<AGamePanel> panel = getMap()->getGame()->getGuiHandler()->getPanel ( "CTradePanel" );
+//        panel->showPanel();
+//        //TODO: code with futures
+//        while ( panel->isShown() ) {
+//            QApplication::processEvents ( QEventLoop::WaitForMoreEvents );
+//        }
+//        setMarket ( nullptr );
+//    }
 }
 
 Coords CPlayer::getNextMove() {

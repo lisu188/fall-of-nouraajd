@@ -181,17 +181,7 @@
 //    painter->drawPixmap ( 0, 0, pixmap );
 //}
 //
-//bool CItemSlot::checkType ( std::string slot, std::shared_ptr<CItem> item ) {
-//    Value config =
-//        ( *CConfigurationProvider::getConfig (
-//              "config/slots.json" ) ) [slot].toObject() ["types"].toArray();
-//    for ( int i = 0; i < config.size(); i++ ) {
-//        if ( item->inherits ( config[i].toString().toStdString().c_str() ) ) {
-//            return true;
-//        }
-//    }
-//    return false;
-//}
+
 //
 //void CItemSlot::update() {
 //    auto player = panel.lock()->getView()->getGame()->getMap()->getPlayer();

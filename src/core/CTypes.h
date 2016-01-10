@@ -21,7 +21,7 @@ public:
 
     template<typename T>
     static void register_builder() {
-        builders() [T::staticMetaObject.className()] = []() { return std::make_shared<T>(); };
+        builders() [T::static_meta()->name()] = []() { return std::make_shared<T>(); };
     }
 
     template<typename T>

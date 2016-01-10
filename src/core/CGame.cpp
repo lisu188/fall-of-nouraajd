@@ -1,7 +1,7 @@
 #include "CGame.h"
 #include "loader/CLoader.h"
 
-CGame::CGame ( std::shared_ptr<CGameView> view ) : view ( view ) {
+CGame::CGame (  ) {
 
 }
 
@@ -19,10 +19,6 @@ std::shared_ptr<CMap> CGame::getMap() const {
 
 void CGame::setMap ( std::shared_ptr<CMap> map ) {
     this->map = map;
-}
-
-std::shared_ptr<CGameView> CGame::getView() {
-    return view.lock();
 }
 
 //std::shared_ptr<CGuiHandler> CGame::getGuiHandler() {

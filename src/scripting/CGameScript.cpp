@@ -46,7 +46,6 @@ BOOST_PYTHON_MODULE ( debug ) {
 #endif
 
 BOOST_PYTHON_MODULE ( _game ) {
-    initialize_converters();
     def ( "randint", randint );
     class_<CGameObject, boost::noncopyable, std::shared_ptr<CGameObject>> ( "CGameObject", no_init )
             .def ( "getStringProperty", &CGameObject::getStringProperty )
@@ -144,17 +143,18 @@ BOOST_PYTHON_MODULE ( _game ) {
     .def ( "configureEffect", &CInteractionWrapper::configureEffect );
     class_<Damage, bases<CGameObject>, boost::noncopyable, std::shared_ptr<Damage>> ( "Damage" );
     class_<Stats, bases<CGameObject>, boost::noncopyable, std::shared_ptr<Stats>> ( "Stats" );
-    class_<AGamePanel, boost::noncopyable, std::shared_ptr<AGamePanel>> ( "AGamePanel", no_init )
-            .def ( "showPanel", &AGamePanel::showPanel );
-    class_<CTextPanel, bases<AGamePanel>, boost::noncopyable, std::shared_ptr<CTextPanel>> ( "CTextPanel" );
-    class_<CFightPanel, bases<AGamePanel>, boost::noncopyable, std::shared_ptr<CFightPanel>> ( "CFightPanel" );
-    class_<CCharPanel, bases<AGamePanel>, boost::noncopyable, std::shared_ptr<CCharPanel>> ( "CCharPanel" );
-    class_<CTradePanel, bases<AGamePanel>, boost::noncopyable, std::shared_ptr<CTradePanel>> ( "CTradePanel" );
-    class_<CGuiHandler, boost::noncopyable, std::shared_ptr<CGuiHandler>> ( "CGuiHandler", no_init )
-            .def ( "showMessage", &CGuiHandler::showMessage )
-            .def ( "showPanel", &CGuiHandler::showPanel )
-            .def ( "hidePanel", &CGuiHandler::hidePanel )
-            .def ( "flipPanel", &CGuiHandler::flipPanel );
+    //TODO: panels
+//    class_<AGamePanel, boost::noncopyable, std::shared_ptr<AGamePanel>> ( "AGamePanel", no_init )
+//            .def ( "showPanel", &AGamePanel::showPanel );
+//    class_<CTextPanel, bases<AGamePanel>, boost::noncopyable, std::shared_ptr<CTextPanel>> ( "CTextPanel" );
+//    class_<CFightPanel, bases<AGamePanel>, boost::noncopyable, std::shared_ptr<CFightPanel>> ( "CFightPanel" );
+//    class_<CCharPanel, bases<AGamePanel>, boost::noncopyable, std::shared_ptr<CCharPanel>> ( "CCharPanel" );
+//    class_<CTradePanel, bases<AGamePanel>, boost::noncopyable, std::shared_ptr<CTradePanel>> ( "CTradePanel" );
+//    class_<CGuiHandler, boost::noncopyable, std::shared_ptr<CGuiHandler>> ( "CGuiHandler", no_init )
+//            .def ( "showMessage", &CGuiHandler::showMessage )
+//            .def ( "showPanel", &CGuiHandler::showPanel )
+//            .def ( "hidePanel", &CGuiHandler::hidePanel )
+//            .def ( "flipPanel", &CGuiHandler::flipPanel );
     class_<CTile, bases<CGameObject>, boost::noncopyable, std::shared_ptr<CTile>> ( "CTileBase" );
     class_<CTileWrapper, bases<CTile>, boost::noncopyable, std::shared_ptr<CTileWrapper> > ( "CTile" ).
     def ( "onStep", &CTileWrapper::onStep );
@@ -177,7 +177,7 @@ BOOST_PYTHON_MODULE ( _game ) {
     class_<CGame, boost::noncopyable, std::shared_ptr<CGame>> ( "CGame", no_init )
             .def ( "getMap", &CGame::getMap )
             .def ( "changeMap", &CGame::changeMap )
-            .def ( "getGuiHandler", &CGame::getGuiHandler )
+//TODO:            .def ( "getGuiHandler", &CGame::getGuiHandler )
             .def ( "getObjectHandler", &CGame::getObjectHandler );
     class_<CMarket, bases<CGameObject>, boost::noncopyable, std::shared_ptr<CMarket> > ( "CMarket" );
 }

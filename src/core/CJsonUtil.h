@@ -50,4 +50,27 @@ namespace CJsonUtil {
         }
         return true;
     }
+
+    std::shared_ptr<Value> from_string(std::string json) {
+        auto d = std::make_shared<Document>();
+        d->Parse(json.c_str());
+        if (d->HasParseError()) {
+            return nullptr;
+        }
+        return d;
+    }
+
+    template<typename T>
+    std::string to_string(T value) {
+        StringBuffer buffer;
+        Writer<StringBuffer> writer(buffer);
+        value->Accept(writer);
+        return buffer.GetString();
+    }
+
+    template<typename T>
+    std::shared_ptr<Value> clone(T value) {
+        return from_string(to_string(value));
+    }
+
 }
