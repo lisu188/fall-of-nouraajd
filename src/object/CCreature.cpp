@@ -2,7 +2,7 @@
 #include "core/CPathFinder.h"
 #include "core/CGame.h"
 
-static bool check_type ( std::string slot, std::shared_ptr<CItem> item ) {
+static bool check_type(std::string slot, std::shared_ptr<CItem> item) {
     //TODO: implement inheritance
 //    const Value& config =( *CConfigurationProvider::getConfig ("config/slots.json" ) ) [slot] ["types"];
 //    for ( auto it =config.Begin();it != config.End();it++) {
@@ -526,7 +526,7 @@ void CCreature::setGold(int value) {
 }
 
 void CCreature::defeatedCreature(std::shared_ptr<CCreature> creature) {
-    vstd::logger::debug(getType(), getName(), "defeated", creature->getType(), creature->getName(),"\n");
+    vstd::logger::debug(getType(), getName(), "defeated", creature->getType(), creature->getName(), "\n");
     addExpScaled(creature->getScale());
     addItem(creature->getLoot());
     getMap()->removeObject(creature);
@@ -562,7 +562,7 @@ void CCreature::afterMove() {
 }
 
 std::string CCreature::getTooltip() const {
-    return vstd::join({getType(),std::to_string(level)}," ");
+    return vstd::join({getType(), std::to_string(level)}, " ");
 }
 
 void CCreature::addGold(int gold) {

@@ -15,14 +15,14 @@ public:
 
     bool isEnabled();
 
-    void setEnabled ( bool enabled );
+    void setEnabled(bool enabled);
 
-    virtual void onEnter ( std::shared_ptr<CGameEvent> ) override;
+    virtual void onEnter(std::shared_ptr<CGameEvent>) override;
 
-    virtual void onLeave ( std::shared_ptr<CGameEvent> ) override;
+    virtual void onLeave(std::shared_ptr<CGameEvent>) override;
 
 protected:
     bool enabled = true;
 };
 
-GAME_PROPERTY ( CBuilding )
+GAME_PROPERTY (CBuilding)

@@ -27,24 +27,25 @@ class CMapObject;
 
 class CMap : private std::unordered_map<Coords, std::shared_ptr<CTile>>, public std::enable_shared_from_this<CMap> {
     friend class CMapLoader;
+
 public:
-    CMap ( std::shared_ptr<CGame> game );
+    CMap(std::shared_ptr<CGame> game);
 
-    bool addTile ( std::shared_ptr<CTile> tile, int x, int y, int z );
+    bool addTile(std::shared_ptr<CTile> tile, int x, int y, int z);
 
-    void removeTile ( int x, int y, int z );
+    void removeTile(int x, int y, int z);
 
     void move();
 
-    std::shared_ptr<CTile> getTile ( int x, int y, int z );
+    std::shared_ptr<CTile> getTile(int x, int y, int z);
 
-    std::shared_ptr<CTile> getTile ( Coords coords );
+    std::shared_ptr<CTile> getTile(Coords coords);
 
-    bool contains ( int x, int y, int z );
+    bool contains(int x, int y, int z);
 
-    void addObject ( std::shared_ptr<CMapObject> mapObject );
+    void addObject(std::shared_ptr<CMapObject> mapObject);
 
-    void removeObject ( std::shared_ptr<CMapObject> mapObject );
+    void removeObject(std::shared_ptr<CMapObject> mapObject);
 
     void ensureSize();
 
@@ -62,7 +63,7 @@ public:
 
     int getEntryZ();
 
-    void ensureTile ( int i, int j );
+    void ensureTile(int i, int j);
 
     std::map<int, std::pair<int, int> > getBounds();
 
@@ -70,19 +71,19 @@ public:
 
     int getCurrentYBound();
 
-    void removeObjectByName ( std::string name );
+    void removeObjectByName(std::string name);
 
-    std::string addObjectByName ( std::string name, Coords coords );
+    std::string addObjectByName(std::string name, Coords coords);
 
-    void replaceTile ( std::string name, Coords coords );
+    void replaceTile(std::string name, Coords coords);
 
-    Coords getLocationByName ( std::string name );
+    Coords getLocationByName(std::string name);
 
     std::shared_ptr<CPlayer> getPlayer();
 
-    void setPlayer ( std::shared_ptr<CPlayer> player );
+    void setPlayer(std::shared_ptr<CPlayer> player);
 
-    void moveTile ( std::shared_ptr<CTile> tile, int x, int y, int z );
+    void moveTile(std::shared_ptr<CTile> tile, int x, int y, int z);
 
     std::shared_ptr<CLootHandler> getLootHandler();
 
@@ -90,28 +91,28 @@ public:
 
     std::shared_ptr<CEventHandler> getEventHandler();
 
-    bool canStep ( int x, int y, int z );
+    bool canStep(int x, int y, int z);
 
-    bool canStep ( const Coords &coords );
+    bool canStep(const Coords &coords);
 
-    std::shared_ptr<CMapObject> getObjectByName ( std::string name );
+    std::shared_ptr<CMapObject> getObjectByName(std::string name);
 
     bool isMoving();
 
     void applyEffects();
 
-    void forObjects ( std::function<void ( std::shared_ptr<CMapObject> ) > func,
-                      std::function<bool ( std::shared_ptr<CMapObject> ) > predicate = [] (
-    std::shared_ptr<CMapObject> ) { return true; } );
+    void forObjects(std::function<void(std::shared_ptr<CMapObject>)> func,
+                    std::function<bool(std::shared_ptr<CMapObject>)> predicate = [](
+                            std::shared_ptr<CMapObject>) { return true; });
 
-    void forTiles ( std::function<void ( std::shared_ptr<CTile> ) > func,
-    std::function<bool ( std::shared_ptr<CTile> ) > predicate = [] ( std::shared_ptr<CTile> ) { return true; } );
+    void forTiles(std::function<void(std::shared_ptr<CTile>)> func,
+                  std::function<bool(std::shared_ptr<CTile>)> predicate = [](std::shared_ptr<CTile>) { return true; });
 
-    void removeObjects ( std::function<bool ( std::shared_ptr<CMapObject> ) > func );
+    void removeObjects(std::function<bool(std::shared_ptr<CMapObject>)> func);
 
     template<typename T>
-    std::shared_ptr<T> createObject ( std::string name ) {
-        return getObjectHandler()->createObject<T> ( this->ptr(), name );
+    std::shared_ptr<T> createObject(std::string name) {
+        return getObjectHandler()->createObject<T>(this->ptr(), name);
     }
 
     std::shared_ptr<CMap> ptr();
