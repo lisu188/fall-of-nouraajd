@@ -69,7 +69,7 @@ void CMapLoader::saveMap(std::shared_ptr<CMap> map, std::string file) {
     (*_data)["tiles"] = *tiles;
     (*_data)["triggers"] = *triggers;
 
-    CResourcesProvider::getInstance()->save(vstd::join({"save/" ,file},""), _data);
+    CResourcesProvider::getInstance()->save(vstd::join({"save/", file}, ""), _data);
 }
 
 void CMapLoader::handleTileLayer(std::shared_ptr<CMap> map, const Value &tileset, const Value &layer) {

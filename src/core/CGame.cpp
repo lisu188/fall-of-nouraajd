@@ -1,7 +1,7 @@
 #include "CGame.h"
 #include "loader/CLoader.h"
 
-CGame::CGame (  ) {
+CGame::CGame() {
 
 }
 
@@ -9,15 +9,15 @@ CGame::~CGame() {
 
 }
 
-void CGame::changeMap ( std::string file ) {
-    CGameLoader::changeMap ( this->ptr(), file );
+void CGame::changeMap(std::string file) {
+    CGameLoader::changeMap(this->ptr(), file);
 }
 
 std::shared_ptr<CMap> CGame::getMap() const {
     return map;
 }
 
-void CGame::setMap ( std::shared_ptr<CMap> map ) {
+void CGame::setMap(std::shared_ptr<CMap> map) {
     this->map = map;
 }
 
@@ -37,7 +37,7 @@ std::shared_ptr<CGame> CGame::ptr() {
     return shared_from_this();
 }
 
-void CGame::keyPressEvent ( void  * event ) { //TODO: implement
+void CGame::keyPressEvent(void *event) { //TODO: implement
 //    if ( map->isMoving() ) {
 //        return;
 //    }

@@ -8,7 +8,7 @@ class CItem;
 class CMarket : public CGameObject {
 
 V_META(CMarket, CGameObject,
-       V_PROPERTY(CMarket,  std::set<std::shared_ptr<CItem>>, items, getItems, setItems),
+       V_PROPERTY(CMarket, std::set<std::shared_ptr<CItem>>, items, getItems, setItems),
        V_PROPERTY(CMarket, int, sell, getSell, setSell),
        V_PROPERTY(CMarket, int, buy, getBuy, setBuy)
 )
@@ -18,23 +18,23 @@ public:
 
     ~CMarket();
 
-    void add ( std::shared_ptr<CItem> item );
+    void add(std::shared_ptr<CItem> item);
 
-    void remove ( std::shared_ptr<CItem> item );
+    void remove(std::shared_ptr<CItem> item);
 
     std::set<std::shared_ptr<CItem> > getTradeItems();
 
-    void setItems ( std::set<std::shared_ptr<CItem>> items );
+    void setItems(std::set<std::shared_ptr<CItem>> items);
 
     std::set<std::shared_ptr<CItem>> getItems();
 
     int getSell() const;
 
-    void setSell ( int value );
+    void setSell(int value);
 
     int getBuy() const;
 
-    void setBuy ( int value );
+    void setBuy(int value);
 
 private:
     std::set<std::shared_ptr<CItem>> items;
@@ -42,4 +42,4 @@ private:
     int buy = 80;
 };
 
-GAME_PROPERTY ( CMarket )
+GAME_PROPERTY (CMarket)

@@ -19,36 +19,36 @@ std::shared_ptr<CMap> CGameObject::getMap() {
     return map.lock();
 }
 
-void CGameObject::setMap ( std::shared_ptr<CMap> map ) {
+void CGameObject::setMap(std::shared_ptr<CMap> map) {
     this->map = map;
 }
 
-void CGameObject::setStringProperty ( std::string name, std::string value ) {
-    this->setProperty ( name, value );
+void CGameObject::setStringProperty(std::string name, std::string value) {
+    this->setProperty(name, value);
 }
 
-void CGameObject::setBoolProperty ( std::string name, bool value ) {
-    this->setProperty ( name, value );
+void CGameObject::setBoolProperty(std::string name, bool value) {
+    this->setProperty(name, value);
 }
 
-void CGameObject::setNumericProperty ( std::string name, int value ) {
-    this->setProperty ( name, value );
+void CGameObject::setNumericProperty(std::string name, int value) {
+    this->setProperty(name, value);
 }
 
-std::string CGameObject::getStringProperty ( std::string name ) const {
-    return this->getProperty<std::string> ( name );
+std::string CGameObject::getStringProperty(std::string name) const {
+    return this->getProperty<std::string>(name);
 }
 
-bool CGameObject::getBoolProperty ( std::string name ) const {
-    return this->getProperty<bool> ( name );
+bool CGameObject::getBoolProperty(std::string name) const {
+    return this->getProperty<bool>(name);
 }
 
-int CGameObject::getNumericProperty ( std::string name ) const {
-    return this->getProperty<int> ( name );
+int CGameObject::getNumericProperty(std::string name) const {
+    return this->getProperty<int>(name);
 }
 
-void CGameObject::incProperty ( std::string name, int value ) {
-    this->setNumericProperty ( name, this->getNumericProperty ( name ) + value );
+void CGameObject::incProperty(std::string name, int value) {
+    this->setNumericProperty(name, this->getNumericProperty(name) + value);
 }
 
 //std::string CGameObject::getTooltip() const {

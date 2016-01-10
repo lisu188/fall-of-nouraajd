@@ -12,37 +12,37 @@ class CPlayer : public CCreature {
 public:
     CPlayer();
 
-    CPlayer ( const CPlayer & );
+    CPlayer(const CPlayer &);
 
     virtual ~CPlayer();
 
-    virtual void onTurn ( std::shared_ptr<CGameEvent> ) override;
+    virtual void onTurn(std::shared_ptr<CGameEvent>) override;
 
-    virtual void onDestroy ( std::shared_ptr<CGameEvent> event ) override;
+    virtual void onDestroy(std::shared_ptr<CGameEvent> event) override;
 
     virtual std::shared_ptr<CInteraction> selectAction() override;
 
-    virtual void fight ( std::shared_ptr<CCreature> creature ) override;
+    virtual void fight(std::shared_ptr<CCreature> creature) override;
 
-    virtual void trade ( std::shared_ptr<CMarket> object ) override;
+    virtual void trade(std::shared_ptr<CMarket> object) override;
 
     std::shared_ptr<CInteraction> getSelectedAction() const;
 
-    void setSelectedAction ( std::shared_ptr<CInteraction> value );
+    void setSelectedAction(std::shared_ptr<CInteraction> value);
 
     std::shared_ptr<CCreature> getEnemy() const;
 
-    void setEnemy ( std::shared_ptr<CCreature> value );
+    void setEnemy(std::shared_ptr<CCreature> value);
 
-    void setNextMove ( Coords coords );
+    void setNextMove(Coords coords);
 
     virtual Coords getNextMove() override;
 
     std::shared_ptr<CMarket> getMarket() const;
 
-    void setMarket ( std::shared_ptr<CMarket> value );
+    void setMarket(std::shared_ptr<CMarket> value);
 
-    void addQuest ( std::string questName );
+    void addQuest(std::string questName);
 
 private:
     void checkQuests();
@@ -55,4 +55,4 @@ private:
     Coords next;
 };
 
-GAME_PROPERTY ( CPlayer )
+GAME_PROPERTY (CPlayer)

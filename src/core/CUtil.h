@@ -96,4 +96,4 @@ namespace std {
     };
 }
 
-int randint(int i, int j) { return rand() % (j - i + 1) + i; }
+force_inline int randint(int i, int j) { return rand() % (j - i + 1) + i; }
