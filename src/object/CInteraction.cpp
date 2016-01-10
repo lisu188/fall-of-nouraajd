@@ -2,7 +2,6 @@
 #include "core/CGame.h"
 
 CInteraction::CInteraction() {
-    setVisible ( false );
 }
 
 CInteraction::~CInteraction() {

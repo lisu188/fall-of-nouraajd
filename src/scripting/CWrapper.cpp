@@ -10,7 +10,7 @@ void CInteractionWrapper::performAction ( std::shared_ptr<CCreature> first, std:
 
 bool CInteractionWrapper::configureEffect ( std::shared_ptr<CEffect> effect ) {
     if ( auto f = this->get_override ( "configureEffect" ) ) {
-        PY_SAFE_RET ( return f ( effect ); )
+        PY_SAFE_RET_VAL ( return f ( effect );, false )
     } else {
         return this->CInteraction::configureEffect ( effect );
     }
@@ -18,7 +18,7 @@ bool CInteractionWrapper::configureEffect ( std::shared_ptr<CEffect> effect ) {
 
 bool CEffectWrapper::onEffect() {
     if ( auto f = this->get_override ( "onEffect" ) ) {
-        PY_SAFE_RET ( return f(); )
+        PY_SAFE_RET_VAL ( return f();,false )
     } else {
         return this->CEffect::onEffect();
     }
@@ -50,7 +50,7 @@ void CTriggerWrapper::trigger ( std::shared_ptr<CGameObject> object, std::shared
 
 bool CQuestWrapper::isCompleted() {
     if ( auto f = this->get_override ( "isCompleted" ) ) {
-        PY_SAFE_RET ( return f(); )
+        PY_SAFE_RET_VAL ( return f();,false )
     } else {
         return this->CQuest::isCompleted();
     }

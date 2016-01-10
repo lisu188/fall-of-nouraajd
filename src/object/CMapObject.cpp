@@ -21,7 +21,6 @@ void CMapObject::move ( int x, int y, int z ) {
     posx += x;
     posy += y;
     posz += z;
-    setPos ( posx * 50, posy * 50 );
 
     if ( dynamic_cast<Moveable *> ( this ) ) {
         dynamic_cast<Moveable *> ( this )->afterMove();

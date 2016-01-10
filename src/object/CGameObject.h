@@ -1,5 +1,6 @@
 #pragma once
 
+#include "core/CGlobal.h"
 #include "core/CUtil.h"
 #include "core/CDefines.h"
 
@@ -9,7 +10,7 @@ class CGameEvent;
 class CMap;
 
 class CGameObject : public std::enable_shared_from_this<CGameObject> {
-V_META(CGameObject, V_NONE,
+V_META(CGameObject, vstd::meta::empty,
        V_PROPERTY(CGameObject, std::string, name, getName, setName),
        V_PROPERTY(CGameObject, std::string, type, getType, setType)
 )
@@ -24,18 +25,20 @@ public:
     void setMap(std::shared_ptr<CMap> map);
 
     template<typename T=CGameObject>
-    std::shared_ptr<T> ptr() {
-        return vstd::cast<T>(shared_from_this());
+    std::shared_ptr<T> ptr() const {
+        return vstd::cast<T>(const_cast<CGameObject *>(this)->shared_from_this());
     }
 
     template<typename T>
     void setProperty(std::string name, T property) {
-        this->meta()->set_property(name, this, property);
+        //TODO: make type checks of shared_from this
+        this->meta()->set_property<CGameObject, T>(name, this->ptr(), property);
     }
 
     template<typename T>
     T getProperty(std::string name) const {
-        return this->meta()->get_property<T>(name, this);
+        //TODO: make type checks of shared_from this
+        return this->meta()->get_property<CGameObject, T>(name, this->ptr());
     }
 
     void setStringProperty(std::string name, std::string value);

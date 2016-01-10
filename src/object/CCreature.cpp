@@ -2,7 +2,18 @@
 #include "core/CPathFinder.h"
 #include "core/CGame.h"
 
-void CCreature::setActions ( std::set<std::shared_ptr<CInteraction>> value ) {
+static bool check_type ( std::string slot, std::shared_ptr<CItem> item ) {
+    //TODO: implement inheritance
+//    const Value& config =( *CConfigurationProvider::getConfig ("config/slots.json" ) ) [slot] ["types"];
+//    for ( auto it =config.Begin();it != config.End();it++) {
+//        if ( item->inherits ( (*it).GetString() ) ) {
+//            return true;
+//        }
+//    }
+    return false;
+}
+
+void CCreature::setActions(std::set<std::shared_ptr<CInteraction>> value) {
     actions = value;
 }
 
@@ -12,13 +23,12 @@ std::set<std::shared_ptr<CInteraction>> CCreature::getActions() {
 
 int CCreature::getExp() { return exp; }
 
-void CCreature::setExp ( int exp ) {
+void CCreature::setExp(int exp) {
     this->exp = exp;
-    this->addExp ( 0 );
+    this->addExp(0);
 }
 
 CCreature::CCreature() {
-    this->setZValue ( 2 );
 }
 
 CCreature::~CCreature() {
@@ -29,26 +39,25 @@ int CCreature::getExpReward() {
     return level * 750;
 }
 
-void CCreature::addExpScaled ( int scale ) {
+void CCreature::addExpScaled(int scale) {
     int rank = level - scale;
-    this->addExp ( 250 * pow ( 2, -rank ) );
+    this->addExp(250 * pow(2, -rank));
 }
 
-void CCreature::addExp ( int exp ) {
-    if ( !isAlive() ) {
+void CCreature::addExp(int exp) {
+    if (!isAlive()) {
         return;
     }
     this->exp += exp;
-    while ( this->exp >= level * ( level + 1 ) * 500 ) {
+    while (this->exp >= level * (level + 1) * 500) {
         this->levelUp();
     }
-    Q_EMIT statsChanged();
 }
 
 std::shared_ptr<CInteraction> CCreature::getLevelAction() {
-    std::string levelString = std::string::number ( level );
-    if ( vstd::ctn ( levelling, levelString ) ) {
-        return getMap()->getObjectHandler()->clone<CInteraction> ( levelling[levelString] );
+    std::string levelString = std::to_string(level);
+    if (vstd::ctn(levelling, levelString)) {
+        return getMap()->getObjectHandler()->clone<CInteraction>(levelling[levelString]);
     } else {
         return nullptr;
     }
@@ -58,35 +67,34 @@ std::shared_ptr<Stats> CCreature::getLevelStats() const {
     return levelStats;
 }
 
-void CCreature::setLevelStats ( std::shared_ptr<Stats> value ) {
-    levelStats = value;
+void CCreature::setLevelStats(std::shared_ptr<Stats> _value) {
+    levelStats = _value;
 }
 
-void CCreature::addBonus ( std::shared_ptr<Stats> bonus ) {
-    stats->addBonus ( bonus );
+void CCreature::addBonus(std::shared_ptr<Stats> bonus) {
+    stats->addBonus(bonus);
 }
 
-void CCreature::removeBonus ( std::shared_ptr<Stats> bonus ) {
-    stats->removeBonus ( bonus );
+void CCreature::removeBonus(std::shared_ptr<Stats> bonus) {
+    stats->removeBonus(bonus);
 }
 
 
-void CCreature::addItem ( std::shared_ptr<CItem> item ) {
+void CCreature::addItem(std::shared_ptr<CItem> item) {
     std::set<std::shared_ptr<CItem>> list;
-    list.insert ( item );
-    addItem ( list );
+    list.insert(item);
+    addItem(list);
 }
 
-void CCreature::removeFromInventory ( std::shared_ptr<CItem> item ) {
-    items.erase ( item );
-    Q_EMIT inventoryChanged();
+void CCreature::removeFromInventory(std::shared_ptr<CItem> item) {
+    items.erase(item);
 }
 
-void CCreature::removeFromEquipped ( std::shared_ptr<CItem> item ) {
-    if ( hasEquipped ( item ) ) {
-        setItem ( getSlotWithItem ( item ), nullptr );
+void CCreature::removeFromEquipped(std::shared_ptr<CItem> item) {
+    if (hasEquipped(item)) {
+        setItem(getSlotWithItem(item), nullptr);
     }
-    removeFromInventory ( item );
+    removeFromInventory(item);
 }
 
 std::set<std::shared_ptr<CItem> > CCreature::getInInventory() {
@@ -101,60 +109,57 @@ CItemMap CCreature::getEquipped() {
     return equipped;
 }
 
-void CCreature::setEquipped ( CItemMap
-                              value ) {
+void CCreature::setEquipped(CItemMap
+                            value) {
     equipped = value;
 }
 
-void CCreature::addItem ( std::set<std::shared_ptr<CItem> > items ) {
-    for ( std::shared_ptr<CItem> it : items ) {
-        items.insert ( it );
+void CCreature::addItem(std::set<std::shared_ptr<CItem> > items) {
+    for (std::shared_ptr<CItem> it : items) {
+        items.insert(it);
     }
-    Q_EMIT inventoryChanged();
 }
 
-void CCreature::heal ( int i ) {
-    vstd::fail_if ( i < 0, "Tried to heal negative value!" );
-    if ( hp > hpMax ) {
+void CCreature::heal(int i) {
+    vstd::fail_if(i < 0, "Tried to heal negative value!");
+    if (hp > hpMax) {
         return;
     }
-    if ( i == 0 ) {
+    if (i == 0) {
         hp = hpMax;
     } else {
         hp += i;
     }
-    if ( hp > hpMax ) {
+    if (hp > hpMax) {
         hp = hpMax;
     }
-    Q_EMIT statsChanged();
 }
 
-void CCreature::healProc ( float i ) {
+void CCreature::healProc(float i) {
     int tmp = hp;
-    heal ( i / 100.0 * hpMax );
-    vstd::logger::debug (getType() , "restored" , hp - tmp, "hp" , "\n" );
+    heal(i / 100.0 * hpMax);
+    vstd::logger::debug(getType(), "restored", hp - tmp, "hp", "\n");
 }
 
-void CCreature::hurt ( int i ) {
+void CCreature::hurt(int i) {
     std::shared_ptr<Damage> damage = std::make_shared<Damage>();
-    damage->setNormal ( i );
-    hurt ( damage );
+    damage->setNormal(i);
+    hurt(damage);
 }
 
-void CCreature::hurt ( float i ) {
-    hurt ( int ( round ( i ) ) );
+void CCreature::hurt(float i) {
+    hurt(int(round(i)));
 }
 
 int CCreature::getExpRatio() {
-    return ( float ) ( ( exp - level * ( level - 1 ) * 500 ) ) /
-           ( float ) ( level * ( level + 1 ) * 500 - level * ( level - 1 ) * 500 ) * 100.0;
+    return (float) ((exp - level * (level - 1) * 500)) /
+           (float) (level * (level + 1) * 500 - level * (level - 1) * 500) * 100.0;
 }
 
-void CCreature::takeDamage ( int i ) {
-    vstd::fail_if ( i < 0, "damage less than 0 taken" );
-    if ( rand() >= stats->getBlock() ) {
-        hp -= i * ( ( 100 - stats->getArmor() ) / 100.0 );
-        Q_EMIT statsChanged();
+void CCreature::takeDamage(int i) {
+    vstd::fail_if(i < 0, "damage less than 0 taken");
+    if (rand() >= stats->getBlock()) {
+        hp -= i * ((100 - stats->getArmor()) / 100.0);
     }
 }
 
@@ -162,12 +167,12 @@ CInteractionMap CCreature::getLevelling() {
     return levelling;
 }
 
-void CCreature::setLevelling ( CInteractionMap
-                               value ) {
+void CCreature::setLevelling(CInteractionMap
+                             value) {
     levelling = value;
 }
 
-void CCreature::setItems ( std::set<std::shared_ptr<CItem> > value ) {
+void CCreature::setItems(std::set<std::shared_ptr<CItem> > value) {
     items = value;
 }
 
@@ -175,12 +180,12 @@ std::set<std::shared_ptr<CItem>> CCreature::getItems() {
     return items;
 }
 
-void CCreature::hurt ( std::shared_ptr<Damage> damage ) {
-    takeDamage ( damage->getNormal() * ( 100 - stats->getNormalResist() ) / 100.0 );
-    takeDamage ( damage->getThunder() * ( 100 - stats->getThunderResist() ) / 100.0 );
-    takeDamage ( damage->getFrost() * ( 100 - stats->getFrostResist() ) / 100.0 );
-    takeDamage ( damage->getFire() * ( 100 - stats->getFireResist() ) / 100.0 );
-    takeDamage ( damage->getShadow() * ( 100 - stats->getShadowResist() ) / 100.0 );
+void CCreature::hurt(std::shared_ptr<Damage> damage) {
+    takeDamage(damage->getNormal() * (100 - stats->getNormalResist()) / 100.0);
+    takeDamage(damage->getThunder() * (100 - stats->getThunderResist()) / 100.0);
+    takeDamage(damage->getFrost() * (100 - stats->getFrostResist()) / 100.0);
+    takeDamage(damage->getFire() * (100 - stats->getFireResist()) / 100.0);
+    takeDamage(damage->getShadow() * (100 - stats->getShadowResist()) / 100.0);
     //TODO: generate to string from properties
 //    qDebug() << getType() << "took damage:"
 //             << "normal(" << damage->getNormal() << ")thunder("
@@ -192,17 +197,17 @@ int CCreature::getDmg() {
     int critDice = rand() % 100;
     int attDice = rand() % 100;
     int dmg =
-        rand() % ( stats->getDmgMax() + 1 - stats->getDmgMin() ) + stats->getDmgMin();
+            rand() % (stats->getDmgMax() + 1 - stats->getDmgMin()) + stats->getDmgMin();
     dmg += stats->getDamage();
     attDice -= stats->getAttack();
-    if ( attDice < stats->getHit() ) {
-        if ( critDice < stats->getCrit() ) {
+    if (attDice < stats->getHit()) {
+        if (critDice < stats->getCrit()) {
             dmg *= 2;
-            vstd::logger::debug ( "Critical hit" );
+            vstd::logger::debug("Critical hit");
         }
         return dmg;
     } else {
-        vstd::logger::debug ( "Missed" );
+        vstd::logger::debug("Missed");
         return 0;
     }
 }
@@ -215,84 +220,80 @@ bool CCreature::isAlive() {
     return hp >= 0;
 }
 
-void CCreature::fight ( std::shared_ptr<CCreature> creature ) {
-    if ( applyEffects() ) {
+void CCreature::fight(std::shared_ptr<CCreature> creature) {
+    if (applyEffects()) {
         return;
     }
-    if ( !isAlive() ) {
-        creature->defeatedCreature ( this->ptr<CCreature>() );
+    if (!isAlive()) {
+        creature->defeatedCreature(this->ptr<CCreature>());
         return;
     }
     std::shared_ptr<CInteraction> action = selectAction();
-    if ( action ) {
-        action->onAction ( this->ptr<CCreature>(), creature );
-        if ( creature->getArmor() ) {
-            if ( creature->getArmor()->getInteraction() ) {
-                creature->getArmor()->getInteraction()->onAction ( creature, this->ptr<CCreature>() );
+    if (action) {
+        action->onAction(this->ptr<CCreature>(), creature);
+        if (creature->getArmor()) {
+            if (creature->getArmor()->getInteraction()) {
+                creature->getArmor()->getInteraction()->onAction(creature, this->ptr<CCreature>());
             }
         }
         vstd::logger::debug();
     }
-    creature->fight ( this->ptr<CCreature>() );
+    creature->fight(this->ptr<CCreature>());
 }
 
-void CCreature::trade ( std::shared_ptr<CMarket> ) {
+void CCreature::trade(std::shared_ptr<CMarket>) {
 
 }
 
-void CCreature::addAction ( std::shared_ptr<CInteraction> action ) {
-    if ( !action ) {
+void CCreature::addAction(std::shared_ptr<CInteraction> action) {
+    if (!action) {
         return;
     }
-    actions.insert ( action );
-    Q_EMIT skillsChanged();
+    actions.insert(action);
 }
 
-void CCreature::addEffect ( std::shared_ptr<CEffect> effect ) {
-    vstd::logger::debug (effect->getType() , "starts for"
-                          , this->getType() );
-    effects.insert ( effect );
+void CCreature::addEffect(std::shared_ptr<CEffect> effect) {
+    vstd::logger::debug(effect->getType(), "starts for", this->getType());
+    effects.insert(effect);
 }
 
 int CCreature::getMana() {
     return mana;
 }
 
-void CCreature::setMana ( int mana ) {
+void CCreature::setMana(int mana) {
     this->mana = mana;
 }
 
-void CCreature::addMana ( int i ) {
-    vstd::fail_if ( i < 0, "Tried to add negative mana!" );
-    if ( mana > manaMax ) {
+void CCreature::addMana(int i) {
+    vstd::fail_if(i < 0, "Tried to add negative mana!");
+    if (mana > manaMax) {
         return;
     }
-    if ( i == 0 ) {
+    if (i == 0) {
         mana = manaMax;
     } else {
         mana += i;
     }
-    if ( mana > manaMax ) {
+    if (mana > manaMax) {
         mana = manaMax;
     }
-    Q_EMIT statsChanged();
 }
 
-void CCreature::addManaProc ( float i ) {
+void CCreature::addManaProc(float i) {
     int tmp = mana;
-    addMana ( i / 100.0 * manaMax );
-    vstd::logger::debug (getType() , "restored" , mana - tmp , "mana" , "\n" );
+    addMana(i / 100.0 * manaMax);
+    vstd::logger::debug(getType(), "restored", mana - tmp, "mana", "\n");
 }
 
-void CCreature::takeMana ( int i ) {
-    vstd::fail_if ( i < 0, "Tried to take negative mana value!" );
+void CCreature::takeMana(int i) {
+    vstd::fail_if(i < 0, "Tried to take negative mana value!");
     mana -= i;
-    Q_EMIT statsChanged();
 }
 
 std::shared_ptr<CInteraction> CCreature::selectAction() {
-    for ( std::shared_ptr<CInteraction> it:actions ) {
-        if ( it->getManaCost() < mana ) {
+    for (std::shared_ptr<CInteraction> it:actions) {
+        if (it->getManaCost() < mana) {
             return it;
         }
     }
@@ -300,33 +301,32 @@ std::shared_ptr<CInteraction> CCreature::selectAction() {
 }
 
 bool CCreature::applyEffects() {
-    if ( effects.size() == 0 ) {
+    if (effects.size() == 0) {
         return false;
     }
     int i = 0;
     std::set<std::shared_ptr<CEffect> >::iterator it = effects.begin();
-    for ( it = effects.begin(); it != effects.end(); ) {
-        if ( ( *it )->getTimeLeft() == 0 ) {
-            vstd::logger::debug (getType() , "is now free from"
-                                  , (*it)->getType() );
+    for (it = effects.begin(); it != effects.end();) {
+        if ((*it)->getTimeLeft() == 0) {
+            vstd::logger::debug(getType(), "is now free from", (*it)->getType());
             i++;
-            effects.erase ( it );
+            effects.erase(it);
             it = effects.begin();
         } else {
             it++;
         }
     }
     bool isStopped = false;
-    for ( std::shared_ptr<CEffect> effect:effects ) {
-        vstd::logger::debug (getType() , "suffers from" , effect->getType() );
+    for (std::shared_ptr<CEffect> effect:effects) {
+        vstd::logger::debug(getType(), "suffers from", effect->getType());
         i++;
-        isStopped = isStopped || effect->apply ( this );
-        if ( !isAlive() ) {
-            effect->getCaster()->defeatedCreature ( this->ptr<CCreature>() );
+        isStopped = isStopped || effect->apply(this);
+        if (!isAlive()) {
+            effect->getCaster()->defeatedCreature(this->ptr<CCreature>());
             return true;
         }
     }
-    if ( i > 0 ) {
+    if (i > 0) {
         vstd::logger::debug();
     }
     return isStopped;
@@ -337,23 +337,23 @@ bool CCreature::isPlayer() {
 }
 
 int CCreature::getHpRatio() {
-    if ( hp > hpMax ) {
+    if (hp > hpMax) {
         return 100;
     }
-    return ( float ) hp / ( float ) hpMax * 100.0;
+    return (float) hp / (float) hpMax * 100.0;
 }
 
 int CCreature::getManaRatio() {
-    if ( mana > manaMax ) {
+    if (mana > manaMax) {
         return 100;
     }
-    if ( manaMax == 0 ) {
+    if (manaMax == 0) {
         return 100;
     }
-    if ( mana < 0 ) {
+    if (mana < 0) {
         return 0;
     }
-    return ( float ) mana / ( float ) manaMax * 100.0;
+    return (float) mana / (float) manaMax * 100.0;
 }
 
 int CCreature::getHp() {
@@ -368,81 +368,79 @@ int CCreature::getLevel() {
     return level;
 }
 
-void CCreature::setWeapon ( std::shared_ptr<CWeapon> weapon ) {
-    this->setItem ( std::string::number ( 0 ), weapon );
+void CCreature::setWeapon(std::shared_ptr<CWeapon> weapon) {
+    this->setItem(std::to_string(0), weapon);
 }
 
-void CCreature::setArmor ( std::shared_ptr<CArmor> armor ) {
-    this->setItem ( std::string::number ( 3 ), armor );
+void CCreature::setArmor(std::shared_ptr<CArmor> armor) {
+    this->setItem(std::to_string(3), armor);
 }
 
-void CCreature::setItem ( std::string i, std::shared_ptr<CItem> newItem ) {
-    if ( !vstd::ctn ( equipped, i ) ) {
-        equipped.insert ( std::make_pair ( i, std::shared_ptr<CItem>() ) );
+void CCreature::setItem(std::string i, std::shared_ptr<CItem> newItem) {
+    if (!vstd::ctn(equipped, i)) {
+        equipped.insert(std::make_pair(i, std::shared_ptr<CItem>()));
     }
-    vstd::fail_if ( newItem && !CItemSlot::checkType ( i, newItem ),
-                    "Tried to insert" + newItem->getType() + "into slot" + i );
-    std::shared_ptr<CItem> oldItem = equipped.at ( i );
-    if ( oldItem ) {
-        getMap()->getEventHandler()->gameEvent ( oldItem, std::make_shared<CGameEventCaused> ( CGameEvent::onUnequip,
-                this->ptr<CCreature>() ) );
-        this->addItem ( oldItem );
-        if ( newItem == oldItem ) {
+    vstd::fail_if(newItem && !check_type(i, newItem),
+                  "Tried to insert" + newItem->getType() + "into slot" + i);
+    std::shared_ptr<CItem> oldItem = equipped.at(i);
+    if (oldItem) {
+        getMap()->getEventHandler()->gameEvent(oldItem, std::make_shared<CGameEventCaused>(CGameEvent::onUnequip,
+                                                                                           this->ptr<CCreature>()));
+        this->addItem(oldItem);
+        if (newItem == oldItem) {
             newItem = nullptr;
         }
     }
-    if ( newItem ) {
-        getMap()->getEventHandler()->gameEvent ( newItem, std::make_shared<CGameEventCaused> ( CGameEvent::onEquip,
-                this->ptr<CCreature>() ) );
+    if (newItem) {
+        getMap()->getEventHandler()->gameEvent(newItem, std::make_shared<CGameEventCaused>(CGameEvent::onEquip,
+                                                                                           this->ptr<CCreature>()));
     }
-    removeFromInventory ( newItem );
+    removeFromInventory(newItem);
     attribChange();
     equipped[i] = newItem;
-    Q_EMIT equippedChanged();
-    Q_EMIT statsChanged();
 }
 
-bool CCreature::hasInInventory ( std::shared_ptr<CItem> item ) {
-    return vstd::ctn ( items, item );
+bool CCreature::hasInInventory(std::shared_ptr<CItem> item) {
+    return vstd::ctn(items, item);
 }
 
-bool CCreature::hasItem ( std::shared_ptr<CItem> item ) {
-    return hasInInventory ( item ) || hasEquipped ( item );
+bool CCreature::hasItem(std::shared_ptr<CItem> item) {
+    return hasInInventory(item) || hasEquipped(item);
 }
 
 std::shared_ptr<CWeapon> CCreature::getWeapon() {
-    return vstd::cast<CWeapon> ( getItemAtSlot ( "0" ) );
+    return vstd::cast<CWeapon>(getItemAtSlot("0"));
 }
 
 std::shared_ptr<CArmor> CCreature::getArmor() {
-    return vstd::cast<CArmor> ( getItemAtSlot ( "3" ) );
+    return vstd::cast<CArmor>(getItemAtSlot("3"));
 }
 
 void CCreature::levelUp() {
     level++;
-    stats->addBonus ( getLevelStats() );
-    addAction ( getLevelAction() );
+    stats->addBonus(getLevelStats());
+    addAction(getLevelAction());
     attribChange();
-    if ( level > 1 ) {
-        vstd::logger::debug (getType() , "is now level:" , level, "\n" );
+    if (level > 1) {
+        vstd::logger::debug(getType(), "is now level:", level, "\n");
     }
 }
 
 std::set<std::shared_ptr<CItem>> CCreature::getLoot() {
-    std::set<std::shared_ptr<CItem>> items = this->getMap()->getLootHandler()->getLoot ( getScale() );
-    for ( std::shared_ptr<CItem> item:getInInventory() ) {
-        this->removeFromInventory ( item );
-        items.insert ( item );
+    std::set<std::shared_ptr<CItem>> items = this->getMap()->getLootHandler()->getLoot(getScale());
+    for (std::shared_ptr<CItem> item:getInInventory()) {
+        this->removeFromInventory(item);
+        items.insert(item);
     }
     return items;
 }
 
 std::set<std::shared_ptr<CItem> > CCreature::getAllItems() {
     std::set<std::shared_ptr<CItem> > allItems;
-    allItems.insert ( items.begin(), items.end() );
-    for ( auto it:equipped ) {
-        if ( it.second ) {
-            allItems.insert ( it.second );
+    allItems.insert(items.begin(), items.end());
+    for (auto it:equipped) {
+        if (it.second) {
+            allItems.insert(it.second);
         }
     }
     return allItems;
@@ -454,9 +452,9 @@ void CCreature::attribChange() {
     manaMax = stats->getMainValue() * 7;
 }
 
-bool CCreature::hasEquipped ( std::shared_ptr<CItem> item ) {
-    for ( auto it:equipped ) {
-        if ( it.second == item ) {
+bool CCreature::hasEquipped(std::shared_ptr<CItem> item) {
+    for (auto it:equipped) {
+        if (it.second == item) {
             return true;
         }
     }
@@ -467,43 +465,43 @@ int CCreature::getSw() const {
     return sw;
 }
 
-void CCreature::setSw ( int value ) {
-    sw = value;
+void CCreature::setSw(int _value) {
+    sw = _value;
 }
 
 std::shared_ptr<Stats> CCreature::getStats() const {
     return stats;
 }
 
-void CCreature::setStats ( std::shared_ptr<Stats> value ) {
-    stats = value;
+void CCreature::setStats(std::shared_ptr<Stats> _value) {
+    stats = _value;
 }
 
 int CCreature::getHpMax() {
     return hpMax;
 }
 
-void CCreature::setHpMax ( int value ) {
+void CCreature::setHpMax(int value) {
     hpMax = value;
 }
 
-std::shared_ptr<CItem> CCreature::getItemAtSlot ( std::string slot ) {
-    if ( vstd::ctn ( equipped, slot ) ) {
-        return equipped.at ( slot );
+std::shared_ptr<CItem> CCreature::getItemAtSlot(std::string slot) {
+    if (vstd::ctn(equipped, slot)) {
+        return equipped.at(slot);
     }
     return nullptr;
 }
 
-std::string CCreature::getSlotWithItem ( std::shared_ptr<CItem> item ) {
-    for ( auto it = equipped.begin(); it != equipped.end(); it++ ) {
-        if ( ( *it ).second == item ) {
-            return ( *it ).first;
+std::string CCreature::getSlotWithItem(std::shared_ptr<CItem> item) {
+    for (auto it = equipped.begin(); it != equipped.end(); it++) {
+        if ((*it).second == item) {
+            return (*it).first;
         }
     }
     return "-1";
 }
 
-void CCreature::setHp ( int value ) {
+void CCreature::setHp(int value) {
     hp = value;
 }
 
@@ -511,11 +509,11 @@ int CCreature::getManaRegRate() {
     return manaRegRate;
 }
 
-void CCreature::setManaRegRate ( int value ) {
+void CCreature::setManaRegRate(int value) {
     manaRegRate = value;
 }
 
-void CCreature::setManaMax ( int value ) {
+void CCreature::setManaMax(int value) {
     manaMax = value;
 }
 
@@ -523,71 +521,67 @@ int CCreature::getGold() {
     return gold;
 }
 
-void CCreature::setGold ( int value ) {
+void CCreature::setGold(int value) {
     gold = value;
 }
 
-void CCreature::defeatedCreature ( std::shared_ptr<CCreature> creature ) {
-    vstd::logger::debug (getType() , objectName() , "defeated" , creature->getType() , creature->objectName()
-                                                                                       << "\n" );
-    addExpScaled ( creature->getScale() );
-    addItem ( creature->getLoot() );
-    getMap()->removeObject ( creature );
+void CCreature::defeatedCreature(std::shared_ptr<CCreature> creature) {
+    vstd::logger::debug(getType(), getName(), "defeated", creature->getType(), creature->getName(),"\n");
+    addExpScaled(creature->getScale());
+    addItem(creature->getLoot());
+    getMap()->removeObject(creature);
 }
 
 void CCreature::beforeMove() {
-    auto pred = [this] ( std::shared_ptr<CMapObject> object ) {
-        return vstd::cast<Visitable> ( object ) && this->getCoords() == object->getCoords();
+    auto pred = [this](std::shared_ptr<CMapObject> object) {
+        return vstd::cast<Visitable>(object) && this->getCoords() == object->getCoords();
     };
 
-    auto func = [this] ( std::shared_ptr<CMapObject> object ) {
-        this->getMap()->getEventHandler()->gameEvent ( object,
-                std::make_shared<CGameEventCaused> ( CGameEvent::Type::onLeave,
-                        this->ptr<CCreature>() ) );
+    auto func = [this](std::shared_ptr<CMapObject> object) {
+        this->getMap()->getEventHandler()->gameEvent(object,
+                                                     std::make_shared<CGameEventCaused>(CGameEvent::Type::onLeave,
+                                                                                        this->ptr<CCreature>()));
     };
 
-    this->getMap()->forObjects ( func, pred );
+    this->getMap()->forObjects(func, pred);
 }
 
 void CCreature::afterMove() {
-    auto pred = [this] ( std::shared_ptr<CMapObject> object ) {
-        return vstd::cast<Visitable> ( object ) && this->getCoords() == object->getCoords();
+    auto pred = [this](std::shared_ptr<CMapObject> object) {
+        return vstd::cast<Visitable>(object) && this->getCoords() == object->getCoords();
     };
 
-    auto func = [this] ( std::shared_ptr<CMapObject> object ) {
-        getMap()->getEventHandler()->gameEvent ( object, std::make_shared<CGameEventCaused> ( CGameEvent::Type::onEnter,
-                this->ptr<CCreature>() ) );
+    auto func = [this](std::shared_ptr<CMapObject> object) {
+        getMap()->getEventHandler()->gameEvent(object, std::make_shared<CGameEventCaused>(CGameEvent::Type::onEnter,
+                                                                                          this->ptr<CCreature>()));
     };
 
-    getMap()->forObjects ( func, pred );
+    getMap()->forObjects(func, pred);
 
-    getMap()->getTile ( this->getCoords() )->onStep ( this->ptr<CCreature>() );
+    getMap()->getTile(this->getCoords())->onStep(this->ptr<CCreature>());
 }
 
 std::string CCreature::getTooltip() const {
-    std::string tooltipText = getType();
-    tooltipText.append ( " " );
-    tooltipText.append ( std::string::number ( level ) );
-    return tooltipText;
+    return vstd::join({getType(),std::to_string(level)}," ");
 }
 
-void CCreature::addGold ( int gold ) {
-    this->setGold ( this->getGold() + gold );
+void CCreature::addGold(int gold) {
+    this->setGold(this->getGold() + gold);
 }
 
-void CCreature::takeGold ( int gold ) {
-    this->setGold ( this->getGold() - gold );
+void CCreature::takeGold(int gold) {
+    this->setGold(this->getGold() - gold);
 }
 
 std::set<std::shared_ptr<CEffect> > CCreature::getEffects() const {
     return effects;
 }
 
-void CCreature::onDestroy ( std::shared_ptr<CGameEvent> ) {
+void CCreature::onDestroy(std::shared_ptr<CGameEvent>) {
     effects.clear();
 }
 
-void CCreature::setEffects ( const std::set<std::shared_ptr<CEffect> > &value ) {
+void CCreature::setEffects(const std::set<std::shared_ptr<CEffect> > &value) {
     effects = value;
 }
 

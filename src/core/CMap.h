@@ -23,8 +23,6 @@ class CScriptHandler;
 
 class CEventHandler;
 
-class CMouseHandler;
-
 class CMapObject;
 
 class CMap : private std::unordered_map<Coords, std::shared_ptr<CTile>>, public std::enable_shared_from_this<CMap> {
@@ -92,8 +90,6 @@ public:
 
     std::shared_ptr<CEventHandler> getEventHandler();
 
-    std::shared_ptr<CMouseHandler> getMouseHandler();
-
     bool canStep ( int x, int y, int z );
 
     bool canStep ( const Coords &coords );
@@ -133,7 +129,6 @@ private:
     vstd::lazy<CLootHandler, std::shared_ptr<CMap>> lootHandler;
     vstd::lazy<CObjectHandler, std::shared_ptr<CObjectHandler>> objectHandler;
     vstd::lazy<CEventHandler> eventHandler;
-    vstd::lazy<CMouseHandler> mouseHandler;
     bool moving = false;
 };
 

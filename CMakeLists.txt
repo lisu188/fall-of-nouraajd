@@ -16,6 +16,7 @@ FIND_PACKAGE(Boost 1.60)
 
 add_definitions("-DRAPIDJSON_ASSERT(x)")
 add_definitions(-DBOOST_DISABLE_ASSERTS)
+add_definitions("-DBOOST_PYTHON_SOURCE")
 
 include_directories(${Boost_INCLUDE_DIRS})
 include_directories($ENV{PYTHON}/include)

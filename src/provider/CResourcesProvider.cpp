@@ -1,3 +1,4 @@
+#include "core/CJsonUtil.h"
 #include "CResourcesProvider.h"
 #include "core/CUtil.h"
 
@@ -17,15 +18,13 @@ std::string CResourcesProvider::load(std::string path) {
 }
 
 std::shared_ptr<Value> CResourcesProvider::load_json(std::string path) {
-    std::shared_ptr<Document> ptr = std::make_shared<Document>();
-    ptr->Parse(load(path).c_str());
-    return ptr;
+    return CJsonUtil::from_string(load(path));
 }
 
 std::string CResourcesProvider::getPath(std::string path) {
     for (auto it:searchPath) {
-        if (boost::filesystem::exists(it / path)) {
-            boost::filesystem::path p = it / path;
+        if (boost::filesystem::exists(it / boost::filesystem::path(path))) {
+            boost::filesystem::path p = it / boost::filesystem::path(path);
             return p.string();
         }
     }
@@ -54,7 +53,8 @@ std::set<std::string> CResourcesProvider::getFiles(CResType type) {
     }
     boost::filesystem::recursive_directory_iterator dir(folderName), end;
     while (dir != end) {
-        retValue.insert((dir++)->path().string());
+        retValue.insert(dir->path().string());
+        dir++;
     }
     return retValue;
 }
@@ -65,11 +65,7 @@ void CResourcesProvider::save(std::string file, std::string data) {
 }
 
 void CResourcesProvider::save(std::string file, std::shared_ptr<Value> data) {
-    Document d;
-    StringBuffer buffer;
-    Writer<StringBuffer> writer(buffer);
-    d.Accept(writer);
-    save(file, buffer.GetString());
+    save(file, CJsonUtil::to_string(data));
 }
 
 CResourcesProvider::CResourcesProvider() {
