@@ -1,5 +1,6 @@
 #pragma once
 
+#include <boost/locale.hpp>
 #include <boost/python.hpp>
 #include <boost/filesystem.hpp>
 

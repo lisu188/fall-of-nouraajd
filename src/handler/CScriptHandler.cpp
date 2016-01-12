@@ -1,11 +1,9 @@
 #include "core/CMap.h"
 #include "scripting/CScripting.h"
 
-static const char *START_SCRIPT = "import sys\n"
-        "from _core import CScriptLoader\n"
-        "sys.path=[]\n"
-        "sys.meta_path.append(CScriptLoader())\n"
-        "sys.dont_write_bytecode=True";
+static const std::string start = vstd::join(
+        {"import sys", "from _core import CScriptLoader", "sys.path=[]", "sys.meta_path.append(CScriptLoader())",
+         "sys.dont_write_bytecode=True"}, "\n");
 
 CScriptHandler::CScriptHandler() {
     PyImport_AppendInittab("_game", PyInit__game);
@@ -19,7 +17,7 @@ CScriptHandler::CScriptHandler() {
     main_namespace = main_module.attr("__dict__");
     boost::python::incref(main_module.ptr());
     vstd::logger::debug("Imported main module.", "\n");
-    executeScript(START_SCRIPT);
+    executeScript(start);
     vstd::logger::debug("Executed starting scripts.", "\n");
 }
 

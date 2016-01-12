@@ -6,6 +6,7 @@ include($ENV{COTIRE_CMAKE}/cotire.cmake)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14 -include cmath -Wno-deprecated-declarations -Wno-unused-local-typedefs -Wno-attributes -Wa,-mbig-obj -Wno-inline")
 
 set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O3")
+set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -g3")
 
 file(GLOB_RECURSE GAME_SRC ${CMAKE_SOURCE_DIR}/src/**.cpp ${CMAKE_SOURCE_DIR}/src/**.h)
 
@@ -32,6 +33,11 @@ include_directories(${CMAKE_SOURCE_DIR}/../rapidjson/include)
 add_executable(game ${GAME_SRC} ${BOOST_PYTHON_SRC} ${BOOST_SYSTEM_SRC} ${BOOST_FILESYSTEM_SRC})
 
 target_link_libraries(game $ENV{PYTHON}/libs/libpython35.a)
+
+file(COPY res/config DESTINATION .)
+file(COPY res/images DESTINATION .)
+file(COPY res/maps DESTINATION .)
+file(COPY res/scripts DESTINATION .)
 
 set_target_properties(game PROPERTIES COTIRE_PREFIX_HEADER_IGNORE_PATH ${CMAKE_SOURCE_DIR}\;$ENV{BOOST}/boost/preprocessor/iteration/detail/local.hpp\;$ENV{BOOST}/boost/detail/utf8_codecvt_facet.hpp) #this file was causing errors
 
