@@ -96,4 +96,5 @@ namespace std {
     };
 }
 
+template<typename T=void>
 force_inline int randint(int i, int j) { return rand() % (j - i + 1) + i; }

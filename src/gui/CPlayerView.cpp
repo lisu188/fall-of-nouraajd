@@ -65,7 +65,7 @@
 //    this->setZValue ( 3 );
 //    curPosition = 0;
 //    x = 4, y = 4;
-//    pixmap.load ( CResourcesProvider::getInstance()->getPath ( "images/item.png" ) );
+//    pixmap.load ( CResourcesProvider::getInstance()->get_path ( "images/item.png" ) );
 //    pixmap = pixmap.scaled ( 50, 50,
 //                             Qt::IgnoreAspectRatio, Qt::SmoothTransformation );
 //}
@@ -166,7 +166,7 @@
 //
 //CItemSlot::CItemSlot ( std::string number, std::shared_ptr<AGamePanel> panel ) :
 //    number ( number ), panel ( panel ) {
-//    pixmap.load ( CResourcesProvider::getInstance()->getPath ( "images/item.png" ) );
+//    pixmap.load ( CResourcesProvider::getInstance()->get_path ( "images/item.png" ) );
 //    pixmap = pixmap.scaled ( 50, 50,
 //                             Qt::IgnoreAspectRatio, Qt::SmoothTransformation );
 //    this->setAcceptDrops ( true );

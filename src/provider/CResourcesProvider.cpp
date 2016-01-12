@@ -11,17 +11,16 @@ CResourcesProvider *CResourcesProvider::getInstance() {
 }
 
 std::string CResourcesProvider::load(std::string path) {
-    std::string data;
-    std::ifstream f(path);
-    f >> data;
-    return data;
+    std::ifstream t(get_path(path));
+    return std::string(std::istreambuf_iterator<char>(t),
+                       std::istreambuf_iterator<char>());
 }
 
 std::shared_ptr<Value> CResourcesProvider::load_json(std::string path) {
     return CJsonUtil::from_string(load(path));
 }
 
-std::string CResourcesProvider::getPath(std::string path) {
+std::string CResourcesProvider::get_path(std::string path) {
     for (auto it:searchPath) {
         if (boost::filesystem::exists(it / boost::filesystem::path(path))) {
             boost::filesystem::path p = it / boost::filesystem::path(path);
