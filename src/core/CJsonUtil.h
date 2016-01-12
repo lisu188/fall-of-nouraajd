@@ -51,6 +51,7 @@ namespace CJsonUtil {
         return true;
     }
 
+    template<typename T=void>
     std::shared_ptr<Value> from_string(std::string json) {
         auto d = std::make_shared<Document>();
         d->Parse(json.c_str());
