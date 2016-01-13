@@ -33,7 +33,7 @@ public:
 
     ~CScriptHandler();
 
-    void executeScript ( std::string script, boost::python::object nameSpace = boost::python::object() );
+    void executeScript(std::string script, boost::python::object name_space = boost::python::object());
 
     void executeCommand ( std::initializer_list<std::string> list );
 

@@ -5,7 +5,7 @@
 
 std::shared_ptr<CSerializerBase> CSerialization::serializer(
         std::pair<boost::typeindex::type_index, boost::typeindex::type_index> key) {
-    return CTypes::serializers()[key];
+    return (*CTypes::serializers())[key];
 }
 
 void CSerialization::setProperty(std::shared_ptr<CGameObject> object, std::string key, std::shared_ptr<Value> value) {
@@ -79,7 +79,8 @@ void CSerialization::setStringProperty(std::shared_ptr<CGameObject> object, std:
 void CSerialization::setOtherProperty(boost::typeindex::type_index serializedId,
                                       boost::typeindex::type_index deserializedId, std::shared_ptr<CGameObject> object,
                                       std::string key, boost::any value) {
-    std::shared_ptr<CSerializerBase> serializer = CTypes::serializers()[std::make_pair(serializedId, deserializedId)];
+    std::shared_ptr<CSerializerBase> serializer = (*CTypes::serializers())[std::make_pair(serializedId,
+                                                                                          deserializedId)];
     value = vstd::not_null(serializer, "No serializer!")->deserialize(object->getMap(), value);
     object->setProperty(key, value);
 }
@@ -99,7 +100,7 @@ void CSerialization::setProperty(std::shared_ptr<Value> conf, std::string proper
         //TODO: implement map
     } else {
         std::shared_ptr<CSerializerBase> serializer;
-        for (std::pair<std::pair<boost::typeindex::type_index, boost::typeindex::type_index>, std::shared_ptr<CSerializerBase>> entry:CTypes::serializers()) {
+        for (std::pair<std::pair<boost::typeindex::type_index, boost::typeindex::type_index>, std::shared_ptr<CSerializerBase>> entry:*CTypes::serializers()) {
             std::pair<boost::typeindex::type_index, boost::typeindex::type_index> types = entry.first;
             if (types.second == propertyValue.type()) {
                 vstd::fail_if(serializer, "Ambigous serializer!");

@@ -8,45 +8,45 @@ class AScriptLoader;
 
 class ModuleSpec {
 public:
-    ModuleSpec ( AScriptLoader *loader, std::string name );
+    ModuleSpec(std::shared_ptr<AScriptLoader> loader, std::string name);
 
-    AScriptLoader *loader();
+    std::shared_ptr<AScriptLoader> loader();
 
     std::string name;
-    std::string subModuleSearch;
-    bool hasLocation = true;
+    std::string sub_module_search;
+    bool has_location = true;
     bool cached = false;
 private:
-    AScriptLoader *scriptLoader = 0;
+    std::shared_ptr<AScriptLoader> script_loader = 0;
 };
 
-class AScriptLoader {
+class AScriptLoader : public std::enable_shared_from_this<AScriptLoader> {
 public:
-    virtual std::string findModule ( std::string modName ) = 0;
+    virtual std::string find_module(std::string modName) = 0;
 
-    bool checkModule ( std::string modName );
+    bool check_module(std::string modName);
 
-    void exec_module ( boost::python::object module );
+    void exec_module(boost::python::object module);
 
-    ModuleSpec *find_spec ( boost::python::object name, boost::python::object, boost::python::object );
+    std::shared_ptr<ModuleSpec> find_spec(boost::python::object name, boost::python::object, boost::python::object);
 
-    bool __eq__ ( boost::python::object object );
+    bool __eq__(boost::python::object object);
 
     virtual ~AScriptLoader();
 };
 
 class CScriptLoader : public AScriptLoader {
 public:
-    virtual std::string findModule ( std::string modName ) override;
+    virtual std::string find_module(std::string modName) override;
 
     virtual ~CScriptLoader();
 };
 
 class CCustomScriptLoader : public AScriptLoader {
 public:
-    CCustomScriptLoader ( std::string name, std::string path );
+    CCustomScriptLoader(std::string name, std::string path);
 
-    virtual std::string findModule ( std::string modName ) override;
+    virtual std::string find_module(std::string modName) override;
 
     virtual ~CCustomScriptLoader();
 
