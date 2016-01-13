@@ -3,7 +3,7 @@
 #include "core/CUtil.h"
 
 
-std::list<std::string> CResourcesProvider::searchPath = {"", ":/"};
+std::list<std::string> CResourcesProvider::searchPath = {""};
 
 CResourcesProvider *CResourcesProvider::getInstance() {
     static CResourcesProvider instance;
@@ -52,9 +52,12 @@ std::set<std::string> CResourcesProvider::getFiles(CResType type) {
     }
     boost::filesystem::recursive_directory_iterator dir(folderName), end;
     while (dir != end) {
-        retValue.insert(dir->path().string());
+        if (!boost::filesystem::is_directory(dir->path())) {
+            retValue.insert(dir->path().string());
+        }
         dir++;
     }
+
     return retValue;
 }
 
