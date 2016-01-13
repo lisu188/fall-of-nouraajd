@@ -1,7 +1,8 @@
 #pragma once
 
-#include <boost/locale.hpp>
+#include <Python.h>
 #include <boost/python.hpp>
+#include <boost/locale.hpp>
 #include <boost/filesystem.hpp>
 
 #include <condition_variable>
