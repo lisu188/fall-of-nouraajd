@@ -85,24 +85,6 @@ void CMap::moveTile(std::shared_ptr<CTile> tile, int x, int y, int z) {
     insert(std::make_pair(Coords(x, y, z), tile));
 }
 
-void CMap::ensureSize() {
-    auto player = getPlayer();
-    if (!player) {
-        return;
-    }
-    for (int i = -25; i < 25; i++) {
-        for (int j = -15; j < 15; j++) {
-            ensureTile(player->getPosX() + i, player->getPosY() + j);
-        }
-    }
-
-    currentLevel = player->getPosZ();
-
-    for (auto it :mapObjects) {
-//        (it.second)->setVisible((it.second)->getPosZ() == currentLevel); //TODO:
-    }
-}
-
 bool CMap::addTile(std::shared_ptr<CTile> tile, int x, int y, int z) {
     if (this->contains(x, y, z)) {
         return false;
@@ -285,8 +267,6 @@ void CMap::move() {
 
         auto end_callback = [map](std::set<void *>) {
             map->resolveFights();
-
-            map->ensureSize();
 
             //TODO:
 //            if (QApplication::instance()->property("auto_save").toBool()) {

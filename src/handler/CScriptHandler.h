@@ -33,48 +33,46 @@ public:
 
     ~CScriptHandler();
 
-    void executeScript(std::string script, boost::python::object name_space = boost::python::object());
+    void execute_script(std::string script, boost::python::object name_space = boost::python::object());
 
-    void executeCommand ( std::initializer_list<std::string> list );
+    void execute_command(std::initializer_list<std::string> list);
 
-    std::string buildCommand ( std::initializer_list<std::string> list );
+    std::string build_command(std::initializer_list<std::string> list);
 
-    void addModule ( std::string modName, std::string path );
-
-    void addFunction ( std::string functionName, std::string functionCode, std::initializer_list<std::string> args );
+    void add_function(std::string function_name, std::string function_code, std::initializer_list<std::string> args);
 
     void import ( std::string name );
 
     template<typename Return=void, typename...Args>
-    std::function<Return ( Args... ) > getFunction ( std::string functionName ) {
-        return wrap<Return, Args...>::call ( getObject ( functionName ) );
+    std::function<Return(Args...)> get_function(std::string functionName) {
+        return wrap<Return, Args...>::call(get_object(functionName));
     }
 
     template<typename Return=void, typename... Args>
     std::function<Return ( Args... ) > createFunction ( std::string functionName, std::string functionCode,
             std::initializer_list<std::string> args ) {
         vstd::fail_if ( sizeof... ( Args ) != args.size(), "Wrong argument list!" );
-        addFunction ( functionName, functionCode, args );
-        return getFunction<Return, Args...> ( functionName );
+        add_function(functionName, functionCode, args);
+        return get_function<Return, Args...>(functionName);
     }
 
     template<typename Return=void, typename ...Args>
-    Return callFunction ( std::string name, Args ...params ) {
-        return getFunction<Return, Args...> ( name ) ( params... );
+    Return call_function(std::string name, Args ...params) {
+        return get_function<Return, Args...>(name)(params...);
     }
 
     template<typename Return=void, typename ...Args>
-    Return callCreatedFunction ( std::string functionCode, std::initializer_list<std::string> args, Args ...params ) {
+    Return call_created_function(std::string function_code, std::initializer_list<std::string> args, Args ...params) {
         return createFunction<Return, Args...> (
-                   "FUNC" + vstd::to_hex_hash<std::string> ( functionCode ),
-                   functionCode, args ) ( params... );
+                "FUNC" + vstd::to_hex_hash<std::string>(function_code),
+                function_code, args)(params...);
     }
 
     template<typename T=boost::python::object>
-    T getObject ( std::string name ) {
+    T get_object(std::string name) {
         std::string script = "object=";
         script = script.append ( name );
-        executeScript ( script );
+        execute_script(script);
         boost::python::object object = main_namespace["object"];
         return boost::python::extract<T> ( object );
     }
