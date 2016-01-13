@@ -11,6 +11,7 @@ CScriptHandler::CScriptHandler() {
 #ifdef DEBUG_MODE
     PyImport_AppendInittab ( "debug",PyInit_debug );
 #endif
+    Py_SetPath(L"C:\\Users\\Andrzej\\AppData\\Local\\Programs\\Python\\Python35\\Lib");
     Py_Initialize();
     vstd::logger::debug("Initialized python interpreter.", "\n");
     main_module = boost::python::object(boost::python::handle<>(PyImport_ImportModule("__main__")));
@@ -25,11 +26,13 @@ CScriptHandler::~CScriptHandler() {
     Py_Finalize();
 }
 
-void CScriptHandler::executeScript(std::string script, boost::python::api::object nameSpace) {
-    if (nameSpace.is_none()) {
-        boost::python::exec(script.append("\n").c_str(), main_namespace);
-    } else {
-        boost::python::exec(script.append("\n").c_str(), nameSpace);
+void CScriptHandler::executeScript(std::string script, boost::python::api::object name_space) {
+    const char *string = script.append("\n").c_str();
+    if (name_space.is_none()) {
+        name_space = main_namespace;
+    }
+    if (!PyRun_String(string, Py_file_input, name_space.ptr(), name_space.ptr())) {
+        boost::python::throw_error_already_set();
     }
 }
 
@@ -56,6 +59,7 @@ std::string CScriptHandler::buildCommand(std::initializer_list<std::string> list
 }
 
 void CScriptHandler::addModule(std::string modName, std::string path) {
+    //TODO: make one simple call add one call to method
     std::shared_ptr<CCustomScriptLoader> loader = std::make_shared<CCustomScriptLoader>(modName, path);
     callFunction("sys.meta_path.append", loader);
     executeScript(vstd::join({"import", modName}, " "));

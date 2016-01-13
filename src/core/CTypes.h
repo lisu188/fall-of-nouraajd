@@ -8,19 +8,19 @@ class CTypes {
 public:
     static void initialize();
 
-    static std::unordered_map<std::string, std::function<std::shared_ptr<CGameObject>() >> &builders();
+    static std::unordered_map<std::string, std::function<std::shared_ptr<CGameObject>()>> *builders();
 
-    static std::unordered_map<std::pair<boost::typeindex::type_index, boost::typeindex::type_index>, std::shared_ptr<CSerializerBase>> serializers();
+    static std::unordered_map<std::pair<boost::typeindex::type_index, boost::typeindex::type_index>, std::shared_ptr<CSerializerBase>> *serializers();
 
     template<typename Serialized, typename Deserialized>
     static void register_serializer() {
-        serializers()[vstd::type_pair<Serialized, Deserialized>()] =
+        (*serializers())[vstd::type_pair<Serialized, Deserialized>()] =
                 std::make_shared<CSerializer<Serialized, Deserialized>>();
     }
 
     template<typename T>
     static void register_builder() {
-        builders()[T::static_meta()->name()] = []() { return std::make_shared<T>(); };
+        (*builders())[T::static_meta()->name()] = []() { return std::make_shared<T>(); };
     }
 
     template<typename T>
@@ -53,8 +53,8 @@ public:
     template<typename T>
     static void register_type() {
         static_assert(vstd::is_base_of<CGameObject, T>::value, "invalid base class");
+        //register_serializer<T>();
         register_builder<T>();
-        register_serializer<T>();
         register_consumer<T>();
         register_supplier<T>();
         register_predicate<T>();
