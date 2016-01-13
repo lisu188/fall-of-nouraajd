@@ -10,35 +10,28 @@ set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -g3")
 
 file(GLOB_RECURSE GAME_SRC ${CMAKE_SOURCE_DIR}/src/**.cpp ${CMAKE_SOURCE_DIR}/src/**.h)
 
-file(GLOB_RECURSE BOOST_PYTHON_SRC $ENV{BOOST}/libs/python/src/**.cpp)
-file(GLOB_RECURSE BOOST_FILESYSTEM_SRC $ENV{BOOST}/libs/filesystem/src/**.cpp)
-file(GLOB_RECURSE BOOST_SYSTEM_SRC $ENV{BOOST}/libs/system/src/**.cpp)
-
-set(BOOST_INCLUDEDIR $ENV{BOOST})
-set(BOOST_LIBRARYDIR $ENV{BOOST}/stage/lib)
-FIND_PACKAGE(Boost 1.60)
+find_package(Boost 1.60 COMPONENTS python filesystem system REQUIRED)
+find_package(PythonInterp REQUIRED)
+find_package(PythonLibs 3.5 REQUIRED)
 
 add_definitions("-DRAPIDJSON_ASSERT(x)")
-add_definitions(-DBOOST_DISABLE_ASSERTS)
-add_definitions(-DBOOST_PYTHON_USE_GCC_SYMBOL_VISIBILITY=1)
 
 include_directories(${Boost_INCLUDE_DIRS})
-include_directories($ENV{PYTHON}/include)
+include_directories(${PYTHON_INCLUDE_DIRS})
 
 include_directories(${CMAKE_SOURCE_DIR}/src)
 
 include_directories(${CMAKE_SOURCE_DIR}/../vstd)
 include_directories(${CMAKE_SOURCE_DIR}/../rapidjson/include)
 
-add_executable(game ${GAME_SRC} ${BOOST_PYTHON_SRC} ${BOOST_SYSTEM_SRC} ${BOOST_FILESYSTEM_SRC})
-
-target_link_libraries(game $ENV{PYTHON}/libs/libpython35.a)
+python_add_module(_game ${GAME_SRC})
+target_link_libraries(_game ${Boost_LIBRARIES} ${PYTHON_LIBRARIES})
 
 file(COPY res/config DESTINATION .)
 file(COPY res/images DESTINATION .)
 file(COPY res/maps DESTINATION .)
-file(COPY res/scripts DESTINATION .)
+file(COPY res/plugins DESTINATION .)
+file(COPY res/game DESTINATION .)
+file(COPY run.py DESTINATION .)
 
-set_target_properties(game PROPERTIES COTIRE_PREFIX_HEADER_IGNORE_PATH ${CMAKE_SOURCE_DIR}\;$ENV{BOOST}/boost/preprocessor/iteration/detail/local.hpp\;$ENV{BOOST}/boost/detail/utf8_codecvt_facet.hpp) #this file was causing errors
-
-cotire(game)
+cotire(_game)

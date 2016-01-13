@@ -1,5 +1,4 @@
 #include "loader/CGameLoader.h"
-#include "core/CTypes.h"
 
 //TODO:
 namespace vstd {
@@ -35,11 +34,4 @@ namespace vstd {
     }
 }
 
-int main(int argc, char *argv[]) {
-    PY_UNSAFE(
-            CTypes::initialize();
-            CGameLoader::loadGame();
-            return 0;
-    )
-}
 

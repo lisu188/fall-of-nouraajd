@@ -1,8 +1,3 @@
-from _game import *
-
-def load(context):
-    pass
-
 def register(context):
     def register_wrapper(f):
         context.getObjectHandler().registerType(f.__name__,f)

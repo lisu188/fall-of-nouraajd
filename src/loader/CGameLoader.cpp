@@ -12,9 +12,6 @@ std::shared_ptr<CGame> CGameLoader::loadGame() {
 
 void CGameLoader::startGame(std::shared_ptr<CGame> game, std::string file, std::string player) {
     game->setMap(CMapLoader::loadNewMap(game, file, player));
-    vstd::call_later([game]() {
-        game->getMap()->ensureSize();
-    });
 }
 
 void CGameLoader::changeMap(std::shared_ptr<CGame> game, std::string name) {
@@ -27,7 +24,6 @@ void CGameLoader::changeMap(std::shared_ptr<CGame> game, std::string name) {
                             std::shared_ptr<CPlayer> player = game->getMap()->getPlayer();
                             game->setMap(CMapLoader::loadNewMap(game, name));
                             game->getMap()->setPlayer(player);
-                            game->getMap()->ensureSize();
                         });
     });
 }
@@ -46,8 +42,8 @@ void CGameLoader::initObjectHandler(std::shared_ptr<CObjectHandler> handler) {
 
 void CGameLoader::initScriptHandler(std::shared_ptr<CScriptHandler> handler, std::shared_ptr<CGame> game) {
     for (std::string script:CResourcesProvider::getInstance()->getFiles(CResType::SCRIPT)) {
-        std::string modName = boost::filesystem::path(script).stem().string();
-        handler->import(modName);
-        handler->callFunction(vstd::join({modName, "load"}, "."), game);
+        std::string mod_name = boost::filesystem::path(script).stem().string();
+        handler->import(mod_name);
+        handler->call_function(vstd::join({mod_name, "load"}, "."), game);
     }
 }

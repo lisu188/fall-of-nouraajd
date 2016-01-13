@@ -1,29 +1,8 @@
 #include "core/CGlobal.h"
-#include "CScripting.h"
 #include "core/CGame.h"
+#include "scripting/CWrapper.h"
 
 using namespace boost::python;
-
-BOOST_PYTHON_MODULE (_core) {
-    class_<AScriptLoader, boost::noncopyable, std::shared_ptr<AScriptLoader>>("AScriptLoader", no_init)
-            .def("exec_module", &AScriptLoader::exec_module)
-            .def("find_spec", &AScriptLoader::find_spec)
-            .def("__eq__", &AScriptLoader::__eq__);
-    class_<ModuleSpec, boost::noncopyable, std::shared_ptr<ModuleSpec>>("ModuleSpec", no_init)
-            .add_property("loader", make_function(&ModuleSpec::loader))
-            .def_readonly("name", &ModuleSpec::name)
-            .def_readonly("submodule_search_locations", &ModuleSpec::sub_module_search)
-            .def_readonly("has_location", &ModuleSpec::has_location)
-            .def_readonly("cached", &ModuleSpec::cached);
-    class_ < CScriptLoader, bases < AScriptLoader >, boost::noncopyable, std::shared_ptr<CScriptLoader>>
-    ("CScriptLoader");
-    class_ < CCustomScriptLoader, bases < AScriptLoader >, boost::noncopyable, std::shared_ptr<CCustomScriptLoader>>
-    ("CCustomScriptLoader", no_init);
-}
-
-
-#ifdef DEBUG_MODE
-#endif
 
 BOOST_PYTHON_MODULE (_game) {
     def("randint", randint);

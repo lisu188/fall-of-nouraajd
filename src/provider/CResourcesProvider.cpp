@@ -33,27 +33,37 @@ std::string CResourcesProvider::get_path(std::string path) {
 std::set<std::string> CResourcesProvider::getFiles(CResType type) {
     std::set<std::string> retValue;
     std::string folderName;
+    std::string suffix;
+    //TODO: do not traverse for .py files and return directories for maps
     switch (type) {
         case CONFIG:
             folderName = "config";
+            suffix = "json";
             break;
         case SCRIPT:
-            folderName = "scripts";
+            folderName = "plugins";
+            suffix = "py";
             break;
         case IMAGE:
             folderName = "images";
+            suffix = "png";
             break;
         case MAP:
             folderName = "maps";
+            suffix = "map";
             break;
         case SAVE:
             folderName = "save";
+            suffix = "sav";
             break;
     }
     boost::filesystem::recursive_directory_iterator dir(folderName), end;
     while (dir != end) {
         if (!boost::filesystem::is_directory(dir->path())) {
-            retValue.insert(dir->path().string());
+            auto pt = dir->path().string();
+            if (vstd::ends_with(pt, vstd::join({".", suffix}, ""))) {
+                retValue.insert(pt);
+            }
         }
         dir++;
     }

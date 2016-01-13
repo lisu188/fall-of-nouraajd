@@ -26,8 +26,9 @@ std::shared_ptr<CMap> CMapLoader::loadNewMap(std::shared_ptr<CGame> game, std::s
     std::shared_ptr<CMap> map = std::make_shared<CMap>(game);
     std::string path = vstd::join({"maps/", name}, "");
     map->getObjectHandler()->registerConfig(vstd::join({path, "/config.json"}, ""));
-    map->getGame()->getScriptHandler()->addModule(name, vstd::join({path, "/script.py"}, ""));
-    map->getGame()->getScriptHandler()->callFunction(vstd::join({name, ".load"}, ""), map);
+    //TODO: make plugin system
+    //map->getGame()->getScriptHandler()->addModule(name, vstd::join({path, "/script.py"}, ""));
+    map->getGame()->getScriptHandler()->call_function(vstd::join({name, ".load"}, ""), map);
     std::shared_ptr<Value> mapc = CConfigurationProvider::getConfig(vstd::join({path, "/map.json"}, ""));
     loadFromTmx(map, mapc);
     return map;
@@ -38,7 +39,7 @@ std::shared_ptr<CMap> CMapLoader::loadNewMap(std::shared_ptr<CGame> game, std::s
 //  std::string path="save/"+name+".sav";
 //  map->getObjectHandler()->registerConfig ( path+"/config.json" );
 //  map->getGame()->getScriptHandler()->addModule ( name,path+"/script.py" );
-//  map->getGame()->getScriptHandler()->callFunction ( name+".load",map );
+//  map->getGame()->getScriptHandler()->call_function ( name+".load",map );
 //  std::shared_ptr<Value> mapc=CConfigurationProvider::getConfig ( path+"/map.json" );
 //  loadFromTmx ( map, mapc );
 //  return map;
