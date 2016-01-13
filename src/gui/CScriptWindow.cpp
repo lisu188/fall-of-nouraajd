@@ -12,5 +12,5 @@
 //}
 //
 //void CScriptWindow::on_executeButton_clicked() {
-//    game->getScriptHandler()->callCreatedFunction ( ui->scriptArea->toPlainText(), {"game"}, game );
+//    game->getScriptHandler()->call_created_function ( ui->scriptArea->toPlainText(), {"game"}, game );
 //}

@@ -47,8 +47,6 @@ public:
 
     void removeObject(std::shared_ptr<CMapObject> mapObject);
 
-    void ensureSize();
-
     std::shared_ptr<CGame> getGame() const;
 
     void mapUp();

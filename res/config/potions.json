@@ -1,82 +1,82 @@
 {
-    "FullLifePotion": {
-        "class": "LifePotion",
-        "properties": {
-            "animation": "images/items/potions/life",
-            "power": 5,
-            "singleUse": true
-        }
-    },
-    "FullManaPotion": {
-        "class": "ManaPotion",
-        "properties": {
-            "animation": "images/items/potions/mana",
-            "power": 5,
-            "singleUse": true
-        }
-    },
-    "GreaterLifePotion": {
-        "class": "LifePotion",
-        "properties": {
-            "animation": "images/items/potions/life",
-            "power": 3,
-            "singleUse": true
-        }
-    },
-    "GreaterManaPotion": {
-        "class": "ManaPotion",
-        "properties": {
-            "animation": "images/items/potions/mana",
-            "power": 3,
-            "singleUse": true
-        }
-    },
-    "LesserLifePotion": {
-        "class": "LifePotion",
-        "properties": {
-            "animation": "images/items/potions/life",
-            "power": 1,
-            "singleUse": true
-        }
-    },
-    "LesserManaPotion": {
-        "class": "ManaPotion",
-        "properties": {
-            "animation": "images/items/potions/mana",
-            "power": 1,
-            "singleUse": true
-        }
-    },
-    "LifePotion": {
-        "class": "LifePotion",
-        "properties": {
-            "animation": "images/items/potions/life",
-            "power": 2,
-            "singleUse": true
-        }
-    },
-    "ManaPotion": {
-        "class": "ManaPotion",
-        "properties": {
-            "animation": "images/items/potions/mana",
-            "power": 3,
-            "singleUse": true
-        }
-    },
-    "MaxLifePotion": {
-        "class": "LifePotion",
-        "properties": {
-            "animation": "images/items/potions/life",
-            "power": 4,
-            "singleUse": true
-        }
-    },
-    "MaxManaPotion": {
-        "class": "ManaPotion",
-        "properties": {
-            "animation": "images/items/potions/mana",
-            "power": 4,
-            "singleUse": true
-        }
+  "FullLifePotion": {
+    "class": "LifePotion",
+    "properties": {
+      "animation": "images/items/potions/life",
+      "power": 5,
+      "singleUse": true
     }
+  },
+  "FullManaPotion": {
+    "class": "ManaPotion",
+    "properties": {
+      "animation": "images/items/potions/mana",
+      "power": 5,
+      "singleUse": true
+    }
+  },
+  "GreaterLifePotion": {
+    "class": "LifePotion",
+    "properties": {
+      "animation": "images/items/potions/life",
+      "power": 3,
+      "singleUse": true
+    }
+  },
+  "GreaterManaPotion": {
+    "class": "ManaPotion",
+    "properties": {
+      "animation": "images/items/potions/mana",
+      "power": 3,
+      "singleUse": true
+    }
+  },
+  "LesserLifePotion": {
+    "class": "LifePotion",
+    "properties": {
+      "animation": "images/items/potions/life",
+      "power": 1,
+      "singleUse": true
+    }
+  },
+  "LesserManaPotion": {
+    "class": "ManaPotion",
+    "properties": {
+      "animation": "images/items/potions/mana",
+      "power": 1,
+      "singleUse": true
+    }
+  },
+  "LifePotion": {
+    "class": "LifePotion",
+    "properties": {
+      "animation": "images/items/potions/life",
+      "power": 2,
+      "singleUse": true
+    }
+  },
+  "ManaPotion": {
+    "class": "ManaPotion",
+    "properties": {
+      "animation": "images/items/potions/mana",
+      "power": 3,
+      "singleUse": true
+    }
+  },
+  "MaxLifePotion": {
+    "class": "LifePotion",
+    "properties": {
+      "animation": "images/items/potions/life",
+      "power": 4,
+      "singleUse": true
+    }
+  },
+  "MaxManaPotion": {
+    "class": "ManaPotion",
+    "properties": {
+      "animation": "images/items/potions/mana",
+      "power": 4,
+      "singleUse": true
+    }
+  }
 }

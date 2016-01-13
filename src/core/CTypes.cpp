@@ -36,3 +36,11 @@ std::unordered_map<std::pair<boost::typeindex::type_index, boost::typeindex::typ
     static std::unordered_map<std::pair<boost::typeindex::type_index, boost::typeindex::type_index>, std::shared_ptr<CSerializerBase>> reg;
     return &reg;
 }
+
+namespace {
+    struct dummy {
+        dummy() {
+            CTypes::initialize();
+        }
+    } _dummy;
+}
