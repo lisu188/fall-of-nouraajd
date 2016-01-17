@@ -1,9 +1,12 @@
 #pragma once
 
 #include <Python.h>
+
 #include <boost/python.hpp>
 #include <boost/locale.hpp>
 #include <boost/filesystem.hpp>
+
+#include <SDL.h>
 
 #include <condition_variable>
 #include <deque>
