@@ -1,0 +1,22 @@
+#include "object/CMapObject.h"
+#include "core/CController.h"
+
+CTargetController::CTargetController(std::shared_ptr<CMapObject> target) : target(target) {
+
+}
+
+std::shared_ptr<vstd::future<void, Coords>> CTargetController::control(std::shared_ptr<CCreature> creature) {
+    return CSmartPathFinder::findNextStep(creature->getCoords(), target->getCoords(), [creature](const Coords &coords) {
+        return creature->getMap()->canStep(coords);
+    })->thenLater([creature](Coords coords) {
+        creature->moveTo(coords);
+    });
+}
+
+std::shared_ptr<vstd::future<void, Coords> >  CController::control(std::shared_ptr<CCreature> c) {
+
+}
+
+CTargetController::CTargetController() {
+
+}

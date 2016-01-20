@@ -1,5 +1,5 @@
-#include "CGame.h"
-#include "loader/CLoader.h"
+#include "core/CGame.h"
+#include "core/CLoader.h"
 
 CGame::CGame() {
 
@@ -10,7 +10,7 @@ CGame::~CGame() {
 }
 
 void CGame::changeMap(std::string file) {
-    CGameLoader::changeMap(this->ptr(), file);
+    CGameLoader::changeMap(this->ptr<CGame>(), file);
 }
 
 std::shared_ptr<CMap> CGame::getMap() const {
@@ -33,9 +33,6 @@ std::shared_ptr<CObjectHandler> CGame::getObjectHandler() {
     return objectHandler.get();
 }
 
-std::shared_ptr<CGame> CGame::ptr() {
-    return shared_from_this();
-}
 
 void CGame::keyPressEvent(void *event) { //TODO: implement
 //    if ( map->isMoving() ) {
@@ -81,3 +78,6 @@ void CGame::keyPressEvent(void *event) { //TODO: implement
 //    }
 }
 
+void CGame::load_plugin(std::function<std::shared_ptr<CPlugin>()> plugin) {
+    plugin()->load(this->ptr<CGame>());
+}
