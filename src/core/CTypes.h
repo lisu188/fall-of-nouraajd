@@ -53,7 +53,7 @@ public:
     template<typename T>
     static void register_type() {
         static_assert(vstd::is_base_of<CGameObject, T>::value, "invalid base class");
-        //register_serializer<T>();
+        register_serializer<T>();
         register_builder<T>();
         register_consumer<T>();
         register_supplier<T>();

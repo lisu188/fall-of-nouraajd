@@ -3,7 +3,7 @@
 #include "core/CGlobal.h"
 
 enum CResType {
-    CONFIG, MAP, SCRIPT, IMAGE, SAVE
+    CONFIG, MAP, PLUGIN, IMAGE, SAVE
 };
 
 class CResourcesProvider {

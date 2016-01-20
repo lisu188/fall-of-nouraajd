@@ -40,7 +40,7 @@ std::set<std::string> CResourcesProvider::getFiles(CResType type) {
             folderName = "config";
             suffix = "json";
             break;
-        case SCRIPT:
+        case PLUGIN:
             folderName = "plugins";
             suffix = "py";
             break;

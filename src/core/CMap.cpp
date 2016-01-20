@@ -1,7 +1,7 @@
 #include "core/CMap.h"
 #include "core/CPathFinder.h"
 #include "core/CGame.h"
-#include "controller/CControllers.h"
+#include "core/CController.h"
 
 
 CMap::CMap(std::shared_ptr<CGame> game) : game(game) {
@@ -65,7 +65,7 @@ void CMap::setPlayer(std::shared_ptr<CPlayer> player) {
 }
 
 std::shared_ptr<CLootHandler> CMap::getLootHandler() {
-    return lootHandler.get(this->ptr());
+    return lootHandler.get(this->ptr<CMap>());
 }
 
 std::shared_ptr<CObjectHandler> CMap::getObjectHandler() {
@@ -158,7 +158,7 @@ bool CMap::contains(int x, int y, int z) {
 void CMap::addObject(std::shared_ptr<CMapObject> mapObject) {
     vstd::fail_if(vstd::ctn(mapObjects, mapObject->getName()),
                   "Map object already exists: " + mapObject->getName());
-    mapObject->setMap(this->ptr());
+    mapObject->setMap(this->ptr<CMap>());
     std::shared_ptr<CCreature> creature = vstd::cast<CCreature>(mapObject);
     if (creature.get()) {
         if (creature->getLevel() == 0) {
@@ -242,7 +242,7 @@ void CMap::removeObjects(std::function<bool(std::shared_ptr<CMapObject>)> func) 
 
 void CMap::move() {
     static std::shared_ptr<vstd::future<void, void>> move = vstd::later([]() { });
-    auto map = this->ptr();
+    auto map = this->ptr<CMap>();
 
     move = move->thenLater([map]() {
         vstd::wait_until([map]() {
@@ -299,8 +299,10 @@ void CMap::resolveFights() {
     });
 }
 
-std::shared_ptr<CMap> CMap::ptr() {
-    return shared_from_this();
+void CMap::load_plugin(std::function<std::shared_ptr<CMapPlugin>()> plugin) {
+    plugin()->load(this->ptr<CMap>());
 }
 
+CMap::CMap() {
 
+}

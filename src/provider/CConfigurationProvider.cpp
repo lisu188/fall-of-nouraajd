@@ -23,5 +23,5 @@ std::shared_ptr<Value> CConfigurationProvider::getConfiguration(std::string path
 }
 
 void CConfigurationProvider::loadConfig(std::string path) {
-    this->insert(std::make_pair( path, CResourcesProvider::getInstance()->load_json(path)));
+    this->insert(std::make_pair(path, CResourcesProvider::getInstance()->load_json(path)));
 }

@@ -53,6 +53,17 @@ void CScriptHandler::add_function(std::string function_name, std::string functio
     execute_script(stream.str());
 }
 
+void CScriptHandler::add_class(std::string class_name, std::string function_code,
+                               std::initializer_list<std::string> bases) {
+    std::string def = vstd::join({"class ", class_name, "(", vstd::join(bases, ","), "):"}, "");
+    std::stringstream stream;
+    stream << def << std::endl;
+    for (std::string line:vstd::split(function_code, '\n')) {
+        stream << "\t" << line << std::endl;
+    }
+    execute_script(stream.str());
+}
+
 void CScriptHandler::import(std::string name) {
     execute_script(vstd::join({"import", name}, " "));
 }

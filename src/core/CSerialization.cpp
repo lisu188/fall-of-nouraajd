@@ -134,9 +134,9 @@ std::shared_ptr<Value> object_serialize(std::shared_ptr<CGameObject> object) {
 
 std::shared_ptr<CGameObject> object_deserialize(std::shared_ptr<CMap> map, std::shared_ptr<Value> config) {
     std::shared_ptr<CGameObject> object;
-    if (!vstd::is_empty((*config)["ref"].GetString())) {
+    if (config->HasMember("ref")&&!vstd::is_empty((*config)["ref"].GetString())) {
         object = map->getObjectHandler()->createObject(map, (*config)["ref"].GetString());
-    } else if (!vstd::is_empty((*config)["class"].GetString())) {
+    } else if (config->HasMember("class")&&!vstd::is_empty((*config)["class"].GetString())) {
         object = map->getObjectHandler()->getType((*config)["class"].GetString());
         if (object) {
             object->setName(vstd::to_hex(object));

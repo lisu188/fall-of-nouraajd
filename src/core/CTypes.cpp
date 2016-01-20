@@ -1,8 +1,9 @@
 #include "core/CTypes.h"
+#include "CController.h"
 
 void CTypes::initialize() {
     CTypes::register_type<Stats>();
-    CTypes::register_type<Damage>();
+    CTypes::register_type<Damage>();\
     CTypes::register_type<CGameObject>();
     CTypes::register_type<CMapObject>();
     CTypes::register_type<CWeapon>();
@@ -25,6 +26,12 @@ void CTypes::initialize() {
     CTypes::register_type<CMarket>();
     CTypes::register_type<CTrigger>();
     CTypes::register_type<CQuest>();
+    CTypes::register_type<CController>();
+    CTypes::register_type<CTargetController>();
+    CTypes::register_type<CPlugin>();
+    CTypes::register_type<CMapPlugin>();
+    CTypes::register_type<CGame>();
+    CTypes::register_type<CMap>();
 }
 
 std::unordered_map<std::string, std::function<std::shared_ptr<CGameObject>()>> *CTypes::builders() {

@@ -12,23 +12,30 @@ class CGameObject;
 
 class CGameEvent {
 
-    //TODO: Q_ENUMS ( Type )
 public:
-    enum Type {
-        onEnter, onTurn, onCreate, onDestroy, onLeave, onUse, onEquip, onUnequip
+    class Type {
+    public:
+        static std::string onEnter;
+        static std::string onTurn;
+        static std::string onCreate;
+        static std::string onDestroy;
+        static std::string onLeave;
+        static std::string onUse;
+        static std::string onEquip;
+        static std::string onUnequip;
     };
 
-    CGameEvent ( Type type );
+    CGameEvent(std::string type);
 
-    Type getType() const;
+    std::string getType() const;
 
 private:
-    const Type type;
+    const std::string type;
 };
 
 class CGameEventCaused : public CGameEvent {
 public:
-    CGameEventCaused ( Type type, std::shared_ptr<CGameObject> cause );
+    CGameEventCaused(std::string type, std::shared_ptr<CGameObject> cause);
 
     std::shared_ptr<CGameObject> getCause() const;
 
@@ -36,28 +43,12 @@ private:
     std::shared_ptr<CGameObject> cause;
 };
 
-struct TriggerKey {
-    TriggerKey ( std::string name, CGameEvent::Type type );
-
-    std::string name;
-    CGameEvent::Type type;
-
-    bool operator== ( const TriggerKey &other ) const;
-};
-
-namespace std {
-    template<>
-    struct hash<TriggerKey> {
-        std::size_t operator() ( const TriggerKey &triggerKey ) const;
-    };
-}
-
 class CEventHandler {
-    typedef std::unordered_multimap<TriggerKey, std::shared_ptr<CTrigger>> TriggerMap;
+    typedef std::unordered_multimap<std::pair<std::string, std::string>, std::shared_ptr<CTrigger>> TriggerMap;
 public:
-    void gameEvent ( std::shared_ptr<CMapObject> mapObject, std::shared_ptr<CGameEvent> event ) const;
+    void gameEvent(std::shared_ptr<CMapObject> mapObject, std::shared_ptr<CGameEvent> event) const;
 
-    void registerTrigger ( std::string name, std::string type, std::shared_ptr<CTrigger> trigger );
+    void registerTrigger(std::string name, std::string type, std::function<std::shared_ptr<CTrigger>()> trigger);
 
 private:
     TriggerMap triggers;

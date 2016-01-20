@@ -71,7 +71,8 @@ namespace CJsonUtil {
 
     template<typename T>
     std::shared_ptr<Value> clone(T value) {
-        return from_string(to_string(value));
+        std::string json = to_string(value);
+        return from_string(json);
     }
 
 }

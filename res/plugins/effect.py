@@ -1,9 +1,9 @@
-from game import CEffect
-from game import Damage
-from game import register
-from game import CEffect
+def load(self,context):
+    from game import CEffect
+    from game import Damage
+    from game import register
+    from game import CEffect
 
-def load(context):
     @register(context)
     class Stun(CEffect):
         def onEffect(self):

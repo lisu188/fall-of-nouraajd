@@ -81,6 +81,13 @@ namespace std {
     };
 
     template<>
+    struct hash<std::pair<std::string, std::string>> {
+        force_inline std::size_t operator()(const std::pair<std::string, std::string> &pair) const {
+            return vstd::hash_combine(pair.first, pair.second);
+        }
+    };
+
+    template<>
     struct hash<std::pair<boost::typeindex::type_index, boost::typeindex::type_index>> {
         force_inline std::size_t operator()(
                 const std::pair<boost::typeindex::type_index, boost::typeindex::type_index> &pair) const {

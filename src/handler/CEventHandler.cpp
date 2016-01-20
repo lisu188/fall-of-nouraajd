@@ -1,61 +1,58 @@
 #include "handler/CHandler.h"
 
-void CEventHandler::gameEvent ( std::shared_ptr<CMapObject> object, std::shared_ptr<CGameEvent> event ) const {
-    switch ( event->getType() ) {
-    case CGameEvent::onEnter:
-        vstd::cast<Visitable> ( object )->onEnter ( event );
-        break;
-    case CGameEvent::onLeave:
-        vstd::cast<Visitable> ( object )->onLeave ( event );
-        break;
-    case CGameEvent::onTurn:
-        vstd::cast<Turnable> ( object )->onTurn ( event );
-        break;
-    case CGameEvent::onDestroy:
-        vstd::cast<Creatable> ( object )->onDestroy ( event );
-        break;
-    case CGameEvent::onCreate:
-        vstd::cast<Creatable> ( object )->onCreate ( event );
-        break;
-    case CGameEvent::onUse:
-        vstd::cast<Usable> ( object )->onUse ( event );
-        break;
-    case CGameEvent::onEquip:
-        vstd::cast<Wearable> ( object )->onEquip ( event );
-        break;
-    case CGameEvent::onUnequip:
-        vstd::cast<Wearable> ( object )->onUnequip ( event );
-        break;
+
+std::string CGameEvent::Type::onEnter = "onEnter";
+std::string CGameEvent::Type::onTurn = "onTurn";
+std::string CGameEvent::Type::onCreate = "onCreate";
+std::string CGameEvent::Type::onDestroy = "onDestroy";
+std::string CGameEvent::Type::onLeave = "onLeave";
+std::string CGameEvent::Type::onUse = "onUse";
+std::string CGameEvent::Type::onEquip = "onEquip";
+std::string CGameEvent::Type::onUnequip = "onUnequip";
+
+
+void CEventHandler::gameEvent(std::shared_ptr<CMapObject> object, std::shared_ptr<CGameEvent> event) const {
+//TODO: maybe add reflection
+    if (event->getType() == CGameEvent::Type::onEnter) {
+        vstd::cast<Visitable>(object)->onEnter(event);
+    } else if (event->getType() == CGameEvent::Type::onLeave) {
+        vstd::cast<Visitable>(object)->onLeave(event);
+    } else if (event->getType() == CGameEvent::Type::onTurn) {
+        vstd::cast<Turnable>(object)->onTurn(event);
+    } else if (event->getType() == CGameEvent::Type::onDestroy) {
+        vstd::cast<Creatable>(object)->onDestroy(event);
+    } else if (event->getType() == CGameEvent::Type::onCreate) {
+        vstd::cast<Creatable>(object)->onCreate(event);
+    } else if (event->getType() == CGameEvent::Type::onUse) {
+        vstd::cast<Usable>(object)->onUse(event);
+    } else if (event->getType() == CGameEvent::Type::onEquip) {
+        vstd::cast<Wearable>(object)->onEquip(event);
+    } else if (event->getType() == CGameEvent::Type::onUnequip) {
+        vstd::cast<Wearable>(object)->onUnequip(event);
+    } else {
+        vstd::logger::fatal("Unrecognized event type:", event->getType());
     }
-    auto range = triggers.equal_range(TriggerKey(object->getName(), event->getType()));
-    std::for_each (
-        range.first,
-        range.second,
-    [object, event] ( TriggerMap::value_type x ) {
-        x.second->trigger ( object, event );
-    }
+
+    auto range = triggers.equal_range(std::make_pair(object->getName(), event->getType()));
+    std::for_each(
+            range.first,
+            range.second,
+            [object, event](TriggerMap::value_type x) {
+                x.second->trigger(object, event);
+            }
     );
 }
 
-void CEventHandler::registerTrigger ( std::string name, std::string type, std::shared_ptr<CTrigger> trigger ) {
-    bool ok;
-    CGameEvent::Type tp;
-    //TODO:
-//    CGameEvent::Type tp = static_cast<CGameEvent::Type>
-//                          ( CGameEvent::staticMetaObject.enumerator ( CGameEvent::staticMetaObject.indexOfEnumerator ( "Type" ) )
-//                            .keyToValue ( type.toStdString().c_str(), &ok ) );
-    if ( ok ) {
-        triggers.insert ( std::make_pair ( TriggerKey ( name, tp ), trigger ) );
-    } else {
-        vstd::logger::fatal(name, ":", type, " wrong type");
-    }
+void CEventHandler::registerTrigger(std::string name, std::string type,
+                                    std::function<std::shared_ptr<CTrigger>()> trigger) {
+    triggers.insert(std::make_pair(std::make_pair(name, type), trigger()));
 }
 
-CGameEvent::CGameEvent ( CGameEvent::Type type ) : type ( type ) {
+CGameEvent::CGameEvent(std::string type) : type(type) {
 
 }
 
-CGameEvent::Type CGameEvent::getType() const {
+std::string CGameEvent::getType() const {
     return type;
 }
 
@@ -63,17 +60,7 @@ std::shared_ptr<CGameObject> CGameEventCaused::getCause() const {
     return cause;
 }
 
-CGameEventCaused::CGameEventCaused ( CGameEvent::Type type, std::shared_ptr<CGameObject> cause ) : CGameEvent ( type ),
-    cause ( cause ) {
+CGameEventCaused::CGameEventCaused(std::string type, std::shared_ptr<CGameObject> cause) : CGameEvent(type),
+                                                                                           cause(cause) {
 
-}
-
-TriggerKey::TriggerKey ( std::string name, CGameEvent::Type type ) : name ( name ), type ( type ) { }
-
-bool TriggerKey::operator== ( const TriggerKey &other ) const {
-    return ( type == other.type && name == other.name );
-}
-
-std::size_t std::hash<TriggerKey>::operator() ( const TriggerKey &triggerKey ) const {
-    return vstd::hash_combine ( triggerKey.type, triggerKey.name );
 }

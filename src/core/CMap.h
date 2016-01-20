@@ -5,6 +5,7 @@
 #include "core/CUtil.h"
 #include "handler/CHandler.h"
 #include "provider/CProvider.h"
+#include "CPlugin.h"
 
 
 class CGame;
@@ -25,10 +26,11 @@ class CEventHandler;
 
 class CMapObject;
 
-class CMap : private std::unordered_map<Coords, std::shared_ptr<CTile>>, public std::enable_shared_from_this<CMap> {
+class CMap : public CGameObject, private std::unordered_map<Coords, std::shared_ptr<CTile>> {
     friend class CMapLoader;
-
+V_META(CMap,CGameObject,vstd::meta::empty())
 public:
+    CMap();
     CMap(std::shared_ptr<CGame> game);
 
     bool addTile(std::shared_ptr<CTile> tile, int x, int y, int z);
@@ -110,10 +112,11 @@ public:
 
     template<typename T>
     std::shared_ptr<T> createObject(std::string name) {
-        return getObjectHandler()->createObject<T>(this->ptr(), name);
+        return getObjectHandler()->createObject<T>(this->ptr<CMap>(), name);
     }
 
-    std::shared_ptr<CMap> ptr();
+
+    void load_plugin(std::function<std::shared_ptr<CMapPlugin>()> plugin);
 
 private:
     void resolveFights();

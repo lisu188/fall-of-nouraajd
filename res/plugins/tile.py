@@ -1,7 +1,7 @@
-from game import CTile
-from game import register
+def load(self,context):
+    from game import CTile
+    from game import register
 
-def load(context):
     @register(context)
     class RoadTile(CTile):
         def onStep(self,creature):
