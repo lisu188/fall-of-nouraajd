@@ -384,7 +384,7 @@ void CCreature::setItem(std::string i, std::shared_ptr<CItem> newItem) {
                   "Tried to insert" + newItem->getType() + "into slot" + i);
     std::shared_ptr<CItem> oldItem = equipped.at(i);
     if (oldItem) {
-        getMap()->getEventHandler()->gameEvent(oldItem, std::make_shared<CGameEventCaused>(CGameEvent::onUnequip,
+        getMap()->getEventHandler()->gameEvent(oldItem, std::make_shared<CGameEventCaused>(CGameEvent::Type::onUnequip,
                                                                                            this->ptr<CCreature>()));
         this->addItem(oldItem);
         if (newItem == oldItem) {
@@ -392,7 +392,7 @@ void CCreature::setItem(std::string i, std::shared_ptr<CItem> newItem) {
         }
     }
     if (newItem) {
-        getMap()->getEventHandler()->gameEvent(newItem, std::make_shared<CGameEventCaused>(CGameEvent::onEquip,
+        getMap()->getEventHandler()->gameEvent(newItem, std::make_shared<CGameEventCaused>(CGameEvent::Type::onEquip,
                                                                                            this->ptr<CCreature>()));
     }
     removeFromInventory(newItem);

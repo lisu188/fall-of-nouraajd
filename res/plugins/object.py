@@ -1,9 +1,9 @@
-from game import randint
-from game import CBuilding
-from game import Coords
-from game import register
+def load(self,context):
+    from game import randint
+    from game import CBuilding
+    from game import Coords
+    from game import register
 
-def load(context):
     @register(context)
     class Teleporter(CBuilding):
         def onEnter(self,event):

@@ -1,6 +1,7 @@
-from game import CPotion
-from game import register
-def load(context):
+def load(self,context):
+    from game import CPotion
+    from game import register
+
     @register(context)
     class LifePotion(CPotion):
         def onUse(self,event):

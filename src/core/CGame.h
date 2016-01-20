@@ -4,6 +4,7 @@
 #include "core/CUtil.h"
 #include "gui/CGui.h"
 #include "handler/CHandler.h"
+#include "core/CPlugin.h"
 
 class CGameView;
 
@@ -13,7 +14,8 @@ class CMap;
 
 class CGameObject;
 
-class CGame : public std::enable_shared_from_this<CGame> {
+class CGame : public CGameObject{
+V_META(CGame,CGameObject,vstd::meta::empty())
 public:
     CGame();
 
@@ -31,7 +33,7 @@ public:
 
     std::shared_ptr<CObjectHandler> getObjectHandler();
 
-    std::shared_ptr<CGame> ptr();
+    void load_plugin(std::function<std::shared_ptr<CPlugin>()> plugin);
 
 protected:
     virtual void keyPressEvent(void *event); //TODO: implement

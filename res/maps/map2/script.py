@@ -1,2 +1,2 @@
-def load(map):
+def load(self,context):
     pass

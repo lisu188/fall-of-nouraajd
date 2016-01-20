@@ -1,10 +1,10 @@
-from game import Damage
-from game import Stats
-from game import CInteraction
-from game import randint
-from game import register
+def load(self,context):
+    from game import Damage
+    from game import Stats
+    from game import CInteraction
+    from game import randint
+    from game import register
 
-def load(context):
     @register(context)
     class Attack(CInteraction):
         def performAction(self,first,second):

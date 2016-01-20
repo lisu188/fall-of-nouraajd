@@ -1,11 +1,11 @@
-from game import CEvent
-from game import CTrigger
-from game import CQuest
-from game import register,trigger
+def load(self,context):
+    from game import CEvent
+    from game import CTrigger
+    from game import CQuest
+    from game import register,trigger
 
-completed = False
+    context.setBoolProperty('completed',False)
 
-def load(context):
     #@register(context)
     class StartEvent(CEvent):
         def onEnter(self,event):
@@ -21,7 +21,7 @@ def load(context):
     @register(context)
     class MainQuest(CQuest):
         def isCompleted(self):
-            return completed
+            return context.getBoolProperty('completed')
 
         def onComplete(self):
             pass
@@ -30,8 +30,7 @@ def load(context):
     class GoobyTrigger(CTrigger):
         def trigger(self,object,event):
             object.getMap().getGuiHandler().showMessage("Gooby killed!!!")
-            global completed
-            completed=True
+            context.setBoolProperty('completed',True)
 
     @trigger(context, "onDestroy", "cave1")
     class CaveTrigger(CTrigger):
