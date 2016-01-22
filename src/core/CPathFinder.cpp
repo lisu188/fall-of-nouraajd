@@ -11,7 +11,7 @@ typedef std::priority_queue<Coords, std::vector<Coords>, Compare> Queue;
 typedef std::shared_ptr<std::unordered_map<Coords, int>> Values;
 
 //TODO: implement
-//static force_inline void dump ( Values values, Coords start, Coords end ) {
+//static   void dump ( Values values, Coords start, Coords end ) {
 //    int x = 0;
 //    int y = 0;
 //    double mval = 0;
@@ -38,7 +38,7 @@ typedef std::shared_ptr<std::unordered_map<Coords, int>> Values;
 //    img.save ( std::string::fromStdString ( stream.str() ), "png" );
 //}
 
-static force_inline Coords getNextStep(const Coords &start, const Coords &goal, Values values) {
+static Coords getNextStep(const Coords &start, const Coords &goal, Values values) {
     Coords target = start;
     for (Coords coords:NEAR_COORDS (start)) {
         if (vstd::ctn((*values), coords) &&
@@ -51,8 +51,8 @@ static force_inline Coords getNextStep(const Coords &start, const Coords &goal, 
     return target;
 }
 
-static force_inline Values fillValues(std::function<bool(const Coords &)> canStep,
-                                      const Coords &goal, const Coords &start) {
+static Values fillValues(std::function<bool(const Coords &)> canStep,
+                         const Coords &goal, const Coords &start) {
     Queue nodes([start](const Coords &a, const Coords &b) {
         double dista = (a.x - start.x) * (a.x - start.x) +
                        (a.y - start.y) * (a.y - start.y);

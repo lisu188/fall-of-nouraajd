@@ -113,14 +113,14 @@ public:
     serialize(boost::any
               object) override final {
         return boost::any(
-                CSerializerFunction<Serialized, Deserialized>::serialize(boost::any_cast<Deserialized>(object)));
+                CSerializerFunction<Serialized, Deserialized>::serialize(vstd::any_cast<Deserialized>(object)));
     }
 
     virtual boost::any
     deserialize(std::shared_ptr<CMap> map, boost::any
     object) override final {
         return boost::any(
-                CSerializerFunction<Serialized, Deserialized>::deserialize(map, boost::any_cast<Serialized>(object)));
+                CSerializerFunction<Serialized, Deserialized>::deserialize(map, vstd::any_cast<Serialized>(object)));
     }
 };
 
@@ -138,14 +138,14 @@ public:
     static Serialized serialize(Deserialized deserialized) {
         boost::any variant = serializer<Serialized, Deserialized>()
                 ->serialize(boost::any(deserialized));
-        return boost::any_cast<Serialized>(variant);
+        return vstd::any_cast<Serialized>(variant);
     }
 
     template<typename Serialized, typename Deserialized>
     static Deserialized deserialize(std::shared_ptr<CMap> map, Serialized serialized) {
         boost::any variant = serializer<Serialized, Deserialized>()
                 ->deserialize(map, boost::any(serialized));
-        return boost::any_cast<Deserialized>(variant);
+        return vstd::any_cast<Deserialized>(variant);
     }
 
     static void setProperty(std::shared_ptr<CGameObject> object, std::string key, std::shared_ptr<Value> value);
