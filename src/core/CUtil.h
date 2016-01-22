@@ -68,40 +68,11 @@ struct Coords {
 namespace std {
     template<>
     struct hash<Coords> {
-        force_inline std::size_t  operator()(const Coords &coords) const {
+        std::size_t  operator()(const Coords &coords) const {
             return vstd::hash_combine(coords.x, coords.y, coords.z);
-        }
-    };
-
-    template<>
-    struct hash<std::pair<int, int>> {
-        force_inline std::size_t operator()(const std::pair<int, int> &pair) const {
-            return vstd::hash_combine(pair.first, pair.second);
-        }
-    };
-
-    template<>
-    struct hash<std::pair<std::string, std::string>> {
-        force_inline std::size_t operator()(const std::pair<std::string, std::string> &pair) const {
-            return vstd::hash_combine(pair.first, pair.second);
-        }
-    };
-
-    template<>
-    struct hash<std::pair<boost::typeindex::type_index, boost::typeindex::type_index>> {
-        force_inline std::size_t operator()(
-                const std::pair<boost::typeindex::type_index, boost::typeindex::type_index> &pair) const {
-            return vstd::hash_combine(pair.first, pair.second);
-        }
-    };
-
-    template<>
-    struct hash<boost::typeindex::type_index> {
-        force_inline std::size_t operator()(const boost::typeindex::type_index &ind) const {
-            return ind.hash_code();
         }
     };
 }
 
 template<typename T=void>
-force_inline int randint(int i, int j) { return rand() % (j - i + 1) + i; }
+int randint(int i, int j) { return rand() % (j - i + 1) + i; }

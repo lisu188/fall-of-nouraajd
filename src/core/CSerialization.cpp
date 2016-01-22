@@ -87,12 +87,12 @@ void CSerialization::setOtherProperty(boost::typeindex::type_index serializedId,
 
 void CSerialization::setProperty(std::shared_ptr<Value> conf, std::string propertyName, boost::any propertyValue) {
     if (propertyValue.type() == boost::typeindex::type_id<int>()) {
-        (*conf)[propertyName.c_str()].SetInt(boost::any_cast<int>(propertyValue));
+        (*conf)[propertyName.c_str()].SetInt(vstd::any_cast<int>(propertyValue));
     } else if (propertyValue.type() == boost::typeindex::type_id<std::string>()) {
-        (*conf)[propertyName.c_str()].SetString(boost::any_cast<std::string>(propertyValue).c_str(),
-                                                boost::any_cast<std::string>(propertyValue).length());
+        (*conf)[propertyName.c_str()].SetString(vstd::any_cast<std::string>(propertyValue).c_str(),
+                                                vstd::any_cast<std::string>(propertyValue).length());
     } else if (propertyValue.type() == boost::typeindex::type_id<bool>()) {
-        (*conf)[propertyName.c_str()].SetBool(boost::any_cast<bool>(propertyValue));
+        (*conf)[propertyName.c_str()].SetBool(vstd::any_cast<bool>(propertyValue));
     } else if (false) {
         //TODO: implement list
     }
@@ -107,7 +107,7 @@ void CSerialization::setProperty(std::shared_ptr<Value> conf, std::string proper
                 serializer = entry.second;
             }
         }
-        auto ob = boost::any_cast<std::shared_ptr<Value>>(
+        auto ob = vstd::any_cast<std::shared_ptr<Value>>(
                 vstd::not_null(serializer, "No serializer!")->serialize(propertyValue));
         for (auto m = ob->MemberBegin(); m != ob->MemberEnd(); m++) {
             //TODO: rewrite object
