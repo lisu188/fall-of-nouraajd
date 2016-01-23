@@ -5,9 +5,7 @@
 class CQuest;
 
 class CPlayer : public CCreature {
-
-
-    friend class PlayerStatsView;
+V_META(CPlayer, CCreature, vstd::meta::empty())
 
 public:
     CPlayer();
@@ -55,4 +53,4 @@ private:
     Coords next;
 };
 
-GAME_PROPERTY (CPlayer)
+

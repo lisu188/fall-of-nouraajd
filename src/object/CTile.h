@@ -52,4 +52,4 @@ private:
     void setXYZ(int x, int y, int z);
 };
 
-GAME_PROPERTY (CTile)
+

@@ -56,7 +56,6 @@ private:
     int slot = 0;
 };
 
-GAME_PROPERTY (CItem)
 
 class CArmor : public CItem {
 
@@ -68,7 +67,6 @@ public:
     CArmor(std::string name);
 };
 
-GAME_PROPERTY (CArmor)
 
 class CBelt : public CItem {
 
@@ -78,7 +76,6 @@ public:
     CBelt(const CBelt &);
 };
 
-GAME_PROPERTY (CBelt)
 
 class CHelmet : public CItem {
 
@@ -88,7 +85,6 @@ public:
     CHelmet(const CHelmet &);
 };
 
-GAME_PROPERTY (CHelmet)
 
 class CBoots : public CItem {
 
@@ -98,7 +94,6 @@ public:
     CBoots(const CBoots &);
 };
 
-GAME_PROPERTY (CBoots)
 
 class CGloves : public CItem {
 
@@ -108,7 +103,6 @@ public:
     CGloves(const CGloves &);
 };
 
-GAME_PROPERTY (CGloves)
 
 class CWeapon : public CItem {
 
@@ -118,7 +112,6 @@ public:
     CWeapon(const CWeapon &);
 };
 
-GAME_PROPERTY (CWeapon)
 
 class CSmallWeapon : public CWeapon {
 
@@ -128,7 +121,6 @@ public:
     CSmallWeapon(const CSmallWeapon &);
 };
 
-GAME_PROPERTY (CSmallWeapon)
 
 class CScroll : public CItem {
 
@@ -151,7 +143,6 @@ private:
     std::string text;
 };
 
-GAME_PROPERTY (CScroll)
 
 class CPotion : public CItem {
 
@@ -161,4 +152,3 @@ public:
     CPotion(const CPotion &);
 };
 
-GAME_PROPERTY (CPotion)
