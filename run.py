@@ -1,3 +1,5 @@
 #!/usr/bin/python3
 import game
-game.CGameLoader.startGame(game.CGameLoader.loadGame(),"map1","Warrior")
+g=game.CGameLoader.loadGame()
+game.CGameLoader.startGame(g,"map1","Warrior")
+g.getMap().move()
