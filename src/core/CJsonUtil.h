@@ -17,9 +17,9 @@ namespace CJsonUtil {
 
     template<typename T>
     bool isRef(T object) {
-        if (object->Size() == 1) {
+        if (object->MemberCount() == 1) {
             return hasStringProp(object, "ref");
-        } else if (object->Size() == 2) {
+        } else if (object->MemberCount() == 2) {
             return hasObjectProp(object, "properties") && hasStringProp(object, "ref");
         }
         return false;
@@ -27,9 +27,9 @@ namespace CJsonUtil {
 
     template<typename T>
     bool isType(T object) {
-        if (object->Size() == 1) {
+        if (object->MemberCount() == 1) {
             return hasStringProp(object, "class");
-        } else if (object->Size() == 2) {
+        } else if (object->MemberCount() == 2) {
             return hasObjectProp(object, "properties") && hasStringProp(object, "class");
         }
         return false;

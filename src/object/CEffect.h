@@ -53,4 +53,4 @@ private:
     bool buff = false;
 };
 
-GAME_PROPERTY (CEffect)
+

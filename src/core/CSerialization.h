@@ -150,8 +150,9 @@ public:
 
     static void setProperty(std::shared_ptr<CGameObject> object, std::string key, std::shared_ptr<Value> value);
 
-    static void setProperty(std::shared_ptr<Value> conf, std::string propertyName, boost::any
+    static void setProperty(std::shared_ptr<Document> conf, std::string propertyName, boost::any
     propertyValue);
+
 
 private:
     static boost::typeindex::type_index getProperty(std::shared_ptr<CGameObject> object, std::string name);

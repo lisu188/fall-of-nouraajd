@@ -42,5 +42,5 @@ private:
     std::shared_ptr<CEffect> effect;
 };
 
-GAME_PROPERTY (CInteraction)
+
 

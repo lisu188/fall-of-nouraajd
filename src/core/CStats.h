@@ -130,7 +130,6 @@ private:
     std::string mainStat;
 };
 
-GAME_PROPERTY (Stats)
 
 class Damage : public CGameObject {
 
@@ -171,4 +170,4 @@ public:
     void setNormal(int value);
 };
 
-GAME_PROPERTY (Damage)
+

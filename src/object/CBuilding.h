@@ -1,6 +1,6 @@
 #pragma once
 
-#include"CMapObject.h"
+#include "CMapObject.h"
 
 class CBuilding : public CMapObject, public Visitable {
 
@@ -25,4 +25,4 @@ protected:
     bool enabled = true;
 };
 
-GAME_PROPERTY (CBuilding)
+

@@ -3,7 +3,7 @@
 #include "CCreature.h"
 
 class CMonster : public CCreature {
-
+V_META(CMonster, CCreature, vstd::meta::empty())
 public:
     CMonster();
 
@@ -16,4 +16,4 @@ public:
     virtual Coords getNextMove();
 };
 
-GAME_PROPERTY (CMonster)
+
