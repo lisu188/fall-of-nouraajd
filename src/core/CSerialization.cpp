@@ -81,62 +81,95 @@ void CSerialization::setOtherProperty(boost::typeindex::type_index serializedId,
                                       std::string key, boost::any value) {
     std::shared_ptr<CSerializerBase> serializer = (*CTypes::serializers())[std::make_pair(serializedId,
                                                                                           deserializedId)];
-    value = vstd::not_null(serializer, "No serializer!")->deserialize(object->getMap(), value);
-    object->setProperty(key, value);
+    boost::any result = vstd::not_null(serializer, "No serializer!")->deserialize(object->getMap(), value);
+    if (CTypes::is_pointer_type(result.type())) {
+        object->setProperty(key, vstd::any_cast<std::shared_ptr<CGameObject>>(result));
+    } else if (CTypes::is_array_type(result.type())) {
+        object->setProperty(key, vstd::any_cast<std::set<std::shared_ptr<CGameObject>>>(result));
+    } else if (CTypes::is_map_type(result.type())) {
+        object->setProperty(key, vstd::any_cast<std::map<std::string, std::shared_ptr<CGameObject>>>(result));
+    } else {
+        vstd::logger::fatal();
+    }
+
 }
 
-void CSerialization::setProperty(std::shared_ptr<Value> conf, std::string propertyName, boost::any propertyValue) {
+void add_member(std::shared_ptr<Document> object, std::string key, std::string value) {
+    object->AddMember(Value(key.c_str(), key.length()), Value(value.c_str(), value.length()), object->GetAllocator());
+}
+
+void add_member(std::shared_ptr<Document> object, std::string key, std::shared_ptr<Value> value) {
+    object->AddMember(Value(key.c_str(), key.length()), *value, object->GetAllocator());
+}
+
+void add_member(std::shared_ptr<Document> object, std::string key, bool value) {
+    object->AddMember(Value(key.c_str(), key.length()), Value(value), object->GetAllocator());
+}
+
+void add_member(std::shared_ptr<Document> object, std::string key, int value) {
+    object->AddMember(Value(key.c_str(), key.length()), Value(value), object->GetAllocator());
+}
+
+void add_arr_member(std::shared_ptr<Document> object, std::string value) {
+    object->PushBack(Value(value.c_str(), value.length()), object->GetAllocator());
+}
+
+void add_arr_member(std::shared_ptr<Document> object, std::shared_ptr<Value> value) {
+    object->PushBack(*value, object->GetAllocator());
+}
+
+void add_arr_member(std::shared_ptr<Document> object, bool value) {
+    object->PushBack(Value(value), object->GetAllocator());
+}
+
+void add_arr_member(std::shared_ptr<Document> object, int value) {
+    object->PushBack(Value(value), object->GetAllocator());
+}
+
+void CSerialization::setProperty(std::shared_ptr<Document> conf, std::string propertyName, boost::any propertyValue) {
     if (propertyValue.type() == boost::typeindex::type_id<int>()) {
-        (*conf)[propertyName.c_str()].SetInt(vstd::any_cast<int>(propertyValue));
+        add_member(conf, propertyName, vstd::any_cast<int>(propertyValue));
     } else if (propertyValue.type() == boost::typeindex::type_id<std::string>()) {
-        (*conf)[propertyName.c_str()].SetString(vstd::any_cast<std::string>(propertyValue).c_str(),
-                                                vstd::any_cast<std::string>(propertyValue).length());
+        add_member(conf, propertyName, vstd::any_cast<std::string>(propertyValue));
     } else if (propertyValue.type() == boost::typeindex::type_id<bool>()) {
-        (*conf)[propertyName.c_str()].SetBool(vstd::any_cast<bool>(propertyValue));
-    } else if (false) {
-        //TODO: implement list
-    }
-    if (false) {
-        //TODO: implement map
+        add_member(conf, propertyName, vstd::any_cast<bool>(propertyValue));
     } else {
         std::shared_ptr<CSerializerBase> serializer;
         for (std::pair<std::pair<boost::typeindex::type_index, boost::typeindex::type_index>, std::shared_ptr<CSerializerBase>> entry:*CTypes::serializers()) {
-            std::pair<boost::typeindex::type_index, boost::typeindex::type_index> types = entry.first;
+            auto types = entry.first;
             if (types.second == propertyValue.type()) {
                 vstd::fail_if(serializer, "Ambigous serializer!");
                 serializer = entry.second;
             }
         }
-        auto ob = vstd::any_cast<std::shared_ptr<Value>>(
-                vstd::not_null(serializer, "No serializer!")->serialize(propertyValue));
-        for (auto m = ob->MemberBegin(); m != ob->MemberEnd(); m++) {
-            //TODO: rewrite object
-        }
+        add_member(conf, propertyName, vstd::any_cast<std::shared_ptr<Value>>(
+                vstd::not_null(serializer, "No serializer!")->serialize(propertyValue)));
     }
 }
 
 std::shared_ptr<Value> object_serialize(std::shared_ptr<CGameObject> object) {
-    std::shared_ptr<Value> conf = std::make_shared<Value>();
+    std::shared_ptr<Document> conf = std::make_shared<Document>();
     conf->SetObject();
     if (object) {
-        (*conf)["class"].SetString(object->getType().c_str(), object->getType().length());
-        std::shared_ptr<Value> properties = std::make_shared<Value>();
+        add_member(conf, "class", object->getType());
+        std::shared_ptr<Document> properties = std::make_shared<Document>();
+        properties->SetObject();
         for (std::shared_ptr<vstd::property> property: object->meta()->properties<CGameObject>(object)) {
             if (property->name() != "name" && property->name() != "type") {
                 CSerialization::setProperty(properties, property->name(),
                                             object->getProperty<boost::any>(property->name()));
             }
         }
-        (*conf)["properties"] = *properties;
+        add_member(conf, "properties", properties);
     }
     return conf;
 }
 
 std::shared_ptr<CGameObject> object_deserialize(std::shared_ptr<CMap> map, std::shared_ptr<Value> config) {
     std::shared_ptr<CGameObject> object;
-    if (config->HasMember("ref")&&!vstd::is_empty((*config)["ref"].GetString())) {
+    if (config->IsObject() && config->HasMember("ref") && !vstd::is_empty((*config)["ref"].GetString())) {
         object = map->getObjectHandler()->createObject(map, (*config)["ref"].GetString());
-    } else if (config->HasMember("class")&&!vstd::is_empty((*config)["class"].GetString())) {
+    } else if (config->IsObject() && config->HasMember("class") && !vstd::is_empty((*config)["class"].GetString())) {
         object = map->getObjectHandler()->getType((*config)["class"].GetString());
         if (object) {
             object->setName(vstd::to_hex(object));
@@ -144,8 +177,8 @@ std::shared_ptr<CGameObject> object_deserialize(std::shared_ptr<CMap> map, std::
             object->setMap(map);
         }
     }
-    if (object) {
-        Value *properties = &(*config)["properties"];
+    if (object && config->IsObject() && config->HasMember("properties")) {
+        auto properties = &(*config)["properties"];
         for (auto it = properties->MemberBegin(); it != properties->MemberEnd(); it++) {
             CSerialization::setProperty(object, it->name.GetString(), CJsonUtil::clone(&it->value));
         }
@@ -154,11 +187,11 @@ std::shared_ptr<CGameObject> object_deserialize(std::shared_ptr<CMap> map, std::
 }
 
 std::shared_ptr<Value> map_serialize(std::map<std::string, std::shared_ptr<CGameObject> > object) {
-    std::shared_ptr<Value> ob = std::make_shared<Value>();
+    std::shared_ptr<Document> ob = std::make_shared<Document>();
     ob->SetObject();
     for (std::pair<std::string, std::shared_ptr<CGameObject>> it:object) {
-        (*ob)[it.first.c_str()] = *CSerializerFunction<std::shared_ptr<Value>, std::shared_ptr<CGameObject>>::serialize(
-                it.second);
+        add_member(ob, it.first,
+                   CSerializerFunction<std::shared_ptr<Value>, std::shared_ptr<CGameObject>>::serialize(it.second));
     }
     return ob;
 }
@@ -174,11 +207,11 @@ std::map<std::string, std::shared_ptr<CGameObject> > map_deserialize(std::shared
 }
 
 std::shared_ptr<Value> array_serialize(std::set<std::shared_ptr<CGameObject> > set) {
-    std::shared_ptr<Value> arr = std::make_shared<Value>();
+    std::shared_ptr<Document> arr = std::make_shared<Document>();
     arr->SetArray();
     SizeType index = 0;
     for (std::shared_ptr<CGameObject> ob:set) {
-        (*arr)[index++] = *CSerializerFunction<std::shared_ptr<Value>, std::shared_ptr<CGameObject>>::serialize(ob);
+        add_arr_member(arr, CSerializerFunction<std::shared_ptr<Value>, std::shared_ptr<CGameObject>>::serialize(ob));
     }
     return arr;
 }
@@ -186,10 +219,10 @@ std::shared_ptr<Value> array_serialize(std::set<std::shared_ptr<CGameObject> > s
 std::set<std::shared_ptr<CGameObject> > array_deserialize(std::shared_ptr<CMap> map,
                                                           std::shared_ptr<Value> object) {
     std::set<std::shared_ptr<CGameObject> > objects;
-    for (auto it = object->MemberBegin(); it != object->MemberEnd(); it++) {
+    for (auto it = object->Begin(); it != object->End(); it++) {
         objects.insert(CSerializerFunction<std::shared_ptr<Value>, std::shared_ptr<CGameObject>>::deserialize(map,
                                                                                                               CJsonUtil::clone(
-                                                                                                                      &it->value)));
+                                                                                                                      &*it)));
     }
     return objects;
 }

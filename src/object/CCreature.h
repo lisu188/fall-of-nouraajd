@@ -254,4 +254,4 @@ protected:
     void defeatedCreature(std::shared_ptr<CCreature> creature);
 };
 
-GAME_PROPERTY (CCreature)
+

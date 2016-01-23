@@ -12,4 +12,4 @@ public:
     virtual void onComplete();
 };
 
-GAME_PROPERTY (CQuest)
+

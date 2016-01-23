@@ -62,5 +62,4 @@ public:
     void moveTo(Coords coords);
 };
 
-GAME_PROPERTY (CMapObject)
 

@@ -2,7 +2,6 @@
 
 #include "core/CGlobal.h"
 #include "core/CUtil.h"
-#include "core/CDefines.h"
 
 
 class CGameEvent;
@@ -106,7 +105,6 @@ private:
     std::weak_ptr<CMap> map;
 };
 
-GAME_PROPERTY (CGameObject)
 
 class Visitable {
 public:
