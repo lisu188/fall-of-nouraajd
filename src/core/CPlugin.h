@@ -2,7 +2,7 @@
 
 #include "object/CGameObject.h"
 #include "CGlobal.h"
-#include "provider/CResourcesProvider.h"
+#include "core/CProvider.h"
 
 class CGame;
 
