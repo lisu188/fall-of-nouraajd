@@ -4,7 +4,7 @@
 
 #include "core/CUtil.h"
 #include "handler/CHandler.h"
-#include "provider/CProvider.h"
+#include "core/CProvider.h"
 #include "CPlugin.h"
 
 
