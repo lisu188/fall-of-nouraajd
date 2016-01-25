@@ -17,6 +17,7 @@ def load(self,context):
         def onEnter(self,event):
             self.getMap().getPlayer().trade(self.getObjectProperty("market"))
 
+    #TODO: make monster a prototype and clone it
     @register(context)
     class Cave(CBuilding):
         def onEnter(self,event):
@@ -40,5 +41,10 @@ def load(self,context):
             enabled=self.getBoolProperty("enabled");
             if enabled and monsters >0 and (randint(1,100)) <= chance:
                 location=self.getCoords()
-                self.getMap().addObjectByName(monster,Coords(location.x,location.y,location.z));
+                mon=self.getMap().createObject(monster)
+                controller=self.getMap().createObject('CRangeController')
+                controller.setObjectProperty('target',self.ptr())
+                mon.setObjectProperty('controller',controller)
+                self.getMap().addObject(mon)
+                mon.moveTo(location.x,location.y,location.z)
                 self.incProperty("monsters",-1);

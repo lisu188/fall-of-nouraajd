@@ -4,52 +4,9 @@
 #include "core/CPlugin.h"
 #include "object/CObject.h"
 
-class CInteractionWrapper : public CInteraction, public boost::python::wrapper<CInteractionWrapper> {
-public:
-    virtual void performAction(std::shared_ptr<CCreature> first, std::shared_ptr<CCreature> second) override final;
-
-    virtual bool configureEffect(std::shared_ptr<CEffect> effect) override final;
-};
-
-class CEffectWrapper : public CEffect, public boost::python::wrapper<CEffectWrapper> {
-public:
-    virtual bool onEffect() override final;
-};
-
-class CTileWrapper : public CTile, public boost::python::wrapper<CTileWrapper> {
-public:
-    virtual void onStep(std::shared_ptr<CCreature> creature) override final;
-};
-
-class CPotionWrapper : public CPotion, public boost::python::wrapper<CPotionWrapper> {
-public:
-    virtual void onUse(std::shared_ptr<CGameEvent> event) override final;
-};
-
-class CTriggerWrapper : public CTrigger, public boost::python::wrapper<CTriggerWrapper> {
-public:
-    virtual void trigger(std::shared_ptr<CGameObject> object, std::shared_ptr<CGameEvent> event) override final;
-};
-
-class CQuestWrapper : public CQuest, public boost::python::wrapper<CQuestWrapper> {
-public:
-    virtual bool isCompleted() override final;
-
-    virtual void onComplete() override final;
-};
-
-class CPluginWrapper : public CPlugin, public boost::python::wrapper<CPluginWrapper> {
-public:
-    virtual void load(std::shared_ptr<CGame> game) override final;
-};
-
-class CMapPluginWrapper : public CMapPlugin, public boost::python::wrapper<CMapPluginWrapper> {
-public:
-    virtual void load(std::shared_ptr<CMap> map) override final;
-};
-
 template<class T>
 class CWrapper : public T, public boost::python::wrapper<CWrapper<T>> {
+V_META(CWrapper<T>, vstd::meta::empty, vstd::meta::empty())
 public:
     virtual void onEnter(std::shared_ptr<CGameEvent> event) override final {
         if (auto f = this->get_override("onEnter")) {
@@ -88,6 +45,128 @@ public:
             PY_SAFE (f(event);)
         } else {
             this->T::onLeave(event);
+        }
+    }
+};
+
+template<>
+class CWrapper<CInteraction> : public CInteraction, public boost::python::wrapper<CWrapper<CInteraction>> {
+V_META(CWrapper<T>, vstd::meta::empty, vstd::meta::empty())
+public:
+    void performAction(std::shared_ptr<CCreature> first, std::shared_ptr<CCreature> second) override final {
+        if (auto f = this->get_override("performAction")) {
+            PY_SAFE (f(first, second);)
+        } else {
+            this->CInteraction::performAction(first, second);
+        }
+    }
+
+    bool configureEffect(std::shared_ptr<CEffect> effect) override final {
+        if (auto f = this->get_override("configureEffect")) {
+            PY_SAFE_RET_VAL (return f(effect);, false)
+        } else {
+            return this->CInteraction::configureEffect(effect);
+        }
+    }
+};
+
+template<>
+class CWrapper<CEffect> : public CEffect, public boost::python::wrapper<CWrapper<CEffect>> {
+V_META(CWrapper<T>, vstd::meta::empty, vstd::meta::empty())
+public:
+    bool onEffect() override final {
+        if (auto f = this->get_override("onEffect")) {
+            PY_SAFE_RET_VAL (return f();, false)
+        } else {
+            return this->CEffect::onEffect();
+        }
+    }
+
+};
+
+template<>
+class CWrapper<CTile> : public CTile, public boost::python::wrapper<CWrapper<CTile>> {
+V_META(CWrapper<T>, vstd::meta::empty, vstd::meta::empty())
+public:
+    void onStep(std::shared_ptr<CCreature> creature) override final {
+        if (auto f = this->get_override("onStep")) {
+            PY_SAFE (f(creature);)
+        } else {
+            this->CTile::onStep(creature);
+        }
+    }
+
+};
+
+template<>
+class CWrapper<CPotion> : public CPotion, public boost::python::wrapper<CWrapper<CPotion>> {
+V_META(CWrapper<T>, vstd::meta::empty, vstd::meta::empty())
+public:
+    void onUse(std::shared_ptr<CGameEvent> event) override final {
+        if (auto f = this->get_override("onUse")) {
+            PY_SAFE (f(event);)
+        } else {
+            this->CPotion::onUse(event);
+        }
+    }
+};
+
+template<>
+class CWrapper<CTrigger> : public CTrigger, public boost::python::wrapper<CWrapper<CTrigger>> {
+V_META(CWrapper<T>, vstd::meta::empty, vstd::meta::empty())
+public:
+    void trigger(std::shared_ptr<CGameObject> object, std::shared_ptr<CGameEvent> event) override final {
+        if (auto f = this->get_override("trigger")) {
+            PY_SAFE (f(object, event);)
+        } else {
+            this->CTrigger::trigger(object, event);
+        }
+    }
+};
+
+template<>
+class CWrapper<CQuest> : public CQuest, public boost::python::wrapper<CWrapper<CQuest>> {
+V_META(CWrapper<T>, vstd::meta::empty, vstd::meta::empty())
+public:
+    bool isCompleted() override final {
+        if (auto f = this->get_override("isCompleted")) {
+            PY_SAFE_RET_VAL (return f();, false)
+        } else {
+            return this->CQuest::isCompleted();
+        }
+    }
+
+    void onComplete() override final {
+        if (auto f = this->get_override("onComplete")) {
+            PY_SAFE (f();)
+        } else {
+            this->CQuest::onComplete();
+        }
+    }
+};
+
+template<>
+class CWrapper<CPlugin> : public CPlugin, public boost::python::wrapper<CWrapper<CPlugin>> {
+V_META(CWrapper<T>, vstd::meta::empty, vstd::meta::empty())
+public:
+    void load(std::shared_ptr<CGame> game) override final {
+        if (auto f = this->get_override("load")) {
+            PY_SAFE (f(game);)
+        } else {
+            this->CPlugin::load(game);
+        }
+    }
+};
+
+template<>
+class CWrapper<CMapPlugin> : public CMapPlugin, public boost::python::wrapper<CWrapper<CMapPlugin>> {
+V_META(CWrapper<T>, vstd::meta::empty, vstd::meta::empty())
+public:
+    void load(std::shared_ptr<CMap> map) {
+        if (auto f = this->get_override("load")) {
+            PY_SAFE (f(map);)
+        } else {
+            this->CMapPlugin::load(map);
         }
     }
 };

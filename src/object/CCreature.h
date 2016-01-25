@@ -1,5 +1,6 @@
 #pragma once
 
+#include <core/CController.h>
 #include "CMapObject.h"
 #include "core/CStats.h"
 
@@ -42,7 +43,8 @@ V_META(CCreature, CMapObject,
        V_PROPERTY(CCreature, std::shared_ptr<Stats>, levelStats, getLevelStats, setLevelStats),
        V_PROPERTY(CCreature, std::set<std::shared_ptr<CInteraction>>, actions, getActions, setActions),
        V_PROPERTY(CCreature, std::set<std::shared_ptr<CItem>>, items, getItems, setItems),
-       V_PROPERTY(CCreature, std::set<std::shared_ptr<CEffect>>, effects, getEffects, setEffects)
+       V_PROPERTY(CCreature, std::set<std::shared_ptr<CEffect>>, effects, getEffects, setEffects),
+       V_PROPERTY(CCreature, std::shared_ptr<CController>, controller, get_controller, set_controller)
 )
 
 public:
@@ -224,6 +226,9 @@ public:
 
     virtual Coords getNextMove();
 
+    std::shared_ptr<CController> get_controller();
+
+    void set_controller(std::shared_ptr<CController> controller);
 protected:
     std::set<std::shared_ptr<CItem>> items;
     std::set<std::shared_ptr<CInteraction>> actions;
@@ -231,6 +236,8 @@ protected:
 
     std::map<std::string, std::shared_ptr<CItem> > equipped;
     std::map<std::string, std::shared_ptr<CInteraction>> levelling;
+
+    std::shared_ptr<CController> controller;
 
     int gold = 0;
     int exp = 0;
