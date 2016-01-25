@@ -64,3 +64,11 @@ CGameEventCaused::CGameEventCaused(std::string type, std::shared_ptr<CGameObject
                                                                                            cause(cause) {
 
 }
+
+CGameEvent::CGameEvent() {
+
+}
+
+CGameEventCaused::CGameEventCaused() {
+
+}

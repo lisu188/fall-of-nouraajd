@@ -1,11 +1,5 @@
 #include "core/CPathFinder.h"
 
-#define NEAR_COORDS(coords) {\
-    Coords(coords.x + 1,coords.y,coords.z),\
-    Coords(coords.x - 1,coords.y,coords.z ),\
-    Coords(coords.x,coords.y + 1, coords.z ),\
-    Coords(coords.x,coords.y - 1,coords.z )}
-
 typedef std::function<bool(const Coords &, const Coords &)> Compare;
 typedef std::priority_queue<Coords, std::vector<Coords>, Compare> Queue;
 typedef std::shared_ptr<std::unordered_map<Coords, int>> Values;
@@ -90,8 +84,8 @@ static Values fillValues(std::function<bool(const Coords &)> canStep,
     return values;
 }
 
-std::shared_ptr<vstd::future<Coords, void>>  CSmartPathFinder::findNextStep(Coords start, Coords goal,
-                                                                            std::function<bool(
+std::shared_ptr<vstd::future<Coords, void>>  CPathFinder::findNextStep(Coords start, Coords goal,
+                                                                       std::function<bool(
                                                                                     const Coords &)> canStep) {
     return vstd::async([start, goal, canStep]() {
         return getNextStep(start, goal, fillValues(
@@ -99,7 +93,7 @@ std::shared_ptr<vstd::future<Coords, void>>  CSmartPathFinder::findNextStep(Coor
     });
 }
 
-std::list<Coords> CSmartPathFinder::findPath(Coords start, Coords goal, std::function<bool(const Coords &)> canStep) {
+std::list<Coords> CPathFinder::findPath(Coords start, Coords goal, std::function<bool(const Coords &)> canStep) {
     std::list<Coords> path;
     Values val = fillValues(canStep, start, goal);
     Coords next = getNextStep(next, goal, val);

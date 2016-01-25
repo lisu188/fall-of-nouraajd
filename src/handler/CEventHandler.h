@@ -10,8 +10,8 @@ class CTrigger;
 
 class CGameObject;
 
-class CGameEvent {
-
+class CGameEvent : public CGameObject{
+V_META(CGameEvent,CGameObject, vstd::meta::empty())
 public:
     class Type {
     public:
@@ -25,6 +25,7 @@ public:
         static std::string onUnequip;
     };
 
+    CGameEvent();
     CGameEvent(std::string type);
 
     std::string getType() const;
@@ -34,7 +35,9 @@ private:
 };
 
 class CGameEventCaused : public CGameEvent {
+V_META(CGameEventCaused, CGameEvent, vstd::meta::empty())
 public:
+    CGameEventCaused();
     CGameEventCaused(std::string type, std::shared_ptr<CGameObject> cause);
 
     std::shared_ptr<CGameObject> getCause() const;

@@ -2,4 +2,8 @@
 import game
 g=game.CGameLoader.loadGame()
 game.CGameLoader.startGame(g,"map1","Warrior")
-g.getMap().move()
+for i in range(1000000):
+    g.getMap().move()
+    game.CEventLoop.instance().run()
+while True:
+    game.CEventLoop.instance().run()

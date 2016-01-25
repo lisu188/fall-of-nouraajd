@@ -1,5 +1,4 @@
 #include "CCreature.h"
-#include "core/CPathFinder.h"
 #include "core/CGame.h"
 
 static bool check_type(std::string slot, std::shared_ptr<CItem> item) {
@@ -587,4 +586,12 @@ void CCreature::setEffects(const std::set<std::shared_ptr<CEffect> > &value) {
 
 Coords CCreature::getNextMove() {
     return Coords();
+}
+
+std::shared_ptr<CController> CCreature::get_controller() {
+    return controller;
+}
+
+void CCreature::set_controller(std::shared_ptr<CController> controller) {
+    this->controller = controller;
 }

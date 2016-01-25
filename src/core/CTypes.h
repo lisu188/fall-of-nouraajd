@@ -61,7 +61,7 @@ public:
 
     template<typename T>
     static void register_consumer() {
-        vstd::function_converter<std::shared_ptr<T>>();
+        vstd::function_converter<void, std::shared_ptr<T>>();
     }
 
     template<typename T>
@@ -74,8 +74,6 @@ public:
     template<typename T, typename U>
     static void register_cast() {
         vstd::implicitly_convertible_cast<std::shared_ptr<T>, std::shared_ptr<U>>();
-        vstd::implicitly_convertible_cast<std::set<std::shared_ptr<T>>, std::set<std::shared_ptr<U>>>();
-        vstd::implicitly_convertible_cast<std::map<std::string, std::shared_ptr<T>>, std::map<std::string, std::shared_ptr<U>>>();
     }
 
     template<typename T, typename U>
@@ -94,12 +92,11 @@ public:
 
     template<typename T, typename U, typename... Args>
     static void register_type() {
-        static_assert(vstd::is_base_of<U, T>::value, "invalid base class");
+        static_assert(vstd::is_base_of<U, T>::value && !vstd::is_same<T, U>::value, "invalid base class");
         register_type<T>();
-        register_cast<T, U>();
         register_any_cast<T, U>();
-        register_cast<U, T>();
         register_any_cast<U, T>();
+        register_cast<U, T>();
         register_type<T, Args...>();
     }
 
@@ -111,7 +108,6 @@ public:
         register_supplier<T>();
         register_predicate<T>();
         register_derived_types<T>();
-        register_cast<T, T>();
         register_any_cast<T, T>();
     }
 };

@@ -1,7 +1,5 @@
 #include "core/CMap.h"
-#include "core/CPathFinder.h"
 #include "core/CGame.h"
-#include "core/CController.h"
 
 
 CMap::CMap(std::shared_ptr<CGame> game) : game(game) {
@@ -42,7 +40,7 @@ std::string CMap::addObjectByName(std::string name, Coords coords) {
             return name;
         }
     }
-    return nullptr;
+    return "";
 }
 
 void CMap::replaceTile(std::string name, Coords coords) {
@@ -262,7 +260,7 @@ void CMap::move() {
         };
 
         auto controller = [map](std::shared_ptr<CMapObject> object) {
-            return std::make_shared<CTargetController>(map->getPlayer())->control(vstd::cast<CCreature>(object));
+            return vstd::cast<CCreature>(object)->get_controller()->control(vstd::cast<CCreature>(object));
         };
 
         auto end_callback = [map](std::set<void *>) {

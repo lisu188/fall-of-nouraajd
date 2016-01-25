@@ -1,6 +1,4 @@
 #include "CMonster.h"
-#include "core/CMap.h"
-#include "core/CPathFinder.h"
 
 void CMonster::levelUp() {
     CCreature::levelUp();
@@ -9,10 +7,10 @@ void CMonster::levelUp() {
 }
 
 Coords CMonster::getNextMove() {
-    return CSmartPathFinder::findNextStep(this->getCoords(),
+    return CPathFinder::findNextStep(this->getCoords(),
                                           this->getMap()->getPlayer() ? this->getMap()->getPlayer()->getCoords()
                                                                       : this->getCoords(),
-                                          [this](const Coords &coords) {
+                                     [this](const Coords &coords) {
                                               return this->getMap()->canStep(coords);
                                           })->get() - this->getCoords();
 }

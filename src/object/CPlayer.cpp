@@ -1,5 +1,4 @@
 #include "CPlayer.h"
-#include "core/CMap.h"
 #include "core/CGame.h"
 
 CPlayer::CPlayer() {
@@ -35,12 +34,13 @@ void CPlayer::onDestroy(std::shared_ptr<CGameEvent> event) {
 
 std::shared_ptr<CInteraction> CPlayer::selectAction() {
     //TODO: code with futures
-    while (!this->getSelectedAction()) {
-//        QApplication::processEvents ( QEventLoop::WaitForMoreEvents );
-    }
-    std::shared_ptr<CInteraction> action = this->getSelectedAction();
-    this->setSelectedAction(nullptr);
-    return action;
+    return CCreature::selectAction();
+//    while (!this->getSelectedAction()) {
+////        QApplication::processEvents ( QEventLoop::WaitForMoreEvents );
+//    }
+//    std::shared_ptr<CInteraction> action = this->getSelectedAction();
+//    this->setSelectedAction(nullptr);
+//    return action;
 }
 
 void CPlayer::fight(std::shared_ptr<CCreature> creature) {
