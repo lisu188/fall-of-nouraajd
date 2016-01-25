@@ -2,8 +2,7 @@
 import game
 g=game.CGameLoader.loadGame()
 game.CGameLoader.startGame(g,"map1","Warrior")
-for i in range(1000000):
+for i in range(1000):
     g.getMap().move()
-    game.CEventLoop.instance().run()
-while True:
+while g.getMap().getNumericProperty('turn')<1000:
     game.CEventLoop.instance().run()
