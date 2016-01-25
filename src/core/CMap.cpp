@@ -243,6 +243,8 @@ void CMap::move() {
     auto map = this->ptr<CMap>();
 
     move = move->thenLater([map]() {
+        vstd::logger::debug("Start turn:", map->turn);
+
         vstd::wait_until([map]() {
             return !map->moving;
         });
@@ -272,6 +274,7 @@ void CMap::move() {
 //            }
 
             map->moving = false;
+            map->turn++;
         };
 
         vstd::join(map->mapObjects |
@@ -303,4 +306,12 @@ void CMap::load_plugin(std::function<std::shared_ptr<CMapPlugin>()> plugin) {
 
 CMap::CMap() {
 
+}
+
+int CMap::get_turn() {
+    return turn;
+}
+
+void CMap::set_turn(int turn) {
+    this->turn = turn;
 }
