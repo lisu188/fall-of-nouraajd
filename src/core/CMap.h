@@ -28,7 +28,7 @@ class CMapObject;
 
 class CMap : public CGameObject, private std::unordered_map<Coords, std::shared_ptr<CTile>> {
     friend class CMapLoader;
-V_META(CMap,CGameObject,vstd::meta::empty())
+V_META(CMap,CGameObject,V_PROPERTY(CMap,int,turn,get_turn,set_turn))
 public:
     CMap();
     CMap(std::shared_ptr<CGame> game);
@@ -118,6 +118,9 @@ public:
 
     void load_plugin(std::function<std::shared_ptr<CMapPlugin>()> plugin);
 
+    int get_turn();
+
+    void set_turn(int turn);
 private:
     void resolveFights();
 
@@ -131,6 +134,7 @@ private:
     vstd::lazy<CLootHandler, std::shared_ptr<CMap>> lootHandler;
     vstd::lazy<CObjectHandler, std::shared_ptr<CObjectHandler>> objectHandler;
     vstd::lazy<CEventHandler> eventHandler;
+    int turn = 0;
     bool moving = false;
 };
 
