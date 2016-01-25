@@ -1,11 +1,11 @@
 #include "CGlobal.h"
+#include "core/CEventLoop.h"
 
 //TODO:
 namespace vstd {
     std::function<void(std::function<void()>)> get_call_later_handler() {
         return [](std::function<void()> f) {
-//            QApplication::postEvent(CInvocationHandler::instance(),
-//                                    new CInvocationEvent(f));
+            CEventLoop::instance()->invoke(f);
         };
     }
 
@@ -18,8 +18,7 @@ namespace vstd {
 
     std::function<void(std::function<void()>)> get_call_later_block_handler() {
         return [](std::function<void()> f) {
-//            QApplication::sendEvent(CInvocationHandler::instance(),
-//                                    new CInvocationEvent(f));
+            CEventLoop::instance()->await(f);
         };
     }
 
@@ -27,7 +26,7 @@ namespace vstd {
         return [](std::function<bool()> pred) {
             vstd::call_later_block([pred]() {
                 while (!pred()) {
-//                    QApplication::processEvents(QEventLoop::WaitForMoreEvents);
+                    CEventLoop::instance()->run();
                 }
             });
         };

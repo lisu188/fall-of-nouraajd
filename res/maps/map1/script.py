@@ -6,7 +6,7 @@ def load(self,context):
 
     context.setBoolProperty('completed',False)
 
-    #@register(context)
+    @register(context)
     class StartEvent(CEvent):
         def onEnter(self,event):
             if event.getCause().isPlayer():

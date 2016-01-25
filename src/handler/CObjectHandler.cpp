@@ -19,7 +19,7 @@ std::shared_ptr<Value> CObjectHandler::getConfig(std::string type) {
     } else if (parent.lock()) {
         return parent.lock()->getConfig(type);
     }
-    return std::make_shared<Value>();
+    return nullptr;
 }
 
 std::set<std::string> CObjectHandler::getAllTypes() {
@@ -51,7 +51,7 @@ void CObjectHandler::registerType(std::string name, std::function<std::shared_pt
 std::shared_ptr<CGameObject> CObjectHandler::_createObject(std::shared_ptr<CMap> map, std::string type) {
     std::shared_ptr<Value> config = getConfig(type);
     if (!config) {
-        (*config)["class"].SetString(type.c_str(), type.length());
+        config = CJsonUtil::from_string(vstd::join({"{\"class\":\"", type, "\"}"}, ""));
     }
     return CSerialization::deserialize<std::shared_ptr<Value>, std::shared_ptr<CGameObject>>(map, config);
 }
