@@ -66,7 +66,8 @@ namespace CJsonUtil {
         StringBuffer buffer;
         Writer<StringBuffer> writer(buffer);
         value->Accept(writer);
-        return buffer.GetString();
+        std::string ret = buffer.GetString();
+        return ret;
     }
 
     template<typename T>

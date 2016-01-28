@@ -71,5 +71,5 @@ public:
 
 private:
     int distance = 15;
-    std::shared_ptr<CMapObject> target;
+    std::weak_ptr<CMapObject> target;
 };

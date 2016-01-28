@@ -1,4 +1,4 @@
-#include "CGameObject.h"
+#include "object/CGameObject.h"
 #include "core/CMap.h"
 
 CGameObject::~CGameObject() {
@@ -92,3 +92,10 @@ void CGameObject::incProperty(std::string name, int value) {
 //    getMap()->getMouseHandler()->handleClick ( this->ptr() );
 //}
 
+std::string  CGameObject::to_string() {
+    return vstd::join({getType(), getName()}, ":");
+}
+
+std::shared_ptr<CGameObject> CGameObject::_clone() {
+    return map.lock()->getObjectHandler()->clone<CGameObject>(this->ptr());
+}

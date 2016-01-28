@@ -110,7 +110,7 @@ void CMapLoader::handleObjectLayer(std::shared_ptr<CMap> map, const Value &layer
         int yPos = object["y"].GetInt() / object["height"].GetInt();
         auto mapObject = map->createObject<CMapObject>(objectType);
         if (mapObject == nullptr) {
-            vstd::logger::debug("Failed to load object:", objectType, objectName, "\n");
+            vstd::logger::debug("Failed to load object:", objectType, objectName);
             continue;
         }
         if (!vstd::is_empty(objectName)) {
@@ -121,9 +121,8 @@ void CMapLoader::handleObjectLayer(std::shared_ptr<CMap> map, const Value &layer
         for (auto it = objectProperties.MemberBegin(); it != objectProperties.MemberEnd(); it++) {
             CSerialization::setProperty(mapObject, it->name.GetString(), CJsonUtil::clone(&it->value));
         }
-        mapObject->moveTo(xPos,
-                          yPos, level);
-        vstd::logger::debug("Loaded object:", objectType, objectName, "\n");
+        mapObject->moveTo(xPos, yPos, level);
+        vstd::logger::debug("Loaded object:", mapObject->to_string());
     }
 }
 
@@ -177,7 +176,7 @@ void CPluginLoader::load_plugin(std::shared_ptr<CGame> game, std::string path) {
     std::string code = CResourcesProvider::getInstance()->load(path);
     std::string name = vstd::join({"CLASS", vstd::to_hex_hash(code)}, "");
     game->getScriptHandler()->add_class(name, code, {"game.CPlugin"});
-    game->getScriptHandler()->call_function("game.load_plugin", game, game->getScriptHandler()->get_object(name));
+    game->load_plugin(game->getScriptHandler()->get_object<std::function<std::shared_ptr<CPlugin>()>>(name));
     game->getScriptHandler()->execute_script(vstd::join({"del", name}, " "));
 }
 
@@ -185,7 +184,7 @@ void CPluginLoader::load_plugin(std::shared_ptr<CMap> map, std::string path) {
     std::string code = CResourcesProvider::getInstance()->load(path);
     std::string name = vstd::join({"CLASS", vstd::to_hex_hash(code)}, "");
     map->getGame()->getScriptHandler()->add_class(name, code, {"game.CMapPlugin"});
-    map->getGame()->getScriptHandler()->call_function("game.load_plugin", map,
-                                                      map->getGame()->getScriptHandler()->get_object(name));
+    map->load_plugin(
+            map->getGame()->getScriptHandler()->get_object<std::function<std::shared_ptr<CMapPlugin>()>>(name));
     map->getGame()->getScriptHandler()->execute_script(vstd::join({"del", name}, " "));
 }

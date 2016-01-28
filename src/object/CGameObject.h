@@ -8,7 +8,7 @@ class CGameEvent;
 
 class CMap;
 
-class CGameObject : public std::enable_shared_from_this<CGameObject> {
+class CGameObject : public vstd::stringable, public std::enable_shared_from_this<CGameObject> {
 V_META(CGameObject, vstd::meta::empty,
        V_PROPERTY(CGameObject, std::string, name, getName, setName),
        V_PROPERTY(CGameObject, std::string, type, getType, setType)
@@ -30,13 +30,11 @@ public:
 
     template<typename T>
     void setProperty(std::string name, T property) {
-        //TODO: make type checks of shared_from this
         this->meta()->set_property<CGameObject, T>(name, this->ptr(), property);
     }
 
     template<typename T>
     T getProperty(std::string name) const {
-        //TODO: make type checks of shared_from this
         return this->meta()->get_property<CGameObject, T>(name, this->ptr());
     }
 
@@ -59,9 +57,12 @@ public:
 
     template<typename T=CGameObject>
     std::shared_ptr<T> getObjectProperty(std::string name) {
-        //TODO: make conversions based on type info
-        return nullptr;
-//        return *reinterpret_cast<std::shared_ptr<T> *> ( getProperty(name).data());
+        return getProperty<std::shared_ptr<T>>(name);
+    }
+
+    template<typename T=CGameObject>
+    std::shared_ptr<T> clone() {
+        return vstd::cast<T>(_clone());
     }
 
     void incProperty(std::string name, int value);
@@ -97,7 +98,11 @@ public:
         this->name = name;
     }
 
+    virtual std::string to_string() override;
+
 private:
+    std::shared_ptr<CGameObject> _clone();
+
     std::string type;
     std::string name;
     //TODO: tooltip
@@ -145,3 +150,4 @@ public:
 
     virtual void onDestroy(std::shared_ptr<CGameEvent>) = 0;
 };
+

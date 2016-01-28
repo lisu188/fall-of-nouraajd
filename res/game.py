@@ -13,6 +13,5 @@ def trigger(context,event,object):
         return f
     return trigger_wrapper
 
-def load_plugin(target,plugin):
-    target.load_plugin(plugin)
+
 

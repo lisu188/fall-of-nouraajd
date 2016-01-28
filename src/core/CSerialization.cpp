@@ -58,19 +58,21 @@ void CSerialization::setObjectProperty(std::shared_ptr<CGameObject> object, boos
 
 void CSerialization::setStringProperty(std::shared_ptr<CGameObject> object, std::string key, std::string value) {
     if (vstd::trim(value) != "") {
-        std::shared_ptr<Value> d = CJsonUtil::from_string(value);
-        if (d) {
-            setProperty(object, key, d);
+        auto val = vstd::to_int(value);
+        if (val.second) {
+            object->setNumericProperty(key, val.first);
+        } else if (value == "true") {
+            object->setBoolProperty(key, true);
+        } else if (value == "false") {
+            object->setBoolProperty(key, false);
         } else {
-            auto val = vstd::to_int(value);
-            if (val.second) {
-                object->setNumericProperty(key, val.first);
-            } else if (value == "true") {
-                object->setBoolProperty(key, true);
-            } else if (value == "false") {
-                object->setBoolProperty(key, false);
-            } else {
+            //TODO: make method that checks if object is JSON
+            std::shared_ptr<Value> d = CJsonUtil::from_string(value);
+            if (!d || d->IsString()) {
                 object->setStringProperty(key, value);
+            }
+            else {
+                setProperty(object, key, d);
             }
         }
     }
@@ -95,23 +97,24 @@ void CSerialization::setOtherProperty(boost::typeindex::type_index serializedId,
 }
 
 void add_member(std::shared_ptr<Document> object, std::string key, std::string value) {
-    object->AddMember(Value(key.c_str(), key.length()), Value(value.c_str(), value.length()), object->GetAllocator());
+    object->AddMember(Value(key.c_str(), key.length(), object->GetAllocator()),
+                      Value(value.c_str(), value.length(), object->GetAllocator()), object->GetAllocator());
 }
 
 void add_member(std::shared_ptr<Document> object, std::string key, std::shared_ptr<Value> value) {
-    object->AddMember(Value(key.c_str(), key.length()), *value, object->GetAllocator());
+    object->AddMember(Value(key.c_str(), key.length(), object->GetAllocator()), *value, object->GetAllocator());
 }
 
 void add_member(std::shared_ptr<Document> object, std::string key, bool value) {
-    object->AddMember(Value(key.c_str(), key.length()), Value(value), object->GetAllocator());
+    object->AddMember(Value(key.c_str(), key.length(), object->GetAllocator()), Value(value), object->GetAllocator());
 }
 
 void add_member(std::shared_ptr<Document> object, std::string key, int value) {
-    object->AddMember(Value(key.c_str(), key.length()), Value(value), object->GetAllocator());
+    object->AddMember(Value(key.c_str(), key.length(), object->GetAllocator()), Value(value), object->GetAllocator());
 }
 
 void add_arr_member(std::shared_ptr<Document> object, std::string value) {
-    object->PushBack(Value(value.c_str(), value.length()), object->GetAllocator());
+    object->PushBack(Value(value.c_str(), value.length(), object->GetAllocator()), object->GetAllocator());
 }
 
 void add_arr_member(std::shared_ptr<Document> object, std::shared_ptr<Value> value) {
@@ -167,9 +170,9 @@ std::shared_ptr<Value> object_serialize(std::shared_ptr<CGameObject> object) {
 
 std::shared_ptr<CGameObject> object_deserialize(std::shared_ptr<CMap> map, std::shared_ptr<Value> config) {
     std::shared_ptr<CGameObject> object;
-    if (config->IsObject() && config->HasMember("ref") && !vstd::is_empty((*config)["ref"].GetString())) {
+    if (CJsonUtil::isRef(config)) {
         object = map->getObjectHandler()->createObject(map, (*config)["ref"].GetString());
-    } else if (config->IsObject() && config->HasMember("class") && !vstd::is_empty((*config)["class"].GetString())) {
+    } else if (CJsonUtil::isType(config)) {
         object = map->getObjectHandler()->getType((*config)["class"].GetString());
         if (object) {
             object->setName(vstd::to_hex(object));
