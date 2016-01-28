@@ -5,7 +5,9 @@
       "animation": "images/buildings/cave",
       "chance": 15,
       "enabled": true,
-      "monster": "Pritz",
+      "monster": {
+        "ref": "Pritz"
+      },
       "monsters": 5
     }
   },

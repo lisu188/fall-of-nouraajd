@@ -229,6 +229,9 @@ public:
     std::shared_ptr<CController> get_controller();
 
     void set_controller(std::shared_ptr<CController> controller);
+
+    virtual std::string to_string() override;
+
 protected:
     std::set<std::shared_ptr<CItem>> items;
     std::set<std::shared_ptr<CInteraction>> actions;

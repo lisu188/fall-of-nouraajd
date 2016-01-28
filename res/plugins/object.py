@@ -37,14 +37,10 @@ def load(self,context):
         def onTurn(self,event):
             chance=self.getNumericProperty("chance");
             monsters=self.getNumericProperty("monsters");
-            monster=self.getStringProperty("monster");
             enabled=self.getBoolProperty("enabled");
             if enabled and monsters >0 and (randint(1,100)) <= chance:
                 location=self.getCoords()
-                mon=self.getMap().createObject(monster)
-                controller=self.getMap().createObject('CRangeController')
-                controller.setObjectProperty('target',self.ptr())
-                mon.setObjectProperty('controller',controller)
+                mon=self.getObjectProperty('monster').clone()
                 self.getMap().addObject(mon)
                 mon.moveTo(location.x,location.y,location.z)
                 self.incProperty("monsters",-1);

@@ -35,8 +35,6 @@ std::string CMap::addObjectByName(std::string name, Coords coords) {
         if (object) {
             addObject(object);
             object->moveTo(coords.x, coords.y, coords.z);
-            vstd::logger::debug("Added object", object->getType(), "with name", object->getName(), "on", coords.x,
-                                coords.y, coords.z, "\n");
             return name;
         }
     }
@@ -243,7 +241,7 @@ void CMap::move() {
     auto map = this->ptr<CMap>();
 
     move = move->thenLater([map]() {
-        vstd::logger::debug("Start turn:", map->turn);
+        vstd::logger::debug("Turn:", map->turn);
 
         vstd::wait_until([map]() {
             return !map->moving;

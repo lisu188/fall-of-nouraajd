@@ -78,7 +78,7 @@ std::shared_ptr<vstd::future<void, Coords> >  CRangeController::control(std::sha
 }
 
 std::shared_ptr<CMapObject> CRangeController::get_target() {
-    return target;
+    return target.lock();
 }
 
 void CRangeController::set_target(std::shared_ptr<CMapObject> target) {
