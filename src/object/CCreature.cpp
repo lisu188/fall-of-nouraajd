@@ -137,7 +137,7 @@ void CCreature::heal(int i) {
 void CCreature::healProc(float i) {
     int tmp = hp;
     heal(i / 100.0 * hpMax);
-    vstd::logger::debug(getType(), "restored", hp - tmp, "hp", "\n");
+    vstd::logger::debug(to_string(), "restored", hp - tmp, "hp");
 }
 
 void CCreature::hurt(int i) {
@@ -202,11 +202,11 @@ int CCreature::getDmg() {
     if (attDice < stats->getHit()) {
         if (critDice < stats->getCrit()) {
             dmg *= 2;
-            vstd::logger::debug("Critical hit");
+            vstd::logger::debug("Critical!");
         }
         return dmg;
     } else {
-        vstd::logger::debug("Missed");
+        vstd::logger::debug("Missed!");
         return 0;
     }
 }
@@ -235,7 +235,6 @@ void CCreature::fight(std::shared_ptr<CCreature> creature) {
                 creature->getArmor()->getInteraction()->onAction(creature, this->ptr<CCreature>());
             }
         }
-        vstd::logger::debug();
     }
     creature->fight(this->ptr<CCreature>());
 }
@@ -252,7 +251,7 @@ void CCreature::addAction(std::shared_ptr<CInteraction> action) {
 }
 
 void CCreature::addEffect(std::shared_ptr<CEffect> effect) {
-    vstd::logger::debug(effect->getType(), "starts for", this->getType());
+    vstd::logger::debug(effect->to_string(), "starts for", this->to_string());
     effects.insert(effect);
 }
 
@@ -282,7 +281,7 @@ void CCreature::addMana(int i) {
 void CCreature::addManaProc(float i) {
     int tmp = mana;
     addMana(i / 100.0 * manaMax);
-    vstd::logger::debug(getType(), "restored", mana - tmp, "mana", "\n");
+    vstd::logger::debug(to_string(), "restored", mana - tmp, "mana");
 }
 
 void CCreature::takeMana(int i) {
@@ -307,7 +306,7 @@ bool CCreature::applyEffects() {
     std::set<std::shared_ptr<CEffect> >::iterator it = effects.begin();
     for (it = effects.begin(); it != effects.end();) {
         if ((*it)->getTimeLeft() == 0) {
-            vstd::logger::debug(getType(), "is now free from", (*it)->getType());
+            vstd::logger::debug(to_string(), "is now free from", (*it)->to_string());
             i++;
             effects.erase(it);
             it = effects.begin();
@@ -317,16 +316,13 @@ bool CCreature::applyEffects() {
     }
     bool isStopped = false;
     for (std::shared_ptr<CEffect> effect:effects) {
-        vstd::logger::debug(getType(), "suffers from", effect->getType());
+        vstd::logger::debug(to_string(), "suffers from", effect->to_string());
         i++;
         isStopped = isStopped || effect->apply(this);
         if (!isAlive()) {
             effect->getCaster()->defeatedCreature(this->ptr<CCreature>());
             return true;
         }
-    }
-    if (i > 0) {
-        vstd::logger::debug();
     }
     return isStopped;
 }
@@ -421,7 +417,7 @@ void CCreature::levelUp() {
     addAction(getLevelAction());
     attribChange();
     if (level > 1) {
-        vstd::logger::debug(getType(), "is now level:", level, "\n");
+        vstd::logger::debug(to_string(), "is now level:", level);
     }
 }
 
@@ -525,7 +521,7 @@ void CCreature::setGold(int value) {
 }
 
 void CCreature::defeatedCreature(std::shared_ptr<CCreature> creature) {
-    vstd::logger::debug(getType(), getName(), "defeated", creature->getType(), creature->getName(), "\n");
+    vstd::logger::debug(to_string(), getName(), "defeated", creature->to_string());
     addExpScaled(creature->getScale());
     addItem(creature->getLoot());
     getMap()->removeObject(creature);
@@ -594,4 +590,9 @@ std::shared_ptr<CController> CCreature::get_controller() {
 
 void CCreature::set_controller(std::shared_ptr<CController> controller) {
     this->controller = controller;
+}
+
+std::string  CCreature::to_string() {
+    return vstd::join({CGameObject::to_string(), "(",
+                       vstd::join({vstd::str(getPosX()), vstd::str(getPosY()), vstd::str(getPosZ())}, ","), ")"}, "");
 }
