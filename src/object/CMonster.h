@@ -13,7 +13,6 @@ public:
 
     virtual void levelUp() override;
 
-    virtual Coords getNextMove();
 };
 
 

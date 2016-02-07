@@ -1,5 +1,6 @@
 #include "CCreature.h"
 #include "core/CGame.h"
+#include "core/CController.h"
 
 static bool check_type(std::string slot, std::shared_ptr<CItem> item) {
     //TODO: implement inheritance
@@ -578,10 +579,6 @@ void CCreature::onDestroy(std::shared_ptr<CGameEvent>) {
 
 void CCreature::setEffects(const std::set<std::shared_ptr<CEffect> > &value) {
     effects = value;
-}
-
-Coords CCreature::getNextMove() {
-    return Coords();
 }
 
 std::shared_ptr<CController> CCreature::get_controller() {

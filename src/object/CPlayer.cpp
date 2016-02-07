@@ -66,10 +66,6 @@ void CPlayer::trade(std::shared_ptr<CMarket> market) {
 //    }
 }
 
-Coords CPlayer::getNextMove() {
-    return next;
-}
-
 void CPlayer::setSelectedAction(std::shared_ptr<CInteraction> value) {
     selectedAction = value;
 }

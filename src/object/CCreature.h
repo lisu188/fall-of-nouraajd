@@ -1,7 +1,6 @@
 #pragma once
 
-#include <core/CController.h>
-#include "CMapObject.h"
+#include "object/CMapObject.h"
 #include "core/CStats.h"
 
 class CInteraction;
@@ -21,6 +20,8 @@ class IPathFinder;
 class CItem;
 
 class CMarket;
+
+class CController;
 
 typedef std::map<std::string, std::shared_ptr<CInteraction> > CInteractionMap;
 typedef std::map<std::string, std::shared_ptr<CItem> > CItemMap;
@@ -223,8 +224,6 @@ public:
     void addGold(int gold);
 
     void takeGold(int gold);
-
-    virtual Coords getNextMove();
 
     std::shared_ptr<CController> get_controller();
 
