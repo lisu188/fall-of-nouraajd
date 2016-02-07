@@ -34,8 +34,6 @@ public:
 
     void setNextMove(Coords coords);
 
-    virtual Coords getNextMove() override;
-
     std::shared_ptr<CMarket> getMarket() const;
 
     void setMarket(std::shared_ptr<CMarket> value);
