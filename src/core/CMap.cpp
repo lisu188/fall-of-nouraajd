@@ -1,6 +1,6 @@
 #include "core/CMap.h"
 #include "core/CGame.h"
-
+#include "core/CController.h"
 
 CMap::CMap(std::shared_ptr<CGame> game) : game(game) {
 

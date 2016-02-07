@@ -120,7 +120,6 @@ public:
 
 class Moveable {
 public:
-    virtual Coords getNextMove() = 0;
 
     virtual void beforeMove() = 0;
 

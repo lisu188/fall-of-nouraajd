@@ -1,6 +1,7 @@
 #include "core/CTypes.h"
 #include "core/CGame.h"
 #include "core/CWrapper.h"
+#include "core/CController.h"
 
 namespace {
     struct register_types {
