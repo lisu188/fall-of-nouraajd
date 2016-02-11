@@ -14,7 +14,7 @@ std::shared_ptr<vstd::future<void, Coords>> CTargetController::control(std::shar
 }
 
 std::shared_ptr<vstd::future<void, Coords> >  CController::control(std::shared_ptr<CCreature> c) {
-
+    return vstd::async([](Coords){});
 }
 
 CTargetController::CTargetController() {
