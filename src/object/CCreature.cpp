@@ -582,7 +582,7 @@ void CCreature::setEffects(const std::set<std::shared_ptr<CEffect> > &value) {
 }
 
 std::shared_ptr<CController> CCreature::get_controller() {
-    return controller;
+    return controller?controller:std::make_shared<CController>();
 }
 
 void CCreature::set_controller(std::shared_ptr<CController> controller) {
