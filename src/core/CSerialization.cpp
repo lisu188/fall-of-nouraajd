@@ -97,24 +97,24 @@ void CSerialization::setOtherProperty(boost::typeindex::type_index serializedId,
 }
 
 void add_member(std::shared_ptr<Document> object, std::string key, std::string value) {
-    object->AddMember(Value(key.c_str(), key.length(), object->GetAllocator()),
-                      Value(value.c_str(), value.length(), object->GetAllocator()), object->GetAllocator());
+    object->AddMember(Value(key.c_str(), object->GetAllocator()),
+                      Value(value.c_str(), object->GetAllocator()), object->GetAllocator());
 }
 
 void add_member(std::shared_ptr<Document> object, std::string key, std::shared_ptr<Value> value) {
-    object->AddMember(Value(key.c_str(), key.length(), object->GetAllocator()), *value, object->GetAllocator());
+    object->AddMember(Value(key.c_str(), object->GetAllocator()), *value, object->GetAllocator());
 }
 
 void add_member(std::shared_ptr<Document> object, std::string key, bool value) {
-    object->AddMember(Value(key.c_str(), key.length(), object->GetAllocator()), Value(value), object->GetAllocator());
+    object->AddMember(Value(key.c_str(), object->GetAllocator()), Value(value), object->GetAllocator());
 }
 
 void add_member(std::shared_ptr<Document> object, std::string key, int value) {
-    object->AddMember(Value(key.c_str(), key.length(), object->GetAllocator()), Value(value), object->GetAllocator());
+    object->AddMember(Value(key.c_str(), object->GetAllocator()), Value(value), object->GetAllocator());
 }
 
 void add_arr_member(std::shared_ptr<Document> object, std::string value) {
-    object->PushBack(Value(value.c_str(), value.length(), object->GetAllocator()), object->GetAllocator());
+    object->PushBack(Value(value.c_str(), object->GetAllocator()), object->GetAllocator());
 }
 
 void add_arr_member(std::shared_ptr<Document> object, std::shared_ptr<Value> value) {
