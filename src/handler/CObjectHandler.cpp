@@ -8,8 +8,8 @@ CObjectHandler::CObjectHandler(std::shared_ptr<CObjectHandler> parent) : parent(
 
 void CObjectHandler::registerConfig(std::string path) {
     std::shared_ptr<Value> config = CConfigurationProvider::getConfig(path);
-    for (auto it = config->MemberBegin(); it != config->MemberEnd(); it++) {
-        objectConfig[it->name.GetString()] = CJsonUtil::clone(&it->value);
+    for (auto key:config->getMemberNames() ) {
+        objectConfig[key] = CJsonUtil::clone(&(*config)[key]);
     }
 }
 

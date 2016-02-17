@@ -30,9 +30,7 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
-#include <rapidjson/document.h>
-#include <rapidjson/writer.h>
-#include <rapidjson/stringbuffer.h>
+#include <json/json.h>
 #include <vstd.h>
 
-using namespace rapidjson;
+using namespace Json;
