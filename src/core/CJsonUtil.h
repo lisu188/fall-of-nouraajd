@@ -5,21 +5,19 @@
 namespace CJsonUtil {
     template<typename T>
     bool hasStringProp(T object, std::string prop) {
-        Value::ConstMemberIterator it = object->FindMember(prop.c_str());
-        return it != object->MemberEnd() && it->value.IsString() && vstd::trim(vstd::str(it->value.GetString())) != "";
+        return object->isMember(prop) && (*object)[prop].isString();
     }
 
     template<typename T>
     bool hasObjectProp(T object, std::string prop) {
-        auto it = object->FindMember(prop.c_str());
-        return it != object->MemberEnd() && it->value.IsObject();
+        return object->isMember(prop) && (*object)[prop].isObject();
     }
 
     template<typename T>
     bool isRef(T object) {
-        if (object->MemberCount() == 1) {
+        if (object->size() == 1) {
             return hasStringProp(object, "ref");
-        } else if (object->MemberCount() == 2) {
+        } else if (object->size() == 2) {
             return hasObjectProp(object, "properties") && hasStringProp(object, "ref");
         }
         return false;
@@ -27,9 +25,9 @@ namespace CJsonUtil {
 
     template<typename T>
     bool isType(T object) {
-        if (object->MemberCount() == 1) {
+        if (object->size() == 1) {
             return hasStringProp(object, "class");
-        } else if (object->MemberCount() == 2) {
+        } else if (object->size() == 2) {
             return hasObjectProp(object, "properties") && hasStringProp(object, "class");
         }
         return false;
@@ -42,9 +40,9 @@ namespace CJsonUtil {
 
     template<typename T>
     bool isMap(T object) {
-        for (auto it = object->MemberBegin(); it != object->MemberEnd(); it++) {
-            if (!it->value.IsObject() ||
-                !isObject(&it->value)) {
+        for (auto it :object->getMemberNames()) {
+            if (!(*object)[it].isObject() ||
+                !isObject(&(*object)[it])) {
                 return false;
             }
         }
@@ -53,21 +51,19 @@ namespace CJsonUtil {
 
     template<typename T=void>
     std::shared_ptr<Value> from_string(std::string json) {
-        auto d = std::make_shared<Document>();
-        d->Parse(json.c_str());
-        if (d->HasParseError()) {
-            return nullptr;
+        auto d = std::make_shared<Value>();
+        Reader reader;
+        if(reader.parse(json,*d)){
+            return d;
         }
-        return d;
+        vstd::logger::debug(reader.getFormatedErrorMessages());
+      return nullptr;
     }
 
     template<typename T>
     std::string to_string(T value) {
-        StringBuffer buffer;
-        Writer<StringBuffer> writer(buffer);
-        value->Accept(writer);
-        std::string ret = buffer.GetString();
-        return ret;
+        //TODO: customize writers
+        return FastWriter().write(*value);
     }
 
     template<typename T>

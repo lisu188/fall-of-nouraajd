@@ -5,19 +5,19 @@
 void CMapLoader::loadFromTmx(std::shared_ptr<CMap> map, std::shared_ptr<Value> mapc) {
     const Value &mapProperties = (*mapc)["properties"];
     const Value &mapLayers = (*mapc)["layers"];
-    map->entryx = vstd::to_int(mapProperties["x"].GetString()).first;
-    map->entryy = vstd::to_int(mapProperties["y"].GetString()).first;
-    map->entryz = vstd::to_int(mapProperties["z"].GetString()).first;
+    map->entryx = vstd::to_int(mapProperties["x"].asString()).first;
+    map->entryy = vstd::to_int(mapProperties["y"].asString()).first;
+    map->entryz = vstd::to_int(mapProperties["z"].asString()).first;
     const Value &tileset = (*mapc)["tilesets"][0]["tileproperties"];
-    for (auto it = mapLayers.Begin(); it != mapLayers.End(); it++) {
-        const Value &layer = *it;
-        if (vstd::string_equals(layer["type"].GetString(), "tilelayer")) {
+    for (int i=0;i<mapLayers.size();i++) {
+        const Value &layer = mapLayers[i];
+        if (vstd::string_equals(layer["type"].asString(), "tilelayer")) {
             handleTileLayer(map, tileset, layer);
         }
     }
-    for (auto it = mapLayers.Begin(); it != mapLayers.End(); it++) {
-        const Value &layer = *it;
-        if (vstd::string_equals(layer["type"].GetString(), "objectgroup")) {
+    for (int i=0;i<mapLayers.size();i++) {
+        const Value &layer = mapLayers[i];
+        if (vstd::string_equals(layer["type"].asString(), "objectgroup")) {
             handleObjectLayer(map, layer);
         }
     }
@@ -75,39 +75,39 @@ void CMapLoader::saveMap(std::shared_ptr<CMap> map, std::string file) {
 
 void CMapLoader::handleTileLayer(std::shared_ptr<CMap> map, const Value &tileset, const Value &layer) {
     const Value &layerProperties = layer["properties"];
-    int level = vstd::to_int(layerProperties["level"].GetString()).first;
-    map->defaultTiles[level] = layerProperties["default"].GetString();
+    int level = vstd::to_int(layerProperties["level"].asString()).first;
+    map->defaultTiles[level] = layerProperties["default"].asString();
     map->boundaries[level] =
-            std::make_pair(vstd::to_int(layerProperties["xBound"].GetString()).first,
-                           vstd::to_int(layerProperties["yBound"].GetString()).first);
+            std::make_pair(vstd::to_int(layerProperties["xBound"].asString()).first,
+                           vstd::to_int(layerProperties["yBound"].asString()).first);
 
-    int yLayer = layer["width"].GetInt();
-    int xLayer = layer["height"].GetInt();
+    int yLayer = layer["width"].asInt();
+    int xLayer = layer["height"].asInt();
 
     for (int y = 0; y < yLayer; ++y) {
         for (int x = 0; x < xLayer; ++x) {
-            int id = layer["data"][x + y * xLayer].GetInt();
+            int id = layer["data"][x + y * xLayer].asInt();
             if (id == 0) {
                 continue;
             }
             id--;
             std::string tileId = std::to_string(id);
-            std::string tileType = tileset[tileId.c_str()]["type"].GetString();
+            std::string tileType = tileset[tileId.c_str()]["type"].asString();
             map->addTile(map->createObject<CTile>(tileType), x, y, level);
         }
     }
 }
 
 void CMapLoader::handleObjectLayer(std::shared_ptr<CMap> map, const Value &layer) {
-    int level = vstd::to_int(layer["properties"]["level"].GetString()).first;
+    int level = vstd::to_int(layer["properties"]["level"].asString()).first;
     const Value &objects = layer["objects"];
-    for (auto it = objects.Begin(); it != objects.End(); it++) {
-        const Value &object = (*it);
-        std::string objectType = object["type"].GetString();
-        std::string objectName = object["name"].GetString();
+    for (int i=0;i<objects.size();i++) {
+        const Value &object = objects[i];
+        std::string objectType = object["type"].asString();
+        std::string objectName = object["name"].asString();
 
-        int xPos = object["x"].GetInt() / object["width"].GetInt();
-        int yPos = object["y"].GetInt() / object["height"].GetInt();
+        int xPos = object["x"].asInt() / object["width"].asInt();
+        int yPos = object["y"].asInt() / object["height"].asInt();
         auto mapObject = map->createObject<CMapObject>(objectType);
         if (mapObject == nullptr) {
             vstd::logger::debug("Failed to load object:", objectType, objectName);
@@ -118,8 +118,8 @@ void CMapLoader::handleObjectLayer(std::shared_ptr<CMap> map, const Value &layer
         }
         map->addObject(mapObject);
         const Value &objectProperties = object["properties"];
-        for (auto it = objectProperties.MemberBegin(); it != objectProperties.MemberEnd(); it++) {
-            CSerialization::setProperty(mapObject, it->name.GetString(), CJsonUtil::clone(&it->value));
+        for (auto it :objectProperties.getMemberNames()) {
+            CSerialization::setProperty(mapObject, it, CJsonUtil::clone(&objectProperties[it]));
         }
         mapObject->moveTo(xPos, yPos, level);
         vstd::logger::debug("Loaded object:", mapObject->to_string());
