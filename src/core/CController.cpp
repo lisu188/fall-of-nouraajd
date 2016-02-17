@@ -42,16 +42,19 @@ std::string CGroundController::get_ground_type() { return _ground_type; }
 void CGroundController::set_ground_type(std::string type) { _ground_type = type; }
 
 std::shared_ptr<vstd::future<void, Coords> >  CGroundController::control(std::shared_ptr<CCreature> creature) {
-    return vstd::later([=]() {
+    return vstd::later([=]() -> Coords{
         std::vector<Coords> possible;
         for (auto c:NEAR_COORDS(creature->getCoords())) {
             if (creature->getMap()->getTile(c)->getType() == this->get_ground_type()) {
                 possible.push_back(c);
             }
         }
-        return possible[vstd::rand(0, possible.size())];
+        if(possible.size()>0) {
+            return possible[vstd::rand(0, possible.size())];
+        }
+        return creature->getCoords();
     })->thenLater([=](Coords coords) {
-        creature->move(coords);
+        creature->moveTo(coords);
     });
 }
 
