@@ -214,7 +214,7 @@ std::shared_ptr<Value> array_serialize(std::set<std::shared_ptr<CGameObject> > s
 std::set<std::shared_ptr<CGameObject> > array_deserialize(std::shared_ptr<CMap> map,
                                                           std::shared_ptr<Value> object) {
     std::set<std::shared_ptr<CGameObject> > objects;
-    for (int i = 0; i < objects.size(); i++) {
+    for (int i = 0; i < object->size(); i++) {
         objects.insert(CSerializerFunction<std::shared_ptr<Value>, std::shared_ptr<CGameObject>>::deserialize(map,
                                                                                                               CJsonUtil::clone(
                                                                                                                       &(*object)[i])));
