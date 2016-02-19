@@ -220,7 +220,11 @@ bool CCreature::isAlive() {
     return hp >= 0;
 }
 
-void CCreature::fight(std::shared_ptr<CCreature> creature) {
+//TODO: do not recurse
+void CCreature::fight(std::shared_ptr<CCreature> creature, int draw) {
+    if (draw == 0) {
+        return;
+    }
     if (applyEffects()) {
         return;
     }
@@ -236,8 +240,11 @@ void CCreature::fight(std::shared_ptr<CCreature> creature) {
                 creature->getArmor()->getInteraction()->onAction(creature, this->ptr<CCreature>());
             }
         }
+        creature->fight(this->ptr<CCreature>());
+    } else {
+        creature->fight(this->ptr<CCreature>(), draw - 1);
     }
-    creature->fight(this->ptr<CCreature>());
+
 }
 
 void CCreature::trade(std::shared_ptr<CMarket>) {
@@ -582,7 +589,7 @@ void CCreature::setEffects(const std::set<std::shared_ptr<CEffect> > &value) {
 }
 
 std::shared_ptr<CController> CCreature::get_controller() {
-    return controller?controller:std::make_shared<CController>();
+    return controller ? controller : std::make_shared<CController>();
 }
 
 void CCreature::set_controller(std::shared_ptr<CController> controller) {

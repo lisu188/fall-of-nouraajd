@@ -36,16 +36,16 @@ public:
 
 class CGroundController : public CController {
 V_META(CGroundController, CController,
-       V_PROPERTY(CGroundController, std::string, ground_type, get_ground_type, set_ground_type))
+       V_PROPERTY(CGroundController, std::string, tileType, getTileType, setTileType))
 public:
     virtual std::shared_ptr<vstd::future<void, Coords> > control(std::shared_ptr<CCreature> creature);
 
-    std::string get_ground_type();
+    std::string getTileType();
 
-    void set_ground_type(std::string type);
+    void setTileType(std::string type);
 
 private:
-    std::string _ground_type;
+    std::string _tileType;
 };
 
 class CRangeController : public CController {

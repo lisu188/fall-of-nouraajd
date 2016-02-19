@@ -53,11 +53,11 @@ namespace CJsonUtil {
     std::shared_ptr<Value> from_string(std::string json) {
         auto d = std::make_shared<Value>();
         Reader reader;
-        if(reader.parse(json,*d)){
+        if (reader.parse(json, *d)) {
             return d;
         }
-        vstd::logger::debug(reader.getFormatedErrorMessages());
-      return nullptr;
+        //vstd::logger::debug(reader.getFormatedErrorMessages());
+        return nullptr;
     }
 
     template<typename T>

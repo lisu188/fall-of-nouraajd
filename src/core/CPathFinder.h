@@ -16,3 +16,4 @@ public:
 };
 
 #define NEAR_COORDS(coords) {Coords(coords.x + 1,coords.y,coords.z),Coords(coords.x - 1,coords.y,coords.z ),Coords(coords.x,coords.y + 1, coords.z ),Coords(coords.x,coords.y - 1,coords.z )}
+#define NEAR_COORDS_WITH(coords) {Coords(coords.x,coords.y,coords.z),Coords(coords.x + 1,coords.y,coords.z),Coords(coords.x - 1,coords.y,coords.z ),Coords(coords.x,coords.y + 1, coords.z ),Coords(coords.x,coords.y - 1,coords.z )}
