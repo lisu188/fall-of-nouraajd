@@ -1,5 +1,6 @@
 #include "core/CProvider.h"
 #include "handler/CHandler.h"
+#include "core/CJsonUtil.h"
 
 std::shared_ptr<Value> CConfigurationProvider::getConfig(std::string path) {
     static CConfigurationProvider instance;
@@ -25,11 +26,6 @@ std::shared_ptr<Value> CConfigurationProvider::getConfiguration(std::string path
 void CConfigurationProvider::loadConfig(std::string path) {
     this->insert(std::make_pair(path, CResourcesProvider::getInstance()->load_json(path)));
 }
-
-#include "core/CJsonUtil.h"
-#include "core/CProvider.h"
-#include "core/CUtil.h"
-
 
 std::list<std::string> CResourcesProvider::searchPath = {""};
 
