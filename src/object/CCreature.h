@@ -97,7 +97,7 @@ public:
         //TODO:
     }
 
-    virtual void fight(std::shared_ptr<CCreature> creature);
+    virtual void fight(std::shared_ptr<CCreature> creature, int draw = 5);
 
     virtual void trade(std::shared_ptr<CMarket>);
 

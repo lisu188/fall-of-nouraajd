@@ -14,7 +14,7 @@ std::shared_ptr<vstd::future<void, Coords>> CTargetController::control(std::shar
 }
 
 std::shared_ptr<vstd::future<void, Coords> >  CController::control(std::shared_ptr<CCreature> c) {
-    return vstd::async([](Coords){});
+    return vstd::async([](Coords) { });
 }
 
 CTargetController::CTargetController() {
@@ -37,19 +37,20 @@ std::shared_ptr<vstd::future<void, Coords> >  CRandomController::control(std::sh
     });
 }
 
-std::string CGroundController::get_ground_type() { return _ground_type; }
+std::string CGroundController::getTileType() { return _tileType; }
 
-void CGroundController::set_ground_type(std::string type) { _ground_type = type; }
+void CGroundController::setTileType(std::string type) { _tileType = type; }
 
 std::shared_ptr<vstd::future<void, Coords> >  CGroundController::control(std::shared_ptr<CCreature> creature) {
-    return vstd::later([=]() -> Coords{
+    return vstd::later([=]() -> Coords {
         std::vector<Coords> possible;
-        for (auto c:NEAR_COORDS(creature->getCoords())) {
-            if (creature->getMap()->getTile(c)->getType() == this->get_ground_type()) {
+        for (auto c:NEAR_COORDS_WITH(creature->getCoords())) {
+            std::string type = creature->getMap()->getTile(c)->getTileType();
+            if (type == this->getTileType()) {
                 possible.push_back(c);
             }
         }
-        if(possible.size()>0) {
+        if (possible.size() > 0) {
             return possible[vstd::rand(0, possible.size())];
         }
         return creature->getCoords();
@@ -67,16 +68,19 @@ CRangeController::CRangeController(std::shared_ptr<CMapObject> target) {
 }
 
 std::shared_ptr<vstd::future<void, Coords> >  CRangeController::control(std::shared_ptr<CCreature> creature) {
-    return vstd::later([=]() {
+    return vstd::later([=]() -> Coords {
         std::vector<Coords> possible;
-        for (auto c:NEAR_COORDS(creature->getCoords())) {
+        for (auto c:NEAR_COORDS_WITH(creature->getCoords())) {
             if (creature->getCoords().getDist(c) < this->distance) {
                 possible.push_back(c);
             }
         }
-        return possible[vstd::rand(0, possible.size())];
+        if (possible.size() > 0) {
+            return possible[vstd::rand(0, possible.size())];
+        }
+        return creature->getCoords();
     })->thenLater([=](Coords coords) {
-        creature->move(coords);
+        creature->moveTo(coords);
     });
 }
 

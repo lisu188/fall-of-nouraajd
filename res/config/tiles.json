@@ -3,6 +3,7 @@
     "class": "CTile",
     "properties": {
       "animation": "images/tiles/beach",
+      "tileType": "beach",
       "canStep": true
     }
   },
@@ -10,6 +11,7 @@
     "class": "CTile",
     "properties": {
       "animation": "images/tiles/desert",
+      "tileType": "desert",
       "canStep": true
     }
   },
@@ -17,6 +19,7 @@
     "class": "CTile",
     "properties": {
       "animation": "images/tiles/grass",
+      "tileType": "grass",
       "canStep": true
     }
   },
@@ -24,6 +27,7 @@
     "class": "CTile",
     "properties": {
       "animation": "images/tiles/ground",
+      "tileType": "ground",
       "canStep": true
     }
   },
@@ -31,6 +35,7 @@
     "class": "CTile",
     "properties": {
       "animation": "images/tiles/lava",
+      "tileType": "lava",
       "canStep": true
     }
   },
@@ -38,6 +43,7 @@
     "class": "CTile",
     "properties": {
       "animation": "images/tiles/mountain",
+      "tileType": "mountain",
       "canStep": false
     }
   },
@@ -45,6 +51,7 @@
     "class": "RoadTile",
     "properties": {
       "animation": "images/tiles/road",
+      "tileType": "road",
       "canStep": true
     }
   },
@@ -52,6 +59,7 @@
     "class": "CTile",
     "properties": {
       "animation": "images/tiles/snow",
+      "tileType": "snow",
       "canStep": true
     }
   },
@@ -59,6 +67,7 @@
     "class": "CTile",
     "properties": {
       "animation": "images/tiles/swamp",
+      "tileType": "swamp",
       "canStep": true
     }
   },
@@ -66,6 +75,7 @@
     "class": "CTile",
     "properties": {
       "animation": "images/tiles/wasteland",
+      "tileType": "wasteland",
       "canStep": true
     }
   },
@@ -73,6 +83,7 @@
     "class": "CTile",
     "properties": {
       "animation": "images/tiles/water",
+      "tileType": "water",
       "canStep": false
     }
   }

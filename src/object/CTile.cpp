@@ -64,3 +64,11 @@ void CTile::setXYZ(int x, int y, int z) {
     posy = y;
     posz = z;
 }
+
+const std::string &CTile::getTileType() const {
+    return tileType;
+}
+
+void CTile::setTileType(const std::string &tileType) {
+    CTile::tileType = tileType;
+}
