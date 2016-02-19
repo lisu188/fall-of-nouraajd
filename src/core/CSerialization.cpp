@@ -11,7 +11,6 @@ std::shared_ptr<CSerializerBase> CSerialization::serializer(
 void CSerialization::setProperty(std::shared_ptr<CGameObject> object, std::string key, std::shared_ptr<Value> value) {
     switch (value->type()) {
         case nullValue:
-            //vstd::fail("Null value detected.");
             break;
         case booleanValue:
             object->setBoolProperty(key, value->asBool());
@@ -96,35 +95,35 @@ void CSerialization::setOtherProperty(boost::typeindex::type_index serializedId,
 }
 
 void add_member(std::shared_ptr<Value> object, std::string key, std::string value) {
-    (*object)[key]=value;
+    (*object)[key] = value;
 }
 
 void add_member(std::shared_ptr<Value> object, std::string key, std::shared_ptr<Value> value) {
-    (*object)[key]=*value;
+    (*object)[key] = *value;
 }
 
 void add_member(std::shared_ptr<Value> object, std::string key, bool value) {
-    (*object)[key]=value;
+    (*object)[key] = value;
 }
 
 void add_member(std::shared_ptr<Value> object, std::string key, int value) {
-    (*object)[key]=value;
+    (*object)[key] = value;
 }
 
 void add_arr_member(std::shared_ptr<Value> object, std::string value) {
-    (*object)[object->size()]=value;
+    (*object)[object->size()] = value;
 }
 
 void add_arr_member(std::shared_ptr<Value> object, std::shared_ptr<Value> value) {
-    (*object)[object->size()]=*value;
+    (*object)[object->size()] = *value;
 }
 
 void add_arr_member(std::shared_ptr<Value> object, bool value) {
-    (*object)[object->size()]=value;
+    (*object)[object->size()] = value;
 }
 
 void add_arr_member(std::shared_ptr<Value> object, int value) {
-    (*object)[object->size()]=value;
+    (*object)[object->size()] = value;
 }
 
 void CSerialization::setProperty(std::shared_ptr<Value> conf, std::string propertyName, boost::any propertyValue) {
@@ -215,7 +214,7 @@ std::shared_ptr<Value> array_serialize(std::set<std::shared_ptr<CGameObject> > s
 std::set<std::shared_ptr<CGameObject> > array_deserialize(std::shared_ptr<CMap> map,
                                                           std::shared_ptr<Value> object) {
     std::set<std::shared_ptr<CGameObject> > objects;
-    for (int i=0;i<objects.size();i++) {
+    for (int i = 0; i < objects.size(); i++) {
         objects.insert(CSerializerFunction<std::shared_ptr<Value>, std::shared_ptr<CGameObject>>::deserialize(map,
                                                                                                               CJsonUtil::clone(
                                                                                                                       &(*object)[i])));

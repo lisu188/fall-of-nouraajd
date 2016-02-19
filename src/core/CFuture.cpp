@@ -1,7 +1,6 @@
 #include "CGlobal.h"
 #include "core/CEventLoop.h"
 
-//TODO:
 namespace vstd {
     std::function<void(std::function<void()>)> get_call_later_handler() {
         return [](std::function<void()> f) {

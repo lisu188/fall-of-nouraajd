@@ -20,7 +20,8 @@ public:
 
     virtual std::shared_ptr<CInteraction> selectAction() override;
 
-    virtual void fight(std::shared_ptr<CCreature> creature) override;
+    //TODO: implement
+//    virtual void fight(std::shared_ptr<CCreature> creature) override;
 
     virtual void trade(std::shared_ptr<CMarket> object) override;
 

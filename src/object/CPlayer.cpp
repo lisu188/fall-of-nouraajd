@@ -43,14 +43,15 @@ std::shared_ptr<CInteraction> CPlayer::selectAction() {
 //    return action;
 }
 
-void CPlayer::fight(std::shared_ptr<CCreature> creature) {
-    //TODO: fight
-    setEnemy(creature);
-    //getMap()->getGame()->getGuiHandler()->getPanel ( "CFightPanel" )->showPanel();
-    CCreature::fight(creature);
-    //getMap()->getGame()->getGuiHandler()->getPanel ( "CFightPanel" )->hidePanel();
-    setEnemy(nullptr);
-}
+//TODO: implement
+//void CPlayer::fight(std::shared_ptr<CCreature> creature) {
+//    //TODO: fight
+//    setEnemy(creature);
+//    //getMap()->getGame()->getGuiHandler()->getPanel ( "CFightPanel" )->showPanel();
+//    CCreature::fight(creature);
+//    //getMap()->getGame()->getGuiHandler()->getPanel ( "CFightPanel" )->hidePanel();
+//    setEnemy(nullptr);
+//}
 
 void CPlayer::trade(std::shared_ptr<CMarket> market) {
     //TODO: trade
