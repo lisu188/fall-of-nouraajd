@@ -49,39 +49,4 @@ double Coords::getDist(Coords a) const {
     return sqrt(x + y);
 }
 
-//TODO: implement call_later and drag_drop
-//
-//CObjectData::CObjectData ( std::shared_ptr<CGameObject> object ) : source ( object ) {
-//
-//}
-//
-//std::shared_ptr<CGameObject> CObjectData::getSource() const {
-//    return source;
-//}
-//
-//
-//CInvocationEvent::CInvocationEvent ( std::function<void() > target ) : QEvent ( TYPE ), target ( target ) {
-//
-//}
-//
-//std::function<void() > CInvocationEvent::getTarget() const {
-//    return target;
-//}
-//
-//
-//CInvocationHandler *CInvocationHandler::instance() {
-//    static CInvocationHandler self;
-//    return &self;
-//}
-//
-//bool CInvocationHandler::event ( QEvent *event ) {
-//    if ( event->type() == CInvocationEvent::TYPE ) {
-//        vstd::call ( static_cast<CInvocationEvent *> ( event )->getTarget() );
-//        return true;
-//    }
-//    return false;
-//}
-//
-//CInvocationHandler::CInvocationHandler() {
-//    this->moveToThread ( QApplication::instance()->thread() );
-//}
+//TODO: implement drag_drop

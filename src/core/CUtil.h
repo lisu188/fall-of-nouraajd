@@ -29,42 +29,6 @@ struct Coords {
     double getDist(Coords a) const;
 };
 
-//TODO: implement drop
-//class CObjectData : public QMimeData {
-//
-//public:
-//    CObjectData(std::shared_ptr<CGameObject> object);
-//
-//    std::shared_ptr<CGameObject> getSource() const;
-//
-//private:
-//    std::shared_ptr<CGameObject> source;
-//};
-
-//TODO: implement call_later
-//class CInvocationEvent : public QEvent {
-//public:
-//    static const QEvent::Type TYPE = static_cast<QEvent::Type> ( 1001 );
-//
-//    CInvocationEvent(std::function<void()> target);
-//
-//    std::function<void()> getTarget() const;
-//
-//private:
-//    std::function<void()> const target;
-//};
-//
-//class CInvocationHandler : public QObject {
-//
-//public:
-//    static CInvocationHandler *instance();
-//
-//    bool event(QEvent *event);
-//
-//private:
-//    CInvocationHandler();
-//};
-
 namespace std {
     template<>
     struct hash<Coords> {
@@ -76,3 +40,5 @@ namespace std {
 
 template<typename T=void>
 int randint(int i, int j) { return rand() % (j - i + 1) + i; }
+
+#define JSONIFY(x) CJsonUtil::to_string(CSerialization::serialize<std::shared_ptr<Value>>(x))

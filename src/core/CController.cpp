@@ -33,7 +33,7 @@ std::shared_ptr<vstd::future<void, Coords> >  CRandomController::control(std::sh
     return vstd::later([]() {
         return Coords(vstd::rand(-1, 1), vstd::rand(-1, 1), 0);
     })->thenLater([=](Coords coords) {
-        creature->move(coords);
+        creature->moveTo(coords);
     });
 }
 
@@ -46,7 +46,7 @@ std::shared_ptr<vstd::future<void, Coords> >  CGroundController::control(std::sh
         std::vector<Coords> possible;
         for (auto c:NEAR_COORDS_WITH(creature->getCoords())) {
             std::string type = creature->getMap()->getTile(c)->getTileType();
-            if (type == this->getTileType()) {
+            if (type == this->getTileType() && creature->getMap()->canStep(c)) {
                 possible.push_back(c);
             }
         }
@@ -64,12 +64,12 @@ CRangeController::CRangeController() {
 }
 
 
-
 std::shared_ptr<vstd::future<void, Coords> >  CRangeController::control(std::shared_ptr<CCreature> creature) {
     return vstd::later([=]() -> Coords {
         std::vector<Coords> possible;
         for (auto c:NEAR_COORDS_WITH(creature->getCoords())) {
-            if (creature->getMap()->getObjectByName(getTarget())->getCoords().getDist(c) < this->distance) {
+            if (creature->getMap()->getObjectByName(getTarget())->getCoords().getDist(c) < this->distance
+                && creature->getMap()->canStep(c)) {
                 possible.push_back(c);
             }
         }

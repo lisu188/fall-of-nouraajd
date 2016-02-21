@@ -174,5 +174,3 @@ private:
                                  std::string key,
                                  boost::any value);
 };
-
-

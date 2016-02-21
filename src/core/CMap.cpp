@@ -306,10 +306,10 @@ CMap::CMap() {
 
 }
 
-int CMap::get_turn() {
+int CMap::getTurn() {
     return turn;
 }
 
-void CMap::set_turn(int turn) {
+void CMap::setTurn(int turn) {
     this->turn = turn;
 }

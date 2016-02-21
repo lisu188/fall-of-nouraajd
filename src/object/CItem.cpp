@@ -9,11 +9,10 @@ CItem::~CItem() {
 }
 
 void CItem::onEnter(std::shared_ptr<CGameEvent> event) {
-    //TODO: grab item
-//    if (std::shared_ptr<CCreature> visitor = vstd::cast<CCreature>(vstd::cast<CGameEventCaused>(event)->getCause())) {
-//        this->getMap()->removeObject(this->ptr<CMapObject>());
-//        visitor->addItem(this->ptr<CItem>());
-//    }
+    if (std::shared_ptr<CCreature> visitor = vstd::cast<CCreature>(vstd::cast<CGameEventCaused>(event)->getCause())) {
+        this->getMap()->removeObject(this->ptr<CMapObject>());
+        visitor->addItem(this->ptr<CItem>());
+    }
 }
 
 void CItem::onLeave(std::shared_ptr<CGameEvent>) {
@@ -29,16 +28,14 @@ void CItem::setSingleUse(bool singleUse) {
 }
 
 void CItem::onEquip(std::shared_ptr<CGameEvent> event) {
-    //TODO: equip
-//    vstd::cast<CCreature>(vstd::cast<CGameEventCaused>(event)->getCause())->addBonus(bonus);
-//    vstd::logger::debug(vstd::cast<CGameEventCaused>(event)->getCause()->getType(), "equipped", getType(), "\n");
+    vstd::cast<CCreature>(vstd::cast<CGameEventCaused>(event)->getCause())->addBonus(bonus);
+    vstd::logger::debug(vstd::cast<CGameEventCaused>(event)->getCause()->getType(), "equipped", getType(), "\n");
 }
 
 void CItem::onUnequip(std::shared_ptr<CGameEvent> event) {
-    //TODO: equip
-//    vstd::cast<CCreature>(vstd::cast<CGameEventCaused>(event)->getCause())->removeBonus(bonus);
-//    vstd::logger::debug(vstd::cast<CGameEventCaused>(event)->getCause()->getType(), "unequipped", getType(),
-//                        "\n");
+    vstd::cast<CCreature>(vstd::cast<CGameEventCaused>(event)->getCause())->removeBonus(bonus);
+    vstd::logger::debug(vstd::cast<CGameEventCaused>(event)->getCause()->getType(), "unequipped", getType(),
+                        "\n");
 }
 
 void CItem::onUse(std::shared_ptr<CGameEvent> event) {

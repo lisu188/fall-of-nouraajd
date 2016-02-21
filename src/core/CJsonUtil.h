@@ -60,10 +60,9 @@ namespace CJsonUtil {
         return nullptr;
     }
 
-    template<typename T>
+    template<typename T, typename Writer=FastWriter>
     std::string to_string(T value) {
-        //TODO: customize writers
-        return FastWriter().write(*value);
+        return std::make_shared<Writer>()->write(*value);
     }
 
     template<typename T>
@@ -71,5 +70,4 @@ namespace CJsonUtil {
         std::string json = to_string(value);
         return from_string(json);
     }
-
 }
