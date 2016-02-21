@@ -28,7 +28,7 @@ class CMapObject;
 
 class CMap : public CGameObject, private std::unordered_map<Coords, std::shared_ptr<CTile>> {
     friend class CMapLoader;
-V_META(CMap,CGameObject,V_PROPERTY(CMap,int,turn,get_turn,set_turn))
+V_META(CMap,CGameObject, V_PROPERTY(CMap, int, turn, getTurn, setTurn))
 public:
     CMap();
     CMap(std::shared_ptr<CGame> game);
@@ -118,9 +118,9 @@ public:
 
     void load_plugin(std::function<std::shared_ptr<CMapPlugin>()> plugin);
 
-    int get_turn();
+    int getTurn();
 
-    void set_turn(int turn);
+    void setTurn(int turn);
 private:
     void resolveFights();
 

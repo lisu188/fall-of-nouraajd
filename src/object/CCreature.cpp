@@ -1,3 +1,4 @@
+#include "core/CJsonUtil.h"
 #include "CCreature.h"
 #include "core/CGame.h"
 #include "core/CController.h"
@@ -186,11 +187,8 @@ void CCreature::hurt(std::shared_ptr<Damage> damage) {
     takeDamage(damage->getFrost() * (100 - stats->getFrostResist()) / 100.0);
     takeDamage(damage->getFire() * (100 - stats->getFireResist()) / 100.0);
     takeDamage(damage->getShadow() * (100 - stats->getShadowResist()) / 100.0);
-    //TODO: generate to string from properties
-//    qDebug() << getType() << "took damage:"
-//             << "normal(" << damage->getNormal() << ")thunder("
-//             << damage->getThunder() << ")frost(" << damage->getFrost() << ")fire("
-//             << damage->getFire() << ")shadow(" << damage->getShadow() << ")";
+
+    vstd::logger::debug(getType(), "took damage:", JSONIFY(damage));
 }
 
 int CCreature::getDmg() {

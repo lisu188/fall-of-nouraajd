@@ -17,7 +17,6 @@ def load(self,context):
         def onEnter(self,event):
             self.getMap().getPlayer().trade(self.getObjectProperty("market"))
 
-    #TODO: make monster a prototype and clone it
     @register(context)
     class Cave(CBuilding):
         def onEnter(self,event):
@@ -26,12 +25,13 @@ def load(self,context):
             if self.getBoolProperty("enabled"):
                 self.setBoolProperty("enabled",False);
                 location=self.getCoords()
-                monster=self.getStringProperty("monster")
                 for i in range(-1,2):
                     for j in range(-1,2):
-                        if j == 0 and i == 0:
+                        if j == 0 and i == 0 and not self.getMap().canStep(Coords(location.x+i,location.y+j,location.z)):
                             continue;
-                        self.getMap().addObjectByName(monster,Coords(location.x+i,location.y+j,location.z));
+                        mon=self.getObjectProperty('monster').clone()
+                        self.getMap().addObject(mon)
+                        mon.moveTo(location.x+i,location.y+j,location.z)
                 self.getMap().removeObject(self);
 
         def onTurn(self,event):
