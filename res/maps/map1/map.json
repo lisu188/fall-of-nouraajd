@@ -13,7 +13,7 @@
               "properties": {
                 "chance": "10",
                 "monster": "{\"ref\":\"Pritz\",\"properties\":{\"controller\":{\"class\":\"CGroundController\",\"properties\":{\"tileType\":\"ground\"}}}}",
-                "monsters": "1000"
+                "monsters": "10"
               },
               "rotation": 0,
               "type": "Cave",
