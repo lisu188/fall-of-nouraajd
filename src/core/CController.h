@@ -50,26 +50,24 @@ private:
 
 class CRangeController : public CController {
 V_META(CRangeController, CController,
-       V_PROPERTY(CRangeController, std::shared_ptr<CMapObject>, target, get_target, set_target),
-       V_PROPERTY(CRangeController, int, distance, get_distance, set_distance)
+       V_PROPERTY(CRangeController, std::string, target, getTarget, setTarget),
+       V_PROPERTY(CRangeController, int, distance, getDistance, setDistance)
 )
 
 public:
     CRangeController();
 
-    CRangeController(std::shared_ptr<CMapObject> target);
-
     virtual std::shared_ptr<vstd::future<void, Coords> > control(std::shared_ptr<CCreature> creature);
 
-    std::shared_ptr<CMapObject> get_target();
+    std::string getTarget();
 
-    void set_target(std::shared_ptr<CMapObject> target);
+    void setTarget(std::string target);
 
-    int get_distance();
+    int getDistance();
 
-    void set_distance(int distance);
+    void setDistance(int distance);
 
 private:
     int distance = 15;
-    std::weak_ptr<CMapObject> target;
+    std::string target;
 };
