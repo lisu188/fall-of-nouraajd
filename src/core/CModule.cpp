@@ -146,8 +146,7 @@ BOOST_PYTHON_MODULE (_game) {
     class_<CWrapper<CPotion>, bases<CPotion>, boost::noncopyable, std::shared_ptr<CWrapper<CPotion>>>("CPotion").
             def("onUse", &CWrapper<CPotion>::onUse);
 
-    //TODO: use CGameObject
-    class_<CGameEvent, boost::noncopyable, std::shared_ptr<CGameEvent>>("CGameEvent", no_init);
+    class_<CGameEvent, bases<CGameObject>, boost::noncopyable, std::shared_ptr<CGameEvent>>("CGameEvent", no_init);
     class_<CGameEventCaused, bases<CGameEvent>, boost::noncopyable, std::shared_ptr<CGameEventCaused>>(
             "CGameEventCaused", no_init)
             .def("getCause", &CGameEventCaused::getCause);
