@@ -150,7 +150,7 @@ void CSerialization::setProperty(std::shared_ptr<Value> conf, std::string proper
 std::shared_ptr<Value> object_serialize(std::shared_ptr<CGameObject> object) {
     std::shared_ptr<Value> conf = std::make_shared<Value>();
     if (object) {
-        add_member(conf, "class", object->getType());
+        add_member(conf, "class", vstd::is_empty(object->getType()) ? object->meta()->name() : object->getType());
         std::shared_ptr<Value> properties = std::make_shared<Value>();
         for (std::shared_ptr<vstd::property> property: object->meta()->properties<CGameObject>(object)) {
             if (property->name() != "name" && property->name() != "type") {
