@@ -260,7 +260,7 @@ void CMap::move() {
         };
 
         auto controller = [map](std::shared_ptr<CMapObject> object) {
-            return vstd::cast<CCreature>(object)->get_controller()->control(vstd::cast<CCreature>(object));
+            return vstd::cast<CCreature>(object)->getController()->control(vstd::cast<CCreature>(object));
         };
 
         auto end_callback = [map](std::set<void *>) {
@@ -287,7 +287,7 @@ void CMap::resolveFights() {
     forObjects([this](std::shared_ptr<CMapObject> mapObject) {
         auto action = [this, mapObject](std::shared_ptr<CMapObject> visitor) {
             if (getObjectByName(mapObject->getName()) && getObjectByName(visitor->getName())) {
-                vstd::cast<CCreature>(mapObject)->fight(vstd::cast<CCreature>(visitor));
+                CFightHandler::fight(vstd::cast<CCreature>(mapObject), vstd::cast<CCreature>(visitor));
             }
         };
         auto pred = [mapObject](std::shared_ptr<CMapObject> visitor) {

@@ -100,8 +100,6 @@ public:
         //TODO:
     }
 
-    virtual void fight(std::shared_ptr<CCreature> creature, int draw = 5);
-
     virtual void trade(std::shared_ptr<CMarket>);
 
     virtual void levelUp();
@@ -237,6 +235,8 @@ public:
     std::shared_ptr<CFightController> getFightController();
 
     void setFightController(std::shared_ptr<CFightController> fightController);
+
+    void useAction(std::shared_ptr<CInteraction> action, std::shared_ptr<CCreature> creature);
 protected:
     std::set<std::shared_ptr<CItem>> items;
     std::set<std::shared_ptr<CInteraction>> actions;

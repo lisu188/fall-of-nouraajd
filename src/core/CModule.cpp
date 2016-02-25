@@ -96,7 +96,8 @@ BOOST_PYTHON_MODULE (_game) {
             .def("getStats", &CCreature::getStats)
             .def("addManaProc", &CCreature::addManaProc)
             .def("isPlayer", &CCreature::isPlayer)
-            .def("trade", &CCreature::trade);
+            .def("trade", &CCreature::trade)
+            .def("useAction", &CCreature::useAction);
     class_<CPlayer, bases<CCreature>, boost::noncopyable, std::shared_ptr<CPlayer>>("CPlayer")
             .def("addQuest", &CPlayer::addQuest);
     class_<CMonster, bases<CCreature>, boost::noncopyable, std::shared_ptr<CMonster>>("CMonster");

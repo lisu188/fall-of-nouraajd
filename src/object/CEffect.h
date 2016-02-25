@@ -18,7 +18,7 @@ public:
 
     int getTimeTotal();
 
-    bool apply(CCreature *creature);
+    bool apply(std::shared_ptr<CCreature> creature);
 
     std::shared_ptr<Stats> getBonus();
 
