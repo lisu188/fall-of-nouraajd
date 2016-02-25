@@ -11,7 +11,8 @@ class CMap;
 class CGameObject : public vstd::stringable, public std::enable_shared_from_this<CGameObject> {
 V_META(CGameObject, vstd::meta::empty,
        V_PROPERTY(CGameObject, std::string, name, getName, setName),
-       V_PROPERTY(CGameObject, std::string, type, getType, setType)
+       V_PROPERTY(CGameObject, std::string, type, getType, setType),
+       V_PROPERTY(CGameObject, std::set<std::string>, tags, getTags, setTags)
 )
 
 public:
@@ -71,6 +72,12 @@ public:
 //
 //    virtual void setTooltip ( const std::string &value );
 
+    bool hasTag(std::string tag);
+
+    void addTag(std::string tag);
+
+    void removeTag(std::string tag);
+
 protected:
     //TODO: tooltip
 //    virtual void hoverEnterEvent ( QGraphicsSceneHoverEvent *event ) override final;
@@ -80,31 +87,28 @@ protected:
 //    virtual void mousePressEvent ( QGraphicsSceneMouseEvent * ) override final;
 
 //    bool hasTooltip = true;
-private:
+
 public:
-    const std::string &getType() const {
-        return type;
-    }
+    std::string getType();
 
-    void setType(const std::string &type) {
-        this->type = type;
-    }
+    void setType(std::string type);
 
-    const std::string &getName() const {
-        return name;
-    }
+    std::string getName();
 
-    void setName(const std::string &name) {
-        this->name = name;
-    }
+    void setName(std::string name);
 
     virtual std::string to_string() override;
+
+    std::set<std::string> getTags();
+
+    void setTags(std::set<std::string> tags);
 
 private:
     std::shared_ptr<CGameObject> _clone();
 
     std::string type;
     std::string name;
+    std::set<std::string> tags;
     //TODO: tooltip
     //QGraphicsSimpleTextItem statsView;
     std::weak_ptr<CMap> map;

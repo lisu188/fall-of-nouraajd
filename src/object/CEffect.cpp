@@ -62,14 +62,6 @@ bool CEffect::onEffect() {
     return false;
 }
 
-bool CEffect::isBuff() const {
-    return buff;
-}
-
-void CEffect::setBuff(bool value) {
-    buff = value;
-}
-
 void CEffect::setCaster(std::shared_ptr<CCreature> value) {
     caster = value;
 }

@@ -23,6 +23,8 @@ class CMarket;
 
 class CController;
 
+class CFightController;
+
 typedef std::map<std::string, std::shared_ptr<CInteraction> > CInteractionMap;
 typedef std::map<std::string, std::shared_ptr<CItem> > CItemMap;
 
@@ -45,7 +47,8 @@ V_META(CCreature, CMapObject,
        V_PROPERTY(CCreature, std::set<std::shared_ptr<CInteraction>>, actions, getActions, setActions),
        V_PROPERTY(CCreature, std::set<std::shared_ptr<CItem>>, items, getItems, setItems),
        V_PROPERTY(CCreature, std::set<std::shared_ptr<CEffect>>, effects, getEffects, setEffects),
-       V_PROPERTY(CCreature, std::shared_ptr<CController>, controller, get_controller, set_controller)
+       V_PROPERTY(CCreature, std::shared_ptr<CController>, controller, getController, setController),
+       V_PROPERTY(CCreature, std::shared_ptr<CFightController>, fightController, getFightController, setFightController)
 )
 
 public:
@@ -219,18 +222,21 @@ public:
 
     virtual void afterMove();
 
-    virtual std::string getTooltip() const;
+    virtual std::string getTooltip();
 
     void addGold(int gold);
 
     void takeGold(int gold);
 
-    std::shared_ptr<CController> get_controller();
+    std::shared_ptr<CController> getController();
 
-    void set_controller(std::shared_ptr<CController> controller);
+    void setController(std::shared_ptr<CController> controller);
 
     virtual std::string to_string() override;
 
+    std::shared_ptr<CFightController> getFightController();
+
+    void setFightController(std::shared_ptr<CFightController> fightController);
 protected:
     std::set<std::shared_ptr<CItem>> items;
     std::set<std::shared_ptr<CInteraction>> actions;
@@ -240,6 +246,9 @@ protected:
     std::map<std::string, std::shared_ptr<CInteraction>> levelling;
 
     std::shared_ptr<CController> controller;
+
+protected:
+    std::shared_ptr<CFightController> fightController;
 
     int gold = 0;
     int exp = 0;
@@ -260,7 +269,7 @@ protected:
 
     std::shared_ptr<CInteraction> getLevelAction();
 
-    void defeatedCreature(std::shared_ptr<CCreature> creature);
+
 };
 
 

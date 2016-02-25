@@ -8,14 +8,18 @@
   "ArmorOfEndlessWinterEffect": {
     "class": "ArmorOfEndlessWinterEffect",
     "properties": {
-      "buff": true,
+      "tags": [
+        "buff"
+      ],
       "duration": 3
     }
   },
   "BarrierEffect": {
     "class": "BarrierEffect",
     "properties": {
-      "buff": true,
+      "tags": [
+        "buff"
+      ],
       "duration": 3
     }
   },
