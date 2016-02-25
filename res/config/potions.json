@@ -4,7 +4,10 @@
     "properties": {
       "animation": "images/items/potions/life",
       "power": 5,
-      "singleUse": true
+      "singleUse": true,
+      "tags": [
+        "heal"
+      ]
     }
   },
   "FullManaPotion": {
@@ -12,7 +15,10 @@
     "properties": {
       "animation": "images/items/potions/mana",
       "power": 5,
-      "singleUse": true
+      "singleUse": true,
+      "tags": [
+        "mana"
+      ]
     }
   },
   "GreaterLifePotion": {
@@ -20,7 +26,10 @@
     "properties": {
       "animation": "images/items/potions/life",
       "power": 3,
-      "singleUse": true
+      "singleUse": true,
+      "tags": [
+        "heal"
+      ]
     }
   },
   "GreaterManaPotion": {
@@ -28,7 +37,10 @@
     "properties": {
       "animation": "images/items/potions/mana",
       "power": 3,
-      "singleUse": true
+      "singleUse": true,
+      "tags": [
+        "mana"
+      ]
     }
   },
   "LesserLifePotion": {
@@ -36,7 +48,10 @@
     "properties": {
       "animation": "images/items/potions/life",
       "power": 1,
-      "singleUse": true
+      "singleUse": true,
+      "tags": [
+        "heal"
+      ]
     }
   },
   "LesserManaPotion": {
@@ -44,7 +59,10 @@
     "properties": {
       "animation": "images/items/potions/mana",
       "power": 1,
-      "singleUse": true
+      "singleUse": true,
+      "tags": [
+        "mana"
+      ]
     }
   },
   "LifePotion": {
@@ -52,7 +70,10 @@
     "properties": {
       "animation": "images/items/potions/life",
       "power": 2,
-      "singleUse": true
+      "singleUse": true,
+      "tags": [
+        "heal"
+      ]
     }
   },
   "ManaPotion": {
@@ -60,7 +81,10 @@
     "properties": {
       "animation": "images/items/potions/mana",
       "power": 3,
-      "singleUse": true
+      "singleUse": true,
+      "tags": [
+        "mana"
+      ]
     }
   },
   "MaxLifePotion": {
@@ -68,7 +92,10 @@
     "properties": {
       "animation": "images/items/potions/life",
       "power": 4,
-      "singleUse": true
+      "singleUse": true,
+      "tags": [
+        "heal"
+      ]
     }
   },
   "MaxManaPotion": {
@@ -76,7 +103,10 @@
     "properties": {
       "animation": "images/items/potions/mana",
       "power": 4,
-      "singleUse": true
+      "singleUse": true,
+      "tags": [
+        "mana"
+      ]
     }
   }
 }

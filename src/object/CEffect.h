@@ -6,7 +6,6 @@
 class CEffect : public CGameObject {
 
 V_META(CEffect, CGameObject,
-       V_PROPERTY(CEffect, bool, buff, isBuff, setBuff),
        V_PROPERTY(CEffect, int, duration, getDuration, setDuration)
 )
 
@@ -30,10 +29,6 @@ public:
     void setDuration(int duration);
 
     virtual bool onEffect();
-
-    bool isBuff() const;
-
-    void setBuff(bool value);
 
     std::shared_ptr<CCreature> getCaster();
 
