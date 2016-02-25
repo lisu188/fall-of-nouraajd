@@ -218,32 +218,6 @@ bool CCreature::isAlive() {
     return hp >= 0;
 }
 
-//TODO: do not recurse
-void CCreature::fight(std::shared_ptr<CCreature> creature, int draw) {
-    if (draw == 0) {
-        return;
-    }
-    if (applyEffects()) {
-        return;
-    }
-    if (!isAlive()) {
-        creature->defeatedCreature(this->ptr<CCreature>());
-        return;
-    }
-    std::shared_ptr<CInteraction> action = selectAction();
-    if (action) {
-        action->onAction(this->ptr<CCreature>(), creature);
-        if (creature->getArmor()) {
-            if (creature->getArmor()->getInteraction()) {
-                creature->getArmor()->getInteraction()->onAction(creature, this->ptr<CCreature>());
-            }
-        }
-        creature->fight(this->ptr<CCreature>());
-    } else {
-        creature->fight(this->ptr<CCreature>(), draw - 1);
-    }
-
-}
 
 void CCreature::trade(std::shared_ptr<CMarket>) {
 
@@ -305,6 +279,7 @@ std::shared_ptr<CInteraction> CCreature::selectAction() {
 }
 
 bool CCreature::applyEffects() {
+    //TODO: move to CFightHandler
     if (effects.size() == 0) {
         return false;
     }
@@ -324,9 +299,9 @@ bool CCreature::applyEffects() {
     for (std::shared_ptr<CEffect> effect:effects) {
         vstd::logger::debug(to_string(), "suffers from", effect->to_string());
         i++;
-        isStopped = isStopped || effect->apply(this);
+        isStopped = isStopped || effect->apply(this->ptr<CCreature>());
         if (!isAlive()) {
-            effect->getCaster()->defeatedCreature(this->ptr<CCreature>());
+            CFightHandler::defeatedCreature(effect->getCaster(), this->ptr<CCreature>());
             return true;
         }
     }
@@ -598,4 +573,14 @@ std::shared_ptr<CFightController> CCreature::getFightController() {
 
 void CCreature::setFightController(std::shared_ptr<CFightController> fightController) {
     CCreature::fightController = fightController;
+}
+
+void CCreature::useAction(std::shared_ptr<CInteraction> action, std::shared_ptr<CCreature> creature) {
+    vstd::fail_if(!vstd::ctn(actions, action));
+    action->onAction(this->ptr<CCreature>(), creature);
+    if (creature->getArmor()) {
+        if (creature->getArmor()->getInteraction()) {
+            creature->getArmor()->getInteraction()->onAction(creature, this->ptr<CCreature>());
+        }
+    }
 }

@@ -25,7 +25,7 @@ std::shared_ptr<CCreature> CEffect::getVictim() {
     return victim;
 }
 
-bool CEffect::apply(CCreature *creature) {
+bool CEffect::apply(std::shared_ptr<CCreature> creature) {
     if (bonus) {
         if (timeTotal == timeLeft) {
             creature->addBonus(bonus);
