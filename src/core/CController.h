@@ -9,6 +9,11 @@ public:
     virtual std::shared_ptr<vstd::future<void, Coords> > control(std::shared_ptr<CCreature> c);
 };
 
+class CFightController : public CGameObject {
+V_META(CFightController, CGameObject, vstd::meta::empty())
+public:
+    virtual bool control(std::shared_ptr<CCreature> me, std::shared_ptr<CCreature> opponent);;
+};
 
 class CTargetController : public CController {
 V_META(CTargetController, CController,

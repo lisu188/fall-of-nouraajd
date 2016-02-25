@@ -8,6 +8,8 @@ namespace {
         register_types() {
             CTypes::register_type<CGameObject>();
             {
+                CTypes::register_type<CFightController, CGameObject>();
+
                 CTypes::register_type<CGameEvent, CGameObject>();
                 {
                     CTypes::register_type<CGameEventCaused, CGameEvent, CGameObject>();

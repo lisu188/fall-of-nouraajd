@@ -526,13 +526,6 @@ void CCreature::setGold(int value) {
     gold = value;
 }
 
-void CCreature::defeatedCreature(std::shared_ptr<CCreature> creature) {
-    vstd::logger::debug(to_string(), getName(), "defeated", creature->to_string());
-    addExpScaled(creature->getScale());
-    addItem(creature->getLoot());
-    getMap()->removeObject(creature);
-}
-
 void CCreature::beforeMove() {
     auto pred = [this](std::shared_ptr<CMapObject> object) {
         return vstd::cast<Visitable>(object) && this->getCoords() == object->getCoords();
@@ -562,7 +555,7 @@ void CCreature::afterMove() {
     getMap()->getTile(this->getCoords())->onStep(this->ptr<CCreature>());
 }
 
-std::string CCreature::getTooltip() const {
+std::string CCreature::getTooltip() {
     return vstd::join({getType(), std::to_string(level)}, " ");
 }
 
@@ -586,15 +579,23 @@ void CCreature::setEffects(const std::set<std::shared_ptr<CEffect> > &value) {
     effects = value;
 }
 
-std::shared_ptr<CController> CCreature::get_controller() {
+std::shared_ptr<CController> CCreature::getController() {
     return controller ? controller : std::make_shared<CController>();
 }
 
-void CCreature::set_controller(std::shared_ptr<CController> controller) {
+void CCreature::setController(std::shared_ptr<CController> controller) {
     this->controller = controller;
 }
 
 std::string  CCreature::to_string() {
     return vstd::join({CGameObject::to_string(), "(",
                        vstd::join({vstd::str(getPosX()), vstd::str(getPosY()), vstd::str(getPosZ())}, ","), ")"}, "");
+}
+
+std::shared_ptr<CFightController> CCreature::getFightController() {
+    return fightController;
+}
+
+void CCreature::setFightController(std::shared_ptr<CFightController> fightController) {
+    CCreature::fightController = fightController;
 }

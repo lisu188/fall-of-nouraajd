@@ -99,3 +99,39 @@ std::string  CGameObject::to_string() {
 std::shared_ptr<CGameObject> CGameObject::_clone() {
     return map.lock()->getObjectHandler()->clone<CGameObject>(this->ptr());
 }
+
+std::set<std::string> CGameObject::getTags() {
+    return tags;
+}
+
+void CGameObject::setTags(std::set<std::string> tags) {
+    CGameObject::tags = tags;
+}
+
+std::string CGameObject::getType() {
+    return type;
+}
+
+void CGameObject::setType(std::string type) {
+    this->type = type;
+}
+
+std::string CGameObject::getName() {
+    return name;
+}
+
+void CGameObject::setName(std::string name) {
+    this->name = name;
+}
+
+bool CGameObject::hasTag(std::string tag) {
+    return vstd::ctn(tags, tag);
+}
+
+void CGameObject::addTag(std::string tag) {
+    tags.insert(tag);
+}
+
+void CGameObject::removeTag(std::string tag) {
+    tags.erase(tag);
+}
