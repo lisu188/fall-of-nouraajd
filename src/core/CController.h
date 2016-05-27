@@ -12,7 +12,7 @@ public:
 class CFightController : public CGameObject {
 V_META(CFightController, CGameObject, vstd::meta::empty())
 public:
-    virtual bool control(std::shared_ptr<CCreature> me, std::shared_ptr<CCreature> opponent);;
+    virtual bool control(std::shared_ptr<CCreature> me, std::shared_ptr<CCreature> opponent);
 };
 
 class CTargetController : public CController {

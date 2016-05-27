@@ -139,6 +139,7 @@ public:
     }
 };
 
+//TODO: make std::set<std::string> typedef vstd::tags
 template<>
 class CSerializer<std::shared_ptr<Json::Value>,std::set<std::string>> : public CSerializerBase {
 public:

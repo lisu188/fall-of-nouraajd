@@ -70,3 +70,10 @@ void CEffect::setVictim(std::shared_ptr<CCreature> value) {
     victim = value;
 }
 
+void CEffect::setCumulative(bool value) {
+    this->cumulative = value;
+}
+
+bool CEffect::getCumulative() {
+    return this->cumulative;
+}
