@@ -248,7 +248,7 @@ protected:
     std::shared_ptr<CController> controller;
 
 protected:
-    std::shared_ptr<CFightController> fightController;
+    std::shared_ptr<CFightController> fightController = std::make_shared<CFightController>();
 
     int gold = 0;
     int exp = 0;
