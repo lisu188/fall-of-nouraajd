@@ -231,8 +231,15 @@ void CCreature::addAction(std::shared_ptr<CInteraction> action) {
 }
 
 void CCreature::addEffect(std::shared_ptr<CEffect> effect) {
-    vstd::logger::debug(effect->to_string(), "starts for", this->to_string());
-    effects.insert(effect);
+    //TODO: make name comparator a constant
+    if (vstd::ctn(effects, effect, [](std::shared_ptr<CEffect> a, std::shared_ptr<CEffect> b) {
+        return a->getType() == b->getType();
+    })) {
+        vstd::logger::debug(effect->to_string(), "skipping already present effect for", this->to_string());
+    } else {
+        vstd::logger::debug(effect->to_string(), "starts for", this->to_string());
+        effects.insert(effect);
+    }
 }
 
 int CCreature::getMana() {

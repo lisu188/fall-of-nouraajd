@@ -6,7 +6,8 @@
 class CEffect : public CGameObject {
 
 V_META(CEffect, CGameObject,
-       V_PROPERTY(CEffect, int, duration, getDuration, setDuration)
+       V_PROPERTY(CEffect, int, duration, getDuration, setDuration),
+       V_PROPERTY(CEffect, bool, cumulative, getCumulative, setCumulative)
 )
 
 public:
@@ -38,6 +39,10 @@ public:
 
     void setVictim(std::shared_ptr<CCreature> value);
 
+    void setCumulative(bool value);
+
+    bool getCumulative();
+
 private:
     int timeLeft = 0;
     int timeTotal = 0;
@@ -45,7 +50,7 @@ private:
     std::shared_ptr<CCreature> caster;
     std::shared_ptr<CCreature> victim;
     int duration = 0;
-    bool buff = false;
+    bool cumulative = false;
 };
 
 

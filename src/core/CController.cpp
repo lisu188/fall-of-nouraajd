@@ -95,5 +95,5 @@ void CRangeController::setDistance(int distance) { this->distance = distance; }
 int CRangeController::getDistance() { return distance; }
 
 bool  CFightController::control(std::shared_ptr<CCreature> me, std::shared_ptr<CCreature> opponent) {
-
+    return false;
 }
