@@ -80,6 +80,11 @@ extern std::shared_ptr<CGameObject> object_deserialize(std::shared_ptr<CMap> map
 
 extern std::shared_ptr<Value> object_serialize(std::shared_ptr<CGameObject> object);
 
+extern std::set<std::string>  array_string_deserialize(std::shared_ptr<CMap> map,
+                                                      std::shared_ptr<Value> object);
+
+extern std::shared_ptr<Value>  array_string_serialize(std::set<std::string>  set);
+
 template<>
 class CSerializerFunction<std::shared_ptr<Value>, std::shared_ptr<CGameObject>> {
 public:
@@ -106,6 +111,16 @@ public:
                                                                std::shared_ptr<Value> object);
 };
 
+template<>
+class CSerializerFunction<std::shared_ptr<Value>, std::set<std::string> > {
+public:
+    static std::shared_ptr<Value> serialize(std::set<std::string> set);
+
+    static std::set<std::string> deserialize(std::shared_ptr<CMap> map,
+                                             std::shared_ptr<Value> object);
+};
+
+
 template<typename Serialized, typename Deserialized>
 class CSerializer : public CSerializerBase {
 public:
@@ -121,6 +136,24 @@ public:
     object) override final {
         return boost::any(
                 CSerializerFunction<Serialized, Deserialized>::deserialize(map, vstd::any_cast<Serialized>(object)));
+    }
+};
+
+template<>
+class CSerializer<std::shared_ptr<Json::Value>,std::set<std::string>> : public CSerializerBase {
+public:
+    virtual boost::any
+    serialize(boost::any
+              object) override final {
+        return boost::any(
+                CSerializerFunction<std::shared_ptr<Json::Value>, std::set<std::string>>::serialize(vstd::any_cast<std::set<std::string>>(object)));
+    }
+
+    virtual boost::any
+    deserialize(std::shared_ptr<CMap> map, boost::any
+    object) override final {
+        return boost::any(
+                CSerializerFunction<std::shared_ptr<Json::Value>, std::set<std::string>>::deserialize(map, vstd::any_cast<std::shared_ptr<Json::Value>>(object)));
     }
 };
 

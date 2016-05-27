@@ -96,6 +96,10 @@ namespace {
                     }
                 }
             }
+            //TODO: make adding custom serializtions more flexible
+            //TODO: add also std::map<std::string,std::string> and std::string
+            //TODO: repeat for int
+            CTypes::register_serializer<std::shared_ptr<Json::Value>,std::set<std::string>>();
         }
     } _register_types;
 }
