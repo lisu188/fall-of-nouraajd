@@ -4,14 +4,14 @@
 #include "core/CUtil.h"
 
 #include "core/CSerialization.h"
+#include "object/CGameObject.h"
 
 class ATypeHandler;
 
-class CGameObject;
 
 class CMap;
 
-class CObjectHandler {
+class CObjectHandler : public CGameObject {
 public:
     CObjectHandler(std::shared_ptr<CObjectHandler> parent = std::shared_ptr<CObjectHandler>());
 

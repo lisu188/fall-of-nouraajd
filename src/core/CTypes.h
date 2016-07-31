@@ -65,6 +65,12 @@ public:
     }
 
     template<typename T>
+    static void register_pointer() {
+        //TODO: check after boost upgrade
+        vstd::register_pointer<T>();
+    }
+
+    template<typename T>
     static void register_serializer() {
         register_serializer<std::shared_ptr<Value>, std::shared_ptr<T>>();
         register_serializer<std::shared_ptr<Value>, std::set<std::shared_ptr<T>>>();
@@ -102,6 +108,7 @@ public:
 
     template<typename T>
     static void register_type() {
+        register_pointer<T>();
         register_serializer<T>();
         register_builder<T>();
         register_consumer<T>();

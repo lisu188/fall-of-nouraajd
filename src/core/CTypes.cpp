@@ -2,12 +2,18 @@
 #include "core/CGame.h"
 #include "core/CWrapper.h"
 #include "core/CController.h"
+#include "core/CEventLoop.h"
 
 namespace {
     struct register_types {
         register_types() {
             CTypes::register_type<CGameObject>();
             {
+                CTypes::register_type<CEventLoop, CGameObject>();
+
+                CTypes::register_type<CObjectHandler, CGameObject>();
+                CTypes::register_type<CEventHandler, CGameObject>();
+
                 CTypes::register_type<CFightController, CGameObject>();
 
                 CTypes::register_type<CGameEvent, CGameObject>();

@@ -1,6 +1,11 @@
 #include "object/CGameObject.h"
 #include "core/CMap.h"
 
+const std::function<bool(std::shared_ptr<CGameObject>, std::shared_ptr<CGameObject>)> CGameObject::name_comparator = [](
+        std::shared_ptr<CGameObject> a, std::shared_ptr<CGameObject> b) {
+    return a->getType() == b->getType();
+};
+
 CGameObject::~CGameObject() {
 
 }
