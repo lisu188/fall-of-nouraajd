@@ -1,6 +1,7 @@
 #include "core/CMap.h"
 #include "core/CGame.h"
 #include "core/CController.h"
+#include "core/CLoader.h"
 
 CMap::CMap(std::shared_ptr<CGame> game) : game(game) {
 
@@ -8,7 +9,7 @@ CMap::CMap(std::shared_ptr<CGame> game) : game(game) {
 
 void CMap::ensureTile(int i, int j) {
     Coords coords(i, j, currentLevel);
-    if (find(coords) == end()) {
+    if (tiles.find(coords) == tiles.end()) {
         this->getTile(i, j, currentLevel);
     }
 }
@@ -74,23 +75,24 @@ std::shared_ptr<CEventHandler> CMap::getEventHandler() {
 
 void CMap::moveTile(std::shared_ptr<CTile> tile, int x, int y, int z) {
     Coords coords = tile->getCoords();
-    auto it = find(coords);
-    if (it != end()) {
-        erase(it);
+    auto it = tiles.find(coords);
+    if (it != tiles.end()) {
+        tiles.erase(it);
     }
-    insert(std::make_pair(Coords(x, y, z), tile));
+    tiles.insert(std::make_pair(Coords(x, y, z), tile));
 }
 
 bool CMap::addTile(std::shared_ptr<CTile> tile, int x, int y, int z) {
     if (this->contains(x, y, z)) {
         return false;
     }
+    tiles.insert(std::make_pair(Coords(x, y, z), tile));
     tile->moveTo(x, y, z);
     return true;
 }
 
 void CMap::removeTile(int x, int y, int z) {
-    this->erase(this->find(Coords(x, y, z)));
+    this->tiles.erase(this->tiles.find(Coords(x, y, z)));
 }
 
 int CMap::getCurrentMap() {
@@ -112,8 +114,8 @@ void CMap::mapDown() {
 std::shared_ptr<CTile> CMap::getTile(int x, int y, int z) {
     Coords coords(x, y, z);
     std::shared_ptr<CTile> tile;
-    auto it = this->find(coords);
-    if (it == this->end()) {
+    auto it = this->tiles.find(coords);
+    if (it == this->tiles.end()) {
         auto bound = boundaries[z];
         if (x < 0 || y < 0 || x > bound.first || y > bound.second) {
             tile = createObject<CTile>("MountainTile");
@@ -133,8 +135,8 @@ std::shared_ptr<CTile> CMap::getTile(Coords coords) {
 
 bool CMap::canStep(int x, int y, int z) {
     Coords coords(x, y, z);
-    auto it = this->find(coords);
-    if (it != this->end()) {
+    auto it = this->tiles.find(coords);
+    if (it != this->tiles.end()) {
         return (*it).second->canStep();
     }
     std::pair<int, int> bound = boundaries[z];
@@ -147,8 +149,8 @@ bool CMap::canStep(const Coords &coords) {
 
 bool CMap::contains(int x, int y, int z) {
     Coords coords(x, y, z);
-    iterator it = find(coords);
-    return it != end();
+    auto it = tiles.find(coords);
+    return it != tiles.end();
 }
 
 void CMap::addObject(std::shared_ptr<CMapObject> mapObject) {
@@ -220,12 +222,13 @@ void CMap::forObjects(std::function<void(std::shared_ptr<CMapObject>)> func,
 
 void CMap::forTiles(std::function<void(std::shared_ptr<CTile>)> func,
                     std::function<bool(std::shared_ptr<CTile>)> predicate) {
-    for (std::shared_ptr<CTile> tile:*dynamic_cast<std::unordered_map<Coords, std::shared_ptr<CTile>> *> ( this ) |
-                                     boost::adaptors::map_values |
-                                     boost::adaptors::filtered(predicate)) {
+    for (std::shared_ptr<CTile> tile:(tiles |
+                                      boost::adaptors::map_values |
+                                      boost::adaptors::filtered(predicate))) {
         func(tile);
     }
 }
+
 
 void CMap::removeObjects(std::function<bool(std::shared_ptr<CMapObject>)> func) {
     auto clone = mapObjects;
@@ -241,13 +244,13 @@ void CMap::move() {
     auto map = this->ptr<CMap>();
 
     move = move->thenLater([map]() {
-        vstd::logger::debug("Turn:", map->turn);
-
         vstd::wait_until([map]() {
             return !map->moving;
         });
 
         map->moving = true;
+
+        vstd::logger::debug("Turn:", map->turn);
 
         map->applyEffects();
 
@@ -266,15 +269,15 @@ void CMap::move() {
         auto end_callback = [map](std::set<void *>) {
             map->resolveFights();
 
-            //TODO:
-//            if (QApplication::instance()->property("auto_save").toBool()) {
-//                CMapLoader::saveMap(map, vstd::to_int(randint(1, 1000000)).first + ".sav");
-//            }
+            if (map->getGame()->getBoolProperty("auto_save")) {
+                CMapLoader::saveMap(map, vstd::str(map->getTurn()) + ".sav");
+            }
 
             map->moving = false;
             map->turn++;
         };
 
+        //TODO: return future and replace
         vstd::join(map->mapObjects |
                    boost::adaptors::map_values |
                    boost::adaptors::filtered(pred) |

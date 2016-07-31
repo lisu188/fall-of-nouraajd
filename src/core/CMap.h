@@ -26,7 +26,8 @@ class CEventHandler;
 
 class CMapObject;
 
-class CMap : public CGameObject, private std::unordered_map<Coords, std::shared_ptr<CTile>> {
+//TODO: make tiles a field
+class CMap : public CGameObject {
     friend class CMapLoader;
 V_META(CMap,CGameObject, V_PROPERTY(CMap, int, turn, getTurn, setTurn))
 public:
@@ -125,6 +126,8 @@ private:
     void resolveFights();
 
     std::unordered_map<std::string, std::shared_ptr<CMapObject>> mapObjects;
+    std::unordered_map<Coords, std::shared_ptr<CTile>> tiles;
+
     std::weak_ptr<CGame> game;
     std::shared_ptr<CPlayer> player;
     int currentLevel = 0;
