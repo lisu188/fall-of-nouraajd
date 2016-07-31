@@ -50,7 +50,8 @@ BOOST_PYTHON_MODULE (_game) {
 
     void ( CObjectHandler::*registerType )(std::string,
                                            std::function<std::shared_ptr<CGameObject>()>) = &CObjectHandler::registerType;
-    class_<CObjectHandler, boost::noncopyable, std::shared_ptr<CObjectHandler>>("CObjectHandler", no_init)
+    class_<CObjectHandler, bases<CGameObject>, boost::noncopyable, std::shared_ptr<CObjectHandler>>("CObjectHandler",
+                                                                                                    no_init)
             .def("registerType", registerType);
 
     void ( CMapObject::*moveTo )(int, int, int) = &CMapObject::moveTo;
@@ -161,7 +162,8 @@ BOOST_PYTHON_MODULE (_game) {
             .def("isCompleted", &CWrapper<CQuest>::isCompleted)
             .def("onComplete", &CWrapper<CQuest>::onComplete);
 
-    class_<CEventHandler, boost::noncopyable, std::shared_ptr<CEventHandler>>("CEventHandler", no_init)
+    class_<CEventHandler, bases<CGameObject>, boost::noncopyable, std::shared_ptr<CEventHandler>>("CEventHandler",
+                                                                                                  no_init)
             .def("registerTrigger", &CEventHandler::registerTrigger);
 
     class_<CMarket, bases<CGameObject>, boost::noncopyable, std::shared_ptr<CMarket> >("CMarket");
@@ -181,7 +183,7 @@ BOOST_PYTHON_MODULE (_game) {
             "CMapPlugin").
             def("load", &CWrapper<CMapPlugin>::load);
 
-    class_<CEventLoop, boost::noncopyable, std::shared_ptr<CEventLoop>>("CEventLoop", no_init)
+    class_<CEventLoop, bases<CGameObject>, boost::noncopyable, std::shared_ptr<CEventLoop>>("CEventLoop", no_init)
             .def("instance", &CEventLoop::instance)
             .def("run", &CEventLoop::run)
             .def("invoke", &CEventLoop::invoke);

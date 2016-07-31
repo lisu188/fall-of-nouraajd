@@ -16,6 +16,8 @@ V_META(CGameObject, vstd::meta::empty,
 )
 
 public:
+    static const std::function<bool(std::shared_ptr<CGameObject>, std::shared_ptr<CGameObject>)> name_comparator;
+
     CGameObject();
 
     virtual ~CGameObject();
