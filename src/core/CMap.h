@@ -26,7 +26,6 @@ class CEventHandler;
 
 class CMapObject;
 
-//TODO: make tiles a field
 class CMap : public CGameObject {
     friend class CMapLoader;
 V_META(CMap,CGameObject, V_PROPERTY(CMap, int, turn, getTurn, setTurn))
