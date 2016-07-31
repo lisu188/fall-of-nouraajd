@@ -44,6 +44,13 @@ public:
                 std::make_shared<CSerializer<Serialized, Deserialized>>();
     }
 
+    template<typename Serialized, typename Deserialized>
+    static void register_custom_serializer(std::function<Serialized(Deserialized)> serialize,
+                                           std::function<Deserialized(std::shared_ptr<CMap>, Serialized)> deserialize) {
+        (*serializers())[vstd::type_pair<Serialized, Deserialized>()] =
+                std::make_shared<CCustomSerializer<Serialized, Deserialized>>(serialize, deserialize);
+    }
+
     template<typename T>
     static void register_builder() {
         (*builders())[T::static_meta()->name()] = []() { return std::make_shared<T>(); };

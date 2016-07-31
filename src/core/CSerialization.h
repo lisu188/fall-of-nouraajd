@@ -111,16 +111,6 @@ public:
                                                                std::shared_ptr<Value> object);
 };
 
-template<>
-class CSerializerFunction<std::shared_ptr<Value>, std::set<std::string> > {
-public:
-    static std::shared_ptr<Value> serialize(std::set<std::string> set);
-
-    static std::set<std::string> deserialize(std::shared_ptr<CMap> map,
-                                             std::shared_ptr<Value> object);
-};
-
-
 template<typename Serialized, typename Deserialized>
 class CSerializer : public CSerializerBase {
 public:
@@ -139,22 +129,30 @@ public:
     }
 };
 
-//TODO: make std::set<std::string> typedef vstd::tags
-template<>
-class CSerializer<std::shared_ptr<Json::Value>,std::set<std::string>> : public CSerializerBase {
+template<typename Serialized, typename Deserialized>
+class CCustomSerializer : public CSerializerBase {
+private:
+    std::function<Serialized(Deserialized)> _serialize;
+    std::function<Deserialized(std::shared_ptr<CMap>, Serialized)> _deserialize;
+
 public:
+
+    CCustomSerializer(std::function<Serialized(Deserialized)> _serialize,
+                      std::function<Deserialized(std::shared_ptr<CMap>, Serialized)> _deserialize)
+            : _serialize(_serialize), _deserialize(_deserialize) {}
+
     virtual boost::any
     serialize(boost::any
               object) override final {
         return boost::any(
-                CSerializerFunction<std::shared_ptr<Json::Value>, std::set<std::string>>::serialize(vstd::any_cast<std::set<std::string>>(object)));
+                _serialize(vstd::any_cast<Deserialized>(object)));
     }
 
     virtual boost::any
     deserialize(std::shared_ptr<CMap> map, boost::any
     object) override final {
         return boost::any(
-                CSerializerFunction<std::shared_ptr<Json::Value>, std::set<std::string>>::deserialize(map, vstd::any_cast<std::shared_ptr<Json::Value>>(object)));
+                _deserialize(map, vstd::any_cast<Serialized>(object)));
     }
 };
 
