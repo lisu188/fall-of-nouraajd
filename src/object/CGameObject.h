@@ -28,6 +28,7 @@ public:
 
     template<typename T=CGameObject>
     std::shared_ptr<T> ptr() const {
+        //const_cast purposedly
         return vstd::cast<T>(const_cast<CGameObject *>(this)->shared_from_this());
     }
 
