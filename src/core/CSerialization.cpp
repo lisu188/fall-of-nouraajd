@@ -269,31 +269,3 @@ std::shared_ptr<Value> CSerializerFunction<std::shared_ptr<Value>, std::shared_p
         std::shared_ptr<CGameObject> object) {
     return object_serialize(object);
 }
-
-std::set<std::string>  array_string_deserialize(std::shared_ptr<CMap> map,
-                                                      std::shared_ptr<Value> object) {
-
-    std::set<std::string> objects;
-    for (int i = 0; i < object->size(); i++) {
-        objects.insert((*object)[i].asString());
-    }
-    return objects;
-
-}
-
-std::shared_ptr<Value>  array_string_serialize(std::set<std::string>  set) {
-    std::shared_ptr<Value> arr = std::make_shared<Value>();
-    for (std::string ob:set) {
-        add_arr_member(arr, ob);
-    }
-    return arr;
-}
-
-std::shared_ptr<Value>  CSerializerFunction<std::shared_ptr<Value>,std::set<std::string> >::serialize(std::set<std::string> set) {
-    return array_string_serialize(set);
-}
-
-std::set<std::string>  CSerializerFunction<std::shared_ptr<Value>, std::set<std::string> >::deserialize(std::shared_ptr<CMap> map,
-                                                                                                                              std::shared_ptr<Value> object) {
-    return array_string_deserialize(map,object);
-}
