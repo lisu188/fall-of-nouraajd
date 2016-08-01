@@ -26,9 +26,12 @@ class CEventHandler;
 
 class CMapObject;
 
+//TODO: triggers saving
 class CMap : public CGameObject {
     friend class CMapLoader;
-V_META(CMap,CGameObject, V_PROPERTY(CMap, int, turn, getTurn, setTurn))
+V_META(CMap,CGameObject, V_PROPERTY(CMap, int, turn, getTurn, setTurn),
+       V_PROPERTY(CMap, std::set<std::shared_ptr<CMapObject>>, objects, getObjects, setObjects),
+       V_PROPERTY(CMap, std::set<std::shared_ptr<CTile>>, tiles, getTiles, setTiles))
 public:
     CMap();
     CMap(std::shared_ptr<CGame> game);
@@ -121,6 +124,26 @@ public:
     int getTurn();
 
     void setTurn(int turn);
+
+    std::set<std::shared_ptr<CMapObject>> getObjects() {
+        return vstd::cast<std::set<std::shared_ptr<CMapObject>>>(mapObjects | boost::adaptors::map_values);
+    }
+
+    void setObjects(std::set<std::shared_ptr<CMapObject>> objects) {
+        for (auto ob : objects) {
+            mapObjects[ob->getName()] = ob;
+        }
+    }
+
+    std::set<std::shared_ptr<CTile>> getTiles() {
+        return vstd::cast<std::set<std::shared_ptr<CTile>>>(tiles | boost::adaptors::map_values);
+    }
+
+    void setTiles(std::set<std::shared_ptr<CTile>> objects) {
+        for (auto ob : objects) {
+            tiles[ob->getCoords()] = ob;
+        }
+    }
 private:
     void resolveFights();
 

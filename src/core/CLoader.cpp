@@ -52,25 +52,7 @@ std::shared_ptr<CMap> CMapLoader::loadNewMapWithPlayer(std::shared_ptr<CGame> ga
 }
 
 void CMapLoader::saveMap(std::shared_ptr<CMap> map, std::string file) {
-    std::shared_ptr<Value> _data = std::make_shared<Value>();
-
-    std::shared_ptr<Value> objects = std::make_shared<Value>();
-    std::shared_ptr<Value> tiles = std::make_shared<Value>();
-    std::shared_ptr<Value> triggers = std::make_shared<Value>();
-
-    map->forObjects([objects](std::shared_ptr<CMapObject> object) {
-        (*objects)[object->getName().c_str()] = *(CSerialization::serialize<std::shared_ptr<Value >>(object));
-    });
-
-    map->forTiles([tiles](std::shared_ptr<CTile> tile) {
-        (*tiles)[tile->getName().c_str()] = *(CSerialization::serialize<std::shared_ptr<Value >>(tile));
-    });
-
-    (*_data)["objects"] = *objects;
-    (*_data)["tiles"] = *tiles;
-    (*_data)["triggers"] = *triggers;
-
-    CResourcesProvider::getInstance()->save(vstd::join({"save/", file}, ""), _data);
+    CResourcesProvider::getInstance()->save(vstd::join({"save/", file}, ""), JSONIFY(map));
 }
 
 void CMapLoader::handleTileLayer(std::shared_ptr<CMap> map, const Value &tileset, const Value &layer) {
