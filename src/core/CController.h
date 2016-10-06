@@ -13,6 +13,11 @@ class CFightController : public CGameObject {
 V_META(CFightController, CGameObject, vstd::meta::empty())
 public:
     virtual bool control(std::shared_ptr<CCreature> me, std::shared_ptr<CCreature> opponent);
+
+private:
+    std::shared_ptr<CInteraction> selectInteraction(std::shared_ptr<CCreature> cr);
+
+    std::shared_ptr<CItem> getLeastPowerfulItemWithTag(std::shared_ptr<CCreature> cr, std::string tag);
 };
 
 class CTargetController : public CController {
