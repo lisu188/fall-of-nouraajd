@@ -579,6 +579,8 @@ void CCreature::setFightController(std::shared_ptr<CFightController> fightContro
     CCreature::fightController = fightController;
 }
 
+//TODO: make this a CGameEvent
+//TODO: add function useItem
 void CCreature::useAction(std::shared_ptr<CInteraction> action, std::shared_ptr<CCreature> creature) {
     vstd::fail_if(!vstd::ctn(actions, action));
     action->onAction(this->ptr<CCreature>(), creature);

@@ -5,6 +5,7 @@
 
 
 void  CFightHandler::fight(std::shared_ptr<CCreature> a, std::shared_ptr<CCreature> b) {
+    //TODO: this is mess!
     int draw = 5;
     while (a->isAlive() && b->isAlive() && draw > 0) {
         if (a->applyEffects()) {
