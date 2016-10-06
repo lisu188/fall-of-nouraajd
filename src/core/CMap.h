@@ -125,25 +125,13 @@ public:
 
     void setTurn(int turn);
 
-    std::set<std::shared_ptr<CMapObject>> getObjects() {
-        return vstd::cast<std::set<std::shared_ptr<CMapObject>>>(mapObjects | boost::adaptors::map_values);
-    }
+    std::set<std::shared_ptr<CMapObject>> getObjects();
 
-    void setObjects(std::set<std::shared_ptr<CMapObject>> objects) {
-        for (auto ob : objects) {
-            mapObjects[ob->getName()] = ob;
-        }
-    }
+    void setObjects(std::set<std::shared_ptr<CMapObject>> objects);
 
-    std::set<std::shared_ptr<CTile>> getTiles() {
-        return vstd::cast<std::set<std::shared_ptr<CTile>>>(tiles | boost::adaptors::map_values);
-    }
+    std::set<std::shared_ptr<CTile>> getTiles();
 
-    void setTiles(std::set<std::shared_ptr<CTile>> objects) {
-        for (auto ob : objects) {
-            tiles[ob->getCoords()] = ob;
-        }
-    }
+    void setTiles(std::set<std::shared_ptr<CTile>> objects);
 private:
     void resolveFights();
 

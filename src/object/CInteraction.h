@@ -38,7 +38,7 @@ public:
     void setManaCost(int value);
 
 private:
-    int manaCost;
+    int manaCost = 0;
     std::shared_ptr<CEffect> effect;
 };
 

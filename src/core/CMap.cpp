@@ -316,3 +316,23 @@ int CMap::getTurn() {
 void CMap::setTurn(int turn) {
     this->turn = turn;
 }
+
+void CMap::setTiles(std::set<std::shared_ptr<CTile>> objects) {
+    for (auto ob : objects) {
+        tiles[ob->getCoords()] = ob;
+    }
+}
+
+std::set<std::shared_ptr<CTile>> CMap::getTiles() {
+    return vstd::cast<std::set<std::shared_ptr<CTile>>>(tiles | boost::adaptors::map_values);
+}
+
+void CMap::setObjects(std::set<std::shared_ptr<CMapObject>> objects) {
+    for (auto ob : objects) {
+        mapObjects[ob->getName()] = ob;
+    }
+}
+
+std::set<std::shared_ptr<CMapObject>> CMap::getObjects() {
+    return vstd::cast<std::set<std::shared_ptr<CMapObject>>>(mapObjects | boost::adaptors::map_values);
+}

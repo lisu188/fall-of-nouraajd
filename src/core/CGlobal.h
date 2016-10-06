@@ -5,6 +5,7 @@
 #include <boost/python.hpp>
 #include <boost/locale.hpp>
 #include <boost/filesystem.hpp>
+#include <boost/range/algorithm.hpp>
 
 #include <SDL.h>
 

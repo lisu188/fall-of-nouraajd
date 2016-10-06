@@ -46,7 +46,9 @@ BOOST_PYTHON_MODULE (_game) {
             .def("createObject", &CMap::createObject<CGameObject>)
             .def("getGame", &CMap::getGame)
             .def("load_plugin", &CMap::load_plugin)
-            .def("move", &CMap::move);
+            .def("move", &CMap::move)
+            .def("getObjectByName", &CMap::getObjectByName)
+            .def("forObjects", &CMap::forObjects);
 
     void ( CObjectHandler::*registerType )(std::string,
                                            std::function<std::shared_ptr<CGameObject>()>) = &CObjectHandler::registerType;
