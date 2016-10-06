@@ -13,8 +13,8 @@ std::shared_ptr<vstd::future<void, Coords>> CTargetController::control(std::shar
     });
 }
 
-std::shared_ptr<vstd::future<void, Coords> >  CController::control(std::shared_ptr<CCreature> c) {
-    return vstd::async([](Coords) { });
+std::shared_ptr<vstd::future<void, Coords> > CController::control(std::shared_ptr<CCreature> c) {
+    return vstd::async([](Coords) {});
 }
 
 CTargetController::CTargetController() {
@@ -29,7 +29,7 @@ void CTargetController::set_target(std::shared_ptr<CMapObject> target) {
     this->target = target;
 }
 
-std::shared_ptr<vstd::future<void, Coords> >  CRandomController::control(std::shared_ptr<CCreature> creature) {
+std::shared_ptr<vstd::future<void, Coords> > CRandomController::control(std::shared_ptr<CCreature> creature) {
     return vstd::later([]() {
         return Coords(vstd::rand(-1, 1), vstd::rand(-1, 1), 0);
     })->thenLater([=](Coords coords) {
@@ -41,7 +41,7 @@ std::string CGroundController::getTileType() { return _tileType; }
 
 void CGroundController::setTileType(std::string type) { _tileType = type; }
 
-std::shared_ptr<vstd::future<void, Coords> >  CGroundController::control(std::shared_ptr<CCreature> creature) {
+std::shared_ptr<vstd::future<void, Coords> > CGroundController::control(std::shared_ptr<CCreature> creature) {
     return vstd::later([=]() -> Coords {
         std::vector<Coords> possible;
         for (auto c:NEAR_COORDS_WITH(creature->getCoords())) {
@@ -64,7 +64,7 @@ CRangeController::CRangeController() {
 }
 
 
-std::shared_ptr<vstd::future<void, Coords> >  CRangeController::control(std::shared_ptr<CCreature> creature) {
+std::shared_ptr<vstd::future<void, Coords> > CRangeController::control(std::shared_ptr<CCreature> creature) {
     return vstd::later([=]() -> Coords {
         std::vector<Coords> possible;
         for (auto c:NEAR_COORDS_WITH(creature->getCoords())) {
@@ -94,6 +94,6 @@ void CRangeController::setDistance(int distance) { this->distance = distance; }
 
 int CRangeController::getDistance() { return distance; }
 
-bool  CFightController::control(std::shared_ptr<CCreature> me, std::shared_ptr<CCreature> opponent) {
+bool CFightController::control(std::shared_ptr<CCreature> me, std::shared_ptr<CCreature> opponent) {
     return false;
 }
