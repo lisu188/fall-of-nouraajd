@@ -106,14 +106,13 @@ public:
 
     virtual void levelUp();
 
-    virtual std::set<std::shared_ptr<CItem> > getLoot();
-
     virtual std::set<std::shared_ptr<CItem> > getAllItems();
 
     void addAction(std::shared_ptr<CInteraction> action);
 
     void addEffect(std::shared_ptr<CEffect> effect);
 
+    void removeEffect(std::shared_ptr<CEffect> effect);
     int getMana();
 
     void setMana(int mana);
@@ -161,8 +160,6 @@ public:
     CItemMap getEquipped();
 
     void setEquipped(CItemMap value);
-
-    bool applyEffects();
 
     std::set<std::shared_ptr<CInteraction>> getInteractions();
 

@@ -1,5 +1,4 @@
 def load(self,context):
-    from game import CEffect
     from game import Damage
     from game import register
     from game import CEffect
@@ -53,6 +52,7 @@ def load(self,context):
     @register(context)
     class ChloroformEffect(CEffect):
         def onEffect(self):
+            # TODO: make add remove tag
             return self.getVictim().getHpRatio() > 25
 
     @register(context)

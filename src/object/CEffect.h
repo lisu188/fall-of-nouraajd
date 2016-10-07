@@ -19,7 +19,7 @@ public:
 
     int getTimeTotal();
 
-    bool apply(std::shared_ptr<CCreature> creature);
+    void apply(std::shared_ptr<CCreature> creature);
 
     std::shared_ptr<Stats> getBonus();
 
@@ -29,7 +29,7 @@ public:
 
     void setDuration(int duration);
 
-    virtual bool onEffect();
+    virtual void onEffect();
 
     std::shared_ptr<CCreature> getCaster();
 

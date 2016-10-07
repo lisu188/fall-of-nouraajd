@@ -52,7 +52,7 @@ std::shared_ptr<CMap> CMapLoader::loadNewMapWithPlayer(std::shared_ptr<CGame> ga
 }
 
 void CMapLoader::saveMap(std::shared_ptr<CMap> map, std::string file) {
-    CResourcesProvider::getInstance()->save(vstd::join({"save/", file}, ""), JSONIFY(map));
+    //CResourcesProvider::getInstance()->save(vstd::join({"save/", file}, ""), JSONIFY(map));
 }
 
 void CMapLoader::handleTileLayer(std::shared_ptr<CMap> map, const Value &tileset, const Value &layer) {
