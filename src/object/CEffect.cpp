@@ -25,7 +25,7 @@ std::shared_ptr<CCreature> CEffect::getVictim() {
     return victim;
 }
 
-bool CEffect::apply(std::shared_ptr<CCreature> creature) {
+void CEffect::apply(std::shared_ptr<CCreature> creature) {
     if (bonus) {
         if (timeTotal == timeLeft) {
             creature->addBonus(bonus);
@@ -36,9 +36,9 @@ bool CEffect::apply(std::shared_ptr<CCreature> creature) {
         if (bonus) {
             creature->removeBonus(bonus);
         }
-        return false;
+    } else {
+        onEffect();
     }
-    return onEffect();
 }
 
 std::shared_ptr<Stats> CEffect::getBonus() {
@@ -58,8 +58,8 @@ void CEffect::setDuration(int duration) {
     timeLeft = timeTotal = duration;
 }
 
-bool CEffect::onEffect() {
-    return false;
+void CEffect::onEffect() {
+
 }
 
 void CEffect::setCaster(std::shared_ptr<CCreature> value) {

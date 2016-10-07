@@ -282,36 +282,6 @@ std::shared_ptr<CInteraction> CCreature::selectAction() {
     return 0;
 }
 
-bool CCreature::applyEffects() {
-    //TODO: move to CFightHandler
-    if (effects.size() == 0) {
-        return false;
-    }
-    int i = 0;
-    std::set<std::shared_ptr<CEffect> >::iterator it = effects.begin();
-    for (it = effects.begin(); it != effects.end();) {
-        if ((*it)->getTimeLeft() == 0) {
-            vstd::logger::debug(to_string(), "is now free from", (*it)->to_string());
-            i++;
-            effects.erase(it);
-            it = effects.begin();
-        } else {
-            it++;
-        }
-    }
-    bool isStopped = false;
-    for (std::shared_ptr<CEffect> effect:effects) {
-        vstd::logger::debug(to_string(), "suffers from", effect->to_string());
-        i++;
-        isStopped = isStopped || effect->apply(this->ptr<CCreature>());
-        if (!isAlive()) {
-            CFightHandler::defeatedCreature(effect->getCaster(), this->ptr<CCreature>());
-            return true;
-        }
-    }
-    return isStopped;
-}
-
 bool CCreature::isPlayer() {
     return getMap()->getPlayer() == this->ptr<CPlayer>();
 }
@@ -404,15 +374,6 @@ void CCreature::levelUp() {
     if (level > 1) {
         vstd::logger::debug(to_string(), "is now level:", level);
     }
-}
-
-std::set<std::shared_ptr<CItem>> CCreature::getLoot() {
-    std::set<std::shared_ptr<CItem>> items = this->getMap()->getLootHandler()->getLoot(getScale());
-    for (std::shared_ptr<CItem> item:getInInventory()) {
-        this->removeFromInventory(item);
-        items.insert(item);
-    }
-    return items;
 }
 
 std::set<std::shared_ptr<CItem> > CCreature::getAllItems() {
@@ -589,4 +550,8 @@ void CCreature::useAction(std::shared_ptr<CInteraction> action, std::shared_ptr<
             creature->getArmor()->getInteraction()->onAction(creature, this->ptr<CCreature>());
         }
     }
+}
+
+void CCreature::removeEffect(std::shared_ptr<CEffect> effect) {
+    effects.erase(effect);
 }

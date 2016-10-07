@@ -74,11 +74,11 @@ template<>
 class CWrapper<CEffect> : public CEffect, public boost::python::wrapper<CWrapper<CEffect>> {
 V_META(CWrapper<T>, CEffect, vstd::meta::empty())
 public:
-    bool onEffect() override final {
+    void onEffect() override final {
         if (auto f = this->get_override("onEffect")) {
-            PY_SAFE_RET_VAL (return f();, false)
+            PY_SAFE (f();)
         } else {
-            return this->CEffect::onEffect();
+            this->CEffect::onEffect();
         }
     }
 

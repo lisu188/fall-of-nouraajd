@@ -10,4 +10,5 @@ public:
 
     static void defeatedCreature(std::shared_ptr<CCreature> a, std::shared_ptr<CCreature> b);
 
+    static void applyEffects(std::shared_ptr<CCreature> cr);
 };

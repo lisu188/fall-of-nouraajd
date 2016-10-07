@@ -102,7 +102,7 @@ public:
 
     bool isMoving();
 
-    void applyEffects();
+//    void applyEffects();
 
     void forObjects(std::function<void(std::shared_ptr<CMapObject>)> func,
                     std::function<bool(std::shared_ptr<CMapObject>)> predicate = [](
