@@ -37,6 +37,9 @@
   },
   "EndlessPainEffect": {
     "class": "EndlessPainEffect",
+    "tags": [
+      "buff"
+    ],
     "properties": {
       "duration": 2
     }
@@ -55,6 +58,9 @@
   },
   "Stun": {
     "class": "Stun",
+    "tags": [
+      "stun"
+    ],
     "properties": {
       "duration": 2
     }

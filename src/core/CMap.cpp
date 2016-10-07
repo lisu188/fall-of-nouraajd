@@ -199,16 +199,16 @@ bool CMap::isMoving() {
     return moving;
 }
 
-void CMap::applyEffects() {
-    auto pred = [](std::shared_ptr<CMapObject> object) {
-        return vstd::castable<CCreature>(object);
-    };
-    for (std::shared_ptr<CMapObject> object:mapObjects |
-                                            boost::adaptors::map_values |
-                                            boost::adaptors::filtered(pred)) {
-        vstd::cast<CCreature>(object)->applyEffects();
-    }
-}
+//void CMap::applyEffects() {
+//    auto pred = [](std::shared_ptr<CMapObject> object) {
+//        return vstd::castable<CCreature>(object);
+//    };
+//    for (std::shared_ptr<CMapObject> object:mapObjects |
+//                                            boost::adaptors::map_values |
+//                                            boost::adaptors::filtered(pred)) {
+//        vstd::cast<CCreature>(object)->applyEffects();
+//    }
+//}
 
 void CMap::forObjects(std::function<void(std::shared_ptr<CMapObject>)> func,
                       std::function<bool(std::shared_ptr<CMapObject>)> predicate) {
@@ -252,7 +252,7 @@ void CMap::move() {
 
         vstd::logger::debug("Turn:", map->turn);
 
-        map->applyEffects();
+        //TODO: map->applyEffects();
 
         map->forObjects([map](std::shared_ptr<CMapObject> mapObject) {
             map->getEventHandler()->gameEvent(mapObject, std::make_shared<CGameEvent>(CGameEvent::Type::onTurn));

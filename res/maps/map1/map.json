@@ -56,7 +56,8 @@
               "id": 4,
               "name": "cave2",
               "properties": {
-                "chance": "1",
+                "chance": "10",
+                "monsters": "1000",
                 "monster": "{\"ref\":\"OctoBogz\",\"properties\":{\"controller\":{\"class\":\"CRangeController\",\"properties\":{\"target\":\"cave2\",\"distance\":10}}}}"
               },
               "rotation": 0,
