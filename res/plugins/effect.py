@@ -6,13 +6,12 @@ def load(self,context):
     @register(context)
     class Stun(CEffect):
         def onEffect(self):
-            return True
+            pass
 
     @register(context)
     class EndlessPainEffect(CEffect):
         def onEffect(self):
             self.getVictim().hurt(self.getCaster().getDmg()*15//100)
-            return True
 
     @register(context)
     class AbyssalShadowsEffect(CEffect):
@@ -23,39 +22,39 @@ def load(self,context):
             else:
                 dmg.setNumericProperty('shadow',self.getCaster().getDmg())
             self.getVictim().hurt(dmg)
-            return False
+
 
     @register(context)
     class ArmorOfEndlessWinterEffect(CEffect):
         def onEffect(self):
-            self.getVictim().healProc ( 20 );
-            return False #must implement ban to other skills
+            self.getVictim().healProc(20)
+            # must implement ban to other skills
 
     @register(context)
     class MutilationEffect(CEffect):
         def onEffect(self):
             self.getVictim().hurt ( self.getCaster().getStats().getNumericProperty('agility') //4 )
-            return False;
+
 
     @register(context)
     class LethalPoisonEffect(CEffect):
         def onEffect(self):
             self.getVictim().hurt ( self.getCaster().getDmg() * 4 // 6)
-            return False;
 
     @register(context)
     class BloodlashEffect(CEffect):
         def onEffect(self):
             self.getVictim().hurt ( self.getCaster().getDmg() * 0.75 )
-            return False;
 
     @register(context)
     class ChloroformEffect(CEffect):
         def onEffect(self):
-            # TODO: make add remove tag
-            return self.getVictim().getHpRatio() > 25
+            if self.getVictim().getHpRatio() > 25:
+                self.removeTag('stun')
+            else:
+                self.addTag('stun')
 
     @register(context)
     class BarrierEffect(CEffect):
         def onEffect(self):
-            return False
+            pass

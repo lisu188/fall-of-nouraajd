@@ -18,7 +18,9 @@ BOOST_PYTHON_MODULE (_game) {
             .def("setObjectProperty", &CGameObject::setObjectProperty<CGameObject>)
             .def("incProperty", &CGameObject::incProperty)
             .def("ptr", &CGameObject::ptr<CGameObject>)
-            .def("clone", &CGameObject::clone<CGameObject>);
+            .def("clone", &CGameObject::clone<CGameObject>)
+            .def("addTag", &CGameObject::addTag)
+            .def("removeTag", &CGameObject::removeTag);
 
     class_<Coords>("Coords", init<int, int, int>())
             .def_readonly("x", &Coords::x)
