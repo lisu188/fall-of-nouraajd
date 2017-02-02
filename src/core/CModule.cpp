@@ -1,12 +1,21 @@
 #include "core/CLoader.h"
 #include "core/CWrapper.h"
 #include "core/CEventLoop.h"
+#include "core/CJsonUtil.h"
 
 using namespace boost::python;
 
-BOOST_PYTHON_MODULE (_game) {
-    def("randint", randint);
+int randint(int i, int j) {
+    return rand() % (j - i + 1) + i;
+}
 
+std::string jsonify(std::shared_ptr<CGameObject> x) {
+    return JSONIFY(x);
+}
+
+#define PY_WRAP_GENERIC(fcn) def(#fcn,boost::python::make_function(fcn))
+
+BOOST_PYTHON_MODULE (_game) {
     class_<CGameObject, boost::noncopyable, std::shared_ptr<CGameObject>>("CGameObject", no_init)
             .def("getStringProperty", &CGameObject::getStringProperty)
             .def("getNumericProperty", &CGameObject::getNumericProperty)
@@ -191,4 +200,7 @@ BOOST_PYTHON_MODULE (_game) {
             .def("instance", &CEventLoop::instance)
             .def("run", &CEventLoop::run)
             .def("invoke", &CEventLoop::invoke);
+
+    PY_WRAP_GENERIC(randint);
+    PY_WRAP_GENERIC(jsonify);
 }
