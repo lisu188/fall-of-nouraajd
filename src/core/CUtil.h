@@ -38,7 +38,4 @@ namespace std {
     };
 }
 
-template<typename T=void>
-int randint(int i, int j) { return rand() % (j - i + 1) + i; }
-
 #define JSONIFY(x) CJsonUtil::to_string(CSerialization::serialize<std::shared_ptr<Value>>(x))
