@@ -1,7 +1,6 @@
 #include "core/CMap.h"
 #include "core/CGame.h"
 #include "core/CController.h"
-#include "core/CLoader.h"
 
 CMap::CMap(std::shared_ptr<CGame> game) : game(game) {
 
@@ -269,9 +268,10 @@ void CMap::move() {
         auto end_callback = [map](std::set<void *>) {
             map->resolveFights();
 
-            if (map->getGame()->getBoolProperty("auto_save")) {
-                CMapLoader::saveMap(map, vstd::str(map->getTurn()) + ".sav");
-            }
+            //TODO:
+//            if (map->getGame()->getBoolProperty("auto_save")) {
+//                CMapLoader::saveMap(map, vstd::str(map->getTurn()) + ".sav");
+//            }
 
             map->moving = false;
             map->turn++;
