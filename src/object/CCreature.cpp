@@ -157,10 +157,20 @@ int CCreature::getExpRatio() {
            (float) (level * (level + 1) * 500 - level * (level - 1) * 500) * 100.0;
 }
 
-void CCreature::takeDamage(int i) {
-    vstd::fail_if(i < 0, "damage less than 0 taken");
+//TODO: resistance and blocking to be more generic
+void CCreature::takeDamage(int rawDamage) {
+    if (rawDamage < 0) {
+        rawDamage = 0;
+    }
+    int damageAfterArmor = rawDamage * ((100 - stats->getArmor()) / 100.0);
+    if (damageAfterArmor < 0) {
+        damageAfterArmor = 0;
+    }
     if (rand() >= stats->getBlock()) {
-        hp -= i * ((100 - stats->getArmor()) / 100.0);
+        vstd::logger::debug(getName(), " armor saved from ", rawDamage - damageAfterArmor, " damage");
+        hp -= damageAfterArmor;
+    } else {
+        vstd::logger::debug(getName(), " blocked ", rawDamage, " damage");
     }
 }
 
