@@ -12,3 +12,4 @@ gen/
 *.h.*
 *.cpp.*
 *.idea/
+/cmake-build-debug/
