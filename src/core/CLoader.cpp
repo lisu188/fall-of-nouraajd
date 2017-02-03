@@ -118,8 +118,12 @@ std::shared_ptr<CGame> CGameLoader::loadGame() {
     return game;
 }
 
-void CGameLoader::startGame(std::shared_ptr<CGame> game, std::string file, std::string player) {
+void CGameLoader::startGameWithPlayer(std::shared_ptr<CGame> game, std::string file, std::string player) {
     game->setMap(CMapLoader::loadNewMapWithPlayer(game, file, player));
+}
+
+void CGameLoader::startGame(std::shared_ptr<CGame> game, std::string file) {
+    game->setMap(CMapLoader::loadNewMap(game, file));
 }
 
 void CGameLoader::changeMap(std::shared_ptr<CGame> game, std::string name) {

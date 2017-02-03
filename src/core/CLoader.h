@@ -33,7 +33,9 @@ class CGameLoader {
 public:
     static std::shared_ptr<CGame> loadGame();
 
-    static void startGame(std::shared_ptr<CGame> game, std::string file, std::string player);
+    static void startGameWithPlayer(std::shared_ptr<CGame> game, std::string file, std::string player);
+
+    static void startGame(std::shared_ptr<CGame> game, std::string file);
 
     static void changeMap(std::shared_ptr<CGame> game, std::string file);
 
