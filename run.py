@@ -12,10 +12,9 @@ def advance(game, turns):
 if __name__ == '__main__':
     turns = 1000
     g = game.CGameLoader.loadGame()
-    g.setBoolProperty('auto_save', True)
     game.CGameLoader.startGame(g, "map1", "Warrior")
     advance(game, turns)
-    print(game.jsonify(g.getMap().ptr()))
+    open("map.json").write(game.jsonify(g.getMap().ptr()))
 # def printName(ob):
 #    print(ob.getStringProperty('name'))
 #
