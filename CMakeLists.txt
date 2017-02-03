@@ -24,7 +24,7 @@ include_directories(${JSONCPP_INCLUDE_DIRS})
 
 include_directories(${CMAKE_SOURCE_DIR}/src)
 
-include_directories(${CMAKE_SOURCE_DIR}/../vstd)
+include_directories(${CMAKE_SOURCE_DIR}/vstd)
 
 python_add_module(_game ${GAME_SRC})
 target_link_libraries(_game ${Boost_LIBRARIES} ${PYTHON_LIBRARIES} ${SDL2_LIBRARY} ${JSONCPP_LIBRARIES})
