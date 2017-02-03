@@ -47,6 +47,8 @@ configure_file(res/maps/map1/script.py maps/map1/script.py)
 
 configure_file(res/maps/map2/map.json maps/map2/map.json)
 
+configure_file(res/maps/empty/map.json maps/empty/map.json)
+
 configure_file(res/plugins/effect.py plugins/effect.py)
 configure_file(res/plugins/interaction.py plugins/interaction.py)
 configure_file(res/plugins/object.py plugins/object.py)
@@ -54,6 +56,8 @@ configure_file(res/plugins/potion.py plugins/potion.py)
 configure_file(res/plugins/tile.py plugins/tile.py)
 
 configure_file(res/game.py game.py)
-configure_file(run.py run.py)
+
+configure_file(test/run_turns.py test/run_turns.py)
+configure_file(test/all_objects.py test/all_objects.py)
 
 cotire(_game)

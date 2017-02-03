@@ -20,7 +20,7 @@
 //    vstd::call_later ( [this, mapName, playerType]() {
 //        game = CGameLoader::loadGame ( this->ptr() );
 //        setScene ( game.get() );
-//        CGameLoader::startGame ( game, mapName, playerType );
+//        CGameLoader::startGameWithPlayer ( game, mapName, playerType );
 //        std::shared_ptr<CPlayer> player = getGame()->getMap()->getPlayer();
 //        playerStatsView.setParent ( this );
 //        playerStatsView.show();
