@@ -11,7 +11,7 @@ def advance(game, turns):
 
 if __name__ == '__main__':
     g = game.CGameLoader.loadGame()
-    game.CGameLoader.startGame(g, "map1", "Warrior")
+    game.CGameLoader.startGameWithPlayer(g, "map1", "Warrior")
     advance(game, int(sys.argv[1]))
     open("map.json","w").write(game.jsonify(g.getMap().ptr()))
 # def printName(ob):
