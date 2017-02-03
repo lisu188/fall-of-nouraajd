@@ -41,7 +41,8 @@ BOOST_PYTHON_MODULE (_game) {
             .def("changeMap", &CGame::changeMap)
             .def("load_plugin", &CGame::load_plugin)
 //TODO:            .def ( "getGuiHandler", &CGame::getGuiHandler )
-            .def("getObjectHandler", &CGame::getObjectHandler);
+            .def("getObjectHandler", &CGame::getObjectHandler)
+            .def("createObject", &CGame::createObject<CGameObject>);
 
     class_<CMap, bases<CGameObject>, boost::noncopyable, std::shared_ptr<CMap>>("CMap", no_init)
             .def("addObjectByName", &CMap::addObjectByName)
