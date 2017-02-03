@@ -1,7 +1,6 @@
 #!/usr/bin/python3
 import game
 
-
 def advance(game, turns):
     current_turn = g.getMap().getNumericProperty('turn')
     for i in range(turns):
@@ -11,8 +10,7 @@ def advance(game, turns):
 
 
 if __name__ == '__main__':
-    input()
-    turns = 1000000
+    turns = 1000
     g = game.CGameLoader.loadGame()
     g.setBoolProperty('auto_save', True)
     game.CGameLoader.startGame(g, "map1", "Warrior")
