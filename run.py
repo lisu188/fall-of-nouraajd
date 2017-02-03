@@ -1,5 +1,6 @@
 #!/usr/bin/python3
 import game
+import sys
 
 def advance(game, turns):
     current_turn = g.getMap().getNumericProperty('turn')
@@ -9,10 +10,9 @@ def advance(game, turns):
         game.CEventLoop.instance().run()
 
 if __name__ == '__main__':
-    turns = 1000
     g = game.CGameLoader.loadGame()
     game.CGameLoader.startGame(g, "map1", "Warrior")
-    advance(game, turns)
+    advance(game, int(sys.argv[1]))
     open("map.json","w").write(game.jsonify(g.getMap().ptr()))
 # def printName(ob):
 #    print(ob.getStringProperty('name'))
