@@ -3,6 +3,7 @@
 #include <Python.h>
 
 #include <boost/python.hpp>
+#include <boost/python/suite/indexing/vector_indexing_suite.hpp>
 #include <boost/locale.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/range/algorithm.hpp>
