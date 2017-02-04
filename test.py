@@ -9,7 +9,6 @@ def game_test(f):
     def wrapper(self):
         n = f.__name__.split("test_")[1]
         open(n + ".log", "w").write(str(f(self)))
-
     return wrapper
 
 
@@ -27,6 +26,7 @@ class GameTest(unittest.TestCase):
             else:
                 print("Failed to create: " + type)
                 failed.append(type)
+        self.assertEquals(failed, [])
         return failed
 
     @game_test
