@@ -61,7 +61,6 @@ configure_file(res/plugins/tile.py plugins/tile.py)
 
 configure_file(res/game.py game.py)
 
-configure_file(test/run_turns.py test/run_turns.py)
-configure_file(test/all_objects.py test/all_objects.py)
+configure_file(test.py test.py)
 
 cotire(_game)
