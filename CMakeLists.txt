@@ -49,11 +49,9 @@ configure_file(res/maps/map2/config.json maps/map2/config.json)
 configure_file(res/maps/map2/map.json maps/map2/map.json)
 configure_file(res/maps/map2/script.py maps/map2/script.py)
 
-
 configure_file(res/maps/empty/config.json maps/empty/config.json)
 configure_file(res/maps/empty/map.json maps/empty/map.json)
 configure_file(res/maps/empty/script.py maps/empty/script.py)
-
 
 configure_file(res/plugins/effect.py plugins/effect.py)
 configure_file(res/plugins/interaction.py plugins/interaction.py)
