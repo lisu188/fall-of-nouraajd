@@ -58,7 +58,7 @@ private:
 
 
 class CArmor : public CItem {
-
+V_META(CArmor, CItem,vstd::meta::empty())
 public:
     CArmor();
 
@@ -69,7 +69,7 @@ public:
 
 
 class CBelt : public CItem {
-
+V_META(CBelt, CItem,vstd::meta::empty())
 public:
     CBelt();
 
@@ -78,7 +78,7 @@ public:
 
 
 class CHelmet : public CItem {
-
+V_META(CHelmet, CItem,vstd::meta::empty())
 public:
     CHelmet();
 
@@ -87,7 +87,7 @@ public:
 
 
 class CBoots : public CItem {
-
+V_META(CBoots, CItem,vstd::meta::empty())
 public:
     CBoots();
 
@@ -96,7 +96,7 @@ public:
 
 
 class CGloves : public CItem {
-
+V_META(CGloves, CItem,vstd::meta::empty())
 public:
     CGloves();
 
@@ -105,7 +105,7 @@ public:
 
 
 class CWeapon : public CItem {
-
+V_META(CWeapon, CItem,vstd::meta::empty())
 public:
     CWeapon();
 
@@ -114,7 +114,7 @@ public:
 
 
 class CSmallWeapon : public CWeapon {
-
+V_META(CSmallWeapon, CWeapon,vstd::meta::empty())
 public:
     CSmallWeapon();
 
@@ -145,7 +145,7 @@ private:
 
 
 class CPotion : public CItem {
-
+V_META(CPotion, CItem,vstd::meta::empty())
 public:
     CPotion();
 

@@ -31,7 +31,7 @@ public:
         return vstd::cast<T>(_clone(object));
     }
 
-    std::set<std::string> getAllTypes();
+    std::vector<std::string> getAllTypes();
 
     void registerConfig(std::string path);
 

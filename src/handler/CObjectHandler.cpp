@@ -22,14 +22,14 @@ std::shared_ptr<Value> CObjectHandler::getConfig(std::string type) {
     return nullptr;
 }
 
-std::set<std::string> CObjectHandler::getAllTypes() {
-    std::set<std::string> types;
+std::vector<std::string> CObjectHandler::getAllTypes() {
+    std::vector<std::string> types;
     for (std::string val:objectConfig | boost::adaptors::map_keys) {
-        types.insert(val);
+        types.push_back(val);
     }
     if (parent.lock()) {
         for (std::string val:parent.lock()->getAllTypes()) {
-            types.insert(val);
+            types.push_back(val);
         }
     }
     return types;
