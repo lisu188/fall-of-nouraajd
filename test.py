@@ -1,10 +1,20 @@
-import game
 import unittest
+
+import game
 from teamcity import is_running_under_teamcity
 from teamcity.unittestpy import TeamcityTestRunner
 
 
+def game_test(f):
+    def wrapper(self):
+        n = f.__name__.split("test_")[1]
+        open(n + ".log", "w").write(str(f(self)))
+
+    return wrapper
+
+
 class GameTest(unittest.TestCase):
+    @game_test
     def test_all_objects(self):
         failed = []
         g = game.CGameLoader.loadGame()
@@ -19,6 +29,7 @@ class GameTest(unittest.TestCase):
                 failed.append(type)
         return failed
 
+    @game_test
     def test_run_turns(self):
         def advance(game, turns):
             current_turn = g.getMap().getNumericProperty('turn')
