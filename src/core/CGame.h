@@ -37,7 +37,7 @@ public:
 
     template<typename T>
     std::shared_ptr<T> createObject(std::string name) {
-        return getObjectHandler()->createObject<T>(this->ptr<CMap>(), name);
+        return getObjectHandler()->createObject<T>(getMap(), name);
     }
 
 protected:

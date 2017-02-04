@@ -205,6 +205,9 @@ BOOST_PYTHON_MODULE (_game) {
             .def("run", &CEventLoop::run)
             .def("invoke", &CEventLoop::invoke);
 
+    class_<std::vector<std::string>>("std::vector<std::string>")
+            .def(vector_indexing_suite<std::vector<std::string>>());
+
     PY_WRAP_GENERIC(randint);
     PY_WRAP_GENERIC(jsonify);
 }
