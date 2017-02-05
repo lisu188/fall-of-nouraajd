@@ -8,7 +8,11 @@ from teamcity.unittestpy import TeamcityTestRunner
 def game_test(f):
     def wrapper(self):
         n = f.__name__.split("test_")[1]
-        open(n + ".log", "w").write(str(f(self)))
+        result = f(self)
+        success = result[0]
+        log = result[1]
+        open(n + ".log", "w").write(str(log))
+        self.assertTrue(success)
     return wrapper
 
 
@@ -26,7 +30,7 @@ class GameTest(unittest.TestCase):
             else:
                 print("Failed to create: " + type)
                 failed.append(type)
-        return failed
+        return failed == [], failed
 
     @game_test
     def test_run_turns(self):
@@ -40,7 +44,7 @@ class GameTest(unittest.TestCase):
         g = game.CGameLoader.loadGame()
         game.CGameLoader.startGameWithPlayer(g, "map1", "Warrior")
         advance(game, 1000)  # TODO: set value from build
-        return game.jsonify(g.getMap().ptr())  # TODO: why we need ptr? in all _bjects we dont!
+        return True, game.jsonify(g.getMap().ptr())  # TODO: why we need ptr? in all _bjects we dont!
 
 
 if __name__ == '__main__':
