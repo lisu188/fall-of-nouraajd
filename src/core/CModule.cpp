@@ -150,11 +150,11 @@ BOOST_PYTHON_MODULE (_game) {
 //    class_<CFightPanel, bases<AGamePanel>, boost::noncopyable, std::shared_ptr<CFightPanel>> ( "CFightPanel" );
 //    class_<CCharPanel, bases<AGamePanel>, boost::noncopyable, std::shared_ptr<CCharPanel>> ( "CCharPanel" );
 //    class_<CTradePanel, bases<AGamePanel>, boost::noncopyable, std::shared_ptr<CTradePanel>> ( "CTradePanel" );
-//    class_<CGuiHandler, boost::noncopyable, std::shared_ptr<CGuiHandler>> ( "CGuiHandler", no_init )
-//            .def ( "showMessage", &CGuiHandler::showMessage )
-//            .def ( "showPanel", &CGuiHandler::showPanel )
-//            .def ( "hidePanel", &CGuiHandler::hidePanel )
-//            .def ( "flipPanel", &CGuiHandler::flipPanel );
+//    class_<CGui, boost::noncopyable, std::shared_ptr<CGui>> ( "CGui", no_init )
+//            .def ( "showMessage", &CGui::showMessage )
+//            .def ( "showPanel", &CGui::showPanel )
+//            .def ( "hidePanel", &CGui::hidePanel )
+//            .def ( "flipPanel", &CGui::flipPanel );
     class_<CTile, bases<CGameObject>, boost::noncopyable, std::shared_ptr<CTile>>("CTileBase");
     class_<CWrapper<CTile>, bases<CTile>, boost::noncopyable, std::shared_ptr<CWrapper<CTile>>>("CTile").
             def("onStep", &CWrapper<CTile>::onStep);
