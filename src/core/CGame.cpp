@@ -21,7 +21,7 @@ void CGame::setMap(std::shared_ptr<CMap> map) {
     this->map = map;
 }
 
-//std::shared_ptr<CGuiHandler> CGame::getGuiHandler() {
+//std::shared_ptr<CGui> CGame::getGuiHandler() {
 //    return guiHandler.get ( this->ptr() );
 //}
 
