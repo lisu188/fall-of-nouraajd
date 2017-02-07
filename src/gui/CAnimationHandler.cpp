@@ -13,7 +13,7 @@ std::shared_ptr<CAnimation> CAnimationHandler::getAnimation(std::string path) {
 std::shared_ptr<CAnimation> CAnimationHandler::loadAnimation(std::string path) {
     if (boost::filesystem::is_directory(path)) {
         return std::make_shared<CDynamicAnimation>(path);
-    } else if (boost::filesystem::is_regular_file(path)) {
+    } else if (boost::filesystem::is_regular_file(path + ".png")) {
         return std::make_shared<CStaticAnimation>(path);
     } else {
         vstd::logger::fatal("wtf!");//TODO:

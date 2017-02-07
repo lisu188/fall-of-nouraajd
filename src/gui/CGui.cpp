@@ -12,6 +12,7 @@ CGui::~CGui() {
 }
 
 void CGui::render() {
+    SDL_RenderClear(renderer);
     for (std::shared_ptr<CGameGraphicsObject> object:gui_stack) {
         SDL_Rect physical;
         physical.x = 0;
@@ -20,6 +21,7 @@ void CGui::render() {
         physical.w = X_SIZE;
         object->render(this->ptr<CGui>(), &physical);
     }
+    SDL_RenderPresent(renderer);
 }
 
 bool CGui::event(SDL_Event *event) {

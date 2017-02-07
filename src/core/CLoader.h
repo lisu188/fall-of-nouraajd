@@ -39,6 +39,8 @@ public:
 
     static void changeMap(std::shared_ptr<CGame> game, std::string file);
 
+    static void loadGui(std::shared_ptr<CGame> game);
+
 private:
     static void initObjectHandler(std::shared_ptr<CObjectHandler> handler);
 

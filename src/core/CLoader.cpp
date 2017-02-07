@@ -1,3 +1,4 @@
+#include <gui/CMapGraphicsObject.h>
 #include "core/CLoader.h"
 
 #include "core/CJsonUtil.h"
@@ -9,13 +10,13 @@ void CMapLoader::loadFromTmx(std::shared_ptr<CMap> map, std::shared_ptr<Value> m
     map->entryy = vstd::to_int(mapProperties["y"].asString()).first;
     map->entryz = vstd::to_int(mapProperties["z"].asString()).first;
     const Value &tileset = (*mapc)["tilesets"][0]["tileproperties"];
-    for (int i=0;i<mapLayers.size();i++) {
+    for (int i=0; i<mapLayers.size(); i++) {
         const Value &layer = mapLayers[i];
         if (vstd::string_equals(layer["type"].asString(), "tilelayer")) {
             handleTileLayer(map, tileset, layer);
         }
     }
-    for (int i=0;i<mapLayers.size();i++) {
+    for (int i=0; i<mapLayers.size(); i++) {
         const Value &layer = mapLayers[i];
         if (vstd::string_equals(layer["type"].asString(), "objectgroup")) {
             handleObjectLayer(map, layer);
@@ -83,7 +84,7 @@ void CMapLoader::handleTileLayer(std::shared_ptr<CMap> map, const Value &tileset
 void CMapLoader::handleObjectLayer(std::shared_ptr<CMap> map, const Value &layer) {
     int level = vstd::to_int(layer["properties"]["level"].asString()).first;
     const Value &objects = layer["objects"];
-    for (int i=0;i<objects.size();i++) {
+    for (int i=0; i<objects.size(); i++) {
         const Value &object = objects[i];
         std::string objectType = object["type"].asString();
         std::string objectName = object["name"].asString();
@@ -156,6 +157,20 @@ void CGameLoader::initScriptHandler(std::shared_ptr<CScriptHandler> handler, std
     for (std::string script:CResourcesProvider::getInstance()->getFiles(CResType::PLUGIN)) {
         CPluginLoader::load_plugin(game, script);
     }
+}
+
+void CGameLoader::loadGui(std::shared_ptr<CGame> game) {
+    std::shared_ptr<CGui> gui = std::make_shared<CGui>();
+    gui->addObject(std::make_shared<CMapGraphicsObject>(game->getMap()));
+    vstd::async([gui]() {
+        for (int i = 0; i < 1000; i++) {
+            auto draw = [gui]() {
+                gui->render();
+            };
+            vstd::later(draw);
+            usleep(10000);
+        }
+    });
 }
 
 void CPluginLoader::load_plugin(std::shared_ptr<CGame> game, std::string path) {
