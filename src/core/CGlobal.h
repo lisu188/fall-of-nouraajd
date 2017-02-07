@@ -9,6 +9,7 @@
 #include <boost/range/algorithm.hpp>
 
 #include <SDL.h>
+#include <SDL_image.h>
 
 #include <condition_variable>
 #include <deque>
@@ -34,5 +35,12 @@
 #include <vector>
 #include <json/json.h>
 #include <vstd.h>
+
+//TODO: rethink this
+#define TILE_SIZE 50
+#define WIDTH 1920
+#define HEIGHT 1080
+#define X_SIZE WIDTH/TILE_SIZE
+#define Y_SIZE HEIGHT/TILE_SIZE
 
 using namespace Json;

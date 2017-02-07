@@ -126,7 +126,7 @@
           "ref": "Attack"
         }
       ],
-      "animation": "images/monsters/octobogz/",
+      "animation": "images/monsters/octobogz",
       "levelStats": {
         "class": "Stats",
         "properties": {
@@ -171,7 +171,7 @@
           "ref": "Attack"
         }
       ],
-      "animation": "images/monsters/pritz/",
+      "animation": "images/monsters/pritz",
       "levelStats": {
         "class": "Stats",
         "properties": {
@@ -216,7 +216,7 @@
           "ref": "Attack"
         }
       ],
-      "animation": "images/monsters/pritzmage/",
+      "animation": "images/monsters/pritzmage",
       "class": "Stats",
       "levelStats": {
         "properties": {
