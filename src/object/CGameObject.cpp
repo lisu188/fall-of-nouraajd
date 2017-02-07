@@ -140,3 +140,11 @@ void CGameObject::addTag(std::string tag) {
 void CGameObject::removeTag(std::string tag) {
     tags.erase(tag);
 }
+
+std::string CGameObject::getAnimation() {
+    return animation;
+}
+
+void CGameObject::setAnimation(std::string animation) {
+    this->animation = animation;
+}

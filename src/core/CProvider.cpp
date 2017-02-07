@@ -68,10 +68,6 @@ std::set<std::string> CResourcesProvider::getFiles(CResType type) {
             folderName = "plugins";
             suffix = "py";
             break;
-        case IMAGE:
-            folderName = "images";
-            suffix = "png";
-            break;
         case MAP:
             folderName = "maps";
             suffix = "map";
