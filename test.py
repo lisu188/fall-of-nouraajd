@@ -50,7 +50,9 @@ class GameTest(unittest.TestCase):
         g = game.CGameLoader.loadGame()
         game.CGameLoader.startGameWithPlayer(g, "map1", "Warrior")
         game.CGameLoader.loadGui(g)
-        while True:
+        import time
+        t_end = time.time() + 5
+        while time.time() < t_end:
             game.CEventLoop.instance().run()
         return True
 
