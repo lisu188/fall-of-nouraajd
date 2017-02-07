@@ -12,6 +12,7 @@ class CGameObject : public vstd::stringable, public std::enable_shared_from_this
 V_META(CGameObject, vstd::meta::empty,
        V_PROPERTY(CGameObject, std::string, name, getName, setName),
        V_PROPERTY(CGameObject, std::string, type, getType, setType),
+       V_PROPERTY(CGameObject, std::string, animation, getAnimation, setAnimation),
        V_PROPERTY(CGameObject, std::set<std::string>, tags, getTags, setTags)
 )
 
@@ -22,6 +23,7 @@ public:
 
     virtual ~CGameObject();
 
+    //TODO: get rid of map as a property!
     std::shared_ptr<CMap> getMap();
 
     void setMap(std::shared_ptr<CMap> map);
@@ -106,11 +108,16 @@ public:
 
     void setTags(std::set<std::string> tags);
 
+    std::string getAnimation();
+
+    void setAnimation(std::string animation);
 private:
     std::shared_ptr<CGameObject> _clone();
 
     std::string type;
     std::string name;
+    std::string animation;
+
     std::set<std::string> tags;
     //TODO: tooltip
     //QGraphicsSimpleTextItem statsView;
