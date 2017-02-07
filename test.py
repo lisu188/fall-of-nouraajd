@@ -1,6 +1,5 @@
-import unittest
-
 import game
+import unittest
 from teamcity import is_running_under_teamcity
 from teamcity.unittestpy import TeamcityTestRunner
 
@@ -46,8 +45,17 @@ class GameTest(unittest.TestCase):
         advance(game, 1000)  # TODO: set value from build
         return True, game.jsonify(g.getMap().ptr())  # TODO: why we need ptr? in all _bjects we dont!
 
+    @game_test
+    def test_gui(self):
+        g = game.CGameLoader.loadGame()
+        game.CGameLoader.startGameWithPlayer(g, "map1", "Warrior")
+        game.CGameLoader.loadGui(g)
+        while True:
+            game.CEventLoop.instance().run()
+        return True
 
 if __name__ == '__main__':
+    input()
     if is_running_under_teamcity():
         runner = TeamcityTestRunner()
     else:

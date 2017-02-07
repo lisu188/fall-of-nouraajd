@@ -186,7 +186,8 @@ BOOST_PYTHON_MODULE (_game) {
     class_<CGameLoader, boost::noncopyable, std::shared_ptr<CGameLoader>>("CGameLoader", no_init)
             .def("loadGame", &CGameLoader::loadGame)
             .def("startGameWithPlayer", &CGameLoader::startGameWithPlayer)
-            .def("startGame", &CGameLoader::startGame);
+            .def("startGame", &CGameLoader::startGame)
+            .def("loadGui", &CGameLoader::loadGui);
     class_<CMapLoader, boost::noncopyable, std::shared_ptr<CMapLoader>>("CMapLoader", no_init)
             .def("loadNewMapWithPlayer", &CMapLoader::loadNewMapWithPlayer)
             .def("loadNewMap", &CMapLoader::loadNewMap);
