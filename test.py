@@ -53,11 +53,11 @@ class GameTest(unittest.TestCase):
         game.CGameLoader.loadGui(g)
         while True:
             player = g.getMap().getPlayer()
-            playerCoords = player.getCoords()
-            newPlayerCoords = game.Coords(playerCoords.x + game.randint(0, 2) - 1,
-                                          playerCoords.y + game.randint(0, 2) - 1, playerCoords.z)
+            newPlayerCoords = game.Coords(15, 15, 0)
             player.setCoords(newPlayerCoords)
             advance(g, 1)
+            for i in range(50):
+                game.CEventLoop.instance().run()
         return True
 
 if __name__ == '__main__':
