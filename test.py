@@ -57,7 +57,6 @@ class GameTest(unittest.TestCase):
         return True
 
 if __name__ == '__main__':
-    input()
     if is_running_under_teamcity():
         runner = TeamcityTestRunner()
     else:
