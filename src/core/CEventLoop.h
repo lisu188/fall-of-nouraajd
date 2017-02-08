@@ -3,8 +3,21 @@
 #include "core/CGlobal.h"
 #include "object/CGameObject.h"
 
-class CEventLoop : public CGameObject {
 
+class CEventLoop : public CGameObject {
+    struct DelayCompare {
+        bool operator()(std::pair<int, std::function<void()>> a, std::pair<int, std::function<void()>> b) {
+            return std::greater<int>()(a.first, b.first);
+        }
+    };
+
+    int lastFrameTime = SDL_GetTicks();
+    Uint32 _call_function_event = SDL_RegisterEvents(1);
+    std::thread::id _main_thread_id = std::this_thread::get_id();
+    std::priority_queue<std::pair<int, std::function<void()>>,
+            std::vector<std::pair<int, std::function<void()>>>,
+            DelayCompare> delayQueue;
+    std::list<std::function<void(int)>> frameCallbackList;
 public:
     static std::shared_ptr<CEventLoop> instance();
 
@@ -12,13 +25,16 @@ public:
 
     void await(std::function<void()> f);
 
-    void run();
+    void delay(int t, std::function<void()> f);
 
-    Uint32 _call_function_event = SDL_RegisterEvents(1);;
-    std::thread::id _main_thread_id = std::this_thread::get_id();
+    void registerFrameCallback(std::function<void(int)> f);
+
+    void run();
 
     CEventLoop();
 
     ~CEventLoop();
+
+
 };
 

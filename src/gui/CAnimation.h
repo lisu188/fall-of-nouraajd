@@ -16,7 +16,7 @@ V_META(CStaticAnimation, CAnimation, vstd::meta::empty())
 public:
     CStaticAnimation(std::string path);
 
-    void render(std::shared_ptr<CGui> gui, SDL_Rect *pos) override;
+    void render(std::shared_ptr<CGui> gui, SDL_Rect *pos, int frameTime) override;
 
     ~CStaticAnimation();
 };

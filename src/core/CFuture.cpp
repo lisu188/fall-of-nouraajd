@@ -30,6 +30,20 @@ namespace vstd {
             });
         };
     }
+
+    std::function<void(int, std::function<void()>)> get_call_delayed_later_handler() {
+        return [](int t, std::function<void()> f) {
+            CEventLoop::instance()->delay(t, f);
+        };
+    }
+
+    std::function<void(int, std::function<void()>)> get_call_delayed_async_handler() {
+        return [](int t, std::function<void()> f) {
+            CEventLoop::instance()->delay(t, [f]() {
+                vstd::async(f);
+            });
+        };
+    }
 }
 
 

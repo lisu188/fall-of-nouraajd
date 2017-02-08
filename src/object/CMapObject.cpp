@@ -13,6 +13,7 @@ CMapObject::~CMapObject() {
 void CMapObject::move(int x, int y, int z) {
     if (dynamic_cast<Moveable *> ( this )) {
         if (!getMap()->getTile(posx + x, posy + y, posz)->canStep()) {
+            vstd::logger::debug(getName(), "cannot step on:", posx + x, posy + y, posz);
             return;
         }
         dynamic_cast<Moveable *> ( this )->beforeMove();

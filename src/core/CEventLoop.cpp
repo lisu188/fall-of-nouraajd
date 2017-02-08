@@ -1,6 +1,6 @@
 #include "core/CEventLoop.h"
 
-std::shared_ptr<CEventLoop>  CEventLoop::instance() {
+std::shared_ptr<CEventLoop> CEventLoop::instance() {
     static std::shared_ptr<CEventLoop> _loop = std::make_shared<CEventLoop>();
     return _loop;
 }
@@ -14,13 +14,37 @@ void CEventLoop::invoke(std::function<void()> f) {
 }
 
 void CEventLoop::run() {
+    int frameTime = SDL_GetTicks();
+
     SDL_Event event;
-    if (SDL_WaitEvent(&event)) {
+    while (SDL_PollEvent(&event)) {
         if (event.type == _call_function_event) {
             static_cast<std::function<void()> *>(event.user.data1)->operator()();
             delete static_cast<std::function<void()> *>(event.user.data1);
         }
     }
+
+    while (!delayQueue.empty() && delayQueue.top().first < frameTime) {
+        delayQueue.top().second();
+        delayQueue.pop();
+    }
+
+    for (auto f:frameCallbackList) {
+        f(frameTime);
+    }
+
+    int endTime = SDL_GetTicks();
+    int actualFrameTime = endTime - lastFrameTime;
+    int desiredFrameTime = 1000 / FPS;
+
+    int diffTime = desiredFrameTime - actualFrameTime;
+    if (diffTime < 0) {
+        vstd::logger::warning("CEventLoop:", "cannot achieve specified fps!");
+    } else {
+        SDL_Delay(diffTime);
+    }
+
+    this->lastFrameTime = SDL_GetTicks();
 }
 
 CEventLoop::CEventLoop() {
@@ -48,3 +72,19 @@ void CEventLoop::await(std::function<void()> f) {
         _condition.wait(_lock, [&]() { return completed; });
     }
 }
+
+void CEventLoop::delay(int t, std::function<void()> f) {
+    if (std::this_thread::get_id() == _main_thread_id) {
+        delayQueue.push(std::make_pair(SDL_GetTicks() + t, f));
+    } else {
+        vstd::later([this, t, f]() {
+            delayQueue.push(std::make_pair(SDL_GetTicks() + t, f));
+        });
+    }
+}
+
+void CEventLoop::registerFrameCallback(std::function<void(int)> f) {
+    frameCallbackList.push_back(f);
+}
+
+

@@ -7,19 +7,19 @@ CMapGraphicsObject::CMapGraphicsObject(std::shared_ptr<CMap> map) : _map(map) {
 
 }
 
-void CMapGraphicsObject::render(std::shared_ptr<CGui> gui, SDL_Rect *pos) {
+void CMapGraphicsObject::render(std::shared_ptr<CGui> gui, SDL_Rect *pos, int i1) {
     std::shared_ptr<CMap> map = _map.lock();
     Coords playerCoords = map->getPlayer()->getCoords();
     for (int x = 0; x < X_SIZE; x++)
         for (int y = 0; y <= Y_SIZE; y++) {
-            std::shared_ptr<CTile> tile = map->getTile(playerCoords.x - X_SIZE / 2 + x, playerCoords.x - Y_SIZE / 2 + y,
+            std::shared_ptr<CTile> tile = map->getTile(playerCoords.x - X_SIZE / 2 + x, playerCoords.y - Y_SIZE / 2 + y,
                                                        playerCoords.z);
             SDL_Rect physical;
             physical.x = TILE_SIZE * x + pos->x;
             physical.y = TILE_SIZE * y + pos->y;
             physical.w = TILE_SIZE;
             physical.h = TILE_SIZE;
-            gui->getAnimationHandler()->getAnimation(tile->getAnimation())->render(gui, &physical);
+            gui->getAnimationHandler()->getAnimation(tile->getAnimation())->render(gui, &physical, 0);
         }
 }
 
