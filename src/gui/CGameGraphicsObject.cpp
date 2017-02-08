@@ -5,7 +5,7 @@
 #include "CGameGraphicsObject.h"
 
 
-void CGameGraphicsObject::render(std::shared_ptr<CGui> reneder, SDL_Rect *pos) {
+void CGameGraphicsObject::render(std::shared_ptr<CGui> reneder, SDL_Rect *pos, int i1) {
 
 }
 

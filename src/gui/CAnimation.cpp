@@ -9,7 +9,7 @@ CStaticAnimation::CStaticAnimation(std::string path) {
     raw_path = path + ".png";
 }
 
-void CStaticAnimation::render(std::shared_ptr<CGui> gui, SDL_Rect *pos) {
+void CStaticAnimation::render(std::shared_ptr<CGui> gui, SDL_Rect *pos, int frameTime) {
     if (texture == nullptr) {
         texture = IMG_LoadTexture(gui->getRenderer(), raw_path.c_str());
     }

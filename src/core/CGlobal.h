@@ -42,5 +42,6 @@
 #define HEIGHT 1080
 #define X_SIZE WIDTH/TILE_SIZE
 #define Y_SIZE HEIGHT/TILE_SIZE
+#define FPS 100
 
 using namespace Json;

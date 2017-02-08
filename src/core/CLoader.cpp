@@ -1,6 +1,6 @@
-#include <gui/CMapGraphicsObject.h>
+#include "gui/CMapGraphicsObject.h"
 #include "core/CLoader.h"
-
+#include "core/CEventLoop.h"
 #include "core/CJsonUtil.h"
 
 void CMapLoader::loadFromTmx(std::shared_ptr<CMap> map, std::shared_ptr<Value> mapc) {
@@ -159,17 +159,12 @@ void CGameLoader::initScriptHandler(std::shared_ptr<CScriptHandler> handler, std
     }
 }
 
+//TODO:
 void CGameLoader::loadGui(std::shared_ptr<CGame> game) {
     std::shared_ptr<CGui> gui = std::make_shared<CGui>();
     gui->addObject(std::make_shared<CMapGraphicsObject>(game->getMap()));
-    vstd::async([gui]() {
-        for (int i = 0; i < 1000; i++) {
-            auto draw = [gui]() {
-                gui->render();
-            };
-            vstd::later(draw);
-            usleep(10000);
-        }
+    CEventLoop::instance()->registerFrameCallback([gui](int time) {
+        gui->render(time);
     });
 }
 

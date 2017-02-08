@@ -24,7 +24,7 @@ public:
 
     void removeObject(std::shared_ptr<CGameGraphicsObject> object);
 
-    void render();
+    void render(int i1);
 
     bool event(SDL_Event *event);
 

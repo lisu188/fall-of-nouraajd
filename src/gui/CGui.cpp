@@ -11,7 +11,7 @@ CGui::~CGui() {
     SDL_DestroyWindow(window);
 }
 
-void CGui::render() {
+void CGui::render(int frameTime) {
     SDL_RenderClear(renderer);
     for (std::shared_ptr<CGameGraphicsObject> object:gui_stack) {
         SDL_Rect physical;
@@ -19,7 +19,7 @@ void CGui::render() {
         physical.y = 0;
         physical.h = Y_SIZE;
         physical.w = X_SIZE;
-        object->render(this->ptr<CGui>(), &physical);
+        object->render(this->ptr<CGui>(), &physical, frameTime);
     }
     SDL_RenderPresent(renderer);
 }
