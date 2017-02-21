@@ -162,9 +162,13 @@ void CGameLoader::initScriptHandler(std::shared_ptr<CScriptHandler> handler, std
 //TODO:
 void CGameLoader::loadGui(std::shared_ptr<CGame> game) {
     std::shared_ptr<CGui> gui = std::make_shared<CGui>();
-    gui->addObject(std::make_shared<CMapGraphicsObject>(game->getMap()));
+    std::shared_ptr<CMapGraphicsObject> mapGraphicsObject = std::make_shared<CMapGraphicsObject>(game->getMap());
+    gui->addObject(mapGraphicsObject);
     CEventLoop::instance()->registerFrameCallback([gui](int time) {
         gui->render(time);
+    });
+    CEventLoop::instance()->registerEventCallback([gui](SDL_Event *event) {
+        gui->event(event);
     });
 }
 

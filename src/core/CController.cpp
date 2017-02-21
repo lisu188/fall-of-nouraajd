@@ -156,3 +156,18 @@ std::shared_ptr<CInteraction> CFightController::selectInteraction(std::shared_pt
     }
     return std::shared_ptr<CInteraction>();
 }
+
+CPlayerController::CPlayerController() {
+    this->next = std::make_shared<Coords>(0, 0, 0);
+}
+
+
+CPlayerController::CPlayerController(Coords next) {
+    this->next = std::make_shared<Coords>(next);
+}
+
+std::shared_ptr<vstd::future<void, Coords> > CPlayerController::control(std::shared_ptr<CCreature> c) {
+    return vstd::later([=](Coords coords) {
+        c->move(*next);
+    });
+}

@@ -1,10 +1,37 @@
+#include "core/CController.h"
 #include "gui/CMapGraphicsObject.h"
-#include "core/CMap.h"
 #include "gui/CAnimationHandler.h"
 #include "gui/CGui.h"
 
 CMapGraphicsObject::CMapGraphicsObject(std::shared_ptr<CMap> map) : _map(map) {
-
+    registerEventCallback([](SDL_Event *event) {
+        return event->type == SDL_KEYDOWN && event->key.keysym.sym == SDLK_UP;
+    }, [map](SDL_Event *event) {
+        map->getPlayer()->setController(std::make_shared<CPlayerController>(Coords(0, -1, 0)));
+        map->move();
+        return true;
+    });
+    registerEventCallback([](SDL_Event *event) {
+        return event->type == SDL_KEYDOWN && event->key.keysym.sym == SDLK_DOWN;
+    }, [map](SDL_Event *event) {
+        map->getPlayer()->setController(std::make_shared<CPlayerController>(Coords(0, 1, 0)));
+        map->move();
+        return true;
+    });
+    registerEventCallback([](SDL_Event *event) {
+        return event->type == SDL_KEYDOWN && event->key.keysym.sym == SDLK_LEFT;
+    }, [map](SDL_Event *event) {
+        map->getPlayer()->setController(std::make_shared<CPlayerController>(Coords(-1, 0, 0)));
+        map->move();
+        return true;
+    });
+    registerEventCallback([](SDL_Event *event) {
+        return event->type == SDL_KEYDOWN && event->key.keysym.sym == SDLK_RIGHT;
+    }, [map](SDL_Event *event) {
+        map->getPlayer()->setController(std::make_shared<CPlayerController>(Coords(1, 0, 0)));
+        map->move();
+        return true;
+    });
 }
 
 void CMapGraphicsObject::render(std::shared_ptr<CGui> gui, SDL_Rect *pos, int frameTime) {
@@ -37,6 +64,3 @@ void CMapGraphicsObject::render(std::shared_ptr<CGui> gui, SDL_Rect *pos, int fr
     });
 }
 
-bool CMapGraphicsObject::event(SDL_Event *event) {
-    return CGameGraphicsObject::event(event);
-}
