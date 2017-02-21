@@ -3,6 +3,7 @@
 #include "core/CGlobal.h"
 #include "object/CGameObject.h"
 
+//TODO: implement cleaning on the end
 
 class CEventLoop : public CGameObject {
     struct DelayCompare {
@@ -18,6 +19,7 @@ class CEventLoop : public CGameObject {
             std::vector<std::pair<int, std::function<void()>>>,
             DelayCompare> delayQueue;
     std::list<std::function<void(int)>> frameCallbackList;
+    std::list<std::function<void(SDL_Event *)>> eventCallbackList;
 public:
     static std::shared_ptr<CEventLoop> instance();
 
@@ -29,7 +31,9 @@ public:
 
     void registerFrameCallback(std::function<void(int)> f);
 
-    void run();
+    void registerEventCallback(std::function<void(SDL_Event *)> f);
+
+    bool run();
 
     CEventLoop();
 

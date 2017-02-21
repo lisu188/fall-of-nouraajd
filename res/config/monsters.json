@@ -2,6 +2,9 @@
   "Assasin": {
     "class": "CPlayer",
     "properties": {
+      "controller": {
+        "class": "CPlayerController"
+      },
       "actions": [
         {
           "ref": "Attack"
