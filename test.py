@@ -39,26 +39,12 @@ class GameTest(unittest.TestCase):
                 failed.append(type)
         return failed == [], failed
 
-    # @game_test
-    # def test_run_turns(self):
-    #     g = game.CGameLoader.loadGame()
-    #     game.CGameLoader.startGameWithPlayer(g, "map1", "Warrior")
-    #     advance(g, 1000)  # TODO: set value from build
-    #     return True, game.jsonify(g.getMap().ptr())  # TODO: why we need ptr? in all _bjects we dont!
-
     @game_test
-    def test_gui(self):
+    def test_run_turns(self):
         g = game.CGameLoader.loadGame()
         game.CGameLoader.startGameWithPlayer(g, "map1", "Warrior")
-        game.CGameLoader.loadGui(g)
-        while True:
-            player = g.getMap().getPlayer()
-            newPlayerCoords = game.Coords(15, 15, 0)
-            player.setCoords(newPlayerCoords)
-            advance(g, 1)
-            for i in range(50):
-                game.CEventLoop.instance().run()
-        return True
+        advance(g, 1000)  # TODO: set value from build
+        return True, game.jsonify(g.getMap().ptr())  # TODO: why we need ptr? in all _bjects we dont!
 
 if __name__ == '__main__':
     if is_running_under_teamcity():

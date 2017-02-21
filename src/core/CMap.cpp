@@ -258,7 +258,7 @@ void CMap::move() {
         });
 
         auto pred = [](std::shared_ptr<CMapObject> object) {
-            return vstd::castable<Moveable>(object) && !vstd::castable<CPlayer>(object);
+            return vstd::castable<Moveable>(object);//TODO:? && !vstd::castable<CPlayer>(object);
         };
 
         auto controller = [map](std::shared_ptr<CMapObject> object) {

@@ -81,6 +81,7 @@ namespace {
                     CTypes::register_type<CRandomController, CController, CGameObject>();
                     CTypes::register_type<CGroundController, CController, CGameObject>();
                     CTypes::register_type<CRangeController, CController, CGameObject>();
+                    CTypes::register_type<CPlayerController, CController, CGameObject>();
                 }
 
                 CTypes::register_type<CMapObject, CGameObject>();

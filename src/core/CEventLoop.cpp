@@ -13,14 +13,16 @@ void CEventLoop::invoke(std::function<void()> f) {
     SDL_PushEvent(&event);
 }
 
-void CEventLoop::run() {
+bool CEventLoop::run() {
     int frameTime = SDL_GetTicks();
 
     SDL_Event event;
     while (SDL_PollEvent(&event)) {
-        if (event.type == _call_function_event) {
-            static_cast<std::function<void()> *>(event.user.data1)->operator()();
-            delete static_cast<std::function<void()> *>(event.user.data1);
+        if (event.type == SDL_QUIT) {
+            return false;
+        }
+        for (auto cm:eventCallbackList) {
+            cm(&event);
         }
     }
 
@@ -45,10 +47,18 @@ void CEventLoop::run() {
     }
 
     this->lastFrameTime = SDL_GetTicks();
+
+    return true;
 }
 
 CEventLoop::CEventLoop() {
     SDL_Init(SDL_INIT_EVENTS);
+    registerEventCallback([=](SDL_Event *event) {
+        if (event->type == _call_function_event) {
+            static_cast<std::function<void()> *>(event->user.data1)->operator()();
+            delete static_cast<std::function<void()> *>(event->user.data1);
+        }
+    });
 }
 
 CEventLoop::~CEventLoop() {
@@ -85,6 +95,10 @@ void CEventLoop::delay(int t, std::function<void()> f) {
 
 void CEventLoop::registerFrameCallback(std::function<void(int)> f) {
     frameCallbackList.push_back(f);
+}
+
+void CEventLoop::registerEventCallback(std::function<void(SDL_Event *)> f) {
+    eventCallbackList.push_back(f);
 }
 
 

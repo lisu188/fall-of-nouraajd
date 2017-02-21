@@ -10,5 +10,16 @@ void CGameGraphicsObject::render(std::shared_ptr<CGui> reneder, SDL_Rect *pos, i
 }
 
 bool CGameGraphicsObject::event(SDL_Event *event) {
+    for (auto callback:eventCallbackList) {
+        if (callback.first(event) && callback.second(event)) {
+            return true;
+        }
+    }
     return false;
+}
+
+void
+CGameGraphicsObject::registerEventCallback(std::function<bool(SDL_Event *)> pred,
+                                           std::function<bool(SDL_Event *)> func) {
+    eventCallbackList.push_back(std::make_pair(pred, func));
 }

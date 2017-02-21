@@ -11,7 +11,5 @@ public:
 
     void render(std::shared_ptr<CGui> gui, SDL_Rect *pos, int i1) override;
 
-    bool event(SDL_Event *event) override;
-
 };
 
