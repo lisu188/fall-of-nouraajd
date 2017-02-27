@@ -121,7 +121,9 @@ std::shared_ptr<CTile> CMap::getTile(int x, int y, int z) {
         } else {
             tile = createObject<CTile>(defaultTiles[z]);
         }
-        this->addTile(tile, x, y, z);
+        if (tile) {
+            this->addTile(tile, x, y, z);
+        }
     } else {
         tile = (*it).second;
     }

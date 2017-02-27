@@ -6,3 +6,4 @@
 //TODO: add mechanism to ensure registering every V_META in CTypes.cpp
 //TODO: weird fight bug after fight, player didnt return to position
 //TODO: make random anim times
+//TODO: make potion one time only
