@@ -67,7 +67,8 @@ BOOST_PYTHON_MODULE (_game) {
     class_<CObjectHandler, bases<CGameObject>, boost::noncopyable, std::shared_ptr<CObjectHandler>>("CObjectHandler",
                                                                                                     no_init)
             .def("registerType", registerType)
-            .def("getAllTypes", &CObjectHandler::getAllTypes);
+            .def("getAllTypes", &CObjectHandler::getAllTypes)
+            .def("getAllSubTypes", &CObjectHandler::getAllSubTypes);
 
     void ( CMapObject::*moveTo )(int, int, int) = &CMapObject::moveTo;
     void ( CMapObject::*move )(int, int, int) = &CMapObject::move;
@@ -180,6 +181,9 @@ BOOST_PYTHON_MODULE (_game) {
     class_<CEventHandler, bases<CGameObject>, boost::noncopyable, std::shared_ptr<CEventHandler>>("CEventHandler",
                                                                                                   no_init)
             .def("registerTrigger", &CEventHandler::registerTrigger);
+
+    class_<CFightHandler, boost::noncopyable, std::shared_ptr<CFightHandler>>("CFightHandler", no_init)
+            .def("fight", &CFightHandler::fight);
 
     class_<CMarket, bases<CGameObject>, boost::noncopyable, std::shared_ptr<CMarket> >("CMarket");
 
