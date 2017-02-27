@@ -33,6 +33,8 @@ public:
 
     std::vector<std::string> getAllTypes();
 
+    std::vector<std::string> getAllSubTypes(std::string claz);
+
     void registerConfig(std::string path);
 
     void registerType(std::string name, std::function<std::shared_ptr<CGameObject>()> constructor);

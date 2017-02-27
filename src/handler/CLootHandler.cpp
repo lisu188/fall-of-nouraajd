@@ -6,6 +6,7 @@ std::set<std::shared_ptr<CItem>> CLootHandler::getLoot(int value) const {
 }
 
 CLootHandler::CLootHandler(std::shared_ptr<CMap> map) : map(map) {
+    //TODO: consider using getAllSubTypes
     for (std::string type : map->getObjectHandler()->getAllTypes()) {
         std::shared_ptr<CItem> item = map->createObject<CItem>(type);
         if (item) {

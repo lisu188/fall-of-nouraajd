@@ -62,6 +62,21 @@ std::shared_ptr<CGameObject> CObjectHandler::_clone(std::shared_ptr<CGameObject>
     return CSerialization::deserialize<std::shared_ptr<Value>, std::shared_ptr<CGameObject>>(object->getMap(), _object);
 }
 
+std::vector<std::string> CObjectHandler::getAllSubTypes(std::string claz) {
+    std::vector<std::string> ret;
+    for (auto type:getAllTypes()) {
+        auto conf = getConfig(type);
+        if (CJsonUtil::isRef(conf)) {
+            conf = getConfig((*conf)["ref"].asString());
+        }
+        std::string clas = (*conf)["class"].asString();
+        if (getType(clas)->meta()->inherits(claz)) {
+            ret.push_back(clas);
+        }
+    }
+    return ret;
+}
+
 
 
 

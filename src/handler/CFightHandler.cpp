@@ -4,14 +4,15 @@
 #include "core/CController.h"
 #include "core/CTags.h"
 
-void CFightHandler::fight(std::shared_ptr <CCreature> a, std::shared_ptr <CCreature> b) {
+bool CFightHandler::fight(std::shared_ptr<CCreature> a, std::shared_ptr<CCreature> b) {
     //TODO: this is mess!
     int draw = 5;
     while (a->isAlive() && b->isAlive() && draw > 0) {
         applyEffects(a);
         if (!a->isAlive()) {
+            //TODO: who was the caster? we should gratify him
             defeatedCreature(b, a);
-            continue;
+            return true;
         }
         if (!CTags::isTagPresent(a->getEffects(), "stun")) {
             if (a->getFightController()->control(a, b)) {
@@ -19,13 +20,13 @@ void CFightHandler::fight(std::shared_ptr <CCreature> a, std::shared_ptr <CCreat
             }
             if (!b->isAlive()) {
                 defeatedCreature(a, b);
-                continue;
+                return true;
             }
         }
         a.swap(b);
         draw--;
     }
-
+    return false;
 }
 
 void CFightHandler::defeatedCreature(std::shared_ptr <CCreature> a, std::shared_ptr <CCreature> b) {
