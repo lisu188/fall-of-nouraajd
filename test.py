@@ -40,6 +40,27 @@ class GameTest(unittest.TestCase):
         return failed == [], failed
 
     @game_test
+    def test_fights(self):
+        failed = []
+        g = game.CGameLoader.loadGame()
+        game.CGameLoader.startGame(g, "empty")
+        creatures = g.getMap().getObjectHandler().getAllSubTypes("CCreature")
+        values = []
+        for type1 in creatures:
+            for type2 in creatures:
+                object1 = g.createObject(type1)
+                object2 = g.createObject(type2)
+                if game.CFightHandler.fight(object1, object2):
+                    values.append((type1, type2, "none"))
+                if object1.isAlive() and not object2.isAlive():
+                    values.append((type1, type2, "first"))
+                if object2.isAlive() and not object1.isAlive():
+                    values.append((type1, type2, "second"))
+                if object2.isAlive() and not object1.isAlive():
+                    values.append((type1, type2, "both"))
+        return True, values
+
+    @game_test
     def test_run_turns(self):
         g = game.CGameLoader.loadGame()
         game.CGameLoader.startGameWithPlayer(g, "map1", "Warrior")
