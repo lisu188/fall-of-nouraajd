@@ -25,43 +25,41 @@ def advance(g, turns):
 
 class GameTest(unittest.TestCase):
     @game_test
-    def test_all_objects(self):
+    def test_objects(self):
         failed = []
         g = game.CGameLoader.loadGame()
         game.CGameLoader.startGame(g, "empty")
         for type in g.getMap().getObjectHandler().getAllTypes():
-            print("Creating: " + type)
-            object = g.createObject(type)
-            if object:
-                print(game.jsonify(object).strip())
-            else:
-                print("Failed to create: " + type)
+            # TODO: log to TC
+            object = g.getMap().createObject(type)
+            if not object:
                 failed.append(type)
         return failed == [], failed
 
     @game_test
     def test_fights(self):
-        failed = []
         g = game.CGameLoader.loadGame()
         game.CGameLoader.startGame(g, "empty")
         creatures = g.getMap().getObjectHandler().getAllSubTypes("CCreature")
         values = []
         for type1 in creatures:
             for type2 in creatures:
-                object1 = g.createObject(type1)
-                object2 = g.createObject(type2)
-                if game.CFightHandler.fight(object1, object2):
+                object1 = g.getMap().createObject(type1)
+                object2 = g.getMap().createObject(type2)
+                g.getMap().addObject(object1)
+                g.getMap().addObject(object2)
+                if not game.CFightHandler.fight(object1, object2):
                     values.append((type1, type2, "none"))
                 if object1.isAlive() and not object2.isAlive():
                     values.append((type1, type2, "first"))
                 if object2.isAlive() and not object1.isAlive():
                     values.append((type1, type2, "second"))
-                if object2.isAlive() and not object1.isAlive():
+                if not object1.isAlive() and not object2.isAlive():
                     values.append((type1, type2, "both"))
         return True, values
 
     @game_test
-    def test_run_turns(self):
+    def test_turns(self):
         g = game.CGameLoader.loadGame()
         game.CGameLoader.startGameWithPlayer(g, "map1", "Warrior")
         advance(g, 1000)  # TODO: set value from build

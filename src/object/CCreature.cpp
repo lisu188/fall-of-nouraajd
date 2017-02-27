@@ -502,7 +502,9 @@ void CCreature::afterMove() {
 
     getMap()->forObjects(func, pred);
 
-    getMap()->getTile(this->getCoords())->onStep(this->ptr<CCreature>());
+    if (getMap()->getTile(this->getCoords())) {
+        getMap()->getTile(this->getCoords())->onStep(this->ptr<CCreature>());
+    }
 }
 
 std::string CCreature::getTooltip() {

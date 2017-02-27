@@ -71,7 +71,7 @@ std::vector<std::string> CObjectHandler::getAllSubTypes(std::string claz) {
         }
         std::string clas = (*conf)["class"].asString();
         if (getType(clas) && getType(clas)->meta()->inherits(claz)) {
-            ret.push_back(clas);
+            ret.push_back(type);
         }
     }
     return ret;

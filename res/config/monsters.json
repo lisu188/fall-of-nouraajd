@@ -20,12 +20,6 @@
         }
       },
       "items": [
-        {
-          "ref": "LifePotion"
-        },
-        {
-          "ref": "ManaPotion"
-        }
       ],
       "levelStats": {
         "class": "Stats",
@@ -222,6 +216,7 @@
       "animation": "images/monsters/pritzmage",
       "class": "Stats",
       "levelStats": {
+        "class": "Stats",
         "properties": {
           "agility": 2,
           "crit": 1,
@@ -277,12 +272,6 @@
         }
       },
       "items": [
-        {
-          "ref": "LifePotion"
-        },
-        {
-          "ref": "ManaPotion"
-        }
       ],
       "levelStats": {
         "class": "Stats",
@@ -357,12 +346,6 @@
         }
       },
       "items": [
-        {
-          "ref": "LifePotion"
-        },
-        {
-          "ref": "ManaPotion"
-        }
       ],
       "levelStats": {
         "class": "Stats",
