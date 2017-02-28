@@ -1,5 +1,7 @@
-import game
+import json
 import unittest
+
+import game
 from teamcity import is_running_under_teamcity
 from teamcity.unittestpy import TeamcityTestRunner
 
@@ -56,7 +58,7 @@ class GameTest(unittest.TestCase):
                     values.append((type1, type2, "second"))
                 if not object1.isAlive() and not object2.isAlive():
                     values.append((type1, type2, "both"))
-        return True, values
+        return True, json.dumps(values)
 
     @game_test
     def test_turns(self):
