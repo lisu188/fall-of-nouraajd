@@ -6,8 +6,7 @@
 
 bool CFightHandler::fight(std::shared_ptr<CCreature> a, std::shared_ptr<CCreature> b) {
     //TODO: this is mess!
-    int draw = 5;
-    while (a->isAlive() && b->isAlive() && draw > 0) {
+    for (int i = 0; i < 5; i++ {
         applyEffects(a);
         if (!a->isAlive()) {
             //TODO: who was the caster? we should gratify him
@@ -16,7 +15,7 @@ bool CFightHandler::fight(std::shared_ptr<CCreature> a, std::shared_ptr<CCreatur
         }
         if (!CTags::isTagPresent(a->getEffects(), "stun")) {
             if (a->getFightController()->control(a, b)) {
-                draw = 5;
+                i = 5;
             }
             if (!b->isAlive()) {
                 defeatedCreature(a, b);
@@ -24,12 +23,11 @@ bool CFightHandler::fight(std::shared_ptr<CCreature> a, std::shared_ptr<CCreatur
             }
         }
         a.swap(b);
-        draw--;
     }
     return false;
 }
 
-void CFightHandler::defeatedCreature(std::shared_ptr <CCreature> a, std::shared_ptr <CCreature> b) {
+void CFightHandler::defeatedCreature(std::shared_ptr<CCreature> a, std::shared_ptr<CCreature> b) {
     vstd::logger::debug(a->to_string(), a->getName(), "defeated", b->to_string());
     a->addExpScaled(b->getScale());
     //TODO: loot handler
@@ -42,7 +40,7 @@ void CFightHandler::defeatedCreature(std::shared_ptr <CCreature> a, std::shared_
     a->getMap()->removeObject(b);
 }
 
-void CFightHandler::applyEffects(std::shared_ptr <CCreature> cr) {
+void CFightHandler::applyEffects(std::shared_ptr<CCreature> cr) {
     auto effects = cr->getEffects();
 
     for (auto it = effects.begin(); it != effects.end(); it++) {
