@@ -6,7 +6,7 @@
 
 bool CFightHandler::fight(std::shared_ptr<CCreature> a, std::shared_ptr<CCreature> b) {
     //TODO: this is mess!
-    for (int i = 0; i < 5; i++ {
+    for (int i = 0; i < 5; i++) {
         applyEffects(a);
         if (!a->isAlive()) {
             //TODO: who was the caster? we should gratify him
@@ -15,7 +15,7 @@ bool CFightHandler::fight(std::shared_ptr<CCreature> a, std::shared_ptr<CCreatur
         }
         if (!CTags::isTagPresent(a->getEffects(), "stun")) {
             if (a->getFightController()->control(a, b)) {
-                i = 5;
+                i = 0;
             }
             if (!b->isAlive()) {
                 defeatedCreature(a, b);
