@@ -225,7 +225,7 @@ int CCreature::getScale() {
 }
 
 bool CCreature::isAlive() {
-    return hp >= 0;
+    return hp > 0;
 }
 
 

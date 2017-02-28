@@ -126,7 +126,7 @@ namespace {
                                                std::shared_ptr<Value> object) {
 
                 std::set<std::string> objects;
-                for (int i = 0; i < object->size(); i++) {
+                for (unsigned int i = 0; i < object->size(); i++) {
                     objects.insert((*object)[i].asString());
                 }
                 return objects;
