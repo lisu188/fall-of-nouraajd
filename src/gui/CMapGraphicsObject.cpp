@@ -34,7 +34,8 @@ CMapGraphicsObject::CMapGraphicsObject(std::shared_ptr<CMap> map) : _map(map) {
     });
 }
 
-void CMapGraphicsObject::render(std::shared_ptr<CGui> gui, SDL_Rect *pos, int frameTime) {
+void CMapGraphicsObject::render(std::shared_ptr<CGui> gui, SDL_Rect *pos, int frameTime,
+                                std::string data) {
     std::shared_ptr<CMap> map = _map.lock();
     Coords playerCoords = map->getPlayer()->getCoords();
     std::unordered_set<Coords> tiles;
@@ -50,7 +51,8 @@ void CMapGraphicsObject::render(std::shared_ptr<CGui> gui, SDL_Rect *pos, int fr
             physical.y = TILE_SIZE * y + pos->y;
             physical.w = TILE_SIZE;
             physical.h = TILE_SIZE;
-            gui->getAnimationHandler()->getAnimation(tile->getAnimation())->render(gui, &physical, frameTime);
+            gui->getAnimationHandler()->getAnimation(tile->getAnimation())->render(gui, &physical, frameTime,
+                                                                                   tile->getName());
         }
     map->forObjects([&](std::shared_ptr<CMapObject> ob) {
         if (vstd::ctn(tiles, ob->getCoords())) {
@@ -59,7 +61,8 @@ void CMapGraphicsObject::render(std::shared_ptr<CGui> gui, SDL_Rect *pos, int fr
             physical.y = TILE_SIZE * (ob->getCoords().y + Y_SIZE / 2 - playerCoords.y) + pos->y;
             physical.w = TILE_SIZE;
             physical.h = TILE_SIZE;
-            gui->getAnimationHandler()->getAnimation(ob->getAnimation())->render(gui, &physical, frameTime);
+            gui->getAnimationHandler()->getAnimation(ob->getAnimation())->render(gui, &physical, frameTime,
+                                                                                 ob->getName());
         }
     });
 }
