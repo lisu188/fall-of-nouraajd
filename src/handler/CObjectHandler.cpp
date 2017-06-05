@@ -8,9 +8,9 @@ CObjectHandler::CObjectHandler(std::shared_ptr<CObjectHandler> parent) : parent(
 
 void CObjectHandler::registerConfig(std::string path) {
     std::shared_ptr<Value> config = CConfigurationProvider::getConfig(path);
-        for (auto key:config->getMemberNames()) {
-            objectConfig[key] = CJsonUtil::clone(&(*config)[key]);
-        }
+    for (auto key:config->getMemberNames()) {
+        objectConfig[key] = CJsonUtil::clone(&(*config)[key]);
+    }
 }
 
 std::shared_ptr<Value> CObjectHandler::getConfig(std::string type) {
@@ -51,6 +51,7 @@ void CObjectHandler::registerType(std::string name, std::function<std::shared_pt
 std::shared_ptr<CGameObject> CObjectHandler::_createObject(std::shared_ptr<CMap> map, std::string type) {
     std::shared_ptr<Value> config = getConfig(type);
     if (!config) {
+        vstd::logger::debug("No config found for:", type);
         config = CJsonUtil::from_string(vstd::join({"{\"class\":\"", type, "\"}"}, ""));
     }
     return CSerialization::deserialize<std::shared_ptr<Value>, std::shared_ptr<CGameObject>>(map, config);
