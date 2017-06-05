@@ -14,8 +14,8 @@ class CMap;
 
 class CGameObject;
 
-class CGame : public CGameObject{
-V_META(CGame,CGameObject,vstd::meta::empty())
+class CGame : public CGameObject {
+V_META(CGame, CGameObject, vstd::meta::empty())
 public:
     CGame();
 
@@ -27,7 +27,7 @@ public:
 
     void setMap(std::shared_ptr<CMap> map);
 
-//TODO:   std::shared_ptr<CGui> getGuiHandler();
+    std::shared_ptr<CGuiHandler> getGuiHandler();
 
     std::shared_ptr<CScriptHandler> getScriptHandler();
 
@@ -44,7 +44,7 @@ protected:
     virtual void keyPressEvent(void *event); //TODO: implement
 
 private:
-//TODO:    vstd::lazy<CGui, std::shared_ptr<CGame>> guiHandler;
+    vstd::lazy<CGuiHandler, std::shared_ptr<CGame>> guiHandler;
     vstd::lazy<CScriptHandler> scriptHandler;
 //TODO:    vstd::lazy<CScriptWindow, std::shared_ptr<CGame>> scriptWindow;
     vstd::lazy<CObjectHandler> objectHandler;
