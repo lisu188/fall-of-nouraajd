@@ -7,3 +7,4 @@
 #include "CMouseHandler.h"
 #include "CQuestHandler.h"
 #include "CFightHandler.h"
+#include "CGuiHandler.h"

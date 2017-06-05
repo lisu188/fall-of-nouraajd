@@ -56,7 +56,7 @@ namespace CJsonUtil {
         if (reader.parse(json, *d)) {
             return d;
         }
-        //vstd::logger::debug(reader.getFormatedErrorMessages());
+//        vstd::logger::debug(json,reader.getFormatedErrorMessages());
         return nullptr;
     }
 
@@ -68,6 +68,7 @@ namespace CJsonUtil {
     template<typename T>
     std::shared_ptr<Value> clone(T value) {
         std::string json = to_string(value);
+//        vstd::logger::debug(json);
         return from_string(json);
     }
 }

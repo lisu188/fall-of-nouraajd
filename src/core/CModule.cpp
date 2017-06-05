@@ -40,7 +40,7 @@ BOOST_PYTHON_MODULE (_game) {
             .def("getMap", &CGame::getMap)
             .def("changeMap", &CGame::changeMap)
             .def("load_plugin", &CGame::load_plugin)
-//TODO:            .def ( "getGuiHandler", &CGame::getGuiHandler )
+            .def("getGuiHandler", &CGame::getGuiHandler)
             .def("getObjectHandler", &CGame::getObjectHandler)
             .def("createObject", &CGame::createObject<CGameObject>);
 
@@ -69,6 +69,10 @@ BOOST_PYTHON_MODULE (_game) {
             .def("registerType", registerType)
             .def("getAllTypes", &CObjectHandler::getAllTypes)
             .def("getAllSubTypes", &CObjectHandler::getAllSubTypes);
+
+    class_<CGuiHandler, bases<CGameObject>, boost::noncopyable, std::shared_ptr<CGuiHandler>>("CGuiHandler",
+                                                                                              no_init)
+            .def("showMessage", &CGuiHandler::showMessage);
 
     void ( CMapObject::*moveTo )(int, int, int) = &CMapObject::moveTo;
     void ( CMapObject::*move )(int, int, int) = &CMapObject::move;
