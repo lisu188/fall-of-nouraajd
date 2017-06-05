@@ -2,7 +2,7 @@
 
 CGui::CGui() {
     SDL_Init(SDL_INIT_VIDEO);
-    SDL_CreateWindowAndRenderer(1920, 1080, SDL_WINDOW_FULLSCREEN | SDL_WINDOW_OPENGL, &window, &renderer);
+    SDL_CreateWindowAndRenderer(WIDTH, HEIGHT, SDL_WINDOW_OPENGL, &window, &renderer);
     //TODO: check render flags
 }
 
@@ -19,7 +19,7 @@ void CGui::render(int frameTime) {
         physical.y = 0;
         physical.h = Y_SIZE;
         physical.w = X_SIZE;
-        object->render(this->ptr<CGui>(), &physical, frameTime);
+        object->render(this->ptr<CGui>(), &physical, frameTime, object->getName());
     }
     SDL_RenderPresent(renderer);
 }

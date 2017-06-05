@@ -14,9 +14,10 @@ def trigger(context,event,object):
     return trigger_wrapper
 
 
-if __name__=='__main__':
+def main():
     g = CGameLoader.loadGame()
     CGameLoader.startGameWithPlayer(g, "map1", "Warrior")
     CGameLoader.loadGui(g)
     while CEventLoop.instance().run():
         pass
+

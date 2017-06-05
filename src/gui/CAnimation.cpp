@@ -10,7 +10,8 @@ CStaticAnimation::CStaticAnimation(std::string path) {
     raw_path = path + ".png";
 }
 
-void CStaticAnimation::render(std::shared_ptr<CGui> gui, SDL_Rect *pos, int frameTime) {
+void CStaticAnimation::render(std::shared_ptr<CGui> gui, SDL_Rect *pos, int frameTime,
+                              std::string data) {
     if (texture == nullptr) {
         texture = IMG_LoadTexture(gui->getRenderer(), raw_path.c_str());
     }
@@ -34,11 +35,11 @@ CDynamicAnimation::CDynamicAnimation(std::string path) {
         totalAnimTime += (*time)[std::to_string(i)].asInt();
         textures.push_back(nullptr);
     }
-
 }
 
-void CDynamicAnimation::render(std::shared_ptr<CGui> gui, SDL_Rect *pos, int frameTime) {
-    int currFrame = getCurrentAnimFrame(frameTime);
+void CDynamicAnimation::render(std::shared_ptr<CGui> gui, SDL_Rect *pos, int frameTime,
+                               std::string object) {
+    int currFrame = getCurrentAnimFrame(frameTime + (totalAnimTime * (getFrameOffset(object, frameTime) / 100.0)));
     if (!textures[currFrame]) {
         textures[currFrame] = IMG_LoadTexture(gui->getRenderer(), paths[currFrame].c_str());
     }
@@ -46,7 +47,7 @@ void CDynamicAnimation::render(std::shared_ptr<CGui> gui, SDL_Rect *pos, int fra
 }
 
 int CDynamicAnimation::getCurrentAnimFrame(int frameTime) {
-    int animTime = frameTime % totalAnimTime;
+    int animTime = (frameTime) % totalAnimTime;
     for (int i = 0; i < size; i++) {
         if (animTime < times[i]) {
             return i;
@@ -59,4 +60,16 @@ CDynamicAnimation::~CDynamicAnimation() {
     for (auto texture:textures) {
         SDL_DestroyTexture(texture);
     }
+}
+
+int CDynamicAnimation::get_next() {
+    return vstd::rand(0, 100);
+}
+
+double CDynamicAnimation::getFrameOffset(std::string object, int frameTime) {
+    return _offsets.get(object, frameTime);
+}
+
+int CDynamicAnimation::get_ttl() {
+    return vstd::rand(5000, 30000);
 }

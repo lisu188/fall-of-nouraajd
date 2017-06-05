@@ -1,3 +1,5 @@
+#include <gui/CMapGraphicsObject.h>
+#include <panel/CGamePanel.h>
 #include "core/CTypes.h"
 #include "core/CGame.h"
 #include "core/CWrapper.h"
@@ -118,6 +120,14 @@ namespace {
                         CTypes::register_type<CMonster, CCreature, CMapObject, CGameObject>();
                     }
                 }
+
+                CTypes::register_type<CGameGraphicsObject, CGameObject>();
+                {
+                    CTypes::register_type<CGamePanel, CGameGraphicsObject>();
+                    {
+                        CTypes::register_type<CGameTextPanel, CGamePanel>();
+                    }
+                }
             }
 
             //TODO: add also std::map<std::string,std::string> and std::string
@@ -151,20 +161,21 @@ std::unordered_map<std::string, std::function<std::shared_ptr<CGameObject>()>> *
     return &reg;
 }
 
-std::unordered_map<std::pair<boost::typeindex::type_index, boost::typeindex::type_index>, std::shared_ptr<CSerializerBase>> *CTypes::serializers() {
+std::unordered_map<std::pair<boost::typeindex::type_index, boost::typeindex::type_index>, std::shared_ptr<CSerializerBase>> *
+CTypes::serializers() {
     static std::unordered_map<std::pair<boost::typeindex::type_index, boost::typeindex::type_index>, std::shared_ptr<CSerializerBase>> reg;
     return &reg;
 }
 
-bool  CTypes::is_map_type(boost::typeindex::type_index index) {
+bool CTypes::is_map_type(boost::typeindex::type_index index) {
     return vstd::ctn(*map_types(), index);
 }
 
-bool  CTypes::is_pointer_type(boost::typeindex::type_index index) {
+bool CTypes::is_pointer_type(boost::typeindex::type_index index) {
     return vstd::ctn(*pointer_types(), index);
 }
 
-bool  CTypes::is_array_type(boost::typeindex::type_index index) {
+bool CTypes::is_array_type(boost::typeindex::type_index index) {
     return vstd::ctn(*array_types(), index);
 }
 
