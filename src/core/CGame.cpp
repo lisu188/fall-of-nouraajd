@@ -81,3 +81,11 @@ void CGame::keyPressEvent(void *event) { //TODO: implement
 void CGame::load_plugin(std::function<std::shared_ptr<CPlugin>()> plugin) {
     plugin()->load(this->ptr<CGame>());
 }
+
+std::shared_ptr<CGui> CGame::getGui() const {
+    return _gui;
+}
+
+void CGame::setGui(std::shared_ptr<CGui> _gui) {
+    CGame::_gui = _gui;
+}
