@@ -1,6 +1,7 @@
 
 #include "panel/CGamePanel.h"
 #include "core/CGame.h"
+#include "panel/CGameTextPanel.h"
 
 CGuiHandler::CGuiHandler() {
 
