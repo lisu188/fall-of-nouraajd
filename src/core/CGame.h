@@ -49,5 +49,10 @@ private:
 //TODO:    vstd::lazy<CScriptWindow, std::shared_ptr<CGame>> scriptWindow;
     vstd::lazy<CObjectHandler> objectHandler;
     std::shared_ptr<CMap> map;
+    std::shared_ptr<CGui> _gui;
+public:
+    std::shared_ptr<CGui> getGui() const;
+
+    void setGui(std::shared_ptr<CGui> _gui);
 };
 

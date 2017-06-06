@@ -170,6 +170,7 @@ void CGameLoader::loadGui(std::shared_ptr<CGame> game) {
     CEventLoop::instance()->registerEventCallback([gui](SDL_Event *event) {
         gui->event(event);
     });
+    game->setGui(gui);
 }
 
 void CPluginLoader::load_plugin(std::shared_ptr<CGame> game, std::string path) {

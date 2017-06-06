@@ -6,17 +6,11 @@ class CGuiHandler : public CGameObject {
 V_META(CGuiHandler, CGameObject, vstd::meta::empty())
 
 public:
-    CGuiHandler() {
+    CGuiHandler();
 
-    }
+    CGuiHandler(std::shared_ptr<CGame> game);
 
-    CGuiHandler(std::shared_ptr<CGame> game) : _game(game) {
-
-    }
-
-    void showMessage(std::string message) {
-        vstd::logger::debug(message);
-    }
+    void showMessage(std::string message);
 
 private:
     std::weak_ptr<CGame> _game;

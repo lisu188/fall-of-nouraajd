@@ -17,8 +17,8 @@ void CGui::render(int frameTime) {
         SDL_Rect physical;
         physical.x = 0;
         physical.y = 0;
-        physical.h = Y_SIZE;
-        physical.w = X_SIZE;
+        physical.h = HEIGHT;
+        physical.w = WIDTH;
         object->render(this->ptr<CGui>(), &physical, frameTime, object->getName());
     }
     SDL_RenderPresent(renderer);
@@ -44,7 +44,7 @@ void CGui::removeObject(std::shared_ptr<CGameGraphicsObject> object) {
 }
 
 std::shared_ptr<CAnimationHandler> CGui::getAnimationHandler() {
-    return _animationHandler;
+    return _animationHandler.get();
 }
 
 SDL_Renderer *CGui::getRenderer() const {
