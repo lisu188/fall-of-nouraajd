@@ -10,7 +10,7 @@ void CGameTextPanel::setText(std::string _text) {
     text = _text;
 }
 
-void CGameTextPanel::renderPanel(std::shared_ptr<CGui> gui, SDL_Rect *pRect, int i, std::string basic_string) {
+void CGameTextPanel::panelRender(std::shared_ptr<CGui> gui, SDL_Rect *pRect, int i, std::string basic_string) {
     if (texture == nullptr) {
         texture = loadTextTexture(gui);
     }
@@ -18,6 +18,7 @@ void CGameTextPanel::renderPanel(std::shared_ptr<CGui> gui, SDL_Rect *pRect, int
     actual.x = pRect->x;
     actual.y = pRect->y;
     SDL_QueryTexture(texture, NULL, NULL, &actual.w, &actual.h);
+    SDL_RenderFillRect(gui->getRenderer(), pRect);
     SDL_RenderCopy(gui->getRenderer(), texture, NULL, &actual);
 }
 
@@ -29,6 +30,12 @@ SDL_Texture *CGameTextPanel::loadTextTexture(std::shared_ptr<CGui> ptr) {
     auto _texture = SDL_CreateTextureFromSurface(ptr->getRenderer(), surface);
     SDL_FreeSurface(surface);
     return _texture;
+}
+
+void CGameTextPanel::panelEvent(std::shared_ptr<CGui> gui, SDL_Event *event) {
+    if (event->type == SDL_KEYDOWN && event->key.keysym.sym == SDLK_SPACE) {
+        gui->removeObject(this->ptr<CGameTextPanel>());
+    }
 }
 
 
@@ -54,10 +61,19 @@ void CGamePanel::render(std::shared_ptr<CGui> reneder, SDL_Rect *pos, int frameT
     recalc.y = pos->y + pos->h / 2 - this->ySize / 2;
     recalc.w = xSize;
     recalc.h = ySize;
-    this->renderPanel(reneder, &recalc, frameTime, object);
+    this->panelRender(reneder, &recalc, frameTime, object);
 }
 
-void CGamePanel::renderPanel(std::shared_ptr<CGui> shared_ptr, SDL_Rect *pRect, int i, std::string basic_string) {
+void CGamePanel::panelRender(std::shared_ptr<CGui> shared_ptr, SDL_Rect *pRect, int i, std::string basic_string) {
+
+}
+
+bool CGamePanel::event(std::shared_ptr<CGui> gui, SDL_Event *event) {
+    this->panelEvent(gui, event);
+    return true;
+}
+
+void CGamePanel::panelEvent(std::shared_ptr<CGui> gui, SDL_Event *pEvent) {
 
 }
 

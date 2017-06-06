@@ -17,18 +17,24 @@ public:
 
     void render(std::shared_ptr<CGui> reneder, SDL_Rect *pos, int frameTime, std::string object) override final;
 
+    bool event(std::shared_ptr<CGui> gui, SDL_Event *event) override;
+
 private:
     int xSize = 800;
     int ySize = 600;
 
-    virtual void renderPanel(std::shared_ptr<CGui> shared_ptr, SDL_Rect *pRect, int i, std::string basic_string);
+    virtual void panelRender(std::shared_ptr<CGui> shared_ptr, SDL_Rect *pRect, int i, std::string basic_string);
+
+    virtual void panelEvent(std::shared_ptr<CGui> gui, SDL_Event *pEvent);
 };
 
 class CGameTextPanel : public CGamePanel {
 V_META(CGameTextPanel, CGamePanel,
        V_PROPERTY(CGameTextPanel, std::string, text, getText, setText))
 
-    void renderPanel(std::shared_ptr<CGui> shared_ptr, SDL_Rect *pRect, int i, std::string basic_string) override;
+    void panelRender(std::shared_ptr<CGui> shared_ptr, SDL_Rect *pRect, int i, std::string basic_string) override;
+
+    void panelEvent(std::shared_ptr<CGui> gui, SDL_Event *pEvent) override;
 
 private:
     SDL_Texture *texture = nullptr;
