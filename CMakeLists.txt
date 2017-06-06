@@ -164,6 +164,8 @@ configure_file(res/images/tiles/ground.png images/tiles/ground.png COPYONLY)
 configure_file(res/images/tiles/grass.png images/tiles/grass.png COPYONLY)
 configure_file(res/images/tiles/desert.png images/tiles/desert.png COPYONLY)
 
+configure_file(res/fonts/ampersand.ttf fonts/ampersand.ttf COPYONLY)
+
 configure_file(res/game.py game.py)
 
 configure_file(test.py test.py)

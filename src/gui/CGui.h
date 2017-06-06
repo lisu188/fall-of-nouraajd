@@ -30,5 +30,5 @@ public:
 
     std::shared_ptr<CAnimationHandler> getAnimationHandler();
 
-    std::shared_ptr<CAnimationHandler> _animationHandler = std::make_shared<CAnimationHandler>();
+    vstd::lazy<CAnimationHandler> _animationHandler;
 };
