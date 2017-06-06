@@ -26,7 +26,7 @@ void CGui::render(int frameTime) {
 
 bool CGui::event(SDL_Event *event) {
     for (std::shared_ptr<CGameGraphicsObject> object:gui_stack | boost::adaptors::reversed) {
-        if (object->event(event)) {
+        if (object->event(this->ptr<CGui>(), event)) {
             return true;
         }
     }
@@ -38,9 +38,10 @@ void CGui::addObject(std::shared_ptr<CGameGraphicsObject> object) {
 }
 
 void CGui::removeObject(std::shared_ptr<CGameGraphicsObject> object) {
-    std::remove_if(gui_stack.begin(), gui_stack.end(), [object](std::shared_ptr<CGameGraphicsObject> ob) {
-        return ob == object;
-    });
+    gui_stack.erase(
+            std::remove_if(gui_stack.begin(), gui_stack.end(), [object](std::shared_ptr<CGameGraphicsObject> ob) {
+                return ob.get() == object.get();
+            }), gui_stack.end());
 }
 
 std::shared_ptr<CAnimationHandler> CGui::getAnimationHandler() {
