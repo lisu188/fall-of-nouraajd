@@ -1,11 +1,11 @@
-#include <gui/CMapGraphicsObject.h>
-#include <panel/CGamePanel.h>
+#include "gui/CMapGraphicsObject.h"
+#include "gui/panel/CGamePanel.h"
 #include "core/CTypes.h"
 #include "core/CGame.h"
 #include "core/CWrapper.h"
 #include "core/CController.h"
 #include "core/CEventLoop.h"
-#include "panel/CGameTextPanel.h"
+#include "gui/panel/CGameTextPanel.h"
 
 extern void add_member(std::shared_ptr<Value> object, std::string key, std::string value);
 
