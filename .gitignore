@@ -13,3 +13,4 @@ gen/
 *.cpp.*
 *.idea/
 /cmake-build-debug/
+/cmake-build-release/
