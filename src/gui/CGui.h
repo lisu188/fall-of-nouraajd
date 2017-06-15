@@ -2,7 +2,7 @@
 
 #include "object/CGameObject.h"
 #include "core/CGlobal.h"
-#include "gui/CGameGraphicsObject.h"
+#include "gui/object/CGameGraphicsObject.h"
 #include "gui/CAnimationHandler.h"
 
 class CGui : public CGameObject {

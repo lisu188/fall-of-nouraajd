@@ -1,5 +1,5 @@
 #include "core/CController.h"
-#include "gui/CMapGraphicsObject.h"
+#include "gui/object/CMapGraphicsObject.h"
 #include "gui/CAnimationHandler.h"
 #include "gui/CGui.h"
 
