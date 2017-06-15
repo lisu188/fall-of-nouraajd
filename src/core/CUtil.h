@@ -32,7 +32,7 @@ struct Coords {
 namespace std {
     template<>
     struct hash<Coords> {
-        std::size_t  operator()(const Coords &coords) const {
+        std::size_t operator()(const Coords &coords) const {
             return vstd::hash_combine(coords.x, coords.y, coords.z);
         }
     };

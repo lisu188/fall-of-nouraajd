@@ -539,7 +539,7 @@ void CCreature::setController(std::shared_ptr<CController> controller) {
     this->controller = controller;
 }
 
-std::string  CCreature::to_string() {
+std::string CCreature::to_string() {
     return vstd::join({CGameObject::to_string(), "(",
                        vstd::join({vstd::str(getPosX()), vstd::str(getPosY()), vstd::str(getPosZ())}, ","), ")"}, "");
 }

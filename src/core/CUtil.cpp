@@ -2,7 +2,7 @@
 
 Coords::Coords() { x = y = z = 0; }
 
-Coords::Coords(int x, int y, int z) : x(x), y(y), z(z) { }
+Coords::Coords(int x, int y, int z) : x(x), y(y), z(z) {}
 
 bool Coords::operator==(const Coords &other) const {
     return (x == other.x && y == other.y && z == other.z);

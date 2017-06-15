@@ -84,9 +84,9 @@ static Values fillValues(std::function<bool(const Coords &)> canStep,
     return values;
 }
 
-std::shared_ptr<vstd::future<Coords, void>>  CPathFinder::findNextStep(Coords start, Coords goal,
-                                                                       std::function<bool(
-                                                                                    const Coords &)> canStep) {
+std::shared_ptr<vstd::future<Coords, void>> CPathFinder::findNextStep(Coords start, Coords goal,
+                                                                      std::function<bool(
+                                                                              const Coords &)> canStep) {
     return vstd::async([start, goal, canStep]() {
         return getNextStep(start, goal, fillValues(
                 canStep, goal, start));

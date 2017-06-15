@@ -68,8 +68,7 @@ void CSerialization::setStringProperty(std::shared_ptr<CGameObject> object, std:
             std::shared_ptr<Value> d = CJsonUtil::from_string(value);
             if (!d || d->isString()) {
                 object->setStringProperty(key, value);
-            }
-            else {
+            } else {
                 setProperty(object, key, d);
             }
         }
@@ -90,7 +89,7 @@ void CSerialization::setOtherProperty(boost::typeindex::type_index serializedId,
         object->setProperty(key, vstd::any_cast<std::map<std::string, std::shared_ptr<CGameObject>>>(result));
     } else {
         //TODO: primitive properties
-        object->setProperty(key,vstd::any_cast<std::set<std::string>>(result));
+        object->setProperty(key, vstd::any_cast<std::set<std::string>>(result));
     }
 
 }
@@ -241,19 +240,22 @@ std::shared_ptr<Value> CSerializerFunction<std::shared_ptr<Value>, std::set<std:
 }
 
 
-std::set<std::shared_ptr<CGameObject> > CSerializerFunction<std::shared_ptr<Value>, std::set<std::shared_ptr<CGameObject> > >::deserialize(
+std::set<std::shared_ptr<CGameObject> >
+CSerializerFunction<std::shared_ptr<Value>, std::set<std::shared_ptr<CGameObject> > >::deserialize(
         std::shared_ptr<CMap> map, std::shared_ptr<Value> object) {
     return array_deserialize(map, object);
 }
 
 
-std::shared_ptr<Value> CSerializerFunction<std::shared_ptr<Value>, std::map<std::string, std::shared_ptr<CGameObject> > >::serialize(
+std::shared_ptr<Value>
+CSerializerFunction<std::shared_ptr<Value>, std::map<std::string, std::shared_ptr<CGameObject> > >::serialize(
         std::map<std::string, std::shared_ptr<CGameObject> > object) {
     return map_serialize(object);
 }
 
 
-std::map<std::string, std::shared_ptr<CGameObject> > CSerializerFunction<std::shared_ptr<Value>, std::map<std::string, std::shared_ptr<CGameObject> > >::deserialize(
+std::map<std::string, std::shared_ptr<CGameObject> >
+CSerializerFunction<std::shared_ptr<Value>, std::map<std::string, std::shared_ptr<CGameObject> > >::deserialize(
         std::shared_ptr<CMap> map, std::shared_ptr<Value> object) {
     return map_deserialize(map, object);
 }

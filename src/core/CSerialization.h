@@ -14,11 +14,11 @@ class CSerializerBase {
 
 public:
     virtual boost::any
-            serialize(boost::any
-                      object) = 0;
+    serialize(boost::any
+              object) = 0;
 
     virtual boost::any
-            deserialize(std::shared_ptr<CMap> map, boost::any
+    deserialize(std::shared_ptr<CMap> map, boost::any
     object) = 0;
 };
 
@@ -80,10 +80,10 @@ extern std::shared_ptr<CGameObject> object_deserialize(std::shared_ptr<CMap> map
 
 extern std::shared_ptr<Value> object_serialize(std::shared_ptr<CGameObject> object);
 
-extern std::set<std::string>  array_string_deserialize(std::shared_ptr<CMap> map,
+extern std::set<std::string> array_string_deserialize(std::shared_ptr<CMap> map,
                                                       std::shared_ptr<Value> object);
 
-extern std::shared_ptr<Value>  array_string_serialize(std::set<std::string>  set);
+extern std::shared_ptr<Value> array_string_serialize(std::set<std::string> set);
 
 template<>
 class CSerializerFunction<std::shared_ptr<Value>, std::shared_ptr<CGameObject>> {

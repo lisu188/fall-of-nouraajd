@@ -112,6 +112,7 @@ public:
     void addEffect(std::shared_ptr<CEffect> effect);
 
     void removeEffect(std::shared_ptr<CEffect> effect);
+
     int getMana();
 
     void setMana(int mana);
@@ -235,6 +236,7 @@ public:
     void setFightController(std::shared_ptr<CFightController> fightController);
 
     void useAction(std::shared_ptr<CInteraction> action, std::shared_ptr<CCreature> creature);
+
 protected:
     std::set<std::shared_ptr<CItem>> items;
     std::set<std::shared_ptr<CInteraction>> actions;

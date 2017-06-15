@@ -1,16 +1,19 @@
 from _game import *
 
+
 def register(context):
     def register_wrapper(f):
-        context.getObjectHandler().registerType(f.__name__,f)
+        context.getObjectHandler().registerType(f.__name__, f)
         return f
+
     return register_wrapper
 
 
-def trigger(context,event,object):
+def trigger(context, event, object):
     def trigger_wrapper(f):
-        context.getEventHandler().registerTrigger(object,event,f)
+        context.getEventHandler().registerTrigger(object, event, f)
         return f
+
     return trigger_wrapper
 
 
@@ -20,4 +23,3 @@ def main():
     CGameLoader.loadGui(g)
     while CEventLoop.instance().run():
         pass
-

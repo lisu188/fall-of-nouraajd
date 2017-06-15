@@ -97,7 +97,7 @@ void CGameObject::incProperty(std::string name, int value) {
 //    getMap()->getMouseHandler()->handleClick ( this->ptr() );
 //}
 
-std::string  CGameObject::to_string() {
+std::string CGameObject::to_string() {
     return vstd::join({getType(), getName()}, ":");
 }
 
