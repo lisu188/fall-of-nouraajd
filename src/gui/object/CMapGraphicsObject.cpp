@@ -32,6 +32,13 @@ CMapGraphicsObject::CMapGraphicsObject(std::function<std::shared_ptr<CMap>()> ma
         map()->move();
         return true;
     });
+    registerEventCallback([](std::shared_ptr<CGui> gui, SDL_Event *event) {
+        return event->type == SDL_KEYDOWN && event->key.keysym.sym == SDLK_SPACE;
+    }, [map](std::shared_ptr<CGui> gui, SDL_Event *event) {
+        map()->getPlayer()->setController(std::make_shared<CPlayerController>(Coords(0, 0, 0)));
+        map()->move();
+        return true;
+    });
 }
 
 void CMapGraphicsObject::render(std::shared_ptr<CGui> gui, SDL_Rect *pos, int frameTime,
