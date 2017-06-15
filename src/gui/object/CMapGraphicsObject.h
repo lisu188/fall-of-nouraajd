@@ -1,6 +1,6 @@
 #pragma once
 
-#include "gui/CGameGraphicsObject.h"
+#include "gui/object/CGameGraphicsObject.h"
 
 class CMapGraphicsObject : public CGameGraphicsObject {
 V_META(CMapGraphicsObject, CGameGraphicsObject, vstd::meta::empty())

@@ -1,4 +1,4 @@
-#include "gui/CMapGraphicsObject.h"
+#include "gui/object/CMapGraphicsObject.h"
 #include "gui/panel/CGamePanel.h"
 #include "core/CTypes.h"
 #include "core/CGame.h"
