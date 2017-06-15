@@ -1,2 +1,2 @@
-def load(self,context):
+def load(self, context):
     pass

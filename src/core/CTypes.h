@@ -9,7 +9,8 @@ public:
 
     static std::unordered_map<std::string, std::function<std::shared_ptr<CGameObject>()>> *builders();
 
-    static std::unordered_map<std::pair<boost::typeindex::type_index, boost::typeindex::type_index>, std::shared_ptr<CSerializerBase>> *serializers();
+    static std::unordered_map<std::pair<boost::typeindex::type_index, boost::typeindex::type_index>, std::shared_ptr<CSerializerBase>> *
+    serializers();
 
     static std::unordered_set<boost::typeindex::type_index> *pointer_types();
 

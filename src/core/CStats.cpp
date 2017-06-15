@@ -177,13 +177,13 @@ const char *Stats::getText(int level) {
     stream << "Stamina: " << stamina << "\n";
     stream << "Damage: " << dmgMin + damage << "-" << dmgMax + damage << "\n";
     stream << "Hit: " << hit + attack << "%"
-    << "\n";
+           << "\n";
     stream << "Crit: " << crit << "%"
-    << "\n";
+           << "\n";
     stream << "Armor: " << armor << "%"
-    << "\n";
+           << "\n";
     stream << "Block: " << block << "%"
-    << "\n";
+           << "\n";
     return stream.str().c_str();
 }
 

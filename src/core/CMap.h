@@ -29,11 +29,13 @@ class CMapObject;
 //TODO: triggers saving
 class CMap : public CGameObject {
     friend class CMapLoader;
-V_META(CMap,CGameObject, V_PROPERTY(CMap, int, turn, getTurn, setTurn),
+
+V_META(CMap, CGameObject, V_PROPERTY(CMap, int, turn, getTurn, setTurn),
        V_PROPERTY(CMap, std::set<std::shared_ptr<CMapObject>>, objects, getObjects, setObjects),
        V_PROPERTY(CMap, std::set<std::shared_ptr<CTile>>, tiles, getTiles, setTiles))
 public:
     CMap();
+
     CMap(std::shared_ptr<CGame> game);
 
     bool addTile(std::shared_ptr<CTile> tile, int x, int y, int z);
@@ -132,6 +134,7 @@ public:
     std::set<std::shared_ptr<CTile>> getTiles();
 
     void setTiles(std::set<std::shared_ptr<CTile>> objects);
+
 private:
     void resolveFights();
 

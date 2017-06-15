@@ -111,6 +111,7 @@ public:
     std::string getAnimation();
 
     void setAnimation(std::string animation);
+
 private:
     std::shared_ptr<CGameObject> _clone();
 
