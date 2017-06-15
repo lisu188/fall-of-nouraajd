@@ -1,7 +1,7 @@
 #pragma once
 
 
-#include "gui/CGameGraphicsObject.h"
+#include "gui/object/CGameGraphicsObject.h"
 
 class CGui;
 

@@ -1,4 +1,5 @@
-#include "gui/CMapGraphicsObject.h"
+#include <gui/object/CStatsGraphicsObject.h>
+#include "gui/object/CMapGraphicsObject.h"
 #include "core/CLoader.h"
 #include "core/CEventLoop.h"
 #include "core/CJsonUtil.h"
@@ -166,6 +167,14 @@ void CGameLoader::loadGui(std::shared_ptr<CGame> game) {
         return game->getMap();
     });
     gui->addObject(mapGraphicsObject);
+
+    std::shared_ptr<CStatsGraphicsObject> stats = std::make_shared<CStatsGraphicsObject>([game]() {
+        return game->getMap()->getPlayer();
+    });
+
+    gui->addObject(mapGraphicsObject);
+    gui->addObject(stats);
+
     CEventLoop::instance()->registerFrameCallback([gui](int time) {
         gui->render(time);
     });
