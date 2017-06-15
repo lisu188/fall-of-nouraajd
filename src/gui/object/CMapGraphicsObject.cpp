@@ -1,3 +1,4 @@
+#include <gui/panel/CGameInventoryPanel.h>
 #include "core/CController.h"
 #include "gui/object/CMapGraphicsObject.h"
 #include "gui/CAnimationHandler.h"
@@ -37,6 +38,12 @@ CMapGraphicsObject::CMapGraphicsObject(std::function<std::shared_ptr<CMap>()> ma
     }, [map](std::shared_ptr<CGui> gui, SDL_Event *event) {
         map()->getPlayer()->setController(std::make_shared<CPlayerController>(Coords(0, 0, 0)));
         map()->move();
+        return true;
+    });
+    registerEventCallback([](std::shared_ptr<CGui> gui, SDL_Event *event) {
+        return event->type == SDL_KEYDOWN && event->key.keysym.sym == SDLK_i;
+    }, [map](std::shared_ptr<CGui> gui, SDL_Event *event) {
+        gui->addObject(std::make_shared<CGameInventoryPanel>(map()->getPlayer()));
         return true;
     });
 }
