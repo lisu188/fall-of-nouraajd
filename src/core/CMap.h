@@ -96,7 +96,7 @@ public:
 
     bool canStep(int x, int y, int z);
 
-    bool canStep(const Coords &coords);
+    bool canStep(Coords coords);
 
     std::shared_ptr<CMapObject> getObjectByName(std::string name);
 

@@ -144,7 +144,7 @@ bool CMap::canStep(int x, int y, int z) {
     return !(x < 0 || y < 0 || x > bound.first || y > bound.second);
 }
 
-bool CMap::canStep(const Coords &coords) {
+bool CMap::canStep(Coords coords) {
     return canStep(coords.x, coords.y, coords.z);
 }
 
