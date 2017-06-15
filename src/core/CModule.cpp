@@ -44,6 +44,8 @@ BOOST_PYTHON_MODULE (_game) {
             .def("getObjectHandler", &CGame::getObjectHandler)
             .def("createObject", &CGame::createObject<CGameObject>);
 
+    bool (CMap::*canStep)(Coords)=&CMap::canStep;
+
     class_<CMap, bases<CGameObject>, boost::noncopyable, std::shared_ptr<CMap>>("CMap", no_init)
             .def("addObjectByName", &CMap::addObjectByName)
             .def("removeObjectByName", &CMap::removeObjectByName)
@@ -60,7 +62,8 @@ BOOST_PYTHON_MODULE (_game) {
             .def("load_plugin", &CMap::load_plugin)
             .def("move", &CMap::move)
             .def("getObjectByName", &CMap::getObjectByName)
-            .def("forObjects", &CMap::forObjects);
+            .def("forObjects", &CMap::forObjects)
+            .def("canStep", canStep);
 
     void ( CObjectHandler::*registerType )(std::string,
                                            std::function<std::shared_ptr<CGameObject>()>) = &CObjectHandler::registerType;

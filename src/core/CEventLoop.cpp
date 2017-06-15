@@ -41,7 +41,7 @@ bool CEventLoop::run() {
 
     int diffTime = desiredFrameTime - actualFrameTime;
     if (diffTime < 0) {
-        vstd::logger::warning("CEventLoop:", "cannot achieve specified fps!");
+        //TODO: vstd::logger::warning("CEventLoop:", "cannot achieve specified fps!");
     } else {
         SDL_Delay(diffTime);
     }
