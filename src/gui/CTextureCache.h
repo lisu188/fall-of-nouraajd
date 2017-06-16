@@ -4,7 +4,6 @@
 #include "gui/CAnimation.h"
 #include "gui/CGui.h"
 
-//TODO: think of random offset to desynchronize animations
 //TODO: generify all cache classes
 
 class CTextureCache : public CGameObject {
