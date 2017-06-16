@@ -117,7 +117,7 @@ void CCreature::setEquipped(CItemMap
 
 void CCreature::addItem(std::set<std::shared_ptr<CItem> > items) {
     for (std::shared_ptr<CItem> it : items) {
-        items.insert(it);
+        this->items.insert(it);
     }
 }
 
@@ -566,4 +566,14 @@ void CCreature::useAction(std::shared_ptr<CInteraction> action, std::shared_ptr<
 
 void CCreature::removeEffect(std::shared_ptr<CEffect> effect) {
     effects.erase(effect);
+}
+
+void CCreature::useItem(std::shared_ptr<CItem> item) {
+    vstd::fail_if(!vstd::ctn(items, item), "Tried to use item not in inventory!");
+    getMap()->getEventHandler()->gameEvent(item,
+                                           std::make_shared<CGameEventCaused>(CGameEvent::Type::onUse,
+                                                                              this->ptr()));
+    if (item->isDisposable()) {
+        removeFromInventory(item);
+    }
 }

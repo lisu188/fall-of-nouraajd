@@ -237,6 +237,8 @@ public:
 
     void useAction(std::shared_ptr<CInteraction> action, std::shared_ptr<CCreature> creature);
 
+    void useItem(std::shared_ptr<CItem> item);
+
 protected:
     std::set<std::shared_ptr<CItem>> items;
     std::set<std::shared_ptr<CInteraction>> actions;

@@ -12,7 +12,6 @@ class CItem : public CMapObject, public Visitable, public Wearable, public Usabl
 V_META(CItem, CMapObject,
        V_PROPERTY(CItem, int, power, getPower, setPower),
        V_PROPERTY(CItem, std::shared_ptr<Stats>, bonus, getBonus, setBonus),
-       V_PROPERTY(CItem, bool, singleUse, isSingleUse, setSingleUse),
        V_PROPERTY(CItem, std::shared_ptr<CInteraction>, interaction, getInteraction, setInteraction)
 )
 
@@ -20,10 +19,6 @@ public:
     CItem();
 
     virtual ~CItem();
-
-    bool isSingleUse();
-
-    void setSingleUse(bool singleUse);
 
     virtual void onEquip(std::shared_ptr<CGameEvent> event) override;
 
@@ -47,8 +42,9 @@ public:
 
     void setInteraction(std::shared_ptr<CInteraction> interaction);
 
+    virtual bool isDisposable();
+
 protected:
-    bool singleUse = false;
     std::shared_ptr<Stats> bonus = std::make_shared<Stats>();
     std::shared_ptr<CInteraction> interaction;
     int power = 0;
@@ -146,7 +142,10 @@ private:
 
 class CPotion : public CItem {
 V_META(CPotion, CItem, vstd::meta::empty())
+
 public:
+    bool isDisposable() override;
+
     CPotion();
 
     CPotion(const CPotion &);

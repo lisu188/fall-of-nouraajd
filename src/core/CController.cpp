@@ -98,16 +98,14 @@ bool CFightController::control(std::shared_ptr<CCreature> me, std::shared_ptr<CC
     if (me->getHpRatio() < 75) {
         auto object = getLeastPowerfulItemWithTag(me, "heal");
         if (object) {
-            me->getMap()->getEventHandler()->gameEvent(object,
-                                                       std::make_shared<CGameEventCaused>(CGameEvent::Type::onUse, me));
+            me->useItem(object);
             return control(me, opponent);
         }
     }
     if (me->getManaRatio() < 75) {
         auto object = getLeastPowerfulItemWithTag(me, "mana");
         if (object) {
-            me->getMap()->getEventHandler()->gameEvent(object,
-                                                       std::make_shared<CGameEventCaused>(CGameEvent::Type::onUse, me));
+            me->useItem(object);
             return control(me, opponent);
         }
     }
