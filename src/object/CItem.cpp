@@ -19,14 +19,6 @@ void CItem::onLeave(std::shared_ptr<CGameEvent>) {
 
 }
 
-bool CItem::isSingleUse() {
-    return singleUse;
-}
-
-void CItem::setSingleUse(bool singleUse) {
-    this->singleUse = singleUse;
-}
-
 void CItem::onEquip(std::shared_ptr<CGameEvent> event) {
     vstd::cast<CCreature>(vstd::cast<CGameEventCaused>(event)->getCause())->addBonus(bonus);
     vstd::logger::debug(vstd::cast<CGameEventCaused>(event)->getCause()->getType(), "equipped", getType(), "\n");
@@ -104,8 +96,16 @@ void CItem::setBonus(std::shared_ptr<Stats> stats) {
     bonus = stats;
 }
 
+bool CItem::isDisposable() {
+    return false;
+}
+
 CPotion::CPotion() {
 
+}
+
+bool CPotion::isDisposable() {
+    return true;
 }
 
 CScroll::CScroll() {
@@ -121,6 +121,6 @@ void CScroll::setText(const std::string &value) {
 }
 
 void CScroll::onUse(std::shared_ptr<CGameEvent>) {
-//TODO:    getMap()->getGame()->getGuiHandler()->showMessage ( text );
+    getMap()->getGame()->getGuiHandler()->showMessage(text);
 }
 
