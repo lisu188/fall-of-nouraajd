@@ -22,6 +22,10 @@ CStaticAnimation::~CStaticAnimation() {
     SDL_DestroyTexture(texture);
 }
 
+CStaticAnimation::CStaticAnimation() {
+
+}
+
 CDynamicAnimation::CDynamicAnimation(std::string path) {
     auto time = CConfigurationProvider::getConfig(path + "/" + "time.json");
     this->size = time->size();
@@ -72,4 +76,8 @@ double CDynamicAnimation::getFrameOffset(std::string object, int frameTime) {
 
 int CDynamicAnimation::get_ttl() {
     return vstd::rand(5000, 30000);
+}
+
+CDynamicAnimation::CDynamicAnimation() {
+
 }

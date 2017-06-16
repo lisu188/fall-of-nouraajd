@@ -56,8 +56,6 @@ static Values fillValues(std::function<bool(const Coords &)> canStep,
     });
     std::unordered_set<Coords> marked;
     Values values = std::make_shared<std::unordered_map<Coords, int>>();
-//TODO
-    //if ( !QApplication::instance()->property ( "disable_pathfinder" ).toBool() ) {
     nodes.push(goal);
     (*values)[goal] = 0;
 
@@ -76,11 +74,6 @@ static Values fillValues(std::function<bool(const Coords &)> canStep,
             }
         }
     }
-    //TODO
-//        if ( QApplication::instance()->property ( "dump_path" ).toBool() ) {
-//            dump ( values, start, goal );
-//        }
-    // }
     return values;
 }
 

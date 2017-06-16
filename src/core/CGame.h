@@ -40,9 +40,6 @@ public:
         return getObjectHandler()->createObject<T>(getMap(), name);
     }
 
-protected:
-    virtual void keyPressEvent(void *event); //TODO: implement
-
 private:
     vstd::lazy<CGuiHandler, std::shared_ptr<CGame>> guiHandler;
     vstd::lazy<CScriptHandler> scriptHandler;

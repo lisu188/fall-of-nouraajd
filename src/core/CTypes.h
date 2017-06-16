@@ -74,7 +74,6 @@ public:
 
     template<typename T>
     static void register_pointer() {
-        //TODO: check after boost upgrade
         vstd::register_pointer<T>();
     }
 

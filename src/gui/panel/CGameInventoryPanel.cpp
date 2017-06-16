@@ -40,3 +40,7 @@ void CGameInventoryPanel::panelEvent(std::shared_ptr<CGui> gui, SDL_Event *event
 CGameInventoryPanel::CGameInventoryPanel(std::shared_ptr<CPlayer> _player) : _player(_player) {
 
 }
+
+CGameInventoryPanel::CGameInventoryPanel() {
+
+}

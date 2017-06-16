@@ -1,9 +1,8 @@
 //TODO: market bug/when configuration is present in map but type is present only in game causes load to fail
-//TODO: gui panels/gui panels do not respond to input
 //TODO: triggers savings
 //TODO: maybe implement custom setattr and getattr for properties
-//TODO: when resized window with opened panel sometimes incorrect location
 //TODO: add mechanism to ensure registering every V_META in CTypes.cpp
 //TODO: weird fight bug after fight, player didnt return to position
 //TODO: make random anim times
-//TODO: make potion one time only
+//TODO: tooltip
+//TODO: drag & drop

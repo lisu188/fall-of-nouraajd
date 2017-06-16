@@ -81,3 +81,7 @@ void CMapGraphicsObject::render(std::shared_ptr<CGui> gui, SDL_Rect *pos, int fr
     });
 }
 
+CMapGraphicsObject::CMapGraphicsObject() {
+
+}
+

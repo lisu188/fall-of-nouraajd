@@ -3,7 +3,7 @@
 #include "CGameObject.h"
 
 class CTrigger : public CGameObject {
-
+V_META(CTrigger, CGameObject, vstd::meta::empty())
 public:
     CTrigger();
 
