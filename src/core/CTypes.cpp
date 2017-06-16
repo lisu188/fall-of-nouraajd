@@ -142,6 +142,9 @@ namespace {
                         CTypes::register_type<CDynamicAnimation, CAnimation, CGameGraphicsObject, CGameObject>();
                     }
                 }
+
+                CTypes::register_type<CGui, CGameObject>();
+                CTypes::register_type<CTextureCache, CGameObject>();
             }
 
             //TODO: add also std::map<std::string,std::string> and std::string

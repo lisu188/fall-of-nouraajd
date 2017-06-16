@@ -7,20 +7,22 @@ class CGui;
 
 class CAnimation : public CGameGraphicsObject {
 V_META(CAnimation, CGameGraphicsObject, vstd::meta::empty())
+public:
+    static std::shared_ptr<CAnimation> buildAnimation(std::string path);
 };
 
 class CStaticAnimation : public CAnimation {
 V_META(CStaticAnimation, CAnimation, vstd::meta::empty())
-    SDL_Texture *texture = nullptr;
+
     std::string raw_path;
 public:
     CStaticAnimation();
 
     CStaticAnimation(std::string path);
 
-    void render(std::shared_ptr<CGui> gui, SDL_Rect *pos, int frameTime, std::string data) override;
+    void render(std::shared_ptr<CGui> gui, SDL_Rect *pos, int frameTime) override;
 
-    ~CStaticAnimation();
+
 };
 
 class CDynamicAnimation : public CAnimation {
@@ -30,9 +32,7 @@ public:
 
     CDynamicAnimation(std::string path);
 
-    ~CDynamicAnimation();
-
-    void render(std::shared_ptr<CGui> gui, SDL_Rect *pos, int frameTime, std::string object) override;
+    void render(std::shared_ptr<CGui> gui, SDL_Rect *pos, int frameTime) override;
 
 private:
     static int get_next();
@@ -42,8 +42,6 @@ private:
 
     std::vector<std::string> paths;
     std::vector<int> times;
-    std::vector<SDL_Texture *> textures;
-
     vstd::cache<std::string, int, get_next, get_ttl> _offsets;
 
     int getCurrentAnimFrame(int frameTime);
@@ -51,5 +49,4 @@ private:
     int size = 0;
     int totalAnimTime = 0;
 
-    double getFrameOffset(std::string object, int frameTime);
 };

@@ -10,17 +10,10 @@ CStaticAnimation::CStaticAnimation(std::string path) {
     raw_path = path + ".png";
 }
 
-void CStaticAnimation::render(std::shared_ptr<CGui> gui, SDL_Rect *pos, int frameTime,
-                              std::string data) {
-    if (texture == nullptr) {
-        texture = IMG_LoadTexture(gui->getRenderer(), raw_path.c_str());
-    }
-    SDL_RenderCopy(gui->getRenderer(), texture, nullptr, pos);
+void CStaticAnimation::render(std::shared_ptr<CGui> gui, SDL_Rect *pos, int frameTime) {
+    SDL_RenderCopy(gui->getRenderer(), gui->getTextureCache()->getTexture(raw_path), nullptr, pos);
 }
 
-CStaticAnimation::~CStaticAnimation() {
-    SDL_DestroyTexture(texture);
-}
 
 CStaticAnimation::CStaticAnimation() {
 
@@ -37,17 +30,13 @@ CDynamicAnimation::CDynamicAnimation(std::string path) {
             times.push_back(times[i - 1] + (*time)[std::to_string(i)].asInt());
         }
         totalAnimTime += (*time)[std::to_string(i)].asInt();
-        textures.push_back(nullptr);
     }
 }
 
-void CDynamicAnimation::render(std::shared_ptr<CGui> gui, SDL_Rect *pos, int frameTime,
-                               std::string object) {
-    int currFrame = getCurrentAnimFrame(frameTime + (totalAnimTime * (getFrameOffset(object, frameTime) / 100.0)));
-    if (!textures[currFrame]) {
-        textures[currFrame] = IMG_LoadTexture(gui->getRenderer(), paths[currFrame].c_str());
-    }
-    SDL_RenderCopy(gui->getRenderer(), textures[currFrame], nullptr, pos);
+void CDynamicAnimation::render(std::shared_ptr<CGui> gui, SDL_Rect *pos, int frameTime) {
+    int currFrame = getCurrentAnimFrame(
+            frameTime + (totalAnimTime * (_offsets.get("main", frameTime % totalAnimTime) / 100.0)));
+    SDL_RenderCopy(gui->getRenderer(), gui->getTextureCache()->getTexture(paths[currFrame]), nullptr, pos);
 }
 
 int CDynamicAnimation::getCurrentAnimFrame(int frameTime) {
@@ -60,19 +49,6 @@ int CDynamicAnimation::getCurrentAnimFrame(int frameTime) {
     vstd::logger::fatal("Cannot determine anim frame!");
 }
 
-CDynamicAnimation::~CDynamicAnimation() {
-    for (auto texture:textures) {
-        SDL_DestroyTexture(texture);
-    }
-}
-
-int CDynamicAnimation::get_next() {
-    return vstd::rand(0, 100);
-}
-
-double CDynamicAnimation::getFrameOffset(std::string object, int frameTime) {
-    return _offsets.get(object, frameTime);
-}
 
 int CDynamicAnimation::get_ttl() {
     return vstd::rand(5000, 30000);
@@ -80,4 +56,19 @@ int CDynamicAnimation::get_ttl() {
 
 CDynamicAnimation::CDynamicAnimation() {
 
+}
+
+int CDynamicAnimation::get_next() {
+    return vstd::rand(0, 100);
+}
+
+std::shared_ptr<CAnimation> CAnimation::buildAnimation(std::string path) {
+    if (boost::filesystem::is_directory(path)) {
+        return std::make_shared<CDynamicAnimation>(path);
+    } else if (boost::filesystem::is_regular_file(path + ".png")) {
+        return std::make_shared<CStaticAnimation>(path);
+    } else {
+        vstd::logger::warning("Loading empty animation");
+        return std::make_shared<CAnimation>();
+    }
 }

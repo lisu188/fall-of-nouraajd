@@ -19,16 +19,16 @@ void CGamePanel::setYSize(int _ySize) {
     ySize = _ySize;
 }
 
-void CGamePanel::render(std::shared_ptr<CGui> reneder, SDL_Rect *pos, int frameTime, std::string object) {
+void CGamePanel::render(std::shared_ptr<CGui> reneder, SDL_Rect *pos, int frameTime) {
     SDL_Rect recalc;
     recalc.x = pos->x + pos->w / 2 - this->xSize / 2;
     recalc.y = pos->y + pos->h / 2 - this->ySize / 2;
     recalc.w = xSize;
     recalc.h = ySize;
-    this->panelRender(reneder, &recalc, frameTime, object);
+    this->panelRender(reneder, &recalc, frameTime);
 }
 
-void CGamePanel::panelRender(std::shared_ptr<CGui> shared_ptr, SDL_Rect *pRect, int i, std::string basic_string) {
+void CGamePanel::panelRender(std::shared_ptr<CGui> shared_ptr, SDL_Rect *pRect, int i) {
 
 }
 

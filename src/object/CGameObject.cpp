@@ -1,6 +1,9 @@
 #include "object/CGameObject.h"
 #include "core/CMap.h"
 
+
+#include "gui/CAnimation.h"
+
 std::function<bool(std::shared_ptr<CGameObject>, std::shared_ptr<CGameObject>)> CGameObject::name_comparator = [](
         std::shared_ptr<CGameObject> a, std::shared_ptr<CGameObject> b) {
     return a->getType() == b->getType();
@@ -100,4 +103,10 @@ std::string CGameObject::getAnimation() {
 
 void CGameObject::setAnimation(std::string animation) {
     this->animation = animation;
+}
+
+std::shared_ptr<CAnimation> CGameObject::getAnimationObject() {
+    return animationObject.get([this]() {
+        return CAnimation::buildAnimation(getAnimation());
+    });
 }
