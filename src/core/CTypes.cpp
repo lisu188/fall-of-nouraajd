@@ -1,5 +1,6 @@
-#include "gui/object/CMapGraphicsObject.h"
-#include "gui/panel/CGamePanel.h"
+#include <gui/panel/CGameInventoryPanel.h>
+#include <gui/object/CMapGraphicsObject.h>
+#include <gui/object/CStatsGraphicsObject.h>
 #include "core/CTypes.h"
 #include "core/CGame.h"
 #include "core/CWrapper.h"
@@ -55,11 +56,14 @@ namespace {
                 {
                     CTypes::register_type<CWrapper<CEffect>, CEffect, CGameObject>();
                 }
+
                 CTypes::register_type<CMarket, CGameObject>();
+
                 CTypes::register_type<CTrigger, CGameObject>();
                 {
                     CTypes::register_type<CWrapper<CTrigger>, CTrigger, CGameObject>();
                 }
+
                 CTypes::register_type<CQuest, CGameObject>();
                 {
                     CTypes::register_type<CWrapper<CQuest>, CQuest, CGameObject>();
@@ -124,9 +128,18 @@ namespace {
 
                 CTypes::register_type<CGameGraphicsObject, CGameObject>();
                 {
-                    CTypes::register_type<CGamePanel, CGameGraphicsObject>();
+                    CTypes::register_type<CMapGraphicsObject, CGameGraphicsObject, CGameObject>();
+                    CTypes::register_type<CStatsGraphicsObject, CGameGraphicsObject, CGameObject>();
+
+                    CTypes::register_type<CGamePanel, CGameGraphicsObject, CGameObject>();
                     {
-                        CTypes::register_type<CGameTextPanel, CGamePanel>();
+                        CTypes::register_type<CGameTextPanel, CGamePanel, CGameGraphicsObject, CGameObject>();
+                        CTypes::register_type<CGameInventoryPanel, CGamePanel, CGameGraphicsObject, CGameObject>();
+                    }
+                    CTypes::register_type<CAnimation, CGameGraphicsObject, CGameObject>();
+                    {
+                        CTypes::register_type<CStaticAnimation, CAnimation, CGameGraphicsObject, CGameObject>();
+                        CTypes::register_type<CDynamicAnimation, CAnimation, CGameGraphicsObject, CGameObject>();
                     }
                 }
             }

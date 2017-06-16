@@ -12,8 +12,6 @@ public:
     SDL_Renderer *getRenderer() const;
 
 private:
-
-    //TODO: make linked hash set
     std::list<std::shared_ptr<CGameGraphicsObject>> gui_stack;
 public:
     CGui();
