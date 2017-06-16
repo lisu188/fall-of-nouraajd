@@ -97,10 +97,6 @@ public:
 
     bool isAlive();
 
-    void setAlive() {
-        //TODO:
-    }
-
     virtual void trade(std::shared_ptr<CMarket>);
 
     virtual void levelUp();

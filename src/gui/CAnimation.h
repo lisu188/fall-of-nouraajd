@@ -14,6 +14,8 @@ V_META(CStaticAnimation, CAnimation, vstd::meta::empty())
     SDL_Texture *texture = nullptr;
     std::string raw_path;
 public:
+    CStaticAnimation();
+
     CStaticAnimation(std::string path);
 
     void render(std::shared_ptr<CGui> gui, SDL_Rect *pos, int frameTime, std::string data) override;
@@ -24,6 +26,8 @@ public:
 class CDynamicAnimation : public CAnimation {
 V_META(CDynamicAnimation, CAnimation, vstd::meta::empty())
 public:
+    CDynamicAnimation();
+
     CDynamicAnimation(std::string path);
 
     ~CDynamicAnimation();

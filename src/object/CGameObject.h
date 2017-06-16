@@ -73,25 +73,11 @@ public:
 
     void incProperty(std::string name, int value);
 
-//    virtual std::string getTooltip() ;
-//
-//    virtual void setTooltip (  std::string &value );
-
     bool hasTag(std::string tag);
 
     void addTag(std::string tag);
 
     void removeTag(std::string tag);
-
-protected:
-    //TODO: tooltip
-//    virtual void hoverEnterEvent ( QGraphicsSceneHoverEvent *event ) override final;
-//
-//    virtual void hoverLeaveEvent ( QGraphicsSceneHoverEvent *event ) override final;
-//
-//    virtual void mousePressEvent ( QGraphicsSceneMouseEvent * ) override final;
-
-//    bool hasTooltip = true;
 
 public:
     std::string getType();
@@ -120,8 +106,6 @@ private:
     std::string animation;
 
     std::set<std::string> tags;
-    //TODO: tooltip
-    //QGraphicsSimpleTextItem statsView;
     std::weak_ptr<CMap> map;
 };
 
