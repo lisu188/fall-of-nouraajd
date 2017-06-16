@@ -22,7 +22,7 @@ void CGameInventoryPanel::panelRender(std::shared_ptr<CGui> gui, SDL_Rect *pRect
 
 
 void CGameInventoryPanel::panelEvent(std::shared_ptr<CGui> gui, SDL_Event *event) {
-    if (event->type == SDL_KEYDOWN && event->key.keysym.sym == SDLK_SPACE) {
+    if (event->type == SDL_KEYDOWN && event->key.keysym.sym == SDLK_i) {
         gui->removeObject(this->ptr<CGameInventoryPanel>());
     }
 }
