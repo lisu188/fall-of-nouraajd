@@ -11,7 +11,7 @@ public:
     CMapGraphicsObject();
     CMapGraphicsObject(std::function<std::shared_ptr<CMap>()> _map);
 
-    void render(std::shared_ptr<CGui> gui, SDL_Rect *pos, int frameTime, std::string data) override;
+    void render(std::shared_ptr<CGui> gui, SDL_Rect *pos, int frameTime) override;
 
 };
 

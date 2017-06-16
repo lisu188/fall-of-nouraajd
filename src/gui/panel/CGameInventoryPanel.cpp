@@ -4,7 +4,7 @@
 #include "gui/CGui.h"
 #include "object/CItem.h"
 
-void CGameInventoryPanel::panelRender(std::shared_ptr<CGui> gui, SDL_Rect *pRect, int i, std::string basic_string) {
+void CGameInventoryPanel::panelRender(std::shared_ptr<CGui> gui, SDL_Rect *pRect, int i) {
 
     SDL_RenderFillRect(gui->getRenderer(), pRect);
     int index = 0;
@@ -14,8 +14,7 @@ void CGameInventoryPanel::panelRender(std::shared_ptr<CGui> gui, SDL_Rect *pRect
         location.y = TILE_SIZE * (index / 4) + pRect->y;
         location.w = TILE_SIZE;
         location.h = TILE_SIZE;
-        gui->getAnimationHandler()->getAnimation(item->getAnimation())->render(gui, &location, i,
-                                                                               item->getName());
+        item->getAnimationObject()->render(gui, &location, i);
         index++;
     }
     for (auto it:_player->getEquipped()) {
@@ -25,8 +24,7 @@ void CGameInventoryPanel::panelRender(std::shared_ptr<CGui> gui, SDL_Rect *pRect
         location.y = TILE_SIZE * (index / 4) + pRect->y;
         location.w = TILE_SIZE;
         location.h = TILE_SIZE;
-        gui->getAnimationHandler()->getAnimation(it.second->getAnimation())->render(gui, &location, i,
-                                                                                    it.second->getName());
+        it.second->getAnimationObject()->render(gui, &location, i);
     }
 }
 

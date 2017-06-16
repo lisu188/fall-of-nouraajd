@@ -8,7 +8,7 @@ V_META(CGameTextPanel, CGamePanel,
        V_PROPERTY(CGameTextPanel, std::string, text, getText, setText))
 
     void
-    panelRender(std::shared_ptr<CGui> shared_ptr, SDL_Rect *pRect, int i, std::string basic_string) override;
+    panelRender(std::shared_ptr<CGui> shared_ptr, SDL_Rect *pRect, int i) override;
 
     void panelEvent(std::shared_ptr<CGui> gui, SDL_Event *pEvent) override;
 

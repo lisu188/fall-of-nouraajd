@@ -12,6 +12,6 @@ public:
 
     CStatsGraphicsObject(std::function<std::shared_ptr<CPlayer>()> _player);
 
-    void render(std::shared_ptr<CGui> gui, SDL_Rect *pos, int frameTime, std::string data) override;
+    void render(std::shared_ptr<CGui> gui, SDL_Rect *pos, int frameTime) override;
 
 };

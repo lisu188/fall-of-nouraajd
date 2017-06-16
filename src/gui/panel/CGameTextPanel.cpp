@@ -11,7 +11,7 @@ void CGameTextPanel::setText(std::string _text) {
     text = _text;
 }
 
-void CGameTextPanel::panelRender(std::shared_ptr<CGui> gui, SDL_Rect *pRect, int i, std::string basic_string) {
+void CGameTextPanel::panelRender(std::shared_ptr<CGui> gui, SDL_Rect *pRect, int i) {
     if (texture == nullptr) {
         texture = loadTextTexture(gui);
     }

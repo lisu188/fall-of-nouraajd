@@ -8,6 +8,8 @@ class CGameEvent;
 
 class CMap;
 
+class CAnimation;
+
 class CGameObject : public vstd::stringable, public std::enable_shared_from_this<CGameObject> {
 V_META(CGameObject, vstd::meta::empty,
        V_PROPERTY(CGameObject, std::string, name, getName, setName),
@@ -98,8 +100,12 @@ public:
 
     void setAnimation(std::string animation);
 
+    std::shared_ptr<CAnimation> getAnimationObject();
+
 private:
     std::shared_ptr<CGameObject> _clone();
+
+    vstd::lazy2<CAnimation> animationObject;
 
     std::string type;
     std::string name;

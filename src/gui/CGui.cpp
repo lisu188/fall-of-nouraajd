@@ -19,7 +19,7 @@ void CGui::render(int frameTime) {
         physical.y = 0;
         physical.h = HEIGHT;
         physical.w = WIDTH;
-        object->render(this->ptr<CGui>(), &physical, frameTime, object->getName());
+        object->render(this->ptr<CGui>(), &physical, frameTime);
     }
     SDL_RenderPresent(renderer);
 }
@@ -44,10 +44,10 @@ void CGui::removeObject(std::shared_ptr<CGameGraphicsObject> object) {
             }), gui_stack.end());
 }
 
-std::shared_ptr<CAnimationHandler> CGui::getAnimationHandler() {
-    return _animationHandler.get();
-}
-
 SDL_Renderer *CGui::getRenderer() const {
     return renderer;
+}
+
+std::shared_ptr<CTextureCache> CGui::getTextureCache() {
+    return _textureCache.get(this->ptr<CGui>());
 }
