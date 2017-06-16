@@ -1,7 +1,7 @@
 #include "object/CGameObject.h"
 #include "core/CMap.h"
 
-const std::function<bool(std::shared_ptr<CGameObject>, std::shared_ptr<CGameObject>)> CGameObject::name_comparator = [](
+std::function<bool(std::shared_ptr<CGameObject>, std::shared_ptr<CGameObject>)> CGameObject::name_comparator = [](
         std::shared_ptr<CGameObject> a, std::shared_ptr<CGameObject> b) {
     return a->getType() == b->getType();
 };
@@ -40,15 +40,15 @@ void CGameObject::setNumericProperty(std::string name, int value) {
     this->setProperty(name, value);
 }
 
-std::string CGameObject::getStringProperty(std::string name) const {
+std::string CGameObject::getStringProperty(std::string name) {
     return this->getProperty<std::string>(name);
 }
 
-bool CGameObject::getBoolProperty(std::string name) const {
+bool CGameObject::getBoolProperty(std::string name) {
     return this->getProperty<bool>(name);
 }
 
-int CGameObject::getNumericProperty(std::string name) const {
+int CGameObject::getNumericProperty(std::string name) {
     return this->getProperty<int>(name);
 }
 
@@ -56,11 +56,11 @@ void CGameObject::incProperty(std::string name, int value) {
     this->setNumericProperty(name, this->getNumericProperty(name) + value);
 }
 
-//std::string CGameObject::getTooltip() const {
+//std::string CGameObject::getTooltip()  {
 //    return tooltip;
 //}
 //
-//void CGameObject::setTooltip ( const std::string &value ) {
+//void CGameObject::setTooltip (  std::string &value ) {
 //    tooltip = value;
 //}
 //TODO: drag

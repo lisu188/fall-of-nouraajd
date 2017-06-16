@@ -17,7 +17,7 @@ V_META(CGameObject, vstd::meta::empty,
 )
 
 public:
-    static const std::function<bool(std::shared_ptr<CGameObject>, std::shared_ptr<CGameObject>)> name_comparator;
+    static std::function<bool(std::shared_ptr<CGameObject>, std::shared_ptr<CGameObject>)> name_comparator;
 
     CGameObject();
 
@@ -29,8 +29,8 @@ public:
     void setMap(std::shared_ptr<CMap> map);
 
     template<typename T=CGameObject>
-    std::shared_ptr<T> ptr() const {
-        //const_cast purposedly
+    std::shared_ptr<T> ptr() {
+        //_cast purposedly
         return vstd::cast<T>(const_cast<CGameObject *>(this)->shared_from_this());
     }
 
@@ -40,7 +40,7 @@ public:
     }
 
     template<typename T>
-    T getProperty(std::string name) const {
+    T getProperty(std::string name) {
         return this->meta()->get_property<CGameObject, T>(name, this->ptr());
     }
 
@@ -50,11 +50,11 @@ public:
 
     void setNumericProperty(std::string name, int value);
 
-    std::string getStringProperty(std::string name) const;
+    std::string getStringProperty(std::string name);
 
-    bool getBoolProperty(std::string name) const;
+    bool getBoolProperty(std::string name);
 
-    int getNumericProperty(std::string name) const;
+    int getNumericProperty(std::string name);
 
     template<typename T=CGameObject>
     void setObjectProperty(std::string name, std::shared_ptr<T> object) {
@@ -73,9 +73,9 @@ public:
 
     void incProperty(std::string name, int value);
 
-//    virtual std::string getTooltip() const;
+//    virtual std::string getTooltip() ;
 //
-//    virtual void setTooltip ( const std::string &value );
+//    virtual void setTooltip (  std::string &value );
 
     bool hasTag(std::string tag);
 
