@@ -2,7 +2,7 @@
 #include "CStatsGraphicsObject.h"
 #include "gui/CGui.h"
 
-void CStatsGraphicsObject::render(std::shared_ptr<CGui> gui, SDL_Rect *pos, int frameTime, std::string data) {
+void CStatsGraphicsObject::render(std::shared_ptr<CGui> gui, SDL_Rect *pos, int frameTime) {
     //TODO: refactor this shit!
     int ratio = _player()->getHpRatio();
     int revRatio = 100 - ratio;

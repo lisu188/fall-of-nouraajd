@@ -3,9 +3,10 @@
 #include "object/CGameObject.h"
 #include "core/CGlobal.h"
 #include "gui/object/CGameGraphicsObject.h"
-#include "gui/CAnimationHandler.h"
+#include "gui/CTextureCache.h"
 
 class CGui : public CGameObject {
+V_META(CGui, CGameObject, vstd::meta::empty())
     SDL_Window *window = 0;
     SDL_Renderer *renderer = 0;
 public:
@@ -26,7 +27,7 @@ public:
 
     bool event(SDL_Event *event);
 
-    std::shared_ptr<CAnimationHandler> getAnimationHandler();
+    std::shared_ptr<CTextureCache> getTextureCache();
 
-    vstd::lazy<CAnimationHandler> _animationHandler;
+    vstd::lazy<CTextureCache, CTextureCache> _textureCache;
 };
