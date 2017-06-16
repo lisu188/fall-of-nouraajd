@@ -42,11 +42,9 @@ private:
 
     std::vector<std::string> paths;
     std::vector<int> times;
-    vstd::cache<std::string, int, get_next, get_ttl> _offsets;
 
-    int getCurrentAnimFrame(int frameTime);
+    vstd::cache<std::string, int, get_next, get_ttl> _offsets;
+    vstd::cache2<std::string, std::vector<int>, get_ttl> _tables;
 
     int size = 0;
-    int totalAnimTime = 0;
-
 };

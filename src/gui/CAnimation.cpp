@@ -24,29 +24,42 @@ CDynamicAnimation::CDynamicAnimation(std::string path) {
     this->size = time->size();
     for (int i = 0; i < size; i++) {
         paths.push_back(path + "/" + std::to_string(i) + ".png");
-        if (i == 0) {
-            times.push_back((*time)[std::to_string(i)].asInt());
-        } else {
-            times.push_back(times[i - 1] + (*time)[std::to_string(i)].asInt());
-        }
-        totalAnimTime += (*time)[std::to_string(i)].asInt();
+        times.push_back((*time)[std::to_string(i)].asInt());
     }
 }
 
 void CDynamicAnimation::render(std::shared_ptr<CGui> gui, SDL_Rect *pos, int frameTime) {
-    int currFrame = getCurrentAnimFrame(
-            frameTime + (totalAnimTime * (_offsets.get("main", frameTime % totalAnimTime) / 100.0)));
-    SDL_RenderCopy(gui->getRenderer(), gui->getTextureCache()->getTexture(paths[currFrame]), nullptr, pos);
-}
+    auto tableCalc = [this]() {
+        std::vector<int> vec;
+        for (int i = 0; i < size; i++) {
+            if (times[i] < 0) {
+                if (i == 0) {
+                    vec.push_back(vstd::rand(0, -times[i]));
+                } else {
+                    vec.push_back(vec[i - 1] + vstd::rand(0, -times[i]));
+                }
+            } else {
+                if (i == 0) {
+                    vec.push_back(times[i]);
+                } else {
+                    vec.push_back(vec[i - 1] + times[i]);
+                }
+            }
+        }
+        return vec;
+    };
+    auto tab = _tables.get("table", frameTime, tableCalc);
 
-int CDynamicAnimation::getCurrentAnimFrame(int frameTime) {
-    int animTime = (frameTime) % totalAnimTime;
+    int animTime = int(frameTime + (_offsets.get("main", frameTime) / 100.0 * tab[size - 1])) % tab[size - 1];
+
+    int currFrame = -1;
     for (int i = 0; i < size; i++) {
-        if (animTime < times[i]) {
-            return i;
+        if (animTime < tab[i]) {
+            currFrame = i;
+            break;
         }
     }
-    vstd::logger::fatal("Cannot determine anim frame!");
+    SDL_RenderCopy(gui->getRenderer(), gui->getTextureCache()->getTexture(paths[currFrame]), nullptr, pos);
 }
 
 
