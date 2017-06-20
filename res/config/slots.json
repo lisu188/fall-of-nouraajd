@@ -1,51 +1,82 @@
 {
-  "0": {
-    "name": "RightHand",
-    "types": [
-      "CWeapon"
-    ]
-  },
-  "1": {
-    "name": "LeftHand",
-    "types": [
-      "CSmallWeapon",
-      "CShield"
-    ]
-  },
-  "2": {
-    "name": "Head",
-    "types": [
-      "CHelmet"
-    ]
-  },
-  "3": {
-    "name": "Chest",
-    "types": [
-      "CArmor"
-    ]
-  },
-  "4": {
-    "name": "Waist",
-    "types": [
-      "CBelt"
-    ]
-  },
-  "5": {
-    "name": "Feet",
-    "types": [
-      "CBoots"
-    ]
-  },
-  "6": {
-    "name": "Legs",
-    "types": [
-      "CPants"
-    ]
-  },
-  "7": {
-    "name": "Hands",
-    "types": [
-      "CGloves"
-    ]
+  "slotConfiguration": {
+    "class": "CSlotConfig",
+    "properties": {
+      "configuration": {
+        "0": {
+          "class": "CSlot",
+          "properties": {
+            "name": "RightHand",
+            "types": [
+              "CWeapon"
+            ]
+          }
+        },
+        "1": {
+          "class": "CSlot",
+          "properties": {
+            "name": "LeftHand",
+            "types": [
+              "CSmallWeapon",
+              "CShield"
+            ]
+          }
+        },
+        "2": {
+          "class": "CSlot",
+          "properties": {
+            "name": "Head",
+            "types": [
+              "CHelmet"
+            ]
+          }
+        },
+        "3": {
+          "class": "CSlot",
+          "properties": {
+            "name": "Chest",
+            "types": [
+              "CArmor"
+            ]
+          }
+        },
+        "4": {
+          "class": "CSlot",
+          "properties": {
+            "name": "Waist",
+            "types": [
+              "CBelt"
+            ]
+          }
+        },
+        "5": {
+          "class": "CSlot",
+          "properties": {
+            "name": "Feet",
+            "types": [
+              "CBoots"
+            ]
+          }
+        },
+        "6": {
+          "class": "CSlot",
+          "properties": {
+            "name": "Legs",
+            "types": [
+              "CPants"
+            ]
+          }
+        },
+        "7": {
+          "class": "CSlot",
+          "properties": {
+            "name": "Hands",
+            "types": [
+              "CGloves"
+            ]
+          }
+        }
+      }
+    }
   }
 }
