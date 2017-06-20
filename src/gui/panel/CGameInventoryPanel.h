@@ -20,5 +20,16 @@ public:
 
     void panelKeyboardEvent(std::shared_ptr<CGui> shared_ptr, SDL_Keycode i) override;
 
+    bool isInInventory(std::shared_ptr<CGui> x, int y, int i1);
+
+private:
+    int xInv = 4;
+    int yInv = 4;
+
+    int selectionBarThickness = 5;
+
+    std::string selected = "";
+
+    void drawSelection(std::shared_ptr<CGui> gui, SDL_Rect *location);
 };
 
