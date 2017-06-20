@@ -13,6 +13,7 @@ CGui::~CGui() {
 }
 
 void CGui::render(int frameTime) {
+    SDL_SetRenderDrawColor(renderer, BLACK);
     SDL_RenderClear(renderer);
     for (std::shared_ptr<CGameGraphicsObject> object:gui_stack) {
         SDL_Rect physical;
