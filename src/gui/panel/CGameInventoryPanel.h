@@ -24,8 +24,8 @@ private:
 
     int selectionBarThickness = 5;
 
-    std::string selected = "";
+    std::weak_ptr<CItem> selected;
 
-    void drawSelection(std::shared_ptr<CGui> gui, SDL_Rect *location);
+    void drawSelection(std::shared_ptr<CGui> gui, SDL_Rect *location, int thickness);
 };
 
