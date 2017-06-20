@@ -1,5 +1,6 @@
 #pragma once
 
+#include "object/CItem.h"
 #include "object/CGameObject.h"
 
 class CSlot : public CGameObject {
@@ -36,6 +37,8 @@ public:
     CSlotMap getConfiguration();
 
     void setConfiguration(CSlotMap configuration);
+
+    bool canFit(std::string slot, std::shared_ptr<CItem> item);
 };
 
 
