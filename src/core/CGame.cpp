@@ -22,15 +22,21 @@ void CGame::setMap(std::shared_ptr<CMap> map) {
 }
 
 std::shared_ptr<CGuiHandler> CGame::getGuiHandler() {
-    return guiHandler.get(this->ptr<CGame>());
+    return guiHandler.get([this]() {
+        return std::make_shared<CGuiHandler>(this->ptr<CGame>());
+    });
 }
 
 std::shared_ptr<CScriptHandler> CGame::getScriptHandler() {
-    return scriptHandler.get();
+    return scriptHandler.get([]() {
+        return std::make_shared<CScriptHandler>();
+    });
 }
 
 std::shared_ptr<CObjectHandler> CGame::getObjectHandler() {
-    return objectHandler.get();
+    return objectHandler.get([]() {
+        return std::make_shared<CObjectHandler>();
+    });
 }
 
 void CGame::load_plugin(std::function<std::shared_ptr<CPlugin>()> plugin) {
@@ -43,4 +49,10 @@ std::shared_ptr<CGui> CGame::getGui() const {
 
 void CGame::setGui(std::shared_ptr<CGui> _gui) {
     CGame::_gui = _gui;
+}
+
+std::shared_ptr<CSlotConfig> CGame::getSlotConfiguration() {
+    return slotConfiguration.get([this]() {
+        return createObject<CSlotConfig>("slotConfiguration");
+    });
 }
