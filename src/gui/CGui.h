@@ -15,6 +15,27 @@ public:
 private:
     std::list<std::shared_ptr<CGameGraphicsObject>> gui_stack;
 public:
+    int getWidth();
+
+    void setWidth(int width);
+
+    int getHeight();
+
+    void setHeight(int height);
+
+    int getTileSize();
+
+    void setTileSize(int tileSize);
+
+    int getTileCountX();
+
+    int getTileCountY();
+
+private:
+    int height = 1080;
+    int tileSize = 50;
+    int width = 1920;
+public:
     CGui();
 
     ~CGui();
