@@ -32,28 +32,9 @@ public:
     vstd::lazy<CTextureCache, CTextureCache> _textureCache;
 };
 
-template<typename T=void>
-class CColor {
-public:
-    static SDL_Color *blue() {
-        static SDL_Color blue = {0, 0, 255, 0};
-        return &blue;
-    }
 
-    static SDL_Color *red() {
-        static SDL_Color red = {255, 0, 0, 0};
-        return &red;
-    }
+#define BLUE 0, 0, 255, 0
+#define RED 255, 0, 0, 0
+#define YELLOW 255, 255, 0, 0
+#define BLACK 0, 0, 0, 0
 
-    static SDL_Color *yellow() {
-        static SDL_Color yellow = {255, 255, 0, 0};
-        return &yellow;
-    }
-
-    static SDL_Color *black() {
-        static SDL_Color black = {0, 0, 0, 0};
-        return &black;
-    }
-};
-
-#define COLOR(x) x->r,x->g,x->b,x->a

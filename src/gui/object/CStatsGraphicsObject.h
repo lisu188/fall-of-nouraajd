@@ -17,5 +17,6 @@ public:
     void render(std::shared_ptr<CGui> gui, SDL_Rect *pos, int frameTime) override;
 
 private:
-    void drawBar(std::shared_ptr<CGui> gui, int ratio, int index, SDL_Rect *pos, const SDL_Color *color);
+    void drawBar(std::shared_ptr<CGui> gui, int ratio, int index, SDL_Rect *pos, Uint8 r, Uint8 g, Uint8 b,
+                 Uint8 a);
 };
