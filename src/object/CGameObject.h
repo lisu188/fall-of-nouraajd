@@ -105,7 +105,7 @@ public:
 private:
     std::shared_ptr<CGameObject> _clone();
 
-    vstd::lazy2<CAnimation> animationObject;
+    vstd::lazy<CAnimation> animationObject;
 
     std::string type;
     std::string name;

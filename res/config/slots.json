@@ -6,7 +6,7 @@
         "0": {
           "class": "CSlot",
           "properties": {
-            "name": "RightHand",
+            "slotName": "RightHand",
             "types": [
               "CWeapon"
             ]
@@ -15,7 +15,7 @@
         "1": {
           "class": "CSlot",
           "properties": {
-            "name": "LeftHand",
+            "slotName": "LeftHand",
             "types": [
               "CSmallWeapon",
               "CShield"
@@ -25,7 +25,7 @@
         "2": {
           "class": "CSlot",
           "properties": {
-            "name": "Head",
+            "slotName": "Head",
             "types": [
               "CHelmet"
             ]
@@ -34,7 +34,7 @@
         "3": {
           "class": "CSlot",
           "properties": {
-            "name": "Chest",
+            "slotName": "Chest",
             "types": [
               "CArmor"
             ]
@@ -43,7 +43,7 @@
         "4": {
           "class": "CSlot",
           "properties": {
-            "name": "Waist",
+            "slotName": "Waist",
             "types": [
               "CBelt"
             ]
@@ -52,7 +52,7 @@
         "5": {
           "class": "CSlot",
           "properties": {
-            "name": "Feet",
+            "slotName": "Feet",
             "types": [
               "CBoots"
             ]
@@ -61,7 +61,7 @@
         "6": {
           "class": "CSlot",
           "properties": {
-            "name": "Legs",
+            "slotName": "Legs",
             "types": [
               "CPants"
             ]
@@ -70,7 +70,7 @@
         "7": {
           "class": "CSlot",
           "properties": {
-            "name": "Hands",
+            "slotName": "Hands",
             "types": [
               "CGloves"
             ]

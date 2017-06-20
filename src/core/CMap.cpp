@@ -61,15 +61,21 @@ void CMap::setPlayer(std::shared_ptr<CPlayer> player) {
 }
 
 std::shared_ptr<CLootHandler> CMap::getLootHandler() {
-    return lootHandler.get(this->ptr<CMap>());
+    return lootHandler.get([this]() {
+        return std::make_shared<CLootHandler>(this->ptr<CMap>());
+    });
 }
 
 std::shared_ptr<CObjectHandler> CMap::getObjectHandler() {
-    return objectHandler.get(getGame()->getObjectHandler());
+    return objectHandler.get([this]() {
+        return std::make_shared<CObjectHandler>(getGame()->getObjectHandler());
+    });
 }
 
 std::shared_ptr<CEventHandler> CMap::getEventHandler() {
-    return eventHandler.get();
+    return eventHandler.get([this]() {
+        return std::make_shared<CEventHandler>();
+    });
 }
 
 void CMap::moveTile(std::shared_ptr<CTile> tile, int x, int y, int z) {

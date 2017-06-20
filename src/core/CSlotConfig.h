@@ -3,9 +3,23 @@
 #include "object/CGameObject.h"
 
 class CSlot : public CGameObject {
-V_META(CSlot, CGameObject, vstd::meta::empty())
+V_META(CSlot, CGameObject,
+       V_PROPERTY(CSlot, std::string, slotName, getSlotName, setSlotName),
+       V_PROPERTY(CSlot, std::set<std::string>, types, getTypes, setTypes))
 public:
     CSlot();
+
+private:
+    std::string slotName;
+    std::set<std::string> types;
+public:
+    std::string getSlotName();
+
+    void setSlotName(std::string slotName);
+
+    std::set<std::string> getTypes();
+
+    void setTypes(std::set<std::string> types);
 };
 
 typedef std::map<std::string, std::shared_ptr<CSlot> > CSlotMap;

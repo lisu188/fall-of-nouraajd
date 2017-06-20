@@ -147,8 +147,8 @@ private:
     std::map<int, std::string> defaultTiles;
     std::map<int, std::pair<int, int> > boundaries;
     int entryx, entryz, entryy;
-    vstd::lazy<CLootHandler, std::shared_ptr<CMap>> lootHandler;
-    vstd::lazy<CObjectHandler, std::shared_ptr<CObjectHandler>> objectHandler;
+    vstd::lazy<CLootHandler> lootHandler;
+    vstd::lazy<CObjectHandler> objectHandler;
     vstd::lazy<CEventHandler> eventHandler;
     int turn = 0;
     bool moving = false;

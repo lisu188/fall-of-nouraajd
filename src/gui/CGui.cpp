@@ -51,7 +51,9 @@ SDL_Renderer *CGui::getRenderer() const {
 }
 
 std::shared_ptr<CTextureCache> CGui::getTextureCache() {
-    return _textureCache.get(this->ptr<CGui>());
+    return _textureCache.get([this]() {
+        return std::make_shared<CTextureCache>(this->ptr<CGui>());
+    });
 }
 
 int CGui::getWidth() {
@@ -84,4 +86,12 @@ int CGui::getTileCountX() {
 
 int CGui::getTileCountY() {
     return height / tileSize;
+}
+
+CGui::CGui(std::shared_ptr<CGame> game) : CGui() {
+    _game = game;
+}
+
+std::shared_ptr<CGame> CGui::getGame() {
+    return _game.lock();
 }

@@ -5,3 +5,4 @@
 //TODO: weird fight bug after fight, player didnt return to position
 //TODO: tooltip
 //TODO: drag & drop
+//TODO: add error handling to SDL code

@@ -3,52 +3,52 @@
 #include "gui/object/CMapGraphicsObject.h"
 #include "gui/CTextureCache.h"
 
-CMapGraphicsObject::CMapGraphicsObject(std::function<std::shared_ptr<CMap>()> map) : _map(map) {
+CMapGraphicsObject::CMapGraphicsObject() {
     registerEventCallback([](std::shared_ptr<CGui> gui, SDL_Event *event) {
         return event->type == SDL_KEYDOWN && event->key.keysym.sym == SDLK_UP;
-    }, [map](std::shared_ptr<CGui> gui, SDL_Event *event) {
-        map()->getPlayer()->setController(std::make_shared<CPlayerController>(Coords(0, -1, 0)));
-        map()->move();
+    }, [](std::shared_ptr<CGui> gui, SDL_Event *event) {
+        gui->getGame()->getMap()->getPlayer()->setController(std::make_shared<CPlayerController>(Coords(0, -1, 0)));
+        gui->getGame()->getMap()->move();
         return true;
     });
     registerEventCallback([](std::shared_ptr<CGui> gui, SDL_Event *event) {
         return event->type == SDL_KEYDOWN && event->key.keysym.sym == SDLK_DOWN;
-    }, [map](std::shared_ptr<CGui> gui, SDL_Event *event) {
-        map()->getPlayer()->setController(std::make_shared<CPlayerController>(Coords(0, 1, 0)));
-        map()->move();
+    }, [](std::shared_ptr<CGui> gui, SDL_Event *event) {
+        gui->getGame()->getMap()->getPlayer()->setController(std::make_shared<CPlayerController>(Coords(0, 1, 0)));
+        gui->getGame()->getMap()->move();
         return true;
     });
     registerEventCallback([](std::shared_ptr<CGui> gui, SDL_Event *event) {
         return event->type == SDL_KEYDOWN && event->key.keysym.sym == SDLK_LEFT;
-    }, [map](std::shared_ptr<CGui> gui, SDL_Event *event) {
-        map()->getPlayer()->setController(std::make_shared<CPlayerController>(Coords(-1, 0, 0)));
-        map()->move();
+    }, [](std::shared_ptr<CGui> gui, SDL_Event *event) {
+        gui->getGame()->getMap()->getPlayer()->setController(std::make_shared<CPlayerController>(Coords(-1, 0, 0)));
+        gui->getGame()->getMap()->move();
         return true;
     });
     registerEventCallback([](std::shared_ptr<CGui> gui, SDL_Event *event) {
         return event->type == SDL_KEYDOWN && event->key.keysym.sym == SDLK_RIGHT;
-    }, [map](std::shared_ptr<CGui> gui, SDL_Event *event) {
-        map()->getPlayer()->setController(std::make_shared<CPlayerController>(Coords(1, 0, 0)));
-        map()->move();
+    }, [](std::shared_ptr<CGui> gui, SDL_Event *event) {
+        gui->getGame()->getMap()->getPlayer()->setController(std::make_shared<CPlayerController>(Coords(1, 0, 0)));
+        gui->getGame()->getMap()->move();
         return true;
     });
     registerEventCallback([](std::shared_ptr<CGui> gui, SDL_Event *event) {
         return event->type == SDL_KEYDOWN && event->key.keysym.sym == SDLK_SPACE;
-    }, [map](std::shared_ptr<CGui> gui, SDL_Event *event) {
-        map()->getPlayer()->setController(std::make_shared<CPlayerController>(Coords(0, 0, 0)));
-        map()->move();
+    }, [](std::shared_ptr<CGui> gui, SDL_Event *event) {
+        gui->getGame()->getMap()->getPlayer()->setController(std::make_shared<CPlayerController>(Coords(0, 0, 0)));
+        gui->getGame()->getMap()->move();
         return true;
     });
     registerEventCallback([](std::shared_ptr<CGui> gui, SDL_Event *event) {
         return event->type == SDL_KEYDOWN && event->key.keysym.sym == SDLK_i;
-    }, [map](std::shared_ptr<CGui> gui, SDL_Event *event) {
-        gui->addObject(std::make_shared<CGameInventoryPanel>(map()->getPlayer()));
+    }, [](std::shared_ptr<CGui> gui, SDL_Event *event) {
+        gui->addObject(std::make_shared<CGameInventoryPanel>());
         return true;
     });
 }
 
 void CMapGraphicsObject::render(std::shared_ptr<CGui> gui, SDL_Rect *pos, int frameTime) {
-    std::shared_ptr<CMap> map = _map();
+    std::shared_ptr<CMap> map = gui->getGame()->getMap();
     Coords playerCoords = map->getPlayer()->getCoords();
     std::unordered_set<Coords> tiles;
     for (int x = 0; x < gui->getTileCountX(); x++)
@@ -76,9 +76,5 @@ void CMapGraphicsObject::render(std::shared_ptr<CGui> gui, SDL_Rect *pos, int fr
             ob->getAnimationObject()->render(gui, &physical, frameTime);
         }
     });
-}
-
-CMapGraphicsObject::CMapGraphicsObject() {
-
 }
 

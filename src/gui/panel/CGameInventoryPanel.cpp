@@ -2,12 +2,11 @@
 
 #include "CGameInventoryPanel.h"
 #include "gui/CGui.h"
-#include "object/CItem.h"
 
 void CGameInventoryPanel::panelRender(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> pRect, int i) {
     SDL_RenderFillRect(gui->getRenderer(), pRect.get());
     int index = 0;
-    for (std::shared_ptr<CItem> item:_player->getItems()) {
+    for (std::shared_ptr<CItem> item:gui->getGame()->getMap()->getPlayer()->getItems()) {
         SDL_Rect location;
         location.x = gui->getTileSize() * (index % xInv) + pRect->x;
         location.y = gui->getTileSize() * (index / xInv) + pRect->y;
@@ -19,7 +18,7 @@ void CGameInventoryPanel::panelRender(std::shared_ptr<CGui> gui, std::shared_ptr
         }
         index++;
     }
-    for (auto it:_player->getEquipped()) {
+    for (auto it:gui->getGame()->getMap()->getPlayer()->getEquipped()) {
         SDL_Rect location;
         index = vstd::to_int(it.first).first;
         location.x = gui->getTileSize() * (index % 4) + pRect->x + 600;
@@ -51,9 +50,6 @@ void CGameInventoryPanel::panelKeyboardEvent(std::shared_ptr<CGui> gui, SDL_Keyc
     }
 }
 
-CGameInventoryPanel::CGameInventoryPanel(std::shared_ptr<CPlayer> _player) : _player(_player) {
-
-}
 
 CGameInventoryPanel::CGameInventoryPanel() {
 
@@ -61,8 +57,8 @@ CGameInventoryPanel::CGameInventoryPanel() {
 
 void CGameInventoryPanel::panelMouseEvent(std::shared_ptr<CGui> gui, int x, int y) {
     if (isInInventory(gui, x, y)) {
-        std::set<std::shared_ptr<CItem>> items = _player->getItems();
-        unsigned int clickedIndex = x / gui->getTileSize() + ((y / gui->getTileSize()) * xInv);
+        std::set<std::shared_ptr<CItem>> items = gui->getGame()->getMap()->getPlayer()->getItems();
+        unsigned int clickedIndex = (unsigned int) (x / gui->getTileSize() + ((y / gui->getTileSize()) * xInv));
         if (clickedIndex < items.size()) {
             std::string newSelection = vstd::get(items, clickedIndex)->getName();
             if (selected != newSelection) {

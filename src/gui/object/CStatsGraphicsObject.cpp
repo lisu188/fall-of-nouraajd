@@ -3,14 +3,12 @@
 #include "gui/CGui.h"
 
 void CStatsGraphicsObject::render(std::shared_ptr<CGui> gui, SDL_Rect *pos, int frameTime) {
-    drawBar(gui, _player()->getHpRatio(), 0, pos, RED);
-    drawBar(gui, _player()->getManaRatio(), 1, pos, BLUE);
-    drawBar(gui, _player()->getExpRatio(), 2, pos, YELLOW);
+    drawBar(gui, gui->getGame()->getMap()->getPlayer()->getHpRatio(), 0, pos, RED);
+    drawBar(gui, gui->getGame()->getMap()->getPlayer()->getManaRatio(), 1, pos, BLUE);
+    drawBar(gui, gui->getGame()->getMap()->getPlayer()->getExpRatio(), 2, pos, YELLOW);
 }
 
-CStatsGraphicsObject::CStatsGraphicsObject(std::function<std::shared_ptr<CPlayer>()> _player) : _player(_player) {
 
-}
 
 CStatsGraphicsObject::CStatsGraphicsObject() {
 
