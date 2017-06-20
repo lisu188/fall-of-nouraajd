@@ -5,6 +5,7 @@
 #include "gui/CGui.h"
 #include "handler/CHandler.h"
 #include "core/CPlugin.h"
+#include "CSlotConfig.h"
 
 class CGameView;
 
@@ -40,9 +41,13 @@ public:
         return getObjectHandler()->createObject<T>(getMap(), name);
     }
 
+    std::shared_ptr<CSlotConfig> getSlotConfiguration();
+
 private:
-    vstd::lazy<CGuiHandler, std::shared_ptr<CGame>> guiHandler;
+    vstd::lazy<CGuiHandler> guiHandler;
     vstd::lazy<CScriptHandler> scriptHandler;
+    vstd::lazy<CSlotConfig> slotConfiguration;
+
 //TODO:    vstd::lazy<CScriptWindow, std::shared_ptr<CGame>> scriptWindow;
     vstd::lazy<CObjectHandler> objectHandler;
     std::shared_ptr<CMap> map;

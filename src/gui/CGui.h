@@ -1,5 +1,7 @@
 #pragma once
 
+
+#include "core/CGame.h"
 #include "object/CGameObject.h"
 #include "core/CGlobal.h"
 #include "gui/object/CGameGraphicsObject.h"
@@ -14,6 +16,7 @@ public:
 
 private:
     std::list<std::shared_ptr<CGameGraphicsObject>> gui_stack;
+    std::weak_ptr<CGame> _game;
 public:
     int getWidth();
 
@@ -31,12 +34,16 @@ public:
 
     int getTileCountY();
 
+    std::shared_ptr<CGame> getGame();
+
 private:
     int height = 1080;
     int tileSize = 50;
     int width = 1920;
 public:
     CGui();
+
+    CGui(std::shared_ptr<CGame> game);
 
     ~CGui();
 
@@ -50,7 +57,7 @@ public:
 
     std::shared_ptr<CTextureCache> getTextureCache();
 
-    vstd::lazy<CTextureCache, CTextureCache> _textureCache;
+    vstd::lazy<CTextureCache> _textureCache;
 };
 
 

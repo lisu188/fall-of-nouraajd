@@ -162,18 +162,17 @@ void CGameLoader::initScriptHandler(std::shared_ptr<CScriptHandler> handler, std
 
 //TODO:
 void CGameLoader::loadGui(std::shared_ptr<CGame> game) {
-    std::shared_ptr<CGui> gui = std::make_shared<CGui>();
-    std::shared_ptr<CMapGraphicsObject> mapGraphicsObject = std::make_shared<CMapGraphicsObject>([game]() {
-        return game->getMap();
-    });
-    gui->addObject(mapGraphicsObject);
+    std::shared_ptr<CGui> gui = std::make_shared<CGui>(game);
 
-    std::shared_ptr<CStatsGraphicsObject> stats = std::make_shared<CStatsGraphicsObject>([game]() {
-        return game->getMap()->getPlayer();
-    });
+    std::shared_ptr<CMapGraphicsObject> mapGraphicsObject = std::make_shared<CMapGraphicsObject>();
+
+    std::shared_ptr<CStatsGraphicsObject> stats = std::make_shared<CStatsGraphicsObject>();
 
     gui->addObject(mapGraphicsObject);
     gui->addObject(stats);
+
+    game->setGui(gui);
+
 
     CEventLoop::instance()->registerFrameCallback([gui](int time) {
         gui->render(time);
@@ -181,7 +180,6 @@ void CGameLoader::loadGui(std::shared_ptr<CGame> game) {
     CEventLoop::instance()->registerEventCallback([gui](SDL_Event *event) {
         gui->event(event);
     });
-    game->setGui(gui);
 }
 
 void CPluginLoader::load_plugin(std::shared_ptr<CGame> game, std::string path) {
