@@ -1,5 +1,6 @@
 #include "CGui.h"
 
+
 CGui::CGui() {
     SDL_Init(SDL_INIT_VIDEO);
     SDL_CreateWindowAndRenderer(WIDTH, HEIGHT, SDL_WINDOW_OPENGL, &window, &renderer);
