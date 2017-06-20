@@ -4,9 +4,9 @@
 #include "gui/CGui.h"
 #include "object/CItem.h"
 
-void CGameInventoryPanel::panelRender(std::shared_ptr<CGui> gui, SDL_Rect *pRect, int i) {
+void CGameInventoryPanel::panelRender(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> pRect, int i) {
 
-    SDL_RenderFillRect(gui->getRenderer(), pRect);
+    SDL_RenderFillRect(gui->getRenderer(), pRect.get());
     int index = 0;
     for (std::shared_ptr<CItem> item:_player->getItems()) {
         SDL_Rect location;
@@ -29,8 +29,8 @@ void CGameInventoryPanel::panelRender(std::shared_ptr<CGui> gui, SDL_Rect *pRect
 }
 
 
-void CGameInventoryPanel::panelEvent(std::shared_ptr<CGui> gui, SDL_Event *event) {
-    if (event->type == SDL_KEYDOWN && event->key.keysym.sym == SDLK_i) {
+void CGameInventoryPanel::panelKeyboardEvent(std::shared_ptr<CGui> gui, SDL_Keycode i) {
+    if (i == SDLK_i) {
         gui->removeObject(this->ptr<CGameInventoryPanel>());
     }
 }
@@ -41,4 +41,8 @@ CGameInventoryPanel::CGameInventoryPanel(std::shared_ptr<CPlayer> _player) : _pl
 
 CGameInventoryPanel::CGameInventoryPanel() {
 
+}
+
+void CGameInventoryPanel::panelMouseEvent(std::shared_ptr<CGui> shared_ptr, int x, int y) {
+    vstd::logger::debug(x, y);
 }

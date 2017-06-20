@@ -11,7 +11,7 @@ void CGameTextPanel::setText(std::string _text) {
     text = _text;
 }
 
-void CGameTextPanel::panelRender(std::shared_ptr<CGui> gui, SDL_Rect *pRect, int i) {
+void CGameTextPanel::panelRender(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> pRect, int i) {
     if (texture == nullptr) {
         texture = loadTextTexture(gui);
     }
@@ -19,7 +19,7 @@ void CGameTextPanel::panelRender(std::shared_ptr<CGui> gui, SDL_Rect *pRect, int
     actual.x = pRect->x;
     actual.y = pRect->y;
     SDL_QueryTexture(texture, NULL, NULL, &actual.w, &actual.h);
-    SDL_RenderFillRect(gui->getRenderer(), pRect);
+    SDL_RenderFillRect(gui->getRenderer(), pRect.get());
     SDL_RenderCopy(gui->getRenderer(), texture, NULL, &actual);
 }
 
@@ -33,8 +33,8 @@ struct SDL_Texture *CGameTextPanel::loadTextTexture(std::shared_ptr<CGui> ptr) {
     return _texture;
 }
 
-void CGameTextPanel::panelEvent(std::shared_ptr<CGui> gui, SDL_Event *event) {
-    if (event->type == SDL_KEYDOWN && event->key.keysym.sym == SDLK_SPACE) {
+void CGameTextPanel::panelKeyboardEvent(std::shared_ptr<CGui> gui, SDL_Keycode i) {
+    if (i == SDLK_SPACE) {
         gui->removeObject(this->ptr<CGameTextPanel>());
     }
 }

@@ -19,12 +19,17 @@ public:
 
     bool event(std::shared_ptr<CGui> gui, SDL_Event *event) override;
 
+    std::pair<int, int> translatePos(std::shared_ptr<CGui> gui, int x, int y);;
+
+    std::shared_ptr<SDL_Rect> getPanelRect(SDL_Rect *pos);;
 private:
     int xSize = 800;
     int ySize = 600;
 
-    virtual void panelRender(std::shared_ptr<CGui> shared_ptr, SDL_Rect *pRect, int i);
+    virtual void panelRender(std::shared_ptr<CGui> shared_ptr, std::shared_ptr<SDL_Rect> pRect, int i);
 
-    virtual void panelEvent(std::shared_ptr<CGui> gui, SDL_Event *pEvent);
+    virtual void panelKeyboardEvent(std::shared_ptr<CGui> shared_ptr, SDL_Keycode i);
+
+    virtual void panelMouseEvent(std::shared_ptr<CGui> shared_ptr, int x, int y);
 };
 
