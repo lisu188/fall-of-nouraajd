@@ -6,6 +6,8 @@
 //TODO: implement cleaning on the end
 
 class CEventLoop : public CGameObject {
+V_META(CEventLoop, CGameObject, V_PROPERTY(CEventLoop, int, fps, getFps, setFps))
+
     struct DelayCompare {
         bool operator()(std::pair<int, std::function<void()>> a, std::pair<int, std::function<void()>> b) {
             return std::greater<int>()(a.first, b.first);
@@ -39,6 +41,11 @@ public:
 
     ~CEventLoop();
 
+private:
+    int fps = 100;
+public:
+    int getFps();
 
+    void setFps(int fps);
 };
 

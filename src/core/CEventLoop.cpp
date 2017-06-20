@@ -37,7 +37,7 @@ bool CEventLoop::run() {
 
     int endTime = SDL_GetTicks();
     int actualFrameTime = endTime - lastFrameTime;
-    int desiredFrameTime = 1000 / FPS;
+    int desiredFrameTime = 1000 / fps;
 
     int diffTime = desiredFrameTime - actualFrameTime;
     if (diffTime < 0) {
@@ -99,6 +99,14 @@ void CEventLoop::registerFrameCallback(std::function<void(int)> f) {
 
 void CEventLoop::registerEventCallback(std::function<void(SDL_Event *)> f) {
     eventCallbackList.push_back(f);
+}
+
+int CEventLoop::getFps() {
+    return fps;
+}
+
+void CEventLoop::setFps(int fps) {
+    CEventLoop::fps = fps;
 }
 
 

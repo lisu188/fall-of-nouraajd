@@ -3,7 +3,7 @@
 
 CGui::CGui() {
     SDL_Init(SDL_INIT_VIDEO);
-    SDL_CreateWindowAndRenderer(WIDTH, HEIGHT, SDL_WINDOW_OPENGL, &window, &renderer);
+    SDL_CreateWindowAndRenderer(width, height, SDL_WINDOW_OPENGL, &window, &renderer);
     //TODO: check render flags
 }
 
@@ -18,8 +18,8 @@ void CGui::render(int frameTime) {
         SDL_Rect physical;
         physical.x = 0;
         physical.y = 0;
-        physical.h = HEIGHT;
-        physical.w = WIDTH;
+        physical.h = height;
+        physical.w = width;
         object->render(this->ptr<CGui>(), &physical, frameTime);
     }
     SDL_RenderPresent(renderer);
@@ -51,4 +51,36 @@ SDL_Renderer *CGui::getRenderer() const {
 
 std::shared_ptr<CTextureCache> CGui::getTextureCache() {
     return _textureCache.get(this->ptr<CGui>());
+}
+
+int CGui::getWidth() {
+    return width;
+}
+
+void CGui::setWidth(int width) {
+    CGui::width = width;
+}
+
+int CGui::getHeight() {
+    return height;
+}
+
+void CGui::setHeight(int height) {
+    CGui::height = height;
+}
+
+int CGui::getTileSize() {
+    return tileSize;
+}
+
+void CGui::setTileSize(int tileSize) {
+    CGui::tileSize = tileSize;
+}
+
+int CGui::getTileCountX() {
+    return width / tileSize;
+}
+
+int CGui::getTileCountY() {
+    return height / tileSize;
 }

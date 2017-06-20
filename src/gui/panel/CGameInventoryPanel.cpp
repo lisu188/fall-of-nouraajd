@@ -10,20 +10,20 @@ void CGameInventoryPanel::panelRender(std::shared_ptr<CGui> gui, SDL_Rect *pRect
     int index = 0;
     for (std::shared_ptr<CItem> item:_player->getItems()) {
         SDL_Rect location;
-        location.x = TILE_SIZE * (index % 4) + pRect->x;
-        location.y = TILE_SIZE * (index / 4) + pRect->y;
-        location.w = TILE_SIZE;
-        location.h = TILE_SIZE;
+        location.x = gui->getTileSize() * (index % 4) + pRect->x;
+        location.y = gui->getTileSize() * (index / 4) + pRect->y;
+        location.w = gui->getTileSize();
+        location.h = gui->getTileSize();
         item->getAnimationObject()->render(gui, &location, i);
         index++;
     }
     for (auto it:_player->getEquipped()) {
         SDL_Rect location;
         index = vstd::to_int(it.first).first;
-        location.x = TILE_SIZE * (index % 4) + pRect->x + 600;
-        location.y = TILE_SIZE * (index / 4) + pRect->y;
-        location.w = TILE_SIZE;
-        location.h = TILE_SIZE;
+        location.x = gui->getTileSize() * (index % 4) + pRect->x + 600;
+        location.y = gui->getTileSize() * (index / 4) + pRect->y;
+        location.w = gui->getTileSize();
+        location.h = gui->getTileSize();
         it.second->getAnimationObject()->render(gui, &location, i);
     }
 }
