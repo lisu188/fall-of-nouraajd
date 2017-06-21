@@ -7,7 +7,7 @@
 class CGameInventoryPanel : public CGamePanel {
 V_META(CGameInventoryPanel, CGamePanel,
        V_PROPERTY(CGameInventoryPanel, int, xInv, getXInv, setXInv),
-       V_PROPERTY(CGameInventoryPanel, int, xInv, getYInv, setYInv),
+       V_PROPERTY(CGameInventoryPanel, int, yInv, getYInv, setYInv),
        V_PROPERTY(CGameInventoryPanel, int, selectionBarThickness, getSelectionBarThickness, setSelectionBarThickness))
 
     void panelMouseEvent(std::shared_ptr<CGui> shared_ptr, int x, int y) override;
@@ -22,10 +22,10 @@ public:
     bool isInInventory(std::shared_ptr<CGui> x, int y, int i1);
 
 private:
-    int xInv = 4;
-    int yInv = 4;
+    int xInv = 0;
+    int yInv = 0;
 
-    int selectionBarThickness = 5;
+    int selectionBarThickness = 0;
 public:
     int getXInv();
 
