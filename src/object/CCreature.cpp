@@ -3,16 +3,6 @@
 #include "core/CGame.h"
 #include "core/CController.h"
 
-static bool check_type(std::string slot, std::shared_ptr<CItem> item) {
-    //TODO: implement inheritance
-//    const Value& config =( *CConfigurationProvider::getConfig ("config/slots.json" ) ) [slot] ["types"];
-//    for ( auto it =config.Begin();it != config.End();it++) {
-//        if ( item->inherits ( (*it).GetString() ) ) {
-//            return true;
-//        }
-//    }
-    return false;
-}
 
 void CCreature::setActions(std::set<std::shared_ptr<CInteraction>> value) {
     actions = value;
@@ -93,7 +83,7 @@ void CCreature::removeFromInventory(std::shared_ptr<CItem> item) {
 
 void CCreature::removeFromEquipped(std::shared_ptr<CItem> item) {
     if (hasEquipped(item)) {
-        setItem(getSlotWithItem(item), nullptr);
+        equipItem(getSlotWithItem(item), nullptr);
     }
     removeFromInventory(item);
 }
@@ -329,19 +319,19 @@ int CCreature::getLevel() {
 }
 
 void CCreature::setWeapon(std::shared_ptr<CWeapon> weapon) {
-    this->setItem(std::to_string(0), weapon);
+    this->equipItem(std::to_string(0), weapon);
 }
 
 void CCreature::setArmor(std::shared_ptr<CArmor> armor) {
-    this->setItem(std::to_string(3), armor);
+    this->equipItem(std::to_string(3), armor);
 }
 
-void CCreature::setItem(std::string i, std::shared_ptr<CItem> newItem) {
+void CCreature::equipItem(std::string i, std::shared_ptr<CItem> newItem) {
+    vstd::fail_if(newItem && !getMap()->getGame()->getSlotConfiguration()->canFit(i, newItem),
+                  "Tried to insert" + newItem->getType() + "into slot" + i);
     if (!vstd::ctn(equipped, i)) {
         equipped.insert(std::make_pair(i, std::shared_ptr<CItem>()));
     }
-    vstd::fail_if(newItem && !check_type(i, newItem),
-                  "Tried to insert" + newItem->getType() + "into slot" + i);
     std::shared_ptr<CItem> oldItem = equipped.at(i);
     if (oldItem) {
         getMap()->getEventHandler()->gameEvent(oldItem, std::make_shared<CGameEventCaused>(CGameEvent::Type::onUnequip,

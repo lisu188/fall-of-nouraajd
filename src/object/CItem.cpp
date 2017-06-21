@@ -40,7 +40,7 @@ void CItem::onUse(std::shared_ptr<CGameEvent> event) {
 //    if (slot == "-1") {
 //        return;
 //    }
-//    vstd::cast<CCreature>(vstd::cast<CGameEventCaused>(event)->getCause())->setItem(slot, this->ptr<CItem>());
+//    vstd::cast<CCreature>(vstd::cast<CGameEventCaused>(event)->getCause())->equipItem(slot, this->ptr<CItem>());
 }
 
 int CItem::getPower() const {

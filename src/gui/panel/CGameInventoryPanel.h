@@ -27,5 +27,11 @@ private:
     std::weak_ptr<CItem> selected;
 
     void drawSelection(std::shared_ptr<CGui> gui, SDL_Rect *location, int thickness);
+
+    void drawInventory(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> pRect, int frameTime);
+
+    void drawEquipped(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> pRect, int frameTime);
+
+    bool isInEquipped(std::shared_ptr<CGui> shared_ptr, int x, int y);
 };
 
