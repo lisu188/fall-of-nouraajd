@@ -3,7 +3,7 @@
 #include <object/CPlayer.h>
 #include "CGamePanel.h"
 
-
+//TODO: dynamic load of layout from slot configuration
 class CGameInventoryPanel : public CGamePanel {
 V_META(CGameInventoryPanel, CGamePanel, vstd::meta::empty())
 
@@ -33,5 +33,9 @@ private:
     void drawEquipped(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> pRect, int frameTime);
 
     bool isInEquipped(std::shared_ptr<CGui> shared_ptr, int x, int y);
+
+    void handleEquippedClick(std::shared_ptr<CGui> gui, int x, int y);
+
+    void handleInventoryClick(std::shared_ptr<CGui> gui, int x, int y);
 };
 
