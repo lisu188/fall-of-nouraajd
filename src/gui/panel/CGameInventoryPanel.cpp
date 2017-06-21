@@ -62,6 +62,8 @@ void CGameInventoryPanel::drawSelection(std::shared_ptr<CGui> gui, SDL_Rect *loc
 void CGameInventoryPanel::panelKeyboardEvent(std::shared_ptr<CGui> gui, SDL_Keycode i) {
     if (i == SDLK_i) {
         gui->removeObject(this->ptr<CGameInventoryPanel>());
+    } else if (i == SDLK_RETURN) {
+        handleEnter(gui);
     }
 }
 
@@ -82,23 +84,22 @@ void CGameInventoryPanel::handleInventoryClick(std::shared_ptr<CGui> gui, int x,
     std::set<std::shared_ptr<CItem>> items = gui->getGame()->getMap()->getPlayer()->getItems();
     unsigned int clickedIndex = (unsigned int) (x / gui->getTileSize() + ((y / gui->getTileSize()) * xInv));
     if (clickedIndex < items.size()) {
-            auto newSelection = vstd::get(items, clickedIndex);
-            if (selected.lock() != newSelection) {
-                selected = newSelection;
-            } else {
-                selected.reset();
-            }
-
+        auto newSelection = vstd::get(items, clickedIndex);
+        if (selected.lock() != newSelection) {
+            selected = newSelection;
+        } else {
+            selected.reset();
         }
+    }
 }
 
 void CGameInventoryPanel::handleEquippedClick(std::shared_ptr<CGui> gui, int x, int y) {
     unsigned int clickedIndex = (unsigned int) ((x - 600) / gui->getTileSize() + ((y / gui->getTileSize()) * 4));
     if (selected.lock() &&
-        gui->getGame()->getSlotConfiguration()->canFit(std::__cxx11::to_string((clickedIndex)), selected.lock())) {
-        gui->getGame()->getMap()->getPlayer()->equipItem(std::__cxx11::to_string(clickedIndex), selected.lock());
-            selected.reset();
-        }
+        gui->getGame()->getSlotConfiguration()->canFit(std::to_string((clickedIndex)), selected.lock())) {
+        gui->getGame()->getMap()->getPlayer()->equipItem(std::to_string(clickedIndex), selected.lock());
+        selected.reset();
+    }
 }
 
 bool CGameInventoryPanel::isInInventory(std::shared_ptr<CGui> gui, int x, int y) {
@@ -107,4 +108,41 @@ bool CGameInventoryPanel::isInInventory(std::shared_ptr<CGui> gui, int x, int y)
 
 bool CGameInventoryPanel::isInEquipped(std::shared_ptr<CGui> shared_ptr, int x, int y) {
     return x >= 600 && y < 200;
+}
+
+int CGameInventoryPanel::getXInv() {
+    return xInv;
+}
+
+void CGameInventoryPanel::setXInv(int xInv) {
+    CGameInventoryPanel::xInv = xInv;
+}
+
+int CGameInventoryPanel::getYInv() {
+    return yInv;
+}
+
+void CGameInventoryPanel::setYInv(int yInv) {
+    CGameInventoryPanel::yInv = yInv;
+}
+
+int CGameInventoryPanel::getSelectionBarThickness() {
+    return selectionBarThickness;
+}
+
+void CGameInventoryPanel::setSelectionBarThickness(int selectionBarThickness) {
+    CGameInventoryPanel::selectionBarThickness = selectionBarThickness;
+}
+
+void CGameInventoryPanel::handleEnter(std::shared_ptr<CGui> gui) {
+    if (selected.lock()) {
+        auto fit = gui->getGame()->getSlotConfiguration()->getFittingSlots(selected.lock());
+        if (fit.size() == 0) {
+            gui->getGame()->getMap()->getPlayer()->useItem(selected.lock());
+            selected.reset();
+        } else if (fit.size() == 1) {
+            gui->getGame()->getMap()->getPlayer()->equipItem((vstd::get(fit, 0)), selected.lock());
+            selected.reset();
+        }
+    }
 }

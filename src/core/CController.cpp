@@ -63,12 +63,12 @@ CRangeController::CRangeController() {
 
 }
 
-
 std::shared_ptr<vstd::future<void, Coords> > CRangeController::control(std::shared_ptr<CCreature> creature) {
     return vstd::later([=]() -> Coords {
         std::vector<Coords> possible;
+        std::shared_ptr<CMapObject> targetObject = creature->getMap()->getObjectByName(getTarget());
         for (auto c:NEAR_COORDS_WITH(creature->getCoords())) {
-            if (creature->getMap()->getObjectByName(getTarget())->getCoords().getDist(c) < this->distance
+            if ((!targetObject || targetObject->getCoords().getDist(c) < this->distance)
                 && creature->getMap()->canStep(c)) {
                 possible.push_back(c);
             }
