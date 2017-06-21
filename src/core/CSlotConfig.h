@@ -39,6 +39,8 @@ public:
     void setConfiguration(CSlotMap configuration);
 
     bool canFit(std::string slot, std::shared_ptr<CItem> item);
+
+    std::set<std::string> getFittingSlots(std::shared_ptr<CItem> item);
 };
 
 
