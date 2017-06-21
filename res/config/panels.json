@@ -1,0 +1,10 @@
+{
+  "inventoryPanel": {
+    "class": "CGameInventoryPanel",
+    "properties": {
+      "xInv": 4,
+      "yInv": 4,
+      "selectionBarThickness": 5
+    }
+  }
+}

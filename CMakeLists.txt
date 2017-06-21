@@ -34,6 +34,7 @@ python_add_module(_game ${GAME_SRC})
 target_link_libraries(_game ${Boost_LIBRARIES} ${PYTHON_LIBRARIES} ${SDL2_LIBRARY} ${SDL2_IMAGE_LIBRARY} ${SDL2_TTF_LIBRARY} ${JSONCPP_LIBRARIES})
 
 configure_file(res/config/armors.json config/armors.json)
+configure_file(res/config/panels.json config/panels.json)
 configure_file(res/config/buildings.json config/buildings.json)
 configure_file(res/config/effects.json config/effects.json)
 configure_file(res/config/interactions.json config/interactions.json)
