@@ -6,5 +6,8 @@
       "yInv": 4,
       "selectionBarThickness": 5
     }
+  },
+  "textPanel": {
+    "class": "CGameTextPanel"
   }
 }

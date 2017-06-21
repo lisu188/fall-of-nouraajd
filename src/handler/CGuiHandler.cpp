@@ -8,7 +8,7 @@ CGuiHandler::CGuiHandler() {
 }
 
 void CGuiHandler::showMessage(std::string message) {
-    std::shared_ptr<CGameTextPanel> panel = std::make_shared<CGameTextPanel>();
+    std::shared_ptr<CGameTextPanel> panel = _game.lock()->getMap()->createObject<CGameTextPanel>("textPanel");
     panel->setText(message);
     _game.lock()->getGui()->addObject(panel);
 }
