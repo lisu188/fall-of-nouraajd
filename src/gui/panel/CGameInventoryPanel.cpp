@@ -10,38 +10,39 @@ void CGameInventoryPanel::panelRender(std::shared_ptr<CGui> gui, std::shared_ptr
 }
 
 void CGameInventoryPanel::drawEquipped(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> pRect, int frameTime) {
-    int index;
-    for (auto it:gui->getGame()->getMap()->getPlayer()->getEquipped()) {
-        SDL_Rect location;
-        std::__cxx11::string slotName = it.first;
-        index = vstd::to_int(slotName).first;
+    std::shared_ptr<SDL_Rect> location = std::make_shared<SDL_Rect>(*pRect.get());
+    location->x += 600;
 
-        location.x = gui->getTileSize() * (index % 4) + pRect->x + 600;
-        location.y = gui->getTileSize() * (index / 4) + pRect->y;
-        location.w = gui->getTileSize();
-        location.h = gui->getTileSize();
-        it.second->getAnimationObject()->render(gui, &location, frameTime);
-
-        if (selected.lock() && gui->getGame()->getSlotConfiguration()->canFit(slotName, selected.lock())) {
-            drawSelection(gui, &location, selectionBarThickness / 2);
-        }
-    }
+    drawCollection(location,
+                   [this, gui]() {
+                       return gui->getGame()->getMap()->getPlayer()->getEquipped();
+                   }, 4, 4, gui->getTileSize(),
+                   [this, gui](auto ob, int prevIndex) {
+                       return vstd::to_int(ob.first).first;
+                   },
+                   [this, gui, frameTime](auto item, auto loc) {
+                       item.second->getAnimationObject()->render(gui, loc, frameTime);
+                       if (selected.lock() &&
+                           gui->getGame()->getSlotConfiguration()->canFit(item.first, selected.lock())) {
+                           this->drawSelection(gui, loc, selectionBarThickness / 2);
+                       }
+                   });
 }
 
 void CGameInventoryPanel::drawInventory(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> pRect, int frameTime) {
-    int index = 0;
-    for (std::shared_ptr<CItem> item:gui->getGame()->getMap()->getPlayer()->getItems()) {
-        SDL_Rect location;
-        location.x = gui->getTileSize() * (index % xInv) + pRect->x;
-        location.y = gui->getTileSize() * (index / xInv) + pRect->y;
-        location.w = gui->getTileSize();
-        location.h = gui->getTileSize();
-        item->getAnimationObject()->render(gui, &location, frameTime);
-        if (item == selected.lock()) {
-            drawSelection(gui, &location, selectionBarThickness);
-        }
-        index++;
-    }
+    drawCollection(pRect,
+                   [this, gui]() {
+                       return gui->getGame()->getMap()->getPlayer()->getInInventory();
+                   }, xInv, yInv, gui->getTileSize(),
+                   [this, gui](auto item, int prevIndex) {
+                       return prevIndex + 1;
+                   },
+                   [this, gui, frameTime](auto item, auto loc) {
+                       item->getAnimationObject()->render(gui, loc, frameTime);
+                       if (item == selected.lock()) {
+                           this->drawSelection(gui, loc, selectionBarThickness);
+                       }
+                   });
 }
 
 void CGameInventoryPanel::drawSelection(std::shared_ptr<CGui> gui, SDL_Rect *location, int thickness) {
