@@ -5,6 +5,30 @@
 
 void CGameInventoryPanel::panelRender(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> pRect, int i) {
     SDL_RenderFillRect(gui->getRenderer(), pRect.get());
+    drawInventory(gui, pRect, i);
+    drawEquipped(gui, pRect, i);
+}
+
+void CGameInventoryPanel::drawEquipped(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> pRect, int frameTime) {
+    int index;
+    for (auto it:gui->getGame()->getMap()->getPlayer()->getEquipped()) {
+        SDL_Rect location;
+        std::__cxx11::string slotName = it.first;
+        index = vstd::to_int(slotName).first;
+
+        location.x = gui->getTileSize() * (index % 4) + pRect->x + 600;
+        location.y = gui->getTileSize() * (index / 4) + pRect->y;
+        location.w = gui->getTileSize();
+        location.h = gui->getTileSize();
+        it.second->getAnimationObject()->render(gui, &location, frameTime);
+
+        if (selected.lock() && gui->getGame()->getSlotConfiguration()->canFit(slotName, selected.lock())) {
+            drawSelection(gui, &location, selectionBarThickness / 2);
+        }
+    }
+}
+
+void CGameInventoryPanel::drawInventory(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> pRect, int frameTime) {
     int index = 0;
     for (std::shared_ptr<CItem> item:gui->getGame()->getMap()->getPlayer()->getItems()) {
         SDL_Rect location;
@@ -12,26 +36,11 @@ void CGameInventoryPanel::panelRender(std::shared_ptr<CGui> gui, std::shared_ptr
         location.y = gui->getTileSize() * (index / xInv) + pRect->y;
         location.w = gui->getTileSize();
         location.h = gui->getTileSize();
-        item->getAnimationObject()->render(gui, &location, i);
+        item->getAnimationObject()->render(gui, &location, frameTime);
         if (item == selected.lock()) {
             drawSelection(gui, &location, selectionBarThickness);
         }
         index++;
-    }
-    for (auto it:gui->getGame()->getMap()->getPlayer()->getEquipped()) {
-        SDL_Rect location;
-        std::string slotName = it.first;
-        index = vstd::to_int(slotName).first;
-
-        location.x = gui->getTileSize() * (index % 4) + pRect->x + 600;
-        location.y = gui->getTileSize() * (index / 4) + pRect->y;
-        location.w = gui->getTileSize();
-        location.h = gui->getTileSize();
-        it.second->getAnimationObject()->render(gui, &location, i);
-
-        if (selected.lock() && gui->getGame()->getSlotConfiguration()->canFit(slotName, selected.lock())) {
-            drawSelection(gui, &location, selectionBarThickness / 2);
-        }
     }
 }
 
@@ -74,9 +83,20 @@ void CGameInventoryPanel::panelMouseEvent(std::shared_ptr<CGui> gui, int x, int 
             }
 
         }
+    } else if (isInEquipped(gui, x, y)) {
+        unsigned int clickedIndex = (unsigned int) ((x - 600) / gui->getTileSize() + ((y / gui->getTileSize()) * 4));
+        if (selected.lock() &&
+            gui->getGame()->getSlotConfiguration()->canFit(std::to_string((clickedIndex)), selected.lock())) {
+            gui->getGame()->getMap()->getPlayer()->equipItem(std::to_string(clickedIndex), selected.lock());
+            selected.reset();
+        }
     }
 }
 
 bool CGameInventoryPanel::isInInventory(std::shared_ptr<CGui> gui, int x, int y) {
     return x < gui->getTileSize() * xInv && y < gui->getTileSize() * yInv;
+}
+
+bool CGameInventoryPanel::isInEquipped(std::shared_ptr<CGui> shared_ptr, int x, int y) {
+    return x >= 600 && y < 200;
 }
