@@ -161,7 +161,7 @@ public:
 
     bool hasEquipped(std::shared_ptr<CItem> item);
 
-    void setItem(std::string i, std::shared_ptr<CItem> newItem);
+    void equipItem(std::string i, std::shared_ptr<CItem> newItem);
 
     bool hasInInventory(std::shared_ptr<CItem> item);
 
