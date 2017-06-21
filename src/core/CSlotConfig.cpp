@@ -24,6 +24,16 @@ bool CSlotConfig::canFit(std::string slot, std::shared_ptr<CItem> item) {
     return false;
 }
 
+std::set<std::string> CSlotConfig::getFittingSlots(std::shared_ptr<CItem> item) {
+    std::set<std::string> ret;
+    for (auto it : configuration) {
+        if (canFit(it.first, item)) {
+            ret.insert(it.first);
+        }
+    }
+    return ret;
+}
+
 CSlot::CSlot() {
 
 }
