@@ -72,9 +72,16 @@ CGameInventoryPanel::CGameInventoryPanel() {
 
 void CGameInventoryPanel::panelMouseEvent(std::shared_ptr<CGui> gui, int x, int y) {
     if (isInInventory(gui, x, y)) {
-        std::set<std::shared_ptr<CItem>> items = gui->getGame()->getMap()->getPlayer()->getItems();
-        unsigned int clickedIndex = (unsigned int) (x / gui->getTileSize() + ((y / gui->getTileSize()) * xInv));
-        if (clickedIndex < items.size()) {
+        handleInventoryClick(gui, x, y);
+    } else if (isInEquipped(gui, x, y)) {
+        handleEquippedClick(gui, x, y);
+    }
+}
+
+void CGameInventoryPanel::handleInventoryClick(std::shared_ptr<CGui> gui, int x, int y) {
+    std::set<std::shared_ptr<CItem>> items = gui->getGame()->getMap()->getPlayer()->getItems();
+    unsigned int clickedIndex = (unsigned int) (x / gui->getTileSize() + ((y / gui->getTileSize()) * xInv));
+    if (clickedIndex < items.size()) {
             auto newSelection = vstd::get(items, clickedIndex);
             if (selected.lock() != newSelection) {
                 selected = newSelection;
@@ -83,14 +90,15 @@ void CGameInventoryPanel::panelMouseEvent(std::shared_ptr<CGui> gui, int x, int 
             }
 
         }
-    } else if (isInEquipped(gui, x, y)) {
-        unsigned int clickedIndex = (unsigned int) ((x - 600) / gui->getTileSize() + ((y / gui->getTileSize()) * 4));
-        if (selected.lock() &&
-            gui->getGame()->getSlotConfiguration()->canFit(std::to_string((clickedIndex)), selected.lock())) {
-            gui->getGame()->getMap()->getPlayer()->equipItem(std::to_string(clickedIndex), selected.lock());
+}
+
+void CGameInventoryPanel::handleEquippedClick(std::shared_ptr<CGui> gui, int x, int y) {
+    unsigned int clickedIndex = (unsigned int) ((x - 600) / gui->getTileSize() + ((y / gui->getTileSize()) * 4));
+    if (selected.lock() &&
+        gui->getGame()->getSlotConfiguration()->canFit(std::__cxx11::to_string((clickedIndex)), selected.lock())) {
+        gui->getGame()->getMap()->getPlayer()->equipItem(std::__cxx11::to_string(clickedIndex), selected.lock());
             selected.reset();
         }
-    }
 }
 
 bool CGameInventoryPanel::isInInventory(std::shared_ptr<CGui> gui, int x, int y) {
