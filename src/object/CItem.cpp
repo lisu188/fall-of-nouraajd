@@ -31,16 +31,7 @@ void CItem::onUnequip(std::shared_ptr<CGameEvent> event) {
 }
 
 void CItem::onUse(std::shared_ptr<CGameEvent> event) {
-    //TODO: parent check
-//    CItemSlot *parent = dynamic_cast<CItemSlot *> ( this->parentItem());
-//    if (!parent) {
-//        return;
-//    }
-//    std::string slot = parent->getNumber();
-//    if (slot == "-1") {
-//        return;
-//    }
-//    vstd::cast<CCreature>(vstd::cast<CGameEventCaused>(event)->getCause())->equipItem(slot, this->ptr<CItem>());
+
 }
 
 int CItem::getPower() const {
