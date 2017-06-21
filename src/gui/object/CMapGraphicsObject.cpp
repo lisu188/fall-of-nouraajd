@@ -42,7 +42,7 @@ CMapGraphicsObject::CMapGraphicsObject() {
     registerEventCallback([](std::shared_ptr<CGui> gui, SDL_Event *event) {
         return event->type == SDL_KEYDOWN && event->key.keysym.sym == SDLK_i;
     }, [](std::shared_ptr<CGui> gui, SDL_Event *event) {
-        gui->addObject(std::make_shared<CGameInventoryPanel>());
+        gui->addObject(gui->getGame()->getMap()->createObject<CGameInventoryPanel>("inventoryPanel"));
         return true;
     });
 }
