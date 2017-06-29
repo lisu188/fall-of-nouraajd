@@ -64,3 +64,6 @@ void CGamePanel::panelMouseEvent(std::shared_ptr<CGui> shared_ptr, int x, int y)
 }
 
 
+CListView::CListView() {
+
+}
