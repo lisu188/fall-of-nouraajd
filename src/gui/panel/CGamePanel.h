@@ -23,9 +23,11 @@ public:
 
     std::shared_ptr<SDL_Rect> getPanelRect(SDL_Rect *pos);;
 protected:
-    template<typename Collection, typename Index, typename Draw>
-    void drawCollection(std::shared_ptr<SDL_Rect> loc, Collection collection, int xSize, int ySize, int tileSize,
-                        Index index, Draw draw) {
+    template<typename Collection, typename Index, typename Draw, typename SelectionPredicate, typename DrawSelection>
+    void drawCollection(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> loc, Collection collection, int xSize,
+                        int ySize, int tileSize,
+                        Index index, Draw draw, SelectionPredicate selPred, DrawSelection drawSelection,
+                        int thickness) {
         int i = -1;
         for (auto it:collection()) {
             i = index(it, i);
@@ -35,6 +37,23 @@ protected:
             location.w = tileSize;
             location.h = tileSize;
             draw(it, &location);
+            if (selPred(it)) {
+                drawSelection(gui, &location, thickness);
+            }
+        }
+    }
+
+    template<typename Collection, typename Index, typename Callback>
+    void
+    onClicked(Collection collection, int x, int y, int xSize, int ySize, int tileSize, Index index, Callback callback) {
+        int i = ((x) / tileSize + ((y / tileSize) * xSize));
+        int prevIndex = -1;
+        for (auto it:collection()) {
+            prevIndex = index(it, prevIndex);
+            if (i == prevIndex) {
+                callback(it);
+                break;
+            }
         }
     }
 
@@ -49,3 +68,8 @@ private:
     int ySize = 600;
 };
 
+class CListView : public CGameGraphicsObject {
+V_META(CGamePanel, CGameGraphicsObject, vstd::meta::empty())
+public:
+    CListView();
+};
