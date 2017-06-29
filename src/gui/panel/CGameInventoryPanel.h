@@ -1,6 +1,6 @@
 #pragma once
 
-#include <object/CPlayer.h>
+#include "object/CPlayer.h"
 #include "CGamePanel.h"
 
 //TODO: dynamic load of layout from slot configuration
@@ -26,9 +26,9 @@ public:
     void setSelectionBarThickness(int selectionBarThickness);
 
 private:
-    int xInv = 0;
-    int yInv = 0;
-    int selectionBarThickness = 0;
+    int xInv = 4;
+    int yInv = 4;
+    int selectionBarThickness = 5;
     std::weak_ptr<CItem> selected;
 
     void panelRender(std::shared_ptr<CGui> shared_ptr, std::shared_ptr<SDL_Rect> pRect, int i) override;

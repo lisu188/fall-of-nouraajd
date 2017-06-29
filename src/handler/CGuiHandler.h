@@ -1,5 +1,6 @@
 #pragma once
 
+#include "object/CMarket.h"
 #include "object/CGameObject.h"
 
 class CGuiHandler : public CGameObject {
@@ -12,6 +13,7 @@ public:
 
     void showMessage(std::string message);
 
+    void showTrade(std::shared_ptr<CMarket> market);
 private:
     std::weak_ptr<CGame> _game;
 };

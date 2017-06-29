@@ -1,13 +1,13 @@
-#include <gui/panel/CGameInventoryPanel.h>
-#include <gui/object/CMapGraphicsObject.h>
-#include <gui/object/CStatsGraphicsObject.h>
+#include "gui/panel/CGameInventoryPanel.h"
+#include "gui/object/CMapGraphicsObject.h"
+#include "gui/object/CStatsGraphicsObject.h"
+#include "gui/panel/CGameTradePanel.h"
 #include "core/CTypes.h"
 #include "core/CGame.h"
 #include "core/CWrapper.h"
 #include "core/CController.h"
 #include "core/CEventLoop.h"
 #include "gui/panel/CGameTextPanel.h"
-#include "CSlotConfig.h"
 
 extern void add_member(std::shared_ptr<Value> object, std::string key, std::string value);
 
@@ -139,6 +139,7 @@ namespace {
                     {
                         CTypes::register_type<CGameTextPanel, CGamePanel, CGameGraphicsObject, CGameObject>();
                         CTypes::register_type<CGameInventoryPanel, CGamePanel, CGameGraphicsObject, CGameObject>();
+                        CTypes::register_type<CGameTradePanel, CGamePanel, CGameGraphicsObject, CGameObject>();
                     }
                     CTypes::register_type<CAnimation, CGameGraphicsObject, CGameObject>();
                     {

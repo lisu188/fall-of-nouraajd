@@ -22,7 +22,9 @@ public:
 
     void remove(std::shared_ptr<CItem> item);
 
-    std::set<std::shared_ptr<CItem> > getTradeItems();
+    bool sellItem(std::shared_ptr<CCreature> cre, std::shared_ptr<CItem> item);
+
+    void buyItem(std::shared_ptr<CCreature> cre, std::shared_ptr<CItem> item);
 
     void setItems(std::set<std::shared_ptr<CItem>> items);
 
@@ -36,9 +38,14 @@ public:
 
     void setBuy(int value);
 
+    int getSellCost(std::shared_ptr<CItem> item);
+
+    int getBuyCost(std::shared_ptr<CItem> item);
 private:
     std::set<std::shared_ptr<CItem>> items;
     int sell = 100;
     int buy = 80;
+
+
 };
 

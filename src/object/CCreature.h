@@ -135,9 +135,7 @@ public:
 
     int getLevel();
 
-    void setLevel(int level) {
-        this->level = level;
-    }
+    void setLevel(int level);
 
     void addExpScaled(int scale);
 
