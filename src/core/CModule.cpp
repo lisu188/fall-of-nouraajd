@@ -75,7 +75,8 @@ BOOST_PYTHON_MODULE (_game) {
 
     class_<CGuiHandler, bases<CGameObject>, boost::noncopyable, std::shared_ptr<CGuiHandler>>("CGuiHandler",
                                                                                               no_init)
-            .def("showMessage", &CGuiHandler::showMessage);
+            .def("showMessage", &CGuiHandler::showMessage)
+            .def("showTrade", &CGuiHandler::showTrade);
 
     void ( CMapObject::*moveTo )(int, int, int) = &CMapObject::moveTo;
     void ( CMapObject::*move )(int, int, int) = &CMapObject::move;

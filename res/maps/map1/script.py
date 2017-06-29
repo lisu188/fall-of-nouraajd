@@ -29,7 +29,7 @@ def load(self, context):
     @trigger(context, "onDestroy", "gooby1")
     class GoobyTrigger(CTrigger):
         def trigger(self, object, event):
-            object.getMap().getGuiHandler().showMessage("Gooby killed!!!")
+            object.getMap().getGame().getGuiHandler().showMessage("Gooby killed!!!")
             context.setBoolProperty('completed', True)
 
     @trigger(context, "onDestroy", "cave1")
@@ -46,4 +46,4 @@ def load(self, context):
     @trigger(context, "onEnter", "market1")
     class MarketTrigger(CTrigger):
         def trigger(self, object, event):
-            print("hello")
+            object.getMap().getGame().getGuiHandler().showTrade(object.getObjectProperty('market'))

@@ -1,11 +1,9 @@
 {
   "inventoryPanel": {
-    "class": "CGameInventoryPanel",
-    "properties": {
-      "xInv": 4,
-      "yInv": 4,
-      "selectionBarThickness": 5
-    }
+    "class": "CGameInventoryPanel"
+  },
+  "tradePanel": {
+    "class": "CGameTradePanel"
   },
   "textPanel": {
     "class": "CGameTextPanel"
