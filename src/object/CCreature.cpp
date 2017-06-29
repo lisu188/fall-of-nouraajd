@@ -32,6 +32,7 @@ int CCreature::getExpReward() {
 
 void CCreature::addExpScaled(int scale) {
     int rank = level - scale;
+    //TODO: rethink this
     this->addExp(250 * pow(2, -rank));
 }
 
@@ -565,4 +566,8 @@ void CCreature::useItem(std::shared_ptr<CItem> item) {
     if (item->isDisposable()) {
         removeFromInventory(item);
     }
+}
+
+void CCreature::setLevel(int level) {
+    this->level = level;
 }
