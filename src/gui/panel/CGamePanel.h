@@ -57,6 +57,9 @@ protected:
         }
     }
 
+
+    void drawSelection(std::shared_ptr<CGui> gui, SDL_Rect *location, int thickness);
+
     virtual void panelRender(std::shared_ptr<CGui> shared_ptr, std::shared_ptr<SDL_Rect> pRect, int i);
 
     virtual void panelKeyboardEvent(std::shared_ptr<CGui> shared_ptr, SDL_Keycode i);
@@ -66,10 +69,4 @@ protected:
 private:
     int xSize = 800;
     int ySize = 600;
-};
-
-class CListView : public CGameGraphicsObject {
-V_META(CGamePanel, CGameGraphicsObject, vstd::meta::empty())
-public:
-    CListView();
 };

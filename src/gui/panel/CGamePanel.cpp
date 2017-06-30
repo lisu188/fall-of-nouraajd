@@ -19,6 +19,20 @@ void CGamePanel::setYSize(int _ySize) {
     ySize = _ySize;
 }
 
+void CGamePanel::drawSelection(std::shared_ptr<CGui> gui, SDL_Rect *location, int thickness) {
+    SDL_SetRenderDrawColor(gui->getRenderer(), YELLOW);
+    SDL_Rect tmp = {location->x, location->y, thickness, location->h};
+    SDL_Rect tmp2 = {location->x, location->y, location->w, thickness};
+    SDL_Rect tmp3 = {location->x, location->y + location->h - thickness, location->w,
+                     thickness};
+    SDL_Rect tmp4 = {location->x + location->w - thickness, location->y, thickness,
+                     location->h};
+    SDL_RenderFillRect(gui->getRenderer(), &tmp);
+    SDL_RenderFillRect(gui->getRenderer(), &tmp2);
+    SDL_RenderFillRect(gui->getRenderer(), &tmp3);
+    SDL_RenderFillRect(gui->getRenderer(), &tmp4);
+}
+
 void CGamePanel::render(std::shared_ptr<CGui> reneder, SDL_Rect *pos, int frameTime) {
     this->panelRender(reneder, getPanelRect(pos), frameTime);
 }
@@ -63,7 +77,3 @@ void CGamePanel::panelMouseEvent(std::shared_ptr<CGui> shared_ptr, int x, int y)
 
 }
 
-
-CListView::CListView() {
-
-}
