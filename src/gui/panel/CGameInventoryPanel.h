@@ -37,8 +37,6 @@ private:
 
     void panelMouseEvent(std::shared_ptr<CGui> shared_ptr, int x, int y) override;
 
-    void drawSelection(std::shared_ptr<CGui> gui, SDL_Rect *location, int thickness);
-
     void drawInventory(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> pRect, int frameTime);
 
     void drawEquipped(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> pRect, int frameTime);
