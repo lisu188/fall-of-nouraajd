@@ -94,7 +94,7 @@ void CRangeController::setDistance(int distance) { this->distance = distance; }
 
 int CRangeController::getDistance() { return distance; }
 
-bool CFightController::control(std::shared_ptr<CCreature> me, std::shared_ptr<CCreature> opponent) {
+bool CMonsterFightController::control(std::shared_ptr<CCreature> me, std::shared_ptr<CCreature> opponent) {
     if (me->getHpRatio() < 75) {
         auto object = getLeastPowerfulItemWithTag(me, "heal");
         if (object) {
@@ -117,7 +117,8 @@ bool CFightController::control(std::shared_ptr<CCreature> me, std::shared_ptr<CC
 }
 
 
-std::shared_ptr<CItem> CFightController::getLeastPowerfulItemWithTag(std::shared_ptr<CCreature> cr, std::string tag) {
+std::shared_ptr<CItem>
+CMonsterFightController::getLeastPowerfulItemWithTag(std::shared_ptr<CCreature> cr, std::string tag) {
     auto cmp = [](std::shared_ptr<CItem> a, std::shared_ptr<CItem> b) {
         return a->getPower() < b->getPower();
     };
@@ -132,7 +133,7 @@ std::shared_ptr<CItem> CFightController::getLeastPowerfulItemWithTag(std::shared
     return std::shared_ptr<CItem>();
 }
 
-std::shared_ptr<CInteraction> CFightController::selectInteraction(std::shared_ptr<CCreature> cr) {
+std::shared_ptr<CInteraction> CMonsterFightController::selectInteraction(std::shared_ptr<CCreature> cr) {
     std::function<bool(std::shared_ptr<CInteraction>)> pFunction = [](std::shared_ptr<CInteraction> it) {
         return !it->hasTag("buff");
     };
@@ -168,4 +169,9 @@ std::shared_ptr<vstd::future<void, Coords> > CPlayerController::control(std::sha
     return vstd::later([=](Coords coords) {
         c->move(*next);
     });
+}
+
+bool CFightController::control(std::shared_ptr<CCreature> me, std::shared_ptr<CCreature> opponent) {
+    vstd::logger::warning("Empty fight controller used!");
+    return true;
 }
