@@ -73,6 +73,9 @@
   "Gooby": {
     "class": "CMonster",
     "properties": {
+      "fightController": {
+        "class": "CMonsterFightController"
+      },
       "actions": [
         {
           "ref": "Attack"
@@ -118,6 +121,9 @@
   "OctoBogz": {
     "class": "CMonster",
     "properties": {
+      "fightController": {
+        "class": "CMonsterFightController"
+      },
       "actions": [
         {
           "ref": "Attack"
@@ -163,6 +169,9 @@
   "Pritz": {
     "class": "CMonster",
     "properties": {
+      "fightController": {
+        "class": "CMonsterFightController"
+      },
       "actions": [
         {
           "ref": "Attack"
@@ -208,6 +217,9 @@
   "PritzMage": {
     "class": "CMonster",
     "properties": {
+      "fightController": {
+        "class": "CMonsterFightController"
+      },
       "actions": [
         {
           "ref": "Attack"
