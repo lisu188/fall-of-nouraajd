@@ -21,9 +21,15 @@ public:
 };
 
 class CFightController : public CGameObject {
-V_META(CFightController, CGameObject, vstd::meta::empty())
+    V_META(CFightController, CGameObject, vstd::meta::empty())
 public:
     virtual bool control(std::shared_ptr<CCreature> me, std::shared_ptr<CCreature> opponent);
+};
+
+class CMonsterFightController : public CFightController {
+V_META(CMonsterFightController, CFightController, vstd::meta::empty())
+public:
+    virtual bool control(std::shared_ptr<CCreature> me, std::shared_ptr<CCreature> opponent) override;
 
 private:
     std::shared_ptr<CInteraction> selectInteraction(std::shared_ptr<CCreature> cr);
@@ -31,9 +37,17 @@ private:
     std::shared_ptr<CItem> getLeastPowerfulItemWithTag(std::shared_ptr<CCreature> cr, std::string tag);
 };
 
+class CPlayerFightController : public CFightController {
+V_META(CPlayerFightController, CFightController, vstd::meta::empty())
+public:
+    virtual bool control(std::shared_ptr<CCreature> me, std::shared_ptr<CCreature> opponent) override {
+        return false; //TODO:
+    }
+};
+
 class CTargetController : public CController {
 V_META(CTargetController, CController,
-       V_PROPERTY(CTargetController, std::shared_ptr<CMapObject>, target, get_target, set_target))
+       V_PROPERTY(CTargetController, std::shared_ptr < CMapObject > , target, get_target, set_target))
 public:
     CTargetController();
 

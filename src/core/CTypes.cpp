@@ -39,6 +39,10 @@ namespace {
                 CTypes::register_type<CEventHandler, CGameObject>();
 
                 CTypes::register_type<CFightController, CGameObject>();
+                {
+                    CTypes::register_type<CPlayerFightController, CFightController, CGameObject>();
+                    CTypes::register_type<CMonsterFightController, CFightController, CGameObject>();
+                }
 
                 CTypes::register_type<CGameEvent, CGameObject>();
                 {
@@ -166,7 +170,7 @@ namespace {
             };
 
             auto array_string_serialize = [](std::set<std::string> set) {
-                std::shared_ptr<Value> arr = std::make_shared<Value>();
+                std::shared_ptr < Value > arr = std::make_shared<Value>();
                 for (std::string ob:set) {
                     add_arr_member(arr, ob);
                 }
