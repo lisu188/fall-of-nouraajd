@@ -36,8 +36,13 @@ void CPlayer::onDestroy(std::shared_ptr<CGameEvent> event) {
 void CPlayer::addQuest(std::string questName) {
     std::shared_ptr<CQuest> quest = getMap()->createObject<CQuest>(questName);
     if (quest) {
+        //TODO:
         quests.insert(quest);
     }
+}
+
+std::set<std::shared_ptr<CQuest>> CPlayer::getQuests() {
+    return quests;
 }
 
 

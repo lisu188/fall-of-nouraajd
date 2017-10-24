@@ -1,3 +1,4 @@
+#include "gui/panel/CGameQuestPanel.h"
 #include "gui/panel/CGameFightPanel.h"
 #include "gui/panel/CGameInventoryPanel.h"
 #include "gui/object/CMapGraphicsObject.h"
@@ -146,6 +147,7 @@ namespace {
                         CTypes::register_type<CGameInventoryPanel, CGamePanel, CGameGraphicsObject, CGameObject>();
                         CTypes::register_type<CGameTradePanel, CGamePanel, CGameGraphicsObject, CGameObject>();
                         CTypes::register_type<CGameFightPanel, CGamePanel, CGameGraphicsObject, CGameObject>();
+                        CTypes::register_type<CGameQuestPanel, CGamePanel, CGameGraphicsObject, CGameObject>();
                     }
                     CTypes::register_type<CAnimation, CGameGraphicsObject, CGameObject>();
                     {

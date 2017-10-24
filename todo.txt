@@ -25,3 +25,5 @@
 //TODO: quest panel
 //TODO: crash when exit with opened market (double free probably)
 //TODO: encapsulate SDL_RenderCopy
+//TODO: font manager
+//TODO: make panel hotkey configuration configurable
