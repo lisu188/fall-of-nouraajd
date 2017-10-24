@@ -1,4 +1,5 @@
-#include <gui/panel/CGameInventoryPanel.h>
+#include "gui/panel/CGameInventoryPanel.h"
+#include "gui/panel/CGameQuestPanel.h"
 #include "core/CController.h"
 #include "gui/object/CMapGraphicsObject.h"
 #include "gui/CTextureCache.h"
@@ -43,6 +44,12 @@ CMapGraphicsObject::CMapGraphicsObject() {
         return event->type == SDL_KEYDOWN && event->key.keysym.sym == SDLK_i;
     }, [](std::shared_ptr<CGui> gui, SDL_Event *event) {
         gui->addObject(gui->getGame()->getMap()->createObject<CGameInventoryPanel>("inventoryPanel"));
+        return true;
+    });
+    registerEventCallback([](std::shared_ptr<CGui> gui, SDL_Event *event) {
+        return event->type == SDL_KEYDOWN && event->key.keysym.sym == SDLK_j;
+    }, [](std::shared_ptr<CGui> gui, SDL_Event *event) {
+        gui->addObject(gui->getGame()->getMap()->createObject<CGameQuestPanel>("questPanel"));
         return true;
     });
 }
