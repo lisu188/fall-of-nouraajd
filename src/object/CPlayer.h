@@ -18,6 +18,7 @@ public:
 
     void addQuest(std::string questName);
 
+    std::set<std::shared_ptr<CQuest>> getQuests();
 private:
     void checkQuests();
 

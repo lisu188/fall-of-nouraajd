@@ -29,6 +29,7 @@ struct SDL_Texture *CGameTextPanel::loadTextTexture(std::shared_ptr<CGui> ptr) {
     SDL_Surface *surface = TTF_RenderText_Blended_Wrapped(font, text.c_str(), textColor, this->getXSize());
     auto _texture = SDL_CreateTextureFromSurface(ptr->getRenderer(), surface);
     SDL_FreeSurface(surface);
+    TTF_CloseFont(font);
     return _texture;
 }
 
@@ -36,4 +37,8 @@ void CGameTextPanel::panelKeyboardEvent(std::shared_ptr<CGui> gui, SDL_Keycode i
     if (i == SDLK_SPACE) {
         gui->removeObject(this->ptr<CGameTextPanel>());
     }
+}
+
+CGameTextPanel::~CGameTextPanel() {
+    SDL_DestroyTexture(texture);
 }
