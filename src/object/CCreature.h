@@ -97,8 +97,6 @@ public:
 
     bool isAlive();
 
-    virtual void trade(std::shared_ptr<CMarket>);
-
     virtual void levelUp();
 
     virtual std::set<std::shared_ptr<CItem> > getAllItems();
@@ -258,8 +256,6 @@ protected:
 
     std::shared_ptr<Stats> stats = std::make_shared<Stats>();
     std::shared_ptr<Stats> levelStats = std::make_shared<Stats>();
-
-    virtual std::shared_ptr<CInteraction> selectAction();
 
     void takeDamage(int i);
 

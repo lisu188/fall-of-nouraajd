@@ -2,6 +2,9 @@
   "Assasin": {
     "class": "CPlayer",
     "properties": {
+      "fightController": {
+        "class": "CPlayerFightController"
+      },
       "controller": {
         "class": "CPlayerController"
       },
@@ -269,6 +272,9 @@
   "Sorcerer": {
     "class": "CPlayer",
     "properties": {
+      "fightController": {
+        "class": "CPlayerFightController"
+      },
       "actions": [
         {
           "ref": "Attack"
@@ -343,6 +349,9 @@
   "Warrior": {
     "class": "CPlayer",
     "properties": {
+      "fightController": {
+        "class": "CPlayerFightController"
+      },
       "actions": [
         {
           "ref": "Attack"

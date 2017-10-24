@@ -134,7 +134,7 @@ void CCreature::healProc(float i) {
 }
 
 void CCreature::hurt(int i) {
-    std::shared_ptr<Damage> damage = std::make_shared<Damage>();
+    std::shared_ptr < Damage > damage = std::make_shared<Damage>();
     damage->setNormal(i);
     hurt(damage);
 }
@@ -220,10 +220,6 @@ bool CCreature::isAlive() {
 }
 
 
-void CCreature::trade(std::shared_ptr<CMarket>) {
-
-}
-
 void CCreature::addAction(std::shared_ptr<CInteraction> action) {
     if (!action) {
         return;
@@ -274,14 +270,6 @@ void CCreature::takeMana(int i) {
     mana -= i;
 }
 
-std::shared_ptr<CInteraction> CCreature::selectAction() {
-    for (std::shared_ptr<CInteraction> it:actions) {
-        if (it->getManaCost() < mana) {
-            return it;
-        }
-    }
-    return 0;
-}
 
 bool CCreature::isPlayer() {
     return getMap()->getPlayer() == this->ptr<CPlayer>();
@@ -331,9 +319,9 @@ void CCreature::equipItem(std::string i, std::shared_ptr<CItem> newItem) {
     vstd::fail_if(newItem && !getMap()->getGame()->getSlotConfiguration()->canFit(i, newItem),
                   "Tried to insert" + newItem->getType() + "into slot" + i);
     if (!vstd::ctn(equipped, i)) {
-        equipped.insert(std::make_pair(i, std::shared_ptr<CItem>()));
+        equipped.insert(std::make_pair(i, std::shared_ptr < CItem > ()));
     }
-    std::shared_ptr<CItem> oldItem = equipped.at(i);
+    std::shared_ptr < CItem > oldItem = equipped.at(i);
     if (oldItem) {
         getMap()->getEventHandler()->gameEvent(oldItem, std::make_shared<CGameEventCaused>(CGameEvent::Type::onUnequip,
                                                                                            this->ptr<CCreature>()));

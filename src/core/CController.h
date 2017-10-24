@@ -3,6 +3,7 @@
 #include "object/CObject.h"
 #include "core/CPathFinder.h"
 
+class CGameFightPanel;
 class CController : public CGameObject {
 V_META(CController, CGameObject, vstd::meta::empty())
 public:
@@ -24,6 +25,10 @@ class CFightController : public CGameObject {
     V_META(CFightController, CGameObject, vstd::meta::empty())
 public:
     virtual bool control(std::shared_ptr<CCreature> me, std::shared_ptr<CCreature> opponent);
+
+    virtual void start(std::shared_ptr<CCreature> me, std::shared_ptr<CCreature> opponent);
+
+    virtual void end(std::shared_ptr<CCreature> me, std::shared_ptr<CCreature> opponent);
 };
 
 class CMonsterFightController : public CFightController {
@@ -40,10 +45,17 @@ private:
 class CPlayerFightController : public CFightController {
 V_META(CPlayerFightController, CFightController, vstd::meta::empty())
 public:
-    virtual bool control(std::shared_ptr<CCreature> me, std::shared_ptr<CCreature> opponent) override {
-        return false; //TODO:
-    }
+    virtual bool control(std::shared_ptr<CCreature> me, std::shared_ptr<CCreature> opponent) override;
+
+    virtual void start(std::shared_ptr<CCreature> me, std::shared_ptr<CCreature> opponent) override;
+
+    virtual void end(std::shared_ptr<CCreature> me, std::shared_ptr<CCreature> opponent) override;
+
+private:
+    std::shared_ptr<CGameFightPanel> fightPanel;
 };
+
+
 
 class CTargetController : public CController {
 V_META(CTargetController, CController,

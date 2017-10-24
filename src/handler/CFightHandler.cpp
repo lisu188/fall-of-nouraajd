@@ -5,13 +5,18 @@
 #include "core/CTags.h"
 
 bool CFightHandler::fight(std::shared_ptr<CCreature> a, std::shared_ptr<CCreature> b) {
+    bool retVal = false;
+    a->getFightController()->start(a, b);
+    b->getFightController()->start(b, a);
+
     //TODO: this is mess!
-    for (int i = 0; i < 5; i++) {
+    for (int i = 0; i < 5; i++) {//TODO: max number of turns? do we need it? implement draw.
         applyEffects(a);
         if (!a->isAlive()) {
             //TODO: who was the caster? we should gratify him
             defeatedCreature(b, a);
-            return true;
+            retVal = true;
+            break;
         }
         if (!CTags::isTagPresent(a->getEffects(), "stun")) {
             if (a->getFightController()->control(a, b)) {
@@ -19,12 +24,17 @@ bool CFightHandler::fight(std::shared_ptr<CCreature> a, std::shared_ptr<CCreatur
             }
             if (!b->isAlive()) {
                 defeatedCreature(a, b);
-                return true;
+                retVal = true;
+                break;
             }
         }
         a.swap(b);
     }
-    return false;
+
+    a->getFightController()->end(a, b);
+    b->getFightController()->end(b, a);
+
+    return retVal;
 }
 
 void CFightHandler::defeatedCreature(std::shared_ptr<CCreature> a, std::shared_ptr<CCreature> b) {
