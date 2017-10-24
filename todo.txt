@@ -23,4 +23,4 @@
     //TODO: enemy health bars
     //TODO: after fight loot window + summary
 //TODO: quest panel
-//TODO: common theme for panels
+//TODO: crash when exit with opened market (double free probably)
