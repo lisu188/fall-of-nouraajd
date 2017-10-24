@@ -4,7 +4,6 @@
 #include "gui/CGui.h"
 
 void CGameTradePanel::panelRender(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> pRect, int i) {
-    SDL_RenderFillRect(gui->getRenderer(), pRect.get());
     drawInventory(gui, pRect, i);
     drawMarket(gui, pRect, i);
 }
