@@ -1,5 +1,7 @@
 #include "object/CMapObject.h"
 #include "core/CController.h"
+#include "gui/panel/CGameFightPanel.h"
+#include "core/CGame.h"
 
 CTargetController::CTargetController(std::shared_ptr<CMapObject> target) : target(target) {
 
@@ -66,7 +68,7 @@ CRangeController::CRangeController() {
 std::shared_ptr<vstd::future<void, Coords> > CRangeController::control(std::shared_ptr<CCreature> creature) {
     return vstd::later([=]() -> Coords {
         std::vector<Coords> possible;
-        std::shared_ptr<CMapObject> targetObject = creature->getMap()->getObjectByName(getTarget());
+        std::shared_ptr < CMapObject > targetObject = creature->getMap()->getObjectByName(getTarget());
         for (auto c:NEAR_COORDS_WITH(creature->getCoords())) {
             if ((!targetObject || targetObject->getCoords().getDist(c) < this->distance)
                 && creature->getMap()->canStep(c)) {
@@ -122,7 +124,7 @@ CMonsterFightController::getLeastPowerfulItemWithTag(std::shared_ptr<CCreature> 
     auto cmp = [](std::shared_ptr<CItem> a, std::shared_ptr<CItem> b) {
         return a->getPower() < b->getPower();
     };
-    std::function<bool(std::shared_ptr<CItem>)> pred = [tag](std::shared_ptr<CItem> it) {
+    std::function<bool(std::shared_ptr < CItem > )> pred = [tag](std::shared_ptr<CItem> it) {
         return it->hasTag(tag);
     };
     auto rng = cr->getItems() | boost::adaptors::filtered(pred);
@@ -130,17 +132,17 @@ CMonsterFightController::getLeastPowerfulItemWithTag(std::shared_ptr<CCreature> 
     if (max != boost::end(rng)) {
         return *max;
     }
-    return std::shared_ptr<CItem>();
+    return std::shared_ptr < CItem > ();
 }
 
 std::shared_ptr<CInteraction> CMonsterFightController::selectInteraction(std::shared_ptr<CCreature> cr) {
-    std::function<bool(std::shared_ptr<CInteraction>)> pFunction = [](std::shared_ptr<CInteraction> it) {
+    std::function<bool(std::shared_ptr < CInteraction > )> pFunction = [](std::shared_ptr<CInteraction> it) {
         return !it->hasTag("buff");
     };
-    std::function<bool(std::shared_ptr<CInteraction>)> pFunction2 = [cr](std::shared_ptr<CInteraction> it) {
+    std::function<bool(std::shared_ptr < CInteraction > )> pFunction2 = [cr](std::shared_ptr<CInteraction> it) {
         return it->getManaCost() <= cr->getMana();
     };
-    std::function<bool(std::shared_ptr<CInteraction>)> pFunction3 = [](std::shared_ptr<CInteraction> it) {
+    std::function<bool(std::shared_ptr < CInteraction > )> pFunction3 = [](std::shared_ptr<CInteraction> it) {
         return !it->getEffect() || (it->getEffect() && !it->getEffect()->hasTag("buff"));
     };
     auto pred = [](std::shared_ptr<CInteraction> a, std::shared_ptr<CInteraction> b) {
@@ -153,7 +155,7 @@ std::shared_ptr<CInteraction> CMonsterFightController::selectInteraction(std::sh
     if (max != boost::end(rng)) {
         return *max;
     }
-    return std::shared_ptr<CInteraction>();
+    return std::shared_ptr < CInteraction > ();
 }
 
 CPlayerController::CPlayerController() {
@@ -174,4 +176,30 @@ std::shared_ptr<vstd::future<void, Coords> > CPlayerController::control(std::sha
 bool CFightController::control(std::shared_ptr<CCreature> me, std::shared_ptr<CCreature> opponent) {
     vstd::logger::warning("Empty fight controller used!");
     return true;
+}
+
+void CFightController::start(std::shared_ptr<CCreature> me, std::shared_ptr<CCreature> opponent) {
+
+}
+
+void CFightController::end(std::shared_ptr<CCreature> me, std::shared_ptr<CCreature> opponent) {
+
+}
+
+
+void CPlayerFightController::start(std::shared_ptr<CCreature> me, std::shared_ptr<CCreature> opponent) {
+    fightPanel = me->getMap()->createObject<CGameFightPanel>("fightPanel");
+    fightPanel->setEnemy(opponent);
+    me->getMap()->getGame()->getGui()->addObject(fightPanel);
+}
+
+bool CPlayerFightController::control(std::shared_ptr<CCreature> me, std::shared_ptr<CCreature> opponent) {
+    me->useAction(fightPanel->getInteraction(), opponent);
+    //TODO: what about mana cost?
+    return true;
+}
+
+void CPlayerFightController::end(std::shared_ptr<CCreature> me, std::shared_ptr<CCreature> opponent) {
+    me->getMap()->getGame()->getGui()->removeObject(fightPanel);
+    fightPanel = nullptr;
 }
