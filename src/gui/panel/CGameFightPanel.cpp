@@ -5,7 +5,6 @@
 #include "gui/CGui.h"
 
 void CGameFightPanel::panelRender(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> pRect, int i) {
-    SDL_RenderFillRect(gui->getRenderer(), pRect.get());
     drawInteractions(gui, pRect, i);
     drawEnemy(gui, pRect, i);
 }

@@ -19,7 +19,6 @@ void CGameTextPanel::panelRender(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_
     actual.x = pRect->x;
     actual.y = pRect->y;
     SDL_QueryTexture(texture, NULL, NULL, &actual.w, &actual.h);
-    SDL_RenderFillRect(gui->getRenderer(), pRect.get());
     SDL_RenderCopy(gui->getRenderer(), texture, NULL, &actual);
 }
 

@@ -33,8 +33,11 @@ void CGamePanel::drawSelection(std::shared_ptr<CGui> gui, SDL_Rect *location, in
     SDL_RenderFillRect(gui->getRenderer(), &tmp4);
 }
 
-void CGamePanel::render(std::shared_ptr<CGui> reneder, SDL_Rect *pos, int frameTime) {
-    this->panelRender(reneder, getPanelRect(pos), frameTime);
+void CGamePanel::render(std::shared_ptr<CGui> gui, SDL_Rect *pos, int frameTime) {
+    std::shared_ptr < SDL_Rect > rect = getPanelRect(pos);
+    SDL_RenderFillRect(gui->getRenderer(), rect.get());
+    SDL_RenderCopy(gui->getRenderer(), gui->getTextureCache()->getTexture("images/panel.png"), nullptr, rect.get());
+    this->panelRender(gui, rect, frameTime);
 }
 
 void CGamePanel::panelRender(std::shared_ptr<CGui> shared_ptr, std::shared_ptr<SDL_Rect> pRect, int i) {

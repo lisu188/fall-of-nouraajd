@@ -15,7 +15,7 @@ def load(self, context):
     @register(context)
     class Market(CBuilding):
         def onEnter(self, event):
-            self.getMap().getPlayer().trade(self.getObjectProperty("market"))
+            pass
 
     @register(context)
     class Cave(CBuilding):

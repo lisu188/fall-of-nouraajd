@@ -86,6 +86,7 @@ configure_file(res/images/interactions/magicmissile.png images/interactions/magi
 configure_file(res/images/interactions/stun.png images/interactions/stun.png COPYONLY)
 configure_file(res/images/interactions/abyssalshadows.png images/interactions/abyssalshadows.png COPYONLY)
 
+configure_file(res/images/panel.png images/panel.png COPYONLY)
 configure_file(res/images/arrows/left.png images/arrows/left.png COPYONLY)
 configure_file(res/images/arrows/right.png images/arrows/right.png COPYONLY)
 configure_file(res/images/item.png images/item.png COPYONLY)
