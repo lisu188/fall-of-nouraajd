@@ -24,4 +24,4 @@
     //TODO: after fight loot window + summary
 //TODO: quest panel
 //TODO: crash when exit with opened market (double free probably)
-//TODO: item background
+//TODO: encapsulate SDL_RenderCopy

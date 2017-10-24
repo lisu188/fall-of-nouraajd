@@ -1,6 +1,8 @@
 #pragma once
 
+
 #include "gui/object/CGameGraphicsObject.h"
+#include "gui/CGui.h"
 
 class CGamePanel : public CGameGraphicsObject {
 V_META(CGamePanel, CGameGraphicsObject,
@@ -36,6 +38,8 @@ protected:
             location.y = tileSize * (i / xSize) + loc->y;
             location.w = tileSize;
             location.h = tileSize;
+            SDL_RenderCopy(gui->getRenderer(), gui->getTextureCache()->getTexture("images/item.png"), nullptr,
+                           &location);
             draw(it, &location);
             if (selPred(it)) {
                 drawSelection(gui, &location, thickness);
