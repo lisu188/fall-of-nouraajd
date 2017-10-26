@@ -24,6 +24,7 @@ private:
     int selectionBarThickness = 5;
     std::weak_ptr<CCreature> enemy;
     std::weak_ptr<CInteraction> selected;
+    std::weak_ptr<CItem> selectedItem;
     std::weak_ptr<CInteraction> finalSelected;
 
     void panelRender(std::shared_ptr<CGui> shared_ptr, std::shared_ptr<SDL_Rect> pRect, int i) override;
@@ -39,5 +40,8 @@ private:
 
     void handleInteractionsClick(std::shared_ptr<CGui> gui, int x, int y);
 
+    bool isInInventory(std::shared_ptr<CGui> gui, int x, int y);
+
+    void handleInventoryClick(std::shared_ptr<CGui> gui, int x, int y);
 };
 

@@ -8,7 +8,6 @@
 //TODO: add error handling to SDL code
 //TODO: turns are resetted when changing map
 //TODO: make hp/mana/exp values visible on StatsView
-//TODO: implement fight
 //TODO: resizing panels
 //TODO: registering singletons in context
 //TODO: lib function to position rectangle in rectangle
@@ -16,14 +15,12 @@
 //TODO: initiative
 //TODO: when lost fight in cave, panel pops out after return to position
 //TODO: fight panel
-    //TODO: mana check in fight panel
     //TODO: buffs in fight panel
-    //TODO: cant quit game when in fight
-    //TODO: back pack items use
+    //TODO: cant quit game when in fight (hang in wait until)
     //TODO: enemy health bars
     //TODO: after fight loot window + summary
-//TODO: quest panel
 //TODO: crash when exit with opened market (double free probably)
 //TODO: encapsulate SDL_RenderCopy
 //TODO: font manager
 //TODO: make panel hotkey configuration configurable
+//TODO: trigger for gooby not working

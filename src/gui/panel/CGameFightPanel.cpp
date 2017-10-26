@@ -27,6 +27,23 @@ void CGameFightPanel::drawInteractions(std::shared_ptr<CGui> gui, std::shared_pt
             }, [this](auto g, auto l, auto t) {
                 this->drawSelection(g, l, t);
             }, selectionBarThickness);
+
+    location->y -= gui->getTileSize();
+
+    drawCollection(gui, location,
+                   [this, gui]() {
+                       return gui->getGame()->getMap()->getPlayer()->getItems();
+                   }, getXSize() / gui->getTileSize(), 1, gui->getTileSize(),
+                   [this, gui](auto ob, int prevIndex) {
+                       return prevIndex + 1;
+                   },
+                   [this, gui, frameTime](auto item, auto loc) {
+                       item->getAnimationObject()->render(gui, loc, frameTime);
+                   }, [this, gui](auto object) {
+                return selectedItem.lock() == object;
+            }, [this](auto g, auto l, auto t) {
+                this->drawSelection(g, l, t);
+            }, selectionBarThickness);
 }
 
 
@@ -37,6 +54,8 @@ CGameFightPanel::CGameFightPanel() {
 void CGameFightPanel::panelMouseEvent(std::shared_ptr<CGui> gui, int x, int y) {
     if (isInInteractions(gui, x, y)) {
         handleInteractionsClick(gui, x, y);
+    } else if (isInInventory(gui, x, y)) {
+        handleInventoryClick(gui, x, y);
     }
 }
 
@@ -49,7 +68,8 @@ void CGameFightPanel::handleInteractionsClick(std::shared_ptr<CGui> gui, int x, 
               }, [this, gui](auto newSelection) {
                 if (selected.lock() != newSelection) {
                     selected = newSelection;
-                } else if (selected.lock() == newSelection) {
+                } else if (selected.lock() == newSelection &&
+                           newSelection->getManaCost() <= gui->getGame()->getMap()->getPlayer()->getMana()) {
                     finalSelected = newSelection;
                 } else {
                     selected.reset();
@@ -59,8 +79,30 @@ void CGameFightPanel::handleInteractionsClick(std::shared_ptr<CGui> gui, int x, 
 }
 
 
+void CGameFightPanel::handleInventoryClick(std::shared_ptr<CGui> gui, int x, int y) {
+    onClicked([this, gui]() {
+                  return gui->getGame()->getMap()->getPlayer()->getItems();
+              }, x, y - (getYSize() - gui->getTileSize() * 2), getXSize() / gui->getTileSize(), 1, gui->getTileSize(),
+              [this, gui](auto item, int prevIndex) {
+                  return prevIndex + 1;
+              }, [this, gui](auto newSelection) {
+
+                if (selectedItem.lock() != newSelection) {
+                    selectedItem = newSelection;
+                } else if (selectedItem.lock() == newSelection) {
+                    gui->getGame()->getMap()->getPlayer()->useItem(newSelection);
+                    selectedItem.reset();
+                }
+            });
+
+}
+
 bool CGameFightPanel::isInInteractions(std::shared_ptr<CGui> gui, int x, int y) {
     return y > (getYSize() - gui->getTileSize());
+}
+
+bool CGameFightPanel::isInInventory(std::shared_ptr<CGui> gui, int x, int y) {
+    return y > (getYSize() - (gui->getTileSize() * 2));
 }
 
 
