@@ -21,7 +21,11 @@ struct SDL_Texture *CGameQuestPanel::loadTextTexture(std::shared_ptr<CGui> ptr) 
     SDL_Color textColor = {255, 255, 255, 0};
     std::string text = "";
     for (auto quest:ptr->getGame()->getMap()->getPlayer()->getQuests()) {
-        text += quest->getDescription() + "\n";
+        text += quest->getDescription();
+        if (quest->isCompleted()) {
+            text += "(completed)";
+        }
+        text += "\n";
     }
     SDL_Surface *surface = TTF_RenderText_Blended_Wrapped(font, text.c_str(), textColor, this->getXSize());
     auto _texture = SDL_CreateTextureFromSurface(ptr->getRenderer(), surface);
