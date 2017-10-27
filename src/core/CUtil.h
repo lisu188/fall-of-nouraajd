@@ -39,3 +39,4 @@ namespace std {
 }
 
 #define JSONIFY(x) CJsonUtil::to_string(CSerialization::serialize<std::shared_ptr<Value>>(x))
+#define JSONIFY_STYLED(x) CJsonUtil::to_string<StyledWriter>(CSerialization::serialize<std::shared_ptr<Value>>(x))

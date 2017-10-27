@@ -13,5 +13,8 @@
   },
   "questPanel": {
     "class": "CGameQuestPanel"
+  },
+  "characterPanel": {
+    "class": "CGameCharacterPanel"
   }
 }
