@@ -28,8 +28,8 @@ extern void add_arr_member(std::shared_ptr<Value> object, int value);
 
 
 namespace {
-    struct register_types {
-        register_types() {
+    struct register_types4 {
+        register_types4() {
             CTypes::register_type<CGameObject>();
             {
                 CTypes::register_type<CGameGraphicsObject, CGameObject>();
@@ -54,5 +54,5 @@ namespace {
                 }
             }
         }
-    } _register_types;
+    } _register_types4;
 }
