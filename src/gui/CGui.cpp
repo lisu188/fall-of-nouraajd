@@ -1,5 +1,5 @@
 #include "CGui.h"
-
+#include "gui/CTextureCache.h"
 
 CGui::CGui() {
     SDL_Init(SDL_INIT_VIDEO);

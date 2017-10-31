@@ -1,5 +1,6 @@
 #include "CMarket.h"
 #include "core/CMap.h"
+#include "object/CCreature.h"
 
 CMarket::CMarket() {
 

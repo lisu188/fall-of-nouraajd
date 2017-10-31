@@ -1,8 +1,9 @@
-#include <gui/object/CStatsGraphicsObject.h>
+#include "gui/object/CStatsGraphicsObject.h"
 #include "gui/object/CMapGraphicsObject.h"
 #include "core/CLoader.h"
 #include "core/CEventLoop.h"
 #include "core/CJsonUtil.h"
+#include "gui/CGui.h"
 
 void CMapLoader::loadFromTmx(std::shared_ptr<CMap> map, std::shared_ptr<Value> mapc) {
     const Value &mapProperties = (*mapc)["properties"];

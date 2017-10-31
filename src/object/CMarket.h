@@ -5,6 +5,8 @@
 
 class CItem;
 
+class CCreature;
+
 class CMarket : public CGameObject {
 
 V_META(CMarket, CGameObject,

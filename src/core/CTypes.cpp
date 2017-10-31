@@ -10,6 +10,7 @@
 #include "core/CController.h"
 #include "core/CEventLoop.h"
 #include "gui/panel/CGameTextPanel.h"
+#include "gui/CTextureCache.h"
 
 extern void add_member(std::shared_ptr<Value> object, std::string key, std::string value);
 
