@@ -1,7 +1,7 @@
 
 #include "CGamePanel.h"
 #include "gui/CGui.h"
-
+#include "gui/CTextureCache.h"
 
 int CGamePanel::getXSize() {
     return xSize;

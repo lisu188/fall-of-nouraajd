@@ -5,7 +5,8 @@
 #include "object/CGameObject.h"
 #include "core/CGlobal.h"
 #include "gui/object/CGameGraphicsObject.h"
-#include "gui/CTextureCache.h"
+
+class CTextureCache;
 
 class CGui : public CGameObject {
 V_META(CGui, CGameObject, vstd::meta::empty())

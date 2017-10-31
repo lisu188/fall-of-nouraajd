@@ -3,6 +3,7 @@
 #include "gui/panel/CGameCharacterPanel.h"
 #include "core/CController.h"
 #include "gui/object/CMapGraphicsObject.h"
+#include "gui/CAnimation.h"
 
 CMapGraphicsObject::CMapGraphicsObject() {
     registerEventCallback([](std::shared_ptr<CGui> gui, SDL_Event *event) {

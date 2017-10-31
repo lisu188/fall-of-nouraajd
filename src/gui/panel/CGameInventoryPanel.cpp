@@ -2,7 +2,7 @@
 
 #include "CGameInventoryPanel.h"
 #include "gui/CGui.h"
-
+#include "gui/CTextureCache.h"
 void CGameInventoryPanel::panelRender(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> pRect, int i) {
     drawInventory(gui, pRect, i);
     drawEquipped(gui, pRect, i);
