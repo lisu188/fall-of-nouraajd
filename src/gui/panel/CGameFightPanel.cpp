@@ -3,6 +3,7 @@
 #include "core/CEventLoop.h"
 #include "CGameFightPanel.h"
 #include "gui/CAnimation.h"
+#include "gui/CTextureCache.h"
 
 void CGameFightPanel::panelRender(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> pRect, int i) {
     drawInteractions(gui, pRect, i);
