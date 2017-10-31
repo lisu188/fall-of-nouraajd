@@ -2,9 +2,10 @@
 // Created by andrz on 07.02.17.
 //
 
-#include <core/CProvider.h>
+#include "core/CProvider.h"
 #include "CAnimation.h"
 #include "gui/CGui.h"
+#include "gui/CTextureCache.h"
 
 CStaticAnimation::CStaticAnimation(std::string path) {
     raw_path = path + ".png";
