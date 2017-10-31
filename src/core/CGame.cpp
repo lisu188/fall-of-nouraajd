@@ -1,5 +1,6 @@
 #include "core/CGame.h"
 #include "core/CLoader.h"
+#include "gui/CGui.h"
 
 CGame::CGame() {
 

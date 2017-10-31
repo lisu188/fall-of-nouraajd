@@ -2,7 +2,6 @@
 
 #include "core/CGlobal.h"
 #include "core/CUtil.h"
-#include "gui/CGui.h"
 #include "handler/CHandler.h"
 #include "core/CPlugin.h"
 #include "CSlotConfig.h"
@@ -14,6 +13,8 @@ class CPlayer;
 class CMap;
 
 class CGameObject;
+
+class CGui;
 
 class CGame : public CGameObject {
 V_META(CGame, CGameObject, vstd::meta::empty())
