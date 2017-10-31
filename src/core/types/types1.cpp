@@ -21,8 +21,8 @@ extern void add_arr_member(std::shared_ptr<Value> object, bool value);
 extern void add_arr_member(std::shared_ptr<Value> object, int value);
 
 namespace {
-    struct register_types {
-        register_types() {
+    struct register_types1 {
+        register_types1() {
             CTypes::register_type<CGameObject>();
             {
                 CTypes::register_type<CSlotConfig, CGameObject>();
@@ -80,5 +80,5 @@ namespace {
             CTypes::register_custom_serializer<std::shared_ptr<Json::Value>, std::set<std::string >>(
                     array_string_serialize, array_string_deserialize);
         }
-    } _register_types;
+    } _register_types1;
 }

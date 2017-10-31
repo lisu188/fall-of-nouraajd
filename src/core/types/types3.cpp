@@ -21,8 +21,8 @@ extern void add_arr_member(std::shared_ptr<Value> object, bool value);
 extern void add_arr_member(std::shared_ptr<Value> object, int value);
 
 namespace {
-    struct register_types {
-        register_types() {
+    struct register_types3 {
+        register_types3() {
             CTypes::register_type<CGameObject>();
             {
                 CTypes::register_type<CEffect, CGameObject>();
@@ -68,5 +68,5 @@ namespace {
                 CTypes::register_type<CTextureCache, CGameObject>();
             }
         }
-    } _register_types;
+    } _register_types3;
 }
