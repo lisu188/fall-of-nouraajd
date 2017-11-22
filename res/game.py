@@ -23,3 +23,7 @@ def main():
     CGameLoader.loadGui(g)
     while CEventLoop.instance().run():
         pass
+
+
+if __name__ == '__main__':
+    main()
