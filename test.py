@@ -30,7 +30,6 @@ class GameTest(unittest.TestCase):
         g = game.CGameLoader.loadGame()
         game.CGameLoader.startGame(g, "empty")
         for type in g.getMap().getObjectHandler().getAllTypes():
-            # TODO: log to TC
             object = g.getMap().createObject(type)
             if not object:
                 failed.append(type)

@@ -24,3 +24,4 @@
 //TODO: font manager
 //TODO: make panel hotkey configuration configurable
 //TODO: trigger for gooby not working
+//TODO: CPlayerFightHandler fails when no gui loaded
