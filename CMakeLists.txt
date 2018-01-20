@@ -1,4 +1,7 @@
 cmake_minimum_required(VERSION 3.3)
+
+include(CPack)
+
 project(fall_of_nouraajd)
 
 include(${CMAKE_SOURCE_DIR}/cmake/cotire.cmake)
