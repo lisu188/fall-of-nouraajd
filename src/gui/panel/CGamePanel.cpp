@@ -80,3 +80,8 @@ void CGamePanel::panelMouseEvent(std::shared_ptr<CGui> shared_ptr, int x, int y)
 
 }
 
+void CGamePanel::drawItemBox(std::shared_ptr<CGui> gui, SDL_Rect *location)  {
+    SDL_RenderCopy(gui->getRenderer(), gui->getTextureCache()->getTexture("images/item.png"), nullptr,
+                   location);
+}
+
