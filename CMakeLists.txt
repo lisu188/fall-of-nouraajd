@@ -1,8 +1,9 @@
 cmake_minimum_required(VERSION 3.3)
 
 include(CPack)
+set(CPACK_GENERATOR "TGZ")
 
-project(fall_of_nouraajd)
+project(fall-of-nouraajd)
 
 include(${CMAKE_SOURCE_DIR}/cmake/cotire.cmake)
 
@@ -177,5 +178,16 @@ configure_file(res/fonts/ampersand.ttf fonts/ampersand.ttf COPYONLY)
 configure_file(res/game.py game.py)
 
 configure_file(test.py test.py)
+
+install(TARGETS _game DESTINATION fall-of-nouraajd)
+install(DIRECTORY res/config DESTINATION fall-of-nouraajd)
+install(DIRECTORY res/fonts DESTINATION fall-of-nouraajd)
+install(DIRECTORY res/images DESTINATION fall-of-nouraajd)
+install(DIRECTORY res/maps DESTINATION fall-of-nouraajd)
+install(DIRECTORY res/plugins DESTINATION fall-of-nouraajd)
+
+install(FILES res/game.py test.py DESTINATION fall-of-nouraajd)
+
+SET(CPACK_STRIP_FILES _game.so)
 
 cotire(_game)
