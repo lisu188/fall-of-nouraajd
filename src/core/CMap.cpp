@@ -344,3 +344,9 @@ void CMap::setObjects(std::set<std::shared_ptr<CMapObject>> objects) {
 std::set<std::shared_ptr<CMapObject>> CMap::getObjects() {
     return vstd::cast<std::set<std::shared_ptr<CMapObject>>>(mapObjects | boost::adaptors::map_values);
 }
+
+void CMap::dumpPaths(std::string path) {
+    CPathFinder::saveMap(getPlayer()->getCoords(), [this](auto coords) {
+        return this->canStep(coords);
+    }, path);
+}

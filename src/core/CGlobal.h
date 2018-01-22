@@ -26,11 +26,12 @@
 #include <queue>
 #include <random>
 #include <set>
-#include <signal.h>
+#include <csignal>
 #include <sstream>
-#include <stdio.h>
+#include <cstdio>
 #include <thread>
-#include <time.h>
+#include <limits>
+#include <ctime>
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
