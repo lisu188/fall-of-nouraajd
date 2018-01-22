@@ -135,6 +135,7 @@ public:
 
     void setTiles(std::set<std::shared_ptr<CTile>> objects);
 
+    void dumpPaths(std::string path);
 private:
     void resolveFights();
 

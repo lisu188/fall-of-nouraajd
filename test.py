@@ -64,6 +64,12 @@ class GameTest(unittest.TestCase):
         advance(g, 1000)  # TODO: set value from build
         return True, game.jsonify(g.getMap().ptr())  # TODO: why we need ptr? in all _bjects we dont!
 
+    @game_test
+    def test_pathfinder(self):
+        g = game.CGameLoader.loadGame()
+        game.CGameLoader.startGameWithPlayer(g, "map1", "Warrior")
+        g.getMap().dumpPaths("pathfinder.png")
+
 
 if __name__ == '__main__':
     unittest.main(testRunner=unittest.TextTestRunner())
