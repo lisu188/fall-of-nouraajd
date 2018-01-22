@@ -79,15 +79,25 @@ static Values fillValues(std::function<bool(const Coords &)> canStep,
 
 static Values fillAllValues(std::function<bool(const Coords &)> canStep,
                             const Coords &goal) {
-    Queue nodes([goal](const Coords &a, const Coords &b) {
-        double dista = (a.x - goal.x) * (a.x - goal.x) +
-                       (a.y - goal.y) * (a.y - goal.y);
-        double distb = (b.x - goal.x) * (b.x - goal.x) +
-                       (b.y - goal.y) * (b.y - goal.y);
-        return dista > distb;
-    });
     std::unordered_set<Coords> marked;
     Values values = std::make_shared<std::unordered_map<Coords, int>>();
+    Queue nodes([values](const Coords &a, const Coords &b) {
+        int dista;
+        auto it = values->find(a);
+        if (it == values->end()) {
+            dista = std::numeric_limits<int>::max();
+        } else {
+            dista = it->second;
+        }
+        int distb;
+        it = values->find(b);
+        if (it == values->end()) {
+            distb = std::numeric_limits<int>::max();
+        } else {
+            distb = it->second;
+        }
+        return dista > distb;
+    });
     nodes.push(goal);
     (*values)[goal] = 0;
 
