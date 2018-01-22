@@ -51,7 +51,8 @@ void initModule1() {
             .def("move", &CMap::move)
             .def("getObjectByName", &CMap::getObjectByName)
             .def("forObjects", &CMap::forObjects)
-            .def("canStep", canStep);
+            .def("canStep", canStep)
+            .def("dumpPaths", &CMap::dumpPaths);
 
     void ( CObjectHandler::*registerType )(std::string,
                                            std::function<std::shared_ptr<CGameObject>()>) = &CObjectHandler::registerType;

@@ -77,6 +77,38 @@ static Values fillValues(std::function<bool(const Coords &)> canStep,
     return values;
 }
 
+static Values fillAllValues(std::function<bool(const Coords &)> canStep,
+                            const Coords &goal) {
+    Queue nodes([goal](const Coords &a, const Coords &b) {
+        double dista = (a.x - goal.x) * (a.x - goal.x) +
+                       (a.y - goal.y) * (a.y - goal.y);
+        double distb = (b.x - goal.x) * (b.x - goal.x) +
+                       (b.y - goal.y) * (b.y - goal.y);
+        return dista > distb;
+    });
+    std::unordered_set<Coords> marked;
+    Values values = std::make_shared<std::unordered_map<Coords, int>>();
+    nodes.push(goal);
+    (*values)[goal] = 0;
+
+    while (!nodes.empty()) {
+        Coords currentCoords = vstd::pop_p(nodes);
+        if (marked.insert(currentCoords).second) {
+            int curValue = (*values)[currentCoords];
+            for (Coords tmpCoords:NEAR_COORDS (currentCoords)) {
+                if (canStep(tmpCoords)) {
+                    auto it = values->find(tmpCoords);
+                    if (it == values->end() || it->second > curValue + 1) {
+                        (*values)[tmpCoords] = curValue + 1;
+                    }
+                    nodes.push(tmpCoords);
+                }
+            }
+        }
+    }
+    return values;
+}
+
 std::shared_ptr<vstd::future<Coords, void>> CPathFinder::findNextStep(Coords start, Coords goal,
                                                                       std::function<bool(
                                                                               const Coords &)> canStep) {
@@ -97,4 +129,46 @@ std::list<Coords> CPathFinder::findPath(Coords start, Coords goal, std::function
         }
     }
     return path;
+}
+
+void CPathFinder::saveMap(Coords start, std::function<bool(const Coords &)> canStep, std::string path) {
+    Values values = fillAllValues(canStep, start);
+    int minx = std::numeric_limits<int>::max();
+    int miny = std::numeric_limits<int>::max();
+    int maxx = std::numeric_limits<int>::min();
+    int maxy = std::numeric_limits<int>::min();
+    int maxVal = std::numeric_limits<int>::min();
+    for (std::pair<Coords, int> entry:*values) {
+        Coords coords = entry.first;
+        if (coords.x < minx) {
+            minx = coords.x;
+        }
+        if (coords.y < miny) {
+            miny = coords.y;
+        }
+        if (coords.x > maxx) {
+            maxx = coords.x;
+        }
+        if (coords.y > maxy) {
+            maxy = coords.y;
+        }
+        if (entry.second > maxVal) {
+            maxVal = entry.second;
+        }
+    }
+    int factor = 4;
+    SDL_Surface *surface = SDL_CreateRGBSurface(0, factor * (maxx - minx), factor * (maxy - miny), 32, 0, 0, 0, 0);
+    float scale = 256.0 / maxVal;
+    for (std::pair<Coords, int> entry:*values) {
+        int posx = entry.first.x - minx;
+        int posy = entry.first.y - miny;
+        int val = entry.second;
+        SDL_Rect rect;
+        rect.x = posx * factor;
+        rect.y = posy * factor;
+        rect.w = factor;
+        rect.h = factor;
+        SDL_FillRect(surface, &rect, SDL_MapRGB(surface->format, scale * val, scale * val, scale * val));
+    }
+    IMG_SavePNG(surface, path.c_str());
 }

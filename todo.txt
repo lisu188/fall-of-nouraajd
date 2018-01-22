@@ -25,3 +25,6 @@
 //TODO: make panel hotkey configuration configurable
 //TODO: trigger for gooby not working
 //TODO: CPlayerFightHandler fails when no gui loaded
+//TODO: implement move cost
+    //TODO: implement move points
+    //TODO: implement dijkstra

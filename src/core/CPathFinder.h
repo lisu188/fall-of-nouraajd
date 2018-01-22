@@ -13,6 +13,8 @@ public:
 
     static std::list<Coords> findPath(Coords start, Coords goal,
                                       std::function<bool(const Coords &)> canStep);
+
+    static void saveMap(Coords start, std::function<bool(const Coords &)> canStep, std::string path);
 };
 
 #define NEAR_COORDS(coords) {Coords(coords.x + 1,coords.y,coords.z),Coords(coords.x - 1,coords.y,coords.z ),Coords(coords.x,coords.y + 1, coords.z ),Coords(coords.x,coords.y - 1,coords.z )}
