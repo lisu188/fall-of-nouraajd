@@ -275,12 +275,6 @@ void CMap::move() {
 
         auto end_callback = [map](std::set<void *>) {
             map->resolveFights();
-
-            //TODO:
-//            if (map->getGame()->getBoolProperty("auto_save")) {
-//                CMapLoader::saveMap(map, vstd::str(map->getTurn()) + ".sav");
-//            }
-
             map->moving = false;
             map->turn++;
         };

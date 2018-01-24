@@ -4,6 +4,7 @@
 #include "core/CController.h"
 #include "gui/object/CMapGraphicsObject.h"
 #include "gui/CAnimation.h"
+#include "core/CLoader.h"
 
 CMapGraphicsObject::CMapGraphicsObject() {
     registerEventCallback([](std::shared_ptr<CGui> gui, SDL_Event *event) {
@@ -57,6 +58,12 @@ CMapGraphicsObject::CMapGraphicsObject() {
         return event->type == SDL_KEYDOWN && event->key.keysym.sym == SDLK_c;
     }, [](std::shared_ptr<CGui> gui, SDL_Event *event) {
         gui->addObject(gui->getGame()->getMap()->createObject<CGameCharacterPanel>("characterPanel"));
+        return true;
+    });
+    registerEventCallback([](std::shared_ptr<CGui> gui, SDL_Event *event) {
+        return event->type == SDL_KEYDOWN && event->key.keysym.sym == SDLK_s;
+    }, [](std::shared_ptr<CGui> gui, SDL_Event *event) {
+        CMapLoader::save(gui->getGame()->getMap(), vstd::to_hex(gui->getGame()->getMap()));
         return true;
     });
 }

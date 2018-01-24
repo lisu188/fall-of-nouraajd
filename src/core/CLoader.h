@@ -13,11 +13,9 @@ public:
     static std::shared_ptr<CMap> loadNewMap(std::shared_ptr<CGame> game, std::string name);
 
     //static std::shared_ptr<CMap> loadSavedMap ( std::shared_ptr<CGame> game, std::string name );//TODO: implement
-    static void saveMap(std::shared_ptr<CMap> map, std::string file);
+    static void save(std::shared_ptr<CMap> map, std::string name);
 
     static void loadFromTmx(std::shared_ptr<CMap> map, std::shared_ptr<Value> mapc);
-
-    void save(std::shared_ptr<Value> data, std::string file);
 
 private:
 
