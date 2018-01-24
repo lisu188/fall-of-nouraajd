@@ -26,4 +26,4 @@
 //TODO: implement move cost
     //TODO: implement move points
     //TODO: implement dijkstra
-//TODO: what if we return to oldMap?
+//TODO: what if we return to oldMap after switch?
