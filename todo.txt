@@ -6,7 +6,6 @@
 //TODO: tooltip
 //TODO: drag & drop
 //TODO: add error handling to SDL code
-//TODO: turns are resetted when changing map
 //TODO: make hp/mana/exp values visible on StatsView
 //TODO: resizing panels
 //TODO: registering singletons in context
@@ -27,3 +26,4 @@
 //TODO: implement move cost
     //TODO: implement move points
     //TODO: implement dijkstra
+//TODO: what if we return to oldMap?

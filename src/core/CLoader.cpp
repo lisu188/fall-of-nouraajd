@@ -136,9 +136,12 @@ void CGameLoader::changeMap(std::shared_ptr<CGame> game, std::string name) {
                             return !game->getMap()->isMoving();
                         },
                         [game, name]() {
-                            std::shared_ptr<CPlayer> player = game->getMap()->getPlayer();
-                            game->setMap(CMapLoader::loadNewMap(game, name));
+                            std::shared_ptr<CMap> oldMap = game->getMap();
+                            std::shared_ptr<CMap> map = CMapLoader::loadNewMap(game, name);
+                            game->setMap(map);
+                            std::shared_ptr<CPlayer> player = oldMap->getPlayer();
                             game->getMap()->setPlayer(player);
+                            game->getMap()->setTurn(oldMap->getTurn());
                         });
     });
 }
