@@ -71,3 +71,29 @@ Coords CMapObject::getCoords() {
 void CMapObject::setCoords(Coords coords) {
     this->moveTo(coords.x, coords.y, coords.z);
 }
+
+bool CMapObject::isAffiliatedWith(std::shared_ptr<CMapObject> object) {
+    return !vstd::is_empty(this->getAffiliation())
+           && !vstd::is_empty(object->getAffiliation())
+           && this->getAffiliation() == object->getAffiliation();
+}
+
+void CMapObject::setPosX(int posx) {
+    this->posx = posx;
+}
+
+std::string CMapObject::getAffiliation() {
+    return affiliation;
+}
+
+void CMapObject::setAffiliation(const std::string &affiliation) {
+    CMapObject::affiliation = affiliation;
+}
+
+void CMapObject::setPosY(int posy) {
+    this->posy = posy;
+}
+
+void CMapObject::setPosZ(int posz) {
+    this->posz = posz;
+}
