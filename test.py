@@ -9,7 +9,7 @@ def game_test(f):
         result = f(self)
         success = result[0]
         log = result[1]
-        open(n + ".log", "w").write(str(log))
+        open(n + ".json", "w").write(str(log))
         self.assertTrue(success)
 
     return wrapper
