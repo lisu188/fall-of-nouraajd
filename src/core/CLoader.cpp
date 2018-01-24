@@ -4,6 +4,7 @@
 #include "core/CEventLoop.h"
 #include "core/CJsonUtil.h"
 #include "gui/CGui.h"
+#include "core/CTypes.h"
 
 void CMapLoader::loadFromTmx(std::shared_ptr<CMap> map, std::shared_ptr<Value> mapc) {
     const Value &mapProperties = (*mapc)["properties"];
@@ -54,8 +55,8 @@ std::shared_ptr<CMap> CMapLoader::loadNewMapWithPlayer(std::shared_ptr<CGame> ga
     return map;
 }
 
-void CMapLoader::saveMap(std::shared_ptr<CMap> map, std::string file) {
-    //CResourcesProvider::getInstance()->save(vstd::join({"save/", file}, ""), JSONIFY(map));
+void CMapLoader::save(std::shared_ptr<CMap> map, std::string name) {
+    CResourcesProvider::getInstance()->save(vstd::join({"save/", name, ".json"}, ""), JSONIFY(map));
 }
 
 void CMapLoader::handleTileLayer(std::shared_ptr<CMap> map, const Value &tileset, const Value &layer) {
@@ -111,7 +112,6 @@ void CMapLoader::handleObjectLayer(std::shared_ptr<CMap> map, const Value &layer
     }
 }
 
-#include "core/CTypes.h"
 
 std::shared_ptr<CGame> CGameLoader::loadGame() {
     std::shared_ptr<CGame> game = std::make_shared<CGame>();
