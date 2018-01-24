@@ -92,6 +92,11 @@ std::set<std::string> CResourcesProvider::getFiles(CResType type) {
 }
 
 void CResourcesProvider::save(std::string file, std::string data) {
+    boost::filesystem::path path(file);
+    boost::filesystem::path dir = path.parent_path();
+    if (!boost::filesystem::exists(dir)) {
+        boost::filesystem::create_directory(dir);
+    }
     std::ofstream f(file);
     f << data;
 }
