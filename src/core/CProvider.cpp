@@ -74,7 +74,7 @@ std::set<std::string> CResourcesProvider::getFiles(CResType type) {
             break;
         case SAVE:
             folderName = "save";
-            suffix = "sav";
+            suffix = "json";
             break;
     }
     boost::filesystem::recursive_directory_iterator dir(folderName), end;
