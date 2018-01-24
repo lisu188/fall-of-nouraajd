@@ -181,4 +181,5 @@ void CPathFinder::saveMap(Coords start, std::function<bool(const Coords &)> canS
         SDL_FillRect(surface, &rect, SDL_MapRGB(surface->format, scale * val, scale * val, scale * val));
     }
     IMG_SavePNG(surface, path.c_str());
+    SDL_FreeSurface(surface);
 }
