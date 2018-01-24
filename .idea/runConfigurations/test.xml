@@ -1,5 +1,5 @@
 <component name="ProjectRunConfigurationManager">
-  <configuration default="false" name="test" type="CMakeRunConfiguration" factoryName="Application" PROGRAM_PARAMS="test.py" WORKING_DIR="file://$PROJECT_DIR$/cmake-build-debug" PASS_PARENT_ENVS_2="true" PROJECT_NAME="fall-of-nouraajd" TARGET_NAME="_game" CONFIG_NAME="Debug" RUN_PATH="/usr/bin/python3">
+  <configuration default="false" name="test" type="CMakeRunConfiguration" factoryName="Application" singleton="true" PROGRAM_PARAMS="test.py" WORKING_DIR="file://$PROJECT_DIR$/cmake-build-debug" PASS_PARENT_ENVS_2="true" PROJECT_NAME="fall-of-nouraajd" TARGET_NAME="_game" CONFIG_NAME="Debug" RUN_PATH="/usr/bin/python3">
     <envs />
     <method />
   </configuration>
