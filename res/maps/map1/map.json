@@ -12,7 +12,7 @@
           "properties": {
             "chance": "10",
             "monster": "{\"ref\":\"Pritz\",\"properties\":{\"affiliation\":\"gooby\",\"controller\":{\"class\":\"CGroundController\",\"properties\":{\"tileType\":\"ground\"}}}}",
-            "monsters": "1000"
+            "monsters": "10"
           },
           "propertytypes": {
             "chance": "string",
@@ -69,7 +69,7 @@
           "properties": {
             "chance": "10",
             "monster": "{\"ref\":\"OctoBogz\",\"properties\":{\"affiliation\":\"bogz\",\"controller\":{\"class\":\"CRangeController\",\"properties\":{\"target\":\"cave2\",\"distance\":10}}}}",
-            "monsters": "1000"
+            "monsters": "5"
           },
           "propertytypes": {
             "chance": "string",
