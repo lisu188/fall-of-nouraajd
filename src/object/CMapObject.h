@@ -15,7 +15,8 @@ class CMapObject : public CGameObject, public Creatable, public Turnable {
 V_META(CMapObject, CGameObject,
        V_PROPERTY(CMapObject, int, posx, getPosX, setPosX),
        V_PROPERTY(CMapObject, int, posy, getPosY, setPosY),
-       V_PROPERTY(CMapObject, int, posz, getPosZ, setPosZ)
+       V_PROPERTY(CMapObject, int, posz, getPosZ, setPosZ),
+       V_PROPERTY(CMapObject, std::string, affiliation, getAffiliation, setAffiliation)
 )
 
 public:
@@ -23,19 +24,16 @@ public:
 
     virtual ~CMapObject();
 
-    void setPosX(int posx) {
-        this->posx = posx;
-    }
+    void setPosX(int posx);
 
-    void setPosY(int posy) {
-        this->posy = posy;
-    }
+    void setPosY(int posy);
 
-    void setPosZ(int posz) {
-        this->posz = posz;
-    }
+    void setPosZ(int posz);
 
-    int posx = 0, posy = 0, posz = 0;
+
+    std::string getAffiliation();
+
+    void setAffiliation(const std::string &affiliation);
 
     int getPosX() const;
 
@@ -60,6 +58,14 @@ public:
     void moveTo(int x, int y, int z);
 
     void moveTo(Coords coords);
+
+    bool isAffiliatedWith(std::shared_ptr<CMapObject> object);
+
+private:
+    int posx = 0;
+    int posy = 0;
+    int posz = 0;
+    std::string affiliation;
 };
 
 

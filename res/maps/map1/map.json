@@ -3,7 +3,6 @@
   "layers": [
     {
       "draworder": "topdown",
-      "height": 200,
       "name": "Object Layer",
       "objects": [
         {
@@ -12,7 +11,7 @@
           "name": "cave1",
           "properties": {
             "chance": "10",
-            "monster": "{\"ref\":\"Pritz\",\"properties\":{\"controller\":{\"class\":\"CGroundController\",\"properties\":{\"tileType\":\"ground\"}}}}",
+            "monster": "{\"ref\":\"Pritz\",\"properties\":{\"affiliation\":\"gooby\",\"controller\":{\"class\":\"CGroundController\",\"properties\":{\"tileType\":\"ground\"}}}}",
             "monsters": "1000"
           },
           "propertytypes": {
@@ -69,7 +68,7 @@
           "name": "cave2",
           "properties": {
             "chance": "10",
-            "monster": "{\"ref\":\"OctoBogz\",\"properties\":{\"controller\":{\"class\":\"CRangeController\",\"properties\":{\"target\":\"cave2\",\"distance\":10}}}}",
+            "monster": "{\"ref\":\"OctoBogz\",\"properties\":{\"affiliation\":\"bogz\",\"controller\":{\"class\":\"CRangeController\",\"properties\":{\"target\":\"cave2\",\"distance\":10}}}}",
             "monsters": "1000"
           },
           "propertytypes": {
@@ -240,7 +239,6 @@
       },
       "type": "objectgroup",
       "visible": true,
-      "width": 200,
       "x": 0,
       "y": 0
     },
@@ -40263,7 +40261,7 @@
         "yBound": "string"
       },
       "type": "tilelayer",
-      "visible": true,
+      "visible": false,
       "width": 200,
       "x": 0,
       "y": 0
@@ -40282,6 +40280,7 @@
     "z": "string"
   },
   "renderorder": "right-down",
+  "tiledversion": "1.0.2",
   "tileheight": 32,
   "tilesets": [
     {
@@ -40369,6 +40368,7 @@
     }
   ],
   "tilewidth": 32,
+  "type": "map",
   "version": 1,
   "width": 200
 }
