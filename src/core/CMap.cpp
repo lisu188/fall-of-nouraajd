@@ -302,8 +302,10 @@ void CMap::resolveFights() {
             }
         };
         auto pred = [mapObject](std::shared_ptr<CMapObject> visitor) {
-            return vstd::cast<CCreature>(mapObject) && vstd::cast<CCreature>(visitor) && mapObject != visitor &&
-                   mapObject->getCoords() == visitor->getCoords();
+            return vstd::cast<CCreature>(mapObject) && vstd::cast<CCreature>(visitor)
+                   && mapObject != visitor
+                   && mapObject->getCoords() == visitor->getCoords()
+                   && !mapObject->isAffiliatedWith(visitor);
         };
         forObjects(action, pred);
     });
