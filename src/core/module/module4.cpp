@@ -37,6 +37,7 @@ void initModule4() {
             .def("getStats", &CCreature::getStats)
             .def("addManaProc", &CCreature::addManaProc)
             .def("isPlayer", &CCreature::isPlayer)
+            .def("addExp", &CCreature::addExp)
             .def("useAction", &CCreature::useAction);
     class_<CPlayer, bases<CCreature>, boost::noncopyable, std::shared_ptr<CPlayer>>("CPlayer")
             .def("addQuest", &CPlayer::addQuest);

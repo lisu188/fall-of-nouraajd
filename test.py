@@ -1,6 +1,7 @@
-import game
 import json
 import unittest
+
+import game
 
 
 def game_test(f):
@@ -55,6 +56,20 @@ class GameTest(unittest.TestCase):
                     values.append((type1, type2, "second"))
                 if not object1.isAlive() and not object2.isAlive():
                     values.append((type1, type2, "both"))
+        return True, json.dumps(values)
+
+    @game_test
+    def test_level(self):
+        g = game.CGameLoader.loadGame()
+        game.CGameLoader.startGame(g, "empty")
+        creatures = g.getMap().getObjectHandler().getAllSubTypes("CCreature")
+        values = []
+        for type1 in creatures:
+            object = g.getMap().createObject(type1)
+            g.getMap().addObject(object)
+            while object.getLevel() < 25:
+                object.addExp(1000)
+            values.append(json.loads(game.jsonify(object)))
         return True, json.dumps(values)
 
     @game_test
