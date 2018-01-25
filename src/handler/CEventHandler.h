@@ -53,7 +53,7 @@ class CEventHandler : public CGameObject {
 public:
     void gameEvent(std::shared_ptr<CMapObject> mapObject, std::shared_ptr<CGameEvent> event) const;
 
-    void registerTrigger(std::string name, std::string type, std::function<std::shared_ptr<CTrigger>()> trigger);
+    void registerTrigger(std::shared_ptr<CTrigger> trigger);
 
 private:
     TriggerMap triggers;
