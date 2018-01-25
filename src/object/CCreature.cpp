@@ -2,7 +2,7 @@
 #include "CCreature.h"
 #include "core/CGame.h"
 #include "core/CController.h"
-
+#include "core/CMap.h"
 
 void CCreature::setActions(std::set<std::shared_ptr<CInteraction>> value) {
     actions = value;
@@ -49,7 +49,7 @@ void CCreature::addExp(int exp) {
 std::shared_ptr<CInteraction> CCreature::getLevelAction() {
     std::string levelString = std::to_string(level);
     if (vstd::ctn(levelling, levelString)) {
-        return getMap()->getObjectHandler()->clone<CInteraction>(levelling[levelString]);
+        return getGame()->getObjectHandler()->clone<CInteraction>(levelling[levelString]);
     } else {
         return nullptr;
     }

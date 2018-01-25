@@ -57,3 +57,9 @@ std::shared_ptr<CSlotConfig> CGame::getSlotConfiguration() {
         return createObject<CSlotConfig>("slotConfiguration");
     });
 }
+
+std::shared_ptr<CLootHandler> CGame::getLootHandler() {
+    return lootHandler.get([this]() {
+        return std::make_shared<CLootHandler>(this->ptr<CGame>());
+    });
+}

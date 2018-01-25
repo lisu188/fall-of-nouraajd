@@ -1,6 +1,6 @@
 #include "CPlayer.h"
 #include "core/CGame.h"
-
+#include "core/CMap.h"
 CPlayer::CPlayer() {
 
 }
@@ -34,7 +34,7 @@ void CPlayer::onDestroy(std::shared_ptr<CGameEvent> event) {
 
 
 void CPlayer::addQuest(std::string questName) {
-    std::shared_ptr<CQuest> quest = getMap()->createObject<CQuest>(questName);
+    std::shared_ptr<CQuest> quest = getGame()->createObject<CQuest>(questName);
     if (quest) {
         //TODO:
         quests.insert(quest);

@@ -2,7 +2,8 @@
 
 #include "CGameTradePanel.h"
 #include "gui/CTextureCache.h"
-
+#include "core/CGame.h"
+#include "core/CMap.h"
 void CGameTradePanel::panelRender(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> pRect, int i) {
     drawInventory(gui, pRect, i);
     drawMarket(gui, pRect, i);

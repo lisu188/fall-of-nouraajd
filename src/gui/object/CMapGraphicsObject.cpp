@@ -45,19 +45,19 @@ CMapGraphicsObject::CMapGraphicsObject() {
     registerEventCallback([](std::shared_ptr<CGui> gui, SDL_Event *event) {
         return event->type == SDL_KEYDOWN && event->key.keysym.sym == SDLK_i;
     }, [](std::shared_ptr<CGui> gui, SDL_Event *event) {
-        gui->addObject(gui->getGame()->getMap()->createObject<CGameInventoryPanel>("inventoryPanel"));
+        gui->addObject(gui->getGame()->createObject<CGameInventoryPanel>("inventoryPanel"));
         return true;
     });
     registerEventCallback([](std::shared_ptr<CGui> gui, SDL_Event *event) {
         return event->type == SDL_KEYDOWN && event->key.keysym.sym == SDLK_j;
     }, [](std::shared_ptr<CGui> gui, SDL_Event *event) {
-        gui->addObject(gui->getGame()->getMap()->createObject<CGameQuestPanel>("questPanel"));
+        gui->addObject(gui->getGame()->createObject<CGameQuestPanel>("questPanel"));
         return true;
     });
     registerEventCallback([](std::shared_ptr<CGui> gui, SDL_Event *event) {
         return event->type == SDL_KEYDOWN && event->key.keysym.sym == SDLK_c;
     }, [](std::shared_ptr<CGui> gui, SDL_Event *event) {
-        gui->addObject(gui->getGame()->getMap()->createObject<CGameCharacterPanel>("characterPanel"));
+        gui->addObject(gui->getGame()->createObject<CGameCharacterPanel>("characterPanel"));
         return true;
     });
     registerEventCallback([](std::shared_ptr<CGui> gui, SDL_Event *event) {

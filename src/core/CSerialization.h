@@ -3,7 +3,7 @@
 #include "core/CGlobal.h"
 
 
-class CMap;
+class CGame;
 
 class CGameObject;
 
@@ -18,7 +18,7 @@ public:
               object) = 0;
 
     virtual boost::any
-    deserialize(std::shared_ptr<CMap> map, boost::any
+    deserialize(std::shared_ptr<CGame> map, boost::any
     object) = 0;
 };
 
@@ -31,7 +31,7 @@ public:
     }
 
     template<typename T=Serialized, typename V=Deserialized>
-    static V deserialize(std::shared_ptr<CMap> map, T serialized,
+    static V deserialize(std::shared_ptr<CGame> map, T serialized,
                          typename std::enable_if<vstd::is_shared_ptr<V>::value>::type * = 0) {
         return std::dynamic_pointer_cast<typename V::element_type>(
                 CSerializerFunction<T, std::shared_ptr<CGameObject>>::deserialize(map, serialized));
@@ -44,7 +44,7 @@ public:
     }
 
     template<typename T=Serialized, typename V=Deserialized>
-    static V deserialize(std::shared_ptr<CMap> map, T serialized,
+    static V deserialize(std::shared_ptr<CGame> map, T serialized,
                          typename std::enable_if<vstd::is_set<V>::value>::type * = 0) {
         return vstd::cast<V>(
                 CSerializerFunction<T, std::set<std::shared_ptr<CGameObject>>>::deserialize(map, serialized));
@@ -57,7 +57,7 @@ public:
     }
 
     template<typename T=Serialized, typename V=Deserialized>
-    static V deserialize(std::shared_ptr<CMap> map, T serialized,
+    static V deserialize(std::shared_ptr<CGame> map, T serialized,
                          typename std::enable_if<vstd::is_map<V>::value>::type * = 0) {
         return vstd::cast<V>(
                 CSerializerFunction<T, std::map<std::string, std::shared_ptr<CGameObject> >>::deserialize(map,
@@ -66,21 +66,21 @@ public:
 };
 
 //inline this functions
-extern std::set<std::shared_ptr<CGameObject> > array_deserialize(std::shared_ptr<CMap> map,
+extern std::set<std::shared_ptr<CGameObject> > array_deserialize(std::shared_ptr<CGame> map,
                                                                  std::shared_ptr<Value> object);
 
 extern std::shared_ptr<Value> array_serialize(std::set<std::shared_ptr<CGameObject> > set);
 
-extern std::map<std::string, std::shared_ptr<CGameObject> > map_deserialize(std::shared_ptr<CMap> map,
+extern std::map<std::string, std::shared_ptr<CGameObject> > map_deserialize(std::shared_ptr<CGame> map,
                                                                             std::shared_ptr<Value> object);
 
 extern std::shared_ptr<Value> map_serialize(std::map<std::string, std::shared_ptr<CGameObject> > object);
 
-extern std::shared_ptr<CGameObject> object_deserialize(std::shared_ptr<CMap> map, std::shared_ptr<Value> config);
+extern std::shared_ptr<CGameObject> object_deserialize(std::shared_ptr<CGame> game, std::shared_ptr<Value> config);
 
 extern std::shared_ptr<Value> object_serialize(std::shared_ptr<CGameObject> object);
 
-extern std::set<std::string> array_string_deserialize(std::shared_ptr<CMap> map,
+extern std::set<std::string> array_string_deserialize(std::shared_ptr<CGame> map,
                                                       std::shared_ptr<Value> object);
 
 extern std::shared_ptr<Value> array_string_serialize(std::set<std::string> set);
@@ -90,7 +90,7 @@ class CSerializerFunction<std::shared_ptr<Value>, std::shared_ptr<CGameObject>> 
 public:
     static std::shared_ptr<Value> serialize(std::shared_ptr<CGameObject> object);
 
-    static std::shared_ptr<CGameObject> deserialize(std::shared_ptr<CMap> map, std::shared_ptr<Value> config);
+    static std::shared_ptr<CGameObject> deserialize(std::shared_ptr<CGame> map, std::shared_ptr<Value> config);
 };
 
 template<>
@@ -98,7 +98,7 @@ class CSerializerFunction<std::shared_ptr<Value>, std::map<std::string, std::sha
 public:
     static std::shared_ptr<Value> serialize(std::map<std::string, std::shared_ptr<CGameObject> > object);
 
-    static std::map<std::string, std::shared_ptr<CGameObject> > deserialize(std::shared_ptr<CMap> map,
+    static std::map<std::string, std::shared_ptr<CGameObject> > deserialize(std::shared_ptr<CGame> map,
                                                                             std::shared_ptr<Value> object);
 };
 
@@ -107,7 +107,7 @@ class CSerializerFunction<std::shared_ptr<Value>, std::set<std::shared_ptr<CGame
 public:
     static std::shared_ptr<Value> serialize(std::set<std::shared_ptr<CGameObject> > set);
 
-    static std::set<std::shared_ptr<CGameObject> > deserialize(std::shared_ptr<CMap> map,
+    static std::set<std::shared_ptr<CGameObject> > deserialize(std::shared_ptr<CGame> map,
                                                                std::shared_ptr<Value> object);
 };
 
@@ -122,7 +122,7 @@ public:
     }
 
     virtual boost::any
-    deserialize(std::shared_ptr<CMap> map, boost::any
+    deserialize(std::shared_ptr<CGame> map, boost::any
     object) override final {
         return boost::any(
                 CSerializerFunction<Serialized, Deserialized>::deserialize(map, vstd::any_cast<Serialized>(object)));
@@ -133,12 +133,12 @@ template<typename Serialized, typename Deserialized>
 class CCustomSerializer : public CSerializerBase {
 private:
     std::function<Serialized(Deserialized)> _serialize;
-    std::function<Deserialized(std::shared_ptr<CMap>, Serialized)> _deserialize;
+    std::function<Deserialized(std::shared_ptr<CGame>, Serialized)> _deserialize;
 
 public:
 
     CCustomSerializer(std::function<Serialized(Deserialized)> _serialize,
-                      std::function<Deserialized(std::shared_ptr<CMap>, Serialized)> _deserialize)
+                      std::function<Deserialized(std::shared_ptr<CGame>, Serialized)> _deserialize)
             : _serialize(_serialize), _deserialize(_deserialize) {}
 
     virtual boost::any
@@ -149,7 +149,7 @@ public:
     }
 
     virtual boost::any
-    deserialize(std::shared_ptr<CMap> map, boost::any
+    deserialize(std::shared_ptr<CGame> map, boost::any
     object) override final {
         return boost::any(
                 _deserialize(map, vstd::any_cast<Serialized>(object)));
@@ -174,7 +174,7 @@ public:
     }
 
     template<typename Serialized, typename Deserialized>
-    static Deserialized deserialize(std::shared_ptr<CMap> map, Serialized serialized) {
+    static Deserialized deserialize(std::shared_ptr<CGame> map, Serialized serialized) {
         boost::any variant = serializer<Serialized, Deserialized>()
                 ->deserialize(map, boost::any(serialized));
         return vstd::any_cast<Deserialized>(variant);

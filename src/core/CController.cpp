@@ -2,6 +2,7 @@
 #include "core/CController.h"
 #include "gui/panel/CGameFightPanel.h"
 #include "core/CGame.h"
+#include "core/CMap.h"
 
 CTargetController::CTargetController(std::shared_ptr<CMapObject> target) : target(target) {
 
@@ -189,7 +190,7 @@ void CFightController::end(std::shared_ptr<CCreature> me, std::shared_ptr<CCreat
 
 void CPlayerFightController::start(std::shared_ptr<CCreature> me, std::shared_ptr<CCreature> opponent) {
     vstd::if_not_null(me->getMap()->getGame()->getGui(), [&](auto gui) {
-        fightPanel = me->getMap()->createObject<CGameFightPanel>("fightPanel");
+        fightPanel = me->getGame()->createObject<CGameFightPanel>("fightPanel");
         fightPanel->setEnemy(opponent);
         gui->addObject(fightPanel);
         return 0;

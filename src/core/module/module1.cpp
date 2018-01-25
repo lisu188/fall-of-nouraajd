@@ -1,5 +1,6 @@
-#include "object/CGameObject.h"
 #include "core/CGame.h"
+#include "object/CGameObject.h"
+#include "core/CMap.h"
 
 using namespace boost::python;
 
@@ -42,12 +43,9 @@ void initModule1() {
             .def("getPlayer", &CMap::getPlayer)
             .def("getLocationByName", &CMap::getLocationByName)
             .def("removeAll", &CMap::removeObjects)
-            .def("getObjectHandler", &CMap::getObjectHandler)
             .def("getEventHandler", &CMap::getEventHandler)
             .def("addObject", &CMap::addObject)
-            .def("createObject", &CMap::createObject<CGameObject>)
             .def("getGame", &CMap::getGame)
-            .def("load_plugin", &CMap::load_plugin)
             .def("move", &CMap::move)
             .def("getObjectByName", &CMap::getObjectByName)
             .def("forObjects", &CMap::forObjects)

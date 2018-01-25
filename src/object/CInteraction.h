@@ -1,7 +1,7 @@
 #pragma once
 
 #include "core/CGlobal.h"
-#include "core/CMap.h"
+#include "object/CGameObject.h"
 
 class CCreature;
 

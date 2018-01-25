@@ -1,3 +1,4 @@
+#include "core/CGame.h"
 #include "core/CWrapper.h"
 
 using namespace boost::python;

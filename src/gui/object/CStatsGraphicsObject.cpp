@@ -1,7 +1,7 @@
 #include "object/CPlayer.h"
 #include "CStatsGraphicsObject.h"
 #include "gui/CGui.h"
-
+#include "core/CMap.h"
 void CStatsGraphicsObject::render(std::shared_ptr<CGui> gui, SDL_Rect *pos, int frameTime) {
     drawBar(gui, gui->getGame()->getMap()->getPlayer()->getHpRatio(), 0, pos, RED);
     drawBar(gui, gui->getGame()->getMap()->getPlayer()->getManaRatio(), 1, pos, BLUE);

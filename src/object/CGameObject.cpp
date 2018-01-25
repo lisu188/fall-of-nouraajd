@@ -3,7 +3,8 @@
 
 
 #include "gui/CAnimation.h"
-
+#include "core/CMap.h"
+#include "core/CGame.h"
 std::function<bool(std::shared_ptr<CGameObject>, std::shared_ptr<CGameObject>)> CGameObject::name_comparator = [](
         std::shared_ptr<CGameObject> a, std::shared_ptr<CGameObject> b) {
     return a->getType() == b->getType();
@@ -18,11 +19,15 @@ CGameObject::CGameObject() {
 }
 
 std::shared_ptr<CMap> CGameObject::getMap() {
-    return map.lock();
+    return getGame()->getMap();
 }
 
-void CGameObject::setMap(std::shared_ptr<CMap> map) {
-    this->map = map;
+std::shared_ptr<CGame> CGameObject::getGame() {
+    return game.lock();
+}
+
+void CGameObject::setGame(std::shared_ptr<CGame> map) {
+    this->game = map;
 }
 
 void CGameObject::setStringProperty(std::string name, std::string value) {
@@ -58,7 +63,7 @@ std::string CGameObject::to_string() {
 }
 
 std::shared_ptr<CGameObject> CGameObject::_clone() {
-    return map.lock()->getObjectHandler()->clone<CGameObject>(this->ptr());
+    return game.lock()->getObjectHandler()->clone<CGameObject>(this->ptr());
 }
 
 std::set<std::string> CGameObject::getTags() {

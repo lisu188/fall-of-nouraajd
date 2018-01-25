@@ -28,10 +28,11 @@ void CMapLoader::loadFromTmx(std::shared_ptr<CMap> map, std::shared_ptr<Value> m
 }
 
 std::shared_ptr<CMap> CMapLoader::loadNewMap(std::shared_ptr<CGame> game, std::string name) {
-    std::shared_ptr<CMap> map = std::make_shared<CMap>(game);
+    std::shared_ptr<CMap> map = game->getObjectHandler()->createObject<CMap>(game, "CMap");
+    game->setMap(map);
     std::string path = vstd::join({"maps/", name}, "");
-    map->getObjectHandler()->registerConfig(vstd::join({path, "/config.json"}, ""));
-    CPluginLoader::load_plugin(map, vstd::join({path, "/script.py"}, ""));
+    game->getObjectHandler()->registerConfig(vstd::join({path, "/config.json"}, ""));
+    CPluginLoader::load_plugin(game, vstd::join({path, "/script.py"}, ""));
     std::shared_ptr<Value> mapc = CConfigurationProvider::getConfig(vstd::join({path, "/map.json"}, ""));
     loadFromTmx(map, mapc);
     return map;
@@ -51,7 +52,7 @@ std::shared_ptr<CMap> CMapLoader::loadNewMap(std::shared_ptr<CGame> game, std::s
 std::shared_ptr<CMap> CMapLoader::loadNewMapWithPlayer(std::shared_ptr<CGame> game, std::string name,
                                                        std::string player) {
     std::shared_ptr<CMap> map = loadNewMap(game, name);
-    map->setPlayer(map->createObject<CPlayer>(player));
+    map->setPlayer(game->createObject<CPlayer>(player));
     return map;
 }
 
@@ -79,7 +80,7 @@ void CMapLoader::handleTileLayer(std::shared_ptr<CMap> map, const Value &tileset
             id--;
             std::string tileId = std::to_string(id);
             std::string tileType = tileset[tileId.c_str()]["type"].asString();
-            map->addTile(map->createObject<CTile>(tileType), x, y, level);
+            map->addTile(map->getGame()->createObject<CTile>(tileType), x, y, level);
         }
     }
 }
@@ -94,7 +95,7 @@ void CMapLoader::handleObjectLayer(std::shared_ptr<CMap> map, const Value &layer
 
         int xPos = object["x"].asInt() / object["width"].asInt();
         int yPos = object["y"].asInt() / object["height"].asInt();
-        auto mapObject = map->createObject<CMapObject>(objectType);
+        auto mapObject = map->getGame()->createObject<CMapObject>(objectType);
         if (mapObject == nullptr) {
             vstd::logger::debug("Failed to load object:", objectType, objectName);
             continue;
@@ -194,11 +195,3 @@ void CPluginLoader::load_plugin(std::shared_ptr<CGame> game, std::string path) {
     game->getScriptHandler()->execute_script(vstd::join({"del", name}, " "));
 }
 
-void CPluginLoader::load_plugin(std::shared_ptr<CMap> map, std::string path) {
-    std::string code = CResourcesProvider::getInstance()->load(path);
-    std::string name = vstd::join({"CLASS", vstd::to_hex_hash(code)}, "");
-    map->getGame()->getScriptHandler()->add_class(name, code, {"game.CMapPlugin"});
-    map->load_plugin(
-            map->getGame()->getScriptHandler()->get_object<std::function<std::shared_ptr<CMapPlugin>()>>(name));
-    map->getGame()->getScriptHandler()->execute_script(vstd::join({"del", name}, " "));
-}

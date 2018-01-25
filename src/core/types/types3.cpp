@@ -1,8 +1,10 @@
+#include "core/CGame.h"
 #include "gui/panel/CGameQuestPanel.h"
 #include "core/CTypes.h"
 #include "core/CWrapper.h"
 #include "core/CController.h"
 #include "gui/CTextureCache.h"
+
 
 extern void add_member(std::shared_ptr<Value> object, std::string key, std::string value);
 
