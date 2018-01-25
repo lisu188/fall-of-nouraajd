@@ -178,6 +178,7 @@ configure_file(res/fonts/ampersand.ttf fonts/ampersand.ttf COPYONLY)
 configure_file(res/game.py game.py)
 
 configure_file(test.py test.py)
+configure_file(play.py play.py)
 
 install(TARGETS _game DESTINATION fall-of-nouraajd)
 install(DIRECTORY res/config DESTINATION fall-of-nouraajd)
@@ -187,6 +188,7 @@ install(DIRECTORY res/maps DESTINATION fall-of-nouraajd)
 install(DIRECTORY res/plugins DESTINATION fall-of-nouraajd)
 
 install(FILES res/game.py test.py DESTINATION fall-of-nouraajd)
+install(FILES res/play.py play.py DESTINATION fall-of-nouraajd)
 
 SET(CPACK_STRIP_FILES _game.so)
 
