@@ -2,7 +2,7 @@
 
 #include "core/CGlobal.h"
 #include "object/CObject.h"
-
+#include "core/CSerialization.h"
 
 class CTypes {
 public:
@@ -47,7 +47,8 @@ public:
 
     template<typename Serialized, typename Deserialized>
     static void register_custom_serializer(std::function<Serialized(Deserialized)> serialize,
-                                           std::function<Deserialized(std::shared_ptr<CMap>, Serialized)> deserialize) {
+                                           std::function<Deserialized(std::shared_ptr<CGame>,
+                                                                      Serialized)> deserialize) {
         (*serializers())[vstd::type_pair<Serialized, Deserialized>()] =
                 std::make_shared<CCustomSerializer<Serialized, Deserialized>>(serialize, deserialize);
     }

@@ -3,10 +3,6 @@
 #include "core/CController.h"
 #include "object/CTrigger.h"
 
-CMap::CMap(std::shared_ptr<CGame> game) : game(game) {
-
-}
-
 void CMap::ensureTile(int i, int j) {
     Coords coords(i, j, currentLevel);
     if (tiles.find(coords) == tiles.end()) {
@@ -32,7 +28,7 @@ void CMap::removeObjectByName(std::string name) {
 
 std::string CMap::addObjectByName(std::string name, Coords coords) {
     if (this->canStep(coords)) {
-        std::shared_ptr<CMapObject> object = createObject<CMapObject>(name);
+        std::shared_ptr<CMapObject> object = getGame()->createObject<CMapObject>(name);
         if (object) {
             addObject(object);
             object->moveTo(coords.x, coords.y, coords.z);
@@ -44,7 +40,7 @@ std::string CMap::addObjectByName(std::string name, Coords coords) {
 
 void CMap::replaceTile(std::string name, Coords coords) {
     removeTile(coords.x, coords.y, coords.z);
-    addTile(createObject<CTile>(name), coords.x, coords.y, coords.z);
+    addTile(getGame()->createObject<CTile>(name), coords.x, coords.y, coords.z);
 }
 
 Coords CMap::getLocationByName(std::string name) {
@@ -61,17 +57,7 @@ void CMap::setPlayer(std::shared_ptr<CPlayer> player) {
     this->player = player;
 }
 
-std::shared_ptr<CLootHandler> CMap::getLootHandler() {
-    return lootHandler.get([this]() {
-        return std::make_shared<CLootHandler>(this->ptr<CMap>());
-    });
-}
 
-std::shared_ptr<CObjectHandler> CMap::getObjectHandler() {
-    return objectHandler.get([this]() {
-        return std::make_shared<CObjectHandler>(getGame()->getObjectHandler());
-    });
-}
 
 std::shared_ptr<CEventHandler> CMap::getEventHandler() {
     return eventHandler.get([this]() {
@@ -105,10 +91,6 @@ int CMap::getCurrentMap() {
     return currentLevel;
 }
 
-std::shared_ptr<CGame> CMap::getGame() const {
-    return game.lock();
-}
-
 void CMap::mapUp() {
     currentLevel--;
 }
@@ -124,9 +106,9 @@ std::shared_ptr<CTile> CMap::getTile(int x, int y, int z) {
     if (it == this->tiles.end()) {
         auto bound = boundaries[z];
         if (x < 0 || y < 0 || x > bound.first || y > bound.second) {
-            tile = createObject<CTile>("MountainTile");
+            tile = getGame()->createObject<CTile>("MountainTile");
         } else {
-            tile = createObject<CTile>(defaultTiles[z]);
+            tile = getGame()->createObject<CTile>(defaultTiles[z]);
         }
         if (tile) {
             this->addTile(tile, x, y, z);
@@ -164,7 +146,6 @@ bool CMap::contains(int x, int y, int z) {
 void CMap::addObject(std::shared_ptr<CMapObject> mapObject) {
     vstd::fail_if(vstd::ctn(mapObjects, mapObject->getName()),
                   "Map object already exists: " + mapObject->getName());
-    mapObject->setMap(this->ptr<CMap>());
     std::shared_ptr<CCreature> creature = vstd::cast<CCreature>(mapObject);
     if (creature.get()) {
         if (creature->getLevel() == 0) {
@@ -306,9 +287,6 @@ void CMap::resolveFights() {
     });
 }
 
-void CMap::load_plugin(std::function<std::shared_ptr<CMapPlugin>()> plugin) {
-    plugin()->load(this->ptr<CMap>());
-}
 
 CMap::CMap() {
 

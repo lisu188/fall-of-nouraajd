@@ -1,6 +1,6 @@
 #include "CItem.h"
 #include "core/CGame.h"
-
+#include "core/CMap.h"
 CItem::CItem() {
 }
 

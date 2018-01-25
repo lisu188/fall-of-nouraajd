@@ -2,6 +2,7 @@
 
 #include "CGameQuestPanel.h"
 #include "gui/CGui.h"
+#include "core/CMap.h"
 
 
 void CGameQuestPanel::panelRender(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> pRect, int i) {

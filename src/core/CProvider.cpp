@@ -1,3 +1,4 @@
+#include "core/CGame.h"
 #include "core/CProvider.h"
 #include "handler/CHandler.h"
 #include "core/CJsonUtil.h"

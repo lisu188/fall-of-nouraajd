@@ -2,7 +2,7 @@
 #include "core/CGame.h"
 #include "core/CJsonUtil.h"
 
-CObjectHandler::CObjectHandler(std::shared_ptr<CObjectHandler> parent) : parent(parent) {
+CObjectHandler::CObjectHandler() {
 
 }
 
@@ -16,8 +16,6 @@ void CObjectHandler::registerConfig(std::string path) {
 std::shared_ptr<Value> CObjectHandler::getConfig(std::string type) {
     if (vstd::ctn(objectConfig, type)) {
         return objectConfig[type];
-    } else if (parent.lock()) {
-        return parent.lock()->getConfig(type);
     }
     return nullptr;
 }
@@ -27,19 +25,12 @@ std::vector<std::string> CObjectHandler::getAllTypes() {
     for (std::string val:objectConfig | boost::adaptors::map_keys) {
         types.push_back(val);
     }
-    if (parent.lock()) {
-        for (std::string val:parent.lock()->getAllTypes()) {
-            types.push_back(val);
-        }
-    }
     return types;
 }
 
 std::shared_ptr<CGameObject> CObjectHandler::getType(std::string name) {
     if (vstd::ctn(constructors, name)) {
         return constructors[name]();
-    } else if (parent.lock()) {
-        return parent.lock()->getType(name);
     }
     return std::shared_ptr<CGameObject>();
 }
@@ -48,19 +39,20 @@ void CObjectHandler::registerType(std::string name, std::function<std::shared_pt
     constructors.insert(std::make_pair(name, constructor));
 }
 
-std::shared_ptr<CGameObject> CObjectHandler::_createObject(std::shared_ptr<CMap> map, std::string type) {
+std::shared_ptr<CGameObject> CObjectHandler::_createObject(std::shared_ptr<CGame> game, std::string type) {
     std::shared_ptr<Value> config = getConfig(type);
     if (!config) {
         vstd::logger::debug("No config found for:", type);
         config = CJsonUtil::from_string(vstd::join({"{\"class\":\"", type, "\"}"}, ""));
     }
-    return CSerialization::deserialize<std::shared_ptr<Value>, std::shared_ptr<CGameObject>>(map, config);
+    return CSerialization::deserialize<std::shared_ptr<Value>, std::shared_ptr<CGameObject>>(game, config);
 }
 
 std::shared_ptr<CGameObject> CObjectHandler::_clone(std::shared_ptr<CGameObject> object) {
     auto _object = CSerialization::serialize<std::shared_ptr<Value>, std::shared_ptr<CGameObject>>(object);
     //vstd::logger::debug("Cloning:", CJsonUtil::to_string(_object));
-    return CSerialization::deserialize<std::shared_ptr<Value>, std::shared_ptr<CGameObject>>(object->getMap(), _object);
+    return CSerialization::deserialize<std::shared_ptr<Value>, std::shared_ptr<CGameObject>>(object->getGame(),
+                                                                                             _object);
 }
 
 std::vector<std::string> CObjectHandler::getAllSubTypes(std::string claz) {

@@ -7,14 +7,10 @@
 #include "core/CProvider.h"
 #include "CPlugin.h"
 
-
-class CGame;
-
 class CTile;
 
 class CPlayer;
 
-class CLootHandler;
 
 class CInteraction;
 
@@ -28,6 +24,8 @@ class CMapObject;
 
 class CTrigger;
 
+class CGame;
+
 class CMap : public CGameObject {
     friend class CMapLoader;
 
@@ -38,7 +36,6 @@ V_META(CMap, CGameObject, V_PROPERTY(CMap, int, turn, getTurn, setTurn),
 public:
     CMap();
 
-    CMap(std::shared_ptr<CGame> game);
 
     bool addTile(std::shared_ptr<CTile> tile, int x, int y, int z);
 
@@ -56,7 +53,6 @@ public:
 
     void removeObject(std::shared_ptr<CMapObject> mapObject);
 
-    std::shared_ptr<CGame> getGame() const;
 
     void mapUp();
 
@@ -92,9 +88,6 @@ public:
 
     void moveTile(std::shared_ptr<CTile> tile, int x, int y, int z);
 
-    std::shared_ptr<CLootHandler> getLootHandler();
-
-    std::shared_ptr<CObjectHandler> getObjectHandler();
 
     std::shared_ptr<CEventHandler> getEventHandler();
 
@@ -116,14 +109,6 @@ public:
                   std::function<bool(std::shared_ptr<CTile>)> predicate = [](std::shared_ptr<CTile>) { return true; });
 
     void removeObjects(std::function<bool(std::shared_ptr<CMapObject>)> func);
-
-    template<typename T>
-    std::shared_ptr<T> createObject(std::string name) {
-        return getObjectHandler()->createObject<T>(this->ptr<CMap>(), name);
-    }
-
-
-    void load_plugin(std::function<std::shared_ptr<CMapPlugin>()> plugin);
 
     int getTurn();
 
@@ -149,7 +134,7 @@ private:
     std::unordered_map<std::string, std::shared_ptr<CMapObject>> mapObjects;
     std::unordered_map<Coords, std::shared_ptr<CTile>> tiles;
 
-    std::weak_ptr<CGame> game;
+
     std::shared_ptr<CPlayer> player;
     int currentLevel = 0;
     std::map<int, std::string> defaultTiles;
@@ -157,8 +142,7 @@ private:
     int entryx = 0;
     int entryz = 0;
     int entryy = 0;
-    vstd::lazy<CLootHandler> lootHandler;
-    vstd::lazy<CObjectHandler> objectHandler;
+
     vstd::lazy<CEventHandler> eventHandler;
     int turn = 0;
     bool moving = false;

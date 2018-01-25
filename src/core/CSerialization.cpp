@@ -80,7 +80,7 @@ void CSerialization::setOtherProperty(boost::typeindex::type_index serializedId,
                                       std::string key, boost::any value) {
     std::shared_ptr<CSerializerBase> serializer = (*CTypes::serializers())[std::make_pair(serializedId,
                                                                                           deserializedId)];
-    boost::any result = vstd::not_null(serializer, "No serializer!")->deserialize(object->getMap(), value);
+    boost::any result = vstd::not_null(serializer, "No serializer!")->deserialize(object->getGame(), value);
     if (CTypes::is_pointer_type(result.type())) {
         object->setProperty(key, vstd::any_cast<std::shared_ptr<CGameObject>>(result));
     } else if (CTypes::is_array_type(result.type())) {
@@ -163,16 +163,16 @@ std::shared_ptr<Value> object_serialize(std::shared_ptr<CGameObject> object) {
     return conf;
 }
 
-std::shared_ptr<CGameObject> object_deserialize(std::shared_ptr<CMap> map, std::shared_ptr<Value> config) {
+std::shared_ptr<CGameObject> object_deserialize(std::shared_ptr<CGame> game, std::shared_ptr<Value> config) {
     std::shared_ptr<CGameObject> object;
     if (CJsonUtil::isRef(config)) {
-        object = map->getObjectHandler()->createObject(map, (*config)["ref"].asString());
+        object = game->getObjectHandler()->createObject(game, (*config)["ref"].asString());
     } else if (CJsonUtil::isType(config)) {
-        object = map->getObjectHandler()->getType((*config)["class"].asString());
+        object = game->getObjectHandler()->getType((*config)["class"].asString());
         if (object) {
             object->setName(vstd::to_hex(object));
             object->setType((*config)["class"].asString());
-            object->setMap(map);
+            object->setGame(game);
         }
     }
     if (object && config->isObject() && config->isMember("properties")) {
@@ -193,7 +193,7 @@ std::shared_ptr<Value> map_serialize(std::map<std::string, std::shared_ptr<CGame
     return ob;
 }
 
-std::map<std::string, std::shared_ptr<CGameObject> > map_deserialize(std::shared_ptr<CMap> map,
+std::map<std::string, std::shared_ptr<CGameObject> > map_deserialize(std::shared_ptr<CGame> map,
                                                                      std::shared_ptr<Value> object) {
     std::map<std::string, std::shared_ptr<CGameObject> > ret;
     for (auto it :object->getMemberNames()) {
@@ -211,7 +211,7 @@ std::shared_ptr<Value> array_serialize(std::set<std::shared_ptr<CGameObject> > s
     return arr;
 }
 
-std::set<std::shared_ptr<CGameObject> > array_deserialize(std::shared_ptr<CMap> map,
+std::set<std::shared_ptr<CGameObject> > array_deserialize(std::shared_ptr<CGame> map,
                                                           std::shared_ptr<Value> object) {
     std::set<std::shared_ptr<CGameObject> > objects;
     for (unsigned int i = 0; i < object->size(); i++) {
@@ -242,7 +242,7 @@ std::shared_ptr<Value> CSerializerFunction<std::shared_ptr<Value>, std::set<std:
 
 std::set<std::shared_ptr<CGameObject> >
 CSerializerFunction<std::shared_ptr<Value>, std::set<std::shared_ptr<CGameObject> > >::deserialize(
-        std::shared_ptr<CMap> map, std::shared_ptr<Value> object) {
+        std::shared_ptr<CGame> map, std::shared_ptr<Value> object) {
     return array_deserialize(map, object);
 }
 
@@ -256,13 +256,13 @@ CSerializerFunction<std::shared_ptr<Value>, std::map<std::string, std::shared_pt
 
 std::map<std::string, std::shared_ptr<CGameObject> >
 CSerializerFunction<std::shared_ptr<Value>, std::map<std::string, std::shared_ptr<CGameObject> > >::deserialize(
-        std::shared_ptr<CMap> map, std::shared_ptr<Value> object) {
+        std::shared_ptr<CGame> map, std::shared_ptr<Value> object) {
     return map_deserialize(map, object);
 }
 
 
 std::shared_ptr<CGameObject> CSerializerFunction<std::shared_ptr<Value>, std::shared_ptr<CGameObject> >::deserialize(
-        std::shared_ptr<CMap> map, std::shared_ptr<Value> config) {
+        std::shared_ptr<CGame> map, std::shared_ptr<Value> config) {
     return object_deserialize(map, config);
 }
 

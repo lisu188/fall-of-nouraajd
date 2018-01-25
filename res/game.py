@@ -15,7 +15,7 @@ def trigger(context, event, object):
         trigger = context.createObject(f.__name__)
         trigger.setStringProperty('object', object)
         trigger.setStringProperty('event', event)
-        context.getEventHandler().registerTrigger(trigger)
+        context.getMap().getEventHandler().registerTrigger(trigger)
         return f
 
     return trigger_wrapper

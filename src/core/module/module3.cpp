@@ -1,3 +1,4 @@
+#include "core/CGame.h"
 #include "core/CLoader.h"
 #include "core/CEventLoop.h"
 #include "core/CWrapper.h"
@@ -26,11 +27,6 @@ void initModule3() {
     class_<CPlugin, bases<CGameObject>, boost::noncopyable, std::shared_ptr<CPlugin>>("CPluginBase", no_init);
     class_<CWrapper<CPlugin>, bases<CPlugin>, boost::noncopyable, std::shared_ptr<CWrapper<CPlugin>>>("CPlugin").
             def("load", &CWrapper<CPlugin>::load);
-
-    class_<CMapPlugin, bases<CGameObject>, boost::noncopyable, std::shared_ptr<CMapPlugin>>("CMapPluginBase", no_init);
-    class_<CWrapper<CMapPlugin>, bases<CMapPlugin>, boost::noncopyable, std::shared_ptr<CWrapper<CMapPlugin>>>(
-            "CMapPlugin").
-            def("load", &CWrapper<CMapPlugin>::load);
 
     class_<CEventLoop, bases<CGameObject>, boost::noncopyable, std::shared_ptr<CEventLoop>>("CEventLoop", no_init)
             .def("instance", &CEventLoop::instance)
