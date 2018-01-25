@@ -47,6 +47,14 @@ void CEventHandler::registerTrigger(std::shared_ptr<CTrigger> trigger) {
     triggers.insert(std::make_pair(std::make_pair(trigger->getObject(), trigger->getEvent()), trigger));
 }
 
+std::set<std::shared_ptr<CTrigger>> CEventHandler::getTriggers() {
+    std::set<std::shared_ptr<CTrigger>> triggers;
+    for (auto trigger: this->triggers | boost::adaptors::map_values) {
+        triggers.insert(trigger);
+    }
+    return triggers;
+}
+
 CGameEvent::CGameEvent(std::string type) : type(type) {
 
 }
