@@ -13,17 +13,11 @@ class CMap;
 
 class CObjectHandler : public CGameObject {
 public:
-    CObjectHandler(std::shared_ptr<CObjectHandler> parent = std::shared_ptr<CObjectHandler>());
+    CObjectHandler();
 
     template<typename T=CGameObject>
-    std::shared_ptr<T> createObject(std::shared_ptr<CMap> map, std::string type) {
-        std::shared_ptr<T> object = vstd::cast<T>(_createObject(map, type));
-        if (object) {
-            return object;
-        } else if (parent.lock()) {
-            return parent.lock()->createObject<T>(map, type);
-        }
-        return object;
+    std::shared_ptr<T> createObject(std::shared_ptr<CGame> game, std::string type) {
+        return vstd::cast<T>(_createObject(game, type));
     }
 
     template<typename T>
@@ -44,14 +38,11 @@ public:
     std::shared_ptr<Value> getConfig(std::string type);
 
 private:
-    std::shared_ptr<CGameObject> _createObject(std::shared_ptr<CMap> map, std::string type);
+    std::shared_ptr<CGameObject> _createObject(std::shared_ptr<CGame> map, std::string type);
 
     std::shared_ptr<CGameObject> _clone(std::shared_ptr<CGameObject> object);
 
     std::unordered_map<std::string, std::function<std::shared_ptr<CGameObject>() >> constructors;
 
     std::unordered_map<std::string, std::shared_ptr<Value>> objectConfig;
-
-    std::weak_ptr<CObjectHandler> parent;
-
 };

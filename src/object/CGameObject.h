@@ -8,6 +8,8 @@ class CGameEvent;
 
 class CMap;
 
+class CGame;
+
 class CAnimation;
 
 class CGameObject : public vstd::stringable, public std::enable_shared_from_this<CGameObject> {
@@ -25,10 +27,12 @@ public:
 
     virtual ~CGameObject();
 
-    //TODO: get rid of map as a property!
     std::shared_ptr<CMap> getMap();
 
-    void setMap(std::shared_ptr<CMap> map);
+    //TODO: get rid of game as a property!
+    std::shared_ptr<CGame> getGame();
+
+    void setGame(std::shared_ptr<CGame> game);
 
     template<typename T=CGameObject>
     std::shared_ptr<T> ptr() {
@@ -112,7 +116,7 @@ private:
     std::string animation;
 
     std::set<std::string> tags;
-    std::weak_ptr<CMap> map;
+    std::weak_ptr<CGame> game;
 };
 
 

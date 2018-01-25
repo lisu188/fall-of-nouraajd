@@ -30,8 +30,8 @@ class GameTest(unittest.TestCase):
         failed = []
         g = game.CGameLoader.loadGame()
         game.CGameLoader.startGame(g, "empty")
-        for type in g.getMap().getObjectHandler().getAllTypes():
-            object = g.getMap().createObject(type)
+        for type in g.getObjectHandler().getAllTypes():
+            object = g.createObject(type)
             if not object:
                 failed.append(type)
         return failed == [], failed
@@ -40,12 +40,12 @@ class GameTest(unittest.TestCase):
     def test_fights(self):
         g = game.CGameLoader.loadGame()
         game.CGameLoader.startGame(g, "empty")
-        creatures = g.getMap().getObjectHandler().getAllSubTypes("CCreature")
+        creatures = g.getObjectHandler().getAllSubTypes("CCreature")
         values = []
         for type1 in creatures:
             for type2 in creatures:
-                object1 = g.getMap().createObject(type1)
-                object2 = g.getMap().createObject(type2)
+                object1 = g.createObject(type1)
+                object2 = g.createObject(type2)
                 g.getMap().addObject(object1)
                 g.getMap().addObject(object2)
                 if not game.CFightHandler.fight(object1, object2):
@@ -62,10 +62,10 @@ class GameTest(unittest.TestCase):
     def test_level(self):
         g = game.CGameLoader.loadGame()
         game.CGameLoader.startGame(g, "empty")
-        creatures = g.getMap().getObjectHandler().getAllSubTypes("CCreature")
+        creatures = g.getObjectHandler().getAllSubTypes("CCreature")
         values = []
         for type1 in creatures:
-            object = g.getMap().createObject(type1)
+            object = g.createObject(type1)
             g.getMap().addObject(object)
             while object.getLevel() < 25:
                 object.addExp(1000)
@@ -84,6 +84,7 @@ class GameTest(unittest.TestCase):
         g = game.CGameLoader.loadGame()
         game.CGameLoader.startGameWithPlayer(g, "map1", "Warrior")
         g.getMap().dumpPaths("pathfinder.png")
+        return True, "pathfinder.png"
 
 
 if __name__ == '__main__':

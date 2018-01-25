@@ -14,13 +14,3 @@ public:
     virtual void load(std::shared_ptr<CGame> game);
 };
 
-class CMapPlugin : public CGameObject {
-V_META(CMapPlugin, CGameObject, vstd::meta::empty())
-public:
-    virtual void load(std::shared_ptr<CMap> map);
-};
-
-
-
-
-

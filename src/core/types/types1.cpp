@@ -1,3 +1,5 @@
+#include "core/CGame.h"
+#include "core/CMap.h"
 #include "gui/panel/CGameQuestPanel.h"
 #include "core/CTypes.h"
 #include "core/CWrapper.h"
@@ -48,10 +50,6 @@ namespace {
                 {
                     CTypes::register_type<CWrapper<CPlugin>, CPlugin, CGameObject>();
                 }
-                CTypes::register_type<CMapPlugin, CGameObject>();
-                {
-                    CTypes::register_type<CWrapper<CMapPlugin>, CMapPlugin, CGameObject>();
-                }
                 CTypes::register_type<CGame, CGameObject>();
                 CTypes::register_type<CMap, CGameObject>();
 
@@ -59,7 +57,7 @@ namespace {
 
             //TODO: add also std::map<std::string,std::string> and std::string
             //TODO: repeat for int
-            auto array_string_deserialize = [](std::shared_ptr<CMap> map,
+            auto array_string_deserialize = [](std::shared_ptr<CGame> game,
                                                std::shared_ptr<Value> object) {
 
                 std::set<std::string> objects;

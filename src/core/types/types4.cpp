@@ -1,3 +1,4 @@
+#include "core/CGame.h"
 #include "gui/panel/CGameQuestPanel.h"
 #include "gui/panel/CGameFightPanel.h"
 #include "gui/panel/CGameCharacterPanel.h"

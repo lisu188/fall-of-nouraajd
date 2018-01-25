@@ -2,7 +2,7 @@
 
 #include "core/CJsonUtil.h"
 #include "CGameCharacterPanel.h"
-
+#include "core/CMap.h"
 
 void CGameCharacterPanel::panelRender(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> pRect, int i) {
     if (texture == nullptr) {

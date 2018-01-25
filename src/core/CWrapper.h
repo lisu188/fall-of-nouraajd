@@ -158,15 +158,3 @@ public:
     }
 };
 
-template<>
-class CWrapper<CMapPlugin> : public CMapPlugin, public boost::python::wrapper<CWrapper<CMapPlugin>> {
-V_META(CWrapper<T>, CMapPlugin, vstd::meta::empty())
-public:
-    void load(std::shared_ptr<CMap> map) {
-        if (auto f = this->get_override("load")) {
-            PY_SAFE (f(map);)
-        } else {
-            this->CMapPlugin::load(map);
-        }
-    }
-};

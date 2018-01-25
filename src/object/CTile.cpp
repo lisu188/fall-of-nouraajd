@@ -1,6 +1,6 @@
 #include "CTile.h"
 #include "core/CGame.h"
-
+#include "core/CMap.h"
 CTile::CTile() {
 }
 

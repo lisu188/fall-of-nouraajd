@@ -16,7 +16,7 @@ void CInteraction::onAction(std::shared_ptr<CCreature> first, std::shared_ptr<CC
     this->performAction(first, second);
 
     if (effect) {
-        std::shared_ptr<CEffect> effect = getMap()->getObjectHandler()->clone(this->effect);
+        std::shared_ptr<CEffect> effect = this->effect->clone<CEffect>();
         effect->setCaster(first);
         if (this->configureEffect(effect)) {
             effect->setVictim(second);
