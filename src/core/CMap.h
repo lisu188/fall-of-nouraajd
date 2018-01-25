@@ -26,13 +26,15 @@ class CEventHandler;
 
 class CMapObject;
 
-//TODO: triggers saving
+class CTrigger;
+
 class CMap : public CGameObject {
     friend class CMapLoader;
 
 V_META(CMap, CGameObject, V_PROPERTY(CMap, int, turn, getTurn, setTurn),
        V_PROPERTY(CMap, std::set<std::shared_ptr<CMapObject>>, objects, getObjects, setObjects),
-       V_PROPERTY(CMap, std::set<std::shared_ptr<CTile>>, tiles, getTiles, setTiles))
+       V_PROPERTY(CMap, std::set<std::shared_ptr<CTile>>, tiles, getTiles, setTiles),
+       V_PROPERTY(CMap, std::set<std::shared_ptr<CTrigger>>, triggers, getTriggers, setTriggers))
 public:
     CMap();
 
@@ -136,6 +138,11 @@ public:
     void setTiles(std::set<std::shared_ptr<CTile>> objects);
 
     void dumpPaths(std::string path);
+
+    std::set<std::shared_ptr<CTrigger>> getTriggers();
+
+    void setTriggers(std::set<std::shared_ptr<CTrigger>> triggers);
+
 private:
     void resolveFights();
 
@@ -147,7 +154,9 @@ private:
     int currentLevel = 0;
     std::map<int, std::string> defaultTiles;
     std::map<int, std::pair<int, int> > boundaries;
-    int entryx, entryz, entryy;
+    int entryx = 0;
+    int entryz = 0;
+    int entryy = 0;
     vstd::lazy<CLootHandler> lootHandler;
     vstd::lazy<CObjectHandler> objectHandler;
     vstd::lazy<CEventHandler> eventHandler;

@@ -1,6 +1,7 @@
 #include "core/CMap.h"
 #include "core/CGame.h"
 #include "core/CController.h"
+#include "object/CTrigger.h"
 
 CMap::CMap(std::shared_ptr<CGame> game) : game(game) {
 
@@ -346,3 +347,14 @@ void CMap::dumpPaths(std::string path) {
         return this->canStep(coords);
     }, path);
 }
+
+std::set<std::shared_ptr<CTrigger>> CMap::getTriggers() {
+    return getEventHandler()->getTriggers();
+}
+
+void CMap::setTriggers(std::set<std::shared_ptr<CTrigger>> triggers) {
+    for (auto trigger:triggers) {
+        getEventHandler()->registerTrigger(trigger);
+    }
+}
+
