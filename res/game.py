@@ -11,7 +11,11 @@ def register(context):
 
 def trigger(context, event, object):
     def trigger_wrapper(f):
-        context.getEventHandler().registerTrigger(object, event, f)
+        context.getObjectHandler().registerType(f.__name__, f)
+        trigger = context.createObject(f.__name__)
+        trigger.setStringProperty('object', object)
+        trigger.setStringProperty('event', event)
+        context.getEventHandler().registerTrigger(trigger)
         return f
 
     return trigger_wrapper

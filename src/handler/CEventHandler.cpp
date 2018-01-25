@@ -43,9 +43,8 @@ void CEventHandler::gameEvent(std::shared_ptr<CMapObject> object, std::shared_pt
     );
 }
 
-void CEventHandler::registerTrigger(std::string name, std::string type,
-                                    std::function<std::shared_ptr<CTrigger>()> trigger) {
-    triggers.insert(std::make_pair(std::make_pair(name, type), trigger()));
+void CEventHandler::registerTrigger(std::shared_ptr<CTrigger> trigger) {
+    triggers.insert(std::make_pair(std::make_pair(trigger->getObject(), trigger->getEvent()), trigger));
 }
 
 CGameEvent::CGameEvent(std::string type) : type(type) {
