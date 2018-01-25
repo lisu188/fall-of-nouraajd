@@ -13,8 +13,8 @@
           "type": "PritzMage",
           "visible": true,
           "width": 32,
-          "x": 768,
-          "y": 0
+          "x": 544,
+          "y": 192
         }
       ],
       "opacity": 1,
