@@ -55,6 +55,7 @@ public:
 
     void registerTrigger(std::shared_ptr<CTrigger> trigger);
 
+    std::set<std::shared_ptr<CTrigger>> getTriggers();
 private:
     TriggerMap triggers;
 };
