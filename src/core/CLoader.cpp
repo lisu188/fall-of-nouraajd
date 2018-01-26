@@ -27,27 +27,46 @@ void CMapLoader::loadFromTmx(std::shared_ptr<CMap> map, std::shared_ptr<Value> m
     }
 }
 
-std::shared_ptr<CMap> CMapLoader::loadNewMap(std::shared_ptr<CGame> game, std::string name) {
+std::string getConfigPath(std::string mapName) {
+    std::string path = vstd::join({"maps/", mapName}, "");
+    return vstd::join({path, "/config.json"}, "");
+}
+
+std::string getScriptPath(std::string mapName) {
+    std::string path = vstd::join({"maps/", mapName}, "");
+    return vstd::join({path, "/script.py"}, "");
+}
+
+std::string getMapPath(std::string mapName) {
+    std::string path = vstd::join({"maps/", mapName}, "");
+    return vstd::join({path, "/map.json"}, "");
+}
+
+std::shared_ptr<CMap> CMapLoader::loadNewMap(std::shared_ptr<CGame> game, std::string mapName) {
     std::shared_ptr<CMap> map = game->getObjectHandler()->createObject<CMap>(game, "CMap");
     game->setMap(map);
-    std::string path = vstd::join({"maps/", name}, "");
-    game->getObjectHandler()->registerConfig(vstd::join({path, "/config.json"}, ""));
-    CPluginLoader::load_plugin(game, vstd::join({path, "/script.py"}, ""));
-    std::shared_ptr<Value> mapc = CConfigurationProvider::getConfig(vstd::join({path, "/map.json"}, ""));
+    game->getObjectHandler()->registerConfig(getConfigPath(mapName));
+    CPluginLoader::load_plugin(game, getScriptPath(mapName));
+    std::shared_ptr<Value> mapc = CConfigurationProvider::getConfig(getMapPath(mapName));
     loadFromTmx(map, mapc);
+    map->setMapName(mapName);
     return map;
 }
 
-//std::shared_ptr<CMap> CMapLoader::loadSavedMap ( std::shared_ptr<CGame> game,std::string name ) {
-//  std::shared_ptr<CMap> map=std::make_shared<CMap> ( game );
-//  std::string path="save/"+name+".sav";
-//  map->getObjectHandler()->registerConfig ( path+"/config.json" );
-//  map->getGame()->getScriptHandler()->addModule ( name,path+"/script.py" );
-//  map->getGame()->getScriptHandler()->call_function ( name+".load",map );
-//  std::shared_ptr<Value> mapc=CConfigurationProvider::getConfig ( path+"/map.json" );
-//  loadFromTmx ( map, mapc );
-//  return map;
-//}
+std::shared_ptr<CMap> CMapLoader::loadSavedMap(std::shared_ptr<CGame> game, std::string name) {
+    std::string path = "save/" + name + ".json";
+    std::shared_ptr<Value> save = CConfigurationProvider::getConfig(path);
+    std::string mapName = (*save)["properties"]["mapName"].asString();
+
+    game->getObjectHandler()->registerConfig(getConfigPath(mapName));
+    CPluginLoader::load_plugin(game, getScriptPath(mapName));
+    game->getObjectHandler()->registerConfig(getConfigPath(mapName));
+
+    game->getObjectHandler()->registerConfig(name, save);
+
+    std::shared_ptr<CMap> map = game->getObjectHandler()->createObject<CMap>(game, name);
+    return map;
+}
 
 std::shared_ptr<CMap> CMapLoader::loadNewMapWithPlayer(std::shared_ptr<CGame> game, std::string name,
                                                        std::string player) {
@@ -124,6 +143,10 @@ std::shared_ptr<CGame> CGameLoader::loadGame() {
 
 void CGameLoader::startGameWithPlayer(std::shared_ptr<CGame> game, std::string file, std::string player) {
     game->setMap(CMapLoader::loadNewMapWithPlayer(game, file, player));
+}
+
+void CGameLoader::loadSavedGame(std::shared_ptr<CGame> game, std::string save) {
+    game->setMap(CMapLoader::loadSavedMap(game, save));
 }
 
 void CGameLoader::startGame(std::shared_ptr<CGame> game, std::string file) {

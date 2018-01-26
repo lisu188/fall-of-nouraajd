@@ -15,7 +15,9 @@ def trigger(context, event, object):
         trigger = context.createObject(f.__name__)
         trigger.setStringProperty('object', object)
         trigger.setStringProperty('event', event)
-        context.getMap().getEventHandler().registerTrigger(trigger)
+        map = context.getMap()
+        if map:
+            map.getEventHandler().registerTrigger(trigger)
         return f
 
     return trigger_wrapper
@@ -29,5 +31,9 @@ def main():
         pass
 
 
-if __name__ == '__main__':
-    main()
+def load(save):
+    g = CGameLoader.loadGame()
+    CGameLoader.loadSavedGame(g, save)
+    CGameLoader.loadGui(g)
+    while CEventLoop.instance().run():
+        pass

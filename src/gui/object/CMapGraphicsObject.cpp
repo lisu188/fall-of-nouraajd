@@ -63,7 +63,7 @@ CMapGraphicsObject::CMapGraphicsObject() {
     registerEventCallback([](std::shared_ptr<CGui> gui, SDL_Event *event) {
         return event->type == SDL_KEYDOWN && event->key.keysym.sym == SDLK_s;
     }, [](std::shared_ptr<CGui> gui, SDL_Event *event) {
-        CMapLoader::save(gui->getGame()->getMap(), vstd::to_hex(gui->getGame()->getMap()));
+        CMapLoader::save(gui->getGame()->getMap(), gui->getGame()->getMap()->getName());
         return true;
     });
 }

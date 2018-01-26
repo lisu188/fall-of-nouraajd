@@ -13,6 +13,10 @@ void CObjectHandler::registerConfig(std::string path) {
     }
 }
 
+void CObjectHandler::registerConfig(std::string name, std::shared_ptr<Value> value) {
+    objectConfig[name] = value;
+}
+
 std::shared_ptr<Value> CObjectHandler::getConfig(std::string type) {
     if (vstd::ctn(objectConfig, type)) {
         return objectConfig[type];
@@ -51,8 +55,10 @@ std::shared_ptr<CGameObject> CObjectHandler::_createObject(std::shared_ptr<CGame
 std::shared_ptr<CGameObject> CObjectHandler::_clone(std::shared_ptr<CGameObject> object) {
     auto _object = CSerialization::serialize<std::shared_ptr<Value>, std::shared_ptr<CGameObject>>(object);
     //vstd::logger::debug("Cloning:", CJsonUtil::to_string(_object));
-    return CSerialization::deserialize<std::shared_ptr<Value>, std::shared_ptr<CGameObject>>(object->getGame(),
-                                                                                             _object);
+    std::shared_ptr<CGameObject> shared_ptr = CSerialization::deserialize<std::shared_ptr<Value>,
+            std::shared_ptr<CGameObject>>(object->getGame(), _object);
+    shared_ptr->setName(CSerialization::generateName(shared_ptr));
+    return shared_ptr;
 }
 
 std::vector<std::string> CObjectHandler::getAllSubTypes(std::string claz) {
@@ -69,6 +75,8 @@ std::vector<std::string> CObjectHandler::getAllSubTypes(std::string claz) {
     }
     return ret;
 }
+
+
 
 
 
