@@ -4,34 +4,6 @@ typedef std::function<bool(const Coords &, const Coords &)> Compare;
 typedef std::priority_queue<Coords, std::vector<Coords>, Compare> Queue;
 typedef std::shared_ptr<std::unordered_map<Coords, int>> Values;
 
-//TODO: implement
-//static   void dump ( Values values, Coords start, Coords end ) {
-//    int x = 0;
-//    int y = 0;
-//    double mval = 0;
-//    for ( std::pair<Coords, int> val: ( *values ) ) {
-//        if ( val.first.x > x ) {
-//            x = val.first.x;
-//        }
-//        if ( val.first.y > y ) {
-//            y = val.first.y;
-//        }
-//        if ( val.second > mval ) {
-//            mval = val.second;
-//        }
-//    }
-//    double scale = 256.0 / mval;
-//    QImage img ( QSize ( x + 1, y + 1 ), QImage::Format_RGB32 );
-//    img.fill ( 0 );
-//    for ( std::pair<Coords, int> val: ( *values ) ) {
-//        int rgb = val.second * scale;
-//        img.setPixel ( val.first.x, val.first.y, qRgb ( rgb, rgb, rgb ) );
-//    }
-//    std::stringstream stream;
-//    stream << "dump/dump" << start.x << "_" << start.y << "_" << end.x << "_" << end.y << ".png";
-//    img.save ( std::string::fromStdString ( stream.str() ), "png" );
-//}
-
 static Coords getNextStep(const Coords &start, const Coords &goal, Values values) {
     Coords target = start;
     for (Coords coords:NEAR_COORDS (start)) {
