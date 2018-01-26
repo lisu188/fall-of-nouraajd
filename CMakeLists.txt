@@ -177,6 +177,8 @@ configure_file(res/fonts/ampersand.ttf fonts/ampersand.ttf COPYONLY)
 
 configure_file(res/game.py game.py)
 
+configure_file(res/save/gooby.json save/gooby.json)
+
 configure_file(test.py test.py)
 configure_file(play.py play.py)
 
@@ -186,6 +188,7 @@ install(DIRECTORY res/fonts DESTINATION fall-of-nouraajd)
 install(DIRECTORY res/images DESTINATION fall-of-nouraajd)
 install(DIRECTORY res/maps DESTINATION fall-of-nouraajd)
 install(DIRECTORY res/plugins DESTINATION fall-of-nouraajd)
+install(DIRECTORY res/save DESTINATION fall-of-nouraajd)
 
 install(FILES res/game.py test.py DESTINATION fall-of-nouraajd)
 
