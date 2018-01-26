@@ -30,6 +30,7 @@ class CMap : public CGameObject {
     friend class CMapLoader;
 
 V_META(CMap, CGameObject, V_PROPERTY(CMap, int, turn, getTurn, setTurn),
+       V_PROPERTY(CMap, std::string, mapName, getMapName, setMapName),
        V_PROPERTY(CMap, std::set<std::shared_ptr<CMapObject>>, objects, getObjects, setObjects),
        V_PROPERTY(CMap, std::set<std::shared_ptr<CTile>>, tiles, getTiles, setTiles),
        V_PROPERTY(CMap, std::set<std::shared_ptr<CTrigger>>, triggers, getTriggers, setTriggers))
@@ -128,6 +129,10 @@ public:
 
     void setTriggers(std::set<std::shared_ptr<CTrigger>> triggers);
 
+    void setMapName(std::string mapName);
+
+    std::string getMapName();
+
 private:
     void resolveFights();
 
@@ -146,5 +151,6 @@ private:
     vstd::lazy<CEventHandler> eventHandler;
     int turn = 0;
     bool moving = false;
+    std::string mapName;
 };
 
