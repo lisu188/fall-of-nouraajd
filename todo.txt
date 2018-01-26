@@ -1,4 +1,3 @@
-//TODO: market bug/when configuration is present in map but type is present only in game causes load to fail
 //TODO: maybe implement custom setattr and getattr for properties
 //TODO: add mechanism to ensure registering every V_META in CTypes.cpp
 //TODO: weird fight bug after fight, player didnt return to position
