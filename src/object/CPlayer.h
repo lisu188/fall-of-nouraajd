@@ -5,6 +5,7 @@
 class CQuest;
 
 class CPlayer : public CCreature {
+    //TODO: add Quest property
 V_META(CPlayer, CCreature, vstd::meta::empty())
 
 public:

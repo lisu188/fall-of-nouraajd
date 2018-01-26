@@ -4,8 +4,6 @@ def load(self, context):
     from game import CQuest
     from game import register, trigger
 
-    context.setBoolProperty('completed', False)
-
     @register(context)
     class StartEvent(CEvent):
         def onEnter(self, event):
@@ -21,29 +19,30 @@ def load(self, context):
     @register(context)
     class MainQuest(CQuest):
         def isCompleted(self):
-            return context.getBoolProperty('completed')
+            return self.getGame().getMap().getBoolProperty('completed')
 
         def onComplete(self):
-            pass
+            print("MainQuest completed")
 
     @trigger(context, "onDestroy", "gooby1")
     class GoobyTrigger(CTrigger):
         def trigger(self, object, event):
-            object.getMap().getGame().getGuiHandler().showMessage("Gooby killed!!!")
-            context.setBoolProperty('completed', True)
+            object.getGame().getGuiHandler().showMessage("Gooby killed!!!")
+            object.getGame().getMap().setBoolProperty('completed', True)
 
     @trigger(context, "onDestroy", "cave1")
     class CaveTrigger(CTrigger):
         def trigger(self, object, event):
-            object.getMap().getGame().getGuiHandler().showMessage(
-                "You feel the ground shaking, and see the ratmen all around you!!! But the one part is missing in this puzzle. Letter said about the ratmen who was much bigger than the other. These here are just ordinary pritschers.")
-            gooby = object.getMap().createObject("Gooby")
+            object.getGame().getGuiHandler().showMessage(
+                "You feel the ground shaking, and see the ratmen all around you!!! But the one part is missin g in this puzzle. Letter said about the ratmen who was much bigger than the other. These here are just ordinary pritschers.")
+            gooby = object.getGame().createObject("Gooby")
             gooby.setStringProperty("objectName", "gooby1")
-            object.getMap().addObject(gooby)
+            object.getGame().getMap().addObject(gooby)
             gooby.moveTo(100, 100, 0)
-            object.getMap().getPlayer().addQuest("mainQuest")
+            object.getGame().getMap().setBoolProperty('completed', False)
+            object.getGame().getMap().getPlayer().addQuest("mainQuest")
 
     @trigger(context, "onEnter", "market1")
     class MarketTrigger(CTrigger):
         def trigger(self, object, event):
-            object.getMap().getGame().getGuiHandler().showTrade(object.getObjectProperty('market'))
+            object.getGame().getGuiHandler().showTrade(object.getObjectProperty('market'))

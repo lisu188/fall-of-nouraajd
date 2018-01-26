@@ -6,6 +6,7 @@ using namespace boost::python;
 
 void initModule1() {
     class_<CGameObject, boost::noncopyable, std::shared_ptr<CGameObject>>("CGameObject", no_init)
+            .def("getGame", &CGameObject::getGame)
             .def("getStringProperty", &CGameObject::getStringProperty)
             .def("getNumericProperty", &CGameObject::getNumericProperty)
             .def("getBoolProperty", &CGameObject::getBoolProperty)
