@@ -185,7 +185,7 @@ public:
     static void setProperty(std::shared_ptr<Value> conf, std::string propertyName, boost::any
     propertyValue);
 
-
+    static std::string generateName(std::shared_ptr<CGameObject> object);
 private:
     static boost::typeindex::type_index getProperty(std::shared_ptr<CGameObject> object, std::string name);
 

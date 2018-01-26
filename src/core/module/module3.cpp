@@ -19,7 +19,8 @@ void initModule3() {
             .def("loadGame", &CGameLoader::loadGame)
             .def("startGameWithPlayer", &CGameLoader::startGameWithPlayer)
             .def("startGame", &CGameLoader::startGame)
-            .def("loadGui", &CGameLoader::loadGui);
+            .def("loadGui", &CGameLoader::loadGui)
+            .def("loadSavedGame", &CGameLoader::loadSavedGame);
     class_<CMapLoader, boost::noncopyable, std::shared_ptr<CMapLoader>>("CMapLoader", no_init)
             .def("loadNewMapWithPlayer", &CMapLoader::loadNewMapWithPlayer)
             .def("loadNewMap", &CMapLoader::loadNewMap);

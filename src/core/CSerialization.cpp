@@ -3,6 +3,7 @@
 #include "core/CJsonUtil.h"
 #include "core/CTypes.h"
 
+
 std::shared_ptr<CSerializerBase> CSerialization::serializer(
         std::pair<boost::typeindex::type_index, boost::typeindex::type_index> key) {
     return (*CTypes::serializers())[key];
@@ -66,7 +67,9 @@ void CSerialization::setStringProperty(std::shared_ptr<CGameObject> object, std:
         } else {
             //TODO: make method that checks if object is JSON
             std::shared_ptr<Value> d = CJsonUtil::from_string(value);
-            if (!d || d->isString()) {
+            if (d && d->isNumeric() && vstd::str(d->asDouble()) != value) {
+                object->setStringProperty(key, value);
+            } else if (!d || d->isString()) {
                 object->setStringProperty(key, value);
             } else {
                 setProperty(object, key, d);
@@ -153,7 +156,7 @@ std::shared_ptr<Value> object_serialize(std::shared_ptr<CGameObject> object) {
         add_member(conf, "class", vstd::is_empty(object->getType()) ? object->meta()->name() : object->getType());
         std::shared_ptr<Value> properties = std::make_shared<Value>();
         for (std::shared_ptr<vstd::property> property: object->meta()->properties<CGameObject>(object)) {
-            if (property->name() != "name" && property->name() != "type") {
+            if (property->name() != "type") {
                 CSerialization::setProperty(properties, property->name(),
                                             object->getProperty<boost::any>(property->name()));
             }
@@ -170,7 +173,9 @@ std::shared_ptr<CGameObject> object_deserialize(std::shared_ptr<CGame> game, std
     } else if (CJsonUtil::isType(config)) {
         object = game->getObjectHandler()->getType((*config)["class"].asString());
         if (object) {
-            object->setName(vstd::to_hex(object));
+            if (vstd::is_empty(object->getName())) {
+                object->setName(CSerialization::generateName(object));
+            }
             object->setType((*config)["class"].asString());
             object->setGame(game);
         }
@@ -182,6 +187,11 @@ std::shared_ptr<CGameObject> object_deserialize(std::shared_ptr<CGame> game, std
         }
     }
     return object;
+}
+
+//TODO: handle collisions
+std::string CSerialization::generateName(std::shared_ptr<CGameObject> object) {
+    return vstd::to_hex_hash(to_hex(object), vstd::rand());
 }
 
 std::shared_ptr<Value> map_serialize(std::map<std::string, std::shared_ptr<CGameObject> > object) {

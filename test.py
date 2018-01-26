@@ -86,6 +86,12 @@ class GameTest(unittest.TestCase):
         g.getMap().dumpPaths("pathfinder.png")
         return True, "pathfinder.png"
 
+    @game_test
+    def test_load(self):
+        g = game.CGameLoader.loadGame()
+        game.CGameLoader.loadSavedGame(g, '0X20C7EE0')
+        return True, ""
+
 
 if __name__ == '__main__':
     unittest.main(testRunner=unittest.TextTestRunner())

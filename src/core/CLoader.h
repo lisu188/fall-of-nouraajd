@@ -12,7 +12,8 @@ public:
 
     static std::shared_ptr<CMap> loadNewMap(std::shared_ptr<CGame> game, std::string name);
 
-    //static std::shared_ptr<CMap> loadSavedMap ( std::shared_ptr<CGame> game, std::string name );//TODO: implement
+    static std::shared_ptr<CMap> loadSavedMap(std::shared_ptr<CGame> game, std::string name);
+
     static void save(std::shared_ptr<CMap> map, std::string name);
 
     static void loadFromTmx(std::shared_ptr<CMap> map, std::shared_ptr<Value> mapc);
@@ -22,6 +23,7 @@ private:
     static void handleTileLayer(std::shared_ptr<CMap> map, const Value &tileset, const Value &layer);
 
     static void handleObjectLayer(std::shared_ptr<CMap> map, const Value &layer);
+
 };
 
 #include "core/CGlobal.h"
@@ -39,6 +41,7 @@ public:
 
     static void loadGui(std::shared_ptr<CGame> game);
 
+    static void loadSavedGame(std::shared_ptr<CGame> game, std::string save);
 private:
     static void initObjectHandler(std::shared_ptr<CObjectHandler> handler);
 

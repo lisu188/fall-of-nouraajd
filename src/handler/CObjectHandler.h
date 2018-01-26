@@ -31,6 +31,8 @@ public:
 
     void registerConfig(std::string path);
 
+    void registerConfig(std::string name, std::shared_ptr<Value> value);
+
     void registerType(std::string name, std::function<std::shared_ptr<CGameObject>()> constructor);
 
     std::shared_ptr<CGameObject> getType(std::string name);
