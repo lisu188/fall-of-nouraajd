@@ -36,7 +36,7 @@ def load(self, context):
             object.getGame().getGuiHandler().showMessage(
                 "You feel the ground shaking, and see the ratmen all around you!!! But the one part is missin g in this puzzle. Letter said about the ratmen who was much bigger than the other. These here are just ordinary pritschers.")
             gooby = object.getGame().createObject("Gooby")
-            gooby.setStringProperty("objectName", "gooby1")
+            gooby.setStringProperty("name", "gooby1")
             object.getGame().getMap().addObject(gooby)
             gooby.moveTo(100, 100, 0)
             object.getGame().getMap().setBoolProperty('completed', False)
