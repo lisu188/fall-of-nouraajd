@@ -23,7 +23,7 @@ def trigger(context, event, object):
     return trigger_wrapper
 
 
-def main():
+def new():
     g = CGameLoader.loadGame()
     CGameLoader.startGameWithPlayer(g, "map1", "Warrior")
     CGameLoader.loadGui(g)
