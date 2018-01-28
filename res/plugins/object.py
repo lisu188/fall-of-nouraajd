@@ -27,12 +27,12 @@ def load(self, context):
                 location = self.getCoords()
                 for i in range(-1, 2):
                     for j in range(-1, 2):
-                        if j == 0 and i == 0 and not self.getMap().canStep(
-                                Coords(location.x + i, location.y + j, location.z)):
-                            continue;
-                        mon = self.getObjectProperty('monster').clone()
-                        self.getMap().addObject(mon)
-                        mon.moveTo(location.x + i, location.y + j, location.z)
+                        if not (j == 0 and i == 0):
+                            if self.getMap().canStep(
+                                    Coords(location.x + i, location.y + j, location.z)):
+                                mon = self.getObjectProperty('monster').clone()
+                                self.getMap().addObject(mon)
+                                mon.moveTo(location.x + i, location.y + j, location.z)
                 self.getMap().removeObject(self.ptr());  # TODO: WHY
 
         def onTurn(self, event):
