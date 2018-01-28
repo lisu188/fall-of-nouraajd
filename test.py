@@ -89,7 +89,7 @@ class GameTest(unittest.TestCase):
     @game_test
     def test_load(self):
         g = game.CGameLoader.loadGame()
-        game.CGameLoader.loadSavedGame(g, '0X20C7EE0')
+        game.CGameLoader.loadSavedGame(g, 'gooby')
         return True, ""
 
 
