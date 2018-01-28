@@ -1,6 +1,7 @@
 #include "CPlayer.h"
 #include "core/CGame.h"
 #include "core/CMap.h"
+
 CPlayer::CPlayer() {
 
 }
@@ -43,6 +44,10 @@ void CPlayer::addQuest(std::string questName) {
 
 std::set<std::shared_ptr<CQuest>> CPlayer::getQuests() {
     return quests;
+}
+
+void CPlayer::setQuests(std::set<std::shared_ptr<CQuest>> quests) {
+    this->quests = quests;
 }
 
 

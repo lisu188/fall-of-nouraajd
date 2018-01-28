@@ -5,8 +5,8 @@
 class CQuest;
 
 class CPlayer : public CCreature {
-    //TODO: add Quest property
-V_META(CPlayer, CCreature, vstd::meta::empty())
+V_META(CPlayer, CCreature,
+       V_PROPERTY(CPlayer, std::set<std::shared_ptr<CQuest>>, quests, getQuests, setQuests))
 
 public:
     CPlayer();
@@ -20,6 +20,9 @@ public:
     void addQuest(std::string questName);
 
     std::set<std::shared_ptr<CQuest>> getQuests();
+
+    void setQuests(std::set<std::shared_ptr<CQuest>> quests);
+
 private:
     void checkQuests();
 
