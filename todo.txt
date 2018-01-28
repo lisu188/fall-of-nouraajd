@@ -20,7 +20,6 @@
 //TODO: encapsulate SDL_RenderCopy
 //TODO: font manager
 //TODO: make panel hotkey configuration configurable
-//TODO: trigger for gooby not working
 //TODO: implement move cost
     //TODO: implement move points
     //TODO: implement dijkstra
