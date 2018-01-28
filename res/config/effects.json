@@ -37,10 +37,10 @@
   },
   "EndlessPainEffect": {
     "class": "EndlessPainEffect",
-    "tags": [
-      "stun"
-    ],
     "properties": {
+      "tags": [
+        "stun"
+      ],
       "duration": 2
     }
   },
@@ -58,10 +58,10 @@
   },
   "Stun": {
     "class": "Stun",
-    "tags": [
-      "stun"
-    ],
     "properties": {
+      "tags": [
+        "stun"
+      ],
       "duration": 2
     }
   }
