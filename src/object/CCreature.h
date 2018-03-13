@@ -79,6 +79,10 @@ public:
 
     int getExpRatio();
 
+    int getExpForNextLevel();
+
+    int getExpForLevel(int level);
+
     void attribChange();
 
     void heal(int i);

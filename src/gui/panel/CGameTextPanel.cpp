@@ -17,10 +17,6 @@ void CGameTextPanel::panelRender(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_
 
 }
 
-struct SDL_Texture *CGameTextPanel::loadTextTexture(std::shared_ptr<CGui> ptr) {
-
-}
-
 void CGameTextPanel::panelKeyboardEvent(std::shared_ptr<CGui> gui, SDL_Keycode i) {
     if (i == SDLK_SPACE) {
         gui->removeObject(this->ptr<CGameTextPanel>());

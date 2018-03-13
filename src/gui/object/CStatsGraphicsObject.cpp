@@ -2,12 +2,20 @@
 #include "CStatsGraphicsObject.h"
 #include "gui/CGui.h"
 #include "core/CMap.h"
+#include "gui/CTextManager.h"
+
 void CStatsGraphicsObject::render(std::shared_ptr<CGui> gui, SDL_Rect *pos, int frameTime) {
     drawBar(gui, gui->getGame()->getMap()->getPlayer()->getHpRatio(), 0, pos, RED);
+    drawValues(gui, gui->getGame()->getMap()->getPlayer()->getHp(), gui->getGame()->getMap()->getPlayer()->getHpMax(),
+               0, pos);
     drawBar(gui, gui->getGame()->getMap()->getPlayer()->getManaRatio(), 1, pos, BLUE);
+    drawValues(gui, gui->getGame()->getMap()->getPlayer()->getMana(),
+               gui->getGame()->getMap()->getPlayer()->getManaMax(), 1, pos);
     drawBar(gui, gui->getGame()->getMap()->getPlayer()->getExpRatio(), 2, pos, YELLOW);
+    drawValues(gui, gui->getGame()->getMap()->getPlayer()->getExp(),
+               gui->getGame()->getMap()->getPlayer()->getExpForNextLevel(), 2,
+               pos);
 }
-
 
 
 CStatsGraphicsObject::CStatsGraphicsObject() {
@@ -34,4 +42,10 @@ CStatsGraphicsObject::drawBar(std::shared_ptr<CGui> gui, int ratio, int index, S
 
     SDL_SetRenderDrawColor(gui->getRenderer(), BLACK);
     SDL_RenderFillRect(gui->getRenderer(), &emptyBar);
+}
+
+void
+CStatsGraphicsObject::drawValues(std::shared_ptr<CGui> gui, int left, int right, int index, SDL_Rect *pos) {
+    gui->getTextManager()->drawTextCentered(vstd::str(left) + "/" + vstd::str(right), pos->x, pos->y + index * height,
+                                            width, height);
 }

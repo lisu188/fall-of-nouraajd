@@ -41,9 +41,13 @@ void CCreature::addExp(int exp) {
         return;
     }
     this->exp += exp;
-    while (this->exp >= level * (level + 1) * 500) {
+    while (this->exp >= getExpForNextLevel()) {
         this->levelUp();
     }
+}
+
+int CCreature::getExpForNextLevel() {
+    return getExpForLevel(level + 1);
 }
 
 std::shared_ptr<CInteraction> CCreature::getLevelAction() {
@@ -134,7 +138,7 @@ void CCreature::healProc(float i) {
 }
 
 void CCreature::hurt(int i) {
-    std::shared_ptr < Damage > damage = std::make_shared<Damage>();
+    std::shared_ptr<Damage> damage = std::make_shared<Damage>();
     damage->setNormal(i);
     hurt(damage);
 }
@@ -144,8 +148,8 @@ void CCreature::hurt(float i) {
 }
 
 int CCreature::getExpRatio() {
-    return (float) ((exp - level * (level - 1) * 500)) /
-           (float) (level * (level + 1) * 500 - level * (level - 1) * 500) * 100.0;
+    return (float) ((exp - getExpForLevel(level))) /
+           (float) (getExpForLevel(level + 1) - getExpForLevel(level)) * 100.0;
 }
 
 //TODO: resistance and blocking to be more generic
@@ -319,9 +323,9 @@ void CCreature::equipItem(std::string i, std::shared_ptr<CItem> newItem) {
     vstd::fail_if(newItem && !getMap()->getGame()->getSlotConfiguration()->canFit(i, newItem),
                   "Tried to insert" + newItem->getType() + "into slot" + i);
     if (!vstd::ctn(equipped, i)) {
-        equipped.insert(std::make_pair(i, std::shared_ptr < CItem > ()));
+        equipped.insert(std::make_pair(i, std::shared_ptr<CItem>()));
     }
-    std::shared_ptr < CItem > oldItem = equipped.at(i);
+    std::shared_ptr<CItem> oldItem = equipped.at(i);
     if (oldItem) {
         getMap()->getEventHandler()->gameEvent(oldItem, std::make_shared<CGameEventCaused>(CGameEvent::Type::onUnequip,
                                                                                            this->ptr<CCreature>()));
@@ -558,4 +562,8 @@ void CCreature::useItem(std::shared_ptr<CItem> item) {
 
 void CCreature::setLevel(int level) {
     this->level = level;
+}
+
+int CCreature::getExpForLevel(int level) {
+    return (level - 1) * level * 500;
 }
