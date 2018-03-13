@@ -4,7 +4,6 @@
 //TODO: tooltip
 //TODO: drag & drop
 //TODO: add error handling to SDL code
-//TODO: make hp/mana/exp values visible on StatsView
 //TODO: resizing panels
 //TODO: registering singletons in context
 //TODO: heuristic masks
