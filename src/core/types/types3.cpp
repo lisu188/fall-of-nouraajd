@@ -4,7 +4,7 @@
 #include "core/CWrapper.h"
 #include "core/CController.h"
 #include "gui/CTextureCache.h"
-
+#include "gui/CTextManager.h"
 
 extern void add_member(std::shared_ptr<Value> object, std::string key, std::string value);
 
@@ -68,6 +68,7 @@ namespace {
 
                 CTypes::register_type<CGui, CGameObject>();
                 CTypes::register_type<CTextureCache, CGameObject>();
+                CTypes::register_type<CTextManager, CGameObject>();
             }
         }
     } _register_types3;

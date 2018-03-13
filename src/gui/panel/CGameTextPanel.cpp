@@ -2,6 +2,7 @@
 
 #include "CGameTextPanel.h"
 #include "gui/CGui.h"
+#include "gui/CTextManager.h"
 
 std::string CGameTextPanel::getText() {
     return text;
@@ -12,25 +13,12 @@ void CGameTextPanel::setText(std::string _text) {
 }
 
 void CGameTextPanel::panelRender(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> pRect, int i) {
-    if (texture == nullptr) {
-        texture = loadTextTexture(gui);
-    }
-    SDL_Rect actual;
-    actual.x = pRect->x;
-    actual.y = pRect->y;
-    SDL_QueryTexture(texture, NULL, NULL, &actual.w, &actual.h);
-    SDL_RenderCopy(gui->getRenderer(), texture, NULL, &actual);
+    gui->getTextManager()->drawText(text, pRect->x, pRect->y, pRect->w);
+
 }
 
 struct SDL_Texture *CGameTextPanel::loadTextTexture(std::shared_ptr<CGui> ptr) {
-    TTF_Init();
-    struct _TTF_Font *font = TTF_OpenFont("fonts/ampersand.ttf", 24);
-    SDL_Color textColor = {255, 255, 255, 0};
-    SDL_Surface *surface = TTF_RenderText_Blended_Wrapped(font, text.c_str(), textColor, this->getXSize());
-    auto _texture = SDL_CreateTextureFromSurface(ptr->getRenderer(), surface);
-    SDL_FreeSurface(surface);
-    TTF_CloseFont(font);
-    return _texture;
+
 }
 
 void CGameTextPanel::panelKeyboardEvent(std::shared_ptr<CGui> gui, SDL_Keycode i) {
@@ -40,5 +28,5 @@ void CGameTextPanel::panelKeyboardEvent(std::shared_ptr<CGui> gui, SDL_Keycode i
 }
 
 CGameTextPanel::~CGameTextPanel() {
-    SDL_DestroyTexture(texture);
+
 }
