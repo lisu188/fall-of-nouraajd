@@ -29,6 +29,17 @@ struct Coords {
     double getDist(Coords a) const;
 };
 
+class CUtil {
+public:
+    static SDL_Rect boxInBox(SDL_Rect *out, SDL_Rect *in);
+
+    static SDL_Rect boxInBox(SDL_Rect out, SDL_Rect *in);
+
+    static SDL_Rect boxInBox(SDL_Rect *out, SDL_Rect in);
+
+    static SDL_Rect boxInBox(SDL_Rect out, SDL_Rect in);
+};
+
 namespace std {
     template<>
     struct hash<Coords> {
