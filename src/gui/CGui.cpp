@@ -1,5 +1,6 @@
 #include "CGui.h"
 #include "gui/CTextureCache.h"
+#include "gui/CTextManager.h"
 
 CGui::CGui() {
     SDL_Init(SDL_INIT_VIDEO);
@@ -53,6 +54,12 @@ SDL_Renderer *CGui::getRenderer() const {
 std::shared_ptr<CTextureCache> CGui::getTextureCache() {
     return _textureCache.get([this]() {
         return std::make_shared<CTextureCache>(this->ptr<CGui>());
+    });
+}
+
+std::shared_ptr<CTextManager> CGui::getTextManager() {
+    return _textManager.get([this]() {
+        return std::make_shared<CTextManager>(this->ptr<CGui>());
     });
 }
 

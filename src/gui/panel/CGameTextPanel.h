@@ -13,7 +13,6 @@ V_META(CGameTextPanel, CGamePanel,
 
 
 private:
-    struct SDL_Texture *texture = nullptr;
     std::string text;
 public:
     ~CGameTextPanel();

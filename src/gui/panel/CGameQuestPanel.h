@@ -11,12 +11,8 @@ V_META(CGameQuestPanel, CGamePanel,
 
     void panelKeyboardEvent(std::shared_ptr<CGui> shared_ptr, SDL_Keycode i) override;
 
-private:
-    struct SDL_Texture *texture = nullptr;
 public:
 
-    ~CGameQuestPanel();
-
-    struct SDL_Texture *loadTextTexture(std::shared_ptr<CGui> ptr);
+    std::string getText(std::shared_ptr<CGui> ptr);
 };
 

@@ -8,6 +8,8 @@
 
 class CTextureCache;
 
+class CTextManager;
+
 class CGui : public CGameObject {
 V_META(CGui, CGameObject, vstd::meta::empty())
     SDL_Window *window = 0;
@@ -58,7 +60,11 @@ public:
 
     std::shared_ptr<CTextureCache> getTextureCache();
 
+    std::shared_ptr<CTextManager> getTextManager();
+
     vstd::lazy<CTextureCache> _textureCache;
+
+    vstd::lazy<CTextManager> _textManager;
 };
 
 
