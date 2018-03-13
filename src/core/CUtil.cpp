@@ -49,4 +49,27 @@ double Coords::getDist(Coords a) const {
     return sqrt(x + y);
 }
 
+SDL_Rect CUtil::boxInBox(SDL_Rect *out, SDL_Rect *in) {
+    SDL_Rect actual;
+    actual.x = out->x + out->w / 2 - in->w / 2;
+    actual.y = out->y + out->h / 2 - in->h / 2;
+    actual.w = in->w;
+    actual.h = in->h;
+    return actual;
+}
+
+SDL_Rect CUtil::boxInBox(SDL_Rect out, SDL_Rect *in) {
+    return boxInBox(&out, in);
+}
+
+
+SDL_Rect CUtil::boxInBox(SDL_Rect *out, SDL_Rect in) {
+    return boxInBox(out, &in);
+}
+
+
+SDL_Rect CUtil::boxInBox(SDL_Rect out, SDL_Rect in) {
+    return boxInBox(&out, &in);
+}
+
 //TODO: implement drag_drop
