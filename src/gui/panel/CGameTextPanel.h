@@ -20,7 +20,5 @@ public:
     std::string getText();
 
     void setText(std::string ext);
-
-    struct SDL_Texture *loadTextTexture(std::shared_ptr<CGui> ptr);
 };
 
