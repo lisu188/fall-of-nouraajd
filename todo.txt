@@ -7,7 +7,6 @@
 //TODO: make hp/mana/exp values visible on StatsView
 //TODO: resizing panels
 //TODO: registering singletons in context
-//TODO: lib function to position rectangle in rectangle
 //TODO: heuristic masks
 //TODO: initiative
 //TODO: when lost fight in cave, panel pops out after return to position

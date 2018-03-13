@@ -1,5 +1,6 @@
 
 #include "CTextManager.h"
+#include "core/CUtil.h"
 
 SDL_Texture *CTextManager::getTexture(std::string text, int width) {
     auto anim = _textures.find(std::make_pair(text, width));
@@ -44,12 +45,9 @@ void CTextManager::drawText(std::string text, int x, int y, int w) {
 
 void CTextManager::drawTextCentered(std::string text, int x, int y, int w, int h) {
     SDL_Rect actual;
-    actual.x = x + w / 2;
-    actual.y = y + h / 2;
     SDL_Texture *pTexture = getTexture(text);
     SDL_QueryTexture(pTexture, NULL, NULL, &actual.w, &actual.h);
 
-    actual.x = actual.x - (actual.w / 2);
-    actual.y = actual.y - (actual.h / 2);
+    actual = CUtil::boxInBox(SDL_Rect{x, y, w, h}, &actual);
     SDL_RenderCopy(_gui.lock()->getRenderer(), pTexture, NULL, &actual);
 }
