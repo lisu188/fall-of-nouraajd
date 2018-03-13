@@ -15,4 +15,6 @@ public:
 private:
     void drawBar(std::shared_ptr<CGui> gui, int ratio, int index, SDL_Rect *pos, Uint8 r, Uint8 g, Uint8 b,
                  Uint8 a);
+
+    void drawValues(std::shared_ptr<CGui> gui, int left, int right, int index, SDL_Rect *pos);
 };

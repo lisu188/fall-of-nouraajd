@@ -15,10 +15,11 @@ public:
 
     void drawText(std::string text, int x, int y, int h);
 
+    void drawTextCentered(std::string text, int x, int y, int w, int h);
 private:
-    SDL_Texture *getTexture(std::string text, int width);
+    SDL_Texture *getTexture(std::string text, int width = -1);
 
-    SDL_Texture *loadTexture(std::string text, int width);
+    SDL_Texture *loadTexture(std::string text, int width = -1);
 
     std::weak_ptr<CGui> _gui;
 
