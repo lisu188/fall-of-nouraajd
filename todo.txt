@@ -16,7 +16,6 @@
     //TODO: after fight loot window + summary
 //TODO: crash when exit with opened market (double free probably)
 //TODO: encapsulate SDL_RenderCopy
-//TODO: font manager
 //TODO: make panel hotkey configuration configurable
 //TODO: implement move cost
     //TODO: implement move points
