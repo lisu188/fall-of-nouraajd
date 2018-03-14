@@ -2,7 +2,6 @@
 
 #include "CGameGraphicsObject.h"
 
-//TODO: write numeric values on bars
 class CStatsGraphicsObject : public CGameGraphicsObject {
 V_META(CStatsGraphicsObject, CGameGraphicsObject, vstd::meta::empty())
     int height = 30;

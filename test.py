@@ -76,7 +76,7 @@ class GameTest(unittest.TestCase):
     def test_turns(self):
         g = game.CGameLoader.loadGame()
         game.CGameLoader.startGameWithPlayer(g, "map1", "Warrior")
-        advance(g, 100)  # TODO: set value from build
+        advance(g, 100)
         return True, game.jsonify(g.getMap().ptr())  # TODO: why we need ptr? in all _bjects we dont!
 
     @game_test
