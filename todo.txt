@@ -14,6 +14,7 @@
     //TODO: cant quit game when in fight (hang in wait until)
     //TODO: enemy health bars
     //TODO: after fight loot window + summary
+//TODO: wrapping of list views
 //TODO: crash when exit with opened market (double free probably)
 //TODO: encapsulate SDL_RenderCopy
 //TODO: make panel hotkey configuration configurable
