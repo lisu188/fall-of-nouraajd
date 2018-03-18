@@ -20,5 +20,17 @@
     "properties": {
       "description": "Kill Gooby"
     }
+  },
+  "rolfQuest": {
+    "class": "RolfQuest",
+    "properties": {
+      "description": "Find what happened to sergeant Rolf."
+    }
+  },
+  "skullOfRolf": {
+    "class": "CItem",
+    "properties": {
+      "animation": "images/skull"
+    }
   }
 }
