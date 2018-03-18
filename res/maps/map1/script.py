@@ -29,7 +29,7 @@ def load(self, context):
     @register(context)
     class RolfQuest(CQuest):
         def isCompleted(self):
-            return self.getGame().getMap().getBoolProperty('completedRolf')
+            return self.getGame().getMap().getPlayer().hasItem('skullOfRolf')
 
         def onComplete(self):
             pass
@@ -51,9 +51,7 @@ def load(self, context):
             gooby.moveTo(100, 100, 0)
             object.getGame().getMap().setBoolProperty('completedGooby', False)
             object.getGame().getMap().getPlayer().addQuest("mainQuest")
-            # TODO: shorten this with player.hasItem
-            object.getGame().getMap().getPlayer().addItem(object.getGame().createObject("skullOfRolf"))
-            object.getGame().getMap().setBoolProperty('completedRolf', True)
+            object.getGame().getMap().getPlayer().addItem("skullOfRolf")
 
     @trigger(context, "onEnter", "market1")
     class MarketTrigger(CTrigger):

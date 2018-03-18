@@ -26,4 +26,5 @@
 //TODO: log save name when saving
 //TODO: make function to compare objects
 //TODO: load assets from map
-//TODO: addItem(std::string) //see addQuest
+//TODO: make question items not droppable
+//TODO: minus mana bug
