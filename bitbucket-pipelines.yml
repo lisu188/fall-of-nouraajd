@@ -5,7 +5,7 @@
  # You can specify a custom docker image from Docker Hub as your build environment.
  # image: atlassian/default-image:latest
  
- image: library/buildpack-deps:artful
+ image: library/ubuntu:artful
  
  pipelines:
    default:
