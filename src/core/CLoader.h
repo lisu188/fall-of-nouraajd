@@ -55,5 +55,5 @@ class CPluginLoader {
 public:
 
 
-    static void load_plugin(std::shared_ptr<CGame> game, std::string path);
+    static void loadPlugin(std::shared_ptr<CGame> game, std::string path);
 };
