@@ -22,6 +22,7 @@ void initModule4() {
     void ( CCreature::*hurtInt )(int) = &CCreature::hurt;
     void ( CCreature::*hurtFloat )(float) = &CCreature::hurt;
     void ( CCreature::*hurtDmg )(std::shared_ptr<Damage>) = &CCreature::hurt;
+    void ( CCreature::*addItem )(std::shared_ptr<CItem>) = &CCreature::addItem;
     class_<CCreature, bases<CMapObject>, boost::noncopyable, std::shared_ptr<CCreature>>("CCreature", no_init)
             .def("getDmg", &CCreature::getDmg)
             .def("hurt", hurtInt)
@@ -39,7 +40,8 @@ void initModule4() {
             .def("addManaProc", &CCreature::addManaProc)
             .def("isPlayer", &CCreature::isPlayer)
             .def("addExp", &CCreature::addExp)
-            .def("useAction", &CCreature::useAction);
+            .def("useAction", &CCreature::useAction)
+            .def("addItem", addItem);
     class_<CPlayer, bases<CCreature>, boost::noncopyable, std::shared_ptr<CPlayer>>("CPlayer")
             .def("addQuest", &CPlayer::addQuest);
     class_<CMonster, bases<CCreature>, boost::noncopyable, std::shared_ptr<CMonster>>("CMonster");
