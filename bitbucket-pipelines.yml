@@ -6,10 +6,10 @@
  # image: atlassian/default-image:latest
  
  image: 
-     -"library/ubuntu"
+   -library/ubuntu:latest
+ 
  pipelines:
    default:
      - step:
-         script:
--          - echo "Everything is awesome!"
-+          - ./configure.sh
+         script: 
+           -  ./configure.sh
