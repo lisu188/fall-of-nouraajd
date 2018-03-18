@@ -12,11 +12,13 @@ void CGameQuestPanel::panelRender(std::shared_ptr<CGui> gui, std::shared_ptr<SDL
 
 std::string CGameQuestPanel::getText(std::shared_ptr<CGui> ptr) {
     std::__cxx11::string text = "";
+    for (auto quest:ptr->getGame()->getMap()->getPlayer()->getCompletedQuests()) {
+        text += quest->getDescription();
+            text += "(completed)";
+        text += "\n";
+    }
     for (auto quest:ptr->getGame()->getMap()->getPlayer()->getQuests()) {
         text += quest->getDescription();
-        if (quest->isCompleted()) {
-            text += "(completed)";
-        }
         text += "\n";
     }
     return text;

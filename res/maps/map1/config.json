@@ -30,6 +30,7 @@
   "skullOfRolf": {
     "class": "CItem",
     "properties": {
+      "name": "skullOfRolf",
       "animation": "images/skull"
     }
   }

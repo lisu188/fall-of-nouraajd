@@ -22,6 +22,7 @@ void CPlayer::checkQuests() {
         if (quest->isCompleted()) {
             quest->onComplete();
             quests.erase(quests.find(quest));
+            completedQuests.insert(quest);
         }
     }
 }
@@ -47,6 +48,14 @@ std::set<std::shared_ptr<CQuest>> CPlayer::getQuests() {
 
 void CPlayer::setQuests(std::set<std::shared_ptr<CQuest>> quests) {
     this->quests = quests;
+}
+
+std::set<std::shared_ptr<CQuest>> CPlayer::getCompletedQuests() {
+    return completedQuests;
+}
+
+void CPlayer::setCompletedQuests(std::set<std::shared_ptr<CQuest>> completedQuests) {
+    CPlayer::completedQuests = completedQuests;
 }
 
 

@@ -147,6 +147,8 @@ public:
 
     void addItem(std::shared_ptr<CItem> item);
 
+    void addItem(std::string item);
+
     void removeFromInventory(std::shared_ptr<CItem> item);
 
     void removeFromEquipped(std::shared_ptr<CItem> item);
@@ -161,12 +163,17 @@ public:
 
     bool hasEquipped(std::shared_ptr<CItem> item);
 
+    bool hasEquipped(std::string item);
+
     void equipItem(std::string i, std::shared_ptr<CItem> newItem);
 
     bool hasInInventory(std::shared_ptr<CItem> item);
 
+    bool hasInInventory(std::string item);
+
     bool hasItem(std::shared_ptr<CItem> item);
 
+    bool hasItem(std::string item);
     int getGold();
 
     void setGold(int value);
