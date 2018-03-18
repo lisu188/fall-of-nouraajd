@@ -116,6 +116,10 @@ void CCreature::addItem(std::set<std::shared_ptr<CItem> > items) {
     }
 }
 
+void CCreature::addItem(std::string item) {
+    addItem(getGame()->createObject<CItem>(item));
+}
+
 void CCreature::heal(int i) {
     vstd::fail_if(i < 0, "Tried to heal negative value!");
     if (hp > hpMax) {
@@ -347,7 +351,17 @@ bool CCreature::hasInInventory(std::shared_ptr<CItem> item) {
     return vstd::ctn(items, item);
 }
 
+bool CCreature::hasInInventory(std::string item) {
+    return std::any_of(items.begin(), items.end(), [=](std::shared_ptr<CItem> ob) {
+        return ob->getName() == item;
+    });
+}
+
 bool CCreature::hasItem(std::shared_ptr<CItem> item) {
+    return hasInInventory(item) || hasEquipped(item);
+}
+
+bool CCreature::hasItem(std::string item) {
     return hasInInventory(item) || hasEquipped(item);
 }
 
@@ -386,6 +400,15 @@ void CCreature::attribChange() {
     manaMax = stats->getMainValue() * 7;
 }
 
+bool CCreature::hasEquipped(std::string item) {
+    for (auto it:equipped) {
+        if (it.second->getName() == item) {
+            return true;
+        }
+    }
+    return false;
+}
+
 bool CCreature::hasEquipped(std::shared_ptr<CItem> item) {
     for (auto it:equipped) {
         if (it.second == item) {
@@ -394,6 +417,7 @@ bool CCreature::hasEquipped(std::shared_ptr<CItem> item) {
     }
     return false;
 }
+
 
 int CCreature::getSw() const {
     return sw;
