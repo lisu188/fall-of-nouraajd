@@ -25,3 +25,4 @@
 //TODO: scroll of town portal
 //TODO: log save name when saving
 //TODO: make function to compare objects
+//TODO: load assets from map

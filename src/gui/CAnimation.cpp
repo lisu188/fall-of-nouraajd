@@ -8,7 +8,7 @@
 #include "gui/CTextureCache.h"
 
 CStaticAnimation::CStaticAnimation(std::string path) {
-    raw_path = path + ".png";
+    raw_path = path;
 }
 
 void CStaticAnimation::render(std::shared_ptr<CGui> gui, SDL_Rect *pos, int frameTime) {
@@ -76,13 +76,3 @@ int CDynamicAnimation::get_next() {
     return vstd::rand(0, 100);
 }
 
-std::shared_ptr<CAnimation> CAnimation::buildAnimation(std::string path) {
-    if (boost::filesystem::is_directory(path)) {
-        return std::make_shared<CDynamicAnimation>(path);
-    } else if (boost::filesystem::is_regular_file(path + ".png")) {
-        return std::make_shared<CStaticAnimation>(path);
-    } else {
-        vstd::logger::warning("Loading empty animation");
-        return std::make_shared<CAnimation>();
-    }
-}

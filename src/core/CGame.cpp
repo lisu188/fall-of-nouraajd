@@ -40,7 +40,7 @@ std::shared_ptr<CObjectHandler> CGame::getObjectHandler() {
     });
 }
 
-void CGame::load_plugin(std::function<std::shared_ptr<CPlugin>()> plugin) {
+void CGame::loadPlugin(std::function<std::shared_ptr<CPlugin>()> plugin) {
     plugin()->load(this->ptr<CGame>());
 }
 

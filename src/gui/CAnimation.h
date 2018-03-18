@@ -7,8 +7,6 @@ class CGui;
 
 class CAnimation : public CGameGraphicsObject {
 V_META(CAnimation, CGameGraphicsObject, vstd::meta::empty())
-public:
-    static std::shared_ptr<CAnimation> buildAnimation(std::string path);
 };
 
 class CStaticAnimation : public CAnimation {

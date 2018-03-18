@@ -2,6 +2,7 @@
 #include "core/CProvider.h"
 #include "handler/CHandler.h"
 #include "core/CJsonUtil.h"
+#include "gui/CAnimation.h"
 
 std::shared_ptr<Value> CConfigurationProvider::getConfig(std::string path) {
     static CConfigurationProvider instance;
@@ -25,7 +26,7 @@ std::shared_ptr<Value> CConfigurationProvider::getConfiguration(std::string path
 }
 
 void CConfigurationProvider::loadConfig(std::string path) {
-    this->insert(std::make_pair(path, CResourcesProvider::getInstance()->load_json(path)));
+    this->insert(std::make_pair(path, CResourcesProvider::getInstance()->loadJson(path)));
 }
 
 std::list<std::string> CResourcesProvider::searchPath = {""};
@@ -36,16 +37,16 @@ CResourcesProvider *CResourcesProvider::getInstance() {
 }
 
 std::string CResourcesProvider::load(std::string path) {
-    std::ifstream t(get_path(path));
+    std::ifstream t(getPath(path));
     return std::string(std::istreambuf_iterator<char>(t),
                        std::istreambuf_iterator<char>());
 }
 
-std::shared_ptr<Value> CResourcesProvider::load_json(std::string path) {
+std::shared_ptr<Value> CResourcesProvider::loadJson(std::string path) {
     return CJsonUtil::from_string(load(path));
 }
 
-std::string CResourcesProvider::get_path(std::string path) {
+std::string CResourcesProvider::getPath(std::string path) {
     for (auto it:searchPath) {
         if (boost::filesystem::exists(it / boost::filesystem::path(path))) {
             boost::filesystem::path p = it / boost::filesystem::path(path);
@@ -108,4 +109,17 @@ void CResourcesProvider::save(std::string file, std::shared_ptr<Value> data) {
 
 CResourcesProvider::CResourcesProvider() {
 
+}
+
+std::shared_ptr<CAnimation> CAnimationProvider::getAnimation(std::string _path) {
+    std::string path = CResourcesProvider::getInstance()->getPath(_path);
+    if (boost::filesystem::is_directory(path)) {
+        return std::make_shared<CDynamicAnimation>(path);
+    }
+    path = CResourcesProvider::getInstance()->getPath(_path + ".png");
+    if (boost::filesystem::is_regular_file(path)) {
+        return std::make_shared<CStaticAnimation>(path);
+    }
+    vstd::logger::warning("Loading empty animation");
+    return std::make_shared<CAnimation>();
 }

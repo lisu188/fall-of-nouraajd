@@ -41,7 +41,7 @@ public:
 
     std::shared_ptr<CObjectHandler> getObjectHandler();
 
-    void load_plugin(std::function<std::shared_ptr<CPlugin>()> plugin);
+    void loadPlugin(std::function<std::shared_ptr<CPlugin>()> plugin);
 
     std::shared_ptr<CLootHandler> getLootHandler();
 

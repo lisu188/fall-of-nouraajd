@@ -46,7 +46,7 @@ std::shared_ptr<CMap> CMapLoader::loadNewMap(std::shared_ptr<CGame> game, std::s
     std::shared_ptr<CMap> map = game->getObjectHandler()->createObject<CMap>(game, "CMap");
     game->setMap(map);
     game->getObjectHandler()->registerConfig(getConfigPath(mapName));
-    CPluginLoader::load_plugin(game, getScriptPath(mapName));
+    CPluginLoader::loadPlugin(game, getScriptPath(mapName));
     std::shared_ptr<Value> mapc = CConfigurationProvider::getConfig(getMapPath(mapName));
     loadFromTmx(map, mapc);
     map->setMapName(mapName);
@@ -59,7 +59,7 @@ std::shared_ptr<CMap> CMapLoader::loadSavedMap(std::shared_ptr<CGame> game, std:
     std::string mapName = (*save)["properties"]["mapName"].asString();
 
     game->getObjectHandler()->registerConfig(getConfigPath(mapName));
-    CPluginLoader::load_plugin(game, getScriptPath(mapName));
+    CPluginLoader::loadPlugin(game, getScriptPath(mapName));
     game->getObjectHandler()->registerConfig(getConfigPath(mapName));
 
     game->getObjectHandler()->registerConfig(name, save);
@@ -184,7 +184,7 @@ void CGameLoader::initObjectHandler(std::shared_ptr<CObjectHandler> handler) {
 
 void CGameLoader::initScriptHandler(std::shared_ptr<CScriptHandler> handler, std::shared_ptr<CGame> game) {
     for (std::string script:CResourcesProvider::getInstance()->getFiles(CResType::PLUGIN)) {
-        CPluginLoader::load_plugin(game, script);
+        CPluginLoader::loadPlugin(game, script);
     }
 }
 
@@ -210,11 +210,11 @@ void CGameLoader::loadGui(std::shared_ptr<CGame> game) {
     });
 }
 
-void CPluginLoader::load_plugin(std::shared_ptr<CGame> game, std::string path) {
+void CPluginLoader::loadPlugin(std::shared_ptr<CGame> game, std::string path) {
     std::string code = CResourcesProvider::getInstance()->load(path);
     std::string name = vstd::join({"CLASS", vstd::to_hex_hash(code)}, "");
     game->getScriptHandler()->add_class(name, code, {"game.CPlugin"});
-    game->load_plugin(game->getScriptHandler()->get_object<std::function<std::shared_ptr<CPlugin>()>>(name));
+    game->loadPlugin(game->getScriptHandler()->get_object<std::function<std::shared_ptr<CPlugin>()>>(name));
     game->getScriptHandler()->execute_script(vstd::join({"del", name}, " "));
 }
 

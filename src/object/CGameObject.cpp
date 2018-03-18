@@ -112,6 +112,6 @@ void CGameObject::setAnimation(std::string animation) {
 
 std::shared_ptr<CAnimation> CGameObject::getAnimationObject() {
     return animationObject.get([this]() {
-        return CAnimation::buildAnimation(getAnimation());
+        return CAnimationProvider::getAnimation(getAnimation());
     });
 }
