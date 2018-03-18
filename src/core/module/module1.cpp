@@ -29,7 +29,7 @@ void initModule1() {
     class_<CGame, bases<CGameObject>, boost::noncopyable, std::shared_ptr<CGame>>("CGame", no_init)
             .def("getMap", &CGame::getMap)
             .def("changeMap", &CGame::changeMap)
-            .def("load_plugin", &CGame::load_plugin)
+            .def("loadPlugin", &CGame::loadPlugin)
             .def("getGuiHandler", &CGame::getGuiHandler)
             .def("getObjectHandler", &CGame::getObjectHandler)
             .def("createObject", &CGame::createObject<CGameObject>);

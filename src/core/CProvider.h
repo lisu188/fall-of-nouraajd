@@ -6,15 +6,18 @@ enum CResType {
     CONFIG, MAP, PLUGIN, SAVE
 };
 
+class CAnimation;
+
+
 class CResourcesProvider {
 public:
     static CResourcesProvider *getInstance();
 
     std::string load(std::string path);
 
-    std::shared_ptr<Value> load_json(std::string path);
+    std::shared_ptr<Value> loadJson(std::string path);
 
-    std::string get_path(std::string path);
+    std::string getPath(std::string path);
 
     std::set<std::string> getFiles(CResType type);
 
@@ -40,4 +43,9 @@ private:
     std::shared_ptr<Value> getConfiguration(std::string path);
 
     void loadConfig(std::string path);
+};
+
+class CAnimationProvider {
+public:
+    static std::shared_ptr<CAnimation> getAnimation(std::string path);
 };
