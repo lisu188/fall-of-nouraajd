@@ -7,11 +7,11 @@ sudo apt install libboost-dev libboost-system-dev libboost-filesystem-dev libboo
 sudo apt install libsdl2-dev libsdl2-ttf-dev libsdl2-image-dev -y
 sudo apt install libjsoncpp-dev
 
-sudo ln -s /usr/lib/x86_64-linux-gnu/libboost_python-py36.a /usr/lib/x86_64-linux-gnu/libboost_python3.a
-sudo ln -s /usr/lib/x86_64-linux-gnu/libboost_python-py36.so /usr/lib/x86_64-linux-gnu/libboost_python3.so
+sudo ln -fs /usr/lib/x86_64-linux-gnu/libboost_python-py36.a /usr/lib/x86_64-linux-gnu/libboost_python3.a
+sudo ln -fs /usr/lib/x86_64-linux-gnu/libboost_python-py36.so /usr/lib/x86_64-linux-gnu/libboost_python3.so
 
-sudo ln -s /usr/lib/x86_64-linux-gnu/libboost_python-py35.a /usr/lib/x86_64-linux-gnu/libboost_python3.a
-sudo ln -s /usr/lib/x86_64-linux-gnu/libboost_python-py35.so /usr/lib/x86_64-linux-gnu/libboost_python3.so
+sudo ln -fs /usr/lib/x86_64-linux-gnu/libboost_python-py35.a /usr/lib/x86_64-linux-gnu/libboost_python3.a
+sudo ln -fs /usr/lib/x86_64-linux-gnu/libboost_python-py35.so /usr/lib/x86_64-linux-gnu/libboost_python3.so
 
 mkdir cmake-build-debug
 mkdir cmake-build-release
