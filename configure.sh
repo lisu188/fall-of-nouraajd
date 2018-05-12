@@ -1,5 +1,6 @@
 #!/bin/bash
 
+apt update
 apt install build-essential cmake -y
 apt install python3-dev -y
 apt install libboost-dev libboost-system-dev libboost-filesystem-dev libboost-python-dev -y
