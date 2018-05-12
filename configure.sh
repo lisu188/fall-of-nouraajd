@@ -13,8 +13,8 @@ sudo ln -fs /usr/lib/x86_64-linux-gnu/libboost_python-py36.so /usr/lib/x86_64-li
 sudo ln -fs /usr/lib/x86_64-linux-gnu/libboost_python-py35.a /usr/lib/x86_64-linux-gnu/libboost_python3.a
 sudo ln -fs /usr/lib/x86_64-linux-gnu/libboost_python-py35.so /usr/lib/x86_64-linux-gnu/libboost_python3.so
 
-mkdir cmake-build-debug
-mkdir cmake-build-release
+mkdir -p cmake-build-debug
+mkdir -p cmake-build-release
 
 cmake -B./cmake-build-debug -H.  -DCMAKE_BUILD_TYPE=Debug -DJSONCPP_ROOT_DIR=/usr/include/jsoncpp
 cmake -B./cmake-build-release -H.  -DCMAKE_BUILD_TYPE=Release -DJSONCPP_ROOT_DIR=/usr/include/jsoncpp
