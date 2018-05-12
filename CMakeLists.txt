@@ -18,7 +18,7 @@ set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -g3")
 
 file(GLOB_RECURSE GAME_SRC ${CMAKE_SOURCE_DIR}/src/**.cpp ${CMAKE_SOURCE_DIR}/src/**.h)
 
-find_package(Boost 1.60 COMPONENTS python3 filesystem system REQUIRED)
+find_package(Boost 1.58 COMPONENTS python3 filesystem system REQUIRED)
 find_package(PythonInterp 3.5 REQUIRED)
 find_package(PythonLibs 3.5 REQUIRED)
 find_package(SDL2 REQUIRED)
