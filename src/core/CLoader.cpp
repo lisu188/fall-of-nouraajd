@@ -5,6 +5,7 @@
 #include "core/CJsonUtil.h"
 #include "gui/CGui.h"
 #include "core/CTypes.h"
+#include "gui/object/CConsoleGraphicsObject.h"
 
 void CMapLoader::loadFromTmx(std::shared_ptr<CMap> map, std::shared_ptr<Value> mapc) {
     const Value &mapProperties = (*mapc)["properties"];
@@ -188,16 +189,18 @@ void CGameLoader::initScriptHandler(std::shared_ptr<CScriptHandler> handler, std
     }
 }
 
-//TODO:
+//TODO: use CObjectHandler
 void CGameLoader::loadGui(std::shared_ptr<CGame> game) {
     std::shared_ptr<CGui> gui = std::make_shared<CGui>(game);
 
     std::shared_ptr<CMapGraphicsObject> mapGraphicsObject = std::make_shared<CMapGraphicsObject>();
 
     std::shared_ptr<CStatsGraphicsObject> stats = std::make_shared<CStatsGraphicsObject>();
+    std::shared_ptr<CConsoleGraphicsObject> console = std::make_shared<CConsoleGraphicsObject>();
 
     gui->addObject(mapGraphicsObject);
     gui->addObject(stats);
+    gui->addObject(console);
 
     game->setGui(gui);
 
