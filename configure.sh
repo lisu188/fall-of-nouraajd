@@ -16,4 +16,4 @@ mkdir -p cmake-build-release
 cmake -B./cmake-build-debug -H.  -DCMAKE_BUILD_TYPE=Debug -DJSONCPP_ROOT_DIR=/usr/include/jsoncpp
 cmake -B./cmake-build-release -H.  -DCMAKE_BUILD_TYPE=Release -DJSONCPP_ROOT_DIR=/usr/include/jsoncpp
 
-#export SDL_VIDEO_X11_VISUALID=0x022 //TODO: check this
+#export SDL_VIDEO_X11_VISUALID=0x022 //TODO: check this, this was used to run in WSL ubuntu with xming

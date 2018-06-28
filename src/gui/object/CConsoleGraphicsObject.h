@@ -2,7 +2,6 @@
 
 #include "CGameGraphicsObject.h"
 
-//TODO: implement history
 class CConsoleGraphicsObject : public CGameGraphicsObject {
 V_META(CConsoleGraphicsObject, CGameGraphicsObject,
        V_PROPERTY(CConsoleGraphicsObject, std::string, consoleState, getConsoleState, setConsoleState),
