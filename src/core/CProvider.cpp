@@ -94,6 +94,7 @@ std::set<std::string> CResourcesProvider::getFiles(CResType type) {
 }
 
 void CResourcesProvider::save(std::string file, std::string data) {
+    vstd::logger::info("Saving map: " + file);
     boost::filesystem::path path(file);
     boost::filesystem::path dir = path.parent_path();
     if (!boost::filesystem::exists(dir)) {
