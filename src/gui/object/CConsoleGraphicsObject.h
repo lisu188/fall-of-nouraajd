@@ -2,6 +2,7 @@
 
 #include "CGameGraphicsObject.h"
 
+//TODO: implement history
 class CConsoleGraphicsObject : public CGameGraphicsObject {
 V_META(CConsoleGraphicsObject, CGameGraphicsObject,
        V_PROPERTY(CConsoleGraphicsObject, std::string, consoleState, getConsoleState, setConsoleState))
@@ -20,5 +21,9 @@ public:
 
 private:
     bool inProgress = false;
-    std::string consoleState = "CONSOLE";
+    std::string consoleState = "";
+
+    void stopInput();
+
+    void startInput();
 };
