@@ -16,19 +16,17 @@ CConsoleGraphicsObject::CConsoleGraphicsObject() {
                 stopInput();
 
             } else if (event->key.keysym.sym == SDLK_RETURN && consoleState.length() > 0) {
-                gui->getGame()->getScriptHandler()->call_created_function(consoleState, {"game"}, gui->getGame());
+                gui->getGame()->getScriptHandler()->call_created_function(consoleState,
+                                                                          {"game"},
+                                                                          gui->getGame());
                 stopInput();
             } else if (event->key.keysym.sym == SDLK_BACKSPACE) {
                 consoleState = consoleState.substr(0, consoleState.length() - 1);
             } else if (event->key.keysym.sym == SDLK_UP) {
-                historyIndex--;
-                if (historyIndex < 0) {
-                    historyIndex = consoleHistory.size() + historyIndex;
-                }
+                decrementHistoryIndex();
                 consoleState = consoleHistory[historyIndex];
             } else if (event->key.keysym.sym == SDLK_DOWN) {
-                historyIndex++;
-                historyIndex = historyIndex % consoleHistory.size();
+                incrementHistoryIndex();
                 consoleState = consoleHistory[historyIndex];
             }
             return true;
@@ -46,6 +44,18 @@ CConsoleGraphicsObject::CConsoleGraphicsObject() {
         consoleState += event->text.text;
         return true;
     });
+}
+
+void CConsoleGraphicsObject::incrementHistoryIndex() {
+    historyIndex++;
+    historyIndex = historyIndex % consoleHistory.size();
+}
+
+void CConsoleGraphicsObject::decrementHistoryIndex() {
+    historyIndex--;
+    if (historyIndex < 0) {
+        historyIndex = consoleHistory.size() + historyIndex;
+    }
 }
 
 void CConsoleGraphicsObject::startInput() {
