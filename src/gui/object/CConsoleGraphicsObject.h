@@ -26,6 +26,7 @@ public:
 private:
     bool inProgress = false;
     std::string consoleState = "";
+    //TODO: persist order when saving
     std::vector<std::string> consoleHistory = {""};
     int historyIndex = 0;
 
