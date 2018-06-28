@@ -20,6 +20,16 @@ CConsoleGraphicsObject::CConsoleGraphicsObject() {
                 stopInput();
             } else if (event->key.keysym.sym == SDLK_BACKSPACE) {
                 consoleState = consoleState.substr(0, consoleState.length() - 1);
+            } else if (event->key.keysym.sym == SDLK_UP) {
+                historyIndex--;
+                if (historyIndex < 0) {
+                    historyIndex = consoleHistory.size() + historyIndex;
+                }
+                consoleState = consoleHistory[historyIndex];
+            } else if (event->key.keysym.sym == SDLK_DOWN) {
+                historyIndex++;
+                historyIndex = historyIndex % consoleHistory.size();
+                consoleState = consoleHistory[historyIndex];
             }
             return true;
         } else {
@@ -46,6 +56,11 @@ void CConsoleGraphicsObject::startInput() {
 void CConsoleGraphicsObject::stopInput() {
     SDL_StopTextInput();
     inProgress = false;
+    clearConsole();
+}
+
+void CConsoleGraphicsObject::clearConsole() {
+    consoleHistory.push_back(consoleState);
     consoleState = "";
 }
 
@@ -55,4 +70,12 @@ std::string CConsoleGraphicsObject::getConsoleState() {
 
 void CConsoleGraphicsObject::setConsoleState(std::string consoleState) {
     CConsoleGraphicsObject::consoleState = consoleState;
+}
+
+std::list<std::string> CConsoleGraphicsObject::getConsoleHistory() {
+    return std::list<std::string>(consoleHistory.begin(), consoleHistory.end());
+}
+
+void CConsoleGraphicsObject::setConsoleHistory(std::list<std::string> consoleHistory) {
+    this->consoleHistory = std::vector<std::string>(consoleHistory.begin(), consoleHistory.end());
 }
