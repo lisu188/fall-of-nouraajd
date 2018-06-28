@@ -10,9 +10,6 @@ sudo apt install libjsoncpp-dev
 sudo ln -fs /usr/lib/x86_64-linux-gnu/libboost_python-py36.a /usr/lib/x86_64-linux-gnu/libboost_python3.a
 sudo ln -fs /usr/lib/x86_64-linux-gnu/libboost_python-py36.so /usr/lib/x86_64-linux-gnu/libboost_python3.so
 
-sudo ln -fs /usr/lib/x86_64-linux-gnu/libboost_python-py35.a /usr/lib/x86_64-linux-gnu/libboost_python3.a
-sudo ln -fs /usr/lib/x86_64-linux-gnu/libboost_python-py35.so /usr/lib/x86_64-linux-gnu/libboost_python3.so
-
 mkdir -p cmake-build-debug
 mkdir -p cmake-build-release
 
