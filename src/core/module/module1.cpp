@@ -19,7 +19,11 @@ void initModule1() {
             .def("ptr", &CGameObject::ptr<CGameObject>)
             .def("clone", &CGameObject::clone<CGameObject>)
             .def("addTag", &CGameObject::addTag)
-            .def("removeTag", &CGameObject::removeTag);
+            .def("removeTag", &CGameObject::removeTag)
+            .def("__setattr__", &CGameObject::setStringProperty)
+            .def("__setattr__", &CGameObject::setNumericProperty)
+            .def("__getattr__", &CGameObject::getStringProperty)
+            .def("__getattr__", &CGameObject::getNumericProperty);
 
     class_<Coords>("Coords", init<int, int, int>())
             .def_readonly("x", &Coords::x)
