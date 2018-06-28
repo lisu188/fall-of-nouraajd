@@ -58,7 +58,6 @@ private:
     vstd::lazy<CSlotConfig> slotConfiguration;
     vstd::lazy<CLootHandler> lootHandler;
 
-//TODO:    vstd::lazy<CScriptWindow, std::shared_ptr<CGame>> scriptWindow;
     vstd::lazy<CObjectHandler> objectHandler;
     std::shared_ptr<CMap> map;
     std::shared_ptr<CGui> _gui;
