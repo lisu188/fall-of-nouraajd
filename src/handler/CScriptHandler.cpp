@@ -50,7 +50,11 @@ void CScriptHandler::add_function(std::string function_name, std::string functio
     for (std::string line:vstd::split(function_code, '\n')) {
         stream << "\t" << line << std::endl;
     }
-    execute_script(stream.str());
+    try {
+        PY_UNSAFE(execute_script(stream.str()););
+    } catch (...) {
+        add_function(function_name, "print('Compilation failure!')", args);
+    }
 }
 
 void CScriptHandler::add_class(std::string class_name, std::string function_code,
