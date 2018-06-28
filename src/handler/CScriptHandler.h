@@ -62,11 +62,23 @@ public:
         return get_function<Return, Args...>(name)(params...);
     }
 
-    template<typename Return=void, typename ...Args>
+    template<typename Return, typename ...Args>
     Return call_created_function(std::string function_code, std::initializer_list<std::string> args, Args ...params) {
-        return create_function<Return, Args...>(
-                "FUNC" + vstd::to_hex_hash<std::string>(function_code),
+        std::string name = "FUNC" + vstd::to_hex_hash<std::string>(function_code);
+        Return res = create_function<Return, Args...>(
+                name,
                 function_code, args)(params...);
+        execute_script("del " + name);
+        return res;
+    }
+
+    template<typename ...Args>
+    void call_created_function(std::string function_code, std::initializer_list<std::string> args, Args ...params) {
+        std::string name = "FUNC" + vstd::to_hex_hash<std::string>(function_code);
+        create_function<void, Args...>(
+                name,
+                function_code, args)(params...);
+        execute_script("del " + name);
     }
 
     template<typename T=boost::python::object>
