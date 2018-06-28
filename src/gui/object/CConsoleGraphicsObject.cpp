@@ -38,8 +38,8 @@ CConsoleGraphicsObject::CConsoleGraphicsObject() {
         }
         return false;
     });
-    registerEventCallback([](std::shared_ptr<CGui> gui, SDL_Event *event) {
-        return event->type == SDL_TEXTINPUT;
+    registerEventCallback([this](std::shared_ptr<CGui> gui, SDL_Event *event) {
+        return event->type == SDL_TEXTINPUT && inProgress;
     }, [this](std::shared_ptr<CGui> gui, SDL_Event *event) {
         consoleState += event->text.text;
         return true;
