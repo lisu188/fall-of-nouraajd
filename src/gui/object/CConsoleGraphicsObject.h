@@ -8,7 +8,7 @@ V_META(CConsoleGraphicsObject, CGameGraphicsObject,
        V_PROPERTY(CConsoleGraphicsObject, std::list<std::string>, consoleHistory, getConsoleHistory, setConsoleHistory))
 //TODO: make this properties
     int height = 30;
-    int width = 200;
+    int width = 1080;
 
 public:
     CConsoleGraphicsObject();
