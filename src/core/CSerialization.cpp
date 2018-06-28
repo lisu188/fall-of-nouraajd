@@ -28,6 +28,12 @@ void CSerialization::setProperty(std::shared_ptr<CGameObject> object, std::strin
         case objectValue:
             setObjectProperty(object, getProperty(object, key), key, value);
             break;
+        case uintValue:
+            vstd::logger::warning("uinValue encountered");
+            break;
+        case realValue:
+            vstd::logger::warning("realValue encountered");
+            break;
     }
 }
 
