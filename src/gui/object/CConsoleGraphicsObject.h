@@ -35,4 +35,8 @@ private:
     void startInput();
 
     void clearConsole();
+
+    void decrementHistoryIndex();
+
+    void incrementHistoryIndex();
 };
