@@ -11,7 +11,10 @@ class CTextureCache;
 class CTextManager;
 
 class CGui : public CGameObject {
-V_META(CGui, CGameObject, vstd::meta::empty())
+V_META(CGui, CGameObject,
+       V_PROPERTY(CGui, int, height, getHeight, setHeight),
+       V_PROPERTY(CGui, int, width, getWidth, setWidth),
+       V_PROPERTY(CGui, int, tileSize, getTileSize, setTileSize))
     SDL_Window *window = 0;
     SDL_Renderer *renderer = 0;
 public:
