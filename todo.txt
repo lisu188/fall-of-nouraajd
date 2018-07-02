@@ -27,3 +27,4 @@
 //TODO: load assets from map
 //TODO: make question items not droppable
 //TODO: minus mana bug
+//TODO: bug easy reproducible with tileSize 10, when too many moves are queued player coords desynchronize DEBUG: F7EE6FEBE3099224 cannot step on: 100137326 10412683 0
