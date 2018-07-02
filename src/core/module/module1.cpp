@@ -1,5 +1,4 @@
 #include "core/CGame.h"
-#include "object/CGameObject.h"
 #include "core/CMap.h"
 
 using namespace boost::python;
@@ -36,7 +35,10 @@ void initModule1() {
             .def("loadPlugin", &CGame::loadPlugin)
             .def("getGuiHandler", &CGame::getGuiHandler)
             .def("getObjectHandler", &CGame::getObjectHandler)
-            .def("createObject", &CGame::createObject<CGameObject>);
+            .def("createObject", &CGame::createObject<CGameObject>)
+            .def("getGui", &CGame::getGui);
+
+    class_<CGui, bases<CGameObject>, boost::noncopyable, std::shared_ptr<CGui>>("CGui", no_init);
 
     bool (CMap::*canStep)(Coords)=&CMap::canStep;
 
