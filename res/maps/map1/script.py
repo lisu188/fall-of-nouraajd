@@ -43,8 +43,7 @@ def load(self, context):
     @trigger(context, "onDestroy", "cave1")
     class CaveTrigger(CTrigger):
         def trigger(self, object, event):
-            object.getGame().getGuiHandler().showMessage(  # TODO: externalize
-                "You feel the ground shaking, and see the ratmen all around you!!! But the one part is missin g in this puzzle. Letter said about the ratmen who was much bigger than the other. These here are just ordinary pritschers.")
+            object.getGame().getGuiHandler().showMessage(object.getStringProperty("message"))
             gooby = object.getGame().createObject("Gooby")
             gooby.setStringProperty("name", "gooby1")
             object.getGame().getMap().addObject(gooby)
