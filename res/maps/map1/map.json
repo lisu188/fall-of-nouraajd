@@ -9,18 +9,8 @@
           "height": 32,
           "id": 1,
           "name": "cave1",
-          "properties": {
-            "chance": "10",
-            "monster": "{\"ref\":\"Pritz\",\"properties\":{\"affiliation\":\"gooby\",\"controller\":{\"class\":\"CGroundController\",\"properties\":{\"tileType\":\"ground\"}}}}",
-            "monsters": "10"
-          },
-          "propertytypes": {
-            "chance": "string",
-            "monster": "string",
-            "monsters": "string"
-          },
           "rotation": 0,
-          "type": "Cave",
+          "type": "cave1",
           "visible": true,
           "width": 32,
           "x": 608,

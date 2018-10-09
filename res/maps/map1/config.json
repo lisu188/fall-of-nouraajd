@@ -33,5 +33,25 @@
       "name": "skullOfRolf",
       "animation": "images/skull"
     }
+  },
+  "cave1": {
+    "ref": "Cave",
+    "properties": {
+      "message": "You feel the ground shaking, and see the ratmen all around you!!! But the one part is missin g in this puzzle. Letter said about the ratmen who was much bigger than the other. These here are just ordinary pritschers.",
+      "chance": "10",
+      "monster": {
+        "ref": "Pritz",
+        "properties": {
+          "affiliation": "gooby",
+          "controller": {
+            "class": "CGroundController",
+            "properties": {
+              "tileType": "ground"
+            }
+          }
+        }
+      },
+      "monsters": "10"
+    }
   }
 }
