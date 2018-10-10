@@ -56,18 +56,8 @@
           "height": 32,
           "id": 4,
           "name": "cave2",
-          "properties": {
-            "chance": "10",
-            "monster": "{\"ref\":\"OctoBogz\",\"properties\":{\"affiliation\":\"bogz\",\"controller\":{\"class\":\"CRangeController\",\"properties\":{\"target\":\"cave2\",\"distance\":10}}}}",
-            "monsters": "5"
-          },
-          "propertytypes": {
-            "chance": "string",
-            "monster": "string",
-            "monsters": "string"
-          },
           "rotation": 0,
-          "type": "Cave",
+          "type": "cave2",
           "visible": true,
           "width": 32,
           "x": 5312,

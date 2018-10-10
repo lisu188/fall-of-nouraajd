@@ -53,5 +53,25 @@
       },
       "monsters": "10"
     }
+  },
+  "cave2": {
+    "ref": "Cave",
+    "properties": {
+      "chance": "10",
+      "monster": {
+        "ref": "OctoBogz",
+        "properties": {
+          "affiliation": "bogz",
+          "controller": {
+            "class": "CRangeController",
+            "properties": {
+              "target": "cave2",
+              "distance": 10
+            }
+          }
+        }
+      },
+      "monsters": "5"
+    }
   }
 }
