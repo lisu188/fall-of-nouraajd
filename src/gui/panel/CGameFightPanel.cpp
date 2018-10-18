@@ -5,13 +5,15 @@
 #include "gui/CAnimation.h"
 #include "gui/CTextureCache.h"
 #include "core/CMap.h"
+#include "gui/object/CStatsGraphicsObject.h"
+
 void CGameFightPanel::panelRender(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> pRect, int i) {
     drawInteractions(gui, pRect, i);
     drawEnemy(gui, pRect, i);
 }
 
 void CGameFightPanel::drawInteractions(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> pRect, int frameTime) {
-    std::shared_ptr < SDL_Rect > location = std::make_shared<SDL_Rect>(*pRect.get());
+    std::shared_ptr<SDL_Rect> location = std::make_shared<SDL_Rect>(*pRect.get());
     location->y += (getYSize() - gui->getTileSize());
 
     drawCollection(gui, location,
@@ -138,4 +140,6 @@ void CGameFightPanel::drawEnemy(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_R
     loc.w = size;
     loc.h = size;
     enemy.lock()->getAnimationObject()->render(gui, &loc, frameTime);
+
+    CStatsGraphicsUtil::drawStats(gui, enemy.lock(), loc.x, loc.y + loc.h, loc.w, loc.h / 4.0, false, false);
 }
