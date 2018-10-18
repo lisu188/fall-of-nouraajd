@@ -129,7 +129,6 @@ def load(self, context):
             if second.getHpRatio() < 20:
                 second.hurt(first.getDmg() * 1.5);
 
-    # TODO: tag this
     @register(context)
     class BloodThirst(CInteraction):
         def performAction(self, first, second):
