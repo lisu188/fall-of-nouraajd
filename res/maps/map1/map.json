@@ -185,14 +185,8 @@
           "height": 32,
           "id": 15,
           "name": "market1",
-          "properties": {
-            "market": "{\"ref\":\"exampleMarket\"}"
-          },
-          "propertytypes": {
-            "market": "string"
-          },
           "rotation": 0,
-          "type": "Market",
+          "type": "market1",
           "visible": true,
           "width": 32,
           "x": 3328,
