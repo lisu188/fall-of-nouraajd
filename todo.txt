@@ -12,7 +12,6 @@
 //TODO: fight panel
     //TODO: buffs in fight panel
     //TODO: cant quit game when in fight (hang in wait until)
-    //TODO: enemy health bars
     //TODO: after fight loot window + summary
 //TODO: wrapping of list views
 //TODO: crash when exit with opened market (double free probably)
