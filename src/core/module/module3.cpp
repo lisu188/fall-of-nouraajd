@@ -1,6 +1,5 @@
 #include "core/CGame.h"
 #include "core/CLoader.h"
-#include "core/CEventLoop.h"
 #include "core/CWrapper.h"
 
 using namespace boost::python;
@@ -29,10 +28,10 @@ void initModule3() {
     class_<CWrapper<CPlugin>, bases<CPlugin>, boost::noncopyable, std::shared_ptr<CWrapper<CPlugin>>>("CPlugin").
             def("load", &CWrapper<CPlugin>::load);
 
-    class_<CEventLoop, bases<CGameObject>, boost::noncopyable, std::shared_ptr<CEventLoop>>("CEventLoop", no_init)
-            .def("instance", &CEventLoop::instance)
-            .def("run", &CEventLoop::run)
-            .def("invoke", &CEventLoop::invoke);
+    class_<vstd::event_loop<>, boost::noncopyable, std::shared_ptr<vstd::event_loop<>>>("event_loop", no_init)
+            .def("instance", &vstd::event_loop<>::instance)
+            .def("run", &vstd::event_loop<>::run)
+            .def("invoke", &vstd::event_loop<>::invoke);
 
     class_<std::vector<std::string>>("std::vector<std::string>")
             .def(vector_indexing_suite<std::vector<std::string>>());

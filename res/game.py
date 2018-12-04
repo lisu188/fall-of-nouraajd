@@ -27,7 +27,7 @@ def new():
     g = CGameLoader.loadGame()
     CGameLoader.startGameWithPlayer(g, "map1", "Warrior")
     CGameLoader.loadGui(g)
-    while CEventLoop.instance().run():
+    while event_loop.instance().run():
         pass
 
 
@@ -35,5 +35,5 @@ def load(save):
     g = CGameLoader.loadGame()
     CGameLoader.loadSavedGame(g, save)
     CGameLoader.loadGui(g)
-    while CEventLoop.instance().run():
+    while event_loop.instance().run():
         pass
