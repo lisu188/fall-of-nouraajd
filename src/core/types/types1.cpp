@@ -4,7 +4,6 @@
 #include "core/CTypes.h"
 #include "core/CWrapper.h"
 #include "core/CController.h"
-#include "core/CEventLoop.h"
 
 extern void add_member(std::shared_ptr<Value> object, std::string key, std::string value);
 
@@ -29,8 +28,6 @@ namespace {
             {
                 CTypes::register_type<CSlotConfig, CGameObject>();
                 CTypes::register_type<CSlot, CGameObject>();
-
-                CTypes::register_type<CEventLoop, CGameObject>();
 
                 CTypes::register_type<CObjectHandler, CGameObject>();
                 CTypes::register_type<CEventHandler, CGameObject>();

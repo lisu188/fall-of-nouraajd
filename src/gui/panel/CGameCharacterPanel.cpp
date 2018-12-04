@@ -15,6 +15,7 @@ void CGameCharacterPanel::panelRender(std::shared_ptr<CGui> gui, std::shared_ptr
     SDL_RenderCopy(gui->getRenderer(), texture, NULL, &actual);
 }
 
+//TODO: can be done in CTextManager
 struct SDL_Texture *CGameCharacterPanel::loadTextTexture(std::shared_ptr<CGui> ptr) {
     TTF_Init();
     struct _TTF_Font *font = TTF_OpenFont("fonts/ampersand.ttf", 24);
