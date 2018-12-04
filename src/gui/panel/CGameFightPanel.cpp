@@ -1,6 +1,3 @@
-
-
-#include "core/CEventLoop.h"
 #include "CGameFightPanel.h"
 #include "gui/CAnimation.h"
 #include "gui/CTextureCache.h"

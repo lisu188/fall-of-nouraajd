@@ -1,7 +1,6 @@
 #include "gui/object/CStatsGraphicsObject.h"
 #include "gui/object/CMapGraphicsObject.h"
 #include "core/CLoader.h"
-#include "core/CEventLoop.h"
 #include "core/CJsonUtil.h"
 #include "gui/CGui.h"
 #include "core/CTypes.h"
@@ -205,10 +204,10 @@ void CGameLoader::loadGui(std::shared_ptr<CGame> game) {
     game->setGui(gui);
 
 
-    CEventLoop::instance()->registerFrameCallback([gui](int time) {
+    vstd::event_loop<>::instance()->registerFrameCallback([gui](int time) {
         gui->render(time);
     });
-    CEventLoop::instance()->registerEventCallback([gui](SDL_Event *event) {
+    vstd::event_loop<>::instance()->registerEventCallback([gui](SDL_Event *event) {
         gui->event(event);
     });
 }

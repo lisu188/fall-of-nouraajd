@@ -1,10 +1,10 @@
 #include "CGlobal.h"
-#include "core/CEventLoop.h"
+
 
 namespace vstd {
     std::function<void(std::function<void()>)> get_call_later_handler() {
         return [](std::function<void()> f) {
-            CEventLoop::instance()->invoke(f);
+            vstd::event_loop<>::instance()->invoke(f);
         };
     }
 
@@ -17,7 +17,7 @@ namespace vstd {
 
     std::function<void(std::function<void()>)> get_call_later_block_handler() {
         return [](std::function<void()> f) {
-            CEventLoop::instance()->await(f);
+            vstd::event_loop<>::instance()->await(f);
         };
     }
 
@@ -25,7 +25,7 @@ namespace vstd {
         return [](std::function<bool()> pred) {
             vstd::call_later_block([pred]() {
                 while (!pred()) {
-                    CEventLoop::instance()->run();
+                    vstd::event_loop<>::instance()->run();
                 }
             });
         };
@@ -33,13 +33,13 @@ namespace vstd {
 
     std::function<void(int, std::function<void()>)> get_call_delayed_later_handler() {
         return [](int t, std::function<void()> f) {
-            CEventLoop::instance()->delay(t, f);
+            vstd::event_loop<>::instance()->delay(t, f);
         };
     }
 
     std::function<void(int, std::function<void()>)> get_call_delayed_async_handler() {
         return [](int t, std::function<void()> f) {
-            CEventLoop::instance()->delay(t, [f]() {
+            vstd::event_loop<>::instance()->delay(t, [f]() {
                 vstd::async(f);
             });
         };
