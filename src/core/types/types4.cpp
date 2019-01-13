@@ -5,6 +5,7 @@
 #include "gui/panel/CGameInventoryPanel.h"
 #include "gui/object/CMapGraphicsObject.h"
 #include "gui/object/CStatsGraphicsObject.h"
+#include "gui/object/CConsoleGraphicsObject.h"
 #include "gui/panel/CGameTradePanel.h"
 #include "core/CTypes.h"
 #include "core/CController.h"
@@ -37,6 +38,7 @@ namespace {
                 {
                     CTypes::register_type<CMapGraphicsObject, CGameGraphicsObject, CGameObject>();
                     CTypes::register_type<CStatsGraphicsObject, CGameGraphicsObject, CGameObject>();
+                    CTypes::register_type<CConsoleGraphicsObject, CGameGraphicsObject, CGameObject>();
 
                     CTypes::register_type<CGamePanel, CGameGraphicsObject, CGameObject>();
                     {

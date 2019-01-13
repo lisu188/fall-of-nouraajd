@@ -190,25 +190,19 @@ void CGameLoader::initScriptHandler(std::shared_ptr<CScriptHandler> handler, std
 
 //TODO: use CObjectHandler
 void CGameLoader::loadGui(std::shared_ptr<CGame> game) {
-    std::shared_ptr<CGui> gui = std::make_shared<CGui>(game);
+    std::shared_ptr<CGui> gui = game->createObject<CGui>("GUI");
 
-    std::shared_ptr<CMapGraphicsObject> mapGraphicsObject = std::make_shared<CMapGraphicsObject>();
-
-    std::shared_ptr<CStatsGraphicsObject> stats = std::make_shared<CStatsGraphicsObject>();
-    std::shared_ptr<CConsoleGraphicsObject> console = std::make_shared<CConsoleGraphicsObject>();
-
-    gui->addObject(mapGraphicsObject);
-    gui->addObject(stats);
-    gui->addObject(console);
+    gui->addObject(game->createObject<CMapGraphicsObject>("CMapGraphicsObject"));
+    gui->addObject(game->createObject<CStatsGraphicsObject>("CStatsGraphicsObject"));
+    gui->addObject(game->createObject<CConsoleGraphicsObject>("CConsoleGraphicsObject"));
 
     game->setGui(gui);
 
-
-    vstd::event_loop<>::instance()->registerFrameCallback([gui](int time) {
-        gui->render(time);
+    vstd::event_loop<>::instance()->registerFrameCallback([game](int time) {
+        game->getGui()->render(time);
     });
-    vstd::event_loop<>::instance()->registerEventCallback([gui](SDL_Event *event) {
-        gui->event(event);
+    vstd::event_loop<>::instance()->registerEventCallback([game](SDL_Event *event) {
+        game->getGui()->event(event);
     });
 }
 

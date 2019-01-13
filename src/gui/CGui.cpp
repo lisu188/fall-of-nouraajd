@@ -16,7 +16,7 @@ CGui::~CGui() {
 void CGui::render(int frameTime) {
     SDL_SetRenderDrawColor(renderer, BLACK);
     SDL_RenderClear(renderer);
-    for (std::shared_ptr<CGameGraphicsObject> object:gui_stack) {
+    for (std::shared_ptr<CGameGraphicsObject> object:guiStack) {
         SDL_Rect physical;
         physical.x = 0;
         physical.y = 0;
@@ -28,7 +28,7 @@ void CGui::render(int frameTime) {
 }
 
 bool CGui::event(SDL_Event *event) {
-    for (std::shared_ptr<CGameGraphicsObject> object:gui_stack | boost::adaptors::reversed) {
+    for (std::shared_ptr<CGameGraphicsObject> object:guiStack | boost::adaptors::reversed) {
         if (object->event(this->ptr<CGui>(), event)) {
             return true;
         }
@@ -37,14 +37,14 @@ bool CGui::event(SDL_Event *event) {
 }
 
 void CGui::addObject(std::shared_ptr<CGameGraphicsObject> object) {
-    gui_stack.push_back(object);
+    guiStack.push_back(object);
 }
 
 void CGui::removeObject(std::shared_ptr<CGameGraphicsObject> object) {
-    gui_stack.erase(
-            std::remove_if(gui_stack.begin(), gui_stack.end(), [object](std::shared_ptr<CGameGraphicsObject> ob) {
+    guiStack.erase(
+            std::remove_if(guiStack.begin(), guiStack.end(), [object](std::shared_ptr<CGameGraphicsObject> ob) {
                 return ob.get() == object.get();
-            }), gui_stack.end());
+            }), guiStack.end());
 }
 
 SDL_Renderer *CGui::getRenderer() const {
@@ -95,10 +95,3 @@ int CGui::getTileCountY() {
     return height / tileSize;
 }
 
-CGui::CGui(std::shared_ptr<CGame> game) : CGui() {
-    _game = game;
-}
-
-std::shared_ptr<CGame> CGui::getGame() {
-    return _game.lock();
-}
