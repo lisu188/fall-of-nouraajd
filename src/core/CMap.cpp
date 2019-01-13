@@ -3,23 +3,9 @@
 #include "core/CController.h"
 #include "object/CTrigger.h"
 
-void CMap::ensureTile(int i, int j) {
-    Coords coords(i, j, currentLevel);
-    if (tiles.find(coords) == tiles.end()) {
-        this->getTile(i, j, currentLevel);
-    }
-}
 
 std::map<int, std::pair<int, int> > CMap::getBounds() {
     return boundaries;
-}
-
-int CMap::getCurrentXBound() {
-    return boundaries[currentLevel].first;
-}
-
-int CMap::getCurrentYBound() {
-    return boundaries[currentLevel].second;
 }
 
 void CMap::removeObjectByName(std::string name) {
@@ -66,7 +52,6 @@ void CMap::setPlayer(std::shared_ptr<CPlayer> player) {
 }
 
 
-
 std::shared_ptr<CEventHandler> CMap::getEventHandler() {
     return eventHandler.get([this]() {
         return std::make_shared<CEventHandler>();
@@ -95,28 +80,15 @@ void CMap::removeTile(int x, int y, int z) {
     this->tiles.erase(this->tiles.find(Coords(x, y, z)));
 }
 
-int CMap::getCurrentMap() {
-    return currentLevel;
-}
-
-void CMap::mapUp() {
-    currentLevel--;
-}
-
-void CMap::mapDown() {
-    currentLevel++;
-}
-
 std::shared_ptr<CTile> CMap::getTile(int x, int y, int z) {
     Coords coords(x, y, z);
     std::shared_ptr<CTile> tile;
     auto it = this->tiles.find(coords);
     if (it == this->tiles.end()) {
-        auto bound = boundaries[z];
-        if (x < 0 || y < 0 || x > bound.first || y > bound.second) {
+        if (vstd::ctn(boundaries, z) && (x < 0 || y < 0 || x > boundaries[z].first || y > boundaries[z].second)) {
             tile = getGame()->createObject<CTile>("MountainTile");
         } else {
-            tile = getGame()->createObject<CTile>(defaultTiles[z]);
+            tile = getGame()->createObject<CTile>(vstd::ctn(boundaries, z) ? defaultTiles[z] : "GrassTile");
         }
         if (tile) {
             this->addTile(tile, x, y, z);
@@ -237,7 +209,8 @@ void CMap::removeObjects(std::function<bool(std::shared_ptr<CMapObject>)> func) 
 }
 
 void CMap::move() {
-    static std::shared_ptr<vstd::future<void, void>> move = vstd::later([]() {});
+    static std::shared_ptr<vstd::future<void, void>> move = vstd::later(
+            []() {}); //TODO: this should not be static because causes crashes on exit
     auto map = this->ptr<CMap>();
 
     move = move->thenLater([map]() {
