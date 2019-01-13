@@ -54,26 +54,13 @@ public:
 
     void removeObject(std::shared_ptr<CMapObject> mapObject);
 
-
-    void mapUp();
-
-    void mapDown();
-
-    int getCurrentMap();
-
     int getEntryX();
 
     int getEntryY();
 
     int getEntryZ();
 
-    void ensureTile(int i, int j);
-
     std::map<int, std::pair<int, int> > getBounds();
-
-    int getCurrentXBound();
-
-    int getCurrentYBound();
 
     void removeObjectByName(std::string name);
 
@@ -141,7 +128,6 @@ private:
 
 
     std::shared_ptr<CPlayer> player;
-    int currentLevel = 0;
     std::map<int, std::string> defaultTiles;
     std::map<int, std::pair<int, int> > boundaries;
     int entryx = 0;
