@@ -155,6 +155,7 @@ configure_file(res/images/buildings/cave.png images/buildings/cave.png COPYONLY)
 configure_file(res/images/buildings/market.png images/buildings/market.png COPYONLY)
 configure_file(res/images/buildings/teleporter.png images/buildings/teleporter.png COPYONLY)
 configure_file(res/images/buildings/dungeon.png images/buildings/dungeon.png COPYONLY)
+configure_file(res/images/buildings/groundhole.png images/buildings/groundhole.png COPYONLY)
 configure_file(res/images/terrain.png images/terrain.png COPYONLY)
 
 configure_file(res/images/players/assasin.png images/players/assasin.png COPYONLY)

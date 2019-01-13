@@ -22,5 +22,11 @@
     "properties": {
       "animation": "images/buildings/teleporter"
     }
+  },
+  "GroundHole": {
+    "class": "GroundHole",
+    "properties": {
+      "animation": "images/buildings/groundhole"
+    }
   }
 }
