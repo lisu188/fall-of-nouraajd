@@ -13,6 +13,12 @@ def load(self, context):
                 event.getCause().setCoords(loc)
 
     @register(context)
+    class GroundHole(CBuilding):
+        def onEnter(self, event):
+            loc = self.getCoords()
+            event.getCause().setCoords(Coords(loc.x, loc.y, loc.z - 1))
+
+    @register(context)
     class Market(CBuilding):
         def onEnter(self, event):
             pass
@@ -23,7 +29,7 @@ def load(self, context):
             if not event.getCause().isPlayer():
                 return
             if self.getBoolProperty("enabled"):
-                self.setBoolProperty("enabled", False);
+                self.setBoolProperty("enabled", False)
                 location = self.getCoords()
                 for i in range(-1, 2):
                     for j in range(-1, 2):

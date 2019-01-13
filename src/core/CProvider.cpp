@@ -121,6 +121,7 @@ std::shared_ptr<CAnimation> CAnimationProvider::getAnimation(std::string _path) 
     if (boost::filesystem::is_regular_file(path)) {
         return std::make_shared<CStaticAnimation>(path);
     }
+    //TODO: if the path wasnt empty load text instead
     vstd::logger::warning("Loading empty animation");
     return std::make_shared<CAnimation>();
 }
