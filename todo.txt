@@ -29,3 +29,7 @@
 //TODO: bug easy reproducible with tileSize 10, when too many moves are queued player coords desynchronize DEBUG: F7EE6FEBE3099224 cannot step on: 100137326 10412683 0
 //TODO: make tags enum
 //TODO: replace buff with selfTarget
+//TODO: pathfinder
+    //TODO: visualise path on click
+    //TODO: make tag on teleporter and dungeon entrance
+    //TODO: multilevel maps
