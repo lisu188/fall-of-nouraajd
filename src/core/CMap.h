@@ -126,7 +126,6 @@ private:
     std::unordered_map<std::string, std::shared_ptr<CMapObject>> mapObjects;
     std::unordered_map<Coords, std::shared_ptr<CTile>> tiles;
 
-
     std::shared_ptr<CPlayer> player;
     std::map<int, std::string> defaultTiles;
     std::map<int, std::pair<int, int> > boundaries;
@@ -138,5 +137,7 @@ private:
     int turn = 0;
     bool moving = false;
     std::string mapName;
+
+    std::shared_ptr<vstd::future<void, void>> _moveHelper = vstd::later([]() {});
 };
 

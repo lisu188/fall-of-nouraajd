@@ -209,11 +209,9 @@ void CMap::removeObjects(std::function<bool(std::shared_ptr<CMapObject>)> func) 
 }
 
 void CMap::move() {
-    static std::shared_ptr<vstd::future<void, void>> move = vstd::later(
-            []() {}); //TODO: this should not be static because causes crashes on exit
     auto map = this->ptr<CMap>();
 
-    move = move->thenLater([map]() {
+    _moveHelper = _moveHelper->thenLater([map]() {
         vstd::wait_until([map]() {
             return !map->moving;
         });
