@@ -21,8 +21,7 @@ public:
     SDL_Renderer *getRenderer() const;
 
 private:
-    std::list<std::shared_ptr<CGameGraphicsObject>> gui_stack;
-    std::weak_ptr<CGame> _game;
+    std::list<std::shared_ptr<CGameGraphicsObject>> guiStack;
 public:
     int getWidth();
 
@@ -40,16 +39,12 @@ public:
 
     int getTileCountY();
 
-    std::shared_ptr<CGame> getGame();
-
 private:
     int height = 1080;
     int tileSize = 50;
     int width = 1920;
 public:
     CGui();
-
-    CGui(std::shared_ptr<CGame> game);
 
     ~CGui();
 
