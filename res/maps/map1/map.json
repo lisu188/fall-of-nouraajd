@@ -202,6 +202,17 @@
           "width": 32,
           "x": 3840,
           "y": 3424
+        },
+        {
+          "height": 32,
+          "id": 17,
+          "name": "",
+          "rotation": 0,
+          "type": "GroundHole",
+          "visible": true,
+          "width": 32,
+          "x": 3648,
+          "y": 3360
         }
       ],
       "opacity": 1,
@@ -40235,13 +40246,13 @@
         "yBound": "string"
       },
       "type": "tilelayer",
-      "visible": true,
+      "visible": false,
       "width": 200,
       "x": 0,
       "y": 0
     }
   ],
-  "nextobjectid": 17,
+  "nextobjectid": 18,
   "orientation": "orthogonal",
   "properties": {
     "x": "110",
@@ -40254,7 +40265,7 @@
     "z": "string"
   },
   "renderorder": "right-down",
-  "tiledversion": "1.0.2",
+  "tiledversion": "1.0.3",
   "tileheight": 32,
   "tilesets": [
     {
