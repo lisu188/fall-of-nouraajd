@@ -1,5 +1,6 @@
 #include "core/CGame.h"
 #include "core/CMap.h"
+#include "gui/CGui.h"
 
 using namespace boost::python;
 
