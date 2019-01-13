@@ -14,7 +14,6 @@
     //TODO: cant quit game when in fight (hang in wait until)
     //TODO: after fight loot window + summary
 //TODO: wrapping of list views
-//TODO: crash when exit with opened market (double free probably) CMap::move() static variable
 //TODO: encapsulate SDL_RenderCopy
 //TODO: make panel hotkey configuration configurable
 //TODO: implement move cost
