@@ -5,8 +5,6 @@
 
 class CCreature;
 
-class QGraphicsSceneMouseEvent;
-
 class Stats;
 
 class CEffect;
