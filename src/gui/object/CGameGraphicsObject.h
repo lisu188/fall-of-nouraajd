@@ -11,7 +11,7 @@ V_META(CGameGraphicsObject, CGameObject, vstd::meta::empty())
     std::list<std::pair<std::function<bool(std::shared_ptr<CGui>, SDL_Event *)>, std::function<bool(
             std::shared_ptr<CGui>, SDL_Event *) >>> eventCallbackList;
 public:
-    virtual void render(std::shared_ptr<CGui> reneder, SDL_Rect *pos, int frameTime);
+    virtual void render(std::shared_ptr<CGui> reneder, std::shared_ptr<SDL_Rect> pos, int frameTime);
 
     virtual bool event(std::shared_ptr<CGui> gui, SDL_Event *event);
 

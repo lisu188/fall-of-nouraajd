@@ -19,7 +19,7 @@ void CGamePanel::setYSize(int _ySize) {
     ySize = _ySize;
 }
 
-void CGamePanel::drawSelection(std::shared_ptr<CGui> gui, SDL_Rect *location, int thickness) {
+void CGamePanel::drawSelection(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> location, int thickness) {
     SDL_SetRenderDrawColor(gui->getRenderer(), YELLOW);
     SDL_Rect tmp = {location->x, location->y, thickness, location->h};
     SDL_Rect tmp2 = {location->x, location->y, location->w, thickness};
@@ -33,8 +33,8 @@ void CGamePanel::drawSelection(std::shared_ptr<CGui> gui, SDL_Rect *location, in
     SDL_RenderFillRect(gui->getRenderer(), &tmp4);
 }
 
-void CGamePanel::render(std::shared_ptr<CGui> gui, SDL_Rect *pos, int frameTime) {
-    std::shared_ptr < SDL_Rect > rect = getPanelRect(pos);
+void CGamePanel::render(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> pos, int frameTime) {
+    std::shared_ptr<SDL_Rect> rect = getPanelRect(pos);
     SDL_RenderFillRect(gui->getRenderer(), rect.get());
     SDL_RenderCopy(gui->getRenderer(), gui->getTextureCache()->getTexture("images/panel.png"), nullptr, rect.get());
     this->panelRender(gui, rect, frameTime);
@@ -57,7 +57,7 @@ bool CGamePanel::event(std::shared_ptr<CGui> gui, SDL_Event *event) {
 }
 
 
-std::shared_ptr<SDL_Rect> CGamePanel::getPanelRect(SDL_Rect *pos) {
+std::shared_ptr<SDL_Rect> CGamePanel::getPanelRect(std::shared_ptr<SDL_Rect> pos) {
     std::shared_ptr<SDL_Rect> recalc = std::make_shared<SDL_Rect>();
     recalc->x = pos->x + pos->w / 2 - this->xSize / 2;
     recalc->y = pos->y + pos->h / 2 - this->ySize / 2;
@@ -67,8 +67,12 @@ std::shared_ptr<SDL_Rect> CGamePanel::getPanelRect(SDL_Rect *pos) {
 }
 
 std::pair<int, int> CGamePanel::translatePos(std::shared_ptr<CGui> gui, int x, int y) {
-    SDL_Rect pos = {0, 0, gui->getWidth(), gui->getHeight()};
-    std::shared_ptr<SDL_Rect> transPos = getPanelRect(&pos);
+    std::shared_ptr<SDL_Rect> pos = std::make_shared<SDL_Rect>();
+    pos->x = 0;
+    pos->y = 0;
+    pos->w = gui->getWidth();
+    pos->h = gui->getHeight();
+    std::shared_ptr<SDL_Rect> transPos = getPanelRect(pos);
     return std::make_pair<int, int>(x - transPos->x, y - transPos->y);
 }
 
@@ -80,19 +84,19 @@ void CGamePanel::panelMouseEvent(std::shared_ptr<CGui> shared_ptr, int x, int y)
 
 }
 
-void CGamePanel::drawItemBox(std::shared_ptr<CGui> gui, SDL_Rect *location)  {
+void CGamePanel::drawItemBox(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> location) {
     SDL_RenderCopy(gui->getRenderer(), gui->getTextureCache()->getTexture("images/item.png"), nullptr,
-                   location);
+                   location.get());
 }
 
-void CGamePanel::drawArrowLeft(std::shared_ptr<CGui> gui, SDL_Rect *location) {
+void CGamePanel::drawArrowLeft(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> location) {
     SDL_RenderCopy(gui->getRenderer(), gui->getTextureCache()->getTexture("images/arrows/left.png"), nullptr,
-                   location);
+                   location.get());
 }
 
 
-void CGamePanel::drawArrowRight(std::shared_ptr<CGui> gui, SDL_Rect *location) {
+void CGamePanel::drawArrowRight(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> location) {
     SDL_RenderCopy(gui->getRenderer(), gui->getTextureCache()->getTexture("images/arrows/right.png"), nullptr,
-                   location);
+                   location.get());
 }
 

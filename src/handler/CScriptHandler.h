@@ -4,14 +4,14 @@
 #include "core/CUtil.h"
 
 
-template<typename Return, typename... Args>
+template<typename Ret, typename... Args>
 struct wrap {
-    static std::function<Return(Args...)> call(boost::python::object func) {
+    static std::function<Ret(Args...)> call(boost::python::object func) {
         return [func](Args... args) {
             PY_SAFE_RET (
                     boost::python::object ret = func(args ...);
                     boost::python::incref(ret.ptr());
-                    return boost::python::extract<Return>(ret);
+                    return boost::python::extract<Ret>(ret);
             )
         };
     }
@@ -44,28 +44,28 @@ public:
 
     void import(std::string name);
 
-    template<typename Return=void, typename...Args>
-    std::function<Return(Args...)> get_function(std::string functionName) {
-        return wrap<Return, Args...>::call(get_object(functionName));
+    template<typename Ret=void, typename...Args>
+    std::function<Ret(Args...)> get_function(std::string functionName) {
+        return wrap<Ret, Args...>::call(get_object(functionName));
     }
 
-    template<typename Return=void, typename... Args>
-    std::function<Return(Args...)> create_function(std::string functionName, std::string functionCode,
+    template<typename Ret=void, typename... Args>
+    std::function<Ret(Args...)> create_function(std::string functionName, std::string functionCode,
                                                    std::initializer_list<std::string> args) {
         vstd::fail_if(sizeof... (Args) != args.size(), "Wrong argument list!");
         add_function(functionName, functionCode, args);
-        return get_function<Return, Args...>(functionName);
+        return get_function<Ret, Args...>(functionName);
     }
 
-    template<typename Return=void, typename ...Args>
-    Return call_function(std::string name, Args ...params) {
-        return get_function<Return, Args...>(name)(params...);
+    template<typename Ret=void, typename ...Args>
+    Ret call_function(std::string name, Args ...params) {
+        return get_function<Ret, Args...>(name)(params...);
     }
 
-    template<typename Return, typename ...Args>
-    Return call_created_function(std::string function_code, std::initializer_list<std::string> args, Args ...params) {
+    template<typename Ret, typename ...Args>
+    Ret call_created_function(std::string function_code, std::initializer_list<std::string> args, Args ...params) {
         std::string name = "FUNC" + vstd::to_hex_hash<std::string>(function_code);
-        Return res = create_function<Return, Args...>(
+        Ret res = create_function<Ret, Args...>(
                 name,
                 function_code, args)(params...);
         execute_script("del " + name);

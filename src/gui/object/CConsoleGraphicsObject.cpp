@@ -2,7 +2,7 @@
 #include "gui/CGui.h"
 #include "gui/CTextManager.h"
 
-void CConsoleGraphicsObject::render(std::shared_ptr<CGui> gui, SDL_Rect *pos, int frameTime) {
+void CConsoleGraphicsObject::render(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> pos, int frameTime) {
     gui->getTextManager()->drawText(consoleState, pos->x, pos->y + pos->h - height, width);
 }
 

@@ -131,12 +131,12 @@ void CGameFightPanel::setEnemy(std::shared_ptr<CCreature> en) {
 
 void CGameFightPanel::drawEnemy(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> pRect, int frameTime) {
     int size = gui->getTileSize() * 4;
-    SDL_Rect loc;
-    loc.x = pRect->x + (getXSize() / 2 - size / 2);
-    loc.y = pRect->y + ((getYSize() - gui->getTileSize()) / 2 - size / 2);
-    loc.w = size;
-    loc.h = size;
-    enemy.lock()->getAnimationObject()->render(gui, &loc, frameTime);
+    std::shared_ptr<SDL_Rect> loc = std::make_shared<SDL_Rect>();
+    loc->x = pRect->x + (getXSize() / 2 - size / 2);
+    loc->y = pRect->y + ((getYSize() - gui->getTileSize()) / 2 - size / 2);
+    loc->w = size;
+    loc->h = size;
+    enemy.lock()->getAnimationObject()->render(gui, loc, frameTime);
 
-    CStatsGraphicsUtil::drawStats(gui, enemy.lock(), loc.x, loc.y + loc.h, loc.w, loc.h / 4.0, false, false);
+    CStatsGraphicsUtil::drawStats(gui, enemy.lock(), loc->x, loc->y + loc->h, loc->w, loc->h / 4.0, false, false);
 }

@@ -68,7 +68,7 @@ CMapGraphicsObject::CMapGraphicsObject() {
     });
 }
 
-void CMapGraphicsObject::render(std::shared_ptr<CGui> gui, SDL_Rect *pos, int frameTime) {
+void CMapGraphicsObject::render(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> pos, int frameTime) {
     std::shared_ptr<CMap> map = gui->getGame()->getMap();
     Coords playerCoords = map->getPlayer()->getCoords();
     std::unordered_set<Coords> tiles;
@@ -80,21 +80,21 @@ void CMapGraphicsObject::render(std::shared_ptr<CGui> gui, SDL_Rect *pos, int fr
 
             tiles.insert(tile->getCoords());
 
-            SDL_Rect physical;
-            physical.x = gui->getTileSize() * x + pos->x;
-            physical.y = gui->getTileSize() * y + pos->y;
-            physical.w = gui->getTileSize();
-            physical.h = gui->getTileSize();
-            tile->getAnimationObject()->render(gui, &physical, frameTime);
+            std::shared_ptr<SDL_Rect> physical = std::make_shared<SDL_Rect>();
+            physical->x = gui->getTileSize() * x + pos->x;
+            physical->y = gui->getTileSize() * y + pos->y;
+            physical->w = gui->getTileSize();
+            physical->h = gui->getTileSize();
+            tile->getAnimationObject()->render(gui, physical, frameTime);
         }
     map->forObjects([&](std::shared_ptr<CMapObject> ob) {
         if (vstd::ctn(tiles, ob->getCoords())) {
-            SDL_Rect physical;
-            physical.x = gui->getTileSize() * (ob->getCoords().x + gui->getTileCountX() / 2 - playerCoords.x) + pos->x;
-            physical.y = gui->getTileSize() * (ob->getCoords().y + gui->getTileCountY() / 2 - playerCoords.y) + pos->y;
-            physical.w = gui->getTileSize();
-            physical.h = gui->getTileSize();
-            ob->getAnimationObject()->render(gui, &physical, frameTime);
+            std::shared_ptr<SDL_Rect> physical = std::make_shared<SDL_Rect>();
+            physical->x = gui->getTileSize() * (ob->getCoords().x + gui->getTileCountX() / 2 - playerCoords.x) + pos->x;
+            physical->y = gui->getTileSize() * (ob->getCoords().y + gui->getTileCountY() / 2 - playerCoords.y) + pos->y;
+            physical->w = gui->getTileSize();
+            physical->h = gui->getTileSize();
+            ob->getAnimationObject()->render(gui, physical, frameTime);
         }
     });
 }
