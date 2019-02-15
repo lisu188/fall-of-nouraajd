@@ -4,6 +4,8 @@
 #include "gui/object/CGameGraphicsObject.h"
 #include "gui/CGui.h"
 
+#define OVERSIZED() isOversized(gui, collection, xSize, ySize, allowOversize)
+
 class CGamePanel : public CGameGraphicsObject {
 V_META(CGamePanel, CGameGraphicsObject,
        V_PROPERTY(CGamePanel, int, xSize, getXSize, setXSize),
@@ -29,8 +31,22 @@ protected:
     void drawCollection(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> loc, Collection collection, int xSize,
                         int ySize, int tileSize,
                         Index index, Draw draw, SelectionPredicate selPred, DrawSelection drawSelection,
-                        int thickness) {
+                        int thickness, bool allowOversize = false) {
         int i = -1;
+        if (OVERSIZED()) {
+            SDL_Rect location;
+            location.x = loc->x;
+            location.y = tileSize * (ySize - 1) + loc->y;
+            location.w = tileSize;
+            location.h = tileSize;
+            drawArrowLeft(gui, &location);
+
+            location.x = tileSize * (xSize - 1) + loc->x;
+            location.y = tileSize * (ySize - 1) + loc->y;
+            location.w = tileSize;
+            location.h = tileSize;
+            drawArrowRight(gui, &location);
+        }
         for (auto it:collection()) {
             i = index(it, i);
             SDL_Rect location;
@@ -47,6 +63,10 @@ protected:
     }
 
     void drawItemBox(std::shared_ptr<CGui> gui, SDL_Rect *location);
+
+    void drawArrowLeft(std::shared_ptr<CGui> gui, SDL_Rect *location);
+
+    void drawArrowRight(std::shared_ptr<CGui> gui, SDL_Rect *location);
 
     template<typename Collection, typename Index, typename Callback>
     void
@@ -72,6 +92,13 @@ protected:
     virtual void panelMouseEvent(std::shared_ptr<CGui> shared_ptr, int x, int y);
 
 private:
+    template<typename T>
+    bool isOversized(std::shared_ptr<CGui> gui, T t, int xSize, int ySize, bool allowOversize) {
+        return allowOversize && t().size() > ((unsigned) xSize * (unsigned) ySize);
+    }
+
     int xSize = 800;
     int ySize = 600;
 };
+
+#undef OVERSIZED
