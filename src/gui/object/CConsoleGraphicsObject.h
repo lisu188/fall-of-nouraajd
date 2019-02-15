@@ -13,7 +13,7 @@ V_META(CConsoleGraphicsObject, CGameGraphicsObject,
 public:
     CConsoleGraphicsObject();
 
-    void render(std::shared_ptr<CGui> gui, SDL_Rect *pos, int frameTime) override;
+    void render(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> pos, int frameTime) override;
 
     std::string getConsoleState();
 

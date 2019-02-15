@@ -1,7 +1,7 @@
 #include "CGameGraphicsObject.h"
 
 
-void CGameGraphicsObject::render(std::shared_ptr<CGui> reneder, SDL_Rect *pos, int frameTime) {
+void CGameGraphicsObject::render(std::shared_ptr<CGui> reneder, std::shared_ptr<SDL_Rect> pos, int frameTime) {
 
 }
 

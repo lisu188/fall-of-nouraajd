@@ -17,12 +17,12 @@ void CGui::render(int frameTime) {
     SDL_SetRenderDrawColor(renderer, BLACK);
     SDL_RenderClear(renderer);
     for (std::shared_ptr<CGameGraphicsObject> object:guiStack) {
-        SDL_Rect physical;
-        physical.x = 0;
-        physical.y = 0;
-        physical.h = height;
-        physical.w = width;
-        object->render(this->ptr<CGui>(), &physical, frameTime);
+        std::shared_ptr<SDL_Rect> physical = std::make_shared<SDL_Rect>();
+        physical->x = 0;
+        physical->y = 0;
+        physical->h = height;
+        physical->w = width;
+        object->render(this->ptr<CGui>(), physical, frameTime);
     }
     SDL_RenderPresent(renderer);
 }
