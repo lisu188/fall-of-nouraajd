@@ -85,3 +85,14 @@ void CGamePanel::drawItemBox(std::shared_ptr<CGui> gui, SDL_Rect *location)  {
                    location);
 }
 
+void CGamePanel::drawArrowLeft(std::shared_ptr<CGui> gui, SDL_Rect *location) {
+    SDL_RenderCopy(gui->getRenderer(), gui->getTextureCache()->getTexture("images/arrows/left.png"), nullptr,
+                   location);
+}
+
+
+void CGamePanel::drawArrowRight(std::shared_ptr<CGui> gui, SDL_Rect *location) {
+    SDL_RenderCopy(gui->getRenderer(), gui->getTextureCache()->getTexture("images/arrows/right.png"), nullptr,
+                   location);
+}
+
