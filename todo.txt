@@ -34,3 +34,4 @@
     //TODO: multilevel maps
 //TODO: customize out of bound tiles and default tiles
 //TODO: toroidal maps
+//TODO: separate class from race
