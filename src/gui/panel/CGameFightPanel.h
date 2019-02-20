@@ -2,6 +2,7 @@
 
 #include "object/CPlayer.h"
 #include "CGamePanel.h"
+#include "gui/panel/CListView.h"
 
 class CGameFightPanel : public CGamePanel {
 V_META(CGameFightPanel, CGamePanel,
@@ -21,6 +22,9 @@ public:
     void setEnemy(std::shared_ptr<CCreature> en);
 
 private:
+    std::shared_ptr<CListView<std::set<std::shared_ptr<CInteraction>>>> interactionsView;
+    std::shared_ptr<CListView<std::set<std::shared_ptr<CItem>>>> itemsView;
+
     int selectionBarThickness = 5;
     std::weak_ptr<CCreature> enemy;
     std::weak_ptr<CInteraction> selected;
@@ -43,5 +47,7 @@ private:
     bool isInInventory(std::shared_ptr<CGui> gui, int x, int y);
 
     void handleInventoryClick(std::shared_ptr<CGui> gui, int x, int y);
+
+    int tileSize = 50;//TODO: make property
 };
 
