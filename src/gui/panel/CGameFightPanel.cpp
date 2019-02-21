@@ -92,10 +92,11 @@ CGameFightPanel::CGameFightPanel() {
 }
 
 void CGameFightPanel::panelMouseEvent(std::shared_ptr<CGui> gui, int x, int y) {
+    //TODO: shift values
     if (isInInteractions(gui, x, y)) {
-        handleInteractionsClick(gui, x, y);
+        handleInteractionsClick(gui, x, y - getInteractionsLocation(gui));
     } else if (isInInventory(gui, x, y)) {
-        handleInventoryClick(gui, x, y);
+        handleInventoryClick(gui, x, y - getInventoryLocation(gui));
     }
 }
 
@@ -110,12 +111,16 @@ void CGameFightPanel::handleInventoryClick(std::shared_ptr<CGui> gui, int x, int
 }
 
 bool CGameFightPanel::isInInteractions(std::shared_ptr<CGui> gui, int x, int y) {
-    return y > (getYSize() - gui->getTileSize());
+    return y > (getInteractionsLocation(gui)) && !isInInventory(gui, x, y);
 }
 
+int CGameFightPanel::getInteractionsLocation(std::shared_ptr<CGui> gui) { return getYSize() - gui->getTileSize(); }
+
 bool CGameFightPanel::isInInventory(std::shared_ptr<CGui> gui, int x, int y) {
-    return y > (getYSize() - (gui->getTileSize() * 2));
+    return y > (getInventoryLocation(gui)) && !isInInteractions(gui, x, y);
 }
+
+int CGameFightPanel::getInventoryLocation(std::shared_ptr<CGui> gui) { return getYSize() - (gui->getTileSize() * 2); }
 
 
 int CGameFightPanel::getSelectionBarThickness() {
