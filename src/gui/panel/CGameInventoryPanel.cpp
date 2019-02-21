@@ -12,7 +12,7 @@ void CGameInventoryPanel::panelRender(std::shared_ptr<CGui> gui, std::shared_ptr
 }
 
 void CGameInventoryPanel::drawEquipped(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> pRect, int frameTime) {
-    std::shared_ptr<SDL_Rect> location = std::make_shared<SDL_Rect>(*pRect.get());
+    std::shared_ptr<SDL_Rect> location = std::make_shared<SDL_Rect>(*pRect.get());//this a clone, do not remove
     location->x += 600;
 
     drawCollection(gui, location,

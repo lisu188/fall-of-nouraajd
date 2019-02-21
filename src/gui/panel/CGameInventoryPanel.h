@@ -4,6 +4,8 @@
 #include "CGamePanel.h"
 
 //TODO: dynamic load of layout from slot configuration
+//TODO: make x y adequate to panel size
+//TODO: make icons on empty inventory slots
 class CGameInventoryPanel : public CGamePanel {
 V_META(CGameInventoryPanel, CGamePanel,
        V_PROPERTY(CGameInventoryPanel, int, xInv, getXInv, setXInv),
@@ -26,6 +28,9 @@ public:
     void setSelectionBarThickness(int selectionBarThickness);
 
 private:
+    std::shared_ptr<CListView<std::set<std::shared_ptr<CItem>>>> inventoryView;
+    std::shared_ptr<CListView<std::set<std::shared_ptr<CItem>>>> itemsView;
+
     int xInv = 4;
     int yInv = 4;
     int selectionBarThickness = 5;
