@@ -36,7 +36,7 @@ public:
 
     }
 
-
+    //TODO: move selection pred
     template<typename Draw, typename SelectionPredicate>
     void drawCollection(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> loc,
                         Draw draw, SelectionPredicate selPred,
