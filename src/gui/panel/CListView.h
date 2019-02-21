@@ -5,11 +5,15 @@
 //TODO: implement locking scrolling on edges and make in on/off
 template<typename Collection>
 class CListView {
+    typedef typename Collection::value_type Item;
+
     std::function<Collection(std::shared_ptr<CGui>)> collection;
 
-    std::function<int(typename Collection::value_type, int)> index;
+    std::function<int(Item, int)> index;
 
-    std::function<void(std::shared_ptr<CGui>, typename Collection::value_type)> callback;
+    std::function<void(std::shared_ptr<CGui>, Item)> callback;
+
+    std::function<void(std::shared_ptr<CGui> gui, Item, std::shared_ptr<SDL_Rect> loc, int frameTime)> draw;
 
     int xSize, ySize;
 
@@ -25,22 +29,24 @@ public:
               std::function<Collection(std::shared_ptr<CGui>)> collection,
               std::function<int(typename Collection::value_type, int)> index,
               std::function<void(std::shared_ptr<CGui>, typename Collection::value_type)> callback,
+              std::function<void(std::shared_ptr<CGui> gui, Item, std::shared_ptr<SDL_Rect> loc, int frameTime)> draw,
               int tileSize,
               bool allowOversize) : xSize(xSize),
                                     ySize(ySize),
                                     collection(collection),
                                     index(index),
                                     callback(callback),
+                                    draw(draw),
                                     tileSize(tileSize),
                                     allowOversize(allowOversize) {
 
     }
 
     //TODO: move selection pred
-    template<typename Draw, typename SelectionPredicate>
+    template<typename SelectionPredicate>
     void drawCollection(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> loc,
-                        Draw draw, SelectionPredicate selPred,
-                        int thickness) {
+                        SelectionPredicate selPred,
+                        int thickness, int frameTime) {
         auto indexedCollection = calculateIndices(gui);
 
         for (int i = 0; i < xSize * ySize; i++) {
@@ -53,7 +59,7 @@ public:
                 int itemIndex = shiftIndex(gui, i);
                 drawItemBox(gui, pos);
                 if (vstd::ctn(indexedCollection, itemIndex)) {
-                    draw(indexedCollection[itemIndex], pos);
+                    draw(gui, indexedCollection[itemIndex], pos, frameTime);
                 }
                 if (selPred(itemIndex, indexedCollection[itemIndex])) {
                     drawSelection(gui, pos, thickness);
