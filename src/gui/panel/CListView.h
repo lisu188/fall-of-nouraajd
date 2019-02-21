@@ -38,8 +38,8 @@ public:
                                         tileSize(tileSize),
                                         allowOversize(allowOversize),
                                         selectionThickness(selectionThickness) {
-        withIndex(&defaultIndex);
-        withDraw(&defaultDraw);
+        index = &defaultIndex;
+        draw = &defaultDraw;
     }
 
 
@@ -70,13 +70,15 @@ public:
         int i = ((x) / tileSize + ((y / tileSize) * xSize));
 
         if (i == getLeftArrowIndex() && isOversized(gui)) {
-            shift -= 1;
+            doShift(gui, -1);
         } else if (i == getRightArrowIndex() && isOversized(gui)) {
-            shift += 1;
+            doShift(gui, 1);
         } else {
             callback(gui, calculateIndices(gui)[shiftIndex(gui, i)]);
         }
     }
+
+
 
     //builder methods
 
@@ -115,6 +117,15 @@ public:
     };
 
 private:
+    void doShift(std::shared_ptr<CGui> gui, int val) {
+        shift += val;
+        if (shift < 0) {
+            shift = 0;
+        } else if (shift > (signed) collection(gui).size() - (xSize * ySize - 2/*arrows*/)) {
+            shift = collection(gui).size() - (xSize * ySize - 2/*arrows*/);
+        }
+    }
+
     template<typename T=Item>
     static void _defaultDraw(std::shared_ptr<CGui> gui, T item, std::shared_ptr<SDL_Rect> loc, int frameTime,
                              typename vstd::enable_if<vstd::is_shared_ptr<T>::value>::type * = 0) {
@@ -143,8 +154,10 @@ private:
 
 
     int shiftIndex(std::shared_ptr<CGui> gui, int arg) {
-        int i = arg + shift;
-        return !isOversized(gui) ? i : (i > getLeftArrowIndex() ? i - 1 : i);
+        if (!isOversized(gui)) {
+            return arg;
+        }
+        return arg + shift > getLeftArrowIndex() ? arg + shift - 1 : arg + shift;
     }
 
     int getRightArrowIndex() {
