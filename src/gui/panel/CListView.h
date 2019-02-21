@@ -52,8 +52,10 @@ public:
             } else {
                 int itemIndex = shiftIndex(gui, i);
                 drawItemBox(gui, pos);
-                draw(indexedCollection[itemIndex], pos);
-                if (selPred(indexedCollection[itemIndex])) {
+                if (vstd::ctn(indexedCollection, itemIndex)) {
+                    draw(indexedCollection[itemIndex], pos);
+                }
+                if (selPred(itemIndex, indexedCollection[itemIndex])) {
                     drawSelection(gui, pos, thickness);
                 }
             }
@@ -65,9 +67,9 @@ public:
         int i = ((x) / tileSize + ((y / tileSize) * xSize));
 
         if (i == getLeftArrowIndex() && isOversized(gui)) {
-            shift += -1;
-        } else if (i == getRightArrowIndex() && isOversized(gui)) {
             shift -= 1;
+        } else if (i == getRightArrowIndex() && isOversized(gui)) {
+            shift += 1;
         } else {
             callback(gui, calculateIndices(gui)[shiftIndex(gui, i)]);
         }
@@ -99,7 +101,7 @@ private:
     }
 
     int getLeftArrowIndex() {
-        return (xSize - 1) * ySize + 1;
+        return (xSize - 1) * ySize;
     }
 
     //TODO: do not generate whole map, instead add callback arguement and stop when met
