@@ -29,7 +29,7 @@ public:
 
 private:
     std::shared_ptr<CListView<std::set<std::shared_ptr<CItem>>>> inventoryView;
-    std::shared_ptr<CListView<std::set<std::shared_ptr<CItem>>>> itemsView;
+    std::shared_ptr<CListView<CItemMap>> itemsView;
 
     int xInv = 4;
     int yInv = 4;
