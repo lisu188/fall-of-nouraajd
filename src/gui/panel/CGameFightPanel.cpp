@@ -18,7 +18,7 @@ void CGameFightPanel::drawInteractions(std::shared_ptr<CGui> gui, std::shared_pt
                                      [gui, frameTime](auto item, auto loc) {
                                          item->getAnimationObject()->render(gui, loc, frameTime);
                                      },
-                                     [this, gui](auto object) {
+                                     [this, gui](int index, auto object) {
                                          return selected.lock() == object;
                                      },
                                      selectionBarThickness);
@@ -30,7 +30,7 @@ void CGameFightPanel::drawInteractions(std::shared_ptr<CGui> gui, std::shared_pt
                               [gui, frameTime](auto item, auto loc) {
                                   item->getAnimationObject()->render(gui, loc, frameTime);
                               },
-                              [this, gui](auto object) {
+                              [this, gui](int index, auto object) {
                                   return selectedItem.lock() == object;
                               },
                               selectionBarThickness);
@@ -116,8 +116,9 @@ bool CGameFightPanel::isInInteractions(std::shared_ptr<CGui> gui, int x, int y) 
 
 int CGameFightPanel::getInteractionsLocation(std::shared_ptr<CGui> gui) { return getYSize() - gui->getTileSize(); }
 
+//TODO: make this method strict
 bool CGameFightPanel::isInInventory(std::shared_ptr<CGui> gui, int x, int y) {
-    return y > (getInventoryLocation(gui)) && !isInInteractions(gui, x, y);
+    return y > (getInventoryLocation(gui));
 }
 
 int CGameFightPanel::getInventoryLocation(std::shared_ptr<CGui> gui) { return getYSize() - (gui->getTileSize() * 2); }

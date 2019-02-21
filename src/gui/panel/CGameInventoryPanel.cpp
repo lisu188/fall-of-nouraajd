@@ -19,10 +19,11 @@ void CGameInventoryPanel::drawEquipped(std::shared_ptr<CGui> gui, std::shared_pt
                               [gui, frameTime](auto item, auto loc) {
                                   item.second->getAnimationObject()->render(gui, loc, frameTime);
                               },
-                              [this, gui](auto
-                                          object) {
+                              [this, gui](int index, auto
+                              object) {
                                   return selected.lock() &&
-                                         gui->getGame()->getSlotConfiguration()->canFit(object.first, selected.lock());
+                                         gui->getGame()->getSlotConfiguration()->canFit(vstd::str(index),
+                                                                                        selected.lock());
                               }, selectionBarThickness / 2);
 }
 
@@ -31,8 +32,8 @@ void CGameInventoryPanel::drawInventory(std::shared_ptr<CGui> gui, std::shared_p
                                   [gui, frameTime](auto item, auto loc) {
                                       item->getAnimationObject()->render(gui, loc, frameTime);
                                   },
-                                  [this](auto object) {
-                                      return selected.lock() = object;
+                                  [this](int index, auto object) {
+                                      return selected.lock() == object;
                                   }, selectionBarThickness);
 }
 
@@ -65,11 +66,12 @@ CGameInventoryPanel::CGameInventoryPanel() {
                     selected.reset();
                 }
             },
+            50,
             true);
 
     itemsView = std::make_shared<
             CListView<CItemMap>>(
-            xInv, yInv,
+            4, 2,
             [](std::shared_ptr<CGui> gui) {
                 return gui->getGame()->getMap()->getPlayer()->getEquipped();
             },
@@ -83,6 +85,7 @@ CGameInventoryPanel::CGameInventoryPanel() {
                     selected.reset();
                 }
             },
+            50,
             false);
 }
 
