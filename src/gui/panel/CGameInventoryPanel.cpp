@@ -16,25 +16,19 @@ void CGameInventoryPanel::drawEquipped(std::shared_ptr<CGui> gui, std::shared_pt
     location->x += 600;
 
     itemsView->drawCollection(gui, location,
-                              [gui, frameTime](auto item, auto loc) {
-                                  item.second->getAnimationObject()->render(gui, loc, frameTime);
-                              },
                               [this, gui](int index, auto
                               object) {
                                   return selected.lock() &&
                                          gui->getGame()->getSlotConfiguration()->canFit(vstd::str(index),
                                                                                         selected.lock());
-                              }, selectionBarThickness / 2);
+                              }, selectionBarThickness / 2, frameTime);
 }
 
 void CGameInventoryPanel::drawInventory(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> pRect, int frameTime) {
     inventoryView->drawCollection(gui, pRect,
-                                  [gui, frameTime](auto item, auto loc) {
-                                      item->getAnimationObject()->render(gui, loc, frameTime);
-                                  },
                                   [this](int index, auto object) {
                                       return selected.lock() == object;
-                                  }, selectionBarThickness);
+                                  }, selectionBarThickness, frameTime);
 }
 
 void CGameInventoryPanel::panelKeyboardEvent(std::shared_ptr<CGui> gui, SDL_Keycode i) {
@@ -66,6 +60,9 @@ CGameInventoryPanel::CGameInventoryPanel() {
                     selected.reset();
                 }
             },
+            [](auto gui, auto item, auto loc, auto frameTime) {
+                item->getAnimationObject()->render(gui, loc, frameTime);
+            },
             50,
             true);
 
@@ -84,6 +81,9 @@ CGameInventoryPanel::CGameInventoryPanel() {
                     gui->getGame()->getMap()->getPlayer()->equipItem(newSelection.first, selected.lock());
                     selected.reset();
                 }
+            },
+            [](std::shared_ptr<CGui> gui, auto item, auto loc, int frameTime) {
+                item.second->getAnimationObject()->render(gui, loc, frameTime);
             },
             50,
             false);

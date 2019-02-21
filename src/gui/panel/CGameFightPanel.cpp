@@ -15,25 +15,19 @@ void CGameFightPanel::drawInteractions(std::shared_ptr<CGui> gui, std::shared_pt
 
     interactionsView->drawCollection(gui,
                                      location,
-                                     [gui, frameTime](auto item, auto loc) {
-                                         item->getAnimationObject()->render(gui, loc, frameTime);
-                                     },
                                      [this, gui](int index, auto object) {
                                          return selected.lock() == object;
                                      },
-                                     selectionBarThickness);
+                                     selectionBarThickness, frameTime);
 
     location->y -= gui->getTileSize();
 
     itemsView->drawCollection(gui,
                               location,
-                              [gui, frameTime](auto item, auto loc) {
-                                  item->getAnimationObject()->render(gui, loc, frameTime);
-                              },
                               [this, gui](int index, auto object) {
                                   return selectedItem.lock() == object;
                               },
-                              selectionBarThickness);
+                              selectionBarThickness, frameTime);
 }
 
 
@@ -64,6 +58,9 @@ CGameFightPanel::CGameFightPanel() {
                     selected.reset();
                 }
             },
+            [](auto gui, auto item, auto loc, auto frameTime) {
+                item->getAnimationObject()->render(gui, loc, frameTime);
+            },
             tileSize,
             true);
 
@@ -86,6 +83,9 @@ CGameFightPanel::CGameFightPanel() {
                     gui->getGame()->getMap()->getPlayer()->useItem(newSelection);
                     selectedItem.reset();
                 }
+            },
+            [](auto gui, auto item, auto loc, auto frameTime) {
+                item->getAnimationObject()->render(gui, loc, frameTime);
             },
             tileSize,
             true);
