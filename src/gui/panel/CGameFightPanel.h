@@ -49,5 +49,8 @@ private:
     void handleInventoryClick(std::shared_ptr<CGui> gui, int x, int y);
 
     int tileSize = 50;//TODO: make property
+    int getInventoryLocation(std::shared_ptr<CGui> gui);
+
+    int getInteractionsLocation(std::shared_ptr<CGui> gui);
 };
 
