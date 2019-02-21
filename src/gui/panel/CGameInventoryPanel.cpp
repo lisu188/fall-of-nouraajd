@@ -15,20 +15,11 @@ void CGameInventoryPanel::drawEquipped(std::shared_ptr<CGui> gui, std::shared_pt
     std::shared_ptr<SDL_Rect> location = std::make_shared<SDL_Rect>(*pRect.get());//this a clone, do not remove
     location->x += 600;
 
-    itemsView->drawCollection(gui, location,
-                              [this, gui](int index, auto
-                              object) {
-                                  return selected.lock() &&
-                                         gui->getGame()->getSlotConfiguration()->canFit(vstd::str(index),
-                                                                                        selected.lock());
-                              }, selectionBarThickness / 2, frameTime);
+    itemsView->drawCollection(gui, location, frameTime);
 }
 
 void CGameInventoryPanel::drawInventory(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> pRect, int frameTime) {
-    inventoryView->drawCollection(gui, pRect,
-                                  [this](int index, auto object) {
-                                      return selected.lock() == object;
-                                  }, selectionBarThickness, frameTime);
+    inventoryView->drawCollection(gui, pRect, frameTime);
 }
 
 void CGameInventoryPanel::panelKeyboardEvent(std::shared_ptr<CGui> gui, SDL_Keycode i) {
@@ -46,47 +37,44 @@ CGameInventoryPanel::CGameInventoryPanel() {
                     std::set<
                             std::shared_ptr<
                                     CItem>>>>(
-            xInv, yInv,
+            xInv, yInv, 50, true, selectionBarThickness)->withCollection(
             [](std::shared_ptr<CGui> gui) {
                 return gui->getGame()->getMap()->getPlayer()->getInInventory();
-            },
-            [](auto ob, int prevIndex) {
-                return prevIndex + 1;
-            },
+            })->withCallback(
             [this](std::shared_ptr<CGui> gui, auto newSelection) {
                 if (selected.lock() != newSelection) {
                     selected = newSelection;
                 } else {
                     selected.reset();
                 }
-            },
-            [](auto gui, auto item, auto loc, auto frameTime) {
-                item->getAnimationObject()->render(gui, loc, frameTime);
-            },
-            50,
-            true);
+            })->withSelect(
+            [this](std::shared_ptr<CGui> gui, int index, auto object) {
+                return selected.lock() == object;
+            });
 
     itemsView = std::make_shared<
             CListView<CItemMap>>(
-            4, 2,
+            4, 2, 50, false, selectionBarThickness / 2)->withCollection(
             [](std::shared_ptr<CGui> gui) {
                 return gui->getGame()->getMap()->getPlayer()->getEquipped();
-            },
+            })->withIndex(
             [](auto ob, int prevIndex) {
                 return vstd::to_int(ob.first).first;
-            },
+            })->withCallback(
             [this](std::shared_ptr<CGui> gui, auto newSelection) {
                 if (selected.lock() &&
                     gui->getGame()->getSlotConfiguration()->canFit(newSelection.first, selected.lock())) {
                     gui->getGame()->getMap()->getPlayer()->equipItem(newSelection.first, selected.lock());
                     selected.reset();
                 }
-            },
-            [](std::shared_ptr<CGui> gui, auto item, auto loc, int frameTime) {
+            })->withSelect([this](std::shared_ptr<CGui> gui, int index, auto object) {
+        return selected.lock() &&
+               gui->getGame()->getSlotConfiguration()->canFit(vstd::str(index),
+                                                              selected.lock());
+    })->withDraw(
+            [](auto gui, auto item, auto loc, auto frameTime) {
                 item.second->getAnimationObject()->render(gui, loc, frameTime);
-            },
-            50,
-            false);
+            });
 }
 
 void CGameInventoryPanel::panelMouseEvent(std::shared_ptr<CGui> gui, int x, int y) {

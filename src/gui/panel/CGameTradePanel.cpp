@@ -14,17 +14,11 @@ void CGameTradePanel::drawMarket(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_
     std::shared_ptr<SDL_Rect> location = std::make_shared<SDL_Rect>(*pRect.get());
     location->x += 600;
 
-    marketView->drawCollection(gui, location,
-                               [this, gui](int index, auto item) {
-                                   return vstd::ctn(selectedMarket, item);
-                               }, selectionBarThickness, frameTime);
+    marketView->drawCollection(gui, location, frameTime);
 }
 
 void CGameTradePanel::drawInventory(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> pRect, int frameTime) {
-    inventoryView->drawCollection(gui, pRect,
-                                  [this, gui](int index, auto item) {
-                                      return vstd::ctn(selectedInventory, item);
-                                  }, selectionBarThickness, frameTime);
+    inventoryView->drawCollection(gui, pRect, frameTime);
 }
 
 void CGameTradePanel::panelKeyboardEvent(std::shared_ptr<CGui> gui, SDL_Keycode i) {
@@ -42,42 +36,32 @@ CGameTradePanel::CGameTradePanel() {
                     std::set<
                             std::shared_ptr<
                                     CItem>>>>(
-            xInv, yInv,
+            xInv, yInv, 50, true, selectionBarThickness)->withCollection(
             [](std::shared_ptr<CGui> gui) {
                 return gui->getGame()->getMap()->getPlayer()->getInInventory();
-            },
-            [](auto ob, int prevIndex) {
-                return prevIndex + 1;
-            },
+            })->withCallback(
             [this](std::shared_ptr<CGui> gui, auto newSelection) {
                 this->selectInventory(newSelection);
-            },
-            [](auto gui, auto item, auto loc, auto frameTime) {
-                item->getAnimationObject()->render(gui, loc, frameTime);
-            },
-            50,
-            true);
+            })->withSelect(
+            [this](std::shared_ptr<CGui> gui, int index, auto item) {
+                return vstd::ctn(selectedInventory, item);
+            });
 
     marketView = std::make_shared<
             CListView<
                     std::set<
                             std::shared_ptr<
                                     CItem>>>>(
-            xInv, yInv,
+            xInv, yInv, 50, true, selectionBarThickness)->withCollection(
             [this](std::shared_ptr<CGui> gui) {
                 return market->getItems();
-            },
-            [](auto ob, int prevIndex) {
-                return prevIndex + 1;
-            },
+            })->withCallback(
             [this](std::shared_ptr<CGui> gui, auto newSelection) {
                 this->selectMarket(newSelection);
-            },
-            [](auto gui, auto item, auto loc, auto frameTime) {
-                item->getAnimationObject()->render(gui, loc, frameTime);
-            },
-            50,
-            true);
+            })->withSelect(
+            [this](std::shared_ptr<CGui> gui, int index, auto item) {
+                return vstd::ctn(selectedMarket, item);
+            });
 }
 
 void CGameTradePanel::panelMouseEvent(std::shared_ptr<CGui> gui, int x, int y) {
@@ -90,12 +74,10 @@ void CGameTradePanel::panelMouseEvent(std::shared_ptr<CGui> gui, int x, int y) {
 
 void CGameTradePanel::handleInventoryClick(std::shared_ptr<CGui> gui, int x, int y) {
     inventoryView->onClicked(gui, x, y);
-
 }
 
 void CGameTradePanel::handleMarketClick(std::shared_ptr<CGui> gui, int x, int y) {
     marketView->onClicked(gui, x - 600, y);
-
 }
 
 bool CGameTradePanel::isInInventory(std::shared_ptr<CGui> gui, int x, int y) {
