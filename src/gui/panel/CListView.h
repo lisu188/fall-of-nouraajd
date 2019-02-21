@@ -4,7 +4,7 @@
 
 //TODO: implement locking scrolling on edges and make in on/off
 template<typename Collection>
-class CListView {
+class CListView : public std::enable_shared_from_this<CListView<Collection>> {
     typedef typename Collection::value_type Item;
 
     std::function<Collection(std::shared_ptr<CGui>)> collection;
@@ -15,38 +15,35 @@ class CListView {
 
     std::function<void(std::shared_ptr<CGui> gui, Item, std::shared_ptr<SDL_Rect> loc, int frameTime)> draw;
 
+    std::function<bool(std::shared_ptr<CGui> gui, int, Item)> select;
+
     int xSize, ySize;
+
+    int tileSize;
 
     bool allowOversize;
 
-    int tileSize;
+    int selectionThickness;
 
     int shift = 0;
 
 public:
 
-    CListView(int xSize, int ySize,
-              std::function<Collection(std::shared_ptr<CGui>)> collection,
-              std::function<int(typename Collection::value_type, int)> index,
-              std::function<void(std::shared_ptr<CGui>, typename Collection::value_type)> callback,
-              std::function<void(std::shared_ptr<CGui> gui, Item, std::shared_ptr<SDL_Rect> loc, int frameTime)> draw,
+    CListView(int xSize,
+              int ySize,
               int tileSize,
-              bool allowOversize) : xSize(xSize),
-                                    ySize(ySize),
-                                    collection(collection),
-                                    index(index),
-                                    callback(callback),
-                                    draw(draw),
-                                    tileSize(tileSize),
-                                    allowOversize(allowOversize) {
-
+              bool allowOversize,
+              int selectionThickness) : xSize(xSize),
+                                        ySize(ySize),
+                                        tileSize(tileSize),
+                                        allowOversize(allowOversize),
+                                        selectionThickness(selectionThickness) {
+        withIndex(&defaultIndex);
+        withDraw(&defaultDraw);
     }
 
-    //TODO: move selection pred
-    template<typename SelectionPredicate>
-    void drawCollection(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> loc,
-                        SelectionPredicate selPred,
-                        int thickness, int frameTime) {
+
+    void drawCollection(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> loc, int frameTime) {
         auto indexedCollection = calculateIndices(gui);
 
         for (int i = 0; i < xSize * ySize; i++) {
@@ -61,8 +58,8 @@ public:
                 if (vstd::ctn(indexedCollection, itemIndex)) {
                     draw(gui, indexedCollection[itemIndex], pos, frameTime);
                 }
-                if (selPred(itemIndex, indexedCollection[itemIndex])) {
-                    drawSelection(gui, pos, thickness);
+                if (select(gui, itemIndex, indexedCollection[itemIndex])) {
+                    drawSelection(gui, pos, selectionThickness);
                 }
             }
         }
@@ -81,7 +78,55 @@ public:
         }
     }
 
-    //TODO: consider making private
+    //builder methods
+
+    std::shared_ptr<CListView> withCollection(std::function<Collection(std::shared_ptr<CGui>)> collection) {
+        this->collection = collection;
+        return this->shared_from_this();
+    }
+
+    std::shared_ptr<CListView> withIndex(std::function<int(Item, int)> index) {
+        this->index = index;
+        return this->shared_from_this();
+    }
+
+    std::shared_ptr<CListView> withCallback(std::function<void(std::shared_ptr<CGui>, Item)> callback) {
+        this->callback = callback;
+        return this->shared_from_this();
+    }
+
+    std::shared_ptr<CListView>
+    withDraw(std::function<void(std::shared_ptr<CGui> gui, Item, std::shared_ptr<SDL_Rect> loc, int frameTime)> draw) {
+        this->draw = draw;
+        return this->shared_from_this();
+    }
+
+    std::shared_ptr<CListView> withSelect(std::function<bool(std::shared_ptr<CGui> gui, int, Item)> select) {
+        this->select = select;
+        return this->shared_from_this();
+    }
+
+    static int defaultIndex(Item ob, int prevIndex) {
+        return prevIndex + 1;
+    };
+
+    static void defaultDraw(std::shared_ptr<CGui> gui, Item item, std::shared_ptr<SDL_Rect> loc, int frameTime) {
+        _defaultDraw(gui, item, loc, frameTime);
+    };
+
+private:
+    template<typename T=Item>
+    static void _defaultDraw(std::shared_ptr<CGui> gui, T item, std::shared_ptr<SDL_Rect> loc, int frameTime,
+                             typename vstd::enable_if<vstd::is_shared_ptr<T>::value>::type * = 0) {
+        item->getAnimationObject()->render(gui, loc, frameTime);
+    }
+
+    template<typename T=Item>
+    static void _defaultDraw(std::shared_ptr<CGui> gui, T item, std::shared_ptr<SDL_Rect> loc, int frameTime,
+                             typename vstd::disable_if<vstd::is_shared_ptr<T>::value>::type * = 0) {
+
+    }
+
     void drawSelection(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> location, int thickness) {
         SDL_SetRenderDrawColor(gui->getRenderer(), YELLOW);
         SDL_Rect tmp = {location->x, location->y, thickness, location->h};
@@ -96,7 +141,7 @@ public:
         SDL_RenderFillRect(gui->getRenderer(), &tmp4);
     }
 
-private:
+
     int shiftIndex(std::shared_ptr<CGui> gui, int arg) {
         int i = arg + shift;
         return !isOversized(gui) ? i : (i > getLeftArrowIndex() ? i - 1 : i);
@@ -110,9 +155,9 @@ private:
         return (xSize - 1) * ySize;
     }
 
-    //TODO: do not generate whole map, instead add callback arguement and stop when met
+//TODO: do not generate whole map, instead add callback arguement and stop when met
     auto calculateIndices(std::shared_ptr<CGui> gui) {
-        std::unordered_map<int, typename Collection::value_type> indices;
+        std::unordered_map<int, Item> indices;
         int i = -1;
         for (auto it:collection(gui)) {
             i = index(it, i);
@@ -149,7 +194,7 @@ private:
                        loc.get());
     }
 
-    //TODO: cache method calls
+//TODO: cache method calls
     bool isOversized(std::shared_ptr<CGui> gui) {
         return allowOversize && collection(gui).size() > ((unsigned) xSize * (unsigned) ySize);
     }
