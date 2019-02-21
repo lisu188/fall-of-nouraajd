@@ -15,19 +15,13 @@ void CGameFightPanel::drawInteractions(std::shared_ptr<CGui> gui, std::shared_pt
 
     interactionsView->drawCollection(gui,
                                      location,
-                                     [this, gui](int index, auto object) {
-                                         return selected.lock() == object;
-                                     },
-                                     selectionBarThickness, frameTime);
+                                     frameTime);
 
     location->y -= gui->getTileSize();
 
     itemsView->drawCollection(gui,
                               location,
-                              [this, gui](int index, auto object) {
-                                  return selectedItem.lock() == object;
-                              },
-                              selectionBarThickness, frameTime);
+                              frameTime);
 }
 
 
@@ -35,13 +29,10 @@ CGameFightPanel::CGameFightPanel() {
     interactionsView = std::make_shared<CListView<std::set<
             std::shared_ptr<
                     CInteraction>>>>(
-            getXSize() / tileSize, 1,
+            getXSize() / tileSize, 1, tileSize, true, selectionBarThickness)->withCollection(
             [](std::shared_ptr<CGui> gui) {
                 return gui->getGame()->getMap()->getPlayer()->getInteractions();
-            },
-            [](auto ob, int prevIndex) {
-                return prevIndex + 1;
-            },
+            })->withCallback(
             [this](std::shared_ptr<CGui> gui,
                    auto newSelection) {
                 if (selected.lock() !=
@@ -57,23 +48,17 @@ CGameFightPanel::CGameFightPanel() {
                     //TODO: rethink moving selection to CListView
                     selected.reset();
                 }
-            },
-            [](auto gui, auto item, auto loc, auto frameTime) {
-                item->getAnimationObject()->render(gui, loc, frameTime);
-            },
-            tileSize,
-            true);
+            })->withSelect(
+            [this](std::shared_ptr<CGui> gui, int index, auto object) {
+                return selected.lock() == object;
+            });
 
     itemsView = std::make_shared<CListView<std::set<
             std::shared_ptr<
-                    CItem>>>>(
-            getXSize() / tileSize, 1,
+                    CItem>>>>(getXSize() / tileSize, 1, tileSize, true, selectionBarThickness)->withCollection(
             [](std::shared_ptr<CGui> gui) {
                 return gui->getGame()->getMap()->getPlayer()->getItems();
-            },
-            [](auto ob, int prevIndex) {
-                return prevIndex + 1;
-            },
+            })->withCallback(
             [this](std::shared_ptr<CGui> gui,
                    auto newSelection) {
 
@@ -83,12 +68,10 @@ CGameFightPanel::CGameFightPanel() {
                     gui->getGame()->getMap()->getPlayer()->useItem(newSelection);
                     selectedItem.reset();
                 }
-            },
-            [](auto gui, auto item, auto loc, auto frameTime) {
-                item->getAnimationObject()->render(gui, loc, frameTime);
-            },
-            tileSize,
-            true);
+            })->withSelect(
+            [this](std::shared_ptr<CGui> gui, int index, auto object) {
+                return selectedItem.lock() == object;
+            });
 }
 
 void CGameFightPanel::panelMouseEvent(std::shared_ptr<CGui> gui, int x, int y) {
