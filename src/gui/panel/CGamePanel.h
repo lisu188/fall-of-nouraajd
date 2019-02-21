@@ -1,7 +1,6 @@
 #pragma once
 
 
-#include <Python-ast.h>
 #include "gui/object/CGameGraphicsObject.h"
 #include "gui/CGui.h"
 #include "gui/panel/CListView.h"
