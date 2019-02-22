@@ -15,7 +15,7 @@ void CGameInventoryPanel::drawEquipped(std::shared_ptr<CGui> gui, std::shared_pt
     std::shared_ptr<SDL_Rect> location = std::make_shared<SDL_Rect>(*pRect.get());//this a clone, do not remove
     location->x += 600;
 
-    itemsView->drawCollection(gui, location, frameTime);
+    equippedView->drawCollection(gui, location, frameTime);
 }
 
 void CGameInventoryPanel::drawInventory(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> pRect, int frameTime) {
@@ -49,10 +49,10 @@ CGameInventoryPanel::CGameInventoryPanel() {
                 }
             })->withSelect(
             [this](std::shared_ptr<CGui> gui, int index, auto object) {
-                return selected.lock() == object;
+                return selected.lock() && selected.lock() == object;
             });
 
-    itemsView = std::make_shared<
+    equippedView = std::make_shared<
             CListView<CItemMap>>(
             4, 2, 50, false, selectionBarThickness / 2)->withCollection(
             [](std::shared_ptr<CGui> gui) {
@@ -90,7 +90,7 @@ void CGameInventoryPanel::handleInventoryClick(std::shared_ptr<CGui> gui, int x,
 }
 
 void CGameInventoryPanel::handleEquippedClick(std::shared_ptr<CGui> gui, int x, int y) {
-    itemsView->onClicked(gui, x - 600, y);
+    equippedView->onClicked(gui, x - 600, y);
 
 }
 
