@@ -157,7 +157,7 @@ private:
         if (!isOversized(gui)) {
             return arg;
         }
-        return arg + shift > getLeftArrowIndex() ? arg + shift - 1 : arg + shift;
+        return arg > getLeftArrowIndex() ? arg + shift - 1 : arg + shift;
     }
 
     int getRightArrowIndex() {

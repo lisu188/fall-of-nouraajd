@@ -50,7 +50,7 @@ CGameFightPanel::CGameFightPanel() {
                 }
             })->withSelect(
             [this](std::shared_ptr<CGui> gui, int index, auto object) {
-                return selected.lock() == object;
+                return selected.lock() && selected.lock() == object;
             });
 
     itemsView = std::make_shared<CListView<std::set<
@@ -61,8 +61,7 @@ CGameFightPanel::CGameFightPanel() {
             })->withCallback(
             [this](std::shared_ptr<CGui> gui,
                    auto newSelection) {
-
-                if (selectedItem.lock() != newSelection) {
+                if (selectedItem.lock() && selectedItem.lock() != newSelection) {
                     selectedItem = newSelection;
                 } else if (selectedItem.lock() == newSelection) {
                     gui->getGame()->getMap()->getPlayer()->useItem(newSelection);
@@ -70,7 +69,7 @@ CGameFightPanel::CGameFightPanel() {
                 }
             })->withSelect(
             [this](std::shared_ptr<CGui> gui, int index, auto object) {
-                return selectedItem.lock() == object;
+                return selectedItem.lock() && selectedItem.lock() == object;
             });
 }
 
@@ -94,14 +93,14 @@ void CGameFightPanel::handleInventoryClick(std::shared_ptr<CGui> gui, int x, int
 }
 
 bool CGameFightPanel::isInInteractions(std::shared_ptr<CGui> gui, int x, int y) {
-    return y > (getInteractionsLocation(gui)) && !isInInventory(gui, x, y);
+    return y > (getInteractionsLocation(gui)) && y < (getInteractionsLocation(gui) + tileSize);
 }
 
 int CGameFightPanel::getInteractionsLocation(std::shared_ptr<CGui> gui) { return getYSize() - gui->getTileSize(); }
 
 //TODO: make this method strict
 bool CGameFightPanel::isInInventory(std::shared_ptr<CGui> gui, int x, int y) {
-    return y > (getInventoryLocation(gui));
+    return y > getInventoryLocation(gui) && y < getInventoryLocation(gui) + tileSize;
 }
 
 int CGameFightPanel::getInventoryLocation(std::shared_ptr<CGui> gui) { return getYSize() - (gui->getTileSize() * 2); }
