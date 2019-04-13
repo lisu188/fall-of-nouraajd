@@ -2,7 +2,6 @@
 
 #include "gui/CTextureCache.h"
 
-//TODO: implement locking scrolling on edges and make in on/off
 template<typename Collection>
 class CListView : public std::enable_shared_from_this<CListView<Collection>> {
     typedef typename Collection::value_type Item;
@@ -207,7 +206,7 @@ private:
                        loc.get());
     }
 
-//TODO: cache method calls
+//TODO: cache method calls // note to self, seems like no performance impact, even in debug
     bool isOversized(std::shared_ptr<CGui> gui) {
         return allowOversize && collection(gui).size() > ((unsigned) xSize * (unsigned) ySize);
     }
