@@ -15,8 +15,6 @@ class Stats;
 
 class CMap;
 
-class IPathFinder;
-
 class CItem;
 
 class CMarket;
