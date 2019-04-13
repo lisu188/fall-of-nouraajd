@@ -51,7 +51,7 @@ void CScriptHandler::add_function(std::string function_name, std::string functio
         stream << "\t" << line << std::endl;
     }
     try {
-        PY_UNSAFE(execute_script(stream.str()););
+        PY_UNSAFE(execute_script(stream.str()));
     } catch (...) {
         add_function(function_name, "print('Compilation failure!')", args);
     }

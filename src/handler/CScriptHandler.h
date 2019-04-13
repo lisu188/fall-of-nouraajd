@@ -21,7 +21,7 @@ template<typename... Args>
 struct wrap<void, Args...> {
     static std::function<void(Args...)> call(boost::python::object func) {
         return [func](Args... args) {
-            PY_SAFE (func(args ...);)
+            PY_SAFE (func(args ...))
         };
     }
 };
