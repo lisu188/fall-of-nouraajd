@@ -12,7 +12,7 @@ CStaticAnimation::CStaticAnimation(std::string path) {
 }
 
 void CStaticAnimation::render(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> pos, int frameTime) {
-    SDL_RenderCopy(gui->getRenderer(), gui->getTextureCache()->getTexture(raw_path), nullptr, pos.get());
+    SDL_SAFE(SDL_RenderCopy(gui->getRenderer(), gui->getTextureCache()->getTexture(raw_path), nullptr, pos.get()));
 }
 
 
@@ -60,7 +60,8 @@ void CDynamicAnimation::render(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Re
             break;
         }
     }
-    SDL_RenderCopy(gui->getRenderer(), gui->getTextureCache()->getTexture(paths[currFrame]), nullptr, pos.get());
+    SDL_SAFE(SDL_RenderCopy(gui->getRenderer(), gui->getTextureCache()->getTexture(paths[currFrame]), nullptr,
+                            pos.get()));
 }
 
 
