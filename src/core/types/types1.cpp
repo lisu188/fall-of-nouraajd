@@ -4,6 +4,7 @@
 #include "core/CTypes.h"
 #include "core/CWrapper.h"
 #include "core/CController.h"
+#include "core/CList.h"
 
 extern void add_member(std::shared_ptr<Value> object, std::string key, std::string value);
 
@@ -50,7 +51,10 @@ namespace {
                 CTypes::register_type<CGame, CGameObject>();
                 CTypes::register_type<CMap, CGameObject>();
 
+                CTypes::register_type<CList, CGameObject>();
             }
+
+
 
             //TODO: add also std::map<std::string,std::string> and std::string
             //TODO: repeat for int

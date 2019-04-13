@@ -4,10 +4,16 @@
 #include "CGameCharacterPanel.h"
 #include "core/CMap.h"
 #include "gui/CTextManager.h"
+#include "core/CList.h"
 
+//TODO: make charSheet singleton
 void CGameCharacterPanel::panelRender(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> pRect, int i) {
+    std::string text;
+    for (auto prop : gui->getGame()->createObject<CList>("charSheet")->getValues()) {
+        text += prop + ": " + vstd::str(gui->getGame()->getMap()->getPlayer()->getNumericProperty(prop)) + "\n";
+    }
     gui->getTextManager()->drawText(
-            JSONIFY(gui->getGame()->getMap()->getPlayer()),
+            text,
             pRect->x,
             pRect->y,
             pRect->w);
