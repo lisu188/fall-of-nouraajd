@@ -3,19 +3,19 @@
 #include "gui/CTextManager.h"
 
 CGui::CGui() {
-    SDL_Init(SDL_INIT_VIDEO);
-    SDL_CreateWindowAndRenderer(width, height, SDL_WINDOW_OPENGL, &window, &renderer);
+    SDL_SAFE(SDL_Init(SDL_INIT_VIDEO));
+    SDL_SAFE(SDL_CreateWindowAndRenderer(width, height, SDL_WINDOW_OPENGL, &window, &renderer));
     //TODO: check render flags
 }
 
 CGui::~CGui() {
-    SDL_DestroyRenderer(renderer);
-    SDL_DestroyWindow(window);
+    SDL_SAFE(SDL_DestroyRenderer(renderer));
+    SDL_SAFE(SDL_DestroyWindow(window));
 }
 
 void CGui::render(int frameTime) {
-    SDL_SetRenderDrawColor(renderer, BLACK);
-    SDL_RenderClear(renderer);
+    SDL_SAFE(SDL_SetRenderDrawColor(renderer, BLACK));
+    SDL_SAFE(SDL_RenderClear(renderer));
     for (std::shared_ptr<CGameGraphicsObject> object:guiStack) {
         std::shared_ptr<SDL_Rect> physical = std::make_shared<SDL_Rect>();
         physical->x = 0;
@@ -24,7 +24,7 @@ void CGui::render(int frameTime) {
         physical->w = width;
         object->render(this->ptr<CGui>(), physical, frameTime);
     }
-    SDL_RenderPresent(renderer);
+    SDL_SAFE(SDL_RenderPresent(renderer));
 }
 
 bool CGui::event(SDL_Event *event) {

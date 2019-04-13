@@ -15,22 +15,22 @@ SDL_Texture *CTextManager::loadTexture(std::string text, int width) {
     SDL_Color textColor = {255, 255, 255, 0};
     SDL_Surface *surface = SDL_SAFE(TTF_RenderText_Blended_Wrapped(font, text.c_str(), textColor, width));
     auto _texture = SDL_SAFE(SDL_CreateTextureFromSurface(_gui.lock()->getRenderer(), surface));
-    SDL_FreeSurface(surface);
+    SDL_SAFE(SDL_FreeSurface(surface));
     return _texture;
 }
 
 CTextManager::CTextManager(std::shared_ptr<CGui> _gui) {
-    TTF_Init();
-    font = TTF_OpenFont("fonts/ampersand.ttf", 24);
+    SDL_SAFE(TTF_Init());
+    font = SDL_SAFE(TTF_OpenFont("fonts/ampersand.ttf", 24));
     this->_gui = _gui;
 }
 
 CTextManager::~CTextManager() {
     for (auto texture:_textures) {
-        SDL_DestroyTexture(texture.second);
+        SDL_SAFE(SDL_DestroyTexture(texture.second));
     }
     _textures.clear();
-    TTF_CloseFont(font);
+    SDL_SAFE(TTF_CloseFont(font));
 }
 
 
@@ -39,15 +39,15 @@ void CTextManager::drawText(std::string text, int x, int y, int w) {
     actual.x = x;
     actual.y = y;
     SDL_Texture *pTexture = getTexture(text, w);
-    SDL_QueryTexture(pTexture, NULL, NULL, &actual.w, &actual.h);
-    SDL_RenderCopy(_gui.lock()->getRenderer(), pTexture, NULL, &actual);
+    SDL_SAFE(SDL_QueryTexture(pTexture, NULL, NULL, &actual.w, &actual.h));
+    SDL_SAFE(SDL_RenderCopy(_gui.lock()->getRenderer(), pTexture, NULL, &actual));
 }
 
 void CTextManager::drawTextCentered(std::string text, int x, int y, int w, int h) {
     SDL_Rect actual;
     SDL_Texture *pTexture = getTexture(text);
-    SDL_QueryTexture(pTexture, NULL, NULL, &actual.w, &actual.h);
+    SDL_SAFE(SDL_QueryTexture(pTexture, NULL, NULL, &actual.w, &actual.h));
 
     actual = CUtil::boxInBox(SDL_Rect{x, y, w, h}, &actual);
-    SDL_RenderCopy(_gui.lock()->getRenderer(), pTexture, NULL, &actual);
+    SDL_SAFE(SDL_RenderCopy(_gui.lock()->getRenderer(), pTexture, NULL, &actual));
 }
