@@ -10,7 +10,7 @@ V_META(CWrapper<T>, T, vstd::meta::empty())
 public:
     virtual void onEnter(std::shared_ptr<CGameEvent> event) override final {
         if (auto f = this->get_override("onEnter")) {
-            PY_SAFE (f(event);)
+            PY_SAFE (f(event))
         } else {
             this->T::onEnter(event);
         }
@@ -18,7 +18,7 @@ public:
 
     virtual void onTurn(std::shared_ptr<CGameEvent> event) override final {
         if (auto f = this->get_override("onTurn")) {
-            PY_SAFE (f(event);)
+            PY_SAFE (f(event))
         } else {
             this->T::onTurn(event);
         }
@@ -26,7 +26,7 @@ public:
 
     virtual void onCreate(std::shared_ptr<CGameEvent> event) override final {
         if (auto f = this->get_override("onCreate")) {
-            PY_SAFE (f(event);)
+            PY_SAFE (f(event))
         } else {
             this->T::onCreate(event);
         }
@@ -34,7 +34,7 @@ public:
 
     virtual void onDestroy(std::shared_ptr<CGameEvent> event) override final {
         if (auto f = this->get_override("onDestroy")) {
-            PY_SAFE (f(event);)
+            PY_SAFE (f(event))
         } else {
             this->T::onDestroy(event);
         }
@@ -42,7 +42,7 @@ public:
 
     virtual void onLeave(std::shared_ptr<CGameEvent> event) override final {
         if (auto f = this->get_override("onLeave")) {
-            PY_SAFE (f(event);)
+            PY_SAFE (f(event))
         } else {
             this->T::onLeave(event);
         }
@@ -55,7 +55,7 @@ V_META(CWrapper<T>, CInteraction, vstd::meta::empty())
 public:
     void performAction(std::shared_ptr<CCreature> first, std::shared_ptr<CCreature> second) override final {
         if (auto f = this->get_override("performAction")) {
-            PY_SAFE (f(first, second);)
+            PY_SAFE (f(first, second))
         } else {
             this->CInteraction::performAction(first, second);
         }
@@ -63,7 +63,7 @@ public:
 
     bool configureEffect(std::shared_ptr<CEffect> effect) override final {
         if (auto f = this->get_override("configureEffect")) {
-            PY_SAFE_RET_VAL (return f(effect);, false)
+            PY_SAFE_RET_VAL (return f(effect), false)
         } else {
             return this->CInteraction::configureEffect(effect);
         }
@@ -76,7 +76,7 @@ V_META(CWrapper<T>, CEffect, vstd::meta::empty())
 public:
     void onEffect() override final {
         if (auto f = this->get_override("onEffect")) {
-            PY_SAFE (f();)
+            PY_SAFE (f())
         } else {
             this->CEffect::onEffect();
         }
@@ -90,7 +90,7 @@ V_META(CWrapper<T>, CTile, vstd::meta::empty())
 public:
     void onStep(std::shared_ptr<CCreature> creature) override final {
         if (auto f = this->get_override("onStep")) {
-            PY_SAFE (f(creature);)
+            PY_SAFE (f(creature))
         } else {
             this->CTile::onStep(creature);
         }
@@ -104,7 +104,7 @@ V_META(CWrapper<T>, CPotion, vstd::meta::empty())
 public:
     void onUse(std::shared_ptr<CGameEvent> event) override final {
         if (auto f = this->get_override("onUse")) {
-            PY_SAFE (f(event);)
+            PY_SAFE (f(event))
         } else {
             this->CPotion::onUse(event);
         }
@@ -117,7 +117,7 @@ V_META(CWrapper<T>, CTrigger, vstd::meta::empty())
 public:
     void trigger(std::shared_ptr<CGameObject> object, std::shared_ptr<CGameEvent> event) override final {
         if (auto f = this->get_override("trigger")) {
-            PY_SAFE (f(object, event);)
+            PY_SAFE (f(object, event))
         } else {
             this->CTrigger::trigger(object, event);
         }
@@ -138,7 +138,7 @@ public:
 
     void onComplete() override final {
         if (auto f = this->get_override("onComplete")) {
-            PY_SAFE (f();)
+            PY_SAFE (f())
         } else {
             this->CQuest::onComplete();
         }
@@ -151,7 +151,7 @@ V_META(CWrapper<T>, CPlugin, vstd::meta::empty())
 public:
     void load(std::shared_ptr<CGame> game) override final {
         if (auto f = this->get_override("load")) {
-            PY_SAFE (f(game);)
+            PY_SAFE (f(game))
         } else {
             this->CPlugin::load(game);
         }

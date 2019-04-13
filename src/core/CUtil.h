@@ -49,5 +49,16 @@ namespace std {
     };
 }
 
+template<typename F>
+auto sdl_safe(F f) {
+    auto return_value = f();
+    if (!return_value) {
+        vstd::logger::error(SDL_GetError());
+    }
+    return return_value;
+}
+
+#define SDL_SAFE(x) sdl_safe([=](){return x;})
+
 #define JSONIFY(x) CJsonUtil::to_string(CSerialization::serialize<std::shared_ptr<Value>>(x))
 #define JSONIFY_STYLED(x) CJsonUtil::to_string<StyledWriter>(CSerialization::serialize<std::shared_ptr<Value>>(x))
