@@ -136,19 +136,23 @@ void CGameTradePanel::handleEnter(std::shared_ptr<CGui> gui) {
 
 void CGameTradePanel::selectMarket(std::shared_ptr<CItem> selection) {
     selectedInventory.clear();
-    if (vstd::ctn(selectedMarket, selection)) {
-        selectedMarket.erase(selection);
-    } else {
-        selectedMarket.insert(selection);
+    if (selection) {
+        if (vstd::ctn(selectedMarket, selection)) {
+            selectedMarket.erase(selection);
+        } else {
+            selectedMarket.insert(selection);
+        }
     }
 }
 
 void CGameTradePanel::selectInventory(std::shared_ptr<CItem> selection) {
     selectedMarket.clear();
-    if (vstd::ctn(selectedInventory, selection)) {
-        selectedInventory.erase(selection);
-    } else {
-        selectedInventory.insert(selection);
+    if (selection) {
+        if (vstd::ctn(selectedInventory, selection)) {
+            selectedInventory.erase(selection);
+        } else {
+            selectedInventory.insert(selection);
+        }
     }
 }
 
