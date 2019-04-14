@@ -35,8 +35,9 @@ CGameTradePanel::CGameTradePanel() {
             CListView<
                     std::set<
                             std::shared_ptr<
-                                    CItem>>>>(
-            xInv, yInv, 50, true, selectionBarThickness)->withCollection(
+                                    CItem>>>>
+            (
+                    xInv, yInv, 50, true, selectionBarThickness)->withCollection(
             [](std::shared_ptr<CGui> gui) {
                 return gui->getGame()->getMap()->getPlayer()->getInInventory();
             })->withCallback(
@@ -44,15 +45,16 @@ CGameTradePanel::CGameTradePanel() {
                 this->selectInventory(newSelection);
             })->withSelect(
             [this](std::shared_ptr<CGui> gui, int index, auto item) {
-                return vstd::ctn(selectedInventory, item);
+                return vstd::ctn(selectedInventory, item, [](auto a, auto b) { return a == b.lock(); });
             });
 
     marketView = std::make_shared<
             CListView<
                     std::set<
                             std::shared_ptr<
-                                    CItem>>>>(
-            xInv, yInv, 50, true, selectionBarThickness)->withCollection(
+                                    CItem>>>>
+            (
+                    xInv, yInv, 50, true, selectionBarThickness)->withCollection(
             [this](std::shared_ptr<CGui> gui) {
                 return market->getItems();
             })->withCallback(
@@ -60,7 +62,7 @@ CGameTradePanel::CGameTradePanel() {
                 this->selectMarket(newSelection);
             })->withSelect(
             [this](std::shared_ptr<CGui> gui, int index, auto item) {
-                return vstd::ctn(selectedMarket, item);
+                return vstd::ctn(selectedMarket, item, [](auto a, auto b) { return a == b.lock(); });
             });
 }
 
@@ -92,68 +94,68 @@ int CGameTradePanel::getXInv() {
     return xInv;
 }
 
-void CGameTradePanel::setXInv(int xInv) {
-    CGameTradePanel::xInv = xInv;
+void CGameTradePanel::setXInv(int _xInv) {
+    CGameTradePanel::xInv = _xInv;
 }
 
 int CGameTradePanel::getYInv() {
     return yInv;
 }
 
-void CGameTradePanel::setYInv(int yInv) {
-    CGameTradePanel::yInv = yInv;
+void CGameTradePanel::setYInv(int _yInv) {
+    CGameTradePanel::yInv = _yInv;
 }
 
 int CGameTradePanel::getSelectionBarThickness() {
     return selectionBarThickness;
 }
 
-void CGameTradePanel::setSelectionBarThickness(int selectionBarThickness) {
-    CGameTradePanel::selectionBarThickness = selectionBarThickness;
+void CGameTradePanel::setSelectionBarThickness(int _selectionBarThickness) {
+    CGameTradePanel::selectionBarThickness = _selectionBarThickness;
 }
 
 void CGameTradePanel::handleEnter(std::shared_ptr<CGui> gui) {
-    vstd::fail_if(selectedMarket.size() > 0 && selectedInventory.size() > 0, "Both selections greater than zero!");
-    if (selectedInventory.size() > 0) {
+    vstd::fail_if(!selectedMarket.empty() && !selectedInventory.empty(), "Both selections are empty!");
+    if (!selectedInventory.empty()) {
         for (auto item:selectedInventory) {
-            market->buyItem(gui->getGame()->getMap()->getPlayer(), item);
+            market->buyItem(gui->getGame()->getMap()->getPlayer(), item.lock());
         }
         selectedInventory.clear();
     }
-    if (selectedMarket.size() > 0) {
+    if (!selectedMarket.empty()) {
         int total = vstd::functional::sum<int>(selectedMarket, [this](auto item) {
-            return market->getSellCost(item);
+            return market->getSellCost(item.lock());
         });
         int playerGold = gui->getGame()->getMap()->getPlayer()->getGold();
         if (total > playerGold) {
             vstd::logger::debug("Cannot afford all selected items!", playerGold, total);//TODO: show confirmation dialog
         } else {
             for (auto item:selectedMarket) {
-                market->sellItem(gui->getGame()->getMap()->getPlayer(), item);
+                market->sellItem(gui->getGame()->getMap()->getPlayer(), item.lock());
             }
         }
         selectedMarket.clear();
     }
 }
 
-void CGameTradePanel::selectMarket(std::shared_ptr<CItem> selection) {
+void CGameTradePanel::selectMarket(std::weak_ptr<CItem> selection) {
     selectedInventory.clear();
-    if (selection) {
-        if (vstd::ctn(selectedMarket, selection)) {
-            selectedMarket.erase(selection);
+    if (selection.lock()) {
+        if (vstd::ctn(selectedMarket, selection, [](auto a, auto b) { return a.lock() == b.lock(); })) {
+            vstd::erase(selectedMarket, selection, [](auto a, auto b) { return a.lock() == b.lock(); });
         } else {
-            selectedMarket.insert(selection);
+            selectedMarket.push_back(selection);
         }
     }
 }
 
-void CGameTradePanel::selectInventory(std::shared_ptr<CItem> selection) {
+void CGameTradePanel::selectInventory(std::weak_ptr<CItem> selection) {
     selectedMarket.clear();
-    if (selection) {
-        if (vstd::ctn(selectedInventory, selection)) {
-            selectedInventory.erase(selection);
+    if (selection.lock()) {
+        if (vstd::ctn(selectedInventory, selection, [](auto a, auto b) { return a.lock() == b.lock(); })) {
+            vstd::erase(selectedInventory, selection, [](auto a, auto b) { return a.lock() == b.lock(); });
         } else {
-            selectedInventory.insert(selection);
+            selectedInventory.push_back(selection);
         }
     }
 }
