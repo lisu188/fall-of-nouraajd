@@ -4,10 +4,13 @@
 #include "gui/CTextureCache.h"
 #include "core/CGame.h"
 #include "core/CMap.h"
+#include "gui/CTextManager.h"
 
 void CGameTradePanel::panelRender(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> pRect, int i) {
     drawInventory(gui, pRect, i);
     drawMarket(gui, pRect, i);
+    gui->getTextManager()->drawTextCentered(vstd::str(getTotalBuyCost()), pRect->x + 200, pRect->y, 200, 200);
+    gui->getTextManager()->drawTextCentered(vstd::str(getTotalSellCost()), pRect->x + 400, pRect->y, 200, 200);
 }
 
 void CGameTradePanel::drawMarket(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> pRect, int frameTime) {
@@ -123,9 +126,7 @@ void CGameTradePanel::handleEnter(std::shared_ptr<CGui> gui) {
         selectedInventory.clear();
     }
     if (!selectedMarket.empty()) {
-        int total = vstd::functional::sum<int>(selectedMarket, [this](auto item) {
-            return market->getSellCost(item.lock());
-        });
+        int total = getTotalSellCost();
         int playerGold = gui->getGame()->getMap()->getPlayer()->getGold();
         if (total > playerGold) {
             vstd::logger::debug("Cannot afford all selected items!", playerGold, total);//TODO: show confirmation dialog
@@ -136,6 +137,18 @@ void CGameTradePanel::handleEnter(std::shared_ptr<CGui> gui) {
         }
         selectedMarket.clear();
     }
+}
+
+int CGameTradePanel::getTotalSellCost() {
+    return vstd::functional::sum<int>(selectedMarket, [this](auto item) {
+        return market->getSellCost(item.lock());
+    });
+}
+
+int CGameTradePanel::getTotalBuyCost() {
+    return vstd::functional::sum<int>(selectedInventory, [this](auto item) {
+        return market->getSellCost(item.lock());
+    });
 }
 
 void CGameTradePanel::selectMarket(std::weak_ptr<CItem> selection) {

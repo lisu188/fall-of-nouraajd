@@ -66,5 +66,9 @@ private:
     void selectMarket(std::weak_ptr<CItem> selection);
 
     void selectInventory(std::weak_ptr<CItem> selection);
+
+    int getTotalSellCost();
+
+    int getTotalBuyCost();
 };
 
