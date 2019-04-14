@@ -70,5 +70,7 @@ private:
     int getTotalSellCost();
 
     int getTotalBuyCost();
+
+    bool canPlayerAfford(std::shared_ptr<CGui> gui);
 };
 
