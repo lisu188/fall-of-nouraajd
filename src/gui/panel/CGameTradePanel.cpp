@@ -121,10 +121,12 @@ void CGameTradePanel::handleEnter(std::shared_ptr<CGui> gui) {
         selectedInventory.clear();
     }
     if (selectedMarket.size() > 0) {
-        if (vstd::functional::sum<int>(selectedMarket, [this](auto item) {
+        int total = vstd::functional::sum<int>(selectedMarket, [this](auto item) {
             return market->getSellCost(item);
-        }) > gui->getGame()->getMap()->getPlayer()->getGold()) {
-            vstd::logger::debug("Cannot afford all selected items!");
+        });
+        int playerGold = gui->getGame()->getMap()->getPlayer()->getGold();
+        if (total > playerGold) {
+            vstd::logger::debug("Cannot afford all selected items!", playerGold, total);//TODO: show confirmation dialog
         } else {
             for (auto item:selectedMarket) {
                 market->sellItem(gui->getGame()->getMap()->getPlayer(), item);
