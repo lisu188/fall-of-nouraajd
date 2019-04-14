@@ -15,6 +15,23 @@
     "class": "CGameQuestPanel"
   },
   "characterPanel": {
-    "class": "CGameCharacterPanel"
+    "class": "CGameCharacterPanel",
+    "properties": {
+      "charSheet": {
+        "class": "CList",
+        "properties": {
+          "values": [
+            "level",
+            "exp",
+            "gold",
+            "mana",
+            "manaMax",
+            "manaRegRate",
+            "hp",
+            "hpMax"
+          ]
+        }
+      }
+    }
   }
 }

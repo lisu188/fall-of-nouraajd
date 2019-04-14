@@ -10,20 +10,5 @@
       "width": 1920,
       "tileSize": 50
     }
-  },
-  "charSheet": {
-    "class": "CList",
-    "properties": {
-      "values": [
-        "level",
-        "exp",
-        "gold",
-        "mana",
-        "manaMax",
-        "manaRegRate",
-        "hp",
-        "hpMax"
-      ]
-    }
   }
 }
