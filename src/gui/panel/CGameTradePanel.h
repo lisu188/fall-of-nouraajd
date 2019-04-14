@@ -7,6 +7,7 @@
 class CGameTradePanel : public CGamePanel {
 V_META(CGameTradePanel, CGamePanel,
 //TODO: unify this with CGameInventoryPanel
+//TODO: stacking of same type objects
        V_PROPERTY(CGameTradePanel, int, xInv, getXInv, setXInv),
        V_PROPERTY(CGameTradePanel, int, yInv, getYInv, setYInv),
        V_PROPERTY(CGameTradePanel, int, selectionBarThickness, getSelectionBarThickness, setSelectionBarThickness),
