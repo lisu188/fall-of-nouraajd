@@ -118,22 +118,20 @@ void CGameTradePanel::setSelectionBarThickness(int _selectionBarThickness) {
 }
 
 void CGameTradePanel::handleEnter(std::shared_ptr<CGui> gui) {
-    if (!selectedMarket.empty()) {
-        int total = getTotalSellCost() - getTotalBuyCost();
-        int playerGold = gui->getGame()->getMap()->getPlayer()->getGold();
-        if (total > playerGold) {
-            vstd::logger::debug("Cannot afford all selected items!", playerGold, total);
-        } else {
-            for (auto item:selectedInventory) {
-                market->buyItem(gui->getGame()->getMap()->getPlayer(), item.lock());
-            }
-            for (auto item:selectedMarket) {
-                market->sellItem(gui->getGame()->getMap()->getPlayer(), item.lock());
-            }
-            selectedMarket.clear();
-            selectedInventory.clear();
+    if (canPlayerAfford(gui)) {
+        for (auto item:selectedInventory) {
+            market->buyItem(gui->getGame()->getMap()->getPlayer(), item.lock());
         }
+        for (auto item:selectedMarket) {
+            market->sellItem(gui->getGame()->getMap()->getPlayer(), item.lock());
+        }
+        selectedMarket.clear();
+        selectedInventory.clear();
     }
+}
+
+bool CGameTradePanel::canPlayerAfford(std::shared_ptr<CGui> gui) {
+    return getTotalSellCost() - getTotalBuyCost() <= gui->getGame()->getMap()->getPlayer()->getGold();
 }
 
 int CGameTradePanel::getTotalSellCost() {
