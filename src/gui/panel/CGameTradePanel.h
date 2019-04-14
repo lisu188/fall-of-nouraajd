@@ -40,8 +40,8 @@ private:
     int selectionBarThickness = 5;
 
     std::shared_ptr<CMarket> market;
-    std::set<std::shared_ptr<CItem>> selectedInventory;
-    std::set<std::shared_ptr<CItem>> selectedMarket;
+    std::list<std::weak_ptr<CItem>> selectedInventory;
+    std::list<std::weak_ptr<CItem>> selectedMarket;
 
     void panelRender(std::shared_ptr<CGui> shared_ptr, std::shared_ptr<SDL_Rect> pRect, int i) override;
 
@@ -63,8 +63,8 @@ private:
 
     void handleEnter(std::shared_ptr<CGui> shared_ptr);
 
-    void selectMarket(std::shared_ptr<CItem> selection);
+    void selectMarket(std::weak_ptr<CItem> selection);
 
-    void selectInventory(std::shared_ptr<CItem> selection);
+    void selectInventory(std::weak_ptr<CItem> selection);
 };
 
