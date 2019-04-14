@@ -118,24 +118,21 @@ void CGameTradePanel::setSelectionBarThickness(int _selectionBarThickness) {
 }
 
 void CGameTradePanel::handleEnter(std::shared_ptr<CGui> gui) {
-    vstd::fail_if(!selectedMarket.empty() && !selectedInventory.empty(), "Both selections are empty!");
-    if (!selectedInventory.empty()) {
-        for (auto item:selectedInventory) {
-            market->buyItem(gui->getGame()->getMap()->getPlayer(), item.lock());
-        }
-        selectedInventory.clear();
-    }
     if (!selectedMarket.empty()) {
-        int total = getTotalSellCost();
+        int total = getTotalSellCost() - getTotalBuyCost();
         int playerGold = gui->getGame()->getMap()->getPlayer()->getGold();
         if (total > playerGold) {
-            vstd::logger::debug("Cannot afford all selected items!", playerGold, total);//TODO: show confirmation dialog
+            vstd::logger::debug("Cannot afford all selected items!", playerGold, total);
         } else {
+            for (auto item:selectedInventory) {
+                market->buyItem(gui->getGame()->getMap()->getPlayer(), item.lock());
+            }
             for (auto item:selectedMarket) {
                 market->sellItem(gui->getGame()->getMap()->getPlayer(), item.lock());
             }
+            selectedMarket.clear();
+            selectedInventory.clear();
         }
-        selectedMarket.clear();
     }
 }
 
@@ -152,7 +149,6 @@ int CGameTradePanel::getTotalBuyCost() {
 }
 
 void CGameTradePanel::selectMarket(std::weak_ptr<CItem> selection) {
-    selectedInventory.clear();
     if (selection.lock()) {
         if (vstd::ctn(selectedMarket, selection, [](auto a, auto b) { return a.lock() == b.lock(); })) {
             vstd::erase(selectedMarket, selection, [](auto a, auto b) { return a.lock() == b.lock(); });
@@ -163,7 +159,6 @@ void CGameTradePanel::selectMarket(std::weak_ptr<CItem> selection) {
 }
 
 void CGameTradePanel::selectInventory(std::weak_ptr<CItem> selection) {
-    selectedMarket.clear();
     if (selection.lock()) {
         if (vstd::ctn(selectedInventory, selection, [](auto a, auto b) { return a.lock() == b.lock(); })) {
             vstd::erase(selectedInventory, selection, [](auto a, auto b) { return a.lock() == b.lock(); });
