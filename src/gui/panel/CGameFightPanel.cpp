@@ -33,7 +33,7 @@ CGameFightPanel::CGameFightPanel() {
             [](std::shared_ptr<CGui> gui) {
                 return gui->getGame()->getMap()->getPlayer()->getInteractions();
             })->withCallback(
-            [this](std::shared_ptr<CGui> gui,
+            [this](std::shared_ptr<CGui> gui, int index,
                    auto newSelection) {
                 if (selected.lock() !=
                     newSelection) {
@@ -59,7 +59,7 @@ CGameFightPanel::CGameFightPanel() {
             [](std::shared_ptr<CGui> gui) {
                 return gui->getGame()->getMap()->getPlayer()->getItems();
             })->withCallback(
-            [this](std::shared_ptr<CGui> gui,
+            [this](std::shared_ptr<CGui> gui, int index,
                    auto newSelection) {
                 if (selectedItem.lock() && selectedItem.lock() != newSelection) {
                     selectedItem = newSelection;

@@ -35,6 +35,7 @@ private:
     int yInv = 4;
     int selectionBarThickness = 5;
     std::weak_ptr<CItem> selected;
+    std::weak_ptr<CItem> selectedEquipped;
 
     void panelRender(std::shared_ptr<CGui> shared_ptr, std::shared_ptr<SDL_Rect> pRect, int i) override;
 

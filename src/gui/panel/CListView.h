@@ -10,7 +10,7 @@ class CListView : public std::enable_shared_from_this<CListView<Collection>> {
 
     std::function<int(Item, int)> index;
 
-    std::function<void(std::shared_ptr<CGui>, Item)> callback;
+    std::function<void(std::shared_ptr<CGui>, int, Item)> callback;
 
     std::function<void(std::shared_ptr<CGui> gui, Item, std::shared_ptr<SDL_Rect> loc, int frameTime)> draw;
 
@@ -73,7 +73,7 @@ public:
         } else if (i == getRightArrowIndex() && isOversized(gui)) {
             doShift(gui, 1);
         } else {
-            callback(gui, calculateIndices(gui)[shiftIndex(gui, i)]);
+            callback(gui, shiftIndex(gui, i), calculateIndices(gui)[shiftIndex(gui, i)]);
         }
     }
 
@@ -91,7 +91,7 @@ public:
         return this->shared_from_this();
     }
 
-    std::shared_ptr<CListView> withCallback(std::function<void(std::shared_ptr<CGui>, Item)> callback) {
+    std::shared_ptr<CListView> withCallback(std::function<void(std::shared_ptr<CGui>, int, Item)> callback) {
         this->callback = callback;
         return this->shared_from_this();
     }
