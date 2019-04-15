@@ -41,7 +41,7 @@ CGameInventoryPanel::CGameInventoryPanel() {
             [](std::shared_ptr<CGui> gui) {
                 return gui->getGame()->getMap()->getPlayer()->getInInventory();
             })->withCallback(
-            [this](std::shared_ptr<CGui> gui, auto newSelection) {
+            [this](std::shared_ptr<CGui> gui, int index, auto newSelection) {
                 if (selected.lock() != newSelection) {
                     selected = newSelection;
                 } else {
@@ -54,23 +54,30 @@ CGameInventoryPanel::CGameInventoryPanel() {
 
     equippedView = std::make_shared<
             CListView<CItemMap>>(
-            4, 2, 50, false, selectionBarThickness / 2)->withCollection(
+            4, 2, 50, false, selectionBarThickness)->withCollection(
             [](std::shared_ptr<CGui> gui) {
                 return gui->getGame()->getMap()->getPlayer()->getEquipped();
             })->withIndex(
             [](auto ob, int prevIndex) {
                 return vstd::to_int(ob.first).first;
             })->withCallback(
-            [this](std::shared_ptr<CGui> gui, auto newSelection) {
-                if (selected.lock() &&
-                    gui->getGame()->getSlotConfiguration()->canFit(newSelection.first, selected.lock())) {
-                    gui->getGame()->getMap()->getPlayer()->equipItem(newSelection.first, selected.lock());
+            [this](std::shared_ptr<CGui> gui, int index, auto newSelection) {
+                std::string slotName = vstd::str(index);
+                if (selectedEquipped.lock()) {
+                    gui->getGame()->getMap()->getPlayer()->equipItem(slotName, nullptr);
+                    selectedEquipped.reset();
+                } else if (selected.lock() &&
+                           gui->getGame()->getSlotConfiguration()->canFit(slotName, selected.lock())) {
+                    gui->getGame()->getMap()->getPlayer()->equipItem(slotName, selected.lock());
                     selected.reset();
+                } else {
+                    selectedEquipped = newSelection.second;
                 }
             })->withSelect([this](std::shared_ptr<CGui> gui, int index, auto object) {
-        return selected.lock() &&
-               gui->getGame()->getSlotConfiguration()->canFit(vstd::str(index),
-                                                              selected.lock());
+        return (selected.lock() &&
+                gui->getGame()->getSlotConfiguration()->canFit(vstd::str(index),
+                                                               selected.lock())) ||
+               (selectedEquipped.lock() && selectedEquipped.lock() == object.second);
     })->withDraw(
             [](auto gui, auto item, auto loc, auto frameTime) {
                 item.second->getAnimationObject()->render(gui, loc, frameTime);

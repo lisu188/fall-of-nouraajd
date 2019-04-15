@@ -44,7 +44,7 @@ CGameTradePanel::CGameTradePanel() {
             [](std::shared_ptr<CGui> gui) {
                 return gui->getGame()->getMap()->getPlayer()->getInInventory();
             })->withCallback(
-            [this](std::shared_ptr<CGui> gui, auto newSelection) {
+            [this](std::shared_ptr<CGui> gui, int index, auto newSelection) {
                 this->selectInventory(newSelection);
             })->withSelect(
             [this](std::shared_ptr<CGui> gui, int index, auto item) {
@@ -61,7 +61,7 @@ CGameTradePanel::CGameTradePanel() {
             [this](std::shared_ptr<CGui> gui) {
                 return market->getItems();
             })->withCallback(
-            [this](std::shared_ptr<CGui> gui, auto newSelection) {
+            [this](std::shared_ptr<CGui> gui, int index, auto newSelection) {
                 this->selectMarket(newSelection);
             })->withSelect(
             [this](std::shared_ptr<CGui> gui, int index, auto item) {
@@ -142,7 +142,7 @@ int CGameTradePanel::getTotalSellCost() {
 
 int CGameTradePanel::getTotalBuyCost() {
     return vstd::functional::sum<int>(selectedInventory, [this](auto item) {
-        return market->getSellCost(item.lock());
+        return market->getBuyCost(item.lock());
     });
 }
 
