@@ -36,7 +36,9 @@ CGameFightPanel::CGameFightPanel() {
             [this](std::shared_ptr<CGui> gui, int index,
                    auto newSelection) {
                 if (selected.lock() !=
-                    newSelection) {
+                    newSelection &&
+                    newSelection->getManaCost() <=
+                    gui->getGame()->getMap()->getPlayer()->getMana()) {
                     selected = newSelection;
                 } else if (
                         selected.lock() ==
@@ -114,11 +116,14 @@ void CGameFightPanel::setSelectionBarThickness(int selectionBarThickness) {
     CGameFightPanel::selectionBarThickness = selectionBarThickness;
 }
 
-std::shared_ptr<CInteraction> CGameFightPanel::getInteraction() {
+std::shared_ptr<CInteraction> CGameFightPanel::selectInteraction() {
     vstd::wait_until([this]() {
         return finalSelected.lock() != nullptr;
     });
-    return finalSelected.lock();
+    auto ret = finalSelected.lock();
+    finalSelected.reset();
+    selected.reset();
+    return ret;
 }
 
 std::shared_ptr<CCreature> CGameFightPanel::getEnemy() {

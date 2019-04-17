@@ -200,7 +200,7 @@ void CPlayerFightController::start(std::shared_ptr<CCreature> me, std::shared_pt
 bool CPlayerFightController::control(std::shared_ptr<CCreature> me, std::shared_ptr<CCreature> opponent) {
     bool used = false;
     vstd::if_not_null(me->getMap()->getGame()->getGui(), [&](auto gui) {
-        me->useAction(fightPanel->getInteraction(), opponent);
+        me->useAction(fightPanel->selectInteraction(), opponent);
         //TODO: what about mana cost?
         std::shared_ptr<bool> ret = std::make_shared<bool>(new bool(true));
         used = true;
