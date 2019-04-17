@@ -15,7 +15,7 @@ public:
 
     void setSelectionBarThickness(int selectionBarThickness);
 
-    std::shared_ptr<CInteraction> getInteraction();
+    std::shared_ptr<CInteraction> selectInteraction();
 
     std::shared_ptr<CCreature> getEnemy();
 
