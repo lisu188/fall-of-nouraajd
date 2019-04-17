@@ -186,13 +186,13 @@
         "properties": {
           "agility": 2,
           "crit": 1,
-          "dmgMax": 3,
-          "dmgMin": 2,
+          "dmgMax": 1,
+          "dmgMin": 1,
           "hit": 3,
           "intelligence": 1,
           "normalResist": 5,
-          "stamina": 2,
-          "strength": 3
+          "stamina": 1,
+          "strength": 2
         }
       },
       "levelling": {
@@ -205,12 +205,12 @@
         "properties": {
           "agility": 5,
           "crit": 10,
-          "dmgMax": 12,
-          "dmgMin": 10,
+          "dmgMax": 3,
+          "dmgMin": 2,
           "hit": 75,
           "intelligence": 5,
           "mainStat": "strength",
-          "stamina": 5,
+          "stamina": 3,
           "strength": 5
         }
       },
