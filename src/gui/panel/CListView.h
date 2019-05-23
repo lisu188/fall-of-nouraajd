@@ -164,7 +164,7 @@ private:
     }
 
     int getLeftArrowIndex() {
-        return (xSize - 1) * ySize;
+        return xSize * (ySize - 1);
     }
 
 //TODO: do not generate whole map, instead add callback arguement and stop when met
