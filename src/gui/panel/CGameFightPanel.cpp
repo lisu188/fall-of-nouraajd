@@ -63,9 +63,9 @@ CGameFightPanel::CGameFightPanel() {
             })->withCallback(
             [this](std::shared_ptr<CGui> gui, int index,
                    auto newSelection) {
-                if (selectedItem.lock() && selectedItem.lock() != newSelection) {
+                if (selectedItem.lock() != newSelection) {
                     selectedItem = newSelection;
-                } else if (selectedItem.lock() == newSelection) {
+                } else if (selectedItem.lock() && selectedItem.lock() == newSelection) {
                     gui->getGame()->getMap()->getPlayer()->useItem(newSelection);
                     selectedItem.reset();
                 }
