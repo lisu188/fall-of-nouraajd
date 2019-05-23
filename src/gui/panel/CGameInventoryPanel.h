@@ -34,7 +34,7 @@ private:
     int xInv = 4;
     int yInv = 4;
     int selectionBarThickness = 5;
-    std::weak_ptr<CItem> selected;
+    std::weak_ptr<CItem> selectedInventory;
     std::weak_ptr<CItem> selectedEquipped;
 
     void panelRender(std::shared_ptr<CGui> shared_ptr, std::shared_ptr<SDL_Rect> pRect, int i) override;
@@ -55,6 +55,5 @@ private:
 
     void handleInventoryClick(std::shared_ptr<CGui> gui, int x, int y);
 
-    void handleEnter(std::shared_ptr<CGui> shared_ptr);
 };
 

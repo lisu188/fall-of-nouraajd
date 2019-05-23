@@ -35,3 +35,6 @@
 //TODO: customize out of bound tiles and default tiles
 //TODO: toroidal maps
 //TODO: separate class from race
+//TODO: barrier effect affects opponent
+//TODO: charges of items vs stacking
+//TODO: use items on right click, when unified selection, do global reset of selections on right click
