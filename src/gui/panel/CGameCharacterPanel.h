@@ -5,7 +5,7 @@
 
 class CGameCharacterPanel : public CGamePanel {
 V_META(CGameCharacterPanel, CGamePanel,
-       V_PROPERTY(CGameCharacterPanel, std::shared_ptr<CList>, charSheet, getCharSheet, setCharSheet))
+       V_PROPERTY(CGameCharacterPanel, std::shared_ptr<CListString>, charSheet, getCharSheet, setCharSheet))
 
     void panelRender(std::shared_ptr<CGui> shared_ptr, std::shared_ptr<SDL_Rect> pRect, int i) override;
 
@@ -14,13 +14,13 @@ V_META(CGameCharacterPanel, CGamePanel,
 public:
 
 
-    std::shared_ptr<CList> getCharSheet();
+    std::shared_ptr<CListString> getCharSheet();
 
-    void setCharSheet(std::shared_ptr<CList> charSheet);
+    void setCharSheet(std::shared_ptr<CListString> charSheet);
 
     ~CGameCharacterPanel();
 
 private:
-    std::shared_ptr<CList> charSheet;
+    std::shared_ptr<CListString> charSheet;
 };
 

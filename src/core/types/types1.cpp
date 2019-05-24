@@ -51,13 +51,15 @@ namespace {
                 CTypes::register_type<CGame, CGameObject>();
                 CTypes::register_type<CMap, CGameObject>();
 
-                CTypes::register_type<CList, CGameObject>();
+                CTypes::register_type<CListInt, CGameObject>();
+                CTypes::register_type<CListString, CGameObject>();
+
+                CTypes::register_type<CMapStringString, CGameObject>();
+                CTypes::register_type<CMapStringInt, CGameObject>();
+                CTypes::register_type<CMapIntString, CGameObject>();
+                CTypes::register_type<CMapIntInt, CGameObject>();
             }
 
-
-
-            //TODO: add also std::map<std::string,std::string> and std::string
-            //TODO: repeat for int
             auto array_string_deserialize = [](std::shared_ptr<CGame> game,
                                                std::shared_ptr<Value> object) {
 
@@ -76,8 +78,119 @@ namespace {
                 }
                 return arr;
             };
+
+            auto array_int_deserialize = [](std::shared_ptr<CGame> game,
+                                            std::shared_ptr<Value> object) {
+
+                std::set<int> objects;
+                for (unsigned int i = 0; i < object->size(); i++) {
+                    objects.insert((*object)[i].asInt());
+                }
+                return objects;
+
+            };
+
+            auto array_int_serialize = [](std::set<int> set) {
+                std::shared_ptr<Value> arr = std::make_shared<Value>();
+                for (int ob:set) {
+                    add_arr_member(arr, ob);
+                }
+                return arr;
+            };
+
+            auto map_string_string_deserialize = [](std::shared_ptr<CGame> game,
+                                                    std::shared_ptr<Value> object) {
+
+                std::map<std::string, std::string> objects;
+                for (auto name:object->getMemberNames()) {
+                    objects[name] = (*object)[name].asString();
+                }
+                return objects;
+
+            };
+
+            auto map_string_string_serialize = [](std::map<std::string, std::string> map) {
+                std::shared_ptr<Value> arr = std::make_shared<Value>();
+                for (auto ob:map) {
+                    add_member(arr, ob.first, ob.second);
+                }
+                return arr;
+            };
+
+            auto map_string_int_deserialize = [](std::shared_ptr<CGame> game,
+                                                 std::shared_ptr<Value> object) {
+
+                std::map<std::string, int> objects;
+                for (auto name:object->getMemberNames()) {
+                    objects[name] = (*object)[name].asInt();
+                }
+                return objects;
+
+            };
+
+            auto map_string_int_serialize = [](std::map<std::string, int> map) {
+                std::shared_ptr<Value> arr = std::make_shared<Value>();
+                for (auto ob:map) {
+                    add_member(arr, ob.first, ob.second);
+                }
+                return arr;
+            };
+
+            auto map_int_string_deserialize = [](std::shared_ptr<CGame> game,
+                                                 std::shared_ptr<Value> object) {
+
+                std::map<int, std::string> objects;
+                for (auto name:object->getMemberNames()) {
+                    objects[vstd::to_int(name).first] = (*object)[name].asString();
+                }
+                return objects;
+
+            };
+
+            auto map_int_string_serialize = [](std::map<int, std::string> map) {
+                std::shared_ptr<Value> arr = std::make_shared<Value>();
+                for (auto ob:map) {
+                    add_member(arr, vstd::str(ob.first), ob.second);
+                }
+                return arr;
+            };
+
+            auto map_int_int_deserialize = [](std::shared_ptr<CGame> game,
+                                              std::shared_ptr<Value> object) {
+
+                std::map<int, int> objects;
+                for (auto name:object->getMemberNames()) {
+                    objects[vstd::to_int(name).first] = (*object)[name].asInt();
+                }
+                return objects;
+
+            };
+
+            auto map_int_int_serialize = [](std::map<int, int> map) {
+                std::shared_ptr<Value> arr = std::make_shared<Value>();
+                for (auto ob:map) {
+                    add_member(arr, vstd::str(ob.first), ob.second);
+                }
+                return arr;
+            };
+
             CTypes::register_custom_serializer<std::shared_ptr<Json::Value>, std::set<std::string >>(
                     array_string_serialize, array_string_deserialize);
+
+            CTypes::register_custom_serializer<std::shared_ptr<Json::Value>, std::set<int >>(
+                    array_int_serialize, array_int_deserialize);
+
+            CTypes::register_custom_serializer<std::shared_ptr<Json::Value>, std::map<std::string, std::string> >(
+                    map_string_string_serialize, map_string_string_deserialize);
+
+            CTypes::register_custom_serializer<std::shared_ptr<Json::Value>, std::map<std::string, int> >(
+                    map_string_int_serialize, map_string_int_deserialize);
+
+            CTypes::register_custom_serializer<std::shared_ptr<Json::Value>, std::map<int, std::string> >(
+                    map_int_string_serialize, map_int_string_deserialize);
+
+            CTypes::register_custom_serializer<std::shared_ptr<Json::Value>, std::map<int, int> >(
+                    map_int_int_serialize, map_int_int_deserialize);
         }
     } _register_types1;
 }
