@@ -26,10 +26,10 @@ CGameCharacterPanel::~CGameCharacterPanel() {
 
 }
 
-std::shared_ptr<CList> CGameCharacterPanel::getCharSheet() {
+std::shared_ptr<CListString> CGameCharacterPanel::getCharSheet() {
     return charSheet;
 }
 
-void CGameCharacterPanel::setCharSheet(std::shared_ptr<CList> charSheet) {
+void CGameCharacterPanel::setCharSheet(std::shared_ptr<CListString> charSheet) {
     CGameCharacterPanel::charSheet = charSheet;
 }
