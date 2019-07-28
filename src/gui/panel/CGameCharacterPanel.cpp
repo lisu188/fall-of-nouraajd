@@ -17,9 +17,7 @@ void CGameCharacterPanel::panelRender(std::shared_ptr<CGui> gui, std::shared_ptr
 }
 
 void CGameCharacterPanel::panelKeyboardEvent(std::shared_ptr<CGui> gui, SDL_Keycode i) {
-    if (i == SDLK_SPACE) {
-        gui->removeObject(this->ptr<CGameCharacterPanel>());
-    }
+
 }
 
 CGameCharacterPanel::~CGameCharacterPanel() {

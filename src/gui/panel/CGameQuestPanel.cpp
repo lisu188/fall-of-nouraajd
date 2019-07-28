@@ -25,7 +25,5 @@ std::string CGameQuestPanel::getText(std::shared_ptr<CGui> ptr) {
 }
 
 void CGameQuestPanel::panelKeyboardEvent(std::shared_ptr<CGui> gui, SDL_Keycode i) {
-    if (i == SDLK_SPACE) {
-        gui->removeObject(this->ptr<CGameQuestPanel>());
-    }
+
 }

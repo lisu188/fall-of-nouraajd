@@ -1,0 +1,10 @@
+{
+  "mapGraphics": {
+    "class": "CMapGraphicsObject",
+    "properties": {
+      "panelKeys": {
+        "ref": "panelKeys"
+      }
+    }
+  }
+}
