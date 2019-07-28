@@ -38,3 +38,4 @@
 //TODO: barrier effect affects opponent
 //TODO: charges of items vs stacking
 //TODO: use items on right click, when unified selection, do global reset of selections on right click
+//TODO: mark primitve CGameObjects like CList and CMapString as primitive and unfold values field directly to properties

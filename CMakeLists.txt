@@ -52,6 +52,7 @@ configure_file(res/config/potions.json config/potions.json)
 configure_file(res/config/slots.json config/slots.json)
 configure_file(res/config/tiles.json config/tiles.json)
 configure_file(res/config/weapons.json config/weapons.json)
+configure_file(res/config/graphics.json config/graphics.json)
 
 configure_file(res/maps/map1/config.json maps/map1/config.json)
 configure_file(res/maps/map1/map.json maps/map1/map.json)

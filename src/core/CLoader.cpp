@@ -190,9 +190,9 @@ void CGameLoader::initScriptHandler(std::shared_ptr<CScriptHandler> handler, std
 
 //TODO: use CObjectHandler
 void CGameLoader::loadGui(std::shared_ptr<CGame> game) {
-    std::shared_ptr<CGui> gui = game->createObject<CGui>("GUI");
+    std::shared_ptr<CGui> gui = game->createObject<CGui>("gui");
 
-    gui->addObject(game->createObject<CMapGraphicsObject>("CMapGraphicsObject"));
+    gui->addObject(game->createObject<CMapGraphicsObject>("mapGraphics"));
     gui->addObject(game->createObject<CStatsGraphicsObject>("CStatsGraphicsObject"));
     gui->addObject(game->createObject<CConsoleGraphicsObject>("CConsoleGraphicsObject"));
 
