@@ -2,9 +2,15 @@
 #include "core/CGame.h"
 
 
-
 std::unordered_map<std::string, std::function<std::shared_ptr<CGameObject>()>> *CTypes::builders() {
     static std::unordered_map<std::string, std::function<std::shared_ptr<CGameObject>() >> reg;
+    return &reg;
+}
+
+std::unordered_map<boost::typeindex::type_index, std::function<void(std::shared_ptr<CGameObject>,
+                                                                    std::string, boost::any)>> *CTypes::setters() {
+    static std::unordered_map<boost::typeindex::type_index, std::function<void(std::shared_ptr<CGameObject>,
+                                                                               std::string, boost::any)>> reg;
     return &reg;
 }
 

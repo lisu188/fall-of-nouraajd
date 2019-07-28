@@ -174,22 +174,22 @@ namespace {
                 return arr;
             };
 
-            CTypes::register_custom_serializer<std::shared_ptr<Json::Value>, std::set<std::string >>(
-                    array_string_serialize, array_string_deserialize);
+            CTypes::register_custom_type<std::set<std::string >>
+                    (array_string_serialize, array_string_deserialize);
 
-            CTypes::register_custom_serializer<std::shared_ptr<Json::Value>, std::set<int >>(
+            CTypes::register_custom_type<std::set<int >>(
                     array_int_serialize, array_int_deserialize);
 
-            CTypes::register_custom_serializer<std::shared_ptr<Json::Value>, std::map<std::string, std::string> >(
+            CTypes::register_custom_type<std::map<std::string, std::string> >(
                     map_string_string_serialize, map_string_string_deserialize);
 
-            CTypes::register_custom_serializer<std::shared_ptr<Json::Value>, std::map<std::string, int> >(
+            CTypes::register_custom_type<std::map<std::string, int> >(
                     map_string_int_serialize, map_string_int_deserialize);
 
-            CTypes::register_custom_serializer<std::shared_ptr<Json::Value>, std::map<int, std::string> >(
+            CTypes::register_custom_type<std::map<int, std::string> >(
                     map_int_string_serialize, map_int_string_deserialize);
 
-            CTypes::register_custom_serializer<std::shared_ptr<Json::Value>, std::map<int, int> >(
+            CTypes::register_custom_type<std::map<int, int> >(
                     map_int_int_serialize, map_int_int_deserialize);
         }
     } _register_types1;

@@ -18,7 +18,7 @@
     "class": "CGameCharacterPanel",
     "properties": {
       "charSheet": {
-        "class": "CList",
+        "class": "CListString",
         "properties": {
           "values": [
             "level",

@@ -23,9 +23,7 @@ void CGameInventoryPanel::drawInventory(std::shared_ptr<CGui> gui, std::shared_p
 }
 
 void CGameInventoryPanel::panelKeyboardEvent(std::shared_ptr<CGui> gui, SDL_Keycode i) {
-    if (i == SDLK_i) {
-        gui->removeObject(this->ptr<CGameInventoryPanel>());
-    }
+
 }
 
 

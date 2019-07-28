@@ -97,8 +97,7 @@ void CSerialization::setOtherProperty(boost::typeindex::type_index serializedId,
     } else if (CTypes::is_map_type(result.type())) {
         object->setProperty(key, vstd::any_cast<std::map<std::string, std::shared_ptr<CGameObject>>>(result));
     } else {
-        //TODO: primitive properties
-        object->setProperty(key, vstd::any_cast<std::set<std::string>>(result));
+        CTypes::set_custom_property(object, key, result);
     }
 
 }

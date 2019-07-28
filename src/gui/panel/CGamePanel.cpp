@@ -31,12 +31,16 @@ void CGamePanel::panelRender(std::shared_ptr<CGui> shared_ptr, std::shared_ptr<S
 }
 
 bool CGamePanel::event(std::shared_ptr<CGui> gui, SDL_Event *event) {
-    if (event->type == SDL_KEYDOWN) {
-        this->panelKeyboardEvent(gui, event->key.keysym.sym);
-    } else if (event->type == SDL_MOUSEBUTTONDOWN) {
-        std::pair<int, int> translated = translatePos(gui, event->button.x, event->button.y);
-        if (translated.first >= 0 && translated.first < xSize && translated.second >= 0 && translated.second < ySize) {
-            this->panelMouseEvent(gui, translated.first, translated.second);
+    if (!CGameGraphicsObject::event(gui, event)) {
+        //TODO: rethink moving this to upper level soe every object can use events
+        if (event->type == SDL_KEYDOWN) {
+            this->panelKeyboardEvent(gui, event->key.keysym.sym);
+        } else if (event->type == SDL_MOUSEBUTTONDOWN) {
+            std::pair<int, int> translated = translatePos(gui, event->button.x, event->button.y);
+            if (translated.first >= 0 && translated.first < xSize && translated.second >= 0 &&
+                translated.second < ySize) {
+                this->panelMouseEvent(gui, translated.first, translated.second);
+            }
         }
     }
     return true;

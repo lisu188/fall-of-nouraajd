@@ -49,7 +49,11 @@ std::shared_ptr<CGameObject> CObjectHandler::_createObject(std::shared_ptr<CGame
         vstd::logger::debug("No config found for:", type);
         config = CJsonUtil::from_string(vstd::join({"{\"class\":\"", type, "\"}"}, ""));
     }
-    return CSerialization::deserialize<std::shared_ptr<Value>, std::shared_ptr<CGameObject>>(game, config);
+    std::shared_ptr<CGameObject> object = CSerialization::deserialize<std::shared_ptr<Value>, std::shared_ptr<CGameObject>>(
+            game, config);
+    object->meta()->invoke_method<void>("initialize", object);
+    return object;
+
 }
 
 std::shared_ptr<CGameObject> CObjectHandler::_clone(std::shared_ptr<CGameObject> object) {

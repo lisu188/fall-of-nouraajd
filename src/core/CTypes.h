@@ -18,6 +18,9 @@ public:
 
     static std::unordered_set<boost::typeindex::type_index> *map_types();
 
+    static std::unordered_map<boost::typeindex::type_index, std::function<void(std::shared_ptr<CGameObject>,
+                                                                               std::string, boost::any)>> *setters();
+
     static bool is_map_type(boost::typeindex::type_index index);
 
     static bool is_pointer_type(boost::typeindex::type_index index);
@@ -44,6 +47,15 @@ public:
         (*serializers())[vstd::type_pair<Serialized, Deserialized>()] =
                 std::make_shared<CSerializer<Serialized, Deserialized>>();
     }
+
+    template<typename T>
+    static void register_custom_setter() {
+        (*setters())[boost::typeindex::type_id<T>()] = [](std::shared_ptr<CGameObject> object,
+                                                          std::string key, boost::any value) {
+            object->setProperty(key, vstd::any_cast<T>(value));
+        };
+    }
+
 
     template<typename Serialized, typename Deserialized>
     static void register_custom_serializer(std::function<Serialized(Deserialized)> serialize,
@@ -124,6 +136,19 @@ public:
         register_predicate<T>();
         register_derived_types<T>();
         register_any_cast<T, T>();
+    }
+
+    template<typename T>
+    static void register_custom_type(std::function<std::shared_ptr<Json::Value>(T)> serialize,
+                                     std::function<T(std::shared_ptr<CGame>,
+                                                     std::shared_ptr<Json::Value>)> deserialize) {
+        register_custom_serializer(serialize, deserialize);
+        register_custom_setter<T>();
+    }
+
+    static void set_custom_property(std::shared_ptr<CGameObject> object,
+                                    std::string key, boost::any property) {
+        (*setters())[property.type()](object, key, property);
     }
 };
 
