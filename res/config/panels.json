@@ -8,6 +8,13 @@
   "textPanel": {
     "class": "CGameTextPanel"
   },
+  "dialogPanel": {
+    "class": "CGameDialogPanel",
+    "properties": {
+      "xSize": 400,
+      "ySize": 300
+    }
+  },
   "fightPanel": {
     "class": "CGameFightPanel"
   },
