@@ -38,6 +38,8 @@ public:
     static SDL_Rect boxInBox(SDL_Rect *out, SDL_Rect in);
 
     static SDL_Rect boxInBox(SDL_Rect out, SDL_Rect in);
+
+    static std::shared_ptr<SDL_Rect> rect(int x, int y, int w, int h);
 };
 
 namespace std {
@@ -83,3 +85,4 @@ void sdl_safe(F f,
 
 #define JSONIFY(x) CJsonUtil::to_string(CSerialization::serialize<std::shared_ptr<Value>>(x))
 #define JSONIFY_STYLED(x) CJsonUtil::to_string<StyledWriter>(CSerialization::serialize<std::shared_ptr<Value>>(x))
+#define RECT(x, y, w, h) CUtil::rect(x,y,w,h)

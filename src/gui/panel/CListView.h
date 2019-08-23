@@ -180,12 +180,11 @@ private:
 
     std::shared_ptr<SDL_Rect>
     calculateIndexPosition(std::shared_ptr<SDL_Rect> loc, int index) {
-        auto location = std::make_shared<SDL_Rect>();
-        location->x = tileSize * (index % xSize) + loc->x;
-        location->y = tileSize * (index / xSize) + loc->y;
-        location->w = tileSize;
-        location->h = tileSize;
-        return location;
+        return RECT(
+                tileSize * (index % xSize) + loc->x,
+                tileSize * (index / xSize) + loc->y,
+                tileSize,
+                tileSize);
     }
 
 

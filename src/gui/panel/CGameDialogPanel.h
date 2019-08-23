@@ -18,6 +18,12 @@ public:
     void setQuestion(std::string question);
 
 private:
+    std::shared_ptr<SDL_Rect> getLeftButtonRect(std::shared_ptr<SDL_Rect> pRect);
+
+    std::shared_ptr<SDL_Rect> getRightButtonRect(std::shared_ptr<SDL_Rect> pRect);
+
+    std::shared_ptr<SDL_Rect> getTextRect(std::shared_ptr<SDL_Rect> pRect);
+
     std::string question;
 };
 

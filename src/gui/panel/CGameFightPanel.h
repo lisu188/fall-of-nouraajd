@@ -33,7 +33,6 @@ private:
 
     void panelRender(std::shared_ptr<CGui> shared_ptr, std::shared_ptr<SDL_Rect> pRect, int i) override;
 
-
     void panelMouseEvent(std::shared_ptr<CGui> shared_ptr, int x, int y) override;
 
     void drawInteractions(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> pRect, int frameTime);
