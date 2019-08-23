@@ -1,8 +1,10 @@
 
+#include "gui/panel/CGameDialogPanel.h"
 #include "gui/panel/CGameTradePanel.h"
 #include "core/CGame.h"
 #include "gui/panel/CGameTextPanel.h"
 #include "core/CMap.h"
+
 CGuiHandler::CGuiHandler() {
 
 }
@@ -10,6 +12,12 @@ CGuiHandler::CGuiHandler() {
 void CGuiHandler::showMessage(std::string message) {
     std::shared_ptr<CGameTextPanel> panel = _game.lock()->createObject<CGameTextPanel>("textPanel");
     panel->setText(message);
+    _game.lock()->getGui()->addObject(panel);
+}
+
+void CGuiHandler::showDialog(std::string question) {
+    std::shared_ptr<CGameDialogPanel> panel = _game.lock()->createObject<CGameDialogPanel>("dialogPanel");
+    panel->setQuestion(question);
     _game.lock()->getGui()->addObject(panel);
 }
 
