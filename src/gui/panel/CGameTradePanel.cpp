@@ -14,7 +14,7 @@ void CGameTradePanel::panelRender(std::shared_ptr<CGui> gui, std::shared_ptr<SDL
 }
 
 void CGameTradePanel::drawMarket(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> pRect, int frameTime) {
-    std::shared_ptr<SDL_Rect> location = std::make_shared<SDL_Rect>(*pRect.get());
+    std::shared_ptr<SDL_Rect> location = std::make_shared<SDL_Rect>(*pRect.get());//cloning
     location->x += 600;
 
     marketView->drawCollection(gui, location, frameTime);

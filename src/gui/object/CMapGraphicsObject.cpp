@@ -63,21 +63,21 @@ void CMapGraphicsObject::render(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_R
 
             tiles.insert(tile->getCoords());
 
-            std::shared_ptr<SDL_Rect> physical = std::make_shared<SDL_Rect>();
-            physical->x = gui->getTileSize() * x + pos->x;
-            physical->y = gui->getTileSize() * y + pos->y;
-            physical->w = gui->getTileSize();
-            physical->h = gui->getTileSize();
-            tile->getAnimationObject()->render(gui, physical, frameTime);
+            tile->getAnimationObject()->render(gui, RECT(
+                    gui->getTileSize() * x + pos->x,
+                    gui->getTileSize() * y + pos->y,
+                    gui->getTileSize(),
+                    gui->getTileSize()), frameTime);
         }
     map->forObjects([&](std::shared_ptr<CMapObject> ob) {
         if (vstd::ctn(tiles, ob->getCoords())) {
-            std::shared_ptr<SDL_Rect> physical = std::make_shared<SDL_Rect>();
-            physical->x = gui->getTileSize() * (ob->getCoords().x + gui->getTileCountX() / 2 - playerCoords.x) + pos->x;
-            physical->y = gui->getTileSize() * (ob->getCoords().y + gui->getTileCountY() / 2 - playerCoords.y) + pos->y;
-            physical->w = gui->getTileSize();
-            physical->h = gui->getTileSize();
-            ob->getAnimationObject()->render(gui, physical, frameTime);
+            ob->getAnimationObject()->render(gui, RECT(
+                    gui->getTileSize() * (ob->getCoords().x + gui->getTileCountX() / 2 - playerCoords.x) +
+                    pos->x,
+                    gui->getTileSize() * (ob->getCoords().y + gui->getTileCountY() / 2 - playerCoords.y) +
+                    pos->y,
+                    gui->getTileSize(),
+                    gui->getTileSize()), frameTime);
         }
     });
 }

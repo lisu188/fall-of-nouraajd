@@ -48,21 +48,15 @@ bool CGamePanel::event(std::shared_ptr<CGui> gui, SDL_Event *event) {
 
 
 std::shared_ptr<SDL_Rect> CGamePanel::getPanelRect(std::shared_ptr<SDL_Rect> pos) {
-    std::shared_ptr<SDL_Rect> recalc = std::make_shared<SDL_Rect>();
-    recalc->x = pos->x + pos->w / 2 - this->xSize / 2;
-    recalc->y = pos->y + pos->h / 2 - this->ySize / 2;
-    recalc->w = xSize;
-    recalc->h = ySize;
-    return recalc;
+    return RECT(
+            pos->x + pos->w / 2 - this->xSize / 2,
+            pos->y + pos->h / 2 - this->ySize / 2,
+            xSize,
+            ySize);
 }
 
 std::pair<int, int> CGamePanel::translatePos(std::shared_ptr<CGui> gui, int x, int y) {
-    std::shared_ptr<SDL_Rect> pos = std::make_shared<SDL_Rect>();
-    pos->x = 0;
-    pos->y = 0;
-    pos->w = gui->getWidth();
-    pos->h = gui->getHeight();
-    std::shared_ptr<SDL_Rect> transPos = getPanelRect(pos);
+    std::shared_ptr<SDL_Rect> transPos = getPanelRect(RECT(0, 0, gui->getWidth(), gui->getHeight()));
     return std::make_pair<int, int>(x - transPos->x, y - transPos->y);
 }
 

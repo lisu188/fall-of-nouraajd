@@ -54,3 +54,7 @@ void CTextManager::drawTextCentered(std::string text, int x, int y, int w, int h
         SDL_SAFE(SDL_RenderCopy(_gui.lock()->getRenderer(), pTexture, NULL, &actual));
     }
 }
+
+void CTextManager::drawTextCentered(std::string text, std::shared_ptr<SDL_Rect> rect) {
+    drawTextCentered(text, rect->x, rect->y, rect->w, rect->h);
+}

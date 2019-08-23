@@ -72,4 +72,13 @@ SDL_Rect CUtil::boxInBox(SDL_Rect out, SDL_Rect in) {
     return boxInBox(&out, &in);
 }
 
+std::shared_ptr<SDL_Rect> CUtil::rect(int x, int y, int w, int h) {
+    std::shared_ptr<SDL_Rect> ret = std::make_shared<SDL_Rect>();
+    ret->x = x;
+    ret->y = y;
+    ret->w = w;
+    ret->h = h;
+    return ret;
+}
+
 //TODO: implement drag_drop
