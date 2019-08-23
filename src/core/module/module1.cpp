@@ -41,7 +41,7 @@ void initModule1() {
 
     class_<CGui, bases<CGameObject>, boost::noncopyable, std::shared_ptr<CGui>>("CGui", no_init);
 
-    bool (CMap::*canStep)(Coords)=&CMap::canStep;
+    bool (CMap::*canStep)(Coords) =&CMap::canStep;
 
     class_<CMap, bases<CGameObject>, boost::noncopyable, std::shared_ptr<CMap>>("CMap", no_init)
             .def("addObjectByName", &CMap::addObjectByName)
@@ -71,7 +71,8 @@ void initModule1() {
     class_<CGuiHandler, bases<CGameObject>, boost::noncopyable, std::shared_ptr<CGuiHandler>>("CGuiHandler",
                                                                                               no_init)
             .def("showMessage", &CGuiHandler::showMessage)
-            .def("showTrade", &CGuiHandler::showTrade);
+            .def("showTrade", &CGuiHandler::showTrade)
+            .def("showDialog", &CGuiHandler::showDialog);
 
     void ( CMapObject::*moveTo )(int, int, int) = &CMapObject::moveTo;
     void ( CMapObject::*move )(int, int, int) = &CMapObject::move;

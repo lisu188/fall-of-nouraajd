@@ -13,6 +13,8 @@ public:
 
     void showMessage(std::string message);
 
+    void showDialog(std::string message);
+
     void showTrade(std::shared_ptr<CMarket> market);
 private:
     std::weak_ptr<CGame> _game;

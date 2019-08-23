@@ -5,7 +5,7 @@
 
 class CGameDialogPanel : public CGamePanel {
 V_META(CGameDialogPanel, CGamePanel,
-       vstd::meta::empty())
+       V_PROPERTY(CGameDialogPanel, std::string, question, getQuestion, setQuestion))
 
     void panelRender(std::shared_ptr<CGui> shared_ptr, std::shared_ptr<SDL_Rect> pRect, int i) override;
 
@@ -13,5 +13,11 @@ V_META(CGameDialogPanel, CGamePanel,
 
 public:
 
+    std::string getQuestion();
+
+    void setQuestion(std::string question);
+
+private:
+    std::string question;
 };
 
