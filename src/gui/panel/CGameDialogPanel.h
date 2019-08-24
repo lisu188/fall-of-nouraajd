@@ -12,6 +12,7 @@ V_META(CGameDialogPanel, CGamePanel,
     void panelKeyboardEvent(std::shared_ptr<CGui> shared_ptr, SDL_Keycode i) override;
 
 public:
+    bool awaitAnswer();
 
     std::string getQuestion();
 
@@ -24,6 +25,13 @@ private:
 
     std::shared_ptr<SDL_Rect> getTextRect(std::shared_ptr<SDL_Rect> pRect);
 
+protected:
+    void panelMouseEvent(std::shared_ptr<CGui> shared_ptr, int x, int y) override;
+
+private:
+
     std::string question;
+
+    std::shared_ptr<bool> selection;
 };
 

@@ -40,6 +40,10 @@ public:
     static SDL_Rect boxInBox(SDL_Rect out, SDL_Rect in);
 
     static std::shared_ptr<SDL_Rect> rect(int x, int y, int w, int h);
+
+    static std::shared_ptr<SDL_Rect> bounds(std::shared_ptr<SDL_Rect> rect);
+
+    static bool isIn(std::shared_ptr<SDL_Rect> rect, int x, int y);
 };
 
 namespace std {

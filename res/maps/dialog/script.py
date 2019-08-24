@@ -8,6 +8,6 @@ def load(self, context):
     @register(context)
     class DialogEvent(CEvent):
         def onEnter(self, event):
-            self.getGame().getGuiHandler().showDialog("dupa")
+            print(self.getGame().getGuiHandler().showDialog("dupa"))
 
     context.getMap().addObjectByName("DialogEvent", Coords(0, 0, 0))

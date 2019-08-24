@@ -39,3 +39,20 @@ std::shared_ptr<SDL_Rect> CGameDialogPanel::getRightButtonRect(std::shared_ptr<S
                 pRect->y + (getYSize() - 100),
                 pRect->w / 2, 100);
 }
+
+bool CGameDialogPanel::awaitAnswer() {
+    vstd::wait_until([this]() {
+        return selection != nullptr;
+    });
+    return *selection;
+}
+
+void CGameDialogPanel::panelMouseEvent(std::shared_ptr<CGui> gui, int x, int y) {
+    if (CUtil::isIn(getLeftButtonRect(RECT(0, 0, getXSize(), getYSize())), x, y)) {
+        selection = std::make_shared<bool>(true);
+        gui->removeObject(this->ptr<CGameDialogPanel>());
+    } else if (CUtil::isIn(getRightButtonRect(RECT(0, 0, getXSize(), getYSize())), x, y)) {
+        selection = std::make_shared<bool>(false);
+        gui->removeObject(this->ptr<CGameDialogPanel>());
+    }
+}
