@@ -66,6 +66,10 @@ configure_file(res/maps/empty/config.json maps/empty/config.json)
 configure_file(res/maps/empty/map.json maps/empty/map.json)
 configure_file(res/maps/empty/script.py maps/empty/script.py)
 
+configure_file(res/maps/dialog/config.json maps/dialog/config.json)
+configure_file(res/maps/dialog/map.json maps/dialog/map.json)
+configure_file(res/maps/dialog/script.py maps/dialog/script.py)
+
 configure_file(res/plugins/effect.py plugins/effect.py)
 configure_file(res/plugins/interaction.py plugins/interaction.py)
 configure_file(res/plugins/object.py plugins/object.py)

@@ -89,7 +89,9 @@ std::shared_ptr<CTile> CMap::getTile(int x, int y, int z) {
         if (vstd::ctn(boundaries, z) && (x < 0 || y < 0 || x > boundaries[z].first || y > boundaries[z].second)) {
             tile = getGame()->createObject<CTile>("MountainTile");
         } else {
-            tile = getGame()->createObject<CTile>(vstd::ctn(boundaries, z) ? defaultTiles[z] : "GrassTile");
+            tile = getGame()->createObject<CTile>(
+                    vstd::ctn(boundaries, z) &&
+                    !defaultTiles[z].empty() ? defaultTiles[z] : "GrassTile");
         }
         if (tile) {
             this->addTile(tile, x, y, z);
