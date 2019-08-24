@@ -51,7 +51,9 @@ std::shared_ptr<CGameObject> CObjectHandler::_createObject(std::shared_ptr<CGame
     }
     std::shared_ptr<CGameObject> object = CSerialization::deserialize<std::shared_ptr<Value>, std::shared_ptr<CGameObject>>(
             game, config);
-    object->meta()->invoke_method<void>("initialize", object);
+    if (object) {
+        object->meta()->invoke_method<void>("initialize", object);
+    }
     return object;
 
 }
