@@ -81,4 +81,16 @@ std::shared_ptr<SDL_Rect> CUtil::rect(int x, int y, int w, int h) {
     return ret;
 }
 
+std::shared_ptr<SDL_Rect> CUtil::bounds(std::shared_ptr<SDL_Rect> rect) {
+    return RECT(rect->x, rect->x + rect->w, rect->y, rect->y + rect->h);
+}
+
+bool CUtil::isIn(std::shared_ptr<SDL_Rect> rect, int x, int y) {
+    auto bound = bounds(rect);
+    return x >= bound->x
+           && x <= bound->y
+           && y >= bound->w
+           && y <= bound->h;
+}
+
 //TODO: implement drag_drop

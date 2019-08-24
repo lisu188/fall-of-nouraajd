@@ -13,7 +13,7 @@ public:
 
     void showMessage(std::string message);
 
-    void showDialog(std::string message);
+    bool showDialog(std::string message);
 
     void showTrade(std::shared_ptr<CMarket> market);
 private:

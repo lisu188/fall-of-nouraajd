@@ -15,10 +15,11 @@ void CGuiHandler::showMessage(std::string message) {
     _game.lock()->getGui()->addObject(panel);
 }
 
-void CGuiHandler::showDialog(std::string question) {
+bool CGuiHandler::showDialog(std::string question) {
     std::shared_ptr<CGameDialogPanel> panel = _game.lock()->createObject<CGameDialogPanel>("dialogPanel");
     panel->setQuestion(question);
     _game.lock()->getGui()->addObject(panel);
+    return panel->awaitAnswer();
 }
 
 void CGuiHandler::showTrade(std::shared_ptr<CMarket> market) {
