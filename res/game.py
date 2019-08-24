@@ -23,9 +23,9 @@ def trigger(context, event, object):
     return trigger_wrapper
 
 
-def new():
+def new(map, player):
     g = CGameLoader.loadGame()
-    CGameLoader.startGameWithPlayer(g, "map1", "Warrior")
+    CGameLoader.startGameWithPlayer(g, map, player)
     CGameLoader.loadGui(g)
     while event_loop.instance().run():
         pass
