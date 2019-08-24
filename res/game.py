@@ -25,15 +25,15 @@ def trigger(context, event, object):
 
 def new(map, player):
     g = CGameLoader.loadGame()
-    CGameLoader.startGameWithPlayer(g, map, player)
     CGameLoader.loadGui(g)
+    CGameLoader.startGameWithPlayer(g, map, player)
     while event_loop.instance().run():
         pass
 
 
 def load(save):
     g = CGameLoader.loadGame()
-    CGameLoader.loadSavedGame(g, save)
     CGameLoader.loadGui(g)
+    CGameLoader.loadSavedGame(g, save)
     while event_loop.instance().run():
         pass
