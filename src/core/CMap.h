@@ -102,6 +102,7 @@ public:
 
     void setTurn(int turn);
 
+    //TODO: accept predicate, can be used in siege map
     std::set<std::shared_ptr<CMapObject>> getObjects();
 
     void setObjects(std::set<std::shared_ptr<CMapObject>> objects);
