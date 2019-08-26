@@ -40,7 +40,10 @@
     "class": "CItem",
     "properties": {
       "name": "skullOfRolf",
-      "animation": "images/skull"
+      "animation": "images/skull",
+      "tags": [
+        "quest"
+      ]
     }
   },
   "cave1": {
