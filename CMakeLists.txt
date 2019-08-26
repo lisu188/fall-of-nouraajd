@@ -70,6 +70,10 @@ configure_file(res/maps/dialog/config.json maps/dialog/config.json)
 configure_file(res/maps/dialog/map.json maps/dialog/map.json)
 configure_file(res/maps/dialog/script.py maps/dialog/script.py)
 
+configure_file(res/maps/siege/config.json maps/siege/config.json)
+configure_file(res/maps/siege/map.json maps/siege/map.json)
+configure_file(res/maps/siege/script.py maps/siege/script.py)
+
 configure_file(res/plugins/effect.py plugins/effect.py)
 configure_file(res/plugins/interaction.py plugins/interaction.py)
 configure_file(res/plugins/object.py plugins/object.py)
