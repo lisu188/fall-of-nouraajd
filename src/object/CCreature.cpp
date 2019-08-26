@@ -83,7 +83,11 @@ void CCreature::addItem(std::shared_ptr<CItem> item) {
 }
 
 void CCreature::removeFromInventory(std::shared_ptr<CItem> item) {
-    items.erase(item);
+    if (item->hasTag("quest")) {
+        vstd::logger::fatal("Tried to drop quest item");
+    } else {
+        items.erase(item);
+    }
 }
 
 void CCreature::removeFromEquipped(std::shared_ptr<CItem> item) {
