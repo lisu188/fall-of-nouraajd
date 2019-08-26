@@ -11,7 +11,7 @@ CPlayer::~CPlayer() {
 }
 
 void CPlayer::onTurn(std::shared_ptr<CGameEvent>) {
-    addMana(manaRegRate);
+    addMana(getManaRegRate());
     turn++;
     checkQuests();
 }
@@ -31,7 +31,7 @@ void CPlayer::onDestroy(std::shared_ptr<CGameEvent> event) {
     CCreature::onDestroy(event);
     getMap()->addObject(this->ptr<CPlayer>());
     moveTo(getMap()->getEntryX(), getMap()->getEntryY(), getMap()->getEntryZ());
-    this->hp = 1;
+    setHp(1);
 }
 
 
