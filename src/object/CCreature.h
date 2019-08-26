@@ -172,6 +172,7 @@ public:
     bool hasItem(std::shared_ptr<CItem> item);
 
     bool hasItem(std::string item);
+
     int getGold();
 
     void setGold(int value);
@@ -240,7 +241,7 @@ public:
 
     void useItem(std::shared_ptr<CItem> item);
 
-protected:
+private:
     std::set<std::shared_ptr<CItem>> items;
     std::set<std::shared_ptr<CInteraction>> actions;
     std::set<std::shared_ptr<CEffect>> effects;
@@ -250,7 +251,6 @@ protected:
 
     std::shared_ptr<CController> controller;
 
-protected:
     std::shared_ptr<CFightController> fightController;
 
     int gold = 0;
