@@ -23,7 +23,10 @@
 //TODO: scroll of town portal
 //TODO: make function to compare objects
 //TODO: load assets from map
-//TODO: make question items not droppable
+//TODO: make question items not droppable and not selectable
+    //TODO: inventory panel
+    //TODO: fight panel
+    //TODO: market panel
 //TODO: minus mana bug
 //TODO: bug easy reproducible with tileSize 10, when too many moves are queued player coords desynchronize DEBUG: F7EE6FEBE3099224 cannot step on: 100137326 10412683 0
 //TODO: make tags enum
@@ -39,3 +42,5 @@
 //TODO: charges of items vs stacking
 //TODO: use items on right click, when unified selection, do global reset of selections on right click
 //TODO: mark primitve CGameObjects like CList and CMapString as primitive and unfold values field directly to properties
+//TODO: inventory panel
+    //TODO: selection of equipped should cancel selections in inventory and vice versa
