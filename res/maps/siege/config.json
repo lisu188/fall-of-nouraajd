@@ -10,5 +10,31 @@
         }
       }
     }
+  },
+  "siegePritzMage": {
+    "ref": "PritzMage",
+    "properties": {
+      "affiliation": "siege",
+      "items": [
+        {
+          "ref": "magicWand"
+        }
+      ],
+      "controller": {
+        "class": "CTargetController",
+        "properties": {
+          "target": "player"
+        }
+      }
+    }
+  },
+  "magicWand": {
+    "class": "CItem",
+    "properties": {
+      "animation": "images/items/weapons/wand",
+      "tags": [
+        "quest"
+      ]
+    }
   }
 }
