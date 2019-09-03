@@ -4,6 +4,7 @@
 #include "core/CPathFinder.h"
 
 class CGameFightPanel;
+
 class CController : public CGameObject {
 V_META(CController, CGameObject, vstd::meta::empty())
 public:
@@ -22,7 +23,7 @@ public:
 };
 
 class CFightController : public CGameObject {
-    V_META(CFightController, CGameObject, vstd::meta::empty())
+V_META(CFightController, CGameObject, vstd::meta::empty())
 public:
     virtual bool control(std::shared_ptr<CCreature> me, std::shared_ptr<CCreature> opponent);
 
@@ -56,23 +57,21 @@ private:
 };
 
 
-
 class CTargetController : public CController {
 V_META(CTargetController, CController,
-       V_PROPERTY(CTargetController, std::shared_ptr < CMapObject > , target, get_target, set_target))
+       V_PROPERTY(CTargetController, std::string, target, getTarget, setTarget))
 public:
     CTargetController();
 
-    CTargetController(std::shared_ptr<CMapObject> target);
 
     virtual std::shared_ptr<vstd::future<void, Coords> > control(std::shared_ptr<CCreature> creature) override;
 
-    std::shared_ptr<CMapObject> get_target();
+    std::string getTarget();
 
-    void set_target(std::shared_ptr<CMapObject> target);
+    void setTarget(std::string);
 
 private:
-    std::shared_ptr<CMapObject> target;
+    std::string target;
 };
 
 class CRandomController : public CController {
