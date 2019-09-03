@@ -71,7 +71,9 @@ std::shared_ptr<CMap> CMapLoader::loadSavedMap(std::shared_ptr<CGame> game, std:
 std::shared_ptr<CMap> CMapLoader::loadNewMapWithPlayer(std::shared_ptr<CGame> game, std::string name,
                                                        std::string player) {
     std::shared_ptr<CMap> map = loadNewMap(game, name);
-    map->setPlayer(game->createObject<CPlayer>(player));
+    auto ptr = game->createObject<CPlayer>(player);
+    ptr->setName("player");
+    map->setPlayer(ptr);
     return map;
 }
 

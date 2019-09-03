@@ -3,6 +3,7 @@ def load(self, context):
     from game import CTrigger
     from game import register
     from game import trigger
+    from game import randint
 
     @register(context)
     class SpawnPoint(CEvent):
@@ -10,13 +11,13 @@ def load(self, context):
             self.setBoolProperty('enabled', False)
 
         def onTurn(self, event):
-            if self.getBoolProperty('enabled'):
-                self.getMap().addObjectByName('Pritz', self.getCoords())
+            if self.getBoolProperty('enabled') and randint(1, 10) == 10:
+                self.getMap().addObjectByName('siegePritz', self.getCoords())
 
     @trigger(context, "onTurn", "triggerAnchor")
     class TurnTrigger(CTrigger):
         def trigger(self, object, event):
-            if (object.getMap().getTurn() + 1 % 25) == 0:
+            if randint(1, 25) == 25:
                 print(object.getMap().getTurn())
                 event.cont = True
 
