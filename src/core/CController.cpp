@@ -4,14 +4,16 @@
 #include "core/CGame.h"
 #include "core/CMap.h"
 
-CTargetController::CTargetController(std::shared_ptr<CMapObject> target) : target(target) {
+CTargetController::CTargetController() {
 
 }
 
 std::shared_ptr<vstd::future<void, Coords>> CTargetController::control(std::shared_ptr<CCreature> creature) {
-    return CPathFinder::findNextStep(creature->getCoords(), target->getCoords(), [creature](const Coords &coords) {
-        return creature->getMap()->canStep(coords);
-    })->thenLater([creature](Coords coords) {
+    return CPathFinder::findNextStep(creature->getCoords(),
+                                     creature->getMap()->getObjectByName(target)->getCoords(),
+                                     [creature](const Coords &coords) {
+                                         return creature->getMap()->canStep(coords);
+                                     })->thenLater([creature](Coords coords) {
         creature->moveTo(coords);
     });
 }
@@ -20,15 +22,12 @@ std::shared_ptr<vstd::future<void, Coords> > CController::control(std::shared_pt
     return vstd::async([](Coords) {});
 }
 
-CTargetController::CTargetController() {
 
-}
-
-std::shared_ptr<CMapObject> CTargetController::get_target() {
+std::string CTargetController::getTarget() {
     return target;
 }
 
-void CTargetController::set_target(std::shared_ptr<CMapObject> target) {
+void CTargetController::setTarget(std::string target) {
     this->target = target;
 }
 

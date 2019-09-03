@@ -1,1 +1,14 @@
-{}
+{
+  "siegePritz": {
+    "ref": "Pritz",
+    "properties": {
+      "affiliation": "siege",
+      "controller": {
+        "class": "CTargetController",
+        "properties": {
+          "target": "player"
+        }
+      }
+    }
+  }
+}
