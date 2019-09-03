@@ -5,11 +5,15 @@
 using namespace boost::python;
 
 int randint(int i, int j) {
-    return rand() % (j - i + 1) + i;
+    return vstd::rand(i, j + 1) % (j - i + 1) + i;//TODO: unify and document exclusive inclusive
 }
 
 std::string jsonify(std::shared_ptr<CGameObject> x) {
     return JSONIFY(x);
+}
+
+void logger(std::string s) {
+    vstd::logger::info(s);//TODO: add script name
 }
 
 extern void initModule1();
@@ -31,4 +35,5 @@ BOOST_PYTHON_MODULE (_game) {
 
     PY_WRAP_GENERIC(randint);
     PY_WRAP_GENERIC(jsonify);
+    PY_WRAP_GENERIC(logger);
 }

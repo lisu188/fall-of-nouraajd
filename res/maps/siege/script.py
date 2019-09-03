@@ -4,6 +4,7 @@ def load(self, context):
     from game import register
     from game import trigger
     from game import randint
+    from game import logger
 
     @register(context)
     class SpawnPoint(CEvent):
@@ -12,13 +13,19 @@ def load(self, context):
 
         def onTurn(self, event):
             if self.getBoolProperty('enabled') and randint(1, 10) == 10:
-                self.getMap().addObjectByName('siegePritz', self.getCoords())
+                logger("Spawning new creature")
+                if randint(1, 10) == 10:
+                    logger("Spawning mage")
+                    self.getMap().addObjectByName('siegePritzMage', self.getCoords())
+                else:
+                    logger("Spawning grunt")
+                    self.getMap().addObjectByName('siegePritz', self.getCoords())
 
     @trigger(context, "onTurn", "triggerAnchor")
     class TurnTrigger(CTrigger):
         def trigger(self, object, event):
             if randint(1, 25) == 25:
-                print(object.getMap().getTurn())
+                logger("Spawning gate")
                 event.cont = True
 
                 def enableSpawn(spawnObject):
