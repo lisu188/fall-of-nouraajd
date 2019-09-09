@@ -1,3 +1,18 @@
+//fall-of-nouraajd c++ dark fantasy game
+//Copyright (C) 2019  Andrzej Lis
+//
+//This program is free software: you can redistribute it and/or modify
+//        it under the terms of the GNU General Public License as published by
+//the Free Software Foundation, either version 3 of the License, or
+//(at your option) any later version.
+//
+//This program is distributed in the hope that it will be useful,
+//        but WITHOUT ANY WARRANTY; without even the implied warranty of
+//MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+//GNU General Public License for more details.
+//
+//You should have received a copy of the GNU General Public License
+//along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "object/CMapObject.h"
 #include "core/CController.h"
 #include "gui/panel/CGameFightPanel.h"
@@ -149,7 +164,7 @@ std::shared_ptr<CInteraction> CMonsterFightController::selectInteraction(std::sh
         return a->getManaCost() < b->getManaCost();
     };
     auto rng = cr->getInteractions() | boost::adaptors::filtered(pFunction) |
-               boost::adaptors::filtered(pFunction2) | boost::adaptors::filtered(pFunction3);
+            boost::adaptors::filtered(pFunction2) | boost::adaptors::filtered(pFunction3);
     auto max = boost::max_element(
             rng, pred);
     if (max != boost::end(rng)) {
