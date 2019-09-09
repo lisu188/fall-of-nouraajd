@@ -100,7 +100,8 @@ void CCreature::addItem(std::shared_ptr<CItem> item) {
 }
 
 void CCreature::removeFromInventory(std::shared_ptr<CItem> item) {
-    if (item->hasTag("quest")) {
+    //TODO: this check should be more polymorphic
+    if (vstd::castable<CPlayer>(this->ptr<CCreature>()) && item->hasTag("quest")) {
         vstd::logger::fatal("Tried to drop quest item");
     } else {
         items.erase(item);
@@ -175,7 +176,7 @@ void CCreature::hurt(float i) {
 
 int CCreature::getExpRatio() {
     return (float) ((exp - getExpForLevel(level))) /
-            (float) (getExpForLevel(level + 1) - getExpForLevel(level)) * 100.0;
+           (float) (getExpForLevel(level + 1) - getExpForLevel(level)) * 100.0;
 }
 
 //TODO: resistance and blocking to be more generic
