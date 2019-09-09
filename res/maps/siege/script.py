@@ -9,6 +9,7 @@ def load(self, context):
     @register(context)
     class SpawnPoint(CEvent):
         def onCreate(self, event):
+            self.setStringProperty("animation", "images/misc/closed_door")
             self.setBoolProperty('enabled', False)
 
         def onTurn(self, event):
@@ -29,8 +30,10 @@ def load(self, context):
                 event.cont = True
 
                 def enableSpawn(spawnObject):
-                    spawnObject.getMap().replaceTile('GrassTile', spawnObject.getCoords())
+                    spawnObject.getMap().replaceTile('SwampTile', spawnObject.getCoords())
                     spawnObject.setBoolProperty('enabled', True)
+                    # TODO: autoexport set get property
+                    spawnObject.setStringProperty("animation", "images/misc/open_door")
                     event.cont = False
 
                 object.getMap().forObjects(enableSpawn, lambda ob: event.cont and ob.getStringProperty(
