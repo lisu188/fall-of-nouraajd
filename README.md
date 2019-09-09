@@ -1,6 +1,6 @@
 # fall-of-nouraajd
 c++ dark fantasy game
-![maze.png](./screenshots/maze.png?raw=true) ![fight.png](./screenshots/fight.png?raw=true)
+<img src="./screenshots/maze.png" width="50%"><img src="./screenshots/fight.png" width="50%">
 ## running
 <pre>
 ./configure.sh
