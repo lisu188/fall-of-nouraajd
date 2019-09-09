@@ -1,3 +1,18 @@
+//fall-of-nouraajd c++ dark fantasy game
+//Copyright (C) 2019  Andrzej Lis
+//
+//This program is free software: you can redistribute it and/or modify
+//        it under the terms of the GNU General Public License as published by
+//the Free Software Foundation, either version 3 of the License, or
+//(at your option) any later version.
+//
+//This program is distributed in the hope that it will be useful,
+//        but WITHOUT ANY WARRANTY; without even the implied warranty of
+//MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+//GNU General Public License for more details.
+//
+//You should have received a copy of the GNU General Public License
+//along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CJsonUtil.h"
 #include "CCreature.h"
 #include "core/CGame.h"
@@ -158,7 +173,7 @@ void CCreature::hurt(float i) {
 
 int CCreature::getExpRatio() {
     return (float) ((exp - getExpForLevel(level))) /
-           (float) (getExpForLevel(level + 1) - getExpForLevel(level)) * 100.0;
+            (float) (getExpForLevel(level + 1) - getExpForLevel(level)) * 100.0;
 }
 
 //TODO: resistance and blocking to be more generic

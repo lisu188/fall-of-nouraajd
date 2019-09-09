@@ -1,3 +1,18 @@
+//fall-of-nouraajd c++ dark fantasy game
+//Copyright (C) 2019  Andrzej Lis
+//
+//This program is free software: you can redistribute it and/or modify
+//        it under the terms of the GNU General Public License as published by
+//the Free Software Foundation, either version 3 of the License, or
+//(at your option) any later version.
+//
+//This program is distributed in the hope that it will be useful,
+//        but WITHOUT ANY WARRANTY; without even the implied warranty of
+//MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+//GNU General Public License for more details.
+//
+//You should have received a copy of the GNU General Public License
+//along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CPathFinder.h"
 
 typedef std::function<bool(const Coords &, const Coords &)> Compare;
@@ -10,7 +25,7 @@ static Coords getNextStep(const Coords &start, const Coords &goal, Values values
         if (vstd::ctn((*values), coords) &&
             ((*values)[coords] < (*values)[target] ||
              ((*values)[coords] == (*values)[target] &&
-              coords.getDist(goal) < target.getDist(goal)))) {
+                     coords.getDist(goal) < target.getDist(goal)))) {
             target = coords;
         }
     }
@@ -21,9 +36,9 @@ static Values fillValues(std::function<bool(const Coords &)> canStep,
                          const Coords &goal, const Coords &start) {
     Queue nodes([start](const Coords &a, const Coords &b) {
         double dista = (a.x - start.x) * (a.x - start.x) +
-                       (a.y - start.y) * (a.y - start.y);
+                (a.y - start.y) * (a.y - start.y);
         double distb = (b.x - start.x) * (b.x - start.x) +
-                       (b.y - start.y) * (b.y - start.y);
+                (b.y - start.y) * (b.y - start.y);
         return dista > distb;
     });
     std::unordered_set<Coords> marked;
