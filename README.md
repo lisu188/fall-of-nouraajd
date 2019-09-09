@@ -6,7 +6,7 @@ c++ dark fantasy game
 ### ubuntu
 <pre>
 ./configure.sh
-cd cmake-buiild-release
+cd cmake-build-release
 make _game_unity
 python3 play.py --map map1 --player Warrior
 </pre>
