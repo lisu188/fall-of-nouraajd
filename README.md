@@ -1,5 +1,6 @@
 # fall-of-nouraajd
 c++ dark fantasy game
+<br/><br/>
 <img src="./screenshots/maze.png" width="50%"><img src="./screenshots/fight.png" width="50%">
 ## running
 <pre>
