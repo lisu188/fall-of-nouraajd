@@ -22,6 +22,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "gui/CAnimation.h"
 #include "core/CMap.h"
 #include "core/CGame.h"
+
 std::function<bool(std::shared_ptr<CGameObject>, std::shared_ptr<CGameObject>)> CGameObject::name_comparator = [](
         std::shared_ptr<CGameObject> a, std::shared_ptr<CGameObject> b) {
     return a->getType() == b->getType();
@@ -124,6 +125,8 @@ std::string CGameObject::getAnimation() {
 }
 
 void CGameObject::setAnimation(std::string animation) {
+    //TODO: implement this in AOP way
+    animationObject.clear();
     this->animation = animation;
 }
 

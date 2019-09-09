@@ -44,3 +44,4 @@
 //TODO: mark primitve CGameObjects like CList and CMapString as primitive and unfold values field directly to properties
 //TODO: inventory panel
     //TODO: selection of equipped should cancel selections in inventory and vice versa
+//TODO: implement property change listeners to enable AOP
