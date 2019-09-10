@@ -17,6 +17,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #include "gui/object/CStatsGraphicsObject.h"
 #include "gui/object/CMapGraphicsObject.h"
+#include "gui/panel/CGamePanel.h"
 #include "core/CLoader.h"
 #include "core/CJsonUtil.h"
 #include "gui/CGui.h"

@@ -17,6 +17,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #pragma once
 
+#include "core/CList.h"
 #include "gui/object/CGameGraphicsObject.h"
 
 class CMapGraphicsObject : public CGameGraphicsObject {
@@ -38,22 +39,7 @@ public:
         this->panelKeys = panelKeys;
     }
 
-    void initialize() {
-        for (auto val:panelKeys->getValues()) {
-            auto keyPred = [=](std::shared_ptr<CGui> gui, SDL_Event *event) {
-                return event->type == SDL_KEYDOWN && event->key.keysym.sym == val.first[0];
-            };
-            registerEventCallback(keyPred, [=](std::shared_ptr<CGui> gui, SDL_Event *event) {
-                std::shared_ptr<CGamePanel> panel = gui->getGame()->createObject<CGamePanel>(val.second);
-                panel->registerEventCallback(keyPred, [=](std::shared_ptr<CGui> gui, SDL_Event *event) {
-                    gui->removeObject(panel);
-                    return true;
-                });
-                gui->addObject(panel);
-                return true;
-            });
-        }
-    }
+    void initialize();
 
 private:
     std::shared_ptr<CMapStringString> panelKeys;

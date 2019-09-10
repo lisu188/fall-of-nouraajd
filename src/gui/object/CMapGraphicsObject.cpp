@@ -100,3 +100,19 @@ void CMapGraphicsObject::render(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_R
     }
 }
 
+void CMapGraphicsObject::initialize() {
+    for (auto val:panelKeys->getValues()) {
+        auto keyPred = [=](std::shared_ptr<CGui> gui, SDL_Event *event) {
+            return event->type == SDL_KEYDOWN && event->key.keysym.sym == val.first[0];
+        };
+        registerEventCallback(keyPred, [=](std::shared_ptr<CGui> gui, SDL_Event *event) {
+            std::shared_ptr<CGamePanel> panel = gui->getGame()->createObject<CGamePanel>(val.second);
+            panel->registerEventCallback(keyPred, [=](std::shared_ptr<CGui> gui, SDL_Event *event) {
+                gui->removeObject(panel);
+                return true;
+            });
+            gui->addObject(panel);
+            return true;
+        });
+    }
+}
