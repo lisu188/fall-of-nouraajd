@@ -59,6 +59,8 @@ public:
 
     void add_class(std::string class_name, std::string function_code, std::initializer_list<std::string> args);
 
+    std::string add_class(std::string function_code, std::initializer_list<std::string> args);
+
     void import(std::string name);
 
     template<typename Ret=void, typename...Args>
