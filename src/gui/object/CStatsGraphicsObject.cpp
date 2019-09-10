@@ -47,8 +47,12 @@ CStatsGraphicsUtil::drawStats(std::shared_ptr<CGui> gui, std::shared_ptr<CCreatu
 }
 
 void CStatsGraphicsObject::render(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> pos, int frameTime) {
-    CStatsGraphicsUtil::drawStats(gui, gui->getGame()->getMap()->getPlayer(), pos->x, pos->y, width, height, true,
-                                  true);
+    if (auto map = gui->getGame()->getMap()) {
+        if (auto player = map->getPlayer()) {
+            CStatsGraphicsUtil::drawStats(gui, player, pos->x, pos->y, width, height, true,
+                                          true);
+        }
+    }
 }
 
 
