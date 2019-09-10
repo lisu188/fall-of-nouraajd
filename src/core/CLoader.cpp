@@ -222,9 +222,7 @@ void CGameLoader::loadGui(std::shared_ptr<CGame> game) {
 
 void CPluginLoader::loadPlugin(std::shared_ptr<CGame> game, std::string path) {
     std::string code = CResourcesProvider::getInstance()->load(path);
-    std::string name = vstd::join({"CLASS", vstd::to_hex_hash(code)}, "");
-    //TODO: move name generation to script handler
-    game->getScriptHandler()->add_class(name, code, {"game.CPlugin"});
+    auto name = game->getScriptHandler()->add_class(code, {"game.CPlugin"});
     game->loadPlugin(game->getScriptHandler()->get_object<std::function<std::shared_ptr<CPlugin>()>>(name));
     game->getScriptHandler()->execute_script(vstd::join({"del", name}, " "));
 }

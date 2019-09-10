@@ -85,6 +85,13 @@ void CScriptHandler::add_class(std::string class_name, std::string function_code
     execute_script(stream.str());
 }
 
+std::string CScriptHandler::add_class(std::string function_code,
+                                      std::initializer_list<std::string> bases) {
+    std::string name = vstd::join({"CLASS", vstd::to_hex_hash(function_code)}, "");
+    add_class(name, function_code, bases);
+    return name;
+}
+
 void CScriptHandler::import(std::string name) {
     execute_script(vstd::join({"import", name}, " "));
 }
