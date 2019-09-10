@@ -51,14 +51,6 @@ Coords CMap::getLocationByName(std::string name) {
 }
 
 std::shared_ptr<CPlayer> CMap::getPlayer() {
-    if (!player) {
-        for (auto object:getObjects()) {
-            if (auto pl = vstd::cast<CPlayer>(object)) {
-                this->player = pl;
-                break;
-            }
-        }
-    }
     return player;
 }
 
