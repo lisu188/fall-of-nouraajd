@@ -26,9 +26,10 @@ def trigger(context, event, object):
 def new(map, player):
     g = CGameLoader.loadGame()
     CGameLoader.loadGui(g)
-    CGameLoader.startGameWithPlayer(g, map, player)
-    while event_loop.instance().run():
-        pass
+    if g.getGuiHandler().showDialog("Do you want to play?"):
+        CGameLoader.startGameWithPlayer(g, map, player)
+        while event_loop.instance().run():
+            pass
 
 
 def load(save):
