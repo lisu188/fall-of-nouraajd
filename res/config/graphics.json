@@ -1,4 +1,23 @@
 {
+  "gui": {
+    "class": "CGui",
+    "properties": {
+      "height": 1080,
+      "width": 1920,
+      "tileSize": 50,
+      "guiStack": {
+        "0": {
+          "ref": "mapGraphics"
+        },
+        "1": {
+          "ref": "CStatsGraphicsObject"
+        },
+        "2": {
+          "ref": "CConsoleGraphicsObject"
+        }
+      }
+    }
+  },
   "mapGraphics": {
     "class": "CMapGraphicsObject",
     "properties": {

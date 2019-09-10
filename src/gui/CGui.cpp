@@ -107,3 +107,18 @@ int CGui::getTileCountY() {
     return height / tileSize;
 }
 
+CGuiStack CGui::getGuiStack() {
+    CGuiStack stack;
+    int i = 0;
+    for (auto it:guiStack) {
+        stack.insert(std::make_pair(vstd::str(i++), it));
+    }
+    return stack;
+}
+
+void CGui::setGuiStack(CGuiStack stack) {
+    for (size_t i = 0; i < stack.size(); i++) {
+        addObject(stack[vstd::str(i)]);
+    }
+}
+
