@@ -29,6 +29,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CController.h"
 #include "gui/panel/CGameTextPanel.h"
 #include "gui/CTextureCache.h"
+#include "core/CWidget.h"
 
 extern void add_member(std::shared_ptr<Value> object, std::string key, std::string value);
 
@@ -68,6 +69,7 @@ namespace {
                         CTypes::register_type<CGameCharacterPanel, CGamePanel, CGameGraphicsObject, CGameObject>();
                         CTypes::register_type<CGameDialogPanel, CGamePanel, CGameGraphicsObject, CGameObject>();
                     }
+                    CTypes::register_type<CWidget, CGameObject>();
                     CTypes::register_type<CAnimation, CGameGraphicsObject, CGameObject>();
                     {
                         CTypes::register_type<CStaticAnimation, CAnimation, CGameGraphicsObject, CGameObject>();
