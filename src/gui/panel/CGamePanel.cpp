@@ -64,6 +64,7 @@ bool CGamePanel::event(std::shared_ptr<CGui> gui, SDL_Event *event) {
 
 
 std::shared_ptr<SDL_Rect> CGamePanel::getPanelRect(std::shared_ptr<SDL_Rect> pos) {
+    //TODO: useBoxInBox
     return RECT(
             pos->x + pos->w / 2 - this->xSize / 2,
             pos->y + pos->h / 2 - this->ySize / 2,

@@ -18,6 +18,14 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "CWidget.h"
 
+std::shared_ptr<SDL_Rect> CWidget::getRect(std::shared_ptr<SDL_Rect> pRect) {
+    return RECT(pRect->x + pRect->w * x / 100.0,
+                pRect->y + pRect->h * y / 100.0,
+                pRect->w * w / 100.0,
+                pRect->h * h / 100.0);
+}
+
+
 int CWidget::getX() {
     return x;
 }
@@ -48,4 +56,20 @@ int CWidget::getH() {
 
 void CWidget::setH(int h) {
     CWidget::h = h;
+}
+
+void CWidget::setRender(std::string draw) {
+    this->render = draw;
+}
+
+std::string CWidget::getRender() {
+    return render;
+}
+
+std::string CWidget::getClick() {
+    return click;
+}
+
+void CWidget::setClick(std::string click) {
+    this->click = click;
 }

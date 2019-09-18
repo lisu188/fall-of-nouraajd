@@ -19,10 +19,17 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "CGamePanel.h"
 
+class CWidget;
 
 class CGameDialogPanel : public CGamePanel {
 V_META(CGameDialogPanel, CGamePanel,
-       V_PROPERTY(CGameDialogPanel, std::string, question, getQuestion, setQuestion))
+       V_PROPERTY(CGameDialogPanel, std::string, question, getQuestion, setQuestion),
+       V_PROPERTY(CGameDialogPanel, std::set<std::shared_ptr<CWidget>>, widgets, getWidgets, setWidgets),
+       V_METHOD(CGameDialogPanel, renderQuestion, void, std::shared_ptr<CGui>, std::shared_ptr<SDL_Rect>, int),
+       V_METHOD(CGameDialogPanel, renderYes, void, std::shared_ptr<CGui>, std::shared_ptr<SDL_Rect>, int),
+       V_METHOD(CGameDialogPanel, renderNo, void, std::shared_ptr<CGui>, std::shared_ptr<SDL_Rect>, int),
+       V_METHOD(CGameDialogPanel, clickNo, void, std::shared_ptr<CGui>),
+       V_METHOD(CGameDialogPanel, clickYes, void, std::shared_ptr<CGui>))
 
     void panelRender(std::shared_ptr<CGui> shared_ptr, std::shared_ptr<SDL_Rect> pRect, int i) override;
 
@@ -35,12 +42,23 @@ public:
 
     void setQuestion(std::string question);
 
+    void renderQuestion(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> pRect, int i);
+
+    void renderYes(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> pRect, int i);
+
+    void renderNo(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> pRect, int i);
+
+    void clickYes(std::shared_ptr<CGui> gui);
+
+    void clickNo(std::shared_ptr<CGui> gui);
+
 private:
-    std::shared_ptr<SDL_Rect> getLeftButtonRect(std::shared_ptr<SDL_Rect> pRect);
+    std::set<std::shared_ptr<CWidget>> widgets;
 
-    std::shared_ptr<SDL_Rect> getRightButtonRect(std::shared_ptr<SDL_Rect> pRect);
+public:
+    std::set<std::shared_ptr<CWidget>> getWidgets();
 
-    std::shared_ptr<SDL_Rect> getTextRect(std::shared_ptr<SDL_Rect> pRect);
+    void setWidgets(std::set<std::shared_ptr<CWidget>> widgets);
 
 protected:
     void panelMouseEvent(std::shared_ptr<CGui> shared_ptr, int x, int y) override;
@@ -50,5 +68,6 @@ private:
     std::string question;
 
     std::shared_ptr<bool> selection;
+
 };
 

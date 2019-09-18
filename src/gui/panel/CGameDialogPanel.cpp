@@ -19,11 +19,16 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "gui/CGui.h"
 #include "core/CMap.h"
 #include "gui/CTextManager.h"
+#include "core/CWidget.h"
 
 void CGameDialogPanel::panelRender(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> pRect, int i) {
-    gui->getTextManager()->drawTextCentered(question, getTextRect(pRect));
-    gui->getTextManager()->drawTextCentered("YES", getLeftButtonRect(pRect));
-    gui->getTextManager()->drawTextCentered("NO", getRightButtonRect(pRect));
+    for (auto widget:widgets) {
+        this->meta()->invoke_method<void, CGameDialogPanel,
+                std::shared_ptr<CGui>,
+                std::shared_ptr<SDL_Rect>, int>(widget->getRender(),
+                                                this->ptr<CGameDialogPanel>(), gui,
+                                                widget->getRect(pRect), i);
+    }
 }
 
 
@@ -39,22 +44,6 @@ void CGameDialogPanel::setQuestion(std::string question) {
     this->question = question;
 }
 
-std::shared_ptr<SDL_Rect> CGameDialogPanel::getTextRect(std::shared_ptr<SDL_Rect> pRect) {
-    return RECT(pRect->x, pRect->y, pRect->w, (getYSize() - 100));
-}
-
-std::shared_ptr<SDL_Rect> CGameDialogPanel::getLeftButtonRect(std::shared_ptr<SDL_Rect> pRect) {
-    return RECT(pRect->x,
-                pRect->y + (getYSize() - 100),
-                pRect->w / 2, 100);
-}
-
-std::shared_ptr<SDL_Rect> CGameDialogPanel::getRightButtonRect(std::shared_ptr<SDL_Rect> pRect) {
-    return RECT(pRect->x + (getXSize() / 2),
-                pRect->y + (getYSize() - 100),
-                pRect->w / 2, 100);
-}
-
 bool CGameDialogPanel::awaitAnswer() {
     vstd::wait_until([this]() {
         return selection != nullptr;
@@ -63,11 +52,42 @@ bool CGameDialogPanel::awaitAnswer() {
 }
 
 void CGameDialogPanel::panelMouseEvent(std::shared_ptr<CGui> gui, int x, int y) {
-    if (CUtil::isIn(getLeftButtonRect(RECT(0, 0, getXSize(), getYSize())), x, y)) {
-        selection = std::make_shared<bool>(true);
-        gui->removeObject(this->ptr<CGameDialogPanel>());
-    } else if (CUtil::isIn(getRightButtonRect(RECT(0, 0, getXSize(), getYSize())), x, y)) {
-        selection = std::make_shared<bool>(false);
-        gui->removeObject(this->ptr<CGameDialogPanel>());
+    for (auto widget:widgets) {
+        if (CUtil::isIn(widget->getRect(RECT(0, 0, getXSize(), getYSize())), x, y)) {
+            this->meta()->invoke_method<void, CGameDialogPanel,
+                    std::shared_ptr<CGui>>(widget->getClick(),
+                                           this->ptr<CGameDialogPanel>(),
+                                           gui);
+        }
     }
+}
+
+void CGameDialogPanel::clickNo(std::shared_ptr<CGui> gui) {
+    selection = std::make_shared<bool>(false);
+    gui->removeObject(this->ptr<CGameDialogPanel>());
+}
+
+void CGameDialogPanel::clickYes(std::shared_ptr<CGui> gui) {
+    selection = std::make_shared<bool>(true);
+    gui->removeObject(this->ptr<CGameDialogPanel>());
+}
+
+std::set<std::shared_ptr<CWidget>> CGameDialogPanel::getWidgets() {
+    return widgets;
+}
+
+void CGameDialogPanel::setWidgets(std::set<std::shared_ptr<CWidget>> widgets) {
+    CGameDialogPanel::widgets = widgets;
+}
+
+void CGameDialogPanel::renderQuestion(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> pRect, int i) {
+    gui->getTextManager()->drawTextCentered(question, pRect);
+}
+
+void CGameDialogPanel::renderYes(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> pRect, int i) {
+    gui->getTextManager()->drawTextCentered("YES", pRect);
+}
+
+void CGameDialogPanel::renderNo(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> pRect, int i) {
+    gui->getTextManager()->drawTextCentered("NO", pRect);
 }
