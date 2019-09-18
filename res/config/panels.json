@@ -12,7 +12,41 @@
     "class": "CGameDialogPanel",
     "properties": {
       "xSize": 400,
-      "ySize": 300
+      "ySize": 300,
+      "widgets": [
+        {
+          "class": "CWidget",
+          "properties": {
+            "render": "renderQuestion",
+            "x": 0,
+            "y": 0,
+            "w": 100,
+            "h": 75
+          }
+        },
+        {
+          "class": "CWidget",
+          "properties": {
+            "render": "renderYes",
+            "click": "clickYes",
+            "x": 0,
+            "y": 75,
+            "w": 50,
+            "h": 25
+          }
+        },
+        {
+          "class": "CWidget",
+          "properties": {
+            "render": "renderNo",
+            "click": "clickNo",
+            "x": 50,
+            "y": 75,
+            "w": 50,
+            "h": 25
+          }
+        }
+      ]
     }
   },
   "fightPanel": {

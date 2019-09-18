@@ -25,16 +25,31 @@ V_META(CWidget, CGameObject,
        V_PROPERTY(CWidget, int, x, getX, setX),
        V_PROPERTY(CWidget, int, y, getY, setY),
        V_PROPERTY(CWidget, int, w, getW, setW),
-       V_PROPERTY(CWidget, int, h, getH, setH))
+       V_PROPERTY(CWidget, int, h, getH, setH),
+       V_PROPERTY(CWidget, std::string, render, getRender, setRender),
+       V_PROPERTY(CWidget, std::string, click, getClick, setClick))
 public:
     CWidget() = default;
+
+    std::shared_ptr<SDL_Rect> getRect(std::shared_ptr<SDL_Rect> pRect);
 
 private:
     int x = 0,
             y = 0,
             w = 0,
             h = 0;
+
+    std::string render;
+    std::string click;
 public:
+    std::string getClick();
+
+    void setClick(std::string click);
+
+    std::string getRender();
+
+    void setRender(std::string draw);
+
     int getX();
 
     void setX(int x);
