@@ -22,10 +22,13 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "gui/CGui.h"
 #include "gui/panel/CListView.h"
 
+class CWidget;
+
 class CGamePanel : public CGameGraphicsObject {
 V_META(CGamePanel, CGameGraphicsObject,
        V_PROPERTY(CGamePanel, int, xSize, getXSize, setXSize),
-       V_PROPERTY(CGamePanel, int, ySize, getYSize, setYSize))
+       V_PROPERTY(CGamePanel, int, ySize, getYSize, setYSize),
+       V_PROPERTY(CGamePanel, std::set<std::shared_ptr<CWidget>>, widgets, getWidgets, setWidgets))
 public:
     int getXSize();
 
@@ -42,6 +45,15 @@ public:
     std::pair<int, int> translatePos(std::shared_ptr<CGui> gui, int x, int y);;
 
     std::shared_ptr<SDL_Rect> getPanelRect(std::shared_ptr<SDL_Rect> pos);;
+
+private:
+    std::set<std::shared_ptr<CWidget>> widgets;
+
+public:
+    std::set<std::shared_ptr<CWidget>> getWidgets();
+
+    void setWidgets(std::set<std::shared_ptr<CWidget>> widgets);
+
 protected:
 
 
