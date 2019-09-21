@@ -17,7 +17,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #include "CGamePanel.h"
 #include "gui/CGui.h"
-#include "gui/CTextureCache.h"
+#include "core/CWidget.h"
 
 int CGamePanel::getXSize() {
     return xSize;
@@ -43,7 +43,13 @@ void CGamePanel::render(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> pos
 }
 
 void CGamePanel::panelRender(std::shared_ptr<CGui> shared_ptr, std::shared_ptr<SDL_Rect> pRect, int i) {
-
+    for (auto widget:widgets) {
+        this->meta()->invoke_method<void, CGamePanel,
+                std::shared_ptr<CGui>,
+                std::shared_ptr<SDL_Rect>, int>(widget->getRender(),
+                                                this->ptr<CGamePanel>(), shared_ptr,
+                                                widget->getRect(pRect), i);
+    }
 }
 
 bool CGamePanel::event(std::shared_ptr<CGui> gui, SDL_Event *event) {
@@ -81,7 +87,22 @@ void CGamePanel::panelKeyboardEvent(std::shared_ptr<CGui> shared_ptr, SDL_Keycod
 
 }
 
-void CGamePanel::panelMouseEvent(std::shared_ptr<CGui> shared_ptr, int x, int y) {
-
+void CGamePanel::panelMouseEvent(std::shared_ptr<CGui> gui, int x, int y) {
+    for (auto widget:widgets) {
+        if (CUtil::isIn(widget->getRect(RECT(0, 0, getXSize(), getYSize())), x, y)) {
+            this->meta()->invoke_method<void, CGamePanel,
+                    std::shared_ptr<CGui>>(widget->getClick(),
+                                           this->ptr<CGamePanel>(),
+                                           gui);
+        }
+    }
 }
 
+
+std::set<std::shared_ptr<CWidget>> CGamePanel::getWidgets() {
+    return widgets;
+}
+
+void CGamePanel::setWidgets(std::set<std::shared_ptr<CWidget>> widgets) {
+    CGamePanel::widgets = widgets;
+}
