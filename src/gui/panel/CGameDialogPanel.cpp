@@ -19,22 +19,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "gui/CGui.h"
 #include "core/CMap.h"
 #include "gui/CTextManager.h"
-#include "core/CWidget.h"
 
-void CGameDialogPanel::panelRender(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> pRect, int i) {
-    for (auto widget:widgets) {
-        this->meta()->invoke_method<void, CGameDialogPanel,
-                std::shared_ptr<CGui>,
-                std::shared_ptr<SDL_Rect>, int>(widget->getRender(),
-                                                this->ptr<CGameDialogPanel>(), gui,
-                                                widget->getRect(pRect), i);
-    }
-}
-
-
-void CGameDialogPanel::panelKeyboardEvent(std::shared_ptr<CGui> gui, SDL_Keycode i) {
-
-}
 
 std::string CGameDialogPanel::getQuestion() {
     return question;
@@ -51,16 +36,6 @@ bool CGameDialogPanel::awaitAnswer() {
     return *selection;
 }
 
-void CGameDialogPanel::panelMouseEvent(std::shared_ptr<CGui> gui, int x, int y) {
-    for (auto widget:widgets) {
-        if (CUtil::isIn(widget->getRect(RECT(0, 0, getXSize(), getYSize())), x, y)) {
-            this->meta()->invoke_method<void, CGameDialogPanel,
-                    std::shared_ptr<CGui>>(widget->getClick(),
-                                           this->ptr<CGameDialogPanel>(),
-                                           gui);
-        }
-    }
-}
 
 void CGameDialogPanel::clickNo(std::shared_ptr<CGui> gui) {
     selection = std::make_shared<bool>(false);
@@ -72,13 +47,6 @@ void CGameDialogPanel::clickYes(std::shared_ptr<CGui> gui) {
     gui->removeObject(this->ptr<CGameDialogPanel>());
 }
 
-std::set<std::shared_ptr<CWidget>> CGameDialogPanel::getWidgets() {
-    return widgets;
-}
-
-void CGameDialogPanel::setWidgets(std::set<std::shared_ptr<CWidget>> widgets) {
-    CGameDialogPanel::widgets = widgets;
-}
 
 void CGameDialogPanel::renderQuestion(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> pRect, int i) {
     gui->getTextManager()->drawTextCentered(question, pRect);
