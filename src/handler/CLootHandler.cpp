@@ -25,8 +25,7 @@ std::set<std::shared_ptr<CItem>> CLootHandler::getLoot(int value) const {
 }
 
 CLootHandler::CLootHandler(std::shared_ptr<CGame> game) : game(game) {
-    //TODO: consider using getAllSubTypes
-    for (std::string type : game->getObjectHandler()->getAllTypes()) {
+    for (std::string type : game->getObjectHandler()->getAllSubTypes("CItem")) {
         std::shared_ptr<CItem> item = game->createObject<CItem>(type);
         if (item) {
             int power = item->getPower();
