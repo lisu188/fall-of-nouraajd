@@ -28,6 +28,11 @@ public:
 private:
     std::set<std::string> values;
 public:
+
+    void addValue(std::string val) {
+        values.insert(val);
+    }
+
     void setValues(std::set<std::string> _values) {
         this->values = _values;
     }
@@ -46,6 +51,10 @@ public:
 private:
     std::set<int> values;
 public:
+    void addValue(int val) {
+        values.insert(val);
+    }
+
     void setValues(std::set<int> _values) {
         this->values = _values;
     }

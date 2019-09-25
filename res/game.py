@@ -23,13 +23,20 @@ def trigger(context, event, object):
     return trigger_wrapper
 
 
-def new(map, player):
+def list_string(g, list):
+    return_list = g.createObject("CListString")
+    for item in list:
+        return_list.addValue(item)
+    return return_list
+
+
+def new(map):
     g = CGameLoader.loadGame()
     CGameLoader.loadGui(g)
-    if g.getGuiHandler().showDialog("Do you want to play?"):
-        CGameLoader.startGameWithPlayer(g, map, player)
-        while event_loop.instance().run():
-            pass
+    player = g.getGuiHandler().showSelection(list_string(g, ["Warrior", "Sorcerer", "Assasin"]))
+    CGameLoader.startGameWithPlayer(g, map, player)
+    while event_loop.instance().run():
+        pass
 
 
 def load(save):
