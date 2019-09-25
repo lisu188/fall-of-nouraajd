@@ -33,7 +33,7 @@ def list_string(g, list):
 def new(map):
     g = CGameLoader.loadGame()
     CGameLoader.loadGui(g)
-    player = g.getGuiHandler().showSelection(list_string(g, ["Warrior", "Sorcerer", "Assasin"]))
+    player = g.getGuiHandler().showSelection(list_string(g, g.getObjectHandler().getAllSubTypes("CPlayer")))
     CGameLoader.startGameWithPlayer(g, map, player)
     while event_loop.instance().run():
         pass
