@@ -20,6 +20,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CGame.h"
 #include "gui/panel/CGameTextPanel.h"
 #include "core/CMap.h"
+#include "core/CWidget.h"
+#include "gui/CTextManager.h"
+#include "core/CList.h"
 
 CGuiHandler::CGuiHandler() {
 
@@ -46,4 +49,58 @@ void CGuiHandler::showTrade(std::shared_ptr<CMarket> market) {
 
 CGuiHandler::CGuiHandler(std::shared_ptr<CGame> game) : _game(game) {
 
+}
+
+std::basic_string<char, std::char_traits<char>, std::allocator<char>>
+CGuiHandler::showSelection(std::shared_ptr<CListString> list) {
+    std::shared_ptr<CGamePanel> panel = _game.lock()->createObject<CGamePanel>("CGamePanel");
+
+    std::shared_ptr<std::string> selected;
+
+    std::set<std::shared_ptr<CWidget>> widgets;
+    int i = 0;
+    for (auto item : list->getValues()) {
+        std::string clickName = vstd::str("click") + vstd::str(i);
+        std::string renderName = vstd::str("render") + vstd::str(i);
+
+        panel->meta()->set_method<CGamePanel, void, std::shared_ptr<CGui>>(clickName, panel,
+                                                                           [item, &selected](CGamePanel *self,
+                                                                                             std::shared_ptr<CGui> gui) {
+                                                                               selected = std::make_shared<std::string>(
+                                                                                       item);
+                                                                           });
+
+        panel->meta()->set_method<CGamePanel, void, std::shared_ptr<CGui>, std::shared_ptr<SDL_Rect>, int>(renderName,
+                                                                                                           panel,
+                                                                                                           [item](CGamePanel *self,
+                                                                                                                  std::shared_ptr<CGui> gui,
+                                                                                                                  std::shared_ptr<SDL_Rect> rect,
+                                                                                                                  int i) {
+                                                                                                               gui->getTextManager()->drawTextCentered(
+                                                                                                                       item,
+                                                                                                                       rect);
+                                                                                                           });
+
+        std::shared_ptr<CWidget> widget = _game.lock()->createObject<CWidget>("CWidget");
+        widget->setClick(clickName);
+        widget->setRender(renderName);
+        widget->setX(0);
+        widget->setY(10 * i);
+        widget->setW(100);
+        widget->setH(10);
+        widgets.insert(widget);
+        i++;
+    }
+
+    panel->setWidgets(widgets);
+
+    _game.lock()->getGui()->addObject(panel);
+
+    vstd::wait_until([&]() {
+        return selected != nullptr;
+    });
+
+    _game.lock()->getGui()->removeObject(panel);
+
+    return *selected;
 }

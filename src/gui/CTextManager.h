@@ -32,6 +32,8 @@ public:
 
     void drawText(std::string text, int x, int y, int h);
 
+    void drawText(std::string text, std::shared_ptr<SDL_Rect> rect);
+
     void drawTextCentered(std::string text, int x, int y, int w, int h);
 
     void drawTextCentered(std::string text, std::shared_ptr<SDL_Rect> rect);
