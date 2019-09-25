@@ -20,6 +20,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "object/CMarket.h"
 #include "object/CGameObject.h"
 
+class CListString;
+
 class CGuiHandler : public CGameObject {
 V_META(CGuiHandler, CGameObject, vstd::meta::empty())
 
@@ -33,6 +35,10 @@ public:
     bool showDialog(std::string message);
 
     void showTrade(std::shared_ptr<CMarket> market);
+
+    std::basic_string<char, std::char_traits<char>, std::allocator<char>>
+    showSelection(std::shared_ptr<CListString> list);
+
 private:
     std::weak_ptr<CGame> _game;
 };

@@ -74,3 +74,7 @@ void CTextManager::drawTextCentered(std::string text, int x, int y, int w, int h
 void CTextManager::drawTextCentered(std::string text, std::shared_ptr<SDL_Rect> rect) {
     drawTextCentered(text, rect->x, rect->y, rect->w, rect->h);
 }
+
+void CTextManager::drawText(std::string text, std::shared_ptr<SDL_Rect> rect) {
+    drawText(text, rect->x, rect->y, rect->w);
+}

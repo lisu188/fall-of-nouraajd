@@ -60,6 +60,7 @@ void CObjectHandler::registerType(std::string name, std::function<std::shared_pt
     constructors.insert(std::make_pair(name, constructor));
 }
 
+//TODO: add option to provide custom configuration from string
 std::shared_ptr<CGameObject> CObjectHandler::_createObject(std::shared_ptr<CGame> game, std::string type) {
     std::shared_ptr<Value> config = getConfig(type);
     if (!config) {
