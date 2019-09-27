@@ -19,8 +19,11 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "core/CGlobal.h"
 
-enum CResType {
-    CONFIG, MAP, PLUGIN, SAVE
+struct CResType {
+    const static std::string CONFIG;
+    const static std::string MAP;
+    const static std::string PLUGIN;
+    const static std::string SAVE;
 };
 
 class CAnimation;
@@ -28,7 +31,7 @@ class CAnimation;
 
 class CResourcesProvider {
 public:
-    static CResourcesProvider *getInstance();
+    static std::shared_ptr<CResourcesProvider> getInstance();
 
     std::string load(std::string path);
 
@@ -36,16 +39,15 @@ public:
 
     std::string getPath(std::string path);
 
-    std::set<std::string> getFiles(CResType type);
+    std::vector<std::string> getFiles(std::string type);
 
     void save(std::string file, std::string data);
 
     void save(std::string file, std::shared_ptr<Value> data);
 
+    CResourcesProvider();
 private:
     static std::list<std::string> searchPath;
-
-    CResourcesProvider();
 };
 
 class CConfigurationProvider : private std::map<std::string, std::shared_ptr<Value>> {

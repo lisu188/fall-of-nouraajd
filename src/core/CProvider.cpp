@@ -21,6 +21,11 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CJsonUtil.h"
 #include "gui/CAnimation.h"
 
+const std::string CResType::CONFIG = "CONFIG";
+const std::string CResType::MAP = "MAP";
+const std::string CResType::PLUGIN = "PLUGIN";
+const std::string CResType::SAVE = "SAVE";
+
 std::shared_ptr<Value> CConfigurationProvider::getConfig(std::string path) {
     static CConfigurationProvider instance;
     return instance.getConfiguration(path);
@@ -48,9 +53,9 @@ void CConfigurationProvider::loadConfig(std::string path) {
 
 std::list<std::string> CResourcesProvider::searchPath = {""};
 
-CResourcesProvider *CResourcesProvider::getInstance() {
-    static CResourcesProvider instance;
-    return &instance;
+std::shared_ptr<CResourcesProvider> CResourcesProvider::getInstance() {
+    static std::shared_ptr<CResourcesProvider> instance = std::make_shared<CResourcesProvider>();
+    return instance;
 }
 
 std::string CResourcesProvider::load(std::string path) {
@@ -73,40 +78,39 @@ std::string CResourcesProvider::getPath(std::string path) {
     return std::string();
 }
 
-std::set<std::string> CResourcesProvider::getFiles(CResType type) {
-    std::set<std::string> retValue;
+std::vector<std::string> CResourcesProvider::getFiles(std::string type) {
+    std::vector<std::string> retValue;
     std::string folderName;
     std::string suffix;
-    //TODO: do not traverse for .py files and return directories for maps
-    switch (type) {
-        case CONFIG:
-            folderName = "config";
-            suffix = "json";
-            break;
-        case PLUGIN:
-            folderName = "plugins";
-            suffix = "py";
-            break;
-        case MAP:
-            folderName = "maps";
-            suffix = "map";
-            break;
-        case SAVE:
-            folderName = "save";
-            suffix = "json";
-            break;
+
+    if (type == CResType::CONFIG) {
+        folderName = "config";
+        suffix = "json";
+    } else if (type == CResType::PLUGIN) {
+        folderName = "plugins";
+        suffix = "py";
+    } else if (type == CResType::MAP) {
+        folderName = "maps";
+    } else if (type == CResType::SAVE) {
+        folderName = "save";
+        suffix = "json";
+    } else {
+        vstd::logger::fatal("Unknown resource type:", type);
     }
-    boost::filesystem::recursive_directory_iterator dir(folderName), end;
+
+    boost::filesystem::directory_iterator dir(folderName), end;
     while (dir != end) {
-        if (!boost::filesystem::is_directory(dir->path())) {
+        if (type == CResType::MAP || type == CResType::SAVE) {
+            auto pt = dir->path().filename().stem().string();
+            retValue.push_back(pt);
+        } else {
             auto pt = dir->path().string();
             if (vstd::ends_with(pt, vstd::join({".", suffix}, ""))) {
-                retValue.insert(pt);
+                retValue.push_back(pt);
             }
         }
         dir++;
     }
-
     return retValue;
 }
 

@@ -30,18 +30,15 @@ def list_string(g, list):
     return return_list
 
 
-def new(map):
+def new():
     g = CGameLoader.loadGame()
     CGameLoader.loadGui(g)
-    player = g.getGuiHandler().showSelection(list_string(g, g.getObjectHandler().getAllSubTypes("CPlayer")))
-    CGameLoader.startGameWithPlayer(g, map, player)
-    while event_loop.instance().run():
-        pass
-
-
-def load(save):
-    g = CGameLoader.loadGame()
-    CGameLoader.loadGui(g)
-    CGameLoader.loadSavedGame(g, save)
+    if g.getGuiHandler().showSelection(list_string(g, ["NEW", "LOAD"])) == "NEW":
+        map = g.getGuiHandler().showSelection(list_string(g, CResourcesProvider.getInstance().getFiles("MAP")))
+        player = g.getGuiHandler().showSelection(list_string(g, g.getObjectHandler().getAllSubTypes("CPlayer")))
+        CGameLoader.startGameWithPlayer(g, map, player)
+    else:
+        save = g.getGuiHandler().showSelection(list_string(g, CResourcesProvider.getInstance().getFiles("SAVE")))
+        CGameLoader.loadSavedGame(g, save)
     while event_loop.instance().run():
         pass

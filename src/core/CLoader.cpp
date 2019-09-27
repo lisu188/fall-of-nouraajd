@@ -83,6 +83,7 @@ std::shared_ptr<CMap> CMapLoader::loadSavedMap(std::shared_ptr<CGame> game, std:
     game->getObjectHandler()->registerConfig(name, save);
 
     std::shared_ptr<CMap> map = game->getObjectHandler()->createObject<CMap>(game, name);
+
     return map;
 }
 
@@ -191,7 +192,7 @@ void CGameLoader::changeMap(std::shared_ptr<CGame> game, std::string name) {
 }
 
 void CGameLoader::initConfigurations(std::shared_ptr<CObjectHandler> handler) {
-    for (std::string path : CResourcesProvider::getInstance()->getFiles(CONFIG)) {
+    for (std::string path : CResourcesProvider::getInstance()->getFiles(CResType::CONFIG)) {
         handler->registerConfig(path);
     }
 }
