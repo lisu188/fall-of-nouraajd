@@ -52,4 +52,8 @@ void initModule3() {
 
     class_<std::vector<std::string>>("std::vector<std::string>")
             .def(vector_indexing_suite<std::vector<std::string>>());
+
+    class_<CResourcesProvider, boost::noncopyable, std::shared_ptr<CResourcesProvider>>("CResourcesProvider", no_init)
+            .def("getInstance", &CResourcesProvider::getInstance)
+            .def("getFiles", &CResourcesProvider::getFiles);
 }

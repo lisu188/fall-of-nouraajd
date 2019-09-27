@@ -14,14 +14,6 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 import game
-import argparse
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--load")
-    parser.add_argument("--map")
-    args = parser.parse_args()
-    if args.load:
-        game.load(args.load)
-    else:
-        game.new(args.map)
+    game.new()
