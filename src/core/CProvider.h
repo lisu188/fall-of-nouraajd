@@ -35,7 +35,7 @@ public:
 
     std::string load(std::string path);
 
-    std::shared_ptr<Value> loadJson(std::string path);
+    std::shared_ptr<json> loadJson(std::string path);
 
     std::string getPath(std::string path);
 
@@ -43,23 +43,23 @@ public:
 
     void save(std::string file, std::string data);
 
-    void save(std::string file, std::shared_ptr<Value> data);
+    void save(std::string file, std::shared_ptr<json> data);
 
     CResourcesProvider();
 private:
     static std::list<std::string> searchPath;
 };
 
-class CConfigurationProvider : private std::map<std::string, std::shared_ptr<Value>> {
+class CConfigurationProvider : private std::map<std::string, std::shared_ptr<json>> {
 public:
-    static std::shared_ptr<Value> getConfig(std::string path);
+    static std::shared_ptr<json> getConfig(std::string path);
 
 private:
     CConfigurationProvider();
 
     ~CConfigurationProvider();
 
-    std::shared_ptr<Value> getConfiguration(std::string path);
+    std::shared_ptr<json> getConfiguration(std::string path);
 
     void loadConfig(std::string path);
 };

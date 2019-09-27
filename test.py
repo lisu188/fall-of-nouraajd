@@ -36,7 +36,7 @@ def advance(g, turns):
     for i in range(turns):
         g.getMap().move()
     while g.getMap().getNumericProperty('turn') < turns + current_turn:
-        game.CEventLoop.instance().run()
+        game.event_loop.instance().run()
 
 
 class GameTest(unittest.TestCase):

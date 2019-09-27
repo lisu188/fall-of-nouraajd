@@ -48,13 +48,13 @@ public:
 
     void registerConfig(std::string path);
 
-    void registerConfig(std::string name, std::shared_ptr<Value> value);
+    void registerConfig(std::string name, std::shared_ptr<json> value);
 
     void registerType(std::string name, std::function<std::shared_ptr<CGameObject>()> constructor);
 
     std::shared_ptr<CGameObject> getType(std::string name);
 
-    std::shared_ptr<Value> getConfig(std::string type);
+    std::shared_ptr<json> getConfig(std::string type);
 
 private:
     std::shared_ptr<CGameObject> _createObject(std::shared_ptr<CGame> map, std::string type);
@@ -63,5 +63,5 @@ private:
 
     std::unordered_map<std::string, std::function<std::shared_ptr<CGameObject>() >> constructors;
 
-    std::unordered_map<std::string, std::shared_ptr<Value>> objectConfig;
+    std::unordered_map<std::string, std::shared_ptr<json>> objectConfig;
 };

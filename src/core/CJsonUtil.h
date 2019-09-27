@@ -22,12 +22,12 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 namespace CJsonUtil {
     template<typename T>
     bool hasStringProp(T object, std::string prop) {
-        return object->isMember(prop) && (*object)[prop].isString();
+        return object->count(prop) && (*object)[prop].is_string();
     }
 
     template<typename T>
     bool hasObjectProp(T object, std::string prop) {
-        return object->isMember(prop) && (*object)[prop].isObject();
+        return object->count(prop) && (*object)[prop].is_object();
     }
 
     template<typename T>
@@ -57,9 +57,9 @@ namespace CJsonUtil {
 
     template<typename T>
     bool isMap(T object) {
-        for (auto it :object->getMemberNames()) {
-            if (!(*object)[it].isObject() ||
-                    !isObject(&(*object)[it])) {
+        for (auto[key, value] :object->items()) {
+            if (!value.is_object() ||
+                !isObject(&value)) {
                 return false;
             }
         }
@@ -67,23 +67,22 @@ namespace CJsonUtil {
     }
 
     template<typename T=void>
-    std::shared_ptr<Value> from_string(std::string json) {
-        auto d = std::make_shared<Value>();
-        Reader reader;
-        if (reader.parse(json, *d)) {
-            return d;
+    std::shared_ptr<json> from_string(std::string json_string) {
+        try {
+            return std::make_shared<json>(json::parse(json_string));
+        } catch (...) {
+            return nullptr;//TODO: handle
         }
 //        vstd::logger::debug(json,reader.getFormatedErrorMessages());
-        return nullptr;
-    }
-
-    template<typename Writer=FastWriter, typename T>
-    std::string to_string(T value) {
-        return std::make_shared<Writer>()->write(*value);
     }
 
     template<typename T>
-    std::shared_ptr<Value> clone(T value) {
+    std::string to_string(T value, int indent = -1) {
+        return value->dump(indent);
+    }
+
+    template<typename T>
+    std::shared_ptr<json> clone(T value) {
         std::string json = to_string(value);
 //        vstd::logger::debug(json);
         return from_string(json);

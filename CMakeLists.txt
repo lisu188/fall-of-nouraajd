@@ -22,8 +22,6 @@ project(fall-of-nouraajd)
 
 include(${CMAKE_SOURCE_DIR}/cmake/cotire.cmake)
 
-set(JSONCPP_INCLUDE_DIR /usr/include/jsoncpp)
-
 set(CMAKE_MODULE_PATH "${CMAKE_MODULE_PATH};${CMAKE_SOURCE_DIR}/cmake")
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17 -include cmath -Wall")
@@ -33,27 +31,26 @@ set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -g3")
 
 file(GLOB_RECURSE GAME_SRC ${CMAKE_SOURCE_DIR}/src/**.cpp ${CMAKE_SOURCE_DIR}/src/**.h)
 
-find_package(Boost 1.58 COMPONENTS python3 filesystem system REQUIRED)
+find_package(Boost 1.58 COMPONENTS python3 filesystem REQUIRED)
 find_package(PythonInterp 3.5 REQUIRED)
 find_package(PythonLibs 3.5 REQUIRED)
 find_package(SDL2 REQUIRED)
 find_package(SDL2_image REQUIRED)
 find_package(SDL2_ttf REQUIRED)
-find_package(JsonCpp REQUIRED)
 
 include_directories(${Boost_INCLUDE_DIRS})
 include_directories(${PYTHON_INCLUDE_DIRS})
 include_directories(${SDL2_INCLUDE_DIR})
 include_directories(${SDL2_IMAGE_INCLUDE_DIR})
 include_directories(${SDL2_TTF_INCLUDE_DIR})
-include_directories(${JSONCPP_INCLUDE_DIRS})
+include_directories(json/single_include/nlohmann)
 
 include_directories(${CMAKE_SOURCE_DIR}/src)
 
 include_directories(${CMAKE_SOURCE_DIR}/vstd)
 
 python_add_module(_game ${GAME_SRC})
-target_link_libraries(_game ${Boost_LIBRARIES} ${PYTHON_LIBRARIES} ${SDL2_LIBRARY} ${SDL2_IMAGE_LIBRARY} ${SDL2_TTF_LIBRARY} ${JSONCPP_LIBRARIES})
+target_link_libraries(_game ${Boost_LIBRARIES} ${PYTHON_LIBRARIES} ${SDL2_LIBRARY} ${SDL2_IMAGE_LIBRARY} ${SDL2_TTF_LIBRARY})
 
 configure_file(res/config/armors.json config/armors.json)
 configure_file(res/config/panels.json config/panels.json)
