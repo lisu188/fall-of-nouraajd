@@ -109,9 +109,9 @@ public:
 
     template<typename T>
     static void register_serializer() {
-        register_serializer<std::shared_ptr<Value>, std::shared_ptr<T>>();
-        register_serializer<std::shared_ptr<Value>, std::set<std::shared_ptr<T>>>();
-        register_serializer<std::shared_ptr<Value>, std::map<std::string, std::shared_ptr<T>>>();
+        register_serializer<std::shared_ptr<json>, std::shared_ptr<T>>();
+        register_serializer<std::shared_ptr<json>, std::set<std::shared_ptr<T>>>();
+        register_serializer<std::shared_ptr<json>, std::map<std::string, std::shared_ptr<T>>>();
     }
 
     template<typename T, typename U>
@@ -156,9 +156,9 @@ public:
     }
 
     template<typename T>
-    static void register_custom_type(std::function<std::shared_ptr<Json::Value>(T)> serialize,
+    static void register_custom_type(std::function<std::shared_ptr<json>(T)> serialize,
                                      std::function<T(std::shared_ptr<CGame>,
-                                                     std::shared_ptr<Json::Value>)> deserialize) {
+                                                     std::shared_ptr<json>)> deserialize) {
         register_custom_serializer(serialize, deserialize);
         register_custom_setter<T>();
     }

@@ -52,7 +52,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
-#include <json/json.h>
+#include <json.hpp>
 #include <vstd.h>
 
-using namespace Json;
+using json = nlohmann::json;

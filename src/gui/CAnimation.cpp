@@ -37,7 +37,7 @@ CDynamicAnimation::CDynamicAnimation(std::string path) {
     this->size = time->size();
     for (int i = 0; i < size; i++) {
         paths.push_back(path + "/" + std::to_string(i) + ".png");
-        times.push_back((*time)[std::to_string(i)].asInt());
+        times.push_back((*time)[std::to_string(i)].get<int>());
     }
 }
 

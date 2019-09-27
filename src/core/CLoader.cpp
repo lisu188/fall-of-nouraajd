@@ -22,24 +22,23 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CJsonUtil.h"
 #include "gui/CGui.h"
 #include "core/CTypes.h"
-#include "gui/object/CConsoleGraphicsObject.h"
 
-void CMapLoader::loadFromTmx(std::shared_ptr<CMap> map, std::shared_ptr<Value> mapc) {
-    const Value &mapProperties = (*mapc)["properties"];
-    const Value &mapLayers = (*mapc)["layers"];
-    map->entryx = vstd::to_int(mapProperties["x"].asString()).first;
-    map->entryy = vstd::to_int(mapProperties["y"].asString()).first;
-    map->entryz = vstd::to_int(mapProperties["z"].asString()).first;
-    const Value &tileset = (*mapc)["tilesets"][0]["tileproperties"];
+void CMapLoader::loadFromTmx(std::shared_ptr<CMap> map, std::shared_ptr<json> mapc) {
+    const json &mapProperties = (*mapc)["properties"];
+    const json &mapLayers = (*mapc)["layers"];
+    map->entryx = vstd::to_int(mapProperties.count("x") ? mapProperties["x"].get<std::string>() : "0").first;
+    map->entryy = vstd::to_int(mapProperties.count("y") ? mapProperties["y"].get<std::string>() : "0").first;
+    map->entryz = vstd::to_int(mapProperties.count("z") ? mapProperties["z"].get<std::string>() : "0").first;
+    const json &tileset = (*mapc)["tilesets"][0]["tileproperties"];
     for (unsigned int i = 0; i < mapLayers.size(); i++) {
-        const Value &layer = mapLayers[i];
-        if (vstd::string_equals(layer["type"].asString(), "tilelayer")) {
+        const json &layer = mapLayers[i];
+        if (vstd::string_equals(layer["type"].get<std::string>(), "tilelayer")) {
             handleTileLayer(map, tileset, layer);
         }
     }
     for (unsigned int i = 0; i < mapLayers.size(); i++) {
-        const Value &layer = mapLayers[i];
-        if (vstd::string_equals(layer["type"].asString(), "objectgroup")) {
+        const json &layer = mapLayers[i];
+        if (vstd::string_equals(layer["type"].get<std::string>(), "objectgroup")) {
             handleObjectLayer(map, layer);
         }
     }
@@ -65,7 +64,7 @@ std::shared_ptr<CMap> CMapLoader::loadNewMap(std::shared_ptr<CGame> game, std::s
     game->setMap(map);
     game->getObjectHandler()->registerConfig(getConfigPath(mapName));
     CPluginLoader::loadPlugin(game, getScriptPath(mapName));
-    std::shared_ptr<Value> mapc = CConfigurationProvider::getConfig(getMapPath(mapName));
+    std::shared_ptr<json> mapc = CConfigurationProvider::getConfig(getMapPath(mapName));
     loadFromTmx(map, mapc);
     map->setMapName(mapName);
     return map;
@@ -73,8 +72,8 @@ std::shared_ptr<CMap> CMapLoader::loadNewMap(std::shared_ptr<CGame> game, std::s
 
 std::shared_ptr<CMap> CMapLoader::loadSavedMap(std::shared_ptr<CGame> game, std::string name) {
     std::string path = "save/" + name + ".json";
-    std::shared_ptr<Value> save = CConfigurationProvider::getConfig(path);
-    std::string mapName = (*save)["properties"]["mapName"].asString();
+    std::shared_ptr<json> save = CConfigurationProvider::getConfig(path);
+    std::string mapName = (*save)["properties"]["mapName"].get<std::string>();
 
     game->getObjectHandler()->registerConfig(getConfigPath(mapName));
     CPluginLoader::loadPlugin(game, getScriptPath(mapName));
@@ -100,41 +99,41 @@ void CMapLoader::save(std::shared_ptr<CMap> map, std::string name) {
     CResourcesProvider::getInstance()->save(vstd::join({"save/", name, ".json"}, ""), JSONIFY_STYLED(map));
 }
 
-void CMapLoader::handleTileLayer(std::shared_ptr<CMap> map, const Value &tileset, const Value &layer) {
-    const Value &layerProperties = layer["properties"];
-    int level = vstd::to_int(layerProperties["level"].asString()).first;
-    map->defaultTiles[level] = layerProperties["default"].asString();
+void CMapLoader::handleTileLayer(std::shared_ptr<CMap> map, const json &tileset, const json &layer) {
+    const json &layerProperties = layer["properties"];
+    int level = vstd::to_int(layerProperties["level"].get<std::string>()).first;
+    map->defaultTiles[level] = layerProperties["default"].get<std::string>();
     map->boundaries[level] =
-            std::make_pair(vstd::to_int(layerProperties["xBound"].asString()).first,
-                           vstd::to_int(layerProperties["yBound"].asString()).first);
+            std::make_pair(vstd::to_int(layerProperties["xBound"].get<std::string>()).first,
+                           vstd::to_int(layerProperties["yBound"].get<std::string>()).first);
 
-    int yLayer = layer["width"].asInt();
-    int xLayer = layer["height"].asInt();
+    int yLayer = layer["width"].get<int>();
+    int xLayer = layer["height"].get<int>();
 
     for (int y = 0; y < yLayer; ++y) {
         for (int x = 0; x < xLayer; ++x) {
-            int id = layer["data"][x + y * xLayer].asInt();
+            int id = layer["data"][x + y * xLayer].get<int>();
             if (id == 0) {
                 continue;
             }
             id--;
             std::string tileId = std::to_string(id);
-            std::string tileType = tileset[tileId.c_str()]["type"].asString();
+            std::string tileType = tileset[tileId.c_str()]["type"].get<std::string>();
             map->addTile(map->getGame()->createObject<CTile>(tileType), x, y, level);
         }
     }
 }
 
-void CMapLoader::handleObjectLayer(std::shared_ptr<CMap> map, const Value &layer) {
-    int level = vstd::to_int(layer["properties"]["level"].asString()).first;
-    const Value &objects = layer["objects"];
+void CMapLoader::handleObjectLayer(std::shared_ptr<CMap> map, const json &layer) {
+    int level = vstd::to_int(layer["properties"]["level"].get<std::string>()).first;
+    const json &objects = layer["objects"];
     for (unsigned int i = 0; i < objects.size(); i++) {
-        const Value &object = objects[i];
-        std::string objectType = object["type"].asString();
-        std::string objectName = object["name"].asString();
+        const json &object = objects[i];
+        std::string objectType = object["type"].get<std::string>();
+        std::string objectName = object["name"].get<std::string>();
 
-        int xPos = object["x"].asInt() / object["width"].asInt();
-        int yPos = object["y"].asInt() / object["height"].asInt();
+        int xPos = object["x"].get<int>() / object["width"].get<int>();
+        int yPos = object["y"].get<int>() / object["height"].get<int>();
         auto mapObject = map->getGame()->createObject<CMapObject>(objectType);
         if (mapObject == nullptr) {
             vstd::logger::debug("Failed to load object:", objectType, objectName);
@@ -144,9 +143,9 @@ void CMapLoader::handleObjectLayer(std::shared_ptr<CMap> map, const Value &layer
             mapObject->setName(objectName);
         }
         map->addObject(mapObject);
-        const Value &objectProperties = object["properties"];
-        for (auto it :objectProperties.getMemberNames()) {
-            CSerialization::setProperty(mapObject, it, CJsonUtil::clone(&objectProperties[it]));
+        const json &objectProperties = object.count("properties") ? object["properties"] : json();
+        for (auto[key, value] :objectProperties.items()) {
+            CSerialization::setProperty(mapObject, key, CJsonUtil::clone(value));
         }
         mapObject->moveTo(xPos, yPos, level);
         vstd::logger::debug("Loaded object:", mapObject->to_string());

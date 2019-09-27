@@ -26,7 +26,7 @@ const std::string CResType::MAP = "MAP";
 const std::string CResType::PLUGIN = "PLUGIN";
 const std::string CResType::SAVE = "SAVE";
 
-std::shared_ptr<Value> CConfigurationProvider::getConfig(std::string path) {
+std::shared_ptr<json> CConfigurationProvider::getConfig(std::string path) {
     static CConfigurationProvider instance;
     return instance.getConfiguration(path);
 }
@@ -39,7 +39,7 @@ CConfigurationProvider::~CConfigurationProvider() {
     clear();
 }
 
-std::shared_ptr<Value> CConfigurationProvider::getConfiguration(std::string path) {
+std::shared_ptr<json> CConfigurationProvider::getConfiguration(std::string path) {
     if (this->find(path) != this->end()) {
         return this->at(path);
     }
@@ -64,7 +64,7 @@ std::string CResourcesProvider::load(std::string path) {
                        std::istreambuf_iterator<char>());
 }
 
-std::shared_ptr<Value> CResourcesProvider::loadJson(std::string path) {
+std::shared_ptr<json> CResourcesProvider::loadJson(std::string path) {
     return CJsonUtil::from_string(load(path));
 }
 
@@ -125,7 +125,7 @@ void CResourcesProvider::save(std::string file, std::string data) {
     f << data;
 }
 
-void CResourcesProvider::save(std::string file, std::shared_ptr<Value> data) {
+void CResourcesProvider::save(std::string file, std::shared_ptr<json> data) {
     save(file, CJsonUtil::to_string(data));
 }
 

@@ -23,21 +23,21 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CController.h"
 #include "core/CList.h"
 
-extern void add_member(std::shared_ptr<Value> object, std::string key, std::string value);
+extern void add_member(std::shared_ptr<json> object, std::string key, std::string value);
 
-extern void add_member(std::shared_ptr<Value> object, std::string key, std::shared_ptr<Value> value);
+extern void add_member(std::shared_ptr<json> object, std::string key, std::shared_ptr<json> value);
 
-extern void add_member(std::shared_ptr<Value> object, std::string key, bool value);
+extern void add_member(std::shared_ptr<json> object, std::string key, bool value);
 
-extern void add_member(std::shared_ptr<Value> object, std::string key, int value);
+extern void add_member(std::shared_ptr<json> object, std::string key, int value);
 
-extern void add_arr_member(std::shared_ptr<Value> object, std::string value);
+extern void add_arr_member(std::shared_ptr<json> object, std::string value);
 
-extern void add_arr_member(std::shared_ptr<Value> object, std::shared_ptr<Value> value);
+extern void add_arr_member(std::shared_ptr<json> object, std::shared_ptr<json> value);
 
-extern void add_arr_member(std::shared_ptr<Value> object, bool value);
+extern void add_arr_member(std::shared_ptr<json> object, bool value);
 
-extern void add_arr_member(std::shared_ptr<Value> object, int value);
+extern void add_arr_member(std::shared_ptr<json> object, int value);
 
 namespace {
     struct register_types1 {
@@ -78,18 +78,18 @@ namespace {
             }
 
             auto array_string_deserialize = [](std::shared_ptr<CGame> game,
-                                               std::shared_ptr<Value> object) {
+                                               std::shared_ptr<json> object) {
 
                 std::set<std::string> objects;
                 for (unsigned int i = 0; i < object->size(); i++) {
-                    objects.insert((*object)[i].asString());
+                    objects.insert((*object)[i].get<std::string>());
                 }
                 return objects;
 
             };
 
             auto array_string_serialize = [](std::set<std::string> set) {
-                std::shared_ptr<Value> arr = std::make_shared<Value>();
+                std::shared_ptr<json> arr = std::make_shared<json>();
                 for (std::string ob:set) {
                     add_arr_member(arr, ob);
                 }
@@ -97,18 +97,18 @@ namespace {
             };
 
             auto array_int_deserialize = [](std::shared_ptr<CGame> game,
-                                            std::shared_ptr<Value> object) {
+                                            std::shared_ptr<json> object) {
 
                 std::set<int> objects;
                 for (unsigned int i = 0; i < object->size(); i++) {
-                    objects.insert((*object)[i].asInt());
+                    objects.insert((*object)[i].get<int>());
                 }
                 return objects;
 
             };
 
             auto array_int_serialize = [](std::set<int> set) {
-                std::shared_ptr<Value> arr = std::make_shared<Value>();
+                std::shared_ptr<json> arr = std::make_shared<json>();
                 for (int ob:set) {
                     add_arr_member(arr, ob);
                 }
@@ -116,18 +116,18 @@ namespace {
             };
 
             auto map_string_string_deserialize = [](std::shared_ptr<CGame> game,
-                                                    std::shared_ptr<Value> object) {
+                                                    std::shared_ptr<json> object) {
 
                 std::map<std::string, std::string> objects;
-                for (auto name:object->getMemberNames()) {
-                    objects[name] = (*object)[name].asString();
+                for (auto[key, value]:object->items()) {
+                    objects[key] = value.get<std::string>();
                 }
                 return objects;
 
             };
 
             auto map_string_string_serialize = [](std::map<std::string, std::string> map) {
-                std::shared_ptr<Value> arr = std::make_shared<Value>();
+                std::shared_ptr<json> arr = std::make_shared<json>();
                 for (auto ob:map) {
                     add_member(arr, ob.first, ob.second);
                 }
@@ -135,18 +135,18 @@ namespace {
             };
 
             auto map_string_int_deserialize = [](std::shared_ptr<CGame> game,
-                                                 std::shared_ptr<Value> object) {
+                                                 std::shared_ptr<json> object) {
 
                 std::map<std::string, int> objects;
-                for (auto name:object->getMemberNames()) {
-                    objects[name] = (*object)[name].asInt();
+                for (auto[key, value]:object->items()) {
+                    objects[key] = value.get<int>();
                 }
                 return objects;
 
             };
 
             auto map_string_int_serialize = [](std::map<std::string, int> map) {
-                std::shared_ptr<Value> arr = std::make_shared<Value>();
+                std::shared_ptr<json> arr = std::make_shared<json>();
                 for (auto ob:map) {
                     add_member(arr, ob.first, ob.second);
                 }
@@ -154,18 +154,18 @@ namespace {
             };
 
             auto map_int_string_deserialize = [](std::shared_ptr<CGame> game,
-                                                 std::shared_ptr<Value> object) {
+                                                 std::shared_ptr<json> object) {
 
                 std::map<int, std::string> objects;
-                for (auto name:object->getMemberNames()) {
-                    objects[vstd::to_int(name).first] = (*object)[name].asString();
+                for (auto[key, value]:object->items()) {
+                    objects[vstd::to_int(key).first] = value.get<std::string>();
                 }
                 return objects;
 
             };
 
             auto map_int_string_serialize = [](std::map<int, std::string> map) {
-                std::shared_ptr<Value> arr = std::make_shared<Value>();
+                std::shared_ptr<json> arr = std::make_shared<json>();
                 for (auto ob:map) {
                     add_member(arr, vstd::str(ob.first), ob.second);
                 }
@@ -173,18 +173,18 @@ namespace {
             };
 
             auto map_int_int_deserialize = [](std::shared_ptr<CGame> game,
-                                              std::shared_ptr<Value> object) {
+                                              std::shared_ptr<json> object) {
 
                 std::map<int, int> objects;
-                for (auto name:object->getMemberNames()) {
-                    objects[vstd::to_int(name).first] = (*object)[name].asInt();
+                for (auto[key, value]:object->items()) {
+                    objects[vstd::to_int(key).first] = value.get<int>();
                 }
                 return objects;
 
             };
 
             auto map_int_int_serialize = [](std::map<int, int> map) {
-                std::shared_ptr<Value> arr = std::make_shared<Value>();
+                std::shared_ptr<json> arr = std::make_shared<json>();
                 for (auto ob:map) {
                     add_member(arr, vstd::str(ob.first), ob.second);
                 }
