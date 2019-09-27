@@ -1,3 +1,6 @@
 [submodule "vstd"]
 	path = vstd
 	url = https://github.com/lisu188/vstd.git
+[submodule "json"]
+	path = json
+	url = https://github.com/nlohmann/json.git

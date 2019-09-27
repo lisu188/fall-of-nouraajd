@@ -104,6 +104,6 @@ void sdl_safe(F f,
 
 #define SDL_SAFE(x) sdl_safe([&](){return x;})
 
-#define JSONIFY(x) CJsonUtil::to_string(CSerialization::serialize<std::shared_ptr<Value>>(x))
-#define JSONIFY_STYLED(x) CJsonUtil::to_string<StyledWriter>(CSerialization::serialize<std::shared_ptr<Value>>(x))
+#define JSONIFY(x) CJsonUtil::to_string(CSerialization::serialize<std::shared_ptr<json>>(x))
+#define JSONIFY_STYLED(x) CJsonUtil::to_string(CSerialization::serialize<std::shared_ptr<json>>(x),-1)
 #define RECT(x, y, w, h) CUtil::rect(x,y,w,h)
