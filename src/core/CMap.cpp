@@ -51,6 +51,15 @@ Coords CMap::getLocationByName(std::string name) {
 }
 
 std::shared_ptr<CPlayer> CMap::getPlayer() {
+    //TODO: think of better solution after save
+    if (!player) {
+        for (auto object:getObjects()) {
+            if (auto pl = vstd::cast<CPlayer>(object)) {
+                this->player = pl;
+                break;
+            }
+        }
+    }
     return player;
 }
 
@@ -195,8 +204,8 @@ void CMap::forObjects(std::function<void(std::shared_ptr<CMapObject>)> func,
                       std::function<bool(std::shared_ptr<CMapObject>)> predicate) {
     auto clone = mapObjects;
     for (std::shared_ptr<CMapObject> object : clone |
-            boost::adaptors::map_values |
-            boost::adaptors::filtered(predicate)) {
+                                              boost::adaptors::map_values |
+                                              boost::adaptors::filtered(predicate)) {
         func(object);
     }
 }
@@ -204,8 +213,8 @@ void CMap::forObjects(std::function<void(std::shared_ptr<CMapObject>)> func,
 void CMap::forTiles(std::function<void(std::shared_ptr<CTile>)> func,
                     std::function<bool(std::shared_ptr<CTile>)> predicate) {
     for (std::shared_ptr<CTile> tile:(tiles |
-            boost::adaptors::map_values |
-            boost::adaptors::filtered(predicate))) {
+                                      boost::adaptors::map_values |
+                                      boost::adaptors::filtered(predicate))) {
         func(tile);
     }
 }
@@ -214,8 +223,8 @@ void CMap::forTiles(std::function<void(std::shared_ptr<CTile>)> func,
 void CMap::removeObjects(std::function<bool(std::shared_ptr<CMapObject>)> func) {
     auto clone = mapObjects;
     for (std::shared_ptr<CMapObject> object : clone |
-            boost::adaptors::map_values |
-            boost::adaptors::filtered(func)) {
+                                              boost::adaptors::map_values |
+                                              boost::adaptors::filtered(func)) {
         removeObject(object);
     }
 }
@@ -254,9 +263,9 @@ void CMap::move() {
 
         //TODO: return future and replace
         vstd::join(map->mapObjects |
-                           boost::adaptors::map_values |
-                           boost::adaptors::filtered(pred) |
-                           boost::adaptors::transformed(controller))
+                   boost::adaptors::map_values |
+                   boost::adaptors::filtered(pred) |
+                   boost::adaptors::transformed(controller))
                 ->thenLater(end_callback);
     });
 }
@@ -270,9 +279,9 @@ void CMap::resolveFights() {
         };
         auto pred = [mapObject](std::shared_ptr<CMapObject> visitor) {
             return vstd::cast<CCreature>(mapObject) && vstd::cast<CCreature>(visitor)
-                                                       && mapObject != visitor
-                                                       && mapObject->getCoords() == visitor->getCoords()
-                                                       && !mapObject->isAffiliatedWith(visitor);
+                   && mapObject != visitor
+                   && mapObject->getCoords() == visitor->getCoords()
+                   && !mapObject->isAffiliatedWith(visitor);
         };
         forObjects(action, pred);
     });

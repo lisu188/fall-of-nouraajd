@@ -86,7 +86,7 @@ def load(self, context):
         def performAction(self, first, second):
             Attack().onAction(first, second)
             damage = Damage()
-            damage.setNumericProperty('frost', first.getStats().getNumericProperty('intelligence') * 75.0 // 100.0)
+            damage.setNumericProperty('frost', int(first.getStats().getNumericProperty('intelligence') * 75.0 // 100.0))
             second.hurt(damage)
 
     @register(context)
