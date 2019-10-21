@@ -22,6 +22,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CTags.h"
 #include "core/CGame.h"
 #include "core/CMap.h"
+
 bool CFightHandler::fight(std::shared_ptr<CCreature> a, std::shared_ptr<CCreature> b) {
     bool retVal = false;
     a->getFightController()->start(a, b);
@@ -61,8 +62,11 @@ void CFightHandler::defeatedCreature(std::shared_ptr<CCreature> a, std::shared_p
     //TODO: loot handler
     std::set<std::shared_ptr<CItem>> items = b->getGame()->getLootHandler()->getLoot(b->getScale());
     for (std::shared_ptr<CItem> item:b->getInInventory()) {
-        b->removeFromInventory(item);
-        items.insert(item);
+        //TODO: this check should be more polymorphic
+        if (!vstd::castable<CPlayer>(b) || !item->hasTag("quest")) {
+            b->removeFromInventory(item);
+            items.insert(item);
+        }
     }
     a->addItem(items);
     a->getMap()->removeObject(b);

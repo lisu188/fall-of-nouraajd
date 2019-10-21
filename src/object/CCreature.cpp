@@ -108,14 +108,6 @@ void CCreature::removeFromInventory(std::shared_ptr<CItem> item) {
     }
 }
 
-void CCreature::removeFromEquipped(std::shared_ptr<CItem> item) {
-    if (hasEquipped(item)) {
-        equipItem(getSlotWithItem(item), nullptr);
-    }
-    //TODO: rethink this
-    removeFromInventory(item);
-}
-
 std::set<std::shared_ptr<CItem> > CCreature::getInInventory() {
     return items;
 }
