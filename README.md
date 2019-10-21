@@ -8,5 +8,5 @@ c++ dark fantasy game
 ./configure.sh
 cd cmake-build-release
 make _game_unity
-python3 play.py --map map1 --player Warrior
+python3 play.py
 </pre>
