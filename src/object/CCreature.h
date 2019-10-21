@@ -166,8 +166,6 @@ public:
 
     void removeFromInventory(std::shared_ptr<CItem> item);
 
-    void removeFromEquipped(std::shared_ptr<CItem> item);
-
     std::set<std::shared_ptr<CItem> > getInInventory();
 
     CItemMap getEquipped();
