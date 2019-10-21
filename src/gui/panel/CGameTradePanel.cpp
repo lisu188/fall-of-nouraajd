@@ -172,7 +172,7 @@ void CGameTradePanel::selectMarket(std::weak_ptr<CItem> selection) {
 }
 
 void CGameTradePanel::selectInventory(std::weak_ptr<CItem> selection) {
-    if (selection.lock()) {
+    if (selection.lock() && !selection.lock()->hasTag("quest")) {
         if (vstd::ctn(selectedInventory, selection, [](auto a, auto b) { return a.lock() == b.lock(); })) {
             vstd::erase(selectedInventory, selection, [](auto a, auto b) { return a.lock() == b.lock(); });
         } else {
