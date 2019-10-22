@@ -11,9 +11,10 @@ def load(self, context):
         def onCreate(self, event):
             self.setStringProperty("animation", "images/misc/closed_door")
             self.setBoolProperty('enabled', False)
+            self.setBoolProperty('destroyed', False)
 
         def onTurn(self, event):
-            if self.getBoolProperty('enabled') and randint(1, 10) == 10:
+            if self.getBoolProperty('enabled') and not self.getBoolProperty('destroyed') and randint(1, 10) == 10:
                 logger("Spawning new creature")
                 if randint(1, 10) == 10:
                     logger("Spawning mage")
@@ -21,6 +22,15 @@ def load(self, context):
                 else:
                     logger("Spawning grunt")
                     self.getMap().addObjectByName('siegePritz', self.getCoords())
+
+        def onEnter(self, event):
+            if self.getMap().getPlayer().hasItem(lambda it: it.hasTag('wand')) \
+                    and self.getMap().getGame().getGuiHandler().showDialog(
+                "Do You want to seal the gate?"):
+                self.getMap().getPlayer().removeQuestItem(lambda it: it.hasTag('wand'))
+                self.setBoolProperty('destroyed', True)
+                self.setStringProperty("animation", "images/misc/closed_door")
+                self.getMap().replaceTile('MountainTile', self.getCoords())
 
     @trigger(context, "onTurn", "triggerAnchor")
     class TurnTrigger(CTrigger):

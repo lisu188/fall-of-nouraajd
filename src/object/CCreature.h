@@ -164,7 +164,13 @@ public:
 
     void addItem(std::string item);
 
-    void removeFromInventory(std::shared_ptr<CItem> item);
+    void removeItem(std::shared_ptr<CItem> item, bool quest = false);
+
+    void removeItem(std::function<bool(std::shared_ptr<CItem>)> item, bool quest = false);
+
+    void removeQuestItem(std::shared_ptr<CItem> item);
+
+    void removeQuestItem(std::function<bool(std::shared_ptr<CItem>)> item);
 
     std::set<std::shared_ptr<CItem> > getInInventory();
 
@@ -176,17 +182,17 @@ public:
 
     bool hasEquipped(std::shared_ptr<CItem> item);
 
-    bool hasEquipped(std::string item);
+    bool hasEquipped(std::function<bool(std::shared_ptr<CItem>)> item);
 
     void equipItem(std::string i, std::shared_ptr<CItem> newItem);
 
     bool hasInInventory(std::shared_ptr<CItem> item);
 
-    bool hasInInventory(std::string item);
+    bool hasInInventory(std::function<bool(std::shared_ptr<CItem>)> item);
 
     bool hasItem(std::shared_ptr<CItem> item);
 
-    bool hasItem(std::string item);
+    bool hasItem(std::function<bool(std::shared_ptr<CItem>)> item);
 
     int getGold();
 
