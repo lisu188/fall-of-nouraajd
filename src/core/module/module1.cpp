@@ -23,6 +23,8 @@ using namespace boost::python;
 
 void initModule1() {
     class_<CGameObject, boost::noncopyable, std::shared_ptr<CGameObject>>("CGameObject", no_init)
+            .def("getName", &CGameObject::getName)
+            .def("getType", &CGameObject::getType)
             .def("getGame", &CGameObject::getGame)
             .def("getStringProperty", &CGameObject::getStringProperty)
             .def("getNumericProperty", &CGameObject::getNumericProperty)
@@ -37,6 +39,7 @@ void initModule1() {
             .def("clone", &CGameObject::clone<CGameObject>)
             .def("addTag", &CGameObject::addTag)
             .def("removeTag", &CGameObject::removeTag)
+            .def("hasTag", &CCreature::hasTag)
             .def("__setattr__", &CGameObject::setStringProperty)
             .def("__setattr__", &CGameObject::setNumericProperty)
             .def("__getattr__", &CGameObject::getStringProperty)

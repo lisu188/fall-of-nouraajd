@@ -64,7 +64,7 @@ void CFightHandler::defeatedCreature(std::shared_ptr<CCreature> a, std::shared_p
     for (std::shared_ptr<CItem> item:b->getInInventory()) {
         //TODO: this check should be more polymorphic
         if (!vstd::castable<CPlayer>(b) || !item->hasTag("quest")) {
-            b->removeFromInventory(item);
+            b->removeItem(item);
             items.insert(item);
         }
     }

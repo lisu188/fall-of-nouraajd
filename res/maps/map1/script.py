@@ -29,7 +29,7 @@ def load(self, context):
     @register(context)
     class RolfQuest(CQuest):
         def isCompleted(self):
-            return self.getGame().getMap().getPlayer().hasItem('skullOfRolf')
+            return self.getGame().getMap().getPlayer().hasItem(lambda it: it.getName() == 'skullOfRolf')
 
         def onComplete(self):
             pass

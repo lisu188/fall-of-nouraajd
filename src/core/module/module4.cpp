@@ -41,7 +41,9 @@ void initModule4() {
     void ( CCreature::*hurtFloat )(float) = &CCreature::hurt;
     void ( CCreature::*hurtDmg )(std::shared_ptr<Damage>) = &CCreature::hurt;
     void ( CCreature::*addItem )(std::string) = &CCreature::addItem;
-    bool ( CCreature::*hasItem )(std::string) = &CCreature::hasItem;
+    bool ( CCreature::*hasItem )(std::function<bool(std::shared_ptr<CItem>)>) = &CCreature::hasItem;
+    void ( CCreature::*removeItem )(std::function<bool(std::shared_ptr<CItem>)>,bool) = &CCreature::removeItem;
+    void ( CCreature::*removeQuestItem )(std::function<bool(std::shared_ptr<CItem>)>) = &CCreature::removeQuestItem;
     class_<CCreature, bases<CMapObject>, boost::noncopyable, std::shared_ptr<CCreature>>("CCreature", no_init)
             .def("getDmg", &CCreature::getDmg)
             .def("hurt", hurtInt)
@@ -61,7 +63,9 @@ void initModule4() {
             .def("addExp", &CCreature::addExp)
             .def("useAction", &CCreature::useAction)
             .def("hasItem", hasItem)
-            .def("addItem", addItem);
+            .def("addItem", addItem)
+            .def("removeItem", removeItem)
+            .def("removeQuestItem", removeQuestItem);
     class_<CPlayer, bases<CCreature>, boost::noncopyable, std::shared_ptr<CPlayer>>("CPlayer")
             .def("addQuest", &CPlayer::addQuest);
     class_<CMonster, bases<CCreature>, boost::noncopyable, std::shared_ptr<CMonster>>("CMonster");
