@@ -59,7 +59,6 @@ CMapGraphicsObject::CMapGraphicsObject() {
         gui->getGame()->getMap()->move();
         return true;
     });
-
     registerEventCallback([](std::shared_ptr<CGui> gui, SDL_Event *event) {
         return event->type == SDL_KEYDOWN && event->key.keysym.sym == SDLK_s;
     }, [](std::shared_ptr<CGui> gui, SDL_Event *event) {
@@ -72,7 +71,7 @@ void CMapGraphicsObject::render(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_R
     if (std::shared_ptr<CMap> map = gui->getGame()->getMap()) {
         Coords playerCoords = map->getPlayer()->getCoords();
         std::unordered_set<Coords> tiles;
-        for (int x = 0; x < gui->getTileCountX(); x++)
+        for (int x = 0; x <= gui->getTileCountX(); x++)
             for (int y = 0; y <= gui->getTileCountY(); y++) {
                 std::shared_ptr<CTile> tile = map->getTile(playerCoords.x - gui->getTileCountX() / 2 + x,
                                                            playerCoords.y - gui->getTileCountY() / 2 + y,
