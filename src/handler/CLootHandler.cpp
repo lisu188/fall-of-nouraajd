@@ -29,7 +29,7 @@ CLootHandler::CLootHandler(std::shared_ptr<CGame> game) : game(game) {
         std::shared_ptr<CItem> item = game->createObject<CItem>(type);
         if (item) {
             int power = item->getPower();
-            if (power > 0) {
+            if (power > 0 && !item->hasTag("quest")) {
                 this->insert(std::make_pair(type, power));
             }
         }
