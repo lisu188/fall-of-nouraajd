@@ -64,7 +64,7 @@ void CTextManager::drawText(std::string text, int x, int y, int w) {
 void CTextManager::drawTextCentered(std::string text, int x, int y, int w, int h) {
     if (text.length() != 0) {
         SDL_Rect actual;
-        SDL_Texture *pTexture = getTexture(text);
+        SDL_Texture *pTexture = getTexture(text, w);
         SDL_SAFE(SDL_QueryTexture(pTexture, NULL, NULL, &actual.w, &actual.h));
         actual = CUtil::boxInBox(SDL_Rect{x, y, w, h}, &actual);
         SDL_SAFE(SDL_RenderCopy(_gui.lock()->getRenderer(), pTexture, NULL, &actual));
