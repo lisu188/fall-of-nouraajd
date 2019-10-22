@@ -31,13 +31,9 @@ public:
 
     void render(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> pos, int frameTime) override;
 
-    std::shared_ptr<CMapStringString> getPanelKeys() {
-        return panelKeys;
-    };
+    std::shared_ptr<CMapStringString> getPanelKeys();
 
-    void setPanelKeys(std::shared_ptr<CMapStringString> panelKeys) {
-        this->panelKeys = panelKeys;
-    }
+    void setPanelKeys(std::shared_ptr<CMapStringString> panelKeys);
 
     void initialize();
 
