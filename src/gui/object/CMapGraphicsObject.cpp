@@ -116,3 +116,11 @@ void CMapGraphicsObject::initialize() {
         });
     }
 }
+
+std::shared_ptr<CMapStringString> CMapGraphicsObject::getPanelKeys() {
+    return panelKeys;
+}
+
+void CMapGraphicsObject::setPanelKeys(std::shared_ptr<CMapStringString> panelKeys) {
+    this->panelKeys = panelKeys;
+}
