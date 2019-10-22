@@ -82,7 +82,7 @@ void CMarket::buyItem(std::shared_ptr<CCreature> cre, std::shared_ptr<CItem> ite
     vstd::fail_if(!vstd::ctn(items, item), "tried to sell not owned item");
     cre->addGold(price);
     this->items.insert(item);
-    cre->removeFromInventory(item);
+    cre->removeItem(item);
 }
 
 int CMarket::getBuyCost(std::shared_ptr<CItem> item) {

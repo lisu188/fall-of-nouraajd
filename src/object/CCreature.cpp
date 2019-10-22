@@ -99,12 +99,20 @@ void CCreature::addItem(std::shared_ptr<CItem> item) {
     addItem(list);
 }
 
-void CCreature::removeFromInventory(std::shared_ptr<CItem> item) {
+void CCreature::removeItem(std::shared_ptr<CItem> item, bool quest) {
     //TODO: this check should be more polymorphic
-    if (vstd::castable<CPlayer>(this->ptr<CCreature>()) && item->hasTag("quest")) {
+    if (!quest && vstd::castable<CPlayer>(this->ptr<CCreature>()) && item->hasTag("quest")) {
         vstd::logger::fatal("Tried to drop quest item");
     } else {
         items.erase(item);
+    }
+}
+
+void CCreature::removeItem(std::function<bool(std::shared_ptr<CItem>)> item_pred, bool quest) {
+    for (auto item:items) {
+        if (item_pred(item)) {
+            removeItem(item, quest);
+        }
     }
 }
 
@@ -346,17 +354,19 @@ void CCreature::equipItem(std::string i, std::shared_ptr<CItem> newItem) {
     if (vstd::ctn(equipped, i)) {
         std::shared_ptr<CItem> oldItem = equipped.at(i);
 
-        getMap()->getEventHandler()->gameEvent(oldItem, std::make_shared<CGameEventCaused>(CGameEvent::Type::onUnequip,
-                                                                                           this->ptr<CCreature>()));
+        getMap()->getEventHandler()->gameEvent(oldItem,
+                                               std::make_shared<CGameEventCaused>(CGameEvent::Type::onUnequip,
+                                                                                  this->ptr<CCreature>()));
         this->addItem(oldItem);
         if (newItem == oldItem) {
             newItem = nullptr;
         }
     }
     if (newItem) {
-        getMap()->getEventHandler()->gameEvent(newItem, std::make_shared<CGameEventCaused>(CGameEvent::Type::onEquip,
-                                                                                           this->ptr<CCreature>()));
-        removeFromInventory(newItem);
+        getMap()->getEventHandler()->gameEvent(newItem,
+                                               std::make_shared<CGameEventCaused>(CGameEvent::Type::onEquip,
+                                                                                  this->ptr<CCreature>()));
+        removeItem(newItem);
         attribChange();
         equipped[i] = newItem;
     } else {
@@ -368,17 +378,15 @@ bool CCreature::hasInInventory(std::shared_ptr<CItem> item) {
     return vstd::ctn(items, item);
 }
 
-bool CCreature::hasInInventory(std::string item) {
-    return std::any_of(items.begin(), items.end(), [=](std::shared_ptr<CItem> ob) {
-        return ob->getName() == item;
-    });
+bool CCreature::hasInInventory(std::function<bool(std::shared_ptr<CItem>)> item) {
+    return std::any_of(items.begin(), items.end(), item);
 }
 
 bool CCreature::hasItem(std::shared_ptr<CItem> item) {
     return hasInInventory(item) || hasEquipped(item);
 }
 
-bool CCreature::hasItem(std::string item) {
+bool CCreature::hasItem(std::function<bool(std::shared_ptr<CItem>)> item) {
     return hasInInventory(item) || hasEquipped(item);
 }
 
@@ -417,9 +425,9 @@ void CCreature::attribChange() {
     manaMax = stats->getMainValue() * 7;
 }
 
-bool CCreature::hasEquipped(std::string item) {
+bool CCreature::hasEquipped(std::function<bool(std::shared_ptr<CItem>)> item) {
     for (auto it:equipped) {
-        if (it.second->getName() == item) {
+        if (item(it.second)) {
             return true;
         }
     }
@@ -565,7 +573,8 @@ void CCreature::setController(std::shared_ptr<CController> controller) {
 
 std::string CCreature::to_string() {
     return vstd::join({CGameObject::to_string(), "(",
-                       vstd::join({vstd::str(getPosX()), vstd::str(getPosY()), vstd::str(getPosZ())}, ","), ")"}, "");
+                       vstd::join({vstd::str(getPosX()), vstd::str(getPosY()), vstd::str(getPosZ())}, ","), ")"},
+                      "");
 }
 
 std::shared_ptr<CFightController> CCreature::getFightController() {
@@ -598,7 +607,7 @@ void CCreature::useItem(std::shared_ptr<CItem> item) {
                                                std::make_shared<CGameEventCaused>(CGameEvent::Type::onUse,
                                                                                   this->ptr()));
 
-        removeFromInventory(item);
+        removeItem(item);
     }
 }
 
@@ -608,4 +617,12 @@ void CCreature::setLevel(int level) {
 
 int CCreature::getExpForLevel(int level) {
     return (level - 1) * level * 500;
+}
+
+void CCreature::removeQuestItem(std::shared_ptr<CItem> item) {
+    removeItem(item, true);
+}
+
+void CCreature::removeQuestItem(std::function<bool(std::shared_ptr<CItem>)> item) {
+    removeItem(item, true);
 }
