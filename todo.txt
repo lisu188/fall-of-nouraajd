@@ -45,3 +45,4 @@
 //TODO: inventory panel
     //TODO: selection of equipped should cancel selections in inventory and vice versa
 //TODO: implement property change listeners to enable AOP
+//TODO: calculate stats on demand, do not refresh after gear change
