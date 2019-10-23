@@ -92,7 +92,7 @@ CGameInventoryPanel::CGameInventoryPanel() {
                (selectedEquipped.lock() && selectedEquipped.lock() == object.second);
     })->withDraw(
             [](auto gui, auto item, auto loc, auto frameTime) {
-                item.second->getAnimationObject()->render(gui, loc, frameTime);
+                item.second->getGraphicsObject()->render(gui, loc, frameTime);
             });
 }
 

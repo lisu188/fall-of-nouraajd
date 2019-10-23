@@ -133,12 +133,14 @@ CResourcesProvider::CResourcesProvider() {
 
 }
 
-std::shared_ptr<CAnimation> CAnimationProvider::getAnimation(std::string _path) {
-    std::string path = CResourcesProvider::getInstance()->getPath(_path);
+std::shared_ptr<CAnimation> CAnimationProvider::getAnimation(std::string path, std::string tooltip) {
+    if (!tooltip.empty()) {
+        return std::make_shared<CTooltipAnimation>(getAnimation(path), tooltip);
+    }
     if (boost::filesystem::is_directory(path)) {
         return std::make_shared<CDynamicAnimation>(path);
     }
-    path = CResourcesProvider::getInstance()->getPath(_path + ".png");
+    path = CResourcesProvider::getInstance()->getPath(path + ".png");
     if (boost::filesystem::is_regular_file(path)) {
         return std::make_shared<CStaticAnimation>(path);
     }
