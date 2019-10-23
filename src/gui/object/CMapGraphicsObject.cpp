@@ -79,7 +79,7 @@ void CMapGraphicsObject::render(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_R
 
                 tiles.insert(tile->getCoords());
 
-                tile->getAnimationObject()->render(gui, RECT(
+                tile->getGraphicsObject()->render(gui, RECT(
                         gui->getTileSize() * x + pos->x,
                         gui->getTileSize() * y + pos->y,
                         gui->getTileSize(),
@@ -87,7 +87,7 @@ void CMapGraphicsObject::render(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_R
             }
         map->forObjects([&](std::shared_ptr<CMapObject> ob) {
             if (vstd::ctn(tiles, ob->getCoords())) {
-                ob->getAnimationObject()->render(gui, RECT(
+                ob->getGraphicsObject()->render(gui, RECT(
                         gui->getTileSize() * (ob->getCoords().x + gui->getTileCountX() / 2 - playerCoords.x) +
                         pos->x,
                         gui->getTileSize() * (ob->getCoords().y + gui->getTileCountY() / 2 - playerCoords.y) +

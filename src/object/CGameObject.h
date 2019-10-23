@@ -27,13 +27,14 @@ class CMap;
 
 class CGame;
 
-class CAnimation;
+class CGameGraphicsObject;
 
 class CGameObject : public vstd::stringable, public std::enable_shared_from_this<CGameObject> {
 V_META(CGameObject, vstd::meta::empty,
        V_PROPERTY(CGameObject, std::string, name, getName, setName),
        V_PROPERTY(CGameObject, std::string, type, getType, setType),
        V_PROPERTY(CGameObject, std::string, animation, getAnimation, setAnimation),
+       V_PROPERTY(CGameObject, std::string, tooltip, getTooltip, setTooltip),
        V_PROPERTY(CGameObject, std::set<std::string>, tags, getTags, setTags)
 )
 
@@ -121,16 +122,21 @@ public:
 
     void setAnimation(std::string animation);
 
-    std::shared_ptr<CAnimation> getAnimationObject();
+    std::string getTooltip();
+
+    void setTooltip(std::string tooltip);
+
+    std::shared_ptr<CGameGraphicsObject> getGraphicsObject();
 
 private:
     std::shared_ptr<CGameObject> _clone();
 
-    vstd::lazy<CAnimation> animationObject;
+    vstd::lazy<CGameGraphicsObject> graphicsObject;
 
     std::string type;
     std::string name;
     std::string animation;
+    std::string tooltip;
 
     std::set<std::string> tags;
     std::weak_ptr<CGame> game;

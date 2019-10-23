@@ -126,12 +126,22 @@ std::string CGameObject::getAnimation() {
 
 void CGameObject::setAnimation(std::string animation) {
     //TODO: implement this in AOP way
-    animationObject.clear();
+    graphicsObject.clear();
     this->animation = animation;
 }
 
-std::shared_ptr<CAnimation> CGameObject::getAnimationObject() {
-    return animationObject.get([this]() {
-        return CAnimationProvider::getAnimation(getAnimation());
+std::string CGameObject::getTooltip() {
+    return tooltip;
+}
+
+void CGameObject::setTooltip(std::string tooltip) {
+    //TODO: implement this in AOP way
+    graphicsObject.clear();
+    this->tooltip = tooltip;
+}
+
+std::shared_ptr<CGameGraphicsObject> CGameObject::getGraphicsObject() {
+    return graphicsObject.get([this]() {
+        return CAnimationProvider::getAnimation(getAnimation(), getTooltip());
     });
 }

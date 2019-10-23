@@ -46,6 +46,7 @@ public:
     void save(std::string file, std::shared_ptr<json> data);
 
     CResourcesProvider();
+
 private:
     static std::list<std::string> searchPath;
 };
@@ -66,5 +67,5 @@ private:
 
 class CAnimationProvider {
 public:
-    static std::shared_ptr<CAnimation> getAnimation(std::string path);
+    static std::shared_ptr<CAnimation> getAnimation(std::string path, std::string tooltip = "");
 };
