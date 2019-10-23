@@ -158,7 +158,7 @@ void CGameFightPanel::drawEnemy(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_R
             pRect->y + ((getYSize() - gui->getTileSize()) / 2 - size / 2),
             size,
             size);
-    enemy.lock()->getAnimationObject()->render(gui, loc, frameTime);
+    enemy.lock()->getGraphicsObject()->render(gui, loc, frameTime);
 
     CStatsGraphicsUtil::drawStats(gui, enemy.lock(), loc->x, loc->y + loc->h, loc->w, loc->h / 4.0, false, false);
 }
