@@ -28,7 +28,7 @@ void CGameFightPanel::panelRender(std::shared_ptr<CGui> gui, std::shared_ptr<SDL
 
 void CGameFightPanel::drawInteractions(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> pRect, int frameTime) {
     std::shared_ptr<SDL_Rect> location = std::make_shared<SDL_Rect>(*pRect.get());//cloning, do not remove
-    location->y += (getYSize() - gui->getTileSize());
+    location->y += (getWidth() - gui->getTileSize());
 
     interactionsView->drawCollection(gui,
                                      location,
@@ -46,7 +46,7 @@ CGameFightPanel::CGameFightPanel() {
     interactionsView = std::make_shared<CListView<std::set<
             std::shared_ptr<
                     CInteraction>>>>(
-            getXSize() / tileSize, 1, tileSize, true, selectionBarThickness)->withCollection(
+            getWidth() / tileSize, 1, tileSize, true, selectionBarThickness)->withCollection(
             [](std::shared_ptr<CGui> gui) {
                 return gui->getGame()->getMap()->getPlayer()->getInteractions();
             })->withCallback(
@@ -74,7 +74,7 @@ CGameFightPanel::CGameFightPanel() {
 
     itemsView = std::make_shared<CListView<std::set<
             std::shared_ptr<
-                    CItem>>>>(getXSize() / tileSize, 1, tileSize, true, selectionBarThickness)->withCollection(
+                    CItem>>>>(getWidth() / tileSize, 1, tileSize, true, selectionBarThickness)->withCollection(
             [](std::shared_ptr<CGui> gui) {
                 return gui->getGame()->getMap()->getPlayer()->getItems();
             })->withCallback(
@@ -115,14 +115,14 @@ bool CGameFightPanel::isInInteractions(std::shared_ptr<CGui> gui, int x, int y) 
     return y > (getInteractionsLocation(gui)) && y < (getInteractionsLocation(gui) + tileSize);
 }
 
-int CGameFightPanel::getInteractionsLocation(std::shared_ptr<CGui> gui) { return getYSize() - gui->getTileSize(); }
+int CGameFightPanel::getInteractionsLocation(std::shared_ptr<CGui> gui) { return getHeight() - gui->getTileSize(); }
 
 //TODO: make this method strict
 bool CGameFightPanel::isInInventory(std::shared_ptr<CGui> gui, int x, int y) {
     return y > getInventoryLocation(gui) && y < getInventoryLocation(gui) + tileSize;
 }
 
-int CGameFightPanel::getInventoryLocation(std::shared_ptr<CGui> gui) { return getYSize() - (gui->getTileSize() * 2); }
+int CGameFightPanel::getInventoryLocation(std::shared_ptr<CGui> gui) { return getHeight() - (gui->getTileSize() * 2); }
 
 
 int CGameFightPanel::getSelectionBarThickness() {
@@ -154,8 +154,8 @@ void CGameFightPanel::setEnemy(std::shared_ptr<CCreature> en) {
 void CGameFightPanel::drawEnemy(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> pRect, int frameTime) {
     int size = gui->getTileSize() * 4;
     std::shared_ptr<SDL_Rect> loc = RECT(
-            pRect->x + (getXSize() / 2 - size / 2),
-            pRect->y + ((getYSize() - gui->getTileSize()) / 2 - size / 2),
+            pRect->x + (getWidth() / 2 - size / 2),
+            pRect->y + ((getHeight() - gui->getTileSize()) / 2 - size / 2),
             size,
             size);
     enemy.lock()->getGraphicsObject()->render(gui, loc, frameTime);

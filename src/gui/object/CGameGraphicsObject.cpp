@@ -16,7 +16,7 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #include "CGameGraphicsObject.h"
-
+#include "gui/CGui.h"
 
 void CGameGraphicsObject::render(std::shared_ptr<CGui> reneder, std::shared_ptr<SDL_Rect> pos, int frameTime) {
 
@@ -28,11 +28,25 @@ bool CGameGraphicsObject::event(std::shared_ptr<CGui> gui, SDL_Event *event) {
             return true;
         }
     }
+    if (event->type == SDL_KEYDOWN) {
+        return this->keyboardEvent(gui, event->key.keysym.sym);
+    } else if (event->type == SDL_MOUSEBUTTONDOWN) {
+        std::pair<int, int> translated = translatePos(gui, event->button.x, event->button.y);
+        if (translated.first >= 0 && translated.first < width && translated.second >= 0 &&
+            translated.second < height) {
+            return this->mouseEvent(gui, translated.first, translated.second);
+        }
+    }
     return false;
 }
 
 void
 CGameGraphicsObject::registerEventCallback(std::function<bool(std::shared_ptr<CGui>, SDL_Event *)> pred,
                                            std::function<bool(std::shared_ptr<CGui>, SDL_Event *)> func) {
-    eventCallbackList.push_back(std::make_pair(pred, func));
+    eventCallbackList.emplace_back(pred, func);
+}
+
+std::pair<int, int> CGameGraphicsObject::translatePos(std::shared_ptr<CGui> gui, int x, int y) {
+    std::shared_ptr<SDL_Rect> transPos = getRect(RECT(0, 0, parent.lock()->getWidth(), parent.lock()->getHeight()));
+    return std::make_pair<int, int>(x - transPos->x, y - transPos->y);
 }
