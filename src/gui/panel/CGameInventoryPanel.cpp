@@ -118,7 +118,7 @@ bool CGameInventoryPanel::isInInventory(std::shared_ptr<CGui> gui, int x, int y)
 }
 
 bool CGameInventoryPanel::isInEquipped(std::shared_ptr<CGui> gui, int x, int y) {
-    return x >= getXSize() - gui->getTileSize() * xInv && y < gui->getTileSize() * yInv && !isInInventory(gui, x, y);
+    return x >= getWidth() - gui->getTileSize() * xInv && y < gui->getTileSize() * yInv && !isInInventory(gui, x, y);
 }
 
 int CGameInventoryPanel::getXInv() {
