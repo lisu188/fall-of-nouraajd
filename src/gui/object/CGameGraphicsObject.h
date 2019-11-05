@@ -21,12 +21,16 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 class CGui;
 
-
 class CGameGraphicsObject : public CGameObject {
-V_META(CGameGraphicsObject, CGameObject, vstd::meta::empty())
+V_META(CGameGraphicsObject, CGameObject,
+       V_PROPERTY(CGameGraphicsObject, int, width, getWidth, setWidth),
+       V_PROPERTY(CGameGraphicsObject, int, height, getHeight, setHeight))
 
     std::list<std::pair<std::function<bool(std::shared_ptr<CGui>, SDL_Event *)>, std::function<bool(
             std::shared_ptr<CGui>, SDL_Event *) >>> eventCallbackList;
+    std::set<std::shared_ptr<CGameGraphicsObject>> children;
+    std::weak_ptr<CGameGraphicsObject> parent;
+
 public:
     virtual void render(std::shared_ptr<CGui> reneder, std::shared_ptr<SDL_Rect> pos, int frameTime);
 
@@ -34,4 +38,37 @@ public:
 
     void registerEventCallback(std::function<bool(std::shared_ptr<CGui>, SDL_Event *)> pred,
                                std::function<bool(std::shared_ptr<CGui>, SDL_Event *)> func);
+
+    int getWidth() {
+        return width;
+    }
+
+    void setWidth(int _width) {
+        width = _width;
+    }
+
+    int getHeight() {
+        return height;
+    }
+
+    void setHeight(int _height) {
+        height = _height;
+    }
+
+private:
+    int width = 0;
+    int height = 0;
+
+    std::pair<int, int> translatePos(std::shared_ptr<CGui> gui, int x, int y);
+
+protected:
+    virtual std::shared_ptr<SDL_Rect> getRect(std::shared_ptr<SDL_Rect> pos) {
+        //TODO: useBoxInBox
+        //TODO: this is centered!
+        return RECT(
+                pos->x + pos->w / 2 - this->width / 2,
+                pos->y + pos->h / 2 - this->height / 2,
+                width,
+                height);
+    }
 };
