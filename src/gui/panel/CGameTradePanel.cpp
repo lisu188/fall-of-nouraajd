@@ -105,7 +105,7 @@ bool CGameTradePanel::isInInventory(std::shared_ptr<CGui> gui, int x, int y) {
 }
 
 bool CGameTradePanel::isInMarket(std::shared_ptr<CGui> gui, int x, int y) {
-    return x >= getXSize() - gui->getTileSize() * 4 && y < gui->getTileSize() * 4;
+    return x >= getWidth() - gui->getTileSize() * 4 && y < gui->getTileSize() * 4;
 }
 
 int CGameTradePanel::getXInv() {
