@@ -17,7 +17,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #include "CGamePanel.h"
 #include "gui/CGui.h"
-#include "core/CWidget.h"
+#include "gui/object/CWidget.h"
 
 
 void CGamePanel::renderObject(std::shared_ptr<CGui> gui, int frameTime) {
