@@ -34,7 +34,7 @@ void CGui::render(int frameTime) {
     SDL_SAFE(SDL_SetRenderDrawColor(renderer, BLACK));
     SDL_SAFE(SDL_RenderClear(renderer));
     for (std::shared_ptr<CGameGraphicsObject> object:guiStack) {
-        object->render(this->ptr<CGui>(), RECT(0, 0, width, height), frameTime);
+        object->render(this->ptr<CGui>(), frameTime);
     }
     SDL_SAFE(SDL_RenderPresent(renderer));
 }

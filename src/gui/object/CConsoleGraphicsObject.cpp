@@ -20,7 +20,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "gui/CTextManager.h"
 
 void CConsoleGraphicsObject::renderObject(std::shared_ptr<CGui> gui, int frameTime) {
-    gui->getTextManager()->drawText(consoleState, pos->x, pos->y + pos->h - height, width);
+    gui->getTextManager()->drawText(consoleState, getRect()->x, getRect()->y + getRect()->h - height, width);
 }
 
 
