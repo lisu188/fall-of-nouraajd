@@ -28,7 +28,8 @@ class CGamePanel : public CGameGraphicsObject {
 V_META(CGamePanel, CGameGraphicsObject,
        V_PROPERTY(CGamePanel, std::set<std::shared_ptr<CWidget>>, widgets, getWidgets, setWidgets))
 public:
-    void render(std::shared_ptr<CGui> reneder, std::shared_ptr<SDL_Rect> pos, int frameTime) override;
+    void renderObject(std::shared_ptr<CGui> reneder,  int frameTime) override;
+
 private:
     std::set<std::shared_ptr<CWidget>> widgets;
 
@@ -37,12 +38,8 @@ public:
 
     void setWidgets(std::set<std::shared_ptr<CWidget>> widgets);
 
-protected:
-    virtual void panelRender(std::shared_ptr<CGui> shared_ptr, std::shared_ptr<SDL_Rect> pRect, int i);
+    bool keyboardEvent(std::shared_ptr<CGui> sharedPtr, SDL_EventType type, SDL_Keycode i) override;
 
-    virtual void panelKeyboardEvent(std::shared_ptr<CGui> shared_ptr, SDL_Keycode i);
-
-    virtual void panelMouseEvent(std::shared_ptr<CGui> shared_ptr, int x, int y);
-
+    bool mouseEvent(std::shared_ptr<CGui> sharedPtr, SDL_EventType type, int x, int y) override;
 };
 

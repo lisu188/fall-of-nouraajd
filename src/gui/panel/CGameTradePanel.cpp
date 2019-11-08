@@ -21,7 +21,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CMap.h"
 #include "gui/CTextManager.h"
 
-void CGameTradePanel::panelRender(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> pRect, int i) {
+
+void CGameTradePanel::renderObject(std::shared_ptr<CGui> gui, int i) {
+    auto pRect = getRect();
     drawInventory(gui, pRect, i);
     drawMarket(gui, pRect, i);
     gui->getTextManager()->drawTextCentered(vstd::str(getTotalBuyCost()), pRect->x + 200, pRect->y, 200, 200);
@@ -39,12 +41,13 @@ void CGameTradePanel::drawInventory(std::shared_ptr<CGui> gui, std::shared_ptr<S
     inventoryView->drawCollection(gui, pRect, frameTime);
 }
 
-void CGameTradePanel::panelKeyboardEvent(std::shared_ptr<CGui> gui, SDL_Keycode i) {
+bool CGameTradePanel::keyboardEvent(std::shared_ptr<CGui> gui, SDL_EventType type, SDL_Keycode i) {
     if (i == SDLK_SPACE) {
         gui->removeObject(this->ptr<CGameTradePanel>());
     } else if (i == SDLK_RETURN) {
         handleEnter(gui);
     }
+    return true;
 }
 
 
@@ -84,12 +87,14 @@ CGameTradePanel::CGameTradePanel() {
             });
 }
 
-void CGameTradePanel::panelMouseEvent(std::shared_ptr<CGui> gui, int x, int y) {
+bool CGameTradePanel::mouseEvent(std::shared_ptr<CGui> gui, SDL_EventType type, int x, int y)(
+        std::shared_ptr<CGui> gui, int x, int y) {
     if (isInInventory(gui, x, y)) {
         handleInventoryClick(gui, x, y);
     } else if (isInMarket(gui, x, y)) {
         handleMarketClick(gui, x, y);
     }
+    return true;
 }
 
 void CGameTradePanel::handleInventoryClick(std::shared_ptr<CGui> gui, int x, int y) {

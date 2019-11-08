@@ -20,38 +20,11 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CWidget.h"
 
 
-void CGamePanel::render(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> pos, int frameTime) {
-    std::shared_ptr<SDL_Rect> rect = getRect(pos);
+void CGamePanel::renderObject(std::shared_ptr<CGui> gui, int frameTime) {
+    std::shared_ptr<SDL_Rect> rect = getRect();
     SDL_RenderFillRect(gui->getRenderer(), rect.get());
     SDL_RenderCopy(gui->getRenderer(), gui->getTextureCache()->getTexture("images/panel.png"), nullptr, rect.get());
-    this->panelRender(gui, rect, frameTime);
 }
-
-void CGamePanel::panelRender(std::shared_ptr<CGui> shared_ptr, std::shared_ptr<SDL_Rect> pRect, int i) {
-    for (auto widget:widgets) {
-        this->meta()->invoke_method<void, CGamePanel,
-                std::shared_ptr<CGui>,
-                std::shared_ptr<SDL_Rect>, int>(widget->getRender(),
-                                                this->ptr<CGamePanel>(), shared_ptr,
-                                                widget->getRect(pRect), i);
-    }
-}
-
-void CGamePanel::panelKeyboardEvent(std::shared_ptr<CGui> shared_ptr, SDL_Keycode i) {
-
-}
-
-void CGamePanel::panelMouseEvent(std::shared_ptr<CGui> gui, int x, int y) {
-    for (auto widget:widgets) {
-        if (CUtil::isIn(widget->getRect(RECT(0, 0, getWidth(), getHeight())), x, y)) {
-            this->meta()->invoke_method<void, CGamePanel,
-                    std::shared_ptr<CGui>>(widget->getClick(),
-                                           this->ptr<CGamePanel>(),
-                                           gui);
-        }
-    }
-}
-
 
 std::set<std::shared_ptr<CWidget>> CGamePanel::getWidgets() {
     return widgets;
@@ -59,4 +32,12 @@ std::set<std::shared_ptr<CWidget>> CGamePanel::getWidgets() {
 
 void CGamePanel::setWidgets(std::set<std::shared_ptr<CWidget>> widgets) {
     CGamePanel::widgets = widgets;
+}
+
+bool CGamePanel::keyboardEvent(std::shared_ptr<CGui> sharedPtr, SDL_EventType type, SDL_Keycode i) {
+    return true;
+}
+
+bool CGamePanel::mouseEvent(std::shared_ptr<CGui> sharedPtr, SDL_EventType type, int x, int y) {
+    return true;
 }

@@ -35,7 +35,7 @@ public:
 
     CStaticAnimation(std::string path);
 
-    void render(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> pos, int frameTime) override;
+    void renderObject(std::shared_ptr<CGui> gui, int frameTime) override;
 
 
 };
@@ -47,7 +47,7 @@ public:
 
     CDynamicAnimation(std::string path);
 
-    void render(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> pos, int frameTime) override;
+    void renderObject(std::shared_ptr<CGui> gui, int frameTime) override;
 
 private:
     static int get_next();
@@ -62,22 +62,4 @@ private:
     vstd::cache2<std::string, std::vector<int>, get_ttl> _tables;
 
     int size = 0;
-};
-
-class CTooltipAnimation : public CAnimation {
-V_META(CTooltipAnimation, CAnimation, vstd::meta::empty())
-
-    std::shared_ptr<CAnimation> animation;
-    std::string tooltip;
-public:
-    CTooltipAnimation(std::shared_ptr<CAnimation> animation, std::string tooltip) : animation(animation),
-                                                                                    tooltip(tooltip) {
-
-    }
-
-    void render(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> pos, int frameTime) override {
-        animation->render(gui, pos, frameTime);
-    }
-
-
 };

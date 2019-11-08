@@ -21,9 +21,10 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CGame.h"
 #include "core/CMap.h"
 
-void CGameInventoryPanel::panelRender(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> pRect, int i) {
-    drawInventory(gui, pRect, i);
-    drawEquipped(gui, pRect, i);
+
+void CGameInventoryPanel::renderObject(std::shared_ptr<CGui> gui, int i) {
+    drawInventory(gui, getRect(), i);
+    drawEquipped(gui, getRect(), i);
 }
 
 void CGameInventoryPanel::drawEquipped(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> pRect, int frameTime) {
@@ -35,10 +36,6 @@ void CGameInventoryPanel::drawEquipped(std::shared_ptr<CGui> gui, std::shared_pt
 
 void CGameInventoryPanel::drawInventory(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> pRect, int frameTime) {
     inventoryView->drawCollection(gui, pRect, frameTime);
-}
-
-void CGameInventoryPanel::panelKeyboardEvent(std::shared_ptr<CGui> gui, SDL_Keycode i) {
-
 }
 
 
@@ -96,7 +93,7 @@ CGameInventoryPanel::CGameInventoryPanel() {
             });
 }
 
-void CGameInventoryPanel::panelMouseEvent(std::shared_ptr<CGui> gui, int x, int y) {
+void CGameInventoryPanel::mouseEvent(std::shared_ptr<CGui> gui, SDL_EventType type, int x, int y)  {
     if (isInInventory(gui, x, y)) {
         handleInventoryClick(gui, x, y);
     } else if (isInEquipped(gui, x, y)) {
