@@ -26,16 +26,18 @@ void CGameTextPanel::setText(std::string _text) {
     text = _text;
 }
 
-void CGameTextPanel::panelRender(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> pRect, int i) {
-    gui->getTextManager()->drawText(text, pRect->x, pRect->y, pRect->w);
+
+void CGameTextPanel::renderObject(std::shared_ptr<CGui> gui, int i) {
+    gui->getTextManager()->drawText(text, getRect()->x, getRect()->y, getRect()->w);
 
 }
 
-void CGameTextPanel::panelKeyboardEvent(std::shared_ptr<CGui> gui, SDL_Keycode i) {
+bool CGameTextPanel::keyboardEvent(std::shared_ptr<CGui> gui, SDL_EventType type, SDL_Keycode i) {
 //TODO: get rid of this
     if (i == SDLK_SPACE) {
         gui->removeObject(this->ptr<CGameTextPanel>());
     }
+    return true;
 }
 
 CGameTextPanel::~CGameTextPanel() {

@@ -67,7 +67,7 @@ CMapGraphicsObject::CMapGraphicsObject() {
     });
 }
 
-void CMapGraphicsObject::render(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> pos, int frameTime) {
+void CMapGraphicsObject::renderObject(std::shared_ptr<CGui> gui, int frameTime) {
     if (std::shared_ptr<CMap> map = gui->getGame()->getMap()) {
         Coords playerCoords = map->getPlayer()->getCoords();
         std::unordered_set<Coords> tiles;

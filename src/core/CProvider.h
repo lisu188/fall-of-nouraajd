@@ -67,5 +67,5 @@ private:
 
 class CAnimationProvider {
 public:
-    static std::shared_ptr<CAnimation> getAnimation(std::string path, std::string tooltip = "");
+    static std::shared_ptr<CAnimation> getAnimation(std::string path);
 };

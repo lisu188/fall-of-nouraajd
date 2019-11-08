@@ -48,9 +48,9 @@ private:
     std::weak_ptr<CItem> selectedItem;
     std::weak_ptr<CInteraction> finalSelected;
 
-    void panelRender(std::shared_ptr<CGui> shared_ptr, std::shared_ptr<SDL_Rect> pRect, int i) override;
+    void renderObject(std::shared_ptr<CGui> shared_ptr, int i) override;
 
-    void panelMouseEvent(std::shared_ptr<CGui> shared_ptr, int x, int y) override;
+    virtual bool mouseEvent(std::shared_ptr<CGui> sharedPtr, SDL_EventType type, int x, int y) override;
 
     void drawInteractions(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> pRect, int frameTime);
 

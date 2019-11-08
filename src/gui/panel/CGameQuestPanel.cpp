@@ -20,7 +20,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CMap.h"
 #include "gui/CTextManager.h"
 
-void CGameQuestPanel::panelRender(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> pRect, int i) {
+void CGameQuestPanel::renderObject(std::shared_ptr<CGui> gui, int i) {
     gui->getTextManager()->drawText(getText(gui), pRect->x, pRect->y, pRect->w);
 }
 
@@ -29,7 +29,7 @@ std::string CGameQuestPanel::getText(std::shared_ptr<CGui> ptr) {
     std::__cxx11::string text = "";
     for (auto quest:ptr->getGame()->getMap()->getPlayer()->getCompletedQuests()) {
         text += quest->getDescription();
-            text += "(completed)";
+        text += "(completed)";
         text += "\n";
     }
     for (auto quest:ptr->getGame()->getMap()->getPlayer()->getQuests()) {
@@ -39,6 +39,6 @@ std::string CGameQuestPanel::getText(std::shared_ptr<CGui> ptr) {
     return text;
 }
 
-void CGameQuestPanel::panelKeyboardEvent(std::shared_ptr<CGui> gui, SDL_Keycode i) {
-
+bool CGameQuestPanel::keyboardEvent(std::shared_ptr<CGui> sharedPtr, SDL_EventType type, SDL_Keycode i) {
+    return true;
 }
