@@ -29,7 +29,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CController.h"
 #include "gui/panel/CGameTextPanel.h"
 #include "gui/CTextureCache.h"
-#include "core/CWidget.h"
+#include "gui/object/CWidget.h"
 
 extern void add_member(std::shared_ptr<json> object, std::string key, std::string value);
 

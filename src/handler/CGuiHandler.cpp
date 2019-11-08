@@ -20,7 +20,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CGame.h"
 #include "gui/panel/CGameTextPanel.h"
 #include "core/CMap.h"
-#include "core/CWidget.h"
+#include "gui/object/CWidget.h"
 #include "gui/CTextManager.h"
 #include "core/CList.h"
 
