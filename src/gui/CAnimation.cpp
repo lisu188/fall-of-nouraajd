@@ -23,8 +23,12 @@ CStaticAnimation::CStaticAnimation(std::string path) {
     raw_path = path;
 }
 
-void CStaticAnimation::render(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> pos, int frameTime) {
-    SDL_SAFE(SDL_RenderCopy(gui->getRenderer(), gui->getTextureCache()->getTexture(raw_path), nullptr, pos.get()));
+void CStaticAnimation::renderObject(std::shared_ptr<CGui> gui, int frameTime) {
+    SDL_SAFE(
+            SDL_RenderCopy(gui->getRenderer(),
+                           gui->getTextureCache()->getTexture(raw_path),
+                           nullptr,
+                           getRect().get()));
 }
 
 
@@ -41,7 +45,7 @@ CDynamicAnimation::CDynamicAnimation(std::string path) {
     }
 }
 
-void CDynamicAnimation::render(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> pos, int frameTime) {
+void CDynamicAnimation::renderObject(std::shared_ptr<CGui> gui, int frameTime) {
     auto tableCalc = [this]() {
         std::vector<int> vec;
         for (int i = 0; i < size; i++) {
@@ -72,8 +76,10 @@ void CDynamicAnimation::render(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Re
             break;
         }
     }
-    SDL_SAFE(SDL_RenderCopy(gui->getRenderer(), gui->getTextureCache()->getTexture(paths[currFrame]), nullptr,
-                            pos.get()));
+    SDL_SAFE(SDL_RenderCopy(gui->getRenderer(),
+                            gui->getTextureCache()->getTexture(paths[currFrame]),
+                            nullptr,
+                            getRect().get()));
 }
 
 

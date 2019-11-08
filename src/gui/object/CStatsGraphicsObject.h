@@ -43,5 +43,5 @@ V_META(CStatsGraphicsObject, CGameGraphicsObject, vstd::meta::empty())
 public:
     CStatsGraphicsObject();
 
-    void render(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> pos, int frameTime) override;
+    void renderObject(std::shared_ptr<CGui> gui, int frameTime) override;
 };

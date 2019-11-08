@@ -61,11 +61,11 @@ private:
     std::list<std::weak_ptr<CItem>> selectedInventory;
     std::list<std::weak_ptr<CItem>> selectedMarket;
 
-    void panelRender(std::shared_ptr<CGui> shared_ptr, std::shared_ptr<SDL_Rect> pRect, int i) override;
+    virtual bool keyboardEvent(std::shared_ptr<CGui> sharedPtr, SDL_EventType type, SDL_Keycode i) override;
 
-    void panelKeyboardEvent(std::shared_ptr<CGui> shared_ptr, SDL_Keycode i) override;
+    virtual bool mouseEvent(std::shared_ptr<CGui> sharedPtr, SDL_EventType type, int x, int y) override;
 
-    void panelMouseEvent(std::shared_ptr<CGui> shared_ptr, int x, int y) override;
+    virtual void renderObject(std::shared_ptr<CGui> reneder, int frameTime) override;
 
     void drawInventory(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> pRect, int frameTime);
 

@@ -20,6 +20,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "object/CGameObject.h"
 
+class CGui;
+
 class CWidget : public CGameObject {
 V_META(CWidget, CGameObject,
        V_PROPERTY(CWidget, int, x, getX, setX),
@@ -42,6 +44,11 @@ private:
     std::string render;
     std::string click;
 public:
+    virtual void renderObject(std::shared_ptr<CGui> reneder, int frameTime) override;
+
+    virtual bool mouseEvent(std::shared_ptr<CGui> sharedPtr, SDL_EventType type, int x, int y) override;
+
+
     std::string getClick();
 
     void setClick(std::string click);
