@@ -33,6 +33,7 @@ V_META(CGameGraphicsObject, CGameObject,
     std::set<std::shared_ptr<CGameGraphicsObject>> children;
     std::weak_ptr<CGameGraphicsObject> parent;
 
+
 public:
     void render(std::shared_ptr<CGui> reneder, int frameTime);
 
@@ -48,6 +49,13 @@ public:
                                std::function<bool(std::shared_ptr<CGui>, SDL_Event *)> func);
 
 
+    std::shared_ptr<CGameGraphicsObject> getParent() {
+        return parent.lock();
+    }
+
+    void setParent(std::shared_ptr<CGameGraphicsObject> _parent) {
+        this->parent = _parent;
+    }
 
     int getWidth() {
         return width;
@@ -81,13 +89,6 @@ public:
         y = _y;
     }
 
-private:
-    int width = 0;
-    int height = 0;
-    int x = 0;
-    int y = 0;
-    
-protected:
     virtual std::shared_ptr<SDL_Rect> getRect() {
         return RECT(
                 parent.lock() ? parent.lock()->getX() + getX() : getX(),
@@ -95,4 +96,10 @@ protected:
                 width,
                 height);
     }
+
+private:
+    int width = 0;
+    int height = 0;
+    int x = 0;
+    int y = 0;
 };
