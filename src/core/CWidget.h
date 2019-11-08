@@ -18,11 +18,11 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #pragma once
 
 
-#include "object/CGameObject.h"
+#include "gui/object/CGameGraphicsObject.h"
 
 class CGui;
 
-class CWidget : public CGameObject {
+class CWidget : public CGameGraphicsObject {
 V_META(CWidget, CGameObject,
        V_PROPERTY(CWidget, int, x, getX, setX),
        V_PROPERTY(CWidget, int, y, getY, setY),
@@ -33,7 +33,7 @@ V_META(CWidget, CGameObject,
 public:
     CWidget() = default;
 
-    std::shared_ptr<SDL_Rect> getRect(std::shared_ptr<SDL_Rect> pRect);
+    std::shared_ptr<SDL_Rect> getRect() override;
 
 private:
     int x = 0,
@@ -44,9 +44,9 @@ private:
     std::string render;
     std::string click;
 public:
-    virtual void renderObject(std::shared_ptr<CGui> reneder, int frameTime) override;
+    void renderObject(std::shared_ptr<CGui> reneder, int frameTime) override;
 
-    virtual bool mouseEvent(std::shared_ptr<CGui> sharedPtr, SDL_EventType type, int x, int y) override;
+    bool mouseEvent(std::shared_ptr<CGui> sharedPtr, SDL_EventType type, int x, int y) override;
 
 
     std::string getClick();
