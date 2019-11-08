@@ -21,9 +21,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CMap.h"
 #include "gui/object/CStatsGraphicsObject.h"
 
-void CGameFightPanel::panelRender(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> pRect, int i) {
-    drawInteractions(gui, pRect, i);
-    drawEnemy(gui, pRect, i);
+void CGameFightPanel::renderObject(std::shared_ptr<CGui> gui, int i) {
+    drawInteractions(gui, getRect(), i);
+    drawEnemy(gui, getRect(), i);
 }
 
 void CGameFightPanel::drawInteractions(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> pRect, int frameTime) {
@@ -53,7 +53,7 @@ CGameFightPanel::CGameFightPanel() {
             [this](std::shared_ptr<CGui> gui, int index,
                    auto newSelection) {
                 if (selected.lock() !=
-                            newSelection &&
+                    newSelection &&
                     newSelection->getManaCost() <=
                     gui->getGame()->getMap()->getPlayer()->getMana()) {
                     selected = newSelection;
@@ -92,13 +92,14 @@ CGameFightPanel::CGameFightPanel() {
             });
 }
 
-void CGameFightPanel::panelMouseEvent(std::shared_ptr<CGui> gui, int x, int y) {
+bool CGameFightPanel::mouseEvent(std::shared_ptr<CGui> gui, SDL_EventType type, int x, int y) {
     //TODO: shift values
     if (isInInteractions(gui, x, y)) {
         handleInteractionsClick(gui, x, y - getInteractionsLocation(gui));
     } else if (isInInventory(gui, x, y)) {
         handleInventoryClick(gui, x, y - getInventoryLocation(gui));
     }
+    return true;
 }
 
 void CGameFightPanel::handleInteractionsClick(std::shared_ptr<CGui> gui, int x, int y) {

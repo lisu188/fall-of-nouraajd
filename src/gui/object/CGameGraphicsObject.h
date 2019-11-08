@@ -24,7 +24,9 @@ class CGui;
 class CGameGraphicsObject : public CGameObject {
 V_META(CGameGraphicsObject, CGameObject,
        V_PROPERTY(CGameGraphicsObject, int, width, getWidth, setWidth),
-       V_PROPERTY(CGameGraphicsObject, int, height, getHeight, setHeight))
+       V_PROPERTY(CGameGraphicsObject, int, height, getHeight, setHeight),
+       V_PROPERTY(CGameGraphicsObject, int, x, getX, setX),
+       V_PROPERTY(CGameGraphicsObject, int, y, getY, setY))
 
     std::list<std::pair<std::function<bool(std::shared_ptr<CGui>, SDL_Event *)>, std::function<bool(
             std::shared_ptr<CGui>, SDL_Event *) >>> eventCallbackList;
@@ -32,12 +34,20 @@ V_META(CGameGraphicsObject, CGameObject,
     std::weak_ptr<CGameGraphicsObject> parent;
 
 public:
-    virtual void render(std::shared_ptr<CGui> reneder, std::shared_ptr<SDL_Rect> pos, int frameTime);
+    void render(std::shared_ptr<CGui> reneder, int frameTime);
 
-    virtual bool event(std::shared_ptr<CGui> gui, SDL_Event *event);
+    bool event(std::shared_ptr<CGui> gui, SDL_Event *event);
+
+    virtual bool keyboardEvent(std::shared_ptr<CGui> sharedPtr, SDL_EventType type, SDL_Keycode i);
+
+    virtual bool mouseEvent(std::shared_ptr<CGui> sharedPtr, SDL_EventType type, int x, int y);
+
+    virtual void renderObject(std::shared_ptr<CGui> reneder, int frameTime);
 
     void registerEventCallback(std::function<bool(std::shared_ptr<CGui>, SDL_Event *)> pred,
                                std::function<bool(std::shared_ptr<CGui>, SDL_Event *)> func);
+
+
 
     int getWidth() {
         return width;
@@ -55,19 +65,33 @@ public:
         height = _height;
     }
 
+    int getX() {
+        return x;
+    }
+
+    void setX(int _x) {
+        x = _x;
+    }
+
+    int getY() {
+        return y;
+    }
+
+    void setY(int _y) {
+        y = _y;
+    }
+
 private:
     int width = 0;
     int height = 0;
-
-    std::pair<int, int> translatePos(std::shared_ptr<CGui> gui, int x, int y);
-
+    int x = 0;
+    int y = 0;
+    
 protected:
-    virtual std::shared_ptr<SDL_Rect> getRect(std::shared_ptr<SDL_Rect> pos) {
-        //TODO: useBoxInBox
-        //TODO: this is centered!
+    virtual std::shared_ptr<SDL_Rect> getRect() {
         return RECT(
-                pos->x + pos->w / 2 - this->width / 2,
-                pos->y + pos->h / 2 - this->height / 2,
+                parent.lock() ? parent.lock()->getX() + getX() : getX(),
+                parent.lock() ? parent.lock()->getY() + getY() : getY(),
                 width,
                 height);
     }

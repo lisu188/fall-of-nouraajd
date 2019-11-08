@@ -73,3 +73,18 @@ std::string CWidget::getClick() {
 void CWidget::setClick(std::string click) {
     this->click = click;
 }
+
+void CWidget::renderObject(std::shared_ptr<CGui> reneder, std::shared_ptr<SDL_Rect> pos, int frameTime) {
+    this->meta()->invoke_method<void, CGamePanel,
+            std::shared_ptr<CGui>,
+            std::shared_ptr<SDL_Rect>, int>(widget->getRender(),
+                                            this->ptr<CGamePanel>(), shared_ptr,
+                                            widget->getRect(pRect), i);
+}
+
+bool CWidget::mouseEvent(std::shared_ptr<CGui> sharedPtr, SDL_EventType type, int x, int y) {
+    this->meta()->invoke_method<void, CGamePanel,
+            std::shared_ptr<CGui>>(widget->getClick(),
+                                   this->ptr<CGamePanel>(),
+                                   gui);
+}
