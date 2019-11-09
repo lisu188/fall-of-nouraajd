@@ -21,9 +21,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CMap.h"
 #include "gui/object/CStatsGraphicsObject.h"
 
-void CGameFightPanel::renderObject(std::shared_ptr<CGui> gui, int i) {
-    drawInteractions(gui, getRect(), i);
-    drawEnemy(gui, getRect(), i);
+void CGameFightPanel::renderObject(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> rect, int i) {
+    drawInteractions(gui,rect, i);
+    drawEnemy(gui,rect, i);
 }
 
 void CGameFightPanel::drawInteractions(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> pRect, int frameTime) {
@@ -159,7 +159,7 @@ void CGameFightPanel::drawEnemy(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_R
             pRect->y + ((getHeight() - gui->getTileSize()) / 2 - size / 2),
             size,
             size);
-    enemy.lock()->getGraphicsObject()->render(gui, loc, frameTime);
+    enemy.lock()->getGraphicsObject()->renderObject(gui, loc, frameTime);
 
     CStatsGraphicsUtil::drawStats(gui, enemy.lock(), loc->x, loc->y + loc->h, loc->w, loc->h / 4.0, false, false);
 }

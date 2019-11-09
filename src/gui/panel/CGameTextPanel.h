@@ -24,7 +24,7 @@ class CGameTextPanel : public CGamePanel {
 V_META(CGameTextPanel, CGamePanel,
        V_PROPERTY(CGameTextPanel, std::string, text, getText, setText))
 
-    void renderObject(std::shared_ptr<CGui> shared_ptr, int i) override;
+    void renderObject(std::shared_ptr<CGui> shared_ptr, std::shared_ptr<SDL_Rect> rect, int i) override;
 
     bool keyboardEvent(std::shared_ptr<CGui> sharedPtr, SDL_EventType type, SDL_Keycode i) override;
 

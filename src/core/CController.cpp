@@ -166,7 +166,7 @@ std::shared_ptr<CInteraction> CMonsterFightController::selectInteraction(std::sh
         return a->getManaCost() < b->getManaCost();
     };
     auto rng = cr->getInteractions() | boost::adaptors::filtered(pFunction) |
-            boost::adaptors::filtered(pFunction2) | boost::adaptors::filtered(pFunction3);
+               boost::adaptors::filtered(pFunction2) | boost::adaptors::filtered(pFunction3);
     auto max = boost::max_element(
             rng, pred);
     if (max != boost::end(rng)) {
@@ -208,7 +208,7 @@ void CPlayerFightController::start(std::shared_ptr<CCreature> me, std::shared_pt
     vstd::if_not_null(me->getMap()->getGame()->getGui(), [&](auto gui) {
         fightPanel = me->getGame()->createObject<CGameFightPanel>("fightPanel");
         fightPanel->setEnemy(opponent);
-        gui->addObject(fightPanel);
+        gui->addChild(fightPanel);
         return 0;
     });
 }
@@ -226,7 +226,7 @@ bool CPlayerFightController::control(std::shared_ptr<CCreature> me, std::shared_
 
 void CPlayerFightController::end(std::shared_ptr<CCreature> me, std::shared_ptr<CCreature> opponent) {
     vstd::if_not_null(me->getMap()->getGame()->getGui(), [&](auto gui) {
-        me->getMap()->getGame()->getGui()->removeObject(fightPanel);
+        me->getMap()->getGame()->getGui()->removeChild(fightPanel);
         fightPanel = nullptr;
     });
 }

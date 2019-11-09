@@ -15,18 +15,19 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-#include <gui/panel/CGamePanel.h>
+#include "gui/panel/CGamePanel.h"
 #include "CGameGraphicsObject.h"
 #include "gui/CGui.h"
+#include "gui/CLayout.h"
 
-void CGameGraphicsObject::renderObject(std::shared_ptr<CGui> reneder, int frameTime) {
+void CGameGraphicsObject::renderObject(std::shared_ptr<CGui> reneder, std::shared_ptr<SDL_Rect> rect, int frameTime) {
 
 }
 
 void CGameGraphicsObject::render(std::shared_ptr<CGui> reneder, int frameTime) {
-    renderObject(reneder, frameTime);
+    renderObject(reneder,getRect(), frameTime);
     for (auto child:children) {
-        child->renderObject(reneder, frameTime);
+        child->renderObject(reneder, child->getRect(), frameTime);
     }
 }
 
@@ -67,4 +68,49 @@ void
 CGameGraphicsObject::registerEventCallback(std::function<bool(std::shared_ptr<CGui>, SDL_Event *)> pred,
                                            std::function<bool(std::shared_ptr<CGui>, SDL_Event *)> func) {
     eventCallbackList.emplace_back(pred, func);
+}
+
+std::shared_ptr<CLayout> CGameGraphicsObject::getLayout() {
+    return layout;
+}
+
+void CGameGraphicsObject::setLayout(std::shared_ptr<CLayout> layout) {
+    CGameGraphicsObject::layout = layout;
+}
+
+std::shared_ptr<SDL_Rect> CGameGraphicsObject::getRect() {
+    return layout->getRect(this->ptr<CGameGraphicsObject>());
+}
+
+void CGameGraphicsObject::setParent(std::shared_ptr<CGameGraphicsObject> _parent) {
+    this->parent = _parent;
+    _parent->addChild(this->ptr<CGameGraphicsObject>());
+}
+
+std::shared_ptr<CGameGraphicsObject> CGameGraphicsObject::getParent() {
+    return parent.lock();
+}
+
+void CGameGraphicsObject::addChild(std::shared_ptr<CGameGraphicsObject> child) {
+    if (children.insert(child).second) {
+        child->setParent(this->ptr<CGameGraphicsObject>());
+    }
+}
+
+void CGameGraphicsObject::removeChild(std::shared_ptr<CGameGraphicsObject> child) {
+    if (children.erase(child)) {
+        child->removeParent();
+    }
+}
+
+void CGameGraphicsObject::removeParent() {
+    parent.lock()->removeChild(this->ptr<CGameGraphicsObject>());
+    parent.reset();
+}
+
+std::shared_ptr<CGameGraphicsObject> CGameGraphicsObject::getTopParent() {
+    if (auto _parent = getParent()) {
+        return _parent->getTopParent();
+    }
+    return this->ptr<CGameGraphicsObject>();
 }
