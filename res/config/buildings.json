@@ -11,6 +11,12 @@
       "monsters": 5
     }
   },
+  "GroundHole": {
+    "class": "GroundHole",
+    "properties": {
+      "animation": "images/buildings/groundhole"
+    }
+  },
   "Market": {
     "class": "Market",
     "properties": {
@@ -21,12 +27,6 @@
     "class": "Teleporter",
     "properties": {
       "animation": "images/buildings/teleporter"
-    }
-  },
-  "GroundHole": {
-    "class": "GroundHole",
-    "properties": {
-      "animation": "images/buildings/groundhole"
     }
   }
 }

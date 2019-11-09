@@ -3,88 +3,88 @@
     "class": "CTile",
     "properties": {
       "animation": "images/tiles/beach",
-      "tileType": "beach",
-      "canStep": true
+      "canStep": true,
+      "tileType": "beach"
     }
   },
   "DesertTile": {
     "class": "CTile",
     "properties": {
       "animation": "images/tiles/desert",
-      "tileType": "desert",
-      "canStep": true
+      "canStep": true,
+      "tileType": "desert"
     }
   },
   "GrassTile": {
     "class": "CTile",
     "properties": {
       "animation": "images/tiles/grass",
-      "tileType": "grass",
-      "canStep": true
+      "canStep": true,
+      "tileType": "grass"
     }
   },
   "GroundTile": {
     "class": "CTile",
     "properties": {
       "animation": "images/tiles/ground",
-      "tileType": "ground",
-      "canStep": true
+      "canStep": true,
+      "tileType": "ground"
     }
   },
   "LavaTile": {
     "class": "CTile",
     "properties": {
       "animation": "images/tiles/lava",
-      "tileType": "lava",
-      "canStep": true
+      "canStep": true,
+      "tileType": "lava"
     }
   },
   "MountainTile": {
     "class": "CTile",
     "properties": {
       "animation": "images/tiles/mountain",
-      "tileType": "mountain",
-      "canStep": false
+      "canStep": false,
+      "tileType": "mountain"
     }
   },
   "RoadTile": {
     "class": "RoadTile",
     "properties": {
       "animation": "images/tiles/road",
-      "tileType": "road",
-      "canStep": true
+      "canStep": true,
+      "tileType": "road"
     }
   },
   "SnowTile": {
     "class": "CTile",
     "properties": {
       "animation": "images/tiles/snow",
-      "tileType": "snow",
-      "canStep": true
+      "canStep": true,
+      "tileType": "snow"
     }
   },
   "SwampTile": {
     "class": "CTile",
     "properties": {
       "animation": "images/tiles/swamp",
-      "tileType": "swamp",
-      "canStep": true
+      "canStep": true,
+      "tileType": "swamp"
     }
   },
   "WastelandTile": {
     "class": "CTile",
     "properties": {
       "animation": "images/tiles/wasteland",
-      "tileType": "wasteland",
-      "canStep": true
+      "canStep": true,
+      "tileType": "wasteland"
     }
   },
   "WaterTile": {
     "class": "CTile",
     "properties": {
       "animation": "images/tiles/water",
-      "tileType": "water",
-      "canStep": false
+      "canStep": false,
+      "tileType": "water"
     }
   }
 }
