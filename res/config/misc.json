@@ -7,9 +7,9 @@
     "class": "CMapStringString",
     "properties": {
       "values": {
+        "c": "characterPanel",
         "i": "inventoryPanel",
-        "j": "questPanel",
-        "c": "characterPanel"
+        "j": "questPanel"
       }
     }
   }
