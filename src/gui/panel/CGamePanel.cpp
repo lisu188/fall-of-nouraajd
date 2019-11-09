@@ -20,8 +20,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "gui/object/CWidget.h"
 
 
-void CGamePanel::renderObject(std::shared_ptr<CGui> gui, int frameTime) {
-    std::shared_ptr<SDL_Rect> rect = getRect();
+void CGamePanel::renderObject(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> rect, int frameTime) {
     SDL_RenderFillRect(gui->getRenderer(), rect.get());
     SDL_RenderCopy(gui->getRenderer(), gui->getTextureCache()->getTexture("images/panel.png"), nullptr, rect.get());
 }

@@ -14,21 +14,24 @@ GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
- */#include "core/CProvider.h"
+ */
+
+#include "core/CProvider.h"
 #include "CAnimation.h"
 #include "gui/CGui.h"
 #include "gui/CTextureCache.h"
+#include "CLayout.h"
 
 CStaticAnimation::CStaticAnimation(std::string path) {
     raw_path = path;
 }
 
-void CStaticAnimation::renderObject(std::shared_ptr<CGui> gui, int frameTime) {
+void CStaticAnimation::renderObject(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> rect, int frameTime) {
     SDL_SAFE(
             SDL_RenderCopy(gui->getRenderer(),
                            gui->getTextureCache()->getTexture(raw_path),
                            nullptr,
-                           getRect().get()));
+                           rect.get()));
 }
 
 
@@ -45,7 +48,7 @@ CDynamicAnimation::CDynamicAnimation(std::string path) {
     }
 }
 
-void CDynamicAnimation::renderObject(std::shared_ptr<CGui> gui, int frameTime) {
+void CDynamicAnimation::renderObject(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> rect, int frameTime) {
     auto tableCalc = [this]() {
         std::vector<int> vec;
         for (int i = 0; i < size; i++) {
@@ -79,7 +82,7 @@ void CDynamicAnimation::renderObject(std::shared_ptr<CGui> gui, int frameTime) {
     SDL_SAFE(SDL_RenderCopy(gui->getRenderer(),
                             gui->getTextureCache()->getTexture(paths[currFrame]),
                             nullptr,
-                            getRect().get()));
+                           rect.get()));
 }
 
 
@@ -95,3 +98,6 @@ int CDynamicAnimation::get_next() {
     return vstd::rand(0, 100);
 }
 
+CAnimation::CAnimation() {
+    setLayout(std::make_shared<CParentLayout>());
+}

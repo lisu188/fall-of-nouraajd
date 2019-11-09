@@ -145,7 +145,7 @@ private:
     template<typename T=Item>
     static void _defaultDraw(std::shared_ptr<CGui> gui, T item, std::shared_ptr<SDL_Rect> loc, int frameTime,
                              typename vstd::enable_if<vstd::is_shared_ptr<T>::value>::type * = 0) {
-        item->getGraphicsObject()->render(gui, loc, frameTime);
+        item->getGraphicsObject()->renderObject(gui, loc, frameTime);
     }
 
     template<typename T=Item>

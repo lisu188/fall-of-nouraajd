@@ -29,23 +29,15 @@ class CTextManager;
 
 typedef std::map<std::string, std::shared_ptr<CGameGraphicsObject>> CGuiStack;
 
-class CGui : public CGameObject {
+class CGui : public CGameGraphicsObject {
 V_META(CGui, CGameObject,
        V_PROPERTY(CGui, int, height, getHeight, setHeight),
        V_PROPERTY(CGui, int, width, getWidth, setWidth),
-       V_PROPERTY(CGui, int, tileSize, getTileSize, setTileSize),
-       V_PROPERTY(CGui, CGuiStack, guiStack, getGuiStack, setGuiStack))
+       V_PROPERTY(CGui, int, tileSize, getTileSize, setTileSize))
     SDL_Window *window = 0;
     SDL_Renderer *renderer = 0;
 public:
     SDL_Renderer *getRenderer() const;
-
-private:
-    std::list<std::shared_ptr<CGameGraphicsObject>> guiStack;
-public:
-    CGuiStack getGuiStack();
-
-    void setGuiStack(CGuiStack guiStack);
 
     int getWidth();
 
@@ -71,10 +63,6 @@ public:
     CGui();
 
     ~CGui();
-
-    void addObject(std::shared_ptr<CGameGraphicsObject> object);
-
-    void removeObject(std::shared_ptr<CGameGraphicsObject> object);
 
     void render(int i1);
 

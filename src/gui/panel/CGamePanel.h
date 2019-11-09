@@ -28,12 +28,21 @@ class CGamePanel : public CGameGraphicsObject {
 V_META(CGamePanel, CGameGraphicsObject,
        V_PROPERTY(CGamePanel, std::set<std::shared_ptr<CWidget>>, widgets, getWidgets, setWidgets))
 public:
-    void renderObject(std::shared_ptr<CGui> reneder,  int frameTime) override;
+    void renderObject(std::shared_ptr<CGui> reneder, std::shared_ptr<SDL_Rect> rect, int frameTime) override;
 
 private:
     std::set<std::shared_ptr<CWidget>> widgets;
 
 public:
+    //TODO:
+    int getWidth() {
+        return 800;
+    }
+
+    int getHeight() {
+        return 600;
+    }
+
     std::set<std::shared_ptr<CWidget>> getWidgets();
 
     void setWidgets(std::set<std::shared_ptr<CWidget>> widgets);

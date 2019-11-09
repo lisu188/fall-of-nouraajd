@@ -54,11 +54,9 @@ private:
     std::weak_ptr<CItem> selectedInventory;
     std::weak_ptr<CItem> selectedEquipped;
 
-    virtual bool keyboardEvent(std::shared_ptr<CGui> sharedPtr, SDL_EventType type, SDL_Keycode i) override;
-
     virtual bool mouseEvent(std::shared_ptr<CGui> sharedPtr, SDL_EventType type, int x, int y) override;
 
-    virtual void renderObject(std::shared_ptr<CGui> reneder, int frameTime) override;
+    virtual void renderObject(std::shared_ptr<CGui> reneder, std::shared_ptr<SDL_Rect> rect, int frameTime) override;
 
     void drawInventory(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> pRect, int frameTime);
 

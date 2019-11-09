@@ -20,17 +20,16 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CMap.h"
 #include "gui/CTextManager.h"
 
-void CGameCharacterPanel::renderObject(std::shared_ptr<CGui> gui, int i) {
-    auto pRect = getRect();
+void CGameCharacterPanel::renderObject(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> rect, int i) {
     std::string text;
     for (auto prop : charSheet->getValues()) {
         text += prop + ": " + vstd::str(gui->getGame()->getMap()->getPlayer()->getNumericProperty(prop)) + "\n";
     }
     gui->getTextManager()->drawText(
             text,
-            pRect->x,
-            pRect->y,
-            pRect->w);
+            rect->x,
+            rect->y,
+            rect->w);
 
 }
 

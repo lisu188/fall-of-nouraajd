@@ -30,33 +30,15 @@ CGui::~CGui() {
     SDL_SAFE(SDL_DestroyWindow(window));
 }
 
-void CGui::render(int frameTime) {
+void CGui::render(int i1) {
     SDL_SAFE(SDL_SetRenderDrawColor(renderer, BLACK));
     SDL_SAFE(SDL_RenderClear(renderer));
-    for (std::shared_ptr<CGameGraphicsObject> object:guiStack) {
-        object->render(this->ptr<CGui>(), frameTime);
-    }
+    CGameGraphicsObject::render(this->ptr<CGui>(), i1);
     SDL_SAFE(SDL_RenderPresent(renderer));
 }
 
 bool CGui::event(SDL_Event *event) {
-    for (std::shared_ptr<CGameGraphicsObject> object:guiStack | boost::adaptors::reversed) {
-        if (object->event(this->ptr<CGui>(), event)) {
-            return true;
-        }
-    }
-    return false;
-}
-
-void CGui::addObject(std::shared_ptr<CGameGraphicsObject> object) {
-    guiStack.push_back(object);
-}
-
-void CGui::removeObject(std::shared_ptr<CGameGraphicsObject> object) {
-    guiStack.erase(
-            std::remove_if(guiStack.begin(), guiStack.end(), [object](std::shared_ptr<CGameGraphicsObject> ob) {
-                return ob.get() == object.get();
-            }), guiStack.end());
+    return CGameGraphicsObject::event(this->ptr<CGui>(), event);
 }
 
 SDL_Renderer *CGui::getRenderer() const {
@@ -106,19 +88,3 @@ int CGui::getTileCountX() {
 int CGui::getTileCountY() {
     return height / tileSize;
 }
-
-CGuiStack CGui::getGuiStack() {
-    CGuiStack stack;
-    int i = 0;
-    for (auto it:guiStack) {
-        stack.insert(std::make_pair(vstd::str(i++), it));
-    }
-    return stack;
-}
-
-void CGui::setGuiStack(CGuiStack stack) {
-    for (size_t i = 0; i < stack.size(); i++) {
-        addObject(stack[vstd::str(i)]);
-    }
-}
-
