@@ -25,14 +25,6 @@ void CGamePanel::renderObject(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rec
     SDL_RenderCopy(gui->getRenderer(), gui->getTextureCache()->getTexture("images/panel.png"), nullptr, rect.get());
 }
 
-std::set<std::shared_ptr<CWidget>> CGamePanel::getWidgets() {
-    return widgets;
-}
-
-void CGamePanel::setWidgets(std::set<std::shared_ptr<CWidget>> widgets) {
-    CGamePanel::widgets = widgets;
-}
-
 bool CGamePanel::keyboardEvent(std::shared_ptr<CGui> sharedPtr, SDL_EventType type, SDL_Keycode i) {
     return true;
 }

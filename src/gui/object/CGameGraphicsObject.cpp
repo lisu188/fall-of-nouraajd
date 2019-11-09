@@ -114,3 +114,13 @@ std::shared_ptr<CGameGraphicsObject> CGameGraphicsObject::getTopParent() {
     }
     return this->ptr<CGameGraphicsObject>();
 }
+
+std::set<std::shared_ptr<CGameGraphicsObject>> CGameGraphicsObject::getChildren() {
+    return children;
+}
+
+void CGameGraphicsObject::setChildren(std::set<std::shared_ptr<CGameGraphicsObject>> _children) {
+    for (auto child:_children) {
+        addChild(child);
+    }
+}
