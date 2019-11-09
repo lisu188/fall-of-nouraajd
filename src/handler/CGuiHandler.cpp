@@ -54,11 +54,11 @@ CGuiHandler::CGuiHandler(std::shared_ptr<CGame> game) : _game(game) {
 
 std::basic_string<char, std::char_traits<char>, std::allocator<char>>
 CGuiHandler::showSelection(std::shared_ptr<CListString> list) {
-    std::shared_ptr<CGamePanel> panel = _game.lock()->createObject<CGamePanel>("CGamePanel");
+    std::shared_ptr<CGamePanel> panel = _game.lock()->createObject<CGamePanel>("gamePanel");
 
     std::shared_ptr<std::string> selected;
 
-    std::set<std::shared_ptr<CWidget>> widgets;
+    std::set<std::shared_ptr<CGameGraphicsObject>> widgets;
     int i = 0;
     for (auto item : list->getValues()) {
         std::string clickName = vstd::str("click") + vstd::str(i);
@@ -95,7 +95,7 @@ CGuiHandler::showSelection(std::shared_ptr<CListString> list) {
         i++;
     }
 
-    panel->setWidgets(widgets);
+    panel->setChildren(widgets);
 
     _game.lock()->getGui()->addChild(panel);
 
