@@ -15,6 +15,7 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
+#include "gui/CLayout.h"
 #include "gui/panel/CGameDialogPanel.h"
 #include "gui/panel/CGameTradePanel.h"
 #include "core/CGame.h"
@@ -31,20 +32,20 @@ CGuiHandler::CGuiHandler() {
 void CGuiHandler::showMessage(std::string message) {
     std::shared_ptr<CGameTextPanel> panel = _game.lock()->createObject<CGameTextPanel>("textPanel");
     panel->setText(message);
-    _game.lock()->getGui()->addObject(panel);
+    _game.lock()->getGui()->addChild(panel);
 }
 
 bool CGuiHandler::showDialog(std::string question) {
     std::shared_ptr<CGameDialogPanel> panel = _game.lock()->createObject<CGameDialogPanel>("dialogPanel");
     panel->setQuestion(question);
-    _game.lock()->getGui()->addObject(panel);
+    _game.lock()->getGui()->addChild(panel);
     return panel->awaitAnswer();
 }
 
 void CGuiHandler::showTrade(std::shared_ptr<CMarket> market) {
     std::shared_ptr<CGameTradePanel> panel = _game.lock()->createObject<CGameTradePanel>("tradePanel");
     panel->setMarket(market);
-    _game.lock()->getGui()->addObject(panel);
+    _game.lock()->getGui()->addChild(panel);
 }
 
 CGuiHandler::CGuiHandler(std::shared_ptr<CGame> game) : _game(game) {
@@ -84,23 +85,25 @@ CGuiHandler::showSelection(std::shared_ptr<CListString> list) {
         std::shared_ptr<CWidget> widget = _game.lock()->createObject<CWidget>("CWidget");
         widget->setClick(clickName);
         widget->setRender(renderName);
-        widget->setX(0);
-        widget->setY(10 * i);
-        widget->setW(100);
-        widget->setH(10);
+        std::shared_ptr<CPercentLayout> layout = _game.lock()->createObject<CPercentLayout>("CPercentLayout");
+        layout->setX(0);
+        layout->setY(10 * i);
+        layout->setW(100);
+        layout->setH(10);
+        widget->setLayout(layout);
         widgets.insert(widget);
         i++;
     }
 
     panel->setWidgets(widgets);
 
-    _game.lock()->getGui()->addObject(panel);
+    _game.lock()->getGui()->addChild(panel);
 
     vstd::wait_until([&]() {
         return selected != nullptr;
     });
 
-    _game.lock()->getGui()->removeObject(panel);
+    _game.lock()->getGui()->removeChild(panel);
 
     return *selected;
 }

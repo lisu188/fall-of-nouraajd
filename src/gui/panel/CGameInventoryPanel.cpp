@@ -22,9 +22,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CMap.h"
 
 
-void CGameInventoryPanel::renderObject(std::shared_ptr<CGui> gui, int i) {
-    drawInventory(gui, getRect(), i);
-    drawEquipped(gui, getRect(), i);
+void CGameInventoryPanel::renderObject(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> rect, int i) {
+    drawInventory(gui, rect, i);
+    drawEquipped(gui, rect, i);
 }
 
 void CGameInventoryPanel::drawEquipped(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> pRect, int frameTime) {
@@ -89,16 +89,17 @@ CGameInventoryPanel::CGameInventoryPanel() {
                (selectedEquipped.lock() && selectedEquipped.lock() == object.second);
     })->withDraw(
             [](auto gui, auto item, auto loc, auto frameTime) {
-                item.second->getGraphicsObject()->render(gui, loc, frameTime);
+                item.second->getGraphicsObject()->renderObject(gui, loc, frameTime);
             });
 }
 
-void CGameInventoryPanel::mouseEvent(std::shared_ptr<CGui> gui, SDL_EventType type, int x, int y)  {
+bool CGameInventoryPanel::mouseEvent(std::shared_ptr<CGui> gui, SDL_EventType type, int x, int y) {
     if (isInInventory(gui, x, y)) {
         handleInventoryClick(gui, x, y);
     } else if (isInEquipped(gui, x, y)) {
         handleEquippedClick(gui, x, y);
     }
+    return true;
 }
 
 void CGameInventoryPanel::handleInventoryClick(std::shared_ptr<CGui> gui, int x, int y) {

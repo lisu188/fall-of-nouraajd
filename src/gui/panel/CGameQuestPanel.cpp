@@ -20,8 +20,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CMap.h"
 #include "gui/CTextManager.h"
 
-void CGameQuestPanel::renderObject(std::shared_ptr<CGui> gui, int i) {
-    gui->getTextManager()->drawText(getText(gui), getRect()->x, getRect()->y, getRect()->w);
+void CGameQuestPanel::renderObject(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> rect, int i) {
+    gui->getTextManager()->drawText(getText(gui), rect->x, rect->y, rect->w);
 }
 
 
@@ -37,8 +37,4 @@ std::string CGameQuestPanel::getText(std::shared_ptr<CGui> ptr) {
         text += "\n";
     }
     return text;
-}
-
-bool CGameQuestPanel::keyboardEvent(std::shared_ptr<CGui> sharedPtr, SDL_EventType type, SDL_Keycode i) {
-    return true;
 }

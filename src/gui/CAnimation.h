@@ -24,6 +24,8 @@ class CGui;
 
 class CAnimation : public CGameGraphicsObject {
 V_META(CAnimation, CGameGraphicsObject, vstd::meta::empty())
+public:
+    CAnimation();
 };
 
 class CStaticAnimation : public CAnimation {
@@ -35,7 +37,7 @@ public:
 
     CStaticAnimation(std::string path);
 
-    void renderObject(std::shared_ptr<CGui> gui, int frameTime) override;
+    void renderObject(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> rect, int frameTime) override;
 
 
 };
@@ -47,7 +49,7 @@ public:
 
     CDynamicAnimation(std::string path);
 
-    void renderObject(std::shared_ptr<CGui> gui, int frameTime) override;
+    void renderObject(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> rect, int frameTime) override;
 
 private:
     static int get_next();

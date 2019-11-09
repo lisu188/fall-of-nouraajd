@@ -134,6 +134,7 @@ CResourcesProvider::CResourcesProvider() {
 }
 
 std::shared_ptr<CAnimation> CAnimationProvider::getAnimation(std::string path) {
+    //TODO: should be created by object handler
     if (boost::filesystem::is_directory(path)) {
         return std::make_shared<CDynamicAnimation>(path);
     }

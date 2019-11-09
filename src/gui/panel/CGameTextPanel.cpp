@@ -27,15 +27,15 @@ void CGameTextPanel::setText(std::string _text) {
 }
 
 
-void CGameTextPanel::renderObject(std::shared_ptr<CGui> gui, int i) {
-    gui->getTextManager()->drawText(text, getRect()->x, getRect()->y, getRect()->w);
+void CGameTextPanel::renderObject(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> rect, int i) {
+    gui->getTextManager()->drawText(text,rect->x, rect->y, rect->w);
 
 }
 
 bool CGameTextPanel::keyboardEvent(std::shared_ptr<CGui> gui, SDL_EventType type, SDL_Keycode i) {
 //TODO: get rid of this
     if (i == SDLK_SPACE) {
-        gui->removeObject(this->ptr<CGameTextPanel>());
+        gui->removeChild(this->ptr<CGameTextPanel>());
     }
     return true;
 }

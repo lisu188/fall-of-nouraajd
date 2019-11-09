@@ -66,28 +66,13 @@ double Coords::getDist(Coords a) const {
     return sqrt(x + y);
 }
 
-SDL_Rect CUtil::boxInBox(SDL_Rect *out, SDL_Rect *in) {
-    SDL_Rect actual;
-    actual.x = out->x + out->w / 2 - in->w / 2;
-    actual.y = out->y + out->h / 2 - in->h / 2;
-    actual.w = in->w;
-    actual.h = in->h;
-    return actual;
+std::shared_ptr<SDL_Rect> CUtil::boxInBox(std::shared_ptr<SDL_Rect> out, std::shared_ptr<SDL_Rect> in) {
+    return RECT(out->x + out->w / 2 - in->w / 2,
+                out->y + out->h / 2 - in->h / 2,
+                in->w,
+                in->h);
 }
 
-SDL_Rect CUtil::boxInBox(SDL_Rect out, SDL_Rect *in) {
-    return boxInBox(&out, in);
-}
-
-
-SDL_Rect CUtil::boxInBox(SDL_Rect *out, SDL_Rect in) {
-    return boxInBox(out, &in);
-}
-
-
-SDL_Rect CUtil::boxInBox(SDL_Rect out, SDL_Rect in) {
-    return boxInBox(&out, &in);
-}
 
 std::shared_ptr<SDL_Rect> CUtil::rect(int x, int y, int w, int h) {
     std::shared_ptr<SDL_Rect> ret = std::make_shared<SDL_Rect>();
