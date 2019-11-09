@@ -24,7 +24,7 @@ class CGameCharacterPanel : public CGamePanel {
 V_META(CGameCharacterPanel, CGamePanel,
        V_PROPERTY(CGameCharacterPanel, std::shared_ptr<CListString>, charSheet, getCharSheet, setCharSheet))
 
-    void renderObject(std::shared_ptr<CGui> shared_ptr, int i) override;
+    void renderObject(std::shared_ptr<CGui> shared_ptr, std::shared_ptr<SDL_Rect> rect, int i) override;
 
 public:
 

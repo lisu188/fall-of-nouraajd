@@ -39,12 +39,12 @@ bool CGameDialogPanel::awaitAnswer() {
 
 void CGameDialogPanel::clickNo(std::shared_ptr<CGui> gui) {
     selection = std::make_shared<bool>(false);
-    gui->removeObject(this->ptr<CGameDialogPanel>());
+    gui->removeChild(this->ptr<CGameDialogPanel>());
 }
 
 void CGameDialogPanel::clickYes(std::shared_ptr<CGui> gui) {
     selection = std::make_shared<bool>(true);
-    gui->removeObject(this->ptr<CGameDialogPanel>());
+    gui->removeChild(this->ptr<CGameDialogPanel>());
 }
 
 

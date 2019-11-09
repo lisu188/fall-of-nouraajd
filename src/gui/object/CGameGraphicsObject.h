@@ -21,18 +21,18 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 class CGui;
 
+class CLayout;
+
 class CGameGraphicsObject : public CGameObject {
 V_META(CGameGraphicsObject, CGameObject,
-       V_PROPERTY(CGameGraphicsObject, int, width, getWidth, setWidth),
-       V_PROPERTY(CGameGraphicsObject, int, height, getHeight, setHeight),
-       V_PROPERTY(CGameGraphicsObject, int, x, getX, setX),
-       V_PROPERTY(CGameGraphicsObject, int, y, getY, setY))
+       V_PROPERTY(CGameGraphicsObject, std::shared_ptr<CLayout>, layout, getLayout, setLayout))
 
     std::list<std::pair<std::function<bool(std::shared_ptr<CGui>, SDL_Event *)>, std::function<bool(
             std::shared_ptr<CGui>, SDL_Event *) >>> eventCallbackList;
     std::set<std::shared_ptr<CGameGraphicsObject>> children;
     std::weak_ptr<CGameGraphicsObject> parent;
 
+    std::shared_ptr<CLayout> layout;
 
 public:
     void render(std::shared_ptr<CGui> reneder, int frameTime);
@@ -43,63 +43,27 @@ public:
 
     virtual bool mouseEvent(std::shared_ptr<CGui> sharedPtr, SDL_EventType type, int x, int y);
 
-    virtual void renderObject(std::shared_ptr<CGui> reneder, int frameTime);
+    virtual void renderObject(std::shared_ptr<CGui> reneder, std::shared_ptr<SDL_Rect> rect, int frameTime);
 
     void registerEventCallback(std::function<bool(std::shared_ptr<CGui>, SDL_Event *)> pred,
                                std::function<bool(std::shared_ptr<CGui>, SDL_Event *)> func);
 
+    std::shared_ptr<CGameGraphicsObject> getParent();
 
-    std::shared_ptr<CGameGraphicsObject> getParent() {
-        return parent.lock();
-    }
+    std::shared_ptr<CGameGraphicsObject> getTopParent();
 
-    void setParent(std::shared_ptr<CGameGraphicsObject> _parent) {
-        this->parent = _parent;
-    }
+    void setParent(std::shared_ptr<CGameGraphicsObject> _parent);
 
-    int getWidth() {
-        return width;
-    }
+    std::shared_ptr<CLayout> getLayout();
 
-    void setWidth(int _width) {
-        width = _width;
-    }
+    void setLayout(std::shared_ptr<CLayout> layout);
 
-    int getHeight() {
-        return height;
-    }
+    void addChild(std::shared_ptr<CGameGraphicsObject> child);
 
-    void setHeight(int _height) {
-        height = _height;
-    }
+    void removeChild(std::shared_ptr<CGameGraphicsObject> child);
 
-    int getX() {
-        return x;
-    }
-
-    void setX(int _x) {
-        x = _x;
-    }
-
-    int getY() {
-        return y;
-    }
-
-    void setY(int _y) {
-        y = _y;
-    }
-
-    virtual std::shared_ptr<SDL_Rect> getRect() {
-        return RECT(
-                parent.lock() ? parent.lock()->getX() + getX() : getX(),
-                parent.lock() ? parent.lock()->getY() + getY() : getY(),
-                width,
-                height);
-    }
+    void removeParent();
 
 private:
-    int width = 0;
-    int height = 0;
-    int x = 0;
-    int y = 0;
+    std::shared_ptr<SDL_Rect> getRect();
 };

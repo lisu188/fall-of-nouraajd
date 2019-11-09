@@ -24,30 +24,20 @@ class CGui;
 
 class CWidget : public CGameGraphicsObject {
 V_META(CWidget, CGameObject,
-       V_PROPERTY(CWidget, int, x, getX, setX),
-       V_PROPERTY(CWidget, int, y, getY, setY),
-       V_PROPERTY(CWidget, int, w, getW, setW),
-       V_PROPERTY(CWidget, int, h, getH, setH),
        V_PROPERTY(CWidget, std::string, render, getRender, setRender),
        V_PROPERTY(CWidget, std::string, click, getClick, setClick))
 public:
     CWidget() = default;
 
-    std::shared_ptr<SDL_Rect> getRect() override;
-
 private:
-    int x = 0,
-            y = 0,
-            w = 0,
-            h = 0;
+
 
     std::string render;
     std::string click;
 public:
-    void renderObject(std::shared_ptr<CGui> reneder, int frameTime) override;
+    void renderObject(std::shared_ptr<CGui> reneder, std::shared_ptr<SDL_Rect> rect, int frameTime) override;
 
     bool mouseEvent(std::shared_ptr<CGui> sharedPtr, SDL_EventType type, int x, int y) override;
-
 
     std::string getClick();
 
@@ -56,22 +46,6 @@ public:
     std::string getRender();
 
     void setRender(std::string draw);
-
-    int getX();
-
-    void setX(int x);
-
-    int getY();
-
-    void setY(int y);
-
-    int getW();
-
-    void setW(int w);
-
-    int getH();
-
-    void setH(int h);
 
 
 };

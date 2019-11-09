@@ -48,13 +48,7 @@ struct Coords {
 
 class CUtil {
 public:
-    static SDL_Rect boxInBox(SDL_Rect *out, SDL_Rect *in);
-
-    static SDL_Rect boxInBox(SDL_Rect out, SDL_Rect *in);
-
-    static SDL_Rect boxInBox(SDL_Rect *out, SDL_Rect in);
-
-    static SDL_Rect boxInBox(SDL_Rect out, SDL_Rect in);
+    static std::shared_ptr<SDL_Rect> boxInBox(std::shared_ptr<SDL_Rect> out, std::shared_ptr<SDL_Rect> in);
 
     static std::shared_ptr<SDL_Rect> rect(int x, int y, int w, int h);
 

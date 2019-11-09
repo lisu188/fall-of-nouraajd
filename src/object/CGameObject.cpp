@@ -142,6 +142,6 @@ void CGameObject::setTooltip(std::string tooltip) {
 
 std::shared_ptr<CGameGraphicsObject> CGameObject::getGraphicsObject() {
     return graphicsObject.get([this]() {
-        return CAnimationProvider::getAnimation(getAnimation(), getTooltip());
+        return CAnimationProvider::getAnimation(getAnimation());
     });
 }

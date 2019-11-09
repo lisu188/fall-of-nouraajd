@@ -15,6 +15,7 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
+
 #include "core/CGame.h"
 #include "gui/panel/CGameDialogPanel.h"
 #include "gui/panel/CGameQuestPanel.h"
@@ -30,6 +31,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "gui/panel/CGameTextPanel.h"
 #include "gui/CTextureCache.h"
 #include "gui/object/CWidget.h"
+#include "gui/CLayout.h"
 
 extern void add_member(std::shared_ptr<json> object, std::string key, std::string value);
 
@@ -74,6 +76,13 @@ namespace {
                     {
                         CTypes::register_type<CStaticAnimation, CAnimation, CGameGraphicsObject, CGameObject>();
                         CTypes::register_type<CDynamicAnimation, CAnimation, CGameGraphicsObject, CGameObject>();
+                    }
+                    CTypes::register_type<CLayout, CGameObject>();
+                    {
+                        CTypes::register_type<CSimpleLayout, CLayout, CGameObject>();
+                        CTypes::register_type<CCenteredLayout, CLayout, CGameObject>();
+                        CTypes::register_type<CPercentLayout, CLayout, CGameObject>();
+                        CTypes::register_type<CParentLayout, CLayout, CGameObject>();
                     }
                 }
             }
