@@ -49,11 +49,11 @@
   "BloodThirst": {
     "class": "BloodThirst",
     "properties": {
+      "animation": "images/interactions/bloodthirst",
+      "manaCost": 35,
       "tags": [
         "heal"
-      ],
-      "animation": "images/interactions/bloodthirst",
-      "manaCost": 35
+      ]
     }
   },
   "Bloodlash": {

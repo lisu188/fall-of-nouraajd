@@ -2,18 +2,15 @@
   "Assasin": {
     "class": "CPlayer",
     "properties": {
-      "fightController": {
-        "class": "CPlayerFightController"
-      },
-      "controller": {
-        "class": "CPlayerController"
-      },
       "actions": [
         {
           "ref": "Attack"
         }
       ],
       "animation": "images/players/assasin",
+      "controller": {
+        "class": "CPlayerController"
+      },
       "equipped": {
         "0": {
           "ref": "Dagger"
@@ -22,8 +19,10 @@
           "ref": "LeatherArmor"
         }
       },
-      "items": [
-      ],
+      "fightController": {
+        "class": "CPlayerFightController"
+      },
+      "items": [],
       "levelStats": {
         "class": "Stats",
         "properties": {
@@ -76,15 +75,15 @@
   "Gooby": {
     "class": "CMonster",
     "properties": {
-      "fightController": {
-        "class": "CMonsterFightController"
-      },
       "actions": [
         {
           "ref": "Attack"
         }
       ],
       "animation": "images/monsters/gooby",
+      "fightController": {
+        "class": "CMonsterFightController"
+      },
       "levelStats": {
         "class": "Stats",
         "properties": {
@@ -124,15 +123,15 @@
   "OctoBogz": {
     "class": "CMonster",
     "properties": {
-      "fightController": {
-        "class": "CMonsterFightController"
-      },
       "actions": [
         {
           "ref": "Attack"
         }
       ],
       "animation": "images/monsters/octobogz",
+      "fightController": {
+        "class": "CMonsterFightController"
+      },
       "levelStats": {
         "class": "Stats",
         "properties": {
@@ -172,15 +171,15 @@
   "Pritz": {
     "class": "CMonster",
     "properties": {
-      "fightController": {
-        "class": "CMonsterFightController"
-      },
       "actions": [
         {
           "ref": "Attack"
         }
       ],
       "animation": "images/monsters/pritz",
+      "fightController": {
+        "class": "CMonsterFightController"
+      },
       "levelStats": {
         "class": "Stats",
         "properties": {
@@ -220,9 +219,6 @@
   "PritzMage": {
     "class": "CMonster",
     "properties": {
-      "fightController": {
-        "class": "CMonsterFightController"
-      },
       "actions": [
         {
           "ref": "Attack"
@@ -230,6 +226,9 @@
       ],
       "animation": "images/monsters/pritzmage",
       "class": "Stats",
+      "fightController": {
+        "class": "CMonsterFightController"
+      },
       "levelStats": {
         "class": "Stats",
         "properties": {
@@ -272,9 +271,6 @@
   "Sorcerer": {
     "class": "CPlayer",
     "properties": {
-      "fightController": {
-        "class": "CPlayerFightController"
-      },
       "actions": [
         {
           "ref": "Attack"
@@ -289,8 +285,10 @@
           "ref": "Robe"
         }
       },
-      "items": [
-      ],
+      "fightController": {
+        "class": "CPlayerFightController"
+      },
+      "items": [],
       "levelStats": {
         "class": "Stats",
         "properties": {
@@ -349,9 +347,6 @@
   "Warrior": {
     "class": "CPlayer",
     "properties": {
-      "fightController": {
-        "class": "CPlayerFightController"
-      },
       "actions": [
         {
           "ref": "Attack"
@@ -366,8 +361,10 @@
           "ref": "PlateArmor"
         }
       },
-      "items": [
-      ],
+      "fightController": {
+        "class": "CPlayerFightController"
+      },
+      "items": [],
       "levelStats": {
         "class": "Stats",
         "properties": {

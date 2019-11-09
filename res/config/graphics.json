@@ -2,16 +2,6 @@
   "gui": {
     "class": "CGui",
     "properties": {
-      "layout": {
-        "class": "CSimpleLayout",
-        "properties": {
-          "height": 1080,
-          "width": 1920,
-          "x": 0,
-          "y": 0
-        }
-      },
-      "tileSize": 50,
       "children": [
         {
           "ref": "mapGraphics"
@@ -22,7 +12,17 @@
         {
           "ref": "CConsoleGraphicsObject"
         }
-      ]
+      ],
+      "layout": {
+        "class": "CSimpleLayout",
+        "properties": {
+          "height": 1080,
+          "width": 1920,
+          "x": 0,
+          "y": 0
+        }
+      },
+      "tileSize": 50
     }
   },
   "mapGraphics": {
