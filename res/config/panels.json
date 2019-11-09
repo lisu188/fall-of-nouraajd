@@ -1,27 +1,64 @@
 {
   "inventoryPanel": {
-    "class": "CGameInventoryPanel"
+    "class": "CGameInventoryPanel",
+    "properties": {
+      "layout": {
+        "class": "CCenteredLayout",
+        "properties": {
+          "height": 600,
+          "width": 800
+        }
+      }
+    }
   },
   "tradePanel": {
-    "class": "CGameTradePanel"
+    "class": "CGameTradePanel",
+    "properties": {
+      "layout": {
+        "class": "CCenteredLayout",
+        "properties": {
+          "height": 600,
+          "width": 800
+        }
+      }
+    }
   },
   "textPanel": {
-    "class": "CGameTextPanel"
+    "class": "CGameTextPanel",
+    "properties": {
+      "layout": {
+        "class": "CCenteredLayout",
+        "properties": {
+          "height": 600,
+          "width": 800
+        }
+      }
+    }
   },
   "dialogPanel": {
     "class": "CGameDialogPanel",
     "properties": {
-      "xSize": 400,
-      "ySize": 300,
-      "widgets": [
+      "layout": {
+        "class": "CCenteredLayout",
+        "properties": {
+          "height": 300,
+          "width": 400
+        }
+      },
+      "children": [
         {
           "class": "CWidget",
           "properties": {
             "render": "renderQuestion",
-            "x": 0,
-            "y": 0,
-            "w": 100,
-            "h": 75
+            "layout": {
+              "class": "CPercentLayout",
+              "properties": {
+                "x": 0,
+                "y": 0,
+                "w": 100,
+                "h": 75
+              }
+            }
           }
         },
         {
@@ -29,10 +66,15 @@
           "properties": {
             "render": "renderYes",
             "click": "clickYes",
-            "x": 0,
-            "y": 75,
-            "w": 50,
-            "h": 25
+            "layout": {
+              "class": "CPercentLayout",
+              "properties": {
+                "x": 0,
+                "y": 75,
+                "w": 50,
+                "h": 25
+              }
+            }
           }
         },
         {
@@ -40,37 +82,79 @@
           "properties": {
             "render": "renderNo",
             "click": "clickNo",
-            "x": 50,
-            "y": 75,
-            "w": 50,
-            "h": 25
+            "layout": {
+              "class": "CPercentLayout",
+              "properties": {
+                "x": 50,
+                "y": 75,
+                "w": 50,
+                "h": 25
+              }
+            }
           }
         }
       ]
     }
   },
   "fightPanel": {
-    "class": "CGameFightPanel"
+    "class": "CGameFightPanel",
+    "properties": {
+      "layout": {
+        "class": "CCenteredLayout",
+        "properties": {
+          "height": 600,
+          "width": 800
+        }
+      }
+    }
+  },
+  "gamePanel": {
+    "class": "CGamePanel",
+    "properties": {
+      "layout": {
+        "class": "CCenteredLayout",
+        "properties": {
+          "height": 600,
+          "width": 800
+        }
+      }
+    }
   },
   "questPanel": {
-    "class": "CGameQuestPanel"
+    "class": "CGameQuestPanel",
+    "properties": {
+      "layout": {
+        "class": "CCenteredLayout",
+        "properties": {
+          "height": 600,
+          "width": 800
+        }
+      }
+    }
   },
   "characterPanel": {
     "class": "CGameCharacterPanel",
     "properties": {
-      "charSheet": {
-        "class": "CListString",
+      "layout": {
+        "class": "CCenteredLayout",
         "properties": {
-          "values": [
-            "level",
-            "exp",
-            "gold",
-            "mana",
-            "manaMax",
-            "manaRegRate",
-            "hp",
-            "hpMax"
-          ]
+          "height": 600,
+          "width": 800
+        },
+        "charSheet": {
+          "class": "CListString",
+          "properties": {
+            "values": [
+              "level",
+              "exp",
+              "gold",
+              "mana",
+              "manaMax",
+              "manaRegRate",
+              "hp",
+              "hpMax"
+            ]
+          }
         }
       }
     }

@@ -25,15 +25,10 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 class CWidget;
 
 class CGamePanel : public CGameGraphicsObject {
-V_META(CGamePanel, CGameGraphicsObject,
-       V_PROPERTY(CGamePanel, std::set<std::shared_ptr<CWidget>>, widgets, getWidgets, setWidgets))
+V_META(CGamePanel, CGameGraphicsObject, vstd::meta::empty())
 public:
     void renderObject(std::shared_ptr<CGui> reneder, std::shared_ptr<SDL_Rect> rect, int frameTime) override;
 
-private:
-    std::set<std::shared_ptr<CWidget>> widgets;
-
-public:
     //TODO:
     int getWidth() {
         return 800;
@@ -42,10 +37,6 @@ public:
     int getHeight() {
         return 600;
     }
-
-    std::set<std::shared_ptr<CWidget>> getWidgets();
-
-    void setWidgets(std::set<std::shared_ptr<CWidget>> widgets);
 
     bool keyboardEvent(std::shared_ptr<CGui> sharedPtr, SDL_EventType type, SDL_Keycode i) override;
 

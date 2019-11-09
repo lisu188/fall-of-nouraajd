@@ -25,7 +25,9 @@ class CLayout;
 
 class CGameGraphicsObject : public CGameObject {
 V_META(CGameGraphicsObject, CGameObject,
-       V_PROPERTY(CGameGraphicsObject, std::shared_ptr<CLayout>, layout, getLayout, setLayout))
+       V_PROPERTY(CGameGraphicsObject, std::shared_ptr<CLayout>, layout, getLayout, setLayout),
+       V_PROPERTY(CGameGraphicsObject,
+                  std::set<std::shared_ptr<CGameGraphicsObject>>, children, getChildren, setChildren))
 
     std::list<std::pair<std::function<bool(std::shared_ptr<CGui>, SDL_Event *)>, std::function<bool(
             std::shared_ptr<CGui>, SDL_Event *) >>> eventCallbackList;
@@ -35,6 +37,10 @@ V_META(CGameGraphicsObject, CGameObject,
     std::shared_ptr<CLayout> layout;
 
 public:
+    std::set<std::shared_ptr<CGameGraphicsObject>> getChildren();
+
+    void setChildren(std::set<std::shared_ptr<CGameGraphicsObject>> _children);
+
     void render(std::shared_ptr<CGui> reneder, int frameTime);
 
     bool event(std::shared_ptr<CGui> gui, SDL_Event *event);
