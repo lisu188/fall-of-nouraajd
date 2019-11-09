@@ -47,10 +47,6 @@ public:
     int getY() { return y; }
 
     void setY(int _y) { this->y = _y; }
-
-private:
-
-    std::shared_ptr<CMapGraphicsObject> getMapGraphicsObject();
 };
 
 class CMapGraphicsObject : public CGameGraphicsObject {
