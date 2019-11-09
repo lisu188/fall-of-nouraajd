@@ -2,25 +2,35 @@
   "gui": {
     "class": "CGui",
     "properties": {
-      "height": 1080,
-      "width": 1920,
+      "layout": {
+        "class": "CSimpleLayout",
+        "properties": {
+          "height": 1080,
+          "width": 1920,
+          "x": 0,
+          "y": 0
+        }
+      },
       "tileSize": 50,
-      "guiStack": {
-        "0": {
+      "children": [
+        {
           "ref": "mapGraphics"
         },
-        "1": {
+        {
           "ref": "CStatsGraphicsObject"
         },
-        "2": {
+        {
           "ref": "CConsoleGraphicsObject"
         }
-      }
+      ]
     }
   },
   "mapGraphics": {
     "class": "CMapGraphicsObject",
     "properties": {
+      "layout": {
+        "class": "CParentLayout"
+      },
       "panelKeys": {
         "ref": "panelKeys"
       }
