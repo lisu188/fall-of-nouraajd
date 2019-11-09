@@ -83,7 +83,6 @@ namespace {
                     CTypes::register_type<CPlayerController, CController, CGameObject>();
                 }
 
-                CTypes::register_type<CGui, CGameObject>();
                 CTypes::register_type<CTextureCache, CGameObject>();
                 CTypes::register_type<CTextManager, CGameObject>();
             }

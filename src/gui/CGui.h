@@ -27,10 +27,8 @@ class CTextureCache;
 
 class CTextManager;
 
-typedef std::map<std::string, std::shared_ptr<CGameGraphicsObject>> CGuiStack;
-
 class CGui : public CGameGraphicsObject {
-V_META(CGui, CGameObject,
+V_META(CGui, CGameGraphicsObject,
        V_PROPERTY(CGui, int, height, getHeight, setHeight),
        V_PROPERTY(CGui, int, width, getWidth, setWidth),
        V_PROPERTY(CGui, int, tileSize, getTileSize, setTileSize))
