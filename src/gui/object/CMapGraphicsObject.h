@@ -38,6 +38,8 @@ private:
     int x, y;
 
 public:
+    CMapGraphicsProxyObject();
+
     CMapGraphicsProxyObject(int x, int y);
 
     int getX() { return x; }

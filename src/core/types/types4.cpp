@@ -61,6 +61,7 @@ namespace {
                     CTypes::register_type<CMapGraphicsObject, CGameGraphicsObject, CGameObject>();
                     CTypes::register_type<CStatsGraphicsObject, CGameGraphicsObject, CGameObject>();
                     CTypes::register_type<CConsoleGraphicsObject, CGameGraphicsObject, CGameObject>();
+                    CTypes::register_type<CMapGraphicsProxyObject, CGameGraphicsObject, CGameObject>();
 
                     CTypes::register_type<CGamePanel, CGameGraphicsObject, CGameObject>();
                     {
