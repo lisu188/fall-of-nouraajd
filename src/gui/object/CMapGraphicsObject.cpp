@@ -15,6 +15,7 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
+#include "gui/CLayout.h"
 #include "gui/panel/CGameInventoryPanel.h"
 #include "gui/panel/CGameQuestPanel.h"
 #include "gui/panel/CGameCharacterPanel.h"
@@ -76,6 +77,7 @@ void CMapGraphicsObject::renderObject(std::shared_ptr<CGui> gui, std::shared_ptr
         for (int x = 0; x <= gui->getTileCountX(); x++)
             for (int y = 0; y <= gui->getTileCountY(); y++) {
                 std::shared_ptr<CMapGraphicsProxyObject> nh = std::make_shared<CMapGraphicsProxyObject>(x, y);
+                nh->setLayout(std::make_shared<CMapGraphicsProxyLayout>());
                 proxyObjects.emplace(std::make_pair(x, y), nh);
                 addChild(nh);
             }
@@ -117,25 +119,29 @@ bool CMapGraphicsProxyObject::mouseEvent(std::shared_ptr<CGui> sharedPtr, SDL_Ev
 
 void
 CMapGraphicsProxyObject::renderObject(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> rect, int frameTime) {
-    std::shared_ptr<CMap> map = gui->getGame()->getMap();
-    auto playerCoords = map->getPlayer()->getCoords();
+    if (std::shared_ptr<CMap> map = gui->getGame()->getMap()) {//TODO:
+        auto playerCoords = map->getPlayer()->getCoords();
 
-    Coords actualCoords(playerCoords.x - gui->getTileCountX() / 2 + x,
-                        playerCoords.y - gui->getTileCountY() / 2 + y,
-                        playerCoords.z);
+        Coords actualCoords(playerCoords.x - gui->getTileCountX() / 2 + x,
+                            playerCoords.y - gui->getTileCountY() / 2 + y,
+                            playerCoords.z);
 
-    std::shared_ptr<CTile> tile = map->getTile(actualCoords.x, actualCoords.y, actualCoords.z);
+        std::shared_ptr<CTile> tile = map->getTile(actualCoords.x, actualCoords.y, actualCoords.z);
 
-    tile->getGraphicsObject()->renderObject(gui, rect, frameTime);
+        tile->getGraphicsObject()->renderObject(gui, rect, frameTime);
 
-    map->forObjects([&](std::shared_ptr<CMapObject> ob) {
-        ob->getGraphicsObject()->renderObject(gui, rect, frameTime);
-    }, [&](std::shared_ptr<CMapObject> ob) {
-        return actualCoords == ob->getCoords();
-    });
+        map->forObjects([&](std::shared_ptr<CMapObject> ob) {
+            ob->getGraphicsObject()->renderObject(gui, rect, frameTime);
+        }, [&](std::shared_ptr<CMapObject> ob) {
+            return actualCoords == ob->getCoords();
+        });
+    }
 }
 
 CMapGraphicsProxyObject::CMapGraphicsProxyObject(int x, int y) : x(x), y(y) {
 
 }
 
+CMapGraphicsProxyObject::CMapGraphicsProxyObject() {
+
+}
