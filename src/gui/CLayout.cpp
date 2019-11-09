@@ -68,6 +68,22 @@ std::shared_ptr<SDL_Rect> CCenteredLayout::getRect(std::shared_ptr<CGameGraphics
     return CUtil::boxInBox(getParentRect(object), RECT(0, 0, width, height));
 }
 
+int CCenteredLayout::getWidth() {
+    return width;
+}
+
+void CCenteredLayout::setWidth(int _width) {
+    this->width = _width;
+}
+
+int CCenteredLayout::getHeight() {
+    return height;
+}
+
+void CCenteredLayout::setHeight(int _height) {
+    this->height = _height;
+}
+
 int CPercentLayout::getX() {
     return x;
 }
