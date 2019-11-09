@@ -25,9 +25,9 @@ void CGameGraphicsObject::renderObject(std::shared_ptr<CGui> reneder, std::share
 }
 
 void CGameGraphicsObject::render(std::shared_ptr<CGui> reneder, int frameTime) {
-    renderObject(reneder,getRect(), frameTime);
+    renderObject(reneder, getRect(), frameTime);
     for (auto child:children) {
-        child->renderObject(reneder, child->getRect(), frameTime);
+        child->render(reneder, frameTime);
     }
 }
 

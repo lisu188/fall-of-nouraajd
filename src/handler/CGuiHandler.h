@@ -36,8 +36,7 @@ public:
 
     void showTrade(std::shared_ptr<CMarket> market);
 
-    std::basic_string<char, std::char_traits<char>, std::allocator<char>>
-    showSelection(std::shared_ptr<CListString> list);
+    std::string showSelection(std::shared_ptr<CListString> list);
 
 private:
     std::weak_ptr<CGame> _game;
