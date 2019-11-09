@@ -8,19 +8,19 @@
   "ArmorOfEndlessWinterEffect": {
     "class": "ArmorOfEndlessWinterEffect",
     "properties": {
+      "duration": 3,
       "tags": [
         "buff"
-      ],
-      "duration": 3
+      ]
     }
   },
   "BarrierEffect": {
     "class": "BarrierEffect",
     "properties": {
+      "duration": 3,
       "tags": [
         "buff"
-      ],
-      "duration": 3
+      ]
     }
   },
   "BloodlashEffect": {
@@ -38,10 +38,10 @@
   "EndlessPainEffect": {
     "class": "EndlessPainEffect",
     "properties": {
+      "duration": 2,
       "tags": [
         "stun"
-      ],
-      "duration": 2
+      ]
     }
   },
   "LethalPoisonEffect": {
@@ -59,10 +59,10 @@
   "Stun": {
     "class": "Stun",
     "properties": {
+      "duration": 2,
       "tags": [
         "stun"
-      ],
-      "duration": 2
+      ]
     }
   }
 }
