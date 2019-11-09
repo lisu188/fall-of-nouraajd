@@ -59,7 +59,8 @@ void initModule1() {
             .def("createObject", &CGame::createObject<CGameObject>)
             .def("getGui", &CGame::getGui);
 
-    class_<CGui, bases<CGameObject>, boost::noncopyable, std::shared_ptr<CGui>>("CGui", no_init);
+    class_<CGameGraphicsObject, bases<CGameObject>, boost::noncopyable, std::shared_ptr<CGameGraphicsObject>>("CGameGraphicsObject", no_init);
+    class_<CGui, bases<CGameGraphicsObject>, boost::noncopyable, std::shared_ptr<CGui>>("CGui", no_init);
 
     bool (CMap::*canStep)(Coords) =&CMap::canStep;
 

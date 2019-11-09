@@ -57,6 +57,7 @@ namespace {
             {
                 CTypes::register_type<CGameGraphicsObject, CGameObject>();
                 {
+                    CTypes::register_type<CGui, CGameGraphicsObject, CGameObject>();
                     CTypes::register_type<CMapGraphicsObject, CGameGraphicsObject, CGameObject>();
                     CTypes::register_type<CStatsGraphicsObject, CGameGraphicsObject, CGameObject>();
                     CTypes::register_type<CConsoleGraphicsObject, CGameGraphicsObject, CGameObject>();
@@ -71,19 +72,19 @@ namespace {
                         CTypes::register_type<CGameCharacterPanel, CGamePanel, CGameGraphicsObject, CGameObject>();
                         CTypes::register_type<CGameDialogPanel, CGamePanel, CGameGraphicsObject, CGameObject>();
                     }
-                    CTypes::register_type<CWidget, CGameObject>();
+                    CTypes::register_type<CWidget, CGameGraphicsObject, CGameObject>();
                     CTypes::register_type<CAnimation, CGameGraphicsObject, CGameObject>();
                     {
                         CTypes::register_type<CStaticAnimation, CAnimation, CGameGraphicsObject, CGameObject>();
                         CTypes::register_type<CDynamicAnimation, CAnimation, CGameGraphicsObject, CGameObject>();
                     }
-                    CTypes::register_type<CLayout, CGameObject>();
-                    {
-                        CTypes::register_type<CSimpleLayout, CLayout, CGameObject>();
-                        CTypes::register_type<CCenteredLayout, CLayout, CGameObject>();
-                        CTypes::register_type<CPercentLayout, CLayout, CGameObject>();
-                        CTypes::register_type<CParentLayout, CLayout, CGameObject>();
-                    }
+                }
+                CTypes::register_type<CLayout, CGameObject>();
+                {
+                    CTypes::register_type<CSimpleLayout, CLayout, CGameObject>();
+                    CTypes::register_type<CCenteredLayout, CLayout, CGameObject>();
+                    CTypes::register_type<CPercentLayout, CLayout, CGameObject>();
+                    CTypes::register_type<CParentLayout, CLayout, CGameObject>();
                 }
             }
         }

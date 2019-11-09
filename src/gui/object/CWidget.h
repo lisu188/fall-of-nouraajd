@@ -23,7 +23,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 class CGui;
 
 class CWidget : public CGameGraphicsObject {
-V_META(CWidget, CGameObject,
+V_META(CWidget, CGameGraphicsObject,
        V_PROPERTY(CWidget, std::string, render, getRender, setRender),
        V_PROPERTY(CWidget, std::string, click, getClick, setClick))
 public:
