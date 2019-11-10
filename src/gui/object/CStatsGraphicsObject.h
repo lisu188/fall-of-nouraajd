@@ -38,8 +38,6 @@ private:
 
 class CStatsGraphicsObject : public CGameGraphicsObject {
 V_META(CStatsGraphicsObject, CGameGraphicsObject, vstd::meta::empty())
-    int height = 100;
-    int width = 200;
 public:
     CStatsGraphicsObject();
 

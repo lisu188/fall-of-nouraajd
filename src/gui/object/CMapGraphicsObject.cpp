@@ -21,6 +21,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "gui/panel/CGameCharacterPanel.h"
 #include "core/CController.h"
 #include "gui/object/CMapGraphicsObject.h"
+#include "gui/object/CProxyGraphicsObject.h"
 #include "gui/CAnimation.h"
 #include "core/CLoader.h"
 
@@ -76,7 +77,7 @@ void CMapGraphicsObject::renderObject(std::shared_ptr<CGui> gui, std::shared_ptr
         proxyObjects.clear();
         for (int x = 0; x <= gui->getTileCountX(); x++)
             for (int y = 0; y <= gui->getTileCountY(); y++) {
-                std::shared_ptr<CMapGraphicsProxyObject> nh = std::make_shared<CMapGraphicsProxyObject>(x, y);
+                std::shared_ptr<CProxyGraphicsObject> nh = std::make_shared<CProxyGraphicsObject>(x, y);
                 nh->setLayout(std::make_shared<CMapGraphicsProxyLayout>());
                 proxyObjects.emplace(std::make_pair(x, y), nh);
                 addChild(nh);
@@ -107,41 +108,4 @@ std::shared_ptr<CMapStringString> CMapGraphicsObject::getPanelKeys() {
 
 void CMapGraphicsObject::setPanelKeys(std::shared_ptr<CMapStringString> _panelKeys) {
     this->panelKeys = _panelKeys;
-}
-
-bool CMapGraphicsProxyObject::keyboardEvent(std::shared_ptr<CGui> sharedPtr, SDL_EventType type, SDL_Keycode i) {
-    return CGameGraphicsObject::keyboardEvent(sharedPtr, type, i);
-}
-
-bool CMapGraphicsProxyObject::mouseEvent(std::shared_ptr<CGui> sharedPtr, SDL_EventType type, int x, int y) {
-    return CGameGraphicsObject::mouseEvent(sharedPtr, type, x, y);
-}
-
-void
-CMapGraphicsProxyObject::renderObject(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> rect, int frameTime) {
-    if (std::shared_ptr<CMap> map = gui->getGame()->getMap()) {//TODO:
-        auto playerCoords = map->getPlayer()->getCoords();
-
-        Coords actualCoords(playerCoords.x - gui->getTileCountX() / 2 + x,
-                            playerCoords.y - gui->getTileCountY() / 2 + y,
-                            playerCoords.z);
-
-        std::shared_ptr<CTile> tile = map->getTile(actualCoords.x, actualCoords.y, actualCoords.z);
-
-        tile->getGraphicsObject()->renderObject(gui, rect, frameTime);
-
-        map->forObjects([&](std::shared_ptr<CMapObject> ob) {
-            ob->getGraphicsObject()->renderObject(gui, rect, frameTime);
-        }, [&](std::shared_ptr<CMapObject> ob) {
-            return actualCoords == ob->getCoords();
-        });
-    }
-}
-
-CMapGraphicsProxyObject::CMapGraphicsProxyObject(int x, int y) : x(x), y(y) {
-
-}
-
-CMapGraphicsProxyObject::CMapGraphicsProxyObject() {
-
 }
