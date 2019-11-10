@@ -1,4 +1,17 @@
 {
+  "consoleGraphics": {
+    "class": "CConsoleGraphicsObject",
+    "properties": {
+      "layout": {
+        "class": "CAnchoredLayout",
+        "properties": {
+          "height": 30,
+          "horizontal": "PARENT",
+          "vertical": "DOWN"
+        }
+      }
+    }
+  },
   "gui": {
     "class": "CGui",
     "properties": {
@@ -36,29 +49,16 @@
       }
     }
   },
-  "consoleGraphics": {
-    "class": "CConsoleGraphicsObject",
-    "properties": {
-      "layout": {
-        "class": "CAnchoredLayout",
-        "properties": {
-          "horizontal": "PARENT",
-          "vertical": "DOWN",
-          "height": 30
-        }
-      }
-    }
-  },
   "statsGraphics": {
     "class": "CStatsGraphicsObject",
     "properties": {
       "layout": {
         "class": "CAnchoredLayout",
         "properties": {
+          "height": 100,
           "horizontal": "LEFT",
           "vertical": "UP",
-          "width": 200,
-          "height": 100
+          "width": 200
         }
       }
     }
