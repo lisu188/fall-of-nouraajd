@@ -64,23 +64,19 @@ std::shared_ptr<SDL_Rect> CLayout::getParentRect(std::shared_ptr<CGameGraphicsOb
     return object->getParent() ? object->getParent()->getLayout()->getRect(object->getParent()) : RECT(0, 0, 0, 0);
 }
 
-std::shared_ptr<SDL_Rect> CCenteredLayout::getRect(std::shared_ptr<CGameGraphicsObject> object) {
-    return CUtil::boxInBox(getParentRect(object), RECT(0, 0, width, height));
-}
-
-int CCenteredLayout::getWidth() {
+int CAnchoredLayout::getWidth() {
     return width;
 }
 
-void CCenteredLayout::setWidth(int _width) {
+void CAnchoredLayout::setWidth(int _width) {
     this->width = _width;
 }
 
-int CCenteredLayout::getHeight() {
+int CAnchoredLayout::getHeight() {
     return height;
 }
 
-void CCenteredLayout::setHeight(int _height) {
+void CAnchoredLayout::setHeight(int _height) {
     this->height = _height;
 }
 
@@ -136,3 +132,59 @@ std::shared_ptr<SDL_Rect> CMapGraphicsProxyLayout::getRect(std::shared_ptr<CGame
                 tileSize, tileSize);
 }
 
+
+void CAnchoredLayout::setHorizontal(std::string horizontal) {
+    CAnchoredLayout::horizontal = horizontal;
+}
+
+std::string CAnchoredLayout::getHorizontal() {
+    return horizontal;
+}
+
+void CAnchoredLayout::setVertical(std::string vertical) {
+    CAnchoredLayout::vertical = vertical;
+}
+
+std::string CAnchoredLayout::getVertical() {
+    return vertical;
+}
+
+std::shared_ptr<SDL_Rect> CAnchoredLayout::getRect(std::shared_ptr<CGameGraphicsObject> object) {
+    auto parent = getParentRect(object);
+    int x = 0;
+    int y = 0;
+    int w = horizontal == "PARENT" ? parent->w : getWidth();
+    int h = vertical == "PARENT" ? parent->h : getHeight();
+
+    if (horizontal == "LEFT" || horizontal == "PARENT") {
+        x = 0;
+    } else if (horizontal == "RIGHT") {
+        x = parent->w - getWidth();
+    } else if (horizontal == "CENTER") {
+        x = parent->w / 2 - getWidth() / 2;
+    } else {
+        vstd::logger::debug("Unknown horizontal layout:", horizontal);
+    }
+
+    if (vertical == "UP" || vertical == "PARENT") {
+        y = 0;
+    } else if (vertical == "DOWN") {
+        y = parent->h - getHeight();
+    } else if (vertical == "CENTER") {
+        y = parent->h / 2 - getHeight() / 2;
+    } else {
+        vstd::logger::debug("Unknown vertical layout:", vertical);
+    }
+
+    return RECT(parent->x + x, parent->y + y, w, h);
+}
+
+CParentLayout::CParentLayout() {
+    setHorizontal("PARENT");
+    setVertical("PARENT");
+}
+
+CCenteredLayout::CCenteredLayout() {
+    setHorizontal("CENTER");
+    setVertical("CENTER");
+}
