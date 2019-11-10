@@ -7,10 +7,10 @@
           "ref": "mapGraphics"
         },
         {
-          "ref": "CStatsGraphicsObject"
+          "ref": "statsGraphics"
         },
         {
-          "ref": "CConsoleGraphicsObject"
+          "ref": "consoleGraphics"
         }
       ],
       "layout": {
@@ -33,6 +33,33 @@
       },
       "panelKeys": {
         "ref": "panelKeys"
+      }
+    }
+  },
+  "consoleGraphics": {
+    "class": "CConsoleGraphicsObject",
+    "properties": {
+      "layout": {
+        "class": "CAnchoredLayout",
+        "properties": {
+          "horizontal": "PARENT",
+          "vertical": "DOWN",
+          "height": 30
+        }
+      }
+    }
+  },
+  "statsGraphics": {
+    "class": "CStatsGraphicsObject",
+    "properties": {
+      "layout": {
+        "class": "CAnchoredLayout",
+        "properties": {
+          "horizontal": "LEFT",
+          "vertical": "UP",
+          "width": 200,
+          "height": 100
+        }
       }
     }
   }

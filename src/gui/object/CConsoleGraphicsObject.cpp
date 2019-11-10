@@ -20,7 +20,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "gui/CTextManager.h"
 
 void CConsoleGraphicsObject::renderObject(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> rect, int frameTime) {
-    gui->getTextManager()->drawText(consoleState,rect->x, rect->y + rect->h - height, width);
+    gui->getTextManager()->drawText(consoleState, rect->x, rect->y, rect->w);
 }
 
 
@@ -31,7 +31,6 @@ CConsoleGraphicsObject::CConsoleGraphicsObject() {
         if (inProgress) {
             if (event->key.keysym.sym == SDLK_TAB) {
                 stopInput();
-
             } else if (event->key.keysym.sym == SDLK_RETURN && consoleState.length() > 0) {
                 gui->getGame()->getScriptHandler()->call_created_function(consoleState,
                                                                           {"game"},

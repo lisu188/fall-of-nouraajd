@@ -65,10 +65,12 @@ private:
 };
 
 
-class CCenteredLayout : public CLayout {
-V_META(CCenteredLayout, CLayout,
-       V_PROPERTY(CCenteredLayout, int, width, getWidth, setWidth),
-       V_PROPERTY(CCenteredLayout, int, height, getHeight, setHeight))
+class CAnchoredLayout : public CLayout {
+V_META(CAnchoredLayout, CLayout,
+       V_PROPERTY(CAnchoredLayout, int, width, getWidth, setWidth),
+       V_PROPERTY(CAnchoredLayout, int, height, getHeight, setHeight),
+       V_PROPERTY(CAnchoredLayout, std::string, vertical, getVertical, setVertical),
+       V_PROPERTY(CAnchoredLayout, std::string, horizontal, getHorizontal, setHorizontal))
 public:
     std::shared_ptr<SDL_Rect> getRect(std::shared_ptr<CGameGraphicsObject> object) override;
 
@@ -80,10 +82,33 @@ public:
 
     void setHeight(int _height);
 
+    std::string getVertical();
+
+    void setVertical(std::string vertical);
+
+    std::string getHorizontal();
+
+    void setHorizontal(std::string horizontal);
+
 private:
     int width = 0;
     int height = 0;
+    std::string vertical;
+    std::string horizontal;
 };
+
+class CCenteredLayout : public CAnchoredLayout {
+V_META(CCenteredLayout, CAnchoredLayout, vstd::meta::empty())
+public:
+    CCenteredLayout();
+};
+
+class CParentLayout : public CAnchoredLayout {
+V_META(CParentLayout, CAnchoredLayout, vstd::meta::empty())
+public:
+    CParentLayout();
+};
+
 
 class CPercentLayout : public CLayout {
 V_META(CPercentLayout, CLayout,
@@ -115,14 +140,6 @@ private:
             y = 0,
             w = 0,
             h = 0;
-};
-
-class CParentLayout : public CLayout {
-V_META(CParentLayout, CLayout, vstd::meta::empty())
-public:
-    std::shared_ptr<SDL_Rect> getRect(std::shared_ptr<CGameGraphicsObject> object) {
-        return getParentRect(object);
-    }
 };
 
 class CMapGraphicsProxyLayout : public CLayout {

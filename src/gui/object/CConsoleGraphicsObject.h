@@ -23,10 +23,6 @@ class CConsoleGraphicsObject : public CGameGraphicsObject {
 V_META(CConsoleGraphicsObject, CGameGraphicsObject,
        V_PROPERTY(CConsoleGraphicsObject, std::string, consoleState, getConsoleState, setConsoleState),
        V_PROPERTY(CConsoleGraphicsObject, std::list<std::string>, consoleHistory, getConsoleHistory, setConsoleHistory))
-//TODO: make this properties
-    int height = 30;
-    int width = 1080;
-
 public:
     CConsoleGraphicsObject();
 
