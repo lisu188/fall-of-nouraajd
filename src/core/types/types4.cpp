@@ -61,7 +61,7 @@ namespace {
                     CTypes::register_type<CMapGraphicsObject, CGameGraphicsObject, CGameObject>();
                     CTypes::register_type<CStatsGraphicsObject, CGameGraphicsObject, CGameObject>();
                     CTypes::register_type<CConsoleGraphicsObject, CGameGraphicsObject, CGameObject>();
-                    CTypes::register_type<CMapGraphicsProxyObject, CGameGraphicsObject, CGameObject>();
+                    CTypes::register_type<CProxyGraphicsObject, CGameGraphicsObject, CGameObject>();
 
                     CTypes::register_type<CGamePanel, CGameGraphicsObject, CGameObject>();
                     {
@@ -83,9 +83,10 @@ namespace {
                 CTypes::register_type<CLayout, CGameObject>();
                 {
                     CTypes::register_type<CSimpleLayout, CLayout, CGameObject>();
-                    CTypes::register_type<CCenteredLayout, CLayout, CGameObject>();
                     CTypes::register_type<CPercentLayout, CLayout, CGameObject>();
-                    CTypes::register_type<CParentLayout, CLayout, CGameObject>();
+                    CTypes::register_type<CAnchoredLayout, CLayout, CGameObject>();
+                    CTypes::register_type<CCenteredLayout, CAnchoredLayout, CLayout, CGameObject>();
+                    CTypes::register_type<CParentLayout, CAnchoredLayout, CLayout, CGameObject>();
                 }
             }
         }
