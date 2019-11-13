@@ -23,20 +23,38 @@ class CGui;
 
 class CLayout;
 
+//TODO: generify
+struct priority_comparator {
+    bool operator()(
+            std::shared_ptr<CGameGraphicsObject> a, std::shared_ptr<CGameGraphicsObject> b);
+};
+
+struct reverse_priority_comparator {
+    bool operator()(
+            std::shared_ptr<CGameGraphicsObject> a, std::shared_ptr<CGameGraphicsObject> b);
+};
+
 class CGameGraphicsObject : public CGameObject {
 V_META(CGameGraphicsObject, CGameObject,
+       V_PROPERTY(CGameGraphicsObject, int, priority, getPriority, setPriority),
        V_PROPERTY(CGameGraphicsObject, std::shared_ptr<CLayout>, layout, getLayout, setLayout),
        V_PROPERTY(CGameGraphicsObject,
                   std::set<std::shared_ptr<CGameGraphicsObject>>, children, getChildren, setChildren))
 
     std::list<std::pair<std::function<bool(std::shared_ptr<CGui>, SDL_Event *)>, std::function<bool(
             std::shared_ptr<CGui>, SDL_Event *) >>> eventCallbackList;
+
     std::set<std::shared_ptr<CGameGraphicsObject>> children;
     std::weak_ptr<CGameGraphicsObject> parent;
 
     std::shared_ptr<CLayout> layout;
-
+    int priority = 0;
 public:
+
+    int getPriority();
+
+    void setPriority(int priority);
+
     std::set<std::shared_ptr<CGameGraphicsObject>> getChildren();
 
     void setChildren(std::set<std::shared_ptr<CGameGraphicsObject>> _children);
@@ -66,10 +84,14 @@ public:
 
     void addChild(std::shared_ptr<CGameGraphicsObject> child);
 
+    void pushChild(std::shared_ptr<CGameGraphicsObject> child);
+
     void removeChild(std::shared_ptr<CGameGraphicsObject> child);
 
     void removeParent();
 
 private:
+    int getTopPriority();
+
     std::shared_ptr<SDL_Rect> getRect();
 };

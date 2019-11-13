@@ -20,19 +20,26 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "gui/CGui.h"
 #include "gui/CLayout.h"
 
+
 void CGameGraphicsObject::renderObject(std::shared_ptr<CGui> reneder, std::shared_ptr<SDL_Rect> rect, int frameTime) {
 
 }
 
 void CGameGraphicsObject::render(std::shared_ptr<CGui> reneder, int frameTime) {
     renderObject(reneder, getRect(), frameTime);
-    for (auto child:children) {
+    std::set<std::shared_ptr<CGameGraphicsObject>,
+            priority_comparator> children_sorted(children.begin(),
+                                                 children.end());
+    for (auto child:children_sorted) {
         child->render(reneder, frameTime);
     }
 }
 
 bool CGameGraphicsObject::event(std::shared_ptr<CGui> gui, SDL_Event *event) {
-    for (auto child:children) {
+    std::set<std::shared_ptr<CGameGraphicsObject>,
+            reverse_priority_comparator> children_reversed(children.begin(),
+                                                           children.end());
+    for (auto child:children_reversed) {
         if (child->event(gui, event)) {
             return true;
         }
@@ -116,11 +123,46 @@ std::shared_ptr<CGameGraphicsObject> CGameGraphicsObject::getTopParent() {
 }
 
 std::set<std::shared_ptr<CGameGraphicsObject>> CGameGraphicsObject::getChildren() {
-    return children;
+    return vstd::cast<std::set<std::shared_ptr<CGameGraphicsObject>>>(children);
 }
 
 void CGameGraphicsObject::setChildren(std::set<std::shared_ptr<CGameGraphicsObject>> _children) {
     for (auto child:_children) {
         addChild(child);
     }
+}
+
+int CGameGraphicsObject::getPriority() {
+    return priority;
+}
+
+void CGameGraphicsObject::setPriority(int priority) {
+    this->priority = priority;
+}
+
+int CGameGraphicsObject::getTopPriority() {
+    auto iterator = std::max_element(
+            children.begin(), children.end(), priority_comparator());
+    if (iterator != children.end()) {
+        return (*iterator)->getPriority();
+    }
+    return -1;
+}
+
+void CGameGraphicsObject::pushChild(std::shared_ptr<CGameGraphicsObject> child) {
+    child->setPriority(getTopPriority() + 1);
+    addChild(child);
+}
+
+bool priority_comparator::operator()(std::shared_ptr<CGameGraphicsObject> a,
+                                     std::shared_ptr<CGameGraphicsObject> b) {
+    if (a->getPriority() == b->getPriority()) {
+        return a < b;
+    }
+    return a->getPriority() < b->getPriority();
+}
+
+bool reverse_priority_comparator::operator()(std::shared_ptr<CGameGraphicsObject> a,
+                                             std::shared_ptr<CGameGraphicsObject> b) {
+    return priority_comparator()(b, a);
 }

@@ -96,7 +96,7 @@ void CMapGraphicsObject::initialize() {
                 gui->removeChild(panel);
                 return true;
             });
-            gui->addChild(panel);
+            gui->pushChild(panel);
             return true;
         });
     }
