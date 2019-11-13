@@ -45,8 +45,8 @@ public:
     void setSelectionBarThickness(int selectionBarThickness);
 
 private:
-    std::shared_ptr<CListView<std::set<std::shared_ptr<CItem>>>> inventoryView;
-    std::shared_ptr<CListView<CItemMap>> equippedView;
+    std::shared_ptr<CListView> inventoryView;
+    std::shared_ptr<CListView> equippedView;
 
     int xInv = 4;
     int yInv = 4;

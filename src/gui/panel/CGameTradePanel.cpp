@@ -51,35 +51,27 @@ bool CGameTradePanel::keyboardEvent(std::shared_ptr<CGui> gui, SDL_EventType typ
 
 
 CGameTradePanel::CGameTradePanel() {
-    inventoryView = std::make_shared<
-            CListView<
-                    std::set<
-                            std::shared_ptr<
-                                    CItem>>>>
+    inventoryView = std::make_shared<CListView>
             (
                     xInv, yInv, 50, true, selectionBarThickness)->withCollection(
             [](std::shared_ptr<CGui> gui) {
-                return gui->getGame()->getMap()->getPlayer()->getInInventory();
+                return vstd::cast<std::set<std::shared_ptr<CGameObject>>>(
+                        gui->getGame()->getMap()->getPlayer()->getInInventory());
             })->withCallback(
             [this](std::shared_ptr<CGui> gui, int index, auto newSelection) {
-                this->selectInventory(newSelection);
+                this->selectInventory(vstd::cast<CItem>(newSelection));
             })->withSelect(
             [this](std::shared_ptr<CGui> gui, int index, auto item) {
                 return vstd::ctn(selectedInventory, item, [](auto a, auto b) { return a == b.lock(); });
             });
 
-    marketView = std::make_shared<
-            CListView<
-                    std::set<
-                            std::shared_ptr<
-                                    CItem>>>>
-            (
+    marketView = std::make_shared<CListView>(
                     xInv, yInv, 50, true, selectionBarThickness)->withCollection(
             [this](std::shared_ptr<CGui> gui) {
-                return market->getItems();
+                return vstd::cast<std::set<std::shared_ptr<CGameObject>>>(market->getItems());
             })->withCallback(
             [this](std::shared_ptr<CGui> gui, int index, auto newSelection) {
-                this->selectMarket(newSelection);
+                this->selectMarket(vstd::cast<CItem>(newSelection));
             })->withSelect(
             [this](std::shared_ptr<CGui> gui, int index, auto item) {
                 return vstd::ctn(selectedMarket, item, [](auto a, auto b) { return a == b.lock(); });
