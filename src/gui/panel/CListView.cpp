@@ -140,7 +140,7 @@ int CListView::getLeftArrowIndex() {
     return xSize * (ySize - 1);
 }
 
-auto CListView::calculateIndices(std::shared_ptr<CGui> gui) {
+std::unordered_map<int, std::shared_ptr<CGameObject>> CListView::calculateIndices(std::shared_ptr<CGui> gui) {
     std::unordered_map<int, std::shared_ptr<CGameObject>> indices;
     int i = -1;
     for (auto it:collection(gui)) {

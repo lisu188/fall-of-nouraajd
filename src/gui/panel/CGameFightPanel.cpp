@@ -22,8 +22,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "gui/object/CStatsGraphicsObject.h"
 
 void CGameFightPanel::renderObject(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> rect, int i) {
-    drawInteractions(gui,rect, i);
-    drawEnemy(gui,rect, i);
+    drawInteractions(gui, rect, i);
+    drawEnemy(gui, rect, i);
 }
 
 void CGameFightPanel::drawInteractions(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> pRect, int frameTime) {
@@ -43,15 +43,15 @@ void CGameFightPanel::drawInteractions(std::shared_ptr<CGui> gui, std::shared_pt
 
 
 CGameFightPanel::CGameFightPanel() {
-    interactionsView = std::make_shared<CListView<std::set<
-            std::shared_ptr<
-                    CInteraction>>>>(
+    interactionsView = std::make_shared<CListView>(
             getWidth() / tileSize, 1, tileSize, true, selectionBarThickness)->withCollection(
             [](std::shared_ptr<CGui> gui) {
-                return gui->getGame()->getMap()->getPlayer()->getInteractions();
+                return vstd::cast<std::set<std::shared_ptr<CGameObject>>>(
+                        gui->getGame()->getMap()->getPlayer()->getInteractions());
             })->withCallback(
             [this](std::shared_ptr<CGui> gui, int index,
-                   auto newSelection) {
+                   auto _newSelection) {
+                auto newSelection = vstd::cast<CInteraction>(_newSelection);
                 if (selected.lock() !=
                     newSelection &&
                     newSelection->getManaCost() <=
@@ -72,14 +72,15 @@ CGameFightPanel::CGameFightPanel() {
                 return selected.lock() && selected.lock() == object;
             });
 
-    itemsView = std::make_shared<CListView<std::set<
-            std::shared_ptr<
-                    CItem>>>>(getWidth() / tileSize, 1, tileSize, true, selectionBarThickness)->withCollection(
+    itemsView = std::make_shared<CListView>(getWidth() / tileSize, 1, tileSize, true,
+                                            selectionBarThickness)->withCollection(
             [](std::shared_ptr<CGui> gui) {
-                return gui->getGame()->getMap()->getPlayer()->getItems();
+                return vstd::cast<std::set<std::shared_ptr<CGameObject>>>(
+                        gui->getGame()->getMap()->getPlayer()->getItems());
             })->withCallback(
             [this](std::shared_ptr<CGui> gui, int index,
-                   auto newSelection) {
+                   auto _newSelection) {
+                auto newSelection = vstd::cast<CItem>(_newSelection);
                 if (selectedItem.lock() != newSelection) {
                     selectedItem = newSelection;
                 } else if (selectedItem.lock() && selectedItem.lock() == newSelection) {

@@ -52,13 +52,9 @@ public:
 
     void drawCollection(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> loc, int frameTime);
 
-
     void onClicked(std::shared_ptr<CGui> gui, int x, int y);
 
-
-
     //builder methods
-
     std::shared_ptr<CListView>
     withCollection(std::function<std::set<std::shared_ptr<CGameObject>>(std::shared_ptr<CGui>)> collection);
 
@@ -96,7 +92,6 @@ private:
 
     void drawSelection(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> location, int thickness);
 
-
     int shiftIndex(std::shared_ptr<CGui> gui, int arg);
 
     int getRightArrowIndex();
@@ -104,7 +99,7 @@ private:
     int getLeftArrowIndex();
 
 //TODO: do not generate whole map, instead add callback arguement and stop when met
-    auto calculateIndices(std::shared_ptr<CGui> gui);
+    std::unordered_map<int, std::shared_ptr<CGameObject>> calculateIndices(std::shared_ptr<CGui> gui);
 
     std::shared_ptr<SDL_Rect>
     calculateIndexPosition(std::shared_ptr<SDL_Rect> loc, int index);
