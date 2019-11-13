@@ -208,7 +208,7 @@ void CPlayerFightController::start(std::shared_ptr<CCreature> me, std::shared_pt
     vstd::if_not_null(me->getMap()->getGame()->getGui(), [&](auto gui) {
         fightPanel = me->getGame()->createObject<CGameFightPanel>("fightPanel");
         fightPanel->setEnemy(opponent);
-        gui->addChild(fightPanel);
+        gui->pushChild(fightPanel);
         return 0;
     });
 }
