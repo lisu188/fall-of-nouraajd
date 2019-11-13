@@ -50,8 +50,8 @@ public:
     void setMarket(std::shared_ptr<CMarket> _market);
 
 private:
-    std::shared_ptr<CListView<std::set<std::shared_ptr<CItem>>>> inventoryView;
-    std::shared_ptr<CListView<std::set<std::shared_ptr<CItem>>>> marketView;
+    std::shared_ptr<CListView> inventoryView;
+    std::shared_ptr<CListView> marketView;
 
     int xInv = 4;
     int yInv = 4;
