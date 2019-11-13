@@ -39,8 +39,8 @@ public:
     void setEnemy(std::shared_ptr<CCreature> en);
 
 private:
-    std::shared_ptr<CListView<std::set<std::shared_ptr<CInteraction>>>> interactionsView;
-    std::shared_ptr<CListView<std::set<std::shared_ptr<CItem>>>> itemsView;
+    std::shared_ptr<CListView> interactionsView;
+    std::shared_ptr<CListView> itemsView;
 
     int selectionBarThickness = 5;
     std::weak_ptr<CCreature> enemy;
