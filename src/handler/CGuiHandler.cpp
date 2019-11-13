@@ -32,20 +32,20 @@ CGuiHandler::CGuiHandler() {
 void CGuiHandler::showMessage(std::string message) {
     std::shared_ptr<CGameTextPanel> panel = _game.lock()->createObject<CGameTextPanel>("textPanel");
     panel->setText(message);
-    _game.lock()->getGui()->addChild(panel);
+    _game.lock()->getGui()->pushChild(panel);
 }
 
 bool CGuiHandler::showDialog(std::string question) {
     std::shared_ptr<CGameDialogPanel> panel = _game.lock()->createObject<CGameDialogPanel>("dialogPanel");
     panel->setQuestion(question);
-    _game.lock()->getGui()->addChild(panel);
+    _game.lock()->getGui()->pushChild(panel);
     return panel->awaitAnswer();
 }
 
 void CGuiHandler::showTrade(std::shared_ptr<CMarket> market) {
     std::shared_ptr<CGameTradePanel> panel = _game.lock()->createObject<CGameTradePanel>("tradePanel");
     panel->setMarket(market);
-    _game.lock()->getGui()->addChild(panel);
+    _game.lock()->getGui()->pushChild(panel);
 }
 
 CGuiHandler::CGuiHandler(std::shared_ptr<CGame> game) : _game(game) {
@@ -96,7 +96,7 @@ std::string CGuiHandler::showSelection(std::shared_ptr<CListString> list) {
 
     panel->setChildren(widgets);
 
-    _game.lock()->getGui()->addChild(panel);
+    _game.lock()->getGui()->pushChild(panel);
 
     vstd::wait_until([&]() {
         return selected != nullptr;
