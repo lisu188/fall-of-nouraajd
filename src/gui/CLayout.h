@@ -142,8 +142,8 @@ private:
             h = 0;
 };
 
-class CMapGraphicsProxyLayout : public CLayout {
-V_META(CMapGraphicsProxyLayout, CLayout, vstd::meta::empty())
+class CProxyGraphicsLayout : public CLayout {
+V_META(CProxyGraphicsLayout, CLayout, vstd::meta::empty())
 public:
     std::shared_ptr<SDL_Rect> getRect(std::shared_ptr<CGameGraphicsObject> object) override;
 };

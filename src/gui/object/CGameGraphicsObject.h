@@ -95,3 +95,10 @@ private:
 
     std::shared_ptr<SDL_Rect> getRect();
 };
+
+class CProxyTargetGraphicsObject : public CGameGraphicsObject {
+V_META(CProxyTargetGraphicsObject, CGameGraphicsObject, vstd::meta::empty())
+public:
+    virtual void
+    renderProxyObject(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> rect, int frameTime, int x, int y);
+};

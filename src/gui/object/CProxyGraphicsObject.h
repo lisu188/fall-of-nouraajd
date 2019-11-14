@@ -17,22 +17,22 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #pragma once
 
-#include "core/CList.h"
-#include "gui/object/CProxyGraphicsObject.h"
+#include "gui/object/CGameGraphicsObject.h"
 
 
 class CMapGraphicsObject;
 
 class CProxyGraphicsObject : public CGameGraphicsObject {
-V_META(CProxyGraphicsObject, CGameGraphicsObject,
-       V_PROPERTY(CProxyGraphicsObject, int, x, getX, setX),
-       V_PROPERTY(CProxyGraphicsObject, int, y, getY, setY))
+    V_META(CProxyGraphicsObject, CGameGraphicsObject,
+            V_PROPERTY(CProxyGraphicsObject, int, x, getX, setX),
+            V_PROPERTY(CProxyGraphicsObject, int, y, getY, setY)
+    )
 public:
-    bool keyboardEvent(std::shared_ptr<CGui> sharedPtr, SDL_EventType type, SDL_Keycode i) override;
+    bool keyboardEvent(std::shared_ptr <CGui> sharedPtr, SDL_EventType type, SDL_Keycode i) override;
 
-    bool mouseEvent(std::shared_ptr<CGui> sharedPtr, SDL_EventType type, int x, int y) override;
+    bool mouseEvent(std::shared_ptr <CGui> sharedPtr, SDL_EventType type, int x, int y) override;
 
-    void renderObject(std::shared_ptr<CGui> reneder, std::shared_ptr<SDL_Rect> rect, int frameTime) override;
+    void renderObject(std::shared_ptr <CGui> reneder, std::shared_ptr <SDL_Rect> rect, int frameTime) override;
 
 private:
     int x, y;
