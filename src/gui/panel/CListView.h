@@ -17,9 +17,13 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #pragma once
 
-#include "gui/CTextureCache.h"
+#include "gui/object/CGameGraphicsObject.h"
 
-class CListView : public CGameGraphicsObject {
+class CProxyGraphicsObject;
+
+class CListView : public CProxyTargetGraphicsObject {
+V_META(CListView, CProxyTargetGraphicsObject, vstd::meta::empty())
+
     std::function<std::set<std::shared_ptr<CGameObject>>(std::shared_ptr<CGui>)> collection;
 
     std::function<int(std::shared_ptr<CGameObject>, int)> index;
@@ -28,6 +32,15 @@ class CListView : public CGameGraphicsObject {
 
     std::function<void(std::shared_ptr<CGui> gui, std::shared_ptr<CGameObject>, std::shared_ptr<SDL_Rect> loc,
                        int frameTime)> draw;
+
+//    std::function<std::set<std::shared_ptr<CGameObject>>(std::shared_ptr<CGui>)> collection;
+//
+//    std::function<int(std::shared_ptr<CGameObject>, int)> index;
+//
+//    std::function<void(std::shared_ptr<CGui>, int, std::shared_ptr<CGameObject>)> callback;
+//
+//    std::function<void(std::shared_ptr<CGui> gui, std::shared_ptr<CGameObject>, std::shared_ptr<SDL_Rect> loc,
+//                       int frameTime)> draw;
 
     std::function<bool(std::shared_ptr<CGui> gui, int, std::shared_ptr<CGameObject>)> select;
 
@@ -49,46 +62,19 @@ public:
               bool allowOversize,
               int selectionThickness);
 
+    void renderObject(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> loc, int frameTime) override;
 
-    void drawCollection(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> loc, int frameTime);
-
-    void onClicked(std::shared_ptr<CGui> gui, int x, int y);
-
-    //builder methods
-    std::shared_ptr<CListView>
-    withCollection(std::function<std::set<std::shared_ptr<CGameObject>>(std::shared_ptr<CGui>)> collection);
-
-    std::shared_ptr<CListView> withIndex(std::function<int(std::shared_ptr<CGameObject>, int)> index);
-
-    std::shared_ptr<CListView>
-    withCallback(std::function<void(std::shared_ptr<CGui>, int, std::shared_ptr<CGameObject>)> callback);
-
-    std::shared_ptr<CListView>
-    withDraw(std::function<void(std::shared_ptr<CGui> gui, std::shared_ptr<CGameObject>, std::shared_ptr<SDL_Rect> loc,
-                                int frameTime)> draw);
-
-    std::shared_ptr<CListView>
-    withSelect(std::function<bool(std::shared_ptr<CGui> gui, int, std::shared_ptr<CGameObject>)> select);
+    bool mouseEvent(std::shared_ptr<CGui> gui, SDL_EventType type, int x, int y) override;
 
     static int defaultIndex(std::shared_ptr<CGameObject> ob, int prevIndex);;
 
     static void defaultDraw(std::shared_ptr<CGui> gui, std::shared_ptr<CGameObject> item, std::shared_ptr<SDL_Rect> loc,
-                            int frameTime);;
+                            int frameTime);
 
 private:
+    std::unordered_map<std::pair<int, int>, std::shared_ptr<CProxyGraphicsObject>> proxyObjects;
+
     void doShift(std::shared_ptr<CGui> gui, int val);
-
-    template<typename T=std::shared_ptr<CGameObject>>
-    static void _defaultDraw(std::shared_ptr<CGui> gui, T item, std::shared_ptr<SDL_Rect> loc, int frameTime,
-                             typename vstd::enable_if<vstd::is_shared_ptr<T>::value>::type * = 0) {
-        item->getGraphicsObject()->renderObject(gui, loc, frameTime);
-    }
-
-    template<typename T=std::shared_ptr<CGameObject>>
-    static void _defaultDraw(std::shared_ptr<CGui> gui, T item, std::shared_ptr<SDL_Rect> loc, int frameTime,
-                             typename vstd::disable_if<vstd::is_shared_ptr<T>::value>::type * = 0) {
-
-    }
 
     void drawSelection(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> location, int thickness);
 
@@ -103,7 +89,6 @@ private:
 
     std::shared_ptr<SDL_Rect>
     calculateIndexPosition(std::shared_ptr<SDL_Rect> loc, int index);
-
 
     void drawItemBox(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> loc);
 

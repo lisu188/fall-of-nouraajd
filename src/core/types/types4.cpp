@@ -32,6 +32,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "gui/CTextureCache.h"
 #include "gui/object/CWidget.h"
 #include "gui/CLayout.h"
+#include "gui/object/CProxyGraphicsObject.h"
 
 extern void add_member(std::shared_ptr<json> object, std::string key, std::string value);
 
@@ -58,11 +59,14 @@ namespace {
                 CTypes::register_type<CGameGraphicsObject, CGameObject>();
                 {
                     CTypes::register_type<CGui, CGameGraphicsObject, CGameObject>();
-                    CTypes::register_type<CMapGraphicsObject, CGameGraphicsObject, CGameObject>();
                     CTypes::register_type<CStatsGraphicsObject, CGameGraphicsObject, CGameObject>();
                     CTypes::register_type<CConsoleGraphicsObject, CGameGraphicsObject, CGameObject>();
                     CTypes::register_type<CProxyGraphicsObject, CGameGraphicsObject, CGameObject>();
 
+                    CTypes::register_type<CProxyTargetGraphicsObject, CGameGraphicsObject, CGameObject>();
+                    {
+                        CTypes::register_type<CMapGraphicsObject, CProxyTargetGraphicsObject, CGameGraphicsObject, CGameObject>();
+                    }
                     CTypes::register_type<CGamePanel, CGameGraphicsObject, CGameObject>();
                     {
                         CTypes::register_type<CGameTextPanel, CGamePanel, CGameGraphicsObject, CGameObject>();
@@ -90,5 +94,6 @@ namespace {
                 }
             }
         }
-    } _register_types4;
+    }
+            _register_types4;
 }
