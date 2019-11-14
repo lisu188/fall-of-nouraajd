@@ -24,25 +24,16 @@ class CProxyGraphicsObject;
 class CListView : public CProxyTargetGraphicsObject {
 V_META(CListView, CProxyTargetGraphicsObject, vstd::meta::empty())
 
-    std::function<std::set<std::shared_ptr<CGameObject>>(std::shared_ptr<CGui>)> collection;
+    std::string collection;
 
-    std::function<int(std::shared_ptr<CGameObject>, int)> index;
+    std::string callback;
 
-    std::function<void(std::shared_ptr<CGui>, int, std::shared_ptr<CGameObject>)> callback;
+    std::string select;
 
     std::function<void(std::shared_ptr<CGui> gui, std::shared_ptr<CGameObject>, std::shared_ptr<SDL_Rect> loc,
                        int frameTime)> draw;
 
-//    std::function<std::set<std::shared_ptr<CGameObject>>(std::shared_ptr<CGui>)> collection;
-//
-//    std::function<int(std::shared_ptr<CGameObject>, int)> index;
-//
-//    std::function<void(std::shared_ptr<CGui>, int, std::shared_ptr<CGameObject>)> callback;
-//
-//    std::function<void(std::shared_ptr<CGui> gui, std::shared_ptr<CGameObject>, std::shared_ptr<SDL_Rect> loc,
-//                       int frameTime)> draw;
-
-    std::function<bool(std::shared_ptr<CGui> gui, int, std::shared_ptr<CGameObject>)> select;
+    std::function<int(std::shared_ptr<CGameObject>, int)> index;
 
     int xSize, ySize;
 
@@ -71,7 +62,42 @@ public:
     static void defaultDraw(std::shared_ptr<CGui> gui, std::shared_ptr<CGameObject> item, std::shared_ptr<SDL_Rect> loc,
                             int frameTime);
 
+    void
+    renderProxyObject(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> rect, int frameTime, int x, int y) override {
+
+    }
+
+    int getProxyCountX(std::shared_ptr<CGui> gui) override {
+        return xSize;
+    }
+
+    int getProxyCountY(std::shared_ptr<CGui> gui) override {
+        return ySize;
+    }
+
 private:
+    std::set<std::shared_ptr<CGameObject>> invokeCollection(std::shared_ptr<CGui> gui) {
+        return getParent()->meta()->invoke_method<std::set<std::shared_ptr<CGameObject>>, CGameGraphicsObject,
+                std::shared_ptr<CGui>>(collection,
+                                       vstd::cast<CGameGraphicsObject>(getParent()), gui);
+    }
+
+    void
+    invokeCallback(std::shared_ptr<CGui> gui, int i, std::shared_ptr<CGameObject> object) {
+        getParent()->meta()->invoke_method<void, CGameGraphicsObject,
+                std::shared_ptr<CGui>, int, std::shared_ptr<CGameObject>>(callback,
+                                                                          vstd::cast<CGameGraphicsObject>(getParent()),
+                                                                          gui, i, object);
+    }
+
+    bool
+    invokeSelect(std::shared_ptr<CGui> gui, int i, std::shared_ptr<CGameObject> object) {
+        return getParent()->meta()->invoke_method<bool, CGameGraphicsObject,
+                std::shared_ptr<CGui>, int, std::shared_ptr<CGameObject>>(select,
+                                                                          vstd::cast<CGameGraphicsObject>(getParent()),
+                                                                          gui, i, object);
+    }
+
     std::unordered_map<std::pair<int, int>, std::shared_ptr<CProxyGraphicsObject>> proxyObjects;
 
     void doShift(std::shared_ptr<CGui> gui, int val);

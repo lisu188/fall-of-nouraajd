@@ -16,16 +16,19 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #include "gui/panel/CGamePanel.h"
-#include "CGameGraphicsObject.h"
 #include "gui/CGui.h"
 #include "gui/CLayout.h"
-
+#include "gui/object/CGameGraphicsObject.h"
+#include "gui/object/CProxyGraphicsObject.h"
 
 void CGameGraphicsObject::renderObject(std::shared_ptr<CGui> reneder, std::shared_ptr<SDL_Rect> rect, int frameTime) {
 
 }
 
 void CGameGraphicsObject::render(std::shared_ptr<CGui> reneder, int frameTime) {
+    for (auto callback:renderCallbackList) {
+        callback(reneder, frameTime);
+    }
     renderObject(reneder, getRect(), frameTime);
     std::set<std::shared_ptr<CGameGraphicsObject>,
             priority_comparator> children_sorted(children.begin(),
@@ -154,6 +157,10 @@ void CGameGraphicsObject::pushChild(std::shared_ptr<CGameGraphicsObject> child) 
     addChild(child);
 }
 
+void CGameGraphicsObject::registerRenderCallback(std::function<void(std::shared_ptr<CGui>, int)> cb) {
+    renderCallbackList.push_back(cb);
+}
+
 bool priority_comparator::operator()(std::shared_ptr<CGameGraphicsObject> a,
                                      std::shared_ptr<CGameGraphicsObject> b) {
     if (a->getPriority() == b->getPriority()) {
@@ -170,4 +177,22 @@ bool reverse_priority_comparator::operator()(std::shared_ptr<CGameGraphicsObject
 void CProxyTargetGraphicsObject::renderProxyObject(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> rect,
                                                    int frameTime, int x, int y) {
 
+}
+
+CProxyTargetGraphicsObject::CProxyTargetGraphicsObject() {
+    registerRenderCallback([this](std::shared_ptr<CGui> gui, int frameTime) {
+        if (proxyObjects.size() != getProxyCountX(gui) * getProxyCountY(gui)) {
+            for (auto val:proxyObjects) {
+                removeChild(val);
+            }
+            proxyObjects.clear();
+            for (int x = 0; x <= getProxyCountX(gui); x++)
+                for (int y = 0; y <= getProxyCountY(gui); y++) {
+                    std::shared_ptr<CProxyGraphicsObject> nh = std::make_shared<CProxyGraphicsObject>(x, y);
+                    nh->setLayout(std::make_shared<CProxyGraphicsLayout>());
+                    proxyObjects.insert(nh);
+                    addChild(nh);
+                }
+        }
+    });
 }
