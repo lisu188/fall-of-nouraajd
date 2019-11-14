@@ -166,3 +166,8 @@ bool reverse_priority_comparator::operator()(std::shared_ptr<CGameGraphicsObject
                                              std::shared_ptr<CGameGraphicsObject> b) {
     return priority_comparator()(b, a);
 }
+
+void CProxyTargetGraphicsObject::renderProxyObject(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> rect,
+                                                   int frameTime, int x, int y) {
+
+}
