@@ -125,7 +125,7 @@ std::shared_ptr<SDL_Rect> CPercentLayout::getRect(std::shared_ptr<CGameGraphicsO
                 pRect->h * h / 100.0);
 }
 
-std::shared_ptr<SDL_Rect> CMapGraphicsProxyLayout::getRect(std::shared_ptr<CGameGraphicsObject> object) {
+std::shared_ptr<SDL_Rect> CProxyGraphicsLayout::getRect(std::shared_ptr<CGameGraphicsObject> object) {
     int tileSize = object->getTopParent()->getNumericProperty("tileSize");
     return RECT(object->getNumericProperty("x") * tileSize,
                 object->getNumericProperty("y") * tileSize,

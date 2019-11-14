@@ -69,6 +69,27 @@ CMapGraphicsObject::CMapGraphicsObject() {
     });
 }
 
+void
+CMapGraphicsObject::renderProxyObject(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> rect, int frameTime,int x, int y) {
+    if (std::shared_ptr<CMap> map = gui->getGame()->getMap()) {//TODO:
+        auto playerCoords = map->getPlayer()->getCoords();
+
+        Coords actualCoords(playerCoords.x - gui->getTileCountX() / 2 + x,
+                            playerCoords.y - gui->getTileCountY() / 2 + y,
+                            playerCoords.z);
+
+        std::shared_ptr<CTile> tile = map->getTile(actualCoords.x, actualCoords.y, actualCoords.z);
+
+        tile->getGraphicsObject()->renderObject(gui, rect, frameTime);
+
+        map->forObjects([&](std::shared_ptr<CMapObject> ob) {
+            ob->getGraphicsObject()->renderObject(gui, rect, frameTime);
+        }, [&](std::shared_ptr<CMapObject> ob) {
+            return actualCoords == ob->getCoords();
+        });
+    }
+}
+
 void CMapGraphicsObject::renderObject(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> rect, int frameTime) {
     if (proxyObjects.size() != gui->getTileCountX() * gui->getTileCountY()) {
         for (auto[key, val]:proxyObjects) {
@@ -78,7 +99,7 @@ void CMapGraphicsObject::renderObject(std::shared_ptr<CGui> gui, std::shared_ptr
         for (int x = 0; x <= gui->getTileCountX(); x++)
             for (int y = 0; y <= gui->getTileCountY(); y++) {
                 std::shared_ptr<CProxyGraphicsObject> nh = std::make_shared<CProxyGraphicsObject>(x, y);
-                nh->setLayout(std::make_shared<CMapGraphicsProxyLayout>());
+                nh->setLayout(std::make_shared<CProxyGraphicsLayout>());
                 proxyObjects.emplace(std::make_pair(x, y), nh);
                 addChild(nh);
             }

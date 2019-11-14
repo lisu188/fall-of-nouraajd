@@ -20,14 +20,12 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CList.h"
 #include "gui/object/CGameGraphicsObject.h"
 
-
 class CProxyGraphicsObject;
 
-class CMapGraphicsObject : public CGameGraphicsObject {
-V_META(CMapGraphicsObject, CGameGraphicsObject,
+class CMapGraphicsObject : public CProxyTargetGraphicsObject {
+V_META(CMapGraphicsObject, CProxyTargetGraphicsObject,
        V_PROPERTY(CMapGraphicsObject, std::shared_ptr<CMapStringString>, panelKeys, getPanelKeys, setPanelKeys),
        V_METHOD(CMapGraphicsObject, initialize))
-
 
 public:
     CMapGraphicsObject();
@@ -40,9 +38,13 @@ public:
 
     void initialize();
 
+    void
+    renderProxyObject(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> rect, int frameTime, int x, int y) override;
+
 private:
     std::shared_ptr<CMapStringString> panelKeys;
 
+    //TODO: maybe unify with CListView
     std::unordered_map<std::pair<int, int>, std::shared_ptr<CProxyGraphicsObject>> proxyObjects;
 
 };

@@ -15,6 +15,7 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
+#include "gui/object/CProxyGraphicsObject.h"
 #include "gui/CLayout.h"
 #include "gui/panel/CGameInventoryPanel.h"
 #include "gui/panel/CGameQuestPanel.h"
@@ -34,23 +35,7 @@ bool CProxyGraphicsObject::mouseEvent(std::shared_ptr<CGui> sharedPtr, SDL_Event
 
 void
 CProxyGraphicsObject::renderObject(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> rect, int frameTime) {
-    if (std::shared_ptr<CMap> map = gui->getGame()->getMap()) {//TODO:
-        auto playerCoords = map->getPlayer()->getCoords();
-
-        Coords actualCoords(playerCoords.x - gui->getTileCountX() / 2 + x,
-                            playerCoords.y - gui->getTileCountY() / 2 + y,
-                            playerCoords.z);
-
-        std::shared_ptr<CTile> tile = map->getTile(actualCoords.x, actualCoords.y, actualCoords.z);
-
-        tile->getGraphicsObject()->renderObject(gui, rect, frameTime);
-
-        map->forObjects([&](std::shared_ptr<CMapObject> ob) {
-            ob->getGraphicsObject()->renderObject(gui, rect, frameTime);
-        }, [&](std::shared_ptr<CMapObject> ob) {
-            return actualCoords == ob->getCoords();
-        });
-    }
+    vstd::cast<CProxyTargetGraphicsObject>(getParent())->renderProxyObject(gui, rect, frameTime, x, y);
 }
 
 CProxyGraphicsObject::CProxyGraphicsObject(int x, int y) : x(x), y(y) {
