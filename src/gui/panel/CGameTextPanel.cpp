@@ -28,7 +28,8 @@ void CGameTextPanel::setText(std::string _text) {
 
 
 void CGameTextPanel::renderObject(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> rect, int i) {
-    gui->getTextManager()->drawText(text,rect->x, rect->y, rect->w);
+    CGamePanel::renderObject(gui, rect, i);
+    gui->getTextManager()->drawText(text, rect->x, rect->y, rect->w);
 
 }
 

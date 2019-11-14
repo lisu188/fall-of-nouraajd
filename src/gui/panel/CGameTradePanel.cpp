@@ -23,21 +23,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 
 void CGameTradePanel::renderObject(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> rect, int i) {
-    drawInventory(gui, rect, i);
-    drawMarket(gui, rect, i);
+    CGamePanel::renderObject(gui, rect, i);
     gui->getTextManager()->drawTextCentered(vstd::str(getTotalBuyCost()), rect->x + 200, rect->y, 200, 200);
     gui->getTextManager()->drawTextCentered(vstd::str(getTotalSellCost()), rect->x + 400, rect->y, 200, 200);
-}
-
-void CGameTradePanel::drawMarket(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> pRect, int frameTime) {
-    std::shared_ptr<SDL_Rect> location = std::make_shared<SDL_Rect>(*pRect.get());//cloning
-    location->x += 600;
-
-    marketView->drawCollection(gui, location, frameTime);
-}
-
-void CGameTradePanel::drawInventory(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> pRect, int frameTime) {
-    inventoryView->drawCollection(gui, pRect, frameTime);
 }
 
 bool CGameTradePanel::keyboardEvent(std::shared_ptr<CGui> gui, SDL_EventType type, SDL_Keycode i) {
@@ -66,7 +54,7 @@ CGameTradePanel::CGameTradePanel() {
             });
 
     marketView = std::make_shared<CListView>(
-                    xInv, yInv, 50, true, selectionBarThickness)->withCollection(
+            xInv, yInv, 50, true, selectionBarThickness)->withCollection(
             [this](std::shared_ptr<CGui> gui) {
                 return vstd::cast<std::set<std::shared_ptr<CGameObject>>>(market->getItems());
             })->withCallback(
@@ -76,31 +64,6 @@ CGameTradePanel::CGameTradePanel() {
             [this](std::shared_ptr<CGui> gui, int index, auto item) {
                 return vstd::ctn(selectedMarket, item, [](auto a, auto b) { return a == b.lock(); });
             });
-}
-
-bool CGameTradePanel::mouseEvent(std::shared_ptr<CGui> gui, SDL_EventType type, int x, int y) {
-    if (isInInventory(gui, x, y)) {
-        handleInventoryClick(gui, x, y);
-    } else if (isInMarket(gui, x, y)) {
-        handleMarketClick(gui, x, y);
-    }
-    return true;
-}
-
-void CGameTradePanel::handleInventoryClick(std::shared_ptr<CGui> gui, int x, int y) {
-    inventoryView->onClicked(gui, x, y);
-}
-
-void CGameTradePanel::handleMarketClick(std::shared_ptr<CGui> gui, int x, int y) {
-    marketView->onClicked(gui, x - 600, y);
-}
-
-bool CGameTradePanel::isInInventory(std::shared_ptr<CGui> gui, int x, int y) {
-    return x < gui->getTileSize() * xInv && y < gui->getTileSize() * yInv;
-}
-
-bool CGameTradePanel::isInMarket(std::shared_ptr<CGui> gui, int x, int y) {
-    return x >= getWidth() - gui->getTileSize() * 4 && y < gui->getTileSize() * 4;
 }
 
 int CGameTradePanel::getXInv() {
@@ -117,14 +80,6 @@ int CGameTradePanel::getYInv() {
 
 void CGameTradePanel::setYInv(int _yInv) {
     CGameTradePanel::yInv = _yInv;
-}
-
-int CGameTradePanel::getSelectionBarThickness() {
-    return selectionBarThickness;
-}
-
-void CGameTradePanel::setSelectionBarThickness(int _selectionBarThickness) {
-    CGameTradePanel::selectionBarThickness = _selectionBarThickness;
 }
 
 void CGameTradePanel::handleEnter(std::shared_ptr<CGui> gui) {

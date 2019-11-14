@@ -26,8 +26,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 class CGameInventoryPanel : public CGamePanel {
 V_META(CGameInventoryPanel, CGamePanel,
        V_PROPERTY(CGameInventoryPanel, int, xInv, getXInv, setXInv),
-       V_PROPERTY(CGameInventoryPanel, int, yInv, getYInv, setYInv),
-       V_PROPERTY(CGameInventoryPanel, int, selectionBarThickness, getSelectionBarThickness, setSelectionBarThickness))
+       V_PROPERTY(CGameInventoryPanel, int, yInv, getYInv, setYInv))
 
 public:
     CGameInventoryPanel();
@@ -39,36 +38,10 @@ public:
     int getYInv();
 
     void setYInv(int yInv);
-
-    int getSelectionBarThickness();
-
-    void setSelectionBarThickness(int selectionBarThickness);
-
 private:
-    std::shared_ptr<CListView> inventoryView;
-    std::shared_ptr<CListView> equippedView;
-
     int xInv = 4;
     int yInv = 4;
-    int selectionBarThickness = 5;
     std::weak_ptr<CItem> selectedInventory;
     std::weak_ptr<CItem> selectedEquipped;
-
-    virtual bool mouseEvent(std::shared_ptr<CGui> sharedPtr, SDL_EventType type, int x, int y) override;
-
-    virtual void renderObject(std::shared_ptr<CGui> reneder, std::shared_ptr<SDL_Rect> rect, int frameTime) override;
-
-    void drawInventory(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> pRect, int frameTime);
-
-    void drawEquipped(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> pRect, int frameTime);
-
-    bool isInInventory(std::shared_ptr<CGui> x, int y, int i1);
-
-    bool isInEquipped(std::shared_ptr<CGui> shared_ptr, int x, int y);
-
-    void handleEquippedClick(std::shared_ptr<CGui> gui, int x, int y);
-
-    void handleInventoryClick(std::shared_ptr<CGui> gui, int x, int y);
-
 };
 

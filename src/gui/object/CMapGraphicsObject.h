@@ -41,11 +41,12 @@ public:
     void
     renderProxyObject(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> rect, int frameTime, int x, int y) override;
 
+    int getProxyCountX(std::shared_ptr<CGui> gui) override;
+
+    int getProxyCountY(std::shared_ptr<CGui> gui) override;
+
 private:
     std::shared_ptr<CMapStringString> panelKeys;
-
-    //TODO: maybe unify with CListView
-    std::unordered_map<std::pair<int, int>, std::shared_ptr<CProxyGraphicsObject>> proxyObjects;
 
 };
 

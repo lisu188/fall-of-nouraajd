@@ -90,6 +90,42 @@
   "fightPanel": {
     "class": "CGameFightPanel",
     "properties": {
+      "children": [
+        {
+          "class": "CListView",
+          "properties": {
+            "collection": "interactionsCollection",
+            "callback": "interactionsCallback",
+            "select": "interactionsSelect",
+            "layout": {
+              "class": "CPercentLayout",
+              "properties": {
+                "h": 10,
+                "w": 100,
+                "x": 0,
+                "y": 90
+              }
+            }
+          }
+        },
+        {
+          "class": "CListView",
+          "properties": {
+            "collection": "itemsCollection",
+            "callback": "itemsCallback",
+            "select": "itemsSelect",
+            "layout": {
+              "class": "CPercentLayout",
+              "properties": {
+                "h": 10,
+                "w": 100,
+                "x": 0,
+                "y": 80
+              }
+            }
+          }
+        }
+      ],
       "layout": {
         "class": "CCenteredLayout",
         "properties": {

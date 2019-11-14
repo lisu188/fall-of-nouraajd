@@ -23,14 +23,15 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 class CGameFightPanel : public CGamePanel {
 V_META(CGameFightPanel, CGamePanel,
-       V_PROPERTY(CGameFightPanel, int, selectionBarThickness, getSelectionBarThickness, setSelectionBarThickness))
+       V_METHOD(CGameFightPanel, interactionsCollection, std::set<std::shared_ptr<CGameObject>>, std::shared_ptr<CGui>),
+       V_METHOD(CGameFightPanel, interactionsCallback, void, std::shared_ptr<CGui>, int, std::shared_ptr<CGameObject>),
+       V_METHOD(CGameFightPanel, interactionsSelect, bool, std::shared_ptr<CGui>, int, std::shared_ptr<CGameObject>),
+       V_METHOD(CGameFightPanel, itemsCollection, std::set<std::shared_ptr<CGameObject>>, std::shared_ptr<CGui>),
+       V_METHOD(CGameFightPanel, itemsCallback, void, std::shared_ptr<CGui>, int, std::shared_ptr<CGameObject>),
+       V_METHOD(CGameFightPanel, itemsSelect, bool, std::shared_ptr<CGui>, int, std::shared_ptr<CGameObject>))
 
 public:
     CGameFightPanel();
-
-    int getSelectionBarThickness();
-
-    void setSelectionBarThickness(int selectionBarThickness);
 
     std::shared_ptr<CInteraction> selectInteraction();
 
@@ -39,34 +40,24 @@ public:
     void setEnemy(std::shared_ptr<CCreature> en);
 
 private:
-    std::shared_ptr<CListView> interactionsView;
-    std::shared_ptr<CListView> itemsView;
-
-    int selectionBarThickness = 5;
     std::weak_ptr<CCreature> enemy;
     std::weak_ptr<CInteraction> selected;
     std::weak_ptr<CItem> selectedItem;
     std::weak_ptr<CInteraction> finalSelected;
 
-    void renderObject(std::shared_ptr<CGui> shared_ptr, std::shared_ptr<SDL_Rect> rect, int i) override;
-
-     bool mouseEvent(std::shared_ptr<CGui> sharedPtr, SDL_EventType type, int x, int y) override;
-
-    void drawInteractions(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> pRect, int frameTime);
-
     void drawEnemy(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> pRect, int frameTime);
 
-    bool isInInteractions(std::shared_ptr<CGui> x, int y, int i1);
+public:
+    std::set<std::shared_ptr<CGameObject>> interactionsCollection(std::shared_ptr<CGui> gui);
 
-    void handleInteractionsClick(std::shared_ptr<CGui> gui, int x, int y);
+    void interactionsCallback(std::shared_ptr<CGui> gui, int index, std::shared_ptr<CGameObject> _newSelection);
 
-    bool isInInventory(std::shared_ptr<CGui> gui, int x, int y);
+    bool interactionsSelect(std::shared_ptr<CGui> gui, int index, std::shared_ptr<CGameObject> object);
 
-    void handleInventoryClick(std::shared_ptr<CGui> gui, int x, int y);
+    std::set<std::shared_ptr<CGameObject>> itemsCollection(std::shared_ptr<CGui> gui);
 
-    int tileSize = 50;//TODO: make property, requires later initialization when gui is accessible
-    int getInventoryLocation(std::shared_ptr<CGui> gui);
+    void itemsCallback(std::shared_ptr<CGui> gui, int index, std::shared_ptr<CGameObject> _newSelection);
 
-    int getInteractionsLocation(std::shared_ptr<CGui> gui);
+    bool itemsSelect(std::shared_ptr<CGui> gui, int index, std::shared_ptr<CGameObject> object);
 };
 
