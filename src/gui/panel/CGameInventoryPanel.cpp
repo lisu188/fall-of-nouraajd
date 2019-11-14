@@ -21,24 +21,6 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CGame.h"
 #include "core/CMap.h"
 
-
-void CGameInventoryPanel::renderObject(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> rect, int i) {
-    drawInventory(gui, rect, i);
-    drawEquipped(gui, rect, i);
-}
-
-void CGameInventoryPanel::drawEquipped(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> pRect, int frameTime) {
-    std::shared_ptr<SDL_Rect> location = std::make_shared<SDL_Rect>(*pRect.get());//this a clone, do not remove
-    location->x += 600;
-
-    equippedView->drawCollection(gui, location, frameTime);
-}
-
-void CGameInventoryPanel::drawInventory(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> pRect, int frameTime) {
-    inventoryView->drawCollection(gui, pRect, frameTime);
-}
-
-
 CGameInventoryPanel::CGameInventoryPanel() {
     inventoryView = std::make_shared<
             CListView>(
@@ -92,31 +74,6 @@ CGameInventoryPanel::CGameInventoryPanel() {
 //            });
 }
 
-bool CGameInventoryPanel::mouseEvent(std::shared_ptr<CGui> gui, SDL_EventType type, int x, int y) {
-    if (isInInventory(gui, x, y)) {
-        handleInventoryClick(gui, x, y);
-    } else if (isInEquipped(gui, x, y)) {
-        handleEquippedClick(gui, x, y);
-    }
-    return true;
-}
-
-void CGameInventoryPanel::handleInventoryClick(std::shared_ptr<CGui> gui, int x, int y) {
-    inventoryView->onClicked(gui, x, y);
-}
-
-void CGameInventoryPanel::handleEquippedClick(std::shared_ptr<CGui> gui, int x, int y) {
-    equippedView->onClicked(gui, x - 600, y);
-
-}
-
-bool CGameInventoryPanel::isInInventory(std::shared_ptr<CGui> gui, int x, int y) {
-    return x < gui->getTileSize() * xInv && y < gui->getTileSize() * yInv && !isInEquipped(gui, x, y);
-}
-
-bool CGameInventoryPanel::isInEquipped(std::shared_ptr<CGui> gui, int x, int y) {
-    return x >= getWidth() - gui->getTileSize() * xInv && y < gui->getTileSize() * yInv && !isInInventory(gui, x, y);
-}
 
 int CGameInventoryPanel::getXInv() {
     return xInv;
@@ -133,12 +90,3 @@ int CGameInventoryPanel::getYInv() {
 void CGameInventoryPanel::setYInv(int yInv) {
     CGameInventoryPanel::yInv = yInv;
 }
-
-int CGameInventoryPanel::getSelectionBarThickness() {
-    return selectionBarThickness;
-}
-
-void CGameInventoryPanel::setSelectionBarThickness(int selectionBarThickness) {
-    CGameInventoryPanel::selectionBarThickness = selectionBarThickness;
-}
-

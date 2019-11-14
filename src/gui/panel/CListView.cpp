@@ -21,20 +21,6 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "gui/CTextureCache.h"
 
 void CListView::renderObject(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> loc, int frameTime) {
-    if (proxyObjects.size() != x * y) {
-        for (auto[key, val]:proxyObjects) {
-            removeChild(val);
-        }
-        proxyObjects.clear();
-        for (int x = 0; x <= gui->getTileCountX(); x++)
-            for (int y = 0; y <= gui->getTileCountY(); y++) {
-                std::shared_ptr<CProxyGraphicsObject> nh = std::make_shared<CProxyGraphicsObject>(x, y);
-                nh->setLayout(std::make_shared<CProxyGraphicsLayout>());
-                proxyObjects.emplace(std::make_pair(x, y), nh);
-                addChild(nh);
-            }
-    }
-
     auto indexedCollection = calculateIndices(gui);
     for (int i = 0; i < xSize * ySize; i++) {
         auto pos = calculateIndexPosition(loc, i);
@@ -48,7 +34,7 @@ void CListView::renderObject(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect
             if (vstd::ctn(indexedCollection, itemIndex)) {
                 draw(gui, indexedCollection[itemIndex], pos, frameTime);
             }
-            if (select(gui, itemIndex, indexedCollection[itemIndex])) {
+            if (invokeSelect(gui, itemIndex, indexedCollection[itemIndex])) {
                 drawSelection(gui, pos, selectionThickness);
             }
         }
@@ -63,7 +49,7 @@ bool CListView::mouseEvent(std::shared_ptr<CGui> gui, SDL_EventType type, int x,
     } else if (i == getRightArrowIndex() && isOversized(gui)) {
         doShift(gui, 1);
     } else {
-        callback(gui, shiftIndex(gui, i), calculateIndices(gui)[shiftIndex(gui, i)]);
+        invokeCallback(gui, shiftIndex(gui, i), calculateIndices(gui)[shiftIndex(gui, i)]);
     }
     return true;
 }
@@ -93,8 +79,8 @@ void CListView::doShift(std::shared_ptr<CGui> gui, int val) {
     shift += val;
     if (shift < 0) {
         shift = 0;
-    } else if (shift > (signed) collection(gui).size() - (xSize * ySize - 2/*arrows*/)) {
-        shift = collection(gui).size() - (xSize * ySize - 2/*arrows*/);
+    } else if (shift > (signed) invokeCollection(gui).size() - (xSize * ySize - 2/*arrows*/)) {
+        shift = invokeCollection(gui).size() - (xSize * ySize - 2/*arrows*/);
     }
 }
 
@@ -130,7 +116,7 @@ int CListView::getLeftArrowIndex() {
 std::unordered_map<int, std::shared_ptr<CGameObject>> CListView::calculateIndices(std::shared_ptr<CGui> gui) {
     std::unordered_map<int, std::shared_ptr<CGameObject>> indices;
     int i = -1;
-    for (auto it:collection(gui)) {
+    for (auto it:invokeCollection(gui)) {
         i = index(it, i);
         indices.insert(std::make_pair(i, it));
     }
@@ -161,5 +147,5 @@ void CListView::drawArrowRight(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Re
 }
 
 bool CListView::isOversized(std::shared_ptr<CGui> gui) {
-    return allowOversize && collection(gui).size() > ((unsigned) xSize * (unsigned) ySize);
+    return allowOversize && invokeCollection(gui).size() > ((unsigned) xSize * (unsigned) ySize);
 }
