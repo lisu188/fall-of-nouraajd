@@ -91,19 +91,7 @@ CMapGraphicsObject::renderProxyObject(std::shared_ptr<CGui> gui, std::shared_ptr
 }
 
 void CMapGraphicsObject::renderObject(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> rect, int frameTime) {
-    if (proxyObjects.size() != gui->getTileCountX() * gui->getTileCountY()) {
-        for (auto[key, val]:proxyObjects) {
-            removeChild(val);
-        }
-        proxyObjects.clear();
-        for (int x = 0; x <= gui->getTileCountX(); x++)
-            for (int y = 0; y <= gui->getTileCountY(); y++) {
-                std::shared_ptr<CProxyGraphicsObject> nh = std::make_shared<CProxyGraphicsObject>(x, y);
-                nh->setLayout(std::make_shared<CProxyGraphicsLayout>());
-                proxyObjects.emplace(std::make_pair(x, y), nh);
-                addChild(nh);
-            }
-    }
+
 }
 
 void CMapGraphicsObject::initialize() {
@@ -129,4 +117,12 @@ std::shared_ptr<CMapStringString> CMapGraphicsObject::getPanelKeys() {
 
 void CMapGraphicsObject::setPanelKeys(std::shared_ptr<CMapStringString> _panelKeys) {
     this->panelKeys = _panelKeys;
+}
+
+int CMapGraphicsObject::getProxyCountY(std::shared_ptr<CGui> gui) {
+    return gui->getTileCountY();
+}
+
+int CMapGraphicsObject::getProxyCountX(std::shared_ptr<CGui> gui) {
+    return gui->getTileCountX();
 }

@@ -21,6 +21,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "gui/CTextManager.h"
 
 void CGameQuestPanel::renderObject(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> rect, int i) {
+    CGamePanel::renderObject(gui, rect, i);
     gui->getTextManager()->drawText(getText(gui), rect->x, rect->y, rect->w);
 }
 

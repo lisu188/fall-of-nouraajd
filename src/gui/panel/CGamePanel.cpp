@@ -18,6 +18,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "CGamePanel.h"
 #include "gui/CGui.h"
 #include "gui/object/CWidget.h"
+#include "gui/CTextureCache.h"
 
 
 void CGamePanel::renderObject(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> rect, int frameTime) {

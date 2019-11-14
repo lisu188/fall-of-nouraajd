@@ -21,118 +21,55 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CMap.h"
 #include "gui/object/CStatsGraphicsObject.h"
 
-void CGameFightPanel::renderObject(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> rect, int i) {
-    drawInteractions(gui, rect, i);
-    drawEnemy(gui, rect, i);
+std::set<std::shared_ptr<CGameObject>> CGameFightPanel::interactionsCollection(std::shared_ptr<CGui> gui) {
+    return vstd::cast<std::set<std::shared_ptr<CGameObject>>>(gui->getGame()->getMap()->getPlayer()->getInteractions());
 }
 
-void CGameFightPanel::drawInteractions(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> pRect, int frameTime) {
-    std::shared_ptr<SDL_Rect> location = std::make_shared<SDL_Rect>(*pRect.get());//cloning, do not remove
-    location->y += (getWidth() - gui->getTileSize());
-
-    interactionsView->drawCollection(gui,
-                                     location,
-                                     frameTime);
-
-    location->y -= gui->getTileSize();
-
-    itemsView->drawCollection(gui,
-                              location,
-                              frameTime);
+void CGameFightPanel::interactionsCallback(std::shared_ptr<CGui> gui, int index,
+                                           std::shared_ptr<CGameObject> _newSelection) {
+    auto newSelection = vstd::cast<CInteraction>(_newSelection);
+    if (selected.lock() !=
+        newSelection &&
+        newSelection->getManaCost() <=
+        gui->getGame()->getMap()->getPlayer()->getMana()) {
+        selected = newSelection;
+    } else if (
+            selected.lock() ==
+            newSelection &&
+            newSelection->getManaCost() <=
+            gui->getGame()->getMap()->getPlayer()->getMana()) {
+        finalSelected = newSelection;
+    } else {
+        //TODO: rethink moving selection to CListView
+        selected.reset();
+    }
 }
 
+bool CGameFightPanel::interactionsSelect(std::shared_ptr<CGui> gui, int index, std::shared_ptr<CGameObject> object) {
+    return selected.lock() && selected.lock() == object;
+}
+
+std::set<std::shared_ptr<CGameObject>> CGameFightPanel::itemsCollection(std::shared_ptr<CGui> gui) {
+    return vstd::cast<std::set<std::shared_ptr<CGameObject>>>(
+            gui->getGame()->getMap()->getPlayer()->getItems());
+}
+
+void CGameFightPanel::itemsCallback(std::shared_ptr<CGui> gui, int index, std::shared_ptr<CGameObject> _newSelection) {
+    auto newSelection = vstd::cast<CItem>(_newSelection);
+    if (selectedItem.lock() != newSelection) {
+        selectedItem = newSelection;
+    } else if (selectedItem.lock() && selectedItem.lock() == newSelection) {
+        gui->getGame()->getMap()->getPlayer()->useItem(newSelection);
+        selectedItem.reset();
+    }
+}
+
+bool CGameFightPanel::itemsSelect(std::shared_ptr<CGui> gui, int index, std::shared_ptr<CGameObject> object) {
+    return selectedItem.lock() && selectedItem.lock() == object;
+}
 
 CGameFightPanel::CGameFightPanel() {
-    interactionsView = std::make_shared<CListView>(
-            getWidth() / tileSize, 1, tileSize, true, selectionBarThickness)->withCollection(
-            [](std::shared_ptr<CGui> gui) {
-                return vstd::cast<std::set<std::shared_ptr<CGameObject>>>(
-                        gui->getGame()->getMap()->getPlayer()->getInteractions());
-            })->withCallback(
-            [this](std::shared_ptr<CGui> gui, int index,
-                   auto _newSelection) {
-                auto newSelection = vstd::cast<CInteraction>(_newSelection);
-                if (selected.lock() !=
-                    newSelection &&
-                    newSelection->getManaCost() <=
-                    gui->getGame()->getMap()->getPlayer()->getMana()) {
-                    selected = newSelection;
-                } else if (
-                        selected.lock() ==
-                        newSelection &&
-                        newSelection->getManaCost() <=
-                        gui->getGame()->getMap()->getPlayer()->getMana()) {
-                    finalSelected = newSelection;
-                } else {
-                    //TODO: rethink moving selection to CListView
-                    selected.reset();
-                }
-            })->withSelect(
-            [this](std::shared_ptr<CGui> gui, int index, auto object) {
-                return selected.lock() && selected.lock() == object;
-            });
 
-    itemsView = std::make_shared<CListView>(getWidth() / tileSize, 1, tileSize, true,
-                                            selectionBarThickness)->withCollection(
-            [](std::shared_ptr<CGui> gui) {
-                return vstd::cast<std::set<std::shared_ptr<CGameObject>>>(
-                        gui->getGame()->getMap()->getPlayer()->getItems());
-            })->withCallback(
-            [this](std::shared_ptr<CGui> gui, int index,
-                   auto _newSelection) {
-                auto newSelection = vstd::cast<CItem>(_newSelection);
-                if (selectedItem.lock() != newSelection) {
-                    selectedItem = newSelection;
-                } else if (selectedItem.lock() && selectedItem.lock() == newSelection) {
-                    gui->getGame()->getMap()->getPlayer()->useItem(newSelection);
-                    selectedItem.reset();
-                }
-            })->withSelect(
-            [this](std::shared_ptr<CGui> gui, int index, auto object) {
-                return selectedItem.lock() && selectedItem.lock() == object;
-            });
-}
-
-bool CGameFightPanel::mouseEvent(std::shared_ptr<CGui> gui, SDL_EventType type, int x, int y) {
-    //TODO: shift values
-    if (isInInteractions(gui, x, y)) {
-        handleInteractionsClick(gui, x, y - getInteractionsLocation(gui));
-    } else if (isInInventory(gui, x, y)) {
-        handleInventoryClick(gui, x, y - getInventoryLocation(gui));
-    }
-    return true;
-}
-
-void CGameFightPanel::handleInteractionsClick(std::shared_ptr<CGui> gui, int x, int y) {
-    interactionsView->onClicked(gui, x, y);
-}
-
-
-void CGameFightPanel::handleInventoryClick(std::shared_ptr<CGui> gui, int x, int y) {
-    itemsView->onClicked(gui, x, y);
-
-}
-
-bool CGameFightPanel::isInInteractions(std::shared_ptr<CGui> gui, int x, int y) {
-    return y > (getInteractionsLocation(gui)) && y < (getInteractionsLocation(gui) + tileSize);
-}
-
-int CGameFightPanel::getInteractionsLocation(std::shared_ptr<CGui> gui) { return getHeight() - gui->getTileSize(); }
-
-//TODO: make this method strict
-bool CGameFightPanel::isInInventory(std::shared_ptr<CGui> gui, int x, int y) {
-    return y > getInventoryLocation(gui) && y < getInventoryLocation(gui) + tileSize;
-}
-
-int CGameFightPanel::getInventoryLocation(std::shared_ptr<CGui> gui) { return getHeight() - (gui->getTileSize() * 2); }
-
-
-int CGameFightPanel::getSelectionBarThickness() {
-    return selectionBarThickness;
-}
-
-void CGameFightPanel::setSelectionBarThickness(int selectionBarThickness) {
-    CGameFightPanel::selectionBarThickness = selectionBarThickness;
 }
 
 std::shared_ptr<CInteraction> CGameFightPanel::selectInteraction() {

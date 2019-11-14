@@ -44,6 +44,8 @@ V_META(CGameGraphicsObject, CGameObject,
     std::list<std::pair<std::function<bool(std::shared_ptr<CGui>, SDL_Event *)>, std::function<bool(
             std::shared_ptr<CGui>, SDL_Event *) >>> eventCallbackList;
 
+    std::list<std::function<void(std::shared_ptr<CGui>, int)>> renderCallbackList;
+
     std::set<std::shared_ptr<CGameGraphicsObject>> children;
     std::weak_ptr<CGameGraphicsObject> parent;
 
@@ -72,6 +74,8 @@ public:
     void registerEventCallback(std::function<bool(std::shared_ptr<CGui>, SDL_Event *)> pred,
                                std::function<bool(std::shared_ptr<CGui>, SDL_Event *)> func);
 
+    void registerRenderCallback(std::function<void(std::shared_ptr<CGui>, int)> cb);
+
     std::shared_ptr<CGameGraphicsObject> getParent();
 
     std::shared_ptr<CGameGraphicsObject> getTopParent();
@@ -96,9 +100,24 @@ private:
     std::shared_ptr<SDL_Rect> getRect();
 };
 
+class CProxyGraphicsObject;
+
 class CProxyTargetGraphicsObject : public CGameGraphicsObject {
 V_META(CProxyTargetGraphicsObject, CGameGraphicsObject, vstd::meta::empty())
 public:
     virtual void
     renderProxyObject(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> rect, int frameTime, int x, int y);
+
+    virtual int getProxyCountX(std::shared_ptr<CGui> gui) {
+        return 0;
+    }
+
+    virtual int getProxyCountY(std::shared_ptr<CGui> gui) {
+        return 0;
+    }
+
+    CProxyTargetGraphicsObject();
+
+private:
+    std::set<std::shared_ptr<CProxyGraphicsObject>> proxyObjects;
 };
