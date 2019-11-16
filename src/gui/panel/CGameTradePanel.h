@@ -25,32 +25,36 @@ class CGameTradePanel : public CGamePanel {
 V_META(CGameTradePanel, CGamePanel,
 //TODO: unify this with CGameInventoryPanel
 //TODO: stacking of same type objects
-       V_PROPERTY(CGameTradePanel, int, xInv, getXInv, setXInv),
-       V_PROPERTY(CGameTradePanel, int, yInv, getYInv, setYInv),
-       V_PROPERTY(CGameTradePanel, std::shared_ptr<CMarket>, market, getMarket, setMarket))
+       V_PROPERTY(CGameTradePanel, std::shared_ptr<CMarket>, market, getMarket, setMarket),
+       V_METHOD(CGameTradePanel, inventoryCollection, std::set<std::shared_ptr<CGameObject>>,
+                std::shared_ptr<CGui>),
+       V_METHOD(CGameTradePanel, inventoryCallback, void, std::shared_ptr<CGui>, int, std::shared_ptr<CGameObject>),
+       V_METHOD(CGameTradePanel, inventorySelect, bool, std::shared_ptr<CGui>, int, std::shared_ptr<CGameObject>),
+       V_METHOD(CGameTradePanel, marketCollection, std::set<std::shared_ptr<CGameObject>>,
+                std::shared_ptr<CGui>),
+       V_METHOD(CGameTradePanel, marketCallback, void, std::shared_ptr<CGui>, int, std::shared_ptr<CGameObject>),
+       V_METHOD(CGameTradePanel, marketSelect, bool, std::shared_ptr<CGui>, int, std::shared_ptr<CGameObject>))
 
 public:
     CGameTradePanel();
-
-    int getXInv();
-
-    void setXInv(int xInv);
-
-    int getYInv();
-
-    void setYInv(int yInv);
 
     std::shared_ptr<CMarket> getMarket();
 
     void setMarket(std::shared_ptr<CMarket> _market);
 
+    std::set<std::shared_ptr<CGameObject>> inventoryCollection(std::shared_ptr<CGui> gui);
+
+    void inventoryCallback(std::shared_ptr<CGui> gui, int index, std::shared_ptr<CGameObject> _newSelection);
+
+    bool inventorySelect(std::shared_ptr<CGui> gui, int index, std::shared_ptr<CGameObject> object);
+
+    std::set<std::shared_ptr<CGameObject>> marketCollection(std::shared_ptr<CGui> gui);
+
+    void marketCallback(std::shared_ptr<CGui> gui, int index, std::shared_ptr<CGameObject> _newSelection);
+
+    bool marketSelect(std::shared_ptr<CGui> gui, int index, std::shared_ptr<CGameObject> object);
+
 private:
-    std::shared_ptr<CListView> inventoryView;
-    std::shared_ptr<CListView> marketView;
-
-    int xInv = 4;
-    int yInv = 4;
-
     std::shared_ptr<CMarket> market;
     std::list<std::weak_ptr<CItem>> selectedInventory;
     std::list<std::weak_ptr<CItem>> selectedMarket;
