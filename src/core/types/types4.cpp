@@ -66,6 +66,7 @@ namespace {
                     CTypes::register_type<CProxyTargetGraphicsObject, CGameGraphicsObject, CGameObject>();
                     {
                         CTypes::register_type<CMapGraphicsObject, CProxyTargetGraphicsObject, CGameGraphicsObject, CGameObject>();
+                        CTypes::register_type<CListView, CProxyTargetGraphicsObject, CGameGraphicsObject, CGameObject>();
                     }
                     CTypes::register_type<CGamePanel, CGameGraphicsObject, CGameObject>();
                     {

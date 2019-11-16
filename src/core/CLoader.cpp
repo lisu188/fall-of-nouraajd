@@ -77,7 +77,7 @@ std::shared_ptr<CMap> CMapLoader::loadSavedMap(std::shared_ptr<CGame> game, std:
 
     game->getObjectHandler()->registerConfig(getConfigPath(mapName));
     CPluginLoader::loadPlugin(game, getScriptPath(mapName));
-    game->getObjectHandler()->registerConfig(getConfigPath(mapName));
+    game->getObjectHandler()->registerConfig(getConfigPath(mapName));//TODO: duplicate?
 
     game->getObjectHandler()->registerConfig(name, save);
 
@@ -213,10 +213,10 @@ void CGameLoader::loadGui(std::shared_ptr<CGame> game) {
 
     game->setGui(gui);
 
-    vstd::event_loop<>::instance()->registerFrameCallback([game](int time) {
+    vstd::event_loop<>::instance()->registerFrameCallback([=](int time) {
         game->getGui()->render(time);
     });
-    vstd::event_loop<>::instance()->registerEventCallback([game](SDL_Event *event) {
+    vstd::event_loop<>::instance()->registerEventCallback([=](SDL_Event *event) {
         game->getGui()->event(event);
     });
 }
