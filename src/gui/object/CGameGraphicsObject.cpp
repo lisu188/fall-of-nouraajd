@@ -173,26 +173,3 @@ bool reverse_priority_comparator::operator()(std::shared_ptr<CGameGraphicsObject
                                              std::shared_ptr<CGameGraphicsObject> b) {
     return priority_comparator()(b, a);
 }
-
-void CProxyTargetGraphicsObject::renderProxyObject(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> rect,
-                                                   int frameTime, int x, int y) {
-
-}
-
-CProxyTargetGraphicsObject::CProxyTargetGraphicsObject() {
-    registerRenderCallback([this](std::shared_ptr<CGui> gui, int frameTime) {
-        if (proxyObjects.size() != ((unsigned int) getSizeX(gui) + 1) * ((unsigned int) getSizeY(gui) + 1)) {
-            for (auto val:proxyObjects) {
-                removeChild(val);
-            }
-            proxyObjects.clear();
-            for (int x = 0; x <= getSizeX(gui); x++)
-                for (int y = 0; y <= getSizeY(gui); y++) {
-                    std::shared_ptr<CProxyGraphicsObject> nh = std::make_shared<CProxyGraphicsObject>(x, y);
-                    nh->setLayout(std::make_shared<CProxyGraphicsLayout>());
-                    proxyObjects.insert(nh);
-                    addChild(nh);
-                }
-        }
-    });
-}

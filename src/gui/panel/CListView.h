@@ -17,7 +17,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #pragma once
 
-#include "gui/object/CGameGraphicsObject.h"
+#include "gui/object/CProxyTargetGraphicsObject.h"
 
 class CProxyGraphicsObject;
 
