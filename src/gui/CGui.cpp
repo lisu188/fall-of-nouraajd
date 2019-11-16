@@ -82,9 +82,9 @@ void CGui::setTileSize(int tileSize) {
 }
 
 int CGui::getTileCountX() {
-    return width / tileSize;
+    return width / tileSize + 1;
 }
 
 int CGui::getTileCountY() {
-    return height / tileSize;
+    return height / tileSize + 1;
 }
