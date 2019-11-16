@@ -22,16 +22,16 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 class CProxyGraphicsObject;
 
 class CListView : public CProxyTargetGraphicsObject {
-V_META(CListView, CProxyTargetGraphicsObject, vstd::meta::empty())
+V_META(CListView, CProxyTargetGraphicsObject,
+       V_PROPERTY(CListView, std::string, collection, getCollection, setCollection),
+       V_PROPERTY(CListView, std::string, select, getSelect, setSelect),
+       V_PROPERTY(CListView, std::string, callback, getCallback, setCallback))
 
     std::string collection;
 
     std::string callback;
 
     std::string select;
-
-    std::function<void(std::shared_ptr<CGui> gui, std::shared_ptr<CGameObject>, std::shared_ptr<SDL_Rect> loc,
-                       int frameTime)> draw;
 
     std::function<int(std::shared_ptr<CGameObject>, int)> index;
 
@@ -51,17 +51,24 @@ public:
 
     static int defaultIndex(std::shared_ptr<CGameObject> ob, int prevIndex);;
 
-    static void defaultDraw(std::shared_ptr<CGui> gui, std::shared_ptr<CGameObject> item, std::shared_ptr<SDL_Rect> loc,
-                            int frameTime);
-
     void
-    renderProxyObject(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> rect, int frameTime, int x, int y) override {
-        //TODO:
-    }
+    renderProxyObject(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> rect, int frameTime, int x, int y) override;
 
     int getSizeX(std::shared_ptr<CGui> gui) override;
 
     int getSizeY(std::shared_ptr<CGui> gui) override;
+
+    std::string getCollection();
+
+    void setCollection(std::string collection);
+
+    std::string getCallback();
+
+    void setCallback(std::string callback);
+
+    std::string getSelect();
+
+    void setSelect(std::string select);
 
 private:
     std::set<std::shared_ptr<CGameObject>> invokeCollection(std::shared_ptr<CGui> gui);

@@ -30,8 +30,6 @@ V_META(CMapGraphicsObject, CProxyTargetGraphicsObject,
 public:
     CMapGraphicsObject();
 
-    void renderObject(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> rect, int frameTime) override;
-
     std::shared_ptr<CMapStringString> getPanelKeys();
 
     void setPanelKeys(std::shared_ptr<CMapStringString> panelKeys);
