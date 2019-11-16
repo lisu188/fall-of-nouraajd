@@ -119,10 +119,10 @@ void CMapGraphicsObject::setPanelKeys(std::shared_ptr<CMapStringString> _panelKe
     this->panelKeys = _panelKeys;
 }
 
-int CMapGraphicsObject::getProxyCountY(std::shared_ptr<CGui> gui) {
+int CMapGraphicsObject::getSizeY(std::shared_ptr<CGui> gui) {
     return gui->getTileCountY();
 }
 
-int CMapGraphicsObject::getProxyCountX(std::shared_ptr<CGui> gui) {
+int CMapGraphicsObject::getSizeX(std::shared_ptr<CGui> gui) {
     return gui->getTileCountX();
 }

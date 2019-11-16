@@ -150,6 +150,25 @@
   "inventoryPanel": {
     "class": "CGameInventoryPanel",
     "properties": {
+      "children": [
+        {
+          "class": "CListView",
+          "properties": {
+            "collection": "inventoryCollection",
+            "callback": "inventoryCallback",
+            "select": "inventorySelect",
+            "layout": {
+              "class": "CPercentLayout",
+              "properties": {
+                "h": 100,
+                "w": 40,
+                "x": 0,
+                "y": 0
+              }
+            }
+          }
+        }
+      ],
       "layout": {
         "class": "CCenteredLayout",
         "properties": {
@@ -186,6 +205,41 @@
   "tradePanel": {
     "class": "CGameTradePanel",
     "properties": {
+      "children": [
+        {
+          "class": "CListView",
+          "properties": {
+            "collection": "inventoryCollection",
+            "callback": "inventoryCallback",
+            "select": "inventorySelect",
+            "layout": {
+              "class": "CPercentLayout",
+              "properties": {
+                "h": 100,
+                "w": 40,
+                "x": 0,
+                "y": 0
+              }
+            }
+          }
+        },        {
+          "class": "CListView",
+          "properties": {
+            "collection": "marketCollection",
+            "callback": "marketCallback",
+            "select": "marketSelect",
+            "layout": {
+              "class": "CPercentLayout",
+              "properties": {
+                "h": 100,
+                "w": 40,
+                "x": 60,
+                "y": 0
+              }
+            }
+          }
+        }
+      ],
       "layout": {
         "class": "CCenteredLayout",
         "properties": {
