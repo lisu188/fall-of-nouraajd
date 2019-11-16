@@ -108,11 +108,11 @@ public:
     virtual void
     renderProxyObject(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> rect, int frameTime, int x, int y);
 
-    virtual int getProxyCountX(std::shared_ptr<CGui> gui) {
+    virtual int getSizeX(std::shared_ptr<CGui> gui) {
         return 0;
     }
 
-    virtual int getProxyCountY(std::shared_ptr<CGui> gui) {
+    virtual int getSizeY(std::shared_ptr<CGui> gui) {
         return 0;
     }
 

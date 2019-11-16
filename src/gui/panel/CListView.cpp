@@ -19,14 +19,15 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "CListView.h"
 #include "gui/CGui.h"
 #include "gui/CTextureCache.h"
+#include "gui/CLayout.h"
 
 void CListView::renderObject(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> loc, int frameTime) {
     auto indexedCollection = calculateIndices(gui);
-    for (int i = 0; i < xSize * ySize; i++) {
-        auto pos = calculateIndexPosition(loc, i);
-        if (i == getLeftArrowIndex() && isOversized(gui)) {
+    for (int i = 0; i < getSizeX(gui) * getSizeY(gui); i++) {
+        auto pos = calculateIndexPosition(gui, loc, i);
+        if (i == getLeftArrowIndex(gui) && isOversized(gui)) {
             drawArrowLeft(gui, pos);
-        } else if (i == getRightArrowIndex() && isOversized(gui)) {
+        } else if (i == getRightArrowIndex(gui) && isOversized(gui)) {
             drawArrowRight(gui, pos);
         } else {
             int itemIndex = shiftIndex(gui, i);
@@ -42,11 +43,11 @@ void CListView::renderObject(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect
 }
 
 bool CListView::mouseEvent(std::shared_ptr<CGui> gui, SDL_EventType type, int x, int y) {
-    int i = ((x) / tileSize + ((y / tileSize) * xSize));
+    int i = ((x) / gui->getTileSize() + ((y / gui->getTileSize()) * getSizeX(gui)));
 
-    if (i == getLeftArrowIndex() && isOversized(gui)) {
+    if (i == getLeftArrowIndex(gui) && isOversized(gui)) {
         doShift(gui, -1);
-    } else if (i == getRightArrowIndex() && isOversized(gui)) {
+    } else if (i == getRightArrowIndex(gui) && isOversized(gui)) {
         doShift(gui, 1);
     } else {
         invokeCallback(gui, shiftIndex(gui, i), calculateIndices(gui)[shiftIndex(gui, i)]);
@@ -54,14 +55,7 @@ bool CListView::mouseEvent(std::shared_ptr<CGui> gui, SDL_EventType type, int x,
     return true;
 }
 
-CListView::CListView(int xSize, int ySize, int tileSize, bool allowOversize, int selectionThickness) : xSize(xSize),
-                                                                                                       ySize(ySize),
-                                                                                                       tileSize(
-                                                                                                               tileSize),
-                                                                                                       allowOversize(
-                                                                                                               allowOversize),
-                                                                                                       selectionThickness(
-                                                                                                               selectionThickness) {
+CListView::CListView() {
     index = &defaultIndex;
     draw = &defaultDraw;
 }
@@ -79,8 +73,8 @@ void CListView::doShift(std::shared_ptr<CGui> gui, int val) {
     shift += val;
     if (shift < 0) {
         shift = 0;
-    } else if (shift > (signed) invokeCollection(gui).size() - (xSize * ySize - 2/*arrows*/)) {
-        shift = invokeCollection(gui).size() - (xSize * ySize - 2/*arrows*/);
+    } else if (shift > (signed) invokeCollection(gui).size() - (getSizeX(gui) * getSizeY(gui) - 2/*arrows*/)) {
+        shift = invokeCollection(gui).size() - (getSizeX(gui) * getSizeY(gui) - 2/*arrows*/);
     }
 }
 
@@ -102,15 +96,15 @@ int CListView::shiftIndex(std::shared_ptr<CGui> gui, int arg) {
     if (!isOversized(gui)) {
         return arg;
     }
-    return arg > getLeftArrowIndex() ? arg + shift - 1 : arg + shift;
+    return arg > getLeftArrowIndex(gui) ? arg + shift - 1 : arg + shift;
 }
 
-int CListView::getRightArrowIndex() {
-    return xSize * ySize - 1;
+int CListView::getRightArrowIndex(std::shared_ptr<CGui> gui) {
+    return getSizeX(gui) * getSizeY(gui) - 1;
 }
 
-int CListView::getLeftArrowIndex() {
-    return xSize * (ySize - 1);
+int CListView::getLeftArrowIndex(std::shared_ptr<CGui> gui) {
+    return getSizeX(gui) * (getSizeY(gui) - 1);
 }
 
 std::unordered_map<int, std::shared_ptr<CGameObject>> CListView::calculateIndices(std::shared_ptr<CGui> gui) {
@@ -123,12 +117,13 @@ std::unordered_map<int, std::shared_ptr<CGameObject>> CListView::calculateIndice
     return indices;
 }
 
-std::shared_ptr<SDL_Rect> CListView::calculateIndexPosition(std::shared_ptr<SDL_Rect> loc, int index) {
+std::shared_ptr<SDL_Rect>
+CListView::calculateIndexPosition(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> loc, int index) {
     return RECT(
-            tileSize * (index % xSize) + loc->x,
-            tileSize * (index / xSize) + loc->y,
-            tileSize,
-            tileSize);
+            gui->getTileSize() * (index % getSizeX(gui)) + loc->x,
+            gui->getTileSize() * (index / getSizeX(gui)) + loc->y,
+            gui->getTileSize(),
+            gui->getTileSize());
 }
 
 void CListView::drawItemBox(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> loc) {
@@ -147,5 +142,33 @@ void CListView::drawArrowRight(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Re
 }
 
 bool CListView::isOversized(std::shared_ptr<CGui> gui) {
-    return allowOversize && invokeCollection(gui).size() > ((unsigned) xSize * (unsigned) ySize);
+    return allowOversize && invokeCollection(gui).size() > ((unsigned) getSizeX(gui) * (unsigned) getSizeY(gui));
+}
+
+int CListView::getSizeX(std::shared_ptr<CGui> gui) {
+    return getLayout()->getRect(this->ptr<CListView>())->w / gui->getTileSize();
+}
+
+int CListView::getSizeY(std::shared_ptr<CGui> gui) {
+    return getLayout()->getRect(this->ptr<CListView>())->h / gui->getTileSize();
+}
+
+std::set<std::shared_ptr<CGameObject>> CListView::invokeCollection(std::shared_ptr<CGui> gui) {
+    return getParent()->meta()->invoke_method<std::set<std::shared_ptr<CGameObject>>, CGameGraphicsObject,
+            std::shared_ptr<CGui>>(collection,
+                                   vstd::cast<CGameGraphicsObject>(getParent()), gui);
+}
+
+void CListView::invokeCallback(std::shared_ptr<CGui> gui, int i, std::shared_ptr<CGameObject> object) {
+    getParent()->meta()->invoke_method<void, CGameGraphicsObject,
+            std::shared_ptr<CGui>, int, std::shared_ptr<CGameObject>>(callback,
+                                                                      vstd::cast<CGameGraphicsObject>(getParent()),
+                                                                      gui, i, object);
+}
+
+bool CListView::invokeSelect(std::shared_ptr<CGui> gui, int i, std::shared_ptr<CGameObject> object) {
+    return getParent()->meta()->invoke_method<bool, CGameGraphicsObject,
+            std::shared_ptr<CGui>, int, std::shared_ptr<CGameObject>>(select,
+                                                                      vstd::cast<CGameGraphicsObject>(getParent()),
+                                                                      gui, i, object);
 }
