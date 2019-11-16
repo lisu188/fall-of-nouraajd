@@ -100,24 +100,3 @@ private:
     std::shared_ptr<SDL_Rect> getRect();
 };
 
-class CProxyGraphicsObject;
-
-class CProxyTargetGraphicsObject : public CGameGraphicsObject {
-V_META(CProxyTargetGraphicsObject, CGameGraphicsObject, vstd::meta::empty())
-public:
-    virtual void
-    renderProxyObject(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> rect, int frameTime, int x, int y);
-
-    virtual int getSizeX(std::shared_ptr<CGui> gui) {
-        return 0;
-    }
-
-    virtual int getSizeY(std::shared_ptr<CGui> gui) {
-        return 0;
-    }
-
-    CProxyTargetGraphicsObject();
-
-private:
-    std::set<std::shared_ptr<CProxyGraphicsObject>> proxyObjects;
-};
