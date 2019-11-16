@@ -181,7 +181,7 @@ void CProxyTargetGraphicsObject::renderProxyObject(std::shared_ptr<CGui> gui, st
 
 CProxyTargetGraphicsObject::CProxyTargetGraphicsObject() {
     registerRenderCallback([this](std::shared_ptr<CGui> gui, int frameTime) {
-        if (proxyObjects.size() != getSizeX(gui) * getSizeY(gui)) {
+        if (proxyObjects.size() != ((unsigned int) getSizeX(gui) + 1) * ((unsigned int) getSizeY(gui) + 1)) {
             for (auto val:proxyObjects) {
                 removeChild(val);
             }

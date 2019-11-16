@@ -102,7 +102,6 @@ std::shared_ptr<CTile> CMap::getTile(int x, int y, int z) {
     Coords coords(x, y, z);
     std::shared_ptr<CTile> tile;
     auto it = this->tiles.find(coords);
-    auto game = getGame();
     if (it == this->tiles.end()) {
         if (vstd::ctn(boundaries, z) && (x < 0 || y < 0 || x > boundaries[z].first || y > boundaries[z].second)) {
             tile = getGame()->createObject<CTile>("MountainTile");

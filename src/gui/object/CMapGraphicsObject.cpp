@@ -90,10 +90,6 @@ CMapGraphicsObject::renderProxyObject(std::shared_ptr<CGui> gui, std::shared_ptr
     }
 }
 
-void CMapGraphicsObject::renderObject(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> rect, int frameTime) {
-
-}
-
 void CMapGraphicsObject::initialize() {
     for (auto val:panelKeys->getValues()) {
         auto keyPred = [=](std::shared_ptr<CGui> gui, SDL_Event *event) {
