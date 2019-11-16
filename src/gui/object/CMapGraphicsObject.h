@@ -41,9 +41,9 @@ public:
     void
     renderProxyObject(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> rect, int frameTime, int x, int y) override;
 
-    int getProxyCountX(std::shared_ptr<CGui> gui) override;
+    int getSizeX(std::shared_ptr<CGui> gui) override;
 
-    int getProxyCountY(std::shared_ptr<CGui> gui) override;
+    int getSizeY(std::shared_ptr<CGui> gui) override;
 
 private:
     std::shared_ptr<CMapStringString> panelKeys;

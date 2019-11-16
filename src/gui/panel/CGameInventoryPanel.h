@@ -25,22 +25,21 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 //TODO: make icons on empty inventory slots
 class CGameInventoryPanel : public CGamePanel {
 V_META(CGameInventoryPanel, CGamePanel,
-       V_PROPERTY(CGameInventoryPanel, int, xInv, getXInv, setXInv),
-       V_PROPERTY(CGameInventoryPanel, int, yInv, getYInv, setYInv))
+       V_METHOD(CGameInventoryPanel, inventoryCollection, std::set<std::shared_ptr<CGameObject>>,
+                std::shared_ptr<CGui>),
+       V_METHOD(CGameInventoryPanel, inventoryCallback, void, std::shared_ptr<CGui>, int, std::shared_ptr<CGameObject>),
+       V_METHOD(CGameInventoryPanel, inventorySelect, bool, std::shared_ptr<CGui>, int, std::shared_ptr<CGameObject>))
 
 public:
     CGameInventoryPanel();
 
-    int getXInv();
+    std::set<std::shared_ptr<CGameObject>> inventoryCollection(std::shared_ptr<CGui> gui);
 
-    void setXInv(int xInv);
+    void inventoryCallback(std::shared_ptr<CGui> gui, int index, std::shared_ptr<CGameObject> _newSelection);
 
-    int getYInv();
+    bool inventorySelect(std::shared_ptr<CGui> gui, int index, std::shared_ptr<CGameObject> object);
 
-    void setYInv(int yInv);
 private:
-    int xInv = 4;
-    int yInv = 4;
     std::weak_ptr<CItem> selectedInventory;
     std::weak_ptr<CItem> selectedEquipped;
 };

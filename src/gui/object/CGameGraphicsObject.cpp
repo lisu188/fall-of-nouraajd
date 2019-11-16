@@ -181,13 +181,13 @@ void CProxyTargetGraphicsObject::renderProxyObject(std::shared_ptr<CGui> gui, st
 
 CProxyTargetGraphicsObject::CProxyTargetGraphicsObject() {
     registerRenderCallback([this](std::shared_ptr<CGui> gui, int frameTime) {
-        if (proxyObjects.size() != getProxyCountX(gui) * getProxyCountY(gui)) {
+        if (proxyObjects.size() != getSizeX(gui) * getSizeY(gui)) {
             for (auto val:proxyObjects) {
                 removeChild(val);
             }
             proxyObjects.clear();
-            for (int x = 0; x <= getProxyCountX(gui); x++)
-                for (int y = 0; y <= getProxyCountY(gui); y++) {
+            for (int x = 0; x <= getSizeX(gui); x++)
+                for (int y = 0; y <= getSizeY(gui); y++) {
                     std::shared_ptr<CProxyGraphicsObject> nh = std::make_shared<CProxyGraphicsObject>(x, y);
                     nh->setLayout(std::make_shared<CProxyGraphicsLayout>());
                     proxyObjects.insert(nh);

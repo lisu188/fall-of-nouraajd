@@ -21,27 +21,27 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CGame.h"
 #include "core/CMap.h"
 
-CGameInventoryPanel::CGameInventoryPanel() {
-    inventoryView = std::make_shared<
-            CListView>(
-            xInv, yInv, 50, true, selectionBarThickness)->withCollection(
-            [](std::shared_ptr<CGui> gui) {
-                return vstd::cast<std::set<std::shared_ptr<CGameObject>>>(
-                        gui->getGame()->getMap()->getPlayer()->getInInventory());
-            })->withCallback(
-            [this](std::shared_ptr<CGui> gui, int index, auto _newSelection) {
-                auto newSelection = vstd::cast<CItem>(_newSelection);
-                if (selectedInventory.lock() != newSelection) {
-                    selectedInventory = newSelection;
-                } else if (selectedInventory.lock() && selectedInventory.lock() == newSelection) {
-                    gui->getGame()->getMap()->getPlayer()->useItem(newSelection);
-                    selectedInventory.reset();
-                }
-            })->withSelect(
-            [this](std::shared_ptr<CGui> gui, int index, auto object) {
-                return selectedInventory.lock() && selectedInventory.lock() == object;
-            });
 
+std::set<std::shared_ptr<CGameObject>> CGameInventoryPanel::inventoryCollection(std::shared_ptr<CGui> gui) {
+    return vstd::cast<std::set<std::shared_ptr<CGameObject>>>(
+            gui->getGame()->getMap()->getPlayer()->getItems());
+}
+
+void CGameInventoryPanel::inventoryCallback(std::shared_ptr<CGui> gui, int index, std::shared_ptr<CGameObject> _newSelection) {
+    auto newSelection = vstd::cast<CItem>(_newSelection);
+    if (selectedInventory.lock() != newSelection) {
+        selectedInventory = newSelection;
+    } else if (selectedInventory.lock() && selectedInventory.lock() == newSelection) {
+        gui->getGame()->getMap()->getPlayer()->useItem(newSelection);
+        selectedInventory.reset();
+    }
+}
+
+bool CGameInventoryPanel::inventorySelect(std::shared_ptr<CGui> gui, int index, std::shared_ptr<CGameObject> object) {
+    return selectedInventory.lock() && selectedInventory.lock() == object;
+}
+
+CGameInventoryPanel::CGameInventoryPanel() {
 //    equippedView = std::make_shared<
 //            CListView<CItemMap>>(
 //            4, 2, 50, false, selectionBarThickness)->withCollection(
@@ -72,21 +72,4 @@ CGameInventoryPanel::CGameInventoryPanel() {
 //            [](auto gui, auto item, auto loc, auto frameTime) {
 //                item.second->getGraphicsObject()->renderObject(gui, loc, frameTime);
 //            });
-}
-
-
-int CGameInventoryPanel::getXInv() {
-    return xInv;
-}
-
-void CGameInventoryPanel::setXInv(int xInv) {
-    CGameInventoryPanel::xInv = xInv;
-}
-
-int CGameInventoryPanel::getYInv() {
-    return yInv;
-}
-
-void CGameInventoryPanel::setYInv(int yInv) {
-    CGameInventoryPanel::yInv = yInv;
 }
