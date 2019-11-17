@@ -51,8 +51,8 @@ public:
 
     static int defaultIndex(std::shared_ptr<CGameObject> ob, int prevIndex);;
 
-    void
-    renderProxyObject(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> rect, int frameTime, int x, int y) override;
+    std::set<std::shared_ptr<CGameGraphicsObject>>
+    getProxiedObjects(std::shared_ptr<CGui> gui, int x, int y) override;
 
     int getSizeX(std::shared_ptr<CGui> gui) override;
 

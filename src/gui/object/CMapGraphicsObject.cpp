@@ -26,51 +26,13 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CLoader.h"
 
 CMapGraphicsObject::CMapGraphicsObject() {
-    registerEventCallback([](std::shared_ptr<CGui> gui, SDL_Event *event) {
-        return event->type == SDL_KEYDOWN && event->key.keysym.sym == SDLK_UP;
-    }, [](std::shared_ptr<CGui> gui, SDL_Event *event) {
-        gui->getGame()->getMap()->getPlayer()->setController(std::make_shared<CPlayerController>(Coords(0, -1, 0)));
-        gui->getGame()->getMap()->move();
-        return true;
-    });
-    registerEventCallback([](std::shared_ptr<CGui> gui, SDL_Event *event) {
-        return event->type == SDL_KEYDOWN && event->key.keysym.sym == SDLK_DOWN;
-    }, [](std::shared_ptr<CGui> gui, SDL_Event *event) {
-        gui->getGame()->getMap()->getPlayer()->setController(std::make_shared<CPlayerController>(Coords(0, 1, 0)));
-        gui->getGame()->getMap()->move();
-        return true;
-    });
-    registerEventCallback([](std::shared_ptr<CGui> gui, SDL_Event *event) {
-        return event->type == SDL_KEYDOWN && event->key.keysym.sym == SDLK_LEFT;
-    }, [](std::shared_ptr<CGui> gui, SDL_Event *event) {
-        gui->getGame()->getMap()->getPlayer()->setController(std::make_shared<CPlayerController>(Coords(-1, 0, 0)));
-        gui->getGame()->getMap()->move();
-        return true;
-    });
-    registerEventCallback([](std::shared_ptr<CGui> gui, SDL_Event *event) {
-        return event->type == SDL_KEYDOWN && event->key.keysym.sym == SDLK_RIGHT;
-    }, [](std::shared_ptr<CGui> gui, SDL_Event *event) {
-        gui->getGame()->getMap()->getPlayer()->setController(std::make_shared<CPlayerController>(Coords(1, 0, 0)));
-        gui->getGame()->getMap()->move();
-        return true;
-    });
-    registerEventCallback([](std::shared_ptr<CGui> gui, SDL_Event *event) {
-        return event->type == SDL_KEYDOWN && event->key.keysym.sym == SDLK_SPACE;
-    }, [](std::shared_ptr<CGui> gui, SDL_Event *event) {
-        gui->getGame()->getMap()->getPlayer()->setController(std::make_shared<CPlayerController>(Coords(0, 0, 0)));
-        gui->getGame()->getMap()->move();
-        return true;
-    });
-    registerEventCallback([](std::shared_ptr<CGui> gui, SDL_Event *event) {
-        return event->type == SDL_KEYDOWN && event->key.keysym.sym == SDLK_s;
-    }, [](std::shared_ptr<CGui> gui, SDL_Event *event) {
-        CMapLoader::save(gui->getGame()->getMap(), gui->getGame()->getMap()->getName());
-        return true;
-    });
+
 }
 
-void
-CMapGraphicsObject::renderProxyObject(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> rect, int frameTime,int x, int y) {
+
+std::set<std::shared_ptr<CGameGraphicsObject>>
+CMapGraphicsObject::getProxiedObjects(std::shared_ptr<CGui> gui, int x, int y) {
+    std::set<std::shared_ptr<CGameGraphicsObject>> return_val;
     if (std::shared_ptr<CMap> map = gui->getGame()->getMap()) {//TODO:
         auto playerCoords = map->getPlayer()->getCoords();
 
@@ -80,14 +42,15 @@ CMapGraphicsObject::renderProxyObject(std::shared_ptr<CGui> gui, std::shared_ptr
 
         std::shared_ptr<CTile> tile = map->getTile(actualCoords.x, actualCoords.y, actualCoords.z);
 
-        tile->getGraphicsObject()->renderObject(gui, rect, frameTime);
+        return_val.insert(tile->getGraphicsObject());
 
         map->forObjects([&](std::shared_ptr<CMapObject> ob) {
-            ob->getGraphicsObject()->renderObject(gui, rect, frameTime);
+            return_val.insert(ob->getGraphicsObject());
         }, [&](std::shared_ptr<CMapObject> ob) {
             return actualCoords == ob->getCoords();
         });
     }
+    return return_val;
 }
 
 void CMapGraphicsObject::initialize() {
@@ -121,4 +84,40 @@ int CMapGraphicsObject::getSizeY(std::shared_ptr<CGui> gui) {
 
 int CMapGraphicsObject::getSizeX(std::shared_ptr<CGui> gui) {
     return gui->getTileCountX();
+}
+
+bool CMapGraphicsObject::keyboardEvent(std::shared_ptr<CGui> gui, SDL_EventType type, SDL_Keycode i) {
+    if (type == SDL_KEYDOWN) {
+        switch (i) {
+            case SDLK_UP:
+                gui->getGame()->getMap()->getPlayer()->setController(
+                        std::make_shared<CPlayerController>(Coords(0, -1, 0)));
+                gui->getGame()->getMap()->move();
+                return true;
+            case SDLK_DOWN:
+                gui->getGame()->getMap()->getPlayer()->setController(
+                        std::make_shared<CPlayerController>(Coords(0, 1, 0)));
+                gui->getGame()->getMap()->move();
+                return true;
+            case SDLK_LEFT:
+                gui->getGame()->getMap()->getPlayer()->setController(
+                        std::make_shared<CPlayerController>(Coords(-1, 0, 0)));
+                gui->getGame()->getMap()->move();
+                return true;
+            case SDLK_RIGHT:
+                gui->getGame()->getMap()->getPlayer()->setController(
+                        std::make_shared<CPlayerController>(Coords(1, 0, 0)));
+                gui->getGame()->getMap()->move();
+                return true;
+            case SDLK_SPACE:
+                gui->getGame()->getMap()->getPlayer()->setController(
+                        std::make_shared<CPlayerController>(Coords(0, 0, 0)));
+                gui->getGame()->getMap()->move();
+                return true;
+            case SDLK_s:
+                CMapLoader::save(gui->getGame()->getMap(), gui->getGame()->getMap()->getName());
+                return true;
+        }
+    }
+    return false;
 }

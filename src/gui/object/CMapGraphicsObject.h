@@ -36,12 +36,14 @@ public:
 
     void initialize();
 
-    void
-    renderProxyObject(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> rect, int frameTime, int x, int y) override;
+    std::set<std::shared_ptr<CGameGraphicsObject>>
+    getProxiedObjects(std::shared_ptr<CGui> gui, int x, int y) override;
 
     int getSizeX(std::shared_ptr<CGui> gui) override;
 
     int getSizeY(std::shared_ptr<CGui> gui) override;
+
+    bool keyboardEvent(std::shared_ptr<CGui> sharedPtr, SDL_EventType type, SDL_Keycode i) override;
 
 private:
     std::shared_ptr<CMapStringString> panelKeys;

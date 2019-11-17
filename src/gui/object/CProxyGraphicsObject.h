@@ -23,16 +23,14 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 class CMapGraphicsObject;
 
 class CProxyGraphicsObject : public CGameGraphicsObject {
-    V_META(CProxyGraphicsObject, CGameGraphicsObject,
-            V_PROPERTY(CProxyGraphicsObject, int, x, getX, setX),
-            V_PROPERTY(CProxyGraphicsObject, int, y, getY, setY)
-    )
-public:
-    bool keyboardEvent(std::shared_ptr <CGui> sharedPtr, SDL_EventType type, SDL_Keycode i) override;
+V_META(CProxyGraphicsObject, CGameGraphicsObject,
+       V_PROPERTY(CProxyGraphicsObject, int, x, getX, setX),
+       V_PROPERTY(CProxyGraphicsObject, int, y, getY, setY)
+)
 
-    bool mouseEvent(std::shared_ptr <CGui> sharedPtr, SDL_EventType type, int x, int y) override;
+    void render(std::shared_ptr<CGui> reneder, int frameTime) override;
 
-    void renderObject(std::shared_ptr <CGui> reneder, std::shared_ptr <SDL_Rect> rect, int frameTime) override;
+    bool event(std::shared_ptr<CGui> gui, SDL_Event *event) override;
 
 private:
     int x, y;
