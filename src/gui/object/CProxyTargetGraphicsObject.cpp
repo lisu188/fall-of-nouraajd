@@ -19,10 +19,6 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "CProxyGraphicsObject.h"
 #include "gui/CLayout.h"
 
-void CProxyTargetGraphicsObject::renderProxyObject(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> rect,
-                                                   int frameTime, int x, int y) {
-
-}
 
 CProxyTargetGraphicsObject::CProxyTargetGraphicsObject() {
     registerRenderCallback([this](std::shared_ptr<CGui> gui, int frameTime) {
@@ -48,4 +44,9 @@ int CProxyTargetGraphicsObject::getSizeX(std::shared_ptr<CGui> gui) {
 
 int CProxyTargetGraphicsObject::getSizeY(std::shared_ptr<CGui> gui) {
     return 0;
+}
+
+std::set<std::shared_ptr<CGameGraphicsObject>>
+CProxyTargetGraphicsObject::getProxiedObjects(std::shared_ptr<CGui> gui, int x, int y) {
+    return std::set<std::shared_ptr<CGameGraphicsObject>>();
 }

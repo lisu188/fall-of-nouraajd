@@ -35,6 +35,10 @@ struct reverse_priority_comparator {
 };
 
 class CGameGraphicsObject : public CGameObject {
+    friend class CGui;
+
+    friend class CProxyGraphicsObject;
+
 V_META(CGameGraphicsObject, CGameObject,
        V_PROPERTY(CGameGraphicsObject, int, priority, getPriority, setPriority),
        V_PROPERTY(CGameGraphicsObject, std::shared_ptr<CLayout>, layout, getLayout, setLayout),
@@ -60,10 +64,6 @@ public:
     std::set<std::shared_ptr<CGameGraphicsObject>> getChildren();
 
     void setChildren(std::set<std::shared_ptr<CGameGraphicsObject>> _children);
-
-    void render(std::shared_ptr<CGui> reneder, int frameTime);
-
-    bool event(std::shared_ptr<CGui> gui, SDL_Event *event);
 
     virtual bool keyboardEvent(std::shared_ptr<CGui> sharedPtr, SDL_EventType type, SDL_Keycode i);
 
@@ -95,6 +95,10 @@ public:
     void removeParent();
 
 private:
+    virtual void render(std::shared_ptr<CGui> reneder, int frameTime);
+
+    virtual bool event(std::shared_ptr<CGui> gui, SDL_Event *event);
+
     int getTopPriority();
 
     std::shared_ptr<SDL_Rect> getRect();

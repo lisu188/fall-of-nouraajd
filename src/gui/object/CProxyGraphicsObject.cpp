@@ -16,27 +16,12 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #include "gui/object/CProxyGraphicsObject.h"
+#include "gui/object/CProxyTargetGraphicsObject.h"
 #include "gui/CLayout.h"
 #include "gui/panel/CGameInventoryPanel.h"
-#include "gui/panel/CGameQuestPanel.h"
-#include "gui/panel/CGameCharacterPanel.h"
 #include "core/CController.h"
 #include "gui/object/CMapGraphicsObject.h"
-#include "gui/CAnimation.h"
 #include "core/CLoader.h"
-
-bool CProxyGraphicsObject::keyboardEvent(std::shared_ptr<CGui> sharedPtr, SDL_EventType type, SDL_Keycode i) {
-    return CGameGraphicsObject::keyboardEvent(sharedPtr, type, i);
-}
-
-bool CProxyGraphicsObject::mouseEvent(std::shared_ptr<CGui> sharedPtr, SDL_EventType type, int x, int y) {
-    return CGameGraphicsObject::mouseEvent(sharedPtr, type, x, y);
-}
-
-void
-CProxyGraphicsObject::renderObject(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> rect, int frameTime) {
-    vstd::cast<CProxyTargetGraphicsObject>(getParent())->renderProxyObject(gui, rect, frameTime, x, y);
-}
 
 CProxyGraphicsObject::CProxyGraphicsObject(int x, int y) : x(x), y(y) {
 
@@ -44,4 +29,32 @@ CProxyGraphicsObject::CProxyGraphicsObject(int x, int y) : x(x), y(y) {
 
 CProxyGraphicsObject::CProxyGraphicsObject() {
 
+}
+
+void CProxyGraphicsObject::render(std::shared_ptr<CGui> gui, int frameTime) {
+    auto proxied = vstd::cast<CProxyTargetGraphicsObject>(getParent())->getProxiedObjects(gui, x, y);
+    std::set<std::shared_ptr<CGameGraphicsObject>,
+            priority_comparator> proxied_sorted(proxied.begin(),
+                                                proxied.end());
+    for (auto child:proxied_sorted) {
+        child->setParent(this->ptr<CGameGraphicsObject>());
+        child->render(gui, frameTime);
+        child->removeParent();
+    }
+}
+
+bool CProxyGraphicsObject::event(std::shared_ptr<CGui> gui, SDL_Event *event) {
+    auto proxied = vstd::cast<CProxyTargetGraphicsObject>(getParent())->getProxiedObjects(gui, x, y);
+    std::set<std::shared_ptr<CGameGraphicsObject>,
+            reverse_priority_comparator> proxied_sorted(proxied.begin(),
+                                                        proxied.end());
+    for (auto child:proxied_sorted) {
+        child->setParent(this->ptr<CGameGraphicsObject>());
+        bool eventConsumed = child->event(gui, event);
+        child->removeParent();
+        if (eventConsumed) {
+            return true;
+        }
+    }
+    return false;
 }

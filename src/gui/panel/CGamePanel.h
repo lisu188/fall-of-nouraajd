@@ -29,15 +29,6 @@ V_META(CGamePanel, CGameGraphicsObject, vstd::meta::empty())
 public:
     void renderObject(std::shared_ptr<CGui> reneder, std::shared_ptr<SDL_Rect> rect, int frameTime) override;
 
-    //TODO:
-    int getWidth() {
-        return 800;
-    }
-
-    int getHeight() {
-        return 600;
-    }
-
     bool keyboardEvent(std::shared_ptr<CGui> sharedPtr, SDL_EventType type, SDL_Keycode i) override;
 
     bool mouseEvent(std::shared_ptr<CGui> sharedPtr, SDL_EventType type, int x, int y) override;
