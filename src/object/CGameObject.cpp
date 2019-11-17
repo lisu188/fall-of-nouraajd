@@ -15,6 +15,7 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
+#include "core/CList.h"
 #include "object/CGameObject.h"
 #include "core/CMap.h"
 
@@ -142,6 +143,12 @@ void CGameObject::setTooltip(std::string tooltip) {
 
 std::shared_ptr<CGameGraphicsObject> CGameObject::getGraphicsObject() {
     return graphicsObject.get([this]() {
-        return CAnimationProvider::getAnimation(getAnimation());
+        std::shared_ptr<CAnimation> anim = CAnimationProvider::getAnimation(getAnimation());
+        for (auto[key, val] :getGame()->createObject<CMapStringInt>("mapObjectPriorities")->getValues()) {
+            if (val > anim->getPriority() && this->meta()->inherits(key)) {
+                anim->setPriority(val);
+            }
+        }
+        return anim;
     });
 }

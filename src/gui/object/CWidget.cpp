@@ -20,7 +20,6 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "gui/panel/CGamePanel.h"
 
 
-
 void CWidget::setRender(std::string draw) {
     this->render = draw;
 }
@@ -43,14 +42,16 @@ void CWidget::renderObject(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> 
             std::shared_ptr<SDL_Rect>, int>(this->getRender(),
                                             vstd::cast<CGamePanel>(getParent()),
                                             gui,
-                                         rect,
+                                            rect,
                                             frameTime);
 }
 
 bool CWidget::mouseEvent(std::shared_ptr<CGui> gui, SDL_EventType type, int x, int y) {
-    this->meta()->invoke_method<void, CGamePanel,
-            std::shared_ptr<CGui>>(this->getClick(),
-                                   vstd::cast<CGamePanel>(getParent()),
-                                   gui);
+    if (type == SDL_MOUSEBUTTONDOWN) {
+        this->meta()->invoke_method<void, CGamePanel,
+                std::shared_ptr<CGui>>(this->getClick(),
+                                       vstd::cast<CGamePanel>(getParent()),
+                                       gui);
+    }
     return true;
 }

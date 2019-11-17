@@ -55,10 +55,13 @@ void CGameTradePanel::renderObject(std::shared_ptr<CGui> gui, std::shared_ptr<SD
 }
 
 bool CGameTradePanel::keyboardEvent(std::shared_ptr<CGui> gui, SDL_EventType type, SDL_Keycode i) {
-    if (i == SDLK_SPACE) {
-        gui->removeChild(this->ptr<CGameTradePanel>());
-    } else if (i == SDLK_RETURN) {
-        handleEnter(gui);
+    if (type == SDL_KEYDOWN) {
+        //TODO: get rid of this
+        if (i == SDLK_SPACE) {
+            gui->removeChild(this->ptr<CGameTradePanel>());
+        } else if (i == SDLK_RETURN) {
+            handleEnter(gui);
+        }
     }
     return true;
 }

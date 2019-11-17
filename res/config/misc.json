@@ -12,5 +12,15 @@
         "j": "questPanel"
       }
     }
+  },
+  "mapObjectPriorities": {
+    "class": "CMapStringInt",
+    "properties": {
+      "values": {
+        "CMapObject": 1,
+        "CCreature": 2,
+        "CPlayer": 3
+      }
+    }
   }
 }
