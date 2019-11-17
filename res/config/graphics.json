@@ -20,7 +20,10 @@
           "ref": "mapGraphics"
         },
         {
-          "ref": "statsGraphics"
+          "ref": "statsGraphics",
+          "properties": {
+            "priority": 1
+          }
         },
         {
           "properties": {

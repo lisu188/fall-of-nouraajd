@@ -21,11 +21,13 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 class CProxyGraphicsObject;
 
+
+//TODO: make interface
 class CProxyTargetGraphicsObject : public CGameGraphicsObject {
 V_META(CProxyTargetGraphicsObject, CGameGraphicsObject, vstd::meta::empty())
 public:
-    virtual void
-    renderProxyObject(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> rect, int frameTime, int x, int y);
+    virtual std::set<std::shared_ptr<CGameGraphicsObject>>
+    getProxiedObjects(std::shared_ptr<CGui> gui,  int x, int y);
 
     virtual int getSizeX(std::shared_ptr<CGui> gui);
 

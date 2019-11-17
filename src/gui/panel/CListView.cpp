@@ -26,14 +26,16 @@ void CListView::renderObject(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect
 }
 
 bool CListView::mouseEvent(std::shared_ptr<CGui> gui, SDL_EventType type, int x, int y) {
-    int i = ((x) / gui->getTileSize() + ((y / gui->getTileSize()) * getSizeX(gui)));
+    if (type == SDL_MOUSEBUTTONDOWN) {//TODO: separate to objects
+        int i = ((x) / gui->getTileSize() + ((y / gui->getTileSize()) * getSizeX(gui)));
 
-    if (i == getLeftArrowIndex(gui) && isOversized(gui)) {
-        doShift(gui, -1);
-    } else if (i == getRightArrowIndex(gui) && isOversized(gui)) {
-        doShift(gui, 1);
-    } else {
-        invokeCallback(gui, shiftIndex(gui, i), calculateIndices(gui)[shiftIndex(gui, i)]);
+        if (i == getLeftArrowIndex(gui) && isOversized(gui)) {
+            doShift(gui, -1);
+        } else if (i == getRightArrowIndex(gui) && isOversized(gui)) {
+            doShift(gui, 1);
+        } else {
+            invokeCallback(gui, shiftIndex(gui, i), calculateIndices(gui)[shiftIndex(gui, i)]);
+        }
     }
     return true;
 }
@@ -103,21 +105,6 @@ CListView::calculateIndexPosition(std::shared_ptr<CGui> gui, std::shared_ptr<SDL
             gui->getTileSize());
 }
 
-void CListView::drawItemBox(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> loc) {
-    SDL_RenderCopy(gui->getRenderer(), gui->getTextureCache()->getTexture("images/item.png"), nullptr,
-                   loc.get());
-}
-
-void CListView::drawArrowLeft(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> loc) {
-    SDL_RenderCopy(gui->getRenderer(), gui->getTextureCache()->getTexture("images/arrows/left.png"), nullptr,
-                   loc.get());
-}
-
-void CListView::drawArrowRight(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> loc) {
-    SDL_RenderCopy(gui->getRenderer(), gui->getTextureCache()->getTexture("images/arrows/right.png"), nullptr,
-                   loc.get());
-}
-
 bool CListView::isOversized(std::shared_ptr<CGui> gui) {
     return allowOversize && invokeCollection(gui).size() > ((unsigned) getSizeX(gui) * (unsigned) getSizeY(gui));
 }
@@ -150,24 +137,26 @@ bool CListView::invokeSelect(std::shared_ptr<CGui> gui, int i, std::shared_ptr<C
                                                                       gui, i, object);
 }
 
-void
-CListView::renderProxyObject(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> rect, int frameTime, int x, int y) {
+std::set<std::shared_ptr<CGameGraphicsObject>>
+CListView::getProxiedObjects(std::shared_ptr<CGui> gui, int x, int y) {
+    std::set<std::shared_ptr<CGameGraphicsObject>> return_val;
     int i = getSizeX(gui) * y + x;
     if (i == getLeftArrowIndex(gui) && isOversized(gui)) {
-        drawArrowLeft(gui, rect);
+        return_val.insert(CAnimationProvider::getAnimation("images/arrows/left"));//TODO: cache
     } else if (i == getRightArrowIndex(gui) && isOversized(gui)) {
-        drawArrowRight(gui, rect);
+        return_val.insert(CAnimationProvider::getAnimation("images/arrows/right"));//TODO: cache
     } else {
         auto indexedCollection = calculateIndices(gui);
         int itemIndex = shiftIndex(gui, i);
-        drawItemBox(gui, rect);
+        return_val.insert(CAnimationProvider::getAnimation("images/item"));//TODO: cache
         if (vstd::ctn(indexedCollection, itemIndex)) {
-            indexedCollection[itemIndex]->getGraphicsObject()->renderObject(gui, rect, frameTime);
+            return_val.insert(indexedCollection[itemIndex]->getGraphicsObject());
         }
         if (invokeSelect(gui, itemIndex, indexedCollection[itemIndex])) {
-            drawSelection(gui, rect, selectionThickness);
+            //TODO:  drawSelection(gui, rect, selectionThickness);
         }
     }
+    return return_val;
 }
 
 std::string CListView::getCollection() {

@@ -217,7 +217,7 @@ void CGameLoader::loadGui(std::shared_ptr<CGame> game) {
         game->getGui()->render(time);
     });
     vstd::event_loop<>::instance()->registerEventCallback([=](SDL_Event *event) {
-        game->getGui()->event(event);
+        return game->getGui()->event(event);
     });
 }
 
