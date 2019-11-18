@@ -30,7 +30,7 @@ public:
 
 class CPlayerController : public CController {
 V_META(CPlayerController, CController, vstd::meta::empty())
-    std::shared_ptr<Coords> next;
+    Coords next;
 public:
     CPlayerController();
 
