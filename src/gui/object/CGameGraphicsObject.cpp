@@ -26,9 +26,6 @@ void CGameGraphicsObject::renderObject(std::shared_ptr<CGui> reneder, std::share
 }
 
 void CGameGraphicsObject::render(std::shared_ptr<CGui> reneder, int frameTime) {
-    for (auto callback:renderCallbackList) {
-        callback(reneder, frameTime);
-    }
     renderObject(reneder, getRect(), frameTime);
     std::set<std::shared_ptr<CGameGraphicsObject>,
             priority_comparator> children_sorted(children.begin(),
@@ -47,7 +44,7 @@ bool CGameGraphicsObject::event(std::shared_ptr<CGui> gui, SDL_Event *event) {
             return true;
         }
     }
-    for (auto callback:eventCallbackList) {
+    for (auto callback:eventCallbackList) {//TODO:remove, replace with other event
         if (callback.first(gui, event) && callback.second(gui, event)) {
             return true;
         }
@@ -130,6 +127,10 @@ std::set<std::shared_ptr<CGameGraphicsObject>> CGameGraphicsObject::getChildren(
 }
 
 void CGameGraphicsObject::setChildren(std::set<std::shared_ptr<CGameGraphicsObject>> _children) {
+    //TODO: doChecks
+    for (auto child:children) {
+        removeChild(child);
+    }
     for (auto child:_children) {
         addChild(child);
     }
@@ -155,10 +156,6 @@ int CGameGraphicsObject::getTopPriority() {
 void CGameGraphicsObject::pushChild(std::shared_ptr<CGameGraphicsObject> child) {
     child->setPriority(getTopPriority() + 1);
     addChild(child);
-}
-
-void CGameGraphicsObject::registerRenderCallback(std::function<void(std::shared_ptr<CGui>, int)> cb) {
-    renderCallbackList.push_back(cb);
 }
 
 bool priority_comparator::operator()(std::shared_ptr<CGameGraphicsObject> a,

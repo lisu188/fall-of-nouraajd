@@ -21,22 +21,43 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 
 CProxyTargetGraphicsObject::CProxyTargetGraphicsObject() {
-    registerRenderCallback([this](std::shared_ptr<CGui> gui, int frameTime) {
-        if (proxyObjects.size() != (unsigned int) getSizeX(gui) * (unsigned int) getSizeY(gui)) {
-            for (auto val:proxyObjects) {
-                removeChild(val);
-            }
-            proxyObjects.clear();
-            for (int x = 0; x < getSizeX(gui); x++)
-                for (int y = 0; y < getSizeY(gui); y++) {
-                    std::shared_ptr<CProxyGraphicsObject> nh = std::make_shared<CProxyGraphicsObject>(x, y);
-                    nh->setLayout(std::make_shared<CProxyGraphicsLayout>());
-                    proxyObjects.insert(nh);
-                    addChild(nh);
-                }
-        }
-    });
+
 }
+
+void CProxyTargetGraphicsObject::render(std::shared_ptr<CGui> gui, int frameTime) {
+    if (proxyObjects.size() != (unsigned int) getSizeX(gui) * (unsigned int) getSizeY(gui)) {
+        for (auto val:proxyObjects) {
+            removeChild(val);
+        }
+        proxyObjects.clear();
+        for (int x = 0; x < getSizeX(gui); x++)
+            for (int y = 0; y < getSizeY(gui); y++) {
+                std::shared_ptr<CProxyGraphicsObject> nh = std::make_shared<CProxyGraphicsObject>(x, y);
+                nh->setLayout(std::make_shared<CProxyGraphicsLayout>());
+                proxyObjects.insert(nh);
+                addChild(nh);
+            }
+    }
+    CGameGraphicsObject::render(gui, frameTime);
+}
+
+bool CProxyTargetGraphicsObject::event(std::shared_ptr<CGui> gui, SDL_Event *event) {
+    if (proxyObjects.size() != (unsigned int) getSizeX(gui) * (unsigned int) getSizeY(gui)) {
+        for (auto val:proxyObjects) {
+            removeChild(val);
+        }
+        proxyObjects.clear();
+        for (int x = 0; x < getSizeX(gui); x++)
+            for (int y = 0; y < getSizeY(gui); y++) {
+                std::shared_ptr<CProxyGraphicsObject> nh = std::make_shared<CProxyGraphicsObject>(x, y);
+                nh->setLayout(std::make_shared<CProxyGraphicsLayout>());
+                proxyObjects.insert(nh);
+                addChild(nh);
+            }
+    }
+    return CGameGraphicsObject::event(gui, event);
+}
+
 
 int CProxyTargetGraphicsObject::getSizeX(std::shared_ptr<CGui> gui) {
     return 0;

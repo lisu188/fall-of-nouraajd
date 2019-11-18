@@ -22,6 +22,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 class CGameObject;
 
+class CMapObject;
+
 struct Coords {
     Coords();
 
@@ -64,6 +66,14 @@ namespace std {
             return vstd::hash_combine(coords.x, coords.y, coords.z);
         }
     };
+
+    template<>
+    struct less<std::weak_ptr<CMapObject>> {
+        bool operator()(const std::weak_ptr<CMapObject> &a, const std::weak_ptr<CMapObject> &b) const {
+            return a.lock() < b.lock();
+        }
+    };
+
 }
 
 template<typename F>
