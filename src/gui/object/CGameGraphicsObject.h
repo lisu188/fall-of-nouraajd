@@ -23,6 +23,10 @@ class CGui;
 
 class CLayout;
 
+class CProxyGraphicsObject;
+
+class CProxyTargetGraphicsObject;
+
 //TODO: generify
 struct priority_comparator {
     bool operator()(
@@ -35,9 +39,12 @@ struct reverse_priority_comparator {
 };
 
 class CGameGraphicsObject : public CGameObject {
+    //TODO: replace with interceptor
     friend class CGui;
 
     friend class CProxyGraphicsObject;
+
+    friend class CProxyTargetGraphicsObject;
 
 V_META(CGameGraphicsObject, CGameObject,
        V_PROPERTY(CGameGraphicsObject, int, priority, getPriority, setPriority),
@@ -47,8 +54,6 @@ V_META(CGameGraphicsObject, CGameObject,
 
     std::list<std::pair<std::function<bool(std::shared_ptr<CGui>, SDL_Event *)>, std::function<bool(
             std::shared_ptr<CGui>, SDL_Event *) >>> eventCallbackList;
-
-    std::list<std::function<void(std::shared_ptr<CGui>, int)>> renderCallbackList;
 
     std::set<std::shared_ptr<CGameGraphicsObject>> children;
     std::weak_ptr<CGameGraphicsObject> parent;
@@ -73,8 +78,6 @@ public:
 
     void registerEventCallback(std::function<bool(std::shared_ptr<CGui>, SDL_Event *)> pred,
                                std::function<bool(std::shared_ptr<CGui>, SDL_Event *)> func);
-
-    void registerRenderCallback(std::function<void(std::shared_ptr<CGui>, int)> cb);
 
     std::shared_ptr<CGameGraphicsObject> getParent();
 

@@ -36,9 +36,13 @@ void CMapObject::move(int x, int y, int z) {
         dynamic_cast<Moveable *> ( this )->beforeMove();
     }
 
+    Coords oldCoords(posx, posy, posz);
     posx += x;
     posy += y;
     posz += z;
+    Coords newCoords(posx, posy, posz);
+
+    getMap()->objectMoved(this->ptr<CMapObject>(), oldCoords, newCoords);
 
     if (dynamic_cast<Moveable *> ( this )) {
         dynamic_cast<Moveable *> ( this )->afterMove();
