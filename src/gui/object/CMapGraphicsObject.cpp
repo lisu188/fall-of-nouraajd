@@ -44,11 +44,10 @@ CMapGraphicsObject::getProxiedObjects(std::shared_ptr<CGui> gui, int x, int y) {
 
         return_val.insert(tile->getGraphicsObject());
 
-        map->forObjects([&](std::shared_ptr<CMapObject> ob) {
+
+        for (auto ob: map->getObjectsAtCoords(actualCoords)) {
             return_val.insert(ob->getGraphicsObject());
-        }, [&](std::shared_ptr<CMapObject> ob) {
-            return actualCoords == ob->getCoords();
-        });
+        }
     }
     return return_val;
 }
@@ -88,6 +87,9 @@ int CMapGraphicsObject::getSizeX(std::shared_ptr<CGui> gui) {
 
 bool CMapGraphicsObject::keyboardEvent(std::shared_ptr<CGui> gui, SDL_EventType type, SDL_Keycode i) {
     if (type == SDL_KEYDOWN) {
+        if (gui->getGame()->getMap()->isMoving()) {
+            return true; //TODO: rethink this
+        }
         switch (i) {
             case SDLK_UP:
                 gui->getGame()->getMap()->getPlayer()->setController(

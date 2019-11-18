@@ -176,17 +176,18 @@ std::shared_ptr<CInteraction> CMonsterFightController::selectInteraction(std::sh
 }
 
 CPlayerController::CPlayerController() {
-    this->next = std::make_shared<Coords>(0, 0, 0);
+    this->next = Coords(0, 0, 0);
 }
 
 
-CPlayerController::CPlayerController(Coords next) {
-    this->next = std::make_shared<Coords>(next);
+CPlayerController::CPlayerController(Coords _next) {
+    this->next = _next;
 }
 
 std::shared_ptr<vstd::future<void, Coords> > CPlayerController::control(std::shared_ptr<CCreature> c) {
+    Coords _next = next;//to ensure copy to closure
     return vstd::later([=](Coords coords) {
-        c->move(*next);
+        c->move(_next);
     });
 }
 

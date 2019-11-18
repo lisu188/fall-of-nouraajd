@@ -32,29 +32,15 @@ CProxyGraphicsObject::CProxyGraphicsObject() {
 }
 
 void CProxyGraphicsObject::render(std::shared_ptr<CGui> gui, int frameTime) {
-    auto proxied = vstd::cast<CProxyTargetGraphicsObject>(getParent())->getProxiedObjects(gui, x, y);
-    std::set<std::shared_ptr<CGameGraphicsObject>,
-            priority_comparator> proxied_sorted(proxied.begin(),
-                                                proxied.end());
-    for (auto child:proxied_sorted) {
-        child->setParent(this->ptr<CGameGraphicsObject>());
-        child->render(gui, frameTime);
-        child->removeParent();
-    }
+     std::set<std::shared_ptr<CGameGraphicsObject>> objects = vstd::cast<CProxyTargetGraphicsObject>(
+            getParent())->getProxiedObjects(gui, x, y);
+    this->setChildren(objects);
+    CGameGraphicsObject::render(gui, frameTime);
 }
 
 bool CProxyGraphicsObject::event(std::shared_ptr<CGui> gui, SDL_Event *event) {
-    auto proxied = vstd::cast<CProxyTargetGraphicsObject>(getParent())->getProxiedObjects(gui, x, y);
-    std::set<std::shared_ptr<CGameGraphicsObject>,
-            reverse_priority_comparator> proxied_sorted(proxied.begin(),
-                                                        proxied.end());
-    for (auto child:proxied_sorted) {
-        child->setParent(this->ptr<CGameGraphicsObject>());
-        bool eventConsumed = child->event(gui, event);
-        child->removeParent();
-        if (eventConsumed) {
-            return true;
-        }
-    }
-    return false;
+     std::set<std::shared_ptr<CGameGraphicsObject>> objects = vstd::cast<CProxyTargetGraphicsObject>(
+            getParent())->getProxiedObjects(gui, x, y);
+    this->setChildren(objects);
+    return CGameGraphicsObject::event(gui, event);
 }

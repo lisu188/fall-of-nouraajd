@@ -123,6 +123,8 @@ public:
     //TODO: sets cannot be returned from python functions, need to implement by value converter of sets of objects
     std::set<std::shared_ptr<CMapObject>> getObjects();
 
+    std::set<std::shared_ptr<CMapObject>> getObjectsAtCoords(Coords coords);
+
     void setObjects(std::set<std::shared_ptr<CMapObject>> objects);
 
     std::set<std::shared_ptr<CTile>> getTiles();
@@ -139,10 +141,15 @@ public:
 
     std::string getMapName();
 
+    void objectMoved(std::shared_ptr<CMapObject> object, Coords _old, Coords _new);
+
 private:
     void resolveFights();
 
     std::unordered_map<std::string, std::shared_ptr<CMapObject>> mapObjects;
+    //TODO: cleanup and after load initialization
+    std::unordered_multimap<Coords, std::string> mapObjectsCache;
+
     std::unordered_map<Coords, std::shared_ptr<CTile>> tiles;
 
     std::shared_ptr<CPlayer> player;

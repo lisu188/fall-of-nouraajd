@@ -343,3 +343,29 @@ std::string CMap::getMapName() {
     return mapName;
 }
 
+void CMap::objectMoved(std::shared_ptr<CMapObject> object, Coords _old, Coords _new) {
+    //TODO: implement own erase if
+    auto range = mapObjectsCache.equal_range(_old);
+
+    for (auto it = range.first; it != range.second; ++it) {
+        if (it->second == object->getName()) {
+            mapObjectsCache.erase(it);
+            break;
+        }
+    }
+
+    mapObjectsCache.insert(std::make_pair(_new, object->getName()));
+}
+
+std::set<std::shared_ptr<CMapObject>> CMap::getObjectsAtCoords(Coords coords) {
+    std::set<std::shared_ptr<CMapObject>> ret;
+    auto range = mapObjectsCache.equal_range(
+            coords);
+    for (auto it = range.first; it != range.second; it++) {
+        if (auto ob = getObjectByName(it->second)) {
+            ret.insert(ob);
+        }
+    }
+    return ret;
+}
+
