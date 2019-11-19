@@ -24,30 +24,32 @@ class CGui;
 
 class CAnimation : public CGameGraphicsObject {
 V_META(CAnimation, CGameGraphicsObject, vstd::meta::empty())
+
+protected:
+    std::weak_ptr<CGameObject> object;
+
 public:
     CAnimation();
+
+    std::shared_ptr<CGameObject> getObject();
+
+    void setObject(std::shared_ptr<CGameObject> _object);
 };
+
 
 class CStaticAnimation : public CAnimation {
 V_META(CStaticAnimation, CAnimation, vstd::meta::empty())
 
-    std::string raw_path;
 public:
     CStaticAnimation();
 
-    CStaticAnimation(std::string path);
-
     void renderObject(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> rect, int frameTime) override;
-
-
 };
 
 class CDynamicAnimation : public CAnimation {
 V_META(CDynamicAnimation, CAnimation, vstd::meta::empty())
 public:
     CDynamicAnimation();
-
-    CDynamicAnimation(std::string path);
 
     void renderObject(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> rect, int frameTime) override;
 
@@ -64,4 +66,7 @@ private:
     vstd::cache2<std::string, std::vector<int>, get_ttl> _tables;
 
     int size = 0;
+    bool initialized = false;
+
+    void initialize();
 };

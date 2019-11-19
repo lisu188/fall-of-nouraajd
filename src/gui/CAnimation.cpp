@@ -22,14 +22,19 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "gui/CTextureCache.h"
 #include "CLayout.h"
 
-CStaticAnimation::CStaticAnimation(std::string path) {
-    raw_path = path;
+
+void CAnimation::setObject(std::shared_ptr<CGameObject> _object) {
+    object = _object;
+}
+
+std::shared_ptr<CGameObject> CAnimation::getObject() {
+    return object.lock();
 }
 
 void CStaticAnimation::renderObject(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> rect, int frameTime) {
     SDL_SAFE(
             SDL_RenderCopy(gui->getRenderer(),
-                           gui->getTextureCache()->getTexture(raw_path),
+                           gui->getTextureCache()->getTexture(object.lock()->getAnimation()),
                            nullptr,
                            rect.get()));
 }
@@ -39,16 +44,12 @@ CStaticAnimation::CStaticAnimation() {
 
 }
 
-CDynamicAnimation::CDynamicAnimation(std::string path) {
-    auto time = CConfigurationProvider::getConfig(path + "/" + "time.json");
-    this->size = time->size();
-    for (int i = 0; i < size; i++) {
-        paths.push_back(path + "/" + std::to_string(i) + ".png");
-        times.push_back((*time)[std::to_string(i)].get<int>());
-    }
+CDynamicAnimation::CDynamicAnimation() {
+
 }
 
 void CDynamicAnimation::renderObject(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> rect, int frameTime) {
+    initialize();
     auto tableCalc = [this]() {
         std::vector<int> vec;
         for (int i = 0; i < size; i++) {
@@ -82,7 +83,19 @@ void CDynamicAnimation::renderObject(std::shared_ptr<CGui> gui, std::shared_ptr<
     SDL_SAFE(SDL_RenderCopy(gui->getRenderer(),
                             gui->getTextureCache()->getTexture(paths[currFrame]),
                             nullptr,
-                           rect.get()));
+                            rect.get()));
+}
+
+void CDynamicAnimation::initialize() {
+    if (!initialized) {
+        std::string path = object.lock()->getAnimation();
+        auto time = CConfigurationProvider::getConfig(path + "/" + "time.json");
+        size = time->size();
+        for (int i = 0; i < size; i++) {
+            paths.push_back(path + "/" + std::to_string(i) + ".png");
+            times.push_back((*time)[std::to_string(i)].get<int>());
+        }
+    }
 }
 
 
