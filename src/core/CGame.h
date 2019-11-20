@@ -67,6 +67,11 @@ public:
         return getObjectHandler()->createObject<T>(this->ptr<CGame>(), name);
     }
 
+    template<typename T>
+    std::shared_ptr<T> createObject() {
+        return getObjectHandler()->createObject<T>(this->ptr<CGame>());
+    }
+
     std::shared_ptr<CSlotConfig> getSlotConfiguration();
 
 private:

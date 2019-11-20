@@ -17,7 +17,6 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #include "core/CGame.h"
 #include "core/CProvider.h"
-#include "handler/CHandler.h"
 #include "core/CJsonUtil.h"
 #include "gui/CAnimation.h"
 
@@ -133,16 +132,24 @@ CResourcesProvider::CResourcesProvider() {
 
 }
 
-std::shared_ptr<CAnimation> CAnimationProvider::getAnimation(std::string path) {
-    //TODO: should be created by object handler
-    if (boost::filesystem::is_directory(path)) {
-        return std::make_shared<CDynamicAnimation>(path);
+std::shared_ptr<CAnimation>
+CAnimationProvider::getAnimation(std::shared_ptr<CGame> game, std::shared_ptr<CGameObject> object) {
+    auto ret = game->createObject<CAnimation>("CAnimation");
+    if (boost::filesystem::is_directory(object->getAnimation())) {
+        ret = game->createObject<CDynamicAnimation>("CDynamicAnimation");
+    } else if (boost::filesystem::is_regular_file(
+            CResourcesProvider::getInstance()->getPath(object->getAnimation() + ".png"))) {
+        ret = game->createObject<CStaticAnimation>("CStaticAnimation");
+    } else {
+        //TODO: if the path wasnt empty load text instead
+        vstd::logger::warning("Loading empty animation");
     }
-    path = CResourcesProvider::getInstance()->getPath(path + ".png");
-    if (boost::filesystem::is_regular_file(path)) {
-        return std::make_shared<CStaticAnimation>(path);
-    }
-    //TODO: if the path wasnt empty load text instead
-    vstd::logger::warning("Loading empty animation");
-    return std::make_shared<CAnimation>();
+    ret->setObject(object);
+    return ret;
+}
+
+std::shared_ptr<CAnimation> CAnimationProvider::getAnimation(std::shared_ptr<CGame> game, std::string path) {
+    std::shared_ptr<CGameObject> object = game->createObject<CGameObject>();
+    object->setAnimation(path);
+    return getAnimation(game, object);
 }

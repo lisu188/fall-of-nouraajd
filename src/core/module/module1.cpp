@@ -50,16 +50,20 @@ void initModule1() {
             .def_readonly("y", &Coords::y)
             .def_readonly("z", &Coords::z);
 
+    std::shared_ptr<CGameObject>(CGame::*
+    createObject)(std::string) = &CGame::createObject<CGameObject>;
+
     class_<CGame, bases<CGameObject>, boost::noncopyable, std::shared_ptr<CGame>>("CGame", no_init)
             .def("getMap", &CGame::getMap)
             .def("changeMap", &CGame::changeMap)
             .def("loadPlugin", &CGame::loadPlugin)
             .def("getGuiHandler", &CGame::getGuiHandler)
             .def("getObjectHandler", &CGame::getObjectHandler)
-            .def("createObject", &CGame::createObject<CGameObject>)
+            .def("createObject", createObject)
             .def("getGui", &CGame::getGui);
 
-    class_<CGameGraphicsObject, bases<CGameObject>, boost::noncopyable, std::shared_ptr<CGameGraphicsObject>>("CGameGraphicsObject", no_init);
+    class_<CGameGraphicsObject, bases<CGameObject>, boost::noncopyable, std::shared_ptr<CGameGraphicsObject>>(
+            "CGameGraphicsObject", no_init);
     class_<CGui, bases<CGameGraphicsObject>, boost::noncopyable, std::shared_ptr<CGui>>("CGui", no_init);
 
     bool (CMap::*canStep)(Coords) =&CMap::canStep;

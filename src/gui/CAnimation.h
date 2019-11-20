@@ -26,7 +26,7 @@ class CAnimation : public CGameGraphicsObject {
 V_META(CAnimation, CGameGraphicsObject, vstd::meta::empty())
 
 protected:
-    std::weak_ptr<CGameObject> object;
+    std::shared_ptr<CGameObject> object;//TODO: try make weak
 
 public:
     CAnimation();
