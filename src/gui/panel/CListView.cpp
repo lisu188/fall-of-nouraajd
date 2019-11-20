@@ -142,13 +142,13 @@ CListView::getProxiedObjects(std::shared_ptr<CGui> gui, int x, int y) {
     std::set<std::shared_ptr<CGameGraphicsObject>> return_val;
     int i = getSizeX(gui) * y + x;
     if (i == getLeftArrowIndex(gui) && isOversized(gui)) {
-        return_val.insert(CAnimationProvider::getAnimation("images/arrows/left"));//TODO: cache
+        return_val.insert(CAnimationProvider::getAnimation(gui->getGame(), "images/arrows/left"));//TODO: cache
     } else if (i == getRightArrowIndex(gui) && isOversized(gui)) {
-        return_val.insert(CAnimationProvider::getAnimation("images/arrows/right"));//TODO: cache
+        return_val.insert(CAnimationProvider::getAnimation(gui->getGame(), "images/arrows/right"));//TODO: cache
     } else {
         auto indexedCollection = calculateIndices(gui);
         int itemIndex = shiftIndex(gui, i);
-        return_val.insert(CAnimationProvider::getAnimation("images/item"));//TODO: cache
+        return_val.insert(CAnimationProvider::getAnimation(gui->getGame(), "images/item"));//TODO: cache
         if (vstd::ctn(indexedCollection, itemIndex)) {
             return_val.insert(indexedCollection[itemIndex]->getGraphicsObject());
         }
