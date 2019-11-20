@@ -28,13 +28,13 @@ void CAnimation::setObject(std::shared_ptr<CGameObject> _object) {
 }
 
 std::shared_ptr<CGameObject> CAnimation::getObject() {
-    return object.lock();
+    return object;
 }
 
 void CStaticAnimation::renderObject(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> rect, int frameTime) {
     SDL_SAFE(
             SDL_RenderCopy(gui->getRenderer(),
-                           gui->getTextureCache()->getTexture(object.lock()->getAnimation()),
+                           gui->getTextureCache()->getTexture(object->getAnimation() + ".png"),
                            nullptr,
                            rect.get()));
 }
@@ -89,7 +89,7 @@ void CDynamicAnimation::renderObject(std::shared_ptr<CGui> gui, std::shared_ptr<
 //TODO: make meta method after object is set as a property
 void CDynamicAnimation::initialize() {
     if (!initialized) {
-        std::string path = object.lock()->getAnimation();
+        std::string path = object->getAnimation();
         auto time = CConfigurationProvider::getConfig(path + "/" + "time.json");
         size = time->size();
         for (int i = 0; i < size; i++) {
@@ -116,7 +116,7 @@ CAnimation::CAnimation() {
 
 bool CAnimation::mouseEvent(std::shared_ptr<CGui> sharedPtr, SDL_EventType type, int button, int x, int y) {
     if (type == SDL_MOUSEBUTTONDOWN && button == SDL_BUTTON_RIGHT) {
-        vstd::logger::debug(object.lock()->getName());
+        vstd::logger::debug(object->getName());
         return true;
     }
     return false;

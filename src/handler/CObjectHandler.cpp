@@ -64,7 +64,7 @@ void CObjectHandler::registerType(std::string name, std::function<std::shared_pt
 std::shared_ptr<CGameObject> CObjectHandler::_createObject(std::shared_ptr<CGame> game, std::string type) {
     std::shared_ptr<json> config = getConfig(type);
     if (!config) {
-        vstd::logger::debug("No config found for:", type);
+        //TODO: vstd::logger::debug("No config found for:", type);
         config = CJsonUtil::from_string(vstd::join({"{\"class\":\"", type, "\"}"}, ""));
     }
     std::shared_ptr<CGameObject> object = CSerialization::deserialize<std::shared_ptr<json>, std::shared_ptr<CGameObject>>(
