@@ -46,8 +46,8 @@ void CWidget::renderObject(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> 
                                             frameTime);
 }
 
-bool CWidget::mouseEvent(std::shared_ptr<CGui> gui, SDL_EventType type, int x, int y) {
-    if (type == SDL_MOUSEBUTTONDOWN) {
+bool CWidget::mouseEvent(std::shared_ptr<CGui> gui, SDL_EventType type, int button, int x, int y) {
+    if (type == SDL_MOUSEBUTTONDOWN && button == SDL_BUTTON_LEFT) {
         this->meta()->invoke_method<void, CGamePanel,
                 std::shared_ptr<CGui>>(this->getClick(),
                                        vstd::cast<CGamePanel>(getParent()),

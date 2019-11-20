@@ -47,7 +47,7 @@ public:
 
     void renderObject(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> loc, int frameTime) override;
 
-    bool mouseEvent(std::shared_ptr<CGui> gui, SDL_EventType type, int x, int y) override;
+    bool mouseEvent(std::shared_ptr<CGui> gui, SDL_EventType type, int button, int x, int y) override;
 
     static int defaultIndex(std::shared_ptr<CGameObject> ob, int prevIndex);;
 
