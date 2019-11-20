@@ -28,6 +28,9 @@ struct CResType {
 
 class CAnimation;
 
+class CGame;
+
+class CGameObject;
 
 class CResourcesProvider {
 public:
@@ -67,5 +70,7 @@ private:
 
 class CAnimationProvider {
 public:
-    static std::shared_ptr<CAnimation> getAnimation(std::string path);
+    static std::shared_ptr<CAnimation> getAnimation(std::shared_ptr<CGame> game, std::shared_ptr<CGameObject> object);
+
+    static std::shared_ptr<CAnimation> getAnimation(std::shared_ptr<CGame> game, std::string path);
 };

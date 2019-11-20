@@ -143,7 +143,7 @@ void CGameObject::setTooltip(std::string tooltip) {
 
 std::shared_ptr<CGameGraphicsObject> CGameObject::getGraphicsObject() {
     return graphicsObject.get([this]() {
-        std::shared_ptr<CAnimation> anim = CAnimationProvider::getAnimation(getAnimation());
+        std::shared_ptr<CAnimation> anim = CAnimationProvider::getAnimation(getGame(), this->ptr<CGameObject>());
         for (auto[key, val] :getGame()->createObject<CMapStringInt>("mapObjectPriorities")->getValues()) {
             if (val > anim->getPriority() && this->meta()->inherits(key)) {
                 anim->setPriority(val);

@@ -37,6 +37,11 @@ public:
         return vstd::cast<T>(_createObject(game, type));
     }
 
+    template<typename T=CGameObject>
+    std::shared_ptr<T> createObject(std::shared_ptr<CGame> game) {
+        return vstd::cast<T>(_createObject(game, T::static_meta()->name()));
+    }
+
     template<typename T>
     std::shared_ptr<T> clone(std::shared_ptr<T> object) {
         return vstd::cast<T>(_clone(object));
