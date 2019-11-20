@@ -25,8 +25,8 @@ void CListView::renderObject(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect
 
 }
 
-bool CListView::mouseEvent(std::shared_ptr<CGui> gui, SDL_EventType type, int x, int y) {
-    if (type == SDL_MOUSEBUTTONDOWN) {//TODO: separate to objects
+bool CListView::mouseEvent(std::shared_ptr<CGui> gui, SDL_EventType type, int button, int x, int y) {
+    if (type == SDL_MOUSEBUTTONDOWN && button == SDL_BUTTON_LEFT) {//TODO: separate to objects
         int i = ((x) / gui->getTileSize() + ((y / gui->getTileSize()) * getSizeX(gui)));
 
         if (i == getLeftArrowIndex(gui) && isOversized(gui)) {
