@@ -30,6 +30,6 @@ bool CGamePanel::keyboardEvent(std::shared_ptr<CGui> sharedPtr, SDL_EventType ty
     return true;
 }
 
-bool CGamePanel::mouseEvent(std::shared_ptr<CGui> sharedPtr, SDL_EventType type, int x, int y) {
+bool CGamePanel::mouseEvent(std::shared_ptr<CGui> sharedPtr, SDL_EventType type, int button, int x, int y) {
     return true;
 }

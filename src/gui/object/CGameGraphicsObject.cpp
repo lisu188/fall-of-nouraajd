@@ -56,7 +56,9 @@ bool CGameGraphicsObject::event(std::shared_ptr<CGui> gui, SDL_Event *event) {
                event->type == SDL_MOUSEBUTTONUP) {
         std::shared_ptr<SDL_Rect> transPos = getRect();
         if (CUtil::isIn(transPos, event->button.x, event->button.y)) {
-            return this->mouseEvent(gui, (SDL_EventType) event->type, event->button.x - transPos->x,
+            return this->mouseEvent(gui, (SDL_EventType) event->type,
+                                    event->button.button,
+                                    event->button.x - transPos->x,
                                     event->button.y - transPos->y);
         }
     }
@@ -67,7 +69,7 @@ bool CGameGraphicsObject::keyboardEvent(std::shared_ptr<CGui> sharedPtr, SDL_Eve
     return false;
 }
 
-bool CGameGraphicsObject::mouseEvent(std::shared_ptr<CGui> sharedPtr, SDL_EventType type, int x, int y) {
+bool CGameGraphicsObject::mouseEvent(std::shared_ptr<CGui> sharedPtr, SDL_EventType type, int button, int x, int y) {
     return false;
 }
 

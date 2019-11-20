@@ -86,6 +86,7 @@ void CDynamicAnimation::renderObject(std::shared_ptr<CGui> gui, std::shared_ptr<
                             rect.get()));
 }
 
+//TODO: make meta method after object is set as a property
 void CDynamicAnimation::initialize() {
     if (!initialized) {
         std::string path = object.lock()->getAnimation();
@@ -95,6 +96,7 @@ void CDynamicAnimation::initialize() {
             paths.push_back(path + "/" + std::to_string(i) + ".png");
             times.push_back((*time)[std::to_string(i)].get<int>());
         }
+        initialized = true;
     }
 }
 
@@ -103,9 +105,6 @@ int CDynamicAnimation::get_ttl() {
     return vstd::rand(5000, 30000);
 }
 
-CDynamicAnimation::CDynamicAnimation() {
-
-}
 
 int CDynamicAnimation::get_next() {
     return vstd::rand(0, 100);
@@ -113,4 +112,12 @@ int CDynamicAnimation::get_next() {
 
 CAnimation::CAnimation() {
     setLayout(std::make_shared<CParentLayout>());
+}
+
+bool CAnimation::mouseEvent(std::shared_ptr<CGui> sharedPtr, SDL_EventType type, int button, int x, int y) {
+    if (type == SDL_MOUSEBUTTONDOWN && button == SDL_BUTTON_RIGHT) {
+        vstd::logger::debug(object.lock()->getName());
+        return true;
+    }
+    return false;
 }

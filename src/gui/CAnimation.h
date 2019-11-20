@@ -34,6 +34,8 @@ public:
     std::shared_ptr<CGameObject> getObject();
 
     void setObject(std::shared_ptr<CGameObject> _object);
+
+    bool mouseEvent(std::shared_ptr<CGui> sharedPtr, SDL_EventType type, int button, int x, int y) override;
 };
 
 
