@@ -30,6 +30,8 @@ public:
 
     ~CTextManager();
 
+    std::pair<int, int> getTextureSize(std::string text);
+
     void drawText(std::string text, int x, int y, int w);
 
     void drawText(std::string text, std::shared_ptr<SDL_Rect> rect);
