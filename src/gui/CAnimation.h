@@ -22,6 +22,29 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 class CGui;
 
+class CTooltip : public CGameGraphicsObject {
+V_META(CTooltip, CGameGraphicsObject, vstd::meta::empty())
+
+    std::string text;
+public:
+    CTooltip() = default;
+
+    void renderObject(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> rect, int frameTime) override;
+
+    bool mouseEvent(std::shared_ptr<CGui> gui, SDL_EventType type, int button, int x, int y) override;
+
+    bool keyboardEvent(std::shared_ptr<CGui> sharedPtr, SDL_EventType type, SDL_Keycode i) override;
+
+    void setText(std::string _text) {
+        this->text = _text;
+    }
+
+    std::string getText() {
+        return text;
+    }
+};
+
+
 class CAnimation : public CGameGraphicsObject {
 V_META(CAnimation, CGameGraphicsObject, vstd::meta::empty())
 
