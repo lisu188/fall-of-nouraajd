@@ -78,3 +78,10 @@ void CTextManager::drawTextCentered(std::string text, std::shared_ptr<SDL_Rect> 
 void CTextManager::drawText(std::string text, std::shared_ptr<SDL_Rect> rect) {
     drawText(text, rect->x, rect->y, rect->w);
 }
+
+std::pair<int, int> CTextManager::getTextureSize(std::string text) {
+    int w, h;
+    SDL_Texture *pTexture = getTexture(text);
+    SDL_SAFE(SDL_QueryTexture(pTexture, NULL, NULL, &w, &h));
+    return std::make_pair(w,h);
+}
