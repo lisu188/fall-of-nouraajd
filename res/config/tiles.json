@@ -4,7 +4,8 @@
     "properties": {
       "animation": "images/tiles/beach",
       "canStep": true,
-      "tileType": "beach"
+      "tileType": "beach",
+      "tooltip": "Beach"
     }
   },
   "DesertTile": {
@@ -12,7 +13,8 @@
     "properties": {
       "animation": "images/tiles/desert",
       "canStep": true,
-      "tileType": "desert"
+      "tileType": "desert",
+      "tooltip": "Desert"
     }
   },
   "GrassTile": {
@@ -20,7 +22,8 @@
     "properties": {
       "animation": "images/tiles/grass",
       "canStep": true,
-      "tileType": "grass"
+      "tileType": "grass",
+      "tooltip": "Grass"
     }
   },
   "GroundTile": {
@@ -28,7 +31,8 @@
     "properties": {
       "animation": "images/tiles/ground",
       "canStep": true,
-      "tileType": "ground"
+      "tileType": "ground",
+      "tooltip": "Ground"
     }
   },
   "LavaTile": {
@@ -36,7 +40,8 @@
     "properties": {
       "animation": "images/tiles/lava",
       "canStep": true,
-      "tileType": "lava"
+      "tileType": "lava",
+      "tooltip": "Lava"
     }
   },
   "MountainTile": {
@@ -44,7 +49,8 @@
     "properties": {
       "animation": "images/tiles/mountain",
       "canStep": false,
-      "tileType": "mountain"
+      "tileType": "mountain",
+      "tooltip": "Mountain"
     }
   },
   "RoadTile": {
@@ -52,7 +58,8 @@
     "properties": {
       "animation": "images/tiles/road",
       "canStep": true,
-      "tileType": "road"
+      "tileType": "road",
+      "tooltip": "Road"
     }
   },
   "SnowTile": {
@@ -60,7 +67,8 @@
     "properties": {
       "animation": "images/tiles/snow",
       "canStep": true,
-      "tileType": "snow"
+      "tileType": "snow",
+      "tooltip": "Snow"
     }
   },
   "SwampTile": {
@@ -68,7 +76,8 @@
     "properties": {
       "animation": "images/tiles/swamp",
       "canStep": true,
-      "tileType": "swamp"
+      "tileType": "swamp",
+      "tooltip": "Swamp"
     }
   },
   "WastelandTile": {
@@ -76,7 +85,8 @@
     "properties": {
       "animation": "images/tiles/wasteland",
       "canStep": true,
-      "tileType": "wasteland"
+      "tileType": "wasteland",
+      "tooltip": "Wasteland"
     }
   },
   "WaterTile": {
@@ -84,7 +94,8 @@
     "properties": {
       "animation": "images/tiles/water",
       "canStep": false,
-      "tileType": "water"
+      "tileType": "water",
+      "tooltip": "Water"
     }
   }
 }

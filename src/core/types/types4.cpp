@@ -33,6 +33,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "gui/object/CWidget.h"
 #include "gui/CLayout.h"
 #include "gui/object/CProxyGraphicsObject.h"
+#include "gui/CTooltip.h"
 
 extern void add_member(std::shared_ptr<json> object, std::string key, std::string value);
 

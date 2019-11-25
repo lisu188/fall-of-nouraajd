@@ -22,6 +22,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "gui/CTextureCache.h"
 #include "CLayout.h"
 #include "CTextManager.h"
+#include "CTooltip.h"
 
 
 void CAnimation::setObject(std::shared_ptr<CGameObject> _object) {
@@ -117,38 +118,9 @@ CAnimation::CAnimation() {
 
 bool CAnimation::mouseEvent(std::shared_ptr<CGui> gui, SDL_EventType type, int button, int x, int y) {
     if (type == SDL_MOUSEBUTTONDOWN && button == SDL_BUTTON_RIGHT) {
-        auto text = object->getName();
-
         std::shared_ptr<SDL_Rect> absPos = getLayout()->getRect(this->ptr<CAnimation>());
-
-        auto layout = gui->getGame()->createObject<CSimpleLayout>();
-        layout->setX(absPos->x + x);
-        layout->setY(absPos->y + y);
-        auto textureSize = gui->getTextManager()->getTextureSize(text);
-        layout->setWidth(textureSize.first);//TODO: layout should accept functions;
-        layout->setHeight(textureSize.second);//TODO: layout should accept functions;
-
-        auto tooltip = gui->getGame()->createObject<CTooltip>();
-        tooltip->setText(text);
-        tooltip->setLayout(layout);
-        getTopParent()->pushChild(tooltip);
-
+        gui->getGame()->getGuiHandler()->showTooltip(object->getTooltip(), absPos->x + x, absPos->y + y);
         return true;
     }
     return false;
-}
-
-void CTooltip::renderObject(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> rect, int frameTime) {
-    gui->getTextManager()->drawTextCentered(text, rect);
-}
-
-bool CTooltip::mouseEvent(std::shared_ptr<CGui> gui, SDL_EventType type, int button, int x, int y) {
-    if (type == SDL_MOUSEBUTTONUP && button == SDL_BUTTON_RIGHT) {
-        getParent()->removeChild(this->ptr<CTooltip>());
-    }
-    return true;
-}
-
-bool CTooltip::keyboardEvent(std::shared_ptr<CGui> sharedPtr, SDL_EventType type, SDL_Keycode i) {
-    return true;
 }

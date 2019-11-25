@@ -15,30 +15,28 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
+
 #pragma once
 
-#include "object/CMarket.h"
-#include "object/CGameObject.h"
 
-class CListString;
+#include "gui/object/CGameGraphicsObject.h"
 
-class CGuiHandler : public CGameObject {
-V_META(CGuiHandler, CGameObject, vstd::meta::empty())
+class CGui;
 
+class CTooltip : public CGameGraphicsObject {
+V_META(CTooltip, CGameGraphicsObject, vstd::meta::empty())
+
+    std::string text;
 public:
-    CGuiHandler();
+    CTooltip() = default;
 
-    CGuiHandler(std::shared_ptr<CGame> game);
+    void renderObject(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> rect, int frameTime) override;
 
-    void showMessage(std::string message);
+    bool mouseEvent(std::shared_ptr<CGui> gui, SDL_EventType type, int button, int x, int y) override;
 
-    bool showDialog(std::string message);
+    bool keyboardEvent(std::shared_ptr<CGui> sharedPtr, SDL_EventType type, SDL_Keycode i) override;
 
-    void showTrade(std::shared_ptr<CMarket> market);
+    void setText(std::string _text);
 
-    std::string showSelection(std::shared_ptr<CListString> list);
-
-    void showTooltip(std::string text, int x, int y);
-private:
-    std::weak_ptr<CGame> _game;
+    std::string getText();
 };
