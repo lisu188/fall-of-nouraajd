@@ -24,6 +24,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "gui/object/CWidget.h"
 #include "gui/CTextManager.h"
 #include "core/CList.h"
+#include "gui/CTooltip.h"
 
 CGuiHandler::CGuiHandler() {
 
@@ -106,3 +107,21 @@ std::string CGuiHandler::showSelection(std::shared_ptr<CListString> list) {
 
     return *selected;
 }
+
+
+void CGuiHandler::showTooltip(std::string text, int x,
+                              int y) {
+
+    auto layout = _game.lock()->createObject<CSimpleLayout>();
+    layout->setX(x);
+    layout->setY(y);
+    auto textureSize = _game.lock()->getGui()->getTextManager()->getTextureSize(text);
+    layout->setWidth(textureSize.first);//TODO: layout should accept functions;
+    layout->setHeight(textureSize.second);//TODO: layout should accept functions;
+
+    auto tooltip = _game.lock()->createObject<CTooltip>();
+    tooltip->setText(text);
+    tooltip->setLayout(layout);
+    _game.lock()->getGui()->pushChild(tooltip);
+}
+
