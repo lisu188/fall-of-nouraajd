@@ -21,8 +21,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CMap.h"
 #include "gui/CTextManager.h"
 
-std::set<std::shared_ptr<CGameObject>> CGameTradePanel::inventoryCollection(std::shared_ptr<CGui> gui) {
-    return vstd::cast<std::set<std::shared_ptr<CGameObject>>>(
+vstd::list<std::shared_ptr<CGameObject>> CGameTradePanel::inventoryCollection(std::shared_ptr<CGui> gui) {
+    return vstd::cast<vstd::list<std::shared_ptr<CGameObject>>>(
             gui->getGame()->getMap()->getPlayer()->getItems());
 }
 
@@ -35,8 +35,8 @@ bool CGameTradePanel::inventorySelect(std::shared_ptr<CGui> gui, int index, std:
     return vstd::ctn(selectedInventory, object, [](auto a, auto b) { return a == b.lock(); });
 }
 
-std::set<std::shared_ptr<CGameObject>> CGameTradePanel::marketCollection(std::shared_ptr<CGui> gui) {
-    return vstd::cast<std::set<std::shared_ptr<CGameObject>>>(market->getItems());
+vstd::list<std::shared_ptr<CGameObject>> CGameTradePanel::marketCollection(std::shared_ptr<CGui> gui) {
+    return vstd::cast<vstd::list<std::shared_ptr<CGameObject>>>(market->getItems());
 }
 
 void CGameTradePanel::marketCallback(std::shared_ptr<CGui> gui, int index, std::shared_ptr<CGameObject> _newSelection) {
