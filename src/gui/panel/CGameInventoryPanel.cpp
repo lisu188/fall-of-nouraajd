@@ -22,12 +22,13 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CMap.h"
 
 
-std::set<std::shared_ptr<CGameObject>> CGameInventoryPanel::inventoryCollection(std::shared_ptr<CGui> gui) {
-    return vstd::cast<std::set<std::shared_ptr<CGameObject>>>(
+vstd::list<std::shared_ptr<CGameObject>> CGameInventoryPanel::inventoryCollection(std::shared_ptr<CGui> gui) {
+    return vstd::cast<vstd::list<std::shared_ptr<CGameObject>>>(
             gui->getGame()->getMap()->getPlayer()->getItems());
 }
 
-void CGameInventoryPanel::inventoryCallback(std::shared_ptr<CGui> gui, int index, std::shared_ptr<CGameObject> _newSelection) {
+void CGameInventoryPanel::inventoryCallback(std::shared_ptr<CGui> gui, int index,
+                                            std::shared_ptr<CGameObject> _newSelection) {
     auto newSelection = vstd::cast<CItem>(_newSelection);
     if (selectedInventory.lock() != newSelection) {
         selectedInventory = newSelection;
@@ -41,35 +42,44 @@ bool CGameInventoryPanel::inventorySelect(std::shared_ptr<CGui> gui, int index, 
     return selectedInventory.lock() && selectedInventory.lock() == object;
 }
 
+vstd::list<std::shared_ptr<CGameObject>> CGameInventoryPanel::equippedCollection(std::shared_ptr<CGui> gui) {
+    vstd::list<std::shared_ptr<CGameObject>> ret;
+    auto map = gui->getGame()->getMap()->getPlayer()->getEquipped();
+    for (int i = 0; i < gui->getGame()->getSlotConfiguration()->getConfiguration().size(); i++) {
+        if (vstd::ctn(map, vstd::str(i))) {
+            ret.insert(map.at(vstd::str(i)));
+        } else {
+            ret.insert(nullptr);
+        }
+
+    }
+    return ret;
+}
+
+void CGameInventoryPanel::equippedCallback(std::shared_ptr<CGui> gui, int index,
+                                           std::shared_ptr<CGameObject> _newSelection) {
+    auto newSelection = vstd::cast<CItem>(_newSelection);
+    std::string slotName = vstd::str(index);
+    if (selectedEquipped.lock()) {
+        gui->getGame()->getMap()->getPlayer()->equipItem(slotName, nullptr);
+        selectedEquipped.reset();
+    } else if (selectedInventory.lock() &&
+               gui->getGame()->getSlotConfiguration()->canFit(slotName, selectedInventory.lock())) {
+        gui->getGame()->getMap()->getPlayer()->equipItem(slotName, selectedInventory.lock());
+        selectedInventory.reset();
+    } else {
+        selectedEquipped = newSelection;
+    }
+}
+
+bool CGameInventoryPanel::equippedSelect(std::shared_ptr<CGui> gui, int index, std::shared_ptr<CGameObject> object) {
+    return (selectedInventory.lock() &&
+            gui->getGame()->getSlotConfiguration()->canFit(vstd::str(index),
+                                                           selectedInventory.lock())) ||
+           (selectedEquipped.lock() && selectedEquipped.lock() == object);
+}
+
+
 CGameInventoryPanel::CGameInventoryPanel() {
-//    equippedView = std::make_shared<
-//            CListView<CItemMap>>(
-//            4, 2, 50, false, selectionBarThickness)->withCollection(
-//            [](std::shared_ptr<CGui> gui) {
-//                return gui->getGame()->getMap()->getPlayer()->getEquipped();
-//            })->withIndex(
-//            [](auto ob, int prevIndex) {
-//                return vstd::to_int(ob.first).first;
-//            })->withCallback(
-//            [this](std::shared_ptr<CGui> gui, int index, auto newSelection) {
-//                std::string slotName = vstd::str(index);
-//                if (selectedEquipped.lock()) {
-//                    gui->getGame()->getMap()->getPlayer()->equipItem(slotName, nullptr);
-//                    selectedEquipped.reset();
-//                } else if (selectedInventory.lock() &&
-//                           gui->getGame()->getSlotConfiguration()->canFit(slotName, selectedInventory.lock())) {
-//                    gui->getGame()->getMap()->getPlayer()->equipItem(slotName, selectedInventory.lock());
-//                    selectedInventory.reset();
-//                } else {
-//                    selectedEquipped = newSelection.second;
-//                }
-//            })->withSelect([this](std::shared_ptr<CGui> gui, int index, auto object) {
-//        return (selectedInventory.lock() &&
-//                gui->getGame()->getSlotConfiguration()->canFit(vstd::str(index),
-//                                                               selectedInventory.lock())) ||
-//               (selectedEquipped.lock() && selectedEquipped.lock() == object.second);
-//    })->withDraw(
-//            [](auto gui, auto item, auto loc, auto frameTime) {
-//                item.second->getGraphicsObject()->renderObject(gui, loc, frameTime);
-//            });
+
 }
