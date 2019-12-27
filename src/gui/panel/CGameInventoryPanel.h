@@ -25,20 +25,29 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 //TODO: make icons on empty inventory slots
 class CGameInventoryPanel : public CGamePanel {
 V_META(CGameInventoryPanel, CGamePanel,
-       V_METHOD(CGameInventoryPanel, inventoryCollection, std::set<std::shared_ptr<CGameObject>>,
+       V_METHOD(CGameInventoryPanel, inventoryCollection,vstd::list<std::shared_ptr<CGameObject>>,
                 std::shared_ptr<CGui>),
        V_METHOD(CGameInventoryPanel, inventoryCallback, void, std::shared_ptr<CGui>, int, std::shared_ptr<CGameObject>),
-       V_METHOD(CGameInventoryPanel, inventorySelect, bool, std::shared_ptr<CGui>, int, std::shared_ptr<CGameObject>))
+       V_METHOD(CGameInventoryPanel, inventorySelect, bool, std::shared_ptr<CGui>, int, std::shared_ptr<CGameObject>),
+       V_METHOD(CGameInventoryPanel, equippedCollection,vstd::list<std::shared_ptr<CGameObject>>,
+                std::shared_ptr<CGui>),
+       V_METHOD(CGameInventoryPanel, equippedCallback, void, std::shared_ptr<CGui>, int, std::shared_ptr<CGameObject>),
+       V_METHOD(CGameInventoryPanel, equippedSelect, bool, std::shared_ptr<CGui>, int, std::shared_ptr<CGameObject>))
 
 public:
     CGameInventoryPanel();
 
-    std::set<std::shared_ptr<CGameObject>> inventoryCollection(std::shared_ptr<CGui> gui);
+    vstd::list<std::shared_ptr<CGameObject>> inventoryCollection(std::shared_ptr<CGui> gui);
 
     void inventoryCallback(std::shared_ptr<CGui> gui, int index, std::shared_ptr<CGameObject> _newSelection);
 
     bool inventorySelect(std::shared_ptr<CGui> gui, int index, std::shared_ptr<CGameObject> object);
 
+    vstd::list<std::shared_ptr<CGameObject>> equippedCollection(std::shared_ptr<CGui> gui);
+
+    void equippedCallback(std::shared_ptr<CGui> gui, int index, std::shared_ptr<CGameObject> _newSelection);
+
+    bool equippedSelect(std::shared_ptr<CGui> gui, int index, std::shared_ptr<CGameObject> object);
 private:
     std::weak_ptr<CItem> selectedInventory;
     std::weak_ptr<CItem> selectedEquipped;
