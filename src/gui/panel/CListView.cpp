@@ -41,11 +41,7 @@ bool CListView::mouseEvent(std::shared_ptr<CGui> gui, SDL_EventType type, int bu
 }
 
 CListView::CListView() {
-    index = &defaultIndex;
-}
 
-int CListView::defaultIndex(std::shared_ptr<CGameObject> ob, int prevIndex) {
-    return prevIndex + 1;
 }
 
 void CListView::doShift(std::shared_ptr<CGui> gui, int val) {
@@ -90,8 +86,7 @@ std::unordered_map<int, std::shared_ptr<CGameObject>> CListView::calculateIndice
     std::unordered_map<int, std::shared_ptr<CGameObject>> indices;
     int i = -1;
     for (auto it:invokeCollection(gui)) {
-        i = index(it, i);
-        indices.insert(std::make_pair(i, it));
+        indices.insert(std::make_pair(++i, it));
     }
     return indices;
 }
@@ -117,8 +112,8 @@ int CListView::getSizeY(std::shared_ptr<CGui> gui) {
     return getLayout()->getRect(this->ptr<CListView>())->h / gui->getTileSize();
 }
 
-std::set<std::shared_ptr<CGameObject>> CListView::invokeCollection(std::shared_ptr<CGui> gui) {
-    return getParent()->meta()->invoke_method<std::set<std::shared_ptr<CGameObject>>, CGameGraphicsObject,
+vstd::list<std::shared_ptr<CGameObject>> CListView::invokeCollection(std::shared_ptr<CGui> gui) {
+    return getParent()->meta()->invoke_method<vstd::list<std::shared_ptr<CGameObject>>, CGameGraphicsObject,
             std::shared_ptr<CGui>>(collection,
                                    vstd::cast<CGameGraphicsObject>(getParent()), gui);
 }
@@ -149,7 +144,7 @@ CListView::getProxiedObjects(std::shared_ptr<CGui> gui, int x, int y) {
         auto indexedCollection = calculateIndices(gui);
         int itemIndex = shiftIndex(gui, i);
         return_val.insert(CAnimationProvider::getAnimation(gui->getGame(), "images/item"));//TODO: cache
-        if (vstd::ctn(indexedCollection, itemIndex)) {
+        if (vstd::ctn(indexedCollection, itemIndex) && indexedCollection[itemIndex]) {
             return_val.insert(indexedCollection[itemIndex]->getGraphicsObject());
         }
         if (invokeSelect(gui, itemIndex, indexedCollection[itemIndex])) {

@@ -167,6 +167,23 @@
               }
             }
           }
+        },
+        {
+          "class": "CListView",
+          "properties": {
+            "collection": "equippedCollection",
+            "callback": "equippedCallback",
+            "select": "equippedSelect",
+            "layout": {
+              "class": "CPercentLayout",
+              "properties": {
+                "h": 100,
+                "w": 40,
+                "x": 60,
+                "y": 0
+              }
+            }
+          }
         }
       ],
       "layout": {
@@ -222,7 +239,8 @@
               }
             }
           }
-        },        {
+        },
+        {
           "class": "CListView",
           "properties": {
             "collection": "marketCollection",

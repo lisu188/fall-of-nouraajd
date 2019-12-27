@@ -21,8 +21,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CMap.h"
 #include "gui/object/CStatsGraphicsObject.h"
 
-std::set<std::shared_ptr<CGameObject>> CGameFightPanel::interactionsCollection(std::shared_ptr<CGui> gui) {
-    return vstd::cast<std::set<std::shared_ptr<CGameObject>>>(gui->getGame()->getMap()->getPlayer()->getInteractions());
+vstd::list<std::shared_ptr<CGameObject>> CGameFightPanel::interactionsCollection(std::shared_ptr<CGui> gui) {
+    return vstd::cast<vstd::list<std::shared_ptr<CGameObject>>>(gui->getGame()->getMap()->getPlayer()->getInteractions());
 }
 
 void CGameFightPanel::interactionsCallback(std::shared_ptr<CGui> gui, int index,
@@ -49,8 +49,8 @@ bool CGameFightPanel::interactionsSelect(std::shared_ptr<CGui> gui, int index, s
     return selected.lock() && selected.lock() == object;
 }
 
-std::set<std::shared_ptr<CGameObject>> CGameFightPanel::itemsCollection(std::shared_ptr<CGui> gui) {
-    return vstd::cast<std::set<std::shared_ptr<CGameObject>>>(
+vstd::list<std::shared_ptr<CGameObject>> CGameFightPanel::itemsCollection(std::shared_ptr<CGui> gui) {
+    return vstd::cast<vstd::list<std::shared_ptr<CGameObject>>>(
             gui->getGame()->getMap()->getPlayer()->getItems());
 }
 

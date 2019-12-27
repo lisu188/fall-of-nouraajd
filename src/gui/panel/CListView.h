@@ -33,8 +33,6 @@ V_META(CListView, CProxyTargetGraphicsObject,
 
     std::string select;
 
-    std::function<int(std::shared_ptr<CGameObject>, int)> index;
-
     bool allowOversize = true;
 
     int selectionThickness = 5;
@@ -48,8 +46,6 @@ public:
     void renderObject(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> loc, int frameTime) override;
 
     bool mouseEvent(std::shared_ptr<CGui> gui, SDL_EventType type, int button, int x, int y) override;
-
-    static int defaultIndex(std::shared_ptr<CGameObject> ob, int prevIndex);;
 
     std::set<std::shared_ptr<CGameGraphicsObject>>
     getProxiedObjects(std::shared_ptr<CGui> gui, int x, int y) override;
@@ -69,9 +65,8 @@ public:
     std::string getSelect();
 
     void setSelect(std::string select);
-
 private:
-    std::set<std::shared_ptr<CGameObject>> invokeCollection(std::shared_ptr<CGui> gui);
+    vstd::list<std::shared_ptr<CGameObject>> invokeCollection(std::shared_ptr<CGui> gui);
 
     void
     invokeCallback(std::shared_ptr<CGui> gui, int i, std::shared_ptr<CGameObject> object);
