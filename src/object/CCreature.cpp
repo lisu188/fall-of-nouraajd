@@ -104,7 +104,10 @@ void CCreature::removeItem(std::shared_ptr<CItem> item, bool quest) {
     if (!quest && vstd::castable<CPlayer>(this->ptr<CCreature>()) && item->hasTag("quest")) {
         vstd::logger::fatal("Tried to drop quest item");
     } else {
-        items.erase(item);
+        if (items.erase(item)) {
+            getMap()->getEventHandler()->gameEvent(this->ptr<CCreature>(),
+                                                   std::make_shared<CGameEvent>(CGameEvent::Type::inventoryChanged));
+        }
     }
 }
 
@@ -130,12 +133,14 @@ CItemMap CCreature::getEquipped() {
 
 void CCreature::setEquipped(CItemMap
                             value) {
-    equipped = value;
+    equipped = value;//TODO: rethink equipped changed here
 }
 
 void CCreature::addItem(std::set<std::shared_ptr<CItem> > items) {
     for (std::shared_ptr<CItem> it : items) {
         this->items.insert(it);
+        getMap()->getEventHandler()->gameEvent(this->ptr<CCreature>(),
+                                               std::make_shared<CGameEvent>(CGameEvent::Type::inventoryChanged));
     }
 }
 
@@ -206,7 +211,7 @@ void CCreature::setLevelling(CInteractionMap
 }
 
 void CCreature::setItems(std::set<std::shared_ptr<CItem> > value) {
-    items = value;
+    items = value;//TODO: rethink inventory changed here
 }
 
 std::set<std::shared_ptr<CItem>> CCreature::getItems() {
@@ -369,8 +374,13 @@ void CCreature::equipItem(std::string i, std::shared_ptr<CItem> newItem) {
         removeItem(newItem);
         attribChange();
         equipped[i] = newItem;
+        getMap()->getEventHandler()->gameEvent(this->ptr<CCreature>(),
+                                               std::make_shared<CGameEvent>(CGameEvent::Type::equippedChanged));
     } else {
-        equipped.erase(i);
+        if (equipped.erase(i)) {
+            getMap()->getEventHandler()->gameEvent(this->ptr<CCreature>(),
+                                                   std::make_shared<CGameEvent>(CGameEvent::Type::equippedChanged));
+        }
     }
 }
 

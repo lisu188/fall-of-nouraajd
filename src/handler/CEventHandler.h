@@ -40,6 +40,8 @@ public:
         static std::string onUse;
         static std::string onEquip;
         static std::string onUnequip;
+        static std::string inventoryChanged;
+        static std::string equippedChanged;
     };
 
     CGameEvent();
