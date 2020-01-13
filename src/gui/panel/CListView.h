@@ -25,13 +25,38 @@ class CListView : public CProxyTargetGraphicsObject {
 V_META(CListView, CProxyTargetGraphicsObject,
        V_PROPERTY(CListView, std::string, collection, getCollection, setCollection),
        V_PROPERTY(CListView, std::string, select, getSelect, setSelect),
-       V_PROPERTY(CListView, std::string, callback, getCallback, setCallback))
+       V_PROPERTY(CListView, std::string, callback, getCallback, setCallback),
+       V_PROPERTY(CListView, std::string, refreshObject, getRefreshObject, setRefreshObject),
+       V_PROPERTY(CListView, std::string, refreshEvent, getRefreshEvent, setRefreshEvent),
+       V_METHOD(CListView, initialize))
 
     std::string collection;
 
     std::string callback;
 
     std::string select;
+
+    std::string refreshObject;
+public:
+    typedef vstd::list<std::shared_ptr<CGameObject>> collection_type;
+    typedef std::shared_ptr<collection_type> collection_pointer;
+
+    typedef  std::set<std::shared_ptr<CGameGraphicsObject>> children_type;
+    typedef  std::shared_ptr<children_type> children_pointer;
+
+    std::string getRefreshObject();
+
+    void setRefreshObject(std::string refreshObject);
+
+    std::string getRefreshEvent();
+
+    void setRefreshEvent(std::string refreshEvent);
+
+    void initialize();
+
+private:
+
+    std::string refreshEvent;
 
     bool allowOversize = true;
 
@@ -65,8 +90,9 @@ public:
     std::string getSelect();
 
     void setSelect(std::string select);
+
 private:
-    vstd::list<std::shared_ptr<CGameObject>> invokeCollection(std::shared_ptr<CGui> gui);
+    CListView::collection_pointer invokeCollection(std::shared_ptr<CGui> gui);
 
     void
     invokeCallback(std::shared_ptr<CGui> gui, int i, std::shared_ptr<CGameObject> object);
@@ -102,6 +128,10 @@ private:
 
 //TODO: cache method calls // note to self, seems like no performance impact, even in debug
     bool isOversized(std::shared_ptr<CGui> gui);
+
+    vstd::lazy<CListView::collection_type> _collection;
+
+    void refresh();
 };
 
 
