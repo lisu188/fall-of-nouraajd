@@ -20,6 +20,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "gui/CGui.h"
 #include "gui/CTextureCache.h"
 #include "gui/CLayout.h"
+#include "core/CGame.h"
+#include "core/CMap.h"
+#include "handler/CEventHandler.h"
 
 void CListView::renderObject(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> loc, int frameTime) {
 
@@ -48,8 +51,8 @@ void CListView::doShift(std::shared_ptr<CGui> gui, int val) {
     shift += val;
     if (shift < 0) {
         shift = 0;
-    } else if (shift > (signed) invokeCollection(gui).size() - (getSizeX(gui) * getSizeY(gui) - 2/*arrows*/)) {
-        shift = invokeCollection(gui).size() - (getSizeX(gui) * getSizeY(gui) - 2/*arrows*/);
+    } else if (shift > (signed) (*invokeCollection(gui)).size() - (getSizeX(gui) * getSizeY(gui) - 2/*arrows*/)) {
+        shift = (*invokeCollection(gui)).size() - (getSizeX(gui) * getSizeY(gui) - 2/*arrows*/);
     }
 }
 
@@ -85,7 +88,7 @@ int CListView::getLeftArrowIndex(std::shared_ptr<CGui> gui) {
 std::unordered_map<int, std::shared_ptr<CGameObject>> CListView::calculateIndices(std::shared_ptr<CGui> gui) {
     std::unordered_map<int, std::shared_ptr<CGameObject>> indices;
     int i = -1;
-    for (auto it:invokeCollection(gui)) {
+    for (auto it:(*invokeCollection(gui))) {
         indices.insert(std::make_pair(++i, it));
     }
     return indices;
@@ -101,7 +104,7 @@ CListView::calculateIndexPosition(std::shared_ptr<CGui> gui, std::shared_ptr<SDL
 }
 
 bool CListView::isOversized(std::shared_ptr<CGui> gui) {
-    return allowOversize && invokeCollection(gui).size() > ((unsigned) getSizeX(gui) * (unsigned) getSizeY(gui));
+    return allowOversize && (*invokeCollection(gui)).size() > ((unsigned) getSizeX(gui) * (unsigned) getSizeY(gui));
 }
 
 int CListView::getSizeX(std::shared_ptr<CGui> gui) {
@@ -112,10 +115,12 @@ int CListView::getSizeY(std::shared_ptr<CGui> gui) {
     return getLayout()->getRect(this->ptr<CListView>())->h / gui->getTileSize();
 }
 
-vstd::list<std::shared_ptr<CGameObject>> CListView::invokeCollection(std::shared_ptr<CGui> gui) {
-    return getParent()->meta()->invoke_method<vstd::list<std::shared_ptr<CGameObject>>, CGameGraphicsObject,
-            std::shared_ptr<CGui>>(collection,
-                                   vstd::cast<CGameGraphicsObject>(getParent()), gui);
+CListView::collection_pointer CListView::invokeCollection(std::shared_ptr<CGui> gui) {
+    return _collection.get([=]() {
+        return getParent()->meta()->invoke_method<CListView::collection_pointer, CGameGraphicsObject,
+                std::shared_ptr<CGui>>(collection,
+                                       vstd::cast<CGameGraphicsObject>(getParent()), gui);
+    });
 }
 
 void CListView::invokeCallback(std::shared_ptr<CGui> gui, int i, std::shared_ptr<CGameObject> object) {
@@ -176,4 +181,33 @@ std::string CListView::getSelect() {
 
 void CListView::setSelect(std::string select) {
     CListView::select = select;
+}
+
+std::string CListView::getRefreshObject() {
+    return refreshObject;
+}
+
+void CListView::setRefreshObject(std::string refreshObject) {
+    CListView::refreshObject = refreshObject;
+}
+
+std::string CListView::getRefreshEvent() {
+    return refreshEvent;
+}
+
+void CListView::setRefreshEvent(std::string refreshEvent) {
+    CListView::refreshEvent = refreshEvent;
+}
+
+void CListView::initialize() {
+    //TODO: deregister on close
+    vstd::cast<CGui>(getTopParent())->getGame()->getMap()->getEventHandler()->registerTrigger(
+            std::make_shared<CCustomTrigger>(refreshObject, refreshEvent,
+                                             [=](std::shared_ptr<CGameObject>, std::shared_ptr<CGameEvent>) {
+                                                 refresh();
+                                             }));
+}
+
+void CListView::refresh() {
+    _collection.clear();
 }

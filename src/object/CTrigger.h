@@ -39,8 +39,16 @@ public:
     std::string getEvent();
 
     void setEvent(std::string event);
-
-
 };
 
+class CCustomTrigger : public CTrigger {
+V_META(CCustomTrigger, CTrigger, vstd::meta::empty())
+
+    std::function<void(std::shared_ptr<CGameObject>, std::shared_ptr<CGameEvent>)> _trigger;
+public:
+    template<typename T>
+    CCustomTrigger(std::string object,std::string event,T _trigger);
+
+    void trigger(std::shared_ptr<CGameObject> object, std::shared_ptr<CGameEvent> event) override;
+};
 
