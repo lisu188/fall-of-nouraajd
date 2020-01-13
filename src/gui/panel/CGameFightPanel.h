@@ -23,10 +23,10 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 class CGameFightPanel : public CGamePanel {
 V_META(CGameFightPanel, CGamePanel,
-       V_METHOD(CGameFightPanel, interactionsCollection, std::list<std::shared_ptr<CGameObject>>, std::shared_ptr<CGui>),
+       V_METHOD(CGameFightPanel, interactionsCollection, CListView::collection_pointer, std::shared_ptr<CGui>),
        V_METHOD(CGameFightPanel, interactionsCallback, void, std::shared_ptr<CGui>, int, std::shared_ptr<CGameObject>),
        V_METHOD(CGameFightPanel, interactionsSelect, bool, std::shared_ptr<CGui>, int, std::shared_ptr<CGameObject>),
-       V_METHOD(CGameFightPanel, itemsCollection, std::list<std::shared_ptr<CGameObject>>, std::shared_ptr<CGui>),
+       V_METHOD(CGameFightPanel, itemsCollection, CListView::collection_pointer, std::shared_ptr<CGui>),
        V_METHOD(CGameFightPanel, itemsCallback, void, std::shared_ptr<CGui>, int, std::shared_ptr<CGameObject>),
        V_METHOD(CGameFightPanel, itemsSelect, bool, std::shared_ptr<CGui>, int, std::shared_ptr<CGameObject>))
 
@@ -48,13 +48,13 @@ private:
     void drawEnemy(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> pRect, int frameTime);
 
 public:
-    vstd::list<std::shared_ptr<CGameObject>> interactionsCollection(std::shared_ptr<CGui> gui);
+    CListView::collection_pointer interactionsCollection(std::shared_ptr<CGui> gui);
 
     void interactionsCallback(std::shared_ptr<CGui> gui, int index, std::shared_ptr<CGameObject> _newSelection);
 
     bool interactionsSelect(std::shared_ptr<CGui> gui, int index, std::shared_ptr<CGameObject> object);
 
-    vstd::list<std::shared_ptr<CGameObject>> itemsCollection(std::shared_ptr<CGui> gui);
+    CListView::collection_pointer itemsCollection(std::shared_ptr<CGui> gui);
 
     void itemsCallback(std::shared_ptr<CGui> gui, int index, std::shared_ptr<CGameObject> _newSelection);
 

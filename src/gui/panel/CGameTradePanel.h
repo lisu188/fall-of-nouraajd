@@ -26,11 +26,11 @@ V_META(CGameTradePanel, CGamePanel,
 //TODO: unify this with CGameInventoryPanel
 //TODO: stacking of same type objects
        V_PROPERTY(CGameTradePanel, std::shared_ptr<CMarket>, market, getMarket, setMarket),
-       V_METHOD(CGameTradePanel, inventoryCollection, std::list<std::shared_ptr<CGameObject>>,
+       V_METHOD(CGameTradePanel, inventoryCollection, CListView::collection_pointer,
                 std::shared_ptr<CGui>),
        V_METHOD(CGameTradePanel, inventoryCallback, void, std::shared_ptr<CGui>, int, std::shared_ptr<CGameObject>),
        V_METHOD(CGameTradePanel, inventorySelect, bool, std::shared_ptr<CGui>, int, std::shared_ptr<CGameObject>),
-       V_METHOD(CGameTradePanel, marketCollection, std::list<std::shared_ptr<CGameObject>>,
+       V_METHOD(CGameTradePanel, marketCollection, CListView::collection_pointer,
                 std::shared_ptr<CGui>),
        V_METHOD(CGameTradePanel, marketCallback, void, std::shared_ptr<CGui>, int, std::shared_ptr<CGameObject>),
        V_METHOD(CGameTradePanel, marketSelect, bool, std::shared_ptr<CGui>, int, std::shared_ptr<CGameObject>))
@@ -42,13 +42,13 @@ public:
 
     void setMarket(std::shared_ptr<CMarket> _market);
 
-    vstd::list<std::shared_ptr<CGameObject>> inventoryCollection(std::shared_ptr<CGui> gui);
+    CListView::collection_pointer inventoryCollection(std::shared_ptr<CGui> gui);
 
     void inventoryCallback(std::shared_ptr<CGui> gui, int index, std::shared_ptr<CGameObject> _newSelection);
 
     bool inventorySelect(std::shared_ptr<CGui> gui, int index, std::shared_ptr<CGameObject> object);
 
-    vstd::list<std::shared_ptr<CGameObject>> marketCollection(std::shared_ptr<CGui> gui);
+    CListView::collection_pointer marketCollection(std::shared_ptr<CGui> gui);
 
     void marketCallback(std::shared_ptr<CGui> gui, int index, std::shared_ptr<CGameObject> _newSelection);
 

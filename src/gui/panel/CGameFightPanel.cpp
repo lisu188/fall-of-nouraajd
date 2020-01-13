@@ -21,8 +21,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CMap.h"
 #include "gui/object/CStatsGraphicsObject.h"
 
-vstd::list<std::shared_ptr<CGameObject>> CGameFightPanel::interactionsCollection(std::shared_ptr<CGui> gui) {
-    return vstd::cast<vstd::list<std::shared_ptr<CGameObject>>>(gui->getGame()->getMap()->getPlayer()->getInteractions());
+CListView::collection_pointer CGameFightPanel::interactionsCollection(std::shared_ptr<CGui> gui) {
+    return std::make_shared<CListView::collection_type>(
+            vstd::cast<CListView::collection_type>(gui->getGame()->getMap()->getPlayer()->getInteractions()));
 }
 
 void CGameFightPanel::interactionsCallback(std::shared_ptr<CGui> gui, int index,
@@ -49,9 +50,9 @@ bool CGameFightPanel::interactionsSelect(std::shared_ptr<CGui> gui, int index, s
     return selected.lock() && selected.lock() == object;
 }
 
-vstd::list<std::shared_ptr<CGameObject>> CGameFightPanel::itemsCollection(std::shared_ptr<CGui> gui) {
-    return vstd::cast<vstd::list<std::shared_ptr<CGameObject>>>(
-            gui->getGame()->getMap()->getPlayer()->getItems());
+CListView::collection_pointer CGameFightPanel::itemsCollection(std::shared_ptr<CGui> gui) {
+    return std::make_shared<CListView::collection_type>(vstd::cast<CListView::collection_type>(
+            gui->getGame()->getMap()->getPlayer()->getItems()));
 }
 
 void CGameFightPanel::itemsCallback(std::shared_ptr<CGui> gui, int index, std::shared_ptr<CGameObject> _newSelection) {

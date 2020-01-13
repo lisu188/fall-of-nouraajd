@@ -22,9 +22,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CMap.h"
 
 
-vstd::list<std::shared_ptr<CGameObject>> CGameInventoryPanel::inventoryCollection(std::shared_ptr<CGui> gui) {
-    return vstd::cast<vstd::list<std::shared_ptr<CGameObject>>>(
-            gui->getGame()->getMap()->getPlayer()->getItems());
+CListView::collection_pointer CGameInventoryPanel::inventoryCollection(std::shared_ptr<CGui> gui) {
+    return std::make_shared<CListView::collection_type>(vstd::cast<CListView::collection_type>(
+            gui->getGame()->getMap()->getPlayer()->getItems()));
 }
 
 void CGameInventoryPanel::inventoryCallback(std::shared_ptr<CGui> gui, int index,
@@ -42,16 +42,15 @@ bool CGameInventoryPanel::inventorySelect(std::shared_ptr<CGui> gui, int index, 
     return selectedInventory.lock() && selectedInventory.lock() == object;
 }
 
-vstd::list<std::shared_ptr<CGameObject>> CGameInventoryPanel::equippedCollection(std::shared_ptr<CGui> gui) {
-    vstd::list<std::shared_ptr<CGameObject>> ret;
+CListView::collection_pointer CGameInventoryPanel::equippedCollection(std::shared_ptr<CGui> gui) {
+    CListView::collection_pointer ret = std::make_shared<CListView::collection_type>();
     auto map = gui->getGame()->getMap()->getPlayer()->getEquipped();
     for (int i = 0; i < gui->getGame()->getSlotConfiguration()->getConfiguration().size(); i++) {
         if (vstd::ctn(map, vstd::str(i))) {
-            ret.insert(map.at(vstd::str(i)));
+            (*ret).insert(map.at(vstd::str(i)));
         } else {
-            ret.insert(nullptr);
+            (*ret).insert(nullptr);
         }
-
     }
     return ret;
 }
