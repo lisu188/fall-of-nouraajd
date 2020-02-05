@@ -26,8 +26,6 @@ std::string CGameEvent::Type::onLeave = "onLeave";
 std::string CGameEvent::Type::onUse = "onUse";
 std::string CGameEvent::Type::onEquip = "onEquip";
 std::string CGameEvent::Type::onUnequip = "onUnequip";
-std::string CGameEvent::Type::inventoryChanged = "inventoryChanged";
-std::string CGameEvent::Type::equippedChanged = "equippedChanged";
 
 void CEventHandler::gameEvent(std::shared_ptr<CMapObject> object, std::shared_ptr<CGameEvent> event) const {
 //TODO: maybe add reflection
@@ -47,10 +45,6 @@ void CEventHandler::gameEvent(std::shared_ptr<CMapObject> object, std::shared_pt
         vstd::cast<Wearable>(object)->onEquip(event);
     } else if (event->getType() == CGameEvent::Type::onUnequip) {
         vstd::cast<Wearable>(object)->onUnequip(event);
-    } else if (event->getType() == CGameEvent::Type::inventoryChanged) {
-        //TODO:
-    } else if (event->getType() == CGameEvent::Type::equippedChanged) {
-        //TODO:
     } else {
         vstd::logger::fatal("Unrecognized event type:", event->getType());
     }

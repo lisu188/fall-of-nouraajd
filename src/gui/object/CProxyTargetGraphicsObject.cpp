@@ -25,36 +25,36 @@ CProxyTargetGraphicsObject::CProxyTargetGraphicsObject() {
 }
 
 void CProxyTargetGraphicsObject::render(std::shared_ptr<CGui> gui, int frameTime) {
-    if (proxyObjects.size() != (unsigned int) getSizeX(gui) * (unsigned int) getSizeY(gui)) {
-        for (auto val:proxyObjects) {
-            removeChild(val);
-        }
-        proxyObjects.clear();
-        for (int x = 0; x < getSizeX(gui); x++)
-            for (int y = 0; y < getSizeY(gui); y++) {
-                std::shared_ptr<CProxyGraphicsObject> nh = std::make_shared<CProxyGraphicsObject>(x, y);
-                nh->setLayout(std::make_shared<CProxyGraphicsLayout>());
-                proxyObjects.insert(nh);
-                addChild(nh);
-            }
-    }
     CGameGraphicsObject::render(gui, frameTime);
 }
 
-bool CProxyTargetGraphicsObject::event(std::shared_ptr<CGui> gui, SDL_Event *event) {
+void CProxyTargetGraphicsObject::refresh(std::shared_ptr<CGui> gui) {
     if (proxyObjects.size() != (unsigned int) getSizeX(gui) * (unsigned int) getSizeY(gui)) {
         for (auto val:proxyObjects) {
             removeChild(val);
         }
         proxyObjects.clear();
-        for (int x = 0; x < getSizeX(gui); x++)
+        for (int x = 0; x < getSizeX(gui); x++) {
             for (int y = 0; y < getSizeY(gui); y++) {
                 std::shared_ptr<CProxyGraphicsObject> nh = std::make_shared<CProxyGraphicsObject>(x, y);
                 nh->setLayout(std::make_shared<CProxyGraphicsLayout>());
                 proxyObjects.insert(nh);
                 addChild(nh);
             }
+        }
+        for (auto object:proxyObjects) {
+            object->refresh(gui);
+        }
     }
+}
+
+void CProxyTargetGraphicsObject::refreshObject(std::shared_ptr<CGui> gui, int x, int y) {
+    vstd::find_if(proxyObjects, [=](std::shared_ptr<CProxyGraphicsObject> object) {
+        return object->getX() == x && object->getY() == y;
+    })->refresh(gui);//TODO: index
+}
+
+bool CProxyTargetGraphicsObject::event(std::shared_ptr<CGui> gui, SDL_Event *event) {
     return CGameGraphicsObject::event(gui, event);
 }
 
