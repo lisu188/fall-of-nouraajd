@@ -47,4 +47,6 @@ public:
     int getY() { return y; }
 
     void setY(int _y) { this->y = _y; }
+
+    void refresh(std::shared_ptr<CGui> gui);
 };
