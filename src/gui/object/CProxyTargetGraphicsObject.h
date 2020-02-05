@@ -39,4 +39,8 @@ public:
 
 private:
     std::set<std::shared_ptr<CProxyGraphicsObject>> proxyObjects;
+
+    void refresh(std::shared_ptr<CGui> gui);
+
+    void refreshObject(std::shared_ptr<CGui> gui, int x, int y);
 };
