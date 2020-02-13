@@ -116,11 +116,9 @@ int CListView::getSizeY(std::shared_ptr<CGui> gui) {
 }
 
 CListView::collection_pointer CListView::invokeCollection(std::shared_ptr<CGui> gui) {
-    return _collection.get([=]() {
-        return getParent()->meta()->invoke_method<CListView::collection_pointer, CGameGraphicsObject,
-                std::shared_ptr<CGui>>(collection,
-                                       vstd::cast<CGameGraphicsObject>(getParent()), gui);
-    });
+    return getParent()->meta()->invoke_method<CListView::collection_pointer, CGameGraphicsObject,
+            std::shared_ptr<CGui>>(collection,
+                                   vstd::cast<CGameGraphicsObject>(getParent()), gui);
 }
 
 void CListView::invokeCallback(std::shared_ptr<CGui> gui, int i, std::shared_ptr<CGameObject> object) {
@@ -200,14 +198,7 @@ void CListView::setRefreshEvent(std::string refreshEvent) {
 }
 
 void CListView::initialize() {
-    //TODO: deregister on close
-    vstd::cast<CGui>(getTopParent())->getGame()->getMap()->getEventHandler()->registerTrigger(
-            std::make_shared<CCustomTrigger>(refreshObject, refreshEvent,
-                                             [=](std::shared_ptr<CGameObject>, std::shared_ptr<CGameEvent>) {
-                                                 refresh();
-                                             }));
-}
-
-void CListView::refresh() {
-    _collection.clear();
+    vstd::cast<CGui>(getTopParent())->getGame()->getMap()->getObjectByName(refreshObject)->connect(refreshEvent,
+                                                                                                   this->ptr<CListView>(),
+                                                                                                   "refresh");
 }
