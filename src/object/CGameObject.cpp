@@ -152,3 +152,23 @@ std::shared_ptr<CGameGraphicsObject> CGameObject::getGraphicsObject() {
         return anim;
     });
 }
+
+void CGameObject::connect(std::string signal, std::shared_ptr<CGameObject> object, std::string slot) {
+    connections.push_back(std::make_tuple(signal, object, slot));
+}
+
+void CGameObject::signal(std::string signal) {
+    auto it = connections.begin();
+    while (it != connections.end()) {
+        auto[_signal, object, slot]=*it;
+        auto ob = object.lock();
+        if (ob) {
+            if (signal == _signal) {
+                ob->meta()->invoke_method<void>(slot, ob);
+            }
+        } else {
+            connections.erase(it);
+        }
+        it++;
+    }
+}
