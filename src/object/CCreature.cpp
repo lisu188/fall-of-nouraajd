@@ -105,8 +105,7 @@ void CCreature::removeItem(std::shared_ptr<CItem> item, bool quest) {
         vstd::logger::fatal("Tried to drop quest item");
     } else {
         if (items.erase(item)) {
-            getMap()->getEventHandler()->gameEvent(this->ptr<CCreature>(),
-                                                   std::make_shared<CGameEvent>(CGameEvent::Type::inventoryChanged));
+            signal("inventoryChanged");
         }
     }
 }
@@ -139,8 +138,7 @@ void CCreature::setEquipped(CItemMap
 void CCreature::addItem(std::set<std::shared_ptr<CItem> > items) {
     for (std::shared_ptr<CItem> it : items) {
         this->items.insert(it);
-        getMap()->getEventHandler()->gameEvent(this->ptr<CCreature>(),
-                                               std::make_shared<CGameEvent>(CGameEvent::Type::inventoryChanged));
+        signal("inventoryChanged");
     }
 }
 
@@ -374,12 +372,10 @@ void CCreature::equipItem(std::string i, std::shared_ptr<CItem> newItem) {
         removeItem(newItem);
         attribChange();
         equipped[i] = newItem;
-        getMap()->getEventHandler()->gameEvent(this->ptr<CCreature>(),
-                                               std::make_shared<CGameEvent>(CGameEvent::Type::equippedChanged));
+        signal("equippedChanged");
     } else {
         if (equipped.erase(i)) {
-            getMap()->getEventHandler()->gameEvent(this->ptr<CCreature>(),
-                                                   std::make_shared<CGameEvent>(CGameEvent::Type::equippedChanged));
+            signal("equippedChanged");
         }
     }
 }

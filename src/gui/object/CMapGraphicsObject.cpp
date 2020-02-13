@@ -67,6 +67,18 @@ void CMapGraphicsObject::initialize() {
             return true;
         });
     }
+
+    vstd::call_when([=]() {
+                        return vstd::cast<CGui>(getTopParent())->getGame()->getMap() != nullptr;
+                    }, [=]() {
+                        vstd::cast<CGui>(getTopParent())->getGame()->getMap()->connect("turnPassed", this->ptr<CMapGraphicsObject>(),
+                                                                                       "refresh");
+                        vstd::cast<CGui>(getTopParent())->getGame()->getMap()->connect("tileChanged", this->ptr<CMapGraphicsObject>(),
+                                                                                       "refresh");//TODO: current lazy tile loading may cause event spam
+                        vstd::cast<CGui>(getTopParent())->getGame()->getMap()->connect("objectChanged", this->ptr<CMapGraphicsObject>(),
+                                                                                       "refresh");//TODO: current lazy tile loading may cause event spam
+                    }
+    );
 }
 
 std::shared_ptr<CMapStringString> CMapGraphicsObject::getPanelKeys() {
