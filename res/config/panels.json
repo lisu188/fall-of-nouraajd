@@ -97,6 +97,8 @@
             "collection": "interactionsCollection",
             "callback": "interactionsCallback",
             "select": "interactionsSelect",
+            "refreshObject": "player",
+            "refreshEvent": "interactionsChanged",
             "layout": {
               "class": "CPercentLayout",
               "properties": {
@@ -114,6 +116,8 @@
             "collection": "itemsCollection",
             "callback": "itemsCallback",
             "select": "itemsSelect",
+            "refreshObject": "player",
+            "refreshEvent": "inventoryChanged",
             "layout": {
               "class": "CPercentLayout",
               "properties": {
@@ -157,6 +161,8 @@
             "collection": "inventoryCollection",
             "callback": "inventoryCallback",
             "select": "inventorySelect",
+            "refreshObject": "player",
+            "refreshEvent": "inventoryChanged",
             "layout": {
               "class": "CPercentLayout",
               "properties": {
@@ -174,6 +180,8 @@
             "collection": "equippedCollection",
             "callback": "equippedCallback",
             "select": "equippedSelect",
+            "refreshObject": "player",
+            "refreshEvent": "equippedChanged",
             "layout": {
               "class": "CPercentLayout",
               "properties": {
@@ -229,6 +237,8 @@
             "collection": "inventoryCollection",
             "callback": "inventoryCallback",
             "select": "inventorySelect",
+            "refreshObject": "player",
+            "refreshEvent": "inventoryChanged",
             "layout": {
               "class": "CPercentLayout",
               "properties": {
@@ -246,6 +256,8 @@
             "collection": "marketCollection",
             "callback": "marketCallback",
             "select": "marketSelect",
+            "refreshObject": "TODO",
+            "refreshEvent": "TODO",
             "layout": {
               "class": "CPercentLayout",
               "properties": {

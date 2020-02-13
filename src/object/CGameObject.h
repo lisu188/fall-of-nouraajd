@@ -128,7 +128,13 @@ public:
 
     std::shared_ptr<CGameGraphicsObject> getGraphicsObject();
 
+    void connect(std::string signal, std::shared_ptr<CGameObject> object, std::string slot);
+
+    void signal(std::string signal);
+
 private:
+    std::list<std::tuple<std::string, std::weak_ptr<CGameObject>, std::string>> connections;
+
     std::shared_ptr<CGameObject> _clone();
 
     vstd::lazy<CGameGraphicsObject> graphicsObject;

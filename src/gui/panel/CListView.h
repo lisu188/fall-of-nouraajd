@@ -41,8 +41,8 @@ public:
     typedef vstd::list<std::shared_ptr<CGameObject>> collection_type;
     typedef std::shared_ptr<collection_type> collection_pointer;
 
-    typedef  std::set<std::shared_ptr<CGameGraphicsObject>> children_type;
-    typedef  std::shared_ptr<children_type> children_pointer;
+    typedef std::set<std::shared_ptr<CGameGraphicsObject>> children_type;
+    typedef std::shared_ptr<children_type> children_pointer;
 
     std::string getRefreshObject();
 
@@ -128,10 +128,6 @@ private:
 
 //TODO: cache method calls // note to self, seems like no performance impact, even in debug
     bool isOversized(std::shared_ptr<CGui> gui);
-
-    vstd::lazy<CListView::collection_type> _collection;
-
-    void refresh();
 };
 
 
