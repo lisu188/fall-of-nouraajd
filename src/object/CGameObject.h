@@ -130,7 +130,23 @@ public:
 
     void connect(std::string signal, std::shared_ptr<CGameObject> object, std::string slot);
 
-    void signal(std::string signal);
+    template<typename ...Args>
+    void signal(std::string signal, Args... args) {
+        vstd::logger::debug(signal, args...);
+        auto it = connections.begin();
+        while (it != connections.end()) {
+            auto[_signal, object, slot]=*it;
+            auto ob = object.lock();
+            if (ob) {
+                if (signal == _signal) {
+                    ob->meta()->invoke_method<void, CGameObject, Args...>(slot, ob, args...);
+                }
+            } else {
+                connections.erase(it);
+            }
+            it++;
+        }
+    }
 
 private:
     std::list<std::tuple<std::string, std::weak_ptr<CGameObject>, std::string>> connections;

@@ -25,7 +25,8 @@ class CProxyGraphicsObject;
 class CMapGraphicsObject : public CProxyTargetGraphicsObject {
 V_META(CMapGraphicsObject, CProxyTargetGraphicsObject,
        V_PROPERTY(CMapGraphicsObject, std::shared_ptr<CMapStringString>, panelKeys, getPanelKeys, setPanelKeys),
-       V_METHOD(CMapGraphicsObject, initialize))
+       V_METHOD(CMapGraphicsObject, initialize),
+       V_METHOD(CMapGraphicsObject, refreshObject, void, Coords))
 
 public:
     CMapGraphicsObject();
@@ -45,7 +46,13 @@ public:
 
     bool keyboardEvent(std::shared_ptr<CGui> sharedPtr, SDL_EventType type, SDL_Keycode i) override;
 
+    void refreshObject(Coords coords);
+
 private:
+    Coords guiToMap(Coords coords);
+
+    Coords mapToGui(Coords coords);
+
     std::shared_ptr<CMapStringString> panelKeys;
 
 };

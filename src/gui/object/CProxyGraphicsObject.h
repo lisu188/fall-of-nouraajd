@@ -48,5 +48,5 @@ public:
 
     void setY(int _y) { this->y = _y; }
 
-    void refresh(std::shared_ptr<CGui> gui);
+    void refresh();
 };

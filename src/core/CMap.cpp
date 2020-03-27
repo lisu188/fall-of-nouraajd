@@ -83,7 +83,7 @@ void CMap::moveTile(std::shared_ptr<CTile> tile, int x, int y, int z) {
         tiles.erase(it);
     }
     tiles.insert(std::make_pair(Coords(x, y, z), tile));
-    signal("tileChanged");
+    signal("tileChanged", Coords(x, y, z));
 }
 
 bool CMap::addTile(std::shared_ptr<CTile> tile, int x, int y, int z) {
@@ -92,13 +92,13 @@ bool CMap::addTile(std::shared_ptr<CTile> tile, int x, int y, int z) {
     }
     tiles.insert(std::make_pair(Coords(x, y, z), tile));
     tile->moveTo(x, y, z);
-    signal("tileChanged");
+    signal("tileChanged", Coords(x, y, z));
     return true;
 }
 
 void CMap::removeTile(int x, int y, int z) {
     this->tiles.erase(this->tiles.find(Coords(x, y, z)));
-    signal("tileChanged");
+    signal("tileChanged", Coords(x, y, z));
 }
 
 std::shared_ptr<CTile> CMap::getTile(int x, int y, int z) {
@@ -160,13 +160,13 @@ void CMap::addObject(std::shared_ptr<CMapObject> mapObject) {
     }
     mapObjects.insert(std::make_pair(mapObject->getName(), mapObject));
     getEventHandler()->gameEvent(mapObject, std::make_shared<CGameEvent>(CGameEvent::Type::onCreate));
-    signal("objectChanged");
+    signal("objectChanged", mapObject->getCoords());
 }
 
 void CMap::removeObject(std::shared_ptr<CMapObject> mapObject) {
     mapObjects.erase(mapObjects.find(mapObject->getName()));
     getEventHandler()->gameEvent(mapObject, std::make_shared<CGameEvent>(CGameEvent::Type::onDestroy));
-    signal("objectChanged");
+    signal("objectChanged", mapObject->getCoords());
 }
 
 int CMap::getEntryX() {
@@ -362,7 +362,7 @@ void CMap::objectMoved(std::shared_ptr<CMapObject> object, Coords _old, Coords _
 
     mapObjectsCache.insert(std::make_pair(_new, object->getName()));
 
-    signal("objectChanged");
+    signal("objectChanged", object->getCoords());
 }
 
 std::set<std::shared_ptr<CMapObject>> CMap::getObjectsAtCoords(Coords coords) {

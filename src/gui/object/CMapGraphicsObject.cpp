@@ -34,12 +34,7 @@ std::set<std::shared_ptr<CGameGraphicsObject>>
 CMapGraphicsObject::getProxiedObjects(std::shared_ptr<CGui> gui, int x, int y) {
     std::set<std::shared_ptr<CGameGraphicsObject>> return_val;
     if (std::shared_ptr<CMap> map = gui->getGame()->getMap()) {//TODO:
-        auto playerCoords = map->getPlayer()->getCoords();
-
-        Coords actualCoords(playerCoords.x - gui->getTileCountX() / 2 + x,
-                            playerCoords.y - gui->getTileCountY() / 2 + y,
-                            playerCoords.z);
-
+        auto actualCoords = guiToMap(Coords(x, y, gui->getGame()->getMap()->getPlayer()->getCoords().z));
         std::shared_ptr<CTile> tile = map->getTile(actualCoords.x, actualCoords.y, actualCoords.z);
 
         return_val.insert(tile->getGraphicsObject());
@@ -69,14 +64,17 @@ void CMapGraphicsObject::initialize() {
     }
 
     vstd::call_when([=]() {
-                        return vstd::cast<CGui>(getTopParent())->getGame()->getMap() != nullptr;
+                        return vstd::cast<CGui>(getTopParent()) != nullptr
+                               && vstd::cast<CGui>(getTopParent())->getGame() != nullptr
+                               && vstd::cast<CGui>(getTopParent())->getGame()->getMap() != nullptr;
                     }, [=]() {
                         vstd::cast<CGui>(getTopParent())->getGame()->getMap()->connect("turnPassed", this->ptr<CMapGraphicsObject>(),
-                                                                                       "refresh");
+                                                                                       "refreshAll");
                         vstd::cast<CGui>(getTopParent())->getGame()->getMap()->connect("tileChanged", this->ptr<CMapGraphicsObject>(),
-                                                                                       "refresh");//TODO: current lazy tile loading may cause event spam
+                                                                                       "refreshObject");//TODO: current lazy tile loading may cause event spam
                         vstd::cast<CGui>(getTopParent())->getGame()->getMap()->connect("objectChanged", this->ptr<CMapGraphicsObject>(),
-                                                                                       "refresh");//TODO: current lazy tile loading may cause event spam
+                                                                                       "refreshObject");//TODO: current lazy tile loading may cause event spam
+                        refresh();
                     }
     );
 }
@@ -134,4 +132,25 @@ bool CMapGraphicsObject::keyboardEvent(std::shared_ptr<CGui> gui, SDL_EventType 
         }
     }
     return false;
+}
+
+Coords CMapGraphicsObject::mapToGui(Coords coords) {
+    auto playerCoords = getGui()->getGame()->getMap()->getPlayer()->getCoords();
+
+    return Coords(coords.x - playerCoords.x + getGui()->getTileCountX() / 2,
+                  coords.y - playerCoords.y + getGui()->getTileCountY() / 2,
+                  coords.z);
+}
+
+Coords CMapGraphicsObject::guiToMap(Coords coords) {
+    auto playerCoords = getGui()->getGame()->getMap()->getPlayer()->getCoords();
+
+    return Coords(playerCoords.x - getGui()->getTileCountX() / 2 + coords.x,
+                  playerCoords.y - getGui()->getTileCountY() / 2 + coords.y,
+                  playerCoords.z);
+}
+
+void CMapGraphicsObject::refreshObject(Coords coords) {
+    auto translated = mapToGui(coords);
+    CProxyTargetGraphicsObject::refreshObject(translated.x, translated.y);
 }
