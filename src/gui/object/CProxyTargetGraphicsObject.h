@@ -22,7 +22,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 class CProxyGraphicsObject;
 
 class CProxyTargetGraphicsObject : public CGameGraphicsObject {
-V_META(CProxyTargetGraphicsObject, CGameGraphicsObject, vstd::meta::empty())
+V_META(CProxyTargetGraphicsObject, CGameGraphicsObject,
+       V_METHOD(CProxyTargetGraphicsObject, refresh),
+       V_METHOD(CProxyTargetGraphicsObject, refreshAll))
 public:
     void render(std::shared_ptr<CGui> reneder, int frameTime) override;
 
@@ -39,8 +41,10 @@ public:
 
 private:
     std::set<std::shared_ptr<CProxyGraphicsObject>> proxyObjects;
+protected:
+    void refresh();
 
-    void refresh(std::shared_ptr<CGui> gui);
+    void refreshObject(int x, int y);
 
-    void refreshObject(std::shared_ptr<CGui> gui, int x, int y);
+    void refreshAll();
 };

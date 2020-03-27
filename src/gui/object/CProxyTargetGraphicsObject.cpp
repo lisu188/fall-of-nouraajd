@@ -28,7 +28,8 @@ void CProxyTargetGraphicsObject::render(std::shared_ptr<CGui> gui, int frameTime
     CGameGraphicsObject::render(gui, frameTime);
 }
 
-void CProxyTargetGraphicsObject::refresh(std::shared_ptr<CGui> gui) {
+void CProxyTargetGraphicsObject::refresh() {
+    std::shared_ptr<CGui> gui = vstd::cast<CGui>(getTopParent());
     if (proxyObjects.size() != (unsigned int) getSizeX(gui) * (unsigned int) getSizeY(gui)) {
         for (auto val:proxyObjects) {
             removeChild(val);
@@ -42,16 +43,22 @@ void CProxyTargetGraphicsObject::refresh(std::shared_ptr<CGui> gui) {
                 addChild(nh);
             }
         }
-        for (auto object:proxyObjects) {
-            object->refresh(gui);
-        }
+        refreshAll();
     }
 }
 
-void CProxyTargetGraphicsObject::refreshObject(std::shared_ptr<CGui> gui, int x, int y) {
-    vstd::find_if(proxyObjects, [=](std::shared_ptr<CProxyGraphicsObject> object) {
+void CProxyTargetGraphicsObject::refreshAll()  {
+    for (auto object:proxyObjects) {
+        object->refresh();
+    }
+}
+
+void CProxyTargetGraphicsObject::refreshObject(int x, int y) {
+    vstd::execute_if(proxyObjects, [=](std::shared_ptr<CProxyGraphicsObject> object) {
         return object->getX() == x && object->getY() == y;
-    })->refresh(gui);//TODO: index
+    }, [=](auto ob) {
+        ob->refresh();
+    });//TODO: index
 }
 
 bool CProxyTargetGraphicsObject::event(std::shared_ptr<CGui> gui, SDL_Event *event) {

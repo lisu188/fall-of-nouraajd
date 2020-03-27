@@ -76,6 +76,13 @@ namespace std {
 
 }
 
+namespace vstd {
+    template<>
+    std::string str(Coords coords) {
+        return vstd::str(coords.x) + "," + vstd::str(coords.y) + "," + vstd::str(coords.z);
+    }
+}
+
 template<typename F>
 auto sdl_safe(F f,
               typename vstd::disable_if<vstd::is_same<typename vstd::function_traits<F>::return_type, int>::value>::type * = 0,
