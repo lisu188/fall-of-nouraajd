@@ -113,8 +113,10 @@ void CGameGraphicsObject::removeChild(std::shared_ptr<CGameGraphicsObject> child
 }
 
 void CGameGraphicsObject::removeParent() {
-    parent.lock()->removeChild(this->ptr<CGameGraphicsObject>());
-    parent.reset();
+    if (parent.lock()) {
+        parent.lock()->removeChild(this->ptr<CGameGraphicsObject>());
+        parent.reset();
+    }
 }
 
 std::shared_ptr<CGameGraphicsObject> CGameGraphicsObject::getTopParent() {
@@ -158,6 +160,10 @@ int CGameGraphicsObject::getTopPriority() {
 void CGameGraphicsObject::pushChild(std::shared_ptr<CGameGraphicsObject> child) {
     child->setPriority(getTopPriority() + 1);
     addChild(child);
+}
+
+std::shared_ptr<CGui> CGameGraphicsObject::getGui() {
+    return vstd::cast<CGui>(getTopParent());
 }
 
 bool priority_comparator::operator()(std::shared_ptr<CGameGraphicsObject> a,

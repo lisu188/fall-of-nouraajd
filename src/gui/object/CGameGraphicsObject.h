@@ -60,8 +60,8 @@ V_META(CGameGraphicsObject, CGameObject,
 
     std::shared_ptr<CLayout> layout;
     int priority = 0;
-public:
 
+public:
     int getPriority();
 
     void setPriority(int priority);
@@ -105,5 +105,8 @@ private:
     int getTopPriority();
 
     std::shared_ptr<SDL_Rect> getRect();
+
+protected:
+    std::shared_ptr<CGui> getGui();
 };
 
