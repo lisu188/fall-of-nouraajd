@@ -153,8 +153,13 @@ void CSerialization::setProperty(std::shared_ptr<json> conf, std::string propert
                 serializer = entry.second;
             }
         }
-        add_member(conf, propertyName, vstd::any_cast<std::shared_ptr<json>>(
-                vstd::not_null(serializer, "No serializer!")->serialize(propertyValue)));
+        if (serializer) {
+            add_member(conf, propertyName, vstd::any_cast<std::shared_ptr<json>>(
+                    serializer->serialize(propertyValue)));
+        } else {
+            vstd::logger::warning("NO serializer for:", propertyName);
+        }
+
     }
 }
 
