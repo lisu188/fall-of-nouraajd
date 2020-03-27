@@ -92,7 +92,7 @@ bool CMap::addTile(std::shared_ptr<CTile> tile, int x, int y, int z) {
     }
     tiles.insert(std::make_pair(Coords(x, y, z), tile));
     tile->moveTo(x, y, z);
-    signal("tileChanged", Coords(x, y, z));
+//    signal("tileChanged", Coords(x, y, z)); //moveTo already sends signal
     return true;
 }
 

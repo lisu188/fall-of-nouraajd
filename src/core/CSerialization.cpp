@@ -199,6 +199,9 @@ std::shared_ptr<CGameObject> object_deserialize(std::shared_ptr<CGame> game, std
             CSerialization::setProperty(object, key, CJsonUtil::clone(value));
         }
     }
+    if (object) {
+        object->meta()->invoke_method<void>("initialize", object);
+    }
     return object;
 }
 

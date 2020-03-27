@@ -88,7 +88,8 @@ int CListView::getLeftArrowIndex(std::shared_ptr<CGui> gui) {
 std::unordered_map<int, std::shared_ptr<CGameObject>> CListView::calculateIndices(std::shared_ptr<CGui> gui) {
     std::unordered_map<int, std::shared_ptr<CGameObject>> indices;
     int i = -1;
-    for (auto it:(*invokeCollection(gui))) {
+    collection_pointer sharedPtr = invokeCollection(gui);
+    for (auto it:(*sharedPtr)) {
         indices.insert(std::make_pair(++i, it));
     }
     return indices;
@@ -198,7 +199,16 @@ void CListView::setRefreshEvent(std::string refreshEvent) {
 }
 
 void CListView::initialize() {
-    vstd::cast<CGui>(getTopParent())->getGame()->getMap()->getObjectByName(refreshObject)->connect(refreshEvent,
-                                                                                                   this->ptr<CListView>(),
-                                                                                                   "refresh");
+    vstd::call_when([=]() {
+                        return vstd::cast<CGui>(getTopParent()) != nullptr
+                               && vstd::cast<CGui>(getTopParent())->getGame() != nullptr
+                               && vstd::cast<CGui>(getTopParent())->getGame()->getMap() != nullptr;
+                    }, [=]() {
+                        vstd::cast<CGui>(getTopParent())->getGame()->getMap()->getObjectByName(refreshObject)->connect(refreshEvent,
+                                                                                                                       this->ptr<CListView>(),
+                                                                                                                       "refresh");
+                        refresh();
+                    }
+    );
+
 }
