@@ -48,6 +48,12 @@ namespace vstd {
         };
     }
 
+    std::function<void(std::function<bool()>, std::function<void()>)>  get_call_when_handler() {
+        return [](std::function<bool()> pred,std::function<void()> func) {
+            vstd::event_loop<>::instance()->invoke_when(pred,func);
+        };
+    }
+
     std::function<void(int, std::function<void()>)> get_call_delayed_later_handler() {
         return [](int t, std::function<void()> f) {
             vstd::event_loop<>::instance()->delay(t, f);
