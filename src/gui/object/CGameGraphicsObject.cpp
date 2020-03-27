@@ -131,10 +131,9 @@ std::set<std::shared_ptr<CGameGraphicsObject>> CGameGraphicsObject::getChildren(
 }
 
 void CGameGraphicsObject::setChildren(std::set<std::shared_ptr<CGameGraphicsObject>> _children) {
+    int childrenCount = children.size();
     //TODO: doChecks
-    for (auto child:children) {
-        removeChild(child);
-    }
+    children.clear();
     for (auto child:_children) {
         addChild(child);
     }
