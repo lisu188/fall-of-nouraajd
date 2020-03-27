@@ -132,7 +132,7 @@ public:
 
     template<typename ...Args>
     void signal(std::string signal, Args... args) {
-        vstd::logger::debug(signal, args...);
+//        vstd::logger::debug(signal, args...);
         auto it = connections.begin();
         while (it != connections.end()) {
             auto[_signal, object, slot]=*it;
