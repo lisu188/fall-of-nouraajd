@@ -30,13 +30,15 @@ void CSlotConfig::setConfiguration(CSlotMap configuration) {
 }
 
 bool CSlotConfig::canFit(std::string slot, std::shared_ptr<CItem> item) {
-    auto types = configuration.find(slot)->second->getTypes();
-    for (auto type : types) {
-        if (item->meta()->inherits(type)) {
-            return true;
+    if (vstd::ctn(configuration, slot)) {
+        auto types = configuration.find(slot)->second->getTypes();
+        for (auto type : types) {
+            if (item->meta()->inherits(type)) {
+                return true;
+            }
         }
+        return false;
     }
-    return false;
 }
 
 std::set<std::string> CSlotConfig::getFittingSlots(std::shared_ptr<CItem> item) {

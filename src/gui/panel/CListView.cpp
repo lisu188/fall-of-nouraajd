@@ -207,6 +207,9 @@ void CListView::initialize() {
                         vstd::cast<CGui>(getTopParent())->getGame()->getMap()->getObjectByName(refreshObject)->connect(refreshEvent,
                                                                                                                        this->ptr<CListView>(),
                                                                                                                        "refresh");
+                        vstd::cast<CGui>(getTopParent())->getGame()->getMap()->getObjectByName(refreshObject)->connect(refreshEvent,
+                                                                                                                       this->ptr<CListView>(),
+                                                                                                                       "refreshAll");
                         refresh();
                     }
     );
