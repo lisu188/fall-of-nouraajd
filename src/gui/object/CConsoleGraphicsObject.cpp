@@ -25,9 +25,9 @@ void CConsoleGraphicsObject::renderObject(std::shared_ptr<CGui> gui, std::shared
 
 
 CConsoleGraphicsObject::CConsoleGraphicsObject() {
-    registerEventCallback([](std::shared_ptr<CGui> gui, SDL_Event *event) {
+    registerEventCallback([](std::shared_ptr<CGui> gui,std::shared_ptr<CGameGraphicsObject> self, SDL_Event *event) {
         return event->type == SDL_KEYDOWN;
-    }, [this](std::shared_ptr<CGui> gui, SDL_Event *event) {
+    }, [this](std::shared_ptr<CGui> gui,std::shared_ptr<CGameGraphicsObject> self, SDL_Event *event) {
         if (inProgress) {
             if (event->key.keysym.sym == SDLK_TAB) {
                 stopInput();
@@ -54,9 +54,9 @@ CConsoleGraphicsObject::CConsoleGraphicsObject() {
         }
         return false;
     });
-    registerEventCallback([this](std::shared_ptr<CGui> gui, SDL_Event *event) {
+    registerEventCallback([this](std::shared_ptr<CGui> gui, std::shared_ptr<CGameGraphicsObject> self,SDL_Event *event) {
         return event->type == SDL_TEXTINPUT && inProgress;
-    }, [this](std::shared_ptr<CGui> gui, SDL_Event *event) {
+    }, [this](std::shared_ptr<CGui> gui,  std::shared_ptr<CGameGraphicsObject> self,SDL_Event *event) {
         consoleState += event->text.text;
         return true;
     });
