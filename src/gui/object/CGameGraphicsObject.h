@@ -52,8 +52,8 @@ V_META(CGameGraphicsObject, CGameObject,
        V_PROPERTY(CGameGraphicsObject,
                   std::set<std::shared_ptr<CGameGraphicsObject>>, children, getChildren, setChildren))
 
-    std::list<std::pair<std::function<bool(std::shared_ptr<CGui>, SDL_Event *)>, std::function<bool(
-            std::shared_ptr<CGui>, SDL_Event *) >>> eventCallbackList;
+    std::list<std::pair<std::function<bool(std::shared_ptr<CGui>, std::shared_ptr<CGameGraphicsObject>,SDL_Event *)>, std::function<bool(
+            std::shared_ptr<CGui>,std::shared_ptr<CGameGraphicsObject>, SDL_Event *) >>> eventCallbackList;
 
     std::set<std::shared_ptr<CGameGraphicsObject>> children;
     std::weak_ptr<CGameGraphicsObject> parent;
@@ -76,8 +76,9 @@ public:
 
     virtual void renderObject(std::shared_ptr<CGui> reneder, std::shared_ptr<SDL_Rect> rect, int frameTime);
 
-    void registerEventCallback(std::function<bool(std::shared_ptr<CGui>, SDL_Event *)> pred,
-                               std::function<bool(std::shared_ptr<CGui>, SDL_Event *)> func);
+    void registerEventCallback(
+            std::function<bool(std::shared_ptr<CGui>, std::shared_ptr<CGameGraphicsObject>, SDL_Event *)> pred,
+            std::function<bool(std::shared_ptr<CGui>, std::shared_ptr<CGameGraphicsObject>, SDL_Event *)> func);
 
     std::shared_ptr<CGameGraphicsObject> getParent();
 

@@ -141,10 +141,10 @@ public:
                 if (signal == _signal) {
                     ob->meta()->invoke_method<void, CGameObject, Args...>(slot, ob, args...);
                 }
+                it++;
             } else {
-                connections.erase(it);
+                it = connections.erase(it);
             }
-            it++;
         }
     }
 
