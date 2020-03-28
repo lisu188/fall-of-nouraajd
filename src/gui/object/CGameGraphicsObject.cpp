@@ -45,7 +45,8 @@ bool CGameGraphicsObject::event(std::shared_ptr<CGui> gui, SDL_Event *event) {
         }
     }
     for (auto callback:eventCallbackList) {//TODO:remove, replace with other event
-        if (callback.first(gui, event) && callback.second(gui, event)) {
+        if (callback.first(gui, this->ptr<CGameGraphicsObject>(), event) &&
+            callback.second(gui, this->ptr<CGameGraphicsObject>(), event)) {
             return true;
         }
     }
@@ -74,8 +75,9 @@ bool CGameGraphicsObject::mouseEvent(std::shared_ptr<CGui> sharedPtr, SDL_EventT
 }
 
 void
-CGameGraphicsObject::registerEventCallback(std::function<bool(std::shared_ptr<CGui>, SDL_Event *)> pred,
-                                           std::function<bool(std::shared_ptr<CGui>, SDL_Event *)> func) {
+CGameGraphicsObject::registerEventCallback(
+        std::function<bool(std::shared_ptr<CGui>, std::shared_ptr<CGameGraphicsObject>, SDL_Event *)> pred,
+        std::function<bool(std::shared_ptr<CGui>, std::shared_ptr<CGameGraphicsObject>, SDL_Event *)> func) {
     eventCallbackList.emplace_back(pred, func);
 }
 
