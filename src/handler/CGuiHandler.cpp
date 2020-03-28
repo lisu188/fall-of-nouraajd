@@ -113,11 +113,13 @@ void CGuiHandler::showTooltip(std::string text, int x,
                               int y) {
 
     auto layout = _game.lock()->createObject<CSimpleLayout>();
-    layout->setX(x);
-    layout->setY(y);
+
     auto textureSize = _game.lock()->getGui()->getTextManager()->getTextureSize(text);
     layout->setWidth(textureSize.first);//TODO: layout should accept functions;
     layout->setHeight(textureSize.second);//TODO: layout should accept functions;
+
+    layout->setX(x - textureSize.first / 2);
+    layout->setY(y - textureSize.second / 2);
 
     auto tooltip = _game.lock()->createObject<CTooltip>();
     tooltip->setText(text);
