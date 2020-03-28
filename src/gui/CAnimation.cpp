@@ -88,9 +88,11 @@ void CDynamicAnimation::renderObject(std::shared_ptr<CGui> gui, std::shared_ptr<
                             rect.get()));
 }
 
-//TODO: make meta method after object is set as a property
+
 void CDynamicAnimation::initialize() {
-    if (!initialized) {
+    vstd::call_when([this]() {
+        return object != nullptr;
+    }, [this]() {
         std::string path = object->getAnimation();
         auto time = CConfigurationProvider::getConfig(path + "/" + "time.json");
         size = time->size();
@@ -98,8 +100,8 @@ void CDynamicAnimation::initialize() {
             paths.push_back(path + "/" + std::to_string(i) + ".png");
             times.push_back((*time)[std::to_string(i)].get<int>());
         }
-        initialized = true;
-    }
+    });
+
 }
 
 

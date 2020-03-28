@@ -50,11 +50,14 @@ public:
 };
 
 class CDynamicAnimation : public CAnimation {
-V_META(CDynamicAnimation, CAnimation, vstd::meta::empty())
+V_META(CDynamicAnimation, CAnimation,
+       V_METHOD(CDynamicAnimation, initialize))
 public:
     CDynamicAnimation();
 
     void renderObject(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> rect, int frameTime) override;
+
+    void initialize();
 
 private:
     static int get_next();
@@ -69,7 +72,6 @@ private:
     vstd::cache2<std::string, std::vector<int>, get_ttl> _tables;
 
     int size = 0;
-    bool initialized = false;
 
-    void initialize();
+
 };
