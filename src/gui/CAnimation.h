@@ -75,3 +75,18 @@ private:
 
 
 };
+
+class CSelectionBox : public CAnimation {
+V_META(CSelectionBox, CAnimation,
+       V_PROPERTY(CSelectionBox, int, thickness, getThickness, setThickness))
+
+public:
+    void renderObject(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> rect, int frameTime) override;
+
+    int getThickness();
+
+    void setThickness(int _thickness);
+
+private:
+    int thickness;
+};
