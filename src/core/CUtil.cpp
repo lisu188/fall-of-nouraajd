@@ -17,6 +17,11 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #include "core/CUtil.h"
 
+template<>
+std::string vstd::str(Coords coords) {
+    return vstd::str(coords.x) + "," + vstd::str(coords.y) + "," + vstd::str(coords.z);
+}
+
 Coords::Coords() { x = y = z = 0; }
 
 Coords::Coords(int x, int y, int z) : x(x), y(y), z(z) {}

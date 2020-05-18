@@ -97,7 +97,7 @@ private:
     void
     invokeCallback(std::shared_ptr<CGui> gui, int i, std::shared_ptr<CGameObject> object);
 
-    int
+    bool
     invokeSelect(std::shared_ptr<CGui> gui, int i, std::shared_ptr<CGameObject> object);
 
     std::unordered_map<std::pair<int, int>, std::shared_ptr<CProxyGraphicsObject>> proxyObjects;
