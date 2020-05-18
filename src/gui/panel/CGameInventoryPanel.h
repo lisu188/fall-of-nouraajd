@@ -20,9 +20,6 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "object/CPlayer.h"
 #include "CGamePanel.h"
 
-//TODO: dynamic load of layout from slot configuration
-//TODO: make x y adequate to panel size
-//TODO: make icons on empty inventory slots
 class CGameInventoryPanel : public CGamePanel {
 V_META(CGameInventoryPanel, CGamePanel,
        V_METHOD(CGameInventoryPanel, inventoryCollection,CListView::collection_pointer,
@@ -48,6 +45,9 @@ public:
     void equippedCallback(std::shared_ptr<CGui> gui, int index, std::shared_ptr<CGameObject> _newSelection);
 
     bool equippedSelect(std::shared_ptr<CGui> gui, int index, std::shared_ptr<CGameObject> object);
+
+    void refreshViews();
+
 private:
     std::weak_ptr<CItem> selectedInventory;
     std::weak_ptr<CItem> selectedEquipped;

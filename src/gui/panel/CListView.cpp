@@ -56,20 +56,6 @@ void CListView::doShift(std::shared_ptr<CGui> gui, int val) {
     }
 }
 
-void CListView::drawSelection(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> location, int thickness) {
-    SDL_SetRenderDrawColor(gui->getRenderer(), YELLOW);
-    SDL_Rect tmp = {location->x, location->y, thickness, location->h};
-    SDL_Rect tmp2 = {location->x, location->y, location->w, thickness};
-    SDL_Rect tmp3 = {location->x, location->y + location->h - thickness, location->w,
-                     thickness};
-    SDL_Rect tmp4 = {location->x + location->w - thickness, location->y, thickness,
-                     location->h};
-    SDL_RenderFillRect(gui->getRenderer(), &tmp);
-    SDL_RenderFillRect(gui->getRenderer(), &tmp2);
-    SDL_RenderFillRect(gui->getRenderer(), &tmp3);
-    SDL_RenderFillRect(gui->getRenderer(), &tmp4);
-}
-
 int CListView::shiftIndex(std::shared_ptr<CGui> gui, int arg) {
     if (!isOversized(gui)) {
         return arg;
@@ -129,8 +115,8 @@ void CListView::invokeCallback(std::shared_ptr<CGui> gui, int i, std::shared_ptr
                                                                       gui, i, object);
 }
 
-bool CListView::invokeSelect(std::shared_ptr<CGui> gui, int i, std::shared_ptr<CGameObject> object) {
-    return getParent()->meta()->invoke_method<bool, CGameGraphicsObject,
+int CListView::invokeSelect(std::shared_ptr<CGui> gui, int i, std::shared_ptr<CGameObject> object) {
+    return getParent()->meta()->invoke_method<int, CGameGraphicsObject,
             std::shared_ptr<CGui>, int, std::shared_ptr<CGameObject>>(select,
                                                                       vstd::cast<CGameGraphicsObject>(getParent()),
                                                                       gui, i, object);
@@ -152,7 +138,10 @@ CListView::getProxiedObjects(std::shared_ptr<CGui> gui, int x, int y) {
             return_val.insert(indexedCollection[itemIndex]->getGraphicsObject());
         }
         if (invokeSelect(gui, itemIndex, indexedCollection[itemIndex])) {
-            //TODO:  drawSelection(gui, rect, selectionThickness);
+            auto selectionBox = gui->getGame()->getObjectHandler()->createObject<CSelectionBox>(gui->getGame());
+            selectionBox->setThickness(5);
+            selectionBox->setPriority(5);
+            return_val.insert(selectionBox);//TODO: cache
         }
     }
     return return_val;

@@ -18,6 +18,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "CProxyTargetGraphicsObject.h"
 #include "CProxyGraphicsObject.h"
 #include "gui/CLayout.h"
+#include "gui/CGui.h"
 
 
 CProxyTargetGraphicsObject::CProxyTargetGraphicsObject() {
