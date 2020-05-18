@@ -35,7 +35,12 @@ void CGameInventoryPanel::inventoryCallback(std::shared_ptr<CGui> gui, int index
     } else if (selectedInventory.lock() && selectedInventory.lock() == newSelection) {
         gui->getGame()->getMap()->getPlayer()->useItem(newSelection);
         selectedInventory.reset();
+    } else if (selectedInventory.lock() == nullptr && selectedEquipped.lock() != nullptr) {
+        gui->getGame()->getMap()->getPlayer()->equipItem(
+                gui->getGame()->getMap()->getPlayer()->getSlotWithItem(selectedEquipped.lock()), nullptr);
+        selectedEquipped.reset();
     }
+    refreshViews();
 }
 
 bool CGameInventoryPanel::inventorySelect(std::shared_ptr<CGui> gui, int index, std::shared_ptr<CGameObject> object) {
@@ -69,6 +74,7 @@ void CGameInventoryPanel::equippedCallback(std::shared_ptr<CGui> gui, int index,
     } else {
         selectedEquipped = newSelection;
     }
+    refreshViews();
 }
 
 bool CGameInventoryPanel::equippedSelect(std::shared_ptr<CGui> gui, int index, std::shared_ptr<CGameObject> object) {
@@ -81,4 +87,12 @@ bool CGameInventoryPanel::equippedSelect(std::shared_ptr<CGui> gui, int index, s
 
 CGameInventoryPanel::CGameInventoryPanel() {
 
+}
+
+void CGameInventoryPanel::refreshViews() {
+    for (auto child : getChildren()) {
+        if (child->meta()->inherits(CListView::static_meta()->name())) {
+            vstd::cast<CListView>(child)->refreshAll();
+        }
+    }
 }

@@ -97,14 +97,12 @@ private:
     void
     invokeCallback(std::shared_ptr<CGui> gui, int i, std::shared_ptr<CGameObject> object);
 
-    bool
+    int
     invokeSelect(std::shared_ptr<CGui> gui, int i, std::shared_ptr<CGameObject> object);
 
     std::unordered_map<std::pair<int, int>, std::shared_ptr<CProxyGraphicsObject>> proxyObjects;
 
     void doShift(std::shared_ptr<CGui> gui, int val);
-
-    void drawSelection(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> location, int thickness);
 
     int shiftIndex(std::shared_ptr<CGui> gui, int arg);
 
@@ -117,14 +115,6 @@ private:
 
     std::shared_ptr<SDL_Rect>
     calculateIndexPosition(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> loc, int index);
-
-    void drawItemBox(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> loc);
-
-
-    void drawArrowLeft(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> loc);
-
-
-    void drawArrowRight(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> loc);
 
 //TODO: cache method calls // note to self, seems like no performance impact, even in debug
     bool isOversized(std::shared_ptr<CGui> gui);
