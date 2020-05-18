@@ -78,10 +78,7 @@ namespace std {
 
 namespace vstd {
     template<>
-    inline
-    std::string str(Coords coords) {
-        return vstd::str(coords.x) + "," + vstd::str(coords.y) + "," + vstd::str(coords.z);
-    }
+    std::string str(Coords coords);
 }
 
 template<typename F>

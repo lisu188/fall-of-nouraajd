@@ -115,8 +115,8 @@ void CListView::invokeCallback(std::shared_ptr<CGui> gui, int i, std::shared_ptr
                                                                       gui, i, object);
 }
 
-int CListView::invokeSelect(std::shared_ptr<CGui> gui, int i, std::shared_ptr<CGameObject> object) {
-    return getParent()->meta()->invoke_method<int, CGameGraphicsObject,
+bool CListView::invokeSelect(std::shared_ptr<CGui> gui, int i, std::shared_ptr<CGameObject> object) {
+    return getParent()->meta()->invoke_method<bool, CGameGraphicsObject,
             std::shared_ptr<CGui>, int, std::shared_ptr<CGameObject>>(select,
                                                                       vstd::cast<CGameGraphicsObject>(getParent()),
                                                                       gui, i, object);
