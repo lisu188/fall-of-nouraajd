@@ -41,7 +41,8 @@ public:
 
 private:
     std::set<std::shared_ptr<CProxyGraphicsObject>> proxyObjects;
-protected:
+
+public:
     void refresh();
 
     void refreshObject(int x, int y);

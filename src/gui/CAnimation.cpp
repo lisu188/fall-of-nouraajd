@@ -126,3 +126,25 @@ bool CAnimation::mouseEvent(std::shared_ptr<CGui> gui, SDL_EventType type, int b
     }
     return false;
 }
+
+void CSelectionBox::setThickness(int _thickness) {
+    this->thickness = _thickness;
+}
+
+int CSelectionBox::getThickness() {
+    return thickness;
+}
+
+void CSelectionBox::renderObject(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> rect, int frameTime) {
+    SDL_SetRenderDrawColor(gui->getRenderer(), YELLOW);
+    SDL_Rect tmp = {rect->x, rect->y, thickness, rect->h};
+    SDL_Rect tmp2 = {rect->x, rect->y, rect->w, thickness};
+    SDL_Rect tmp3 = {rect->x, rect->y + rect->h - thickness, rect->w,
+                     thickness};
+    SDL_Rect tmp4 = {rect->x + rect->w - thickness, rect->y, thickness,
+                     rect->h};
+    SDL_RenderFillRect(gui->getRenderer(), &tmp);
+    SDL_RenderFillRect(gui->getRenderer(), &tmp2);
+    SDL_RenderFillRect(gui->getRenderer(), &tmp3);
+    SDL_RenderFillRect(gui->getRenderer(), &tmp4);
+}

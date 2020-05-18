@@ -37,8 +37,8 @@ bool CSlotConfig::canFit(std::string slot, std::shared_ptr<CItem> item) {
                 return true;
             }
         }
-        return false;
     }
+    return false;
 }
 
 std::set<std::string> CSlotConfig::getFittingSlots(std::shared_ptr<CItem> item) {
