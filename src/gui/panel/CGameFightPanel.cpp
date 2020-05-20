@@ -44,6 +44,7 @@ void CGameFightPanel::interactionsCallback(std::shared_ptr<CGui> gui, int index,
         //TODO: rethink moving selection to CListView
         selected.reset();
     }
+    refreshViews();
 }
 
 bool CGameFightPanel::interactionsSelect(std::shared_ptr<CGui> gui, int index, std::shared_ptr<CGameObject> object) {
@@ -63,6 +64,7 @@ void CGameFightPanel::itemsCallback(std::shared_ptr<CGui> gui, int index, std::s
         gui->getGame()->getMap()->getPlayer()->useItem(newSelection);
         selectedItem.reset();
     }
+    refreshViews();
 }
 
 bool CGameFightPanel::itemsSelect(std::shared_ptr<CGui> gui, int index, std::shared_ptr<CGameObject> object) {

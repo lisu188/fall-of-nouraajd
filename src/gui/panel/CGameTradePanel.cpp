@@ -29,6 +29,7 @@ CListView::collection_pointer CGameTradePanel::inventoryCollection(std::shared_p
 void
 CGameTradePanel::inventoryCallback(std::shared_ptr<CGui> gui, int index, std::shared_ptr<CGameObject> _newSelection) {
     this->selectInventory(vstd::cast<CItem>(_newSelection));
+    refreshViews();
 }
 
 bool CGameTradePanel::inventorySelect(std::shared_ptr<CGui> gui, int index, std::shared_ptr<CGameObject> object) {
@@ -42,6 +43,7 @@ CListView::collection_pointer CGameTradePanel::marketCollection(std::shared_ptr<
 
 void CGameTradePanel::marketCallback(std::shared_ptr<CGui> gui, int index, std::shared_ptr<CGameObject> _newSelection) {
     this->selectMarket(vstd::cast<CItem>(_newSelection));
+    refreshViews();
 }
 
 bool CGameTradePanel::marketSelect(std::shared_ptr<CGui> gui, int index, std::shared_ptr<CGameObject> object) {
