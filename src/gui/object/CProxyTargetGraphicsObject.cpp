@@ -30,7 +30,7 @@ void CProxyTargetGraphicsObject::render(std::shared_ptr<CGui> gui, int frameTime
 }
 
 void CProxyTargetGraphicsObject::refresh() {
-    std::shared_ptr<CGui> gui = vstd::cast<CGui>(getTopParent());
+    std::shared_ptr<CGui> gui = getGui();
     if (proxyObjects.size() != (unsigned int) getSizeX(gui) * (unsigned int) getSizeY(gui)) {
         for (auto val:proxyObjects) {
             removeChild(val);

@@ -23,6 +23,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CGame.h"
 #include "core/CMap.h"
 #include "handler/CEventHandler.h"
+#include "core/CScript.h"
 
 void CListView::renderObject(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> loc, int frameTime) {
 
@@ -171,11 +172,11 @@ void CListView::setSelect(std::string select) {
     CListView::select = select;
 }
 
-std::string CListView::getRefreshObject() {
+std::shared_ptr<CScript> CListView::getRefreshObject() {
     return refreshObject;
 }
 
-void CListView::setRefreshObject(std::string refreshObject) {
+void CListView::setRefreshObject(std::shared_ptr<CScript> refreshObject) {
     CListView::refreshObject = refreshObject;
 }
 
@@ -189,18 +190,24 @@ void CListView::setRefreshEvent(std::string refreshEvent) {
 
 void CListView::initialize() {
     vstd::call_when([=]() {
-                        return vstd::cast<CGui>(getTopParent()) != nullptr
-                               && vstd::cast<CGui>(getTopParent())->getGame() != nullptr
-                               && vstd::cast<CGui>(getTopParent())->getGame()->getMap() != nullptr;
+                        return getGui() != nullptr
+                               && getGui()->getGame() != nullptr
+                               && getGui()->getGame()->getMap() != nullptr;
                     }, [=]() {
-                        vstd::cast<CGui>(getTopParent())->getGame()->getMap()->getObjectByName(refreshObject)->connect(refreshEvent,
-                                                                                                                       this->ptr<CListView>(),
-                                                                                                                       "refresh");
-                        vstd::cast<CGui>(getTopParent())->getGame()->getMap()->getObjectByName(refreshObject)->connect(refreshEvent,
-                                                                                                                       this->ptr<CListView>(),
-                                                                                                                       "refreshAll");
+                        refreshObject->invoke(
+                                getGui()->getGame(),
+                                this->ptr())->connect(refreshEvent,
+                                                      this->ptr<CListView>(),
+                                                      "refresh");
+                        refreshObject->invoke(
+                                getGui()->getGame(),
+                                this->ptr())->connect(refreshEvent,
+                                                      this->ptr<CListView>(),
+                                                      "refreshAll");
                         refresh();
                     }
     );
 
 }
+
+

@@ -21,12 +21,14 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 class CProxyGraphicsObject;
 
+class CScript;
+
 class CListView : public CProxyTargetGraphicsObject {
 V_META(CListView, CProxyTargetGraphicsObject,
        V_PROPERTY(CListView, std::string, collection, getCollection, setCollection),
        V_PROPERTY(CListView, std::string, select, getSelect, setSelect),
        V_PROPERTY(CListView, std::string, callback, getCallback, setCallback),
-       V_PROPERTY(CListView, std::string, refreshObject, getRefreshObject, setRefreshObject),
+       V_PROPERTY(CListView, std::shared_ptr<CScript>, refreshObject, getRefreshObject, setRefreshObject),
        V_PROPERTY(CListView, std::string, refreshEvent, getRefreshEvent, setRefreshEvent),
        V_METHOD(CListView, initialize))
 
@@ -36,7 +38,7 @@ V_META(CListView, CProxyTargetGraphicsObject,
 
     std::string select;
 
-    std::string refreshObject;
+    std::shared_ptr<CScript> refreshObject;
 public:
     typedef vstd::list<std::shared_ptr<CGameObject>> collection_type;
     typedef std::shared_ptr<collection_type> collection_pointer;
@@ -44,9 +46,9 @@ public:
     typedef std::set<std::shared_ptr<CGameGraphicsObject>> children_type;
     typedef std::shared_ptr<children_type> children_pointer;
 
-    std::string getRefreshObject();
+    std::shared_ptr<CScript> getRefreshObject();
 
-    void setRefreshObject(std::string refreshObject);
+    void setRefreshObject(std::shared_ptr<CScript> refreshObject);
 
     std::string getRefreshEvent();
 

@@ -63,8 +63,11 @@ void initModule1() {
             .def("getGui", &CGame::getGui);
 
     class_<CGameGraphicsObject, bases<CGameObject>, boost::noncopyable, std::shared_ptr<CGameGraphicsObject>>(
-            "CGameGraphicsObject", no_init);
-    class_<CGui, bases<CGameGraphicsObject>, boost::noncopyable, std::shared_ptr<CGui>>("CGui", no_init);
+            "CGameGraphicsObject", no_init)
+            .def("getGui", &CGameGraphicsObject::getGui)
+            .def("getParent", &CGameGraphicsObject::getParent);
+    class_<CGui, bases<CGameGraphicsObject>, boost::noncopyable, std::shared_ptr<CGui>>("CGui", no_init)
+            .def("getGame", &CGui::getGame);
 
     bool (CMap::*canStep)(Coords) =&CMap::canStep;
 
