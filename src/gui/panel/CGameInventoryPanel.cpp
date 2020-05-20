@@ -89,10 +89,3 @@ CGameInventoryPanel::CGameInventoryPanel() {
 
 }
 
-void CGameInventoryPanel::refreshViews() {
-    for (auto child : getChildren()) {
-        if (child->meta()->inherits(CListView::static_meta()->name())) {
-            vstd::cast<CListView>(child)->refreshAll();
-        }
-    }
-}

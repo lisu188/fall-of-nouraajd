@@ -46,7 +46,7 @@ public:
 
     bool equippedSelect(std::shared_ptr<CGui> gui, int index, std::shared_ptr<CGameObject> object);
 
-    void refreshViews();
+
 
 private:
     std::weak_ptr<CItem> selectedInventory;
