@@ -41,6 +41,9 @@ extern void initModule3();
 
 extern void initModule4();
 
+extern void initModule5();
+
+
 #define PY_WRAP_GENERIC(fcn) def(#fcn,boost::python::make_function(fcn))
 
 BOOST_PYTHON_MODULE (_game) {
@@ -49,6 +52,7 @@ BOOST_PYTHON_MODULE (_game) {
     initModule2();
     initModule3();
     initModule4();
+    initModule5();
 
     PY_WRAP_GENERIC(randint);
     PY_WRAP_GENERIC(jsonify);

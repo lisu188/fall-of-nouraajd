@@ -68,16 +68,16 @@ void CMapGraphicsObject::initialize() {
     }
 
     vstd::call_when([=]() {
-                        return vstd::cast<CGui>(getTopParent()) != nullptr
-                               && vstd::cast<CGui>(getTopParent())->getGame() != nullptr
-                               && vstd::cast<CGui>(getTopParent())->getGame()->getMap() != nullptr;
+                        return getGui() != nullptr
+                               && getGui()->getGame() != nullptr
+                               && getGui()->getGame()->getMap() != nullptr;
                     }, [=]() {
-                        vstd::cast<CGui>(getTopParent())->getGame()->getMap()->connect("turnPassed", this->ptr<CMapGraphicsObject>(),
-                                                                                       "refreshAll");
-                        vstd::cast<CGui>(getTopParent())->getGame()->getMap()->connect("tileChanged", this->ptr<CMapGraphicsObject>(),
-                                                                                       "refreshObject");//TODO: current lazy tile loading may cause event spam
-                        vstd::cast<CGui>(getTopParent())->getGame()->getMap()->connect("objectChanged", this->ptr<CMapGraphicsObject>(),
-                                                                                       "refreshObject");//TODO: current lazy tile loading may cause event spam
+                        getGui()->getGame()->getMap()->connect("turnPassed", this->ptr<CMapGraphicsObject>(),
+                                                               "refreshAll");
+                        getGui()->getGame()->getMap()->connect("tileChanged", this->ptr<CMapGraphicsObject>(),
+                                                               "refreshObject");//TODO: current lazy tile loading may cause event spam
+                        getGui()->getGame()->getMap()->connect("objectChanged", this->ptr<CMapGraphicsObject>(),
+                                                               "refreshObject");//TODO: current lazy tile loading may cause event spam
                         refresh();
                     }
     );
