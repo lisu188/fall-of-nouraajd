@@ -29,15 +29,23 @@ CMarket::~CMarket() {
 
 void CMarket::add(std::shared_ptr<CItem> item) {
     items.insert(item);
+    signal("itemsChanged");
 }
 
 void CMarket::remove(std::shared_ptr<CItem> item) {
-    items.erase(item);
+    if (items.erase(item)) {
+        signal("itemsChanged");
+    }
 }
 
 
-void CMarket::setItems(std::set<std::shared_ptr<CItem>> items) {
-    this->items = items;
+void CMarket::setItems(std::set<std::shared_ptr<CItem>> _items) {
+    while (items.size() > 0) {//TODO: extract this to macro
+        remove(*items.begin());
+    }
+    for (auto item :_items) {
+        add(item);
+    }
 }
 
 std::set<std::shared_ptr<CItem>> CMarket::getItems() {
@@ -68,7 +76,7 @@ bool CMarket::sellItem(std::shared_ptr<CCreature> cre, std::shared_ptr<CItem> it
     }
     cre->addGold(-price);
     cre->addItem(item);
-    items.erase(item);
+    remove(item);
     return true;
 }
 
@@ -81,7 +89,7 @@ void CMarket::buyItem(std::shared_ptr<CCreature> cre, std::shared_ptr<CItem> ite
     std::set<std::shared_ptr<CItem>> items = cre->getInInventory();
     vstd::fail_if(!vstd::ctn(items, item), "tried to sell not owned item");
     cre->addGold(price);
-    this->items.insert(item);
+    add(item);
     cre->removeItem(item);
 }
 

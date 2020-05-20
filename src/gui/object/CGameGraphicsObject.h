@@ -52,8 +52,9 @@ V_META(CGameGraphicsObject, CGameObject,
        V_PROPERTY(CGameGraphicsObject,
                   std::set<std::shared_ptr<CGameGraphicsObject>>, children, getChildren, setChildren))
 
-    std::list<std::pair<std::function<bool(std::shared_ptr<CGui>, std::shared_ptr<CGameGraphicsObject>,SDL_Event *)>, std::function<bool(
-            std::shared_ptr<CGui>,std::shared_ptr<CGameGraphicsObject>, SDL_Event *) >>> eventCallbackList;
+    std::list<std::pair<std::function<bool(std::shared_ptr<CGui>, std::shared_ptr<CGameGraphicsObject>,
+                                           SDL_Event *)>, std::function<bool(
+            std::shared_ptr<CGui>, std::shared_ptr<CGameGraphicsObject>, SDL_Event *) >>> eventCallbackList;
 
     std::set<std::shared_ptr<CGameGraphicsObject>> children;
     std::weak_ptr<CGameGraphicsObject> parent;
@@ -98,6 +99,8 @@ public:
 
     void removeParent();
 
+    std::shared_ptr<CGui> getGui();
+
 private:
     virtual void render(std::shared_ptr<CGui> reneder, int frameTime);
 
@@ -107,7 +110,5 @@ private:
 
     std::shared_ptr<SDL_Rect> getRect();
 
-protected:
-    std::shared_ptr<CGui> getGui();
 };
 

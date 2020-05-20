@@ -97,7 +97,12 @@
             "collection": "interactionsCollection",
             "callback": "interactionsCallback",
             "select": "interactionsSelect",
-            "refreshObject": "player",
+            "refreshObject": {
+              "class": "CScript",
+              "properties": {
+                "script": "self.getGui().getGame().getMap().getPlayer()"
+              }
+            },
             "refreshEvent": "interactionsChanged",
             "layout": {
               "class": "CPercentLayout",
@@ -116,7 +121,12 @@
             "collection": "itemsCollection",
             "callback": "itemsCallback",
             "select": "itemsSelect",
-            "refreshObject": "player",
+            "refreshObject": {
+              "class": "CScript",
+              "properties": {
+                "script": "self.getGui().getGame().getMap().getPlayer()"
+              }
+            },
             "refreshEvent": "inventoryChanged",
             "layout": {
               "class": "CPercentLayout",
@@ -161,7 +171,12 @@
             "collection": "inventoryCollection",
             "callback": "inventoryCallback",
             "select": "inventorySelect",
-            "refreshObject": "player",
+            "refreshObject": {
+              "class": "CScript",
+              "properties": {
+                "script": "self.getGui().getGame().getMap().getPlayer()"
+              }
+            },
             "refreshEvent": "inventoryChanged",
             "layout": {
               "class": "CPercentLayout",
@@ -180,7 +195,12 @@
             "collection": "equippedCollection",
             "callback": "equippedCallback",
             "select": "equippedSelect",
-            "refreshObject": "player",
+            "refreshObject": {
+              "class": "CScript",
+              "properties": {
+                "script": "self.getGui().getGame().getMap().getPlayer()"
+              }
+            },
             "refreshEvent": "equippedChanged",
             "layout": {
               "class": "CPercentLayout",
@@ -237,7 +257,12 @@
             "collection": "inventoryCollection",
             "callback": "inventoryCallback",
             "select": "inventorySelect",
-            "refreshObject": "player",
+            "refreshObject": {
+              "class": "CScript",
+              "properties": {
+                "script": "self.getGui().getGame().getMap().getPlayer()"
+              }
+            },
             "refreshEvent": "inventoryChanged",
             "layout": {
               "class": "CPercentLayout",
@@ -256,8 +281,13 @@
             "collection": "marketCollection",
             "callback": "marketCallback",
             "select": "marketSelect",
-            "refreshObject": "TODO",
-            "refreshEvent": "TODO",
+            "refreshObject": {
+              "class": "CScript",
+              "properties": {
+                "script": "self.getParent().getMarket()"
+              }
+            },
+            "refreshEvent": "itemsChanged",
             "layout": {
               "class": "CPercentLayout",
               "properties": {
