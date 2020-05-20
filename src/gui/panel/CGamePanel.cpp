@@ -33,3 +33,11 @@ bool CGamePanel::keyboardEvent(std::shared_ptr<CGui> sharedPtr, SDL_EventType ty
 bool CGamePanel::mouseEvent(std::shared_ptr<CGui> sharedPtr, SDL_EventType type, int button, int x, int y) {
     return true;
 }
+
+void CGamePanel::refreshViews() {
+    for (auto child : getChildren()) {
+        if (child->meta()->inherits(CListView::static_meta()->name())) {
+            vstd::cast<CListView>(child)->refreshAll();
+        }
+    }
+}
