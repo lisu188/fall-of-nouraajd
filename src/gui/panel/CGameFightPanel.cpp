@@ -82,6 +82,7 @@ std::shared_ptr<CInteraction> CGameFightPanel::selectInteraction() {
     auto ret = finalSelected.lock();
     finalSelected.reset();
     selected.reset();
+    refreshViews();
     return ret;
 }
 
