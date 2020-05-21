@@ -95,12 +95,14 @@ bool CListView::isOversized(std::shared_ptr<CGui> gui) {
     return allowOversize && (*invokeCollection(gui)).size() > ((unsigned) getSizeX(gui) * (unsigned) getSizeY(gui));
 }
 
+//TODO: sizes should be calculated dynamically based on preferences
 int CListView::getSizeX(std::shared_ptr<CGui> gui) {
-    return getLayout()->getRect(this->ptr<CListView>())->w / gui->getTileSize();
+    return xPrefferedSize != -1 ? xPrefferedSize : getLayout()->getRect(this->ptr<CListView>())->w / gui->getTileSize();
 }
 
+//TODO: sizes should be calculated dynamically based on preferences
 int CListView::getSizeY(std::shared_ptr<CGui> gui) {
-    return getLayout()->getRect(this->ptr<CListView>())->h / gui->getTileSize();
+    return yPrefferedSize != -1 ? yPrefferedSize : getLayout()->getRect(this->ptr<CListView>())->h / gui->getTileSize();
 }
 
 CListView::collection_pointer CListView::invokeCollection(std::shared_ptr<CGui> gui) {
@@ -134,14 +136,18 @@ CListView::getProxiedObjects(std::shared_ptr<CGui> gui, int x, int y) {
     } else {
         auto indexedCollection = calculateIndices(gui);
         int itemIndex = shiftIndex(gui, i);
-        return_val.insert(CAnimationProvider::getAnimation(gui->getGame(), "images/item"));//TODO: cache
+        std::shared_ptr<CAnimation> itemBox = CAnimationProvider::getAnimation(gui->getGame(), "images/item");
+        itemBox->setPriority(1);
+        return_val.insert(itemBox);//TODO: cache
         if (vstd::ctn(indexedCollection, itemIndex) && indexedCollection[itemIndex]) {
-            return_val.insert(indexedCollection[itemIndex]->getGraphicsObject());
+            std::shared_ptr<CGameGraphicsObject> objectGraphic = indexedCollection[itemIndex]->getGraphicsObject();
+            objectGraphic->setPriority(2);
+            return_val.insert(objectGraphic);
         }
         if (invokeSelect(gui, itemIndex, indexedCollection[itemIndex])) {
             auto selectionBox = gui->getGame()->getObjectHandler()->createObject<CSelectionBox>(gui->getGame());
             selectionBox->setThickness(5);
-            selectionBox->setPriority(5);
+            selectionBox->setPriority(3);
             return_val.insert(selectionBox);//TODO: cache
         }
     }
@@ -208,6 +214,22 @@ void CListView::initialize() {
                     }
     );
 
+}
+
+int CListView::getXPrefferedSize() const {
+    return xPrefferedSize;
+}
+
+void CListView::setXPrefferedSize(int xPrefferedSize) {
+    CListView::xPrefferedSize = xPrefferedSize;
+}
+
+int CListView::getYPrefferedSize() const {
+    return yPrefferedSize;
+}
+
+void CListView::setYPrefferedSize(int yPrefferedSize) {
+    CListView::yPrefferedSize = yPrefferedSize;
 }
 
 

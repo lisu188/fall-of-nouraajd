@@ -22,7 +22,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "gui/CTextManager.h"
 
 CListView::collection_pointer CGameTradePanel::inventoryCollection(std::shared_ptr<CGui> gui) {
-    return std::make_shared<CListView::collection_type>( vstd::cast<CListView::collection_type>(
+    return std::make_shared<CListView::collection_type>(vstd::cast<CListView::collection_type>(
             gui->getGame()->getMap()->getPlayer()->getItems()));
 }
 
@@ -37,7 +37,7 @@ bool CGameTradePanel::inventorySelect(std::shared_ptr<CGui> gui, int index, std:
 }
 
 CListView::collection_pointer CGameTradePanel::marketCollection(std::shared_ptr<CGui> gui) {
-    return std::make_shared<CListView::collection_type>( vstd::cast<CListView::collection_type>(
+    return std::make_shared<CListView::collection_type>(vstd::cast<CListView::collection_type>(
             market->getItems()));
 }
 
@@ -53,6 +53,7 @@ bool CGameTradePanel::marketSelect(std::shared_ptr<CGui> gui, int index, std::sh
 
 void CGameTradePanel::renderObject(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> rect, int i) {
     CGamePanel::renderObject(gui, rect, i);
+    //TODO: move this to CWidgets
     gui->getTextManager()->drawTextCentered(vstd::str(getTotalBuyCost()), rect->x + 200, rect->y, 200, 200);
     gui->getTextManager()->drawTextCentered(vstd::str(getTotalSellCost()), rect->x + 400, rect->y, 200, 200);
 }

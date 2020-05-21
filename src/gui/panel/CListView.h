@@ -30,6 +30,8 @@ V_META(CListView, CProxyTargetGraphicsObject,
        V_PROPERTY(CListView, std::string, callback, getCallback, setCallback),
        V_PROPERTY(CListView, std::shared_ptr<CScript>, refreshObject, getRefreshObject, setRefreshObject),
        V_PROPERTY(CListView, std::string, refreshEvent, getRefreshEvent, setRefreshEvent),
+       V_PROPERTY(CListView, int, xPrefferedSize, getXPrefferedSize, setXPrefferedSize),
+       V_PROPERTY(CListView, int, yPrefferedSize, getYPrefferedSize, setYPrefferedSize),
        V_METHOD(CListView, initialize))
 
     std::string collection;
@@ -66,8 +68,11 @@ private:
 
     int shift = 0;
 
-public:
+    int xPrefferedSize = -1;
 
+    int yPrefferedSize = -1;
+
+public:
     CListView();
 
     void renderObject(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> loc, int frameTime) override;
@@ -92,6 +97,14 @@ public:
     std::string getSelect();
 
     void setSelect(std::string select);
+
+    int getXPrefferedSize() const;
+
+    void setXPrefferedSize(int xPrefferedSize);
+
+    int getYPrefferedSize() const;
+
+    void setYPrefferedSize(int yPrefferedSize);
 
 private:
     CListView::collection_pointer invokeCollection(std::shared_ptr<CGui> gui);

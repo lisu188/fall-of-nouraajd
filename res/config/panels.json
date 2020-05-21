@@ -182,7 +182,7 @@
               "class": "CPercentLayout",
               "properties": {
                 "h": 100,
-                "w": 40,
+                "w": 25,
                 "x": 0,
                 "y": 0
               }
@@ -201,13 +201,15 @@
                 "script": "self.getGui().getGame().getMap().getPlayer()"
               }
             },
+            "xPrefferedSize": 4,
+            "yPrefferedSize": 2,
             "refreshEvent": "equippedChanged",
             "layout": {
               "class": "CPercentLayout",
               "properties": {
                 "h": 100,
-                "w": 40,
-                "x": 60,
+                "w": 25,
+                "x": 75,
                 "y": 0
               }
             }
@@ -268,7 +270,7 @@
               "class": "CPercentLayout",
               "properties": {
                 "h": 100,
-                "w": 40,
+                "w": 25,
                 "x": 0,
                 "y": 0
               }
@@ -292,8 +294,8 @@
               "class": "CPercentLayout",
               "properties": {
                 "h": 100,
-                "w": 40,
-                "x": 60,
+                "w": 25,
+                "x": 75,
                 "y": 0
               }
             }
