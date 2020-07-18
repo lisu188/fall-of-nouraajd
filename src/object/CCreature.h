@@ -242,7 +242,7 @@ public:
 
     virtual void afterMove();
 
-    virtual std::string getTooltip();
+     std::string getTooltip();
 
     void addGold(int gold);
 

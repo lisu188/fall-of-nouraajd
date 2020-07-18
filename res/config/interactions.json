@@ -6,7 +6,8 @@
       "effect": {
         "ref": "AbyssalShadowsEffect"
       },
-      "manaCost": 15
+      "manaCost": 15,
+      "tooltip": "Abyssal Shadows"
     }
   },
   "ArmorOfEndlessWinter": {
@@ -16,6 +17,7 @@
       "effect": {
         "ref": "ArmorOfEndlessWinterEffect"
       },
+      "tooltip": "Armor of Endless Winter",
       "manaCost": 60
     }
   },
@@ -33,6 +35,7 @@
       "effect": {
         "ref": "Stun"
       },
+      "tooltip": "Stun",
       "manaCost": 40
     }
   },
@@ -43,6 +46,7 @@
       "effect": {
         "ref": "BarrierEffect"
       },
+      "tooltip": "Barrier",
       "manaCost": 17
     }
   },
@@ -51,6 +55,7 @@
     "properties": {
       "animation": "images/interactions/bloodthirst",
       "manaCost": 35,
+      "tooltip": "Blood Thirst",
       "tags": [
         "heal"
       ]
@@ -63,6 +68,7 @@
       "effect": {
         "ref": "BloodlashEffect"
       },
+      "tooltip": "Bloodlash",
       "manaCost": 30
     }
   },
@@ -70,7 +76,8 @@
     "class": "ChaosBlast",
     "properties": {
       "animation": "images/interactions/chaosblast",
-      "manaCost": 150
+      "manaCost": 150,
+      "tooltip": "Chaos Blast"
     }
   },
   "Chloroform": {
@@ -80,28 +87,32 @@
       "effect": {
         "ref": "ChloroformEffect"
       },
-      "manaCost": 25
+      "manaCost": 25,
+      "tooltip": "Chloroform"
     }
   },
   "DeathStrike": {
     "class": "DeathStrike",
     "properties": {
       "animation": "images/interactions/deathstrike",
-      "manaCost": 45
+      "manaCost": 45,
+      "tooltip": "Death Strike"
     }
   },
   "Devour": {
     "class": "Devour",
     "properties": {
       "animation": "images/interactions/devour",
-      "manaCost": 75
+      "manaCost": 75,
+      "tooltip": "Devour"
     }
   },
   "DoubleAttack": {
     "class": "DoubleAttack",
     "properties": {
       "animation": "images/interactions/doubleattack",
-      "manaCost": 50
+      "manaCost": 50,
+      "tooltip": "Double Attack"
     }
   },
   "ElemStaff": {
@@ -115,6 +126,7 @@
       "effect": {
         "ref": "EndlessPainEffect"
       },
+      "tooltip": "Endless Pain",
       "manaCost": 25
     }
   },
@@ -122,7 +134,8 @@
     "class": "FrostBolt",
     "properties": {
       "animation": "images/interactions/frostbolt",
-      "manaCost": 20
+      "manaCost": 20,
+      "tooltip": "Frost Bolt"
     }
   },
   "LethalPoison": {
@@ -132,6 +145,7 @@
       "effect": {
         "ref": "LethalPoisonEffect"
       },
+      "tooltip": "Lethal Poison",
       "manaCost": 20
     }
   },
@@ -140,6 +154,7 @@
     "properties": {
       "animation": "images/interactions/magicmissile",
       "manaCost": 5,
+      "tooltip": "Magic Missile",
       "tooltip": "Magic Missile"
     }
   },
@@ -150,6 +165,7 @@
       "effect": {
         "ref": "MutilationEffect"
       },
+      "tooltip": "Mutilation",
       "manaCost": 15
     }
   },
@@ -160,12 +176,14 @@
       "effect": {
         "ref": "AbyssalShadowsEffect"
       },
+      "tooltip": "Shadow Bolt",
       "manaCost": 45
     }
   },
   "SneakAttack": {
     "class": "SneakAttack",
     "properties": {
+      "tooltip": "Sneak Attack",
       "animation": "images/interactions/sneakattack",
       "manaCost": 15
     }
@@ -173,6 +191,7 @@
   "Strike": {
     "class": "Strike",
     "properties": {
+      "tooltip": "Strike",
       "animation": "images/interactions/strike",
       "manaCost": 25
     }
@@ -180,6 +199,7 @@
   "Stunner": {
     "class": "Stunner",
     "properties": {
+      "tooltip": "Stunner",
       "animation": "images/interactions/stun",
       "effect": {
         "ref": "Stun"
