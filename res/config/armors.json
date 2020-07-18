@@ -2,6 +2,7 @@
   "ChestPlateOfTheNorth": {
     "class": "CArmor",
     "properties": {
+      "tooltip": "Chest Plate of the North",
       "animation": "images/items/armors/chestplateofnorth",
       "bonus": {
         "class": "Stats",
@@ -20,6 +21,7 @@
   "LeatherArmor": {
     "class": "CArmor",
     "properties": {
+      "tooltip": "Leather Armor",
       "animation": "images/items/armors/leatherarmor",
       "bonus": {
         "class": "Stats",
@@ -36,6 +38,7 @@
   "PlateArmor": {
     "class": "CArmor",
     "properties": {
+      "tooltip": "Plate Armor",
       "animation": "images/items/armors/platearmor",
       "bonus": {
         "class": "Stats",
@@ -51,6 +54,7 @@
   "Robe": {
     "class": "CArmor",
     "properties": {
+      "tooltip": "Robe",
       "animation": "images/items/armors/robe",
       "bonus": {
         "class": "Stats",

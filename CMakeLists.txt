@@ -118,6 +118,7 @@ configure_file(res/images/panel.png images/panel.png COPYONLY)
 configure_file(res/images/arrows/left.png images/arrows/left.png COPYONLY)
 configure_file(res/images/arrows/right.png images/arrows/right.png COPYONLY)
 configure_file(res/images/item.png images/item.png COPYONLY)
+configure_file(res/images/tooltip.png images/tooltip.png COPYONLY)
 
 configure_file(res/images/monsters/pritzmage/time.json images/monsters/pritzmage/time.json COPYONLY)
 configure_file(res/images/monsters/pritzmage/2.png images/monsters/pritzmage/2.png COPYONLY)
