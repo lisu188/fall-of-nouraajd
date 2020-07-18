@@ -122,7 +122,7 @@ public:
 
     void setAnimation(std::string animation);
 
-    std::string getTooltip();
+    virtual std::string getTooltip();
 
     void setTooltip(std::string tooltip);
 

@@ -111,19 +111,24 @@ std::string CGuiHandler::showSelection(std::shared_ptr<CListString> list) {
 
 void CGuiHandler::showTooltip(std::string text, int x,
                               int y) {
+    if (text.length() > 0) {
+        auto layout = _game.lock()->createObject<CSimpleLayout>();
 
-    auto layout = _game.lock()->createObject<CSimpleLayout>();
+        auto textureSize = _game.lock()->getGui()->getTextManager()->getTextureSize(text);
 
-    auto textureSize = _game.lock()->getGui()->getTextManager()->getTextureSize(text);
-    layout->setWidth(textureSize.first);//TODO: layout should accept functions;
-    layout->setHeight(textureSize.second);//TODO: layout should accept functions;
+        int width = vstd::percent(textureSize.first, 125);
+        int height = vstd::percent(textureSize.second, 125);
 
-    layout->setX(x - textureSize.first / 2);
-    layout->setY(y - textureSize.second / 2);
+        layout->setWidth(width);//TODO: layout should accept functions;
+        layout->setHeight(height);//TODO: layout should accept functions;
 
-    auto tooltip = _game.lock()->createObject<CTooltip>();
-    tooltip->setText(text);
-    tooltip->setLayout(layout);
-    _game.lock()->getGui()->pushChild(tooltip);
+        layout->setX(x - width / 2);//TODO: extract to util
+        layout->setY(y - height / 2);//TODO: extract to util
+
+        auto tooltip = _game.lock()->createObject<CTooltip>();
+        tooltip->setText(text);
+        tooltip->setLayout(layout);
+        _game.lock()->getGui()->pushChild(tooltip);
+    }
 }
 

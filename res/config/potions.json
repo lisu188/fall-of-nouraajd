@@ -5,6 +5,7 @@
       "animation": "images/items/potions/life",
       "power": 5,
       "singleUse": true,
+      "tooltip": "Full Life Potion",
       "tags": [
         "heal"
       ]
@@ -16,6 +17,7 @@
       "animation": "images/items/potions/mana",
       "power": 5,
       "singleUse": true,
+      "tooltip": "Full Mana Potion",
       "tags": [
         "mana"
       ]
@@ -26,6 +28,7 @@
     "properties": {
       "animation": "images/items/potions/life",
       "power": 3,
+      "tooltip": "Greater Life Potion",
       "singleUse": true,
       "tags": [
         "heal"
@@ -37,6 +40,7 @@
     "properties": {
       "animation": "images/items/potions/mana",
       "power": 3,
+      "tooltip": "Greater Mana Potion",
       "singleUse": true,
       "tags": [
         "mana"
@@ -47,6 +51,7 @@
     "class": "LifePotion",
     "properties": {
       "animation": "images/items/potions/life",
+      "tooltip": "Lesser Life Potion",
       "power": 1,
       "singleUse": true,
       "tags": [
@@ -57,6 +62,7 @@
   "LesserManaPotion": {
     "class": "ManaPotion",
     "properties": {
+      "tooltip": "Lesser Mana Potion",
       "animation": "images/items/potions/mana",
       "power": 1,
       "singleUse": true,
@@ -68,6 +74,7 @@
   "LifePotion": {
     "class": "LifePotion",
     "properties": {
+      "tooltip": "Life Potion",
       "animation": "images/items/potions/life",
       "power": 2,
       "singleUse": true,
@@ -79,6 +86,7 @@
   "ManaPotion": {
     "class": "ManaPotion",
     "properties": {
+      "tooltip": "Mana Potion",
       "animation": "images/items/potions/mana",
       "power": 3,
       "singleUse": true,
@@ -90,6 +98,7 @@
   "MaxLifePotion": {
     "class": "LifePotion",
     "properties": {
+      "tooltip": "Max Life Potion",
       "animation": "images/items/potions/life",
       "power": 4,
       "singleUse": true,
@@ -101,6 +110,7 @@
   "MaxManaPotion": {
     "class": "ManaPotion",
     "properties": {
+      "tooltip": "Max Mana Potion",
       "animation": "images/items/potions/mana",
       "power": 4,
       "singleUse": true,
