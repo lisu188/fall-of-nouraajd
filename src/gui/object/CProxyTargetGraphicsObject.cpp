@@ -39,7 +39,7 @@ void CProxyTargetGraphicsObject::refresh() {
         for (int x = 0; x < getSizeX(gui); x++) {
             for (int y = 0; y < getSizeY(gui); y++) {
                 std::shared_ptr<CProxyGraphicsObject> nh = std::make_shared<CProxyGraphicsObject>(x, y);
-                nh->setLayout(std::make_shared<CProxyGraphicsLayout>());
+                nh->setLayout(gui->getGame()->createObject<CLayout>(proxyLayout));
                 proxyObjects.insert(nh);
                 addChild(nh);
             }
@@ -48,7 +48,7 @@ void CProxyTargetGraphicsObject::refresh() {
     }
 }
 
-void CProxyTargetGraphicsObject::refreshAll()  {
+void CProxyTargetGraphicsObject::refreshAll() {
     for (auto object:proxyObjects) {
         object->refresh();
     }
@@ -78,4 +78,12 @@ int CProxyTargetGraphicsObject::getSizeY(std::shared_ptr<CGui> gui) {
 std::set<std::shared_ptr<CGameGraphicsObject>>
 CProxyTargetGraphicsObject::getProxiedObjects(std::shared_ptr<CGui> gui, int x, int y) {
     return std::set<std::shared_ptr<CGameGraphicsObject>>();
+}
+
+std::string CProxyTargetGraphicsObject::getProxyLayout() {
+    return proxyLayout;
+}
+
+void CProxyTargetGraphicsObject::setProxyLayout(std::string _layout) {
+    proxyLayout = _layout;
 }

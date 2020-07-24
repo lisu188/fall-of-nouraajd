@@ -142,6 +142,7 @@ private:
             h = 0;
 };
 
+//TODO: remove
 class CProxyGraphicsLayout : public CLayout {
 V_META(CProxyGraphicsLayout, CLayout, vstd::meta::empty())
 public:

@@ -28,7 +28,8 @@ V_META(CGameFightPanel, CGamePanel,
        V_METHOD(CGameFightPanel, interactionsSelect, bool, std::shared_ptr<CGui>, int, std::shared_ptr<CGameObject>),
        V_METHOD(CGameFightPanel, itemsCollection, CListView::collection_pointer, std::shared_ptr<CGui>),
        V_METHOD(CGameFightPanel, itemsCallback, void, std::shared_ptr<CGui>, int, std::shared_ptr<CGameObject>),
-       V_METHOD(CGameFightPanel, itemsSelect, bool, std::shared_ptr<CGui>, int, std::shared_ptr<CGameObject>))
+       V_METHOD(CGameFightPanel, itemsSelect, bool, std::shared_ptr<CGui>, int, std::shared_ptr<CGameObject>),
+       V_METHOD(CGameFightPanel, getEnemy, std::shared_ptr<CCreature>))
 
 public:
     CGameFightPanel();
