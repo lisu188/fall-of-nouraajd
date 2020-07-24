@@ -24,7 +24,8 @@ class CProxyGraphicsObject;
 class CProxyTargetGraphicsObject : public CGameGraphicsObject {
 V_META(CProxyTargetGraphicsObject, CGameGraphicsObject,
        V_METHOD(CProxyTargetGraphicsObject, refresh),
-       V_METHOD(CProxyTargetGraphicsObject, refreshAll))
+       V_METHOD(CProxyTargetGraphicsObject, refreshAll),
+       V_PROPERTY(CProxyTargetGraphicsObject, std::string, proxyLayout, getProxyLayout, setProxyLayout))
 public:
     void render(std::shared_ptr<CGui> reneder, int frameTime) override;
 
@@ -41,8 +42,12 @@ public:
 
 private:
     std::set<std::shared_ptr<CProxyGraphicsObject>> proxyObjects;
-
+    std::string proxyLayout = "CProxyGraphicsLayout";
 public:
+    std::string getProxyLayout();
+
+    void setProxyLayout(std::string _layout);
+
     void refresh();
 
     void refreshObject(int x, int y);
