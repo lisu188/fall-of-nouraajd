@@ -34,6 +34,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "gui/CLayout.h"
 #include "gui/object/CProxyGraphicsObject.h"
 #include "gui/CTooltip.h"
+#include "gui/panel/CCreatureView.h"
 
 extern void add_member(std::shared_ptr<json> object, std::string key, std::string value);
 
@@ -68,6 +69,7 @@ namespace {
                     {
                         CTypes::register_type<CMapGraphicsObject, CProxyTargetGraphicsObject, CGameGraphicsObject, CGameObject>();
                         CTypes::register_type<CListView, CProxyTargetGraphicsObject, CGameGraphicsObject, CGameObject>();
+                        CTypes::register_type<CCreatureView, CProxyTargetGraphicsObject, CGameGraphicsObject, CGameObject>();
                     }
                     CTypes::register_type<CGamePanel, CGameGraphicsObject, CGameObject>();
                     {
@@ -95,6 +97,7 @@ namespace {
                     CTypes::register_type<CAnchoredLayout, CLayout, CGameObject>();
                     CTypes::register_type<CCenteredLayout, CAnchoredLayout, CLayout, CGameObject>();
                     CTypes::register_type<CParentLayout, CAnchoredLayout, CLayout, CGameObject>();
+                    CTypes::register_type<CProxyGraphicsLayout, CLayout, CGameObject>();
                 }
             }
         }

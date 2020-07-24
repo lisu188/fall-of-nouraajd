@@ -92,6 +92,22 @@
     "properties": {
       "children": [
         {
+          "class": "CCreatureView",
+          "properties": {
+            "creature": "getEnemy",
+            "proxyLayout": "CParentLayout",
+            "layout": {
+              "class": "CPercentLayout",
+              "properties": {
+                "h": 25,
+                "w": 25,
+                "x": 25,
+                "y": 25
+              }
+            }
+          }
+        },
+        {
           "class": "CListView",
           "properties": {
             "collection": "interactionsCollection",
