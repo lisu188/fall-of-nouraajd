@@ -362,7 +362,9 @@ void CMap::objectMoved(std::shared_ptr<CMapObject> object, Coords _old, Coords _
 
     mapObjectsCache.insert(std::make_pair(_new, object->getName()));
 
-    signal("objectChanged", object->getCoords());
+    //TODO: check if it`s correct
+    signal("objectChanged", _old);
+    signal("objectChanged", _new);
 }
 
 std::set<std::shared_ptr<CMapObject>> CMap::getObjectsAtCoords(Coords coords) {
