@@ -94,8 +94,10 @@ std::shared_ptr<SDL_Rect> CGameGraphicsObject::getRect() {
 }
 
 void CGameGraphicsObject::setParent(std::shared_ptr<CGameGraphicsObject> _parent) {
-    this->parent = _parent;
-    _parent->addChild(this->ptr<CGameGraphicsObject>());
+    if (parent.lock() != _parent) {
+        this->parent = _parent;
+        _parent->addChild(this->ptr<CGameGraphicsObject>());
+    }
 }
 
 std::shared_ptr<CGameGraphicsObject> CGameGraphicsObject::getParent() {
