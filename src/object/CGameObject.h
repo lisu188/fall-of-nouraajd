@@ -139,7 +139,9 @@ public:
             auto ob = object.lock();
             if (ob) {
                 if (signal == _signal) {
-                    ob->meta()->invoke_method<void, CGameObject, Args...>(slot, ob, args...);
+                    vstd::later([=]() {
+                        ob->meta()->invoke_method<void, CGameObject, Args...>(slot, ob, args...);
+                    });
                 }
                 it++;
             } else {
