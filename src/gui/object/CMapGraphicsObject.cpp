@@ -32,8 +32,9 @@ CMapGraphicsObject::CMapGraphicsObject() {
 
 std::set<std::shared_ptr<CGameGraphicsObject>>
 CMapGraphicsObject::getProxiedObjects(std::shared_ptr<CGui> gui, int x, int y) {
-    std::set<std::shared_ptr<CGameGraphicsObject>> return_val;
-    if (std::shared_ptr<CMap> map = gui->getGame()->getMap()) {//TODO:
+    return vstd::with<std::set<std::shared_ptr<CGameGraphicsObject>>>(gui->getGame()->getMap(), [&](auto map) {
+        std::set<std::shared_ptr<CGameGraphicsObject>> return_val;
+
         auto actualCoords = guiToMap(Coords(x, y, gui->getGame()->getMap()->getPlayer()->getCoords().z));
 
         std::shared_ptr<CTile> tile = map->getTile(actualCoords.x, actualCoords.y, actualCoords.z);
@@ -44,8 +45,9 @@ CMapGraphicsObject::getProxiedObjects(std::shared_ptr<CGui> gui, int x, int y) {
         for (auto ob: map->getObjectsAtCoords(actualCoords)) {
             return_val.insert(ob->getGraphicsObject());
         }
-    }
-    return return_val;
+        return return_val;
+    });
+
 }
 
 void CMapGraphicsObject::initialize() {

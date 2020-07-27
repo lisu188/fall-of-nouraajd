@@ -15,6 +15,7 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
+#include "core/CScript.h"
 #include "object/CPlayer.h"
 #include "CStatsGraphicsObject.h"
 #include "gui/CGui.h"
@@ -47,19 +48,25 @@ CStatsGraphicsUtil::drawStats(std::shared_ptr<CGui> gui, std::shared_ptr<CCreatu
 }
 
 void CStatsGraphicsObject::renderObject(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> rect, int frameTime) {
-    if (auto map = gui->getGame()->getMap()) {
-        if (auto player = map->getPlayer()) {
-            CStatsGraphicsUtil::drawStats(gui, player,
-                                          rect->x, rect->y,
-                                          rect->w, rect->h,
-                                          true, true);
-        }
+    if (auto cret = creature->invoke(gui->getGame(), this->ptr())) {
+        CStatsGraphicsUtil::drawStats(gui, vstd::cast<CCreature>(cret),
+                                      rect->x, rect->y,
+                                      rect->w, rect->h,
+                                      true, true);
     }
 }
 
 
 CStatsGraphicsObject::CStatsGraphicsObject() {
 
+}
+
+std::shared_ptr<CScript> CStatsGraphicsObject::getCreature() {
+    return creature;
+}
+
+void CStatsGraphicsObject::setCreature(std::shared_ptr<CScript> _creature) {
+    creature = _creature;
 }
 
 void

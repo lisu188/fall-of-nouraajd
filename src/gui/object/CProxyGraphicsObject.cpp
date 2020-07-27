@@ -36,9 +36,11 @@ void CProxyGraphicsObject::render(std::shared_ptr<CGui> gui, int frameTime) {
 }
 
 void CProxyGraphicsObject::refresh() {
-    std::set<std::shared_ptr<CGameGraphicsObject>> objects = vstd::cast<CProxyTargetGraphicsObject>(
-            getParent())->getProxiedObjects(getGui(), x, y);
-    setChildren(objects);
+    vstd::with<void>(getGui(), [=](auto gui) {
+        std::set<std::shared_ptr<CGameGraphicsObject>> objects = vstd::cast<CProxyTargetGraphicsObject>(
+                getParent())->getProxiedObjects(gui, x, y);
+        setChildren(objects);
+    });
 }
 
 bool CProxyGraphicsObject::event(std::shared_ptr<CGui> gui, SDL_Event *event) {

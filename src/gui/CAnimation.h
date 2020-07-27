@@ -90,3 +90,19 @@ public:
 private:
     int thickness;
 };
+
+class CCustomAnimation : public CStaticAnimation {
+V_META(CCustomAnimation, CStaticAnimation, vstd::meta::empty())
+
+public:
+    bool mouseEvent(std::shared_ptr<CGui> gui, SDL_EventType type, int button, int x, int y) override;
+
+    template<typename F>
+    auto withCallback(F f) {
+        callback = f;
+        return this->ptr<CCustomAnimation>();
+    }
+
+private:
+    std::function<bool(std::shared_ptr<CGui>, SDL_EventType, int, int, int)> callback;
+};
