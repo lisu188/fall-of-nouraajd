@@ -46,8 +46,6 @@ private:
     std::weak_ptr<CItem> selectedItem;
     std::weak_ptr<CInteraction> finalSelected;
 
-    void drawEnemy(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> pRect, int frameTime);
-
 public:
     CListView::collection_pointer interactionsCollection(std::shared_ptr<CGui> gui);
 

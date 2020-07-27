@@ -19,6 +19,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "CGameGraphicsObject.h"
 
+class CScript;
+
 class CCreature;
 
 //TODO: move from here
@@ -37,9 +39,17 @@ private:
 };
 
 class CStatsGraphicsObject : public CGameGraphicsObject {
-V_META(CStatsGraphicsObject, CGameGraphicsObject, vstd::meta::empty())
+V_META(CStatsGraphicsObject, CGameGraphicsObject,
+       V_PROPERTY(CStatsGraphicsObject, std::shared_ptr<CScript>, creature, getCreature, setCreature))
 public:
     CStatsGraphicsObject();
 
     void renderObject(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> rect, int frameTime) override;
+
+    std::shared_ptr<CScript> getCreature();
+
+    void setCreature(std::shared_ptr<CScript> _creature);
+
+private:
+    std::shared_ptr<CScript> creature;
 };

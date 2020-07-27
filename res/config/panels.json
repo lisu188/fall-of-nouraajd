@@ -92,6 +92,26 @@
     "properties": {
       "children": [
         {
+          "class": "CStatsGraphicsObject",
+          "properties": {
+            "creature": {
+              "class": "CScript",
+              "properties": {
+                "script": "self.getParent().getEnemy()"
+              }
+            },
+            "layout": {
+              "class": "CAnchoredLayout",
+              "properties": {
+                "height": 100,
+                "horizontal": "LEFT",
+                "vertical": "UP",
+                "width": 200
+              }
+            }
+          }
+        },
+        {
           "class": "CCreatureView",
           "properties": {
             "creature": "getEnemy",
