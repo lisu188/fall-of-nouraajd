@@ -30,22 +30,24 @@ void CProxyTargetGraphicsObject::render(std::shared_ptr<CGui> gui, int frameTime
 }
 
 void CProxyTargetGraphicsObject::refresh() {
-    std::shared_ptr<CGui> gui = getGui();
-    if (proxyObjects.size() != (unsigned int) getSizeX(gui) * (unsigned int) getSizeY(gui)) {
-        for (auto val:proxyObjects) {
-            removeChild(val);
-        }
-        proxyObjects.clear();
-        for (int x = 0; x < getSizeX(gui); x++) {
-            for (int y = 0; y < getSizeY(gui); y++) {
-                std::shared_ptr<CProxyGraphicsObject> nh = std::make_shared<CProxyGraphicsObject>(x, y);
-                nh->setLayout(gui->getGame()->createObject<CLayout>(proxyLayout));
-                proxyObjects.insert(nh);
-                addChild(nh);
+    vstd::with<void>(getGui(), [this](auto gui) {
+        if (proxyObjects.size() != (unsigned int) getSizeX(gui) * (unsigned int) getSizeY(gui)) {
+            for (auto val:proxyObjects) {
+                removeChild(val);
             }
+            proxyObjects.clear();
+            for (int x = 0; x < getSizeX(gui); x++) {
+                for (int y = 0; y < getSizeY(gui); y++) {
+                    std::shared_ptr<CProxyGraphicsObject> nh = std::make_shared<CProxyGraphicsObject>(x, y);
+                    nh->setLayout(gui->getGame()->template createObject<CLayout>(proxyLayout));
+                    proxyObjects.insert(nh);
+                    addChild(nh);
+                }
+            }
+            refreshAll();
         }
-        refreshAll();
-    }
+    });
+
 }
 
 void CProxyTargetGraphicsObject::refreshAll() {

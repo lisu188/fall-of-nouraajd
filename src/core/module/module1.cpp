@@ -18,6 +18,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CGame.h"
 #include "core/CMap.h"
 #include "gui/CGui.h"
+#include "gui/object/CStatsGraphicsObject.h"
 
 using namespace boost::python;
 
@@ -68,6 +69,9 @@ void initModule1() {
             .def("getParent", &CGameGraphicsObject::getParent);
     class_<CGui, bases<CGameGraphicsObject>, boost::noncopyable, std::shared_ptr<CGui>>("CGui", no_init)
             .def("getGame", &CGui::getGame);
+
+    class_<CStatsGraphicsObject, bases<CGameGraphicsObject>, boost::noncopyable, std::shared_ptr<CStatsGraphicsObject>>(
+            "CGameGraphicsObject", no_init);
 
     bool (CMap::*canStep)(Coords) =&CMap::canStep;
 

@@ -87,6 +87,7 @@ namespace {
                         CTypes::register_type<CStaticAnimation, CAnimation, CGameGraphicsObject, CGameObject>();
                         CTypes::register_type<CDynamicAnimation, CAnimation, CGameGraphicsObject, CGameObject>();
                         CTypes::register_type<CSelectionBox, CAnimation, CGameGraphicsObject, CGameObject>();
+                        CTypes::register_type<CCustomAnimation, CStaticAnimation, CAnimation, CGameGraphicsObject, CGameObject>();
                     }
                     CTypes::register_type<CTooltip, CGameGraphicsObject, CGameObject>();
                 }

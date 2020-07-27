@@ -58,6 +58,12 @@
   "statsGraphics": {
     "class": "CStatsGraphicsObject",
     "properties": {
+      "creature": {
+        "class": "CScript",
+        "properties": {
+          "script": "self.getGui().getGame().getMap().getPlayer()"
+        }
+      },
       "layout": {
         "class": "CAnchoredLayout",
         "properties": {

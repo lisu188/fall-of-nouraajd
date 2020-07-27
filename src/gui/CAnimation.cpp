@@ -148,3 +148,8 @@ void CSelectionBox::renderObject(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_
     SDL_RenderFillRect(gui->getRenderer(), &tmp3);
     SDL_RenderFillRect(gui->getRenderer(), &tmp4);
 }
+
+
+bool CCustomAnimation::mouseEvent(std::shared_ptr<CGui> gui, SDL_EventType type, int button, int x, int y) {
+    return callback(gui, type, button, x, y);
+}

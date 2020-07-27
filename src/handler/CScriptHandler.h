@@ -24,11 +24,11 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 template<typename Ret, typename... Args>
 struct wrap {
     static std::function<Ret(Args...)> call(boost::python::object func) {
-        return [func](Args... args) {
+        return [func](Args... args) -> Ret {
             PY_SAFE_RET_VAL (
                     boost::python::object ret = func(args ...);
                     boost::python::incref(ret.ptr());
-                    return boost::python::extract<Ret>(ret);, boost::python::extract<Ret>(nullptr))
+                    return boost::python::extract<Ret>(ret);, Ret())
         };
     }
 };
