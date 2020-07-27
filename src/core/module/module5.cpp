@@ -36,7 +36,8 @@ void initModule5() {
             .def("getMarket", &CGameTradePanel::getMarket);
 
     class_<CGameFightPanel, bases<CGamePanel>, boost::noncopyable, std::shared_ptr<CGameFightPanel>>("CGameFightPanel",
-                                                                                                     no_init);
+                                                                                                     no_init)
+            .def("getEnemy", &CGameFightPanel::getEnemy);
 
     class_<CGameCharacterPanel, bases<CGamePanel>, boost::noncopyable, std::shared_ptr<CGameCharacterPanel>>(
             "CGameCharacterPanel",

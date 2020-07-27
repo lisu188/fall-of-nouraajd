@@ -93,15 +93,3 @@ std::shared_ptr<CCreature> CGameFightPanel::getEnemy() {
 void CGameFightPanel::setEnemy(std::shared_ptr<CCreature> en) {
     enemy = en;
 }
-
-void CGameFightPanel::drawEnemy(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> pRect, int frameTime) {
-//    int size = gui->getTileSize() * 4;
-//    std::shared_ptr<SDL_Rect> loc = RECT(
-//            pRect->x + (getWidth() / 2 - size / 2),
-//            pRect->y + ((getHeight() - gui->getTileSize()) / 2 - size / 2),
-//            size,
-//            size);
-//    enemy.lock()->getGraphicsObject()->renderObject(gui, loc, frameTime);
-//
-//    CStatsGraphicsUtil::drawStats(gui, enemy.lock(), loc->x, loc->y + loc->h, loc->w, loc->h / 4.0, false, false);
-}

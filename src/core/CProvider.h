@@ -18,6 +18,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #pragma once
 
 #include "core/CGlobal.h"
+#include "gui/CAnimation.h"
 
 struct CResType {
     const static std::string CONFIG;
@@ -70,7 +71,13 @@ private:
 
 class CAnimationProvider {
 public:
-    static std::shared_ptr<CAnimation> getAnimation(std::shared_ptr<CGame> game, std::shared_ptr<CGameObject> object);
+    static std::shared_ptr<CAnimation>
+    getAnimation(std::shared_ptr<CGame> game, std::shared_ptr<CGameObject> object, bool custom = false);
 
-    static std::shared_ptr<CAnimation> getAnimation(std::shared_ptr<CGame> game, std::string path);
+    static std::shared_ptr<CAnimation> getAnimation(std::shared_ptr<CGame> game, std::string path, bool custom = false);
+
+    template<typename F>
+    static std::shared_ptr<CAnimation> getCustomAnimation(std::shared_ptr<CGame> game, std::string path, F f) {
+        return vstd::cast<CCustomAnimation>(getAnimation(game, path, true))->withCallback(f);
+    }
 };

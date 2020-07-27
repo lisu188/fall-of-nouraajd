@@ -133,6 +133,8 @@ private:
 
 //TODO: cache method calls // note to self, seems like no performance impact, even in debug
     bool isOversized(std::shared_ptr<CGui> gui);
+
+    auto getArrowCallback(bool left);
 };
 
 

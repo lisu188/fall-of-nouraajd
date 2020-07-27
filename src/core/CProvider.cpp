@@ -133,13 +133,14 @@ CResourcesProvider::CResourcesProvider() {
 }
 
 std::shared_ptr<CAnimation>
-CAnimationProvider::getAnimation(std::shared_ptr<CGame> game, std::shared_ptr<CGameObject> object) {
+CAnimationProvider::getAnimation(std::shared_ptr<CGame> game, std::shared_ptr<CGameObject> object, bool custom) {
     auto ret = game->createObject<CAnimation>("CAnimation");
     if (boost::filesystem::is_directory(object->getAnimation())) {
         ret = game->createObject<CDynamicAnimation>("CDynamicAnimation");
     } else if (boost::filesystem::is_regular_file(
             CResourcesProvider::getInstance()->getPath(object->getAnimation() + ".png"))) {
-        ret = game->createObject<CStaticAnimation>("CStaticAnimation");
+        ret = custom ? game->createObject<CAnimation>("CCustomAnimation") : game->createObject<CStaticAnimation>(
+                "CStaticAnimation");
     } else {
         //TODO: if the path wasnt empty load text instead
         vstd::logger::warning("Loading empty animation");
@@ -148,8 +149,9 @@ CAnimationProvider::getAnimation(std::shared_ptr<CGame> game, std::shared_ptr<CG
     return ret;
 }
 
-std::shared_ptr<CAnimation> CAnimationProvider::getAnimation(std::shared_ptr<CGame> game, std::string path) {
+std::shared_ptr<CAnimation>
+CAnimationProvider::getAnimation(std::shared_ptr<CGame> game, std::string path, bool custom) {
     std::shared_ptr<CGameObject> object = game->createObject<CGameObject>();
     object->setAnimation(path);
-    return getAnimation(game, object);
+    return getAnimation(game, object, custom);
 }
