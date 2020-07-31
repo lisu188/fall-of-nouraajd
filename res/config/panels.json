@@ -92,37 +92,58 @@
     "properties": {
       "children": [
         {
-          "class": "CStatsGraphicsObject",
+          "class": "CGameGraphicsObject",
           "properties": {
-            "creature": {
-              "class": "CScript",
-              "properties": {
-                "script": "self.getParent().getEnemy()"
+            "children": [
+              {
+                "class": "CStatsGraphicsObject",
+                "properties": {
+                  "creature": {
+                    "class": "CScript",
+                    "properties": {
+                      "script": "self.getParent().getParent().getEnemy()"
+                    }
+                  },
+                  "layout": {
+                    "class": "CAnchoredLayout",
+                    "properties": {
+                      "height": 100,
+                      "horizontal": "PARENT",
+                      "vertical": "DOWN",
+                      "width": 200
+                    }
+                  }
+                }
+              },
+              {
+                "class": "CCreatureView",
+                "properties": {
+                  "creature": {
+                    "class": "CScript",
+                    "properties": {
+                      "script": "self.getParent().getParent().getEnemy()"
+                    }
+                  },
+                  "proxyLayout": "CParentLayout",
+                  "layout": {
+                    "class": "CAnchoredLayout",
+                    "properties": {
+                      "height": 100,
+                      "horizontal": "PARENT",
+                      "vertical": "UP",
+                      "width": 200
+                    }
+                  }
+                }
               }
-            },
+            ],
             "layout": {
-              "class": "CAnchoredLayout",
+              "class": "CSimpleLayout",
               "properties": {
-                "height": 100,
-                "horizontal": "LEFT",
-                "vertical": "UP",
-                "width": 200
-              }
-            }
-          }
-        },
-        {
-          "class": "CCreatureView",
-          "properties": {
-            "creature": "getEnemy",
-            "proxyLayout": "CParentLayout",
-            "layout": {
-              "class": "CPercentLayout",
-              "properties": {
-                "h": 25,
-                "w": 25,
-                "x": 25,
-                "y": 25
+                "height": 200,
+                "width": 200,
+                "x": 300,
+                "y": 0
               }
             }
           }

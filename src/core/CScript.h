@@ -24,6 +24,11 @@ V_META(CScript, CGameObject,
        V_PROPERTY(CScript, std::string, script, getScript, setScript)
 )
 public:
+    template<typename T>
+    std::shared_ptr<T> invoke(std::shared_ptr<CGame> game, std::shared_ptr<CGameObject> self) {
+        return vstd::cast<T>(invoke(game, self));
+    }
+
     std::shared_ptr<CGameObject> invoke(std::shared_ptr<CGame> game, std::shared_ptr<CGameObject> self);
 
     std::string getScript();

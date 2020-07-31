@@ -21,13 +21,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 class CCreatureView : public CProxyTargetGraphicsObject {
 V_META(CCreatureView, CProxyTargetGraphicsObject,
-       V_PROPERTY(CCreatureView, std::string, creature, getCreature, setCreature),
+       V_PROPERTY(CCreatureView, std::shared_ptr<CScript>, creature, getCreature, setCreature),
        V_METHOD(CCreatureView, initialize))
 public:
-    std::string getCreature();
-
-    void setCreature(std::string _creature);
-
     std::set<std::shared_ptr<CGameGraphicsObject>> getProxiedObjects(std::shared_ptr<CGui> gui, int x, int y) override;
 
     int getSizeX(std::shared_ptr<CGui> gui) override;
@@ -36,6 +32,10 @@ public:
 
     void initialize();
 
+    std::shared_ptr<CScript> getCreature();
+
+    void setCreature(std::shared_ptr<CScript> _creature);
+
 private:
-    std::string creature;
+    std::shared_ptr<CScript> creature;
 };

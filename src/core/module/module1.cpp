@@ -15,6 +15,7 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
+#include "gui/panel/CCreatureView.h"
 #include "core/CGame.h"
 #include "core/CMap.h"
 #include "gui/CGui.h"
@@ -72,6 +73,9 @@ void initModule1() {
 
     class_<CStatsGraphicsObject, bases<CGameGraphicsObject>, boost::noncopyable, std::shared_ptr<CStatsGraphicsObject>>(
             "CGameGraphicsObject", no_init);
+
+    class_<CCreatureView, bases<CGameGraphicsObject>, boost::noncopyable, std::shared_ptr<CCreatureView>>(
+            "CCreatureView", no_init);
 
     bool (CMap::*canStep)(Coords) =&CMap::canStep;
 
