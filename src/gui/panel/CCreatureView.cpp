@@ -20,18 +20,18 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "object/CCreature.h"
 #include "gui/CGui.h"
 
-void CCreatureView::setCreature(std::string _creature) {
-    creature = _creature;
+
+std::shared_ptr<CScript> CCreatureView::getCreature() {
+    return creature;
 }
 
-std::string CCreatureView::getCreature() {
-    return creature;
+void CCreatureView::setCreature(std::shared_ptr<CScript> _creature) {
+    creature = _creature;
 }
 
 std::set<std::shared_ptr<CGameGraphicsObject>>
 CCreatureView::getProxiedObjects(std::shared_ptr<CGui> gui, int x, int y) {
-    std::shared_ptr<CGameGraphicsObject> graphicsObject = getParent()->meta()->invoke_method<std::shared_ptr<CCreature>>(
-            creature, getParent())->getGraphicsObject();
+    auto graphicsObject = creature->invoke<CCreature>(gui->getGame(), this->ptr())->getGraphicsObject();
     graphicsObject->setLayout(std::make_shared<CParentLayout>());
     return vstd::set(
             graphicsObject);

@@ -150,6 +150,7 @@ std::string CAnchoredLayout::getVertical() {
     return vertical;
 }
 
+//TODO: parse percent
 std::shared_ptr<SDL_Rect> CAnchoredLayout::getRect(std::shared_ptr<CGameGraphicsObject> object) {
     auto parent = getParentRect(object);
     int x = 0;
