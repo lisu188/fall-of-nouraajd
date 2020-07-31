@@ -81,6 +81,7 @@ public:
             std::function<bool(std::shared_ptr<CGui>, std::shared_ptr<CGameGraphicsObject>, SDL_Event *)> pred,
             std::function<bool(std::shared_ptr<CGui>, std::shared_ptr<CGameGraphicsObject>, SDL_Event *)> func);
 
+    //TODO: add posibility to search for parent with type or name
     std::shared_ptr<CGameGraphicsObject> getParent();
 
     std::shared_ptr<CGameGraphicsObject> getTopParent();
