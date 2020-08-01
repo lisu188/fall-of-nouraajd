@@ -33,21 +33,21 @@ protected:
 
 class CSimpleLayout : public CLayout {
 V_META(CSimpleLayout, CLayout,
-       V_PROPERTY(CSimpleLayout, int, width, getWidth, setWidth),
-       V_PROPERTY(CSimpleLayout, int, height, getHeight, setHeight),
+       V_PROPERTY(CSimpleLayout, int, w, getW, setW),
+       V_PROPERTY(CSimpleLayout, int, h, getH, setH),
        V_PROPERTY(CSimpleLayout, int, x, getX, setX),
        V_PROPERTY(CSimpleLayout, int, y, getY, setY))
 public:
     std::shared_ptr<SDL_Rect> getRect(std::shared_ptr<CGameGraphicsObject> object) override;
 
 
-    int getWidth();
+    int getW();
 
-    void setWidth(int _width);
+    void setW(int _width);
 
-    int getHeight();
+    int getH();
 
-    void setHeight(int _height);
+    void setH(int _height);
 
     int getX();
 
@@ -58,8 +58,8 @@ public:
     void setY(int _y);
 
 private:
-    int width = 0;
-    int height = 0;
+    int w = 0;
+    int h = 0;
     int x = 0;
     int y = 0;
 };
@@ -67,20 +67,23 @@ private:
 
 class CAnchoredLayout : public CLayout {
 V_META(CAnchoredLayout, CLayout,
-       V_PROPERTY(CAnchoredLayout, int, width, getWidth, setWidth),
-       V_PROPERTY(CAnchoredLayout, int, height, getHeight, setHeight),
+       V_PROPERTY(CAnchoredLayout, int, w, getW, setW),
+       V_PROPERTY(CAnchoredLayout, int, h, getH, setH),
        V_PROPERTY(CAnchoredLayout, std::string, vertical, getVertical, setVertical),
        V_PROPERTY(CAnchoredLayout, std::string, horizontal, getHorizontal, setHorizontal))
 public:
     std::shared_ptr<SDL_Rect> getRect(std::shared_ptr<CGameGraphicsObject> object) override;
 
-    int getWidth();
 
-    void setWidth(int _width);
+    int getW();
 
-    int getHeight();
+    void setW(int _width);
 
-    void setHeight(int _height);
+    int getH();
+
+    void setH(int _height);
+
+    int getX();
 
     std::string getVertical();
 
@@ -91,8 +94,8 @@ public:
     void setHorizontal(std::string horizontal);
 
 private:
-    int width = 0;
-    int height = 0;
+    int w = 0;
+    int h = 0;
     std::string vertical;
     std::string horizontal;
 };
