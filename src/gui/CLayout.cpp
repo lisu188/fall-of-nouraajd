@@ -19,20 +19,20 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "CLayout.h"
 
 
-int CSimpleLayout::getWidth() {
-    return width;
+int CSimpleLayout::getW() {
+    return w;
 }
 
-void CSimpleLayout::setWidth(int _width) {
-    width = _width;
+void CSimpleLayout::setW(int _width) {
+    w = _width;
 }
 
-int CSimpleLayout::getHeight() {
-    return height;
+int CSimpleLayout::getH() {
+    return h;
 }
 
-void CSimpleLayout::setHeight(int _height) {
-    height = _height;
+void CSimpleLayout::setH(int _height) {
+    h = _height;
 }
 
 int CSimpleLayout::getX() {
@@ -56,28 +56,28 @@ std::shared_ptr<SDL_Rect> CSimpleLayout::getRect(std::shared_ptr<CGameGraphicsOb
     return RECT(
             parentRect->x + getX(),
             parentRect->y + getY(),
-            width,
-            height);
+            w,
+            h);
 }
 
 std::shared_ptr<SDL_Rect> CLayout::getParentRect(std::shared_ptr<CGameGraphicsObject> object) {
     return object->getParent() ? object->getParent()->getLayout()->getRect(object->getParent()) : RECT(0, 0, 0, 0);
 }
 
-int CAnchoredLayout::getWidth() {
-    return width;
+int CAnchoredLayout::getW() {
+    return w;
 }
 
-void CAnchoredLayout::setWidth(int _width) {
-    this->width = _width;
+void CAnchoredLayout::setW(int _width) {
+    this->w = _width;
 }
 
-int CAnchoredLayout::getHeight() {
-    return height;
+int CAnchoredLayout::getH() {
+    return h;
 }
 
-void CAnchoredLayout::setHeight(int _height) {
-    this->height = _height;
+void CAnchoredLayout::setH(int _height) {
+    this->h = _height;
 }
 
 int CPercentLayout::getX() {
@@ -155,15 +155,15 @@ std::shared_ptr<SDL_Rect> CAnchoredLayout::getRect(std::shared_ptr<CGameGraphics
     auto parent = getParentRect(object);
     int x = 0;
     int y = 0;
-    int w = horizontal == "PARENT" ? parent->w : getWidth();
-    int h = vertical == "PARENT" ? parent->h : getHeight();
+    int w = horizontal == "PARENT" ? parent->w : getW();
+    int h = vertical == "PARENT" ? parent->h : getH();
 
     if (horizontal == "LEFT" || horizontal == "PARENT") {
         x = 0;
     } else if (horizontal == "RIGHT") {
-        x = parent->w - getWidth();
+        x = parent->w - getW();
     } else if (horizontal == "CENTER") {
-        x = parent->w / 2 - getWidth() / 2;
+        x = parent->w / 2 - getH() / 2;
     } else {
         vstd::logger::debug("Unknown horizontal layout:", horizontal);
     }
@@ -171,9 +171,9 @@ std::shared_ptr<SDL_Rect> CAnchoredLayout::getRect(std::shared_ptr<CGameGraphics
     if (vertical == "UP" || vertical == "PARENT") {
         y = 0;
     } else if (vertical == "DOWN") {
-        y = parent->h - getHeight();
+        y = parent->h - getH();
     } else if (vertical == "CENTER") {
-        y = parent->h / 2 - getHeight() / 2;
+        y = parent->h / 2 - getH() / 2;
     } else {
         vstd::logger::debug("Unknown vertical layout:", vertical);
     }

@@ -20,8 +20,8 @@
       "layout": {
         "class": "CCenteredLayout",
         "properties": {
-          "height": 600,
-          "width": 800
+          "h": 600,
+          "w": 800
         }
       }
     }
@@ -81,8 +81,8 @@
       "layout": {
         "class": "CCenteredLayout",
         "properties": {
-          "height": 300,
-          "width": 400
+          "h": 300,
+          "w": 400
         }
       }
     }
@@ -107,10 +107,10 @@
                   "layout": {
                     "class": "CAnchoredLayout",
                     "properties": {
-                      "height": 100,
+                      "h": 100,
                       "horizontal": "PARENT",
                       "vertical": "DOWN",
-                      "width": 200
+                      "w": 200
                     }
                   }
                 }
@@ -128,10 +128,10 @@
                   "layout": {
                     "class": "CAnchoredLayout",
                     "properties": {
-                      "height": 100,
+                      "h": 100,
                       "horizontal": "PARENT",
                       "vertical": "UP",
-                      "width": 200
+                      "w": 200
                     }
                   }
                 }
@@ -140,8 +140,8 @@
             "layout": {
               "class": "CSimpleLayout",
               "properties": {
-                "height": 200,
-                "width": 200,
+                "h": 200,
+                "w": 200,
                 "x": 300,
                 "y": 0
               }
@@ -200,8 +200,8 @@
       "layout": {
         "class": "CCenteredLayout",
         "properties": {
-          "height": 600,
-          "width": 800
+          "h": 600,
+          "w": 800
         }
       }
     }
@@ -212,8 +212,8 @@
       "layout": {
         "class": "CCenteredLayout",
         "properties": {
-          "height": 600,
-          "width": 800
+          "h": 600,
+          "w": 800
         }
       }
     }
@@ -276,8 +276,8 @@
       "layout": {
         "class": "CCenteredLayout",
         "properties": {
-          "height": 600,
-          "width": 800
+          "h": 600,
+          "w": 800
         }
       }
     }
@@ -288,8 +288,8 @@
       "layout": {
         "class": "CCenteredLayout",
         "properties": {
-          "height": 600,
-          "width": 800
+          "h": 600,
+          "w": 800
         }
       }
     }
@@ -300,8 +300,8 @@
       "layout": {
         "class": "CCenteredLayout",
         "properties": {
-          "height": 600,
-          "width": 800
+          "h": 600,
+          "w": 800
         }
       }
     }
@@ -362,8 +362,8 @@
       "layout": {
         "class": "CCenteredLayout",
         "properties": {
-          "height": 600,
-          "width": 800
+          "h": 600,
+          "w": 800
         }
       }
     }

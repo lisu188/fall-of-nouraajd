@@ -119,8 +119,8 @@ void CGuiHandler::showTooltip(std::string text, int x,
         int width = vstd::percent(textureSize.first, 125);
         int height = vstd::percent(textureSize.second, 125);
 
-        layout->setWidth(width);//TODO: layout should accept functions;
-        layout->setHeight(height);//TODO: layout should accept functions;
+        layout->setW(width);//TODO: layout should accept functions;
+        layout->setH(height);//TODO: layout should accept functions;
 
         layout->setX(x - width / 2);//TODO: extract to util
         layout->setY(y - height / 2);//TODO: extract to util
