@@ -109,8 +109,7 @@
                     "properties": {
                       "h": 100,
                       "horizontal": "PARENT",
-                      "vertical": "DOWN",
-                      "w": 200
+                      "vertical": "DOWN"
                     }
                   }
                 }
@@ -128,10 +127,9 @@
                   "layout": {
                     "class": "CAnchoredLayout",
                     "properties": {
-                      "h": 100,
+                      "h": 200,
                       "horizontal": "PARENT",
-                      "vertical": "UP",
-                      "w": 200
+                      "vertical": "UP"
                     }
                   }
                 }
@@ -140,10 +138,10 @@
             "layout": {
               "class": "CSimpleLayout",
               "properties": {
-                "h": 200,
+                "h": 300,
                 "w": 200,
                 "x": 300,
-                "y": 0
+                "y": 100
               }
             }
           }
