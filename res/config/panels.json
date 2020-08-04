@@ -46,7 +46,7 @@
           }
         },
         {
-          "class": "CWidget",
+          "class": "CTextWidget",
           "properties": {
             "click": "clickYes",
             "layout": {
@@ -58,11 +58,11 @@
                 "y": 75
               }
             },
-            "render": "renderYes"
+            "text": "YES"
           }
         },
         {
-          "class": "CWidget",
+          "class": "CTextWidget",
           "properties": {
             "click": "clickNo",
             "layout": {
@@ -74,7 +74,7 @@
                 "y": 75
               }
             },
-            "render": "renderNo"
+            "text": "NO"
           }
         }
       ],
@@ -308,6 +308,36 @@
     "class": "CGameTradePanel",
     "properties": {
       "children": [
+        {
+          "class": "CWidget",
+          "properties": {
+            "layout": {
+              "class": "CSimpleLayout",
+              "properties": {
+                "h": 200,
+                "w": 200,
+                "x": 200,
+                "y": 0
+              }
+            },
+            "render": "renderBuyCost"
+          }
+        },
+        {
+          "class": "CWidget",
+          "properties": {
+            "layout": {
+              "class": "CSimpleLayout",
+              "properties": {
+                "h": 200,
+                "w": 200,
+                "x": 400,
+                "y": 0
+              }
+            },
+            "render": "renderSellCost"
+          }
+        },
         {
           "class": "CListView",
           "properties": {

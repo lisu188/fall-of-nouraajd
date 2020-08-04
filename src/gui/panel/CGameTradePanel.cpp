@@ -50,14 +50,6 @@ bool CGameTradePanel::marketSelect(std::shared_ptr<CGui> gui, int index, std::sh
     return vstd::ctn(selectedMarket, object, [](auto a, auto b) { return a == b.lock(); });
 }
 
-
-void CGameTradePanel::renderObject(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> rect, int i) {
-    CGamePanel::renderObject(gui, rect, i);
-    //TODO: move this to CWidgets
-    gui->getTextManager()->drawTextCentered(vstd::str(getTotalBuyCost()), rect->x + 200, rect->y, 200, 200);
-    gui->getTextManager()->drawTextCentered(vstd::str(getTotalSellCost()), rect->x + 400, rect->y, 200, 200);
-}
-
 bool CGameTradePanel::keyboardEvent(std::shared_ptr<CGui> gui, SDL_EventType type, SDL_Keycode i) {
     if (type == SDL_KEYDOWN) {
         //TODO: get rid of this
@@ -130,4 +122,12 @@ void CGameTradePanel::setMarket(std::shared_ptr<CMarket> _market) {
 
 std::shared_ptr<CMarket> CGameTradePanel::getMarket() {
     return market;
+}
+
+void CGameTradePanel::renderSellCost(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> pRect, int i) {
+    gui->getTextManager()->drawTextCentered(vstd::str(getTotalSellCost()), pRect);
+}
+
+void CGameTradePanel::renderBuyCost(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> pRect, int i) {
+    gui->getTextManager()->drawTextCentered(vstd::str(getTotalBuyCost()), pRect);
 }
