@@ -24,8 +24,6 @@ class CGameDialogPanel : public CGamePanel {
 V_META(CGameDialogPanel, CGamePanel,
        V_PROPERTY(CGameDialogPanel, std::string, question, getQuestion, setQuestion),
        V_METHOD(CGameDialogPanel, renderQuestion, void, std::shared_ptr<CGui>, std::shared_ptr<SDL_Rect>, int),
-       V_METHOD(CGameDialogPanel, renderYes, void, std::shared_ptr<CGui>, std::shared_ptr<SDL_Rect>, int),
-       V_METHOD(CGameDialogPanel, renderNo, void, std::shared_ptr<CGui>, std::shared_ptr<SDL_Rect>, int),
        V_METHOD(CGameDialogPanel, clickNo, void, std::shared_ptr<CGui>),
        V_METHOD(CGameDialogPanel, clickYes, void, std::shared_ptr<CGui>))
 
@@ -38,10 +36,6 @@ public:
     void setQuestion(std::string question);
 
     void renderQuestion(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> pRect, int i);
-
-    void renderYes(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> pRect, int i);
-
-    void renderNo(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> pRect, int i);
 
     void clickYes(std::shared_ptr<CGui> gui);
 

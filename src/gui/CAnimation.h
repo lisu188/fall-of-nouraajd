@@ -87,6 +87,8 @@ public:
 
     void setThickness(int _thickness);
 
+    bool mouseEvent(std::shared_ptr<CGui> gui, SDL_EventType type, int button, int x, int y) override;
+
 private:
     int thickness;
 };

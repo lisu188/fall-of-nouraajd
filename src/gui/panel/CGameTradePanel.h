@@ -33,7 +33,9 @@ V_META(CGameTradePanel, CGamePanel,
        V_METHOD(CGameTradePanel, marketCollection, CListView::collection_pointer,
                 std::shared_ptr<CGui>),
        V_METHOD(CGameTradePanel, marketCallback, void, std::shared_ptr<CGui>, int, std::shared_ptr<CGameObject>),
-       V_METHOD(CGameTradePanel, marketSelect, bool, std::shared_ptr<CGui>, int, std::shared_ptr<CGameObject>))
+       V_METHOD(CGameTradePanel, marketSelect, bool, std::shared_ptr<CGui>, int, std::shared_ptr<CGameObject>),
+       V_METHOD(CGameTradePanel, renderSellCost, void, std::shared_ptr<CGui>, std::shared_ptr<SDL_Rect>, int),
+       V_METHOD(CGameTradePanel, renderBuyCost, void, std::shared_ptr<CGui>, std::shared_ptr<SDL_Rect>, int))
 
 public:
     CGameTradePanel();
@@ -54,14 +56,16 @@ public:
 
     bool marketSelect(std::shared_ptr<CGui> gui, int index, std::shared_ptr<CGameObject> object);
 
+    void renderSellCost(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> pRect, int i);
+
+    void renderBuyCost(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> pRect, int i);
+
 private:
     std::shared_ptr<CMarket> market;
     std::list<std::weak_ptr<CItem>> selectedInventory;
     std::list<std::weak_ptr<CItem>> selectedMarket;
 
     bool keyboardEvent(std::shared_ptr<CGui> sharedPtr, SDL_EventType type, SDL_Keycode i) override;
-
-    void renderObject(std::shared_ptr<CGui> reneder, std::shared_ptr<SDL_Rect> rect, int frameTime) override;
 
     void handleEnter(std::shared_ptr<CGui> shared_ptr);
 
