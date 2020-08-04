@@ -36,7 +36,6 @@ bool CGameDialogPanel::awaitAnswer() {
     return *selection;
 }
 
-
 void CGameDialogPanel::clickNo(std::shared_ptr<CGui> gui) {
     selection = std::make_shared<bool>(false);
     gui->removeChild(this->ptr<CGameDialogPanel>());
@@ -47,15 +46,6 @@ void CGameDialogPanel::clickYes(std::shared_ptr<CGui> gui) {
     gui->removeChild(this->ptr<CGameDialogPanel>());
 }
 
-
 void CGameDialogPanel::renderQuestion(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> pRect, int i) {
     gui->getTextManager()->drawTextCentered(question, pRect);
-}
-
-void CGameDialogPanel::renderYes(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> pRect, int i) {
-    gui->getTextManager()->drawTextCentered("YES", pRect);
-}
-
-void CGameDialogPanel::renderNo(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> pRect, int i) {
-    gui->getTextManager()->drawTextCentered("NO", pRect);
 }
