@@ -46,6 +46,18 @@ public:
     std::string getRender();
 
     void setRender(std::string draw);
+};
 
+class CTextWidget : public CWidget {
+V_META(CTextWidget, CWidget,
+       V_PROPERTY(CTextWidget, std::string, textd, getText, setText))
+public:
+    void renderObject(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> rect, int frameTime) override;
 
+    std::string getText();
+
+    void setText(std::string _text);
+
+private:
+    std::string text;
 };

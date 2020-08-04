@@ -18,7 +18,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "CWidget.h"
 #include "gui/panel/CGamePanel.h"
-
+#include "gui/CTextManager.h"
 
 void CWidget::setRender(std::string draw) {
     this->render = draw;
@@ -37,7 +37,7 @@ void CWidget::setClick(std::string click) {
 }
 
 void CWidget::renderObject(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> rect, int frameTime) {
-    this->meta()->invoke_method<void, CGamePanel,
+    this->getParent()->meta()->invoke_method<void, CGamePanel,
             std::shared_ptr<CGui>,
             std::shared_ptr<SDL_Rect>, int>(this->getRender(),
                                             vstd::cast<CGamePanel>(getParent()),
@@ -48,10 +48,22 @@ void CWidget::renderObject(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> 
 
 bool CWidget::mouseEvent(std::shared_ptr<CGui> gui, SDL_EventType type, int button, int x, int y) {
     if (type == SDL_MOUSEBUTTONDOWN && button == SDL_BUTTON_LEFT) {
-        this->meta()->invoke_method<void, CGamePanel,
+        this->getParent()->meta()->invoke_method<void, CGamePanel,
                 std::shared_ptr<CGui>>(this->getClick(),
                                        vstd::cast<CGamePanel>(getParent()),
                                        gui);
     }
     return true;
+}
+
+void CTextWidget::setText(std::string _text) {
+    text = _text;
+}
+
+std::string CTextWidget::getText() {
+    return text;
+}
+
+void CTextWidget::renderObject(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> rect, int frameTime) {
+    gui->getTextManager()->drawTextCentered(vstd::str(text), rect);
 }
