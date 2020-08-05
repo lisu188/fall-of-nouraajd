@@ -36,6 +36,12 @@ void CGuiHandler::showMessage(std::string message) {
     _game.lock()->getGui()->pushChild(panel);
 }
 
+void CGuiHandler::showInfo(std::string message) {
+    std::shared_ptr<CGameTextPanel> panel = _game.lock()->createObject<CGameTextPanel>("infoPanel");
+    panel->setText(message);
+    _game.lock()->getGui()->pushChild(panel);
+}
+
 bool CGuiHandler::showDialog(std::string question) {
     std::shared_ptr<CGameDialogPanel> panel = _game.lock()->createObject<CGameDialogPanel>("dialogPanel");
     panel->setQuestion(question);

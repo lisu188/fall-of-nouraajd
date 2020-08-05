@@ -55,8 +55,6 @@ bool CGameTradePanel::keyboardEvent(std::shared_ptr<CGui> gui, SDL_EventType typ
         //TODO: get rid of this
         if (i == SDLK_SPACE) {
             gui->removeChild(this->ptr<CGameTradePanel>());
-        } else if (i == SDLK_RETURN) {
-            handleEnter(gui);
         }
     }
     return true;
@@ -67,21 +65,35 @@ CGameTradePanel::CGameTradePanel() {
 
 }
 
-void CGameTradePanel::handleEnter(std::shared_ptr<CGui> gui) {
-    if (canPlayerAfford(gui)) {
+void CGameTradePanel::finalizeSell(std::shared_ptr<CGui> gui) {
+    if (!selectedInventory.empty() && gui->getGame()->getGuiHandler()->showDialog(
+            "Do You want to sell these items: " + vstd::join(getItemNames(selectedInventory), ", "))) {
         for (auto item:selectedInventory) {
             market->buyItem(gui->getGame()->getMap()->getPlayer(), item.lock());
         }
-        for (auto item:selectedMarket) {
-            market->sellItem(gui->getGame()->getMap()->getPlayer(), item.lock());
-        }
-        selectedMarket.clear();
         selectedInventory.clear();
     }
 }
 
-bool CGameTradePanel::canPlayerAfford(std::shared_ptr<CGui> gui) {
-    return getTotalSellCost() - getTotalBuyCost() <= gui->getGame()->getMap()->getPlayer()->getGold();
+void CGameTradePanel::finalizeBuy(std::shared_ptr<CGui> gui) {
+    if (getTotalBuyCost() > gui->getGame()->getMap()->getPlayer()->getGold()) {
+        gui->getGame()->getGuiHandler()->showInfo("You cannot afford all selected items!");
+    } else {
+        if (!selectedMarket.empty() &&
+            gui->getGame()->getGuiHandler()->showDialog("Do You want to buy these items: " + vstd::join(
+                    getItemNames(selectedMarket), ", "))) {
+            for (auto item:selectedMarket) {
+                market->sellItem(gui->getGame()->getMap()->getPlayer(), item.lock());
+            }
+            selectedMarket.clear();
+        }
+    }
+}
+
+std::set<std::string> CGameTradePanel::getItemNames(std::list<std::weak_ptr<CItem>> items) {
+    return vstd::functional::map<std::set<std::string>>(items, [](std::weak_ptr<CItem> ob) {
+        return ob.lock()->getTooltip();
+    });
 }
 
 int CGameTradePanel::getTotalSellCost() {

@@ -304,10 +304,54 @@
       }
     }
   },
+  "infoPanel": {
+    "class": "CGameTextPanel",
+    "properties": {
+      "layout": {
+        "class": "CCenteredLayout",
+        "properties": {
+          "h": 300,
+          "w": 400
+        }
+      }
+    }
+  },
   "tradePanel": {
     "class": "CGameTradePanel",
     "properties": {
       "children": [
+        {
+          "class": "CTextWidget",
+          "properties": {
+            "layout": {
+              "class": "CSimpleLayout",
+              "properties": {
+                "h": 200,
+                "w": 200,
+                "x": 200,
+                "y": 400
+              }
+            },
+            "text": "SELL",
+            "click": "finalizeSell"
+          }
+        },
+        {
+          "class": "CTextWidget",
+          "properties": {
+            "layout": {
+              "class": "CSimpleLayout",
+              "properties": {
+                "h": 200,
+                "w": 200,
+                "x": 400,
+                "y": 400
+              }
+            },
+            "text": "BUY",
+            "click": "finalizeBuy"
+          }
+        },
         {
           "class": "CWidget",
           "properties": {
