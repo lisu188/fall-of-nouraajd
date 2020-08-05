@@ -32,6 +32,8 @@ public:
 
     void showMessage(std::string message);
 
+    void showInfo(std::string message);
+
     bool showDialog(std::string message);
 
     void showTrade(std::shared_ptr<CMarket> market);
@@ -39,6 +41,7 @@ public:
     std::string showSelection(std::shared_ptr<CListString> list);
 
     void showTooltip(std::string text, int x, int y);
+
 private:
     std::weak_ptr<CGame> _game;
 };
