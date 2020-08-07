@@ -19,6 +19,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "gui/object/CProxyTargetGraphicsObject.h"
 
+class CScript;
+
 class CCreatureView : public CProxyTargetGraphicsObject {
 V_META(CCreatureView, CProxyTargetGraphicsObject,
        V_PROPERTY(CCreatureView, std::shared_ptr<CScript>, creature, getCreature, setCreature),
