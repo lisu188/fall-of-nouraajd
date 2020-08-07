@@ -19,6 +19,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "CCreatureView.h"
 #include "object/CCreature.h"
 #include "gui/CGui.h"
+#include "core/CScript.h"
 
 
 std::shared_ptr<CScript> CCreatureView::getCreature() {
