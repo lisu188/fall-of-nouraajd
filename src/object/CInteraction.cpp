@@ -36,6 +36,7 @@ void CInteraction::onAction(std::shared_ptr<CCreature> first, std::shared_ptr<CC
         std::shared_ptr<CEffect> effect = this->effect->clone<CEffect>();
         effect->setCaster(first);
         if (this->configureEffect(effect)) {
+            effect->setAnimation(getAnimation());
             effect->setVictim(second);
             second->addEffect(effect);
         }

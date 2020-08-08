@@ -205,22 +205,23 @@ void CListView::setRefreshEvent(std::string refreshEvent) {
 }
 
 void CListView::initialize() {
-    vstd::call_when([=]() {
-                        return getGui() != nullptr
-                               && getGui()->getGame() != nullptr
-                               && getGui()->getGame()->getMap() != nullptr;
-                    }, [=]() {
-                        refreshObject->invoke(
-                                getGui()->getGame(),
-                                this->ptr())->connect(refreshEvent,
-                                                      this->ptr<CListView>(),
-                                                      "refresh");
-                        refreshObject->invoke(
-                                getGui()->getGame(),
-                                this->ptr())->connect(refreshEvent,
-                                                      this->ptr<CListView>(),
-                                                      "refreshAll");
-                        refresh();
+    auto self = this->ptr<CListView>();
+    vstd::call_when([self]() {
+                        return self->getGui() != nullptr
+                               && self->getGui()->getGame() != nullptr
+                               && self->getGui()->getGame()->getMap() != nullptr;
+                    }, [self]() {
+                        self->refreshObject->invoke(
+                                self->getGui()->getGame(),
+                                self)->connect(self->refreshEvent,
+                                               self,
+                                               "refresh");
+                        self->refreshObject->invoke(
+                                self->getGui()->getGame(),
+                                self)->connect(self->refreshEvent,
+                                               self,
+                                               "refreshAll");
+                        self->refresh();
                     }
     );
 
