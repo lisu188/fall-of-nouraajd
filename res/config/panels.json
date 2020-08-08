@@ -87,6 +87,63 @@
       }
     }
   },
+  "creatureView": {
+    "class": "CCreatureView",
+    "properties": {
+      "children": [
+        {
+          "class": "CListView",
+          "properties": {
+            "priority": 1,
+            "collection": "getEffects",
+            "refreshObject": {
+              "class": "CScript",
+              "properties": {
+                "script": "self.getParent().getCreature()"
+              }
+            },
+            "refreshEvent": "effectsChanged",
+            "layout": {
+              "class": "CAnchoredLayout",
+              "properties": {
+                "horizontal": "LEFT",
+                "vertical": "PARENT",
+                "w": 50
+              }
+            }
+          }
+        }
+      ],
+      "creatureScript": {
+        "class": "CScript",
+        "properties": {
+          "script": "self.getParent().getParent().getEnemy()"
+        }
+      },
+      "proxyLayout": "CParentLayout",
+      "layout": {
+        "class": "CAnchoredLayout",
+        "properties": {
+          "h": 200,
+          "horizontal": "PARENT",
+          "vertical": "UP"
+        }
+      }
+    }
+  },
+  "statsView": {
+    "class": "CStatsGraphicsObject",
+    "properties": {
+      "layout": {
+        "class": "CAnchoredLayout",
+        "properties": {
+          "h": 100,
+          "horizontal": "PARENT",
+          "vertical": "DOWN"
+        }
+      }
+    }
+  },
   "fightPanel": {
     "class": "CGameFightPanel",
     "properties": {
@@ -96,40 +153,23 @@
           "properties": {
             "children": [
               {
-                "class": "CStatsGraphicsObject",
+                "ref": "creatureView",
                 "properties": {
-                  "creature": {
+                  "creatureScript": {
                     "class": "CScript",
                     "properties": {
-                      "script": "self.getParent().getParent().getEnemy()"
-                    }
-                  },
-                  "layout": {
-                    "class": "CAnchoredLayout",
-                    "properties": {
-                      "h": 100,
-                      "horizontal": "PARENT",
-                      "vertical": "DOWN"
+                      "script": "self.getGui().getGame().getMap().getPlayer()"
                     }
                   }
                 }
               },
               {
-                "class": "CCreatureView",
+                "ref": "statsView",
                 "properties": {
                   "creature": {
                     "class": "CScript",
                     "properties": {
-                      "script": "self.getParent().getParent().getEnemy()"
-                    }
-                  },
-                  "proxyLayout": "CParentLayout",
-                  "layout": {
-                    "class": "CAnchoredLayout",
-                    "properties": {
-                      "h": 200,
-                      "horizontal": "PARENT",
-                      "vertical": "UP"
+                      "script": "self.getGui().getGame().getMap().getPlayer()"
                     }
                   }
                 }
@@ -140,7 +180,45 @@
               "properties": {
                 "h": 300,
                 "w": 200,
-                "x": 300,
+                "x": 150,
+                "y": 100
+              }
+            }
+          }
+        },
+        {
+          "class": "CGameGraphicsObject",
+          "properties": {
+            "children": [
+              {
+                "ref": "creatureView",
+                "properties": {
+                  "creatureScript": {
+                    "class": "CScript",
+                    "properties": {
+                      "script": "self.getParent().getParent().getEnemy()"
+                    }
+                  }
+                }
+              },
+              {
+                "ref": "statsView",
+                "properties": {
+                  "creature": {
+                    "class": "CScript",
+                    "properties": {
+                      "script": "self.getParent().getParent().getEnemy()"
+                    }
+                  }
+                }
+              }
+            ],
+            "layout": {
+              "class": "CSimpleLayout",
+              "properties": {
+                "h": 300,
+                "w": 200,
+                "x": 450,
                 "y": 100
               }
             }

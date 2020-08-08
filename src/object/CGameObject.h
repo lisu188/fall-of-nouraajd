@@ -139,9 +139,10 @@ public:
             auto ob = object.lock();
             if (ob) {
                 if (signal == _signal) {
-                    vstd::later(vstd::bind([=](auto _slot) {
+                    auto _slot = slot;//cause of closure
+                    vstd::later([=]() {
                         ob->meta()->invoke_method<void, CGameObject, Args...>(_slot, ob, args...);
-                    }, slot));
+                    });
                 }
                 it++;
             } else {

@@ -259,6 +259,7 @@ void CCreature::addAction(std::shared_ptr<CInteraction> action) {
         return;
     }
     actions.insert(action);
+    signal("interactionsChanged");
 }
 
 void CCreature::addEffect(std::shared_ptr<CEffect> effect) {
@@ -267,6 +268,7 @@ void CCreature::addEffect(std::shared_ptr<CEffect> effect) {
     } else {
         vstd::logger::debug(effect->to_string(), "starts for", this->to_string());
         effects.insert(effect);
+        signal("effectsChanged");
     }
 }
 
@@ -604,6 +606,7 @@ void CCreature::useAction(std::shared_ptr<CInteraction> action, std::shared_ptr<
 
 void CCreature::removeEffect(std::shared_ptr<CEffect> effect) {
     effects.erase(effect);
+    signal("equippedChanged");
 }
 
 void CCreature::useItem(std::shared_ptr<CItem> item) {

@@ -75,7 +75,8 @@ void initModule1() {
             "CGameGraphicsObject", no_init);
 
     class_<CCreatureView, bases<CGameGraphicsObject>, boost::noncopyable, std::shared_ptr<CCreatureView>>(
-            "CCreatureView", no_init);
+            "CCreatureView", no_init)
+            .def("getCreature", &CCreatureView::getCreature);
 
     bool (CMap::*canStep)(Coords) =&CMap::canStep;
 
