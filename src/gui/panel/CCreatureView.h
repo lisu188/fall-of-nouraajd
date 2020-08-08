@@ -18,12 +18,15 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #pragma once
 
 #include "gui/object/CProxyTargetGraphicsObject.h"
+#include "CListView.h"
 
 class CScript;
 
 class CCreatureView : public CProxyTargetGraphicsObject {
 V_META(CCreatureView, CProxyTargetGraphicsObject,
-       V_PROPERTY(CCreatureView, std::shared_ptr<CScript>, creature, getCreature, setCreature),
+       V_PROPERTY(CCreatureView, std::shared_ptr<CScript>, creatureScript, getCreatureScript, setCreatureScript),
+       V_METHOD(CCreatureView, getEffects, CListView::collection_pointer),
+       V_METHOD(CCreatureView, getCreature, std::shared_ptr<CCreature>),
        V_METHOD(CCreatureView, initialize))
 public:
     std::set<std::shared_ptr<CGameGraphicsObject>> getProxiedObjects(std::shared_ptr<CGui> gui, int x, int y) override;
@@ -34,10 +37,14 @@ public:
 
     void initialize();
 
-    std::shared_ptr<CScript> getCreature();
+    std::shared_ptr<CScript> getCreatureScript();
 
-    void setCreature(std::shared_ptr<CScript> _creature);
+    void setCreatureScript(std::shared_ptr<CScript> _creature);
+
+    CListView::collection_pointer getEffects();
+
+    std::shared_ptr<CCreature> getCreature();
 
 private:
-    std::shared_ptr<CScript> creature;
+    std::shared_ptr<CScript> creatureScript;
 };

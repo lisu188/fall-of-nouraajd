@@ -22,17 +22,17 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CScript.h"
 
 
-std::shared_ptr<CScript> CCreatureView::getCreature() {
-    return creature;
+std::shared_ptr<CScript> CCreatureView::getCreatureScript() {
+    return creatureScript;
 }
 
-void CCreatureView::setCreature(std::shared_ptr<CScript> _creature) {
-    creature = _creature;
+void CCreatureView::setCreatureScript(std::shared_ptr<CScript> _creatureScript) {
+    creatureScript = _creatureScript;
 }
 
 std::set<std::shared_ptr<CGameGraphicsObject>>
 CCreatureView::getProxiedObjects(std::shared_ptr<CGui> gui, int x, int y) {
-    auto graphicsObject = creature->invoke<CCreature>(gui->getGame(), this->ptr())->getGraphicsObject();
+    auto graphicsObject = getCreature()->getGraphicsObject();
     graphicsObject->setLayout(std::make_shared<CParentLayout>());
     return vstd::set(
             graphicsObject);
@@ -55,4 +55,13 @@ void CCreatureView::initialize() {
                         refresh();
                     }
     );
+}
+
+CListView::collection_pointer CCreatureView::getEffects() {
+    return std::make_shared<CListView::collection_type>(vstd::cast<CListView::collection_type>(
+            getCreature()->getEffects()));
+}
+
+std::shared_ptr<CCreature> CCreatureView::getCreature() {
+    return creatureScript->invoke<CCreature>(getGui()->getGame(), this->ptr());
 }

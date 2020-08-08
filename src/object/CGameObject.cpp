@@ -18,8 +18,6 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CList.h"
 #include "object/CGameObject.h"
 #include "core/CMap.h"
-
-
 #include "gui/CAnimation.h"
 #include "core/CMap.h"
 #include "core/CGame.h"
