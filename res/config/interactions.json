@@ -154,7 +154,6 @@
     "properties": {
       "animation": "images/interactions/magicmissile",
       "manaCost": 5,
-      "tooltip": "Magic Missile",
       "tooltip": "Magic Missile"
     }
   },
