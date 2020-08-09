@@ -2,7 +2,6 @@
   "CrownOfNightmares": {
     "class": "CHelmet",
     "properties": {
-      "label": "Crown of Nightmares",
       "animation": "images/items/helmets/crownofnightmares",
       "bonus": {
         "class": "Stats",
@@ -15,13 +14,13 @@
           "strength": 4
         }
       },
+      "label": "Crown of Nightmares",
       "power": 18
     }
   },
   "EradicatorsBoots": {
     "class": "CBoots",
     "properties": {
-      "label": "Eradicators Boots",
       "animation": "images/items/boots/eradicatorsboots",
       "bonus": {
         "class": "Stats",
@@ -33,13 +32,13 @@
           "strength": 10
         }
       },
+      "label": "Eradicators Boots",
       "power": 14
     }
   },
   "GlovesOfTheAssasin": {
     "class": "CGloves",
     "properties": {
-      "label": "Gloves of the Assasin",
       "animation": "images/items/gloves/glovesoftheassasin",
       "bonus": {
         "class": "Stats",
@@ -52,14 +51,15 @@
           "strength": 8
         }
       },
+      "label": "Gloves of the Assasin",
       "power": 11
     }
   },
   "Scroll": {
     "class": "CScroll",
     "properties": {
-      "label": "Scroll",
       "animation": "images/items/scroll",
+      "label": "Scroll",
       "power": 0,
       "singleUse": true
     }
@@ -67,7 +67,6 @@
   "UndestructibleBelt": {
     "class": "CBelt",
     "properties": {
-      "label": "Undestructible Belt",
       "animation": "images/items/belts/undestructiblebelt",
       "bonus": {
         "class": "Stats",
@@ -80,6 +79,7 @@
           "strength": 14
         }
       },
+      "label": "Undestructible Belt",
       "power": 20
     }
   }

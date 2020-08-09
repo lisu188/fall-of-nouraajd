@@ -606,7 +606,7 @@ void CCreature::useAction(std::shared_ptr<CInteraction> action, std::shared_ptr<
 
 void CCreature::removeEffect(std::shared_ptr<CEffect> effect) {
     effects.erase(effect);
-    signal("equippedChanged");
+    signal("effectsChanged");
 }
 
 void CCreature::useItem(std::shared_ptr<CItem> item) {

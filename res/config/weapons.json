@@ -3,7 +3,6 @@
     "class": "CWeapon",
     "properties": {
       "animation": "images/items/weapons/bladeofdarkdreams",
-      "label": "Blade of Dark Dreams",
       "bonus": {
         "class": "Stats",
         "properties": {
@@ -16,13 +15,13 @@
           "strength": 13
         }
       },
+      "label": "Blade of Dark Dreams",
       "power": 9
     }
   },
   "BroadSword": {
     "class": "CWeapon",
     "properties": {
-      "label": "Broad Sword",
       "animation": "images/items/weapons/broadsword",
       "bonus": {
         "class": "Stats",
@@ -35,13 +34,13 @@
           "strength": 5
         }
       },
+      "label": "Broad Sword",
       "power": 5
     }
   },
   "ChaosSword": {
     "class": "CWeapon",
     "properties": {
-      "label": "Chaos Sword",
       "animation": "images/items/weapons/chaossword",
       "bonus": {
         "class": "Stats",
@@ -53,13 +52,13 @@
       "interaction": {
         "ref": "ChaosBlast"
       },
+      "label": "Chaos Sword",
       "power": 18
     }
   },
   "Dagger": {
     "class": "CWeapon",
     "properties": {
-      "label": "Dagger",
       "animation": "images/items/weapons/dagger",
       "bonus": {
         "class": "Stats",
@@ -70,13 +69,13 @@
           "stamina": 2
         }
       },
+      "label": "Dagger",
       "power": 3
     }
   },
   "DaggerOfVileHeart": {
     "class": "CWeapon",
     "properties": {
-      "label": "Dagger of Vile Heart",
       "animation": "images/items/weapons/daggerofvileheart",
       "bonus": {
         "class": "Stats",
@@ -90,13 +89,13 @@
           "strength": 5
         }
       },
+      "label": "Dagger of Vile Heart",
       "power": 9
     }
   },
   "Knife": {
     "class": "CWeapon",
     "properties": {
-      "label": "Knife",
       "animation": "images/items/weapons/knife",
       "bonus": {
         "class": "Stats",
@@ -106,13 +105,13 @@
           "dmgMin": 5,
           "stamina": 1
         }
-      }
+      },
+      "label": "Knife"
     }
   },
   "LongSword": {
     "class": "CWeapon",
     "properties": {
-      "label": "Long Sword",
       "animation": "images/items/weapons/longsword",
       "bonus": {
         "class": "Stats",
@@ -123,13 +122,13 @@
           "strength": 1
         }
       },
+      "label": "Long Sword",
       "power": 3
     }
   },
   "ShadowBlade": {
     "class": "CWeapon",
     "properties": {
-      "label": "Shadow Blade",
       "animation": "images/items/weapons/shadowblade",
       "bonus": {
         "class": "Stats",
@@ -143,13 +142,13 @@
           "strength": 10
         }
       },
+      "label": "Shadow Blade",
       "power": 25
     }
   },
   "ShortStaff": {
     "class": "CWeapon",
     "properties": {
-      "label": "Short Staff",
       "animation": "images/items/weapons/shortstaff",
       "bonus": {
         "class": "Stats",
@@ -159,13 +158,13 @@
           "intelligence": 1,
           "stamina": 1
         }
-      }
+      },
+      "label": "Short Staff"
     }
   },
   "ShortSword": {
     "class": "CWeapon",
     "properties": {
-      "label": "Short Sword",
       "animation": "images/items/weapons/shortsword",
       "bonus": {
         "class": "Stats",
@@ -175,13 +174,13 @@
           "stamina": 1,
           "strength": 1
         }
-      }
+      },
+      "label": "Short Sword"
     }
   },
   "Staff": {
     "class": "CWeapon",
     "properties": {
-      "label": "Staff",
       "animation": "images/items/weapons/staff",
       "bonus": {
         "class": "Stats",
@@ -195,13 +194,13 @@
       "interaction": {
         "ref": "ElemStaff"
       },
+      "label": "Staff",
       "power": 3
     }
   },
   "StaffOfTheAbyss": {
     "class": "CWeapon",
     "properties": {
-      "label": "Staff of the Abyss",
       "animation": "images/items/weapons/staffoftheabyss",
       "bonus": {
         "class": "Stats",
@@ -214,13 +213,13 @@
           "strength": 4
         }
       },
+      "label": "Staff of the Abyss",
       "power": 9
     }
   },
   "Stiletto": {
     "class": "CWeapon",
     "properties": {
-      "label": "Stiletto",
       "animation": "images/items/weapons/stiletto",
       "bonus": {
         "class": "Stats",
@@ -233,13 +232,13 @@
           "strength": 3
         }
       },
+      "label": "Stiletto",
       "power": 5
     }
   },
   "Sword": {
     "class": "CWeapon",
     "properties": {
-      "label": "Sword",
       "animation": "images/items/weapons/sword",
       "bonus": {
         "class": "Stats",
@@ -247,13 +246,13 @@
           "attack": 5,
           "damage": 10
         }
-      }
+      },
+      "label": "Sword"
     }
   },
   "Valkyrie": {
     "class": "CWeapon",
     "properties": {
-      "label": "Valkyrie",
       "animation": "images/items/weapons/valkyrie",
       "bonus": {
         "class": "Stats",
@@ -267,13 +266,13 @@
           "strength": 8
         }
       },
+      "label": "Valkyrie",
       "power": 25
     }
   },
   "Void": {
     "class": "CWeapon",
     "properties": {
-      "label": "Void",
       "animation": "images/items/weapons/void",
       "bonus": {
         "class": "Stats",
@@ -288,13 +287,13 @@
           "strength": 15
         }
       },
+      "label": "Void",
       "power": 25
     }
   },
   "Wand": {
     "class": "CWeapon",
     "properties": {
-      "label": "Wand",
       "animation": "images/items/weapons/wand",
       "bonus": {
         "class": "Stats",
@@ -307,6 +306,7 @@
           "strength": 1
         }
       },
+      "label": "Wand",
       "power": 5
     }
   }

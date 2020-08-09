@@ -146,22 +146,43 @@ CListView::getProxiedObjects(std::shared_ptr<CGui> gui, int x, int y) {
     } else {
         auto indexedCollection = calculateIndices(gui);
         int itemIndex = shiftIndex(gui, i);
-        std::shared_ptr<CAnimation> itemBox = CAnimationProvider::getAnimation(gui->getGame(), "images/item");
-        itemBox->setPriority(1);
-        return_val.insert(itemBox);//TODO: cache
-        if (vstd::ctn(indexedCollection, itemIndex) && indexedCollection[itemIndex]) {
-            std::shared_ptr<CGameGraphicsObject> objectGraphic = indexedCollection[itemIndex]->getGraphicsObject();
-            objectGraphic->setPriority(2);
-            return_val.insert(objectGraphic);
+
+        bool isItemPresent = vstd::ctn(indexedCollection, itemIndex) && indexedCollection[itemIndex];
+
+        if (isItemPresent || showEmpty) {
+            addItemBox(gui, return_val);
+        }
+        if (isItemPresent) {
+            addItem(return_val, indexedCollection, itemIndex);
         }
         if (invokeSelect(gui, itemIndex, indexedCollection[itemIndex])) {
-            auto selectionBox = gui->getGame()->getObjectHandler()->createObject<CSelectionBox>(gui->getGame());
-            selectionBox->setThickness(5);
-            selectionBox->setPriority(3);
-            return_val.insert(selectionBox);//TODO: cache
+            addSelectionBox(gui, return_val);
         }
     }
     return return_val;
+}
+
+void CListView::addSelectionBox(std::shared_ptr<CGui> gui,
+                                std::set<std::shared_ptr<CGameGraphicsObject>> &return_val) const {
+    auto selectionBox = gui->getGame()->getObjectHandler()->createObject<CSelectionBox>(gui->getGame());
+    selectionBox->setThickness(5);
+    selectionBox->setPriority(3);
+    return_val.insert(selectionBox);//TODO: cache
+}
+
+void CListView::addItem(std::set<std::shared_ptr<CGameGraphicsObject>> &return_val,
+                        std::unordered_map<int, std::shared_ptr<CGameObject>> &indexedCollection, int itemIndex) const {
+    std::shared_ptr<CGameGraphicsObject> objectGraphic = indexedCollection[itemIndex]->getGraphicsObject();
+    objectGraphic->setPriority(2);
+    return_val.insert(objectGraphic);
+}
+
+void
+CListView::addItemBox(std::shared_ptr<CGui> gui, std::set<std::shared_ptr<CGameGraphicsObject>> &return_val) const {
+    std::shared_ptr<CAnimation> itemBox = CAnimationProvider::getAnimation(gui->getGame(), "images/item");
+    itemBox->setPriority(1);
+    return_val.insert(itemBox);//TODO: cache
+
 }
 
 std::string CListView::getCollection() {
@@ -257,6 +278,15 @@ bool CListView::getAllowOversize() {
 
 void CListView::setAllowOversize(bool _allowOversize) {
     allowOversize = _allowOversize;
+}
+
+
+bool CListView::getShowEmpty() {
+    return showEmpty;
+}
+
+void CListView::setShowEmpty(bool _showEmpty) {
+    showEmpty = _showEmpty;
 }
 
 
