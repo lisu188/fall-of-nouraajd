@@ -47,12 +47,13 @@ int CCreatureView::getSizeY(std::shared_ptr<CGui> gui) {
 }
 
 void CCreatureView::initialize() {
-    vstd::call_when([=]() {
-                        return getGui() != nullptr
-                               && getGui()->getGame() != nullptr
-                               && getGui()->getGame()->getMap() != nullptr;
-                    }, [=]() {
-                        refresh();
+    auto self = this->ptr<CCreatureView>();
+    vstd::call_when([self]() {
+                        return self->getGui() != nullptr
+                               && self->getGui()->getGame() != nullptr
+                               && self->getGui()->getGame()->getMap() != nullptr;
+                    }, [self]() {
+                        self->refresh();
                     }
     );
 }

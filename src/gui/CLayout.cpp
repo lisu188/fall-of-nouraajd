@@ -126,7 +126,6 @@ std::shared_ptr<SDL_Rect> CPercentLayout::getRect(std::shared_ptr<CGameGraphicsO
 }
 
 std::shared_ptr<SDL_Rect> CProxyGraphicsLayout::getRect(std::shared_ptr<CGameGraphicsObject> object) {
-    int tileSize = object->getTopParent()->getNumericProperty("tileSize");
     auto pRect = getParentRect(object);
     return RECT(pRect->x + object->getNumericProperty("x") * tileSize,
                 pRect->y + object->getNumericProperty("y") * tileSize,
@@ -189,4 +188,12 @@ CParentLayout::CParentLayout() {
 CCenteredLayout::CCenteredLayout() {
     setHorizontal("CENTER");
     setVertical("CENTER");
+}
+
+void CProxyGraphicsLayout::setTileSize(int _tileSize) {
+    tileSize = _tileSize;
+}
+
+int CProxyGraphicsLayout::getTileSize() {
+    return tileSize;
 }

@@ -31,7 +31,7 @@ void CListView::renderObject(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect
 
 bool CListView::mouseEvent(std::shared_ptr<CGui> gui, SDL_EventType type, int button, int x, int y) {
     if (type == SDL_MOUSEBUTTONDOWN && button == SDL_BUTTON_LEFT) {//TODO: separate to objects
-        int i = ((x) / gui->getTileSize() + ((y / gui->getTileSize()) * getSizeX(gui)));
+        int i = ((x) / tileSize + ((y / tileSize) * getSizeX(gui)));
         invokeCallback(gui, shiftIndex(gui, i), calculateIndices(gui)[shiftIndex(gui, i)]);
     }
     return true;
@@ -79,10 +79,10 @@ std::unordered_map<int, std::shared_ptr<CGameObject>> CListView::calculateIndice
 std::shared_ptr<SDL_Rect>
 CListView::calculateIndexPosition(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> loc, int index) {
     return RECT(
-            gui->getTileSize() * (index % getSizeX(gui)) + loc->x,
-            gui->getTileSize() * (index / getSizeX(gui)) + loc->y,
-            gui->getTileSize(),
-            gui->getTileSize());
+            tileSize * (index % getSizeX(gui)) + loc->x,
+            tileSize * (index / getSizeX(gui)) + loc->y,
+            tileSize,
+            tileSize);
 }
 
 bool CListView::isOversized(std::shared_ptr<CGui> gui) {
@@ -91,12 +91,12 @@ bool CListView::isOversized(std::shared_ptr<CGui> gui) {
 
 //TODO: sizes should be calculated dynamically based on preferences
 int CListView::getSizeX(std::shared_ptr<CGui> gui) {
-    return xPrefferedSize != -1 ? xPrefferedSize : getLayout()->getRect(this->ptr<CListView>())->w / gui->getTileSize();
+    return xPrefferedSize != -1 ? xPrefferedSize : getLayout()->getRect(this->ptr<CListView>())->w / tileSize;
 }
 
 //TODO: sizes should be calculated dynamically based on preferences
 int CListView::getSizeY(std::shared_ptr<CGui> gui) {
-    return yPrefferedSize != -1 ? yPrefferedSize : getLayout()->getRect(this->ptr<CListView>())->h / gui->getTileSize();
+    return yPrefferedSize != -1 ? yPrefferedSize : getLayout()->getRect(this->ptr<CListView>())->h / tileSize;
 }
 
 CListView::collection_pointer CListView::invokeCollection(std::shared_ptr<CGui> gui) {
@@ -241,6 +241,22 @@ int CListView::getYPrefferedSize() const {
 
 void CListView::setYPrefferedSize(int yPrefferedSize) {
     CListView::yPrefferedSize = yPrefferedSize;
+}
+
+int CListView::getTileSize() {
+    return tileSize;
+}
+
+void CListView::setTileSize(int _tileSize) {
+    tileSize = _tileSize;
+}
+
+bool CListView::getAllowOversize() {
+    return allowOversize;
+}
+
+void CListView::setAllowOversize(bool _allowOversize) {
+    allowOversize = _allowOversize;
 }
 
 

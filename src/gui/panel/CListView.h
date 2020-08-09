@@ -32,6 +32,8 @@ V_META(CListView, CProxyTargetGraphicsObject,
        V_PROPERTY(CListView, std::string, refreshEvent, getRefreshEvent, setRefreshEvent),
        V_PROPERTY(CListView, int, xPrefferedSize, getXPrefferedSize, setXPrefferedSize),
        V_PROPERTY(CListView, int, yPrefferedSize, getYPrefferedSize, setYPrefferedSize),
+       V_PROPERTY(CListView, int, tileSize, getTileSize, setTileSize),
+       V_PROPERTY(CListView, bool, allowOversize, getAllowOversize, setAllowOversize),
        V_METHOD(CListView, initialize))
 
     std::string collection;
@@ -72,8 +74,17 @@ private:
 
     int yPrefferedSize = -1;
 
+    int tileSize = 50;
 public:
     CListView();
+
+    bool getAllowOversize();
+
+    void setAllowOversize(bool _allowOversize);
+
+    int getTileSize();
+
+    void setTileSize(int _tileSize);
 
     void renderObject(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> loc, int frameTime) override;
 

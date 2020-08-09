@@ -2,7 +2,7 @@
   "CrownOfNightmares": {
     "class": "CHelmet",
     "properties": {
-      "tooltip": "Crown of Nightmares",
+      "label": "Crown of Nightmares",
       "animation": "images/items/helmets/crownofnightmares",
       "bonus": {
         "class": "Stats",
@@ -21,7 +21,7 @@
   "EradicatorsBoots": {
     "class": "CBoots",
     "properties": {
-      "tooltip": "Eradicators Boots",
+      "label": "Eradicators Boots",
       "animation": "images/items/boots/eradicatorsboots",
       "bonus": {
         "class": "Stats",
@@ -39,7 +39,7 @@
   "GlovesOfTheAssasin": {
     "class": "CGloves",
     "properties": {
-      "tooltip": "Gloves of the Assasin",
+      "label": "Gloves of the Assasin",
       "animation": "images/items/gloves/glovesoftheassasin",
       "bonus": {
         "class": "Stats",
@@ -58,7 +58,7 @@
   "Scroll": {
     "class": "CScroll",
     "properties": {
-      "tooltip": "Scroll",
+      "label": "Scroll",
       "animation": "images/items/scroll",
       "power": 0,
       "singleUse": true
@@ -67,7 +67,7 @@
   "UndestructibleBelt": {
     "class": "CBelt",
     "properties": {
-      "tooltip": "Undestructible Belt",
+      "label": "Undestructible Belt",
       "animation": "images/items/belts/undestructiblebelt",
       "bonus": {
         "class": "Stats",
