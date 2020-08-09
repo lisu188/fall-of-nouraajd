@@ -2,7 +2,6 @@
   "Assasin": {
     "class": "CPlayer",
     "properties": {
-      "label": "Assasin",
       "actions": [
         {
           "ref": "Attack"
@@ -24,6 +23,7 @@
         "class": "CPlayerFightController"
       },
       "items": [],
+      "label": "Assasin",
       "levelStats": {
         "class": "Stats",
         "properties": {
@@ -76,7 +76,6 @@
   "Gooby": {
     "class": "CMonster",
     "properties": {
-      "label": "Gooby",
       "actions": [
         {
           "ref": "Attack"
@@ -86,6 +85,7 @@
       "fightController": {
         "class": "CMonsterFightController"
       },
+      "label": "Gooby",
       "levelStats": {
         "class": "Stats",
         "properties": {
@@ -125,7 +125,6 @@
   "OctoBogz": {
     "class": "CMonster",
     "properties": {
-      "label": "Octobogz",
       "actions": [
         {
           "ref": "Attack"
@@ -135,6 +134,7 @@
       "fightController": {
         "class": "CMonsterFightController"
       },
+      "label": "Octobogz",
       "levelStats": {
         "class": "Stats",
         "properties": {
@@ -174,7 +174,6 @@
   "Pritz": {
     "class": "CMonster",
     "properties": {
-      "label": "Pritz",
       "actions": [
         {
           "ref": "Attack"
@@ -184,6 +183,7 @@
       "fightController": {
         "class": "CMonsterFightController"
       },
+      "label": "Pritz",
       "levelStats": {
         "class": "Stats",
         "properties": {
@@ -223,7 +223,6 @@
   "PritzMage": {
     "class": "CMonster",
     "properties": {
-      "label": "Pritz Mage",
       "actions": [
         {
           "ref": "Attack"
@@ -234,6 +233,7 @@
       "fightController": {
         "class": "CMonsterFightController"
       },
+      "label": "Pritz Mage",
       "levelStats": {
         "class": "Stats",
         "properties": {
@@ -276,7 +276,6 @@
   "Sorcerer": {
     "class": "CPlayer",
     "properties": {
-      "label": "Sorcerer",
       "actions": [
         {
           "ref": "Attack"
@@ -295,6 +294,7 @@
         "class": "CPlayerFightController"
       },
       "items": [],
+      "label": "Sorcerer",
       "levelStats": {
         "class": "Stats",
         "properties": {
@@ -353,7 +353,6 @@
   "Warrior": {
     "class": "CPlayer",
     "properties": {
-      "label": "Warrior",
       "actions": [
         {
           "ref": "Attack"
@@ -372,6 +371,7 @@
         "class": "CPlayerFightController"
       },
       "items": [],
+      "label": "Warrior",
       "levelStats": {
         "class": "Stats",
         "properties": {

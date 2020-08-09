@@ -3,6 +3,16 @@
     "class": "CEvent",
     "properties": {}
   },
+  "mapObjectPriorities": {
+    "class": "CMapStringInt",
+    "properties": {
+      "values": {
+        "CCreature": 2,
+        "CMapObject": 1,
+        "CPlayer": 3
+      }
+    }
+  },
   "panelKeys": {
     "class": "CMapStringString",
     "properties": {
@@ -10,16 +20,6 @@
         "c": "characterPanel",
         "i": "inventoryPanel",
         "j": "questPanel"
-      }
-    }
-  },
-  "mapObjectPriorities": {
-    "class": "CMapStringInt",
-    "properties": {
-      "values": {
-        "CMapObject": 1,
-        "CCreature": 2,
-        "CPlayer": 3
       }
     }
   }

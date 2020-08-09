@@ -3,9 +3,9 @@
     "class": "LifePotion",
     "properties": {
       "animation": "images/items/potions/life",
+      "label": "Full Life Potion",
       "power": 5,
       "singleUse": true,
-      "label": "Full Life Potion",
       "tags": [
         "heal"
       ]
@@ -15,9 +15,9 @@
     "class": "ManaPotion",
     "properties": {
       "animation": "images/items/potions/mana",
+      "label": "Full Mana Potion",
       "power": 5,
       "singleUse": true,
-      "label": "Full Mana Potion",
       "tags": [
         "mana"
       ]
@@ -27,8 +27,8 @@
     "class": "LifePotion",
     "properties": {
       "animation": "images/items/potions/life",
-      "power": 3,
       "label": "Greater Life Potion",
+      "power": 3,
       "singleUse": true,
       "tags": [
         "heal"
@@ -39,8 +39,8 @@
     "class": "ManaPotion",
     "properties": {
       "animation": "images/items/potions/mana",
-      "power": 3,
       "label": "Greater Mana Potion",
+      "power": 3,
       "singleUse": true,
       "tags": [
         "mana"
@@ -62,8 +62,8 @@
   "LesserManaPotion": {
     "class": "ManaPotion",
     "properties": {
-      "label": "Lesser Mana Potion",
       "animation": "images/items/potions/mana",
+      "label": "Lesser Mana Potion",
       "power": 1,
       "singleUse": true,
       "tags": [
@@ -74,8 +74,8 @@
   "LifePotion": {
     "class": "LifePotion",
     "properties": {
-      "label": "Life Potion",
       "animation": "images/items/potions/life",
+      "label": "Life Potion",
       "power": 2,
       "singleUse": true,
       "tags": [
@@ -86,8 +86,8 @@
   "ManaPotion": {
     "class": "ManaPotion",
     "properties": {
-      "label": "Mana Potion",
       "animation": "images/items/potions/mana",
+      "label": "Mana Potion",
       "power": 3,
       "singleUse": true,
       "tags": [
@@ -98,8 +98,8 @@
   "MaxLifePotion": {
     "class": "LifePotion",
     "properties": {
-      "label": "Max Life Potion",
       "animation": "images/items/potions/life",
+      "label": "Max Life Potion",
       "power": 4,
       "singleUse": true,
       "tags": [
@@ -110,8 +110,8 @@
   "MaxManaPotion": {
     "class": "ManaPotion",
     "properties": {
-      "label": "Max Mana Potion",
       "animation": "images/items/potions/mana",
+      "label": "Max Mana Potion",
       "power": 4,
       "singleUse": true,
       "tags": [

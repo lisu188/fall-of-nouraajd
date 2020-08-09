@@ -6,8 +6,8 @@
       "effect": {
         "ref": "AbyssalShadowsEffect"
       },
-      "manaCost": 15,
-      "label": "Abyssal Shadows"
+      "label": "Abyssal Shadows",
+      "manaCost": 15
     }
   },
   "ArmorOfEndlessWinter": {
@@ -54,8 +54,8 @@
     "class": "BloodThirst",
     "properties": {
       "animation": "images/interactions/bloodthirst",
-      "manaCost": 35,
       "label": "Blood Thirst",
+      "manaCost": 35,
       "tags": [
         "heal"
       ]
@@ -76,8 +76,8 @@
     "class": "ChaosBlast",
     "properties": {
       "animation": "images/interactions/chaosblast",
-      "manaCost": 150,
-      "label": "Chaos Blast"
+      "label": "Chaos Blast",
+      "manaCost": 150
     }
   },
   "Chloroform": {
@@ -87,32 +87,32 @@
       "effect": {
         "ref": "ChloroformEffect"
       },
-      "manaCost": 25,
-      "label": "Chloroform"
+      "label": "Chloroform",
+      "manaCost": 25
     }
   },
   "DeathStrike": {
     "class": "DeathStrike",
     "properties": {
       "animation": "images/interactions/deathstrike",
-      "manaCost": 45,
-      "label": "Death Strike"
+      "label": "Death Strike",
+      "manaCost": 45
     }
   },
   "Devour": {
     "class": "Devour",
     "properties": {
       "animation": "images/interactions/devour",
-      "manaCost": 75,
-      "label": "Devour"
+      "label": "Devour",
+      "manaCost": 75
     }
   },
   "DoubleAttack": {
     "class": "DoubleAttack",
     "properties": {
       "animation": "images/interactions/doubleattack",
-      "manaCost": 50,
-      "label": "Double Attack"
+      "label": "Double Attack",
+      "manaCost": 50
     }
   },
   "ElemStaff": {
@@ -134,8 +134,8 @@
     "class": "FrostBolt",
     "properties": {
       "animation": "images/interactions/frostbolt",
-      "manaCost": 20,
-      "label": "Frost Bolt"
+      "label": "Frost Bolt",
+      "manaCost": 20
     }
   },
   "LethalPoison": {
@@ -153,8 +153,8 @@
     "class": "MagicMissile",
     "properties": {
       "animation": "images/interactions/magicmissile",
-      "manaCost": 5,
-      "label": "Magic Missile"
+      "label": "Magic Missile",
+      "manaCost": 5
     }
   },
   "Mutilation": {
@@ -182,27 +182,27 @@
   "SneakAttack": {
     "class": "SneakAttack",
     "properties": {
-      "label": "Sneak Attack",
       "animation": "images/interactions/sneakattack",
+      "label": "Sneak Attack",
       "manaCost": 15
     }
   },
   "Strike": {
     "class": "Strike",
     "properties": {
-      "label": "Strike",
       "animation": "images/interactions/strike",
+      "label": "Strike",
       "manaCost": 25
     }
   },
   "Stunner": {
     "class": "Stunner",
     "properties": {
-      "label": "Stunner",
       "animation": "images/interactions/stun",
       "effect": {
         "ref": "Stun"
       },
+      "label": "Stunner",
       "manaCost": 40
     }
   }
