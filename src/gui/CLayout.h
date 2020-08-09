@@ -147,7 +147,15 @@ private:
 
 //TODO: remove
 class CProxyGraphicsLayout : public CLayout {
-V_META(CProxyGraphicsLayout, CLayout, vstd::meta::empty())
+V_META(CProxyGraphicsLayout, CLayout,
+       V_PROPERTY(CProxyGraphicsLayout, int, tileSize, getTileSize, setTileSize))
 public:
     std::shared_ptr<SDL_Rect> getRect(std::shared_ptr<CGameGraphicsObject> object) override;
+
+    int getTileSize();
+
+    void setTileSize(int _tileSize);
+
+private:
+    int tileSize;
 };

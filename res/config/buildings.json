@@ -9,28 +9,28 @@
         "ref": "Pritz"
       },
       "monsters": 5,
-      "tooltip": "Cave"
+      "label": "Cave"
     }
   },
   "GroundHole": {
     "class": "GroundHole",
     "properties": {
       "animation": "images/buildings/groundhole",
-      "tooltip": "Ground Hole"
+      "label": "Ground Hole"
     }
   },
   "Market": {
     "class": "Market",
     "properties": {
       "animation": "images/buildings/market",
-      "tooltip": "Market"
+      "label": "Market"
     }
   },
   "Teleporter": {
     "class": "Teleporter",
     "properties": {
       "animation": "images/buildings/teleporter",
-      "tooltip": "Teleporter"
+      "label": "Teleporter"
     }
   }
 }
