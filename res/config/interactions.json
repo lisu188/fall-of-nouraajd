@@ -7,7 +7,7 @@
         "ref": "AbyssalShadowsEffect"
       },
       "manaCost": 15,
-      "tooltip": "Abyssal Shadows"
+      "label": "Abyssal Shadows"
     }
   },
   "ArmorOfEndlessWinter": {
@@ -17,7 +17,7 @@
       "effect": {
         "ref": "ArmorOfEndlessWinterEffect"
       },
-      "tooltip": "Armor of Endless Winter",
+      "label": "Armor of Endless Winter",
       "manaCost": 60
     }
   },
@@ -25,7 +25,7 @@
     "class": "Attack",
     "properties": {
       "animation": "images/interactions/attack",
-      "tooltip": "Standard Attack"
+      "label": "Standard Attack"
     }
   },
   "Backstab": {
@@ -35,7 +35,7 @@
       "effect": {
         "ref": "Stun"
       },
-      "tooltip": "Stun",
+      "label": "Stun",
       "manaCost": 40
     }
   },
@@ -46,7 +46,7 @@
       "effect": {
         "ref": "BarrierEffect"
       },
-      "tooltip": "Barrier",
+      "label": "Barrier",
       "manaCost": 17
     }
   },
@@ -55,7 +55,7 @@
     "properties": {
       "animation": "images/interactions/bloodthirst",
       "manaCost": 35,
-      "tooltip": "Blood Thirst",
+      "label": "Blood Thirst",
       "tags": [
         "heal"
       ]
@@ -68,7 +68,7 @@
       "effect": {
         "ref": "BloodlashEffect"
       },
-      "tooltip": "Bloodlash",
+      "label": "Bloodlash",
       "manaCost": 30
     }
   },
@@ -77,7 +77,7 @@
     "properties": {
       "animation": "images/interactions/chaosblast",
       "manaCost": 150,
-      "tooltip": "Chaos Blast"
+      "label": "Chaos Blast"
     }
   },
   "Chloroform": {
@@ -88,7 +88,7 @@
         "ref": "ChloroformEffect"
       },
       "manaCost": 25,
-      "tooltip": "Chloroform"
+      "label": "Chloroform"
     }
   },
   "DeathStrike": {
@@ -96,7 +96,7 @@
     "properties": {
       "animation": "images/interactions/deathstrike",
       "manaCost": 45,
-      "tooltip": "Death Strike"
+      "label": "Death Strike"
     }
   },
   "Devour": {
@@ -104,7 +104,7 @@
     "properties": {
       "animation": "images/interactions/devour",
       "manaCost": 75,
-      "tooltip": "Devour"
+      "label": "Devour"
     }
   },
   "DoubleAttack": {
@@ -112,7 +112,7 @@
     "properties": {
       "animation": "images/interactions/doubleattack",
       "manaCost": 50,
-      "tooltip": "Double Attack"
+      "label": "Double Attack"
     }
   },
   "ElemStaff": {
@@ -126,7 +126,7 @@
       "effect": {
         "ref": "EndlessPainEffect"
       },
-      "tooltip": "Endless Pain",
+      "label": "Endless Pain",
       "manaCost": 25
     }
   },
@@ -135,7 +135,7 @@
     "properties": {
       "animation": "images/interactions/frostbolt",
       "manaCost": 20,
-      "tooltip": "Frost Bolt"
+      "label": "Frost Bolt"
     }
   },
   "LethalPoison": {
@@ -145,7 +145,7 @@
       "effect": {
         "ref": "LethalPoisonEffect"
       },
-      "tooltip": "Lethal Poison",
+      "label": "Lethal Poison",
       "manaCost": 20
     }
   },
@@ -154,7 +154,7 @@
     "properties": {
       "animation": "images/interactions/magicmissile",
       "manaCost": 5,
-      "tooltip": "Magic Missile"
+      "label": "Magic Missile"
     }
   },
   "Mutilation": {
@@ -164,7 +164,7 @@
       "effect": {
         "ref": "MutilationEffect"
       },
-      "tooltip": "Mutilation",
+      "label": "Mutilation",
       "manaCost": 15
     }
   },
@@ -175,14 +175,14 @@
       "effect": {
         "ref": "AbyssalShadowsEffect"
       },
-      "tooltip": "Shadow Bolt",
+      "label": "Shadow Bolt",
       "manaCost": 45
     }
   },
   "SneakAttack": {
     "class": "SneakAttack",
     "properties": {
-      "tooltip": "Sneak Attack",
+      "label": "Sneak Attack",
       "animation": "images/interactions/sneakattack",
       "manaCost": 15
     }
@@ -190,7 +190,7 @@
   "Strike": {
     "class": "Strike",
     "properties": {
-      "tooltip": "Strike",
+      "label": "Strike",
       "animation": "images/interactions/strike",
       "manaCost": 25
     }
@@ -198,7 +198,7 @@
   "Stunner": {
     "class": "Stunner",
     "properties": {
-      "tooltip": "Stunner",
+      "label": "Stunner",
       "animation": "images/interactions/stun",
       "effect": {
         "ref": "Stun"

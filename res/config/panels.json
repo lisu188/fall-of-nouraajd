@@ -95,6 +95,10 @@
           "class": "CListView",
           "properties": {
             "priority": 1,
+            "tileSize": 25,
+            "xPrefferedSize": 1,
+            "yPrefferedSize": 4,
+            "allowOversize": false,
             "collection": "getEffects",
             "refreshObject": {
               "class": "CScript",

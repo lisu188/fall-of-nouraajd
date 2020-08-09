@@ -130,13 +130,17 @@ void CGameObject::setAnimation(std::string animation) {
 }
 
 std::string CGameObject::getTooltip() {
-    return tooltip;
+    return label;
 }
 
-void CGameObject::setTooltip(std::string tooltip) {
+std::string CGameObject::getLabel() {
+    return label;
+}
+
+void CGameObject::setLabel(std::string _label) {
     //TODO: implement this in AOP way
-    graphicsObject.clear();
-    this->tooltip = tooltip;
+//    graphicsObject.clear();
+    label = _label;
 }
 
 std::shared_ptr<CGameGraphicsObject> CGameObject::getGraphicsObject() {
@@ -155,4 +159,7 @@ void CGameObject::connect(std::string signal, std::shared_ptr<CGameObject> objec
     connections.push_back(std::make_tuple(signal, object, slot));
 }
 
+bool CGameObject::hasProperty(std::string name) {
+    return this->meta()->has_property<CGameObject>(name, this->ptr());
+}
 

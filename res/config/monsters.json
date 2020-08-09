@@ -2,6 +2,7 @@
   "Assasin": {
     "class": "CPlayer",
     "properties": {
+      "label": "Assasin",
       "actions": [
         {
           "ref": "Attack"
@@ -75,6 +76,7 @@
   "Gooby": {
     "class": "CMonster",
     "properties": {
+      "label": "Gooby",
       "actions": [
         {
           "ref": "Attack"
@@ -123,6 +125,7 @@
   "OctoBogz": {
     "class": "CMonster",
     "properties": {
+      "label": "Octobogz",
       "actions": [
         {
           "ref": "Attack"
@@ -171,6 +174,7 @@
   "Pritz": {
     "class": "CMonster",
     "properties": {
+      "label": "Pritz",
       "actions": [
         {
           "ref": "Attack"
@@ -219,6 +223,7 @@
   "PritzMage": {
     "class": "CMonster",
     "properties": {
+      "label": "Pritz Mage",
       "actions": [
         {
           "ref": "Attack"
@@ -271,6 +276,7 @@
   "Sorcerer": {
     "class": "CPlayer",
     "properties": {
+      "label": "Sorcerer",
       "actions": [
         {
           "ref": "Attack"
@@ -347,6 +353,7 @@
   "Warrior": {
     "class": "CPlayer",
     "properties": {
+      "label": "Warrior",
       "actions": [
         {
           "ref": "Attack"

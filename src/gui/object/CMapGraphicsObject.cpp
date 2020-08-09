@@ -52,36 +52,39 @@ CMapGraphicsObject::getProxiedObjects(std::shared_ptr<CGui> gui, int x, int y) {
 
 void CMapGraphicsObject::initialize() {
     for (auto val:panelKeys->getValues()) {
-        auto keyPred = [=](std::shared_ptr<CGui> gui, std::shared_ptr<CGameGraphicsObject> self, SDL_Event *event) {
+        auto keyPred = [val](std::shared_ptr<CGui> gui, std::shared_ptr<CGameGraphicsObject> self, SDL_Event *event) {
             return event->type == SDL_KEYDOWN && event->key.keysym.sym == val.first[0];
         };
-        registerEventCallback(keyPred, [=](std::shared_ptr<CGui> gui, std::shared_ptr<CGameGraphicsObject> self,
-                                           SDL_Event *event) {
-            std::shared_ptr<CGamePanel> panel = gui->getGame()->createObject<CGamePanel>(val.second);
-            gui->pushChild(panel);
-            panel->registerEventCallback(keyPred,
-                                         [](std::shared_ptr<CGui> gui,
-                                            std::shared_ptr<CGameGraphicsObject> self,
-                                            SDL_Event *event) {
-                                             gui->removeChild(self);
-                                             return true;
-                                         });
-            return true;
-        });
+        registerEventCallback(keyPred,
+                              [keyPred, val](std::shared_ptr<CGui> gui, std::shared_ptr<CGameGraphicsObject> self,
+                                             SDL_Event *event) {
+                                  std::shared_ptr<CGamePanel> panel = gui->getGame()->createObject<CGamePanel>(
+                                          val.second);
+                                  gui->pushChild(panel);
+                                  panel->registerEventCallback(keyPred,
+                                                               [](std::shared_ptr<CGui> gui,
+                                                                  std::shared_ptr<CGameGraphicsObject> self,
+                                                                  SDL_Event *event) {
+                                                                   gui->removeChild(self);
+                                                                   return true;
+                                                               });
+                                  return true;
+                              });
     }
 
-    vstd::call_when([=]() {
-                        return getGui() != nullptr
-                               && getGui()->getGame() != nullptr
-                               && getGui()->getGame()->getMap() != nullptr;
-                    }, [=]() {
-                        getGui()->getGame()->getMap()->connect("turnPassed", this->ptr<CMapGraphicsObject>(),
-                                                               "refreshAll");
-                        getGui()->getGame()->getMap()->connect("tileChanged", this->ptr<CMapGraphicsObject>(),
-                                                               "refreshObject");//TODO: current lazy tile loading may cause event spam
-                        getGui()->getGame()->getMap()->connect("objectChanged", this->ptr<CMapGraphicsObject>(),
-                                                               "refreshObject");//TODO: current lazy tile loading may cause event spam
-                        refresh();
+    auto self = this->ptr<CMapGraphicsObject>();
+    vstd::call_when([self]() {
+                        return self->getGui() != nullptr
+                               && self->getGui()->getGame() != nullptr
+                               && self->getGui()->getGame()->getMap() != nullptr;
+                    }, [self]() {
+                        self->getGui()->getGame()->getMap()->connect("turnPassed", self,
+                                                                     "refreshAll");
+                        self->getGui()->getGame()->getMap()->connect("tileChanged", self,
+                                                                     "refreshObject");//TODO: current lazy tile loading may cause event spam
+                        self->getGui()->getGame()->getMap()->connect("objectChanged", self,
+                                                                     "refreshObject");//TODO: current lazy tile loading may cause event spam
+                        self->refresh();
                     }
     );
 }

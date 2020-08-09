@@ -90,15 +90,16 @@ void CDynamicAnimation::renderObject(std::shared_ptr<CGui> gui, std::shared_ptr<
 
 
 void CDynamicAnimation::initialize() {
-    vstd::call_when([this]() {
-        return object != nullptr;
-    }, [this]() {
-        std::string path = object->getAnimation();
+    auto self = this->ptr<CDynamicAnimation>();
+    vstd::call_when([self]() {
+        return self->object != nullptr;
+    }, [self]() {
+        std::string path = self->object->getAnimation();
         auto time = CConfigurationProvider::getConfig(path + "/" + "time.json");
-        size = time->size();
-        for (int i = 0; i < size; i++) {
-            paths.push_back(path + "/" + std::to_string(i) + ".png");
-            times.push_back((*time)[std::to_string(i)].get<int>());
+        self->size = time->size();
+        for (int i = 0; i < self->size; i++) {
+            self->paths.push_back(path + "/" + std::to_string(i) + ".png");
+            self->times.push_back((*time)[std::to_string(i)].get<int>());
         }
     });
 
