@@ -26,6 +26,55 @@
       }
     }
   },
+  "creatureView": {
+    "class": "CCreatureView",
+    "properties": {
+      "children": [
+        {
+          "class": "CListView",
+          "properties": {
+            "allowOversize": false,
+            "collection": "getEffects",
+            "layout": {
+              "class": "CAnchoredLayout",
+              "properties": {
+                "horizontal": "LEFT",
+                "vertical": "PARENT",
+                "w": 50
+              }
+            },
+            "priority": 1,
+            "refreshEvent": "effectsChanged",
+            "refreshObject": {
+              "class": "CScript",
+              "properties": {
+                "script": "self.getParent().getCreature()"
+              }
+            },
+            "showEmpty": false,
+            "tileSize": 25,
+            "xPrefferedSize": 1,
+            "yPrefferedSize": 4
+          }
+        }
+      ],
+      "creatureScript": {
+        "class": "CScript",
+        "properties": {
+          "script": "self.getParent().getParent().getEnemy()"
+        }
+      },
+      "layout": {
+        "class": "CAnchoredLayout",
+        "properties": {
+          "h": 200,
+          "horizontal": "PARENT",
+          "vertical": "UP"
+        }
+      },
+      "proxyLayout": "CParentLayout"
+    }
+  },
   "dialogPanel": {
     "class": "CGameDialogPanel",
     "properties": {
@@ -87,67 +136,6 @@
       }
     }
   },
-  "creatureView": {
-    "class": "CCreatureView",
-    "properties": {
-      "children": [
-        {
-          "class": "CListView",
-          "properties": {
-            "priority": 1,
-            "tileSize": 25,
-            "xPrefferedSize": 1,
-            "yPrefferedSize": 4,
-            "allowOversize": false,
-            "collection": "getEffects",
-            "refreshObject": {
-              "class": "CScript",
-              "properties": {
-                "script": "self.getParent().getCreature()"
-              }
-            },
-            "refreshEvent": "effectsChanged",
-            "layout": {
-              "class": "CAnchoredLayout",
-              "properties": {
-                "horizontal": "LEFT",
-                "vertical": "PARENT",
-                "w": 50
-              }
-            }
-          }
-        }
-      ],
-      "creatureScript": {
-        "class": "CScript",
-        "properties": {
-          "script": "self.getParent().getParent().getEnemy()"
-        }
-      },
-      "proxyLayout": "CParentLayout",
-      "layout": {
-        "class": "CAnchoredLayout",
-        "properties": {
-          "h": 200,
-          "horizontal": "PARENT",
-          "vertical": "UP"
-        }
-      }
-    }
-  },
-  "statsView": {
-    "class": "CStatsGraphicsObject",
-    "properties": {
-      "layout": {
-        "class": "CAnchoredLayout",
-        "properties": {
-          "h": 100,
-          "horizontal": "PARENT",
-          "vertical": "DOWN"
-        }
-      }
-    }
-  },
   "fightPanel": {
     "class": "CGameFightPanel",
     "properties": {
@@ -157,7 +145,6 @@
           "properties": {
             "children": [
               {
-                "ref": "creatureView",
                 "properties": {
                   "creatureScript": {
                     "class": "CScript",
@@ -165,10 +152,10 @@
                       "script": "self.getGui().getGame().getMap().getPlayer()"
                     }
                   }
-                }
+                },
+                "ref": "creatureView"
               },
               {
-                "ref": "statsView",
                 "properties": {
                   "creature": {
                     "class": "CScript",
@@ -176,7 +163,8 @@
                       "script": "self.getGui().getGame().getMap().getPlayer()"
                     }
                   }
-                }
+                },
+                "ref": "statsView"
               }
             ],
             "layout": {
@@ -195,7 +183,6 @@
           "properties": {
             "children": [
               {
-                "ref": "creatureView",
                 "properties": {
                   "creatureScript": {
                     "class": "CScript",
@@ -203,10 +190,10 @@
                       "script": "self.getParent().getParent().getEnemy()"
                     }
                   }
-                }
+                },
+                "ref": "creatureView"
               },
               {
-                "ref": "statsView",
                 "properties": {
                   "creature": {
                     "class": "CScript",
@@ -214,7 +201,8 @@
                       "script": "self.getParent().getParent().getEnemy()"
                     }
                   }
-                }
+                },
+                "ref": "statsView"
               }
             ],
             "layout": {
@@ -231,16 +219,8 @@
         {
           "class": "CListView",
           "properties": {
-            "collection": "interactionsCollection",
             "callback": "interactionsCallback",
-            "select": "interactionsSelect",
-            "refreshObject": {
-              "class": "CScript",
-              "properties": {
-                "script": "self.getGui().getGame().getMap().getPlayer()"
-              }
-            },
-            "refreshEvent": "interactionsChanged",
+            "collection": "interactionsCollection",
             "layout": {
               "class": "CPercentLayout",
               "properties": {
@@ -249,22 +229,22 @@
                 "x": 0,
                 "y": 90
               }
-            }
-          }
-        },
-        {
-          "class": "CListView",
-          "properties": {
-            "collection": "itemsCollection",
-            "callback": "itemsCallback",
-            "select": "itemsSelect",
+            },
+            "refreshEvent": "interactionsChanged",
             "refreshObject": {
               "class": "CScript",
               "properties": {
                 "script": "self.getGui().getGame().getMap().getPlayer()"
               }
             },
-            "refreshEvent": "inventoryChanged",
+            "select": "interactionsSelect"
+          }
+        },
+        {
+          "class": "CListView",
+          "properties": {
+            "callback": "itemsCallback",
+            "collection": "itemsCollection",
             "layout": {
               "class": "CPercentLayout",
               "properties": {
@@ -273,7 +253,15 @@
                 "x": 0,
                 "y": 80
               }
-            }
+            },
+            "refreshEvent": "inventoryChanged",
+            "refreshObject": {
+              "class": "CScript",
+              "properties": {
+                "script": "self.getGui().getGame().getMap().getPlayer()"
+              }
+            },
+            "select": "itemsSelect"
           }
         }
       ],
@@ -298,6 +286,18 @@
       }
     }
   },
+  "infoPanel": {
+    "class": "CGameTextPanel",
+    "properties": {
+      "layout": {
+        "class": "CCenteredLayout",
+        "properties": {
+          "h": 300,
+          "w": 400
+        }
+      }
+    }
+  },
   "inventoryPanel": {
     "class": "CGameInventoryPanel",
     "properties": {
@@ -305,16 +305,8 @@
         {
           "class": "CListView",
           "properties": {
-            "collection": "inventoryCollection",
             "callback": "inventoryCallback",
-            "select": "inventorySelect",
-            "refreshObject": {
-              "class": "CScript",
-              "properties": {
-                "script": "self.getGui().getGame().getMap().getPlayer()"
-              }
-            },
-            "refreshEvent": "inventoryChanged",
+            "collection": "inventoryCollection",
             "layout": {
               "class": "CPercentLayout",
               "properties": {
@@ -323,24 +315,22 @@
                 "x": 0,
                 "y": 0
               }
-            }
-          }
-        },
-        {
-          "class": "CListView",
-          "properties": {
-            "collection": "equippedCollection",
-            "callback": "equippedCallback",
-            "select": "equippedSelect",
+            },
+            "refreshEvent": "inventoryChanged",
             "refreshObject": {
               "class": "CScript",
               "properties": {
                 "script": "self.getGui().getGame().getMap().getPlayer()"
               }
             },
-            "xPrefferedSize": 4,
-            "yPrefferedSize": 2,
-            "refreshEvent": "equippedChanged",
+            "select": "inventorySelect"
+          }
+        },
+        {
+          "class": "CListView",
+          "properties": {
+            "callback": "equippedCallback",
+            "collection": "equippedCollection",
             "layout": {
               "class": "CPercentLayout",
               "properties": {
@@ -349,7 +339,17 @@
                 "x": 75,
                 "y": 0
               }
-            }
+            },
+            "refreshEvent": "equippedChanged",
+            "refreshObject": {
+              "class": "CScript",
+              "properties": {
+                "script": "self.getGui().getGame().getMap().getPlayer()"
+              }
+            },
+            "select": "equippedSelect",
+            "xPrefferedSize": 4,
+            "yPrefferedSize": 2
           }
         }
       ],
@@ -374,6 +374,19 @@
       }
     }
   },
+  "statsView": {
+    "class": "CStatsGraphicsObject",
+    "properties": {
+      "layout": {
+        "class": "CAnchoredLayout",
+        "properties": {
+          "h": 100,
+          "horizontal": "PARENT",
+          "vertical": "DOWN"
+        }
+      }
+    }
+  },
   "textPanel": {
     "class": "CGameTextPanel",
     "properties": {
@@ -386,18 +399,6 @@
       }
     }
   },
-  "infoPanel": {
-    "class": "CGameTextPanel",
-    "properties": {
-      "layout": {
-        "class": "CCenteredLayout",
-        "properties": {
-          "h": 300,
-          "w": 400
-        }
-      }
-    }
-  },
   "tradePanel": {
     "class": "CGameTradePanel",
     "properties": {
@@ -405,6 +406,7 @@
         {
           "class": "CTextWidget",
           "properties": {
+            "click": "finalizeSell",
             "layout": {
               "class": "CSimpleLayout",
               "properties": {
@@ -414,13 +416,13 @@
                 "y": 400
               }
             },
-            "text": "SELL",
-            "click": "finalizeSell"
+            "text": "SELL"
           }
         },
         {
           "class": "CTextWidget",
           "properties": {
+            "click": "finalizeBuy",
             "layout": {
               "class": "CSimpleLayout",
               "properties": {
@@ -430,8 +432,7 @@
                 "y": 400
               }
             },
-            "text": "BUY",
-            "click": "finalizeBuy"
+            "text": "BUY"
           }
         },
         {
@@ -467,16 +468,8 @@
         {
           "class": "CListView",
           "properties": {
-            "collection": "inventoryCollection",
             "callback": "inventoryCallback",
-            "select": "inventorySelect",
-            "refreshObject": {
-              "class": "CScript",
-              "properties": {
-                "script": "self.getGui().getGame().getMap().getPlayer()"
-              }
-            },
-            "refreshEvent": "inventoryChanged",
+            "collection": "inventoryCollection",
             "layout": {
               "class": "CPercentLayout",
               "properties": {
@@ -485,22 +478,22 @@
                 "x": 0,
                 "y": 0
               }
-            }
+            },
+            "refreshEvent": "inventoryChanged",
+            "refreshObject": {
+              "class": "CScript",
+              "properties": {
+                "script": "self.getGui().getGame().getMap().getPlayer()"
+              }
+            },
+            "select": "inventorySelect"
           }
         },
         {
           "class": "CListView",
           "properties": {
-            "collection": "marketCollection",
             "callback": "marketCallback",
-            "select": "marketSelect",
-            "refreshObject": {
-              "class": "CScript",
-              "properties": {
-                "script": "self.getParent().getMarket()"
-              }
-            },
-            "refreshEvent": "itemsChanged",
+            "collection": "marketCollection",
             "layout": {
               "class": "CPercentLayout",
               "properties": {
@@ -509,7 +502,15 @@
                 "x": 75,
                 "y": 0
               }
-            }
+            },
+            "refreshEvent": "itemsChanged",
+            "refreshObject": {
+              "class": "CScript",
+              "properties": {
+                "script": "self.getParent().getMarket()"
+              }
+            },
+            "select": "marketSelect"
           }
         }
       ],
