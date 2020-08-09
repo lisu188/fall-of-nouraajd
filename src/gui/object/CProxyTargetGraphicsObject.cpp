@@ -36,10 +36,14 @@ void CProxyTargetGraphicsObject::refresh() {
                 removeChild(val);
             }
             proxyObjects.clear();
+            auto tileSize = getTileSize(this->ptr<CGameGraphicsObject>());
             for (int x = 0; x < getSizeX(gui); x++) {
                 for (int y = 0; y < getSizeY(gui); y++) {
                     std::shared_ptr<CProxyGraphicsObject> nh = std::make_shared<CProxyGraphicsObject>(x, y);
-                    nh->setLayout(gui->getGame()->template createObject<CLayout>(proxyLayout));
+                    std::shared_ptr<CLayout> layout1 = gui->getGame()->template createObject<CLayout>(
+                            proxyLayout);
+                    layout1->setNumericProperty("tileSize", tileSize);
+                    nh->setLayout(layout1);
                     proxyObjects.insert(nh);
                     addChild(nh);
                 }
@@ -47,7 +51,14 @@ void CProxyTargetGraphicsObject::refresh() {
             refreshAll();
         }
     });
+}
 
+int CProxyTargetGraphicsObject::getTileSize(
+        std::shared_ptr<CGameGraphicsObject> object) {
+    if (object->hasProperty("tileSize")) {
+        return object->getNumericProperty("tileSize");
+    }
+    return getTileSize(object->getParent());
 }
 
 void CProxyTargetGraphicsObject::refreshAll() {

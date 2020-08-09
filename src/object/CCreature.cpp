@@ -548,7 +548,7 @@ void CCreature::afterMove() {
 }
 
 std::string CCreature::getTooltip() {
-    return vstd::join({getType(), std::to_string(level)}, " ");
+    return vstd::join({getLabel(), std::to_string(level)}, " ");
 }
 
 void CCreature::addGold(int gold) {

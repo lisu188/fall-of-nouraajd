@@ -17,7 +17,7 @@
                 "manaCost": 0,
                 "name": "DC4EC07A1F3DCD65",
                 "tags": null,
-                "tooltip": "Standard Attack"
+                "label": "Standard Attack"
               }
             },
             {
@@ -162,7 +162,7 @@
                 "manaCost": 0,
                 "name": "25BB18185680BE48",
                 "tags": null,
-                "tooltip": "Standard Attack"
+                "label": "Standard Attack"
               }
             },
             {
@@ -1298,7 +1298,7 @@
                     "manaCost": 0,
                     "name": "DC4EC07A1F3DCD65",
                     "tags": null,
-                    "tooltip": "Standard Attack"
+                    "label": "Standard Attack"
                   }
                 }
               ],
@@ -1523,7 +1523,7 @@
                 "manaCost": 0,
                 "name": "DC4EC07A1F3DCD65",
                 "tags": null,
-                "tooltip": "Standard Attack"
+                "label": "Standard Attack"
               }
             },
             {
@@ -1668,7 +1668,7 @@
                 "manaCost": 0,
                 "name": "DC4EC07A1F3DCD65",
                 "tags": null,
-                "tooltip": "Standard Attack"
+                "label": "Standard Attack"
               }
             },
             {
@@ -1813,7 +1813,7 @@
                 "manaCost": 0,
                 "name": "DC4EC07A1F3DCD65",
                 "tags": null,
-                "tooltip": "Standard Attack"
+                "label": "Standard Attack"
               }
             },
             {
@@ -1958,7 +1958,7 @@
                 "manaCost": 0,
                 "name": "DC4EC07A1F3DCD65",
                 "tags": null,
-                "tooltip": "Standard Attack"
+                "label": "Standard Attack"
               }
             },
             {
@@ -2103,7 +2103,7 @@
                 "manaCost": 0,
                 "name": "2612D6D5ABBC8B53",
                 "tags": null,
-                "tooltip": "Standard Attack"
+                "label": "Standard Attack"
               }
             },
             {
@@ -2229,7 +2229,7 @@
                 "manaCost": 0,
                 "name": "2612D6D5ABBC8B53",
                 "tags": null,
-                "tooltip": "Standard Attack"
+                "label": "Standard Attack"
               }
             },
             {

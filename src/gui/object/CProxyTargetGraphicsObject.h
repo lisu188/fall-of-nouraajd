@@ -43,6 +43,9 @@ public:
 private:
     std::set<std::shared_ptr<CProxyGraphicsObject>> proxyObjects;
     std::string proxyLayout = "CProxyGraphicsLayout";
+
+    int getTileSize(std::shared_ptr<CGameGraphicsObject> object);
+
 public:
     std::string getProxyLayout();
 

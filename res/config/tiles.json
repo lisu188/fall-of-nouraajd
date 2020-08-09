@@ -5,7 +5,7 @@
       "animation": "images/tiles/beach",
       "canStep": true,
       "tileType": "beach",
-      "tooltip": "Beach"
+      "label": "Beach"
     }
   },
   "DesertTile": {
@@ -14,7 +14,7 @@
       "animation": "images/tiles/desert",
       "canStep": true,
       "tileType": "desert",
-      "tooltip": "Desert"
+      "label": "Desert"
     }
   },
   "GrassTile": {
@@ -23,7 +23,7 @@
       "animation": "images/tiles/grass",
       "canStep": true,
       "tileType": "grass",
-      "tooltip": "Grass"
+      "label": "Grass"
     }
   },
   "GroundTile": {
@@ -32,7 +32,7 @@
       "animation": "images/tiles/ground",
       "canStep": true,
       "tileType": "ground",
-      "tooltip": "Ground"
+      "label": "Ground"
     }
   },
   "LavaTile": {
@@ -41,7 +41,7 @@
       "animation": "images/tiles/lava",
       "canStep": true,
       "tileType": "lava",
-      "tooltip": "Lava"
+      "label": "Lava"
     }
   },
   "MountainTile": {
@@ -50,7 +50,7 @@
       "animation": "images/tiles/mountain",
       "canStep": false,
       "tileType": "mountain",
-      "tooltip": "Mountain"
+      "label": "Mountain"
     }
   },
   "RoadTile": {
@@ -59,7 +59,7 @@
       "animation": "images/tiles/road",
       "canStep": true,
       "tileType": "road",
-      "tooltip": "Road"
+      "label": "Road"
     }
   },
   "SnowTile": {
@@ -68,7 +68,7 @@
       "animation": "images/tiles/snow",
       "canStep": true,
       "tileType": "snow",
-      "tooltip": "Snow"
+      "label": "Snow"
     }
   },
   "SwampTile": {
@@ -77,7 +77,7 @@
       "animation": "images/tiles/swamp",
       "canStep": true,
       "tileType": "swamp",
-      "tooltip": "Swamp"
+      "label": "Swamp"
     }
   },
   "WastelandTile": {
@@ -86,7 +86,7 @@
       "animation": "images/tiles/wasteland",
       "canStep": true,
       "tileType": "wasteland",
-      "tooltip": "Wasteland"
+      "label": "Wasteland"
     }
   },
   "WaterTile": {
@@ -95,7 +95,7 @@
       "animation": "images/tiles/water",
       "canStep": false,
       "tileType": "water",
-      "tooltip": "Water"
+      "label": "Water"
     }
   }
 }

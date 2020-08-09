@@ -3,7 +3,7 @@
     "class": "CWeapon",
     "properties": {
       "animation": "images/items/weapons/bladeofdarkdreams",
-      "tooltip": "Blade of Dark Dreams",
+      "label": "Blade of Dark Dreams",
       "bonus": {
         "class": "Stats",
         "properties": {
@@ -22,7 +22,7 @@
   "BroadSword": {
     "class": "CWeapon",
     "properties": {
-      "tooltip": "Broad Sword",
+      "label": "Broad Sword",
       "animation": "images/items/weapons/broadsword",
       "bonus": {
         "class": "Stats",
@@ -41,7 +41,7 @@
   "ChaosSword": {
     "class": "CWeapon",
     "properties": {
-      "tooltip": "Chaos Sword",
+      "label": "Chaos Sword",
       "animation": "images/items/weapons/chaossword",
       "bonus": {
         "class": "Stats",
@@ -59,7 +59,7 @@
   "Dagger": {
     "class": "CWeapon",
     "properties": {
-      "tooltip": "Dagger",
+      "label": "Dagger",
       "animation": "images/items/weapons/dagger",
       "bonus": {
         "class": "Stats",
@@ -76,7 +76,7 @@
   "DaggerOfVileHeart": {
     "class": "CWeapon",
     "properties": {
-      "tooltip": "Dagger of Vile Heart",
+      "label": "Dagger of Vile Heart",
       "animation": "images/items/weapons/daggerofvileheart",
       "bonus": {
         "class": "Stats",
@@ -96,7 +96,7 @@
   "Knife": {
     "class": "CWeapon",
     "properties": {
-      "tooltip": "Knife",
+      "label": "Knife",
       "animation": "images/items/weapons/knife",
       "bonus": {
         "class": "Stats",
@@ -112,7 +112,7 @@
   "LongSword": {
     "class": "CWeapon",
     "properties": {
-      "tooltip": "Long Sword",
+      "label": "Long Sword",
       "animation": "images/items/weapons/longsword",
       "bonus": {
         "class": "Stats",
@@ -129,7 +129,7 @@
   "ShadowBlade": {
     "class": "CWeapon",
     "properties": {
-      "tooltip": "Shadow Blade",
+      "label": "Shadow Blade",
       "animation": "images/items/weapons/shadowblade",
       "bonus": {
         "class": "Stats",
@@ -149,7 +149,7 @@
   "ShortStaff": {
     "class": "CWeapon",
     "properties": {
-      "tooltip": "Short Staff",
+      "label": "Short Staff",
       "animation": "images/items/weapons/shortstaff",
       "bonus": {
         "class": "Stats",
@@ -165,7 +165,7 @@
   "ShortSword": {
     "class": "CWeapon",
     "properties": {
-      "tooltip": "Short Sword",
+      "label": "Short Sword",
       "animation": "images/items/weapons/shortsword",
       "bonus": {
         "class": "Stats",
@@ -181,7 +181,7 @@
   "Staff": {
     "class": "CWeapon",
     "properties": {
-      "tooltip": "Staff",
+      "label": "Staff",
       "animation": "images/items/weapons/staff",
       "bonus": {
         "class": "Stats",
@@ -201,7 +201,7 @@
   "StaffOfTheAbyss": {
     "class": "CWeapon",
     "properties": {
-      "tooltip": "Staff of the Abyss",
+      "label": "Staff of the Abyss",
       "animation": "images/items/weapons/staffoftheabyss",
       "bonus": {
         "class": "Stats",
@@ -220,7 +220,7 @@
   "Stiletto": {
     "class": "CWeapon",
     "properties": {
-      "tooltip": "Stiletto",
+      "label": "Stiletto",
       "animation": "images/items/weapons/stiletto",
       "bonus": {
         "class": "Stats",
@@ -239,7 +239,7 @@
   "Sword": {
     "class": "CWeapon",
     "properties": {
-      "tooltip": "Sword",
+      "label": "Sword",
       "animation": "images/items/weapons/sword",
       "bonus": {
         "class": "Stats",
@@ -253,7 +253,7 @@
   "Valkyrie": {
     "class": "CWeapon",
     "properties": {
-      "tooltip": "Valkyrie",
+      "label": "Valkyrie",
       "animation": "images/items/weapons/valkyrie",
       "bonus": {
         "class": "Stats",
@@ -273,7 +273,7 @@
   "Void": {
     "class": "CWeapon",
     "properties": {
-      "tooltip": "Void",
+      "label": "Void",
       "animation": "images/items/weapons/void",
       "bonus": {
         "class": "Stats",
@@ -294,7 +294,7 @@
   "Wand": {
     "class": "CWeapon",
     "properties": {
-      "tooltip": "Wand",
+      "label": "Wand",
       "animation": "images/items/weapons/wand",
       "bonus": {
         "class": "Stats",
