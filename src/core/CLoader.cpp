@@ -213,10 +213,10 @@ void CGameLoader::loadGui(std::shared_ptr<CGame> game) {
 
     game->setGui(gui);
 
-    vstd::event_loop<>::instance()->registerFrameCallback([=](int time) {
+    vstd::event_loop<>::instance()->registerFrameCallback([game](int time) {
         game->getGui()->render(time);
     });
-    vstd::event_loop<>::instance()->registerEventCallback([=](SDL_Event *event) {
+    vstd::event_loop<>::instance()->registerEventCallback([game](SDL_Event *event) {
         return game->getGui()->event(event);
     });
 }
