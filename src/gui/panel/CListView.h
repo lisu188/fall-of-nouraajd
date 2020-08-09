@@ -34,6 +34,7 @@ V_META(CListView, CProxyTargetGraphicsObject,
        V_PROPERTY(CListView, int, yPrefferedSize, getYPrefferedSize, setYPrefferedSize),
        V_PROPERTY(CListView, int, tileSize, getTileSize, setTileSize),
        V_PROPERTY(CListView, bool, allowOversize, getAllowOversize, setAllowOversize),
+       V_PROPERTY(CListView, bool, showEmpty, getShowEmpty, setShowEmpty),
        V_METHOD(CListView, initialize))
 
     std::string collection;
@@ -66,6 +67,8 @@ private:
 
     bool allowOversize = true;
 
+    bool showEmpty = true;
+
     int selectionThickness = 5;
 
     int shift = 0;
@@ -81,6 +84,10 @@ public:
     bool getAllowOversize();
 
     void setAllowOversize(bool _allowOversize);
+
+    bool getShowEmpty();
+
+    void setShowEmpty(bool _showEmpty);
 
     int getTileSize();
 
@@ -146,6 +153,14 @@ private:
     bool isOversized(std::shared_ptr<CGui> gui);
 
     auto getArrowCallback(bool left);
+
+    void addItemBox(std::shared_ptr<CGui> gui, std::set<std::shared_ptr<CGameGraphicsObject>> &return_val) const;
+
+    void addItem(std::set<std::shared_ptr<CGameGraphicsObject>> &return_val,
+                 std::unordered_map<int, std::shared_ptr<CGameObject>> &indexedCollection,
+                 int itemIndex) const;
+
+    void addSelectionBox(std::shared_ptr<CGui> gui, std::set<std::shared_ptr<CGameGraphicsObject>> &return_val) const;
 };
 
 

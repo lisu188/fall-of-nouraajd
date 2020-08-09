@@ -5,11 +5,11 @@
       "animation": "images/buildings/cave",
       "chance": 15,
       "enabled": true,
+      "label": "Cave",
       "monster": {
         "ref": "Pritz"
       },
-      "monsters": 5,
-      "label": "Cave"
+      "monsters": 5
     }
   },
   "GroundHole": {

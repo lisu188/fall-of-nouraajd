@@ -4,8 +4,8 @@
     "properties": {
       "animation": "images/tiles/beach",
       "canStep": true,
-      "tileType": "beach",
-      "label": "Beach"
+      "label": "Beach",
+      "tileType": "beach"
     }
   },
   "DesertTile": {
@@ -13,8 +13,8 @@
     "properties": {
       "animation": "images/tiles/desert",
       "canStep": true,
-      "tileType": "desert",
-      "label": "Desert"
+      "label": "Desert",
+      "tileType": "desert"
     }
   },
   "GrassTile": {
@@ -22,8 +22,8 @@
     "properties": {
       "animation": "images/tiles/grass",
       "canStep": true,
-      "tileType": "grass",
-      "label": "Grass"
+      "label": "Grass",
+      "tileType": "grass"
     }
   },
   "GroundTile": {
@@ -31,8 +31,8 @@
     "properties": {
       "animation": "images/tiles/ground",
       "canStep": true,
-      "tileType": "ground",
-      "label": "Ground"
+      "label": "Ground",
+      "tileType": "ground"
     }
   },
   "LavaTile": {
@@ -40,8 +40,8 @@
     "properties": {
       "animation": "images/tiles/lava",
       "canStep": true,
-      "tileType": "lava",
-      "label": "Lava"
+      "label": "Lava",
+      "tileType": "lava"
     }
   },
   "MountainTile": {
@@ -49,8 +49,8 @@
     "properties": {
       "animation": "images/tiles/mountain",
       "canStep": false,
-      "tileType": "mountain",
-      "label": "Mountain"
+      "label": "Mountain",
+      "tileType": "mountain"
     }
   },
   "RoadTile": {
@@ -58,8 +58,8 @@
     "properties": {
       "animation": "images/tiles/road",
       "canStep": true,
-      "tileType": "road",
-      "label": "Road"
+      "label": "Road",
+      "tileType": "road"
     }
   },
   "SnowTile": {
@@ -67,8 +67,8 @@
     "properties": {
       "animation": "images/tiles/snow",
       "canStep": true,
-      "tileType": "snow",
-      "label": "Snow"
+      "label": "Snow",
+      "tileType": "snow"
     }
   },
   "SwampTile": {
@@ -76,8 +76,8 @@
     "properties": {
       "animation": "images/tiles/swamp",
       "canStep": true,
-      "tileType": "swamp",
-      "label": "Swamp"
+      "label": "Swamp",
+      "tileType": "swamp"
     }
   },
   "WastelandTile": {
@@ -85,8 +85,8 @@
     "properties": {
       "animation": "images/tiles/wasteland",
       "canStep": true,
-      "tileType": "wasteland",
-      "label": "Wasteland"
+      "label": "Wasteland",
+      "tileType": "wasteland"
     }
   },
   "WaterTile": {
@@ -94,8 +94,8 @@
     "properties": {
       "animation": "images/tiles/water",
       "canStep": false,
-      "tileType": "water",
-      "label": "Water"
+      "label": "Water",
+      "tileType": "water"
     }
   }
 }

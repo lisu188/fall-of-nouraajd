@@ -35,6 +35,7 @@ void CGameFightPanel::interactionsCallback(std::shared_ptr<CGui> gui, int index,
         gui->getGame()->getMap()->getPlayer()->getMana()) {
         selected = newSelection;
     } else if (
+            newSelection &&
             selected.lock() ==
             newSelection &&
             newSelection->getManaCost() <=

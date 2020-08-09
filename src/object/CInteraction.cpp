@@ -42,8 +42,14 @@ void CInteraction::onAction(std::shared_ptr<CCreature> first, std::shared_ptr<CC
             if (effect->getLabel().empty()) {
                 effect->setLabel(getLabel());
             }
-            effect->setVictim(second);
-            second->addEffect(effect);
+            if (effect->hasTag("buff")) {
+                effect->setVictim(first);
+                first->addEffect(effect);
+            } else {
+                effect->setVictim(second);
+                second->addEffect(effect);
+            }
+
         }
     }
 }
