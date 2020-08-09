@@ -22,6 +22,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 class CScript;
 
+class CCreature;
+
 class CCreatureView : public CProxyTargetGraphicsObject {
 V_META(CCreatureView, CProxyTargetGraphicsObject,
        V_PROPERTY(CCreatureView, std::shared_ptr<CScript>, creatureScript, getCreatureScript, setCreatureScript),
