@@ -58,6 +58,7 @@ namespace CJsonUtil {
     template<typename T>
     bool isMap(T object) {
         for (auto[key, value] :object->items()) {
+            (void) key;//to silence compiler
             if (!value.is_object() ||
                 !isObject(&value)) {
                 return false;
