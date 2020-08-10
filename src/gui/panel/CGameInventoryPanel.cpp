@@ -50,7 +50,7 @@ bool CGameInventoryPanel::inventorySelect(std::shared_ptr<CGui> gui, int index, 
 CListView::collection_pointer CGameInventoryPanel::equippedCollection(std::shared_ptr<CGui> gui) {
     CListView::collection_pointer ret = std::make_shared<CListView::collection_type>();
     auto map = gui->getGame()->getMap()->getPlayer()->getEquipped();
-    for (int i = 0; i < gui->getGame()->getSlotConfiguration()->getConfiguration().size(); i++) {
+    for (unsigned int i = 0; i < gui->getGame()->getSlotConfiguration()->getConfiguration().size(); i++) {
         if (vstd::ctn(map, vstd::str(i))) {
             (*ret).insert(map.at(vstd::str(i)));
         } else {
