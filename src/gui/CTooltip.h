@@ -28,7 +28,7 @@ V_META(CTooltip, CGameGraphicsObject, vstd::meta::empty())
 
     std::string text;
 public:
-    CTooltip() = default;
+    CTooltip();
 
     void renderObject(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> rect, int frameTime) override;
 

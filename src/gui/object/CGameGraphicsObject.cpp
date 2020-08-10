@@ -56,14 +56,15 @@ bool CGameGraphicsObject::event(std::shared_ptr<CGui> gui, SDL_Event *event) {
     } else if (event->type == SDL_MOUSEBUTTONDOWN ||
                event->type == SDL_MOUSEBUTTONUP) {
         std::shared_ptr<SDL_Rect> transPos = getRect();
-        if (CUtil::isIn(transPos, event->button.x, event->button.y)) {
+        if (CUtil::isIn(transPos, event->button.x, event->button.y) || modal) {
             return this->mouseEvent(gui, (SDL_EventType) event->type,
                                     event->button.button,
                                     event->button.x - transPos->x,
                                     event->button.y - transPos->y);
         }
     }
-    return false;
+    //TODO: check if we are not consuming too many events
+    return modal;
 }
 
 bool CGameGraphicsObject::keyboardEvent(std::shared_ptr<CGui> sharedPtr, SDL_EventType type, SDL_Keycode i) {
@@ -166,6 +167,14 @@ void CGameGraphicsObject::pushChild(std::shared_ptr<CGameGraphicsObject> child) 
 
 std::shared_ptr<CGui> CGameGraphicsObject::getGui() {
     return vstd::cast<CGui>(getTopParent());
+}
+
+bool CGameGraphicsObject::getModal() {
+    return modal;
+}
+
+void CGameGraphicsObject::setModal(bool _modal) {
+    modal = _modal;
 }
 
 bool priority_comparator::operator()(std::shared_ptr<CGameGraphicsObject> a,
