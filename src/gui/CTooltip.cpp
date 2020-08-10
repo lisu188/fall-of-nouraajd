@@ -21,6 +21,10 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "CTextManager.h"
 #include "CTextureCache.h"
 
+CTooltip::CTooltip() {
+    modal = true;
+}
+
 void CTooltip::renderObject(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> rect, int frameTime) {
     SDL_RenderCopy(gui->getRenderer(), gui->getTextureCache()->getTexture("images/tooltip.png"), nullptr, rect.get());
     gui->getTextManager()->drawTextCentered(text, rect);
