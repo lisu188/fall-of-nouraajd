@@ -24,13 +24,14 @@ def load(self, context):
                     self.getMap().addObjectByName('siegePritz', self.getCoords())
 
         def onEnter(self, event):
-            if self.getMap().getPlayer().hasItem(lambda it: it.hasTag('wand')) \
-                    and self.getMap().getGame().getGuiHandler().showDialog(
-                "Do You want to seal the gate?"):
-                self.getMap().getPlayer().removeQuestItem(lambda it: it.hasTag('wand'))
-                self.setBoolProperty('destroyed', True)
-                self.setStringProperty("animation", "images/misc/closed_door")
-                self.getMap().replaceTile('MountainTile', self.getCoords())
+            if event.getCause().isPlayer():
+                if self.getMap().getPlayer().hasItem(lambda it: it.hasTag('wand')) \
+                        and self.getMap().getGame().getGuiHandler().showDialog(
+                    "Do You want to seal the gate?"):
+                    self.getMap().getPlayer().removeQuestItem(lambda it: it.hasTag('wand'))
+                    self.setBoolProperty('destroyed', True)
+                    self.setStringProperty("animation", "images/misc/closed_door")
+                    self.getMap().replaceTile('MountainTile', self.getCoords())
 
     @trigger(context, "onTurn", "triggerAnchor")
     class TurnTrigger(CTrigger):
