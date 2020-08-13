@@ -30,6 +30,12 @@
             "priority": 1
           },
           "ref": "consoleGraphics"
+        },
+        {
+          "properties": {
+            "priority": 1
+          },
+          "ref": "sideBar"
         }
       ],
       "layout": {
@@ -49,9 +55,79 @@
     "properties": {
       "layout": {
         "class": "CParentLayout"
+      }
+    }
+  },
+  "sideBar": {
+    "class": "CSideBar",
+    "properties": {
+      "children": [
+        {
+          "class": "CTextWidget",
+          "properties": {
+            "click": "clickInventory",
+            "layout": {
+              "class": "CPercentLayout",
+              "properties": {
+                "h": 25,
+                "w": 100,
+                "x": 0,
+                "y": 0
+              }
+            },
+            "text": "INVENTORY"
+          }
+        },
+        {
+          "class": "CTextWidget",
+          "properties": {
+            "click": "clickJournal",
+            "layout": {
+              "class": "CPercentLayout",
+              "properties": {
+                "h": 25,
+                "w": 100,
+                "x": 0,
+                "y": 25
+              }
+            },
+            "text": "JOURNAL"
+          }
+        },
+        {
+          "class": "CTextWidget",
+          "properties": {
+            "click": "clickCharacter",
+            "layout": {
+              "class": "CPercentLayout",
+              "properties": {
+                "h": 25,
+                "w": 100,
+                "x": 0,
+                "y": 50
+              }
+            },
+            "text": "CHARACTER"
+          }
+        }
+      ],
+      "layout": {
+        "class": "CAnchoredLayout",
+        "properties": {
+          "h": 200,
+          "horizontal": "RIGHT",
+          "vertical": "UP",
+          "w": 200
+        }
       },
       "panelKeys": {
         "ref": "panelKeys"
+      },
+      "visible": {
+        "class": "CScript",
+        "properties": {
+          "script": "self.getGui().getGame().getMap().getPlayer()"
+        }
       }
     }
   },
@@ -71,6 +147,12 @@
           "horizontal": "LEFT",
           "vertical": "UP",
           "w": 200
+        }
+      },
+      "visible": {
+        "class": "CScript",
+        "properties": {
+          "script": "self.getGui().getGame().getMap().getPlayer()"
         }
       }
     }

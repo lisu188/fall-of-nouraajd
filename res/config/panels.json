@@ -447,7 +447,7 @@
                 "y": 0
               }
             },
-            "render": "renderBuyCost"
+            "render": "renderSellCost"
           }
         },
         {
@@ -462,7 +462,7 @@
                 "y": 0
               }
             },
-            "render": "renderSellCost"
+            "render": "renderBuyCost"
           }
         },
         {
