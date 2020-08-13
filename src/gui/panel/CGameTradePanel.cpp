@@ -97,13 +97,13 @@ std::set<std::string> CGameTradePanel::getItemNames(std::list<std::weak_ptr<CIte
 }
 
 int CGameTradePanel::getTotalSellCost() {
-    return vstd::functional::sum<int>(selectedMarket, [this](auto item) {
+    return vstd::functional::sum<int>(selectedInventory, [this](auto item) {
         return market->getSellCost(item.lock());
     });
 }
 
 int CGameTradePanel::getTotalBuyCost() {
-    return vstd::functional::sum<int>(selectedInventory, [this](auto item) {
+    return vstd::functional::sum<int>(selectedMarket, [this](auto item) {
         return market->getBuyCost(item.lock());
     });
 }

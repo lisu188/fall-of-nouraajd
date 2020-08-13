@@ -50,6 +50,8 @@ public:
 
     void setCreature(std::shared_ptr<CScript> _creature);
 
+    bool mouseEvent(std::shared_ptr<CGui> sharedPtr, SDL_EventType type, int button, int x, int y) override;
+
 private:
     std::shared_ptr<CScript> creature;
 };

@@ -61,6 +61,8 @@ public:
 
     std::shared_ptr<json> getConfig(std::string type);
 
+    std::string getClass(std::string type);
+
 private:
     std::shared_ptr<CGameObject> _createObject(std::shared_ptr<CGame> map, std::string type);
 

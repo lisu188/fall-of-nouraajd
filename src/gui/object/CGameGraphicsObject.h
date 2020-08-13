@@ -27,6 +27,8 @@ class CProxyGraphicsObject;
 
 class CProxyTargetGraphicsObject;
 
+class CScript;
+
 //TODO: generify
 struct priority_comparator {
     bool operator()(
@@ -51,7 +53,8 @@ V_META(CGameGraphicsObject, CGameObject,
        V_PROPERTY(CGameGraphicsObject, std::shared_ptr<CLayout>, layout, getLayout, setLayout),
        V_PROPERTY(CGameGraphicsObject,
                   std::set<std::shared_ptr<CGameGraphicsObject>>, children, getChildren, setChildren),
-       V_PROPERTY(CGameGraphicsObject, bool, modal, getModal, setModal))
+       V_PROPERTY(CGameGraphicsObject, bool, modal, getModal, setModal),
+       V_PROPERTY(CGameGraphicsObject, std::shared_ptr<CScript>, visible, getVisible, setVisible))
 
     std::list<std::pair<std::function<bool(std::shared_ptr<CGui>, std::shared_ptr<CGameGraphicsObject>,
                                            SDL_Event *)>, std::function<bool(
@@ -99,6 +102,9 @@ public:
 
     void removeChild(std::shared_ptr<CGameGraphicsObject> child);
 
+    //TODO: more flexible
+    std::shared_ptr<CGameGraphicsObject> findChild(std::string type);
+
     void removeParent();
 
     std::shared_ptr<CGui> getGui();
@@ -106,6 +112,12 @@ public:
     bool getModal();
 
     void setModal(bool _modal);
+
+    std::shared_ptr<CScript> getVisible();
+
+    void setVisible(std::shared_ptr<CScript> hidden);
+
+    bool isVisible();
 
 private:
     virtual void render(std::shared_ptr<CGui> reneder, int frameTime);
@@ -115,6 +127,8 @@ private:
     int getTopPriority();
 
     std::shared_ptr<SDL_Rect> getRect();
+
+    std::shared_ptr<CScript> visible;
 
 protected:
     bool modal = false;

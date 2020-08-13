@@ -20,51 +20,57 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "gui/CLayout.h"
 #include "gui/object/CGameGraphicsObject.h"
 #include "gui/object/CProxyGraphicsObject.h"
+#include "core/CScript.h"
 
 void CGameGraphicsObject::renderObject(std::shared_ptr<CGui> reneder, std::shared_ptr<SDL_Rect> rect, int frameTime) {
 
 }
 
 void CGameGraphicsObject::render(std::shared_ptr<CGui> reneder, int frameTime) {
-    renderObject(reneder, getRect(), frameTime);
-    std::set<std::shared_ptr<CGameGraphicsObject>,
-            priority_comparator> children_sorted(children.begin(),
-                                                 children.end());
-    for (auto child:children_sorted) {
-        child->render(reneder, frameTime);
+    if (isVisible()) {
+        renderObject(reneder, getRect(), frameTime);
+        std::set<std::shared_ptr<CGameGraphicsObject>,
+                priority_comparator> children_sorted(children.begin(),
+                                                     children.end());
+        for (auto child:children_sorted) {
+            child->render(reneder, frameTime);
+        }
     }
 }
 
 bool CGameGraphicsObject::event(std::shared_ptr<CGui> gui, SDL_Event *event) {
-    std::set<std::shared_ptr<CGameGraphicsObject>,
-            reverse_priority_comparator> children_reversed(children.begin(),
-                                                           children.end());
-    for (auto child:children_reversed) {
-        if (child->event(gui, event)) {
-            return true;
+    if (isVisible()) {
+        std::set<std::shared_ptr<CGameGraphicsObject>,
+                reverse_priority_comparator> children_reversed(children.begin(),
+                                                               children.end());
+        for (auto child:children_reversed) {
+            if (child->event(gui, event)) {
+                return true;
+            }
         }
-    }
-    for (auto callback:eventCallbackList) {//TODO:remove, replace with other event
-        if (callback.first(gui, this->ptr<CGameGraphicsObject>(), event) &&
-            callback.second(gui, this->ptr<CGameGraphicsObject>(), event)) {
-            return true;
+        for (auto callback:eventCallbackList) {//TODO:remove, replace with other event
+            if (callback.first(gui, this->ptr<CGameGraphicsObject>(), event) &&
+                callback.second(gui, this->ptr<CGameGraphicsObject>(), event)) {
+                return true;
+            }
         }
-    }
-    if (event->type == SDL_KEYDOWN ||
-        event->type == SDL_KEYUP) {
-        return this->keyboardEvent(gui, (SDL_EventType) event->type, event->key.keysym.sym);
-    } else if (event->type == SDL_MOUSEBUTTONDOWN ||
-               event->type == SDL_MOUSEBUTTONUP) {
-        std::shared_ptr<SDL_Rect> transPos = getRect();
-        if (CUtil::isIn(transPos, event->button.x, event->button.y) || modal) {
-            return this->mouseEvent(gui, (SDL_EventType) event->type,
-                                    event->button.button,
-                                    event->button.x - transPos->x,
-                                    event->button.y - transPos->y);
+        if (event->type == SDL_KEYDOWN ||
+            event->type == SDL_KEYUP) {
+            return this->keyboardEvent(gui, (SDL_EventType) event->type, event->key.keysym.sym);
+        } else if (event->type == SDL_MOUSEBUTTONDOWN ||
+                   event->type == SDL_MOUSEBUTTONUP) {
+            std::shared_ptr<SDL_Rect> transPos = getRect();
+            if (CUtil::isIn(transPos, event->button.x, event->button.y) || modal) {
+                return this->mouseEvent(gui, (SDL_EventType) event->type,
+                                        event->button.button,
+                                        event->button.x - transPos->x,
+                                        event->button.y - transPos->y);
+            }
         }
+        //TODO: check if we are not consuming too many events
+        return modal;
     }
-    //TODO: check if we are not consuming too many events
-    return modal;
+    return false;
 }
 
 bool CGameGraphicsObject::keyboardEvent(std::shared_ptr<CGui> sharedPtr, SDL_EventType type, SDL_Keycode i) {
@@ -175,6 +181,30 @@ bool CGameGraphicsObject::getModal() {
 
 void CGameGraphicsObject::setModal(bool _modal) {
     modal = _modal;
+}
+
+std::shared_ptr<CGameGraphicsObject> CGameGraphicsObject::findChild(std::string type) {
+    for (auto child:getChildren()) {
+        if (auto found = child->findChild(type)) {
+            return found;
+        }
+        if (child->getType() == type) {
+            return child;
+        }
+    }
+    return nullptr;
+}
+
+std::shared_ptr<CScript> CGameGraphicsObject::getVisible() {
+    return visible;
+}
+
+void CGameGraphicsObject::setVisible(std::shared_ptr<CScript> visible) {
+    CGameGraphicsObject::visible = visible;
+}
+
+bool CGameGraphicsObject::isVisible() {
+    return !visible || visible->invoke<CGameObject>(getGame(), this->ptr<CGameObject>()) != nullptr;
 }
 
 bool priority_comparator::operator()(std::shared_ptr<CGameGraphicsObject> a,
