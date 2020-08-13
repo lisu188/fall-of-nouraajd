@@ -162,7 +162,7 @@ std::shared_ptr<SDL_Rect> CAnchoredLayout::getRect(std::shared_ptr<CGameGraphics
     } else if (horizontal == "RIGHT") {
         x = parent->w - getW();
     } else if (horizontal == "CENTER") {
-        x = parent->w / 2 - getH() / 2;
+        x = parent->w / 2 - getW() / 2;
     } else {
         vstd::logger::debug("Unknown horizontal layout:", horizontal);
     }

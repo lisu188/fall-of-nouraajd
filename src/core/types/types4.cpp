@@ -35,6 +35,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "gui/object/CProxyGraphicsObject.h"
 #include "gui/CTooltip.h"
 #include "gui/panel/CCreatureView.h"
+#include "gui/object/CSideBar.h"
+
 
 extern void add_member(std::shared_ptr<json> object, std::string key, std::string value);
 
@@ -64,6 +66,7 @@ namespace {
                     CTypes::register_type<CStatsGraphicsObject, CGameGraphicsObject, CGameObject>();
                     CTypes::register_type<CConsoleGraphicsObject, CGameGraphicsObject, CGameObject>();
                     CTypes::register_type<CProxyGraphicsObject, CGameGraphicsObject, CGameObject>();
+                    CTypes::register_type<CSideBar, CGameGraphicsObject, CGameObject>();
 
                     CTypes::register_type<CProxyTargetGraphicsObject, CGameGraphicsObject, CGameObject>();
                     {

@@ -97,6 +97,13 @@ std::vector<std::string> CObjectHandler::getAllSubTypes(std::string claz) {
     return ret;
 }
 
+std::string CObjectHandler::getClass(std::string type) {
+    auto conf = getConfig(type);
+    if (CJsonUtil::isRef(conf)) {
+        conf = getConfig((*conf)["ref"].get<std::string>());
+    }
+    return (*conf)["class"].get<std::string>();
+}
 
 
 

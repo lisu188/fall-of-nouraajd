@@ -17,7 +17,6 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
 #include "CWidget.h"
-#include "gui/panel/CGamePanel.h"
 #include "gui/CTextManager.h"
 
 void CWidget::setRender(std::string draw) {
@@ -37,10 +36,10 @@ void CWidget::setClick(std::string click) {
 }
 
 void CWidget::renderObject(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> rect, int frameTime) {
-    this->getParent()->meta()->invoke_method<void, CGamePanel,
+    this->getParent()->meta()->invoke_method<void, CGameGraphicsObject,
             std::shared_ptr<CGui>,
             std::shared_ptr<SDL_Rect>, int>(this->getRender(),
-                                            vstd::cast<CGamePanel>(getParent()),
+                                            getParent(),
                                             gui,
                                             rect,
                                             frameTime);
@@ -48,9 +47,9 @@ void CWidget::renderObject(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> 
 
 bool CWidget::mouseEvent(std::shared_ptr<CGui> gui, SDL_EventType type, int button, int x, int y) {
     if (type == SDL_MOUSEBUTTONDOWN && button == SDL_BUTTON_LEFT) {
-        this->getParent()->meta()->invoke_method<void, CGamePanel,
+        this->getParent()->meta()->invoke_method<void, CGameGraphicsObject,
                 std::shared_ptr<CGui>>(this->getClick(),
-                                       vstd::cast<CGamePanel>(getParent()),
+                                       getParent(),
                                        gui);
     }
     return true;

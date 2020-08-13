@@ -20,6 +20,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CMap.h"
 #include "gui/CGui.h"
 #include "gui/object/CStatsGraphicsObject.h"
+#include "gui/object/CSideBar.h"
 
 using namespace boost::python;
 
@@ -73,6 +74,9 @@ void initModule1() {
 
     class_<CStatsGraphicsObject, bases<CGameGraphicsObject>, boost::noncopyable, std::shared_ptr<CStatsGraphicsObject>>(
             "CGameGraphicsObject", no_init);
+
+    class_<CSideBar, bases<CGameGraphicsObject>, boost::noncopyable, std::shared_ptr<CSideBar>>(
+            "CSideBar", no_init);
 
     class_<CCreatureView, bases<CGameGraphicsObject>, boost::noncopyable, std::shared_ptr<CCreatureView>>(
             "CCreatureView", no_init)

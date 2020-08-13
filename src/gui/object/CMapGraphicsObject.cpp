@@ -17,12 +17,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #include "gui/CLayout.h"
 #include "gui/panel/CGameInventoryPanel.h"
-#include "gui/panel/CGameQuestPanel.h"
-#include "gui/panel/CGameCharacterPanel.h"
 #include "core/CController.h"
 #include "gui/object/CMapGraphicsObject.h"
 #include "gui/object/CProxyGraphicsObject.h"
-#include "gui/CAnimation.h"
 #include "core/CLoader.h"
 
 CMapGraphicsObject::CMapGraphicsObject() {
@@ -51,27 +48,6 @@ CMapGraphicsObject::getProxiedObjects(std::shared_ptr<CGui> gui, int x, int y) {
 }
 
 void CMapGraphicsObject::initialize() {
-    for (auto val:panelKeys->getValues()) {
-        auto keyPred = [val](std::shared_ptr<CGui> gui, std::shared_ptr<CGameGraphicsObject> self, SDL_Event *event) {
-            return event->type == SDL_KEYDOWN && event->key.keysym.sym == val.first[0];
-        };
-        registerEventCallback(keyPred,
-                              [keyPred, val](std::shared_ptr<CGui> gui, std::shared_ptr<CGameGraphicsObject> self,
-                                             SDL_Event *event) {
-                                  std::shared_ptr<CGamePanel> panel = gui->getGame()->createObject<CGamePanel>(
-                                          val.second);
-                                  gui->pushChild(panel);
-                                  panel->registerEventCallback(keyPred,
-                                                               [](std::shared_ptr<CGui> gui,
-                                                                  std::shared_ptr<CGameGraphicsObject> self,
-                                                                  SDL_Event *event) {
-                                                                   gui->removeChild(self);
-                                                                   return true;
-                                                               });
-                                  return true;
-                              });
-    }
-
     auto self = this->ptr<CMapGraphicsObject>();
     vstd::call_when([self]() {
                         return self->getGui() != nullptr
@@ -89,13 +65,6 @@ void CMapGraphicsObject::initialize() {
     );
 }
 
-std::shared_ptr<CMapStringString> CMapGraphicsObject::getPanelKeys() {
-    return panelKeys;
-}
-
-void CMapGraphicsObject::setPanelKeys(std::shared_ptr<CMapStringString> _panelKeys) {
-    this->panelKeys = _panelKeys;
-}
 
 int CMapGraphicsObject::getSizeY(std::shared_ptr<CGui> gui) {
     return gui->getTileCountY();

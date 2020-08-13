@@ -22,6 +22,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 class CListString;
 
+class CGamePanel;
+
 class CGuiHandler : public CGameObject {
 V_META(CGuiHandler, CGameObject, vstd::meta::empty())
 
@@ -41,6 +43,8 @@ public:
     std::string showSelection(std::shared_ptr<CListString> list);
 
     void showTooltip(std::string text, int x, int y);
+
+    std::shared_ptr<CGamePanel> flipPanel(std::string panel);
 
 private:
     std::weak_ptr<CGame> _game;
