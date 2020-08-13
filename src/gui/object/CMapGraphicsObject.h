@@ -24,16 +24,11 @@ class CProxyGraphicsObject;
 
 class CMapGraphicsObject : public CProxyTargetGraphicsObject {
 V_META(CMapGraphicsObject, CProxyTargetGraphicsObject,
-       V_PROPERTY(CMapGraphicsObject, std::shared_ptr<CMapStringString>, panelKeys, getPanelKeys, setPanelKeys),
        V_METHOD(CMapGraphicsObject, initialize),
        V_METHOD(CMapGraphicsObject, refreshObject, void, Coords))
 
 public:
     CMapGraphicsObject();
-
-    std::shared_ptr<CMapStringString> getPanelKeys();
-
-    void setPanelKeys(std::shared_ptr<CMapStringString> panelKeys);
 
     void initialize();
 
@@ -53,7 +48,6 @@ private:
 
     Coords mapToGui(Coords coords);
 
-    std::shared_ptr<CMapStringString> panelKeys;
 
 };
 

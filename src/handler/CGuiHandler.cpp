@@ -25,6 +25,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "gui/CTextManager.h"
 #include "core/CList.h"
 #include "gui/CTooltip.h"
+#include "CGuiHandler.h"
+
 
 CGuiHandler::CGuiHandler() {
 
@@ -136,5 +138,18 @@ void CGuiHandler::showTooltip(std::string text, int x,
         tooltip->setLayout(layout);
         _game.lock()->getGui()->pushChild(tooltip);
     }
+}
+
+std::shared_ptr<CGamePanel> CGuiHandler::flipPanel(std::string panel) {
+    std::shared_ptr<CGame> game = _game.lock();
+    auto panelClas = game->getObjectHandler()->getClass(panel);
+    if (auto currentPanel = game->getGui()->findChild(panelClas)) {
+        game->getGui()->removeChild(currentPanel);
+    } else {
+        std::shared_ptr<CGamePanel> child = game->createObject<CGamePanel>(panel);
+        game->getGui()->pushChild(child);
+        return child;
+    }
+    return nullptr;
 }
 

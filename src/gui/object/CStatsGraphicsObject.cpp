@@ -48,12 +48,11 @@ CStatsGraphicsUtil::drawStats(std::shared_ptr<CGui> gui, std::shared_ptr<CCreatu
 }
 
 void CStatsGraphicsObject::renderObject(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> rect, int frameTime) {
-    if (auto cret = creature->invoke<CCreature>(gui->getGame(), this->ptr())) {
-        CStatsGraphicsUtil::drawStats(gui, cret,
-                                      rect->x, rect->y,
-                                      rect->w, rect->h,
-                                      true, true);
-    }
+    auto cret = creature->invoke<CCreature>(gui->getGame(), this->ptr());
+    CStatsGraphicsUtil::drawStats(gui, cret,
+                                  rect->x, rect->y,
+                                  rect->w, rect->h,
+                                  true, true);
 }
 
 
@@ -97,4 +96,9 @@ CStatsGraphicsUtil::drawValues(std::shared_ptr<CGui> gui, int left, int right, i
     h = h / 3.0;
     gui->getTextManager()->drawTextCentered(vstd::str(left) + "/" + vstd::str(right), x, y + index * h,
                                             w, h);
+}
+
+bool
+CStatsGraphicsObject::mouseEvent(std::shared_ptr<CGui> sharedPtr, SDL_EventType type, int button, int x, int y) {
+    return true;
 }
