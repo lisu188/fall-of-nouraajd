@@ -46,7 +46,8 @@ void CWidget::renderObject(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> 
 }
 
 bool CWidget::mouseEvent(std::shared_ptr<CGui> gui, SDL_EventType type, int button, int x, int y) {
-    if (type == SDL_MOUSEBUTTONDOWN && button == SDL_BUTTON_LEFT) {
+    //TODO: maybe require both up and down
+    if (type == SDL_MOUSEBUTTONUP && button == SDL_BUTTON_LEFT) {
         this->getParent()->meta()->invoke_method<void, CGameGraphicsObject,
                 std::shared_ptr<CGui>>(this->getClick(),
                                        getParent(),
