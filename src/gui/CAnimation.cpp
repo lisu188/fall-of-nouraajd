@@ -36,7 +36,7 @@ std::shared_ptr<CGameObject> CAnimation::getObject() {
 void CStaticAnimation::renderObject(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> rect, int frameTime) {
     SDL_SAFE(
             SDL_RenderCopy(gui->getRenderer(),
-                           gui->getTextureCache()->getTexture(object->getAnimation() + ".png"),
+                           gui->getTextureCache()->getTexture(object->getAnimation()),
                            nullptr,
                            rect.get()));
 }
