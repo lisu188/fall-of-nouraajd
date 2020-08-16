@@ -63,7 +63,7 @@
     "properties": {
       "children": [
         {
-          "class": "CTextWidget",
+          "class": "CButton",
           "properties": {
             "click": "clickInventory",
             "layout": {
@@ -79,7 +79,7 @@
           }
         },
         {
-          "class": "CTextWidget",
+          "class": "CButton",
           "properties": {
             "click": "clickJournal",
             "layout": {
@@ -95,7 +95,7 @@
           }
         },
         {
-          "class": "CTextWidget",
+          "class": "CButton",
           "properties": {
             "click": "clickCharacter",
             "layout": {

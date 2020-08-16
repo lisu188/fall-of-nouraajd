@@ -79,20 +79,11 @@ std::string CGuiHandler::showSelection(std::shared_ptr<CListString> list) {
                                                                                        item);
                                                                            });
 
-        panel->meta()->set_method<CGamePanel, void, std::shared_ptr<CGui>, std::shared_ptr<SDL_Rect>, int>(renderName,
-                                                                                                           panel,
-                                                                                                           [item](CGamePanel *self,
-                                                                                                                  std::shared_ptr<CGui> gui,
-                                                                                                                  std::shared_ptr<SDL_Rect> rect,
-                                                                                                                  int i) {
-                                                                                                               gui->getTextManager()->drawTextCentered(
-                                                                                                                       item,
-                                                                                                                       rect);
-                                                                                                           });
 
-        std::shared_ptr<CWidget> widget = _game.lock()->createObject<CWidget>("CWidget");
+        std::shared_ptr<CButton> widget = _game.lock()->createObject<CButton>("CButton");
         widget->setClick(clickName);
-        widget->setRender(renderName);
+        widget->setText(item);
+
         std::shared_ptr<CPercentLayout> layout = _game.lock()->createObject<CPercentLayout>("CPercentLayout");
         layout->setX(0);
         layout->setY(10 * i);
