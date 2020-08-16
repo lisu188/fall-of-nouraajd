@@ -55,6 +55,11 @@ bool CWidget::mouseEvent(std::shared_ptr<CGui> gui, SDL_EventType type, int butt
     return true;
 }
 
+CWidget::CWidget() {
+    //TODO: move to json
+    setBackground("images/button.png");
+}
+
 void CTextWidget::setText(std::string _text) {
     text = _text;
 }

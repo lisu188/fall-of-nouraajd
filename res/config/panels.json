@@ -274,7 +274,7 @@
       }
     }
   },
-  "gamePanel": {
+  "selectionPanel": {
     "class": "CGamePanel",
     "properties": {
       "layout": {

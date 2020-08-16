@@ -18,12 +18,15 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "CTextureCache.h"
 
 SDL_Texture *CTextureCache::getTexture(std::string path) {
-    auto anim = _textures.find(path);
-    if (anim == _textures.end()) {
-        _textures[path] = this->loadTexture(path);
-        return getTexture(path);
+    if (vstd::ends_with(path, ".png")) {
+        auto anim = _textures.find(path);
+        if (anim == _textures.end()) {
+            _textures[path] = this->loadTexture(path);
+            return getTexture(path);
+        }
+        return _textures[path];
     }
-    return _textures[path];
+    return getTexture(path + ".png");
 }
 
 SDL_Texture *CTextureCache::loadTexture(std::string path) {

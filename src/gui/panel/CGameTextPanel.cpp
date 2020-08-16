@@ -27,11 +27,8 @@ void CGameTextPanel::setText(std::string _text) {
     text = _text;
 }
 
-
 void CGameTextPanel::renderObject(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> rect, int i) {
-    CGamePanel::renderObject(gui, rect, i);
     gui->getTextManager()->drawText(text, rect->x, rect->y, rect->w);
-
 }
 
 bool CGameTextPanel::keyboardEvent(std::shared_ptr<CGui> gui, SDL_EventType type, SDL_Keycode i) {

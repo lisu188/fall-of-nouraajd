@@ -21,6 +21,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "gui/object/CGameGraphicsObject.h"
 #include "gui/object/CProxyGraphicsObject.h"
 #include "core/CScript.h"
+#include "gui/CTextureCache.h"
 
 void CGameGraphicsObject::renderObject(std::shared_ptr<CGui> reneder, std::shared_ptr<SDL_Rect> rect, int frameTime) {
 
@@ -28,6 +29,7 @@ void CGameGraphicsObject::renderObject(std::shared_ptr<CGui> reneder, std::share
 
 void CGameGraphicsObject::render(std::shared_ptr<CGui> reneder, int frameTime) {
     if (isVisible()) {
+        renderBackground(reneder, getRect(), frameTime);
         renderObject(reneder, getRect(), frameTime);
         std::set<std::shared_ptr<CGameGraphicsObject>,
                 priority_comparator> children_sorted(children.begin(),
@@ -205,6 +207,21 @@ void CGameGraphicsObject::setVisible(std::shared_ptr<CScript> visible) {
 
 bool CGameGraphicsObject::isVisible() {
     return !visible || visible->invoke<CGameObject>(getGame(), this->ptr<CGameObject>()) != nullptr;
+}
+
+void CGameGraphicsObject::renderBackground(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> rect, int time) {
+    if (!background.empty()) {
+        SDL_SAFE(SDL_RenderCopy(gui->getRenderer(),
+                                gui->getTextureCache()->getTexture(background), nullptr, rect.get()));
+    }
+}
+
+std::string CGameGraphicsObject::getBackground() {
+    return background;
+}
+
+void CGameGraphicsObject::setBackground(std::string _background) {
+    background = _background;
 }
 
 bool priority_comparator::operator()(std::shared_ptr<CGameGraphicsObject> a,
