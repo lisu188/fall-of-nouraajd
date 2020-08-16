@@ -61,3 +61,11 @@ public:
 private:
     std::string text;
 };
+
+class CButton : public CTextWidget {
+V_META(CButton, CTextWidget, vstd::meta::empty())
+public:
+    CButton();
+
+    bool mouseEvent(std::shared_ptr<CGui> sharedPtr, SDL_EventType type, int button, int x, int y) override;
+};

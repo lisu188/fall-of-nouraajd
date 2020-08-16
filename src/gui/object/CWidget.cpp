@@ -56,8 +56,7 @@ bool CWidget::mouseEvent(std::shared_ptr<CGui> gui, SDL_EventType type, int butt
 }
 
 CWidget::CWidget() {
-    //TODO: move to json
-    setBackground("images/button.png");
+
 }
 
 void CTextWidget::setText(std::string _text) {
@@ -70,4 +69,19 @@ std::string CTextWidget::getText() {
 
 void CTextWidget::renderObject(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> rect, int frameTime) {
     gui->getTextManager()->drawTextCentered(vstd::str(text), rect);
+}
+
+CButton::CButton() {
+
+}
+
+bool CButton::mouseEvent(std::shared_ptr<CGui> sharedPtr, SDL_EventType type, int button, int x, int y) {
+    if (type == SDL_MOUSEBUTTONDOWN && button == SDL_BUTTON_LEFT) {
+        setBackground("images/button_on");
+        setModal(true);
+    } else if (type == SDL_MOUSEBUTTONUP && button == SDL_BUTTON_LEFT) {
+        setBackground("images/button_off");
+        setModal(false);
+    }
+    return CTextWidget::mouseEvent(sharedPtr, type, button, x, y);
 }
