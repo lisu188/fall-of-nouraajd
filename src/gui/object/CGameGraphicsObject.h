@@ -119,6 +119,10 @@ public:
 
     bool isVisible();
 
+    std::string getBackground();
+
+    void setBackground(std::string _background);
+
 private:
     virtual void render(std::shared_ptr<CGui> reneder, int frameTime);
 
@@ -130,8 +134,10 @@ private:
 
     std::shared_ptr<CScript> visible;
 
-protected:
-    bool modal = false;
+    void renderBackground(std::shared_ptr<CGui> sharedPtr, std::shared_ptr<SDL_Rect> rect, int time);
 
+    std::string background;
+
+    bool modal = false;
 };
 

@@ -21,12 +21,6 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "gui/CTextureCache.h"
 
 
-void CGamePanel::renderObject(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> rect, int frameTime) {
-    SDL_SAFE(SDL_SetRenderDrawColor(gui->getRenderer(), BLACK));
-    SDL_SAFE(SDL_RenderFillRect(gui->getRenderer(), rect.get()));
-    SDL_SAFE(SDL_RenderCopy(gui->getRenderer(),
-                            gui->getTextureCache()->getTexture("images/panel.png"), nullptr, rect.get()));
-}
 
 bool CGamePanel::keyboardEvent(std::shared_ptr<CGui> sharedPtr, SDL_EventType type, SDL_Keycode i) {
     return true;
@@ -42,4 +36,9 @@ void CGamePanel::refreshViews() {
             vstd::cast<CListView>(child)->refreshAll();
         }
     }
+}
+
+CGamePanel::CGamePanel() {
+    //TODO: extract to json
+    setBackground("images/panel");
 }
