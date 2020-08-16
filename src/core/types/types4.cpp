@@ -86,6 +86,7 @@ namespace {
                     }
                     CTypes::register_type<CWidget, CGameGraphicsObject, CGameObject>();
                     CTypes::register_type<CTextWidget, CWidget, CGameGraphicsObject, CGameObject>();
+                    CTypes::register_type<CButton, CTextWidget, CWidget, CGameGraphicsObject, CGameObject>();
 
                     CTypes::register_type<CAnimation, CGameGraphicsObject, CGameObject>();
                     {
