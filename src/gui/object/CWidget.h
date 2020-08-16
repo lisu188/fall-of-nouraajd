@@ -27,7 +27,7 @@ V_META(CWidget, CGameGraphicsObject,
        V_PROPERTY(CWidget, std::string, render, getRender, setRender),
        V_PROPERTY(CWidget, std::string, click, getClick, setClick))
 public:
-    CWidget() = default;
+    CWidget();
 
 private:
 

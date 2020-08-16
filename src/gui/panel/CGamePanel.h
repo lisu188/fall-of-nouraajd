@@ -27,7 +27,7 @@ class CWidget;
 class CGamePanel : public CGameGraphicsObject {
 V_META(CGamePanel, CGameGraphicsObject, vstd::meta::empty())
 public:
-    void renderObject(std::shared_ptr<CGui> reneder, std::shared_ptr<SDL_Rect> rect, int frameTime) override;
+    CGamePanel();
 
     bool keyboardEvent(std::shared_ptr<CGui> sharedPtr, SDL_EventType type, SDL_Keycode i) override;
 
