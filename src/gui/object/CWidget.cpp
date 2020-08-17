@@ -73,7 +73,8 @@ void CTextWidget::renderObject(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Re
 }
 
 CButton::CButton() {
-
+    //TODO: move to json
+    setBackground("images/button_off");
 }
 
 bool CButton::mouseEvent(std::shared_ptr<CGui> sharedPtr, SDL_EventType type, int button, int x, int y) {
