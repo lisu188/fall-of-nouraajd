@@ -275,13 +275,13 @@
     }
   },
   "selectionPanel": {
-    "class": "CGamePanel",
+    "class": "CGameGraphicsObject",
     "properties": {
       "layout": {
         "class": "CCenteredLayout",
         "properties": {
-          "h": 600,
-          "w": 800
+          "h": 300,
+          "w": 300
         }
       }
     }
@@ -410,10 +410,10 @@
             "layout": {
               "class": "CSimpleLayout",
               "properties": {
-                "h": 200,
+                "h": 100,
                 "w": 200,
                 "x": 200,
-                "y": 400
+                "y": 500
               }
             },
             "text": "SELL"
@@ -426,10 +426,10 @@
             "layout": {
               "class": "CSimpleLayout",
               "properties": {
-                "h": 200,
+                "h": 100,
                 "w": 200,
                 "x": 400,
-                "y": 400
+                "y": 500
               }
             },
             "text": "BUY"
