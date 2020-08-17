@@ -62,7 +62,7 @@ CGuiHandler::CGuiHandler(std::shared_ptr<CGame> game) : _game(game) {
 }
 
 std::string CGuiHandler::showSelection(std::shared_ptr<CListString> list) {
-    std::shared_ptr<CGamePanel> panel = _game.lock()->createObject<CGamePanel>("selectionPanel");
+    std::shared_ptr<CGameGraphicsObject> panel = _game.lock()->createObject<CGameGraphicsObject>("selectionPanel");
 
     std::shared_ptr<std::string> selected;
 
@@ -72,12 +72,13 @@ std::string CGuiHandler::showSelection(std::shared_ptr<CListString> list) {
         std::string clickName = vstd::str("click") + vstd::str(i);
         std::string renderName = vstd::str("render") + vstd::str(i);
 
-        panel->meta()->set_method<CGamePanel, void, std::shared_ptr<CGui>>(clickName, panel,
-                                                                           [item, &selected](CGamePanel *self,
-                                                                                             std::shared_ptr<CGui> gui) {
-                                                                               selected = std::make_shared<std::string>(
-                                                                                       item);
-                                                                           });
+        panel->meta()->set_method<CGameGraphicsObject, void, std::shared_ptr<CGui>>(clickName, panel,
+                                                                                    [item, &selected](
+                                                                                            CGameGraphicsObject *self,
+                                                                                            std::shared_ptr<CGui> gui) {
+                                                                                        selected = std::make_shared<std::string>(
+                                                                                                item);
+                                                                                    });
 
 
         std::shared_ptr<CButton> widget = _game.lock()->createObject<CButton>("CButton");
@@ -85,10 +86,11 @@ std::string CGuiHandler::showSelection(std::shared_ptr<CListString> list) {
         widget->setText(item);
 
         std::shared_ptr<CPercentLayout> layout = _game.lock()->createObject<CPercentLayout>("CPercentLayout");
+        double percentSize = 100.0 / list->getValues().size();
         layout->setX(0);
-        layout->setY(10 * i);
+        layout->setY(percentSize * i);
         layout->setW(100);
-        layout->setH(10);
+        layout->setH(percentSize);
         widget->setLayout(layout);
         widgets.insert(widget);
         i++;
