@@ -63,6 +63,7 @@ CGuiHandler::CGuiHandler(std::shared_ptr<CGame> game) : _game(game) {
 
 std::string CGuiHandler::showSelection(std::shared_ptr<CListString> list) {
     std::shared_ptr<CGameGraphicsObject> panel = _game.lock()->createObject<CGameGraphicsObject>("selectionPanel");
+    vstd::cast<CCenteredLayout>(panel->getLayout())->setH(75 * list->getValues().size());
 
     std::shared_ptr<std::string> selected;
 

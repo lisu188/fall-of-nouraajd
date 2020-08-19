@@ -81,6 +81,7 @@ private:
 
     int getTotalBuyCost();
 
+    //TODO: should be not unique collection. items get merged
     std::set<std::string> getItemNames(std::list<std::weak_ptr<CItem>> items);
 };
 

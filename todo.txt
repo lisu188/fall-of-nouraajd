@@ -10,7 +10,6 @@
 //TODO: initiative
 //TODO: when lost fight in cave, panel pops out after return to position
 //TODO: fight panel
-    //TODO: buffs in fight panel
     //TODO: cant quit game when in fight (hang in wait until)
     //TODO: after fight loot window + summary
 //TODO: wrapping of list views
@@ -38,7 +37,6 @@
 //TODO: customize out of bound tiles and default tiles
 //TODO: toroidal maps
 //TODO: separate class from race
-//TODO: barrier effect affects opponent
 //TODO: charges of items vs stacking
 //TODO: use items on right click, when unified selection, do global reset of selections on right click
 //TODO: mark primitve CGameObjects like CList and CMapString as primitive and unfold values field directly to properties
