@@ -229,6 +229,7 @@ void CCreature::hurt(std::shared_ptr<Damage> damage) {
 int CCreature::getDmg() {
     int critDice = rand() % 100;
     int attDice = rand() % 100;
+    //TODO: crashes if min damage is greater than max. duh.
     int dmg =
             rand() % (stats->getDmgMax() + 1 - stats->getDmgMin()) + stats->getDmgMin();
     dmg += stats->getDamage();
