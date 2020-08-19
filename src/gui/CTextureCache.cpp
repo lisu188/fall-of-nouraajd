@@ -144,13 +144,18 @@ SDL_Texture *CTextureUtil::calculateAlpha(SDL_Renderer *renderer, SDL_Surface *s
                          && std::get<3>(maskPixel) == 255;
 
 
+    std::unordered_set<std::pair<int, int>> mask = shouldAddMask ? calculateMask(surface)
+                                                                 : std::unordered_set<std::pair<int, int>>();
+
     for (auto verticalIndex = 0; verticalIndex < h; verticalIndex++) {
         for (auto horizontalIndex = 0; horizontalIndex < w; horizontalIndex++) {
             auto currentPixel = getPixelRgba(surface,
                                              horizontalIndex,
                                              verticalIndex);
+
+
             auto[r, g, b, a]=currentPixel;
-            if (shouldAddMask && currentPixel == maskPixel) {
+            if (vstd::ctn(mask, std::make_pair(horizontalIndex, verticalIndex))) {
                 setPixelColor(secondSurface, horizontalIndex, verticalIndex,
                               {r, g, b, 0});
             } else {
@@ -158,7 +163,6 @@ SDL_Texture *CTextureUtil::calculateAlpha(SDL_Renderer *renderer, SDL_Surface *s
                               {r, g, b, a});
             }
         }
-
     }
 
     auto texture = SDL_SAFE(SDL_CreateTextureFromSurface(renderer, secondSurface));
@@ -167,5 +171,43 @@ SDL_Texture *CTextureUtil::calculateAlpha(SDL_Renderer *renderer, SDL_Surface *s
     SDL_SAFE(SDL_FreeSurface(secondSurface));
 
     return texture;
+}
+
+std::unordered_set<std::pair<int, int>> CTextureUtil::calculateMask(SDL_Surface *pSurface) {
+    std::unordered_set<std::pair<int, int>> checked;
+    std::unordered_set<std::pair<int, int>> remaining;
+    std::unordered_set<std::pair<int, int>> result;
+
+    remaining.insert(std::make_pair(0, 0));
+    remaining.insert(std::make_pair(0, pSurface->h - 1));
+    remaining.insert(std::make_pair(pSurface->w - 1, 0));
+    remaining.insert(std::make_pair(pSurface->w - 1, pSurface->h - 1));
+
+    auto mask = getPixelRgba(pSurface, 0, 0);
+
+    while (!remaining.empty()) {
+        //TODO: make pop
+        auto coords = vstd::any(remaining);
+        remaining.erase(coords);
+
+        if (getPixelRgba(pSurface, coords.first, coords.second) == mask) {
+            result.insert(coords);
+            for (int i = -1; i <= 1; i++) {
+                for (int j = -1; j <= 1; j++) {
+                    int x = coords.first + i;
+                    int y = coords.second + j;
+                    if (x >= 0 && x < pSurface->w && y >= 0 && y < pSurface->h) {
+                        std::pair<int, int> value = std::make_pair(x, y);
+                        if (!vstd::ctn(checked, value)) {
+                            remaining.insert(value);
+                        }
+                    }
+                }
+            }
+        }
+        checked.insert(coords);
+    }
+
+    return result;
 }
 
