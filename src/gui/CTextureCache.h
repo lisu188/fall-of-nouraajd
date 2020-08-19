@@ -33,11 +33,22 @@ public:
 
     ~CTextureCache();
 
-
     SDL_Texture *getTexture(std::string path);
 
 private:
     SDL_Texture *loadTexture(std::string path);
 
     std::weak_ptr<CGui> _gui;
+};
+
+class CTextureUtil {
+public:
+    static SDL_Texture *calculateAlpha(SDL_Renderer *renderer, SDL_Surface *texture);
+
+    static auto getPixelRgba(SDL_Surface *surface, int x, int y);
+
+    static auto getPixelColor(SDL_Surface *surface, int x, int y);
+
+    static void setPixelColor(SDL_Surface *surface, int x, int y,
+                              std::tuple<Uint8, Uint8, Uint8, Uint8> color);
 };
