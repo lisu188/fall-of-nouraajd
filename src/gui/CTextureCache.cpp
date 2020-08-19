@@ -17,6 +17,69 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #include "CTextureCache.h"
 
+
+Uint32 getpixel(SDL_Surface *surface, int x, int y) {
+    int bpp = surface->format->BytesPerPixel;
+    /* Here p is the address to the pixel we want to retrieve */
+    Uint8 *p = (Uint8 *) surface->pixels + y * surface->pitch + x * bpp;
+
+    switch (bpp) {
+        case 1:
+            return *p;
+            break;
+
+        case 2:
+            return *(Uint16 *) p;
+            break;
+
+        case 3:
+            if (SDL_BYTEORDER == SDL_BIG_ENDIAN)
+                return p[0] << 16 | p[1] << 8 | p[2];
+            else
+                return p[0] | p[1] << 8 | p[2] << 16;
+            break;
+
+        case 4:
+            return *(Uint32 *) p;
+            break;
+
+        default:
+            return 0;       /* shouldn't happen, but avoids warnings */
+    }
+}
+
+void putpixel(SDL_Surface *surface, int x, int y, Uint32 pixel) {
+    int bpp = surface->format->BytesPerPixel;
+    /* Here p is the address to the pixel we want to set */
+    Uint8 *p = (Uint8 *) surface->pixels + y * surface->pitch + x * bpp;
+
+    switch (bpp) {
+        case 1:
+            *p = pixel;
+            break;
+
+        case 2:
+            *(Uint16 *) p = pixel;
+            break;
+
+        case 3:
+            if (SDL_BYTEORDER == SDL_BIG_ENDIAN) {
+                p[0] = (pixel >> 16) & 0xff;
+                p[1] = (pixel >> 8) & 0xff;
+                p[2] = pixel & 0xff;
+            } else {
+                p[0] = pixel & 0xff;
+                p[1] = (pixel >> 8) & 0xff;
+                p[2] = (pixel >> 16) & 0xff;
+            }
+            break;
+
+        case 4:
+            *(Uint32 *) p = pixel;
+            break;
+    }
+}
+
 SDL_Texture *CTextureCache::getTexture(std::string path) {
     if (vstd::ends_with(path, ".png")) {
         auto anim = _textures.find(path);
@@ -30,7 +93,8 @@ SDL_Texture *CTextureCache::getTexture(std::string path) {
 }
 
 SDL_Texture *CTextureCache::loadTexture(std::string path) {
-    return IMG_LoadTexture(_gui.lock()->getRenderer(), path.c_str());
+    return CTextureUtil::calculateAlpha(_gui.lock()->getRenderer(),
+                                        IMG_Load(path.c_str()));
 }
 
 CTextureCache::CTextureCache(std::shared_ptr<CGui> _gui) : _gui(_gui) {}
@@ -45,3 +109,63 @@ CTextureCache::~CTextureCache() {
 CTextureCache::CTextureCache() {
 
 }
+
+auto CTextureUtil::getPixelColor(SDL_Surface *surface, int x, int y) {
+    return getpixel(surface, x, y);
+}
+
+void CTextureUtil::setPixelColor(SDL_Surface *surface, int x, int y,
+                                 std::tuple<Uint8, Uint8, Uint8, Uint8> color) {
+    auto[r, g, b, a]=color;
+    auto rgbaColor = SDL_MapRGBA(surface->format, r, g, b, a);
+    putpixel(surface, x, y, rgbaColor);
+}
+
+
+auto CTextureUtil::getPixelRgba(SDL_Surface *surface, int x, int y) {
+    Uint8 r, g, b, a;
+    SDL_GetRGBA(getpixel(surface, x, y), surface->format, &r, &g, &b, &a);
+    return std::make_tuple(r, g, b, a);
+}
+
+SDL_Texture *CTextureUtil::calculateAlpha(SDL_Renderer *renderer, SDL_Surface *surface) {
+    int w = surface->w;
+    int h = surface->h;
+
+    auto secondSurface = SDL_CreateRGBSurfaceWithFormat(surface->flags, surface->w, surface->h, 32,
+                                                        SDL_PIXELFORMAT_RGBA32);
+
+    auto maskPixel = getPixelRgba(surface, 0, 0);
+
+    bool shouldAddMask = vstd::all_equals(getPixelColor(surface, 0, 0),
+                                          getPixelColor(surface, 0, h - 1),
+                                          getPixelColor(surface, w - 1, 0),
+                                          getPixelColor(surface, w - 1, h - 1))
+                         && std::get<3>(maskPixel) == 255;
+
+
+    for (auto verticalIndex = 0; verticalIndex < h; verticalIndex++) {
+        for (auto horizontalIndex = 0; horizontalIndex < w; horizontalIndex++) {
+            auto currentPixel = getPixelRgba(surface,
+                                             horizontalIndex,
+                                             verticalIndex);
+            auto[r, g, b, a]=currentPixel;
+            if (shouldAddMask && currentPixel == maskPixel) {
+                setPixelColor(secondSurface, horizontalIndex, verticalIndex,
+                              {r, g, b, 0});
+            } else {
+                setPixelColor(secondSurface, horizontalIndex, verticalIndex,
+                              {r, g, b, a});
+            }
+        }
+
+    }
+
+    auto texture = SDL_SAFE(SDL_CreateTextureFromSurface(renderer, secondSurface));
+
+    SDL_SAFE(SDL_FreeSurface(surface));
+    SDL_SAFE(SDL_FreeSurface(secondSurface));
+
+    return texture;
+}
+
