@@ -10,7 +10,7 @@ jobs:
     - name: submodules
       run: git submodule update --init --recursive
     - name: configure
-      run: ./configure.sh
+      run: ./configure.bat
     - name: make
       run: make -C cmake-build-release package
     - name: publish
