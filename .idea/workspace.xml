@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="CMakeRunConfigurationManager" shouldGenerate="true" shouldDeleteObsolete="true">
+    <generated>
+      <config projectName="fall-of-nouraajd" targetName="_game" />
+    </generated>
+  </component>
+  <component name="CMakeSettings" AUTO_RELOAD="true">
+    <configurations>
+      <configuration PROFILE_NAME="Debug" CONFIG_NAME="Debug">
+        <ADDITIONAL_GENERATION_ENVIRONMENT>
+          <envs>
+            <env name="PATH" value="%PATH%\;C:\\dev\Python36\\;C:\\dev\boost64\;C:\\dev\SDL2_image-2.0.5\x86_64-w64-mingw32\\;C:\\dev\SDL2_ttf-2.0.15\x86_64-w64-mingw32\\;C:\\dev\SDL2-2.0.12\x86_64-w64-mingw32\\;C:\\dev\mingw\mingw64\bin\\;C:\\dev\boost_1_74_0\boost64\lib\\;C:\\dev\SDL2_image-2.0.5\x86_64-w64-mingw32\bin\\;C:\\dev\SDL2_ttf-2.0.15\x86_64-w64-mingw32\bin\\;C:\\dev\SDL2-2.0.12\x86_64-w64-mingw32\bin\\;" />
+          </envs>
+        </ADDITIONAL_GENERATION_ENVIRONMENT>
+      </configuration>
+      <configuration PROFILE_NAME="Release" CONFIG_NAME="Release">
+        <ADDITIONAL_GENERATION_ENVIRONMENT>
+          <envs>
+            <env name="PATH" value="%PATH%;C:\\dev\Python36\;C:\\dev\boost64;C:\\dev\SDL2_image-2.0.5\x86_64-w64-mingw32\;C:\\dev\SDL2_ttf-2.0.15\x86_64-w64-mingw32\;C:\\dev\SDL2-2.0.12\x86_64-w64-mingw32\;C:\\dev\mingw\mingw64\bin\;C:\\dev\boost_1_74_0\boost64\lib\;C:\\dev\SDL2_image-2.0.5\x86_64-w64-mingw32\bin\;C:\\dev\SDL2_ttf-2.0.15\x86_64-w64-mingw32\bin\;C:\\dev\SDL2-2.0.12\x86_64-w64-mingw32\bin\;" />
+          </envs>
+        </ADDITIONAL_GENERATION_ENVIRONMENT>
+      </configuration>
+    </configurations>
+  </component>
+  <component name="ChangeListManager">
+    <list default="true" id="4376a8b6-35dc-4e1d-8076-f9350c811619" name="Default Changelist" comment="" />
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="ClangdSettings">
+    <option name="formatViaClangd" value="false" />
+  </component>
+  <component name="ExecutionTargetManager" SELECTED_TARGET="CMakeBuildProfile:Debug" />
+  <component name="Git.Settings">
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+  </component>
+  <component name="ProjectId" id="1gNN90pkLL51TNAByemaAz4hGrI" />
+  <component name="ProjectLevelVcsManager" settingsEditedManually="true" />
+  <component name="ProjectViewState">
+    <option name="autoscrollFromSource" value="true" />
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showLibraryContents" value="true" />
+  </component>
+  <component name="PropertiesComponent">
+    <property name="RunOnceActivity.OpenProjectViewOnStart" value="true" />
+    <property name="WebServerToolWindowFactoryState" value="true" />
+    <property name="cf.first.check.clang-format" value="false" />
+    <property name="nodejs_package_manager_path" value="npm" />
+    <property name="settings.editor.selected.configurable" value="CMakeSettings" />
+  </component>
+  <component name="RunManager" selected="CMake Application.play">
+    <configuration default="true" type="CLionExternalRunConfiguration" factoryName="Application" REDIRECT_INPUT="false" PASS_PARENT_ENVS_2="true">
+      <method v="2">
+        <option name="CLION.EXTERNAL.BUILD" enabled="true" />
+      </method>
+    </configuration>
+    <configuration default="true" type="CMakeRunConfiguration" factoryName="Application" REDIRECT_INPUT="false" PASS_PARENT_ENVS_2="true">
+      <method v="2">
+        <option name="com.jetbrains.cidr.execution.CidrBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
+      </method>
+    </configuration>
+    <list>
+      <item itemvalue="CMake Application.play" />
+      <item itemvalue="CMake Application.play _unity" />
+      <item itemvalue="CMake Application.test" />
+      <item itemvalue="CMake Application.test _unity" />
+    </list>
+  </component>
+  <component name="SpellCheckerSettings" RuntimeDictionaries="0" Folders="0" CustomDictionaries="0" DefaultDictionary="application-level" UseSingleDictionary="true" transferred="true" />
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="Default task">
+      <changelist id="4376a8b6-35dc-4e1d-8076-f9350c811619" name="Default Changelist" comment="" />
+      <created>1597950936399</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1597950936399</updated>
+      <workItem from="1597950938896" duration="183000" />
+      <workItem from="1597951149890" duration="532000" />
+    </task>
+    <servers />
+  </component>
+  <component name="TypeScriptGeneratedFilesManager">
+    <option name="version" value="3" />
+  </component>
+  <component name="WindowStateProjectService">
+    <state x="1622" y="256" width="714" height="735" key="EnvironmentVariablesDialog" timestamp="1597951672681">
+      <screen x="0" y="0" width="2560" height="1400" />
+    </state>
+    <state x="1622" y="256" width="714" height="735" key="EnvironmentVariablesDialog/0.0.2560.1400/2560.0.1920.1040@0.0.2560.1400" timestamp="1597951672681" />
+    <state x="1256" y="151" key="SettingsEditor" timestamp="1597951681611">
+      <screen x="0" y="0" width="2560" height="1400" />
+    </state>
+    <state x="1256" y="151" key="SettingsEditor/0.0.2560.1400/2560.0.1920.1040@0.0.2560.1400" timestamp="1597951681611" />
+    <state x="943" y="315" width="672" height="678" key="search.everywhere.popup" timestamp="1597951659851">
+      <screen x="0" y="0" width="2560" height="1400" />
+    </state>
+    <state x="943" y="315" width="672" height="678" key="search.everywhere.popup/0.0.2560.1400/2560.0.1920.1040@0.0.2560.1400" timestamp="1597951659851" />
+  </component>
+</project>
