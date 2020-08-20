@@ -11,4 +11,10 @@ jobs:
     - name: configure
       run: ./configure.sh
     - name: make
-      run: make -C cmake-build-release
+      run: make -C cmake-build-release package
+    - name: publish
+      uses: actions/upload-artifact@v2
+      with:
+        name: fall-of-nouraajd
+        path: fall-of-nouraajd-0.1.1-.tar.gz
+    
