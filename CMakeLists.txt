@@ -243,9 +243,32 @@ install(FILES res/game.py test.py DESTINATION fall-of-nouraajd)
 install(FILES play.py play.py DESTINATION fall-of-nouraajd)
 install(FILES test.py test.py DESTINATION fall-of-nouraajd)
 
-if(WIN32)
-    install(DIRECTORY windows-tools/lib DESTINATION fall-of-nouraajd)
-endif()
+if (WIN32)
+    install(FILES play.bat play.bat DESTINATION fall-of-nouraajd)
+
+    install(FILES windows-tools/SDL2_image-2.0.5/x86_64-w64-mingw32/bin/libjpeg-9.dll DESTINATION fall-of-nouraajd)
+    install(FILES windows-tools/SDL2_image-2.0.5/x86_64-w64-mingw32/bin/libpng16-16.dll DESTINATION fall-of-nouraajd)
+    install(FILES windows-tools/SDL2_image-2.0.5/x86_64-w64-mingw32/bin/libtiff-5.dll DESTINATION fall-of-nouraajd)
+    install(FILES windows-tools/SDL2_image-2.0.5/x86_64-w64-mingw32/bin/libwebp-7.dll DESTINATION fall-of-nouraajd)
+    install(FILES windows-tools/SDL2_image-2.0.5/x86_64-w64-mingw32/bin/SDL2_image.dll DESTINATION fall-of-nouraajd)
+    install(FILES windows-tools/SDL2_image-2.0.5/x86_64-w64-mingw32/bin/zlib1.dll DESTINATION fall-of-nouraajd)
+
+    install(FILES windows-tools/SDL2_ttf-2.0.15/x86_64-w64-mingw32/bin/libfreetype-6.dll DESTINATION fall-of-nouraajd)
+    install(FILES windows-tools/SDL2_ttf-2.0.15/x86_64-w64-mingw32/bin/SDL2_ttf.dll DESTINATION fall-of-nouraajd)
+
+    install(FILES windows-tools/SDL2-2.0.12/x86_64-w64-mingw32/bin/SDL2.dll DESTINATION fall-of-nouraajd)
+
+    install(FILES windows-tools/boost64/lib/libboost_python36-mgw8-mt-x64-1_74.dll DESTINATION fall-of-nouraajd)
+    install(FILES windows-tools/boost64/lib/libboost_filesystem-mgw8-mt-x64-1_74.dll DESTINATION fall-of-nouraajd)
+
+    install(FILES windows-tools/Python36/python.exe DESTINATION fall-of-nouraajd)
+    install(FILES windows-tools/Python36/python36.dll DESTINATION fall-of-nouraajd)
+    install(FILES windows-tools/Python36/vcruntime140.dll DESTINATION fall-of-nouraajd)
+
+    install(FILES windows-tools/mingw/mingw64/bin/libgcc_s_seh-1.dll DESTINATION fall-of-nouraajd)
+    install(FILES windows-tools/mingw/mingw64/bin/libstdc++-6.dll DESTINATION fall-of-nouraajd)
+    install(FILES windows-tools/mingw/mingw64/bin/libwinpthread-1.dll DESTINATION fall-of-nouraajd)
+endif ()
 
 SET(CPACK_STRIP_FILES _game.so)
 
