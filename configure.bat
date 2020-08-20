@@ -5,7 +5,5 @@ set PATH=%cd%\windows-tools\Python36\;%cd%\windows-tools\boost64;%cd%\windows-to
 mkdir cmake-build-debug
 mkdir cmake-build-release
 
-dir D:\a\fall-of-nouraajd\fall-of-nouraajd\windows-tools\mingw\mingw64\bin
-
 cmake -B./cmake-build-debug -H. -DCMAKE_BUILD_TYPE=Debug -DCMAKE_MAKE_PROGRAM=mingw32-make.exe -G "MinGW Makefiles"
 cmake -B./cmake-build-release -H. -DCMAKE_BUILD_TYPE=Release -DCMAKE_MAKE_PROGRAM=mingw32-make.exe -G "MinGW Makefiles"
