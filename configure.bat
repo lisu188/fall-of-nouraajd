@@ -5,5 +5,5 @@ set PATH=%PATH%;%cd%\windows-tools\Python36\;%cd%\windows-tools\boost64;%cd%\win
 mkdir cmake-build-debug
 mkdir cmake-build-release
 
-cmake -B./cmake-build-debug -H. -DCMAKE_BUILD_TYPE=Debug
-cmake -B./cmake-build-release -H. -DCMAKE_BUILD_TYPE=Release
+cmake -B./cmake-build-debug -H. -DCMAKE_BUILD_TYPE=Debug -G "MinGW Makefiles"
+cmake -B./cmake-build-release -H. -DCMAKE_BUILD_TYPE=Release -G "MinGW Makefiles"
