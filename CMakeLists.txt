@@ -15,10 +15,12 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 cmake_minimum_required(VERSION 3.3)
 
+project(fall-of-nouraajd)
+
 include(CPack)
 set(CPACK_GENERATOR "TGZ")
 
-project(fall-of-nouraajd)
+include(${CMAKE_SOURCE_DIR}/cmake/cotire.cmake)
 
 include(${CMAKE_SOURCE_DIR}/cmake/cotire.cmake)
 
