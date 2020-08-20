@@ -225,7 +225,7 @@ void CGameGraphicsObject::setBackground(std::string _background) {
 }
 
 bool priority_comparator::operator()(std::shared_ptr<CGameGraphicsObject> a,
-                                     std::shared_ptr<CGameGraphicsObject> b) {
+                                     std::shared_ptr<CGameGraphicsObject> b) const {
     if (a->getPriority() == b->getPriority()) {
         return a < b;
     }
@@ -233,6 +233,6 @@ bool priority_comparator::operator()(std::shared_ptr<CGameGraphicsObject> a,
 }
 
 bool reverse_priority_comparator::operator()(std::shared_ptr<CGameGraphicsObject> a,
-                                             std::shared_ptr<CGameGraphicsObject> b) {
+                                             std::shared_ptr<CGameGraphicsObject> b) const {
     return priority_comparator()(b, a);
 }

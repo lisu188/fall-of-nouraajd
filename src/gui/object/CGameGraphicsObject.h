@@ -32,12 +32,12 @@ class CScript;
 //TODO: generify
 struct priority_comparator {
     bool operator()(
-            std::shared_ptr<CGameGraphicsObject> a, std::shared_ptr<CGameGraphicsObject> b);
+            std::shared_ptr<CGameGraphicsObject> a, std::shared_ptr<CGameGraphicsObject> b) const;
 };
 
 struct reverse_priority_comparator {
     bool operator()(
-            std::shared_ptr<CGameGraphicsObject> a, std::shared_ptr<CGameGraphicsObject> b);
+            std::shared_ptr<CGameGraphicsObject> a, std::shared_ptr<CGameGraphicsObject> b) const;
 };
 
 class CGameGraphicsObject : public CGameObject {
