@@ -243,6 +243,10 @@ install(FILES res/game.py test.py DESTINATION fall-of-nouraajd)
 install(FILES play.py play.py DESTINATION fall-of-nouraajd)
 install(FILES test.py test.py DESTINATION fall-of-nouraajd)
 
+if(WIN32)
+    install(DIRECTORY windows-tools/lib DESTINATION fall-of-nouraajd)
+endif()
+
 SET(CPACK_STRIP_FILES _game.so)
 
 IF (!WIN32)
