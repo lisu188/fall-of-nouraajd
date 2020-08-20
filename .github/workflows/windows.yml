@@ -17,4 +17,4 @@ jobs:
       uses: actions/upload-artifact@v2
       with:
         name: fall-of-nouraajd
-        path: fall-of-nouraajd-0.1.1-.tar.gz
+        path: fall-of-nouraajd-0.1.1-win64.tar.gz
