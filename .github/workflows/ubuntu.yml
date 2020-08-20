@@ -7,7 +7,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v1
-    - uses: "textbook/git-checkout-submodule-action@master"
+    - name: submodules
+      run: git submodule init
     - name: configure
       run: ./configure.sh
     - name: make
