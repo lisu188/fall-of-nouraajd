@@ -8,5 +8,5 @@ mkdir cmake-build-release
 set CC=D:\a\fall-of-nouraajd\fall-of-nouraajd\windows-tools\mingw\mingw64\bin\gcc.exe
 set CXX=D:\a\fall-of-nouraajd\fall-of-nouraajd\windows-tools\mingw\mingw64\bin\g++.exe
 
-cmake -B./cmake-build-debug -H. -DCMAKE_BUILD_TYPE=Debug -DCMAKE_CXX_COMPILER=%CXX% -DCMAKE_C_COMPILER=%CC% -G "MinGW Makefiles"
-cmake -B./cmake-build-release -H. -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_COMPILER=%CXX% -DCMAKE_C_COMPILER=%CC% -G "MinGW Makefiles"
+cmake -B./cmake-build-debug -H. -DCMAKE_BUILD_TYPE=Debug -DCMAKE_CXX_COMPILER=%CXX% -DCMAKE_C_COMPILER=%CC% -DCMAKE_MAKE_PROGRAM=D:\a\fall-of-nouraajd\fall-of-nouraajd\windows-tools\mingw\mingw64\bin\ming32-make.exe -G "MinGW Makefiles"
+cmake -B./cmake-build-release -H. -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_COMPILER=%CXX% -DCMAKE_C_COMPILER=%CC% -DCMAKE_MAKE_PROGRAM=D:\a\fall-of-nouraajd\fall-of-nouraajd\windows-tools\mingw\mingw64\bin\ming32-make.exe -G "MinGW Makefiles"
