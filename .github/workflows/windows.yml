@@ -17,4 +17,4 @@ jobs:
       uses: actions/upload-artifact@v2
       with:
         name: fall-of-nouraajd
-        path: cmake-build-release/fall-of-nouraajd-*.tar.gz
+        path: cmake-build-release/fall-of-nouraajd-*.exe
