@@ -8,7 +8,7 @@ jobs:
     steps:
     - uses: actions/checkout@v1
     - name: submodules
-      run: git submodule init
+      run: git submodule update --init --recursive
     - name: configure
       run: ./configure.sh
     - name: make
