@@ -169,7 +169,9 @@ private:
     std::string label;
 
     std::set<std::string> tags;
-    std::weak_ptr<CGame> game;
+
+    //TODO: this creates cyclic dependencies
+    std::shared_ptr<CGame> game;
 };
 
 

@@ -40,7 +40,7 @@ std::shared_ptr<CMap> CGameObject::getMap() {
 }
 
 std::shared_ptr<CGame> CGameObject::getGame() {
-    return game.lock();
+    return game;
 }
 
 void CGameObject::setGame(std::shared_ptr<CGame> map) {
@@ -80,7 +80,7 @@ std::string CGameObject::to_string() {
 }
 
 std::shared_ptr<CGameObject> CGameObject::_clone() {
-    return game.lock()->getObjectHandler()->clone<CGameObject>(this->ptr());
+    return game->getObjectHandler()->clone<CGameObject>(this->ptr());
 }
 
 std::set<std::string> CGameObject::getTags() {
