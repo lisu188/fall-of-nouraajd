@@ -6,7 +6,7 @@ mkdir cmake-build-debug
 mkdir cmake-build-release
 
 set CC=windows-tools/mingw/mingw64/bin/gcc.exe
-set CXX=windows-tools/mingw/mingw64/bin/gcc.exe
+set CXX=windows-tools/mingw/mingw64/bin/g++.exe
 
-cmake -B./cmake-build-debug -H. -DCMAKE_BUILD_TYPE=Debug
-cmake -B./cmake-build-release -H. -DCMAKE_BUILD_TYPE=Release
+cmake -B./cmake-build-debug -H. -DCMAKE_BUILD_TYPE=Debug -DCMAKE_CXX_COMPILER=%CXX% -DCMAKE_C_COMPILER=%CC%
+cmake -B./cmake-build-release -H. -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_COMPILER=%CXX% -DCMAKE_C_COMPILER=%CC%
