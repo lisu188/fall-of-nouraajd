@@ -5,5 +5,5 @@ set PATH=windows-tools\Python36\;windows-tools\boost64\;windows-tools\SDL2_image
 mkdir cmake-build-debug
 mkdir cmake-build-release
 
-cmake -B./cmake-build-debug -H. -DCMAKE_BUILD_TYPE=Debug -DCMAKE_CXX_COMPILER=g++
-cmake -B./cmake-build-release -H. -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_COMPILER=g++
+cmake -B./cmake-build-debug -H. -DCMAKE_BUILD_TYPE=Debug -DCMAKE_CXX_COMPILER=C:\dev\mingw\mingw64\bin\g++.exe -DCMAKE_C_COMPILER=C:\dev\mingw\mingw64\bin\gcc.exe
+cmake -B./cmake-build-release -H. -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_COMPILER=C:\dev\mingw\mingw64\bin\g++.exe -DCMAKE_C_COMPILER=C:\dev\mingw\mingw64\bin\gcc.exe
