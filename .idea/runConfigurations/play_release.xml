@@ -1,0 +1,7 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="play release" type="CMakeRunConfiguration" factoryName="Application" PROGRAM_PARAMS="play.py" REDIRECT_INPUT="false" WORKING_DIR="file://$PROJECT_DIR$/cmake-build-release" PASS_PARENT_ENVS_2="true" PROJECT_NAME="fall-of-nouraajd" TARGET_NAME="_game" CONFIG_NAME="Windows Debug" RUN_PATH="/usr/bin/python3">
+    <method v="2">
+      <option name="com.jetbrains.cidr.execution.CidrBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
+    </method>
+  </configuration>
+</component>
