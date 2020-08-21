@@ -268,6 +268,8 @@ if (WIN32)
     install(FILES windows-tools/mingw/mingw64/bin/libgcc_s_seh-1.dll DESTINATION fall-of-nouraajd)
     install(FILES windows-tools/mingw/mingw64/bin/libstdc++-6.dll DESTINATION fall-of-nouraajd)
     install(FILES windows-tools/mingw/mingw64/bin/libwinpthread-1.dll DESTINATION fall-of-nouraajd)
+
+    install(FILES windows-tools/Python36/python36.zip DESTINATION fall-of-nouraajd)
 endif ()
 
 SET(CPACK_STRIP_FILES _game.so)
