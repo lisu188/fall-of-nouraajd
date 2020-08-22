@@ -74,12 +74,12 @@ private:
 };
 
 
+//should accept script
 class CTargetController : public CController {
 V_META(CTargetController, CController,
        V_PROPERTY(CTargetController, std::string, target, getTarget, setTarget))
 public:
     CTargetController();
-
 
     virtual std::shared_ptr<vstd::future<void, Coords> > control(std::shared_ptr<CCreature> creature) override;
 

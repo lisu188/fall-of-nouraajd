@@ -93,5 +93,16 @@
         "ref": "exampleMarket"
       }
     }
+  },
+  "gooby": {
+    "ref": "Gooby",
+    "properties": {
+      "controller": {
+        "class": "CTargetController",
+        "properties": {
+          "target": "player"
+        }
+      }
+    }
   }
 }

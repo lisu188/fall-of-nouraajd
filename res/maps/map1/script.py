@@ -44,7 +44,7 @@ def load(self, context):
     class CaveTrigger(CTrigger):
         def trigger(self, object, event):
             object.getGame().getGuiHandler().showMessage(object.getStringProperty("message"))
-            gooby = object.getGame().createObject("Gooby")
+            gooby = object.getGame().createObject("gooby")
             gooby.setStringProperty("name", "gooby1")
             object.getGame().getMap().addObject(gooby)
             gooby.moveTo(100, 100, 0)
