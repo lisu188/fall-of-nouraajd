@@ -7,27 +7,28 @@
   </component>
   <component name="CMakeSettings" AUTO_RELOAD="true">
     <configurations>
-      <configuration PROFILE_NAME="Windows Debug" CONFIG_NAME="Debug" GENERATION_DIR="cmake-build-debug">
+      <configuration PROFILE_NAME="Windows Debug" CONFIG_NAME="Debug" GENERATION_DIR="cmake-build-debug-windows">
         <ADDITIONAL_GENERATION_ENVIRONMENT>
           <envs>
             <env name="PATH" value="%PATH%\;C:\\dev\Python36\\;C:\\dev\boost64\;C:\\dev\SDL2_image-2.0.5\x86_64-w64-mingw32\\;C:\\dev\SDL2_ttf-2.0.15\x86_64-w64-mingw32\\;C:\\dev\SDL2-2.0.12\x86_64-w64-mingw32\\;C:\\dev\mingw\mingw64\bin\\;C:\\dev\boost_1_74_0\boost64\lib\\;C:\\dev\SDL2_image-2.0.5\x86_64-w64-mingw32\bin\\;C:\\dev\SDL2_ttf-2.0.15\x86_64-w64-mingw32\bin\\;C:\\dev\SDL2-2.0.12\x86_64-w64-mingw32\bin\\;" />
           </envs>
         </ADDITIONAL_GENERATION_ENVIRONMENT>
       </configuration>
-      <configuration PROFILE_NAME="Windows Release" CONFIG_NAME="Release" GENERATION_DIR="cmake-build-release">
+      <configuration PROFILE_NAME="Windows Release" CONFIG_NAME="Release" GENERATION_DIR="cmake-build-release-windows">
         <ADDITIONAL_GENERATION_ENVIRONMENT>
           <envs>
             <env name="PATH" value="%PATH%;C:\\dev\Python36\;C:\\dev\boost64;C:\\dev\SDL2_image-2.0.5\x86_64-w64-mingw32\;C:\\dev\SDL2_ttf-2.0.15\x86_64-w64-mingw32\;C:\\dev\SDL2-2.0.12\x86_64-w64-mingw32\;C:\\dev\mingw\mingw64\bin\;C:\\dev\boost_1_74_0\boost64\lib\;C:\\dev\SDL2_image-2.0.5\x86_64-w64-mingw32\bin\;C:\\dev\SDL2_ttf-2.0.15\x86_64-w64-mingw32\bin\;C:\\dev\SDL2-2.0.12\x86_64-w64-mingw32\bin\;" />
           </envs>
         </ADDITIONAL_GENERATION_ENVIRONMENT>
       </configuration>
+      <configuration PROFILE_NAME="Ubuntu Debug" CONFIG_NAME="Debug" GENERATION_DIR="cmake-build-debug-ubuntu" />
+      <configuration PROFILE_NAME="Ubuntu Release" CONFIG_NAME="Release" GENERATION_DIR="cmake-build-release-ubuntu" />
     </configurations>
   </component>
   <component name="ChangeListManager">
     <list default="true" id="4376a8b6-35dc-4e1d-8076-f9350c811619" name="Default Changelist" comment="">
+      <change beforePath="$PROJECT_DIR$/.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/.gitignore" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/CMakeLists.txt" beforeDir="false" afterPath="$PROJECT_DIR$/CMakeLists.txt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/gui/CTextManager.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/src/gui/CTextManager.cpp" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -37,13 +38,16 @@
   <component name="ClangdSettings">
     <option name="formatViaClangd" value="false" />
   </component>
-  <component name="ExecutionTargetManager" SELECTED_TARGET="CMakeBuildProfile:Windows Debug" />
+  <component name="ExecutionTargetManager" SELECTED_TARGET="CMakeBuildProfile:Ubuntu Debug" />
   <component name="Git.Settings">
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
     <option name="ROOT_SYNC" value="DONT_SYNC" />
+    <option name="UPDATE_TYPE" value="REBASE" />
   </component>
   <component name="ProjectId" id="1gNN90pkLL51TNAByemaAz4hGrI" />
-  <component name="ProjectLevelVcsManager" settingsEditedManually="true" />
+  <component name="ProjectLevelVcsManager" settingsEditedManually="true">
+    <OptionsSetting value="false" id="Update" />
+  </component>
   <component name="ProjectViewState">
     <option name="autoscrollFromSource" value="true" />
     <option name="hideEmptyMiddlePackages" value="true" />
@@ -63,7 +67,7 @@
     <property name="nodejs_package_manager_path" value="npm" />
     <property name="settings.editor.selected.configurable" value="CMakeSettings" />
   </component>
-  <component name="RunManager" selected="CMake Application.windows play debug">
+  <component name="RunManager" selected="CMake Application.play debug">
     <configuration default="true" type="CLionExternalRunConfiguration" factoryName="Application" REDIRECT_INPUT="false" PASS_PARENT_ENVS_2="true">
       <method v="2">
         <option name="CLION.EXTERNAL.BUILD" enabled="true" />
@@ -109,15 +113,19 @@
   <component name="TypeScriptGeneratedFilesManager">
     <option name="version" value="3" />
   </component>
+  <component name="Vcs.Log.Tabs.Properties">
+    <option name="oldMeFiltersMigrated" value="true" />
+  </component>
   <component name="VcsManagerConfiguration">
     <MESSAGE value="add workspace" />
     <option name="LAST_COMMIT_MESSAGE" value="add workspace" />
   </component>
   <component name="WindowStateProjectService">
-    <state x="734" y="354" key="#com.intellij.execution.impl.EditConfigurationsDialog" timestamp="1597986882262">
-      <screen x="0" y="0" width="2560" height="1400" />
+    <state x="1055" y="389" width="1081" height="689" key="#com.intellij.execution.impl.EditConfigurationsDialog" timestamp="1598073654629">
+      <screen x="0" y="0" width="4480" height="1440" />
     </state>
     <state x="734" y="354" key="#com.intellij.execution.impl.EditConfigurationsDialog/0.0.2560.1400/2560.0.1920.1040@0.0.2560.1400" timestamp="1597986882262" />
+    <state x="1055" y="389" width="1081" height="689" key="#com.intellij.execution.impl.EditConfigurationsDialog/0.0.4480.1440@0.0.4480.1440" timestamp="1598073654629" />
     <state x="856" y="264" key="CommitChangelistDialog2" timestamp="1597951942859">
       <screen x="0" y="0" width="2560" height="1400" />
     </state>
@@ -162,17 +170,19 @@
       <screen x="0" y="0" width="2560" height="1400" />
     </state>
     <state width="2517" height="492" key="GridCell.Tab.1.right/0.0.2560.1400/2560.0.1920.1040@0.0.2560.1400" timestamp="1597987171529" />
-    <state x="1256" y="151" key="SettingsEditor" timestamp="1597952397158">
-      <screen x="0" y="0" width="2560" height="1400" />
+    <state x="664" y="256" width="1032" height="720" key="SettingsEditor" timestamp="1598073820154">
+      <screen x="0" y="0" width="4480" height="1440" />
     </state>
     <state x="1256" y="151" key="SettingsEditor/0.0.2560.1400/2560.0.1920.1040@0.0.2560.1400" timestamp="1597952397158" />
+    <state x="664" y="256" width="1032" height="720" key="SettingsEditor/0.0.4480.1440@0.0.4480.1440" timestamp="1598073820154" />
     <state x="987" y="433" width="585" height="534" key="find.popup" timestamp="1597952939698">
       <screen x="0" y="0" width="2560" height="1400" />
     </state>
     <state x="987" y="433" width="585" height="534" key="find.popup/0.0.2560.1400/2560.0.1920.1040@0.0.2560.1400" timestamp="1597952939698" />
-    <state x="943" y="315" width="672" height="678" key="search.everywhere.popup" timestamp="1597952372251">
-      <screen x="0" y="0" width="2560" height="1400" />
+    <state x="1650" y="324" width="1176" height="698" key="search.everywhere.popup" timestamp="1598073780834">
+      <screen x="0" y="0" width="4480" height="1440" />
     </state>
     <state x="943" y="315" width="672" height="678" key="search.everywhere.popup/0.0.2560.1400/2560.0.1920.1040@0.0.2560.1400" timestamp="1597952372251" />
+    <state x="1650" y="324" width="1176" height="698" key="search.everywhere.popup/0.0.4480.1440@0.0.4480.1440" timestamp="1598073780834" />
   </component>
 </project>
