@@ -55,4 +55,5 @@ def load(self, context):
     @trigger(context, "onEnter", "market1")
     class MarketTrigger(CTrigger):
         def trigger(self, object, event):
-            object.getGame().getGuiHandler().showTrade(object.getObjectProperty('market'))
+            if event.getCause().isPlayer():
+                object.getGame().getGuiHandler().showTrade(object.getObjectProperty('market'))
