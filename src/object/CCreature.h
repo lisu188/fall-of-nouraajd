@@ -51,14 +51,11 @@ V_META(CCreature, CMapObject,
        V_PROPERTY(CCreature, int, gold, getGold, setGold),
        V_PROPERTY(CCreature, int, level, getLevel, setLevel),
        V_PROPERTY(CCreature, int, mana, getMana, setMana),
-       V_PROPERTY(CCreature, int, manaMax, getManaMax, setManaMax),
-       V_PROPERTY(CCreature, int, manaRegRate, getManaRegRate, setManaRegRate),
        V_PROPERTY(CCreature, int, hp, getHp, setHp),
-       V_PROPERTY(CCreature, int, hpMax, getHpMax, setHpMax),
        V_PROPERTY(CCreature, int, sw, getSw, setSw),
        V_PROPERTY(CCreature, CInteractionMap, levelling, getLevelling, setLevelling),
        V_PROPERTY(CCreature, CItemMap, equipped, getEquipped, setEquipped),
-       V_PROPERTY(CCreature, std::shared_ptr<Stats>, stats, getStats, setStats),
+       V_PROPERTY(CCreature, std::shared_ptr<Stats>, baseStats, getBaseStats, setBaseStats),
        V_PROPERTY(CCreature, std::shared_ptr<Stats>, levelStats, getLevelStats, setLevelStats),
        V_PROPERTY(CCreature, std::set<std::shared_ptr<CInteraction>>, actions, getActions, setActions),
        V_PROPERTY(CCreature, std::set<std::shared_ptr<CItem>>, items, getItems, setItems),
@@ -97,8 +94,6 @@ public:
     int getExpForNextLevel();
 
     int getExpForLevel(int level);
-
-    void attribChange();
 
     void heal(int i);
 
@@ -200,19 +195,13 @@ public:
 
     int getManaMax();
 
-    void setManaMax(int value);
-
     int getManaRegRate();
-
-    void setManaRegRate(int value);
 
     int getHp();
 
     void setHp(int value);
 
     int getHpMax();
-
-    void setHpMax(int value);
 
     std::shared_ptr<CItem> getItemAtSlot(std::string slot);
 
@@ -222,17 +211,13 @@ public:
 
     void setLevelling(CInteractionMap value);
 
-    std::shared_ptr<Stats> getStats() const;
+    std::shared_ptr<Stats> getBaseStats();
 
-    void setStats(std::shared_ptr<Stats> value);
+    void setBaseStats(std::shared_ptr<Stats> value);
 
-    std::shared_ptr<Stats> getLevelStats() const;
+    std::shared_ptr<Stats> getLevelStats();
 
     void setLevelStats(std::shared_ptr<Stats> value);
-
-    void addBonus(std::shared_ptr<Stats> bonus);
-
-    void removeBonus(std::shared_ptr<Stats> bonus);
 
     int getSw() const;
 
@@ -242,7 +227,7 @@ public:
 
     virtual void afterMove();
 
-     std::string getTooltip();
+    std::string getTooltip();
 
     void addGold(int gold);
 
@@ -262,6 +247,8 @@ public:
 
     void useItem(std::shared_ptr<CItem> item);
 
+    std::shared_ptr<Stats> getStats();
+
 private:
     std::set<std::shared_ptr<CItem>> items;
     std::set<std::shared_ptr<CInteraction>> actions;
@@ -279,12 +266,9 @@ private:
     int level = 0;
     int sw = 0;
     int mana = 0;
-    int manaMax = 0;
-    int manaRegRate = 0;
-    int hpMax = 0;
     int hp = 0;
 
-    std::shared_ptr<Stats> stats = std::make_shared<Stats>();
+    std::shared_ptr<Stats> baseStats = std::make_shared<Stats>();
     std::shared_ptr<Stats> levelStats = std::make_shared<Stats>();
 
     void takeDamage(int i);
