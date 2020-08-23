@@ -43,16 +43,8 @@ std::shared_ptr<CCreature> CEffect::getVictim() {
 }
 
 void CEffect::apply(std::shared_ptr<CCreature> creature) {
-    if (bonus) {
-        if (timeTotal == timeLeft) {
-            creature->addBonus(bonus);
-        }
-    }
     timeLeft--;
     if (timeLeft == 0) {
-        if (bonus) {
-            creature->removeBonus(bonus);
-        }
     } else {
         onEffect();
     }
