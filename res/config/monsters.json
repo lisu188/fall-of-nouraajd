@@ -57,7 +57,7 @@
           "ref": "Backstab"
         }
       },
-      "stats": {
+      "baseStats": {
         "class": "Stats",
         "properties": {
           "agility": 5,
@@ -105,7 +105,7 @@
           "ref": "DoubleAttack"
         }
       },
-      "stats": {
+      "baseStats": {
         "class": "Stats",
         "properties": {
           "agility": 5,
@@ -154,7 +154,7 @@
           "ref": "AbyssalShadows"
         }
       },
-      "stats": {
+      "baseStats": {
         "class": "Stats",
         "properties": {
           "agility": 10,
@@ -203,7 +203,7 @@
           "ref": "DoubleAttack"
         }
       },
-      "stats": {
+      "baseStats": {
         "class": "Stats",
         "properties": {
           "agility": 5,
@@ -256,7 +256,7 @@
           "ref": "FrostBolt"
         }
       },
-      "stats": {
+      "baseStats": {
         "class": "Stats",
         "properties": {
           "agility": 5,
@@ -334,7 +334,7 @@
           "ref": "Devour"
         }
       },
-      "stats": {
+      "baseStats": {
         "class": "Stats",
         "properties": {
           "agility": 5,
@@ -405,7 +405,7 @@
           "ref": "DoubleAttack"
         }
       },
-      "stats": {
+      "baseStats": {
         "class": "Stats",
         "properties": {
           "agility": 5,

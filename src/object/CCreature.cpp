@@ -76,22 +76,13 @@ std::shared_ptr<CInteraction> CCreature::getLevelAction() {
     }
 }
 
-std::shared_ptr<Stats> CCreature::getLevelStats() const {
+std::shared_ptr<Stats> CCreature::getLevelStats() {
     return levelStats;
 }
 
 void CCreature::setLevelStats(std::shared_ptr<Stats> _value) {
     levelStats = _value;
 }
-
-void CCreature::addBonus(std::shared_ptr<Stats> bonus) {
-    stats->addBonus(bonus);
-}
-
-void CCreature::removeBonus(std::shared_ptr<Stats> bonus) {
-    stats->removeBonus(bonus);
-}
-
 
 void CCreature::addItem(std::shared_ptr<CItem> item) {
     std::set<std::shared_ptr<CItem>> list;
@@ -148,6 +139,7 @@ void CCreature::addItem(std::string item) {
 
 void CCreature::heal(int i) {
     vstd::fail_if(i < 0, "Tried to heal negative value!");
+    auto hpMax = getHpMax();
     if (hp > hpMax) {
         return;
     }
@@ -163,7 +155,7 @@ void CCreature::heal(int i) {
 
 void CCreature::healProc(float i) {
     int tmp = hp;
-    heal(i / 100.0 * hpMax);
+    heal(i / 100.0 * getHpMax());
     vstd::logger::debug(to_string(), "restored", hp - tmp, "hp");
 }
 
@@ -184,6 +176,7 @@ int CCreature::getExpRatio() {
 
 //TODO: resistance and blocking to be more generic
 void CCreature::takeDamage(int rawDamage) {
+    auto stats = getStats();
     if (rawDamage < 0) {
         rawDamage = 0;
     }
@@ -217,6 +210,7 @@ std::set<std::shared_ptr<CItem>> CCreature::getItems() {
 }
 
 void CCreature::hurt(std::shared_ptr<Damage> damage) {
+    auto stats = getStats();
     takeDamage(damage->getNormal() * (100 - stats->getNormalResist()) / 100.0);
     takeDamage(damage->getThunder() * (100 - stats->getThunderResist()) / 100.0);
     takeDamage(damage->getFrost() * (100 - stats->getFrostResist()) / 100.0);
@@ -227,6 +221,7 @@ void CCreature::hurt(std::shared_ptr<Damage> damage) {
 }
 
 int CCreature::getDmg() {
+    auto stats = getStats();
     int critDice = rand() % 100;
     int attDice = rand() % 100;
     //TODO: crashes if min damage is greater than max. duh.
@@ -283,6 +278,7 @@ void CCreature::setMana(int mana) {
 
 void CCreature::addMana(int i) {
     vstd::fail_if(i < 0, "Tried to add negative mana!");
+    auto manaMax = getManaMax();
     if (mana > manaMax) {
         return;
     }
@@ -298,7 +294,7 @@ void CCreature::addMana(int i) {
 
 void CCreature::addManaProc(float i) {
     int tmp = mana;
-    addMana(i / 100.0 * manaMax);
+    addMana(i / 100.0 * getManaMax());
     vstd::logger::debug(to_string(), "restored", mana - tmp, "mana");
 }
 
@@ -313,6 +309,7 @@ bool CCreature::isPlayer() {
 }
 
 int CCreature::getHpRatio() {
+    auto hpMax = getHpMax();
     if (hp > hpMax) {
         return 100;
     }
@@ -320,6 +317,7 @@ int CCreature::getHpRatio() {
 }
 
 int CCreature::getManaRatio() {
+    auto manaMax = getManaMax();
     if (mana > manaMax) {
         return 100;
     }
@@ -337,7 +335,7 @@ int CCreature::getHp() {
 }
 
 int CCreature::getManaMax() {
-    return manaMax;
+    return getStats()->getMainValue() * 7;
 }
 
 int CCreature::getLevel() {
@@ -373,7 +371,6 @@ void CCreature::equipItem(std::string i, std::shared_ptr<CItem> newItem) {
                                                std::make_shared<CGameEventCaused>(CGameEvent::Type::onEquip,
                                                                                   this->ptr<CCreature>()));
         removeItem(newItem);
-        attribChange();
         equipped[i] = newItem;
         signal("equippedChanged");
     } else {
@@ -409,9 +406,7 @@ std::shared_ptr<CArmor> CCreature::getArmor() {
 
 void CCreature::levelUp() {
     level++;
-    stats->addBonus(getLevelStats());
     addAction(getLevelAction());
-    attribChange();
     if (level > 1) {
         vstd::logger::debug(to_string(), "is now level:", level);
     }
@@ -426,12 +421,6 @@ std::set<std::shared_ptr<CItem> > CCreature::getAllItems() {
         }
     }
     return allItems;
-}
-
-void CCreature::attribChange() {
-    hpMax = stats->getStamina() * 7;
-    manaRegRate = stats->getMainValue() / 10 + 1;
-    manaMax = stats->getMainValue() * 7;
 }
 
 bool CCreature::hasEquipped(std::function<bool(std::shared_ptr<CItem>)> item) {
@@ -461,20 +450,16 @@ void CCreature::setSw(int _value) {
     sw = _value;
 }
 
-std::shared_ptr<Stats> CCreature::getStats() const {
-    return stats;
+std::shared_ptr<Stats> CCreature::getBaseStats() {
+    return baseStats;
 }
 
-void CCreature::setStats(std::shared_ptr<Stats> _value) {
-    stats = _value;
+void CCreature::setBaseStats(std::shared_ptr<Stats> _value) {
+    baseStats = _value;
 }
 
 int CCreature::getHpMax() {
-    return hpMax;
-}
-
-void CCreature::setHpMax(int value) {
-    hpMax = value;
+    return getStats()->getStamina() * 7;;
 }
 
 std::shared_ptr<CItem> CCreature::getItemAtSlot(std::string slot) {
@@ -498,15 +483,7 @@ void CCreature::setHp(int value) {
 }
 
 int CCreature::getManaRegRate() {
-    return manaRegRate;
-}
-
-void CCreature::setManaRegRate(int value) {
-    manaRegRate = value;
-}
-
-void CCreature::setManaMax(int value) {
-    manaMax = value;
+    return getStats()->getMainValue() / 10 + 1;
 }
 
 int CCreature::getGold() {
@@ -635,4 +612,20 @@ void CCreature::removeQuestItem(std::shared_ptr<CItem> item) {
 
 void CCreature::removeQuestItem(std::function<bool(std::shared_ptr<CItem>)> item) {
     removeItem(item, true);
+}
+
+std::shared_ptr<Stats> CCreature::getStats() {
+    std::shared_ptr<Stats> ret = std::make_shared<Stats>();
+    ret->setMainStat(getBaseStats()->getMainStat());
+    ret->addBonus(getBaseStats());
+    for (int i = 0; i < level; i++) {
+        ret->addBonus(getLevelStats());
+    }
+    for (auto[slot, item] :getEquipped()) {
+        ret->addBonus(item->getBonus());
+    }
+    for (auto effect:getEffects()) {
+        ret->addBonus(effect->getBonus());
+    }
+    return ret;
 }
