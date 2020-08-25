@@ -33,8 +33,7 @@ def load(self, context):
                         self.setStringProperty("animation", "images/misc/closed_door")
                         self.getMap().replaceTile('MountainTile', self.getCoords())
                 else:
-                    self.getMap().getGame().getGuiHandler().showInfo(
-                        "You need a wand to seal the gate!")
+                    self.getMap().getGame().getGuiHandler().showInfo("You need a wand to seal the gate!")
 
     @trigger(context, "onTurn", "triggerAnchor")
     class TurnTrigger(CTrigger):
