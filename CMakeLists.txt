@@ -92,14 +92,6 @@ configure_file(res/maps/map2/config.json maps/map2/config.json)
 configure_file(res/maps/map2/map.json maps/map2/map.json)
 configure_file(res/maps/map2/script.py maps/map2/script.py)
 
-configure_file(res/maps/empty/config.json maps/empty/config.json)
-configure_file(res/maps/empty/map.json maps/empty/map.json)
-configure_file(res/maps/empty/script.py maps/empty/script.py)
-
-configure_file(res/maps/dialog/config.json maps/dialog/config.json)
-configure_file(res/maps/dialog/map.json maps/dialog/map.json)
-configure_file(res/maps/dialog/script.py maps/dialog/script.py)
-
 configure_file(res/maps/siege/config.json maps/siege/config.json)
 configure_file(res/maps/siege/map.json maps/siege/map.json)
 configure_file(res/maps/siege/script.py maps/siege/script.py)

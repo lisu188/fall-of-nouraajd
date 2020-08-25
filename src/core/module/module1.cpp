@@ -116,7 +116,8 @@ void initModule1() {
             .def("showMessage", &CGuiHandler::showMessage)
             .def("showTrade", &CGuiHandler::showTrade)
             .def("showDialog", &CGuiHandler::showDialog)
-            .def("showSelection", &CGuiHandler::showSelection);
+            .def("showSelection", &CGuiHandler::showSelection)
+            .def("showInfo", &CGuiHandler::showInfo);
 
     void ( CMapObject::*moveTo )(int, int, int) = &CMapObject::moveTo;
     void ( CMapObject::*move )(int, int, int) = &CMapObject::move;
