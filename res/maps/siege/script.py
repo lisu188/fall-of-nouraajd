@@ -25,13 +25,16 @@ def load(self, context):
 
         def onEnter(self, event):
             if event.getCause().isPlayer():
-                if self.getMap().getPlayer().hasItem(lambda it: it.hasTag('wand')) \
-                        and self.getMap().getGame().getGuiHandler().showDialog(
-                    "Do You want to seal the gate?"):
-                    self.getMap().getPlayer().removeQuestItem(lambda it: it.hasTag('wand'))
-                    self.setBoolProperty('destroyed', True)
-                    self.setStringProperty("animation", "images/misc/closed_door")
-                    self.getMap().replaceTile('MountainTile', self.getCoords())
+                if self.getMap().getPlayer().hasItem(lambda it: it.hasTag('wand')):
+                    if self.getMap().getGame().getGuiHandler().showDialog(
+                            "Do You want to seal the gate?"):
+                        self.getMap().getPlayer().removeQuestItem(lambda it: it.hasTag('wand'))
+                        self.setBoolProperty('destroyed', True)
+                        self.setStringProperty("animation", "images/misc/closed_door")
+                        self.getMap().replaceTile('MountainTile', self.getCoords())
+                else:
+                    self.getMap().getGame().getGuiHandler().showInfo(
+                        "You need a wand to seal the gate!")
 
     @trigger(context, "onTurn", "triggerAnchor")
     class TurnTrigger(CTrigger):
