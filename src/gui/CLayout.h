@@ -21,69 +21,47 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "gui/object/CGameGraphicsObject.h"
 
 class CLayout : public CGameObject {
-V_META(CLayout, CGameObject, vstd::meta::empty())
+V_META(CLayout, CGameObject,
+       V_PROPERTY(CLayout, std::string, w, getW, setW),
+       V_PROPERTY(CLayout, std::string, h, getH, setH),
+       V_PROPERTY(CLayout, std::string, x, getX, setX),
+       V_PROPERTY(CLayout, std::string, y, getY, setY),
+       V_PROPERTY(CLayout, std::string, vertical, getVertical, setVertical),
+       V_PROPERTY(CLayout, std::string, horizontal, getHorizontal, setHorizontal))
 public:
     virtual std::shared_ptr<SDL_Rect> getRect(std::shared_ptr<CGameGraphicsObject> object);
 
-protected:
+private:
 
+    enum TYPE {
+        SIMPLE, PERCENT
+    };
+
+    std::pair<TYPE, int> parseValue(std::shared_ptr<CGameGraphicsObject> object, std::string value);
+
+    int parseValue(std::pair<TYPE, int> value, int parentValue);
+
+    int parseValue(std::shared_ptr<CGameGraphicsObject> object, std::string value, int parentValue);
+
+protected:
     static std::shared_ptr<SDL_Rect> getParentRect(std::shared_ptr<CGameGraphicsObject> object);
 
-};
-
-class CSimpleLayout : public CLayout {
-V_META(CSimpleLayout, CLayout,
-       V_PROPERTY(CSimpleLayout, int, w, getW, setW),
-       V_PROPERTY(CSimpleLayout, int, h, getH, setH),
-       V_PROPERTY(CSimpleLayout, int, x, getX, setX),
-       V_PROPERTY(CSimpleLayout, int, y, getY, setY))
 public:
-    std::shared_ptr<SDL_Rect> getRect(std::shared_ptr<CGameGraphicsObject> object) override;
+    std::string getW();
 
+    void setW(std::string _width);
 
-    int getW();
+    std::string getH();
 
-    void setW(int _width);
+    void setH(std::string _height);
 
-    int getH();
+    std::string getX();
 
-    void setH(int _height);
+    void setX(std::string _x);
 
-    int getX();
+    std::string getY();
 
-    void setX(int _x);
-
-    int getY();
-
-    void setY(int _y);
-
-private:
-    int w = 0;
-    int h = 0;
-    int x = 0;
-    int y = 0;
-};
-
-
-class CAnchoredLayout : public CLayout {
-V_META(CAnchoredLayout, CLayout,
-       V_PROPERTY(CAnchoredLayout, int, w, getW, setW),
-       V_PROPERTY(CAnchoredLayout, int, h, getH, setH),
-       V_PROPERTY(CAnchoredLayout, std::string, vertical, getVertical, setVertical),
-       V_PROPERTY(CAnchoredLayout, std::string, horizontal, getHorizontal, setHorizontal))
-public:
-    std::shared_ptr<SDL_Rect> getRect(std::shared_ptr<CGameGraphicsObject> object) override;
-
-
-    int getW();
-
-    void setW(int _width);
-
-    int getH();
-
-    void setH(int _height);
-
-    int getX();
+    void setY(std::string _y);
 
     std::string getVertical();
 
@@ -94,55 +72,24 @@ public:
     void setHorizontal(std::string horizontal);
 
 private:
-    int w = 0;
-    int h = 0;
+    std::string w = "0";
+    std::string h = "0";
+    std::string x = "0";
+    std::string y = "0";
     std::string vertical;
     std::string horizontal;
 };
 
-class CCenteredLayout : public CAnchoredLayout {
-V_META(CCenteredLayout, CAnchoredLayout, vstd::meta::empty())
+class CCenteredLayout : public CLayout {
+V_META(CCenteredLayout, CLayout, vstd::meta::empty())
 public:
     CCenteredLayout();
 };
 
-class CParentLayout : public CAnchoredLayout {
-V_META(CParentLayout, CAnchoredLayout, vstd::meta::empty())
+class CParentLayout : public CLayout {
+V_META(CParentLayout, CLayout, vstd::meta::empty())
 public:
     CParentLayout();
-};
-
-
-class CPercentLayout : public CLayout {
-V_META(CPercentLayout, CLayout,
-       V_PROPERTY(CPercentLayout, int, x, getX, setX),
-       V_PROPERTY(CPercentLayout, int, y, getY, setY),
-       V_PROPERTY(CPercentLayout, int, w, getW, setW),
-       V_PROPERTY(CPercentLayout, int, h, getH, setH))
-public:
-    std::shared_ptr<SDL_Rect> getRect(std::shared_ptr<CGameGraphicsObject> object) override;
-
-    int getX();
-
-    void setX(int x);
-
-    int getY();
-
-    void setY(int y);
-
-    int getW();
-
-    void setW(int w);
-
-    int getH();
-
-    void setH(int h);
-
-private:
-    int x = 0,
-            y = 0,
-            w = 0,
-            h = 0;
 };
 
 //TODO: remove

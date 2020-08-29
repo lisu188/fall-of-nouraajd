@@ -63,7 +63,7 @@ CGuiHandler::CGuiHandler(std::shared_ptr<CGame> game) : _game(game) {
 
 std::string CGuiHandler::showSelection(std::shared_ptr<CListString> list) {
     std::shared_ptr<CGameGraphicsObject> panel = _game.lock()->createObject<CGameGraphicsObject>("selectionPanel");
-    vstd::cast<CCenteredLayout>(panel->getLayout())->setH(75 * list->getValues().size());
+    vstd::cast<CCenteredLayout>(panel->getLayout())->setH(vstd::str(75 * list->getValues().size()));
 
     std::shared_ptr<std::string> selected;
 
@@ -86,12 +86,12 @@ std::string CGuiHandler::showSelection(std::shared_ptr<CListString> list) {
         widget->setClick(clickName);
         widget->setText(item);
 
-        std::shared_ptr<CPercentLayout> layout = _game.lock()->createObject<CPercentLayout>("CPercentLayout");
-        double percentSize = 100.0 / list->getValues().size();
-        layout->setX(0);
-        layout->setY(percentSize * i);
-        layout->setW(100);
-        layout->setH(percentSize);
+        std::shared_ptr<CLayout> layout = _game.lock()->createObject<CLayout>("CLayout");
+        int percentSize = 100.0 / list->getValues().size();
+        layout->setX(vstd::str(0) + "%");
+        layout->setY(vstd::str(percentSize * i) + "%");
+        layout->setW(vstd::str(100) + "%");
+        layout->setH(vstd::str(percentSize) + "%");
         widget->setLayout(layout);
         widgets.insert(widget);
         i++;
@@ -114,18 +114,18 @@ std::string CGuiHandler::showSelection(std::shared_ptr<CListString> list) {
 void CGuiHandler::showTooltip(std::string text, int x,
                               int y) {
     if (text.length() > 0) {
-        auto layout = _game.lock()->createObject<CSimpleLayout>();
+        auto layout = _game.lock()->createObject<CLayout>();
 
         auto textureSize = _game.lock()->getGui()->getTextManager()->getTextureSize(text);
 
         int width = vstd::percent(textureSize.first, 125);
         int height = vstd::percent(textureSize.second, 125);
 
-        layout->setW(width);//TODO: layout should accept functions;
-        layout->setH(height);//TODO: layout should accept functions;
+        layout->setW(vstd::str(width));//TODO: layout should accept functions;
+        layout->setH(vstd::str(height));//TODO: layout should accept functions;
 
-        layout->setX(x - width / 2);//TODO: extract to util
-        layout->setY(y - height / 2);//TODO: extract to util
+        layout->setX(vstd::str(x - width / 2));//TODO: extract to util
+        layout->setY(vstd::str(y - height / 2));//TODO: extract to util
 
         auto tooltip = _game.lock()->createObject<CTooltip>();
         tooltip->setText(text);

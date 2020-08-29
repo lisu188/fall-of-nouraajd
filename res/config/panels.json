@@ -20,8 +20,8 @@
       "layout": {
         "class": "CCenteredLayout",
         "properties": {
-          "h": 600,
-          "w": 800
+          "h": "600",
+          "w": "800"
         }
       }
     }
@@ -36,11 +36,11 @@
             "allowOversize": false,
             "collection": "getEffects",
             "layout": {
-              "class": "CAnchoredLayout",
+              "class": "CLayout",
               "properties": {
                 "horizontal": "LEFT",
                 "vertical": "PARENT",
-                "w": 50
+                "w": "50"
               }
             },
             "priority": 1,
@@ -65,9 +65,9 @@
         }
       },
       "layout": {
-        "class": "CAnchoredLayout",
+        "class": "CLayout",
         "properties": {
-          "h": 200,
+          "h": "200",
           "horizontal": "PARENT",
           "vertical": "UP"
         }
@@ -83,12 +83,10 @@
           "class": "CWidget",
           "properties": {
             "layout": {
-              "class": "CPercentLayout",
+              "class": "CLayout",
               "properties": {
-                "h": 75,
-                "w": 100,
-                "x": 0,
-                "y": 0
+                "h": "75%",
+                "w": "100%"
               }
             },
             "render": "renderQuestion"
@@ -99,12 +97,12 @@
           "properties": {
             "click": "clickYes",
             "layout": {
-              "class": "CPercentLayout",
+              "class": "CLayout",
               "properties": {
-                "h": 25,
-                "w": 50,
-                "x": 0,
-                "y": 75
+                "h": "25%",
+                "w": "50%",
+                "x": "0%",
+                "y": "75%"
               }
             },
             "text": "YES"
@@ -115,12 +113,12 @@
           "properties": {
             "click": "clickNo",
             "layout": {
-              "class": "CPercentLayout",
+              "class": "CLayout",
               "properties": {
-                "h": 25,
-                "w": 50,
-                "x": 50,
-                "y": 75
+                "h": "25%",
+                "w": "50%",
+                "x": "50%",
+                "y": "75%"
               }
             },
             "text": "NO"
@@ -130,8 +128,8 @@
       "layout": {
         "class": "CCenteredLayout",
         "properties": {
-          "h": 300,
-          "w": 400
+          "h": "300",
+          "w": "400"
         }
       }
     }
@@ -168,12 +166,12 @@
               }
             ],
             "layout": {
-              "class": "CSimpleLayout",
+              "class": "CLayout",
               "properties": {
-                "h": 300,
-                "w": 200,
-                "x": 150,
-                "y": 100
+                "h": "300",
+                "w": "200",
+                "x": "150",
+                "y": "100"
               }
             }
           }
@@ -206,12 +204,12 @@
               }
             ],
             "layout": {
-              "class": "CSimpleLayout",
+              "class": "CLayout",
               "properties": {
-                "h": 300,
-                "w": 200,
-                "x": 450,
-                "y": 100
+                "h": "300",
+                "w": "200",
+                "x": "450",
+                "y": "100"
               }
             }
           }
@@ -222,12 +220,12 @@
             "callback": "interactionsCallback",
             "collection": "interactionsCollection",
             "layout": {
-              "class": "CPercentLayout",
+              "class": "CLayout",
               "properties": {
-                "h": 10,
-                "w": 100,
-                "x": 0,
-                "y": 90
+                "h": "10%",
+                "w": "100%",
+                "x": "0%",
+                "y": "90%"
               }
             },
             "refreshEvent": "interactionsChanged",
@@ -246,12 +244,12 @@
             "callback": "itemsCallback",
             "collection": "itemsCollection",
             "layout": {
-              "class": "CPercentLayout",
+              "class": "CLayout",
               "properties": {
-                "h": 10,
-                "w": 100,
-                "x": 0,
-                "y": 80
+                "h": "10%",
+                "w": "100%",
+                "x": "0%",
+                "y": "80%"
               }
             },
             "refreshEvent": "inventoryChanged",
@@ -268,8 +266,8 @@
       "layout": {
         "class": "CCenteredLayout",
         "properties": {
-          "h": 600,
-          "w": 800
+          "h": "600",
+          "w": "800"
         }
       }
     }
@@ -280,8 +278,8 @@
       "layout": {
         "class": "CCenteredLayout",
         "properties": {
-          "h": 300,
-          "w": 300
+          "h": "300",
+          "w": "300"
         }
       }
     }
@@ -292,8 +290,8 @@
       "layout": {
         "class": "CCenteredLayout",
         "properties": {
-          "h": 300,
-          "w": 400
+          "h": "300",
+          "w": "400"
         }
       }
     }
@@ -308,12 +306,12 @@
             "callback": "inventoryCallback",
             "collection": "inventoryCollection",
             "layout": {
-              "class": "CPercentLayout",
+              "class": "CLayout",
               "properties": {
-                "h": 100,
-                "w": 25,
-                "x": 0,
-                "y": 0
+                "h": "100%",
+                "w": "25%",
+                "x": "0%",
+                "y": "0%"
               }
             },
             "refreshEvent": "inventoryChanged",
@@ -332,12 +330,12 @@
             "callback": "equippedCallback",
             "collection": "equippedCollection",
             "layout": {
-              "class": "CPercentLayout",
+              "class": "CLayout",
               "properties": {
-                "h": 100,
-                "w": 25,
-                "x": 75,
-                "y": 0
+                "h": "100%",
+                "w": "25%",
+                "x": "75%",
+                "y": "0%"
               }
             },
             "refreshEvent": "equippedChanged",
@@ -356,8 +354,8 @@
       "layout": {
         "class": "CCenteredLayout",
         "properties": {
-          "h": 600,
-          "w": 800
+          "h": "600",
+          "w": "800"
         }
       }
     }
@@ -368,8 +366,8 @@
       "layout": {
         "class": "CCenteredLayout",
         "properties": {
-          "h": 600,
-          "w": 800
+          "h": "600",
+          "w": "800"
         }
       }
     }
@@ -378,9 +376,9 @@
     "class": "CStatsGraphicsObject",
     "properties": {
       "layout": {
-        "class": "CAnchoredLayout",
+        "class": "CLayout",
         "properties": {
-          "h": 100,
+          "h": "100",
           "horizontal": "PARENT",
           "vertical": "DOWN"
         }
@@ -393,8 +391,8 @@
       "layout": {
         "class": "CCenteredLayout",
         "properties": {
-          "h": 600,
-          "w": 800
+          "h": "600",
+          "w": "800"
         }
       }
     }
@@ -408,12 +406,12 @@
           "properties": {
             "click": "finalizeSell",
             "layout": {
-              "class": "CSimpleLayout",
+              "class": "CLayout",
               "properties": {
-                "h": 100,
-                "w": 200,
-                "x": 200,
-                "y": 500
+                "h": "100",
+                "w": "200",
+                "x": "200",
+                "y": "500"
               }
             },
             "text": "SELL"
@@ -424,12 +422,12 @@
           "properties": {
             "click": "finalizeBuy",
             "layout": {
-              "class": "CSimpleLayout",
+              "class": "CLayout",
               "properties": {
-                "h": 100,
-                "w": 200,
-                "x": 400,
-                "y": 500
+                "h": "100",
+                "w": "200",
+                "x": "400",
+                "y": "500"
               }
             },
             "text": "BUY"
@@ -439,12 +437,12 @@
           "class": "CWidget",
           "properties": {
             "layout": {
-              "class": "CSimpleLayout",
+              "class": "CLayout",
               "properties": {
-                "h": 200,
-                "w": 200,
-                "x": 200,
-                "y": 0
+                "h": "200",
+                "w": "200",
+                "x": "200",
+                "y": "0"
               }
             },
             "render": "renderSellCost"
@@ -454,12 +452,12 @@
           "class": "CWidget",
           "properties": {
             "layout": {
-              "class": "CSimpleLayout",
+              "class": "CLayout",
               "properties": {
-                "h": 200,
-                "w": 200,
-                "x": 400,
-                "y": 0
+                "h": "200",
+                "w": "200",
+                "x": "400",
+                "y": "0"
               }
             },
             "render": "renderBuyCost"
@@ -471,12 +469,12 @@
             "callback": "inventoryCallback",
             "collection": "inventoryCollection",
             "layout": {
-              "class": "CPercentLayout",
+              "class": "CLayout",
               "properties": {
-                "h": 100,
-                "w": 25,
-                "x": 0,
-                "y": 0
+                "h": "100%",
+                "w": "25%",
+                "x": "0%",
+                "y": "0%"
               }
             },
             "refreshEvent": "inventoryChanged",
@@ -495,12 +493,12 @@
             "callback": "marketCallback",
             "collection": "marketCollection",
             "layout": {
-              "class": "CPercentLayout",
+              "class": "CLayout",
               "properties": {
-                "h": 100,
-                "w": 25,
-                "x": 75,
-                "y": 0
+                "h": "100%",
+                "w": "25%",
+                "x": "75%",
+                "y": "0%"
               }
             },
             "refreshEvent": "itemsChanged",
@@ -517,8 +515,8 @@
       "layout": {
         "class": "CCenteredLayout",
         "properties": {
-          "h": 600,
-          "w": 800
+          "h": "600",
+          "w": "800"
         }
       }
     }

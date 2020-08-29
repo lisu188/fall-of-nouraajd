@@ -67,7 +67,9 @@ void CSerialization::setObjectProperty(std::shared_ptr<CGameObject> object, boos
 void CSerialization::setStringProperty(std::shared_ptr<CGameObject> object, std::string key, std::string value) {
     if (vstd::trim(value) != "") {
         auto val = vstd::to_int(value);
-        if (val.second) {
+        if (isString(object, key)) {
+            object->setStringProperty(key, value);
+        } else if (val.second) {
             object->setNumericProperty(key, val.first);
         } else if (value == "true") {
             object->setBoolProperty(key, true);
@@ -85,6 +87,10 @@ void CSerialization::setStringProperty(std::shared_ptr<CGameObject> object, std:
             }
         }
     }
+}
+
+bool CSerialization::isString(std::shared_ptr<CGameObject> object, std::string key) {
+    return getProperty(object, key) == boost::typeindex::type_id<std::string>();
 }
 
 void CSerialization::setOtherProperty(boost::typeindex::type_index serializedId,

@@ -3,9 +3,9 @@
     "class": "CConsoleGraphicsObject",
     "properties": {
       "layout": {
-        "class": "CAnchoredLayout",
+        "class": "CLayout",
         "properties": {
-          "h": 30,
+          "h": "30",
           "horizontal": "PARENT",
           "vertical": "DOWN"
         }
@@ -39,12 +39,12 @@
         }
       ],
       "layout": {
-        "class": "CSimpleLayout",
+        "class": "CLayout",
         "properties": {
-          "h": 1080,
-          "w": 1920,
-          "x": 0,
-          "y": 0
+          "h": "1080",
+          "w": "1920",
+          "x": "0",
+          "y": "0"
         }
       },
       "tileSize": 50
@@ -67,12 +67,12 @@
           "properties": {
             "click": "clickInventory",
             "layout": {
-              "class": "CPercentLayout",
+              "class": "CLayout",
               "properties": {
-                "h": 25,
-                "w": 100,
-                "x": 0,
-                "y": 0
+                "h": "25%",
+                "w": "100%",
+                "x": "0%",
+                "y": "0%"
               }
             },
             "text": "INVENTORY"
@@ -83,12 +83,12 @@
           "properties": {
             "click": "clickJournal",
             "layout": {
-              "class": "CPercentLayout",
+              "class": "CLayout",
               "properties": {
-                "h": 25,
-                "w": 100,
-                "x": 0,
-                "y": 25
+                "h": "25%",
+                "w": "100%",
+                "x": "0%",
+                "y": "25%"
               }
             },
             "text": "JOURNAL"
@@ -99,12 +99,12 @@
           "properties": {
             "click": "clickCharacter",
             "layout": {
-              "class": "CPercentLayout",
+              "class": "CLayout",
               "properties": {
-                "h": 25,
-                "w": 100,
-                "x": 0,
-                "y": 50
+                "h": "25%",
+                "w": "100%",
+                "x": "0%",
+                "y": "50%"
               }
             },
             "text": "CHARACTER"
@@ -112,12 +112,12 @@
         }
       ],
       "layout": {
-        "class": "CAnchoredLayout",
+        "class": "CLayout",
         "properties": {
-          "h": 200,
+          "h": "200",
           "horizontal": "RIGHT",
           "vertical": "UP",
-          "w": 200
+          "w": "200"
         }
       },
       "panelKeys": {
@@ -141,12 +141,12 @@
         }
       },
       "layout": {
-        "class": "CAnchoredLayout",
+        "class": "CLayout",
         "properties": {
-          "h": 100,
+          "h": "100",
           "horizontal": "LEFT",
           "vertical": "UP",
-          "w": 200
+          "w": "200"
         }
       },
       "visible": {

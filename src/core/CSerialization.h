@@ -222,4 +222,6 @@ private:
                                  std::shared_ptr<CGameObject> object,
                                  std::string key,
                                  boost::any value);
+
+    static bool isString(std::shared_ptr<CGameObject> object, std::string key);
 };

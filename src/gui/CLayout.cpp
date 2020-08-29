@@ -17,163 +17,113 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
 #include "CLayout.h"
-
-
-int CSimpleLayout::getW() {
-    return w;
-}
-
-void CSimpleLayout::setW(int _width) {
-    w = _width;
-}
-
-int CSimpleLayout::getH() {
-    return h;
-}
-
-void CSimpleLayout::setH(int _height) {
-    h = _height;
-}
-
-int CSimpleLayout::getX() {
-    return x;
-}
-
-void CSimpleLayout::setX(int _x) {
-    x = _x;
-}
-
-int CSimpleLayout::getY() {
-    return y;
-}
-
-void CSimpleLayout::setY(int _y) {
-    y = _y;
-}
-
-std::shared_ptr<SDL_Rect> CSimpleLayout::getRect(std::shared_ptr<CGameGraphicsObject> object) {
-    auto parentRect = getParentRect(object);
-    return RECT(
-            parentRect->x + getX(),
-            parentRect->y + getY(),
-            w,
-            h);
-}
+#include "core/CGame.h"
+#include "handler/CScriptHandler.h"
 
 std::shared_ptr<SDL_Rect> CLayout::getParentRect(std::shared_ptr<CGameGraphicsObject> object) {
     return object->getParent() ? object->getParent()->getLayout()->getRect(object->getParent()) : RECT(0, 0, 0, 0);
 }
 
-int CAnchoredLayout::getW() {
+std::string CLayout::getW() {
     return w;
 }
 
-void CAnchoredLayout::setW(int _width) {
+void CLayout::setW(std::string _width) {
     this->w = _width;
 }
 
-int CAnchoredLayout::getH() {
+std::string CLayout::getH() {
     return h;
 }
 
-void CAnchoredLayout::setH(int _height) {
+void CLayout::setH(std::string _height) {
     this->h = _height;
 }
 
-int CPercentLayout::getX() {
+std::string CLayout::getX() {
     return x;
 }
 
-void CPercentLayout::setX(int x) {
-    CPercentLayout::x = x;
+void CLayout::setX(std::string x) {
+    CLayout::x = x;
 }
 
-int CPercentLayout::getY() {
+std::string CLayout::getY() {
     return y;
 }
 
-void CPercentLayout::setY(int y) {
-    CPercentLayout::y = y;
+void CLayout::setY(std::string y) {
+    CLayout::y = y;
 }
 
-int CPercentLayout::getW() {
-    return w;
+void CLayout::setHorizontal(std::string horizontal) {
+    CLayout::horizontal = horizontal;
 }
 
-void CPercentLayout::setW(int w) {
-    CPercentLayout::w = w;
-}
-
-int CPercentLayout::getH() {
-    return h;
-}
-
-void CPercentLayout::setH(int h) {
-    CPercentLayout::h = h;
-}
-
-std::shared_ptr<SDL_Rect> CLayout::getRect(std::shared_ptr<CGameGraphicsObject> object) {
-    return RECT(0, 0, 0, 0);
-}
-
-
-std::shared_ptr<SDL_Rect> CPercentLayout::getRect(std::shared_ptr<CGameGraphicsObject> object) {
-    auto pRect = getParentRect(object);
-    return RECT(pRect->x + pRect->w * x / 100.0,
-                pRect->y + pRect->h * y / 100.0,
-                pRect->w * w / 100.0,
-                pRect->h * h / 100.0);
-}
-
-std::shared_ptr<SDL_Rect> CProxyGraphicsLayout::getRect(std::shared_ptr<CGameGraphicsObject> object) {
-    auto pRect = getParentRect(object);
-    return RECT(pRect->x + object->getNumericProperty("x") * tileSize,
-                pRect->y + object->getNumericProperty("y") * tileSize,
-                tileSize, tileSize);
-}
-
-
-void CAnchoredLayout::setHorizontal(std::string horizontal) {
-    CAnchoredLayout::horizontal = horizontal;
-}
-
-std::string CAnchoredLayout::getHorizontal() {
+std::string CLayout::getHorizontal() {
     return horizontal;
 }
 
-void CAnchoredLayout::setVertical(std::string vertical) {
-    CAnchoredLayout::vertical = vertical;
+void CLayout::setVertical(std::string vertical) {
+    CLayout::vertical = vertical;
 }
 
-std::string CAnchoredLayout::getVertical() {
+std::string CLayout::getVertical() {
     return vertical;
 }
 
-//TODO: parse percent
-std::shared_ptr<SDL_Rect> CAnchoredLayout::getRect(std::shared_ptr<CGameGraphicsObject> object) {
+std::pair<CLayout::TYPE, int> CLayout::parseValue(std::shared_ptr<CGameGraphicsObject> object, std::string value) {
+    if (vstd::ends_with(value, "%") && vstd::is_int(value.substr(0, value.length() - 1))) {
+        return std::make_pair(PERCENT, vstd::to_int(value.substr(0, value.length() - 1)).first);
+    } else if (vstd::is_int(value)) {
+        return std::make_pair(SIMPLE, vstd::to_int(value).first);
+    }
+    //TODO: rethink parsing and validating script and script output
+    return std::make_pair(SIMPLE, object->getGame()
+            ->getScriptHandler()
+            ->call_created_function<int, std::shared_ptr<CGameGraphicsObject>>(
+                    value, {"self"}, object));
+}
+
+int CLayout::parseValue(std::pair<TYPE, int> value, int parentValue) {
+    switch (value.first) {
+        case SIMPLE:
+            return value.second;
+        case PERCENT:
+            return value.second * parentValue / 100.0;
+    }
+    return vstd::fail_if(true, "Should not happen!");
+}
+
+int CLayout::parseValue(std::shared_ptr<CGameGraphicsObject> object, std::string value, int parentValue) {
+    return parseValue(parseValue(object, value), parentValue);
+}
+
+std::shared_ptr<SDL_Rect> CLayout::getRect(std::shared_ptr<CGameGraphicsObject> object) {
     auto parent = getParentRect(object);
-    int x = 0;
-    int y = 0;
-    int w = horizontal == "PARENT" ? parent->w : getW();
-    int h = vertical == "PARENT" ? parent->h : getH();
+
+    int x = parseValue(object, getX(), parent->w);
+    int y = parseValue(object, getY(), parent->h);
+    int w = horizontal == "PARENT" ? parent->w : parseValue(object, getW(), parent->w);
+    int h = vertical == "PARENT" ? parent->h : parseValue(object, getH(), parent->h);
 
     if (horizontal == "LEFT" || horizontal == "PARENT") {
         x = 0;
     } else if (horizontal == "RIGHT") {
-        x = parent->w - getW();
+        x = parent->w - w;
     } else if (horizontal == "CENTER") {
-        x = parent->w / 2 - getW() / 2;
-    } else {
+        x = parent->w / 2 - w / 2;
+    } else if (!horizontal.empty()) {
         vstd::logger::debug("Unknown horizontal layout:", horizontal);
     }
 
     if (vertical == "UP" || vertical == "PARENT") {
         y = 0;
     } else if (vertical == "DOWN") {
-        y = parent->h - getH();
+        y = parent->h - h;
     } else if (vertical == "CENTER") {
-        y = parent->h / 2 - getH() / 2;
-    } else {
+        y = parent->h / 2 - h / 2;
+    } else if (!vertical.empty()) {
         vstd::logger::debug("Unknown vertical layout:", vertical);
     }
 
@@ -196,4 +146,11 @@ void CProxyGraphicsLayout::setTileSize(int _tileSize) {
 
 int CProxyGraphicsLayout::getTileSize() {
     return tileSize;
+}
+
+std::shared_ptr<SDL_Rect> CProxyGraphicsLayout::getRect(std::shared_ptr<CGameGraphicsObject> object) {
+    auto pRect = getParentRect(object);
+    return RECT(pRect->x + object->getNumericProperty("x") * tileSize,
+                pRect->y + object->getNumericProperty("y") * tileSize,
+                tileSize, tileSize);
 }
