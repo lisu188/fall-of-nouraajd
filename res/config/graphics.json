@@ -5,7 +5,7 @@
       "layout": {
         "class": "CLayout",
         "properties": {
-          "h": "30",
+          "h": 30,
           "horizontal": "PARENT",
           "vertical": "DOWN"
         }
@@ -41,10 +41,10 @@
       "layout": {
         "class": "CLayout",
         "properties": {
-          "h": "1080",
-          "w": "1920",
-          "x": "0",
-          "y": "0"
+          "h": 1080,
+          "w": 1920,
+          "x": 0,
+          "y": 0
         }
       },
       "tileSize": 50
@@ -114,10 +114,10 @@
       "layout": {
         "class": "CLayout",
         "properties": {
-          "h": "200",
+          "h": 200,
           "horizontal": "RIGHT",
           "vertical": "UP",
-          "w": "200"
+          "w": 200
         }
       },
       "panelKeys": {
@@ -143,10 +143,10 @@
       "layout": {
         "class": "CLayout",
         "properties": {
-          "h": "100",
+          "h": 100,
           "horizontal": "LEFT",
           "vertical": "UP",
-          "w": "200"
+          "w": 200
         }
       },
       "visible": {
