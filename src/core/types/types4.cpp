@@ -99,11 +99,8 @@ namespace {
                 }
                 CTypes::register_type<CLayout, CGameObject>();
                 {
-                    CTypes::register_type<CSimpleLayout, CLayout, CGameObject>();
-                    CTypes::register_type<CPercentLayout, CLayout, CGameObject>();
-                    CTypes::register_type<CAnchoredLayout, CLayout, CGameObject>();
-                    CTypes::register_type<CCenteredLayout, CAnchoredLayout, CLayout, CGameObject>();
-                    CTypes::register_type<CParentLayout, CAnchoredLayout, CLayout, CGameObject>();
+                    CTypes::register_type<CCenteredLayout, CLayout, CGameObject>();
+                    CTypes::register_type<CParentLayout, CLayout, CGameObject>();
                     CTypes::register_type<CProxyGraphicsLayout, CLayout, CGameObject>();
                 }
             }
