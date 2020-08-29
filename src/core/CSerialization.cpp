@@ -28,9 +28,9 @@ std::shared_ptr<CSerializerBase> CSerialization::serializer(
 
 void CSerialization::setProperty(std::shared_ptr<CGameObject> object, std::string key, std::shared_ptr<json> value) {
     if (value->is_boolean()) {
-        object->setBoolProperty(key, value->get<bool>());
+        setBooleanProperty(object, key, value->get<bool>());
     } else if (value->is_number()) {
-        object->setNumericProperty(key, value->get<int>());
+        setNumericProperty(object, key, value->get<int>());
     } else if (value->is_string()) {
         setStringProperty(object, key, value->get<std::string>());
     } else if (value->is_array()) {
@@ -64,17 +64,31 @@ void CSerialization::setObjectProperty(std::shared_ptr<CGameObject> object, boos
                      object, key, boost::any(value));
 }
 
+void CSerialization::setNumericProperty(std::shared_ptr<CGameObject> object, std::string key, int value) {
+    if (isString(object, key)) {
+        object->setStringProperty(key, vstd::str(value));
+    } else {
+        object->setNumericProperty(key, value);
+    }
+}
+
+void CSerialization::setBooleanProperty(std::shared_ptr<CGameObject> object, std::string key, bool value) {
+    if (isString(object, key)) {
+        object->setStringProperty(key, vstd::str(value));
+    } else {
+        object->setBoolProperty(key, value);
+    }
+}
+
 void CSerialization::setStringProperty(std::shared_ptr<CGameObject> object, std::string key, std::string value) {
     if (vstd::trim(value) != "") {
         auto val = vstd::to_int(value);
-        if (isString(object, key)) {
-            object->setStringProperty(key, value);
-        } else if (val.second) {
-            object->setNumericProperty(key, val.first);
+        if (val.second) {
+            setNumericProperty(object, key, val.first);
         } else if (value == "true") {
-            object->setBoolProperty(key, true);
+            setBooleanProperty(object, key, true);
         } else if (value == "false") {
-            object->setBoolProperty(key, false);
+            setBooleanProperty(object, key, false);
         } else {
             //TODO: make method that checks if object is JSON
             std::shared_ptr<json> d = CJsonUtil::from_string(value);

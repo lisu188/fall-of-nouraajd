@@ -203,6 +203,7 @@ public:
     propertyValue);
 
     static std::string generateName(std::shared_ptr<CGameObject> object);
+
 private:
     static boost::typeindex::type_index getProperty(std::shared_ptr<CGameObject> object, std::string name);
 
@@ -217,6 +218,10 @@ private:
                                   std::shared_ptr<json> value);
 
     static void setStringProperty(std::shared_ptr<CGameObject> object, std::string key, std::string value);
+
+    static void setNumericProperty(std::shared_ptr<CGameObject> object, std::string key, int value);
+
+    static void setBooleanProperty(std::shared_ptr<CGameObject> object, std::string key, bool value);
 
     static void setOtherProperty(boost::typeindex::type_index serializedId, boost::typeindex::type_index deserializedId,
                                  std::shared_ptr<CGameObject> object,
