@@ -227,8 +227,6 @@ public:
 
     virtual void afterMove();
 
-    std::string getTooltip();
-
     void addGold(int gold);
 
     void takeGold(int gold);

@@ -29,9 +29,7 @@ SDL_Texture *CTextManager::getTexture(std::string text, int width) {
 
 SDL_Texture *CTextManager::loadTexture(std::string text, int width) {
     SDL_Color textColor = {255, 255, 255, 0};
-    SDL_Surface *surface = width != -1 ?
-                           SDL_SAFE(TTF_RenderText_Blended_Wrapped(font, text.c_str(), textColor, width)) :
-                           SDL_SAFE(TTF_RenderText_Blended(font, text.c_str(), textColor));
+    SDL_Surface *surface = SDL_SAFE(TTF_RenderText_Blended_Wrapped(font, text.c_str(), textColor, width));
     auto _texture = SDL_SAFE(SDL_CreateTextureFromSurface(_gui.lock()->getRenderer(), surface));
     SDL_SAFE(SDL_FreeSurface(surface));
     return _texture;
@@ -82,8 +80,18 @@ void CTextManager::drawText(std::string text, std::shared_ptr<SDL_Rect> rect) {
 }
 
 std::pair<int, int> CTextManager::getTextureSize(std::string text) {
-    int w, h;
-    SDL_Texture *pTexture = getTexture(text);
-    SDL_SAFE(SDL_QueryTexture(pTexture, NULL, NULL, &w, &h));
+    int w = 0, h = 0;
+    if (vstd::ctn(text, '\n')) {
+        for (auto line:vstd::split(text, '\n')) {
+            auto lineSize = getTextureSize(line);
+            if (lineSize.first > w) {
+                w = lineSize.first;
+            }
+            h += lineSize.second;
+        }
+    } else {
+        SDL_Texture *pTexture = getTexture(text);
+        SDL_SAFE(SDL_QueryTexture(pTexture, NULL, NULL, &w, &h));
+    }
     return std::make_pair(w, h);
 }

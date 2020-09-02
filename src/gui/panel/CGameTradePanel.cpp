@@ -92,7 +92,7 @@ void CGameTradePanel::finalizeBuy(std::shared_ptr<CGui> gui) {
 
 std::set<std::string> CGameTradePanel::getItemNames(std::list<std::weak_ptr<CItem>> items) {
     return vstd::functional::map<std::set<std::string>>(items, [](std::weak_ptr<CItem> ob) {
-        return ob.lock()->getTooltip();
+        return ob.lock()->getLabel();
     });
 }
 

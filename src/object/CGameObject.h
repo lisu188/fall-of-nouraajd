@@ -35,6 +35,7 @@ V_META(CGameObject, vstd::meta::empty,
        V_PROPERTY(CGameObject, std::string, type, getType, setType),
        V_PROPERTY(CGameObject, std::string, animation, getAnimation, setAnimation),
        V_PROPERTY(CGameObject, std::string, label, getLabel, setLabel),
+       V_PROPERTY(CGameObject, std::string, description, getDescription, setDescription),
        V_PROPERTY(CGameObject, std::set<std::string>, tags, getTags, setTags)
 )
 
@@ -124,12 +125,13 @@ public:
 
     void setAnimation(std::string animation);
 
-    //TODO: implement external tooltip handler
-    virtual std::string getTooltip();
-
     std::string getLabel();
 
     void setLabel(std::string _label);
+
+    std::string getDescription();
+
+    void setDescription(std::string _description);
 
     std::shared_ptr<CGameGraphicsObject> getGraphicsObject();
 
@@ -167,6 +169,7 @@ private:
     std::string name;
     std::string animation;
     std::string label;
+    std::string description;
 
     std::set<std::string> tags;
 
