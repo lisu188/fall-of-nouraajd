@@ -129,19 +129,22 @@ void CGameObject::setAnimation(std::string animation) {
     this->animation = animation;
 }
 
-std::string CGameObject::getTooltip() {
-    return label;
-}
-
 std::string CGameObject::getLabel() {
     return label;
 }
 
 void CGameObject::setLabel(std::string _label) {
-    //TODO: implement this in AOP way
-//    graphicsObject.clear();
     label = _label;
 }
+
+std::string CGameObject::getDescription() {
+    return description;
+}
+
+void CGameObject::setDescription(std::string _description) {
+    description = _description;
+}
+
 
 std::shared_ptr<CGameGraphicsObject> CGameObject::getGraphicsObject() {
     return graphicsObject.get([this]() {
