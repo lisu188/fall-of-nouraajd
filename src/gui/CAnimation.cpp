@@ -122,7 +122,9 @@ CAnimation::CAnimation() {
 bool CAnimation::mouseEvent(std::shared_ptr<CGui> gui, SDL_EventType type, int button, int x, int y) {
     if (type == SDL_MOUSEBUTTONDOWN && button == SDL_BUTTON_RIGHT) {
         std::shared_ptr<SDL_Rect> absPos = getLayout()->getRect(this->ptr<CAnimation>());
-        gui->getGame()->getGuiHandler()->showTooltip(object->getTooltip(), absPos->x + x, absPos->y + y);
+        gui->getGame()->getGuiHandler()->showTooltip(CTooltipHandler::buildTooltip(object),
+                                                     absPos->x + x,
+                                                     absPos->y + y);
         return true;
     }
     return false;

@@ -41,9 +41,9 @@ public:
     void drawTextCentered(std::string text, std::shared_ptr<SDL_Rect> rect);
 
 private:
-    SDL_Texture *getTexture(std::string text, int width = -1);
+    SDL_Texture *getTexture(std::string text, int width = 0);
 
-    SDL_Texture *loadTexture(std::string text, int width = -1);
+    SDL_Texture *loadTexture(std::string text, int width = 0);
 
     std::weak_ptr<CGui> _gui;
 

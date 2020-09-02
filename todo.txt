@@ -1,20 +1,15 @@
 //TODO: maybe implement custom setattr and getattr for properties
 //TODO: add mechanism to ensure registering every V_META in CTypes.cpp
 //TODO: weird fight bug after fight, player didnt return to position
-//TODO: tooltip
 //TODO: drag & drop
-//TODO: add error handling to SDL code
 //TODO: resizing panels
 //TODO: registering singletons in context
-//TODO: heuristic masks
 //TODO: initiative
 //TODO: when lost fight in cave, panel pops out after return to position
 //TODO: fight panel
     //TODO: cant quit game when in fight (hang in wait until)
     //TODO: after fight loot window + summary
-//TODO: wrapping of list views
 //TODO: encapsulate SDL_RenderCopy
-//TODO: make panel hotkey configuration configurable
 //TODO: implement move cost
     //TODO: implement move points
     //TODO: implement dijkstra
@@ -27,7 +22,6 @@
     //TODO: fight panel
     //TODO: market panel
 //TODO: minus mana bug
-//TODO: bug easy reproducible with tileSize 10, when too many moves are queued player coords desynchronize DEBUG: F7EE6FEBE3099224 cannot step on: 100137326 10412683 0
 //TODO: make tags enum
 //TODO: replace buff with selfTarget
 //TODO: pathfinder
@@ -39,8 +33,9 @@
 //TODO: separate class from race
 //TODO: charges of items vs stacking
 //TODO: use items on right click, when unified selection, do global reset of selections on right click
-//TODO: mark primitve CGameObjects like CList and CMapString as primitive and unfold values field directly to properties
+//TODO: mark primitve CGameObjects like CList and CMapString, CScript as primitive and unfold values field directly to properties
+    generally items with one property, would require not counting props from CGameObject and getting field type from meta class
+    because its not accesible in CSerialization
 //TODO: inventory panel
     //TODO: selection of equipped should cancel selections in inventory and vice versa
 //TODO: implement property change listeners to enable AOP
-//TODO: calculate stats on demand, do not refresh after gear change
