@@ -2,19 +2,43 @@
   "characterPanel": {
     "class": "CGameCharacterPanel",
     "properties": {
+      "children": [
+        {
+          "class": "CListView",
+          "properties": {
+            "collection": "interactionsCollection",
+            "layout": {
+              "class": "CLayout",
+              "properties": {
+                "h": "10%",
+                "w": "100%",
+                "x": "0%",
+                "y": "90%"
+              }
+            },
+            "refreshEvent": "interactionsChanged",
+            "refreshObject": {
+              "class": "CScript",
+              "properties": {
+                "script": "self.getGui().getGame().getMap().getPlayer()"
+              }
+            }
+          }
+        }
+      ],
       "charSheet": {
-        "class": "CListString",
+        "class": "CMapStringString",
         "properties": {
-          "values": [
-            "level",
-            "exp",
-            "gold",
-            "mana",
-            "manaMax",
-            "manaRegRate",
-            "hp",
-            "hpMax"
-          ]
+          "values": {
+            "Level": "getLevel",
+            "Experience": "getExp",
+            "Gold": "getGold",
+            "Mana": "getMana",
+            "Total Mana": "getManaMax",
+            "Mana Regeneration Rate": "getManaRegRate",
+            "Health Points": "getHp",
+            "Total Health Points": "getHpMax"
+          }
         }
       },
       "layout": {

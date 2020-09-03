@@ -22,8 +22,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 void CGameCharacterPanel::renderObject(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> rect, int i) {
     std::string text;
-    for (auto prop : charSheet->getValues()) {
-        text += prop + ": " + vstd::str(gui->getGame()->getMap()->getPlayer()->getNumericProperty(prop)) + "\n";
+    for (auto[key, value] : charSheet->getValues()) {
+        std::shared_ptr<CPlayer> player = gui->getGame()->getMap()->getPlayer();
+        text += key + ": " + vstd::str(player->meta()->invoke_method<int>(value, player)) + "\n";
     }
     gui->getTextManager()->drawText(
             text,
@@ -38,10 +39,15 @@ CGameCharacterPanel::~CGameCharacterPanel() {
 
 }
 
-std::shared_ptr<CListString> CGameCharacterPanel::getCharSheet() {
+std::shared_ptr<CMapStringString> CGameCharacterPanel::getCharSheet() {
     return charSheet;
 }
 
-void CGameCharacterPanel::setCharSheet(std::shared_ptr<CListString> charSheet) {
+void CGameCharacterPanel::setCharSheet(std::shared_ptr<CMapStringString> charSheet) {
     CGameCharacterPanel::charSheet = charSheet;
+}
+
+CListView::collection_pointer CGameCharacterPanel::interactionsCollection(std::shared_ptr<CGui> gui) {
+    return std::make_shared<CListView::collection_type>(
+            vstd::cast<CListView::collection_type>(gui->getGame()->getMap()->getPlayer()->getInteractions()));
 }
