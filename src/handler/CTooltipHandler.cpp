@@ -20,19 +20,18 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 std::string CTooltipHandler::buildTooltip(std::shared_ptr<CGameObject> object) {
     std::string tooltip = object->getLabel();
-    tooltip = vstd::add_in_line(tooltip, object->getDescription());
+    vstd::add_line(tooltip, object->getDescription());
     if (object->meta()->inherits("CItem")) {
-        tooltip = object->getLabel();
-        tooltip = vstd::add_in_line(tooltip, object->getDescription());
+        vstd::add_line(tooltip, object->getDescription());
         auto bonus = vstd::cast<CItem>(object)->getBonus();
         for (auto prop:bonus->meta()->properties(bonus)) {
             //TODO: move to meta
             if (prop->value_type() == boost::typeindex::type_id<int>()) {
                 auto value = bonus->getNumericProperty(prop->name());
                 if (value > 0) {
-                    tooltip = vstd::add_in_line(tooltip,
-                                                prop->name() + ": "
-                                                + vstd::str(value));
+                    vstd::add_line(tooltip,
+                                   prop->name() + ": "
+                                   + vstd::str(value));
                 }
             }
         }

@@ -61,7 +61,11 @@ V_META(CCreature, CMapObject,
        V_PROPERTY(CCreature, std::set<std::shared_ptr<CItem>>, items, getItems, setItems),
        V_PROPERTY(CCreature, std::set<std::shared_ptr<CEffect>>, effects, getEffects, setEffects),
        V_PROPERTY(CCreature, std::shared_ptr<CController>, controller, getController, setController),
-       V_PROPERTY(CCreature, std::shared_ptr<CFightController>, fightController, getFightController, setFightController)
+       V_PROPERTY(CCreature, std::shared_ptr<CFightController>,
+                  fightController, getFightController, setFightController),
+       V_METHOD(CCreature, getManaMax, int),
+       V_METHOD(CCreature, getHpMax, int),
+       V_METHOD(CCreature, getManaRegRate, int)
 )
 
 public:
