@@ -59,7 +59,8 @@
       "animation": "images/tiles/road",
       "canStep": true,
       "label": "Road",
-      "tileType": "road"
+      "tileType": "road",
+      "description": "Heals 1 hp per step"
     }
   },
   "SnowTile": {
