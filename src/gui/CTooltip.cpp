@@ -28,6 +28,7 @@ CTooltip::CTooltip() {
 }
 
 void CTooltip::renderObject(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> rect, int frameTime) {
+    //TODO: move this inside textManager
     auto textureSize = gui->getTextManager()->getTextureSize(text);
     gui->getTextManager()->drawText(text, CUtil::boxInBox(rect, RECT(0, 0, textureSize.first, textureSize.second)));
 }
