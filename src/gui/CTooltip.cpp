@@ -28,7 +28,8 @@ CTooltip::CTooltip() {
 }
 
 void CTooltip::renderObject(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> rect, int frameTime) {
-    gui->getTextManager()->drawTextCentered(text, rect);
+    auto textureSize = gui->getTextManager()->getTextureSize(text);
+    gui->getTextManager()->drawText(text, CUtil::boxInBox(rect, RECT(0, 0, textureSize.first, textureSize.second)));
 }
 
 bool CTooltip::mouseEvent(std::shared_ptr<CGui> gui, SDL_EventType type, int button, int x, int y) {
