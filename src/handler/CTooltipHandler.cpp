@@ -30,7 +30,7 @@ std::string CTooltipHandler::buildTooltip(std::shared_ptr<CGameObject> object) {
                 auto value = bonus->getNumericProperty(prop->name());
                 if (value > 0) {
                     vstd::add_line(tooltip,
-                                   prop->name() + ": "
+                                   vstd::camel(prop->name()) + ": "
                                    + vstd::str(value));
                 }
             }
