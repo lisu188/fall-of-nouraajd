@@ -166,3 +166,10 @@ bool CGameObject::hasProperty(std::string name) {
     return this->meta()->has_property<CGameObject>(name, this->ptr());
 }
 
+void CGameObject::setTypeId(std::string _typeId) {
+    typeId = _typeId;
+}
+
+std::string CGameObject::getTypeId() {
+    return typeId;
+}

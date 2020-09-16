@@ -33,6 +33,7 @@ class CGameObject : public vstd::stringable, public std::enable_shared_from_this
 V_META(CGameObject, vstd::meta::empty,
        V_PROPERTY(CGameObject, std::string, name, getName, setName),
        V_PROPERTY(CGameObject, std::string, type, getType, setType),
+       V_PROPERTY(CGameObject, std::string, typeId, getTypeId, setTypeId),
        V_PROPERTY(CGameObject, std::string, animation, getAnimation, setAnimation),
        V_PROPERTY(CGameObject, std::string, label, getLabel, setLabel),
        V_PROPERTY(CGameObject, std::string, description, getDescription, setDescription),
@@ -111,6 +112,10 @@ public:
 
     void setType(std::string type);
 
+    std::string getTypeId();
+
+    void setTypeId(std::string _typeId);
+
     std::string getName();
 
     void setName(std::string name);
@@ -166,6 +171,7 @@ private:
     vstd::lazy<CGameGraphicsObject> graphicsObject;
 
     std::string type;
+    std::string typeId;
     std::string name;
     std::string animation;
     std::string label;
