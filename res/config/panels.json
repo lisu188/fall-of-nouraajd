@@ -265,6 +265,7 @@
         {
           "class": "CListView",
           "properties": {
+            "grouping": true,
             "callback": "itemsCallback",
             "collection": "itemsCollection",
             "layout": {
@@ -327,6 +328,7 @@
         {
           "class": "CListView",
           "properties": {
+            "grouping": true,
             "callback": "inventoryCallback",
             "collection": "inventoryCollection",
             "layout": {
@@ -490,6 +492,7 @@
         {
           "class": "CListView",
           "properties": {
+            "grouping": true,
             "callback": "inventoryCallback",
             "collection": "inventoryCollection",
             "layout": {
