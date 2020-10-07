@@ -15,6 +15,7 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
+#include "gui/object/CWidget.h"
 #include "gui/object/CProxyGraphicsObject.h"
 #include "CListView.h"
 #include "gui/CGui.h"
@@ -32,7 +33,7 @@ void CListView::renderObject(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect
 bool CListView::mouseEvent(std::shared_ptr<CGui> gui, SDL_EventType type, int button, int x, int y) {
     if (type == SDL_MOUSEBUTTONDOWN && button == SDL_BUTTON_LEFT) {//TODO: separate to objects
         int i = ((x) / tileSize + ((y / tileSize) * getSizeX(gui)));
-        invokeCallback(gui, shiftIndex(gui, i), calculateIndices(gui)[shiftIndex(gui, i)]);
+        invokeCallback(gui, shiftIndex(gui, i), calculateIndices(gui).find(shiftIndex(gui, i))->second);
     }
     return true;
 }
@@ -66,14 +67,34 @@ int CListView::getLeftArrowIndex(std::shared_ptr<CGui> gui) {
     return getSizeX(gui) * (getSizeY(gui) - 1);
 }
 
-std::unordered_map<int, std::shared_ptr<CGameObject>> CListView::calculateIndices(std::shared_ptr<CGui> gui) {
-    std::unordered_map<int, std::shared_ptr<CGameObject>> indices;
-    int i = -1;
-    collection_pointer sharedPtr = invokeCollection(gui);
-    for (auto it:(*sharedPtr)) {
-        indices.insert(std::make_pair(++i, it));
+std::unordered_multimap<int, std::shared_ptr<CGameObject>> CListView::calculateIndices(std::shared_ptr<CGui> gui) {
+    if (grouping) {
+        collection_pointer collection = invokeCollection(gui);
+        vstd::list<std::shared_ptr<CGameObject>> &container = *collection;
+        auto reduced =
+                vstd::functional::map_reduce<std::string>(container,
+                                                          [](auto ob) { return ob->getTypeId(); });
+
+        std::unordered_multimap<int, std::shared_ptr<CGameObject>> indices;
+
+        int i = -1;
+
+        for (auto it:(reduced)) {
+            i++;
+            for (auto it2:it.second) {
+                indices.insert(std::make_pair(i, it2));
+            }
+        }
+        return indices;
+    } else {
+        std::unordered_multimap<int, std::shared_ptr<CGameObject>> indices;
+        int i = -1;
+        collection_pointer sharedPtr = invokeCollection(gui);
+        for (auto it:(*sharedPtr)) {
+            indices.insert(std::make_pair(++i, it));
+        }
+        return indices;
     }
-    return indices;
 }
 
 std::shared_ptr<SDL_Rect>
@@ -147,7 +168,7 @@ CListView::getProxiedObjects(std::shared_ptr<CGui> gui, int x, int y) {
         auto indexedCollection = calculateIndices(gui);
         int itemIndex = shiftIndex(gui, i);
 
-        bool isItemPresent = vstd::ctn(indexedCollection, itemIndex) && indexedCollection[itemIndex];
+        bool isItemPresent = vstd::ctn(indexedCollection, itemIndex) && indexedCollection.find(itemIndex)->second;
 
         if (isItemPresent || showEmpty) {
             addItemBox(gui, return_val);
@@ -155,11 +176,29 @@ CListView::getProxiedObjects(std::shared_ptr<CGui> gui, int x, int y) {
         if (isItemPresent) {
             addItem(return_val, indexedCollection, itemIndex);
         }
-        if (invokeSelect(gui, itemIndex, indexedCollection[itemIndex])) {
+        if (invokeSelect(gui, itemIndex,
+                         isItemPresent ? indexedCollection.find(itemIndex)->second : nullptr)) {
             addSelectionBox(gui, return_val);
+        }
+        if (indexedCollection.count(itemIndex) > 1) {
+            addCountBox(gui, indexedCollection.count(itemIndex), return_val);
         }
     }
     return return_val;
+}
+
+void CListView::addCountBox(std::shared_ptr<CGui> gui, int count,
+                            std::set<std::shared_ptr<CGameGraphicsObject>> &return_val) const {
+    auto countBox = gui->getGame()->getObjectHandler()->createObject<CTextWidget>(gui->getGame());
+    countBox->setText(vstd::str(count));
+    auto layout = gui->getGame()->getObjectHandler()->createObject<CLayout>(gui->getGame());
+    layout->setHorizontal("RIGHT");
+    layout->setVertical("DOWN");
+    layout->setW("10%");
+    layout->setH("10%");
+    countBox->setLayout(layout);
+    countBox->setPriority(4);
+    return_val.insert(countBox);//TODO: cache
 }
 
 void CListView::addSelectionBox(std::shared_ptr<CGui> gui,
@@ -171,8 +210,9 @@ void CListView::addSelectionBox(std::shared_ptr<CGui> gui,
 }
 
 void CListView::addItem(std::set<std::shared_ptr<CGameGraphicsObject>> &return_val,
-                        std::unordered_map<int, std::shared_ptr<CGameObject>> &indexedCollection, int itemIndex) const {
-    std::shared_ptr<CGameGraphicsObject> objectGraphic = indexedCollection[itemIndex]->getGraphicsObject();
+                        std::unordered_multimap<int, std::shared_ptr<CGameObject>, std::hash<int>, std::equal_to<int>, std::allocator<std::pair<const int, std::shared_ptr<CGameObject>>>> indexedCollection,
+                        int itemIndex) const {
+    std::shared_ptr<CGameGraphicsObject> objectGraphic = indexedCollection.find(itemIndex)->second->getGraphicsObject();
     objectGraphic->setPriority(2);
     return_val.insert(objectGraphic);
 }
@@ -287,6 +327,14 @@ bool CListView::getShowEmpty() {
 
 void CListView::setShowEmpty(bool _showEmpty) {
     showEmpty = _showEmpty;
+}
+
+bool CListView::getGrouping() {
+    return grouping;
+}
+
+void CListView::setGrouping(bool _grouping) {
+    grouping = _grouping;
 }
 
 

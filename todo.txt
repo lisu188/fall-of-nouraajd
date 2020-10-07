@@ -31,7 +31,7 @@
 //TODO: customize out of bound tiles and default tiles
 //TODO: toroidal maps
 //TODO: separate class from race
-//TODO: charges of items vs stacking
+
 //TODO: use items on right click, when unified selection, do global reset of selections on right click
 //TODO: mark primitve CGameObjects like CList and CMapString, CScript as primitive and unfold values field directly to properties
     generally items with one property, would require not counting props from CGameObject and getting field type from meta class
@@ -39,3 +39,5 @@
 //TODO: inventory panel
     //TODO: selection of equipped should cancel selections in inventory and vice versa
 //TODO: implement property change listeners to enable AOP
+//TODO: do not allow using heal or mana potion when full
+//TODO: add stacks of object (wand etc) same as grouping but in the left corner

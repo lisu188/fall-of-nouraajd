@@ -24,7 +24,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 class CGameTradePanel : public CGamePanel {
 V_META(CGameTradePanel, CGamePanel,
 //TODO: unify this with CGameInventoryPanel
-//TODO: stacking of same type objects
+//TODO: allow selecting couple of grouped objects
        V_PROPERTY(CGameTradePanel, std::shared_ptr<CMarket>, market, getMarket, setMarket),
        V_METHOD(CGameTradePanel, inventoryCollection, CListView::collection_pointer,
                 std::shared_ptr<CGui>),

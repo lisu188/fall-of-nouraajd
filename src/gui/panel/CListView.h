@@ -35,6 +35,7 @@ V_META(CListView, CProxyTargetGraphicsObject,
        V_PROPERTY(CListView, int, tileSize, getTileSize, setTileSize),
        V_PROPERTY(CListView, bool, allowOversize, getAllowOversize, setAllowOversize),
        V_PROPERTY(CListView, bool, showEmpty, getShowEmpty, setShowEmpty),
+       V_PROPERTY(CListView, bool, grouping, getGrouping, setGrouping),
        V_METHOD(CListView, initialize))
 
     std::string collection;
@@ -69,6 +70,8 @@ private:
 
     bool showEmpty = true;
 
+    bool grouping = false;
+
     int selectionThickness = 5;
 
     int shift = 0;
@@ -84,6 +87,10 @@ public:
     bool getAllowOversize();
 
     void setAllowOversize(bool _allowOversize);
+
+    bool getGrouping();
+
+    void setGrouping(bool _grouping);
 
     bool getShowEmpty();
 
@@ -144,7 +151,7 @@ private:
     int getLeftArrowIndex(std::shared_ptr<CGui> gui);
 
 //TODO: do not generate whole map, instead add callback arguement and stop when met
-    std::unordered_map<int, std::shared_ptr<CGameObject>> calculateIndices(std::shared_ptr<CGui> gui);
+    std::unordered_multimap<int, std::shared_ptr<CGameObject>> calculateIndices(std::shared_ptr<CGui> gui);
 
     std::shared_ptr<SDL_Rect>
     calculateIndexPosition(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> loc, int index);
@@ -157,10 +164,14 @@ private:
     void addItemBox(std::shared_ptr<CGui> gui, std::set<std::shared_ptr<CGameGraphicsObject>> &return_val) const;
 
     void addItem(std::set<std::shared_ptr<CGameGraphicsObject>> &return_val,
-                 std::unordered_map<int, std::shared_ptr<CGameObject>> &indexedCollection,
+                 std::unordered_multimap<int, std::shared_ptr<CGameObject>, std::hash<int>, std::equal_to<int>, std::allocator<std::pair<const int, std::shared_ptr<CGameObject>>>> indexedCollection,
                  int itemIndex) const;
 
     void addSelectionBox(std::shared_ptr<CGui> gui, std::set<std::shared_ptr<CGameGraphicsObject>> &return_val) const;
+
+    void
+    addCountBox(std::shared_ptr<CGui> gui, int count, std::set<std::shared_ptr<CGameGraphicsObject>> &return_val) const;
+
 };
 
 
