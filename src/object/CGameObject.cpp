@@ -146,7 +146,7 @@ void CGameObject::setDescription(std::string _description) {
 }
 
 
-std::shared_ptr<CGameGraphicsObject> CGameObject::getGraphicsObject() {
+std::shared_ptr<CAnimation> CGameObject::getGraphicsObject() {
     return graphicsObject.get([this]() {
         std::shared_ptr<CAnimation> anim = CAnimationProvider::getAnimation(getGame(), this->ptr<CGameObject>());
         for (auto[key, val] :getGame()->createObject<CMapStringInt>("mapObjectPriorities")->getValues()) {
