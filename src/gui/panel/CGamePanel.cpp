@@ -21,7 +21,6 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "gui/CTextureCache.h"
 
 
-
 bool CGamePanel::keyboardEvent(std::shared_ptr<CGui> sharedPtr, SDL_EventType type, SDL_Keycode i) {
     return true;
 }
@@ -41,4 +40,5 @@ void CGamePanel::refreshViews() {
 CGamePanel::CGamePanel() {
     //TODO: extract to json
     setBackground("images/panel");
+    setModal(true);
 }

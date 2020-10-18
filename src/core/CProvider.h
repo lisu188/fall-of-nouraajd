@@ -75,9 +75,4 @@ public:
     getAnimation(std::shared_ptr<CGame> game, std::shared_ptr<CGameObject> object, bool custom = false);
 
     static std::shared_ptr<CAnimation> getAnimation(std::shared_ptr<CGame> game, std::string path, bool custom = false);
-
-    template<typename F>
-    static std::shared_ptr<CAnimation> getCustomAnimation(std::shared_ptr<CGame> game, std::string path, F f) {
-        return vstd::cast<CCustomAnimation>(getAnimation(game, path, true))->withCallback(f);
-    }
 };

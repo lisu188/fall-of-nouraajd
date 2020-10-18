@@ -32,7 +32,7 @@ void CCreatureView::setCreatureScript(std::shared_ptr<CScript> _creatureScript) 
 
 std::set<std::shared_ptr<CGameGraphicsObject>>
 CCreatureView::getProxiedObjects(std::shared_ptr<CGui> gui, int x, int y) {
-    auto graphicsObject = getCreature()->getGraphicsObject();
+    std::shared_ptr<CGameGraphicsObject> graphicsObject = getCreature()->getGraphicsObject();
     graphicsObject->setLayout(std::make_shared<CParentLayout>());
     return vstd::set(
             graphicsObject);

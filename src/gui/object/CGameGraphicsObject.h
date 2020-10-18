@@ -29,6 +29,8 @@ class CProxyTargetGraphicsObject;
 
 class CScript;
 
+class CGameGraphicsObject;
+
 //TODO: generify
 struct priority_comparator {
     bool operator()(

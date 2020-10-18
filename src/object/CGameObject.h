@@ -27,7 +27,7 @@ class CMap;
 
 class CGame;
 
-class CGameGraphicsObject;
+class CAnimation;
 
 class CGameObject : public vstd::stringable, public std::enable_shared_from_this<CGameObject> {
 V_META(CGameObject, vstd::meta::empty,
@@ -138,7 +138,7 @@ public:
 
     void setDescription(std::string _description);
 
-    std::shared_ptr<CGameGraphicsObject> getGraphicsObject();
+    std::shared_ptr<CAnimation> getGraphicsObject();
 
     void connect(std::string signal, std::shared_ptr<CGameObject> object, std::string slot);
 
@@ -168,7 +168,7 @@ private:
 
     std::shared_ptr<CGameObject> _clone();
 
-    vstd::lazy<CGameGraphicsObject> graphicsObject;
+    vstd::lazy<CAnimation> graphicsObject;
 
     std::string type;
     std::string typeId;

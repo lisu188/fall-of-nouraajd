@@ -36,7 +36,13 @@ CMapGraphicsObject::getProxiedObjects(std::shared_ptr<CGui> gui, int x, int y) {
 
         std::shared_ptr<CTile> tile = map->getTile(actualCoords.x, actualCoords.y, actualCoords.z);
 
-        return_val.insert(tile->getGraphicsObject());
+        return_val.insert(tile->getGraphicsObject()->withCallback(
+                [actualCoords](std::shared_ptr<CGui> gui, SDL_EventType type, int button, int, int) {
+                    if (type == SDL_MOUSEBUTTONDOWN && button == SDL_BUTTON_LEFT) {
+                        vstd::logger::debug(actualCoords.x, actualCoords.y, actualCoords.z);
+                    }
+                    return false;
+                }));
 
 
         for (auto ob: map->getObjectsAtCoords(actualCoords)) {
