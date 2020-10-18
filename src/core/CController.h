@@ -30,13 +30,14 @@ public:
 
 class CPlayerController : public CController {
 V_META(CPlayerController, CController, vstd::meta::empty())
-    Coords next;
+    Coords target;
 public:
-    CPlayerController();
+    void setTarget(Coords coords);
 
-    CPlayerController(Coords next);
+    virtual std::shared_ptr<vstd::future<void, Coords>> control(std::shared_ptr<CCreature> c);
 
-    virtual std::shared_ptr<vstd::future<void, Coords> > control(std::shared_ptr<CCreature> c);
+private:
+    std::shared_ptr<vstd::future<Coords, void>> getPathfinder(std::shared_ptr<CCreature> c);
 };
 
 class CFightController : public CGameObject {

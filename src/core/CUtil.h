@@ -45,7 +45,13 @@ struct Coords {
 
     Coords operator*() const;
 
-    double getDist(Coords a) const;
+    double getDist(const Coords &a) const;
+
+    bool adjacent(const Coords &a) const;
+
+    bool same(const Coords &a) const;
+
+    bool adjacentOrSame(const Coords &a) const;
 };
 
 class CUtil {

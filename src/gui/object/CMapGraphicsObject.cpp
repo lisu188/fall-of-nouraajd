@@ -39,7 +39,12 @@ CMapGraphicsObject::getProxiedObjects(std::shared_ptr<CGui> gui, int x, int y) {
         return_val.insert(tile->getGraphicsObject()->withCallback(
                 [actualCoords](std::shared_ptr<CGui> gui, SDL_EventType type, int button, int, int) {
                     if (type == SDL_MOUSEBUTTONDOWN && button == SDL_BUTTON_LEFT) {
-                        vstd::logger::debug(actualCoords.x, actualCoords.y, actualCoords.z);
+                        vstd::cast<CPlayerController>(
+                                gui->getGame()->getMap()->getPlayer()->getController())->setTarget(actualCoords);
+                        while (gui->getGame()->getMap()->getPlayer()->getCoords() != actualCoords) {
+                            gui->getGame()->getMap()->move();
+                        }
+                        return true;
                     }
                     return false;
                 }));
@@ -85,30 +90,31 @@ bool CMapGraphicsObject::keyboardEvent(std::shared_ptr<CGui> gui, SDL_EventType 
         if (gui->getGame()->getMap()->isMoving()) {
             return true; //TODO: rethink this
         }
+        std::shared_ptr<CPlayer> player = gui->getGame()->getMap()->getPlayer();
         switch (i) {
             case SDLK_UP:
-                gui->getGame()->getMap()->getPlayer()->setController(
-                        std::make_shared<CPlayerController>(Coords(0, -1, 0)));
+                vstd::cast<CPlayerController>(player->getController())->setTarget(
+                        player->getCoords() + Coords(0, -1, 0));
                 gui->getGame()->getMap()->move();
                 return true;
             case SDLK_DOWN:
-                gui->getGame()->getMap()->getPlayer()->setController(
-                        std::make_shared<CPlayerController>(Coords(0, 1, 0)));
+                vstd::cast<CPlayerController>(player->getController())->setTarget(
+                        player->getCoords() + Coords(0, 1, 0));
                 gui->getGame()->getMap()->move();
                 return true;
             case SDLK_LEFT:
-                gui->getGame()->getMap()->getPlayer()->setController(
-                        std::make_shared<CPlayerController>(Coords(-1, 0, 0)));
+                vstd::cast<CPlayerController>(player->getController())->setTarget(
+                        player->getCoords() + Coords(-1, 0, 0));
                 gui->getGame()->getMap()->move();
                 return true;
             case SDLK_RIGHT:
-                gui->getGame()->getMap()->getPlayer()->setController(
-                        std::make_shared<CPlayerController>(Coords(1, 0, 0)));
+                vstd::cast<CPlayerController>(player->getController())->setTarget(
+                        player->getCoords() + Coords(1, 0, 0));
                 gui->getGame()->getMap()->move();
                 return true;
             case SDLK_SPACE:
-                gui->getGame()->getMap()->getPlayer()->setController(
-                        std::make_shared<CPlayerController>(Coords(0, 0, 0)));
+                vstd::cast<CPlayerController>(player->getController())->setTarget(
+                        player->getCoords() + Coords(0, 0, 0));
                 gui->getGame()->getMap()->move();
                 return true;
             case SDLK_s:
