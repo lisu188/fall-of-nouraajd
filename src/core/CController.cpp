@@ -175,20 +175,23 @@ std::shared_ptr<CInteraction> CMonsterFightController::selectInteraction(std::sh
     return std::shared_ptr<CInteraction>();
 }
 
-CPlayerController::CPlayerController() {
-    this->next = Coords(0, 0, 0);
-}
-
-
-CPlayerController::CPlayerController(Coords _next) {
-    this->next = _next;
-}
-
 std::shared_ptr<vstd::future<void, Coords> > CPlayerController::control(std::shared_ptr<CCreature> c) {
-    Coords _next = next;//to ensure copy to closure
-    return vstd::later([=](Coords coords) {
-        c->move(_next);
+    return getPathfinder(c)->thenLater([c](Coords coords) {
+        c->moveTo(coords);
     });
+}
+
+std::shared_ptr<vstd::future<Coords, void> > CPlayerController::getPathfinder(std::shared_ptr<CCreature> c) {
+    return c->getCoords().adjacentOrSame(target) ? vstd::later([=]() {
+        return target;
+    }) : CPathFinder::findNextStep(c->getCoords(), target, [c](Coords coords) {
+        return c->getMap()->canStep(coords);
+    });
+}
+
+
+void CPlayerController::setTarget(Coords coords) {
+    target = coords;
 }
 
 bool CFightController::control(std::shared_ptr<CCreature> me, std::shared_ptr<CCreature> opponent) {

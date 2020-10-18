@@ -63,12 +63,24 @@ Coords Coords::operator*() const {
     return *this;
 }
 
-double Coords::getDist(Coords a) const {
+double Coords::getDist(const Coords &a) const {
     double x = this->x - a.x;
     x *= x;
     double y = this->y - a.y;
     y *= y;
     return sqrt(x + y);
+}
+
+bool Coords::adjacent(const Coords &a) const {
+    return getDist(a) == 1;
+}
+
+bool Coords::same(const Coords &a) const {
+    return getDist(a) == 0;
+}
+
+bool Coords::adjacentOrSame(const Coords &a) const {
+    return adjacent(a) || same(a);
 }
 
 std::shared_ptr<SDL_Rect> CUtil::boxInBox(std::shared_ptr<SDL_Rect> out, std::shared_ptr<SDL_Rect> in) {

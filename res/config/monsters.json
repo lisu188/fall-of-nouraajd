@@ -276,6 +276,9 @@
   "Sorcerer": {
     "class": "CPlayer",
     "properties": {
+      "controller": {
+        "class": "CPlayerController"
+      },
       "actions": [
         {
           "ref": "Attack"
@@ -353,6 +356,9 @@
   "Warrior": {
     "class": "CPlayer",
     "properties": {
+      "controller": {
+        "class": "CPlayerController"
+      },
       "actions": [
         {
           "ref": "Attack"

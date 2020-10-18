@@ -236,42 +236,44 @@ void CMap::removeObjects(std::function<bool(std::shared_ptr<CMapObject>)> func) 
 void CMap::move() {
     auto map = this->ptr<CMap>();
 
-    _moveHelper = _moveHelper->thenLater([map]() {
-        vstd::wait_until([map]() {
-            return !map->moving;
-        });
+    if (map->moving) {
+        vstd::logger::fatal("Invalid move request");
+    }
 
-        map->moving = true;
+    map->moving = true;
 
-        vstd::logger::debug("Turn:", map->turn);
+    vstd::logger::debug("Turn:", map->turn);
 
-        //TODO: map->applyEffects();
+    //TODO: map->applyEffects();
 
-        map->forObjects([map](std::shared_ptr<CMapObject> mapObject) {
-            map->getEventHandler()->gameEvent(mapObject, std::make_shared<CGameEvent>(CGameEvent::Type::onTurn));
-        });
+    map->forObjects([map](std::shared_ptr<CMapObject> mapObject) {
+        map->getEventHandler()->gameEvent(mapObject, std::make_shared<CGameEvent>(CGameEvent::Type::onTurn));
+    });
 
-        auto pred = [](std::shared_ptr<CMapObject> object) {
-            return vstd::castable<Moveable>(object);
-        };
+    auto pred = [](std::shared_ptr<CMapObject> object) {
+        return vstd::castable<Moveable>(object);
+    };
 
-        auto controller = [map](std::shared_ptr<CMapObject> object) {
-            return vstd::cast<CCreature>(object)->getController()->control(vstd::cast<CCreature>(object));
-        };
+    auto controller = [map](std::shared_ptr<CMapObject> object) {
+        return vstd::cast<CCreature>(object)->getController()->control(vstd::cast<CCreature>(object));
+    };
 
-        auto end_callback = [map](std::set<void *>) {
-            map->resolveFights();
-            map->moving = false;
-            map->turn++;
-            map->signal("turnPassed");
-        };
+    auto end_callback = [map](std::set<void *>) {
+        map->resolveFights();
+        map->moving = false;
+        map->turn++;
+        map->signal("turnPassed");
+    };
 
-        //TODO: return future and replace
-        vstd::join(map->mapObjects |
-                   boost::adaptors::map_values |
-                   boost::adaptors::filtered(pred) |
-                   boost::adaptors::transformed(controller))
-                ->thenLater(end_callback);
+    //TODO: return future and replace
+    vstd::join(map->mapObjects |
+               boost::adaptors::map_values |
+               boost::adaptors::filtered(pred) |
+               boost::adaptors::transformed(controller))
+            ->thenLater(end_callback);
+
+    vstd::wait_until([map]() {
+        return !map->moving;
     });
 }
 
