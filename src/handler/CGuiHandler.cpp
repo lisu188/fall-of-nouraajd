@@ -36,12 +36,14 @@ void CGuiHandler::showMessage(std::string message) {
     std::shared_ptr<CGameTextPanel> panel = _game.lock()->createObject<CGameTextPanel>("textPanel");
     panel->setText(message);
     _game.lock()->getGui()->pushChild(panel);
+    panel->awaitClosing();
 }
 
 void CGuiHandler::showInfo(std::string message) {
     std::shared_ptr<CGameTextPanel> panel = _game.lock()->createObject<CGameTextPanel>("infoPanel");
     panel->setText(message);
     _game.lock()->getGui()->pushChild(panel);
+    panel->awaitClosing();
 }
 
 bool CGuiHandler::showDialog(std::string question) {
@@ -55,6 +57,7 @@ void CGuiHandler::showTrade(std::shared_ptr<CMarket> market) {
     std::shared_ptr<CGameTradePanel> panel = _game.lock()->createObject<CGameTradePanel>("tradePanel");
     panel->setMarket(market);
     _game.lock()->getGui()->pushChild(panel);
+    panel->awaitClosing();
 }
 
 CGuiHandler::CGuiHandler(std::shared_ptr<CGame> game) : _game(game) {
@@ -134,7 +137,7 @@ void CGuiHandler::showTooltip(std::string text, int x,
     }
 }
 
-std::shared_ptr<CGamePanel> CGuiHandler::flipPanel(std::string panel) {
+void CGuiHandler::flipPanel(std::string panel, std::string hotkey) {
     std::shared_ptr<CGame> game = _game.lock();
     auto panelClas = game->getObjectHandler()->getClass(panel);
     if (auto currentPanel = game->getGui()->findChild(panelClas)) {
@@ -142,8 +145,21 @@ std::shared_ptr<CGamePanel> CGuiHandler::flipPanel(std::string panel) {
     } else {
         std::shared_ptr<CGamePanel> child = game->createObject<CGamePanel>(panel);
         game->getGui()->pushChild(child);
-        return child;
+
+        auto keyPred = [hotkey](std::shared_ptr<CGui> gui, std::shared_ptr<CGameGraphicsObject> self,
+                                SDL_Event *event) {
+            return event->type == SDL_KEYDOWN && event->key.keysym.sym == hotkey[0];
+        };
+        auto _self = this->ptr<CGuiHandler>();
+        child->registerEventCallback(keyPred,
+                                     [_self, panel, hotkey](std::shared_ptr<CGui> gui,
+                                                            std::shared_ptr<CGameGraphicsObject> self,
+                                                            SDL_Event *event) {
+                                         _self->flipPanel(panel, hotkey);
+                                         return true;
+                                     });
+
+        child->awaitClosing();
     }
-    return nullptr;
 }
 

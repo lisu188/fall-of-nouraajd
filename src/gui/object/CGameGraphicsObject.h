@@ -107,6 +107,8 @@ public:
     //TODO: more flexible
     std::shared_ptr<CGameGraphicsObject> findChild(std::string type);
 
+    std::shared_ptr<CGameGraphicsObject> findChild(std::shared_ptr<CGameGraphicsObject> type);
+
     void removeParent();
 
     std::shared_ptr<CGui> getGui();
