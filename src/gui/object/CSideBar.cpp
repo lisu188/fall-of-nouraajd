@@ -41,24 +41,10 @@ void CSideBar::setPanelKeys(std::shared_ptr<CMapStringString> _panelKeys) {
 }
 
 void CSideBar::flipPanel(std::shared_ptr<CGui> gui, std::string panel) {
-    if (auto _panel = gui->getGame()->getGuiHandler()->flipPanel(panel)) {
-        for (auto val:panelKeys->getValues()) {
-            if (val.second == panel) {
-                auto keyPred = [val](std::shared_ptr<CGui> gui, std::shared_ptr<CGameGraphicsObject> self,
-                                     SDL_Event *event) {
-                    return event->type == SDL_KEYDOWN && event->key.keysym.sym == val.first[0];
-                };
-                auto _self = this->ptr<CSideBar>();
-                _panel->registerEventCallback(keyPred,
-                                              [_self, panel](std::shared_ptr<CGui> gui,
-                                                             std::shared_ptr<CGameGraphicsObject> self,
-                                                             SDL_Event *event) {
-                                                  _self->flipPanel(gui, panel);
-                                                  return true;
-                                              });
-            }
+    for (auto val:panelKeys->getValues()) {
+        if (val.second == panel) {
+            gui->getGame()->getGuiHandler()->flipPanel(panel, val.first);
         }
-
     }
 }
 

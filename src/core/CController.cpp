@@ -234,3 +234,7 @@ void CPlayerFightController::end(std::shared_ptr<CCreature> me, std::shared_ptr<
         fightPanel = nullptr;
     });
 }
+
+Coords CPlayerController::getTarget() {
+    return target;
+}

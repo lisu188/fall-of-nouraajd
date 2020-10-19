@@ -34,6 +34,8 @@ V_META(CPlayerController, CController, vstd::meta::empty())
 public:
     void setTarget(Coords coords);
 
+    Coords getTarget();
+
     virtual std::shared_ptr<vstd::future<void, Coords>> control(std::shared_ptr<CCreature> c);
 
 private:

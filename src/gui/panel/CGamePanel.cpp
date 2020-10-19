@@ -42,3 +42,10 @@ CGamePanel::CGamePanel() {
     setBackground("images/panel");
     setModal(true);
 }
+
+void CGamePanel::awaitClosing() {
+    auto self = this->ptr<CGamePanel>();
+    vstd::wait_until([self]() {
+        return !self->getGui() || self->getGui()->findChild(self) == nullptr;
+    });
+}

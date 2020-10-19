@@ -32,8 +32,12 @@ void CListView::renderObject(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect
 
 bool CListView::mouseEvent(std::shared_ptr<CGui> gui, SDL_EventType type, int button, int x, int y) {
     if (type == SDL_MOUSEBUTTONDOWN && button == SDL_BUTTON_LEFT) {//TODO: separate to objects
-        int i = ((x) / tileSize + ((y / tileSize) * getSizeX(gui)));
-        invokeCallback(gui, shiftIndex(gui, i), calculateIndices(gui).find(shiftIndex(gui, i))->second);
+        int xIndex = x / tileSize;
+        int yIndex = y / tileSize;
+        if (xIndex < getSizeX(gui) && yIndex < getSizeY(gui)) {
+            int i = (xIndex + (yIndex * getSizeX(gui)));
+            invokeCallback(gui, shiftIndex(gui, i), calculateIndices(gui).find(shiftIndex(gui, i))->second);
+        }
     }
     return true;
 }
@@ -162,9 +166,9 @@ CListView::getProxiedObjects(std::shared_ptr<CGui> gui, int x, int y) {
                                                            "images/arrows/left")->withCallback(
                 getArrowCallback(true)));//TODO: cache
     } else if (i == getRightArrowIndex(gui) && isOversized(gui)) {
-                return_val.insert(CAnimationProvider::getAnimation(gui->getGame(),
-                                                                   "images/arrows/right")->withCallback(
-                        getArrowCallback(false)));//TODO: cache
+        return_val.insert(CAnimationProvider::getAnimation(gui->getGame(),
+                                                           "images/arrows/right")->withCallback(
+                getArrowCallback(false)));//TODO: cache
     } else {
         auto indexedCollection = calculateIndices(gui);
         int itemIndex = shiftIndex(gui, i);

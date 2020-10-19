@@ -39,11 +39,18 @@ CMapGraphicsObject::getProxiedObjects(std::shared_ptr<CGui> gui, int x, int y) {
         return_val.insert(tile->getGraphicsObject()->withCallback(
                 [actualCoords](std::shared_ptr<CGui> gui, SDL_EventType type, int button, int, int) {
                     if (type == SDL_MOUSEBUTTONDOWN && button == SDL_BUTTON_LEFT) {
-                        vstd::cast<CPlayerController>(
-                                gui->getGame()->getMap()->getPlayer()->getController())->setTarget(actualCoords);
-                        while (gui->getGame()->getMap()->getPlayer()->getCoords() != actualCoords) {
-                            gui->getGame()->getMap()->move();
+                        auto controller = vstd::cast<CPlayerController>(
+                                gui->getGame()->getMap()->getPlayer()->getController());
+                        controller->setTarget(actualCoords);
+
+                        if (!gui->getMap()->isMoving()) {
+                            //move this code
+                            while (gui->getGame()->getMap()->getPlayer()->getCoords()
+                                   != controller->getTarget()) {
+                                gui->getGame()->getMap()->move();
+                            }
                         }
+
                         return true;
                     }
                     return false;

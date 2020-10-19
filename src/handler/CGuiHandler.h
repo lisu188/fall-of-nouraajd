@@ -44,7 +44,7 @@ public:
 
     void showTooltip(std::string text, int x, int y);
 
-    std::shared_ptr<CGamePanel> flipPanel(std::string panel);
+    void flipPanel(std::string panel, std::string hotkey);
 
 private:
     std::weak_ptr<CGame> _game;

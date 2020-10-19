@@ -197,6 +197,19 @@ std::shared_ptr<CGameGraphicsObject> CGameGraphicsObject::findChild(std::string 
     return nullptr;
 }
 
+
+std::shared_ptr<CGameGraphicsObject> CGameGraphicsObject::findChild(std::shared_ptr<CGameGraphicsObject> toFind) {
+    for (auto child:getChildren()) {
+        if (auto found = child->findChild(toFind)) {
+            return found;
+        }
+        if (child == toFind) {
+            return child;
+        }
+    }
+    return nullptr;
+}
+
 std::shared_ptr<CScript> CGameGraphicsObject::getVisible() {
     return visible;
 }
