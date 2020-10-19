@@ -34,5 +34,7 @@ public:
     bool mouseEvent(std::shared_ptr<CGui> sharedPtr, SDL_EventType type, int button, int x, int y) override;
 
     void refreshViews();
+
+    void awaitClosing();
 };
 
