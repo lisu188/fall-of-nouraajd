@@ -92,6 +92,10 @@ configure_file(res/maps/siege/config.json maps/siege/config.json)
 configure_file(res/maps/siege/map.json maps/siege/map.json)
 configure_file(res/maps/siege/script.py maps/siege/script.py)
 
+configure_file(res/maps/test/config.json maps/test/config.json)
+configure_file(res/maps/test/map.json maps/test/map.json)
+configure_file(res/maps/test/script.py maps/test/script.py)
+
 configure_file(res/plugins/effect.py plugins/effect.py)
 configure_file(res/plugins/interaction.py plugins/interaction.py)
 configure_file(res/plugins/object.py plugins/object.py)

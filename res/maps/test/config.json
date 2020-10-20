@@ -1,0 +1,29 @@
+{
+  "exampleMarket": {
+    "class": "CMarket",
+    "properties": {
+      "items": [
+        {
+          "ref": "DaggerOfVileHeart"
+        },
+        {
+          "ref": "LesserLifePotion"
+        },
+        {
+          "ref": "LesserLifePotion"
+        },
+        {
+          "ref": "LesserLifePotion"
+        }
+      ]
+    }
+  },
+  "market1": {
+    "ref": "Market",
+    "properties": {
+      "market": {
+        "ref": "exampleMarket"
+      }
+    }
+  }
+}
