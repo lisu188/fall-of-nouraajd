@@ -39,9 +39,10 @@ void CGuiHandler::showMessage(std::string message) {
     panel->awaitClosing();
 }
 
-void CGuiHandler::showInfo(std::string message) {
+void CGuiHandler::showInfo(std::string message, bool centered) {
     std::shared_ptr<CGameTextPanel> panel = _game.lock()->createObject<CGameTextPanel>("infoPanel");
     panel->setText(message);
+    panel->setCentered(centered);
     _game.lock()->getGui()->pushChild(panel);
     panel->awaitClosing();
 }

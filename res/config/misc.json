@@ -22,5 +22,11 @@
         "j": "questPanel"
       }
     }
+  },
+  "signPost": {
+    "class": "SignPost",
+    "properties": {
+      "animation": "images/misc/signpost"
+    }
   }
 }
