@@ -187,11 +187,18 @@ std::shared_ptr<vstd::future<void, Coords> > CPlayerController::control(std::sha
 
 std::shared_ptr<vstd::future<Coords, void> > CPlayerController::getPathfinder(std::shared_ptr<CCreature> c) {
     auto self = this->ptr<CPlayerController>();
-    return c->getCoords().adjacentOrSame(target) ? vstd::later([self]() {
-        return self->target;
-    }) : CPathFinder::findNextStep(c->getCoords(), target, [c](Coords coords) {
-        return c->getMap()->canStep(coords);
-    });
+    if (!c->getMap()->canStep(self->target)) {
+        self->setTarget(c->getCoords());
+        return getPathfinder(c);
+    } else if (c->getCoords().adjacentOrSame(target)) {
+        return vstd::later([self]() {
+            return self->target;
+        });
+    } else {
+        return CPathFinder::findNextStep(c->getCoords(), target, [c](Coords coords) {
+            return c->getMap()->canStep(coords);
+        });
+    }
 }
 
 
