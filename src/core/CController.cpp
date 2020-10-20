@@ -176,14 +176,19 @@ std::shared_ptr<CInteraction> CMonsterFightController::selectInteraction(std::sh
 }
 
 std::shared_ptr<vstd::future<void, Coords> > CPlayerController::control(std::shared_ptr<CCreature> c) {
-    return getPathfinder(c)->thenLater([c](Coords coords) {
+    auto self = this->ptr<CPlayerController>();
+    return getPathfinder(c)->thenLater([self, c](Coords coords) {
         c->moveTo(coords);
+        if (coords == self->target) {
+            self->completed = true;
+        }
     });
 }
 
 std::shared_ptr<vstd::future<Coords, void> > CPlayerController::getPathfinder(std::shared_ptr<CCreature> c) {
-    return c->getCoords().adjacentOrSame(target) ? vstd::later([=]() {
-        return target;
+    auto self = this->ptr<CPlayerController>();
+    return c->getCoords().adjacentOrSame(target) ? vstd::later([self]() {
+        return self->target;
     }) : CPathFinder::findNextStep(c->getCoords(), target, [c](Coords coords) {
         return c->getMap()->canStep(coords);
     });
@@ -192,6 +197,7 @@ std::shared_ptr<vstd::future<Coords, void> > CPlayerController::getPathfinder(st
 
 void CPlayerController::setTarget(Coords coords) {
     target = coords;
+    completed = false;
 }
 
 bool CFightController::control(std::shared_ptr<CCreature> me, std::shared_ptr<CCreature> opponent) {
@@ -237,4 +243,8 @@ void CPlayerFightController::end(std::shared_ptr<CCreature> me, std::shared_ptr<
 
 Coords CPlayerController::getTarget() {
     return target;
+}
+
+bool CPlayerController::isCompleted() {
+    return completed;
 }
