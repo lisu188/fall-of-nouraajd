@@ -33,6 +33,7 @@ V_META(CMapObject, CGameObject,
        V_PROPERTY(CMapObject, int, posx, getPosX, setPosX),
        V_PROPERTY(CMapObject, int, posy, getPosY, setPosY),
        V_PROPERTY(CMapObject, int, posz, getPosZ, setPosZ),
+       V_PROPERTY(CMapObject, bool, canStep, getCanStep, setCanStep),
        V_PROPERTY(CMapObject, std::string, affiliation, getAffiliation, setAffiliation)
 )
 
@@ -78,10 +79,15 @@ public:
 
     bool isAffiliatedWith(std::shared_ptr<CMapObject> object);
 
+    bool getCanStep();
+
+    void setCanStep(bool step);
+
 private:
     int posx = 0;
     int posy = 0;
     int posz = 0;
+    bool canStep = true;
     std::string affiliation;
 };
 

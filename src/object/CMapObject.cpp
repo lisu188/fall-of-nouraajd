@@ -118,3 +118,11 @@ void CMapObject::setPosY(int posy) {
 void CMapObject::setPosZ(int posz) {
     this->posz = posz;
 }
+
+bool CMapObject::getCanStep() {
+    return canStep;
+}
+
+void CMapObject::setCanStep(bool step) {
+    canStep = step;
+}

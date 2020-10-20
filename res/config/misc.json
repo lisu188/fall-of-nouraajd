@@ -28,5 +28,12 @@
     "properties": {
       "animation": "images/misc/signpost"
     }
+  },
+  "brickWall": {
+    "class": "CMapObject",
+    "properties": {
+      "animation": "images/misc/wall",
+      "canStep": false
+    }
   }
 }

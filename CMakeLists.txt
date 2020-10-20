@@ -214,6 +214,7 @@ configure_file(res/images/misc/open_door.png images/misc/open_door.png COPYONLY)
 configure_file(res/images/misc/closed_door.png images/misc/closed_door.png COPYONLY)
 
 configure_file(res/images/misc/signpost.png images/misc/signpost.png COPYONLY)
+configure_file(res/images/misc/wall.png images/misc/wall.png COPYONLY)
 
 configure_file(res/fonts/ampersand.ttf fonts/ampersand.ttf COPYONLY)
 
