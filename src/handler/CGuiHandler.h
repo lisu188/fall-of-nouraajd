@@ -34,7 +34,7 @@ public:
 
     void showMessage(std::string message);
 
-    void showInfo(std::string message);
+    void showInfo(std::string message, bool centered = false);
 
     bool showDialog(std::string message);
 

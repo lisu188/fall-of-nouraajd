@@ -31,11 +31,16 @@ V_META(CGameTextPanel, CGamePanel,
 
 private:
     std::string text;
+    bool centered = false;
 public:
     ~CGameTextPanel();
 
     std::string getText();
 
     void setText(std::string ext);
+
+    bool getCentered();
+
+    void setCentered(bool ext);
 };
 

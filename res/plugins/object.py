@@ -39,6 +39,11 @@ def load(self, context):
             pass
 
     @register(context)
+    class SignPost(CBuilding):
+        def onEnter(self, event):
+            self.getMap().getGame().getGuiHandler().showInfo(self.getStringProperty('text'), True)
+
+    @register(context)
     class Cave(CBuilding):
         def onEnter(self, event):
             if not event.getCause().isPlayer():
