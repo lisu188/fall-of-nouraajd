@@ -129,6 +129,11 @@ std::shared_ptr<CTile> CMap::getTile(Coords coords) {
 bool CMap::canStep(int x, int y, int z) {
     Coords coords(x, y, z);
     auto it = this->tiles.find(coords);
+    for (auto object:getObjectsAtCoords(coords)) {
+        if (!object->getCanStep()) {
+            return false;
+        }
+    }
     if (it != this->tiles.end()) {
         return (*it).second->canStep();
     }
