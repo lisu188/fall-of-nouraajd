@@ -45,8 +45,7 @@ CMapGraphicsObject::getProxiedObjects(std::shared_ptr<CGui> gui, int x, int y) {
 
                         if (!gui->getMap()->isMoving()) {
                             //move this code
-                            while (gui->getGame()->getMap()->getPlayer()->getCoords()
-                                   != controller->getTarget()) {
+                            while (!controller->isCompleted()) {
                                 gui->getGame()->getMap()->move();
                             }
                         }

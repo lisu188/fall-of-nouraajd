@@ -265,7 +265,6 @@ void CMap::move() {
         map->signal("turnPassed");
     };
 
-    //TODO: return future and replace
     vstd::join(map->mapObjects |
                boost::adaptors::map_values |
                boost::adaptors::filtered(pred) |
