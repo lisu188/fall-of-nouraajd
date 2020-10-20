@@ -213,6 +213,8 @@ configure_file(res/images/skull.png images/skull.png COPYONLY)
 configure_file(res/images/misc/open_door.png images/misc/open_door.png COPYONLY)
 configure_file(res/images/misc/closed_door.png images/misc/closed_door.png COPYONLY)
 
+configure_file(res/images/misc/signpost.png images/misc/signpost.png COPYONLY)
+
 configure_file(res/fonts/ampersand.ttf fonts/ampersand.ttf COPYONLY)
 
 configure_file(res/game.py game.py)

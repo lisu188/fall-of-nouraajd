@@ -28,7 +28,11 @@ void CGameTextPanel::setText(std::string _text) {
 }
 
 void CGameTextPanel::renderObject(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> rect, int i) {
-    gui->getTextManager()->drawText(text, rect->x, rect->y, rect->w);
+    if (centered) {
+        gui->getTextManager()->drawTextCentered(text, rect->x, rect->y, rect->w, rect->h);
+    } else {
+        gui->getTextManager()->drawText(text, rect->x, rect->y, rect->w);
+    }
 }
 
 bool CGameTextPanel::keyboardEvent(std::shared_ptr<CGui> gui, SDL_EventType type, SDL_Keycode i) {
@@ -43,4 +47,12 @@ bool CGameTextPanel::keyboardEvent(std::shared_ptr<CGui> gui, SDL_EventType type
 
 CGameTextPanel::~CGameTextPanel() {
 
+}
+
+bool CGameTextPanel::getCentered() {
+    return centered;
+}
+
+void CGameTextPanel::setCentered(bool ext) {
+    centered = ext;
 }
