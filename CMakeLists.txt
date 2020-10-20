@@ -84,13 +84,9 @@ configure_file(res/config/tiles.json config/tiles.json)
 configure_file(res/config/weapons.json config/weapons.json)
 configure_file(res/config/graphics.json config/graphics.json)
 
-configure_file(res/maps/map1/config.json maps/map1/config.json)
-configure_file(res/maps/map1/map.json maps/map1/map.json)
-configure_file(res/maps/map1/script.py maps/map1/script.py)
-
-configure_file(res/maps/map2/config.json maps/map2/config.json)
-configure_file(res/maps/map2/map.json maps/map2/map.json)
-configure_file(res/maps/map2/script.py maps/map2/script.py)
+configure_file(res/maps/nouraajd/config.json maps/nouraajd/config.json)
+configure_file(res/maps/nouraajd/map.json maps/nouraajd/map.json)
+configure_file(res/maps/nouraajd/script.py maps/nouraajd/script.py)
 
 configure_file(res/maps/siege/config.json maps/siege/config.json)
 configure_file(res/maps/siege/map.json maps/siege/map.json)
