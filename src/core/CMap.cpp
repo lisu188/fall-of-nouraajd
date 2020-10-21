@@ -170,6 +170,9 @@ void CMap::addObject(std::shared_ptr<CMapObject> mapObject) {
 
 void CMap::removeObject(std::shared_ptr<CMapObject> mapObject) {
     mapObjects.erase(mapObjects.find(mapObject->getName()));
+    vstd::erase_if(mapObjectsCache, [mapObject](auto it) {
+        return it.second == mapObject->getName();
+    });
     getEventHandler()->gameEvent(mapObject, std::make_shared<CGameEvent>(CGameEvent::Type::onDestroy));
     signal("objectChanged", mapObject->getCoords());
 }
@@ -275,7 +278,6 @@ void CMap::move() {
             creature->getController()->afterControl(creature, coords);
             creature->moveTo(coords);
         }
-        map->resolveFights();
         map->moving = false;
         map->turn++;
         map->signal("turnPassed");
@@ -291,24 +293,6 @@ void CMap::move() {
         return !map->moving;
     });
 }
-
-void CMap::resolveFights() {
-    forObjects([this](std::shared_ptr<CMapObject> mapObject) {
-        auto action = [this, mapObject](std::shared_ptr<CMapObject> visitor) {
-            if (getObjectByName(mapObject->getName()) && getObjectByName(visitor->getName())) {
-                CFightHandler::fight(vstd::cast<CCreature>(mapObject), vstd::cast<CCreature>(visitor));
-            }
-        };
-        auto pred = [mapObject](std::shared_ptr<CMapObject> visitor) {
-            return vstd::cast<CCreature>(mapObject) && vstd::cast<CCreature>(visitor)
-                   && mapObject != visitor
-                   && mapObject->getCoords() == visitor->getCoords()
-                   && !mapObject->isAffiliatedWith(visitor);
-        };
-        forObjects(action, pred);
-    });
-}
-
 
 CMap::CMap() {
 
@@ -396,3 +380,12 @@ std::set<std::shared_ptr<CMapObject>> CMap::getObjectsAtCoords(Coords coords) {
     return ret;
 }
 
+void CMap::forObjectsAtCoords(Coords coords, std::function<void(std::shared_ptr<CMapObject>)> func,
+                              std::function<bool(std::shared_ptr<CMapObject>)> predicate) {
+    auto clone = getObjectsAtCoords(coords);
+    for (auto object:clone) {
+        if (predicate(object)) {
+            func(object);
+        }
+    }
+}

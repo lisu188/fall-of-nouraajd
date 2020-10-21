@@ -110,6 +110,10 @@ public:
                     std::function<bool(std::shared_ptr<CMapObject>)> predicate = [](
                             std::shared_ptr<CMapObject>) { return true; });
 
+    void forObjectsAtCoords(Coords coords, std::function<void(std::shared_ptr<CMapObject>)> func,
+                            std::function<bool(std::shared_ptr<CMapObject>)> predicate = [](
+                                    std::shared_ptr<CMapObject>) { return true; });
+
     void forTiles(std::function<void(std::shared_ptr<CTile>)> func,
                   std::function<bool(std::shared_ptr<CTile>)> predicate = [](std::shared_ptr<CTile>) { return true; });
 
@@ -144,8 +148,6 @@ public:
     void objectMoved(std::shared_ptr<CMapObject> object, Coords _old, Coords _new);
 
 private:
-    void resolveFights();
-
     std::unordered_map<std::string, std::shared_ptr<CMapObject>> mapObjects;
     //TODO: cleanup and after load initialization
     std::unordered_multimap<Coords, std::string> mapObjectsCache;
