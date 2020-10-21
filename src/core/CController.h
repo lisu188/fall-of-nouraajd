@@ -25,7 +25,11 @@ class CGameFightPanel;
 class CController : public CGameObject {
 V_META(CController, CGameObject, vstd::meta::empty())
 public:
-    virtual std::shared_ptr<vstd::future<void, Coords> > control(std::shared_ptr<CCreature> c);
+
+    virtual std::shared_ptr<vstd::future<Coords, void>> control(std::shared_ptr<CCreature> c);
+
+//TODO: get rid of, only used in player controller
+    virtual void afterControl(std::shared_ptr<CCreature> c, Coords coords);
 };
 
 class CPlayerController : public CController {
@@ -36,9 +40,11 @@ public:
 
     Coords getTarget();
 
-    virtual std::shared_ptr<vstd::future<void, Coords>> control(std::shared_ptr<CCreature> c);
+    virtual std::shared_ptr<vstd::future<Coords, void>> control(std::shared_ptr<CCreature> c);
 
     bool isCompleted();
+
+    void afterControl(std::shared_ptr<CCreature> c, Coords coords) override;
 
 private:
     std::shared_ptr<vstd::future<Coords, void>> getPathfinder(std::shared_ptr<CCreature> c);
@@ -61,7 +67,7 @@ public:
 class CMonsterFightController : public CFightController {
 V_META(CMonsterFightController, CFightController, vstd::meta::empty())
 public:
-    virtual bool control(std::shared_ptr<CCreature> me, std::shared_ptr<CCreature> opponent) override;
+    bool control(std::shared_ptr<CCreature> me, std::shared_ptr<CCreature> opponent) override;
 
 private:
     std::shared_ptr<CInteraction> selectInteraction(std::shared_ptr<CCreature> cr);
@@ -72,11 +78,11 @@ private:
 class CPlayerFightController : public CFightController {
 V_META(CPlayerFightController, CFightController, vstd::meta::empty())
 public:
-    virtual bool control(std::shared_ptr<CCreature> me, std::shared_ptr<CCreature> opponent) override;
+    bool control(std::shared_ptr<CCreature> me, std::shared_ptr<CCreature> opponent) override;
 
-    virtual void start(std::shared_ptr<CCreature> me, std::shared_ptr<CCreature> opponent) override;
+    void start(std::shared_ptr<CCreature> me, std::shared_ptr<CCreature> opponent) override;
 
-    virtual void end(std::shared_ptr<CCreature> me, std::shared_ptr<CCreature> opponent) override;
+    void end(std::shared_ptr<CCreature> me, std::shared_ptr<CCreature> opponent) override;
 
 private:
     std::shared_ptr<CGameFightPanel> fightPanel;
@@ -90,7 +96,7 @@ V_META(CTargetController, CController,
 public:
     CTargetController();
 
-    virtual std::shared_ptr<vstd::future<void, Coords> > control(std::shared_ptr<CCreature> creature) override;
+    std::shared_ptr<vstd::future<Coords, void>> control(std::shared_ptr<CCreature> creature) override;
 
     std::string getTarget();
 
@@ -103,14 +109,14 @@ private:
 class CRandomController : public CController {
 V_META(CRandomController, CController, vstd::meta::empty())
 public:
-    virtual std::shared_ptr<vstd::future<void, Coords> > control(std::shared_ptr<CCreature> creature);
+    std::shared_ptr<vstd::future<Coords, void>> control(std::shared_ptr<CCreature> creature) override;
 };
 
 class CGroundController : public CController {
 V_META(CGroundController, CController,
        V_PROPERTY(CGroundController, std::string, tileType, getTileType, setTileType))
 public:
-    virtual std::shared_ptr<vstd::future<void, Coords> > control(std::shared_ptr<CCreature> creature);
+    std::shared_ptr<vstd::future<Coords, void>> control(std::shared_ptr<CCreature> creature) override;
 
     std::string getTileType();
 
@@ -129,7 +135,7 @@ V_META(CRangeController, CController,
 public:
     CRangeController();
 
-    virtual std::shared_ptr<vstd::future<void, Coords> > control(std::shared_ptr<CCreature> creature);
+    std::shared_ptr<vstd::future<Coords, void>> control(std::shared_ptr<CCreature> creature) override;
 
     std::string getTarget();
 
