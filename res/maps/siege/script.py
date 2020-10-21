@@ -31,7 +31,7 @@ def load(self, context):
                         self.getMap().getPlayer().removeQuestItem(lambda it: it.hasTag('wand'))
                         self.setBoolProperty('destroyed', True)
                         self.setStringProperty("animation", "images/misc/closed_door")
-                        self.getMap().replaceTile('MountainTile', self.getCoords())
+                        self.setBoolProperty("canStep", False)
                 else:
                     self.getMap().getGame().getGuiHandler().showInfo("You need a wand to seal the gate!")
 

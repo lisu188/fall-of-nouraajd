@@ -259,11 +259,22 @@ void CMap::move() {
         return vstd::castable<Moveable>(object);
     };
 
-    auto controller = [map](std::shared_ptr<CMapObject> object) {
-        return vstd::cast<CCreature>(object)->getController()->control(vstd::cast<CCreature>(object));
+    std::shared_ptr<std::list<std::pair<std::shared_ptr<CCreature>, Coords >>> coordinates
+            = std::make_shared<std::list<std::pair<std::shared_ptr<CCreature>, Coords >>>();
+
+    auto controller = [map, coordinates](std::shared_ptr<CMapObject> object) {
+        auto creature = vstd::cast<CCreature>(object);
+        return creature->getController()->control(creature)
+                ->thenLater([creature, coordinates](Coords coords) {
+                    coordinates->push_back(std::make_pair(creature, coords));
+                });
     };
 
-    auto end_callback = [map](std::set<void *>) {
+    auto end_callback = [map, coordinates](std::set<void *>) {
+        for (auto[creature, coords]:*coordinates) {
+            creature->getController()->afterControl(creature, coords);
+            creature->moveTo(coords);
+        }
         map->resolveFights();
         map->moving = false;
         map->turn++;
