@@ -495,34 +495,54 @@ void CCreature::setGold(int value) {
 }
 
 void CCreature::beforeMove() {
-    auto pred = [this](std::shared_ptr<CMapObject> object) {
-        return vstd::cast<Visitable>(object) && this->getCoords() == object->getCoords();
+    auto self = this->ptr<CCreature>();
+
+    auto pred = [](std::shared_ptr<CMapObject> object) {
+        return vstd::cast<Visitable>(object) && true;
     };
 
-    auto func = [this](std::shared_ptr<CMapObject> object) {
-        this->getMap()->getEventHandler()->gameEvent(object,
+    auto func = [self](std::shared_ptr<CMapObject> object) {
+        self->getMap()->getEventHandler()->gameEvent(object,
                                                      std::make_shared<CGameEventCaused>(CGameEvent::Type::onLeave,
-                                                                                        this->ptr<CCreature>()));
+                                                                                        self));
     };
 
-    this->getMap()->forObjects(func, pred);
+    getMap()->forObjectsAtCoords(getCoords(), func, pred);
 }
 
 void CCreature::afterMove() {
-    auto pred = [this](std::shared_ptr<CMapObject> object) {
-        return vstd::cast<Visitable>(object) && this->getCoords() == object->getCoords();
-    };
-
-    auto func = [this](std::shared_ptr<CMapObject> object) {
-        getMap()->getEventHandler()->gameEvent(object, std::make_shared<CGameEventCaused>(CGameEvent::Type::onEnter,
-                                                                                          this->ptr<CCreature>()));
-    };
-
-    getMap()->forObjects(func, pred);
+    auto self = this->ptr<CCreature>();
 
     if (getMap()->getTile(this->getCoords())) {
         getMap()->getTile(this->getCoords())->onStep(this->ptr<CCreature>());
     }
+
+    auto fightPred = [self](std::shared_ptr<CMapObject> object) {
+        return vstd::cast<CCreature>(object) &&
+               self != object
+               && !self->isAffiliatedWith(object)
+               //TODO: better
+               && self->getMap()->getObjectByName(self->getName())
+               && object->getMap()->getObjectByName(object->getName());
+    };
+
+    auto fightAction = [self](auto object) {
+        CFightHandler::fight(self, vstd::cast<CCreature>(object));
+    };
+
+    getMap()->forObjectsAtCoords(this->getCoords(), fightAction, fightPred);
+
+    auto visitablePred = [](std::shared_ptr<CMapObject> object) {
+        return vstd::cast<Visitable>(object) && true;
+    };
+
+    auto eventAction = [self](auto object) {
+        self->getMap()->getEventHandler()->gameEvent(object,
+                                                     std::make_shared<CGameEventCaused>(CGameEvent::Type::onEnter,
+                                                                                        self));
+    };
+
+    getMap()->forObjectsAtCoords(this->getCoords(), eventAction, visitablePred);
 }
 
 void CCreature::addGold(int gold) {
