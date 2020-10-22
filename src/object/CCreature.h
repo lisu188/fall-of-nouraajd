@@ -44,6 +44,8 @@ class CFightController;
 typedef std::map<std::string, std::shared_ptr<CInteraction> > CInteractionMap;
 typedef std::map<std::string, std::shared_ptr<CItem> > CItemMap;
 
+
+
 class CCreature : public CMapObject, public Moveable {
 
 V_META(CCreature, CMapObject,

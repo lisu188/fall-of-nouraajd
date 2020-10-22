@@ -47,7 +47,6 @@ public:
     void afterControl(std::shared_ptr<CCreature> c, Coords coords) override;
 
 private:
-    std::shared_ptr<vstd::future<Coords, void>> getPathfinder(std::shared_ptr<CCreature> c);
 
     Coords target;
 
