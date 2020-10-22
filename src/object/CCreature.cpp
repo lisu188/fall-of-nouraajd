@@ -21,6 +21,10 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CController.h"
 #include "core/CMap.h"
 
+bool visitablePredicate(std::shared_ptr<CMapObject> object) {
+    return vstd::cast<Visitable>(object).operator bool();
+};
+
 void CCreature::setActions(std::set<std::shared_ptr<CInteraction>> value) {
     actions = value;
 }
@@ -497,17 +501,13 @@ void CCreature::setGold(int value) {
 void CCreature::beforeMove() {
     auto self = this->ptr<CCreature>();
 
-    auto pred = [](std::shared_ptr<CMapObject> object) {
-        return vstd::cast<Visitable>(object) && true;
-    };
-
     auto func = [self](std::shared_ptr<CMapObject> object) {
         self->getMap()->getEventHandler()->gameEvent(object,
                                                      std::make_shared<CGameEventCaused>(CGameEvent::Type::onLeave,
                                                                                         self));
     };
 
-    getMap()->forObjectsAtCoords(getCoords(), func, pred);
+    getMap()->forObjectsAtCoords(getCoords(), func, visitablePredicate);
 }
 
 void CCreature::afterMove() {
@@ -530,19 +530,14 @@ void CCreature::afterMove() {
         CFightHandler::fight(self, vstd::cast<CCreature>(object));
     };
 
-    getMap()->forObjectsAtCoords(this->getCoords(), fightAction, fightPred);
-
-    auto visitablePred = [](std::shared_ptr<CMapObject> object) {
-        return vstd::cast<Visitable>(object) && true;
-    };
-
     auto eventAction = [self](auto object) {
         self->getMap()->getEventHandler()->gameEvent(object,
                                                      std::make_shared<CGameEventCaused>(CGameEvent::Type::onEnter,
                                                                                         self));
     };
 
-    getMap()->forObjectsAtCoords(this->getCoords(), eventAction, visitablePred);
+    getMap()->forObjectsAtCoords(this->getCoords(), fightAction, fightPred);
+    getMap()->forObjectsAtCoords(this->getCoords(), eventAction, visitablePredicate);
 }
 
 void CCreature::addGold(int gold) {

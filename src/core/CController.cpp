@@ -172,24 +172,9 @@ std::shared_ptr<CInteraction> CMonsterFightController::selectInteraction(std::sh
 }
 
 std::shared_ptr<vstd::future<Coords, void>> CPlayerController::control(std::shared_ptr<CCreature> c) {
-    auto self = this->ptr<CPlayerController>();
-    return getPathfinder(c);
-}
-
-std::shared_ptr<vstd::future<Coords, void>> CPlayerController::getPathfinder(std::shared_ptr<CCreature> c) {
-    auto self = this->ptr<CPlayerController>();
-    if (!c->getMap()->canStep(self->target) && c->getCoords() != self->target) {
-        self->setTarget(c->getCoords());
-        return getPathfinder(c);
-    } else if (c->getCoords().adjacentOrSame(target)) {
-        return vstd::later([self]() {
-            return self->target;
-        });
-    } else {
-        return CPathFinder::findNextStep(c->getCoords(), target, [c](Coords coords) {
-            return c->getMap()->canStep(coords);
-        });
-    }
+    return CPathFinder::findNextStep(c->getCoords(), target, [c](Coords coords) {
+        return c->getMap()->canStep(coords);
+    });
 }
 
 
@@ -248,7 +233,7 @@ bool CPlayerController::isCompleted() {
 }
 
 void CPlayerController::afterControl(std::shared_ptr<CCreature> c, Coords coords) {
-    if (target == coords) {
+    if (target == coords || !c->getMap()->canStep(target)) {
         completed = true;
     }
 }

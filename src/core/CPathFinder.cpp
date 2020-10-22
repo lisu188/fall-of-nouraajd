@@ -27,7 +27,7 @@ static Coords getNextStep(const Coords &start, const Coords &goal, Values values
         if (vstd::ctn((*values), coords) &&
             ((*values)[coords] < (*values)[target] ||
              ((*values)[coords] == (*values)[target] &&
-                     coords.getDist(goal) < target.getDist(goal)))) {
+              coords.getDist(goal) < target.getDist(goal)))) {
             target = coords;
         }
     }
@@ -38,22 +38,25 @@ static Values fillValues(std::function<bool(const Coords &)> canStep,
                          const Coords &goal, const Coords &start) {
     Queue nodes([start](const Coords &a, const Coords &b) {
         double dista = (a.x - start.x) * (a.x - start.x) +
-                (a.y - start.y) * (a.y - start.y);
+                       (a.y - start.y) * (a.y - start.y);
         double distb = (b.x - start.x) * (b.x - start.x) +
-                (b.y - start.y) * (b.y - start.y);
+                       (b.y - start.y) * (b.y - start.y);
         return dista > distb;
     });
     std::unordered_set<Coords> marked;
     Values values = std::make_shared<std::unordered_map<Coords, int>>();
-    nodes.push(goal);
-    (*values)[goal] = 0;
+
+    if (canStep(goal)) {
+        nodes.push(goal);
+        (*values)[goal] = 0;
+    }
 
     while (!nodes.empty() && !vstd::ctn(marked, start)) {
         Coords currentCoords = vstd::pop_p(nodes);
         if (marked.insert(currentCoords).second) {
             int curValue = (*values)[currentCoords];
             for (Coords tmpCoords:NEAR_COORDS (currentCoords)) {
-                if (canStep(tmpCoords)) {
+                if (tmpCoords == start || canStep(tmpCoords)) {
                     auto it = values->find(tmpCoords);
                     if (it == values->end() || it->second > curValue + 1) {
                         (*values)[tmpCoords] = curValue + 1;

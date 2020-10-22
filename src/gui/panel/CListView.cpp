@@ -71,6 +71,7 @@ int CListView::getLeftArrowIndex(std::shared_ptr<CGui> gui) {
     return getSizeX(gui) * (getSizeY(gui) - 1);
 }
 
+//TODO: maybe return collection pointer to avoid copying
 std::unordered_multimap<int, std::shared_ptr<CGameObject>> CListView::calculateIndices(std::shared_ptr<CGui> gui) {
     if (grouping) {
         collection_pointer collection = invokeCollection(gui);
@@ -111,7 +112,7 @@ CListView::calculateIndexPosition(std::shared_ptr<CGui> gui, std::shared_ptr<SDL
 }
 
 bool CListView::isOversized(std::shared_ptr<CGui> gui) {
-    return allowOversize && (*invokeCollection(gui)).size() > ((unsigned) getSizeX(gui) * (unsigned) getSizeY(gui));
+    return allowOversize && (calculateIndices(gui)).size() > ((unsigned) getSizeX(gui) * (unsigned) getSizeY(gui));
 }
 
 //TODO: sizes should be calculated dynamically based on preferences
