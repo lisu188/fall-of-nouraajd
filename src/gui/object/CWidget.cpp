@@ -60,16 +60,12 @@ CWidget::CWidget() {
 
 }
 
-void CTextWidget::setText(std::string _text) {
-    text = _text;
-}
-
-std::string CTextWidget::getText() {
-    return text;
-}
-
 void CTextWidget::renderObject(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> rect, int frameTime) {
-    gui->getTextManager()->drawTextCentered(vstd::str(text), rect);
+    if (centered) {
+        gui->getTextManager()->drawTextCentered(text, rect->x, rect->y, rect->w, rect->h);
+    } else {
+        gui->getTextManager()->drawText(text, rect->x, rect->y, rect->w);
+    }
 }
 
 CButton::CButton() {
@@ -86,4 +82,20 @@ bool CButton::mouseEvent(std::shared_ptr<CGui> sharedPtr, SDL_EventType type, in
         setModal(false);
     }
     return CTextWidget::mouseEvent(sharedPtr, type, button, x, y);
+}
+
+bool CTextWidget::getCentered() const {
+    return centered;
+}
+
+void CTextWidget::setCentered(bool centered) {
+    CTextWidget::centered = centered;
+}
+
+const std::string &CTextWidget::getText() const {
+    return text;
+}
+
+void CTextWidget::setText(const std::string &text) {
+    CTextWidget::text = text;
 }

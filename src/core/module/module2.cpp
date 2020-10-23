@@ -15,8 +15,10 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
+
 #include "core/CGame.h"
 #include "core/CWrapper.h"
+#include "object/CDialog.h"
 
 using namespace boost::python;
 
@@ -72,4 +74,9 @@ void initModule2() {
             .def("isCompleted", &CWrapper<CQuest>::isCompleted)
             .def("onComplete", &CWrapper<CQuest>::onComplete);
 
+    class_<CDialog, bases<CGameObject>, boost::noncopyable, std::shared_ptr<CDialog>>("CDialog", no_init);
+    class_<CDialogOption, bases<CGameObject>, boost::noncopyable, std::shared_ptr<CDialogOption>>("CDialogOption",
+                                                                                                  no_init);
+    class_<CDialogState, bases<CGameObject>, boost::noncopyable, std::shared_ptr<CDialogState>>("CDialogState",
+                                                                                                no_init);
 }

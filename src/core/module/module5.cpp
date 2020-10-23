@@ -23,6 +23,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "gui/panel/CGameQuestionPanel.h"
 #include "gui/panel/CGameQuestPanel.h"
 #include "gui/panel/CGameTextPanel.h"
+#include "gui/panel/CGameDialogPanel.h"
 #include "gui/panel/CListView.h"
 
 using namespace boost::python;
@@ -45,6 +46,10 @@ void initModule5() {
 
     class_<CGameQuestionPanel, bases<CGamePanel>, boost::noncopyable, std::shared_ptr<CGameQuestionPanel>>(
             "CGameQuestionPanel",
+            no_init);
+
+    class_<CGameDialogPanel, bases<CGamePanel>, boost::noncopyable, std::shared_ptr<CGameDialogPanel>>(
+            "CGameDialogPanel",
             no_init);
 
     class_<CGameInventoryPanel, bases<CGamePanel>, boost::noncopyable, std::shared_ptr<CGameInventoryPanel>>(

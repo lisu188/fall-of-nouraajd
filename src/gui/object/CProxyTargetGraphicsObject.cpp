@@ -53,14 +53,6 @@ void CProxyTargetGraphicsObject::refresh() {
     });
 }
 
-int CProxyTargetGraphicsObject::getTileSize(
-        std::shared_ptr<CGameGraphicsObject> object) {
-    if (object->hasProperty("tileSize")) {
-        return object->getNumericProperty("tileSize");
-    }
-    return getTileSize(object->getParent());
-}
-
 void CProxyTargetGraphicsObject::refreshAll() {
     for (auto object:proxyObjects) {
         object->refresh();

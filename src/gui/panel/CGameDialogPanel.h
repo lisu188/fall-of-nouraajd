@@ -1,6 +1,6 @@
 /*
 fall-of-nouraajd c++ dark fantasy game
-Copyright (C) 2019  Andrzej Lis
+Copyright (C) 2020  Andrzej Lis
 
 This program is free software: you can redistribute it and/or modify
         it under the terms of the GNU General Public License as published by
@@ -19,29 +19,19 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "CGamePanel.h"
 
+class CDialog;
 
-//TODO: unify with CTextWidget
-class CGameTextPanel : public CGamePanel {
-V_META(CGameTextPanel, CGamePanel,
-       V_PROPERTY(CGameTextPanel, std::string, text, getText, setText))
-
-    void renderObject(std::shared_ptr<CGui> shared_ptr, std::shared_ptr<SDL_Rect> rect, int i) override;
-
-    bool keyboardEvent(std::shared_ptr<CGui> sharedPtr, SDL_EventType type, SDL_Keycode i) override;
-
-
-private:
-    std::string text;
-    bool centered = false;
+class CGameDialogPanel : public CGamePanel {
+V_META(CGameDialogPanel, CGamePanel,
+       V_PROPERTY(CGameDialogPanel, std::shared_ptr<CDialog>, dialog, getDialog, setDialog))
 public:
-    ~CGameTextPanel();
+    const std::shared_ptr<CDialog> &getDialog() const;
 
-    std::string getText();
+    void setDialog(const std::shared_ptr<CDialog> &dialog);
 
-    void setText(std::string ext);
-
-    bool getCentered();
-
-    void setCentered(bool ext);
+    void reload();
+private:
+    std::shared_ptr<CDialog> dialog;
+    int currentState = 0;
 };
 

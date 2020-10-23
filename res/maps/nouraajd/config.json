@@ -110,5 +110,51 @@
         }
       }
     }
+  },
+  "doorDialog": {
+    "class": "CDialog",
+    "properties": {
+      "states": [
+        {
+          "class": "CDialogState",
+          "properties": {
+            "number": 0,
+            "text": "Welcome to Nouraajd!",
+            "options": [
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 0,
+                  "next": 1,
+                  "text": "Hello!"
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 1,
+                  "next": 2,
+                  "text": "Fuck You!"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "class": "CDialogState",
+          "properties": {
+            "number": 1,
+            "text": "Nice to meet You!"
+          }
+        },
+        {
+          "class": "CDialogState",
+          "properties": {
+            "number": 2,
+            "text": "Fuck You too!"
+          }
+        }
+      ]
+    }
   }
 }

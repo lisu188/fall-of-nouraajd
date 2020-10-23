@@ -26,7 +26,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CList.h"
 #include "gui/CTooltip.h"
 #include "CGuiHandler.h"
-
+#include "object/CMarket.h"
+#include "object/CDialog.h"
+#include "gui/panel/CGameDialogPanel.h"
 
 CGuiHandler::CGuiHandler() {
 
@@ -47,7 +49,7 @@ void CGuiHandler::showInfo(std::string message, bool centered) {
     panel->awaitClosing();
 }
 
-bool CGuiHandler::showDialog(std::string question) {
+bool CGuiHandler::showQuestion(std::string question) {
     std::shared_ptr<CGameQuestionPanel> panel = _game.lock()->createObject<CGameQuestionPanel>("questionPanel");
     panel->setQuestion(question);
     _game.lock()->getGui()->pushChild(panel);
@@ -57,6 +59,14 @@ bool CGuiHandler::showDialog(std::string question) {
 void CGuiHandler::showTrade(std::shared_ptr<CMarket> market) {
     std::shared_ptr<CGameTradePanel> panel = _game.lock()->createObject<CGameTradePanel>("tradePanel");
     panel->setMarket(market);
+    _game.lock()->getGui()->pushChild(panel);
+    panel->awaitClosing();
+}
+
+void CGuiHandler::showDialog(std::shared_ptr<CDialog> dialog) {
+    std::shared_ptr<CGameDialogPanel> panel = _game.lock()->createObject<CGameDialogPanel>("dialogPanel");
+    panel->setDialog(dialog);
+    panel->reload();
     _game.lock()->getGui()->pushChild(panel);
     panel->awaitClosing();
 }
@@ -73,9 +83,9 @@ std::string CGuiHandler::showSelection(std::shared_ptr<CListString> list) {
 
     std::set<std::shared_ptr<CGameGraphicsObject>> widgets;
     int i = 0;
+    //TODO: unify with CGameDialogPanel
     for (auto item : list->getValues()) {
         std::string clickName = vstd::str("click") + vstd::str(i);
-        std::string renderName = vstd::str("render") + vstd::str(i);
 
         panel->meta()->set_method<CGameGraphicsObject, void, std::shared_ptr<CGui>>(clickName, panel,
                                                                                     [item, &selected](

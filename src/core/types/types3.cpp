@@ -15,13 +15,14 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-#include "core/CGame.h"
+
 #include "gui/panel/CGameQuestPanel.h"
 #include "core/CTypes.h"
 #include "core/CWrapper.h"
 #include "core/CController.h"
 #include "gui/CTextureCache.h"
 #include "gui/CTextManager.h"
+#include "object/CDialog.h"
 
 extern void add_member(std::shared_ptr<json> object, std::string key, std::string value);
 
@@ -50,6 +51,12 @@ namespace {
                 }
 
                 CTypes::register_type<CMarket, CGameObject>();
+                CTypes::register_type<CDialog, CGameObject>();
+                {
+                    CTypes::register_type<CWrapper<CDialog>, CDialog, CGameObject>();
+                }
+                CTypes::register_type<CDialogOption, CGameObject>();
+                CTypes::register_type<CDialogState, CGameObject>();
 
                 CTypes::register_type<CTrigger, CGameObject>();
                 {

@@ -26,7 +26,7 @@ def load(self, context):
         def onEnter(self, event):
             if event.getCause().isPlayer():
                 if self.getMap().getPlayer().hasItem(lambda it: it.hasTag('wand')):
-                    if self.getMap().getGame().getGuiHandler().showDialog(
+                    if self.getMap().getGame().getGuiHandler().showQuestion(
                             "Do You want to seal the gate?"):
                         self.getMap().getPlayer().removeQuestItem(lambda it: it.hasTag('wand'))
                         self.setBoolProperty('destroyed', True)
@@ -39,10 +39,10 @@ def load(self, context):
     class TurnTrigger(CTrigger):
         def trigger(self, object, event):
             if randint(1, 25) == 25:
-                logger("Spawning gate")
                 event.cont = True
 
                 def enableSpawn(spawnObject):
+                    logger("Spawning gate")
                     spawnObject.getMap().replaceTile('SwampTile', spawnObject.getCoords())
                     spawnObject.setBoolProperty('enabled', True)
                     # TODO: autoexport set get property

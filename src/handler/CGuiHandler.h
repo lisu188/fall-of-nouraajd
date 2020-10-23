@@ -17,12 +17,16 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #pragma once
 
-#include "object/CMarket.h"
+
 #include "object/CGameObject.h"
 
 class CListString;
 
 class CGamePanel;
+
+class CDialog;
+
+class CMarket;
 
 class CGuiHandler : public CGameObject {
 V_META(CGuiHandler, CGameObject, vstd::meta::empty())
@@ -36,9 +40,11 @@ public:
 
     void showInfo(std::string message, bool centered = false);
 
-    bool showDialog(std::string message);
+    bool showQuestion(std::string message);
 
     void showTrade(std::shared_ptr<CMarket> market);
+
+    void showDialog(std::shared_ptr<CDialog> dialog);
 
     std::string showSelection(std::shared_ptr<CListString> list);
 

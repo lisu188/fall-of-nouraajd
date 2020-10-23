@@ -249,3 +249,10 @@ bool reverse_priority_comparator::operator()(std::shared_ptr<CGameGraphicsObject
                                              std::shared_ptr<CGameGraphicsObject> b) const {
     return priority_comparator()(b, a);
 }
+int CGameGraphicsObject::getTileSize(
+        std::shared_ptr<CGameGraphicsObject> object) {
+    if (object->hasProperty("tileSize")) {
+        return object->getNumericProperty("tileSize");
+    }
+    return getTileSize(object->getParent());
+}
