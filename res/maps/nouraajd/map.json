@@ -40700,7 +40700,7 @@
             "animation": "string"
           },
           "rotation": 0,
-          "type": "CMapObject",
+          "type": "CBuilding",
           "visible": true,
           "width": 32,
           "x": 1408,

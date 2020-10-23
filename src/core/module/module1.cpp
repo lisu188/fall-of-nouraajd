@@ -116,6 +116,7 @@ void initModule1() {
             .def("showMessage", &CGuiHandler::showMessage)
             .def("showTrade", &CGuiHandler::showTrade)
             .def("showDialog", &CGuiHandler::showDialog)
+            .def("showQuestion", &CGuiHandler::showQuestion)
             .def("showSelection", &CGuiHandler::showSelection)
             .def("showInfo", &CGuiHandler::showInfo);
 

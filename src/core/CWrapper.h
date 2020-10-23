@@ -1,6 +1,6 @@
 /*
 fall-of-nouraajd c++ dark fantasy game
-Copyright (C) 2019  Andrzej Lis
+Copyright (C) 2020  Andrzej Lis
 
 This program is free software: you can redistribute it and/or modify
         it under the terms of the GNU General Public License as published by
@@ -20,6 +20,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CGlobal.h"
 #include "core/CPlugin.h"
 #include "object/CObject.h"
+#include "object/CDialog.h"
 
 template<class T>
 class CWrapper : public T, public boost::python::wrapper<CWrapper<T>> {
@@ -175,3 +176,7 @@ public:
     }
 };
 
+template<>
+class CWrapper<CDialog> : public CDialog, public boost::python::wrapper<CWrapper<CDialog>> {
+V_META(CWrapper<T>, CDialog, vstd::meta::empty())
+};
