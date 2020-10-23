@@ -48,18 +48,27 @@ public:
     void setRender(std::string draw);
 };
 
+//TODO: unify with CGameTextPanel
 class CTextWidget : public CWidget {
 V_META(CTextWidget, CWidget,
-       V_PROPERTY(CTextWidget, std::string, text, getText, setText))
+       V_PROPERTY(CTextWidget, std::string, text, getText, setText),
+       V_PROPERTY(CTextWidget, bool, centered, getCentered, setCentered))
 public:
     void renderObject(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> rect, int frameTime) override;
 
-    std::string getText();
+    bool getCentered() const;
 
-    void setText(std::string _text);
+    void setCentered(bool centered);
+
+    const std::string &getText() const;
+
+    void setText(const std::string &text);
 
 private:
+    bool centered = true;
     std::string text;
+
+
 };
 
 class CButton : public CTextWidget {

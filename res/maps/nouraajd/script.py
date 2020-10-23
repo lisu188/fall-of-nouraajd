@@ -57,3 +57,9 @@ def load(self, context):
         def trigger(self, object, event):
             if event.getCause().isPlayer():
                 object.getGame().getGuiHandler().showTrade(object.getObjectProperty('market'))
+
+    @trigger(context, "onEnter", "nouraajdDoor")
+    class NouraajdDoorTrigger(CTrigger):
+        def trigger(self, object, event):
+            if event.getCause().isPlayer():
+                object.getGame().getGuiHandler().showDialog(object.getGame().createObject('doorDialog'))

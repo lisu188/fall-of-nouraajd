@@ -127,6 +127,8 @@ public:
 
     void setBackground(std::string _background);
 
+    int getTileSize(std::shared_ptr<CGameGraphicsObject> object);
+
 private:
     virtual void render(std::shared_ptr<CGui> reneder, int frameTime);
 

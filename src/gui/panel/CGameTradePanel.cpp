@@ -66,7 +66,7 @@ CGameTradePanel::CGameTradePanel() {
 }
 
 void CGameTradePanel::finalizeSell(std::shared_ptr<CGui> gui) {
-    if (!selectedInventory.empty() && gui->getGame()->getGuiHandler()->showDialog(
+    if (!selectedInventory.empty() && gui->getGame()->getGuiHandler()->showQuestion(
             "Do You want to sell these items: " + vstd::join(getItemNames(selectedInventory), ", "))) {
         for (auto item:selectedInventory) {
             market->buyItem(gui->getGame()->getMap()->getPlayer(), item.lock());
@@ -80,7 +80,7 @@ void CGameTradePanel::finalizeBuy(std::shared_ptr<CGui> gui) {
         gui->getGame()->getGuiHandler()->showInfo("You cannot afford all selected items!");
     } else {
         if (!selectedMarket.empty() &&
-            gui->getGame()->getGuiHandler()->showDialog("Do You want to buy these items: " + vstd::join(
+            gui->getGame()->getGuiHandler()->showQuestion("Do You want to buy these items: " + vstd::join(
                     getItemNames(selectedMarket), ", "))) {
             for (auto item:selectedMarket) {
                 market->sellItem(gui->getGame()->getMap()->getPlayer(), item.lock());

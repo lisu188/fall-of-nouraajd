@@ -547,5 +547,17 @@
         }
       }
     }
+  },
+  "dialogPanel": {
+    "class": "CGameDialogPanel",
+    "properties": {
+      "layout": {
+        "class": "CCenteredLayout",
+        "properties": {
+          "h": "600",
+          "w": "800"
+        }
+      }
+    }
   }
 }

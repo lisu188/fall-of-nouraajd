@@ -20,6 +20,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "CGamePanel.h"
 
 
+//TODO: unify with CTextWidget
 class CGameTextPanel : public CGamePanel {
 V_META(CGameTextPanel, CGamePanel,
        V_PROPERTY(CGameTextPanel, std::string, text, getText, setText))
