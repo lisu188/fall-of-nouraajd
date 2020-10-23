@@ -16,7 +16,7 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #include "gui/CLayout.h"
-#include "gui/panel/CGameDialogPanel.h"
+#include "gui/panel/CGameQuestionPanel.h"
 #include "gui/panel/CGameTradePanel.h"
 #include "core/CGame.h"
 #include "gui/panel/CGameTextPanel.h"
@@ -48,7 +48,7 @@ void CGuiHandler::showInfo(std::string message, bool centered) {
 }
 
 bool CGuiHandler::showDialog(std::string question) {
-    std::shared_ptr<CGameDialogPanel> panel = _game.lock()->createObject<CGameDialogPanel>("dialogPanel");
+    std::shared_ptr<CGameQuestionPanel> panel = _game.lock()->createObject<CGameQuestionPanel>("questionPanel");
     panel->setQuestion(question);
     _game.lock()->getGui()->pushChild(panel);
     return panel->awaitAnswer();

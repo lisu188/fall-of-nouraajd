@@ -20,12 +20,12 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "CGamePanel.h"
 
 
-class CGameDialogPanel : public CGamePanel {
-V_META(CGameDialogPanel, CGamePanel,
-       V_PROPERTY(CGameDialogPanel, std::string, question, getQuestion, setQuestion),
-       V_METHOD(CGameDialogPanel, renderQuestion, void, std::shared_ptr<CGui>, std::shared_ptr<SDL_Rect>, int),
-       V_METHOD(CGameDialogPanel, clickNo, void, std::shared_ptr<CGui>),
-       V_METHOD(CGameDialogPanel, clickYes, void, std::shared_ptr<CGui>))
+class CGameQuestionPanel : public CGamePanel {
+V_META(CGameQuestionPanel, CGamePanel,
+       V_PROPERTY(CGameQuestionPanel, std::string, question, getQuestion, setQuestion),
+       V_METHOD(CGameQuestionPanel, renderQuestion, void, std::shared_ptr<CGui>, std::shared_ptr<SDL_Rect>, int),
+       V_METHOD(CGameQuestionPanel, clickNo, void, std::shared_ptr<CGui>),
+       V_METHOD(CGameQuestionPanel, clickYes, void, std::shared_ptr<CGui>))
 
 
 public:
