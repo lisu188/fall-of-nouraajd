@@ -15,37 +15,37 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-#include "CGameDialogPanel.h"
+#include "CGameQuestionPanel.h"
 #include "gui/CGui.h"
 #include "core/CMap.h"
 #include "gui/CTextManager.h"
 
 
-std::string CGameDialogPanel::getQuestion() {
+std::string CGameQuestionPanel::getQuestion() {
     return question;
 }
 
-void CGameDialogPanel::setQuestion(std::string question) {
+void CGameQuestionPanel::setQuestion(std::string question) {
     this->question = question;
 }
 
-bool CGameDialogPanel::awaitAnswer() {
+bool CGameQuestionPanel::awaitAnswer() {
     vstd::wait_until([this]() {
         return selection != nullptr;
     });
     return *selection;
 }
 
-void CGameDialogPanel::clickNo(std::shared_ptr<CGui> gui) {
+void CGameQuestionPanel::clickNo(std::shared_ptr<CGui> gui) {
     selection = std::make_shared<bool>(false);
-    gui->removeChild(this->ptr<CGameDialogPanel>());
+    gui->removeChild(this->ptr<CGameQuestionPanel>());
 }
 
-void CGameDialogPanel::clickYes(std::shared_ptr<CGui> gui) {
+void CGameQuestionPanel::clickYes(std::shared_ptr<CGui> gui) {
     selection = std::make_shared<bool>(true);
-    gui->removeChild(this->ptr<CGameDialogPanel>());
+    gui->removeChild(this->ptr<CGameQuestionPanel>());
 }
 
-void CGameDialogPanel::renderQuestion(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> pRect, int i) {
+void CGameQuestionPanel::renderQuestion(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> pRect, int i) {
     gui->getTextManager()->drawTextCentered(question, pRect);
 }
