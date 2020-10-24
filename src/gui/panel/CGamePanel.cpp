@@ -49,3 +49,7 @@ void CGamePanel::awaitClosing() {
         return !self->getGui() || self->getGui()->findChild(self) == nullptr;
     });
 }
+
+void CGamePanel::close() {
+    getGui()->removeChild(this->ptr<CGamePanel>());
+}

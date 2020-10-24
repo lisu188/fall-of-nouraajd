@@ -219,7 +219,7 @@ bool CPlayerFightController::control(std::shared_ptr<CCreature> me, std::shared_
 
 void CPlayerFightController::end(std::shared_ptr<CCreature> me, std::shared_ptr<CCreature> opponent) {
     vstd::if_not_null(me->getMap()->getGame()->getGui(), [&](auto gui) {
-        me->getMap()->getGame()->getGui()->removeChild(fightPanel);
+        fightPanel->close();
         fightPanel = nullptr;
     });
 }
