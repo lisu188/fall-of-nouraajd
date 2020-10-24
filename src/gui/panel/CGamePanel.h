@@ -36,5 +36,7 @@ public:
     void refreshViews();
 
     void awaitClosing();
+
+    void close();
 };
 

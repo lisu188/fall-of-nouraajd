@@ -38,12 +38,12 @@ bool CGameQuestionPanel::awaitAnswer() {
 
 void CGameQuestionPanel::clickNo(std::shared_ptr<CGui> gui) {
     selection = std::make_shared<bool>(false);
-    gui->removeChild(this->ptr<CGameQuestionPanel>());
+    close();
 }
 
 void CGameQuestionPanel::clickYes(std::shared_ptr<CGui> gui) {
     selection = std::make_shared<bool>(true);
-    gui->removeChild(this->ptr<CGameQuestionPanel>());
+    close();
 }
 
 void CGameQuestionPanel::renderQuestion(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> pRect, int i) {
