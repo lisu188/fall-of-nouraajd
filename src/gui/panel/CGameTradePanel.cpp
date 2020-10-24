@@ -54,7 +54,7 @@ bool CGameTradePanel::keyboardEvent(std::shared_ptr<CGui> gui, SDL_EventType typ
     if (type == SDL_KEYDOWN) {
         //TODO: get rid of this
         if (i == SDLK_SPACE) {
-            gui->removeChild(this->ptr<CGameTradePanel>());
+            close();
         }
     }
     return true;

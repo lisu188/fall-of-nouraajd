@@ -76,7 +76,7 @@ CGuiHandler::CGuiHandler(std::shared_ptr<CGame> game) : _game(game) {
 }
 
 std::string CGuiHandler::showSelection(std::shared_ptr<CListString> list) {
-    std::shared_ptr<CGameGraphicsObject> panel = _game.lock()->createObject<CGameGraphicsObject>("selectionPanel");
+    std::shared_ptr<CGamePanel> panel = _game.lock()->createObject<CGamePanel>("selectionPanel");
     vstd::cast<CCenteredLayout>(panel->getLayout())->setH(vstd::str(75 * list->getValues().size()));
 
     std::shared_ptr<std::string> selected;
@@ -119,7 +119,7 @@ std::string CGuiHandler::showSelection(std::shared_ptr<CListString> list) {
         return selected != nullptr;
     });
 
-    _game.lock()->getGui()->removeChild(panel);
+    panel->close();
 
     return *selected;
 }
@@ -151,8 +151,8 @@ void CGuiHandler::showTooltip(std::string text, int x,
 void CGuiHandler::flipPanel(std::string panel, std::string hotkey) {
     std::shared_ptr<CGame> game = _game.lock();
     auto panelClas = game->getObjectHandler()->getClass(panel);
-    if (auto currentPanel = game->getGui()->findChild(panelClas)) {
-        game->getGui()->removeChild(currentPanel);
+    if (auto currentPanel = vstd::cast<CGamePanel>(game->getGui()->findChild(panelClas))) {
+        currentPanel->close();
     } else {
         std::shared_ptr<CGamePanel> child = game->createObject<CGamePanel>(panel);
         game->getGui()->pushChild(child);
