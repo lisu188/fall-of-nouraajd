@@ -111,6 +111,14 @@
       }
     }
   },
+  "exitOption": {
+    "class": "CDialogOption",
+    "properties": {
+      "number": 0,
+      "nextStateId": "EXIT",
+      "text": "Leave"
+    }
+  },
   "doorDialog": {
     "class": "CDialog",
     "properties": {
@@ -118,14 +126,14 @@
         {
           "class": "CDialogState",
           "properties": {
-            "number": 0,
+            "stateId": "ENTRY",
             "text": "Welcome to Nouraajd!",
             "options": [
               {
                 "class": "CDialogOption",
                 "properties": {
                   "number": 0,
-                  "next": 1,
+                  "nextStateId": "NICE_ANSWER",
                   "text": "Hello!"
                 }
               },
@@ -133,7 +141,7 @@
                 "class": "CDialogOption",
                 "properties": {
                   "number": 1,
-                  "next": 2,
+                  "nextStateId": "RUDE_ANSWER",
                   "text": "Fuck You!"
                 }
               }
@@ -143,15 +151,25 @@
         {
           "class": "CDialogState",
           "properties": {
-            "number": 1,
-            "text": "Nice to meet You!"
+            "stateId": "NICE_ANSWER",
+            "text": "Nice to meet You!",
+            "options": [
+              {
+                "ref": "exitOption"
+              }
+            ]
           }
         },
         {
           "class": "CDialogState",
           "properties": {
-            "number": 2,
-            "text": "Fuck You too!"
+            "stateId": "RUDE_ANSWER",
+            "text": "Fuck You too!",
+            "options": [
+              {
+                "ref": "exitOption"
+              }
+            ]
           }
         }
       ]

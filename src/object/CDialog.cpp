@@ -25,17 +25,8 @@ void CDialog::setStates(const std::set<std::shared_ptr<CDialogState>> &states) {
     CDialog::states = states;
 }
 
-std::shared_ptr<CDialogState> CDialog::getState(int state) {
-    return vstd::find_if(states, [state](auto _state) { return _state->getNumber() == state; });
-}
-
-
-int CDialogState::getNumber() const {
-    return number;
-}
-
-void CDialogState::setNumber(int number) {
-    CDialogState::number = number;
+std::shared_ptr<CDialogState> CDialog::getState(std::string stateId) {
+    return vstd::find_if(states, [stateId](auto _state) { return _state->getStateId() == stateId; });
 }
 
 const std::string &CDialogState::getText() const {
@@ -62,14 +53,6 @@ void CDialogOption::setNumber(int number) {
     CDialogOption::number = number;
 }
 
-int CDialogOption::getNext() const {
-    return next;
-}
-
-void CDialogOption::setNext(int next) {
-    CDialogOption::next = next;
-}
-
 const std::string &CDialogOption::getText() const {
     return text;
 }
@@ -84,4 +67,20 @@ const std::string &CDialogOption::getAction() const {
 
 void CDialogOption::setAction(const std::string &action) {
     CDialogOption::action = action;
+}
+
+const std::string &CDialogState::getStateId() const {
+    return stateId;
+}
+
+void CDialogState::setStateId(const std::string &stateId) {
+    CDialogState::stateId = stateId;
+}
+
+const std::string &CDialogOption::getNextStateId() const {
+    return nextStateId;
+}
+
+void CDialogOption::setNextStateId(const std::string &nextStateId) {
+    CDialogOption::nextStateId = nextStateId;
 }

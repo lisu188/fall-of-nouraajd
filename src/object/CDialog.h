@@ -23,7 +23,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 class CDialogOption : public CGameObject {
 V_META(CDialogOption, CGameObject,
        V_PROPERTY(CDialogOption, int, number, getNumber, setNumber),
-       V_PROPERTY(CDialogOption, int, next, getNext, setNext),
+       V_PROPERTY(CDialogOption, std::string, nextStateId, getNextStateId, setNextStateId),
        V_PROPERTY(CDialogOption, std::string, text, getText, setText),
        V_PROPERTY(CDialogOption, std::string, action, getAction, setAction))
 
@@ -32,9 +32,6 @@ public:
 
     void setNumber(int number);
 
-    int getNext() const;
-
-    void setNext(int next);
 
     const std::string &getText() const;
 
@@ -45,7 +42,13 @@ public:
     void setAction(const std::string &action);
 
 private:
-    int next;
+    std::string nextStateId;
+public:
+    const std::string &getNextStateId() const;
+
+    void setNextStateId(const std::string &nextStateId);
+
+private:
     int number;
 
     std::string text;
@@ -55,13 +58,9 @@ private:
 class CDialogState : public CGameObject {
 V_META(CDialogState, CGameObject,
        V_PROPERTY(CDialogState, std::set<std::shared_ptr<CDialogOption>>, options, getOptions, setOptions),
-       V_PROPERTY(CDialogState, int, number, getNumber, setNumber),
+       V_PROPERTY(CDialogState, std::string, stateId, getStateId, setStateId),
        V_PROPERTY(CDialogState, std::string, text, getText, setText))
 public:
-    int getNumber() const;
-
-    void setNumber(int number);
-
     const std::string &getText() const;
 
     void setText(const std::string &text);
@@ -70,8 +69,15 @@ public:
 
     void setOptions(const std::set<std::shared_ptr<CDialogOption>> &options);
 
+
 private:
-    int number;
+    std::string stateId;
+public:
+    const std::string &getStateId() const;
+
+    void setStateId(const std::string &stateId);
+
+private:
     std::string text;
     std::set<std::shared_ptr<CDialogOption>> options;
 };
@@ -84,7 +90,7 @@ public:
 
     void setStates(const std::set<std::shared_ptr<CDialogState>> &states);
 
-    std::shared_ptr<CDialogState> getState(int state);
+    std::shared_ptr<CDialogState> getState(std::string state);
 
 private:
     std::set<std::shared_ptr<CDialogState>> states;
