@@ -32,6 +32,6 @@ public:
     void reload();
 private:
     std::shared_ptr<CDialog> dialog;
-    int currentState = 0;
+    std::string currentStateId = "ENTRY";
 };
 
