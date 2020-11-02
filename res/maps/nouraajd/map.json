@@ -40705,6 +40705,57 @@
           "width": 32,
           "x": 1408,
           "y": 3392
+        },
+        {
+          "height": 32,
+          "id": 87,
+          "name": "nouraajdDoorTrigger1",
+          "properties": {
+            "canStep": "false"
+          },
+          "propertytypes": {
+            "canStep": "string"
+          },
+          "rotation": 0,
+          "type": "CMapObject",
+          "visible": true,
+          "width": 32,
+          "x": 1376,
+          "y": 3360
+        },
+        {
+          "height": 32,
+          "id": 95,
+          "name": "nouraajdDoorTrigger2",
+          "properties": {
+            "canStep": "false"
+          },
+          "propertytypes": {
+            "canStep": "string"
+          },
+          "rotation": 0,
+          "type": "CMapObject",
+          "visible": true,
+          "width": 32,
+          "x": 1408,
+          "y": 3360
+        },
+        {
+          "height": 32,
+          "id": 96,
+          "name": "nouraajdDoorTrigger3",
+          "properties": {
+            "canStep": "false"
+          },
+          "propertytypes": {
+            "canStep": "string"
+          },
+          "rotation": 0,
+          "type": "CMapObject",
+          "visible": true,
+          "width": 32,
+          "x": 1440,
+          "y": 3360
         }
       ],
       "opacity": 1,
@@ -40720,7 +40771,7 @@
       "y": 0
     }
   ],
-  "nextobjectid": 87,
+  "nextobjectid": 97,
   "orientation": "orthogonal",
   "properties": {
     "x": "110",

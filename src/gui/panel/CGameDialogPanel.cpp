@@ -20,6 +20,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "object/CDialog.h"
 #include "gui/object/CWidget.h"
 #include "gui/CLayout.h"
+#include "core/CWrapper.h"
 
 const std::shared_ptr<CDialog> &CGameDialogPanel::getDialog() const {
     return dialog;
@@ -59,6 +60,10 @@ void CGameDialogPanel::reload() {
                                                                                        [self, option](
                                                                                                CGameGraphicsObject *_self,
                                                                                                std::shared_ptr<CGui> gui) {
+                                                                                           if (!option->getAction().empty()) {
+                                                                                               self->dialog->invokeAction(
+                                                                                                       option->getAction());
+                                                                                           }
                                                                                            self->currentStateId = option->getNextStateId();
                                                                                            self->reload();
                                                                                        });

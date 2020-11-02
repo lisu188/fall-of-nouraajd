@@ -29,6 +29,10 @@ std::shared_ptr<CDialogState> CDialog::getState(std::string stateId) {
     return vstd::find_if(states, [stateId](auto _state) { return _state->getStateId() == stateId; });
 }
 
+void CDialog::invokeAction(std::string action) {
+
+}
+
 const std::string &CDialogState::getText() const {
     return text;
 }

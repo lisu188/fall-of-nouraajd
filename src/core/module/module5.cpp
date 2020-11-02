@@ -29,46 +29,33 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 using namespace boost::python;
 
 void initModule5() {
-    class_<CGamePanel, bases<CGameGraphicsObject>, boost::noncopyable, std::shared_ptr<CGamePanel>>("CGamePanel",
-                                                                                                    no_init);
+    class_<CGamePanel, bases<CGameGraphicsObject>, boost::noncopyable, std::shared_ptr<CGamePanel>>("CGamePanel");
 
-    class_<CGameTradePanel, bases<CGamePanel>, boost::noncopyable, std::shared_ptr<CGameTradePanel>>("CGameTradePanel",
-                                                                                                     no_init)
+    class_<CGameTradePanel, bases<CGamePanel>, boost::noncopyable, std::shared_ptr<CGameTradePanel>>("CGameTradePanel")
             .def("getMarket", &CGameTradePanel::getMarket);
 
-    class_<CGameFightPanel, bases<CGamePanel>, boost::noncopyable, std::shared_ptr<CGameFightPanel>>("CGameFightPanel",
-                                                                                                     no_init)
+    class_<CGameFightPanel, bases<CGamePanel>, boost::noncopyable, std::shared_ptr<CGameFightPanel>>("CGameFightPanel")
             .def("getEnemy", &CGameFightPanel::getEnemy);
 
     class_<CGameCharacterPanel, bases<CGamePanel>, boost::noncopyable, std::shared_ptr<CGameCharacterPanel>>(
-            "CGameCharacterPanel",
-            no_init);
+            "CGameCharacterPanel");
 
     class_<CGameQuestionPanel, bases<CGamePanel>, boost::noncopyable, std::shared_ptr<CGameQuestionPanel>>(
-            "CGameQuestionPanel",
-            no_init);
+            "CGameQuestionPanel");
 
     class_<CGameDialogPanel, bases<CGamePanel>, boost::noncopyable, std::shared_ptr<CGameDialogPanel>>(
-            "CGameDialogPanel",
-            no_init);
+            "CGameDialogPanel");
 
     class_<CGameInventoryPanel, bases<CGamePanel>, boost::noncopyable, std::shared_ptr<CGameInventoryPanel>>(
-            "CGameInventoryPanel",
-            no_init);
+            "CGameInventoryPanel");
 
-    class_<CGameQuestPanel, bases<CGamePanel>, boost::noncopyable, std::shared_ptr<CGameQuestPanel>>(
-            "CGameQuestPanel",
-            no_init);
+    class_<CGameQuestPanel, bases<CGamePanel>, boost::noncopyable, std::shared_ptr<CGameQuestPanel>>("CGameQuestPanel");
 
-    class_<CGameTextPanel, bases<CGamePanel>, boost::noncopyable, std::shared_ptr<CGameTextPanel>>(
-            "CGameTextPanel",
-            no_init);
+    class_<CGameTextPanel, bases<CGamePanel>, boost::noncopyable, std::shared_ptr<CGameTextPanel>>("CGameTextPanel");
 
-    class_<CProxyTargetGraphicsObject, bases<CGameGraphicsObject>, boost::noncopyable, std::shared_ptr<CListView>>(
-            "CProxyTargetGraphicsObject",
-            no_init);
+    class_<CProxyTargetGraphicsObject, bases<CGameGraphicsObject>, boost::noncopyable, std::shared_ptr<CProxyTargetGraphicsObject>>(
+            "CProxyTargetGraphicsObject");
 
-    class_<CListView, bases<CProxyTargetGraphicsObject>, boost::noncopyable, std::shared_ptr<CListView>>("CListView",
-                                                                                                         no_init);
+    class_<CListView, bases<CProxyTargetGraphicsObject>, boost::noncopyable, std::shared_ptr<CListView>>("CListView");
 
 }

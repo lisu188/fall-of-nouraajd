@@ -35,5 +35,13 @@
       "animation": "images/misc/wall",
       "canStep": false
     }
+  },
+  "exitOption": {
+    "class": "CDialogOption",
+    "properties": {
+      "number": 0,
+      "nextStateId": "EXIT",
+      "text": "Leave"
+    }
   }
 }
