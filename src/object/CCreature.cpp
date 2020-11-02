@@ -600,11 +600,10 @@ void CCreature::removeEffect(std::shared_ptr<CEffect> effect) {
 
 void CCreature::useItem(std::shared_ptr<CItem> item) {
     vstd::fail_if(!vstd::ctn(items, item), "Tried to use item not in inventory!");
+    getMap()->getEventHandler()->gameEvent(item,
+                                           std::make_shared<CGameEventCaused>(CGameEvent::Type::onUse,
+                                                                              this->ptr()));
     if (item->isDisposable()) {
-        getMap()->getEventHandler()->gameEvent(item,
-                                               std::make_shared<CGameEventCaused>(CGameEvent::Type::onUse,
-                                                                                  this->ptr()));
-
         removeItem(item);
     }
 }

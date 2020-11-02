@@ -42,3 +42,8 @@ def new():
         CGameLoader.loadSavedGame(g, save)
     while event_loop.instance().run():
         pass
+
+
+class CDialog(CDialogBase2):
+    def invokeAction(self, action):
+        getattr(self, action)()

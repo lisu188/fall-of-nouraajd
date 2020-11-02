@@ -25,7 +25,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 using namespace boost::python;
 
 void initModule1() {
-    class_<CGameObject, boost::noncopyable, std::shared_ptr<CGameObject>>("CGameObject", no_init)
+    class_<CGameObject, boost::noncopyable, std::shared_ptr<CGameObject>>("CGameObject")
             .def("getName", &CGameObject::getName)
             .def("getType", &CGameObject::getType)
             .def("getGame", &CGameObject::getGame)
@@ -56,7 +56,7 @@ void initModule1() {
     std::shared_ptr<CGameObject>(CGame::*
     createObject)(std::string) = &CGame::createObject<CGameObject>;
 
-    class_<CGame, bases<CGameObject>, boost::noncopyable, std::shared_ptr<CGame>>("CGame", no_init)
+    class_<CGame, bases<CGameObject>, boost::noncopyable, std::shared_ptr<CGame>>("CGame")
             .def("getMap", &CGame::getMap)
             .def("changeMap", &CGame::changeMap)
             .def("loadPlugin", &CGame::loadPlugin)
@@ -66,25 +66,25 @@ void initModule1() {
             .def("getGui", &CGame::getGui);
 
     class_<CGameGraphicsObject, bases<CGameObject>, boost::noncopyable, std::shared_ptr<CGameGraphicsObject>>(
-            "CGameGraphicsObject", no_init)
+            "CGameGraphicsObject")
             .def("getGui", &CGameGraphicsObject::getGui)
             .def("getParent", &CGameGraphicsObject::getParent);
-    class_<CGui, bases<CGameGraphicsObject>, boost::noncopyable, std::shared_ptr<CGui>>("CGui", no_init)
+    class_<CGui, bases<CGameGraphicsObject>, boost::noncopyable, std::shared_ptr<CGui>>("CGui")
             .def("getGame", &CGui::getGame);
 
     class_<CStatsGraphicsObject, bases<CGameGraphicsObject>, boost::noncopyable, std::shared_ptr<CStatsGraphicsObject>>(
-            "CGameGraphicsObject", no_init);
+            "CGameGraphicsObject");
 
     class_<CSideBar, bases<CGameGraphicsObject>, boost::noncopyable, std::shared_ptr<CSideBar>>(
-            "CSideBar", no_init);
+            "CSideBar");
 
     class_<CCreatureView, bases<CGameGraphicsObject>, boost::noncopyable, std::shared_ptr<CCreatureView>>(
-            "CCreatureView", no_init)
+            "CCreatureView")
             .def("getCreature", &CCreatureView::getCreature);
 
     bool (CMap::*canStep)(Coords) =&CMap::canStep;
 
-    class_<CMap, bases<CGameObject>, boost::noncopyable, std::shared_ptr<CMap>>("CMap", no_init)
+    class_<CMap, bases<CGameObject>, boost::noncopyable, std::shared_ptr<CMap>>("CMap")
             .def("addObjectByName", &CMap::addObjectByName)
             .def("removeObjectByName", &CMap::removeObjectByName)
             .def("removeObject", &CMap::removeObject)
@@ -105,14 +105,12 @@ void initModule1() {
 
     void ( CObjectHandler::*registerType )(std::string,
                                            std::function<std::shared_ptr<CGameObject>()>) = &CObjectHandler::registerType;
-    class_<CObjectHandler, bases<CGameObject>, boost::noncopyable, std::shared_ptr<CObjectHandler>>("CObjectHandler",
-                                                                                                    no_init)
+    class_<CObjectHandler, bases<CGameObject>, boost::noncopyable, std::shared_ptr<CObjectHandler>>("CObjectHandler")
             .def("registerType", registerType)
             .def("getAllTypes", &CObjectHandler::getAllTypes)
             .def("getAllSubTypes", &CObjectHandler::getAllSubTypes);
 
-    class_<CGuiHandler, bases<CGameObject>, boost::noncopyable, std::shared_ptr<CGuiHandler>>("CGuiHandler",
-                                                                                              no_init)
+    class_<CGuiHandler, bases<CGameObject>, boost::noncopyable, std::shared_ptr<CGuiHandler>>("CGuiHandler")
             .def("showMessage", &CGuiHandler::showMessage)
             .def("showTrade", &CGuiHandler::showTrade)
             .def("showDialog", &CGuiHandler::showDialog)
@@ -122,7 +120,7 @@ void initModule1() {
 
     void ( CMapObject::*moveTo )(int, int, int) = &CMapObject::moveTo;
     void ( CMapObject::*move )(int, int, int) = &CMapObject::move;
-    class_<CMapObject, bases<CGameObject>, boost::noncopyable, std::shared_ptr<CMapObject>>("CMapObject", no_init)
+    class_<CMapObject, bases<CGameObject>, boost::noncopyable, std::shared_ptr<CMapObject>>("CMapObject")
             .def("getMap", &CMapObject::getMap)
             .def("moveTo", moveTo)
             .def("move", move)

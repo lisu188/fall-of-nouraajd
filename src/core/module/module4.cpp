@@ -42,9 +42,9 @@ void initModule4() {
     void ( CCreature::*hurtDmg )(std::shared_ptr<Damage>) = &CCreature::hurt;
     void ( CCreature::*addItem )(std::string) = &CCreature::addItem;
     bool ( CCreature::*hasItem )(std::function<bool(std::shared_ptr<CItem>)>) = &CCreature::hasItem;
-    void ( CCreature::*removeItem )(std::function<bool(std::shared_ptr<CItem>)>,bool) = &CCreature::removeItem;
+    void ( CCreature::*removeItem )(std::function<bool(std::shared_ptr<CItem>)>, bool) = &CCreature::removeItem;
     void ( CCreature::*removeQuestItem )(std::function<bool(std::shared_ptr<CItem>)>) = &CCreature::removeQuestItem;
-    class_<CCreature, bases<CMapObject>, boost::noncopyable, std::shared_ptr<CCreature>>("CCreature", no_init)
+    class_<CCreature, bases<CMapObject>, boost::noncopyable, std::shared_ptr<CCreature>>("CCreature")
             .def("getDmg", &CCreature::getDmg)
             .def("hurt", hurtInt)
             .def("hurt", hurtDmg)

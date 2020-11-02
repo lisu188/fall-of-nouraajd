@@ -106,7 +106,7 @@ template<>
 class CWrapper<CTile> : public CTile, public boost::python::wrapper<CWrapper<CTile>> {
 V_META(CWrapper<T>, CTile, vstd::meta::empty())
 public:
-    void onStep(std::shared_ptr<CCreature> creature) override final {
+    void onStep(std::shared_ptr<CCreature> creature) final {
         if (auto f = this->get_override("onStep")) {
             PY_SAFE (f(creature))
         } else {
@@ -120,7 +120,7 @@ template<>
 class CWrapper<CPotion> : public CPotion, public boost::python::wrapper<CWrapper<CPotion>> {
 V_META(CWrapper<T>, CPotion, vstd::meta::empty())
 public:
-    void onUse(std::shared_ptr<CGameEvent> event) override final {
+    void onUse(std::shared_ptr<CGameEvent> event) final {
         if (auto f = this->get_override("onUse")) {
             PY_SAFE (f(event))
         } else {
@@ -133,7 +133,7 @@ template<>
 class CWrapper<CTrigger> : public CTrigger, public boost::python::wrapper<CWrapper<CTrigger>> {
 V_META(CWrapper<T>, CTrigger, vstd::meta::empty())
 public:
-    void trigger(std::shared_ptr<CGameObject> object, std::shared_ptr<CGameEvent> event) override final {
+    void trigger(std::shared_ptr<CGameObject> object, std::shared_ptr<CGameEvent> event) final {
         if (auto f = this->get_override("trigger")) {
             PY_SAFE (f(object, event))
         } else {
@@ -146,7 +146,7 @@ template<>
 class CWrapper<CQuest> : public CQuest, public boost::python::wrapper<CWrapper<CQuest>> {
 V_META(CWrapper<T>, CQuest, vstd::meta::empty())
 public:
-    bool isCompleted() override final {
+    bool isCompleted() final {
         if (auto f = this->get_override("isCompleted")) {
             PY_SAFE_RET_VAL (return f();, false)
         } else {
@@ -154,7 +154,7 @@ public:
         }
     }
 
-    void onComplete() override final {
+    void onComplete() final {
         if (auto f = this->get_override("onComplete")) {
             PY_SAFE (f())
         } else {
@@ -167,7 +167,7 @@ template<>
 class CWrapper<CPlugin> : public CPlugin, public boost::python::wrapper<CWrapper<CPlugin>> {
 V_META(CWrapper<T>, CPlugin, vstd::meta::empty())
 public:
-    void load(std::shared_ptr<CGame> game) override final {
+    void load(std::shared_ptr<CGame> game) final {
         if (auto f = this->get_override("load")) {
             PY_SAFE (f(game))
         } else {
@@ -179,4 +179,12 @@ public:
 template<>
 class CWrapper<CDialog> : public CDialog, public boost::python::wrapper<CWrapper<CDialog>> {
 V_META(CWrapper<T>, CDialog, vstd::meta::empty())
+public:
+    void invokeAction(std::string action) final {
+        if (auto f = this->get_override("invokeAction")) {
+            PY_SAFE (f(action))
+        } else {
+            this->CDialog::invokeAction(action);
+        }
+    }
 };

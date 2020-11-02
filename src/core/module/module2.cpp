@@ -60,23 +60,24 @@ void initModule2() {
     class_<CWrapper<CPotion>, bases<CPotion>, boost::noncopyable, std::shared_ptr<CWrapper<CPotion>>>("CPotion").
             def("onUse", &CWrapper<CPotion>::onUse);
 
-    class_<CGameEvent, bases<CGameObject>, boost::noncopyable, std::shared_ptr<CGameEvent>>("CGameEvent", no_init);
+    class_<CGameEvent, bases<CGameObject>, boost::noncopyable, std::shared_ptr<CGameEvent>>("CGameEvent");
     class_<CGameEventCaused, bases<CGameEvent>, boost::noncopyable, std::shared_ptr<CGameEventCaused>>(
-            "CGameEventCaused", no_init)
+            "CGameEventCaused")
             .def("getCause", &CGameEventCaused::getCause);
 
-    class_<CTrigger, bases<CGameObject>, boost::noncopyable, std::shared_ptr<CTrigger>>("CTriggerBase", no_init);
+    class_<CTrigger, bases<CGameObject>, boost::noncopyable, std::shared_ptr<CTrigger>>("CTriggerBase");
     class_<CWrapper<CTrigger>, bases<CTrigger>, boost::noncopyable, std::shared_ptr<CWrapper<CTrigger>>>("CTrigger")
             .def("trigger", &CWrapper<CTrigger>::trigger);
 
-    class_<CQuest, bases<CGameObject>, boost::noncopyable, std::shared_ptr<CQuest>>("CQuestBase", no_init);
+    class_<CQuest, bases<CGameObject>, boost::noncopyable, std::shared_ptr<CQuest>>("CQuestBase");
     class_<CWrapper<CQuest>, bases<CQuest>, boost::noncopyable, std::shared_ptr<CWrapper<CQuest>>>("CQuest")
             .def("isCompleted", &CWrapper<CQuest>::isCompleted)
             .def("onComplete", &CWrapper<CQuest>::onComplete);
 
-    class_<CDialog, bases<CGameObject>, boost::noncopyable, std::shared_ptr<CDialog>>("CDialog", no_init);
-    class_<CDialogOption, bases<CGameObject>, boost::noncopyable, std::shared_ptr<CDialogOption>>("CDialogOption",
-                                                                                                  no_init);
-    class_<CDialogState, bases<CGameObject>, boost::noncopyable, std::shared_ptr<CDialogState>>("CDialogState",
-                                                                                                no_init);
+    class_<CDialog, bases<CGameObject>, boost::noncopyable, std::shared_ptr<CDialog>>("CDialogBase");
+    class_<CWrapper<CDialog>, bases<CDialog>, boost::noncopyable, std::shared_ptr<CWrapper<CDialog>>>("CDialogBase2")
+            .def("invokeAction", &CWrapper<CDialog>::invokeAction);
+
+    class_<CDialogOption, bases<CGameObject>, boost::noncopyable, std::shared_ptr<CDialogOption>>("CDialogOption");
+    class_<CDialogState, bases<CGameObject>, boost::noncopyable, std::shared_ptr<CDialogState>>("CDialogState");
 }

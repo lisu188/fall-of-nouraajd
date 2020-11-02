@@ -2,6 +2,7 @@ def load(self, context):
     from game import CEvent
     from game import CTrigger
     from game import CQuest
+    from game import CDialog
     from game import register, trigger
 
     @register(context)
@@ -12,6 +13,7 @@ def load(self, context):
                 self.getMap().removeAll(lambda ob: ob.getStringProperty('type') == self.getStringProperty('type'))
                 self.getMap().setBoolProperty('completedRolf', False)
                 self.getMap().getPlayer().addQuest("rolfQuest")
+                self.getMap().getPlayer().addItem("letterFromRolf")
 
     @register(context)
     class ChangeMap(CEvent):
@@ -63,3 +65,8 @@ def load(self, context):
         def trigger(self, object, event):
             if event.getCause().isPlayer():
                 object.getGame().getGuiHandler().showDialog(object.getGame().createObject('doorDialog'))
+
+    @register(context)
+    class DoorDialog(CDialog):
+        def openDoor(self):
+            self.getGame().getMap().removeAll(lambda ob: ob.getName().startswith('nouraajdDoorTrigger'))

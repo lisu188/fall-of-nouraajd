@@ -61,7 +61,7 @@
       "animation": "images/items/scroll",
       "label": "Scroll",
       "power": 0,
-      "singleUse": true
+      "singleUse": false
     }
   },
   "UndestructibleBelt": {

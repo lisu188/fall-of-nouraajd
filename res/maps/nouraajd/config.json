@@ -2,7 +2,7 @@
   "StartEvent": {
     "class": "StartEvent",
     "properties": {
-      "text": "Lord Commander, These terrifying creatures keep attacking us all the time, locals call them Pritschers. Our scout reports that Pritschers have their lair in ruins of Nouraayd, but we can't do anything about it - we don't have enough men. We're barely able to defend village. We won't survive much longer. We need reinforcements. Sergeant Rolf."
+      "text": "Here it begins. A hero is sent to rescue with only letter in his hand. You don`t know who Sergeant Rolf is or who snitched the letter to Your backpack. Somewhere here lies small town of Nouraajd which is where investigation should be started..."
     }
   },
   "nouraajdSign": {
@@ -111,38 +111,44 @@
       }
     }
   },
-  "exitOption": {
-    "class": "CDialogOption",
+  "letterFromRolf": {
+    "ref": "Scroll",
     "properties": {
-      "number": 0,
-      "nextStateId": "EXIT",
-      "text": "Leave"
+      "label": "Letter from Rolf",
+      "text": "Lord Commander, These terrifying creatures keep attacking us all the time, locals call them Pritschers. Our scout reports that Pritschers have their lair in ruins of Nouraajd, but we can't do anything about it - we don't have enough men. We're barely able to defend village. We won't survive much longer. We need reinforcements. Sergeant Rolf."
     }
   },
   "doorDialog": {
-    "class": "CDialog",
+    "class": "DoorDialog",
     "properties": {
       "states": [
         {
           "class": "CDialogState",
           "properties": {
             "stateId": "ENTRY",
-            "text": "Welcome to Nouraajd!",
+            "text": "Due to rat infestation gates are closed. Orders from Sergeant Rolf!",
             "options": [
               {
                 "class": "CDialogOption",
                 "properties": {
                   "number": 0,
-                  "nextStateId": "NICE_ANSWER",
-                  "text": "Hello!"
+                  "action": "openDoor",
+                  "nextStateId": "WELCOME",
+                  "text": "I am here to help. (show him the letter)"
                 }
               },
               {
                 "class": "CDialogOption",
                 "properties": {
                   "number": 1,
-                  "nextStateId": "RUDE_ANSWER",
-                  "text": "Fuck You!"
+                  "nextStateId": "NOT_WELCOME",
+                  "text": "Open up or I`ll smash this gate into pieces!"
+                }
+              },
+              {
+                "ref": "exitOption",
+                "properties": {
+                  "number": 2
                 }
               }
             ]
@@ -151,11 +157,22 @@
         {
           "class": "CDialogState",
           "properties": {
-            "stateId": "NICE_ANSWER",
-            "text": "Nice to meet You!",
+            "stateId": "WELCOME",
+            "text": "Come on then. You can spend a night at inn or pray in the chapel. Not much to do here.",
             "options": [
               {
-                "ref": "exitOption"
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 0,
+                  "nextStateId": "ABOUT_ROLF",
+                  "text": "Where can I find Sergeant Rolf?"
+                }
+              },
+              {
+                "ref": "exitOption",
+                "properties": {
+                  "number": 1
+                }
               }
             ]
           }
@@ -163,11 +180,29 @@
         {
           "class": "CDialogState",
           "properties": {
-            "stateId": "RUDE_ANSWER",
-            "text": "Fuck You too!",
+            "stateId": "ABOUT_ROLF",
+            "text": "He left couple days ago with his crew. They did not come back yet.",
             "options": [
               {
-                "ref": "exitOption"
+                "ref": "exitOption",
+                "properties": {
+                  "number": 0
+                }
+              }
+            ]
+          }
+        },
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "NOT_WELCOME",
+            "text": "I`d love to see that. Good day, kind sir!",
+            "options": [
+              {
+                "ref": "exitOption",
+                "properties": {
+                  "number": 0
+                }
               }
             ]
           }
