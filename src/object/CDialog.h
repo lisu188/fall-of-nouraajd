@@ -92,6 +92,7 @@ public:
 
     std::shared_ptr<CDialogState> getState(std::string state);
 
+    virtual void invokeAction(std::string action);
 private:
     std::set<std::shared_ptr<CDialogState>> states;
 };
