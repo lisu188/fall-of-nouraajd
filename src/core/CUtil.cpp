@@ -112,4 +112,31 @@ bool CUtil::isIn(std::shared_ptr<SDL_Rect> rect, int x, int y) {
            && y <= bound->h;
 }
 
+int CUtil::parseKey(SDL_Keycode i) {
+    switch (i) {
+        case SDLK_0:
+            return 0;
+        case SDLK_1:
+            return 1;
+        case SDLK_2:
+            return 2;
+        case SDLK_3:
+            return 3;
+        case SDLK_4:
+            return 4;
+        case SDLK_5:
+            return 5;
+        case SDLK_6:
+            return 6;
+        case SDLK_7:
+            return 7;
+        case SDLK_8:
+            return 8;
+        case SDLK_9:
+            return 9;
+        default:
+            return -1;
+    }
+}
+
 //TODO: implement drag_drop

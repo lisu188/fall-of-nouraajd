@@ -21,6 +21,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 class CDialog;
 
+class CDialogOption;
+
 class CGameDialogPanel : public CGamePanel {
 V_META(CGameDialogPanel, CGamePanel,
        V_PROPERTY(CGameDialogPanel, std::shared_ptr<CDialog>, dialog, getDialog, setDialog))
@@ -30,8 +32,19 @@ public:
     void setDialog(const std::shared_ptr<CDialog> &dialog);
 
     void reload();
+
+    bool keyboardEvent(std::shared_ptr<CGui> sharedPtr, SDL_EventType type, SDL_Keycode i) override;
+
 private:
     std::shared_ptr<CDialog> dialog;
     std::string currentStateId = "ENTRY";
+
+    std::shared_ptr<CDialogOption> getOption(int option);
+
+    void selectOption(int option);
+
+    void selectOption(const std::shared_ptr<CDialogOption> &option);
+
+    const std::set<std::shared_ptr<CDialogOption>> &getCurrentOptions();
 };
 

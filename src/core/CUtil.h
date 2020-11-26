@@ -63,6 +63,8 @@ public:
     static std::shared_ptr<SDL_Rect> bounds(std::shared_ptr<SDL_Rect> rect);
 
     static bool isIn(std::shared_ptr<SDL_Rect> rect, int x, int y);
+
+    static int parseKey(SDL_Keycode i);
 };
 
 namespace std {
