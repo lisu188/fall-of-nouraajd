@@ -20,7 +20,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "object/CDialog.h"
 #include "gui/object/CWidget.h"
 #include "gui/CLayout.h"
-#include "core/CWrapper.h"
+
 
 const std::shared_ptr<CDialog> &CGameDialogPanel::getDialog() const {
     return dialog;
@@ -60,18 +60,13 @@ void CGameDialogPanel::reload() {
                                                                                        [self, option](
                                                                                                CGameGraphicsObject *_self,
                                                                                                std::shared_ptr<CGui> gui) {
-                                                                                           if (!option->getAction().empty()) {
-                                                                                               self->dialog->invokeAction(
-                                                                                                       option->getAction());
-                                                                                           }
-                                                                                           self->currentStateId = option->getNextStateId();
-                                                                                           self->reload();
+                                                                                           self->selectOption(option);
                                                                                        });
 
 
             std::shared_ptr<CTextWidget> optionWidget = getGame()->createObject<CTextWidget>("CTextWidget");
             optionWidget->setClick(clickName);
-            optionWidget->setText(vstd::str(option->getNumber()) + ": " + option->getText());
+            optionWidget->setText(vstd::str(option->getNumber() + 1) + ": " + option->getText());
             optionWidget->setCentered(false);
 
             std::shared_ptr<CLayout> optionWidgetLayout = getGame()->createObject<CLayout>("CLayout");
@@ -88,4 +83,38 @@ void CGameDialogPanel::reload() {
     } else {
         self->close();
     }
+}
+
+std::shared_ptr<CDialogOption> CGameDialogPanel::getOption(int option) {
+    return vstd::find_if(getCurrentOptions(), [option](auto op) {
+        return op->getNumber() == option;
+    });
+}
+
+const std::set<std::shared_ptr<CDialogOption>> &
+CGameDialogPanel::getCurrentOptions() { return dialog->getState(currentStateId)->getOptions(); }
+
+void CGameDialogPanel::selectOption(int option) {
+    selectOption(getOption(option));
+}
+
+void CGameDialogPanel::selectOption(const std::shared_ptr<CDialogOption> &option) {
+    if (!option->getAction().empty()) {
+        dialog->invokeAction(
+                option->getAction());
+    }
+    currentStateId = option->getNextStateId();
+    reload();
+}
+
+bool CGameDialogPanel::keyboardEvent(std::shared_ptr<CGui> sharedPtr, SDL_EventType type, SDL_Keycode i) {
+    //TODO: util function to transalte number keys to int
+    if (type == SDL_KEYDOWN) {
+        auto opt = CUtil::parseKey(i) - 1;
+        if (opt > -1 && opt < getCurrentOptions().size()) {
+            selectOption(opt);
+            return true;
+        }
+    }
+    return false;
 }
