@@ -209,5 +209,174 @@
         }
       ]
     }
+  },
+  "askAboutGirl": {
+    "class": "CDialogOption",
+    "properties": {
+      "nextStateId": "INKEEPER_ABOUT_GIRL",
+      "text": "What they were looking for?",
+      "action": "askedAboutGirl"
+    }
+  },
+  "askAboutMarumi": {
+    "class": "CDialogOption",
+    "properties": {
+      "nextStateId": "INKEEPER_ABOUT_MARUMI",
+      "text": "Who is this Marumi Baso?"
+    }
+  },
+  "askForBeer": {
+    "ref": "exitOption",
+    "properties": {
+      "text": "Alright, now get me some beer.",
+      "action": "sellBeer"
+    }
+  },
+  "shouldGo": {
+    "ref": "exitOption",
+    "properties": {
+      "text": "I should go."
+    }
+  },
+  "tavernDialog1": {
+    "class": "TavernDialog1",
+    "properties": {
+      "states": [
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "ENTRY",
+            "text": "As You enter the inn, You see 5 men rushing out. They are dressed in dark brown coats. One of them, the elder one, is holding staff and he is wearing round hat. Your eyes cross as he is leaving.",
+            "options": [
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 0,
+                  "nextStateId": "INNKEEPER_WELCOME",
+                  "text": "Talk to the innkeeper."
+                }
+              },
+              {
+                "ref": "exitOption",
+                "properties": {
+                  "text": "Leave inn.",
+                  "number": 1
+                }
+              }
+            ]
+          }
+        },
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "INNKEEPER_WELCOME",
+            "text": "Welcome, welcome. What can I do for You?",
+            "options": [
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 0,
+                  "nextStateId": "INKEEPER_ABOUT_CULTISTS",
+                  "text": "I`ve seen a group of weird men that were leaving the inn in a hurry. They looked like priests, but nothing like Matulog cultists."
+                }
+              },
+              {
+                "ref": "shouldGo",
+                "properties": {
+                  "number": 1
+                }
+              }
+            ]
+          }
+        },
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "INKEEPER_ABOUT_CULTISTS",
+            "text": "Ah yeah, they`ve been around a city since I can remember. Cult of Marumi Baso they call themselves. Some of the locals consider them zealots.",
+            "options": [
+              {
+                "ref": "askAboutMarumi",
+                "properties": {
+                  "number": 0
+                }
+              },
+              {
+                "ref": "askAboutGirl",
+                "properties": {
+                  "number": 1
+                }
+              },
+              {
+                "ref": "askForBeer",
+                "properties": {
+                  "number": 2
+                }
+              },
+              {
+                "ref": "shouldGo",
+                "properties": {
+                  "number": 3
+                }
+              }
+            ]
+          }
+        },
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "INKEEPER_ABOUT_MARUMI",
+            "text": "Ugh... I don`t know, seems like deity? I`m not really interested in religious staff, do You want anything else?",
+            "options": [
+              {
+                "ref": "askAboutGirl",
+                "properties": {
+                  "number": 0
+                }
+              },
+              {
+                "ref": "askForBeer",
+                "properties": {
+                  "number": 1
+                }
+              },
+              {
+                "ref": "shouldGo",
+                "properties": {
+                  "number": 2
+                }
+              }
+            ]
+          }
+        },
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "INKEEPER_ABOUT_GIRL",
+            "text": "Some girl, I`ve told them to get the fuck out and look for their victims elsewhere. Anyway, does inn look like a proper place for a child?",
+            "options": [
+              {
+                "ref": "askAboutMarumi",
+                "properties": {
+                  "number": 0
+                }
+              },
+              {
+                "ref": "askForBeer",
+                "properties": {
+                  "number": 1
+                }
+              },
+              {
+                "ref": "shouldGo",
+                "properties": {
+                  "number": 2
+                }
+              }
+            ]
+          }
+        }
+      ]
+    }
   }
 }
