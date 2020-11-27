@@ -63,10 +63,11 @@ def load(self, context):
     @trigger(context, "onEnter", "nouraajdDoor")
     class NouraajdDoorTrigger(CTrigger):
         def trigger(self, object, event):
-            if event.getCause().isPlayer():
+            if event.getCause().isPlayer() and not object.getBoolProperty('opened'):
                 object.getGame().getGuiHandler().showDialog(object.getGame().createObject('doorDialog'))
 
     @register(context)
     class DoorDialog(CDialog):
         def openDoor(self):
             self.getGame().getMap().removeAll(lambda ob: ob.getName().startswith('nouraajdDoorTrigger'))
+            self.getGame().getMap().getObjectByName('nouraajdDoor').setBoolProperty('opened', True)
