@@ -22676,7 +22676,7 @@
         6,
         6,
         6,
-        0,
+        6,
         0,
         0,
         0,
@@ -40694,10 +40694,12 @@
           "id": 84,
           "name": "nouraajdDoor",
           "properties": {
-            "animation": "images\/misc\/closed_door"
+            "animation": "images\/misc\/closed_door",
+            "opened": false
           },
           "propertytypes": {
-            "animation": "string"
+            "animation": "string",
+            "opened": "bool"
           },
           "rotation": 0,
           "type": "CBuilding",
@@ -40756,6 +40758,23 @@
           "width": 32,
           "x": 1440,
           "y": 3360
+        },
+        {
+          "height": 32,
+          "id": 97,
+          "name": "nouraajdTavern",
+          "properties": {
+            "animation": "images\/buildings\/tavern"
+          },
+          "propertytypes": {
+            "animation": "string"
+          },
+          "rotation": 0,
+          "type": "CBuilding",
+          "visible": true,
+          "width": 32,
+          "x": 1536,
+          "y": 3168
         }
       ],
       "opacity": 1,
@@ -40771,7 +40790,7 @@
       "y": 0
     }
   ],
-  "nextobjectid": 97,
+  "nextobjectid": 98,
   "orientation": "orthogonal",
   "properties": {
     "x": "110",

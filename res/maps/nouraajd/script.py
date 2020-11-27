@@ -71,3 +71,16 @@ def load(self, context):
         def openDoor(self):
             self.getGame().getMap().removeAll(lambda ob: ob.getName().startswith('nouraajdDoorTrigger'))
             self.getGame().getMap().getObjectByName('nouraajdDoor').setBoolProperty('opened', True)
+
+    @trigger(context, "onEnter", "nouraajdTavern")
+    class NouraajdTavernTrigger(CTrigger):
+        def trigger(self, object, event):
+            object.getGame().getGuiHandler().showDialog(object.getGame().createObject('tavernDialog1'))
+
+    @register(context)
+    class TavernDialog1(CDialog):
+        def sellBeer(self):
+            print("sellBeer")
+
+        def askedAboutGirl(self):
+            print("askedAboutGirl")
