@@ -60,15 +60,15 @@ void CGameObject::setNumericProperty(std::string name, int value) {
 }
 
 std::string CGameObject::getStringProperty(std::string name) {
-    return this->getProperty<std::string>(name);
+    return this->hasProperty(name) ? this->getProperty<std::string>(name) : "";
 }
 
 bool CGameObject::getBoolProperty(std::string name) {
-    return this->getProperty<bool>(name);
+    return this->hasProperty(name) && this->getProperty<bool>(name);
 }
 
 int CGameObject::getNumericProperty(std::string name) {
-    return this->getProperty<int>(name);
+    return this->hasProperty(name) ? this->getProperty<int>(name) : 0;
 }
 
 void CGameObject::incProperty(std::string name, int value) {

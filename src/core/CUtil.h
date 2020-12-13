@@ -65,6 +65,20 @@ public:
     static bool isIn(std::shared_ptr<SDL_Rect> rect, int x, int y);
 
     static int parseKey(SDL_Keycode i);
+
+    template<typename Predicate>
+    static std::set<std::string> findFiles(std::string dir, Predicate pred) {
+        std::set<std::string> retValue;
+        boost::filesystem::directory_iterator iterator(dir), end;
+        while (iterator != end) {
+            auto path = iterator->path().string();
+            if (pred(path)) {
+                retValue.insert(path);
+            }
+            iterator++;
+        }
+        return retValue;
+    }
 };
 
 namespace std {
