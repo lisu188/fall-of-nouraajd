@@ -85,6 +85,7 @@ configure_file(res/config/weapons.json config/weapons.json)
 configure_file(res/config/graphics.json config/graphics.json)
 
 configure_file(res/maps/nouraajd/config.json maps/nouraajd/config.json)
+configure_file(res/maps/nouraajd/dialog.json maps/nouraajd/dialog.json)
 configure_file(res/maps/nouraajd/map.json maps/nouraajd/map.json)
 configure_file(res/maps/nouraajd/script.py maps/nouraajd/script.py)
 

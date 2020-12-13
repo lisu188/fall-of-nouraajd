@@ -40694,12 +40694,10 @@
           "id": 84,
           "name": "nouraajdDoor",
           "properties": {
-            "animation": "images\/misc\/closed_door",
-            "opened": false
+            "animation": "images\/misc\/closed_door"
           },
           "propertytypes": {
-            "animation": "string",
-            "opened": "bool"
+            "animation": "string"
           },
           "rotation": 0,
           "type": "CBuilding",
