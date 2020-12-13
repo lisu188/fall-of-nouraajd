@@ -75,7 +75,12 @@ def load(self, context):
     @trigger(context, "onEnter", "nouraajdTavern")
     class NouraajdTavernTrigger(CTrigger):
         def trigger(self, object, event):
-            object.getGame().getGuiHandler().showDialog(object.getGame().createObject('tavernDialog1'))
+            if object.getNumericProperty('visited') == 0:
+                object.getGame().getGuiHandler().showDialog(object.getGame().createObject('tavernDialog1'))
+            elif object.getNumericProperty('visited') == 1:
+                # TODO: maybe some time should pass
+                object.getGame().getGuiHandler().showDialog(object.getGame().createObject('tavernDialog2'))
+            object.incProperty('visited', 1)
 
     @register(context)
     class TavernDialog1(CDialog):
@@ -83,4 +88,8 @@ def load(self, context):
             print("sellBeer")
 
         def askedAboutGirl(self):
-            print("askedAboutGirl")
+            self.getGame().getMap().setBoolProperty('ASKED_ABOUT_GIRL', True)
+
+    @register(context)
+    class TavernDialog2(CDialog):
+        pass

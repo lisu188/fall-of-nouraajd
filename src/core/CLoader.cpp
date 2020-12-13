@@ -44,9 +44,10 @@ void CMapLoader::loadFromTmx(std::shared_ptr<CMap> map, std::shared_ptr<json> ma
     }
 }
 
-std::string getConfigPath(std::string mapName) {
-    std::string path = vstd::join({"maps/", mapName}, "");
-    return vstd::join({path, "/config.json"}, "");
+std::set<std::string> getConfigPaths(std::string mapName) {
+    return CUtil::findFiles("maps/" + mapName, [](auto path) {
+        return vstd::ends_with(path, ".json") && !vstd::ends_with(path, "map.json");
+    });
 }
 
 std::string getScriptPath(std::string mapName) {
@@ -62,7 +63,7 @@ std::string getMapPath(std::string mapName) {
 std::shared_ptr<CMap> CMapLoader::loadNewMap(std::shared_ptr<CGame> game, std::string mapName) {
     std::shared_ptr<CMap> map = game->getObjectHandler()->createObject<CMap>(game, "CMap");
     game->setMap(map);
-    game->getObjectHandler()->registerConfig(getConfigPath(mapName));
+    game->getObjectHandler()->registerConfig(getConfigPaths(mapName));
     CPluginLoader::loadPlugin(game, getScriptPath(mapName));
     std::shared_ptr<json> mapc = CConfigurationProvider::getConfig(getMapPath(mapName));
     loadFromTmx(map, mapc);
@@ -73,11 +74,11 @@ std::shared_ptr<CMap> CMapLoader::loadNewMap(std::shared_ptr<CGame> game, std::s
 std::shared_ptr<CMap> CMapLoader::loadSavedMap(std::shared_ptr<CGame> game, std::string name) {
     std::string path = "save/" + name + ".json";
     std::shared_ptr<json> save = CConfigurationProvider::getConfig(path);
-    std::string mapName = (*save)["properties"]["mapName"].get<std::string>();
+    auto mapName = (*save)["properties"]["mapName"].get<std::string>();
 
-    game->getObjectHandler()->registerConfig(getConfigPath(mapName));
+    game->getObjectHandler()->registerConfig(getConfigPaths(mapName));
     CPluginLoader::loadPlugin(game, getScriptPath(mapName));
-    game->getObjectHandler()->registerConfig(getConfigPath(mapName));//TODO: duplicate?
+    game->getObjectHandler()->registerConfig(getConfigPaths(mapName));//TODO: duplicate?
 
     game->getObjectHandler()->registerConfig(name, save);
 
