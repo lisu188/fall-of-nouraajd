@@ -27,9 +27,9 @@ public:
     static std::shared_ptr<CMap> loadNewMapWithPlayer(std::shared_ptr<CGame> game, std::string name,
                                                       std::string player);
 
-    static std::shared_ptr<CMap> loadNewMap(std::shared_ptr<CGame> game, std::string name);
+    static std::shared_ptr<CMap> loadNewMap(std::shared_ptr<CGame> game, const std::string &name);
 
-    static std::shared_ptr<CMap> loadSavedMap(std::shared_ptr<CGame> game, std::string name);
+    static std::shared_ptr<CMap> loadSavedMap(std::shared_ptr<CGame> game, const std::string &name);
 
     static void save(std::shared_ptr<CMap> map, std::string name);
 
@@ -60,7 +60,7 @@ public:
 
     static void loadSavedGame(std::shared_ptr<CGame> game, std::string save);
 private:
-    static void initObjectHandler(std::shared_ptr<CObjectHandler> handler);
+    static void initObjectHandler(const std::shared_ptr<CObjectHandler> &handler);
 
     static void initConfigurations(std::shared_ptr<CObjectHandler> handler);
 
