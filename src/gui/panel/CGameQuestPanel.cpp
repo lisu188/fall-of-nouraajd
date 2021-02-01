@@ -26,7 +26,7 @@ void CGameQuestPanel::renderObject(std::shared_ptr<CGui> gui, std::shared_ptr<SD
 
 
 std::string CGameQuestPanel::getText(std::shared_ptr<CGui> ptr) {
-    std::__cxx11::string text = "";
+    std::string text = "";
     for (auto quest:ptr->getGame()->getMap()->getPlayer()->getCompletedQuests()) {
         text += quest->getDescription();
         text += "(completed)";
