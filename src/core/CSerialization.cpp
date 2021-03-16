@@ -188,7 +188,7 @@ std::shared_ptr<json> object_serialize(std::shared_ptr<CGameObject> object) {
     if (object) {
         add_member(conf, "class", vstd::is_empty(object->getType()) ? object->meta()->name() : object->getType());
         std::shared_ptr<json> properties = std::make_shared<json>();
-        for (std::shared_ptr<vstd::property> property: object->meta()->properties<CGameObject>(object)) {
+        for (std::shared_ptr<vstd::property> property: *object->meta()->properties<CGameObject>(object)) {
             if (property->name() != "type") {
                 CSerialization::setProperty(properties, property->name(),
                                             object->getProperty<boost::any>(property->name()));
