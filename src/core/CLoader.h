@@ -1,6 +1,6 @@
 /*
 fall-of-nouraajd c++ dark fantasy game
-Copyright (C) 2019  Andrzej Lis
+Copyright (C) 2021  Andrzej Lis
 
 This program is free software: you can redistribute it and/or modify
         it under the terms of the GNU General Public License as published by
@@ -29,7 +29,7 @@ public:
 
     static std::shared_ptr<CMap> loadRandomMapWithPlayer(std::shared_ptr<CGame> game, std::string player);
 
-    static std::shared_ptr<CMap> loadNewMap(std::shared_ptr<CGame> game, std::string name);
+    static std::shared_ptr<CMap> loadNewMap(std::shared_ptr<CGame> game, const std::string &name);
 
     static std::shared_ptr<CMap> loadSavedMap(std::shared_ptr<CGame> game, std::string name);
 
@@ -58,9 +58,9 @@ public:
 
     static void startRandomGameWithPlayer(std::shared_ptr<CGame> game, std::string player);
 
-    static void startGame(std::shared_ptr<CGame> game, std::string file);
+    static void startGame(std::shared_ptr<CGame> game, const std::string &file);
 
-    static void changeMap(std::shared_ptr<CGame> game, std::string file);
+    static void changeMap(std::shared_ptr<CGame> game, const std::string &file);
 
     static void loadGui(std::shared_ptr<CGame> game);
 
