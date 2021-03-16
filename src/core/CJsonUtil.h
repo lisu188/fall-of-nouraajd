@@ -72,7 +72,7 @@ namespace CJsonUtil {
         try {
             return std::make_shared<json>(json::parse(json_string));
         } catch (...) {
-            return nullptr;//TODO: handle
+            return std::make_shared<json>(json::parse("{}"));//TODO: handle
         }
 //        vstd::logger::debug(json,reader.getFormatedErrorMessages());
     }
