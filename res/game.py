@@ -33,13 +33,17 @@ def list_string(g, list):
 def new():
     g = CGameLoader.loadGame()
     CGameLoader.loadGui(g)
-    if g.getGuiHandler().showSelection(list_string(g, ["NEW", "LOAD"])) == "NEW":
+    selection = g.getGuiHandler().showSelection(list_string(g, ["NEW", "LOAD", "RANDOM"]))
+    if selection == "NEW":
         map = g.getGuiHandler().showSelection(list_string(g, CResourcesProvider.getInstance().getFiles("MAP")))
         player = g.getGuiHandler().showSelection(list_string(g, g.getObjectHandler().getAllSubTypes("CPlayer")))
         CGameLoader.startGameWithPlayer(g, map, player)
-    else:
+    elif selection == "LOAD":
         save = g.getGuiHandler().showSelection(list_string(g, CResourcesProvider.getInstance().getFiles("SAVE")))
         CGameLoader.loadSavedGame(g, save)
+    elif selection == "RANDOM":
+        player = g.getGuiHandler().showSelection(list_string(g, g.getObjectHandler().getAllSubTypes("CPlayer")))
+        CGameLoader.startRandomGameWithPlayer(g, player)
     while event_loop.instance().run():
         pass
 

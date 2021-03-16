@@ -24,12 +24,16 @@ class CMapLoader {
 
 public:
 
-    static std::shared_ptr<CMap> loadNewMapWithPlayer(std::shared_ptr<CGame> game, std::string name,
-                                                      std::string player);
+    static std::shared_ptr<CMap>
+    loadNewMapWithPlayer(std::shared_ptr<CGame> game, std::string name, std::string player);
+
+    static std::shared_ptr<CMap> loadRandomMapWithPlayer(std::shared_ptr<CGame> game, std::string player);
 
     static std::shared_ptr<CMap> loadNewMap(std::shared_ptr<CGame> game, std::string name);
 
     static std::shared_ptr<CMap> loadSavedMap(std::shared_ptr<CGame> game, std::string name);
+
+    static std::shared_ptr<CMap> loadRandomMap(std::shared_ptr<CGame> game);
 
     static void save(std::shared_ptr<CMap> map, std::string name);
 
@@ -52,6 +56,8 @@ public:
 
     static void startGameWithPlayer(std::shared_ptr<CGame> game, std::string file, std::string player);
 
+    static void startRandomGameWithPlayer(std::shared_ptr<CGame> game, std::string player);
+
     static void startGame(std::shared_ptr<CGame> game, std::string file);
 
     static void changeMap(std::shared_ptr<CGame> game, std::string file);
@@ -59,6 +65,7 @@ public:
     static void loadGui(std::shared_ptr<CGame> game);
 
     static void loadSavedGame(std::shared_ptr<CGame> game, std::string save);
+
 private:
     static void initObjectHandler(std::shared_ptr<CObjectHandler> handler);
 

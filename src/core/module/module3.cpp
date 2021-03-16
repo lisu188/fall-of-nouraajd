@@ -33,6 +33,7 @@ void initModule3() {
     class_<CGameLoader, boost::noncopyable, std::shared_ptr<CGameLoader>>("CGameLoader")
             .def("loadGame", &CGameLoader::loadGame)
             .def("startGameWithPlayer", &CGameLoader::startGameWithPlayer)
+            .def("startRandomGameWithPlayer", &CGameLoader::startRandomGameWithPlayer)
             .def("startGame", &CGameLoader::startGame)
             .def("loadGui", &CGameLoader::loadGui)
             .def("loadSavedGame", &CGameLoader::loadSavedGame);
