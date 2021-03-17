@@ -1,6 +1,6 @@
 /*
 fall-of-nouraajd c++ dark fantasy game
-Copyright (C) 2020  Andrzej Lis
+Copyright (C) 2021  Andrzej Lis
 
 This program is free software: you can redistribute it and/or modify
         it under the terms of the GNU General Public License as published by
@@ -30,11 +30,11 @@ void CCreatureView::setCreatureScript(std::shared_ptr<CScript> _creatureScript) 
     creatureScript = _creatureScript;
 }
 
-std::set<std::shared_ptr<CGameGraphicsObject>>
+std::list<std::shared_ptr<CGameGraphicsObject>>
 CCreatureView::getProxiedObjects(std::shared_ptr<CGui> gui, int x, int y) {
     std::shared_ptr<CGameGraphicsObject> graphicsObject = getCreature()->getGraphicsObject();
     graphicsObject->setLayout(std::make_shared<CParentLayout>());
-    return vstd::set(
+    return vstd::as_list(
             graphicsObject);
 }
 

@@ -1,6 +1,6 @@
 /*
 fall-of-nouraajd c++ dark fantasy game
-Copyright (C) 2020  Andrzej Lis
+Copyright (C) 2021  Andrzej Lis
 
 This program is free software: you can redistribute it and/or modify
         it under the terms of the GNU General Public License as published by
@@ -31,7 +31,7 @@ V_META(CCreatureView, CProxyTargetGraphicsObject,
        V_METHOD(CCreatureView, getCreature, std::shared_ptr<CCreature>),
        V_METHOD(CCreatureView, initialize))
 public:
-    std::set<std::shared_ptr<CGameGraphicsObject>> getProxiedObjects(std::shared_ptr<CGui> gui, int x, int y) override;
+    std::list<std::shared_ptr<CGameGraphicsObject>> getProxiedObjects(std::shared_ptr<CGui> gui, int x, int y) override;
 
     int getSizeX(std::shared_ptr<CGui> gui) override;
 

@@ -80,9 +80,9 @@ int CProxyTargetGraphicsObject::getSizeY(std::shared_ptr<CGui> gui) {
     return 0;
 }
 
-std::set<std::shared_ptr<CGameGraphicsObject>>
+std::list<std::shared_ptr<CGameGraphicsObject>>
 CProxyTargetGraphicsObject::getProxiedObjects(std::shared_ptr<CGui> gui, int x, int y) {
-    return std::set<std::shared_ptr<CGameGraphicsObject>>();
+    return std::list<std::shared_ptr<CGameGraphicsObject>>();
 }
 
 std::string CProxyTargetGraphicsObject::getProxyLayout() {

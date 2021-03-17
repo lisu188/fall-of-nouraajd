@@ -170,8 +170,8 @@ std::shared_ptr<CMap> CMapLoader::loadRandomMap(std::shared_ptr<CGame> game) {
     map->entryx = stairs.row;
     map->entryy = stairs.col;
     map->entryz = 0;
-    for (int i = 0; i < dungeon.getCells().size(); i++) {
-        for (int j = 0; j < dungeon.getCells()[0].size(); j++) {
+    for (unsigned int i = 0; i < dungeon.getCells().size(); i++) {
+        for (unsigned int j = 0; j < dungeon.getCells()[0].size(); j++) {
             if (dungeon.getCells()[i][j].isOpenspace()) {
                 map->addTile(map->getGame()->createObject<CTile>("GroundTile"), i, j, 0);
             } else {
