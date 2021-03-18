@@ -170,7 +170,7 @@ Stats::Stats() {
 }
 
 void Stats::addBonus(std::shared_ptr<Stats> stats) {
-    stats->meta()->for_properties(stats, [&](auto property) {
+    stats->meta()->for_all_properties(stats, [&](auto property) {
         if (property->value_type() == boost::typeindex::type_id<int>()) {
             this->incProperty(property->name(), stats->getProperty<int>(property->name()));
         }
@@ -178,7 +178,7 @@ void Stats::addBonus(std::shared_ptr<Stats> stats) {
 }
 
 void Stats::removeBonus(std::shared_ptr<Stats> stats) {
-    stats->meta()->for_properties(stats, [&](auto property) {
+    stats->meta()->for_all_properties(stats, [&](auto property) {
         if (property->value_type() == boost::typeindex::type_id<int>()) {
             this->incProperty(property->name(), -stats->getProperty<int>(property->name()));
         }
