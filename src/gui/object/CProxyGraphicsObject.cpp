@@ -1,6 +1,6 @@
 /*
 fall-of-nouraajd c++ dark fantasy game
-Copyright (C) 2019  Andrzej Lis
+Copyright (C) 2021  Andrzej Lis
 
 This program is free software: you can redistribute it and/or modify
         it under the terms of the GNU General Public License as published by
@@ -37,9 +37,12 @@ void CProxyGraphicsObject::render(std::shared_ptr<CGui> gui, int frameTime) {
 
 void CProxyGraphicsObject::refresh() {
     vstd::with<void>(getGui(), [=](auto gui) {
-        std::set<std::shared_ptr<CGameGraphicsObject>> objects = vstd::cast<CProxyTargetGraphicsObject>(
+        std::list<std::shared_ptr<CGameGraphicsObject>> objects = vstd::cast<CProxyTargetGraphicsObject>(
                 getParent())->getProxiedObjects(gui, x, y);
-        setChildren(objects);
+        children.clear();
+        for (auto &object:objects) {
+            addChild(object);
+        }
     });
 }
 

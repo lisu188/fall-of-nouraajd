@@ -1,6 +1,6 @@
 /*
 fall-of-nouraajd c++ dark fantasy game
-Copyright (C) 2019  Andrzej Lis
+Copyright (C) 2021  Andrzej Lis
 
 This program is free software: you can redistribute it and/or modify
         it under the terms of the GNU General Public License as published by
@@ -19,6 +19,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "CLayout.h"
 #include "core/CGame.h"
 #include "handler/CScriptHandler.h"
+#include "gui/object/CProxyGraphicsObject.h"
 
 std::shared_ptr<SDL_Rect> CLayout::getParentRect(std::shared_ptr<CGameGraphicsObject> object) {
     return object->getParent() ? object->getParent()->getLayout()->getRect(object->getParent()) : RECT(0, 0, 0, 0);
@@ -150,7 +151,7 @@ int CProxyGraphicsLayout::getTileSize() {
 
 std::shared_ptr<SDL_Rect> CProxyGraphicsLayout::getRect(std::shared_ptr<CGameGraphicsObject> object) {
     auto pRect = getParentRect(object);
-    return RECT(pRect->x + object->getNumericProperty("x") * tileSize,
-                pRect->y + object->getNumericProperty("y") * tileSize,
+    return RECT(pRect->x + vstd::cast<CProxyGraphicsObject>(object)->getX() * tileSize,
+                pRect->y + vstd::cast<CProxyGraphicsObject>(object)->getY() * tileSize,
                 tileSize, tileSize);
 }

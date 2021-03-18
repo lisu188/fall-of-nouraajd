@@ -1,6 +1,6 @@
 /*
 fall-of-nouraajd c++ dark fantasy game
-Copyright (C) 2019  Andrzej Lis
+Copyright (C) 2021  Andrzej Lis
 
 This program is free software: you can redistribute it and/or modify
         it under the terms of the GNU General Public License as published by
@@ -17,27 +17,31 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #include "gui/object/CStatsGraphicsObject.h"
 #include "gui/object/CMapGraphicsObject.h"
-#include "gui/panel/CGamePanel.h"
 #include "core/CLoader.h"
 #include "core/CJsonUtil.h"
 #include "gui/CGui.h"
 #include "core/CTypes.h"
+#include <rdg.h>
+
+#include <utility>
 
 void CMapLoader::loadFromTmx(std::shared_ptr<CMap> map, std::shared_ptr<json> mapc) {
-    const json &mapProperties = (*mapc)["properties"];
-    const json &mapLayers = (*mapc)["layers"];
-    map->entryx = vstd::to_int(mapProperties.count("x") ? mapProperties["x"].get<std::string>() : "0").first;
-    map->entryy = vstd::to_int(mapProperties.count("y") ? mapProperties["y"].get<std::string>() : "0").first;
-    map->entryz = vstd::to_int(mapProperties.count("z") ? mapProperties["z"].get<std::string>() : "0").first;
-    const json &tileset = (*mapc)["tilesets"][0]["tileproperties"];
-    for (const auto &layer : mapLayers) {
-        if (vstd::string_equals(layer["type"].get<std::string>(), "tilelayer")) {
-            handleTileLayer(map, tileset, layer);
+    if (mapc) {
+        const json &mapProperties = (*mapc)["properties"];
+        const json &mapLayers = (*mapc)["layers"];
+        map->entryx = vstd::to_int(mapProperties.count("x") ? mapProperties["x"].get<std::string>() : "0").first;
+        map->entryy = vstd::to_int(mapProperties.count("y") ? mapProperties["y"].get<std::string>() : "0").first;
+        map->entryz = vstd::to_int(mapProperties.count("z") ? mapProperties["z"].get<std::string>() : "0").first;
+        const json &tileset = (*mapc)["tilesets"][0]["tileproperties"];
+        for (const auto &layer : mapLayers) {
+            if (vstd::string_equals(layer["type"].get<std::string>(), "tilelayer")) {
+                handleTileLayer(map, tileset, layer);
+            }
         }
-    }
-    for (const auto &layer : mapLayers) {
-        if (vstd::string_equals(layer["type"].get<std::string>(), "objectgroup")) {
-            handleObjectLayer(map, layer);
+        for (const auto &layer : mapLayers) {
+            if (vstd::string_equals(layer["type"].get<std::string>(), "objectgroup")) {
+                handleObjectLayer(map, layer);
+            }
         }
     }
 }
@@ -49,12 +53,12 @@ std::set<std::string> getConfigPaths(const std::string &mapName) {
 }
 
 std::string getScriptPath(std::string mapName) {
-    std::string path = vstd::join({"maps/", mapName}, "");
+    std::string path = vstd::join({"maps/", std::move(mapName)}, "");
     return vstd::join({path, "/script.py"}, "");
 }
 
 std::string getMapPath(std::string mapName) {
-    std::string path = vstd::join({"maps/", mapName}, "");
+    std::string path = vstd::join({"maps/", std::move(mapName)}, "");
     return vstd::join({path, "/map.json"}, "");
 }
 
@@ -69,7 +73,7 @@ std::shared_ptr<CMap> CMapLoader::loadNewMap(std::shared_ptr<CGame> game, const 
     return map;
 }
 
-std::shared_ptr<CMap> CMapLoader::loadSavedMap(std::shared_ptr<CGame> game, const std::string &name) {
+std::shared_ptr<CMap> CMapLoader::loadSavedMap(std::shared_ptr<CGame> game, std::string name) {
     std::string path = "save/" + name + ".json";
     std::shared_ptr<json> save = CConfigurationProvider::getConfig(path);
     auto mapName = (*save)["properties"]["mapName"].get<std::string>();
@@ -88,14 +92,22 @@ std::shared_ptr<CMap> CMapLoader::loadSavedMap(std::shared_ptr<CGame> game, cons
 std::shared_ptr<CMap> CMapLoader::loadNewMapWithPlayer(std::shared_ptr<CGame> game, std::string name,
                                                        std::string player) {
     std::shared_ptr<CMap> map = loadNewMap(game, name);
-    auto ptr = game->createObject<CPlayer>(player);
+    auto ptr = game->createObject<CPlayer>(std::move(player));
+    ptr->setName("player");
+    map->setPlayer(ptr);
+    return map;
+}
+
+std::shared_ptr<CMap> CMapLoader::loadRandomMapWithPlayer(std::shared_ptr<CGame> game, std::string player) {
+    std::shared_ptr<CMap> map = loadRandomMap(game);
+    auto ptr = game->createObject<CPlayer>(std::move(player));
     ptr->setName("player");
     map->setPlayer(ptr);
     return map;
 }
 
 void CMapLoader::save(std::shared_ptr<CMap> map, std::string name) {
-    CResourcesProvider::getInstance()->save(vstd::join({"save/", name, ".json"}, ""), JSONIFY_STYLED(map));
+    CResourcesProvider::getInstance()->save(vstd::join({"save/", std::move(name), ".json"}, ""), JSONIFY_STYLED(map));
 }
 
 void CMapLoader::handleTileLayer(std::shared_ptr<CMap> map, const json &tileset, const json &layer) {
@@ -150,6 +162,26 @@ void CMapLoader::handleObjectLayer(std::shared_ptr<CMap> map, const json &layer)
     }
 }
 
+std::shared_ptr<CMap> CMapLoader::loadRandomMap(std::shared_ptr<CGame> game) {
+    auto map = loadNewMap(game, "");
+    auto dungeon = rdg<>::create_dungeon(rdg<>::Options());
+    auto container = dungeon.getStairs();
+    auto stairs = vstd::any(container);
+    map->entryx = stairs.row;
+    map->entryy = stairs.col;
+    map->entryz = 0;
+    for (unsigned int i = 0; i < dungeon.getCells().size(); i++) {
+        for (unsigned int j = 0; j < dungeon.getCells()[0].size(); j++) {
+            if (dungeon.getCells()[i][j].isOpenspace()) {
+                map->addTile(map->getGame()->createObject<CTile>("GroundTile"), i, j, 0);
+            } else {
+                map->addTile(map->getGame()->createObject<CTile>("MountainTile"), i, j, 0);
+            }
+        }
+    }
+    return map;
+}
+
 
 std::shared_ptr<CGame> CGameLoader::loadGame() {
     std::shared_ptr<CGame> game = std::make_shared<CGame>();
@@ -160,18 +192,22 @@ std::shared_ptr<CGame> CGameLoader::loadGame() {
 }
 
 void CGameLoader::startGameWithPlayer(std::shared_ptr<CGame> game, std::string file, std::string player) {
-    game->setMap(CMapLoader::loadNewMapWithPlayer(game, file, player));
+    game->setMap(CMapLoader::loadNewMapWithPlayer(game, std::move(file), std::move(player)));
+}
+
+void CGameLoader::startRandomGameWithPlayer(std::shared_ptr<CGame> game, std::string player) {
+    game->setMap(CMapLoader::loadRandomMapWithPlayer(game, std::move(player)));
 }
 
 void CGameLoader::loadSavedGame(std::shared_ptr<CGame> game, std::string save) {
-    game->setMap(CMapLoader::loadSavedMap(game, save));
+    game->setMap(CMapLoader::loadSavedMap(game, std::move(save)));
 }
 
-void CGameLoader::startGame(std::shared_ptr<CGame> game, std::string file) {
+void CGameLoader::startGame(std::shared_ptr<CGame> game, const std::string &file) {
     game->setMap(CMapLoader::loadNewMap(game, file));
 }
 
-void CGameLoader::changeMap(std::shared_ptr<CGame> game, std::string name) {
+void CGameLoader::changeMap(std::shared_ptr<CGame> game, const std::string &name) {
     vstd::call_later([game, name]() {
         //TODO: implement stop processing events here
         vstd::call_when([game]() {
@@ -189,19 +225,19 @@ void CGameLoader::changeMap(std::shared_ptr<CGame> game, std::string name) {
 }
 
 void CGameLoader::initConfigurations(std::shared_ptr<CObjectHandler> handler) {
-    for (const std::string &path : CResourcesProvider::getInstance()->getFiles(CResType::CONFIG)) {
+    for (std::string path : CResourcesProvider::getInstance()->getFiles(CResType::CONFIG)) {
         handler->registerConfig(path);
     }
 }
 
-void CGameLoader::initObjectHandler(const std::shared_ptr<CObjectHandler> &handler) {
-    for (const auto &it:*CTypes::builders()) {
+void CGameLoader::initObjectHandler(std::shared_ptr<CObjectHandler> handler) {
+    for (auto it:*CTypes::builders()) {
         handler->registerType(it.first, it.second);
     }
 }
 
 void CGameLoader::initScriptHandler(std::shared_ptr<CScriptHandler> handler, std::shared_ptr<CGame> game) {
-    for (const auto &script:CResourcesProvider::getInstance()->getFiles(CResType::PLUGIN)) {
+    for (std::string script:CResourcesProvider::getInstance()->getFiles(CResType::PLUGIN)) {
         CPluginLoader::loadPlugin(game, script);
     }
 }
@@ -220,9 +256,12 @@ void CGameLoader::loadGui(std::shared_ptr<CGame> game) {
 }
 
 void CPluginLoader::loadPlugin(std::shared_ptr<CGame> game, std::string path) {
-    std::string code = CResourcesProvider::getInstance()->load(path);
-    auto name = game->getScriptHandler()->add_class(code, {"game.CPlugin"});
-    game->loadPlugin(game->getScriptHandler()->get_object<std::function<std::shared_ptr<CPlugin>()>>(name));
-    game->getScriptHandler()->execute_script(vstd::join({"del", name}, " "));
+    PY_SAFE(
+            std::string code = CResourcesProvider::getInstance()->load(path);
+            auto name = game->getScriptHandler()->add_class(code, {"game.CPlugin"});
+            game->loadPlugin(
+                    game->getScriptHandler()->get_object<std::function<std::shared_ptr<CPlugin>()>>(name));
+            game->getScriptHandler()->execute_script(vstd::join({"del", name}, " "));
+    )
 }
 

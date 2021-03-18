@@ -34,12 +34,7 @@ class CGameGraphicsObject;
 //TODO: generify
 struct priority_comparator {
     bool operator()(
-            std::shared_ptr<CGameGraphicsObject> a, std::shared_ptr<CGameGraphicsObject> b) const;
-};
-
-struct reverse_priority_comparator {
-    bool operator()(
-            std::shared_ptr<CGameGraphicsObject> a, std::shared_ptr<CGameGraphicsObject> b) const;
+            const std::shared_ptr<CGameGraphicsObject> &a, const std::shared_ptr<CGameGraphicsObject> &b) const;
 };
 
 class CGameGraphicsObject : public CGameObject {
@@ -62,7 +57,7 @@ V_META(CGameGraphicsObject, CGameObject,
                                            SDL_Event *)>, std::function<bool(
             std::shared_ptr<CGui>, std::shared_ptr<CGameGraphicsObject>, SDL_Event *) >>> eventCallbackList;
 
-    std::set<std::shared_ptr<CGameGraphicsObject>> children;
+    std::set<std::shared_ptr<CGameGraphicsObject>, priority_comparator> children;
     std::weak_ptr<CGameGraphicsObject> parent;
 
     std::shared_ptr<CLayout> layout;

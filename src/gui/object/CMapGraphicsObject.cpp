@@ -1,6 +1,6 @@
 /*
 fall-of-nouraajd c++ dark fantasy game
-Copyright (C) 2019  Andrzej Lis
+Copyright (C) 2021  Andrzej Lis
 
 This program is free software: you can redistribute it and/or modify
         it under the terms of the GNU General Public License as published by
@@ -27,16 +27,16 @@ CMapGraphicsObject::CMapGraphicsObject() {
 }
 
 
-std::set<std::shared_ptr<CGameGraphicsObject>>
+std::list<std::shared_ptr<CGameGraphicsObject>>
 CMapGraphicsObject::getProxiedObjects(std::shared_ptr<CGui> gui, int x, int y) {
-    return vstd::with<std::set<std::shared_ptr<CGameGraphicsObject>>>(gui->getGame()->getMap(), [&](auto map) {
-        std::set<std::shared_ptr<CGameGraphicsObject>> return_val;
+    return vstd::with<std::list<std::shared_ptr<CGameGraphicsObject>>>(gui->getGame()->getMap(), [&](auto map) {
+        std::list<std::shared_ptr<CGameGraphicsObject>> return_val;
 
-        auto actualCoords = guiToMap(Coords(x, y, gui->getGame()->getMap()->getPlayer()->getCoords().z));
+        auto actualCoords = guiToMap(gui, Coords(x, y, gui->getGame()->getMap()->getPlayer()->getCoords().z));
 
         std::shared_ptr<CTile> tile = map->getTile(actualCoords.x, actualCoords.y, actualCoords.z);
 
-        return_val.insert(tile->getGraphicsObject()->withCallback(
+        return_val.push_back(tile->getGraphicsObject()->withCallback(
                 [actualCoords](std::shared_ptr<CGui> gui, SDL_EventType type, int button, int, int) {
                     if (type == SDL_MOUSEBUTTONDOWN && button == SDL_BUTTON_LEFT) {
                         auto controller = vstd::cast<CPlayerController>(
@@ -57,11 +57,10 @@ CMapGraphicsObject::getProxiedObjects(std::shared_ptr<CGui> gui, int x, int y) {
 
 
         for (auto ob: map->getObjectsAtCoords(actualCoords)) {
-            return_val.insert(ob->getGraphicsObject());
+            return_val.push_back(ob->getGraphicsObject());
         }
         return return_val;
     });
-
 }
 
 void CMapGraphicsObject::initialize() {
@@ -131,23 +130,23 @@ bool CMapGraphicsObject::keyboardEvent(std::shared_ptr<CGui> gui, SDL_EventType 
     return false;
 }
 
-Coords CMapGraphicsObject::mapToGui(Coords coords) {
-    auto playerCoords = getGui()->getGame()->getMap()->getPlayer()->getCoords();
+Coords CMapGraphicsObject::mapToGui(std::shared_ptr<CGui> gui, Coords coords) {
+    auto playerCoords = gui->getGame()->getMap()->getPlayer()->getCoords();
 
-    return Coords(coords.x - playerCoords.x + getGui()->getTileCountX() / 2,
-                  coords.y - playerCoords.y + getGui()->getTileCountY() / 2,
+    return Coords(coords.x - playerCoords.x + gui->getTileCountX() / 2,
+                  coords.y - playerCoords.y + gui->getTileCountY() / 2,
                   coords.z);
 }
 
-Coords CMapGraphicsObject::guiToMap(Coords coords) {
-    auto playerCoords = getGui()->getGame()->getMap()->getPlayer()->getCoords();
+Coords CMapGraphicsObject::guiToMap(std::shared_ptr<CGui> gui, Coords coords) {
+    auto playerCoords = gui->getGame()->getMap()->getPlayer()->getCoords();
 
-    return Coords(playerCoords.x - getGui()->getTileCountX() / 2 + coords.x,
-                  playerCoords.y - getGui()->getTileCountY() / 2 + coords.y,
+    return Coords(playerCoords.x - gui->getTileCountX() / 2 + coords.x,
+                  playerCoords.y - gui->getTileCountY() / 2 + coords.y,
                   playerCoords.z);
 }
 
 void CMapGraphicsObject::refreshObject(Coords coords) {
-    auto translated = mapToGui(coords);
+    auto translated = mapToGui(getGui(), coords);
     CProxyTargetGraphicsObject::refreshObject(translated.x, translated.y);
 }
