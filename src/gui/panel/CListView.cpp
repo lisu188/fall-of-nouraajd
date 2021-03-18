@@ -1,6 +1,6 @@
 /*
 fall-of-nouraajd c++ dark fantasy game
-Copyright (C) 2019  Andrzej Lis
+Copyright (C) 2021  Andrzej Lis
 
 This program is free software: you can redistribute it and/or modify
         it under the terms of the GNU General Public License as published by
@@ -158,17 +158,17 @@ bool CListView::invokeSelect(std::shared_ptr<CGui> gui, int i, std::shared_ptr<C
                                                                       gui, i, object);
 }
 
-std::set<std::shared_ptr<CGameGraphicsObject>>
+std::list<std::shared_ptr<CGameGraphicsObject>>
 CListView::getProxiedObjects(std::shared_ptr<CGui> gui, int x, int y) {
-    std::set<std::shared_ptr<CGameGraphicsObject>> return_val;
+    std::list<std::shared_ptr<CGameGraphicsObject>> return_val;
     int i = getSizeX(gui) * y + x;
     if (i == getLeftArrowIndex(gui) && isOversized(gui)) {
-        return_val.insert(CAnimationProvider::getAnimation(gui->getGame(),
-                                                           "images/arrows/left")->withCallback(
+        return_val.push_back(CAnimationProvider::getAnimation(gui->getGame(),
+                                                              "images/arrows/left")->withCallback(
                 getArrowCallback(true)));//TODO: cache
     } else if (i == getRightArrowIndex(gui) && isOversized(gui)) {
-        return_val.insert(CAnimationProvider::getAnimation(gui->getGame(),
-                                                           "images/arrows/right")->withCallback(
+        return_val.push_back(CAnimationProvider::getAnimation(gui->getGame(),
+                                                              "images/arrows/right")->withCallback(
                 getArrowCallback(false)));//TODO: cache
     } else {
         auto indexedCollection = calculateIndices(gui);
@@ -194,7 +194,7 @@ CListView::getProxiedObjects(std::shared_ptr<CGui> gui, int x, int y) {
 }
 
 void CListView::addCountBox(std::shared_ptr<CGui> gui, int count,
-                            std::set<std::shared_ptr<CGameGraphicsObject>> &return_val) const {
+                            std::list<std::shared_ptr<CGameGraphicsObject>> &return_val) const {
     auto countBox = gui->getGame()->getObjectHandler()->createObject<CTextWidget>(gui->getGame());
     countBox->setText(vstd::str(count));
     auto layout = gui->getGame()->getObjectHandler()->createObject<CLayout>(gui->getGame());
@@ -204,30 +204,30 @@ void CListView::addCountBox(std::shared_ptr<CGui> gui, int count,
     layout->setH("10%");
     countBox->setLayout(layout);
     countBox->setPriority(4);
-    return_val.insert(countBox);//TODO: cache
+    return_val.push_back(countBox);//TODO: cache
 }
 
 void CListView::addSelectionBox(std::shared_ptr<CGui> gui,
-                                std::set<std::shared_ptr<CGameGraphicsObject>> &return_val) const {
+                                std::list<std::shared_ptr<CGameGraphicsObject>> &return_val) const {
     auto selectionBox = gui->getGame()->getObjectHandler()->createObject<CSelectionBox>(gui->getGame());
     selectionBox->setThickness(5);
     selectionBox->setPriority(3);
-    return_val.insert(selectionBox);//TODO: cache
+    return_val.push_back(selectionBox);//TODO: cache
 }
 
-void CListView::addItem(std::set<std::shared_ptr<CGameGraphicsObject>> &return_val,
+void CListView::addItem(std::list<std::shared_ptr<CGameGraphicsObject>> &return_val,
                         std::unordered_multimap<int, std::shared_ptr<CGameObject>, std::hash<int>, std::equal_to<int>, std::allocator<std::pair<const int, std::shared_ptr<CGameObject>>>> indexedCollection,
                         int itemIndex) const {
     std::shared_ptr<CGameGraphicsObject> objectGraphic = indexedCollection.find(itemIndex)->second->getGraphicsObject();
     objectGraphic->setPriority(2);
-    return_val.insert(objectGraphic);
+    return_val.push_back(objectGraphic);
 }
 
 void
-CListView::addItemBox(std::shared_ptr<CGui> gui, std::set<std::shared_ptr<CGameGraphicsObject>> &return_val) const {
+CListView::addItemBox(std::shared_ptr<CGui> gui, std::list<std::shared_ptr<CGameGraphicsObject>> &return_val) const {
     std::shared_ptr<CAnimation> itemBox = CAnimationProvider::getAnimation(gui->getGame(), "images/item");
     itemBox->setPriority(1);
-    return_val.insert(itemBox);//TODO: cache
+    return_val.push_back(itemBox);//TODO: cache
 
 }
 

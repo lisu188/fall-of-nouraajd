@@ -1,6 +1,6 @@
 /*
 fall-of-nouraajd c++ dark fantasy game
-Copyright (C) 2019  Andrzej Lis
+Copyright (C) 2021  Andrzej Lis
 
 This program is free software: you can redistribute it and/or modify
         it under the terms of the GNU General Public License as published by
@@ -170,22 +170,22 @@ Stats::Stats() {
 }
 
 void Stats::addBonus(std::shared_ptr<Stats> stats) {
-    for (auto property:stats->meta()->properties(stats)) {
+    stats->meta()->for_properties(stats, [&](auto property) {
         if (property->value_type() == boost::typeindex::type_id<int>()) {
             this->incProperty(property->name(), stats->getProperty<int>(property->name()));
         }
-    }
+    });
 }
 
 void Stats::removeBonus(std::shared_ptr<Stats> stats) {
-    for (auto property:stats->meta()->properties(stats)) {
+    stats->meta()->for_properties(stats, [&](auto property) {
         if (property->value_type() == boost::typeindex::type_id<int>()) {
             this->incProperty(property->name(), -stats->getProperty<int>(property->name()));
         }
-    }
+    });
 }
 
-const char *Stats::getText(int level) {
+std::string Stats::getText(int level) {
     std::ostringstream stream;
     stream << "Level: " << level << "\n";
     stream << "Strength: " << strength << "\n";
@@ -194,14 +194,14 @@ const char *Stats::getText(int level) {
     stream << "Stamina: " << stamina << "\n";
     stream << "Damage: " << dmgMin + damage << "-" << dmgMax + damage << "\n";
     stream << "Hit: " << hit + attack << "%"
-            << "\n";
+           << "\n";
     stream << "Crit: " << crit << "%"
-            << "\n";
+           << "\n";
     stream << "Armor: " << armor << "%"
-            << "\n";
+           << "\n";
     stream << "Block: " << block << "%"
-            << "\n";
-    return stream.str().c_str();
+           << "\n";
+    return stream.str();
 }
 
 

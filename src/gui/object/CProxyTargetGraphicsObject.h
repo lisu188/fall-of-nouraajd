@@ -1,6 +1,6 @@
 /*
 fall-of-nouraajd c++ dark fantasy game
-Copyright (C) 2019  Andrzej Lis
+Copyright (C) 2021  Andrzej Lis
 
 This program is free software: you can redistribute it and/or modify
         it under the terms of the GNU General Public License as published by
@@ -31,7 +31,7 @@ public:
 
     bool event(std::shared_ptr<CGui> gui, SDL_Event *event) override;
 
-    virtual std::set<std::shared_ptr<CGameGraphicsObject>>
+    virtual std::list<std::shared_ptr<CGameGraphicsObject>>
     getProxiedObjects(std::shared_ptr<CGui> gui, int x, int y);
 
     virtual int getSizeX(std::shared_ptr<CGui> gui);

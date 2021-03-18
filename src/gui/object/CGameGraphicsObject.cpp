@@ -31,10 +31,7 @@ void CGameGraphicsObject::render(std::shared_ptr<CGui> reneder, int frameTime) {
     if (isVisible()) {
         renderBackground(reneder, getRect(), frameTime);
         renderObject(reneder, getRect(), frameTime);
-        std::set<std::shared_ptr<CGameGraphicsObject>,
-                priority_comparator> children_sorted(children.begin(),
-                                                     children.end());
-        for (auto child:children_sorted) {
+        for (const auto &child:children) {
             child->render(reneder, frameTime);
         }
     }
@@ -42,15 +39,12 @@ void CGameGraphicsObject::render(std::shared_ptr<CGui> reneder, int frameTime) {
 
 bool CGameGraphicsObject::event(std::shared_ptr<CGui> gui, SDL_Event *event) {
     if (isVisible()) {
-        std::set<std::shared_ptr<CGameGraphicsObject>,
-                reverse_priority_comparator> children_reversed(children.begin(),
-                                                               children.end());
-        for (auto child:children_reversed) {
+        for (const auto &child:children | boost::adaptors::reversed) {
             if (child->event(gui, event)) {
                 return true;
             }
         }
-        for (auto callback:eventCallbackList) {//TODO:remove, replace with other event
+        for (const auto &callback:eventCallbackList) {//TODO:remove, replace with other event
             if (callback.first(gui, this->ptr<CGameGraphicsObject>(), event) &&
                 callback.second(gui, this->ptr<CGameGraphicsObject>(), event)) {
                 return true;
@@ -146,7 +140,7 @@ std::set<std::shared_ptr<CGameGraphicsObject>> CGameGraphicsObject::getChildren(
 void CGameGraphicsObject::setChildren(std::set<std::shared_ptr<CGameGraphicsObject>> _children) {
     //TODO: doChecks if some of children are already present
     children.clear();
-    for (auto child:_children) {
+    for (const auto &child:_children) {
         addChild(child);
     }
 }
@@ -160,6 +154,7 @@ void CGameGraphicsObject::setPriority(int priority) {
 }
 
 int CGameGraphicsObject::getTopPriority() {
+    //TODO: with already sorted set, can be optimized
     auto iterator = std::max_element(
             children.begin(), children.end(), priority_comparator());
     if (iterator != children.end()) {
@@ -237,18 +232,14 @@ void CGameGraphicsObject::setBackground(std::string _background) {
     background = _background;
 }
 
-bool priority_comparator::operator()(std::shared_ptr<CGameGraphicsObject> a,
-                                     std::shared_ptr<CGameGraphicsObject> b) const {
+bool priority_comparator::operator()(const std::shared_ptr<CGameGraphicsObject> &a,
+                                     const std::shared_ptr<CGameGraphicsObject> &b) const {
     if (a->getPriority() == b->getPriority()) {
         return a < b;
     }
     return a->getPriority() < b->getPriority();
 }
 
-bool reverse_priority_comparator::operator()(std::shared_ptr<CGameGraphicsObject> a,
-                                             std::shared_ptr<CGameGraphicsObject> b) const {
-    return priority_comparator()(b, a);
-}
 int CGameGraphicsObject::getTileSize(
         std::shared_ptr<CGameGraphicsObject> object) {
     if (object->hasProperty("tileSize")) {
