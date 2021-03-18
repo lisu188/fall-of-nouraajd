@@ -15,6 +15,8 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
+#include <utility>
+
 #include "core/CLoader.h"
 #include "core/CWrapper.h"
 #include "core/CJsonUtil.h"
@@ -22,7 +24,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 using namespace boost::python;
 
 int randint(int i, int j) {
-    return vstd::rand(i, j + 1) % (j - i + 1) + i;//TODO: unify and document exclusive inclusive
+    return vstd::rand(i, j);//TODO: unify and document exclusive inclusive
 }
 
 std::string jsonify(std::shared_ptr<CGameObject> x) {
@@ -30,7 +32,7 @@ std::string jsonify(std::shared_ptr<CGameObject> x) {
 }
 
 void logger(std::string s) {
-    vstd::logger::info(s);//TODO: add script name
+    vstd::logger::info(std::move(s));//TODO: add script name
 }
 
 extern void initModule1();
