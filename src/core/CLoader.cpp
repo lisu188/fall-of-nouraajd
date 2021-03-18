@@ -164,7 +164,11 @@ void CMapLoader::handleObjectLayer(std::shared_ptr<CMap> map, const json &layer)
 
 std::shared_ptr<CMap> CMapLoader::loadRandomMap(std::shared_ptr<CGame> game) {
     auto map = loadNewMap(game, "");
-    auto dungeon = rdg<>::create_dungeon(rdg<>::Options());
+    auto options = rdg<>::Options();
+    options.n_rows = 555;
+    options.n_cols = 555;
+    options.corridor_layout = rdg<>::BENT;
+    auto dungeon = rdg<>::create_dungeon(options);
     auto container = dungeon.getStairs();
     auto stairs = vstd::any(container);
     map->entryx = stairs.row;
