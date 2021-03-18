@@ -84,9 +84,9 @@ std::unordered_multimap<int, std::shared_ptr<CGameObject>> CListView::calculateI
 
         int i = -1;
 
-        for (auto it:(reduced)) {
+        for (const auto &it:(reduced)) {
             i++;
-            for (auto it2:it.second) {
+            for (const auto &it2:it.second) {
                 indices.insert(std::make_pair(i, it2));
             }
         }
@@ -95,7 +95,7 @@ std::unordered_multimap<int, std::shared_ptr<CGameObject>> CListView::calculateI
         std::unordered_multimap<int, std::shared_ptr<CGameObject>> indices;
         int i = -1;
         collection_pointer sharedPtr = invokeCollection(gui);
-        for (auto it:(*sharedPtr)) {
+        for (const auto &it:(*sharedPtr)) {
             indices.insert(std::make_pair(++i, it));
         }
         return indices;

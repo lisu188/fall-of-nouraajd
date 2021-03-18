@@ -69,7 +69,7 @@ std::shared_ptr<vstd::future<Coords, void>> CGroundController::control(std::shar
             }
         }
         if (!possible.empty()) {
-            return possible[vstd::rand(0, possible.size())];
+            return vstd::random_element(possible);
         }
         return creature->getCoords();
     });
@@ -91,7 +91,7 @@ std::shared_ptr<vstd::future<Coords, void>> CRangeController::control(std::share
             }
         }
         if (!possible.empty()) {
-            return possible[vstd::rand(0, possible.size())];
+            return vstd::random_element(possible);
         }
         return creature->getCoords();
     });
@@ -134,13 +134,14 @@ bool CMonsterFightController::control(std::shared_ptr<CCreature> me, std::shared
 
 std::shared_ptr<CItem>
 CMonsterFightController::getLeastPowerfulItemWithTag(std::shared_ptr<CCreature> cr, std::string tag) {
-    auto cmp = [](std::shared_ptr<CItem> a, std::shared_ptr<CItem> b) {
+    auto cmp = [](const std::shared_ptr<CItem> &a, const std::shared_ptr<CItem> &b) {
         return a->getPower() < b->getPower();
     };
-    std::function<bool(std::shared_ptr<CItem>)> pred = [tag](std::shared_ptr<CItem> it) {
+    std::function<bool(std::shared_ptr<CItem>)> pred = [tag](const std::shared_ptr<CItem> &it) {
         return it->hasTag(tag);
     };
-    auto rng = cr->getItems() | boost::adaptors::filtered(pred);
+    std::set<std::shared_ptr<CItem>> items = cr->getItems();
+    auto rng = items | boost::adaptors::filtered(pred);
     auto max = boost::min_element(rng, cmp);
     if (max != boost::end(rng)) {
         return *max;
@@ -149,19 +150,20 @@ CMonsterFightController::getLeastPowerfulItemWithTag(std::shared_ptr<CCreature> 
 }
 
 std::shared_ptr<CInteraction> CMonsterFightController::selectInteraction(std::shared_ptr<CCreature> cr) {
-    std::function<bool(std::shared_ptr<CInteraction>)> pFunction = [](std::shared_ptr<CInteraction> it) {
+    std::function<bool(std::shared_ptr<CInteraction>)> pFunction = [](const std::shared_ptr<CInteraction> &it) {
         return !it->hasTag("buff");
     };
-    std::function<bool(std::shared_ptr<CInteraction>)> pFunction2 = [cr](std::shared_ptr<CInteraction> it) {
+    std::function<bool(std::shared_ptr<CInteraction>)> pFunction2 = [cr](const std::shared_ptr<CInteraction> &it) {
         return it->getManaCost() <= cr->getMana();
     };
-    std::function<bool(std::shared_ptr<CInteraction>)> pFunction3 = [](std::shared_ptr<CInteraction> it) {
+    std::function<bool(std::shared_ptr<CInteraction>)> pFunction3 = [](const std::shared_ptr<CInteraction> &it) {
         return !it->getEffect() || (it->getEffect() && !it->getEffect()->hasTag("buff"));
     };
-    auto pred = [](std::shared_ptr<CInteraction> a, std::shared_ptr<CInteraction> b) {
+    auto pred = [](const std::shared_ptr<CInteraction> &a, const std::shared_ptr<CInteraction> &b) {
         return a->getManaCost() < b->getManaCost();
     };
-    auto rng = cr->getInteractions() | boost::adaptors::filtered(pFunction) |
+    std::set<std::shared_ptr<CInteraction>> interactions = cr->getInteractions();
+    auto rng = interactions | boost::adaptors::filtered(pFunction) |
                boost::adaptors::filtered(pFunction2) | boost::adaptors::filtered(pFunction3);
     auto max = boost::max_element(
             rng, pred);
