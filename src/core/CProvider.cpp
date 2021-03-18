@@ -24,6 +24,7 @@ const std::string CResType::CONFIG = "CONFIG";
 const std::string CResType::MAP = "MAP";
 const std::string CResType::PLUGIN = "PLUGIN";
 const std::string CResType::SAVE = "SAVE";
+const std::string CResType::IMAGE = "IMAGE";
 
 std::shared_ptr<json> CConfigurationProvider::getConfig(const std::string &path) {
     static CConfigurationProvider instance;
@@ -148,4 +149,35 @@ CAnimationProvider::getAnimation(const std::shared_ptr<CGame> &game, std::string
     std::shared_ptr<CGameObject> object = game->createObject<CGameObject>();
     object->setAnimation(std::move(path));
     return getAnimation(game, object, custom);
+}
+
+const std::string &CResource::getPath() const {
+    return path;
+}
+
+void CResource::setPath(const std::string &path) {
+    CResource::path = path;
+}
+
+const std::string &CResource::getPathPrefix() const {
+    return pathPrefix;
+}
+
+void CResource::setPathPrefix(const std::string &pathPrefix) {
+    CResource::pathPrefix = pathPrefix;
+}
+
+const std::string &CResource::getPathSuffix() const {
+    return pathSuffix;
+}
+
+void CResource::setPathSuffix(const std::string &pathSuffix) {
+    CResource::pathSuffix = pathSuffix;
+}
+
+std::string CTextResource::getText() {
+    std::ifstream t((boost::filesystem::path(getPathPrefix())
+                     / boost::filesystem::path(getPath()).replace_extension(getPathSuffix())).string());
+    return std::string(std::istreambuf_iterator<char>(t),
+                       std::istreambuf_iterator<char>());
 }
