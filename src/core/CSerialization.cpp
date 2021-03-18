@@ -1,6 +1,6 @@
 /*
 fall-of-nouraajd c++ dark fantasy game
-Copyright (C) 2019  Andrzej Lis
+Copyright (C) 2021  Andrzej Lis
 
 This program is free software: you can redistribute it and/or modify
         it under the terms of the GNU General Public License as published by
@@ -81,7 +81,7 @@ void CSerialization::setBooleanProperty(std::shared_ptr<CGameObject> object, std
 }
 
 void CSerialization::setStringProperty(std::shared_ptr<CGameObject> object, std::string key, std::string value) {
-    if (vstd::trim(value) != "") {
+    if (!vstd::trim(value).empty()) {
         auto val = vstd::to_int(value);
         if (val.second) {
             setNumericProperty(object, key, val.first);
@@ -188,12 +188,12 @@ std::shared_ptr<json> object_serialize(std::shared_ptr<CGameObject> object) {
     if (object) {
         add_member(conf, "class", vstd::is_empty(object->getType()) ? object->meta()->name() : object->getType());
         std::shared_ptr<json> properties = std::make_shared<json>();
-        for (std::shared_ptr<vstd::property> property: object->meta()->properties<CGameObject>(object)) {
+        object->meta()->for_properties(object, [&](auto property) {
             if (property->name() != "type") {
                 CSerialization::setProperty(properties, property->name(),
                                             object->getProperty<boost::any>(property->name()));
             }
-        }
+        });
         add_member(conf, "properties", properties);
     }
     return conf;

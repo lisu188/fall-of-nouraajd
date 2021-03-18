@@ -1,6 +1,6 @@
 /*
 fall-of-nouraajd c++ dark fantasy game
-Copyright (C) 2020  Andrzej Lis
+Copyright (C) 2021  Andrzej Lis
 
 This program is free software: you can redistribute it and/or modify
         it under the terms of the GNU General Public License as published by
@@ -24,7 +24,7 @@ std::string CTooltipHandler::buildTooltip(std::shared_ptr<CGameObject> object) {
     if (object->meta()->inherits("CItem")) {
         vstd::add_line(tooltip, object->getDescription());
         auto bonus = vstd::cast<CItem>(object)->getBonus();
-        for (auto prop:bonus->meta()->properties(bonus)) {
+        bonus->meta()->for_properties(bonus, [&](auto prop) {
             //TODO: move to meta
             if (prop->value_type() == boost::typeindex::type_id<int>()) {
                 auto value = bonus->getNumericProperty(prop->name());
@@ -34,7 +34,7 @@ std::string CTooltipHandler::buildTooltip(std::shared_ptr<CGameObject> object) {
                                    + vstd::str(value));
                 }
             }
-        }
+        });
     }
     return tooltip;
 }

@@ -1,6 +1,6 @@
 /*
 fall-of-nouraajd c++ dark fantasy game
-Copyright (C) 2019  Andrzej Lis
+Copyright (C) 2021  Andrzej Lis
 
 This program is free software: you can redistribute it and/or modify
         it under the terms of the GNU General Public License as published by
@@ -104,7 +104,7 @@ public:
 
     bool mouseEvent(std::shared_ptr<CGui> gui, SDL_EventType type, int button, int x, int y) override;
 
-    std::set<std::shared_ptr<CGameGraphicsObject>>
+    std::list<std::shared_ptr<CGameGraphicsObject>>
     getProxiedObjects(std::shared_ptr<CGui> gui, int x, int y) override;
 
     int getSizeX(std::shared_ptr<CGui> gui) override;
@@ -161,16 +161,17 @@ private:
 
     auto getArrowCallback(bool left);
 
-    void addItemBox(std::shared_ptr<CGui> gui, std::set<std::shared_ptr<CGameGraphicsObject>> &return_val) const;
+    void addItemBox(std::shared_ptr<CGui> gui, std::list<std::shared_ptr<CGameGraphicsObject>> &return_val) const;
 
-    void addItem(std::set<std::shared_ptr<CGameGraphicsObject>> &return_val,
-                 std::unordered_multimap<int, std::shared_ptr<CGameObject>, std::hash<int>, std::equal_to<int>, std::allocator<std::pair<const int, std::shared_ptr<CGameObject>>>> indexedCollection,
+    void addItem(std::list<std::shared_ptr<CGameGraphicsObject>> &return_val,
+                 std::unordered_multimap<int, std::shared_ptr<CGameObject>> indexedCollection,
                  int itemIndex) const;
 
-    void addSelectionBox(std::shared_ptr<CGui> gui, std::set<std::shared_ptr<CGameGraphicsObject>> &return_val) const;
+    void addSelectionBox(std::shared_ptr<CGui> gui, std::list<std::shared_ptr<CGameGraphicsObject>> &return_val) const;
 
     void
-    addCountBox(std::shared_ptr<CGui> gui, int count, std::set<std::shared_ptr<CGameGraphicsObject>> &return_val) const;
+    addCountBox(std::shared_ptr<CGui> gui, int count,
+                std::list<std::shared_ptr<CGameGraphicsObject>> &return_val) const;
 
 };
 

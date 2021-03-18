@@ -159,7 +159,7 @@ std::shared_ptr<CAnimation> CGameObject::getGraphicsObject() {
 }
 
 void CGameObject::connect(std::string signal, std::shared_ptr<CGameObject> object, std::string slot) {
-    connections.push_back(std::make_tuple(signal, object, slot));
+    connections.emplace_back(signal, object, slot);
 }
 
 bool CGameObject::hasProperty(std::string name) {
