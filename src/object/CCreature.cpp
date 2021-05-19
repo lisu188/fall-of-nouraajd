@@ -91,7 +91,7 @@ void CCreature::setLevelStats(std::shared_ptr<Stats> _value) {
 void CCreature::addItem(std::shared_ptr<CItem> item) {
     std::set<std::shared_ptr<CItem>> list;
     list.insert(item);
-    addItem(list);
+    addItems(list);
 }
 
 void CCreature::removeItem(std::shared_ptr<CItem> item, bool quest) {
@@ -130,7 +130,7 @@ void CCreature::setEquipped(CItemMap
     equipped = value;//TODO: rethink equipped changed here
 }
 
-void CCreature::addItem(std::set<std::shared_ptr<CItem> > items) {
+void CCreature::addItems(std::set<std::shared_ptr<CItem> > items) {
     for (std::shared_ptr<CItem> it : items) {
         this->items.insert(it);
         signal("inventoryChanged");

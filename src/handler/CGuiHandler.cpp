@@ -72,11 +72,16 @@ void CGuiHandler::showDialog(std::shared_ptr<CDialog> dialog) {
     panel->awaitClosing();
 }
 
-void CGuiHandler::showLoot(std::set<std::shared_ptr<CItem>> items) {
+void CGuiHandler::showLoot(std::shared_ptr<CCreature> creature, std::set<std::shared_ptr<CItem>> items) {
     std::shared_ptr<CGameLootPanel> panel = _game.lock()->createObject<CGameLootPanel>("lootPanel");
+    panel->setCreature(creature);
     panel->setItems(items);
     _game.lock()->getGui()->pushChild(panel);
     panel->awaitClosing();
+}
+
+void CGuiHandler::showLoot(std::shared_ptr<CCreature> creature, int value) {
+    showLoot(creature, creature->getMap()->getGame()->getLootHandler()->getLoot(value));
 }
 
 CGuiHandler::CGuiHandler(std::shared_ptr<CGame> game) : _game(game) {

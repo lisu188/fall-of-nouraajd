@@ -30,7 +30,7 @@ CLootHandler::CLootHandler(std::shared_ptr<CGame> game) : game(game) {
         if (item) {
             int power = item->getPower();
             if (power > 0 && !item->hasTag("quest")) {
-                this->insert(std::make_pair(type, power));
+                powerTable.insert(std::make_pair(power, type));
             }
         }
     }
@@ -40,20 +40,25 @@ std::set<std::shared_ptr<CItem>> CLootHandler::calculateLoot(int value) const {
     std::set<std::shared_ptr<CItem>> loot;
     std::list<int> powers;
     while (value > 0) {
-        int pow = vstd::rand(1, value);
-        value -= pow;
-        powers.push_back(pow);
-    }
-    for (int val:powers) {
-        std::vector<std::string> names;
-        for (const auto &it:*this) {
-            if (it.second == val) {
-                names.push_back(it.first);
+        std::set<int> possible_values;
+        for (const auto &it:powerTable) {
+            if (it.first <= value) {
+                possible_values.insert(it.first);
             }
         }
-        if (!names.empty()) {
-            loot.insert(game.lock()->createObject<CItem>(vstd::random_element(names)));
+        if (possible_values.empty()) {
+            break;
         }
+        int pow = vstd::random_element(possible_values);
+        std::set<std::string> possible_names;
+        auto range = powerTable.equal_range(pow);
+        for (auto it = range.first; it != range.second; it++) {
+            possible_names.insert(it->second);
+        }
+        if (!possible_names.empty()) {
+            loot.insert(game.lock()->createObject<CItem>(vstd::random_element(possible_names)));
+        }
+        value -= pow;
     }
     return loot;
 }

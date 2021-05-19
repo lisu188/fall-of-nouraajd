@@ -25,6 +25,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 class CGameLootPanel : public CGamePanel {
 V_META(CGameLootPanel, CGamePanel,
        V_PROPERTY(CGameLootPanel, std::set<std::shared_ptr<CItem>>, items, getItems, setItems),
+       V_PROPERTY(CGameLootPanel, std::shared_ptr<CCreature>, creature, getCreature, setCreature),
        V_METHOD(CGameLootPanel, itemsCollection, CListView::collection_pointer, std::shared_ptr<CGui>))
 public:
     void setItems(std::set<std::shared_ptr<CItem>> items);
@@ -37,4 +38,9 @@ public:
 
 private:
     std::set<std::shared_ptr<CItem>> items;
+    std::shared_ptr<CCreature> creature;
+public:
+    const std::shared_ptr<CCreature> &getCreature() const;
+
+    void setCreature(const std::shared_ptr<CCreature> &creature);
 };

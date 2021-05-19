@@ -23,6 +23,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CController.h"
 #include "core/CList.h"
 #include "core/CScript.h"
+#include "handler/CLootHandler.h"
 
 extern void add_member(std::shared_ptr<json> object, std::string key, std::string value);
 
@@ -52,6 +53,7 @@ namespace {
 
                 CTypes::register_type<CObjectHandler, CGameObject>();
                 CTypes::register_type<CEventHandler, CGameObject>();
+                CTypes::register_type<CLootHandler, CGameObject>();
 
                 CTypes::register_type<CFightController, CGameObject>();
                 {

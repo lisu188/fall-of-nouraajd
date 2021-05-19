@@ -68,8 +68,7 @@ void CFightHandler::defeatedCreature(std::shared_ptr<CCreature> a, std::shared_p
             items.insert(item);
         }
     }
-    a->getGame()->getGuiHandler()->showLoot(items);
-    a->addItem(items);
+    a->getGame()->getGuiHandler()->showLoot(a, items);
     a->getMap()->removeObject(b);
 }
 
