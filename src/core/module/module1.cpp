@@ -21,6 +21,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "gui/CGui.h"
 #include "gui/object/CStatsGraphicsObject.h"
 #include "gui/object/CSideBar.h"
+#include "handler/CLootHandler.h"
 
 using namespace boost::python;
 
@@ -62,6 +63,7 @@ void initModule1() {
             .def("loadPlugin", &CGame::loadPlugin)
             .def("getGuiHandler", &CGame::getGuiHandler)
             .def("getObjectHandler", &CGame::getObjectHandler)
+            .def("getLootHandler", &CGame::getLootHandler)
             .def("createObject", createObject)
             .def("getGui", &CGame::getGui);
 
@@ -110,13 +112,18 @@ void initModule1() {
             .def("getAllTypes", &CObjectHandler::getAllTypes)
             .def("getAllSubTypes", &CObjectHandler::getAllSubTypes);
 
+    void ( CGuiHandler::*showLoot )(std::shared_ptr<CCreature>, int) = &CGuiHandler::showLoot;
     class_<CGuiHandler, bases<CGameObject>, boost::noncopyable, std::shared_ptr<CGuiHandler>>("CGuiHandler")
             .def("showMessage", &CGuiHandler::showMessage)
             .def("showTrade", &CGuiHandler::showTrade)
             .def("showDialog", &CGuiHandler::showDialog)
             .def("showQuestion", &CGuiHandler::showQuestion)
             .def("showSelection", &CGuiHandler::showSelection)
-            .def("showInfo", &CGuiHandler::showInfo);
+            .def("showInfo", &CGuiHandler::showInfo)
+            .def("showLoot", showLoot);
+
+    class_<CLootHandler, bases<CGameObject>, boost::noncopyable, std::shared_ptr<CLootHandler>>("CLootHandler")
+            .def("getLoot", &CLootHandler::getLoot);
 
     void ( CMapObject::*moveTo )(int, int, int) = &CMapObject::moveTo;
     void ( CMapObject::*move )(int, int, int) = &CMapObject::move;

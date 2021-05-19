@@ -64,6 +64,7 @@ void initModule4() {
             .def("useAction", &CCreature::useAction)
             .def("hasItem", hasItem)
             .def("addItem", addItem)
+            .def("addItems", &CCreature::addItems)
             .def("removeItem", removeItem)
             .def("removeQuestItem", removeQuestItem);
     class_<CPlayer, bases<CCreature>, boost::noncopyable, std::shared_ptr<CPlayer>>("CPlayer")
