@@ -33,6 +33,8 @@ public:
 
     CListView::collection_pointer itemsCollection(std::shared_ptr<CGui> gui);
 
+    bool keyboardEvent(std::shared_ptr<CGui> gui, SDL_EventType type, SDL_Keycode i) override;
+
 private:
     std::set<std::shared_ptr<CItem>> items;
 };

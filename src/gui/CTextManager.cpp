@@ -29,7 +29,9 @@ SDL_Texture *CTextManager::getTexture(std::string text, int width) {
 
 SDL_Texture *CTextManager::loadTexture(std::string text, int width) {
     SDL_Color textColor = {255, 255, 255, 0};
-    SDL_Surface *surface = SDL_SAFE(TTF_RenderText_Blended_Wrapped(font, text.c_str(), textColor, width));
+    //in some sdl versions blended wrapped automatically treats 0 as not wrapper, other versions fail on width=0
+    SDL_Surface *surface = SDL_SAFE(width ? TTF_RenderText_Blended_Wrapped(font, text.c_str(), textColor, width)
+                                          : TTF_RenderText_Blended(font, text.c_str(), textColor));
     auto _texture = SDL_SAFE(SDL_CreateTextureFromSurface(_gui.lock()->getRenderer(), surface));
     SDL_SAFE(SDL_FreeSurface(surface));
     return _texture;
