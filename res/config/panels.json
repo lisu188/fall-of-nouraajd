@@ -425,6 +425,7 @@
         {
           "class": "CListView",
           "properties": {
+            "showEmpty": false,
             "grouping": true,
             "collection": "itemsCollection",
             "layout": {

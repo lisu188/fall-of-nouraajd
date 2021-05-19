@@ -61,7 +61,6 @@ void CFightHandler::defeatedCreature(std::shared_ptr<CCreature> a, std::shared_p
     a->addExpScaled(b->getScale());
     //TODO: loot handler
     std::set<std::shared_ptr<CItem>> items = b->getGame()->getLootHandler()->getLoot(b->getScale());
-    a->getGame()->getGuiHandler()->showLoot(items);
     for (const std::shared_ptr<CItem> &item:b->getInInventory()) {
         //TODO: this check should be more polymorphic
         if (!vstd::castable<CPlayer>(b) || !item->hasTag("quest")) {
@@ -69,6 +68,7 @@ void CFightHandler::defeatedCreature(std::shared_ptr<CCreature> a, std::shared_p
             items.insert(item);
         }
     }
+    a->getGame()->getGuiHandler()->showLoot(items);
     a->addItem(items);
     a->getMap()->removeObject(b);
 }
