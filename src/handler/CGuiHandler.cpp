@@ -29,6 +29,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "object/CMarket.h"
 #include "object/CDialog.h"
 #include "gui/panel/CGameDialogPanel.h"
+#include "gui/panel/CGameLootPanel.h"
 
 CGuiHandler::CGuiHandler() {
 
@@ -67,6 +68,13 @@ void CGuiHandler::showDialog(std::shared_ptr<CDialog> dialog) {
     std::shared_ptr<CGameDialogPanel> panel = _game.lock()->createObject<CGameDialogPanel>("dialogPanel");
     panel->setDialog(dialog);
     panel->reload();
+    _game.lock()->getGui()->pushChild(panel);
+    panel->awaitClosing();
+}
+
+void CGuiHandler::showLoot(std::set<std::shared_ptr<CItem>> items) {
+    std::shared_ptr<CGameLootPanel> panel = _game.lock()->createObject<CGameLootPanel>("lootPanel");
+    panel->setItems(items);
     _game.lock()->getGui()->pushChild(panel);
     panel->awaitClosing();
 }

@@ -411,6 +411,36 @@
       }
     }
   },
+  "lootPanel": {
+    "class": "CGameLootPanel",
+    "properties": {
+      "layout": {
+        "class": "CCenteredLayout",
+        "properties": {
+          "h": 300,
+          "w": 400
+        }
+      },
+      "children": [
+        {
+          "class": "CListView",
+          "properties": {
+            "grouping": true,
+            "collection": "itemsCollection",
+            "layout": {
+              "class": "CLayout",
+              "properties": {
+                "h": "100%",
+                "w": "100%",
+                "x": "0%",
+                "y": "0%"
+              }
+            }
+          }
+        }
+      ]
+    }
+  },
   "textPanel": {
     "class": "CGameTextPanel",
     "properties": {

@@ -19,6 +19,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CGame.h"
 #include "gui/panel/CGameQuestionPanel.h"
 #include "gui/panel/CGameQuestPanel.h"
+#include "gui/panel/CGameLootPanel.h"
 #include "gui/panel/CGameFightPanel.h"
 #include "gui/panel/CGameCharacterPanel.h"
 #include "gui/panel/CGameInventoryPanel.h"
@@ -85,6 +86,7 @@ namespace {
                         CTypes::register_type<CGameCharacterPanel, CGamePanel, CGameGraphicsObject, CGameObject>();
                         CTypes::register_type<CGameQuestionPanel, CGamePanel, CGameGraphicsObject, CGameObject>();
                         CTypes::register_type<CGameDialogPanel, CGamePanel, CGameGraphicsObject, CGameObject>();
+                        CTypes::register_type<CGameLootPanel, CGamePanel, CGameGraphicsObject, CGameObject>();
                     }
                     CTypes::register_type<CWidget, CGameGraphicsObject, CGameObject>();
                     CTypes::register_type<CTextWidget, CWidget, CGameGraphicsObject, CGameObject>();

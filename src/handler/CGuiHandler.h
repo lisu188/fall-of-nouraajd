@@ -46,6 +46,8 @@ public:
 
     void showDialog(std::shared_ptr<CDialog> dialog);
 
+    void showLoot(std::set<std::shared_ptr<CItem>> items);
+
     std::string showSelection(std::shared_ptr<CListString> list);
 
     void showTooltip(std::string text, int x, int y);
