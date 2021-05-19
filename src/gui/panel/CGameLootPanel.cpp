@@ -29,3 +29,13 @@ CListView::collection_pointer CGameLootPanel::itemsCollection(std::shared_ptr<CG
 std::set<std::shared_ptr<CItem>> CGameLootPanel::getItems() {
     return items;
 }
+
+bool CGameLootPanel::keyboardEvent(std::shared_ptr<CGui> gui, SDL_EventType type, SDL_Keycode i) {
+    if (type == SDL_KEYDOWN) {
+        //TODO: get rid of this
+        if (i == SDLK_SPACE) {
+            close();
+        }
+    }
+    return true;
+}
