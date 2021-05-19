@@ -278,16 +278,18 @@ void CListView::initialize() {
                                && self->getGui()->getGame() != nullptr
                                && self->getGui()->getGame()->getMap() != nullptr;
                     }, [self]() {
-                        self->refreshObject->invoke(
-                                self->getGui()->getGame(),
-                                self)->connect(self->refreshEvent,
-                                               self,
-                                               "refresh");
-                        self->refreshObject->invoke(
-                                self->getGui()->getGame(),
-                                self)->connect(self->refreshEvent,
-                                               self,
-                                               "refreshAll");
+                        if (self->refreshObject) {
+                            self->refreshObject->invoke(
+                                    self->getGui()->getGame(),
+                                    self)->connect(self->refreshEvent,
+                                                   self,
+                                                   "refresh");
+                            self->refreshObject->invoke(
+                                    self->getGui()->getGame(),
+                                    self)->connect(self->refreshEvent,
+                                                   self,
+                                                   "refreshAll");
+                        }
                         self->refresh();
                     }
     );
