@@ -7,6 +7,23 @@
       "objects": [
         {
           "height": 32,
+          "id": 24,
+          "name": "chest",
+          "rotation": 0,
+          "type": "chest",
+          "visible": true,
+          "width": 32,
+          "x": 400,
+          "y": 400,
+          "properties": {
+            "value": "100"
+          },
+          "propertytypes": {
+            "value": "string"
+          }
+        },
+        {
+          "height": 32,
           "id": 2,
           "name": "teleporter1",
           "properties": {

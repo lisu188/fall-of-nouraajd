@@ -44,6 +44,15 @@ def load(self, context):
             self.getMap().getGame().getGuiHandler().showInfo(self.getStringProperty('text'), True)
 
     @register(context)
+    class Chest(CBuilding):
+        def onEnter(self, event):
+            # TODO: make it available not only for players
+            if not event.getCause().isPlayer():
+                return
+            self.getMap().getGame().getGuiHandler().showLoot(self.getMap().getPlayer(),
+                                                             self.getNumericProperty('value'))
+
+    @register(context)
     class Cave(CBuilding):
         def onEnter(self, event):
             if not event.getCause().isPlayer():

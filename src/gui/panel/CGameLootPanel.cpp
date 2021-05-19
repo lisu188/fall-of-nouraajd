@@ -34,8 +34,17 @@ bool CGameLootPanel::keyboardEvent(std::shared_ptr<CGui> gui, SDL_EventType type
     if (type == SDL_KEYDOWN) {
         //TODO: get rid of this
         if (i == SDLK_SPACE) {
+            creature->addItems(items);
             close();
         }
     }
     return true;
+}
+
+const std::shared_ptr<CCreature> &CGameLootPanel::getCreature() const {
+    return creature;
+}
+
+void CGameLootPanel::setCreature(const std::shared_ptr<CCreature> &creature) {
+    CGameLootPanel::creature = creature;
 }

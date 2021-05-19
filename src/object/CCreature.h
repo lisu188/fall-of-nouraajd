@@ -159,7 +159,7 @@ public:
 
     void addExp(int exp);
 
-    void addItem(std::set<std::shared_ptr<CItem> > items);
+    void addItems(std::set<std::shared_ptr<CItem> > items);
 
     void addItem(std::shared_ptr<CItem> item);
 

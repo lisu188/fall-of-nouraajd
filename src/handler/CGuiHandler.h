@@ -46,7 +46,9 @@ public:
 
     void showDialog(std::shared_ptr<CDialog> dialog);
 
-    void showLoot(std::set<std::shared_ptr<CItem>> items);
+    void showLoot(std::shared_ptr<CCreature>, std::set<std::shared_ptr<CItem>> items);
+
+    void showLoot(std::shared_ptr<CCreature>, int value);
 
     std::string showSelection(std::shared_ptr<CListString> list);
 

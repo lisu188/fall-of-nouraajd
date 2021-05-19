@@ -23,8 +23,6 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CSerialization.h"
 #include "object/CGameObject.h"
 
-class ATypeHandler;
-
 
 class CMap;
 

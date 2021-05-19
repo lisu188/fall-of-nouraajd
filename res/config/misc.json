@@ -29,6 +29,13 @@
       "animation": "images/misc/signpost"
     }
   },
+  "chest": {
+    "class": "Chest",
+    "properties": {
+      "animation": "images/misc/chest",
+      "value": 10
+    }
+  },
   "brickWall": {
     "class": "CMapObject",
     "properties": {
