@@ -112,7 +112,7 @@ void initModule1() {
             .def("getAllTypes", &CObjectHandler::getAllTypes)
             .def("getAllSubTypes", &CObjectHandler::getAllSubTypes);
 
-    void ( CGuiHandler::*showLoot )(std::shared_ptr<CCreature>, int) = &CGuiHandler::showLoot;
+
     class_<CGuiHandler, bases<CGameObject>, boost::noncopyable, std::shared_ptr<CGuiHandler>>("CGuiHandler")
             .def("showMessage", &CGuiHandler::showMessage)
             .def("showTrade", &CGuiHandler::showTrade)
@@ -120,10 +120,11 @@ void initModule1() {
             .def("showQuestion", &CGuiHandler::showQuestion)
             .def("showSelection", &CGuiHandler::showSelection)
             .def("showInfo", &CGuiHandler::showInfo)
-            .def("showLoot", showLoot);
+            .def("showLoot", &CGuiHandler::showLoot);
 
+    void ( CLootHandler::*addLoot )(const std::shared_ptr<CCreature> &, int) = &CLootHandler::addLoot;
     class_<CLootHandler, bases<CGameObject>, boost::noncopyable, std::shared_ptr<CLootHandler>>("CLootHandler")
-            .def("getLoot", &CLootHandler::getLoot);
+            .def("addLoot", addLoot);
 
     void ( CMapObject::*moveTo )(int, int, int) = &CMapObject::moveTo;
     void ( CMapObject::*move )(int, int, int) = &CMapObject::move;
