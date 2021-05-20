@@ -48,8 +48,6 @@ public:
 
     void showLoot(std::shared_ptr<CCreature>, std::set<std::shared_ptr<CItem>> items);
 
-    void showLoot(std::shared_ptr<CCreature>, int value);
-
     std::string showSelection(std::shared_ptr<CListString> list);
 
     void showTooltip(std::string text, int x, int y);

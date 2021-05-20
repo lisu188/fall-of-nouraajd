@@ -46,10 +46,7 @@ def load(self, context):
     @register(context)
     class Chest(CBuilding):
         def onEnter(self, event):
-            # TODO: make it available not only for players
-            if not event.getCause().isPlayer():
-                return
-            self.getMap().getGame().getGuiHandler().showLoot(self.getMap().getPlayer(),
+            self.getMap().getGame().getLootHandler().addLoot(self.getMap().getPlayer(),
                                                              self.getNumericProperty('value'))
 
     @register(context)
