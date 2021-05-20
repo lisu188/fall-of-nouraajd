@@ -80,10 +80,6 @@ void CGuiHandler::showLoot(std::shared_ptr<CCreature> creature, std::set<std::sh
     panel->awaitClosing();
 }
 
-void CGuiHandler::showLoot(std::shared_ptr<CCreature> creature, int value) {
-    showLoot(creature, creature->getMap()->getGame()->getLootHandler()->getLoot(value));
-}
-
 CGuiHandler::CGuiHandler(std::shared_ptr<CGame> game) : _game(game) {
 
 }

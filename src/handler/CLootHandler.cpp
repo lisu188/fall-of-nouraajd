@@ -24,7 +24,7 @@ std::set<std::shared_ptr<CItem>> CLootHandler::getLoot(int value) const {
     return calculateLoot(value);
 }
 
-CLootHandler::CLootHandler(std::shared_ptr<CGame> game) : game(game) {
+CLootHandler::CLootHandler(const std::shared_ptr<CGame> &game) : game(game) {
     for (const std::string &type : game->getObjectHandler()->getAllSubTypes("CItem")) {
         std::shared_ptr<CItem> item = game->createObject<CItem>(type);
         if (item) {
@@ -61,4 +61,16 @@ std::set<std::shared_ptr<CItem>> CLootHandler::calculateLoot(int value) const {
         value -= pow;
     }
     return loot;
+}
+
+void CLootHandler::addLoot(const std::shared_ptr<CCreature> &creature, const std::set<std::shared_ptr<CItem>> &items) {
+    //TODO: polymorphic
+    if (vstd::castable<CPlayer>(creature)) {
+        creature->getGame()->getGuiHandler()->showLoot(creature, items);
+    }
+    creature->addItems(items);
+}
+
+void CLootHandler::addLoot(const std::shared_ptr<CCreature> &creature, int value) {
+    addLoot(creature, getLoot(value));
 }

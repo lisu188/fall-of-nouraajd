@@ -17,7 +17,6 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #include "CFightHandler.h"
 #include "object/CCreature.h"
-#include "object/CInteraction.h"
 #include "core/CController.h"
 #include "core/CTags.h"
 #include "core/CGame.h"
@@ -56,7 +55,7 @@ bool CFightHandler::fight(std::shared_ptr<CCreature> a, std::shared_ptr<CCreatur
     return retVal;
 }
 
-void CFightHandler::defeatedCreature(std::shared_ptr<CCreature> a, std::shared_ptr<CCreature> b) {
+void CFightHandler::defeatedCreature(const std::shared_ptr<CCreature> &a, const std::shared_ptr<CCreature> &b) {
     vstd::logger::debug(a->to_string(), a->getName(), "defeated", b->to_string());
     a->addExpScaled(b->getScale());
     //TODO: loot handler
@@ -68,22 +67,22 @@ void CFightHandler::defeatedCreature(std::shared_ptr<CCreature> a, std::shared_p
             items.insert(item);
         }
     }
-    a->getGame()->getGuiHandler()->showLoot(a, items);
+    a->getGame()->getLootHandler()->addLoot(a, items);
     a->getMap()->removeObject(b);
 }
 
-void CFightHandler::applyEffects(std::shared_ptr<CCreature> cr) {
+void CFightHandler::applyEffects(const std::shared_ptr<CCreature> &cr) {
     auto effects = cr->getEffects();
 
-    for (auto it = effects.begin(); it != effects.end(); it++) {
-        if ((*it)->getTimeLeft() == 0) {
-            vstd::logger::debug(cr->to_string(), "is now free from", (*it)->to_string());
-            cr->removeEffect(*it);
+    for (const auto &effect : effects) {
+        if (effect->getTimeLeft() == 0) {
+            vstd::logger::debug(cr->to_string(), "is now free from", effect->to_string());
+            cr->removeEffect(effect);
             applyEffects(cr);
             return;
         }
     }
-    for (std::shared_ptr<CEffect> effect:effects) {
+    for (const auto &effect:effects) {
         vstd::logger::debug(cr->to_string(), "suffers from", effect->to_string());
         effect->apply(cr);
         if (!cr->isAlive()) {

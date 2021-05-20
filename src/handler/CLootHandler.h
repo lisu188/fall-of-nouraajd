@@ -24,13 +24,19 @@ class CItem;
 
 class CGame;
 
+class CCreature;
+
 class CLootHandler : public CGameObject {
 public:
     CLootHandler() = default;
 
-    explicit CLootHandler(std::shared_ptr<CGame> map);
+    explicit CLootHandler(const std::shared_ptr<CGame> &map);
 
     std::set<std::shared_ptr<CItem> > getLoot(int value) const;
+
+    void addLoot(const std::shared_ptr<CCreature> &creature, const std::set<std::shared_ptr<CItem>> &items);
+
+    void addLoot(const std::shared_ptr<CCreature> &creature, int value);
 
 private:
     std::set<std::shared_ptr<CItem> > calculateLoot(int value) const;
