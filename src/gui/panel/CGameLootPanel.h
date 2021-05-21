@@ -28,11 +28,11 @@ V_META(CGameLootPanel, CGamePanel,
        V_PROPERTY(CGameLootPanel, std::shared_ptr<CCreature>, creature, getCreature, setCreature),
        V_METHOD(CGameLootPanel, itemsCollection, CListView::collection_pointer, std::shared_ptr<CGui>))
 public:
-    void setItems(std::set<std::shared_ptr<CItem>> items);
+    void setItems(const std::set<std::shared_ptr<CItem>> &_items);
 
     std::set<std::shared_ptr<CItem>> getItems();
 
-    CListView::collection_pointer itemsCollection(std::shared_ptr<CGui> gui);
+    CListView::collection_pointer itemsCollection(const std::shared_ptr<CGui> &gui);
 
     bool keyboardEvent(std::shared_ptr<CGui> gui, SDL_EventType type, SDL_Keycode i) override;
 
