@@ -17,11 +17,11 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #include "CGameLootPanel.h"
 
-void CGameLootPanel::setItems(std::set<std::shared_ptr<CItem>> items) {
-    this->items = items;
+void CGameLootPanel::setItems(const std::set<std::shared_ptr<CItem>> &_items) {
+    items = _items;
 }
 
-CListView::collection_pointer CGameLootPanel::itemsCollection(std::shared_ptr<CGui> gui) {
+CListView::collection_pointer CGameLootPanel::itemsCollection(const std::shared_ptr<CGui> &gui) {
     return std::make_shared<CListView::collection_type>(vstd::cast<CListView::collection_type>(
             items));
 }
@@ -44,6 +44,6 @@ const std::shared_ptr<CCreature> &CGameLootPanel::getCreature() const {
     return creature;
 }
 
-void CGameLootPanel::setCreature(const std::shared_ptr<CCreature> &creature) {
-    CGameLootPanel::creature = creature;
+void CGameLootPanel::setCreature(const std::shared_ptr<CCreature> &_creature) {
+    creature = _creature;
 }
