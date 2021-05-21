@@ -26,9 +26,9 @@ class CTextManager : public CGameObject {
 V_META(CTextManager, CGameObject, vstd::meta::empty())
     std::unordered_map<std::pair<std::string, int>, SDL_Texture *> _textures;
 public:
-    CTextManager(std::shared_ptr<CGui> _gui = nullptr);
+    explicit CTextManager(std::shared_ptr<CGui> _gui = nullptr);
 
-    ~CTextManager();
+    ~CTextManager() override;
 
     std::pair<int, int> getTextureSize(std::string text);
 
@@ -39,6 +39,8 @@ public:
     void drawTextCentered(std::string text, int x, int y, int w, int h);
 
     void drawTextCentered(std::string text, std::shared_ptr<SDL_Rect> rect);
+
+    int countLines(std::string text, int w);
 
 private:
     SDL_Texture *getTexture(std::string text, int width = 0);
