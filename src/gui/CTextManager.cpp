@@ -18,7 +18,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "CTextManager.h"
 #include "core/CUtil.h"
 
-SDL_Texture *CTextManager::getTexture(std::string text, int width) {
+SDL_Texture *CTextManager::getTexture(const std::string &text, int width) {
     auto anim = _textures.find(std::make_pair(text, width));
     if (anim == _textures.end()) {
         _textures[std::make_pair(text, width)] = this->loadTexture(text, width);
@@ -37,7 +37,7 @@ SDL_Texture *CTextManager::loadTexture(std::string text, int width) {
     return _texture;
 }
 
-CTextManager::CTextManager(std::shared_ptr<CGui> _gui) {
+CTextManager::CTextManager(const std::shared_ptr<CGui> &_gui) {
     SDL_SAFE(TTF_Init());
     font = SDL_SAFE(TTF_OpenFont("fonts/ampersand.ttf", 24));
     this->_gui = _gui;
@@ -51,49 +51,49 @@ CTextManager::~CTextManager() {
     SDL_SAFE(TTF_CloseFont(font));
 }
 
-int CTextManager::countLines(std::string text, int w) {
+int CTextManager::countLines(const std::string &text, int w) {
     SDL_Rect wrapped;
     SDL_Texture *wrappedTexture = getTexture(text, w);
-    SDL_SAFE(SDL_QueryTexture(wrappedTexture, NULL, NULL, &wrapped.w, &wrapped.h));
+    SDL_SAFE(SDL_QueryTexture(wrappedTexture, nullptr, nullptr, &wrapped.w, &wrapped.h));
     SDL_Rect notWrapped;
     SDL_Texture *notWrappedTexture = getTexture(text);
-    SDL_SAFE(SDL_QueryTexture(notWrappedTexture, NULL, NULL, &notWrapped.w, &notWrapped.h));
+    SDL_SAFE(SDL_QueryTexture(notWrappedTexture, nullptr, nullptr, &notWrapped.w, &notWrapped.h));
     return wrapped.h / notWrapped.h;
 }
 
-void CTextManager::drawText(std::string text, int x, int y, int w) {
+void CTextManager::drawText(const std::string &text, int x, int y, int w) {
     if (text.length() != 0) {
         SDL_Rect actual;
         actual.x = x;
         actual.y = y;
         SDL_Texture *pTexture = getTexture(text, w);
-        SDL_SAFE(SDL_QueryTexture(pTexture, NULL, NULL, &actual.w, &actual.h));
-        SDL_SAFE(SDL_RenderCopy(_gui.lock()->getRenderer(), pTexture, NULL, &actual));
+        SDL_SAFE(SDL_QueryTexture(pTexture, nullptr, nullptr, &actual.w, &actual.h));
+        SDL_SAFE(SDL_RenderCopy(_gui.lock()->getRenderer(), pTexture, nullptr, &actual));
     }
 }
 
-void CTextManager::drawTextCentered(std::string text, int x, int y, int w, int h) {
+void CTextManager::drawTextCentered(const std::string &text, int x, int y, int w, int h) {
     if (text.length() != 0) {
         SDL_Rect actual;
         SDL_Texture *pTexture = getTexture(text, w);
-        SDL_SAFE(SDL_QueryTexture(pTexture, NULL, NULL, &actual.w, &actual.h));
+        SDL_SAFE(SDL_QueryTexture(pTexture, nullptr, nullptr, &actual.w, &actual.h));
         auto centered = CUtil::boxInBox(RECT(x, y, w, h), RECT(0, 0, actual.w, actual.h));
-        SDL_SAFE(SDL_RenderCopy(_gui.lock()->getRenderer(), pTexture, NULL, centered.get()));
+        SDL_SAFE(SDL_RenderCopy(_gui.lock()->getRenderer(), pTexture, nullptr, centered.get()));
     }
 }
 
-void CTextManager::drawTextCentered(std::string text, std::shared_ptr<SDL_Rect> rect) {
+void CTextManager::drawTextCentered(const std::string &text, const std::shared_ptr<SDL_Rect> &rect) {
     drawTextCentered(text, rect->x, rect->y, rect->w, rect->h);
 }
 
-void CTextManager::drawText(std::string text, std::shared_ptr<SDL_Rect> rect) {
+void CTextManager::drawText(const std::string &text, const std::shared_ptr<SDL_Rect> &rect) {
     drawText(text, rect->x, rect->y, rect->w);
 }
 
 std::pair<int, int> CTextManager::getTextureSize(std::string text) {
     int w = 0, h = 0;
     if (vstd::ctn(text, '\n')) {
-        for (auto line:vstd::split(text, '\n')) {
+        for (const auto &line:vstd::split(text, '\n')) {
             auto lineSize = getTextureSize(line);
             if (lineSize.first > w) {
                 w = lineSize.first;
@@ -102,7 +102,7 @@ std::pair<int, int> CTextManager::getTextureSize(std::string text) {
         }
     } else {
         SDL_Texture *pTexture = getTexture(text);
-        SDL_SAFE(SDL_QueryTexture(pTexture, NULL, NULL, &w, &h));
+        SDL_SAFE(SDL_QueryTexture(pTexture, nullptr, nullptr, &w, &h));
     }
     return std::make_pair(w, h);
 }
