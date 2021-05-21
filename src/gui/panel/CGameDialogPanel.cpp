@@ -20,14 +20,15 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "object/CDialog.h"
 #include "gui/object/CWidget.h"
 #include "gui/CLayout.h"
+#include "gui/CTextManager.h"
 
 
 const std::shared_ptr<CDialog> &CGameDialogPanel::getDialog() const {
     return dialog;
 }
 
-void CGameDialogPanel::setDialog(const std::shared_ptr<CDialog> &dialog) {
-    CGameDialogPanel::dialog = dialog;
+void CGameDialogPanel::setDialog(const std::shared_ptr<CDialog> &_dialog) {
+    dialog = _dialog;
 }
 
 //TODO: unify with CGuiHandler
@@ -44,16 +45,17 @@ void CGameDialogPanel::reload() {
 
         int percentSize = 5;
 
-        std::shared_ptr<CLayout> mainWidgetLayout = getGame()->createObject<CLayout>("CLayout");
-        mainWidgetLayout->setW(vstd::str(100) + "%");
-        int textSize = 100 - state->getOptions().size() * percentSize;
-        mainWidgetLayout->setH(vstd::str(textSize) + "%");
-        mainWidget->setLayout(mainWidgetLayout);
+        //TODO: make this generic and in vstd
+        struct OptionComparator {
+            bool operator()(const std::shared_ptr<CDialogOption> &a, const std::shared_ptr<CDialogOption> &b) const {
+                return a->getNumber() > b->getNumber();
+            }
+        };
 
-        widgets.insert(mainWidget);
+        auto options = vstd::cast<std::set<std::shared_ptr<CDialogOption>, OptionComparator>>(state->getOptions());
 
-        for (auto option : state->getOptions()) {
-            int i = option->getNumber();
+        int totalLines = 0;
+        for (const auto &option : options) {
             std::string clickName = vstd::to_hex_hash(option);
 
             self->meta()->set_method<CGameGraphicsObject, void, std::shared_ptr<CGui>>(clickName, self,
@@ -66,18 +68,31 @@ void CGameDialogPanel::reload() {
 
             std::shared_ptr<CTextWidget> optionWidget = getGame()->createObject<CTextWidget>("CTextWidget");
             optionWidget->setClick(clickName);
-            optionWidget->setText(vstd::str(option->getNumber() + 1) + ": " + option->getText());
+            auto optionText =
+                    vstd::str(option->getNumber() + 1) + ": " + option->getText();
+            optionWidget->setText(optionText);
             optionWidget->setCentered(false);
 
             std::shared_ptr<CLayout> optionWidgetLayout = getGame()->createObject<CLayout>("CLayout");
 
-            optionWidgetLayout->setY(vstd::str(textSize + (i * percentSize)) + "%");
+            auto lines = getGame()->getGui()->getTextManager()->countLines(optionText, getLayout()->getRect(self)->w);
+            totalLines += lines;
+
+            optionWidgetLayout->setY(vstd::str(100 - (totalLines * percentSize)) + "%");
             optionWidgetLayout->setW(vstd::str(100) + "%");
-            optionWidgetLayout->setH(vstd::str(percentSize) + "%");
+            optionWidgetLayout->setH(vstd::str(percentSize * lines) + "%");
             optionWidget->setLayout(optionWidgetLayout);
 
             widgets.insert(optionWidget);
         }
+
+        std::shared_ptr<CLayout> mainWidgetLayout = getGame()->createObject<CLayout>("CLayout");
+        mainWidgetLayout->setW(vstd::str(100) + "%");
+        int textSize = 100 - totalLines * percentSize;
+        mainWidgetLayout->setH(vstd::str(textSize) + "%");
+        mainWidget->setLayout(mainWidgetLayout);
+
+        widgets.insert(mainWidget);
 
         setChildren(widgets);
     } else {

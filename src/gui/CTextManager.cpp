@@ -51,6 +51,15 @@ CTextManager::~CTextManager() {
     SDL_SAFE(TTF_CloseFont(font));
 }
 
+int CTextManager::countLines(std::string text, int w) {
+    SDL_Rect wrapped;
+    SDL_Texture *wrappedTexture = getTexture(text, w);
+    SDL_SAFE(SDL_QueryTexture(wrappedTexture, NULL, NULL, &wrapped.w, &wrapped.h));
+    SDL_Rect notWrapped;
+    SDL_Texture *notWrappedTexture = getTexture(text);
+    SDL_SAFE(SDL_QueryTexture(notWrappedTexture, NULL, NULL, &notWrapped.w, &notWrapped.h));
+    return wrapped.h / notWrapped.h;
+}
 
 void CTextManager::drawText(std::string text, int x, int y, int w) {
     if (text.length() != 0) {
