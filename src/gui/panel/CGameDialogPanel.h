@@ -29,7 +29,7 @@ V_META(CGameDialogPanel, CGamePanel,
 public:
     const std::shared_ptr<CDialog> &getDialog() const;
 
-    void setDialog(const std::shared_ptr<CDialog> &dialog);
+    void setDialog(const std::shared_ptr<CDialog> &_dialog);
 
     void reload();
 
