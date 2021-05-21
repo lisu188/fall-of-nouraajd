@@ -26,24 +26,24 @@ class CTextManager : public CGameObject {
 V_META(CTextManager, CGameObject, vstd::meta::empty())
     std::unordered_map<std::pair<std::string, int>, SDL_Texture *> _textures;
 public:
-    explicit CTextManager(std::shared_ptr<CGui> _gui = nullptr);
+    explicit CTextManager(const std::shared_ptr<CGui> &_gui = nullptr);
 
     ~CTextManager() override;
 
     std::pair<int, int> getTextureSize(std::string text);
 
-    void drawText(std::string text, int x, int y, int w);
+    void drawText(const std::string &text, int x, int y, int w);
 
-    void drawText(std::string text, std::shared_ptr<SDL_Rect> rect);
+    void drawText(const std::string &text, const std::shared_ptr<SDL_Rect> &rect);
 
-    void drawTextCentered(std::string text, int x, int y, int w, int h);
+    void drawTextCentered(const std::string &text, int x, int y, int w, int h);
 
-    void drawTextCentered(std::string text, std::shared_ptr<SDL_Rect> rect);
+    void drawTextCentered(const std::string &text, const std::shared_ptr<SDL_Rect> &rect);
 
-    int countLines(std::string text, int w);
+    int countLines(const std::string &text, int w);
 
 private:
-    SDL_Texture *getTexture(std::string text, int width = 0);
+    SDL_Texture *getTexture(const std::string &text, int width = 0);
 
     SDL_Texture *loadTexture(std::string text, int width = 0);
 
