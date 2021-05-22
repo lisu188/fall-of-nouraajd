@@ -25,25 +25,25 @@ class CMapLoader {
 public:
 
     static std::shared_ptr<CMap>
-    loadNewMapWithPlayer(std::shared_ptr<CGame> game, std::string name, std::string player);
+    loadNewMapWithPlayer(const std::shared_ptr<CGame> &game, const std::string &name, std::string player);
 
-    static std::shared_ptr<CMap> loadRandomMapWithPlayer(std::shared_ptr<CGame> game, std::string player);
+    static std::shared_ptr<CMap> loadRandomMapWithPlayer(const std::shared_ptr<CGame> &game, std::string player);
 
-    static std::shared_ptr<CMap> loadNewMap(std::shared_ptr<CGame> game, const std::string &name);
+    static std::shared_ptr<CMap> loadNewMap(const std::shared_ptr<CGame> &game, const std::string &name);
 
-    static std::shared_ptr<CMap> loadSavedMap(std::shared_ptr<CGame> game, std::string name);
+    static std::shared_ptr<CMap> loadSavedMap(const std::shared_ptr<CGame> &game, const std::string &name);
 
-    static std::shared_ptr<CMap> loadRandomMap(std::shared_ptr<CGame> game);
+    static std::shared_ptr<CMap> loadRandomMap(const std::shared_ptr<CGame> &game);
 
-    static void save(std::shared_ptr<CMap> map, std::string name);
+    static void save(const std::shared_ptr<CMap> &map, const std::string &name);
 
-    static void loadFromTmx(std::shared_ptr<CMap> map, std::shared_ptr<json> mapc);
+    static void loadFromTmx(const std::shared_ptr<CMap> &map, const std::shared_ptr<json> &mapc);
 
 private:
 
-    static void handleTileLayer(std::shared_ptr<CMap> map, const json &tileset, const json &layer);
+    static void handleTileLayer(const std::shared_ptr<CMap> &map, const json &tileset, const json &layer);
 
-    static void handleObjectLayer(std::shared_ptr<CMap> map, const json &layer);
+    static void handleObjectLayer(const std::shared_ptr<CMap> &map, const json &layer);
 
 };
 
@@ -54,24 +54,24 @@ class CGameLoader {
 public:
     static std::shared_ptr<CGame> loadGame();
 
-    static void startGameWithPlayer(std::shared_ptr<CGame> game, std::string file, std::string player);
+    static void startGameWithPlayer(const std::shared_ptr<CGame> &game, const std::string &file, std::string player);
 
-    static void startRandomGameWithPlayer(std::shared_ptr<CGame> game, std::string player);
+    static void startRandomGameWithPlayer(const std::shared_ptr<CGame> &game, std::string player);
 
-    static void startGame(std::shared_ptr<CGame> game, const std::string &file);
+    static void startGame(const std::shared_ptr<CGame> &game, const std::string &file);
 
-    static void changeMap(std::shared_ptr<CGame> game, const std::string &file);
+    static void changeMap(const std::shared_ptr<CGame> &game, const std::string &file);
 
-    static void loadGui(std::shared_ptr<CGame> game);
+    static void loadGui(const std::shared_ptr<CGame> &game);
 
-    static void loadSavedGame(std::shared_ptr<CGame> game, std::string save);
+    static void loadSavedGame(const std::shared_ptr<CGame> &game, const std::string &save);
 
 private:
-    static void initObjectHandler(std::shared_ptr<CObjectHandler> handler);
+    static void initObjectHandler(const std::shared_ptr<CObjectHandler> &handler);
 
-    static void initConfigurations(std::shared_ptr<CObjectHandler> handler);
+    static void initConfigurations(const std::shared_ptr<CObjectHandler> &handler);
 
-    static void initScriptHandler(std::shared_ptr<CScriptHandler> handler, std::shared_ptr<CGame> game);
+    static void initScriptHandler(const std::shared_ptr<CScriptHandler> &handler, const std::shared_ptr<CGame> &game);
 
 };
 
@@ -79,5 +79,5 @@ class CPluginLoader {
 public:
 
 
-    static void loadPlugin(std::shared_ptr<CGame> game, std::string path);
+    static void loadPlugin(const std::shared_ptr<CGame> &game, const std::string &path);
 };

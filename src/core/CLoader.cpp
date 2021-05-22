@@ -25,7 +25,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include <utility>
 
-void CMapLoader::loadFromTmx(std::shared_ptr<CMap> map, std::shared_ptr<json> mapc) {
+void CMapLoader::loadFromTmx(const std::shared_ptr<CMap> &map, const std::shared_ptr<json> &mapc) {
     if (mapc) {
         const json &mapProperties = (*mapc)["properties"];
         const json &mapLayers = (*mapc)["layers"];
@@ -62,7 +62,7 @@ std::string getMapPath(std::string mapName) {
     return vstd::join({path, "/map.json"}, "");
 }
 
-std::shared_ptr<CMap> CMapLoader::loadNewMap(std::shared_ptr<CGame> game, const std::string &mapName) {
+std::shared_ptr<CMap> CMapLoader::loadNewMap(const std::shared_ptr<CGame> &game, const std::string &mapName) {
     std::shared_ptr<CMap> map = game->getObjectHandler()->createObject<CMap>(game, "CMap");
     game->setMap(map);
     game->getObjectHandler()->registerConfig(getConfigPaths(mapName));
@@ -73,7 +73,7 @@ std::shared_ptr<CMap> CMapLoader::loadNewMap(std::shared_ptr<CGame> game, const 
     return map;
 }
 
-std::shared_ptr<CMap> CMapLoader::loadSavedMap(std::shared_ptr<CGame> game, std::string name) {
+std::shared_ptr<CMap> CMapLoader::loadSavedMap(const std::shared_ptr<CGame> &game, const std::string &name) {
     std::string path = "save/" + name + ".json";
     std::shared_ptr<json> save = CConfigurationProvider::getConfig(path);
     auto mapName = (*save)["properties"]["mapName"].get<std::string>();
@@ -89,7 +89,7 @@ std::shared_ptr<CMap> CMapLoader::loadSavedMap(std::shared_ptr<CGame> game, std:
     return map;
 }
 
-std::shared_ptr<CMap> CMapLoader::loadNewMapWithPlayer(std::shared_ptr<CGame> game, std::string name,
+std::shared_ptr<CMap> CMapLoader::loadNewMapWithPlayer(const std::shared_ptr<CGame> &game, const std::string &name,
                                                        std::string player) {
     std::shared_ptr<CMap> map = loadNewMap(game, name);
     auto ptr = game->createObject<CPlayer>(std::move(player));
@@ -98,7 +98,7 @@ std::shared_ptr<CMap> CMapLoader::loadNewMapWithPlayer(std::shared_ptr<CGame> ga
     return map;
 }
 
-std::shared_ptr<CMap> CMapLoader::loadRandomMapWithPlayer(std::shared_ptr<CGame> game, std::string player) {
+std::shared_ptr<CMap> CMapLoader::loadRandomMapWithPlayer(const std::shared_ptr<CGame> &game, std::string player) {
     std::shared_ptr<CMap> map = loadRandomMap(game);
     auto ptr = game->createObject<CPlayer>(std::move(player));
     ptr->setName("player");
@@ -106,11 +106,11 @@ std::shared_ptr<CMap> CMapLoader::loadRandomMapWithPlayer(std::shared_ptr<CGame>
     return map;
 }
 
-void CMapLoader::save(std::shared_ptr<CMap> map, std::string name) {
-    CResourcesProvider::getInstance()->save(vstd::join({"save/", std::move(name), ".json"}, ""), JSONIFY_STYLED(map));
+void CMapLoader::save(const std::shared_ptr<CMap> &map, const std::string &name) {
+    CResourcesProvider::getInstance()->save(vstd::join({"save/", name, ".json"}, ""), JSONIFY_STYLED(map));
 }
 
-void CMapLoader::handleTileLayer(std::shared_ptr<CMap> map, const json &tileset, const json &layer) {
+void CMapLoader::handleTileLayer(const std::shared_ptr<CMap> &map, const json &tileset, const json &layer) {
     const json &layerProperties = layer["properties"];
     int level = vstd::to_int(layerProperties["level"].get<std::string>()).first;
     map->defaultTiles[level] = layerProperties["default"].get<std::string>();
@@ -135,7 +135,7 @@ void CMapLoader::handleTileLayer(std::shared_ptr<CMap> map, const json &tileset,
     }
 }
 
-void CMapLoader::handleObjectLayer(std::shared_ptr<CMap> map, const json &layer) {
+void CMapLoader::handleObjectLayer(const std::shared_ptr<CMap> &map, const json &layer) {
     int level = vstd::to_int(layer["properties"]["level"].get<std::string>()).first;
     const json &objects = layer["objects"];
     for (const auto &object : objects) {
@@ -162,7 +162,7 @@ void CMapLoader::handleObjectLayer(std::shared_ptr<CMap> map, const json &layer)
     }
 }
 
-std::shared_ptr<CMap> CMapLoader::loadRandomMap(std::shared_ptr<CGame> game) {
+std::shared_ptr<CMap> CMapLoader::loadRandomMap(const std::shared_ptr<CGame> &game) {
     auto map = loadNewMap(game, "");
     auto options = rdg<>::Options();
     options.n_rows = 555;
@@ -195,23 +195,23 @@ std::shared_ptr<CGame> CGameLoader::loadGame() {
     return game;
 }
 
-void CGameLoader::startGameWithPlayer(std::shared_ptr<CGame> game, std::string file, std::string player) {
-    game->setMap(CMapLoader::loadNewMapWithPlayer(game, std::move(file), std::move(player)));
+void CGameLoader::startGameWithPlayer(const std::shared_ptr<CGame> &game, const std::string &file, std::string player) {
+    game->setMap(CMapLoader::loadNewMapWithPlayer(game, file, std::move(player)));
 }
 
-void CGameLoader::startRandomGameWithPlayer(std::shared_ptr<CGame> game, std::string player) {
+void CGameLoader::startRandomGameWithPlayer(const std::shared_ptr<CGame> &game, std::string player) {
     game->setMap(CMapLoader::loadRandomMapWithPlayer(game, std::move(player)));
 }
 
-void CGameLoader::loadSavedGame(std::shared_ptr<CGame> game, std::string save) {
-    game->setMap(CMapLoader::loadSavedMap(game, std::move(save)));
+void CGameLoader::loadSavedGame(const std::shared_ptr<CGame> &game, const std::string &save) {
+    game->setMap(CMapLoader::loadSavedMap(game, save));
 }
 
-void CGameLoader::startGame(std::shared_ptr<CGame> game, const std::string &file) {
+void CGameLoader::startGame(const std::shared_ptr<CGame> &game, const std::string &file) {
     game->setMap(CMapLoader::loadNewMap(game, file));
 }
 
-void CGameLoader::changeMap(std::shared_ptr<CGame> game, const std::string &name) {
+void CGameLoader::changeMap(const std::shared_ptr<CGame> &game, const std::string &name) {
     vstd::call_later([game, name]() {
         //TODO: implement stop processing events here
         vstd::call_when([game]() {
@@ -228,25 +228,26 @@ void CGameLoader::changeMap(std::shared_ptr<CGame> game, const std::string &name
     });
 }
 
-void CGameLoader::initConfigurations(std::shared_ptr<CObjectHandler> handler) {
-    for (std::string path : CResourcesProvider::getInstance()->getFiles(CResType::CONFIG)) {
+void CGameLoader::initConfigurations(const std::shared_ptr<CObjectHandler> &handler) {
+    for (const std::string &path : CResourcesProvider::getInstance()->getFiles(CResType::CONFIG)) {
         handler->registerConfig(path);
     }
 }
 
-void CGameLoader::initObjectHandler(std::shared_ptr<CObjectHandler> handler) {
-    for (auto it:*CTypes::builders()) {
+void CGameLoader::initObjectHandler(const std::shared_ptr<CObjectHandler> &handler) {
+    for (const auto &it:*CTypes::builders()) {
         handler->registerType(it.first, it.second);
     }
 }
 
-void CGameLoader::initScriptHandler(std::shared_ptr<CScriptHandler> handler, std::shared_ptr<CGame> game) {
-    for (std::string script:CResourcesProvider::getInstance()->getFiles(CResType::PLUGIN)) {
+void
+CGameLoader::initScriptHandler(const std::shared_ptr<CScriptHandler> &handler, const std::shared_ptr<CGame> &game) {
+    for (const std::string &script:CResourcesProvider::getInstance()->getFiles(CResType::PLUGIN)) {
         CPluginLoader::loadPlugin(game, script);
     }
 }
 
-void CGameLoader::loadGui(std::shared_ptr<CGame> game) {
+void CGameLoader::loadGui(const std::shared_ptr<CGame> &game) {
     std::shared_ptr<CGui> gui = game->createObject<CGui>("gui");
 
     game->setGui(gui);
@@ -259,7 +260,7 @@ void CGameLoader::loadGui(std::shared_ptr<CGame> game) {
     });
 }
 
-void CPluginLoader::loadPlugin(std::shared_ptr<CGame> game, std::string path) {
+void CPluginLoader::loadPlugin(const std::shared_ptr<CGame> &game, const std::string &path) {
     PY_SAFE(
             std::string code = CResourcesProvider::getInstance()->load(path);
             auto name = game->getScriptHandler()->add_class(code, {"game.CPlugin"});

@@ -83,19 +83,20 @@ public:
 };
 
 //inline this functions
-extern std::set<std::shared_ptr<CGameObject> > array_deserialize(std::shared_ptr<CGame> map,
-                                                                 std::shared_ptr<json> object);
+extern std::set<std::shared_ptr<CGameObject> > array_deserialize(const std::shared_ptr<CGame> &map,
+                                                                 const std::shared_ptr<json> &object);
 
-extern std::shared_ptr<json> array_serialize(std::set<std::shared_ptr<CGameObject> > set);
+extern std::shared_ptr<json> array_serialize(const std::set<std::shared_ptr<CGameObject> > &set);
 
-extern std::map<std::string, std::shared_ptr<CGameObject> > map_deserialize(std::shared_ptr<CGame> map,
-                                                                            std::shared_ptr<json> object);
+extern std::map<std::string, std::shared_ptr<CGameObject> > map_deserialize(const std::shared_ptr<CGame> &map,
+                                                                            const std::shared_ptr<json> &object);
 
-extern std::shared_ptr<json> map_serialize(std::map<std::string, std::shared_ptr<CGameObject> > object);
+extern std::shared_ptr<json> map_serialize(const std::map<std::string, std::shared_ptr<CGameObject> > &object);
 
-extern std::shared_ptr<CGameObject> object_deserialize(std::shared_ptr<CGame> game, std::shared_ptr<json> config);
+extern std::shared_ptr<CGameObject>
+object_deserialize(const std::shared_ptr<CGame> &game, const std::shared_ptr<json> &config);
 
-extern std::shared_ptr<json> object_serialize(std::shared_ptr<CGameObject> object);
+extern std::shared_ptr<json> object_serialize(const std::shared_ptr<CGameObject> &object);
 
 extern std::set<std::string> array_string_deserialize(std::shared_ptr<CGame> map,
                                                       std::shared_ptr<json> object);
@@ -105,42 +106,43 @@ extern std::shared_ptr<json> array_string_serialize(std::set<std::string> set);
 template<>
 class CSerializerFunction<std::shared_ptr<json>, std::shared_ptr<CGameObject>> {
 public:
-    static std::shared_ptr<json> serialize(std::shared_ptr<CGameObject> object);
+    static std::shared_ptr<json> serialize(const std::shared_ptr<CGameObject> &object);
 
-    static std::shared_ptr<CGameObject> deserialize(std::shared_ptr<CGame> map, std::shared_ptr<json> config);
+    static std::shared_ptr<CGameObject>
+    deserialize(const std::shared_ptr<CGame> &map, const std::shared_ptr<json> &config);
 };
 
 template<>
 class CSerializerFunction<std::shared_ptr<json>, std::map<std::string, std::shared_ptr<CGameObject> >> {
 public:
-    static std::shared_ptr<json> serialize(std::map<std::string, std::shared_ptr<CGameObject> > object);
+    static std::shared_ptr<json> serialize(const std::map<std::string, std::shared_ptr<CGameObject> > &object);
 
-    static std::map<std::string, std::shared_ptr<CGameObject> > deserialize(std::shared_ptr<CGame> map,
-                                                                            std::shared_ptr<json> object);
+    static std::map<std::string, std::shared_ptr<CGameObject> > deserialize(const std::shared_ptr<CGame> &map,
+                                                                            const std::shared_ptr<json> &object);
 };
 
 template<>
 class CSerializerFunction<std::shared_ptr<json>, std::set<std::shared_ptr<CGameObject> >> {
 public:
-    static std::shared_ptr<json> serialize(std::set<std::shared_ptr<CGameObject> > set);
+    static std::shared_ptr<json> serialize(const std::set<std::shared_ptr<CGameObject> > &set);
 
-    static std::set<std::shared_ptr<CGameObject> > deserialize(std::shared_ptr<CGame> map,
-                                                               std::shared_ptr<json> object);
+    static std::set<std::shared_ptr<CGameObject> > deserialize(const std::shared_ptr<CGame> &map,
+                                                               const std::shared_ptr<json> &object);
 };
 
 template<typename Serialized, typename Deserialized>
 class CSerializer : public CSerializerBase {
 public:
-    virtual boost::any
+    boost::any
     serialize(boost::any
-              object) override final {
+              object) final {
         return boost::any(
                 CSerializerFunction<Serialized, Deserialized>::serialize(vstd::any_cast<Deserialized>(object)));
     }
 
-    virtual boost::any
+    boost::any
     deserialize(std::shared_ptr<CGame> map, boost::any
-    object) override final {
+    object) final {
         return boost::any(
                 CSerializerFunction<Serialized, Deserialized>::deserialize(map, vstd::any_cast<Serialized>(object)));
     }
@@ -158,16 +160,16 @@ public:
                       std::function<Deserialized(std::shared_ptr<CGame>, Serialized)> _deserialize)
             : _serialize(_serialize), _deserialize(_deserialize) {}
 
-    virtual boost::any
+    boost::any
     serialize(boost::any
-              object) override final {
+              object) final {
         return boost::any(
                 _serialize(vstd::any_cast<Deserialized>(object)));
     }
 
-    virtual boost::any
+    boost::any
     deserialize(std::shared_ptr<CGame> map, boost::any
-    object) override final {
+    object) final {
         return boost::any(
                 _deserialize(map, vstd::any_cast<Serialized>(object)));
     }
@@ -197,36 +199,39 @@ public:
         return vstd::any_cast<Deserialized>(variant);
     }
 
-    static void setProperty(std::shared_ptr<CGameObject> object, std::string key, std::shared_ptr<json> value);
+    static void
+    setProperty(const std::shared_ptr<CGameObject> &object, const std::string &key, const std::shared_ptr<json> &value);
 
-    static void setProperty(std::shared_ptr<json> conf, std::string propertyName, boost::any
+    static void setProperty(const std::shared_ptr<json> &conf, const std::string &propertyName, const boost::any &
     propertyValue);
 
-    static std::string generateName(std::shared_ptr<CGameObject> object);
+    static std::string generateName(const std::shared_ptr<CGameObject> &object);
 
 private:
-    static boost::typeindex::type_index getProperty(std::shared_ptr<CGameObject> object, std::string name);
+    static boost::typeindex::type_index
+    getProperty(const std::shared_ptr<CGameObject> &object, const std::string &name);
 
-    static boost::typeindex::type_index getGenericPropertyType(std::shared_ptr<json> object);
+    static boost::typeindex::type_index getGenericPropertyType(const std::shared_ptr<json> &object);
 
-    static void setArrayProperty(std::shared_ptr<CGameObject> object, boost::typeindex::type_index property,
-                                 std::string key,
+    static void setArrayProperty(const std::shared_ptr<CGameObject> &object, boost::typeindex::type_index property,
+                                 const std::string &key,
                                  std::shared_ptr<json> value);
 
-    static void setObjectProperty(std::shared_ptr<CGameObject> object, boost::typeindex::type_index property,
-                                  std::string key,
+    static void setObjectProperty(const std::shared_ptr<CGameObject> &object, boost::typeindex::type_index property,
+                                  const std::string &key,
                                   std::shared_ptr<json> value);
 
-    static void setStringProperty(std::shared_ptr<CGameObject> object, std::string key, std::string value);
+    static void
+    setStringProperty(const std::shared_ptr<CGameObject> &object, const std::string &key, const std::string &value);
 
-    static void setNumericProperty(std::shared_ptr<CGameObject> object, std::string key, int value);
+    static void setNumericProperty(const std::shared_ptr<CGameObject> &object, const std::string &key, int value);
 
-    static void setBooleanProperty(std::shared_ptr<CGameObject> object, std::string key, bool value);
+    static void setBooleanProperty(const std::shared_ptr<CGameObject> &object, const std::string &key, bool value);
 
     static void setOtherProperty(boost::typeindex::type_index serializedId, boost::typeindex::type_index deserializedId,
-                                 std::shared_ptr<CGameObject> object,
-                                 std::string key,
-                                 boost::any value);
+                                 const std::shared_ptr<CGameObject> &object,
+                                 const std::string &key,
+                                 const boost::any &value);
 
-    static bool isString(std::shared_ptr<CGameObject> object, std::string key);
+    static bool isString(const std::shared_ptr<CGameObject> &object, const std::string &key);
 };

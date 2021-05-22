@@ -8,7 +8,6 @@
 //TODO: when lost fight in cave, panel pops out after return to position
 //TODO: fight panel
     //TODO: cant quit game when in fight (hang in wait until)
-    //TODO: after fight loot window + summary
 //TODO: encapsulate SDL_RenderCopy
 //TODO: implement move cost
     //TODO: implement move points
@@ -31,7 +30,6 @@
 //TODO: customize out of bound tiles and default tiles
 //TODO: toroidal maps
 //TODO: separate class from race
-
 //TODO: use items on right click, when unified selection, do global reset of selections on right click
 //TODO: mark primitve CGameObjects like CList and CMapString, CScript as primitive and unfold values field directly to properties
     generally items with one property, would require not counting props from CGameObject and getting field type from meta class
