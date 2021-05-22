@@ -21,7 +21,7 @@ typedef std::function<bool(const Coords &, const Coords &)> Compare;
 typedef std::priority_queue<Coords, std::vector<Coords>, Compare> Queue;
 typedef std::shared_ptr<std::unordered_map<Coords, int>> Values;
 
-static Coords getNextStep(const Coords &start, const Coords &goal, Values values) {
+static Coords getNextStep(const Coords &start, const Coords &goal, const Values &values) {
     Coords target = start;
     for (Coords coords:NEAR_COORDS (start)) {
         if (vstd::ctn((*values), coords) &&
@@ -34,7 +34,7 @@ static Coords getNextStep(const Coords &start, const Coords &goal, Values values
     return target;
 }
 
-static Values fillValues(std::function<bool(const Coords &)> canStep,
+static Values fillValues(const std::function<bool(const Coords &)> &canStep,
                          const Coords &goal, const Coords &start) {
     Queue nodes([start](const Coords &a, const Coords &b) {
         double dista = (a.x - start.x) * (a.x - start.x) +
@@ -69,7 +69,7 @@ static Values fillValues(std::function<bool(const Coords &)> canStep,
     return values;
 }
 
-static Values fillAllValues(std::function<bool(const Coords &)> canStep,
+static Values fillAllValues(const std::function<bool(const Coords &)> &canStep,
                             const Coords &goal) {
     std::unordered_set<Coords> marked;
     Values values = std::make_shared<std::unordered_map<Coords, int>>();
@@ -112,15 +112,15 @@ static Values fillAllValues(std::function<bool(const Coords &)> canStep,
 }
 
 std::shared_ptr<vstd::future<Coords, void>> CPathFinder::findNextStep(Coords start, Coords goal,
-                                                                      std::function<bool(
-                                                                              const Coords &)> canStep) {
+                                                                      const std::function<bool(
+                                                                              const Coords &)> &canStep) {
     return vstd::async([start, goal, canStep]() {
         return getNextStep(start, goal, fillValues(
                 canStep, goal, start));
     });
 }
 
-std::list<Coords> CPathFinder::findPath(Coords start, Coords goal, std::function<bool(const Coords &)> canStep) {
+std::list<Coords> CPathFinder::findPath(Coords start, Coords goal, const std::function<bool(const Coords &)> &canStep) {
     std::list<Coords> path;
     Values val = fillValues(canStep, start, goal);
     Coords next = getNextStep(next, goal, val);
@@ -133,7 +133,7 @@ std::list<Coords> CPathFinder::findPath(Coords start, Coords goal, std::function
     return path;
 }
 
-void CPathFinder::saveMap(Coords start, std::function<bool(const Coords &)> canStep, std::string path) {
+void CPathFinder::saveMap(Coords start, const std::function<bool(const Coords &)> &canStep, const std::string &path) {
     Values values = fillAllValues(canStep, start);
     int minx = std::numeric_limits<int>::max();
     int miny = std::numeric_limits<int>::max();
