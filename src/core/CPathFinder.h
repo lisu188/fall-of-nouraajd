@@ -26,12 +26,13 @@ class CPathFinder {
 public:
     //TODO change naming
     static std::shared_ptr<vstd::future<Coords, void> > findNextStep(Coords start, Coords goal,
-                                                                     std::function<bool(const Coords &)> canStep);
+                                                                     const std::function<bool(
+                                                                             const Coords &)> &canStep);
 
     static std::list<Coords> findPath(Coords start, Coords goal,
-                                      std::function<bool(const Coords &)> canStep);
+                                      const std::function<bool(const Coords &)> &canStep);
 
-    static void saveMap(Coords start, std::function<bool(const Coords &)> canStep, std::string path);
+    static void saveMap(Coords start, const std::function<bool(const Coords &)> &canStep, const std::string &path);
 };
 
 #define NEAR_COORDS(coords) {Coords(coords.x + 1,coords.y,coords.z),Coords(coords.x - 1,coords.y,coords.z ),Coords(coords.x,coords.y + 1, coords.z ),Coords(coords.x,coords.y - 1,coords.z )}
