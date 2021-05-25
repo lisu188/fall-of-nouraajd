@@ -25,21 +25,21 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CScript.h"
 #include "handler/CLootHandler.h"
 
-extern void add_member(std::shared_ptr<json> object, std::string key, std::string value);
+extern void add_member(const std::shared_ptr<json> &object, const std::string &key, const std::string &value);
 
-extern void add_member(std::shared_ptr<json> object, std::string key, std::shared_ptr<json> value);
+extern void add_member(const std::shared_ptr<json> &object, const std::string &key, const std::shared_ptr<json> &value);
 
-extern void add_member(std::shared_ptr<json> object, std::string key, bool value);
+extern void add_member(const std::shared_ptr<json> &object, const std::string &key, bool value);
 
-extern void add_member(std::shared_ptr<json> object, std::string key, int value);
+extern void add_member(const std::shared_ptr<json> &object, const std::string &key, int value);
 
-extern void add_arr_member(std::shared_ptr<json> object, std::string value);
+extern void add_arr_member(const std::shared_ptr<json> &object, const std::string &value);
 
-extern void add_arr_member(std::shared_ptr<json> object, std::shared_ptr<json> value);
+extern void add_arr_member(const std::shared_ptr<json> &object, const std::shared_ptr<json> &value);
 
-extern void add_arr_member(std::shared_ptr<json> object, bool value);
+extern void add_arr_member(const std::shared_ptr<json> &object, bool value);
 
-extern void add_arr_member(std::shared_ptr<json> object, int value);
+extern void add_arr_member(const std::shared_ptr<json> &object, int value);
 
 namespace {
     struct register_types1 {
