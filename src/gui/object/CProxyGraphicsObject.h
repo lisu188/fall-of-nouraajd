@@ -36,7 +36,7 @@ private:
     int x, y;
 
 public:
-    CProxyGraphicsObject();
+    CProxyGraphicsObject() = default;
 
     CProxyGraphicsObject(int x, int y);
 
