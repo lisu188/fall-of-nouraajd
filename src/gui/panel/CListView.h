@@ -82,7 +82,7 @@ private:
 
     int tileSize = 50;
 public:
-    CListView();
+    CListView() = default;
 
     bool getAllowOversize();
 
@@ -142,35 +142,37 @@ private:
 
     std::unordered_map<std::pair<int, int>, std::shared_ptr<CProxyGraphicsObject>> proxyObjects;
 
-    void doShift(std::shared_ptr<CGui> gui, int val);
+    void doShift(const std::shared_ptr<CGui> &gui, int val);
 
-    int shiftIndex(std::shared_ptr<CGui> gui, int arg);
+    int shiftIndex(const std::shared_ptr<CGui> &gui, int arg);
 
-    int getRightArrowIndex(std::shared_ptr<CGui> gui);
+    int getRightArrowIndex(const std::shared_ptr<CGui> &gui);
 
-    int getLeftArrowIndex(std::shared_ptr<CGui> gui);
+    int getLeftArrowIndex(const std::shared_ptr<CGui> &gui);
 
 //TODO: do not generate whole map, instead add callback arguement and stop when met
-    std::unordered_multimap<int, std::shared_ptr<CGameObject>> calculateIndices(std::shared_ptr<CGui> gui);
+    std::unordered_multimap<int, std::shared_ptr<CGameObject>> calculateIndices(const std::shared_ptr<CGui> &gui);
 
     std::shared_ptr<SDL_Rect>
-    calculateIndexPosition(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> loc, int index);
+    calculateIndexPosition(const std::shared_ptr<CGui> &gui, const std::shared_ptr<SDL_Rect> &loc, int index);
 
 //TODO: cache method calls // note to self, seems like no performance impact, even in debug
-    bool isOversized(std::shared_ptr<CGui> gui);
+    bool isOversized(const std::shared_ptr<CGui> &gui);
 
     auto getArrowCallback(bool left);
 
-    void addItemBox(std::shared_ptr<CGui> gui, std::list<std::shared_ptr<CGameGraphicsObject>> &return_val) const;
+    void
+    addItemBox(const std::shared_ptr<CGui> &gui, std::list<std::shared_ptr<CGameGraphicsObject>> &return_val) const;
 
     void addItem(std::list<std::shared_ptr<CGameGraphicsObject>> &return_val,
                  std::unordered_multimap<int, std::shared_ptr<CGameObject>> indexedCollection,
                  int itemIndex) const;
 
-    void addSelectionBox(std::shared_ptr<CGui> gui, std::list<std::shared_ptr<CGameGraphicsObject>> &return_val) const;
+    void addSelectionBox(const std::shared_ptr<CGui> &gui,
+                         std::list<std::shared_ptr<CGameGraphicsObject>> &return_val) const;
 
     void
-    addCountBox(std::shared_ptr<CGui> gui, int count,
+    addCountBox(const std::shared_ptr<CGui> &gui, int count,
                 std::list<std::shared_ptr<CGameGraphicsObject>> &return_val) const;
 
 };
