@@ -38,18 +38,7 @@ CLootHandler::CLootHandler(const std::shared_ptr<CGame> &game) : game(game) {
 
 std::set<std::shared_ptr<CItem>> CLootHandler::calculateLoot(int value) const {
     std::set<std::shared_ptr<CItem>> loot;
-    std::list<int> powers;
-    while (value > 0) {
-        std::set<int> possible_values;
-        for (const auto &it:powerTable) {
-            if (it.first <= value) {
-                possible_values.insert(it.first);
-            }
-        }
-        if (possible_values.empty()) {
-            break;
-        }
-        int pow = vstd::random_element(possible_values);
+    for (auto pow:vstd::random_components(value, powerTable | boost::adaptors::map_keys)) {
         std::set<std::string> possible_names;
         auto range = powerTable.equal_range(pow);
         for (auto it = range.first; it != range.second; it++) {
