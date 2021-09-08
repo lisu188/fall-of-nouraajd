@@ -46,8 +46,8 @@ def load(self, context):
     @register(context)
     class Chest(CBuilding):
         def onEnter(self, event):
-            self.getMap().getGame().getLootHandler().addLoot(self.getMap().getPlayer(),
-                                                             self.getNumericProperty('value'))
+            self.getMap().getGame().getLootHandler().addRandomLoot(self.getMap().getPlayer(),
+                                                                   self.getNumericProperty('value'))
 
     @register(context)
     class Cave(CBuilding):

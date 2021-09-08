@@ -129,7 +129,7 @@ std::shared_ptr<CTile> CMap::getTile(Coords coords) {
 bool CMap::canStep(int x, int y, int z) {
     Coords coords(x, y, z);
     auto it = this->tiles.find(coords);
-    for (auto object:getObjectsAtCoords(coords)) {
+    for (const auto &object: getObjectsAtCoords(coords)) {
         if (!object->getCanStep()) {
             return false;
         }
@@ -151,13 +151,13 @@ bool CMap::contains(int x, int y, int z) {
     return it != tiles.end();
 }
 
-void CMap::addObject(std::shared_ptr<CMapObject> mapObject) {
+void CMap::addObject(const std::shared_ptr<CMapObject> &mapObject) {
     vstd::fail_if(vstd::ctn(mapObjects, mapObject->getName()),
                   "Map object already exists: " + mapObject->getName());
     std::shared_ptr<CCreature> creature = vstd::cast<CCreature>(mapObject);
     if (creature.get()) {
         if (creature->getLevel() == 0) {
-            creature->levelUp();
+            creature->addExp(0);
             creature->heal(0);
             creature->addMana(0);
         }
@@ -168,7 +168,7 @@ void CMap::addObject(std::shared_ptr<CMapObject> mapObject) {
     signal("objectChanged", mapObject->getCoords());
 }
 
-void CMap::removeObject(std::shared_ptr<CMapObject> mapObject) {
+void CMap::removeObject(const std::shared_ptr<CMapObject> &mapObject) {
     mapObjects.erase(mapObjects.find(mapObject->getName()));
     vstd::erase_if(mapObjectsCache, [mapObject](auto it) {
         return it.second == mapObject->getName();
@@ -189,7 +189,7 @@ int CMap::getEntryZ() {
     return entryz;
 }
 
-std::shared_ptr<CMapObject> CMap::getObjectByName(std::string name) {
+std::shared_ptr<CMapObject> CMap::getObjectByName(const std::string &name) {
     auto it = mapObjects.find(name);
     if (it != mapObjects.end()) {
         return (*it).second;
@@ -294,10 +294,6 @@ void CMap::move() {
     });
 }
 
-CMap::CMap() {
-
-}
-
 int CMap::getTurn() {
     return turn;
 }
@@ -307,7 +303,7 @@ void CMap::setTurn(int turn) {
 }
 
 void CMap::setTiles(std::set<std::shared_ptr<CTile>> objects) {
-    for (auto ob : objects) {
+    for (const auto &ob: objects) {
         tiles[ob->getCoords()] = ob;
     }
 }
@@ -383,9 +379,22 @@ std::set<std::shared_ptr<CMapObject>> CMap::getObjectsAtCoords(Coords coords) {
 void CMap::forObjectsAtCoords(Coords coords, std::function<void(std::shared_ptr<CMapObject>)> func,
                               std::function<bool(std::shared_ptr<CMapObject>)> predicate) {
     auto clone = getObjectsAtCoords(coords);
-    for (auto object:clone) {
+    for (auto object: clone) {
         if (predicate(object)) {
             func(object);
         }
     }
+}
+
+void CMap::addObject(const std::shared_ptr<CMapObject> &mapObject, Coords coords) {
+    if (this->canStep(coords)) {
+        if (mapObject) {
+            addObject(mapObject);
+            mapObject->moveTo(coords.x, coords.y, coords.z);
+        }
+    }
+}
+
+Coords CMap::getEntry() {
+    return Coords(getEntryX(), getEntryY(), getEntryZ());
 }

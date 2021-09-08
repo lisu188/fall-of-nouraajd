@@ -26,22 +26,27 @@ class CGame;
 
 class CCreature;
 
-class CLootHandler : public CGameObject {
+class CRngHandler : public CGameObject {
 public:
-    CLootHandler() = default;
+    CRngHandler() = default;
 
-    explicit CLootHandler(const std::shared_ptr<CGame> &map);
+    explicit CRngHandler(const std::shared_ptr<CGame> &map);
 
-    std::set<std::shared_ptr<CItem> > getLoot(int value) const;
+    std::set<std::shared_ptr<CItem> > getRandomLoot(int value) const;
 
-    void addLoot(const std::shared_ptr<CCreature> &creature, const std::set<std::shared_ptr<CItem>> &items);
+    std::set<std::shared_ptr<CCreature> > getRandomEncounter(int value) const;
 
-    void addLoot(const std::shared_ptr<CCreature> &creature, int value);
+    void addRandomLoot(const std::shared_ptr<CCreature> &creature, const std::set<std::shared_ptr<CItem>> &items);
+
+    void addRandomLoot(const std::shared_ptr<CCreature> &creature, int value);
 
 private:
-    std::set<std::shared_ptr<CItem> > calculateLoot(int value) const;
+    std::set<std::shared_ptr<CItem> > calculateRandomLoot(int value) const;
+
+    std::set<std::shared_ptr<CCreature> > calculateRandomEncounter(int value) const;
 
     std::weak_ptr<CGame> game;
 
-    std::unordered_multimap<int, std::string> powerTable;
+    std::unordered_multimap<int, std::string> itemPowerTable;
+    std::unordered_multimap<int, std::string> creaturePowerTable;
 };

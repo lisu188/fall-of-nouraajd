@@ -52,8 +52,7 @@ V_META(CMap, CGameObject, V_PROPERTY(CMap, int, turn, getTurn, setTurn),
        V_PROPERTY(CMap, std::set<std::shared_ptr<CTile>>, tiles, getTiles, setTiles),
        V_PROPERTY(CMap, std::set<std::shared_ptr<CTrigger>>, triggers, getTriggers, setTriggers))
 public:
-    CMap();
-
+    CMap() = default;
 
     bool addTile(std::shared_ptr<CTile> tile, int x, int y, int z);
 
@@ -67,15 +66,19 @@ public:
 
     bool contains(int x, int y, int z);
 
-    void addObject(std::shared_ptr<CMapObject> mapObject);
+    void addObject(const std::shared_ptr<CMapObject> &mapObject);
 
-    void removeObject(std::shared_ptr<CMapObject> mapObject);
+    void addObject(const std::shared_ptr<CMapObject> &mapObject, Coords coords);
+
+    void removeObject(const std::shared_ptr<CMapObject> &mapObject);
 
     int getEntryX();
 
     int getEntryY();
 
     int getEntryZ();
+
+    Coords getEntry();
 
     std::map<int, std::pair<int, int> > getBounds();
 
@@ -100,7 +103,7 @@ public:
 
     bool canStep(Coords coords);
 
-    std::shared_ptr<CMapObject> getObjectByName(std::string name);
+    std::shared_ptr<CMapObject> getObjectByName(const std::string &name);
 
     bool isMoving();
 

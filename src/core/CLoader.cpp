@@ -21,6 +21,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CJsonUtil.h"
 #include "gui/CGui.h"
 #include "core/CTypes.h"
+#include "handler/CRngHandler.h"
 #include <rdg.h>
 
 #include <utility>
@@ -180,6 +181,15 @@ std::shared_ptr<CMap> CMapLoader::loadRandomMap(const std::shared_ptr<CGame> &ga
                 map->addTile(map->getGame()->createObject<CTile>("GroundTile"), i, j, 0);
             } else {
                 map->addTile(map->getGame()->createObject<CTile>("MountainTile"), i, j, 0);
+            }
+        }
+    }
+    std::map<int, rdg<>::Room> rooms = dungeon.getRooms();
+    for (const auto room: rooms | boost::adaptors::map_values) {
+        auto roomCoords = Coords(room.row + room.width / 2, room.col + room.height / 2, 0);
+        if (roomCoords.getDist(map->getEntry()) > 5) {
+            for (const auto &creature: game->getRngHandler()->getRandomEncounter(5)) {
+                map->addObject(creature, roomCoords);
             }
         }
     }

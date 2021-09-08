@@ -20,7 +20,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "CObjectHandler.h"
 #include "CEventHandler.h"
 #include "CScriptHandler.h"
-#include "CLootHandler.h"
+#include "CRngHandler.h"
 #include "CQuestHandler.h"
 #include "CFightHandler.h"
 #include "CGuiHandler.h"

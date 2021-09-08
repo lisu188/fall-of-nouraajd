@@ -45,7 +45,6 @@ typedef std::map<std::string, std::shared_ptr<CInteraction> > CInteractionMap;
 typedef std::map<std::string, std::shared_ptr<CItem> > CItemMap;
 
 
-
 class CCreature : public CMapObject, public Moveable {
 
 V_META(CCreature, CMapObject,
@@ -93,8 +92,6 @@ public:
 
     void setExp(int exp);
 
-    int getExpReward();
-
     int getExpRatio();
 
     int getExpForNextLevel();
@@ -116,8 +113,6 @@ public:
     int getScale();
 
     bool isAlive();
-
-    virtual void levelUp();
 
     virtual std::set<std::shared_ptr<CItem> > getAllItems();
 
@@ -252,6 +247,9 @@ public:
     void useItem(std::shared_ptr<CItem> item);
 
     std::shared_ptr<Stats> getStats();
+
+protected:
+    virtual void levelUp();
 
 private:
     std::set<std::shared_ptr<CItem>> items;

@@ -33,7 +33,7 @@ class CGameObject;
 
 class CGui;
 
-class CLootHandler;
+class CRngHandler;
 
 class CGuiHandler;
 
@@ -60,7 +60,7 @@ public:
 
     void loadPlugin(std::function<std::shared_ptr<CPlugin>()> plugin);
 
-    std::shared_ptr<CLootHandler> getLootHandler();
+    std::shared_ptr<CRngHandler> getRngHandler();
 
     template<typename T>
     std::shared_ptr<T> createObject(std::string name) {
@@ -78,7 +78,7 @@ private:
     vstd::lazy<CGuiHandler> guiHandler;
     vstd::lazy<CScriptHandler> scriptHandler;
     vstd::lazy<CSlotConfig> slotConfiguration;
-    vstd::lazy<CLootHandler> lootHandler;
+    vstd::lazy<CRngHandler> rngHandler;
 
     vstd::lazy<CObjectHandler> objectHandler;
     std::shared_ptr<CMap> map;

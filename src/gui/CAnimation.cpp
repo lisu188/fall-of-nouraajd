@@ -47,45 +47,45 @@ CStaticAnimation::CStaticAnimation() {
 }
 
 CDynamicAnimation::CDynamicAnimation() {
-
 }
 
 void CDynamicAnimation::renderObject(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> rect, int frameTime) {
-    initialize();
-    auto tableCalc = [this]() {
-        std::vector<int> vec;
-        for (int i = 0; i < size; i++) {
-            if (times[i] < 0) {
-                if (i == 0) {
-                    vec.push_back(vstd::rand(0, -times[i]));
+    if (initialized) {
+        auto tableCalc = [this]() {
+            std::vector<int> vec;
+            for (int i = 0; i < size; i++) {
+                if (times[i] < 0) {
+                    if (i == 0) {
+                        vec.push_back(vstd::rand(0, -times[i]));
+                    } else {
+                        vec.push_back(vec[i - 1] + vstd::rand(0, -times[i]));
+                    }
                 } else {
-                    vec.push_back(vec[i - 1] + vstd::rand(0, -times[i]));
-                }
-            } else {
-                if (i == 0) {
-                    vec.push_back(times[i]);
-                } else {
-                    vec.push_back(vec[i - 1] + times[i]);
+                    if (i == 0) {
+                        vec.push_back(times[i]);
+                    } else {
+                        vec.push_back(vec[i - 1] + times[i]);
+                    }
                 }
             }
-        }
-        return vec;
-    };
-    auto tab = _tables.get("table", frameTime, tableCalc);
+            return vec;
+        };
+        auto tab = _tables.get("table", frameTime, tableCalc);
 
-    int animTime = int(frameTime + (_offsets.get("main", frameTime) / 100.0 * tab[size - 1])) % tab[size - 1];
+        int animTime = int(frameTime + (_offsets.get("main", frameTime) / 100.0 * tab[size - 1])) % tab[size - 1];
 
-    int currFrame = -1;
-    for (int i = 0; i < size; i++) {
-        if (animTime < tab[i]) {
-            currFrame = i;
-            break;
+        int currFrame = -1;
+        for (int i = 0; i < size; i++) {
+            if (animTime < tab[i]) {
+                currFrame = i;
+                break;
+            }
         }
+        SDL_SAFE(SDL_RenderCopy(gui->getRenderer(),
+                                gui->getTextureCache()->getTexture(paths[currFrame]),
+                                nullptr,
+                                rect.get()));
     }
-    SDL_SAFE(SDL_RenderCopy(gui->getRenderer(),
-                            gui->getTextureCache()->getTexture(paths[currFrame]),
-                            nullptr,
-                            rect.get()));
 }
 
 
@@ -101,6 +101,7 @@ void CDynamicAnimation::initialize() {
             self->paths.push_back(path + "/" + std::to_string(i) + ".png");
             self->times.push_back((*time)[std::to_string(i)].get<int>());
         }
+        self->initialized = true;
     });
 
 }
