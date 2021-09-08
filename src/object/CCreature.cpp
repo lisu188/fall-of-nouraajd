@@ -47,10 +47,6 @@ CCreature::~CCreature() {
 
 }
 
-int CCreature::getExpReward() {
-    return level * 750;
-}
-
 void CCreature::addExpScaled(int scale) {
     int rank = level - scale;
     //TODO: rethink this
@@ -408,6 +404,7 @@ std::shared_ptr<CArmor> CCreature::getArmor() {
     return vstd::cast<CArmor>(getItemAtSlot("3"));
 }
 
+//TODO: get rid of this, calculate level automatically
 void CCreature::levelUp() {
     level++;
     addAction(getLevelAction());

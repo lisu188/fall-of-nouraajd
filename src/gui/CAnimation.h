@@ -82,7 +82,7 @@ private:
     vstd::cache2<std::string, std::vector<int>, get_ttl> _tables;
 
     int size = 0;
-
+    bool initialized = false;
 
 };
 

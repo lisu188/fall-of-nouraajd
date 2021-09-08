@@ -24,6 +24,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <boost/locale.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/range/algorithm.hpp>
+#include <boost/range/irange.hpp>
 
 #include <SDL.h>
 #include <SDL_image.h>
