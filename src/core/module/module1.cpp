@@ -21,7 +21,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "gui/CGui.h"
 #include "gui/object/CStatsGraphicsObject.h"
 #include "gui/object/CSideBar.h"
-#include "handler/CLootHandler.h"
+#include "handler/CRngHandler.h"
 
 using namespace boost::python;
 
@@ -63,7 +63,7 @@ void initModule1() {
             .def("loadPlugin", &CGame::loadPlugin)
             .def("getGuiHandler", &CGame::getGuiHandler)
             .def("getObjectHandler", &CGame::getObjectHandler)
-            .def("getLootHandler", &CGame::getLootHandler)
+            .def("getRngHandler", &CGame::getRngHandler)
             .def("createObject", createObject)
             .def("getGui", &CGame::getGui);
 
@@ -85,6 +85,7 @@ void initModule1() {
             .def("getCreature", &CCreatureView::getCreature);
 
     bool (CMap::*canStep)(Coords) =&CMap::canStep;
+    void (CMap::*addObject)(const std::shared_ptr<CMapObject> &) =&CMap::addObject;
 
     class_<CMap, bases<CGameObject>, boost::noncopyable, std::shared_ptr<CMap>>("CMap")
             .def("addObjectByName", &CMap::addObjectByName)
@@ -95,7 +96,7 @@ void initModule1() {
             .def("getLocationByName", &CMap::getLocationByName)
             .def("removeAll", &CMap::removeObjects)
             .def("getEventHandler", &CMap::getEventHandler)
-            .def("addObject", &CMap::addObject)
+            .def("addObject", addObject)
             .def("getGame", &CMap::getGame)
             .def("move", &CMap::move)
             .def("getObjectByName", &CMap::getObjectByName)
@@ -122,9 +123,9 @@ void initModule1() {
             .def("showInfo", &CGuiHandler::showInfo)
             .def("showLoot", &CGuiHandler::showLoot);
 
-    void ( CLootHandler::*addLoot )(const std::shared_ptr<CCreature> &, int) = &CLootHandler::addLoot;
-    class_<CLootHandler, bases<CGameObject>, boost::noncopyable, std::shared_ptr<CLootHandler>>("CLootHandler")
-            .def("addLoot", addLoot);
+    void ( CRngHandler::*addRandomLoot )(const std::shared_ptr<CCreature> &, int) = &CRngHandler::addRandomLoot;
+    class_<CRngHandler, bases<CGameObject>, boost::noncopyable, std::shared_ptr<CRngHandler>>("CRngHandler")
+            .def("addRandomLoot", addRandomLoot);
 
     void ( CMapObject::*moveTo )(int, int, int) = &CMapObject::moveTo;
     void ( CMapObject::*move )(int, int, int) = &CMapObject::move;
