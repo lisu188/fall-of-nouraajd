@@ -14,3 +14,10 @@ def load(self, context):
         def trigger(self, object, event):
             if event.getCause().isPlayer():
                 object.getGame().getGuiHandler().showTrade(object.getObjectProperty('market'))
+
+    # TODO: replace with onLoad event
+    @trigger(context, "onTurn", "triggerAnchor")
+    class TurnTrigger(CTrigger):
+        def trigger(self, object, event):
+            if object.getMap().getTurn() == 0:
+                object.getMap().getGame().getRngHandler().addRandomEncounter(object.getMap(), 0, 1, 0, 5)
