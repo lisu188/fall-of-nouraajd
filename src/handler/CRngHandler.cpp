@@ -19,6 +19,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CUtil.h"
 #include "object/CObject.h"
 #include "core/CGame.h"
+#include "core/CMap.h"
 
 std::set<std::shared_ptr<CItem>> CRngHandler::getRandomLoot(int value) const {
     return calculateRandomLoot(value);
@@ -39,7 +40,7 @@ CRngHandler::CRngHandler(const std::shared_ptr<CGame> &game) : game(game) {
         }
     }
 
-    for (const std::string &type: game->getObjectHandler()->getAllSubTypes("CCreature")) {
+    for (const std::string &type: game->getObjectHandler()->getAllSubTypes("CMonster")) {
         std::shared_ptr<CCreature> creature = game->createObject<CCreature>(type);
         if (creature) {
             int power = creature->getSw();
@@ -79,11 +80,14 @@ void CRngHandler::addRandomLoot(const std::shared_ptr<CCreature> &creature, int 
 
 std::set<std::shared_ptr<CCreature> > CRngHandler::calculateRandomEncounter(int value) const {
     std::set<std::shared_ptr<CCreature>> encounter;
-    for (auto pow: vstd::random_components(value, boost::irange(1, value + 1))) {
-        auto sw = vstd::random_element(
-                creaturePowerTable | boost::adaptors::map_keys | boost::adaptors::filtered([=](auto it) {
+    for (int pow: vstd::random_components(value, boost::irange(1, value + 1))) {
+        auto possiblePowersRange =
+                creaturePowerTable | boost::adaptors::map_keys | boost::adaptors::filtered([pow](int it) {
                     return it <= pow;
-                }));
+                });
+        //TODO: util for range copy
+        std::set<int> possiblePowers(possiblePowersRange.begin(), possiblePowersRange.end());
+        auto sw = vstd::random_element(possiblePowers);
         std::set<std::string> possible_names;
         auto range = creaturePowerTable.equal_range(sw);
         for (auto it = range.first; it != range.second; it++) {
@@ -98,4 +102,10 @@ std::set<std::shared_ptr<CCreature> > CRngHandler::calculateRandomEncounter(int 
         value -= pow;
     }
     return encounter;
+}
+
+void CRngHandler::addRandomEncounter(const std::shared_ptr<CMap> &map, int x, int y, int z, int value) {
+    for (auto creature:getRandomEncounter(value)) {
+        map->addObject(creature, Coords(x, y, z));
+    }
 }

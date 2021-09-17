@@ -125,7 +125,8 @@ void initModule1() {
 
     void ( CRngHandler::*addRandomLoot )(const std::shared_ptr<CCreature> &, int) = &CRngHandler::addRandomLoot;
     class_<CRngHandler, bases<CGameObject>, boost::noncopyable, std::shared_ptr<CRngHandler>>("CRngHandler")
-            .def("addRandomLoot", addRandomLoot);
+            .def("addRandomLoot", addRandomLoot)
+            .def("addRandomEncounter", &CRngHandler::addRandomEncounter);
 
     void ( CMapObject::*moveTo )(int, int, int) = &CMapObject::moveTo;
     void ( CMapObject::*move )(int, int, int) = &CMapObject::move;
