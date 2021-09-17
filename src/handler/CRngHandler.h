@@ -40,6 +40,7 @@ public:
 
     void addRandomLoot(const std::shared_ptr<CCreature> &creature, int value);
 
+    void addRandomEncounter(const std::shared_ptr<CMap> &map, int x, int y, int z, int value);
 private:
     std::set<std::shared_ptr<CItem> > calculateRandomLoot(int value) const;
 
