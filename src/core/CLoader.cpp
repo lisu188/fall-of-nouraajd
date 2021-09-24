@@ -15,13 +15,15 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-#include "gui/object/CStatsGraphicsObject.h"
 #include "gui/object/CMapGraphicsObject.h"
 #include "core/CLoader.h"
 #include "core/CJsonUtil.h"
 #include "gui/CGui.h"
 #include "core/CTypes.h"
 #include "handler/CRngHandler.h"
+#include "core/CController.h"
+#include "object/CCreature.h"
+#include "object/CPlayer.h"
 #include <rdg.h>
 
 #include <utility>
@@ -34,12 +36,12 @@ void CMapLoader::loadFromTmx(const std::shared_ptr<CMap> &map, const std::shared
         map->entryy = vstd::to_int(mapProperties.count("y") ? mapProperties["y"].get<std::string>() : "0").first;
         map->entryz = vstd::to_int(mapProperties.count("z") ? mapProperties["z"].get<std::string>() : "0").first;
         const json &tileset = (*mapc)["tilesets"][0]["tileproperties"];
-        for (const auto &layer : mapLayers) {
+        for (const auto &layer: mapLayers) {
             if (vstd::string_equals(layer["type"].get<std::string>(), "tilelayer")) {
                 handleTileLayer(map, tileset, layer);
             }
         }
-        for (const auto &layer : mapLayers) {
+        for (const auto &layer: mapLayers) {
             if (vstd::string_equals(layer["type"].get<std::string>(), "objectgroup")) {
                 handleObjectLayer(map, layer);
             }
@@ -93,16 +95,23 @@ std::shared_ptr<CMap> CMapLoader::loadSavedMap(const std::shared_ptr<CGame> &gam
 std::shared_ptr<CMap> CMapLoader::loadNewMapWithPlayer(const std::shared_ptr<CGame> &game, const std::string &name,
                                                        std::string player) {
     std::shared_ptr<CMap> map = loadNewMap(game, name);
-    auto ptr = game->createObject<CPlayer>(std::move(player));
-    ptr->setName("player");
+    std::shared_ptr<CPlayer> ptr = createPlayer(game, player);
     map->setPlayer(ptr);
+
+
+
     return map;
+}
+
+//TODO: move to map, set player as well as triggers
+std::shared_ptr<CPlayer> CMapLoader::createPlayer(const std::shared_ptr<CGame> &game, std::string &player) {
+    auto ptr = game->createObject<CPlayer>(std::move(player));
+    return ptr;
 }
 
 std::shared_ptr<CMap> CMapLoader::loadRandomMapWithPlayer(const std::shared_ptr<CGame> &game, std::string player) {
     std::shared_ptr<CMap> map = loadRandomMap(game);
-    auto ptr = game->createObject<CPlayer>(std::move(player));
-    ptr->setName("player");
+    std::shared_ptr<CPlayer> ptr = createPlayer(game, player);
     map->setPlayer(ptr);
     return map;
 }
@@ -139,7 +148,7 @@ void CMapLoader::handleTileLayer(const std::shared_ptr<CMap> &map, const json &t
 void CMapLoader::handleObjectLayer(const std::shared_ptr<CMap> &map, const json &layer) {
     int level = vstd::to_int(layer["properties"]["level"].get<std::string>()).first;
     const json &objects = layer["objects"];
-    for (const auto &object : objects) {
+    for (const auto &object: objects) {
         auto objectType = object["type"].get<std::string>();
         auto objectName = object["name"].get<std::string>();
 
@@ -155,7 +164,7 @@ void CMapLoader::handleObjectLayer(const std::shared_ptr<CMap> &map, const json 
         }
         map->addObject(mapObject);
         const json &objectProperties = object.count("properties") ? object["properties"] : json();
-        for (auto[key, value] :objectProperties.items()) {
+        for (auto[key, value]: objectProperties.items()) {
             CSerialization::setProperty(mapObject, key, CJsonUtil::clone(value));
         }
         mapObject->moveTo(xPos, yPos, level);
@@ -239,20 +248,20 @@ void CGameLoader::changeMap(const std::shared_ptr<CGame> &game, const std::strin
 }
 
 void CGameLoader::initConfigurations(const std::shared_ptr<CObjectHandler> &handler) {
-    for (const std::string &path : CResourcesProvider::getInstance()->getFiles(CResType::CONFIG)) {
+    for (const std::string &path: CResourcesProvider::getInstance()->getFiles(CResType::CONFIG)) {
         handler->registerConfig(path);
     }
 }
 
 void CGameLoader::initObjectHandler(const std::shared_ptr<CObjectHandler> &handler) {
-    for (const auto &it:*CTypes::builders()) {
+    for (const auto &it: *CTypes::builders()) {
         handler->registerType(it.first, it.second);
     }
 }
 
 void
 CGameLoader::initScriptHandler(const std::shared_ptr<CScriptHandler> &handler, const std::shared_ptr<CGame> &game) {
-    for (const std::string &script:CResourcesProvider::getInstance()->getFiles(CResType::PLUGIN)) {
+    for (const std::string &script: CResourcesProvider::getInstance()->getFiles(CResType::PLUGIN)) {
         CPluginLoader::loadPlugin(game, script);
     }
 }

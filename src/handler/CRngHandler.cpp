@@ -20,13 +20,25 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "object/CObject.h"
 #include "core/CGame.h"
 #include "core/CMap.h"
+#include "core/CController.h"
 
 std::set<std::shared_ptr<CItem>> CRngHandler::getRandomLoot(int value) const {
     return calculateRandomLoot(value);
 }
 
 std::set<std::shared_ptr<CCreature>> CRngHandler::getRandomEncounter(int value) const {
-    return calculateRandomEncounter(value);
+    auto randomEncounter = calculateRandomEncounter(value);
+    //TODO: make generic hashing of collections
+    std::size_t hash;
+    for (const auto &creature: randomEncounter) {
+        hash = vstd::hash_combine(hash, creature);
+    }
+    for (const auto &creature: randomEncounter) {
+        creature->setAffiliation(vstd::str(hash));
+        //TODO: make this customizable
+        creature->setController(game.lock()->createObject<CController>("CRandomController"));
+    }
+    return randomEncounter;
 }
 
 CRngHandler::CRngHandler(const std::shared_ptr<CGame> &game) : game(game) {
@@ -40,7 +52,7 @@ CRngHandler::CRngHandler(const std::shared_ptr<CGame> &game) : game(game) {
         }
     }
 
-    for (const std::string &type: game->getObjectHandler()->getAllSubTypes("CMonster")) {
+    for (const std::string &type: game->getObjectHandler()->getAllSubTypes("CCreature")) {
         std::shared_ptr<CCreature> creature = game->createObject<CCreature>(type);
         if (creature) {
             int power = creature->getSw();
@@ -66,9 +78,10 @@ std::set<std::shared_ptr<CItem>> CRngHandler::calculateRandomLoot(int value) con
 }
 
 void
-CRngHandler::addRandomLoot(const std::shared_ptr<CCreature> &creature, const std::set<std::shared_ptr<CItem>> &items) {
+CRngHandler::addRandomLoot(const std::shared_ptr<CCreature> &creature,
+                           const std::set<std::shared_ptr<CItem>> &items) {
     //TODO: polymorphic
-    if (vstd::castable<CPlayer>(creature)) {
+    if (creature->isPlayer()) {
         creature->getGame()->getGuiHandler()->showLoot(creature, items);
     }
     creature->addItems(items);
@@ -78,7 +91,7 @@ void CRngHandler::addRandomLoot(const std::shared_ptr<CCreature> &creature, int 
     addRandomLoot(creature, getRandomLoot(value));
 }
 
-std::set<std::shared_ptr<CCreature> > CRngHandler::calculateRandomEncounter(int value) const {
+std::set<std::shared_ptr<CCreature>> CRngHandler::calculateRandomEncounter(int value) const {
     std::set<std::shared_ptr<CCreature>> encounter;
     for (int pow: vstd::random_components(value, boost::irange(1, value + 1))) {
         auto possiblePowersRange =
@@ -105,7 +118,7 @@ std::set<std::shared_ptr<CCreature> > CRngHandler::calculateRandomEncounter(int 
 }
 
 void CRngHandler::addRandomEncounter(const std::shared_ptr<CMap> &map, int x, int y, int z, int value) {
-    for (auto creature:getRandomEncounter(value)) {
+    for (const auto& creature: getRandomEncounter(value)) {
         map->addObject(creature, Coords(x, y, z));
     }
 }

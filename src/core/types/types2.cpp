@@ -75,7 +75,6 @@ namespace {
                     CTypes::register_type<CCreature, CMapObject, CGameObject>();
                     {
                         CTypes::register_type<CPlayer, CCreature, CMapObject, CGameObject>();
-                        CTypes::register_type<CMonster, CCreature, CMapObject, CGameObject>();
                     }
                 }
             }
