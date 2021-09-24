@@ -27,13 +27,9 @@ V_META(CPlayer, CCreature,
        V_PROPERTY(CPlayer, std::set<std::shared_ptr<CQuest>>, completedQuests, getCompletedQuests, setCompletedQuests))
 
 public:
-    CPlayer();
+    CPlayer() = default;
 
-    virtual ~CPlayer();
-
-    virtual void onTurn(std::shared_ptr<CGameEvent>) override;
-
-    virtual void onDestroy(std::shared_ptr<CGameEvent> event) override;
+    ~CPlayer() override = default;
 
     void addQuest(std::string questName);
 
@@ -41,17 +37,18 @@ public:
 
     void setQuests(std::set<std::shared_ptr<CQuest>> quests);
 
-private:
-    void checkQuests();
-
-    std::set<std::shared_ptr<CQuest>> quests;
-    std::set<std::shared_ptr<CQuest>> completedQuests;
-public:
     std::set<std::shared_ptr<CQuest>> getCompletedQuests();
 
     void setCompletedQuests(std::set<std::shared_ptr<CQuest>> completedQuests);
 
+    void checkQuests();
+
+    void incTurn();
+
 private:
+    std::set<std::shared_ptr<CQuest>> quests;
+    std::set<std::shared_ptr<CQuest>> completedQuests;
+
     int turn = 0;
 };
 

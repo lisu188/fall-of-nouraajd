@@ -24,7 +24,6 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "CCreature.h"
 #include "CBuilding.h"
 #include "CPlayer.h"
-#include "CMonster.h"
 #include "CEffect.h"
 #include "CGameObject.h"
 #include "CEvent.h"

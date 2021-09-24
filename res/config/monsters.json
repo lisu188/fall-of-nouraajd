@@ -8,9 +8,6 @@
         }
       ],
       "animation": "images/players/assasin",
-      "controller": {
-        "class": "CPlayerController"
-      },
       "equipped": {
         "0": {
           "ref": "Dagger"
@@ -20,7 +17,7 @@
         }
       },
       "fightController": {
-        "class": "CPlayerFightController"
+        "class": "CMonsterFightController"
       },
       "items": [],
       "label": "Assasin",
@@ -74,7 +71,7 @@
     }
   },
   "Gooby": {
-    "class": "CMonster",
+    "class": "CCreature",
     "properties": {
       "actions": [
         {
@@ -123,7 +120,7 @@
     }
   },
   "OctoBogz": {
-    "class": "CMonster",
+    "class": "CCreature",
     "properties": {
       "actions": [
         {
@@ -172,7 +169,7 @@
     }
   },
   "Pritz": {
-    "class": "CMonster",
+    "class": "{",
     "properties": {
       "actions": [
         {
@@ -221,7 +218,7 @@
     }
   },
   "PritzMage": {
-    "class": "CMonster",
+    "class": "CCreature",
     "properties": {
       "actions": [
         {
@@ -276,9 +273,6 @@
   "Sorcerer": {
     "class": "CPlayer",
     "properties": {
-      "controller": {
-        "class": "CPlayerController"
-      },
       "actions": [
         {
           "ref": "Attack"
@@ -294,7 +288,7 @@
         }
       },
       "fightController": {
-        "class": "CPlayerFightController"
+        "class": "CMonsterFightController"
       },
       "items": [],
       "label": "Sorcerer",
@@ -356,9 +350,6 @@
   "Warrior": {
     "class": "CPlayer",
     "properties": {
-      "controller": {
-        "class": "CPlayerController"
-      },
       "actions": [
         {
           "ref": "Attack"
@@ -374,7 +365,7 @@
         }
       },
       "fightController": {
-        "class": "CPlayerFightController"
+        "class": "CMonsterFightController"
       },
       "items": [],
       "label": "Warrior",

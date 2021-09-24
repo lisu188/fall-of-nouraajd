@@ -67,9 +67,9 @@ void initModule4() {
             .def("addItems", &CCreature::addItems)
             .def("removeItem", removeItem)
             .def("removeQuestItem", removeQuestItem);
+
     class_<CPlayer, bases<CCreature>, boost::noncopyable, std::shared_ptr<CPlayer>>("CPlayer")
             .def("addQuest", &CPlayer::addQuest);
-    class_<CMonster, bases<CCreature>, boost::noncopyable, std::shared_ptr<CMonster>>("CMonster");
 
     class_<CListString, bases<CGameObject>, boost::noncopyable, std::shared_ptr<CListString>>("CListString")
             .def("addValue", &CListString::addValue);

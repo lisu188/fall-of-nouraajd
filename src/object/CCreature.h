@@ -247,7 +247,6 @@ public:
     void useItem(std::shared_ptr<CItem> item);
 
     std::shared_ptr<Stats> getStats();
-
 protected:
     virtual void levelUp();
 

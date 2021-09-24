@@ -47,7 +47,10 @@ V_META(CCustomTrigger, CTrigger, vstd::meta::empty())
     std::function<void(std::shared_ptr<CGameObject>, std::shared_ptr<CGameEvent>)> _trigger;
 public:
     template<typename T>
-    CCustomTrigger(std::string object,std::string event,T _trigger);
+    CCustomTrigger(std::string object, std::string event, T __trigger):_trigger(__trigger) {
+        setObject(object);
+        setEvent(event);
+    }
 
     void trigger(std::shared_ptr<CGameObject> object, std::shared_ptr<CGameEvent> event) override;
 };
