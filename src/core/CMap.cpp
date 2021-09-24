@@ -53,9 +53,10 @@ Coords CMap::getLocationByName(std::string name) {
 std::shared_ptr<CPlayer> CMap::getPlayer() {
     //TODO: think of better solution after save
     if (!player) {
-        for (auto object:getObjects()) {
-            if (auto pl = vstd::cast<CPlayer>(object)) {
-                this->player = pl;
+        for (auto object: getObjects()) {
+            if (object->getName() == "player") {
+                //TODO: what about duplicated triggers?
+                setPlayer(vstd::cast<CPlayer>(object));
                 break;
             }
         }
@@ -64,6 +65,27 @@ std::shared_ptr<CPlayer> CMap::getPlayer() {
 }
 
 void CMap::setPlayer(std::shared_ptr<CPlayer> player) {
+    player->setName("player");
+    player->setController(getGame()->createObject<CPlayerController>());
+    player->setFightController(getGame()->createObject<CPlayerFightController>());
+
+    auto restartTrigger = std::make_shared<CCustomTrigger>("player", "onDestroy", [](auto object, auto event) {
+        auto _player = vstd::cast<CPlayer>(object);
+        _player->getMap()->addObject(_player);
+        _player->moveTo(object->getMap()->getEntryX(), object->getMap()->getEntryY(), object->getMap()->getEntryZ());
+        _player->setHp(1);
+    });
+
+    auto turnTrigger = std::make_shared<CCustomTrigger>("player", "onTurn", [](auto object, auto event) {
+        auto _player = vstd::cast<CPlayer>(object);
+        _player->addMana(_player->getManaRegRate());
+        _player->incTurn();
+        _player->checkQuests();
+    });
+
+    getEventHandler()->registerTrigger(restartTrigger);
+    getEventHandler()->registerTrigger(turnTrigger);
+
     addObject(player);
     player->moveTo(entryx, entryy, entryz);
     this->player = player;
@@ -215,18 +237,18 @@ bool CMap::isMoving() {
 void CMap::forObjects(std::function<void(std::shared_ptr<CMapObject>)> func,
                       std::function<bool(std::shared_ptr<CMapObject>)> predicate) {
     auto clone = mapObjects;
-    for (std::shared_ptr<CMapObject> object : clone |
-                                              boost::adaptors::map_values |
-                                              boost::adaptors::filtered(predicate)) {
+    for (std::shared_ptr<CMapObject> object: clone |
+                                             boost::adaptors::map_values |
+                                             boost::adaptors::filtered(predicate)) {
         func(object);
     }
 }
 
 void CMap::forTiles(std::function<void(std::shared_ptr<CTile>)> func,
                     std::function<bool(std::shared_ptr<CTile>)> predicate) {
-    for (std::shared_ptr<CTile> tile:(tiles |
-                                      boost::adaptors::map_values |
-                                      boost::adaptors::filtered(predicate))) {
+    for (std::shared_ptr<CTile> tile: (tiles |
+                                       boost::adaptors::map_values |
+                                       boost::adaptors::filtered(predicate))) {
         func(tile);
     }
 }
@@ -234,9 +256,9 @@ void CMap::forTiles(std::function<void(std::shared_ptr<CTile>)> func,
 
 void CMap::removeObjects(std::function<bool(std::shared_ptr<CMapObject>)> func) {
     auto clone = mapObjects;
-    for (std::shared_ptr<CMapObject> object : clone |
-                                              boost::adaptors::map_values |
-                                              boost::adaptors::filtered(func)) {
+    for (std::shared_ptr<CMapObject> object: clone |
+                                             boost::adaptors::map_values |
+                                             boost::adaptors::filtered(func)) {
         removeObject(object);
     }
 }
@@ -274,7 +296,7 @@ void CMap::move() {
     };
 
     auto end_callback = [map, coordinates](std::set<void *>) {
-        for (auto[creature, coords]:*coordinates) {
+        for (auto[creature, coords]: *coordinates) {
             creature->getController()->afterControl(creature, coords);
             creature->moveTo(coords);
         }
@@ -313,7 +335,7 @@ std::set<std::shared_ptr<CTile>> CMap::getTiles() {
 }
 
 void CMap::setObjects(std::set<std::shared_ptr<CMapObject>> objects) {
-    for (auto ob : objects) {
+    for (auto ob: objects) {
         mapObjects[ob->getName()] = ob;
     }
 }
@@ -333,7 +355,7 @@ std::set<std::shared_ptr<CTrigger>> CMap::getTriggers() {
 }
 
 void CMap::setTriggers(std::set<std::shared_ptr<CTrigger>> triggers) {
-    for (auto trigger:triggers) {
+    for (auto trigger: triggers) {
         getEventHandler()->registerTrigger(trigger);
     }
 }

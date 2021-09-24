@@ -45,6 +45,7 @@ private:
 
     static void handleObjectLayer(const std::shared_ptr<CMap> &map, const json &layer);
 
+    static std::shared_ptr<CPlayer> createPlayer(const std::shared_ptr<CGame> &game, std::string &player);
 };
 
 #include "core/CGlobal.h"

@@ -102,7 +102,7 @@ void CCreature::removeItem(std::shared_ptr<CItem> item, bool quest) {
 }
 
 void CCreature::removeItem(std::function<bool(std::shared_ptr<CItem>)> item_pred, bool quest) {
-    for (auto item:items) {
+    for (auto item: items) {
         if (item_pred(item)) {
             removeItem(item, quest);
         }
@@ -127,7 +127,7 @@ void CCreature::setEquipped(CItemMap
 }
 
 void CCreature::addItems(std::set<std::shared_ptr<CItem> > items) {
-    for (std::shared_ptr<CItem> it : items) {
+    for (std::shared_ptr<CItem> it: items) {
         this->items.insert(it);
         signal("inventoryChanged");
     }
@@ -305,7 +305,8 @@ void CCreature::takeMana(int i) {
 
 
 bool CCreature::isPlayer() {
-    return getMap()->getPlayer() == this->ptr<CPlayer>();
+    const std::shared_ptr<CPlayer> player = getMap()->getPlayer();
+    return player && player == this->ptr<CPlayer>();
 }
 
 int CCreature::getHpRatio() {
@@ -407,7 +408,10 @@ std::shared_ptr<CArmor> CCreature::getArmor() {
 //TODO: get rid of this, calculate level automatically
 void CCreature::levelUp() {
     level++;
+    //TODO: dynamic action calculation
     addAction(getLevelAction());
+    heal(0);
+    addMana(0);
     if (level > 1) {
         vstd::logger::debug(to_string(), "is now level:", level);
     }
@@ -416,7 +420,7 @@ void CCreature::levelUp() {
 std::set<std::shared_ptr<CItem> > CCreature::getAllItems() {
     std::set<std::shared_ptr<CItem> > allItems;
     allItems.insert(items.begin(), items.end());
-    for (auto it:equipped) {
+    for (auto it: equipped) {
         if (it.second) {
             allItems.insert(it.second);
         }
@@ -425,7 +429,7 @@ std::set<std::shared_ptr<CItem> > CCreature::getAllItems() {
 }
 
 bool CCreature::hasEquipped(std::function<bool(std::shared_ptr<CItem>)> item) {
-    for (auto it:equipped) {
+    for (auto it: equipped) {
         if (item(it.second)) {
             return true;
         }
@@ -434,7 +438,7 @@ bool CCreature::hasEquipped(std::function<bool(std::shared_ptr<CItem>)> item) {
 }
 
 bool CCreature::hasEquipped(std::shared_ptr<CItem> item) {
-    for (auto it:equipped) {
+    for (auto it: equipped) {
         if (it.second == item) {
             return true;
         }
@@ -628,10 +632,10 @@ std::shared_ptr<Stats> CCreature::getStats() {
     for (int i = 0; i < level; i++) {
         ret->addBonus(getLevelStats());
     }
-    for (auto[slot, item] :getEquipped()) {
+    for (auto[slot, item]: getEquipped()) {
         ret->addBonus(item->getBonus());
     }
-    for (auto effect:getEffects()) {
+    for (auto effect: getEffects()) {
         ret->addBonus(effect->getBonus());
     }
     return ret;

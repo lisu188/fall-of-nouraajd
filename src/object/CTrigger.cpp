@@ -40,12 +40,6 @@ void CTrigger::setEvent(std::string event) {
     CTrigger::event = event;
 }
 
-template<typename T>
-CCustomTrigger::CCustomTrigger(std::string object, std::string event, T __trigger):_trigger(__trigger) {
-    setObject(object);
-    setEvent(event);
-}
-
 void CCustomTrigger::trigger(std::shared_ptr<CGameObject> object, std::shared_ptr<CGameEvent> event) {
     _trigger(object, event);
 }
