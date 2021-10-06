@@ -213,8 +213,6 @@ configure_file(res/fonts/ampersand.ttf fonts/ampersand.ttf COPYONLY)
 
 configure_file(res/game.py game.py)
 
-configure_file(res/save/gooby.json save/gooby.json)
-
 configure_file(test.py test.py)
 configure_file(play.py play.py)
 
