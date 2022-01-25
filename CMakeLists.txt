@@ -222,7 +222,6 @@ install(DIRECTORY res/fonts DESTINATION fall-of-nouraajd)
 install(DIRECTORY res/images DESTINATION fall-of-nouraajd)
 install(DIRECTORY res/maps DESTINATION fall-of-nouraajd)
 install(DIRECTORY res/plugins DESTINATION fall-of-nouraajd)
-install(DIRECTORY res/save DESTINATION fall-of-nouraajd)
 
 install(FILES res/game.py test.py DESTINATION fall-of-nouraajd)
 
