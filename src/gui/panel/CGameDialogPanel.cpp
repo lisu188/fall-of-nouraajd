@@ -1,6 +1,6 @@
 /*
 fall-of-nouraajd c++ dark fantasy game
-Copyright (C) 2020  Andrzej Lis
+Copyright (C) 2022  Andrzej Lis
 
 This program is free software: you can redistribute it and/or modify
         it under the terms of the GNU General Public License as published by
@@ -45,31 +45,23 @@ void CGameDialogPanel::reload() {
 
         int percentSize = 5;
 
-        //TODO: make this generic and in vstd
-        struct OptionComparator {
-            bool operator()(const std::shared_ptr<CDialogOption> &a, const std::shared_ptr<CDialogOption> &b) const {
-                return a->getNumber() > b->getNumber();
-            }
-        };
-
-        auto options = vstd::cast<std::set<std::shared_ptr<CDialogOption>, OptionComparator>>(state->getOptions());
-
         int totalLines = 0;
-        for (const auto &option: options) {
+        for (const auto &[index, option]: getCurrentOptions()) {
             std::string clickName = vstd::to_hex_hash(option);
 
+            auto _option = option;
             self->meta()->set_method<CGameGraphicsObject, void, std::shared_ptr<CGui>>(clickName, self,
-                                                                                       [self, option](
+                                                                                       [self, _option](
                                                                                                CGameGraphicsObject *_self,
                                                                                                std::shared_ptr<CGui> gui) {
-                                                                                           self->selectOption(option);
+                                                                                           self->selectOption(_option);
                                                                                        });
 
 
             std::shared_ptr<CTextWidget> optionWidget = getGame()->createObject<CTextWidget>("CTextWidget");
             optionWidget->setClick(clickName);
             auto optionText =
-                    vstd::str(option->getNumber() + 1) + ": " + option->getText();
+                    vstd::str(index + 1) + ": " + option->getText();
             optionWidget->setText(optionText);
             optionWidget->setCentered(false);
 
@@ -101,13 +93,29 @@ void CGameDialogPanel::reload() {
 }
 
 std::shared_ptr<CDialogOption> CGameDialogPanel::getOption(int option) {
-    return vstd::find_if(getCurrentOptions(), [option](auto op) {
-        return op->getNumber() == option;
-    });
+    return getCurrentOptions()[option];
 }
 
-const std::set<std::shared_ptr<CDialogOption>> &
-CGameDialogPanel::getCurrentOptions() { return dialog->getState(currentStateId)->getOptions(); }
+std::map<int, std::shared_ptr<CDialogOption>, std::greater<>>
+CGameDialogPanel::getCurrentOptions() {
+    //TODO: make this generic and in vstd
+    struct OptionComparator {
+        bool operator()(const std::shared_ptr<CDialogOption> &a, const std::shared_ptr<CDialogOption> &b) const {
+            return a->getNumber() < b->getNumber();
+        }
+    };
+
+    auto options = vstd::cast<std::set<std::shared_ptr<CDialogOption>, OptionComparator>>(
+            dialog->getState(currentStateId)->getOptions() | boost::adaptors::filtered([this](auto option) {
+                return dialog->invokeCondition(option->getCondition());
+            }));
+
+    std::map<int, std::shared_ptr<CDialogOption>, std::greater<>> return_value;
+    for (const auto &it: options | boost::adaptors::indexed(0)) {
+        return_value[it.index()] = it.value();
+    }
+    return return_value;
+}
 
 void CGameDialogPanel::selectOption(int option) {
     selectOption(getOption(option));

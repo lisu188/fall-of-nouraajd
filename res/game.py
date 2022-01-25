@@ -51,3 +51,6 @@ def new():
 class CDialog(CDialogBase2):
     def invokeAction(self, action):
         getattr(self, action)()
+
+    def invokeCondition(self, condition):
+        return getattr(self, condition)()
