@@ -74,13 +74,16 @@ def load(self, context):
 
     @trigger(context, "onEnter", "nouraajdTavern")
     class NouraajdTavernTrigger(CTrigger):
-        def trigger(self, object, event):
-            if object.getNumericProperty('visited') == 0:
-                object.getGame().getGuiHandler().showDialog(object.getGame().createObject('tavernDialog1'))
-            elif object.getNumericProperty('visited') == 1:
-                # TODO: maybe some time should pass
-                object.getGame().getGuiHandler().showDialog(object.getGame().createObject('tavernDialog2'))
-            object.incProperty('visited', 1)
+        def trigger(self, tavern, event):
+            if tavern.getNumericProperty('visited') == 0 and tavern.getNumericProperty('time_visited') == 0:
+                tavern.getGame().getGuiHandler().showDialog(tavern.getGame().createObject('tavernDialog1'))
+                tavern.setNumericProperty('time_visited', tavern.getGame().getMap().getTurn())
+                tavern.incProperty('visited', 1)
+            elif tavern.getNumericProperty(
+                    'visited') == 1 and tavern.getGame().getMap().getTurn() - tavern.getNumericProperty(
+                'time_visited') > 50:
+                tavern.getGame().getGuiHandler().showDialog(tavern.getGame().createObject('tavernDialog2'))
+                tavern.incProperty('visited', 1)
 
     @register(context)
     class TavernDialog1(CDialog):
@@ -92,4 +95,5 @@ def load(self, context):
 
     @register(context)
     class TavernDialog2(CDialog):
-        pass
+        def askedAboutGirl(self):
+            return self.getGame().getMap().getBoolProperty('ASKED_ABOUT_GIRL')
