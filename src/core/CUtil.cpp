@@ -52,11 +52,11 @@ bool Coords::operator>(const Coords &other) const {
 }
 
 Coords Coords::operator-(const Coords &other) const {
-    return Coords(x - other.x, y - other.y, z - other.z);
+    return {x - other.x, y - other.y, z - other.z};
 }
 
 Coords Coords::operator+(const Coords &other) const {
-    return Coords(x + other.x, y + other.y, z + other.z);
+    return {x + other.x, y + other.y, z + other.z};
 }
 
 Coords Coords::operator*() const {
@@ -64,11 +64,9 @@ Coords Coords::operator*() const {
 }
 
 double Coords::getDist(const Coords &a) const {
-    double x = this->x - a.x;
-    x *= x;
-    double y = this->y - a.y;
-    y *= y;
-    return sqrt(x + y);
+    double _x = this->x - a.x;
+    double _y = this->y - a.y;
+    return sqrt(_x * _x + _y * _y);
 }
 
 bool Coords::adjacent(const Coords &a) const {
@@ -83,7 +81,7 @@ bool Coords::adjacentOrSame(const Coords &a) const {
     return adjacent(a) || same(a);
 }
 
-std::shared_ptr<SDL_Rect> CUtil::boxInBox(std::shared_ptr<SDL_Rect> out, std::shared_ptr<SDL_Rect> in) {
+std::shared_ptr<SDL_Rect> CUtil::boxInBox(const std::shared_ptr<SDL_Rect> &out, const std::shared_ptr<SDL_Rect> &in) {
     return RECT(out->x + out->w / 2 - in->w / 2,
                 out->y + out->h / 2 - in->h / 2,
                 in->w,
@@ -100,11 +98,11 @@ std::shared_ptr<SDL_Rect> CUtil::rect(int x, int y, int w, int h) {
     return ret;
 }
 
-std::shared_ptr<SDL_Rect> CUtil::bounds(std::shared_ptr<SDL_Rect> rect) {
+std::shared_ptr<SDL_Rect> CUtil::bounds(const std::shared_ptr<SDL_Rect> &rect) {
     return RECT(rect->x, rect->x + rect->w, rect->y, rect->y + rect->h);
 }
 
-bool CUtil::isIn(std::shared_ptr<SDL_Rect> rect, int x, int y) {
+bool CUtil::isIn(const std::shared_ptr<SDL_Rect> &rect, int x, int y) {
     auto bound = bounds(rect);
     return x >= bound->x
            && x <= bound->y
