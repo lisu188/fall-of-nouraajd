@@ -1,6 +1,6 @@
 /*
 fall-of-nouraajd c++ dark fantasy game
-Copyright (C) 2020  Andrzej Lis
+Copyright (C) 2022  Andrzej Lis
 
 This program is free software: you can redistribute it and/or modify
         it under the terms of the GNU General Public License as published by
@@ -45,6 +45,6 @@ private:
 
     void selectOption(const std::shared_ptr<CDialogOption> &option);
 
-    const std::set<std::shared_ptr<CDialogOption>> &getCurrentOptions();
+    std::map<int, std::shared_ptr<CDialogOption>, std::greater<>> getCurrentOptions();
 };
 
