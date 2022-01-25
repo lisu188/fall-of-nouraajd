@@ -369,15 +369,18 @@
             "text": "My name is Victor. It's about my daughter... She is lost for 3 days now. My ex-wife told me that she lost her in the crowd in the market 3 days ago. We can't find her anywhere and so does the city guard. I'm afraid I've lost my little girl. (cries)",
             "options": [
               {
-                "ref": "beAMan",
+                "class": "CDialogOption",
                 "properties": {
+                  "text": "Don't you have ANY clue where she might be?",
                   "number": 0
                 }
               },
               {
-                "ref": "whatsWrong",
+                "class": "CDialogOption",
                 "properties": {
-                  "number": 1
+                  "text": "I've ran into group of priests of Marumi Baso that were looking for a girl around the city, maybe they are responsible for your daughter's disappearance?",
+                  "number": 1,
+                  "condition": "askedAboutGirl"
                 }
               }
             ]

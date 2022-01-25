@@ -33,6 +33,10 @@ void CDialog::invokeAction(std::string action) {
 
 }
 
+bool CDialog::invokeCondition(std::string condition) {
+    return true;
+}
+
 const std::string &CDialogState::getText() const {
     return text;
 }
@@ -87,4 +91,12 @@ const std::string &CDialogOption::getNextStateId() const {
 
 void CDialogOption::setNextStateId(const std::string &nextStateId) {
     CDialogOption::nextStateId = nextStateId;
+}
+
+const std::string &CDialogOption::getCondition() const {
+    return condition;
+}
+
+void CDialogOption::setCondition(const std::string &condition) {
+    CDialogOption::condition = condition;
 }
