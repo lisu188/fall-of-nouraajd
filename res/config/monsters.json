@@ -169,7 +169,7 @@
     }
   },
   "Pritz": {
-    "class": "{",
+    "class": "CCreature",
     "properties": {
       "actions": [
         {

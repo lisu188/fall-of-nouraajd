@@ -187,4 +187,12 @@ public:
             this->CDialog::invokeAction(action);
         }
     }
+
+    bool invokeCondition(std::string condition) final {
+        if (auto f = this->get_override("invokeCondition")) {
+            PY_SAFE_RET_VAL (return f(condition), false)
+        } else {
+            return this->CDialog::invokeCondition(condition);
+        }
+    }
 };

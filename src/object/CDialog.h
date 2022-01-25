@@ -25,13 +25,13 @@ V_META(CDialogOption, CGameObject,
        V_PROPERTY(CDialogOption, int, number, getNumber, setNumber),
        V_PROPERTY(CDialogOption, std::string, nextStateId, getNextStateId, setNextStateId),
        V_PROPERTY(CDialogOption, std::string, text, getText, setText),
+       V_PROPERTY(CDialogOption, std::string, condition, getCondition, setCondition),
        V_PROPERTY(CDialogOption, std::string, action, getAction, setAction))
 
 public:
     int getNumber() const;
 
     void setNumber(int number);
-
 
     const std::string &getText() const;
 
@@ -53,6 +53,11 @@ private:
 
     std::string text;
     std::string action;
+    std::string condition;
+public:
+    const std::string &getCondition() const;
+
+    void setCondition(const std::string &condition);
 };
 
 class CDialogState : public CGameObject {
@@ -93,6 +98,9 @@ public:
     std::shared_ptr<CDialogState> getState(std::string state);
 
     virtual void invokeAction(std::string action);
+
+    virtual bool invokeCondition(std::string action);
+
 private:
     std::set<std::shared_ptr<CDialogState>> states;
 };

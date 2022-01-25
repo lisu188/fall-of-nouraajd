@@ -55,7 +55,7 @@ void CGameDialogPanel::reload() {
         auto options = vstd::cast<std::set<std::shared_ptr<CDialogOption>, OptionComparator>>(state->getOptions());
 
         int totalLines = 0;
-        for (const auto &option : options) {
+        for (const auto &option: options) {
             std::string clickName = vstd::to_hex_hash(option);
 
             self->meta()->set_method<CGameGraphicsObject, void, std::shared_ptr<CGui>>(clickName, self,
