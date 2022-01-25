@@ -190,7 +190,7 @@ public:
 
     bool invokeCondition(std::string condition) final {
         if (auto f = this->get_override("invokeCondition")) {
-            PY_SAFE_RET_VAL (return f(condition), false)
+            PY_SAFE_RET_VAL (return f(condition), true)
         } else {
             return this->CDialog::invokeCondition(condition);
         }
