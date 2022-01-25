@@ -56,13 +56,14 @@ struct Coords {
 
 class CUtil {
 public:
-    static std::shared_ptr<SDL_Rect> boxInBox(std::shared_ptr<SDL_Rect> out, std::shared_ptr<SDL_Rect> in);
+    static std::shared_ptr<SDL_Rect>
+    boxInBox(const std::shared_ptr<SDL_Rect> &out, const std::shared_ptr<SDL_Rect> &in);
 
     static std::shared_ptr<SDL_Rect> rect(int x, int y, int w, int h);
 
-    static std::shared_ptr<SDL_Rect> bounds(std::shared_ptr<SDL_Rect> rect);
+    static std::shared_ptr<SDL_Rect> bounds(const std::shared_ptr<SDL_Rect> &rect);
 
-    static bool isIn(std::shared_ptr<SDL_Rect> rect, int x, int y);
+    static bool isIn(const std::shared_ptr<SDL_Rect> &rect, int x, int y);
 
     static int parseKey(SDL_Keycode i);
 
