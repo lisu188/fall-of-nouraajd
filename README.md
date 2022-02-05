@@ -17,6 +17,6 @@ tab - open/close python console
 <pre>
 ./configure.sh
 cd cmake-build-release
-make _game_unity
+make _game
 python3 play.py
 </pre>
