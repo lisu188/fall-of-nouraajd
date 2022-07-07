@@ -368,16 +368,10 @@ std::string CMap::getMapName() {
     return mapName;
 }
 
-void CMap::objectMoved(std::shared_ptr<CMapObject> object, Coords _old, Coords _new) {
-    //TODO: implement own erase if
-    auto range = mapObjectsCache.equal_range(_old);
-
-    for (auto it = range.first; it != range.second; ++it) {
-        if (it->second == object->getName()) {
-            mapObjectsCache.erase(it);
-            break;
-        }
-    }
+void CMap::objectMoved(const std::shared_ptr<CMapObject> &object, Coords _old, Coords _new) {
+    vstd::erase_if(mapObjectsCache, [object](auto it) {
+        return it.second == object->getName();
+    });
 
     mapObjectsCache.insert(std::make_pair(_new, object->getName()));
 

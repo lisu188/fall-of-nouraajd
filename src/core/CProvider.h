@@ -43,13 +43,13 @@ public:
 
     std::string getPath(std::string path);
 
-    std::vector<std::string> getFiles(std::string type);
+    std::vector<std::string> getFiles(const std::string &type);
 
-    void save(std::string file, std::string data);
+    void save(std::string file, const std::string &data);
 
     void save(std::string file, std::shared_ptr<json> data);
 
-    CResourcesProvider();
+    CResourcesProvider() = default;
 
 private:
     static std::list<std::string> searchPath;
@@ -57,22 +57,23 @@ private:
 
 class CConfigurationProvider : private std::map<std::string, std::shared_ptr<json>> {
 public:
-    static std::shared_ptr<json> getConfig(std::string path);
+    static std::shared_ptr<json> getConfig(const std::string &path);
 
 private:
-    CConfigurationProvider();
+    CConfigurationProvider() = default;
 
     ~CConfigurationProvider();
 
-    std::shared_ptr<json> getConfiguration(std::string path);
+    std::shared_ptr<json> getConfiguration(const std::string &path);
 
-    void loadConfig(std::string path);
+    void loadConfig(const std::string &path);
 };
 
 class CAnimationProvider {
 public:
     static std::shared_ptr<CAnimation>
-    getAnimation(std::shared_ptr<CGame> game, std::shared_ptr<CGameObject> object, bool custom = false);
+    getAnimation(const std::shared_ptr<CGame> &game, const std::shared_ptr<CGameObject> &object, bool custom = false);
 
-    static std::shared_ptr<CAnimation> getAnimation(std::shared_ptr<CGame> game, std::string path, bool custom = false);
+    static std::shared_ptr<CAnimation>
+    getAnimation(const std::shared_ptr<CGame> &game, std::string path, bool custom = false);
 };

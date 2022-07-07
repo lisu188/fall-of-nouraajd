@@ -38,10 +38,10 @@ public:
 
     virtual int getSizeY(std::shared_ptr<CGui> gui);
 
-    CProxyTargetGraphicsObject();
+    CProxyTargetGraphicsObject() = default;
 
 private:
-    std::set<std::shared_ptr<CProxyGraphicsObject>> proxyObjects;
+    std::map<int, std::map<int, std::shared_ptr<CProxyGraphicsObject>>> proxyObjects;
     std::string proxyLayout = "CProxyGraphicsLayout";
 
 
