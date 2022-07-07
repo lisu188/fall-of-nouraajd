@@ -25,20 +25,16 @@ const std::string CResType::MAP = "MAP";
 const std::string CResType::PLUGIN = "PLUGIN";
 const std::string CResType::SAVE = "SAVE";
 
-std::shared_ptr<json> CConfigurationProvider::getConfig(std::string path) {
+std::shared_ptr<json> CConfigurationProvider::getConfig(const std::string &path) {
     static CConfigurationProvider instance;
     return instance.getConfiguration(path);
-}
-
-CConfigurationProvider::CConfigurationProvider() {
-
 }
 
 CConfigurationProvider::~CConfigurationProvider() {
     clear();
 }
 
-std::shared_ptr<json> CConfigurationProvider::getConfiguration(std::string path) {
+std::shared_ptr<json> CConfigurationProvider::getConfiguration(const std::string &path) {
     if (this->find(path) != this->end()) {
         return this->at(path);
     }
@@ -46,7 +42,7 @@ std::shared_ptr<json> CConfigurationProvider::getConfiguration(std::string path)
     return getConfiguration(path);
 }
 
-void CConfigurationProvider::loadConfig(std::string path) {
+void CConfigurationProvider::loadConfig(const std::string &path) {
     this->insert(std::make_pair(path, CResourcesProvider::getInstance()->loadJson(path)));
 }
 
@@ -58,26 +54,26 @@ std::shared_ptr<CResourcesProvider> CResourcesProvider::getInstance() {
 }
 
 std::string CResourcesProvider::load(std::string path) {
-    std::ifstream t(getPath(path));
-    return std::string(std::istreambuf_iterator<char>(t),
-                       std::istreambuf_iterator<char>());
+    std::ifstream t(getPath(std::move(path)));
+    return {std::istreambuf_iterator<char>(t),
+            std::istreambuf_iterator<char>()};
 }
 
 std::shared_ptr<json> CResourcesProvider::loadJson(std::string path) {
-    return CJsonUtil::from_string(load(path));
+    return CJsonUtil::from_string(load(std::move(path)));
 }
 
 std::string CResourcesProvider::getPath(std::string path) {
-    for (auto it:searchPath) {
+    for (auto it: searchPath) {
         if (boost::filesystem::exists(it / boost::filesystem::path(path))) {
             boost::filesystem::path p = it / boost::filesystem::path(path);
             return p.string();
         }
     }
-    return std::string();
+    return {};
 }
 
-std::vector<std::string> CResourcesProvider::getFiles(std::string type) {
+std::vector<std::string> CResourcesProvider::getFiles(const std::string &type) {
     std::vector<std::string> retValue;
     std::string folderName;
     std::string suffix;
@@ -113,7 +109,7 @@ std::vector<std::string> CResourcesProvider::getFiles(std::string type) {
     return retValue;
 }
 
-void CResourcesProvider::save(std::string file, std::string data) {
+void CResourcesProvider::save(std::string file, const std::string &data) {
     vstd::logger::info("Saving map: " + file);
     boost::filesystem::path path(file);
     boost::filesystem::path dir = path.parent_path();
@@ -125,33 +121,31 @@ void CResourcesProvider::save(std::string file, std::string data) {
 }
 
 void CResourcesProvider::save(std::string file, std::shared_ptr<json> data) {
-    save(file, CJsonUtil::to_string(data));
-}
-
-CResourcesProvider::CResourcesProvider() {
-
+    save(std::move(file), CJsonUtil::to_string(std::move(data)));
 }
 
 std::shared_ptr<CAnimation>
-CAnimationProvider::getAnimation(std::shared_ptr<CGame> game, std::shared_ptr<CGameObject> object, bool custom) {
-    auto ret = game->createObject<CAnimation>("CAnimation");
-    if (boost::filesystem::is_directory(object->getAnimation())) {
-        ret = game->createObject<CDynamicAnimation>("CDynamicAnimation");
+CAnimationProvider::getAnimation(const std::shared_ptr<CGame> &game, const std::shared_ptr<CGameObject> &object,
+                                 bool custom) {
+    auto animation = game->createObject<CAnimation>("CAnimation");
+    auto animationPath = object->getAnimation();
+    if (boost::filesystem::is_directory(animationPath)) {
+        animation = game->createObject<CDynamicAnimation>("CDynamicAnimation");
     } else if (boost::filesystem::is_regular_file(
-            CResourcesProvider::getInstance()->getPath(object->getAnimation() + ".png"))) {
-        ret = custom ? game->createObject<CAnimation>("CCustomAnimation") : game->createObject<CStaticAnimation>(
+            CResourcesProvider::getInstance()->getPath(animationPath + ".png"))) {
+        animation = custom ? game->createObject<CAnimation>("CCustomAnimation") : game->createObject<CStaticAnimation>(
                 "CStaticAnimation");
     } else {
-        //TODO: if the path wasnt empty load text instead
+        //TODO: if the path wasnt empty load text instead, requires changes in text manager
         vstd::logger::warning("Loading empty animation");
     }
-    ret->setObject(object);
-    return ret;
+    animation->setObject(object);
+    return animation;
 }
 
 std::shared_ptr<CAnimation>
-CAnimationProvider::getAnimation(std::shared_ptr<CGame> game, std::string path, bool custom) {
+CAnimationProvider::getAnimation(const std::shared_ptr<CGame> &game, std::string path, bool custom) {
     std::shared_ptr<CGameObject> object = game->createObject<CGameObject>();
-    object->setAnimation(path);
+    object->setAnimation(std::move(path));
     return getAnimation(game, object, custom);
 }
