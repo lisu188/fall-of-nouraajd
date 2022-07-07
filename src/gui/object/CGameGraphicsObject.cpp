@@ -31,7 +31,7 @@ void CGameGraphicsObject::render(std::shared_ptr<CGui> reneder, int frameTime) {
     if (isVisible()) {
         renderBackground(reneder, getRect(), frameTime);
         renderObject(reneder, getRect(), frameTime);
-        for (const auto &child:children) {
+        for (const auto &child: children) {
             child->render(reneder, frameTime);
         }
     }
@@ -39,12 +39,12 @@ void CGameGraphicsObject::render(std::shared_ptr<CGui> reneder, int frameTime) {
 
 bool CGameGraphicsObject::event(std::shared_ptr<CGui> gui, SDL_Event *event) {
     if (isVisible()) {
-        for (const auto &child:children | boost::adaptors::reversed) {
+        for (const auto &child: children | boost::adaptors::reversed) {
             if (child->event(gui, event)) {
                 return true;
             }
         }
-        for (const auto &callback:eventCallbackList) {//TODO:remove, replace with other event
+        for (const auto &callback: eventCallbackList) {//TODO:remove, replace with other event
             if (callback.first(gui, this->ptr<CGameGraphicsObject>(), event) &&
                 callback.second(gui, this->ptr<CGameGraphicsObject>(), event)) {
                 return true;
@@ -107,13 +107,13 @@ std::shared_ptr<CGameGraphicsObject> CGameGraphicsObject::getParent() {
     return parent.lock();
 }
 
-void CGameGraphicsObject::addChild(std::shared_ptr<CGameGraphicsObject> child) {
+void CGameGraphicsObject::addChild(const std::shared_ptr<CGameGraphicsObject> &child) {
     if (children.insert(child).second) {
         child->setParent(this->ptr<CGameGraphicsObject>());
     }
 }
 
-void CGameGraphicsObject::removeChild(std::shared_ptr<CGameGraphicsObject> child) {
+void CGameGraphicsObject::removeChild(const std::shared_ptr<CGameGraphicsObject> &child) {
     if (children.erase(child)) {
         child->removeParent();
     }
@@ -138,9 +138,11 @@ std::set<std::shared_ptr<CGameGraphicsObject>> CGameGraphicsObject::getChildren(
 }
 
 void CGameGraphicsObject::setChildren(std::set<std::shared_ptr<CGameGraphicsObject>> _children) {
-    //TODO: doChecks if some of children are already present
-    children.clear();
-    for (const auto &child:_children) {
+    auto[to_add, to_remove]= vstd::set_difference(children, _children);
+    for (const auto &child: to_remove) {
+        removeChild(child);
+    }
+    for (const auto &child: to_add) {
         addChild(child);
     }
 }
@@ -149,21 +151,19 @@ int CGameGraphicsObject::getPriority() {
     return priority;
 }
 
-void CGameGraphicsObject::setPriority(int priority) {
-    this->priority = priority;
+void CGameGraphicsObject::setPriority(int _priority) {
+    this->priority = _priority;
 }
 
 int CGameGraphicsObject::getTopPriority() {
-    //TODO: with already sorted set, can be optimized
-    auto iterator = std::max_element(
-            children.begin(), children.end(), priority_comparator());
+    auto iterator = std::max_element(children.begin(), children.end());
     if (iterator != children.end()) {
         return (*iterator)->getPriority();
     }
     return -1;
 }
 
-void CGameGraphicsObject::pushChild(std::shared_ptr<CGameGraphicsObject> child) {
+void CGameGraphicsObject::pushChild(const std::shared_ptr<CGameGraphicsObject> &child) {
     child->setPriority(getTopPriority() + 1);
     addChild(child);
 }
@@ -180,8 +180,8 @@ void CGameGraphicsObject::setModal(bool _modal) {
     modal = _modal;
 }
 
-std::shared_ptr<CGameGraphicsObject> CGameGraphicsObject::findChild(std::string type) {
-    for (auto child:getChildren()) {
+std::shared_ptr<CGameGraphicsObject> CGameGraphicsObject::findChild(const std::string &type) {
+    for (auto child: getChildren()) {
         if (auto found = child->findChild(type)) {
             return found;
         }
@@ -193,8 +193,9 @@ std::shared_ptr<CGameGraphicsObject> CGameGraphicsObject::findChild(std::string 
 }
 
 
-std::shared_ptr<CGameGraphicsObject> CGameGraphicsObject::findChild(std::shared_ptr<CGameGraphicsObject> toFind) {
-    for (auto child:getChildren()) {
+std::shared_ptr<CGameGraphicsObject>
+CGameGraphicsObject::findChild(const std::shared_ptr<CGameGraphicsObject> &toFind) {
+    for (auto child: getChildren()) {
         if (auto found = child->findChild(toFind)) {
             return found;
         }
@@ -209,8 +210,8 @@ std::shared_ptr<CScript> CGameGraphicsObject::getVisible() {
     return visible;
 }
 
-void CGameGraphicsObject::setVisible(std::shared_ptr<CScript> visible) {
-    CGameGraphicsObject::visible = visible;
+void CGameGraphicsObject::setVisible(std::shared_ptr<CScript> _visible) {
+    CGameGraphicsObject::visible = _visible;
 }
 
 bool CGameGraphicsObject::isVisible() {
@@ -229,7 +230,7 @@ std::string CGameGraphicsObject::getBackground() {
 }
 
 void CGameGraphicsObject::setBackground(std::string _background) {
-    background = _background;
+    background = std::move(_background);
 }
 
 bool priority_comparator::operator()(const std::shared_ptr<CGameGraphicsObject> &a,
@@ -241,7 +242,7 @@ bool priority_comparator::operator()(const std::shared_ptr<CGameGraphicsObject> 
 }
 
 int CGameGraphicsObject::getTileSize(
-        std::shared_ptr<CGameGraphicsObject> object) {
+        const std::shared_ptr<CGameGraphicsObject> &object) {
     if (object->hasProperty("tileSize")) {
         return object->getNumericProperty("tileSize");
     }

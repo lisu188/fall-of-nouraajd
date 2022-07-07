@@ -148,7 +148,7 @@ public:
 
     std::string getMapName();
 
-    void objectMoved(std::shared_ptr<CMapObject> object, Coords _old, Coords _new);
+    void objectMoved(const std::shared_ptr<CMapObject> &object, Coords _old, Coords _new);
 
 private:
     std::unordered_map<std::string, std::shared_ptr<CMapObject>> mapObjects;

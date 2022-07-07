@@ -93,16 +93,16 @@ public:
 
     void setLayout(std::shared_ptr<CLayout> layout);
 
-    void addChild(std::shared_ptr<CGameGraphicsObject> child);
+    void addChild(const std::shared_ptr<CGameGraphicsObject> &child);
 
-    void pushChild(std::shared_ptr<CGameGraphicsObject> child);
+    void pushChild(const std::shared_ptr<CGameGraphicsObject> &child);
 
-    void removeChild(std::shared_ptr<CGameGraphicsObject> child);
+    void removeChild(const std::shared_ptr<CGameGraphicsObject> &child);
 
     //TODO: more flexible
-    std::shared_ptr<CGameGraphicsObject> findChild(std::string type);
+    std::shared_ptr<CGameGraphicsObject> findChild(const std::string &type);
 
-    std::shared_ptr<CGameGraphicsObject> findChild(std::shared_ptr<CGameGraphicsObject> type);
+    std::shared_ptr<CGameGraphicsObject> findChild(const std::shared_ptr<CGameGraphicsObject> &type);
 
     void removeParent();
 
@@ -122,7 +122,7 @@ public:
 
     void setBackground(std::string _background);
 
-    int getTileSize(std::shared_ptr<CGameGraphicsObject> object);
+    int getTileSize(const std::shared_ptr<CGameGraphicsObject> &object);
 
 private:
     virtual void render(std::shared_ptr<CGui> reneder, int frameTime);
