@@ -28,19 +28,32 @@ void CProxyTargetGraphicsObject::render(std::shared_ptr<CGui> gui, int frameTime
 
 void CProxyTargetGraphicsObject::refresh() {
     vstd::with<void>(getGui(), [this](auto gui) {
-        auto[previousSizeX, xRow]=*std::max_element(proxyObjects.begin(), proxyObjects.end());
-        auto[previousSizeY, unused]=*std::max_element(xRow.begin(), xRow.end());
-
+        int prevX, prevY;
+        if (proxyObjects.size() > 0) {
+            auto &previousSizeX = *std::max_element(proxyObjects.begin(), proxyObjects.end(), [](auto &a, auto &b) {
+                return a.first > b.first;
+            });
+            if (previousSizeX.second.size() > 0) {
+                auto &previousSizeY = *std::max_element(previousSizeX.second.begin(), previousSizeX.second.end(),
+                                                        [](auto &a, auto &b) {
+                                                            return a.first > b.first;
+                                                        });
+                prevY = previousSizeY.first;
+            } else {
+                prevY = 0;
+            }
+            prevX = previousSizeX.first;
+        } else { prevX = 0; }
 
         int currentSizeX = getSizeX(gui);
         int currentSizeY = getSizeY(gui);
 
-        int xDiff = currentSizeX - previousSizeX;
-        int yDiff = currentSizeX - previousSizeY;
+        int xDiff = currentSizeX - prevX;
+        int yDiff = currentSizeX - prevY;
 
         if (proxyObjects.size() != (unsigned int) currentSizeX * (unsigned int) currentSizeY) {
-            for (auto[_x, map_x]: proxyObjects) {
-                for (auto[no, val]: map_x) {
+            for (auto [_x, map_x]: proxyObjects) {
+                for (auto [no, val]: map_x) {
                     removeChild(val);
                 }
             }
@@ -63,16 +76,16 @@ void CProxyTargetGraphicsObject::refresh() {
 }
 
 void CProxyTargetGraphicsObject::refreshAll() {
-    for (auto[_x, map_x]: proxyObjects) {
-        for (auto[no, val]: map_x) {
+    for (auto [_x, map_x]: proxyObjects) {
+        for (auto [no, val]: map_x) {
             val->refresh();
         }
     }
 }
 
 void CProxyTargetGraphicsObject::refreshObject(int x, int y) {
-    for (auto[_x, map_x]: proxyObjects) {
-        vstd::execute_if(map_x, [=](auto object) {
+    for (auto [_x, map_x]: proxyObjects) {
+        vstd::execute_if(map_x, [&](auto object) {
             return object.second->getX() == x && object.second->getY() == y;
         }, [=](auto ob) {
             ob.second->refresh();
