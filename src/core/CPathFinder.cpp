@@ -23,7 +23,7 @@ typedef std::shared_ptr<std::unordered_map<Coords, int>> Values;
 
 static Coords getNextStep(const Coords &start, const Coords &goal, const Values &values) {
     Coords target = start;
-    for (Coords coords:NEAR_COORDS (start)) {
+    for (Coords coords: near_coords(start)) {
         if (vstd::ctn((*values), coords) &&
             ((*values)[coords] < (*values)[target] ||
              ((*values)[coords] == (*values)[target] &&
@@ -55,7 +55,7 @@ static Values fillValues(const std::function<bool(const Coords &)> &canStep,
         Coords currentCoords = vstd::pop_p(nodes);
         if (marked.insert(currentCoords).second) {
             int curValue = (*values)[currentCoords];
-            for (Coords tmpCoords:NEAR_COORDS (currentCoords)) {
+            for (Coords tmpCoords: near_coords(currentCoords)) {
                 if (tmpCoords == start || canStep(tmpCoords)) {
                     auto it = values->find(tmpCoords);
                     if (it == values->end() || it->second > curValue + 1) {
@@ -97,7 +97,7 @@ static Values fillAllValues(const std::function<bool(const Coords &)> &canStep,
         Coords currentCoords = vstd::pop_p(nodes);
         if (marked.insert(currentCoords).second) {
             int curValue = (*values)[currentCoords];
-            for (Coords tmpCoords:NEAR_COORDS (currentCoords)) {
+            for (Coords tmpCoords: near_coords(currentCoords)) {
                 if (canStep(tmpCoords)) {
                     auto it = values->find(tmpCoords);
                     if (it == values->end() || it->second > curValue + 1) {
@@ -140,7 +140,7 @@ void CPathFinder::saveMap(Coords start, const std::function<bool(const Coords &)
     int maxx = std::numeric_limits<int>::min();
     int maxy = std::numeric_limits<int>::min();
     int maxVal = std::numeric_limits<int>::min();
-    for (std::pair<Coords, int> entry:*values) {
+    for (std::pair<Coords, int> entry: *values) {
         Coords coords = entry.first;
         if (coords.x < minx) {
             minx = coords.x;
@@ -161,7 +161,7 @@ void CPathFinder::saveMap(Coords start, const std::function<bool(const Coords &)
     int factor = 4;
     SDL_Surface *surface = SDL_CreateRGBSurface(0, factor * (maxx - minx), factor * (maxy - miny), 32, 0, 0, 0, 0);
     float scale = 256.0 / maxVal;
-    for (std::pair<Coords, int> entry:*values) {
+    for (std::pair<Coords, int> entry: *values) {
         int posx = entry.first.x - minx;
         int posy = entry.first.y - miny;
         int val = entry.second;
@@ -175,3 +175,4 @@ void CPathFinder::saveMap(Coords start, const std::function<bool(const Coords &)
     IMG_SavePNG(surface, path.c_str());
     SDL_FreeSurface(surface);
 }
+
