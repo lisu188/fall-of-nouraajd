@@ -35,5 +35,15 @@ public:
     static void saveMap(Coords start, const std::function<bool(const Coords &)> &canStep, const std::string &path);
 };
 
-#define NEAR_COORDS(coords) {Coords(coords.x + 1,coords.y,coords.z),Coords(coords.x - 1,coords.y,coords.z ),Coords(coords.x,coords.y + 1, coords.z ),Coords(coords.x,coords.y - 1,coords.z )}
-#define NEAR_COORDS_WITH(coords) {Coords(coords.x,coords.y,coords.z),Coords(coords.x + 1,coords.y,coords.z),Coords(coords.x - 1,coords.y,coords.z ),Coords(coords.x,coords.y + 1, coords.z ),Coords(coords.x,coords.y - 1,coords.z )}
+template<typename T=void>
+std::list<Coords> near_coords(auto coords) {
+    return {Coords(coords.x + 1, coords.y, coords.z), Coords(coords.x - 1, coords.y, coords.z),
+            Coords(coords.x, coords.y + 1, coords.z), Coords(coords.x, coords.y - 1, coords.z)};
+}
+
+template<typename T=void>
+std::list<Coords> near_coords_with(auto coords) {
+    return {Coords(coords.x, coords.y, coords.z), Coords(coords.x + 1, coords.y, coords.z),
+            Coords(coords.x - 1, coords.y, coords.z), Coords(coords.x, coords.y + 1, coords.z),
+            Coords(coords.x, coords.y - 1, coords.z)};
+}
