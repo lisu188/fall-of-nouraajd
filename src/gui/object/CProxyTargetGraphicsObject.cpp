@@ -1,6 +1,6 @@
 /*
 fall-of-nouraajd c++ dark fantasy game
-Copyright (C) 2019  Andrzej Lis
+Copyright (C) 2022  Andrzej Lis
 
 This program is free software: you can redistribute it and/or modify
         it under the terms of the GNU General Public License as published by
@@ -29,7 +29,7 @@ void CProxyTargetGraphicsObject::render(std::shared_ptr<CGui> gui, int frameTime
 void CProxyTargetGraphicsObject::refresh() {
     vstd::with<void>(getGui(), [this](auto gui) {
         int prevX, prevY;
-        if (proxyObjects.size() > 0) {
+        if (!proxyObjects.empty()) {
             auto &previousSizeX = *std::max_element(proxyObjects.begin(), proxyObjects.end(), [](auto &a, auto &b) {
                 return a.first > b.first;
             });
@@ -51,28 +51,39 @@ void CProxyTargetGraphicsObject::refresh() {
         int xDiff = currentSizeX - prevX;
         int yDiff = currentSizeX - prevY;
 
-        if (proxyObjects.size() != (unsigned int) currentSizeX * (unsigned int) currentSizeY) {
-            for (auto [_x, map_x]: proxyObjects) {
-                for (auto [no, val]: map_x) {
-                    removeChild(val);
+        for (int x = 0; x < std::max(prevX, currentSizeX); x++) {
+            for (int y = 0; x < std::max(prevY, currentSizeY); y++) {
+                if (vstd::square_ctn(currentSizeX, currentSizeY, x, y) && !vstd::square_ctn(prevX, prevY, x, y)) {
+                    addProxyObject(gui, x, y);
+                } else if (!vstd::square_ctn(currentSizeX, currentSizeY, x, y) &&
+                           vstd::square_ctn(prevX, prevY, x, y)) {
+                    removeProxyObject(x, y);
                 }
             }
-            proxyObjects.clear();
-            auto tileSize = getTileSize(this->ptr<CGameGraphicsObject>());
-            for (int x = 0; x < getSizeX(gui); x++) {
-                for (int y = 0; y < currentSizeY; y++) {
-                    std::shared_ptr<CProxyGraphicsObject> nh = std::make_shared<CProxyGraphicsObject>(x, y);
-                    std::shared_ptr<CLayout> layout1 = gui->getGame()->template createObject<CLayout>(
-                            proxyLayout);
-                    layout1->setNumericProperty("tileSize", tileSize);
-                    nh->setLayout(layout1);
-                    proxyObjects[x][y] = nh;
-                    addChild(nh);
-                }
-            }
+        }
+
+        if (xDiff != 0 || yDiff != 0) {
             refreshAll();
         }
     });
+}
+
+void CProxyTargetGraphicsObject::addProxyObject(auto gui, int &x, int &y) {
+    std::shared_ptr<CProxyGraphicsObject> nh = std::make_shared<CProxyGraphicsObject>(x, y);
+    std::shared_ptr<CLayout> layout1 = gui->getGame()->template createObject<CLayout>(
+            proxyLayout);
+    layout1->setNumericProperty("tileSize", getTileSize(this->ptr<CGameGraphicsObject>()));
+    nh->setLayout(layout1);
+    proxyObjects[x][y] = nh;
+    addChild(nh);
+}
+
+void CProxyTargetGraphicsObject::removeProxyObject(int &x, int &y) {
+    removeChild(proxyObjects[x][y]);
+    proxyObjects[x].erase(y);
+    if (proxyObjects[x].empty()) {
+        proxyObjects.erase(x);
+    }
 }
 
 void CProxyTargetGraphicsObject::refreshAll() {

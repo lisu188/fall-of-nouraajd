@@ -55,4 +55,8 @@ public:
     void refreshObject(int x, int y);
 
     void refreshAll();
+
+    void addProxyObject(auto gui, int &x, int &y);
+
+    void removeProxyObject(int &x, int &y);
 };
