@@ -29,7 +29,7 @@ std::set<std::shared_ptr<CItem>> CRngHandler::getRandomLoot(int value) const {
 std::set<std::shared_ptr<CCreature>> CRngHandler::getRandomEncounter(int value) const {
     auto randomEncounter = calculateRandomEncounter(value);
     //TODO: make generic hashing of collections
-    std::size_t hash;
+    std::size_t hash = vstd::rand(256);
     for (const auto &creature: randomEncounter) {
         hash = vstd::hash_combine(hash, creature);
     }
@@ -118,7 +118,7 @@ std::set<std::shared_ptr<CCreature>> CRngHandler::calculateRandomEncounter(int v
 }
 
 void CRngHandler::addRandomEncounter(const std::shared_ptr<CMap> &map, int x, int y, int z, int value) {
-    for (const auto& creature: getRandomEncounter(value)) {
+    for (const auto &creature: getRandomEncounter(value)) {
         map->addObject(creature, Coords(x, y, z));
     }
 }
