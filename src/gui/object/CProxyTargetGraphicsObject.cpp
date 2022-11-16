@@ -55,7 +55,7 @@ void CProxyTargetGraphicsObject::refresh() {
         int yDiff = currentSizeX - prevY;
 
         for (int x = 0; x < std::max(prevX, currentSizeX); x++) {
-            for (int y = 0; x < std::max(prevY, currentSizeY); y++) {
+            for (int y = 0; y < std::max(prevY, currentSizeY); y++) {
                 if (vstd::square_ctn(currentSizeX, currentSizeY, x, y) &&
                     !vstd::square_ctn(prevX, prevY, x, y)) {
                     addProxyObject(gui, x, y);
