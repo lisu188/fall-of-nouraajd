@@ -43,7 +43,10 @@ void CProxyTargetGraphicsObject::refresh() {
                 prevY = 0;
             }
             prevX = previousSizeX.first;
-        } else { prevX = 0; }
+        } else {
+            prevX = 0;
+            prevY = 0;
+        }
 
         int currentSizeX = getSizeX(gui);
         int currentSizeY = getSizeY(gui);
@@ -53,7 +56,8 @@ void CProxyTargetGraphicsObject::refresh() {
 
         for (int x = 0; x < std::max(prevX, currentSizeX); x++) {
             for (int y = 0; x < std::max(prevY, currentSizeY); y++) {
-                if (vstd::square_ctn(currentSizeX, currentSizeY, x, y) && !vstd::square_ctn(prevX, prevY, x, y)) {
+                if (vstd::square_ctn(currentSizeX, currentSizeY, x, y) &&
+                    !vstd::square_ctn(prevX, prevY, x, y)) {
                     addProxyObject(gui, x, y);
                 } else if (!vstd::square_ctn(currentSizeX, currentSizeY, x, y) &&
                            vstd::square_ctn(prevX, prevY, x, y)) {
