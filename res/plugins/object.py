@@ -18,20 +18,28 @@ def load(self, context):
     from game import CBuilding
     from game import Coords
     from game import register
+    @register(context)
+    class WayPoint(CBuilding):
+        def onEnter(self, event):
+            if self.getExit():
+                event.getCause().setCoords(self.getExit())
+
+        def getExit(self):
+            pass
 
     @register(context)
-    class Teleporter(CBuilding):
-        def onEnter(self, event):
+    class Teleporter(WayPoint):
+        def getExit(self):
             if self.getBoolProperty("enabled"):
                 exit = self.getStringProperty("exit")
                 loc = self.getMap().getLocationByName(exit)
-                event.getCause().setCoords(loc)
+                return loc
 
     @register(context)
-    class GroundHole(CBuilding):
-        def onEnter(self, event):
+    class GroundHole(WayPoint):
+        def getExit(self):
             loc = self.getCoords()
-            event.getCause().setCoords(Coords(loc.x, loc.y, loc.z - 1))
+            return Coords(loc.x, loc.y, loc.z - 1)
 
     @register(context)
     class Market(CBuilding):
