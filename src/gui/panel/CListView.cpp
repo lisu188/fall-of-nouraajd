@@ -81,9 +81,9 @@ CListView::calculateIndices(const std::shared_ptr<CGui> &gui) {
 
         int i = -1;
 
-        for (const auto &it:(reduced)) {
+        for (const auto &it: (reduced)) {
             i++;
-            for (const auto &it2:it.second) {
+            for (const auto &it2: it.second) {
                 indices.insert(std::make_pair(i, it2));
             }
         }
@@ -92,7 +92,7 @@ CListView::calculateIndices(const std::shared_ptr<CGui> &gui) {
         std::unordered_multimap<int, std::shared_ptr<CGameObject>> indices;
         int i = -1;
         collection_pointer sharedPtr = invokeCollection(gui);
-        for (const auto &it:(*sharedPtr)) {
+        for (const auto &it: (*sharedPtr)) {
             indices.insert(std::make_pair(++i, it));
         }
         return indices;
@@ -109,7 +109,17 @@ CListView::calculateIndexPosition(const std::shared_ptr<CGui> &gui, const std::s
 }
 
 bool CListView::isOversized(const std::shared_ptr<CGui> &gui) {
-    return allowOversize && (calculateIndices(gui)).size() > ((unsigned) getSizeX(gui) * (unsigned) getSizeY(gui));
+    return allowOversize && getItemTypesCount(gui) > (getSizeX(gui) * getSizeY(gui));
+}
+
+int CListView::getItemTypesCount(const std::shared_ptr<CGui> &gui) {
+    auto map = calculateIndices(gui);
+    std::set<int> indices;
+    for (const auto &it: map) {
+        indices.insert(it.first);
+    }
+    auto size = indices.size();
+    return size;
 }
 
 //TODO: sizes should be calculated dynamically based on preferences
@@ -197,8 +207,8 @@ void CListView::addCountBox(const std::shared_ptr<CGui> &gui, int count,
     auto layout = gui->getGame()->getObjectHandler()->createObject<CLayout>(gui->getGame());
     layout->setHorizontal("RIGHT");
     layout->setVertical("DOWN");
-    layout->setW("10%");
-    layout->setH("10%");
+    layout->setW("25%");
+    layout->setH("25%");
     countBox->setLayout(layout);
     countBox->setPriority(4);
     return_val.push_back(countBox);//TODO: cache

@@ -175,6 +175,7 @@ private:
     addCountBox(const std::shared_ptr<CGui> &gui, int count,
                 std::list<std::shared_ptr<CGameGraphicsObject>> &return_val) const;
 
+    int getItemTypesCount(const std::shared_ptr<CGui> &gui);
 };
 
 
