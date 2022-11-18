@@ -47,6 +47,9 @@ private:
     Coords guiToMap(std::shared_ptr<CGui> gui, Coords coords);
 
     Coords mapToGui(std::shared_ptr<CGui> gui, Coords coords);
+
+    void showCoordinates(std::shared_ptr<CGui> &gui, std::list<std::shared_ptr<CGameGraphicsObject>> &return_val,
+                         const Coords &actualCoords) const;
 };
 
 
