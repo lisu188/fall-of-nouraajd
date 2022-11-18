@@ -21,6 +21,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "gui/object/CMapGraphicsObject.h"
 #include "gui/object/CProxyGraphicsObject.h"
 #include "core/CLoader.h"
+#include "CWidget.h"
 
 CMapGraphicsObject::CMapGraphicsObject() {
 
@@ -56,11 +57,30 @@ CMapGraphicsObject::getProxiedObjects(std::shared_ptr<CGui> gui, int x, int y) {
                 }));
 
 
-        for (auto ob: map->getObjectsAtCoords(actualCoords)) {
+        for (const auto &ob: map->getObjectsAtCoords(actualCoords)) {
             return_val.push_back(ob->getGraphicsObject());
         }
+
+//        showCoordinates(gui, return_val, actualCoords);
+
         return return_val;
     });
+}
+
+//TODO: fix text display, smaller font
+void CMapGraphicsObject::showCoordinates(std::shared_ptr<CGui> &gui,
+                                         std::list<std::shared_ptr<CGameGraphicsObject>> &return_val,
+                                         const Coords &actualCoords) const {
+    auto countBox = gui->getGame()->getObjectHandler()->createObject<CTextWidget>(gui->getGame());
+    countBox->setText(vstd::str(actualCoords.x, ",", actualCoords.y));
+    auto layout = gui->getGame()->getObjectHandler()->createObject<CLayout>(gui->getGame());
+    layout->setHorizontal("RIGHT");
+    layout->setVertical("DOWN");
+    layout->setW("100%");
+    layout->setH("25%");
+    countBox->setLayout(layout);
+    countBox->setPriority(4);
+    return_val.push_back(countBox);
 }
 
 void CMapGraphicsObject::initialize() {
