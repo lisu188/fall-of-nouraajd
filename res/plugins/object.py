@@ -24,6 +24,14 @@ def load(self, context):
             if self.getExit():
                 event.getCause().setCoords(self.getExit())
 
+        # merge with onEnter logic
+        def onTurn(self, event):
+            self.setBoolProperty('waypoint', True)
+            exit = self.getExit()
+            self.setNumericProperty('x', exit.x)
+            self.setNumericProperty('y', exit.y)
+            self.setNumericProperty('z', exit.z)
+
         def getExit(self):
             pass
 
