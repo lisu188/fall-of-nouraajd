@@ -69,8 +69,8 @@ static Values fillValues(const std::function<bool(const Coords &)> &canStep,
     return values;
 }
 
-static Values fillAllValues(const std::function<bool(const Coords &)> &canStep,
-                            const Coords &goal) {
+static Values fillAllValues(const std::function<bool(const Coords &)> &canStep, const Coords &goal,
+                            const std::function<std::pair<bool, Coords>(const Coords &)> waypoint) {
     std::unordered_set<Coords> marked;
     Values values = std::make_shared<std::unordered_map<Coords, int>>();
     Queue nodes([values](const Coords &a, const Coords &b) {
@@ -97,7 +97,12 @@ static Values fillAllValues(const std::function<bool(const Coords &)> &canStep,
         Coords currentCoords = vstd::pop_p(nodes);
         if (marked.insert(currentCoords).second) {
             int curValue = (*values)[currentCoords];
-            for (Coords tmpCoords: near_coords(currentCoords)) {
+            auto list = near_coords(currentCoords);
+            auto waypoint_direction = waypoint(currentCoords);
+            if (waypoint_direction.first) {
+                list.push_back(waypoint_direction.second);
+            }
+            for (Coords tmpCoords: list) {
                 if (canStep(tmpCoords)) {
                     auto it = values->find(tmpCoords);
                     if (it == values->end() || it->second > curValue + 1) {
@@ -133,8 +138,9 @@ std::list<Coords> CPathFinder::findPath(Coords start, Coords goal, const std::fu
     return path;
 }
 
-void CPathFinder::saveMap(Coords start, const std::function<bool(const Coords &)> &canStep, const std::string &path) {
-    Values values = fillAllValues(canStep, start);
+void CPathFinder::saveMap(Coords start, const std::function<bool(const Coords &)> &canStep, const std::string &path,
+                          const std::function<std::pair<bool, Coords>(const Coords &)> &waypoint) {
+    Values values = fillAllValues(canStep, start, waypoint);
     int minx = std::numeric_limits<int>::max();
     int miny = std::numeric_limits<int>::max();
     int maxx = std::numeric_limits<int>::min();

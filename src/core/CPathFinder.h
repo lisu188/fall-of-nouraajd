@@ -32,7 +32,8 @@ public:
     static std::list<Coords> findPath(Coords start, Coords goal,
                                       const std::function<bool(const Coords &)> &canStep);
 
-    static void saveMap(Coords start, const std::function<bool(const Coords &)> &canStep, const std::string &path);
+    static void saveMap(Coords start, const std::function<bool(const Coords &)> &canStep, const std::string &path,
+                        const std::function<std::pair<bool, Coords>(const Coords &)> &waypoint);
 };
 
 template<typename T=void>

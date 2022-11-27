@@ -296,7 +296,7 @@ void CMap::move() {
     };
 
     auto end_callback = [map, coordinates](std::set<void *>) {
-        for (auto[creature, coords]: *coordinates) {
+        for (auto [creature, coords]: *coordinates) {
             creature->getController()->afterControl(creature, coords);
             creature->moveTo(coords);
         }
@@ -347,8 +347,19 @@ std::set<std::shared_ptr<CMapObject>> CMap::getObjects() {
 void CMap::dumpPaths(std::string path) {
     CPathFinder::saveMap(getPlayer()->getCoords(), [this](auto coords) {
         return this->canStep(coords);
-    }, path);
+    }, path, [this](auto coords) {
+        for (auto ob: getObjectsAtCoords(coords)) {
+            if (ob->getBoolProperty("waypoint")) {
+                return std::make_pair(true,
+                                      Coords(ob->getNumericProperty("x"),
+                                             ob->getNumericProperty("y"),
+                                             ob->getNumericProperty("z")));
+            }
+        }
+        return std::make_pair(false, Coords(0, 0, 0));
+    });
 }
+
 
 std::set<std::shared_ptr<CTrigger>> CMap::getTriggers() {
     return getEventHandler()->getTriggers();
