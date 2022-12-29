@@ -17,8 +17,11 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #pragma once
 
+#include <rdg.h>
 #include "core/CGlobal.h"
 #include "core/CMap.h"
+#include "core/CGlobal.h"
+#include "core/CGame.h"
 
 class CMapLoader {
 
@@ -33,7 +36,6 @@ public:
 
     static std::shared_ptr<CMap> loadSavedMap(const std::shared_ptr<CGame> &game, const std::string &name);
 
-    static std::shared_ptr<CMap> loadRandomMap(const std::shared_ptr<CGame> &game);
 
     static void save(const std::shared_ptr<CMap> &map, const std::string &name);
 
@@ -48,8 +50,7 @@ private:
     static std::shared_ptr<CPlayer> createPlayer(const std::shared_ptr<CGame> &game, std::string &player);
 };
 
-#include "core/CGlobal.h"
-#include "core/CGame.h"
+
 
 class CGameLoader {
 public:
@@ -78,7 +79,15 @@ private:
 
 class CPluginLoader {
 public:
-
-
     static void loadPlugin(const std::shared_ptr<CGame> &game, const std::string &path);
+};
+
+class CRandomMapGenerator {
+    static std::shared_ptr<CMap> loadRandomMap(const std::shared_ptr<CGame> &game);
+
+    static void generateTiles(std::shared_ptr<CMap> &map, rdg<void>::Dungeon &dungeon);
+
+    static void
+    generateEncounters(const std::shared_ptr<CGame> &game, std::shared_ptr<CMap> &map,
+                       std::map<int, rdg<>::Room> &rooms);
 };
