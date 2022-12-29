@@ -35,7 +35,9 @@ void CProxyGraphicsObject::refresh() {
     vstd::with<void>(getGui(), [this](auto gui) {
         std::list<std::shared_ptr<CGameGraphicsObject>> objects = vstd::cast<CProxyTargetGraphicsObject>(
                 getParent())->getProxiedObjects(gui, x, y);
-        children.clear();
+        for (auto &child:getChildren()) {
+            removeChild(child);
+        }
         for (auto &object:objects) {
             addChild(object);
         }
