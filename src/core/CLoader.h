@@ -17,8 +17,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #pragma once
 
-#include <rdg.h>
 #include "core/CGlobal.h"
+#include <rdg.h>
 #include "core/CMap.h"
 #include "core/CGlobal.h"
 #include "core/CGame.h"
@@ -36,7 +36,6 @@ public:
 
     static std::shared_ptr<CMap> loadSavedMap(const std::shared_ptr<CGame> &game, const std::string &name);
 
-
     static void save(const std::shared_ptr<CMap> &map, const std::string &name);
 
     static void loadFromTmx(const std::shared_ptr<CMap> &map, const std::shared_ptr<json> &mapc);
@@ -51,12 +50,12 @@ private:
 };
 
 
-
 class CGameLoader {
 public:
     static std::shared_ptr<CGame> loadGame();
 
-    static void startGameWithPlayer(const std::shared_ptr<CGame> &game, const std::string &file, std::string player);
+    static void
+    startGameWithPlayer(const std::shared_ptr<CGame> &game, const std::string &file, std::string player);
 
     static void startRandomGameWithPlayer(const std::shared_ptr<CGame> &game, std::string player);
 
@@ -73,7 +72,8 @@ private:
 
     static void initConfigurations(const std::shared_ptr<CObjectHandler> &handler);
 
-    static void initScriptHandler(const std::shared_ptr<CScriptHandler> &handler, const std::shared_ptr<CGame> &game);
+    static void
+    initScriptHandler(const std::shared_ptr<CScriptHandler> &handler, const std::shared_ptr<CGame> &game);
 
 };
 
@@ -83,8 +83,10 @@ public:
 };
 
 class CRandomMapGenerator {
+public:
     static std::shared_ptr<CMap> loadRandomMap(const std::shared_ptr<CGame> &game);
 
+private:
     static void generateTiles(std::shared_ptr<CMap> &map, rdg<void>::Dungeon &dungeon);
 
     static void
