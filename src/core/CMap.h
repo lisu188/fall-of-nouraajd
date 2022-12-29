@@ -46,6 +46,8 @@ class CGame;
 class CMap : public CGameObject {
     friend class CMapLoader;
 
+    friend class CRandomMapGenerator;
+
 V_META(CMap, CGameObject, V_PROPERTY(CMap, int, turn, getTurn, setTurn),
        V_PROPERTY(CMap, std::string, mapName, getMapName, setMapName),
        V_PROPERTY(CMap, std::set<std::shared_ptr<CMapObject>>, objects, getObjects, setObjects),

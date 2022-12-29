@@ -99,7 +99,6 @@ std::shared_ptr<CMap> CMapLoader::loadNewMapWithPlayer(const std::shared_ptr<CGa
     map->setPlayer(ptr);
 
 
-
     return map;
 }
 
@@ -164,7 +163,7 @@ void CMapLoader::handleObjectLayer(const std::shared_ptr<CMap> &map, const json 
         }
         map->addObject(mapObject);
         const json &objectProperties = object.count("properties") ? object["properties"] : json();
-        for (auto[key, value]: objectProperties.items()) {
+        for (auto [key, value]: objectProperties.items()) {
             CSerialization::setProperty(mapObject, key, CJsonUtil::clone(value));
         }
         mapObject->moveTo(xPos, yPos, level);
@@ -172,18 +171,48 @@ void CMapLoader::handleObjectLayer(const std::shared_ptr<CMap> &map, const json 
     }
 }
 
-std::shared_ptr<CMap> CMapLoader::loadRandomMap(const std::shared_ptr<CGame> &game) {
-    auto map = loadNewMap(game, "");
+std::shared_ptr<CMap> CRandomMapGenerator::loadRandomMap(const std::shared_ptr<CGame> &game) {
+    auto map = CMapLoader::loadNewMap(game, "");
     auto options = rdg<>::Options();
+
     options.n_rows = 555;
     options.n_cols = 555;
     options.corridor_layout = rdg<>::BENT;
+
     auto dungeon = rdg<>::create_dungeon(options);
     auto container = dungeon.getStairs();
     auto stairs = vstd::any(container);
+
     map->entryx = stairs.row;
     map->entryy = stairs.col;
     map->entryz = 0;
+
+    generateTiles(map, dungeon);
+
+    std::map<int, rdg<>::Room> rooms = dungeon.getRooms();
+
+    generateEncounters(game, map, rooms);
+
+    vstd::random_element(rooms).first;
+    vstd::random_element(rooms).first;
+
+
+    return map;
+}
+
+void CRandomMapGenerator::generateEncounters(const std::shared_ptr<CGame> &game, std::shared_ptr<CMap> &map,
+                                             std::map<int, rdg<>::Room> &rooms) {
+    for (const auto room: rooms | boost::adaptors::map_values) {
+        auto roomCoords = Coords(room.row + room.width / 2, room.col + room.height / 2, 0);
+        if (roomCoords.getDist(map->getEntry()) > 5) {
+            for (const auto &creature: game->getRngHandler()->getRandomEncounter(5)) {
+                map->addObject(creature, roomCoords);
+            }
+        }
+    }
+}
+
+void CRandomMapGenerator::generateTiles(std::shared_ptr<CMap> &map, rdg<void>::Dungeon &dungeon) {
     for (unsigned int i = 0; i < dungeon.getCells().size(); i++) {
         for (unsigned int j = 0; j < dungeon.getCells()[0].size(); j++) {
             if (dungeon.getCells()[i][j].isOpenspace()) {
@@ -193,16 +222,6 @@ std::shared_ptr<CMap> CMapLoader::loadRandomMap(const std::shared_ptr<CGame> &ga
             }
         }
     }
-    std::map<int, rdg<>::Room> rooms = dungeon.getRooms();
-    for (const auto room: rooms | boost::adaptors::map_values) {
-        auto roomCoords = Coords(room.row + room.width / 2, room.col + room.height / 2, 0);
-        if (roomCoords.getDist(map->getEntry()) > 5) {
-            for (const auto &creature: game->getRngHandler()->getRandomEncounter(5)) {
-                map->addObject(creature, roomCoords);
-            }
-        }
-    }
-    return map;
 }
 
 
