@@ -99,12 +99,10 @@ void CProxyTargetGraphicsObject::refreshAll() {
 }
 
 void CProxyTargetGraphicsObject::refreshObject(int x, int y) {
-    for (auto [_x, map_x]: proxyObjects) {
-        vstd::execute_if(map_x, [&](auto object) {
-            return object.second->getX() == x && object.second->getY() == y;
-        }, [=](auto ob) {
-            ob.second->refresh();
-        });//TODO: index
+    if (x < 0 || x >= getSizeX(getGui()) || y < 0 || y >= getSizeY(getGui())) {
+        //TODO: log warning
+    } else {
+        proxyObjects[x][y]->refresh();
     }
 }
 

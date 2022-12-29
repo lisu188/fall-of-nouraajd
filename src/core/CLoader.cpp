@@ -109,7 +109,7 @@ std::shared_ptr<CPlayer> CMapLoader::createPlayer(const std::shared_ptr<CGame> &
 }
 
 std::shared_ptr<CMap> CMapLoader::loadRandomMapWithPlayer(const std::shared_ptr<CGame> &game, std::string player) {
-    std::shared_ptr<CMap> map = loadRandomMap(game);
+    std::shared_ptr<CMap> map = CRandomMapGenerator::loadRandomMap(game);
     std::shared_ptr<CPlayer> ptr = createPlayer(game, player);
     map->setPlayer(ptr);
     return map;
