@@ -147,8 +147,9 @@ def load(self, context):
     @register(context)
     class BloodThirst(CInteraction):
         def performAction(self, first, second):
-            second.hurt(first.getDmg() * 0.2)
-            first.healProc(20)
+            tmpDmg = first.getDmg() * 0.2
+            second.hurt(tmpDmg)
+            first.heal(tmpDmg)
 
     @register(context)
     class AbyssalShadows(CInteraction):
