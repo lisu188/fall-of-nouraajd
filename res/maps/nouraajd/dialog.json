@@ -7,7 +7,7 @@
           "class": "CDialogState",
           "properties": {
             "stateId": "ENTRY",
-            "text": "Due to rat infestation gates are closed. Orders from Sergeant Rolf!",
+            "text": "The city gates are sealed by order of Sergeant Rolf. A plague of rats has infested the streets.",
             "options": [
               {
                 "class": "CDialogOption",
@@ -15,7 +15,7 @@
                   "number": 0,
                   "action": "openDoor",
                   "nextStateId": "WELCOME",
-                  "text": "I am here to help. (show him the letter)"
+                  "text": "I offer my assistance. (present the letter)"
                 }
               },
               {
@@ -23,7 +23,7 @@
                 "properties": {
                   "number": 1,
                   "nextStateId": "NOT_WELCOME",
-                  "text": "Open up or I`ll smash this gate into pieces!"
+                  "text": "Open the gates, or I'll reduce them to splinters!"
                 }
               },
               {
@@ -39,7 +39,7 @@
           "class": "CDialogState",
           "properties": {
             "stateId": "WELCOME",
-            "text": "Come on then. You can spend a night at inn or pray in the chapel. Not much to do here.",
+            "text": "Enter, stranger. The inn offers shelter for the night, while the chapel provides solace. There is little else to find here.",
             "options": [
               {
                 "class": "CDialogOption",
@@ -62,7 +62,7 @@
           "class": "CDialogState",
           "properties": {
             "stateId": "ABOUT_ROLF",
-            "text": "He left couple days ago with his crew. They did not come back yet.",
+            "text": "He ventured forth with his men days ago. They've yet to return.",
             "options": [
               {
                 "ref": "exitOption",
@@ -77,7 +77,7 @@
           "class": "CDialogState",
           "properties": {
             "stateId": "NOT_WELCOME",
-            "text": "I`d love to see that. Good day, kind sir!",
+            "text": "Bold words. Farewell, traveler!",
             "options": [
               {
                 "ref": "exitOption",
