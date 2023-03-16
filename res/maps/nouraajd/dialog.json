@@ -95,7 +95,7 @@
     "class": "CDialogOption",
     "properties": {
       "nextStateId": "INKEEPER_ABOUT_GIRL",
-      "text": "What they were looking for?",
+      "text": "What dark purpose did they pursue?",
       "action": "askedAboutGirl"
     }
   },
@@ -103,20 +103,20 @@
     "class": "CDialogOption",
     "properties": {
       "nextStateId": "INKEEPER_ABOUT_MARUMI",
-      "text": "Who is this Marumi Baso?"
+      "text": "Who is this enigmatic Marumi Baso?"
     }
   },
   "askForBeer": {
     "ref": "exitOption",
     "properties": {
-      "text": "Alright, now get me some beer.",
+      "text": "Enough of this. Bring me a tankard of ale.",
       "action": "sellBeer"
     }
   },
   "shouldGo": {
     "ref": "exitOption",
     "properties": {
-      "text": "I should go."
+      "text": "I must take my leave."
     }
   },
   "tavernDialog1": {
@@ -127,20 +127,20 @@
           "class": "CDialogState",
           "properties": {
             "stateId": "ENTRY",
-            "text": "As You enter the inn, You see 5 men rushing out. They are dressed in dark brown coats. One of them, the elder one, is holding staff and he is wearing round hat. Your eyes cross as he is leaving.",
+            "text": "Upon entering the gloomy inn, you notice five men in dark brown robes hastily departing. The eldest among them clutches a staff and dons a round hat. Your eyes meet briefly, as a sinister chill runs down your spine.",
             "options": [
               {
                 "class": "CDialogOption",
                 "properties": {
                   "number": 0,
                   "nextStateId": "INNKEEPER_WELCOME",
-                  "text": "Talk to the innkeeper."
+                  "text": "Approach the innkeeper."
                 }
               },
               {
                 "ref": "exitOption",
                 "properties": {
-                  "text": "Leave inn.",
+                  "text": "Exit the wretched establishment.",
                   "number": 1
                 }
               }
@@ -151,7 +151,7 @@
           "class": "CDialogState",
           "properties": {
             "stateId": "INNKEEPER_WELCOME",
-            "text": "Welcome, welcome. What can I do for You?",
+            "text": "Greetings, stranger. What brings You to this forsaken place?",
             "options": [
               {
                 "class": "CDialogOption",
@@ -174,7 +174,7 @@
           "class": "CDialogState",
           "properties": {
             "stateId": "INKEEPER_ABOUT_CULTISTS",
-            "text": "Ah yeah, they`ve been around a city since I can remember. Cult of Marumi Baso they call themselves. Some of the locals consider them zealots.",
+            "text": "Aye, those sinister souls have haunted this city for as long as memory serves. They name themselves the Cult of Marumi Baso. Many locals regard them as dangerous zealots.",
             "options": [
               {
                 "ref": "askAboutMarumi",
@@ -207,7 +207,7 @@
           "class": "CDialogState",
           "properties": {
             "stateId": "INKEEPER_ABOUT_MARUMI",
-            "text": "Ugh... I don`t know, seems like deity? I`m not really interested in religious staff, do You want anything else?",
+            "text": "Hmph... a deity of sorts, perhaps? I care little for religious matters. Do you seek something else?",
             "options": [
               {
                 "ref": "askAboutGirl",
@@ -234,7 +234,7 @@
           "class": "CDialogState",
           "properties": {
             "stateId": "INKEEPER_ABOUT_GIRL",
-            "text": "Some girl, I`ve told them to get the fuck out and look for their victims elsewhere. Anyway, does inn look like a proper place for a child?",
+            "text": "A young lass, it seems. I sent them away with harsh words, bidding them to search for their prey elsewhere. Does this accursed inn resemble a place for a child?",
             "options": [
               {
                 "ref": "askAboutMarumi",
