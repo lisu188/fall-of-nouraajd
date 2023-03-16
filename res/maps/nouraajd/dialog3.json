@@ -1,0 +1,131 @@
+{
+  "beAMan": {
+    "class": "CDialogOption",
+    "properties": {
+      "text": "Be a man and stop crying.",
+      "nextStateId": "VICTOR_SPEECH"
+    }
+  },
+  "whatsWrong": {
+    "class": "CDialogOption",
+    "properties": {
+      "text": "What`s wrong? Why are You crying?",
+      "nextStateId": "VICTOR_SPEECH"
+    }
+  },
+  "tavernDialog2": {
+    "class": "TavernDialog2",
+    "properties": {
+      "states": [
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "ENTRY",
+            "text": "As You enter the inn, You see a lonely man arguing with innkeeper about alcohol. You approach them.",
+            "options": [
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "text": "Continue.",
+                  "nextStateId": "INKEEPER_RANT",
+                  "number": 0
+                }
+              }
+            ]
+          }
+        },
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "INKEEPER_RANT",
+            "text": "(inkeeper yelling) I`VE ALREADY TOLD YOU, I`M OUT OF YOUR PRECIOUS VODKA! THERE IS ONLY BEER LEFT.",
+            "options": [
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "text": "(punch the annoying man)",
+                  "nextStateId": "PUNCHED_VICTOR",
+                  "number": 0
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "text": "Hey, step away!",
+                  "nextStateId": "YELLED_AT_VICTOR",
+                  "number": 1
+                }
+              }
+            ]
+          }
+        },
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "PUNCHED_VICTOR",
+            "text": "The man falls on the floor with broken nose and starts crying.",
+            "options": [
+              {
+                "ref": "beAMan",
+                "properties": {
+                  "number": 0
+                }
+              },
+              {
+                "ref": "whatsWrong",
+                "properties": {
+                  "number": 1
+                }
+              }
+            ]
+          }
+        },
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "YELLED_AT_VICTOR",
+            "text": "Man sits on the chair and starts crying.",
+            "options": [
+              {
+                "ref": "beAMan",
+                "properties": {
+                  "number": 0
+                }
+              },
+              {
+                "ref": "whatsWrong",
+                "properties": {
+                  "number": 1
+                }
+              }
+            ]
+          }
+        },
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "VICTOR_SPEECH",
+            "text": "My name is Victor. It's about my daughter... She is lost for 3 days now. My ex-wife told me that she lost her in the crowd in the market 3 days ago. We can't find her anywhere and so does the city guard. I'm afraid I've lost my little girl. (cries)",
+            "options": [
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "text": "Don't you have ANY clue where she might be?",
+                  "number": 0
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "text": "I've ran into group of priests of Marumi Baso that were looking for a girl around the city, maybe they are responsible for your daughter's disappearance?",
+                  "number": 1,
+                  "condition": "askedAboutGirl"
+                }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  }
+}
