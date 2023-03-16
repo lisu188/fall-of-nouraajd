@@ -2,7 +2,7 @@
   "StartEvent": {
     "class": "StartEvent",
     "properties": {
-      "text": "Here it begins. A hero is sent to rescue with only letter in his hand. You don`t know who Sergeant Rolf is or who snitched the letter to Your backpack. Somewhere here lies small town of Nouraajd which is where investigation should be started..."
+      "text": "In shadows, the journey commences. A hero emerges, guided by a cryptic letter. The identity of Sergeant Rolf remains veiled, as does the sender who concealed the message within the hero's belongings. The forsaken town of Nouraajd awaits, harboring mysteries for the hero to unravel."
     }
   },
   "nouraajdSign": {
@@ -33,13 +33,13 @@
   "mainQuest": {
     "class": "MainQuest",
     "properties": {
-      "description": "Kill Gooby"
+      "description": "Vanquish the Dreaded Gooby"
     }
   },
   "rolfQuest": {
     "class": "RolfQuest",
     "properties": {
-      "description": "Find what happened to sergeant Rolf."
+      "description": "Unravel the fate of Sergeant Rolf."
     }
   },
   "skullOfRolf": {
@@ -55,7 +55,7 @@
   "cave1": {
     "ref": "Cave",
     "properties": {
-      "message": "You feel the ground shaking, and see the ratmen all around you!!! But the one part is missin g in this puzzle. Letter said about the ratmen who was much bigger than the other. These here are just ordinary pritschers.",
+      "message": "The ground trembles beneath your feet as ratmen swarm around you. They are but ordinary Pritschers, lacking the colossal size foretold in the letter. Where is the behemoth that leads them?",
       "chance": "10",
       "monster": {
         "ref": "Pritz",
@@ -115,7 +115,7 @@
     "ref": "Scroll",
     "properties": {
       "label": "Letter from Rolf",
-      "text": "Lord Commander, These terrifying creatures keep attacking us all the time, locals call them Pritschers. Our scout reports that Pritschers have their lair in ruins of Nouraajd, but we can`t do anything about it - we don`t have enough men. We`re barely able to defend village. We won`t survive much longer. We need reinforcements. Sergeant Rolf."
+      "text": "Lord Commander, The nightmarish Pritschers relentlessly assault us. Locals whisper of their lair, hidden within the desolate ruins of Nouraajd. Our forces wane, our defenses falter; we are on the brink. We lack the strength to purge their den. Reinforcements are our final hope. Sergeant Rolf."
     }
   }
 }
