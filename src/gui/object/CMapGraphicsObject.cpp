@@ -61,7 +61,9 @@ CMapGraphicsObject::getProxiedObjects(std::shared_ptr<CGui> gui, int x, int y) {
             return_val.push_back(ob->getGraphicsObject());
         }
 
-//        showCoordinates(gui, return_val, actualCoords);
+        if (map->getBoolProperty("showCoordinates")) {
+            showCoordinates(gui, return_val, actualCoords);
+        }
 
         return return_val;
     });
