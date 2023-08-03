@@ -297,7 +297,6 @@ void CMap::move() {
 
     auto end_callback = [map, coordinates](std::set<void *>) {
         for (auto [creature, coords]: *coordinates) {
-            creature->getController()->afterControl(creature, coords);
             creature->moveTo(coords);
         }
         map->moving = false;

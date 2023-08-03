@@ -1,6 +1,6 @@
 /*
 fall-of-nouraajd c++ dark fantasy game
-Copyright (C) 2019  Andrzej Lis
+Copyright (C) 2023  Andrzej Lis
 
 This program is free software: you can redistribute it and/or modify
         it under the terms of the GNU General Public License as published by
@@ -20,6 +20,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "gui/panel/CGameFightPanel.h"
 #include "core/CGame.h"
 #include "core/CMap.h"
+#include "object/CPlayer.h"
 
 CTargetController::CTargetController() {
 
@@ -146,9 +147,10 @@ CMonsterFightController::getLeastPowerfulItemWithTag(std::shared_ptr<CCreature> 
     if (max != boost::end(rng)) {
         return *max;
     }
-    return std::shared_ptr<CItem>();
+    return {};
 }
 
+//TODO: use buffs
 std::shared_ptr<CInteraction> CMonsterFightController::selectInteraction(std::shared_ptr<CCreature> cr) {
     std::function<bool(std::shared_ptr<CInteraction>)> pFunction = [](const std::shared_ptr<CInteraction> &it) {
         return !it->hasTag("buff");
@@ -170,19 +172,30 @@ std::shared_ptr<CInteraction> CMonsterFightController::selectInteraction(std::sh
     if (max != boost::end(rng)) {
         return *max;
     }
-    return std::shared_ptr<CInteraction>();
+    return {};
 }
 
 std::shared_ptr<vstd::future<Coords, void>> CPlayerController::control(std::shared_ptr<CCreature> c) {
-    return CPathFinder::findNextStep(c->getCoords(), target, [c](Coords coords) {
-        return c->getMap()->canStep(coords);
+    if (!player.lock()) {
+        player = vstd::cast<CPlayer>(c);
+    }
+    return CPathFinder::findNextStep(c->getCoords(), *target, [this](Coords coords) {
+        return player.lock()->getMap()->canStep(coords);
     });
 }
 
 
 void CPlayerController::setTarget(Coords coords) {
-    target = coords;
-    completed = false;
+    target = std::make_shared<Coords>(coords);
+}
+
+std::set<Coords> CPlayerController::getPath() {
+    Coords start = player.lock()->getCoords();
+    return isCompleted() ? std::set<Coords>() : CPathFinder::findPath(start, *target,
+                                                                      [this](Coords coords) {
+                                                                          return player.lock()->getMap()->canStep(
+                                                                                  coords);
+                                                                      });
 }
 
 bool CFightController::control(std::shared_ptr<CCreature> me, std::shared_ptr<CCreature> opponent) {
@@ -225,20 +238,13 @@ void CPlayerFightController::end(std::shared_ptr<CCreature> me, std::shared_ptr<
     });
 }
 
-Coords CPlayerController::getTarget() {
-    return target;
-}
-
 bool CPlayerController::isCompleted() {
-    return completed;
+    return (target && player.lock() && player.lock()->getCoords() == *target)
+           ||
+           (player.lock() && !player.lock()->getMap()->canStep(*target));
 }
 
-void CPlayerController::afterControl(std::shared_ptr<CCreature> c, Coords coords) {
-    if (target == coords || !c->getMap()->canStep(target)) {
-        completed = true;
-    }
+void CPlayerController::setPlayer(std::shared_ptr<CPlayer> c) {
+    player = c;
 }
 
-void CController::afterControl(std::shared_ptr<CCreature> c, Coords coords) {
-
-}

@@ -125,14 +125,14 @@ std::shared_ptr<vstd::future<Coords, void>> CPathFinder::findNextStep(Coords sta
     });
 }
 
-std::list<Coords> CPathFinder::findPath(Coords start, Coords goal, const std::function<bool(const Coords &)> &canStep) {
-    std::list<Coords> path;
+std::set<Coords> CPathFinder::findPath(Coords start, Coords goal, const std::function<bool(const Coords &)> &canStep) {
+    std::set<Coords> path;
     Values val = fillValues(canStep, start, goal);
     Coords next = getNextStep(next, goal, val);
     if (next != start) {
         while (next != goal) {
             next = getNextStep(next, goal, val);
-            path.push_front(next);
+            path.insert(next);
         }
     }
     return path;

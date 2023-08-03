@@ -30,43 +30,55 @@ CMapGraphicsObject::CMapGraphicsObject() {
 
 std::list<std::shared_ptr<CGameGraphicsObject>>
 CMapGraphicsObject::getProxiedObjects(std::shared_ptr<CGui> gui, int x, int y) {
-    return vstd::with<std::list<std::shared_ptr<CGameGraphicsObject>>>(gui->getGame()->getMap(), [&](auto map) {
-        std::list<std::shared_ptr<CGameGraphicsObject>> return_val;
+    return vstd::with<std::list<std::shared_ptr<CGameGraphicsObject>>>(
+            gui->getGame()->getMap(), [&](auto map) {
+                std::list<std::shared_ptr<CGameGraphicsObject>> return_val;
 
-        auto actualCoords = guiToMap(gui, Coords(x, y, gui->getGame()->getMap()->getPlayer()->getCoords().z));
+                auto actualCoords = guiToMap(gui, Coords(x, y, gui->getGame()->getMap()->getPlayer()->getCoords().z));
 
-        std::shared_ptr<CTile> tile = map->getTile(actualCoords.x, actualCoords.y, actualCoords.z);
+                std::shared_ptr<CTile> tile = map->getTile(actualCoords.x, actualCoords.y, actualCoords.z);
 
-        return_val.push_back(tile->getGraphicsObject()->withCallback(
-                [actualCoords](std::shared_ptr<CGui> gui, SDL_EventType type, int button, int, int) {
-                    if (type == SDL_MOUSEBUTTONDOWN && button == SDL_BUTTON_LEFT) {
-                        auto controller = vstd::cast<CPlayerController>(
-                                gui->getGame()->getMap()->getPlayer()->getController());
-                        controller->setTarget(actualCoords);
+                return_val.push_back(tile->getGraphicsObject()->withCallback(
+                        [actualCoords](std::shared_ptr<CGui> gui, SDL_EventType type, int button, int, int) {
+                            if (type == SDL_MOUSEBUTTONDOWN && button == SDL_BUTTON_LEFT) {
+                                auto controller = vstd::cast<CPlayerController>(
+                                        gui->getGame()->getMap()->getPlayer()->getController());
+                                controller->setTarget(actualCoords);
 
-                        if (!gui->getMap()->isMoving()) {
-                            //move this code
-                            while (!controller->isCompleted()) {
-                                gui->getGame()->getMap()->move();
+                                if (!gui->getMap()->isMoving()) {
+                                    //move this code
+                                    while (!controller->isCompleted()) {
+                                        gui->getGame()->getMap()->move();
+                                    }
+                                }
+
+                                return true;
                             }
-                        }
+                            return false;
+                        }));
 
-                        return true;
+
+                for (const auto &ob: map->getObjectsAtCoords(actualCoords)) {
+                    return_val.push_back(ob->getGraphicsObject());
+                }
+
+                //TODO: make list of such properties in config
+                if (map->getBoolProperty("showCoordinates")) {
+                    showCoordinates(gui, return_val, actualCoords);
+                }
+
+                if (map->getBoolProperty("showPath")) {
+                    auto path = vstd::cast<CPlayerController>(
+                            gui->getGame()->getMap()->getPlayer()->getController())->getPath();
+                    if (vstd::ctn(path, actualCoords)) {
+                        showFootprint(gui, return_val, actualCoords);
                     }
-                    return false;
-                }));
+                }
 
+                return return_val;
+            }
 
-        for (const auto &ob: map->getObjectsAtCoords(actualCoords)) {
-            return_val.push_back(ob->getGraphicsObject());
-        }
-
-        if (map->getBoolProperty("showCoordinates")) {
-            showCoordinates(gui, return_val, actualCoords);
-        }
-
-        return return_val;
-    });
+    );
 }
 
 //TODO: fix text display, smaller font
@@ -83,6 +95,20 @@ void CMapGraphicsObject::showCoordinates(std::shared_ptr<CGui> &gui,
     countBox->setLayout(layout);
     countBox->setPriority(4);
     return_val.push_back(countBox);
+}
+
+void CMapGraphicsObject::showFootprint(std::shared_ptr<CGui> &gui,
+                                       std::list<std::shared_ptr<CGameGraphicsObject>> &return_val,
+                                       const Coords &actualCoords) const {
+    auto footprint = CAnimationProvider::getAnimation(gui->getGame(), "images/footprint");
+    auto layout = gui->getGame()->getObjectHandler()->createObject<CLayout>(gui->getGame());
+    layout->setHorizontal("CENTER");
+    layout->setVertical("CENTER");
+    layout->setW("50%");
+    layout->setH("50%");
+    footprint->setLayout(layout);
+    footprint->setPriority(4);
+    return_val.push_back(footprint);
 }
 
 void CMapGraphicsObject::initialize() {
