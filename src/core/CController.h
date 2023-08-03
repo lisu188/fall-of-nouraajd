@@ -27,30 +27,25 @@ V_META(CController, CGameObject, vstd::meta::empty())
 public:
 
     virtual std::shared_ptr<vstd::future<Coords, void>> control(std::shared_ptr<CCreature> c);
-
-//TODO: get rid of, only used in player controller
-    virtual void afterControl(std::shared_ptr<CCreature> c, Coords coords);
 };
 
 class CPlayerController : public CController {
 V_META(CPlayerController, CController, vstd::meta::empty())
 
 public:
-    void setTarget(Coords coords);
+    void setPlayer(std::shared_ptr<CPlayer> c);
 
-    Coords getTarget();
+    void setTarget(Coords coords);
 
     virtual std::shared_ptr<vstd::future<Coords, void>> control(std::shared_ptr<CCreature> c);
 
     bool isCompleted();
 
-    void afterControl(std::shared_ptr<CCreature> c, Coords coords) override;
+    std::set<Coords> getPath();
 
 private:
-
-    Coords target;
-
-    bool completed = false;
+    std::shared_ptr<Coords> target;
+    std::weak_ptr<CPlayer> player;
 };
 
 class CFightController : public CGameObject {
