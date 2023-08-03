@@ -33,7 +33,7 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DBOOST_ALLOW_DEPRECATED_HEADERS -DBOOST
 
 if (WIN32)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D_hypot=hypot -Wa,-mbig-obj")
-    set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -O3")
+    set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -O")
 endif ()
 
 file(GLOB_RECURSE GAME_SRC ${CMAKE_SOURCE_DIR}/src/**.cpp ${CMAKE_SOURCE_DIR}/src/**.h)
@@ -124,6 +124,7 @@ configure_file(res/images/item.png images/item.png COPYONLY)
 configure_file(res/images/tooltip.png images/tooltip.png COPYONLY)
 configure_file(res/images/button_on.png images/button_on.png COPYONLY)
 configure_file(res/images/button_off.png images/button_off.png COPYONLY)
+configure_file(res/images/footprint.png images/footprint.png COPYONLY)
 
 configure_file(res/images/monsters/pritzmage/time.json images/monsters/pritzmage/time.json COPYONLY)
 configure_file(res/images/monsters/pritzmage/2.png images/monsters/pritzmage/2.png COPYONLY)
