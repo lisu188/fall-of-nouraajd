@@ -22,6 +22,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 CGui::CGui() {
     SDL_SAFE(SDL_Init(SDL_INIT_VIDEO));
     SDL_SAFE(SDL_CreateWindowAndRenderer(width, height, SDL_WINDOW_OPENGL, &window, &renderer));
+    //TODO: set icon
     //TODO: check render flags
 }
 
