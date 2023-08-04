@@ -67,7 +67,7 @@ CMapGraphicsObject::getProxiedObjects(std::shared_ptr<CGui> gui, int x, int y) {
                     showCoordinates(gui, return_val, actualCoords);
                 }
 
-                if (map->getBoolProperty("showPath")) {
+                if (true){//map->getBoolProperty("showPath")) {
                     auto path = vstd::cast<CPlayerController>(
                             gui->getGame()->getMap()->getPlayer()->getController())->getPath();
                     if (vstd::ctn(path, actualCoords)) {

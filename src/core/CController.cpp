@@ -190,12 +190,12 @@ void CPlayerController::setTarget(Coords coords) {
 }
 
 std::set<Coords> CPlayerController::getPath() {
-    Coords start = player.lock()->getCoords();
-    return isCompleted() ? std::set<Coords>() : CPathFinder::findPath(start, *target,
-                                                                      [this](Coords coords) {
-                                                                          return player.lock()->getMap()->canStep(
-                                                                                  coords);
-                                                                      });
+    return isCompleted() || !player.lock() ? std::set<Coords>() : CPathFinder::findPath(player.lock()->getCoords(),
+                                                                                        *target,
+                                                                                        [this](Coords coords) {
+                                                                                            return player.lock()->getMap()->canStep(
+                                                                                                    coords);
+                                                                                        });
 }
 
 bool CFightController::control(std::shared_ptr<CCreature> me, std::shared_ptr<CCreature> opponent) {
