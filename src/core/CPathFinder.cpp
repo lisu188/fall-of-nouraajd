@@ -127,8 +127,9 @@ std::shared_ptr<vstd::future<Coords, void>> CPathFinder::findNextStep(Coords sta
 
 std::set<Coords> CPathFinder::findPath(Coords start, Coords goal, const std::function<bool(const Coords &)> &canStep) {
     std::set<Coords> path;
-    Values val = fillValues(canStep, start, goal);
-    Coords next = getNextStep(next, goal, val);
+    Values val = fillValues(canStep, goal, start);
+    Coords next = getNextStep(start, goal, val);
+    path.insert(next);
     if (next != start) {
         while (next != goal) {
             next = getNextStep(next, goal, val);
