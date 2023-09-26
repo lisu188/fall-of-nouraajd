@@ -21,9 +21,15 @@ typedef std::function<bool(const Coords &, const Coords &)> Compare;
 typedef std::priority_queue<Coords, std::vector<Coords>, Compare> Queue;
 typedef std::shared_ptr<std::unordered_map<Coords, int>> Values;
 
-static Coords getNextStep(const Coords &start, const Coords &goal, const Values &values) {
+static Coords getNextStep(const Coords &start, const Coords &goal, const Values &values,
+                          const std::function<std::pair<bool, Coords>(const Coords &)> waypoint) {
     Coords target = start;
-    for (Coords coords: near_coords(start)) {
+    std::list<Coords> list = near_coords(start);
+    auto it = waypoint(start);
+    if (it.first) {
+        list.push_back(it.second);
+    }
+    for (Coords coords: list) {
         if (vstd::ctn((*values), coords) &&
             ((*values)[coords] < (*values)[target] ||
              ((*values)[coords] == (*values)[target] &&
@@ -35,7 +41,8 @@ static Coords getNextStep(const Coords &start, const Coords &goal, const Values 
 }
 
 static Values fillValues(const std::function<bool(const Coords &)> &canStep,
-                         const Coords &goal, const Coords &start) {
+                         const Coords &goal, const Coords &start,
+                         const std::function<std::pair<bool, Coords>(const Coords &)> waypoint) {
     Queue nodes([start](const Coords &a, const Coords &b) {
         double dista = (a.x - start.x) * (a.x - start.x) +
                        (a.y - start.y) * (a.y - start.y);
@@ -55,7 +62,12 @@ static Values fillValues(const std::function<bool(const Coords &)> &canStep,
         Coords currentCoords = vstd::pop_p(nodes);
         if (marked.insert(currentCoords).second) {
             int curValue = (*values)[currentCoords];
-            for (Coords tmpCoords: near_coords(currentCoords)) {
+            auto waypoint_direction = waypoint(currentCoords);
+            auto list = near_coords(currentCoords);
+            if (waypoint_direction.first) {
+                list.push_back(waypoint_direction.second);
+            }
+            for (Coords tmpCoords: list) {
                 if (tmpCoords == start || canStep(tmpCoords)) {
                     auto it = values->find(tmpCoords);
                     if (it == values->end() || it->second > curValue + 1) {
@@ -118,22 +130,27 @@ static Values fillAllValues(const std::function<bool(const Coords &)> &canStep, 
 
 std::shared_ptr<vstd::future<Coords, void>> CPathFinder::findNextStep(Coords start, Coords goal,
                                                                       const std::function<bool(
-                                                                              const Coords &)> &canStep) {
-    return vstd::async([start, goal, canStep]() {
+                                                                              const Coords &)> &canStep,
+                                                                      const std::function<std::pair<bool, Coords>(
+                                                                              const Coords &)> waypoint) {
+    return vstd::async([=]() {
         return getNextStep(start, goal, fillValues(
-                canStep, goal, start));
+                canStep, goal, start, waypoint), waypoint);
     });
 }
 
-std::set<Coords> CPathFinder::findPath(Coords start, Coords goal, const std::function<bool(const Coords &)> &canStep) {
-    std::set<Coords> path;
-    Values val = fillValues(canStep, goal, start);
-    Coords next = getNextStep(start, goal, val);
-    path.insert(next);
+std::vector<Coords>
+CPathFinder::findPath(Coords start, Coords goal, const std::function<bool(const Coords &)> &canStep,
+                      const std::function<std::pair<bool, Coords>(
+                              const Coords &)> waypoint) {
+    std::vector<Coords> path;
+    Values val = fillValues(canStep, goal, start, waypoint);
+    Coords next = getNextStep(start, goal, val, waypoint);
+    path.push_back(next);
     if (next != start) {
         while (next != goal) {
-            next = getNextStep(next, goal, val);
-            path.insert(next);
+            next = getNextStep(next, goal, val, waypoint);
+            path.push_back(next);
         }
     }
     return path;

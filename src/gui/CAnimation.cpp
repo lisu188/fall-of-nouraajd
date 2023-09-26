@@ -34,16 +34,34 @@ std::shared_ptr<CGameObject> CAnimation::getObject() {
 }
 
 void CStaticAnimation::renderObject(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> rect, int frameTime) {
-    SDL_SAFE(
-            SDL_RenderCopy(gui->getRenderer(),
-                           gui->getTextureCache()->getTexture(object->getAnimation()),
-                           nullptr,
-                           rect.get()));
+    if (rotation == 0) {
+        SDL_SAFE(
+                SDL_RenderCopy(gui->getRenderer(),
+                               gui->getTextureCache()->getTexture(object->getAnimation()),
+                               nullptr,
+                               rect.get()));
+    } else {
+        SDL_SAFE(SDL_RenderCopyEx(gui->getRenderer(),
+                                  gui->getTextureCache()->getTexture(object->getAnimation()),
+                                  nullptr,
+                                  rect.get(),
+                                  rotation,
+                                  nullptr,
+                                  SDL_FLIP_NONE));
+    }
 }
 
 
 CStaticAnimation::CStaticAnimation() {
 
+}
+
+int CStaticAnimation::getRotation() const {
+    return rotation;
+}
+
+void CStaticAnimation::setRotation(int rotation) {
+    CStaticAnimation::rotation = rotation;
 }
 
 CDynamicAnimation::CDynamicAnimation() {

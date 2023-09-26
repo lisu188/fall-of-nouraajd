@@ -17,6 +17,14 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #include "core/CUtil.h"
 
+Coords ZERO(0, 0, 0),
+        EAST(1, 0, 0),
+        WEST(-1, 0, 0),
+        NORTH(0, -1, 0),
+        SOUTH(0, 1, 0),
+        UP(0, 0, 1),
+        DOWN(0, 0, -1);
+
 template<>
 std::string vstd::str(Coords coords) {
     return vstd::str(coords.x) + "," + vstd::str(coords.y) + "," + vstd::str(coords.z);
@@ -135,6 +143,25 @@ int CUtil::parseKey(SDL_Keycode i) {
         default:
             return -1;
     }
+}
+
+Coords::Direction CUtil::getDirection(Coords coords) {
+    if (coords == ZERO) {
+        return Coords::Direction::ZERO;
+    } else if (coords == EAST) {
+        return Coords::Direction::EAST;
+    } else if (coords == WEST) {
+        return Coords::Direction::WEST;
+    } else if (coords == NORTH) {
+        return Coords::Direction::NORTH;
+    } else if (coords == SOUTH) {
+        return Coords::Direction::SOUTH;
+    } else if (coords == UP) {
+        return Coords::Direction::UP;
+    } else if (coords == DOWN) {
+        return Coords::Direction::DOWN;
+    }
+    return Coords::Direction::UNDEFINED;
 }
 
 //TODO: implement drag_drop

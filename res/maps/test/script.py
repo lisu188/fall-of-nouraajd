@@ -7,7 +7,7 @@ def load(self, context):
     @register(context)
     class ChangeMap(CEvent):
         def onEnter(self, event):
-            self.getMap().getGame().changeMap("test")
+            pass #self.getMap().getGame().changeMap("test")
 
     @trigger(context, "onEnter", "market1")
     class MarketTrigger(CTrigger):

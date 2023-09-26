@@ -24,8 +24,6 @@
 //TODO: make tags enum
 //TODO: replace buff with selfTarget
 //TODO: pathfinder
-    //TODO: visualise path on click
-    //TODO: make tag on teleporter and dungeon entrance
     //TODO: multilevel maps
 //TODO: customize out of bound tiles and default tiles
 //TODO: toroidal maps
