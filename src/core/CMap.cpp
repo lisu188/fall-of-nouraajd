@@ -355,7 +355,7 @@ void CMap::dumpPaths(std::string path) {
                                              ob->getNumericProperty("z")));
             }
         }
-        return std::make_pair(false, Coords(0, 0, 0));
+        return std::make_pair(false, ZERO);
     });
 }
 

@@ -26,17 +26,25 @@ CTargetController::CTargetController() {
 
 }
 
-std::shared_ptr<vstd::future<Coords, void>> CTargetController::control(std::shared_ptr<CCreature> creature) {
-    return CPathFinder::findNextStep(creature->getCoords(),
-                                     creature->getMap()->getObjectByName(target)->getCoords(),
-                                     [creature](const Coords &coords) {
-                                         return creature->getMap()->canStep(coords);
-                                     });
+std::shared_ptr<vstd::future<Coords, void>>
+CTargetController::control(std::shared_ptr<CCreature>
+                           creature) {
+    return
+            CPathFinder::findNextStep(creature->getCoords(),
+                                      creature->getMap()->getObjectByName(target)->getCoords(), [creature](
+                            const Coords &coords) {
+                        return creature->getMap()->canStep(coords);
+                    }, [](auto it) { return std::make_pair(false, ZERO); });
 }
 
-std::shared_ptr<vstd::future<Coords, void>> CController::control(std::shared_ptr<CCreature> c) {
+std::shared_ptr<vstd::future<Coords, void>>
+CController::control(std::shared_ptr<CCreature>
+                     c) {
     return vstd::later([c]() {
-        return c->getCoords();
+        return c->
+
+                getCoords();
+
     });
 }
 
@@ -49,9 +57,17 @@ void CTargetController::setTarget(std::string target) {
     this->target = target;
 }
 
-std::shared_ptr<vstd::future<Coords, void>> CRandomController::control(std::shared_ptr<CCreature> creature) {
+std::shared_ptr<vstd::future<Coords, void>>
+CRandomController::control(std::shared_ptr<CCreature>
+                           creature) {
     return vstd::later([creature]() {
-        return creature->getCoords() + Coords(vstd::rand(-1, 1), vstd::rand(-1, 1), 0);
+        return creature->
+
+                getCoords()
+
+               +
+               Coords(vstd::rand(-1, 1), vstd::rand(-1, 1),
+                      0);
     });
 }
 
@@ -59,20 +75,45 @@ std::string CGroundController::getTileType() { return _tileType; }
 
 void CGroundController::setTileType(std::string type) { _tileType = type; }
 
-std::shared_ptr<vstd::future<Coords, void>> CGroundController::control(std::shared_ptr<CCreature> creature) {
+std::shared_ptr<vstd::future<Coords, void>>
+CGroundController::control(std::shared_ptr<CCreature>
+                           creature) {
     auto self = this->ptr<CGroundController>();
     return vstd::later([self, creature]() -> Coords {
         std::vector<Coords> possible;
-        for (auto c: near_coords_with(creature->getCoords())) {
+        for (
+            auto c
+                :
+                near_coords_with(creature
+                                         ->
+
+                                                 getCoords()
+
+                )) {
             std::string type = creature->getMap()->getTile(c)->getTileType();
-            if (type == self->getTileType() && creature->getMap()->canStep(c)) {
-                possible.push_back(c);
+            if (type == self->
+
+                    getTileType() &&
+
+                creature->getMap()->
+                        canStep(c)
+                    ) {
+                possible.
+                        push_back(c);
             }
         }
-        if (!possible.empty()) {
-            return vstd::random_element(possible);
+        if (!possible.
+
+                empty()
+
+                ) {
+            return
+                    vstd::random_element(possible);
         }
-        return creature->getCoords();
+        return creature->
+
+                getCoords();
+
     });
 }
 
@@ -80,21 +121,48 @@ CRangeController::CRangeController() {
 
 }
 
-std::shared_ptr<vstd::future<Coords, void>> CRangeController::control(std::shared_ptr<CCreature> creature) {
+std::shared_ptr<vstd::future<Coords, void>>
+CRangeController::control(std::shared_ptr<CCreature>
+                          creature) {
     auto self = this->ptr<CRangeController>();
     return vstd::later([self, creature]() -> Coords {
         std::vector<Coords> possible;
         std::shared_ptr<CMapObject> targetObject = creature->getMap()->getObjectByName(self->getTarget());
-        for (auto c: near_coords_with(creature->getCoords())) {
-            if ((!targetObject || targetObject->getCoords().getDist(c) < self->distance)
-                && creature->getMap()->canStep(c)) {
-                possible.push_back(c);
+        for (
+            auto c
+                :
+                near_coords_with(creature
+                                         ->
+
+                                                 getCoords()
+
+                )) {
+            if ((!targetObject || targetObject->
+
+                            getCoords()
+
+                                          .
+                                                  getDist(c)
+                                  < self->distance)
+                && creature->getMap()->
+                    canStep(c)
+                    ) {
+                possible.
+                        push_back(c);
             }
         }
-        if (!possible.empty()) {
-            return vstd::random_element(possible);
+        if (!possible.
+
+                empty()
+
+                ) {
+            return
+                    vstd::random_element(possible);
         }
-        return creature->getCoords();
+        return creature->
+
+                getCoords();
+
     });
 }
 
@@ -175,27 +243,65 @@ std::shared_ptr<CInteraction> CMonsterFightController::selectInteraction(std::sh
     return {};
 }
 
-std::shared_ptr<vstd::future<Coords, void>> CPlayerController::control(std::shared_ptr<CCreature> c) {
-    if (!player.lock()) {
-        player = vstd::cast<CPlayer>(c);
-    }
-    return CPathFinder::findNextStep(c->getCoords(), *target, [this](Coords coords) {
-        return player.lock()->getMap()->canStep(coords);
+std::shared_ptr<vstd::future<Coords, void>>
+CPlayerController::control(std::shared_ptr<CCreature>
+                           c) {
+    return vstd::now([&]() {
+        return
+                isCompleted(vstd::cast<CPlayer>(c)
+                ) ? c->
+
+                        getCoords() : path
+
+                [currentStep++];
     });
 }
 
 
-void CPlayerController::setTarget(Coords coords) {
-    target = std::make_shared<Coords>(coords);
+void CPlayerController::setTarget(std::shared_ptr<CPlayer> player, Coords _target) {
+    target = std::make_shared<Coords>(_target);
+    path.clear();
+    currentStep = 0;
+    auto _path = calculatePath(player);
+    for (int i = 0; i < _path.size(); i++) {
+        path[i] = _path[i];
+    }
 }
 
-std::set<Coords> CPlayerController::getPath() {
-    return isCompleted() || !player.lock() ? std::set<Coords>() : CPathFinder::findPath(player.lock()->getCoords(),
-                                                                                        *target,
-                                                                                        [this](Coords coords) {
-                                                                                            return player.lock()->getMap()->canStep(
-                                                                                                    coords);
-                                                                                        });
+//TODO: add stopping when obstacle found
+std::pair<bool, Coords::Direction> CPlayerController::isOnPath(std::shared_ptr<CPlayer> player, Coords coords) {
+    if (!isCompleted(player)) {
+        for (auto it: path | boost::adaptors::filtered([this](auto it) {
+            return it.first >= currentStep - 1;
+        })) {
+            if (it.second == coords) {
+                auto prev = it.first > 0 ? path[it.first - 1] : coords;
+                auto dir = coords - prev;
+                return std::make_pair(true, CUtil::getDirection(dir));
+            }
+        }
+    }
+    return std::make_pair(false, Coords::Direction::ZERO);
+}
+
+std::vector<Coords> CPlayerController::calculatePath(std::shared_ptr<CPlayer> player) {
+    return CPathFinder::findPath(player->getCoords(),
+                                 *target,
+                                 [player](Coords coords) {
+                                     return player->getMap()->canStep(
+                                             coords);
+                                 }, [player](auto coords) {
+                //TODO: make it more efficient. cache?
+                for (auto ob: player->getMap()->getObjectsAtCoords(coords)) {
+                    if (ob->getBoolProperty("waypoint")) {
+                        return std::make_pair(true,
+                                              Coords(ob->getNumericProperty("x"),
+                                                     ob->getNumericProperty("y"),
+                                                     ob->getNumericProperty("z")));
+                    }
+                }
+                return std::make_pair(false, ZERO);
+            });
 }
 
 bool CFightController::control(std::shared_ptr<CCreature> me, std::shared_ptr<CCreature> opponent) {
@@ -238,13 +344,11 @@ void CPlayerFightController::end(std::shared_ptr<CCreature> me, std::shared_ptr<
     });
 }
 
-bool CPlayerController::isCompleted() {
-    return (target && player.lock() && player.lock()->getCoords() == *target)
-           ||
-           (player.lock() && !player.lock()->getMap()->canStep(*target));
-}
-
-void CPlayerController::setPlayer(std::shared_ptr<CPlayer> c) {
-    player = c;
+bool CPlayerController::isCompleted(std::shared_ptr<CPlayer> player) {
+    return !target
+           || currentStep >= path.size()
+           || currentStep < 0
+           || player->getCoords() == *target
+           || !player->getMap()->canStep(*target);
 }
 

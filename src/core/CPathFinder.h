@@ -27,10 +27,13 @@ public:
     //TODO change naming
     static std::shared_ptr<vstd::future<Coords, void> > findNextStep(Coords start, Coords goal,
                                                                      const std::function<bool(
-                                                                             const Coords &)> &canStep);
+                                                                             const Coords &)> &canStep,
+                                                                     const std::function<std::pair<bool, Coords>(
+                                                                             const Coords &)> waypoint);
 
-    static std::set<Coords> findPath(Coords start, Coords goal,
-                                     const std::function<bool(const Coords &)> &canStep);
+    static std::vector<Coords> findPath(Coords start, Coords goal,
+                                        const std::function<bool(const Coords &)> &canStep,
+                                        const std::function<std::pair<bool, Coords>(const Coords &)> waypoint);
 
     static void saveMap(Coords start, const std::function<bool(const Coords &)> &canStep, const std::string &path,
                         const std::function<std::pair<bool, Coords>(const Coords &)> &waypoint);

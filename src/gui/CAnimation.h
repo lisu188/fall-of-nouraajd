@@ -51,12 +51,20 @@ private:
 
 
 class CStaticAnimation : public CAnimation {
-V_META(CStaticAnimation, CAnimation, vstd::meta::empty())
+V_META(CStaticAnimation, CAnimation,
+       V_PROPERTY(CStaticAnimation, int, rotation, getRotation, setRotation))
 
 public:
     CStaticAnimation();
 
     void renderObject(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> rect, int frameTime) override;
+
+private:
+    int rotation = 0;
+public:
+    int getRotation() const;
+
+    void setRotation(int rotation);
 };
 
 class CDynamicAnimation : public CAnimation {

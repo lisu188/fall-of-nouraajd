@@ -34,7 +34,8 @@ CMapGraphicsObject::getProxiedObjects(std::shared_ptr<CGui> gui, int x, int y) {
             gui->getGame()->getMap(), [&](auto map) {
                 std::list<std::shared_ptr<CGameGraphicsObject>> return_val;
 
-                auto actualCoords = guiToMap(gui, Coords(x, y, gui->getGame()->getMap()->getPlayer()->getCoords().z));
+                std::shared_ptr<CPlayer> player = gui->getGame()->getMap()->getPlayer();
+                auto actualCoords = guiToMap(gui, Coords(x, y, player->getCoords().z));
 
                 std::shared_ptr<CTile> tile = map->getTile(actualCoords.x, actualCoords.y, actualCoords.z);
 
@@ -43,11 +44,12 @@ CMapGraphicsObject::getProxiedObjects(std::shared_ptr<CGui> gui, int x, int y) {
                             if (type == SDL_MOUSEBUTTONDOWN && button == SDL_BUTTON_LEFT) {
                                 auto controller = vstd::cast<CPlayerController>(
                                         gui->getGame()->getMap()->getPlayer()->getController());
-                                controller->setTarget(actualCoords);
+                                auto player = gui->getGame()->getMap()->getPlayer();
+                                controller->setTarget(player, actualCoords);
 
                                 if (!gui->getMap()->isMoving()) {
                                     //move this code
-                                    while (!controller->isCompleted()) {
+                                    while (!controller->isCompleted(player)) {
                                         gui->getGame()->getMap()->move();
                                     }
                                 }
@@ -67,12 +69,13 @@ CMapGraphicsObject::getProxiedObjects(std::shared_ptr<CGui> gui, int x, int y) {
                     showCoordinates(gui, return_val, actualCoords);
                 }
 
-                if (true){//map->getBoolProperty("showPath")) {
-                    auto path = vstd::cast<CPlayerController>(
-                            gui->getGame()->getMap()->getPlayer()->getController())->getPath();
-                    if (vstd::ctn(path, actualCoords)) {
-                        showFootprint(gui, return_val, actualCoords);
-                    }
+
+                auto path = vstd::cast<CPlayerController>(
+                        player->getController())->isOnPath(player, actualCoords);
+                if (path.first) {
+                    showFootprint(gui,
+                                  path.second,
+                                  return_val);
                 }
 
                 return return_val;
@@ -98,9 +101,26 @@ void CMapGraphicsObject::showCoordinates(std::shared_ptr<CGui> &gui,
 }
 
 void CMapGraphicsObject::showFootprint(std::shared_ptr<CGui> &gui,
-                                       std::list<std::shared_ptr<CGameGraphicsObject>> &return_val,
-                                       const Coords &actualCoords) const {
-    auto footprint = CAnimationProvider::getAnimation(gui->getGame(), "images/footprint");
+                                       Coords::Direction dir,
+                                       std::list<std::shared_ptr<CGameGraphicsObject>> &return_val) const {
+    auto footprint = vstd::cast<CStaticAnimation>(CAnimationProvider::getAnimation(gui->getGame(), "images/footprint"));
+    switch (dir) {
+        case Coords::UNDEFINED:
+        case Coords::ZERO:
+        case Coords::NORTH:
+        case Coords::UP:
+        case Coords::DOWN:
+            break;
+        case Coords::EAST:
+            footprint->setRotation(90);
+            break;
+        case Coords::SOUTH:
+            footprint->setRotation(180);
+            break;
+        case Coords::WEST:
+            footprint->setRotation(270);
+            break;
+    }
     auto layout = gui->getGame()->getObjectHandler()->createObject<CLayout>(gui->getGame());
     layout->setHorizontal("CENTER");
     layout->setVertical("CENTER");
@@ -146,28 +166,33 @@ bool CMapGraphicsObject::keyboardEvent(std::shared_ptr<CGui> gui, SDL_EventType 
         std::shared_ptr<CPlayer> player = gui->getGame()->getMap()->getPlayer();
         switch (i) {
             case SDLK_UP:
-                vstd::cast<CPlayerController>(player->getController())->setTarget(
-                        player->getCoords() + Coords(0, -1, 0));
+                vstd::cast<CPlayerController>(player->getController())->setTarget(player,
+                                                                                  player->getCoords() +
+                                                                                  NORTH);
                 gui->getGame()->getMap()->move();
                 return true;
             case SDLK_DOWN:
-                vstd::cast<CPlayerController>(player->getController())->setTarget(
-                        player->getCoords() + Coords(0, 1, 0));
+                vstd::cast<CPlayerController>(player->getController())->setTarget(player,
+                                                                                  player->getCoords() +
+                                                                                  SOUTH);
                 gui->getGame()->getMap()->move();
                 return true;
             case SDLK_LEFT:
-                vstd::cast<CPlayerController>(player->getController())->setTarget(
-                        player->getCoords() + Coords(-1, 0, 0));
+                vstd::cast<CPlayerController>(player->getController())->setTarget(player,
+                                                                                  player->getCoords() +
+                                                                                  WEST);
                 gui->getGame()->getMap()->move();
                 return true;
             case SDLK_RIGHT:
-                vstd::cast<CPlayerController>(player->getController())->setTarget(
-                        player->getCoords() + Coords(1, 0, 0));
+                vstd::cast<CPlayerController>(player->getController())->setTarget(player,
+                                                                                  player->getCoords() +
+                                                                                  EAST);
                 gui->getGame()->getMap()->move();
                 return true;
             case SDLK_SPACE:
-                vstd::cast<CPlayerController>(player->getController())->setTarget(
-                        player->getCoords() + Coords(0, 0, 0));
+                vstd::cast<CPlayerController>(player->getController())->setTarget(player,
+                                                                                  player->getCoords() +
+                                                                                  ZERO);
                 gui->getGame()->getMap()->move();
                 return true;
             case SDLK_s:
