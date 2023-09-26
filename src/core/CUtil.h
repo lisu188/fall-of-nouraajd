@@ -52,7 +52,19 @@ struct Coords {
     bool same(const Coords &a) const;
 
     bool adjacentOrSame(const Coords &a) const;
-};
+
+    enum Direction {
+        UNDEFINED,
+        ZERO,
+        EAST,
+        WEST,
+        NORTH,
+        SOUTH,
+        UP,
+        DOWN
+    };
+} extern ZERO, EAST, WEST, NORTH, SOUTH, UP, DOWN;
+
 
 class CUtil {
 public:
@@ -66,6 +78,8 @@ public:
     static bool isIn(const std::shared_ptr<SDL_Rect> &rect, int x, int y);
 
     static int parseKey(SDL_Keycode i);
+
+    static Coords::Direction getDirection(Coords coords);
 
     template<typename Predicate>
     static std::set<std::string> findFiles(std::string dir, Predicate pred) {

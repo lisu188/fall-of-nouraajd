@@ -33,19 +33,20 @@ class CPlayerController : public CController {
 V_META(CPlayerController, CController, vstd::meta::empty())
 
 public:
-    void setPlayer(std::shared_ptr<CPlayer> c);
-
-    void setTarget(Coords coords);
+    void setTarget(std::shared_ptr<CPlayer> player, Coords target);
 
     virtual std::shared_ptr<vstd::future<Coords, void>> control(std::shared_ptr<CCreature> c);
 
-    bool isCompleted();
+    std::pair<bool, Coords::Direction> isOnPath(std::shared_ptr<CPlayer> player, Coords coords);
 
-    std::set<Coords> getPath();
+    bool isCompleted(std::shared_ptr<CPlayer> player);
 
 private:
     std::shared_ptr<Coords> target;
-    std::weak_ptr<CPlayer> player;
+    std::unordered_map<int, Coords> path;
+    int currentStep = 0;
+
+    std::vector<Coords> calculatePath(std::shared_ptr<CPlayer> ptr);
 };
 
 class CFightController : public CGameObject {

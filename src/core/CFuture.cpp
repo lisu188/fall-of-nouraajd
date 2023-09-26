@@ -32,6 +32,12 @@ namespace vstd {
         };
     }
 
+    std::function<void(std::function<void()>)> get_call_now_handler() {
+        return [](std::function<void()> f) {
+            f();
+        };
+    }
+
     std::function<void(std::function<void()>)> get_call_later_block_handler() {
         return [](std::function<void()> f) {
             vstd::event_loop<>::instance()->await(f);
@@ -48,9 +54,9 @@ namespace vstd {
         };
     }
 
-    std::function<void(std::function<bool()>, std::function<void()>)>  get_call_when_handler() {
-        return [](std::function<bool()> pred,std::function<void()> func) {
-            vstd::event_loop<>::instance()->invoke_when(pred,func);
+    std::function<void(std::function<bool()>, std::function<void()>)> get_call_when_handler() {
+        return [](std::function<bool()> pred, std::function<void()> func) {
+            vstd::event_loop<>::instance()->invoke_when(pred, func);
         };
     }
 
