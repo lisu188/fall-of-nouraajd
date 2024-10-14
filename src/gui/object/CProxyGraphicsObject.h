@@ -28,10 +28,6 @@ V_META(CProxyGraphicsObject, CGameGraphicsObject,
        V_PROPERTY(CProxyGraphicsObject, int, y, getY, setY)
 )
 
-    void render(std::shared_ptr<CGui> reneder, int frameTime) override;
-
-    bool event(std::shared_ptr<CGui> gui, SDL_Event *event) override;
-
 private:
     int x, y;
 
