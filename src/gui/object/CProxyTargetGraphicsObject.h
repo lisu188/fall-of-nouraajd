@@ -22,16 +22,12 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 class CProxyGraphicsObject;
 
 class CProxyTargetGraphicsObject : public CGameGraphicsObject {
-V_META(CProxyTargetGraphicsObject, CGameGraphicsObject,
-       V_METHOD(CProxyTargetGraphicsObject, refresh),
-       V_METHOD(CProxyTargetGraphicsObject, refreshAll),
-       V_PROPERTY(CProxyTargetGraphicsObject, std::string, proxyLayout, getProxyLayout, setProxyLayout))
+    V_META(CProxyTargetGraphicsObject, CGameGraphicsObject,
+           V_METHOD(CProxyTargetGraphicsObject, refresh),
+           V_METHOD(CProxyTargetGraphicsObject, refreshAll),
+           V_PROPERTY(CProxyTargetGraphicsObject, std::string, proxyLayout, getProxyLayout, setProxyLayout))
 public:
-    void render(std::shared_ptr<CGui> reneder, int frameTime) override;
-
-    bool event(std::shared_ptr<CGui> gui, SDL_Event *event) override;
-
-    virtual std::list<std::shared_ptr<CGameGraphicsObject>>
+    virtual std::list<std::shared_ptr<CGameGraphicsObject> >
     getProxiedObjects(std::shared_ptr<CGui> gui, int x, int y);
 
     virtual int getSizeX(std::shared_ptr<CGui> gui);
@@ -41,9 +37,8 @@ public:
     CProxyTargetGraphicsObject() = default;
 
 private:
-    std::map<int, std::map<int, std::shared_ptr<CProxyGraphicsObject>>> proxyObjects;
+    std::map<int, std::map<int, std::shared_ptr<CProxyGraphicsObject> > > proxyObjects;
     std::string proxyLayout = "CProxyGraphicsLayout";
-
 
 public:
     std::string getProxyLayout();

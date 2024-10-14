@@ -22,9 +22,6 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "gui/CLayout.h"
 #include "gui/CGui.h"
 
-void CProxyTargetGraphicsObject::render(std::shared_ptr<CGui> gui, int frameTime) {
-    CGameGraphicsObject::render(gui, frameTime);
-}
 
 void CProxyTargetGraphicsObject::refresh() {
     vstd::with<void>(getGui(), [this](auto gui) {
@@ -75,7 +72,7 @@ void CProxyTargetGraphicsObject::refresh() {
 void CProxyTargetGraphicsObject::addProxyObject(auto gui, int &x, int &y) {
     std::shared_ptr<CProxyGraphicsObject> nh = std::make_shared<CProxyGraphicsObject>(x, y);
     std::shared_ptr<CLayout> layout1 = gui->getGame()->template createObject<CLayout>(
-            proxyLayout);
+        proxyLayout);
     layout1->setNumericProperty("tileSize", getTileSize(this->ptr<CGameGraphicsObject>()));
     nh->setLayout(layout1);
     proxyObjects[x][y] = nh;
@@ -106,11 +103,6 @@ void CProxyTargetGraphicsObject::refreshObject(int x, int y) {
     }
 }
 
-bool CProxyTargetGraphicsObject::event(std::shared_ptr<CGui> gui, SDL_Event *event) {
-    return CGameGraphicsObject::event(gui, event);
-}
-
-
 int CProxyTargetGraphicsObject::getSizeX(std::shared_ptr<CGui> gui) {
     return 0;
 }
@@ -119,7 +111,7 @@ int CProxyTargetGraphicsObject::getSizeY(std::shared_ptr<CGui> gui) {
     return 0;
 }
 
-std::list<std::shared_ptr<CGameGraphicsObject>>
+std::list<std::shared_ptr<CGameGraphicsObject> >
 CProxyTargetGraphicsObject::getProxiedObjects(std::shared_ptr<CGui> gui, int x, int y) {
     return {};
 }
