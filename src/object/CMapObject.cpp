@@ -20,20 +20,18 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CGame.h"
 
 CMapObject::CMapObject() {
-
 }
 
 CMapObject::~CMapObject() {
-
 }
 
 void CMapObject::move(int x, int y, int z) {
-    if (dynamic_cast<Moveable *> ( this )) {
+    if (dynamic_cast<Moveable *>(this) && getMap()) {
         if (getMap()->getTile(posx + x, posy + y, posz) && !getMap()->getTile(posx + x, posy + y, posz)->canStep()) {
             vstd::logger::debug(getName(), "cannot step on:", posx + x, posy + y, posz);
             return;
         }
-        dynamic_cast<Moveable *> ( this )->beforeMove();
+        dynamic_cast<Moveable *>(this)->beforeMove();
     }
 
     Coords oldCoords(posx, posy, posz);
@@ -42,10 +40,12 @@ void CMapObject::move(int x, int y, int z) {
     posz += z;
     Coords newCoords(posx, posy, posz);
 
-    getMap()->objectMoved(this->ptr<CMapObject>(), oldCoords, newCoords);
+    if (getMap()) {
+        getMap()->objectMoved(this->ptr<CMapObject>(), oldCoords, newCoords);
+    }
 
-    if (dynamic_cast<Moveable *> ( this )) {
-        dynamic_cast<Moveable *> ( this )->afterMove();
+    if (dynamic_cast<Moveable *>(this) && getMap()) {
+        dynamic_cast<Moveable *>(this)->afterMove();
     }
 }
 
@@ -74,15 +74,12 @@ int CMapObject::getPosX() const {
 }
 
 void CMapObject::onTurn(std::shared_ptr<CGameEvent>) {
-
 }
 
 void CMapObject::onCreate(std::shared_ptr<CGameEvent>) {
-
 }
 
 void CMapObject::onDestroy(std::shared_ptr<CGameEvent>) {
-
 }
 
 Coords CMapObject::getCoords() {
