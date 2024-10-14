@@ -60,7 +60,7 @@ private:
 public:
     CGui();
 
-    ~CGui();
+    ~CGui() override;
 
     void render(int i1);
 
