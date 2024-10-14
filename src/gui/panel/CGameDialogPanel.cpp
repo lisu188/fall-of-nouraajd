@@ -133,8 +133,7 @@ void CGameDialogPanel::selectOption(const std::shared_ptr<CDialogOption> &option
 bool CGameDialogPanel::keyboardEvent(std::shared_ptr<CGui> sharedPtr, SDL_EventType type, SDL_Keycode i) {
     //TODO: util function to transalte number keys to int
     if (type == SDL_KEYDOWN) {
-        auto opt = CUtil::parseKey(i) - 1;
-        if (opt > -1 && opt < getCurrentOptions().size()) {
+        if (const auto opt = CUtil::parseKey(i) - 1; opt > -1 && static_cast<size_t>(opt) < getCurrentOptions().size()) {
             selectOption(opt);
             return true;
         }

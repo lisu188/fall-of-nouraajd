@@ -127,7 +127,7 @@ public:
 private:
     virtual void render(std::shared_ptr<CGui> reneder, int frameTime);
 
-    virtual bool event(std::shared_ptr<CGui> gui, SDL_Event *event);
+    bool event(std::shared_ptr<CGui> gui, SDL_Event *event);
 
     int getTopPriority();
 
