@@ -25,7 +25,7 @@ def game_test(f):
         result = f(self)
         success = result[0]
         log = result[1]
-        open(n + ".json", "w").write(str(log))
+        open("test/" + n + ".json", "w").write(str(log))
         self.assertTrue(success)
 
     return wrapper
@@ -98,14 +98,21 @@ class GameTest(unittest.TestCase):
     def test_pathfinder(self):
         g = game.CGameLoader.loadGame()
         game.CGameLoader.startGameWithPlayer(g, "nouraajd", "Warrior")
-        g.getMap().dumpPaths("pathfinder.png")
-        return True, "pathfinder.png"
+        g.getMap().dumpPaths("test/pathfinder.png")
+        return True, "test/pathfinder.png"
 
     @game_test
     def test_load(self):
         g = game.CGameLoader.loadGame()
         game.CGameLoader.loadSavedGame(g, 'gooby')
         return True, ""
+
+    @game_test
+    def test_random(self):
+        g = game.CGameLoader.loadGame()
+        game.CGameLoader.startRandomGameWithPlayer(g, "Warrior")
+        g.getMap().dumpPaths("test/random.png")
+        return True, "test/random.png"
 
 
 if __name__ == '__main__':

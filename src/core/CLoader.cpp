@@ -66,30 +66,33 @@ std::string getMapPath(std::string mapName) {
 }
 
 std::shared_ptr<CMap> CMapLoader::loadNewMap(const std::shared_ptr<CGame> &game, const std::string &mapName) {
-    std::shared_ptr<CMap> map = game->getObjectHandler()->createObject<CMap>(game, "CMap");
-    game->setMap(map);
-    game->getObjectHandler()->registerConfig(getConfigPaths(mapName));
-    CPluginLoader::loadPlugin(game, getScriptPath(mapName));
-    std::shared_ptr<json> mapc = CConfigurationProvider::getConfig(getMapPath(mapName));
-    loadFromTmx(map, mapc);
-    map->setMapName(mapName);
-    return map;
+    if (std::shared_ptr<json> mapc = CConfigurationProvider::getConfig(getMapPath(mapName))) {
+        std::shared_ptr<CMap> map = game->getObjectHandler()->createObject<CMap>(game);
+        game->setMap(map);
+        game->getObjectHandler()->registerConfig(getConfigPaths(mapName));
+        CPluginLoader::loadPlugin(game, getScriptPath(mapName));
+        loadFromTmx(map, mapc);
+        map->setMapName(mapName);
+        return map;
+    }
+    return game->getObjectHandler()->createObject<CMap>(game);
 }
 
 std::shared_ptr<CMap> CMapLoader::loadSavedMap(const std::shared_ptr<CGame> &game, const std::string &name) {
-    std::string path = "save/" + name + ".json";
-    std::shared_ptr<json> save = CConfigurationProvider::getConfig(path);
-    auto mapName = (*save)["properties"]["mapName"].get<std::string>();
+    const std::string path = "save/" + name + ".json";
 
-    game->getObjectHandler()->registerConfig(getConfigPaths(mapName));
-    CPluginLoader::loadPlugin(game, getScriptPath(mapName));
-    game->getObjectHandler()->registerConfig(getConfigPaths(mapName));//TODO: duplicate?
+    if (std::shared_ptr<json> save = CConfigurationProvider::getConfig(path)) {
+        const auto mapName = (*save)["properties"]["mapName"].get<std::string>();
 
-    game->getObjectHandler()->registerConfig(name, save);
+        game->getObjectHandler()->registerConfig(getConfigPaths(mapName));
+        CPluginLoader::loadPlugin(game, getScriptPath(mapName));
+        game->getObjectHandler()->registerConfig(getConfigPaths(mapName)); //TODO: duplicate?
 
-    std::shared_ptr<CMap> map = game->getObjectHandler()->createObject<CMap>(game, name);
+        game->getObjectHandler()->registerConfig(name, save);
 
-    return map;
+        return game->getObjectHandler()->createObject<CMap>(game, name);
+    }
+    return game->getObjectHandler()->createObject<CMap>(game);
 }
 
 std::shared_ptr<CMap> CMapLoader::loadNewMapWithPlayer(const std::shared_ptr<CGame> &game, const std::string &name,
@@ -97,7 +100,6 @@ std::shared_ptr<CMap> CMapLoader::loadNewMapWithPlayer(const std::shared_ptr<CGa
     std::shared_ptr<CMap> map = loadNewMap(game, name);
     std::shared_ptr<CPlayer> ptr = createPlayer(game, player);
     map->setPlayer(ptr);
-
 
     return map;
 }
@@ -173,6 +175,8 @@ void CMapLoader::handleObjectLayer(const std::shared_ptr<CMap> &map, const json 
 
 std::shared_ptr<CMap> CRandomMapGenerator::loadRandomMap(const std::shared_ptr<CGame> &game) {
     auto map = CMapLoader::loadNewMap(game, "");
+
+    //TODO: this should be passed
     auto options = rdg<>::Options();
 
     options.n_rows = 555;
@@ -300,11 +304,11 @@ void CGameLoader::loadGui(const std::shared_ptr<CGame> &game) {
 
 void CPluginLoader::loadPlugin(const std::shared_ptr<CGame> &game, const std::string &path) {
     PY_SAFE(
-            std::string code = CResourcesProvider::getInstance()->load(path);
-            auto name = game->getScriptHandler()->add_class(code, {"game.CPlugin"});
-            game->loadPlugin(
-                    game->getScriptHandler()->get_object<std::function<std::shared_ptr<CPlugin>()>>(name));
-            game->getScriptHandler()->execute_script(vstd::join({"del", name}, " "));
+        std::string code = CResourcesProvider::getInstance()->load(path);
+        auto name = game->getScriptHandler()->add_class(code, {"game.CPlugin"});
+        game->loadPlugin(
+            game->getScriptHandler()->get_object<std::function<std::shared_ptr<CPlugin>()>>(name));
+        game->getScriptHandler()->execute_script(vstd::join({"del", name}, " "));
     )
 }
 
