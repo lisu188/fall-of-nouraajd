@@ -76,7 +76,8 @@ void initModule2() {
 
     class_<CDialog, bases<CGameObject>, boost::noncopyable, std::shared_ptr<CDialog>>("CDialogBase");
     class_<CWrapper<CDialog>, bases<CDialog>, boost::noncopyable, std::shared_ptr<CWrapper<CDialog>>>("CDialogBase2")
-            .def("invokeAction", &CWrapper<CDialog>::invokeAction);
+            .def("invokeAction", &CWrapper<CDialog>::invokeAction)
+            .def("invokeCondition", &CWrapper<CDialog>::invokeCondition);
 
     class_<CDialogOption, bases<CGameObject>, boost::noncopyable, std::shared_ptr<CDialogOption>>("CDialogOption");
     class_<CDialogState, bases<CGameObject>, boost::noncopyable, std::shared_ptr<CDialogState>>("CDialogState");
