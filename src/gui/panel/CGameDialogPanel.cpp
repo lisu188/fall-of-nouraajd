@@ -37,7 +37,7 @@ void CGameDialogPanel::reload() {
     if (currentStateId != "EXIT") {
         std::shared_ptr<CDialogState> state = dialog->getState(currentStateId);
 
-        std::set<std::shared_ptr<CGameGraphicsObject>> widgets;
+        std::set<std::shared_ptr<CGameGraphicsObject> > widgets;
 
         std::shared_ptr<CTextWidget> mainWidget = getGame()->createObject<CTextWidget>("CTextWidget");
         mainWidget->setCentered(false);
@@ -50,12 +50,12 @@ void CGameDialogPanel::reload() {
             std::string clickName = vstd::to_hex_hash(option);
 
             auto _option = option;
-            self->meta()->set_method<CGameGraphicsObject, void, std::shared_ptr<CGui>>(clickName, self,
-                                                                                       [self, _option](
-                                                                                               CGameGraphicsObject *_self,
-                                                                                               std::shared_ptr<CGui> gui) {
-                                                                                           self->selectOption(_option);
-                                                                                       });
+            self->meta()->set_method<CGameGraphicsObject, void, std::shared_ptr<CGui> >(clickName, self,
+                [self, _option](
+            CGameGraphicsObject *_self,
+            std::shared_ptr<CGui> gui) {
+                    self->selectOption(_option);
+                });
 
 
             std::shared_ptr<CTextWidget> optionWidget = getGame()->createObject<CTextWidget>("CTextWidget");
@@ -96,7 +96,7 @@ std::shared_ptr<CDialogOption> CGameDialogPanel::getOption(int option) {
     return getCurrentOptions()[option];
 }
 
-std::map<int, std::shared_ptr<CDialogOption>, std::greater<>>
+std::map<int, std::shared_ptr<CDialogOption>, std::greater<> >
 CGameDialogPanel::getCurrentOptions() {
     //TODO: make this generic and in vstd
     struct OptionComparator {
@@ -105,12 +105,12 @@ CGameDialogPanel::getCurrentOptions() {
         }
     };
 
-    auto options = vstd::cast<std::set<std::shared_ptr<CDialogOption>, OptionComparator>>(
-            dialog->getState(currentStateId)->getOptions() | boost::adaptors::filtered([this](auto option) {
-                return dialog->invokeCondition(option->getCondition());
-            }));
+    auto options = vstd::cast<std::set<std::shared_ptr<CDialogOption>, OptionComparator> >(
+        dialog->getState(currentStateId)->getOptions() | boost::adaptors::filtered([this](auto option) {
+            return option->getCondition().empty() || dialog->invokeCondition(option->getCondition());
+        }));
 
-    std::map<int, std::shared_ptr<CDialogOption>, std::greater<>> return_value;
+    std::map<int, std::shared_ptr<CDialogOption>, std::greater<> > return_value;
     for (const auto &it: options | boost::adaptors::indexed(0)) {
         return_value[it.index()] = it.value();
     }
@@ -124,7 +124,7 @@ void CGameDialogPanel::selectOption(int option) {
 void CGameDialogPanel::selectOption(const std::shared_ptr<CDialogOption> &option) {
     if (!option->getAction().empty()) {
         dialog->invokeAction(
-                option->getAction());
+            option->getAction());
     }
     currentStateId = option->getNextStateId();
     reload();
@@ -133,7 +133,8 @@ void CGameDialogPanel::selectOption(const std::shared_ptr<CDialogOption> &option
 bool CGameDialogPanel::keyboardEvent(std::shared_ptr<CGui> sharedPtr, SDL_EventType type, SDL_Keycode i) {
     //TODO: util function to transalte number keys to int
     if (type == SDL_KEYDOWN) {
-        if (const auto opt = CUtil::parseKey(i) - 1; opt > -1 && static_cast<size_t>(opt) < getCurrentOptions().size()) {
+        if (const auto opt = CUtil::parseKey(i) - 1;
+            opt > -1 && static_cast<size_t>(opt) < getCurrentOptions().size()) {
             selectOption(opt);
             return true;
         }
