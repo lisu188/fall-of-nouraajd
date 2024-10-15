@@ -19,7 +19,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 typedef std::function<bool(const Coords &, const Coords &)> Compare;
 typedef std::priority_queue<Coords, std::vector<Coords>, Compare> Queue;
-typedef std::shared_ptr<std::unordered_map<Coords, int>> Values;
+typedef std::shared_ptr<std::unordered_map<Coords, int> > Values;
 
 static Coords getNextStep(const Coords &start, const Coords &goal, const Values &values,
                           const std::function<std::pair<bool, Coords>(const Coords &)> waypoint) {
@@ -51,7 +51,7 @@ static Values fillValues(const std::function<bool(const Coords &)> &canStep,
         return dista > distb;
     });
     std::unordered_set<Coords> marked;
-    Values values = std::make_shared<std::unordered_map<Coords, int>>();
+    Values values = std::make_shared<std::unordered_map<Coords, int> >();
 
     if (canStep(goal)) {
         nodes.push(goal);
@@ -84,7 +84,7 @@ static Values fillValues(const std::function<bool(const Coords &)> &canStep,
 static Values fillAllValues(const std::function<bool(const Coords &)> &canStep, const Coords &goal,
                             const std::function<std::pair<bool, Coords>(const Coords &)> waypoint) {
     std::unordered_set<Coords> marked;
-    Values values = std::make_shared<std::unordered_map<Coords, int>>();
+    Values values = std::make_shared<std::unordered_map<Coords, int> >();
     Queue nodes([values](const Coords &a, const Coords &b) {
         int dista;
         auto it = values->find(a);
@@ -128,21 +128,21 @@ static Values fillAllValues(const std::function<bool(const Coords &)> &canStep, 
     return values;
 }
 
-std::shared_ptr<vstd::future<Coords, void>> CPathFinder::findNextStep(Coords start, Coords goal,
-                                                                      const std::function<bool(
-                                                                              const Coords &)> &canStep,
-                                                                      const std::function<std::pair<bool, Coords>(
-                                                                              const Coords &)> waypoint) {
+std::shared_ptr<vstd::future<Coords, void> > CPathFinder::findNextStep(Coords start, Coords goal,
+                                                                       const std::function<bool(
+                                                                           const Coords &)> &canStep,
+                                                                       const std::function<std::pair<bool, Coords>(
+                                                                           const Coords &)> waypoint) {
     return vstd::async([=]() {
         return getNextStep(start, goal, fillValues(
-                canStep, goal, start, waypoint), waypoint);
+                               canStep, goal, start, waypoint), waypoint);
     });
 }
 
 std::vector<Coords>
 CPathFinder::findPath(Coords start, Coords goal, const std::function<bool(const Coords &)> &canStep,
                       const std::function<std::pair<bool, Coords>(
-                              const Coords &)> waypoint) {
+                          const Coords &)> waypoint) {
     std::vector<Coords> path;
     Values val = fillValues(canStep, goal, start, waypoint);
     Coords next = getNextStep(start, goal, val, waypoint);
@@ -194,7 +194,8 @@ void CPathFinder::saveMap(Coords start, const std::function<bool(const Coords &)
         rect.y = posy * factor;
         rect.w = factor;
         rect.h = factor;
-        SDL_FillRect(surface, &rect, SDL_MapRGB(surface->format, scale * val, scale * val, scale * val));
+        float r = 256.0 - (scale * val);
+        SDL_FillRect(surface, &rect, SDL_MapRGB(surface->format, r, r, r));
     }
     IMG_SavePNG(surface, path.c_str());
     SDL_FreeSurface(surface);
