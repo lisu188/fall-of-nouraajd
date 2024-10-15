@@ -59,54 +59,13 @@ extern void add_arr_member(const std::shared_ptr<json> &object, int value);
 namespace {
     struct register_types4 {
         register_types4() {
-            CTypes::register_type<CGameObject>();
-            {
-                CTypes::register_type<CGameGraphicsObject, CGameObject>();
-                {
-                    CTypes::register_type<CGui, CGameGraphicsObject, CGameObject>();
-                    CTypes::register_type<CStatsGraphicsObject, CGameGraphicsObject, CGameObject>();
-                    CTypes::register_type<CConsoleGraphicsObject, CGameGraphicsObject, CGameObject>();
-                    CTypes::register_type<CProxyGraphicsObject, CGameGraphicsObject, CGameObject>();
-                    CTypes::register_type<CSideBar, CGameGraphicsObject, CGameObject>();
-
-                    CTypes::register_type<CProxyTargetGraphicsObject, CGameGraphicsObject, CGameObject>();
-                    {
-                        CTypes::register_type<CMapGraphicsObject, CProxyTargetGraphicsObject, CGameGraphicsObject, CGameObject>();
-                        CTypes::register_type<CListView, CProxyTargetGraphicsObject, CGameGraphicsObject, CGameObject>();
-                        CTypes::register_type<CCreatureView, CProxyTargetGraphicsObject, CGameGraphicsObject, CGameObject>();
-                    }
-                    CTypes::register_type<CGamePanel, CGameGraphicsObject, CGameObject>();
-                    {
-                        CTypes::register_type<CGameTextPanel, CGamePanel, CGameGraphicsObject, CGameObject>();
-                        CTypes::register_type<CGameInventoryPanel, CGamePanel, CGameGraphicsObject, CGameObject>();
-                        CTypes::register_type<CGameTradePanel, CGamePanel, CGameGraphicsObject, CGameObject>();
-                        CTypes::register_type<CGameFightPanel, CGamePanel, CGameGraphicsObject, CGameObject>();
-                        CTypes::register_type<CGameQuestPanel, CGamePanel, CGameGraphicsObject, CGameObject>();
-                        CTypes::register_type<CGameCharacterPanel, CGamePanel, CGameGraphicsObject, CGameObject>();
-                        CTypes::register_type<CGameQuestionPanel, CGamePanel, CGameGraphicsObject, CGameObject>();
-                        CTypes::register_type<CGameDialogPanel, CGamePanel, CGameGraphicsObject, CGameObject>();
-                        CTypes::register_type<CGameLootPanel, CGamePanel, CGameGraphicsObject, CGameObject>();
-                    }
-                    CTypes::register_type<CWidget, CGameGraphicsObject, CGameObject>();
-                    CTypes::register_type<CTextWidget, CWidget, CGameGraphicsObject, CGameObject>();
-                    CTypes::register_type<CButton, CTextWidget, CWidget, CGameGraphicsObject, CGameObject>();
-
-                    CTypes::register_type<CAnimation, CGameGraphicsObject, CGameObject>();
-                    {
-                        CTypes::register_type<CStaticAnimation, CAnimation, CGameGraphicsObject, CGameObject>();
-                        CTypes::register_type<CDynamicAnimation, CAnimation, CGameGraphicsObject, CGameObject>();
-                        CTypes::register_type<CSelectionBox, CAnimation, CGameGraphicsObject, CGameObject>();
-                    }
-                    CTypes::register_type<CTooltip, CGameGraphicsObject, CGameObject>();
-                }
-                CTypes::register_type<CLayout, CGameObject>();
-                {
+            CTypes::register_type<CGameObject>(); {
+                CTypes::register_type<CLayout, CGameObject>(); {
                     CTypes::register_type<CCenteredLayout, CLayout, CGameObject>();
                     CTypes::register_type<CParentLayout, CLayout, CGameObject>();
                     CTypes::register_type<CProxyGraphicsLayout, CLayout, CGameObject>();
                 }
             }
         }
-    }
-            _register_types4;
+    } _register_types4;
 }
