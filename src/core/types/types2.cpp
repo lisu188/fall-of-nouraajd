@@ -16,10 +16,8 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #include "core/CGame.h"
-#include "gui/panel/CGameQuestPanel.h"
 #include "core/CTypes.h"
 #include "core/CWrapper.h"
-#include "core/CController.h"
 
 
 extern void add_member(const std::shared_ptr<json> &object, const std::string &key, const std::string &value);

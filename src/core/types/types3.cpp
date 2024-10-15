@@ -16,7 +16,6 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "gui/panel/CGameQuestPanel.h"
 #include "core/CTypes.h"
 #include "core/CWrapper.h"
 #include "core/CController.h"
@@ -43,46 +42,38 @@ extern void add_arr_member(const std::shared_ptr<json> &object, int value);
 namespace {
     struct register_types3 {
         register_types3() {
-            CTypes::register_type<CGameObject>();
-            {
-                CTypes::register_type<CEffect, CGameObject>();
-                {
+            CTypes::register_type<CGameObject>(); {
+                CTypes::register_type<CEffect, CGameObject>(); {
                     CTypes::register_type<CWrapper<CEffect>, CEffect, CGameObject>();
                 }
 
                 CTypes::register_type<CMarket, CGameObject>();
-                CTypes::register_type<CDialog, CGameObject>();
-                {
+                CTypes::register_type<CDialog, CGameObject>(); {
                     CTypes::register_type<CWrapper<CDialog>, CDialog, CGameObject>();
                 }
                 CTypes::register_type<CDialogOption, CGameObject>();
                 CTypes::register_type<CDialogState, CGameObject>();
 
-                CTypes::register_type<CTrigger, CGameObject>();
-                {
+                CTypes::register_type<CTrigger, CGameObject>(); {
                     CTypes::register_type<CWrapper<CTrigger>, CTrigger, CGameObject>();
                 }
 
-                CTypes::register_type<CQuest, CGameObject>();
-                {
+                CTypes::register_type<CQuest, CGameObject>(); {
                     CTypes::register_type<CWrapper<CQuest>, CQuest, CGameObject>();
                 }
 
                 CTypes::register_type<Stats, CGameObject>();
                 CTypes::register_type<Damage, CGameObject>();
 
-                CTypes::register_type<CTile, CGameObject>();
-                {
+                CTypes::register_type<CTile, CGameObject>(); {
                     CTypes::register_type<CWrapper<CTile>, CTile, CGameObject>();
                 }
 
-                CTypes::register_type<CInteraction, CGameObject>();
-                {
+                CTypes::register_type<CInteraction, CGameObject>(); {
                     CTypes::register_type<CWrapper<CInteraction>, CInteraction, CGameObject>();
                 }
 
-                CTypes::register_type<CController, CGameObject>();
-                {
+                CTypes::register_type<CController, CGameObject>(); {
                     CTypes::register_type<CTargetController, CController, CGameObject>();
                     CTypes::register_type<CRandomController, CController, CGameObject>();
                     CTypes::register_type<CGroundController, CController, CGameObject>();
