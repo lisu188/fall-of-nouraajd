@@ -185,6 +185,8 @@ configure_file(res/images/buildings/teleporter.png images/buildings/teleporter.p
 configure_file(res/images/buildings/dungeon.png images/buildings/dungeon.png COPYONLY)
 configure_file(res/images/buildings/groundhole.png images/buildings/groundhole.png COPYONLY)
 configure_file(res/images/buildings/tavern.png images/buildings/tavern.png COPYONLY)
+configure_file(res/images/buildings/town_hall.png images/buildings/town_hall.png COPYONLY)
+
 configure_file(res/images/terrain.png images/terrain.png COPYONLY)
 
 configure_file(res/images/players/assasin.png images/players/assasin.png COPYONLY)

@@ -40773,6 +40773,23 @@
           "width": 32,
           "x": 1536,
           "y": 3168
+        },
+        {
+          "height": 32,
+          "id": 98,
+          "name": "nouraajdTownHall",
+          "properties": {
+            "animation": "images\/buildings\/town_hall"
+          },
+          "propertytypes": {
+            "animation": "string"
+          },
+          "rotation": 0,
+          "type": "CBuilding",
+          "visible": true,
+          "width": 32,
+          "x": 1376,
+          "y": 3232
         }
       ],
       "opacity": 1,
@@ -40788,7 +40805,7 @@
       "y": 0
     }
   ],
-  "nextobjectid": 98,
+  "nextobjectid": 99,
   "orientation": "orthogonal",
   "properties": {
     "x": "110",
