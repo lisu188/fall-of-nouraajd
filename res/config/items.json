@@ -64,6 +64,15 @@
       "singleUse": false
     }
   },
+  "TownPortalScroll": {
+    "class": "TownPortalScroll",
+    "properties": {
+      "animation": "images/items/scroll",
+      "label": "Scroll of Town Portal",
+      "power": 0,
+      "singleUse": true
+    }
+  },
   "UndestructibleBelt": {
     "class": "CBelt",
     "properties": {
