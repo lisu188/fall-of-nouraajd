@@ -7,6 +7,7 @@ sudo apt install python3-dev -y
 sudo apt install libboost-dev libboost-filesystem-dev libboost-python-dev -y
 sudo apt install libsdl2-dev libsdl2-ttf-dev libsdl2-image-dev -y
 
+git submodule update --init --recursive
 mkdir -p cmake-build-debug
 mkdir -p cmake-build-release
 
