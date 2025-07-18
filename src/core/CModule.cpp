@@ -209,6 +209,11 @@ BOOST_PYTHON_MODULE (_game) {
         class_<CWrapper<CPotion>, bases<CPotion>, boost::noncopyable, std::shared_ptr<CWrapper<CPotion>>>("CPotion")
                 .def("onUse", &CWrapper<CPotion>::onUse);
 
+        class_<CScroll, bases<CItem>, boost::noncopyable, std::shared_ptr<CScroll>>("CScrollBase");
+        class_<CWrapper<CScroll>, bases<CScroll>, boost::noncopyable, std::shared_ptr<CWrapper<CScroll>>>("CScroll")
+                .def("onUse", &CWrapper<CScroll>::onUse)
+                .def("isDisposable", &CWrapper<CScroll>::isDisposable);
+
         class_<CGameEvent, bases<CGameObject>, boost::noncopyable, std::shared_ptr<CGameEvent>>("CGameEvent");
         class_<CGameEventCaused, bases<CGameEvent>, boost::noncopyable, std::shared_ptr<CGameEventCaused>>(
                         "CGameEventCaused")
