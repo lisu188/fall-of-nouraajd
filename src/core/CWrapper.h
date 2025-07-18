@@ -130,6 +130,27 @@ public:
 };
 
 template<>
+class CWrapper<CScroll> : public CScroll, public boost::python::wrapper<CWrapper<CScroll>> {
+V_META(CWrapper<T>, CScroll, vstd::meta::empty())
+public:
+    void onUse(std::shared_ptr<CGameEvent> event) final {
+        if (auto f = this->get_override("onUse")) {
+            PY_SAFE (f(event))
+        } else {
+            this->CScroll::onUse(event);
+        }
+    }
+
+    bool isDisposable() override {
+        if (auto f = this->get_override("isDisposable")) {
+            PY_SAFE_RET_VAL (return f(), false)
+        } else {
+            return this->CScroll::isDisposable();
+        }
+    }
+};
+
+template<>
 class CWrapper<CTrigger> : public CTrigger, public boost::python::wrapper<CWrapper<CTrigger>> {
 V_META(CWrapper<T>, CTrigger, vstd::meta::empty())
 public:

@@ -13,7 +13,6 @@
     //TODO: implement move points
     //TODO: implement dijkstra
 //TODO: what if we return to oldMap after switch?
-//TODO: scroll of town portal
 //TODO: make function to compare objects
 //TODO: load assets from map
 //TODO: make question items not droppable and not selectable
