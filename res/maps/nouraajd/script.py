@@ -52,6 +52,22 @@ def load(self, context):
         def onComplete(self):
             pass
 
+    @register(context)
+    class CleanseCaveQuest(CQuest):
+        def isCompleted(self):
+            return self.getGame().getMap().getBoolProperty('OCTOBOGZ_CLEARED')
+
+        def onComplete(self):
+            pass
+
+    @register(context)
+    class AmuletQuest(CQuest):
+        def isCompleted(self):
+            return self.getGame().getMap().getPlayer().hasItem(lambda it: it.getName() == 'preciousAmulet')
+
+        def onComplete(self):
+            pass
+
     @trigger(context, "onDestroy", "gooby1")
     class GoobyTrigger(CTrigger):
         def trigger(self, object, event):
@@ -96,9 +112,7 @@ def load(self, context):
                 tavern.getGame().getGuiHandler().showDialog(tavern.getGame().createObject('tavernDialog1'))
                 tavern.setNumericProperty('time_visited', tavern.getGame().getMap().getTurn())
                 tavern.incProperty('visited', 1)
-            elif tavern.getNumericProperty(
-                    'visited') == 1 and tavern.getGame().getMap().getTurn() - tavern.getNumericProperty(
-                'time_visited') > 50:
+            elif tavern.getNumericProperty('visited') == 1 and tavern.getGame().getMap().getTurn() - tavern.getNumericProperty('time_visited') > 50:
                 tavern.getGame().getGuiHandler().showDialog(tavern.getGame().createObject('tavernDialog2'))
                 tavern.incProperty('visited', 1)
 
@@ -119,8 +133,7 @@ def load(self, context):
     class TownHallTrigger(CTrigger):
         def trigger(self, object, event):
             if event.getCause().isPlayer():
-                object.getGame().getGuiHandler().showDialog(
-                    object.getGame().createObject('townHallDialog'))
+                object.getGame().getGuiHandler().showDialog(object.getGame().createObject('townHallDialog'))
 
     @register(context)
     class TownHallDialog(CDialog):
@@ -134,8 +147,7 @@ def load(self, context):
     class ChapelTrigger(CTrigger):
         def trigger(self, object, event):
             if event.getCause().isPlayer():
-                object.getGame().getGuiHandler().showDialog(
-                    object.getGame().createObject('berenDialog'))
+                object.getGame().getGuiHandler().showDialog(object.getGame().createObject('berenDialog'))
 
     @register(context)
     class BerenDialog(CDialog):
@@ -151,7 +163,6 @@ def load(self, context):
             if player.hasItem(lambda it: it.getName() == 'holyRelic'):
                 player.removeItem(lambda it: it.getName() == 'holyRelic', True)
                 self.getGame().getMap().setBoolProperty('RELIC_RETURNED', True)
-
                 player.addQuest('cleanseCaveQuest')
 
         def finishCleanse(self):
@@ -161,22 +172,24 @@ def load(self, context):
             else:
                 self.getGame().getGuiHandler().showMessage('The cave still crawls with OctoBogz.')
 
-@register(context)
-class CleanseCaveQuest(CQuest):
-    def isCompleted(self):
-        return self.getGame().getMap().getBoolProperty('OCTOBOGZ_CLEARED')
+    @trigger(context, "onEnter", "oldWoman")
+    class OldWomanTrigger(CTrigger):
+        def trigger(self, obj, event):
+            if event.getCause().isPlayer():
+                obj.getGame().getGuiHandler().showDialog(obj.getGame().createObject('questDialog'))
 
-    def onComplete(self):
-        pass
+    @register(context)
+    class QuestDialog(CDialog):
+        def startAmuletQuest(self):
+            self.getGame().getMap().getPlayer().addQuest('amuletQuest')
 
-@trigger(context, "onDestroy", "cave2")
-class OctoBogzCaveTrigger(CTrigger):
-    def trigger(self, object, event):
-        player = object.getGame().getMap().getPlayer()
-        if player.hasItem(lambda it: it.getName() == 'holyRelic'):
-            object.getGame().getGuiHandler().showMessage(
-                object.getStringProperty('message'))
-        else:
-            object.getGame().getGuiHandler().showMessage(
-                'The OctoBogz are defeated!')
-        object.getGame().getMap().setBoolProperty('OCTOBOGZ_CLEARED', True)
+    @trigger(context, "onDestroy", "cave2")
+    class OctoBogzCaveTrigger(CTrigger):
+        def trigger(self, object, event):
+            player = object.getGame().getMap().getPlayer()
+            if player.hasItem(lambda it: it.getName() == 'holyRelic'):
+                object.getGame().getGuiHandler().showMessage(object.getStringProperty('message'))
+            else:
+                object.getGame().getGuiHandler().showMessage('The OctoBogz are defeated!')
+            object.getGame().getMap().setBoolProperty('OCTOBOGZ_CLEARED', True)
+
