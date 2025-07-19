@@ -12,6 +12,7 @@ def load(self, context):
                 self.getMap().getGame().getGuiHandler().showMessage(self.getStringProperty('text'))
                 self.getMap().removeAll(lambda ob: ob.getStringProperty('type') == self.getStringProperty('type'))
                 self.getMap().setBoolProperty('completedRolf', False)
+                self.getMap().setBoolProperty('completedOctoBogz', False)
                 self.getMap().getPlayer().addQuest("rolfQuest")
                 self.getMap().getPlayer().addItem("letterFromRolf")
 
@@ -32,6 +33,14 @@ def load(self, context):
     class RolfQuest(CQuest):
         def isCompleted(self):
             return self.getGame().getMap().getPlayer().hasItem(lambda it: it.getName() == 'skullOfRolf')
+
+        def onComplete(self):
+            pass
+
+    @register(context)
+    class OctoBogzQuest(CQuest):
+        def isCompleted(self):
+            return self.getGame().getMap().getBoolProperty('completedOctoBogz')
 
         def onComplete(self):
             pass
@@ -61,6 +70,12 @@ def load(self, context):
             object.getGame().getMap().setBoolProperty('completedGooby', False)
             object.getGame().getMap().getPlayer().addQuest("mainQuest")
             object.getGame().getMap().getPlayer().addItem("skullOfRolf")
+
+    @trigger(context, "onDestroy", "cave2")
+    class Cave2Trigger(CTrigger):
+        def trigger(self, object, event):
+            object.getGame().getGuiHandler().showMessage("The OctoBogz lair has been cleared!")
+            object.getGame().getMap().setBoolProperty('completedOctoBogz', True)
 
     @trigger(context, "onEnter", "market1")
     class MarketTrigger(CTrigger):
@@ -106,6 +121,20 @@ def load(self, context):
         def askedAboutGirl(self):
             return self.getGame().getMap().getBoolProperty('ASKED_ABOUT_GIRL')
 
+
+    @register(context)
+    class OctoBogzDialog(CDialog):
+        def acceptQuest(self):
+            self.getGame().getMap().getPlayer().addQuest('octoBogzQuest')
+            self.getGame().getMap().setBoolProperty('completedOctoBogz', False)
+
+    @trigger(context, "onEnter", "nouraajdTownHall")
+    class NouraajdTownHallTrigger(CTrigger):
+        def trigger(self, hall, event):
+            if event.getCause().isPlayer():
+                hall.getGame().getGuiHandler().showDialog(hall.getGame().createObject('dialog'))
+
+
     @trigger(context, "onEnter", "oldWoman")
     class OldWomanTrigger(CTrigger):
         def trigger(self, obj, event):
@@ -116,3 +145,4 @@ def load(self, context):
     class QuestDialog(CDialog):
         def startAmuletQuest(self):
             self.getGame().getMap().getPlayer().addQuest('amuletQuest')
+
