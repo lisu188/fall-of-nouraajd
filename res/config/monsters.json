@@ -417,5 +417,83 @@
         }
       }
     }
+  },
+   "Cultist": {
+    "class": "CCreature",
+    "properties": {
+      "actions": [
+        { "ref": "Attack" }
+      ],
+      "animation": "images/monsters/pritz",
+      "fightController": { "class": "CMonsterFightController" },
+      "label": "Cultist",
+      "levelStats": {
+        "class": "Stats",
+        "properties": {
+          "agility": 2,
+          "crit": 1,
+          "dmgMax": 1,
+          "dmgMin": 1,
+          "hit": 3,
+          "intelligence": 1,
+          "stamina": 1,
+          "strength": 2
+        }
+      },
+      "baseStats": {
+        "class": "Stats",
+        "properties": {
+          "agility": 5,
+          "crit": 10,
+          "dmgMax": 3,
+          "dmgMin": 2,
+          "hit": 75,
+          "intelligence": 5,
+          "mainStat": "strength",
+          "stamina": 3,
+          "strength": 5
+        }
+      },
+      "sw": 1
+    }
+  },
+  "CultLeader": {
+    "class": "CCreature",
+    "properties": {
+      "actions": [
+        { "ref": "Attack" }
+      ],
+      "animation": "images/monsters/pritzmage",
+      "fightController": { "class": "CMonsterFightController" },
+      "label": "Cult Leader",
+      "levelStats": {
+        "class": "Stats",
+        "properties": {
+          "agility": 3,
+          "crit": 2,
+          "dmgMax": 4,
+          "dmgMin": 3,
+          "hit": 4,
+          "intelligence": 3,
+          "stamina": 4,
+          "strength": 4
+        }
+      },
+      "baseStats": {
+        "class": "Stats",
+        "properties": {
+          "agility": 8,
+          "crit": 15,
+          "dmgMax": 8,
+          "dmgMin": 6,
+          "hit": 80,
+          "intelligence": 8,
+          "mainStat": "strength",
+          "stamina": 7,
+          "strength": 7
+        }
+      },
+      "sw": 2
+    }
   }
 }
