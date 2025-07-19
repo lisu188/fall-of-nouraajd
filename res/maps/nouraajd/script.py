@@ -36,6 +36,14 @@ def load(self, context):
         def onComplete(self):
             pass
 
+    @register(context)
+    class AmuletQuest(CQuest):
+        def isCompleted(self):
+            return self.getGame().getMap().getPlayer().hasItem(lambda it: it.getName() == 'preciousAmulet')
+
+        def onComplete(self):
+            pass
+
     @trigger(context, "onDestroy", "gooby1")
     class GoobyTrigger(CTrigger):
         def trigger(self, object, event):
@@ -97,3 +105,14 @@ def load(self, context):
     class TavernDialog2(CDialog):
         def askedAboutGirl(self):
             return self.getGame().getMap().getBoolProperty('ASKED_ABOUT_GIRL')
+
+    @trigger(context, "onEnter", "oldWoman")
+    class OldWomanTrigger(CTrigger):
+        def trigger(self, obj, event):
+            if event.getCause().isPlayer():
+                obj.getGame().getGuiHandler().showDialog(obj.getGame().createObject('questDialog'))
+
+    @register(context)
+    class QuestDialog(CDialog):
+        def startAmuletQuest(self):
+            self.getGame().getMap().getPlayer().addQuest('amuletQuest')
