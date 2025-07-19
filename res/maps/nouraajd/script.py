@@ -121,6 +121,7 @@ def load(self, context):
         def askedAboutGirl(self):
             return self.getGame().getMap().getBoolProperty('ASKED_ABOUT_GIRL')
 
+
     @register(context)
     class OctoBogzDialog(CDialog):
         def acceptQuest(self):
@@ -132,6 +133,7 @@ def load(self, context):
         def trigger(self, hall, event):
             if event.getCause().isPlayer():
                 hall.getGame().getGuiHandler().showDialog(hall.getGame().createObject('dialog'))
+
 
     @trigger(context, "onEnter", "oldWoman")
     class OldWomanTrigger(CTrigger):
