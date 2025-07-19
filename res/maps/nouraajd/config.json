@@ -117,5 +117,28 @@
       "label": "Letter from Rolf",
       "text": "Lord Commander, The nightmarish Pritschers relentlessly assault us. Locals whisper of their lair, hidden within the desolate ruins of Nouraajd. Our forces wane, our defenses falter; we are on the brink. We lack the strength to purge their den. Reinforcements are our final hope. Sergeant Rolf."
     }
+  },
+  "oldAmulet": {
+    "class": "CItem",
+    "properties": {
+      "name": "oldAmulet",
+      "animation": "images/item",
+      "tags": [
+        "quest"
+      ]
+    }
+  },
+  "oldWoman": {
+    "class": "CMapObject",
+    "properties": {
+      "animation": "images/misc/signpost",
+      "canStep": false
+    }
+  },
+  "amuletQuest": {
+    "class": "AmuletQuest",
+    "properties": {
+      "description": "Retrieve the old woman's amulet"
+    }
   }
 }

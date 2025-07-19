@@ -259,5 +259,91 @@
         }
       ]
     }
+  },
+  "questDialog": {
+    "class": "QuestDialog",
+    "properties": {
+      "states": [
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "ENTRY",
+            "text": "As you walk through the village, you notice an old woman looking distressed. She seems to be in need of help.",
+            "options": [
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 0,
+                  "nextStateId": "OLD_WOMAN_HELLO",
+                  "text": "Approach the old woman and ask if she needs help."
+                }
+              },
+              {
+                "ref": "exitOption",
+                "properties": {
+                  "number": 1
+                }
+              }
+            ]
+          }
+        },
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "OLD_WOMAN_HELLO",
+            "text": "Oh, dear traveler! I'm in desperate need of help. My precious amulet has been stolen by the goblins in the nearby forest. It's been in my family for generations, and I can't bear the thought of losing it.",
+            "options": [
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 0,
+                  "nextStateId": "ACCEPT_QUEST",
+                  "text": "Don't worry, I'll retrieve your amulet from the goblins."
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 1,
+                  "nextStateId": "DECLINE_QUEST",
+                  "text": "I'm sorry, but I can't help you with that."
+                }
+              }
+            ]
+          }
+        },
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "ACCEPT_QUEST",
+            "text": "Thank you, brave traveler! I'll be forever grateful if you can bring my amulet back. Please be careful, the goblins are cunning and dangerous.",
+            "options": [
+              {
+                "ref": "exitOption",
+                "properties": {
+                  "number": 0,
+                  "action": "startAmuletQuest"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "DECLINE_QUEST",
+            "text": "I understand. It's a dangerous task. I'll keep praying for someone to help me.",
+            "options": [
+              {
+                "ref": "exitOption",
+                "properties": {
+                  "number": 0
+                }
+              }
+            ]
+          }
+        }
+      ]
+    }
   }
 }

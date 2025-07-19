@@ -97,3 +97,22 @@ def load(self, context):
     class TavernDialog2(CDialog):
         def askedAboutGirl(self):
             return self.getGame().getMap().getBoolProperty('ASKED_ABOUT_GIRL')
+
+    @register(context)
+    class QuestDialog(CDialog):
+        def startAmuletQuest(self):
+            self.getGame().getMap().getPlayer().addQuest("amuletQuest")
+
+    @register(context)
+    class AmuletQuest(CQuest):
+        def isCompleted(self):
+            return self.getGame().getMap().getPlayer().hasItem(lambda it: it.getName() == 'oldAmulet')
+
+        def onComplete(self):
+            pass
+
+    @trigger(context, "onEnter", "oldWoman")
+    class OldWomanTrigger(CTrigger):
+        def trigger(self, object, event):
+            if event.getCause().isPlayer():
+                object.getGame().getGuiHandler().showDialog(object.getGame().createObject('questDialog'))
