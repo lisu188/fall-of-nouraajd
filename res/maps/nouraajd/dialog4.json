@@ -1,0 +1,65 @@
+{
+  "townHallDialog": {
+    "class": "TownHallDialog",
+    "properties": {
+      "states": [
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "ENTRY",
+            "text": "Welcome to the town hall, traveler. I am Mayor Irvin. What brings you here?",
+            "options": [
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 0,
+                  "nextStateId": "ASK_HELP",
+                  "text": "I'm looking for work."
+                }
+              },
+              {
+                "ref": "exitOption",
+                "properties": { "number": 1 }
+              }
+            ]
+          }
+        },
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "ASK_HELP",
+            "text": "We need someone to deliver a sealed letter to Father Beren at the chapel. Will you help us?",
+            "options": [
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 0,
+                  "action": "giveLetter",
+                  "nextStateId": "THANKS",
+                  "text": "I'll deliver it."
+                }
+              },
+              {
+                "ref": "exitOption",
+                "properties": { "number": 1 }
+              }
+            ]
+          }
+        },
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "THANKS",
+            "text": "Thank you. Please hurry; the situation is dire.",
+            "options": [
+              {
+                "ref": "exitOption",
+                "properties": { "number": 0 }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  }
+}

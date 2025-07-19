@@ -40790,6 +40790,23 @@
           "width": 32,
           "x": 1376,
           "y": 3232
+        },
+        {
+          "height": 32,
+          "id": 99,
+          "name": "nouraajdChapel",
+          "properties": {
+            "animation": "images\/buildings\/chapel"
+          },
+          "propertytypes": {
+            "animation": "string"
+          },
+          "rotation": 0,
+          "type": "CBuilding",
+          "visible": true,
+          "width": 32,
+          "x": 1600,
+          "y": 3232
         }
       ],
       "opacity": 1,
@@ -40805,7 +40822,7 @@
       "y": 0
     }
   ],
-  "nextobjectid": 99,
+  "nextobjectid": 100,
   "orientation": "orthogonal",
   "properties": {
     "x": "110",
