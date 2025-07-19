@@ -53,6 +53,12 @@
       "description": "Unravel the fate of Sergeant Rolf."
     }
   },
+  "octoBogzQuest": {
+    "class": "OctoBogzQuest",
+    "properties": {
+      "description": "Eliminate the OctoBogz menace."
+    }
+  },
   "skullOfRolf": {
     "class": "CItem",
     "properties": {
