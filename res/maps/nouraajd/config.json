@@ -30,6 +30,17 @@
       ]
     }
   },
+  "victorMarket": {
+    "class": "CMarket",
+    "properties": {
+      "items": [
+        { "ref": "LesserLifePotion" },
+        { "ref": "LifePotion" },
+        { "ref": "LesserManaPotion" },
+        { "ref": "ManaPotion" }
+      ]
+    }
+  },
   "mainQuest": {
     "class": "MainQuest",
     "properties": {

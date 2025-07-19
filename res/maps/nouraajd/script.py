@@ -3,6 +3,7 @@ def load(self, context):
     from game import CTrigger
     from game import CQuest
     from game import CDialog
+    from game import Coords
     from game import register, trigger
 
     @register(context)
@@ -121,6 +122,35 @@ def load(self, context):
         def askedAboutGirl(self):
             return self.getGame().getMap().getBoolProperty('ASKED_ABOUT_GIRL')
 
+        def talkedToVictor(self):
+            self.getGame().getMap().setBoolProperty('TALKED_TO_VICTOR', True)
+
+    @register(context)
+    class TownHallDialog(CDialog):
+        def talkedToVictor(self):
+            return self.getGame().getMap().getBoolProperty('TALKED_TO_VICTOR')
+
+        def spawnCultists(self):
+            game = self.getGame()
+            player = game.getMap().getPlayer()
+            loc = player.getCoords()
+
+            offsets = [(-1, 0), (1, 0), (0, -1), (0, 1)]
+            for i, j in offsets:
+                coords = Coords(loc.x + i, loc.y + j, loc.z)
+                if game.getMap().canStep(coords):
+                    mon = game.createObject('Cultist')
+                    game.getMap().addObject(mon)
+                    mon.moveTo(coords.x, coords.y, coords.z)
+
+            leader_pos = (1, 1)
+            coords = Coords(loc.x + leader_pos[0], loc.y + leader_pos[1], loc.z)
+            if game.getMap().canStep(coords):
+                leader = game.createObject('CultLeader')
+                leader.setStringProperty('name', 'cultLeaderQuest')
+                game.getMap().addObject(leader)
+                leader.moveTo(coords.x, coords.y, coords.z)
+
 
     @register(context)
     class OctoBogzDialog(CDialog):
@@ -128,9 +158,23 @@ def load(self, context):
             self.getGame().getMap().getPlayer().addQuest('octoBogzQuest')
             self.getGame().getMap().setBoolProperty('completedOctoBogz', False)
 
+
     @trigger(context, "onEnter", "nouraajdTownHall")
     class NouraajdTownHallTrigger(CTrigger):
         def trigger(self, hall, event):
+            if event.getCause().isPlayer() and hall.getGame().getMap().getBoolProperty('TALKED_TO_VICTOR'):
+                hall.getGame().getGuiHandler().showDialog(hall.getGame().createObject('townHallDialog'))
+
+    @trigger(context, "onDestroy", "cultLeaderQuest")
+    class CultLeaderQuestTrigger(CTrigger):
+        def trigger(self, leader, event):
+            game = leader.getGame()
+            player = game.getMap().getPlayer()
+            player.addGold(500)
+            player.healProc(100)
+            game.getGuiHandler().showDialog(game.createObject('victorRewardDialog'))
+            game.getGuiHandler().showTrade(game.createObject('victorMarket'))
+            game.getMap().setBoolProperty('VICTOR_HELP', True)
             if event.getCause().isPlayer():
                 hall.getGame().getGuiHandler().showDialog(hall.getGame().createObject('dialog'))
 
