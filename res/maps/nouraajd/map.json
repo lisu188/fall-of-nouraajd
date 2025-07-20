@@ -40810,6 +40810,23 @@
         },
         {
           "height": 32,
+          "id": 101,
+          "name": "nouraajdChapel",
+          "properties": {
+            "animation": "images/buildings/chapel"
+          },
+          "propertytypes": {
+            "animation": "string"
+          },
+          "rotation": 0,
+          "type": "CBuilding",
+          "visible": true,
+          "width": 32,
+          "x": 1600,
+          "y": 3232
+        },
+        {
+          "height": 32,
           "id": 100,
           "name": "townPortalScroll",
           "properties": {
@@ -40839,7 +40856,7 @@
       "y": 0
     }
   ],
-  "nextobjectid": 101,
+  "nextobjectid": 102,
   "orientation": "orthogonal",
   "properties": {
     "x": "110",

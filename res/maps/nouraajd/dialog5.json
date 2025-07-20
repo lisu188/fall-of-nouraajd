@@ -1,0 +1,88 @@
+{
+  "berenDialog": {
+    "class": "BerenDialog",
+    "properties": {
+      "states": [
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "ENTRY",
+            "text": "Greetings, traveler. Do you bring news from the mayor?",
+            "options": [
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 0,
+                  "action": "deliverLetter",
+                  "nextStateId": "LETTER_DELIVERED",
+                  "text": "I carry a letter for you."
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 1,
+                  "action": "returnRelic",
+                  "nextStateId": "RELIC_RETURNED",
+                  "text": "I recovered the relic."
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 2,
+                  "action": "finishCleanse",
+                  "nextStateId": "CAVE_PURGED",
+                  "text": "The cave has been cleansed."
+                }
+              },
+              {
+                "ref": "exitOption",
+                "properties": { "number": 3 }
+              }
+            ]
+          }
+        },
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "LETTER_DELIVERED",
+            "text": "Thank you for delivering the mayor's words. Please seek out the ancient catacombs and retrieve the holy relic for our town.",
+            "options": [
+              {
+                "ref": "exitOption",
+                "properties": { "number": 0 }
+              }
+            ]
+          }
+        },
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "RELIC_RETURNED",
+            "text": "Excellent. With this relic you can purge the OctoBogz in their cave east of town. Return when the task is done.",
+            "options": [
+              {
+                "ref": "exitOption",
+                "properties": { "number": 0 }
+              }
+            ]
+          }
+        },
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "CAVE_PURGED",
+            "text": "You have freed us from the OctoBogz menace. The town thanks you.",
+            "options": [
+              {
+                "ref": "exitOption",
+                "properties": { "number": 0 }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  }
+}
