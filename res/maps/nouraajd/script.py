@@ -232,13 +232,6 @@ def load(self, context):
             self.getGame().getMap().getPlayer().addQuest('octoBogzQuest')
             self.getGame().getMap().setBoolProperty('completedOctoBogz', False)
 
-
-    @trigger(context, "onEnter", "nouraajdTownHall")
-    class NouraajdTownHallTrigger(CTrigger):
-        def trigger(self, hall, event):
-            if event.getCause().isPlayer() and hall.getGame().getMap().getBoolProperty('TALKED_TO_VICTOR'):
-                hall.getGame().getGuiHandler().showDialog(hall.getGame().createObject('townHallDialog'))
-
     @trigger(context, "onDestroy", "cultLeaderQuest")
     class CultLeaderQuestTrigger(CTrigger):
         def trigger(self, leader, event):
