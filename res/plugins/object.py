@@ -18,6 +18,7 @@ def load(self, context):
     from game import CBuilding
     from game import Coords
     from game import register
+    from game import CScroll
     @register(context)
     class WayPoint(CBuilding):
         def onEnter(self, event):
@@ -93,3 +94,14 @@ def load(self, context):
                 self.getMap().addObject(mon)
                 mon.moveTo(location.x, location.y, location.z)
                 self.incProperty("monsters", -1);
+
+    @register(context)
+    class TownPortalScroll(CScroll):
+        def onUse(self, event):
+            cur_map = event.getCause().getMap()
+            event.getCause().moveTo(
+                cur_map.getEntryX(), cur_map.getEntryY(), cur_map.getEntryZ()
+            )
+
+        def isDisposable(self):
+            return True

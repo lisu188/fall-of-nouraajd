@@ -40694,7 +40694,7 @@
           "id": 84,
           "name": "nouraajdDoor",
           "properties": {
-            "animation": "images\/misc\/closed_door"
+            "animation": "images/misc/closed_door"
           },
           "propertytypes": {
             "animation": "string"
@@ -40762,7 +40762,7 @@
           "id": 97,
           "name": "nouraajdTavern",
           "properties": {
-            "animation": "images\/buildings\/tavern"
+            "animation": "images/buildings/tavern"
           },
           "propertytypes": {
             "animation": "string"
@@ -40779,7 +40779,7 @@
           "id": 98,
           "name": "nouraajdTownHall",
           "properties": {
-            "animation": "images\/buildings\/town_hall"
+            "animation": "images/buildings/town_hall"
           },
           "propertytypes": {
             "animation": "string"
@@ -40807,7 +40807,24 @@
           "width": 32,
           "x": 6080,
           "y": 160
-        }
+        },
+        {
+          "height": 32,
+          "id": 100,
+          "name": "townPortalScroll",
+          "properties": {
+            "animation": "images/items/scroll"
+          },
+          "propertytypes": {
+            "animation": "string"
+          },
+          "rotation": 0,
+          "type": "TownPortalScroll",
+          "visible": true,
+          "width": 32,
+          "x": 3456,
+          "y": 3520
+        },
       ],
       "opacity": 1,
       "properties": {
@@ -40822,7 +40839,7 @@
       "y": 0
     }
   ],
-  "nextobjectid": 100,
+  "nextobjectid": 101,
   "orientation": "orthogonal",
   "properties": {
     "x": "110",
@@ -40841,7 +40858,7 @@
     {
       "columns": 4,
       "firstgid": 1,
-      "image": "..\/..\/images\/terrain.png",
+      "image": "../../images/terrain.png",
       "imageheight": 96,
       "imagewidth": 128,
       "margin": 0,
