@@ -52,3 +52,23 @@ Follow these steps whenever you introduce a new building, potion, effect, tile o
     - Ensure that every state and option id used in the JSON matches the definitions in the dialog class.
 
 After adding the new item type, run `python3 test.py` to confirm that loading the game still works.
+## Exposing C++ Types to Python
+Follow these steps when making a new C++ class usable from Python:
+
+1. **Create a wrapper**
+    - Add a `CWrapper<MyClass>` specialization in `src/core/CWrapper.h`.
+    - Implement wrappers for any methods Python should override.
+
+2. **Update the module**
+    - Edit `src/core/CModule.cpp` and declare the wrapper with
+      `class_<CWrapper<MyClass>, bases<BaseClass>, boost::noncopyable,
+      std::shared_ptr<CWrapper<MyClass>>>("MyClass")` inside
+      `BOOST_PYTHON_MODULE(_game)`.
+    - Register the wrapper in `src/core/CTypes.cpp` using
+      `CTypes::register_type<CWrapper<MyClass>, MyClass, BaseClass>();`.
+
+3. **Create the Python object**
+    - Define a subclass in a plugin under `res/plugins/`.
+    - Add it inside `load(context)` and decorate with `@register(context)`.
+
+After exposing the new type, run `python3 test.py` to verify the bindings.
