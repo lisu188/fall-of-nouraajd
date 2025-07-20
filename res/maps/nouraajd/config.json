@@ -92,6 +92,7 @@
   "cave2": {
     "ref": "Cave",
     "properties": {
+      "message": "With the relic's power, the OctoBogz lair collapses around you.",
       "chance": "10",
       "monster": {
         "ref": "OctoBogz",
@@ -111,11 +112,7 @@
   },
   "market1": {
     "ref": "Market",
-    "properties": {
-      "market": {
-        "ref": "exampleMarket"
-      }
-    }
+    "properties": { "market": { "ref": "exampleMarket" } }
   },
   "gooby": {
     "ref": "Gooby",
@@ -133,6 +130,33 @@
     "properties": {
       "label": "Letter from Rolf",
       "text": "Lord Commander, The nightmarish Pritschers relentlessly assault us. Locals whisper of their lair, hidden within the desolate ruins of Nouraajd. Our forces wane, our defenses falter; we are on the brink. We lack the strength to purge their den. Reinforcements are our final hope. Sergeant Rolf."
+    }
+  },
+  "letterToBeren": {
+    "ref": "Scroll",
+    "properties": {
+      "label": "Sealed Letter",
+      "text": "Father Beren, we beseech your guidance. - Mayor Irvin"
+    }
+  },
+  "deliverLetterQuest": {
+    "class": "DeliverLetterQuest",
+    "properties": { "description": "Bring Mayor Irvin's letter to Father Beren" }
+  },
+  "retrieveRelicQuest": {
+    "class": "RetrieveRelicQuest",
+    "properties": { "description": "Recover the holy relic from the catacombs" }
+  },
+  "cleanseCaveQuest": {
+    "class": "CleanseCaveQuest",
+    "properties": { "description": "Use the relic to cleanse the OctoBogz cave" }
+  },
+  "holyRelic": {
+    "class": "CItem",
+    "properties": {
+      "name": "holyRelic",
+      "animation": "images/skull",
+      "tags": [ "quest" ]
     }
   },
   "preciousAmulet": {
