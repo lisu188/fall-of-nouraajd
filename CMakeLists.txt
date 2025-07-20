@@ -268,6 +268,5 @@ SET(CPACK_STRIP_FILES _game.so)
 
 IF (!WIN32)
     cotire(_game)
+    set_target_properties(_game PROPERTIES UNITY_BUILD ON)
 ENDIF ()
-
-set_target_properties(_game PROPERTIES UNITY_BUILD ON)
