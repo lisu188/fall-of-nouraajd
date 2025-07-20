@@ -103,6 +103,16 @@ extern std::set<std::string> array_string_deserialize(std::shared_ptr<CGame> map
 
 extern std::shared_ptr<json> array_string_serialize(std::set<std::string> set);
 
+extern void add_member(const std::shared_ptr<json> &object, const std::string &key, const std::string &value);
+extern void add_member(const std::shared_ptr<json> &object, const std::string &key, const std::shared_ptr<json> &value);
+extern void add_member(const std::shared_ptr<json> &object, const std::string &key, bool value);
+extern void add_member(const std::shared_ptr<json> &object, const std::string &key, int value);
+
+extern void add_arr_member(const std::shared_ptr<json> &object, const std::string &value);
+extern void add_arr_member(const std::shared_ptr<json> &object, const std::shared_ptr<json> &value);
+extern void add_arr_member(const std::shared_ptr<json> &object, bool value);
+extern void add_arr_member(const std::shared_ptr<json> &object, int value);
+
 template<>
 class CSerializerFunction<std::shared_ptr<json>, std::shared_ptr<CGameObject>> {
 public:
