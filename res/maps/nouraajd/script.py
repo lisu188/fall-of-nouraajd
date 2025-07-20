@@ -32,8 +32,35 @@ def load(self, context):
 
     @register(context)
     class RolfQuest(CQuest):
+    def isCompleted(self):
+        return self.getGame().getMap().getPlayer().hasItem(lambda it: it.getName() == 'skullOfRolf')
+
+    def onComplete(self):
+        pass
+
+
+    @register(context)
+    class DeliverLetterQuest(CQuest):
         def isCompleted(self):
-            return self.getGame().getMap().getPlayer().hasItem(lambda it: it.getName() == 'skullOfRolf')
+            return self.getGame().getMap().getBoolProperty('DELIVERED_LETTER')
+
+        def onComplete(self):
+            pass
+
+
+    @register(context)
+    class RetrieveRelicQuest(CQuest):
+        def isCompleted(self):
+            return self.getGame().getMap().getPlayer().hasItem(lambda it: it.getName() == 'holyRelic')
+
+        def onComplete(self):
+            pass
+
+
+    @register(context)
+    class CleanseCaveQuest(CQuest):
+        def isCompleted(self):
+            return self.getGame().getMap().getBoolProperty('OCTOBOGZ_CLEARED')
 
         def onComplete(self):
             pass
@@ -71,11 +98,17 @@ def load(self, context):
             object.getGame().getMap().setBoolProperty('completedGooby', False)
             object.getGame().getMap().getPlayer().addQuest("mainQuest")
             object.getGame().getMap().getPlayer().addItem("skullOfRolf")
+            object.getGame().getMap().getPlayer().addItem('holyRelic')
 
     @trigger(context, "onDestroy", "cave2")
-    class Cave2Trigger(CTrigger):
+    class OctoBogzCaveTrigger(CTrigger):
         def trigger(self, object, event):
-            object.getGame().getGuiHandler().showMessage("The OctoBogz lair has been cleared!")
+            player = object.getGame().getMap().getPlayer()
+            if player.hasItem(lambda it: it.getName() == 'holyRelic'):
+                object.getGame().getGuiHandler().showMessage(object.getStringProperty('message'))
+            else:
+                object.getGame().getGuiHandler().showMessage('The OctoBogz are defeated!')
+            object.getGame().getMap().setBoolProperty('OCTOBOGZ_CLEARED', True)
             object.getGame().getMap().setBoolProperty('completedOctoBogz', True)
 
     @trigger(context, "onEnter", "market1")
@@ -125,8 +158,20 @@ def load(self, context):
         def talkedToVictor(self):
             self.getGame().getMap().setBoolProperty('TALKED_TO_VICTOR', True)
 
+    @trigger(context, "onEnter", "nouraajdTownHall")
+    class TownHallTrigger(CTrigger):
+        def trigger(self, object, event):
+            if event.getCause().isPlayer():
+                object.getGame().getGuiHandler().showDialog(object.getGame().createObject('townHallDialog'))
+
     @register(context)
     class TownHallDialog(CDialog):
+        def giveLetter(self):
+            player = self.getGame().getMap().getPlayer()
+            player.addItem('letterToBeren')
+            player.addQuest('deliverLetterQuest')
+            self.getGame().getGuiHandler().showMessage('You received a sealed letter.')
+
         def talkedToVictor(self):
             return self.getGame().getMap().getBoolProperty('TALKED_TO_VICTOR')
 
@@ -150,6 +195,35 @@ def load(self, context):
                 leader.setStringProperty('name', 'cultLeaderQuest')
                 game.getMap().addObject(leader)
                 leader.moveTo(coords.x, coords.y, coords.z)
+
+    @trigger(context, "onEnter", "nouraajdChapel")
+    class ChapelTrigger(CTrigger):
+        def trigger(self, object, event):
+            if event.getCause().isPlayer():
+                object.getGame().getGuiHandler().showDialog(object.getGame().createObject('berenDialog'))
+
+    @register(context)
+    class BerenDialog(CDialog):
+        def deliverLetter(self):
+            player = self.getGame().getMap().getPlayer()
+            if player.hasItem(lambda it: it.getName() == 'letterToBeren'):
+                player.removeItem(lambda it: it.getName() == 'letterToBeren', True)
+                self.getGame().getMap().setBoolProperty('DELIVERED_LETTER', True)
+                player.addQuest('retrieveRelicQuest')
+
+        def returnRelic(self):
+            player = self.getGame().getMap().getPlayer()
+            if player.hasItem(lambda it: it.getName() == 'holyRelic'):
+                player.removeItem(lambda it: it.getName() == 'holyRelic', True)
+                self.getGame().getMap().setBoolProperty('RELIC_RETURNED', True)
+                player.addQuest('cleanseCaveQuest')
+
+        def finishCleanse(self):
+            if self.getGame().getMap().getBoolProperty('OCTOBOGZ_CLEARED'):
+                self.getGame().getMap().setBoolProperty('CAVE_PURGED', True)
+                self.getGame().getGuiHandler().showMessage('The town is safe once more.')
+            else:
+                self.getGame().getGuiHandler().showMessage('The cave still crawls with OctoBogz.')
 
 
     @register(context)
