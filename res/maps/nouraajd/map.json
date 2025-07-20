@@ -40795,6 +40795,12 @@
           "height": 32,
           "id": 99,
           "name": "townPortalScroll",
+          "properties": {
+            "animation": "images/items/scroll"
+          },
+          "propertytypes": {
+            "animation": "string"
+          },
           "rotation": 0,
           "type": "TownPortalScroll",
           "visible": true,
