@@ -19,7 +19,9 @@
               },
               {
                 "ref": "exitOption",
-                "properties": { "number": 1 }
+                "properties": {
+                  "number": 1
+                }
               }
             ]
           }
@@ -41,7 +43,9 @@
               },
               {
                 "ref": "exitOption",
-                "properties": { "number": 1 }
+                "properties": {
+                  "number": 1
+                }
               }
             ]
           }
@@ -54,7 +58,34 @@
             "options": [
               {
                 "ref": "exitOption",
-                "properties": { "number": 0 }
+                "properties": {
+                  "number": 0
+                }
+              }
+            ]
+          }
+        },
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "ENTRY",
+            "condition": "talkedToVictor",
+            "text": "Among dusty ledgers you find a handwritten note describing the Cult of Marumi Baso. A decade ago they hid their chapel behind a wooden door in the courtyard. The author claims they sacrifice girls resembling their dead prophet's daughter to preserve a mysterious stained glass and extend the prophet's life.",
+            "options": [
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "text": "Search the courtyard",
+                  "number": 0,
+                  "action": "spawnCultists",
+                  "nextStateId": "EXIT"
+                }
+              },
+              {
+                "ref": "exitOption",
+                "properties": {
+                  "number": 1
+                }
               }
             ]
           }
@@ -63,3 +94,4 @@
     }
   }
 }
+
