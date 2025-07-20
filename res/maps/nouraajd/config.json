@@ -22,6 +22,17 @@
       ]
     }
   },
+  "victorMarket": {
+    "class": "CMarket",
+    "properties": {
+      "items": [
+        { "ref": "LesserLifePotion" },
+        { "ref": "LifePotion" },
+        { "ref": "LesserManaPotion" },
+        { "ref": "ManaPotion" }
+      ]
+    }
+  },
   "mainQuest": {
     "class": "MainQuest",
     "properties": { "description": "Vanquish the Dreaded Gooby" }
@@ -29,6 +40,12 @@
   "rolfQuest": {
     "class": "RolfQuest",
     "properties": { "description": "Unravel the fate of Sergeant Rolf." }
+  },
+  "octoBogzQuest": {
+    "class": "OctoBogzQuest",
+    "properties": {
+      "description": "Eliminate the OctoBogz menace."
+    }
   },
   "skullOfRolf": {
     "class": "CItem",
