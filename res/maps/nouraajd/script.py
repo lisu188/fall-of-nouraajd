@@ -89,14 +89,19 @@ def load(self, context):
     class CaveTrigger(CTrigger):
         def trigger(self, object, event):
             object.getGame().getGuiHandler().showMessage(object.getStringProperty("message"))
+            game_map = object.getGame().getMap()
+            player = game_map.getPlayer()
             gooby = object.getGame().createObject("gooby")
             gooby.setStringProperty("name", "gooby1")
-            object.getGame().getMap().addObject(gooby)
+            game_map.addObject(gooby)
             gooby.moveTo(100, 100, 0)
-            object.getGame().getMap().setBoolProperty('completedGooby', False)
-            object.getGame().getMap().getPlayer().addQuest("mainQuest")
-            object.getGame().getMap().getPlayer().addItem("skullOfRolf")
-            object.getGame().getMap().getPlayer().addItem('holyRelic')
+            game_map.setBoolProperty('completedGooby', False)
+            player.addQuest("mainQuest")
+            player.addItem("skullOfRolf")
+            game_map.setBoolProperty('completedRolf', True)
+            quests = player.getQuests()
+            if any(q.getName() == 'retrieveRelicQuest' for q in quests):
+                player.addItem('holyRelic')
 
     @trigger(context, "onDestroy", "cave2")
     class OctoBogzCaveTrigger(CTrigger):
@@ -219,7 +224,10 @@ def load(self, context):
             if player.hasItem(lambda it: it.getName() == 'letterToBeren'):
                 player.removeItem(lambda it: it.getName() == 'letterToBeren', True)
                 self.getGame().getMap().setBoolProperty('DELIVERED_LETTER', True)
-                player.addQuest('retrieveRelicQuest')
+                if player.hasItem(lambda it: it.getName() == 'holyRelic'):
+                    self.returnRelic()
+                else:
+                    player.addQuest('retrieveRelicQuest')
 
         def returnRelic(self):
             player = self.getGame().getMap().getPlayer()
@@ -291,4 +299,3 @@ def load(self, context):
                 player.addGold(50)
                 game.getMap().setBoolProperty('AMULET_RETURNED', True)
                 game.getGuiHandler().showMessage('The old woman gratefully rewards you with 50 gold.')
-                game.getMap().setBoolProperty('AMULET_RETURNED', True)
