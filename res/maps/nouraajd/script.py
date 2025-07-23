@@ -32,12 +32,12 @@ def load(self, context):
 
     @register(context)
     class RolfQuest(CQuest):
-    def isCompleted(self):
-        return self.getGame().getMap().getPlayer().hasItem(lambda it: it.getName() == 'skullOfRolf')
+
+        def isCompleted(self):
+            return self.getGame().getMap().getPlayer().hasItem(lambda it: it.getName() == 'skullOfRolf')
 
     def onComplete(self):
         pass
-
 
     @register(context)
     class DeliverLetterQuest(CQuest):
@@ -47,7 +47,6 @@ def load(self, context):
         def onComplete(self):
             pass
 
-
     @register(context)
     class RetrieveRelicQuest(CQuest):
         def isCompleted(self):
@@ -55,7 +54,6 @@ def load(self, context):
 
         def onComplete(self):
             pass
-
 
     @register(context)
     class CleanseCaveQuest(CQuest):
@@ -225,7 +223,6 @@ def load(self, context):
             else:
                 self.getGame().getGuiHandler().showMessage('The cave still crawls with OctoBogz.')
 
-
     @register(context)
     class OctoBogzDialog(CDialog):
         def acceptQuest(self):
@@ -245,7 +242,6 @@ def load(self, context):
             if event.getCause().isPlayer():
                 hall.getGame().getGuiHandler().showDialog(hall.getGame().createObject('dialog'))
 
-
     @trigger(context, "onEnter", "oldWoman")
     class OldWomanTrigger(CTrigger):
         def trigger(self, obj, event):
@@ -256,4 +252,3 @@ def load(self, context):
     class QuestDialog(CDialog):
         def startAmuletQuest(self):
             self.getGame().getMap().getPlayer().addQuest('amuletQuest')
-
