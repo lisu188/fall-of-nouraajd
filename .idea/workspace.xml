@@ -46,22 +46,7 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="4376a8b6-35dc-4e1d-8076-f9350c811619" name="Default Changelist" comment="merge types and module">
-      <change afterPath="$PROJECT_DIR$/AGENTS.md" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/res/maps/nouraajd/dialog4.json" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/res/maps/nouraajd/dialog5.json" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/CMakeLists.txt" beforeDir="false" afterPath="$PROJECT_DIR$/CMakeLists.txt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/config/monsters.json" beforeDir="false" afterPath="$PROJECT_DIR$/res/config/monsters.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/maps/nouraajd/config.json" beforeDir="false" afterPath="$PROJECT_DIR$/res/maps/nouraajd/config.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/maps/nouraajd/dialog2.json" beforeDir="false" afterPath="$PROJECT_DIR$/res/maps/nouraajd/dialog2.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/maps/nouraajd/dialog3.json" beforeDir="false" afterPath="$PROJECT_DIR$/res/maps/nouraajd/dialog3.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/maps/nouraajd/map.json" beforeDir="false" afterPath="$PROJECT_DIR$/res/maps/nouraajd/map.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/maps/nouraajd/script.py" beforeDir="false" afterPath="$PROJECT_DIR$/res/maps/nouraajd/script.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/plugins/object.py" beforeDir="false" afterPath="$PROJECT_DIR$/res/plugins/object.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/core/CModule.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/src/core/CModule.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/core/CTypes.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/src/core/CTypes.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/gui/object/CProxyTargetGraphicsObject.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/src/gui/object/CProxyTargetGraphicsObject.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/object/CItem.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/src/object/CItem.cpp" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -96,15 +81,8 @@
     <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
     <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
     <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
-    <setting file="file://$PROJECT_DIR$/cmake-build-release-ubuntu/CMakeFiles/_game.dir/Unity/unity_0_cxx.cxx" root0="FORCE_HIGHLIGHTING" />
-    <setting file="file://$PROJECT_DIR$/cmake-build-release-ubuntu/CMakeFiles/_game.dir/Unity/unity_1_cxx.cxx" root0="FORCE_HIGHLIGHTING" />
-    <setting file="file://$PROJECT_DIR$/cmake-build-release-ubuntu/CMakeFiles/_game.dir/Unity/unity_2_cxx.cxx" root0="FORCE_HIGHLIGHTING" />
-    <setting file="file://$PROJECT_DIR$/cmake-build-release-ubuntu/CMakeFiles/_game.dir/Unity/unity_3_cxx.cxx" root0="FORCE_HIGHLIGHTING" />
-    <setting file="file://$PROJECT_DIR$/cmake-build-release-ubuntu/CMakeFiles/_game.dir/Unity/unity_4_cxx.cxx" root0="FORCE_HIGHLIGHTING" />
-    <setting file="file://$PROJECT_DIR$/cmake-build-release-ubuntu/CMakeFiles/_game.dir/Unity/unity_5_cxx.cxx" root0="FORCE_HIGHLIGHTING" />
-    <setting file="file://$PROJECT_DIR$/cmake-build-release-ubuntu/CMakeFiles/_game.dir/Unity/unity_6_cxx.cxx" root0="FORCE_HIGHLIGHTING" />
-    <setting file="file://$PROJECT_DIR$/cmake-build-release-ubuntu/CMakeFiles/_game.dir/Unity/unity_7_cxx.cxx" root0="FORCE_HIGHLIGHTING" />
-    <setting file="file://$PROJECT_DIR$/cmake-build-release-ubuntu/CMakeFiles/_game.dir/Unity/unity_8_cxx.cxx" root0="FORCE_HIGHLIGHTING" />
+    <setting file="vcs:///home/andrz/git/fall-of-nouraajd/src/object/CGameObject.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="vcs:///home/andrz/git/fall-of-nouraajd/src/object/CGameObject.cpp" root0="SKIP_HIGHLIGHTING" />
   </component>
   <component name="ProjectApplicationVersion">
     <option name="ide" value="CLion" />
@@ -137,7 +115,7 @@
     "cf.advertisement.text.has.clang-format": "true",
     "cf.first.check.clang-format": "false",
     "cidr.known.project.marker": "true",
-    "git-widget-placeholder": "Merging feature/town__portal__scroll",
+    "git-widget-placeholder": "feature/town__portal__scroll",
     "last_opened_file_path": "/home/andrz/git/fall-of-nouraajd/src/core/types",
     "node.js.detected.package.eslint": "true",
     "node.js.detected.package.tslint": "true",
@@ -210,7 +188,7 @@
       <workItem from="1753082788928" duration="5327000" />
       <workItem from="1753256001142" duration="2375000" />
       <workItem from="1753258622571" duration="674000" />
-      <workItem from="1753259634533" duration="8052000" />
+      <workItem from="1753259634533" duration="8920000" />
     </task>
     <task id="LOCAL-00001" summary="add workspace">
       <created>1597951943440</created>

@@ -21,7 +21,6 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "gui/CAnimation.h"
 #include "core/CMap.h"
 #include "core/CGame.h"
-#include <algorithm>
 
 std::function<bool(std::shared_ptr<CGameObject>, std::shared_ptr<CGameObject>)> CGameObject::name_comparator = [](
         std::shared_ptr<CGameObject> a, std::shared_ptr<CGameObject> b) {
@@ -160,13 +159,7 @@ std::shared_ptr<CAnimation> CGameObject::getGraphicsObject() {
 }
 
 void CGameObject::connect(std::string signal, std::shared_ptr<CGameObject> object, std::string slot) {
-    auto duplicate = std::find_if(connections.begin(), connections.end(), [&](auto &t) {
-        auto [_signal, _object, _slot] = t;
-        return signal == _signal && !_object.expired() && _object.lock() == object && slot == _slot;
-    });
-    if (duplicate == connections.end()) {
-        connections.emplace_back(signal, object, slot);
-    }
+    connections.emplace_back(signal, object, slot);
 }
 
 bool CGameObject::hasProperty(std::string name) {
