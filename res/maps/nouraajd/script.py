@@ -101,13 +101,15 @@ def load(self, context):
     @trigger(context, "onDestroy", "cave2")
     class OctoBogzCaveTrigger(CTrigger):
         def trigger(self, object, event):
-            player = object.getGame().getMap().getPlayer()
-            if player.hasItem(lambda it: it.getName() == 'holyRelic'):
-                object.getGame().getGuiHandler().showMessage(object.getStringProperty('message'))
+            game_map = object.getGame().getMap()
+            if game_map.getBoolProperty('RELIC_RETURNED'):
+                object.getGame().getGuiHandler().showMessage(
+                    object.getStringProperty('message')
+                )
             else:
                 object.getGame().getGuiHandler().showMessage('The OctoBogz are defeated!')
-            object.getGame().getMap().setBoolProperty('OCTOBOGZ_CLEARED', True)
-            object.getGame().getMap().setBoolProperty('completedOctoBogz', True)
+            game_map.setBoolProperty('OCTOBOGZ_CLEARED', True)
+            game_map.setBoolProperty('completedOctoBogz', True)
 
     @trigger(context, "onEnter", "market1")
     class MarketTrigger(CTrigger):
