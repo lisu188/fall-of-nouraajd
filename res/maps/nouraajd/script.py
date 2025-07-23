@@ -12,8 +12,8 @@ def load(self, context):
             if event.getCause().isPlayer():
                 self.getMap().getGame().getGuiHandler().showMessage(self.getStringProperty('text'))
                 self.getMap().removeAll(lambda ob: ob.getStringProperty('type') == self.getStringProperty('type'))
-                self.getMap().setBoolProperty('completedRolf', False)
-                self.getMap().setBoolProperty('completedOctoBogz', False)
+                self.getMap().setBoolProperty('completed_rolf', False)
+                self.getMap().setBoolProperty('completed_octobogz', False)
                 self.getMap().getPlayer().addQuest("rolfQuest")
                 self.getMap().getPlayer().addItem("letterFromRolf")
 
@@ -25,7 +25,7 @@ def load(self, context):
     @register(context)
     class MainQuest(CQuest):
         def isCompleted(self):
-            return self.getGame().getMap().getBoolProperty('completedGooby')
+            return self.getGame().getMap().getBoolProperty('completed_gooby')
 
         def onComplete(self):
             pass
@@ -66,7 +66,7 @@ def load(self, context):
     @register(context)
     class OctoBogzQuest(CQuest):
         def isCompleted(self):
-            return self.getGame().getMap().getBoolProperty('completedOctoBogz')
+            return self.getGame().getMap().getBoolProperty('completed_octobogz')
 
         def onComplete(self):
             pass
@@ -83,20 +83,25 @@ def load(self, context):
     class GoobyTrigger(CTrigger):
         def trigger(self, object, event):
             object.getGame().getGuiHandler().showMessage("Gooby killed!!!")
-            object.getGame().getMap().setBoolProperty('completedGooby', True)
+            object.getGame().getMap().setBoolProperty('completed_gooby', True)
 
     @trigger(context, "onDestroy", "cave1")
     class CaveTrigger(CTrigger):
         def trigger(self, object, event):
             object.getGame().getGuiHandler().showMessage(object.getStringProperty("message"))
+            game_map = object.getGame().getMap()
+            player = game_map.getPlayer()
             gooby = object.getGame().createObject("gooby")
             gooby.setStringProperty("name", "gooby1")
-            object.getGame().getMap().addObject(gooby)
+            game_map.addObject(gooby)
             gooby.moveTo(100, 100, 0)
-            object.getGame().getMap().setBoolProperty('completedGooby', False)
-            object.getGame().getMap().getPlayer().addQuest("mainQuest")
-            object.getGame().getMap().getPlayer().addItem("skullOfRolf")
-            object.getGame().getMap().getPlayer().addItem('holyRelic')
+            game_map.setBoolProperty('completed_gooby', False)
+            player.addQuest("mainQuest")
+            player.addItem("skullOfRolf")
+            game_map.setBoolProperty('completed_rolf', True)
+            quests = player.getQuests()
+            if any(q.getName() == 'retrieveRelicQuest' for q in quests):
+                player.addItem('holyRelic')
 
     @trigger(context, "onDestroy", "cave2")
     class OctoBogzCaveTrigger(CTrigger):
@@ -109,7 +114,7 @@ def load(self, context):
             else:
                 object.getGame().getGuiHandler().showMessage('The OctoBogz are defeated!')
             game_map.setBoolProperty('OCTOBOGZ_CLEARED', True)
-            game_map.setBoolProperty('completedOctoBogz', True)
+            game_map.setBoolProperty('completed_octobogz', True)
 
     @trigger(context, "onEnter", "market1")
     class MarketTrigger(CTrigger):
@@ -125,7 +130,7 @@ def load(self, context):
 
     @register(context)
     class DoorDialog(CDialog):
-        def openDoor(self):
+        def open_door(self):
             self.getGame().getMap().removeAll(lambda ob: ob.getName().startswith('nouraajdDoorTrigger'))
             self.getGame().getMap().getObjectByName('nouraajdDoor').setBoolProperty('opened', True)
 
@@ -144,18 +149,18 @@ def load(self, context):
 
     @register(context)
     class TavernDialog1(CDialog):
-        def sellBeer(self):
+        def sell_beer(self):
             print("sellBeer")
 
-        def askedAboutGirl(self):
+        def asked_about_girl(self):
             self.getGame().getMap().setBoolProperty('ASKED_ABOUT_GIRL', True)
 
     @register(context)
     class TavernDialog2(CDialog):
-        def askedAboutGirl(self):
+        def asked_about_girl(self):
             return self.getGame().getMap().getBoolProperty('ASKED_ABOUT_GIRL')
 
-        def talkedToVictor(self):
+        def talked_to_victor(self):
             self.getGame().getMap().setBoolProperty('TALKED_TO_VICTOR', True)
 
     @trigger(context, "onEnter", "nouraajdTownHall")
@@ -166,7 +171,7 @@ def load(self, context):
 
     @register(context)
     class TownHallDialog(CDialog):
-        def giveLetter(self):
+        def give_letter(self):
             player = self.getGame().getMap().getPlayer()
             if not player.hasItem(lambda it: it.getName() == 'letterToBeren'):
                 player.addItem('letterToBeren')
@@ -175,17 +180,17 @@ def load(self, context):
             if not any(q.getName() == 'deliverLetterQuest' for q in quests):
                 player.addQuest('deliverLetterQuest')
 
-        def hasLetterQuest(self):
+        def has_letter_quest(self):
             player = self.getGame().getMap().getPlayer()
             if player.hasItem(lambda it: it.getName() == 'letterToBeren'):
                 return True
             quests = player.getQuests()
             return any(q.getName() == 'deliverLetterQuest' for q in quests)
 
-        def talkedToVictor(self):
+        def talked_to_victor(self):
             return self.getGame().getMap().getBoolProperty('TALKED_TO_VICTOR')
 
-        def spawnCultists(self):
+        def spawn_cultists(self):
             game = self.getGame()
             player = game.getMap().getPlayer()
             loc = player.getCoords()
@@ -214,21 +219,24 @@ def load(self, context):
 
     @register(context)
     class BerenDialog(CDialog):
-        def deliverLetter(self):
+        def deliver_letter(self):
             player = self.getGame().getMap().getPlayer()
             if player.hasItem(lambda it: it.getName() == 'letterToBeren'):
                 player.removeItem(lambda it: it.getName() == 'letterToBeren', True)
                 self.getGame().getMap().setBoolProperty('DELIVERED_LETTER', True)
-                player.addQuest('retrieveRelicQuest')
+                if player.hasItem(lambda it: it.getName() == 'holyRelic'):
+                    self.returnRelic()
+                else:
+                    player.addQuest('retrieveRelicQuest')
 
-        def returnRelic(self):
+        def return_relic(self):
             player = self.getGame().getMap().getPlayer()
             if player.hasItem(lambda it: it.getName() == 'holyRelic'):
                 player.removeItem(lambda it: it.getName() == 'holyRelic', True)
                 self.getGame().getMap().setBoolProperty('RELIC_RETURNED', True)
                 player.addQuest('cleanseCaveQuest')
 
-        def finishCleanse(self):
+        def finish_cleanse(self):
             if self.getGame().getMap().getBoolProperty('OCTOBOGZ_CLEARED'):
                 self.getGame().getMap().setBoolProperty('CAVE_PURGED', True)
                 self.getGame().getGuiHandler().showMessage('The town is safe once more.')
@@ -237,9 +245,16 @@ def load(self, context):
 
     @register(context)
     class OctoBogzDialog(CDialog):
-        def acceptQuest(self):
+        def accept_quest(self):
             self.getGame().getMap().getPlayer().addQuest('octoBogzQuest')
-            self.getGame().getMap().setBoolProperty('completedOctoBogz', False)
+            self.getGame().getMap().setBoolProperty('completed_octobogz', False)
+
+    @trigger(context, "onEnter", "questGiver")
+    class QuestGiverTrigger(CTrigger):
+        def trigger(self, obj, event):
+            if event.getCause().isPlayer():
+                game = obj.getGame()
+                game.getGuiHandler().showDialog(game.createObject('dialog'))
 
     @trigger(context, "onDestroy", "cultLeaderQuest")
     class CultLeaderQuestTrigger(CTrigger):
@@ -271,7 +286,7 @@ def load(self, context):
 
     @register(context)
     class QuestDialog(CDialog):
-        def startAmuletQuest(self):
+        def start_amulet_quest(self):
             game = self.getGame()
             player = game.getMap().getPlayer()
             player.addQuest('amuletQuest')
@@ -283,7 +298,7 @@ def load(self, context):
 
     @register(context)
     class QuestReturnDialog(CDialog):
-        def completeAmuletQuest(self):
+        def complete_amulet_quest(self):
             game = self.getGame()
             player = game.getMap().getPlayer()
             if player.hasItem(lambda it: it.getName() == 'preciousAmulet'):
@@ -291,4 +306,3 @@ def load(self, context):
                 player.addGold(50)
                 game.getMap().setBoolProperty('AMULET_RETURNED', True)
                 game.getGuiHandler().showMessage('The old woman gratefully rewards you with 50 gold.')
-                game.getMap().setBoolProperty('AMULET_RETURNED', True)

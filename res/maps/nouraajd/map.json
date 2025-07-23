@@ -40841,6 +40841,23 @@
           "width": 32,
           "x": 3456,
           "y": 3520
+        },
+        {
+          "height": 32,
+          "id": 102,
+          "name": "questGiver",
+          "properties": {
+            "animation": "images/players/warrior"
+          },
+          "propertytypes": {
+            "animation": "string"
+          },
+          "rotation": 0,
+          "type": "CBuilding",
+          "visible": true,
+          "width": 32,
+          "x": 3424,
+          "y": 3552
         }
       ],
       "opacity": 1,
@@ -40856,7 +40873,7 @@
       "y": 0
     }
   ],
-  "nextobjectid": 102,
+  "nextobjectid": 103,
   "orientation": "orthogonal",
   "properties": {
     "x": "110",

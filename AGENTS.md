@@ -12,6 +12,22 @@ Testing section.
 - Keep lines under 120 characters where practical.
 - Python variable and function names should be in `snake_case`.
 - C++ class names should use `CamelCase`.
+- Classes decorated with `@trigger` should use `CamelCase` with a `Trigger` suffix.
+- Reserve `UPPER_SNAKE_CASE` for global or constant-like properties and `snake_case` for local ones.
+- Keep camelCase for object and item ids referenced from JSON.
+- Engine methods may stay in CamelCase, but new Python-only methods should use `snake_case`.
+
+### Naming Conventions for Triggers and Variables
+The project mixes C++ and Python, so consistent naming is critical:
+
+- **Trigger classes** should be in `CamelCase` and end with `Trigger`, e.g. `MarketTrigger`.
+- **Python methods and local variables** use `snake_case` so that dialog actions
+  and quest checks match their definitions in scripts.
+- **Global flags** shared across maps are written in `UPPER_SNAKE_CASE` while
+  temporary or object-specific properties remain `snake_case`.
+- **Object and item identifiers** in JSON stay in `camelCase`; use the same
+  IDs when referencing them from Python.
+- Engine methods exposed from C++ keep their original `CamelCase` form.
 
 ## Commit Messages
 Describe changes clearly in the commit message.
@@ -60,6 +76,11 @@ Follow these steps whenever you introduce a new building, potion, effect, tile o
     - Ensure that every state and option id used in the JSON matches the definitions in the dialog class.
     - Implement each custom `action` as a method on the Python dialog class.
       The method name must match the `action` string used in the JSON option.
+    - The dialog panel only checks for state ids named `ENTRY` and `EXIT` when
+      opening and closing dialogs. They are not keywords; use any id names as
+      long as references match.
+    - The C++ class handling these dialogs is `CGameDialogPanel`; there is no
+      separate `CDialogPanel` type.
 
 After adding the new item type, run `python3 test.py` to confirm that loading the game still works.
 ## Exposing C++ Types to Python
