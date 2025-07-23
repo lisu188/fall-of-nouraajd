@@ -8,6 +8,7 @@ Testing section.
 
 ## Code Style
 - Use four spaces for indentation in both Python and C++ files.
+- Python files are checked for indentation consistency during testing.
 - Keep lines under 120 characters where practical.
 - Python variable and function names should be in `snake_case`.
 - C++ class names should use `CamelCase`.
@@ -16,6 +17,8 @@ Testing section.
 Describe changes clearly in the commit message.
 If multiple logical changes are made, separate them into individual commits when
 possible.
+- Keep your branch up to date with the main branch.
+
 
 ## Merging Main
 Regularly merge the repository's main branch (`master`) into your feature branch to
