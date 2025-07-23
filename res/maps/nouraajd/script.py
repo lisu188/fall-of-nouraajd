@@ -74,7 +74,7 @@ def load(self, context):
     @register(context)
     class AmuletQuest(CQuest):
         def isCompleted(self):
-            return self.getGame().getMap().getPlayer().hasItem(lambda it: it.getName() == 'preciousAmulet')
+            return self.getGame().getMap().getBoolProperty('AMULET_RETURNED')
 
         def onComplete(self):
             pass
@@ -101,13 +101,15 @@ def load(self, context):
     @trigger(context, "onDestroy", "cave2")
     class OctoBogzCaveTrigger(CTrigger):
         def trigger(self, object, event):
-            player = object.getGame().getMap().getPlayer()
-            if player.hasItem(lambda it: it.getName() == 'holyRelic'):
-                object.getGame().getGuiHandler().showMessage(object.getStringProperty('message'))
+            game_map = object.getGame().getMap()
+            if game_map.getBoolProperty('RELIC_RETURNED'):
+                object.getGame().getGuiHandler().showMessage(
+                    object.getStringProperty('message')
+                )
             else:
                 object.getGame().getGuiHandler().showMessage('The OctoBogz are defeated!')
-            object.getGame().getMap().setBoolProperty('OCTOBOGZ_CLEARED', True)
-            object.getGame().getMap().setBoolProperty('completedOctoBogz', True)
+            game_map.setBoolProperty('OCTOBOGZ_CLEARED', True)
+            game_map.setBoolProperty('completedOctoBogz', True)
 
     @trigger(context, "onEnter", "market1")
     class MarketTrigger(CTrigger):
@@ -250,17 +252,22 @@ def load(self, context):
             game.getGuiHandler().showTrade(game.createObject('victorMarket'))
             game.getMap().setBoolProperty('VICTOR_HELP', True)
             if event.getCause().isPlayer():
-                hall.getGame().getGuiHandler().showDialog(hall.getGame().createObject('dialog'))
+                # Display a completion dialog to the player
+                game.getGuiHandler().showDialog(game.createObject('dialog'))
 
     @trigger(context, "onEnter", "oldWoman")
     class OldWomanTrigger(CTrigger):
         def trigger(self, obj, event):
             if event.getCause().isPlayer():
-                player = obj.getGame().getMap().getPlayer()
+                game = obj.getGame()
+                game_map = game.getMap()
+                if game_map.getBoolProperty('AMULET_RETURNED'):
+                    return
+                player = game_map.getPlayer()
                 if player.hasItem(lambda it: it.getName() == 'preciousAmulet'):
-                    obj.getGame().getGuiHandler().showDialog(obj.getGame().createObject('questReturnDialog'))
+                    game.getGuiHandler().showDialog(game.createObject('questReturnDialog'))
                 else:
-                    obj.getGame().getGuiHandler().showDialog(obj.getGame().createObject('questDialog'))
+                    game.getGuiHandler().showDialog(game.createObject('questDialog'))
 
     @register(context)
     class QuestDialog(CDialog):
@@ -282,4 +289,14 @@ def load(self, context):
             if player.hasItem(lambda it: it.getName() == 'preciousAmulet'):
                 player.removeItem(lambda it: it.getName() == 'preciousAmulet', True)
                 player.addGold(50)
+                game.getMap().setBoolProperty('AMULET_RETURNED', True)
                 game.getGuiHandler().showMessage('The old woman gratefully rewards you with 50 gold.')
+                game.getMap().setBoolProperty('AMULET_RETURNED', True)
+
+    @trigger(context, "onEnter", "octoBogzSign")
+    class OctoBogzSignTrigger(CTrigger):
+        def trigger(self, obj, event):
+            if event.getCause().isPlayer():
+                obj.getGame().getGuiHandler().showDialog(
+                    obj.getGame().createObject('dialog')
+                )
