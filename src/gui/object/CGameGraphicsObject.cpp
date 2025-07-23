@@ -220,8 +220,13 @@ bool CGameGraphicsObject::isVisible() {
 
 void CGameGraphicsObject::renderBackground(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> rect, int time) {
     if (!background.empty()) {
+        auto texture = gui->getTextureCache()->getTexture(background);
+        if (!texture) {
+            vstd::logger::error("CGameGraphicsObject: missing background", background);
+            return;
+        }
         SDL_SAFE(SDL_RenderCopy(gui->getRenderer(),
-                                gui->getTextureCache()->getTexture(background), nullptr, rect.get()));
+                                texture, nullptr, rect.get()));
     }
 }
 
