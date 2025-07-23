@@ -250,7 +250,8 @@ def load(self, context):
             game.getGuiHandler().showTrade(game.createObject('victorMarket'))
             game.getMap().setBoolProperty('VICTOR_HELP', True)
             if event.getCause().isPlayer():
-                hall.getGame().getGuiHandler().showDialog(hall.getGame().createObject('dialog'))
+                # Display a completion dialog to the player
+                game.getGuiHandler().showDialog(game.createObject('dialog'))
 
     @trigger(context, "onEnter", "oldWoman")
     class OldWomanTrigger(CTrigger):
