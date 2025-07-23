@@ -18,6 +18,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "CProxyTargetGraphicsObject.h"
 
 #include <utility>
+#include <algorithm>
 #include "CProxyGraphicsObject.h"
 #include "gui/CLayout.h"
 #include "gui/CGui.h"
@@ -26,11 +27,10 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 void CProxyTargetGraphicsObject::refresh() {
     vstd::with<void>(getGui(), [this](auto gui) {
         int prevX = 0, prevY = 0;
-        if (!proxyObjects.empty()) {
-            auto last_x = proxyObjects.rbegin();
-            prevX = last_x->first + 1;
-            if (!last_x->second.empty()) {
-                prevY = last_x->second.rbegin()->first + 1;
+        for (const auto &x_pair : proxyObjects) {
+            prevX = std::max(prevX, x_pair.first + 1);
+            if (!x_pair.second.empty()) {
+                prevY = std::max(prevY, x_pair.second.rbegin()->first + 1);
             }
         }
 
