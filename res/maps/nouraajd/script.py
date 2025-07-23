@@ -261,7 +261,8 @@ def load(self, context):
             goblin = game.createObject('goblinThief')
             goblin.setStringProperty('name', 'amuletGoblin')
             game.getMap().addObject(goblin)
-            goblin.moveTo(6240, 256, 0)
+            # spawn near the old woman within map bounds
+            goblin.moveTo(195, 8, 0)
 
     @register(context)
     class QuestReturnDialog(CDialog):
