@@ -13,7 +13,7 @@
                 "class": "CDialogOption",
                 "properties": {
                   "number": 0,
-                  "action": "openDoor",
+                  "action": "open_door",
                   "nextStateId": "WELCOME",
                   "text": "I offer my assistance. (present the letter)"
                 }
@@ -96,7 +96,7 @@
     "properties": {
       "nextStateId": "INKEEPER_ABOUT_GIRL",
       "text": "What dark purpose did they pursue?",
-      "action": "askedAboutGirl"
+      "action": "asked_about_girl"
     }
   },
   "askAboutMarumi": {
@@ -110,7 +110,7 @@
     "ref": "exitOption",
     "properties": {
       "text": "Enough of this. Bring me a tankard of ale.",
-      "action": "sellBeer"
+      "action": "sell_beer"
     }
   },
   "shouldGo": {
