@@ -139,6 +139,9 @@ BOOST_PYTHON_MODULE (_game) {
                 .def("forObjects", &CMap::forObjects)
                 .def("canStep", canStep)
                 .def("dumpPaths", &CMap::dumpPaths)
+                .def("getEntryX", &CMap::getEntryX)
+                .def("getEntryY", &CMap::getEntryY)
+                .def("getEntryZ", &CMap::getEntryZ)
                 .def("getObjects", &CMap::getObjects)
                 .def("getTurn", &CMap::getTurn);
 
