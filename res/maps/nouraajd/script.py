@@ -283,3 +283,9 @@ def load(self, context):
                 player.removeItem(lambda it: it.getName() == 'preciousAmulet', True)
                 player.addGold(50)
                 game.getGuiHandler().showMessage('The old woman gratefully rewards you with 50 gold.')
+
+    @trigger(context, "onEnter", "octoBogzSign")
+    class OctoBogzSignTrigger(CTrigger):
+        def trigger(self, obj, event):
+            if event.getCause().isPlayer():
+                obj.getGame().getGuiHandler().showDialog(obj.getGame().createObject('dialog'))

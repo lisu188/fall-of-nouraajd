@@ -11,6 +11,12 @@
       "text": "NOURAAJD - EAST"
     }
   },
+  "octoBogzSign": {
+    "ref": "signPost",
+    "properties": {
+      "text": "Beware of OctoBogz ahead"
+    }
+  },
   "exampleMarket": {
     "class": "CMarket",
     "properties": {
