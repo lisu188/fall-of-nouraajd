@@ -53,7 +53,7 @@
         {
           "class": "CDialogState",
           "properties": {
-            "stateId": "ASK_HELP",
+            "stateId": "ASK_HELP_REPEAT",
             "condition": "hasLetterQuest",
             "text": "You already agreed to deliver our letter. Please hurry to Father Beren.",
             "options": [
@@ -102,6 +102,13 @@
                 }
               }
             ]
+          }
+        },
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "EXIT",
+            "text": ""
           }
         }
       ]
