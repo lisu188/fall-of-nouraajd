@@ -13,7 +13,7 @@
                 "class": "CDialogOption",
                 "properties": {
                   "number": 0,
-                  "action": "deliverLetter",
+                  "action": "deliver_letter",
                   "nextStateId": "LETTER_DELIVERED",
                   "text": "I carry a letter for you."
                 }
@@ -22,7 +22,7 @@
                 "class": "CDialogOption",
                 "properties": {
                   "number": 1,
-                  "action": "returnRelic",
+                  "action": "return_relic",
                   "nextStateId": "RELIC_RETURNED",
                   "text": "I recovered the relic."
                 }
@@ -31,7 +31,7 @@
                 "class": "CDialogOption",
                 "properties": {
                   "number": 2,
-                  "action": "finishCleanse",
+                  "action": "finish_cleanse",
                   "nextStateId": "CAVE_PURGED",
                   "text": "The cave has been cleansed."
                 }
