@@ -74,7 +74,7 @@ def load(self, context):
     @register(context)
     class AmuletQuest(CQuest):
         def isCompleted(self):
-            return self.getGame().getMap().getPlayer().hasItem(lambda it: it.getName() == 'preciousAmulet')
+            return self.getGame().getMap().getBoolProperty('AMULET_RETURNED')
 
         def onComplete(self):
             pass
@@ -283,3 +283,4 @@ def load(self, context):
                 player.removeItem(lambda it: it.getName() == 'preciousAmulet', True)
                 player.addGold(50)
                 game.getGuiHandler().showMessage('The old woman gratefully rewards you with 50 gold.')
+                game.getMap().setBoolProperty('AMULET_RETURNED', True)
