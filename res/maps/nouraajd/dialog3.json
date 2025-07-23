@@ -111,9 +111,10 @@
             "options": [
               {
                 "class": "CDialogOption",
-                "properties": {
+              "properties": {
                   "text": "Don't you have ANY clue where she might be?",
-                  "number": 0
+                  "number": 0,
+                  "nextStateId": "VICTOR_CLUE"
                 }
               },
               {
@@ -121,6 +122,7 @@
                 "properties": {
                   "text": "I've ran into group of priests of Marumi Baso that were looking for a girl around the city, maybe they are responsible for your daughter's disappearance?",
                   "number": 1,
+                  "nextStateId": "SUGGEST_TOWN_HALL",
                   "condition": "askedAboutGirl"
                 }
               }
