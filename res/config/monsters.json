@@ -495,5 +495,48 @@
       },
       "sw": 2
     }
+  },
+  "GoblinThief": {
+    "class": "CCreature",
+    "properties": {
+      "actions": [
+        { "ref": "Attack" }
+      ],
+      "animation": "images/monsters/pritz",
+      "fightController": { "class": "CMonsterFightController" },
+      "label": "Goblin Thief",
+      "levelStats": {
+        "class": "Stats",
+        "properties": {
+          "agility": 2,
+          "crit": 1,
+          "dmgMax": 1,
+          "dmgMin": 1,
+          "hit": 3,
+          "intelligence": 1,
+          "normalResist": 5,
+          "stamina": 1,
+          "strength": 2
+        }
+      },
+      "levelling": {
+        "4": { "ref": "DoubleAttack" }
+      },
+      "baseStats": {
+        "class": "Stats",
+        "properties": {
+          "agility": 5,
+          "crit": 10,
+          "dmgMax": 3,
+          "dmgMin": 2,
+          "hit": 75,
+          "intelligence": 5,
+          "mainStat": "strength",
+          "stamina": 3,
+          "strength": 5
+        }
+      },
+      "sw": 1
+    }
   }
 }
