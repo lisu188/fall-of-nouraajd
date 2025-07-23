@@ -60,6 +60,9 @@ Follow these steps whenever you introduce a new building, potion, effect, tile o
     - Ensure that every state and option id used in the JSON matches the definitions in the dialog class.
     - Implement each custom `action` as a method on the Python dialog class.
       The method name must match the `action` string used in the JSON option.
+    - The dialog panel only checks for state ids named `ENTRY` and `EXIT` when
+      opening and closing dialogs. They are not keywords; use any id names as
+      long as references match.
 
 After adding the new item type, run `python3 test.py` to confirm that loading the game still works.
 ## Exposing C++ Types to Python
