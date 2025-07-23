@@ -79,3 +79,7 @@ Follow these steps when making a new C++ class usable from Python:
     - Add it inside `load(context)` and decorate with `@register(context)`.
 
 After exposing the new type, run `python3 test.py` to verify the bindings.
+
+## Copyright
+When modifying source files, update the copyright year in
+the header comments to 2025.
