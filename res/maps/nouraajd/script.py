@@ -256,11 +256,15 @@ def load(self, context):
     class OldWomanTrigger(CTrigger):
         def trigger(self, obj, event):
             if event.getCause().isPlayer():
-                player = obj.getGame().getMap().getPlayer()
+                game = obj.getGame()
+                game_map = game.getMap()
+                if game_map.getBoolProperty('AMULET_RETURNED'):
+                    return
+                player = game_map.getPlayer()
                 if player.hasItem(lambda it: it.getName() == 'preciousAmulet'):
-                    obj.getGame().getGuiHandler().showDialog(obj.getGame().createObject('questReturnDialog'))
+                    game.getGuiHandler().showDialog(game.createObject('questReturnDialog'))
                 else:
-                    obj.getGame().getGuiHandler().showDialog(obj.getGame().createObject('questDialog'))
+                    game.getGuiHandler().showDialog(game.createObject('questDialog'))
 
     @register(context)
     class QuestDialog(CDialog):
@@ -282,4 +286,5 @@ def load(self, context):
             if player.hasItem(lambda it: it.getName() == 'preciousAmulet'):
                 player.removeItem(lambda it: it.getName() == 'preciousAmulet', True)
                 player.addGold(50)
+                game.getMap().setBoolProperty('AMULET_RETURNED', True)
                 game.getGuiHandler().showMessage('The old woman gratefully rewards you with 50 gold.')
