@@ -53,6 +53,20 @@
         {
           "class": "CDialogState",
           "properties": {
+            "stateId": "ASK_HELP",
+            "condition": "hasLetterQuest",
+            "text": "You already agreed to deliver our letter. Please hurry to Father Beren.",
+            "options": [
+              {
+                "ref": "exitOption",
+                "properties": { "number": 0 }
+              }
+            ]
+          }
+        },
+        {
+          "class": "CDialogState",
+          "properties": {
             "stateId": "THANKS",
             "text": "Thank you. Please hurry; the situation is dire.",
             "options": [
