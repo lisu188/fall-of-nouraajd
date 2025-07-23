@@ -251,7 +251,7 @@
                 "ref": "exitOption",
                 "properties": {
                   "number": 0,
-                  "action": "startAmuletQuest"
+                  "action": "start_amulet_quest"
                 }
               }
             ]
@@ -289,7 +289,7 @@
                 "ref": "exitOption",
                 "properties": {
                   "number": 0,
-                  "action": "completeAmuletQuest"
+                  "action": "complete_amulet_quest"
                 }
               }
             ]
