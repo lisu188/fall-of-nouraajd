@@ -25,24 +25,13 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 void CProxyTargetGraphicsObject::refresh() {
     vstd::with<void>(getGui(), [this](auto gui) {
-        int prevX, prevY;
+        int prevX = 0, prevY = 0;
         if (!proxyObjects.empty()) {
-            auto &previousSizeX = *std::max_element(proxyObjects.begin(), proxyObjects.end(), [](auto &a, auto &b) {
-                return a.first > b.first;
-            });
-            if (previousSizeX.second.size() > 0) {
-                auto &previousSizeY = *std::max_element(previousSizeX.second.begin(), previousSizeX.second.end(),
-                                                        [](auto &a, auto &b) {
-                                                            return a.first > b.first;
-                                                        });
-                prevY = previousSizeY.first;
-            } else {
-                prevY = 0;
+            auto last_x = proxyObjects.rbegin();
+            prevX = last_x->first + 1;
+            if (!last_x->second.empty()) {
+                prevY = last_x->second.rbegin()->first + 1;
             }
-            prevX = previousSizeX.first;
-        } else {
-            prevX = 0;
-            prevY = 0;
         }
 
         int currentSizeX = getSizeX(gui);
