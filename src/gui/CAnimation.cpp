@@ -34,15 +34,25 @@ std::shared_ptr<CGameObject> CAnimation::getObject() {
 }
 
 void CStaticAnimation::renderObject(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> rect, int frameTime) {
+    if (!object) {
+        vstd::logger::error("CStaticAnimation: object expired");
+        return;
+    }
+
+    auto texture = gui->getTextureCache()->getTexture(object->getAnimation());
+    if (!texture) {
+        vstd::logger::error("CStaticAnimation: missing texture", object->getAnimation());
+        return;
+    }
     if (rotation == 0) {
         SDL_SAFE(
                 SDL_RenderCopy(gui->getRenderer(),
-                               gui->getTextureCache()->getTexture(object->getAnimation()),
+                               texture,
                                nullptr,
                                rect.get()));
     } else {
         SDL_SAFE(SDL_RenderCopyEx(gui->getRenderer(),
-                                  gui->getTextureCache()->getTexture(object->getAnimation()),
+                                  texture,
                                   nullptr,
                                   rect.get(),
                                   rotation,
@@ -69,6 +79,10 @@ CDynamicAnimation::CDynamicAnimation() {
 
 void CDynamicAnimation::renderObject(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> rect, int frameTime) {
     if (initialized) {
+        if (!object) {
+            vstd::logger::error("CDynamicAnimation: object expired");
+            return;
+        }
         auto tableCalc = [this]() {
             std::vector<int> vec;
             for (int i = 0; i < size; i++) {
@@ -99,8 +113,13 @@ void CDynamicAnimation::renderObject(std::shared_ptr<CGui> gui, std::shared_ptr<
                 break;
             }
         }
+        auto texture = gui->getTextureCache()->getTexture(paths[currFrame]);
+        if (!texture) {
+            vstd::logger::error("CDynamicAnimation: missing frame", paths[currFrame]);
+            return;
+        }
         SDL_SAFE(SDL_RenderCopy(gui->getRenderer(),
-                                gui->getTextureCache()->getTexture(paths[currFrame]),
+                                texture,
                                 nullptr,
                                 rect.get()));
     }
