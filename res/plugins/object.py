@@ -82,7 +82,7 @@ def load(self, context):
                                 mon = self.getObjectProperty('monster').clone()
                                 self.getMap().addObject(mon)
                                 mon.moveTo(location.x + i, location.y + j, location.z)
-                self.getMap().removeObject(self.ptr());  # TODO: WHY
+                self.getMap().removeObjectByName(self.getName())
 
         def onTurn(self, event):
             chance = self.getNumericProperty("chance");

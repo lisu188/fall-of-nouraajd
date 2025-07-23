@@ -162,6 +162,9 @@ namespace
                             CTypes::register_type<CWrapper<CScroll>, CScroll, CItem, CMapObject, CGameObject>();
                         }
                     }
+                        {
+                            CTypes::register_type<CWrapper<CScroll>, CScroll, CItem, CMapObject, CGameObject>();
+                        }
 
                     CTypes::register_type<CCreature, CMapObject, CGameObject>();
                     {

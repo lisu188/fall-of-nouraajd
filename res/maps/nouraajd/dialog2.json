@@ -1,6 +1,6 @@
 {
   "dialog": {
-    "class": "CDialog",
+    "class": "OctoBogzDialog",
     "properties": {
       "states": [
         {
@@ -81,6 +81,7 @@
                 "properties": {
                   "number": 0,
                   "nextStateId": "ACCEPT_QUEST",
+                  "action": "acceptQuest",
                   "text": "I'll take on this challenge and rid the cave of the OctoBogz."
                 }
               },

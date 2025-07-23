@@ -49,7 +49,7 @@ void CProxyTargetGraphicsObject::refresh() {
         int currentSizeY = getSizeY(gui);
 
         int xDiff = currentSizeX - prevX;
-        int yDiff = currentSizeX - prevY;
+        int yDiff = currentSizeY - prevY;
 
         for (int x = 0; x < std::max(prevX, currentSizeX); x++) {
             for (int y = 0; y < std::max(prevY, currentSizeY); y++) {
