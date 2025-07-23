@@ -158,6 +158,9 @@ namespace
                         CTypes::register_type<CBelt, CItem, CMapObject, CGameObject>();
                         CTypes::register_type<CGloves, CItem, CMapObject, CGameObject>();
                         CTypes::register_type<CScroll, CItem, CMapObject, CGameObject>();
+                        {
+                            CTypes::register_type<CWrapper<CScroll>, CScroll, CItem, CMapObject, CGameObject>();
+                        }
                     }
                         {
                             CTypes::register_type<CWrapper<CScroll>, CScroll, CItem, CMapObject, CGameObject>();

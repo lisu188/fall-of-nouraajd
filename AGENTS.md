@@ -17,6 +17,11 @@ Describe changes clearly in the commit message.
 If multiple logical changes are made, separate them into individual commits when
 possible.
 
+## Merging Main
+Regularly merge the repository's main branch (`master`) into your feature branch to
+stay up to date:
+Resolve any conflicts and rerun `python3 test.py`.
+
 ## Adding Item Types
 Follow these steps whenever you introduce a new building, potion, effect, tile or other item type:
 
