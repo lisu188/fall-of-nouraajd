@@ -246,9 +246,29 @@ def load(self, context):
     class OldWomanTrigger(CTrigger):
         def trigger(self, obj, event):
             if event.getCause().isPlayer():
-                obj.getGame().getGuiHandler().showDialog(obj.getGame().createObject('questDialog'))
+                player = obj.getGame().getMap().getPlayer()
+                if player.hasItem(lambda it: it.getName() == 'preciousAmulet'):
+                    obj.getGame().getGuiHandler().showDialog(obj.getGame().createObject('questReturnDialog'))
+                else:
+                    obj.getGame().getGuiHandler().showDialog(obj.getGame().createObject('questDialog'))
 
     @register(context)
     class QuestDialog(CDialog):
         def startAmuletQuest(self):
-            self.getGame().getMap().getPlayer().addQuest('amuletQuest')
+            game = self.getGame()
+            player = game.getMap().getPlayer()
+            player.addQuest('amuletQuest')
+            goblin = game.createObject('goblinThief')
+            goblin.setStringProperty('name', 'amuletGoblin')
+            game.getMap().addObject(goblin)
+            goblin.moveTo(6240, 256, 0)
+
+    @register(context)
+    class QuestReturnDialog(CDialog):
+        def completeAmuletQuest(self):
+            game = self.getGame()
+            player = game.getMap().getPlayer()
+            if player.hasItem(lambda it: it.getName() == 'preciousAmulet'):
+                player.removeItem(lambda it: it.getName() == 'preciousAmulet', True)
+                player.addGold(50)
+                game.getGuiHandler().showMessage('The old woman gratefully rewards you with 50 gold.')
