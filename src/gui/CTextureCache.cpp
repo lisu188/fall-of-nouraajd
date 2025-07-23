@@ -93,8 +93,12 @@ SDL_Texture *CTextureCache::getTexture(std::string path) {
 }
 
 SDL_Texture *CTextureCache::loadTexture(std::string path) {
-    return CTextureUtil::calculateAlpha(_gui.lock()->getRenderer(),
-                                        IMG_Load(path.c_str()));
+    SDL_Surface *surface = IMG_Load(path.c_str());
+    if (!surface) {
+        vstd::logger::error("CTextureCache::loadTexture: cannot load", path);
+        return nullptr;
+    }
+    return CTextureUtil::calculateAlpha(_gui.lock()->getRenderer(), surface);
 }
 
 CTextureCache::CTextureCache(std::shared_ptr<CGui> _gui) : _gui(_gui) {}
@@ -129,8 +133,19 @@ auto CTextureUtil::getPixelRgba(SDL_Surface *surface, int x, int y) {
 }
 
 SDL_Texture *CTextureUtil::calculateAlpha(SDL_Renderer *renderer, SDL_Surface *surface) {
+    if (!surface) {
+        vstd::logger::error("CTextureUtil::calculateAlpha: null surface");
+        return nullptr;
+    }
+
     int w = surface->w;
     int h = surface->h;
+
+    if (w <= 0 || h <= 0) {
+        vstd::logger::error("CTextureUtil::calculateAlpha: invalid surface size", w, h);
+        SDL_SAFE(SDL_FreeSurface(surface));
+        return nullptr;
+    }
 
     auto secondSurface = SDL_CreateRGBSurfaceWithFormat(surface->flags, surface->w, surface->h, 32,
                                                         SDL_PIXELFORMAT_RGBA32);

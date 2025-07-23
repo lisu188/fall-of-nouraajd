@@ -34,15 +34,20 @@ std::shared_ptr<CGameObject> CAnimation::getObject() {
 }
 
 void CStaticAnimation::renderObject(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> rect, int frameTime) {
+    auto texture = gui->getTextureCache()->getTexture(object->getAnimation());
+    if (!texture) {
+        vstd::logger::error("CStaticAnimation: missing texture", object->getAnimation());
+        return;
+    }
     if (rotation == 0) {
         SDL_SAFE(
                 SDL_RenderCopy(gui->getRenderer(),
-                               gui->getTextureCache()->getTexture(object->getAnimation()),
+                               texture,
                                nullptr,
                                rect.get()));
     } else {
         SDL_SAFE(SDL_RenderCopyEx(gui->getRenderer(),
-                                  gui->getTextureCache()->getTexture(object->getAnimation()),
+                                  texture,
                                   nullptr,
                                   rect.get(),
                                   rotation,
@@ -99,8 +104,13 @@ void CDynamicAnimation::renderObject(std::shared_ptr<CGui> gui, std::shared_ptr<
                 break;
             }
         }
+        auto texture = gui->getTextureCache()->getTexture(paths[currFrame]);
+        if (!texture) {
+            vstd::logger::error("CDynamicAnimation: missing frame", paths[currFrame]);
+            return;
+        }
         SDL_SAFE(SDL_RenderCopy(gui->getRenderer(),
-                                gui->getTextureCache()->getTexture(paths[currFrame]),
+                                texture,
                                 nullptr,
                                 rect.get()));
     }
