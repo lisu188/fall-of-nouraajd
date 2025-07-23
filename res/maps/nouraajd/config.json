@@ -125,6 +125,20 @@
       }
     }
   },
+  "goblinThief": {
+    "ref": "GoblinThief",
+    "properties": {
+      "items": [
+        { "ref": "preciousAmulet" }
+      ],
+      "controller": {
+        "class": "CTargetController",
+        "properties": {
+          "target": "player"
+        }
+      }
+    }
+  },
   "letterFromRolf": {
     "ref": "Scroll",
     "properties": {
@@ -253,6 +267,29 @@
                 "ref": "exitOption",
                 "properties": {
                   "number": 0
+                }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  },
+  "questReturnDialog": {
+    "class": "QuestReturnDialog",
+    "properties": {
+      "states": [
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "ENTRY",
+            "text": "You found my amulet! Please take this as a reward.",
+            "options": [
+              {
+                "ref": "exitOption",
+                "properties": {
+                  "number": 0,
+                  "action": "completeAmuletQuest"
                 }
               }
             ]
