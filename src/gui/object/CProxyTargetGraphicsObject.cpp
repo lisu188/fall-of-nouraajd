@@ -18,6 +18,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "CProxyTargetGraphicsObject.h"
 
 #include <utility>
+#include <algorithm>
 #include "CProxyGraphicsObject.h"
 #include "gui/CLayout.h"
 #include "gui/CGui.h"
@@ -25,24 +26,12 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 void CProxyTargetGraphicsObject::refresh() {
     vstd::with<void>(getGui(), [this](auto gui) {
-        int prevX, prevY;
-        if (!proxyObjects.empty()) {
-            auto &previousSizeX = *std::max_element(proxyObjects.begin(), proxyObjects.end(), [](auto &a, auto &b) {
-                return a.first > b.first;
-            });
-            if (previousSizeX.second.size() > 0) {
-                auto &previousSizeY = *std::max_element(previousSizeX.second.begin(), previousSizeX.second.end(),
-                                                        [](auto &a, auto &b) {
-                                                            return a.first > b.first;
-                                                        });
-                prevY = previousSizeY.first;
-            } else {
-                prevY = 0;
+        int prevX = 0, prevY = 0;
+        for (auto const &[x, row] : proxyObjects) {
+            prevX = std::max(prevX, x + 1);
+            if (!row.empty()) {
+                prevY = std::max(prevY, row.rbegin()->first + 1);
             }
-            prevX = previousSizeX.first;
-        } else {
-            prevX = 0;
-            prevY = 0;
         }
 
         int currentSizeX = getSizeX(gui);
