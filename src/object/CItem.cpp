@@ -27,9 +27,11 @@ CItem::~CItem() {
 
 void CItem::onEnter(std::shared_ptr<CGameEvent> event) {
     if (std::shared_ptr<CCreature> visitor = vstd::cast<CCreature>(vstd::cast<CGameEventCaused>(event)->getCause())) {
-        auto self_from_map = vstd::cast<CItem>(getMap()->getObjectByName(getName()));
-        getMap()->removeObject(self_from_map);
-        visitor->addItem(self_from_map);
+        // ensure the item added to the inventory shares the same control block
+        // as the one stored inside the map
+        auto item = vstd::cast<CItem>(getMap()->getObjectByName(getName()));
+        visitor->addItem(item);
+        getMap()->removeObject(item);
     }
 }
 
