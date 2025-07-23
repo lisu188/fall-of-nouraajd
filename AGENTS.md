@@ -84,6 +84,23 @@ Follow these steps whenever you introduce a new building, potion, effect, tile o
       separate `CDialogPanel` type.
 
 After adding the new item type, run `python3 test.py` to confirm that loading the game still works.
+
+## Quest Integrity
+Follow these steps to verify quests remain consistent:
+
+1. **Check ids**
+    - Ensure every quest id in `res/maps/<map>/config.json` matches the
+      class name in the corresponding `script.py` file.
+2. **Playtest**
+    - Build the game and start it with `python3 play.py`.
+    - Accept each available quest and open the quest log with **j** to
+      confirm it appears.
+    - Progress the objectives and verify completed quests move to the
+      "completed" section.
+3. **Run tests**
+    - Execute `python3 test.py` to ensure the game still loads with the
+      updated quests.
+
 ## Exposing C++ Types to Python
 Follow these steps when making a new C++ class usable from Python:
 
