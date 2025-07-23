@@ -40794,7 +40794,47 @@
         {
           "height": 32,
           "id": 99,
+          "name": "oldWoman",
+          "properties": {
+            "animation": "images/players/sorcerer"
+          },
+          "propertytypes": {
+            "animation": "string"
+          },
+          "rotation": 0,
+          "type": "CBuilding",
+          "visible": true,
+          "width": 32,
+          "x": 6080,
+          "y": 160
+        },
+        {
+          "height": 32,
+          "id": 101,
+          "name": "nouraajdChapel",
+          "properties": {
+            "animation": "images/buildings/chapel"
+          },
+          "propertytypes": {
+            "animation": "string"
+          },
+          "rotation": 0,
+          "type": "CBuilding",
+          "visible": true,
+          "width": 32,
+          "x": 1600,
+          "y": 3232
+        },
+        {
+          "height": 32,
+          "id": 100,
           "name": "townPortalScroll",
+          "properties": {
+            "animation": "images/items/scroll"
+          },
+          "propertytypes": {
+            "animation": "string"
+          },
           "rotation": 0,
           "type": "TownPortalScroll",
           "visible": true,
@@ -40816,7 +40856,7 @@
       "y": 0
     }
   ],
-  "nextobjectid": 100,
+  "nextobjectid": 102,
   "orientation": "orthogonal",
   "properties": {
     "x": "110",

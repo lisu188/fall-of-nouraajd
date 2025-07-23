@@ -3,14 +3,16 @@
     "class": "CDialogOption",
     "properties": {
       "text": "Be a man and stop crying.",
-      "nextStateId": "VICTOR_SPEECH"
+      "nextStateId": "VICTOR_SPEECH",
+      "action": "talkedToVictor"
     }
   },
   "whatsWrong": {
     "class": "CDialogOption",
     "properties": {
       "text": "What`s wrong? Why are You crying?",
-      "nextStateId": "VICTOR_SPEECH"
+      "nextStateId": "VICTOR_SPEECH",
+      "action": "talkedToVictor"
     }
   },
   "tavernDialog2": {
@@ -121,6 +123,91 @@
                   "number": 1,
                   "condition": "askedAboutGirl"
                 }
+              }
+            ]
+          }
+        },
+          {
+            "class": "CDialogState",
+            "properties": {
+              "stateId": "VICTOR_CLUE",
+              "text": "No... someone told me they've seen a girl that could be her in the courtyard nearby, but I was already there and couldn't find her or any clue.",
+              "options": [
+                {
+                  "class": "CDialogOption",
+                  "properties": {
+                    "number": 0,
+                    "nextStateId": "COURTYARD_PATH",
+                    "text": "Let's search the courtyard together."
+                  }
+                },
+                {
+                  "class": "CDialogOption",
+                  "properties": {
+                    "number": 1,
+                    "nextStateId": "SUGGEST_TOWN_HALL",
+                    "text": "Maybe the town hall has some records."
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "class": "CDialogState",
+            "properties": {
+              "stateId": "SUGGEST_TOWN_HALL",
+              "text": "WHAT?! I've heard about them but I have no clue where their chapel might be located. We should check the town hall, maybe someone could help us there.",
+              "options": [
+                {
+                  "class": "CDialogOption",
+                  "properties": {
+                    "number": 0,
+                    "nextStateId": "EXIT",
+                    "text": "Let's head to the town hall."
+                  }
+                },
+                {
+                  "class": "CDialogOption",
+                  "properties": {
+                    "number": 1,
+                    "nextStateId": "COURTYARD_PATH",
+                    "text": "I'll search the courtyard."
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "class": "CDialogState",
+            "properties": {
+              "stateId": "COURTYARD_PATH",
+              "text": "You decide to search the courtyard. A wooden door bearing the cult's sigil catches your eye. Beyond it lies a stained glass depicting a young girl. Four robed cultists bar your way. After a brutal fight you enter only to find the cult leader has already sacrificed Victor's daughter. Her soul is trapped within the glass, a single tear glimmering on its surface. Victor drinks a vial of poison in despair.",
+              "options": [
+                {
+                  "ref": "exitOption",
+                  "properties": {
+                    "number": 0
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      }
+    },
+  "victorRewardDialog": {
+    "class": "CDialog",
+    "properties": {
+      "states": [
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "ENTRY",
+            "text": "You shatter the stained glass and free Victor's terrified daughter. Grateful beyond words, Victor rewards you with 500 gold and offers his potions whenever you need them.",
+            "options": [
+              {
+                "ref": "exitOption",
+                "properties": { "number": 0 }
               }
             ]
           }
