@@ -4,7 +4,7 @@
     "properties": {
       "text": "Be a man and stop crying.",
       "nextStateId": "VICTOR_SPEECH",
-      "action": "talkedToVictor"
+      "action": "talked_to_victor"
     }
   },
   "whatsWrong": {
@@ -12,7 +12,7 @@
     "properties": {
       "text": "What`s wrong? Why are You crying?",
       "nextStateId": "VICTOR_SPEECH",
-      "action": "talkedToVictor"
+      "action": "talked_to_victor"
     }
   },
   "tavernDialog2": {
@@ -123,7 +123,7 @@
                   "text": "I've ran into group of priests of Marumi Baso that were looking for a girl around the city, maybe they are responsible for your daughter's disappearance?",
                   "number": 1,
                   "nextStateId": "SUGGEST_TOWN_HALL",
-                  "condition": "askedAboutGirl"
+                  "condition": "asked_about_girl"
                 }
               }
             ]

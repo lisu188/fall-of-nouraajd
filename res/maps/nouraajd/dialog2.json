@@ -81,7 +81,7 @@
                 "properties": {
                   "number": 0,
                   "nextStateId": "ACCEPT_QUEST",
-                  "action": "acceptQuest",
+                  "action": "accept_quest",
                   "text": "I'll take on this challenge and rid the cave of the OctoBogz."
                 }
               },

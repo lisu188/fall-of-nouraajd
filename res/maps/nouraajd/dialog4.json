@@ -36,7 +36,7 @@
                 "class": "CDialogOption",
                 "properties": {
                   "number": 0,
-                  "action": "giveLetter",
+                  "action": "give_letter",
                   "nextStateId": "THANKS",
                   "text": "I'll deliver it."
                 }
@@ -54,7 +54,7 @@
           "class": "CDialogState",
           "properties": {
             "stateId": "ASK_HELP_REPEAT",
-            "condition": "hasLetterQuest",
+            "condition": "has_letter_quest",
             "text": "You already agreed to deliver our letter. Please hurry to Father Beren.",
             "options": [
               {
@@ -83,7 +83,7 @@
           "class": "CDialogState",
           "properties": {
             "stateId": "ENTRY",
-            "condition": "talkedToVictor",
+            "condition": "talked_to_victor",
             "text": "Among dusty ledgers you find a handwritten note describing the Cult of Marumi Baso. A decade ago they hid their chapel behind a wooden door in the courtyard. The author claims they sacrifice girls resembling their dead prophet's daughter to preserve a mysterious stained glass and extend the prophet's life.",
             "options": [
               {
@@ -91,7 +91,7 @@
                 "properties": {
                   "text": "Search the courtyard",
                   "number": 0,
-                  "action": "spawnCultists",
+                  "action": "spawn_cultists",
                   "nextStateId": "EXIT"
                 }
               },
