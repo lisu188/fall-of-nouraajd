@@ -166,9 +166,19 @@ def load(self, context):
     class TownHallDialog(CDialog):
         def giveLetter(self):
             player = self.getGame().getMap().getPlayer()
-            player.addItem('letterToBeren')
-            player.addQuest('deliverLetterQuest')
-            self.getGame().getGuiHandler().showMessage('You received a sealed letter.')
+            if not player.hasItem(lambda it: it.getName() == 'letterToBeren'):
+                player.addItem('letterToBeren')
+                self.getGame().getGuiHandler().showMessage('You received a sealed letter.')
+            quests = player.getQuests()
+            if not any(q.getName() == 'deliverLetterQuest' for q in quests):
+                player.addQuest('deliverLetterQuest')
+
+        def hasLetterQuest(self):
+            player = self.getGame().getMap().getPlayer()
+            if player.hasItem(lambda it: it.getName() == 'letterToBeren'):
+                return True
+            quests = player.getQuests()
+            return any(q.getName() == 'deliverLetterQuest' for q in quests)
 
         def talkedToVictor(self):
             return self.getGame().getMap().getBoolProperty('TALKED_TO_VICTOR')
