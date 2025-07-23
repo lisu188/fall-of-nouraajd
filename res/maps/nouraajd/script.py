@@ -241,6 +241,13 @@ def load(self, context):
             self.getGame().getMap().getPlayer().addQuest('octoBogzQuest')
             self.getGame().getMap().setBoolProperty('completedOctoBogz', False)
 
+    @trigger(context, "onEnter", "questGiver")
+    class QuestGiverTrigger(CTrigger):
+        def trigger(self, obj, event):
+            if event.getCause().isPlayer():
+                game = obj.getGame()
+                game.getGuiHandler().showDialog(game.createObject('dialog'))
+
     @trigger(context, "onDestroy", "cultLeaderQuest")
     class CultLeaderQuestTrigger(CTrigger):
         def trigger(self, leader, event):
