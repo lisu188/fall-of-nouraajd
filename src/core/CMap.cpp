@@ -187,7 +187,7 @@ void CMap::addObject(const std::shared_ptr<CMapObject> &mapObject) {
     }
     mapObjects.insert(std::make_pair(mapObject->getName(), mapObject));
     getEventHandler()->gameEvent(mapObject, std::make_shared<CGameEvent>(CGameEvent::Type::onCreate));
-    signal<true>("objectChanged", mapObject->getCoords());
+    signal("objectChanged", mapObject->getCoords());
 }
 
 void CMap::removeObject(const std::shared_ptr<CMapObject> &mapObject) {
@@ -196,7 +196,7 @@ void CMap::removeObject(const std::shared_ptr<CMapObject> &mapObject) {
         return it.second == mapObject->getName();
     });
     getEventHandler()->gameEvent(mapObject, std::make_shared<CGameEvent>(CGameEvent::Type::onDestroy));
-    signal<true>("objectChanged", mapObject->getCoords());
+    signal("objectChanged", mapObject->getCoords());
 }
 
 int CMap::getEntryX() {
@@ -386,42 +386,31 @@ void CMap::objectMoved(const std::shared_ptr<CMapObject> &object, Coords _old, C
     mapObjectsCache.insert(std::make_pair(_new, object->getName()));
 
     //TODO: check if it`s correct
-    signal<true>("objectChanged", _old);
-    signal<true>("objectChanged", _new);
+    signal("objectChanged", _old);
+    signal("objectChanged", _new);
 }
 
 std::set<std::shared_ptr<CMapObject>> CMap::getObjectsAtCoords(Coords coords) {
     std::set<std::shared_ptr<CMapObject>> ret;
-    auto range = mapObjectsCache.equal_range(coords);
-    for (auto it = range.first; it != range.second;) {
-        auto curr = it++;
-        if (auto ob = getObjectByName(curr->second)) {
-            ret.insert(std::move(ob));
+    auto range = mapObjectsCache.equal_range(
+            coords);
+    for (auto it = range.first; it != range.second; it++) {
+        if (auto ob = getObjectByName(it->second)) {
+            ret.insert(ob);
         }
     }
     return ret;
 }
 
-void CMap::forObjectsAtCoords(
-        Coords coords,
-        const std::function<void(std::shared_ptr<CMapObject>)> func,
-        const std::function<bool(std::shared_ptr<CMapObject>)> predicate) {
-
-    std::vector<std::string> names;
-    auto range = mapObjectsCache.equal_range(coords);
-    for (auto it = range.first; it != range.second; ++it) {
-        names.emplace_back(it->second);
-    }
-
-    for (const auto& name : names) {
-        if (auto ob = getObjectByName(name).get()) {
-            if (predicate(ob)) {
-                    func(ob);
-                }
-         }
+void CMap::forObjectsAtCoords(Coords coords, std::function<void(std::shared_ptr<CMapObject>)> func,
+                              std::function<bool(std::shared_ptr<CMapObject>)> predicate) {
+    auto clone = getObjectsAtCoords(coords);
+    for (auto object: clone) {
+        if (predicate(object)) {
+            func(object);
+        }
     }
 }
-
 
 void CMap::addObject(const std::shared_ptr<CMapObject> &mapObject, Coords coords) {
     if (this->canStep(coords)) {
