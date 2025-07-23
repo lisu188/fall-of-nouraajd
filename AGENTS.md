@@ -12,6 +12,10 @@ Testing section.
 - Keep lines under 120 characters where practical.
 - Python variable and function names should be in `snake_case`.
 - C++ class names should use `CamelCase`.
+- Classes decorated with `@trigger` should use `CamelCase` with a `Trigger` suffix.
+- Reserve `UPPER_SNAKE_CASE` for global or constant-like properties and `snake_case` for local ones.
+- Keep camelCase for object and item ids referenced from JSON.
+- Engine methods may stay in CamelCase, but new Python-only methods should use `snake_case`.
 
 ## Commit Messages
 Describe changes clearly in the commit message.
