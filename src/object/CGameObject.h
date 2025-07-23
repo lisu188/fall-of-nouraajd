@@ -29,16 +29,17 @@ class CGame;
 
 class CAnimation;
 
-class CGameObject : public vstd::stringable, public std::enable_shared_from_this<CGameObject> {
-V_META(CGameObject, vstd::meta::empty,
-       V_PROPERTY(CGameObject, std::string, name, getName, setName),
-       V_PROPERTY(CGameObject, std::string, type, getType, setType),
-       V_PROPERTY(CGameObject, std::string, typeId, getTypeId, setTypeId),
-       V_PROPERTY(CGameObject, std::string, animation, getAnimation, setAnimation),
-       V_PROPERTY(CGameObject, std::string, label, getLabel, setLabel),
-       V_PROPERTY(CGameObject, std::string, description, getDescription, setDescription),
-       V_PROPERTY(CGameObject, std::set<std::string>, tags, getTags, setTags)
-)
+class CGameObject : public vstd::stringable, public std::enable_shared_from_this<CGameObject>
+{
+    V_META(CGameObject, vstd::meta::empty,
+           V_PROPERTY(CGameObject, std::string, name, getName, setName),
+           V_PROPERTY(CGameObject, std::string, type, getType, setType),
+           V_PROPERTY(CGameObject, std::string, typeId, getTypeId, setTypeId),
+           V_PROPERTY(CGameObject, std::string, animation, getAnimation, setAnimation),
+           V_PROPERTY(CGameObject, std::string, label, getLabel, setLabel),
+           V_PROPERTY(CGameObject, std::string, description, getDescription, setDescription),
+           V_PROPERTY(CGameObject, std::set<std::string>, tags, getTags, setTags)
+    )
 
 public:
     static std::function<bool(std::shared_ptr<CGameObject>, std::shared_ptr<CGameObject>)> name_comparator;
@@ -54,19 +55,22 @@ public:
 
     void setGame(std::shared_ptr<CGame> game);
 
-    template<typename T=CGameObject>
-    std::shared_ptr<T> ptr() {
+    template <typename T=CGameObject>
+    std::shared_ptr<T> ptr()
+    {
         //_cast purposedly
-        return vstd::cast<T>(const_cast<CGameObject *>(this)->shared_from_this());
+        return vstd::cast<T>(const_cast<CGameObject*>(this)->shared_from_this());
     }
 
-    template<typename T>
-    void setProperty(std::string name, T property) {
+    template <typename T>
+    void setProperty(std::string name, T property)
+    {
         this->meta()->set_property<CGameObject, T>(name, this->ptr(), property);
     }
 
-    template<typename T>
-    T getProperty(std::string name) {
+    template <typename T>
+    T getProperty(std::string name)
+    {
         return this->meta()->get_property<CGameObject, T>(name, this->ptr());
     }
 
@@ -84,18 +88,21 @@ public:
 
     int getNumericProperty(std::string name);
 
-    template<typename T=CGameObject>
-    void setObjectProperty(std::string name, std::shared_ptr<T> object) {
+    template <typename T=CGameObject>
+    void setObjectProperty(std::string name, std::shared_ptr<T> object)
+    {
         setProperty(name, boost::any(object));
     }
 
-    template<typename T=CGameObject>
-    std::shared_ptr<T> getObjectProperty(std::string name) {
+    template <typename T=CGameObject>
+    std::shared_ptr<T> getObjectProperty(std::string name)
+    {
         return getProperty<std::shared_ptr<T>>(name);
     }
 
-    template<typename T=CGameObject>
-    std::shared_ptr<T> clone() {
+    template <typename T=CGameObject>
+    std::shared_ptr<T> clone()
+    {
         return vstd::cast<T>(_clone());
     }
 
@@ -142,26 +149,32 @@ public:
 
     void connect(std::string signal, std::shared_ptr<CGameObject> object, std::string slot);
 
-    template<typename ...Args>
-    void signal(std::string signal, Args... args) {
-//        vstd::logger::debug(signal, args...);
-        auto it = connections.begin();
-        while (it != connections.end()) {
-            auto[_signal, object, slot]=*it;
-            auto ob = object.lock();
-            if (ob) {
-                if (signal == _signal) {
-                    auto _slot = slot;//cause of closure
-                    vstd::later([=]() {
-                        ob->meta()->invoke_method<void, CGameObject, Args...>(_slot, ob, args...);
-                    });
+template<bool now = false, typename... Args>
+void signal(std::string signal, Args... args) {
+    //vstd::logger::debug(signal, args...);
+    auto it = connections.begin();
+    while (it != connections.end()) {
+        auto [_signal, object, slot] = *it;
+        auto ob = object.lock();
+        if (ob) {
+            if (signal == _signal) {
+                auto _slot = slot;
+                auto task = [=]() {
+                    ob->meta()->invoke_method<void, CGameObject, Args...>(_slot, ob, args...);
+                };
+                if constexpr (now) {
+                    vstd::now(task);
+                } else {
+                    vstd::later(task);
                 }
-                it++;
-            } else {
-                it = connections.erase(it);
             }
+            ++it;
+        } else {
+            it = connections.erase(it);
         }
     }
+}
+
 
 private:
     std::list<std::tuple<std::string, std::weak_ptr<CGameObject>, std::string>> connections;
@@ -184,39 +197,44 @@ private:
 };
 
 
-class Visitable {
+class Visitable
+{
 public:
     virtual void onEnter(std::shared_ptr<CGameEvent>) = 0;
 
     virtual void onLeave(std::shared_ptr<CGameEvent>) = 0;
 };
 
-class Moveable {
+class Moveable
+{
 public:
-
     virtual void beforeMove() = 0;
 
     virtual void afterMove() = 0;
 };
 
-class Wearable {
+class Wearable
+{
 public:
     virtual void onEquip(std::shared_ptr<CGameEvent>) = 0;
 
     virtual void onUnequip(std::shared_ptr<CGameEvent>) = 0;
 };
 
-class Usable {
+class Usable
+{
 public:
     virtual void onUse(std::shared_ptr<CGameEvent>) = 0;
 };
 
-class Turnable {
+class Turnable
+{
 public:
     virtual void onTurn(std::shared_ptr<CGameEvent>) = 0;
 };
 
-class Creatable {
+class Creatable
+{
 public:
     virtual void onCreate(std::shared_ptr<CGameEvent>) = 0;
 

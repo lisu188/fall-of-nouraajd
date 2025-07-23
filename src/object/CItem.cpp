@@ -27,8 +27,9 @@ CItem::~CItem() {
 
 void CItem::onEnter(std::shared_ptr<CGameEvent> event) {
     if (std::shared_ptr<CCreature> visitor = vstd::cast<CCreature>(vstd::cast<CGameEventCaused>(event)->getCause())) {
-        this->getMap()->removeObject(this->ptr<CMapObject>());
-        visitor->addItem(this->ptr<CItem>());
+        auto item = this->ptr<CItem>();
+        visitor->addItem(item);
+        this->getMap()->removeObject(item);
     }
 }
 
