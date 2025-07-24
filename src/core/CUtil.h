@@ -1,6 +1,6 @@
 /*
 fall-of-nouraajd c++ dark fantasy game
-Copyright (C) 2019  Andrzej Lis
+Copyright (C) 2025  Andrzej Lis
 
 This program is free software: you can redistribute it and/or modify
         it under the terms of the GNU General Public License as published by
@@ -119,9 +119,12 @@ namespace vstd {
 }
 
 template<typename F>
-auto sdl_safe(F f,
-              typename vstd::disable_if<vstd::is_same<typename vstd::function_traits<F>::return_type, int>::value>::type * = 0,
-              typename vstd::disable_if<vstd::is_same<typename vstd::function_traits<F>::return_type, void>::value>::type * = 0) {
+auto sdl_safe(
+        F f,
+        typename vstd::disable_if<
+                vstd::is_same<typename vstd::function_traits<F>::return_type, int>::value>::type * = 0,
+        typename vstd::disable_if<
+                vstd::is_same<typename vstd::function_traits<F>::return_type, void>::value>::type * = 0) {
     auto return_value = f();
     if (!return_value) {
         vstd::logger::error(SDL_GetError());
@@ -130,9 +133,12 @@ auto sdl_safe(F f,
 }
 
 template<typename F>
-auto sdl_safe(F f,
-              typename vstd::enable_if<vstd::is_same<typename vstd::function_traits<F>::return_type, int>::value>::type * = 0,
-              typename vstd::disable_if<vstd::is_same<typename vstd::function_traits<F>::return_type, void>::value>::type * = 0) {
+auto sdl_safe(
+        F f,
+        typename vstd::enable_if<
+                vstd::is_same<typename vstd::function_traits<F>::return_type, int>::value>::type * = 0,
+        typename vstd::disable_if<
+                vstd::is_same<typename vstd::function_traits<F>::return_type, void>::value>::type * = 0) {
     auto return_value = f();
     if (return_value == -1) {
         vstd::logger::error(SDL_GetError());
@@ -141,9 +147,12 @@ auto sdl_safe(F f,
 }
 
 template<typename F>
-void sdl_safe(F f,
-              typename vstd::disable_if<vstd::is_same<typename vstd::function_traits<F>::return_type, int>::value>::type * = 0,
-              typename vstd::enable_if<vstd::is_same<typename vstd::function_traits<F>::return_type, void>::value>::type * = 0) {
+void sdl_safe(
+        F f,
+        typename vstd::disable_if<
+                vstd::is_same<typename vstd::function_traits<F>::return_type, int>::value>::type * = 0,
+        typename vstd::enable_if<
+                vstd::is_same<typename vstd::function_traits<F>::return_type, void>::value>::type * = 0) {
     f();
 }
 

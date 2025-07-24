@@ -1,6 +1,6 @@
 /*
 fall-of-nouraajd c++ dark fantasy game
-Copyright (C) 2021  Andrzej Lis
+Copyright (C) 2025  Andrzej Lis
 
 This program is free software: you can redistribute it and/or modify
         it under the terms of the GNU General Public License as published by
@@ -266,13 +266,15 @@ std::shared_ptr<json> array_serialize(const std::set<std::shared_ptr<CGameObject
     return arr;
 }
 
-std::set<std::shared_ptr<CGameObject> > array_deserialize(const std::shared_ptr<CGame> &map,
-                                                          const std::shared_ptr<json> &object) {
+std::set<std::shared_ptr<CGameObject> > array_deserialize(
+        const std::shared_ptr<CGame> &map,
+        const std::shared_ptr<json> &object) {
     std::set<std::shared_ptr<CGameObject> > objects;
     for (unsigned int i = 0; i < object->size(); i++) {
-        objects.insert(CSerializerFunction<std::shared_ptr<json>, std::shared_ptr<CGameObject>>::deserialize(map,
-                                                                                                             CJsonUtil::clone(
-                                                                                                                     &(*object)[i])));
+        objects.insert(
+                CSerializerFunction<std::shared_ptr<json>, std::shared_ptr<CGameObject>>::deserialize(
+                        map,
+                        CJsonUtil::clone(&(*object)[i])));
     }
     return objects;
 }
