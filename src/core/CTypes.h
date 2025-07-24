@@ -1,6 +1,6 @@
 /*
 fall-of-nouraajd c++ dark fantasy game
-Copyright (C) 2019  Andrzej Lis
+Copyright (C) 2025  Andrzej Lis
 
 This program is free software: you can redistribute it and/or modify
         it under the terms of the GNU General Public License as published by
@@ -26,8 +26,9 @@ public:
 
     static std::unordered_map<std::string, std::function<std::shared_ptr<CGameObject>()>> *builders();
 
-    static std::unordered_map<std::pair<boost::typeindex::type_index, boost::typeindex::type_index>, std::shared_ptr<CSerializerBase>> *
-    serializers();
+    static std::unordered_map<std::pair<boost::typeindex::type_index,
+                                        boost::typeindex::type_index>,
+                                std::shared_ptr<CSerializerBase>> *serializers();
 
     static std::unordered_set<boost::typeindex::type_index> *pointer_types();
 
@@ -35,8 +36,10 @@ public:
 
     static std::unordered_set<boost::typeindex::type_index> *map_types();
 
-    static std::unordered_map<boost::typeindex::type_index, std::function<void(std::shared_ptr<CGameObject>,
-                                                                               std::string, boost::any)>> *setters();
+    static std::unordered_map<boost::typeindex::type_index,
+                              std::function<void(std::shared_ptr<CGameObject>,
+                                                 std::string,
+                                                 boost::any)>> *setters();
 
     static bool is_map_type(boost::typeindex::type_index index);
 
