@@ -14,6 +14,7 @@ def load(self, context):
                 self.getMap().removeAll(lambda ob: ob.getStringProperty('type') == self.getStringProperty('type'))
                 self.getMap().setBoolProperty('completed_rolf', False)
                 self.getMap().setBoolProperty('completed_octobogz', False)
+                self.getMap().setBoolProperty('AMULET_QUEST_STARTED', False)
                 self.getMap().getPlayer().addQuest("rolfQuest")
                 self.getMap().getPlayer().addItem("letterFromRolf")
 
@@ -28,7 +29,9 @@ def load(self, context):
             return self.getGame().getMap().getBoolProperty('completed_gooby')
 
         def onComplete(self):
-            pass
+            self.getGame().getGuiHandler().showMessage(
+                'Gooby has fallen. The townsfolk cheer your victory.'
+            )
 
     @register(context)
     class RolfQuest(CQuest):
@@ -36,8 +39,8 @@ def load(self, context):
         def isCompleted(self):
             return self.getGame().getMap().getPlayer().hasItem(lambda it: it.getName() == 'skullOfRolf')
 
-    def onComplete(self):
-        pass
+        def onComplete(self):
+            pass
 
     @register(context)
     class DeliverLetterQuest(CQuest):
@@ -50,7 +53,7 @@ def load(self, context):
     @register(context)
     class RetrieveRelicQuest(CQuest):
         def isCompleted(self):
-            return self.getGame().getMap().getPlayer().hasItem(lambda it: it.getName() == 'holyRelic')
+            return self.getGame().getMap().getBoolProperty('RELIC_RETURNED')
 
         def onComplete(self):
             pass
@@ -99,9 +102,14 @@ def load(self, context):
             player.addQuest("mainQuest")
             player.addItem("skullOfRolf")
             game_map.setBoolProperty('completed_rolf', True)
-            quests = player.getQuests()
-            if any(q.getName() == 'retrieveRelicQuest' for q in quests):
-                player.addItem('holyRelic')
+
+    @trigger(context, "onDestroy", "catacombs")
+    class CatacombsTrigger(CTrigger):
+        def trigger(self, obj, event):
+            game_map = obj.getGame().getMap()
+            player = game_map.getPlayer()
+            player.addItem('holyRelic')
+            obj.getGame().getGuiHandler().showMessage(obj.getStringProperty('message'))
 
     @trigger(context, "onDestroy", "cave2")
     class OctoBogzCaveTrigger(CTrigger):
@@ -281,20 +289,26 @@ def load(self, context):
                 player = game_map.getPlayer()
                 if player.hasItem(lambda it: it.getName() == 'preciousAmulet'):
                     game.getGuiHandler().showDialog(game.createObject('questReturnDialog'))
-                else:
+                elif not game_map.getBoolProperty('AMULET_QUEST_STARTED'):
                     game.getGuiHandler().showDialog(game.createObject('questDialog'))
+                else:
+                    game.getGuiHandler().showMessage('The goblin still has my amulet!')
 
     @register(context)
     class QuestDialog(CDialog):
         def start_amulet_quest(self):
             game = self.getGame()
-            player = game.getMap().getPlayer()
+            game_map = game.getMap()
+            if game_map.getBoolProperty('AMULET_QUEST_STARTED'):
+                return
+            player = game_map.getPlayer()
             player.addQuest('amuletQuest')
             goblin = game.createObject('goblinThief')
             goblin.setStringProperty('name', 'amuletGoblin')
-            game.getMap().addObject(goblin)
+            game_map.addObject(goblin)
             # spawn near the old woman within map bounds
             goblin.moveTo(195, 8, 0)
+            game_map.setBoolProperty('AMULET_QUEST_STARTED', True)
 
     @register(context)
     class QuestReturnDialog(CDialog):

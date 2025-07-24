@@ -89,6 +89,26 @@
       "monsters": "10"
     }
   },
+  "catacombs": {
+    "ref": "Cave",
+    "properties": {
+      "message": "Dusty catacombs crumble as you claim a sacred relic.",
+      "chance": "10",
+      "monster": {
+        "ref": "Pritz",
+        "properties": {
+          "affiliation": "gooby",
+          "controller": {
+            "class": "CGroundController",
+            "properties": {
+              "tileType": "ground"
+            }
+          }
+        }
+      },
+      "monsters": "10"
+    }
+  },
   "cave2": {
     "ref": "Cave",
     "properties": {
