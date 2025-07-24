@@ -20,21 +20,6 @@ def load(self, context):
                 game_map.getPlayer().addQuest("rolfQuest")
                 game_map.getPlayer().addItem("letterFromRolf")
 
-                if not game_map.getBoolProperty('NPC_CONVERTED'):
-                    for name in ('questGiver', 'oldWoman'):
-                        obj = game_map.getObjectByName(name)
-                        if obj:
-                            coords = obj.getCoords()
-                            anim = obj.getStringProperty('animation')
-                            game_map.removeObject(obj)
-                            npc = game.createObject('CCreature')
-                            npc.setName(name)
-                            if anim:
-                                npc.setAnimation(anim)
-                            npc.setController(game.createObject('CNpcRandomController'))
-                            game_map.addObject(npc)
-                            npc.moveTo(coords.x, coords.y, coords.z)
-                    game_map.setBoolProperty('NPC_CONVERTED', True)
 
     @register(context)
     class ChangeMap(CEvent):
