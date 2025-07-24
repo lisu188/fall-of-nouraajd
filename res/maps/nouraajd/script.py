@@ -208,7 +208,9 @@ def load(self, context):
                 coords = Coords(loc.x + i, loc.y + j, loc.z)
                 if game.getMap().canStep(coords):
                     mon = game.createObject('Cultist')
-                    mon.setController(game.createObject('CNpcRandomController'))
+                    target_ctrl = game.createObject('CTargetController')
+                    target_ctrl.setTarget('player')
+                    mon.setController(target_ctrl)
                     game.getMap().addObject(mon)
                     mon.moveTo(coords.x, coords.y, coords.z)
 
@@ -217,7 +219,9 @@ def load(self, context):
             if game.getMap().canStep(coords):
                 leader = game.createObject('CultLeader')
                 leader.setStringProperty('name', 'cultLeaderQuest')
-                leader.setController(game.createObject('CNpcRandomController'))
+                target_ctrl = game.createObject('CTargetController')
+                target_ctrl.setTarget('player')
+                leader.setController(target_ctrl)
                 game.getMap().addObject(leader)
                 leader.moveTo(coords.x, coords.y, coords.z)
 
