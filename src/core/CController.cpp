@@ -71,6 +71,35 @@ CRandomController::control(std::shared_ptr<CCreature>
     });
 }
 
+std::shared_ptr<vstd::future<Coords, void>>
+CNpcRandomController::control(std::shared_ptr<CCreature> creature) {
+    auto self = this->ptr<CNpcRandomController>();
+    return vstd::later([self, creature]() -> Coords {
+        if (self->path.empty() || self->currentStep >= self->path.size()) {
+            for (int i = 0; i < 10; i++) {
+                auto dx = vstd::rand(-5, 5);
+                auto dy = vstd::rand(-5, 5);
+                auto candidate = creature->getCoords() + Coords(dx, dy, 0);
+                if (creature->getMap()->canStep(candidate)) {
+                    self->path = CPathFinder::findPath(
+                            creature->getCoords(),
+                            candidate,
+                            [creature](const Coords &c) { return creature->getMap()->canStep(c); },
+                            [](auto) { return std::make_pair(false, ZERO); });
+                    self->currentStep = 0;
+                    break;
+                }
+            }
+        }
+
+        if (!self->path.empty() && self->currentStep < self->path.size()) {
+            return self->path[self->currentStep++];
+        }
+
+        return creature->getCoords();
+    });
+}
+
 std::string CGroundController::getTileType() { return _tileType; }
 
 void CGroundController::setTileType(std::string type) { _tileType = type; }
