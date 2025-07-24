@@ -72,7 +72,13 @@ def load(self, context):
             return self.getGame().getMap().getBoolProperty('completed_octobogz')
 
         def onComplete(self):
-            pass
+            game = self.getGame()
+            player = game.getMap().getPlayer()
+            player.addGold(1000)
+            player.addItem('ShadowBlade')
+            game.getGuiHandler().showMessage(
+                'The travelers reward you with 1000 gold and the Shadow Blade.'
+            )
 
     @register(context)
     class AmuletQuest(CQuest):

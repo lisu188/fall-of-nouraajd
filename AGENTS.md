@@ -91,13 +91,15 @@ Follow these steps to verify quests remain consistent:
 1. **Check ids**
     - Ensure every quest id in `res/maps/<map>/config.json` matches the
       class name in the corresponding `script.py` file.
-2. **Playtest**
+2. **Short descriptions**
+    - Keep quest descriptions brief; a single sentence is enough for the quest log.
+3. **Playtest**
     - Build the game and start it with `python3 play.py`.
     - Accept each available quest and open the quest log with **j** to
       confirm it appears.
     - Progress the objectives and verify completed quests move to the
       "completed" section.
-3. **Run tests**
+4. **Run tests**
     - Execute `python3 test.py` to ensure the game still loads with the
       updated quests.
 

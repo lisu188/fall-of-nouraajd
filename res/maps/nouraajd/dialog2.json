@@ -100,20 +100,7 @@
           "class": "CDialogState",
           "properties": {
             "stateId": "ACCEPT_QUEST",
-            "text": "Travel east across the river and locate the cave infested with OctoBogz. The cave entrance is partially hidden by large boulders and sand, making it difficult to find. As you approach, you can hear strange, guttural noises echoing from within.",
-            "event": {
-              "class": "CEvent",
-              "properties": {
-                "type": "Quest",
-                "title": "The OctoBogz Menace",
-                "description": "Eliminate the OctoBogz threat in the cave to the east of Nouraajd and uncover the origin of these creatures. A generous reward is offered by the group of travelers who have banded together seeking help.",
-                "rewards": {
-                  "gold": 1000,
-                  "item": "unique weapon with shadow damage",
-                  "reputation": "Nouraajd reputation boost"
-                }
-              }
-            }
+            "text": "Travel east across the river and locate the cave infested with OctoBogz. The cave entrance is partially hidden by large boulders and sand, making it difficult to find. As you approach, you can hear strange, guttural noises echoing from within."
           }
         },
         {
