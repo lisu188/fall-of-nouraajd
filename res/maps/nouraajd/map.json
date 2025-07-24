@@ -40053,6 +40053,17 @@
         },
         {
           "height": 32,
+          "id": 103,
+          "name": "catacombs",
+          "rotation": 0,
+          "type": "catacombs",
+          "visible": true,
+          "width": 32,
+          "x": 704,
+          "y": 544
+        },
+        {
+          "height": 32,
           "id": 7,
           "name": "",
           "rotation": 0,
@@ -40873,7 +40884,7 @@
       "y": 0
     }
   ],
-  "nextobjectid": 103,
+  "nextobjectid": 104,
   "orientation": "orthogonal",
   "properties": {
     "x": "110",
