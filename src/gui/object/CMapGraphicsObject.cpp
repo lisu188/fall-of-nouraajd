@@ -1,6 +1,6 @@
 /*
 fall-of-nouraajd c++ dark fantasy game
-Copyright (C) 2021  Andrzej Lis
+Copyright (C) 2025  Andrzej Lis
 
 This program is free software: you can redistribute it and/or modify
         it under the terms of the GNU General Public License as published by
@@ -138,12 +138,14 @@ void CMapGraphicsObject::initialize() {
                                && self->getGui()->getGame() != nullptr
                                && self->getGui()->getGame()->getMap() != nullptr;
                     }, [self]() {
-                        self->getGui()->getGame()->getMap()->connect("turnPassed", self,
-                                                                     "refreshAll");
-                        self->getGui()->getGame()->getMap()->connect("tileChanged", self,
-                                                                     "refreshObject");//TODO: current lazy tile loading may cause event spam
-                        self->getGui()->getGame()->getMap()->connect("objectChanged", self,
-                                                                     "refreshObject");//TODO: current lazy tile loading may cause event spam
+                        self->getGui()->getGame()->getMap()->connect(
+                                "turnPassed", self, "refreshAll");
+                        self->getGui()->getGame()->getMap()->connect(
+                                "tileChanged", self,
+                                "refreshObject"); // TODO: current lazy tile loading may cause event spam
+                        self->getGui()->getGame()->getMap()->connect(
+                                "objectChanged", self,
+                                "refreshObject"); // TODO: current lazy tile loading may cause event spam
                         self->refresh();
                     }
     );
