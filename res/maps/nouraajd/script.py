@@ -10,13 +10,31 @@ def load(self, context):
     class StartEvent(CEvent):
         def onEnter(self, event):
             if event.getCause().isPlayer():
-                self.getMap().getGame().getGuiHandler().showMessage(self.getStringProperty('text'))
-                self.getMap().removeAll(lambda ob: ob.getStringProperty('type') == self.getStringProperty('type'))
-                self.getMap().setBoolProperty('completed_rolf', False)
-                self.getMap().setBoolProperty('completed_octobogz', False)
-                self.getMap().setBoolProperty('AMULET_QUEST_STARTED', False)
-                self.getMap().getPlayer().addQuest("rolfQuest")
-                self.getMap().getPlayer().addItem("letterFromRolf")
+                game_map = self.getMap()
+                game = game_map.getGame()
+                game.getGuiHandler().showMessage(self.getStringProperty('text'))
+                game_map.removeAll(lambda ob: ob.getStringProperty('type') == self.getStringProperty('type'))
+                game_map.setBoolProperty('completed_rolf', False)
+                game_map.setBoolProperty('completed_octobogz', False)
+                game_map.setBoolProperty('AMULET_QUEST_STARTED', False)
+                game_map.getPlayer().addQuest("rolfQuest")
+                game_map.getPlayer().addItem("letterFromRolf")
+
+                if not game_map.getBoolProperty('NPC_CONVERTED'):
+                    for name in ('questGiver', 'oldWoman'):
+                        obj = game_map.getObjectByName(name)
+                        if obj:
+                            coords = obj.getCoords()
+                            anim = obj.getStringProperty('animation')
+                            game_map.removeObject(obj)
+                            npc = game.createObject('CCreature')
+                            npc.setName(name)
+                            if anim:
+                                npc.setAnimation(anim)
+                            npc.setController(game.createObject('CNpcRandomController'))
+                            game_map.addObject(npc)
+                            npc.moveTo(coords.x, coords.y, coords.z)
+                    game_map.setBoolProperty('NPC_CONVERTED', True)
 
     @register(context)
     class ChangeMap(CEvent):
