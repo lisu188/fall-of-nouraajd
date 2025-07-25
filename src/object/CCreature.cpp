@@ -1,6 +1,6 @@
 /*
 fall-of-nouraajd c++ dark fantasy game
-Copyright (C) 2019  Andrzej Lis
+Copyright (C) 2025  Andrzej Lis
 
 This program is free software: you can redistribute it and/or modify
         it under the terms of the GNU General Public License as published by
@@ -551,6 +551,12 @@ void CCreature::takeGold(int gold) {
 
 std::set<std::shared_ptr<CEffect> > CCreature::getEffects() const {
     return effects;
+}
+
+void CCreature::onEnter(std::shared_ptr<CGameEvent>) {
+}
+
+void CCreature::onLeave(std::shared_ptr<CGameEvent>) {
 }
 
 void CCreature::onDestroy(std::shared_ptr<CGameEvent>) {
