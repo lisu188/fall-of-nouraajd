@@ -418,13 +418,13 @@
       }
     }
   },
-   "Cultist": {
+  "Cultist": {
     "class": "CCreature",
     "properties": {
       "actions": [
         { "ref": "Attack" }
       ],
-      "animation": "images/monsters/pritz",
+      "animation": "images/monsters/cultist",
       "fightController": { "class": "CMonsterFightController" },
       "label": "Cultist",
       "levelStats": {
@@ -463,7 +463,7 @@
       "actions": [
         { "ref": "Attack" }
       ],
-      "animation": "images/monsters/pritzmage",
+      "animation": "images/monsters/cult_leader",
       "fightController": { "class": "CMonsterFightController" },
       "label": "Cult Leader",
       "levelStats": {
@@ -502,7 +502,7 @@
       "actions": [
         { "ref": "Attack" }
       ],
-      "animation": "images/monsters/pritz",
+      "animation": "images/monsters/goblin_thief",
       "fightController": { "class": "CMonsterFightController" },
       "label": "Goblin Thief",
       "levelStats": {

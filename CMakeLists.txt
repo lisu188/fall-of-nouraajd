@@ -1,5 +1,5 @@
 #fall-of-nouraajd c++ dark fantasy game
-# Copyright (C) 2019  Andrzej Lis
+# Copyright (C) 2025  Andrzej Lis
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -135,6 +135,9 @@ configure_file(res/images/monsters/pritzmage/0.png images/monsters/pritzmage/0.p
 configure_file(res/images/monsters/pritzmage/3.png images/monsters/pritzmage/3.png COPYONLY)
 configure_file(res/images/monsters/pritzmage/1.png images/monsters/pritzmage/1.png COPYONLY)
 configure_file(res/images/monsters/gooby.png images/monsters/gooby.png COPYONLY)
+configure_file(res/images/monsters/cult_leader.png images/monsters/cult_leader.png COPYONLY)
+configure_file(res/images/monsters/cultist.png images/monsters/cultist.png COPYONLY)
+configure_file(res/images/monsters/goblin_thief.png images/monsters/goblin_thief.png COPYONLY)
 
 configure_file(res/images/monsters/octobogz/time.json images/monsters/octobogz/time.json COPYONLY)
 configure_file(res/images/monsters/octobogz/0.png images/monsters/octobogz/0.png COPYONLY)
