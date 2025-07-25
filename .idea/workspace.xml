@@ -115,14 +115,14 @@
     "cf.advertisement.text.has.clang-format": "true",
     "cf.first.check.clang-format": "false",
     "cidr.known.project.marker": "true",
-    "git-widget-placeholder": "feature/town__portal__scroll",
+    "git-widget-placeholder": "main",
     "last_opened_file_path": "/home/andrz/git/fall-of-nouraajd/src/core/types",
     "node.js.detected.package.eslint": "true",
     "node.js.detected.package.tslint": "true",
     "node.js.selected.package.eslint": "(autodetect)",
     "node.js.selected.package.tslint": "(autodetect)",
     "nodejs_package_manager_path": "npm",
-    "settings.editor.selected.configurable": "preferences.lookFeel",
+    "settings.editor.selected.configurable": "configurable.group.tools",
     "vue.rearranger.settings.migration": "true"
   }
 }]]></component>
@@ -140,11 +140,6 @@
     <configuration default="true" type="GradleAppRunConfiguration" factoryName="Application" REDIRECT_INPUT="false" PASS_PARENT_ENVS_2="true">
       <method v="2">
         <option name="com.jetbrains.cidr.cpp.gradle.execution.GradleNativeBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
-      </method>
-    </configuration>
-    <configuration default="true" type="CLionExternalRunConfiguration" factoryName="Application" REDIRECT_INPUT="false" ELEVATE="false" USE_EXTERNAL_CONSOLE="false" EMULATE_TERMINAL="false" PASS_PARENT_ENVS_2="true">
-      <method v="2">
-        <option name="CLION.EXTERNAL.BUILD" enabled="true" />
       </method>
     </configuration>
     <list>
@@ -189,6 +184,9 @@
       <workItem from="1753256001142" duration="2375000" />
       <workItem from="1753258622571" duration="674000" />
       <workItem from="1753259634533" duration="8920000" />
+      <workItem from="1753347482353" duration="888000" />
+      <workItem from="1753380095610" duration="3076000" />
+      <workItem from="1753430389104" duration="387000" />
     </task>
     <task id="LOCAL-00001" summary="add workspace">
       <created>1597951943440</created>
