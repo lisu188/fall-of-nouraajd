@@ -10,13 +10,16 @@ def load(self, context):
     class StartEvent(CEvent):
         def onEnter(self, event):
             if event.getCause().isPlayer():
-                self.getMap().getGame().getGuiHandler().showMessage(self.getStringProperty('text'))
-                self.getMap().removeAll(lambda ob: ob.getStringProperty('type') == self.getStringProperty('type'))
-                self.getMap().setBoolProperty('completed_rolf', False)
-                self.getMap().setBoolProperty('completed_octobogz', False)
-                self.getMap().setBoolProperty('AMULET_QUEST_STARTED', False)
-                self.getMap().getPlayer().addQuest("rolfQuest")
-                self.getMap().getPlayer().addItem("letterFromRolf")
+                game_map = self.getMap()
+                game = game_map.getGame()
+                game.getGuiHandler().showMessage(self.getStringProperty('text'))
+                game_map.removeAll(lambda ob: ob.getStringProperty('type') == self.getStringProperty('type'))
+                game_map.setBoolProperty('completed_rolf', False)
+                game_map.setBoolProperty('completed_octobogz', False)
+                game_map.setBoolProperty('AMULET_QUEST_STARTED', False)
+                game_map.getPlayer().addQuest("rolfQuest")
+                game_map.getPlayer().addItem("letterFromRolf")
+
 
     @register(context)
     class ChangeMap(CEvent):
@@ -214,6 +217,9 @@ def load(self, context):
                 coords = Coords(loc.x + i, loc.y + j, loc.z)
                 if game.getMap().canStep(coords):
                     mon = game.createObject('Cultist')
+                    target_ctrl = game.createObject('CTargetController')
+                    target_ctrl.setTarget('player')
+                    mon.setController(target_ctrl)
                     game.getMap().addObject(mon)
                     mon.moveTo(coords.x, coords.y, coords.z)
 
@@ -222,6 +228,9 @@ def load(self, context):
             if game.getMap().canStep(coords):
                 leader = game.createObject('CultLeader')
                 leader.setStringProperty('name', 'cultLeaderQuest')
+                target_ctrl = game.createObject('CTargetController')
+                target_ctrl.setTarget('player')
+                leader.setController(target_ctrl)
                 game.getMap().addObject(leader)
                 leader.moveTo(coords.x, coords.y, coords.z)
 

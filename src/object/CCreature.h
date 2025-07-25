@@ -1,6 +1,6 @@
 /*
 fall-of-nouraajd c++ dark fantasy game
-Copyright (C) 2019  Andrzej Lis
+Copyright (C) 2025  Andrzej Lis
 
 This program is free software: you can redistribute it and/or modify
         it under the terms of the GNU General Public License as published by
@@ -45,7 +45,7 @@ typedef std::map<std::string, std::shared_ptr<CInteraction> > CInteractionMap;
 typedef std::map<std::string, std::shared_ptr<CItem> > CItemMap;
 
 
-class CCreature : public CMapObject, public Moveable {
+class CCreature : public CMapObject, public Moveable, public Visitable {
 
 V_META(CCreature, CMapObject,
        V_PROPERTY(CCreature, int, exp, getExp, setExp),
@@ -83,6 +83,10 @@ public:
     std::set<std::shared_ptr<CItem> > getItems();
 
     std::set<std::shared_ptr<CEffect> > getEffects() const;
+
+    virtual void onEnter(std::shared_ptr<CGameEvent>) override;
+
+    virtual void onLeave(std::shared_ptr<CGameEvent>) override;
 
     virtual void onDestroy(std::shared_ptr<CGameEvent>);
 
