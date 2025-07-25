@@ -120,6 +120,7 @@ configure_file(res/images/interactions/stun.png images/interactions/stun.png COP
 configure_file(res/images/interactions/abyssalshadows.png images/interactions/abyssalshadows.png COPYONLY)
 
 configure_file(res/images/panel.png images/panel.png COPYONLY)
+configure_file(res/images/paper.png images/paper.png COPYONLY)
 configure_file(res/images/arrows/left.png images/arrows/left.png COPYONLY)
 configure_file(res/images/arrows/right.png images/arrows/right.png COPYONLY)
 configure_file(res/images/item.png images/item.png COPYONLY)
@@ -182,6 +183,7 @@ configure_file(res/images/items/helmets/crownofnightmares.png images/items/helme
 configure_file(res/images/items/belts/undestructiblebelt.png images/items/belts/undestructiblebelt.png COPYONLY)
 
 configure_file(res/images/buildings/cave.png images/buildings/cave.png COPYONLY)
+configure_file(res/images/buildings/chapel.png images/buildings/chapel.png COPYONLY)
 configure_file(res/images/buildings/market.png images/buildings/market.png COPYONLY)
 configure_file(res/images/buildings/teleporter.png images/buildings/teleporter.png COPYONLY)
 configure_file(res/images/buildings/dungeon.png images/buildings/dungeon.png COPYONLY)
@@ -194,6 +196,8 @@ configure_file(res/images/terrain.png images/terrain.png COPYONLY)
 configure_file(res/images/players/assasin.png images/players/assasin.png COPYONLY)
 configure_file(res/images/players/sorcerer.png images/players/sorcerer.png COPYONLY)
 configure_file(res/images/players/warrior.png images/players/warrior.png COPYONLY)
+configure_file(res/images/npc/oldWoman.png images/npc/oldWoman.png COPYONLY)
+configure_file(res/images/npc/questGiver.png images/npc/questGiver.png COPYONLY)
 
 configure_file(res/images/tiles/lava.png images/tiles/lava.png COPYONLY)
 configure_file(res/images/tiles/beach.png images/tiles/beach.png COPYONLY)
