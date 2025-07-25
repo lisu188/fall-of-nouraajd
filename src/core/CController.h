@@ -1,6 +1,6 @@
 /*
 fall-of-nouraajd c++ dark fantasy game
-Copyright (C) 2019  Andrzej Lis
+Copyright (C) 2025  Andrzej Lis
 
 This program is free software: you can redistribute it and/or modify
         it under the terms of the GNU General Public License as published by
@@ -105,6 +105,16 @@ class CRandomController : public CController {
 V_META(CRandomController, CController, vstd::meta::empty())
 public:
     std::shared_ptr<vstd::future<Coords, void>> control(std::shared_ptr<CCreature> creature) override;
+};
+
+class CNpcRandomController : public CController {
+V_META(CNpcRandomController, CController, vstd::meta::empty())
+public:
+    std::shared_ptr<vstd::future<Coords, void>> control(std::shared_ptr<CCreature> creature) override;
+
+private:
+    std::vector<Coords> path;
+    int currentStep = 0;
 };
 
 class CGroundController : public CController {

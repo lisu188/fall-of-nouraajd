@@ -159,6 +159,18 @@
       }
     }
   },
+  "questGiver": {
+    "ref": "Warrior",
+    "properties": {
+      "controller": { "class": "CNpcRandomController" }
+    }
+  },
+  "oldWoman": {
+    "ref": "Sorcerer",
+    "properties": {
+      "controller": { "class": "CNpcRandomController" }
+    }
+  },
   "letterFromRolf": {
     "ref": "Scroll",
     "properties": {
