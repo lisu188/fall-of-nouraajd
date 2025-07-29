@@ -1,6 +1,6 @@
 /*
 fall-of-nouraajd c++ dark fantasy game
-Copyright (C) 2019  Andrzej Lis
+Copyright (C) 2025  Andrzej Lis
 
 This program is free software: you can redistribute it and/or modify
         it under the terms of the GNU General Public License as published by
@@ -17,39 +17,38 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #include "CGamePanel.h"
 #include "gui/CGui.h"
-#include "gui/object/CWidget.h"
 #include "gui/CTextureCache.h"
+#include "gui/object/CWidget.h"
 
-
-bool CGamePanel::keyboardEvent(std::shared_ptr<CGui> sharedPtr, SDL_EventType type, SDL_Keycode i) {
-    return true;
+bool CGamePanel::keyboardEvent(std::shared_ptr<CGui> sharedPtr,
+                               SDL_EventType type, SDL_Keycode i) {
+  return true;
 }
 
-bool CGamePanel::mouseEvent(std::shared_ptr<CGui> sharedPtr, SDL_EventType type, int button, int x, int y) {
-    return true;
+bool CGamePanel::mouseEvent(std::shared_ptr<CGui> sharedPtr, SDL_EventType type,
+                            int button, int x, int y) {
+  return true;
 }
 
 void CGamePanel::refreshViews() {
-    for (auto child : getChildren()) {
-        if (child->meta()->inherits(CListView::static_meta()->name())) {
-            vstd::cast<CListView>(child)->refreshAll();
-        }
+  for (auto child : getChildren()) {
+    if (child->meta()->inherits(CListView::static_meta()->name())) {
+      vstd::cast<CListView>(child)->refreshAll();
     }
+  }
 }
 
 CGamePanel::CGamePanel() {
-    //TODO: extract to json
-    setBackground("images/panel");
-    setModal(true);
+  // TODO: extract to json
+  setBackground("images/panel");
+  setModal(true);
 }
 
 void CGamePanel::awaitClosing() {
-    auto self = this->ptr<CGamePanel>();
-    vstd::wait_until([self]() {
-        return !self->getGui() || self->getGui()->findChild(self) == nullptr;
-    });
+  auto self = this->ptr<CGamePanel>();
+  vstd::wait_until([self]() {
+    return !self->getGui() || self->getGui()->findChild(self) == nullptr;
+  });
 }
 
-void CGamePanel::close() {
-    getGui()->removeChild(this->ptr<CGamePanel>());
-}
+void CGamePanel::close() { getGui()->removeChild(this->ptr<CGamePanel>()); }

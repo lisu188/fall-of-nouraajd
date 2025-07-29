@@ -1,6 +1,6 @@
 /*
 fall-of-nouraajd c++ dark fantasy game
-Copyright (C) 2019  Andrzej Lis
+Copyright (C) 2025  Andrzej Lis
 
 This program is free software: you can redistribute it and/or modify
         it under the terms of the GNU General Public License as published by
@@ -17,62 +17,58 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #include "CGlobal.h"
 
-
 namespace vstd {
-    std::function<void(std::function<void()>)> get_call_later_handler() {
-        return [](std::function<void()> f) {
-            vstd::event_loop<>::instance()->invoke(f);
-        };
-    }
-
-    std::function<void(std::function<void()>)> get_call_async_handler() {
-        return [](std::function<void()> f) {
-            static std::shared_ptr<vstd::thread_pool<16>> pool = std::make_shared<vstd::thread_pool<16>>()->start();
-            pool->execute(f);
-        };
-    }
-
-    std::function<void(std::function<void()>)> get_call_now_handler() {
-        return [](std::function<void()> f) {
-            f();
-        };
-    }
-
-    std::function<void(std::function<void()>)> get_call_later_block_handler() {
-        return [](std::function<void()> f) {
-            vstd::event_loop<>::instance()->await(f);
-        };
-    }
-
-    std::function<void(std::function<bool()>)> get_wait_until_handler() {
-        return [](std::function<bool()> pred) {
-            vstd::call_later_block([pred]() {
-                while (!pred()) {
-                    vstd::event_loop<>::instance()->run();
-                }
-            });
-        };
-    }
-
-    std::function<void(std::function<bool()>, std::function<void()>)> get_call_when_handler() {
-        return [](std::function<bool()> pred, std::function<void()> func) {
-            vstd::event_loop<>::instance()->invoke_when(pred, func);
-        };
-    }
-
-    std::function<void(int, std::function<void()>)> get_call_delayed_later_handler() {
-        return [](int t, std::function<void()> f) {
-            vstd::event_loop<>::instance()->delay(t, f);
-        };
-    }
-
-    std::function<void(int, std::function<void()>)> get_call_delayed_async_handler() {
-        return [](int t, std::function<void()> f) {
-            vstd::event_loop<>::instance()->delay(t, [f]() {
-                vstd::async(f);
-            });
-        };
-    }
+std::function<void(std::function<void()>)> get_call_later_handler() {
+  return [](std::function<void()> f) {
+    vstd::event_loop<>::instance()->invoke(f);
+  };
 }
 
+std::function<void(std::function<void()>)> get_call_async_handler() {
+  return [](std::function<void()> f) {
+    static std::shared_ptr<vstd::thread_pool<16>> pool =
+        std::make_shared<vstd::thread_pool<16>>()->start();
+    pool->execute(f);
+  };
+}
 
+std::function<void(std::function<void()>)> get_call_now_handler() {
+  return [](std::function<void()> f) { f(); };
+}
+
+std::function<void(std::function<void()>)> get_call_later_block_handler() {
+  return
+      [](std::function<void()> f) { vstd::event_loop<>::instance()->await(f); };
+}
+
+std::function<void(std::function<bool()>)> get_wait_until_handler() {
+  return [](std::function<bool()> pred) {
+    vstd::call_later_block([pred]() {
+      while (!pred()) {
+        vstd::event_loop<>::instance()->run();
+      }
+    });
+  };
+}
+
+std::function<void(std::function<bool()>, std::function<void()>)>
+get_call_when_handler() {
+  return [](std::function<bool()> pred, std::function<void()> func) {
+    vstd::event_loop<>::instance()->invoke_when(pred, func);
+  };
+}
+
+std::function<void(int, std::function<void()>)>
+get_call_delayed_later_handler() {
+  return [](int t, std::function<void()> f) {
+    vstd::event_loop<>::instance()->delay(t, f);
+  };
+}
+
+std::function<void(int, std::function<void()>)>
+get_call_delayed_async_handler() {
+  return [](int t, std::function<void()> f) {
+    vstd::event_loop<>::instance()->delay(t, [f]() { vstd::async(f); });
+  };
+}
+} // namespace vstd

@@ -1,6 +1,6 @@
 /*
 fall-of-nouraajd c++ dark fantasy game
-Copyright (C) 2019  Andrzej Lis
+Copyright (C) 2025  Andrzej Lis
 
 This program is free software: you can redistribute it and/or modify
         it under the terms of the GNU General Public License as published by
@@ -19,33 +19,31 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "CGamePanel.h"
 
-
 class CGameQuestionPanel : public CGamePanel {
-V_META(CGameQuestionPanel, CGamePanel,
-       V_PROPERTY(CGameQuestionPanel, std::string, question, getQuestion, setQuestion),
-       V_METHOD(CGameQuestionPanel, renderQuestion, void, std::shared_ptr<CGui>, std::shared_ptr<SDL_Rect>, int),
-       V_METHOD(CGameQuestionPanel, clickNo, void, std::shared_ptr<CGui>),
-       V_METHOD(CGameQuestionPanel, clickYes, void, std::shared_ptr<CGui>))
-
+  V_META(CGameQuestionPanel, CGamePanel,
+         V_PROPERTY(CGameQuestionPanel, std::string, question, getQuestion,
+                    setQuestion),
+         V_METHOD(CGameQuestionPanel, renderQuestion, void,
+                  std::shared_ptr<CGui>, std::shared_ptr<SDL_Rect>, int),
+         V_METHOD(CGameQuestionPanel, clickNo, void, std::shared_ptr<CGui>),
+         V_METHOD(CGameQuestionPanel, clickYes, void, std::shared_ptr<CGui>))
 
 public:
-    bool awaitAnswer();
+  bool awaitAnswer();
 
-    std::string getQuestion();
+  std::string getQuestion();
 
-    void setQuestion(std::string question);
+  void setQuestion(std::string question);
 
-    void renderQuestion(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> pRect, int i);
+  void renderQuestion(std::shared_ptr<CGui> gui,
+                      std::shared_ptr<SDL_Rect> pRect, int i);
 
-    void clickYes(std::shared_ptr<CGui> gui);
+  void clickYes(std::shared_ptr<CGui> gui);
 
-    void clickNo(std::shared_ptr<CGui> gui);
+  void clickNo(std::shared_ptr<CGui> gui);
 
 private:
+  std::string question;
 
-    std::string question;
-
-    std::shared_ptr<bool> selection;
-
+  std::shared_ptr<bool> selection;
 };
-

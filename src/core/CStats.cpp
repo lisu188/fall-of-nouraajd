@@ -1,6 +1,6 @@
 /*
 fall-of-nouraajd c++ dark fantasy game
-Copyright (C) 2021  Andrzej Lis
+Copyright (C) 2025  Andrzej Lis
 
 This program is free software: you can redistribute it and/or modify
         it under the terms of the GNU General Public License as published by
@@ -17,239 +17,137 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #include "core/CStats.h"
 
-int Stats::getAttack() const {
-    return attack;
-}
+int Stats::getAttack() const { return attack; }
 
-void Stats::setAttack(int value) {
-    attack = value;
-}
+void Stats::setAttack(int value) { attack = value; }
 
-int Stats::getDamage() const {
-    return damage;
-}
+int Stats::getDamage() const { return damage; }
 
-void Stats::setDamage(int value) {
-    damage = value;
-}
+void Stats::setDamage(int value) { damage = value; }
 
-int Stats::getShadowResist() const {
-    return shadowResist;
-}
+int Stats::getShadowResist() const { return shadowResist; }
 
-void Stats::setShadowResist(int value) {
-    shadowResist = value;
-}
+void Stats::setShadowResist(int value) { shadowResist = value; }
 
-int Stats::getThunderResist() const {
-    return thunderResist;
-}
+int Stats::getThunderResist() const { return thunderResist; }
 
-void Stats::setThunderResist(int value) {
-    thunderResist = value;
-}
+void Stats::setThunderResist(int value) { thunderResist = value; }
 
-int Stats::getNormalResist() const {
-    return normalResist;
-}
+int Stats::getNormalResist() const { return normalResist; }
 
-void Stats::setNormalResist(int value) {
-    normalResist = value;
-}
+void Stats::setNormalResist(int value) { normalResist = value; }
 
-int Stats::getFrostResist() const {
-    return frostResist;
-}
+int Stats::getFrostResist() const { return frostResist; }
 
-void Stats::setFrostResist(int value) {
-    frostResist = value;
-}
+void Stats::setFrostResist(int value) { frostResist = value; }
 
-int Stats::getFireResist() const {
-    return fireResist;
-}
+int Stats::getFireResist() const { return fireResist; }
 
-void Stats::setFireResist(int value) {
-    fireResist = value;
-}
+void Stats::setFireResist(int value) { fireResist = value; }
 
-int Stats::getCrit() const {
-    return crit;
-}
+int Stats::getCrit() const { return crit; }
 
-void Stats::setCrit(int value) {
-    crit = value;
-}
+void Stats::setCrit(int value) { crit = value; }
 
-int Stats::getHit() const {
-    return hit;
-}
+int Stats::getHit() const { return hit; }
 
-void Stats::setHit(int value) {
-    hit = value;
-}
+void Stats::setHit(int value) { hit = value; }
 
-int Stats::getDmgMax() const {
-    return dmgMax;
-}
+int Stats::getDmgMax() const { return dmgMax; }
 
-void Stats::setDmgMax(int value) {
-    dmgMax = value;
-}
+void Stats::setDmgMax(int value) { dmgMax = value; }
 
-int Stats::getDmgMin() const {
-    return dmgMin;
-}
+int Stats::getDmgMin() const { return dmgMin; }
 
-void Stats::setDmgMin(int value) {
-    dmgMin = value;
-}
+void Stats::setDmgMin(int value) { dmgMin = value; }
 
-int Stats::getBlock() const {
-    return block;
-}
+int Stats::getBlock() const { return block; }
 
-void Stats::setBlock(int value) {
-    block = value;
-}
+void Stats::setBlock(int value) { block = value; }
 
-int Stats::getArmor() const {
-    return armor;
-}
+int Stats::getArmor() const { return armor; }
 
-void Stats::setArmor(int value) {
-    armor = value;
-}
+void Stats::setArmor(int value) { armor = value; }
 
-int Stats::getIntelligence() const {
-    return intelligence;
-}
+int Stats::getIntelligence() const { return intelligence; }
 
-void Stats::setIntelligence(int value) {
-    intelligence = value;
-}
+void Stats::setIntelligence(int value) { intelligence = value; }
 
-int Stats::getStamina() const {
-    return stamina;
-}
+int Stats::getStamina() const { return stamina; }
 
-void Stats::setStamina(int value) {
-    stamina = value;
-}
+void Stats::setStamina(int value) { stamina = value; }
 
-int Stats::getAgility() const {
-    return agility;
-}
+int Stats::getAgility() const { return agility; }
 
-void Stats::setAgility(int value) {
-    agility = value;
-}
+void Stats::setAgility(int value) { agility = value; }
 
-int Stats::getStrength() const {
-    return strength;
-}
+int Stats::getStrength() const { return strength; }
 
-void Stats::setStrength(int value) {
-    strength = value;
-}
+void Stats::setStrength(int value) { strength = value; }
 
-std::string Stats::getMainStat() const {
-    return mainStat;
-}
+std::string Stats::getMainStat() const { return mainStat; }
 
-void Stats::setMainStat(const std::string &value) {
-    mainStat = value;
-}
+void Stats::setMainStat(const std::string &value) { mainStat = value; }
 
-int Stats::getMainValue() {
-    return this->getNumericProperty(mainStat);
-}
+int Stats::getMainValue() { return this->getNumericProperty(mainStat); }
 
-Stats::Stats() {
-
-}
+Stats::Stats() {}
 
 void Stats::addBonus(std::shared_ptr<Stats> stats) {
-    stats->meta()->for_all_properties(stats, [&](auto property) {
-        if (property->value_type() == boost::typeindex::type_id<int>()) {
-            this->incProperty(property->name(), stats->getProperty<int>(property->name()));
-        }
-    });
+  stats->meta()->for_all_properties(stats, [&](auto property) {
+    if (property->value_type() == boost::typeindex::type_id<int>()) {
+      this->incProperty(property->name(),
+                        stats->getProperty<int>(property->name()));
+    }
+  });
 }
 
 void Stats::removeBonus(std::shared_ptr<Stats> stats) {
-    stats->meta()->for_all_properties(stats, [&](auto property) {
-        if (property->value_type() == boost::typeindex::type_id<int>()) {
-            this->incProperty(property->name(), -stats->getProperty<int>(property->name()));
-        }
-    });
+  stats->meta()->for_all_properties(stats, [&](auto property) {
+    if (property->value_type() == boost::typeindex::type_id<int>()) {
+      this->incProperty(property->name(),
+                        -stats->getProperty<int>(property->name()));
+    }
+  });
 }
 
 std::string Stats::getText(int level) {
-    std::ostringstream stream;
-    stream << "Level: " << level << "\n";
-    stream << "Strength: " << strength << "\n";
-    stream << "Agility: " << agility << "\n";
-    stream << "Intelligence: " << intelligence << "\n";
-    stream << "Stamina: " << stamina << "\n";
-    stream << "Damage: " << dmgMin + damage << "-" << dmgMax + damage << "\n";
-    stream << "Hit: " << hit + attack << "%"
-           << "\n";
-    stream << "Crit: " << crit << "%"
-           << "\n";
-    stream << "Armor: " << armor << "%"
-           << "\n";
-    stream << "Block: " << block << "%"
-           << "\n";
-    return stream.str();
+  std::ostringstream stream;
+  stream << "Level: " << level << "\n";
+  stream << "Strength: " << strength << "\n";
+  stream << "Agility: " << agility << "\n";
+  stream << "Intelligence: " << intelligence << "\n";
+  stream << "Stamina: " << stamina << "\n";
+  stream << "Damage: " << dmgMin + damage << "-" << dmgMax + damage << "\n";
+  stream << "Hit: " << hit + attack << "%"
+         << "\n";
+  stream << "Crit: " << crit << "%"
+         << "\n";
+  stream << "Armor: " << armor << "%"
+         << "\n";
+  stream << "Block: " << block << "%"
+         << "\n";
+  return stream.str();
 }
 
+Damage::Damage() {}
 
-Damage::Damage() {
+int Damage::getFire() const { return fire; }
 
-}
+void Damage::setFire(int value) { fire = value; }
 
-int Damage::getFire() const {
-    return fire;
-}
+int Damage::getFrost() const { return frost; }
 
-void Damage::setFire(int value) {
-    fire = value;
-}
+void Damage::setFrost(int value) { frost = value; }
 
-int Damage::getFrost() const {
-    return frost;
-}
+int Damage::getThunder() const { return thunder; }
 
-void Damage::setFrost(int value) {
-    frost = value;
-}
+void Damage::setThunder(int value) { thunder = value; }
 
-int Damage::getThunder() const {
-    return thunder;
-}
+int Damage::getShadow() const { return shadow; }
 
-void Damage::setThunder(int value) {
-    thunder = value;
-}
+void Damage::setShadow(int value) { shadow = value; }
 
-int Damage::getShadow() const {
-    return shadow;
-}
+int Damage::getNormal() const { return normal; }
 
-void Damage::setShadow(int value) {
-    shadow = value;
-}
-
-int Damage::getNormal() const {
-    return normal;
-}
-
-void Damage::setNormal(int value) {
-    normal = value;
-}
-
-
-
-
-
+void Damage::setNormal(int value) { normal = value; }

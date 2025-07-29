@@ -41,7 +41,7 @@ CMapGraphicsObject::getProxiedObjects(std::shared_ptr<CGui> gui, int x, int y) {
               return false;
             }));
 
-        for (const auto& ob : map->getObjectsAtCoords(actualCoords)) {
+        for (const auto &ob : map->getObjectsAtCoords(actualCoords)) {
           return_val.push_back(ob->getGraphicsObject());
         }
 
@@ -49,7 +49,8 @@ CMapGraphicsObject::getProxiedObjects(std::shared_ptr<CGui> gui, int x, int y) {
           showCoordinates(gui, return_val, actualCoords);
         }
 
-        auto playerController = vstd::cast<CPlayerController>(player->getController());
+        auto playerController =
+            vstd::cast<CPlayerController>(player->getController());
         auto path = playerController
                         ? playerController->isOnPath(player, actualCoords)
                         : std::make_pair(false, Coords::UNDEFINED);
@@ -62,9 +63,9 @@ CMapGraphicsObject::getProxiedObjects(std::shared_ptr<CGui> gui, int x, int y) {
 }
 
 void CMapGraphicsObject::showCoordinates(
-    std::shared_ptr<CGui>& gui,
-    std::list<std::shared_ptr<CGameGraphicsObject>>& return_val,
-    const Coords& actualCoords) const {
+    std::shared_ptr<CGui> &gui,
+    std::list<std::shared_ptr<CGameGraphicsObject>> &return_val,
+    const Coords &actualCoords) const {
   auto countBox = gui->getGame()->getObjectHandler()->createObject<CTextWidget>(
       gui->getGame());
   countBox->setText(vstd::str(actualCoords.x, ",", actualCoords.y));
@@ -80,8 +81,8 @@ void CMapGraphicsObject::showCoordinates(
 }
 
 void CMapGraphicsObject::showFootprint(
-    std::shared_ptr<CGui>& gui, Coords::Direction dir,
-    std::list<std::shared_ptr<CGameGraphicsObject>>& return_val) const {
+    std::shared_ptr<CGui> &gui, Coords::Direction dir,
+    std::list<std::shared_ptr<CGameGraphicsObject>> &return_val) const {
   auto footprint = vstd::cast<CStaticAnimation>(
       CAnimationProvider::getAnimation(gui->getGame(), "images/footprint"));
   switch (dir) {
@@ -179,8 +180,7 @@ bool CMapGraphicsObject::keyboardEvent(std::shared_ptr<CGui> gui,
 Coords CMapGraphicsObject::mapToGui(std::shared_ptr<CGui> gui, Coords coords) {
   auto playerCoords = gui->getGame()->getMap()->getPlayer()->getCoords();
   return Coords(coords.x - playerCoords.x + gui->getTileCountX() / 2,
-                coords.y - playerCoords.y + gui->getTileCountY() / 2,
-                coords.z);
+                coords.y - playerCoords.y + gui->getTileCountY() / 2, coords.z);
 }
 
 Coords CMapGraphicsObject::guiToMap(std::shared_ptr<CGui> gui, Coords coords) {

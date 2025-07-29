@@ -18,118 +18,78 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "CItem.h"
 #include "core/CGame.h"
 #include "core/CMap.h"
-CItem::CItem() {
-}
+CItem::CItem() {}
 
-CItem::~CItem() {
-
-}
+CItem::~CItem() {}
 
 void CItem::onEnter(std::shared_ptr<CGameEvent> event) {
-    if (std::shared_ptr<CCreature> visitor = vstd::cast<CCreature>(vstd::cast<CGameEventCaused>(event)->getCause())) {
-        // ensure the item added to the inventory shares the same control block
-        // as the one stored inside the map
-        auto item = vstd::cast<CItem>(getMap()->getObjectByName(getName()));
-        visitor->addItem(item);
-        getMap()->removeObject(item);
-    }
+  if (std::shared_ptr<CCreature> visitor = vstd::cast<CCreature>(
+          vstd::cast<CGameEventCaused>(event)->getCause())) {
+    // ensure the item added to the inventory shares the same control block
+    // as the one stored inside the map
+    auto item = vstd::cast<CItem>(getMap()->getObjectByName(getName()));
+    visitor->addItem(item);
+    getMap()->removeObject(item);
+  }
 }
 
-void CItem::onLeave(std::shared_ptr<CGameEvent>) {
-
-}
+void CItem::onLeave(std::shared_ptr<CGameEvent>) {}
 
 void CItem::onEquip(std::shared_ptr<CGameEvent> event) {
-    vstd::logger::debug(vstd::cast<CGameEventCaused>(event)->getCause()->getType(), "equipped", getType(), "\n");
+  vstd::logger::debug(
+      vstd::cast<CGameEventCaused>(event)->getCause()->getType(), "equipped",
+      getType(), "\n");
 }
 
 void CItem::onUnequip(std::shared_ptr<CGameEvent> event) {
-    vstd::logger::debug(vstd::cast<CGameEventCaused>(event)->getCause()->getType(), "unequipped", getType(),
-                        "\n");
+  vstd::logger::debug(
+      vstd::cast<CGameEventCaused>(event)->getCause()->getType(), "unequipped",
+      getType(), "\n");
 }
 
-void CItem::onUse(std::shared_ptr<CGameEvent> event) {
+void CItem::onUse(std::shared_ptr<CGameEvent> event) {}
 
-}
+int CItem::getPower() const { return power; }
 
-int CItem::getPower() const {
-    return power;
-}
+void CItem::setPower(int value) { power = value; }
 
-void CItem::setPower(int value) {
-    power = value;
-}
+CArmor::CArmor() {}
 
-CArmor::CArmor() {
-
-}
-
-std::shared_ptr<CInteraction> CItem::getInteraction() {
-    return interaction;
-}
+std::shared_ptr<CInteraction> CItem::getInteraction() { return interaction; }
 
 void CItem::setInteraction(std::shared_ptr<CInteraction> interaction) {
-    this->interaction = interaction;
-    interaction->setManaCost(0);
+  this->interaction = interaction;
+  interaction->setManaCost(0);
 }
 
-CBelt::CBelt() {
+CBelt::CBelt() {}
 
-}
+CBoots::CBoots() {}
 
-CBoots::CBoots() {
+CGloves::CGloves() {}
 
-}
+CHelmet::CHelmet() {}
 
-CGloves::CGloves() {
+CSmallWeapon::CSmallWeapon() {}
 
-}
+CWeapon::CWeapon() : CItem() {}
 
-CHelmet::CHelmet() {
+std::shared_ptr<Stats> CItem::getBonus() { return bonus; }
 
-}
+void CItem::setBonus(std::shared_ptr<Stats> stats) { bonus = stats; }
 
-CSmallWeapon::CSmallWeapon() {
+bool CItem::isDisposable() { return false; }
 
-}
+CPotion::CPotion() {}
 
-CWeapon::CWeapon() : CItem() {
+bool CPotion::isDisposable() { return true; }
 
-}
+CScroll::CScroll() {}
 
-std::shared_ptr<Stats> CItem::getBonus() {
-    return bonus;
-}
+std::string CScroll::getText() const { return text; }
 
-void CItem::setBonus(std::shared_ptr<Stats> stats) {
-    bonus = stats;
-}
-
-bool CItem::isDisposable() {
-    return false;
-}
-
-CPotion::CPotion() {
-
-}
-
-bool CPotion::isDisposable() {
-    return true;
-}
-
-CScroll::CScroll() {
-
-}
-
-std::string CScroll::getText() const {
-    return text;
-}
-
-void CScroll::setText(const std::string &value) {
-    text = value;
-}
+void CScroll::setText(const std::string &value) { text = value; }
 
 void CScroll::onUse(std::shared_ptr<CGameEvent>) {
-    getMap()->getGame()->getGuiHandler()->showMessage(text);
+  getMap()->getGame()->getGuiHandler()->showMessage(text);
 }
-
