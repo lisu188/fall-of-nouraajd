@@ -1,6 +1,6 @@
 /*
 fall-of-nouraajd c++ dark fantasy game
-Copyright (C) 2019  Andrzej Lis
+Copyright (C) 2025  Andrzej Lis
 
 This program is free software: you can redistribute it and/or modify
         it under the terms of the GNU General Public License as published by
@@ -21,10 +21,10 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "gui/CAnimation.h"
 
 struct CResType {
-    const static std::string CONFIG;
-    const static std::string MAP;
-    const static std::string PLUGIN;
-    const static std::string SAVE;
+  const static std::string CONFIG;
+  const static std::string MAP;
+  const static std::string PLUGIN;
+  const static std::string SAVE;
 };
 
 class CAnimation;
@@ -35,45 +35,48 @@ class CGameObject;
 
 class CResourcesProvider {
 public:
-    static std::shared_ptr<CResourcesProvider> getInstance();
+  static std::shared_ptr<CResourcesProvider> getInstance();
 
-    std::string load(std::string path);
+  std::string load(std::string path);
 
-    std::shared_ptr<json> loadJson(std::string path);
+  std::shared_ptr<json> loadJson(std::string path);
 
-    std::string getPath(std::string path);
+  std::string getPath(std::string path);
 
-    std::vector<std::string> getFiles(const std::string &type);
+  std::vector<std::string> getFiles(const std::string &type);
 
-    void save(std::string file, const std::string &data);
+  void save(std::string file, const std::string &data);
 
-    void save(std::string file, std::shared_ptr<json> data);
+  void save(std::string file, std::shared_ptr<json> data);
 
-    CResourcesProvider() = default;
+  CResourcesProvider() = default;
 
 private:
-    static std::list<std::string> searchPath;
+  static std::list<std::string> searchPath;
 };
 
-class CConfigurationProvider : private std::map<std::string, std::shared_ptr<json>> {
+class CConfigurationProvider
+    : private std::map<std::string, std::shared_ptr<json>> {
 public:
-    static std::shared_ptr<json> getConfig(const std::string &path);
+  static std::shared_ptr<json> getConfig(const std::string &path);
 
 private:
-    CConfigurationProvider() = default;
+  CConfigurationProvider() = default;
 
-    ~CConfigurationProvider();
+  ~CConfigurationProvider();
 
-    std::shared_ptr<json> getConfiguration(const std::string &path);
+  std::shared_ptr<json> getConfiguration(const std::string &path);
 
-    void loadConfig(const std::string &path);
+  void loadConfig(const std::string &path);
 };
 
 class CAnimationProvider {
 public:
-    static std::shared_ptr<CAnimation>
-    getAnimation(const std::shared_ptr<CGame> &game, const std::shared_ptr<CGameObject> &object, bool custom = false);
+  static std::shared_ptr<CAnimation>
+  getAnimation(const std::shared_ptr<CGame> &game,
+               const std::shared_ptr<CGameObject> &object, bool custom = false);
 
-    static std::shared_ptr<CAnimation>
-    getAnimation(const std::shared_ptr<CGame> &game, std::string path, bool custom = false);
+  static std::shared_ptr<CAnimation>
+  getAnimation(const std::shared_ptr<CGame> &game, std::string path,
+               bool custom = false);
 };

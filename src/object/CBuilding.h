@@ -1,6 +1,6 @@
 /*
 fall-of-nouraajd c++ dark fantasy game
-Copyright (C) 2019  Andrzej Lis
+Copyright (C) 2025  Andrzej Lis
 
 This program is free software: you can redistribute it and/or modify
         it under the terms of the GNU General Public License as published by
@@ -21,25 +21,22 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 class CBuilding : public CMapObject, public Visitable {
 
-V_META(CBuilding, CMapObject,
-       V_PROPERTY(CBuilding, bool, enabled, isEnabled, setEnabled)
-)
+  V_META(CBuilding, CMapObject,
+         V_PROPERTY(CBuilding, bool, enabled, isEnabled, setEnabled))
 
 public:
-    CBuilding();
+  CBuilding();
 
-    virtual ~CBuilding();
+  virtual ~CBuilding();
 
-    bool isEnabled();
+  bool isEnabled();
 
-    void setEnabled(bool enabled);
+  void setEnabled(bool enabled);
 
-    virtual void onEnter(std::shared_ptr<CGameEvent>) override;
+  virtual void onEnter(std::shared_ptr<CGameEvent>) override;
 
-    virtual void onLeave(std::shared_ptr<CGameEvent>) override;
+  virtual void onLeave(std::shared_ptr<CGameEvent>) override;
 
 protected:
-    bool enabled = true;
+  bool enabled = true;
 };
-
-

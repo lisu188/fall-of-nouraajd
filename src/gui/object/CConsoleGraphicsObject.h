@@ -1,6 +1,6 @@
 /*
 fall-of-nouraajd c++ dark fantasy game
-Copyright (C) 2019  Andrzej Lis
+Copyright (C) 2025  Andrzej Lis
 
 This program is free software: you can redistribute it and/or modify
         it under the terms of the GNU General Public License as published by
@@ -20,36 +20,39 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "CGameGraphicsObject.h"
 
 class CConsoleGraphicsObject : public CGameGraphicsObject {
-V_META(CConsoleGraphicsObject, CGameGraphicsObject,
-       V_PROPERTY(CConsoleGraphicsObject, std::string, consoleState, getConsoleState, setConsoleState),
-       V_PROPERTY(CConsoleGraphicsObject, std::list<std::string>, consoleHistory, getConsoleHistory, setConsoleHistory))
+  V_META(CConsoleGraphicsObject, CGameGraphicsObject,
+         V_PROPERTY(CConsoleGraphicsObject, std::string, consoleState,
+                    getConsoleState, setConsoleState),
+         V_PROPERTY(CConsoleGraphicsObject, std::list<std::string>,
+                    consoleHistory, getConsoleHistory, setConsoleHistory))
 public:
-    CConsoleGraphicsObject();
+  CConsoleGraphicsObject();
 
-    void renderObject(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> rect, int frameTime) override;
+  void renderObject(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> rect,
+                    int frameTime) override;
 
-    std::string getConsoleState();
+  std::string getConsoleState();
 
-    void setConsoleState(std::string consoleState);
+  void setConsoleState(std::string consoleState);
 
-    std::list<std::string> getConsoleHistory();
+  std::list<std::string> getConsoleHistory();
 
-    void setConsoleHistory(std::list<std::string> consoleHistory);
+  void setConsoleHistory(std::list<std::string> consoleHistory);
 
 private:
-    bool inProgress = false;
-    std::string consoleState = "";
-    //TODO: persist order when saving
-    std::vector<std::string> consoleHistory = {""};
-    int historyIndex = 0;
+  bool inProgress = false;
+  std::string consoleState = "";
+  // TODO: persist order when saving
+  std::vector<std::string> consoleHistory = {""};
+  int historyIndex = 0;
 
-    void stopInput();
+  void stopInput();
 
-    void startInput();
+  void startInput();
 
-    void clearConsole();
+  void clearConsole();
 
-    void decrementHistoryIndex();
+  void decrementHistoryIndex();
 
-    void incrementHistoryIndex();
+  void incrementHistoryIndex();
 };

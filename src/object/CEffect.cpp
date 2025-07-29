@@ -1,6 +1,6 @@
 /*
 fall-of-nouraajd c++ dark fantasy game
-Copyright (C) 2019  Andrzej Lis
+Copyright (C) 2025  Andrzej Lis
 
 This program is free software: you can redistribute it and/or modify
         it under the terms of the GNU General Public License as published by
@@ -18,71 +18,43 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "CEffect.h"
 #include "CCreature.h"
 
-CEffect::CEffect() {
+CEffect::CEffect() {}
 
-}
+CEffect::~CEffect() {}
 
-CEffect::~CEffect() {
+int CEffect::getTimeLeft() { return timeLeft; }
 
-}
+int CEffect::getTimeTotal() { return timeTotal; }
 
-int CEffect::getTimeLeft() {
-    return timeLeft;
-}
+std::shared_ptr<CCreature> CEffect::getCaster() { return caster; }
 
-int CEffect::getTimeTotal() {
-    return timeTotal;
-}
-
-std::shared_ptr<CCreature> CEffect::getCaster() {
-    return caster;
-}
-
-std::shared_ptr<CCreature> CEffect::getVictim() {
-    return victim;
-}
+std::shared_ptr<CCreature> CEffect::getVictim() { return victim; }
 
 void CEffect::apply(std::shared_ptr<CCreature> creature) {
-    timeLeft--;
-    if (timeLeft == 0) {
-    } else {
-        onEffect();
-    }
+  timeLeft--;
+  if (timeLeft == 0) {
+  } else {
+    onEffect();
+  }
 }
 
-std::shared_ptr<Stats> CEffect::getBonus() {
-    return bonus;
-}
+std::shared_ptr<Stats> CEffect::getBonus() { return bonus; }
 
-void CEffect::setBonus(std::shared_ptr<Stats> value) {
-    bonus = value;
-}
+void CEffect::setBonus(std::shared_ptr<Stats> value) { bonus = value; }
 
-int CEffect::getDuration() {
-    return duration;
-}
+int CEffect::getDuration() { return duration; }
 
 void CEffect::setDuration(int duration) {
-    this->duration = duration;
-    timeLeft = timeTotal = duration;
+  this->duration = duration;
+  timeLeft = timeTotal = duration;
 }
 
-void CEffect::onEffect() {
+void CEffect::onEffect() {}
 
-}
+void CEffect::setCaster(std::shared_ptr<CCreature> value) { caster = value; }
 
-void CEffect::setCaster(std::shared_ptr<CCreature> value) {
-    caster = value;
-}
+void CEffect::setVictim(std::shared_ptr<CCreature> value) { victim = value; }
 
-void CEffect::setVictim(std::shared_ptr<CCreature> value) {
-    victim = value;
-}
+void CEffect::setCumulative(bool value) { this->cumulative = value; }
 
-void CEffect::setCumulative(bool value) {
-    this->cumulative = value;
-}
-
-bool CEffect::getCumulative() {
-    return this->cumulative;
-}
+bool CEffect::getCumulative() { return this->cumulative; }

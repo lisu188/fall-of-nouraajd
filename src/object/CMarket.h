@@ -1,6 +1,6 @@
 /*
 fall-of-nouraajd c++ dark fantasy game
-Copyright (C) 2019  Andrzej Lis
+Copyright (C) 2025  Andrzej Lis
 
 This program is free software: you can redistribute it and/or modify
         it under the terms of the GNU General Public License as published by
@@ -26,45 +26,43 @@ class CCreature;
 
 class CMarket : public CGameObject {
 
-V_META(CMarket, CGameObject,
-       V_PROPERTY(CMarket, std::set<std::shared_ptr<CItem>>, items, getItems, setItems),
-       V_PROPERTY(CMarket, int, sell, getSell, setSell),
-       V_PROPERTY(CMarket, int, buy, getBuy, setBuy)
-)
+  V_META(CMarket, CGameObject,
+         V_PROPERTY(CMarket, std::set<std::shared_ptr<CItem>>, items, getItems,
+                    setItems),
+         V_PROPERTY(CMarket, int, sell, getSell, setSell),
+         V_PROPERTY(CMarket, int, buy, getBuy, setBuy))
 
 public:
-    CMarket();
+  CMarket();
 
-    ~CMarket();
+  ~CMarket();
 
-    void add(std::shared_ptr<CItem> item);
+  void add(std::shared_ptr<CItem> item);
 
-    void remove(std::shared_ptr<CItem> item);
+  void remove(std::shared_ptr<CItem> item);
 
-    bool sellItem(std::shared_ptr<CCreature> cre, std::shared_ptr<CItem> item);
+  bool sellItem(std::shared_ptr<CCreature> cre, std::shared_ptr<CItem> item);
 
-    void buyItem(std::shared_ptr<CCreature> cre, std::shared_ptr<CItem> item);
+  void buyItem(std::shared_ptr<CCreature> cre, std::shared_ptr<CItem> item);
 
-    void setItems(std::set<std::shared_ptr<CItem>> items);
+  void setItems(std::set<std::shared_ptr<CItem>> items);
 
-    std::set<std::shared_ptr<CItem>> getItems();
+  std::set<std::shared_ptr<CItem>> getItems();
 
-    int getSell() const;
+  int getSell() const;
 
-    void setSell(int value);
+  void setSell(int value);
 
-    int getBuy() const;
+  int getBuy() const;
 
-    void setBuy(int value);
+  void setBuy(int value);
 
-    int getSellCost(std::shared_ptr<CItem> item);
+  int getSellCost(std::shared_ptr<CItem> item);
 
-    int getBuyCost(std::shared_ptr<CItem> item);
+  int getBuyCost(std::shared_ptr<CItem> item);
+
 private:
-    std::set<std::shared_ptr<CItem>> items;
-    int sell = 100;
-    int buy = 80;
-
-
+  std::set<std::shared_ptr<CItem>> items;
+  int sell = 100;
+  int buy = 80;
 };
-

@@ -1,6 +1,6 @@
 /*
 fall-of-nouraajd c++ dark fantasy game
-Copyright (C) 2019  Andrzej Lis
+Copyright (C) 2025  Andrzej Lis
 
 This program is free software: you can redistribute it and/or modify
         it under the terms of the GNU General Public License as published by
@@ -22,52 +22,49 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 class CEffect : public CGameObject {
 
-V_META(CEffect, CGameObject,
-       V_PROPERTY(CEffect, int, duration, getDuration, setDuration),
-       V_PROPERTY(CEffect, bool, cumulative, getCumulative, setCumulative)
-)
+  V_META(CEffect, CGameObject,
+         V_PROPERTY(CEffect, int, duration, getDuration, setDuration),
+         V_PROPERTY(CEffect, bool, cumulative, getCumulative, setCumulative))
 
 public:
-    CEffect();
+  CEffect();
 
-    virtual ~CEffect();
+  virtual ~CEffect();
 
-    int getTimeLeft();
+  int getTimeLeft();
 
-    int getTimeTotal();
+  int getTimeTotal();
 
-    void apply(std::shared_ptr<CCreature> creature);
+  void apply(std::shared_ptr<CCreature> creature);
 
-    std::shared_ptr<Stats> getBonus();
+  std::shared_ptr<Stats> getBonus();
 
-    void setBonus(std::shared_ptr<Stats> value);
+  void setBonus(std::shared_ptr<Stats> value);
 
-    int getDuration();
+  int getDuration();
 
-    void setDuration(int duration);
+  void setDuration(int duration);
 
-    virtual void onEffect();
+  virtual void onEffect();
 
-    std::shared_ptr<CCreature> getCaster();
+  std::shared_ptr<CCreature> getCaster();
 
-    void setCaster(std::shared_ptr<CCreature> value);
+  void setCaster(std::shared_ptr<CCreature> value);
 
-    std::shared_ptr<CCreature> getVictim();
+  std::shared_ptr<CCreature> getVictim();
 
-    void setVictim(std::shared_ptr<CCreature> value);
+  void setVictim(std::shared_ptr<CCreature> value);
 
-    void setCumulative(bool value);
+  void setCumulative(bool value);
 
-    bool getCumulative();
+  bool getCumulative();
 
 private:
-    int timeLeft = 0;
-    int timeTotal = 0;
-    std::shared_ptr<Stats> bonus = std::make_shared<Stats>();
-    std::shared_ptr<CCreature> caster;
-    std::shared_ptr<CCreature> victim;
-    int duration = 0;
-    bool cumulative = false;
+  int timeLeft = 0;
+  int timeTotal = 0;
+  std::shared_ptr<Stats> bonus = std::make_shared<Stats>();
+  std::shared_ptr<CCreature> caster;
+  std::shared_ptr<CCreature> victim;
+  int duration = 0;
+  bool cumulative = false;
 };
-
-
