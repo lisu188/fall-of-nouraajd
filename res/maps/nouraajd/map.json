@@ -40711,7 +40711,7 @@
             "animation": "string"
           },
           "rotation": 0,
-            "type": "oldWoman",
+            "type": "nouraajdDoor",
           "visible": true,
           "width": 32,
           "x": 1408,
@@ -40779,7 +40779,7 @@
             "animation": "string"
           },
           "rotation": 0,
-            "type": "questGiver",
+            "type": "nouraajdTavern",
           "visible": true,
           "width": 32,
           "x": 1536,
@@ -40796,7 +40796,7 @@
             "animation": "string"
           },
           "rotation": 0,
-          "type": "oldWoman",
+          "type": "nouraajdTownHall",
           "visible": true,
           "width": 32,
           "x": 1376,
@@ -40830,7 +40830,7 @@
             "animation": "string"
           },
           "rotation": 0,
-          "type": "CBuilding",
+          "type": "nouraajdChapel",
           "visible": true,
           "width": 32,
           "x": 1600,

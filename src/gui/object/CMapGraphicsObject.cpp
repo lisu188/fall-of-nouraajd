@@ -1,20 +1,3 @@
-/*
-fall-of-nouraajd c++ dark fantasy game
-Copyright (C) 2025  Andrzej Lis
-
-This program is free software: you can redistribute it and/or modify
-        it under the terms of the GNU General Public License as published by
-the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version.
-
-This program is distributed in the hope that it will be useful,
-        but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
-
-You should have received a copy of the GNU General Public License
-along with this program.  If not, see <https://www.gnu.org/licenses/>.
- */
 #include "gui/object/CMapGraphicsObject.h"
 #include "CWidget.h"
 #include "core/CController.h"
@@ -28,8 +11,7 @@ CMapGraphicsObject::CMapGraphicsObject() {}
 std::list<std::shared_ptr<CGameGraphicsObject>>
 CMapGraphicsObject::getProxiedObjects(std::shared_ptr<CGui> gui, int x, int y) {
   return vstd::with<std::list<std::shared_ptr<CGameGraphicsObject>>>(
-      gui->getGame()->getMap(),
-      [&](auto map) {
+      gui->getGame()->getMap(), [&](auto map) {
         std::list<std::shared_ptr<CGameGraphicsObject>> return_val;
 
         std::shared_ptr<CPlayer> player = gui->getGame()->getMap()->getPlayer();
@@ -49,30 +31,25 @@ CMapGraphicsObject::getProxiedObjects(std::shared_ptr<CGui> gui, int x, int y) {
                 }
                 auto player = gui->getGame()->getMap()->getPlayer();
                 controller->setTarget(player, actualCoords);
-
                 if (!gui->getMap()->isMoving()) {
-                  // move this code
                   while (!controller->isCompleted(player)) {
                     gui->getGame()->getMap()->move();
                   }
                 }
-
                 return true;
               }
               return false;
             }));
 
-        for (const auto &ob : map->getObjectsAtCoords(actualCoords)) {
+        for (const auto& ob : map->getObjectsAtCoords(actualCoords)) {
           return_val.push_back(ob->getGraphicsObject());
         }
 
-        // TODO: make list of such properties in config
         if (map->getBoolProperty("showCoordinates")) {
           showCoordinates(gui, return_val, actualCoords);
         }
 
-        auto playerController =
-            vstd::cast<CPlayerController>(player->getController());
+        auto playerController = vstd::cast<CPlayerController>(player->getController());
         auto path = playerController
                         ? playerController->isOnPath(player, actualCoords)
                         : std::make_pair(false, Coords::UNDEFINED);
@@ -81,16 +58,13 @@ CMapGraphicsObject::getProxiedObjects(std::shared_ptr<CGui> gui, int x, int y) {
         }
 
         return return_val;
-      }
-
-  );
+      });
 }
 
-// TODO: fix text display, smaller font
 void CMapGraphicsObject::showCoordinates(
-    std::shared_ptr<CGui> &gui,
-    std::list<std::shared_ptr<CGameGraphicsObject>> &return_val,
-    const Coords &actualCoords) const {
+    std::shared_ptr<CGui>& gui,
+    std::list<std::shared_ptr<CGameGraphicsObject>>& return_val,
+    const Coords& actualCoords) const {
   auto countBox = gui->getGame()->getObjectHandler()->createObject<CTextWidget>(
       gui->getGame());
   countBox->setText(vstd::str(actualCoords.x, ",", actualCoords.y));
@@ -106,17 +80,11 @@ void CMapGraphicsObject::showCoordinates(
 }
 
 void CMapGraphicsObject::showFootprint(
-    std::shared_ptr<CGui> &gui, Coords::Direction dir,
-    std::list<std::shared_ptr<CGameGraphicsObject>> &return_val) const {
+    std::shared_ptr<CGui>& gui, Coords::Direction dir,
+    std::list<std::shared_ptr<CGameGraphicsObject>>& return_val) const {
   auto footprint = vstd::cast<CStaticAnimation>(
       CAnimationProvider::getAnimation(gui->getGame(), "images/footprint"));
   switch (dir) {
-  case Coords::UNDEFINED:
-  case Coords::ZERO:
-  case Coords::NORTH:
-  case Coords::UP:
-  case Coords::DOWN:
-    break;
   case Coords::EAST:
     footprint->setRotation(90);
     break;
@@ -125,6 +93,8 @@ void CMapGraphicsObject::showFootprint(
     break;
   case Coords::WEST:
     footprint->setRotation(270);
+    break;
+  default:
     break;
   }
   auto layout =
@@ -142,21 +112,16 @@ void CMapGraphicsObject::initialize() {
   auto self = this->ptr<CMapGraphicsObject>();
   vstd::call_when(
       [self]() {
-        return self->getGui() != nullptr &&
-               self->getGui()->getGame() != nullptr &&
-               self->getGui()->getGame()->getMap() != nullptr;
+        return self->getGui() && self->getGui()->getGame() &&
+               self->getGui()->getGame()->getMap();
       },
       [self]() {
         self->getGui()->getGame()->getMap()->connect("turnPassed", self,
                                                      "refreshAll");
-        self->getGui()->getGame()->getMap()->connect(
-            "tileChanged", self,
-            "refreshObject"); // TODO: current lazy tile loading may cause event
-                              // spam
-        self->getGui()->getGame()->getMap()->connect(
-            "objectChanged", self,
-            "refreshObject"); // TODO: current lazy tile loading may cause event
-                              // spam
+        self->getGui()->getGame()->getMap()->connect("tileChanged", self,
+                                                     "refreshObject");
+        self->getGui()->getGame()->getMap()->connect("objectChanged", self,
+                                                     "refreshObject");
         self->refresh();
       });
 }
@@ -173,7 +138,7 @@ bool CMapGraphicsObject::keyboardEvent(std::shared_ptr<CGui> gui,
                                        SDL_EventType type, SDL_Keycode i) {
   if (type == SDL_KEYDOWN) {
     if (gui->getGame()->getMap()->isMoving()) {
-      return true; // TODO: rethink this
+      return true;
     }
     std::shared_ptr<CPlayer> player = gui->getGame()->getMap()->getPlayer();
     switch (i) {
@@ -213,14 +178,13 @@ bool CMapGraphicsObject::keyboardEvent(std::shared_ptr<CGui> gui,
 
 Coords CMapGraphicsObject::mapToGui(std::shared_ptr<CGui> gui, Coords coords) {
   auto playerCoords = gui->getGame()->getMap()->getPlayer()->getCoords();
-
   return Coords(coords.x - playerCoords.x + gui->getTileCountX() / 2,
-                coords.y - playerCoords.y + gui->getTileCountY() / 2, coords.z);
+                coords.y - playerCoords.y + gui->getTileCountY() / 2,
+                coords.z);
 }
 
 Coords CMapGraphicsObject::guiToMap(std::shared_ptr<CGui> gui, Coords coords) {
   auto playerCoords = gui->getGame()->getMap()->getPlayer()->getCoords();
-
   return Coords(playerCoords.x - gui->getTileCountX() / 2 + coords.x,
                 playerCoords.y - gui->getTileCountY() / 2 + coords.y,
                 playerCoords.z);
