@@ -1,6 +1,6 @@
 /*
 fall-of-nouraajd c++ dark fantasy game
-Copyright (C) 2019  Andrzej Lis
+Copyright (C) 2025  Andrzej Lis
 
 This program is free software: you can redistribute it and/or modify
         it under the terms of the GNU General Public License as published by
@@ -23,52 +23,55 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CSerialization.h"
 #include "object/CGameObject.h"
 
-
 class CMap;
 
 class CObjectHandler : public CGameObject {
 public:
-    CObjectHandler();
+  CObjectHandler();
 
-    template<typename T=CGameObject>
-    std::shared_ptr<T> createObject(std::shared_ptr<CGame> game, std::string type) {
-        return vstd::cast<T>(_createObject(game, type));
-    }
+  template <typename T = CGameObject>
+  std::shared_ptr<T> createObject(std::shared_ptr<CGame> game,
+                                  std::string type) {
+    return vstd::cast<T>(_createObject(game, type));
+  }
 
-    template<typename T=CGameObject>
-    std::shared_ptr<T> createObject(std::shared_ptr<CGame> game) {
-        return vstd::cast<T>(_createObject(game, T::static_meta()->name()));
-    }
+  template <typename T = CGameObject>
+  std::shared_ptr<T> createObject(std::shared_ptr<CGame> game) {
+    return vstd::cast<T>(_createObject(game, T::static_meta()->name()));
+  }
 
-    template<typename T>
-    std::shared_ptr<T> clone(std::shared_ptr<T> object) {
-        return vstd::cast<T>(_clone(object));
-    }
+  template <typename T> std::shared_ptr<T> clone(std::shared_ptr<T> object) {
+    return vstd::cast<T>(_clone(object));
+  }
 
-    std::vector<std::string> getAllTypes();
+  std::vector<std::string> getAllTypes();
 
-    std::vector<std::string> getAllSubTypes(const std::string &claz);
+  std::vector<std::string> getAllSubTypes(const std::string &claz);
 
-    void registerConfig(const std::string &path);
+  void registerConfig(const std::string &path);
 
-    void registerConfig(const std::string &name, std::shared_ptr<json> value);
+  void registerConfig(const std::string &name, std::shared_ptr<json> value);
 
-    void registerConfig(const std::set<std::string> &paths);
+  void registerConfig(const std::set<std::string> &paths);
 
-    void registerType(std::string name, std::function<std::shared_ptr<CGameObject>()> constructor);
+  void registerType(std::string name,
+                    std::function<std::shared_ptr<CGameObject>()> constructor);
 
-    std::shared_ptr<CGameObject> getType(const std::string &name);
+  std::shared_ptr<CGameObject> getType(const std::string &name);
 
-    std::shared_ptr<json> getConfig(const std::string &type);
+  std::shared_ptr<json> getConfig(const std::string &type);
 
-    std::string getClass(const std::string &type);
+  std::string getClass(const std::string &type);
 
 private:
-    std::shared_ptr<CGameObject> _createObject(std::shared_ptr<CGame> map, const std::string &type);
+  std::shared_ptr<CGameObject> _createObject(std::shared_ptr<CGame> map,
+                                             const std::string &type);
 
-    std::shared_ptr<CGameObject> _clone(const std::shared_ptr<CGameObject> &object);
+  std::shared_ptr<CGameObject>
+  _clone(const std::shared_ptr<CGameObject> &object);
 
-    std::unordered_map<std::string, std::function<std::shared_ptr<CGameObject>() >> constructors;
+  std::unordered_map<std::string, std::function<std::shared_ptr<CGameObject>()>>
+      constructors;
 
-    std::unordered_map<std::string, std::shared_ptr<json>> objectConfig;
+  std::unordered_map<std::string, std::shared_ptr<json>> objectConfig;
 };

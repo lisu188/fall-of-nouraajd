@@ -1,6 +1,6 @@
 /*
 fall-of-nouraajd c++ dark fantasy game
-Copyright (C) 2019  Andrzej Lis
+Copyright (C) 2025  Andrzej Lis
 
 This program is free software: you can redistribute it and/or modify
         it under the terms of the GNU General Public License as published by
@@ -28,26 +28,30 @@ class CCreature;
 
 class CRngHandler : public CGameObject {
 public:
-    CRngHandler() = default;
+  CRngHandler() = default;
 
-    explicit CRngHandler(const std::shared_ptr<CGame> &map);
+  explicit CRngHandler(const std::shared_ptr<CGame> &map);
 
-    std::set<std::shared_ptr<CItem> > getRandomLoot(int value) const;
+  std::set<std::shared_ptr<CItem>> getRandomLoot(int value) const;
 
-    std::set<std::shared_ptr<CCreature> > getRandomEncounter(int value) const;
+  std::set<std::shared_ptr<CCreature>> getRandomEncounter(int value) const;
 
-    void addRandomLoot(const std::shared_ptr<CCreature> &creature, const std::set<std::shared_ptr<CItem>> &items);
+  void addRandomLoot(const std::shared_ptr<CCreature> &creature,
+                     const std::set<std::shared_ptr<CItem>> &items);
 
-    void addRandomLoot(const std::shared_ptr<CCreature> &creature, int value);
+  void addRandomLoot(const std::shared_ptr<CCreature> &creature, int value);
 
-    void addRandomEncounter(const std::shared_ptr<CMap> &map, int x, int y, int z, int value);
+  void addRandomEncounter(const std::shared_ptr<CMap> &map, int x, int y, int z,
+                          int value);
+
 private:
-    std::set<std::shared_ptr<CItem> > calculateRandomLoot(int value) const;
+  std::set<std::shared_ptr<CItem>> calculateRandomLoot(int value) const;
 
-    std::set<std::shared_ptr<CCreature> > calculateRandomEncounter(int value) const;
+  std::set<std::shared_ptr<CCreature>>
+  calculateRandomEncounter(int value) const;
 
-    std::weak_ptr<CGame> game;
+  std::weak_ptr<CGame> game;
 
-    std::unordered_multimap<int, std::string> itemPowerTable;
-    std::unordered_multimap<int, std::string> creaturePowerTable;
+  std::unordered_multimap<int, std::string> itemPowerTable;
+  std::unordered_multimap<int, std::string> creaturePowerTable;
 };

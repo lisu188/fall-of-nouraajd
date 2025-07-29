@@ -1,6 +1,6 @@
 /*
 fall-of-nouraajd c++ dark fantasy game
-Copyright (C) 2019  Andrzej Lis
+Copyright (C) 2025  Andrzej Lis
 
 This program is free software: you can redistribute it and/or modify
         it under the terms of the GNU General Public License as published by
@@ -17,21 +17,14 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #include "CQuest.h"
 
-CQuest::CQuest() {
-}
+CQuest::CQuest() {}
 
-bool CQuest::isCompleted() {
-    return false;
-}
+bool CQuest::isCompleted() { return false; }
 
-void CQuest::onComplete() {
-
-}
+void CQuest::onComplete() {}
 
 void CQuest::setDescription(std::string description) {
-    this->description = description;
+  this->description = description;
 }
 
-std::string CQuest::getDescription() {
-    return description;
-}
+std::string CQuest::getDescription() { return description; }
