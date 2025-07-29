@@ -35,6 +35,7 @@ CMapGraphicsObject::getProxiedObjects(std::shared_ptr<CGui> gui, int x, int y) {
                 std::list<std::shared_ptr<CGameGraphicsObject>> return_val;
 
                 std::shared_ptr<CPlayer> player = gui->getGame()->getMap()->getPlayer();
+                if (player){
                 auto actualCoords = guiToMap(gui, Coords(x, y, player->getCoords().z));
 
                 std::shared_ptr<CTile> tile = map->getTile(actualCoords.x, actualCoords.y, actualCoords.z);
@@ -80,7 +81,7 @@ CMapGraphicsObject::getProxiedObjects(std::shared_ptr<CGui> gui, int x, int y) {
                     showFootprint(gui,
                                   path.second,
                                   return_val);
-                }
+                }}
 
                 return return_val;
             }
