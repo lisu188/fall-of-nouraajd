@@ -1,6 +1,6 @@
 /*
 fall-of-nouraajd c++ dark fantasy game
-Copyright (C) 2019  Andrzej Lis
+Copyright (C) 2025  Andrzej Lis
 
 This program is free software: you can redistribute it and/or modify
         it under the terms of the GNU General Public License as published by
@@ -17,39 +17,44 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #pragma once
 
-#include "object/CPlayer.h"
 #include "CGamePanel.h"
+#include "object/CPlayer.h"
 
 class CGameInventoryPanel : public CGamePanel {
-V_META(CGameInventoryPanel, CGamePanel,
-       V_METHOD(CGameInventoryPanel, inventoryCollection,CListView::collection_pointer,
-                std::shared_ptr<CGui>),
-       V_METHOD(CGameInventoryPanel, inventoryCallback, void, std::shared_ptr<CGui>, int, std::shared_ptr<CGameObject>),
-       V_METHOD(CGameInventoryPanel, inventorySelect, bool, std::shared_ptr<CGui>, int, std::shared_ptr<CGameObject>),
-       V_METHOD(CGameInventoryPanel, equippedCollection,CListView::collection_pointer,
-                std::shared_ptr<CGui>),
-       V_METHOD(CGameInventoryPanel, equippedCallback, void, std::shared_ptr<CGui>, int, std::shared_ptr<CGameObject>),
-       V_METHOD(CGameInventoryPanel, equippedSelect, bool, std::shared_ptr<CGui>, int, std::shared_ptr<CGameObject>))
+  V_META(CGameInventoryPanel, CGamePanel,
+         V_METHOD(CGameInventoryPanel, inventoryCollection,
+                  CListView::collection_pointer, std::shared_ptr<CGui>),
+         V_METHOD(CGameInventoryPanel, inventoryCallback, void,
+                  std::shared_ptr<CGui>, int, std::shared_ptr<CGameObject>),
+         V_METHOD(CGameInventoryPanel, inventorySelect, bool,
+                  std::shared_ptr<CGui>, int, std::shared_ptr<CGameObject>),
+         V_METHOD(CGameInventoryPanel, equippedCollection,
+                  CListView::collection_pointer, std::shared_ptr<CGui>),
+         V_METHOD(CGameInventoryPanel, equippedCallback, void,
+                  std::shared_ptr<CGui>, int, std::shared_ptr<CGameObject>),
+         V_METHOD(CGameInventoryPanel, equippedSelect, bool,
+                  std::shared_ptr<CGui>, int, std::shared_ptr<CGameObject>))
 
 public:
-    CGameInventoryPanel();
+  CGameInventoryPanel();
 
-    CListView::collection_pointer inventoryCollection(std::shared_ptr<CGui> gui);
+  CListView::collection_pointer inventoryCollection(std::shared_ptr<CGui> gui);
 
-    void inventoryCallback(std::shared_ptr<CGui> gui, int index, std::shared_ptr<CGameObject> _newSelection);
+  void inventoryCallback(std::shared_ptr<CGui> gui, int index,
+                         std::shared_ptr<CGameObject> _newSelection);
 
-    bool inventorySelect(std::shared_ptr<CGui> gui, int index, std::shared_ptr<CGameObject> object);
+  bool inventorySelect(std::shared_ptr<CGui> gui, int index,
+                       std::shared_ptr<CGameObject> object);
 
-    CListView::collection_pointer equippedCollection(std::shared_ptr<CGui> gui);
+  CListView::collection_pointer equippedCollection(std::shared_ptr<CGui> gui);
 
-    void equippedCallback(std::shared_ptr<CGui> gui, int index, std::shared_ptr<CGameObject> _newSelection);
+  void equippedCallback(std::shared_ptr<CGui> gui, int index,
+                        std::shared_ptr<CGameObject> _newSelection);
 
-    bool equippedSelect(std::shared_ptr<CGui> gui, int index, std::shared_ptr<CGameObject> object);
-
-
+  bool equippedSelect(std::shared_ptr<CGui> gui, int index,
+                      std::shared_ptr<CGameObject> object);
 
 private:
-    std::weak_ptr<CItem> selectedInventory;
-    std::weak_ptr<CItem> selectedEquipped;
+  std::weak_ptr<CItem> selectedInventory;
+  std::weak_ptr<CItem> selectedEquipped;
 };
-

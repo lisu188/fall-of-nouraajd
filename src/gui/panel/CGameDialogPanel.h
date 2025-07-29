@@ -1,6 +1,6 @@
 /*
 fall-of-nouraajd c++ dark fantasy game
-Copyright (C) 2022  Andrzej Lis
+Copyright (C) 2025  Andrzej Lis
 
 This program is free software: you can redistribute it and/or modify
         it under the terms of the GNU General Public License as published by
@@ -24,27 +24,29 @@ class CDialog;
 class CDialogOption;
 
 class CGameDialogPanel : public CGamePanel {
-V_META(CGameDialogPanel, CGamePanel,
-       V_PROPERTY(CGameDialogPanel, std::shared_ptr<CDialog>, dialog, getDialog, setDialog))
+  V_META(CGameDialogPanel, CGamePanel,
+         V_PROPERTY(CGameDialogPanel, std::shared_ptr<CDialog>, dialog,
+                    getDialog, setDialog))
 public:
-    const std::shared_ptr<CDialog> &getDialog() const;
+  const std::shared_ptr<CDialog> &getDialog() const;
 
-    void setDialog(const std::shared_ptr<CDialog> &_dialog);
+  void setDialog(const std::shared_ptr<CDialog> &_dialog);
 
-    void reload();
+  void reload();
 
-    bool keyboardEvent(std::shared_ptr<CGui> sharedPtr, SDL_EventType type, SDL_Keycode i) override;
+  bool keyboardEvent(std::shared_ptr<CGui> sharedPtr, SDL_EventType type,
+                     SDL_Keycode i) override;
 
 private:
-    std::shared_ptr<CDialog> dialog;
-    std::string currentStateId = "ENTRY";
+  std::shared_ptr<CDialog> dialog;
+  std::string currentStateId = "ENTRY";
 
-    std::shared_ptr<CDialogOption> getOption(int option);
+  std::shared_ptr<CDialogOption> getOption(int option);
 
-    void selectOption(int option);
+  void selectOption(int option);
 
-    void selectOption(const std::shared_ptr<CDialogOption> &option);
+  void selectOption(const std::shared_ptr<CDialogOption> &option);
 
-    std::map<int, std::shared_ptr<CDialogOption>, std::greater<>> getCurrentOptions();
+  std::map<int, std::shared_ptr<CDialogOption>, std::greater<>>
+  getCurrentOptions();
 };
-

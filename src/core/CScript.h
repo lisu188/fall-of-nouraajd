@@ -1,6 +1,6 @@
 /*
 fall-of-nouraajd c++ dark fantasy game
-Copyright (C) 2020  Andrzej Lis
+Copyright (C) 2025  Andrzej Lis
 
 This program is free software: you can redistribute it and/or modify
         it under the terms of the GNU General Public License as published by
@@ -20,22 +20,22 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "object/CGameObject.h"
 
 class CScript : public CGameObject {
-V_META(CScript, CGameObject,
-       V_PROPERTY(CScript, std::string, script, getScript, setScript)
-)
+  V_META(CScript, CGameObject,
+         V_PROPERTY(CScript, std::string, script, getScript, setScript))
 public:
-    template<typename T>
-    std::shared_ptr<T> invoke(std::shared_ptr<CGame> game, std::shared_ptr<CGameObject> self) {
-        return vstd::cast<T>(invoke(game, self));
-    }
+  template <typename T>
+  std::shared_ptr<T> invoke(std::shared_ptr<CGame> game,
+                            std::shared_ptr<CGameObject> self) {
+    return vstd::cast<T>(invoke(game, self));
+  }
 
-    std::shared_ptr<CGameObject> invoke(std::shared_ptr<CGame> game, std::shared_ptr<CGameObject> self);
+  std::shared_ptr<CGameObject> invoke(std::shared_ptr<CGame> game,
+                                      std::shared_ptr<CGameObject> self);
 
-    std::string getScript();
+  std::string getScript();
 
-    void setScript(std::string script);
+  void setScript(std::string script);
 
 private:
-    std::string script;
-
+  std::string script;
 };

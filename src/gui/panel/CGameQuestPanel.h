@@ -1,6 +1,6 @@
 /*
 fall-of-nouraajd c++ dark fantasy game
-Copyright (C) 2019  Andrzej Lis
+Copyright (C) 2025  Andrzej Lis
 
 This program is free software: you can redistribute it and/or modify
         it under the terms of the GNU General Public License as published by
@@ -19,15 +19,12 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "CGamePanel.h"
 
-
 class CGameQuestPanel : public CGamePanel {
-V_META(CGameQuestPanel, CGamePanel,
-       vstd::meta::empty())
+  V_META(CGameQuestPanel, CGamePanel, vstd::meta::empty())
 
-    void renderObject(std::shared_ptr<CGui> shared_ptr, std::shared_ptr<SDL_Rect> rect, int i) override;
+  void renderObject(std::shared_ptr<CGui> shared_ptr,
+                    std::shared_ptr<SDL_Rect> rect, int i) override;
 
 public:
-
-    std::string getText(std::shared_ptr<CGui> ptr);
+  std::string getText(std::shared_ptr<CGui> ptr);
 };
-

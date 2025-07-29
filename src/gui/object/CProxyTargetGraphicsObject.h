@@ -1,6 +1,6 @@
 /*
 fall-of-nouraajd c++ dark fantasy game
-Copyright (C) 2021  Andrzej Lis
+Copyright (C) 2025  Andrzej Lis
 
 This program is free software: you can redistribute it and/or modify
         it under the terms of the GNU General Public License as published by
@@ -22,36 +22,38 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 class CProxyGraphicsObject;
 
 class CProxyTargetGraphicsObject : public CGameGraphicsObject {
-    V_META(CProxyTargetGraphicsObject, CGameGraphicsObject,
-           V_METHOD(CProxyTargetGraphicsObject, refresh),
-           V_METHOD(CProxyTargetGraphicsObject, refreshAll),
-           V_PROPERTY(CProxyTargetGraphicsObject, std::string, proxyLayout, getProxyLayout, setProxyLayout))
+  V_META(CProxyTargetGraphicsObject, CGameGraphicsObject,
+         V_METHOD(CProxyTargetGraphicsObject, refresh),
+         V_METHOD(CProxyTargetGraphicsObject, refreshAll),
+         V_PROPERTY(CProxyTargetGraphicsObject, std::string, proxyLayout,
+                    getProxyLayout, setProxyLayout))
 public:
-    virtual std::list<std::shared_ptr<CGameGraphicsObject> >
-    getProxiedObjects(std::shared_ptr<CGui> gui, int x, int y);
+  virtual std::list<std::shared_ptr<CGameGraphicsObject>>
+  getProxiedObjects(std::shared_ptr<CGui> gui, int x, int y);
 
-    virtual int getSizeX(std::shared_ptr<CGui> gui);
+  virtual int getSizeX(std::shared_ptr<CGui> gui);
 
-    virtual int getSizeY(std::shared_ptr<CGui> gui);
+  virtual int getSizeY(std::shared_ptr<CGui> gui);
 
-    CProxyTargetGraphicsObject() = default;
+  CProxyTargetGraphicsObject() = default;
 
 private:
-    std::map<int, std::map<int, std::shared_ptr<CProxyGraphicsObject> > > proxyObjects;
-    std::string proxyLayout = "CProxyGraphicsLayout";
+  std::map<int, std::map<int, std::shared_ptr<CProxyGraphicsObject>>>
+      proxyObjects;
+  std::string proxyLayout = "CProxyGraphicsLayout";
 
 public:
-    std::string getProxyLayout();
+  std::string getProxyLayout();
 
-    void setProxyLayout(std::string _layout);
+  void setProxyLayout(std::string _layout);
 
-    void refresh();
+  void refresh();
 
-    void refreshObject(int x, int y);
+  void refreshObject(int x, int y);
 
-    void refreshAll();
+  void refreshAll();
 
-    void addProxyObject(auto gui, int &x, int &y);
+  void addProxyObject(auto gui, int &x, int &y);
 
-    void removeProxyObject(int &x, int &y);
+  void removeProxyObject(int &x, int &y);
 };

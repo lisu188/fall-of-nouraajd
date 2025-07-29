@@ -1,6 +1,6 @@
 /*
 fall-of-nouraajd c++ dark fantasy game
-Copyright (C) 2021  Andrzej Lis
+Copyright (C) 2025  Andrzej Lis
 
 This program is free software: you can redistribute it and/or modify
         it under the terms of the GNU General Public License as published by
@@ -16,26 +16,25 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #include "gui/object/CProxyGraphicsObject.h"
-#include "gui/object/CProxyTargetGraphicsObject.h"
-#include "gui/CLayout.h"
-#include "gui/panel/CGameInventoryPanel.h"
 #include "core/CController.h"
-#include "gui/object/CMapGraphicsObject.h"
 #include "core/CLoader.h"
+#include "gui/CLayout.h"
+#include "gui/object/CMapGraphicsObject.h"
+#include "gui/object/CProxyTargetGraphicsObject.h"
+#include "gui/panel/CGameInventoryPanel.h"
 
-CProxyGraphicsObject::CProxyGraphicsObject(int x, int y) : x(x), y(y) {
-
-}
+CProxyGraphicsObject::CProxyGraphicsObject(int x, int y) : x(x), y(y) {}
 
 void CProxyGraphicsObject::refresh() {
-    vstd::with<void>(getGui(), [this](auto gui) {
-        std::list<std::shared_ptr<CGameGraphicsObject>> objects = vstd::cast<CProxyTargetGraphicsObject>(
-                getParent())->getProxiedObjects(gui, x, y);
-        for (auto &child:getChildren()) {
-            removeChild(child);
-        }
-        for (auto &object:objects) {
-            addChild(object);
-        }
-    });
+  vstd::with<void>(getGui(), [this](auto gui) {
+    std::list<std::shared_ptr<CGameGraphicsObject>> objects =
+        vstd::cast<CProxyTargetGraphicsObject>(getParent())
+            ->getProxiedObjects(gui, x, y);
+    for (auto &child : getChildren()) {
+      removeChild(child);
+    }
+    for (auto &object : objects) {
+      addChild(object);
+    }
+  });
 }

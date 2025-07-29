@@ -1,6 +1,6 @@
 /*
 fall-of-nouraajd c++ dark fantasy game
-Copyright (C) 2019  Andrzej Lis
+Copyright (C) 2025  Andrzej Lis
 
 This program is free software: you can redistribute it and/or modify
         it under the terms of the GNU General Public License as published by
@@ -17,47 +17,48 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #pragma once
 
-#include "object/CItem.h"
 #include "object/CGameObject.h"
+#include "object/CItem.h"
 
 class CSlot : public CGameObject {
-V_META(CSlot, CGameObject,
-       V_PROPERTY(CSlot, std::string, slotName, getSlotName, setSlotName),
-       V_PROPERTY(CSlot, std::set<std::string>, types, getTypes, setTypes))
+  V_META(CSlot, CGameObject,
+         V_PROPERTY(CSlot, std::string, slotName, getSlotName, setSlotName),
+         V_PROPERTY(CSlot, std::set<std::string>, types, getTypes, setTypes))
 public:
-    CSlot();
+  CSlot();
 
 private:
-    std::string slotName;
-    std::set<std::string> types;
+  std::string slotName;
+  std::set<std::string> types;
+
 public:
-    std::string getSlotName();
+  std::string getSlotName();
 
-    void setSlotName(std::string slotName);
+  void setSlotName(std::string slotName);
 
-    std::set<std::string> getTypes();
+  std::set<std::string> getTypes();
 
-    void setTypes(std::set<std::string> types);
+  void setTypes(std::set<std::string> types);
 };
 
-typedef std::map<std::string, std::shared_ptr<CSlot> > CSlotMap;
+typedef std::map<std::string, std::shared_ptr<CSlot>> CSlotMap;
 
 class CSlotConfig : public CGameObject {
-V_META(CSlotConfig, CGameObject,
-       V_PROPERTY(CSlotConfig, CSlotMap, configuration, getConfiguration, setConfiguration))
+  V_META(CSlotConfig, CGameObject,
+         V_PROPERTY(CSlotConfig, CSlotMap, configuration, getConfiguration,
+                    setConfiguration))
 public:
-    CSlotConfig();
+  CSlotConfig();
 
 private:
-    CSlotMap configuration;
+  CSlotMap configuration;
+
 public:
-    CSlotMap getConfiguration();
+  CSlotMap getConfiguration();
 
-    void setConfiguration(CSlotMap configuration);
+  void setConfiguration(CSlotMap configuration);
 
-    bool canFit(std::string slot, std::shared_ptr<CItem> item);
+  bool canFit(std::string slot, std::shared_ptr<CItem> item);
 
-    std::set<std::string> getFittingSlots(std::shared_ptr<CItem> item);
+  std::set<std::string> getFittingSlots(std::shared_ptr<CItem> item);
 };
-
-

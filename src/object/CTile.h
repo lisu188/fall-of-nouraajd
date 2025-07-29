@@ -1,6 +1,6 @@
 /*
 fall-of-nouraajd c++ dark fantasy game
-Copyright (C) 2019  Andrzej Lis
+Copyright (C) 2025  Andrzej Lis
 
 This program is free software: you can redistribute it and/or modify
         it under the terms of the GNU General Public License as published by
@@ -17,8 +17,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #pragma once
 
-#include "core/CGlobal.h"
 #include "CMapObject.h"
+#include "core/CGlobal.h"
 
 class CGame;
 
@@ -26,53 +26,50 @@ class CCreature;
 
 class CTile : public CGameObject {
 
-V_META(CTile, CGameObject,
-       V_PROPERTY(CTile, bool, canStep, canStep, setCanStep),
-       V_PROPERTY(CTile, int, posx, getPosx, setPosx),
-       V_PROPERTY(CTile, int, posy, getPosy, setPosy),
-       V_PROPERTY(CTile, int, posz, getPosz, setPosz),
-       V_PROPERTY(CTile, std::string, tileType, getTileType, setTileType)
-)
+  V_META(CTile, CGameObject,
+         V_PROPERTY(CTile, bool, canStep, canStep, setCanStep),
+         V_PROPERTY(CTile, int, posx, getPosx, setPosx),
+         V_PROPERTY(CTile, int, posy, getPosy, setPosy),
+         V_PROPERTY(CTile, int, posz, getPosz, setPosz),
+         V_PROPERTY(CTile, std::string, tileType, getTileType, setTileType))
 
 public:
-    CTile();
+  CTile();
 
-    virtual ~CTile();
+  virtual ~CTile();
 
-    virtual void onStep(std::shared_ptr<CCreature>);
+  virtual void onStep(std::shared_ptr<CCreature>);
 
-    void move(int x, int y, int z);
+  void move(int x, int y, int z);
 
-    void moveTo(int x, int y, int z);
+  void moveTo(int x, int y, int z);
 
-    Coords getCoords();
+  Coords getCoords();
 
-    bool canStep() const;
+  bool canStep() const;
 
-    void setCanStep(bool canStep);
+  void setCanStep(bool canStep);
 
-    int getPosx() const;
+  int getPosx() const;
 
-    void setPosx(int value);
+  void setPosx(int value);
 
-    int getPosy() const;
+  int getPosy() const;
 
-    void setPosy(int value);
+  void setPosy(int value);
 
-    int getPosz() const;
+  int getPosz() const;
 
-    void setPosz(int value);
+  void setPosz(int value);
 
-    const std::string &getTileType() const;
+  const std::string &getTileType() const;
 
-    void setTileType(const std::string &tileType);
+  void setTileType(const std::string &tileType);
 
 private:
-    std::string tileType;
-    bool step = false;
-    int posx = 0, posy = 0, posz = 0;
+  std::string tileType;
+  bool step = false;
+  int posx = 0, posy = 0, posz = 0;
 
-    void setXYZ(int x, int y, int z);
+  void setXYZ(int x, int y, int z);
 };
-
-

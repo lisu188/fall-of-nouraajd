@@ -1,6 +1,6 @@
 /*
 fall-of-nouraajd c++ dark fantasy game
-Copyright (C) 2019  Andrzej Lis
+Copyright (C) 2025  Andrzej Lis
 
 This program is free software: you can redistribute it and/or modify
         it under the terms of the GNU General Public License as published by
@@ -19,29 +19,29 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "CGamePanel.h"
 
-
-//TODO: unify with CTextWidget
+// TODO: unify with CTextWidget
 class CGameTextPanel : public CGamePanel {
-V_META(CGameTextPanel, CGamePanel,
-       V_PROPERTY(CGameTextPanel, std::string, text, getText, setText))
+  V_META(CGameTextPanel, CGamePanel,
+         V_PROPERTY(CGameTextPanel, std::string, text, getText, setText))
 
-    void renderObject(std::shared_ptr<CGui> shared_ptr, std::shared_ptr<SDL_Rect> rect, int i) override;
+  void renderObject(std::shared_ptr<CGui> shared_ptr,
+                    std::shared_ptr<SDL_Rect> rect, int i) override;
 
-    bool keyboardEvent(std::shared_ptr<CGui> sharedPtr, SDL_EventType type, SDL_Keycode i) override;
-
+  bool keyboardEvent(std::shared_ptr<CGui> sharedPtr, SDL_EventType type,
+                     SDL_Keycode i) override;
 
 private:
-    std::string text;
-    bool centered = false;
+  std::string text;
+  bool centered = false;
+
 public:
-    ~CGameTextPanel();
+  ~CGameTextPanel();
 
-    std::string getText();
+  std::string getText();
 
-    void setText(std::string ext);
+  void setText(std::string ext);
 
-    bool getCentered();
+  bool getCentered();
 
-    void setCentered(bool ext);
+  void setCentered(bool ext);
 };
-

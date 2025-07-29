@@ -1,6 +1,6 @@
 /*
 fall-of-nouraajd c++ dark fantasy game
-Copyright (C) 2019  Andrzej Lis
+Copyright (C) 2025  Andrzej Lis
 
 This program is free software: you can redistribute it and/or modify
         it under the terms of the GNU General Public License as published by
@@ -15,39 +15,36 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-#include "core/CJsonUtil.h"
 #include "CGameCharacterPanel.h"
+#include "core/CJsonUtil.h"
 #include "core/CMap.h"
 #include "gui/CTextManager.h"
 
-void CGameCharacterPanel::renderObject(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> rect, int i) {
-    std::string text;
-    for (auto[key, value] : charSheet->getValues()) {
-        std::shared_ptr<CPlayer> player = gui->getGame()->getMap()->getPlayer();
-        text += key + ": " + vstd::str(player->meta()->invoke_method<int>(value, player)) + "\n";
-    }
-    gui->getTextManager()->drawText(
-            text,
-            rect->x,
-            rect->y,
-            rect->w);
-
+void CGameCharacterPanel::renderObject(std::shared_ptr<CGui> gui,
+                                       std::shared_ptr<SDL_Rect> rect, int i) {
+  std::string text;
+  for (auto [key, value] : charSheet->getValues()) {
+    std::shared_ptr<CPlayer> player = gui->getGame()->getMap()->getPlayer();
+    text += key + ": " +
+            vstd::str(player->meta()->invoke_method<int>(value, player)) + "\n";
+  }
+  gui->getTextManager()->drawText(text, rect->x, rect->y, rect->w);
 }
 
-
-CGameCharacterPanel::~CGameCharacterPanel() {
-
-}
+CGameCharacterPanel::~CGameCharacterPanel() {}
 
 std::shared_ptr<CMapStringString> CGameCharacterPanel::getCharSheet() {
-    return charSheet;
+  return charSheet;
 }
 
-void CGameCharacterPanel::setCharSheet(std::shared_ptr<CMapStringString> charSheet) {
-    CGameCharacterPanel::charSheet = charSheet;
+void CGameCharacterPanel::setCharSheet(
+    std::shared_ptr<CMapStringString> charSheet) {
+  CGameCharacterPanel::charSheet = charSheet;
 }
 
-CListView::collection_pointer CGameCharacterPanel::interactionsCollection(std::shared_ptr<CGui> gui) {
-    return std::make_shared<CListView::collection_type>(
-            vstd::cast<CListView::collection_type>(gui->getGame()->getMap()->getPlayer()->getInteractions()));
+CListView::collection_pointer
+CGameCharacterPanel::interactionsCollection(std::shared_ptr<CGui> gui) {
+  return std::make_shared<CListView::collection_type>(
+      vstd::cast<CListView::collection_type>(
+          gui->getGame()->getMap()->getPlayer()->getInteractions()));
 }

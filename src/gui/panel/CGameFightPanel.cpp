@@ -1,6 +1,6 @@
 /*
 fall-of-nouraajd c++ dark fantasy game
-Copyright (C) 2019  Andrzej Lis
+Copyright (C) 2025  Andrzej Lis
 
 This program is free software: you can redistribute it and/or modify
         it under the terms of the GNU General Public License as published by
@@ -16,81 +16,78 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #include "CGameFightPanel.h"
+#include "core/CMap.h"
 #include "gui/CAnimation.h"
 #include "gui/CTextureCache.h"
-#include "core/CMap.h"
 #include "gui/object/CStatsGraphicsObject.h"
 
-CListView::collection_pointer CGameFightPanel::interactionsCollection(std::shared_ptr<CGui> gui) {
-    return std::make_shared<CListView::collection_type>(
-            vstd::cast<CListView::collection_type>(gui->getGame()->getMap()->getPlayer()->getInteractions()));
+CListView::collection_pointer
+CGameFightPanel::interactionsCollection(std::shared_ptr<CGui> gui) {
+  return std::make_shared<CListView::collection_type>(
+      vstd::cast<CListView::collection_type>(
+          gui->getGame()->getMap()->getPlayer()->getInteractions()));
 }
 
-void CGameFightPanel::interactionsCallback(std::shared_ptr<CGui> gui, int index,
-                                           std::shared_ptr<CGameObject> _newSelection) {
-    auto newSelection = vstd::cast<CInteraction>(_newSelection);
-    if (selected.lock() !=
-        newSelection &&
-        newSelection->getManaCost() <=
-        gui->getGame()->getMap()->getPlayer()->getMana()) {
-        selected = newSelection;
-    } else if (
-            newSelection &&
-            selected.lock() ==
-            newSelection &&
-            newSelection->getManaCost() <=
-            gui->getGame()->getMap()->getPlayer()->getMana()) {
-        finalSelected = newSelection;
-    } else {
-        //TODO: rethink moving selection to CListView
-        selected.reset();
-    }
-    refreshViews();
+void CGameFightPanel::interactionsCallback(
+    std::shared_ptr<CGui> gui, int index,
+    std::shared_ptr<CGameObject> _newSelection) {
+  auto newSelection = vstd::cast<CInteraction>(_newSelection);
+  if (selected.lock() != newSelection &&
+      newSelection->getManaCost() <=
+          gui->getGame()->getMap()->getPlayer()->getMana()) {
+    selected = newSelection;
+  } else if (newSelection && selected.lock() == newSelection &&
+             newSelection->getManaCost() <=
+                 gui->getGame()->getMap()->getPlayer()->getMana()) {
+    finalSelected = newSelection;
+  } else {
+    // TODO: rethink moving selection to CListView
+    selected.reset();
+  }
+  refreshViews();
 }
 
-bool CGameFightPanel::interactionsSelect(std::shared_ptr<CGui> gui, int index, std::shared_ptr<CGameObject> object) {
-    return selected.lock() && selected.lock() == object;
+bool CGameFightPanel::interactionsSelect(std::shared_ptr<CGui> gui, int index,
+                                         std::shared_ptr<CGameObject> object) {
+  return selected.lock() && selected.lock() == object;
 }
 
-CListView::collection_pointer CGameFightPanel::itemsCollection(std::shared_ptr<CGui> gui) {
-    return std::make_shared<CListView::collection_type>(vstd::cast<CListView::collection_type>(
-            gui->getGame()->getMap()->getPlayer()->getItems()));
+CListView::collection_pointer
+CGameFightPanel::itemsCollection(std::shared_ptr<CGui> gui) {
+  return std::make_shared<CListView::collection_type>(
+      vstd::cast<CListView::collection_type>(
+          gui->getGame()->getMap()->getPlayer()->getItems()));
 }
 
-void CGameFightPanel::itemsCallback(std::shared_ptr<CGui> gui, int index, std::shared_ptr<CGameObject> _newSelection) {
-    auto newSelection = vstd::cast<CItem>(_newSelection);
-    if (selectedItem.lock() != newSelection) {
-        selectedItem = newSelection;
-    } else if (selectedItem.lock() && selectedItem.lock() == newSelection) {
-        gui->getGame()->getMap()->getPlayer()->useItem(newSelection);
-        selectedItem.reset();
-    }
-    refreshViews();
+void CGameFightPanel::itemsCallback(
+    std::shared_ptr<CGui> gui, int index,
+    std::shared_ptr<CGameObject> _newSelection) {
+  auto newSelection = vstd::cast<CItem>(_newSelection);
+  if (selectedItem.lock() != newSelection) {
+    selectedItem = newSelection;
+  } else if (selectedItem.lock() && selectedItem.lock() == newSelection) {
+    gui->getGame()->getMap()->getPlayer()->useItem(newSelection);
+    selectedItem.reset();
+  }
+  refreshViews();
 }
 
-bool CGameFightPanel::itemsSelect(std::shared_ptr<CGui> gui, int index, std::shared_ptr<CGameObject> object) {
-    return selectedItem.lock() && selectedItem.lock() == object;
+bool CGameFightPanel::itemsSelect(std::shared_ptr<CGui> gui, int index,
+                                  std::shared_ptr<CGameObject> object) {
+  return selectedItem.lock() && selectedItem.lock() == object;
 }
 
-CGameFightPanel::CGameFightPanel() {
-
-}
+CGameFightPanel::CGameFightPanel() {}
 
 std::shared_ptr<CInteraction> CGameFightPanel::selectInteraction() {
-    vstd::wait_until([this]() {
-        return finalSelected.lock() != nullptr;
-    });
-    auto ret = finalSelected.lock();
-    finalSelected.reset();
-    selected.reset();
-    refreshViews();
-    return ret;
+  vstd::wait_until([this]() { return finalSelected.lock() != nullptr; });
+  auto ret = finalSelected.lock();
+  finalSelected.reset();
+  selected.reset();
+  refreshViews();
+  return ret;
 }
 
-std::shared_ptr<CCreature> CGameFightPanel::getEnemy() {
-    return enemy.lock();
-}
+std::shared_ptr<CCreature> CGameFightPanel::getEnemy() { return enemy.lock(); }
 
-void CGameFightPanel::setEnemy(std::shared_ptr<CCreature> en) {
-    enemy = en;
-}
+void CGameFightPanel::setEnemy(std::shared_ptr<CCreature> en) { enemy = en; }

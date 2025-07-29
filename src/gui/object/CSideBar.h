@@ -1,6 +1,6 @@
 /*
 fall-of-nouraajd c++ dark fantasy game
-Copyright (C) 2020  Andrzej Lis
+Copyright (C) 2025  Andrzej Lis
 
 This program is free software: you can redistribute it and/or modify
         it under the terms of the GNU General Public License as published by
@@ -22,27 +22,28 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 class CMapStringString;
 
 class CSideBar : public CGameGraphicsObject {
-V_META(CSideBar, CGameGraphicsObject,
-       V_PROPERTY(CSideBar, std::shared_ptr<CMapStringString>, panelKeys, getPanelKeys, setPanelKeys),
-       V_METHOD(CSideBar, clickInventory, void, std::shared_ptr<CGui>),
-       V_METHOD(CSideBar, clickJournal, void, std::shared_ptr<CGui>),
-       V_METHOD(CSideBar, clickCharacter, void, std::shared_ptr<CGui>))
+  V_META(CSideBar, CGameGraphicsObject,
+         V_PROPERTY(CSideBar, std::shared_ptr<CMapStringString>, panelKeys,
+                    getPanelKeys, setPanelKeys),
+         V_METHOD(CSideBar, clickInventory, void, std::shared_ptr<CGui>),
+         V_METHOD(CSideBar, clickJournal, void, std::shared_ptr<CGui>),
+         V_METHOD(CSideBar, clickCharacter, void, std::shared_ptr<CGui>))
 public:
-    void clickInventory(std::shared_ptr<CGui> gui);
+  void clickInventory(std::shared_ptr<CGui> gui);
 
-    void clickJournal(std::shared_ptr<CGui> gui);
+  void clickJournal(std::shared_ptr<CGui> gui);
 
-    void clickCharacter(std::shared_ptr<CGui> gui);
+  void clickCharacter(std::shared_ptr<CGui> gui);
 
-    std::shared_ptr<CMapStringString> getPanelKeys();
+  std::shared_ptr<CMapStringString> getPanelKeys();
 
-    void setPanelKeys(std::shared_ptr<CMapStringString> panelKeys);
+  void setPanelKeys(std::shared_ptr<CMapStringString> panelKeys);
 
-    bool keyboardEvent(std::shared_ptr<CGui> sharedPtr, SDL_EventType type, SDL_Keycode i) override;
+  bool keyboardEvent(std::shared_ptr<CGui> sharedPtr, SDL_EventType type,
+                     SDL_Keycode i) override;
 
 private:
+  void flipPanel(std::shared_ptr<CGui> gui, std::string panel);
 
-    void flipPanel(std::shared_ptr<CGui> gui, std::string panel);
-
-    std::shared_ptr<CMapStringString> panelKeys;
+  std::shared_ptr<CMapStringString> panelKeys;
 };

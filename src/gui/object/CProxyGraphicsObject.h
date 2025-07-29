@@ -1,6 +1,6 @@
 /*
 fall-of-nouraajd c++ dark fantasy game
-Copyright (C) 2019  Andrzej Lis
+Copyright (C) 2025  Andrzej Lis
 
 This program is free software: you can redistribute it and/or modify
         it under the terms of the GNU General Public License as published by
@@ -19,30 +19,28 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "gui/object/CGameGraphicsObject.h"
 
-
 class CMapGraphicsObject;
 
 class CProxyGraphicsObject : public CGameGraphicsObject {
-V_META(CProxyGraphicsObject, CGameGraphicsObject,
-       V_PROPERTY(CProxyGraphicsObject, int, x, getX, setX),
-       V_PROPERTY(CProxyGraphicsObject, int, y, getY, setY)
-)
+  V_META(CProxyGraphicsObject, CGameGraphicsObject,
+         V_PROPERTY(CProxyGraphicsObject, int, x, getX, setX),
+         V_PROPERTY(CProxyGraphicsObject, int, y, getY, setY))
 
 private:
-    int x, y;
+  int x, y;
 
 public:
-    CProxyGraphicsObject() = default;
+  CProxyGraphicsObject() = default;
 
-    CProxyGraphicsObject(int x, int y);
+  CProxyGraphicsObject(int x, int y);
 
-    int getX() { return x; }
+  int getX() { return x; }
 
-    void setX(int _x) { this->x = _x; }
+  void setX(int _x) { this->x = _x; }
 
-    int getY() { return y; }
+  int getY() { return y; }
 
-    void setY(int _y) { this->y = _y; }
+  void setY(int _y) { this->y = _y; }
 
-    void refresh();
+  void refresh();
 };

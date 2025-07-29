@@ -1,6 +1,6 @@
 /*
 fall-of-nouraajd c++ dark fantasy game
-Copyright (C) 2019  Andrzej Lis
+Copyright (C) 2025  Andrzej Lis
 
 This program is free software: you can redistribute it and/or modify
         it under the terms of the GNU General Public License as published by
@@ -28,53 +28,58 @@ class CTrigger;
 class CGameObject;
 
 class CGameEvent : public CGameObject {
-V_META(CGameEvent, CGameObject, vstd::meta::empty())
+  V_META(CGameEvent, CGameObject, vstd::meta::empty())
 public:
-    class Type {
-    public:
-        static std::string onEnter;
-        static std::string onTurn;
-        static std::string onCreate;
-        static std::string onDestroy;
-        static std::string onLeave;
-        static std::string onUse;
-        static std::string onEquip;
-        static std::string onUnequip;
-        static std::string inventoryChanged;
-        static std::string equippedChanged;
-    };
+  class Type {
+  public:
+    static std::string onEnter;
+    static std::string onTurn;
+    static std::string onCreate;
+    static std::string onDestroy;
+    static std::string onLeave;
+    static std::string onUse;
+    static std::string onEquip;
+    static std::string onUnequip;
+    static std::string inventoryChanged;
+    static std::string equippedChanged;
+  };
 
-    CGameEvent();
+  CGameEvent();
 
-    CGameEvent(std::string type);
+  CGameEvent(std::string type);
 
-    std::string getType() const;
+  std::string getType() const;
 
 private:
-    const std::string type;
+  const std::string type;
 };
 
 class CGameEventCaused : public CGameEvent {
-V_META(CGameEventCaused, CGameEvent, vstd::meta::empty())
+  V_META(CGameEventCaused, CGameEvent, vstd::meta::empty())
 public:
-    CGameEventCaused();
+  CGameEventCaused();
 
-    CGameEventCaused(std::string type, std::shared_ptr<CGameObject> cause);
+  CGameEventCaused(std::string type, std::shared_ptr<CGameObject> cause);
 
-    std::shared_ptr<CGameObject> getCause() const;
+  std::shared_ptr<CGameObject> getCause() const;
 
 private:
-    std::shared_ptr<CGameObject> cause;
+  std::shared_ptr<CGameObject> cause;
 };
 
 class CEventHandler : public CGameObject {
-    typedef std::unordered_multimap<std::pair<std::string, std::string>, std::shared_ptr<CTrigger>> TriggerMap;
+  typedef std::unordered_multimap<std::pair<std::string, std::string>,
+                                  std::shared_ptr<CTrigger>>
+      TriggerMap;
+
 public:
-    void gameEvent(std::shared_ptr<CMapObject> mapObject, std::shared_ptr<CGameEvent> event) const;
+  void gameEvent(std::shared_ptr<CMapObject> mapObject,
+                 std::shared_ptr<CGameEvent> event) const;
 
-    void registerTrigger(std::shared_ptr<CTrigger> trigger);
+  void registerTrigger(std::shared_ptr<CTrigger> trigger);
 
-    std::set<std::shared_ptr<CTrigger>> getTriggers();
+  std::set<std::shared_ptr<CTrigger>> getTriggers();
+
 private:
-    TriggerMap triggers;
+  TriggerMap triggers;
 };

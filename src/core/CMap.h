@@ -1,6 +1,6 @@
 /*
 fall-of-nouraajd c++ dark fantasy game
-Copyright (C) 2019  Andrzej Lis
+Copyright (C) 2025  Andrzej Lis
 
 This program is free software: you can redistribute it and/or modify
         it under the terms of the GNU General Public License as published by
@@ -19,15 +19,14 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "core/CGlobal.h"
 
+#include "CPlugin.h"
+#include "core/CProvider.h"
 #include "core/CUtil.h"
 #include "handler/CHandler.h"
-#include "core/CProvider.h"
-#include "CPlugin.h"
 
 class CTile;
 
 class CPlayer;
-
 
 class CInteraction;
 
@@ -44,133 +43,140 @@ class CTrigger;
 class CGame;
 
 class CMap : public CGameObject {
-    friend class CMapLoader;
+  friend class CMapLoader;
 
-    friend class CRandomMapGenerator;
+  friend class CRandomMapGenerator;
 
-V_META(CMap, CGameObject, V_PROPERTY(CMap, int, turn, getTurn, setTurn),
-       V_PROPERTY(CMap, std::string, mapName, getMapName, setMapName),
-       V_PROPERTY(CMap, std::set<std::shared_ptr<CMapObject>>, objects, getObjects, setObjects),
-       V_PROPERTY(CMap, std::set<std::shared_ptr<CTile>>, tiles, getTiles, setTiles),
-       V_PROPERTY(CMap, std::set<std::shared_ptr<CTrigger>>, triggers, getTriggers, setTriggers))
+  V_META(CMap, CGameObject, V_PROPERTY(CMap, int, turn, getTurn, setTurn),
+         V_PROPERTY(CMap, std::string, mapName, getMapName, setMapName),
+         V_PROPERTY(CMap, std::set<std::shared_ptr<CMapObject>>, objects,
+                    getObjects, setObjects),
+         V_PROPERTY(CMap, std::set<std::shared_ptr<CTile>>, tiles, getTiles,
+                    setTiles),
+         V_PROPERTY(CMap, std::set<std::shared_ptr<CTrigger>>, triggers,
+                    getTriggers, setTriggers))
 public:
-    CMap() = default;
+  CMap() = default;
 
-    bool addTile(std::shared_ptr<CTile> tile, int x, int y, int z);
+  bool addTile(std::shared_ptr<CTile> tile, int x, int y, int z);
 
-    void removeTile(int x, int y, int z);
+  void removeTile(int x, int y, int z);
 
-    void move();
+  void move();
 
-    std::shared_ptr<CTile> getTile(int x, int y, int z);
+  std::shared_ptr<CTile> getTile(int x, int y, int z);
 
-    std::shared_ptr<CTile> getTile(Coords coords);
+  std::shared_ptr<CTile> getTile(Coords coords);
 
-    bool contains(int x, int y, int z);
+  bool contains(int x, int y, int z);
 
-    void addObject(const std::shared_ptr<CMapObject> &mapObject);
+  void addObject(const std::shared_ptr<CMapObject> &mapObject);
 
-    void addObject(const std::shared_ptr<CMapObject> &mapObject, Coords coords);
+  void addObject(const std::shared_ptr<CMapObject> &mapObject, Coords coords);
 
-    void removeObject(const std::shared_ptr<CMapObject> &mapObject);
+  void removeObject(const std::shared_ptr<CMapObject> &mapObject);
 
-    int getEntryX();
+  int getEntryX();
 
-    int getEntryY();
+  int getEntryY();
 
-    int getEntryZ();
+  int getEntryZ();
 
-    Coords getEntry();
+  Coords getEntry();
 
-    std::map<int, std::pair<int, int> > getBounds();
+  std::map<int, std::pair<int, int>> getBounds();
 
-    void removeObjectByName(std::string name);
+  void removeObjectByName(std::string name);
 
-    std::string addObjectByName(std::string name, Coords coords);
+  std::string addObjectByName(std::string name, Coords coords);
 
-    void replaceTile(std::string name, Coords coords);
+  void replaceTile(std::string name, Coords coords);
 
-    Coords getLocationByName(std::string name);
+  Coords getLocationByName(std::string name);
 
-    std::shared_ptr<CPlayer> getPlayer();
+  std::shared_ptr<CPlayer> getPlayer();
 
-    void setPlayer(std::shared_ptr<CPlayer> player);
+  void setPlayer(std::shared_ptr<CPlayer> player);
 
-    void moveTile(std::shared_ptr<CTile> tile, int x, int y, int z);
+  void moveTile(std::shared_ptr<CTile> tile, int x, int y, int z);
 
+  std::shared_ptr<CEventHandler> getEventHandler();
 
-    std::shared_ptr<CEventHandler> getEventHandler();
+  bool canStep(int x, int y, int z);
 
-    bool canStep(int x, int y, int z);
+  bool canStep(Coords coords);
 
-    bool canStep(Coords coords);
+  std::shared_ptr<CMapObject> getObjectByName(const std::string &name);
 
-    std::shared_ptr<CMapObject> getObjectByName(const std::string &name);
+  bool isMoving();
 
-    bool isMoving();
+  //    void applyEffects();
 
-//    void applyEffects();
+  void forObjects(
+      std::function<void(std::shared_ptr<CMapObject>)> func,
+      std::function<bool(std::shared_ptr<CMapObject>)> predicate =
+          [](std::shared_ptr<CMapObject>) { return true; });
 
-    void forObjects(std::function<void(std::shared_ptr<CMapObject>)> func,
-                    std::function<bool(std::shared_ptr<CMapObject>)> predicate = [](
-                            std::shared_ptr<CMapObject>) { return true; });
+  void forObjectsAtCoords(
+      Coords coords, std::function<void(std::shared_ptr<CMapObject>)> func,
+      std::function<bool(std::shared_ptr<CMapObject>)> predicate =
+          [](std::shared_ptr<CMapObject>) { return true; });
 
-    void forObjectsAtCoords(Coords coords, std::function<void(std::shared_ptr<CMapObject>)> func,
-                            std::function<bool(std::shared_ptr<CMapObject>)> predicate = [](
-                                    std::shared_ptr<CMapObject>) { return true; });
+  void forTiles(
+      std::function<void(std::shared_ptr<CTile>)> func,
+      std::function<bool(std::shared_ptr<CTile>)> predicate =
+          [](std::shared_ptr<CTile>) { return true; });
 
-    void forTiles(std::function<void(std::shared_ptr<CTile>)> func,
-                  std::function<bool(std::shared_ptr<CTile>)> predicate = [](std::shared_ptr<CTile>) { return true; });
+  void removeObjects(std::function<bool(std::shared_ptr<CMapObject>)> func);
 
-    void removeObjects(std::function<bool(std::shared_ptr<CMapObject>)> func);
+  int getTurn();
 
-    int getTurn();
+  void setTurn(int turn);
 
-    void setTurn(int turn);
+  // TODO: accept predicate, can be used in siege map
+  // TODO: sets cannot be returned from python functions, need to implement by
+  // value converter of sets of objects
+  std::set<std::shared_ptr<CMapObject>> getObjects();
 
-    //TODO: accept predicate, can be used in siege map
-    //TODO: sets cannot be returned from python functions, need to implement by value converter of sets of objects
-    std::set<std::shared_ptr<CMapObject>> getObjects();
+  std::set<std::shared_ptr<CMapObject>> getObjectsAtCoords(Coords coords);
 
-    std::set<std::shared_ptr<CMapObject>> getObjectsAtCoords(Coords coords);
+  void setObjects(std::set<std::shared_ptr<CMapObject>> objects);
 
-    void setObjects(std::set<std::shared_ptr<CMapObject>> objects);
+  std::set<std::shared_ptr<CTile>> getTiles();
 
-    std::set<std::shared_ptr<CTile>> getTiles();
+  void setTiles(std::set<std::shared_ptr<CTile>> objects);
 
-    void setTiles(std::set<std::shared_ptr<CTile>> objects);
+  void dumpPaths(std::string path);
 
-    void dumpPaths(std::string path);
+  std::set<std::shared_ptr<CTrigger>> getTriggers();
 
-    std::set<std::shared_ptr<CTrigger>> getTriggers();
+  void setTriggers(std::set<std::shared_ptr<CTrigger>> triggers);
 
-    void setTriggers(std::set<std::shared_ptr<CTrigger>> triggers);
+  void setMapName(std::string mapName);
 
-    void setMapName(std::string mapName);
+  std::string getMapName();
 
-    std::string getMapName();
-
-    void objectMoved(const std::shared_ptr<CMapObject> &object, Coords _old, Coords _new);
+  void objectMoved(const std::shared_ptr<CMapObject> &object, Coords _old,
+                   Coords _new);
 
 private:
-    std::unordered_map<std::string, std::shared_ptr<CMapObject>> mapObjects;
-    //TODO: cleanup and after load initialization
-    std::unordered_multimap<Coords, std::string> mapObjectsCache;
+  std::unordered_map<std::string, std::shared_ptr<CMapObject>> mapObjects;
+  // TODO: cleanup and after load initialization
+  std::unordered_multimap<Coords, std::string> mapObjectsCache;
 
-    std::unordered_map<Coords, std::shared_ptr<CTile>> tiles;
+  std::unordered_map<Coords, std::shared_ptr<CTile>> tiles;
 
-    std::shared_ptr<CPlayer> player;
-    std::map<int, std::string> defaultTiles;
-    std::map<int, std::pair<int, int> > boundaries;
-    int entryx = 0;
-    int entryz = 0;
-    int entryy = 0;
+  std::shared_ptr<CPlayer> player;
+  std::map<int, std::string> defaultTiles;
+  std::map<int, std::pair<int, int>> boundaries;
+  int entryx = 0;
+  int entryz = 0;
+  int entryy = 0;
 
-    vstd::lazy<CEventHandler> eventHandler;
-    int turn = 0;
-    bool moving = false;
-    std::string mapName;
+  vstd::lazy<CEventHandler> eventHandler;
+  int turn = 0;
+  bool moving = false;
+  std::string mapName;
 
-    std::shared_ptr<vstd::future<void, void>> _moveHelper = vstd::later([]() {});
+  std::shared_ptr<vstd::future<void, void>> _moveHelper = vstd::later([]() {});
 };
-

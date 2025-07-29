@@ -1,6 +1,6 @@
 /*
 fall-of-nouraajd c++ dark fantasy game
-Copyright (C) 2019  Andrzej Lis
+Copyright (C) 2025  Andrzej Lis
 
 This program is free software: you can redistribute it and/or modify
         it under the terms of the GNU General Public License as published by
@@ -17,7 +17,6 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #pragma once
 
-
 #include "object/CGameObject.h"
 
 class CListString;
@@ -29,31 +28,32 @@ class CDialog;
 class CMarket;
 
 class CGuiHandler : public CGameObject {
-V_META(CGuiHandler, CGameObject, vstd::meta::empty())
+  V_META(CGuiHandler, CGameObject, vstd::meta::empty())
 
 public:
-    CGuiHandler();
+  CGuiHandler();
 
-    CGuiHandler(std::shared_ptr<CGame> game);
+  CGuiHandler(std::shared_ptr<CGame> game);
 
-    void showMessage(std::string message);
+  void showMessage(std::string message);
 
-    void showInfo(std::string message, bool centered = false);
+  void showInfo(std::string message, bool centered = false);
 
-    bool showQuestion(std::string message);
+  bool showQuestion(std::string message);
 
-    void showTrade(std::shared_ptr<CMarket> market);
+  void showTrade(std::shared_ptr<CMarket> market);
 
-    void showDialog(std::shared_ptr<CDialog> dialog);
+  void showDialog(std::shared_ptr<CDialog> dialog);
 
-    void showLoot(std::shared_ptr<CCreature>, std::set<std::shared_ptr<CItem>> items);
+  void showLoot(std::shared_ptr<CCreature>,
+                std::set<std::shared_ptr<CItem>> items);
 
-    std::string showSelection(std::shared_ptr<CListString> list);
+  std::string showSelection(std::shared_ptr<CListString> list);
 
-    void showTooltip(std::string text, int x, int y);
+  void showTooltip(std::string text, int x, int y);
 
-    void flipPanel(std::string panel, std::string hotkey);
+  void flipPanel(std::string panel, std::string hotkey);
 
 private:
-    std::weak_ptr<CGame> _game;
+  std::weak_ptr<CGame> _game;
 };

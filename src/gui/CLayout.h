@@ -1,6 +1,6 @@
 /*
 fall-of-nouraajd c++ dark fantasy game
-Copyright (C) 2019  Andrzej Lis
+Copyright (C) 2025  Andrzej Lis
 
 This program is free software: you can redistribute it and/or modify
         it under the terms of the GNU General Public License as published by
@@ -17,92 +17,95 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #pragma once
 
-#include "object/CGameObject.h"
 #include "gui/object/CGameGraphicsObject.h"
+#include "object/CGameObject.h"
 
 class CLayout : public CGameObject {
-V_META(CLayout, CGameObject,
-       V_PROPERTY(CLayout, std::string, w, getW, setW),
-       V_PROPERTY(CLayout, std::string, h, getH, setH),
-       V_PROPERTY(CLayout, std::string, x, getX, setX),
-       V_PROPERTY(CLayout, std::string, y, getY, setY),
-       V_PROPERTY(CLayout, std::string, vertical, getVertical, setVertical),
-       V_PROPERTY(CLayout, std::string, horizontal, getHorizontal, setHorizontal))
+  V_META(CLayout, CGameObject, V_PROPERTY(CLayout, std::string, w, getW, setW),
+         V_PROPERTY(CLayout, std::string, h, getH, setH),
+         V_PROPERTY(CLayout, std::string, x, getX, setX),
+         V_PROPERTY(CLayout, std::string, y, getY, setY),
+         V_PROPERTY(CLayout, std::string, vertical, getVertical, setVertical),
+         V_PROPERTY(CLayout, std::string, horizontal, getHorizontal,
+                    setHorizontal))
 public:
-    virtual std::shared_ptr<SDL_Rect> getRect(std::shared_ptr<CGameGraphicsObject> object);
+  virtual std::shared_ptr<SDL_Rect>
+  getRect(std::shared_ptr<CGameGraphicsObject> object);
 
 private:
+  enum TYPE { SIMPLE, PERCENT };
 
-    enum TYPE {
-        SIMPLE, PERCENT
-    };
+  std::pair<TYPE, int> parseValue(std::shared_ptr<CGameGraphicsObject> object,
+                                  std::string value);
 
-    std::pair<TYPE, int> parseValue(std::shared_ptr<CGameGraphicsObject> object, std::string value);
+  int parseValue(std::pair<TYPE, int> value, int parentValue);
 
-    int parseValue(std::pair<TYPE, int> value, int parentValue);
-
-    int parseValue(std::shared_ptr<CGameGraphicsObject> object, std::string value, int parentValue);
+  int parseValue(std::shared_ptr<CGameGraphicsObject> object, std::string value,
+                 int parentValue);
 
 protected:
-    static std::shared_ptr<SDL_Rect> getParentRect(std::shared_ptr<CGameGraphicsObject> object);
+  static std::shared_ptr<SDL_Rect>
+  getParentRect(std::shared_ptr<CGameGraphicsObject> object);
 
 public:
-    std::string getW();
+  std::string getW();
 
-    void setW(std::string _width);
+  void setW(std::string _width);
 
-    std::string getH();
+  std::string getH();
 
-    void setH(std::string _height);
+  void setH(std::string _height);
 
-    std::string getX();
+  std::string getX();
 
-    void setX(std::string _x);
+  void setX(std::string _x);
 
-    std::string getY();
+  std::string getY();
 
-    void setY(std::string _y);
+  void setY(std::string _y);
 
-    std::string getVertical();
+  std::string getVertical();
 
-    void setVertical(std::string vertical);
+  void setVertical(std::string vertical);
 
-    std::string getHorizontal();
+  std::string getHorizontal();
 
-    void setHorizontal(std::string horizontal);
+  void setHorizontal(std::string horizontal);
 
 private:
-    std::string w = "0";
-    std::string h = "0";
-    std::string x = "0";
-    std::string y = "0";
-    std::string vertical;
-    std::string horizontal;
+  std::string w = "0";
+  std::string h = "0";
+  std::string x = "0";
+  std::string y = "0";
+  std::string vertical;
+  std::string horizontal;
 };
 
 class CCenteredLayout : public CLayout {
-V_META(CCenteredLayout, CLayout, vstd::meta::empty())
+  V_META(CCenteredLayout, CLayout, vstd::meta::empty())
 public:
-    CCenteredLayout();
+  CCenteredLayout();
 };
 
 class CParentLayout : public CLayout {
-V_META(CParentLayout, CLayout, vstd::meta::empty())
+  V_META(CParentLayout, CLayout, vstd::meta::empty())
 public:
-    CParentLayout();
+  CParentLayout();
 };
 
-//TODO: remove
+// TODO: remove
 class CProxyGraphicsLayout : public CLayout {
-V_META(CProxyGraphicsLayout, CLayout,
-       V_PROPERTY(CProxyGraphicsLayout, int, tileSize, getTileSize, setTileSize))
+  V_META(CProxyGraphicsLayout, CLayout,
+         V_PROPERTY(CProxyGraphicsLayout, int, tileSize, getTileSize,
+                    setTileSize))
 public:
-    std::shared_ptr<SDL_Rect> getRect(std::shared_ptr<CGameGraphicsObject> object) override;
+  std::shared_ptr<SDL_Rect>
+  getRect(std::shared_ptr<CGameGraphicsObject> object) override;
 
-    int getTileSize();
+  int getTileSize();
 
-    void setTileSize(int _tileSize);
+  void setTileSize(int _tileSize);
 
 private:
-    int tileSize;
+  int tileSize;
 };

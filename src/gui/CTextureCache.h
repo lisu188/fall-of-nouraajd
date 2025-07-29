@@ -1,6 +1,6 @@
 /*
 fall-of-nouraajd c++ dark fantasy game
-Copyright (C) 2019  Andrzej Lis
+Copyright (C) 2025  Andrzej Lis
 
 This program is free software: you can redistribute it and/or modify
         it under the terms of the GNU General Public License as published by
@@ -17,40 +17,43 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #pragma once
 
-#include "object/CGameObject.h"
 #include "gui/CAnimation.h"
 #include "gui/CGui.h"
+#include "object/CGameObject.h"
 
-//TODO: generify all cache classes
+// TODO: generify all cache classes
 
 class CTextureCache : public CGameObject {
-V_META(CTextureCache, CGameObject, vstd::meta::empty())
-    std::unordered_map<std::string, SDL_Texture *> _textures;
+  V_META(CTextureCache, CGameObject, vstd::meta::empty())
+  std::unordered_map<std::string, SDL_Texture *> _textures;
+
 public:
-    CTextureCache(std::shared_ptr<CGui> _gui);
+  CTextureCache(std::shared_ptr<CGui> _gui);
 
-    CTextureCache();
+  CTextureCache();
 
-    ~CTextureCache();
+  ~CTextureCache();
 
-    SDL_Texture *getTexture(std::string path);
+  SDL_Texture *getTexture(std::string path);
 
 private:
-    SDL_Texture *loadTexture(std::string path);
+  SDL_Texture *loadTexture(std::string path);
 
-    std::weak_ptr<CGui> _gui;
+  std::weak_ptr<CGui> _gui;
 };
 
 class CTextureUtil {
 public:
-    static SDL_Texture *calculateAlpha(SDL_Renderer *renderer, SDL_Surface *texture);
+  static SDL_Texture *calculateAlpha(SDL_Renderer *renderer,
+                                     SDL_Surface *texture);
 
-    static auto getPixelRgba(SDL_Surface *surface, int x, int y);
+  static auto getPixelRgba(SDL_Surface *surface, int x, int y);
 
-    static auto getPixelColor(SDL_Surface *surface, int x, int y);
+  static auto getPixelColor(SDL_Surface *surface, int x, int y);
 
-    static void setPixelColor(SDL_Surface *surface, int x, int y,
-                              std::tuple<Uint8, Uint8, Uint8, Uint8> color);
+  static void setPixelColor(SDL_Surface *surface, int x, int y,
+                            std::tuple<Uint8, Uint8, Uint8, Uint8> color);
 
-    static std::unordered_set<std::pair<int, int>> calculateMask(SDL_Surface *pSurface);
+  static std::unordered_set<std::pair<int, int>>
+  calculateMask(SDL_Surface *pSurface);
 };

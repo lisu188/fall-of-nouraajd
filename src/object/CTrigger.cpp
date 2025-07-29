@@ -1,6 +1,6 @@
 /*
 fall-of-nouraajd c++ dark fantasy game
-Copyright (C) 2019  Andrzej Lis
+Copyright (C) 2025  Andrzej Lis
 
 This program is free software: you can redistribute it and/or modify
         it under the terms of the GNU General Public License as published by
@@ -17,29 +17,20 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #include "CTrigger.h"
 
-CTrigger::CTrigger() {
-}
+CTrigger::CTrigger() {}
 
-void CTrigger::trigger(std::shared_ptr<CGameObject>, std::shared_ptr<CGameEvent>) {
+void CTrigger::trigger(std::shared_ptr<CGameObject>,
+                       std::shared_ptr<CGameEvent>) {}
 
-}
+std::string CTrigger::getObject() { return object; }
 
-std::string CTrigger::getObject() {
-    return object;
-}
+void CTrigger::setObject(std::string object) { CTrigger::object = object; }
 
-void CTrigger::setObject(std::string object) {
-    CTrigger::object = object;
-}
+std::string CTrigger::getEvent() { return event; }
 
-std::string CTrigger::getEvent() {
-    return event;
-}
+void CTrigger::setEvent(std::string event) { CTrigger::event = event; }
 
-void CTrigger::setEvent(std::string event) {
-    CTrigger::event = event;
-}
-
-void CCustomTrigger::trigger(std::shared_ptr<CGameObject> object, std::shared_ptr<CGameEvent> event) {
-    _trigger(object, event);
+void CCustomTrigger::trigger(std::shared_ptr<CGameObject> object,
+                             std::shared_ptr<CGameEvent> event) {
+  _trigger(object, event);
 }

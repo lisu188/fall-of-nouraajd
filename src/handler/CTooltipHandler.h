@@ -1,6 +1,6 @@
 /*
 fall-of-nouraajd c++ dark fantasy game
-Copyright (C) 2020  Andrzej Lis
+Copyright (C) 2025  Andrzej Lis
 
 This program is free software: you can redistribute it and/or modify
         it under the terms of the GNU General Public License as published by
@@ -22,5 +22,5 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 class CTooltipHandler : public CGameObject {
 
 public:
-    static std::string buildTooltip(std::shared_ptr<CGameObject> object);
+  static std::string buildTooltip(std::shared_ptr<CGameObject> object);
 };

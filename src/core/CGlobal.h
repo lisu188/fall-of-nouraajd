@@ -1,6 +1,6 @@
 /*
 fall-of-nouraajd c++ dark fantasy game
-Copyright (C) 2019  Andrzej Lis
+Copyright (C) 2025  Andrzej Lis
 
 This program is free software: you can redistribute it and/or modify
         it under the terms of the GNU General Public License as published by
@@ -19,10 +19,10 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include <Python.h>
 
+#include <boost/filesystem.hpp>
+#include <boost/locale.hpp>
 #include <boost/python.hpp>
 #include <boost/python/suite/indexing/vector_indexing_suite.hpp>
-#include <boost/locale.hpp>
-#include <boost/filesystem.hpp>
 #include <boost/range/algorithm.hpp>
 #include <boost/range/irange.hpp>
 
@@ -31,12 +31,16 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <SDL_ttf.h>
 
 #include <condition_variable>
+#include <csignal>
+#include <cstdio>
+#include <ctime>
 #include <deque>
 #include <fstream>
 #include <functional>
 #include <iomanip>
 #include <iostream>
-#include <string>
+#include <json.hpp>
+#include <limits>
 #include <list>
 #include <map>
 #include <memory>
@@ -44,16 +48,12 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <queue>
 #include <random>
 #include <set>
-#include <csignal>
 #include <sstream>
-#include <cstdio>
+#include <string>
 #include <thread>
-#include <limits>
-#include <ctime>
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
-#include <json.hpp>
 #include <vstd.h>
 
 using json = nlohmann::json;

@@ -1,6 +1,6 @@
 /*
 fall-of-nouraajd c++ dark fantasy game
-Copyright (C) 2019  Andrzej Lis
+Copyright (C) 2025  Andrzej Lis
 
 This program is free software: you can redistribute it and/or modify
         it under the terms of the GNU General Public License as published by
@@ -19,83 +19,67 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CMap.h"
 #include "object/CCreature.h"
 
-CMarket::CMarket() {
+CMarket::CMarket() {}
 
-}
-
-CMarket::~CMarket() {
-
-}
+CMarket::~CMarket() {}
 
 void CMarket::add(std::shared_ptr<CItem> item) {
-    items.insert(item);
-    signal("itemsChanged");
+  items.insert(item);
+  signal("itemsChanged");
 }
 
 void CMarket::remove(std::shared_ptr<CItem> item) {
-    if (items.erase(item)) {
-        signal("itemsChanged");
-    }
+  if (items.erase(item)) {
+    signal("itemsChanged");
+  }
 }
-
 
 void CMarket::setItems(std::set<std::shared_ptr<CItem>> _items) {
-    while (items.size() > 0) {//TODO: extract this to macro
-        remove(*items.begin());
-    }
-    for (auto item :_items) {
-        add(item);
-    }
+  while (items.size() > 0) { // TODO: extract this to macro
+    remove(*items.begin());
+  }
+  for (auto item : _items) {
+    add(item);
+  }
 }
 
-std::set<std::shared_ptr<CItem>> CMarket::getItems() {
-    return items;
-}
+std::set<std::shared_ptr<CItem>> CMarket::getItems() { return items; }
 
-int CMarket::getSell() const {
-    return sell;
-}
+int CMarket::getSell() const { return sell; }
 
-void CMarket::setSell(int value) {
-    sell = value;
-}
+void CMarket::setSell(int value) { sell = value; }
 
-int CMarket::getBuy() const {
-    return buy;
-}
+int CMarket::getBuy() const { return buy; }
 
-void CMarket::setBuy(int value) {
-    buy = value;
-}
+void CMarket::setBuy(int value) { buy = value; }
 
-bool CMarket::sellItem(std::shared_ptr<CCreature> cre, std::shared_ptr<CItem> item) {
-    int price = getSellCost(item);
-    vstd::fail_if(!vstd::ctn(items, item), "tried to sell item not on sell");
-    if (cre->getGold() < price) {
-        return false;
-    }
-    cre->addGold(-price);
-    cre->addItem(item);
-    remove(item);
-    return true;
+bool CMarket::sellItem(std::shared_ptr<CCreature> cre,
+                       std::shared_ptr<CItem> item) {
+  int price = getSellCost(item);
+  vstd::fail_if(!vstd::ctn(items, item), "tried to sell item not on sell");
+  if (cre->getGold() < price) {
+    return false;
+  }
+  cre->addGold(-price);
+  cre->addItem(item);
+  remove(item);
+  return true;
 }
 
 int CMarket::getSellCost(std::shared_ptr<CItem> item) {
-    return (int) (pow(2, item->getPower()) * 200.0 * ((double) getSell()) / 100.0);
+  return (int)(pow(2, item->getPower()) * 200.0 * ((double)getSell()) / 100.0);
 }
 
-void CMarket::buyItem(std::shared_ptr<CCreature> cre, std::shared_ptr<CItem> item) {
-    int price = getBuyCost(item);
-    std::set<std::shared_ptr<CItem>> items = cre->getInInventory();
-    vstd::fail_if(!vstd::ctn(items, item), "tried to sell not owned item");
-    cre->addGold(price);
-    add(item);
-    cre->removeItem(item);
+void CMarket::buyItem(std::shared_ptr<CCreature> cre,
+                      std::shared_ptr<CItem> item) {
+  int price = getBuyCost(item);
+  std::set<std::shared_ptr<CItem>> items = cre->getInInventory();
+  vstd::fail_if(!vstd::ctn(items, item), "tried to sell not owned item");
+  cre->addGold(price);
+  add(item);
+  cre->removeItem(item);
 }
 
 int CMarket::getBuyCost(std::shared_ptr<CItem> item) {
-    return (int) (pow(2, item->getPower()) * 200.0 * ((double) getBuy()) / 100.0);
+  return (int)(pow(2, item->getPower()) * 200.0 * ((double)getBuy()) / 100.0);
 }
-
-
-
