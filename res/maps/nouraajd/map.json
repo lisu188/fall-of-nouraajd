@@ -40711,7 +40711,7 @@
             "animation": "string"
           },
           "rotation": 0,
-            "type": "nouraajdDoor",
+            "type": "CBuilding",
           "visible": true,
           "width": 32,
           "x": 1408,
@@ -40779,7 +40779,7 @@
             "animation": "string"
           },
           "rotation": 0,
-            "type": "nouraajdTavern",
+            "type": "CBuilding",
           "visible": true,
           "width": 32,
           "x": 1536,
@@ -40796,7 +40796,7 @@
             "animation": "string"
           },
           "rotation": 0,
-          "type": "nouraajdTownHall",
+          "type": "CBuilding",
           "visible": true,
           "width": 32,
           "x": 1376,
@@ -40830,7 +40830,7 @@
             "animation": "string"
           },
           "rotation": 0,
-          "type": "nouraajdChapel",
+          "type": "CBuilding",
           "visible": true,
           "width": 32,
           "x": 1600,
