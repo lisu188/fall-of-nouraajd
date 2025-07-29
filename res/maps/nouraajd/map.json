@@ -40807,7 +40807,7 @@
           "id": 99,
           "name": "oldWoman",
           "properties": {
-            "animation": "images/players/sorcerer"
+            "animation": "images/npc/oldWoman"
           },
           "propertytypes": {
             "animation": "string"
@@ -40858,7 +40858,7 @@
           "id": 102,
           "name": "questGiver",
           "properties": {
-            "animation": "images/players/warrior"
+            "animation": "images/npc/questGiver"
           },
           "propertytypes": {
             "animation": "string"
