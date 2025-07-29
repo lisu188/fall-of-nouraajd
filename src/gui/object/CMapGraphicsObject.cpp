@@ -44,6 +44,9 @@ CMapGraphicsObject::getProxiedObjects(std::shared_ptr<CGui> gui, int x, int y) {
                             if (type == SDL_MOUSEBUTTONDOWN && button == SDL_BUTTON_LEFT) {
                                 auto controller = vstd::cast<CPlayerController>(
                                         gui->getGame()->getMap()->getPlayer()->getController());
+                                if (!controller) {
+                                    return false;
+                                }
                                 auto player = gui->getGame()->getMap()->getPlayer();
                                 controller->setTarget(player, actualCoords);
 
@@ -70,8 +73,9 @@ CMapGraphicsObject::getProxiedObjects(std::shared_ptr<CGui> gui, int x, int y) {
                 }
 
 
-                auto path = vstd::cast<CPlayerController>(
-                        player->getController())->isOnPath(player, actualCoords);
+                auto playerController = vstd::cast<CPlayerController>(player->getController());
+                auto path = playerController ?
+                        playerController->isOnPath(player, actualCoords) : std::make_pair(false, Coords::UNDEFINED);
                 if (path.first) {
                     showFootprint(gui,
                                   path.second,
