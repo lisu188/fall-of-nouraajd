@@ -33,54 +33,51 @@ CMapGraphicsObject::getProxiedObjects(std::shared_ptr<CGui> gui, int x, int y) {
         std::list<std::shared_ptr<CGameGraphicsObject>> return_val;
 
         std::shared_ptr<CPlayer> player = gui->getGame()->getMap()->getPlayer();
-        if (player) {
-          auto actualCoords =
-              guiToMap(gui, Coords(x, y, player->getCoords().z));
+        auto actualCoords = guiToMap(gui, Coords(x, y, player->getCoords().z));
 
-          std::shared_ptr<CTile> tile =
-              map->getTile(actualCoords.x, actualCoords.y, actualCoords.z);
+        std::shared_ptr<CTile> tile =
+            map->getTile(actualCoords.x, actualCoords.y, actualCoords.z);
 
-          return_val.push_back(tile->getGraphicsObject()->withCallback(
-              [actualCoords](std::shared_ptr<CGui> gui, SDL_EventType type,
-                             int button, int, int) {
-                if (type == SDL_MOUSEBUTTONDOWN && button == SDL_BUTTON_LEFT) {
-                  auto controller = vstd::cast<CPlayerController>(
-                      gui->getGame()->getMap()->getPlayer()->getController());
-                  if (!controller) {
-                    return false;
-                  }
-                  auto player = gui->getGame()->getMap()->getPlayer();
-                  controller->setTarget(player, actualCoords);
-
-                  if (!gui->getMap()->isMoving()) {
-                    // move this code
-                    while (!controller->isCompleted(player)) {
-                      gui->getGame()->getMap()->move();
-                    }
-                  }
-
-                  return true;
+        return_val.push_back(tile->getGraphicsObject()->withCallback(
+            [actualCoords](std::shared_ptr<CGui> gui, SDL_EventType type,
+                           int button, int, int) {
+              if (type == SDL_MOUSEBUTTONDOWN && button == SDL_BUTTON_LEFT) {
+                auto controller = vstd::cast<CPlayerController>(
+                    gui->getGame()->getMap()->getPlayer()->getController());
+                if (!controller) {
+                  return false;
                 }
-                return false;
-              }));
+                auto player = gui->getGame()->getMap()->getPlayer();
+                controller->setTarget(player, actualCoords);
 
-          for (const auto &ob : map->getObjectsAtCoords(actualCoords)) {
-            return_val.push_back(ob->getGraphicsObject());
-          }
+                if (!gui->getMap()->isMoving()) {
+                  // move this code
+                  while (!controller->isCompleted(player)) {
+                    gui->getGame()->getMap()->move();
+                  }
+                }
 
-          // TODO: make list of such properties in config
-          if (map->getBoolProperty("showCoordinates")) {
-            showCoordinates(gui, return_val, actualCoords);
-          }
+                return true;
+              }
+              return false;
+            }));
 
-          auto playerController =
-              vstd::cast<CPlayerController>(player->getController());
-          auto path = playerController
-                          ? playerController->isOnPath(player, actualCoords)
-                          : std::make_pair(false, Coords::UNDEFINED);
-          if (path.first) {
-            showFootprint(gui, path.second, return_val);
-          }
+        for (const auto &ob : map->getObjectsAtCoords(actualCoords)) {
+          return_val.push_back(ob->getGraphicsObject());
+        }
+
+        // TODO: make list of such properties in config
+        if (map->getBoolProperty("showCoordinates")) {
+          showCoordinates(gui, return_val, actualCoords);
+        }
+
+        auto playerController =
+            vstd::cast<CPlayerController>(player->getController());
+        auto path = playerController
+                        ? playerController->isOnPath(player, actualCoords)
+                        : std::make_pair(false, Coords::UNDEFINED);
+        if (path.first) {
+          showFootprint(gui, path.second, return_val);
         }
 
         return return_val;
