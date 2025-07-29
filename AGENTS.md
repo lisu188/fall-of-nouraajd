@@ -29,6 +29,10 @@ The project mixes C++ and Python, so consistent naming is critical:
   IDs when referencing them from Python.
 - Engine methods exposed from C++ keep their original `CamelCase` form.
 
+### Auto Formatting
+Use automated formatters before committing code:
+- Run `clang-format -i` on any modified C++ files.
+- Run `black -l 120` on Python files to match the line length guideline.
 
 ## Commit Messages
 Describe changes clearly in the commit message.
