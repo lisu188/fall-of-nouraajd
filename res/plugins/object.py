@@ -58,7 +58,10 @@ def load(self, context):
     @register(context)
     class SignPost(CBuilding):
         def onEnter(self, event):
-            self.getMap().getGame().getGuiHandler().showInfo(self.getStringProperty('text'), True)
+            if event.getCause().isPlayer():
+                self.getMap().getGame().getGuiHandler().showInfo(
+                    self.getStringProperty('text'), True
+                )
 
     @register(context)
     class Chest(CBuilding):
