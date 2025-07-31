@@ -13,7 +13,10 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
+import ast
 import json
+import os
+from pathlib import Path
 import unittest
 
 import game
@@ -32,10 +35,10 @@ def game_test(f):
 
 
 def advance(g, turns):
-    current_turn = g.getMap().getNumericProperty('turn')
+    current_turn = g.getMap().getNumericProperty("turn")
     for i in range(turns):
         g.getMap().move()
-    while g.getMap().getNumericProperty('turn') < turns + current_turn:
+    while g.getMap().getNumericProperty("turn") < turns + current_turn:
         game.event_loop.instance().run()
 
 
@@ -104,7 +107,7 @@ class GameTest(unittest.TestCase):
     @game_test
     def test_load(self):
         g = game.CGameLoader.loadGame()
-        game.CGameLoader.loadSavedGame(g, 'gooby')
+        game.CGameLoader.loadSavedGame(g, "gooby")
         return True, ""
 
     @game_test
@@ -114,6 +117,91 @@ class GameTest(unittest.TestCase):
         g.getMap().dumpPaths("test/random.png")
         return True, "test/random.png"
 
+    @game_test
+    def test_dialogs(self):
+        option_defs = {}
+        dialog_defs = {}
 
-if __name__ == '__main__':
+        misc = Path("res/config/misc.json")
+        if misc.exists():
+            with open(misc) as f:
+                data = json.load(f)
+                for key, value in data.items():
+                    if isinstance(value, dict) and value.get("class") == "CDialogOption":
+                        option_defs[key] = value
+
+        dialog_dir = Path("res/maps/nouraajd")
+        for path in dialog_dir.glob("*.json"):
+            with open(path) as f:
+                data = json.load(f)
+            for key, value in data.items():
+                if not isinstance(value, dict):
+                    continue
+                if value.get("class") == "CDialogOption":
+                    option_defs[key] = value
+                if isinstance(value.get("class"), str) and value.get("class").endswith("Dialog"):
+                    dialog_defs[key] = value
+
+        with open(dialog_dir / "script.py") as f:
+            tree = ast.parse(f.read())
+        methods_by_class = {}
+        for node in ast.walk(tree):
+            if isinstance(node, ast.ClassDef) and node.name.endswith("Dialog"):
+                methods_by_class[node.name] = {n.name for n in node.body if isinstance(n, ast.FunctionDef)}
+
+        missing_actions = []
+        missing_states = []
+        unreachable_states = []
+
+        for dialog_id, dialog in dialog_defs.items():
+            cls = dialog.get("class")
+            states = dialog.get("properties", {}).get("states", [])
+            state_map = {}
+            edges = {}
+            entry_states = []
+            for state in states:
+                props = state.get("properties", {})
+                sid = props.get("stateId")
+                state_map[sid] = props
+                if sid == "ENTRY":
+                    entry_states.append(sid)
+            for state in states:
+                sid = state.get("properties", {}).get("stateId")
+                for opt in state.get("properties", {}).get("options", []):
+                    resolved = {}
+                    if "ref" in opt:
+                        resolved.update(option_defs.get(opt["ref"], {}).get("properties", {}))
+                    resolved.update(opt.get("properties", {}))
+                    next_id = resolved.get("nextStateId")
+                    if next_id and next_id != "EXIT" and next_id not in state_map:
+                        missing_states.append(f"{dialog_id}:{sid}->{next_id}")
+                    if next_id and next_id != "EXIT":
+                        edges.setdefault(sid, []).append(next_id)
+                    action = resolved.get("action")
+                    if action and action not in methods_by_class.get(cls, set()):
+                        missing_actions.append(f"{dialog_id}:{action}")
+            visited = set()
+            stack = list(entry_states)
+            while stack:
+                current = stack.pop()
+                if current in visited:
+                    continue
+                visited.add(current)
+                for nxt in edges.get(current, []):
+                    if nxt in state_map:
+                        stack.append(nxt)
+            for sid, props in state_map.items():
+                if sid != "EXIT" and sid not in visited and not props.get("condition"):
+                    unreachable_states.append(f"{dialog_id}:{sid}")
+
+        success = not (missing_actions or missing_states or unreachable_states)
+        log = {
+            "missing_actions": sorted(missing_actions),
+            "missing_states": sorted(missing_states),
+            "unreachable_states": sorted(unreachable_states),
+        }
+        return success, json.dumps(log)
+
+
+if __name__ == "__main__":
     unittest.main(testRunner=unittest.TextTestRunner())
