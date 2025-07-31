@@ -19,6 +19,7 @@ def load(self, context):
     from game import Coords
     from game import register
     from game import CScroll
+
     @register(context)
     class WayPoint(CBuilding):
         def onEnter(self, event):
@@ -27,11 +28,11 @@ def load(self, context):
 
         # merge with onEnter logic
         def onTurn(self, event):
-            self.setBoolProperty('waypoint', True)
+            self.setBoolProperty("waypoint", True)
             exit = self.getExit()
-            self.setNumericProperty('x', exit.x)
-            self.setNumericProperty('y', exit.y)
-            self.setNumericProperty('z', exit.z)
+            self.setNumericProperty("x", exit.x)
+            self.setNumericProperty("y", exit.y)
+            self.setNumericProperty("z", exit.z)
 
         def getExit(self):
             pass
@@ -59,15 +60,14 @@ def load(self, context):
     class SignPost(CBuilding):
         def onEnter(self, event):
             if event.getCause().isPlayer():
-                self.getMap().getGame().getGuiHandler().showInfo(
-                    self.getStringProperty('text'), True
-                )
+                self.getMap().getGame().getGuiHandler().showInfo(self.getStringProperty("text"), True)
 
     @register(context)
     class Chest(CBuilding):
         def onEnter(self, event):
-            self.getMap().getGame().getLootHandler().addRandomLoot(self.getMap().getPlayer(),
-                                                                   self.getNumericProperty('value'))
+            self.getMap().getGame().getLootHandler().addRandomLoot(
+                self.getMap().getPlayer(), self.getNumericProperty("value")
+            )
 
     @register(context)
     class Cave(CBuilding):
@@ -80,31 +80,28 @@ def load(self, context):
                 for i in range(-1, 2):
                     for j in range(-1, 2):
                         if not (j == 0 and i == 0):
-                            if self.getMap().canStep(
-                                    Coords(location.x + i, location.y + j, location.z)):
-                                mon = self.getObjectProperty('monster').clone()
+                            if self.getMap().canStep(Coords(location.x + i, location.y + j, location.z)):
+                                mon = self.getObjectProperty("monster").clone()
                                 self.getMap().addObject(mon)
                                 mon.moveTo(location.x + i, location.y + j, location.z)
                 self.getMap().removeObjectByName(self.getName())
 
         def onTurn(self, event):
-            chance = self.getNumericProperty("chance");
-            monsters = self.getNumericProperty("monsters");
-            enabled = self.getBoolProperty("enabled");
+            chance = self.getNumericProperty("chance")
+            monsters = self.getNumericProperty("monsters")
+            enabled = self.getBoolProperty("enabled")
             if enabled and monsters > 0 and (randint(1, 100)) <= chance:
                 location = self.getCoords()
-                mon = self.getObjectProperty('monster').clone()
+                mon = self.getObjectProperty("monster").clone()
                 self.getMap().addObject(mon)
                 mon.moveTo(location.x, location.y, location.z)
-                self.incProperty("monsters", -1);
+                self.incProperty("monsters", -1)
 
     @register(context)
     class TownPortalScroll(CScroll):
         def onUse(self, event):
             cur_map = event.getCause().getMap()
-            event.getCause().moveTo(
-                cur_map.getEntryX(), cur_map.getEntryY(), cur_map.getEntryZ()
-            )
+            event.getCause().moveTo(cur_map.getEntryX(), cur_map.getEntryY(), cur_map.getEntryZ())
 
         def isDisposable(self):
             return True

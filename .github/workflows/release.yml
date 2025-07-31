@@ -1,0 +1,32 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.x'
+      - name: Install dependencies
+        run: |
+          sudo apt update
+          sudo apt install -y build-essential cmake python3-dev libboost-dev libboost-filesystem-dev libboost-python-dev libsdl2-dev libsdl2-ttf-dev libsdl2-image-dev
+      - name: Configure
+        run: |
+          git submodule update --init --recursive
+          cmake -B build -DCMAKE_BUILD_TYPE=Release
+      - name: Build package
+        run: cmake --build build --target package --config Release
+      - name: Upload release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: build/*.tar.gz
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
