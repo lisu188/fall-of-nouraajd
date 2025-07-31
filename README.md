@@ -20,3 +20,6 @@ cd cmake-build-release
 make _game
 python3 play.py
 </pre>
+### testing
+Run `python3 test.py` to execute the unit tests. Data validation tests run without
+needing the compiled `_game` module, but other tests require it to be built.
