@@ -273,7 +273,10 @@ endif ()
 
 SET(CPACK_STRIP_FILES _game.so)
 
-IF (!WIN32)
+if (WIN32)
+    set_target_properties(_game PROPERTIES UNITY_BUILD OFF)
+else()
     cotire(_game)
     set_target_properties(_game PROPERTIES UNITY_BUILD ON)
-ENDIF ()
+endif ()
+
