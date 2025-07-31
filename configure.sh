@@ -2,7 +2,7 @@
 
 sudo apt update
 sudo apt install build-essential cmake -y
-sudo apt install python3-dev -y
+sudo apt install python3.11 python3.11-dev -y
 sudo apt install libboost-dev libboost-filesystem-dev libboost-python-dev -y
 sudo apt install libsdl2-dev libsdl2-ttf-dev libsdl2-image-dev -y
 
