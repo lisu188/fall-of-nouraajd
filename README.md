@@ -15,6 +15,7 @@ tab - open/close python console
 ## running
 ### ubuntu
 <pre>
+sudo apt install python3.11 python3.11-dev
 ./configure.sh
 cd cmake-build-release
 make _game
