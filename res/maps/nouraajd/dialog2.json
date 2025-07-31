@@ -6,7 +6,7 @@
         {
           "class": "CDialogState",
           "properties": {
-            "stateId": "INIT",
+            "stateId": "ENTRY",
             "text": "Whoa! Hold on there, stranger! Are you headed east, beyond the river?",
             "options": [
               {
