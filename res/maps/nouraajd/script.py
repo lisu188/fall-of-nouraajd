@@ -188,7 +188,12 @@ def load(self, context):
                 player.addItem("letterToBeren")
                 self.getGame().getGuiHandler().showMessage("You received a sealed letter.")
             quests = player.getQuests()
-            if not any(q.getName() == "deliverLetterQuest" for q in quests):
+            found = False
+            for q in quests:
+                if q.getName() == "deliverLetterQuest":
+                    found = True
+                    break
+            if not found:
                 player.addQuest("deliverLetterQuest")
 
         def has_letter_quest(self):
@@ -196,7 +201,10 @@ def load(self, context):
             if player.hasItem(lambda it: it.getName() == "letterToBeren"):
                 return True
             quests = player.getQuests()
-            return any(q.getName() == "deliverLetterQuest" for q in quests)
+            for q in quests:
+                if q.getName() == "deliverLetterQuest":
+                    return True
+            return False
 
         def talked_to_victor(self):
             return self.getGame().getMap().getBoolProperty("TALKED_TO_VICTOR")
