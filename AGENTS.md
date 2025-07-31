@@ -4,7 +4,9 @@
 Run `python3 test.py` from the repository root.
 This test suite requires the compiled `_game` module.
 If the module or dependencies are missing, tests may fail; note this in the
-Testing section.
+Testing section. Import the optional `game` module inside each test that
+requires it so that tests which don't depend on the compiled module can still
+run.
 
 ## Code Style
 - Use four spaces for indentation in both Python and C++ files.

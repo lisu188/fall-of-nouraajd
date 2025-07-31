@@ -19,22 +19,23 @@ import os
 from pathlib import Path
 import unittest
 
-import game
-
 
 def game_test(f):
     def wrapper(self):
         n = f.__name__.split("test_")[1]
+        os.makedirs("test", exist_ok=True)
         result = f(self)
         success = result[0]
         log = result[1]
-        open("test/" + n + ".json", "w").write(str(log))
+        open(os.path.join("test", n + ".json"), "w").write(str(log))
         self.assertTrue(success)
 
     return wrapper
 
 
 def advance(g, turns):
+    import game
+
     current_turn = g.getMap().getNumericProperty("turn")
     for i in range(turns):
         g.getMap().move()
@@ -45,6 +46,8 @@ def advance(g, turns):
 class GameTest(unittest.TestCase):
     @game_test
     def test_objects(self):
+        import game
+
         failed = []
         g = game.CGameLoader.loadGame()
         game.CGameLoader.startGame(g, "empty")
@@ -56,6 +59,8 @@ class GameTest(unittest.TestCase):
 
     @game_test
     def test_fights(self):
+        import game
+
         g = game.CGameLoader.loadGame()
         game.CGameLoader.startGame(g, "empty")
         creatures = g.getObjectHandler().getAllSubTypes("CCreature")
@@ -78,6 +83,8 @@ class GameTest(unittest.TestCase):
 
     @game_test
     def test_level(self):
+        import game
+
         g = game.CGameLoader.loadGame()
         game.CGameLoader.startGame(g, "empty")
         creatures = g.getObjectHandler().getAllSubTypes("CCreature")
@@ -92,6 +99,8 @@ class GameTest(unittest.TestCase):
 
     @game_test
     def test_turns(self):
+        import game
+
         g = game.CGameLoader.loadGame()
         game.CGameLoader.startGameWithPlayer(g, "nouraajd", "Warrior")
         advance(g, 100)
@@ -99,6 +108,8 @@ class GameTest(unittest.TestCase):
 
     @game_test
     def test_pathfinder(self):
+        import game
+
         g = game.CGameLoader.loadGame()
         game.CGameLoader.startGameWithPlayer(g, "nouraajd", "Warrior")
         g.getMap().dumpPaths("test/pathfinder.png")
@@ -106,12 +117,16 @@ class GameTest(unittest.TestCase):
 
     @game_test
     def test_load(self):
+        import game
+
         g = game.CGameLoader.loadGame()
         game.CGameLoader.loadSavedGame(g, "gooby")
         return True, ""
 
     @game_test
     def test_random(self):
+        import game
+
         g = game.CGameLoader.loadGame()
         game.CGameLoader.startRandomGameWithPlayer(g, "Warrior")
         g.getMap().dumpPaths("test/random.png")
