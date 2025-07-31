@@ -163,14 +163,16 @@
     "ref": "Warrior",
     "properties": {
       "animation": "images/npc/questGiver",
-      "controller": { "class": "CNpcRandomController" }
+      "controller": { "class": "CNpcRandomController" },
+      "npc": true
     }
   },
   "oldWoman": {
     "ref": "Sorcerer",
     "properties": {
       "animation": "images/npc/oldWoman",
-      "controller": { "class": "CNpcRandomController" }
+      "controller": { "class": "CNpcRandomController" },
+      "npc": true
     }
   },
   "letterFromRolf": {
