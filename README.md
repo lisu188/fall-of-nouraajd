@@ -19,6 +19,9 @@ tab - open/close python console
 cd cmake-build-release
 make _game
 python3 play.py
+
+The build expects **Python 3.11**. Ensure this version is installed before
+running the configure script.
 </pre>
 ### testing
 Run `python3 test.py` to execute the unit tests. Data validation tests run without
