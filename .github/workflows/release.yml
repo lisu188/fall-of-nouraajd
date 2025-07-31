@@ -13,11 +13,11 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.x'
+          python-version: '3.11'
       - name: Install dependencies
         run: |
           sudo apt update
-          sudo apt install -y build-essential cmake python3-dev libboost-dev libboost-filesystem-dev libboost-python-dev libsdl2-dev libsdl2-ttf-dev libsdl2-image-dev
+          sudo apt install -y build-essential cmake python3.11 python3.11-dev libboost-dev libboost-filesystem-dev libboost-python-dev libsdl2-dev libsdl2-ttf-dev libsdl2-image-dev
       - name: Configure
         run: |
           git submodule update --init --recursive
