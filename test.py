@@ -217,6 +217,79 @@ class GameTest(unittest.TestCase):
         }
         return success, json.dumps(log)
 
+    @game_test
+    def test_json_validity(self):
+        errors = []
+        for path in Path("res").rglob("*.json"):
+            try:
+                with open(path) as f:
+                    json.load(f)
+            except Exception:
+                errors.append(str(path))
+        return errors == [], json.dumps(errors)
+
+    @game_test
+    def test_plugin_load_function(self):
+        missing = []
+        for path in Path("res/plugins").rglob("*.py"):
+            with open(path) as f:
+                tree = ast.parse(f.read())
+            if not any(isinstance(n, ast.FunctionDef) and n.name == "load" for n in tree.body):
+                missing.append(str(path))
+        for path in Path("res/maps").rglob("script.py"):
+            with open(path) as f:
+                tree = ast.parse(f.read())
+            if not any(isinstance(n, ast.FunctionDef) and n.name == "load" for n in tree.body):
+                missing.append(str(path))
+        return missing == [], json.dumps(missing)
+
+    @game_test
+    def test_indentation(self):
+        offenders = []
+        for path in Path(".").rglob("*.py"):
+            parts = set(path.parts)
+            if "json" in parts and ("tools" in parts or "tests" in parts):
+                continue
+            if any(p.startswith("cmake-build") for p in parts):
+                continue
+            if "random-dungeon-generator" in parts or "vstd" in parts:
+                continue
+            with open(path) as f:
+                for i, line in enumerate(f, 1):
+                    if line.startswith("\t"):
+                        offenders.append(f"{path}:{i}")
+                    else:
+                        stripped = line.lstrip(" ")
+                        if stripped and (len(line) - len(stripped)) % 4 != 0:
+                            offenders.append(f"{path}:{i}")
+        return offenders == [], json.dumps(offenders)
+
+    @game_test
+    def test_resource_paths(self):
+        missing = []
+        for path in Path("res/config").rglob("*.json"):
+            with open(path) as f:
+                data = json.load(f)
+            for key, val in self._collect_resource_paths(data):
+                base = Path("res") / val
+                if base.exists():
+                    continue
+                candidate = base if base.suffix else base.with_suffix(".png")
+                if not candidate.exists():
+                    missing.append(f"{path}:{key}:{val}")
+        return missing == [], json.dumps(missing)
+
+    def _collect_resource_paths(self, obj):
+        if isinstance(obj, dict):
+            for k, v in obj.items():
+                if k in ("animation", "image") and isinstance(v, str):
+                    yield k, v
+                else:
+                    yield from self._collect_resource_paths(v)
+        elif isinstance(obj, list):
+            for item in obj:
+                yield from self._collect_resource_paths(item)
+
 
 if __name__ == "__main__":
     unittest.main(testRunner=unittest.TextTestRunner())
