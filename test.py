@@ -32,10 +32,10 @@ def game_test(f):
 
 
 def advance(g, turns):
-    current_turn = g.getMap().getNumericProperty('turn')
+    current_turn = g.getMap().getNumericProperty("turn")
     for i in range(turns):
         g.getMap().move()
-    while g.getMap().getNumericProperty('turn') < turns + current_turn:
+    while g.getMap().getNumericProperty("turn") < turns + current_turn:
         game.event_loop.instance().run()
 
 
@@ -104,7 +104,7 @@ class GameTest(unittest.TestCase):
     @game_test
     def test_load(self):
         g = game.CGameLoader.loadGame()
-        game.CGameLoader.loadSavedGame(g, 'gooby')
+        game.CGameLoader.loadSavedGame(g, "gooby")
         return True, ""
 
     @game_test
@@ -114,6 +114,42 @@ class GameTest(unittest.TestCase):
         g.getMap().dumpPaths("test/random.png")
         return True, "test/random.png"
 
+    @game_test
+    def test_playthrough(self):
+        g = game.CGameLoader.loadGame()
+        game.CGameLoader.startGameWithPlayer(g, "nouraajd", "Warrior")
+        advance(g, 1)
 
-if __name__ == '__main__':
+        m = g.getMap()
+        player = m.getPlayer()
+        player.addExp(10000)
+        player.healProc(100)
+
+        def kill_all():
+            for obj in list(m.getObjects()):
+                if isinstance(obj, game.CCreature) and not obj.isPlayer() and not obj.isNpc():
+                    game.CFightHandler.fight(player, obj)
+                    player.healProc(100)
+
+        player.moveTo(704, 544, 0)
+        kill_all()
+
+        player.moveTo(608, 320, 0)
+        kill_all()
+
+        player.moveTo(100, 100, 0)
+        kill_all()
+
+        player.moveTo(5312, 672, 0)
+        kill_all()
+
+        success = (
+            m.getBoolProperty("completed_gooby")
+            and m.getBoolProperty("completed_octobogz")
+            and player.hasItem(lambda it: it.getName() == "holyRelic")
+        )
+        return success, game.jsonify(m.ptr())
+
+
+if __name__ == "__main__":
     unittest.main(testRunner=unittest.TextTestRunner())
