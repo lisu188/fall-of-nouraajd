@@ -16,12 +16,18 @@ jobs:
             artifact: cmake-build-release/fall-of-nouraajd-*.exe
     steps:
       - uses: actions/checkout@v3
+      - name: cache-ccache
+        uses: actions/cache@v3
+        with:
+          path: ~/.ccache
+          key: ${{ runner.os }}-ccache-${{ hashFiles('**/CMakeLists.txt') }}
+          restore-keys: ${{ runner.os }}-ccache-
       - name: submodules
         run: git submodule update --init --recursive
       - name: configure
         run: ${{ matrix.configure }}
-      - name: make
-        run: make -C cmake-build-release package
+      - name: build
+        run: cmake --build cmake-build-release --target package -j$(nproc)
       - name: publish
         uses: actions/upload-artifact@v4
         with:
