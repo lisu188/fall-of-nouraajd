@@ -8,7 +8,7 @@ jobs:
     strategy:
       matrix:
         include:
-          - os: ubuntu-latest
+          - os: ubuntu-22.04
             configure: ./configure.sh
             artifact: cmake-build-release/fall-of-nouraajd-*.tar.gz
           - os: windows-latest
