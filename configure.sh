@@ -1,16 +1,20 @@
 #!/bin/bash
 
 sudo apt update
-sudo apt install build-essential cmake -y
-sudo apt install python3.11 python3.11-dev -y
-sudo apt install libboost-dev libboost-filesystem-dev libboost-python-dev -y
-sudo apt install libsdl2-dev libsdl2-ttf-dev libsdl2-image-dev -y
+sudo apt install -y build-essential cmake ninja-build ccache \
+    python3.11 python3.11-dev \
+    libboost-dev libboost-filesystem-dev libboost-python-dev \
+    libsdl2-dev libsdl2-ttf-dev libsdl2-image-dev
 
 git submodule update --init --recursive
 mkdir -p cmake-build-debug
 mkdir -p cmake-build-release
 
-cmake -B./cmake-build-debug -H. -DCMAKE_BUILD_TYPE=Debug
-cmake -B./cmake-build-release -H. -DCMAKE_BUILD_TYPE=Release
+cmake -G Ninja -B ./cmake-build-debug -S . \
+    -DCMAKE_BUILD_TYPE=Debug \
+    -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
+cmake -G Ninja -B ./cmake-build-release -S . \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
 
 #export SDL_VIDEO_X11_VISUALID=0x022 //TODO: check this, this was used to run in WSL ubuntu with xming
