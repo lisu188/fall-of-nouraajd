@@ -15,7 +15,7 @@ tab - open/close python console
 ## running
 ### ubuntu
 <pre>
-sudo apt install python3.11 python3.11-dev
+sudo apt install python3 python3-dev
 ./configure.sh
 cmake --build cmake-build-release --target _game -j$(nproc)
 python3 play.py
