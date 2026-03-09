@@ -271,6 +271,28 @@ if (WIN32)
     install(FILES windows-tools/Python36/python36.zip DESTINATION fall-of-nouraajd)
 endif ()
 
+
+add_executable(fon_unit_tests
+    tests/unit/test_coords.cpp
+    src/core/CUtil.cpp
+)
+
+target_include_directories(fon_unit_tests PRIVATE
+    ${CMAKE_SOURCE_DIR}/src
+    ${CMAKE_SOURCE_DIR}/vstd
+    json/single_include/nlohmann
+    ${PYTHON_INCLUDE_DIRS}
+    ${Boost_INCLUDE_DIRS}
+    ${SDL2_INCLUDE_DIR}
+    ${SDL2_IMAGE_INCLUDE_DIR}
+    ${SDL2_TTF_INCLUDE_DIR}
+)
+
+target_link_libraries(fon_unit_tests PRIVATE ${PYTHON_LIBRARIES})
+
+enable_testing()
+add_test(NAME fon_unit_tests COMMAND fon_unit_tests)
+
 SET(CPACK_STRIP_FILES _game.so)
 
 if (WIN32)
