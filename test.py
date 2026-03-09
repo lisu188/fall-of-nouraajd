@@ -16,6 +16,7 @@
 import ast
 import json
 import os
+import re
 from pathlib import Path
 import unittest
 
@@ -166,6 +167,7 @@ class GameTest(unittest.TestCase):
 
         missing_actions = []
         missing_states = []
+        duplicate_state_ids = []
         unreachable_states = []
 
         for dialog_id, dialog in dialog_defs.items():
@@ -177,6 +179,8 @@ class GameTest(unittest.TestCase):
             for state in states:
                 props = state.get("properties", {})
                 sid = props.get("stateId")
+                if sid in state_map:
+                    duplicate_state_ids.append(f"{dialog_id}:{sid}")
                 state_map[sid] = props
                 if sid == "ENTRY":
                     entry_states.append(sid)
@@ -209,13 +213,38 @@ class GameTest(unittest.TestCase):
                 if sid != "EXIT" and sid not in visited and not props.get("condition"):
                     unreachable_states.append(f"{dialog_id}:{sid}")
 
-        success = not (missing_actions or missing_states or unreachable_states)
+        success = not (missing_actions or missing_states or duplicate_state_ids or unreachable_states)
         log = {
             "missing_actions": sorted(missing_actions),
             "missing_states": sorted(missing_states),
+            "duplicate_state_ids": sorted(duplicate_state_ids),
             "unreachable_states": sorted(unreachable_states),
         }
         return success, json.dumps(log)
+
+    @game_test
+    def test_nouraajd_trigger_targets(self):
+        script_path = Path("res/maps/nouraajd/script.py")
+        with open(script_path) as f:
+            script = f.read()
+
+        trigger_targets = set(re.findall(r'@trigger\(context,\s*"[^"]+",\s*"([^"]+)"\)', script))
+
+        with open("res/maps/nouraajd/map.json") as f:
+            map_data = json.load(f)
+        placed_names = set()
+        for layer in map_data.get("layers", []):
+            if layer.get("type") == "objectgroup":
+                for obj in layer.get("objects", []):
+                    name = obj.get("name")
+                    if name:
+                        placed_names.add(name)
+
+        runtime_spawned_targets = {"gooby1", "amuletGoblin", "cultLeaderQuest"}
+        missing_targets = sorted(
+            target for target in trigger_targets if target not in placed_names and target not in runtime_spawned_targets
+        )
+        return missing_targets == [], json.dumps(missing_targets)
 
     @game_test
     def test_json_validity(self):
@@ -267,15 +296,21 @@ class GameTest(unittest.TestCase):
     @game_test
     def test_resource_paths(self):
         missing = []
-        for path in Path("res/config").rglob("*.json"):
+        json_paths = list(Path("res/config").rglob("*.json"))
+        json_paths.extend(Path("res/maps").rglob("*.json"))
+        for path in json_paths:
             with open(path) as f:
                 data = json.load(f)
             for key, val in self._collect_resource_paths(data):
+                if val == "string":
+                    continue
                 base = Path("res") / val
-                if base.exists():
+                local = (path.parent / val).resolve()
+                if base.exists() or local.exists():
                     continue
                 candidate = base if base.suffix else base.with_suffix(".png")
-                if not candidate.exists():
+                local_candidate = local if local.suffix else local.with_suffix(".png")
+                if not candidate.exists() and not local_candidate.exists():
                     missing.append(f"{path}:{key}:{val}")
         return missing == [], json.dumps(missing)
 

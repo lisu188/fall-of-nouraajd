@@ -40855,6 +40855,23 @@
         },
         {
           "height": 32,
+          "id": 104,
+          "name": "market1",
+          "properties": {
+            "animation": "images/npc/questGiver"
+          },
+          "propertytypes": {
+            "animation": "string"
+          },
+          "rotation": 0,
+          "type": "market1",
+          "visible": true,
+          "width": 32,
+          "x": 3392,
+          "y": 3552
+        },
+        {
+          "height": 32,
           "id": 102,
           "name": "questGiver",
           "properties": {
@@ -40884,7 +40901,7 @@
       "y": 0
     }
   ],
-  "nextobjectid": 104,
+  "nextobjectid": 105,
   "orientation": "orthogonal",
   "properties": {
     "x": "110",
