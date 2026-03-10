@@ -2,7 +2,7 @@
 
 sudo apt update
 sudo apt install -y build-essential cmake ninja-build ccache \
-    python3.12 python3.12-dev \
+    python3 python3-dev \
     libboost-dev libboost-filesystem-dev libboost-python-dev \
     libsdl2-dev libsdl2-ttf-dev libsdl2-image-dev
 
