@@ -1,5 +1,5 @@
 # fall-of-nouraajd c++ dark fantasy game
-# Copyright (C) 2019  Andrzej Lis
+# Copyright (C) 2025  Andrzej Lis
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -14,28 +14,57 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 import ast
+import builtins
+import importlib
 import json
 import os
 import re
+import sys
 from pathlib import Path
 import unittest
+
+
+REPO_ROOT = Path(__file__).resolve().parent
+TEST_OUTPUT_DIR = REPO_ROOT / "test"
+XDG_RUNTIME_DIR = Path("/tmp") / f"xdg-runtime-{os.getuid()}"
+
+if "XDG_RUNTIME_DIR" not in os.environ:
+    XDG_RUNTIME_DIR.mkdir(mode=0o700, parents=True, exist_ok=True)
+    os.environ["XDG_RUNTIME_DIR"] = str(XDG_RUNTIME_DIR)
+
+build_dir = REPO_ROOT / "cmake-build-release"
+if build_dir.exists():
+    os.chdir(build_dir)
+
+if str(REPO_ROOT / "res") not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT / "res"))
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+if str(Path.cwd()) not in sys.path:
+    sys.path.insert(0, str(Path.cwd()))
+
+
+def load_game_module():
+    game = importlib.import_module("game")
+    builtins.game = game
+    return game
 
 
 def game_test(f):
     def wrapper(self):
         n = f.__name__.split("test_")[1]
-        os.makedirs("test", exist_ok=True)
+        TEST_OUTPUT_DIR.mkdir(exist_ok=True)
         result = f(self)
         success = result[0]
         log = result[1]
-        open(os.path.join("test", n + ".json"), "w").write(str(log))
+        (TEST_OUTPUT_DIR / f"{n}.json").write_text(str(log))
         self.assertTrue(success)
 
     return wrapper
 
 
 def advance(g, turns):
-    import game
+    game = load_game_module()
 
     current_turn = g.getMap().getNumericProperty("turn")
     for i in range(turns):
@@ -47,7 +76,7 @@ def advance(g, turns):
 class GameTest(unittest.TestCase):
     @game_test
     def test_objects(self):
-        import game
+        game = load_game_module()
 
         failed = []
         g = game.CGameLoader.loadGame()
@@ -60,7 +89,7 @@ class GameTest(unittest.TestCase):
 
     @game_test
     def test_fights(self):
-        import game
+        game = load_game_module()
 
         g = game.CGameLoader.loadGame()
         game.CGameLoader.startGame(g, "empty")
@@ -84,7 +113,7 @@ class GameTest(unittest.TestCase):
 
     @game_test
     def test_level(self):
-        import game
+        game = load_game_module()
 
         g = game.CGameLoader.loadGame()
         game.CGameLoader.startGame(g, "empty")
@@ -100,7 +129,7 @@ class GameTest(unittest.TestCase):
 
     @game_test
     def test_turns(self):
-        import game
+        game = load_game_module()
 
         g = game.CGameLoader.loadGame()
         game.CGameLoader.startGameWithPlayer(g, "nouraajd", "Warrior")
@@ -109,16 +138,17 @@ class GameTest(unittest.TestCase):
 
     @game_test
     def test_pathfinder(self):
-        import game
+        game = load_game_module()
 
         g = game.CGameLoader.loadGame()
         game.CGameLoader.startGameWithPlayer(g, "nouraajd", "Warrior")
-        g.getMap().dumpPaths("test/pathfinder.png")
-        return True, "test/pathfinder.png"
+        output_path = TEST_OUTPUT_DIR / "pathfinder.png"
+        g.getMap().dumpPaths(str(output_path))
+        return True, str(output_path)
 
     @game_test
     def test_load(self):
-        import game
+        game = load_game_module()
 
         g = game.CGameLoader.loadGame()
         game.CGameLoader.loadSavedGame(g, "gooby")
@@ -126,19 +156,20 @@ class GameTest(unittest.TestCase):
 
     @game_test
     def test_random(self):
-        import game
+        game = load_game_module()
 
         g = game.CGameLoader.loadGame()
         game.CGameLoader.startRandomGameWithPlayer(g, "Warrior")
-        g.getMap().dumpPaths("test/random.png")
-        return True, "test/random.png"
+        output_path = TEST_OUTPUT_DIR / "random.png"
+        g.getMap().dumpPaths(str(output_path))
+        return True, str(output_path)
 
     @game_test
     def test_dialogs(self):
         option_defs = {}
         dialog_defs = {}
 
-        misc = Path("res/config/misc.json")
+        misc = REPO_ROOT / "res/config/misc.json"
         if misc.exists():
             with open(misc) as f:
                 data = json.load(f)
@@ -146,7 +177,7 @@ class GameTest(unittest.TestCase):
                     if isinstance(value, dict) and value.get("class") == "CDialogOption":
                         option_defs[key] = value
 
-        dialog_dir = Path("res/maps/nouraajd")
+        dialog_dir = REPO_ROOT / "res/maps/nouraajd"
         for path in dialog_dir.glob("*.json"):
             with open(path) as f:
                 data = json.load(f)
@@ -224,13 +255,13 @@ class GameTest(unittest.TestCase):
 
     @game_test
     def test_nouraajd_trigger_targets(self):
-        script_path = Path("res/maps/nouraajd/script.py")
+        script_path = REPO_ROOT / "res/maps/nouraajd/script.py"
         with open(script_path) as f:
             script = f.read()
 
         trigger_targets = set(re.findall(r'@trigger\(context,\s*"[^"]+",\s*"([^"]+)"\)', script))
 
-        with open("res/maps/nouraajd/map.json") as f:
+        with open(REPO_ROOT / "res/maps/nouraajd/map.json") as f:
             map_data = json.load(f)
         placed_names = set()
         for layer in map_data.get("layers", []):
@@ -249,7 +280,7 @@ class GameTest(unittest.TestCase):
     @game_test
     def test_json_validity(self):
         errors = []
-        for path in Path("res").rglob("*.json"):
+        for path in (REPO_ROOT / "res").rglob("*.json"):
             try:
                 with open(path) as f:
                     json.load(f)
@@ -260,12 +291,12 @@ class GameTest(unittest.TestCase):
     @game_test
     def test_plugin_load_function(self):
         missing = []
-        for path in Path("res/plugins").rglob("*.py"):
+        for path in (REPO_ROOT / "res/plugins").rglob("*.py"):
             with open(path) as f:
                 tree = ast.parse(f.read())
             if not any(isinstance(n, ast.FunctionDef) and n.name == "load" for n in tree.body):
                 missing.append(str(path))
-        for path in Path("res/maps").rglob("script.py"):
+        for path in (REPO_ROOT / "res/maps").rglob("script.py"):
             with open(path) as f:
                 tree = ast.parse(f.read())
             if not any(isinstance(n, ast.FunctionDef) and n.name == "load" for n in tree.body):
@@ -275,7 +306,7 @@ class GameTest(unittest.TestCase):
     @game_test
     def test_indentation(self):
         offenders = []
-        for path in Path(".").rglob("*.py"):
+        for path in REPO_ROOT.rglob("*.py"):
             parts = set(path.parts)
             if "json" in parts and ("tools" in parts or "tests" in parts):
                 continue
@@ -296,15 +327,15 @@ class GameTest(unittest.TestCase):
     @game_test
     def test_resource_paths(self):
         missing = []
-        json_paths = list(Path("res/config").rglob("*.json"))
-        json_paths.extend(Path("res/maps").rglob("*.json"))
+        json_paths = list((REPO_ROOT / "res/config").rglob("*.json"))
+        json_paths.extend((REPO_ROOT / "res/maps").rglob("*.json"))
         for path in json_paths:
             with open(path) as f:
                 data = json.load(f)
             for key, val in self._collect_resource_paths(data):
                 if val == "string":
                     continue
-                base = Path("res") / val
+                base = REPO_ROOT / "res" / val
                 local = (path.parent / val).resolve()
                 if base.exists() or local.exists():
                     continue

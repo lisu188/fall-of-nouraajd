@@ -1,7 +1,11 @@
 # Repository Guidelines
 
 ## Testing
-Run `python3 test.py` from the repository root.
+Running tests is **mandatory** for every code change made by agents.
+Always run tests from the repository root:
+1. Build the Python extension module: `cmake --build cmake-build-release --target _game -j$(nproc)`
+2. Run the test suite: `python3 test.py`
+
 This test suite requires the compiled `_game` module.
 If the module or dependencies are missing, tests may fail; note this in the
 Testing section. Import the optional `game` module inside each test that

@@ -21,5 +21,11 @@ cmake --build cmake-build-release --target _game -j$(nproc)
 python3 play.py
 </pre>
 ### testing
-Run `python3 test.py` to execute the unit tests. Data validation tests run without
-needing the compiled `_game` module, but other tests require it to be built.
+Running tests is **mandatory** after any code change.
+From the repository root, run:
+<pre>
+cmake --build cmake-build-release --target _game -j$(nproc)
+python3 test.py
+</pre>
+Data validation tests run without needing the compiled `_game` module, but
+other tests require it to be built.
