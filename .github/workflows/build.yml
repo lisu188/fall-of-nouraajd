@@ -30,6 +30,13 @@ jobs:
         run: git submodule update --init --recursive
       - name: configure
         run: ${{ matrix.configure }}
+      - name: install-coverage-tools
+        if: matrix.os == 'ubuntu-22.04'
+        run: python3 -m pip install --upgrade gcovr
+      - name: coverage
+        if: matrix.os == 'ubuntu-22.04'
+        run: ./scripts/run_coverage.sh
+
       - name: build
         run: cmake --build cmake-build-release --target package -j$(nproc)
       - name: publish

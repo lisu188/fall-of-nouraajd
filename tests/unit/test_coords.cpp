@@ -43,6 +43,27 @@ void test_edge_case_adjacent_or_same() {
     expect_true(origin.adjacent(Coords(8, 7, 0)), "adjacent should allow cardinal neighbors");
 }
 
+void test_direction_mapping() {
+    expect_true(CUtil::getDirection(ZERO) == Coords::Direction::ZERO, "getDirection should detect ZERO direction");
+    expect_true(CUtil::getDirection(EAST) == Coords::Direction::EAST, "getDirection should detect EAST direction");
+    expect_true(CUtil::getDirection(WEST) == Coords::Direction::WEST, "getDirection should detect WEST direction");
+    expect_true(CUtil::getDirection(NORTH) == Coords::Direction::NORTH, "getDirection should detect NORTH direction");
+    expect_true(CUtil::getDirection(SOUTH) == Coords::Direction::SOUTH, "getDirection should detect SOUTH direction");
+    expect_true(CUtil::getDirection(UP) == Coords::Direction::UP, "getDirection should detect UP direction");
+    expect_true(CUtil::getDirection(DOWN) == Coords::Direction::DOWN, "getDirection should detect DOWN direction");
+    expect_true(CUtil::getDirection(Coords(2, 1, 0)) == Coords::Direction::UNDEFINED,
+                "getDirection should return UNDEFINED for unsupported vectors");
+}
+
+void test_rect_bounds_inclusion() {
+    auto rect = CUtil::rect(10, 20, 30, 40);
+    expect_true(CUtil::isIn(rect, 10, 20), "isIn should include lower bounds");
+    expect_true(CUtil::isIn(rect, 40, 60), "isIn should include upper bounds");
+    expect_true(!CUtil::isIn(rect, 9, 20), "isIn should reject x outside left bound");
+    expect_true(!CUtil::isIn(rect, 41, 20), "isIn should reject x outside right bound");
+    expect_true(!CUtil::isIn(rect, 10, 61), "isIn should reject y outside bottom bound");
+}
+
 void test_boundary_invalid_key_parsing() {
     expect_true(CUtil::parseKey(SDLK_9) == 9, "parseKey should parse a supported digit key");
     expect_true(CUtil::parseKey(SDLK_F1) == -1, "parseKey should reject unsupported keys");
@@ -53,6 +74,8 @@ int main() {
     test_happy_path_add_and_distance();
     test_edge_case_adjacent_or_same();
     test_boundary_invalid_key_parsing();
+    test_direction_mapping();
+    test_rect_bounds_inclusion();
 
     if (failures == 0) {
         std::cout << "All unit tests passed.\n";
