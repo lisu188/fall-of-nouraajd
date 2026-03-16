@@ -17,6 +17,11 @@ def load(self, context):
                 game_map.setBoolProperty("completed_rolf", False)
                 game_map.setBoolProperty("completed_octobogz", False)
                 game_map.setBoolProperty("AMULET_QUEST_STARTED", False)
+                game_map.setBoolProperty("VICTOR_QUEST_STARTED", False)
+                game_map.setBoolProperty("VICTOR_COURTYARD_FOUND", False)
+                game_map.setBoolProperty("VICTOR_GOOD_END", False)
+                game_map.setBoolProperty("VICTOR_BAD_END", False)
+                game_map.setBoolProperty("VICTOR_REWARD_CLAIMED", False)
                 game_map.getPlayer().addQuest("rolfQuest")
                 game_map.getPlayer().addItem("letterFromRolf")
 
@@ -352,9 +357,13 @@ def load(self, context):
         def trigger(self, leader, event):
             game = leader.getGame()
             game_map = game.getMap()
+            if not game_map.getBoolProperty("VICTOR_QUEST_STARTED"):
+                return
             if not game_map.getBoolProperty("VICTOR_COURTYARD_FOUND"):
                 return
-            if game_map.getBoolProperty("VICTOR_BAD_END") or game_map.getBoolProperty("VICTOR_REWARD_CLAIMED"):
+            if game_map.getBoolProperty("VICTOR_BAD_END") or game_map.getBoolProperty("VICTOR_GOOD_END"):
+                return
+            if game_map.getBoolProperty("VICTOR_REWARD_CLAIMED"):
                 return
             player = game.getMap().getPlayer()
             player.addGold(500)
@@ -363,6 +372,7 @@ def load(self, context):
             game.getGuiHandler().showTrade(game.createObject("victorMarket"))
             game_map.setBoolProperty("VICTOR_HELP", True)
             game_map.setBoolProperty("VICTOR_GOOD_END", True)
+            game_map.setBoolProperty("VICTOR_BAD_END", False)
             game_map.setBoolProperty("VICTOR_REWARD_CLAIMED", True)
             if event.getCause().isPlayer():
                 # Display a completion dialog to the player
