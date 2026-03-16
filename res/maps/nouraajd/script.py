@@ -67,6 +67,15 @@ def load(self, context):
             pass
 
     @register(context)
+    class VictorQuest(CQuest):
+        def isCompleted(self):
+            game_map = self.getGame().getMap()
+            return game_map.getBoolProperty("VICTOR_GOOD_END") or game_map.getBoolProperty("VICTOR_BAD_END")
+
+        def onComplete(self):
+            pass
+
+    @register(context)
     class OctoBogzQuest(CQuest):
         def isCompleted(self):
             return self.getGame().getMap().getBoolProperty("completed_octobogz")
@@ -119,11 +128,12 @@ def load(self, context):
     class OctoBogzCaveTrigger(CTrigger):
         def trigger(self, object, event):
             game_map = object.getGame().getMap()
+            game_map.setBoolProperty("OCTOBOGZ_SLAIN", True)
             if game_map.getBoolProperty("RELIC_RETURNED"):
                 object.getGame().getGuiHandler().showMessage(object.getStringProperty("message"))
+                game_map.setBoolProperty("OCTOBOGZ_CLEARED", True)
             else:
                 object.getGame().getGuiHandler().showMessage("The OctoBogz are defeated!")
-            game_map.setBoolProperty("OCTOBOGZ_CLEARED", True)
             game_map.setBoolProperty("completed_octobogz", True)
 
     @trigger(context, "onEnter", "market1")
@@ -168,10 +178,21 @@ def load(self, context):
 
     @register(context)
     class TavernDialog2(CDialog):
+        def _ensure_victor_quest(self):
+            game_map = self.getGame().getMap()
+            player = game_map.getPlayer()
+            if not game_map.getBoolProperty("VICTOR_QUEST_STARTED"):
+                game_map.setBoolProperty("VICTOR_QUEST_STARTED", True)
+            for quest in player.getQuests():
+                if quest.getName() == "victorQuest":
+                    return
+            player.addQuest("victorQuest")
+
         def asked_about_girl(self):
             return self.getGame().getMap().getBoolProperty("ASKED_ABOUT_GIRL")
 
         def talked_to_victor(self):
+            self._ensure_victor_quest()
             self.getGame().getMap().setBoolProperty("TALKED_TO_VICTOR", True)
 
     @trigger(context, "onEnter", "nouraajdTownHall")
@@ -182,19 +203,22 @@ def load(self, context):
 
     @register(context)
     class TownHallDialog(CDialog):
+        COURTYARD_SPAWNS = [(44, 100, 0), (46, 100, 0), (45, 99, 0), (45, 101, 0)]
+        COURTYARD_LEADER_SPAWN = (45, 100, 0)
+
+        def _ensure_quest(self, quest_name):
+            player = self.getGame().getMap().getPlayer()
+            for quest in player.getQuests():
+                if quest.getName() == quest_name:
+                    return
+            player.addQuest(quest_name)
+
         def give_letter(self):
             player = self.getGame().getMap().getPlayer()
             if not player.hasItem(lambda it: it.getName() == "letterToBeren"):
                 player.addItem("letterToBeren")
                 self.getGame().getGuiHandler().showMessage("You received a sealed letter.")
-            quests = player.getQuests()
-            found = False
-            for q in quests:
-                if q.getName() == "deliverLetterQuest":
-                    found = True
-                    break
-            if not found:
-                player.addQuest("deliverLetterQuest")
+            self._ensure_quest("deliverLetterQuest")
 
         def has_letter_quest(self):
             player = self.getGame().getMap().getPlayer()
@@ -209,32 +233,39 @@ def load(self, context):
         def talked_to_victor(self):
             return self.getGame().getMap().getBoolProperty("TALKED_TO_VICTOR")
 
+        def start_victor_quest(self):
+            game_map = self.getGame().getMap()
+            game_map.setBoolProperty("VICTOR_QUEST_STARTED", True)
+            self._ensure_quest("victorQuest")
+
         def spawn_cultists(self):
             game = self.getGame()
-            player = game.getMap().getPlayer()
-            loc = player.getCoords()
+            game_map = game.getMap()
+            self.start_victor_quest()
+            game_map.setBoolProperty("VICTOR_COURTYARD_FOUND", True)
+            if game_map.getBoolProperty("VICTOR_CULTISTS_SPAWNED"):
+                return
 
-            offsets = [(-1, 0), (1, 0), (0, -1), (0, 1)]
-            for i, j in offsets:
-                coords = Coords(loc.x + i, loc.y + j, loc.z)
-                if game.getMap().canStep(coords):
+            for x, y, z in self.COURTYARD_SPAWNS:
+                coords = Coords(x, y, z)
+                if game_map.canStep(coords):
                     mon = game.createObject("Cultist")
                     target_ctrl = game.createObject("CTargetController")
                     target_ctrl.setTarget("player")
                     mon.setController(target_ctrl)
-                    game.getMap().addObject(mon)
+                    game_map.addObject(mon)
                     mon.moveTo(coords.x, coords.y, coords.z)
 
-            leader_pos = (1, 1)
-            coords = Coords(loc.x + leader_pos[0], loc.y + leader_pos[1], loc.z)
-            if game.getMap().canStep(coords):
+            coords = Coords(*self.COURTYARD_LEADER_SPAWN)
+            if game_map.canStep(coords):
                 leader = game.createObject("CultLeader")
                 leader.setStringProperty("name", "cultLeaderQuest")
                 target_ctrl = game.createObject("CTargetController")
                 target_ctrl.setTarget("player")
                 leader.setController(target_ctrl)
-                game.getMap().addObject(leader)
+                game_map.addObject(leader)
                 leader.moveTo(coords.x, coords.y, coords.z)
+                game_map.setBoolProperty("VICTOR_CULTISTS_SPAWNED", True)
 
     @trigger(context, "onEnter", "nouraajdChapel")
     class ChapelTrigger(CTrigger):
@@ -244,26 +275,61 @@ def load(self, context):
 
     @register(context)
     class BerenDialog(CDialog):
-        def deliver_letter(self):
+        def _ensure_quest(self, quest_name):
             player = self.getGame().getMap().getPlayer()
-            if player.hasItem(lambda it: it.getName() == "letterToBeren"):
+            for quest in player.getQuests():
+                if quest.getName() == quest_name:
+                    return
+            player.addQuest(quest_name)
+
+        def can_deliver_letter(self):
+            game_map = self.getGame().getMap()
+            player = game_map.getPlayer()
+            return player.hasItem(lambda it: it.getName() == "letterToBeren") and not game_map.getBoolProperty(
+                "DELIVERED_LETTER"
+            )
+
+        def can_return_relic(self):
+            game_map = self.getGame().getMap()
+            player = game_map.getPlayer()
+            return (
+                game_map.getBoolProperty("DELIVERED_LETTER")
+                and player.hasItem(lambda it: it.getName() == "holyRelic")
+                and not game_map.getBoolProperty("RELIC_RETURNED")
+            )
+
+        def can_finish_cleanse(self):
+            game_map = self.getGame().getMap()
+            return (
+                game_map.getBoolProperty("RELIC_RETURNED")
+                and game_map.getBoolProperty("OCTOBOGZ_CLEARED")
+                and not game_map.getBoolProperty("CAVE_PURGED")
+            )
+
+        def deliver_letter(self):
+            game_map = self.getGame().getMap()
+            player = game_map.getPlayer()
+            if self.can_deliver_letter():
                 player.removeItem(lambda it: it.getName() == "letterToBeren", True)
-                self.getGame().getMap().setBoolProperty("DELIVERED_LETTER", True)
-                if player.hasItem(lambda it: it.getName() == "holyRelic"):
-                    self.return_relic()
-                else:
-                    player.addQuest("retrieveRelicQuest")
+                game_map.setBoolProperty("DELIVERED_LETTER", True)
+                if not game_map.getBoolProperty("RELIC_RETURNED"):
+                    self._ensure_quest("retrieveRelicQuest")
 
         def return_relic(self):
-            player = self.getGame().getMap().getPlayer()
-            if player.hasItem(lambda it: it.getName() == "holyRelic"):
+            game_map = self.getGame().getMap()
+            player = game_map.getPlayer()
+            if self.can_return_relic():
                 player.removeItem(lambda it: it.getName() == "holyRelic", True)
-                self.getGame().getMap().setBoolProperty("RELIC_RETURNED", True)
-                player.addQuest("cleanseCaveQuest")
+                game_map.setBoolProperty("RELIC_RETURNED", True)
+                if game_map.getBoolProperty("OCTOBOGZ_SLAIN"):
+                    game_map.setBoolProperty("OCTOBOGZ_CLEARED", True)
+                if not game_map.getBoolProperty("CAVE_PURGED"):
+                    self._ensure_quest("cleanseCaveQuest")
 
         def finish_cleanse(self):
-            if self.getGame().getMap().getBoolProperty("OCTOBOGZ_CLEARED"):
-                self.getGame().getMap().setBoolProperty("CAVE_PURGED", True)
+            game_map = self.getGame().getMap()
+            if self.can_finish_cleanse():
+                game_map.setBoolProperty("CAVE_PURGED", True)
                 self.getGame().getGuiHandler().showMessage("The town is safe once more.")
             else:
                 self.getGame().getGuiHandler().showMessage("The cave still crawls with OctoBogz.")
@@ -285,12 +351,19 @@ def load(self, context):
     class CultLeaderQuestTrigger(CTrigger):
         def trigger(self, leader, event):
             game = leader.getGame()
+            game_map = game.getMap()
+            if not game_map.getBoolProperty("VICTOR_COURTYARD_FOUND"):
+                return
+            if game_map.getBoolProperty("VICTOR_BAD_END") or game_map.getBoolProperty("VICTOR_REWARD_CLAIMED"):
+                return
             player = game.getMap().getPlayer()
             player.addGold(500)
             player.healProc(100)
             game.getGuiHandler().showDialog(game.createObject("victorRewardDialog"))
             game.getGuiHandler().showTrade(game.createObject("victorMarket"))
-            game.getMap().setBoolProperty("VICTOR_HELP", True)
+            game_map.setBoolProperty("VICTOR_HELP", True)
+            game_map.setBoolProperty("VICTOR_GOOD_END", True)
+            game_map.setBoolProperty("VICTOR_REWARD_CLAIMED", True)
             if event.getCause().isPlayer():
                 # Display a completion dialog to the player
                 game.getGuiHandler().showDialog(game.createObject("dialog"))
