@@ -34,10 +34,18 @@
     "class": "CMarket",
     "properties": {
       "items": [
-        { "ref": "LesserLifePotion" },
-        { "ref": "LifePotion" },
-        { "ref": "LesserManaPotion" },
-        { "ref": "ManaPotion" }
+        {
+          "ref": "LesserLifePotion"
+        },
+        {
+          "ref": "LifePotion"
+        },
+        {
+          "ref": "LesserManaPotion"
+        },
+        {
+          "ref": "ManaPotion"
+        }
       ]
     }
   },
@@ -132,7 +140,11 @@
   },
   "market1": {
     "ref": "Market",
-    "properties": { "market": { "ref": "exampleMarket" } }
+    "properties": {
+      "market": {
+        "ref": "exampleMarket"
+      }
+    }
   },
   "gooby": {
     "ref": "Gooby",
@@ -149,7 +161,9 @@
     "ref": "GoblinThief",
     "properties": {
       "items": [
-        { "ref": "preciousAmulet" }
+        {
+          "ref": "preciousAmulet"
+        }
       ],
       "controller": {
         "class": "CTargetController",
@@ -163,7 +177,9 @@
     "ref": "Warrior",
     "properties": {
       "animation": "images/npc/questGiver",
-      "controller": { "class": "CNpcRandomController" },
+      "controller": {
+        "class": "CNpcRandomController"
+      },
       "npc": true
     }
   },
@@ -171,7 +187,9 @@
     "ref": "Sorcerer",
     "properties": {
       "animation": "images/npc/oldWoman",
-      "controller": { "class": "CNpcRandomController" },
+      "controller": {
+        "class": "CNpcRandomController"
+      },
       "npc": true
     }
   },
@@ -191,22 +209,36 @@
   },
   "deliverLetterQuest": {
     "class": "DeliverLetterQuest",
-    "properties": { "description": "Bring Mayor Irvin's letter to Father Beren" }
+    "properties": {
+      "description": "Bring Mayor Irvin's letter to Father Beren"
+    }
   },
   "retrieveRelicQuest": {
     "class": "RetrieveRelicQuest",
-    "properties": { "description": "Recover the holy relic from the catacombs" }
+    "properties": {
+      "description": "Recover the holy relic from the catacombs"
+    }
   },
   "cleanseCaveQuest": {
     "class": "CleanseCaveQuest",
-    "properties": { "description": "Use the relic to cleanse the OctoBogz cave" }
+    "properties": {
+      "description": "Use the relic to cleanse the OctoBogz cave"
+    }
+  },
+  "victorQuest": {
+    "class": "VictorQuest",
+    "properties": {
+      "description": "Find Victor's daughter by following the town hall clue to the courtyard."
+    }
   },
   "holyRelic": {
     "class": "CItem",
     "properties": {
       "name": "holyRelic",
       "animation": "images/skull",
-      "tags": [ "quest" ]
+      "tags": [
+        "quest"
+      ]
     }
   },
   "preciousAmulet": {
