@@ -403,6 +403,68 @@ class GameTest(unittest.TestCase):
         return failed == [], json.dumps({"failed": failed, "checks": checks})
 
     @game_test
+    def test_ritual_dialog_integrity(self):
+        config = json.loads((REPO_ROOT / "res/maps/ritual/config.json").read_text())
+        dialog_defs = {
+            key: val
+            for key, val in config.items()
+            if isinstance(val, dict) and isinstance(val.get("class"), str) and val.get("class").endswith("Dialog")
+        }
+
+        with open(REPO_ROOT / "res/maps/ritual/script.py") as f:
+            tree = ast.parse(f.read())
+
+        methods_by_class = {}
+        for node in ast.walk(tree):
+            if isinstance(node, ast.ClassDef) and node.name.endswith("Dialog"):
+                methods_by_class[node.name] = {n.name for n in node.body if isinstance(n, ast.FunctionDef)}
+
+        missing_actions = []
+        missing_states = []
+
+        for dialog_id, dialog in dialog_defs.items():
+            states = dialog.get("properties", {}).get("states", [])
+            state_ids = {state.get("properties", {}).get("stateId") for state in states}
+            for state in states:
+                sid = state.get("properties", {}).get("stateId")
+                for opt in state.get("properties", {}).get("options", []):
+                    props = opt.get("properties", {})
+                    next_state = props.get("nextStateId")
+                    action = props.get("action")
+                    if next_state and next_state != "EXIT" and next_state not in state_ids:
+                        missing_states.append(f"{dialog_id}:{sid}->{next_state}")
+                    if action and action not in methods_by_class.get(dialog.get("class"), set()):
+                        missing_actions.append(f"{dialog_id}:{action}")
+
+        success = not (missing_actions or missing_states)
+        return success, json.dumps({"missing_actions": missing_actions, "missing_states": missing_states})
+
+    @game_test
+    def test_ritual_trigger_targets(self):
+        script_path = REPO_ROOT / "res/maps/ritual/script.py"
+        with open(script_path) as f:
+            script = f.read()
+
+        trigger_targets = set(re.findall(r'@trigger\(context,\s*"[^"]+",\s*"([^"]+)"\)', script))
+
+        with open(REPO_ROOT / "res/maps/ritual/map.json") as f:
+            map_data = json.load(f)
+
+        placed_names = set()
+        for layer in map_data.get("layers", []):
+            if layer.get("type") == "objectgroup":
+                for obj in layer.get("objects", []):
+                    name = obj.get("name")
+                    if name:
+                        placed_names.add(name)
+
+        runtime_spawned_targets = {"ritualLeader"}
+        missing_targets = sorted(
+            target for target in trigger_targets if target not in placed_names and target not in runtime_spawned_targets
+        )
+        return missing_targets == [], json.dumps(missing_targets)
+
+    @game_test
     def test_json_validity(self):
         errors = []
         for path in (REPO_ROOT / "res").rglob("*.json"):
