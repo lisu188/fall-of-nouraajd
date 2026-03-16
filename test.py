@@ -363,6 +363,11 @@ class GameTest(unittest.TestCase):
             "beren_can_deliver_condition": beren_conditions.get("I carry a letter for you.") == "can_deliver_letter",
             "beren_can_return_condition": beren_conditions.get("I recovered the relic.") == "can_return_relic",
             "beren_can_finish_condition": beren_conditions.get("The cave has been cleansed.") == "can_finish_cleanse",
+            "beren_condition_methods_exist": (
+                "def can_deliver_letter(self):" in script
+                and "def can_return_relic(self):" in script
+                and "def can_finish_cleanse(self):" in script
+            ),
             "octobogz_split_flags": (
                 "OCTOBOGZ_SLAIN" in script
                 and "OCTOBOGZ_CLEARED" in script
@@ -381,6 +386,11 @@ class GameTest(unittest.TestCase):
                 and "VICTOR_GOOD_END" in script
                 and "VICTOR_REWARD_CLAIMED" in script
                 and 'getBoolProperty("VICTOR_REWARD_CLAIMED")' in script
+                and 'getBoolProperty("VICTOR_GOOD_END")' in script
+                and 'setBoolProperty("VICTOR_BAD_END", False)' in script
+            ),
+            "victor_reward_once_guard": (
+                "player.addGold(500)" in script and 'getBoolProperty("VICTOR_REWARD_CLAIMED")' in script
             ),
             "victor_dialog_coherent": (
                 courtyard_state is not None
