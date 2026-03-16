@@ -15,7 +15,8 @@
                   "number": 0,
                   "action": "deliver_letter",
                   "nextStateId": "LETTER_DELIVERED",
-                  "text": "I carry a letter for you."
+                  "text": "I carry a letter for you.",
+                  "condition": "can_deliver_letter"
                 }
               },
               {
@@ -24,7 +25,8 @@
                   "number": 1,
                   "action": "return_relic",
                   "nextStateId": "RELIC_RETURNED",
-                  "text": "I recovered the relic."
+                  "text": "I recovered the relic.",
+                  "condition": "can_return_relic"
                 }
               },
               {
@@ -33,12 +35,15 @@
                   "number": 2,
                   "action": "finish_cleanse",
                   "nextStateId": "CAVE_PURGED",
-                  "text": "The cave has been cleansed."
+                  "text": "The cave has been cleansed.",
+                  "condition": "can_finish_cleanse"
                 }
               },
               {
                 "ref": "exitOption",
-                "properties": { "number": 3 }
+                "properties": {
+                  "number": 3
+                }
               }
             ]
           }
@@ -51,7 +56,9 @@
             "options": [
               {
                 "ref": "exitOption",
-                "properties": { "number": 0 }
+                "properties": {
+                  "number": 0
+                }
               }
             ]
           }
@@ -64,7 +71,9 @@
             "options": [
               {
                 "ref": "exitOption",
-                "properties": { "number": 0 }
+                "properties": {
+                  "number": 0
+                }
               }
             ]
           }
@@ -77,7 +86,9 @@
             "options": [
               {
                 "ref": "exitOption",
-                "properties": { "number": 0 }
+                "properties": {
+                  "number": 0
+                }
               }
             ]
           }

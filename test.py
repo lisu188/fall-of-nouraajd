@@ -330,6 +330,69 @@ class GameTest(unittest.TestCase):
         return missing_targets == [], json.dumps(missing_targets)
 
     @game_test
+    def test_nouraajd_quest_integrity_regression(self):
+        script_path = REPO_ROOT / "res/maps/nouraajd/script.py"
+        with open(script_path) as f:
+            script = f.read()
+
+        dialog5 = json.loads((REPO_ROOT / "res/maps/nouraajd/dialog5.json").read_text())
+        entry_options = dialog5["berenDialog"]["properties"]["states"][0]["properties"]["options"]
+        beren_conditions = {
+            opt.get("properties", {}).get("text"): opt.get("properties", {}).get("condition")
+            for opt in entry_options
+            if opt.get("class") == "CDialogOption"
+        }
+
+        dialog3 = json.loads((REPO_ROOT / "res/maps/nouraajd/dialog3.json").read_text())
+        courtyard_state = None
+        for state in dialog3["tavernDialog2"]["properties"]["states"]:
+            if state.get("properties", {}).get("stateId") == "COURTYARD_PATH":
+                courtyard_state = state
+                break
+
+        dialog4 = json.loads((REPO_ROOT / "res/maps/nouraajd/dialog4.json").read_text())
+        clue_action = None
+        for state in dialog4["townHallDialog"]["properties"]["states"]:
+            if state.get("properties", {}).get("stateId") == "VICTOR_CLUE":
+                clue_action = state["properties"]["options"][0]["properties"].get("action")
+                break
+
+        config = json.loads((REPO_ROOT / "res/maps/nouraajd/config.json").read_text())
+
+        checks = {
+            "beren_can_deliver_condition": beren_conditions.get("I carry a letter for you.") == "can_deliver_letter",
+            "beren_can_return_condition": beren_conditions.get("I recovered the relic.") == "can_return_relic",
+            "beren_can_finish_condition": beren_conditions.get("The cave has been cleansed.") == "can_finish_cleanse",
+            "octobogz_split_flags": (
+                "OCTOBOGZ_SLAIN" in script
+                and "OCTOBOGZ_CLEARED" in script
+                and 'setBoolProperty("OCTOBOGZ_SLAIN", True)' in script
+            ),
+            "octobogz_out_of_order_fix": (
+                'if game_map.getBoolProperty("OCTOBOGZ_SLAIN")' in script
+                and 'game_map.setBoolProperty("OCTOBOGZ_CLEARED", True)' in script
+            ),
+            "victor_quest_declared": "victorQuest" in config,
+            "victor_spawn_not_player_coords": "player.getCoords()" not in script,
+            "victor_courtyard_stable_spawns": "COURTYARD_SPAWNS" in script and "COURTYARD_LEADER_SPAWN" in script,
+            "victor_clue_spawns_encounter": clue_action == "spawn_cultists",
+            "victor_mutual_exclusive_guard": (
+                "VICTOR_BAD_END" in script
+                and "VICTOR_GOOD_END" in script
+                and "VICTOR_REWARD_CLAIMED" in script
+                and 'getBoolProperty("VICTOR_REWARD_CLAIMED")' in script
+            ),
+            "victor_dialog_coherent": (
+                courtyard_state is not None
+                and "already sacrificed" not in courtyard_state.get("properties", {}).get("text", "").lower()
+                and "Victor drinks a vial of poison" not in courtyard_state.get("properties", {}).get("text", "")
+            ),
+        }
+
+        failed = sorted([name for name, ok in checks.items() if not ok])
+        return failed == [], json.dumps({"failed": failed, "checks": checks})
+
+    @game_test
     def test_json_validity(self):
         errors = []
         for path in (REPO_ROOT / "res").rglob("*.json"):
