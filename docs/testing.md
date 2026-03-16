@@ -1,0 +1,41 @@
+# Testing
+
+## Normal test workflow
+Run from the repository root:
+
+```bash
+cmake --build cmake-build-release --target _game -j$(nproc)
+python3 test.py
+```
+
+## Coverage workflow
+Run from the repository root:
+
+```bash
+./scripts/run_coverage.sh
+```
+
+The script:
+- configures a dedicated coverage build (`cmake-build-coverage`)
+- builds `_game` with GCC/Clang coverage flags
+- runs `python3 test.py` against the coverage build
+- generates reports with `gcovr` in `coverage/coverage.txt` and `coverage/coverage.html`
+- fails if line coverage in the scoped target is below 80%
+
+## Coverage scope
+Included paths:
+- `src/core/**`
+- `src/handler/**`
+- `src/object/**`
+
+Explicit exclusions:
+- `src/gui/**` (out of scope for this runtime target)
+- `vstd/**` (external utility library)
+- `random-dungeon-generator/**` (external generator dependency)
+- build/package directories (`cmake-build*`, `build*`, `package*`)
+- generated/binding boilerplate that is not realistic to unit test directly:
+  - `src/core/CModule.cpp`
+  - `src/core/CWrapper.h`
+  - `src/core/CTypes.cpp`
+  - `src/core/CTypes.h`
+  - `src/core/CJsonUtil.h`

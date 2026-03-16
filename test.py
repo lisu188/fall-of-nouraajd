@@ -33,15 +33,18 @@ if "XDG_RUNTIME_DIR" not in os.environ:
     os.environ["XDG_RUNTIME_DIR"] = str(XDG_RUNTIME_DIR)
 
 build_dir = REPO_ROOT / "cmake-build-release"
+build_dir_override = os.environ.get("GAME_BUILD_DIR")
+if build_dir_override:
+    build_dir = (REPO_ROOT / build_dir_override).resolve()
 if build_dir.exists():
     os.chdir(build_dir)
 
-if str(REPO_ROOT / "res") not in sys.path:
-    sys.path.insert(0, str(REPO_ROOT / "res"))
-if str(REPO_ROOT) not in sys.path:
-    sys.path.insert(0, str(REPO_ROOT))
 if str(Path.cwd()) not in sys.path:
     sys.path.insert(0, str(Path.cwd()))
+if str(REPO_ROOT / "res") not in sys.path:
+    sys.path.insert(1, str(REPO_ROOT / "res"))
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(2, str(REPO_ROOT))
 
 
 def load_game_module():
@@ -74,6 +77,55 @@ def advance(g, turns):
 
 
 class GameTest(unittest.TestCase):
+    @game_test
+    def test_invalid_inputs(self):
+        game = load_game_module()
+
+        g = game.CGameLoader.loadGame()
+        game.CGameLoader.startGame(g, "empty")
+        self.assertIsNone(g.createObject("DefinitelyMissingType"))
+        self.assertIsNone(g.getMap().getObjectByName("DefinitelyMissingObject"))
+        g.getMap().removeObjectByName("DefinitelyMissingObject")
+        return True, ""
+
+    @game_test
+    def test_map_transition_and_bounds(self):
+        game = load_game_module()
+
+        g = game.CGameLoader.loadGame()
+        game.CGameLoader.startGameWithPlayer(g, "nouraajd", "Warrior")
+        nouraajd = g.getMap()
+        player = nouraajd.getPlayer()
+        self.assertTrue(nouraajd.canStep(player.getCoords()))
+        self.assertFalse(nouraajd.canStep(game.Coords(-1, -1, 0)))
+        self.assertFalse(nouraajd.canStep(game.Coords(9999, 9999, 0)))
+
+        return True, ""
+
+    @game_test
+    def test_combat_invariants(self):
+        game = load_game_module()
+
+        g = game.CGameLoader.loadGame()
+        game.CGameLoader.startGame(g, "empty")
+        attacker = g.createObject("Warrior")
+        defender = g.createObject("Goblin")
+        g.getMap().addObject(attacker)
+        g.getMap().addObject(defender)
+
+        attacker_hp_before = attacker.getHpRatio()
+        defender_hp_before = defender.getHpRatio()
+        game.CFightHandler.fight(attacker, defender)
+
+        self.assertGreaterEqual(attacker.getHpRatio(), 0.0)
+        self.assertLessEqual(attacker.getHpRatio(), 1.0)
+        self.assertGreaterEqual(defender.getHpRatio(), 0.0)
+        self.assertLessEqual(defender.getHpRatio(), 1.0)
+
+        one_side_took_damage = attacker.getHpRatio() < attacker_hp_before or defender.getHpRatio() < defender_hp_before
+        self.assertTrue(one_side_took_damage)
+        return True, ""
+
     @game_test
     def test_objects(self):
         game = load_game_module()
