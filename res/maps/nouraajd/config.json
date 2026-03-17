@@ -174,7 +174,7 @@
     }
   },
   "questGiver": {
-    "ref": "Warrior",
+    "ref": "Cultist",
     "properties": {
       "animation": "images/npc/questGiver",
       "controller": {
@@ -184,7 +184,7 @@
     }
   },
   "oldWoman": {
-    "ref": "Sorcerer",
+    "ref": "Cultist",
     "properties": {
       "animation": "images/npc/oldWoman",
       "controller": {
