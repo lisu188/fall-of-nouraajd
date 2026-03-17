@@ -1,0 +1,49 @@
+{
+    "brew_life_potion": {
+        "station": "alchemyTable",
+        "inputs": [
+            { "item": "LesserLifePotion", "count": 2 }
+        ],
+        "output": { "item": "LifePotion", "count": 1 },
+        "gold": 20,
+        "successChance": 100
+    },
+    "brew_mana_potion": {
+        "station": "alchemyTable",
+        "inputs": [
+            { "item": "LesserManaPotion", "count": 2 }
+        ],
+        "output": { "item": "ManaPotion", "count": 1 },
+        "gold": 20,
+        "unlockQuest": "FindTheAlchemist",
+        "successChance": 95
+    },
+    "craft_town_portal_scroll": {
+        "station": "scribeDesk",
+        "inputs": [
+            { "item": "Scroll", "count": 1 },
+            { "item": "ManaPotion", "count": 1 }
+        ],
+        "output": { "item": "TownPortalScroll", "count": 1 },
+        "gold": 35,
+        "unlockFlag": "CAN_CRAFT_SCROLLS"
+    },
+    "blend_greater_life_potion": {
+        "station": "alchemyTable",
+        "inputs": [
+            { "item": "LifePotion", "count": 2 }
+        ],
+        "output": { "item": "GreaterLifePotion", "count": 1 },
+        "gold": 45,
+        "successChance": 90
+    },
+    "blend_greater_mana_potion": {
+        "station": "alchemyTable",
+        "inputs": [
+            { "item": "ManaPotion", "count": 2 }
+        ],
+        "output": { "item": "GreaterManaPotion", "count": 1 },
+        "gold": 45,
+        "successChance": 90
+    }
+}
