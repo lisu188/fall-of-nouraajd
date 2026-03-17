@@ -12,6 +12,10 @@ Testing section. Import the optional `game` module inside each test that
 requires it so that tests which don't depend on the compiled module can still
 run.
 
+### Resource-to-CMake checklist
+- Whenever files are added under `res/`, update the root `CMakeLists.txt` so each new file is covered by `configure_file(...)` entries or by an `install(DIRECTORY ...)` rule as appropriate.
+- Before committing, verify no `res/**` file is missing from CMake resource references.
+
 ## Code Style
 - Use four spaces for indentation in both Python and C++ files.
 - Python files are checked for indentation consistency during testing.

@@ -87,6 +87,10 @@ configure_file(res/maps/siege/config.json maps/siege/config.json)
 configure_file(res/maps/siege/map.json maps/siege/map.json)
 configure_file(res/maps/siege/script.py maps/siege/script.py)
 
+configure_file(res/maps/ritual/config.json maps/ritual/config.json)
+configure_file(res/maps/ritual/map.json maps/ritual/map.json)
+configure_file(res/maps/ritual/script.py maps/ritual/script.py)
+
 configure_file(res/maps/test/config.json maps/test/config.json)
 configure_file(res/maps/test/map.json maps/test/map.json)
 configure_file(res/maps/test/script.py maps/test/script.py)
@@ -301,5 +305,4 @@ else()
     cotire(_game)
     set_target_properties(_game PROPERTIES UNITY_BUILD ON)
 endif ()
-
 
