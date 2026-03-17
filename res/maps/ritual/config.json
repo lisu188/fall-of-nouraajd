@@ -30,7 +30,7 @@
     }
   },
   "ritualWitness": {
-    "ref": "Sorcerer",
+    "ref": "Cultist",
     "properties": {
       "animation": "images/npc/oldWoman",
       "controller": {
@@ -40,7 +40,7 @@
     }
   },
   "ritualCaptive": {
-    "ref": "Warrior",
+    "ref": "Cultist",
     "properties": {
       "animation": "images/npc/questGiver",
       "controller": {

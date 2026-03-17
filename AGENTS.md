@@ -138,6 +138,21 @@ Follow these steps when making a new C++ class usable from Python:
 
 After exposing the new type, run `python3 test.py` to verify the bindings.
 
+## Map NPC vs Player Template Rule
+For **all maps** under `res/maps/*`, do **not** place player-class templates
+(`CPlayer`-based refs such as `Sorcerer`/`Warrior`/`Assasin`) as regular map
+actors in `config.json`.
+
+Doing so creates extra player objects at load and can produce debug lines like
+`Loaded object: CPlayer:<objectName>(...)`.
+
+For NPCs and scripted map actors, use non-player creature templates
+(`CCreature`-based refs) and keep `npc: true`/controllers as needed.
+
+To control where the real player starts, set map entry coordinates in each
+map's `map.json` top-level `properties` (`x`, `y`, `z`) instead of adding a
+separate player object.
+
 ## Copyright
 When modifying source files, update the copyright year in
 the header comments to 2025.
