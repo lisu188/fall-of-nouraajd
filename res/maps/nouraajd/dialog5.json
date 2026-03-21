@@ -40,9 +40,19 @@
                 }
               },
               {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 3,
+                  "action": "inspect_stained_glass",
+                  "nextStateId": "STAINED_GLASS",
+                  "text": "Let me inspect the chapel's stained glass.",
+                  "condition": "can_inspect_stained_glass"
+                }
+              },
+              {
                 "ref": "exitOption",
                 "properties": {
-                  "number": 3
+                  "number": 4
                 }
               }
             ]
@@ -68,6 +78,21 @@
           "properties": {
             "stateId": "RELIC_RETURNED",
             "text": "Excellent. With this relic you can purge the OctoBogz in their cave east of town. Return when the task is done.",
+            "options": [
+              {
+                "ref": "exitOption",
+                "properties": {
+                  "number": 0
+                }
+              }
+            ]
+          }
+        },
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "STAINED_GLASS",
+            "text": "You trace a hidden seal in the glass: a cult cipher burned into the lead by patient hands.",
             "options": [
               {
                 "ref": "exitOption",
