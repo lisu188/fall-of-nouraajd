@@ -12,6 +12,7 @@ def load(self, context):
             if event.getCause().isPlayer():
                 game_map = self.getMap()
                 game = game_map.getGame()
+                player = game_map.getPlayer()
                 game.getGuiHandler().showMessage(self.getStringProperty("text"))
                 game_map.removeAll(lambda ob: ob.getStringProperty("type") == self.getStringProperty("type"))
                 game_map.setBoolProperty("completed_gooby", False)
@@ -34,8 +35,12 @@ def load(self, context):
                 game_map.setBoolProperty("VICTOR_REWARD_CLAIMED", False)
                 game_map.setBoolProperty("VICTOR_HELP", False)
                 game_map.setNumericProperty("VICTOR_COURTYARD_TURN", 0)
-                game_map.getPlayer().addQuest("rolfQuest")
-                game_map.getPlayer().addItem("letterFromRolf")
+                player.setNumericProperty("inquisitor_clues", 0)
+                player.setNumericProperty("wayfarer_routes", 0)
+                player.setBoolProperty("inspected_stained_glass", False)
+                player.setBoolProperty("charted_smuggler_route", False)
+                player.addQuest("rolfQuest")
+                player.addItem("letterFromRolf")
 
     @register(context)
     class ChangeMap(CEvent):
@@ -231,6 +236,21 @@ def load(self, context):
                     return
             player.addQuest(quest_name)
 
+        def can_chart_wayfarer_route(self):
+            player = self.getGame().getMap().getPlayer()
+            return player.getType() == "Wayfarer" and not player.getBoolProperty("charted_smuggler_route")
+
+        def chart_wayfarer_route(self):
+            player = self.getGame().getMap().getPlayer()
+            if not self.can_chart_wayfarer_route():
+                return
+            player.incProperty("wayfarer_routes", 1)
+            player.setBoolProperty("charted_smuggler_route", True)
+            player.addExp(750)
+            self.getGame().getGuiHandler().showMessage(
+                "You trace old courier alleys through Nouraajd. Your footing sharpens whenever a route turns unclear."
+            )
+
         def give_letter(self):
             player = self.getGame().getMap().getPlayer()
             if not player.hasItem(lambda it: it.getName() == "letterToBeren"):
@@ -317,6 +337,21 @@ def load(self, context):
                 if quest.getName() == quest_name:
                     return
             player.addQuest(quest_name)
+
+        def can_inspect_stained_glass(self):
+            player = self.getGame().getMap().getPlayer()
+            return player.getType() == "Inquisitor" and not player.getBoolProperty("inspected_stained_glass")
+
+        def inspect_stained_glass(self):
+            player = self.getGame().getMap().getPlayer()
+            if not self.can_inspect_stained_glass():
+                return
+            player.incProperty("inquisitor_clues", 1)
+            player.setBoolProperty("inspected_stained_glass", True)
+            player.addExp(750)
+            self.getGame().getGuiHandler().showMessage(
+                "The stained glass hides a Marumi Baso seal. Your zeal hardens as you memorize the cult's cipher."
+            )
 
         def can_deliver_letter(self):
             game_map = self.getGame().getMap()

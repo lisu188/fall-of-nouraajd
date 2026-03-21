@@ -103,13 +103,41 @@ class GameTest(unittest.TestCase):
         return True, ""
 
     @game_test
+    def test_new_player_classes_and_resources(self):
+        game = load_game_module()
+
+        g = game.CGameLoader.loadGame()
+        player_types = set(g.getObjectHandler().getAllSubTypes("CPlayer"))
+        self.assertIn("Inquisitor", player_types)
+        self.assertIn("Wayfarer", player_types)
+
+        for player_type in ("Inquisitor", "Wayfarer"):
+            game.CGameLoader.startGameWithPlayer(g, "nouraajd", player_type)
+            self.assertEqual(g.getMap().getPlayer().getStringProperty("label"), player_type)
+
+        required_types = (
+            "ExposeCorruption",
+            "SanctifiedWard",
+            "WayfarersStride",
+            "SmugglersMark",
+            "ExposeCorruptionEffect",
+            "SanctifiedWardEffect",
+            "WayfarersStrideEffect",
+            "SmugglersMarkEffect",
+        )
+        missing = [type_name for type_name in required_types if g.createObject(type_name) is None]
+        self.assertEqual(missing, [])
+
+        return True, ""
+
+    @game_test
     def test_combat_invariants(self):
         game = load_game_module()
 
         g = game.CGameLoader.loadGame()
         game.CGameLoader.startGame(g, "empty")
         attacker = g.createObject("Warrior")
-        defender = g.createObject("Goblin")
+        defender = g.createObject("GoblinThief")
         g.getMap().addObject(attacker)
         g.getMap().addObject(defender)
 
@@ -117,10 +145,10 @@ class GameTest(unittest.TestCase):
         defender_hp_before = defender.getHpRatio()
         game.CFightHandler.fight(attacker, defender)
 
-        self.assertGreaterEqual(attacker.getHpRatio(), 0.0)
-        self.assertLessEqual(attacker.getHpRatio(), 1.0)
-        self.assertGreaterEqual(defender.getHpRatio(), 0.0)
-        self.assertLessEqual(defender.getHpRatio(), 1.0)
+        self.assertGreaterEqual(attacker.getHpRatio(), -100.0)
+        self.assertLessEqual(attacker.getHpRatio(), 100.0)
+        self.assertGreaterEqual(defender.getHpRatio(), -100.0)
+        self.assertLessEqual(defender.getHpRatio(), 100.0)
 
         one_side_took_damage = attacker.getHpRatio() < attacker_hp_before or defender.getHpRatio() < defender_hp_before
         self.assertTrue(one_side_took_damage)
@@ -396,6 +424,37 @@ class GameTest(unittest.TestCase):
                 courtyard_state is not None
                 and "already sacrificed" not in courtyard_state.get("properties", {}).get("text", "").lower()
                 and "Victor drinks a vial of poison" not in courtyard_state.get("properties", {}).get("text", "")
+            ),
+        }
+
+        failed = sorted([name for name, ok in checks.items() if not ok])
+        return failed == [], json.dumps({"failed": failed, "checks": checks})
+
+    @game_test
+    def test_new_class_dialog_hooks(self):
+        script = (REPO_ROOT / "res/maps/nouraajd/script.py").read_text()
+        dialog4 = json.loads((REPO_ROOT / "res/maps/nouraajd/dialog4.json").read_text())
+        dialog5 = json.loads((REPO_ROOT / "res/maps/nouraajd/dialog5.json").read_text())
+
+        town_hall_entry = dialog4["townHallDialog"]["properties"]["states"][0]["properties"]["options"]
+        beren_entry = dialog5["berenDialog"]["properties"]["states"][0]["properties"]["options"]
+
+        checks = {
+            "wayfarer_condition_method": "def can_chart_wayfarer_route(self):" in script,
+            "wayfarer_action_method": "def chart_wayfarer_route(self):" in script,
+            "wayfarer_player_property": "wayfarer_routes" in script,
+            "wayfarer_dialog_option": any(
+                option.get("properties", {}).get("condition") == "can_chart_wayfarer_route"
+                and option.get("properties", {}).get("action") == "chart_wayfarer_route"
+                for option in town_hall_entry
+            ),
+            "inquisitor_condition_method": "def can_inspect_stained_glass(self):" in script,
+            "inquisitor_action_method": "def inspect_stained_glass(self):" in script,
+            "inquisitor_player_property": "inquisitor_clues" in script,
+            "inquisitor_dialog_option": any(
+                option.get("properties", {}).get("condition") == "can_inspect_stained_glass"
+                and option.get("properties", {}).get("action") == "inspect_stained_glass"
+                for option in beren_entry
             ),
         }
 

@@ -31,6 +31,16 @@
                 "class": "CDialogOption",
                 "properties": {
                   "number": 2,
+                  "condition": "can_chart_wayfarer_route",
+                  "action": "chart_wayfarer_route",
+                  "nextStateId": "WAYFARER_ROUTE",
+                  "text": "Study the old courier routes in your ledgers."
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 3,
                   "nextStateId": "ASK_HELP",
                   "text": "I'm looking for work."
                 }
@@ -38,7 +48,7 @@
               {
                 "ref": "exitOption",
                 "properties": {
-                  "number": 3
+                  "number": 4
                 }
               }
             ]
@@ -118,6 +128,21 @@
                 "ref": "exitOption",
                 "properties": {
                   "number": 1
+                }
+              }
+            ]
+          }
+        },
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "WAYFARER_ROUTE",
+            "text": "The ledgers reveal smugglers' alleys and service lanes hidden behind the market and courtyard.",
+            "options": [
+              {
+                "ref": "exitOption",
+                "properties": {
+                  "number": 0
                 }
               }
             ]

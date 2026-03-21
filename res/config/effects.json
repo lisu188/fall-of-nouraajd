@@ -64,5 +64,35 @@
         "stun"
       ]
     }
+  },
+  "ExposeCorruptionEffect": {
+    "class": "ExposeCorruptionEffect",
+    "properties": {
+      "duration": 3
+    }
+  },
+  "SanctifiedWardEffect": {
+    "class": "SanctifiedWardEffect",
+    "properties": {
+      "duration": 3,
+      "tags": [
+        "buff"
+      ]
+    }
+  },
+  "WayfarersStrideEffect": {
+    "class": "WayfarersStrideEffect",
+    "properties": {
+      "duration": 3,
+      "tags": [
+        "buff"
+      ]
+    }
+  },
+  "SmugglersMarkEffect": {
+    "class": "SmugglersMarkEffect",
+    "properties": {
+      "duration": 3
+    }
   }
 }
