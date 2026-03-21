@@ -148,12 +148,16 @@ BOOST_PYTHON_MODULE(_game) {
       .def("getObjects", &CMap::getObjects)
       .def("getTurn", &CMap::getTurn);
 
-  void (CObjectHandler::*registerType)(
-      std::string, std::function<std::shared_ptr<CGameObject>()>) =
+  void (CObjectHandler::*registerType)(std::string, std::function<std::shared_ptr<CGameObject>()>) =
       &CObjectHandler::registerType;
-  class_<CObjectHandler, bases<CGameObject>, boost::noncopyable,
-         std::shared_ptr<CObjectHandler>>("CObjectHandler")
+  std::shared_ptr<CGameObject> (*createObjectByType)(std::shared_ptr<CObjectHandler>, std::shared_ptr<CGame>,
+                                                     std::string) = [](std::shared_ptr<CObjectHandler> handler,
+                                                                       std::shared_ptr<CGame> game, std::string type) {
+      return handler->createObject<CGameObject>(game, type);
+  };
+  class_<CObjectHandler, bases<CGameObject>, boost::noncopyable, std::shared_ptr<CObjectHandler>>("CObjectHandler")
       .def("registerType", registerType)
+      .def("createObject", createObjectByType)
       .def("getAllTypes", &CObjectHandler::getAllTypes)
       .def("getAllSubTypes", &CObjectHandler::getAllSubTypes);
 
@@ -331,16 +335,12 @@ BOOST_PYTHON_MODULE(_game) {
   void (CCreature::*hurtInt)(int) = &CCreature::hurt;
   void (CCreature::*hurtFloat)(float) = &CCreature::hurt;
   void (CCreature::*hurtDmg)(std::shared_ptr<Damage>) = &CCreature::hurt;
-  void (CCreature::*addItem)(std::string) = &CCreature::addItem;
-  bool (CCreature::*hasItem)(std::function<bool(std::shared_ptr<CItem>)>) =
-      &CCreature::hasItem;
-  void (CCreature::*removeItem)(std::function<bool(std::shared_ptr<CItem>)>,
-                                bool) = &CCreature::removeItem;
-  void (CCreature::*removeQuestItem)(
-      std::function<bool(std::shared_ptr<CItem>)>) =
-      &CCreature::removeQuestItem;
-  class_<CCreature, bases<CMapObject>, boost::noncopyable,
-         std::shared_ptr<CCreature>>("CCreature")
+  void (CCreature::*addItemByName)(std::string) = &CCreature::addItem;
+  void (CCreature::*addItemByObject)(std::shared_ptr<CItem>) = &CCreature::addItem;
+  bool (CCreature::*hasItem)(std::function<bool(std::shared_ptr<CItem>)>) = &CCreature::hasItem;
+  void (CCreature::*removeItem)(std::function<bool(std::shared_ptr<CItem>)>, bool) = &CCreature::removeItem;
+  void (CCreature::*removeQuestItem)(std::function<bool(std::shared_ptr<CItem>)>) = &CCreature::removeQuestItem;
+  class_<CCreature, bases<CMapObject>, boost::noncopyable, std::shared_ptr<CCreature>>("CCreature")
       .def("getDmg", &CCreature::getDmg)
       .def("hurt", hurtInt)
       .def("hurt", hurtDmg)
@@ -359,7 +359,8 @@ BOOST_PYTHON_MODULE(_game) {
       .def("addExp", &CCreature::addExp)
       .def("useAction", &CCreature::useAction)
       .def("hasItem", hasItem)
-      .def("addItem", addItem)
+      .def("addItem", addItemByName)
+      .def("addItem", addItemByObject)
       .def("addItems", &CCreature::addItems)
       .def("removeItem", removeItem)
       .def("removeQuestItem", removeQuestItem);
