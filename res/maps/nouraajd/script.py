@@ -14,14 +14,26 @@ def load(self, context):
                 game = game_map.getGame()
                 game.getGuiHandler().showMessage(self.getStringProperty("text"))
                 game_map.removeAll(lambda ob: ob.getStringProperty("type") == self.getStringProperty("type"))
+                game_map.setBoolProperty("completed_gooby", False)
                 game_map.setBoolProperty("completed_rolf", False)
                 game_map.setBoolProperty("completed_octobogz", False)
+                game_map.setBoolProperty("DELIVERED_LETTER", False)
+                game_map.setBoolProperty("RELIC_RETURNED", False)
+                game_map.setBoolProperty("OCTOBOGZ_SLAIN", False)
+                game_map.setBoolProperty("OCTOBOGZ_CLEARED", False)
+                game_map.setBoolProperty("CAVE_PURGED", False)
                 game_map.setBoolProperty("AMULET_QUEST_STARTED", False)
+                game_map.setBoolProperty("AMULET_RETURNED", False)
+                game_map.setBoolProperty("ASKED_ABOUT_GIRL", False)
+                game_map.setBoolProperty("TALKED_TO_VICTOR", False)
                 game_map.setBoolProperty("VICTOR_QUEST_STARTED", False)
                 game_map.setBoolProperty("VICTOR_COURTYARD_FOUND", False)
+                game_map.setBoolProperty("VICTOR_CULTISTS_SPAWNED", False)
                 game_map.setBoolProperty("VICTOR_GOOD_END", False)
                 game_map.setBoolProperty("VICTOR_BAD_END", False)
                 game_map.setBoolProperty("VICTOR_REWARD_CLAIMED", False)
+                game_map.setBoolProperty("VICTOR_HELP", False)
+                game_map.setNumericProperty("VICTOR_COURTYARD_TURN", 0)
                 game_map.getPlayer().addQuest("rolfQuest")
                 game_map.getPlayer().addItem("letterFromRolf")
 
@@ -210,6 +222,7 @@ def load(self, context):
     class TownHallDialog(CDialog):
         COURTYARD_SPAWNS = [(44, 100, 0), (46, 100, 0), (45, 99, 0), (45, 101, 0)]
         COURTYARD_LEADER_SPAWN = (45, 100, 0)
+        COURTYARD_TIMEOUT_TURNS = 75
 
         def _ensure_quest(self, quest_name):
             player = self.getGame().getMap().getPlayer()
@@ -243,13 +256,31 @@ def load(self, context):
             game_map.setBoolProperty("VICTOR_QUEST_STARTED", True)
             self._ensure_quest("victorQuest")
 
+        def _expire_victor_search(self, game_map):
+            if not game_map.getBoolProperty("VICTOR_CULTISTS_SPAWNED"):
+                return False
+            if game_map.getBoolProperty("VICTOR_GOOD_END") or game_map.getBoolProperty("VICTOR_BAD_END"):
+                return False
+            spawn_turn = game_map.getNumericProperty("VICTOR_COURTYARD_TURN")
+            if spawn_turn and game_map.getTurn() - spawn_turn >= self.COURTYARD_TIMEOUT_TURNS:
+                game_map.setBoolProperty("VICTOR_BAD_END", True)
+                game_map.setBoolProperty("VICTOR_HELP", False)
+                self.getGame().getGuiHandler().showMessage(
+                    "You return to an empty courtyard. Victor's daughter has vanished with the cult."
+                )
+                game_map.removeAll(lambda ob: ob.getName() == "cultLeaderQuest")
+                return True
+            return False
+
         def spawn_cultists(self):
             game = self.getGame()
             game_map = game.getMap()
             self.start_victor_quest()
             game_map.setBoolProperty("VICTOR_COURTYARD_FOUND", True)
             if game_map.getBoolProperty("VICTOR_CULTISTS_SPAWNED"):
+                self._expire_victor_search(game_map)
                 return
+            game_map.setNumericProperty("VICTOR_COURTYARD_TURN", game_map.getTurn())
 
             for x, y, z in self.COURTYARD_SPAWNS:
                 coords = Coords(x, y, z)
@@ -342,8 +373,10 @@ def load(self, context):
     @register(context)
     class OctoBogzDialog(CDialog):
         def accept_quest(self):
-            self.getGame().getMap().getPlayer().addQuest("octoBogzQuest")
-            self.getGame().getMap().setBoolProperty("completed_octobogz", False)
+            game_map = self.getGame().getMap()
+            game_map.getPlayer().addQuest("octoBogzQuest")
+            if not game_map.getBoolProperty("OCTOBOGZ_SLAIN"):
+                game_map.setBoolProperty("completed_octobogz", False)
 
     @trigger(context, "onEnter", "questGiver")
     class QuestGiverTrigger(CTrigger):
@@ -374,9 +407,6 @@ def load(self, context):
             game_map.setBoolProperty("VICTOR_GOOD_END", True)
             game_map.setBoolProperty("VICTOR_BAD_END", False)
             game_map.setBoolProperty("VICTOR_REWARD_CLAIMED", True)
-            if event.getCause().isPlayer():
-                # Display a completion dialog to the player
-                game.getGuiHandler().showDialog(game.createObject("dialog"))
 
     @trigger(context, "onEnter", "oldWoman")
     class OldWomanTrigger(CTrigger):
