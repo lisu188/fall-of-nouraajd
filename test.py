@@ -19,7 +19,9 @@ import importlib
 import json
 import os
 import re
+import subprocess
 import sys
+import traceback
 from pathlib import Path
 import unittest
 
@@ -74,6 +76,290 @@ def advance(g, turns):
         g.getMap().move()
     while g.getMap().getNumericProperty("turn") < turns + current_turn:
         game.event_loop.instance().run()
+
+
+MAPS_DIR = REPO_ROOT / "res/maps"
+DEFAULT_PLAYER = "Warrior"
+
+
+def discover_maps():
+    playable_maps = []
+    for path in sorted(MAPS_DIR.iterdir()):
+        if not path.is_dir():
+            continue
+        map_path = path / "map.json"
+        if not map_path.exists():
+            continue
+        data = json.loads(map_path.read_text())
+        properties = data.get("properties", {})
+        if all(key in properties for key in ("x", "y", "z")):
+            playable_maps.append(path.name)
+    return playable_maps
+
+
+def load_map_data(map_name):
+    return json.loads((MAPS_DIR / map_name / "map.json").read_text())
+
+
+def load_game_map(map_name):
+    game = load_game_module()
+    g = game.CGameLoader.loadGame()
+    game.CGameLoader.startGame(g, map_name)
+    return g, g.getMap()
+
+
+def load_game_map_with_player(map_name, player_name=DEFAULT_PLAYER):
+    game = load_game_module()
+    g = game.CGameLoader.loadGame()
+    game.CGameLoader.startGameWithPlayer(g, map_name, player_name)
+    game_map = g.getMap()
+    player = game_map.getPlayer()
+    return g, game_map, player
+
+
+def advance_turns(g, turns):
+    advance(g, turns)
+    return g.getMap().getTurn()
+
+
+def advance_map_only(game_map, turns):
+    for i in range(turns):
+        game_map.move()
+    return game_map.getTurn()
+
+
+def find_runtime_object(game_map, object_name):
+    obj = game_map.getObjectByName(object_name)
+    if obj is None:
+        raise AssertionError(f"Could not find runtime object '{object_name}' on map '{game_map.getName()}'.")
+    return obj
+
+
+def find_map_object_definition(map_name, object_name):
+    map_data = load_map_data(map_name)
+    for layer in map_data.get("layers", []):
+        if layer.get("type") != "objectgroup":
+            continue
+        for obj in layer.get("objects", []):
+            if obj.get("name") == object_name:
+                return obj
+    raise AssertionError(f"Could not find object definition '{object_name}' in res/maps/{map_name}/map.json.")
+
+
+def quest_names(player):
+    return sorted(quest.getName() for quest in player.getQuests())
+
+
+def walkthrough_log_path(map_name):
+    TEST_OUTPUT_DIR.mkdir(exist_ok=True)
+    return TEST_OUTPUT_DIR / f"walkthrough_{map_name}.json"
+
+
+def write_walkthrough_log(map_name, log):
+    walkthrough_log_path(map_name).write_text(json.dumps(log, indent=2, sort_keys=True))
+
+
+def walkthrough_test_map():
+    g, game_map, player = load_game_map_with_player("test")
+    teleporter_1_def = find_map_object_definition("test", "teleporter1")
+    teleporter_2_def = find_map_object_definition("test", "teleporter2")
+    ground_hole_def = find_map_object_definition("test", "groundHole")
+    teleporter = find_runtime_object(game_map, "teleporter1")
+    ground_hole = find_runtime_object(game_map, "groundHole")
+
+    player.setCoords(teleporter.getCoords())
+    after_teleport = player.getCoords()
+
+    turn_after_advance = game_map.getTurn()
+
+    player.setCoords(ground_hole.getCoords())
+    after_ground_hole = player.getCoords()
+
+    assert (after_teleport.x, after_teleport.y, after_teleport.z) == (
+        teleporter_2_def["x"] // 32,
+        teleporter_2_def["y"] // 32,
+        0,
+    )
+    assert (after_ground_hole.x, after_ground_hole.y, after_ground_hole.z) == (
+        ground_hole_def["x"] // 32,
+        ground_hole_def["y"] // 32,
+        -1,
+    )
+    return {
+        "map": "test",
+        "teleporter_from": [teleporter_1_def["x"] // 32, teleporter_1_def["y"] // 32, 0],
+        "teleporter_to": [after_teleport.x, after_teleport.y, after_teleport.z],
+        "ground_hole_exit": [after_ground_hole.x, after_ground_hole.y, after_ground_hole.z],
+        "turn_after_advance": turn_after_advance,
+    }
+
+
+def walkthrough_siege_map():
+    game = load_game_module()
+    original_randint = game.randint
+    try:
+        randint_values = iter([25, 10, 1, 25, 1])
+
+        def deterministic_randint(lower, upper):
+            return next(randint_values, lower)
+
+        game.randint = deterministic_randint
+
+        g, game_map, player = load_game_map_with_player("siege")
+        spawn_names = ["spawnPoint1", "spawnPoint2", "spawnPoint3", "spawnPoint4"]
+        for name in spawn_names:
+            find_map_object_definition("siege", name)
+
+        advance_turns(g, 2)
+
+        enabled_spawn_points = [
+            find_runtime_object(game_map, name)
+            for name in spawn_names
+            if game_map.getObjectByName(name).getBoolProperty("enabled")
+        ]
+        siege_units = []
+        game_map.forObjects(
+            lambda ob: siege_units.append(ob.getName()),
+            lambda ob: ob.getStringProperty("affiliation") == "siege",
+        )
+
+        assert enabled_spawn_points, "No siege spawn point was enabled during the deterministic walkthrough."
+        assert siege_units, "No siege attackers spawned from the enabled gate."
+        return {
+            "map": "siege",
+            "enabled_gates": [gate.getName() for gate in enabled_spawn_points],
+            "player_coords": [player.getCoords().x, player.getCoords().y, player.getCoords().z],
+            "spawned_enemies": sorted(siege_units),
+        }
+    finally:
+        game.randint = original_randint
+
+
+def walkthrough_ritual_map():
+    game = load_game_module()
+    original_show_message = game.CGuiHandler.showMessage
+    try:
+        game.CGuiHandler.showMessage = lambda self, message: None
+        g, game_map = load_game_map("ritual")
+        for name in ("anchorNorth", "anchorCrypt", "anchorSanctum"):
+            find_map_object_definition("ritual", name)
+
+        game_map.removeObjectByName("anchorNorth")
+        turn_after_countdown = advance_map_only(game_map, 5)
+        game_map.removeObjectByName("anchorCrypt")
+        game_map.removeObjectByName("anchorSanctum")
+        leader = find_runtime_object(game_map, "ritualLeader")
+        advance_map_only(game_map, 70)
+
+        assert game_map.getBoolProperty("ritual_started"), "The ritual should start during the walkthrough."
+        assert game_map.getBoolProperty("anchors_destroyed"), "All ritual anchors should be destroyed."
+        assert game_map.getBoolProperty("leader_spawned"), "The ritual leader should spawn after all anchors fall."
+        assert leader.getName() == "ritualLeader", "The ritual leader should be present after the anchor phase."
+        assert game_map.getBoolProperty("captive_lost"), "The countdown failure path should mark the captive lost."
+        assert game_map.getBoolProperty("bad_ending"), "The ritual walkthrough should reach the bad ending."
+        assert game_map.getBoolProperty("ritual_finished"), "The ritual should finish after the countdown expires."
+        return {
+            "map": "ritual",
+            "anchors_destroyed_count": game_map.getNumericProperty("anchors_destroyed_count"),
+            "countdown_after_turns": game_map.getNumericProperty("ritual_countdown"),
+            "turn_after_countdown": turn_after_countdown,
+            "leader_spawned": game_map.getBoolProperty("leader_spawned"),
+            "captive_lost": game_map.getBoolProperty("captive_lost"),
+            "bad_ending": game_map.getBoolProperty("bad_ending"),
+            "note": "Ritual currently cannot be started with startGameWithPlayer, so this walkthrough covers the deterministic no-player failure path.",
+        }
+    finally:
+        game.CGuiHandler.showMessage = original_show_message
+
+
+def walkthrough_nouraajd_map():
+    game = load_game_module()
+    original_show_message = game.CGuiHandler.showMessage
+    try:
+        game.CGuiHandler.showMessage = lambda self, message: None
+        g, game_map, player = load_game_map_with_player("nouraajd")
+        for name in ("cave1", "gooby1", "catacombs", "cave2"):
+            if name != "gooby1":
+                find_map_object_definition("nouraajd", name)
+
+        game_map.removeObjectByName("cave1")
+        gooby = find_runtime_object(game_map, "gooby1")
+        game_map.removeObjectByName(gooby.getName())
+        game_map.removeObjectByName("catacombs")
+        game_map.removeObjectByName("cave2")
+
+        assert game_map.getBoolProperty("completed_rolf"), "The cave1 trigger should complete the Rolf lead."
+        assert player.hasItem(lambda it: it.getName() == "skullOfRolf"), "The cave1 trigger should award Rolf's skull."
+        assert game_map.getBoolProperty("completed_gooby"), "Defeating Gooby should complete the main quest flag."
+        assert player.hasItem(
+            lambda it: it.getName() == "holyRelic"
+        ), "The catacombs trigger should award the holy relic."
+        assert game_map.getBoolProperty("OCTOBOGZ_SLAIN"), "The cave2 trigger should mark the OctoBogz slain."
+        return {
+            "map": "nouraajd",
+            "completed_rolf": game_map.getBoolProperty("completed_rolf"),
+            "completed_gooby": game_map.getBoolProperty("completed_gooby"),
+            "octobogz_slain": game_map.getBoolProperty("OCTOBOGZ_SLAIN"),
+            "has_skull_of_rolf": player.hasItem(lambda it: it.getName() == "skullOfRolf"),
+            "has_holy_relic": player.hasItem(lambda it: it.getName() == "holyRelic"),
+            "quests": quest_names(player),
+        }
+    finally:
+        game.CGuiHandler.showMessage = original_show_message
+
+
+WALKTHROUGHS = {
+    "nouraajd": walkthrough_nouraajd_map,
+    "ritual": walkthrough_ritual_map,
+    "siege": walkthrough_siege_map,
+    "test": walkthrough_test_map,
+}
+
+
+def execute_walkthrough(map_name):
+    try:
+        log = WALKTHROUGHS[map_name]()
+        success = True
+    except Exception as exc:
+        success = False
+        log = {
+            "map": map_name,
+            "error": str(exc),
+            "exception_type": type(exc).__name__,
+            "traceback": traceback.format_exc(),
+        }
+    write_walkthrough_log(map_name, log)
+    return success, json.dumps(log)
+
+
+def run_walkthrough(map_name, fn):
+    command = [sys.executable, str(REPO_ROOT / "test.py"), f"GameTest.test_map_walkthrough_{map_name}"]
+    completed = subprocess.run(command, cwd=REPO_ROOT, capture_output=True, text=True)
+    log = {}
+    log_path = walkthrough_log_path(map_name)
+    if log_path.exists():
+        try:
+            log = json.loads(log_path.read_text())
+        except json.JSONDecodeError:
+            log = {"map": map_name, "raw_log": log_path.read_text()}
+
+    if completed.returncode != 0:
+        log.update(
+            {
+                "map": map_name,
+                "returncode": completed.returncode,
+                "stdout": completed.stdout.strip(),
+                "stderr": completed.stderr.strip(),
+                "walkthrough": fn.__name__,
+            }
+        )
+        write_walkthrough_log(map_name, log)
+        return False, log
+
+    if not log:
+        log = {"map": map_name, "stdout": completed.stdout.strip(), "walkthrough": fn.__name__}
+        write_walkthrough_log(map_name, log)
+    return True, log
 
 
 class GameTest(unittest.TestCase):
@@ -522,6 +808,54 @@ class GameTest(unittest.TestCase):
             target for target in trigger_targets if target not in placed_names and target not in runtime_spawned_targets
         )
         return missing_targets == [], json.dumps(missing_targets)
+
+    @game_test
+    def test_map_walkthrough_nouraajd(self):
+        return execute_walkthrough("nouraajd")
+
+    @game_test
+    def test_map_walkthrough_ritual(self):
+        return execute_walkthrough("ritual")
+
+    @game_test
+    def test_map_walkthrough_siege(self):
+        return execute_walkthrough("siege")
+
+    @game_test
+    def test_map_walkthrough_test(self):
+        return execute_walkthrough("test")
+
+    @game_test
+    def test_all_maps_have_walkthroughs(self):
+        discovered_maps = discover_maps()
+        walkthrough_maps = sorted(WALKTHROUGHS)
+        missing = sorted(set(discovered_maps) - set(walkthrough_maps))
+        extra = sorted(set(walkthrough_maps) - set(discovered_maps))
+        log = {
+            "discovered_maps": discovered_maps,
+            "walkthrough_maps": walkthrough_maps,
+            "missing_walkthroughs": missing,
+            "unknown_walkthroughs": extra,
+        }
+        return not (missing or extra), json.dumps(log)
+
+    @game_test
+    def test_map_walkthroughs(self):
+        discovered_maps = discover_maps()
+        results = {}
+        failed = {}
+        for map_name in discovered_maps:
+            success, log = run_walkthrough(map_name, WALKTHROUGHS[map_name])
+            results[map_name] = log
+            if not success:
+                failed[map_name] = log
+        summary = {
+            "discovered_maps": discovered_maps,
+            "walkthroughs": {map_name: WALKTHROUGHS[map_name].__name__ for map_name in discovered_maps},
+            "failed": failed,
+            "results": results,
+        }
+        return failed == {}, json.dumps(summary)
 
     @game_test
     def test_json_validity(self):
