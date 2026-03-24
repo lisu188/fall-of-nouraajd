@@ -146,6 +146,27 @@ def find_map_object_definition(map_name, object_name):
     raise AssertionError(f"Could not find object definition '{object_name}' in res/maps/{map_name}/map.json.")
 
 
+def load_object_configs(map_name=None):
+    configs = {}
+    for path in sorted((REPO_ROOT / "res/config").glob("*.json")):
+        configs.update(json.loads(path.read_text()))
+    if map_name is not None:
+        configs.update(json.loads((MAPS_DIR / map_name / "config.json").read_text()))
+    return configs
+
+
+def resolve_object_class(configs, type_name):
+    conf = configs.get(type_name, {"class": type_name})
+    seen = set()
+    while isinstance(conf, dict) and "ref" in conf:
+        ref = conf["ref"]
+        if ref in seen:
+            raise AssertionError(f"Circular ref while resolving {type_name}: {ref}")
+        seen.add(ref)
+        conf = configs.get(ref, {"class": ref})
+    return conf.get("class")
+
+
 def quest_names(player):
     return sorted(quest.getName() for quest in player.getQuests())
 
@@ -783,6 +804,31 @@ class GameTest(unittest.TestCase):
 
         success = not (missing_actions or missing_states)
         return success, json.dumps({"missing_actions": missing_actions, "missing_states": missing_states})
+
+    @game_test
+    def test_ritual_has_no_static_cplayer_objects(self):
+        configs = load_object_configs("ritual")
+        map_data = load_map_data("ritual")
+
+        player_like_objects = []
+        explicit_player_names = []
+        for layer in map_data.get("layers", []):
+            if layer.get("type") != "objectgroup":
+                continue
+            for obj in layer.get("objects", []):
+                obj_type = obj.get("type")
+                obj_name = obj.get("name")
+                resolved_class = resolve_object_class(configs, obj_type)
+                if resolved_class == "CPlayer":
+                    player_like_objects.append({"name": obj_name, "type": obj_type})
+                if obj_name == "player":
+                    explicit_player_names.append({"name": obj_name, "type": obj_type})
+
+        log = {
+            "player_like_objects": player_like_objects,
+            "explicit_player_names": explicit_player_names,
+        }
+        return not (player_like_objects or explicit_player_names), json.dumps(log)
 
     @game_test
     def test_ritual_trigger_targets(self):
