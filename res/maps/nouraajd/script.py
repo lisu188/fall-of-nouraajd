@@ -2,9 +2,72 @@ def load(self, context):
     from game import CEvent
     from game import CTrigger
     from game import CQuest
+    from game import CPlayer
     from game import CDialog
     from game import Coords
     from game import register, trigger
+
+    VICTOR_COURTYARD_TIMEOUT_TURNS = 75
+    VICTOR_CULTIST_PREFIX = "victorCultist"
+
+    def _clear_victor_encounter(game_map):
+        def should_remove(obj):
+            name = obj.getName()
+            return bool(name) and (name == "cultLeaderQuest" or name.startswith(VICTOR_CULTIST_PREFIX))
+
+        game_map.removeAll(should_remove)
+        game_map.setBoolProperty("VICTOR_CULTISTS_SPAWNED", False)
+        game_map.setNumericProperty("VICTOR_COURTYARD_TURN", 0)
+
+    def _expire_victor_search(game_map):
+        if not game_map.getBoolProperty("VICTOR_CULTISTS_SPAWNED"):
+            return False
+        if game_map.getBoolProperty("VICTOR_GOOD_END") or game_map.getBoolProperty("VICTOR_BAD_END"):
+            return False
+        spawn_turn = game_map.getNumericProperty("VICTOR_COURTYARD_TURN")
+        if not spawn_turn:
+            return False
+        if game_map.getTurn() - spawn_turn < VICTOR_COURTYARD_TIMEOUT_TURNS:
+            return False
+        game_map.setBoolProperty("VICTOR_BAD_END", True)
+        game_map.setBoolProperty("VICTOR_HELP", False)
+        _clear_victor_encounter(game_map)
+        game_map.getGame().getGuiHandler().showMessage(
+            "You return to an empty courtyard. Victor's daughter has vanished with the cult."
+        )
+        return True
+
+    class _TrackedQuest:
+        def __init__(self, name):
+            self._name = name
+
+        def getName(self):
+            return self._name
+
+    _player_quests = {}
+
+    def _reset_player_quests(player):
+        _player_quests.clear()
+
+    def _ensure_player_quest_api(player):
+        if not isinstance(_player_quests, dict):
+            _player_quests.clear()
+
+    def _player_has_quest(player, quest_name):
+        _ensure_player_quest_api(player)
+        return quest_name in _player_quests
+
+    def _grant_quest(player, quest_name):
+        if _player_has_quest(player, quest_name):
+            return
+        _player_quests[quest_name] = _TrackedQuest(quest_name)
+        player.addQuest(quest_name)
+
+    def _python_get_quests(self):
+        _ensure_player_quest_api(self)
+        return list(_player_quests.values())
+
+    CPlayer.getQuests = _python_get_quests
 
     @register(context)
     class StartEvent(CEvent):
@@ -13,6 +76,7 @@ def load(self, context):
                 game_map = self.getMap()
                 game = game_map.getGame()
                 player = game_map.getPlayer()
+                _reset_player_quests(player)
                 game.getGuiHandler().showMessage(self.getStringProperty("text"))
                 game_map.removeAll(lambda ob: ob.getStringProperty("type") == self.getStringProperty("type"))
                 game_map.setBoolProperty("completed_gooby", False)
@@ -39,7 +103,7 @@ def load(self, context):
                 player.setNumericProperty("wayfarer_routes", 0)
                 player.setBoolProperty("inspected_stained_glass", False)
                 player.setBoolProperty("charted_smuggler_route", False)
-                player.addQuest("rolfQuest")
+                _grant_quest(player, "rolfQuest")
                 player.addItem("letterFromRolf")
 
     @register(context)
@@ -57,12 +121,20 @@ def load(self, context):
 
     @register(context)
     class RolfQuest(CQuest):
+        def _ensure_main_quest(self):
+            player = self.getGame().getMap().getPlayer()
+            _grant_quest(player, "mainQuest")
 
         def isCompleted(self):
             return self.getGame().getMap().getPlayer().hasItem(lambda it: it.getName() == "skullOfRolf")
 
         def onComplete(self):
-            pass
+            game_map = self.getGame().getMap()
+            game_map.setBoolProperty("completed_rolf", True)
+            self._ensure_main_quest()
+            self.getGame().getGuiHandler().showMessage(
+                "Sergeant Rolf's skull confirms his fall. Gooby now stalks the caverns."
+            )
 
     @register(context)
     class DeliverLetterQuest(CQuest):
@@ -83,7 +155,7 @@ def load(self, context):
     @register(context)
     class CleanseCaveQuest(CQuest):
         def isCompleted(self):
-            return self.getGame().getMap().getBoolProperty("OCTOBOGZ_CLEARED")
+            return self.getGame().getMap().getBoolProperty("CAVE_PURGED")
 
         def onComplete(self):
             pass
@@ -134,7 +206,6 @@ def load(self, context):
             game_map.addObject(gooby)
             gooby.moveTo(100, 100, 0)
             game_map.setBoolProperty("completed_gooby", False)
-            player.addQuest("mainQuest")
             player.addItem("skullOfRolf")
             game_map.setBoolProperty("completed_rolf", True)
 
@@ -205,10 +276,7 @@ def load(self, context):
             player = game_map.getPlayer()
             if not game_map.getBoolProperty("VICTOR_QUEST_STARTED"):
                 game_map.setBoolProperty("VICTOR_QUEST_STARTED", True)
-            for quest in player.getQuests():
-                if quest.getName() == "victorQuest":
-                    return
-            player.addQuest("victorQuest")
+            _grant_quest(player, "victorQuest")
 
         def asked_about_girl(self):
             return self.getGame().getMap().getBoolProperty("ASKED_ABOUT_GIRL")
@@ -227,7 +295,7 @@ def load(self, context):
     class TownHallDialog(CDialog):
         COURTYARD_SPAWNS = [(44, 100, 0), (46, 100, 0), (45, 99, 0), (45, 101, 0)]
         COURTYARD_LEADER_SPAWN = (45, 100, 0)
-        COURTYARD_TIMEOUT_TURNS = 75
+        COURTYARD_TIMEOUT_TURNS = VICTOR_COURTYARD_TIMEOUT_TURNS
 
         def _is_letter_to_beren(self, item):
             return item.getName() == "letterToBeren" or (
@@ -236,10 +304,7 @@ def load(self, context):
 
         def _ensure_quest(self, quest_name):
             player = self.getGame().getMap().getPlayer()
-            for quest in player.getQuests():
-                if quest.getName() == quest_name:
-                    return
-            player.addQuest(quest_name)
+            _grant_quest(player, quest_name)
 
         def can_chart_wayfarer_route(self):
             player = self.getGame().getMap().getPlayer()
@@ -273,11 +338,7 @@ def load(self, context):
             player = self.getGame().getMap().getPlayer()
             if player.hasItem(self._is_letter_to_beren):
                 return True
-            quests = player.getQuests()
-            for q in quests:
-                if q.getName() == "deliverLetterQuest":
-                    return True
-            return False
+            return _player_has_quest(player, "deliverLetterQuest")
 
         def talked_to_victor(self):
             return self.getGame().getMap().getBoolProperty("TALKED_TO_VICTOR")
@@ -287,39 +348,32 @@ def load(self, context):
             game_map.setBoolProperty("VICTOR_QUEST_STARTED", True)
             self._ensure_quest("victorQuest")
 
-        def _expire_victor_search(self, game_map):
-            if not game_map.getBoolProperty("VICTOR_CULTISTS_SPAWNED"):
-                return False
-            if game_map.getBoolProperty("VICTOR_GOOD_END") or game_map.getBoolProperty("VICTOR_BAD_END"):
-                return False
-            spawn_turn = game_map.getNumericProperty("VICTOR_COURTYARD_TURN")
-            if spawn_turn and game_map.getTurn() - spawn_turn >= self.COURTYARD_TIMEOUT_TURNS:
-                game_map.setBoolProperty("VICTOR_BAD_END", True)
-                game_map.setBoolProperty("VICTOR_HELP", False)
-                self.getGame().getGuiHandler().showMessage(
-                    "You return to an empty courtyard. Victor's daughter has vanished with the cult."
-                )
-                game_map.removeAll(lambda ob: ob.getName() == "cultLeaderQuest")
-                return True
-            return False
-
         def spawn_cultists(self):
             game = self.getGame()
             game_map = game.getMap()
             self.start_victor_quest()
             game_map.setBoolProperty("VICTOR_COURTYARD_FOUND", True)
+            if game_map.getBoolProperty("VICTOR_GOOD_END"):
+                game.getGuiHandler().showMessage("Victor already reclaimed his daughter; the courtyard lies quiet.")
+                return
+            if game_map.getBoolProperty("VICTOR_BAD_END"):
+                game.getGuiHandler().showMessage(
+                    "The mayor grimly reports that the Cult of Marumi Baso slipped away with Victor's daughter."
+                )
+                return
             if game_map.getBoolProperty("VICTOR_CULTISTS_SPAWNED"):
-                self._expire_victor_search(game_map)
+                _expire_victor_search(game_map)
                 return
             game_map.setNumericProperty("VICTOR_COURTYARD_TURN", game_map.getTurn())
 
-            for x, y, z in self.COURTYARD_SPAWNS:
+            for index, (x, y, z) in enumerate(self.COURTYARD_SPAWNS, start=1):
                 coords = Coords(x, y, z)
                 if game_map.canStep(coords):
                     mon = game.createObject("Cultist")
                     target_ctrl = game.createObject("CTargetController")
                     target_ctrl.setTarget("player")
                     mon.setController(target_ctrl)
+                    mon.setStringProperty("name", f"{VICTOR_CULTIST_PREFIX}{index}")
                     game_map.addObject(mon)
                     mon.moveTo(coords.x, coords.y, coords.z)
 
@@ -333,6 +387,14 @@ def load(self, context):
                 game_map.addObject(leader)
                 leader.moveTo(coords.x, coords.y, coords.z)
                 game_map.setBoolProperty("VICTOR_CULTISTS_SPAWNED", True)
+
+    @trigger(context, "onTurn", "nouraajdTownHall")
+    class VictorCourtyardTimerTrigger(CTrigger):
+        def trigger(self, obj, event):
+            game_map = obj.getGame().getMap()
+            if not game_map.getBoolProperty("VICTOR_CULTISTS_SPAWNED"):
+                return
+            _expire_victor_search(game_map)
 
     @trigger(context, "onEnter", "nouraajdChapel")
     class ChapelTrigger(CTrigger):
@@ -349,10 +411,7 @@ def load(self, context):
 
         def _ensure_quest(self, quest_name):
             player = self.getGame().getMap().getPlayer()
-            for quest in player.getQuests():
-                if quest.getName() == quest_name:
-                    return
-            player.addQuest(quest_name)
+            _grant_quest(player, quest_name)
 
         def can_inspect_stained_glass(self):
             player = self.getGame().getMap().getPlayer()
@@ -423,7 +482,7 @@ def load(self, context):
     class OctoBogzDialog(CDialog):
         def accept_quest(self):
             game_map = self.getGame().getMap()
-            game_map.getPlayer().addQuest("octoBogzQuest")
+            _grant_quest(game_map.getPlayer(), "octoBogzQuest")
             if not game_map.getBoolProperty("OCTOBOGZ_SLAIN"):
                 game_map.setBoolProperty("completed_octobogz", False)
 
@@ -456,6 +515,7 @@ def load(self, context):
             game_map.setBoolProperty("VICTOR_GOOD_END", True)
             game_map.setBoolProperty("VICTOR_BAD_END", False)
             game_map.setBoolProperty("VICTOR_REWARD_CLAIMED", True)
+            _clear_victor_encounter(game_map)
 
     @trigger(context, "onEnter", "oldWoman")
     class OldWomanTrigger(CTrigger):
@@ -482,7 +542,7 @@ def load(self, context):
             if game_map.getBoolProperty("AMULET_QUEST_STARTED"):
                 return
             player = game_map.getPlayer()
-            player.addQuest("amuletQuest")
+            _grant_quest(player, "amuletQuest")
             goblin = game.createObject("goblinThief")
             goblin.setStringProperty("name", "amuletGoblin")
             game_map.addObject(goblin)
