@@ -35,6 +35,8 @@ class CGui : public CGameGraphicsObject {
   SDL_Renderer *renderer = 0;
 
 public:
+  using CGameGraphicsObject::render;
+
   SDL_Renderer *getRenderer() const;
 
   int getWidth();

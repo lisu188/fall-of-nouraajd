@@ -63,29 +63,27 @@ std::shared_ptr<vstd::future<Coords, void>>
 CNpcRandomController::control(std::shared_ptr<CCreature> creature) {
   auto self = this->ptr<CNpcRandomController>();
   return vstd::later([self, creature]() -> Coords {
-    if (self->path.empty() || self->currentStep >= self->path.size()) {
-      for (int i = 0; i < 10; i++) {
-        auto dx = vstd::rand(-5, 5);
-        auto dy = vstd::rand(-5, 5);
-        auto candidate = creature->getCoords() + Coords(dx, dy, 0);
-        if (creature->getMap()->canStep(candidate)) {
-          self->path = CPathFinder::findPath(
-              creature->getCoords(), candidate,
-              [creature](const Coords &c) {
-                return creature->getMap()->canStep(c);
-              },
-              [](auto) { return std::make_pair(false, ZERO); });
-          self->currentStep = 0;
-          break;
-        }
+      if (self->path.empty() || self->currentStep >= static_cast<int>(self->path.size())) {
+          for (int i = 0; i < 10; i++) {
+              auto dx = vstd::rand(-5, 5);
+              auto dy = vstd::rand(-5, 5);
+              auto candidate = creature->getCoords() + Coords(dx, dy, 0);
+              if (creature->getMap()->canStep(candidate)) {
+                  self->path = CPathFinder::findPath(
+                      creature->getCoords(), candidate,
+                      [creature](const Coords &c) { return creature->getMap()->canStep(c); },
+                      [](auto) { return std::make_pair(false, ZERO); });
+                  self->currentStep = 0;
+                  break;
+              }
+          }
       }
-    }
 
-    if (!self->path.empty() && self->currentStep < self->path.size()) {
-      return self->path[self->currentStep++];
-    }
+      if (!self->path.empty() && self->currentStep < static_cast<int>(self->path.size())) {
+          return self->path[self->currentStep++];
+      }
 
-    return creature->getCoords();
+      return creature->getCoords();
   });
 }
 
@@ -259,8 +257,8 @@ void CPlayerController::setTarget(std::shared_ptr<CPlayer> player,
   path.clear();
   currentStep = 0;
   auto _path = calculatePath(player);
-  for (int i = 0; i < _path.size(); i++) {
-    path[i] = _path[i];
+  for (int i = 0; i < static_cast<int>(_path.size()); i++) {
+      path[i] = _path[i];
   }
 }
 
@@ -341,6 +339,6 @@ void CPlayerFightController::end(std::shared_ptr<CCreature> me,
 }
 
 bool CPlayerController::isCompleted(std::shared_ptr<CPlayer> player) {
-  return !target || currentStep >= path.size() || currentStep < 0 ||
-         player->getCoords() == *target || !player->getMap()->canStep(*target);
+    return !target || currentStep >= static_cast<int>(path.size()) || currentStep < 0 ||
+           player->getCoords() == *target || !player->getMap()->canStep(*target);
 }

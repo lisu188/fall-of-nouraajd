@@ -140,7 +140,7 @@ public:
   int getTileSize(const std::shared_ptr<CGameGraphicsObject> &object);
 
 private:
-  virtual void render(std::shared_ptr<CGui> reneder, int frameTime);
+  virtual void render(std::shared_ptr<CGui> renderer, int frameTime);
 
   bool event(std::shared_ptr<CGui> gui, SDL_Event *event);
 
