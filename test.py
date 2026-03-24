@@ -738,6 +738,61 @@ class GameTest(unittest.TestCase):
         return failed == [], json.dumps({"failed": failed, "checks": checks})
 
     @game_test
+    def test_nouraajd_quest_progression(self):
+        game = load_game_module()
+        original_show_message = game.CGuiHandler.showMessage
+        try:
+            game.CGuiHandler.showMessage = lambda self, message: None
+            g, game_map, player = load_game_map_with_player("nouraajd")
+
+            game_map.removeObjectByName("cave1")
+            self.assertTrue(game_map.getBoolProperty("completed_rolf"))
+            self.assertTrue(player.hasItem(lambda it: it.getName() == "skullOfRolf"))
+            self.assertFalse(game_map.getBoolProperty("completed_gooby"))
+
+            game_map.removeObjectByName("gooby1")
+            self.assertTrue(game_map.getBoolProperty("completed_gooby"))
+
+            game_map.removeObjectByName("catacombs")
+            self.assertTrue(player.hasItem(lambda it: it.getName() == "holyRelic"))
+
+            game_map.removeObjectByName("cave2")
+            self.assertTrue(game_map.getBoolProperty("OCTOBOGZ_SLAIN"))
+            self.assertFalse(
+                game_map.getBoolProperty("OCTOBOGZ_CLEARED"),
+                "OctoBogz cave should not be marked cleared before the relic is returned.",
+            )
+
+            g_with_relic, map_with_relic, player_with_relic = load_game_map_with_player("nouraajd")
+            map_with_relic.setBoolProperty("RELIC_RETURNED", True)
+            map_with_relic.removeObjectByName("cave2")
+            self.assertTrue(map_with_relic.getBoolProperty("OCTOBOGZ_SLAIN"))
+            self.assertTrue(
+                map_with_relic.getBoolProperty("OCTOBOGZ_CLEARED"),
+                "OctoBogz cave should be marked cleared when relic has already been returned.",
+            )
+
+            map_with_relic.removeObjectByName("catacombs")
+            self.assertTrue(player_with_relic.hasItem(lambda it: it.getName() == "holyRelic"))
+
+            log = {
+                "flags": {
+                    "completed_rolf": game_map.getBoolProperty("completed_rolf"),
+                    "completed_gooby": game_map.getBoolProperty("completed_gooby"),
+                    "relic_item_awarded": player.hasItem(lambda it: it.getName() == "holyRelic"),
+                    "octobogz_slain": game_map.getBoolProperty("OCTOBOGZ_SLAIN"),
+                    "octobogz_cleared": game_map.getBoolProperty("OCTOBOGZ_CLEARED"),
+                    "octobogz_cleared_with_relic": map_with_relic.getBoolProperty("OCTOBOGZ_CLEARED"),
+                    "relic_item_awarded_with_relic_path": player_with_relic.hasItem(
+                        lambda it: it.getName() == "holyRelic"
+                    ),
+                },
+            }
+            return True, json.dumps(log, sort_keys=True)
+        finally:
+            game.CGuiHandler.showMessage = original_show_message
+
+    @game_test
     def test_new_class_dialog_hooks(self):
         script = (REPO_ROOT / "res/maps/nouraajd/script.py").read_text()
         dialog4 = json.loads((REPO_ROOT / "res/maps/nouraajd/dialog4.json").read_text())
