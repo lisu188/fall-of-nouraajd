@@ -229,8 +229,7 @@ def load(self, context):
         COURTYARD_LEADER_SPAWN = (45, 100, 0)
         COURTYARD_TIMEOUT_TURNS = 75
 
-        @staticmethod
-        def _is_letter_to_beren(item):
+        def _is_letter_to_beren(self, item):
             return item.getName() == "letterToBeren" or (
                 hasattr(item, "getLabel") and item.getLabel() == "Sealed Letter"
             )
@@ -343,8 +342,7 @@ def load(self, context):
 
     @register(context)
     class BerenDialog(CDialog):
-        @staticmethod
-        def _is_letter_to_beren(item):
+        def _is_letter_to_beren(self, item):
             return item.getName() == "letterToBeren" or (
                 hasattr(item, "getLabel") and item.getLabel() == "Sealed Letter"
             )
