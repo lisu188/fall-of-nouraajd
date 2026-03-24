@@ -74,6 +74,9 @@ CObjectHandler::_createObject(std::shared_ptr<CGame> game,
   std::shared_ptr<CGameObject> object =
       CSerialization::deserialize<std::shared_ptr<json>,
                                   std::shared_ptr<CGameObject>>(game, config);
+  if (!object) {
+    return object;
+  }
   object->setTypeId(type);
   return object;
 }

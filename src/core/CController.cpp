@@ -26,9 +26,12 @@ CTargetController::CTargetController() {}
 
 std::shared_ptr<vstd::future<Coords, void>>
 CTargetController::control(std::shared_ptr<CCreature> creature) {
+  auto target_object = creature->getMap()->getObjectByName(target);
+  if (!target_object) {
+    return vstd::later([creature]() { return creature->getCoords(); });
+  }
   return CPathFinder::findNextStep(
-      creature->getCoords(),
-      creature->getMap()->getObjectByName(target)->getCoords(),
+      creature->getCoords(), target_object->getCoords(),
       [creature](const Coords &coords) {
         return creature->getMap()->canStep(coords);
       },

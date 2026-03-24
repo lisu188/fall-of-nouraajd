@@ -54,6 +54,14 @@ void logger(std::string s) {
   vstd::logger::info(std::move(s)); // TODO: add script name
 }
 
+list map_get_objects(const std::shared_ptr<CMap> &map) {
+  list objects;
+  for (const auto &object : map->getObjects()) {
+    objects.append(object);
+  }
+  return objects;
+}
+
 extern void initModule1();
 
 #define PY_WRAP_GENERIC(fcn) def(#fcn, boost::python::make_function(fcn))
@@ -145,7 +153,7 @@ BOOST_PYTHON_MODULE(_game) {
       .def("getEntryX", &CMap::getEntryX)
       .def("getEntryY", &CMap::getEntryY)
       .def("getEntryZ", &CMap::getEntryZ)
-      .def("getObjects", &CMap::getObjects)
+      .def("getObjects", &map_get_objects)
       .def("getTurn", &CMap::getTurn);
 
   void (CObjectHandler::*registerType)(std::string, std::function<std::shared_ptr<CGameObject>()>) =
@@ -219,7 +227,17 @@ BOOST_PYTHON_MODULE(_game) {
   class_<Damage, bases<CGameObject>, boost::noncopyable,
          std::shared_ptr<Damage>>("Damage");
   class_<Stats, bases<CGameObject>, boost::noncopyable, std::shared_ptr<Stats>>(
-      "Stats");
+      "Stats")
+      .def("setStrength", &Stats::setStrength)
+      .def("setAgility", &Stats::setAgility)
+      .def("setStamina", &Stats::setStamina)
+      .def("setIntelligence", &Stats::setIntelligence)
+      .def("setArmor", &Stats::setArmor)
+      .def("setBlock", &Stats::setBlock)
+      .def("setDmgMin", &Stats::setDmgMin)
+      .def("setDmgMax", &Stats::setDmgMax)
+      .def("setHit", &Stats::setHit)
+      .def("setCrit", &Stats::setCrit);
 
   class_<CTile, bases<CGameObject>, boost::noncopyable, std::shared_ptr<CTile>>(
       "CTileBase");
@@ -356,6 +374,9 @@ BOOST_PYTHON_MODULE(_game) {
       .def("getStats", &CCreature::getStats)
       .def("addManaProc", &CCreature::addManaProc)
       .def("isPlayer", &CCreature::isPlayer)
+      .def("isNpc", &CCreature::isNpc)
+      .def("setHp", &CCreature::setHp)
+      .def("setMana", &CCreature::setMana)
       .def("addExp", &CCreature::addExp)
       .def("useAction", &CCreature::useAction)
       .def("hasItem", hasItem)

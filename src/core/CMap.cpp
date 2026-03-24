@@ -175,7 +175,16 @@ void CMap::addObject(const std::shared_ptr<CMapObject> &mapObject) {
 }
 
 void CMap::removeObject(const std::shared_ptr<CMapObject> &mapObject) {
-    mapObjects.erase(mapObjects.find(mapObject->getName()));
+    if (!mapObject) {
+        return;
+    }
+
+    auto map_object_it = mapObjects.find(mapObject->getName());
+    if (map_object_it == mapObjects.end()) {
+        return;
+    }
+
+    mapObjects.erase(map_object_it);
     vstd::erase_if(mapObjectsCache, [mapObject](auto it) { return it.second == mapObject->getName(); });
     getEventHandler()->gameEvent(mapObject, std::make_shared<CGameEvent>(CGameEvent::Type::onDestroy));
     signal("objectChanged", mapObject->getCoords());
