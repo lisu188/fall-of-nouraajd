@@ -229,6 +229,12 @@ def load(self, context):
         COURTYARD_LEADER_SPAWN = (45, 100, 0)
         COURTYARD_TIMEOUT_TURNS = 75
 
+        @staticmethod
+        def _is_letter_to_beren(item):
+            return item.getName() == "letterToBeren" or (
+                hasattr(item, "getLabel") and item.getLabel() == "Sealed Letter"
+            )
+
         def _ensure_quest(self, quest_name):
             player = self.getGame().getMap().getPlayer()
             for quest in player.getQuests():
@@ -256,7 +262,7 @@ def load(self, context):
             player = self.getGame().getMap().getPlayer()
             if game_map.getBoolProperty("DELIVERED_LETTER"):
                 return
-            if not player.hasItem(lambda it: it.getName() == "letterToBeren"):
+            if not player.hasItem(self._is_letter_to_beren):
                 player.addItem("letterToBeren")
                 self.getGame().getGuiHandler().showMessage("You received a sealed letter.")
             self._ensure_quest("deliverLetterQuest")
@@ -266,7 +272,7 @@ def load(self, context):
             if game_map.getBoolProperty("DELIVERED_LETTER"):
                 return False
             player = self.getGame().getMap().getPlayer()
-            if player.hasItem(lambda it: it.getName() == "letterToBeren"):
+            if player.hasItem(self._is_letter_to_beren):
                 return True
             quests = player.getQuests()
             for q in quests:
@@ -337,6 +343,12 @@ def load(self, context):
 
     @register(context)
     class BerenDialog(CDialog):
+        @staticmethod
+        def _is_letter_to_beren(item):
+            return item.getName() == "letterToBeren" or (
+                hasattr(item, "getLabel") and item.getLabel() == "Sealed Letter"
+            )
+
         def _ensure_quest(self, quest_name):
             player = self.getGame().getMap().getPlayer()
             for quest in player.getQuests():
@@ -362,9 +374,7 @@ def load(self, context):
         def can_deliver_letter(self):
             game_map = self.getGame().getMap()
             player = game_map.getPlayer()
-            return player.hasItem(lambda it: it.getName() == "letterToBeren") and not game_map.getBoolProperty(
-                "DELIVERED_LETTER"
-            )
+            return player.hasItem(self._is_letter_to_beren) and not game_map.getBoolProperty("DELIVERED_LETTER")
 
         def can_return_relic(self):
             game_map = self.getGame().getMap()
@@ -387,7 +397,7 @@ def load(self, context):
             game_map = self.getGame().getMap()
             player = game_map.getPlayer()
             if self.can_deliver_letter():
-                player.removeItem(lambda it: it.getName() == "letterToBeren", True)
+                player.removeItem(self._is_letter_to_beren, True)
                 game_map.setBoolProperty("DELIVERED_LETTER", True)
                 if not game_map.getBoolProperty("RELIC_RETURNED"):
                     self._ensure_quest("retrieveRelicQuest")
