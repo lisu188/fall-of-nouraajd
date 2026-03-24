@@ -456,6 +456,7 @@ def load(self, context):
                 game = obj.getGame()
                 game_map = game.getMap()
                 if game_map.getBoolProperty("AMULET_RETURNED"):
+                    game_map.removeObject(obj)
                     return
                 player = game_map.getPlayer()
                 if player.hasItem(lambda it: it.getName() == "preciousAmulet"):
@@ -485,9 +486,17 @@ def load(self, context):
     class QuestReturnDialog(CDialog):
         def complete_amulet_quest(self):
             game = self.getGame()
-            player = game.getMap().getPlayer()
+            game_map = game.getMap()
+            player = game_map.getPlayer()
             if player.hasItem(lambda it: it.getName() == "preciousAmulet"):
                 player.removeItem(lambda it: it.getName() == "preciousAmulet", True)
                 player.addGold(50)
-                game.getMap().setBoolProperty("AMULET_RETURNED", True)
+                game_map.setBoolProperty("AMULET_RETURNED", True)
+                game_map.setBoolProperty("AMULET_QUEST_STARTED", False)
+                amulet_goblin = game_map.getObjectByName("amuletGoblin")
+                if amulet_goblin:
+                    game_map.removeObject(amulet_goblin)
+                old_woman = game_map.getObjectByName("oldWoman")
+                if old_woman:
+                    game_map.removeObject(old_woman)
                 game.getGuiHandler().showMessage("The old woman gratefully rewards you with 50 gold.")
