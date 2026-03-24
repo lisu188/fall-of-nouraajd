@@ -6,8 +6,7 @@ def load(self, context):
     from game import register
     from game import trigger
 
-    def ensure_quest(game_map, quest_name):
-        player = game_map.getPlayer()
+    def ensure_quest(player, quest_name):
         for quest in player.getQuests():
             if quest.getName() == quest_name:
                 return
@@ -69,7 +68,7 @@ def load(self, context):
     @register(context)
     class StartEvent(CEvent):
         def onEnter(self, event):
-            if not event.getCause().isPlayer():
+            if event.getCause().getName() != "player":
                 return
             game_map = self.getMap()
             if game_map.getBoolProperty("ritual_initialized"):
@@ -98,10 +97,11 @@ def load(self, context):
             game_map.setNumericProperty("ritual_last_wave_turn", 0)
             game_map.setNumericProperty("ritual_last_tick_turn", 0)
 
-            ensure_quest(game_map, "ritualQuest")
-            ensure_quest(game_map, "destroyAnchorsQuest")
-            ensure_quest(game_map, "rescueCaptiveQuest")
-            ensure_quest(game_map, "finalResolutionQuest")
+            player = event.getCause()
+            ensure_quest(player, "ritualQuest")
+            ensure_quest(player, "destroyAnchorsQuest")
+            ensure_quest(player, "rescueCaptiveQuest")
+            ensure_quest(player, "finalResolutionQuest")
 
     @register(context)
     class RitualQuest(CQuest):
