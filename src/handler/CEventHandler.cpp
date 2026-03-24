@@ -30,21 +30,37 @@ void CEventHandler::gameEvent(std::shared_ptr<CMapObject> object,
                               std::shared_ptr<CGameEvent> event) const {
   // TODO: maybe add reflection
   if (event->getType() == CGameEvent::Type::onEnter) {
-    vstd::cast<Visitable>(object)->onEnter(event);
+    if (auto visitable = vstd::cast<Visitable>(object)) {
+      visitable->onEnter(event);
+    }
   } else if (event->getType() == CGameEvent::Type::onLeave) {
-    vstd::cast<Visitable>(object)->onLeave(event);
+    if (auto visitable = vstd::cast<Visitable>(object)) {
+      visitable->onLeave(event);
+    }
   } else if (event->getType() == CGameEvent::Type::onTurn) {
-    vstd::cast<Turnable>(object)->onTurn(event);
+    if (auto turnable = vstd::cast<Turnable>(object)) {
+      turnable->onTurn(event);
+    }
   } else if (event->getType() == CGameEvent::Type::onDestroy) {
-    vstd::cast<Creatable>(object)->onDestroy(event);
+    if (auto creatable = vstd::cast<Creatable>(object)) {
+      creatable->onDestroy(event);
+    }
   } else if (event->getType() == CGameEvent::Type::onCreate) {
-    vstd::cast<Creatable>(object)->onCreate(event);
+    if (auto creatable = vstd::cast<Creatable>(object)) {
+      creatable->onCreate(event);
+    }
   } else if (event->getType() == CGameEvent::Type::onUse) {
-    vstd::cast<Usable>(object)->onUse(event);
+    if (auto usable = vstd::cast<Usable>(object)) {
+      usable->onUse(event);
+    }
   } else if (event->getType() == CGameEvent::Type::onEquip) {
-    vstd::cast<Wearable>(object)->onEquip(event);
+    if (auto wearable = vstd::cast<Wearable>(object)) {
+      wearable->onEquip(event);
+    }
   } else if (event->getType() == CGameEvent::Type::onUnequip) {
-    vstd::cast<Wearable>(object)->onUnequip(event);
+    if (auto wearable = vstd::cast<Wearable>(object)) {
+      wearable->onUnequip(event);
+    }
   } else {
     vstd::logger::fatal("Unrecognized event type:", event->getType());
   }
