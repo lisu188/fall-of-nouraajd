@@ -203,6 +203,7 @@
   "letterToBeren": {
     "ref": "Scroll",
     "properties": {
+      "name": "letterToBeren",
       "label": "Sealed Letter",
       "text": "Father Beren, we beseech your guidance. - Mayor Irvin"
     }

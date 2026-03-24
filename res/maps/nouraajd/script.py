@@ -252,13 +252,19 @@ def load(self, context):
             )
 
         def give_letter(self):
+            game_map = self.getGame().getMap()
             player = self.getGame().getMap().getPlayer()
+            if game_map.getBoolProperty("DELIVERED_LETTER"):
+                return
             if not player.hasItem(lambda it: it.getName() == "letterToBeren"):
                 player.addItem("letterToBeren")
                 self.getGame().getGuiHandler().showMessage("You received a sealed letter.")
             self._ensure_quest("deliverLetterQuest")
 
         def has_letter_quest(self):
+            game_map = self.getGame().getMap()
+            if game_map.getBoolProperty("DELIVERED_LETTER"):
+                return False
             player = self.getGame().getMap().getPlayer()
             if player.hasItem(lambda it: it.getName() == "letterToBeren"):
                 return True
