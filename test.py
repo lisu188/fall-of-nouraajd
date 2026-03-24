@@ -70,7 +70,6 @@ def game_test(f):
 
 def advance(g, turns):
     game = load_game_module()
-
     current_turn = g.getMap().getNumericProperty("turn")
     for i in range(turns):
         g.getMap().move()
@@ -1037,6 +1036,37 @@ class GameTest(unittest.TestCase):
             for item in obj:
                 yield from self._collect_resource_paths(item)
 
+    @game_test
+    def test_playthrough(self):
+        game = load_game_module()
+        g, game_map, player = load_game_map_with_player("nouraajd")
+        advance(g, 1)
+
+        player.addExp(10000)
+        player.healProc(100)
+
+        def kill_all():
+            for obj in list(game_map.getObjects()):
+                if isinstance(obj, game.CCreature) and not obj.isPlayer() and not obj.isNpc():
+                    game.CFightHandler.fight(player, obj)
+                    player.healProc(100)
+
+        for coords in ((704, 544, 0), (608, 320, 0), (100, 100, 0), (5312, 672, 0)):
+            player.moveTo(*coords)
+            kill_all()
+
+        success = (
+            game_map.getBoolProperty("completed_gooby")
+            and game_map.getBoolProperty("completed_octobogz")
+            and player.hasItem(lambda it: it.getName() == "holyRelic")
+        )
+        log = {
+            "completed_gooby": game_map.getBoolProperty("completed_gooby"),
+            "completed_octobogz": game_map.getBoolProperty("completed_octobogz"),
+            "has_holy_relic": player.hasItem(lambda it: it.getName() == "holyRelic"),
+            "player_coords": [player.getCoords().x, player.getCoords().y, player.getCoords().z],
+        }
+        return success, json.dumps(log, sort_keys=True)
 
 if __name__ == "__main__":
     unittest.main(testRunner=unittest.TextTestRunner())
