@@ -15,8 +15,17 @@ tab - open/close python console
 ## running
 ### ubuntu
 <pre>
+sudo apt install python3.11 python3.11-dev
 ./configure.sh
-cd cmake-build-release
-make _game
+cmake --build cmake-build-release --target _game -j$(nproc)
 python3 play.py
 </pre>
+### testing
+Running tests is **mandatory** after any code change.
+From the repository root, run:
+<pre>
+cmake --build cmake-build-release --target _game -j$(nproc)
+python3 test.py
+</pre>
+Data validation tests run without needing the compiled `_game` module, but
+other tests require it to be built.

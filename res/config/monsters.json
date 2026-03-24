@@ -422,10 +422,14 @@
     "class": "CCreature",
     "properties": {
       "actions": [
-        { "ref": "Attack" }
+        {
+          "ref": "Attack"
+        }
       ],
       "animation": "images/monsters/cultist",
-      "fightController": { "class": "CMonsterFightController" },
+      "fightController": {
+        "class": "CMonsterFightController"
+      },
       "label": "Cultist",
       "levelStats": {
         "class": "Stats",
@@ -461,10 +465,14 @@
     "class": "CCreature",
     "properties": {
       "actions": [
-        { "ref": "Attack" }
+        {
+          "ref": "Attack"
+        }
       ],
       "animation": "images/monsters/cult_leader",
-      "fightController": { "class": "CMonsterFightController" },
+      "fightController": {
+        "class": "CMonsterFightController"
+      },
       "label": "Cult Leader",
       "levelStats": {
         "class": "Stats",
@@ -500,10 +508,14 @@
     "class": "CCreature",
     "properties": {
       "actions": [
-        { "ref": "Attack" }
+        {
+          "ref": "Attack"
+        }
       ],
       "animation": "images/monsters/goblin_thief",
-      "fightController": { "class": "CMonsterFightController" },
+      "fightController": {
+        "class": "CMonsterFightController"
+      },
       "label": "Goblin Thief",
       "levelStats": {
         "class": "Stats",
@@ -520,7 +532,9 @@
         }
       },
       "levelling": {
-        "4": { "ref": "DoubleAttack" }
+        "4": {
+          "ref": "DoubleAttack"
+        }
       },
       "baseStats": {
         "class": "Stats",
@@ -537,6 +551,148 @@
         }
       },
       "sw": 1
+    }
+  },
+  "Inquisitor": {
+    "class": "CPlayer",
+    "properties": {
+      "actions": [
+        {
+          "ref": "Attack"
+        }
+      ],
+      "animation": "images/players/warrior",
+      "equipped": {
+        "0": {
+          "ref": "Sword"
+        },
+        "3": {
+          "ref": "Robe"
+        }
+      },
+      "fightController": {
+        "class": "CMonsterFightController"
+      },
+      "items": [],
+      "label": "Inquisitor",
+      "levelStats": {
+        "class": "Stats",
+        "properties": {
+          "agility": 1,
+          "crit": 1,
+          "dmgMax": 2,
+          "dmgMin": 1,
+          "hit": 2,
+          "intelligence": 2,
+          "stamina": 2,
+          "strength": 2
+        }
+      },
+      "levelling": {
+        "1": {
+          "ref": "ExposeCorruption"
+        },
+        "2": {
+          "ref": "Strike"
+        },
+        "3": {
+          "ref": "SanctifiedWard"
+        },
+        "4": {
+          "ref": "FrostBolt"
+        },
+        "5": {
+          "ref": "Barrier"
+        },
+        "6": {
+          "ref": "EndlessPain"
+        }
+      },
+      "baseStats": {
+        "class": "Stats",
+        "properties": {
+          "agility": 5,
+          "crit": 8,
+          "dmgMax": 11,
+          "dmgMin": 9,
+          "hit": 78,
+          "intelligence": 7,
+          "mainStat": "intelligence",
+          "stamina": 6,
+          "strength": 6
+        }
+      }
+    }
+  },
+  "Wayfarer": {
+    "class": "CPlayer",
+    "properties": {
+      "actions": [
+        {
+          "ref": "Attack"
+        }
+      ],
+      "animation": "images/players/assasin",
+      "equipped": {
+        "0": {
+          "ref": "ShortSword"
+        },
+        "3": {
+          "ref": "LeatherArmor"
+        }
+      },
+      "fightController": {
+        "class": "CMonsterFightController"
+      },
+      "items": [],
+      "label": "Wayfarer",
+      "levelStats": {
+        "class": "Stats",
+        "properties": {
+          "agility": 3,
+          "crit": 1,
+          "dmgMax": 2,
+          "dmgMin": 1,
+          "hit": 3,
+          "intelligence": 1,
+          "stamina": 1,
+          "strength": 2
+        }
+      },
+      "levelling": {
+        "1": {
+          "ref": "WayfarersStride"
+        },
+        "2": {
+          "ref": "SneakAttack"
+        },
+        "3": {
+          "ref": "SmugglersMark"
+        },
+        "4": {
+          "ref": "DoubleAttack"
+        },
+        "5": {
+          "ref": "Backstab"
+        },
+        "6": {
+          "ref": "BloodThirst"
+        }
+      },
+      "baseStats": {
+        "class": "Stats",
+        "properties": {
+          "agility": 8,
+          "crit": 12,
+          "dmgMax": 11,
+          "dmgMin": 9,
+          "hit": 82,
+          "intelligence": 5,
+          "mainStat": "agility",
+          "stamina": 5,
+          "strength": 6
+        }
+      }
     }
   }
 }

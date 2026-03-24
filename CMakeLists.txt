@@ -39,8 +39,8 @@ endif ()
 file(GLOB_RECURSE GAME_SRC ${CMAKE_SOURCE_DIR}/src/**.cpp ${CMAKE_SOURCE_DIR}/src/**.h)
 
 find_package(Boost COMPONENTS python filesystem REQUIRED)
-find_package(PythonInterp REQUIRED)
-find_package(PythonLibs REQUIRED)
+find_package(PythonInterp 3 REQUIRED)
+find_package(PythonLibs 3 REQUIRED)
 find_package(SDL2 REQUIRED)
 find_package(SDL2_image REQUIRED)
 find_package(SDL2_ttf REQUIRED)
@@ -87,6 +87,10 @@ configure_file(res/maps/siege/config.json maps/siege/config.json)
 configure_file(res/maps/siege/map.json maps/siege/map.json)
 configure_file(res/maps/siege/script.py maps/siege/script.py)
 
+configure_file(res/maps/ritual/config.json maps/ritual/config.json)
+configure_file(res/maps/ritual/map.json maps/ritual/map.json)
+configure_file(res/maps/ritual/script.py maps/ritual/script.py)
+
 configure_file(res/maps/test/config.json maps/test/config.json)
 configure_file(res/maps/test/map.json maps/test/map.json)
 configure_file(res/maps/test/script.py maps/test/script.py)
@@ -94,6 +98,7 @@ configure_file(res/maps/test/script.py maps/test/script.py)
 configure_file(res/plugins/effect.py plugins/effect.py)
 configure_file(res/plugins/interaction.py plugins/interaction.py)
 configure_file(res/plugins/object.py plugins/object.py)
+configure_file(res/plugins/crafting.py plugins/crafting.py)
 configure_file(res/plugins/potion.py plugins/potion.py)
 configure_file(res/plugins/tile.py plugins/tile.py)
 
@@ -271,10 +276,34 @@ if (WIN32)
     install(FILES windows-tools/Python36/python36.zip DESTINATION fall-of-nouraajd)
 endif ()
 
+
+add_executable(fon_unit_tests
+    tests/unit/test_coords.cpp
+    src/core/CUtil.cpp
+)
+
+target_include_directories(fon_unit_tests PRIVATE
+    ${CMAKE_SOURCE_DIR}/src
+    ${CMAKE_SOURCE_DIR}/vstd
+    json/single_include/nlohmann
+    ${PYTHON_INCLUDE_DIRS}
+    ${Boost_INCLUDE_DIRS}
+    ${SDL2_INCLUDE_DIR}
+    ${SDL2_IMAGE_INCLUDE_DIR}
+    ${SDL2_TTF_INCLUDE_DIR}
+)
+
+target_link_libraries(fon_unit_tests PRIVATE ${PYTHON_LIBRARIES})
+
+enable_testing()
+add_test(NAME fon_unit_tests COMMAND fon_unit_tests)
+
 SET(CPACK_STRIP_FILES _game.so)
 
-IF (!WIN32)
+if (WIN32)
+    set_target_properties(_game PROPERTIES UNITY_BUILD OFF)
+else()
     cotire(_game)
-ENDIF ()
+    set_target_properties(_game PROPERTIES UNITY_BUILD ON)
+endif ()
 
-set_target_properties(_game PROPERTIES UNITY_BUILD ON)

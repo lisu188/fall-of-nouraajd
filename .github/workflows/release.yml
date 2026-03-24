@@ -1,0 +1,40 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      - name: cache-ccache
+        uses: actions/cache@v3
+        with:
+          path: ~/.ccache
+          key: ${{ runner.os }}-ccache-${{ hashFiles('**/CMakeLists.txt') }}
+          restore-keys: ${{ runner.os }}-ccache-
+      - name: submodules
+        run: git submodule update --init --recursive
+      - name: configure
+        run: ./configure.sh
+      - name: build
+        run: cmake --build cmake-build-release --target package -j$(nproc)
+      - name: test (c++)
+        working-directory: cmake-build-release
+        run: ctest --output-on-failure
+      - name: test
+        working-directory: cmake-build-release
+        run: python test.py
+      - name: Upload release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: cmake-build-release/fall-of-nouraajd-*.tar.gz
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -1,0 +1,320 @@
+{
+  "ritualStart": {
+    "class": "StartEvent",
+    "properties": {
+      "text": "Cold rain runs across broken stones as you enter the abandoned chapel. Three ritual anchors feed a stained-glass prison in the sanctum. Break the anchors, stop the binding, and free the captive before the final chant."
+    }
+  },
+  "ritualQuest": {
+    "class": "RitualQuest",
+    "properties": {
+      "description": "Find and disrupt the chapel ritual."
+    }
+  },
+  "destroyAnchorsQuest": {
+    "class": "DestroyAnchorsQuest",
+    "properties": {
+      "description": "Destroy the three ritual anchors."
+    }
+  },
+  "rescueCaptiveQuest": {
+    "class": "RescueCaptiveQuest",
+    "properties": {
+      "description": "Free the captive before the binding ends."
+    }
+  },
+  "finalResolutionQuest": {
+    "class": "FinalResolutionQuest",
+    "properties": {
+      "description": "Resolve the chapel's fate."
+    }
+  },
+  "ritualWitness": {
+    "ref": "Cultist",
+    "properties": {
+      "animation": "images/npc/oldWoman",
+      "controller": {
+        "class": "CNpcRandomController"
+      },
+      "npc": true
+    }
+  },
+  "ritualCaptive": {
+    "ref": "Cultist",
+    "properties": {
+      "animation": "images/npc/questGiver",
+      "controller": {
+        "class": "CNpcRandomController"
+      },
+      "npc": true
+    }
+  },
+  "ritualAnchorNorth": {
+    "ref": "Cave",
+    "properties": {
+      "message": "The north anchor cracks. The ritual pulse grows unstable.",
+      "chance": "0",
+      "monster": {
+        "ref": "Cultist",
+        "properties": {
+          "controller": {
+            "class": "CTargetController",
+            "properties": {
+              "target": "player"
+            }
+          }
+        }
+      },
+      "monsters": "0"
+    }
+  },
+  "ritualAnchorCrypt": {
+    "ref": "Cave",
+    "properties": {
+      "message": "The crypt anchor collapses into ash.",
+      "chance": "0",
+      "monster": {
+        "ref": "Cultist",
+        "properties": {
+          "controller": {
+            "class": "CTargetController",
+            "properties": {
+              "target": "player"
+            }
+          }
+        }
+      },
+      "monsters": "0"
+    }
+  },
+  "ritualAnchorSanctum": {
+    "ref": "Cave",
+    "properties": {
+      "message": "The final anchor shatters and the sanctum screams.",
+      "chance": "0",
+      "monster": {
+        "ref": "Cultist",
+        "properties": {
+          "controller": {
+            "class": "CTargetController",
+            "properties": {
+              "target": "player"
+            }
+          }
+        }
+      },
+      "monsters": "0"
+    }
+  },
+  "ritualCultist": {
+    "ref": "Cultist",
+    "properties": {
+      "affiliation": "ritual",
+      "controller": {
+        "class": "CTargetController",
+        "properties": {
+          "target": "player"
+        }
+      }
+    }
+  },
+  "ritualPritz": {
+    "ref": "Pritz",
+    "properties": {
+      "affiliation": "ritual",
+      "controller": {
+        "class": "CTargetController",
+        "properties": {
+          "target": "player"
+        }
+      }
+    }
+  },
+  "ritualMage": {
+    "ref": "PritzMage",
+    "properties": {
+      "affiliation": "ritual",
+      "controller": {
+        "class": "CTargetController",
+        "properties": {
+          "target": "player"
+        }
+      }
+    }
+  },
+  "ritualLeaderTemplate": {
+    "ref": "CultLeader",
+    "properties": {
+      "affiliation": "ritual",
+      "controller": {
+        "class": "CTargetController",
+        "properties": {
+          "target": "player"
+        }
+      }
+    }
+  },
+  "chapelWarningDialog": {
+    "class": "ChapelWarningDialog",
+    "properties": {
+      "states": [
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "ENTRY",
+            "text": "The witness clutches a broken rosary. Three anchors sustain the prison. Each moment of delay strengthens the chant.",
+            "options": [
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 0,
+                  "nextStateId": "DETAIL",
+                  "text": "Where are the anchors?"
+                }
+              },
+              {
+                "ref": "exitOption",
+                "properties": {
+                  "number": 1,
+                  "text": "I understand."
+                }
+              }
+            ]
+          }
+        },
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "DETAIL",
+            "text": "One anchor is in the outer chapel, one in the crypt, and one beside the sanctum glass. Break them all, then slay the ritual leader.",
+            "options": [
+              {
+                "ref": "exitOption",
+                "properties": {
+                  "number": 0
+                }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  },
+  "capturedSoulDialog": {
+    "class": "CapturedSoulDialog",
+    "properties": {
+      "states": [
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "ENTRY",
+            "text": "The captive trembles behind the stained glass, waiting for your decision.",
+            "options": [
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 0,
+                  "condition": "can_free_captive",
+                  "action": "free_captive",
+                  "nextStateId": "GOOD_END",
+                  "text": "Break the glass and pull the captive free."
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 1,
+                  "condition": "is_captive_lost",
+                  "nextStateId": "BAD_END",
+                  "text": "The soul is already bound."
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 2,
+                  "condition": "need_more_work",
+                  "nextStateId": "LOCKED",
+                  "text": "The prison still hums with ritual force."
+                }
+              },
+              {
+                "ref": "exitOption",
+                "properties": {
+                  "number": 3
+                }
+              }
+            ]
+          }
+        },
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "GOOD_END",
+            "text": "The stained glass explodes outward. The captive survives, and the chapel falls silent.",
+            "options": [
+              {
+                "ref": "exitOption",
+                "properties": {
+                  "number": 0
+                }
+              }
+            ]
+          }
+        },
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "BAD_END",
+            "text": "Only an empty husk remains. The rite finished before you could intervene.",
+            "options": [
+              {
+                "ref": "exitOption",
+                "properties": {
+                  "number": 0
+                }
+              }
+            ]
+          }
+        },
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "LOCKED",
+            "text": "The prison is sealed. Destroy all anchors and end the ritual leader first.",
+            "options": [
+              {
+                "ref": "exitOption",
+                "properties": {
+                  "number": 0
+                }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  },
+  "recordsDialog": {
+    "class": "RecordsDialog",
+    "properties": {
+      "states": [
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "ENTRY",
+            "text": "Ritual records mention that every fifth chant draws new defenders from the crypt halls.",
+            "options": [
+              {
+                "ref": "exitOption",
+                "properties": {
+                  "number": 0
+                }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  }
+}

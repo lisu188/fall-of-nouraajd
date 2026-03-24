@@ -205,5 +205,49 @@
       "label": "Stunner",
       "manaCost": 40
     }
+  },
+  "ExposeCorruption": {
+    "class": "ExposeCorruption",
+    "properties": {
+      "animation": "images/interactions/shadowbolt",
+      "effect": {
+        "ref": "ExposeCorruptionEffect"
+      },
+      "label": "Expose Corruption",
+      "manaCost": 20
+    }
+  },
+  "SanctifiedWard": {
+    "class": "SanctifiedWard",
+    "properties": {
+      "animation": "images/interactions/barrier",
+      "effect": {
+        "ref": "SanctifiedWardEffect"
+      },
+      "label": "Sanctified Ward",
+      "manaCost": 22
+    }
+  },
+  "WayfarersStride": {
+    "class": "WayfarersStride",
+    "properties": {
+      "animation": "images/interactions/doubleattack",
+      "effect": {
+        "ref": "WayfarersStrideEffect"
+      },
+      "label": "Wayfarer's Stride",
+      "manaCost": 18
+    }
+  },
+  "SmugglersMark": {
+    "class": "SmugglersMark",
+    "properties": {
+      "animation": "images/interactions/chloroform",
+      "effect": {
+        "ref": "SmugglersMarkEffect"
+      },
+      "label": "Smuggler's Mark",
+      "manaCost": 20
+    }
   }
 }

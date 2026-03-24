@@ -1,10 +1,20 @@
 # Repository Guidelines
 
 ## Testing
-Run `python3 test.py` from the repository root.
+Running tests is **mandatory** for every code change made by agents.
+Always run tests from the repository root:
+1. Build the Python extension module: `cmake --build cmake-build-release --target _game -j$(nproc)`
+2. Run the test suite: `python3 test.py`
+
 This test suite requires the compiled `_game` module.
 If the module or dependencies are missing, tests may fail; note this in the
-Testing section.
+Testing section. Import the optional `game` module inside each test that
+requires it so that tests which don't depend on the compiled module can still
+run.
+
+### Resource-to-CMake checklist
+- Whenever files are added under `res/`, update the root `CMakeLists.txt` so each new file is covered by `configure_file(...)` entries or by an `install(DIRECTORY ...)` rule as appropriate.
+- Before committing, verify no `res/**` file is missing from CMake resource references.
 
 ## Code Style
 - Use four spaces for indentation in both Python and C++ files.
@@ -127,6 +137,21 @@ Follow these steps when making a new C++ class usable from Python:
     - Add it inside `load(context)` and decorate with `@register(context)`.
 
 After exposing the new type, run `python3 test.py` to verify the bindings.
+
+## Map NPC vs Player Template Rule
+For **all maps** under `res/maps/*`, do **not** place player-class templates
+(`CPlayer`-based refs such as `Sorcerer`/`Warrior`/`Assasin`) as regular map
+actors in `config.json`.
+
+Doing so creates extra player objects at load and can produce debug lines like
+`Loaded object: CPlayer:<objectName>(...)`.
+
+For NPCs and scripted map actors, use non-player creature templates
+(`CCreature`-based refs) and keep `npc: true`/controllers as needed.
+
+To control where the real player starts, set map entry coordinates in each
+map's `map.json` top-level `properties` (`x`, `y`, `z`) instead of adding a
+separate player object.
 
 ## Copyright
 When modifying source files, update the copyright year in

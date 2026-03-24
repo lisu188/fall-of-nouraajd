@@ -6,7 +6,7 @@
         {
           "class": "CDialogState",
           "properties": {
-            "stateId": "INIT",
+            "stateId": "ENTRY",
             "text": "Whoa! Hold on there, stranger! Are you headed east, beyond the river?",
             "options": [
               {
@@ -100,14 +100,30 @@
           "class": "CDialogState",
           "properties": {
             "stateId": "ACCEPT_QUEST",
-            "text": "Travel east across the river and locate the cave infested with OctoBogz. The cave entrance is partially hidden by large boulders and sand, making it difficult to find. As you approach, you can hear strange, guttural noises echoing from within."
+            "text": "Travel east across the river and locate the cave infested with OctoBogz. The cave entrance is partially hidden by large boulders and sand, making it difficult to find. As you approach, you can hear strange, guttural noises echoing from within.",
+            "options": [
+              {
+                "ref": "exitOption",
+                "properties": {
+                  "number": 0
+                }
+              }
+            ]
           }
         },
         {
           "class": "CDialogState",
           "properties": {
             "stateId": "DECLINE_QUEST",
-            "text": "Thank you for considering it, traveler. Perhaps we'll find help elsewhere. Safe travels."
+            "text": "Thank you for considering it, traveler. Perhaps we'll find help elsewhere. Safe travels.",
+            "options": [
+              {
+                "ref": "exitOption",
+                "properties": {
+                  "number": 0
+                }
+              }
+            ]
           }
         }
       ]

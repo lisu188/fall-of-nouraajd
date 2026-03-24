@@ -1,0 +1,52 @@
+name: build
+
+on: [push]
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-22.04
+            configure: ./configure.sh
+            artifact: cmake-build-release/fall-of-nouraajd-*.tar.gz
+          - os: windows-latest
+            configure: ./configure.bat
+            artifact: cmake-build-release/fall-of-nouraajd-*.exe
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      - name: cache-ccache
+        uses: actions/cache@v3
+        with:
+          path: ~/.ccache
+          key: ${{ runner.os }}-ccache-${{ hashFiles('**/CMakeLists.txt') }}
+          restore-keys: ${{ runner.os }}-ccache-
+      - name: submodules
+        run: git submodule update --init --recursive
+      - name: configure
+        run: ${{ matrix.configure }}
+      - name: install-coverage-tools
+        if: matrix.os == 'ubuntu-22.04'
+        run: python3 -m pip install --upgrade gcovr
+      - name: coverage
+        if: matrix.os == 'ubuntu-22.04'
+        run: ./scripts/run_coverage.sh
+
+      - name: build
+        run: cmake --build cmake-build-release --target package -j$(nproc)
+      - name: test (c++)
+        working-directory: cmake-build-release
+        run: ctest --output-on-failure
+      - name: test
+        working-directory: cmake-build-release
+        run: python test.py
+      - name: publish
+        uses: actions/upload-artifact@v4
+        with:
+          name: fall-of-nouraajd
+          path: ${{ matrix.artifact }}
