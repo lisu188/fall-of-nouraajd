@@ -5,6 +5,7 @@
 *.pre
 *~
 gen/
+test/
 *.swp
 *.pyo
 *.user
