@@ -2,7 +2,7 @@
   "beAMan": {
     "class": "CDialogOption",
     "properties": {
-      "text": "Be a man and stop crying.",
+      "text": "Steel yourself and stop sobbing.",
       "nextStateId": "VICTOR_SPEECH",
       "action": "talked_to_victor"
     }
@@ -10,7 +10,7 @@
   "whatsWrong": {
     "class": "CDialogOption",
     "properties": {
-      "text": "What`s wrong? Why are You crying?",
+      "text": "What gnaws at you so hard?",
       "nextStateId": "VICTOR_SPEECH",
       "action": "talked_to_victor"
     }
@@ -23,7 +23,7 @@
           "class": "CDialogState",
           "properties": {
             "stateId": "ENTRY",
-            "text": "As You enter the inn, You see a lonely man arguing with innkeeper about alcohol. You approach them.",
+            "text": "You step into the inn and find a lone man snarling at the innkeeper over liquor. You draw closer.",
             "options": [
               {
                 "class": "CDialogOption",
@@ -40,7 +40,7 @@
           "class": "CDialogState",
           "properties": {
             "stateId": "INKEEPER_RANT",
-            "text": "(inkeeper yelling) I`VE ALREADY TOLD YOU, I`M OUT OF YOUR PRECIOUS VODKA! THERE IS ONLY BEER LEFT.",
+            "text": "(innkeeper shouting) I TOLD YOU, I'M OUT OF YOUR PRECIOUS VODKA! ONLY BITTER BEER REMAINS.",
             "options": [
               {
                 "class": "CDialogOption",
@@ -65,7 +65,7 @@
           "class": "CDialogState",
           "properties": {
             "stateId": "PUNCHED_VICTOR",
-            "text": "The man falls on the floor with broken nose and starts crying.",
+            "text": "He crashes to the floor, nose bloodied, and begins to sob.",
             "options": [
               {
                 "ref": "beAMan",
@@ -86,7 +86,7 @@
           "class": "CDialogState",
           "properties": {
             "stateId": "YELLED_AT_VICTOR",
-            "text": "Man sits on the chair and starts crying.",
+            "text": "The man collapses into a chair and sobs.",
             "options": [
               {
                 "ref": "beAMan",
@@ -107,12 +107,12 @@
           "class": "CDialogState",
           "properties": {
             "stateId": "VICTOR_SPEECH",
-            "text": "My name is Victor. It's about my daughter... She is lost for 3 days now. My ex-wife told me that she lost her in the crowd in the market 3 days ago. We can't find her anywhere and so does the city guard. I'm afraid I've lost my little girl. (cries)",
+            "text": "I'm Victor. It's my daughter... She's been gone three days. My ex-wife lost her in the market crowd, and neither I nor the guards can find a trace. I'm terrified she's gone forever. (sobs)",
             "options": [
               {
                 "class": "CDialogOption",
                 "properties": {
-                  "text": "Don't you have ANY clue where she might be?",
+                  "text": "Is there any clue at all where she went?",
                   "number": 0,
                   "nextStateId": "VICTOR_CLUE"
                 }
@@ -120,7 +120,7 @@
               {
                 "class": "CDialogOption",
                 "properties": {
-                  "text": "I've ran into group of priests of Marumi Baso that were looking for a girl around the city, maybe they are responsible for your daughter's disappearance?",
+                  "text": "I crossed paths with Marumi Baso priests hunting a girl. Could they have taken her?",
                   "number": 1,
                   "nextStateId": "SUGGEST_TOWN_HALL",
                   "condition": "asked_about_girl"
@@ -133,14 +133,14 @@
           "class": "CDialogState",
           "properties": {
             "stateId": "VICTOR_CLUE",
-            "text": "No... someone told me they've seen a girl that could be her in the courtyard nearby, but I was already there and couldn't find her or any clue.",
+            "text": "No... Someone swore they saw a girl like her near the courtyard, but when I rushed there I found nothing. No tracks, no ribbon, nothing.",
             "options": [
               {
                 "class": "CDialogOption",
                 "properties": {
                   "number": 0,
                   "nextStateId": "COURTYARD_PATH",
-                  "text": "Let's search the courtyard together."
+                  "text": "We'll scour the courtyard together."
                 }
               },
               {
@@ -148,7 +148,7 @@
                 "properties": {
                   "number": 1,
                   "nextStateId": "SUGGEST_TOWN_HALL",
-                  "text": "Maybe the town hall has some records."
+                  "text": "Maybe the town hall keeps a clue."
                 }
               }
             ]
@@ -158,14 +158,14 @@
           "class": "CDialogState",
           "properties": {
             "stateId": "SUGGEST_TOWN_HALL",
-            "text": "WHAT?! I've heard about them but I have no clue where their chapel might be located. We should check the town hall, maybe someone could help us there.",
+            "text": "What?! I've heard of them but never knew where their chapel hides. We should check the town hall—someone there must know.",
             "options": [
               {
                 "class": "CDialogOption",
                 "properties": {
                   "number": 0,
                   "nextStateId": "EXIT",
-                  "text": "Let's head to the town hall."
+                  "text": "Then let's head for the town hall."
                 }
               },
               {
@@ -173,7 +173,7 @@
                 "properties": {
                   "number": 1,
                   "nextStateId": "COURTYARD_PATH",
-                  "text": "I'll search the courtyard."
+                  "text": "I'll take the courtyard."
                 }
               }
             ]
@@ -183,13 +183,13 @@
           "class": "CDialogState",
           "properties": {
             "stateId": "COURTYARD_PATH",
-            "text": "You head for the courtyard and find a wooden door marked with the Cult of Marumi Baso sigil. The place is occupied. If you press on, you may still save Victor's daughter.",
+            "text": "You reach the courtyard and find a wooden door branded with the Cult of Marumi Baso sigil. The place is occupied; press on and you may yet save Victor's child.",
             "options": [
               {
                 "class": "CDialogOption",
                 "properties": {
                   "number": 0,
-                  "text": "I will confront them in the courtyard.",
+                  "text": "I'll confront them in that courtyard.",
                   "nextStateId": "EXIT"
                 }
               }
@@ -207,7 +207,7 @@
           "class": "CDialogState",
           "properties": {
             "stateId": "ENTRY",
-            "text": "You shatter the stained glass and free Victor's terrified daughter. Grateful beyond words, Victor rewards you with 500 gold and offers his potions whenever you need them.",
+            "text": "You smash through the stained glass and drag Victor's trembling daughter into the light. Overwhelmed, Victor presses 500 gold into your palm and vows his potions are yours whenever you ask.",
             "options": [
               {
                 "ref": "exitOption",

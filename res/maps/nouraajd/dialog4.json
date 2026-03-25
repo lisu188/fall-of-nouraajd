@@ -7,7 +7,7 @@
           "class": "CDialogState",
           "properties": {
             "stateId": "ENTRY",
-            "text": "Welcome to the town hall, traveler. I am Mayor Irvin. What brings you here?",
+            "text": "Welcome to the town hall, traveler. I am Mayor Irvin, steward of what's left. What business do you carry?",
             "options": [
               {
                 "class": "CDialogOption",
@@ -15,7 +15,7 @@
                   "number": 0,
                   "condition": "talked_to_victor",
                   "nextStateId": "VICTOR_CLUE",
-                  "text": "Do you have records about Victor's missing daughter?"
+                  "text": "Do your ledgers mention Victor's missing daughter?"
                 }
               },
               {
@@ -34,7 +34,7 @@
                   "condition": "can_chart_wayfarer_route",
                   "action": "chart_wayfarer_route",
                   "nextStateId": "WAYFARER_ROUTE",
-                  "text": "Study the old courier routes in your ledgers."
+                  "text": "Study the old courier routes hidden in your ledgers."
                 }
               },
               {
@@ -58,7 +58,7 @@
           "class": "CDialogState",
           "properties": {
             "stateId": "ASK_HELP",
-            "text": "We need someone to deliver a sealed letter to Father Beren at the chapel. Will you help us?",
+            "text": "We require a courier to bear this sealed letter to Father Beren at the chapel. Will you take it?",
             "options": [
               {
                 "class": "CDialogOption",
@@ -83,7 +83,7 @@
           "properties": {
             "stateId": "ASK_HELP_REPEAT",
             "condition": "has_letter_quest",
-            "text": "You already agreed to deliver our letter. Please hurry to Father Beren.",
+            "text": "You already agreed to bear our letter. Hurry to Father Beren before the ink dries useless.",
             "options": [
               {
                 "ref": "exitOption",
@@ -98,7 +98,7 @@
           "class": "CDialogState",
           "properties": {
             "stateId": "THANKS",
-            "text": "Thank you. Please hurry; the situation is dire.",
+            "text": "Thank you. Waste no time—the town frays by the hour.",
             "options": [
               {
                 "ref": "exitOption",
@@ -113,7 +113,7 @@
           "class": "CDialogState",
           "properties": {
             "stateId": "VICTOR_CLUE",
-            "text": "Among dusty ledgers you find a handwritten note describing the Cult of Marumi Baso. A decade ago they hid their chapel behind a wooden door in the courtyard. The author claims they sacrifice girls resembling their dead prophet's daughter to preserve a mysterious stained glass and extend the prophet's life.",
+            "text": "Among dusty ledgers you find a note on the Cult of Marumi Baso. A decade ago they concealed their chapel behind a wooden door in the courtyard. The author swears they sacrifice girls who resemble their dead prophet's daughter to preserve a stained glass and stretch the prophet's unnatural life.",
             "options": [
               {
                 "class": "CDialogOption",
@@ -137,7 +137,7 @@
           "class": "CDialogState",
           "properties": {
             "stateId": "WAYFARER_ROUTE",
-            "text": "The ledgers reveal smugglers' alleys and service lanes hidden behind the market and courtyard.",
+            "text": "The ledgers reveal smugglers' alleys and service lanes snaking behind the market and courtyard.",
             "options": [
               {
                 "ref": "exitOption",
