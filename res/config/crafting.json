@@ -15,7 +15,6 @@
         ],
         "output": { "item": "ManaPotion", "count": 1 },
         "gold": 20,
-        "unlockQuest": "FindTheAlchemist",
         "successChance": 95
     },
     "craft_town_portal_scroll": {

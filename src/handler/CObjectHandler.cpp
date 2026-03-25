@@ -24,6 +24,11 @@ CObjectHandler::CObjectHandler() {}
 void CObjectHandler::registerConfig(const std::string &path) {
   std::shared_ptr<json> config = CConfigurationProvider::getConfig(path);
   for (auto [key, value] : config->items()) {
+    if (value.is_object() &&
+        !value.count("class") &&
+        !value.count("ref")) {
+      continue;
+    }
     objectConfig[key] = CJsonUtil::clone(value);
   }
 }

@@ -40855,6 +40855,40 @@
         },
         {
           "height": 32,
+          "id": 105,
+          "name": "alchemyTable1",
+          "properties": {
+            "animation": "images/buildings/chapel"
+          },
+          "propertytypes": {
+            "animation": "string"
+          },
+          "rotation": 0,
+          "type": "alchemyTable1",
+          "visible": true,
+          "width": 32,
+          "x": 3360,
+          "y": 3520
+        },
+        {
+          "height": 32,
+          "id": 106,
+          "name": "scribeDesk1",
+          "properties": {
+            "animation": "images/buildings/chapel"
+          },
+          "propertytypes": {
+            "animation": "string"
+          },
+          "rotation": 0,
+          "type": "scribeDesk1",
+          "visible": true,
+          "width": 32,
+          "x": 3360,
+          "y": 3488
+        },
+        {
+          "height": 32,
           "id": 104,
           "name": "market1",
           "properties": {

@@ -63,6 +63,7 @@ target_link_libraries(_game ${Boost_LIBRARIES} ${PYTHON_LIBRARIES} ${SDL2_LIBRAR
 configure_file(res/config/armors.json config/armors.json)
 configure_file(res/config/panels.json config/panels.json)
 configure_file(res/config/buildings.json config/buildings.json)
+configure_file(res/config/crafting.json config/crafting.json)
 configure_file(res/config/effects.json config/effects.json)
 configure_file(res/config/interactions.json config/interactions.json)
 configure_file(res/config/items.json config/items.json)
@@ -306,4 +307,3 @@ else()
     cotire(_game)
     set_target_properties(_game PROPERTIES UNITY_BUILD ON)
 endif ()
-

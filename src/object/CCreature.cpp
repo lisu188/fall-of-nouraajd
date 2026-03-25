@@ -16,6 +16,7 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #include "CCreature.h"
+#include <algorithm>
 #include "core/CController.h"
 #include "core/CGame.h"
 #include "core/CJsonUtil.h"
@@ -90,6 +91,7 @@ void CCreature::removeItem(std::function<bool(std::shared_ptr<CItem>)> item_pred
     for (auto item : items) {
         if (item_pred(item)) {
             removeItem(item, quest);
+            break;
         }
     }
 }
@@ -334,6 +336,12 @@ bool CCreature::hasItem(std::shared_ptr<CItem> item) { return hasInInventory(ite
 
 bool CCreature::hasItem(std::function<bool(std::shared_ptr<CItem>)> item) {
     return hasInInventory(item) || hasEquipped(item);
+}
+
+int CCreature::countItems(std::string typeId) {
+    return std::count_if(items.begin(), items.end(), [&typeId](const std::shared_ptr<CItem> &item) {
+        return item && item->getTypeId() == typeId;
+    });
 }
 
 std::shared_ptr<CWeapon> CCreature::getWeapon() { return vstd::cast<CWeapon>(getItemAtSlot("0")); }

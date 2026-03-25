@@ -187,6 +187,8 @@ class CCreature : public CMapObject, public Moveable, public Visitable {
 
     bool hasItem(std::function<bool(std::shared_ptr<CItem>)> item);
 
+    int countItems(std::string typeId);
+
     int getGold();
 
     void setGold(int value);

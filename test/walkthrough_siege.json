@@ -1,0 +1,15 @@
+{
+  "enabled_gates": [
+    "spawnPoint3",
+    "spawnPoint4"
+  ],
+  "map": "siege",
+  "player_coords": [
+    12,
+    12,
+    0
+  ],
+  "spawned_enemies": [
+    "A1250690D69B5A46"
+  ]
+}
