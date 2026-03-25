@@ -15,6 +15,7 @@
         }
       },
       "label": "Crown of Nightmares",
+      "description": "Jagged circlet of OctoBogz shell and chapel bone, still pulsing with the clergy-breaking plague.",
       "power": 18
     }
   },
@@ -33,6 +34,7 @@
         }
       },
       "label": "Eradicators Boots",
+      "description": "Steel-shanked boots for Eradicator squads; the soles still reek of burned Pritscher warrens.",
       "power": 14
     }
   },
@@ -52,6 +54,7 @@
         }
       },
       "label": "Gloves of the Assasin",
+      "description": "Fingerless gloves soaked in lamp oil and soot so assassins can climb chimneys unseen.",
       "power": 11
     }
   },
@@ -60,6 +63,7 @@
     "properties": {
       "animation": "images/items/scroll",
       "label": "Scroll",
+      "description": "Cheap parchment from the chapel scriptorium passed among mayors, mercenaries, and villagers.",
       "power": 0,
       "singleUse": false
     }
@@ -69,6 +73,7 @@
     "properties": {
       "animation": "images/items/scroll",
       "label": "Scroll of Town Portal",
+      "description": "Sigils painted with powdered teleporter stone bind the reader to Nouraajd's lonely obelisks.",
       "power": 0,
       "singleUse": true
     }
@@ -89,6 +94,7 @@
         }
       },
       "label": "Undestructible Belt",
+      "description": "Ballista cabling braided after the siege, now used to drag barricades through Victor's streets.",
       "power": 20
     }
   }
