@@ -146,6 +146,12 @@
       }
     }
   },
+  "alchemyTable1": {
+    "ref": "AlchemyTable"
+  },
+  "scribeDesk1": {
+    "ref": "ScribeDesk"
+  },
   "gooby": {
     "ref": "Gooby",
     "properties": {

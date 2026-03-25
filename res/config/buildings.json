@@ -26,6 +26,22 @@
       "label": "Market"
     }
   },
+  "AlchemyTable": {
+    "class": "CraftingStation",
+    "properties": {
+      "animation": "images/buildings/chapel",
+      "label": "Alchemist's Table",
+      "craftingStationId": "alchemyTable"
+    }
+  },
+  "ScribeDesk": {
+    "class": "CraftingStation",
+    "properties": {
+      "animation": "images/buildings/chapel",
+      "label": "Scribe's Desk",
+      "craftingStationId": "scribeDesk"
+    }
+  },
   "Teleporter": {
     "class": "Teleporter",
     "properties": {

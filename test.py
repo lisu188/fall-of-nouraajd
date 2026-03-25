@@ -47,6 +47,9 @@ if str(REPO_ROOT / "res") not in sys.path:
     sys.path.insert(1, str(REPO_ROOT / "res"))
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(2, str(REPO_ROOT))
+plugins_path = REPO_ROOT / "res" / "plugins"
+if str(plugins_path) not in sys.path:
+    sys.path.insert(3, str(plugins_path))
 
 
 def load_game_module():
@@ -393,6 +396,225 @@ class GameTest(unittest.TestCase):
         self.assertIsNone(g.getMap().getObjectByName("DefinitelyMissingObject"))
         g.getMap().removeObjectByName("DefinitelyMissingObject")
         return True, ""
+
+    @game_test
+    def test_crafting_runtime_applies_recipe(self):
+        import crafting
+
+        g, game_map, player = load_game_map_with_player("nouraajd")
+        player.setNumericProperty("gold", 100)
+
+        while player.countItems("LesserLifePotion") > 0:
+            player.removeItem(lambda it: it.getTypeId() == "LesserLifePotion", True)
+        while player.countItems("LifePotion") > 0:
+            player.removeItem(lambda it: it.getTypeId() == "LifePotion", True)
+
+        player.addItem("LesserLifePotion")
+        player.addItem("LesserLifePotion")
+
+        before = crafting.count_inventory_matches(player, "LesserLifePotion")
+        result = crafting.craft_recipe(g, player, "brew_life_potion")
+        after = crafting.count_inventory_matches(player, "LesserLifePotion")
+        crafted_count = player.countItems("LifePotion")
+        remaining_gold = player.getNumericProperty("gold")
+
+        assert result["ok"], f"Crafting failed: {result}"
+        assert before == 2 and after == 0, f"Unexpected reagent counts: before={before}, after={after}"
+        assert crafted_count >= 1, "Player did not receive the crafted item."
+        assert remaining_gold == 80, f"Expected 80 gold after crafting, got {remaining_gold}"
+
+        return True, {
+            "before_reagents": before,
+            "after_reagents": after,
+            "crafted_count": crafted_count,
+            "remaining_gold": remaining_gold,
+        }
+
+    @game_test
+    def test_crafting_transactions_are_atomic(self):
+        import crafting
+
+        g, game_map, player = load_game_map_with_player("nouraajd")
+        base_gold = 100
+
+        def clear_item(item_id):
+            while player.countItems(item_id) > 0:
+                player.removeItem(lambda it, tid=item_id: it.getTypeId() == tid, True)
+
+        def reset():
+            player.setNumericProperty("gold", base_gold)
+            for item_id in ("LesserLifePotion", "LifePotion", "GreaterLifePotion", "ManaPotion"):
+                clear_item(item_id)
+
+        reset()
+
+        # Missing ingredient never consumes existing reagents or gold
+        player.addItem("LesserLifePotion")
+        result = crafting.craft_recipe(g, player, "brew_life_potion")
+        assert not result["ok"] and result["reason"] == "missing:LesserLifePotion"
+        assert player.countItems("LesserLifePotion") == 1
+        assert player.getNumericProperty("gold") == base_gold
+
+        # Insufficient gold keeps inventory intact
+        reset()
+        player.addItem("LesserLifePotion")
+        player.addItem("LesserLifePotion")
+        player.setNumericProperty("gold", 10)
+        result = crafting.craft_recipe(g, player, "brew_life_potion")
+        assert not result["ok"] and result["reason"] == "missing:gold"
+        assert player.countItems("LesserLifePotion") == 2
+        assert player.getNumericProperty("gold") == 10
+
+        # Successful craft consumes reagents and gold exactly once
+        reset()
+        player.addItem("LesserLifePotion")
+        player.addItem("LesserLifePotion")
+        result = crafting.craft_recipe(g, player, "brew_life_potion")
+        assert result["ok"]
+        assert player.countItems("LesserLifePotion") == 0
+        assert player.countItems("LifePotion") >= 1
+        assert player.getNumericProperty("gold") == base_gold - 20
+
+        # RNG failure leaves inventory and gold untouched
+        reset()
+        player.addItem("LifePotion")
+        player.addItem("LifePotion")
+        player.setNumericProperty("gold", 200)
+        original_randint = crafting.randint
+
+        def always_fail(*args, **kwargs):
+            return 100
+
+        crafting.randint = always_fail
+        try:
+            result = crafting.craft_recipe(g, player, "blend_greater_life_potion")
+        finally:
+            crafting.randint = original_randint
+
+        assert not result["ok"] and result["reason"] == "failed"
+        assert player.countItems("LifePotion") == 2
+        assert player.countItems("GreaterLifePotion") == 0
+        assert player.getNumericProperty("gold") == 200
+
+        return True, ""
+
+    @game_test
+    def test_crafting_config_is_valid(self):
+        crafting_path = REPO_ROOT / "res/config/crafting.json"
+        buildings_path = REPO_ROOT / "res/config/buildings.json"
+        crafting_data = json.loads(crafting_path.read_text())
+        building_data = json.loads(buildings_path.read_text())
+        configs = load_object_configs()
+
+        station_ids = {
+            props.get("properties", {}).get("craftingStationId")
+            for props in building_data.values()
+            if isinstance(props, dict)
+        }
+        station_ids.discard(None)
+
+        errors = []
+        seen_recipes = set()
+
+        def normalize_entries(entries):
+            normalized = []
+            for entry in entries or []:
+                if isinstance(entry, str):
+                    normalized.append({"item": entry, "count": 1})
+                elif isinstance(entry, dict):
+                    item_id = (
+                        entry.get("item")
+                        or entry.get("item_id")
+                        or entry.get("itemId")
+                        or entry.get("id")
+                    )
+                    normalized.append({"item": item_id, "count": entry.get("count", 1)})
+                else:
+                    normalized.append({"item": None, "count": None})
+            return normalized
+
+        def normalized_outputs(recipe):
+            outputs = recipe.get("outputs")
+            if outputs is None and isinstance(recipe.get("output"), dict):
+                outputs = [recipe["output"]]
+            return normalize_entries(outputs or [])
+
+        for recipe_id, recipe in crafting_data.items():
+            if recipe_id in seen_recipes:
+                errors.append(f"Duplicate recipe id: {recipe_id}")
+                continue
+            seen_recipes.add(recipe_id)
+
+            station_id = recipe.get("station")
+            if not station_id:
+                errors.append(f"{recipe_id}: missing station")
+            elif station_id not in station_ids:
+                errors.append(f"{recipe_id}: unknown station '{station_id}'")
+
+            inputs = normalize_entries(recipe.get("inputs", []))
+            if not inputs:
+                errors.append(f"{recipe_id}: no inputs defined")
+            for entry in inputs:
+                item_id = entry["item"]
+                count = entry["count"]
+                if not item_id:
+                    errors.append(f"{recipe_id}: input missing item id")
+                    continue
+                if item_id not in configs:
+                    errors.append(f"{recipe_id}: input item '{item_id}' is undefined")
+                try:
+                    numeric_count = int(count)
+                except (TypeError, ValueError):
+                    errors.append(f"{recipe_id}: input '{item_id}' has invalid count '{count}'")
+                    continue
+                if numeric_count <= 0:
+                    errors.append(f"{recipe_id}: input '{item_id}' has non-positive count {count}")
+
+            outputs = normalized_outputs(recipe)
+            if not outputs:
+                errors.append(f"{recipe_id}: no outputs defined")
+            for entry in outputs:
+                item_id = entry["item"]
+                count = entry["count"]
+                if not item_id:
+                    errors.append(f"{recipe_id}: output missing item id")
+                    continue
+                if item_id not in configs:
+                    errors.append(f"{recipe_id}: output item '{item_id}' is undefined")
+                try:
+                    numeric_count = int(count)
+                except (TypeError, ValueError):
+                    errors.append(f"{recipe_id}: output '{item_id}' has invalid count '{count}'")
+                    continue
+                if numeric_count <= 0:
+                    errors.append(f"{recipe_id}: output '{item_id}' has non-positive count {count}")
+
+            gold_cost = recipe.get("gold", recipe.get("gold_cost", 0))
+            try:
+                gold_value = int(gold_cost)
+            except (TypeError, ValueError):
+                errors.append(f"{recipe_id}: gold cost '{gold_cost}' is invalid")
+                gold_value = None
+            if gold_value is not None and gold_value < 0:
+                errors.append(f"{recipe_id}: gold cost {gold_cost} is negative")
+
+            success_chance = recipe.get("successChance", recipe.get("success_chance", 100))
+            if not isinstance(success_chance, int):
+                try:
+                    success_chance = int(success_chance)
+                except (TypeError, ValueError):
+                    errors.append(f"{recipe_id}: success chance '{success_chance}' is invalid")
+                    success_chance = None
+            if success_chance is not None and not (0 <= success_chance <= 100):
+                errors.append(f"{recipe_id}: success chance {success_chance} is outside 0-100")
+
+            if "unlockQuest" in recipe:
+                errors.append(f"{recipe_id}: unlockQuest is unsupported")
+            unlock_flag = recipe.get("unlockFlag")
+            if unlock_flag is not None and not str(unlock_flag).strip():
+                errors.append(f"{recipe_id}: unlockFlag is empty")
+
+        return not errors, json.dumps({"errors": errors})
 
     @game_test
     def test_map_transition_and_bounds(self):

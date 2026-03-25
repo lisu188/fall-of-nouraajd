@@ -71,6 +71,7 @@ BOOST_PYTHON_MODULE(_game) {
       "CGameObject")
       .def("getName", &CGameObject::getName)
       .def("getType", &CGameObject::getType)
+      .def("getTypeId", &CGameObject::getTypeId)
       .def("getGame", &CGameObject::getGame)
       .def("getStringProperty", &CGameObject::getStringProperty)
       .def("getNumericProperty", &CGameObject::getNumericProperty)
@@ -384,7 +385,8 @@ BOOST_PYTHON_MODULE(_game) {
       .def("addItem", addItemByObject)
       .def("addItems", &CCreature::addItems)
       .def("removeItem", removeItem)
-      .def("removeQuestItem", removeQuestItem);
+      .def("removeQuestItem", removeQuestItem)
+      .def("countItems", &CCreature::countItems);
 
   class_<CPlayer, bases<CCreature>, boost::noncopyable,
          std::shared_ptr<CPlayer>>("CPlayer")

@@ -1,0 +1,1 @@
+{"map": "ritual", "anchors_destroyed_count": 3, "countdown_after_turns": -1, "turn_after_countdown": 5, "leader_spawned": true, "captive_lost": true, "bad_ending": true, "note": "Ritual currently cannot be started with startGameWithPlayer, so this walkthrough covers the deterministic no-player failure path."}
