@@ -2,7 +2,7 @@
   "StartEvent": {
     "class": "StartEvent",
     "properties": {
-      "text": "In shadows, the journey commences. A hero emerges, guided by a cryptic letter. The identity of Sergeant Rolf remains veiled, as does the sender who concealed the message within the hero's belongings. The forsaken town of Nouraajd awaits, harboring mysteries for the hero to unravel."
+      "text": "Shadows hem in your first steps. A hidden letter bearing Sergeant Rolf's seal appeared among your gear, though neither his face nor the courier are known. The forsaken town of Nouraajd waits ahead, fat with unanswered whispers."
     }
   },
   "nouraajdSign": {
@@ -72,6 +72,7 @@
     "properties": {
       "name": "skullOfRolf",
       "animation": "images/skull",
+      "description": "The blackened skull of Sergeant Rolf, etched with the command sigils he used to rally Nouraajd before he fell.",
       "tags": [
         "quest"
       ]
@@ -80,7 +81,7 @@
   "cave1": {
     "ref": "Cave",
     "properties": {
-      "message": "The ground trembles beneath your feet as ratmen swarm around you. They are but ordinary Pritschers, lacking the colossal size foretold in the letter. Where is the behemoth that leads them?",
+      "message": "The earth quakes as ratmen pour around you—common Pritscher wretches, not the colossal brute the letter promised. Where does their behemoth hide?",
       "chance": "10",
       "monster": {
         "ref": "Pritz",
@@ -100,7 +101,7 @@
   "catacombs": {
     "ref": "Cave",
     "properties": {
-      "message": "Dusty catacombs crumble as you claim a sacred relic.",
+      "message": "Dust-choked catacombs crumble as you wrench the sacred relic free.",
       "chance": "10",
       "monster": {
         "ref": "Pritz",
@@ -120,7 +121,7 @@
   "cave2": {
     "ref": "Cave",
     "properties": {
-      "message": "With the relic's power, the OctoBogz lair collapses around you.",
+      "message": "With the relic blazing, the OctoBogz lair groans and collapses around you.",
       "chance": "10",
       "monster": {
         "ref": "OctoBogz",
@@ -203,7 +204,8 @@
     "ref": "Scroll",
     "properties": {
       "label": "Letter from Rolf",
-      "text": "Lord Commander, The nightmarish Pritschers relentlessly assault us. Locals whisper of their lair, hidden within the desolate ruins of Nouraajd. Our forces wane, our defenses falter; we are on the brink. We lack the strength to purge their den. Reinforcements are our final hope. Sergeant Rolf."
+      "description": "A blood-smeared plea from Sergeant Rolf describing the Pritscher hordes closing around the town.",
+      "text": "Lord Commander,\nThe nightmarish Pritschers gnaw at our barricades without pause. Locals swear their lair festers beneath the desolate ruins of Nouraajd. Our ranks thin, our walls rot. We cannot scour them alone. Send blades before all is lost.\nSergeant Rolf"
     }
   },
   "letterToBeren": {
@@ -211,7 +213,8 @@
     "properties": {
       "name": "letterToBeren",
       "label": "Sealed Letter",
-      "text": "Father Beren, we beseech your guidance. - Mayor Irvin"
+      "description": "Mayor Irvin's sealed appeal to Father Beren, ink soaked with incense and desperation.",
+      "text": "Father Beren, Nouraajd sinks beneath plague and cult. I beg your guidance before the town breaks entirely.\n- Mayor Irvin"
     }
   },
   "deliverLetterQuest": {
@@ -243,6 +246,7 @@
     "properties": {
       "name": "holyRelic",
       "animation": "images/skull",
+      "description": "A sanctified shard taken from the ruined chapel, the only tool that can cleanse the OctoBogz lair.",
       "tags": [
         "quest"
       ]
@@ -253,6 +257,7 @@
     "properties": {
       "name": "preciousAmulet",
       "animation": "images/item",
+      "description": "A weathered family talisman carried by the old woman of Nouraajd, still warm from her prayers.",
       "tags": [
         "quest"
       ]
@@ -272,14 +277,14 @@
           "class": "CDialogState",
           "properties": {
             "stateId": "ENTRY",
-            "text": "As you walk through the village, you notice an old woman looking distressed. She seems to be in need of help.",
+            "text": "As you weave through the village, a withered woman wrings her hands beneath a sagging awning. Desperation clings to her like smoke.",
             "options": [
               {
                 "class": "CDialogOption",
                 "properties": {
                   "number": 0,
                   "nextStateId": "OLD_WOMAN_HELLO",
-                  "text": "Approach the old woman and ask if she needs help."
+                  "text": "Approach the old woman and ask what burdens her."
                 }
               },
               {
@@ -295,14 +300,14 @@
           "class": "CDialogState",
           "properties": {
             "stateId": "OLD_WOMAN_HELLO",
-            "text": "Oh, dear traveler! I'm in desperate need of help. My precious amulet has been stolen by the goblins in the nearby forest. It's been in my family for generations, and I can't bear the thought of losing it.",
+            "text": "Oh, traveler... the goblins in the nearby grove stole my family amulet. Generations prayed over it, and now it's vanished into their claws.",
             "options": [
               {
                 "class": "CDialogOption",
                 "properties": {
                   "number": 0,
                   "nextStateId": "ACCEPT_QUEST",
-                  "text": "Don't worry, I'll retrieve your amulet from the goblins."
+                  "text": "I'll hunt down the goblin and bring your talisman home."
                 }
               },
               {
@@ -310,7 +315,7 @@
                 "properties": {
                   "number": 1,
                   "nextStateId": "DECLINE_QUEST",
-                  "text": "I'm sorry, but I can't help you with that."
+                  "text": "I'm sorry. That path is closed to me."
                 }
               }
             ]
@@ -320,7 +325,7 @@
           "class": "CDialogState",
           "properties": {
             "stateId": "ACCEPT_QUEST",
-            "text": "Thank you, brave traveler! I'll be forever grateful if you can bring my amulet back. Please be careful, the goblins are cunning and dangerous.",
+            "text": "Thank you. The goblins are quick and mean as knives—please be careful when you seek them.",
             "options": [
               {
                 "ref": "exitOption",
@@ -336,7 +341,7 @@
           "class": "CDialogState",
           "properties": {
             "stateId": "DECLINE_QUEST",
-            "text": "I understand. It's a dangerous task. I'll keep praying for someone to help me.",
+            "text": "I understand. I'll keep praying that some soul answers this plea.",
             "options": [
               {
                 "ref": "exitOption",
@@ -358,7 +363,7 @@
           "class": "CDialogState",
           "properties": {
             "stateId": "ENTRY",
-            "text": "You found my amulet! Please take this as a reward.",
+            "text": "You found it! Please, take this coin and my blessing."
             "options": [
               {
                 "ref": "exitOption",

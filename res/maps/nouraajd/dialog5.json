@@ -7,7 +7,7 @@
           "class": "CDialogState",
           "properties": {
             "stateId": "ENTRY",
-            "text": "Greetings, traveler. Do you bring news from the mayor?",
+            "text": "Welcome to the chapel, traveler. Do you carry the mayor's news?",
             "options": [
               {
                 "class": "CDialogOption",
@@ -15,7 +15,7 @@
                   "number": 0,
                   "action": "deliver_letter",
                   "nextStateId": "LETTER_DELIVERED",
-                  "text": "I carry a letter for you.",
+                  "text": "I bear a letter for you.",
                   "condition": "can_deliver_letter"
                 }
               },
@@ -62,7 +62,7 @@
           "class": "CDialogState",
           "properties": {
             "stateId": "LETTER_DELIVERED",
-            "text": "Thank you for delivering the mayor's words. Please seek out the ancient catacombs and retrieve the holy relic for our town.",
+            "text": "Thank you for bearing the mayor's plea. Now descend into the catacombs and retrieve the holy relic our town clings to.",
             "options": [
               {
                 "ref": "exitOption",
@@ -77,7 +77,7 @@
           "class": "CDialogState",
           "properties": {
             "stateId": "RELIC_RETURNED",
-            "text": "Excellent. With this relic you can purge the OctoBogz in their cave east of town. Return when the task is done.",
+            "text": "Excellent. With this relic you can scour the OctoBogz from their eastern cave. Return when that blight is ended.",
             "options": [
               {
                 "ref": "exitOption",
@@ -92,7 +92,7 @@
           "class": "CDialogState",
           "properties": {
             "stateId": "STAINED_GLASS",
-            "text": "You trace a hidden seal in the glass: a cult cipher burned into the lead by patient hands.",
+            "text": "You trace a hidden seal in the glass—a cult cipher burned into the lead with endless patience.",
             "options": [
               {
                 "ref": "exitOption",
@@ -107,7 +107,7 @@
           "class": "CDialogState",
           "properties": {
             "stateId": "CAVE_PURGED",
-            "text": "You have freed us from the OctoBogz menace. The town thanks you.",
+            "text": "You have freed us from the OctoBogz. The town breathes easier because of you.",
             "options": [
               {
                 "ref": "exitOption",
