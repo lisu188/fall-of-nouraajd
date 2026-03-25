@@ -82,6 +82,7 @@ def advance(g, turns):
 
 MAPS_DIR = REPO_ROOT / "res/maps"
 DEFAULT_PLAYER = "Warrior"
+NOURAAJD_VICTOR_TIMEOUT = 75
 
 
 def discover_maps():
@@ -1311,6 +1312,94 @@ class GameTest(unittest.TestCase):
             "fallback_used": fallback_used,
         }
         return success, json.dumps(log, sort_keys=True)
+
+    @game_test
+    def test_nouraajd_quest_state_machine(self):
+        game = load_game_module()
+
+        def quest_state(map_object, name):
+            return map_object.getStringProperty(f"quest_state_{name}")
+
+        # Scenario A: Rolf, letter chain, OctoBogz, and amulet quests
+        g1, game_map1, player1 = load_game_map_with_player("nouraajd")
+        town_hall = g1.createObject("townHallDialog")
+        beren = g1.createObject("berenDialog")
+        quest_dialog = g1.createObject("questDialog")
+        quest_return_dialog = g1.createObject("questReturnDialog")
+        travelers = g1.createObject("dialog")
+
+        assert quest_state(game_map1, "rolf") == "awaiting_skull"
+        assert quest_state(game_map1, "main") == "locked"
+        assert quest_state(game_map1, "beren_chain") == "letter_pending"
+        assert quest_state(game_map1, "octobogz_contract") == "not_started"
+        assert quest_state(game_map1, "amulet") == "not_started"
+
+        # Trigger Rolf/Gooby path
+        game_map1.removeObjectByName("cave1")
+        gooby = find_runtime_object(game_map1, "gooby1")
+        game_map1.removeObjectByName(gooby.getName())
+        assert quest_state(game_map1, "rolf") == "skull_recovered"
+        assert quest_state(game_map1, "main") == "gooby_slain"
+
+        # Letter delivery flow
+        town_hall.give_letter()
+        assert quest_state(game_map1, "beren_chain") == "letter_in_hand"
+        beren.deliver_letter()
+        assert quest_state(game_map1, "beren_chain") == "letter_delivered"
+
+        # Retrieve relic
+        game_map1.removeObjectByName("catacombs")
+        assert quest_state(game_map1, "beren_chain") == "relic_obtained"
+        beren.return_relic()
+        assert quest_state(game_map1, "beren_chain") == "relic_returned_waiting_kill"
+
+        # OctoBogz travelers quest and cave clear
+        travelers.accept_quest()
+        assert quest_state(game_map1, "octobogz_contract") == "active"
+        game_map1.removeObjectByName("cave2")
+        assert quest_state(game_map1, "beren_chain") == "ready_to_report"
+        assert quest_state(game_map1, "octobogz_contract") == "completed"
+        beren.finish_cleanse()
+        assert quest_state(game_map1, "beren_chain") == "purged"
+
+        # Amulet quest start and completion
+        quest_dialog.start_amulet_quest()
+        assert quest_state(game_map1, "amulet") == "active"
+        player1.addItem("preciousAmulet")
+        quest_return_dialog.complete_amulet_quest()
+        assert quest_state(game_map1, "amulet") == "returned"
+
+        # Scenario B: Victor good-ending
+        g2, game_map2, player2 = load_game_map_with_player("nouraajd")
+        tavern_dialog2 = g2.createObject("tavernDialog2")
+        tavern_dialog2.talked_to_victor()
+        town_hall2 = g2.createObject("townHallDialog")
+        town_hall2.spawn_cultists()
+        leader = find_runtime_object(game_map2, "cultLeaderQuest")
+        game_map2.removeObjectByName(leader.getName())
+        assert quest_state(game_map2, "victor") == "good_end"
+
+        # Scenario C: Victor bad-ending via timeout
+        g3, game_map3, player3 = load_game_map_with_player("nouraajd")
+        tavern_dialog2b = g3.createObject("tavernDialog2")
+        tavern_dialog2b.talked_to_victor()
+        town_hall3 = g3.createObject("townHallDialog")
+        town_hall3.spawn_cultists()
+        advance_map_only(game_map3, NOURAAJD_VICTOR_TIMEOUT + 1)
+        assert quest_state(game_map3, "victor") == "bad_end"
+
+        log = {
+            "scenario_a": {
+                "rolf": quest_state(game_map1, "rolf"),
+                "main": quest_state(game_map1, "main"),
+                "beren_chain": quest_state(game_map1, "beren_chain"),
+                "octobogz_contract": quest_state(game_map1, "octobogz_contract"),
+                "amulet": quest_state(game_map1, "amulet"),
+            },
+            "victor_good_end": quest_state(game_map2, "victor"),
+            "victor_bad_end": quest_state(game_map3, "victor"),
+        }
+        return True, json.dumps(log, sort_keys=True)
 
 if __name__ == "__main__":
     unittest.main(testRunner=unittest.TextTestRunner())
