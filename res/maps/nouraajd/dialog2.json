@@ -7,14 +7,14 @@
           "class": "CDialogState",
           "properties": {
             "stateId": "ENTRY",
-            "text": "Whoa! Hold on there, stranger! Are you headed east, beyond the river?",
+            "text": "Hold a moment, stranger. Are you bound for the eastern road beyond the river?",
             "options": [
               {
                 "class": "CDialogOption",
                 "properties": {
                   "number": 0,
                   "nextStateId": "ASK_WHY",
-                  "text": "Yes, I am. Why do you ask?"
+                  "text": "Aye. Why the warning?"
                 }
               },
               {
@@ -22,7 +22,7 @@
                 "properties": {
                   "number": 1,
                   "nextStateId": "ASK_WHY",
-                  "text": "I haven't decided yet. What's the matter?"
+                  "text": "I'm unsure. What troubles you?"
                 }
               }
             ]
@@ -32,7 +32,7 @@
           "class": "CDialogState",
           "properties": {
             "stateId": "ASK_WHY",
-            "text": "You must be careful! There's a cave infested with dreadful creatures called OctoBogz. They're a bizarre mix of octopus and rabbit, with the ability to cast Abyssal Shadows. They've been attacking travelers and caravans passing through the area, leaving chaos in their wake.",
+            "text": "Be careful. A cave out there seethes with OctoBogz—twisted things part octopus, part hare, all shadowcraft. They lash caravans with Abyssal Shadows and leave bones in the sand.",
             "options": [
               {
                 "class": "CDialogOption",
@@ -57,7 +57,7 @@
           "class": "CDialogState",
           "properties": {
             "stateId": "ASK_ABOUT_OCTOBOGZ",
-            "text": "The OctoBogz are highly intelligent and extremely agile, capable of swiftly ambushing unsuspecting victims. Their octopus-like tentacles give them a deadly reach, and their Abyssal Shadows ability allows them to deal significant shadow damage to their prey.",
+            "text": "They're clever and quick, ambushing from stone and sand alike. Their tentacles strike far, and the Abyssal Shadows they fling strip the warmth from flesh.",
             "options": [
               {
                 "class": "CDialogOption",
@@ -74,7 +74,7 @@
           "class": "CDialogState",
           "properties": {
             "stateId": "OFFER_HELP",
-            "text": "A few of us who escaped their attacks have banded together to seek help. We're offering a generous reward to anyone brave enough to venture into the cave and eliminate the OctoBogz menace.",
+            "text": "Those of us who escaped have pooled what coin we have. We'll pay generously if someone dares that cave and ends the OctoBogz blight.",
             "options": [
               {
                 "class": "CDialogOption",
@@ -82,7 +82,7 @@
                   "number": 0,
                   "nextStateId": "ACCEPT_QUEST",
                   "action": "accept_quest",
-                  "text": "I'll take on this challenge and rid the cave of the OctoBogz."
+                  "text": "I'll see the cave purged of OctoBogz."
                 }
               },
               {
@@ -90,7 +90,7 @@
                 "properties": {
                   "number": 1,
                   "nextStateId": "DECLINE_QUEST",
-                  "text": "I can't help right now, but I'll keep it in mind."
+                  "text": "Not now, but I'll remember."
                 }
               }
             ]
@@ -100,7 +100,7 @@
           "class": "CDialogState",
           "properties": {
             "stateId": "ACCEPT_QUEST",
-            "text": "Travel east across the river and locate the cave infested with OctoBogz. The cave entrance is partially hidden by large boulders and sand, making it difficult to find. As you approach, you can hear strange, guttural noises echoing from within.",
+            "text": "Head east across the river. The cave is half-buried under boulders and sand; follow the guttural echoes and you'll find it.",
             "options": [
               {
                 "ref": "exitOption",
@@ -115,7 +115,7 @@
           "class": "CDialogState",
           "properties": {
             "stateId": "DECLINE_QUEST",
-            "text": "Thank you for considering it, traveler. Perhaps we'll find help elsewhere. Safe travels.",
+            "text": "Thank you for listening. May another blade take pity if you will not. Safe travels.",
             "options": [
               {
                 "ref": "exitOption",

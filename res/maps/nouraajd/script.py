@@ -33,7 +33,7 @@ def load(self, context):
         game_map.setBoolProperty("VICTOR_HELP", False)
         _clear_victor_encounter(game_map)
         game_map.getGame().getGuiHandler().showMessage(
-            "You return to an empty courtyard. Victor's daughter has vanished with the cult."
+            "You find the courtyard scrubbed bare; Victor's daughter is gone, carried off with the cult's hush."
         )
         return True
 
@@ -117,7 +117,7 @@ def load(self, context):
             return self.getGame().getMap().getBoolProperty("completed_gooby")
 
         def onComplete(self):
-            self.getGame().getGuiHandler().showMessage("Gooby has fallen. The townsfolk cheer your victory.")
+            self.getGame().getGuiHandler().showMessage("Gooby lies butchered, and weary townsfolk dare a ragged cheer.")
 
     @register(context)
     class RolfQuest(CQuest):
@@ -133,7 +133,7 @@ def load(self, context):
             game_map.setBoolProperty("completed_rolf", True)
             self._ensure_main_quest()
             self.getGame().getGuiHandler().showMessage(
-                "Sergeant Rolf's skull confirms his fall. Gooby now stalks the caverns."
+                "Sergeant Rolf's skull proves his doom; Gooby still prowls the caverns beneath Nouraajd."
             )
 
     @register(context)
@@ -179,7 +179,7 @@ def load(self, context):
             player = game.getMap().getPlayer()
             player.addGold(1000)
             player.addItem("ShadowBlade")
-            game.getGuiHandler().showMessage("The travelers reward you with 1000 gold and the Shadow Blade.")
+            game.getGuiHandler().showMessage("The refugees press 1000 gold and the Shadow Blade into your hands.")
 
     @register(context)
     class AmuletQuest(CQuest):
@@ -192,7 +192,7 @@ def load(self, context):
     @trigger(context, "onDestroy", "gooby1")
     class GoobyTrigger(CTrigger):
         def trigger(self, object, event):
-            object.getGame().getGuiHandler().showMessage("Gooby killed!!!")
+            object.getGame().getGuiHandler().showMessage("Gooby is felled; the tunnels exhale a foul breath.")
             object.getGame().getMap().setBoolProperty("completed_gooby", True)
 
     @trigger(context, "onDestroy", "cave1")
@@ -226,7 +226,7 @@ def load(self, context):
                 object.getGame().getGuiHandler().showMessage(object.getStringProperty("message"))
                 game_map.setBoolProperty("OCTOBOGZ_CLEARED", True)
             else:
-                object.getGame().getGuiHandler().showMessage("The OctoBogz are defeated!")
+                object.getGame().getGuiHandler().showMessage("The OctoBogz lie broken, yet their lair remains befouled.")
             game_map.setBoolProperty("completed_octobogz", True)
 
     @trigger(context, "onEnter", "market1")
@@ -318,7 +318,7 @@ def load(self, context):
             player.setBoolProperty("charted_smuggler_route", True)
             player.addExp(750)
             self.getGame().getGuiHandler().showMessage(
-                "You trace old courier alleys through Nouraajd. Your footing sharpens whenever a route turns unclear."
+                "You chart forgotten courier alleys through Nouraajd; each hidden turn steadies your stride when the lane rots away."
             )
 
         def give_letter(self):
@@ -328,7 +328,7 @@ def load(self, context):
                 return
             if not player.hasItem(self._is_letter_to_beren):
                 player.addItem("letterToBeren")
-                self.getGame().getGuiHandler().showMessage("You received a sealed letter.")
+                self.getGame().getGuiHandler().showMessage("You accept the mayor's sealed missive, wax still warm.")
             self._ensure_quest("deliverLetterQuest")
 
         def has_letter_quest(self):
@@ -354,11 +354,11 @@ def load(self, context):
             self.start_victor_quest()
             game_map.setBoolProperty("VICTOR_COURTYARD_FOUND", True)
             if game_map.getBoolProperty("VICTOR_GOOD_END"):
-                game.getGuiHandler().showMessage("Victor already reclaimed his daughter; the courtyard lies quiet.")
+                game.getGuiHandler().showMessage("Victor has already reclaimed his daughter; the courtyard now keeps a reverent quiet.")
                 return
             if game_map.getBoolProperty("VICTOR_BAD_END"):
                 game.getGuiHandler().showMessage(
-                    "The mayor grimly reports that the Cult of Marumi Baso slipped away with Victor's daughter."
+                    "The mayor mutters that the Cult of Marumi Baso vanished with Victor's daughter before help arrived."
                 )
                 return
             if game_map.getBoolProperty("VICTOR_CULTISTS_SPAWNED"):
@@ -425,7 +425,7 @@ def load(self, context):
             player.setBoolProperty("inspected_stained_glass", True)
             player.addExp(750)
             self.getGame().getGuiHandler().showMessage(
-                "The stained glass hides a Marumi Baso seal. Your zeal hardens as you memorize the cult's cipher."
+                "The stained glass hides a Marumi Baso seal; zeal hardens as you memorize the cult's patient cipher."
             )
 
         def can_deliver_letter(self):
@@ -474,9 +474,9 @@ def load(self, context):
             game_map = self.getGame().getMap()
             if self.can_finish_cleanse():
                 game_map.setBoolProperty("CAVE_PURGED", True)
-                self.getGame().getGuiHandler().showMessage("The town is safe once more.")
+                self.getGame().getGuiHandler().showMessage("For a breath, the town is spared and the OctoBogz lie quiet.")
             else:
-                self.getGame().getGuiHandler().showMessage("The cave still crawls with OctoBogz.")
+                self.getGame().getGuiHandler().showMessage("The cave still writhes with OctoBogz corruption.")
 
     @register(context)
     class OctoBogzDialog(CDialog):
@@ -532,7 +532,7 @@ def load(self, context):
                 elif not game_map.getBoolProperty("AMULET_QUEST_STARTED"):
                     game.getGuiHandler().showDialog(game.createObject("questDialog"))
                 else:
-                    game.getGuiHandler().showMessage("The goblin still has my amulet!")
+                    game.getGuiHandler().showMessage("The goblin still clutches my amulet; please bring it back!")
 
     @register(context)
     class QuestDialog(CDialog):
@@ -567,4 +567,4 @@ def load(self, context):
                 old_woman = game_map.getObjectByName("oldWoman")
                 if old_woman:
                     game_map.removeObject(old_woman)
-                game.getGuiHandler().showMessage("The old woman gratefully rewards you with 50 gold.")
+                game.getGuiHandler().showMessage("The old woman presses 50 gold upon you, tears streaking her dust-caked cheeks.")

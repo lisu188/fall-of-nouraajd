@@ -7,7 +7,7 @@
           "class": "CDialogState",
           "properties": {
             "stateId": "ENTRY",
-            "text": "The city gates are sealed by order of Sergeant Rolf. A plague of rats has infested the streets.",
+            "text": "By Sergeant Rolf's order these gates stay barred; a rat-plague gnaws through every street.",
             "options": [
               {
                 "class": "CDialogOption",
@@ -15,7 +15,7 @@
                   "number": 0,
                   "action": "open_door",
                   "nextStateId": "WELCOME",
-                  "text": "I offer my assistance. (present the letter)"
+                  "text": "Present Rolf's letter and swear your aid."
                 }
               },
               {
@@ -23,7 +23,7 @@
                 "properties": {
                   "number": 1,
                   "nextStateId": "NOT_WELCOME",
-                  "text": "Open the gates, or I'll reduce them to splinters!"
+                  "text": "Open up, or these gates become splinters beneath my boot."
                 }
               },
               {
@@ -39,7 +39,7 @@
           "class": "CDialogState",
           "properties": {
             "stateId": "WELCOME",
-            "text": "Enter, stranger. The inn offers shelter for the night, while the chapel provides solace. There is little else to find here.",
+            "text": "Enter if you must, stranger. The inn still pours something warm and the chapel still murmurs solace. Little else in Nouraajd is worth the risk.",
             "options": [
               {
                 "class": "CDialogOption",
@@ -62,7 +62,7 @@
           "class": "CDialogState",
           "properties": {
             "stateId": "ABOUT_ROLF",
-            "text": "He ventured forth with his men days ago. They've yet to return.",
+            "text": "He marched out with his men days past. None have returned, nor has word."
             "options": [
               {
                 "ref": "exitOption",
@@ -77,7 +77,7 @@
           "class": "CDialogState",
           "properties": {
             "stateId": "NOT_WELCOME",
-            "text": "Bold words. Farewell, traveler!",
+            "text": "Bold words. May the rats enjoy them.",
             "options": [
               {
                 "ref": "exitOption",
@@ -95,7 +95,7 @@
     "class": "CDialogOption",
     "properties": {
       "nextStateId": "INKEEPER_ABOUT_GIRL",
-      "text": "What dark purpose did they pursue?",
+      "text": "What quarry were those robed men stalking?",
       "action": "asked_about_girl"
     }
   },
@@ -103,20 +103,20 @@
     "class": "CDialogOption",
     "properties": {
       "nextStateId": "INKEEPER_ABOUT_MARUMI",
-      "text": "Who is this enigmatic Marumi Baso?"
+      "text": "Who in the abyss is Marumi Baso?"
     }
   },
   "askForBeer": {
     "ref": "exitOption",
     "properties": {
-      "text": "Enough of this. Bring me a tankard of ale.",
+      "text": "Enough talk. Bring me a tankard of something strong.",
       "action": "sell_beer"
     }
   },
   "shouldGo": {
     "ref": "exitOption",
     "properties": {
-      "text": "I must take my leave."
+      "text": "I should be moving on."
     }
   },
   "tavernDialog1": {
@@ -127,7 +127,7 @@
           "class": "CDialogState",
           "properties": {
             "stateId": "ENTRY",
-            "text": "Upon entering the gloomy inn, you notice five men in dark brown robes hastily departing. The eldest among them clutches a staff and dons a round hat. Your eyes meet briefly, as a sinister chill runs down your spine.",
+            "text": "You push into the gloom of the inn just as five brown-robed men hurry out. The eldest clutches a staff and round hat; his gaze snags yours, leaving a chill like grave-water.",
             "options": [
               {
                 "class": "CDialogOption",
@@ -140,7 +140,7 @@
               {
                 "ref": "exitOption",
                 "properties": {
-                  "text": "Exit the wretched establishment.",
+                  "text": "Turn away from this wretched hall.",
                   "number": 1
                 }
               }
@@ -151,14 +151,14 @@
           "class": "CDialogState",
           "properties": {
             "stateId": "INNKEEPER_WELCOME",
-            "text": "Greetings, stranger. What brings You to this forsaken place?",
+            "text": "Greetings, stranger. What drags you into this forsaken room?",
             "options": [
               {
                 "class": "CDialogOption",
                 "properties": {
                   "number": 0,
                   "nextStateId": "INKEEPER_ABOUT_CULTISTS",
-                  "text": "I`ve seen a group of weird men that were leaving the inn in a hurry. They looked like priests, but nothing like Matulog cultists."
+                  "text": "I spotted robed men fleeing your door. Priests, perhaps, but nothing like Matulog’s lot."
                 }
               },
               {
@@ -174,7 +174,7 @@
           "class": "CDialogState",
           "properties": {
             "stateId": "INKEEPER_ABOUT_CULTISTS",
-            "text": "Aye, those sinister souls have haunted this city for as long as memory serves. They name themselves the Cult of Marumi Baso. Many locals regard them as dangerous zealots.",
+            "text": "Aye, those cloaked carrion have haunted Nouraajd as long as drinkers remember. They call themselves the Cult of Marumi Baso, and folk whisper they're as dangerous as any zealot can be.",
             "options": [
               {
                 "ref": "askAboutMarumi",
@@ -207,7 +207,7 @@
           "class": "CDialogState",
           "properties": {
             "stateId": "INKEEPER_ABOUT_MARUMI",
-            "text": "Hmph... a deity of sorts, perhaps? I care little for religious matters. Do you seek something else?",
+            "text": "Hmph… some prophet or deity, I suppose. I spill ale, not sermons. Anything else you need?",
             "options": [
               {
                 "ref": "askAboutGirl",
@@ -234,7 +234,7 @@
           "class": "CDialogState",
           "properties": {
             "stateId": "INKEEPER_ABOUT_GIRL",
-            "text": "A young lass, it seems. I sent them away with harsh words, bidding them to search for their prey elsewhere. Does this accursed inn resemble a place for a child?",
+            "text": "They prowled after a young lass. I cursed them out and sent them hunting elsewhere. Does this accursed inn look fit for a child to you?",
             "options": [
               {
                 "ref": "askAboutMarumi",
