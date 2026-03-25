@@ -4,6 +4,7 @@
     "properties": {
       "animation": "images/items/potions/life",
       "label": "Full Life Potion",
+      "description": "Siege infirmary draught thick enough to knit torn organs if you can stomach the taste.",
       "power": 5,
       "singleUse": true,
       "tags": [
@@ -16,6 +17,7 @@
     "properties": {
       "animation": "images/items/potions/mana",
       "label": "Full Mana Potion",
+      "description": "Ceremonial brew for all-night rituals; burnt parchment flavor that keeps casters lucid for days.",
       "power": 5,
       "singleUse": true,
       "tags": [
@@ -28,6 +30,7 @@
     "properties": {
       "animation": "images/items/potions/life",
       "label": "Greater Life Potion",
+      "description": "Steeped with relic dust carried from the catacombs, it burns away Pritscher rot as it heals.",
       "power": 3,
       "singleUse": true,
       "tags": [
@@ -40,6 +43,7 @@
     "properties": {
       "animation": "images/items/potions/mana",
       "label": "Greater Mana Potion",
+      "description": "Cut with shards from OctoBogz crystals to flood nerves with cold focus.",
       "power": 3,
       "singleUse": true,
       "tags": [
@@ -52,6 +56,7 @@
     "properties": {
       "animation": "images/items/potions/life",
       "label": "Lesser Life Potion",
+      "description": "Marsh-thistle tonic that keeps scouts upright long enough to limp back to town.",
       "power": 1,
       "singleUse": true,
       "tags": [
@@ -64,6 +69,7 @@
     "properties": {
       "animation": "images/items/potions/mana",
       "label": "Lesser Mana Potion",
+      "description": "Thin blue draught brewed from river fungus, good for a single rune-spark.",
       "power": 1,
       "singleUse": true,
       "tags": [
@@ -76,6 +82,7 @@
     "properties": {
       "animation": "images/items/potions/life",
       "label": "Life Potion",
+      "description": "Standard chapel mixture of saint-ash and nettle that scalds while it stitches flesh.",
       "power": 2,
       "singleUse": true,
       "tags": [
@@ -88,6 +95,7 @@
     "properties": {
       "animation": "images/items/potions/mana",
       "label": "Mana Potion",
+      "description": "Balanced infusion of incense tar and void-salt for steady spellcasting along the ramparts.",
       "power": 3,
       "singleUse": true,
       "tags": [
@@ -100,6 +108,7 @@
     "properties": {
       "animation": "images/items/potions/life",
       "label": "Max Life Potion",
+      "description": "Reserved for Eradicator captains; tar-thick medicine that feels like swallowing molten iron.",
       "power": 4,
       "singleUse": true,
       "tags": [
@@ -112,6 +121,7 @@
     "properties": {
       "animation": "images/items/potions/mana",
       "label": "Max Mana Potion",
+      "description": "Rarest azure syrup from Beren's reliquary, potent enough to shatter cult wards.",
       "power": 4,
       "singleUse": true,
       "tags": [
