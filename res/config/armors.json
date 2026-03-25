@@ -15,6 +15,7 @@
         }
       },
       "label": "Chest Plate of the North",
+      "description": "Layered steel from northern wardens, scarred by every frostbitten rake of a Pritscher claw.",
       "power": 15
     }
   },
@@ -32,7 +33,8 @@
           "stamina": 2
         }
       },
-      "label": "Leather Armor"
+      "label": "Leather Armor",
+      "description": "Supple hide stitched by Nouraajd's tannery guild for scouts slipping between alleys."
     }
   },
   "PlateArmor": {
@@ -48,7 +50,8 @@
           "strength": 4
         }
       },
-      "label": "Plate Armor"
+      "label": "Plate Armor",
+      "description": "Standard issue harness from Mayor Irvin's barracks, dented by years of holding the town gates."
     }
   },
   "Robe": {
@@ -64,7 +67,8 @@
           "stamina": 2
         }
       },
-      "label": "Robe"
+      "label": "Robe",
+      "description": "Threadbare robe worn by Father Beren's acolytes, its hem darkened by incense soot and grave-dust."
     }
   }
 }

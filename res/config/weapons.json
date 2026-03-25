@@ -16,6 +16,7 @@
         }
       },
       "label": "Blade of Dark Dreams",
+      "description": "Curved OctoBogz spine blade that murmurs nightmare hymns to sleepless Victor veterans.",
       "power": 9
     }
   },
@@ -35,6 +36,7 @@
         }
       },
       "label": "Broad Sword",
+      "description": "Frontier broadsword issued to caravan guards for cleaving Pritscher shields on the eastern road.",
       "power": 5
     }
   },
@@ -53,6 +55,7 @@
         "ref": "ChaosBlast"
       },
       "label": "Chaos Sword",
+      "description": "Abyssal altar blade taken beneath Nouraajd, its edge still sizzling with violet rifts.",
       "power": 18
     }
   },
@@ -70,6 +73,7 @@
         }
       },
       "label": "Dagger",
+      "description": "Common tavern dagger from the town smithy, chipped by years of alley disputes.",
       "power": 3
     }
   },
@@ -90,6 +94,7 @@
         }
       },
       "label": "Dagger of Vile Heart",
+      "description": "Bogz venom bakes into this hollow knife's edge, favored by assassins stalking cult sympathizers.",
       "power": 9
     }
   },
@@ -106,7 +111,8 @@
           "stamina": 1
         }
       },
-      "label": "Knife"
+      "label": "Knife",
+      "description": "Utility knife every scout carries for rope, rations, and a last defense when the barricades fall."
     }
   },
   "LongSword": {
@@ -123,6 +129,7 @@
         }
       },
       "label": "Long Sword",
+      "description": "Tall guard sword from Victor's armory, balanced for sweeping cultists clear of the courtyard.",
       "power": 3
     }
   },
@@ -143,6 +150,7 @@
         }
       },
       "label": "Shadow Blade",
+      "description": "Matt-black steel quenched in soot and pitch so even chapel braziers cannot catch its shine.",
       "power": 25
     }
   },
@@ -159,7 +167,8 @@
           "stamina": 1
         }
       },
-      "label": "Short Staff"
+      "label": "Short Staff",
+      "description": "Knotty ash staff issued to Beren's novices before they master true rites."
     }
   },
   "ShortSword": {
@@ -175,7 +184,8 @@
           "strength": 1
         }
       },
-      "label": "Short Sword"
+      "label": "Short Sword",
+      "description": "Compact sword prized by tunnel fighters defending the catacomb stairwells against ratmen."
     }
   },
   "Staff": {
@@ -195,6 +205,7 @@
         "ref": "ElemStaff"
       },
       "label": "Staff",
+      "description": "Pilgrim's staff etched with travel prayers for those who still dare the road into Nouraajd.",
       "power": 3
     }
   },
@@ -214,6 +225,7 @@
         }
       },
       "label": "Staff of the Abyss",
+      "description": "Warped stave that drank from the catacomb breach; frost creeps along every grip.",
       "power": 9
     }
   },
@@ -233,6 +245,7 @@
         }
       },
       "label": "Stiletto",
+      "description": "Needle-fine stiletto hidden under Victor's courtesans' sleeves for quiet silencing.",
       "power": 5
     }
   },
@@ -247,7 +260,8 @@
           "damage": 10
         }
       },
-      "label": "Sword"
+      "label": "Sword",
+      "description": "Plain sword hammered by the town's last smith, serviceable despite damp barracks."
     }
   },
   "Valkyrie": {
@@ -267,6 +281,7 @@
         }
       },
       "label": "Valkyrie",
+      "description": "Ornate blade seized from a northern crusader whose bones now rest in Nouraajd's frozen crypts.",
       "power": 25
     }
   },
@@ -288,6 +303,7 @@
         }
       },
       "label": "Void",
+      "description": "Gloss-black greatblade dredged from a void scar near the chapel; its edges swallow lamplight.",
       "power": 25
     }
   },
@@ -307,6 +323,7 @@
         }
       },
       "label": "Wand",
+      "description": "Simple witchwood wand the chapel scribes use to kindle braziers and scorch Pritschers at need.",
       "power": 5
     }
   }

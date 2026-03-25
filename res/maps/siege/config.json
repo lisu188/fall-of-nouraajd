@@ -32,6 +32,7 @@
     "class": "CItem",
     "properties": {
       "animation": "images/items/weapons/wand",
+      "description": "Charred wand carried by siege Pritz mages, still humming with guttering battlefield curses.",
       "tags": [
         "quest",
         "wand"
