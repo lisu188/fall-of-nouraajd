@@ -24,7 +24,7 @@ python3 play.py
 ### mcp server (engine api)
 <pre>
 cmake --build cmake-build-release --target _game -j$(nproc)
-python3 scripts/mcp_engine_server.py
+python3 mcp.py
 </pre>
 The server exposes a unified `engine` surface from both `game` and `_game` via MCP tools:
 - `engine_list`
