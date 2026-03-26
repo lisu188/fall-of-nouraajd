@@ -235,6 +235,7 @@ configure_file(res/game.py game.py)
 
 configure_file(test.py test.py)
 configure_file(play.py play.py)
+configure_file(mcp.py mcp.py)
 
 install(TARGETS _game DESTINATION fall-of-nouraajd)
 install(DIRECTORY res/config DESTINATION fall-of-nouraajd)
@@ -246,6 +247,7 @@ install(DIRECTORY res/plugins DESTINATION fall-of-nouraajd)
 install(FILES res/game.py test.py DESTINATION fall-of-nouraajd)
 
 install(FILES play.py play.py DESTINATION fall-of-nouraajd)
+install(FILES mcp.py mcp.py DESTINATION fall-of-nouraajd)
 install(FILES test.py test.py DESTINATION fall-of-nouraajd)
 
 if (WIN32)
