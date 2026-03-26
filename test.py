@@ -523,12 +523,7 @@ class GameTest(unittest.TestCase):
                 if isinstance(entry, str):
                     normalized.append({"item": entry, "count": 1})
                 elif isinstance(entry, dict):
-                    item_id = (
-                        entry.get("item")
-                        or entry.get("item_id")
-                        or entry.get("itemId")
-                        or entry.get("id")
-                    )
+                    item_id = entry.get("item") or entry.get("item_id") or entry.get("itemId") or entry.get("id")
                     normalized.append({"item": item_id, "count": entry.get("count", 1)})
                 else:
                     normalized.append({"item": None, "count": None})
@@ -735,6 +730,21 @@ class GameTest(unittest.TestCase):
                 object.addExp(1000)
             values.append(json.loads(game.jsonify(object)))
         return True, json.dumps(values)
+
+    @game_test
+    def test_binding_docstrings(self):
+        game = load_game_module()
+        checks = {
+            "CGameObject": getattr(game.CGameObject, "__doc__", "") or "",
+            "CMap": getattr(game.CMap, "__doc__", "") or "",
+            "CCreature": getattr(game.CCreature, "__doc__", "") or "",
+            "CCreature.hurt": getattr(game.CCreature.hurt, "__doc__", "") or "",
+            "randint": getattr(game.randint, "__doc__", "") or "",
+            "jsonify": getattr(game.jsonify, "__doc__", "") or "",
+            "logger": getattr(game.logger, "__doc__", "") or "",
+        }
+        missing = sorted([name for name, doc in checks.items() if not doc.strip()])
+        return missing == [], json.dumps({"missing": missing, "doc_sizes": {k: len(v) for k, v in checks.items()}})
 
     @game_test
     def test_turns(self):
@@ -1400,6 +1410,7 @@ class GameTest(unittest.TestCase):
             "victor_bad_end": quest_state(game_map3, "victor"),
         }
         return True, json.dumps(log, sort_keys=True)
+
 
 if __name__ == "__main__":
     unittest.main(testRunner=unittest.TextTestRunner())
