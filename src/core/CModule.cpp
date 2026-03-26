@@ -16,6 +16,8 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #include <utility>
+#include <cctype>
+#include <stdexcept>
 
 #include "../../vstd/vstd.h"
 #include "../gui/CGui.h"
@@ -52,6 +54,43 @@ std::string jsonify(std::shared_ptr<CGameObject> x) { return JSONIFY(x); }
 
 void logger(std::string s) {
     vstd::logger::info(std::move(s)); // TODO: add script name
+}
+
+static vstd::logger::sink parse_logger_sink(const std::string &sink_name) {
+    std::string normalized;
+    normalized.reserve(sink_name.size());
+    for (char ch : sink_name) {
+        normalized.push_back(static_cast<char>(std::tolower(static_cast<unsigned char>(ch))));
+    }
+    if (normalized == "stdout") {
+        return vstd::logger::sink::stdout_sink;
+    }
+    if (normalized == "stderr") {
+        return vstd::logger::sink::stderr_sink;
+    }
+    if (normalized == "file") {
+        return vstd::logger::sink::file_sink;
+    }
+    if (normalized == "disabled") {
+        return vstd::logger::sink::disabled;
+    }
+    throw std::invalid_argument("Unknown logger sink: " + sink_name);
+}
+
+void set_logger_sink(const std::string &sink_name, const std::string &path) {
+    const auto target = parse_logger_sink(sink_name);
+    if (target == vstd::logger::sink::file_sink && path.empty()) {
+        throw std::invalid_argument("File logger sink requires a path");
+    }
+    vstd::logger::set_sink(target, path);
+}
+
+void set_logger_sink_py(const std::string &sink_name, object path = object()) {
+    std::string file_path;
+    if (!path.is_none()) {
+        file_path = extract<std::string>(path);
+    }
+    set_logger_sink(sink_name, file_path);
 }
 
 list map_get_objects(const std::shared_ptr<CMap> &map) {
@@ -434,4 +473,6 @@ BOOST_PYTHON_MODULE(_game) {
     PY_WRAP_GENERIC_DOC(randint, "randint(lower, upper) -> int: Return a random integer in engine-defined bounds.");
     PY_WRAP_GENERIC_DOC(jsonify, "jsonify(obj) -> str: Serialize a game object to JSON text.");
     PY_WRAP_GENERIC_DOC(logger, "logger(message) -> None: Write an info log message to the engine logger.");
+    def("set_logger_sink", set_logger_sink_py,
+        "set_logger_sink(sink, path=None) -> None: Configure the native logger output target.");
 }

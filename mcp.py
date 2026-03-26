@@ -97,11 +97,15 @@ class EngineMcpServer:
         build_dir: Path,
         allow_origins: list[str] | None = None,
         trace_messages: bool = False,
+        native_log_sink: str = "stdout",
+        native_log_path: Path | None = None,
     ) -> None:
         self.repo_root = repo_root
         self.build_dir = build_dir
         self.allow_origins = allow_origins or []
         self.trace_messages = trace_messages
+        self.native_log_sink = native_log_sink
+        self.native_log_path = native_log_path
         self.handles: dict[str, Any] = {}
         self.next_handle = 1
         self.exports: dict[str, ExportedCallable] = {}
@@ -130,6 +134,7 @@ class EngineMcpServer:
                 "Unable to import compiled `_game` module. Build it with `cmake --build "
                 f"{self.build_dir} --target _game -j$(nproc)` or run mcp.py with `--build`."
             ) from exc
+        self._configure_native_logging()
         self.game_module = importlib.import_module("game")
         logger.info("modules imported successfully")
 
@@ -139,6 +144,27 @@ class EngineMcpServer:
         self._export_module_callables(self._game_module, source="_game")
         self._export_module_callables(self.game_module, source="game")
         logger.info("exported %d callables", len(self.exports))
+
+    def _configure_native_logging(self) -> None:
+        if self._game_module is None:
+            return
+        setter = getattr(self._game_module, "set_logger_sink", None)
+        if setter is None:
+            logger.warning("native module does not expose set_logger_sink; cannot redirect native logs")
+            return
+        sink = self.native_log_sink or "stdout"
+        call_args: list[Any] = [sink]
+        if self.native_log_path is not None:
+            call_args.append(str(self.native_log_path))
+        try:
+            setter(*call_args)
+        except Exception:
+            logger.exception("failed to configure native logger sink")
+            return
+        target_desc = sink
+        if self.native_log_path:
+            target_desc = f"{sink}:{self.native_log_path}"
+        logger.info("configured native logger sink to %s", target_desc)
 
     def _export_module_callables(self, module: Any, source: str) -> None:
         for name, value in inspect.getmembers(module):
@@ -1339,6 +1365,17 @@ def parse_args() -> argparse.Namespace:
         help="Log full MCP request/response payloads for debugging",
     )
     parser.add_argument("--allow-origin", action="append", default=[], help="Additional allowed Origin value")
+    parser.add_argument(
+        "--native-log-sink",
+        choices=["stdout", "stderr", "file", "disabled"],
+        default=None,
+        help="Configure native engine logging target (default stdout, file when --stdio).",
+    )
+    parser.add_argument(
+        "--native-log-file",
+        default=None,
+        help="File path for native logs when using --native-log-sink file (relative to repo root by default).",
+    )
     return parser.parse_args()
 
 
@@ -1359,12 +1396,27 @@ def main() -> int:
     repo_root = Path(args.repo_root).resolve() if args.repo_root else Path(__file__).resolve().parent
     build_dir_arg = Path(args.build_dir)
     build_dir = build_dir_arg.resolve() if build_dir_arg.is_absolute() else (repo_root / build_dir_arg).resolve()
+    native_log_sink = args.native_log_sink or ("file" if args.stdio else "stdout")
+    native_log_path: Path | None = None
+    if native_log_sink == "file":
+        log_path = Path(args.native_log_file) if args.native_log_file else build_dir / "logs" / "mcp-stdio.log"
+        if not log_path.is_absolute():
+            log_path = repo_root / log_path
+        log_path.parent.mkdir(parents=True, exist_ok=True)
+        native_log_path = log_path
+    elif args.native_log_file:
+        logger.warning(
+            "Ignoring --native-log-file because native log sink %s does not use a file",
+            native_log_sink,
+        )
 
     server = EngineMcpServer(
         repo_root=repo_root,
         build_dir=build_dir,
         allow_origins=args.allow_origin,
         trace_messages=args.trace_messages,
+        native_log_sink=native_log_sink,
+        native_log_path=native_log_path,
     )
     if args.build:
         server.build_extension()
