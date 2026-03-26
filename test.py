@@ -19,8 +19,10 @@ import importlib
 import json
 import os
 import re
+import select
 import subprocess
 import sys
+import time
 import traceback
 from pathlib import Path
 import unittest
@@ -33,6 +35,11 @@ XDG_RUNTIME_DIR = Path("/tmp") / f"xdg-runtime-{os.getuid()}"
 if "XDG_RUNTIME_DIR" not in os.environ:
     XDG_RUNTIME_DIR.mkdir(mode=0o700, parents=True, exist_ok=True)
     os.environ["XDG_RUNTIME_DIR"] = str(XDG_RUNTIME_DIR)
+
+os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
+os.environ.setdefault("SDL_AUDIODRIVER", "dummy")
+os.environ.setdefault("SDL_RENDER_DRIVER", "software")
+os.environ.setdefault("LIBGL_ALWAYS_SOFTWARE", "1")
 
 build_dir = REPO_ROOT / "cmake-build-release"
 build_dir_override = os.environ.get("GAME_BUILD_DIR")
@@ -1410,6 +1417,120 @@ class GameTest(unittest.TestCase):
             "victor_bad_end": quest_state(game_map3, "victor"),
         }
         return True, json.dumps(log, sort_keys=True)
+
+
+class McpServerTest(unittest.TestCase):
+    def test_stdio_handshake_and_tool_listing(self):
+        script = REPO_ROOT / "mcp.py"
+        self.assertTrue(script.exists(), "MCP entry point is missing")
+        proc = subprocess.Popen(
+            [
+                sys.executable,
+                str(script),
+                "--stdio",
+                "--repo-root",
+                str(REPO_ROOT),
+                "--build-dir",
+                str(build_dir),
+            ],
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            bufsize=0,
+        )
+        try:
+            self._send_rpc(
+                proc,
+                {
+                    "jsonrpc": "2.0",
+                    "id": 1,
+                    "method": "initialize",
+                    "params": {"capabilities": {}, "clientInfo": {"name": "mcp-test", "version": "1.0"}},
+                },
+            )
+            initialize_response = self._read_rpc(proc)
+            self.assertEqual(initialize_response.get("id"), 1)
+            result = initialize_response.get("result", {})
+            server_info = result.get("serverInfo", {})
+            self.assertEqual(server_info.get("name"), "fall-of-nouraajd-engine-mcp")
+
+            self._send_rpc(proc, {"jsonrpc": "2.0", "method": "notifications/initialized", "params": {}})
+
+            self._send_rpc(proc, {"jsonrpc": "2.0", "id": 2, "method": "tools/list"})
+            tools_response = self._read_rpc(proc)
+            self.assertEqual(tools_response.get("id"), 2)
+            tools = tools_response.get("result", {}).get("tools", [])
+            tool_names = {tool.get("name") for tool in tools}
+            self.assertTrue({"engine_list", "engine_call", "engine_handle_call"}.issubset(tool_names))
+        finally:
+            self._shutdown_process(proc)
+
+    def _send_rpc(self, proc, payload):
+        if proc.stdin is None:
+            self.fail("Process stdin not available")
+        body = json.dumps(payload).encode("utf-8")
+        header = f"Content-Length: {len(body)}\r\n\r\n".encode("utf-8")
+        proc.stdin.write(header)
+        proc.stdin.write(body)
+        proc.stdin.flush()
+
+    def _read_rpc(self, proc, timeout: float = 10.0):
+        if proc.stdout is None:
+            self.fail("Process stdout not available")
+        deadline = time.monotonic() + timeout
+        content_length = None
+        while True:
+            line = self._readline(proc.stdout, deadline)
+            if line in (b"", b"\r\n", b"\n"):
+                break
+            normalized = line.decode("utf-8").strip()
+            if normalized.lower().startswith("content-length:"):
+                content_length = int(normalized.split(":", 1)[1].strip())
+        self.assertIsNotNone(content_length, "Server response missing Content-Length header")
+        body = self._read_exact(proc.stdout, content_length, deadline)
+        return json.loads(body.decode("utf-8"))
+
+    def _readline(self, stream, deadline: float) -> bytes:
+        while True:
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                self.fail("Timed out waiting for MCP response header")
+            readable, _, _ = select.select([stream], [], [], remaining)
+            if readable:
+                line = stream.readline()
+                if not line:
+                    return b""
+                return line
+
+    def _read_exact(self, stream, size: int, deadline: float) -> bytes:
+        data = bytearray()
+        while len(data) < size:
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                self.fail("Timed out waiting for MCP response body")
+            readable, _, _ = select.select([stream], [], [], remaining)
+            if readable:
+                chunk = stream.read(size - len(data))
+                if not chunk:
+                    self.fail("Unexpected EOF while reading MCP response body")
+                data.extend(chunk)
+        return bytes(data)
+
+    def _shutdown_process(self, proc):
+        if proc.stdin:
+            proc.stdin.close()
+        try:
+            proc.wait(timeout=5)
+        except subprocess.TimeoutExpired:
+            proc.kill()
+            proc.wait()
+        stderr_output = proc.stderr.read().decode("utf-8", errors="ignore") if proc.stderr else ""
+        if proc.stdout:
+            proc.stdout.close()
+        if proc.stderr:
+            proc.stderr.close()
+        if proc.returncode not in (0, None):
+            self.fail(f"MCP server exited with {proc.returncode}: {stderr_output}")
 
 
 if __name__ == "__main__":
