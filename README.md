@@ -20,6 +20,17 @@ sudo apt install python3.11 python3.11-dev
 cmake --build cmake-build-release --target _game -j$(nproc)
 python3 play.py
 </pre>
+
+### mcp server (engine api)
+<pre>
+cmake --build cmake-build-release --target _game -j$(nproc)
+python3 scripts/mcp_engine_server.py
+</pre>
+The server exposes a unified `engine` surface from both `game` and `_game` via MCP tools:
+- `engine_list`
+- `engine_call`
+- `engine_handle_call`
+
 ### testing
 Running tests is **mandatory** after any code change.
 From the repository root, run:
