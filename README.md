@@ -29,11 +29,16 @@ python3 mcp.py
 # or build the extension on demand and run
 python3 mcp.py --build
 </pre>
-The HTTP server exposes a unified `engine` surface from both `game` and `_game` via MCP tools (run with
-`--stdio` to keep the previous stdio transport):
+The HTTP server exposes a unified `engine` surface from both `game` and `_game` via MCP tools:
 - `engine_list`
 - `engine_call`
 - `engine_handle_call`
+
+To use stdio transport instead (required by some Codex flows), run from the repository root:
+<pre>
+python3 mcp.py --stdio --repo-root . --build-dir cmake-build-release
+</pre>
+The command also works from `cmake-build-release/mcp.py` if you prefer launching from the build directory.
 
 ### testing
 Running tests is **mandatory** after any code change.

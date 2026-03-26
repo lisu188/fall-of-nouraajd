@@ -11,9 +11,43 @@
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
 #
-# You should have received a copy of the GNU General Public License
-# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+import os
+from pathlib import Path
+import sys
+
+
+def _insert_path(entry: Path) -> None:
+    if not entry.exists():
+        return
+    entry_str = str(entry)
+    if entry_str not in sys.path:
+        sys.path.insert(0, entry_str)
+
+
+def _find_build_dir(root: Path) -> Path | None:
+    for candidate in (root / "cmake-build-release", root / "cmake-build-debug"):
+        if candidate.exists():
+            return candidate
+    return None
+
+
+def _ensure_workdir(build_dir: Path | None) -> None:
+    if build_dir and not (Path.cwd() / "config").exists():
+        os.chdir(build_dir)
+
+
+def _bootstrap() -> None:
+    repo_root = Path(__file__).resolve().parent
+    res_dir = repo_root / "res"
+    _insert_path(res_dir)
+    build_dir = _find_build_dir(repo_root)
+    if build_dir:
+        _insert_path(build_dir)
+    _ensure_workdir(build_dir)
+
+
+_bootstrap()
 import game
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     game.new()
