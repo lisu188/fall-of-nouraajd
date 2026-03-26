@@ -189,7 +189,9 @@ class EngineMcpServer:
         protocol_version_header: str | None,
     ) -> tuple[HTTPStatus, dict[str, Any] | list[dict[str, Any]] | None, str | None, str | None]:
         if isinstance(payload, list):
-            return self._handle_http_batch(payload, session_id=session_id, protocol_version_header=protocol_version_header)
+            return self._handle_http_batch(
+                payload, session_id=session_id, protocol_version_header=protocol_version_header
+            )
 
         if not isinstance(payload, dict):
             return HTTPStatus.BAD_REQUEST, self._error_response(None, -32600, "Invalid Request"), None, None
@@ -199,7 +201,9 @@ class EngineMcpServer:
             return HTTPStatus.ACCEPTED, None, None, None
 
         try:
-            result = self.handle_message(payload, transport="http", session_id=session_id, protocol_version_header=protocol_version_header)
+            result = self.handle_message(
+                payload, transport="http", session_id=session_id, protocol_version_header=protocol_version_header
+            )
         except ProtocolError as exc:
             req_id = payload.get("id") if isinstance(payload, dict) else None
             return (
@@ -251,9 +255,7 @@ class EngineMcpServer:
                 if result.response is not None and not self._is_notification(item):
                     responses.append(result.response)
             except ProtocolError as exc:
-                responses.append(
-                    self._error_response(item.get("id"), exc.code, exc.message, exc.data)
-                )
+                responses.append(self._error_response(item.get("id"), exc.code, exc.message, exc.data))
             except Exception:
                 logger.exception("unhandled HTTP batch item failure")
                 responses.append(self._error_response(item.get("id"), -32603, "Internal error"))
@@ -1216,15 +1218,20 @@ class EngineHttpRequestHandler(BaseHTTPRequestHandler):
         self.wfile.flush()
 
     def _add_default_headers(self) -> None:
-        self.send_header("Access-Control-Allow-Origin", self.headers.get("Origin", "*") if self.headers.get("Origin") else "*")
-        self.send_header("Access-Control-Allow-Headers", "content-type, accept, origin, mcp-session-id, mcp-protocol-version, last-event-id")
+        self.send_header(
+            "Access-Control-Allow-Origin", self.headers.get("Origin", "*") if self.headers.get("Origin") else "*"
+        )
+        self.send_header(
+            "Access-Control-Allow-Headers",
+            "content-type, accept, origin, mcp-session-id, mcp-protocol-version, last-event-id",
+        )
         self.send_header("Access-Control-Allow-Methods", "GET, POST, DELETE, OPTIONS")
         self.send_header("Vary", "Accept, Origin, MCP-Protocol-Version, MCP-Session-Id")
 
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="MCP server exposing unified game/_game functions")
-    parser.add_argument("--repo-root", default=".", help="Repository root path")
+    parser.add_argument("--repo-root", default=None, help="Repository root path")
     parser.add_argument("--build-dir", default="cmake-build-release", help="Build directory containing _game")
     parser.add_argument("--build", action="store_true", help="Build the extension before starting the server")
     parser.add_argument("--stdio", action="store_true", help="Run as a stdio MCP server instead of HTTP")
@@ -1247,8 +1254,9 @@ def configure_logging(level_name: str) -> None:
 def main() -> int:
     args = parse_args()
     configure_logging(args.log_level)
-    repo_root = Path(args.repo_root).resolve()
-    build_dir = (repo_root / args.build_dir).resolve()
+    repo_root = Path(args.repo_root).resolve() if args.repo_root else Path(__file__).resolve().parent
+    build_dir_arg = Path(args.build_dir)
+    build_dir = build_dir_arg.resolve() if build_dir_arg.is_absolute() else (repo_root / build_dir_arg).resolve()
 
     server = EngineMcpServer(
         repo_root=repo_root,
