@@ -283,6 +283,8 @@ endif ()
 add_executable(fon_unit_tests
     tests/unit/test_coords.cpp
     src/core/CUtil.cpp
+    src/core/CPathFinder.cpp
+    src/core/CFuture.cpp
 )
 
 target_include_directories(fon_unit_tests PRIVATE
@@ -296,7 +298,11 @@ target_include_directories(fon_unit_tests PRIVATE
     ${SDL2_TTF_INCLUDE_DIR}
 )
 
-target_link_libraries(fon_unit_tests PRIVATE ${PYTHON_LIBRARIES})
+target_link_libraries(fon_unit_tests PRIVATE
+    ${PYTHON_LIBRARIES}
+    ${SDL2_LIBRARY}
+    ${SDL2_IMAGE_LIBRARY}
+)
 
 enable_testing()
 add_test(NAME fon_unit_tests COMMAND fon_unit_tests)
