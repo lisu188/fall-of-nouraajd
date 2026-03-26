@@ -24,9 +24,13 @@ python3 play.py
 ### mcp server (engine api)
 <pre>
 cmake --build cmake-build-release --target _game -j$(nproc)
+# start HTTP MCP server (defaults to 127.0.0.1:8765)
 python3 mcp.py
+# or build the extension on demand and run
+python3 mcp.py --build
 </pre>
-The server exposes a unified `engine` surface from both `game` and `_game` via MCP tools:
+The HTTP server exposes a unified `engine` surface from both `game` and `_game` via MCP tools (run with
+`--stdio` to keep the previous stdio transport):
 - `engine_list`
 - `engine_call`
 - `engine_handle_call`
