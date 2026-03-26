@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Copyright 2025.
 
-Minimal MCP stdio server that exposes a unified `engine` module composed of
+Minimal MCP server that exposes a unified `engine` module composed of
 `game` and `_game` callables.
 """
 
@@ -16,6 +16,8 @@ import subprocess
 import sys
 import traceback
 from dataclasses import dataclass
+from http import HTTPStatus
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any
 
@@ -34,10 +36,9 @@ class ExportedCallable:
 
 
 class EngineMcpServer:
-    def __init__(self, repo_root: Path, build_dir: Path, skip_build: bool = False) -> None:
+    def __init__(self, repo_root: Path, build_dir: Path) -> None:
         self.repo_root = repo_root
         self.build_dir = build_dir
-        self.skip_build = skip_build
         self.handles: dict[str, Any] = {}
         self.next_handle = 1
         self.exports: dict[str, ExportedCallable] = {}
@@ -45,8 +46,6 @@ class EngineMcpServer:
         self._game_module: Any | None = None
 
     def build_extension(self) -> None:
-        if self.skip_build:
-            return
         subprocess.run(
             ["cmake", "--build", str(self.build_dir), "--target", "_game", f"-j{os.cpu_count() or 1}"],
             cwd=self.repo_root,
@@ -56,7 +55,13 @@ class EngineMcpServer:
     def import_modules(self) -> None:
         sys.path.insert(0, str(self.repo_root / "res"))
         sys.path.insert(0, str(self.build_dir))
-        self._game_module = importlib.import_module("_game")
+        try:
+            self._game_module = importlib.import_module("_game")
+        except ModuleNotFoundError as exc:  # pragma: no cover - defensive path
+            raise ModuleNotFoundError(
+                "Unable to import compiled `_game` module. Build it with `cmake --build "
+                f"{self.build_dir} --target _game -j$(nproc)` or run mcp.py with `--build`."
+            ) from exc
         self.game_module = importlib.import_module("game")
 
     def inspect_and_export(self) -> None:
@@ -93,13 +98,16 @@ class EngineMcpServer:
         except (TypeError, ValueError):
             return "(signature unavailable)"
 
-    def serve_forever(self) -> None:
+    def handle_request(self, request: dict[str, Any]) -> dict[str, Any] | None:
+        return self._handle_request(request)
+
+    def serve_stdio(self) -> None:
         while True:
             request = self._read_message()
             if request is None:
                 return
 
-            response = self._handle_request(request)
+            response = self.handle_request(request)
             if response is not None:
                 self._write_message(response)
 
@@ -304,12 +312,109 @@ class EngineMcpServer:
         sys.stdout.buffer.write(body)
         sys.stdout.buffer.flush()
 
+    def serve_http(self, host: str, port: int) -> None:
+        httpd = EngineHttpServer((host, port), EngineHttpRequestHandler, self)
+        try:
+            print(f"HTTP MCP server listening on http://{host}:{port}", file=sys.stderr)
+            httpd.serve_forever()
+        finally:
+            httpd.server_close()
+
+
+class EngineHttpServer(ThreadingHTTPServer):
+    daemon_threads = True
+
+    def __init__(self, server_address, RequestHandlerClass, mcp_server: EngineMcpServer) -> None:  # noqa: N803
+        super().__init__(server_address, RequestHandlerClass)
+        self.mcp_server = mcp_server
+
+
+class EngineHttpRequestHandler(BaseHTTPRequestHandler):
+    server_version = f"{SERVER_NAME}/{SERVER_VERSION}"
+    protocol_version = "HTTP/1.1"
+
+    def do_OPTIONS(self) -> None:
+        self.send_response(HTTPStatus.NO_CONTENT)
+        self._add_default_headers()
+        self.end_headers()
+
+    def do_GET(self) -> None:
+        if self.path in {"/", "/healthz", "/status"}:
+            payload = {
+                "name": SERVER_NAME,
+                "version": SERVER_VERSION,
+                "status": "ok",
+                "tools": len(self.server.mcp_server.exports),  # type: ignore[attr-defined]
+            }
+            self._write_json(payload)
+            return
+        if self.path == "/manifest.json":
+            payload = {
+                "name": SERVER_NAME,
+                "version": SERVER_VERSION,
+                "protocolVersion": "2024-11-05",
+                "capabilities": {"tools": {"listChanged": False}},
+            }
+            self._write_json(payload)
+            return
+        self.send_error(HTTPStatus.NOT_FOUND, "Unknown endpoint")
+
+    def do_POST(self) -> None:
+        if self.path not in {"/", "/rpc", "/mcp"}:
+            self.send_error(HTTPStatus.NOT_FOUND, "Unknown endpoint")
+            return
+        length_header = self.headers.get("Content-Length")
+        if length_header is None:
+            self.send_error(HTTPStatus.LENGTH_REQUIRED, "Missing Content-Length header")
+            return
+        try:
+            length = int(length_header)
+        except ValueError:
+            self.send_error(HTTPStatus.BAD_REQUEST, "Invalid Content-Length header")
+            return
+        raw_body = self.rfile.read(length)
+        try:
+            request = json.loads(raw_body.decode("utf-8"))
+        except json.JSONDecodeError:
+            self.send_error(HTTPStatus.BAD_REQUEST, "Invalid JSON payload")
+            return
+
+        response = self.server.mcp_server.handle_request(request)  # type: ignore[attr-defined]
+        if response is None:
+            self.send_response(HTTPStatus.NO_CONTENT)
+            self._add_default_headers()
+            self.end_headers()
+            return
+        self._write_json(response)
+
+    def log_message(self, format: str, *args: Any) -> None:  # noqa: A003
+        sys.stderr.write(
+            "[HTTP MCP] %s - - [%s] %s\n" % (self.client_address[0], self.log_date_time_string(), format % args)
+        )
+
+    def _write_json(self, payload: dict[str, Any], status: HTTPStatus = HTTPStatus.OK) -> None:
+        body = json.dumps(payload).encode("utf-8")
+        self.send_response(status)
+        self._add_default_headers()
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+
+    def _add_default_headers(self) -> None:
+        self.send_header("Access-Control-Allow-Origin", "*")
+        self.send_header("Access-Control-Allow-Headers", "content-type")
+        self.send_header("Access-Control-Allow-Methods", "POST, OPTIONS, GET")
+
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="MCP server exposing unified game/_game functions")
     parser.add_argument("--repo-root", default=".", help="Repository root path")
     parser.add_argument("--build-dir", default="cmake-build-release", help="Build directory containing _game")
-    parser.add_argument("--skip-build", action="store_true", help="Skip extension rebuild step")
+    parser.add_argument("--build", action="store_true", help="Build the extension before starting the server")
+    parser.add_argument("--stdio", action="store_true", help="Run as a stdio MCP server instead of HTTP")
+    parser.add_argument("--host", default="127.0.0.1", help="HTTP host to bind when running in HTTP mode")
+    parser.add_argument("--port", type=int, default=8765, help="HTTP port to bind when running in HTTP mode")
     return parser.parse_args()
 
 
@@ -318,11 +423,15 @@ def main() -> int:
     repo_root = Path(args.repo_root).resolve()
     build_dir = (repo_root / args.build_dir).resolve()
 
-    server = EngineMcpServer(repo_root=repo_root, build_dir=build_dir, skip_build=args.skip_build)
-    server.build_extension()
+    server = EngineMcpServer(repo_root=repo_root, build_dir=build_dir)
+    if args.build:
+        server.build_extension()
     server.import_modules()
     server.inspect_and_export()
-    server.serve_forever()
+    if args.stdio:
+        server.serve_stdio()
+    else:
+        server.serve_http(host=args.host, port=args.port)
     return 0
 
 
