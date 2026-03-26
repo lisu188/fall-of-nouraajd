@@ -280,12 +280,12 @@ if (WIN32)
 endif ()
 
 
-add_executable(fon_unit_tests
+add_executable(for_unit_tests
     tests/unit/test_coords.cpp
     src/core/CUtil.cpp
 )
 
-target_include_directories(fon_unit_tests PRIVATE
+target_include_directories(for_unit_tests PRIVATE
     ${CMAKE_SOURCE_DIR}/src
     ${CMAKE_SOURCE_DIR}/vstd
     json/single_include/nlohmann
@@ -296,10 +296,10 @@ target_include_directories(fon_unit_tests PRIVATE
     ${SDL2_TTF_INCLUDE_DIR}
 )
 
-target_link_libraries(fon_unit_tests PRIVATE ${PYTHON_LIBRARIES})
+target_link_libraries(for_unit_tests PRIVATE ${PYTHON_LIBRARIES})
 
 enable_testing()
-add_test(NAME fon_unit_tests COMMAND fon_unit_tests)
+add_test(NAME for_unit_tests COMMAND for_unit_tests)
 
 SET(CPACK_STRIP_FILES _game.so)
 
