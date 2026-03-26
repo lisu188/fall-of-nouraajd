@@ -146,7 +146,6 @@ public:
   }
 
   template <typename T> static void register_type() {
-    register_pointer<T>();
     register_serializer<T>();
     register_builder<T>();
     register_consumer<T>();
