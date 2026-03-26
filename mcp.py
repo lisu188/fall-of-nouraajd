@@ -91,10 +91,17 @@ class ProtocolError(Exception):
 
 
 class EngineMcpServer:
-    def __init__(self, repo_root: Path, build_dir: Path, allow_origins: list[str] | None = None) -> None:
+    def __init__(
+        self,
+        repo_root: Path,
+        build_dir: Path,
+        allow_origins: list[str] | None = None,
+        trace_messages: bool = False,
+    ) -> None:
         self.repo_root = repo_root
         self.build_dir = build_dir
         self.allow_origins = allow_origins or []
+        self.trace_messages = trace_messages
         self.handles: dict[str, Any] = {}
         self.next_handle = 1
         self.exports: dict[str, ExportedCallable] = {}
@@ -166,12 +173,25 @@ class EngineMcpServer:
             if request is None:
                 logger.info("stdio closed")
                 return
-            if self._is_jsonrpc_response(request):
+            is_response = self._is_jsonrpc_response(request)
+            self._trace_message(
+                transport="stdio",
+                direction="recv",
+                payload=request,
+                extra={"jsonrpcResponse": is_response},
+            )
+            if is_response:
                 logger.debug("ignoring stdio client response payload")
                 continue
             try:
                 result = self.handle_message(request, transport="stdio", session_id=None)
                 if result.response is not None:
+                    self._trace_message(
+                        transport="stdio",
+                        direction="send",
+                        payload=result.response,
+                        session_id=None,
+                    )
                     self._write_stdio_message(result.response)
             except Exception:
                 logger.exception("unhandled stdio request failure")
@@ -179,6 +199,13 @@ class EngineMcpServer:
                     request.get("id") if isinstance(request, dict) else None,
                     -32603,
                     "Internal error",
+                )
+                self._trace_message(
+                    transport="stdio",
+                    direction="send",
+                    payload=error,
+                    session_id=None,
+                    extra={"error": True},
                 )
                 self._write_stdio_message(error)
 
@@ -831,6 +858,27 @@ class EngineMcpServer:
         self.handles[handle] = value
         return {"__handle__": handle, "__type__": value.__class__.__name__, "repr": repr(value)}
 
+    def _trace_message(
+        self,
+        *,
+        transport: str,
+        direction: str,
+        payload: Any,
+        session_id: str | None = None,
+        extra: dict[str, Any] | None = None,
+    ) -> None:
+        if not self.trace_messages:
+            return
+        record: dict[str, Any] = {
+            "transport": transport,
+            "direction": direction,
+            "sessionId": session_id,
+            "payload": self._jsonable(payload),
+        }
+        if extra:
+            record["meta"] = self._jsonable(extra)
+        logger.debug("trace %s", json.dumps(record, ensure_ascii=False))
+
     def _emit_log(
         self,
         transport: str,
@@ -865,6 +913,13 @@ class EngineMcpServer:
         if transport == "stdio":
             state = self.stdio_state
             if state and state.initialized and self._should_emit_client_log(state.log_level, level):
+                self._trace_message(
+                    transport="stdio",
+                    direction="send",
+                    payload=payload,
+                    session_id=None,
+                    extra={"logger": logger_name},
+                )
                 self._write_stdio_message(payload)
             return
 
@@ -1059,6 +1114,13 @@ class EngineHttpRequestHandler(BaseHTTPRequestHandler):
                     continue
                 if item is None:
                     break
+                self.server.mcp_server._trace_message(
+                    transport="http",
+                    direction="send",
+                    session_id=session_id,
+                    payload=item,
+                    extra={"stream": stream.stream_id},
+                )
                 self._write_sse_event(stream.stream_id, json.dumps(item, ensure_ascii=False, separators=(",", ":")))
         except (BrokenPipeError, ConnectionResetError, ConnectionAbortedError):
             pass
@@ -1129,6 +1191,14 @@ class EngineHttpRequestHandler(BaseHTTPRequestHandler):
         session_id = self.headers.get("MCP-Session-Id")
         protocol_version_header = self.headers.get("MCP-Protocol-Version")
 
+        self.server.mcp_server._trace_message(
+            transport="http",
+            direction="recv",
+            session_id=session_id,
+            payload=payload,
+            extra={"path": path, "protocolVersion": protocol_version_header},
+        )
+
         if isinstance(payload, dict) and payload.get("method") != "initialize":
             if not session_id:
                 self._write_mcp_error(HTTPStatus.BAD_REQUEST, payload.get("id"), -32600, "Missing MCP-Session-Id")
@@ -1158,8 +1228,22 @@ class EngineHttpRequestHandler(BaseHTTPRequestHandler):
             if response_protocol_version:
                 self.send_header("MCP-Protocol-Version", response_protocol_version)
             self.end_headers()
+            self.server.mcp_server._trace_message(
+                transport="http",
+                direction="send",
+                session_id=response_session_id,
+                payload={"status": int(status), "body": None},
+                extra={"path": path, "protocolVersion": response_protocol_version, "status": int(status)},
+            )
             return
 
+        self.server.mcp_server._trace_message(
+            transport="http",
+            direction="send",
+            session_id=response_session_id,
+            payload=response,
+            extra={"path": path, "protocolVersion": response_protocol_version, "status": int(status)},
+        )
         self._write_json(
             response,
             status=status,
@@ -1202,6 +1286,17 @@ class EngineHttpRequestHandler(BaseHTTPRequestHandler):
             payload["id"] = req_id
         if data is not None:
             payload["error"]["data"] = data
+        self.server.mcp_server._trace_message(
+            transport="http",
+            direction="send",
+            session_id=self.headers.get("MCP-Session-Id"),
+            payload=payload,
+            extra={
+                "path": self.path.split("?", 1)[0],
+                "status": int(status),
+                "error": True,
+            },
+        )
         self._write_json(payload, status=status)
 
     def _write_sse_event(self, event_id: str, data: str) -> None:
@@ -1238,12 +1333,19 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--host", default="127.0.0.1", help="HTTP host to bind when running in HTTP mode")
     parser.add_argument("--port", type=int, default=8765, help="HTTP port to bind when running in HTTP mode")
     parser.add_argument("--log-level", default="INFO", help="Python log level")
+    parser.add_argument(
+        "--trace-messages",
+        action="store_true",
+        help="Log full MCP request/response payloads for debugging",
+    )
     parser.add_argument("--allow-origin", action="append", default=[], help="Additional allowed Origin value")
     return parser.parse_args()
 
 
-def configure_logging(level_name: str) -> None:
+def configure_logging(level_name: str, trace_messages: bool = False) -> None:
     level = getattr(logging, level_name.upper(), logging.INFO)
+    if trace_messages and level > logging.DEBUG:
+        level = logging.DEBUG
     logging.basicConfig(
         level=level,
         stream=sys.stderr,
@@ -1253,7 +1355,7 @@ def configure_logging(level_name: str) -> None:
 
 def main() -> int:
     args = parse_args()
-    configure_logging(args.log_level)
+    configure_logging(args.log_level, trace_messages=args.trace_messages)
     repo_root = Path(args.repo_root).resolve() if args.repo_root else Path(__file__).resolve().parent
     build_dir_arg = Path(args.build_dir)
     build_dir = build_dir_arg.resolve() if build_dir_arg.is_absolute() else (repo_root / build_dir_arg).resolve()
@@ -1262,6 +1364,7 @@ def main() -> int:
         repo_root=repo_root,
         build_dir=build_dir,
         allow_origins=args.allow_origin,
+        trace_messages=args.trace_messages,
     )
     if args.build:
         server.build_extension()
