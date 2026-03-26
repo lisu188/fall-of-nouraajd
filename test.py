@@ -27,7 +27,6 @@ import traceback
 from pathlib import Path
 import unittest
 
-
 REPO_ROOT = Path(__file__).resolve().parent
 TEST_OUTPUT_DIR = REPO_ROOT / "test"
 XDG_RUNTIME_DIR = Path("/tmp") / f"xdg-runtime-{os.getuid()}"
@@ -57,6 +56,8 @@ if str(REPO_ROOT) not in sys.path:
 plugins_path = REPO_ROOT / "res" / "plugins"
 if str(plugins_path) not in sys.path:
     sys.path.insert(3, str(plugins_path))
+
+MCP_PROTOCOL_VERSION = "2025-11-25"
 
 
 def load_game_module():
@@ -1445,11 +1446,15 @@ class McpServerTest(unittest.TestCase):
                     "jsonrpc": "2.0",
                     "id": 1,
                     "method": "initialize",
-                    "params": {"capabilities": {}, "clientInfo": {"name": "mcp-test", "version": "1.0"}},
+                    "params": {
+                        "protocolVersion": MCP_PROTOCOL_VERSION,
+                        "capabilities": {},
+                        "clientInfo": {"name": "mcp-test", "version": "1.0"},
+                    },
                 },
             )
             initialize_response = self._read_rpc(proc)
-            self.assertEqual(initialize_response.get("id"), 1)
+            self.assertNotIn("error", initialize_response)
             result = initialize_response.get("result", {})
             server_info = result.get("serverInfo", {})
             self.assertEqual(server_info.get("name"), "fall-of-nouraajd-engine-mcp")
@@ -1468,27 +1473,22 @@ class McpServerTest(unittest.TestCase):
     def _send_rpc(self, proc, payload):
         if proc.stdin is None:
             self.fail("Process stdin not available")
-        body = json.dumps(payload).encode("utf-8")
-        header = f"Content-Length: {len(body)}\r\n\r\n".encode("utf-8")
-        proc.stdin.write(header)
-        proc.stdin.write(body)
+        line = json.dumps(payload, separators=(",", ":")) + "\n"
+        proc.stdin.write(line.encode("utf-8"))
         proc.stdin.flush()
 
     def _read_rpc(self, proc, timeout: float = 10.0):
         if proc.stdout is None:
             self.fail("Process stdout not available")
         deadline = time.monotonic() + timeout
-        content_length = None
         while True:
             line = self._readline(proc.stdout, deadline)
             if line in (b"", b"\r\n", b"\n"):
-                break
-            normalized = line.decode("utf-8").strip()
-            if normalized.lower().startswith("content-length:"):
-                content_length = int(normalized.split(":", 1)[1].strip())
-        self.assertIsNotNone(content_length, "Server response missing Content-Length header")
-        body = self._read_exact(proc.stdout, content_length, deadline)
-        return json.loads(body.decode("utf-8"))
+                continue
+            payload = json.loads(line.decode("utf-8"))
+            if "id" not in payload and "method" in payload:
+                continue
+            return payload
 
     def _readline(self, stream, deadline: float) -> bytes:
         while True:
@@ -1501,20 +1501,6 @@ class McpServerTest(unittest.TestCase):
                 if not line:
                     return b""
                 return line
-
-    def _read_exact(self, stream, size: int, deadline: float) -> bytes:
-        data = bytearray()
-        while len(data) < size:
-            remaining = deadline - time.monotonic()
-            if remaining <= 0:
-                self.fail("Timed out waiting for MCP response body")
-            readable, _, _ = select.select([stream], [], [], remaining)
-            if readable:
-                chunk = stream.read(size - len(data))
-                if not chunk:
-                    self.fail("Unexpected EOF while reading MCP response body")
-                data.extend(chunk)
-        return bytes(data)
 
     def _shutdown_process(self, proc):
         if proc.stdin:
