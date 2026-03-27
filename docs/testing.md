@@ -19,7 +19,8 @@ The script:
 - configures a dedicated coverage build (`cmake-build-coverage`)
 - builds `_game` with GCC/Clang coverage flags
 - runs `python3 test.py` against the coverage build
-- generates reports with `gcovr` in `coverage/coverage.txt` and `coverage/coverage.html`
+- generates reports in `coverage/coverage.txt` and `coverage/coverage.html`
+- uses `gcovr` when available and falls back to the repo-local `gcov` parser otherwise
 - fails if line coverage in the scoped target is below 80%
 
 ## Coverage scope
