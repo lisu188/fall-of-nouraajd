@@ -22,208 +22,242 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "object/CDialog.h"
 #include "object/CObject.h"
 
-template <class T>
-class CWrapper : public T, public boost::python::wrapper<CWrapper<T>> {
+namespace py = pybind11;
+
+template <class T> class CWrapper : public T {
   V_META(CWrapper<T>, T, vstd::meta::empty())
+
 public:
-  virtual void onEnter(std::shared_ptr<CGameEvent> event) override final {
-    if (auto f = this->get_override("onEnter")) {
-      PY_SAFE(f(event))
-    } else {
-      this->T::onEnter(event);
+  using T::T;
+
+  void onEnter(std::shared_ptr<CGameEvent> event) override final {
+    try {
+      PYBIND11_OVERRIDE(void, T, onEnter, event);
+    } catch (const py::error_already_set &) {
+      PYTHON_LOG;
+      PyErr_Clear();
     }
   }
 
-  virtual void onTurn(std::shared_ptr<CGameEvent> event) override final {
-    if (auto f = this->get_override("onTurn")) {
-      PY_SAFE(f(event))
-    } else {
-      this->T::onTurn(event);
+  void onTurn(std::shared_ptr<CGameEvent> event) override final {
+    try {
+      PYBIND11_OVERRIDE(void, T, onTurn, event);
+    } catch (const py::error_already_set &) {
+      PYTHON_LOG;
+      PyErr_Clear();
     }
   }
 
-  virtual void onCreate(std::shared_ptr<CGameEvent> event) override final {
-    if (auto f = this->get_override("onCreate")) {
-      PY_SAFE(f(event))
-    } else {
-      this->T::onCreate(event);
+  void onCreate(std::shared_ptr<CGameEvent> event) override final {
+    try {
+      PYBIND11_OVERRIDE(void, T, onCreate, event);
+    } catch (const py::error_already_set &) {
+      PYTHON_LOG;
+      PyErr_Clear();
     }
   }
 
-  virtual void onDestroy(std::shared_ptr<CGameEvent> event) override final {
-    if (auto f = this->get_override("onDestroy")) {
-      PY_SAFE(f(event))
-    } else {
-      this->T::onDestroy(event);
+  void onDestroy(std::shared_ptr<CGameEvent> event) override final {
+    try {
+      PYBIND11_OVERRIDE(void, T, onDestroy, event);
+    } catch (const py::error_already_set &) {
+      PYTHON_LOG;
+      PyErr_Clear();
     }
   }
 
-  virtual void onLeave(std::shared_ptr<CGameEvent> event) override final {
-    if (auto f = this->get_override("onLeave")) {
-      PY_SAFE(f(event))
-    } else {
-      this->T::onLeave(event);
+  void onLeave(std::shared_ptr<CGameEvent> event) override final {
+    try {
+      PYBIND11_OVERRIDE(void, T, onLeave, event);
+    } catch (const py::error_already_set &) {
+      PYTHON_LOG;
+      PyErr_Clear();
     }
   }
 };
 
-template <>
-class CWrapper<CInteraction>
-    : public CInteraction,
-      public boost::python::wrapper<CWrapper<CInteraction>> {
+template <> class CWrapper<CInteraction> : public CInteraction {
   V_META(CWrapper<T>, CInteraction, vstd::meta::empty())
+
 public:
+  using CInteraction::CInteraction;
+
   void performAction(std::shared_ptr<CCreature> first,
                      std::shared_ptr<CCreature> second) override final {
-    if (auto f = this->get_override("performAction")) {
-      PY_SAFE(f(first, second))
-    } else {
-      this->CInteraction::performAction(first, second);
+    try {
+      PYBIND11_OVERRIDE(void, CInteraction, performAction, first, second);
+    } catch (const py::error_already_set &) {
+      PYTHON_LOG;
+      PyErr_Clear();
     }
   }
 
   bool configureEffect(std::shared_ptr<CEffect> effect) override final {
-    if (auto f = this->get_override("configureEffect")) {
-      PY_SAFE_RET_VAL(return f(effect), false)
-    } else {
-      return this->CInteraction::configureEffect(effect);
+    try {
+      PYBIND11_OVERRIDE(bool, CInteraction, configureEffect, effect);
+    } catch (const py::error_already_set &) {
+      PYTHON_LOG;
+      PyErr_Clear();
+      return false;
     }
   }
 };
 
-template <>
-class CWrapper<CEffect> : public CEffect,
-                          public boost::python::wrapper<CWrapper<CEffect>> {
+template <> class CWrapper<CEffect> : public CEffect {
   V_META(CWrapper<T>, CEffect, vstd::meta::empty())
+
 public:
+  using CEffect::CEffect;
+
   void onEffect() override final {
-    if (auto f = this->get_override("onEffect")) {
-      PY_SAFE(f())
-    } else {
-      this->CEffect::onEffect();
+    try {
+      PYBIND11_OVERRIDE(void, CEffect, onEffect);
+    } catch (const py::error_already_set &) {
+      PYTHON_LOG;
+      PyErr_Clear();
     }
   }
 };
 
-template <>
-class CWrapper<CTile> : public CTile,
-                        public boost::python::wrapper<CWrapper<CTile>> {
+template <> class CWrapper<CTile> : public CTile {
   V_META(CWrapper<T>, CTile, vstd::meta::empty())
+
 public:
-  void onStep(std::shared_ptr<CCreature> creature) final {
-    if (auto f = this->get_override("onStep")) {
-      PY_SAFE(f(creature))
-    } else {
-      this->CTile::onStep(creature);
+  using CTile::CTile;
+
+  void onStep(std::shared_ptr<CCreature> creature) override final {
+    try {
+      PYBIND11_OVERRIDE(void, CTile, onStep, creature);
+    } catch (const py::error_already_set &) {
+      PYTHON_LOG;
+      PyErr_Clear();
     }
   }
 };
 
-template <>
-class CWrapper<CPotion> : public CPotion,
-                          public boost::python::wrapper<CWrapper<CPotion>> {
+template <> class CWrapper<CPotion> : public CPotion {
   V_META(CWrapper<T>, CPotion, vstd::meta::empty())
+
 public:
-  void onUse(std::shared_ptr<CGameEvent> event) final {
-    if (auto f = this->get_override("onUse")) {
-      PY_SAFE(f(event))
-    } else {
-      this->CPotion::onUse(event);
+  using CPotion::CPotion;
+
+  void onUse(std::shared_ptr<CGameEvent> event) override final {
+    try {
+      PYBIND11_OVERRIDE(void, CPotion, onUse, event);
+    } catch (const py::error_already_set &) {
+      PYTHON_LOG;
+      PyErr_Clear();
     }
   }
 };
 
-template <>
-class CWrapper<CScroll> : public CScroll,
-                          public boost::python::wrapper<CWrapper<CScroll>> {
+template <> class CWrapper<CScroll> : public CScroll {
   V_META(CWrapper<T>, CScroll, vstd::meta::empty())
+
 public:
-  void onUse(std::shared_ptr<CGameEvent> event) final {
-    if (auto f = this->get_override("onUse")) {
-      PY_SAFE(f(event))
-    } else {
-      this->CScroll::onUse(event);
+  using CScroll::CScroll;
+
+  void onUse(std::shared_ptr<CGameEvent> event) override final {
+    try {
+      PYBIND11_OVERRIDE(void, CScroll, onUse, event);
+    } catch (const py::error_already_set &) {
+      PYTHON_LOG;
+      PyErr_Clear();
     }
   }
 
-  bool isDisposable() override {
-    if (auto f = this->get_override("isDisposable")) {
-      PY_SAFE_RET_VAL(return f(), false)
-    } else {
-      return this->CScroll::isDisposable();
+  bool isDisposable() override final {
+    try {
+      PYBIND11_OVERRIDE(bool, CScroll, isDisposable);
+    } catch (const py::error_already_set &) {
+      PYTHON_LOG;
+      PyErr_Clear();
+      return false;
     }
   }
 };
 
-template <>
-class CWrapper<CTrigger> : public CTrigger,
-                           public boost::python::wrapper<CWrapper<CTrigger>> {
+template <> class CWrapper<CTrigger> : public CTrigger {
   V_META(CWrapper<T>, CTrigger, vstd::meta::empty())
+
 public:
+  using CTrigger::CTrigger;
+
   void trigger(std::shared_ptr<CGameObject> object,
-               std::shared_ptr<CGameEvent> event) final {
-    if (auto f = this->get_override("trigger")) {
-      PY_SAFE(f(object, event))
-    } else {
-      this->CTrigger::trigger(object, event);
+               std::shared_ptr<CGameEvent> event) override final {
+    try {
+      PYBIND11_OVERRIDE(void, CTrigger, trigger, object, event);
+    } catch (const py::error_already_set &) {
+      PYTHON_LOG;
+      PyErr_Clear();
     }
   }
 };
 
-template <>
-class CWrapper<CQuest> : public CQuest,
-                         public boost::python::wrapper<CWrapper<CQuest>> {
+template <> class CWrapper<CQuest> : public CQuest {
   V_META(CWrapper<T>, CQuest, vstd::meta::empty())
+
 public:
-  bool isCompleted() final {
-    if (auto f = this->get_override("isCompleted")) {
-      PY_SAFE_RET_VAL(return f();, false)
-    } else {
-      return this->CQuest::isCompleted();
+  using CQuest::CQuest;
+
+  bool isCompleted() override final {
+    try {
+      PYBIND11_OVERRIDE(bool, CQuest, isCompleted);
+    } catch (const py::error_already_set &) {
+      PYTHON_LOG;
+      PyErr_Clear();
+      return false;
     }
   }
 
-  void onComplete() final {
-    if (auto f = this->get_override("onComplete")) {
-      PY_SAFE(f())
-    } else {
-      this->CQuest::onComplete();
+  void onComplete() override final {
+    try {
+      PYBIND11_OVERRIDE(void, CQuest, onComplete);
+    } catch (const py::error_already_set &) {
+      PYTHON_LOG;
+      PyErr_Clear();
     }
   }
 };
 
-template <>
-class CWrapper<CPlugin> : public CPlugin,
-                          public boost::python::wrapper<CWrapper<CPlugin>> {
+template <> class CWrapper<CPlugin> : public CPlugin {
   V_META(CWrapper<T>, CPlugin, vstd::meta::empty())
+
 public:
-  void load(std::shared_ptr<CGame> game) final {
-    if (auto f = this->get_override("load")) {
-      PY_SAFE(f(game))
-    } else {
-      this->CPlugin::load(game);
+  using CPlugin::CPlugin;
+
+  void load(std::shared_ptr<CGame> game) override final {
+    try {
+      PYBIND11_OVERRIDE(void, CPlugin, load, game);
+    } catch (const py::error_already_set &) {
+      PYTHON_LOG;
+      PyErr_Clear();
     }
   }
 };
 
-template <>
-class CWrapper<CDialog> : public CDialog,
-                          public boost::python::wrapper<CWrapper<CDialog>> {
+template <> class CWrapper<CDialog> : public CDialog {
   V_META(CWrapper<T>, CDialog, vstd::meta::empty())
+
 public:
-  void invokeAction(std::string action) final {
-    if (auto f = this->get_override("invokeAction")) {
-      PY_SAFE(f(action))
-    } else {
-      this->CDialog::invokeAction(action);
+  using CDialog::CDialog;
+
+  void invokeAction(std::string action) override final {
+    try {
+      PYBIND11_OVERRIDE(void, CDialog, invokeAction, action);
+    } catch (const py::error_already_set &) {
+      PYTHON_LOG;
+      PyErr_Clear();
     }
   }
 
-  bool invokeCondition(std::string condition) final {
-    if (auto f = this->get_override("invokeCondition")) {
-      PY_SAFE_RET_VAL(return f(condition), true)
-    } else {
-      return this->CDialog::invokeCondition(condition);
+  bool invokeCondition(std::string condition) override final {
+    try {
+      PYBIND11_OVERRIDE(bool, CDialog, invokeCondition, condition);
+    } catch (const py::error_already_set &) {
+      PYTHON_LOG;
+      PyErr_Clear();
+      return true;
     }
   }
 };

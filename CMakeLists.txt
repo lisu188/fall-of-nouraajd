@@ -38,15 +38,15 @@ endif ()
 
 file(GLOB_RECURSE GAME_SRC ${CMAKE_SOURCE_DIR}/src/**.cpp ${CMAKE_SOURCE_DIR}/src/**.h)
 
-find_package(Boost COMPONENTS python filesystem REQUIRED)
-find_package(PythonInterp 3 REQUIRED)
-find_package(PythonLibs 3 REQUIRED)
+find_package(Boost COMPONENTS filesystem REQUIRED)
+find_package(Python3 COMPONENTS Interpreter Development REQUIRED)
+find_package(pybind11 CONFIG REQUIRED)
 find_package(SDL2 REQUIRED)
 find_package(SDL2_image REQUIRED)
 find_package(SDL2_ttf REQUIRED)
 
 include_directories(${Boost_INCLUDE_DIRS})
-include_directories(${PYTHON_INCLUDE_DIRS})
+include_directories(${Python3_INCLUDE_DIRS})
 include_directories(${SDL2_INCLUDE_DIR})
 include_directories(${SDL2_IMAGE_INCLUDE_DIR})
 include_directories(${SDL2_TTF_INCLUDE_DIR})
@@ -57,8 +57,19 @@ include_directories(${CMAKE_SOURCE_DIR}/src)
 include_directories(${CMAKE_SOURCE_DIR}/vstd)
 include_directories(${CMAKE_SOURCE_DIR}/random-dungeon-generator)
 
-python_add_module(_game ${GAME_SRC})
-target_link_libraries(_game ${Boost_LIBRARIES} ${PYTHON_LIBRARIES} ${SDL2_LIBRARY} ${SDL2_IMAGE_LIBRARY} ${SDL2_TTF_LIBRARY})
+pybind11_add_module(_game NO_EXTRAS ${GAME_SRC})
+target_link_libraries(_game PRIVATE ${Boost_LIBRARIES} ${SDL2_LIBRARY} ${SDL2_IMAGE_LIBRARY} ${SDL2_TTF_LIBRARY})
+
+set_source_files_properties(
+    ${CMAKE_SOURCE_DIR}/src/core/CModule.cpp
+    ${CMAKE_SOURCE_DIR}/src/core/CTypes.cpp
+    ${CMAKE_SOURCE_DIR}/src/object/CCreature.cpp
+    ${CMAKE_SOURCE_DIR}/src/core/CSerialization.cpp
+    ${CMAKE_SOURCE_DIR}/src/core/CMap.cpp
+    ${CMAKE_SOURCE_DIR}/src/core/CLoader.cpp
+    ${CMAKE_SOURCE_DIR}/src/core/CController.cpp
+    PROPERTIES SKIP_UNITY_BUILD_INCLUSION ON
+)
 
 configure_file(res/config/armors.json config/armors.json)
 configure_file(res/config/panels.json config/panels.json)
@@ -265,7 +276,6 @@ if (WIN32)
 
     install(FILES windows-tools/SDL2-2.0.12/x86_64-w64-mingw32/bin/SDL2.dll DESTINATION fall-of-nouraajd)
 
-    install(FILES windows-tools/boost64/lib/libboost_python36-mgw8-mt-x64-1_74.dll DESTINATION fall-of-nouraajd)
     install(FILES windows-tools/boost64/lib/libboost_filesystem-mgw8-mt-x64-1_74.dll DESTINATION fall-of-nouraajd)
 
     install(FILES windows-tools/Python36/python.exe DESTINATION fall-of-nouraajd)
@@ -280,38 +290,37 @@ if (WIN32)
 endif ()
 
 
-add_executable(fon_unit_tests
+add_executable(for_unit_tests
     tests/unit/test_coords.cpp
     src/core/CUtil.cpp
     src/core/CPathFinder.cpp
     src/core/CFuture.cpp
 )
 
-target_include_directories(fon_unit_tests PRIVATE
+target_include_directories(for_unit_tests PRIVATE
     ${CMAKE_SOURCE_DIR}/src
     ${CMAKE_SOURCE_DIR}/vstd
     json/single_include/nlohmann
-    ${PYTHON_INCLUDE_DIRS}
+    ${Python3_INCLUDE_DIRS}
     ${Boost_INCLUDE_DIRS}
     ${SDL2_INCLUDE_DIR}
     ${SDL2_IMAGE_INCLUDE_DIR}
     ${SDL2_TTF_INCLUDE_DIR}
 )
 
-target_link_libraries(fon_unit_tests PRIVATE
-    ${PYTHON_LIBRARIES}
+target_link_libraries(for_unit_tests PRIVATE
+    Python3::Python
     ${SDL2_LIBRARY}
     ${SDL2_IMAGE_LIBRARY}
 )
 
 enable_testing()
-add_test(NAME fon_unit_tests COMMAND fon_unit_tests)
+add_test(NAME for_unit_tests COMMAND for_unit_tests)
 
 SET(CPACK_STRIP_FILES _game.so)
 
 if (WIN32)
     set_target_properties(_game PROPERTIES UNITY_BUILD OFF)
 else()
-    cotire(_game)
-    set_target_properties(_game PROPERTIES UNITY_BUILD ON)
+    set_target_properties(_game PROPERTIES UNITY_BUILD ON UNITY_BUILD_BATCH_SIZE 8)
 endif ()

@@ -57,6 +57,14 @@ plugins_path = REPO_ROOT / "res" / "plugins"
 if str(plugins_path) not in sys.path:
     sys.path.insert(3, str(plugins_path))
 
+# Silence the native engine logger so regression tests don't flood stdout.
+try:
+    import _game  # type: ignore
+
+    _game.set_logger_sink("disabled")
+except Exception:
+    pass
+
 MCP_PROTOCOL_VERSION = "2025-11-25"
 
 
@@ -268,76 +276,64 @@ def walkthrough_siege_map():
 
 
 def walkthrough_ritual_map():
-    game = load_game_module()
-    original_show_message = game.CGuiHandler.showMessage
-    try:
-        game.CGuiHandler.showMessage = lambda self, message: None
-        g, game_map = load_game_map("ritual")
-        for name in ("anchorNorth", "anchorCrypt", "anchorSanctum"):
-            find_map_object_definition("ritual", name)
+    g, game_map = load_game_map("ritual")
+    for name in ("anchorNorth", "anchorCrypt", "anchorSanctum"):
+        find_map_object_definition("ritual", name)
 
-        game_map.removeObjectByName("anchorNorth")
-        turn_after_countdown = advance_map_only(game_map, 5)
-        game_map.removeObjectByName("anchorCrypt")
-        game_map.removeObjectByName("anchorSanctum")
-        leader = find_runtime_object(game_map, "ritualLeader")
-        advance_map_only(game_map, 70)
+    game_map.removeObjectByName("anchorNorth")
+    turn_after_countdown = advance_map_only(game_map, 5)
+    game_map.removeObjectByName("anchorCrypt")
+    game_map.removeObjectByName("anchorSanctum")
+    leader = find_runtime_object(game_map, "ritualLeader")
+    advance_map_only(game_map, 70)
 
-        assert game_map.getBoolProperty("ritual_started"), "The ritual should start during the walkthrough."
-        assert game_map.getBoolProperty("anchors_destroyed"), "All ritual anchors should be destroyed."
-        assert game_map.getBoolProperty("leader_spawned"), "The ritual leader should spawn after all anchors fall."
-        assert leader.getName() == "ritualLeader", "The ritual leader should be present after the anchor phase."
-        assert game_map.getBoolProperty("captive_lost"), "The countdown failure path should mark the captive lost."
-        assert game_map.getBoolProperty("bad_ending"), "The ritual walkthrough should reach the bad ending."
-        assert game_map.getBoolProperty("ritual_finished"), "The ritual should finish after the countdown expires."
-        return {
-            "map": "ritual",
-            "anchors_destroyed_count": game_map.getNumericProperty("anchors_destroyed_count"),
-            "countdown_after_turns": game_map.getNumericProperty("ritual_countdown"),
-            "turn_after_countdown": turn_after_countdown,
-            "leader_spawned": game_map.getBoolProperty("leader_spawned"),
-            "captive_lost": game_map.getBoolProperty("captive_lost"),
-            "bad_ending": game_map.getBoolProperty("bad_ending"),
-            "note": "Ritual currently cannot be started with startGameWithPlayer, so this walkthrough covers the deterministic no-player failure path.",
-        }
-    finally:
-        game.CGuiHandler.showMessage = original_show_message
+    assert game_map.getBoolProperty("ritual_started"), "The ritual should start during the walkthrough."
+    assert game_map.getBoolProperty("anchors_destroyed"), "All ritual anchors should be destroyed."
+    assert game_map.getBoolProperty("leader_spawned"), "The ritual leader should spawn after all anchors fall."
+    assert leader.getName() == "ritualLeader", "The ritual leader should be present after the anchor phase."
+    assert game_map.getBoolProperty("captive_lost"), "The countdown failure path should mark the captive lost."
+    assert game_map.getBoolProperty("bad_ending"), "The ritual walkthrough should reach the bad ending."
+    assert game_map.getBoolProperty("ritual_finished"), "The ritual should finish after the countdown expires."
+    return {
+        "map": "ritual",
+        "anchors_destroyed_count": game_map.getNumericProperty("anchors_destroyed_count"),
+        "countdown_after_turns": game_map.getNumericProperty("ritual_countdown"),
+        "turn_after_countdown": turn_after_countdown,
+        "leader_spawned": game_map.getBoolProperty("leader_spawned"),
+        "captive_lost": game_map.getBoolProperty("captive_lost"),
+        "bad_ending": game_map.getBoolProperty("bad_ending"),
+        "note": "Ritual currently cannot be started with startGameWithPlayer, so this walkthrough covers the deterministic no-player failure path.",
+    }
 
 
 def walkthrough_nouraajd_map():
-    game = load_game_module()
-    original_show_message = game.CGuiHandler.showMessage
-    try:
-        game.CGuiHandler.showMessage = lambda self, message: None
-        g, game_map, player = load_game_map_with_player("nouraajd")
-        for name in ("cave1", "gooby1", "catacombs", "cave2"):
-            if name != "gooby1":
-                find_map_object_definition("nouraajd", name)
+    g, game_map, player = load_game_map_with_player("nouraajd")
+    for name in ("cave1", "gooby1", "catacombs", "cave2"):
+        if name != "gooby1":
+            find_map_object_definition("nouraajd", name)
 
-        game_map.removeObjectByName("cave1")
-        gooby = find_runtime_object(game_map, "gooby1")
-        game_map.removeObjectByName(gooby.getName())
-        game_map.removeObjectByName("catacombs")
-        game_map.removeObjectByName("cave2")
+    game_map.removeObjectByName("cave1")
+    gooby = find_runtime_object(game_map, "gooby1")
+    game_map.removeObjectByName(gooby.getName())
+    game_map.removeObjectByName("catacombs")
+    game_map.removeObjectByName("cave2")
 
-        assert game_map.getBoolProperty("completed_rolf"), "The cave1 trigger should complete the Rolf lead."
-        assert player.hasItem(lambda it: it.getName() == "skullOfRolf"), "The cave1 trigger should award Rolf's skull."
-        assert game_map.getBoolProperty("completed_gooby"), "Defeating Gooby should complete the main quest flag."
-        assert player.hasItem(
-            lambda it: it.getName() == "holyRelic"
-        ), "The catacombs trigger should award the holy relic."
-        assert game_map.getBoolProperty("OCTOBOGZ_SLAIN"), "The cave2 trigger should mark the OctoBogz slain."
-        return {
-            "map": "nouraajd",
-            "completed_rolf": game_map.getBoolProperty("completed_rolf"),
-            "completed_gooby": game_map.getBoolProperty("completed_gooby"),
-            "octobogz_slain": game_map.getBoolProperty("OCTOBOGZ_SLAIN"),
-            "has_skull_of_rolf": player.hasItem(lambda it: it.getName() == "skullOfRolf"),
-            "has_holy_relic": player.hasItem(lambda it: it.getName() == "holyRelic"),
-            "quests": quest_names(player),
-        }
-    finally:
-        game.CGuiHandler.showMessage = original_show_message
+    assert game_map.getBoolProperty("completed_rolf"), "The cave1 trigger should complete the Rolf lead."
+    assert player.hasItem(lambda it: it.getName() == "skullOfRolf"), "The cave1 trigger should award Rolf's skull."
+    assert game_map.getBoolProperty("completed_gooby"), "Defeating Gooby should complete the main quest flag."
+    assert player.hasItem(
+        lambda it: it.getName() == "holyRelic"
+    ), "The catacombs trigger should award the holy relic."
+    assert game_map.getBoolProperty("OCTOBOGZ_SLAIN"), "The cave2 trigger should mark the OctoBogz slain."
+    return {
+        "map": "nouraajd",
+        "completed_rolf": game_map.getBoolProperty("completed_rolf"),
+        "completed_gooby": game_map.getBoolProperty("completed_gooby"),
+        "octobogz_slain": game_map.getBoolProperty("OCTOBOGZ_SLAIN"),
+        "has_skull_of_rolf": player.hasItem(lambda it: it.getName() == "skullOfRolf"),
+        "has_holy_relic": player.hasItem(lambda it: it.getName() == "holyRelic"),
+        "quests": quest_names(player),
+    }
 
 
 WALKTHROUGHS = {

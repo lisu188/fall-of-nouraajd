@@ -19,20 +19,28 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "core/CGlobal.h"
 #include "core/CUtil.h"
+#include <utility>
 
 template <typename Ret, typename... Args> struct wrap {
-  static std::function<Ret(Args...)> call(boost::python::object func) {
+  static std::function<Ret(Args...)> call(pybind11::object func) {
     return [func](Args... args) -> Ret {
-      PY_SAFE_RET_VAL(boost::python::object ret = func(args...);
-                      boost::python::incref(ret.ptr());
-                      return boost::python::extract<Ret>(ret);, Ret())
+      try {
+        pybind11::object ret = func(std::forward<Args>(args)...);
+        return ret.cast<Ret>();
+      } catch (...) {
+        PYTHON_LOG;
+        PyErr_Clear();
+        return Ret();
+      }
     };
   }
 };
 
 template <typename... Args> struct wrap<void, Args...> {
-  static std::function<void(Args...)> call(boost::python::object func) {
-    return [func](Args... args) { PY_SAFE(func(args...)) };
+  static std::function<void(Args...)> call(pybind11::object func) {
+    return [func](Args... args) {
+      PY_SAFE(func(std::forward<Args>(args)...));
+    };
   }
 };
 
@@ -44,7 +52,7 @@ public:
 
   void
   execute_script(std::string script,
-                 boost::python::object name_space = boost::python::object());
+                 pybind11::object name_space = pybind11::none());
 
   void execute_command(std::initializer_list<std::string> list);
 
@@ -100,15 +108,15 @@ public:
     execute_script("del " + name);
   }
 
-  template <typename T = boost::python::object> T get_object(std::string name) {
+  template <typename T = pybind11::object> T get_object(std::string name) {
     execute_script(vstd::join({"__tmp__", name}, "="));
-    boost::python::object object = main_namespace["__tmp__"];
-    T t = boost::python::extract<T>(object);
+    pybind11::object object = main_namespace["__tmp__"];
+    T t = object.cast<T>();
     execute_script("del __tmp__");
     return t;
   }
 
 private:
-  boost::python::object main_module;
-  boost::python::object main_namespace;
+  pybind11::object main_module;
+  pybind11::dict main_namespace;
 };

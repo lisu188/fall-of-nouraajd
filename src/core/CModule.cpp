@@ -19,7 +19,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <cctype>
 #include <stdexcept>
 
-#include "../../vstd/vstd.h"
+#include "CGlobal.h"
+#include "../../vstd/veventloop.h"
 #include "../gui/CGui.h"
 #include "../gui/object/CSideBar.h"
 #include "../gui/object/CStatsGraphicsObject.h"

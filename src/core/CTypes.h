@@ -91,21 +91,13 @@ public:
     };
   }
 
-  template <typename T> static void register_predicate() {
-    vstd::function_converter<bool, std::shared_ptr<T>>();
-  }
+  template <typename T> static void register_predicate() {}
 
-  template <typename T> static void register_supplier() {
-    vstd::function_converter<std::shared_ptr<T>>();
-  }
+  template <typename T> static void register_supplier() {}
 
-  template <typename T> static void register_consumer() {
-    vstd::function_converter<void, std::shared_ptr<T>>();
-  }
+  template <typename T> static void register_consumer() {}
 
-  template <typename T> static void register_pointer() {
-    vstd::register_pointer<T>();
-  }
+  template <typename T> static void register_pointer() {}
 
   template <typename T> static void register_serializer() {
     register_serializer<std::shared_ptr<json>, std::shared_ptr<T>>();
@@ -114,9 +106,7 @@ public:
                         std::map<std::string, std::shared_ptr<T>>>();
   }
 
-  template <typename T, typename U> static void register_cast() {
-    vstd::implicitly_convertible_cast<std::shared_ptr<T>, std::shared_ptr<U>>();
-  }
+  template <typename T, typename U> static void register_cast() {}
 
   template <typename T, typename U> static void register_any_cast() {
     vstd::register_any_type<std::shared_ptr<T>, std::shared_ptr<U>>();

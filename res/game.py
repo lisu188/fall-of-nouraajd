@@ -1,5 +1,7 @@
 from _game import *
 
+set_logger_sink("disabled", None)
+
 
 def register(context):
     def register_wrapper(f):
