@@ -148,7 +148,6 @@ py::object game_object_getattr(CGameObject &self, const std::string &name) {
 
     throw py::attribute_error(name);
 }
-
 std::shared_ptr<CGameObject> cast_registered_python_object(
     const py::object &instance) {
     if (py::isinstance<CBuilding>(instance)) {
