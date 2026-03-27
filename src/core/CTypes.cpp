@@ -41,6 +41,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "CController.h"
 #include "CList.h"
 #include "CMap.h"
+#include "CSerialization.h"
 #include "CScript.h"
 #include "CWrapper.h"
 #include "core/CGame.h"

@@ -16,8 +16,10 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #include "CTile.h"
+#include "CCreature.h"
 #include "core/CGame.h"
 #include "core/CMap.h"
+#include "core/CPythonOverrides.h"
 CTile::CTile() {}
 
 CTile::~CTile() {}
@@ -33,7 +35,13 @@ void CTile::moveTo(int x, int y, int z) { move(x - posx, y - posy, z - posz); }
 
 Coords CTile::getCoords() { return Coords(posx, posy, posz); }
 
-void CTile::onStep(std::shared_ptr<CCreature>) {}
+void CTile::onStep(std::shared_ptr<CCreature> creature) {
+  pybind11::gil_scoped_acquire gil;
+  if (auto override = CPythonOverrides::find_override(this, "onStep");
+      !override.is_none()) {
+    PY_SAFE(override(creature); return;)
+  }
+}
 
 bool CTile::canStep() const { return step; }
 

@@ -61,6 +61,7 @@ void CMap::setPlayer(std::shared_ptr<CPlayer> player) {
     player->setName("player");
     player->setController(getGame()->createObject<CPlayerController>());
     player->setFightController(getGame()->createObject<CPlayerFightController>());
+    this->player = player;
 
     auto restartTrigger = std::make_shared<CCustomTrigger>("player", "onDestroy", [](auto object, auto event) {
         auto _player = vstd::cast<CPlayer>(object);
@@ -81,7 +82,6 @@ void CMap::setPlayer(std::shared_ptr<CPlayer> player) {
 
     addObject(player);
     player->moveTo(entryx, entryy, entryz);
-    this->player = player;
 }
 
 std::shared_ptr<CEventHandler> CMap::getEventHandler() {

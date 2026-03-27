@@ -21,10 +21,12 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include <boost/filesystem.hpp>
 #include <boost/locale.hpp>
-#include <boost/python.hpp>
-#include <boost/python/suite/indexing/vector_indexing_suite.hpp>
 #include <boost/range/algorithm.hpp>
 #include <boost/range/irange.hpp>
+
+#include <pybind11/pybind11.h>
+#include <pybind11/stl.h>
+#include <pybind11/functional.h>
 
 #include <SDL.h>
 #include <SDL_image.h>

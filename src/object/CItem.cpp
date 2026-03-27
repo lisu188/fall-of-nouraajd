@@ -18,6 +18,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "CItem.h"
 #include "core/CGame.h"
 #include "core/CMap.h"
+#include "core/CPythonOverrides.h"
+#include "handler/CEventHandler.h"
 CItem::CItem() {}
 
 CItem::~CItem() {}
@@ -47,7 +49,13 @@ void CItem::onUnequip(std::shared_ptr<CGameEvent> event) {
       getType(), "\n");
 }
 
-void CItem::onUse(std::shared_ptr<CGameEvent> event) {}
+void CItem::onUse(std::shared_ptr<CGameEvent> event) {
+  pybind11::gil_scoped_acquire gil;
+  if (auto override = CPythonOverrides::find_override(this, "onUse");
+      !override.is_none()) {
+    PY_SAFE(override(event); return;)
+  }
+}
 
 int CItem::getPower() const { return power; }
 
@@ -78,7 +86,14 @@ std::shared_ptr<Stats> CItem::getBonus() { return bonus; }
 
 void CItem::setBonus(std::shared_ptr<Stats> stats) { bonus = stats; }
 
-bool CItem::isDisposable() { return false; }
+bool CItem::isDisposable() {
+  pybind11::gil_scoped_acquire gil;
+  if (auto override = CPythonOverrides::find_override(this, "isDisposable");
+      !override.is_none()) {
+    PY_SAFE_RET_VAL(return override().cast<bool>();, false)
+  }
+  return false;
+}
 
 CPotion::CPotion() {}
 

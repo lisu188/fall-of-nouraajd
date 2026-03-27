@@ -16,26 +16,19 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #include "core/CMap.h"
+#include <pybind11/eval.h>
 
 CScriptHandler::CScriptHandler() {
-  main_module = boost::python::object(
-      boost::python::handle<>(PyImport_ImportModule("__main__")));
+  main_module = pybind11::module::import("__main__");
   main_namespace = main_module.attr("__dict__");
-  boost::python::incref(main_module.ptr());
 }
 
-CScriptHandler::~CScriptHandler() {}
+CScriptHandler::~CScriptHandler() = default;
 
 void CScriptHandler::execute_script(std::string script,
-                                    boost::python::api::object name_space) {
-  const char *string = script.append("\n").c_str();
-  if (name_space.is_none()) {
-    name_space = main_namespace;
-  }
-  if (!PyRun_String(string, Py_file_input, name_space.ptr(),
-                    name_space.ptr())) {
-    boost::python::throw_error_already_set();
-  }
+                                    pybind11::object name_space) {
+  auto target = name_space.is_none() ? main_namespace : name_space;
+  pybind11::exec(script + "\n", target, target);
 }
 
 std::string

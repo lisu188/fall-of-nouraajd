@@ -15,7 +15,7 @@
                   "number": 0,
                   "action": "deliver_letter",
                   "nextStateId": "LETTER_DELIVERED",
-                  "text": "I bear a letter for you.",
+                  "text": "I carry a letter for you.",
                   "condition": "can_deliver_letter"
                 }
               },

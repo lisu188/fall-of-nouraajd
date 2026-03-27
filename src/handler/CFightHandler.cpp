@@ -28,9 +28,15 @@ bool CFightHandler::fight(std::shared_ptr<CCreature> a,
   a->getFightController()->start(a, b);
   b->getFightController()->start(b, a);
 
-  // TODO: this is mess!
-  for (int i = 0; i < 5;
-       i++) { // TODO: max number of turns? do we need it? implement draw.
+  auto state = [](const std::shared_ptr<CCreature> &creature) {
+    return std::make_tuple(creature->getHp(), creature->getMana(),
+                           creature->getEffects().size(),
+                           creature->getInInventory().size());
+  };
+
+  int stale_turns = 0;
+  for (int turn = 0; turn < 100 && stale_turns < 20; ++turn) {
+    auto before = std::make_pair(state(a), state(b));
     applyEffects(a);
     if (!a->isAlive()) {
       // TODO: who was the caster? we should gratify him
@@ -39,15 +45,15 @@ bool CFightHandler::fight(std::shared_ptr<CCreature> a,
       break;
     }
     if (!CTags::isTagPresent(a->getEffects(), "stun")) {
-      if (a->getFightController()->control(a, b)) {
-        i = 0;
-      }
+      a->getFightController()->control(a, b);
       if (!b->isAlive()) {
         defeatedCreature(a, b);
         retVal = true;
         break;
       }
     }
+    auto after = std::make_pair(state(a), state(b));
+    stale_turns = after == before ? stale_turns + 1 : 0;
     a.swap(b);
   }
 

@@ -18,6 +18,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "CMapObject.h"
 #include "core/CGame.h"
 #include "core/CMap.h"
+#include "core/CPythonOverrides.h"
+#include "handler/CEventHandler.h"
 
 CMapObject::CMapObject() {}
 
@@ -67,11 +69,29 @@ int CMapObject::getPosZ() const { return posz; }
 
 int CMapObject::getPosX() const { return posx; }
 
-void CMapObject::onTurn(std::shared_ptr<CGameEvent>) {}
+void CMapObject::onTurn(std::shared_ptr<CGameEvent> event) {
+  pybind11::gil_scoped_acquire gil;
+  if (auto override = CPythonOverrides::find_override(this, "onTurn");
+      !override.is_none()) {
+    PY_SAFE(override(event); return;)
+  }
+}
 
-void CMapObject::onCreate(std::shared_ptr<CGameEvent>) {}
+void CMapObject::onCreate(std::shared_ptr<CGameEvent> event) {
+  pybind11::gil_scoped_acquire gil;
+  if (auto override = CPythonOverrides::find_override(this, "onCreate");
+      !override.is_none()) {
+    PY_SAFE(override(event); return;)
+  }
+}
 
-void CMapObject::onDestroy(std::shared_ptr<CGameEvent>) {}
+void CMapObject::onDestroy(std::shared_ptr<CGameEvent> event) {
+  pybind11::gil_scoped_acquire gil;
+  if (auto override = CPythonOverrides::find_override(this, "onDestroy");
+      !override.is_none()) {
+    PY_SAFE(override(event); return;)
+  }
+}
 
 Coords CMapObject::getCoords() { return Coords(posx, posy, posz); }
 

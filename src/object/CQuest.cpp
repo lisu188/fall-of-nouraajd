@@ -16,12 +16,26 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #include "CQuest.h"
+#include "core/CPythonOverrides.h"
 
 CQuest::CQuest() {}
 
-bool CQuest::isCompleted() { return false; }
+bool CQuest::isCompleted() {
+  pybind11::gil_scoped_acquire gil;
+  if (auto override = CPythonOverrides::find_override(this, "isCompleted");
+      !override.is_none()) {
+    PY_SAFE_RET_VAL(return override().cast<bool>();, false)
+  }
+  return false;
+}
 
-void CQuest::onComplete() {}
+void CQuest::onComplete() {
+  pybind11::gil_scoped_acquire gil;
+  if (auto override = CPythonOverrides::find_override(this, "onComplete");
+      !override.is_none()) {
+    PY_SAFE(override(); return;)
+  }
+}
 
 void CQuest::setDescription(std::string description) {
   this->description = description;
