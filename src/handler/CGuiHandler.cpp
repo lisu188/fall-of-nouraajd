@@ -34,54 +34,81 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 CGuiHandler::CGuiHandler() {}
 
 void CGuiHandler::showMessage(std::string message) {
+  auto game = _game.lock();
+  if (!game || !game->getGui()) {
+    vstd::logger::info(message);
+    return;
+  }
   std::shared_ptr<CGameTextPanel> panel =
-      _game.lock()->createObject<CGameTextPanel>("textPanel");
+      game->createObject<CGameTextPanel>("textPanel");
   panel->setText(message);
-  _game.lock()->getGui()->pushChild(panel);
+  game->getGui()->pushChild(panel);
   panel->awaitClosing();
 }
 
 void CGuiHandler::showInfo(std::string message, bool centered) {
+  auto game = _game.lock();
+  if (!game || !game->getGui()) {
+    vstd::logger::info(message);
+    return;
+  }
   std::shared_ptr<CGameTextPanel> panel =
-      _game.lock()->createObject<CGameTextPanel>("infoPanel");
+      game->createObject<CGameTextPanel>("infoPanel");
   panel->setText(message);
   panel->setCentered(centered);
-  _game.lock()->getGui()->pushChild(panel);
+  game->getGui()->pushChild(panel);
   panel->awaitClosing();
 }
 
 bool CGuiHandler::showQuestion(std::string question) {
+  auto game = _game.lock();
+  if (!game || !game->getGui()) {
+    vstd::logger::info(question);
+    return false;
+  }
   std::shared_ptr<CGameQuestionPanel> panel =
-      _game.lock()->createObject<CGameQuestionPanel>("questionPanel");
+      game->createObject<CGameQuestionPanel>("questionPanel");
   panel->setQuestion(question);
-  _game.lock()->getGui()->pushChild(panel);
+  game->getGui()->pushChild(panel);
   return panel->awaitAnswer();
 }
 
 void CGuiHandler::showTrade(std::shared_ptr<CMarket> market) {
+  auto game = _game.lock();
+  if (!game || !game->getGui()) {
+    return;
+  }
   std::shared_ptr<CGameTradePanel> panel =
-      _game.lock()->createObject<CGameTradePanel>("tradePanel");
+      game->createObject<CGameTradePanel>("tradePanel");
   panel->setMarket(market);
-  _game.lock()->getGui()->pushChild(panel);
+  game->getGui()->pushChild(panel);
   panel->awaitClosing();
 }
 
 void CGuiHandler::showDialog(std::shared_ptr<CDialog> dialog) {
+  auto game = _game.lock();
+  if (!game || !game->getGui()) {
+    return;
+  }
   std::shared_ptr<CGameDialogPanel> panel =
-      _game.lock()->createObject<CGameDialogPanel>("dialogPanel");
+      game->createObject<CGameDialogPanel>("dialogPanel");
   panel->setDialog(dialog);
   panel->reload();
-  _game.lock()->getGui()->pushChild(panel);
+  game->getGui()->pushChild(panel);
   panel->awaitClosing();
 }
 
 void CGuiHandler::showLoot(std::shared_ptr<CCreature> creature,
                            std::set<std::shared_ptr<CItem>> items) {
+  auto game = _game.lock();
+  if (!game || !game->getGui()) {
+    return;
+  }
   std::shared_ptr<CGameLootPanel> panel =
-      _game.lock()->createObject<CGameLootPanel>("lootPanel");
+      game->createObject<CGameLootPanel>("lootPanel");
   panel->setCreature(creature);
   panel->setItems(items);
-  _game.lock()->getGui()->pushChild(panel);
+  game->getGui()->pushChild(panel);
   panel->awaitClosing();
 }
 

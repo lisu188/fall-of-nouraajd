@@ -16,11 +16,19 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #include "CTrigger.h"
+#include "core/CPythonOverrides.h"
+#include "handler/CEventHandler.h"
 
 CTrigger::CTrigger() {}
 
-void CTrigger::trigger(std::shared_ptr<CGameObject>,
-                       std::shared_ptr<CGameEvent>) {}
+void CTrigger::trigger(std::shared_ptr<CGameObject> object,
+                       std::shared_ptr<CGameEvent> event) {
+  pybind11::gil_scoped_acquire gil;
+  if (auto override = CPythonOverrides::find_override(this, "trigger");
+      !override.is_none()) {
+    PY_SAFE(override(object, event); return;)
+  }
+}
 
 std::string CTrigger::getObject() { return object; }
 

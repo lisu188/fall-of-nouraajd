@@ -363,7 +363,7 @@
           "class": "CDialogState",
           "properties": {
             "stateId": "ENTRY",
-            "text": "You found it! Please, take this coin and my blessing."
+            "text": "You found it! Please, take this coin and my blessing.",
             "options": [
               {
                 "ref": "exitOption",

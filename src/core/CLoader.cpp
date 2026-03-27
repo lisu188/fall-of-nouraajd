@@ -24,6 +24,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "handler/CRngHandler.h"
 #include "object/CCreature.h"
 #include "object/CPlayer.h"
+#include <pybind11/eval.h>
 #include <rdg.h>
 
 #include <utility>
@@ -345,9 +346,12 @@ void CPluginLoader::loadPlugin(const std::shared_ptr<CGame> &game,
                                const std::string &path) {
   PY_SAFE(
       std::string code = CResourcesProvider::getInstance()->load(path);
-      auto name = game->getScriptHandler()->add_class(code, {"game.CPlugin"});
-      game->loadPlugin(
-          game->getScriptHandler()
-              ->get_object<std::function<std::shared_ptr<CPlugin>()>>(name));
-      game->getScriptHandler()->execute_script(vstd::join({"del", name}, " "));)
+      pybind11::dict plugin_namespace;
+      plugin_namespace["__builtins__"] =
+          pybind11::module::import("builtins");
+      plugin_namespace["__file__"] = path;
+      plugin_namespace["__name__"] =
+          vstd::join({"plugin_", vstd::to_hex_hash(path)}, "");
+      pybind11::exec(code + "\n", plugin_namespace, plugin_namespace);
+      plugin_namespace["load"](pybind11::none(), pybind11::cast(game));)
 }

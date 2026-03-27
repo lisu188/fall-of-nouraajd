@@ -62,7 +62,7 @@
           "class": "CDialogState",
           "properties": {
             "stateId": "ABOUT_ROLF",
-            "text": "He marched out with his men days past. None have returned, nor has word."
+            "text": "He marched out with his men days past. None have returned, nor has word.",
             "options": [
               {
                 "ref": "exitOption",

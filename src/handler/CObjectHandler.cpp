@@ -23,6 +23,10 @@ CObjectHandler::CObjectHandler() {}
 
 void CObjectHandler::registerConfig(const std::string &path) {
   std::shared_ptr<json> config = CConfigurationProvider::getConfig(path);
+  if (!config) {
+    vstd::logger::warning("Failed to load config:", path);
+    return;
+  }
   for (auto [key, value] : config->items()) {
     if (value.is_object() &&
         !value.count("class") &&
