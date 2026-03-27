@@ -639,9 +639,19 @@ class GameTest(unittest.TestCase):
         self.assertIn("Inquisitor", player_types)
         self.assertIn("Wayfarer", player_types)
 
+        expected_animations = {
+            "Inquisitor": "images/players/inquisitor",
+            "Wayfarer": "images/players/wayfarer",
+        }
         for player_type in ("Inquisitor", "Wayfarer"):
+            g = game.CGameLoader.loadGame()
             game.CGameLoader.startGameWithPlayer(g, "nouraajd", player_type)
-            self.assertEqual(g.getMap().getPlayer().getStringProperty("label"), player_type)
+            player = g.getMap().getPlayer()
+            self.assertEqual(player.getStringProperty("label"), player_type)
+            self.assertEqual(player.getStringProperty("animation"), expected_animations[player_type])
+
+        for image_name in ("inquisitor.png", "wayfarer.png"):
+            self.assertTrue((build_dir / "images" / "players" / image_name).exists(), image_name)
 
         required_types = (
             "ExposeCorruption",
@@ -751,13 +761,198 @@ class GameTest(unittest.TestCase):
         return missing == [], json.dumps({"missing": missing, "doc_sizes": {k: len(v) for k, v in checks.items()}})
 
     @game_test
+    def test_runtime_binding_properties(self):
+        game = load_game_module()
+        g = game.CGameLoader.loadGame()
+        game.CGameLoader.startGame(g, "empty")
+
+        stats = g.createObject("Stats")
+        for name, value in {
+            "strength": 1,
+            "agility": 2,
+            "stamina": 3,
+            "intelligence": 4,
+            "armor": 5,
+            "block": 6,
+            "dmgMin": 7,
+            "dmgMax": 8,
+            "hit": 9,
+            "crit": 10,
+            "fireResist": 11,
+            "frostResist": 12,
+            "normalResist": 13,
+            "thunderResist": 14,
+            "shadowResist": 15,
+            "damage": 16,
+            "mainStat": "agility",
+        }.items():
+            setattr(stats, name, value)
+            self.assertEqual(getattr(stats, name), value)
+
+        damage = g.createObject("Damage")
+        for name, value in {
+            "fire": 21,
+            "frost": 22,
+            "thunder": 23,
+            "shadow": 24,
+            "normal": 25,
+        }.items():
+            setattr(damage, name, value)
+            self.assertEqual(getattr(damage, name), value)
+
+        dialog = g.createObject("CDialog")
+        self.assertTrue(dialog.invokeCondition("missing"))
+        dialog.invokeAction("missing")
+
+        dialog_state = g.createObject("CDialogState")
+        dialog_state.stateId = "ENTRY"
+        dialog_state.text = "Hello there"
+        self.assertEqual(dialog_state.stateId, "ENTRY")
+        self.assertEqual(dialog_state.text, "Hello there")
+
+        dialog_option = g.createObject("CDialogOption")
+        dialog_option.number = 3
+        dialog_option.text = "Continue"
+        dialog_option.action = "act"
+        dialog_option.condition = "cond"
+        dialog_option.nextStateId = "EXIT"
+        self.assertEqual(dialog_option.number, 3)
+        self.assertEqual(dialog_option.text, "Continue")
+        self.assertEqual(dialog_option.action, "act")
+        self.assertEqual(dialog_option.condition, "cond")
+        self.assertEqual(dialog_option.nextStateId, "EXIT")
+
+        quest = g.createObject("CQuest")
+        quest.description = "Investigate"
+        self.assertEqual(quest.description, "Investigate")
+        self.assertFalse(quest.isCompleted())
+        quest.onComplete()
+
+        trigger = g.createObject("CTrigger")
+        trigger.object = "gate"
+        trigger.event = "open"
+        self.assertEqual(trigger.object, "gate")
+        self.assertEqual(trigger.event, "open")
+        trigger.trigger(None, None)
+
+        event = g.createObject("CEvent")
+        event.enabled = False
+        self.assertFalse(event.enabled)
+        event.onEnter(None)
+        event.onLeave(None)
+
+        building = g.createObject("CBuilding")
+        building.enabled = False
+        self.assertFalse(building.enabled)
+        building.onEnter(None)
+        building.onLeave(None)
+
+        effect = g.createObject("CEffect")
+        effect.duration = 4
+        effect.cumulative = True
+        effect.setBonus(stats)
+        self.assertEqual(effect.duration, 4)
+        self.assertTrue(effect.cumulative)
+        self.assertIsNotNone(effect.getBonus())
+        self.assertEqual(effect.getTimeLeft(), 4)
+        self.assertIsNone(effect.getCaster())
+        self.assertIsNone(effect.getVictim())
+        effect.onEffect()
+
+        item = g.createObject("CItem")
+        item.power = 2
+        self.assertEqual(item.power, 2)
+
+        potion = g.createObject("CPotion")
+        potion.onUse(None)
+
+        scroll = g.createObject("CScroll")
+        scroll.text = "Lore"
+        self.assertEqual(scroll.text, "Lore")
+        self.assertFalse(scroll.isDisposable())
+        scroll.onUse(None)
+
+        market = g.createObject("CMarket")
+        market.sell = 130
+        market.buy = 60
+        self.assertEqual(market.sell, 130)
+        self.assertEqual(market.buy, 60)
+
+        list_string = g.createObject("CListString")
+        list_string.addValue("north")
+
+        report = {
+            "stats": {name: getattr(stats, name) for name in ("strength", "agility", "damage", "mainStat")},
+            "damage": {name: getattr(damage, name) for name in ("fire", "frost", "thunder", "shadow", "normal")},
+            "dialog": {"state": dialog_state.stateId, "option": dialog_option.text},
+            "market": {"sell": market.sell, "buy": market.buy},
+            "effect_time_left": effect.getTimeLeft(),
+        }
+        return True, json.dumps(report, sort_keys=True)
+
+    @game_test
+    def test_headless_handlers_and_resources(self):
+        game = load_game_module()
+        g = game.CGameLoader.loadGame()
+
+        gui_handler = g.getGuiHandler()
+        market = g.createObject("CMarket")
+        dialog = g.createObject("CDialog")
+        creature = g.createObject("CCreature")
+        item = g.createObject("CItem")
+
+        gui_handler.showMessage("message")
+        gui_handler.showInfo("info", True)
+        answer = gui_handler.showQuestion("question?")
+        gui_handler.showTrade(market)
+        gui_handler.showDialog(dialog)
+        gui_handler.showLoot(creature, {item})
+
+        rng_handler = g.getRngHandler()
+        object_handler = g.getObjectHandler()
+        g.loadPlugin(lambda: g.createObject("CPlugin"))
+
+        provider = game.CResourcesProvider.getInstance()
+        (Path.cwd() / "save").mkdir(exist_ok=True)
+        resources = {
+            "config": sorted(provider.getFiles("CONFIG"))[:3],
+            "plugins": sorted(provider.getFiles("PLUGIN"))[:3],
+            "maps": sorted(provider.getFiles("MAP")),
+            "save": sorted(provider.getFiles("SAVE")),
+        }
+
+        self.assertFalse(answer)
+        self.assertIsNotNone(rng_handler)
+        self.assertIsNotNone(object_handler)
+        self.assertIn("nouraajd", resources["maps"])
+        self.assertTrue(any(path.endswith(".json") for path in resources["config"]))
+        self.assertTrue(any(path.endswith(".py") for path in resources["plugins"]))
+
+        return True, json.dumps(resources, sort_keys=True)
+
+    @game_test
     def test_turns(self):
         game = load_game_module()
 
         g = game.CGameLoader.loadGame()
         game.CGameLoader.startGameWithPlayer(g, "nouraajd", "Warrior")
         advance(g, 100)
-        return True, game.jsonify(g.getMap().ptr())  # TODO: why we need ptr? in all _bjects we dont!
+        return True, game.jsonify(g.getMap())
+
+    @game_test
+    def test_map_objects_at_coords_binding(self):
+        g, game_map, player = load_game_map_with_player("nouraajd")
+        coords = player.getCoords()
+        objects = game_map.getObjectsAtCoords(coords)
+        names = sorted(obj.getName() for obj in objects)
+        success = isinstance(objects, list) and player.getName() in names
+        return success, json.dumps(
+            {
+                "coords": [coords.x, coords.y, coords.z],
+                "count": len(objects),
+                "names": names,
+            }
+        )
 
     @game_test
     def test_pathfinder(self):

@@ -134,8 +134,6 @@ public:
   void setTurn(int turn);
 
   // TODO: accept predicate, can be used in siege map
-  // TODO: sets cannot be returned from python functions, need to implement by
-  // value converter of sets of objects
   std::set<std::shared_ptr<CMapObject>> getObjects();
 
   std::set<std::shared_ptr<CMapObject>> getObjectsAtCoords(Coords coords);
