@@ -214,7 +214,9 @@ configure_file(res/images/buildings/town_hall.png images/buildings/town_hall.png
 configure_file(res/images/terrain.png images/terrain.png COPYONLY)
 
 configure_file(res/images/players/assasin.png images/players/assasin.png COPYONLY)
+configure_file(res/images/players/inquisitor.png images/players/inquisitor.png COPYONLY)
 configure_file(res/images/players/sorcerer.png images/players/sorcerer.png COPYONLY)
+configure_file(res/images/players/wayfarer.png images/players/wayfarer.png COPYONLY)
 configure_file(res/images/players/warrior.png images/players/warrior.png COPYONLY)
 configure_file(res/images/npc/oldWoman.png images/npc/oldWoman.png COPYONLY)
 configure_file(res/images/npc/questGiver.png images/npc/questGiver.png COPYONLY)

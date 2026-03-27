@@ -561,7 +561,7 @@
           "ref": "Attack"
         }
       ],
-      "animation": "images/players/warrior",
+      "animation": "images/players/inquisitor",
       "equipped": {
         "0": {
           "ref": "Sword"
@@ -632,7 +632,7 @@
           "ref": "Attack"
         }
       ],
-      "animation": "images/players/assasin",
+      "animation": "images/players/wayfarer",
       "equipped": {
         "0": {
           "ref": "ShortSword"

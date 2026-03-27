@@ -24,8 +24,11 @@ class CGameObject;
 namespace CPythonOverrides {
 
 inline std::unordered_map<const CGameObject *, pybind11::object> &instances() {
-  static std::unordered_map<const CGameObject *, pybind11::object> registry;
-  return registry;
+  // Intentionally leak the registry so pybind11::object destructors do not run
+  // during C++ static teardown after the Python interpreter has finalized.
+  static auto *registry =
+      new std::unordered_map<const CGameObject *, pybind11::object>();
+  return *registry;
 }
 
 inline void retain(const std::shared_ptr<CGameObject> &object,

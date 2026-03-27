@@ -3,8 +3,13 @@
 ## Testing
 Running tests is **mandatory** for every code change made by agents.
 Always run tests from the repository root:
-1. Build the Python extension module: `cmake --build cmake-build-release --target _game -j$(nproc)`
-2. Run the test suite: `python3 test.py`
+1. Build the test targets: `cmake --build cmake-build-release --target _game for_unit_tests -j$(nproc)`
+2. Run the C++ unit tests: `ctest --test-dir cmake-build-release --output-on-failure -R for_unit_tests`
+3. Run the Python test suite: `python3 test.py`
+
+Coverage is also a requirement:
+1. Run `./scripts/run_coverage.sh` when changing tests, coverage tooling, or code in `src/core`, `src/handler`, or `src/object`.
+2. Keep the scoped line coverage at **80% or higher**. Do not finish coverage-related work below that threshold without explicitly calling it out.
 
 This test suite requires the compiled `_game` module.
 If the module or dependencies are missing, tests may fail; note this in the

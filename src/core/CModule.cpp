@@ -58,6 +58,13 @@ int randint(int i, int j) {
 
 std::string jsonify(std::shared_ptr<CGameObject> x) { return JSONIFY(x); }
 
+std::string jsonify_py(const py::handle &value) {
+    if (py::isinstance<CGameObject>(value)) {
+        return jsonify(value.cast<std::shared_ptr<CGameObject>>());
+    }
+    throw py::type_error("jsonify() expects a CGameObject instance");
+}
+
 void logger(std::string s) {
     vstd::logger::info(std::move(s)); // TODO: add script name
 }
@@ -107,6 +114,15 @@ py::list map_get_objects(const std::shared_ptr<CMap> &map) {
     return objects;
 }
 
+py::list map_get_objects_at_coords(const std::shared_ptr<CMap> &map,
+                                   Coords coords) {
+    py::list objects;
+    for (const auto &object : map->getObjectsAtCoords(coords)) {
+        objects.append(object);
+    }
+    return objects;
+}
+
 void game_object_setattr(CGameObject &self, const std::string &name,
                          const py::handle &value) {
     if (py::isinstance<py::bool_>(value)) {
@@ -148,7 +164,6 @@ py::object game_object_getattr(CGameObject &self, const std::string &name) {
 
     throw py::attribute_error(name);
 }
-
 std::shared_ptr<CGameObject> cast_registered_python_object(
     const py::object &instance) {
     if (py::isinstance<CBuilding>(instance)) {
@@ -280,6 +295,8 @@ PYBIND11_MODULE(_game, m) {
         .def("getEntryY", &CMap::getEntryY, "Return map entry Y coordinate.")
         .def("getEntryZ", &CMap::getEntryZ, "Return map entry Z coordinate.")
         .def("getObjects", &map_get_objects, "Return a Python list of map objects.")
+        .def("getObjectsAtCoords", &map_get_objects_at_coords,
+             "Return a Python list of map objects at the given coordinates.")
         .def("getTurn", &CMap::getTurn, "Return the current turn counter.");
 
     std::shared_ptr<CGameObject> (*createObjectByType)(std::shared_ptr<CObjectHandler>, std::shared_ptr<CGame>,
@@ -583,7 +600,8 @@ PYBIND11_MODULE(_game, m) {
 
     py::class_<CListView, CProxyTargetGraphicsObject, std::shared_ptr<CListView>>(m, "CListView", "List view widget.");
     PY_WRAP_GENERIC_DOC(randint, "randint(lower, upper) -> int: Return a random integer in engine-defined bounds.");
-    PY_WRAP_GENERIC_DOC(jsonify, "jsonify(obj) -> str: Serialize a game object to JSON text.");
+    m.def("jsonify", &jsonify_py,
+          "jsonify(obj) -> str: Serialize a game object to JSON text.");
     PY_WRAP_GENERIC_DOC(logger, "logger(message) -> None: Write an info log message to the engine logger.");
     m.def("set_logger_sink", set_logger_sink_py,
           "set_logger_sink(sink, path=None) -> None: Configure the native logger output target.");
