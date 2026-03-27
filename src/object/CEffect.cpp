@@ -17,6 +17,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #include "CEffect.h"
 #include "CCreature.h"
+#include "core/CPythonOverrides.h"
 
 CEffect::CEffect() {}
 
@@ -49,7 +50,13 @@ void CEffect::setDuration(int duration) {
   timeLeft = timeTotal = duration;
 }
 
-void CEffect::onEffect() {}
+void CEffect::onEffect() {
+  pybind11::gil_scoped_acquire gil;
+  if (auto override = CPythonOverrides::find_override(this, "onEffect");
+      !override.is_none()) {
+    PY_SAFE(override(); return;)
+  }
+}
 
 void CEffect::setCaster(std::shared_ptr<CCreature> value) { caster = value; }
 

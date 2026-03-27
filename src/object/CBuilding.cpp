@@ -16,6 +16,8 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #include "CBuilding.h"
+#include "core/CPythonOverrides.h"
+#include "handler/CEventHandler.h"
 
 CBuilding::CBuilding() {
   //    this->setZValue ( 1 );
@@ -27,6 +29,18 @@ bool CBuilding::isEnabled() { return enabled; }
 
 void CBuilding::setEnabled(bool enabled) { this->enabled = enabled; }
 
-void CBuilding::onEnter(std::shared_ptr<CGameEvent>) {}
+void CBuilding::onEnter(std::shared_ptr<CGameEvent> event) {
+  pybind11::gil_scoped_acquire gil;
+  if (auto override = CPythonOverrides::find_override(this, "onEnter");
+      !override.is_none()) {
+    PY_SAFE(override(event); return;)
+  }
+}
 
-void CBuilding::onLeave(std::shared_ptr<CGameEvent>) {}
+void CBuilding::onLeave(std::shared_ptr<CGameEvent> event) {
+  pybind11::gil_scoped_acquire gil;
+  if (auto override = CPythonOverrides::find_override(this, "onLeave");
+      !override.is_none()) {
+    PY_SAFE(override(event); return;)
+  }
+}

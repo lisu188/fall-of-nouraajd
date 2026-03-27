@@ -16,6 +16,7 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #include "CDialog.h"
+#include "core/CPythonOverrides.h"
 
 const std::set<std::shared_ptr<CDialogState>> &CDialog::getStates() const {
   return states;
@@ -31,9 +32,22 @@ std::shared_ptr<CDialogState> CDialog::getState(std::string stateId) {
   });
 }
 
-void CDialog::invokeAction(std::string action) {}
+void CDialog::invokeAction(std::string action) {
+  pybind11::gil_scoped_acquire gil;
+  if (auto override = CPythonOverrides::find_override(this, "invokeAction");
+      !override.is_none()) {
+    PY_SAFE(override(action); return;)
+  }
+}
 
-bool CDialog::invokeCondition(std::string condition) { return true; }
+bool CDialog::invokeCondition(std::string condition) {
+  pybind11::gil_scoped_acquire gil;
+  if (auto override = CPythonOverrides::find_override(this, "invokeCondition");
+      !override.is_none()) {
+    PY_SAFE_RET_VAL(return override(condition).cast<bool>();, true)
+  }
+  return true;
+}
 
 const std::string &CDialogState::getText() const { return text; }
 

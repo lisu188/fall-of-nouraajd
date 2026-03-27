@@ -17,6 +17,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #include "CInteraction.h"
 #include "core/CGame.h"
+#include "core/CPythonOverrides.h"
 
 CInteraction::CInteraction() {}
 
@@ -62,7 +63,20 @@ void CInteraction::setEffect(const std::shared_ptr<CEffect> value) {
   effect = value;
 }
 
-void CInteraction::performAction(std::shared_ptr<CCreature>,
-                                 std::shared_ptr<CCreature>) {}
+void CInteraction::performAction(std::shared_ptr<CCreature> first,
+                                 std::shared_ptr<CCreature> second) {
+  pybind11::gil_scoped_acquire gil;
+  if (auto override = CPythonOverrides::find_override(this, "performAction");
+      !override.is_none()) {
+    PY_SAFE(override(first, second); return;)
+  }
+}
 
-bool CInteraction::configureEffect(std::shared_ptr<CEffect>) { return true; }
+bool CInteraction::configureEffect(std::shared_ptr<CEffect> effect) {
+  pybind11::gil_scoped_acquire gil;
+  if (auto override = CPythonOverrides::find_override(this, "configureEffect");
+      !override.is_none()) {
+    PY_SAFE_RET_VAL(return override(effect).cast<bool>();, true)
+  }
+  return true;
+}
