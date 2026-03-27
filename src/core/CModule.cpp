@@ -40,6 +40,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "CList.h"
 #include "CMap.h"
 #include "CProvider.h"
+#include "core/CController.h"
 #include "core/CJsonUtil.h"
 #include "core/CLoader.h"
 #include "core/CPythonOverrides.h"
@@ -103,6 +104,48 @@ py::list map_get_objects(const std::shared_ptr<CMap> &map) {
         objects.append(object);
     }
     return objects;
+}
+
+void game_object_setattr(CGameObject &self, const std::string &name,
+                         const py::handle &value) {
+    if (py::isinstance<py::bool_>(value)) {
+        self.setBoolProperty(name, value.cast<bool>());
+        return;
+    }
+    if (py::isinstance<py::int_>(value)) {
+        self.setNumericProperty(name, value.cast<int>());
+        return;
+    }
+    if (py::isinstance<py::str>(value)) {
+        self.setStringProperty(name, value.cast<std::string>());
+        return;
+    }
+    if (py::isinstance<CGameObject>(value)) {
+        self.setObjectProperty(name, value.cast<std::shared_ptr<CGameObject>>());
+        return;
+    }
+    throw py::type_error("Unsupported CGameObject property type");
+}
+
+py::object game_object_getattr(CGameObject &self, const std::string &name) {
+    if (!self.hasProperty(name)) {
+        throw py::attribute_error(name);
+    }
+
+    try {
+        return py::bool_(self.getBoolProperty(name));
+    } catch (const std::exception &) {
+    }
+    try {
+        return py::int_(self.getNumericProperty(name));
+    } catch (const std::exception &) {
+    }
+    try {
+        return py::str(self.getStringProperty(name));
+    } catch (const std::exception &) {
+    }
+
+    throw py::attribute_error(name);
 }
 
 std::shared_ptr<CGameObject> cast_registered_python_object(
@@ -178,10 +221,8 @@ PYBIND11_MODULE(_game, m) {
         .def("addTag", &CGameObject::addTag, "Add a tag to this object.")
         .def("removeTag", &CGameObject::removeTag, "Remove a tag from this object.")
         .def("hasTag", &CCreature::hasTag, "Return whether this object has the given tag.")
-        .def("__setattr__", &CGameObject::setStringProperty, "Alias for setStringProperty(name, value).")
-        .def("__setattr__", &CGameObject::setNumericProperty, "Alias for setNumericProperty(name, value).")
-        .def("__getattr__", &CGameObject::getStringProperty, "Alias for getStringProperty(name).")
-        .def("__getattr__", &CGameObject::getNumericProperty, "Alias for getNumericProperty(name).");
+        .def("__setattr__", &game_object_setattr, "Alias for dynamic property assignment.")
+        .def("__getattr__", &game_object_getattr, "Alias for dynamic property lookup.");
 
     py::class_<Coords>(m, "Coords", "3D integer coordinates (x, y, z).")
         .def(py::init<int, int, int>())
@@ -270,6 +311,24 @@ PYBIND11_MODULE(_game, m) {
         .def("showSelection", &CGuiHandler::showSelection, "Open a selection panel.")
         .def("showInfo", &CGuiHandler::showInfo, "Open an info panel.")
         .def("showLoot", &CGuiHandler::showLoot, "Show loot acquisition UI.");
+
+    py::class_<CController, CGameObject, std::shared_ptr<CController>>(m, "CController", "Base movement controller.");
+    py::class_<CTargetController, CController, std::shared_ptr<CTargetController>>(m, "CTargetController",
+                                                                                  "Controller that follows a named map target.")
+        .def("getTarget", &CTargetController::getTarget, "Return current target object name.")
+        .def("setTarget", &CTargetController::setTarget, "Set target object name.");
+    py::class_<CGroundController, CController, std::shared_ptr<CGroundController>>(m, "CGroundController",
+                                                                                  "Controller constrained to a tile type.")
+        .def("getTileType", &CGroundController::getTileType, "Return allowed tile type.")
+        .def("setTileType", &CGroundController::setTileType, "Set allowed tile type.");
+    py::class_<CRangeController, CController, std::shared_ptr<CRangeController>>(m, "CRangeController",
+                                                                                "Controller that keeps range from a target.")
+        .def("getTarget", &CRangeController::getTarget, "Return target object name.")
+        .def("setTarget", &CRangeController::setTarget, "Set target object name.")
+        .def("getDistance", &CRangeController::getDistance, "Return desired distance from target.")
+        .def("setDistance", &CRangeController::setDistance, "Set desired distance from target.");
+    py::class_<CFightController, CGameObject, std::shared_ptr<CFightController>>(m, "CFightController",
+                                                                                "Base fight controller.");
 
     void (CRngHandler::*addRandomLoot)(const std::shared_ptr<CCreature> &, int) = &CRngHandler::addRandomLoot;
     py::class_<CRngHandler, CGameObject, std::shared_ptr<CRngHandler>>(m, "CRngHandler", "Random loot and encounter generator.")
@@ -468,9 +527,16 @@ PYBIND11_MODULE(_game, m) {
         .def("addManaProc", &CCreature::addManaProc, "Restore mana by percentage of max mana.")
         .def("isPlayer", &CCreature::isPlayer, "Return whether this creature is the active player.")
         .def("isNpc", &CCreature::isNpc, "Return whether this creature is marked as NPC.")
+        .def("getController", &CCreature::getController, "Return the movement controller.")
+        .def("setController", &CCreature::setController, "Set the movement controller.")
+        .def("getFightController", &CCreature::getFightController, "Return the fight controller.")
+        .def("setFightController", &CCreature::setFightController, "Set the fight controller.")
         .def("setHp", &CCreature::setHp, "Set current HP.")
         .def("setMana", &CCreature::setMana, "Set current mana.")
         .def("addExp", &CCreature::addExp, "Add experience and trigger level ups when thresholds are reached.")
+        .def("getGold", &CCreature::getGold, "Return current gold.")
+        .def("addGold", &CCreature::addGold, "Add gold to the creature inventory.")
+        .def("takeGold", &CCreature::takeGold, "Remove gold from the creature inventory.")
         .def("useAction", &CCreature::useAction, "Use an interaction/action against another creature.")
         .def("hasItem", hasItem, "Return whether any inventory item matches predicate(item) -> bool.")
         .def("addItem", addItemByName, "Create and add an item by type id.")

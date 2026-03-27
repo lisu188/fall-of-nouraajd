@@ -16,14 +16,14 @@ def load(self, context):
             return bool(name) and (name == "cultLeaderQuest" or name.startswith(VICTOR_CULTIST_PREFIX))
 
         game_map.removeAll(should_remove)
-        game_map.setNumericProperty("VICTOR_COURTYARD_TURN", 0)
+        game_map.setNumericProperty("VICTOR_COURTYARD_TURN", -1)
 
     def _expire_victor_search(game_map):
         quest_system = _get_quest_system(game_map)
         if quest_system.get_state("victor") != "encounter_active":
             return False
         spawn_turn = game_map.getNumericProperty("VICTOR_COURTYARD_TURN")
-        if not spawn_turn:
+        if spawn_turn < 0:
             return False
         if game_map.getTurn() - spawn_turn < VICTOR_COURTYARD_TIMEOUT_TURNS:
             return False
@@ -125,8 +125,18 @@ def load(self, context):
         def reset_all(self):
             for quest, state in self.QUEST_DEFAULTS.items():
                 self.map.setStringProperty(self._key(quest), state)
-            self.map.setNumericProperty("VICTOR_COURTYARD_TURN", 0)
+            self.map.setNumericProperty("VICTOR_COURTYARD_TURN", -1)
             self._sync_legacy_flags()
+
+        def initialize_defaults(self):
+            changed = False
+            for quest, state in self.QUEST_DEFAULTS.items():
+                if not self.map.getStringProperty(self._key(quest)):
+                    self.map.setStringProperty(self._key(quest), state)
+                    changed = True
+            if changed:
+                self.map.setNumericProperty("VICTOR_COURTYARD_TURN", -1)
+                self._sync_legacy_flags()
 
         # --- Compatibility helpers ---
         def _beren_flags(self):
@@ -291,10 +301,16 @@ def load(self, context):
 
         def mark_victor_good_end(self):
             self._set_state("victor", "good_end")
+            self.map.setBoolProperty("VICTOR_BAD_END", False)
+            self.map.setBoolProperty("VICTOR_GOOD_END", True)
+            self.map.setBoolProperty("VICTOR_REWARD_CLAIMED", True)
 
         def mark_victor_bad_end(self):
             if self.get_state("victor") == "encounter_active":
                 self._set_state("victor", "bad_end")
+                self.map.setBoolProperty("VICTOR_GOOD_END", False)
+                self.map.setBoolProperty("VICTOR_BAD_END", True)
+                self.map.setBoolProperty("VICTOR_REWARD_CLAIMED", False)
 
         # --- Query helpers ---
         def is_letter_delivered(self):
@@ -426,17 +442,19 @@ def load(self, context):
     @trigger(context, "onDestroy", "gooby1")
     class GoobyTrigger(CTrigger):
         def trigger(self, object, event):
-            object.getGame().getGuiHandler().showMessage("Gooby is felled; the tunnels exhale a foul breath.")
-            _quest_system_from(object).mark_gooby_slain()
+            game = self.getGame()
+            game.getGuiHandler().showMessage("Gooby is felled; the tunnels exhale a foul breath.")
+            _quest_system_from(self).mark_gooby_slain()
 
     @trigger(context, "onDestroy", "cave1")
     class CaveTrigger(CTrigger):
         def trigger(self, object, event):
-            object.getGame().getGuiHandler().showMessage(object.getStringProperty("message"))
-            game_map = object.getGame().getMap()
+            game = self.getGame()
+            game.getGuiHandler().showMessage(object.getStringProperty("message"))
+            game_map = game.getMap()
             player = game_map.getPlayer()
-            quest_system = _quest_system_from(object)
-            gooby = object.getGame().createObject("gooby")
+            quest_system = _quest_system_from(self)
+            gooby = game.createObject("gooby")
             gooby.setStringProperty("name", "gooby1")
             game_map.addObject(gooby)
             gooby.moveTo(100, 100, 0)
@@ -446,23 +464,29 @@ def load(self, context):
     @trigger(context, "onDestroy", "catacombs")
     class CatacombsTrigger(CTrigger):
         def trigger(self, obj, event):
-            game_map = obj.getGame().getMap()
+            game = self.getGame()
+            game_map = game.getMap()
             player = game_map.getPlayer()
             player.addItem("holyRelic")
-            _quest_system_from(obj).mark_relic_obtained()
-            obj.getGame().getGuiHandler().showMessage(obj.getStringProperty("message"))
+            _quest_system_from(self).mark_relic_obtained()
+            game.getGuiHandler().showMessage(obj.getStringProperty("message"))
 
     @trigger(context, "onDestroy", "cave2")
     class OctoBogzCaveTrigger(CTrigger):
         def trigger(self, object, event):
-            game_map = object.getGame().getMap()
-            quest_system = _quest_system_from(object)
+            game = self.getGame()
+            game_map = game.getMap()
+            relic_returned = game_map.getBoolProperty("RELIC_RETURNED")
+            quest_system = _quest_system_from(self)
             quest_system.mark_octobogz_slain()
             quest_system.complete_octobogz_contract()
+            game_map.setBoolProperty("OCTOBOGZ_SLAIN", True)
+            if relic_returned:
+                game_map.setBoolProperty("OCTOBOGZ_CLEARED", True)
             if quest_system.is_relic_returned():
-                object.getGame().getGuiHandler().showMessage(object.getStringProperty("message"))
+                game.getGuiHandler().showMessage(object.getStringProperty("message"))
             else:
-                object.getGame().getGuiHandler().showMessage("The OctoBogz lie broken, yet their lair remains befouled.")
+                game.getGuiHandler().showMessage("The OctoBogz lie broken, yet their lair remains befouled.")
 
     @trigger(context, "onEnter", "market1")
     class MarketTrigger(CTrigger):
@@ -697,6 +721,8 @@ def load(self, context):
                 return
             player.removeItem(lambda it: it.getName() == "holyRelic", True)
             quest_system.mark_relic_returned()
+            if game_map.getBoolProperty("OCTOBOGZ_SLAIN"):
+                game_map.setBoolProperty("OCTOBOGZ_CLEARED", True)
             if not quest_system.is_cave_purged():
                 self._ensure_quest("cleanseCaveQuest")
 
@@ -725,10 +751,12 @@ def load(self, context):
     @trigger(context, "onDestroy", "cultLeaderQuest")
     class CultLeaderQuestTrigger(CTrigger):
         def trigger(self, leader, event):
-            game = leader.getGame()
+            game = self.getGame()
             game_map = game.getMap()
-            quest_system = _quest_system_from(leader)
+            quest_system = _quest_system_from(self)
             if quest_system.get_state("victor") != "encounter_active":
+                return
+            if game_map.getBoolProperty("VICTOR_REWARD_CLAIMED") or game_map.getBoolProperty("VICTOR_GOOD_END"):
                 return
             player = game.getMap().getPlayer()
             player.addGold(500)
@@ -791,3 +819,6 @@ def load(self, context):
                 if old_woman:
                     game_map.removeObject(old_woman)
                 game.getGuiHandler().showMessage("The old woman presses 50 gold upon you, tears streaking her dust-caked cheeks.")
+
+    if context.getMap():
+        _get_quest_system(context.getMap()).initialize_defaults()
