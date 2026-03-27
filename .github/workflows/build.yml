@@ -1,27 +1,20 @@
 name: build
 
-on: [push]
+on:
+  push:
+  pull_request:
 
 jobs:
-  build:
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        include:
-          - os: ubuntu-22.04
-            configure: ./configure.sh
-            artifact: cmake-build-release/fall-of-nouraajd-*.tar.gz
-          - os: windows-latest
-            configure: ./configure.bat
-            artifact: cmake-build-release/fall-of-nouraajd-*.exe
+  linux:
+    runs-on: ubuntu-22.04
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
-      - name: cache-ccache
-        uses: actions/cache@v3
+          python-version: "3.11"
+      - name: Cache ccache
+        uses: actions/cache@v4
         with:
           path: ~/.ccache
           key: ${{ runner.os }}-ccache-${{ hashFiles('**/CMakeLists.txt') }}
@@ -29,24 +22,45 @@ jobs:
       - name: submodules
         run: git submodule update --init --recursive
       - name: configure
-        run: ${{ matrix.configure }}
-      - name: install-coverage-tools
-        if: matrix.os == 'ubuntu-22.04'
+        run: ./configure.sh
+      - name: install coverage tools
         run: python3 -m pip install --upgrade gcovr
-      - name: coverage
-        if: matrix.os == 'ubuntu-22.04'
-        run: ./scripts/run_coverage.sh
-
-      - name: build
-        run: cmake --build cmake-build-release --target package -j$(nproc)
+      - name: build test targets
+        run: cmake --build cmake-build-release --target _game for_unit_tests -j"$(nproc)"
       - name: test (c++)
-        working-directory: cmake-build-release
-        run: ctest --output-on-failure
-      - name: test
-        working-directory: cmake-build-release
-        run: python test.py
+        run: ctest --test-dir cmake-build-release --output-on-failure -R for_unit_tests
+      - name: test (python)
+        run: python3 test.py
+      - name: coverage
+        run: ./scripts/run_coverage.sh
+      - name: package
+        run: cmake --build cmake-build-release --target package -j"$(nproc)"
       - name: publish
         uses: actions/upload-artifact@v4
         with:
-          name: fall-of-nouraajd
-          path: ${{ matrix.artifact }}
+          name: fall-of-nouraajd-linux
+          path: cmake-build-release/fall-of-nouraajd-*.tar.gz
+
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: submodules
+        run: git submodule update --init --recursive
+      - name: configure, test, and package
+        shell: cmd
+        run: |
+          call configure.bat
+          cmake --build cmake-build-release --target _game for_unit_tests
+          ctest --test-dir cmake-build-release --output-on-failure -R for_unit_tests
+          python test.py
+          cmake --build cmake-build-release --target package
+      - name: publish
+        uses: actions/upload-artifact@v4
+        with:
+          name: fall-of-nouraajd-windows
+          path: cmake-build-release/fall-of-nouraajd-*.exe
