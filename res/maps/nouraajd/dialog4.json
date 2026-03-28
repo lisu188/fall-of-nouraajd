@@ -41,6 +41,7 @@
                 "class": "CDialogOption",
                 "properties": {
                   "number": 3,
+                  "condition": "can_offer_letter_work",
                   "nextStateId": "ASK_HELP",
                   "text": "I'm looking for work."
                 }

@@ -54,6 +54,7 @@ def load(self, context):
         if game_map.getBoolProperty("good_ending") or game_map.getBoolProperty("bad_ending"):
             return
         game_map.setBoolProperty("bad_ending", True)
+        game_map.setBoolProperty("ritual_active", False)
         game_map.setBoolProperty("ritual_finished", True)
         game_map.getGame().getGuiHandler().showMessage(message)
 
@@ -159,9 +160,12 @@ def load(self, context):
         def is_captive_lost(self):
             return self.getGame().getMap().getBoolProperty("captive_lost")
 
+        def is_captive_freed(self):
+            return self.getGame().getMap().getBoolProperty("captive_freed")
+
         def need_more_work(self):
             game_map = self.getGame().getMap()
-            return not self.can_free_captive() and not game_map.getBoolProperty("captive_lost")
+            return not self.can_free_captive() and not game_map.getBoolProperty("captive_lost") and not self.is_captive_freed()
 
         def free_captive(self):
             game_map = self.getGame().getMap()
