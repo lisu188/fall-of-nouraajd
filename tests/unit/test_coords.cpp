@@ -75,11 +75,14 @@ void test_rect_bounds_inclusion() {
     auto rect = CUtil::rect(10, 20, 30, 40);
     auto bounds = CUtil::bounds(rect);
     auto centered = CUtil::boxInBox(CUtil::rect(0, 0, 10, 10), CUtil::rect(0, 0, 4, 6));
+    auto centered_at = CUtil::centeredRect(50, 40, 10, 6);
 
     expect_true(bounds->x == 10 && bounds->y == 40 && bounds->w == 20 && bounds->h == 60,
                 "bounds should return left, right, top and bottom values");
     expect_true(centered->x == 3 && centered->y == 2 && centered->w == 4 && centered->h == 6,
                 "boxInBox should center the inner box");
+    expect_true(centered_at->x == 45 && centered_at->y == 37 && centered_at->w == 10 && centered_at->h == 6,
+                "centeredRect should position a rectangle around its center point");
 
     expect_true(CUtil::isIn(rect, 10, 20), "isIn should include lower bounds");
     expect_true(CUtil::isIn(rect, 40, 60), "isIn should include upper bounds");

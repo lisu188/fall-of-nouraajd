@@ -321,9 +321,7 @@ def walkthrough_nouraajd_map():
     assert game_map.getBoolProperty("completed_rolf"), "The cave1 trigger should complete the Rolf lead."
     assert player.hasItem(lambda it: it.getName() == "skullOfRolf"), "The cave1 trigger should award Rolf's skull."
     assert game_map.getBoolProperty("completed_gooby"), "Defeating Gooby should complete the main quest flag."
-    assert player.hasItem(
-        lambda it: it.getName() == "holyRelic"
-    ), "The catacombs trigger should award the holy relic."
+    assert player.hasItem(lambda it: it.getName() == "holyRelic"), "The catacombs trigger should award the holy relic."
     assert game_map.getBoolProperty("OCTOBOGZ_SLAIN"), "The cave2 trigger should mark the OctoBogz slain."
     return {
         "map": "nouraajd",
@@ -691,6 +689,28 @@ class GameTest(unittest.TestCase):
         one_side_took_damage = attacker.getHpRatio() < attacker_hp_before or defender.getHpRatio() < defender_hp_before
         self.assertTrue(one_side_took_damage)
         return True, ""
+
+    @game_test
+    def test_creature_damage_roll_normalizes_inverted_range(self):
+        game = load_game_module()
+
+        g = game.CGameLoader.loadGame()
+        game.CGameLoader.startGame(g, "empty")
+
+        creature = g.createObject("CCreature")
+        stats = g.createObject("Stats")
+        stats.dmgMin = 8
+        stats.dmgMax = 3
+        stats.hit = 100
+        stats.crit = 0
+        stats.damage = 0
+        stats.mainStat = "strength"
+        stats.strength = 1
+        creature.baseStats = stats
+
+        rolls = [creature.getDmg() for i in range(25)]
+        valid_rolls = all(3 <= roll <= 8 for roll in rolls)
+        return valid_rolls, json.dumps({"rolls": rolls})
 
     @game_test
     def test_objects(self):
