@@ -233,6 +233,15 @@
                 "class": "CDialogOption",
                 "properties": {
                   "number": 2,
+                  "condition": "is_captive_freed",
+                  "nextStateId": "GOOD_END",
+                  "text": "The captive is already free."
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 3,
                   "condition": "need_more_work",
                   "nextStateId": "LOCKED",
                   "text": "The prison still hums with ritual force."
@@ -241,7 +250,7 @@
               {
                 "ref": "exitOption",
                 "properties": {
-                  "number": 3
+                  "number": 4
                 }
               }
             ]
