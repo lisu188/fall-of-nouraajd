@@ -49,6 +49,22 @@
       ]
     }
   },
+  "tavernBeerMarket": {
+    "class": "CMarket",
+    "properties": {
+      "items": [
+        {
+          "ref": "DarkBeer"
+        },
+        {
+          "ref": "DarkBeer"
+        },
+        {
+          "ref": "SpicedBeer"
+        }
+      ]
+    }
+  },
   "mainQuest": {
     "class": "MainQuest",
     "properties": {
