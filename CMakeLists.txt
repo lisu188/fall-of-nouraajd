@@ -257,11 +257,7 @@ install(DIRECTORY res/images DESTINATION fall-of-nouraajd)
 install(DIRECTORY res/maps DESTINATION fall-of-nouraajd)
 install(DIRECTORY res/plugins DESTINATION fall-of-nouraajd)
 
-install(FILES res/game.py test.py DESTINATION fall-of-nouraajd)
-
-install(FILES play.py play.py DESTINATION fall-of-nouraajd)
-install(FILES mcp.py mcp.py DESTINATION fall-of-nouraajd)
-install(FILES test.py test.py DESTINATION fall-of-nouraajd)
+install(FILES res/game.py play.py mcp.py test.py DESTINATION fall-of-nouraajd)
 
 if (WIN32)
     install(FILES play.bat play.bat DESTINATION fall-of-nouraajd)

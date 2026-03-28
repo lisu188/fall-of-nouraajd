@@ -523,7 +523,8 @@ def load(self, context):
     @register(context)
     class TavernDialog1(CDialog):
         def sell_beer(self):
-            print("sell_beer")
+            game = self.getGame()
+            game.getGuiHandler().showTrade(game.createObject("tavernBeerMarket"))
 
         def asked_about_girl(self):
             self.getGame().getMap().setBoolProperty("ASKED_ABOUT_GIRL", True)
@@ -614,7 +615,9 @@ def load(self, context):
             quest_system.mark_courtyard_known()
             victor_state = quest_system.get_state("victor")
             if quest_system.victor_good_end():
-                game.getGuiHandler().showMessage("Victor has already reclaimed his daughter; the courtyard now keeps a reverent quiet.")
+                game.getGuiHandler().showMessage(
+                    "Victor has already reclaimed his daughter; the courtyard now keeps a reverent quiet."
+                )
                 return
             if victor_state == "bad_end":
                 game.getGuiHandler().showMessage(
@@ -730,7 +733,9 @@ def load(self, context):
             quest_system = _quest_system_from(self)
             if self.can_finish_cleanse():
                 quest_system.mark_cave_purged()
-                self.getGame().getGuiHandler().showMessage("For a breath, the town is spared and the OctoBogz lie quiet.")
+                self.getGame().getGuiHandler().showMessage(
+                    "For a breath, the town is spared and the OctoBogz lie quiet."
+                )
             else:
                 self.getGame().getGuiHandler().showMessage("The cave still writhes with OctoBogz corruption.")
 
@@ -818,7 +823,9 @@ def load(self, context):
                 old_woman = game_map.getObjectByName("oldWoman")
                 if old_woman:
                     game_map.removeObject(old_woman)
-                game.getGuiHandler().showMessage("The old woman presses 50 gold upon you, tears streaking her dust-caked cheeks.")
+                game.getGuiHandler().showMessage(
+                    "The old woman presses 50 gold upon you, tears streaking her dust-caked cheeks."
+                )
 
     if context.getMap():
         _get_quest_system(context.getMap()).initialize_defaults()

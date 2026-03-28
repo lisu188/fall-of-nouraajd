@@ -1,4 +1,17 @@
 {
+  "DarkBeer": {
+    "class": "LifePotion",
+    "properties": {
+      "animation": "images/items/potions/life",
+      "label": "Dark Beer",
+      "description": "A soot-dark tavern ale that steadies nerves and dulls the ache of long marches.",
+      "power": 1,
+      "singleUse": true,
+      "tags": [
+        "heal"
+      ]
+    }
+  },
   "FullLifePotion": {
     "class": "LifePotion",
     "properties": {
@@ -97,6 +110,19 @@
       "label": "Mana Potion",
       "description": "Balanced infusion of incense tar and void-salt for steady spellcasting along the ramparts.",
       "power": 3,
+      "singleUse": true,
+      "tags": [
+        "mana"
+      ]
+    }
+  },
+  "SpicedBeer": {
+    "class": "ManaPotion",
+    "properties": {
+      "animation": "images/items/potions/mana",
+      "label": "Spiced Beer",
+      "description": "Mulled with bitter roots and ash-pepper, it leaves the mind buzzing and the throat ablaze.",
+      "power": 1,
       "singleUse": true,
       "tags": [
         "mana"

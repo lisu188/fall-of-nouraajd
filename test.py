@@ -1244,6 +1244,40 @@ class GameTest(unittest.TestCase):
             game.CGuiHandler.showMessage = original_show_message
 
     @game_test
+    def test_nouraajd_tavern_beer_vendor(self):
+        game = load_game_module()
+        g, game_map, player = load_game_map_with_player("nouraajd")
+        original_show_trade = game.CGuiHandler.showTrade
+        captured = {}
+
+        try:
+
+            def capture_trade(self, market):
+                captured["market"] = market
+
+            game.CGuiHandler.showTrade = capture_trade
+            g.createObject("tavernDialog1").sell_beer()
+
+            market = captured.get("market")
+            self.assertIsNotNone(market, "sell_beer should open a tavern market.")
+
+            market_data = json.loads(game.jsonify(market))
+            raw_items = market_data.get("properties", {}).get("items", market_data.get("items", []))
+            labels = sorted(
+                item.get("properties", {}).get("label") or item.get("label") or item.get("name") for item in raw_items
+            )
+
+            self.assertEqual(labels, ["Dark Beer", "Dark Beer", "Spiced Beer"])
+
+            log = {
+                "labels": labels,
+                "item_count": len(raw_items),
+            }
+            return True, json.dumps(log, sort_keys=True)
+        finally:
+            game.CGuiHandler.showTrade = original_show_trade
+
+    @game_test
     def test_new_class_dialog_hooks(self):
         script = (REPO_ROOT / "res/maps/nouraajd/script.py").read_text()
         dialog4 = json.loads((REPO_ROOT / "res/maps/nouraajd/dialog4.json").read_text())

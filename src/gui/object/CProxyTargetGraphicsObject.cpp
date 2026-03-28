@@ -86,8 +86,11 @@ void CProxyTargetGraphicsObject::refreshAll() {
 }
 
 void CProxyTargetGraphicsObject::refreshObject(int x, int y) {
-  if (x < 0 || x >= getSizeX(getGui()) || y < 0 || y >= getSizeY(getGui())) {
-    // TODO: log warning
+  int sizeX = getSizeX(getGui());
+  int sizeY = getSizeY(getGui());
+  if (x < 0 || x >= sizeX || y < 0 || y >= sizeY) {
+    vstd::logger::warning("Ignoring proxy refresh outside target bounds:", x,
+                          y, "size:", sizeX, sizeY);
   } else {
     proxyObjects[x][y]->refresh();
   }
