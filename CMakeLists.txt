@@ -260,7 +260,7 @@ install(DIRECTORY res/plugins DESTINATION fall-of-nouraajd)
 install(FILES res/game.py play.py mcp.py test.py DESTINATION fall-of-nouraajd)
 
 if (WIN32)
-    install(FILES play.bat play.bat DESTINATION fall-of-nouraajd)
+    install(FILES play.bat DESTINATION fall-of-nouraajd)
 
     install(FILES windows-tools/SDL2_image-2.0.5/x86_64-w64-mingw32/bin/libjpeg-9.dll DESTINATION fall-of-nouraajd)
     install(FILES windows-tools/SDL2_image-2.0.5/x86_64-w64-mingw32/bin/libpng16-16.dll DESTINATION fall-of-nouraajd)
