@@ -31,6 +31,20 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "object/CDialog.h"
 #include "object/CMarket.h"
 
+namespace {
+std::shared_ptr<CLayout> create_tooltip_layout(const std::shared_ptr<CGame> &game,
+                                               const std::string &text, int x,
+                                               int y) {
+  auto textureSize = game->getGui()->getTextManager()->getTextureSize(text);
+  int width = vstd::percent(textureSize.first, 125);
+  int height = vstd::percent(textureSize.second, 125);
+
+  auto layout = game->createObject<CLayout>();
+  layout->setRect(CUtil::centeredRect(x, y, width, height));
+  return layout;
+}
+} // namespace
+
 CGuiHandler::CGuiHandler() {}
 
 void CGuiHandler::showMessage(std::string message) {
@@ -165,24 +179,12 @@ std::string CGuiHandler::showSelection(std::shared_ptr<CListString> list) {
 
 void CGuiHandler::showTooltip(std::string text, int x, int y) {
   if (text.length() > 0) {
-    auto layout = _game.lock()->createObject<CLayout>();
-
-    auto textureSize =
-        _game.lock()->getGui()->getTextManager()->getTextureSize(text);
-
-    int width = vstd::percent(textureSize.first, 125);
-    int height = vstd::percent(textureSize.second, 125);
-
-    layout->setW(vstd::str(width));  // TODO: layout should accept functions;
-    layout->setH(vstd::str(height)); // TODO: layout should accept functions;
-
-    layout->setX(vstd::str(x - width / 2));  // TODO: extract to util
-    layout->setY(vstd::str(y - height / 2)); // TODO: extract to util
-
-    auto tooltip = _game.lock()->createObject<CTooltip>();
+    auto game = _game.lock();
+    auto layout = create_tooltip_layout(game, text, x, y);
+    auto tooltip = game->createObject<CTooltip>();
     tooltip->setText(text);
     tooltip->setLayout(layout);
-    _game.lock()->getGui()->pushChild(tooltip);
+    game->getGui()->pushChild(tooltip);
   }
 }
 

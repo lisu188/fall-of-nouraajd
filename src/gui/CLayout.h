@@ -64,6 +64,10 @@ public:
 
   void setY(std::string _y);
 
+  void setRect(int x, int y, int w, int h);
+
+  void setRect(const std::shared_ptr<SDL_Rect> &rect);
+
   std::string getVertical();
 
   void setVertical(std::string vertical);

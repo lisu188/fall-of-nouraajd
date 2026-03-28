@@ -91,6 +91,11 @@ std::shared_ptr<SDL_Rect> CUtil::rect(int x, int y, int w, int h) {
   return ret;
 }
 
+std::shared_ptr<SDL_Rect> CUtil::centeredRect(int centerX, int centerY, int w,
+                                              int h) {
+  return RECT(centerX - w / 2, centerY - h / 2, w, h);
+}
+
 std::shared_ptr<SDL_Rect> CUtil::bounds(const std::shared_ptr<SDL_Rect> &rect) {
   return RECT(rect->x, rect->x + rect->w, rect->y, rect->y + rect->h);
 }

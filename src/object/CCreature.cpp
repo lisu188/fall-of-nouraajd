@@ -192,8 +192,9 @@ int CCreature::getDmg() {
     auto stats = getStats();
     int critDice = rand() % 100;
     int attDice = rand() % 100;
-    // TODO: crashes if min damage is greater than max. duh.
-    int dmg = rand() % (stats->getDmgMax() + 1 - stats->getDmgMin()) + stats->getDmgMin();
+    int dmgMin = std::min(stats->getDmgMin(), stats->getDmgMax());
+    int dmgMax = std::max(stats->getDmgMin(), stats->getDmgMax());
+    int dmg = rand() % (dmgMax + 1 - dmgMin) + dmgMin;
     dmg += stats->getDamage();
     attDice -= stats->getAttack();
     if (attDice < stats->getHit()) {

@@ -63,6 +63,9 @@ public:
 
   static std::shared_ptr<SDL_Rect> rect(int x, int y, int w, int h);
 
+  static std::shared_ptr<SDL_Rect> centeredRect(int centerX, int centerY,
+                                                int w, int h);
+
   static std::shared_ptr<SDL_Rect>
   bounds(const std::shared_ptr<SDL_Rect> &rect);
 

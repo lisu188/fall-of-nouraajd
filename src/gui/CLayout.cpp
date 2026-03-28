@@ -44,6 +44,17 @@ std::string CLayout::getY() { return y; }
 
 void CLayout::setY(std::string y) { CLayout::y = y; }
 
+void CLayout::setRect(int x, int y, int w, int h) {
+  setX(vstd::str(x));
+  setY(vstd::str(y));
+  setW(vstd::str(w));
+  setH(vstd::str(h));
+}
+
+void CLayout::setRect(const std::shared_ptr<SDL_Rect> &rect) {
+  setRect(rect->x, rect->y, rect->w, rect->h);
+}
+
 void CLayout::setHorizontal(std::string horizontal) {
   CLayout::horizontal = horizontal;
 }
