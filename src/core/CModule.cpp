@@ -567,7 +567,8 @@ PYBIND11_MODULE(_game, m) {
 
     py::class_<CPlayer, CCreature, std::shared_ptr<CPlayer>>(m, "CPlayer",
                                                                                     "Player-controlled creature.")
-        .def("addQuest", &CPlayer::addQuest, "Add a quest to the player quest log.");
+        .def("addQuest", &CPlayer::addQuest, "Add a quest to the player quest log.")
+        .def("getQuests", &CPlayer::getQuests, "Return the player's active quests.");
 
     py::class_<CListString, CGameObject, std::shared_ptr<CListString>>(m, "CListString", "String list wrapper object.")
         .def("addValue", &CListString::addValue, "Append a value to the list.");
