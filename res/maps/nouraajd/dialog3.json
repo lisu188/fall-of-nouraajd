@@ -207,7 +207,7 @@
           "class": "CDialogState",
           "properties": {
             "stateId": "ENTRY",
-            "text": "You smash through the stained glass and drag Victor's trembling daughter into the light. Overwhelmed, Victor presses 500 gold into your palm and vows his potions are yours whenever you ask.",
+            "text": "You smash through the stained glass and drag Victor's trembling daughter into the light. Overwhelmed, Victor presses 500 gold into your palm and urges you to take whatever potions he still has left.",
             "options": [
               {
                 "ref": "exitOption",
