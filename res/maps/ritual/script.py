@@ -7,9 +7,11 @@ def load(self, context):
     from game import trigger
 
     def ensure_quest(player, quest_name):
-        for quest in player.getQuests():
-            if quest.getName() == quest_name:
-                return
+        get_quests = getattr(player, "getQuests", None)
+        if callable(get_quests):
+            for quest in get_quests():
+                if quest.getName() == quest_name:
+                    return
         player.addQuest(quest_name)
 
     def start_ritual(game_map):
