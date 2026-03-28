@@ -26,8 +26,9 @@ CTile::~CTile() {}
 
 void CTile::move(int x, int y, int z) {
   if (getMap()) {
-    getMap()->moveTile(this->ptr<CTile>(), posx + x, posy + y, posz + z);
-    setXYZ(posx + x, posy + y, posz + z);
+    Coords target = getMap()->normalizeCoords(Coords(posx + x, posy + y, posz + z));
+    getMap()->moveTile(this->ptr<CTile>(), target.x, target.y, target.z);
+    setXYZ(target.x, target.y, target.z);
   }
 }
 

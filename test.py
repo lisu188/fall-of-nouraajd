@@ -629,6 +629,80 @@ class GameTest(unittest.TestCase):
         return True, ""
 
     @game_test
+    def test_toroidal_map_wraps_and_survives_save_load(self):
+        game = load_game_module()
+
+        g = game.CGameLoader.loadGame()
+        game.CGameLoader.startGameWithPlayer(g, "test", "Warrior")
+        game_map = g.getMap()
+        player = game_map.getPlayer()
+
+        initial_y = player.getCoords().y
+        self.assertTrue(game_map.canStep(game.Coords(-1, initial_y, 0)))
+        self.assertTrue(game_map.canStep(game.Coords(player.getCoords().x, -1, 0)))
+
+        player.moveTo(-1, initial_y, 0)
+        after_horizontal = player.getCoords()
+        self.assertEqual((after_horizontal.x, after_horizontal.y, after_horizontal.z), (25, initial_y, 0))
+
+        player.moveTo(after_horizontal.x, -1, 0)
+        after_vertical = player.getCoords()
+        self.assertEqual((after_vertical.x, after_vertical.y, after_vertical.z), (25, 25, 0))
+
+        save_name = "toroidal_wrap_regression"
+        game.CMapLoader.save(game_map, save_name)
+
+        loaded_game = game.CGameLoader.loadGame()
+        game.CGameLoader.loadSavedGame(loaded_game, save_name)
+        loaded_map = loaded_game.getMap()
+        loaded_player = loaded_map.getPlayer()
+
+        self.assertTrue(loaded_map.canStep(game.Coords(-1, loaded_player.getCoords().y, 0)))
+        loaded_player.moveTo(-1, loaded_player.getCoords().y, 0)
+        self.assertEqual(
+            (loaded_player.getCoords().x, loaded_player.getCoords().y, loaded_player.getCoords().z), (25, 25, 0)
+        )
+
+        return True, json.dumps(
+            {
+                "wrapped_horizontal": [after_horizontal.x, after_horizontal.y, after_horizontal.z],
+                "wrapped_vertical": [after_vertical.x, after_vertical.y, after_vertical.z],
+                "loaded_player": [
+                    loaded_player.getCoords().x,
+                    loaded_player.getCoords().y,
+                    loaded_player.getCoords().z,
+                ],
+            }
+        )
+
+    @game_test
+    def test_toroidal_target_controller_prefers_wrapped_step(self):
+        game = load_game_module()
+
+        g = game.CGameLoader.loadGame()
+        game.CGameLoader.startGameWithPlayer(g, "test", "Warrior")
+        game_map = g.getMap()
+
+        target = g.createObject("CEvent")
+        target.setStringProperty("name", "wrapTarget")
+        game_map.addObject(target)
+        target.moveTo(25, 13, 0)
+
+        chaser = g.createObject("Cultist")
+        controller = g.createObject("CTargetController")
+        controller.setTarget("wrapTarget")
+        chaser.setController(controller)
+        chaser.setBoolProperty("npc", True)
+        game_map.addObject(chaser)
+        chaser.moveTo(0, 13, 0)
+
+        game_map.move()
+
+        coords = chaser.getCoords()
+        self.assertEqual((coords.x, coords.y, coords.z), (25, 13, 0))
+        return True, json.dumps({"chaser_coords": [coords.x, coords.y, coords.z]})
+
+    @game_test
     def test_new_player_classes_and_resources(self):
         game = load_game_module()
 
