@@ -51,7 +51,6 @@
   - `python3 test.py` -> `Ran 41 tests in 98.299s`, `OK`
 - Blockers if unresolved: `clang-format -i src/gui/object/CProxyTargetGraphicsObject.cpp` could not be run because `clang-format` is not installed in this environment.
 
-
 ## Batch 5
 - Location: `CMakeLists.txt`
 - Original TODO or summary: The Windows packaging section still installed `play.bat` with the same source path repeated twice on one line.
@@ -88,3 +87,15 @@
   - verified the siege TODO is tied to property export behavior rather than a localized content defect
 - Blockers if unresolved: Insufficient source evidence for a safe non-duplicative content change; siege item depends on broader engine behavior.
 
+## Batch 8
+- Location: `res/plugins/object.py`, `res/maps/nouraajd/script.py`
+- Original TODO or summary: The generic `Market` building still had an empty `onEnter()` stub, while Nouraajd used a map-specific trigger to open the trade panel as a workaround.
+- Status: fixed
+- What was changed: Implemented generic market interaction in `Market.onEnter()` and removed the now-redundant Nouraajd-only `MarketTrigger`.
+- Why the change is correct: The repo already stores the target market object on the building via the `market` property, and Nouraajd was already using that exact data to open trade. Moving the behavior into the generic building preserves existing gameplay while completing the placeholder.
+- Validation performed:
+  - `cmake --build cmake-build-release --target _game for_unit_tests -j$(nproc)`
+  - `ctest --test-dir cmake-build-release --output-on-failure -R for_unit_tests`
+  - static verification that `Market.onEnter()` now opens the configured market and that `MarketTrigger` is gone from Nouraajd
+  - `python3 test.py` -> `Ran 41 tests in 106.832s`, `OK`
+- Blockers if unresolved: None so far.

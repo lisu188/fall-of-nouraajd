@@ -56,7 +56,10 @@ def load(self, context):
     @register(context)
     class Market(CBuilding):
         def onEnter(self, event):
-            pass
+            if event.getCause().isPlayer():
+                market = self.getObjectProperty("market")
+                if market:
+                    self.getMap().getGame().getGuiHandler().showTrade(market)
 
     @register(context)
     class SignPost(CBuilding):

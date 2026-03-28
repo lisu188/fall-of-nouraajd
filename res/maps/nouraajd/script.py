@@ -488,12 +488,6 @@ def load(self, context):
             else:
                 game.getGuiHandler().showMessage("The OctoBogz lie broken, yet their lair remains befouled.")
 
-    @trigger(context, "onEnter", "market1")
-    class MarketTrigger(CTrigger):
-        def trigger(self, object, event):
-            if event.getCause().isPlayer():
-                object.getGame().getGuiHandler().showTrade(object.getObjectProperty("market"))
-
     @trigger(context, "onEnter", "nouraajdDoor")
     class NouraajdDoorTrigger(CTrigger):
         def trigger(self, object, event):
