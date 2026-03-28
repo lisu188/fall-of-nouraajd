@@ -4,7 +4,8 @@
 Run from the repository root:
 
 ```bash
-cmake --build cmake-build-release --target _game -j$(nproc)
+cmake --build cmake-build-release --target _game for_unit_tests -j$(nproc)
+ctest --test-dir cmake-build-release --output-on-failure -R for_unit_tests
 python3 test.py
 ```
 
