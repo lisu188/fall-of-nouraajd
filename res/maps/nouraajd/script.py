@@ -593,6 +593,10 @@ def load(self, context):
                 return True
             return _player_has_quest(player, "deliverLetterQuest")
 
+        def can_offer_letter_work(self):
+            quest_system = _quest_system_from(self)
+            return quest_system.needs_letter_delivery() and not self.has_letter_quest()
+
         def talked_to_victor(self):
             return self.getGame().getMap().getBoolProperty("TALKED_TO_VICTOR")
 
