@@ -50,21 +50,32 @@ def load(self, context):
         if not isinstance(_player_quests, dict):
             _player_quests.clear()
 
+    def _quest_id(quest):
+        if hasattr(quest, "getTypeId"):
+            quest_id = quest.getTypeId()
+            if quest_id:
+                return quest_id
+        return quest.getName()
+
     def _player_has_quest(player, quest_name):
+        if hasattr(player, "getQuests"):
+            return any(_quest_id(quest) == quest_name for quest in player.getQuests())
         _ensure_player_quest_api(player)
         return quest_name in _player_quests
 
     def _grant_quest(player, quest_name):
         if _player_has_quest(player, quest_name):
             return
-        _player_quests[quest_name] = _TrackedQuest(quest_name)
         player.addQuest(quest_name)
+        if not hasattr(player, "getQuests"):
+            _player_quests[quest_name] = _TrackedQuest(quest_name)
 
     def _python_get_quests(self):
         _ensure_player_quest_api(self)
         return list(_player_quests.values())
 
-    CPlayer.getQuests = _python_get_quests
+    if not hasattr(CPlayer, "getQuests"):
+        CPlayer.getQuests = _python_get_quests
 
     _QUEST_SYSTEMS = {}
 

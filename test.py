@@ -187,7 +187,15 @@ def resolve_object_class(configs, type_name):
 
 
 def quest_names(player):
-    return sorted(quest.getName() for quest in player.getQuests())
+    names = []
+    for quest in player.getQuests():
+        if hasattr(quest, "getTypeId"):
+            quest_id = quest.getTypeId()
+            if quest_id:
+                names.append(quest_id)
+                continue
+        names.append(quest.getName())
+    return sorted(names)
 
 
 def walkthrough_log_path(map_name):
@@ -1369,6 +1377,18 @@ class GameTest(unittest.TestCase):
             "explicit_player_names": explicit_player_names,
         }
         return not (player_like_objects or explicit_player_names), json.dumps(log)
+
+    @game_test
+    def test_ritual_start_grants_quests(self):
+        g, game_map, player = load_game_map_with_player("ritual")
+
+        self.assertTrue(game_map.getBoolProperty("ritual_initialized"))
+        self.assertEqual(
+            quest_names(player),
+            ["destroyAnchorsQuest", "finalResolutionQuest", "rescueCaptiveQuest", "ritualQuest"],
+        )
+
+        return True, json.dumps({"quests": quest_names(player)}, sort_keys=True)
 
     @game_test
     def test_ritual_trigger_targets(self):
