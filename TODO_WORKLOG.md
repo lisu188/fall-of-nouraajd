@@ -51,6 +51,7 @@
   - `python3 test.py` -> `Ran 41 tests in 98.299s`, `OK`
 - Blockers if unresolved: `clang-format -i src/gui/object/CProxyTargetGraphicsObject.cpp` could not be run because `clang-format` is not installed in this environment.
 
+
 ## Batch 5
 - Location: `CMakeLists.txt`
 - Original TODO or summary: The Windows packaging section still installed `play.bat` with the same source path repeated twice on one line.
@@ -86,3 +87,4 @@
   - inspected the Nouraajd and Ritual quest flows against their dialogs, triggers, and reward paths
   - verified the siege TODO is tied to property export behavior rather than a localized content defect
 - Blockers if unresolved: Insufficient source evidence for a safe non-duplicative content change; siege item depends on broader engine behavior.
+
