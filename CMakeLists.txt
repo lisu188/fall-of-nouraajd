@@ -103,6 +103,10 @@ configure_file(res/maps/ritual/config.json maps/ritual/config.json)
 configure_file(res/maps/ritual/map.json maps/ritual/map.json)
 configure_file(res/maps/ritual/script.py maps/ritual/script.py)
 
+configure_file(res/maps/map2/config.json maps/map2/config.json)
+configure_file(res/maps/map2/map.json maps/map2/map.json)
+configure_file(res/maps/map2/script.py maps/map2/script.py)
+
 configure_file(res/maps/test/config.json maps/test/config.json)
 configure_file(res/maps/test/map.json maps/test/map.json)
 configure_file(res/maps/test/script.py maps/test/script.py)

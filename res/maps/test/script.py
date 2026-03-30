@@ -7,13 +7,14 @@ def load(self, context):
     @register(context)
     class ChangeMap(CEvent):
         def onEnter(self, event):
-            pass #self.getMap().getGame().changeMap("test")
+            if event.getCause().isPlayer():
+                self.getMap().getGame().changeMap("map2")
 
     @trigger(context, "onEnter", "market1")
     class MarketTrigger(CTrigger):
         def trigger(self, object, event):
             if event.getCause().isPlayer():
-                object.getGame().getGuiHandler().showTrade(object.getObjectProperty('market'))
+                object.getGame().getGuiHandler().showTrade(object.getObjectProperty("market"))
 
     # TODO: replace with onLoad event
     @trigger(context, "onTurn", "triggerAnchor")

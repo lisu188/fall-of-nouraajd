@@ -1,0 +1,183 @@
+{
+  "height": 4,
+  "layers": [
+    {
+      "draworder": "topdown",
+      "name": "Object Layer",
+      "objects": [
+        {
+          "height": 32,
+          "id": 1,
+          "name": "map2Marker",
+          "properties": {
+            "text": "Dedicated ChangeMap target."
+          },
+          "propertytypes": {
+            "text": "string"
+          },
+          "rotation": 0,
+          "type": "signPost",
+          "visible": true,
+          "width": 32,
+          "x": 64,
+          "y": 64
+        }
+      ],
+      "opacity": 1,
+      "properties": {
+        "level": "0"
+      },
+      "propertytypes": {
+        "level": "string"
+      },
+      "type": "objectgroup",
+      "visible": true,
+      "x": 0,
+      "y": 0
+    },
+    {
+      "data": [
+        10,
+        10,
+        10,
+        10,
+        10,
+        10,
+        10,
+        10,
+        10,
+        10,
+        10,
+        10,
+        10,
+        10,
+        10,
+        10
+      ],
+      "height": 4,
+      "name": "Map Layer",
+      "opacity": 1,
+      "properties": {
+        "default": "GrassTile",
+        "level": "0",
+        "xBound": "4",
+        "yBound": "4"
+      },
+      "propertytypes": {
+        "default": "string",
+        "level": "string",
+        "xBound": "string",
+        "yBound": "string"
+      },
+      "type": "tilelayer",
+      "visible": true,
+      "width": 4,
+      "x": 0,
+      "y": 0
+    }
+  ],
+  "nextobjectid": 1,
+  "orientation": "orthogonal",
+  "properties": {
+    "x": "1",
+    "y": "1",
+    "z": "0"
+  },
+  "propertytypes": {
+    "x": "string",
+    "y": "string",
+    "z": "string"
+  },
+  "renderorder": "right-down",
+  "tiledversion": "1.0.3",
+  "tileheight": 32,
+  "tilesets": [
+    {
+      "columns": 4,
+      "firstgid": 1,
+      "image": "..\/..\/images\/terrain.png",
+      "imageheight": 96,
+      "imagewidth": 128,
+      "margin": 0,
+      "name": "terrain",
+      "spacing": 0,
+      "tilecount": 12,
+      "tileheight": 32,
+      "tileproperties": {
+        "1": {
+          "type": "WaterTile"
+        },
+        "10": {
+          "type": "GrassTile"
+        },
+        "11": {
+          "type": "MountainTile"
+        },
+        "2": {
+          "type": "SwampTile"
+        },
+        "3": {
+          "type": "DesertTile"
+        },
+        "4": {
+          "type": "SnowTile"
+        },
+        "5": {
+          "type": "RoadTile"
+        },
+        "6": {
+          "type": "WastelandTile"
+        },
+        "7": {
+          "type": "BeachTile"
+        },
+        "8": {
+          "type": "LavaTile"
+        },
+        "9": {
+          "type": "GroundTile"
+        }
+      },
+      "tilepropertytypes": {
+        "1": {
+          "type": "string"
+        },
+        "10": {
+          "type": "string"
+        },
+        "11": {
+          "type": "string"
+        },
+        "2": {
+          "type": "string"
+        },
+        "3": {
+          "type": "string"
+        },
+        "4": {
+          "type": "string"
+        },
+        "5": {
+          "type": "string"
+        },
+        "6": {
+          "type": "string"
+        },
+        "7": {
+          "type": "string"
+        },
+        "8": {
+          "type": "string"
+        },
+        "9": {
+          "type": "string"
+        }
+      },
+      "tilewidth": 32
+    }
+  ],
+  "tilewidth": 32,
+  "type": "map",
+  "version": 1,
+  "width": 4
+}

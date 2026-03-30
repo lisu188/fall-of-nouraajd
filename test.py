@@ -96,6 +96,16 @@ def advance(g, turns):
         game.event_loop.instance().run()
 
 
+def advance_event_loop_until(predicate, max_runs=20):
+    game = load_game_module()
+    for _ in range(max_runs):
+        if predicate():
+            return True
+        if not game.event_loop.instance().run():
+            break
+    return predicate()
+
+
 MAPS_DIR = REPO_ROOT / "res/maps"
 DEFAULT_PLAYER = "Warrior"
 NOURAAJD_VICTOR_TIMEOUT = 75
@@ -306,6 +316,24 @@ def walkthrough_ritual_map():
     }
 
 
+def walkthrough_map2():
+    _, game_map, player = load_game_map_with_player("map2")
+    map2_data = load_map_data("map2")
+    marker = find_runtime_object(game_map, "map2Marker")
+    assert marker.getStringProperty("text") == "Dedicated ChangeMap target.", "The map2 marker should load."
+    assert (player.getCoords().x, player.getCoords().y, player.getCoords().z) == (
+        int(map2_data["properties"]["x"]),
+        int(map2_data["properties"]["y"]),
+        int(map2_data["properties"]["z"]),
+    ), "The walkthrough should spawn the player at the map2 entry coordinates."
+    assert game_map.canStep(player.getCoords()), "The map2 entry coordinates should be walkable."
+    return {
+        "map": "map2",
+        "marker_text": marker.getStringProperty("text"),
+        "player_coords": [player.getCoords().x, player.getCoords().y, player.getCoords().z],
+    }
+
+
 def walkthrough_nouraajd_map():
     g, game_map, player = load_game_map_with_player("nouraajd")
     for name in ("cave1", "gooby1", "catacombs", "cave2"):
@@ -335,6 +363,7 @@ def walkthrough_nouraajd_map():
 
 
 WALKTHROUGHS = {
+    "map2": walkthrough_map2,
     "nouraajd": walkthrough_nouraajd_map,
     "ritual": walkthrough_ritual_map,
     "siege": walkthrough_siege_map,
@@ -625,6 +654,29 @@ class GameTest(unittest.TestCase):
         self.assertTrue(nouraajd.canStep(player.getCoords()))
         self.assertFalse(nouraajd.canStep(game.Coords(-1, -1, 0)))
         self.assertFalse(nouraajd.canStep(game.Coords(9999, 9999, 0)))
+
+        transition_game, test_map, test_player = load_game_map_with_player("test")
+        change_map_def = find_map_object_definition("test", "changeMap")
+        test_player.moveTo(change_map_def["x"] // 32, change_map_def["y"] // 32, 0)
+        self.assertTrue(
+            advance_event_loop_until(lambda: transition_game.getMap().getObjectByName("map2Marker") is not None)
+        )
+        map2 = transition_game.getMap()
+        map2_player = map2.getPlayer()
+        map2_data = load_map_data("map2")
+        self.assertIsNone(map2.getObjectByName("changeMap"))
+        marker = map2.getObjectByName("map2Marker")
+        self.assertIsNotNone(marker)
+        self.assertEqual(marker.getStringProperty("text"), "Dedicated ChangeMap target.")
+        self.assertEqual(
+            (map2_player.getCoords().x, map2_player.getCoords().y, map2_player.getCoords().z),
+            (
+                int(map2_data["properties"]["x"]),
+                int(map2_data["properties"]["y"]),
+                int(map2_data["properties"]["z"]),
+            ),
+        )
+        self.assertTrue(map2.canStep(map2_player.getCoords()))
 
         return True, ""
 
@@ -1398,6 +1450,10 @@ class GameTest(unittest.TestCase):
     @game_test
     def test_map_walkthrough_nouraajd(self):
         return execute_walkthrough("nouraajd")
+
+    @game_test
+    def test_map_walkthrough_map2(self):
+        return execute_walkthrough("map2")
 
     @game_test
     def test_map_walkthrough_ritual(self):
