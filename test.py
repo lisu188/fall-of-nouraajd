@@ -1326,6 +1326,39 @@ class GameTest(unittest.TestCase):
             game.CGuiHandler.showMessage = original_show_message
 
     @game_test
+    def test_nouraajd_relic_before_letter_regression(self):
+        g, game_map, player = load_game_map_with_player("nouraajd")
+        town_hall = g.createObject("townHallDialog")
+        beren = g.createObject("berenDialog")
+
+        game_map.removeObjectByName("catacombs")
+        self.assertTrue(player.hasItem(lambda it: it.getName() == "holyRelic"))
+        self.assertEqual(game_map.getStringProperty("quest_state_beren_chain"), "letter_pending")
+        self.assertFalse(beren.can_return_relic())
+
+        town_hall.give_letter()
+        beren.deliver_letter()
+
+        self.assertEqual(
+            game_map.getStringProperty("quest_state_beren_chain"),
+            "relic_obtained",
+            "Delivering the letter after finding the relic should preserve relic progress.",
+        )
+        self.assertTrue(
+            beren.can_return_relic(),
+            "Father Beren should accept the relic after the delayed letter delivery path.",
+        )
+
+        return True, json.dumps(
+            {
+                "quest_state_beren_chain": game_map.getStringProperty("quest_state_beren_chain"),
+                "can_return_relic": beren.can_return_relic(),
+                "has_holy_relic": player.hasItem(lambda it: it.getName() == "holyRelic"),
+            },
+            sort_keys=True,
+        )
+
+    @game_test
     def test_nouraajd_tavern_beer_vendor(self):
         game = load_game_module()
         g, game_map, player = load_game_map_with_player("nouraajd")

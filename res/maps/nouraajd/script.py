@@ -240,7 +240,10 @@ def load(self, context):
         def mark_letter_delivered(self, player):
             prior = self.get_state("beren_chain")
             if prior in ("letter_pending", "letter_in_hand"):
-                self._set_state("beren_chain", "letter_delivered")
+                next_state = (
+                    "relic_obtained" if player.hasItem(lambda it: it.getName() == "holyRelic") else "letter_delivered"
+                )
+                self._set_state("beren_chain", next_state)
                 _grant_quest(player, "retrieveRelicQuest")
             elif prior == "relic_obtained":
                 self._set_state("beren_chain", "relic_obtained")
