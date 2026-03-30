@@ -15,7 +15,8 @@ CMapGraphicsObject::getProxiedObjects(std::shared_ptr<CGui> gui, int x, int y) {
         std::list<std::shared_ptr<CGameGraphicsObject>> return_val;
 
         std::shared_ptr<CPlayer> player = gui->getGame()->getMap()->getPlayer();
-        auto actualCoords = guiToMap(gui, Coords(x, y, player->getCoords().z));
+        auto actualCoords =
+            map->normalizeCoords(guiToMap(gui, Coords(x, y, player->getCoords().z)));
 
         std::shared_ptr<CTile> tile =
             map->getTile(actualCoords.x, actualCoords.y, actualCoords.z);
@@ -178,19 +179,38 @@ bool CMapGraphicsObject::keyboardEvent(std::shared_ptr<CGui> gui,
 }
 
 Coords CMapGraphicsObject::mapToGui(std::shared_ptr<CGui> gui, Coords coords) {
-  auto playerCoords = gui->getGame()->getMap()->getPlayer()->getCoords();
-  return Coords(coords.x - playerCoords.x + gui->getTileCountX() / 2,
-                coords.y - playerCoords.y + gui->getTileCountY() / 2, coords.z);
+  auto map = gui->getGame()->getMap();
+  auto playerCoords = map->getPlayer()->getCoords();
+  auto delta = map->getShortestDelta(playerCoords, coords);
+  return Coords(delta.x + gui->getTileCountX() / 2,
+                delta.y + gui->getTileCountY() / 2, coords.z);
 }
 
 Coords CMapGraphicsObject::guiToMap(std::shared_ptr<CGui> gui, Coords coords) {
-  auto playerCoords = gui->getGame()->getMap()->getPlayer()->getCoords();
-  return Coords(playerCoords.x - gui->getTileCountX() / 2 + coords.x,
-                playerCoords.y - gui->getTileCountY() / 2 + coords.y,
-                playerCoords.z);
+  auto map = gui->getGame()->getMap();
+  auto playerCoords = map->getPlayer()->getCoords();
+  auto raw = Coords(playerCoords.x - gui->getTileCountX() / 2 + coords.x,
+                    playerCoords.y - gui->getTileCountY() / 2 + coords.y,
+                    playerCoords.z);
+  return map->normalizeCoords(raw);
 }
 
 void CMapGraphicsObject::refreshObject(Coords coords) {
-  auto translated = mapToGui(getGui(), coords);
+  auto gui = getGui();
+  auto map = gui->getGame()->getMap();
+  Coords normalized = map->normalizeCoords(coords);
+
+  if (map->wrapsX(normalized.z) || map->wrapsY(normalized.z)) {
+    for (int x = 0; x < getSizeX(gui); x++) {
+      for (int y = 0; y < getSizeY(gui); y++) {
+        if (guiToMap(gui, Coords(x, y, normalized.z)) == normalized) {
+          CProxyTargetGraphicsObject::refreshObject(x, y);
+        }
+      }
+    }
+    return;
+  }
+
+  auto translated = mapToGui(gui, normalized);
   CProxyTargetGraphicsObject::refreshObject(translated.x, translated.y);
 }

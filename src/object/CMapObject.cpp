@@ -26,20 +26,25 @@ CMapObject::CMapObject() {}
 CMapObject::~CMapObject() {}
 
 void CMapObject::move(int x, int y, int z) {
+  Coords target(posx + x, posy + y, posz + z);
+  if (getMap()) {
+    target = getMap()->normalizeCoords(target);
+  }
+
   if (dynamic_cast<Moveable *>(this) && getMap()) {
-    if (getMap()->getTile(posx + x, posy + y, posz) &&
-        !getMap()->getTile(posx + x, posy + y, posz)->canStep()) {
-      vstd::logger::debug(getName(), "cannot step on:", posx + x, posy + y,
-                          posz);
+    if (getMap()->getTile(target.x, target.y, target.z) &&
+        !getMap()->getTile(target.x, target.y, target.z)->canStep()) {
+      vstd::logger::debug(getName(), "cannot step on:", target.x, target.y,
+                          target.z);
       return;
     }
     dynamic_cast<Moveable *>(this)->beforeMove();
   }
 
   Coords oldCoords(posx, posy, posz);
-  posx += x;
-  posy += y;
-  posz += z;
+  posx = target.x;
+  posy = target.y;
+  posz = target.z;
   Coords newCoords(posx, posy, posz);
 
   if (getMap()) {

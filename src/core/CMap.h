@@ -43,6 +43,10 @@ class CTrigger;
 class CGame;
 
 class CMap : public CGameObject {
+  using StringMap = std::map<int, std::string>;
+  using IntMap = std::map<int, int>;
+  using BoundsMap = std::map<int, std::pair<int, int>>;
+
   friend class CMapLoader;
 
   friend class CRandomMapGenerator;
@@ -82,9 +86,35 @@ public:
 
   int getEntryZ();
 
+  void setEntryX(int x);
+
+  void setEntryY(int y);
+
+  void setEntryZ(int z);
+
   Coords getEntry();
 
-  std::map<int, std::pair<int, int>> getBounds();
+  BoundsMap getBounds();
+
+  IntMap getXBounds();
+
+  void setXBounds(IntMap bounds);
+
+  IntMap getYBounds();
+
+  void setYBounds(IntMap bounds);
+
+  StringMap getDefaultTiles();
+
+  void setDefaultTiles(StringMap tiles);
+
+  IntMap getWrapX();
+
+  void setWrapX(IntMap values);
+
+  IntMap getWrapY();
+
+  void setWrapY(IntMap values);
 
   void removeObjectByName(std::string name);
 
@@ -105,6 +135,19 @@ public:
   bool canStep(int x, int y, int z);
 
   bool canStep(Coords coords);
+
+  Coords normalizeCoords(Coords coords) const;
+
+  std::vector<Coords> getAdjacentCoords(Coords coords,
+                                        bool includeSelf = false) const;
+
+  Coords getShortestDelta(Coords from, Coords to) const;
+
+  double getDistance(Coords from, Coords to) const;
+
+  bool wrapsX(int z) const;
+
+  bool wrapsY(int z) const;
 
   std::shared_ptr<CMapObject> getObjectByName(const std::string &name);
 
@@ -165,8 +208,11 @@ private:
   std::unordered_map<Coords, std::shared_ptr<CTile>> tiles;
 
   std::shared_ptr<CPlayer> player;
-  std::map<int, std::string> defaultTiles;
-  std::map<int, std::pair<int, int>> boundaries;
+  StringMap defaultTiles;
+  IntMap xBounds;
+  IntMap yBounds;
+  IntMap wrapX;
+  IntMap wrapY;
   int entryx = 0;
   int entryz = 0;
   int entryy = 0;
@@ -177,4 +223,10 @@ private:
   std::string mapName;
 
   std::shared_ptr<vstd::future<void, void>> _moveHelper = vstd::later([]() {});
+
+  bool hasBounds(int z) const;
+
+  int normalizeAxis(int value, int z, bool wrapAxis, const IntMap &bounds) const;
+
+  void registerPlayerTriggers();
 };
