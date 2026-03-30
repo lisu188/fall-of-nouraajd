@@ -161,6 +161,82 @@ void test_pathfinder_waypoint_override() {
     auto next_step = CPathFinder::findNextStep(Coords(0, 0, 0), Coords(2, 0, 0), can_step, forced_waypoint);
     expect_true(next_step->get() == Coords(2, 0, 0), "findNextStep should allow waypoint override when available");
 }
+
+int wrap_axis(int value, int bound) {
+    int size = bound + 1;
+    int normalized = value % size;
+    if (normalized < 0) {
+        normalized += size;
+    }
+    return normalized;
+}
+
+Coords normalize_toroidal(Coords coords, int x_bound, int y_bound) {
+    return Coords(wrap_axis(coords.x, x_bound), wrap_axis(coords.y, y_bound), coords.z);
+}
+
+std::vector<Coords> toroidal_neighbors(const Coords &coords, int x_bound, int y_bound) {
+    std::set<Coords> unique;
+    for (const auto &neighbor : near_coords(coords)) {
+        unique.insert(normalize_toroidal(neighbor, x_bound, y_bound));
+    }
+    return {unique.begin(), unique.end()};
+}
+
+double toroidal_distance(const Coords &a, const Coords &b, int x_bound, int y_bound) {
+    int width = x_bound + 1;
+    int height = y_bound + 1;
+    int dx = std::abs(a.x - b.x);
+    int dy = std::abs(a.y - b.y);
+    dx = std::min(dx, width - dx);
+    dy = std::min(dy, height - dy);
+    return std::sqrt(dx * dx + dy * dy);
+}
+
+void test_toroidal_pathfinder_prefers_wrapped_route() {
+    constexpr int x_bound = 25;
+    constexpr int y_bound = 25;
+    auto can_step = [=](const Coords &coords) {
+        Coords normalized = normalize_toroidal(coords, x_bound, y_bound);
+        return normalized.z == 0 && normalized.y == 0;
+    };
+    auto no_waypoint = [](const Coords &) { return std::pair<bool, Coords>(false, ZERO); };
+    auto neighbors = [=](const Coords &coords) { return toroidal_neighbors(coords, x_bound, y_bound); };
+    auto distance = [=](const Coords &a, const Coords &b) {
+        return toroidal_distance(normalize_toroidal(a, x_bound, y_bound), normalize_toroidal(b, x_bound, y_bound),
+                                 x_bound, y_bound);
+    };
+
+    auto path = CPathFinder::findPath(Coords(0, 0, 0), Coords(25, 0, 0), can_step, no_waypoint, neighbors, distance);
+    expect_true(path.size() == 1, "Toroidal path should use the wrapped one-step route");
+    expect_true(path.front() == Coords(25, 0, 0), "Toroidal path should wrap west-to-east in one move");
+
+    auto next_step =
+        CPathFinder::findNextStep(Coords(0, 0, 0), Coords(25, 0, 0), can_step, no_waypoint, neighbors, distance);
+    expect_true(next_step->get() == Coords(25, 0, 0), "Toroidal next step should choose the wrapped edge tile");
+}
+
+void test_toroidal_pathfinder_wraps_on_both_axes() {
+    constexpr int x_bound = 25;
+    constexpr int y_bound = 25;
+    auto can_step = [=](const Coords &coords) {
+        Coords normalized = normalize_toroidal(coords, x_bound, y_bound);
+        return normalized.z == 0;
+    };
+    auto no_waypoint = [](const Coords &) { return std::pair<bool, Coords>(false, ZERO); };
+    auto neighbors = [=](const Coords &coords) { return toroidal_neighbors(coords, x_bound, y_bound); };
+    auto distance = [=](const Coords &a, const Coords &b) {
+        return toroidal_distance(normalize_toroidal(a, x_bound, y_bound), normalize_toroidal(b, x_bound, y_bound),
+                                 x_bound, y_bound);
+    };
+
+    auto path =
+        CPathFinder::findPath(Coords(0, 0, 0), Coords(25, 25, 0), can_step, no_waypoint, neighbors, distance);
+    expect_true(path.size() == 2, "Toroidal path should wrap independently on both axes");
+    expect_true(path.front() == Coords(0, 25, 0) || path.front() == Coords(25, 0, 0),
+                "Toroidal path should take a wrapped step on one axis first");
+    expect_true(path.back() == Coords(25, 25, 0), "Toroidal path should end at the wrapped goal coordinate");
+}
 } // namespace
 
 int main() {
@@ -172,6 +248,8 @@ int main() {
     test_pathfinder_find_path_without_obstacles();
     test_pathfinder_waypoint_and_blocked_goal();
     test_pathfinder_waypoint_override();
+    test_toroidal_pathfinder_prefers_wrapped_route();
+    test_toroidal_pathfinder_wraps_on_both_axes();
     test_direction_mapping();
     test_rect_bounds_inclusion();
 

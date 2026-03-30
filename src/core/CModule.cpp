@@ -485,7 +485,8 @@ PYBIND11_MODULE(_game, m) {
     py::class_<CMapLoader, std::shared_ptr<CMapLoader>>(m, "CMapLoader",
                                                                         "Helpers for loading map resources.")
         .def("loadNewMapWithPlayer", &CMapLoader::loadNewMapWithPlayer, "Load a map and place a player template.")
-        .def("loadNewMap", &CMapLoader::loadNewMap, "Load a map without changing the active player.");
+        .def("loadNewMap", &CMapLoader::loadNewMap, "Load a map without changing the active player.")
+        .def("save", &CMapLoader::save, "Save the current map state to a named save slot.");
 
     auto cplugin = py::class_<CPlugin, CWrapper<CPlugin>, std::shared_ptr<CPlugin>, CGameObject>(m, "CPlugin",
                                                                                                  "Base plugin class.");

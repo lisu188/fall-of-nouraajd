@@ -23,9 +23,11 @@ typedef std::shared_ptr<std::unordered_map<Coords, int>> Values;
 
 static Coords getNextStep(
     const Coords &start, const Coords &goal, const Values &values,
-    const std::function<std::pair<bool, Coords>(const Coords &)> waypoint) {
+    const std::function<std::pair<bool, Coords>(const Coords &)> &waypoint,
+    const std::function<std::vector<Coords>(const Coords &)> &neighbors,
+    const std::function<double(const Coords &, const Coords &)> &distance) {
   Coords target = start;
-  std::list<Coords> list = near_coords(start);
+  std::vector<Coords> list = neighbors(start);
   auto it = waypoint(start);
   if (it.first) {
     list.push_back(it.second);
@@ -34,7 +36,7 @@ static Coords getNextStep(
     if (vstd::ctn((*values), coords) &&
         ((*values)[coords] < (*values)[target] ||
          ((*values)[coords] == (*values)[target] &&
-          coords.getDist(goal) < target.getDist(goal)))) {
+          distance(coords, goal) < distance(target, goal)))) {
       target = coords;
     }
   }
@@ -44,13 +46,11 @@ static Coords getNextStep(
 static Values fillValues(
     const std::function<bool(const Coords &)> &canStep, const Coords &goal,
     const Coords &start,
-    const std::function<std::pair<bool, Coords>(const Coords &)> waypoint) {
-  Queue nodes([start](const Coords &a, const Coords &b) {
-    double dista =
-        (a.x - start.x) * (a.x - start.x) + (a.y - start.y) * (a.y - start.y);
-    double distb =
-        (b.x - start.x) * (b.x - start.x) + (b.y - start.y) * (b.y - start.y);
-    return dista > distb;
+    const std::function<std::pair<bool, Coords>(const Coords &)> &waypoint,
+    const std::function<std::vector<Coords>(const Coords &)> &neighbors,
+    const std::function<double(const Coords &, const Coords &)> &distance) {
+  Queue nodes([start, distance](const Coords &a, const Coords &b) {
+    return distance(a, start) > distance(b, start);
   });
   std::unordered_set<Coords> marked;
   Values values = std::make_shared<std::unordered_map<Coords, int>>();
@@ -64,8 +64,8 @@ static Values fillValues(
     Coords currentCoords = vstd::pop_p(nodes);
     if (marked.insert(currentCoords).second) {
       int curValue = (*values)[currentCoords];
+      auto list = neighbors(currentCoords);
       auto waypoint_direction = waypoint(currentCoords);
-      auto list = near_coords(currentCoords);
       if (waypoint_direction.first) {
         list.push_back(waypoint_direction.second);
       }
@@ -85,7 +85,8 @@ static Values fillValues(
 
 static Values fillAllValues(
     const std::function<bool(const Coords &)> &canStep, const Coords &goal,
-    const std::function<std::pair<bool, Coords>(const Coords &)> waypoint) {
+    const std::function<std::pair<bool, Coords>(const Coords &)> &waypoint,
+    const std::function<std::vector<Coords>(const Coords &)> &neighbors) {
   std::unordered_set<Coords> marked;
   Values values = std::make_shared<std::unordered_map<Coords, int>>();
   Queue nodes([values](const Coords &a, const Coords &b) {
@@ -112,7 +113,7 @@ static Values fillAllValues(
     Coords currentCoords = vstd::pop_p(nodes);
     if (marked.insert(currentCoords).second) {
       int curValue = (*values)[currentCoords];
-      auto list = near_coords(currentCoords);
+      auto list = neighbors(currentCoords);
       auto waypoint_direction = waypoint(currentCoords);
       if (waypoint_direction.first) {
         list.push_back(waypoint_direction.second);
@@ -134,24 +135,30 @@ static Values fillAllValues(
 std::shared_ptr<vstd::future<Coords, void>> CPathFinder::findNextStep(
     Coords start, Coords goal,
     const std::function<bool(const Coords &)> &canStep,
-    const std::function<std::pair<bool, Coords>(const Coords &)> waypoint) {
+    const std::function<std::pair<bool, Coords>(const Coords &)> waypoint,
+    const std::function<std::vector<Coords>(const Coords &)> &neighbors,
+    const std::function<double(const Coords &, const Coords &)> &distance) {
   return vstd::async([=]() {
-    return getNextStep(start, goal, fillValues(canStep, goal, start, waypoint),
-                       waypoint);
+    return getNextStep(start, goal,
+                       fillValues(canStep, goal, start, waypoint, neighbors,
+                                  distance),
+                       waypoint, neighbors, distance);
   });
 }
 
 std::vector<Coords> CPathFinder::findPath(
     Coords start, Coords goal,
     const std::function<bool(const Coords &)> &canStep,
-    const std::function<std::pair<bool, Coords>(const Coords &)> waypoint) {
+    const std::function<std::pair<bool, Coords>(const Coords &)> waypoint,
+    const std::function<std::vector<Coords>(const Coords &)> &neighbors,
+    const std::function<double(const Coords &, const Coords &)> &distance) {
   std::vector<Coords> path;
-  Values val = fillValues(canStep, goal, start, waypoint);
-  Coords next = getNextStep(start, goal, val, waypoint);
+  Values val = fillValues(canStep, goal, start, waypoint, neighbors, distance);
+  Coords next = getNextStep(start, goal, val, waypoint, neighbors, distance);
   path.push_back(next);
   if (next != start) {
     while (next != goal) {
-      next = getNextStep(next, goal, val, waypoint);
+      next = getNextStep(next, goal, val, waypoint, neighbors, distance);
       path.push_back(next);
     }
   }
@@ -161,8 +168,10 @@ std::vector<Coords> CPathFinder::findPath(
 void CPathFinder::saveMap(
     Coords start, const std::function<bool(const Coords &)> &canStep,
     const std::string &path,
-    const std::function<std::pair<bool, Coords>(const Coords &)> &waypoint) {
-  Values values = fillAllValues(canStep, start, waypoint);
+    const std::function<std::pair<bool, Coords>(const Coords &)> &waypoint,
+    const std::function<std::vector<Coords>(const Coords &)> &neighbors,
+    const std::function<double(const Coords &, const Coords &)> &) {
+  Values values = fillAllValues(canStep, start, waypoint, neighbors);
   int minx = std::numeric_limits<int>::max();
   int miny = std::numeric_limits<int>::max();
   int maxx = std::numeric_limits<int>::min();

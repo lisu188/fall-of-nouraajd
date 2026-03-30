@@ -29,26 +29,75 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include <utility>
 
+namespace {
+bool read_bool_property(const json &properties, const std::string &key) {
+  if (!properties.count(key)) {
+    return false;
+  }
+  const auto &value = properties[key];
+  if (value.is_boolean()) {
+    return value.get<bool>();
+  }
+  if (value.is_number_integer()) {
+    return value.get<int>() != 0;
+  }
+  if (value.is_string()) {
+    const auto text = value.get<std::string>();
+    return text == "true" || text == "1";
+  }
+  return false;
+}
+
+void apply_tile_layer_metadata(const std::shared_ptr<CMap> &map, const json &layer) {
+  const json &layerProperties = layer["properties"];
+  int level = vstd::to_int(layerProperties["level"].get<std::string>()).first;
+
+  auto default_tiles = map->getDefaultTiles();
+  auto x_bounds = map->getXBounds();
+  auto y_bounds = map->getYBounds();
+  auto wrap_x = map->getWrapX();
+  auto wrap_y = map->getWrapY();
+
+  default_tiles[level] = layerProperties["default"].get<std::string>();
+  x_bounds[level] = vstd::to_int(layerProperties["xBound"].get<std::string>()).first;
+  y_bounds[level] = vstd::to_int(layerProperties["yBound"].get<std::string>()).first;
+  wrap_x[level] = read_bool_property(layerProperties, "wrapX") ? 1 : 0;
+  wrap_y[level] = read_bool_property(layerProperties, "wrapY") ? 1 : 0;
+
+  map->setDefaultTiles(default_tiles);
+  map->setXBounds(x_bounds);
+  map->setYBounds(y_bounds);
+  map->setWrapX(wrap_x);
+  map->setWrapY(wrap_y);
+}
+} // namespace
+
 void CMapLoader::loadFromTmx(const std::shared_ptr<CMap> &map,
                              const std::shared_ptr<json> &mapc) {
   if (mapc) {
     const json &mapProperties = (*mapc)["properties"];
     const json &mapLayers = (*mapc)["layers"];
-    map->entryx = vstd::to_int(mapProperties.count("x")
-                                   ? mapProperties["x"].get<std::string>()
-                                   : "0")
-                      .first;
-    map->entryy = vstd::to_int(mapProperties.count("y")
-                                   ? mapProperties["y"].get<std::string>()
-                                   : "0")
-                      .first;
-    map->entryz = vstd::to_int(mapProperties.count("z")
-                                   ? mapProperties["z"].get<std::string>()
-                                   : "0")
-                      .first;
+    map->setDefaultTiles({});
+    map->setXBounds({});
+    map->setYBounds({});
+    map->setWrapX({});
+    map->setWrapY({});
+    map->setEntryX(vstd::to_int(mapProperties.count("x")
+                                    ? mapProperties["x"].get<std::string>()
+                                    : "0")
+                       .first);
+    map->setEntryY(vstd::to_int(mapProperties.count("y")
+                                    ? mapProperties["y"].get<std::string>()
+                                    : "0")
+                       .first);
+    map->setEntryZ(vstd::to_int(mapProperties.count("z")
+                                    ? mapProperties["z"].get<std::string>()
+                                    : "0")
+                       .first);
     const json &tileset = (*mapc)["tilesets"][0]["tileproperties"];
     for (const auto &layer : mapLayers) {
       if (vstd::string_equals(layer["type"].get<std::string>(), "tilelayer")) {
+        apply_tile_layer_metadata(map, layer);
         handleTileLayer(map, tileset, layer);
       }
     }
@@ -108,7 +157,31 @@ CMapLoader::loadSavedMap(const std::shared_ptr<CGame> &game,
 
     game->getObjectHandler()->registerConfig(name, save);
 
-    return game->getObjectHandler()->createObject<CMap>(game, name);
+    auto map = game->getObjectHandler()->createObject<CMap>(game, name);
+    if (std::shared_ptr<json> mapc = CConfigurationProvider::getConfig(getMapPath(mapName))) {
+      map->setDefaultTiles({});
+      map->setXBounds({});
+      map->setYBounds({});
+      map->setWrapX({});
+      map->setWrapY({});
+      const json &mapProperties = (*mapc)["properties"];
+      map->setEntryX(vstd::to_int(mapProperties.count("x") ? mapProperties["x"].get<std::string>() : "0").first);
+      map->setEntryY(vstd::to_int(mapProperties.count("y") ? mapProperties["y"].get<std::string>() : "0").first);
+      map->setEntryZ(vstd::to_int(mapProperties.count("z") ? mapProperties["z"].get<std::string>() : "0").first);
+      for (const auto &layer : (*mapc)["layers"]) {
+        if (vstd::string_equals(layer["type"].get<std::string>(), "tilelayer")) {
+          apply_tile_layer_metadata(map, layer);
+        }
+      }
+    }
+    for (const auto &object : map->getObjects()) {
+      if (auto player = std::dynamic_pointer_cast<CPlayer>(object)) {
+        map->player = player;
+        map->registerPlayerTriggers();
+        break;
+      }
+    }
+    return map;
   }
   return game->getObjectHandler()->createObject<CMap>(game);
 }
@@ -150,10 +223,6 @@ void CMapLoader::handleTileLayer(const std::shared_ptr<CMap> &map,
                                  const json &tileset, const json &layer) {
   const json &layerProperties = layer["properties"];
   int level = vstd::to_int(layerProperties["level"].get<std::string>()).first;
-  map->defaultTiles[level] = layerProperties["default"].get<std::string>();
-  map->boundaries[level] = std::make_pair(
-      vstd::to_int(layerProperties["xBound"].get<std::string>()).first,
-      vstd::to_int(layerProperties["yBound"].get<std::string>()).first);
 
   int yLayer = layer["width"].get<int>();
   int xLayer = layer["height"].get<int>();
@@ -217,9 +286,9 @@ CRandomMapGenerator::loadRandomMap(const std::shared_ptr<CGame> &game) {
   auto container = dungeon.getStairs();
   auto stairs = vstd::any(container);
 
-  map->entryx = stairs.row;
-  map->entryy = stairs.col;
-  map->entryz = 0;
+  map->setEntryX(stairs.row);
+  map->setEntryY(stairs.col);
+  map->setEntryZ(0);
 
   generateTiles(map, dungeon);
 

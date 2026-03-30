@@ -35,16 +35,19 @@ CTargetController::control(std::shared_ptr<CCreature> creature) {
       [creature](const Coords &coords) {
         return creature->getMap()->canStep(coords);
       },
-      [](auto it) { return std::make_pair(false, ZERO); });
+      [](auto) { return std::make_pair(false, ZERO); },
+      [creature](const Coords &coords) {
+        auto adjacent = creature->getMap()->getAdjacentCoords(coords);
+        return std::vector<Coords>(adjacent.begin(), adjacent.end());
+      },
+      [creature](const Coords &from, const Coords &to) {
+        return creature->getMap()->getDistance(from, to);
+      });
 }
 
 std::shared_ptr<vstd::future<Coords, void>>
 CController::control(std::shared_ptr<CCreature> c) {
-  return vstd::later([c]() {
-    return c->
-
-        getCoords();
-  });
+  return vstd::later([c]() { return c->getCoords(); });
 }
 
 std::string CTargetController::getTarget() { return target; }
@@ -54,11 +57,10 @@ void CTargetController::setTarget(std::string target) { this->target = target; }
 std::shared_ptr<vstd::future<Coords, void>>
 CRandomController::control(std::shared_ptr<CCreature> creature) {
   return vstd::later([creature]() {
-    return creature->
-
-           getCoords()
-
-           + Coords(vstd::rand(-1, 1), vstd::rand(-1, 1), 0);
+    Coords target =
+        creature->getCoords() + Coords(vstd::rand(-1, 1), vstd::rand(-1, 1), 0);
+    return creature->getMap() ? creature->getMap()->normalizeCoords(target)
+                              : target;
   });
 }
 
@@ -66,27 +68,37 @@ std::shared_ptr<vstd::future<Coords, void>>
 CNpcRandomController::control(std::shared_ptr<CCreature> creature) {
   auto self = this->ptr<CNpcRandomController>();
   return vstd::later([self, creature]() -> Coords {
-      if (self->path.empty() || self->currentStep >= static_cast<int>(self->path.size())) {
-          for (int i = 0; i < 10; i++) {
-              auto dx = vstd::rand(-5, 5);
-              auto dy = vstd::rand(-5, 5);
-              auto candidate = creature->getCoords() + Coords(dx, dy, 0);
-              if (creature->getMap()->canStep(candidate)) {
-                  self->path = CPathFinder::findPath(
-                      creature->getCoords(), candidate,
-                      [creature](const Coords &c) { return creature->getMap()->canStep(c); },
-                      [](auto) { return std::make_pair(false, ZERO); });
-                  self->currentStep = 0;
-                  break;
-              }
-          }
+    if (self->path.empty() ||
+        self->currentStep >= static_cast<int>(self->path.size())) {
+      for (int i = 0; i < 10; i++) {
+        auto dx = vstd::rand(-5, 5);
+        auto dy = vstd::rand(-5, 5);
+        auto candidate = creature->getMap()->normalizeCoords(
+            creature->getCoords() + Coords(dx, dy, 0));
+        if (creature->getMap()->canStep(candidate)) {
+          self->path = CPathFinder::findPath(
+              creature->getCoords(), candidate,
+              [creature](const Coords &c) { return creature->getMap()->canStep(c); },
+              [](auto) { return std::make_pair(false, ZERO); },
+              [creature](const Coords &coords) {
+                auto adjacent = creature->getMap()->getAdjacentCoords(coords);
+                return std::vector<Coords>(adjacent.begin(), adjacent.end());
+              },
+              [creature](const Coords &from, const Coords &to) {
+                return creature->getMap()->getDistance(from, to);
+              });
+          self->currentStep = 0;
+          break;
+        }
       }
+    }
 
-      if (!self->path.empty() && self->currentStep < static_cast<int>(self->path.size())) {
-          return self->path[self->currentStep++];
-      }
+    if (!self->path.empty() &&
+        self->currentStep < static_cast<int>(self->path.size())) {
+      return self->path[self->currentStep++];
+    }
 
-      return creature->getCoords();
+    return creature->getCoords();
   });
 }
 
@@ -99,30 +111,17 @@ CGroundController::control(std::shared_ptr<CCreature> creature) {
   auto self = this->ptr<CGroundController>();
   return vstd::later([self, creature]() -> Coords {
     std::vector<Coords> possible;
-    for (auto c : near_coords_with(creature->
-
-                                   getCoords()
-
-                                       )) {
+    for (auto c : creature->getMap()->getAdjacentCoords(creature->getCoords(),
+                                                        true)) {
       std::string type = creature->getMap()->getTile(c)->getTileType();
-      if (type == self->
-
-                  getTileType() &&
-
-          creature->getMap()->canStep(c)) {
+      if (type == self->getTileType() && creature->getMap()->canStep(c)) {
         possible.push_back(c);
       }
     }
-    if (!possible.
-
-         empty()
-
-    ) {
+    if (!possible.empty()) {
       return vstd::random_element(possible);
     }
-    return creature->
-
-        getCoords();
+    return creature->getCoords();
   });
 }
 
@@ -135,31 +134,19 @@ CRangeController::control(std::shared_ptr<CCreature> creature) {
     std::vector<Coords> possible;
     std::shared_ptr<CMapObject> targetObject =
         creature->getMap()->getObjectByName(self->getTarget());
-    for (auto c : near_coords_with(creature->
-
-                                   getCoords()
-
-                                       )) {
-      if ((!targetObject || targetObject
-                                    ->
-
-                                getCoords()
-
-                                    .getDist(c) < self->distance) &&
+    for (auto c : creature->getMap()->getAdjacentCoords(creature->getCoords(),
+                                                        true)) {
+      if ((!targetObject ||
+           creature->getMap()->getDistance(targetObject->getCoords(), c) <
+               self->distance) &&
           creature->getMap()->canStep(c)) {
         possible.push_back(c);
       }
     }
-    if (!possible.
-
-         empty()
-
-    ) {
+    if (!possible.empty()) {
       return vstd::random_element(possible);
     }
-    return creature->
-
-        getCoords();
+    return creature->getCoords();
   });
 }
 
@@ -245,23 +232,19 @@ CMonsterFightController::selectInteraction(std::shared_ptr<CCreature> cr) {
 std::shared_ptr<vstd::future<Coords, void>>
 CPlayerController::control(std::shared_ptr<CCreature> c) {
   return vstd::now([&]() {
-    return isCompleted(vstd::cast<CPlayer>(c)) ? c->
-
-                                                 getCoords()
-                                               : path
-
-                                                     [currentStep++];
+    return isCompleted(vstd::cast<CPlayer>(c)) ? c->getCoords()
+                                               : path[currentStep++];
   });
 }
 
 void CPlayerController::setTarget(std::shared_ptr<CPlayer> player,
                                   Coords _target) {
-  target = std::make_shared<Coords>(_target);
+  target = std::make_shared<Coords>(player->getMap()->normalizeCoords(_target));
   path.clear();
   currentStep = 0;
   auto _path = calculatePath(player);
   for (int i = 0; i < static_cast<int>(_path.size()); i++) {
-      path[i] = _path[i];
+    path[i] = _path[i];
   }
 }
 
@@ -273,8 +256,8 @@ CPlayerController::isOnPath(std::shared_ptr<CPlayer> player, Coords coords) {
                      return it.first >= currentStep - 1;
                    })) {
       if (it.second == coords) {
-        auto prev = it.first > 0 ? path[it.first - 1] : coords;
-        auto dir = coords - prev;
+        auto prev = it.first > 0 ? path[it.first - 1] : player->getCoords();
+        auto dir = player->getMap()->getShortestDelta(prev, coords);
         return std::make_pair(true, CUtil::getDirection(dir));
       }
     }
@@ -297,6 +280,13 @@ CPlayerController::calculatePath(std::shared_ptr<CPlayer> player) {
           }
         }
         return std::make_pair(false, ZERO);
+      },
+      [player](const Coords &coords) {
+        auto adjacent = player->getMap()->getAdjacentCoords(coords);
+        return std::vector<Coords>(adjacent.begin(), adjacent.end());
+      },
+      [player](const Coords &from, const Coords &to) {
+        return player->getMap()->getDistance(from, to);
       });
 }
 
@@ -342,6 +332,8 @@ void CPlayerFightController::end(std::shared_ptr<CCreature> me,
 }
 
 bool CPlayerController::isCompleted(std::shared_ptr<CPlayer> player) {
-    return !target || currentStep >= static_cast<int>(path.size()) || currentStep < 0 ||
-           player->getCoords() == *target || !player->getMap()->canStep(*target);
+  return !target || currentStep >= static_cast<int>(path.size()) ||
+         currentStep < 0 ||
+         player->getCoords() == player->getMap()->normalizeCoords(*target) ||
+         !player->getMap()->canStep(*target);
 }
