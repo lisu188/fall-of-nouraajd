@@ -48,6 +48,27 @@ void CGame::loadPlugin(std::function<std::shared_ptr<CPlugin>()> plugin) {
   plugin()->load(this->ptr<CGame>());
 }
 
+bool CGame::hasLoadedNativePlugin(const std::string &name) const {
+  return loadedNativePlugins.count(name) > 0;
+}
+
+std::map<std::string, std::string> CGame::getLoadedNativePlugins() const {
+  return loadedNativePlugins;
+}
+
+void CGame::registerLoadedNativePlugin(std::string name, std::string version) {
+  nativePluginErrors.erase(name);
+  loadedNativePlugins[std::move(name)] = std::move(version);
+}
+
+std::map<std::string, std::string> CGame::getNativePluginErrors() const {
+  return nativePluginErrors;
+}
+
+void CGame::registerNativePluginError(std::string name, std::string message) {
+  nativePluginErrors[std::move(name)] = std::move(message);
+}
+
 std::shared_ptr<CGui> CGame::getGui() const { return _gui; }
 
 void CGame::setGui(std::shared_ptr<CGui> _gui) { CGame::_gui = _gui; }

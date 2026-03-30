@@ -15,6 +15,7 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 import ast
 import builtins
+from contextlib import contextmanager
 import importlib
 import json
 import os
@@ -99,6 +100,22 @@ def advance(g, turns):
 MAPS_DIR = REPO_ROOT / "res/maps"
 DEFAULT_PLAYER = "Warrior"
 NOURAAJD_VICTOR_TIMEOUT = 75
+
+
+@contextmanager
+def temporary_env(name, value):
+    previous = os.environ.get(name)
+    if value is None:
+        os.environ.pop(name, None)
+    else:
+        os.environ[name] = value
+    try:
+        yield
+    finally:
+        if previous is None:
+            os.environ.pop(name, None)
+        else:
+            os.environ[name] = previous
 
 
 def discover_maps():
@@ -1031,6 +1048,98 @@ class GameTest(unittest.TestCase):
         self.assertTrue(any(path.endswith(".py") for path in resources["plugins"]))
 
         return True, json.dumps(resources, sort_keys=True)
+
+    @game_test
+    def test_native_plugin_registry_and_explicit_load(self):
+        game = load_game_module()
+
+        with temporary_env("FON_NATIVE_PLUGINS", None):
+            available = game.CGameLoader.getAvailableNativePlugins()
+            g = game.CGameLoader.loadGame()
+            marker_before = g.createObject("exampleNativePluginMarker")
+            initially_loaded = g.getLoadedNativePlugins()
+            initial_errors = g.getNativePluginErrors()
+            game.CGameLoader.loadNativePlugin(g, "example_native_plugin")
+            loaded = g.getLoadedNativePlugins()
+            errors = g.getNativePluginErrors()
+            marker_after = g.createObject("exampleNativePluginMarker")
+
+        checks = {
+            "registry_contains_example": available.get("example_native_plugin") == "1.0.0",
+            "nothing_loaded_by_default": initially_loaded == {},
+            "no_errors_before_load": initial_errors == {},
+            "marker_missing_before_load": marker_before is None,
+            "plugin_marked_loaded": loaded.get("example_native_plugin") == "1.0.0",
+            "no_errors_after_load": errors == {},
+            "marker_created_after_load": marker_after is not None,
+            "marker_class": marker_after is not None and marker_after.getType() == "CExampleNativePluginMarker",
+            "marker_type_id": marker_after is not None and marker_after.getTypeId() == "exampleNativePluginMarker",
+            "marker_label": marker_after is not None
+            and marker_after.getStringProperty("label") == "Native Plugin Marker",
+            "marker_has_native_tag": marker_after is not None and marker_after.hasTag("native"),
+        }
+        failed = sorted([name for name, ok in checks.items() if not ok])
+        return failed == [], json.dumps(
+            {
+                "available": available,
+                "initially_loaded": initially_loaded,
+                "loaded": loaded,
+                "errors": errors,
+                "failed": failed,
+                "checks": checks,
+            },
+            sort_keys=True,
+        )
+
+    @game_test
+    def test_native_plugin_env_startup_coexists_with_python_maps(self):
+        game = load_game_module()
+
+        with temporary_env("FON_NATIVE_PLUGINS", "example_native_plugin,missing_native_plugin"):
+            g = game.CGameLoader.loadGame()
+            marker = g.createObject("exampleNativePluginMarker")
+            game.CGameLoader.startGameWithPlayer(g, "nouraajd", "Warrior")
+            player = g.getMap().getPlayer()
+            tavern_dialog = g.createObject("tavernDialog1")
+            loaded = g.getLoadedNativePlugins()
+            errors = g.getNativePluginErrors()
+
+        checks = {
+            "native_plugin_loaded": loaded.get("example_native_plugin") == "1.0.0",
+            "native_marker_available": marker is not None,
+            "native_marker_label": marker is not None and marker.getStringProperty("label") == "Native Plugin Marker",
+            "native_marker_has_tag": marker is not None and marker.hasTag("native"),
+            "missing_plugin_reported": "missing_native_plugin" in errors,
+            "diagnostic_mentions_available": "example_native_plugin@1.0.0" in errors.get("missing_native_plugin", ""),
+            "player_loaded": player is not None and player.getTypeId() == "Warrior",
+            "python_map_dialog_available": tavern_dialog is not None,
+        }
+        failed = sorted([name for name, ok in checks.items() if not ok])
+        return failed == [], json.dumps(
+            {"loaded": loaded, "errors": errors, "failed": failed, "checks": checks}, sort_keys=True
+        )
+
+    @game_test
+    def test_native_plugin_missing_startup_error_is_actionable(self):
+        game = load_game_module()
+
+        with temporary_env("FON_NATIVE_PLUGINS", "missing_native_plugin"):
+            g = game.CGameLoader.loadGame()
+            game.CGameLoader.startGameWithPlayer(g, "nouraajd", "Warrior")
+            errors = g.getNativePluginErrors()
+            loaded = g.getLoadedNativePlugins()
+            player = g.getMap().getPlayer()
+
+        checks = {
+            "no_plugin_loaded": loaded == {},
+            "startup_survived": player is not None and player.getTypeId() == "Warrior",
+            "mentions_missing_name": "missing_native_plugin" in errors,
+            "mentions_available_plugin": "example_native_plugin@1.0.0" in errors.get("missing_native_plugin", ""),
+        }
+        failed = sorted([name for name, ok in checks.items() if not ok])
+        return failed == [], json.dumps(
+            {"loaded": loaded, "errors": errors, "failed": failed, "checks": checks}, sort_keys=True
+        )
 
     @game_test
     def test_turns(self):

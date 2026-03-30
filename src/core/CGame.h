@@ -60,6 +60,16 @@ public:
 
   void loadPlugin(std::function<std::shared_ptr<CPlugin>()> plugin);
 
+  bool hasLoadedNativePlugin(const std::string &name) const;
+
+  std::map<std::string, std::string> getLoadedNativePlugins() const;
+
+  void registerLoadedNativePlugin(std::string name, std::string version);
+
+  std::map<std::string, std::string> getNativePluginErrors() const;
+
+  void registerNativePluginError(std::string name, std::string message);
+
   std::shared_ptr<CRngHandler> getRngHandler();
 
   template <typename T> std::shared_ptr<T> createObject(std::string name) {
@@ -81,6 +91,8 @@ private:
   vstd::lazy<CObjectHandler> objectHandler;
   std::shared_ptr<CMap> map;
   std::shared_ptr<CGui> _gui;
+  std::map<std::string, std::string> loadedNativePlugins;
+  std::map<std::string, std::string> nativePluginErrors;
 
 public:
   std::shared_ptr<CGui> getGui() const;

@@ -18,6 +18,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CLoader.h"
 #include "core/CController.h"
 #include "core/CJsonUtil.h"
+#include "core/CNativePlugin.h"
 #include "core/CTypes.h"
 #include "gui/CGui.h"
 #include "gui/object/CMapGraphicsObject.h"
@@ -334,8 +335,13 @@ std::shared_ptr<CGame> CGameLoader::loadGame() {
   std::shared_ptr<CGame> game = std::make_shared<CGame>();
   initObjectHandler(game->getObjectHandler());
   initConfigurations(game->getObjectHandler());
+  initNativePlugins(game);
   initScriptHandler(game->getScriptHandler(), game);
   return game;
+}
+
+std::map<std::string, std::string> CGameLoader::getAvailableNativePlugins() {
+  return CNativePluginLoader::getAvailablePlugins();
 }
 
 void CGameLoader::startGameWithPlayer(const std::shared_ptr<CGame> &game,
@@ -352,6 +358,16 @@ void CGameLoader::startRandomGameWithPlayer(const std::shared_ptr<CGame> &game,
 void CGameLoader::loadSavedGame(const std::shared_ptr<CGame> &game,
                                 const std::string &save) {
   game->setMap(CMapLoader::loadSavedMap(game, save));
+}
+
+void CGameLoader::loadConfiguredNativePlugins(
+    const std::shared_ptr<CGame> &game) {
+  CNativePluginLoader::loadConfiguredPlugins(game);
+}
+
+void CGameLoader::loadNativePlugin(const std::shared_ptr<CGame> &game,
+                                   const std::string &name) {
+  CNativePluginLoader::loadPlugin(game, name);
 }
 
 void CGameLoader::startGame(const std::shared_ptr<CGame> &game,
@@ -389,6 +405,10 @@ void CGameLoader::initObjectHandler(
   for (const auto &it : *CTypes::builders()) {
     handler->registerType(it.first, it.second);
   }
+}
+
+void CGameLoader::initNativePlugins(const std::shared_ptr<CGame> &game) {
+  loadConfiguredNativePlugins(game);
 }
 
 void CGameLoader::initScriptHandler(

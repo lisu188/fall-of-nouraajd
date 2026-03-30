@@ -59,6 +59,8 @@ class CGameLoader {
 public:
   static std::shared_ptr<CGame> loadGame();
 
+  static std::map<std::string, std::string> getAvailableNativePlugins();
+
   static void startGameWithPlayer(const std::shared_ptr<CGame> &game,
                                   const std::string &file, std::string player);
 
@@ -76,11 +78,18 @@ public:
   static void loadSavedGame(const std::shared_ptr<CGame> &game,
                             const std::string &save);
 
+  static void loadConfiguredNativePlugins(const std::shared_ptr<CGame> &game);
+
+  static void loadNativePlugin(const std::shared_ptr<CGame> &game,
+                               const std::string &name);
+
 private:
   static void initObjectHandler(const std::shared_ptr<CObjectHandler> &handler);
 
   static void
   initConfigurations(const std::shared_ptr<CObjectHandler> &handler);
+
+  static void initNativePlugins(const std::shared_ptr<CGame> &game);
 
   static void initScriptHandler(const std::shared_ptr<CScriptHandler> &handler,
                                 const std::shared_ptr<CGame> &game);

@@ -60,6 +60,13 @@ include_directories(${CMAKE_SOURCE_DIR}/random-dungeon-generator)
 pybind11_add_module(_game NO_EXTRAS ${GAME_SRC})
 target_link_libraries(_game PRIVATE ${Boost_LIBRARIES} ${SDL2_LIBRARY} ${SDL2_IMAGE_LIBRARY} ${SDL2_TTF_LIBRARY})
 
+add_library(example_native_plugin OBJECT
+    native_plugins/example/CExampleNativePlugin.cpp
+)
+set_target_properties(example_native_plugin PROPERTIES POSITION_INDEPENDENT_CODE ON)
+target_sources(_game PRIVATE $<TARGET_OBJECTS:example_native_plugin>)
+add_custom_target(native_plugins DEPENDS example_native_plugin)
+
 set_source_files_properties(
     ${CMAKE_SOURCE_DIR}/src/core/CModule.cpp
     ${CMAKE_SOURCE_DIR}/src/core/CTypes.cpp

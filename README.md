@@ -21,6 +21,11 @@ cmake --build cmake-build-release --target _game -j$(nproc)
 python3 play.py
 </pre>
 
+To enable compiled native plugins during startup, set `FON_NATIVE_PLUGINS` to a
+comma-separated list of plugin names, for example
+`FON_NATIVE_PLUGINS=example_native_plugin python3 play.py`.
+See `docs/native-plugins.md` for the native plugin contract and example target.
+
 ### mcp server (engine api)
 <pre>
 cmake --build cmake-build-release --target _game -j$(nproc)
@@ -50,3 +55,23 @@ python3 test.py
 </pre>
 Data validation tests run without needing the compiled `_game` module, but
 other tests require it to be built.
+
+### native c++ plugins
+The engine now supports native C++ plugins alongside the existing Python
+`load(context)` flow. This first implementation is intentionally statically
+linked: the engine currently lives inside the `_game` extension, so external
+shared plugins would require a larger split of the runtime into a separately
+linkable library.
+
+Build the example native plugin with:
+<pre>
+cmake --build cmake-build-release --target native_plugins _game -j$(nproc)
+</pre>
+
+Load it for a game session with:
+<pre>
+FON_NATIVE_PLUGINS=example_native_plugin python3 -c "import play, game; g = game.CGameLoader.loadGame(); print(g.getLoadedNativePlugins())"
+</pre>
+
+See `docs/native-plugins.md` for the plugin contract, loader behavior,
+diagnostics, and the example plugin.

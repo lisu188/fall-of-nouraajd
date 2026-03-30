@@ -252,6 +252,10 @@ PYBIND11_MODULE(_game, m) {
         .def("getMap", &CGame::getMap, "Return the currently loaded map.")
         .def("changeMap", &CGame::changeMap, "Load and switch to another map.")
         .def("loadPlugin", &CGame::loadPlugin, "Load a plugin object into the game.")
+        .def("getLoadedNativePlugins", &CGame::getLoadedNativePlugins,
+             "Return loaded native plugins keyed by plugin name.")
+        .def("getNativePluginErrors", &CGame::getNativePluginErrors,
+             "Return native plugin load errors keyed by plugin name.")
         .def("getGuiHandler", &CGame::getGuiHandler, "Return the GUI handler service.")
         .def("getObjectHandler", &CGame::getObjectHandler, "Return the object factory/registry handler.")
         .def("getRngHandler", &CGame::getRngHandler, "Return the random encounter/loot handler.")
@@ -475,6 +479,12 @@ PYBIND11_MODULE(_game, m) {
 
     py::class_<CGameLoader, std::shared_ptr<CGameLoader>>(m, "CGameLoader", "Factory helpers for loading game sessions and maps.")
         .def("loadGame", &CGameLoader::loadGame, "Create and initialize a game instance.")
+        .def("getAvailableNativePlugins", &CGameLoader::getAvailableNativePlugins,
+             "Return registered native plugins keyed by plugin name.")
+        .def("loadConfiguredNativePlugins", &CGameLoader::loadConfiguredNativePlugins,
+             "Load native plugins configured through the environment.")
+        .def("loadNativePlugin", &CGameLoader::loadNativePlugin,
+             "Load a native plugin by registered name.")
         .def("startGameWithPlayer", &CGameLoader::startGameWithPlayer, "Start a map with a specific player template.")
         .def("startRandomGameWithPlayer", &CGameLoader::startRandomGameWithPlayer,
              "Start a random map with a specific player template.")
