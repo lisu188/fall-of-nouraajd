@@ -1618,55 +1618,28 @@ class GameTest(unittest.TestCase):
 
     @game_test
     def test_playthrough(self):
-        game = load_game_module()
-        g, game_map, player = load_game_map_with_player("nouraajd")
-        advance(g, 1)
+        _, game_map, player = load_game_map_with_player("nouraajd")
+        find_map_object_definition("nouraajd", "catacombs")
+        find_map_object_definition("nouraajd", "cave1")
+        find_map_object_definition("nouraajd", "cave2")
 
-        player.addExp(10000)
-        player.healProc(100)
-        stats = player.getStats()
-        stats.setStrength(500)
-        stats.setAgility(500)
-        stats.setStamina(500)
-        stats.setArmor(75)
-        stats.setBlock(50)
-        stats.setDmgMin(200)
-        stats.setDmgMax(400)
-        stats.setHit(100)
-        stats.setCrit(50)
-        player.setHp(player.getHpMax())
-        player.setMana(1000)
-
-        def kill_all():
-            for obj in list(game_map.getObjects()):
-                if isinstance(obj, game.CCreature) and not obj.isPlayer() and not obj.isNpc():
-                    game.CFightHandler.fight(player, obj)
-                    player.healProc(100)
-                    advance(g, 1)
-
-        for coords in ((704, 544, 0), (608, 320, 0), (100, 100, 0), (5312, 672, 0)):
-            player.moveTo(*coords)
-            kill_all()
+        game_map.removeObjectByName("catacombs")
+        game_map.removeObjectByName("cave1")
+        gooby = find_runtime_object(game_map, "gooby1")
+        game_map.removeObjectByName(gooby.getName())
+        game_map.removeObjectByName("cave2")
 
         success = (
             game_map.getBoolProperty("completed_gooby")
             and game_map.getBoolProperty("completed_octobogz")
             and player.hasItem(lambda it: it.getName() == "holyRelic")
         )
-        fallback_used = False
-        if not success:
-            game_map.setBoolProperty("completed_gooby", True)
-            game_map.setBoolProperty("completed_octobogz", True)
-            if not player.hasItem(lambda it: it.getName() == "holyRelic"):
-                player.addItem("holyRelic")
-            success = True
-            fallback_used = True
         log = {
             "completed_gooby": game_map.getBoolProperty("completed_gooby"),
             "completed_octobogz": game_map.getBoolProperty("completed_octobogz"),
             "has_holy_relic": player.hasItem(lambda it: it.getName() == "holyRelic"),
             "player_coords": [player.getCoords().x, player.getCoords().y, player.getCoords().z],
-            "fallback_used": fallback_used,
+            "gooby_spawned": [gooby.getCoords().x, gooby.getCoords().y, gooby.getCoords().z],
         }
         return success, json.dumps(log, sort_keys=True)
 
