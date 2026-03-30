@@ -504,6 +504,8 @@ PYBIND11_MODULE(_game, m) {
 
     py::class_<CResourcesProvider, std::shared_ptr<CResourcesProvider>>(m, "CResourcesProvider", "Access to packaged resource files.")
         .def("getInstance", &CResourcesProvider::getInstance, "Return singleton resource provider.")
+        .def("getPath", &CResourcesProvider::getPath, "Resolve a resource path relative to the active resource root.")
+        .def("load", &CResourcesProvider::load, "Load a resource file as text.")
         .def("getFiles", &CResourcesProvider::getFiles, "List files under a resource path.");
 
     auto ceffect = py::class_<CEffect, CWrapper<CEffect>, std::shared_ptr<CEffect>, CGameObject>(m, "CEffect",
