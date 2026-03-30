@@ -20,6 +20,16 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CJsonUtil.h"
 #include "gui/CAnimation.h"
 
+namespace {
+
+bool isConfigResourcePath(const std::string &path) {
+  const boost::filesystem::path resourcePath(path);
+  return !resourcePath.has_parent_path() ||
+         resourcePath.parent_path() == boost::filesystem::path("config");
+}
+
+} // namespace
+
 const std::string CResType::CONFIG = "CONFIG";
 const std::string CResType::MAP = "MAP";
 const std::string CResType::PLUGIN = "PLUGIN";
@@ -43,6 +53,14 @@ CConfigurationProvider::getConfiguration(const std::string &path) {
 }
 
 void CConfigurationProvider::loadConfig(const std::string &path) {
+  if (isConfigResourcePath(path)) {
+    auto config = std::static_pointer_cast<CTextResource>(
+        CConfigResourceLoader().load(path));
+    this->insert(
+        std::make_pair(path, CJsonUtil::from_string(config->getText())));
+    return;
+  }
+
   this->insert(
       std::make_pair(path, CResourcesProvider::getInstance()->loadJson(path)));
 }
@@ -154,4 +172,47 @@ CAnimationProvider::getAnimation(const std::shared_ptr<CGame> &game,
   std::shared_ptr<CGameObject> object = game->createObject<CGameObject>();
   object->setAnimation(std::move(path));
   return getAnimation(game, object, custom);
+}
+
+const std::string &CResource::getPath() const {
+  return path;
+}
+
+void CResource::setPath(const std::string &path) {
+  CResource::path = path;
+}
+
+const std::string &CResource::getPathPrefix() const {
+  return pathPrefix;
+}
+
+void CResource::setPathPrefix(const std::string &pathPrefix) {
+  CResource::pathPrefix = pathPrefix;
+}
+
+const std::string &CResource::getPathSuffix() const {
+  return pathSuffix;
+}
+
+void CResource::setPathSuffix(const std::string &pathSuffix) {
+  CResource::pathSuffix = pathSuffix;
+}
+
+std::string CResource::getFilePath() const {
+  return (boost::filesystem::path(getPathPrefix()) /
+          boost::filesystem::path(getPath()).replace_extension(
+              getPathSuffix()))
+      .string();
+}
+
+std::string CTextResource::getText() {
+  const auto filePath = getFilePath();
+  auto resolvedPath = CResourcesProvider::getInstance()->getPath(filePath);
+  if (resolvedPath.empty()) {
+    resolvedPath = filePath;
+  }
+
+  std::ifstream t(resolvedPath);
+  return std::string(std::istreambuf_iterator<char>(t),
+                     std::istreambuf_iterator<char>());
 }
