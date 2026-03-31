@@ -1033,6 +1033,26 @@ class GameTest(unittest.TestCase):
         return True, json.dumps(resources, sort_keys=True)
 
     @game_test
+    def test_resource_provider_resolves_and_loads_known_files(self):
+        game = load_game_module()
+        provider = game.CResourcesProvider.getInstance()
+
+        samples = {
+            "config/tiles.json": "GroundTile",
+            "maps/test/map.json": '"layers"',
+            "plugins/effect.py": "def load",
+        }
+        resolved = {}
+        for resource_path, needle in samples.items():
+            full_path = provider.getPath(resource_path)
+            self.assertTrue(full_path, resource_path)
+            self.assertTrue(Path(full_path).exists(), full_path)
+            self.assertIn(needle, provider.load(resource_path), resource_path)
+            resolved[resource_path] = full_path
+
+        return True, json.dumps(resolved, sort_keys=True)
+
+    @game_test
     def test_turns(self):
         game = load_game_module()
 
