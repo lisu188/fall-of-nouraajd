@@ -20,6 +20,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CJsonUtil.h"
 #include "core/CTypes.h"
 
+#include <stdexcept>
+
 std::shared_ptr<CSerializerBase> CSerialization::serializer(
     std::pair<boost::typeindex::type_index, boost::typeindex::type_index> key) {
   return (*CTypes::serializers())[key];
@@ -126,8 +128,14 @@ void CSerialization::setOtherProperty(
     const boost::any &value) {
   std::shared_ptr<CSerializerBase> serializer =
       (*CTypes::serializers())[std::make_pair(serializedId, deserializedId)];
-  boost::any result = vstd::not_null(serializer, "No serializer!")
-                          ->deserialize(object->getGame(), value);
+  boost::any result;
+  try {
+    result = vstd::not_null(serializer, "No serializer!")
+                 ->deserialize(object->getGame(), value);
+  } catch (const std::exception &ex) {
+    throw std::runtime_error("Failed to deserialize property '" + key +
+                             "': " + ex.what());
+  }
   if (CTypes::is_pointer_type(result.type())) {
     object->setProperty(key,
                         vstd::any_cast<std::shared_ptr<CGameObject>>(result));

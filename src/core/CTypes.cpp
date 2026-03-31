@@ -43,6 +43,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "CMap.h"
 #include "CSerialization.h"
 #include "CScript.h"
+#include "CTags.h"
 #include "CWrapper.h"
 #include "core/CGame.h"
 
@@ -262,6 +263,24 @@ struct register_all_types {
       return arr;
     };
 
+    auto tags_deserialize = [](std::shared_ptr<CGame> game,
+                               std::shared_ptr<json> object) {
+      (void)game;
+      CTags tags;
+      for (unsigned int i = 0; i < object->size(); i++) {
+        tags.insert(CTags::fromString((*object)[i].get<std::string>()));
+      }
+      return tags;
+    };
+
+    auto tags_serialize = [](CTags tags) {
+      std::shared_ptr<json> arr = std::make_shared<json>(json::array());
+      for (const auto &tag : tags) {
+        add_arr_member(arr, std::string(CTags::toString(tag)));
+      }
+      return arr;
+    };
+
     auto array_int_deserialize = [](std::shared_ptr<CGame> game,
                                     std::shared_ptr<json> object) {
       std::set<int> objects;
@@ -350,6 +369,7 @@ struct register_all_types {
 
     CTypes::register_custom_type<std::set<std::string>>(
         array_string_serialize, array_string_deserialize);
+    CTypes::register_custom_type<CTags>(tags_serialize, tags_deserialize);
     CTypes::register_custom_type<std::set<int>>(array_int_serialize,
                                                 array_int_deserialize);
     CTypes::register_custom_type<std::map<std::string, std::string>>(

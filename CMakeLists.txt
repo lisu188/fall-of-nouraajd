@@ -292,6 +292,7 @@ endif ()
 
 add_executable(for_unit_tests
     tests/unit/test_coords.cpp
+    src/core/CTags.cpp
     src/core/CUtil.cpp
     src/core/CPathFinder.cpp
     src/core/CFuture.cpp

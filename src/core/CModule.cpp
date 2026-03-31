@@ -45,6 +45,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CJsonUtil.h"
 #include "core/CLoader.h"
 #include "core/CPythonOverrides.h"
+#include "core/CTags.h"
 #include "core/CWrapper.h"
 #include <pybind11/stl_bind.h>
 
@@ -218,6 +219,14 @@ extern void initModule1();
 #define PY_WRAP_GENERIC_DOC(fcn, doc) m.def(#fcn, fcn, doc)
 
 PYBIND11_MODULE(_game, m) {
+    py::enum_<CTag>(m, "CTag", "Canonical gameplay tag identifier.")
+        .value("BUFF", CTag::Buff)
+        .value("HEAL", CTag::Heal)
+        .value("MANA", CTag::Mana)
+        .value("QUEST", CTag::Quest)
+        .value("STUN", CTag::Stun)
+        .value("WAND", CTag::Wand);
+
     py::class_<CGameObject, std::shared_ptr<CGameObject>>(m, "CGameObject", "Base engine object with dynamic string, numeric, bool, and object properties.")
         .def("getName", &CGameObject::getName, "Return the object name.")
         .def("getType", &CGameObject::getType, "Return the runtime class/type name.")
@@ -234,9 +243,12 @@ PYBIND11_MODULE(_game, m) {
         .def("incProperty", &CGameObject::incProperty, "Increment an integer property by value.")
         .def("ptr", &CGameObject::ptr<CGameObject>, "Return this object as a shared pointer.")
         .def("clone", &CGameObject::clone<CGameObject>, "Clone this object using engine serialization.")
-        .def("addTag", &CGameObject::addTag, "Add a tag to this object.")
-        .def("removeTag", &CGameObject::removeTag, "Remove a tag from this object.")
-        .def("hasTag", &CCreature::hasTag, "Return whether this object has the given tag.")
+        .def("addTag", py::overload_cast<CTag>(&CGameObject::addTag), "Add a canonical tag enum to this object.")
+        .def("addTag", py::overload_cast<const std::string &>(&CGameObject::addTag), "Add a canonical tag string to this object.")
+        .def("removeTag", py::overload_cast<CTag>(&CGameObject::removeTag), "Remove a canonical tag enum from this object.")
+        .def("removeTag", py::overload_cast<const std::string &>(&CGameObject::removeTag), "Remove a canonical tag string from this object.")
+        .def("hasTag", py::overload_cast<CTag>(&CGameObject::hasTag), "Return whether this object has the given canonical tag enum.")
+        .def("hasTag", py::overload_cast<const std::string &>(&CGameObject::hasTag), "Return whether this object has the given canonical tag string.")
         .def("__setattr__", &game_object_setattr, "Alias for dynamic property assignment.")
         .def("__getattr__", &game_object_getattr, "Alias for dynamic property lookup.");
 

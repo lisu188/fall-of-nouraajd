@@ -17,14 +17,66 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #pragma once
 
+#include <cstddef>
+#include <initializer_list>
+#include <set>
+#include <string>
+#include <string_view>
+#include <vector>
+
+enum class CTag {
+  Buff,
+  Heal,
+  Mana,
+  Quest,
+  Stun,
+  Wand,
+};
+
 class CTags {
 public:
-  template <typename Range> static bool isTagPresent(Range r, std::string tag) {
-    for (auto a : r) {
-      if (a->hasTag(tag)) {
+  using storage_type = std::set<CTag>;
+
+  CTags() = default;
+
+  CTags(std::initializer_list<CTag> tags);
+
+  bool contains(CTag tag) const;
+
+  void insert(CTag tag);
+
+  void erase(CTag tag);
+
+  bool empty() const;
+
+  std::size_t size() const;
+
+  std::vector<std::string> toStrings() const;
+
+  const storage_type &values() const;
+
+  storage_type::const_iterator begin() const;
+
+  storage_type::const_iterator end() const;
+
+  static const std::vector<CTag> &all();
+
+  static CTag fromString(std::string_view tag);
+
+  static std::string_view toString(CTag tag);
+
+  template <typename Range>
+  static bool isTagPresent(const Range &range, CTag tag) {
+    for (const auto &value : range) {
+      if (value->hasTag(tag)) {
         return true;
       }
     }
     return false;
   }
+
+  bool operator==(const CTags &other) const;
+
+private:
+  storage_type tags;
 };

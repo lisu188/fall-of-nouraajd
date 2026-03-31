@@ -16,11 +16,13 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+#include "core/CTags.h"
 #include "core/CUtil.h"
 #include "core/CPathFinder.h"
 
 #include <algorithm>
 #include <iostream>
+#include <stdexcept>
 
 namespace {
 int failures = 0;
@@ -237,6 +239,35 @@ void test_toroidal_pathfinder_wraps_on_both_axes() {
                 "Toroidal path should take a wrapped step on one axis first");
     expect_true(path.back() == Coords(25, 25, 0), "Toroidal path should end at the wrapped goal coordinate");
 }
+
+void test_tag_round_trip_and_ordering() {
+    for (const auto &tag : CTags::all()) {
+        auto text = CTags::toString(tag);
+        expect_true(CTags::fromString(text) == tag, "Tag conversion should round-trip between enum and string");
+    }
+
+    CTags tags;
+    tags.insert(CTag::Quest);
+    tags.insert(CTag::Buff);
+    tags.insert(CTag::Quest);
+    expect_true(tags.contains(CTag::Buff), "CTags should report contained tags");
+    expect_true(tags.contains(CTag::Quest), "CTags should deduplicate repeated inserts");
+    expect_true(tags.size() == 2, "CTags should keep unique enum values only");
+
+    const auto names = tags.toStrings();
+    expect_true(names.size() == 2 && names[0] == "buff" && names[1] == "quest",
+                "CTags should emit canonical strings in deterministic order");
+}
+
+void test_unknown_tag_rejection() {
+    bool threw = false;
+    try {
+        (void)CTags::fromString("unknown_tag");
+    } catch (const std::invalid_argument &) {
+        threw = true;
+    }
+    expect_true(threw, "Unknown tag strings should be rejected explicitly");
+}
 } // namespace
 
 int main() {
@@ -252,6 +283,8 @@ int main() {
     test_toroidal_pathfinder_wraps_on_both_axes();
     test_direction_mapping();
     test_rect_bounds_inclusion();
+    test_tag_round_trip_and_ordering();
+    test_unknown_tag_rejection();
 
     if (failures == 0) {
         std::cout << "All unit tests passed.\n";

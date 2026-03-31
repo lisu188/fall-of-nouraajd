@@ -21,6 +21,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CMap.h"
 #include "gui/CAnimation.h"
 
+#include <utility>
+
 std::function<bool(std::shared_ptr<CGameObject>, std::shared_ptr<CGameObject>)>
     CGameObject::name_comparator =
         [](std::shared_ptr<CGameObject> a, std::shared_ptr<CGameObject> b) {
@@ -73,11 +75,9 @@ std::shared_ptr<CGameObject> CGameObject::_clone() {
   return game->getObjectHandler()->clone<CGameObject>(this->ptr());
 }
 
-std::set<std::string> CGameObject::getTags() { return tags; }
+CTags CGameObject::getTags() { return tags; }
 
-void CGameObject::setTags(std::set<std::string> tags) {
-  CGameObject::tags = tags;
-}
+void CGameObject::setTags(CTags tags) { CGameObject::tags = std::move(tags); }
 
 std::string CGameObject::getType() { return type; }
 
@@ -87,11 +87,23 @@ std::string CGameObject::getName() { return name; }
 
 void CGameObject::setName(std::string name) { this->name = name; }
 
-bool CGameObject::hasTag(std::string tag) { return vstd::ctn(tags, tag); }
+bool CGameObject::hasTag(CTag tag) { return tags.contains(tag); }
 
-void CGameObject::addTag(std::string tag) { tags.insert(tag); }
+bool CGameObject::hasTag(const std::string &tag) {
+  return hasTag(CTags::fromString(tag));
+}
 
-void CGameObject::removeTag(std::string tag) { tags.erase(tag); }
+void CGameObject::addTag(CTag tag) { tags.insert(tag); }
+
+void CGameObject::addTag(const std::string &tag) {
+  addTag(CTags::fromString(tag));
+}
+
+void CGameObject::removeTag(CTag tag) { tags.erase(tag); }
+
+void CGameObject::removeTag(const std::string &tag) {
+  removeTag(CTags::fromString(tag));
+}
 
 std::string CGameObject::getAnimation() { return animation; }
 
