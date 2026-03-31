@@ -22,6 +22,7 @@ import re
 import select
 import subprocess
 import sys
+import tempfile
 import time
 import traceback
 from pathlib import Path
@@ -831,10 +832,11 @@ def validate_map_json_tiled_compatibility(path):
     tile_width = int(data.get("tilewidth", 0)) if is_integral_json_number(data.get("tilewidth")) else None
     tile_height = int(data.get("tileheight", 0)) if is_integral_json_number(data.get("tileheight")) else None
 
-    properties = get_legacy_properties(data, path, issues, scope="map", required=True)
+    properties = get_legacy_properties(data, path, issues, scope="map")
     if properties is not None:
         for key in ("x", "y", "z"):
-            require_engine_int_string(properties, key, path, issues, scope="map")
+            if key in properties:
+                require_engine_int_string(properties, key, path, issues, scope="map")
 
     layers = data.get("layers")
     if not isinstance(layers, list):
@@ -2409,6 +2411,52 @@ class GameTest(unittest.TestCase):
             "warnings_by_file": warnings_by_file,
         }
         return issues_by_file == {}, json.dumps(log, indent=2, sort_keys=True)
+
+    def test_map_json_tiled_compatibility_allows_default_entry_coordinates(self):
+        TEST_OUTPUT_DIR.mkdir(exist_ok=True)
+        map_data = {
+            "type": "map",
+            "orientation": "orthogonal",
+            "width": 1,
+            "height": 1,
+            "tilewidth": 40,
+            "tileheight": 40,
+            "layers": [
+                {
+                    "type": "tilelayer",
+                    "name": "ground",
+                    "width": 1,
+                    "height": 1,
+                    "x": 0,
+                    "y": 0,
+                    "properties": {
+                        "level": "0",
+                        "default": "0",
+                        "xBound": "1",
+                        "yBound": "1",
+                    },
+                    "data": [1],
+                }
+            ],
+            "tilesets": [
+                {
+                    "firstgid": 1,
+                    "tileproperties": {
+                        "0": {
+                            "type": "grass",
+                        }
+                    },
+                }
+            ],
+        }
+
+        with tempfile.TemporaryDirectory(dir=TEST_OUTPUT_DIR) as temp_dir:
+            path = Path(temp_dir) / "map.json"
+            path.write_text(json.dumps(map_data))
+            issues, warnings = validate_map_json_tiled_compatibility(path)
+
+        self.assertEqual([], issues)
+        self.assertEqual([], warnings)
 
     @game_test
     def test_plugin_load_function(self):
