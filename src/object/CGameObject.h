@@ -17,6 +17,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #pragma once
 
+#include "core/CTags.h"
 #include "core/CGlobal.h"
 #include "core/CUtil.h"
 
@@ -39,7 +40,7 @@ class CGameObject : public vstd::stringable,
          V_PROPERTY(CGameObject, std::string, label, getLabel, setLabel),
          V_PROPERTY(CGameObject, std::string, description, getDescription,
                     setDescription),
-         V_PROPERTY(CGameObject, std::set<std::string>, tags, getTags, setTags))
+         V_PROPERTY(CGameObject, CTags, tags, getTags, setTags))
 
 public:
   static std::function<bool(std::shared_ptr<CGameObject>,
@@ -100,11 +101,17 @@ public:
 
   void incProperty(std::string name, int value);
 
-  bool hasTag(std::string tag);
+  bool hasTag(CTag tag);
 
-  void addTag(std::string tag);
+  bool hasTag(const std::string &tag);
 
-  void removeTag(std::string tag);
+  void addTag(CTag tag);
+
+  void addTag(const std::string &tag);
+
+  void removeTag(CTag tag);
+
+  void removeTag(const std::string &tag);
 
 public:
   std::string getType();
@@ -121,9 +128,9 @@ public:
 
   virtual std::string to_string() override;
 
-  std::set<std::string> getTags();
+  CTags getTags();
 
-  void setTags(std::set<std::string> tags);
+  void setTags(CTags tags);
 
   std::string getAnimation();
 
@@ -184,7 +191,7 @@ private:
   std::string label;
   std::string description;
 
-  std::set<std::string> tags;
+  CTags tags;
 
   // TODO: this creates cyclic dependencies
   std::shared_ptr<CGame> game;

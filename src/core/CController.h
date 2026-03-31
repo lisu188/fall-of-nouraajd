@@ -18,6 +18,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #pragma once
 
 #include "core/CPathFinder.h"
+#include "core/CTags.h"
 #include "object/CObject.h"
 
 class CGameFightPanel;
@@ -75,7 +76,7 @@ private:
   selectInteraction(std::shared_ptr<CCreature> cr);
 
   std::shared_ptr<CItem>
-  getLeastPowerfulItemWithTag(std::shared_ptr<CCreature> cr, std::string tag);
+  getLeastPowerfulItemWithTag(std::shared_ptr<CCreature> cr, CTag tag);
 };
 
 class CPlayerFightController : public CFightController {

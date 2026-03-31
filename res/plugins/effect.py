@@ -14,6 +14,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 def load(self, context):
+    from game import CTag
     from game import CEffect
     from game import Damage
     from game import register
@@ -66,9 +67,9 @@ def load(self, context):
     class ChloroformEffect(CEffect):
         def onEffect(self):
             if self.getVictim().getHpRatio() > 25:
-                self.removeTag("stun")
+                self.removeTag(CTag.STUN)
             else:
-                self.addTag("stun")
+                self.addTag(CTag.STUN)
 
     @register(context)
     class BarrierEffect(CEffect):

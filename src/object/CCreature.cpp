@@ -78,7 +78,7 @@ void CCreature::addItem(std::shared_ptr<CItem> item) {
 
 void CCreature::removeItem(std::shared_ptr<CItem> item, bool quest) {
     // TODO: this check should be more polymorphic
-    if (!quest && vstd::castable<CPlayer>(this->ptr<CCreature>()) && item->hasTag("quest")) {
+    if (!quest && vstd::castable<CPlayer>(this->ptr<CCreature>()) && item->hasTag(CTag::Quest)) {
         vstd::logger::fatal("Tried to drop quest item");
     } else {
         if (items.erase(item)) {

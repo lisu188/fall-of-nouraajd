@@ -161,14 +161,14 @@ int CRangeController::getDistance() { return distance; }
 bool CMonsterFightController::control(std::shared_ptr<CCreature> me,
                                       std::shared_ptr<CCreature> opponent) {
   if (me->getHpRatio() < 75) {
-    auto object = getLeastPowerfulItemWithTag(me, "heal");
+    auto object = getLeastPowerfulItemWithTag(me, CTag::Heal);
     if (object) {
       me->useItem(object);
       return control(me, opponent);
     }
   }
   if (me->getManaRatio() < 75) {
-    auto object = getLeastPowerfulItemWithTag(me, "mana");
+    auto object = getLeastPowerfulItemWithTag(me, CTag::Mana);
     if (object) {
       me->useItem(object);
       return control(me, opponent);
@@ -182,7 +182,7 @@ bool CMonsterFightController::control(std::shared_ptr<CCreature> me,
 }
 
 std::shared_ptr<CItem> CMonsterFightController::getLeastPowerfulItemWithTag(
-    std::shared_ptr<CCreature> cr, std::string tag) {
+    std::shared_ptr<CCreature> cr, CTag tag) {
   auto cmp = [](const std::shared_ptr<CItem> &a,
                 const std::shared_ptr<CItem> &b) {
     return a->getPower() < b->getPower();
@@ -203,7 +203,7 @@ std::shared_ptr<CInteraction>
 CMonsterFightController::selectInteraction(std::shared_ptr<CCreature> cr) {
   std::function<bool(std::shared_ptr<CInteraction>)> pFunction =
       [](const std::shared_ptr<CInteraction> &it) {
-        return !it->hasTag("buff");
+        return !it->hasTag(CTag::Buff);
       };
   std::function<bool(std::shared_ptr<CInteraction>)> pFunction2 =
       [cr](const std::shared_ptr<CInteraction> &it) {
@@ -212,7 +212,7 @@ CMonsterFightController::selectInteraction(std::shared_ptr<CCreature> cr) {
   std::function<bool(std::shared_ptr<CInteraction>)> pFunction3 =
       [](const std::shared_ptr<CInteraction> &it) {
         return !it->getEffect() ||
-               (it->getEffect() && !it->getEffect()->hasTag("buff"));
+               (it->getEffect() && !it->getEffect()->hasTag(CTag::Buff));
       };
   auto pred = [](const std::shared_ptr<CInteraction> &a,
                  const std::shared_ptr<CInteraction> &b) {

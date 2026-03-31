@@ -49,7 +49,7 @@ CRngHandler::CRngHandler(const std::shared_ptr<CGame> &game) : game(game) {
     std::shared_ptr<CItem> item = game->createObject<CItem>(type);
     if (item) {
       int power = item->getPower();
-      if (power > 0 && !item->hasTag("quest")) {
+      if (power > 0 && !item->hasTag(CTag::Quest)) {
         itemPowerTable.insert(std::make_pair(power, type));
       }
     }

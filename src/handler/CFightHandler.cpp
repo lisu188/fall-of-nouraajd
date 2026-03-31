@@ -44,7 +44,7 @@ bool CFightHandler::fight(std::shared_ptr<CCreature> a,
       retVal = true;
       break;
     }
-    if (!CTags::isTagPresent(a->getEffects(), "stun")) {
+    if (!CTags::isTagPresent(a->getEffects(), CTag::Stun)) {
       a->getFightController()->control(a, b);
       if (!b->isAlive()) {
         defeatedCreature(a, b);
@@ -71,7 +71,7 @@ void CFightHandler::defeatedCreature(const std::shared_ptr<CCreature> &a,
   std::set<std::shared_ptr<CItem>> items =
       b->getGame()->getRngHandler()->getRandomLoot(b->getScale());
   for (const std::shared_ptr<CItem> &item : b->getInInventory()) {
-    if (!b->isPlayer() || !item->hasTag("quest")) {
+    if (!b->isPlayer() || !item->hasTag(CTag::Quest)) {
       b->removeItem(item);
       items.insert(item);
     }

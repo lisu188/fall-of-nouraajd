@@ -1760,6 +1760,66 @@ class GameTest(unittest.TestCase):
         return True, json.dumps(report, sort_keys=True)
 
     @game_test
+    def test_tags_are_typed_in_bindings_and_persist_through_save_load(self):
+        game = load_game_module()
+        g = game.CGameLoader.loadGame()
+        game.CGameLoader.startGameWithPlayer(g, "siege", "Warrior")
+
+        heal_potion = g.createObject("LesserLifePotion")
+        barrier_effect = g.createObject("BarrierEffect")
+        magic_wand = g.createObject("magicWand")
+        chloroform_effect = g.createObject("ChloroformEffect")
+
+        self.assertTrue(heal_potion.hasTag(game.CTag.HEAL))
+        self.assertTrue(heal_potion.hasTag("heal"))
+        self.assertTrue(barrier_effect.hasTag(game.CTag.BUFF))
+        self.assertTrue(magic_wand.hasTag(game.CTag.QUEST))
+        self.assertTrue(magic_wand.hasTag(game.CTag.WAND))
+
+        chloroform_effect.addTag(game.CTag.STUN)
+        self.assertTrue(chloroform_effect.hasTag(game.CTag.STUN))
+        chloroform_effect.removeTag("stun")
+        self.assertFalse(chloroform_effect.hasTag(game.CTag.STUN))
+
+        with self.assertRaises(ValueError):
+            heal_potion.hasTag("unknownTag")
+        with self.assertRaises(ValueError):
+            heal_potion.addTag("unknownTag")
+        with self.assertRaises(ValueError):
+            heal_potion.removeTag("unknownTag")
+
+        tagged_object_name = "typedTagPotion"
+        heal_potion.name = tagged_object_name
+        siege_map = g.getMap()
+        siege_map.addObject(heal_potion)
+        heal_potion.moveTo(2, 2, 0)
+
+        save_name = "typed_tags_roundtrip"
+        game.CMapLoader.save(siege_map, save_name)
+
+        loaded_game = game.CGameLoader.loadGame()
+        game.CGameLoader.loadSavedGame(loaded_game, save_name)
+        loaded_object = loaded_game.getMap().getObjectByName(tagged_object_name)
+
+        self.assertIsNotNone(loaded_object)
+        self.assertTrue(loaded_object.hasTag(game.CTag.HEAL))
+        self.assertTrue(loaded_object.hasTag("heal"))
+
+        report = {
+            "enum_checks": {
+                "heal": heal_potion.hasTag(game.CTag.HEAL),
+                "buff": barrier_effect.hasTag(game.CTag.BUFF),
+                "quest": magic_wand.hasTag(game.CTag.QUEST),
+                "wand": magic_wand.hasTag(game.CTag.WAND),
+            },
+            "saved_object": {
+                "name": tagged_object_name,
+                "loaded_has_heal": loaded_object.hasTag(game.CTag.HEAL),
+            },
+        }
+        return True, json.dumps(report, sort_keys=True)
+
+    @game_test
     def test_headless_handlers_and_resources(self):
         game = load_game_module()
         g = game.CGameLoader.loadGame()
@@ -2378,6 +2438,38 @@ class GameTest(unittest.TestCase):
             except Exception:
                 errors.append(str(path))
         return errors == [], json.dumps(errors)
+
+    @game_test
+    def test_authored_tag_strings_are_canonical(self):
+        game = load_game_module()
+        g = game.CGameLoader.loadGame()
+        probe = g.createObject("CEffect")
+        checked = {}
+
+        def visit(node, collected, trail=""):
+            if isinstance(node, dict):
+                for key, value in node.items():
+                    next_trail = f"{trail}.{key}" if trail else key
+                    if key == "tags" and isinstance(value, list):
+                        collected[next_trail] = list(value)
+                        for tag in value:
+                            probe.addTag(tag)
+                            self.assertTrue(probe.hasTag(tag))
+                            probe.removeTag(tag)
+                    visit(value, collected, next_trail)
+            elif isinstance(node, list):
+                for index, value in enumerate(node):
+                    visit(value, collected, f"{trail}[{index}]")
+
+        for path in sorted((REPO_ROOT / "res").rglob("*.json")):
+            data = json.loads(path.read_text())
+            rel_path = str(path.relative_to(REPO_ROOT))
+            collected = {}
+            visit(data, collected)
+            if collected:
+                checked[rel_path] = collected
+
+        return True, json.dumps(checked, sort_keys=True)
 
     @game_test
     def test_map_json_tiled_compatibility(self):
