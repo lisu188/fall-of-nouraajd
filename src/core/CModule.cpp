@@ -162,6 +162,10 @@ py::object game_object_getattr(CGameObject &self, const std::string &name) {
         return py::str(self.getStringProperty(name));
     } catch (const std::exception &) {
     }
+    try {
+        return py::cast(self.getObjectProperty<CGameObject>(name));
+    } catch (const std::exception &) {
+    }
 
     throw py::attribute_error(name);
 }
@@ -570,7 +574,9 @@ PYBIND11_MODULE(_game, m) {
         .def("getGold", &CCreature::getGold, "Return current gold.")
         .def("addGold", &CCreature::addGold, "Add gold to the creature inventory.")
         .def("takeGold", &CCreature::takeGold, "Remove gold from the creature inventory.")
+        .def("takeMana", &CCreature::takeMana, "Consume mana, clamped at zero.")
         .def("useAction", &CCreature::useAction, "Use an interaction/action against another creature.")
+        .def("useItem", &CCreature::useItem, "Use an inventory item if it is currently usable.")
         .def("hasItem", hasItem, "Return whether any inventory item matches predicate(item) -> bool.")
         .def("addItem", addItemByName, "Create and add an item by type id.")
         .def("addItem", addItemByObject, "Add an existing item object.")

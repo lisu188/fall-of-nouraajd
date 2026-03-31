@@ -1285,41 +1285,83 @@ class GameTest(unittest.TestCase):
 
     @game_test
     def test_potions_are_not_consumed_at_full_resources(self):
-        g, _game_map, player = load_game_map_with_player("empty")
+        g, _game_map, player = load_game_map_with_player("nouraajd", "Sorcerer")
 
-        player.addItem("LesserLifePotion")
-        player.addItem("LesserManaPotion")
-        player.heal(0)
-        player.addMana(0)
+        def clear_item(item_id):
+            while player.countItems(item_id) > 0:
+                player.removeItem(lambda it, tid=item_id: it.getTypeId() == tid, True)
 
-        def find_item(type_id):
-            for item in list(player.items):
-                if item.typeId == type_id:
-                    return item
-            raise AssertionError(f"Missing inventory item {type_id}")
+        clear_item("LesserLifePotion")
+        clear_item("LesserManaPotion")
 
-        life_potion = find_item("LesserLifePotion")
-        mana_potion = find_item("LesserManaPotion")
+        life_potion = g.createObject("LesserLifePotion")
+        mana_potion = g.createObject("LesserManaPotion")
+        player.addItem(life_potion)
+        player.addItem(mana_potion)
+        player.setHp(player.getHpMax())
+        player.addManaProc(0)
+        full_mana = player.getMana()
 
-        hp_before = player.getHp()
+        hp_ratio_before = player.getHpRatio()
         mana_before = player.getMana()
 
         player.useItem(life_potion)
         player.useItem(mana_potion)
 
-        assert player.getHp() == hp_before
+        assert player.getHpRatio() == hp_ratio_before
         assert player.getMana() == mana_before
         assert player.countItems("LesserLifePotion") == 1
         assert player.countItems("LesserManaPotion") == 1
 
+        player.setHp(max(1, player.getHpMax() - 10))
+        player.setMana(max(0, full_mana - 10))
+
+        player.useItem(life_potion)
+        player.useItem(mana_potion)
+
+        assert player.getHpRatio() == 100
+        assert player.getMana() == full_mana
+        assert player.countItems("LesserLifePotion") == 0
+        assert player.countItems("LesserManaPotion") == 0
+
         return True, json.dumps(
             {
-                "hp_before": hp_before,
+                "hp_ratio_before": hp_ratio_before,
                 "mana_before": mana_before,
-                "hp_after": player.getHp(),
+                "hp_ratio_after": player.getHpRatio(),
                 "mana_after": player.getMana(),
                 "life_potions": player.countItems("LesserLifePotion"),
                 "mana_potions": player.countItems("LesserManaPotion"),
+            },
+            sort_keys=True,
+        )
+
+    @game_test
+    def test_take_mana_clamps_at_zero(self):
+        game = load_game_module()
+        g = game.CGameLoader.loadGame()
+        game.CGameLoader.startGame(g, "empty")
+
+        creature = g.createObject("CCreature")
+        stats = g.createObject("Stats")
+        stats.mainStat = "intelligence"
+        stats.intelligence = 2
+        creature.baseStats = stats
+
+        mana_max = 14
+        creature.setMana(mana_max)
+        creature.takeMana(3)
+        mana_after_partial_use = creature.getMana()
+        creature.takeMana(mana_max + 20)
+
+        assert mana_after_partial_use == mana_max - 3
+        assert creature.getMana() == 0
+
+        return True, json.dumps(
+            {
+                "mana_max": mana_max,
+                "mana_after_partial_use": mana_after_partial_use,
+                "mana_after_overdraw": creature.getMana(),
             },
             sort_keys=True,
         )
@@ -1775,6 +1817,10 @@ class GameTest(unittest.TestCase):
         self.assertIsNone(effect.getCaster())
         self.assertIsNone(effect.getVictim())
         effect.onEffect()
+
+        creature = g.createObject("CCreature")
+        creature.baseStats = stats
+        self.assertEqual(creature.baseStats.getStringProperty("mainStat"), "agility")
 
         item = g.createObject("CItem")
         item.power = 2
