@@ -51,6 +51,8 @@ private:
   std::weak_ptr<CInteraction> selected;
   std::weak_ptr<CItem> selectedItem;
   std::weak_ptr<CInteraction> finalSelected;
+  bool mouseEvent(std::shared_ptr<CGui> sharedPtr, SDL_EventType type,
+                  int button, int x, int y) override;
 
 public:
   CListView::collection_pointer
