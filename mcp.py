@@ -1405,20 +1405,22 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def configure_logging(level_name: str, trace_messages: bool = False) -> None:
+def configure_logging(level_name: str, log_sink: str = "stderr", trace_messages: bool = False) -> None:
     level = getattr(logging, level_name.upper(), logging.INFO)
     if trace_messages and level > logging.DEBUG:
         level = logging.DEBUG
+    stream = sys.stdout if log_sink == "stdout" else sys.stderr
     logging.basicConfig(
         level=level,
-        stream=sys.stderr,
+        stream=stream,
         format="%(asctime)s %(levelname)s %(name)s %(message)s",
     )
 
 
 def main() -> int:
     args = parse_args()
-    configure_logging(args.log_level, trace_messages=args.trace_messages)
+    python_log_sink = "stderr" if args.stdio else "stdout"
+    configure_logging(args.log_level, log_sink=python_log_sink, trace_messages=args.trace_messages)
     repo_root = Path(args.repo_root).resolve() if args.repo_root else Path(__file__).resolve().parent
     build_dir_arg = Path(args.build_dir)
     build_dir = build_dir_arg.resolve() if build_dir_arg.is_absolute() else (repo_root / build_dir_arg).resolve()
