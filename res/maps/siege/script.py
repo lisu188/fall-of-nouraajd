@@ -25,15 +25,18 @@ def load(self, context):
                     self.getMap().addObjectByName("siegePritz", self.getCoords())
 
         def onEnter(self, event):
-            if event.getCause().isPlayer():
-                if self.getMap().getPlayer().hasItem(lambda it: it.hasTag(CTag.WAND)):
-                    if self.getMap().getGame().getGuiHandler().showQuestion("Do You want to seal the gate?"):
-                        self.getMap().getPlayer().removeQuestItem(lambda it: it.hasTag(CTag.WAND))
-                        self.setBoolProperty("destroyed", True)
-                        self.setStringProperty("animation", "images/misc/closed_door")
-                        self.setBoolProperty("canStep", False)
-                else:
-                    self.getMap().getGame().getGuiHandler().showInfo("You need a wand to seal the gate!")
+            if not event.getCause().isPlayer():
+                return
+            if not self.getBoolProperty("enabled") or self.getBoolProperty("destroyed"):
+                return
+            if self.getMap().getPlayer().hasItem(lambda it: it.hasTag(CTag.WAND)):
+                if self.getMap().getGame().getGuiHandler().showQuestion("Do You want to seal the gate?"):
+                    self.getMap().getPlayer().removeQuestItem(lambda it: it.hasTag(CTag.WAND))
+                    self.setBoolProperty("destroyed", True)
+                    self.setStringProperty("animation", "images/misc/closed_door")
+                    self.setBoolProperty("canStep", False)
+            else:
+                self.getMap().getGame().getGuiHandler().showInfo("You need a wand to seal the gate!")
 
     @trigger(context, "onTurn", "triggerAnchor")
     class TurnTrigger(CTrigger):

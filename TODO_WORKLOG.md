@@ -99,3 +99,18 @@
   - static verification that `Market.onEnter()` now opens the configured market and that `MarketTrigger` is gone from Nouraajd
   - `python3 test.py` -> `Ran 41 tests in 106.832s`, `OK`
 - Blockers if unresolved: None so far.
+
+## Batch 9
+- Location: `res/maps/siege/script.py`
+- Original TODO or summary: Siege spawn points still prompted the player to seal the gate, or warned about needing a wand, even when the gate had never opened or had already been sealed.
+- Status: fixed
+- What was changed: Guarded `SpawnPoint.onEnter()` so it only prompts or warns when the gate is currently `enabled` and not `destroyed`, leaving dormant and already-sealed spawn points silent.
+- Why the change is correct: `onCreate()` initializes every spawn point as `enabled = False` and `destroyed = False`, and the turn trigger is the only place that flips a gate open by setting `enabled = True` and swapping to the open-door animation. The old `onEnter()` path ignored both flags, so it advertised sealing on the wrong states. The new guard matches the actual open-gate lifecycle without changing spawn timing or seal behavior.
+- Validation performed:
+  - focused scripted repro before the fix: monkeypatched `CGuiHandler.showQuestion`, loaded `siege`, set `spawnPoint1` to `enabled = True` and `destroyed = True`, invoked `spawn.onEnter(...)`, and still captured `Do You want to seal the gate?`
+  - focused scripted repro after the fix: unopened and destroyed spawn points stayed silent, while an opened gate still emitted the seal prompt and the missing-wand info path still emitted its warning
+  - `cmake --build cmake-build-release --target _game for_unit_tests -j$(nproc)` -> `[100%] Built target _game`, `[100%] Built target for_unit_tests`
+  - `ctest --test-dir cmake-build-release --output-on-failure -R for_unit_tests` -> `1/1 Test #1: for_unit_tests ... Passed`
+  - `python3 test.py` -> emitted progress dots and wrote updated `test/*.json` artifacts through the map walkthrough tests, but never reached a final unittest summary; after remaining CPU-bound for several more minutes it was terminated manually, and the shell reported exit code `137`
+  - static source verification of `res/maps/siege/config.json` and `res/maps/siege/map.json` to confirm `SpawnPoint` has no extra config gating and is wired directly from the siege map object layer
+- Blockers if unresolved: Full Python-suite validation is currently blocked in this environment because `python3 test.py` did not finish on this run.

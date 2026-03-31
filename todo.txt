@@ -29,5 +29,4 @@
 //TODO: implement property change listeners to enable AOP
 //TODO: add stacks of object (wand etc) same as grouping but in the left corner
 //TODO: siege
-    //TODO: info about opening the gate is showing even after all gates were opened and sealed
     //TODO: when changing canStep of gate creatures can get in but cant get out
