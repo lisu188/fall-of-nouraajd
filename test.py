@@ -99,6 +99,8 @@ def advance(g, turns):
 MAPS_DIR = REPO_ROOT / "res/maps"
 DEFAULT_PLAYER = "Warrior"
 NOURAAJD_VICTOR_TIMEOUT = 75
+TILED_FLIP_FLAG_MASK = 0xF0000000
+SUPPORTED_TILED_LAYER_TYPES = {"tilelayer", "objectgroup"}
 
 
 def discover_maps():
@@ -172,6 +174,769 @@ def load_object_configs(map_name=None):
     if map_name is not None:
         configs.update(json.loads((MAPS_DIR / map_name / "config.json").read_text()))
     return configs
+
+
+def map_validation_issue(
+    path,
+    category,
+    message,
+    *,
+    field=None,
+    layer_name=None,
+    layer_index=None,
+    object_name=None,
+    object_id=None,
+):
+    issue = {
+        "category": category,
+        "message": message,
+        "path": str(path.relative_to(REPO_ROOT)),
+    }
+    if field is not None:
+        issue["field"] = field
+    if layer_index is not None:
+        issue["layer_index"] = layer_index
+    if layer_name is not None:
+        issue["layer_name"] = layer_name
+    if object_id is not None:
+        issue["object_id"] = object_id
+    if object_name is not None:
+        issue["object_name"] = object_name
+    return issue
+
+
+def is_integral_json_number(value):
+    if isinstance(value, bool):
+        return False
+    if isinstance(value, int):
+        return True
+    if isinstance(value, float):
+        return value.is_integer()
+    return False
+
+
+def parse_engine_int_string(value):
+    if not isinstance(value, str):
+        return None
+    try:
+        return int(value)
+    except ValueError:
+        return None
+
+
+def is_loader_bool(value):
+    if isinstance(value, bool):
+        return True
+    if isinstance(value, int) and not isinstance(value, bool):
+        return True
+    if isinstance(value, str):
+        return value in {"true", "false", "1", "0"}
+    return False
+
+
+def get_legacy_properties(owner, path, issues, *, scope, required=False, **location):
+    if "properties" not in owner:
+        if required:
+            issues.append(
+                map_validation_issue(
+                    path,
+                    "loader_assumption",
+                    f"{scope} must define a legacy object-style 'properties' map because CMapLoader indexes it directly.",
+                    field="properties",
+                    **location,
+                )
+            )
+        return {}
+
+    properties = owner["properties"]
+    if isinstance(properties, dict):
+        return properties
+
+    if isinstance(properties, list):
+        issues.append(
+            map_validation_issue(
+                path,
+                "loader_assumption",
+                f"{scope} uses Tiled's typed property array, but CMapLoader expects a legacy object-style 'properties' map.",
+                field="properties",
+                **location,
+            )
+        )
+        return None
+
+    issues.append(
+        map_validation_issue(
+            path,
+            "tiled_semantics",
+            f"{scope} has a non-object 'properties' value.",
+            field="properties",
+            **location,
+        )
+    )
+    return None
+
+
+def require_engine_int_string(properties, key, path, issues, *, scope, **location):
+    if key not in properties:
+        issues.append(
+            map_validation_issue(
+                path,
+                "loader_assumption",
+                f"{scope} is missing required '{key}' property.",
+                field=key,
+                **location,
+            )
+        )
+        return None
+
+    value = properties[key]
+    parsed = parse_engine_int_string(value)
+    if parsed is None:
+        issues.append(
+            map_validation_issue(
+                path,
+                "loader_assumption",
+                f"{scope} property '{key}' must remain a string parseable as int because CMapLoader reads it with get<std::string>().",
+                field=key,
+                **location,
+            )
+        )
+    return parsed
+
+
+def validate_tiled_object(obj, path, issues, warnings, *, layer, layer_index, tile_width, tile_height):
+    object_name = obj.get("name")
+    object_id = obj.get("id")
+    prefix = f"object {object_name or '<unnamed>'}"
+
+    for field in ("name", "type"):
+        if not isinstance(obj.get(field), str):
+            issues.append(
+                map_validation_issue(
+                    path,
+                    "loader_assumption",
+                    f"{prefix} must provide string '{field}' because handleObjectLayer() reads it directly.",
+                    field=field,
+                    layer_name=layer.get("name"),
+                    layer_index=layer_index,
+                    object_name=object_name,
+                    object_id=object_id,
+                )
+            )
+
+    numeric_fields = {}
+    for field in ("x", "y", "width", "height"):
+        value = obj.get(field)
+        if not is_integral_json_number(value):
+            issues.append(
+                map_validation_issue(
+                    path,
+                    "loader_assumption",
+                    f"{prefix} field '{field}' must be an integer-valued JSON number because handleObjectLayer() reads it as int.",
+                    field=field,
+                    layer_name=layer.get("name"),
+                    layer_index=layer_index,
+                    object_name=object_name,
+                    object_id=object_id,
+                )
+            )
+            continue
+        numeric_fields[field] = int(value)
+
+    width = numeric_fields.get("width")
+    height = numeric_fields.get("height")
+    x_pos = numeric_fields.get("x")
+    y_pos = numeric_fields.get("y")
+    if width is not None and width <= 0:
+        issues.append(
+            map_validation_issue(
+                path,
+                "loader_assumption",
+                f"{prefix} width must be greater than zero because handleObjectLayer() divides x by width.",
+                field="width",
+                layer_name=layer.get("name"),
+                layer_index=layer_index,
+                object_name=object_name,
+                object_id=object_id,
+            )
+        )
+    if height is not None and height <= 0:
+        issues.append(
+            map_validation_issue(
+                path,
+                "loader_assumption",
+                f"{prefix} height must be greater than zero because handleObjectLayer() divides y by height.",
+                field="height",
+                layer_name=layer.get("name"),
+                layer_index=layer_index,
+                object_name=object_name,
+                object_id=object_id,
+            )
+        )
+
+    if width and tile_width and width != tile_width:
+        issues.append(
+            map_validation_issue(
+                path,
+                "loader_assumption",
+                f"{prefix} width must match map tilewidth ({tile_width}) because the engine maps object pixels to tile coords via width.",
+                field="width",
+                layer_name=layer.get("name"),
+                layer_index=layer_index,
+                object_name=object_name,
+                object_id=object_id,
+            )
+        )
+    if height and tile_height and height != tile_height:
+        issues.append(
+            map_validation_issue(
+                path,
+                "loader_assumption",
+                f"{prefix} height must match map tileheight ({tile_height}) because the engine maps object pixels to tile coords via height.",
+                field="height",
+                layer_name=layer.get("name"),
+                layer_index=layer_index,
+                object_name=object_name,
+                object_id=object_id,
+            )
+        )
+
+    if width and height and x_pos is not None and y_pos is not None:
+        if x_pos % width or y_pos % height:
+            warnings.append(
+                map_validation_issue(
+                    path,
+                    "warning",
+                    f"{prefix} is placed at pixel coords ({x_pos}, {y_pos}) that do not align to whole width/height steps; the loader will truncate with integer division.",
+                    field="x/y",
+                    layer_name=layer.get("name"),
+                    layer_index=layer_index,
+                    object_name=object_name,
+                    object_id=object_id,
+                )
+            )
+
+    if obj.get("rotation", 0) not in (0, 0.0):
+        issues.append(
+            map_validation_issue(
+                path,
+                "loader_assumption",
+                f"{prefix} uses rotation, but the engine ignores object rotation when loading map objects.",
+                field="rotation",
+                layer_name=layer.get("name"),
+                layer_index=layer_index,
+                object_name=object_name,
+                object_id=object_id,
+            )
+        )
+
+    unsupported_fields = {
+        "gid": "tile objects use TMX/Tiled tile-object semantics that handleObjectLayer() does not resolve.",
+        "template": "template instances are valid Tiled data, but the engine does not resolve external object templates.",
+        "ellipse": "ellipse objects are not supported because handleObjectLayer() assumes rectangle dimensions.",
+        "point": "point objects are not supported because handleObjectLayer() divides by width/height.",
+        "polygon": "polygon objects are not supported because handleObjectLayer() only consumes rectangle bounds.",
+        "polyline": "polyline objects are not supported because handleObjectLayer() only consumes rectangle bounds.",
+        "text": "text objects are not supported because handleObjectLayer() only instantiates map objects by type.",
+        "capsule": "capsule objects are not supported because handleObjectLayer() only consumes rectangle bounds.",
+    }
+    for field, reason in unsupported_fields.items():
+        if field in obj:
+            issues.append(
+                map_validation_issue(
+                    path,
+                    "loader_assumption",
+                    f"{prefix} uses '{field}', but {reason}",
+                    field=field,
+                    layer_name=layer.get("name"),
+                    layer_index=layer_index,
+                    object_name=object_name,
+                    object_id=object_id,
+                )
+            )
+
+    properties = get_legacy_properties(
+        obj,
+        path,
+        issues,
+        scope=prefix,
+        required=False,
+        layer_name=layer.get("name"),
+        layer_index=layer_index,
+        object_name=object_name,
+        object_id=object_id,
+    )
+    if properties is None:
+        return
+
+
+def validate_tiled_layer(
+    layer, path, issues, warnings, *, layer_index, map_width, map_height, tile_width, tile_height, tileproperties
+):
+    layer_name = layer.get("name")
+    layer_type = layer.get("type")
+    prefix = f"layer {layer_name or layer_index}"
+
+    if not isinstance(layer_type, str):
+        issues.append(
+            map_validation_issue(
+                path,
+                "tiled_semantics",
+                f"{prefix} must define string field 'type'.",
+                field="type",
+                layer_name=layer_name,
+                layer_index=layer_index,
+            )
+        )
+        return
+
+    if layer_type not in SUPPORTED_TILED_LAYER_TYPES:
+        issues.append(
+            map_validation_issue(
+                path,
+                "loader_assumption",
+                f"{prefix} uses unsupported layer type '{layer_type}'. The engine only handles tilelayer and objectgroup.",
+                field="type",
+                layer_name=layer_name,
+                layer_index=layer_index,
+            )
+        )
+        return
+
+    for field in ("x", "y"):
+        if layer.get(field, 0) not in (0, 0.0):
+            issues.append(
+                map_validation_issue(
+                    path,
+                    "loader_assumption",
+                    f"{prefix} has non-zero {field} offset, but CMapLoader ignores layer offsets.",
+                    field=field,
+                    layer_name=layer_name,
+                    layer_index=layer_index,
+                )
+            )
+
+    properties = get_legacy_properties(
+        layer,
+        path,
+        issues,
+        scope=prefix,
+        required=True,
+        layer_name=layer_name,
+        layer_index=layer_index,
+    )
+    if properties is None:
+        return
+
+    require_engine_int_string(
+        properties,
+        "level",
+        path,
+        issues,
+        scope=prefix,
+        layer_name=layer_name,
+        layer_index=layer_index,
+    )
+
+    if layer_type == "tilelayer":
+        if "default" not in properties or not isinstance(properties.get("default"), str):
+            issues.append(
+                map_validation_issue(
+                    path,
+                    "loader_assumption",
+                    f"{prefix} must define string property 'default' because CMapLoader uses it as the fallback tile id.",
+                    field="default",
+                    layer_name=layer_name,
+                    layer_index=layer_index,
+                )
+            )
+
+        for key in ("xBound", "yBound"):
+            require_engine_int_string(
+                properties,
+                key,
+                path,
+                issues,
+                scope=prefix,
+                layer_name=layer_name,
+                layer_index=layer_index,
+            )
+
+        for key in ("wrapX", "wrapY"):
+            if key in properties and not is_loader_bool(properties[key]):
+                issues.append(
+                    map_validation_issue(
+                        path,
+                        "loader_assumption",
+                        f"{prefix} property '{key}' must be bool, integer, or 'true'/'false'/'1'/'0' because read_bool_property() only supports those forms.",
+                        field=key,
+                        layer_name=layer_name,
+                        layer_index=layer_index,
+                    )
+                )
+
+        if "chunks" in layer or layer.get("infinite") is True:
+            issues.append(
+                map_validation_issue(
+                    path,
+                    "loader_assumption",
+                    f"{prefix} uses chunked or infinite tile data, but handleTileLayer() only reads flat layer['data'].",
+                    field="chunks",
+                    layer_name=layer_name,
+                    layer_index=layer_index,
+                )
+            )
+
+        if "encoding" in layer or "compression" in layer:
+            issues.append(
+                map_validation_issue(
+                    path,
+                    "loader_assumption",
+                    f"{prefix} uses encoded or compressed tile data, but handleTileLayer() expects a raw integer array.",
+                    field="data",
+                    layer_name=layer_name,
+                    layer_index=layer_index,
+                )
+            )
+
+        width = layer.get("width")
+        height = layer.get("height")
+        if not is_integral_json_number(width) or int(width) <= 0:
+            issues.append(
+                map_validation_issue(
+                    path,
+                    "tiled_semantics",
+                    f"{prefix} must define positive integer 'width'.",
+                    field="width",
+                    layer_name=layer_name,
+                    layer_index=layer_index,
+                )
+            )
+            width = None
+        else:
+            width = int(width)
+        if not is_integral_json_number(height) or int(height) <= 0:
+            issues.append(
+                map_validation_issue(
+                    path,
+                    "tiled_semantics",
+                    f"{prefix} must define positive integer 'height'.",
+                    field="height",
+                    layer_name=layer_name,
+                    layer_index=layer_index,
+                )
+            )
+            height = None
+        else:
+            height = int(height)
+
+        if width is not None and height is not None and (width != map_width or height != map_height):
+            issues.append(
+                map_validation_issue(
+                    path,
+                    "tiled_semantics",
+                    f"{prefix} has dimensions {width}x{height}, but fixed-size Tiled tile layers should match the map dimensions {map_width}x{map_height}.",
+                    field="width",
+                    layer_name=layer_name,
+                    layer_index=layer_index,
+                )
+            )
+
+        data = layer.get("data")
+        if not isinstance(data, list):
+            issues.append(
+                map_validation_issue(
+                    path,
+                    "loader_assumption",
+                    f"{prefix} must use a raw integer 'data' array because handleTileLayer() indexes layer['data'] directly.",
+                    field="data",
+                    layer_name=layer_name,
+                    layer_index=layer_index,
+                )
+            )
+            return
+
+        if width is not None and height is not None and len(data) != width * height:
+            issues.append(
+                map_validation_issue(
+                    path,
+                    "tiled_semantics",
+                    f"{prefix} data length {len(data)} does not match width * height ({width * height}) for a finite tile layer.",
+                    field="data",
+                    layer_name=layer_name,
+                    layer_index=layer_index,
+                )
+            )
+
+        if width is not None and height is not None and width != height:
+            issues.append(
+                map_validation_issue(
+                    path,
+                    "loader_assumption",
+                    f"{prefix} is rectangular ({width}x{height}), but the current handleTileLayer() implementation swaps width and height and is only safe for square layers.",
+                    field="width",
+                    layer_name=layer_name,
+                    layer_index=layer_index,
+                )
+            )
+
+        for cell_index, gid in enumerate(data):
+            if not is_integral_json_number(gid) or int(gid) < 0:
+                issues.append(
+                    map_validation_issue(
+                        path,
+                        "loader_assumption",
+                        f"{prefix} data[{cell_index}] must be a non-negative integer GID.",
+                        field="data",
+                        layer_name=layer_name,
+                        layer_index=layer_index,
+                    )
+                )
+                continue
+
+            gid = int(gid)
+            if gid == 0:
+                continue
+            if gid & TILED_FLIP_FLAG_MASK:
+                issues.append(
+                    map_validation_issue(
+                        path,
+                        "loader_assumption",
+                        f"{prefix} data[{cell_index}] uses flipped/rotated global tile ID flags, but handleTileLayer() never clears Tiled flip bits.",
+                        field="data",
+                        layer_name=layer_name,
+                        layer_index=layer_index,
+                    )
+                )
+                continue
+
+            tile = tileproperties.get(str(gid - 1))
+            if not isinstance(tile, dict) or not isinstance(tile.get("type"), str):
+                issues.append(
+                    map_validation_issue(
+                        path,
+                        "loader_assumption",
+                        f"{prefix} data[{cell_index}] resolves to local tile id {gid - 1}, but tilesets[0].tileproperties[{gid - 1!r}].type is missing.",
+                        field="tilesets[0].tileproperties",
+                        layer_name=layer_name,
+                        layer_index=layer_index,
+                    )
+                )
+
+        return
+
+    objects = layer.get("objects")
+    if not isinstance(objects, list):
+        issues.append(
+            map_validation_issue(
+                path,
+                "loader_assumption",
+                f"{prefix} must define an 'objects' array because handleObjectLayer() iterates layer['objects'].",
+                field="objects",
+                layer_name=layer_name,
+                layer_index=layer_index,
+            )
+        )
+        return
+
+    for obj in objects:
+        if not isinstance(obj, dict):
+            issues.append(
+                map_validation_issue(
+                    path,
+                    "tiled_semantics",
+                    f"{prefix} contains a non-object entry in 'objects'.",
+                    field="objects",
+                    layer_name=layer_name,
+                    layer_index=layer_index,
+                )
+            )
+            continue
+        validate_tiled_object(
+            obj,
+            path,
+            issues,
+            warnings,
+            layer=layer,
+            layer_index=layer_index,
+            tile_width=tile_width,
+            tile_height=tile_height,
+        )
+
+
+def validate_map_json_tiled_compatibility(path):
+    issues = []
+    warnings = []
+
+    try:
+        data = json.loads(path.read_text())
+    except json.JSONDecodeError as exc:
+        issues.append(
+            map_validation_issue(
+                path,
+                "invalid_json",
+                f"Invalid JSON: {exc.msg} at line {exc.lineno}, column {exc.colno}.",
+            )
+        )
+        return issues, warnings
+
+    if not isinstance(data, dict):
+        issues.append(map_validation_issue(path, "tiled_semantics", "Root document must be a JSON object."))
+        return issues, warnings
+
+    if data.get("type") != "map":
+        issues.append(
+            map_validation_issue(
+                path,
+                "tiled_semantics",
+                "Root field 'type' must be 'map' for Tiled/TMX-compatible map data.",
+                field="type",
+            )
+        )
+
+    if data.get("orientation") not in (None, "orthogonal"):
+        issues.append(
+            map_validation_issue(
+                path,
+                "loader_assumption",
+                "Only orthogonal maps are supported by the current loader assumptions.",
+                field="orientation",
+            )
+        )
+
+    if data.get("infinite") is True:
+        issues.append(
+            map_validation_issue(
+                path,
+                "loader_assumption",
+                "Infinite maps are valid Tiled data, but the current loader does not support chunked layers.",
+                field="infinite",
+            )
+        )
+
+    for field in ("width", "height", "tilewidth", "tileheight"):
+        value = data.get(field)
+        if not is_integral_json_number(value) or int(value) <= 0:
+            issues.append(
+                map_validation_issue(
+                    path,
+                    "tiled_semantics",
+                    f"Root field '{field}' must be a positive integer.",
+                    field=field,
+                )
+            )
+
+    map_width = int(data.get("width", 0)) if is_integral_json_number(data.get("width")) else None
+    map_height = int(data.get("height", 0)) if is_integral_json_number(data.get("height")) else None
+    tile_width = int(data.get("tilewidth", 0)) if is_integral_json_number(data.get("tilewidth")) else None
+    tile_height = int(data.get("tileheight", 0)) if is_integral_json_number(data.get("tileheight")) else None
+
+    properties = get_legacy_properties(data, path, issues, scope="map", required=True)
+    if properties is not None:
+        for key in ("x", "y", "z"):
+            require_engine_int_string(properties, key, path, issues, scope="map")
+
+    layers = data.get("layers")
+    if not isinstance(layers, list):
+        issues.append(
+            map_validation_issue(
+                path,
+                "tiled_semantics",
+                "Root field 'layers' must be an array.",
+                field="layers",
+            )
+        )
+        return issues, warnings
+
+    tilesets = data.get("tilesets")
+    if not isinstance(tilesets, list) or not tilesets:
+        issues.append(
+            map_validation_issue(
+                path,
+                "loader_assumption",
+                "The current loader requires one embedded tileset at tilesets[0].",
+                field="tilesets",
+            )
+        )
+        return issues, warnings
+
+    if len(tilesets) != 1:
+        issues.append(
+            map_validation_issue(
+                path,
+                "loader_assumption",
+                f"The current loader only consumes tilesets[0], so maps must not define multiple tilesets (found {len(tilesets)}).",
+                field="tilesets",
+            )
+        )
+
+    first_tileset = tilesets[0]
+    if not isinstance(first_tileset, dict):
+        issues.append(
+            map_validation_issue(
+                path,
+                "tiled_semantics",
+                "tilesets[0] must be an object.",
+                field="tilesets[0]",
+            )
+        )
+        return issues, warnings
+
+    if first_tileset.get("source"):
+        issues.append(
+            map_validation_issue(
+                path,
+                "loader_assumption",
+                "External TSX/JSON tilesets are not supported because CMapLoader only reads embedded tilesets[0].tileproperties.",
+                field="tilesets[0].source",
+            )
+        )
+
+    if first_tileset.get("firstgid") != 1:
+        issues.append(
+            map_validation_issue(
+                path,
+                "loader_assumption",
+                "The loader assumes the first tileset starts at gid 1 and never remaps by firstgid.",
+                field="tilesets[0].firstgid",
+            )
+        )
+
+    tileproperties = first_tileset.get("tileproperties")
+    if not isinstance(tileproperties, dict):
+        message = (
+            "The loader requires legacy tilesets[0].tileproperties. Modern Tiled exports store per-tile metadata in "
+            "tilesets[0].tiles[]."
+        )
+        issues.append(map_validation_issue(path, "loader_assumption", message, field="tilesets[0].tileproperties"))
+        tileproperties = {}
+
+    for layer_index, layer in enumerate(layers):
+        if not isinstance(layer, dict):
+            issues.append(
+                map_validation_issue(
+                    path,
+                    "tiled_semantics",
+                    "Each layer entry must be an object.",
+                    field="layers",
+                    layer_index=layer_index,
+                )
+            )
+            continue
+        validate_tiled_layer(
+            layer,
+            path,
+            issues,
+            warnings,
+            layer_index=layer_index,
+            map_width=map_width,
+            map_height=map_height,
+            tile_width=tile_width,
+            tile_height=tile_height,
+            tileproperties=tileproperties,
+        )
+
+    return issues, warnings
 
 
 def resolve_object_class(configs, type_name):
@@ -1611,6 +2376,39 @@ class GameTest(unittest.TestCase):
             except Exception:
                 errors.append(str(path))
         return errors == [], json.dumps(errors)
+
+    @game_test
+    def test_map_json_tiled_compatibility(self):
+        issues_by_file = {}
+        warnings_by_file = {}
+        for path in sorted(MAPS_DIR.glob("*/map.json")):
+            issues, warnings = validate_map_json_tiled_compatibility(path)
+            if issues:
+                issues_by_file[str(path.relative_to(REPO_ROOT))] = issues
+            if warnings:
+                warnings_by_file[str(path.relative_to(REPO_ROOT))] = warnings
+
+        issue_counts = {
+            "invalid_json": sum(
+                1 for issues in issues_by_file.values() for issue in issues if issue["category"] == "invalid_json"
+            ),
+            "tiled_semantics": sum(
+                1 for issues in issues_by_file.values() for issue in issues if issue["category"] == "tiled_semantics"
+            ),
+            "loader_assumption": sum(
+                1 for issues in issues_by_file.values() for issue in issues if issue["category"] == "loader_assumption"
+            ),
+            "warning": sum(
+                1 for warnings in warnings_by_file.values() for warning in warnings if warning["category"] == "warning"
+            ),
+        }
+        log = {
+            "checked_files": [str(path.relative_to(REPO_ROOT)) for path in sorted(MAPS_DIR.glob("*/map.json"))],
+            "issue_counts": issue_counts,
+            "issues_by_file": issues_by_file,
+            "warnings_by_file": warnings_by_file,
+        }
+        return issues_by_file == {}, json.dumps(log, indent=2, sort_keys=True)
 
     @game_test
     def test_plugin_load_function(self):
