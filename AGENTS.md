@@ -1,5 +1,7 @@
 # Repository Guidelines
 
+The repository default branch is `main`.
+
 ## Testing
 Running tests is **mandatory** for every code change made by agents.
 Always run tests from the repository root:
