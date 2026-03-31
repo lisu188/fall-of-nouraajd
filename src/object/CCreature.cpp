@@ -259,7 +259,7 @@ void CCreature::addManaProc(float i) {
 
 void CCreature::takeMana(int i) {
     vstd::fail_if(i < 0, "Tried to take negative mana value!");
-    mana -= i;
+    mana = std::max(0, mana - i);
 }
 
 bool CCreature::isPlayer() {
@@ -516,10 +516,11 @@ void CCreature::removeEffect(std::shared_ptr<CEffect> effect) {
 
 void CCreature::useItem(std::shared_ptr<CItem> item) {
     vstd::fail_if(!vstd::ctn(items, item), "Tried to use item not in inventory!");
-    const bool is_heal_potion = item->hasTag(CTag::Heal);
-    const bool is_mana_potion = item->hasTag(CTag::Mana);
-    if ((is_heal_potion && getHp() >= getHpMax()) ||
-        (is_mana_potion && getMana() >= getManaMax())) {
+    const bool restores_hp = item->hasTag(CTag::Heal);
+    const bool restores_mana = item->hasTag(CTag::Mana);
+    const bool can_restore_hp = restores_hp && getHp() < getHpMax();
+    const bool can_restore_mana = restores_mana && getMana() < getManaMax();
+    if ((restores_hp || restores_mana) && !can_restore_hp && !can_restore_mana) {
         return;
     }
     getMap()->getEventHandler()->gameEvent(item,

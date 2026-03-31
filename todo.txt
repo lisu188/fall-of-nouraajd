@@ -1,4 +1,3 @@
-//TODO: maybe implement custom setattr and getattr for properties
 //TODO: add mechanism to ensure registering every V_META in CTypes.cpp
 //TODO: weird fight bug after fight, player didnt return to position
 //TODO: drag & drop
@@ -6,8 +5,7 @@
 //TODO: registering singletons in context
 //TODO: initiative
 //TODO: when lost fight in cave, panel pops out after return to position
-//TODO: fight panel
-    //TODO: cant quit game when in fight (hang in wait until)
+//TODO: cant quit game when in fight (hang in wait until)
 //TODO: encapsulate SDL_RenderCopy
 //TODO: implement move cost
     //TODO: implement move points
@@ -15,21 +13,21 @@
 //TODO: what if we return to oldMap after switch?
 //TODO: make function to compare objects
 //TODO: load assets from map
-//TODO: minus mana bug
-//TODO: make tags enum
+//TODO: add regression coverage for quest-item selection guards
+    //TODO: inventory panel
+    //TODO: fight panel
 //TODO: replace buff with selfTarget
-//TODO: pathfinder
-    //TODO: multilevel maps
-//TODO: customize out of bound tiles and default tiles
-//TODO: toroidal maps
+//TODO: extend pathfinder to multilevel maps
+//TODO: customize out of bound tiles
+//TODO: add new toroidal map
 //TODO: separate class from race
 //TODO: use items on right click, when unified selection, do global reset of selections on right click
 //TODO: mark primitve CGameObjects like CList and CMapString, CScript as primitive and unfold values field directly to properties
     generally items with one property, would require not counting props from CGameObject and getting field type from meta class
     because its not accesible in CSerialization
+//TODO: add regression coverage for inventory/equipped selection reset
 //TODO: implement property change listeners to enable AOP
 //TODO: add stacks of object (wand etc) same as grouping but in the left corner
 //TODO: siege
-    //TODO: all wands are taken when sealing one gate
     //TODO: info about opening the gate is showing even after all gates were opened and sealed
     //TODO: when changing canStep of gate creatures can get in but cant get out
