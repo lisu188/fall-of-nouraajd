@@ -169,8 +169,10 @@ configure_file(res/images/items/boots/eradicatorsboots.png images/items/boots/er
 
 configure_file(res/images/items/potions/bless.png images/items/potions/bless.png COPYONLY)
 configure_file(res/images/items/potions/poison.png images/items/potions/poison.png COPYONLY)
+configure_file(res/images/items/potions/dark_beer.png images/items/potions/dark_beer.png COPYONLY)
 configure_file(res/images/items/potions/life.png images/items/potions/life.png COPYONLY)
 configure_file(res/images/items/potions/mana.png images/items/potions/mana.png COPYONLY)
+configure_file(res/images/items/potions/spiced_beer.png images/items/potions/spiced_beer.png COPYONLY)
 configure_file(res/images/items/scroll.png images/items/scroll.png COPYONLY)
 
 configure_file(res/images/items/armors/leatherarmor.png images/items/armors/leatherarmor.png COPYONLY)
