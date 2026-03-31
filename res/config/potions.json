@@ -2,7 +2,7 @@
   "DarkBeer": {
     "class": "LifePotion",
     "properties": {
-      "animation": "images/items/potions/life",
+      "animation": "images/items/potions/dark_beer",
       "label": "Dark Beer",
       "description": "A soot-dark tavern ale that steadies nerves and dulls the ache of long marches.",
       "power": 1,
@@ -119,7 +119,7 @@
   "SpicedBeer": {
     "class": "ManaPotion",
     "properties": {
-      "animation": "images/items/potions/mana",
+      "animation": "images/items/potions/spiced_beer",
       "label": "Spiced Beer",
       "description": "Mulled with bitter roots and ash-pepper, it leaves the mind buzzing and the throat ablaze.",
       "power": 1,
