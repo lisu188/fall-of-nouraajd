@@ -40,7 +40,21 @@ file(GLOB_RECURSE GAME_SRC ${CMAKE_SOURCE_DIR}/src/**.cpp ${CMAKE_SOURCE_DIR}/sr
 
 find_package(Boost COMPONENTS filesystem REQUIRED)
 find_package(Python3 COMPONENTS Interpreter Development REQUIRED)
-find_package(pybind11 CONFIG REQUIRED)
+find_package(pybind11 CONFIG QUIET)
+if (NOT pybind11_FOUND)
+    execute_process(
+        COMMAND ${Python3_EXECUTABLE} -m pybind11 --cmakedir
+        OUTPUT_VARIABLE pybind11_cmake_dir
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+        ERROR_QUIET
+    )
+    if (pybind11_cmake_dir)
+        list(APPEND CMAKE_PREFIX_PATH ${pybind11_cmake_dir})
+        find_package(pybind11 CONFIG REQUIRED)
+    else ()
+        message(FATAL_ERROR "pybind11 was not found. Install pybind11 or set pybind11_DIR.")
+    endif ()
+endif ()
 find_package(SDL2 REQUIRED)
 find_package(SDL2_image REQUIRED)
 find_package(SDL2_ttf REQUIRED)
