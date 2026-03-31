@@ -75,6 +75,19 @@ void CGameFightPanel::itemsCallback(
   refreshViews();
 }
 
+bool CGameFightPanel::itemsRightClickCallback(
+    std::shared_ptr<CGui> gui, int index,
+    std::shared_ptr<CGameObject> _newSelection) {
+  auto newSelection = vstd::cast<CItem>(_newSelection);
+  if (!newSelection || newSelection->hasTag(CTag::Quest)) {
+    return false;
+  }
+  gui->getGame()->getMap()->getPlayer()->useItem(newSelection);
+  selectedItem.reset();
+  refreshViews();
+  return true;
+}
+
 bool CGameFightPanel::itemsSelect(std::shared_ptr<CGui> gui, int index,
                                   std::shared_ptr<CGameObject> object) {
   return object && !object->hasTag(CTag::Quest) && selectedItem.lock() &&

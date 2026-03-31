@@ -26,6 +26,8 @@ class CGameInventoryPanel : public CGamePanel {
                   CListView::collection_pointer, std::shared_ptr<CGui>),
          V_METHOD(CGameInventoryPanel, inventoryCallback, void,
                   std::shared_ptr<CGui>, int, std::shared_ptr<CGameObject>),
+         V_METHOD(CGameInventoryPanel, inventoryRightClickCallback, bool,
+                  std::shared_ptr<CGui>, int, std::shared_ptr<CGameObject>),
          V_METHOD(CGameInventoryPanel, inventorySelect, bool,
                   std::shared_ptr<CGui>, int, std::shared_ptr<CGameObject>),
          V_METHOD(CGameInventoryPanel, equippedCollection,
@@ -42,6 +44,9 @@ public:
 
   void inventoryCallback(std::shared_ptr<CGui> gui, int index,
                          std::shared_ptr<CGameObject> _newSelection);
+
+  bool inventoryRightClickCallback(std::shared_ptr<CGui> gui, int index,
+                                   std::shared_ptr<CGameObject> _newSelection);
 
   bool inventorySelect(std::shared_ptr<CGui> gui, int index,
                        std::shared_ptr<CGameObject> object);

@@ -31,19 +31,19 @@ void CListView::renderObject(std::shared_ptr<CGui> gui,
 
 bool CListView::mouseEvent(std::shared_ptr<CGui> gui, SDL_EventType type,
                            int button, int x, int y) {
-  if (type == SDL_MOUSEBUTTONDOWN && button == SDL_BUTTON_RIGHT) {
-    return false;
+  if (type != SDL_MOUSEBUTTONDOWN ||
+      (button != SDL_BUTTON_LEFT && button != SDL_BUTTON_RIGHT)) {
+    return true;
   }
-  if (type == SDL_MOUSEBUTTONDOWN &&
-      button == SDL_BUTTON_LEFT) { // TODO: separate to objects
-    int xIndex = x / tileSize;
-    int yIndex = y / tileSize;
-    if (xIndex < getSizeX(gui) && yIndex < getSizeY(gui)) {
-      int i = (xIndex + (yIndex * getSizeX(gui)));
-      invokeCallback(gui, shiftIndex(gui, i),
-                     calculateIndices(gui).find(shiftIndex(gui, i))->second);
-    }
+  int index = -1;
+  std::shared_ptr<CGameObject> object;
+  if (!tryGetClickedObject(gui, x, y, index, object)) {
+    return button != SDL_BUTTON_RIGHT;
   }
+  if (button == SDL_BUTTON_RIGHT) {
+    return invokeRightClickCallback(gui, index, object);
+  }
+  invokeCallback(gui, index, object);
   return true;
 }
 
@@ -161,6 +161,19 @@ void CListView::invokeCallback(std::shared_ptr<CGui> gui, int i,
           object);
 }
 
+bool CListView::invokeRightClickCallback(std::shared_ptr<CGui> gui, int i,
+                                         std::shared_ptr<CGameObject> object) {
+  if (rightClickCallback.empty()) {
+    return false;
+  }
+  return getParent()
+      ->meta()
+      ->invoke_method<bool, CGameGraphicsObject, std::shared_ptr<CGui>, int,
+                      std::shared_ptr<CGameObject>>(
+          rightClickCallback, vstd::cast<CGameGraphicsObject>(getParent()), gui,
+          i, object);
+}
+
 auto CListView::getArrowCallback(bool left) {
   return [=, this](std::shared_ptr<CGui> gui, SDL_EventType type, int button,
                    int, int) {
@@ -178,6 +191,24 @@ bool CListView::invokeSelect(std::shared_ptr<CGui> gui, int i,
       ->invoke_method<bool, CGameGraphicsObject, std::shared_ptr<CGui>, int,
                       std::shared_ptr<CGameObject>>(
           select, vstd::cast<CGameGraphicsObject>(getParent()), gui, i, object);
+}
+
+bool CListView::tryGetClickedObject(std::shared_ptr<CGui> gui, int x, int y,
+                                    int &index,
+                                    std::shared_ptr<CGameObject> &object) {
+  int xIndex = x / tileSize;
+  int yIndex = y / tileSize;
+  if (xIndex < 0 || yIndex < 0 || xIndex >= getSizeX(gui) ||
+      yIndex >= getSizeY(gui)) {
+    return false;
+  }
+  index = shiftIndex(gui, xIndex + (yIndex * getSizeX(gui)));
+  auto indexedCollection = calculateIndices(gui);
+  if (!vstd::ctn(indexedCollection, index)) {
+    return false;
+  }
+  object = indexedCollection.find(index)->second;
+  return true;
 }
 
 std::list<std::shared_ptr<CGameGraphicsObject>>
@@ -252,8 +283,30 @@ void CListView::addItem(
     std::unordered_multimap<int, std::shared_ptr<CGameObject>>
         indexedCollection,
     int itemIndex) const {
-  std::shared_ptr<CGameGraphicsObject> objectGraphic =
-      indexedCollection.find(itemIndex)->second->getGraphicsObject();
+  auto self = const_cast<CListView *>(this)->ptr<CListView>();
+  auto object = indexedCollection.find(itemIndex)->second;
+  std::shared_ptr<CGameGraphicsObject> objectGraphic = object->getGraphicsObject()
+                                                           ->withCallback(
+                                                               [self, itemIndex, object](
+                                                                   std::shared_ptr<CGui> gui,
+                                                                   SDL_EventType type, int button,
+                                                                   int, int) {
+                                                                 if (type != SDL_MOUSEBUTTONDOWN) {
+                                                                   return false;
+                                                                 }
+                                                                 if (button == SDL_BUTTON_LEFT) {
+                                                                   self->invokeCallback(gui, itemIndex,
+                                                                                        object);
+                                                                   return true;
+                                                                 }
+                                                                 if (button ==
+                                                                     SDL_BUTTON_RIGHT) {
+                                                                   return self
+                                                                       ->invokeRightClickCallback(
+                                                                           gui, itemIndex, object);
+                                                                 }
+                                                                 return false;
+                                                               });
   objectGraphic->setPriority(2);
   return_val.push_back(objectGraphic);
 }
@@ -262,7 +315,9 @@ void CListView::addItemBox(
     const std::shared_ptr<CGui> &gui,
     std::list<std::shared_ptr<CGameGraphicsObject>> &return_val) const {
   std::shared_ptr<CAnimation> itemBox =
-      CAnimationProvider::getAnimation(gui->getGame(), "images/item");
+      CAnimationProvider::getAnimation(gui->getGame(), "images/item")
+          ->withCallback([](std::shared_ptr<CGui>, SDL_EventType, int, int,
+                            int) { return false; });
   itemBox->setPriority(1);
   return_val.push_back(itemBox); // TODO: cache
 }
@@ -277,6 +332,12 @@ std::string CListView::getCallback() { return callback; }
 
 void CListView::setCallback(std::string callback) {
   CListView::callback = callback;
+}
+
+std::string CListView::getRightClickCallback() { return rightClickCallback; }
+
+void CListView::setRightClickCallback(std::string rightClickCallback) {
+  CListView::rightClickCallback = rightClickCallback;
 }
 
 std::string CListView::getSelect() { return select; }
