@@ -40,8 +40,12 @@ bool CListView::mouseEvent(std::shared_ptr<CGui> gui, SDL_EventType type,
     int yIndex = y / tileSize;
     if (xIndex < getSizeX(gui) && yIndex < getSizeY(gui)) {
       int i = (xIndex + (yIndex * getSizeX(gui)));
-      invokeCallback(gui, shiftIndex(gui, i),
-                     calculateIndices(gui).find(shiftIndex(gui, i))->second);
+      auto indices = calculateIndices(gui);
+      auto shiftedIndex = shiftIndex(gui, i);
+      auto found = indices.find(shiftedIndex);
+      if (found != indices.end()) {
+        invokeCallback(gui, shiftedIndex, found->second);
+      }
     }
   }
   return true;

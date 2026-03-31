@@ -17,6 +17,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #pragma once
 
+#include <vector>
+
 #include "core/CGlobal.h"
 
 class CCreature;
@@ -24,6 +26,10 @@ class CCreature;
 class CFightHandler {
 public:
   static bool fight(std::shared_ptr<CCreature> a, std::shared_ptr<CCreature> b);
+
+  static bool
+  fightMany(std::shared_ptr<CCreature> attacker,
+            const std::vector<std::shared_ptr<CCreature>> &opponents);
 
   static void defeatedCreature(const std::shared_ptr<CCreature> &a,
                                const std::shared_ptr<CCreature> &b);

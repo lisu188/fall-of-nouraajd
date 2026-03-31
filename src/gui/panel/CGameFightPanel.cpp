@@ -16,10 +16,28 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #include "CGameFightPanel.h"
+#include <algorithm>
+#include <unordered_set>
+
 #include "core/CMap.h"
 #include "gui/CAnimation.h"
 #include "gui/CTextureCache.h"
+#include "gui/object/CProxyTargetGraphicsObject.h"
 #include "gui/object/CStatsGraphicsObject.h"
+
+namespace {
+void refresh_proxy_children(const std::shared_ptr<CGameGraphicsObject> &object) {
+  if (!object) {
+    return;
+  }
+  if (auto proxy = vstd::cast<CProxyTargetGraphicsObject>(object)) {
+    proxy->refreshAll();
+  }
+  for (const auto &child : object->getChildren()) {
+    refresh_proxy_children(child);
+  }
+}
+} // namespace
 
 CListView::collection_pointer
 CGameFightPanel::interactionsCollection(std::shared_ptr<CGui> gui) {
@@ -44,7 +62,7 @@ void CGameFightPanel::interactionsCallback(
     // TODO: rethink moving selection to CListView
     selected.reset();
   }
-  refreshViews();
+  refreshEncounterViews();
 }
 
 bool CGameFightPanel::interactionsSelect(std::shared_ptr<CGui> gui, int index,
@@ -72,7 +90,7 @@ void CGameFightPanel::itemsCallback(
     gui->getGame()->getMap()->getPlayer()->useItem(newSelection);
     selectedItem.reset();
   }
-  refreshViews();
+  refreshEncounterViews();
 }
 
 bool CGameFightPanel::itemsSelect(std::shared_ptr<CGui> gui, int index,
@@ -90,9 +108,14 @@ bool CGameFightPanel::mouseEvent(std::shared_ptr<CGui> gui,
     selected.reset();
     selectedItem.reset();
     finalSelected.reset();
-    refreshViews();
+    refreshEncounterViews();
   }
   return true;
+}
+
+void CGameFightPanel::refreshEncounterViews() {
+  refreshViews();
+  refresh_proxy_children(this->ptr<CGameFightPanel>());
 }
 
 std::shared_ptr<CInteraction> CGameFightPanel::selectInteraction() {
@@ -100,10 +123,68 @@ std::shared_ptr<CInteraction> CGameFightPanel::selectInteraction() {
   auto ret = finalSelected.lock();
   finalSelected.reset();
   selected.reset();
-  refreshViews();
+  refreshEncounterViews();
   return ret;
 }
 
 std::shared_ptr<CCreature> CGameFightPanel::getEnemy() { return enemy.lock(); }
 
-void CGameFightPanel::setEnemy(std::shared_ptr<CCreature> en) { enemy = en; }
+void CGameFightPanel::setEnemy(std::shared_ptr<CCreature> en) {
+  if (en && en->isAlive() &&
+      std::find(enemies.begin(), enemies.end(), en) == enemies.end()) {
+    enemies.push_back(en);
+  }
+  enemy = en && en->isAlive() ? en : nullptr;
+  if (enemy.lock()) {
+    refreshEncounterViews();
+  } else {
+    refreshViews();
+  }
+}
+
+void CGameFightPanel::setEnemies(
+    const std::vector<std::shared_ptr<CCreature>> &value) {
+  enemies.clear();
+  std::unordered_set<std::string> names;
+  for (const auto &candidate : value) {
+    if (candidate && candidate->isAlive() &&
+        names.insert(candidate->getName()).second) {
+      enemies.push_back(candidate);
+    }
+  }
+
+  auto current = enemy.lock();
+  auto current_it = std::find(enemies.begin(), enemies.end(), current);
+  enemy = current_it != enemies.end()
+              ? *current_it
+              : (enemies.empty() ? std::shared_ptr<CCreature>() : enemies.front());
+  if (enemy.lock()) {
+    refreshEncounterViews();
+  } else {
+    refreshViews();
+  }
+}
+
+CListView::collection_pointer
+CGameFightPanel::enemiesCollection(std::shared_ptr<CGui> gui) {
+  auto collection = std::make_shared<CListView::collection_type>();
+  for (const auto &candidate : enemies) {
+    collection->push_back(candidate);
+  }
+  return collection;
+}
+
+void CGameFightPanel::enemiesCallback(
+    std::shared_ptr<CGui> gui, int index,
+    std::shared_ptr<CGameObject> _newSelection) {
+  auto newSelection = vstd::cast<CCreature>(_newSelection);
+  if (newSelection && newSelection->isAlive()) {
+    enemy = newSelection;
+    refreshEncounterViews();
+  }
+}
+
+bool CGameFightPanel::enemiesSelect(std::shared_ptr<CGui> gui, int index,
+                                    std::shared_ptr<CGameObject> object) {
+  return object && enemy.lock() && enemy.lock() == object;
+}

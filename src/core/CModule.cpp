@@ -484,7 +484,17 @@ PYBIND11_MODULE(_game, m) {
 
     py::class_<CFightHandler, std::shared_ptr<CFightHandler>>(m, "CFightHandler",
                                                                               "Combat resolution service.")
-        .def("fight", &CFightHandler::fight, "Run a fight between two creatures.");
+        .def("fight", &CFightHandler::fight, "Run a fight between two creatures.")
+        .def("fightMany",
+             [](std::shared_ptr<CCreature> attacker, const py::iterable &opponents) {
+               std::vector<std::shared_ptr<CCreature>> encounter;
+               for (const auto &opponent : opponents) {
+                 encounter.push_back(
+                     opponent.cast<std::shared_ptr<CCreature>>());
+               }
+               return CFightHandler::fightMany(attacker, encounter);
+             },
+             "Run a fight between one creature and multiple opponents.");
 
     py::class_<CMarket, CGameObject, std::shared_ptr<CMarket>>(m, "CMarket",
                                                                                       "Trading inventory and prices.");

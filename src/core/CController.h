@@ -17,6 +17,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #pragma once
 
+#include <vector>
+
 #include "core/CPathFinder.h"
 #include "core/CTags.h"
 #include "object/CObject.h"
@@ -63,6 +65,15 @@ public:
 
   virtual void end(std::shared_ptr<CCreature> me,
                    std::shared_ptr<CCreature> opponent);
+
+  virtual void
+  setOpponents(std::shared_ptr<CCreature> me,
+               const std::vector<std::shared_ptr<CCreature>> &opponents);
+
+  virtual std::shared_ptr<CCreature>
+  selectOpponent(std::shared_ptr<CCreature> me,
+                 const std::vector<std::shared_ptr<CCreature>> &opponents,
+                 std::shared_ptr<CCreature> opponent);
 };
 
 class CMonsterFightController : public CFightController {
@@ -90,6 +101,15 @@ public:
 
   void end(std::shared_ptr<CCreature> me,
            std::shared_ptr<CCreature> opponent) override;
+
+  void setOpponents(
+      std::shared_ptr<CCreature> me,
+      const std::vector<std::shared_ptr<CCreature>> &opponents) override;
+
+  std::shared_ptr<CCreature>
+  selectOpponent(std::shared_ptr<CCreature> me,
+                 const std::vector<std::shared_ptr<CCreature>> &opponents,
+                 std::shared_ptr<CCreature> opponent) override;
 
 private:
   std::shared_ptr<CGameFightPanel> fightPanel;

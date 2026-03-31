@@ -17,6 +17,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #pragma once
 
+#include <vector>
+
 #include "CGamePanel.h"
 #include "gui/panel/CListView.h"
 #include "object/CPlayer.h"
@@ -35,6 +37,12 @@ class CGameFightPanel : public CGamePanel {
                   int, std::shared_ptr<CGameObject>),
          V_METHOD(CGameFightPanel, itemsSelect, bool, std::shared_ptr<CGui>,
                   int, std::shared_ptr<CGameObject>),
+         V_METHOD(CGameFightPanel, enemiesCollection,
+                  CListView::collection_pointer, std::shared_ptr<CGui>),
+         V_METHOD(CGameFightPanel, enemiesCallback, void, std::shared_ptr<CGui>,
+                  int, std::shared_ptr<CGameObject>),
+         V_METHOD(CGameFightPanel, enemiesSelect, bool, std::shared_ptr<CGui>,
+                  int, std::shared_ptr<CGameObject>),
          V_METHOD(CGameFightPanel, getEnemy, std::shared_ptr<CCreature>))
 
 public:
@@ -46,13 +54,18 @@ public:
 
   void setEnemy(std::shared_ptr<CCreature> en);
 
+  void setEnemies(const std::vector<std::shared_ptr<CCreature>> &value);
+
 private:
+  std::vector<std::shared_ptr<CCreature>> enemies;
   std::weak_ptr<CCreature> enemy;
   std::weak_ptr<CInteraction> selected;
   std::weak_ptr<CItem> selectedItem;
   std::weak_ptr<CInteraction> finalSelected;
   bool mouseEvent(std::shared_ptr<CGui> sharedPtr, SDL_EventType type,
                   int button, int x, int y) override;
+
+  void refreshEncounterViews();
 
 public:
   CListView::collection_pointer
@@ -71,4 +84,12 @@ public:
 
   bool itemsSelect(std::shared_ptr<CGui> gui, int index,
                    std::shared_ptr<CGameObject> object);
+
+  CListView::collection_pointer enemiesCollection(std::shared_ptr<CGui> gui);
+
+  void enemiesCallback(std::shared_ptr<CGui> gui, int index,
+                       std::shared_ptr<CGameObject> _newSelection);
+
+  bool enemiesSelect(std::shared_ptr<CGui> gui, int index,
+                     std::shared_ptr<CGameObject> object);
 };

@@ -16,6 +16,8 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #include "core/CController.h"
+#include <algorithm>
+
 #include "core/CGame.h"
 #include "core/CMap.h"
 #include "gui/panel/CGameFightPanel.h"
@@ -302,11 +304,27 @@ void CFightController::start(std::shared_ptr<CCreature> me,
 void CFightController::end(std::shared_ptr<CCreature> me,
                            std::shared_ptr<CCreature> opponent) {}
 
+void CFightController::setOpponents(
+    std::shared_ptr<CCreature> me,
+    const std::vector<std::shared_ptr<CCreature>> &opponents) {}
+
+std::shared_ptr<CCreature>
+CFightController::selectOpponent(
+    std::shared_ptr<CCreature> me,
+    const std::vector<std::shared_ptr<CCreature>> &opponents,
+    std::shared_ptr<CCreature> opponent) {
+  auto current = std::find(opponents.begin(), opponents.end(), opponent);
+  if (current != opponents.end()) {
+    return *current;
+  }
+  return opponents.empty() ? std::shared_ptr<CCreature>() : opponents.front();
+}
+
 void CPlayerFightController::start(std::shared_ptr<CCreature> me,
                                    std::shared_ptr<CCreature> opponent) {
   vstd::if_not_null(me->getMap()->getGame()->getGui(), [&](auto gui) {
     fightPanel = me->getGame()->createObject<CGameFightPanel>("fightPanel");
-    fightPanel->setEnemy(opponent);
+    fightPanel->setEnemies({opponent});
     gui->pushChild(fightPanel);
     return 0;
   });
@@ -317,7 +335,9 @@ bool CPlayerFightController::control(std::shared_ptr<CCreature> me,
   bool used = false;
   vstd::if_not_null(me->getMap()->getGame()->getGui(), [&](auto gui) {
     // TODO: what about mana cost?
-    me->useAction(fightPanel->selectInteraction(), opponent);
+    auto target = fightPanel && fightPanel->getEnemy() ? fightPanel->getEnemy()
+                                                       : opponent;
+    me->useAction(fightPanel->selectInteraction(), target);
     used = true;
   });
   return used;
@@ -326,9 +346,31 @@ bool CPlayerFightController::control(std::shared_ptr<CCreature> me,
 void CPlayerFightController::end(std::shared_ptr<CCreature> me,
                                  std::shared_ptr<CCreature> opponent) {
   vstd::if_not_null(me->getMap()->getGame()->getGui(), [&](auto gui) {
-    fightPanel->close();
-    fightPanel = nullptr;
+    if (fightPanel) {
+      fightPanel->close();
+      fightPanel = nullptr;
+    }
   });
+}
+
+void CPlayerFightController::setOpponents(
+    std::shared_ptr<CCreature> me,
+    const std::vector<std::shared_ptr<CCreature>> &opponents) {
+  if (fightPanel && !opponents.empty()) {
+    fightPanel->setEnemies(opponents);
+  }
+}
+
+std::shared_ptr<CCreature>
+CPlayerFightController::selectOpponent(
+    std::shared_ptr<CCreature> me,
+    const std::vector<std::shared_ptr<CCreature>> &opponents,
+    std::shared_ptr<CCreature> opponent) {
+  setOpponents(me, opponents);
+  if (fightPanel && fightPanel->getEnemy()) {
+    return fightPanel->getEnemy();
+  }
+  return CFightController::selectOpponent(me, opponents, opponent);
 }
 
 bool CPlayerController::isCompleted(std::shared_ptr<CPlayer> player) {
