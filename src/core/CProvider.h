@@ -27,6 +27,75 @@ struct CResType {
   const static std::string SAVE;
 };
 
+class CResource : public CGameObject {
+V_META(CResource, CGameObject, vstd::meta::empty())
+public:
+  virtual std::string type() = 0;
+
+  const std::string &getPath() const;
+
+  void setPath(const std::string &path);
+
+  const std::string &getPathPrefix() const;
+
+  void setPathPrefix(const std::string &pathPrefix);
+
+  const std::string &getPathSuffix() const;
+
+  void setPathSuffix(const std::string &pathSuffix);
+
+  std::string getFilePath() const;
+
+private:
+  std::string path;
+  std::string pathPrefix;
+  std::string pathSuffix;
+};
+
+class CTextResource : public CResource {
+V_META(CTextResource, CResource, vstd::meta::empty())
+public:
+  std::string getText();
+};
+
+class CConfigResource : public CResource {
+V_META(CConfigResource, CTextResource, vstd::meta::empty())
+public:
+  std::string type() override { return CResType::CONFIG; }
+};
+
+class CResourceLoader : public CGameObject {
+V_META(CResourceLoader, CGameObject, vstd::meta::empty())
+public:
+  virtual std::shared_ptr<CResource> load(std::string path) = 0;
+};
+
+class CConfigResourceLoader : public CResourceLoader {
+V_META(CConfigResourceLoader, CResourceLoader, vstd::meta::empty())
+public:
+  std::shared_ptr<CResource> load(std::string path) override {
+    auto config = std::make_shared<CConfigResource>();
+    config->setPathPrefix("config");
+    config->setPath(normalizePath(std::move(path)));
+    config->setPathSuffix("json");
+    return config;
+  }
+
+private:
+  static std::string normalizePath(std::string path) {
+    boost::filesystem::path normalized(std::move(path));
+    if (normalized.extension() == ".json") {
+      normalized.replace_extension();
+    }
+    auto normalizedString = normalized.generic_string();
+    constexpr auto prefix = "config/";
+    if (normalizedString.rfind(prefix, 0) == 0) {
+      normalizedString.erase(0, sizeof(prefix) - 1);
+    }
+    return normalizedString;
+  }
+};
+
 class CAnimation;
 
 class CGame;
