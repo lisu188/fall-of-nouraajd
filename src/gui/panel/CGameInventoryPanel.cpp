@@ -53,6 +53,20 @@ void CGameInventoryPanel::inventoryCallback(
   refreshViews();
 }
 
+bool CGameInventoryPanel::inventoryRightClickCallback(
+    std::shared_ptr<CGui> gui, int index,
+    std::shared_ptr<CGameObject> _newSelection) {
+  auto newSelection = vstd::cast<CItem>(_newSelection);
+  if (!newSelection || newSelection->hasTag(CTag::Quest)) {
+    return false;
+  }
+  selectedEquipped.reset();
+  selectedInventory.reset();
+  gui->getGame()->getMap()->getPlayer()->useItem(newSelection);
+  refreshViews();
+  return true;
+}
+
 bool CGameInventoryPanel::inventorySelect(std::shared_ptr<CGui> gui, int index,
                                           std::shared_ptr<CGameObject> object) {
   return object && !object->hasTag(CTag::Quest) && selectedInventory.lock() &&

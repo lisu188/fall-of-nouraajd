@@ -33,6 +33,8 @@ class CGameFightPanel : public CGamePanel {
                   CListView::collection_pointer, std::shared_ptr<CGui>),
          V_METHOD(CGameFightPanel, itemsCallback, void, std::shared_ptr<CGui>,
                   int, std::shared_ptr<CGameObject>),
+         V_METHOD(CGameFightPanel, itemsRightClickCallback, bool,
+                  std::shared_ptr<CGui>, int, std::shared_ptr<CGameObject>),
          V_METHOD(CGameFightPanel, itemsSelect, bool, std::shared_ptr<CGui>,
                   int, std::shared_ptr<CGameObject>),
          V_METHOD(CGameFightPanel, getEnemy, std::shared_ptr<CCreature>))
@@ -68,6 +70,9 @@ public:
 
   void itemsCallback(std::shared_ptr<CGui> gui, int index,
                      std::shared_ptr<CGameObject> _newSelection);
+
+  bool itemsRightClickCallback(std::shared_ptr<CGui> gui, int index,
+                               std::shared_ptr<CGameObject> _newSelection);
 
   bool itemsSelect(std::shared_ptr<CGui> gui, int index,
                    std::shared_ptr<CGameObject> object);

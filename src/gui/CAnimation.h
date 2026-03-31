@@ -39,10 +39,13 @@ public:
 
   template <typename F> auto withCallback(F f) {
     callback = f;
+    hasCallback = true;
     return this->ptr<CAnimation>();
   }
 
 private:
+  bool hasCallback = false;
+
   std::function<bool(std::shared_ptr<CGui>, SDL_EventType, int, int, int)>
       callback = [](auto a, auto b, auto c, auto d, auto e) { return false; };
 };

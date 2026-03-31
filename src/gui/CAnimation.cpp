@@ -127,11 +127,14 @@ CAnimation::CAnimation() { setLayout(std::make_shared<CParentLayout>()); }
 bool CAnimation::mouseEvent(std::shared_ptr<CGui> gui, SDL_EventType type,
                             int button, int x, int y) {
   if (type == SDL_MOUSEBUTTONDOWN && button == SDL_BUTTON_RIGHT) {
-    std::shared_ptr<SDL_Rect> absPos =
-        getLayout()->getRect(this->ptr<CAnimation>());
-    gui->getGame()->getGuiHandler()->showTooltip(
-        CTooltipHandler::buildTooltip(object), absPos->x + x, absPos->y + y);
-    return true;
+    if (object &&
+        (!object->getLabel().empty() || !object->getDescription().empty())) {
+      std::shared_ptr<SDL_Rect> absPos =
+          getLayout()->getRect(this->ptr<CAnimation>());
+      gui->getGame()->getGuiHandler()->showTooltip(
+          CTooltipHandler::buildTooltip(object), absPos->x + x, absPos->y + y);
+    }
+    return hasCallback ? callback(gui, type, button, x, y) : true;
   }
   return callback(gui, type, button, x, y);
 }

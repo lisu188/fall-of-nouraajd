@@ -29,6 +29,8 @@ class CListView : public CProxyTargetGraphicsObject {
                     setCollection),
          V_PROPERTY(CListView, std::string, select, getSelect, setSelect),
          V_PROPERTY(CListView, std::string, callback, getCallback, setCallback),
+         V_PROPERTY(CListView, std::string, rightClickCallback,
+                    getRightClickCallback, setRightClickCallback),
          V_PROPERTY(CListView, std::shared_ptr<CScript>, refreshObject,
                     getRefreshObject, setRefreshObject),
          V_PROPERTY(CListView, std::string, refreshEvent, getRefreshEvent,
@@ -47,6 +49,8 @@ class CListView : public CProxyTargetGraphicsObject {
   std::string collection;
 
   std::string callback;
+
+  std::string rightClickCallback;
 
   std::string select;
 
@@ -128,6 +132,10 @@ public:
 
   void setCallback(std::string callback);
 
+  std::string getRightClickCallback();
+
+  void setRightClickCallback(std::string rightClickCallback);
+
   std::string getSelect();
 
   void setSelect(std::string select);
@@ -146,8 +154,14 @@ private:
   void invokeCallback(std::shared_ptr<CGui> gui, int i,
                       std::shared_ptr<CGameObject> object);
 
+  bool invokeRightClickCallback(std::shared_ptr<CGui> gui, int i,
+                                std::shared_ptr<CGameObject> object);
+
   bool invokeSelect(std::shared_ptr<CGui> gui, int i,
                     std::shared_ptr<CGameObject> object);
+
+  bool tryGetClickedObject(std::shared_ptr<CGui> gui, int x, int y, int &index,
+                           std::shared_ptr<CGameObject> &object);
 
   std::unordered_map<std::pair<int, int>, std::shared_ptr<CProxyGraphicsObject>>
       proxyObjects;
