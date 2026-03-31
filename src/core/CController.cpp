@@ -317,8 +317,10 @@ bool CPlayerFightController::control(std::shared_ptr<CCreature> me,
   bool used = false;
   vstd::if_not_null(me->getMap()->getGame()->getGui(), [&](auto gui) {
     // TODO: what about mana cost?
-    me->useAction(fightPanel->selectInteraction(), opponent);
-    used = true;
+    if (auto action = fightPanel->selectInteraction()) {
+      me->useAction(action, opponent);
+      used = true;
+    }
   });
   return used;
 }

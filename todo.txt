@@ -5,7 +5,6 @@
 //TODO: registering singletons in context
 //TODO: initiative
 //TODO: when lost fight in cave, panel pops out after return to position
-//TODO: cant quit game when in fight (hang in wait until)
 //TODO: encapsulate SDL_RenderCopy
 //TODO: implement move cost
     //TODO: implement move points

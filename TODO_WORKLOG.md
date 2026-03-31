@@ -143,3 +143,20 @@
   - `ctest --test-dir cmake-build-release --output-on-failure -R for_unit_tests` -> `1/1 Test #1: for_unit_tests ... Passed`
   - `python3 test.py` -> emitted progress output (`.....`, `....`, `.................`, `......`) and then remained CPU-bound without reaching a unittest summary; interrupted manually with `^C`
 - Blockers if unresolved: Full `python3 test.py` completion is still not reproducible in this environment, so the item-use fix still needs manual in-game confirmation for the tooltip-plus-right-click interaction in inventory and fight panels.
+
+## Batch 12
+- Location: `src/gui/panel/CGameFightPanel.cpp`, `src/core/CController.cpp`, `src/handler/CFightHandler.cpp`, `todo.txt`
+- Original TODO or summary: `todo.txt` tracked `cant quit game when in fight (hang in wait until)`, and the current fight UI blocked inside a nested event loop until the player selected an action.
+- Status: fixed
+- What was changed: Replaced the fight-panel interaction wait with a loop that exits when SDL posts `SDL_QUIT`, re-queued the quit event so the outer game loop still sees it, guarded `CPlayerFightController::control()` against null interaction selection, and made `CFightHandler::fight()` stop advancing turns once a quit event is pending. Removed the resolved `todo.txt` entry.
+- Why the change is correct: The hang came from consuming `SDL_QUIT` inside the fight-panel selection wait and then continuing to wait for `finalSelected`. Returning early on quit prevents the infinite loop, reposting `SDL_QUIT` preserves the existing outer-loop shutdown path, and the controller/fight-handler guards prevent null action crashes or continued combat after the quit request.
+- Validation performed:
+  - source verification of `AGENTS.md`, `README.md`, `todo.txt`, `TODO_WORKLOG.md`, `test.py`, `res/game.py`, `CMakeLists.txt`, `scripts/run_coverage.sh`, `src/core/CFuture.cpp`, `src/core/CController.cpp`, `src/handler/CFightHandler.cpp`, `src/gui/panel/CGameFightPanel.cpp`, and `src/gui/panel/CGameFightPanel.h`
+  - GitHub `main` verification of `todo.txt`, `TODO_WORKLOG.md`, `src/core/CFuture.cpp`, `src/core/CController.cpp`, `src/handler/CFightHandler.cpp`, and `src/gui/panel/CGameFightPanel.cpp` before editing
+  - `clang-format -i src/gui/panel/CGameFightPanel.cpp src/core/CController.cpp src/handler/CFightHandler.cpp` -> failed with `/bin/bash: line 1: clang-format: command not found`
+  - `cmake -G Ninja -B ./cmake-build-release -S . -DCMAKE_BUILD_TYPE=Release` -> configured successfully with only existing SDL2 CMake dev warnings
+  - `cmake --build cmake-build-release --target _game for_unit_tests -j$(nproc)` -> `[21/21] Linking CXX shared module _game.cpython-312-x86_64-linux-gnu.so`
+  - `ctest --test-dir cmake-build-release --output-on-failure -R for_unit_tests` -> `1/1 Test #1: for_unit_tests ... Passed`
+  - `python3 test.py` -> `Ran 61 tests in 171.540s`, `OK`
+  - `./scripts/run_coverage.sh` -> configured and built `cmake-build-coverage`, `ctest` passed, then the embedded `python3 test.py` phase emitted progress dots (`.....`, `......................`, `.....`) and remained CPU-bound for over 20 minutes without reaching a unittest summary or writing coverage reports; the run was terminated manually
+- Blockers if unresolved: The functional quit fix passed the mandatory build, unit-test, and Python-suite validation, but the required coverage script is still blocked by the repo's long-running `python3 test.py` behavior under coverage instrumentation, so no fresh scoped percentage was produced for this batch.
