@@ -63,6 +63,9 @@ void CGameFightPanel::itemsCallback(
     std::shared_ptr<CGui> gui, int index,
     std::shared_ptr<CGameObject> _newSelection) {
   auto newSelection = vstd::cast<CItem>(_newSelection);
+  if (newSelection && newSelection->hasTag(CTag::Quest)) {
+    return;
+  }
   if (selectedItem.lock() != newSelection) {
     selectedItem = newSelection;
   } else if (selectedItem.lock() && selectedItem.lock() == newSelection) {
@@ -74,7 +77,8 @@ void CGameFightPanel::itemsCallback(
 
 bool CGameFightPanel::itemsSelect(std::shared_ptr<CGui> gui, int index,
                                   std::shared_ptr<CGameObject> object) {
-  return selectedItem.lock() && selectedItem.lock() == object;
+  return object && !object->hasTag(CTag::Quest) && selectedItem.lock() &&
+         selectedItem.lock() == object;
 }
 
 CGameFightPanel::CGameFightPanel() {}
