@@ -24,25 +24,26 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 namespace {
 using TagDefinition = std::pair<CTag, std::string_view>;
 
-const std::array<TagDefinition, 6> TAG_DEFINITIONS = {{
+const std::array<TagDefinition, 7> TAG_DEFINITIONS = {{
     {CTag::Buff, "buff"},
     {CTag::Heal, "heal"},
     {CTag::Mana, "mana"},
+    {CTag::Move, "move"},
     {CTag::Quest, "quest"},
     {CTag::Stun, "stun"},
     {CTag::Wand, "wand"},
 }};
 
 std::string supported_tags_message() {
-  std::string message;
-  for (const auto &[tag, name] : TAG_DEFINITIONS) {
-    (void)tag;
-    if (!message.empty()) {
-      message += ", ";
+    std::string message;
+    for (const auto &[tag, name] : TAG_DEFINITIONS) {
+        (void)tag;
+        if (!message.empty()) {
+            message += ", ";
+        }
+        message += name;
     }
-    message += name;
-  }
-  return message;
+    return message;
 }
 } // namespace
 
@@ -59,12 +60,12 @@ bool CTags::empty() const { return tags.empty(); }
 std::size_t CTags::size() const { return tags.size(); }
 
 std::vector<std::string> CTags::toStrings() const {
-  std::vector<std::string> names;
-  names.reserve(tags.size());
-  for (const auto &tag : tags) {
-    names.emplace_back(toString(tag));
-  }
-  return names;
+    std::vector<std::string> names;
+    names.reserve(tags.size());
+    for (const auto &tag : tags) {
+        names.emplace_back(toString(tag));
+    }
+    return names;
 }
 
 const CTags::storage_type &CTags::values() const { return tags; }
@@ -76,33 +77,32 @@ CTags::storage_type::const_iterator CTags::end() const { return tags.end(); }
 bool CTags::operator==(const CTags &other) const { return tags == other.tags; }
 
 const std::vector<CTag> &CTags::all() {
-  static const std::vector<CTag> tags = []() {
-    std::vector<CTag> values;
-    values.reserve(TAG_DEFINITIONS.size());
-    for (const auto &[tag, name] : TAG_DEFINITIONS) {
-      (void)name;
-      values.push_back(tag);
-    }
-    return values;
-  }();
-  return tags;
+    static const std::vector<CTag> tags = []() {
+        std::vector<CTag> values;
+        values.reserve(TAG_DEFINITIONS.size());
+        for (const auto &[tag, name] : TAG_DEFINITIONS) {
+            (void)name;
+            values.push_back(tag);
+        }
+        return values;
+    }();
+    return tags;
 }
 
 CTag CTags::fromString(std::string_view tag) {
-  for (const auto &[value, name] : TAG_DEFINITIONS) {
-    if (name == tag) {
-      return value;
+    for (const auto &[value, name] : TAG_DEFINITIONS) {
+        if (name == tag) {
+            return value;
+        }
     }
-  }
-  throw std::invalid_argument("Unknown tag '" + std::string(tag) +
-                              "'. Supported tags: " + supported_tags_message());
+    throw std::invalid_argument("Unknown tag '" + std::string(tag) + "'. Supported tags: " + supported_tags_message());
 }
 
 std::string_view CTags::toString(CTag tag) {
-  for (const auto &[value, name] : TAG_DEFINITIONS) {
-    if (value == tag) {
-      return name;
+    for (const auto &[value, name] : TAG_DEFINITIONS) {
+        if (value == tag) {
+            return name;
+        }
     }
-  }
-  throw std::invalid_argument("Unknown tag enum value.");
+    throw std::invalid_argument("Unknown tag enum value.");
 }

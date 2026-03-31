@@ -33,6 +33,8 @@
             "Level": "getLevel",
             "Experience": "getExp",
             "Gold": "getGold",
+            "Move Points": "getMovePoints",
+            "Total Move Points": "getMovePointsMax",
             "Mana": "getMana",
             "Total Mana": "getManaMax",
             "Mana Regeneration Rate": "getManaRegRate",
