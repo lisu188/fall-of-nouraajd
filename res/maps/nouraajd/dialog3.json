@@ -190,6 +190,7 @@
                 "properties": {
                   "number": 0,
                   "text": "I'll confront them in that courtyard.",
+                  "action": "spawn_cultists",
                   "nextStateId": "EXIT"
                 }
               }
