@@ -32,7 +32,11 @@ void CGameInventoryPanel::inventoryCallback(
     std::shared_ptr<CGui> gui, int index,
     std::shared_ptr<CGameObject> _newSelection) {
   auto newSelection = vstd::cast<CItem>(_newSelection);
+  if (newSelection && newSelection->hasTag(CTag::Quest)) {
+    return;
+  }
   if (selectedInventory.lock() != newSelection) {
+    selectedEquipped.reset();
     selectedInventory = newSelection;
   } else if (selectedInventory.lock() &&
              selectedInventory.lock() == newSelection) {
@@ -51,7 +55,8 @@ void CGameInventoryPanel::inventoryCallback(
 
 bool CGameInventoryPanel::inventorySelect(std::shared_ptr<CGui> gui, int index,
                                           std::shared_ptr<CGameObject> object) {
-  return selectedInventory.lock() && selectedInventory.lock() == object;
+  return object && !object->hasTag(CTag::Quest) && selectedInventory.lock() &&
+         selectedInventory.lock() == object;
 }
 
 CListView::collection_pointer
@@ -75,6 +80,9 @@ void CGameInventoryPanel::equippedCallback(
     std::shared_ptr<CGui> gui, int index,
     std::shared_ptr<CGameObject> _newSelection) {
   auto newSelection = vstd::cast<CItem>(_newSelection);
+  if (newSelection && newSelection->hasTag(CTag::Quest)) {
+    return;
+  }
   std::string slotName = vstd::str(index);
   if (selectedEquipped.lock()) {
     gui->getGame()->getMap()->getPlayer()->equipItem(slotName, nullptr);
@@ -86,6 +94,7 @@ void CGameInventoryPanel::equippedCallback(
                                                      selectedInventory.lock());
     selectedInventory.reset();
   } else {
+    selectedInventory.reset();
     selectedEquipped = newSelection;
   }
   refreshViews();
@@ -93,10 +102,11 @@ void CGameInventoryPanel::equippedCallback(
 
 bool CGameInventoryPanel::equippedSelect(std::shared_ptr<CGui> gui, int index,
                                          std::shared_ptr<CGameObject> object) {
-  return (selectedInventory.lock() &&
-          gui->getGame()->getSlotConfiguration()->canFit(
-              vstd::str(index), selectedInventory.lock())) ||
-         (selectedEquipped.lock() && selectedEquipped.lock() == object);
+  return (!object || !object->hasTag(CTag::Quest)) &&
+         ((selectedInventory.lock() &&
+           gui->getGame()->getSlotConfiguration()->canFit(
+               vstd::str(index), selectedInventory.lock())) ||
+          (selectedEquipped.lock() && selectedEquipped.lock() == object));
 }
 
 CGameInventoryPanel::CGameInventoryPanel() {}
