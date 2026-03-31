@@ -284,6 +284,7 @@
                 "script": "self.getGui().getGame().getMap().getPlayer()"
               }
             },
+            "rightClickCallback": "itemsRightClickCallback",
             "select": "itemsSelect"
           }
         }
@@ -347,6 +348,7 @@
                 "script": "self.getGui().getGame().getMap().getPlayer()"
               }
             },
+            "rightClickCallback": "inventoryRightClickCallback",
             "select": "inventorySelect"
           }
         },
