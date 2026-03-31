@@ -1381,6 +1381,8 @@ class GameTest(unittest.TestCase):
     @game_test
     def test_nouraajd_tavern_beer_vendor(self):
         game = load_game_module()
+        config = json.loads((REPO_ROOT / "res/maps/nouraajd/config.json").read_text())
+        potions = json.loads((REPO_ROOT / "res/config/potions.json").read_text())
         g, game_map, player = load_game_map_with_player("nouraajd")
         original_show_trade = game.CGuiHandler.showTrade
         captured = {}
@@ -1401,10 +1403,19 @@ class GameTest(unittest.TestCase):
             labels = sorted(
                 item.get("properties", {}).get("label") or item.get("label") or item.get("name") for item in raw_items
             )
+            market_refs = [item["ref"] for item in config["tavernBeerMarket"]["properties"]["items"]]
 
+            self.assertEqual(market.getTypeId(), "tavernBeerMarket")
+            self.assertEqual(market_refs, ["DarkBeer", "DarkBeer", "SpicedBeer"])
             self.assertEqual(labels, ["Dark Beer", "Dark Beer", "Spiced Beer"])
+            self.assertTrue(
+                all(ref in potions for ref in market_refs),
+                "Configured tavern beers should exist in potions.json",
+            )
 
             log = {
+                "market_type": market.getTypeId(),
+                "market_refs": market_refs,
                 "labels": labels,
                 "item_count": len(raw_items),
             }
