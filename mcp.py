@@ -199,41 +199,67 @@ class EngineMcpServer:
             if request is None:
                 logger.info("stdio closed")
                 return
-            is_response = self._is_jsonrpc_response(request)
             self._trace_message(
                 transport="stdio",
                 direction="recv",
                 payload=request,
-                extra={"jsonrpcResponse": is_response},
+                extra={"jsonrpcResponse": self._is_jsonrpc_response(request)},
             )
-            if is_response:
-                logger.debug("ignoring stdio client response payload")
+            response = self._handle_stdio_payload(request)
+            if response is None:
                 continue
-            try:
-                result = self.handle_message(request, transport="stdio", session_id=None)
-                if result.response is not None:
-                    self._trace_message(
-                        transport="stdio",
-                        direction="send",
-                        payload=result.response,
-                        session_id=None,
-                    )
-                    self._write_stdio_message(result.response)
-            except Exception:
-                logger.exception("unhandled stdio request failure")
-                error = self._error_response(
-                    request.get("id") if isinstance(request, dict) else None,
-                    -32603,
-                    "Internal error",
-                )
-                self._trace_message(
-                    transport="stdio",
-                    direction="send",
-                    payload=error,
-                    session_id=None,
-                    extra={"error": True},
-                )
-                self._write_stdio_message(error)
+            self._trace_message(
+                transport="stdio",
+                direction="send",
+                payload=response,
+                session_id=None,
+            )
+            self._write_stdio_message(response)
+
+    def _handle_stdio_payload(self, payload: Any) -> dict[str, Any] | list[dict[str, Any]] | None:
+        if isinstance(payload, list):
+            if not payload:
+                return self._error_response(None, -32600, "Invalid Request")
+
+            responses: list[dict[str, Any]] = []
+            for item in payload:
+                if not isinstance(item, dict):
+                    responses.append(self._error_response(None, -32600, "Invalid Request"))
+                    continue
+                if self._is_jsonrpc_response(item):
+                    logger.debug("ignoring stdio client response payload in batch")
+                    continue
+                try:
+                    result = self.handle_message(item, transport="stdio", session_id=None)
+                except ProtocolError as exc:
+                    responses.append(self._error_response(item.get("id"), exc.code, exc.message, exc.data))
+                    continue
+                except Exception:
+                    logger.exception("unhandled stdio batch item failure")
+                    responses.append(self._error_response(item.get("id"), -32603, "Internal error"))
+                    continue
+
+                if result.response is not None and not self._is_notification(item):
+                    responses.append(result.response)
+
+            return responses or None
+
+        if isinstance(payload, dict) and self._is_jsonrpc_response(payload):
+            logger.debug("ignoring stdio client response payload")
+            return None
+
+        try:
+            result = self.handle_message(payload, transport="stdio", session_id=None)
+            if result.response is not None:
+                return result.response
+            return None
+        except ProtocolError as exc:
+            req_id = payload.get("id") if isinstance(payload, dict) else None
+            return self._error_response(req_id, exc.code, exc.message, exc.data)
+        except Exception:
+            logger.exception("unhandled stdio request failure")
+            req_id = payload.get("id") if isinstance(payload, dict) else None
+            return self._error_response(req_id, -32603, "Internal error")
 
     def handle_http_post(
         self,
@@ -354,7 +380,7 @@ class EngineMcpServer:
                 raise ProtocolError(-32602, "Invalid params")
             if transport == "http" and session_id is not None:
                 raise ProtocolError(-32600, "Initialize must not include an MCP-Session-Id header")
-            return self._handle_initialize(params, transport=transport)
+            return self._handle_initialize(req_id=req_id, params=params, transport=transport)
 
         state = self._require_connection_state(transport=transport, session_id=session_id)
 
@@ -450,7 +476,7 @@ class EngineMcpServer:
 
         raise ProtocolError(-32601, f"Method not found: {method}")
 
-    def _handle_initialize(self, params: dict[str, Any], transport: str) -> HandleResult:
+    def _handle_initialize(self, req_id: Any, params: dict[str, Any], transport: str) -> HandleResult:
         requested_protocol_version = params.get("protocolVersion")
         client_capabilities = params.get("capabilities", {})
         client_info = params.get("clientInfo", {})
@@ -498,7 +524,7 @@ class EngineMcpServer:
 
         return HandleResult(
             response=self._result_response(
-                1 if False else params.get("_requestIdPlaceholder"),
+                req_id,
                 {
                     "protocolVersion": negotiated_protocol_version,
                     "serverInfo": {
@@ -991,7 +1017,7 @@ class EngineMcpServer:
         return isinstance(payload, dict) and "method" not in payload and ("result" in payload or "error" in payload)
 
     @staticmethod
-    def _read_stdio_message() -> dict[str, Any] | None:
+    def _read_stdio_message() -> Any | None:
         while True:
             raw = sys.stdin.buffer.readline()
             if not raw:
@@ -1002,7 +1028,7 @@ class EngineMcpServer:
             return json.loads(line)
 
     @staticmethod
-    def _write_stdio_message(payload: dict[str, Any]) -> None:
+    def _write_stdio_message(payload: Any) -> None:
         body = json.dumps(payload, ensure_ascii=False, separators=(",", ":"))
         sys.stdout.write(body)
         sys.stdout.write("\n")
