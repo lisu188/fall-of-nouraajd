@@ -83,6 +83,18 @@ bool CGameFightPanel::itemsSelect(std::shared_ptr<CGui> gui, int index,
 
 CGameFightPanel::CGameFightPanel() {}
 
+bool CGameFightPanel::mouseEvent(std::shared_ptr<CGui> gui,
+                                 SDL_EventType type, int button, int x,
+                                 int y) {
+  if (type == SDL_MOUSEBUTTONDOWN && button == SDL_BUTTON_RIGHT) {
+    selected.reset();
+    selectedItem.reset();
+    finalSelected.reset();
+    refreshViews();
+  }
+  return true;
+}
+
 std::shared_ptr<CInteraction> CGameFightPanel::selectInteraction() {
   vstd::wait_until([this]() { return finalSelected.lock() != nullptr; });
   auto ret = finalSelected.lock();

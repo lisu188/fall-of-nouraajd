@@ -83,6 +83,9 @@ private:
   std::list<std::weak_ptr<CItem>> selectedInventory;
   std::list<std::weak_ptr<CItem>> selectedMarket;
 
+  bool mouseEvent(std::shared_ptr<CGui> sharedPtr, SDL_EventType type,
+                  int button, int x, int y) override;
+
   bool keyboardEvent(std::shared_ptr<CGui> sharedPtr, SDL_EventType type,
                      SDL_Keycode i) override;
 

@@ -110,3 +110,14 @@ bool CGameInventoryPanel::equippedSelect(std::shared_ptr<CGui> gui, int index,
 }
 
 CGameInventoryPanel::CGameInventoryPanel() {}
+
+bool CGameInventoryPanel::mouseEvent(std::shared_ptr<CGui> gui,
+                                     SDL_EventType type, int button, int x,
+                                     int y) {
+  if (type == SDL_MOUSEBUTTONDOWN && button == SDL_BUTTON_RIGHT) {
+    selectedInventory.reset();
+    selectedEquipped.reset();
+    refreshViews();
+  }
+  return true;
+}
