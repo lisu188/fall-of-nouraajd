@@ -150,6 +150,11 @@ def advance_map_only(game_map, turns):
     return game_map.getTurn()
 
 
+def force_nouraajd_victor_timeout(game_map):
+    advance_map_only(game_map, NOURAAJD_VICTOR_TIMEOUT + 1)
+    return game_map.getStringProperty("quest_state_victor")
+
+
 def find_runtime_object(game_map, object_name):
     obj = game_map.getObjectByName(object_name)
     if obj is None:
@@ -1893,14 +1898,14 @@ class GameTest(unittest.TestCase):
                     continue
                 if value.get("class") == "CDialogOption":
                     option_defs[key] = value
-                if isinstance(value.get("class"), str) and value.get("class").endswith("Dialog"):
+                if isinstance(value.get("properties", {}).get("states"), list):
                     dialog_defs[key] = value
 
         with open(dialog_dir / "script.py") as f:
             tree = ast.parse(f.read())
         methods_by_class = {}
         for node in ast.walk(tree):
-            if isinstance(node, ast.ClassDef) and node.name.endswith("Dialog"):
+            if isinstance(node, ast.ClassDef):
                 methods_by_class[node.name] = {n.name for n in node.body if isinstance(n, ast.FunctionDef)}
 
         missing_actions = []
@@ -2000,9 +2005,11 @@ class GameTest(unittest.TestCase):
 
         dialog3 = json.loads((REPO_ROOT / "res/maps/nouraajd/dialog3.json").read_text())
         courtyard_state = None
+        courtyard_action = None
         for state in dialog3["tavernDialog2"]["properties"]["states"]:
             if state.get("properties", {}).get("stateId") == "COURTYARD_PATH":
                 courtyard_state = state
+                courtyard_action = state["properties"]["options"][0]["properties"].get("action")
                 break
 
         dialog4 = json.loads((REPO_ROOT / "res/maps/nouraajd/dialog4.json").read_text())
@@ -2036,6 +2043,7 @@ class GameTest(unittest.TestCase):
             "victor_spawn_not_player_coords": "player.getCoords()" not in script,
             "victor_courtyard_stable_spawns": "COURTYARD_SPAWNS" in script and "COURTYARD_LEADER_SPAWN" in script,
             "victor_clue_spawns_encounter": clue_action == "spawn_cultists",
+            "victor_direct_courtyard_spawns_encounter": courtyard_action == "spawn_cultists",
             "victor_mutual_exclusive_guard": (
                 "VICTOR_BAD_END" in script
                 and "VICTOR_GOOD_END" in script
@@ -2146,6 +2154,91 @@ class GameTest(unittest.TestCase):
         )
 
     @game_test
+    def test_nouraajd_letter_relic_and_cleanse_report_regression(self):
+        g, game_map, player = load_game_map_with_player("nouraajd")
+        town_hall = g.createObject("townHallDialog")
+        beren = g.createObject("berenDialog")
+
+        self.assertTrue(town_hall.can_offer_letter_work())
+        self.assertFalse(town_hall.has_letter_quest())
+
+        town_hall.give_letter()
+        self.assertEqual(game_map.getStringProperty("quest_state_beren_chain"), "letter_in_hand")
+        self.assertTrue(town_hall.has_letter_quest())
+        self.assertFalse(town_hall.can_offer_letter_work())
+        self.assertTrue(player.hasItem(lambda it: it.getName() == "letterToBeren"))
+
+        beren.deliver_letter()
+        self.assertEqual(game_map.getStringProperty("quest_state_beren_chain"), "letter_delivered")
+        self.assertFalse(player.hasItem(lambda it: it.getName() == "letterToBeren"))
+        self.assertIn("retrieveRelicQuest", quest_names(player))
+
+        game_map.removeObjectByName("catacombs")
+        self.assertEqual(game_map.getStringProperty("quest_state_beren_chain"), "relic_obtained")
+        self.assertTrue(beren.can_return_relic())
+
+        beren.return_relic()
+        self.assertEqual(game_map.getStringProperty("quest_state_beren_chain"), "relic_returned_waiting_kill")
+        self.assertFalse(player.hasItem(lambda it: it.getName() == "holyRelic"))
+        self.assertIn("cleanseCaveQuest", quest_names(player))
+        self.assertFalse(beren.can_finish_cleanse())
+
+        game_map.removeObjectByName("cave2")
+        self.assertEqual(game_map.getStringProperty("quest_state_beren_chain"), "ready_to_report")
+        self.assertTrue(beren.can_finish_cleanse())
+
+        beren.finish_cleanse()
+        self.assertEqual(game_map.getStringProperty("quest_state_beren_chain"), "purged")
+        self.assertTrue(game_map.getBoolProperty("CAVE_PURGED"))
+
+        return True, json.dumps(
+            {
+                "quest_state_beren_chain": game_map.getStringProperty("quest_state_beren_chain"),
+                "quests": quest_names(player),
+                "cave_purged": game_map.getBoolProperty("CAVE_PURGED"),
+            },
+            sort_keys=True,
+        )
+
+    @game_test
+    def test_nouraajd_octobogz_before_letter_and_relic_return_regression(self):
+        g, game_map, player = load_game_map_with_player("nouraajd")
+        town_hall = g.createObject("townHallDialog")
+        beren = g.createObject("berenDialog")
+
+        game_map.removeObjectByName("cave2")
+        self.assertEqual(game_map.getStringProperty("quest_state_beren_chain"), "octobogz_slain_pending_letter")
+        self.assertTrue(game_map.getBoolProperty("OCTOBOGZ_SLAIN"))
+        self.assertTrue(town_hall.can_offer_letter_work())
+
+        town_hall.give_letter()
+        self.assertTrue(beren.can_deliver_letter())
+        beren.deliver_letter()
+        self.assertEqual(game_map.getStringProperty("quest_state_beren_chain"), "octobogz_slain_no_relic")
+        self.assertFalse(beren.can_return_relic())
+
+        game_map.removeObjectByName("catacombs")
+        self.assertTrue(player.hasItem(lambda it: it.getName() == "holyRelic"))
+        self.assertTrue(beren.can_return_relic())
+
+        beren.return_relic()
+        self.assertEqual(game_map.getStringProperty("quest_state_beren_chain"), "ready_to_report")
+        self.assertTrue(game_map.getBoolProperty("OCTOBOGZ_CLEARED"))
+        self.assertTrue(beren.can_finish_cleanse())
+
+        beren.finish_cleanse()
+        self.assertEqual(game_map.getStringProperty("quest_state_beren_chain"), "purged")
+
+        return True, json.dumps(
+            {
+                "quest_state_beren_chain": game_map.getStringProperty("quest_state_beren_chain"),
+                "octobogz_slain": game_map.getBoolProperty("OCTOBOGZ_SLAIN"),
+                "octobogz_cleared": game_map.getBoolProperty("OCTOBOGZ_CLEARED"),
+            },
+            sort_keys=True,
+        )
+
+    @game_test
     def test_nouraajd_tavern_beer_vendor(self):
         game = load_game_module()
         config = json.loads((REPO_ROOT / "res/maps/nouraajd/config.json").read_text())
@@ -2189,6 +2282,231 @@ class GameTest(unittest.TestCase):
             return True, json.dumps(log, sort_keys=True)
         finally:
             game.CGuiHandler.showTrade = original_show_trade
+
+    @game_test
+    def test_nouraajd_victor_town_hall_clue_regression(self):
+        g, game_map, player = load_game_map_with_player("nouraajd")
+        tavern_intro = g.createObject("tavernDialog1")
+        tavern = g.createObject("tavernDialog2")
+        town_hall = g.createObject("townHallDialog")
+
+        self.assertFalse(tavern.asked_about_girl())
+        tavern_intro.asked_about_girl()
+        self.assertTrue(tavern.asked_about_girl())
+
+        self.assertFalse(town_hall.talked_to_victor())
+        tavern.talked_to_victor()
+        self.assertTrue(town_hall.talked_to_victor())
+        self.assertEqual(game_map.getStringProperty("quest_state_victor"), "met_victor")
+        self.assertTrue(game_map.getBoolProperty("VICTOR_QUEST_STARTED"))
+        self.assertIn("victorQuest", quest_names(player))
+
+        town_hall.spawn_cultists()
+
+        leader = find_runtime_object(game_map, "cultLeaderQuest")
+        cultists = sorted(
+            obj.getName()
+            for obj in game_map.getObjects()
+            if obj.getName() and obj.getName().startswith("victorCultist")
+        )
+
+        self.assertEqual(game_map.getStringProperty("quest_state_victor"), "encounter_active")
+        self.assertTrue(game_map.getBoolProperty("VICTOR_COURTYARD_FOUND"))
+        self.assertTrue(game_map.getBoolProperty("VICTOR_CULTISTS_SPAWNED"))
+        self.assertEqual(leader.getName(), "cultLeaderQuest")
+        self.assertTrue(cultists)
+
+        return True, json.dumps(
+            {
+                "quest_state_victor": game_map.getStringProperty("quest_state_victor"),
+                "victor_started": game_map.getBoolProperty("VICTOR_QUEST_STARTED"),
+                "victor_courtyard_found": game_map.getBoolProperty("VICTOR_COURTYARD_FOUND"),
+                "victor_cultists_spawned": game_map.getBoolProperty("VICTOR_CULTISTS_SPAWNED"),
+                "cultists": cultists,
+            },
+            sort_keys=True,
+        )
+
+    @game_test
+    def test_nouraajd_victor_direct_courtyard_branch_regression(self):
+        dialog3 = json.loads((REPO_ROOT / "res/maps/nouraajd/dialog3.json").read_text())
+        courtyard_option = None
+        for state in dialog3["tavernDialog2"]["properties"]["states"]:
+            if state.get("properties", {}).get("stateId") == "COURTYARD_PATH":
+                courtyard_option = state["properties"]["options"][0]["properties"]
+                break
+
+        self.assertIsNotNone(courtyard_option)
+        self.assertEqual(courtyard_option.get("action"), "spawn_cultists")
+
+        g, game_map, player = load_game_map_with_player("nouraajd")
+        tavern = g.createObject("tavernDialog2")
+
+        tavern.talked_to_victor()
+        tavern.spawn_cultists()
+
+        leader = find_runtime_object(game_map, "cultLeaderQuest")
+        cultists = sorted(
+            obj.getName()
+            for obj in game_map.getObjects()
+            if obj.getName() and obj.getName().startswith("victorCultist")
+        )
+        self.assertEqual(game_map.getStringProperty("quest_state_victor"), "encounter_active")
+        self.assertTrue(cultists)
+        self.assertEqual(leader.getName(), "cultLeaderQuest")
+
+        return True, json.dumps(
+            {
+                "quest_state_victor": game_map.getStringProperty("quest_state_victor"),
+                "leader": leader.getName(),
+                "cultists": cultists,
+            },
+            sort_keys=True,
+        )
+
+    @game_test
+    def test_nouraajd_victor_reward_unlock_regression(self):
+        game = load_game_module()
+        original_show_dialog = game.CGuiHandler.showDialog
+        original_show_trade = game.CGuiHandler.showTrade
+        original_heal_proc = game.CPlayer.healProc
+        captured = {"dialogs": [], "trades": []}
+        heal_amounts = []
+
+        try:
+
+            def capture_dialog(self, dialog):
+                captured["dialogs"].append(dialog.getTypeId())
+
+            def capture_trade(self, market):
+                captured["trades"].append(market.getTypeId())
+
+            def capture_heal(self, amount):
+                heal_amounts.append(amount)
+                return original_heal_proc(self, amount)
+
+            game.CGuiHandler.showDialog = capture_dialog
+            game.CGuiHandler.showTrade = capture_trade
+            game.CPlayer.healProc = capture_heal
+
+            g, game_map, player = load_game_map_with_player("nouraajd")
+            tavern = g.createObject("tavernDialog2")
+            town_hall = g.createObject("townHallDialog")
+
+            self.assertFalse(town_hall.talked_to_victor())
+            tavern.talked_to_victor()
+            self.assertTrue(town_hall.talked_to_victor())
+
+            start_gold = player.getGold()
+
+            town_hall.spawn_cultists()
+            leader = find_runtime_object(game_map, "cultLeaderQuest")
+            self.assertEqual(game_map.getStringProperty("quest_state_victor"), "encounter_active")
+
+            game_map.removeObjectByName(leader.getName())
+
+            self.assertEqual(game_map.getStringProperty("quest_state_victor"), "good_end")
+            self.assertEqual(player.getGold() - start_gold, 500)
+            self.assertEqual(heal_amounts, [100])
+            self.assertTrue(game_map.getBoolProperty("VICTOR_GOOD_END"))
+            self.assertTrue(game_map.getBoolProperty("VICTOR_REWARD_CLAIMED"))
+            self.assertIn("victorRewardDialog", captured["dialogs"])
+            self.assertIn("victorMarket", captured["trades"])
+
+            town_hall.spawn_cultists()
+            self.assertIsNone(game_map.getObjectByName("cultLeaderQuest"))
+            self.assertFalse(
+                any(
+                    obj.getName() and (obj.getName() == "cultLeaderQuest" or obj.getName().startswith("victorCultist"))
+                    for obj in game_map.getObjects()
+                )
+            )
+
+            return True, json.dumps(
+                {
+                    "quest_state_victor": game_map.getStringProperty("quest_state_victor"),
+                    "dialogs": captured["dialogs"],
+                    "trades": captured["trades"],
+                    "heal_amounts": heal_amounts,
+                    "gold_delta": player.getGold() - start_gold,
+                },
+                sort_keys=True,
+            )
+        finally:
+            game.CGuiHandler.showDialog = original_show_dialog
+            game.CGuiHandler.showTrade = original_show_trade
+            game.CPlayer.healProc = original_heal_proc
+
+    @game_test
+    def test_nouraajd_victor_timeout_cleanup_regression(self):
+        g, game_map, player = load_game_map_with_player("nouraajd")
+        tavern = g.createObject("tavernDialog2")
+        town_hall = g.createObject("townHallDialog")
+
+        tavern.talked_to_victor()
+        town_hall.spawn_cultists()
+        self.assertIsNotNone(game_map.getObjectByName("cultLeaderQuest"))
+
+        force_nouraajd_victor_timeout(game_map)
+
+        self.assertEqual(game_map.getStringProperty("quest_state_victor"), "bad_end")
+        self.assertTrue(game_map.getBoolProperty("VICTOR_BAD_END"))
+        self.assertIsNone(game_map.getObjectByName("cultLeaderQuest"))
+        self.assertFalse(
+            any(obj.getName() and obj.getName().startswith("victorCultist") for obj in game_map.getObjects())
+        )
+
+        town_hall.spawn_cultists()
+        self.assertIsNone(game_map.getObjectByName("cultLeaderQuest"))
+
+        return True, json.dumps(
+            {
+                "quest_state_victor": game_map.getStringProperty("quest_state_victor"),
+                "victor_bad_end": game_map.getBoolProperty("VICTOR_BAD_END"),
+            },
+            sort_keys=True,
+        )
+
+    @game_test
+    def test_nouraajd_amulet_cleanup_and_repeat_regression(self):
+        g, game_map, player = load_game_map_with_player("nouraajd")
+        quest_dialog = g.createObject("questDialog")
+        quest_return_dialog = g.createObject("questReturnDialog")
+
+        start_gold = player.getGold()
+        self.assertIsNotNone(game_map.getObjectByName("oldWoman"))
+        self.assertIsNone(game_map.getObjectByName("amuletGoblin"))
+
+        quest_dialog.start_amulet_quest()
+        self.assertEqual(game_map.getStringProperty("quest_state_amulet"), "active")
+        self.assertIn("amuletQuest", quest_names(player))
+        self.assertIsNotNone(game_map.getObjectByName("amuletGoblin"))
+
+        quest_dialog.start_amulet_quest()
+        self.assertEqual(game_map.getStringProperty("quest_state_amulet"), "active")
+
+        player.addItem("preciousAmulet")
+        quest_return_dialog.complete_amulet_quest()
+
+        self.assertEqual(game_map.getStringProperty("quest_state_amulet"), "returned")
+        self.assertEqual(player.getGold() - start_gold, 50)
+        self.assertFalse(player.hasItem(lambda it: it.getName() == "preciousAmulet"))
+        self.assertIsNone(game_map.getObjectByName("amuletGoblin"))
+        self.assertIsNone(game_map.getObjectByName("oldWoman"))
+
+        quest_dialog.start_amulet_quest()
+        self.assertEqual(game_map.getStringProperty("quest_state_amulet"), "returned")
+        self.assertIsNone(game_map.getObjectByName("amuletGoblin"))
+
+        return True, json.dumps(
+            {
+                "quest_state_amulet": game_map.getStringProperty("quest_state_amulet"),
+                "gold_delta": player.getGold() - start_gold,
+                "old_woman_present": game_map.getObjectByName("oldWoman") is not None,
+                "amulet_goblin_present": game_map.getObjectByName("amuletGoblin") is not None,
+            },
+            sort_keys=True,
+        )
 
     @game_test
     def test_new_class_dialog_hooks(self):
@@ -2625,8 +2943,12 @@ class GameTest(unittest.TestCase):
         tavern_dialog2b.talked_to_victor()
         town_hall3 = g3.createObject("townHallDialog")
         town_hall3.spawn_cultists()
-        advance_map_only(game_map3, NOURAAJD_VICTOR_TIMEOUT + 1)
+        force_nouraajd_victor_timeout(game_map3)
         assert quest_state(game_map3, "victor") == "bad_end"
+        assert game_map3.getObjectByName("cultLeaderQuest") is None
+        assert not any(obj.getName() and obj.getName().startswith("victorCultist") for obj in game_map3.getObjects())
+        town_hall3.spawn_cultists()
+        assert game_map3.getObjectByName("cultLeaderQuest") is None
 
         log = {
             "scenario_a": {

@@ -9,6 +9,8 @@ def load(self, context):
 
     VICTOR_COURTYARD_TIMEOUT_TURNS = 75
     VICTOR_CULTIST_PREFIX = "victorCultist"
+    VICTOR_COURTYARD_SPAWNS = [(44, 100, 0), (46, 100, 0), (45, 99, 0), (45, 101, 0)]
+    VICTOR_COURTYARD_LEADER_SPAWN = (45, 100, 0)
 
     def _clear_victor_encounter(game_map):
         def should_remove(obj):
@@ -33,6 +35,53 @@ def load(self, context):
             "You find the courtyard scrubbed bare; Victor's daughter is gone, carried off with the cult's hush."
         )
         return True
+
+    def _spawn_victor_encounter(dialog):
+        game = dialog.getGame()
+        game_map = game.getMap()
+        quest_system = _quest_system_from(dialog)
+        victor_state = quest_system.get_state("victor")
+        if quest_system.victor_good_end():
+            game.getGuiHandler().showMessage(
+                "Victor has already reclaimed his daughter; the courtyard now keeps a reverent quiet."
+            )
+            return False
+        if victor_state == "bad_end":
+            game.getGuiHandler().showMessage(
+                "The mayor mutters that the Cult of Marumi Baso vanished with Victor's daughter before help arrived."
+            )
+            return False
+        if victor_state == "encounter_active":
+            _expire_victor_search(game_map)
+            return False
+
+        spawned = False
+        for index, (x, y, z) in enumerate(dialog.COURTYARD_SPAWNS, start=1):
+            coords = Coords(x, y, z)
+            if game_map.canStep(coords):
+                mon = game.createObject("Cultist")
+                target_ctrl = game.createObject("CTargetController")
+                target_ctrl.setTarget("player")
+                mon.setController(target_ctrl)
+                mon.setStringProperty("name", f"{VICTOR_CULTIST_PREFIX}{index}")
+                game_map.addObject(mon)
+                mon.moveTo(coords.x, coords.y, coords.z)
+                spawned = True
+
+        coords = Coords(*dialog.COURTYARD_LEADER_SPAWN)
+        if game_map.canStep(coords):
+            leader = game.createObject("CultLeader")
+            leader.setStringProperty("name", "cultLeaderQuest")
+            target_ctrl = game.createObject("CTargetController")
+            target_ctrl.setTarget("player")
+            leader.setController(target_ctrl)
+            game_map.addObject(leader)
+            leader.moveTo(coords.x, coords.y, coords.z)
+            spawned = True
+
+        if spawned:
+            quest_system.mark_victor_encounter_active()
+        return spawned
 
     class _TrackedQuest:
         def __init__(self, name):
@@ -152,20 +201,32 @@ def load(self, context):
         # --- Compatibility helpers ---
         def _beren_flags(self):
             state = self.get_state("beren_chain")
-            delivered = state not in ("letter_pending", "letter_in_hand")
+            delivered = state not in ("letter_pending", "letter_in_hand", "octobogz_slain_pending_letter")
             relic_returned = state in (
                 "relic_returned_waiting_kill",
                 "ready_to_report",
                 "purged",
             )
-            octobogz_slain = state in ("octobogz_slain_no_relic", "ready_to_report", "purged")
+            octobogz_slain = state in (
+                "octobogz_slain_pending_letter",
+                "octobogz_slain_no_relic",
+                "ready_to_report",
+                "purged",
+            )
             octobogz_cleared = state in ("ready_to_report", "purged")
             cave_purged = state == "purged"
             return delivered, relic_returned, octobogz_slain, octobogz_cleared, cave_purged
 
         def _victor_flags(self):
             state = self.get_state("victor")
-            started = state in ("records_reviewed", "courtyard_known", "encounter_active", "good_end", "bad_end")
+            started = state in (
+                "met_victor",
+                "records_reviewed",
+                "courtyard_known",
+                "encounter_active",
+                "good_end",
+                "bad_end",
+            )
             courtyard_found = state in ("courtyard_known", "encounter_active", "good_end", "bad_end")
             encounter_active = state == "encounter_active"
             good_end = state == "good_end"
@@ -233,13 +294,19 @@ def load(self, context):
                 self._set_state("beren_chain", "letter_in_hand")
                 _grant_quest(player, "deliverLetterQuest")
                 return True
+            if state == "octobogz_slain_pending_letter":
+                _grant_quest(player, "deliverLetterQuest")
+                return True
             if state == "letter_in_hand":
                 return True
             return False
 
         def mark_letter_delivered(self, player):
             prior = self.get_state("beren_chain")
-            if prior in ("letter_pending", "letter_in_hand"):
+            if prior == "octobogz_slain_pending_letter":
+                self._set_state("beren_chain", "octobogz_slain_no_relic")
+                _grant_quest(player, "retrieveRelicQuest")
+            elif prior in ("letter_pending", "letter_in_hand"):
                 next_state = (
                     "relic_obtained" if player.hasItem(lambda it: it.getName() == "holyRelic") else "letter_delivered"
                 )
@@ -269,6 +336,8 @@ def load(self, context):
                 self._set_state("beren_chain", "ready_to_report")
             elif state in ("relic_obtained", "letter_delivered"):
                 self._set_state("beren_chain", "octobogz_slain_no_relic")
+            elif state in ("letter_pending", "letter_in_hand", "octobogz_slain_pending_letter"):
+                self._set_state("beren_chain", "octobogz_slain_pending_letter")
 
         def mark_cave_purged(self):
             if self.get_state("beren_chain") == "ready_to_report":
@@ -349,7 +418,11 @@ def load(self, context):
             return self.get_state("victor") == "good_end"
 
         def needs_letter_delivery(self):
-            return self.get_state("beren_chain") in ("letter_pending", "letter_in_hand")
+            return self.get_state("beren_chain") in (
+                "letter_pending",
+                "letter_in_hand",
+                "octobogz_slain_pending_letter",
+            )
 
         def needs_relic_return(self):
             return self.get_state("beren_chain") in ("relic_obtained", "octobogz_slain_no_relic")
@@ -539,6 +612,9 @@ def load(self, context):
 
     @register(context)
     class TavernDialog2(CDialog):
+        COURTYARD_SPAWNS = VICTOR_COURTYARD_SPAWNS
+        COURTYARD_LEADER_SPAWN = VICTOR_COURTYARD_LEADER_SPAWN
+
         def _ensure_victor_quest(self):
             game_map = self.getGame().getMap()
             player = game_map.getPlayer()
@@ -552,6 +628,10 @@ def load(self, context):
             self._ensure_victor_quest()
             self.getGame().getMap().setBoolProperty("TALKED_TO_VICTOR", True)
 
+        def spawn_cultists(self):
+            self._ensure_victor_quest()
+            _spawn_victor_encounter(self)
+
     @trigger(context, "onEnter", "nouraajdTownHall")
     class TownHallTrigger(CTrigger):
         def trigger(self, object, event):
@@ -560,8 +640,8 @@ def load(self, context):
 
     @register(context)
     class TownHallDialog(CDialog):
-        COURTYARD_SPAWNS = [(44, 100, 0), (46, 100, 0), (45, 99, 0), (45, 101, 0)]
-        COURTYARD_LEADER_SPAWN = (45, 100, 0)
+        COURTYARD_SPAWNS = VICTOR_COURTYARD_SPAWNS
+        COURTYARD_LEADER_SPAWN = VICTOR_COURTYARD_LEADER_SPAWN
         COURTYARD_TIMEOUT_TURNS = VICTOR_COURTYARD_TIMEOUT_TURNS
 
         def _is_letter_to_beren(self, item):
@@ -620,50 +700,10 @@ def load(self, context):
             self._ensure_quest("victorQuest")
 
         def spawn_cultists(self):
-            game = self.getGame()
-            game_map = game.getMap()
             self.start_victor_quest()
             quest_system = _quest_system_from(self)
             quest_system.mark_courtyard_known()
-            victor_state = quest_system.get_state("victor")
-            if quest_system.victor_good_end():
-                game.getGuiHandler().showMessage(
-                    "Victor has already reclaimed his daughter; the courtyard now keeps a reverent quiet."
-                )
-                return
-            if victor_state == "bad_end":
-                game.getGuiHandler().showMessage(
-                    "The mayor mutters that the Cult of Marumi Baso vanished with Victor's daughter before help arrived."
-                )
-                return
-            if victor_state == "encounter_active":
-                _expire_victor_search(game_map)
-                return
-            spawned = False
-            for index, (x, y, z) in enumerate(self.COURTYARD_SPAWNS, start=1):
-                coords = Coords(x, y, z)
-                if game_map.canStep(coords):
-                    mon = game.createObject("Cultist")
-                    target_ctrl = game.createObject("CTargetController")
-                    target_ctrl.setTarget("player")
-                    mon.setController(target_ctrl)
-                    mon.setStringProperty("name", f"{VICTOR_CULTIST_PREFIX}{index}")
-                    game_map.addObject(mon)
-                    mon.moveTo(coords.x, coords.y, coords.z)
-                    spawned = True
-
-            coords = Coords(*self.COURTYARD_LEADER_SPAWN)
-            if game_map.canStep(coords):
-                leader = game.createObject("CultLeader")
-                leader.setStringProperty("name", "cultLeaderQuest")
-                target_ctrl = game.createObject("CTargetController")
-                target_ctrl.setTarget("player")
-                leader.setController(target_ctrl)
-                game_map.addObject(leader)
-                leader.moveTo(coords.x, coords.y, coords.z)
-                spawned = True
-            if spawned:
-                quest_system.mark_victor_encounter_active()
+            _spawn_victor_encounter(self)
 
     @trigger(context, "onTurn", "nouraajdTownHall")
     class VictorCourtyardTimerTrigger(CTrigger):
