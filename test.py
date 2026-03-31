@@ -28,6 +28,8 @@ import traceback
 from pathlib import Path
 import unittest
 
+import mcp
+
 REPO_ROOT = Path(__file__).resolve().parent
 TEST_OUTPUT_DIR = REPO_ROOT / "test"
 XDG_RUNTIME_DIR = Path("/tmp") / f"xdg-runtime-{os.getuid()}"
@@ -3098,6 +3100,71 @@ class GameTest(unittest.TestCase):
 
 
 class McpServerTest(unittest.TestCase):
+    def make_stub_server(self):
+        server = mcp.EngineMcpServer(repo_root=REPO_ROOT, build_dir=build_dir)
+        server.exports["echo"] = mcp.ExportedCallable(
+            name="echo",
+            source="test",
+            target_name="echo",
+            callable_obj=lambda value=None: value,
+            signature="(value=None)",
+        )
+        return server
+
+    def test_initialize_response_preserves_request_id(self):
+        server = self.make_stub_server()
+        response = server._handle_stdio_payload(
+            {
+                "jsonrpc": "2.0",
+                "id": 41,
+                "method": "initialize",
+                "params": {
+                    "protocolVersion": MCP_PROTOCOL_VERSION,
+                    "capabilities": {},
+                    "clientInfo": {"name": "mcp-test", "version": "1.0"},
+                },
+            }
+        )
+        self.assertIsInstance(response, dict)
+        self.assertEqual(response.get("id"), 41)
+        self.assertEqual(response.get("result", {}).get("protocolVersion"), MCP_PROTOCOL_VERSION)
+
+    def test_stdio_batch_handles_initialize_and_tool_listing(self):
+        server = self.make_stub_server()
+        init_response = server._handle_stdio_payload(
+            [
+                {
+                    "jsonrpc": "2.0",
+                    "id": 1,
+                    "method": "initialize",
+                    "params": {
+                        "protocolVersion": MCP_PROTOCOL_VERSION,
+                        "capabilities": {},
+                        "clientInfo": {"name": "mcp-test", "version": "1.0"},
+                    },
+                }
+            ]
+        )
+        self.assertIsInstance(init_response, list)
+        self.assertEqual(len(init_response), 1)
+        self.assertEqual(init_response[0].get("id"), 1)
+        self.assertEqual(init_response[0].get("result", {}).get("protocolVersion"), MCP_PROTOCOL_VERSION)
+        self.assertIsNotNone(server.stdio_state)
+        server.stdio_state.log_level = "critical"
+
+        batch_response = server._handle_stdio_payload(
+            [
+                {"jsonrpc": "2.0", "method": "notifications/initialized", "params": {}},
+                {"jsonrpc": "2.0", "id": 2, "method": "tools/list"},
+            ]
+        )
+        self.assertIsInstance(batch_response, list)
+        self.assertEqual(len(batch_response), 1)
+        self.assertEqual(batch_response[0].get("id"), 2)
+        tools = batch_response[0].get("result", {}).get("tools", [])
+        tool_names = {tool.get("name") for tool in tools}
+        self.assertTrue({"engine_list", "engine_call", "engine_handle_call"}.issubset(tool_names))
+
     def test_stdio_handshake_and_tool_listing(self):
         script = REPO_ROOT / "mcp.py"
         self.assertTrue(script.exists(), "MCP entry point is missing")
@@ -3132,6 +3199,7 @@ class McpServerTest(unittest.TestCase):
             )
             initialize_response = self._read_rpc(proc)
             self.assertNotIn("error", initialize_response)
+            self.assertEqual(initialize_response.get("id"), 1)
             result = initialize_response.get("result", {})
             server_info = result.get("serverInfo", {})
             self.assertEqual(server_info.get("name"), "fall-of-nouraajd-engine-mcp")
