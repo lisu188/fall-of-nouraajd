@@ -1282,6 +1282,47 @@ class GameTest(unittest.TestCase):
         return True, ""
 
     @game_test
+    def test_potions_are_not_consumed_at_full_resources(self):
+        g, _game_map, player = load_game_map_with_player("empty")
+
+        player.addItem("LesserLifePotion")
+        player.addItem("LesserManaPotion")
+        player.heal(0)
+        player.addMana(0)
+
+        def find_item(type_id):
+            for item in list(player.items):
+                if item.typeId == type_id:
+                    return item
+            raise AssertionError(f"Missing inventory item {type_id}")
+
+        life_potion = find_item("LesserLifePotion")
+        mana_potion = find_item("LesserManaPotion")
+
+        hp_before = player.getHp()
+        mana_before = player.getMana()
+
+        player.useItem(life_potion)
+        player.useItem(mana_potion)
+
+        assert player.getHp() == hp_before
+        assert player.getMana() == mana_before
+        assert player.countItems("LesserLifePotion") == 1
+        assert player.countItems("LesserManaPotion") == 1
+
+        return True, json.dumps(
+            {
+                "hp_before": hp_before,
+                "mana_before": mana_before,
+                "hp_after": player.getHp(),
+                "mana_after": player.getMana(),
+                "life_potions": player.countItems("LesserLifePotion"),
+                "mana_potions": player.countItems("LesserManaPotion"),
+            },
+            sort_keys=True,
+        )
+
+    @game_test
     def test_crafting_config_is_valid(self):
         crafting_path = REPO_ROOT / "res/config/crafting.json"
         buildings_path = REPO_ROOT / "res/config/buildings.json"
