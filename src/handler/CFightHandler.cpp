@@ -36,6 +36,9 @@ bool CFightHandler::fight(std::shared_ptr<CCreature> a,
 
   int stale_turns = 0;
   for (int turn = 0; turn < 100 && stale_turns < 20; ++turn) {
+    if (SDL_HasEvent(SDL_QUIT)) {
+      break;
+    }
     auto before = std::make_pair(state(a), state(b));
     applyEffects(a);
     if (!a->isAlive()) {
@@ -46,6 +49,9 @@ bool CFightHandler::fight(std::shared_ptr<CCreature> a,
     }
     if (!CTags::isTagPresent(a->getEffects(), CTag::Stun)) {
       a->getFightController()->control(a, b);
+      if (SDL_HasEvent(SDL_QUIT)) {
+        break;
+      }
       if (!b->isAlive()) {
         defeatedCreature(a, b);
         retVal = true;
