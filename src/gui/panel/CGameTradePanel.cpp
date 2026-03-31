@@ -60,6 +60,17 @@ bool CGameTradePanel::marketSelect(std::shared_ptr<CGui> gui, int index,
                    [](auto a, auto b) { return a == b.lock(); });
 }
 
+bool CGameTradePanel::mouseEvent(std::shared_ptr<CGui> gui,
+                                 SDL_EventType type, int button, int x,
+                                 int y) {
+  if (type == SDL_MOUSEBUTTONDOWN && button == SDL_BUTTON_RIGHT) {
+    selectedInventory.clear();
+    selectedMarket.clear();
+    refreshViews();
+  }
+  return true;
+}
+
 bool CGameTradePanel::keyboardEvent(std::shared_ptr<CGui> gui,
                                     SDL_EventType type, SDL_Keycode i) {
   if (type == SDL_KEYDOWN) {

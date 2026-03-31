@@ -114,3 +114,16 @@
   - `python3 test.py` -> emitted progress dots and wrote updated `test/*.json` artifacts through the map walkthrough tests, but never reached a final unittest summary; after remaining CPU-bound for several more minutes it was terminated manually, and the shell reported exit code `137`
   - static source verification of `res/maps/siege/config.json` and `res/maps/siege/map.json` to confirm `SpawnPoint` has no extra config gating and is wired directly from the siege map object layer
 - Blockers if unresolved: Full Python-suite validation is currently blocked in this environment because `python3 test.py` did not finish on this run.
+
+## Batch 10
+- Location: `src/gui/panel/CListView.cpp`, `src/gui/panel/CGameInventoryPanel.cpp`, `src/gui/panel/CGameInventoryPanel.h`, `src/gui/panel/CGameFightPanel.cpp`, `src/gui/panel/CGameFightPanel.h`, `src/gui/panel/CGameTradePanel.cpp`, `src/gui/panel/CGameTradePanel.h`, `todo.txt`
+- Original TODO or summary: `todo.txt` tracked combined right-click item-use and selection-reset work, but the current GUI only handled left-click in `CListView`, so right-clicks could not clear stale selections in the inventory, fight, or trade panels.
+- Status: partially fixed
+- What was changed: Let right-click `SDL_MOUSEBUTTONDOWN` events bubble past `CListView`, added panel-level right-click handlers that clear the relevant selection state in inventory, fight, and trade panels, and rewrote the `todo.txt` entry to leave only the still-unimplemented direct item-use-on-right-click behavior.
+- Why the change is correct: The selected state in all three panels lives on the parent panel objects, not inside `CListView`. Returning `false` for right-clicks in `CListView` lets the parent panel receive the event, and each panel now clears exactly the selection state it owns before refreshing the views. This matches the verified missing behavior without changing left-click semantics or trade actions.
+- Validation performed:
+  - source verification of `todo.txt`, `TODO_WORKLOG.md`, `src/gui/panel/CListView.cpp`, `src/gui/panel/CGameInventoryPanel.cpp`, `src/gui/panel/CGameFightPanel.cpp`, and `src/gui/panel/CGameTradePanel.cpp`
+  - `cmake --build cmake-build-release --target _game for_unit_tests -j$(nproc)` -> `[100%] Built target _game`, `[100%] Built target for_unit_tests`
+  - `ctest --test-dir cmake-build-release --output-on-failure -R for_unit_tests` -> `1/1 Test #1: for_unit_tests ... Passed`
+  - `python3 test.py` -> emitted progress dots (`.....`, then later `.............`/`..............`) but did not reach a final unittest summary before multiple runs remained CPU-bound in this environment
+- Blockers if unresolved: Direct right-click item use is still outstanding and remains in `todo.txt`; full Python-suite completion is still not reproducible in this environment because `python3 test.py` did not finish cleanly during this batch.

@@ -57,4 +57,7 @@ public:
 private:
   std::weak_ptr<CItem> selectedInventory;
   std::weak_ptr<CItem> selectedEquipped;
+
+  bool mouseEvent(std::shared_ptr<CGui> sharedPtr, SDL_EventType type,
+                  int button, int x, int y) override;
 };

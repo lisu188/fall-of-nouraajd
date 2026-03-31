@@ -31,6 +31,9 @@ void CListView::renderObject(std::shared_ptr<CGui> gui,
 
 bool CListView::mouseEvent(std::shared_ptr<CGui> gui, SDL_EventType type,
                            int button, int x, int y) {
+  if (type == SDL_MOUSEBUTTONDOWN && button == SDL_BUTTON_RIGHT) {
+    return false;
+  }
   if (type == SDL_MOUSEBUTTONDOWN &&
       button == SDL_BUTTON_LEFT) { // TODO: separate to objects
     int xIndex = x / tileSize;
