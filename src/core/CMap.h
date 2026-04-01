@@ -216,6 +216,7 @@ class CMap : public CGameObject {
     vstd::lazy<CEventHandler> eventHandler;
     int turn = 0;
     bool moving = false;
+    bool playerTriggersRegistered = false;
     std::string mapName;
 
     std::shared_ptr<vstd::future<void, void>> _moveHelper = vstd::later([]() {});

@@ -97,8 +97,10 @@ std::shared_ptr<CPlayer> CMap::getPlayer() {
     if (!player) {
         for (auto object : getObjects()) {
             if (object->getName() == "player") {
-                // TODO: what about duplicated triggers?
-                setPlayer(vstd::cast<CPlayer>(object));
+                player = vstd::cast<CPlayer>(object);
+                player->setController(getGame()->createObject<CPlayerController>());
+                player->setFightController(getGame()->createObject<CPlayerFightController>());
+                registerPlayerTriggers();
                 break;
             }
         }
@@ -586,6 +588,11 @@ bool CMap::wrapsX(int z) const { return vstd::ctn(wrapX, z) && wrapX.at(z) != 0;
 bool CMap::wrapsY(int z) const { return vstd::ctn(wrapY, z) && wrapY.at(z) != 0; }
 
 void CMap::registerPlayerTriggers() {
+    if (playerTriggersRegistered) {
+        return;
+    }
+    playerTriggersRegistered = true;
+
     auto restartTrigger = std::make_shared<CCustomTrigger>("player", "onDestroy", [](auto object, auto event) {
         auto _player = vstd::cast<CPlayer>(object);
         _player->getMap()->addObject(_player);
