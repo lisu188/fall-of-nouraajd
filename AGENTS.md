@@ -2,6 +2,10 @@
 
 The repository default branch is `main`.
 
+## Change Scope
+Unless the user explicitly requests otherwise, only modify files inside the
+`vstd/` submodule. Do not change files elsewhere in the superproject.
+
 ## Testing
 Running tests is **mandatory** for every code change made by agents.
 Always run tests from the repository root:
