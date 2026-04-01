@@ -23,49 +23,47 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 class CCreature;
 
 template <typename T = void> std::list<Coords> near_coords(auto coords) {
-  return {Coords(coords.x + 1, coords.y, coords.z),
-          Coords(coords.x - 1, coords.y, coords.z),
-          Coords(coords.x, coords.y + 1, coords.z),
-          Coords(coords.x, coords.y - 1, coords.z)};
+    return {Coords(coords.x + 1, coords.y, coords.z), Coords(coords.x - 1, coords.y, coords.z),
+            Coords(coords.x, coords.y + 1, coords.z), Coords(coords.x, coords.y - 1, coords.z)};
 }
 
 template <typename T = void> std::list<Coords> near_coords_with(auto coords) {
-  return {Coords(coords.x, coords.y, coords.z),
-          Coords(coords.x + 1, coords.y, coords.z),
-          Coords(coords.x - 1, coords.y, coords.z),
-          Coords(coords.x, coords.y + 1, coords.z),
-          Coords(coords.x, coords.y - 1, coords.z)};
+    return {Coords(coords.x, coords.y, coords.z), Coords(coords.x + 1, coords.y, coords.z),
+            Coords(coords.x - 1, coords.y, coords.z), Coords(coords.x, coords.y + 1, coords.z),
+            Coords(coords.x, coords.y - 1, coords.z)};
 }
 
 inline std::vector<Coords> default_neighbors(const Coords &coords) {
-  auto list = near_coords(coords);
-  return std::vector<Coords>(list.begin(), list.end());
+    auto list = near_coords(coords);
+    return std::vector<Coords>(list.begin(), list.end());
 }
 
 class CPathFinder {
-public:
-  // TODO change naming
-  static std::shared_ptr<vstd::future<Coords, void>> findNextStep(
-      Coords start, Coords goal,
-      const std::function<bool(const Coords &)> &canStep,
-      const std::function<std::pair<bool, Coords>(const Coords &)> waypoint,
-      const std::function<std::vector<Coords>(const Coords &)> &neighbors = default_neighbors,
-      const std::function<double(const Coords &, const Coords &)> &distance =
-          [](const Coords &a, const Coords &b) { return a.getDist(b); });
+  public:
+    using StepCost = std::function<int(const Coords &, const Coords &)>;
 
-  static std::vector<Coords> findPath(
-      Coords start, Coords goal,
-      const std::function<bool(const Coords &)> &canStep,
-      const std::function<std::pair<bool, Coords>(const Coords &)> waypoint,
-      const std::function<std::vector<Coords>(const Coords &)> &neighbors = default_neighbors,
-      const std::function<double(const Coords &, const Coords &)> &distance =
-          [](const Coords &a, const Coords &b) { return a.getDist(b); });
+    // TODO change naming
+    static std::shared_ptr<vstd::future<Coords, void>> findNextStep(
+        Coords start, Coords goal, const std::function<bool(const Coords &)> &canStep,
+        const std::function<std::pair<bool, Coords>(const Coords &)> waypoint,
+        const std::function<std::vector<Coords>(const Coords &)> &neighbors = default_neighbors,
+        const std::function<double(const Coords &, const Coords &)> &distance =
+            [](const Coords &a, const Coords &b) { return a.getDist(b); },
+        const StepCost &stepCost = [](const Coords &, const Coords &) { return 1; });
 
-  static void saveMap(
-      Coords start, const std::function<bool(const Coords &)> &canStep,
-      const std::string &path,
-      const std::function<std::pair<bool, Coords>(const Coords &)> &waypoint,
-      const std::function<std::vector<Coords>(const Coords &)> &neighbors = default_neighbors,
-      const std::function<double(const Coords &, const Coords &)> &distance =
-          [](const Coords &a, const Coords &b) { return a.getDist(b); });
+    static std::vector<Coords> findPath(
+        Coords start, Coords goal, const std::function<bool(const Coords &)> &canStep,
+        const std::function<std::pair<bool, Coords>(const Coords &)> waypoint,
+        const std::function<std::vector<Coords>(const Coords &)> &neighbors = default_neighbors,
+        const std::function<double(const Coords &, const Coords &)> &distance =
+            [](const Coords &a, const Coords &b) { return a.getDist(b); },
+        const StepCost &stepCost = [](const Coords &, const Coords &) { return 1; });
+
+    static void saveMap(
+        Coords start, const std::function<bool(const Coords &)> &canStep, const std::string &path,
+        const std::function<std::pair<bool, Coords>(const Coords &)> &waypoint,
+        const std::function<std::vector<Coords>(const Coords &)> &neighbors = default_neighbors,
+        const std::function<double(const Coords &, const Coords &)> &distance =
+            [](const Coords &a, const Coords &b) { return a.getDist(b); },
+        const StepCost &stepCost = [](const Coords &, const Coords &) { return 1; });
 };

@@ -48,6 +48,7 @@ class CCreature : public CMapObject, public Moveable, public Visitable {
     V_META(CCreature, CMapObject, V_PROPERTY(CCreature, int, exp, getExp, setExp),
            V_PROPERTY(CCreature, int, gold, getGold, setGold), V_PROPERTY(CCreature, int, level, getLevel, setLevel),
            V_PROPERTY(CCreature, int, mana, getMana, setMana), V_PROPERTY(CCreature, int, hp, getHp, setHp),
+           V_PROPERTY(CCreature, int, movePoints, getMovePoints, setMovePoints),
            V_PROPERTY(CCreature, int, sw, getSw, setSw),
            V_PROPERTY(CCreature, CInteractionMap, levelling, getLevelling, setLevelling),
            V_PROPERTY(CCreature, CItemMap, equipped, getEquipped, setEquipped),
@@ -60,7 +61,9 @@ class CCreature : public CMapObject, public Moveable, public Visitable {
            V_PROPERTY(CCreature, std::shared_ptr<CFightController>, fightController, getFightController,
                       setFightController),
            V_PROPERTY(CCreature, bool, npc, isNpc, setNpc), V_METHOD(CCreature, getManaMax, int),
-           V_METHOD(CCreature, getHpMax, int), V_METHOD(CCreature, getManaRegRate, int))
+           V_METHOD(CCreature, getHpMax, int), V_METHOD(CCreature, getManaRegRate, int),
+           V_METHOD(CCreature, getMovePointsMax, int), V_METHOD(CCreature, resetMovePoints, void),
+           V_METHOD(CCreature, spendMovePoints, bool, int), V_METHOD(CCreature, addMovePoints, void, int))
 
   public:
     CCreature();
@@ -82,6 +85,8 @@ class CCreature : public CMapObject, public Moveable, public Visitable {
     virtual void onLeave(std::shared_ptr<CGameEvent>) override;
 
     virtual void onDestroy(std::shared_ptr<CGameEvent>);
+
+    void onTurn(std::shared_ptr<CGameEvent>) override;
 
     void setEffects(const std::set<std::shared_ptr<CEffect>> &value);
 
@@ -122,6 +127,18 @@ class CCreature : public CMapObject, public Moveable, public Visitable {
     int getMana();
 
     void setMana(int mana);
+
+    int getMovePoints();
+
+    void setMovePoints(int movePoints);
+
+    int getMovePointsMax();
+
+    void resetMovePoints();
+
+    bool spendMovePoints(int cost);
+
+    void addMovePoints(int value);
 
     void addMana(int i);
 
@@ -270,6 +287,7 @@ class CCreature : public CMapObject, public Moveable, public Visitable {
     int sw = 0;
     int mana = 0;
     int hp = 0;
+    int movePoints = 0;
 
     std::shared_ptr<Stats> baseStats = std::make_shared<Stats>();
     std::shared_ptr<Stats> levelStats = std::make_shared<Stats>();

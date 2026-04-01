@@ -16,8 +16,10 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #include "core/CMap.h"
+#include <algorithm>
 #include "core/CController.h"
 #include "core/CGame.h"
+#include "object/CItem.h"
 #include "object/CTrigger.h"
 
 namespace {
@@ -142,7 +144,10 @@ bool CMap::addTile(std::shared_ptr<CTile> tile, int x, int y, int z) {
 
 void CMap::removeTile(int x, int y, int z) {
     Coords coords = normalizeCoords(Coords(x, y, z));
-    this->tiles.erase(this->tiles.find(coords));
+    auto it = this->tiles.find(coords);
+    if (it != this->tiles.end()) {
+        this->tiles.erase(it);
+    }
     signal("tileChanged", coords);
 }
 
@@ -154,9 +159,8 @@ std::shared_ptr<CTile> CMap::getTile(int x, int y, int z) {
         if (hasBounds(z) && (coords.x < 0 || coords.y < 0 || coords.x > xBounds.at(z) || coords.y > yBounds.at(z))) {
             tile = getGame()->createObject<CTile>("MountainTile");
         } else {
-            tile = getGame()->createObject<CTile>(vstd::ctn(defaultTiles, z) && !defaultTiles.at(z).empty()
-                                                      ? defaultTiles.at(z)
-                                                      : "GrassTile");
+            tile = getGame()->createObject<CTile>(
+                vstd::ctn(defaultTiles, z) && !defaultTiles.at(z).empty() ? defaultTiles.at(z) : "GrassTile");
         }
         if (tile) {
             this->addTile(tile, coords.x, coords.y, coords.z);
@@ -187,6 +191,16 @@ bool CMap::canStep(int x, int y, int z) {
 
 bool CMap::canStep(Coords coords) { return canStep(coords.x, coords.y, coords.z); }
 
+int CMap::getMovementCost(int x, int y, int z) {
+    auto tile = getTile(x, y, z);
+    return tile ? tile->getMovementCost() : 1;
+}
+
+int CMap::getMovementCost(Coords coords) {
+    coords = normalizeCoords(coords);
+    return getMovementCost(coords.x, coords.y, coords.z);
+}
+
 bool CMap::contains(int x, int y, int z) {
     Coords coords = normalizeCoords(Coords(x, y, z));
     auto it = tiles.find(coords);
@@ -203,6 +217,7 @@ void CMap::addObject(const std::shared_ptr<CMapObject> &mapObject) {
             creature->addMana(0);
         }
         creature->addExp(0);
+        creature->resetMovePoints();
     }
     mapObjects.insert(std::make_pair(mapObject->getName(), mapObject));
     getEventHandler()->gameEvent(mapObject, std::make_shared<CGameEvent>(CGameEvent::Type::onCreate));
@@ -299,31 +314,104 @@ void CMap::move() {
         map->getEventHandler()->gameEvent(mapObject, std::make_shared<CGameEvent>(CGameEvent::Type::onTurn));
     });
 
-    auto pred = [](std::shared_ptr<CMapObject> object) { return vstd::castable<Moveable>(object); };
+    auto is_active_creature = [map](const std::shared_ptr<CCreature> &creature) {
+        return creature && creature->getMap() == map && map->getObjectByName(creature->getName()) == creature &&
+               creature->isAlive();
+    };
 
-    std::shared_ptr<std::list<std::pair<std::shared_ptr<CCreature>, Coords>>> coordinates =
-        std::make_shared<std::list<std::pair<std::shared_ptr<CCreature>, Coords>>>();
+    auto should_interrupt_after_step = [map](const std::shared_ptr<CCreature> &creature, const Coords &target) {
+        auto objects = map->getObjectsAtCoords(target);
+        return std::any_of(objects.begin(), objects.end(), [&](const auto &object) {
+            return object != creature &&
+                   (vstd::cast<CCreature>(object) || (vstd::cast<Visitable>(object) && !vstd::cast<CItem>(object)));
+        });
+    };
 
-    auto controller = [map, coordinates](std::shared_ptr<CMapObject> object) {
+    auto pred = [is_active_creature](std::shared_ptr<CMapObject> object) {
         auto creature = vstd::cast<CCreature>(object);
-        return creature->getController()->control(creature)->thenLater(
-            [creature, coordinates](Coords coords) { coordinates->push_back(std::make_pair(creature, coords)); });
+        return creature && vstd::castable<Moveable>(object) && is_active_creature(creature) &&
+               creature->getMovePoints() > 0;
     };
 
-    auto end_callback = [map, coordinates](std::set<void *>) {
-        for (auto [creature, coords] : *coordinates) {
-            creature->moveTo(coords);
+    bool progressed = true;
+    while (progressed) {
+        progressed = false;
+
+        std::shared_ptr<std::list<std::pair<std::shared_ptr<CCreature>, Coords>>> coordinates =
+            std::make_shared<std::list<std::pair<std::shared_ptr<CCreature>, Coords>>>();
+
+        std::vector<std::shared_ptr<CMapObject>> active_objects;
+        for (auto object : map->mapObjects | boost::adaptors::map_values | boost::adaptors::filtered(pred)) {
+            active_objects.push_back(object);
         }
-        map->moving = false;
-        map->turn++;
-        map->signal("turnPassed");
-    };
+        if (active_objects.empty()) {
+            break;
+        }
 
-    vstd::join(map->mapObjects | boost::adaptors::map_values | boost::adaptors::filtered(pred) |
-               boost::adaptors::transformed(controller))
-        ->thenLater(end_callback);
+        auto controller = [coordinates](std::shared_ptr<CMapObject> object) {
+            auto creature = vstd::cast<CCreature>(object);
+            return creature->getController()->control(creature)->thenLater(
+                [creature, coordinates](Coords coords) { coordinates->push_back(std::make_pair(creature, coords)); });
+        };
 
-    vstd::wait_until([map]() { return !map->moving; });
+        auto pending = active_objects | boost::adaptors::transformed(controller);
+        auto joined = vstd::join(pending);
+
+        bool round_complete = false;
+        joined->thenLater([&round_complete](std::set<void *>) { round_complete = true; });
+        vstd::wait_until([&round_complete]() { return round_complete; });
+
+        for (auto [creature, coords] : *coordinates) {
+            auto controller_ptr = creature->getController();
+            if (!is_active_creature(creature)) {
+                controller_ptr->interrupt(creature);
+                continue;
+            }
+
+            auto current = map->normalizeCoords(creature->getCoords());
+            auto target = map->normalizeCoords(coords);
+            if (target == current) {
+                controller_ptr->interrupt(creature);
+                continue;
+            }
+            if (!map->canStep(target)) {
+                controller_ptr->interrupt(creature);
+                continue;
+            }
+
+            const int movement_cost = map->getMovementCost(target);
+            if (!creature->spendMovePoints(movement_cost)) {
+                controller_ptr->interrupt(creature);
+                continue;
+            }
+
+            const bool interrupt_after_step = should_interrupt_after_step(creature, target);
+            creature->moveTo(target);
+            progressed = true;
+
+            if (!is_active_creature(creature) || map->normalizeCoords(creature->getCoords()) != target) {
+                controller_ptr->interrupt(creature);
+                continue;
+            }
+
+            controller_ptr->onStepCommitted(creature, target);
+            if (interrupt_after_step) {
+                controller_ptr->interrupt(creature);
+            }
+        }
+    }
+
+    map->forObjects(
+        [](std::shared_ptr<CMapObject> object) {
+            if (auto creature = vstd::cast<CCreature>(object)) {
+                creature->getController()->onTurnEnded(creature);
+            }
+        },
+        [](std::shared_ptr<CMapObject> object) { return vstd::castable<CCreature>(object); });
+
+    map->moving = false;
+    map->turn++;
+    map->signal("turnPassed");
 }
 
 int CMap::getTurn() { return turn; }

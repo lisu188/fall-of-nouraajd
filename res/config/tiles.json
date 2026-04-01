@@ -5,6 +5,7 @@
       "animation": "images/tiles/beach",
       "canStep": true,
       "label": "Beach",
+      "movementCost": 2,
       "tileType": "beach"
     }
   },
@@ -14,6 +15,7 @@
       "animation": "images/tiles/desert",
       "canStep": true,
       "label": "Desert",
+      "movementCost": 3,
       "tileType": "desert"
     }
   },
@@ -23,6 +25,7 @@
       "animation": "images/tiles/grass",
       "canStep": true,
       "label": "Grass",
+      "movementCost": 2,
       "tileType": "grass"
     }
   },
@@ -32,6 +35,7 @@
       "animation": "images/tiles/ground",
       "canStep": true,
       "label": "Ground",
+      "movementCost": 2,
       "tileType": "ground"
     }
   },
@@ -41,6 +45,7 @@
       "animation": "images/tiles/lava",
       "canStep": true,
       "label": "Lava",
+      "movementCost": 3,
       "tileType": "lava"
     }
   },
@@ -50,6 +55,7 @@
       "animation": "images/tiles/mountain",
       "canStep": false,
       "label": "Mountain",
+      "movementCost": 4,
       "tileType": "mountain"
     }
   },
@@ -60,6 +66,7 @@
       "canStep": true,
       "label": "Road",
       "tileType": "road",
+      "movementCost": 1,
       "description": "Heals 1 hp per step"
     }
   },
@@ -69,6 +76,7 @@
       "animation": "images/tiles/snow",
       "canStep": true,
       "label": "Snow",
+      "movementCost": 2,
       "tileType": "snow"
     }
   },
@@ -78,6 +86,7 @@
       "animation": "images/tiles/swamp",
       "canStep": true,
       "label": "Swamp",
+      "movementCost": 3,
       "tileType": "swamp"
     }
   },
@@ -87,6 +96,7 @@
       "animation": "images/tiles/wasteland",
       "canStep": true,
       "label": "Wasteland",
+      "movementCost": 2,
       "tileType": "wasteland"
     }
   },
@@ -96,6 +106,7 @@
       "animation": "images/tiles/water",
       "canStep": false,
       "label": "Water",
+      "movementCost": 4,
       "tileType": "water"
     }
   }

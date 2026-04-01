@@ -16,6 +16,7 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #include "CTile.h"
+#include <algorithm>
 #include "CCreature.h"
 #include "core/CGame.h"
 #include "core/CMap.h"
@@ -25,11 +26,11 @@ CTile::CTile() {}
 CTile::~CTile() {}
 
 void CTile::move(int x, int y, int z) {
-  if (getMap()) {
-    Coords target = getMap()->normalizeCoords(Coords(posx + x, posy + y, posz + z));
-    getMap()->moveTile(this->ptr<CTile>(), target.x, target.y, target.z);
-    setXYZ(target.x, target.y, target.z);
-  }
+    if (getMap()) {
+        Coords target = getMap()->normalizeCoords(Coords(posx + x, posy + y, posz + z));
+        getMap()->moveTile(this->ptr<CTile>(), target.x, target.y, target.z);
+        setXYZ(target.x, target.y, target.z);
+    }
 }
 
 void CTile::moveTo(int x, int y, int z) { move(x - posx, y - posy, z - posz); }
@@ -37,16 +38,19 @@ void CTile::moveTo(int x, int y, int z) { move(x - posx, y - posy, z - posz); }
 Coords CTile::getCoords() { return Coords(posx, posy, posz); }
 
 void CTile::onStep(std::shared_ptr<CCreature> creature) {
-  pybind11::gil_scoped_acquire gil;
-  if (auto override = CPythonOverrides::find_override(this, "onStep");
-      !override.is_none()) {
-    PY_SAFE(override(creature); return;)
-  }
+    pybind11::gil_scoped_acquire gil;
+    if (auto override = CPythonOverrides::find_override(this, "onStep"); !override.is_none()) {
+        PY_SAFE(override(creature); return;)
+    }
 }
 
 bool CTile::canStep() const { return step; }
 
 void CTile::setCanStep(bool canStep) { this->step = canStep; }
+
+int CTile::getMovementCost() const { return movementCost; }
+
+void CTile::setMovementCost(int value) { movementCost = std::max(1, value); }
 
 int CTile::getPosx() const { return posx; }
 
@@ -61,13 +65,11 @@ int CTile::getPosz() const { return posz; }
 void CTile::setPosz(int value) { posz = value; }
 
 void CTile::setXYZ(int x, int y, int z) {
-  posx = x;
-  posy = y;
-  posz = z;
+    posx = x;
+    posy = y;
+    posz = z;
 }
 
 const std::string &CTile::getTileType() const { return tileType; }
 
-void CTile::setTileType(const std::string &tileType) {
-  CTile::tileType = tileType;
-}
+void CTile::setTileType(const std::string &tileType) { CTile::tileType = tileType; }

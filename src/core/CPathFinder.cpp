@@ -17,200 +17,175 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #include "core/CPathFinder.h"
 
-typedef std::function<bool(const Coords &, const Coords &)> Compare;
-typedef std::priority_queue<Coords, std::vector<Coords>, Compare> Queue;
-typedef std::shared_ptr<std::unordered_map<Coords, int>> Values;
+#include <algorithm>
+#include <limits>
+#include <queue>
 
-static Coords getNextStep(
-    const Coords &start, const Coords &goal, const Values &values,
-    const std::function<std::pair<bool, Coords>(const Coords &)> &waypoint,
-    const std::function<std::vector<Coords>(const Coords &)> &neighbors,
-    const std::function<double(const Coords &, const Coords &)> &distance) {
-  Coords target = start;
-  std::vector<Coords> list = neighbors(start);
-  auto it = waypoint(start);
-  if (it.first) {
-    list.push_back(it.second);
-  }
-  for (Coords coords : list) {
-    if (vstd::ctn((*values), coords) &&
-        ((*values)[coords] < (*values)[target] ||
-         ((*values)[coords] == (*values)[target] &&
-          distance(coords, goal) < distance(target, goal)))) {
-      target = coords;
-    }
-  }
-  return target;
-}
+namespace {
+using Values = std::shared_ptr<std::unordered_map<Coords, int>>;
 
-static Values fillValues(
-    const std::function<bool(const Coords &)> &canStep, const Coords &goal,
-    const Coords &start,
-    const std::function<std::pair<bool, Coords>(const Coords &)> &waypoint,
-    const std::function<std::vector<Coords>(const Coords &)> &neighbors,
-    const std::function<double(const Coords &, const Coords &)> &distance) {
-  Queue nodes([start, distance](const Coords &a, const Coords &b) {
-    return distance(a, start) > distance(b, start);
-  });
-  std::unordered_set<Coords> marked;
-  Values values = std::make_shared<std::unordered_map<Coords, int>>();
+struct QueueNode {
+    int cost;
+    Coords coords;
+};
 
-  if (canStep(goal)) {
-    nodes.push(goal);
-    (*values)[goal] = 0;
-  }
+struct QueueCompare {
+    bool operator()(const QueueNode &a, const QueueNode &b) const { return a.cost > b.cost; }
+};
 
-  while (!nodes.empty() && !vstd::ctn(marked, start)) {
-    Coords currentCoords = vstd::pop_p(nodes);
-    if (marked.insert(currentCoords).second) {
-      int curValue = (*values)[currentCoords];
-      auto list = neighbors(currentCoords);
-      auto waypoint_direction = waypoint(currentCoords);
-      if (waypoint_direction.first) {
+using Queue = std::priority_queue<QueueNode, std::vector<QueueNode>, QueueCompare>;
+
+std::vector<Coords> candidates(const Coords &coords,
+                               const std::function<std::pair<bool, Coords>(const Coords &)> &waypoint,
+                               const std::function<std::vector<Coords>(const Coords &)> &neighbors) {
+    auto list = neighbors(coords);
+    auto waypoint_direction = waypoint(coords);
+    if (waypoint_direction.first) {
         list.push_back(waypoint_direction.second);
-      }
-      for (Coords tmpCoords : list) {
-        if (tmpCoords == start || canStep(tmpCoords)) {
-          auto it = values->find(tmpCoords);
-          if (it == values->end() || it->second > curValue + 1) {
-            (*values)[tmpCoords] = curValue + 1;
-          }
-          nodes.push(tmpCoords);
+    }
+    return list;
+}
+
+Values fillValues(const std::function<bool(const Coords &)> &canStep, const Coords &goal,
+                  const std::function<std::pair<bool, Coords>(const Coords &)> &waypoint,
+                  const std::function<std::vector<Coords>(const Coords &)> &neighbors,
+                  const CPathFinder::StepCost &stepCost, const Coords *stopAt = nullptr) {
+    Values values = std::make_shared<std::unordered_map<Coords, int>>();
+    Queue nodes;
+
+    if (canStep(goal) || (stopAt && goal == *stopAt)) {
+        (*values)[goal] = 0;
+        nodes.push({0, goal});
+    }
+
+    while (!nodes.empty()) {
+        auto current = nodes.top();
+        nodes.pop();
+
+        auto best = values->find(current.coords);
+        if (best == values->end() || best->second != current.cost) {
+            continue;
         }
-      }
-    }
-  }
-  return values;
-}
-
-static Values fillAllValues(
-    const std::function<bool(const Coords &)> &canStep, const Coords &goal,
-    const std::function<std::pair<bool, Coords>(const Coords &)> &waypoint,
-    const std::function<std::vector<Coords>(const Coords &)> &neighbors) {
-  std::unordered_set<Coords> marked;
-  Values values = std::make_shared<std::unordered_map<Coords, int>>();
-  Queue nodes([values](const Coords &a, const Coords &b) {
-    int dista;
-    auto it = values->find(a);
-    if (it == values->end()) {
-      dista = std::numeric_limits<int>::max();
-    } else {
-      dista = it->second;
-    }
-    int distb;
-    it = values->find(b);
-    if (it == values->end()) {
-      distb = std::numeric_limits<int>::max();
-    } else {
-      distb = it->second;
-    }
-    return dista > distb;
-  });
-  nodes.push(goal);
-  (*values)[goal] = 0;
-
-  while (!nodes.empty()) {
-    Coords currentCoords = vstd::pop_p(nodes);
-    if (marked.insert(currentCoords).second) {
-      int curValue = (*values)[currentCoords];
-      auto list = neighbors(currentCoords);
-      auto waypoint_direction = waypoint(currentCoords);
-      if (waypoint_direction.first) {
-        list.push_back(waypoint_direction.second);
-      }
-      for (Coords tmpCoords : list) {
-        if (canStep(tmpCoords)) {
-          auto it = values->find(tmpCoords);
-          if (it == values->end() || it->second > curValue + 1) {
-            (*values)[tmpCoords] = curValue + 1;
-          }
-          nodes.push(tmpCoords);
+        if (stopAt && current.coords == *stopAt) {
+            break;
         }
-      }
+
+        for (auto previous : candidates(current.coords, waypoint, neighbors)) {
+            if ((stopAt && previous == *stopAt) || canStep(previous)) {
+                const int edge_cost = std::max(1, stepCost(previous, current.coords));
+                const int next_cost = current.cost + edge_cost;
+                auto value = values->find(previous);
+                if (value == values->end() || next_cost < value->second) {
+                    (*values)[previous] = next_cost;
+                    nodes.push({next_cost, previous});
+                }
+            }
+        }
     }
-  }
-  return values;
+
+    return values;
 }
 
-std::shared_ptr<vstd::future<Coords, void>> CPathFinder::findNextStep(
-    Coords start, Coords goal,
-    const std::function<bool(const Coords &)> &canStep,
-    const std::function<std::pair<bool, Coords>(const Coords &)> waypoint,
-    const std::function<std::vector<Coords>(const Coords &)> &neighbors,
-    const std::function<double(const Coords &, const Coords &)> &distance) {
-  return vstd::async([=]() {
-    return getNextStep(start, goal,
-                       fillValues(canStep, goal, start, waypoint, neighbors,
-                                  distance),
-                       waypoint, neighbors, distance);
-  });
+Coords getNextStep(const Coords &start, const Coords &goal, const Values &values,
+                   const std::function<std::pair<bool, Coords>(const Coords &)> &waypoint,
+                   const std::function<std::vector<Coords>(const Coords &)> &neighbors,
+                   const std::function<double(const Coords &, const Coords &)> &distance,
+                   const CPathFinder::StepCost &stepCost) {
+    Coords target = start;
+    int target_cost = std::numeric_limits<int>::max();
+    int current_cost = std::numeric_limits<int>::max();
+    if (auto current = values->find(start); current != values->end()) {
+        current_cost = current->second;
+    }
+
+    for (auto coords : candidates(start, waypoint, neighbors)) {
+        if (auto value = values->find(coords); value != values->end()) {
+            const int candidate_cost = std::max(1, stepCost(start, coords)) + value->second;
+            if (candidate_cost < target_cost ||
+                (candidate_cost == target_cost && distance(coords, goal) < distance(target, goal))) {
+                target = coords;
+                target_cost = candidate_cost;
+            }
+        }
+    }
+
+    return target_cost <= current_cost ? target : start;
+}
+} // namespace
+
+std::shared_ptr<vstd::future<Coords, void>>
+CPathFinder::findNextStep(Coords start, Coords goal, const std::function<bool(const Coords &)> &canStep,
+                          const std::function<std::pair<bool, Coords>(const Coords &)> waypoint,
+                          const std::function<std::vector<Coords>(const Coords &)> &neighbors,
+                          const std::function<double(const Coords &, const Coords &)> &distance,
+                          const StepCost &stepCost) {
+    return vstd::async([=]() {
+        return getNextStep(start, goal, fillValues(canStep, goal, waypoint, neighbors, stepCost, &start), waypoint,
+                           neighbors, distance, stepCost);
+    });
 }
 
-std::vector<Coords> CPathFinder::findPath(
-    Coords start, Coords goal,
-    const std::function<bool(const Coords &)> &canStep,
-    const std::function<std::pair<bool, Coords>(const Coords &)> waypoint,
-    const std::function<std::vector<Coords>(const Coords &)> &neighbors,
-    const std::function<double(const Coords &, const Coords &)> &distance) {
-  std::vector<Coords> path;
-  Values val = fillValues(canStep, goal, start, waypoint, neighbors, distance);
-  Coords next = getNextStep(start, goal, val, waypoint, neighbors, distance);
-  path.push_back(next);
-  if (next != start) {
-    while (next != goal) {
-      next = getNextStep(next, goal, val, waypoint, neighbors, distance);
-      path.push_back(next);
+std::vector<Coords> CPathFinder::findPath(Coords start, Coords goal, const std::function<bool(const Coords &)> &canStep,
+                                          const std::function<std::pair<bool, Coords>(const Coords &)> waypoint,
+                                          const std::function<std::vector<Coords>(const Coords &)> &neighbors,
+                                          const std::function<double(const Coords &, const Coords &)> &distance,
+                                          const StepCost &stepCost) {
+    std::vector<Coords> path;
+    Values values = fillValues(canStep, goal, waypoint, neighbors, stepCost, &start);
+    Coords next = getNextStep(start, goal, values, waypoint, neighbors, distance, stepCost);
+    path.push_back(next);
+    if (next != start) {
+        while (next != goal) {
+            next = getNextStep(next, goal, values, waypoint, neighbors, distance, stepCost);
+            path.push_back(next);
+        }
     }
-  }
-  return path;
+    return path;
 }
 
-void CPathFinder::saveMap(
-    Coords start, const std::function<bool(const Coords &)> &canStep,
-    const std::string &path,
-    const std::function<std::pair<bool, Coords>(const Coords &)> &waypoint,
-    const std::function<std::vector<Coords>(const Coords &)> &neighbors,
-    const std::function<double(const Coords &, const Coords &)> &) {
-  Values values = fillAllValues(canStep, start, waypoint, neighbors);
-  int minx = std::numeric_limits<int>::max();
-  int miny = std::numeric_limits<int>::max();
-  int maxx = std::numeric_limits<int>::min();
-  int maxy = std::numeric_limits<int>::min();
-  int maxVal = std::numeric_limits<int>::min();
-  for (std::pair<Coords, int> entry : *values) {
-    Coords coords = entry.first;
-    if (coords.x < minx) {
-      minx = coords.x;
+void CPathFinder::saveMap(Coords start, const std::function<bool(const Coords &)> &canStep, const std::string &path,
+                          const std::function<std::pair<bool, Coords>(const Coords &)> &waypoint,
+                          const std::function<std::vector<Coords>(const Coords &)> &neighbors,
+                          const std::function<double(const Coords &, const Coords &)> &, const StepCost &stepCost) {
+    Values values = fillValues(canStep, start, waypoint, neighbors, stepCost);
+    int minx = std::numeric_limits<int>::max();
+    int miny = std::numeric_limits<int>::max();
+    int maxx = std::numeric_limits<int>::min();
+    int maxy = std::numeric_limits<int>::min();
+    int maxVal = std::numeric_limits<int>::min();
+    for (const auto &entry : *values) {
+        Coords coords = entry.first;
+        if (coords.x < minx) {
+            minx = coords.x;
+        }
+        if (coords.y < miny) {
+            miny = coords.y;
+        }
+        if (coords.x > maxx) {
+            maxx = coords.x;
+        }
+        if (coords.y > maxy) {
+            maxy = coords.y;
+        }
+        if (entry.second > maxVal) {
+            maxVal = entry.second;
+        }
     }
-    if (coords.y < miny) {
-      miny = coords.y;
+    int factor = 4;
+    SDL_Surface *surface = SDL_CreateRGBSurface(0, factor * (maxx - minx), factor * (maxy - miny), 32, 0, 0, 0, 0);
+    float scale = maxVal > 0 ? 256.0f / maxVal : 0.0f;
+    for (const auto &entry : *values) {
+        int posx = entry.first.x - minx;
+        int posy = entry.first.y - miny;
+        int val = entry.second;
+        SDL_Rect rect;
+        rect.x = posx * factor;
+        rect.y = posy * factor;
+        rect.w = factor;
+        rect.h = factor;
+        float r = 256.0f - (scale * val);
+        SDL_FillRect(surface, &rect, SDL_MapRGB(surface->format, r, r, r));
     }
-    if (coords.x > maxx) {
-      maxx = coords.x;
-    }
-    if (coords.y > maxy) {
-      maxy = coords.y;
-    }
-    if (entry.second > maxVal) {
-      maxVal = entry.second;
-    }
-  }
-  int factor = 4;
-  SDL_Surface *surface = SDL_CreateRGBSurface(
-      0, factor * (maxx - minx), factor * (maxy - miny), 32, 0, 0, 0, 0);
-  float scale = 256.0 / maxVal;
-  for (std::pair<Coords, int> entry : *values) {
-    int posx = entry.first.x - minx;
-    int posy = entry.first.y - miny;
-    int val = entry.second;
-    SDL_Rect rect;
-    rect.x = posx * factor;
-    rect.y = posy * factor;
-    rect.w = factor;
-    rect.h = factor;
-    float r = 256.0 - (scale * val);
-    SDL_FillRect(surface, &rect, SDL_MapRGB(surface->format, r, r, r));
-  }
-  IMG_SavePNG(surface, path.c_str());
-  SDL_FreeSurface(surface);
+    IMG_SavePNG(surface, path.c_str());
+    SDL_FreeSurface(surface);
 }
