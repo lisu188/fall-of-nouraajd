@@ -20,6 +20,10 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CGlobal.h"
 
 namespace CJsonUtil {
+inline std::shared_ptr<json> alias(const std::shared_ptr<json> &owner, json &value) {
+    return std::shared_ptr<json>(owner, &value);
+}
+
 inline std::string preview_json(std::string text, size_t limit = 120) {
     for (char &ch : text) {
         if (ch == '\n' || ch == '\r' || ch == '\t') {
@@ -87,9 +91,9 @@ std::shared_ptr<json> from_string(std::string json_string, const std::string &so
 
 template <typename T> std::string to_string(T value, int indent = -1) { return value->dump(indent); }
 
-template <typename T> std::shared_ptr<json> clone(T value) {
-    std::string json = to_string(value);
-    //        vstd::logger::debug(json);
-    return from_string(json);
-}
+inline std::shared_ptr<json> clone(const json &value) { return std::make_shared<json>(value); }
+
+inline std::shared_ptr<json> clone(const std::shared_ptr<json> &value) { return std::make_shared<json>(*value); }
+
+inline std::shared_ptr<json> clone(const json *value) { return std::make_shared<json>(*value); }
 } // namespace CJsonUtil
