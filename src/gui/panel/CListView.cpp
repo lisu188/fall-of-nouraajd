@@ -258,8 +258,8 @@ void CListView::addCountBox(
   countBox->setText(vstd::str(count));
   auto layout =
       gui->getGame()->getObjectHandler()->createObject<CLayout>(gui->getGame());
-  layout->setHorizontal("RIGHT");
-  layout->setVertical("DOWN");
+  layout->setHorizontal("LEFT");
+  layout->setVertical("UP");
   layout->setW("25%");
   layout->setH("25%");
   countBox->setLayout(layout);
