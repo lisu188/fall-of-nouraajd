@@ -25,6 +25,7 @@ import sys
 import tempfile
 import time
 import traceback
+import types
 from pathlib import Path
 import unittest
 
@@ -3670,6 +3671,81 @@ class McpServerTest(unittest.TestCase):
             signature="(value=None)",
         )
         return server
+
+    def test_export_module_includes_python_class_methods(self):
+        server = self.make_stub_server()
+        module = types.ModuleType("game_stub")
+
+        def top_level():
+            return "top-level"
+
+        class Dialog:
+            def invoke(self, action):
+                return action
+
+            @classmethod
+            def class_invoke(cls, action):
+                return action
+
+            @staticmethod
+            def static_invoke(action):
+                return action
+
+        class NativeLike:
+            append = list.append
+
+        module.top_level = top_level
+        module.Dialog = Dialog
+        module.NativeLike = NativeLike
+
+        server._export_module_callables(module, source="game")
+
+        self.assertIn("top_level", server.exports)
+        self.assertIn("Dialog", server.exports)
+        self.assertIn("Dialog.invoke", server.exports)
+        self.assertIn("Dialog.class_invoke", server.exports)
+        self.assertIn("Dialog.static_invoke", server.exports)
+        self.assertNotIn("NativeLike.append", server.exports)
+        self.assertEqual(server.exports["Dialog"].source, "game")
+        self.assertEqual(server.exports["Dialog.invoke"].source, "game.Dialog")
+
+    def test_engine_call_resolves_handle_arguments_for_python_methods(self):
+        server = self.make_stub_server()
+
+        class Dialog:
+            def invoke(self, action):
+                return f"invoked:{action}"
+
+        server.exports["Dialog.invoke"] = mcp.ExportedCallable(
+            name="Dialog.invoke",
+            source="test.Dialog",
+            target_name="invoke",
+            callable_obj=Dialog.invoke,
+            signature="(self, action)",
+        )
+
+        handle = server._serialize_result(Dialog())
+        response = server._engine_call(
+            {
+                "name": "Dialog.invoke",
+                "args": [handle, "open"],
+            }
+        )
+
+        self.assertFalse(response["isError"])
+        self.assertEqual(response["structuredContent"]["result"], "invoked:open")
+
+    def test_serialize_result_lists_python_methods_for_handles(self):
+        server = self.make_stub_server()
+
+        class Dialog:
+            def invoke(self, action):
+                return action
+
+        handle = server._serialize_result(Dialog())
+
+        self.assertEqual(handle["__type__"], "Dialog")
+        self.assertEqual(handle["pythonMethods"], [{"name": "invoke", "signature": "(self, action)"}])
 
     def test_initialize_response_preserves_request_id(self):
         server = self.make_stub_server()
