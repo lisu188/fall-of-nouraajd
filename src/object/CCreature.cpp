@@ -17,6 +17,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #include "CCreature.h"
 #include <algorithm>
+#include <vector>
+
 #include "core/CController.h"
 #include "core/CGame.h"
 #include "core/CJsonUtil.h"
@@ -489,7 +491,12 @@ void CCreature::afterMove() {
                self->getMap()->getObjectByName(self->getName()) && object->getMap()->getObjectByName(object->getName());
     };
 
-    auto fightAction = [self](auto object) { CFightHandler::fight(self, vstd::cast<CCreature>(object)); };
+    std::vector<std::shared_ptr<CCreature>> opponents;
+    auto fightAction = [&opponents](auto object) {
+        if (auto creature = vstd::cast<CCreature>(object)) {
+            opponents.push_back(creature);
+        }
+    };
 
     auto eventAction = [self](auto object) {
         self->getMap()->getEventHandler()->gameEvent(
@@ -497,6 +504,9 @@ void CCreature::afterMove() {
     };
 
     getMap()->forObjectsAtCoords(this->getCoords(), fightAction, fightPred);
+    if (!opponents.empty()) {
+        CFightHandler::fightMany(self, opponents);
+    }
     getMap()->forObjectsAtCoords(this->getCoords(), eventAction, visitablePredicate);
 }
 

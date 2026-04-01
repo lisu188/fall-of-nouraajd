@@ -1774,6 +1774,40 @@ class GameTest(unittest.TestCase):
 
         return True, ""
 
+    def make_multi_enemy_combat_fixture(self):
+        game = load_game_module()
+
+        g = game.CGameLoader.loadGame()
+        game.CGameLoader.startGame(g, "empty")
+        attacker = g.createObject("Warrior")
+        attacker.baseStats.hit = 100
+        attacker.baseStats.dmgMin = 10
+        attacker.baseStats.dmgMax = 10
+        attacker.baseStats.crit = 0
+        attacker.moveTo(0, 0, 0)
+        g.getMap().addObject(attacker)
+
+        defenders = []
+        for item_id in ("Scroll", "TownPortalScroll"):
+            defender = g.createObject("GoblinThief")
+            defender.baseStats.hit = 0
+            defender.baseStats.dmgMin = 0
+            defender.baseStats.dmgMax = 0
+            defender.baseStats.crit = 0
+            defender.level = 0
+            defender.sw = 0
+            defender.hp = 1
+            defender.addItem(item_id)
+            defender.moveTo(1, 0, 0)
+            g.getMap().addObject(defender)
+            defenders.append(defender)
+
+        return game, g, attacker, defenders
+
+    def expected_scaled_exp_gain(self, attacker, defenders):
+        attacker_level = attacker.getLevel()
+        return sum(int(250 * pow(2, -(attacker_level - (defender.level + defender.sw)))) for defender in defenders)
+
     @game_test
     def test_combat_invariants(self):
         game = load_game_module()
@@ -1797,6 +1831,123 @@ class GameTest(unittest.TestCase):
         one_side_took_damage = attacker.getHpRatio() < attacker_hp_before or defender.getHpRatio() < defender_hp_before
         self.assertTrue(one_side_took_damage)
         return True, ""
+
+    @game_test
+    def test_multi_enemy_combat_resolves_and_rewards_once(self):
+        game, g, attacker, defenders = self.make_multi_enemy_combat_fixture()
+
+        exp_before = attacker.exp
+        scroll_before = attacker.countItems("Scroll")
+        town_portal_before = attacker.countItems("TownPortalScroll")
+        expected_exp = exp_before + self.expected_scaled_exp_gain(attacker, defenders)
+        started = time.monotonic()
+        result = game.CFightHandler.fightMany(attacker, defenders)
+        elapsed = time.monotonic() - started
+
+        remaining = [defender.getName() for defender in defenders if g.getMap().getObjectByName(defender.getName())]
+
+        self.assertTrue(result)
+        self.assertLess(elapsed, 2.0)
+        self.assertTrue(attacker.isAlive())
+        self.assertEqual([], remaining)
+        self.assertEqual(expected_exp, attacker.exp)
+        self.assertEqual(scroll_before + 1, attacker.countItems("Scroll"))
+        self.assertEqual(town_portal_before + 1, attacker.countItems("TownPortalScroll"))
+
+        return True, json.dumps(
+            {
+                "elapsed": elapsed,
+                "exp_before": exp_before,
+                "exp_after": attacker.exp,
+                "scrolls": attacker.countItems("Scroll"),
+                "town_portal_scrolls": attacker.countItems("TownPortalScroll"),
+                "remaining": remaining,
+            }
+        )
+
+    @game_test
+    def test_multi_enemy_combat_from_movement_path(self):
+        game, g, attacker, defenders = self.make_multi_enemy_combat_fixture()
+
+        fight_coords = defenders[0].getCoords()
+        before_names = sorted(obj.getName() for obj in g.getMap().getObjectsAtCoords(fight_coords))
+        exp_before = attacker.exp
+        expected_exp = exp_before + self.expected_scaled_exp_gain(attacker, defenders)
+        attacker.moveTo(fight_coords.x, fight_coords.y, fight_coords.z)
+
+        remaining = [defender.getName() for defender in defenders if g.getMap().getObjectByName(defender.getName())]
+        occupant_names = sorted(obj.getName() for obj in g.getMap().getObjectsAtCoords(attacker.getCoords()))
+
+        self.assertEqual(2, len(before_names))
+        self.assertEqual([], remaining)
+        self.assertEqual([attacker.getName()], occupant_names)
+        self.assertEqual(expected_exp, attacker.exp)
+
+        return True, json.dumps(
+            {
+                "before_names": before_names,
+                "occupants_after": occupant_names,
+                "remaining": remaining,
+                "exp_before": exp_before,
+                "exp_after": attacker.exp,
+            }
+        )
+
+    @game_test
+    def test_multi_enemy_combat_stale_loop_terminates(self):
+        game, g, attacker, defenders = self.make_multi_enemy_combat_fixture()
+
+        attacker.setFightController(g.createObject("CFightController"))
+        for defender in defenders:
+            defender.setFightController(g.createObject("CFightController"))
+
+        exp_before = attacker.exp
+        started = time.monotonic()
+        result = game.CFightHandler.fightMany(attacker, defenders)
+        elapsed = time.monotonic() - started
+
+        remaining = sorted(
+            defender.getName() for defender in defenders if g.getMap().getObjectByName(defender.getName())
+        )
+
+        self.assertFalse(result)
+        self.assertLess(elapsed, 2.0)
+        self.assertTrue(attacker.isAlive())
+        self.assertEqual(exp_before, attacker.exp)
+        self.assertEqual(sorted(defender.getName() for defender in defenders), remaining)
+
+        return True, json.dumps(
+            {
+                "elapsed": elapsed,
+                "exp_before": exp_before,
+                "exp_after": attacker.exp,
+                "remaining": remaining,
+            }
+        )
+
+    @game_test
+    def test_single_opponent_fight_wrapper_still_works(self):
+        game, g, attacker, defenders = self.make_multi_enemy_combat_fixture()
+
+        defender = defenders[0]
+        exp_before = attacker.exp
+        expected_exp = exp_before + self.expected_scaled_exp_gain(attacker, [defender])
+
+        result = game.CFightHandler.fight(attacker, defender)
+
+        self.assertTrue(result)
+        self.assertIsNone(g.getMap().getObjectByName(defender.getName()))
+        self.assertIsNotNone(g.getMap().getObjectByName(defenders[1].getName()))
+        self.assertEqual(expected_exp, attacker.exp)
+
+        return True, json.dumps(
+            {
+                "defeated": defender.getName(),
+                "remaining": defenders[1].getName(),
+                "exp_before": exp_before,
+                "exp_after": attacker.exp,
+            }
+        )
 
     @game_test
     def test_creature_damage_roll_normalizes_inverted_range(self):
