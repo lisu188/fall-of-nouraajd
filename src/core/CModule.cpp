@@ -115,8 +115,7 @@ py::list map_get_objects(const std::shared_ptr<CMap> &map) {
     return objects;
 }
 
-py::list map_get_objects_at_coords(const std::shared_ptr<CMap> &map,
-                                   Coords coords) {
+py::list map_get_objects_at_coords(const std::shared_ptr<CMap> &map, Coords coords) {
     py::list objects;
     for (const auto &object : map->getObjectsAtCoords(coords)) {
         objects.append(object);
@@ -124,8 +123,7 @@ py::list map_get_objects_at_coords(const std::shared_ptr<CMap> &map,
     return objects;
 }
 
-void game_object_setattr(CGameObject &self, const std::string &name,
-                         const py::handle &value) {
+void game_object_setattr(CGameObject &self, const std::string &name, const py::handle &value) {
     if (py::isinstance<py::bool_>(value)) {
         self.setBoolProperty(name, value.cast<bool>());
         return;
@@ -169,51 +167,39 @@ py::object game_object_getattr(CGameObject &self, const std::string &name) {
 
     throw py::attribute_error(name);
 }
-std::shared_ptr<CGameObject> cast_registered_python_object(
-    const py::object &instance) {
+std::shared_ptr<CGameObject> cast_registered_python_object(const py::object &instance) {
     if (py::isinstance<CBuilding>(instance)) {
-        return std::static_pointer_cast<CGameObject>(
-            instance.cast<std::shared_ptr<CBuilding>>());
+        return std::static_pointer_cast<CGameObject>(instance.cast<std::shared_ptr<CBuilding>>());
     }
     if (py::isinstance<CEvent>(instance)) {
-        return std::static_pointer_cast<CGameObject>(
-            instance.cast<std::shared_ptr<CEvent>>());
+        return std::static_pointer_cast<CGameObject>(instance.cast<std::shared_ptr<CEvent>>());
     }
     if (py::isinstance<CInteraction>(instance)) {
-        return std::static_pointer_cast<CGameObject>(
-            instance.cast<std::shared_ptr<CInteraction>>());
+        return std::static_pointer_cast<CGameObject>(instance.cast<std::shared_ptr<CInteraction>>());
     }
     if (py::isinstance<CEffect>(instance)) {
-        return std::static_pointer_cast<CGameObject>(
-            instance.cast<std::shared_ptr<CEffect>>());
+        return std::static_pointer_cast<CGameObject>(instance.cast<std::shared_ptr<CEffect>>());
     }
     if (py::isinstance<CTile>(instance)) {
-        return std::static_pointer_cast<CGameObject>(
-            instance.cast<std::shared_ptr<CTile>>());
+        return std::static_pointer_cast<CGameObject>(instance.cast<std::shared_ptr<CTile>>());
     }
     if (py::isinstance<CPotion>(instance)) {
-        return std::static_pointer_cast<CGameObject>(
-            instance.cast<std::shared_ptr<CPotion>>());
+        return std::static_pointer_cast<CGameObject>(instance.cast<std::shared_ptr<CPotion>>());
     }
     if (py::isinstance<CScroll>(instance)) {
-        return std::static_pointer_cast<CGameObject>(
-            instance.cast<std::shared_ptr<CScroll>>());
+        return std::static_pointer_cast<CGameObject>(instance.cast<std::shared_ptr<CScroll>>());
     }
     if (py::isinstance<CTrigger>(instance)) {
-        return std::static_pointer_cast<CGameObject>(
-            instance.cast<std::shared_ptr<CTrigger>>());
+        return std::static_pointer_cast<CGameObject>(instance.cast<std::shared_ptr<CTrigger>>());
     }
     if (py::isinstance<CQuest>(instance)) {
-        return std::static_pointer_cast<CGameObject>(
-            instance.cast<std::shared_ptr<CQuest>>());
+        return std::static_pointer_cast<CGameObject>(instance.cast<std::shared_ptr<CQuest>>());
     }
     if (py::isinstance<CPlugin>(instance)) {
-        return std::static_pointer_cast<CGameObject>(
-            instance.cast<std::shared_ptr<CPlugin>>());
+        return std::static_pointer_cast<CGameObject>(instance.cast<std::shared_ptr<CPlugin>>());
     }
     if (py::isinstance<CDialog>(instance)) {
-        return std::static_pointer_cast<CGameObject>(
-            instance.cast<std::shared_ptr<CDialog>>());
+        return std::static_pointer_cast<CGameObject>(instance.cast<std::shared_ptr<CDialog>>());
     }
     return instance.cast<std::shared_ptr<CGameObject>>();
 }
@@ -227,11 +213,13 @@ PYBIND11_MODULE(_game, m) {
         .value("BUFF", CTag::Buff)
         .value("HEAL", CTag::Heal)
         .value("MANA", CTag::Mana)
+        .value("MOVE", CTag::Move)
         .value("QUEST", CTag::Quest)
         .value("STUN", CTag::Stun)
         .value("WAND", CTag::Wand);
 
-    py::class_<CGameObject, std::shared_ptr<CGameObject>>(m, "CGameObject", "Base engine object with dynamic string, numeric, bool, and object properties.")
+    py::class_<CGameObject, std::shared_ptr<CGameObject>>(
+        m, "CGameObject", "Base engine object with dynamic string, numeric, bool, and object properties.")
         .def("getName", &CGameObject::getName, "Return the object name.")
         .def("getType", &CGameObject::getType, "Return the runtime class/type name.")
         .def("getTypeId", &CGameObject::getTypeId, "Return the configured type id used to spawn this object.")
@@ -248,11 +236,16 @@ PYBIND11_MODULE(_game, m) {
         .def("ptr", &CGameObject::ptr<CGameObject>, "Return this object as a shared pointer.")
         .def("clone", &CGameObject::clone<CGameObject>, "Clone this object using engine serialization.")
         .def("addTag", py::overload_cast<CTag>(&CGameObject::addTag), "Add a canonical tag enum to this object.")
-        .def("addTag", py::overload_cast<const std::string &>(&CGameObject::addTag), "Add a canonical tag string to this object.")
-        .def("removeTag", py::overload_cast<CTag>(&CGameObject::removeTag), "Remove a canonical tag enum from this object.")
-        .def("removeTag", py::overload_cast<const std::string &>(&CGameObject::removeTag), "Remove a canonical tag string from this object.")
-        .def("hasTag", py::overload_cast<CTag>(&CGameObject::hasTag), "Return whether this object has the given canonical tag enum.")
-        .def("hasTag", py::overload_cast<const std::string &>(&CGameObject::hasTag), "Return whether this object has the given canonical tag string.")
+        .def("addTag", py::overload_cast<const std::string &>(&CGameObject::addTag),
+             "Add a canonical tag string to this object.")
+        .def("removeTag", py::overload_cast<CTag>(&CGameObject::removeTag),
+             "Remove a canonical tag enum from this object.")
+        .def("removeTag", py::overload_cast<const std::string &>(&CGameObject::removeTag),
+             "Remove a canonical tag string from this object.")
+        .def("hasTag", py::overload_cast<CTag>(&CGameObject::hasTag),
+             "Return whether this object has the given canonical tag enum.")
+        .def("hasTag", py::overload_cast<const std::string &>(&CGameObject::hasTag),
+             "Return whether this object has the given canonical tag string.")
         .def("__setattr__", &game_object_setattr, "Alias for dynamic property assignment.")
         .def("__getattr__", &game_object_getattr, "Alias for dynamic property lookup.");
 
@@ -264,7 +257,8 @@ PYBIND11_MODULE(_game, m) {
 
     std::shared_ptr<CGameObject> (CGame::*createObject)(std::string) = &CGame::createObject<CGameObject>;
 
-    py::class_<CGame, CGameObject, std::shared_ptr<CGame>>(m, "CGame", "Top-level game container holding the active map, handlers, and GUI.")
+    py::class_<CGame, CGameObject, std::shared_ptr<CGame>>(
+        m, "CGame", "Top-level game container holding the active map, handlers, and GUI.")
         .def("getMap", &CGame::getMap, "Return the currently loaded map.")
         .def("changeMap", &CGame::changeMap, "Load and switch to another map.")
         .def("loadPlugin", &CGame::loadPlugin, "Load a plugin object into the game.")
@@ -274,24 +268,29 @@ PYBIND11_MODULE(_game, m) {
         .def("createObject", createObject, "Create an object by configured type id.")
         .def("getGui", &CGame::getGui, "Return the GUI root object.");
 
-    py::class_<CGameGraphicsObject, CGameObject, std::shared_ptr<CGameGraphicsObject>>(m, "CGameGraphicsObject", "Base class for GUI graphics objects.")
+    py::class_<CGameGraphicsObject, CGameObject, std::shared_ptr<CGameGraphicsObject>>(
+        m, "CGameGraphicsObject", "Base class for GUI graphics objects.")
         .def("getGui", &CGameGraphicsObject::getGui, "Return the owning GUI object.")
         .def("getParent", &CGameGraphicsObject::getParent, "Return the parent graphics object.");
 
     py::class_<CGui, CGameGraphicsObject, std::shared_ptr<CGui>>(m, "CGui", "Game GUI root object.")
         .def("getGame", &CGui::getGame, "Return the owning game.");
 
-    py::class_<CStatsGraphicsObject, CGameGraphicsObject, std::shared_ptr<CStatsGraphicsObject>>(m, "CStatsGraphicsObject");
+    py::class_<CStatsGraphicsObject, CGameGraphicsObject, std::shared_ptr<CStatsGraphicsObject>>(
+        m, "CStatsGraphicsObject");
 
     py::class_<CSideBar, CGameGraphicsObject, std::shared_ptr<CSideBar>>(m, "CSideBar");
 
-    py::class_<CCreatureView, CGameGraphicsObject, std::shared_ptr<CCreatureView>>(m, "CCreatureView", "Panel widget that renders a creature.")
+    py::class_<CCreatureView, CGameGraphicsObject, std::shared_ptr<CCreatureView>>(
+        m, "CCreatureView", "Panel widget that renders a creature.")
         .def("getCreature", &CCreatureView::getCreature, "Return the creature shown in this view.");
 
     bool (CMap::*canStep)(Coords) = &CMap::canStep;
+    int (CMap::*getMovementCost)(Coords) = &CMap::getMovementCost;
     void (CMap::*addObject)(const std::shared_ptr<CMapObject> &) = &CMap::addObject;
 
-    py::class_<CMap, CGameObject, std::shared_ptr<CMap>>(m, "CMap", "Runtime map containing tiles, map objects, triggers, and turn state.")
+    py::class_<CMap, CGameObject, std::shared_ptr<CMap>>(
+        m, "CMap", "Runtime map containing tiles, map objects, triggers, and turn state.")
         .def("addObjectByName", &CMap::addObjectByName, "Create and add an object by type id at coordinates.")
         .def("removeObjectByName", &CMap::removeObjectByName, "Remove an object by its name.")
         .def("removeObject", &CMap::removeObject, "Remove a map object instance.")
@@ -306,6 +305,7 @@ PYBIND11_MODULE(_game, m) {
         .def("getObjectByName", &CMap::getObjectByName, "Return a map object by name or None.")
         .def("forObjects", &CMap::forObjects, "Apply a callback for objects matching an optional predicate.")
         .def("canStep", canStep, "Return whether coordinates are walkable.")
+        .def("getMovementCost", getMovementCost, "Return tile movement cost at coordinates.")
         .def("dumpPaths", &CMap::dumpPaths, "Write pathfinding diagnostics to a file path.")
         .def("getEntryX", &CMap::getEntryX, "Return map entry X coordinate.")
         .def("getEntryY", &CMap::getEntryY, "Return map entry Y coordinate.")
@@ -320,24 +320,27 @@ PYBIND11_MODULE(_game, m) {
         [](std::shared_ptr<CObjectHandler> handler, std::shared_ptr<CGame> game, std::string type) {
             return handler->createObject<CGameObject>(game, type);
         };
-    py::class_<CObjectHandler, CGameObject, std::shared_ptr<CObjectHandler>>(m, "CObjectHandler", "Factory and type/config registry for runtime objects.")
-        .def("registerType",
-             [](CObjectHandler &self, std::string name, py::object constructor) {
-                 self.registerType(std::move(name), [constructor]() {
-                     py::gil_scoped_acquire gil;
-                     py::object instance = constructor();
-                     auto object = cast_registered_python_object(instance);
-                     CPythonOverrides::retain(object, instance);
-                     return object;
-                 });
-             },
-             "Register a class constructor under a class name.")
+    py::class_<CObjectHandler, CGameObject, std::shared_ptr<CObjectHandler>>(
+        m, "CObjectHandler", "Factory and type/config registry for runtime objects.")
+        .def(
+            "registerType",
+            [](CObjectHandler &self, std::string name, py::object constructor) {
+                self.registerType(std::move(name), [constructor]() {
+                    py::gil_scoped_acquire gil;
+                    py::object instance = constructor();
+                    auto object = cast_registered_python_object(instance);
+                    CPythonOverrides::retain(object, instance);
+                    return object;
+                });
+            },
+            "Register a class constructor under a class name.")
         .def("createObject", createObjectByType, "Create an object by configured type id.")
         .def("getAllTypes", &CObjectHandler::getAllTypes, "Return all configured object type ids.")
         .def("getAllSubTypes", &CObjectHandler::getAllSubTypes,
              "Return configured type ids whose class inherits the given base class.");
 
-    py::class_<CGuiHandler, CGameObject, std::shared_ptr<CGuiHandler>>(m, "CGuiHandler", "High-level helper for opening UI panels.")
+    py::class_<CGuiHandler, CGameObject, std::shared_ptr<CGuiHandler>>(m, "CGuiHandler",
+                                                                       "High-level helper for opening UI panels.")
         .def("showMessage", &CGuiHandler::showMessage, "Show a message panel.")
         .def("showTrade", &CGuiHandler::showTrade, "Open a trade panel.")
         .def("showDialog", &CGuiHandler::showDialog, "Open a dialog panel.")
@@ -347,42 +350,47 @@ PYBIND11_MODULE(_game, m) {
         .def("showLoot", &CGuiHandler::showLoot, "Show loot acquisition UI.");
 
     py::class_<CController, CGameObject, std::shared_ptr<CController>>(m, "CController", "Base movement controller.");
-    py::class_<CTargetController, CController, std::shared_ptr<CTargetController>>(m, "CTargetController",
-                                                                                  "Controller that follows a named map target.")
+    py::class_<CPlayerController, CController, std::shared_ptr<CPlayerController>>(
+        m, "CPlayerController", "Controller that follows a queued player path.")
+        .def("setTarget", &CPlayerController::setTarget, "Set a pathfinding destination for the player.")
+        .def("isCompleted", &CPlayerController::isCompleted, "Return whether the queued path can continue this turn.");
+    py::class_<CTargetController, CController, std::shared_ptr<CTargetController>>(
+        m, "CTargetController", "Controller that follows a named map target.")
         .def("getTarget", &CTargetController::getTarget, "Return current target object name.")
         .def("setTarget", &CTargetController::setTarget, "Set target object name.");
-    py::class_<CGroundController, CController, std::shared_ptr<CGroundController>>(m, "CGroundController",
-                                                                                  "Controller constrained to a tile type.")
+    py::class_<CGroundController, CController, std::shared_ptr<CGroundController>>(
+        m, "CGroundController", "Controller constrained to a tile type.")
         .def("getTileType", &CGroundController::getTileType, "Return allowed tile type.")
         .def("setTileType", &CGroundController::setTileType, "Set allowed tile type.");
-    py::class_<CRangeController, CController, std::shared_ptr<CRangeController>>(m, "CRangeController",
-                                                                                "Controller that keeps range from a target.")
+    py::class_<CRangeController, CController, std::shared_ptr<CRangeController>>(
+        m, "CRangeController", "Controller that keeps range from a target.")
         .def("getTarget", &CRangeController::getTarget, "Return target object name.")
         .def("setTarget", &CRangeController::setTarget, "Set target object name.")
         .def("getDistance", &CRangeController::getDistance, "Return desired distance from target.")
         .def("setDistance", &CRangeController::setDistance, "Set desired distance from target.");
     py::class_<CFightController, CGameObject, std::shared_ptr<CFightController>>(m, "CFightController",
-                                                                                "Base fight controller.");
+                                                                                 "Base fight controller.");
 
     void (CRngHandler::*addRandomLoot)(const std::shared_ptr<CCreature> &, int) = &CRngHandler::addRandomLoot;
-    py::class_<CRngHandler, CGameObject, std::shared_ptr<CRngHandler>>(m, "CRngHandler", "Random loot and encounter generator.")
+    py::class_<CRngHandler, CGameObject, std::shared_ptr<CRngHandler>>(m, "CRngHandler",
+                                                                       "Random loot and encounter generator.")
         .def("addRandomLoot", addRandomLoot, "Generate random loot for a creature and apply/show it.")
         .def("addRandomEncounter", &CRngHandler::addRandomEncounter,
              "Generate and place random enemy creatures on a map.");
 
     void (CMapObject::*moveTo)(int, int, int) = &CMapObject::moveTo;
     void (CMapObject::*move)(int, int, int) = &CMapObject::move;
-    py::class_<CMapObject, CGameObject, std::shared_ptr<CMapObject>>(m, "CMapObject", "Base object that exists at map coordinates.")
+    py::class_<CMapObject, CGameObject, std::shared_ptr<CMapObject>>(m, "CMapObject",
+                                                                     "Base object that exists at map coordinates.")
         .def("getMap", &CMapObject::getMap, "Return the map containing this object.")
         .def("moveTo", moveTo, "Move this object to absolute coordinates.")
         .def("move", move, "Move this object by relative coordinate delta.")
         .def("getCoords", &CMapObject::getCoords, "Return current map coordinates.")
         .def("setCoords", &CMapObject::setCoords, "Set map coordinates.");
 
-    auto cbuilding = py::class_<CBuilding, CWrapper<CBuilding>, std::shared_ptr<CBuilding>, CMapObject>(m, "CBuilding",
-                                                                                                        "Base building object class.");
-    cbuilding
-        .def(py::init_alias<>())
+    auto cbuilding = py::class_<CBuilding, CWrapper<CBuilding>, std::shared_ptr<CBuilding>, CMapObject>(
+        m, "CBuilding", "Base building object class.");
+    cbuilding.def(py::init_alias<>())
         .def("onCreate", &CBuilding::onCreate, "Handle onCreate game event.")
         .def("onTurn", &CBuilding::onTurn, "Handle onTurn game event.")
         .def("onDestroy", &CBuilding::onDestroy, "Handle onDestroy game event.")
@@ -390,10 +398,9 @@ PYBIND11_MODULE(_game, m) {
         .def("onEnter", &CBuilding::onEnter, "Handle onEnter game event.");
     m.attr("CBuildingBase") = cbuilding;
 
-    auto cevent = py::class_<CEvent, CWrapper<CEvent>, std::shared_ptr<CEvent>, CMapObject>(m, "CEvent",
-                                                                                           "Base map event object class.");
-    cevent
-        .def(py::init_alias<>())
+    auto cevent = py::class_<CEvent, CWrapper<CEvent>, std::shared_ptr<CEvent>, CMapObject>(
+        m, "CEvent", "Base map event object class.");
+    cevent.def(py::init_alias<>())
         .def("onCreate", &CEvent::onCreate, "Handle onCreate game event.")
         .def("onTurn", &CEvent::onTurn, "Handle onTurn game event.")
         .def("onLeave", &CEvent::onLeave, "Handle onLeave game event.")
@@ -401,19 +408,21 @@ PYBIND11_MODULE(_game, m) {
         .def("onEnter", &CEvent::onEnter, "Handle onEnter game event.");
     m.attr("CEventBase") = cevent;
 
-    auto cinteraction = py::class_<CInteraction, CWrapper<CInteraction>, std::shared_ptr<CInteraction>, CGameObject>(m, "CInteraction",
-                                                                                                                     "Base interaction/action definition.")
-        .def(py::init_alias<>())
-        .def("onAction", &CInteraction::onAction, "Engine callback when the interaction is activated.");
+    auto cinteraction =
+        py::class_<CInteraction, CWrapper<CInteraction>, std::shared_ptr<CInteraction>, CGameObject>(
+            m, "CInteraction", "Base interaction/action definition.")
+            .def(py::init_alias<>())
+            .def("onAction", &CInteraction::onAction, "Engine callback when the interaction is activated.");
     cinteraction
         .def("performAction", &CInteraction::performAction,
              "Perform the interaction between source and target creatures.")
-        .def("configureEffect", &CInteraction::configureEffect,
-             "Configure an effect instance before it is applied.");
+        .def("configureEffect", &CInteraction::configureEffect, "Configure an effect instance before it is applied.");
     m.attr("CInteractionBase") = cinteraction;
 
-    py::class_<Damage, CGameObject, std::shared_ptr<Damage>>(m, "Damage", "Damage packet with typed damage components.");
-    py::class_<Stats, CGameObject, std::shared_ptr<Stats>>(m, "Stats", "Creature stat container used for combat calculations.")
+    py::class_<Damage, CGameObject, std::shared_ptr<Damage>>(m, "Damage",
+                                                             "Damage packet with typed damage components.");
+    py::class_<Stats, CGameObject, std::shared_ptr<Stats>>(m, "Stats",
+                                                           "Creature stat container used for combat calculations.")
         .def("setStrength", &Stats::setStrength, "Set strength.")
         .def("setAgility", &Stats::setAgility, "Set agility.")
         .def("setStamina", &Stats::setStamina, "Set stamina.")
@@ -425,71 +434,67 @@ PYBIND11_MODULE(_game, m) {
         .def("setHit", &Stats::setHit, "Set hit chance modifier.")
         .def("setCrit", &Stats::setCrit, "Set critical chance percentage.");
 
-    auto ctile = py::class_<CTile, CWrapper<CTile>, std::shared_ptr<CTile>, CGameObject>(m, "CTile", "Base tile class.");
-    ctile
-        .def(py::init_alias<>())
+    auto ctile =
+        py::class_<CTile, CWrapper<CTile>, std::shared_ptr<CTile>, CGameObject>(m, "CTile", "Base tile class.");
+    ctile.def(py::init_alias<>())
+        .def("getMovementCost", &CTile::getMovementCost, "Return positive movement cost for entering this tile.")
+        .def("setMovementCost", &CTile::setMovementCost, "Set positive movement cost for entering this tile.")
         .def("onStep", &CTile::onStep, "Handle a creature stepping on this tile.");
     m.attr("CTileBase") = ctile;
 
-    py::class_<CItem, CMapObject, std::shared_ptr<CItem>>(m, "CItem",
-                                                                                 "Base inventory/equipment item.");
+    py::class_<CItem, CMapObject, std::shared_ptr<CItem>>(m, "CItem", "Base inventory/equipment item.");
     auto cpotion = py::class_<CPotion, CWrapper<CPotion>, std::shared_ptr<CPotion>, CItem>(m, "CPotion",
                                                                                            "Base potion item class.");
-    cpotion
-        .def(py::init_alias<>())
-        .def("onUse", &CPotion::onUse, "Handle potion use event.");
+    cpotion.def(py::init_alias<>()).def("onUse", &CPotion::onUse, "Handle potion use event.");
     m.attr("CPotionBase") = cpotion;
     auto cscroll = py::class_<CScroll, CWrapper<CScroll>, std::shared_ptr<CScroll>, CItem>(m, "CScroll",
                                                                                            "Base scroll item class.");
-    cscroll
-        .def(py::init_alias<>())
+    cscroll.def(py::init_alias<>())
         .def("onUse", &CScroll::onUse, "Handle scroll use event.")
         .def("isDisposable", &CScroll::isDisposable, "Return whether the scroll is consumed on use.");
     m.attr("CScrollBase") = cscroll;
 
-    py::class_<CGameEvent, CGameObject, std::shared_ptr<CGameEvent>>(m, "CGameEvent",
-                                                                                            "Base event object.");
-    py::class_<CGameEventCaused, CGameEvent, std::shared_ptr<CGameEventCaused>>(m, "CGameEventCaused", "Event carrying a causing game object.")
+    py::class_<CGameEvent, CGameObject, std::shared_ptr<CGameEvent>>(m, "CGameEvent", "Base event object.");
+    py::class_<CGameEventCaused, CGameEvent, std::shared_ptr<CGameEventCaused>>(m, "CGameEventCaused",
+                                                                                "Event carrying a causing game object.")
         .def("getCause", &CGameEventCaused::getCause, "Return the object that caused this event.");
 
-    auto ctrigger = py::class_<CTrigger, CWrapper<CTrigger>, std::shared_ptr<CTrigger>, CGameObject>(m, "CTrigger",
-                                                                                                     "Base trigger class.");
-    ctrigger
-        .def(py::init_alias<>())
+    auto ctrigger = py::class_<CTrigger, CWrapper<CTrigger>, std::shared_ptr<CTrigger>, CGameObject>(
+        m, "CTrigger", "Base trigger class.");
+    ctrigger.def(py::init_alias<>())
         .def("trigger", &CTrigger::trigger, "Handle trigger execution for an object and event.");
     m.attr("CTriggerBase") = ctrigger;
 
-    auto cquest = py::class_<CQuest, CWrapper<CQuest>, std::shared_ptr<CQuest>, CGameObject>(m, "CQuest", "Base quest class.");
-    cquest
-        .def(py::init_alias<>())
+    auto cquest =
+        py::class_<CQuest, CWrapper<CQuest>, std::shared_ptr<CQuest>, CGameObject>(m, "CQuest", "Base quest class.");
+    cquest.def(py::init_alias<>())
         .def("isCompleted", &CQuest::isCompleted, "Return whether quest objectives are completed.")
         .def("onComplete", &CQuest::onComplete, "Handle quest completion callback.");
     m.attr("CQuestBase") = cquest;
 
-    auto cdialog = py::class_<CDialog, CWrapper<CDialog>, std::shared_ptr<CDialog>, CGameObject>(m, "CDialog",
-                                                                                                "Base dialog definition.");
-    cdialog
-        .def(py::init_alias<>())
+    auto cdialog = py::class_<CDialog, CWrapper<CDialog>, std::shared_ptr<CDialog>, CGameObject>(
+        m, "CDialog", "Base dialog definition.");
+    cdialog.def(py::init_alias<>())
         .def("invokeAction", &CDialog::invokeAction, "Run a named dialog action callback.")
         .def("invokeCondition", &CDialog::invokeCondition, "Evaluate a named dialog condition callback.");
     m.attr("CDialogBase") = cdialog;
     m.attr("CDialogBase2") = cdialog;
 
-    py::class_<CDialogOption, CGameObject, std::shared_ptr<CDialogOption>>(m, "CDialogOption", "Single selectable dialog option.");
-    py::class_<CDialogState, CGameObject, std::shared_ptr<CDialogState>>(m, "CDialogState",
-                                                                                                "Dialog state node.");
+    py::class_<CDialogOption, CGameObject, std::shared_ptr<CDialogOption>>(m, "CDialogOption",
+                                                                           "Single selectable dialog option.");
+    py::class_<CDialogState, CGameObject, std::shared_ptr<CDialogState>>(m, "CDialogState", "Dialog state node.");
 
-    py::class_<CEventHandler, CGameObject, std::shared_ptr<CEventHandler>>(m, "CEventHandler", "Dispatcher for game/map events.")
+    py::class_<CEventHandler, CGameObject, std::shared_ptr<CEventHandler>>(m, "CEventHandler",
+                                                                           "Dispatcher for game/map events.")
         .def("registerTrigger", &CEventHandler::registerTrigger, "Register a trigger for an event type.");
 
-    py::class_<CFightHandler, std::shared_ptr<CFightHandler>>(m, "CFightHandler",
-                                                                              "Combat resolution service.")
+    py::class_<CFightHandler, std::shared_ptr<CFightHandler>>(m, "CFightHandler", "Combat resolution service.")
         .def("fight", &CFightHandler::fight, "Run a fight between two creatures.");
 
-    py::class_<CMarket, CGameObject, std::shared_ptr<CMarket>>(m, "CMarket",
-                                                                                      "Trading inventory and prices.");
+    py::class_<CMarket, CGameObject, std::shared_ptr<CMarket>>(m, "CMarket", "Trading inventory and prices.");
 
-    py::class_<CGameLoader, std::shared_ptr<CGameLoader>>(m, "CGameLoader", "Factory helpers for loading game sessions and maps.")
+    py::class_<CGameLoader, std::shared_ptr<CGameLoader>>(m, "CGameLoader",
+                                                          "Factory helpers for loading game sessions and maps.")
         .def("loadGame", &CGameLoader::loadGame, "Create and initialize a game instance.")
         .def("startGameWithPlayer", &CGameLoader::startGameWithPlayer, "Start a map with a specific player template.")
         .def("startRandomGameWithPlayer", &CGameLoader::startRandomGameWithPlayer,
@@ -498,20 +503,18 @@ PYBIND11_MODULE(_game, m) {
         .def("loadGui", &CGameLoader::loadGui, "Load and attach GUI objects for a game.")
         .def("loadSavedGame", &CGameLoader::loadSavedGame, "Load a saved game state from storage.");
 
-    py::class_<CMapLoader, std::shared_ptr<CMapLoader>>(m, "CMapLoader",
-                                                                        "Helpers for loading map resources.")
+    py::class_<CMapLoader, std::shared_ptr<CMapLoader>>(m, "CMapLoader", "Helpers for loading map resources.")
         .def("loadNewMapWithPlayer", &CMapLoader::loadNewMapWithPlayer, "Load a map and place a player template.")
         .def("loadNewMap", &CMapLoader::loadNewMap, "Load a map without changing the active player.")
         .def("save", &CMapLoader::save, "Save the current map state to a named save slot.");
 
     auto cplugin = py::class_<CPlugin, CWrapper<CPlugin>, std::shared_ptr<CPlugin>, CGameObject>(m, "CPlugin",
                                                                                                  "Base plugin class.");
-    cplugin
-        .def(py::init_alias<>())
-        .def("load", &CPlugin::load, "Load plugin content into a game.");
+    cplugin.def(py::init_alias<>()).def("load", &CPlugin::load, "Load plugin content into a game.");
     m.attr("CPluginBase") = cplugin;
 
-    py::class_<vstd::event_loop<>, std::shared_ptr<vstd::event_loop<>>>(m, "event_loop", "Global async event loop utility.")
+    py::class_<vstd::event_loop<>, std::shared_ptr<vstd::event_loop<>>>(m, "event_loop",
+                                                                        "Global async event loop utility.")
         .def("instance", &vstd::event_loop<>::instance, "Return the singleton event loop instance.")
         .def("run", &vstd::event_loop<>::run, "Process queued tasks/events once.")
         .def("invoke", &vstd::event_loop<>::invoke, "Queue a callable for later execution.");
@@ -519,21 +522,22 @@ PYBIND11_MODULE(_game, m) {
     auto vector_string = py::bind_vector<std::vector<std::string>>(m, "std::vector<std::string>");
     vector_string.doc() = "Mutable list of strings.";
 
-    py::class_<CResourcesProvider, std::shared_ptr<CResourcesProvider>>(m, "CResourcesProvider", "Access to packaged resource files.")
+    py::class_<CResourcesProvider, std::shared_ptr<CResourcesProvider>>(m, "CResourcesProvider",
+                                                                        "Access to packaged resource files.")
         .def("getInstance", &CResourcesProvider::getInstance, "Return singleton resource provider.")
         .def("getPath", &CResourcesProvider::getPath, "Resolve a resource path relative to the active resource root.")
         .def("load", &CResourcesProvider::load, "Load a resource file as text.")
         .def("getFiles", &CResourcesProvider::getFiles, "List files under a resource path.");
 
-    auto ceffect = py::class_<CEffect, CWrapper<CEffect>, std::shared_ptr<CEffect>, CGameObject>(m, "CEffect",
-                                                                                                "Base status effect class.")
-        .def(py::init_alias<>())
-        .def("getBonus", &CEffect::getBonus, "Return effect stat bonus object.")
-        .def("setBonus", &CEffect::setBonus, "Set effect stat bonus object.")
-        .def("getCaster", &CEffect::getCaster, "Return creature that applied the effect.")
-        .def("getVictim", &CEffect::getVictim, "Return creature affected by the effect.")
-        .def("getTimeLeft", &CEffect::getTimeLeft, "Return remaining effect duration in turns.")
-        .def("onEffect", &CEffect::onEffect, "Apply effect behavior for one tick.");
+    auto ceffect = py::class_<CEffect, CWrapper<CEffect>, std::shared_ptr<CEffect>, CGameObject>(
+                       m, "CEffect", "Base status effect class.")
+                       .def(py::init_alias<>())
+                       .def("getBonus", &CEffect::getBonus, "Return effect stat bonus object.")
+                       .def("setBonus", &CEffect::setBonus, "Set effect stat bonus object.")
+                       .def("getCaster", &CEffect::getCaster, "Return creature that applied the effect.")
+                       .def("getVictim", &CEffect::getVictim, "Return creature affected by the effect.")
+                       .def("getTimeLeft", &CEffect::getTimeLeft, "Return remaining effect duration in turns.")
+                       .def("onEffect", &CEffect::onEffect, "Apply effect behavior for one tick.");
     m.attr("CEffectBase") = ceffect;
 
     py::class_<CWeapon, CItem, std::shared_ptr<CWeapon>>(m, "CWeapon", "Weapon item.")
@@ -547,7 +551,8 @@ PYBIND11_MODULE(_game, m) {
     bool (CCreature::*hasItem)(std::function<bool(std::shared_ptr<CItem>)>) = &CCreature::hasItem;
     void (CCreature::*removeItem)(std::function<bool(std::shared_ptr<CItem>)>, bool) = &CCreature::removeItem;
     void (CCreature::*removeQuestItem)(std::function<bool(std::shared_ptr<CItem>)>) = &CCreature::removeQuestItem;
-    py::class_<CCreature, CMapObject, std::shared_ptr<CCreature>>(m, "CCreature", "Creature that can move, fight, and manage inventory.")
+    py::class_<CCreature, CMapObject, std::shared_ptr<CCreature>>(
+        m, "CCreature", "Creature that can move, fight, and manage inventory.")
         .def("getDmg", &CCreature::getDmg, "Roll outgoing attack damage.")
         .def("hurt", hurtInt, "Apply raw damage value (int).")
         .def("hurt", hurtDmg, "Apply structured Damage object.")
@@ -556,12 +561,16 @@ PYBIND11_MODULE(_game, m) {
         .def("getHpRatio", &CCreature::getHpRatio, "Return HP percentage (0-100).")
         .def("isAlive", &CCreature::isAlive, "Return whether HP is above zero.")
         .def("getMana", &CCreature::getMana, "Return current mana.")
+        .def("getMovePoints", &CCreature::getMovePoints, "Return current move points.")
         .def("healProc", &CCreature::healProc, "Restore HP by percentage of max HP.")
         .def("heal", &CCreature::heal, "Restore HP by fixed amount (0 means full heal).")
         .def("getHpMax", &CCreature::getHpMax, "Return maximum HP.")
+        .def("getMovePointsMax", &CCreature::getMovePointsMax, "Return per-turn maximum move points.")
         .def("getLevel", &CCreature::getLevel, "Return level.")
         .def("getStats", &CCreature::getStats, "Return aggregated combat stats.")
         .def("addManaProc", &CCreature::addManaProc, "Restore mana by percentage of max mana.")
+        .def("addMovePoints", &CCreature::addMovePoints,
+             "Restore move points by amount (0 means restore to full for this turn).")
         .def("isPlayer", &CCreature::isPlayer, "Return whether this creature is the active player.")
         .def("isNpc", &CCreature::isNpc, "Return whether this creature is marked as NPC.")
         .def("getController", &CCreature::getController, "Return the movement controller.")
@@ -570,11 +579,14 @@ PYBIND11_MODULE(_game, m) {
         .def("setFightController", &CCreature::setFightController, "Set the fight controller.")
         .def("setHp", &CCreature::setHp, "Set current HP.")
         .def("setMana", &CCreature::setMana, "Set current mana.")
+        .def("setMovePoints", &CCreature::setMovePoints, "Set current move points.")
         .def("addExp", &CCreature::addExp, "Add experience and trigger level ups when thresholds are reached.")
         .def("getGold", &CCreature::getGold, "Return current gold.")
         .def("addGold", &CCreature::addGold, "Add gold to the creature inventory.")
         .def("takeGold", &CCreature::takeGold, "Remove gold from the creature inventory.")
         .def("takeMana", &CCreature::takeMana, "Consume mana, clamped at zero.")
+        .def("resetMovePoints", &CCreature::resetMovePoints, "Restore move points to this turn's maximum.")
+        .def("spendMovePoints", &CCreature::spendMovePoints, "Spend move points if enough remain.")
         .def("useAction", &CCreature::useAction, "Use an interaction/action against another creature.")
         .def("useItem", &CCreature::useItem, "Use an inventory item if it is currently usable.")
         .def("hasItem", hasItem, "Return whether any inventory item matches predicate(item) -> bool.")
@@ -586,44 +598,44 @@ PYBIND11_MODULE(_game, m) {
         .def("removeQuestItem", removeQuestItem, "Remove first matching quest item predicate from inventory.")
         .def("countItems", &CCreature::countItems, "Count inventory items by type id.");
 
-    py::class_<CPlayer, CCreature, std::shared_ptr<CPlayer>>(m, "CPlayer",
-                                                                                    "Player-controlled creature.")
+    py::class_<CPlayer, CCreature, std::shared_ptr<CPlayer>>(m, "CPlayer", "Player-controlled creature.")
         .def("addQuest", &CPlayer::addQuest, "Add a quest to the player quest log.")
         .def("getQuests", &CPlayer::getQuests, "Return the player's active quests.");
 
     py::class_<CListString, CGameObject, std::shared_ptr<CListString>>(m, "CListString", "String list wrapper object.")
         .def("addValue", &CListString::addValue, "Append a value to the list.");
 
-    py::class_<CGamePanel, CGameGraphicsObject, std::shared_ptr<CGamePanel>>(m, "CGamePanel", "Base in-game GUI panel.");
+    py::class_<CGamePanel, CGameGraphicsObject, std::shared_ptr<CGamePanel>>(m, "CGamePanel",
+                                                                             "Base in-game GUI panel.");
 
-    py::class_<CGameTradePanel, CGamePanel, std::shared_ptr<CGameTradePanel>>(m, "CGameTradePanel",
-                                                                                                     "Trade panel.")
+    py::class_<CGameTradePanel, CGamePanel, std::shared_ptr<CGameTradePanel>>(m, "CGameTradePanel", "Trade panel.")
         .def("getMarket", &CGameTradePanel::getMarket, "Return market displayed by this panel.");
 
-    py::class_<CGameFightPanel, CGamePanel, std::shared_ptr<CGameFightPanel>>(m, "CGameFightPanel",
-                                                                                                     "Fight panel.")
+    py::class_<CGameFightPanel, CGamePanel, std::shared_ptr<CGameFightPanel>>(m, "CGameFightPanel", "Fight panel.")
         .def("getEnemy", &CGameFightPanel::getEnemy, "Return current enemy creature.");
 
-    py::class_<CGameCharacterPanel, CGamePanel, std::shared_ptr<CGameCharacterPanel>>(m, "CGameCharacterPanel", "Character sheet panel.");
+    py::class_<CGameCharacterPanel, CGamePanel, std::shared_ptr<CGameCharacterPanel>>(m, "CGameCharacterPanel",
+                                                                                      "Character sheet panel.");
 
-    py::class_<CGameQuestionPanel, CGamePanel, std::shared_ptr<CGameQuestionPanel>>(m, "CGameQuestionPanel", "Question/choice panel.");
+    py::class_<CGameQuestionPanel, CGamePanel, std::shared_ptr<CGameQuestionPanel>>(m, "CGameQuestionPanel",
+                                                                                    "Question/choice panel.");
 
-    py::class_<CGameDialogPanel, CGamePanel, std::shared_ptr<CGameDialogPanel>>(m, "CGameDialogPanel", "Dialog conversation panel.");
+    py::class_<CGameDialogPanel, CGamePanel, std::shared_ptr<CGameDialogPanel>>(m, "CGameDialogPanel",
+                                                                                "Dialog conversation panel.");
 
-    py::class_<CGameInventoryPanel, CGamePanel, std::shared_ptr<CGameInventoryPanel>>(m, "CGameInventoryPanel", "Inventory panel.");
+    py::class_<CGameInventoryPanel, CGamePanel, std::shared_ptr<CGameInventoryPanel>>(m, "CGameInventoryPanel",
+                                                                                      "Inventory panel.");
 
     py::class_<CGameQuestPanel, CGamePanel, std::shared_ptr<CGameQuestPanel>>(m, "CGameQuestPanel", "Quest log panel.");
 
     py::class_<CGameTextPanel, CGamePanel, std::shared_ptr<CGameTextPanel>>(m, "CGameTextPanel", "Text display panel.");
 
-    py::class_<CProxyTargetGraphicsObject, CGameGraphicsObject,
-           std::shared_ptr<CProxyTargetGraphicsObject>>(m, "CProxyTargetGraphicsObject",
-                                                        "Graphics object that proxies a target object.");
+    py::class_<CProxyTargetGraphicsObject, CGameGraphicsObject, std::shared_ptr<CProxyTargetGraphicsObject>>(
+        m, "CProxyTargetGraphicsObject", "Graphics object that proxies a target object.");
 
     py::class_<CListView, CProxyTargetGraphicsObject, std::shared_ptr<CListView>>(m, "CListView", "List view widget.");
     PY_WRAP_GENERIC_DOC(randint, "randint(lower, upper) -> int: Return a random integer in engine-defined bounds.");
-    m.def("jsonify", &jsonify_py,
-          "jsonify(obj) -> str: Serialize a game object to JSON text.");
+    m.def("jsonify", &jsonify_py, "jsonify(obj) -> str: Serialize a game object to JSON text.");
     PY_WRAP_GENERIC_DOC(logger, "logger(message) -> None: Write an info log message to the engine logger.");
     m.def("set_logger_sink", set_logger_sink_py,
           "set_logger_sink(sink, path=None) -> None: Configure the native logger output target.");

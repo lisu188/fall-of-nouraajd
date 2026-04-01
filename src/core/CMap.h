@@ -43,190 +43,186 @@ class CTrigger;
 class CGame;
 
 class CMap : public CGameObject {
-  using StringMap = std::map<int, std::string>;
-  using IntMap = std::map<int, int>;
-  using BoundsMap = std::map<int, std::pair<int, int>>;
+    using StringMap = std::map<int, std::string>;
+    using IntMap = std::map<int, int>;
+    using BoundsMap = std::map<int, std::pair<int, int>>;
 
-  friend class CMapLoader;
+    friend class CMapLoader;
 
-  friend class CRandomMapGenerator;
+    friend class CRandomMapGenerator;
 
-  V_META(CMap, CGameObject, V_PROPERTY(CMap, int, turn, getTurn, setTurn),
-         V_PROPERTY(CMap, std::string, mapName, getMapName, setMapName),
-         V_PROPERTY(CMap, std::set<std::shared_ptr<CMapObject>>, objects,
-                    getObjects, setObjects),
-         V_PROPERTY(CMap, std::set<std::shared_ptr<CTile>>, tiles, getTiles,
-                    setTiles),
-         V_PROPERTY(CMap, std::set<std::shared_ptr<CTrigger>>, triggers,
-                    getTriggers, setTriggers))
-public:
-  CMap() = default;
+    V_META(CMap, CGameObject, V_PROPERTY(CMap, int, turn, getTurn, setTurn),
+           V_PROPERTY(CMap, std::string, mapName, getMapName, setMapName),
+           V_PROPERTY(CMap, std::set<std::shared_ptr<CMapObject>>, objects, getObjects, setObjects),
+           V_PROPERTY(CMap, std::set<std::shared_ptr<CTile>>, tiles, getTiles, setTiles),
+           V_PROPERTY(CMap, std::set<std::shared_ptr<CTrigger>>, triggers, getTriggers, setTriggers))
+  public:
+    CMap() = default;
 
-  bool addTile(std::shared_ptr<CTile> tile, int x, int y, int z);
+    bool addTile(std::shared_ptr<CTile> tile, int x, int y, int z);
 
-  void removeTile(int x, int y, int z);
+    void removeTile(int x, int y, int z);
 
-  void move();
+    void move();
 
-  std::shared_ptr<CTile> getTile(int x, int y, int z);
+    std::shared_ptr<CTile> getTile(int x, int y, int z);
 
-  std::shared_ptr<CTile> getTile(Coords coords);
+    std::shared_ptr<CTile> getTile(Coords coords);
 
-  bool contains(int x, int y, int z);
+    bool contains(int x, int y, int z);
 
-  void addObject(const std::shared_ptr<CMapObject> &mapObject);
+    void addObject(const std::shared_ptr<CMapObject> &mapObject);
 
-  void addObject(const std::shared_ptr<CMapObject> &mapObject, Coords coords);
+    void addObject(const std::shared_ptr<CMapObject> &mapObject, Coords coords);
 
-  void removeObject(const std::shared_ptr<CMapObject> &mapObject);
+    void removeObject(const std::shared_ptr<CMapObject> &mapObject);
 
-  int getEntryX();
+    int getEntryX();
 
-  int getEntryY();
+    int getEntryY();
 
-  int getEntryZ();
+    int getEntryZ();
 
-  void setEntryX(int x);
+    void setEntryX(int x);
 
-  void setEntryY(int y);
+    void setEntryY(int y);
 
-  void setEntryZ(int z);
+    void setEntryZ(int z);
 
-  Coords getEntry();
+    Coords getEntry();
 
-  BoundsMap getBounds();
+    BoundsMap getBounds();
 
-  IntMap getXBounds();
+    IntMap getXBounds();
 
-  void setXBounds(IntMap bounds);
+    void setXBounds(IntMap bounds);
 
-  IntMap getYBounds();
+    IntMap getYBounds();
 
-  void setYBounds(IntMap bounds);
+    void setYBounds(IntMap bounds);
 
-  StringMap getDefaultTiles();
+    StringMap getDefaultTiles();
 
-  void setDefaultTiles(StringMap tiles);
+    void setDefaultTiles(StringMap tiles);
 
-  IntMap getWrapX();
+    IntMap getWrapX();
 
-  void setWrapX(IntMap values);
+    void setWrapX(IntMap values);
 
-  IntMap getWrapY();
+    IntMap getWrapY();
 
-  void setWrapY(IntMap values);
+    void setWrapY(IntMap values);
 
-  void removeObjectByName(std::string name);
+    void removeObjectByName(std::string name);
 
-  std::string addObjectByName(std::string name, Coords coords);
+    std::string addObjectByName(std::string name, Coords coords);
 
-  void replaceTile(std::string name, Coords coords);
+    void replaceTile(std::string name, Coords coords);
 
-  Coords getLocationByName(std::string name);
+    Coords getLocationByName(std::string name);
 
-  std::shared_ptr<CPlayer> getPlayer();
+    std::shared_ptr<CPlayer> getPlayer();
 
-  void setPlayer(std::shared_ptr<CPlayer> player);
+    void setPlayer(std::shared_ptr<CPlayer> player);
 
-  void moveTile(std::shared_ptr<CTile> tile, int x, int y, int z);
+    void moveTile(std::shared_ptr<CTile> tile, int x, int y, int z);
 
-  std::shared_ptr<CEventHandler> getEventHandler();
+    std::shared_ptr<CEventHandler> getEventHandler();
 
-  bool canStep(int x, int y, int z);
+    bool canStep(int x, int y, int z);
 
-  bool canStep(Coords coords);
+    bool canStep(Coords coords);
 
-  Coords normalizeCoords(Coords coords) const;
+    int getMovementCost(int x, int y, int z);
 
-  std::vector<Coords> getAdjacentCoords(Coords coords,
-                                        bool includeSelf = false) const;
+    int getMovementCost(Coords coords);
 
-  Coords getShortestDelta(Coords from, Coords to) const;
+    Coords normalizeCoords(Coords coords) const;
 
-  double getDistance(Coords from, Coords to) const;
+    std::vector<Coords> getAdjacentCoords(Coords coords, bool includeSelf = false) const;
 
-  bool wrapsX(int z) const;
+    Coords getShortestDelta(Coords from, Coords to) const;
 
-  bool wrapsY(int z) const;
+    double getDistance(Coords from, Coords to) const;
 
-  std::shared_ptr<CMapObject> getObjectByName(const std::string &name);
+    bool wrapsX(int z) const;
 
-  bool isMoving();
+    bool wrapsY(int z) const;
 
-  //    void applyEffects();
+    std::shared_ptr<CMapObject> getObjectByName(const std::string &name);
 
-  void forObjects(
-      std::function<void(std::shared_ptr<CMapObject>)> func,
-      std::function<bool(std::shared_ptr<CMapObject>)> predicate =
-          [](std::shared_ptr<CMapObject>) { return true; });
+    bool isMoving();
 
-  void forObjectsAtCoords(
-      Coords coords, std::function<void(std::shared_ptr<CMapObject>)> func,
-      std::function<bool(std::shared_ptr<CMapObject>)> predicate =
-          [](std::shared_ptr<CMapObject>) { return true; });
+    //    void applyEffects();
 
-  void forTiles(
-      std::function<void(std::shared_ptr<CTile>)> func,
-      std::function<bool(std::shared_ptr<CTile>)> predicate =
-          [](std::shared_ptr<CTile>) { return true; });
+    void forObjects(
+        std::function<void(std::shared_ptr<CMapObject>)> func,
+        std::function<bool(std::shared_ptr<CMapObject>)> predicate = [](std::shared_ptr<CMapObject>) { return true; });
 
-  void removeObjects(std::function<bool(std::shared_ptr<CMapObject>)> func);
+    void forObjectsAtCoords(
+        Coords coords, std::function<void(std::shared_ptr<CMapObject>)> func,
+        std::function<bool(std::shared_ptr<CMapObject>)> predicate = [](std::shared_ptr<CMapObject>) { return true; });
 
-  int getTurn();
+    void forTiles(
+        std::function<void(std::shared_ptr<CTile>)> func,
+        std::function<bool(std::shared_ptr<CTile>)> predicate = [](std::shared_ptr<CTile>) { return true; });
 
-  void setTurn(int turn);
+    void removeObjects(std::function<bool(std::shared_ptr<CMapObject>)> func);
 
-  // TODO: accept predicate, can be used in siege map
-  std::set<std::shared_ptr<CMapObject>> getObjects();
+    int getTurn();
 
-  std::set<std::shared_ptr<CMapObject>> getObjectsAtCoords(Coords coords);
+    void setTurn(int turn);
 
-  void setObjects(std::set<std::shared_ptr<CMapObject>> objects);
+    // TODO: accept predicate, can be used in siege map
+    std::set<std::shared_ptr<CMapObject>> getObjects();
 
-  std::set<std::shared_ptr<CTile>> getTiles();
+    std::set<std::shared_ptr<CMapObject>> getObjectsAtCoords(Coords coords);
 
-  void setTiles(std::set<std::shared_ptr<CTile>> objects);
+    void setObjects(std::set<std::shared_ptr<CMapObject>> objects);
 
-  void dumpPaths(std::string path);
+    std::set<std::shared_ptr<CTile>> getTiles();
 
-  std::set<std::shared_ptr<CTrigger>> getTriggers();
+    void setTiles(std::set<std::shared_ptr<CTile>> objects);
 
-  void setTriggers(std::set<std::shared_ptr<CTrigger>> triggers);
+    void dumpPaths(std::string path);
 
-  void setMapName(std::string mapName);
+    std::set<std::shared_ptr<CTrigger>> getTriggers();
 
-  std::string getMapName();
+    void setTriggers(std::set<std::shared_ptr<CTrigger>> triggers);
 
-  void objectMoved(const std::shared_ptr<CMapObject> &object, Coords _old,
-                   Coords _new);
+    void setMapName(std::string mapName);
 
-private:
-  std::unordered_map<std::string, std::shared_ptr<CMapObject>> mapObjects;
-  // TODO: cleanup and after load initialization
-  std::unordered_multimap<Coords, std::string> mapObjectsCache;
+    std::string getMapName();
 
-  std::unordered_map<Coords, std::shared_ptr<CTile>> tiles;
+    void objectMoved(const std::shared_ptr<CMapObject> &object, Coords _old, Coords _new);
 
-  std::shared_ptr<CPlayer> player;
-  StringMap defaultTiles;
-  IntMap xBounds;
-  IntMap yBounds;
-  IntMap wrapX;
-  IntMap wrapY;
-  int entryx = 0;
-  int entryz = 0;
-  int entryy = 0;
+  private:
+    std::unordered_map<std::string, std::shared_ptr<CMapObject>> mapObjects;
+    // TODO: cleanup and after load initialization
+    std::unordered_multimap<Coords, std::string> mapObjectsCache;
 
-  vstd::lazy<CEventHandler> eventHandler;
-  int turn = 0;
-  bool moving = false;
-  std::string mapName;
+    std::unordered_map<Coords, std::shared_ptr<CTile>> tiles;
 
-  std::shared_ptr<vstd::future<void, void>> _moveHelper = vstd::later([]() {});
+    std::shared_ptr<CPlayer> player;
+    StringMap defaultTiles;
+    IntMap xBounds;
+    IntMap yBounds;
+    IntMap wrapX;
+    IntMap wrapY;
+    int entryx = 0;
+    int entryz = 0;
+    int entryy = 0;
 
-  bool hasBounds(int z) const;
+    vstd::lazy<CEventHandler> eventHandler;
+    int turn = 0;
+    bool moving = false;
+    std::string mapName;
 
-  int normalizeAxis(int value, int z, bool wrapAxis, const IntMap &bounds) const;
+    std::shared_ptr<vstd::future<void, void>> _moveHelper = vstd::later([]() {});
 
-  void registerPlayerTriggers();
+    bool hasBounds(int z) const;
+
+    int normalizeAxis(int value, int z, bool wrapAxis, const IntMap &bounds) const;
+
+    void registerPlayerTriggers();
 };

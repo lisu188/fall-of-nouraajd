@@ -154,5 +154,18 @@
         "mana"
       ]
     }
+  },
+  "WayfarersDraught": {
+    "class": "MovePotion",
+    "properties": {
+      "animation": "images/items/potions/spiced_beer",
+      "label": "Wayfarer's Draught",
+      "description": "A hot spiced tonic that restores your footing and pace for the rest of the turn.",
+      "power": 1,
+      "singleUse": true,
+      "tags": [
+        "move"
+      ]
+    }
   }
 }
