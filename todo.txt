@@ -20,6 +20,5 @@
     because its not accesible in CSerialization
 //TODO: add regression coverage for inventory/equipped selection reset
 //TODO: implement property change listeners to enable AOP
-//TODO: add stacks of object (wand etc) same as grouping but in the left corner
 //TODO: siege
     //TODO: when changing canStep of gate creatures can get in but cant get out
