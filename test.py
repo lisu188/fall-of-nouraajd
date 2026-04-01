@@ -579,6 +579,18 @@ def validate_tiled_layer(
                 )
             )
 
+        if "outOfBounds" in properties and not isinstance(properties.get("outOfBounds"), str):
+            issues.append(
+                map_validation_issue(
+                    path,
+                    "loader_assumption",
+                    f"{prefix} property 'outOfBounds' must be a string because CMapLoader reads it with get<std::string>().",
+                    field="outOfBounds",
+                    layer_name=layer_name,
+                    layer_index=layer_index,
+                )
+            )
+
         for key in ("xBound", "yBound"):
             require_engine_int_string(
                 properties,
@@ -1749,6 +1761,62 @@ class GameTest(unittest.TestCase):
                 ],
             }
         )
+
+    @game_test
+    def test_out_of_bounds_tile_override_survives_save_load(self):
+        game = load_game_module()
+        target = (-1, 0, 0)
+        save_dir = build_dir / "save"
+        fresh_save = save_dir / "out_of_bounds_tile_override_fresh.json"
+        pristine_save = save_dir / "out_of_bounds_tile_override_pristine.json"
+        loaded_save = save_dir / "out_of_bounds_tile_override_loaded.json"
+
+        def remove_save(path):
+            if path.exists():
+                path.unlink()
+
+        def load_saved_tile_type(path, coords):
+            data = json.loads(path.read_text())
+            for tile in data["properties"]["tiles"]:
+                props = tile.get("properties", {})
+                if (props.get("posx"), props.get("posy"), props.get("posz")) == coords:
+                    return props.get("typeId")
+            return None
+
+        for path in (fresh_save, pristine_save, loaded_save):
+            remove_save(path)
+
+        try:
+            fresh_game = game.CGameLoader.loadGame()
+            game.CGameLoader.startGameWithPlayer(fresh_game, "ritual", "Warrior")
+            fresh_map = fresh_game.getMap()
+            self.assertFalse(fresh_map.canStep(game.Coords(*target)))
+            self.assertEqual(fresh_map.getMovementCost(game.Coords(*target)), 4)
+            game.CMapLoader.save(fresh_map, "out_of_bounds_tile_override_fresh")
+            self.assertEqual(load_saved_tile_type(fresh_save, target), "WaterTile")
+
+            pristine_game = game.CGameLoader.loadGame()
+            game.CGameLoader.startGameWithPlayer(pristine_game, "ritual", "Warrior")
+            game.CMapLoader.save(pristine_game.getMap(), "out_of_bounds_tile_override_pristine")
+
+            loaded_game = game.CGameLoader.loadGame()
+            game.CGameLoader.loadSavedGame(loaded_game, "out_of_bounds_tile_override_pristine")
+            loaded_map = loaded_game.getMap()
+            self.assertFalse(loaded_map.canStep(game.Coords(*target)))
+            self.assertEqual(loaded_map.getMovementCost(game.Coords(*target)), 4)
+            game.CMapLoader.save(loaded_map, "out_of_bounds_tile_override_loaded")
+            self.assertEqual(load_saved_tile_type(loaded_save, target), "WaterTile")
+
+            return True, json.dumps(
+                {
+                    "fresh_tile_type": load_saved_tile_type(fresh_save, target),
+                    "loaded_tile_type": load_saved_tile_type(loaded_save, target),
+                    "target": list(target),
+                }
+            )
+        finally:
+            for path in (fresh_save, pristine_save, loaded_save):
+                remove_save(path)
 
     @game_test
     def test_player_recovery_from_map_objects_preserves_state(self):

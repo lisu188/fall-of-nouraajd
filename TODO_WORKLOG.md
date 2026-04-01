@@ -194,3 +194,22 @@
   - `python3 test.py` -> `Ran 73 tests in 378.683s`, `OK`
   - `./scripts/run_coverage.sh` -> configured and built `cmake-build-coverage`, `ctest` passed, then the embedded instrumented `python3 test.py` phase emitted progress dots (`...........`, then `.............................`) and remained CPU-bound for over 24 minutes without reaching a unittest summary or coverage report; the run was terminated manually with `kill 88422 89103`
 - Blockers if unresolved: The functional batch is validated by the mandatory build, C++ unit target, and full Python suite, but the required coverage script is still blocked by the instrumented `python3 test.py` phase not completing in this environment, so no fresh scoped coverage percentage was produced.
+
+## Batch 15
+- Location: `src/core/CMap.h`, `src/core/CMap.cpp`, `src/core/CLoader.cpp`, `res/maps/ritual/map.json`, `test.py`, `todo.txt`
+- Original TODO or summary: `todo.txt` still tracked `customize out of bound tiles` and `add new toroidal map`.
+- Status: fixed
+- What was changed: Added a per-level `outOfBoundsTiles` map to `CMap`, taught `apply_tile_layer_metadata(...)` to load an optional `outOfBounds` tile id from TMX layer properties and to reapply it when loading saved games, configured the existing `ritual` map to use `WaterTile` outside bounds, added a regression test that materializes the out-of-bounds tile on both a fresh map and a saved-game reload and verifies the serialized tile type, extended the Tiled compatibility test to validate the new optional property type, and removed both resolved TODO entries from `todo.txt`.
+- Why the change is correct: The real unfinished behavior was in `CMap::getTile(...)`, which still hard-coded `MountainTile` for bounded out-of-range lookups even though the loader already supported other per-layer tile metadata. The toroidal item was stale on current `main`: wrap metadata loading already exists, `res/maps/test/map.json` is already toroidal, and `test.py` already covers wrap behavior and wrapped target selection. The new `outOfBounds` property is the smallest map-layer extension that fixes the real missing behavior without changing unrelated map loading or runtime ids.
+- Validation performed:
+  - source verification of `AGENTS.md`, `README.md`, `todo.txt`, `TODO_WORKLOG.md`, `test.py`, `scripts/run_coverage.sh`, `res/game.py`, `CMakeLists.txt`, `src/core/CMap.h`, `src/core/CMap.cpp`, `src/core/CLoader.cpp`, `res/maps/ritual/map.json`, `res/maps/ritual/script.py`, `res/maps/ritual/config.json`, and `res/maps/test/map.json`
+  - GitHub `main` verification of `todo.txt`, `TODO_WORKLOG.md`, `src/core/CMap.h`, `src/core/CMap.cpp`, `src/core/CLoader.cpp`, `res/maps/ritual/map.json`, `res/maps/test/map.json`, and `test.py` before editing
+  - `black -l 120 test.py`
+  - `clang-format -i src/core/CMap.h src/core/CMap.cpp src/core/CLoader.cpp`
+  - `cmake --build cmake-build-release --target _game for_unit_tests -j$(nproc)` -> `[100%] Built target _game`, `[100%] Built target for_unit_tests`
+  - `python3 -m unittest test.GameTest.test_out_of_bounds_tile_override_survives_save_load` -> `Ran 1 test in 0.509s`, `OK`
+  - `python3 -m unittest test.GameTest.test_map_json_tiled_compatibility` -> `Ran 1 test in 0.062s`, `OK`
+  - `ctest --test-dir cmake-build-release --output-on-failure -R for_unit_tests` -> `1/1 Test #1: for_unit_tests ... Passed`
+  - `python3 test.py` -> `Ran 78 tests in 487.808s`, `OK`
+  - `./scripts/run_coverage.sh` -> configured and built `cmake-build-coverage`, `ctest` passed, then the embedded instrumented `python3 test.py` phase emitted progress dots (`.......................` then `..................`) and remained CPU-bound with no new output for several minutes; the run was terminated manually with `kill 135584 136514`, and no `coverage/coverage.txt` or `coverage/coverage.html` report was produced
+- Blockers if unresolved: The two TODOs are fixed, but the required coverage script is still blocked by the instrumented `python3 test.py` phase stalling before report generation, so there is no fresh scoped coverage percentage for this batch.
