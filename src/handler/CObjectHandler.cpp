@@ -27,11 +27,11 @@ void CObjectHandler::registerConfig(const std::string &path) {
         vstd::logger::warning("Failed to load config:", path);
         return;
     }
-    for (auto [key, value] : config->items()) {
+    for (auto &[key, value] : config->items()) {
         if (value.is_object() && !value.count("class") && !value.count("ref")) {
             continue;
         }
-        objectConfig[key] = CJsonUtil::clone(value);
+        objectConfig[key] = CJsonUtil::alias(config, value);
     }
 }
 
