@@ -168,9 +168,9 @@ class EngineMcpServer:
         for name, value in inspect.getmembers(module):
             if name.startswith("_"):
                 continue
-            if not callable(value):
-                continue
             if inspect.isclass(value):
+                self._export_class_python_methods(value, source=source)
+            if not callable(value):
                 continue
             if name in {"load", "register", "trigger"}:
                 continue
@@ -183,12 +183,41 @@ class EngineMcpServer:
                     signature=self._safe_signature(value),
                 )
 
+    def _export_class_python_methods(self, cls: Any, source: str) -> None:
+        class_name = getattr(cls, "__name__", None)
+        if not isinstance(class_name, str) or not class_name or class_name.startswith("_"):
+            return
+        for name, value in inspect.getmembers(cls):
+            if name.startswith("_"):
+                continue
+            if self._python_callable(value) is None:
+                continue
+            export_name = f"{class_name}.{name}"
+            if export_name in self.exports:
+                continue
+            self.exports[export_name] = ExportedCallable(
+                name=export_name,
+                source=f"{source}.{class_name}",
+                target_name=name,
+                callable_obj=value,
+                signature=self._safe_signature(value),
+            )
+
     @staticmethod
     def _safe_signature(fn: Any) -> str:
         try:
             return str(inspect.signature(fn))
         except (TypeError, ValueError):
             return "(signature unavailable)"
+
+    @staticmethod
+    def _python_callable(value: Any) -> Any | None:
+        if inspect.isfunction(value):
+            return value
+        function = getattr(value, "__func__", None)
+        if function is not None and inspect.isfunction(function):
+            return function
+        return None
 
     def serve_stdio(self) -> None:
         logger.info("starting stdio MCP server")
@@ -790,7 +819,9 @@ class EngineMcpServer:
             raise ProtocolError(-32602, f"Callable not exported: {name}")
 
         try:
-            result = exported.callable_obj(*call_args, **call_kwargs)
+            resolved_args = self._resolve_handle_references(call_args)
+            resolved_kwargs = self._resolve_handle_references(call_kwargs)
+            result = exported.callable_obj(*resolved_args, **resolved_kwargs)
             serialized = self._serialize_result(result)
             structured = {
                 "name": name,
@@ -867,7 +898,9 @@ class EngineMcpServer:
             }
 
         try:
-            result = method_callable(*call_args, **call_kwargs)
+            resolved_args = self._resolve_handle_references(call_args)
+            resolved_kwargs = self._resolve_handle_references(call_kwargs)
+            result = method_callable(*resolved_args, **resolved_kwargs)
             serialized = self._serialize_result(result)
             structured = {"result": serialized}
             return {
@@ -896,6 +929,31 @@ class EngineMcpServer:
                 "isError": True,
             }
 
+    def _resolve_handle_references(self, value: Any) -> Any:
+        if isinstance(value, list):
+            return [self._resolve_handle_references(item) for item in value]
+        if isinstance(value, tuple):
+            return tuple(self._resolve_handle_references(item) for item in value)
+        if isinstance(value, dict):
+            handle = value.get("__handle__")
+            if isinstance(handle, str):
+                if handle not in self.handles:
+                    raise ProtocolError(-32602, f"Unknown handle: {handle}")
+                return self.handles[handle]
+            return {str(key): self._resolve_handle_references(item) for key, item in value.items()}
+        return value
+
+    def _python_methods_for(self, value: Any) -> list[dict[str, str]]:
+        methods: list[dict[str, str]] = []
+        for name, member in inspect.getmembers(type(value)):
+            if name.startswith("_"):
+                continue
+            if self._python_callable(member) is None:
+                continue
+            methods.append({"name": name, "signature": self._safe_signature(member)})
+        methods.sort(key=lambda item: item["name"])
+        return methods
+
     def _serialize_result(self, value: Any) -> Any:
         if value is None or isinstance(value, (str, int, float, bool)):
             return value
@@ -906,7 +964,11 @@ class EngineMcpServer:
         handle = f"h_{self.next_handle}"
         self.next_handle += 1
         self.handles[handle] = value
-        return {"__handle__": handle, "__type__": value.__class__.__name__, "repr": repr(value)}
+        result = {"__handle__": handle, "__type__": value.__class__.__name__, "repr": repr(value)}
+        python_methods = self._python_methods_for(value)
+        if python_methods:
+            result["pythonMethods"] = python_methods
+        return result
 
     def _trace_message(
         self,
