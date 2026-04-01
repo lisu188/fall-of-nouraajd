@@ -59,7 +59,7 @@
         {
           "class": "CListView",
           "properties": {
-            "allowOversize": false,
+            "allowOversize": true,
             "collection": "getEffects",
             "layout": {
               "class": "CLayout",
@@ -238,6 +238,27 @@
                 "y": 100
               }
             }
+          }
+        },
+        {
+          "class": "CListView",
+          "properties": {
+            "allowOversize": false,
+            "callback": "enemiesCallback",
+            "collection": "enemiesCollection",
+            "layout": {
+              "class": "CLayout",
+              "properties": {
+                "h": "10%",
+                "w": "40%",
+                "x": "30%",
+                "y": "5%"
+              }
+            },
+            "select": "enemiesSelect",
+            "showEmpty": false,
+            "xPrefferedSize": 4,
+            "yPrefferedSize": 1
           }
         },
         {
