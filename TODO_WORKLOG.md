@@ -207,5 +207,5 @@
   - GitHub `main` verification of `todo.txt`, `src/core/CMap.cpp`, `src/core/CLoader.cpp`, `res/maps/test/map.json`, and `test.py` before editing
   - `cmake --build cmake-build-release --target _game for_unit_tests -j$(nproc)` -> `Built target _game`, `Built target for_unit_tests`
   - `ctest --test-dir cmake-build-release --output-on-failure -R for_unit_tests` -> `1/1 Test #1: for_unit_tests ... Passed`
-  - `python3 test.py` -> `Ran 74 tests in 436.905s`, `OK`
+  - `python3 test.py` -> `Ran 77 tests in 323.349s`, `OK` (rerun after rebasing onto the latest `origin/main`)
 - Blockers if unresolved: None.
