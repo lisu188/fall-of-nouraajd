@@ -194,3 +194,18 @@
   - `python3 test.py` -> `Ran 73 tests in 378.683s`, `OK`
   - `./scripts/run_coverage.sh` -> configured and built `cmake-build-coverage`, `ctest` passed, then the embedded instrumented `python3 test.py` phase emitted progress dots (`...........`, then `.............................`) and remained CPU-bound for over 24 minutes without reaching a unittest summary or coverage report; the run was terminated manually with `kill 88422 89103`
 - Blockers if unresolved: The functional batch is validated by the mandatory build, C++ unit target, and full Python suite, but the required coverage script is still blocked by the instrumented `python3 test.py` phase not completing in this environment, so no fresh scoped coverage percentage was produced.
+
+## Batch 15
+- Location: `src/gui/panel/CListView.cpp`, `todo.txt`
+- Original TODO or summary: `todo.txt` still tracked `add stacks of object (wand etc) same as grouping but in the left corner`, and grouped item stacks were still rendering their count badge in the lower-right corner.
+- Status: fixed
+- What was changed: Changed `CListView::addCountBox(...)` to anchor grouped count badges with `LEFT`/`UP` instead of `RIGHT`/`DOWN`, then removed the resolved backlog entry from `todo.txt`.
+- Why the change is correct: Grouped lists in inventory, fight, loot, and trade panels already share the same `CListView` count-badge path through `res/config/panels.json`, and `CLayout::getRect(...)` interprets `LEFT`/`UP` as top-left anchoring. The broken behavior was only the badge layout direction, so no panel callback or grouping logic changes were needed.
+- Validation performed:
+  - source verification of `AGENTS.md`, `README.md`, `todo.txt`, `TODO_WORKLOG.md`, `test.py`, `scripts/run_coverage.sh`, `res/game.py`, and `CMakeLists.txt`
+  - local and GitHub `main` verification of `todo.txt`, `src/gui/panel/CListView.cpp`, `src/gui/CLayout.cpp`, and `res/config/panels.json` before editing
+  - `clang-format -i --lines=253:264 src/gui/panel/CListView.cpp`
+  - `cmake --build cmake-build-release --target _game for_unit_tests -j$(nproc)` -> `[100%] Built target _game`, `[100%] Built target for_unit_tests`
+  - `ctest --test-dir cmake-build-release --output-on-failure -R for_unit_tests` -> `1/1 Test #1: for_unit_tests ... Passed`
+  - `python3 test.py` -> `Ran 77 tests in 338.493s`, `OK`
+- Blockers if unresolved: None. This batch touched only `src/gui` plus backlog bookkeeping, so `./scripts/run_coverage.sh` was not required by the repository rules.
