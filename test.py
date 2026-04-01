@@ -1708,6 +1708,58 @@ class GameTest(unittest.TestCase):
         )
 
     @game_test
+    def test_player_recovery_from_map_objects_preserves_state(self):
+        game = load_game_module()
+
+        g = game.CGameLoader.loadGame()
+        game.CGameLoader.startGameWithPlayer(g, "test", "Warrior")
+        recovered_player = g.getMap().getPlayer()
+
+        game.CGameLoader.startGame(g, "test")
+        game_map = g.getMap()
+        recovered_player.moveTo(1, 2, 0)
+        game_map.addObject(recovered_player)
+
+        recovered_player = game_map.getPlayer()
+        recovered_again = game_map.getPlayer()
+        player_count = sum(1 for obj in game_map.getObjects() if obj.getName() == "player")
+        recovered_coords = recovered_player.getCoords()
+        recovered_again_coords = recovered_again.getCoords()
+
+        self.assertEqual((1, 2, 0), (recovered_coords.x, recovered_coords.y, recovered_coords.z))
+        self.assertEqual((1, 2, 0), (recovered_again_coords.x, recovered_again_coords.y, recovered_again_coords.z))
+        self.assertEqual(1, player_count)
+        self.assertIsNotNone(recovered_player.getController())
+        self.assertIsNotNone(recovered_player.getFightController())
+
+        stats = recovered_player.getStats()
+        main_value = getattr(stats, stats.mainStat)
+        expected_mana_regen = main_value // 10 + 1
+        mana_max = main_value * 7
+
+        recovered_player.setMana(0)
+        recovered_player.setMovePoints(0)
+        game_map.move()
+        mana_after_first_turn = recovered_player.getMana()
+        game_map.move()
+        mana_after_second_turn = recovered_player.getMana()
+
+        self.assertEqual(expected_mana_regen, mana_after_first_turn)
+        self.assertEqual(min(expected_mana_regen * 2, mana_max), mana_after_second_turn)
+        recovered_coords = recovered_player.getCoords()
+        self.assertEqual((1, 2, 0), (recovered_coords.x, recovered_coords.y, recovered_coords.z))
+
+        return True, json.dumps(
+            {
+                "coords": [recovered_coords.x, recovered_coords.y, recovered_coords.z],
+                "player_count": player_count,
+                "mana_after_first_turn": mana_after_first_turn,
+                "mana_after_second_turn": mana_after_second_turn,
+                "expected_mana_regen": expected_mana_regen,
+            }
+        )
+
+    @game_test
     def test_toroidal_target_controller_prefers_wrapped_step(self):
         game = load_game_module()
 
@@ -1970,6 +2022,48 @@ class GameTest(unittest.TestCase):
         rolls = [creature.getDmg() for i in range(25)]
         valid_rolls = all(3 <= roll <= 8 for roll in rolls)
         return valid_rolls, json.dumps({"rolls": rolls})
+
+    @game_test
+    def test_block_chance_uses_percentage_scale(self):
+        game = load_game_module()
+
+        g = game.CGameLoader.loadGame()
+        game.CGameLoader.startGame(g, "empty")
+
+        creature = g.createObject("CCreature")
+        stats = g.createObject("Stats")
+        stats.stamina = 10
+        stats.strength = 10
+        stats.mainStat = "strength"
+        stats.armor = 0
+        stats.block = 100
+        stats.normalResist = 0
+        stats.thunderResist = 0
+        stats.frostResist = 0
+        stats.fireResist = 0
+        stats.shadowResist = 0
+        creature.baseStats = stats
+        creature.setHp(creature.getHpMax())
+
+        blocked_hp_before = creature.getHpRatio()
+        creature.hurt(5)
+        blocked_hp_after = creature.getHpRatio()
+
+        stats.block = 0
+        creature.setHp(creature.getHpMax())
+        creature.hurt(5)
+        unblocked_hp_after = creature.getHpRatio()
+
+        self.assertEqual(blocked_hp_before, blocked_hp_after)
+        self.assertLess(unblocked_hp_after, blocked_hp_before)
+
+        return True, json.dumps(
+            {
+                "blocked_hp_before": blocked_hp_before,
+                "blocked_hp_after": blocked_hp_after,
+                "unblocked_hp_after": unblocked_hp_after,
+            }
+        )
 
     @game_test
     def test_objects(self):
