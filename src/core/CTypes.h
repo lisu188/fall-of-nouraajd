@@ -17,6 +17,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #pragma once
 
+#include <stdexcept>
+
 #include "core/CGlobal.h"
 #include "core/CSerialization.h"
 #include "object/CObject.h"
@@ -156,6 +158,13 @@ public:
 
   static void set_custom_property(std::shared_ptr<CGameObject> object,
                                   std::string key, boost::any property) {
-    (*setters())[property.type()](object, key, property);
+    auto setter = setters()->find(property.type());
+    if (setter == setters()->end() || !setter->second) {
+      throw std::runtime_error(
+          "No custom setter registered for property '" + key +
+          "' of type '" +
+          boost::typeindex::type_index(property.type()).pretty_name() + "'");
+    }
+    setter->second(object, key, property);
   }
 };

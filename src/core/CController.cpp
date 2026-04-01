@@ -24,6 +24,18 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "object/CMapObject.h"
 #include "object/CPlayer.h"
 
+namespace {
+bool creature_can_follow_step(const std::shared_ptr<CCreature> &creature, const Coords &step) {
+    if (!creature || !creature->getMap()) {
+        return false;
+    }
+    auto map = creature->getMap();
+    auto current = map->normalizeCoords(creature->getCoords());
+    auto target = map->normalizeCoords(step);
+    return target != current && map->canStep(target) && creature->getMovePoints() >= map->getMovementCost(target);
+}
+} // namespace
+
 CTargetController::CTargetController() {}
 
 std::shared_ptr<vstd::future<Coords, void>> CTargetController::control(std::shared_ptr<CCreature> creature) {
@@ -67,6 +79,15 @@ std::shared_ptr<vstd::future<Coords, void>> CRandomController::control(std::shar
 std::shared_ptr<vstd::future<Coords, void>> CNpcRandomController::control(std::shared_ptr<CCreature> creature) {
     auto self = this->ptr<CNpcRandomController>();
     return vstd::later([self, creature]() -> Coords {
+        if (!self->path.empty() && self->currentStep < static_cast<int>(self->path.size())) {
+            auto next = creature->getMap()->normalizeCoords(self->path[self->currentStep]);
+            if (creature_can_follow_step(creature, next)) {
+                return next;
+            }
+            self->path.clear();
+            self->currentStep = 0;
+        }
+
         if (self->path.empty() || self->currentStep >= static_cast<int>(self->path.size())) {
             for (int i = 0; i < 10; i++) {
                 auto dx = vstd::rand(-5, 5);
@@ -94,7 +115,12 @@ std::shared_ptr<vstd::future<Coords, void>> CNpcRandomController::control(std::s
         }
 
         if (!self->path.empty() && self->currentStep < static_cast<int>(self->path.size())) {
-            return self->path[self->currentStep];
+            auto next = creature->getMap()->normalizeCoords(self->path[self->currentStep]);
+            if (creature_can_follow_step(creature, next)) {
+                return next;
+            }
+            self->path.clear();
+            self->currentStep = 0;
         }
 
         return creature->getCoords();

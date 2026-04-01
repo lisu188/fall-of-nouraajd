@@ -27,13 +27,17 @@ CMapObject::~CMapObject() {}
 
 void CMapObject::move(int x, int y, int z) {
   Coords target(posx + x, posy + y, posz + z);
-  if (getMap()) {
-    target = getMap()->normalizeCoords(target);
+  auto map = getMap();
+  if (map) {
+    target = map->normalizeCoords(target);
   }
 
-  if (dynamic_cast<Moveable *>(this) && getMap()) {
-    if (getMap()->getTile(target.x, target.y, target.z) &&
-        !getMap()->getTile(target.x, target.y, target.z)->canStep()) {
+  if (dynamic_cast<Moveable *>(this) && map) {
+    auto current = map->normalizeCoords(Coords(posx, posy, posz));
+    auto delta = map->getShortestDelta(current, target);
+    bool is_registered = map->getObjectByName(getName()) == this->ptr<CMapObject>();
+    bool is_step_move = delta.z == 0 && std::abs(delta.x) + std::abs(delta.y) == 1;
+    if (is_registered && is_step_move && !map->canStep(target)) {
       vstd::logger::debug(getName(), "cannot step on:", target.x, target.y,
                           target.z);
       return;
@@ -47,11 +51,11 @@ void CMapObject::move(int x, int y, int z) {
   posz = target.z;
   Coords newCoords(posx, posy, posz);
 
-  if (getMap()) {
-    getMap()->objectMoved(this->ptr<CMapObject>(), oldCoords, newCoords);
+  if (map) {
+    map->objectMoved(this->ptr<CMapObject>(), oldCoords, newCoords);
   }
 
-  if (dynamic_cast<Moveable *>(this) && getMap()) {
+  if (dynamic_cast<Moveable *>(this) && map) {
     dynamic_cast<Moveable *>(this)->afterMove();
   }
 }
