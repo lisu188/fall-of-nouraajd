@@ -1661,6 +1661,42 @@ class GameTest(unittest.TestCase):
         return True, ""
 
     @game_test
+    def test_moveable_objects_respect_non_steppable_map_objects(self):
+        game = load_game_module()
+
+        g, game_map, player = load_game_map_with_player("test")
+        origin = player.getCoords()
+
+        target = None
+        for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+            candidate = game.Coords(origin.x + dx, origin.y + dy, origin.z)
+            if game_map.canStep(candidate):
+                target = candidate
+                break
+
+        self.assertIsNotNone(target, "Expected at least one adjacent walkable tile on the test map")
+
+        blocker = g.createObject("CEvent")
+        blocker.setStringProperty("name", "movementBlocker")
+        blocker.setBoolProperty("canStep", False)
+        game_map.addObject(blocker)
+        blocker.moveTo(target.x, target.y, target.z)
+
+        self.assertFalse(game_map.canStep(target))
+
+        player.moveTo(target.x, target.y, target.z)
+        current = player.getCoords()
+        self.assertEqual((current.x, current.y, current.z), (origin.x, origin.y, origin.z))
+
+        return True, json.dumps(
+            {
+                "origin": [origin.x, origin.y, origin.z],
+                "target": [target.x, target.y, target.z],
+                "player": [current.x, current.y, current.z],
+            }
+        )
+
+    @game_test
     def test_toroidal_map_wraps_and_survives_save_load(self):
         game = load_game_module()
 
