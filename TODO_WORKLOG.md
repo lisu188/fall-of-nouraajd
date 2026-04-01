@@ -175,3 +175,22 @@
   - `ctest --test-dir cmake-build-release --output-on-failure -R for_unit_tests`
   - `python3 test.py`
 - Blockers if unresolved: None. This batch only cleans up stale backlog items; the verified movement/pathfinding behavior is already live and tested.
+
+## Batch 14
+- Location: `src/core/CJsonUtil.h`, `src/core/CProvider.cpp`, `src/handler/CObjectHandler.cpp`, `test.py`
+- Original TODO or summary: Inline TODOs still left JSON parse failures silent (`return nullptr; // TODO: handle`) and missing object-config fallback undiscoverable (`// TODO: vstd::logger::debug("No config found for:", type);`).
+- Status: fixed
+- What was changed: Added contextual JSON parse warnings with source path and payload preview in `CJsonUtil::from_string(...)`, threaded source paths through configuration/resource loading so malformed files report which resource failed, restored a debug log when `CObjectHandler::_createObject(...)` falls back from a missing config to class-name construction, and added focused regression tests that capture native file-sink logs for both the class-name fallback and a malformed saved-game load. While validating this batch, stabilized the pre-existing `test_player_recovery_from_map_objects_preserves_state` fixture so it no longer depends on unrelated map activity during the full suite.
+- Why the change is correct: Before this batch, both failure modes reproduced as completely silent no-op paths: creating `CCreature` by class name emitted no diagnostic, and loading an invalid save returned an empty `CMap` without any parse error context. The new logging keeps the existing fallback behavior intact while making malformed resources and missing configs diagnosable. The new tests verify the exact no-crash paths by asserting on the native logger output rather than implementation details.
+- Validation performed:
+  - source verification of `AGENTS.md`, `README.md`, `todo.txt`, `TODO_WORKLOG.md`, `test.py`, `scripts/run_coverage.sh`, `res/game.py`, and `CMakeLists.txt`
+  - local and GitHub `main` verification of `src/core/CJsonUtil.h`, `src/core/CProvider.cpp`, `src/handler/CObjectHandler.cpp`, and `test.py` before editing
+  - `black -l 120 test.py`
+  - `clang-format -i src/core/CJsonUtil.h src/core/CProvider.cpp src/handler/CObjectHandler.cpp`
+  - `python3 -m unittest test.GameTest.test_create_object_without_config_logs_fallback` -> `Ran 1 test`, `OK`
+  - `python3 -m unittest test.GameTest.test_invalid_saved_game_logs_parse_failure` -> `Ran 1 test`, `OK`
+  - `cmake --build cmake-build-release --target _game for_unit_tests -j$(nproc)` -> `[100%] Built target _game`, `[100%] Built target for_unit_tests`
+  - `ctest --test-dir cmake-build-release --output-on-failure -R for_unit_tests` -> `1/1 Test #1: for_unit_tests ... Passed`
+  - `python3 test.py` -> `Ran 73 tests in 378.683s`, `OK`
+  - `./scripts/run_coverage.sh` -> configured and built `cmake-build-coverage`, `ctest` passed, then the embedded instrumented `python3 test.py` phase emitted progress dots (`...........`, then `.............................`) and remained CPU-bound for over 24 minutes without reaching a unittest summary or coverage report; the run was terminated manually with `kill 88422 89103`
+- Blockers if unresolved: The functional batch is validated by the mandatory build, C++ unit target, and full Python suite, but the required coverage script is still blocked by the instrumented `python3 test.py` phase not completing in this environment, so no fresh scoped coverage percentage was produced.

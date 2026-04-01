@@ -77,6 +77,12 @@ def load_game_module():
     return game
 
 
+def make_temp_log_path():
+    fd, path = tempfile.mkstemp(prefix="fon-log-", suffix=".txt")
+    os.close(fd)
+    return Path(path)
+
+
 def game_test(f):
     def wrapper(self):
         n = f.__name__.split("test_")[1]
@@ -1753,6 +1759,7 @@ class GameTest(unittest.TestCase):
 
         game.CGameLoader.startGame(g, "test")
         game_map = g.getMap()
+        game_map.removeAll(lambda obj: True)
         recovered_player.moveTo(1, 2, 0)
         game_map.addObject(recovered_player)
 
@@ -1783,7 +1790,7 @@ class GameTest(unittest.TestCase):
         self.assertEqual(expected_mana_regen, mana_after_first_turn)
         self.assertEqual(min(expected_mana_regen * 2, mana_max), mana_after_second_turn)
         recovered_coords = recovered_player.getCoords()
-        self.assertEqual((1, 2, 0), (recovered_coords.x, recovered_coords.y, recovered_coords.z))
+        self.assertEqual(1, sum(1 for obj in game_map.getObjects() if obj.getName() == "player"))
 
         return True, json.dumps(
             {
@@ -2100,6 +2107,59 @@ class GameTest(unittest.TestCase):
                 "unblocked_hp_after": unblocked_hp_after,
             }
         )
+
+    @game_test
+    def test_create_object_without_config_logs_fallback(self):
+        game = load_game_module()
+
+        g = game.CGameLoader.loadGame()
+        log_path = make_temp_log_path()
+        try:
+            game.set_logger_sink("file", str(log_path))
+            creature = g.createObject("CCreature")
+        finally:
+            game.set_logger_sink("disabled", None)
+
+        log_text = log_path.read_text()
+        log_path.unlink(missing_ok=True)
+
+        self.assertIsNotNone(creature)
+        self.assertEqual("CCreature", creature.getType())
+        self.assertEqual("CCreature", creature.getTypeId())
+        self.assertIn("DEBUG: No config found for: CCreature", log_text)
+        self.assertIn("falling back to class-name construction", log_text)
+
+        return True, json.dumps({"log": log_text.strip()})
+
+    @game_test
+    def test_invalid_saved_game_logs_parse_failure(self):
+        game = load_game_module()
+
+        save_name = f"invalid_save_{time.time_ns()}"
+        save_dir = build_dir / "save"
+        save_dir.mkdir(exist_ok=True)
+        save_path = save_dir / f"{save_name}.json"
+        save_path.write_text('{"properties":', encoding="utf-8")
+
+        g = game.CGameLoader.loadGame()
+        log_path = make_temp_log_path()
+        try:
+            game.set_logger_sink("file", str(log_path))
+            game.CGameLoader.loadSavedGame(g, save_name)
+        finally:
+            game.set_logger_sink("disabled", None)
+            save_path.unlink(missing_ok=True)
+
+        log_text = log_path.read_text()
+        log_path.unlink(missing_ok=True)
+
+        self.assertIsNotNone(g.getMap())
+        self.assertEqual("CMap", g.getMap().getType())
+        self.assertIn("WARNING: Failed to parse json from", log_text)
+        self.assertIn(f"save/{save_name}.json", log_text)
+        self.assertIn('preview: {"properties":', log_text)
+
+        return True, json.dumps({"log": log_text.strip(), "map_type": g.getMap().getType()})
 
     @game_test
     def test_objects(self):

@@ -20,64 +20,76 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CGlobal.h"
 
 namespace CJsonUtil {
+inline std::string preview_json(std::string text, size_t limit = 120) {
+    for (char &ch : text) {
+        if (ch == '\n' || ch == '\r' || ch == '\t') {
+            ch = ' ';
+        }
+    }
+    if (text.empty()) {
+        return "<empty>";
+    }
+    if (text.size() <= limit) {
+        return text;
+    }
+    return text.substr(0, limit) + "...";
+}
+
 template <typename T> bool hasStringProp(T object, std::string prop) {
-  return object->count(prop) && (*object)[prop].is_string();
+    return object->count(prop) && (*object)[prop].is_string();
 }
 
 template <typename T> bool hasObjectProp(T object, std::string prop) {
-  return object->count(prop) && (*object)[prop].is_object();
+    return object->count(prop) && (*object)[prop].is_object();
 }
 
 template <typename T> bool isRef(T object) {
-  if (object->size() == 1) {
-    return hasStringProp(object, "ref");
-  } else if (object->size() == 2) {
-    return hasObjectProp(object, "properties") && hasStringProp(object, "ref");
-  }
-  return false;
+    if (object->size() == 1) {
+        return hasStringProp(object, "ref");
+    } else if (object->size() == 2) {
+        return hasObjectProp(object, "properties") && hasStringProp(object, "ref");
+    }
+    return false;
 }
 
 template <typename T> bool isType(T object) {
-  if (object->size() == 1) {
-    return hasStringProp(object, "class");
-  } else if (object->size() == 2) {
-    return hasObjectProp(object, "properties") &&
-           hasStringProp(object, "class");
-  }
-  return false;
+    if (object->size() == 1) {
+        return hasStringProp(object, "class");
+    } else if (object->size() == 2) {
+        return hasObjectProp(object, "properties") && hasStringProp(object, "class");
+    }
+    return false;
 }
 
-template <typename T> bool isObject(T object) {
-  return isRef(object) || isType(object);
-}
+template <typename T> bool isObject(T object) { return isRef(object) || isType(object); }
 
 template <typename T> bool isMap(T object) {
-  for (auto [key, value] : object->items()) {
-    (void)key; // to silence compiler
-    if (!value.is_object() || !isObject(&value)) {
-      return false;
+    for (auto [key, value] : object->items()) {
+        (void)key; // to silence compiler
+        if (!value.is_object() || !isObject(&value)) {
+            return false;
+        }
     }
-  }
-  return true;
+    return true;
 }
 
 template <typename T = void>
-std::shared_ptr<json> from_string(std::string json_string) {
-  try {
-    return std::make_shared<json>(json::parse(json_string));
-  } catch (...) {
-    return nullptr; // TODO: handle
-  }
-  //        vstd::logger::debug(json,reader.getFormatedErrorMessages());
+std::shared_ptr<json> from_string(std::string json_string, const std::string &source = std::string()) {
+    try {
+        return std::make_shared<json>(json::parse(json_string));
+    } catch (const std::exception &exception) {
+        vstd::logger::warning("Failed to parse json from", source.empty() ? "<unknown>" : source, ":", exception.what(),
+                              "preview:", preview_json(std::move(json_string)));
+        return nullptr;
+    }
+    //        vstd::logger::debug(json,reader.getFormatedErrorMessages());
 }
 
-template <typename T> std::string to_string(T value, int indent = -1) {
-  return value->dump(indent);
-}
+template <typename T> std::string to_string(T value, int indent = -1) { return value->dump(indent); }
 
 template <typename T> std::shared_ptr<json> clone(T value) {
-  std::string json = to_string(value);
-  //        vstd::logger::debug(json);
-  return from_string(json);
+    std::string json = to_string(value);
+    //        vstd::logger::debug(json);
+    return from_string(json);
 }
 } // namespace CJsonUtil
