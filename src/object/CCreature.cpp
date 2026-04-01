@@ -166,7 +166,8 @@ void CCreature::takeDamage(int rawDamage) {
     if (damageAfterArmor < 0) {
         damageAfterArmor = 0;
     }
-    if (rand() >= stats->getBlock()) {
+    int blockDice = rand() % 100;
+    if (blockDice >= stats->getBlock()) {
         vstd::logger::debug(to_string(), "armor saved from", rawDamage - damageAfterArmor, "damage");
         hp -= damageAfterArmor;
     } else {
