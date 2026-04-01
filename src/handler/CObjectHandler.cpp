@@ -22,114 +22,100 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 CObjectHandler::CObjectHandler() {}
 
 void CObjectHandler::registerConfig(const std::string &path) {
-  std::shared_ptr<json> config = CConfigurationProvider::getConfig(path);
-  if (!config) {
-    vstd::logger::warning("Failed to load config:", path);
-    return;
-  }
-  for (auto [key, value] : config->items()) {
-    if (value.is_object() &&
-        !value.count("class") &&
-        !value.count("ref")) {
-      continue;
+    std::shared_ptr<json> config = CConfigurationProvider::getConfig(path);
+    if (!config) {
+        vstd::logger::warning("Failed to load config:", path);
+        return;
     }
-    objectConfig[key] = CJsonUtil::clone(value);
-  }
+    for (auto [key, value] : config->items()) {
+        if (value.is_object() && !value.count("class") && !value.count("ref")) {
+            continue;
+        }
+        objectConfig[key] = CJsonUtil::clone(value);
+    }
 }
 
-void CObjectHandler::registerConfig(const std::string &name,
-                                    std::shared_ptr<json> value) {
-  objectConfig[name] = value;
+void CObjectHandler::registerConfig(const std::string &name, std::shared_ptr<json> value) {
+    objectConfig[name] = value;
 }
 
 std::shared_ptr<json> CObjectHandler::getConfig(const std::string &type) {
-  if (vstd::ctn(objectConfig, type)) {
-    return objectConfig[type];
-  }
-  return nullptr;
+    if (vstd::ctn(objectConfig, type)) {
+        return objectConfig[type];
+    }
+    return nullptr;
 }
 
 std::vector<std::string> CObjectHandler::getAllTypes() {
-  std::vector<std::string> types;
-  for (auto val : objectConfig | boost::adaptors::map_keys) {
-    types.push_back(val);
-  }
-  return types;
+    std::vector<std::string> types;
+    for (auto val : objectConfig | boost::adaptors::map_keys) {
+        types.push_back(val);
+    }
+    return types;
 }
 
 std::shared_ptr<CGameObject> CObjectHandler::getType(const std::string &name) {
-  if (vstd::ctn(constructors, name)) {
-    return constructors[name]();
-  }
-  return std::shared_ptr<CGameObject>();
+    if (vstd::ctn(constructors, name)) {
+        return constructors[name]();
+    }
+    return std::shared_ptr<CGameObject>();
 }
 
-void CObjectHandler::registerType(
-    std::string name,
-    std::function<std::shared_ptr<CGameObject>()> constructor) {
-  constructors.insert(std::make_pair(name, constructor));
+void CObjectHandler::registerType(std::string name, std::function<std::shared_ptr<CGameObject>()> constructor) {
+    constructors.insert(std::make_pair(name, constructor));
 }
 
 // TODO: add option to provide custom configuration from string
-std::shared_ptr<CGameObject>
-CObjectHandler::_createObject(std::shared_ptr<CGame> game,
-                              const std::string &type) {
-  std::shared_ptr<json> config = getConfig(type);
-  if (!config) {
-    // TODO: vstd::logger::debug("No config found for:", type);
-    config =
-        CJsonUtil::from_string(vstd::join({R"({"class":")", type, "\"}"}, ""));
-  }
-  std::shared_ptr<CGameObject> object =
-      CSerialization::deserialize<std::shared_ptr<json>,
-                                  std::shared_ptr<CGameObject>>(game, config);
-  if (!object) {
+std::shared_ptr<CGameObject> CObjectHandler::_createObject(std::shared_ptr<CGame> game, const std::string &type) {
+    std::shared_ptr<json> config = getConfig(type);
+    if (!config) {
+        vstd::logger::debug("No config found for:", type, "falling back to class-name construction");
+        config = std::make_shared<json>();
+        (*config)["class"] = type;
+    }
+    std::shared_ptr<CGameObject> object =
+        CSerialization::deserialize<std::shared_ptr<json>, std::shared_ptr<CGameObject>>(game, config);
+    if (!object) {
+        return object;
+    }
+    object->setTypeId(type);
     return object;
-  }
-  object->setTypeId(type);
-  return object;
 }
 
-std::shared_ptr<CGameObject>
-CObjectHandler::_clone(const std::shared_ptr<CGameObject> &object) {
-  auto _object =
-      CSerialization::serialize<std::shared_ptr<json>,
-                                std::shared_ptr<CGameObject>>(object);
-  // vstd::logger::debug("Cloning:", CJsonUtil::to_string(_object));
-  std::shared_ptr<CGameObject> shared_ptr =
-      CSerialization::deserialize<std::shared_ptr<json>,
-                                  std::shared_ptr<CGameObject>>(
-          object->getGame(), _object);
-  shared_ptr->setName(CSerialization::generateName(shared_ptr));
-  return shared_ptr;
+std::shared_ptr<CGameObject> CObjectHandler::_clone(const std::shared_ptr<CGameObject> &object) {
+    auto _object = CSerialization::serialize<std::shared_ptr<json>, std::shared_ptr<CGameObject>>(object);
+    // vstd::logger::debug("Cloning:", CJsonUtil::to_string(_object));
+    std::shared_ptr<CGameObject> shared_ptr =
+        CSerialization::deserialize<std::shared_ptr<json>, std::shared_ptr<CGameObject>>(object->getGame(), _object);
+    shared_ptr->setName(CSerialization::generateName(shared_ptr));
+    return shared_ptr;
 }
 
-std::vector<std::string>
-CObjectHandler::getAllSubTypes(const std::string &claz) {
-  std::vector<std::string> ret;
-  for (const auto &type : getAllTypes()) {
-    auto conf = getConfig(type);
-    if (CJsonUtil::isRef(conf)) {
-      conf = getConfig((*conf)["ref"].get<std::string>());
+std::vector<std::string> CObjectHandler::getAllSubTypes(const std::string &claz) {
+    std::vector<std::string> ret;
+    for (const auto &type : getAllTypes()) {
+        auto conf = getConfig(type);
+        if (CJsonUtil::isRef(conf)) {
+            conf = getConfig((*conf)["ref"].get<std::string>());
+        }
+        auto clas = (*conf)["class"].get<std::string>();
+        if (getType(clas) && getType(clas)->meta()->inherits(claz)) {
+            ret.push_back(type);
+        }
     }
-    auto clas = (*conf)["class"].get<std::string>();
-    if (getType(clas) && getType(clas)->meta()->inherits(claz)) {
-      ret.push_back(type);
-    }
-  }
-  return ret;
+    return ret;
 }
 
 std::string CObjectHandler::getClass(const std::string &type) {
-  auto conf = getConfig(type);
-  if (CJsonUtil::isRef(conf)) {
-    conf = getConfig((*conf)["ref"].get<std::string>());
-  }
-  return (*conf)["class"].get<std::string>();
+    auto conf = getConfig(type);
+    if (CJsonUtil::isRef(conf)) {
+        conf = getConfig((*conf)["ref"].get<std::string>());
+    }
+    return (*conf)["class"].get<std::string>();
 }
 
 void CObjectHandler::registerConfig(const std::set<std::string> &paths) {
-  for (const auto &path : paths) {
-    registerConfig(path);
-  }
+    for (const auto &path : paths) {
+        registerConfig(path);
+    }
 }
