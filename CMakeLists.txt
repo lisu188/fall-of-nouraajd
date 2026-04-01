@@ -314,6 +314,7 @@ add_executable(for_unit_tests
     src/core/CUtil.cpp
     src/core/CPathFinder.cpp
     src/core/CFuture.cpp
+    src/handler/CScriptHandler.cpp
 )
 
 target_include_directories(for_unit_tests PRIVATE
