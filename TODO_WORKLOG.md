@@ -194,3 +194,18 @@
   - `python3 test.py` -> `Ran 73 tests in 378.683s`, `OK`
   - `./scripts/run_coverage.sh` -> configured and built `cmake-build-coverage`, `ctest` passed, then the embedded instrumented `python3 test.py` phase emitted progress dots (`...........`, then `.............................`) and remained CPU-bound for over 24 minutes without reaching a unittest summary or coverage report; the run was terminated manually with `kill 88422 89103`
 - Blockers if unresolved: The functional batch is validated by the mandatory build, C++ unit target, and full Python suite, but the required coverage script is still blocked by the instrumented `python3 test.py` phase not completing in this environment, so no fresh scoped coverage percentage was produced.
+
+## Batch 15
+- Location: `todo.txt`, `src/core/CMap.cpp`, `src/core/CLoader.cpp`, `res/maps/test/map.json`, `test.py`
+- Original TODO or summary: `todo.txt` still tracked `add new toroidal map`.
+- Status: fixed
+- What was changed: Removed the stale toroidal-map TODO from `todo.txt`. No runtime source changes were needed.
+- Why the change is correct: Toroidal-map support is already implemented in engine and test assets. `apply_tile_layer_metadata(...)` in `src/core/CLoader.cpp` already reads per-layer `wrapX` and `wrapY`; `CMap::normalizeCoords(...)`, `getAdjacentCoords(...)`, and `getShortestDelta(...)` in `src/core/CMap.cpp` already use those wrap flags; `res/maps/test/map.json` already defines a wrap-enabled authored map; and `test_toroidal_map_wraps_and_survives_save_load` in `test.py` already verifies wrap behavior across movement and save/load. Local source matched GitHub `main` before editing, so the backlog item was stale rather than merely locally implemented.
+- Validation performed:
+  - source verification of `AGENTS.md`, `README.md`, `todo.txt`, `TODO_WORKLOG.md`, `test.py`, `scripts/run_coverage.sh`, `res/game.py`, and `CMakeLists.txt`
+  - local source verification of `src/core/CMap.cpp`, `src/core/CLoader.cpp`, `res/maps/test/map.json`, and `res/maps/test/script.py`
+  - GitHub `main` verification of `todo.txt`, `src/core/CMap.cpp`, `src/core/CLoader.cpp`, `res/maps/test/map.json`, and `test.py` before editing
+  - `cmake --build cmake-build-release --target _game for_unit_tests -j$(nproc)` -> `Built target _game`, `Built target for_unit_tests`
+  - `ctest --test-dir cmake-build-release --output-on-failure -R for_unit_tests` -> `1/1 Test #1: for_unit_tests ... Passed`
+  - `python3 test.py` -> `Ran 74 tests in 436.905s`, `OK`
+- Blockers if unresolved: None.
