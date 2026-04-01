@@ -14,8 +14,6 @@
     //TODO: fight panel
 //TODO: replace buff with selfTarget
 //TODO: extend pathfinder to multilevel maps
-//TODO: customize out of bound tiles
-//TODO: add new toroidal map
 //TODO: separate class from race
 //TODO: mark primitve CGameObjects like CList and CMapString, CScript as primitive and unfold values field directly to properties
     generally items with one property, would require not counting props from CGameObject and getting field type from meta class

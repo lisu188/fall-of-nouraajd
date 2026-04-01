@@ -194,3 +194,21 @@
   - `python3 test.py` -> `Ran 73 tests in 378.683s`, `OK`
   - `./scripts/run_coverage.sh` -> configured and built `cmake-build-coverage`, `ctest` passed, then the embedded instrumented `python3 test.py` phase emitted progress dots (`...........`, then `.............................`) and remained CPU-bound for over 24 minutes without reaching a unittest summary or coverage report; the run was terminated manually with `kill 88422 89103`
 - Blockers if unresolved: The functional batch is validated by the mandatory build, C++ unit target, and full Python suite, but the required coverage script is still blocked by the instrumented `python3 test.py` phase not completing in this environment, so no fresh scoped coverage percentage was produced.
+
+## Batch 15
+- Location: `src/core/CMap.h`, `src/core/CMap.cpp`, `src/core/CLoader.cpp`, `res/maps/ritual/map.json`, `test.py`, `todo.txt`
+- Original TODO or summary: `todo.txt` still tracked `customize out of bound tiles` and `add new toroidal map`.
+- Status: fixed
+- What was changed: Added per-layer `outOfBounds` tile metadata to `CMap` and `CMapLoader`, wired the `ritual` map to use `WaterTile` outside bounds, added a save/load regression test plus loader-assumption validation for the optional `outOfBounds` property, and removed the resolved toroidal/out-of-bounds TODOs from `todo.txt`.
+- Why the change is correct: Current `main` already supports toroidal wrapping through `wrapX`/`wrapY`, `normalizeCoords(...)`, `getShortestDelta(...)`, the `res/maps/test/map.json` wrap-enabled fixture, and `test_toroidal_map_wraps_and_survives_save_load`, so that backlog item was stale. The remaining real defect was `CMap::getTile(...)` hard-coding `MountainTile` for bounded out-of-range coordinates while `apply_tile_layer_metadata(...)` exposed no way to configure an alternative fallback. The new optional metadata preserves the existing `MountainTile` behavior when absent and makes the configured fallback survive saved-game reloads because `loadSavedMap(...)` reapplies the same layer metadata from `map.json`.
+- Validation performed:
+  - source verification of `AGENTS.md`, `README.md`, `todo.txt`, `TODO_WORKLOG.md`, `test.py`, `scripts/run_coverage.sh`, `res/game.py`, and `CMakeLists.txt`
+  - local and GitHub `main` verification of `todo.txt`, `src/core/CMap.h`, `src/core/CMap.cpp`, `src/core/CLoader.cpp`, `res/maps/test/map.json`, `res/maps/ritual/map.json`, and `test.py` before editing
+  - `black -l 120 test.py` -> `1 file left unchanged`
+  - `clang-format -i src/core/CMap.h src/core/CMap.cpp src/core/CLoader.cpp` -> ran, but `src/core/CLoader.cpp` was restored and re-patched afterward to avoid unrelated whole-file formatting churn
+  - `python3 -m unittest test.GameTest.test_out_of_bounds_tile_override_survives_save_load test.GameTest.test_toroidal_map_wraps_and_survives_save_load test.GameTest.test_map_json_tiled_compatibility` -> `Ran 3 tests in 0.476s`, `OK`
+  - `cmake --build cmake-build-release --target _game for_unit_tests -j$(nproc)` -> `[100%] Built target _game`, `[100%] Built target for_unit_tests`
+  - `ctest --test-dir cmake-build-release --output-on-failure -R for_unit_tests` -> `1/1 Test #1: for_unit_tests ... Passed`
+  - `python3 test.py` -> `Ran 78 tests in 527.428s`, `OK`
+  - `./scripts/run_coverage.sh` -> configured and built `cmake-build-coverage`, `ctest` passed there, then the embedded instrumented `python3 test.py` emitted progress dots (`..........................` then `...............`) and remained CPU-bound for over 15 minutes without producing a unittest summary or any coverage reports; the run was terminated manually with `kill -9 163809 163369`
+- Blockers if unresolved: The functional batch passed the mandatory build, C++ unit, focused regression, and full Python-suite validation, but the required coverage script is still blocked by the instrumented `python3 test.py` phase not finishing in this environment. No `coverage/coverage.txt` or `coverage/coverage.html` was produced.

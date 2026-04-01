@@ -579,6 +579,18 @@ def validate_tiled_layer(
                 )
             )
 
+        if "outOfBounds" in properties and not isinstance(properties.get("outOfBounds"), str):
+            issues.append(
+                map_validation_issue(
+                    path,
+                    "loader_assumption",
+                    f"{prefix} property 'outOfBounds' must remain a string because CMapLoader reads it as a tile id.",
+                    field="outOfBounds",
+                    layer_name=layer_name,
+                    layer_index=layer_index,
+                )
+            )
+
         for key in ("xBound", "yBound"):
             require_engine_int_string(
                 properties,
@@ -1742,6 +1754,50 @@ class GameTest(unittest.TestCase):
             {
                 "wrapped_horizontal": [after_horizontal.x, after_horizontal.y, after_horizontal.z],
                 "wrapped_vertical": [after_vertical.x, after_vertical.y, after_vertical.z],
+                "loaded_player": [
+                    loaded_player.getCoords().x,
+                    loaded_player.getCoords().y,
+                    loaded_player.getCoords().z,
+                ],
+            }
+        )
+
+    @game_test
+    def test_out_of_bounds_tile_override_survives_save_load(self):
+        game = load_game_module()
+
+        def out_of_bounds_tile_type(game_map, coords):
+            game_map.getMovementCost(coords)
+            data = json.loads(game.jsonify(game_map))
+            for tile in data["properties"]["tiles"]:
+                properties = tile["properties"]
+                if (properties["posx"], properties["posy"], properties["posz"]) == (coords.x, coords.y, coords.z):
+                    return properties["typeId"]
+            return None
+
+        g = game.CGameLoader.loadGame()
+        game.CGameLoader.startGameWithPlayer(g, "ritual", "Warrior")
+        game_map = g.getMap()
+        player = game_map.getPlayer()
+
+        left_edge = game.Coords(-1, player.getCoords().y, 0)
+        self.assertEqual(out_of_bounds_tile_type(game_map, left_edge), "WaterTile")
+
+        save_name = "out_of_bounds_tile_override"
+        game.CMapLoader.save(game_map, save_name)
+
+        loaded_game = game.CGameLoader.loadGame()
+        game.CGameLoader.loadSavedGame(loaded_game, save_name)
+        loaded_map = loaded_game.getMap()
+        loaded_player = loaded_map.getPlayer()
+
+        right_edge = game.Coords(25, loaded_player.getCoords().y, 0)
+        self.assertEqual(out_of_bounds_tile_type(loaded_map, right_edge), "WaterTile")
+
+        return True, json.dumps(
+            {
+                "before_save": out_of_bounds_tile_type(game_map, left_edge),
+                "after_load": out_of_bounds_tile_type(loaded_map, right_edge),
                 "loaded_player": [
                     loaded_player.getCoords().x,
                     loaded_player.getCoords().y,

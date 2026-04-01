@@ -53,18 +53,24 @@ void apply_tile_layer_metadata(const std::shared_ptr<CMap> &map, const json &lay
   int level = vstd::to_int(layerProperties["level"].get<std::string>()).first;
 
   auto default_tiles = map->getDefaultTiles();
+  auto out_of_bounds_tiles = map->getOutOfBoundsTiles();
   auto x_bounds = map->getXBounds();
   auto y_bounds = map->getYBounds();
   auto wrap_x = map->getWrapX();
   auto wrap_y = map->getWrapY();
 
   default_tiles[level] = layerProperties["default"].get<std::string>();
+  if (layerProperties.count("outOfBounds")) {
+    out_of_bounds_tiles[level] =
+        layerProperties["outOfBounds"].get<std::string>();
+  }
   x_bounds[level] = vstd::to_int(layerProperties["xBound"].get<std::string>()).first;
   y_bounds[level] = vstd::to_int(layerProperties["yBound"].get<std::string>()).first;
   wrap_x[level] = read_bool_property(layerProperties, "wrapX") ? 1 : 0;
   wrap_y[level] = read_bool_property(layerProperties, "wrapY") ? 1 : 0;
 
   map->setDefaultTiles(default_tiles);
+  map->setOutOfBoundsTiles(out_of_bounds_tiles);
   map->setXBounds(x_bounds);
   map->setYBounds(y_bounds);
   map->setWrapX(wrap_x);
@@ -78,6 +84,7 @@ void CMapLoader::loadFromTmx(const std::shared_ptr<CMap> &map,
     const json &mapProperties = (*mapc)["properties"];
     const json &mapLayers = (*mapc)["layers"];
     map->setDefaultTiles({});
+    map->setOutOfBoundsTiles({});
     map->setXBounds({});
     map->setYBounds({});
     map->setWrapX({});
@@ -160,6 +167,7 @@ CMapLoader::loadSavedMap(const std::shared_ptr<CGame> &game,
     auto map = game->getObjectHandler()->createObject<CMap>(game, name);
     if (std::shared_ptr<json> mapc = CConfigurationProvider::getConfig(getMapPath(mapName))) {
       map->setDefaultTiles({});
+      map->setOutOfBoundsTiles({});
       map->setXBounds({});
       map->setYBounds({});
       map->setWrapX({});
