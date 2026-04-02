@@ -34,6 +34,11 @@ The HTTP server exposes a unified `engine` surface from both `game` and `_game` 
 - `engine_call`
 - `engine_handle_call`
 
+`engine_list` now includes pybind-backed class methods such as `CGameLoader.loadGame`,
+`CGameLoader.loadGui`, and `CGameLoader.startGameWithPlayer`, so a client can build a
+headless game session, call `CGuiHandler.openPanel("inventoryPanel")`, and dump the live
+GUI tree with `jsonify(...)` without adding repo-specific MCP tools.
+
 To use stdio transport instead (required by some Codex flows), run from the repository root:
 <pre>
 python3 mcp.py --stdio --repo-root . --build-dir cmake-build-release

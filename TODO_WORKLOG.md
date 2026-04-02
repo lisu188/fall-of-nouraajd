@@ -259,3 +259,27 @@
   - `ctest --test-dir cmake-build-release --output-on-failure -R for_unit_tests` -> `1/1 Test #1: for_unit_tests ... Passed`
   - `python3 test.py` -> tool polling duplicated long-running sandboxes in this environment, so the suite was rerun once in a single background shell writing to `/tmp/fon-python-test.log`; the final log ended with `Ran 78 tests in 283.191s` and `OK`
 - Blockers if unresolved: No known functional blocker remains, but this environment's long-command polling can clone `python3 test.py` runs, so future full-suite checks should avoid session polling and capture the output from a single process.
+
+## Batch 19
+- Location: `mcp.py`, `src/handler/CGuiHandler.h`, `src/handler/CGuiHandler.cpp`, `src/core/CModule.cpp`, `README.md`, `test.py`
+- Original TODO or summary: Codex could inspect GUI state directly from Python with `game.jsonify(g.getGui())`, but the documented repo-root MCP stdio flow did not expose the pybind loader methods needed to build that session and failed to load game assets from repo root because it never changed into the build directory.
+- Status: fixed
+- What was changed: Made `EngineMcpServer.import_modules()` switch into the configured build directory before importing `game`/`_game`, taught MCP export discovery to include pybind-backed class methods such as `CGameLoader.loadGame`, `CGameLoader.loadGui`, and `CGameLoader.startGameWithPlayer`, and added a read-only `CGuiHandler.openPanel(...)` binding that opens a configured panel without blocking on `awaitClosing()`. Documented the now-supported GUI inspection path in `README.md` and added two regression tests that prove the pybind exports are visible over MCP and that `python3 mcp.py --stdio --repo-root . --build-dir cmake-build-release` can open `inventoryPanel` headlessly and dump a live GUI tree containing the expected `CListView` wiring.
+- Why the change is correct: The missing capability was not GUI serialization itself; it was the MCP access path. Existing generic MCP tools (`engine_list`, `engine_call`, `engine_handle_call`) were already enough once they could actually reach the loader methods and a non-blocking panel opener. `flipPanel(...)` was the wrong API to expose because it waits for manual closure, so `openPanel(...)` keeps the change bounded and read-only while making the existing `jsonify(...)` surface usable for debugging and automation.
+- Validation performed:
+  - source verification of `AGENTS.md`, `README.md`, `docs/testing.md`, `CMakeLists.txt`, `test.py`, `mcp.py`, `src/core/CWrapper.h`, `src/core/CModule.cpp`, `src/core/CTypes.cpp`, `src/gui/CGui.h`, `src/gui/CGui.cpp`, `src/gui/object/CGameGraphicsObject.h`, `src/gui/object/CGameGraphicsObject.cpp`, `src/gui/object/CWidget.h`, `src/gui/object/CWidget.cpp`, `src/gui/CLayout.h`, `src/gui/CLayout.cpp`, `src/gui/CTooltip.h`, `src/gui/CTooltip.cpp`, `src/gui/panel/CGamePanel.h`, `src/gui/panel/CGamePanel.cpp`, `src/gui/panel/CListView.h`, `src/gui/panel/CListView.cpp`, `src/gui/panel/CGameInventoryPanel.h`, `src/gui/panel/CGameInventoryPanel.cpp`, `src/gui/panel/CGameFightPanel.h`, `src/gui/panel/CGameFightPanel.cpp`, `res/config/panels.json`, `tests/unit/test_coords.cpp`, `TODO_WORKLOG.md`, and `todo.txt`
+  - `git fetch origin --prune`
+  - GitHub `main` verification of `mcp.py`, `README.md`, `test.py`, `src/core/CModule.cpp`, `src/handler/CGuiHandler.h`, and `src/handler/CGuiHandler.cpp` before editing
+  - `git submodule update --init --recursive`
+  - `clang-format -i src/core/CModule.cpp src/handler/CGuiHandler.h src/handler/CGuiHandler.cpp`
+  - `python3 -m py_compile mcp.py test.py` -> completed successfully
+  - `python3 -m unittest test.McpServerTest.test_export_module_includes_pybind_class_methods` -> `Ran 1 test`, `OK`
+  - `python3 -m unittest test.McpServerTest.test_stdio_handshake_and_tool_listing` -> `Ran 1 test`, `OK`
+  - `python3 -m unittest test.McpServerTest.test_stdio_gui_inventory_dump_from_repo_root` -> `Ran 1 test`, `OK`
+  - `python3 - <<'PY' ...` -> wrote `/tmp/fon-gui-tree.json`, printed `CGameInventoryPanel`, and confirmed 5 top-level GUI children after `openPanel("inventoryPanel")`
+  - `timeout 120s /home/andrz/.local/bin/black -l 120 mcp.py test.py` -> printed `All done!` and `2 files left unchanged`, but the wrapper still exited with code `124` after two trailing `Aborted!` lines during worker shutdown
+  - `cmake --build cmake-build-release --target _game for_unit_tests -j$(nproc)` -> `[100%] Built target _game`, `[100%] Built target for_unit_tests`
+  - `ctest --test-dir cmake-build-release --output-on-failure -R for_unit_tests` -> `1/1 Test #1: for_unit_tests ... Passed`
+  - `python3 test.py` -> `/tmp/fon-gui-python.log` ended with `Ran 80 tests in 98.953s` and `OK`
+  - `./scripts/run_coverage.sh` -> configured and built `cmake-build-coverage`, `ctest` passed, then the instrumented `python3 test.py` phase emitted `..........................................` and remained CPU-bound until it was terminated with `kill -9`; the script ended with `./scripts/run_coverage.sh: line 27:   226 Killed                  GAME_BUILD_DIR="${BUILD_DIR}" python3 test.py`
+- Blockers if unresolved: Functional validation passed, but the required coverage step is still blocked by the repo's instrumented `python3 test.py` phase hanging without producing a coverage report, so no fresh scoped percentage was produced for this batch.

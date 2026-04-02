@@ -347,6 +347,7 @@ PYBIND11_MODULE(_game, m) {
         .def("showQuestion", &CGuiHandler::showQuestion, "Open a question/choice panel.")
         .def("showSelection", &CGuiHandler::showSelection, "Open a selection panel.")
         .def("showInfo", &CGuiHandler::showInfo, "Open an info panel.")
+        .def("openPanel", &CGuiHandler::openPanel, "Open a configured panel without blocking for user input.")
         .def("showLoot", &CGuiHandler::showLoot, "Show loot acquisition UI.");
 
     py::class_<CController, CGameObject, std::shared_ptr<CController>>(m, "CController", "Base movement controller.");

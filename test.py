@@ -3778,6 +3778,16 @@ class McpServerTest(unittest.TestCase):
         self.assertEqual(server.exports["Dialog"].source, "game")
         self.assertEqual(server.exports["Dialog.invoke"].source, "game.Dialog")
 
+    def test_export_module_includes_pybind_class_methods(self):
+        server = mcp.EngineMcpServer(repo_root=REPO_ROOT, build_dir=build_dir)
+        server.import_modules()
+        server.inspect_and_export()
+
+        self.assertIn("CGameLoader.loadGame", server.exports)
+        self.assertIn("CGameLoader.loadGui", server.exports)
+        self.assertIn("CGameLoader.startGameWithPlayer", server.exports)
+        self.assertIn("CGuiHandler.openPanel", server.exports)
+
     def test_engine_call_resolves_handle_arguments_for_python_methods(self):
         server = self.make_stub_server()
 
@@ -3887,6 +3897,7 @@ class McpServerTest(unittest.TestCase):
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             bufsize=0,
+            cwd=str(REPO_ROOT),
         )
         try:
             self._send_rpc(
@@ -3920,12 +3931,114 @@ class McpServerTest(unittest.TestCase):
         finally:
             self._shutdown_process(proc)
 
+    def test_stdio_gui_inventory_dump_from_repo_root(self):
+        script = REPO_ROOT / "mcp.py"
+        self.assertTrue(script.exists(), "MCP entry point is missing")
+        proc = subprocess.Popen(
+            [
+                sys.executable,
+                str(script),
+                "--stdio",
+                "--repo-root",
+                str(REPO_ROOT),
+                "--build-dir",
+                str(build_dir),
+            ],
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            bufsize=0,
+            cwd=str(REPO_ROOT),
+        )
+        try:
+            self._send_rpc(
+                proc,
+                {
+                    "jsonrpc": "2.0",
+                    "id": 1,
+                    "method": "initialize",
+                    "params": {
+                        "protocolVersion": MCP_PROTOCOL_VERSION,
+                        "capabilities": {},
+                        "clientInfo": {"name": "mcp-test", "version": "1.0"},
+                    },
+                },
+            )
+            initialize_response = self._read_rpc(proc)
+            self.assertNotIn("error", initialize_response)
+            self.assertEqual(initialize_response.get("id"), 1)
+
+            self._send_rpc(proc, {"jsonrpc": "2.0", "method": "notifications/initialized", "params": {}})
+
+            game_handle = self._call_tool(proc, 2, "engine_call", {"name": "CGameLoader.loadGame"})["result"]
+            self._call_tool(proc, 3, "engine_call", {"name": "CGameLoader.loadGui", "args": [game_handle]})
+            self._call_tool(
+                proc,
+                4,
+                "engine_call",
+                {"name": "CGameLoader.startGameWithPlayer", "args": [game_handle, "test", DEFAULT_PLAYER]},
+            )
+            gui_handler_handle = self._call_tool(
+                proc,
+                5,
+                "engine_handle_call",
+                {"handle": game_handle["__handle__"], "method": "getGuiHandler"},
+            )["result"]
+            panel_handle = self._call_tool(
+                proc,
+                6,
+                "engine_handle_call",
+                {"handle": gui_handler_handle["__handle__"], "method": "openPanel", "args": ["inventoryPanel"]},
+            )["result"]
+            self.assertEqual(panel_handle["__type__"], "CGameInventoryPanel")
+            gui_handle = self._call_tool(
+                proc,
+                7,
+                "engine_handle_call",
+                {"handle": game_handle["__handle__"], "method": "getGui"},
+            )["result"]
+            gui_tree = json.loads(
+                self._call_tool(proc, 8, "engine_call", {"name": "jsonify", "args": [gui_handle]})["result"]
+            )
+
+            children = gui_tree.get("properties", {}).get("children") or []
+            inventory_panels = [child for child in children if child.get("class") == "CGameInventoryPanel"]
+            self.assertEqual(len(inventory_panels), 1, gui_tree)
+            list_views = [
+                child
+                for child in (inventory_panels[0].get("properties", {}).get("children") or [])
+                if child.get("class") == "CListView"
+            ]
+            self.assertEqual(len(list_views), 2, inventory_panels[0])
+            self.assertIn(
+                "inventoryRightClickCallback",
+                [child.get("properties", {}).get("rightClickCallback") for child in list_views],
+            )
+        finally:
+            self._shutdown_process(proc)
+
     def _send_rpc(self, proc, payload):
         if proc.stdin is None:
             self.fail("Process stdin not available")
         line = json.dumps(payload, separators=(",", ":")) + "\n"
         proc.stdin.write(line.encode("utf-8"))
         proc.stdin.flush()
+
+    def _call_tool(self, proc, request_id: int, name: str, arguments: dict):
+        self._send_rpc(
+            proc,
+            {
+                "jsonrpc": "2.0",
+                "id": request_id,
+                "method": "tools/call",
+                "params": {"name": name, "arguments": arguments},
+            },
+        )
+        response = self._read_rpc(proc)
+        self.assertEqual(response.get("id"), request_id)
+        result = response.get("result", {})
+        self.assertFalse(result.get("isError"), result)
+        return result.get("structuredContent", {})
 
     def _read_rpc(self, proc, timeout: float = 10.0):
         if proc.stdout is None:
