@@ -283,3 +283,19 @@
   - `python3 test.py` -> `/tmp/fon-gui-python.log` ended with `Ran 80 tests in 98.953s` and `OK`
   - `./scripts/run_coverage.sh` -> configured and built `cmake-build-coverage`, `ctest` passed, then the instrumented `python3 test.py` phase emitted `..........................................` and remained CPU-bound until it was terminated with `kill -9`; the script ended with `./scripts/run_coverage.sh: line 27:   226 Killed                  GAME_BUILD_DIR="${BUILD_DIR}" python3 test.py`
 - Blockers if unresolved: Functional validation passed, but the required coverage step is still blocked by the repo's instrumented `python3 test.py` phase hanging without producing a coverage report, so no fresh scoped percentage was produced for this batch.
+
+## Batch 20
+- Location: `README.md`, `docs/testing.md`, `TODO_WORKLOG.md`
+- Original TODO or summary: PR `#189` documented the testing flow, but review feedback correctly noted that the fresh-checkout instructions still omitted `./configure.sh` and that the coverage trigger wording was too narrow because it only mentioned `test.py`.
+- Status: fixed
+- What was changed: Added `./configure.sh` to the fresh-checkout prep flow in `README.md` and `docs/testing.md`, broadened the coverage trigger wording to all test changes with concrete examples (`test.py` and `tests/unit/**`), and recorded the updated docs-sync batch after rebasing onto the newer `origin/main`.
+- Why the change is correct: The repo workflow already requires configuration before a fresh checkout can build, and `AGENTS.md` requires coverage when changing tests in general rather than only `test.py`. The updated wording matches the executable repo workflow and the review findings without changing runtime behavior.
+- Validation performed:
+  - source verification of `AGENTS.md`, `README.md`, `docs/testing.md`, `TODO_WORKLOG.md`, and `.github/workflows/build.yml`
+  - GitHub `main` verification of `README.md`, `docs/testing.md`, and `TODO_WORKLOG.md` before editing
+  - review verification of PR `#189` comments on `docs/testing.md`
+  - `git rebase origin/main` -> conflicted only in `TODO_WORKLOG.md`; resolved manually
+  - `cmake --build cmake-build-release --target _game for_unit_tests -j$(nproc)` -> `[100%] Built target _game`, `[100%] Built target for_unit_tests`
+  - `ctest --test-dir cmake-build-release --output-on-failure -R for_unit_tests` -> `1/1 Test #1: for_unit_tests ... Passed`
+  - `python3 test.py` -> `/tmp/pr189-python.log` ended with `Ran 81 tests in 138.273s` and `OK`
+- Blockers if unresolved: None. This batch only updates documentation and worklog bookkeeping, so `./scripts/run_coverage.sh` was not required by the repository rules.
