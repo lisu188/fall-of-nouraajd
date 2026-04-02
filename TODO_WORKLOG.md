@@ -209,3 +209,37 @@
   - `ctest --test-dir cmake-build-release --output-on-failure -R for_unit_tests` -> `1/1 Test #1: for_unit_tests ... Passed`
   - `python3 test.py` -> `Ran 77 tests in 323.349s`, `OK` (rerun after rebasing onto the latest `origin/main`)
 - Blockers if unresolved: None.
+
+## Batch 16
+- Location: `src/core/CMap.h`, `src/core/CMap.cpp`, `src/core/CLoader.cpp`, `res/maps/ritual/map.json`, `test.py`, `todo.txt`
+- Original TODO or summary: `todo.txt` still tracked `customize out of bound tiles`.
+- Status: fixed
+- What was changed: Added per-layer `outOfBounds` tile metadata to `CMap` and `CMapLoader`, wired the `ritual` map to use `WaterTile` outside its bounds, added loader-assumption validation plus a save/load regression test for the override, and removed the resolved TODO entry from `todo.txt`.
+- Why the change is correct: The real gap was that bounded coordinates outside `xBound`/`yBound` always materialized `MountainTile`, even though map layers already carried other tile metadata. The loader now accepts an explicit `outOfBounds` tile id and reapplies it when loading saved maps, so the configured fallback survives both fresh loads and saved-game reloads.
+- Validation performed:
+  - source verification of `AGENTS.md`, `README.md`, `todo.txt`, `TODO_WORKLOG.md`, `test.py`, `scripts/run_coverage.sh`, `res/game.py`, `CMakeLists.txt`, `src/core/CMap.h`, `src/core/CMap.cpp`, `src/core/CLoader.cpp`, `res/maps/ritual/config.json`, `res/maps/ritual/script.py`, `res/maps/ritual/map.json`, `res/maps/test/script.py`, and `res/maps/test/map.json`
+  - GitHub `main` verification of `todo.txt`, `src/core/CMap.h`, `src/core/CMap.cpp`, `src/core/CLoader.cpp`, `test.py`, `res/maps/ritual/map.json`, `res/maps/test/map.json`, and `res/maps/test/script.py` before editing
+  - `python3 -c 'import json, builtins, game; ...'` -> confirmed `game.jsonify(...)` exposes materialized map tiles under `properties.tiles[*].properties.typeId`, which the new regression uses to assert the actual fallback tile id
+  - `black -l 120 test.py` -> `1 file left unchanged`
+  - `clang-format -i src/core/CMap.h src/core/CMap.cpp src/core/CLoader.cpp` -> succeeded, but I restored `src/core/CLoader.cpp` to `HEAD` and reapplied only the minimal loader changes because whole-file formatting caused broad whitespace churn
+  - `cmake --build cmake-build-release --target _game for_unit_tests -j$(nproc)` -> `[100%] Built target _game`, `[100%] Built target for_unit_tests`
+  - `python3 -m unittest test.GameTest.test_out_of_bounds_tile_override_survives_save_load test.GameTest.test_toroidal_map_wraps_and_survives_save_load test.GameTest.test_map_json_tiled_compatibility` -> `Ran 3 tests in 0.436s`, `OK`
+  - `ctest --test-dir cmake-build-release --output-on-failure -R for_unit_tests` -> `1/1 Test #1: for_unit_tests ... Passed`
+  - `python3 test.py` -> `Ran 78 tests in 272.585s`, `OK`
+  - `./scripts/run_coverage.sh` -> configured and built `cmake-build-coverage`, `ctest` passed, then the embedded instrumented `python3 test.py` printed `.........................................` and stopped producing output or reports; after an additional 4 minutes with no progress, I confirmed two coverage-run `python3 test.py` processes stuck at ~99% CPU (`280306`, `280331`), terminated them with `kill -9 280306 280331`, and the script exited with `./scripts/run_coverage.sh: line 27: 280331 Killed                  GAME_BUILD_DIR="${BUILD_DIR}" python3 test.py`
+- Blockers if unresolved: Functional validation passed, but the required coverage step is still blocked by the instrumented `python3 test.py` phase hanging without generating `coverage/coverage.txt` or `coverage/coverage.html`, so no fresh scoped line percentage was produced for this batch.
+
+## Batch 17
+- Location: `src/gui/panel/CListView.cpp`, `todo.txt`
+- Original TODO or summary: `todo.txt` still tracked `add stacks of object (wand etc) same as grouping but in the left corner`, and grouped item stacks were still rendering their count badge in the lower-right corner.
+- Status: fixed
+- What was changed: Changed `CListView::addCountBox(...)` to anchor grouped count badges with `LEFT`/`UP` instead of `RIGHT`/`DOWN`, then removed the resolved backlog entry from `todo.txt`.
+- Why the change is correct: Grouped lists in inventory, fight, loot, and trade panels already share the same `CListView` count-badge path through `res/config/panels.json`, and `CLayout::getRect(...)` interprets `LEFT`/`UP` as top-left anchoring. The broken behavior was only the badge layout direction, so no panel callback or grouping logic changes were needed.
+- Validation performed:
+  - source verification of `AGENTS.md`, `README.md`, `todo.txt`, `TODO_WORKLOG.md`, `test.py`, `scripts/run_coverage.sh`, `res/game.py`, and `CMakeLists.txt`
+  - local and GitHub `main` verification of `todo.txt`, `src/gui/panel/CListView.cpp`, `src/gui/CLayout.cpp`, and `res/config/panels.json` before editing
+  - `clang-format -i --lines=253:264 src/gui/panel/CListView.cpp`
+  - `cmake --build cmake-build-release --target _game for_unit_tests -j$(nproc)` -> `[100%] Built target _game`, `[100%] Built target for_unit_tests`
+  - `ctest --test-dir cmake-build-release --output-on-failure -R for_unit_tests` -> `1/1 Test #1: for_unit_tests ... Passed`
+  - `python3 test.py` -> `Ran 77 tests in 338.493s`, `OK`
+- Blockers if unresolved: None. This batch touched only `src/gui` plus backlog bookkeeping, so `./scripts/run_coverage.sh` was not required by the repository rules.

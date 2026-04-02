@@ -872,12 +872,14 @@
       "properties": {
         "default": "SwampTile",
         "level": "0",
+        "outOfBounds": "WaterTile",
         "xBound": "24",
         "yBound": "24"
       },
       "propertytypes": {
         "default": "string",
         "level": "string",
+        "outOfBounds": "string",
         "xBound": "string",
         "yBound": "string"
       },

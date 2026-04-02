@@ -106,6 +106,16 @@ def advance(g, turns):
         game.event_loop.instance().run()
 
 
+def materialized_tile_type(game, game_map, coords):
+    game_map.getMovementCost(coords)
+    serialized_map = json.loads(game.jsonify(game_map))
+    for tile in serialized_map.get("properties", {}).get("tiles", []):
+        properties = tile.get("properties", {})
+        if (properties.get("posx"), properties.get("posy"), properties.get("posz")) == (coords.x, coords.y, coords.z):
+            return properties.get("typeId")
+    return None
+
+
 MAPS_DIR = REPO_ROOT / "res/maps"
 DEFAULT_PLAYER = "Warrior"
 NOURAAJD_VICTOR_TIMEOUT = 75
@@ -574,6 +584,18 @@ def validate_tiled_layer(
                     "loader_assumption",
                     f"{prefix} must define string property 'default' because CMapLoader uses it as the fallback tile id.",
                     field="default",
+                    layer_name=layer_name,
+                    layer_index=layer_index,
+                )
+            )
+
+        if "outOfBounds" in properties and not isinstance(properties.get("outOfBounds"), str):
+            issues.append(
+                map_validation_issue(
+                    path,
+                    "loader_assumption",
+                    f"{prefix} property 'outOfBounds' must be a string because CMapLoader uses it as the out-of-bounds tile id.",
+                    field="outOfBounds",
                     layer_name=layer_name,
                     layer_index=layer_index,
                 )
@@ -1747,6 +1769,42 @@ class GameTest(unittest.TestCase):
                     loaded_player.getCoords().y,
                     loaded_player.getCoords().z,
                 ],
+            }
+        )
+
+    @game_test
+    def test_out_of_bounds_tile_override_survives_save_load(self):
+        game = load_game_module()
+
+        g = game.CGameLoader.loadGame()
+        game.CGameLoader.startGameWithPlayer(g, "ritual", "Warrior")
+        game_map = g.getMap()
+        player = game_map.getPlayer()
+
+        initial_coords = game.Coords(-1, player.getCoords().y, 0)
+        self.assertEqual("WaterTile", materialized_tile_type(game, game_map, initial_coords))
+
+        save_name = "out_of_bounds_tile_override_regression"
+        game.CMapLoader.save(game_map, save_name)
+
+        loaded_game = game.CGameLoader.loadGame()
+        game.CGameLoader.loadSavedGame(loaded_game, save_name)
+        loaded_map = loaded_game.getMap()
+        loaded_player = loaded_map.getPlayer()
+
+        loaded_coords = game.Coords(25, loaded_player.getCoords().y, 0)
+        self.assertEqual("WaterTile", materialized_tile_type(game, loaded_map, loaded_coords))
+
+        return True, json.dumps(
+            {
+                "initial_out_of_bounds_tile": {
+                    "coords": [initial_coords.x, initial_coords.y, initial_coords.z],
+                    "typeId": materialized_tile_type(game, game_map, initial_coords),
+                },
+                "loaded_out_of_bounds_tile": {
+                    "coords": [loaded_coords.x, loaded_coords.y, loaded_coords.z],
+                    "typeId": materialized_tile_type(game, loaded_map, loaded_coords),
+                },
             }
         )
 

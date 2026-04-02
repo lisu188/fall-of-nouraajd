@@ -63,6 +63,10 @@ std::map<int, std::string> CMap::getDefaultTiles() { return defaultTiles; }
 
 void CMap::setDefaultTiles(std::map<int, std::string> tiles) { defaultTiles = std::move(tiles); }
 
+std::map<int, std::string> CMap::getOutOfBoundsTiles() { return outOfBoundsTiles; }
+
+void CMap::setOutOfBoundsTiles(std::map<int, std::string> tiles) { outOfBoundsTiles = std::move(tiles); }
+
 std::map<int, int> CMap::getWrapX() { return wrapX; }
 
 void CMap::setWrapX(std::map<int, int> values) { wrapX = std::move(values); }
@@ -159,7 +163,9 @@ std::shared_ptr<CTile> CMap::getTile(int x, int y, int z) {
     auto it = this->tiles.find(coords);
     if (it == this->tiles.end()) {
         if (hasBounds(z) && (coords.x < 0 || coords.y < 0 || coords.x > xBounds.at(z) || coords.y > yBounds.at(z))) {
-            tile = getGame()->createObject<CTile>("MountainTile");
+            tile = getGame()->createObject<CTile>(vstd::ctn(outOfBoundsTiles, z) && !outOfBoundsTiles.at(z).empty()
+                                                      ? outOfBoundsTiles.at(z)
+                                                      : "MountainTile");
         } else {
             tile = getGame()->createObject<CTile>(
                 vstd::ctn(defaultTiles, z) && !defaultTiles.at(z).empty() ? defaultTiles.at(z) : "GrassTile");
