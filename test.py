@@ -1405,29 +1405,40 @@ class GameTest(unittest.TestCase):
         for coords in swamp_tiles:
             game_map.replaceTile("SwampTile", coords)
 
-        set_player_target(player, goal)
+        controller = set_player_target(player, goal)
         turn_before = game_map.getTurn()
         game_map.move()
 
         coords = player.getCoords()
-        expected = (start.x + 1, start.y - 1, start.z)
-        self.assertEqual((coords.x, coords.y, coords.z), expected)
+        expected_after_first_turn = (start.x + 1, start.y - 1, start.z)
+        self.assertEqual((coords.x, coords.y, coords.z), expected_after_first_turn)
         self.assertEqual(game_map.getTurn(), turn_before + 1)
         self.assertEqual(player.getMovePoints(), 0)
+        self.assertFalse(controller.isCompleted(player))
         move_points_after_budgeted_turn = player.getMovePoints()
 
         turn_after_path = game_map.getTurn()
         game_map.move()
         coords_after = player.getCoords()
-        self.assertEqual((coords_after.x, coords_after.y, coords_after.z), expected)
+        expected_after_second_turn = (start.x + 3, start.y - 1, start.z)
+        self.assertEqual((coords_after.x, coords_after.y, coords_after.z), expected_after_second_turn)
         self.assertEqual(game_map.getTurn(), turn_after_path + 1)
-        self.assertEqual(player.getMovePoints(), player.getMovePointsMax())
+        self.assertEqual(player.getMovePoints(), 0)
+        self.assertFalse(controller.isCompleted(player))
+
+        turn_before_arrival = game_map.getTurn()
+        game_map.move()
+        coords_at_goal = player.getCoords()
+        self.assertEqual((coords_at_goal.x, coords_at_goal.y, coords_at_goal.z), (goal.x, goal.y, goal.z))
+        self.assertEqual(game_map.getTurn(), turn_before_arrival + 1)
+        self.assertTrue(controller.isCompleted(player))
 
         return True, json.dumps(
             {
                 "start": [start.x, start.y, start.z],
                 "after_budgeted_turn": [coords.x, coords.y, coords.z],
                 "after_idle_turn": [coords_after.x, coords_after.y, coords_after.z],
+                "final_goal": [coords_at_goal.x, coords_at_goal.y, coords_at_goal.z],
                 "move_points_after_budgeted_turn": move_points_after_budgeted_turn,
                 "move_points_max": player.getMovePointsMax(),
             },

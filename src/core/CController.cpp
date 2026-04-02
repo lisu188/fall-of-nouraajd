@@ -276,7 +276,7 @@ void CPlayerController::onStepCommitted(std::shared_ptr<CCreature>, const Coords
 
 void CPlayerController::interrupt(std::shared_ptr<CCreature>) { clearPath(); }
 
-void CPlayerController::onTurnEnded(std::shared_ptr<CCreature>) { clearPath(); }
+void CPlayerController::onTurnEnded(std::shared_ptr<CCreature>) {}
 
 // TODO: add stopping when obstacle found
 std::pair<bool, Coords::Direction> CPlayerController::isOnPath(std::shared_ptr<CPlayer> player, Coords coords) {
@@ -322,8 +322,8 @@ void CFightController::start(std::shared_ptr<CCreature> me, std::shared_ptr<CCre
 
 void CFightController::end(std::shared_ptr<CCreature> me, std::shared_ptr<CCreature> opponent) {}
 
-void CFightController::setOpponents(std::shared_ptr<CCreature> me, const std::vector<std::shared_ptr<CCreature>> &opponents) {
-}
+void CFightController::setOpponents(std::shared_ptr<CCreature> me,
+                                    const std::vector<std::shared_ptr<CCreature>> &opponents) {}
 
 std::shared_ptr<CCreature> CFightController::selectOpponent(std::shared_ptr<CCreature> me,
                                                             const std::vector<std::shared_ptr<CCreature>> &opponents,
@@ -372,9 +372,10 @@ void CPlayerFightController::setOpponents(std::shared_ptr<CCreature> me,
     }
 }
 
-std::shared_ptr<CCreature> CPlayerFightController::selectOpponent(
-    std::shared_ptr<CCreature> me, const std::vector<std::shared_ptr<CCreature>> &opponents,
-    std::shared_ptr<CCreature> opponent) {
+std::shared_ptr<CCreature>
+CPlayerFightController::selectOpponent(std::shared_ptr<CCreature> me,
+                                       const std::vector<std::shared_ptr<CCreature>> &opponents,
+                                       std::shared_ptr<CCreature> opponent) {
     setOpponents(me, opponents);
     if (fightPanel && fightPanel->getEnemy()) {
         return fightPanel->getEnemy();
@@ -382,7 +383,7 @@ std::shared_ptr<CCreature> CPlayerFightController::selectOpponent(
     return CFightController::selectOpponent(me, opponents, opponent);
 }
 
-bool CPlayerController::isCompleted(std::shared_ptr<CPlayer> player) { return !canContinue(player); }
+bool CPlayerController::isCompleted(std::shared_ptr<CPlayer> player) { return !hasPendingPath(player); }
 
 void CPlayerController::clearPath() {
     target.reset();
@@ -390,18 +391,27 @@ void CPlayerController::clearPath() {
     currentStep = 0;
 }
 
-bool CPlayerController::canContinue(std::shared_ptr<CPlayer> player) {
+bool CPlayerController::hasPendingPath(std::shared_ptr<CPlayer> player) {
     if (!target || currentStep < 0 || !player || !player->getMap()) {
         return false;
     }
-    if (player->getCoords() == player->getMap()->normalizeCoords(*target) || !player->getMap()->canStep(*target)) {
+    auto map = player->getMap();
+    auto normalized_target = map->normalizeCoords(*target);
+    if (player->getCoords() == normalized_target || !map->canStep(normalized_target)) {
         return false;
     }
     auto it = path.find(currentStep);
     if (it == path.end()) {
         return false;
     }
-    auto next = player->getMap()->normalizeCoords(it->second);
-    return next != player->getCoords() && player->getMap()->canStep(next) &&
-           player->getMovePoints() >= player->getMap()->getMovementCost(next);
+    auto next = map->normalizeCoords(it->second);
+    return next != player->getCoords() && map->canStep(next);
+}
+
+bool CPlayerController::canContinue(std::shared_ptr<CPlayer> player) {
+    if (!hasPendingPath(player)) {
+        return false;
+    }
+    auto next = player->getMap()->normalizeCoords(path.at(currentStep));
+    return player->getMovePoints() >= player->getMap()->getMovementCost(next);
 }

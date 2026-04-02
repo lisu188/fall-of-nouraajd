@@ -29,7 +29,9 @@ std::list<std::shared_ptr<CGameGraphicsObject>> CMapGraphicsObject::getProxiedOb
                     auto player = gui->getGame()->getMap()->getPlayer();
                     controller->setTarget(player, actualCoords);
                     if (!gui->getMap()->isMoving()) {
-                        gui->getGame()->getMap()->move();
+                        while (!controller->isCompleted(player)) {
+                            gui->getGame()->getMap()->move();
+                        }
                     }
                     return true;
                 }
