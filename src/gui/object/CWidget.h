@@ -22,59 +22,54 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 class CGui;
 
 class CWidget : public CGameGraphicsObject {
-  V_META(CWidget, CGameGraphicsObject,
-         V_PROPERTY(CWidget, std::string, render, getRender, setRender),
-         V_PROPERTY(CWidget, std::string, click, getClick, setClick))
-public:
-  CWidget();
+    V_META(CWidget, CGameGraphicsObject, V_PROPERTY(CWidget, std::string, render, getRender, setRender),
+           V_PROPERTY(CWidget, std::string, click, getClick, setClick))
+  public:
+    CWidget();
 
-private:
-  std::string render;
-  std::string click;
+  private:
+    std::string render;
+    std::string click;
+    bool clickPressed = false;
 
-public:
-  void renderObject(std::shared_ptr<CGui> reneder,
-                    std::shared_ptr<SDL_Rect> rect, int frameTime) override;
+  public:
+    void renderObject(std::shared_ptr<CGui> reneder, std::shared_ptr<SDL_Rect> rect, int frameTime) override;
 
-  bool mouseEvent(std::shared_ptr<CGui> sharedPtr, SDL_EventType type,
-                  int button, int x, int y) override;
+    bool mouseEvent(std::shared_ptr<CGui> sharedPtr, SDL_EventType type, int button, int x, int y) override;
 
-  std::string getClick();
+    std::string getClick();
 
-  void setClick(std::string click);
+    void setClick(std::string click);
 
-  std::string getRender();
+    std::string getRender();
 
-  void setRender(std::string draw);
+    void setRender(std::string draw);
 };
 
 // TODO: unify with CGameTextPanel
 class CTextWidget : public CWidget {
-  V_META(CTextWidget, CWidget,
-         V_PROPERTY(CTextWidget, std::string, text, getText, setText),
-         V_PROPERTY(CTextWidget, bool, centered, getCentered, setCentered))
-public:
-  void renderObject(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> rect,
-                    int frameTime) override;
+    V_META(CTextWidget, CWidget, V_PROPERTY(CTextWidget, std::string, text, getText, setText),
+           V_PROPERTY(CTextWidget, bool, centered, getCentered, setCentered))
+  public:
+    void renderObject(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> rect, int frameTime) override;
 
-  bool getCentered() const;
+    bool getCentered() const;
 
-  void setCentered(bool centered);
+    void setCentered(bool centered);
 
-  const std::string &getText() const;
+    const std::string &getText() const;
 
-  void setText(const std::string &text);
+    void setText(const std::string &text);
 
-private:
-  bool centered = true;
-  std::string text;
+  private:
+    bool centered = true;
+    std::string text;
 };
 
 class CButton : public CTextWidget {
-  V_META(CButton, CTextWidget, vstd::meta::empty())
-public:
-  CButton();
+    V_META(CButton, CTextWidget, vstd::meta::empty())
+  public:
+    CButton();
 
-  bool mouseEvent(std::shared_ptr<CGui> sharedPtr, SDL_EventType type,
-                  int button, int x, int y) override;
+    bool mouseEvent(std::shared_ptr<CGui> sharedPtr, SDL_EventType type, int button, int x, int y) override;
 };
