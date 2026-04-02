@@ -105,6 +105,10 @@ class CMap : public CGameObject {
 
     void setDefaultTiles(StringMap tiles);
 
+    StringMap getOutOfBoundsTiles();
+
+    void setOutOfBoundsTiles(StringMap tiles);
+
     IntMap getWrapX();
 
     void setWrapX(IntMap values);
@@ -205,6 +209,7 @@ class CMap : public CGameObject {
 
     std::shared_ptr<CPlayer> player;
     StringMap defaultTiles;
+    StringMap outOfBoundsTiles;
     IntMap xBounds;
     IntMap yBounds;
     IntMap wrapX;

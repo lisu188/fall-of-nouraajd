@@ -250,21 +250,18 @@ CListView::getProxiedObjects(std::shared_ptr<CGui> gui, int x, int y) {
   return return_val;
 }
 
-void CListView::addCountBox(
-    const std::shared_ptr<CGui> &gui, int count,
-    std::list<std::shared_ptr<CGameGraphicsObject>> &return_val) const {
-  auto countBox = gui->getGame()->getObjectHandler()->createObject<CTextWidget>(
-      gui->getGame());
-  countBox->setText(vstd::str(count));
-  auto layout =
-      gui->getGame()->getObjectHandler()->createObject<CLayout>(gui->getGame());
-  layout->setHorizontal("RIGHT");
-  layout->setVertical("DOWN");
-  layout->setW("25%");
-  layout->setH("25%");
-  countBox->setLayout(layout);
-  countBox->setPriority(4);
-  return_val.push_back(countBox); // TODO: cache
+void CListView::addCountBox(const std::shared_ptr<CGui> &gui, int count,
+                            std::list<std::shared_ptr<CGameGraphicsObject>> &return_val) const {
+    auto countBox = gui->getGame()->getObjectHandler()->createObject<CTextWidget>(gui->getGame());
+    countBox->setText(vstd::str(count));
+    auto layout = gui->getGame()->getObjectHandler()->createObject<CLayout>(gui->getGame());
+    layout->setHorizontal("LEFT");
+    layout->setVertical("UP");
+    layout->setW("25%");
+    layout->setH("25%");
+    countBox->setLayout(layout);
+    countBox->setPriority(4);
+    return_val.push_back(countBox); // TODO: cache
 }
 
 void CListView::addSelectionBox(
