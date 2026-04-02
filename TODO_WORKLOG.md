@@ -243,3 +243,19 @@
   - `ctest --test-dir cmake-build-release --output-on-failure -R for_unit_tests` -> `1/1 Test #1: for_unit_tests ... Passed`
   - `python3 test.py` -> `Ran 77 tests in 338.493s`, `OK`
 - Blockers if unresolved: None. This batch touched only `src/gui` plus backlog bookkeeping, so `./scripts/run_coverage.sh` was not required by the repository rules.
+
+## Batch 18
+- Location: `src/gui/object/CWidget.h`, `src/gui/object/CWidget.cpp`
+- Original TODO or summary: `CWidget::mouseEvent(...)` still carried `// TODO: maybe require both up and down`, and clickable widgets invoked their callback on any left-button release while also swallowing unrelated mouse events.
+- Status: fixed
+- What was changed: Added per-widget press tracking in `CWidget`, limited click handling to left-button press/release sequences, and required the release to land back inside the widget before invoking the configured callback. The widget now still consumes the matching release after a captured press, but lets unrelated mouse events bubble to parent handlers.
+- Why the change is correct: Before the fix, `CWidget::mouseEvent(...)` only checked for `SDL_MOUSEBUTTONUP` plus a non-empty `click`, so a modal button could fire even after the pointer was dragged off the widget, and any clickable widget returned `true` for unrelated mouse events. The new guard keeps the intended click path for real left-clicks while preventing false activations and accidental event swallowing.
+- Validation performed:
+  - source verification of `AGENTS.md`, `README.md`, `docs/testing.md`, `todo.txt`, `TODO_WORKLOG.md`, `src/gui/object/CWidget.h`, and `src/gui/object/CWidget.cpp`
+  - GitHub `main` verification of `src/gui/object/CWidget.h`, `src/gui/object/CWidget.cpp`, and `TODO_WORKLOG.md` before editing
+  - `git submodule update --init --recursive`
+  - `clang-format -i src/gui/object/CWidget.h src/gui/object/CWidget.cpp`
+  - `cmake --build cmake-build-release --target _game for_unit_tests -j$(nproc)` -> `[100%] Built target _game`, `[100%] Built target for_unit_tests`
+  - `ctest --test-dir cmake-build-release --output-on-failure -R for_unit_tests` -> `1/1 Test #1: for_unit_tests ... Passed`
+  - `python3 test.py` -> tool polling duplicated long-running sandboxes in this environment, so the suite was rerun once in a single background shell writing to `/tmp/fon-python-test.log`; the final log ended with `Ran 78 tests in 283.191s` and `OK`
+- Blockers if unresolved: No known functional blocker remains, but this environment's long-command polling can clone `python3 test.py` runs, so future full-suite checks should avoid session polling and capture the output from a single process.

@@ -17,6 +17,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
 #include "CWidget.h"
+#include "gui/CLayout.h"
 #include "gui/CTextManager.h"
 
 void CWidget::setRender(std::string draw) { this->render = draw; }
@@ -27,63 +28,67 @@ std::string CWidget::getClick() { return click; }
 
 void CWidget::setClick(std::string click) { this->click = click; }
 
-void CWidget::renderObject(std::shared_ptr<CGui> gui,
-                           std::shared_ptr<SDL_Rect> rect, int frameTime) {
-  this->getParent()
-      ->meta()
-      ->invoke_method<void, CGameGraphicsObject, std::shared_ptr<CGui>,
-                      std::shared_ptr<SDL_Rect>, int>(
-          this->getRender(), getParent(), gui, rect, frameTime);
-}
-
-bool CWidget::mouseEvent(std::shared_ptr<CGui> gui, SDL_EventType type,
-                         int button, int x, int y) {
-  // TODO: maybe require both up and down
-  if (type == SDL_MOUSEBUTTONUP && button == SDL_BUTTON_LEFT &&
-      !getClick().empty()) {
+void CWidget::renderObject(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> rect, int frameTime) {
     this->getParent()
         ->meta()
-        ->invoke_method<void, CGameGraphicsObject, std::shared_ptr<CGui>>(
-            this->getClick(), getParent(), gui);
-    return true;
-  }
-  return !getClick().empty();
+        ->invoke_method<void, CGameGraphicsObject, std::shared_ptr<CGui>, std::shared_ptr<SDL_Rect>, int>(
+            this->getRender(), getParent(), gui, rect, frameTime);
+}
+
+bool CWidget::mouseEvent(std::shared_ptr<CGui> gui, SDL_EventType type, int button, int x, int y) {
+    auto clickable = !getClick().empty();
+    if (button != SDL_BUTTON_LEFT || (!clickable && !clickPressed)) {
+        return false;
+    }
+
+    if (type == SDL_MOUSEBUTTONDOWN) {
+        clickPressed = clickable;
+        return clickPressed;
+    }
+
+    if (type == SDL_MOUSEBUTTONUP && clickPressed) {
+        clickPressed = false;
+        auto rect = getLayout()->getRect(this->ptr<CGameGraphicsObject>());
+        auto releasedInside = x >= 0 && y >= 0 && x < rect->w && y < rect->h;
+        if (clickable && releasedInside) {
+            this->getParent()->meta()->invoke_method<void, CGameGraphicsObject, std::shared_ptr<CGui>>(
+                this->getClick(), getParent(), gui);
+        }
+        return true;
+    }
+
+    return false;
 }
 
 CWidget::CWidget() {}
 
-void CTextWidget::renderObject(std::shared_ptr<CGui> gui,
-                               std::shared_ptr<SDL_Rect> rect, int frameTime) {
-  if (centered) {
-    gui->getTextManager()->drawTextCentered(text, rect->x, rect->y, rect->w,
-                                            rect->h);
-  } else {
-    gui->getTextManager()->drawText(text, rect->x, rect->y, rect->w);
-  }
+void CTextWidget::renderObject(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> rect, int frameTime) {
+    if (centered) {
+        gui->getTextManager()->drawTextCentered(text, rect->x, rect->y, rect->w, rect->h);
+    } else {
+        gui->getTextManager()->drawText(text, rect->x, rect->y, rect->w);
+    }
 }
 
 CButton::CButton() {
-  // TODO: move to json
-  setBackground("images/button_off");
+    // TODO: move to json
+    setBackground("images/button_off");
 }
 
-bool CButton::mouseEvent(std::shared_ptr<CGui> sharedPtr, SDL_EventType type,
-                         int button, int x, int y) {
-  if (type == SDL_MOUSEBUTTONDOWN && button == SDL_BUTTON_LEFT) {
-    setBackground("images/button_on");
-    setModal(true);
-  } else if (type == SDL_MOUSEBUTTONUP && button == SDL_BUTTON_LEFT) {
-    setBackground("images/button_off");
-    setModal(false);
-  }
-  return CTextWidget::mouseEvent(sharedPtr, type, button, x, y);
+bool CButton::mouseEvent(std::shared_ptr<CGui> sharedPtr, SDL_EventType type, int button, int x, int y) {
+    if (type == SDL_MOUSEBUTTONDOWN && button == SDL_BUTTON_LEFT) {
+        setBackground("images/button_on");
+        setModal(true);
+    } else if (type == SDL_MOUSEBUTTONUP && button == SDL_BUTTON_LEFT) {
+        setBackground("images/button_off");
+        setModal(false);
+    }
+    return CTextWidget::mouseEvent(sharedPtr, type, button, x, y);
 }
 
 bool CTextWidget::getCentered() const { return centered; }
 
-void CTextWidget::setCentered(bool centered) {
-  CTextWidget::centered = centered;
-}
+void CTextWidget::setCentered(bool centered) { CTextWidget::centered = centered; }
 
 const std::string &CTextWidget::getText() const { return text; }
 
