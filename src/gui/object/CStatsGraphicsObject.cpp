@@ -22,79 +22,75 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "gui/CTextManager.h"
 #include "object/CPlayer.h"
 
-void CStatsGraphicsUtil::drawStats(std::shared_ptr<CGui> gui,
-                                   std::shared_ptr<CCreature> creature, int x,
-                                   int y, int w, int h, bool showNumeric,
-                                   bool showExp) {
-
-  drawBar(gui, creature->getHpRatio(), 0, RED, x, y, w, h);
-  if (showNumeric) {
-    drawValues(gui, creature->getHp(), creature->getHpMax(), 0, x, y, w, h);
-  }
-  drawBar(gui, creature->getManaRatio(), 1, BLUE, x, y, w, h);
-  if (showNumeric) {
-    drawValues(gui, creature->getMana(), creature->getManaMax(), 1, x, y, w, h);
-  }
-  if (showExp) {
-    drawBar(gui, creature->getExpRatio(), 2, YELLOW, x, y, w, h);
-    if (showNumeric) {
-      drawValues(gui, creature->getExp(), creature->getExpForNextLevel(), 2, x,
-                 y, w, h);
+void CStatsGraphicsUtil::drawStats(std::shared_ptr<CGui> gui, std::shared_ptr<CCreature> creature, int x, int y, int w,
+                                   int h, bool showNumeric, bool showExp) {
+    if (!creature) {
+        return;
     }
-  }
+
+    const int barCount = showExp ? 4 : 3;
+    const int movePointsMax = std::max(1, creature->getMovePointsMax());
+    const int movePointRatio = creature->getMovePoints() * 100 / movePointsMax;
+
+    drawBar(gui, creature->getHpRatio(), 0, barCount, RED, x, y, w, h);
+    if (showNumeric) {
+        drawValues(gui, creature->getHp(), creature->getHpMax(), 0, barCount, x, y, w, h);
+    }
+    drawBar(gui, creature->getManaRatio(), 1, barCount, BLUE, x, y, w, h);
+    if (showNumeric) {
+        drawValues(gui, creature->getMana(), creature->getManaMax(), 1, barCount, x, y, w, h);
+    }
+    drawBar(gui, movePointRatio, 2, barCount, 255, 255, 255, 0, x, y, w, h);
+    if (showNumeric) {
+        drawValues(gui, creature->getMovePoints(), creature->getMovePointsMax(), 2, barCount, x, y, w, h);
+    }
+    if (showExp) {
+        drawBar(gui, creature->getExpRatio(), 3, barCount, YELLOW, x, y, w, h);
+        if (showNumeric) {
+            drawValues(gui, creature->getExp(), creature->getExpForNextLevel(), 3, barCount, x, y, w, h);
+        }
+    }
 }
 
-void CStatsGraphicsObject::renderObject(std::shared_ptr<CGui> gui,
-                                        std::shared_ptr<SDL_Rect> rect,
-                                        int frameTime) {
-  auto cret = creature->invoke<CCreature>(gui->getGame(), this->ptr());
-  CStatsGraphicsUtil::drawStats(gui, cret, rect->x, rect->y, rect->w, rect->h,
-                                true, true);
+void CStatsGraphicsObject::renderObject(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> rect, int frameTime) {
+    auto cret = creature->invoke<CCreature>(gui->getGame(), this->ptr());
+    CStatsGraphicsUtil::drawStats(gui, cret, rect->x, rect->y, rect->w, rect->h, true, true);
 }
 
 CStatsGraphicsObject::CStatsGraphicsObject() {}
 
-std::shared_ptr<CScript> CStatsGraphicsObject::getCreature() {
-  return creature;
+std::shared_ptr<CScript> CStatsGraphicsObject::getCreature() { return creature; }
+
+void CStatsGraphicsObject::setCreature(std::shared_ptr<CScript> _creature) { creature = _creature; }
+
+void CStatsGraphicsUtil::drawBar(std::shared_ptr<CGui> gui, int ratio, int index, int barCount, Uint8 r, Uint8 g,
+                                 Uint8 b, Uint8 a, int x, int y, int w, int h) {
+    h = h / std::max(1, barCount);
+    SDL_Rect filledBar;
+    filledBar.x = x;
+    filledBar.y = y + index * h;
+    filledBar.h = h;
+    filledBar.w = (int)(ratio / 100.0 * w);
+
+    SDL_SetRenderDrawColor(gui->getRenderer(), r, g, b, a);
+    SDL_RenderFillRect(gui->getRenderer(), &filledBar);
+
+    SDL_Rect emptyBar;
+    emptyBar.x = x + filledBar.w;
+    emptyBar.y = y + index * h;
+    emptyBar.h = h;
+    emptyBar.w = w - filledBar.w;
+
+    SDL_SetRenderDrawColor(gui->getRenderer(), BLACK);
+    SDL_RenderFillRect(gui->getRenderer(), &emptyBar);
 }
 
-void CStatsGraphicsObject::setCreature(std::shared_ptr<CScript> _creature) {
-  creature = _creature;
+void CStatsGraphicsUtil::drawValues(std::shared_ptr<CGui> gui, int left, int right, int index, int barCount, int x,
+                                    int y, int w, int h) {
+    h = h / std::max(1, barCount);
+    gui->getTextManager()->drawTextCentered(vstd::str(left) + "/" + vstd::str(right), x, y + index * h, w, h);
 }
 
-void CStatsGraphicsUtil::drawBar(std::shared_ptr<CGui> gui, int ratio,
-                                 int index, Uint8 r, Uint8 g, Uint8 b, Uint8 a,
-                                 int x, int y, int w, int h) {
-  h = h / 3.0;
-  SDL_Rect filledBar;
-  filledBar.x = x;
-  filledBar.y = y + index * h;
-  filledBar.h = h;
-  filledBar.w = (int)(ratio / 100.0 * w);
-
-  SDL_SetRenderDrawColor(gui->getRenderer(), r, g, b, a);
-  SDL_RenderFillRect(gui->getRenderer(), &filledBar);
-
-  SDL_Rect emptyBar;
-  emptyBar.x = x + filledBar.w;
-  emptyBar.y = y + index * h;
-  emptyBar.h = h;
-  emptyBar.w = w - filledBar.w;
-
-  SDL_SetRenderDrawColor(gui->getRenderer(), BLACK);
-  SDL_RenderFillRect(gui->getRenderer(), &emptyBar);
-}
-
-void CStatsGraphicsUtil::drawValues(std::shared_ptr<CGui> gui, int left,
-                                    int right, int index, int x, int y, int w,
-                                    int h) {
-  h = h / 3.0;
-  gui->getTextManager()->drawTextCentered(
-      vstd::str(left) + "/" + vstd::str(right), x, y + index * h, w, h);
-}
-
-bool CStatsGraphicsObject::mouseEvent(std::shared_ptr<CGui> sharedPtr,
-                                      SDL_EventType type, int button, int x,
-                                      int y) {
-  return true;
+bool CStatsGraphicsObject::mouseEvent(std::shared_ptr<CGui> sharedPtr, SDL_EventType type, int button, int x, int y) {
+    return true;
 }

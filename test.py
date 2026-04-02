@@ -1385,20 +1385,32 @@ class GameTest(unittest.TestCase):
         game_map.removeAll(lambda obj: obj.getName() != "player")
 
         start = player.getCoords()
-        self.assertEqual(player.getMovePointsMax(), 2 + player.getLevel() // 2)
+        self.assertEqual(player.getMovePointsMax(), 10 + player.getLevel() // 2)
         self.assertEqual(player.getMovePoints(), player.getMovePointsMax())
 
-        goal = game.Coords(start.x + 3, start.y, start.z)
+        goal = game.Coords(start.x + 9, start.y, start.z)
         road_tiles = [
             game.Coords(start.x, start.y - 1, start.z),
             game.Coords(start.x + 1, start.y - 1, start.z),
             game.Coords(start.x + 2, start.y - 1, start.z),
             game.Coords(start.x + 3, start.y - 1, start.z),
+            game.Coords(start.x + 4, start.y - 1, start.z),
+            game.Coords(start.x + 5, start.y - 1, start.z),
+            game.Coords(start.x + 6, start.y - 1, start.z),
+            game.Coords(start.x + 7, start.y - 1, start.z),
+            game.Coords(start.x + 8, start.y - 1, start.z),
+            game.Coords(start.x + 9, start.y - 1, start.z),
             goal,
         ]
         swamp_tiles = [
             game.Coords(start.x + 1, start.y, start.z),
             game.Coords(start.x + 2, start.y, start.z),
+            game.Coords(start.x + 3, start.y, start.z),
+            game.Coords(start.x + 4, start.y, start.z),
+            game.Coords(start.x + 5, start.y, start.z),
+            game.Coords(start.x + 6, start.y, start.z),
+            game.Coords(start.x + 7, start.y, start.z),
+            game.Coords(start.x + 8, start.y, start.z),
         ]
         for coords in road_tiles:
             game_map.replaceTile("RoadTile", coords)
@@ -1410,8 +1422,8 @@ class GameTest(unittest.TestCase):
         game_map.move()
 
         coords = player.getCoords()
-        expected_after_first_turn = (start.x + 1, start.y - 1, start.z)
-        self.assertEqual((coords.x, coords.y, coords.z), expected_after_first_turn)
+        expected = (start.x + 9, start.y - 1, start.z)
+        self.assertEqual((coords.x, coords.y, coords.z), expected)
         self.assertEqual(game_map.getTurn(), turn_before + 1)
         self.assertEqual(player.getMovePoints(), 0)
         self.assertFalse(controller.isCompleted(player))
@@ -1420,17 +1432,9 @@ class GameTest(unittest.TestCase):
         turn_after_path = game_map.getTurn()
         game_map.move()
         coords_after = player.getCoords()
-        expected_after_second_turn = (start.x + 3, start.y - 1, start.z)
-        self.assertEqual((coords_after.x, coords_after.y, coords_after.z), expected_after_second_turn)
+        self.assertEqual((coords_after.x, coords_after.y, coords_after.z), (goal.x, goal.y, goal.z))
         self.assertEqual(game_map.getTurn(), turn_after_path + 1)
-        self.assertEqual(player.getMovePoints(), 0)
-        self.assertFalse(controller.isCompleted(player))
-
-        turn_before_arrival = game_map.getTurn()
-        game_map.move()
-        coords_at_goal = player.getCoords()
-        self.assertEqual((coords_at_goal.x, coords_at_goal.y, coords_at_goal.z), (goal.x, goal.y, goal.z))
-        self.assertEqual(game_map.getTurn(), turn_before_arrival + 1)
+        self.assertEqual(player.getMovePoints(), player.getMovePointsMax() - 1)
         self.assertTrue(controller.isCompleted(player))
 
         return True, json.dumps(
@@ -1438,7 +1442,7 @@ class GameTest(unittest.TestCase):
                 "start": [start.x, start.y, start.z],
                 "after_budgeted_turn": [coords.x, coords.y, coords.z],
                 "after_idle_turn": [coords_after.x, coords_after.y, coords_after.z],
-                "final_goal": [coords_at_goal.x, coords_at_goal.y, coords_at_goal.z],
+                "final_goal": [coords_after.x, coords_after.y, coords_after.z],
                 "move_points_after_budgeted_turn": move_points_after_budgeted_turn,
                 "move_points_max": player.getMovePointsMax(),
             },
@@ -1489,7 +1493,7 @@ class GameTest(unittest.TestCase):
         player.setMovePoints(0)
         player.addExp(1000)
         self.assertEqual(player.getLevel(), initial_level + 1)
-        self.assertEqual(player.getMovePointsMax(), 2 + player.getLevel() // 2)
+        self.assertEqual(player.getMovePointsMax(), 10 + player.getLevel() // 2)
         self.assertGreater(player.getMovePointsMax(), initial_max)
         self.assertEqual(player.getMovePoints(), player.getMovePointsMax())
 
@@ -1509,6 +1513,33 @@ class GameTest(unittest.TestCase):
                 "leveled_max": player.getMovePointsMax(),
                 "npc_max": creature.getMovePointsMax(),
                 "npc_after_reset": creature.getMovePoints(),
+            },
+            sort_keys=True,
+        )
+
+    @game_test
+    def test_lava_tile_is_walkable(self):
+        game = load_game_module()
+        g, game_map, player = load_game_map_with_player("test", "Warrior")
+        game_map.removeAll(lambda obj: obj.getName() != "player")
+
+        start = player.getCoords()
+        lava = game.Coords(start.x + 1, start.y, start.z)
+        game_map.replaceTile("LavaTile", lava)
+
+        self.assertTrue(game_map.canStep(lava))
+        set_player_target(player, lava)
+        game_map.move()
+
+        coords = player.getCoords()
+        self.assertEqual((coords.x, coords.y, coords.z), (lava.x, lava.y, lava.z))
+        self.assertEqual(player.getMovePoints(), player.getMovePointsMax() - game_map.getMovementCost(lava))
+
+        return True, json.dumps(
+            {
+                "lava": [lava.x, lava.y, lava.z],
+                "move_points_left": player.getMovePoints(),
+                "move_points_max": player.getMovePointsMax(),
             },
             sort_keys=True,
         )
