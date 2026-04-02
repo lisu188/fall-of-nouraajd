@@ -10,7 +10,7 @@ git submodule update --init --recursive
 mkdir -p cmake-build-debug
 mkdir -p cmake-build-release
 
-python3 -m pip install --upgrade pybind11
+python3 -m pip install --upgrade pybind11 pillow
 PYBIND11_DIR="$(python3 -m pybind11 --cmakedir)"
 
 cmake -G Ninja -B ./cmake-build-debug -S . \
