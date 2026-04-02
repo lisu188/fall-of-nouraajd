@@ -299,3 +299,23 @@
   - `ctest --test-dir cmake-build-release --output-on-failure -R for_unit_tests` -> `1/1 Test #1: for_unit_tests ... Passed`
   - `python3 test.py` -> `/tmp/pr189-python.log` ended with `Ran 81 tests in 138.273s` and `OK`
 - Blockers if unresolved: None. This batch only updates documentation and worklog bookkeeping, so `./scripts/run_coverage.sh` was not required by the repository rules.
+
+## Batch 21
+- Location: `src/gui/object/CMapGraphicsObject.cpp`, `test.py`, `TODO_WORKLOG.md`
+- Original TODO or summary: Map movement could leave black rectangular holes and stale-looking map content because proxy cells reused the same cached tile/object animation instances while the player-centered viewport was shifting underneath them.
+- Status: fixed
+- What was changed: Stopped reusing shared cached map animation instances inside `CMapGraphicsObject::getProxiedObjects(...)` by building fresh per-proxy `CAnimation` objects for tiles and map objects while preserving the configured priority from the cached animation. Added a focused GUI regression in `test.py` that loads the `test` map with a GUI, moves the player east and back west, serializes `CMapGraphicsObject`, and asserts that no proxy cell is left without children after either move.
+- Why the change is correct: The verified repro was not a texture or asset problem. On the `test` map, a one-tile move used to leave 22 serialized proxy cells with zero children even though each proxy should still contain at least its tile renderable. The root cause was map proxies sharing object-owned animation instances across multiple GUI cells and movement refreshes. Fresh per-proxy animations remove that ownership collision while still allowing wrapped maps to show the same world tile in more than one GUI slot.
+- Validation performed:
+  - source verification of `src/gui/object/CMapGraphicsObject.cpp`, `src/gui/object/CGameGraphicsObject.cpp`, `src/gui/object/CProxyGraphicsObject.cpp`, `src/gui/object/CProxyTargetGraphicsObject.cpp`, `src/gui/CAnimation.cpp`, `src/gui/CAnimation.h`, `src/gui/CLayout.cpp`, `src/core/CMap.cpp`, `src/object/CMapObject.cpp`, `test.py`, and `TODO_WORKLOG.md`
+  - `git fetch origin --prune`
+  - `git revert --no-edit 25177e82` -> removed the earlier incorrect asset-only fix from this branch before implementing the proxy-path fix
+  - `python3 - <<'PY' ...` -> headless GUI repro on the `test` map showed `(858, 22, 0, 2)` proxy-child counts after a one-tile east move before the final fix and `(858, 0, 1, 2)` after the final fix
+  - `clang-format -i src/gui/object/CMapGraphicsObject.cpp`
+  - `black -l 120 test.py` -> `1 file left unchanged`
+  - `python3 -m unittest test.GameTest.test_map_proxy_cells_remain_populated_after_player_move` -> `Ran 1 test`, `OK`
+  - `cmake --build cmake-build-release --target _game for_unit_tests -j$(nproc)` -> `ninja: no work to do.`
+  - `ctest --test-dir cmake-build-release --output-on-failure -R for_unit_tests` -> `1/1 Test #1: for_unit_tests ... Passed`
+  - `python3 test.py` -> `Ran 82 tests in 138.766s`, `OK`
+  - `./scripts/run_coverage.sh` -> `Ran 82 tests in 622.127s`, `OK`, `lines: 83.12% (2944 out of 3542)`
+- Blockers if unresolved: None. Manual visual confirmation in the original screenshot scene is still advisable, but the verified proxy-hole repro is now covered automatically.
