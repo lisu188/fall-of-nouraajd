@@ -247,11 +247,7 @@ int CCreature::getMovePoints() { return std::max(0, std::min(movePoints, getMove
 
 void CCreature::setMovePoints(int value) { movePoints = std::max(0, value); }
 
-int CCreature::getMovePointsMax() {
-    // Conservative per-level mobility scaling: level 1 starts at 2 points and
-    // gains 1 additional point every 2 levels.
-    return 2 + level / 2;
-}
+int CCreature::getMovePointsMax() { return 10 + level / 2; }
 
 void CCreature::resetMovePoints() { movePoints = getMovePointsMax(); }
 
