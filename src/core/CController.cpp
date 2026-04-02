@@ -47,10 +47,7 @@ std::shared_ptr<vstd::future<Coords, void>> CTargetController::control(std::shar
         creature->getCoords(), target_object->getCoords(),
         [creature](const Coords &coords) { return creature->getMap()->canStep(coords); },
         [](auto) { return std::make_pair(false, ZERO); },
-        [creature](const Coords &coords) {
-            auto adjacent = creature->getMap()->getAdjacentCoords(coords);
-            return std::vector<Coords>(adjacent.begin(), adjacent.end());
-        },
+        [creature](const Coords &coords) { return creature->getMap()->getAdjacentCoords(coords); },
         [creature](const Coords &from, const Coords &to) { return creature->getMap()->getDistance(from, to); },
         [creature](const Coords &, const Coords &to) { return creature->getMap()->getMovementCost(to); });
 }
@@ -98,10 +95,7 @@ std::shared_ptr<vstd::future<Coords, void>> CNpcRandomController::control(std::s
                         creature->getCoords(), candidate,
                         [creature](const Coords &c) { return creature->getMap()->canStep(c); },
                         [](auto) { return std::make_pair(false, ZERO); },
-                        [creature](const Coords &coords) {
-                            auto adjacent = creature->getMap()->getAdjacentCoords(coords);
-                            return std::vector<Coords>(adjacent.begin(), adjacent.end());
-                        },
+                        [creature](const Coords &coords) { return creature->getMap()->getAdjacentCoords(coords); },
                         [creature](const Coords &from, const Coords &to) {
                             return creature->getMap()->getDistance(from, to);
                         },
@@ -265,9 +259,10 @@ void CPlayerController::setTarget(std::shared_ptr<CPlayer> player, Coords _targe
     }
 }
 
-void CPlayerController::onStepCommitted(std::shared_ptr<CCreature>, const Coords &coords) {
+void CPlayerController::onStepCommitted(std::shared_ptr<CCreature> creature, const Coords &coords) {
     if (currentStep < static_cast<int>(path.size()) && path[currentStep] == coords) {
         currentStep++;
+        rebuildPathStepInfoCache(vstd::cast<CPlayer>(creature));
     } else {
         clearPath();
     }
@@ -288,34 +283,31 @@ void CPlayerController::onTurnEnded(std::shared_ptr<CCreature>) { waitingForNext
 // TODO: add stopping when obstacle found
 CPlayerController::PathStepInfo CPlayerController::getPathStepInfo(std::shared_ptr<CPlayer> player, Coords coords) {
     PathStepInfo info;
-    if (!target || !player || !player->getMap() || currentStep < 0 || currentStep >= static_cast<int>(path.size())) {
+    if (!target || !player || !player->getMap() || pathStepInfoCache.empty()) {
         return info;
     }
 
     auto map = player->getMap();
-    auto normalizedTarget = map->normalizeCoords(*target);
     auto normalizedCoords = map->normalizeCoords(coords);
-    if (player->getCoords() == normalizedTarget || !map->canStep(normalizedTarget)) {
+    auto cached = pathStepInfoCache.find(normalizedCoords);
+    if (cached == pathStepInfoCache.end()) {
         return info;
     }
 
-    int pathCost = 0;
-    Coords previous = map->normalizeCoords(player->getCoords());
-    for (int i = currentStep; i < static_cast<int>(path.size()); i++) {
-        auto step = map->normalizeCoords(path[i]);
-        if (!map->canStep(step)) {
-            break;
-        }
-        pathCost += map->getMovementCost(step);
-        if (step == normalizedCoords) {
-            info.onPath = true;
-            info.direction = CUtil::getDirection(map->getShortestDelta(previous, step));
-            info.reachableThisTurn = pathCost <= player->getMovePoints();
+    if (pathStepInfoRevision != map->getNavigationRevision() || !map->canStep(normalizedCoords)) {
+        if (!recalculatePath(player)) {
+            clearPath();
             return info;
         }
-        previous = step;
+        cached = pathStepInfoCache.find(normalizedCoords);
+        if (cached == pathStepInfoCache.end() || !map->canStep(normalizedCoords)) {
+            return info;
+        }
     }
 
+    info.onPath = true;
+    info.direction = cached->second.direction;
+    info.reachableThisTurn = cached->second.cumulativeCost <= player->getMovePoints();
     return info;
 }
 
@@ -328,6 +320,7 @@ bool CPlayerController::recalculatePath(std::shared_ptr<CPlayer> player) {
     *target = map->normalizeCoords(*target);
     if (player->getCoords() == *target || !map->canStep(*target)) {
         path.clear();
+        pathStepInfoCache.clear();
         currentStep = 0;
         waitingForNextTurn = false;
         return false;
@@ -336,6 +329,7 @@ bool CPlayerController::recalculatePath(std::shared_ptr<CPlayer> player) {
     path = calculatePath(player);
     currentStep = 0;
     waitingForNextTurn = false;
+    rebuildPathStepInfoCache(player);
     return !path.empty() && path.front() != player->getCoords();
 }
 
@@ -343,9 +337,33 @@ bool CPlayerController::isCompleted(std::shared_ptr<CPlayer> player) {
     return getPathStatus(player) == PathStatus::Invalid;
 }
 
+void CPlayerController::rebuildPathStepInfoCache(std::shared_ptr<CPlayer> player) {
+    pathStepInfoCache.clear();
+    pathStepInfoRevision = player && player->getMap() ? player->getMap()->getNavigationRevision() : 0;
+    if (!player || !player->getMap() || currentStep < 0 || currentStep >= static_cast<int>(path.size())) {
+        return;
+    }
+
+    auto map = player->getMap();
+    int pathCost = 0;
+    Coords previous = map->normalizeCoords(player->getCoords());
+    for (int i = currentStep; i < static_cast<int>(path.size()); i++) {
+        auto step = map->normalizeCoords(path[i]);
+        if (!map->canStep(step)) {
+            break;
+        }
+
+        pathCost += map->getMovementCost(step);
+        pathStepInfoCache[step] = {CUtil::getDirection(map->getShortestDelta(previous, step)), pathCost};
+        previous = step;
+    }
+}
+
 void CPlayerController::clearPath() {
     target.reset();
     path.clear();
+    pathStepInfoCache.clear();
+    pathStepInfoRevision = 0;
     currentStep = 0;
     waitingForNextTurn = false;
 }
@@ -408,10 +426,7 @@ std::vector<Coords> CPlayerController::calculatePath(std::shared_ptr<CPlayer> pl
             }
             return std::make_pair(false, ZERO);
         },
-        [player](const Coords &coords) {
-            auto adjacent = player->getMap()->getAdjacentCoords(coords);
-            return std::vector<Coords>(adjacent.begin(), adjacent.end());
-        },
+        [player](const Coords &coords) { return player->getMap()->getAdjacentCoords(coords); },
         [player](const Coords &from, const Coords &to) { return player->getMap()->getDistance(from, to); },
         [player](const Coords &, const Coords &to) { return player->getMap()->getMovementCost(to); });
 }

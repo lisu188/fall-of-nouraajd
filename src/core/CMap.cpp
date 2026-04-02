@@ -126,6 +126,10 @@ std::shared_ptr<CEventHandler> CMap::getEventHandler() {
     return eventHandler.get([this]() { return std::make_shared<CEventHandler>(); });
 }
 
+std::uint64_t CMap::getNavigationRevision() const { return navigationRevision; }
+
+void CMap::bumpNavigationRevision() { navigationRevision++; }
+
 void CMap::moveTile(std::shared_ptr<CTile> tile, int x, int y, int z) {
     Coords coords = normalizeCoords(tile->getCoords());
     Coords target = normalizeCoords(Coords(x, y, z));
@@ -134,6 +138,7 @@ void CMap::moveTile(std::shared_ptr<CTile> tile, int x, int y, int z) {
         tiles.erase(it);
     }
     tiles.insert(std::make_pair(target, tile));
+    bumpNavigationRevision();
     signal("tileChanged", target);
 }
 
@@ -143,6 +148,7 @@ bool CMap::addTile(std::shared_ptr<CTile> tile, int x, int y, int z) {
         return false;
     }
     tiles.insert(std::make_pair(coords, tile));
+    bumpNavigationRevision();
     tile->moveTo(coords.x, coords.y, coords.z);
     //    signal("tileChanged", Coords(x, y, z)); //moveTo already sends signal
     return true;
@@ -154,6 +160,7 @@ void CMap::removeTile(int x, int y, int z) {
     if (it != this->tiles.end()) {
         this->tiles.erase(it);
     }
+    bumpNavigationRevision();
     signal("tileChanged", coords);
 }
 
@@ -228,6 +235,7 @@ void CMap::addObject(const std::shared_ptr<CMapObject> &mapObject) {
         creature->resetMovePoints();
     }
     mapObjects.insert(std::make_pair(mapObject->getName(), mapObject));
+    bumpNavigationRevision();
     getEventHandler()->gameEvent(mapObject, std::make_shared<CGameEvent>(CGameEvent::Type::onCreate));
     signal("objectChanged", mapObject->getCoords());
 }
@@ -244,6 +252,7 @@ void CMap::removeObject(const std::shared_ptr<CMapObject> &mapObject) {
 
     mapObjects.erase(map_object_it);
     vstd::erase_if(mapObjectsCache, [mapObject](auto it) { return it.second == mapObject->getName(); });
+    bumpNavigationRevision();
     getEventHandler()->gameEvent(mapObject, std::make_shared<CGameEvent>(CGameEvent::Type::onDestroy));
     signal("objectChanged", mapObject->getCoords());
 }
@@ -431,6 +440,7 @@ void CMap::setTiles(std::set<std::shared_ptr<CTile>> objects) {
     for (const auto &ob : objects) {
         tiles[normalizeCoords(ob->getCoords())] = ob;
     }
+    bumpNavigationRevision();
 }
 
 std::set<std::shared_ptr<CTile>> CMap::getTiles() {
@@ -444,6 +454,7 @@ void CMap::setObjects(std::set<std::shared_ptr<CMapObject>> objects) {
         mapObjects[ob->getName()] = ob;
         mapObjectsCache.insert(std::make_pair(normalizeCoords(ob->getCoords()), ob->getName()));
     }
+    bumpNavigationRevision();
 }
 
 std::set<std::shared_ptr<CMapObject>> CMap::getObjects() {
@@ -492,6 +503,7 @@ void CMap::objectMoved(const std::shared_ptr<CMapObject> &object, Coords _old, C
     vstd::erase_if(mapObjectsCache, [object](auto it) { return it.second == object->getName(); });
 
     mapObjectsCache.insert(std::make_pair(_new, object->getName()));
+    bumpNavigationRevision();
 
     // TODO: check if it`s correct
     signal("objectChanged", _old);
@@ -548,10 +560,10 @@ Coords CMap::normalizeCoords(Coords coords) const {
 
 std::vector<Coords> CMap::getAdjacentCoords(Coords coords, bool includeSelf) const {
     std::vector<Coords> adjacent;
-    std::set<Coords> unique;
-    auto add = [&](Coords candidate) {
+    adjacent.reserve(includeSelf ? 5 : 4);
+    auto add = [&adjacent, this](Coords candidate) {
         candidate = normalizeCoords(candidate);
-        if (unique.insert(candidate).second) {
+        if (std::find(adjacent.begin(), adjacent.end(), candidate) == adjacent.end()) {
             adjacent.push_back(candidate);
         }
     };

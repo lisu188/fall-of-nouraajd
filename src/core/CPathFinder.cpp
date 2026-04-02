@@ -42,8 +42,15 @@ struct AStarNode {
     Coords coords;
 };
 
+struct NextStepNode {
+    int priority;
+    int cost;
+    Coords coords;
+    Coords firstStep;
+};
+
 struct AStarCompare {
-    bool operator()(const AStarNode &a, const AStarNode &b) const {
+    template <typename Node> bool operator()(const Node &a, const Node &b) const {
         if (a.priority == b.priority) {
             return a.cost > b.cost;
         }
@@ -52,6 +59,7 @@ struct AStarCompare {
 };
 
 using AStarQueue = std::priority_queue<AStarNode, std::vector<AStarNode>, AStarCompare>;
+using NextStepQueue = std::priority_queue<NextStepNode, std::vector<NextStepNode>, AStarCompare>;
 
 std::vector<Coords> candidates(const Coords &coords,
                                const std::function<std::pair<bool, Coords>(const Coords &)> &waypoint,
@@ -177,6 +185,55 @@ std::vector<Coords> findAStarPath(Coords start, Coords goal, const std::function
 
     return buildPath(start, goal, previous);
 }
+
+Coords findAStarNextStep(Coords start, Coords goal, const std::function<bool(const Coords &)> &canStep,
+                         const std::function<std::pair<bool, Coords>(const Coords &)> &waypoint,
+                         const std::function<std::vector<Coords>(const Coords &)> &neighbors,
+                         const std::function<double(const Coords &, const Coords &)> &distance,
+                         const CPathFinder::StepCost &stepCost) {
+    if (start == goal) {
+        return start;
+    }
+    if (!canStep(goal)) {
+        return start;
+    }
+
+    std::unordered_map<Coords, int> bestCost;
+    NextStepQueue frontier;
+
+    bestCost[start] = 0;
+    frontier.push({estimateCost(distance, start, goal), 0, start, start});
+
+    while (!frontier.empty()) {
+        auto current = frontier.top();
+        frontier.pop();
+
+        auto best = bestCost.find(current.coords);
+        if (best == bestCost.end() || best->second != current.cost) {
+            continue;
+        }
+        if (current.coords == goal) {
+            return current.firstStep;
+        }
+
+        for (auto next : candidates(current.coords, waypoint, neighbors)) {
+            if (next != goal && !canStep(next)) {
+                continue;
+            }
+
+            const int edgeCost = std::max(1, stepCost(current.coords, next));
+            const int nextCost = current.cost + edgeCost;
+            auto nextBest = bestCost.find(next);
+            if (nextBest == bestCost.end() || nextCost < nextBest->second) {
+                bestCost[next] = nextCost;
+                frontier.push({nextCost + estimateCost(distance, next, goal), nextCost, next,
+                               current.coords == start ? next : current.firstStep});
+            }
+        }
+    }
+
+    return start;
+}
 } // namespace
 
 std::shared_ptr<vstd::future<Coords, void>>
@@ -185,10 +242,8 @@ CPathFinder::findNextStep(Coords start, Coords goal, const std::function<bool(co
                           const std::function<std::vector<Coords>(const Coords &)> &neighbors,
                           const std::function<double(const Coords &, const Coords &)> &distance,
                           const StepCost &stepCost) {
-    return vstd::async([=]() {
-        auto path = findAStarPath(start, goal, canStep, waypoint, neighbors, distance, stepCost);
-        return path.empty() ? start : path.front();
-    });
+    return vstd::async(
+        [=]() { return findAStarNextStep(start, goal, canStep, waypoint, neighbors, distance, stepCost); });
 }
 
 std::vector<Coords> CPathFinder::findPath(Coords start, Coords goal, const std::function<bool(const Coords &)> &canStep,

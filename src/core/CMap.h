@@ -177,6 +177,8 @@ class CMap : public CGameObject {
 
     void setTurn(int turn);
 
+    std::uint64_t getNavigationRevision() const;
+
     // TODO: accept predicate, can be used in siege map
     std::set<std::shared_ptr<CMapObject>> getObjects();
 
@@ -223,12 +225,15 @@ class CMap : public CGameObject {
     bool moving = false;
     bool playerTriggersRegistered = false;
     std::string mapName;
+    std::uint64_t navigationRevision = 0;
 
     std::shared_ptr<vstd::future<void, void>> _moveHelper = vstd::later([]() {});
 
     bool hasBounds(int z) const;
 
     int normalizeAxis(int value, int z, bool wrapAxis, const IntMap &bounds) const;
+
+    void bumpNavigationRevision();
 
     void registerPlayerTriggers();
 };
