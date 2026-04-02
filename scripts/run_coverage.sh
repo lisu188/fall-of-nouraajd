@@ -28,35 +28,10 @@ GAME_BUILD_DIR="${BUILD_DIR}" python3 test.py
 
 mkdir -p "${REPORT_DIR}"
 
-if command -v gcovr >/dev/null 2>&1; then
-    gcovr \
-        --root "${ROOT_DIR}" \
-        --object-directory "${BUILD_DIR}" \
-        --gcov-ignore-errors source_not_found --gcov-ignore-errors no_working_dir_found \
-        --filter "${ROOT_DIR}/src/core" \
-        --filter "${ROOT_DIR}/src/handler" \
-        --filter "${ROOT_DIR}/src/object" \
-        --exclude "${ROOT_DIR}/src/gui" \
-        --exclude "${ROOT_DIR}/vstd" \
-        --exclude "${ROOT_DIR}/random-dungeon-generator" \
-        --exclude "${ROOT_DIR}/src/core/CModule.cpp" \
-        --exclude "${ROOT_DIR}/src/core/CWrapper.h" \
-        --exclude "${ROOT_DIR}/src/core/CTypes.cpp" \
-        --exclude "${ROOT_DIR}/src/core/CTypes.h" \
-        --exclude "${ROOT_DIR}/src/core/CJsonUtil.h" \
-        --exclude "${ROOT_DIR}/cmake-build.*" \
-        --exclude "${ROOT_DIR}/build.*" \
-        --exclude "${ROOT_DIR}/package.*" \
-        --print-summary \
-        --txt "${REPORT_DIR}/coverage.txt" \
-        --html-details "${REPORT_DIR}/coverage.html" \
-        --fail-under-line "${MIN_COVERAGE}"
-else
-    python3 "${ROOT_DIR}/scripts/coverage_report.py" \
-        --root "${ROOT_DIR}" \
-        --build-dir "${BUILD_DIR}" \
-        --report-dir "${REPORT_DIR}" \
-        --min-line "${MIN_COVERAGE}"
-fi
+python3 "${ROOT_DIR}/scripts/coverage_report.py" \
+    --root "${ROOT_DIR}" \
+    --build-dir "${BUILD_DIR}" \
+    --report-dir "${REPORT_DIR}" \
+    --min-line "${MIN_COVERAGE}"
 
 echo "Coverage reports written to ${REPORT_DIR}/coverage.txt and ${REPORT_DIR}/coverage.html"

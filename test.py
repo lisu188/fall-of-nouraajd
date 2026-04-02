@@ -33,7 +33,8 @@ import mcp
 
 REPO_ROOT = Path(__file__).resolve().parent
 TEST_OUTPUT_DIR = REPO_ROOT / "test"
-XDG_RUNTIME_DIR = Path("/tmp") / f"xdg-runtime-{os.getuid()}"
+runtime_dir_id = os.getuid() if hasattr(os, "getuid") else os.getpid()
+XDG_RUNTIME_DIR = Path(tempfile.gettempdir()) / f"xdg-runtime-{runtime_dir_id}"
 
 if "XDG_RUNTIME_DIR" not in os.environ:
     XDG_RUNTIME_DIR.mkdir(mode=0o700, parents=True, exist_ok=True)
