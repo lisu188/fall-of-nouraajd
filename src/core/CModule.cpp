@@ -353,7 +353,8 @@ PYBIND11_MODULE(_game, m) {
     py::class_<CPlayerController, CController, std::shared_ptr<CPlayerController>>(
         m, "CPlayerController", "Controller that follows a queued player path.")
         .def("setTarget", &CPlayerController::setTarget, "Set a pathfinding destination for the player.")
-        .def("isCompleted", &CPlayerController::isCompleted, "Return whether the queued path can continue this turn.");
+        .def("isCompleted", &CPlayerController::isCompleted,
+             "Return whether the queued path has finished or become invalid.");
     py::class_<CTargetController, CController, std::shared_ptr<CTargetController>>(
         m, "CTargetController", "Controller that follows a named map target.")
         .def("getTarget", &CTargetController::getTarget, "Return current target object name.")
@@ -490,15 +491,16 @@ PYBIND11_MODULE(_game, m) {
 
     py::class_<CFightHandler, std::shared_ptr<CFightHandler>>(m, "CFightHandler", "Combat resolution service.")
         .def("fight", &CFightHandler::fight, "Run a fight between two creatures.")
-        .def("fightMany",
-             [](std::shared_ptr<CCreature> attacker, const py::iterable &opponents) {
-                 std::vector<std::shared_ptr<CCreature>> encounter;
-                 for (const auto &opponent : opponents) {
-                     encounter.push_back(opponent.cast<std::shared_ptr<CCreature>>());
-                 }
-                 return CFightHandler::fightMany(attacker, encounter);
-             },
-             "Run a fight between one creature and multiple opponents.");
+        .def(
+            "fightMany",
+            [](std::shared_ptr<CCreature> attacker, const py::iterable &opponents) {
+                std::vector<std::shared_ptr<CCreature>> encounter;
+                for (const auto &opponent : opponents) {
+                    encounter.push_back(opponent.cast<std::shared_ptr<CCreature>>());
+                }
+                return CFightHandler::fightMany(attacker, encounter);
+            },
+            "Run a fight between one creature and multiple opponents.");
 
     py::class_<CMarket, CGameObject, std::shared_ptr<CMarket>>(m, "CMarket", "Trading inventory and prices.");
 
