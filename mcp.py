@@ -123,6 +123,7 @@ class EngineMcpServer:
         )
 
     def import_modules(self) -> None:
+        os.chdir(self.build_dir)
         sys.path.insert(0, str(self.repo_root / "res"))
         sys.path.insert(0, str(self.build_dir))
         try:
@@ -152,8 +153,7 @@ class EngineMcpServer:
             return
         sink = self.native_log_sink or "stdout"
         call_args: list[Any] = [sink]
-        if self.native_log_path is not None:
-            call_args.append(str(self.native_log_path))
+        call_args.append(str(self.native_log_path) if self.native_log_path is not None else None)
         try:
             setter(*call_args)
         except Exception:
@@ -217,6 +217,13 @@ class EngineMcpServer:
         function = getattr(value, "__func__", None)
         if function is not None and inspect.isfunction(function):
             return function
+        if (
+            callable(value)
+            and inspect.ismethoddescriptor(value)
+            and type(value).__name__ == "instancemethod"
+            and getattr(value, "__self__", None) is not None
+        ):
+            return value
         return None
 
     def serve_stdio(self) -> None:

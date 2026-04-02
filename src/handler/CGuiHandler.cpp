@@ -32,187 +32,188 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "object/CMarket.h"
 
 namespace {
-std::shared_ptr<CLayout> create_tooltip_layout(const std::shared_ptr<CGame> &game,
-                                               const std::string &text, int x,
+std::shared_ptr<CLayout> create_tooltip_layout(const std::shared_ptr<CGame> &game, const std::string &text, int x,
                                                int y) {
-  auto textureSize = game->getGui()->getTextManager()->getTextureSize(text);
-  int width = vstd::percent(textureSize.first, 125);
-  int height = vstd::percent(textureSize.second, 125);
+    auto textureSize = game->getGui()->getTextManager()->getTextureSize(text);
+    int width = vstd::percent(textureSize.first, 125);
+    int height = vstd::percent(textureSize.second, 125);
 
-  auto layout = game->createObject<CLayout>();
-  layout->setRect(CUtil::centeredRect(x, y, width, height));
-  return layout;
+    auto layout = game->createObject<CLayout>();
+    layout->setRect(CUtil::centeredRect(x, y, width, height));
+    return layout;
 }
 } // namespace
 
 CGuiHandler::CGuiHandler() {}
 
 void CGuiHandler::showMessage(std::string message) {
-  auto game = _game.lock();
-  if (!game || !game->getGui()) {
-    vstd::logger::info(message);
-    return;
-  }
-  std::shared_ptr<CGameTextPanel> panel =
-      game->createObject<CGameTextPanel>("textPanel");
-  panel->setText(message);
-  game->getGui()->pushChild(panel);
-  panel->awaitClosing();
+    auto game = _game.lock();
+    if (!game || !game->getGui()) {
+        vstd::logger::info(message);
+        return;
+    }
+    std::shared_ptr<CGameTextPanel> panel = game->createObject<CGameTextPanel>("textPanel");
+    panel->setText(message);
+    game->getGui()->pushChild(panel);
+    panel->awaitClosing();
 }
 
 void CGuiHandler::showInfo(std::string message, bool centered) {
-  auto game = _game.lock();
-  if (!game || !game->getGui()) {
-    vstd::logger::info(message);
-    return;
-  }
-  std::shared_ptr<CGameTextPanel> panel =
-      game->createObject<CGameTextPanel>("infoPanel");
-  panel->setText(message);
-  panel->setCentered(centered);
-  game->getGui()->pushChild(panel);
-  panel->awaitClosing();
+    auto game = _game.lock();
+    if (!game || !game->getGui()) {
+        vstd::logger::info(message);
+        return;
+    }
+    std::shared_ptr<CGameTextPanel> panel = game->createObject<CGameTextPanel>("infoPanel");
+    panel->setText(message);
+    panel->setCentered(centered);
+    game->getGui()->pushChild(panel);
+    panel->awaitClosing();
 }
 
 bool CGuiHandler::showQuestion(std::string question) {
-  auto game = _game.lock();
-  if (!game || !game->getGui()) {
-    vstd::logger::info(question);
-    return false;
-  }
-  std::shared_ptr<CGameQuestionPanel> panel =
-      game->createObject<CGameQuestionPanel>("questionPanel");
-  panel->setQuestion(question);
-  game->getGui()->pushChild(panel);
-  return panel->awaitAnswer();
+    auto game = _game.lock();
+    if (!game || !game->getGui()) {
+        vstd::logger::info(question);
+        return false;
+    }
+    std::shared_ptr<CGameQuestionPanel> panel = game->createObject<CGameQuestionPanel>("questionPanel");
+    panel->setQuestion(question);
+    game->getGui()->pushChild(panel);
+    return panel->awaitAnswer();
 }
 
 void CGuiHandler::showTrade(std::shared_ptr<CMarket> market) {
-  auto game = _game.lock();
-  if (!game || !game->getGui()) {
-    return;
-  }
-  std::shared_ptr<CGameTradePanel> panel =
-      game->createObject<CGameTradePanel>("tradePanel");
-  panel->setMarket(market);
-  game->getGui()->pushChild(panel);
-  panel->awaitClosing();
+    auto game = _game.lock();
+    if (!game || !game->getGui()) {
+        return;
+    }
+    std::shared_ptr<CGameTradePanel> panel = game->createObject<CGameTradePanel>("tradePanel");
+    panel->setMarket(market);
+    game->getGui()->pushChild(panel);
+    panel->awaitClosing();
 }
 
 void CGuiHandler::showDialog(std::shared_ptr<CDialog> dialog) {
-  auto game = _game.lock();
-  if (!game || !game->getGui()) {
-    return;
-  }
-  std::shared_ptr<CGameDialogPanel> panel =
-      game->createObject<CGameDialogPanel>("dialogPanel");
-  panel->setDialog(dialog);
-  panel->reload();
-  game->getGui()->pushChild(panel);
-  panel->awaitClosing();
+    auto game = _game.lock();
+    if (!game || !game->getGui()) {
+        return;
+    }
+    std::shared_ptr<CGameDialogPanel> panel = game->createObject<CGameDialogPanel>("dialogPanel");
+    panel->setDialog(dialog);
+    panel->reload();
+    game->getGui()->pushChild(panel);
+    panel->awaitClosing();
 }
 
-void CGuiHandler::showLoot(std::shared_ptr<CCreature> creature,
-                           std::set<std::shared_ptr<CItem>> items) {
-  auto game = _game.lock();
-  if (!game || !game->getGui()) {
-    return;
-  }
-  std::shared_ptr<CGameLootPanel> panel =
-      game->createObject<CGameLootPanel>("lootPanel");
-  panel->setCreature(creature);
-  panel->setItems(items);
-  game->getGui()->pushChild(panel);
-  panel->awaitClosing();
+void CGuiHandler::showLoot(std::shared_ptr<CCreature> creature, std::set<std::shared_ptr<CItem>> items) {
+    auto game = _game.lock();
+    if (!game || !game->getGui()) {
+        return;
+    }
+    std::shared_ptr<CGameLootPanel> panel = game->createObject<CGameLootPanel>("lootPanel");
+    panel->setCreature(creature);
+    panel->setItems(items);
+    game->getGui()->pushChild(panel);
+    panel->awaitClosing();
 }
 
 CGuiHandler::CGuiHandler(std::shared_ptr<CGame> game) : _game(game) {}
 
 std::string CGuiHandler::showSelection(std::shared_ptr<CListString> list) {
-  std::shared_ptr<CGamePanel> panel =
-      _game.lock()->createObject<CGamePanel>("selectionPanel");
-  vstd::cast<CCenteredLayout>(panel->getLayout())
-      ->setH(vstd::str(75 * list->getValues().size()));
+    std::shared_ptr<CGamePanel> panel = _game.lock()->createObject<CGamePanel>("selectionPanel");
+    vstd::cast<CCenteredLayout>(panel->getLayout())->setH(vstd::str(75 * list->getValues().size()));
 
-  std::shared_ptr<std::string> selected;
+    std::shared_ptr<std::string> selected;
 
-  std::set<std::shared_ptr<CGameGraphicsObject>> widgets;
-  int i = 0;
-  // TODO: unify with CGameDialogPanel
-  for (auto item : list->getValues()) {
-    std::string clickName = vstd::str("click") + vstd::str(i);
+    std::set<std::shared_ptr<CGameGraphicsObject>> widgets;
+    int i = 0;
+    // TODO: unify with CGameDialogPanel
+    for (auto item : list->getValues()) {
+        std::string clickName = vstd::str("click") + vstd::str(i);
 
-    panel->meta()->set_method<CGameGraphicsObject, void, std::shared_ptr<CGui>>(
-        clickName, panel,
-        [item, &selected](CGameGraphicsObject *self,
-                          std::shared_ptr<CGui> gui) {
-          selected = std::make_shared<std::string>(item);
-        });
+        panel->meta()->set_method<CGameGraphicsObject, void, std::shared_ptr<CGui>>(
+            clickName, panel, [item, &selected](CGameGraphicsObject *self, std::shared_ptr<CGui> gui) {
+                selected = std::make_shared<std::string>(item);
+            });
 
-    std::shared_ptr<CButton> widget =
-        _game.lock()->createObject<CButton>("CButton");
-    widget->setClick(clickName);
-    widget->setText(item);
+        std::shared_ptr<CButton> widget = _game.lock()->createObject<CButton>("CButton");
+        widget->setClick(clickName);
+        widget->setText(item);
 
-    std::shared_ptr<CLayout> layout =
-        _game.lock()->createObject<CLayout>("CLayout");
-    int percentSize = 100.0 / list->getValues().size();
-    layout->setX(vstd::str(0) + "%");
-    layout->setY(vstd::str(percentSize * i) + "%");
-    layout->setW(vstd::str(100) + "%");
-    layout->setH(vstd::str(percentSize) + "%");
-    widget->setLayout(layout);
-    widgets.insert(widget);
-    i++;
-  }
+        std::shared_ptr<CLayout> layout = _game.lock()->createObject<CLayout>("CLayout");
+        int percentSize = 100.0 / list->getValues().size();
+        layout->setX(vstd::str(0) + "%");
+        layout->setY(vstd::str(percentSize * i) + "%");
+        layout->setW(vstd::str(100) + "%");
+        layout->setH(vstd::str(percentSize) + "%");
+        widget->setLayout(layout);
+        widgets.insert(widget);
+        i++;
+    }
 
-  panel->setChildren(widgets);
+    panel->setChildren(widgets);
 
-  _game.lock()->getGui()->pushChild(panel);
+    _game.lock()->getGui()->pushChild(panel);
 
-  vstd::wait_until([&]() { return selected != nullptr; });
+    vstd::wait_until([&]() { return selected != nullptr; });
 
-  panel->close();
+    panel->close();
 
-  return *selected;
+    return *selected;
 }
 
 void CGuiHandler::showTooltip(std::string text, int x, int y) {
-  if (text.length() > 0) {
-    auto game = _game.lock();
-    auto layout = create_tooltip_layout(game, text, x, y);
-    auto tooltip = game->createObject<CTooltip>();
-    tooltip->setText(text);
-    tooltip->setLayout(layout);
-    game->getGui()->pushChild(tooltip);
-  }
+    if (text.length() > 0) {
+        auto game = _game.lock();
+        auto layout = create_tooltip_layout(game, text, x, y);
+        auto tooltip = game->createObject<CTooltip>();
+        tooltip->setText(text);
+        tooltip->setLayout(layout);
+        game->getGui()->pushChild(tooltip);
+    }
+}
+
+std::shared_ptr<CGamePanel> CGuiHandler::openPanel(std::string panel) {
+    std::shared_ptr<CGame> game = _game.lock();
+    if (!game || !game->getGui()) {
+        return nullptr;
+    }
+    auto panelClas = game->getObjectHandler()->getClass(panel);
+    if (auto currentPanel = vstd::cast<CGamePanel>(game->getGui()->findChild(panelClas))) {
+        return currentPanel;
+    }
+    std::shared_ptr<CGamePanel> child = game->createObject<CGamePanel>(panel);
+    game->getGui()->pushChild(child);
+    return child;
 }
 
 void CGuiHandler::flipPanel(std::string panel, std::string hotkey) {
-  std::shared_ptr<CGame> game = _game.lock();
-  auto panelClas = game->getObjectHandler()->getClass(panel);
-  if (auto currentPanel =
-          vstd::cast<CGamePanel>(game->getGui()->findChild(panelClas))) {
-    currentPanel->close();
-  } else {
-    std::shared_ptr<CGamePanel> child = game->createObject<CGamePanel>(panel);
-    game->getGui()->pushChild(child);
+    std::shared_ptr<CGame> game = _game.lock();
+    if (!game || !game->getGui()) {
+        return;
+    }
+    auto panelClas = game->getObjectHandler()->getClass(panel);
+    if (auto currentPanel = vstd::cast<CGamePanel>(game->getGui()->findChild(panelClas))) {
+        currentPanel->close();
+    } else {
+        std::shared_ptr<CGamePanel> child = openPanel(panel);
+        if (!child) {
+            return;
+        }
 
-    auto keyPred = [hotkey](std::shared_ptr<CGui> gui,
-                            std::shared_ptr<CGameGraphicsObject> self,
-                            SDL_Event *event) {
-      return event->type == SDL_KEYDOWN && event->key.keysym.sym == hotkey[0];
-    };
-    auto _self = this->ptr<CGuiHandler>();
-    child->registerEventCallback(
-        keyPred,
-        [_self, panel, hotkey](std::shared_ptr<CGui> gui,
-                               std::shared_ptr<CGameGraphicsObject> self,
-                               SDL_Event *event) {
-          _self->flipPanel(panel, hotkey);
-          return true;
+        auto keyPred = [hotkey](std::shared_ptr<CGui> gui, std::shared_ptr<CGameGraphicsObject> self,
+                                SDL_Event *event) {
+            return event->type == SDL_KEYDOWN && event->key.keysym.sym == hotkey[0];
+        };
+        auto _self = this->ptr<CGuiHandler>();
+        child->registerEventCallback(keyPred, [_self, panel, hotkey](std::shared_ptr<CGui> gui,
+                                                                     std::shared_ptr<CGameGraphicsObject> self,
+                                                                     SDL_Event *event) {
+            _self->flipPanel(panel, hotkey);
+            return true;
         });
 
-    child->awaitClosing();
-  }
+        child->awaitClosing();
+    }
 }

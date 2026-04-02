@@ -28,32 +28,33 @@ class CDialog;
 class CMarket;
 
 class CGuiHandler : public CGameObject {
-  V_META(CGuiHandler, CGameObject, vstd::meta::empty())
+    V_META(CGuiHandler, CGameObject, vstd::meta::empty())
 
-public:
-  CGuiHandler();
+  public:
+    CGuiHandler();
 
-  CGuiHandler(std::shared_ptr<CGame> game);
+    CGuiHandler(std::shared_ptr<CGame> game);
 
-  void showMessage(std::string message);
+    void showMessage(std::string message);
 
-  void showInfo(std::string message, bool centered = false);
+    void showInfo(std::string message, bool centered = false);
 
-  bool showQuestion(std::string message);
+    bool showQuestion(std::string message);
 
-  void showTrade(std::shared_ptr<CMarket> market);
+    void showTrade(std::shared_ptr<CMarket> market);
 
-  void showDialog(std::shared_ptr<CDialog> dialog);
+    void showDialog(std::shared_ptr<CDialog> dialog);
 
-  void showLoot(std::shared_ptr<CCreature>,
-                std::set<std::shared_ptr<CItem>> items);
+    void showLoot(std::shared_ptr<CCreature>, std::set<std::shared_ptr<CItem>> items);
 
-  std::string showSelection(std::shared_ptr<CListString> list);
+    std::string showSelection(std::shared_ptr<CListString> list);
 
-  void showTooltip(std::string text, int x, int y);
+    void showTooltip(std::string text, int x, int y);
 
-  void flipPanel(std::string panel, std::string hotkey);
+    std::shared_ptr<CGamePanel> openPanel(std::string panel);
 
-private:
-  std::weak_ptr<CGame> _game;
+    void flipPanel(std::string panel, std::string hotkey);
+
+  private:
+    std::weak_ptr<CGame> _game;
 };
