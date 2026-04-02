@@ -106,6 +106,21 @@ def advance(g, turns):
         game.event_loop.instance().run()
 
 
+def pump_event_loop(iterations=30):
+    game = load_game_module()
+    for _ in range(iterations):
+        game.event_loop.instance().run()
+
+
+def get_map_proxy_child_counts(g):
+    game = load_game_module()
+    gui_tree = json.loads(game.jsonify(g.getGui()))
+    children = gui_tree.get("properties", {}).get("children") or []
+    map_graph = next(child for child in children if child.get("class") == "CMapGraphicsObject")
+    proxies = map_graph.get("properties", {}).get("children") or []
+    return [len(proxy.get("properties", {}).get("children") or []) for proxy in proxies]
+
+
 def materialized_tile_type(game, game_map, coords):
     game_map.getMovementCost(coords)
     serialized_map = json.loads(game.jsonify(game_map))
@@ -1811,6 +1826,47 @@ class GameTest(unittest.TestCase):
                     loaded_player.getCoords().y,
                     loaded_player.getCoords().z,
                 ],
+            }
+        )
+
+    @game_test
+    def test_map_proxy_cells_remain_populated_after_player_move(self):
+        game = load_game_module()
+
+        g = game.CGameLoader.loadGame()
+        game.CGameLoader.loadGui(g)
+        game.CGameLoader.startGameWithPlayer(g, "test", "Sorcerer")
+        pump_event_loop()
+
+        initial_counts = get_map_proxy_child_counts(g)
+        self.assertTrue(initial_counts, "Expected serialized map proxies after GUI initialization")
+        self.assertEqual(sum(count == 0 for count in initial_counts), 0)
+
+        game_map = g.getMap()
+        player = game_map.getPlayer()
+        controller = get_player_controller(player)
+
+        def move_player(dx):
+            coords = player.getCoords()
+            target = game.Coords(coords.x + dx, coords.y, coords.z)
+            self.assertTrue(game_map.canStep(target), f"Expected walkable move target {target.x},{target.y},{target.z}")
+            controller.setTarget(player, target)
+            game_map.move()
+            pump_event_loop()
+            return get_map_proxy_child_counts(g)
+
+        east_counts = move_player(1)
+        west_counts = move_player(-1)
+
+        self.assertEqual(sum(count == 0 for count in east_counts), 0)
+        self.assertEqual(sum(count == 0 for count in west_counts), 0)
+
+        return True, json.dumps(
+            {
+                "initial_proxy_count": len(initial_counts),
+                "initial_empty_proxies": sum(count == 0 for count in initial_counts),
+                "empty_after_east_move": sum(count == 0 for count in east_counts),
+                "empty_after_west_move": sum(count == 0 for count in west_counts),
             }
         )
 

@@ -2,9 +2,21 @@
 #include "CWidget.h"
 #include "core/CController.h"
 #include "core/CLoader.h"
+#include "core/CProvider.h"
+#include "gui/CAnimation.h"
 #include "gui/CLayout.h"
 #include "gui/object/CProxyGraphicsObject.h"
 #include "gui/panel/CGameInventoryPanel.h"
+
+namespace {
+std::shared_ptr<CAnimation> build_proxy_animation(const std::shared_ptr<CGui> &gui,
+                                                  const std::shared_ptr<CGameObject> &object) {
+    auto cached = object->getGraphicsObject();
+    auto animation = CAnimationProvider::getAnimation(gui->getGame(), object);
+    animation->setPriority(cached->getPriority());
+    return animation;
+}
+} // namespace
 
 CMapGraphicsObject::CMapGraphicsObject() {}
 
@@ -18,7 +30,7 @@ std::list<std::shared_ptr<CGameGraphicsObject>> CMapGraphicsObject::getProxiedOb
 
         std::shared_ptr<CTile> tile = map->getTile(actualCoords.x, actualCoords.y, actualCoords.z);
 
-        return_val.push_back(tile->getGraphicsObject()->withCallback(
+        return_val.push_back(build_proxy_animation(gui, tile)->withCallback(
             [actualCoords](std::shared_ptr<CGui> gui, SDL_EventType type, int button, int, int) {
                 if (type == SDL_MOUSEBUTTONDOWN && button == SDL_BUTTON_LEFT) {
                     auto controller =
@@ -39,7 +51,7 @@ std::list<std::shared_ptr<CGameGraphicsObject>> CMapGraphicsObject::getProxiedOb
             }));
 
         for (const auto &ob : map->getObjectsAtCoords(actualCoords)) {
-            return_val.push_back(ob->getGraphicsObject());
+            return_val.push_back(build_proxy_animation(gui, ob));
         }
 
         if (map->getBoolProperty("showCoordinates")) {
