@@ -47,11 +47,21 @@ The command also works from `cmake-build-release/mcp.py` if you prefer launching
 
 ### testing
 Running tests is **mandatory** after any code change.
+From a fresh checkout, prepare the repository first:
+<pre>
+git submodule update --init --recursive
+./configure.sh
+</pre>
+
 From the repository root, run:
 <pre>
 cmake --build cmake-build-release --target _game for_unit_tests -j$(nproc)
 ctest --test-dir cmake-build-release --output-on-failure -R for_unit_tests
 python3 test.py
 </pre>
+Also run `./scripts/run_coverage.sh` when a change touches tests (for example
+`test.py` or `tests/unit/**`), `src/core/**`, `src/handler/**`, `src/object/**`,
+or the coverage tooling. The scoped line coverage threshold for that run is 80%;
+see `docs/testing.md` for details.
 Data validation tests run without needing the compiled `_game` module, but
 other tests require it to be built.

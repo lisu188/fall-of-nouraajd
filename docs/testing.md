@@ -1,5 +1,13 @@
 # Testing
 
+## Repository prep
+Run from the repository root after a fresh checkout:
+
+```bash
+git submodule update --init --recursive
+./configure.sh
+```
+
 ## Normal test workflow
 Run from the repository root:
 
@@ -10,7 +18,9 @@ python3 test.py
 ```
 
 ## Coverage workflow
-Run from the repository root:
+Run from the repository root when a change touches tests (for example
+`test.py` or `tests/unit/**`), `src/core/**`, `src/handler/**`,
+`src/object/**`, or the coverage tooling:
 
 ```bash
 ./scripts/run_coverage.sh
