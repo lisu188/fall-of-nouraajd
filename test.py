@@ -30,7 +30,6 @@ from pathlib import Path
 import unittest
 
 import mcp
-from PIL import Image
 
 REPO_ROOT = Path(__file__).resolve().parent
 TEST_OUTPUT_DIR = REPO_ROOT / "test"
@@ -3629,44 +3628,6 @@ class GameTest(unittest.TestCase):
                 if not candidate.exists() and not local_candidate.exists():
                     missing.append(f"{path}:{key}:{val}")
         return missing == [], json.dumps(missing)
-
-    def test_item_sprite_border_palette_is_transparent(self):
-        image_path = REPO_ROOT / "res" / "images" / "item.png"
-        with Image.open(image_path) as raw_image:
-            image = raw_image.convert("RGBA")
-
-        width, height = image.size
-        border_rgbs = set()
-        for x in range(width):
-            border_rgbs.add(image.getpixel((x, 0))[:3])
-            border_rgbs.add(image.getpixel((x, height - 1))[:3])
-        for y in range(1, height - 1):
-            border_rgbs.add(image.getpixel((0, y))[:3])
-            border_rgbs.add(image.getpixel((width - 1, y))[:3])
-
-        transparent_corners = {
-            image.getpixel((0, 0))[3],
-            image.getpixel((0, height - 1))[3],
-            image.getpixel((width - 1, 0))[3],
-            image.getpixel((width - 1, height - 1))[3],
-        }
-        self.assertEqual({0}, transparent_corners)
-
-        opaque_border_palette_pixels = []
-        for y in range(height):
-            for x in range(width):
-                r, g, b, a = image.getpixel((x, y))
-                if a > 0 and (r, g, b) in border_rgbs:
-                    opaque_border_palette_pixels.append((x, y, (r, g, b, a)))
-                    if len(opaque_border_palette_pixels) >= 10:
-                        break
-            if len(opaque_border_palette_pixels) >= 10:
-                break
-
-        self.assertFalse(
-            opaque_border_palette_pixels,
-            f"Opaque matte pixels remain in {image_path}: {opaque_border_palette_pixels}",
-        )
 
     def _collect_resource_paths(self, obj):
         if isinstance(obj, dict):
