@@ -26,15 +26,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 CProxyGraphicsObject::CProxyGraphicsObject(int x, int y) : x(x), y(y) {}
 
 void CProxyGraphicsObject::refresh() {
-  vstd::with<void>(getGui(), [this](auto gui) {
-    std::list<std::shared_ptr<CGameGraphicsObject>> objects =
-        vstd::cast<CProxyTargetGraphicsObject>(getParent())
-            ->getProxiedObjects(gui, x, y);
-    for (auto &child : getChildren()) {
-      removeChild(child);
-    }
-    for (auto &object : objects) {
-      addChild(object);
-    }
-  });
+    vstd::with<void>(getGui(), [this](auto gui) {
+        auto objects = vstd::cast<CProxyTargetGraphicsObject>(getParent())->getProxiedObjects(gui, x, y);
+        setChildren(std::set<std::shared_ptr<CGameGraphicsObject>>(objects.begin(), objects.end()));
+    });
 }

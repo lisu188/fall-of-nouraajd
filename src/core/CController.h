@@ -17,6 +17,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #pragma once
 
+#include <unordered_map>
 #include <vector>
 
 #include "core/CPathFinder.h"
@@ -47,6 +48,11 @@ class CPlayerController : public CController {
         bool reachableThisTurn = false;
     };
 
+    struct CachedPathStep {
+        Coords::Direction direction = Coords::Direction::UNDEFINED;
+        int cumulativeCost = 0;
+    };
+
     void setTarget(std::shared_ptr<CPlayer> player, Coords target);
 
     virtual std::shared_ptr<vstd::future<Coords, void>> control(std::shared_ptr<CCreature> c);
@@ -66,12 +72,16 @@ class CPlayerController : public CController {
 
     std::shared_ptr<Coords> target;
     std::vector<Coords> path;
+    std::unordered_map<Coords, CachedPathStep> pathStepInfoCache;
+    std::uint64_t pathStepInfoRevision = 0;
     int currentStep = 0;
     bool waitingForNextTurn = false;
 
     std::vector<Coords> calculatePath(std::shared_ptr<CPlayer> ptr);
 
     bool recalculatePath(std::shared_ptr<CPlayer> player);
+
+    void rebuildPathStepInfoCache(std::shared_ptr<CPlayer> player);
 
     void clearPath();
 

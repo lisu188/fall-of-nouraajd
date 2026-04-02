@@ -17,6 +17,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #pragma once
 
+#include <unordered_map>
+#include <vector>
+
 #include "core/CList.h"
 #include "gui/object/CProxyTargetGraphicsObject.h"
 
@@ -42,9 +45,20 @@ class CMapGraphicsObject : public CProxyTargetGraphicsObject {
     void refreshObject(Coords coords);
 
   private:
+    struct ProxyAnimationSlot {
+        std::shared_ptr<CAnimation> tile;
+        std::vector<std::shared_ptr<CAnimation>> objects;
+    };
+
+    std::unordered_map<Coords, ProxyAnimationSlot> proxyAnimations;
+
     Coords guiToMap(std::shared_ptr<CGui> gui, Coords coords);
 
     Coords mapToGui(std::shared_ptr<CGui> gui, Coords coords);
+
+    std::shared_ptr<CAnimation> syncProxyAnimation(std::shared_ptr<CGui> gui,
+                                                   const std::shared_ptr<CGameObject> &object,
+                                                   std::shared_ptr<CAnimation> &animation);
 
     void showCoordinates(std::shared_ptr<CGui> &gui, std::list<std::shared_ptr<CGameGraphicsObject>> &return_val,
                          const Coords &actualCoords) const;

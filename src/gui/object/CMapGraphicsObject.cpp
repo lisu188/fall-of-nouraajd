@@ -2,17 +2,25 @@
 #include "CWidget.h"
 #include "core/CController.h"
 #include "core/CLoader.h"
-#include "core/CProvider.h"
 #include "gui/CAnimation.h"
 #include "gui/CLayout.h"
 #include "gui/object/CProxyGraphicsObject.h"
 #include "gui/panel/CGameInventoryPanel.h"
 
 namespace {
-std::shared_ptr<CAnimation> build_proxy_animation(const std::shared_ptr<CGui> &gui,
-                                                  const std::shared_ptr<CGameObject> &object) {
-    auto cached = object->getGraphicsObject();
-    auto animation = CAnimationProvider::getAnimation(gui->getGame(), object);
+std::shared_ptr<CAnimation> clone_proxy_animation(const std::shared_ptr<CGui> &gui,
+                                                  const std::shared_ptr<CAnimation> &cached) {
+    std::shared_ptr<CAnimation> animation;
+    if (vstd::cast<CDynamicAnimation>(cached)) {
+        animation = std::make_shared<CDynamicAnimation>();
+    } else if (vstd::cast<CStaticAnimation>(cached)) {
+        animation = std::make_shared<CStaticAnimation>();
+    } else if (vstd::cast<CSelectionBox>(cached)) {
+        animation = std::make_shared<CSelectionBox>();
+    } else {
+        animation = gui->getGame()->createObject<CAnimation>(cached->meta()->name());
+    }
+    animation->setGame(gui->getGame());
     animation->setPriority(cached->getPriority());
     return animation;
 }
@@ -20,38 +28,57 @@ std::shared_ptr<CAnimation> build_proxy_animation(const std::shared_ptr<CGui> &g
 
 CMapGraphicsObject::CMapGraphicsObject() {}
 
+std::shared_ptr<CAnimation> CMapGraphicsObject::syncProxyAnimation(std::shared_ptr<CGui> gui,
+                                                                   const std::shared_ptr<CGameObject> &object,
+                                                                   std::shared_ptr<CAnimation> &animation) {
+    auto cached = object->getGraphicsObject();
+    if (!animation || animation->meta()->name() != cached->meta()->name()) {
+        animation = clone_proxy_animation(gui, cached);
+    }
+    animation->setObject(object);
+    animation->setPriority(cached->getPriority());
+    return animation;
+}
+
 std::list<std::shared_ptr<CGameGraphicsObject>> CMapGraphicsObject::getProxiedObjects(std::shared_ptr<CGui> gui, int x,
                                                                                       int y) {
     return vstd::with<std::list<std::shared_ptr<CGameGraphicsObject>>>(gui->getGame()->getMap(), [&](auto map) {
         std::list<std::shared_ptr<CGameGraphicsObject>> return_val;
 
         std::shared_ptr<CPlayer> player = gui->getGame()->getMap()->getPlayer();
+        auto proxyCoords = Coords(x, y, player->getCoords().z);
         auto actualCoords = map->normalizeCoords(guiToMap(gui, Coords(x, y, player->getCoords().z)));
+        auto &slot = proxyAnimations[proxyCoords];
 
         std::shared_ptr<CTile> tile = map->getTile(actualCoords.x, actualCoords.y, actualCoords.z);
 
-        return_val.push_back(build_proxy_animation(gui, tile)->withCallback(
-            [actualCoords](std::shared_ptr<CGui> gui, SDL_EventType type, int button, int, int) {
-                if (type == SDL_MOUSEBUTTONDOWN && button == SDL_BUTTON_LEFT) {
-                    auto controller =
-                        vstd::cast<CPlayerController>(gui->getGame()->getMap()->getPlayer()->getController());
-                    if (!controller) {
-                        return false;
-                    }
-                    auto player = gui->getGame()->getMap()->getPlayer();
-                    controller->setTarget(player, actualCoords);
-                    if (!gui->getMap()->isMoving()) {
-                        while (!controller->isCompleted(player)) {
-                            gui->getGame()->getMap()->move();
+        return_val.push_back(
+            syncProxyAnimation(gui, tile, slot.tile)
+                ->withCallback([actualCoords](std::shared_ptr<CGui> gui, SDL_EventType type, int button, int, int) {
+                    if (type == SDL_MOUSEBUTTONDOWN && button == SDL_BUTTON_LEFT) {
+                        auto controller =
+                            vstd::cast<CPlayerController>(gui->getGame()->getMap()->getPlayer()->getController());
+                        if (!controller) {
+                            return false;
                         }
+                        auto player = gui->getGame()->getMap()->getPlayer();
+                        controller->setTarget(player, actualCoords);
+                        if (!gui->getMap()->isMoving()) {
+                            while (!controller->isCompleted(player)) {
+                                gui->getGame()->getMap()->move();
+                            }
+                        }
+                        return true;
                     }
-                    return true;
-                }
-                return false;
-            }));
+                    return false;
+                }));
 
-        for (const auto &ob : map->getObjectsAtCoords(actualCoords)) {
-            return_val.push_back(build_proxy_animation(gui, ob));
+        auto objects = map->getObjectsAtCoords(actualCoords);
+        slot.objects.resize(objects.size());
+        std::size_t objectIndex = 0;
+        for (const auto &ob : objects) {
+            return_val.push_back(syncProxyAnimation(gui, ob, slot.objects[objectIndex]));
+            objectIndex++;
         }
 
         if (map->getBoolProperty("showCoordinates")) {
