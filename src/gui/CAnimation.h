@@ -22,93 +22,95 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 class CGui;
 
 class CAnimation : public CGameGraphicsObject {
-  V_META(CAnimation, CGameGraphicsObject, vstd::meta::empty())
+    V_META(CAnimation, CGameGraphicsObject, vstd::meta::empty())
 
-protected:
-  std::shared_ptr<CGameObject> object; // TODO: try make weak
+  protected:
+    std::shared_ptr<CGameObject> object; // TODO: try make weak
 
-public:
-  CAnimation();
+  public:
+    CAnimation();
 
-  std::shared_ptr<CGameObject> getObject();
+    std::shared_ptr<CGameObject> getObject();
 
-  void setObject(std::shared_ptr<CGameObject> _object);
+    void setObject(std::shared_ptr<CGameObject> _object);
 
-  bool mouseEvent(std::shared_ptr<CGui> sharedPtr, SDL_EventType type,
-                  int button, int x, int y) override;
+    bool mouseEvent(std::shared_ptr<CGui> sharedPtr, SDL_EventType type, int button, int x, int y) override;
 
-  template <typename F> auto withCallback(F f) {
-    callback = f;
-    hasCallback = true;
-    return this->ptr<CAnimation>();
-  }
+    template <typename F> auto withCallback(F f) {
+        callback = f;
+        hasCallback = true;
+        return this->ptr<CAnimation>();
+    }
 
-private:
-  bool hasCallback = false;
+  private:
+    bool hasCallback = false;
 
-  std::function<bool(std::shared_ptr<CGui>, SDL_EventType, int, int, int)>
-      callback = [](auto a, auto b, auto c, auto d, auto e) { return false; };
+    std::function<bool(std::shared_ptr<CGui>, SDL_EventType, int, int, int)> callback =
+        [](auto a, auto b, auto c, auto d, auto e) { return false; };
 };
 
 class CStaticAnimation : public CAnimation {
-  V_META(CStaticAnimation, CAnimation,
-         V_PROPERTY(CStaticAnimation, int, rotation, getRotation, setRotation))
+    V_META(CStaticAnimation, CAnimation, V_PROPERTY(CStaticAnimation, int, rotation, getRotation, setRotation))
 
-public:
-  CStaticAnimation();
+  public:
+    CStaticAnimation();
 
-  void renderObject(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> rect,
-                    int frameTime) override;
+    void renderObject(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> rect, int frameTime) override;
 
-private:
-  int rotation = 0;
+  private:
+    int rotation = 0;
+    bool useColorMod = false;
+    Uint8 colorR = 255;
+    Uint8 colorG = 255;
+    Uint8 colorB = 255;
+    Uint8 colorA = 255;
 
-public:
-  int getRotation() const;
+  public:
+    int getRotation() const;
 
-  void setRotation(int rotation);
+    void setRotation(int rotation);
+
+    void setColorMod(Uint8 r, Uint8 g, Uint8 b, Uint8 a = 255);
+
+    void clearColorMod();
 };
 
 class CDynamicAnimation : public CAnimation {
-  V_META(CDynamicAnimation, CAnimation, V_METHOD(CDynamicAnimation, initialize))
-public:
-  CDynamicAnimation();
+    V_META(CDynamicAnimation, CAnimation, V_METHOD(CDynamicAnimation, initialize))
+  public:
+    CDynamicAnimation();
 
-  void renderObject(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> rect,
-                    int frameTime) override;
+    void renderObject(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> rect, int frameTime) override;
 
-  void initialize();
+    void initialize();
 
-private:
-  static int get_next();
+  private:
+    static int get_next();
 
-  static int get_ttl();
+    static int get_ttl();
 
-  std::vector<std::string> paths;
-  std::vector<int> times;
+    std::vector<std::string> paths;
+    std::vector<int> times;
 
-  vstd::cache<std::string, int, get_next, get_ttl> _offsets;
-  vstd::cache2<std::string, std::vector<int>, get_ttl> _tables;
+    vstd::cache<std::string, int, get_next, get_ttl> _offsets;
+    vstd::cache2<std::string, std::vector<int>, get_ttl> _tables;
 
-  int size = 0;
-  bool initialized = false;
+    int size = 0;
+    bool initialized = false;
 };
 
 class CSelectionBox : public CAnimation {
-  V_META(CSelectionBox, CAnimation,
-         V_PROPERTY(CSelectionBox, int, thickness, getThickness, setThickness))
+    V_META(CSelectionBox, CAnimation, V_PROPERTY(CSelectionBox, int, thickness, getThickness, setThickness))
 
-public:
-  void renderObject(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> rect,
-                    int frameTime) override;
+  public:
+    void renderObject(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> rect, int frameTime) override;
 
-  int getThickness();
+    int getThickness();
 
-  void setThickness(int _thickness);
+    void setThickness(int _thickness);
 
-  bool mouseEvent(std::shared_ptr<CGui> gui, SDL_EventType type, int button,
-                  int x, int y) override;
+    bool mouseEvent(std::shared_ptr<CGui> gui, SDL_EventType type, int button, int x, int y) override;
 
-private:
-  int thickness;
+  private:
+    int thickness;
 };
