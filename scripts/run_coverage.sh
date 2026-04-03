@@ -29,10 +29,12 @@ GAME_BUILD_DIR="${BUILD_DIR}" python3 test.py
 mkdir -p "${REPORT_DIR}"
 
 if command -v gcovr >/dev/null 2>&1; then
+    # gcov can emit negative branch counts for some files; keep reporting and the line gate intact.
     gcovr \
         --root "${ROOT_DIR}" \
         --object-directory "${BUILD_DIR}" \
         --gcov-ignore-errors source_not_found --gcov-ignore-errors no_working_dir_found \
+        --gcov-ignore-parse-errors negative_hits.warn_once_per_file \
         --filter "${ROOT_DIR}/src/core" \
         --filter "${ROOT_DIR}/src/handler" \
         --filter "${ROOT_DIR}/src/object" \
