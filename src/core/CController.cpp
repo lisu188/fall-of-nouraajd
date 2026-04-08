@@ -32,7 +32,7 @@ bool creature_can_follow_step(const std::shared_ptr<CCreature> &creature, const 
     auto map = creature->getMap();
     auto current = map->normalizeCoords(creature->getCoords());
     auto target = map->normalizeCoords(step);
-    return target != current && map->canStep(target) && creature->getMovePoints() >= map->getMovementCost(target);
+    return target != current && map->canStep(target);
 }
 } // namespace
 
@@ -48,8 +48,7 @@ std::shared_ptr<vstd::future<Coords, void>> CTargetController::control(std::shar
         [creature](const Coords &coords) { return creature->getMap()->canStep(coords); },
         [](auto) { return std::make_pair(false, ZERO); },
         [creature](const Coords &coords) { return creature->getMap()->getAdjacentCoords(coords); },
-        [creature](const Coords &from, const Coords &to) { return creature->getMap()->getDistance(from, to); },
-        [creature](const Coords &, const Coords &to) { return creature->getMap()->getMovementCost(to); });
+        [creature](const Coords &from, const Coords &to) { return creature->getMap()->getDistance(from, to); });
 }
 
 std::shared_ptr<vstd::future<Coords, void>> CController::control(std::shared_ptr<CCreature> c) {
@@ -98,9 +97,6 @@ std::shared_ptr<vstd::future<Coords, void>> CNpcRandomController::control(std::s
                         [creature](const Coords &coords) { return creature->getMap()->getAdjacentCoords(coords); },
                         [creature](const Coords &from, const Coords &to) {
                             return creature->getMap()->getDistance(from, to);
-                        },
-                        [creature](const Coords &, const Coords &to) {
-                            return creature->getMap()->getMovementCost(to);
                         });
                     self->currentStep = 0;
                     break;
@@ -242,177 +238,76 @@ std::shared_ptr<CInteraction> CMonsterFightController::selectInteraction(std::sh
 std::shared_ptr<vstd::future<Coords, void>> CPlayerController::control(std::shared_ptr<CCreature> c) {
     auto player = vstd::cast<CPlayer>(c);
     return vstd::now([this, player]() {
-        Coords next;
-        auto status = getPathStatus(player, &next);
-        waitingForNextTurn = status == PathStatus::WaitingForNextTurn;
-        if (status != PathStatus::Ready) {
+        if (!canContinue(player)) {
             return player->getCoords();
         }
-        return next;
+        return path.at(currentStep);
     });
 }
 
 void CPlayerController::setTarget(std::shared_ptr<CPlayer> player, Coords _target) {
     target = std::make_shared<Coords>(player->getMap()->normalizeCoords(_target));
-    if (!recalculatePath(player)) {
-        clearPath();
+    path.clear();
+    currentStep = 0;
+    auto _path = calculatePath(player);
+    for (int i = 0; i < static_cast<int>(_path.size()); i++) {
+        path[i] = _path[i];
     }
 }
 
-void CPlayerController::onStepCommitted(std::shared_ptr<CCreature> creature, const Coords &coords) {
-    if (currentStep < static_cast<int>(path.size()) && path[currentStep] == coords) {
+void CPlayerController::onStepCommitted(std::shared_ptr<CCreature>, const Coords &coords) {
+    auto it = path.find(currentStep);
+    if (it != path.end() && it->second == coords) {
         currentStep++;
-        rebuildPathStepInfoCache(vstd::cast<CPlayer>(creature));
     } else {
         clearPath();
     }
 }
 
-void CPlayerController::interrupt(std::shared_ptr<CCreature> creature) {
-    auto player = vstd::cast<CPlayer>(creature);
-    if (waitingForNextTurn && player && target && player->getMap() &&
-        player->getCoords() != player->getMap()->normalizeCoords(*target)) {
-        waitingForNextTurn = false;
-        return;
-    }
-    clearPath();
-}
+void CPlayerController::interrupt(std::shared_ptr<CCreature>) { clearPath(); }
 
-void CPlayerController::onTurnEnded(std::shared_ptr<CCreature>) { waitingForNextTurn = false; }
+void CPlayerController::onTurnEnded(std::shared_ptr<CCreature>) {}
 
 // TODO: add stopping when obstacle found
-CPlayerController::PathStepInfo CPlayerController::getPathStepInfo(std::shared_ptr<CPlayer> player, Coords coords) {
-    PathStepInfo info;
-    if (!target || !player || !player->getMap() || pathStepInfoCache.empty()) {
-        return info;
-    }
-
-    auto map = player->getMap();
-    auto normalizedCoords = map->normalizeCoords(coords);
-    auto cached = pathStepInfoCache.find(normalizedCoords);
-    if (cached == pathStepInfoCache.end()) {
-        return info;
-    }
-
-    if (pathStepInfoRevision != map->getNavigationRevision() || !map->canStep(normalizedCoords)) {
-        if (!recalculatePath(player)) {
-            clearPath();
-            return info;
-        }
-        cached = pathStepInfoCache.find(normalizedCoords);
-        if (cached == pathStepInfoCache.end() || !map->canStep(normalizedCoords)) {
-            return info;
+std::pair<bool, Coords::Direction> CPlayerController::isOnPath(std::shared_ptr<CPlayer> player, Coords coords) {
+    if (!isCompleted(player)) {
+        for (auto it : path | boost::adaptors::filtered([this](auto it) { return it.first >= currentStep - 1; })) {
+            if (it.second == coords) {
+                auto prev = it.first > 0 ? path[it.first - 1] : player->getCoords();
+                auto dir = player->getMap()->getShortestDelta(prev, coords);
+                return std::make_pair(true, CUtil::getDirection(dir));
+            }
         }
     }
-
-    info.onPath = true;
-    info.direction = cached->second.direction;
-    info.reachableThisTurn = cached->second.cumulativeCost <= player->getMovePoints();
-    return info;
+    return std::make_pair(false, Coords::Direction::ZERO);
 }
 
-bool CPlayerController::recalculatePath(std::shared_ptr<CPlayer> player) {
-    if (!target || !player || !player->getMap()) {
-        return false;
-    }
-
-    auto map = player->getMap();
-    *target = map->normalizeCoords(*target);
-    if (player->getCoords() == *target || !map->canStep(*target)) {
-        path.clear();
-        pathStepInfoCache.clear();
-        currentStep = 0;
-        waitingForNextTurn = false;
-        return false;
-    }
-
-    path = calculatePath(player);
-    currentStep = 0;
-    waitingForNextTurn = false;
-    rebuildPathStepInfoCache(player);
-    return !path.empty() && path.front() != player->getCoords();
-}
-
-bool CPlayerController::isCompleted(std::shared_ptr<CPlayer> player) {
-    return getPathStatus(player) == PathStatus::Invalid;
-}
-
-void CPlayerController::rebuildPathStepInfoCache(std::shared_ptr<CPlayer> player) {
-    pathStepInfoCache.clear();
-    pathStepInfoRevision = player && player->getMap() ? player->getMap()->getNavigationRevision() : 0;
-    if (!player || !player->getMap() || currentStep < 0 || currentStep >= static_cast<int>(path.size())) {
-        return;
-    }
-
-    auto map = player->getMap();
-    int pathCost = 0;
-    Coords previous = map->normalizeCoords(player->getCoords());
-    for (int i = currentStep; i < static_cast<int>(path.size()); i++) {
-        auto step = map->normalizeCoords(path[i]);
-        if (!map->canStep(step)) {
-            break;
-        }
-
-        pathCost += map->getMovementCost(step);
-        pathStepInfoCache[step] = {CUtil::getDirection(map->getShortestDelta(previous, step)), pathCost};
-        previous = step;
-    }
-}
+bool CPlayerController::isCompleted(std::shared_ptr<CPlayer> player) { return !hasPendingPath(player); }
 
 void CPlayerController::clearPath() {
     target.reset();
     path.clear();
-    pathStepInfoCache.clear();
-    pathStepInfoRevision = 0;
     currentStep = 0;
-    waitingForNextTurn = false;
 }
 
-CPlayerController::PathStatus CPlayerController::getPathStatus(std::shared_ptr<CPlayer> player, Coords *nextStep) {
-    if (!target || !player || !player->getMap()) {
-        return PathStatus::Invalid;
+bool CPlayerController::hasPendingPath(std::shared_ptr<CPlayer> player) {
+    if (!target || currentStep < 0 || !player || !player->getMap()) {
+        return false;
     }
-
     auto map = player->getMap();
-    *target = map->normalizeCoords(*target);
-    if (player->getCoords() == *target || !map->canStep(*target)) {
-        return PathStatus::Invalid;
+    auto normalized_target = map->normalizeCoords(*target);
+    if (player->getCoords() == normalized_target || !map->canStep(normalized_target)) {
+        return false;
     }
-
-    if (currentStep < 0 || currentStep >= static_cast<int>(path.size())) {
-        if (!recalculatePath(player)) {
-            return PathStatus::Invalid;
-        }
+    auto it = path.find(currentStep);
+    if (it == path.end()) {
+        return false;
     }
-
-    auto next = map->normalizeCoords(path[currentStep]);
-    if (next == player->getCoords()) {
-        currentStep++;
-        if (currentStep >= static_cast<int>(path.size())) {
-            return PathStatus::Invalid;
-        }
-        next = map->normalizeCoords(path[currentStep]);
-    }
-
-    if (!map->canStep(next)) {
-        if (!recalculatePath(player)) {
-            return PathStatus::Invalid;
-        }
-        next = map->normalizeCoords(path[currentStep]);
-        if (next == player->getCoords() || !map->canStep(next)) {
-            return PathStatus::Invalid;
-        }
-    }
-
-    if (player->getMovePoints() < map->getMovementCost(next)) {
-        return PathStatus::WaitingForNextTurn;
-    }
-
-    if (nextStep) {
-        *nextStep = next;
-    }
-    return PathStatus::Ready;
+    auto next = map->normalizeCoords(it->second);
+    return next != player->getCoords() && map->canStep(next);
 }
+
+bool CPlayerController::canContinue(std::shared_ptr<CPlayer> player) { return hasPendingPath(player); }
 
 std::vector<Coords> CPlayerController::calculatePath(std::shared_ptr<CPlayer> player) {
     return CPathFinder::findPath(
@@ -427,8 +322,7 @@ std::vector<Coords> CPlayerController::calculatePath(std::shared_ptr<CPlayer> pl
             return std::make_pair(false, ZERO);
         },
         [player](const Coords &coords) { return player->getMap()->getAdjacentCoords(coords); },
-        [player](const Coords &from, const Coords &to) { return player->getMap()->getDistance(from, to); },
-        [player](const Coords &, const Coords &to) { return player->getMap()->getMovementCost(to); });
+        [player](const Coords &from, const Coords &to) { return player->getMap()->getDistance(from, to); });
 }
 
 bool CFightController::control(std::shared_ptr<CCreature> me, std::shared_ptr<CCreature> opponent) {

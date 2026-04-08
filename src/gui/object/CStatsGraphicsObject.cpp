@@ -28,9 +28,7 @@ void CStatsGraphicsUtil::drawStats(std::shared_ptr<CGui> gui, std::shared_ptr<CC
         return;
     }
 
-    const int barCount = showExp ? 4 : 3;
-    const int movePointsMax = std::max(1, creature->getMovePointsMax());
-    const int movePointRatio = creature->getMovePoints() * 100 / movePointsMax;
+    const int barCount = showExp ? 3 : 2;
 
     drawBar(gui, creature->getHpRatio(), 0, barCount, RED, x, y, w, h);
     if (showNumeric) {
@@ -40,14 +38,10 @@ void CStatsGraphicsUtil::drawStats(std::shared_ptr<CGui> gui, std::shared_ptr<CC
     if (showNumeric) {
         drawValues(gui, creature->getMana(), creature->getManaMax(), 1, barCount, x, y, w, h);
     }
-    drawBar(gui, movePointRatio, 2, barCount, 255, 255, 255, 0, x, y, w, h);
-    if (showNumeric) {
-        drawValues(gui, creature->getMovePoints(), creature->getMovePointsMax(), 2, barCount, x, y, w, h);
-    }
     if (showExp) {
-        drawBar(gui, creature->getExpRatio(), 3, barCount, YELLOW, x, y, w, h);
+        drawBar(gui, creature->getExpRatio(), 2, barCount, YELLOW, x, y, w, h);
         if (showNumeric) {
-            drawValues(gui, creature->getExp(), creature->getExpForNextLevel(), 3, barCount, x, y, w, h);
+            drawValues(gui, creature->getExp(), creature->getExpForNextLevel(), 2, barCount, x, y, w, h);
         }
     }
 }
