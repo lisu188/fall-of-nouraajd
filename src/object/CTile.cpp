@@ -16,7 +16,6 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #include "CTile.h"
-#include <algorithm>
 #include "CCreature.h"
 #include "core/CGame.h"
 #include "core/CMap.h"
@@ -47,10 +46,6 @@ void CTile::onStep(std::shared_ptr<CCreature> creature) {
 bool CTile::canStep() const { return step; }
 
 void CTile::setCanStep(bool canStep) { this->step = canStep; }
-
-int CTile::getMovementCost() const { return movementCost; }
-
-void CTile::setMovementCost(int value) { movementCost = std::max(1, value); }
 
 int CTile::getPosx() const { return posx; }
 

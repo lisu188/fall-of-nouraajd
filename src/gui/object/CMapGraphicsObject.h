@@ -63,6 +63,6 @@ class CMapGraphicsObject : public CProxyTargetGraphicsObject {
     void showCoordinates(std::shared_ptr<CGui> &gui, std::list<std::shared_ptr<CGameGraphicsObject>> &return_val,
                          const Coords &actualCoords) const;
 
-    void showFootprint(std::shared_ptr<CGui> &gui, Coords::Direction dir, bool reachableThisTurn,
+    void showFootprint(std::shared_ptr<CGui> &gui, Coords::Direction dir,
                        std::list<std::shared_ptr<CGameGraphicsObject>> &return_val) const;
 };

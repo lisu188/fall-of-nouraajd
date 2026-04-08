@@ -213,7 +213,6 @@ PYBIND11_MODULE(_game, m) {
         .value("BUFF", CTag::Buff)
         .value("HEAL", CTag::Heal)
         .value("MANA", CTag::Mana)
-        .value("MOVE", CTag::Move)
         .value("QUEST", CTag::Quest)
         .value("STUN", CTag::Stun)
         .value("WAND", CTag::Wand);
@@ -305,7 +304,8 @@ PYBIND11_MODULE(_game, m) {
         .def("getObjectByName", &CMap::getObjectByName, "Return a map object by name or None.")
         .def("forObjects", &CMap::forObjects, "Apply a callback for objects matching an optional predicate.")
         .def("canStep", canStep, "Return whether coordinates are walkable.")
-        .def("getMovementCost", getMovementCost, "Return tile movement cost at coordinates.")
+        .def("getMovementCost", getMovementCost,
+             "Return movement cost at coordinates. One-step turns treat every tile as cost 1.")
         .def("dumpPaths", &CMap::dumpPaths, "Write pathfinding diagnostics to a file path.")
         .def("getEntryX", &CMap::getEntryX, "Return map entry X coordinate.")
         .def("getEntryY", &CMap::getEntryY, "Return map entry Y coordinate.")
@@ -438,10 +438,7 @@ PYBIND11_MODULE(_game, m) {
 
     auto ctile =
         py::class_<CTile, CWrapper<CTile>, std::shared_ptr<CTile>, CGameObject>(m, "CTile", "Base tile class.");
-    ctile.def(py::init_alias<>())
-        .def("getMovementCost", &CTile::getMovementCost, "Return positive movement cost for entering this tile.")
-        .def("setMovementCost", &CTile::setMovementCost, "Set positive movement cost for entering this tile.")
-        .def("onStep", &CTile::onStep, "Handle a creature stepping on this tile.");
+    ctile.def(py::init_alias<>()).def("onStep", &CTile::onStep, "Handle a creature stepping on this tile.");
     m.attr("CTileBase") = ctile;
 
     py::class_<CItem, CMapObject, std::shared_ptr<CItem>>(m, "CItem", "Base inventory/equipment item.");
@@ -573,16 +570,12 @@ PYBIND11_MODULE(_game, m) {
         .def("getHpRatio", &CCreature::getHpRatio, "Return HP percentage (0-100).")
         .def("isAlive", &CCreature::isAlive, "Return whether HP is above zero.")
         .def("getMana", &CCreature::getMana, "Return current mana.")
-        .def("getMovePoints", &CCreature::getMovePoints, "Return current move points.")
         .def("healProc", &CCreature::healProc, "Restore HP by percentage of max HP.")
         .def("heal", &CCreature::heal, "Restore HP by fixed amount (0 means full heal).")
         .def("getHpMax", &CCreature::getHpMax, "Return maximum HP.")
-        .def("getMovePointsMax", &CCreature::getMovePointsMax, "Return per-turn maximum move points.")
         .def("getLevel", &CCreature::getLevel, "Return level.")
         .def("getStats", &CCreature::getStats, "Return aggregated combat stats.")
         .def("addManaProc", &CCreature::addManaProc, "Restore mana by percentage of max mana.")
-        .def("addMovePoints", &CCreature::addMovePoints,
-             "Restore move points by amount (0 means restore to full for this turn).")
         .def("isPlayer", &CCreature::isPlayer, "Return whether this creature is the active player.")
         .def("isNpc", &CCreature::isNpc, "Return whether this creature is marked as NPC.")
         .def("getController", &CCreature::getController, "Return the movement controller.")
@@ -591,14 +584,11 @@ PYBIND11_MODULE(_game, m) {
         .def("setFightController", &CCreature::setFightController, "Set the fight controller.")
         .def("setHp", &CCreature::setHp, "Set current HP.")
         .def("setMana", &CCreature::setMana, "Set current mana.")
-        .def("setMovePoints", &CCreature::setMovePoints, "Set current move points.")
         .def("addExp", &CCreature::addExp, "Add experience and trigger level ups when thresholds are reached.")
         .def("getGold", &CCreature::getGold, "Return current gold.")
         .def("addGold", &CCreature::addGold, "Add gold to the creature inventory.")
         .def("takeGold", &CCreature::takeGold, "Remove gold from the creature inventory.")
         .def("takeMana", &CCreature::takeMana, "Consume mana, clamped at zero.")
-        .def("resetMovePoints", &CCreature::resetMovePoints, "Restore move points to this turn's maximum.")
-        .def("spendMovePoints", &CCreature::spendMovePoints, "Spend move points if enough remain.")
         .def("useAction", &CCreature::useAction, "Use an interaction/action against another creature.")
         .def("useItem", &CCreature::useItem, "Use an inventory item if it is currently usable.")
         .def("hasItem", hasItem, "Return whether any inventory item matches predicate(item) -> bool.")

@@ -1395,145 +1395,6 @@ class GameTest(unittest.TestCase):
         )
 
     @game_test
-    def test_weighted_player_path_respects_move_budget(self):
-        game = load_game_module()
-        g, game_map, player = load_game_map_with_player("test", "Warrior")
-        game_map.removeAll(lambda obj: obj.getName() != "player")
-
-        start = player.getCoords()
-        self.assertEqual(player.getMovePointsMax(), 10 + player.getLevel() // 2)
-        self.assertEqual(player.getMovePoints(), player.getMovePointsMax())
-
-        goal = game.Coords(start.x + 9, start.y, start.z)
-        road_tiles = [
-            game.Coords(start.x, start.y - 1, start.z),
-            game.Coords(start.x + 1, start.y - 1, start.z),
-            game.Coords(start.x + 2, start.y - 1, start.z),
-            game.Coords(start.x + 3, start.y - 1, start.z),
-            game.Coords(start.x + 4, start.y - 1, start.z),
-            game.Coords(start.x + 5, start.y - 1, start.z),
-            game.Coords(start.x + 6, start.y - 1, start.z),
-            game.Coords(start.x + 7, start.y - 1, start.z),
-            game.Coords(start.x + 8, start.y - 1, start.z),
-            game.Coords(start.x + 9, start.y - 1, start.z),
-            goal,
-        ]
-        swamp_tiles = [
-            game.Coords(start.x + 1, start.y, start.z),
-            game.Coords(start.x + 2, start.y, start.z),
-            game.Coords(start.x + 3, start.y, start.z),
-            game.Coords(start.x + 4, start.y, start.z),
-            game.Coords(start.x + 5, start.y, start.z),
-            game.Coords(start.x + 6, start.y, start.z),
-            game.Coords(start.x + 7, start.y, start.z),
-            game.Coords(start.x + 8, start.y, start.z),
-        ]
-        for coords in road_tiles:
-            game_map.replaceTile("RoadTile", coords)
-        for coords in swamp_tiles:
-            game_map.replaceTile("SwampTile", coords)
-
-        controller = set_player_target(player, goal)
-        turn_before = game_map.getTurn()
-        game_map.move()
-
-        coords = player.getCoords()
-        expected = (start.x + 9, start.y - 1, start.z)
-        self.assertEqual((coords.x, coords.y, coords.z), expected)
-        self.assertEqual(game_map.getTurn(), turn_before + 1)
-        self.assertEqual(player.getMovePoints(), 0)
-        self.assertFalse(controller.isCompleted(player))
-        move_points_after_budgeted_turn = player.getMovePoints()
-
-        turn_after_path = game_map.getTurn()
-        game_map.move()
-        coords_after = player.getCoords()
-        self.assertEqual((coords_after.x, coords_after.y, coords_after.z), (goal.x, goal.y, goal.z))
-        self.assertEqual(game_map.getTurn(), turn_after_path + 1)
-        self.assertEqual(player.getMovePoints(), player.getMovePointsMax() - 1)
-        self.assertTrue(controller.isCompleted(player))
-
-        return True, json.dumps(
-            {
-                "start": [start.x, start.y, start.z],
-                "after_budgeted_turn": [coords.x, coords.y, coords.z],
-                "after_idle_turn": [coords_after.x, coords_after.y, coords_after.z],
-                "final_goal": [coords_after.x, coords_after.y, coords_after.z],
-                "move_points_after_budgeted_turn": move_points_after_budgeted_turn,
-                "move_points_max": player.getMovePointsMax(),
-            },
-            sort_keys=True,
-        )
-
-    @game_test
-    def test_move_potion_restores_points_and_is_not_consumed_when_full(self):
-        g, _game_map, player = load_game_map_with_player("nouraajd", "Wayfarer")
-
-        while player.countItems("WayfarersDraught") > 0:
-            player.removeItem(lambda it: it.getTypeId() == "WayfarersDraught", True)
-
-        potion = g.createObject("WayfarersDraught")
-        player.addItem(potion)
-
-        full_move_points = player.getMovePointsMax()
-        self.assertEqual(player.getMovePoints(), full_move_points)
-        player.useItem(potion)
-        self.assertEqual(player.getMovePoints(), full_move_points)
-        self.assertEqual(player.countItems("WayfarersDraught"), 1)
-
-        player.setMovePoints(max(0, full_move_points - 1))
-        player.useItem(potion)
-        self.assertEqual(player.getMovePoints(), full_move_points)
-        self.assertEqual(player.countItems("WayfarersDraught"), 0)
-
-        return True, json.dumps(
-            {
-                "full_move_points": full_move_points,
-                "after_restore": player.getMovePoints(),
-                "remaining_potions": player.countItems("WayfarersDraught"),
-            },
-            sort_keys=True,
-        )
-
-    @game_test
-    def test_move_points_reset_and_scale_with_level(self):
-        g, game_map, player = load_game_map_with_player("test", "Warrior")
-        game_map.removeAll(lambda obj: obj.getName() != "player")
-
-        initial_level = player.getLevel()
-        initial_max = player.getMovePointsMax()
-        player.setMovePoints(0)
-        game_map.move()
-        self.assertEqual(player.getMovePoints(), initial_max)
-
-        player.setMovePoints(0)
-        player.addExp(1000)
-        self.assertEqual(player.getLevel(), initial_level + 1)
-        self.assertEqual(player.getMovePointsMax(), 10 + player.getLevel() // 2)
-        self.assertGreater(player.getMovePointsMax(), initial_max)
-        self.assertEqual(player.getMovePoints(), player.getMovePointsMax())
-
-        creature = g.createObject("GoblinThief")
-        creature.setController(g.createObject("CController"))
-        game_map.addObject(creature)
-        creature.moveTo(player.getCoords().x + 2, player.getCoords().y, player.getCoords().z)
-        creature.setMovePoints(0)
-        game_map.move()
-        self.assertEqual(creature.getMovePoints(), creature.getMovePointsMax())
-
-        return True, json.dumps(
-            {
-                "initial_level": initial_level,
-                "initial_max": initial_max,
-                "leveled_level": player.getLevel(),
-                "leveled_max": player.getMovePointsMax(),
-                "npc_max": creature.getMovePointsMax(),
-                "npc_after_reset": creature.getMovePoints(),
-            },
-            sort_keys=True,
-        )
-
-    @game_test
     def test_lava_tile_is_walkable(self):
         game = load_game_module()
         g, game_map, player = load_game_map_with_player("test", "Warrior")
@@ -1549,13 +1410,11 @@ class GameTest(unittest.TestCase):
 
         coords = player.getCoords()
         self.assertEqual((coords.x, coords.y, coords.z), (lava.x, lava.y, lava.z))
-        self.assertEqual(player.getMovePoints(), player.getMovePointsMax() - game_map.getMovementCost(lava))
 
         return True, json.dumps(
             {
                 "lava": [lava.x, lava.y, lava.z],
-                "move_points_left": player.getMovePoints(),
-                "move_points_max": player.getMovePointsMax(),
+                "player": [coords.x, coords.y, coords.z],
             },
             sort_keys=True,
         )
@@ -1939,7 +1798,6 @@ class GameTest(unittest.TestCase):
         mana_max = main_value * 7
 
         recovered_player.setMana(0)
-        recovered_player.setMovePoints(0)
         game_map.move()
         mana_after_first_turn = recovered_player.getMana()
         game_map.move()
@@ -2528,15 +2386,12 @@ class GameTest(unittest.TestCase):
         game.CGameLoader.startGameWithPlayer(g, "siege", "Warrior")
 
         heal_potion = g.createObject("LesserLifePotion")
-        move_potion = g.createObject("WayfarersDraught")
         barrier_effect = g.createObject("BarrierEffect")
         magic_wand = g.createObject("magicWand")
         chloroform_effect = g.createObject("ChloroformEffect")
 
         self.assertTrue(heal_potion.hasTag(game.CTag.HEAL))
         self.assertTrue(heal_potion.hasTag("heal"))
-        self.assertTrue(move_potion.hasTag(game.CTag.MOVE))
-        self.assertTrue(move_potion.hasTag("move"))
         self.assertTrue(barrier_effect.hasTag(game.CTag.BUFF))
         self.assertTrue(magic_wand.hasTag(game.CTag.QUEST))
         self.assertTrue(magic_wand.hasTag(game.CTag.WAND))
@@ -2573,7 +2428,6 @@ class GameTest(unittest.TestCase):
         report = {
             "enum_checks": {
                 "heal": heal_potion.hasTag(game.CTag.HEAL),
-                "move": move_potion.hasTag(game.CTag.MOVE),
                 "buff": barrier_effect.hasTag(game.CTag.BUFF),
                 "quest": magic_wand.hasTag(game.CTag.QUEST),
                 "wand": magic_wand.hasTag(game.CTag.WAND),

@@ -28,7 +28,6 @@ enum class CTag {
     Buff,
     Heal,
     Mana,
-    Move,
     Quest,
     Stun,
     Wand,

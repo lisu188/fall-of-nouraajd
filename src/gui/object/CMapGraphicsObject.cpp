@@ -86,10 +86,10 @@ std::list<std::shared_ptr<CGameGraphicsObject>> CMapGraphicsObject::getProxiedOb
         }
 
         auto playerController = vstd::cast<CPlayerController>(player->getController());
-        auto path = playerController ? playerController->getPathStepInfo(player, actualCoords)
-                                     : CPlayerController::PathStepInfo();
-        if (path.onPath) {
-            showFootprint(gui, path.direction, path.reachableThisTurn, return_val);
+        auto path = playerController ? playerController->isOnPath(player, actualCoords)
+                                     : std::make_pair(false, Coords::UNDEFINED);
+        if (path.first) {
+            showFootprint(gui, path.second, return_val);
         }
 
         return return_val;
@@ -111,10 +111,9 @@ void CMapGraphicsObject::showCoordinates(std::shared_ptr<CGui> &gui,
     return_val.push_back(countBox);
 }
 
-void CMapGraphicsObject::showFootprint(std::shared_ptr<CGui> &gui, Coords::Direction dir, bool reachableThisTurn,
+void CMapGraphicsObject::showFootprint(std::shared_ptr<CGui> &gui, Coords::Direction dir,
                                        std::list<std::shared_ptr<CGameGraphicsObject>> &return_val) const {
     auto footprint = vstd::cast<CStaticAnimation>(CAnimationProvider::getAnimation(gui->getGame(), "images/footprint"));
-    footprint->setColorMod(reachableThisTurn ? 0 : 255, reachableThisTurn ? 0 : 255, reachableThisTurn ? 0 : 0);
     switch (dir) {
     case Coords::EAST:
         footprint->setRotation(90);

@@ -42,22 +42,11 @@ class CPlayerController : public CController {
     V_META(CPlayerController, CController, vstd::meta::empty())
 
   public:
-    struct PathStepInfo {
-        bool onPath = false;
-        Coords::Direction direction = Coords::Direction::UNDEFINED;
-        bool reachableThisTurn = false;
-    };
-
-    struct CachedPathStep {
-        Coords::Direction direction = Coords::Direction::UNDEFINED;
-        int cumulativeCost = 0;
-    };
-
     void setTarget(std::shared_ptr<CPlayer> player, Coords target);
 
     virtual std::shared_ptr<vstd::future<Coords, void>> control(std::shared_ptr<CCreature> c);
 
-    PathStepInfo getPathStepInfo(std::shared_ptr<CPlayer> player, Coords coords);
+    std::pair<bool, Coords::Direction> isOnPath(std::shared_ptr<CPlayer> player, Coords coords);
 
     bool isCompleted(std::shared_ptr<CPlayer> player);
 
@@ -68,24 +57,17 @@ class CPlayerController : public CController {
     void onTurnEnded(std::shared_ptr<CCreature> creature) override;
 
   private:
-    enum class PathStatus { Invalid, WaitingForNextTurn, Ready };
-
     std::shared_ptr<Coords> target;
-    std::vector<Coords> path;
-    std::unordered_map<Coords, CachedPathStep> pathStepInfoCache;
-    std::uint64_t pathStepInfoRevision = 0;
+    std::unordered_map<int, Coords> path;
     int currentStep = 0;
-    bool waitingForNextTurn = false;
 
     std::vector<Coords> calculatePath(std::shared_ptr<CPlayer> ptr);
 
-    bool recalculatePath(std::shared_ptr<CPlayer> player);
-
-    void rebuildPathStepInfoCache(std::shared_ptr<CPlayer> player);
-
     void clearPath();
 
-    PathStatus getPathStatus(std::shared_ptr<CPlayer> player, Coords *nextStep = nullptr);
+    bool hasPendingPath(std::shared_ptr<CPlayer> player);
+
+    bool canContinue(std::shared_ptr<CPlayer> player);
 };
 
 class CFightController : public CGameObject {

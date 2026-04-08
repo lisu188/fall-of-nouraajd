@@ -207,8 +207,8 @@ bool CMap::canStep(int x, int y, int z) {
 bool CMap::canStep(Coords coords) { return canStep(coords.x, coords.y, coords.z); }
 
 int CMap::getMovementCost(int x, int y, int z) {
-    auto tile = getTile(x, y, z);
-    return tile ? tile->getMovementCost() : 1;
+    getTile(x, y, z);
+    return 1;
 }
 
 int CMap::getMovementCost(Coords coords) {
@@ -232,7 +232,6 @@ void CMap::addObject(const std::shared_ptr<CMapObject> &mapObject) {
             creature->addMana(0);
         }
         creature->addExp(0);
-        creature->resetMovePoints();
     }
     mapObjects.insert(std::make_pair(mapObject->getName(), mapObject));
     bumpNavigationRevision();
@@ -346,75 +345,59 @@ void CMap::move() {
 
     auto pred = [is_active_creature](std::shared_ptr<CMapObject> object) {
         auto creature = vstd::cast<CCreature>(object);
-        return creature && vstd::castable<Moveable>(object) && is_active_creature(creature) &&
-               creature->getMovePoints() > 0;
+        return creature && vstd::castable<Moveable>(object) && is_active_creature(creature);
     };
 
-    bool progressed = true;
-    while (progressed) {
-        progressed = false;
+    std::shared_ptr<std::list<std::pair<std::shared_ptr<CCreature>, Coords>>> coordinates =
+        std::make_shared<std::list<std::pair<std::shared_ptr<CCreature>, Coords>>>();
 
-        std::shared_ptr<std::list<std::pair<std::shared_ptr<CCreature>, Coords>>> coordinates =
-            std::make_shared<std::list<std::pair<std::shared_ptr<CCreature>, Coords>>>();
+    std::vector<std::shared_ptr<CMapObject>> active_objects;
+    for (auto object : map->mapObjects | boost::adaptors::map_values | boost::adaptors::filtered(pred)) {
+        active_objects.push_back(object);
+    }
 
-        std::vector<std::shared_ptr<CMapObject>> active_objects;
-        for (auto object : map->mapObjects | boost::adaptors::map_values | boost::adaptors::filtered(pred)) {
-            active_objects.push_back(object);
+    auto controller = [coordinates](std::shared_ptr<CMapObject> object) {
+        auto creature = vstd::cast<CCreature>(object);
+        return creature->getController()->control(creature)->thenLater(
+            [creature, coordinates](Coords coords) { coordinates->push_back(std::make_pair(creature, coords)); });
+    };
+
+    auto pending = active_objects | boost::adaptors::transformed(controller);
+    auto joined = vstd::join(pending);
+
+    bool round_complete = false;
+    joined->thenLater([&round_complete](std::set<void *>) { round_complete = true; });
+    vstd::wait_until([&round_complete]() { return round_complete; });
+
+    for (auto [creature, coords] : *coordinates) {
+        auto controller_ptr = creature->getController();
+        if (!is_active_creature(creature)) {
+            controller_ptr->interrupt(creature);
+            continue;
         }
-        if (active_objects.empty()) {
-            break;
+
+        auto current = map->normalizeCoords(creature->getCoords());
+        auto target = map->normalizeCoords(coords);
+        if (target == current) {
+            controller_ptr->interrupt(creature);
+            continue;
+        }
+        if (!map->canStep(target)) {
+            controller_ptr->interrupt(creature);
+            continue;
         }
 
-        auto controller = [coordinates](std::shared_ptr<CMapObject> object) {
-            auto creature = vstd::cast<CCreature>(object);
-            return creature->getController()->control(creature)->thenLater(
-                [creature, coordinates](Coords coords) { coordinates->push_back(std::make_pair(creature, coords)); });
-        };
+        const bool interrupt_after_step = should_interrupt_after_step(creature, target);
+        creature->moveTo(target);
 
-        auto pending = active_objects | boost::adaptors::transformed(controller);
-        auto joined = vstd::join(pending);
+        if (!is_active_creature(creature) || map->normalizeCoords(creature->getCoords()) != target) {
+            controller_ptr->interrupt(creature);
+            continue;
+        }
 
-        bool round_complete = false;
-        joined->thenLater([&round_complete](std::set<void *>) { round_complete = true; });
-        vstd::wait_until([&round_complete]() { return round_complete; });
-
-        for (auto [creature, coords] : *coordinates) {
-            auto controller_ptr = creature->getController();
-            if (!is_active_creature(creature)) {
-                controller_ptr->interrupt(creature);
-                continue;
-            }
-
-            auto current = map->normalizeCoords(creature->getCoords());
-            auto target = map->normalizeCoords(coords);
-            if (target == current) {
-                controller_ptr->interrupt(creature);
-                continue;
-            }
-            if (!map->canStep(target)) {
-                controller_ptr->interrupt(creature);
-                continue;
-            }
-
-            const int movement_cost = map->getMovementCost(target);
-            if (!creature->spendMovePoints(movement_cost)) {
-                controller_ptr->interrupt(creature);
-                continue;
-            }
-
-            const bool interrupt_after_step = should_interrupt_after_step(creature, target);
-            creature->moveTo(target);
-            progressed = true;
-
-            if (!is_active_creature(creature) || map->normalizeCoords(creature->getCoords()) != target) {
-                controller_ptr->interrupt(creature);
-                continue;
-            }
-
-            controller_ptr->onStepCommitted(creature, target);
-            if (interrupt_after_step) {
-                controller_ptr->interrupt(creature);
-            }
+        controller_ptr->onStepCommitted(creature, target);
+        if (interrupt_after_step) {
+            controller_ptr->interrupt(creature);
         }
     }
 

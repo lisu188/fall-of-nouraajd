@@ -41,11 +41,6 @@ CCreature::CCreature() {}
 
 CCreature::~CCreature() {}
 
-void CCreature::onTurn(std::shared_ptr<CGameEvent> event) {
-    resetMovePoints();
-    CMapObject::onTurn(event);
-}
-
 void CCreature::addExpScaled(int scale) {
     int rank = level - scale;
     // TODO: rethink this
@@ -243,35 +238,6 @@ int CCreature::getMana() { return mana; }
 
 void CCreature::setMana(int mana) { this->mana = mana; }
 
-int CCreature::getMovePoints() { return std::max(0, std::min(movePoints, getMovePointsMax())); }
-
-void CCreature::setMovePoints(int value) { movePoints = std::max(0, value); }
-
-int CCreature::getMovePointsMax() { return 10 + level / 2; }
-
-void CCreature::resetMovePoints() { movePoints = getMovePointsMax(); }
-
-bool CCreature::spendMovePoints(int cost) {
-    cost = std::max(0, cost);
-    if (cost == 0) {
-        return true;
-    }
-    if (getMovePoints() < cost) {
-        return false;
-    }
-    movePoints = getMovePoints() - cost;
-    return true;
-}
-
-void CCreature::addMovePoints(int value) {
-    vstd::fail_if(value < 0, "Tried to add negative move points!");
-    if (value == 0) {
-        resetMovePoints();
-    } else {
-        movePoints = std::min(getMovePointsMax(), getMovePoints() + value);
-    }
-}
-
 void CCreature::addMana(int i) {
     vstd::fail_if(i < 0, "Tried to add negative mana!");
     auto manaMax = getManaMax();
@@ -392,7 +358,6 @@ void CCreature::levelUp() {
     addAction(getLevelAction());
     heal(0);
     addMana(0);
-    resetMovePoints();
     if (level > 1) {
         vstd::logger::debug(to_string(), "is now level:", level);
     }
@@ -563,11 +528,9 @@ void CCreature::useItem(std::shared_ptr<CItem> item) {
     vstd::fail_if(!vstd::ctn(items, item), "Tried to use item not in inventory!");
     const bool restores_hp = item->hasTag(CTag::Heal);
     const bool restores_mana = item->hasTag(CTag::Mana);
-    const bool restores_move = item->hasTag(CTag::Move);
     const bool can_restore_hp = restores_hp && getHp() < getHpMax();
     const bool can_restore_mana = restores_mana && getMana() < getManaMax();
-    const bool can_restore_move = restores_move && getMovePoints() < getMovePointsMax();
-    if ((restores_hp || restores_mana || restores_move) && !can_restore_hp && !can_restore_mana && !can_restore_move) {
+    if ((restores_hp || restores_mana) && !can_restore_hp && !can_restore_mana) {
         return;
     }
     getMap()->getEventHandler()->gameEvent(item,
