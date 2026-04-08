@@ -28,8 +28,3 @@ def load(self, context):
         def onUse(self, event):
             power = self.getNumericProperty("power")
             event.getCause().addManaProc(power * 20)
-
-    @register(context)
-    class MovePotion(CPotion):
-        def onUse(self, event):
-            event.getCause().resetMovePoints()
