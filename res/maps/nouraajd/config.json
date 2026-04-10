@@ -230,7 +230,10 @@
       "name": "letterToBeren",
       "label": "Sealed Letter",
       "description": "Mayor Irvin's sealed appeal to Father Beren, ink soaked with incense and desperation.",
-      "text": "Father Beren, Nouraajd sinks beneath plague and cult. I beg your guidance before the town breaks entirely.\n- Mayor Irvin"
+      "text": "Father Beren, Nouraajd sinks beneath plague and cult. I beg your guidance before the town breaks entirely.\n- Mayor Irvin",
+      "tags": [
+        "quest"
+      ]
     }
   },
   "deliverLetterQuest": {
