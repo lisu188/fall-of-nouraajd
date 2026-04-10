@@ -2191,6 +2191,42 @@ class GameTest(unittest.TestCase):
         return failed == [], failed
 
     @game_test
+    def test_effect_apply_uses_full_duration(self):
+        game = load_game_module()
+        seen_time_left = []
+
+        class CountingEffect(game.CEffect):
+            def onEffect(self):
+                seen_time_left.append(self.getTimeLeft())
+
+        g = game.CGameLoader.loadGame()
+        game.CGameLoader.startGame(g, "empty")
+
+        creature = g.createObject("CCreature")
+        effect = CountingEffect()
+        effect.duration = 3
+
+        effect.apply(creature)
+        effect.apply(creature)
+        effect.apply(creature)
+        effect.apply(creature)
+
+        self.assertEqual(
+            [3, 2, 1],
+            seen_time_left,
+            "A duration-N effect should tick exactly N times and expose the final tick to onEffect().",
+        )
+        self.assertEqual(0, effect.getTimeLeft())
+
+        return True, json.dumps(
+            {
+                "seen_time_left": seen_time_left,
+                "time_left": effect.getTimeLeft(),
+            },
+            sort_keys=True,
+        )
+
+    @game_test
     def test_fights(self):
         game = load_game_module()
 
