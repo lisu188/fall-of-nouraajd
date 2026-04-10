@@ -3614,6 +3614,26 @@ class GameTest(unittest.TestCase):
         )
 
     @game_test
+    def test_ritual_captive_stays_at_prison(self):
+        g, game_map = load_game_map("ritual")
+        captive_definition = find_map_object_definition("ritual", "ritualCaptive")
+        captive = find_runtime_object(game_map, "ritualCaptive")
+        initial_coords = captive.getCoords()
+        expected_coords = (captive_definition["x"] // 32, captive_definition["y"] // 32, 0)
+
+        advance_map_only(game_map, 20)
+
+        captive = find_runtime_object(game_map, "ritualCaptive")
+        current_coords = captive.getCoords()
+        current_triplet = (current_coords.x, current_coords.y, current_coords.z)
+        initial_triplet = (initial_coords.x, initial_coords.y, initial_coords.z)
+
+        self.assertEqual(expected_coords, initial_triplet)
+        self.assertEqual(expected_coords, current_triplet)
+
+        return True, json.dumps({"initial_coords": initial_triplet, "current_coords": current_triplet}, sort_keys=True)
+
+    @game_test
     def test_ritual_trigger_targets(self):
         script_path = REPO_ROOT / "res/maps/ritual/script.py"
         with open(script_path) as f:
