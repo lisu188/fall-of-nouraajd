@@ -2005,6 +2005,41 @@ class GameTest(unittest.TestCase):
         )
 
     @game_test
+    def test_affiliated_creatures_do_not_fight_on_overlap(self):
+        game = load_game_module()
+
+        g = game.CGameLoader.loadGame()
+        game.CGameLoader.startGame(g, "empty")
+        allies = []
+        for x_pos in (0, 1):
+            creature = g.createObject("GoblinThief")
+            creature.baseStats.hit = 100
+            creature.baseStats.dmgMin = 10
+            creature.baseStats.dmgMax = 10
+            creature.baseStats.crit = 0
+            creature.hp = 1
+            creature.setStringProperty("affiliation", "encounter-pack")
+            g.getMap().addObject(creature)
+            creature.moveTo(x_pos, 0, 0)
+            allies.append(creature)
+
+        allies[1].moveTo(0, 0, 0)
+
+        remaining = sorted(creature.getName() for creature in allies if g.getMap().getObjectByName(creature.getName()))
+        occupants = sorted(obj.getName() for obj in g.getMap().getObjectsAtCoords(allies[0].getCoords()))
+
+        expected = sorted(creature.getName() for creature in allies)
+        self.assertEqual(expected, remaining)
+        self.assertEqual(expected, occupants)
+
+        return True, json.dumps(
+            {
+                "occupants": occupants,
+                "remaining": remaining,
+            }
+        )
+
+    @game_test
     def test_multi_enemy_combat_stale_loop_terminates(self):
         game, g, attacker, defenders = self.make_multi_enemy_combat_fixture()
 

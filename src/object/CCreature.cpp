@@ -449,7 +449,7 @@ void CCreature::afterMove() {
 
     auto fightPred = [self](std::shared_ptr<CMapObject> object) {
         auto other = vstd::cast<CCreature>(object);
-        return other && self != object && !self->isNpc() && !other->isNpc() &&
+        return other && self != object && !self->isNpc() && !other->isNpc() && !self->isAffiliatedWith(object) &&
                self->getMap()->getObjectByName(self->getName()) && object->getMap()->getObjectByName(object->getName());
     };
 
