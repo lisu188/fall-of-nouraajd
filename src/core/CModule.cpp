@@ -542,6 +542,7 @@ PYBIND11_MODULE(_game, m) {
     auto ceffect = py::class_<CEffect, CWrapper<CEffect>, std::shared_ptr<CEffect>, CGameObject>(
                        m, "CEffect", "Base status effect class.")
                        .def(py::init_alias<>())
+                       .def("apply", &CEffect::apply, "Apply one effect tick to the given creature.")
                        .def("getBonus", &CEffect::getBonus, "Return effect stat bonus object.")
                        .def("setBonus", &CEffect::setBonus, "Set effect stat bonus object.")
                        .def("getCaster", &CEffect::getCaster, "Return creature that applied the effect.")

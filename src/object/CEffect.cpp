@@ -32,11 +32,11 @@ std::shared_ptr<CCreature> CEffect::getCaster() { return caster; }
 std::shared_ptr<CCreature> CEffect::getVictim() { return victim; }
 
 void CEffect::apply(std::shared_ptr<CCreature> creature) {
-  timeLeft--;
-  if (timeLeft == 0) {
-  } else {
+    if (timeLeft <= 0) {
+        return;
+    }
     onEffect();
-  }
+    timeLeft--;
 }
 
 std::shared_ptr<Stats> CEffect::getBonus() { return bonus; }
@@ -46,16 +46,15 @@ void CEffect::setBonus(std::shared_ptr<Stats> value) { bonus = value; }
 int CEffect::getDuration() { return duration; }
 
 void CEffect::setDuration(int duration) {
-  this->duration = duration;
-  timeLeft = timeTotal = duration;
+    this->duration = duration;
+    timeLeft = timeTotal = duration;
 }
 
 void CEffect::onEffect() {
-  pybind11::gil_scoped_acquire gil;
-  if (auto override = CPythonOverrides::find_override(this, "onEffect");
-      !override.is_none()) {
-    PY_SAFE(override(); return;)
-  }
+    pybind11::gil_scoped_acquire gil;
+    if (auto override = CPythonOverrides::find_override(this, "onEffect"); !override.is_none()) {
+        PY_SAFE(override(); return;)
+    }
 }
 
 void CEffect::setCaster(std::shared_ptr<CCreature> value) { caster = value; }
