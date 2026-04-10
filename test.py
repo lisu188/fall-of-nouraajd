@@ -2960,6 +2960,48 @@ class GameTest(unittest.TestCase):
         )
 
     @game_test
+    def test_nouraajd_letter_reissue_and_quest_tag_regression(self):
+        game = load_game_module()
+        g, game_map, player = load_game_map_with_player("nouraajd")
+        town_hall = g.createObject("townHallDialog")
+
+        town_hall.give_letter()
+        self.assertTrue(
+            player.hasItem(lambda it: it.getName() == "letterToBeren" and it.hasTag(game.CTag.QUEST)),
+            "The mayor's letter should be tagged as a quest item so it cannot be sold or dropped.",
+        )
+        self.assertTrue(town_hall.has_letter_quest())
+        self.assertFalse(town_hall.can_offer_letter_work())
+
+        player.removeQuestItem(lambda it: it.getName() == "letterToBeren")
+        self.assertFalse(player.hasItem(lambda it: it.getName() == "letterToBeren"))
+        self.assertEqual(game_map.getStringProperty("quest_state_beren_chain"), "letter_in_hand")
+        self.assertFalse(town_hall.has_letter_quest())
+        self.assertTrue(
+            town_hall.can_offer_letter_work(),
+            "The mayor should reissue the letter if an older save or scripted state has lost the item.",
+        )
+
+        town_hall.give_letter()
+        self.assertTrue(
+            player.hasItem(lambda it: it.getName() == "letterToBeren" and it.hasTag(game.CTag.QUEST)),
+            "Reissued letters should stay protected as quest items.",
+        )
+        self.assertIn("deliverLetterQuest", quest_names(player))
+
+        return True, json.dumps(
+            {
+                "quest_state_beren_chain": game_map.getStringProperty("quest_state_beren_chain"),
+                "has_letter": player.hasItem(lambda it: it.getName() == "letterToBeren"),
+                "letter_is_quest_item": player.hasItem(
+                    lambda it: it.getName() == "letterToBeren" and it.hasTag(game.CTag.QUEST)
+                ),
+                "quests": quest_names(player),
+            },
+            sort_keys=True,
+        )
+
+    @game_test
     def test_nouraajd_octobogz_before_letter_and_relic_return_regression(self):
         g, game_map, player = load_game_map_with_player("nouraajd")
         town_hall = g.createObject("townHallDialog")
