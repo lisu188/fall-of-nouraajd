@@ -328,6 +328,9 @@ void CCreature::equipItem(std::string i, std::shared_ptr<CItem> newItem) {
             signal("equippedChanged");
         }
     }
+
+    hp = std::min(hp, getHpMax());
+    mana = std::min(mana, getManaMax());
 }
 
 bool CCreature::hasInInventory(std::shared_ptr<CItem> item) { return vstd::ctn(items, item); }
