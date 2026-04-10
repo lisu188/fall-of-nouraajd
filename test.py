@@ -1480,6 +1480,44 @@ class GameTest(unittest.TestCase):
         )
 
     @game_test
+    def test_unequipping_armor_clamps_hp_and_mana_to_new_caps(self):
+        _g_hp, _game_map_hp, warrior = load_game_map_with_player("test", "Warrior")
+        warrior_hp_with_armor = warrior.getHpMax()
+        warrior.setHp(warrior_hp_with_armor)
+        warrior.unequipArmor()
+        warrior_hp_without_armor = warrior.getHpMax()
+
+        self.assertGreater(warrior_hp_with_armor, warrior_hp_without_armor)
+        self.assertEqual(warrior_hp_without_armor, warrior.getNumericProperty("hp"))
+        self.assertEqual(100, warrior.getHpRatio())
+
+        _g_mana, _game_map_mana, sorcerer = load_game_map_with_player("test", "Sorcerer")
+        sorcerer_stats = sorcerer.getStats()
+        sorcerer_mana_with_armor = sorcerer_stats.getNumericProperty(sorcerer_stats.getStringProperty("mainStat")) * 7
+        sorcerer.addManaProc(0)
+        sorcerer.unequipArmor()
+        sorcerer_stats_after_unequip = sorcerer.getStats()
+        sorcerer_mana_without_armor = (
+            sorcerer_stats_after_unequip.getNumericProperty(sorcerer_stats_after_unequip.getStringProperty("mainStat"))
+            * 7
+        )
+
+        self.assertGreater(sorcerer_mana_with_armor, sorcerer_mana_without_armor)
+        self.assertEqual(sorcerer_mana_without_armor, sorcerer.getMana())
+
+        return True, json.dumps(
+            {
+                "warrior_hp_with_armor": warrior_hp_with_armor,
+                "warrior_hp_without_armor": warrior_hp_without_armor,
+                "warrior_hp": warrior.getNumericProperty("hp"),
+                "sorcerer_mana_with_armor": sorcerer_mana_with_armor,
+                "sorcerer_mana_without_armor": sorcerer_mana_without_armor,
+                "sorcerer_mana": sorcerer.getMana(),
+            },
+            sort_keys=True,
+        )
+
+    @game_test
     def test_crafting_config_is_valid(self):
         crafting_path = REPO_ROOT / "res/config/crafting.json"
         buildings_path = REPO_ROOT / "res/config/buildings.json"

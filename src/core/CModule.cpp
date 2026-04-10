@@ -567,6 +567,8 @@ PYBIND11_MODULE(_game, m) {
         .def("hurt", hurtDmg, "Apply structured Damage object.")
         .def("hurt", hurtFloat, "Apply damage value (float), rounded to int.")
         .def("getWeapon", &CCreature::getWeapon, "Return equipped weapon or None.")
+        .def(
+            "unequipArmor", [](CCreature &creature) { creature.setArmor(nullptr); }, "Unequip current armor item.")
         .def("getHpRatio", &CCreature::getHpRatio, "Return HP percentage (0-100).")
         .def("isAlive", &CCreature::isAlive, "Return whether HP is above zero.")
         .def("getMana", &CCreature::getMana, "Return current mana.")
