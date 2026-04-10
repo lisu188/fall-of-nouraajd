@@ -1944,6 +1944,45 @@ class GameTest(unittest.TestCase):
         return True, ""
 
     @game_test
+    def test_monster_fight_controller_uses_only_one_heal_item_per_turn(self):
+        g, game_map, _player = load_game_map_with_player("test")
+        monster = g.createObject("GoblinThief")
+        monster.name = "unitTestMonsterController"
+        game_map.addObject(monster)
+        monster.moveTo(1, 1, 0)
+        monster.setHp(max(1, monster.getHpMax() // 4))
+
+        weak_potion = g.createObject("CPotion")
+        weak_potion.name = "unitTestWeakHeal"
+        weak_potion.typeId = "unitTestWeakHealPotion"
+        weak_potion.addTag("heal")
+        weak_potion.power = 1
+
+        strong_potion = g.createObject("CPotion")
+        strong_potion.name = "unitTestStrongHeal"
+        strong_potion.typeId = "unitTestStrongHealPotion"
+        strong_potion.addTag("heal")
+        strong_potion.power = 2
+
+        monster.addItem(weak_potion)
+        monster.addItem(strong_potion)
+
+        acted = monster.getFightController().control(monster, game_map.getPlayer())
+
+        self.assertTrue(acted)
+        self.assertEqual(0, monster.countItems("unitTestWeakHealPotion"))
+        self.assertEqual(1, monster.countItems("unitTestStrongHealPotion"))
+
+        return True, json.dumps(
+            {
+                "acted": acted,
+                "weak_remaining": monster.countItems("unitTestWeakHealPotion"),
+                "strong_remaining": monster.countItems("unitTestStrongHealPotion"),
+            },
+            sort_keys=True,
+        )
+
+    @game_test
     def test_multi_enemy_combat_resolves_and_rewards_once(self):
         game, g, attacker, defenders = self.make_multi_enemy_combat_fixture()
 

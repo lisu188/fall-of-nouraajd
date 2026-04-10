@@ -371,7 +371,8 @@ PYBIND11_MODULE(_game, m) {
         .def("getDistance", &CRangeController::getDistance, "Return desired distance from target.")
         .def("setDistance", &CRangeController::setDistance, "Set desired distance from target.");
     py::class_<CFightController, CGameObject, std::shared_ptr<CFightController>>(m, "CFightController",
-                                                                                 "Base fight controller.");
+                                                                                 "Base fight controller.")
+        .def("control", &CFightController::control, "Execute one fight-controller turn.");
 
     void (CRngHandler::*addRandomLoot)(const std::shared_ptr<CCreature> &, int) = &CRngHandler::addRandomLoot;
     py::class_<CRngHandler, CGameObject, std::shared_ptr<CRngHandler>>(m, "CRngHandler",
