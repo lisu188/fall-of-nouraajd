@@ -1944,6 +1944,22 @@ class GameTest(unittest.TestCase):
         return True, ""
 
     @game_test
+    def test_shadow_bolt_can_configure_its_effect(self):
+        game = load_game_module()
+        original_randint = game.randint
+        try:
+            game.randint = lambda lower, upper: lower
+            g = game.CGameLoader.loadGame()
+
+            shadow_bolt = g.createObject("ShadowBolt")
+            effect = g.createObject("AbyssalShadowsEffect")
+
+            self.assertTrue(shadow_bolt.configureEffect(effect))
+        finally:
+            game.randint = original_randint
+        return True, ""
+
+    @game_test
     def test_multi_enemy_combat_resolves_and_rewards_once(self):
         game, g, attacker, defenders = self.make_multi_enemy_combat_fixture()
 
