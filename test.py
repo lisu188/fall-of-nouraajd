@@ -1450,6 +1450,35 @@ class GameTest(unittest.TestCase):
         )
 
     @game_test
+    def test_disabled_teleporter_does_not_publish_waypoint(self):
+        _g, game_map, _player = load_game_map_with_player("test", "Warrior")
+        active_teleporter = find_runtime_object(game_map, "teleporter1")
+        teleporter = find_runtime_object(game_map, "teleporter2")
+        teleporter_coords = teleporter.getCoords()
+
+        self.assertFalse(teleporter.getBoolProperty("waypoint"))
+
+        advance_map_only(game_map, 1)
+
+        self.assertTrue(active_teleporter.getBoolProperty("waypoint"))
+        self.assertEqual(teleporter_coords.x, active_teleporter.getNumericProperty("x"))
+        self.assertEqual(teleporter_coords.y, active_teleporter.getNumericProperty("y"))
+        self.assertEqual(teleporter_coords.z, active_teleporter.getNumericProperty("z"))
+        self.assertFalse(teleporter.getBoolProperty("enabled"))
+        self.assertFalse(teleporter.getBoolProperty("waypoint"))
+
+        return True, json.dumps(
+            {
+                "active_name": active_teleporter.getName(),
+                "active_waypoint": active_teleporter.getBoolProperty("waypoint"),
+                "disabled_name": teleporter.getName(),
+                "disabled_enabled": teleporter.getBoolProperty("enabled"),
+                "disabled_waypoint": teleporter.getBoolProperty("waypoint"),
+            },
+            sort_keys=True,
+        )
+
+    @game_test
     def test_take_mana_clamps_at_zero(self):
         game = load_game_module()
         g = game.CGameLoader.loadGame()
