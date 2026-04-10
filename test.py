@@ -3415,6 +3415,69 @@ class GameTest(unittest.TestCase):
         return True, json.dumps({"quests": quest_names(player)}, sort_keys=True)
 
     @game_test
+    def test_ritual_quest_requires_successful_disruption(self):
+        g, game_map, player = load_game_map_with_player("ritual")
+
+        game_map.removeObjectByName("anchorNorth")
+        advance(g, 1)
+        self.assertTrue(game_map.getBoolProperty("ritual_started"))
+        self.assertIn(
+            "ritualQuest",
+            quest_names(player),
+            "Starting the ritual should not immediately complete the main ritual quest.",
+        )
+
+        game_map.removeObjectByName("anchorCrypt")
+        game_map.removeObjectByName("anchorSanctum")
+        self.assertTrue(game_map.getBoolProperty("leader_spawned"))
+
+        game_map.removeObjectByName("ritualLeader")
+        advance(g, 1)
+        self.assertTrue(game_map.getBoolProperty("leader_defeated"))
+        self.assertFalse(game_map.getBoolProperty("captive_lost"))
+        self.assertNotIn(
+            "ritualQuest",
+            quest_names(player),
+            "Defeating the leader before the captive is lost should complete the ritual disruption quest.",
+        )
+
+        return True, json.dumps(
+            {
+                "ritual_started": game_map.getBoolProperty("ritual_started"),
+                "leader_spawned": game_map.getBoolProperty("leader_spawned"),
+                "leader_defeated": game_map.getBoolProperty("leader_defeated"),
+                "captive_lost": game_map.getBoolProperty("captive_lost"),
+                "quests": quest_names(player),
+            },
+            sort_keys=True,
+        )
+
+    @game_test
+    def test_ritual_quest_failure_does_not_complete(self):
+        g, game_map, player = load_game_map_with_player("ritual")
+
+        game_map.removeObjectByName("anchorNorth")
+        advance(g, 71)
+        self.assertTrue(game_map.getBoolProperty("ritual_started"))
+        self.assertTrue(game_map.getBoolProperty("captive_lost"))
+        self.assertTrue(game_map.getBoolProperty("bad_ending"))
+        self.assertIn(
+            "ritualQuest",
+            quest_names(player),
+            "The ritual quest should not complete on the bad ending path where the ritual succeeds.",
+        )
+
+        return True, json.dumps(
+            {
+                "ritual_started": game_map.getBoolProperty("ritual_started"),
+                "captive_lost": game_map.getBoolProperty("captive_lost"),
+                "bad_ending": game_map.getBoolProperty("bad_ending"),
+                "quests": quest_names(player),
+            },
+            sort_keys=True,
+        )
+
+    @game_test
     def test_ritual_trigger_targets(self):
         script_path = REPO_ROOT / "res/maps/ritual/script.py"
         with open(script_path) as f:
