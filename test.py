@@ -2282,6 +2282,33 @@ class GameTest(unittest.TestCase):
         )
 
     @game_test
+    def test_attack_bonus_reflection_affects_hit_rolls(self):
+        game = load_game_module()
+
+        g = game.CGameLoader.loadGame()
+        game.CGameLoader.startGame(g, "empty")
+
+        creature = g.createObject("CCreature")
+        base_stats = g.createObject("Stats")
+        base_stats.hit = 0
+        base_stats.crit = 0
+        base_stats.dmgMin = 1
+        base_stats.dmgMax = 1
+        base_stats.damage = 0
+        creature.baseStats = base_stats
+
+        level_stats = g.createObject("Stats")
+        level_stats.attack = 100
+        creature.levelStats = level_stats
+        creature.level = 1
+
+        rolls = [creature.getDmg() for _ in range(20)]
+
+        self.assertEqual([1] * len(rolls), rolls)
+
+        return True, json.dumps({"rolls": rolls})
+
+    @game_test
     def test_create_object_without_config_logs_fallback(self):
         game = load_game_module()
 
