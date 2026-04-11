@@ -3477,6 +3477,46 @@ class GameTest(unittest.TestCase):
         return failed == [], json.dumps({"failed": failed, "checks": checks})
 
     @game_test
+    def test_nouraajd_class_specific_dialog_routes_unlock_for_type_ids(self):
+        g_wayfarer, _, wayfarer = load_game_map_with_player("nouraajd", "Wayfarer")
+        town_hall_wayfarer = g_wayfarer.createObject("townHallDialog")
+        beren_wayfarer = g_wayfarer.createObject("berenDialog")
+
+        self.assertEqual("CPlayer", wayfarer.getType())
+        self.assertEqual("Wayfarer", wayfarer.getTypeId())
+        self.assertTrue(town_hall_wayfarer.can_chart_wayfarer_route())
+        self.assertFalse(beren_wayfarer.can_inspect_stained_glass())
+
+        town_hall_wayfarer.chart_wayfarer_route()
+        self.assertEqual(1, wayfarer.getNumericProperty("wayfarer_routes"))
+        self.assertFalse(town_hall_wayfarer.can_chart_wayfarer_route())
+
+        g_inquisitor, _, inquisitor = load_game_map_with_player("nouraajd", "Inquisitor")
+        town_hall_inquisitor = g_inquisitor.createObject("townHallDialog")
+        beren_inquisitor = g_inquisitor.createObject("berenDialog")
+
+        self.assertEqual("CPlayer", inquisitor.getType())
+        self.assertEqual("Inquisitor", inquisitor.getTypeId())
+        self.assertFalse(town_hall_inquisitor.can_chart_wayfarer_route())
+        self.assertTrue(beren_inquisitor.can_inspect_stained_glass())
+
+        beren_inquisitor.inspect_stained_glass()
+        self.assertEqual(1, inquisitor.getNumericProperty("inquisitor_clues"))
+        self.assertFalse(beren_inquisitor.can_inspect_stained_glass())
+
+        return True, json.dumps(
+            {
+                "wayfarer_type": wayfarer.getType(),
+                "wayfarer_type_id": wayfarer.getTypeId(),
+                "wayfarer_routes": wayfarer.getNumericProperty("wayfarer_routes"),
+                "inquisitor_type": inquisitor.getType(),
+                "inquisitor_type_id": inquisitor.getTypeId(),
+                "inquisitor_clues": inquisitor.getNumericProperty("inquisitor_clues"),
+            },
+            sort_keys=True,
+        )
+
+    @game_test
     def test_ritual_dialog_integrity(self):
         config = json.loads((REPO_ROOT / "res/maps/ritual/config.json").read_text())
         dialog_defs = {
