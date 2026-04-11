@@ -655,7 +655,7 @@ def load(self, context):
 
         def can_chart_wayfarer_route(self):
             player = self.getGame().getMap().getPlayer()
-            return player.getType() == "Wayfarer" and not player.getBoolProperty("charted_smuggler_route")
+            return player.getTypeId() == "Wayfarer" and not player.getBoolProperty("charted_smuggler_route")
 
         def chart_wayfarer_route(self):
             player = self.getGame().getMap().getPlayer()
@@ -732,7 +732,7 @@ def load(self, context):
 
         def can_inspect_stained_glass(self):
             player = self.getGame().getMap().getPlayer()
-            return player.getType() == "Inquisitor" and not player.getBoolProperty("inspected_stained_glass")
+            return player.getTypeId() == "Inquisitor" and not player.getBoolProperty("inspected_stained_glass")
 
         def inspect_stained_glass(self):
             player = self.getGame().getMap().getPlayer()
