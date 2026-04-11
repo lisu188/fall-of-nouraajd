@@ -298,6 +298,7 @@ def load(self, context):
                 _grant_quest(player, "deliverLetterQuest")
                 return True
             if state == "letter_in_hand":
+                _grant_quest(player, "deliverLetterQuest")
                 return True
             return False
 
@@ -655,7 +656,7 @@ def load(self, context):
 
         def can_chart_wayfarer_route(self):
             player = self.getGame().getMap().getPlayer()
-            return player.getType() == "Wayfarer" and not player.getBoolProperty("charted_smuggler_route")
+            return player.getTypeId() == "Wayfarer" and not player.getBoolProperty("charted_smuggler_route")
 
         def chart_wayfarer_route(self):
             player = self.getGame().getMap().getPlayer()
@@ -683,9 +684,7 @@ def load(self, context):
             if not quest_system.needs_letter_delivery():
                 return False
             player = self.getGame().getMap().getPlayer()
-            if player.hasItem(self._is_letter_to_beren):
-                return True
-            return _player_has_quest(player, "deliverLetterQuest")
+            return player.hasItem(self._is_letter_to_beren)
 
         def can_offer_letter_work(self):
             quest_system = _quest_system_from(self)
@@ -732,7 +731,7 @@ def load(self, context):
 
         def can_inspect_stained_glass(self):
             player = self.getGame().getMap().getPlayer()
-            return player.getType() == "Inquisitor" and not player.getBoolProperty("inspected_stained_glass")
+            return player.getTypeId() == "Inquisitor" and not player.getBoolProperty("inspected_stained_glass")
 
         def inspect_stained_glass(self):
             player = self.getGame().getMap().getPlayer()

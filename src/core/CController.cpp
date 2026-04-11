@@ -178,14 +178,14 @@ bool CMonsterFightController::control(std::shared_ptr<CCreature> me, std::shared
         auto object = getLeastPowerfulItemWithTag(me, CTag::Heal);
         if (object) {
             me->useItem(object);
-            return control(me, opponent);
+            return true;
         }
     }
     if (me->getManaRatio() < 75) {
         auto object = getLeastPowerfulItemWithTag(me, CTag::Mana);
         if (object) {
             me->useItem(object);
-            return control(me, opponent);
+            return true;
         }
     }
     if (auto action = selectInteraction(me)) {
