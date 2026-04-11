@@ -32,6 +32,7 @@ class Stats : public CGameObject {
          V_PROPERTY(Stats, int, block, getBlock, setBlock),
          V_PROPERTY(Stats, int, dmgMin, getDmgMin, setDmgMin),
          V_PROPERTY(Stats, int, dmgMax, getDmgMax, setDmgMax),
+         V_PROPERTY(Stats, int, attack, getAttack, setAttack),
          V_PROPERTY(Stats, int, hit, getHit, setHit),
          V_PROPERTY(Stats, int, crit, getCrit, setCrit),
          V_PROPERTY(Stats, int, fireResist, getFireResist, setFireResist),

@@ -25,16 +25,20 @@ def load(self, context):
     @register(context)
     class WayPoint(CBuilding):
         def onEnter(self, event):
-            if self.getExit():
-                event.getCause().setCoords(self.getExit())
+            exit_coords = self.getExit()
+            if exit_coords:
+                event.getCause().setCoords(exit_coords)
 
         # merge with onEnter logic
         def onTurn(self, event):
+            exit_coords = self.getExit()
+            if not exit_coords:
+                self.setBoolProperty("waypoint", False)
+                return
             self.setBoolProperty("waypoint", True)
-            exit = self.getExit()
-            self.setNumericProperty("x", exit.x)
-            self.setNumericProperty("y", exit.y)
-            self.setNumericProperty("z", exit.z)
+            self.setNumericProperty("x", exit_coords.x)
+            self.setNumericProperty("y", exit_coords.y)
+            self.setNumericProperty("z", exit_coords.z)
 
         def getExit(self):
             pass

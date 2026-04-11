@@ -43,9 +43,6 @@
     "ref": "Cultist",
     "properties": {
       "animation": "images/npc/questGiver",
-      "controller": {
-        "class": "CNpcRandomController"
-      },
       "npc": true
     }
   },

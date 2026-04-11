@@ -107,7 +107,8 @@ def load(self, context):
     @register(context)
     class RitualQuest(CQuest):
         def isCompleted(self):
-            return self.getGame().getMap().getBoolProperty("ritual_started")
+            game_map = self.getGame().getMap()
+            return game_map.getBoolProperty("leader_defeated") and not game_map.getBoolProperty("captive_lost")
 
         def onComplete(self):
             pass

@@ -328,6 +328,9 @@ void CCreature::equipItem(std::string i, std::shared_ptr<CItem> newItem) {
             signal("equippedChanged");
         }
     }
+
+    hp = std::min(hp, getHpMax());
+    mana = std::min(mana, getManaMax());
 }
 
 bool CCreature::hasInInventory(std::shared_ptr<CItem> item) { return vstd::ctn(items, item); }
@@ -449,7 +452,7 @@ void CCreature::afterMove() {
 
     auto fightPred = [self](std::shared_ptr<CMapObject> object) {
         auto other = vstd::cast<CCreature>(object);
-        return other && self != object && !self->isNpc() && !other->isNpc() &&
+        return other && self != object && !self->isNpc() && !other->isNpc() && !self->isAffiliatedWith(object) &&
                self->getMap()->getObjectByName(self->getName()) && object->getMap()->getObjectByName(object->getName());
     };
 
