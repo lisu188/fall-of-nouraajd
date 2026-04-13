@@ -24,6 +24,7 @@ GameScene::GameScene() {
   map->addRiver(16, 6, -5);
   map->addObject(new Cave(map, 5, 2));
   ensureSize(24, 16);
+  player->update();
 }
 
 GameScene::~GameScene() {
@@ -70,7 +71,7 @@ void GameScene::ensureSize(int sizex, int sizey) {
     for (int y = player->getPosY() - halfy; y <= player->getPosY() + halfy;
          ++y) {
       if (!map->contains(x, y)) {
-        addRandomTile(x, y);
+        addTile(Tile::getRandomTile(x, y));
       }
     }
   }
@@ -104,11 +105,13 @@ void GameScene::keyPressEvent(QKeyEvent *keyEvent) {
   }
 }
 
-void GameScene::addRandomTile(int x, int y) { map->getTile(x, y); }
+void GameScene::addRandomTile(int x, int y) {
+  addTile(Tile::getRandomTile(x, y));
+}
 
 void GameScene::addTile(Tile *tile) {
   if (tile)
-    tile->addToGame();
+    map->addTile(tile);
 }
 
 void GameScene::addObject(MapObject *mapObject) { map->addObject(mapObject); }

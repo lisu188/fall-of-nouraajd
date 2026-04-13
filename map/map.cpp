@@ -6,18 +6,38 @@
 
 #include <buildings/cave.h>
 #include <creatures/players/player.h>
+#include <map/tiles/groundtile.h>
+#include <map/tiles/mountaintile.h>
 #include <map/tiles/roadtile.h>
 #include <map/tiles/watertile.h>
 #include <view/gamescene.h>
 
 Map::Map() { mapObjects = new std::list<MapObject *>(); }
 
-// Tiles and map objects are AnimatedObjects owned by the Destroyer, which deletes
-// them when the game terminates; the map only drops its references here.
 Map::~Map() {
+  std::vector<Tile *> tilesToDelete;
+  for (iterator it = begin(); it != end(); ++it) {
+    tilesToDelete.push_back((*it).second);
+  }
   clear();
+
+  for (std::vector<Tile *>::iterator it = tilesToDelete.begin();
+       it != tilesToDelete.end(); ++it) {
+    if ((*it)->scene())
+      (*it)->scene()->removeItem(*it);
+    delete *it;
+  }
+
+  std::vector<MapObject *> objects(mapObjects->begin(), mapObjects->end());
   mapObjects->clear();
   delete mapObjects;
+
+  for (std::vector<MapObject *>::iterator it = objects.begin();
+       it != objects.end(); ++it) {
+    if ((*it)->scene())
+      (*it)->scene()->removeItem(*it);
+    delete *it;
+  }
 }
 
 void Map::move(int x, int y) {
@@ -25,58 +45,33 @@ void Map::move(int x, int y) {
   if (!player)
     return;
   player->move(x, y);
-
-  std::vector<MapObject *> objects(mapObjects->begin(), mapObjects->end());
-  for (std::vector<MapObject *>::iterator it = objects.begin();
-       it != objects.end(); ++it) {
-    MapObject *object = *it;
-    if (object == player ||
-        std::find(mapObjects->begin(), mapObjects->end(), object) ==
-            mapObjects->end())
-      continue;
-    if (object->getPosX() != player->getPosX() ||
-        object->getPosY() != player->getPosY())
-      object->onMove();
-    if (std::find(mapObjects->begin(), mapObjects->end(), object) !=
-            mapObjects->end() &&
-        object->getPosX() == player->getPosX() &&
-        object->getPosY() == player->getPosY())
-      object->onEnter();
-  }
-  player->onMove();
 }
 
 Tile *Map::getTile(int x, int y) {
   iterator it = find(Coords(x, y));
-  if (it != end())
-    return (*it).second;
-  Tile *tile = Tile::getRandomTile(x, y);
-  addTile(tile);
-  return tile;
+  if (it == end())
+    return 0;
+  return (*it).second;
 }
 
-bool Map::contains(int x, int y) { return find(Coords(x, y)) != end(); }
+bool Map::contains(int x, int y) { return getTile(x, y) != 0; }
 
 void Map::addObject(MapObject *mapObject) {
   if (!mapObject)
     return;
-  if (std::find(mapObjects->begin(), mapObjects->end(), mapObject) ==
-      mapObjects->end())
-    mapObjects->push_back(mapObject);
-  getTile(mapObject->getPosX(), mapObject->getPosY());
+  mapObjects->push_back(mapObject);
+  mapObject->moveTo(mapObject->getPosX(), mapObject->getPosY());
+  if (GameScene::getGame() && mapObject->scene() != GameScene::getGame()) {
+    GameScene::getGame()->addItem(mapObject);
+  }
 }
 
 void Map::addRiver(int length, int startx, int starty) {
   int x = startx;
   int y = starty;
-  int dirs[4];
   for (int i = 0; i < length; ++i) {
-    iterator it = find(Coords(x, y));
-    if (it != end())
-      erase(it);
     addTile(new WaterTile(x, y));
-    randomDir(dirs, 4);
-    switch (dirs[0]) {
+    switch (rand() % 4) {
     case 0:
       x++;
       break;
@@ -97,9 +92,6 @@ void Map::addRoad(int length, int startx, int starty) {
   int x = startx;
   int y = starty;
   for (int i = 0; i < length; ++i) {
-    iterator it = find(Coords(x, y));
-    if (it != end())
-      erase(it);
     addTile(new RoadTile(x, y));
     if (rand() % 2 == 0)
       x += rand() % 2 == 0 ? 1 : -1;
@@ -109,22 +101,33 @@ void Map::addRoad(int length, int startx, int starty) {
 }
 
 void Map::removeObject(MapObject *mapObject) {
-  if (mapObject)
-    mapObjects->remove(mapObject);
+  if (!mapObject)
+    return;
+  mapObjects->remove(mapObject);
+  if (mapObject->scene())
+    mapObject->scene()->removeItem(mapObject);
+  delete mapObject;
 }
 
-void Map::randomDir(int *tab, int rule) {
-  for (int i = 0; i < 4; ++i)
-    tab[i] = i;
-  for (int i = 0; i < 4; ++i)
-    std::swap(tab[i], tab[rand() % std::max(1, std::min(4, rule))]);
+void Map::randomDir(int *tab, int) {
+  tab[0] = 0;
+  tab[1] = 1;
+  tab[2] = 2;
+  tab[3] = 3;
+  for (int i = 0; i < 4; ++i) {
+    int j = rand() % 4;
+    std::swap(tab[i], tab[j]);
+  }
 }
 
 bool Map::addTile(Tile *tile) {
   if (!tile)
     return false;
-  if (contains(tile->getCoords().first, tile->getCoords().second))
+  if (contains(tile->getCoords().first, tile->getCoords().second)) {
+    delete tile;
     return false;
+  }
+
   insert(std::pair<Coords, Tile *>(tile->getCoords(), tile));
   tile->addToGame();
   return true;
@@ -140,8 +143,6 @@ MapObject::MapObject(Map *map, int x, int y, int z) {
   statsView.setParentItem(this);
   statsView.setVisible(false);
   setPos(x * Tile::size, y * Tile::size);
-  if (GameScene::getGame())
-    GameScene::getGame()->addItem(this);
 }
 
 MapObject::~MapObject() {
@@ -162,21 +163,40 @@ int MapObject::getPosX() const { return posx; }
 int MapObject::getPosY() const { return posy; }
 
 void MapObject::removeFromGame() {
-  setVisible(false);
-  if (scene())
-    scene()->removeItem(this);
-  if (map)
-    map->removeObject(this);
+  Map *owner = map;
+  map = 0;
+  if (owner) {
+    owner->removeObject(this);
+  }
 }
 
 void MapObject::move(int x, int y) {
-  if (!map || (x == 0 && y == 0))
+  if (!map)
     return;
+
   Tile *destination = map->getTile(posx + x, posy + y);
   if (!destination || !destination->canStep())
     return;
+
   moveTo(posx + x, posy + y);
   destination->onStep();
+
+  std::vector<MapObject *> collisions;
+  for (std::list<MapObject *>::iterator it = map->getObjects()->begin();
+       it != map->getObjects()->end(); ++it) {
+    if (*it != this && (*it)->getPosX() == posx && (*it)->getPosY() == posy) {
+      collisions.push_back(*it);
+    }
+  }
+
+  onMove();
+
+  for (std::vector<MapObject *>::iterator it = collisions.begin();
+       it != collisions.end(); ++it) {
+    if (*it && (*it)->getPosX() == posx && (*it)->getPosY() == posy) {
+      (*it)->onEnter();
+    }
+  }
 }
 
 void MapObject::setParentItem(QGraphicsItem *parent) {
