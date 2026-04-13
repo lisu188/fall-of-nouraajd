@@ -6,25 +6,22 @@
 #include <QGraphicsPixmapItem>
 #include <QTimer>
 
-class AnimatedObject : private QObject,protected QGraphicsPixmapItem
-{
-    Q_OBJECT
+class AnimatedObject : public QObject, public QGraphicsPixmapItem {
+  Q_OBJECT
 public:
-    explicit AnimatedObject();
-    ~AnimatedObject();
+  explicit AnimatedObject();
+  ~AnimatedObject();
+
 protected:
-    Animation *animation;
-    void setPixmap(const QPixmap &pixmap);
-    void setAnimation(std::string path);
-
-
+  Animation *animation;
+  void setPixmap(const QPixmap &pixmap);
+  void setAnimation(std::string path);
 
 private:
-    QTimer *timer;
+  QTimer *timer;
 
 private slots:
-    void animate();
-
+  void animate();
 };
 
 #endif // ANIMATEDOBJECT_H
