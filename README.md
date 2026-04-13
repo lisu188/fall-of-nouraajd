@@ -1,7 +1,7 @@
 # Recovered game snapshot
 
-Original commit: `b9ae428bb65478f78f5e7e883ba3b2dd9e0af8ae`. Original tree: `a52f6a83298998702d2b76e5a959df9cc2ae4906`.
-Startup was verified from identical recovered sources at `b9ae428bb65478f78f5e7e883ba3b2dd9e0af8ae`.
+Original commit: `108bdcbeda04cefeba5e1895f91df023cea8487f`. Original tree: `54126a24ae5e9b85e05fc1f9a4a198953cc262d7`.
+Startup was verified from identical recovered sources at `108bdcbeda04cefeba5e1895f91df023cea8487f`.
 
 This recovered version compiled and linked on Linux, started the real game on an isolated Xvfb display,
 loaded its map and a healthy player, rendered the screenshot below, and exited normally.
@@ -35,30 +35,14 @@ launches run the game's original entry point. Startup evidence does not establis
 
 ## Recovery provenance
 
-compatibilityRepair: 11, exactOriginal: 22, reconstruction: 11.
+exactOriginal: 22, existingFile: 5, reconstruction: 6.
 
-- `Game.pro`: unverified donor reconstruction; earliest compatibility set 108bdcbeda04cefeba5e1895f91df023cea8487f:Game.pro
-- `creatures/creature.cpp`: unverified donor reconstruction; earliest compatibility set 108bdcbeda04cefeba5e1895f91df023cea8487f:creatures/creature.cpp
-- `images/buildings/cave/0.png`: unverified donor reconstruction; 71a3432e36b5649aabdd63c7807a78e9a8a3749a:images/buildings/cave/0.png; headerMatch=0; apiOverlap=0/10000; distance=160
-- `images/tiles/grass/0.png`: unverified donor reconstruction; c049ac73064442354af6224d06fe1c8b847bb8d9:images/tiles/grass/0.png; headerMatch=0; apiOverlap=0/10000; distance=106
-- `images/tiles/ground/0.png`: unverified donor reconstruction; c049ac73064442354af6224d06fe1c8b847bb8d9:images/tiles/ground/0.png; headerMatch=0; apiOverlap=0/10000; distance=106
-- `images/tiles/mountain/0.png`: unverified donor reconstruction; 152007b28631784d3c5e17f2686eb6ef9ff30e46:images/tiles/mountain/0.png; headerMatch=0; apiOverlap=0/10000; distance=156
-- `images/tiles/road/0.png`: unverified donor reconstruction; 152007b28631784d3c5e17f2686eb6ef9ff30e46:images/tiles/road/0.png; headerMatch=0; apiOverlap=0/10000; distance=156
-- `images/tiles/water/0.png`: unverified donor reconstruction; c049ac73064442354af6224d06fe1c8b847bb8d9:images/tiles/water/0.png; headerMatch=0; apiOverlap=0/10000; distance=106
-- `map/map.cpp`: unverified donor reconstruction; earliest compatibility set 108bdcbeda04cefeba5e1895f91df023cea8487f:map/map.cpp
-- `stats/stats.cpp`: unverified donor reconstruction; earliest compatibility set 108bdcbeda04cefeba5e1895f91df023cea8487f:stats/stats.cpp
-- `view/gamescene.cpp`: unverified donor reconstruction; earliest compatibility set 108bdcbeda04cefeba5e1895f91df023cea8487f:view/gamescene.cpp
-- `animation/animatedobject.h`: unverified donor reconstruction; earliest compatibility set 108bdcbeda04cefeba5e1895f91df023cea8487f:animation/animatedobject.h
-- `animation/animationprovider.cpp`: unverified donor reconstruction; earliest compatibility set 108bdcbeda04cefeba5e1895f91df023cea8487f:animation/animationprovider.cpp
-- `creatures/monsters/pritz.cpp`: unverified donor reconstruction; earliest compatibility set 108bdcbeda04cefeba5e1895f91df023cea8487f:creatures/monsters/pritz.cpp
-- `creatures/monsters/pritzmage.cpp`: unverified donor reconstruction; earliest compatibility set 108bdcbeda04cefeba5e1895f91df023cea8487f:creatures/monsters/pritzmage.cpp
-- `creatures/players/mage.cpp`: unverified donor reconstruction; earliest compatibility set 108bdcbeda04cefeba5e1895f91df023cea8487f:creatures/players/mage.cpp
-- `creatures/players/player.cpp`: unverified donor reconstruction; earliest compatibility set 108bdcbeda04cefeba5e1895f91df023cea8487f:creatures/players/player.cpp
-- `creatures/players/rogue.cpp`: unverified donor reconstruction; earliest compatibility set 108bdcbeda04cefeba5e1895f91df023cea8487f:creatures/players/rogue.cpp
-- `creatures/players/warrior.cpp`: unverified donor reconstruction; earliest compatibility set 108bdcbeda04cefeba5e1895f91df023cea8487f:creatures/players/warrior.cpp
-- `map/map.h`: unverified donor reconstruction; earliest compatibility set 108bdcbeda04cefeba5e1895f91df023cea8487f:map/map.h
-- `map/tiles/tile.h`: unverified donor reconstruction; earliest compatibility set 108bdcbeda04cefeba5e1895f91df023cea8487f:map/tiles/tile.h
-- `view/gameview.cpp`: unverified donor reconstruction; earliest compatibility set 108bdcbeda04cefeba5e1895f91df023cea8487f:view/gameview.cpp
+- `images/buildings/cave/0.png`: unverified donor reconstruction; 71a3432e36b5649aabdd63c7807a78e9a8a3749a:images/buildings/cave/0.png; headerMatch=0; apiOverlap=0/10000; distance=161
+- `images/tiles/grass/0.png`: unverified donor reconstruction; c049ac73064442354af6224d06fe1c8b847bb8d9:images/tiles/grass/0.png; headerMatch=0; apiOverlap=0/10000; distance=107
+- `images/tiles/ground/0.png`: unverified donor reconstruction; c049ac73064442354af6224d06fe1c8b847bb8d9:images/tiles/ground/0.png; headerMatch=0; apiOverlap=0/10000; distance=107
+- `images/tiles/mountain/0.png`: unverified donor reconstruction; 152007b28631784d3c5e17f2686eb6ef9ff30e46:images/tiles/mountain/0.png; headerMatch=0; apiOverlap=0/10000; distance=157
+- `images/tiles/road/0.png`: unverified donor reconstruction; 152007b28631784d3c5e17f2686eb6ef9ff30e46:images/tiles/road/0.png; headerMatch=0; apiOverlap=0/10000; distance=157
+- `images/tiles/water/0.png`: unverified donor reconstruction; c049ac73064442354af6224d06fe1c8b847bb8d9:images/tiles/water/0.png; headerMatch=0; apiOverlap=0/10000; distance=107
 
 Restored source fingerprint: `4dd9688483ab8e3fc0b8890ed80178454b335e16a0520d0c4be8fac4141e53b5`.
 
