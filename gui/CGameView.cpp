@@ -15,7 +15,11 @@ CGameView::CGameView ( QString mapName, QString playerType ) {
     setHorizontalScrollBarPolicy ( Qt::ScrollBarAlwaysOff );
     setVerticalScrollBarPolicy ( Qt::ScrollBarAlwaysOff );
     setViewportUpdateMode ( QGraphicsView::BoundingRectViewportUpdate );
-    setViewport ( new QGLWidget ( QGLFormat ( QGL::SampleBuffers ) ) );
+    QSurfaceFormat format;
+    format.setSamples ( 4 );
+    QOpenGLWidget *viewport = new QOpenGLWidget();
+    viewport->setFormat ( format );
+    setViewport ( viewport );
     setViewportUpdateMode ( QGraphicsView::FullViewportUpdate );
     vstd::call_later ( [this, mapName, playerType]() {
         game = CGameLoader::loadGame ( this->ptr() );
@@ -74,4 +78,3 @@ std::shared_ptr<CGame> CGameView::getGame() const {
 void CGameView::centerOn ( std::shared_ptr<CPlayer> player ) {
     this->QGraphicsView::centerOn ( player.get() );
 }
-

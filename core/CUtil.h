@@ -67,22 +67,8 @@ private:
 namespace std {
     template<>
     struct hash<Coords> {
-        force_inline std::size_t  operator() ( const Coords &coords ) const {
+        std::size_t operator() ( const Coords &coords ) const {
             return vstd::hash_combine ( coords.x, coords.y, coords.z );
-        }
-    };
-
-    template<>
-    struct hash<QString> {
-        force_inline std::size_t operator() ( const QString &string ) const {
-            return vstd::hash_combine ( string.toStdString() );
-        }
-    };
-
-    template<>
-    struct hash<std::pair<int, int>> {
-        force_inline std::size_t operator() ( const std::pair<int, int> &pair ) const {
-            return vstd::hash_combine ( pair.first, pair.second );
         }
     };
 }

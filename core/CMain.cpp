@@ -41,6 +41,12 @@ namespace vstd {
         };
     }
 
+    std::function<void ( std::function<void() > ) > get_call_now_handler() {
+        return [] ( std::function<void() > f ) {
+            f();
+        };
+    }
+
     std::function<void ( std::function<void() > ) > get_call_later_block_handler() {
         return [] ( std::function<void() > f ) {
             QApplication::sendEvent ( CInvocationHandler::instance(),
@@ -54,6 +60,36 @@ namespace vstd {
                 while ( !pred() ) {
                     QApplication::processEvents ( QEventLoop::WaitForMoreEvents );
                 }
+            } );
+        };
+    }
+
+    std::function<void ( std::function<bool() >, std::function<void() > ) > get_call_when_handler() {
+        return [] ( std::function<bool() > pred, std::function<void() > f ) {
+            QTimer *timer = new QTimer ( CInvocationHandler::instance() );
+            QObject::connect ( timer, &QTimer::timeout, [pred, f, timer]() {
+                if ( pred() ) {
+                    timer->stop();
+                    timer->deleteLater();
+                    f();
+                }
+            } );
+            timer->start ( 1 );
+        };
+    }
+
+    std::function<void ( int, std::function<void() > ) > get_call_delayed_async_handler() {
+        return [] ( int millis, std::function<void() > f ) {
+            QTimer::singleShot ( millis, [f]() {
+                vstd::call_async ( f );
+            } );
+        };
+    }
+
+    std::function<void ( int, std::function<void() > ) > get_call_delayed_later_handler() {
+        return [] ( int millis, std::function<void() > f ) {
+            QTimer::singleShot ( millis, [f]() {
+                vstd::call_later ( f );
             } );
         };
     }
@@ -73,4 +109,3 @@ int main ( int argc, char *argv[] ) {
     }
     return 0;
 }
-

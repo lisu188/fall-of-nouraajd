@@ -64,6 +64,14 @@ CArmor::CArmor() {
 
 }
 
+CArmor::CArmor ( const CArmor & ) : CItem() {
+
+}
+
+CArmor::CArmor ( QString name ) : CItem() {
+    setObjectName ( name );
+}
+
 std::shared_ptr<CInteraction> CItem::getInteraction() {
     return interaction;
 }
@@ -77,7 +85,15 @@ CBelt::CBelt() {
 
 }
 
+CBelt::CBelt ( const CBelt & ) : CItem() {
+
+}
+
 CBoots::CBoots() {
+
+}
+
+CBoots::CBoots ( const CBoots & ) : CItem() {
 
 }
 
@@ -85,7 +101,15 @@ CGloves::CGloves() {
 
 }
 
+CGloves::CGloves ( const CGloves & ) : CItem() {
+
+}
+
 CHelmet::CHelmet() {
+
+}
+
+CHelmet::CHelmet ( const CHelmet & ) : CItem() {
 
 }
 
@@ -93,7 +117,15 @@ CSmallWeapon::CSmallWeapon() {
 
 }
 
+CSmallWeapon::CSmallWeapon ( const CSmallWeapon & ) : CWeapon() {
+
+}
+
 CWeapon::CWeapon() : CItem() {
+
+}
+
+CWeapon::CWeapon ( const CWeapon & ) : CItem() {
 
 }
 
@@ -109,7 +141,15 @@ CPotion::CPotion() {
 
 }
 
+CPotion::CPotion ( const CPotion & ) : CItem() {
+
+}
+
 CScroll::CScroll() {
+
+}
+
+CScroll::CScroll ( const CScroll & ) : CItem() {
 
 }
 
@@ -124,4 +164,3 @@ void CScroll::setText ( const QString &value ) {
 void CScroll::onUse ( std::shared_ptr<CGameEvent> ) {
     getMap()->getGame()->getGuiHandler()->showMessage ( text );
 }
-

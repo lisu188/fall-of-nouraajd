@@ -6,6 +6,10 @@ CPlayer::CPlayer() {
 
 }
 
+CPlayer::CPlayer ( const CPlayer & ) : CCreature() {
+
+}
+
 CPlayer::~CPlayer() {
 
 }

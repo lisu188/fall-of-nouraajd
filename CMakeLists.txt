@@ -1,24 +1,32 @@
-cmake_minimum_required(VERSION 3.3)
-project(game)
-
-set(Qt5_DIR $ENV{QT_CMAKE})
-
-include($ENV{COTIRE_CMAKE}/cotire.cmake)
+cmake_minimum_required(VERSION 3.16)
+project(game LANGUAGES CXX)
 
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 set(CMAKE_AUTOMOC ON)
+set(CMAKE_AUTOUIC ON)
+set(CMAKE_AUTORCC ON)
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
 
-find_package(Qt5 COMPONENTS Widgets OpenGL REQUIRED)
+find_package(QT NAMES Qt6 REQUIRED COMPONENTS Widgets OpenGL OpenGLWidgets)
+find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Widgets OpenGL OpenGLWidgets)
 
-set(BOOST_INCLUDEDIR $ENV{BOOST_INC})
-set(BOOST_LIBRARYDIR $ENV{BOOST_LIB})
-find_package(Boost 1.58 COMPONENTS system python3 thread REQUIRED)
+find_package(Python3 REQUIRED COMPONENTS Development)
+set(PYTHONLIBS_FOUND ON)
 
-set(PYTHON_LIBRARY $ENV{PYTHON_LIB}/libpython34.a)
-set(PYTHON_INCLUDE_DIR $ENV{PYTHON_INC})
-find_package(PythonLibs REQUIRED)
+set(BOOST_PYTHON_COMPONENT "python${Python3_VERSION_MAJOR}${Python3_VERSION_MINOR}")
+set(Boost_NO_BOOST_CMAKE ON)
+find_package(Boost 1.58 REQUIRED COMPONENTS system ${BOOST_PYTHON_COMPONENT})
+find_package(Threads REQUIRED)
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14 -include cmath -Wno-deprecated-declarations -Wno-unused-local-typedefs -Wno-attributes")
+add_compile_options(
+        -include
+        cmath
+        -Wno-deprecated-declarations
+        -Wno-unused-local-typedefs
+        -Wno-attributes)
+add_compile_definitions(QT_NO_KEYWORDS QT_NO_FOREACH)
 
 set(SOURCE_FILES
         controller/CController.cpp
@@ -133,24 +141,22 @@ set(SOURCE_FILES
         core/CTypes.cpp
         core/CTypes.h
         core/CUtil.cpp
-        core/CUtil.h)
+        core/CUtil.h
+        gui/CMainWindow.ui
+        gui/CScriptWindow.ui
+        resources/resources.qrc)
 
 add_subdirectory(vstd)
 
-qt5_wrap_ui(FOMRS_SOURCE_FILES gui/CMainWindow.ui gui/CScriptWindow.ui)
-qt5_add_resources(RESOURCE_FILES resources/resources.qrc)
+add_executable(game ${SOURCE_FILES})
 
-include_directories(${Boost_INCLUDE_DIRS})
-include_directories(${PYTHON_INCLUDE_DIRS})
+target_include_directories(game PRIVATE ${Boost_INCLUDE_DIRS})
+target_include_directories(game PRIVATE ${Python3_INCLUDE_DIRS})
 
-add_executable(game ${SOURCE_FILES} ${FOMRS_SOURCE_FILES} ${RESOURCE_FILES})
-
-add_custom_command(TARGET game PRE_BUILD COMMAND format.py WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
-
-qt5_use_modules(game Widgets)
-qt5_use_modules(game OpenGL)
-
-target_link_libraries(game ${Boost_LIBRARIES})
-target_link_libraries(game ${PYTHON_LIBRARIES})
-
-cotire(game)
+target_link_libraries(game PRIVATE
+        Qt${QT_VERSION_MAJOR}::Widgets
+        Qt${QT_VERSION_MAJOR}::OpenGL
+        Qt${QT_VERSION_MAJOR}::OpenGLWidgets
+        ${Boost_LIBRARIES}
+        Python3::Python
+        Threads::Threads)

@@ -49,15 +49,24 @@ public:
 
     template<typename T=Serialized, typename V=Deserialized>
     static T serialize ( V deserialized, typename std::enable_if<vstd::is_map<V>::value>::type * = 0 ) {
-        return CSerializerFunction<T, std::map<QString, std::shared_ptr<CGameObject> >>::serialize (
-                   vstd::cast<std::map<QString, std::shared_ptr<CGameObject> >> ( deserialized ) );
+        std::map<QString, std::shared_ptr<CGameObject> > casted;
+        for ( const auto &entry : deserialized ) {
+            casted[entry.first] = std::static_pointer_cast<CGameObject> ( entry.second );
+        }
+        return CSerializerFunction<T, std::map<QString, std::shared_ptr<CGameObject> >>::serialize ( casted );
     }
 
     template<typename T=Serialized, typename V=Deserialized>
     static V deserialize ( std::shared_ptr<CMap> map, T serialized,
                            typename std::enable_if<vstd::is_map<V>::value>::type * = 0 ) {
-        return vstd::cast<V> (
-                   CSerializerFunction<T, std::map<QString, std::shared_ptr<CGameObject> >>::deserialize ( map, serialized ) );
+        V casted;
+        auto objects =
+            CSerializerFunction<T, std::map<QString, std::shared_ptr<CGameObject> >>::deserialize ( map, serialized );
+        for ( const auto &entry : objects ) {
+            casted[entry.first] =
+                std::dynamic_pointer_cast<typename V::mapped_type::element_type> ( entry.second );
+        }
+        return casted;
     }
 };
 
@@ -121,7 +130,8 @@ class CSerialization {
 
     template<typename Serialized, typename Deserialized>
     static std::shared_ptr<CSerializerBase> serializer() {
-        return serializer ( vstd::type_pair<Serialized, Deserialized>() );
+        return serializer ( std::make_pair ( qRegisterMetaType<Serialized>(),
+                                             qRegisterMetaType<Deserialized>() ) );
     }
 
 public:
@@ -163,4 +173,3 @@ private:
 Q_DECLARE_METATYPE ( std::shared_ptr<QJsonObject> )
 
 Q_DECLARE_METATYPE ( std::shared_ptr<QJsonArray> )
-

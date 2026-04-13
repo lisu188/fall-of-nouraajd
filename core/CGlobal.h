@@ -16,7 +16,6 @@
 #include <QBitmap>
 #include <QDateTime>
 #include <QDebug>
-#include <QDesktopWidget>
 #include <QDirIterator>
 #include <QDrag>
 #include <QFile>
@@ -44,11 +43,12 @@
 #include <QSet>
 #include <QString>
 #include <QStringList>
+#include <QSurfaceFormat>
 #include <QtGlobal>
 #include <QThread>
 #include <QThreadPool>
 #include <QTimer>
-#include <QtOpenGL/QGLWidget>
+#include <QOpenGLWidget>
 #include <queue>
 #include <QVariant>
 #include <QWidget>

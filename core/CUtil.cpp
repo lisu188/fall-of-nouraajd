@@ -76,7 +76,7 @@ CInvocationHandler *CInvocationHandler::instance() {
 
 bool CInvocationHandler::event ( QEvent *event ) {
     if ( event->type() == CInvocationEvent::TYPE ) {
-        vstd::call ( static_cast<CInvocationEvent *> ( event )->getTarget() );
+        vstd::functional::call ( static_cast<CInvocationEvent *> ( event )->getTarget() );
         return true;
     }
     return false;

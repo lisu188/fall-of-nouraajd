@@ -10,7 +10,7 @@ typedef std::function<bool ( const Coords &, const Coords & ) > Compare;
 typedef std::priority_queue<Coords, std::vector<Coords>, Compare> Queue;
 typedef std::shared_ptr<std::unordered_map<Coords, int>> Values;
 
-static force_inline void dump ( Values values, Coords start, Coords end ) {
+static inline void dump ( Values values, Coords start, Coords end ) {
     int x = 0;
     int y = 0;
     double mval = 0;
@@ -37,7 +37,7 @@ static force_inline void dump ( Values values, Coords start, Coords end ) {
     img.save ( QString::fromStdString ( stream.str() ), "png" );
 }
 
-static force_inline Coords getNextStep ( const Coords &start, const Coords &goal, Values values ) {
+static inline Coords getNextStep ( const Coords &start, const Coords &goal, Values values ) {
     Coords target = start;
     for ( Coords coords:NEAR_COORDS ( start ) ) {
         if ( vstd::ctn ( ( *values ), coords ) &&
@@ -50,7 +50,7 @@ static force_inline Coords getNextStep ( const Coords &start, const Coords &goal
     return target;
 }
 
-static force_inline Values fillValues ( std::function<bool ( const Coords & ) > canStep,
+static inline Values fillValues ( std::function<bool ( const Coords & ) > canStep,
                                         const Coords &goal, const Coords &start ) {
     Queue nodes ( [start] ( const Coords &a, const Coords &b ) {
         double dista = ( a.x - start.x ) * ( a.x - start.x ) +

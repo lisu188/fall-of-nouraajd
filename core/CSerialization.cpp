@@ -217,7 +217,8 @@ int CSerialization::getGenericPropertyType ( std::shared_ptr<QJsonObject> object
     } else if ( CJsonUtil::isMap ( object ) ) {
         return qRegisterMetaType<std::map<QString, std::shared_ptr<CGameObject>>>();
     }
-    return vstd::fail<int> ( "Unable to determine property type!" );
+    vstd::fail ( "Unable to determine property type!" );
+    return 0;
 }
 
 
