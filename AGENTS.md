@@ -1,191 +1,340 @@
-# Repository Guidelines
+# AGENTS.md
 
-The repository default branch is `main`.
+## Scope
 
-## Testing
-Running tests is **mandatory** for every code change made by agents.
-Always run tests from the repository root:
-1. Build the test targets: `cmake --build cmake-build-release --target _game for_unit_tests -j$(nproc)`
-2. Run the C++ unit tests: `ctest --test-dir cmake-build-release --output-on-failure -R for_unit_tests`
-3. Run the Python test suite: `python3 test.py`
+These instructions apply to the entire repository unless a more specific `AGENTS.md` exists deeper in the tree.
 
-Coverage is also a requirement:
-1. Run `./scripts/run_coverage.sh` when changing tests, coverage tooling, or code in `src/core`, `src/handler`, or `src/object`.
-2. Keep the scoped line coverage at **80% or higher**. Do not finish coverage-related work below that threshold without explicitly calling it out.
+The default branch is `main`.
 
-This test suite requires the compiled `_game` module.
-If the module or dependencies are missing, tests may fail; note this in the
-Testing section. Import the optional `game` module inside each test that
-requires it so that tests which don't depend on the compiled module can still
-run.
+Keep changes narrow. Do not modify unrelated files, generated build output, packaged artifacts, dependency lock state, or submodule SHAs unless the task explicitly requires it. Do not merge, rebase, or update from `main` unless asked. If a task requires touching `random-dungeon-generator` or `vstd`, state that clearly and rerun the full validation workflow.
 
-### GUI tests under Xvfb and screenshot verification
-When adding or updating GUI-focused tests in `test.py`, follow the existing
-`XvfbGameplayTest` / `XvfbGameplayProcessTest` pattern:
-1. Guard platform/tooling preconditions (`os.name == "posix"`, `xvfb-run`,
-   and `xauth`) and skip cleanly when unavailable.
-2. Run GUI child tests with `xvfb-run -a --server-args=-screen 0 1920x1080x24`
-   and set `SDL_VIDEODRIVER=x11`, `SDL_AUDIODRIVER=dummy`,
-   `SDL_RENDER_DRIVER=software`, and `LIBGL_ALWAYS_SOFTWARE=1`.
-3. Keep assertions behavior-based (input handling, panel visibility, map turn
-   progression) and include a rendered-output check such as map proxy cells.
+When this file conflicts with the current code, tests, or build scripts, trust the code and update this file as part of the fix.
 
-For screenshot/image artifacts produced by tests (for example via
-`g.getMap().dumpPaths(...)`), add explicit verification:
-1. Assert the output file exists after rendering.
-2. Assert it is non-empty and has an expected image extension (typically
-   `.png`).
-3. If a deterministic baseline exists, compare against it in the test; if not,
-   at minimum validate dimensions/metadata or loadability to catch corrupt
-   screenshots.
+## Project overview
 
-## Debugging
-- Use `valgrind` for native memory diagnostics and runtime error investigation.
-- Use `callgrind` through `valgrind --tool=callgrind` when profiling hot paths
-  or performance regressions.
+`fall-of-nouraajd` is a C++ dark-fantasy 2D game with Python scripts/plugins, JSON resource configuration, SDL assets, CMake builds, and a pybind11 `_game` extension module.
 
-### Resource-to-CMake checklist
-- Whenever files are added under `res/`, update the root `CMakeLists.txt` so each new file is covered by `configure_file(...)` entries or by an `install(DIRECTORY ...)` rule as appropriate.
-- Before committing, verify no `res/**` file is missing from CMake resource references.
+Important paths:
 
-## Code Style
-- Use four spaces for indentation in both Python and C++ files.
-- Python files are checked for indentation consistency during testing.
+- `src/core/` — engine core, loaders, wrappers, type registry, Python bindings.
+- `src/handler/` — gameplay handlers and script/event handling.
+- `src/object/` — game object model.
+- `src/gui/` — GUI objects, layouts, panels, and rendering-facing classes.
+- `res/config/` — global JSON configuration for items, effects, tiles, panels, monsters, slots, and related content.
+- `res/maps/<map>/` — map JSON, dialogs, and map scripts.
+- `res/plugins/` — Python plugin definitions loaded into the game.
+- `tests/unit/` — native C++ tests.
+- `test.py` — Python/data/integration/GUI-oriented test suite.
+- `scripts/` — coverage and repository helper scripts.
+- `cmake/` — CMake modules and platform triplets.
+- `random-dungeon-generator/`, `vstd/` — external submodules.
+
+## Fresh checkout setup
+
+Run commands from the repository root.
+
+Linux:
+
+```sh
+git submodule update --init --recursive
+./configure.sh
+```
+
+The README’s Ubuntu setup uses Python, pybind11 headers, and nlohmann-json development packages before configuration.
+
+Windows:
+
+- Use Visual Studio 2022 with Desktop development with C++ and CMake tools.
+- Use Python 3.12.
+- Bootstrap vcpkg and set `VCPKG_ROOT`.
+- Run `configure.bat` from a normal `cmd.exe` shell.
+
+Do not add new production dependencies without explicit approval. Prefer existing CMake, vcpkg, Python, and system-package setup.
+
+## Build and run
+
+Linux build:
+
+```sh
+cmake --build cmake-build-release --target _game -j$(nproc)
+```
+
+Windows Release build:
+
+```bat
+cmake --build cmake-build-release --config Release --target _game
+set GAME_BUILD_CONFIG=Release
+```
+
+Run the game:
+
+```sh
+python3 play.py
+```
+
+Run the MCP engine API server:
+
+```sh
+cmake --build cmake-build-release --target _game -j$(nproc)
+python3 mcp.py
+```
+
+For stdio transport:
+
+```sh
+python3 mcp.py --stdio --repo-root . --build-dir cmake-build-release
+```
+
+On Windows Visual Studio builds, add `--build-config Release` when required.
+
+## Required validation
+
+For every code change, run this full workflow from the repository root unless the environment makes it impossible:
+
+```sh
+cmake --build cmake-build-release --target _game for_unit_tests -j$(nproc)
+ctest --test-dir cmake-build-release --output-on-failure -R for_unit_tests
+python3 test.py
+```
+
+Windows Release equivalent:
+
+```bat
+cmake --build cmake-build-release --config Release --target _game for_unit_tests
+ctest --test-dir cmake-build-release -C Release --output-on-failure -R for_unit_tests
+set GAME_BUILD_DIR=cmake-build-release
+set GAME_BUILD_CONFIG=Release
+python test.py
+```
+
+The Python tests require the compiled `_game` module for most runtime paths. Tests that do not need `_game` should still be able to run, so import optional `game`/`_game` modules inside the individual tests that need them.
+
+When validation cannot be run, do not imply that it passed. Report the exact command that was skipped or failed and the reason.
+
+## Coverage
+
+Run coverage when a change touches:
+
+- `test.py`
+- `tests/unit/**`
+- `scripts/run_coverage.sh`
+- coverage tooling
+- `src/core/**`
+- `src/handler/**`
+- `src/object/**`
+
+Coverage command:
+
+```sh
+./scripts/run_coverage.sh
+```
+
+The scoped line coverage threshold is 80%. Do not finish coverage-relevant work below that threshold without explicitly reporting it.
+
+Coverage reports are generated under `coverage/`.
+
+## GUI and screenshot tests
+
+When adding or updating GUI-focused tests in `test.py`, follow the existing `XvfbGameplayTest` and `XvfbGameplayProcessTest` style.
+
+Guard platform/tooling preconditions and skip cleanly when unavailable:
+
+- `os.name == "posix"`
+- `xvfb-run`
+- `xauth`
+
+Run GUI child processes with:
+
+```sh
+xvfb-run -a --server-args="-screen 0 1920x1080x24"
+```
+
+Use these environment settings for GUI child tests:
+
+```sh
+SDL_VIDEODRIVER=x11
+SDL_AUDIODRIVER=dummy
+SDL_RENDER_DRIVER=software
+LIBGL_ALWAYS_SOFTWARE=1
+```
+
+Prefer behavior-based assertions: input handling, panel visibility, map turn progression, and rendered map/proxy cell checks.
+
+For screenshot or image artifacts produced by tests, verify at least:
+
+- the output file exists;
+- the file is non-empty;
+- the extension is expected, usually `.png`;
+- the file is loadable or has expected dimensions/metadata;
+- deterministic baselines are compared when such baselines exist.
+
+## Code style
+
+General:
+
+- Use four spaces for indentation in C++ and Python.
 - Keep lines under 120 characters where practical.
-- Python variable and function names should be in `snake_case`.
-- C++ class names should use `CamelCase`.
-- Classes decorated with `@trigger` should use `CamelCase` with a `Trigger` suffix.
-- Reserve `UPPER_SNAKE_CASE` for global or constant-like properties and `snake_case` for local ones.
-- Keep camelCase for object and item ids referenced from JSON.
-- Engine methods may stay in CamelCase, but new Python-only methods should use `snake_case`.
+- Keep changes minimal and local to the requested behavior.
+- Do not rewrite broad areas only for style.
+- Do not add comments that merely restate obvious code.
 
-### Naming Conventions for Triggers and Variables
-The project mixes C++ and Python, so consistent naming is critical:
+Python:
 
-- **Trigger classes** should be in `CamelCase` and end with `Trigger`, e.g. `MarketTrigger`.
-- **Python methods and local variables** use `snake_case` so that dialog actions
-  and quest checks match their definitions in scripts.
-- **Global flags** shared across maps are written in `UPPER_SNAKE_CASE` while
-  temporary or object-specific properties remain `snake_case`.
-- **Object and item identifiers** in JSON stay in `camelCase`; use the same
-  IDs when referencing them from Python.
-- Engine methods exposed from C++ keep their original `CamelCase` form.
+- Use `snake_case` for functions, methods, and local variables.
+- Use `UPPER_SNAKE_CASE` for global flags and constant-like values.
+- Use `CamelCase` for classes.
+- Trigger classes decorated with `@trigger` must use `CamelCase` and end with `Trigger`.
 
-### Auto Formatting
-Use automated formatters before committing code:
-- Run `clang-format -i` on any modified C++ files.
-- Run `black -l 120` on Python files to match the line length guideline.
+C++:
 
-## Commit Messages
-Describe changes clearly in the commit message.
-If multiple logical changes are made, separate them into individual commits when
-possible.
-- Keep your branch up to date with the main branch.
+- Use `CamelCase` for class names.
+- Existing engine methods exposed to Python may keep their current `CamelCase` names.
+- New Python-only methods should use `snake_case`.
 
+JSON/resource IDs:
 
-## Merging Main
-Regularly merge the repository's main branch (`main`) into your feature branch to
-stay up to date:
-Resolve any conflicts and rerun `python3 test.py`.
-Always update both `rdg` and `vstd` to the latest `main` branch before finishing your work.
+- Keep object and item identifiers in JSON as `camelCase`.
+- Use exactly the same IDs when referencing them from Python, map files, dialog definitions, and script calls.
 
-## Adding Item Types
-Follow these steps whenever you introduce a new building, potion, effect, tile or other item type:
+Formatting:
 
-1. **Python plugin**
-    - Add the class in a suitable file under `res/plugins/`.
-    - Each plugin defines a `load(context)` function.
-      Declare classes inside and decorate them with `@register(context)` so they
-      become available to the game.
+```sh
+clang-format -i <modified-cpp-or-header-files>
+black -l 120 <modified-python-files>
+```
 
-2. **Configuration entry**
-    - Insert a new entry in the matching JSON file under `res/config/`.
-      For example `items.json` for equipment or `potions.json` for potions.
-    - The entry key is the item id used elsewhere.
-      Specify the class name and any properties required by the object.
+Run formatters only on files relevant to the task unless the task is explicitly repo-wide formatting.
 
-3. **Map update**
-    - Reference the new item from map configuration files
-      (such as `res/maps/nouraajd/config.json`).
-      Use a `ref` field to point at the id from step 2, or define a class
-      directly via a `class` field.
+## Resource files and CMake
 
-4. **Cross check ids**
-    - Verify that the id in the config file matches the id used in the map and in
-      any script calls like `createObject('YourItemId')`.
-    - Mis‑matched ids will cause runtime errors when the map tries to spawn the item.
+When adding files under `res/`, update the root `CMakeLists.txt` so the new files are copied or installed.
 
-5. **Dialogs and dialog options**
-    - To interact with the new item via dialog, add a new `CDialog` object to the
-      map config or script.
-    - Dialog states (`CDialogState`) can include options (`CDialogOption`) whose
-      `action` or `nextStateId` references the item id or a method defined in
-      your dialog class.
-    - Ensure that every state and option id used in the JSON matches the definitions in the dialog class.
-    - Implement each custom `action` as a method on the Python dialog class.
-      The method name must match the `action` string used in the JSON option.
-    - The dialog panel only checks for state ids named `ENTRY` and `EXIT` when
-      opening and closing dialogs. They are not keywords; use any id names as
-      long as references match.
-    - The C++ class handling these dialogs is `CGameDialogPanel`; there is no
-      separate `CDialogPanel` type.
+Use the existing pattern:
 
-After adding the new item type, run `python3 test.py` to confirm that loading the game still works.
+- `configure_file(...)` for explicit configured/copied resources.
+- `COPYONLY` for binary/static assets.
+- `install(DIRECTORY ...)` where the existing install rules already cover whole directories.
 
-## Quest Integrity
-Follow these steps to verify quests remain consistent:
+Before finishing, verify the new `res/**` files are not missing from CMake resource handling.
 
-1. **Check ids**
-    - Ensure every quest id in `res/maps/<map>/config.json` matches the
-      class name in the corresponding `script.py` file.
-2. **Short descriptions**
-    - Keep quest descriptions brief; a single sentence is enough for the quest log.
-3. **Playtest**
-    - Build the game and start it with `python3 play.py`.
-    - Accept each available quest and open the quest log with **j** to
-      confirm it appears.
-    - Progress the objectives and verify completed quests move to the
-      "completed" section.
-4. **Run tests**
-    - Execute `python3 test.py` to ensure the game still loads with the
-      updated quests.
+## Adding item, tile, effect, potion, building, or similar types
 
-## Exposing C++ Types to Python
-Follow these steps when making a new C++ class usable from Python:
+Follow this workflow:
 
-1. **Create a wrapper**
-    - Add a `CWrapper<MyClass>` specialization in `src/core/CWrapper.h`.
-    - Implement wrappers for any methods Python should override.
+1. Add or update the Python plugin class under `res/plugins/`.
+2. Define plugin classes inside `load(context)`.
+3. Decorate plugin classes with `@register(context)`.
+4. Add the matching JSON entry under `res/config/`, for example `items.json`, `potions.json`, `effects.json`, `tiles.json`, or `buildings.json`.
+5. Use the JSON entry key as the stable item/object id.
+6. Reference the new id from map configuration, usually under `res/maps/<map>/config.json`.
+7. Use `ref` when pointing to a configured object id, or `class` only when defining a class directly.
+8. Cross-check every id used in JSON, Python, dialog definitions, and calls such as `createObject("...")`.
+9. Run the required validation workflow.
 
-2. **Update the module**
-    - Edit `src/core/CModule.cpp` and declare the wrapper with
-      `class_<CWrapper<MyClass>, bases<BaseClass>, boost::noncopyable,
-      std::shared_ptr<CWrapper<MyClass>>>("MyClass")` inside
-      `BOOST_PYTHON_MODULE(_game)`.
-    - Register the wrapper in `src/core/CTypes.cpp` using
-      `CTypes::register_type<CWrapper<MyClass>, MyClass, BaseClass>();`.
+Mismatched ids cause runtime loading or spawning failures.
 
-3. **Create the Python object**
-    - Define a subclass in a plugin under `res/plugins/`.
-    - Add it inside `load(context)` and decorate with `@register(context)`.
+## Dialogs
 
-After exposing the new type, run `python3 test.py` to verify the bindings.
+To add dialog interaction for an item, NPC, or map object:
 
-## Map NPC vs Player Template Rule
-For **all maps** under `res/maps/*`, do **not** place player-class templates
-(`CPlayer`-based refs such as `Sorcerer`/`Warrior`/`Assasin`) as regular map
-actors in `config.json`.
+- Add or update the relevant `CDialog` object in map config or script.
+- Use `CDialogState` and `CDialogOption` definitions consistently.
+- Ensure every `action`, `condition`, and `nextStateId` matches a real method or state id.
+- Implement each custom dialog `action` as a Python method on the dialog class.
+- The method name must exactly match the JSON `action` string.
+- `ENTRY` and `EXIT` are conventional state ids checked by the dialog panel when opening and closing dialogs; do not treat them as general language keywords.
+- The C++ panel class is `CGameDialogPanel`; do not invent a separate `CDialogPanel` type.
 
-Doing so creates extra player objects at load and can produce debug lines like
-`Loaded object: CPlayer:<objectName>(...)`.
+## Quest integrity
 
-For NPCs and scripted map actors, use non-player creature templates
-(`CCreature`-based refs) and keep `npc: true`/controllers as needed.
+When adding or changing quests:
 
-To control where the real player starts, set map entry coordinates in each
-map's `map.json` top-level `properties` (`x`, `y`, `z`) instead of adding a
-separate player object.
+1. Ensure every quest id in `res/maps/<map>/config.json` matches the class name in that map’s `script.py`.
+2. Keep quest-log descriptions brief, preferably one sentence.
+3. Build the game and run it with `python3 play.py` when gameplay behavior changed.
+4. Accept each changed quest and open the quest log with `j`.
+5. Verify active quests appear correctly.
+6. Progress objectives and verify completed quests move to the completed section.
+7. Run the required validation workflow.
+
+## Exposing C++ types to Python
+
+This project uses pybind11 for the `_game` module.
+
+When exposing a new C++ class to Python:
+
+1. Add or update a `CWrapper<YourClass>` specialization in `src/core/CWrapper.h` if Python subclasses need to override virtual behavior.
+2. Add the pybind11 binding in `src/core/CModule.cpp` inside `PYBIND11_MODULE(_game, m)`.
+3. Use `py::class_<...>` with the correct base class, wrapper class when needed, and `std::shared_ptr<...>`.
+4. Register the type hierarchy in `src/core/CTypes.cpp` with `CTypes::register_type<...>()`.
+5. Register wrapper types in `CTypes.cpp` when wrapped Python-overridable types are involved.
+6. Add or update Python plugin classes under `res/plugins/` when the new type is intended to be instantiated from scripts or config.
+7. Build `_game`, run C++ tests, and run `python3 test.py`.
+
+Do not use Boost.Python patterns for new bindings.
+
+## Map NPC vs player template rule
+
+For all maps under `res/maps/*`, do not place player-class templates as normal map actors in `config.json`.
+
+Player-class refs include:
+
+- `Sorcerer`
+- `Warrior`
+- `Assasin`
+
+Keep the existing `Assasin` spelling where it is part of a resource id.
+
+Using player-class refs as regular actors creates extra player objects at load time and can produce debug output such as `Loaded object: CPlayer:<objectName>(...)`.
+
+For NPCs and scripted actors, use non-player creature templates based on `CCreature` and keep `npc: true` or controller settings as needed.
+
+To control the real player’s starting position, set map entry coordinates in each map’s `map.json` top-level `properties`:
+
+- `x`
+- `y`
+- `z`
+
+Do not add a separate player object for the spawn point.
+
+## Debugging and profiling
+
+Use `valgrind` for native memory diagnostics and runtime error investigation.
+
+Use callgrind for profiling hot paths or performance regressions:
+
+```sh
+valgrind --tool=callgrind <command>
+```
+
+Prefer small, reproducible failing cases. Add tests for regressions when practical.
+
+## CI expectations
+
+The main build workflow validates Linux and Windows builds, runs C++ tests, runs Python tests, runs coverage on Linux, packages artifacts, and uploads build artifacts.
+
+Before proposing a change, reproduce the relevant local parts of CI as closely as the environment allows.
+
+## Commits and pull requests
+
+Do not commit unless explicitly asked.
+
+When asked to commit:
+
+- use a clear, specific commit message;
+- keep one logical change per commit where practical;
+- do not bundle unrelated cleanup with feature or bug-fix work.
+
+Before finishing, summarize:
+
+- files changed;
+- tests and coverage commands run;
+- commands that failed or could not be run;
+- any risky assumptions;
+- any follow-up work that is genuinely required.
 
 ## Copyright
-When modifying source files, update the copyright year in
-the header comments to 2025.
+
+When modifying source files with copyright headers, preserve the existing owner text and update the year or year range to include the current calendar year.
+
+Do not change license text unless the task explicitly requires it.
