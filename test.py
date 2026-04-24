@@ -187,6 +187,25 @@ def set_player_target(player, coords):
     return controller
 
 
+def find_adjacent_walkable_tile(game_map, origin):
+    game = load_game_module()
+    for delta in (game.Coords(1, 0, 0), game.Coords(-1, 0, 0), game.Coords(0, 1, 0), game.Coords(0, -1, 0)):
+        target = game.Coords(origin.x + delta.x, origin.y + delta.y, origin.z + delta.z)
+        if game_map.canStep(target):
+            return target
+    raise AssertionError(f"Expected an adjacent walkable tile near {origin.x},{origin.y},{origin.z}.")
+
+
+def get_panel_proxy_child_totals(panel):
+    game = load_game_module()
+    panel_data = json.loads(game.jsonify(panel))
+    totals = []
+    for child in panel_data.get("properties", {}).get("children") or []:
+        proxy_children = child.get("properties", {}).get("children") or []
+        totals.append(sum(len(proxy.get("properties", {}).get("children") or []) for proxy in proxy_children))
+    return totals
+
+
 def advance_turns(g, turns):
     advance(g, turns)
     return g.getMap().getTurn()
@@ -1710,6 +1729,75 @@ class GameTest(unittest.TestCase):
         )
 
     @game_test
+    def test_change_map_waits_for_event_loop_after_move_event(self):
+        game = load_game_module()
+
+        g, game_map, player = load_game_map_with_player("test")
+        origin = player.getCoords()
+        target = find_adjacent_walkable_tile(game_map, origin)
+        controller = get_player_controller(player)
+        lifecycle = []
+
+        class DeferredChangeMap(game.CEvent):
+            def onEnter(self, event):
+                lifecycle.append(
+                    {
+                        "phase": "entered",
+                        "map": self.getMap().mapName,
+                        "turn": self.getMap().getTurn(),
+                        "cause": event.getCause().getName(),
+                    }
+                )
+                self.getMap().getGame().changeMap("ritual")
+
+        g.getObjectHandler().registerType("DeferredChangeMap", DeferredChangeMap)
+        switcher = g.createObject("DeferredChangeMap")
+        switcher.name = "deferredChangeMap"
+        game_map.addObject(switcher)
+        switcher.moveTo(target.x, target.y, target.z)
+
+        controller.setTarget(player, target)
+        game_map.move()
+
+        self.assertEqual("test", g.getMap().mapName)
+        self.assertEqual(1, g.getMap().getTurn())
+        self.assertEqual(
+            (target.x, target.y, target.z), (player.getCoords().x, player.getCoords().y, player.getCoords().z)
+        )
+        self.assertEqual(
+            [{"phase": "entered", "map": "test", "turn": 0, "cause": "player"}],
+            lifecycle,
+            "onEnter should run during the move, before the deferred map swap is processed.",
+        )
+
+        pump_event_loop(3)
+
+        self.assertEqual("ritual", g.getMap().mapName)
+        self.assertEqual(1, g.getMap().getTurn())
+        self.assertTrue(g.getMap().getPlayer() == player)
+
+        return True, json.dumps(
+            {
+                "before_event_loop": {
+                    "map": "test",
+                    "turn": 1,
+                    "player": [target.x, target.y, target.z],
+                },
+                "after_event_loop": {
+                    "map": g.getMap().mapName,
+                    "turn": g.getMap().getTurn(),
+                    "player": [
+                        g.getMap().getPlayer().getCoords().x,
+                        g.getMap().getPlayer().getCoords().y,
+                        g.getMap().getPlayer().getCoords().z,
+                    ],
+                },
+                "lifecycle": lifecycle,
+            },
+            sort_keys=True,
+        )
+
+    @game_test
     def test_toroidal_map_wraps_and_survives_save_load(self):
         game = load_game_module()
 
@@ -1795,6 +1883,46 @@ class GameTest(unittest.TestCase):
                 "empty_after_east_move": sum(count == 0 for count in east_counts),
                 "empty_after_west_move": sum(count == 0 for count in west_counts),
             }
+        )
+
+    @game_test
+    def test_inventory_panel_refreshes_only_after_event_loop_drains(self):
+        game = load_game_module()
+
+        g = game.CGameLoader.loadGame()
+        game.CGameLoader.loadGui(g)
+        game.CGameLoader.startGameWithPlayer(g, "test", "Warrior")
+        panel = g.getGuiHandler().openPanel("inventoryPanel")
+        pump_event_loop()
+
+        player = g.getMap().getPlayer()
+        before_totals = get_panel_proxy_child_totals(panel)
+
+        sword = g.createObject("Sword")
+        player.addItem(sword)
+        after_add_without_pump = get_panel_proxy_child_totals(panel)
+        pump_event_loop()
+        after_add_with_pump = get_panel_proxy_child_totals(panel)
+
+        player.removeItem(lambda item: item == sword, False)
+        after_remove_without_pump = get_panel_proxy_child_totals(panel)
+        pump_event_loop()
+        after_remove_with_pump = get_panel_proxy_child_totals(panel)
+
+        self.assertEqual(before_totals, after_add_without_pump)
+        self.assertEqual(before_totals[0] + 1, after_add_with_pump[0])
+        self.assertEqual(after_add_with_pump, after_remove_without_pump)
+        self.assertEqual(before_totals, after_remove_with_pump)
+
+        return True, json.dumps(
+            {
+                "before": before_totals,
+                "after_add_without_pump": after_add_without_pump,
+                "after_add_with_pump": after_add_with_pump,
+                "after_remove_without_pump": after_remove_without_pump,
+                "after_remove_with_pump": after_remove_with_pump,
+            },
+            sort_keys=True,
         )
 
     @game_test
@@ -2598,6 +2726,107 @@ class GameTest(unittest.TestCase):
             "effect_time_left": effect.getTimeLeft(),
         }
         return True, json.dumps(report, sort_keys=True)
+
+    @game_test
+    def test_event_handler_dispatches_lifecycle_triggers_and_item_use(self):
+        game = load_game_module()
+
+        g, game_map, player = load_game_map_with_player("test")
+        controller = get_player_controller(player)
+        lifecycle = []
+        trigger_hits = []
+        use_hits = []
+
+        class LifecycleEvent(game.CEvent):
+            def onCreate(self, event):
+                lifecycle.append(("create", self.getName()))
+
+            def onDestroy(self, event):
+                lifecycle.append(("destroy", self.getName()))
+
+            def onEnter(self, event):
+                lifecycle.append(("enter", self.getName(), event.getCause().getName()))
+
+            def onLeave(self, event):
+                lifecycle.append(("leave", self.getName(), event.getCause().getName()))
+
+        class EnterTrigger(game.CTrigger):
+            def trigger(self, obj, event):
+                trigger_hits.append((obj.getName(), event.getCause().getName()))
+
+        class LoggedPotion(game.CPotion):
+            def onUse(self, event):
+                use_hits.append((self.getName(), event.getCause().getName()))
+
+        g.getObjectHandler().registerType("LifecycleEvent", LifecycleEvent)
+        g.getObjectHandler().registerType("EnterTrigger", EnterTrigger)
+        g.getObjectHandler().registerType("LoggedPotion", LoggedPotion)
+
+        event_object = g.createObject("LifecycleEvent")
+        event_object.name = "lifecycleEvent"
+        game_map.addObject(event_object)
+
+        origin = player.getCoords()
+        enter_target = find_adjacent_walkable_tile(game_map, origin)
+        event_object.moveTo(enter_target.x, enter_target.y, enter_target.z)
+
+        matching_trigger = g.createObject("EnterTrigger")
+        matching_trigger.object = "lifecycleEvent"
+        matching_trigger.event = "onEnter"
+        game_map.getEventHandler().registerTrigger(matching_trigger)
+
+        wrong_trigger = g.createObject("EnterTrigger")
+        wrong_trigger.object = "otherObject"
+        wrong_trigger.event = "onEnter"
+        game_map.getEventHandler().registerTrigger(wrong_trigger)
+
+        controller.setTarget(player, enter_target)
+        game_map.move()
+
+        leave_target = find_adjacent_walkable_tile(game_map, player.getCoords())
+        if leave_target == enter_target:
+            raise AssertionError("Expected a different adjacent tile for the leave test.")
+        controller.setTarget(player, leave_target)
+        game_map.move()
+
+        potion = g.createObject("LoggedPotion")
+        potion.name = "loggedPotion"
+        game_map.addObject(potion)
+        pickup_target = find_adjacent_walkable_tile(game_map, player.getCoords())
+        potion.moveTo(pickup_target.x, pickup_target.y, pickup_target.z)
+
+        controller.setTarget(player, pickup_target)
+        game_map.move()
+
+        self.assertEqual(1, player.countItems("LoggedPotion"))
+        self.assertIsNone(game_map.getObjectByName("loggedPotion"))
+
+        player.useItem(potion)
+
+        game_map.removeObjectByName("lifecycleEvent")
+
+        self.assertEqual(
+            [
+                ("create", "lifecycleEvent"),
+                ("enter", "lifecycleEvent", "player"),
+                ("leave", "lifecycleEvent", "player"),
+                ("destroy", "lifecycleEvent"),
+            ],
+            lifecycle,
+        )
+        self.assertEqual([("lifecycleEvent", "player")], trigger_hits)
+        self.assertEqual([("loggedPotion", "player")], use_hits)
+        self.assertEqual(0, player.countItems("LoggedPotion"))
+
+        return True, json.dumps(
+            {
+                "lifecycle": lifecycle,
+                "trigger_hits": trigger_hits,
+                "use_hits": use_hits,
+                "pickup_target": [pickup_target.x, pickup_target.y, pickup_target.z],
+            },
+            sort_keys=True,
+        )
 
     @game_test
     def test_tags_are_typed_in_bindings_and_persist_through_save_load(self):
