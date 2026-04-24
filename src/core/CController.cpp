@@ -203,9 +203,9 @@ std::shared_ptr<CItem> CMonsterFightController::getLeastPowerfulItemWithTag(std:
         return it->hasTag(tag);
     };
     std::set<std::shared_ptr<CItem>> items = cr->getItems();
-    auto rng = items | boost::adaptors::filtered(pred);
-    auto max = boost::min_element(rng, cmp);
-    if (max != boost::end(rng)) {
+    auto rng = items | std::views::filter(pred);
+    auto max = std::ranges::min_element(rng, cmp);
+    if (max != std::ranges::end(rng)) {
         return *max;
     }
     return {};
@@ -226,10 +226,10 @@ std::shared_ptr<CInteraction> CMonsterFightController::selectInteraction(std::sh
         return a->getManaCost() < b->getManaCost();
     };
     std::set<std::shared_ptr<CInteraction>> interactions = cr->getInteractions();
-    auto rng = interactions | boost::adaptors::filtered(pFunction) | boost::adaptors::filtered(pFunction2) |
-               boost::adaptors::filtered(pFunction3);
-    auto max = boost::max_element(rng, pred);
-    if (max != boost::end(rng)) {
+    auto rng =
+        interactions | std::views::filter(pFunction) | std::views::filter(pFunction2) | std::views::filter(pFunction3);
+    auto max = std::ranges::max_element(rng, pred);
+    if (max != std::ranges::end(rng)) {
         return *max;
     }
     return {};
@@ -271,7 +271,7 @@ void CPlayerController::onTurnEnded(std::shared_ptr<CCreature>) {}
 // TODO: add stopping when obstacle found
 std::pair<bool, Coords::Direction> CPlayerController::isOnPath(std::shared_ptr<CPlayer> player, Coords coords) {
     if (!isCompleted(player)) {
-        for (auto it : path | boost::adaptors::filtered([this](auto it) { return it.first >= currentStep - 1; })) {
+        for (auto it : path | std::views::filter([this](auto it) { return it.first >= currentStep - 1; })) {
             if (it.second == coords) {
                 auto prev = it.first > 0 ? path[it.first - 1] : player->getCoords();
                 auto dir = player->getMap()->getShortestDelta(prev, coords);
