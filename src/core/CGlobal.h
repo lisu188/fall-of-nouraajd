@@ -20,7 +20,6 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <Python.h>
 
 #include <boost/filesystem.hpp>
-#include <boost/locale.hpp>
 #include <boost/range/algorithm.hpp>
 #include <boost/range/irange.hpp>
 
