@@ -19,6 +19,26 @@ Testing section. Import the optional `game` module inside each test that
 requires it so that tests which don't depend on the compiled module can still
 run.
 
+### GUI tests under Xvfb and screenshot verification
+When adding or updating GUI-focused tests in `test.py`, follow the existing
+`XvfbGameplayTest` / `XvfbGameplayProcessTest` pattern:
+1. Guard platform/tooling preconditions (`os.name == "posix"`, `xvfb-run`,
+   and `xauth`) and skip cleanly when unavailable.
+2. Run GUI child tests with `xvfb-run -a --server-args=-screen 0 1920x1080x24`
+   and set `SDL_VIDEODRIVER=x11`, `SDL_AUDIODRIVER=dummy`,
+   `SDL_RENDER_DRIVER=software`, and `LIBGL_ALWAYS_SOFTWARE=1`.
+3. Keep assertions behavior-based (input handling, panel visibility, map turn
+   progression) and include a rendered-output check such as map proxy cells.
+
+For screenshot/image artifacts produced by tests (for example via
+`g.getMap().dumpPaths(...)`), add explicit verification:
+1. Assert the output file exists after rendering.
+2. Assert it is non-empty and has an expected image extension (typically
+   `.png`).
+3. If a deterministic baseline exists, compare against it in the test; if not,
+   at minimum validate dimensions/metadata or loadability to catch corrupt
+   screenshots.
+
 ## Debugging
 - Use `valgrind` for native memory diagnostics and runtime error investigation.
 - Use `callgrind` through `valgrind --tool=callgrind` when profiling hot paths
