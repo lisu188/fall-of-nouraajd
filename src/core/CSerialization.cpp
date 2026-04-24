@@ -260,9 +260,10 @@ std::set<std::shared_ptr<CGameObject>> array_deserialize(const std::shared_ptr<C
     for (unsigned int i = 0; i < object->size(); i++) {
         auto deserialized = CSerializerFunction<std::shared_ptr<json>, std::shared_ptr<CGameObject>>::deserialize(
             map, CJsonUtil::alias(object, (*object)[i]));
-        if (deserialized) {
-            objects.insert(deserialized);
+        if (!deserialized) {
+            vstd::logger::warning("Failed to deserialize object in array at index:", i);
         }
+        objects.insert(deserialized);
     }
     return objects;
 }
