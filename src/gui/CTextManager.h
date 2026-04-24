@@ -22,33 +22,32 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "object/CGameObject.h"
 
 class CTextManager : public CGameObject {
-  V_META(CTextManager, CGameObject, vstd::meta::empty())
-  std::unordered_map<std::pair<std::string, int>, SDL_Texture *> _textures;
+    V_META(CTextManager, CGameObject, vstd::meta::empty())
+    std::unordered_map<std::pair<std::string, int>, SDL_Texture *> _textures;
 
-public:
-  explicit CTextManager(const std::shared_ptr<CGui> &_gui = nullptr);
+  public:
+    explicit CTextManager(const std::shared_ptr<CGui> &_gui = nullptr);
 
-  ~CTextManager() override;
+    ~CTextManager() override;
 
-  std::pair<int, int> getTextureSize(std::string text);
+    std::pair<int, int> getTextureSize(std::string text);
 
-  void drawText(const std::string &text, int x, int y, int w);
+    void drawText(const std::string &text, int x, int y, int w);
 
-  void drawText(const std::string &text, const std::shared_ptr<SDL_Rect> &rect);
+    void drawText(const std::string &text, const std::shared_ptr<SDL_Rect> &rect);
 
-  void drawTextCentered(const std::string &text, int x, int y, int w, int h);
+    void drawTextCentered(const std::string &text, int x, int y, int w, int h);
 
-  void drawTextCentered(const std::string &text,
-                        const std::shared_ptr<SDL_Rect> &rect);
+    void drawTextCentered(const std::string &text, const std::shared_ptr<SDL_Rect> &rect);
 
-  int countLines(const std::string &text, int w);
+    int countLines(const std::string &text, int w);
 
-private:
-  SDL_Texture *getTexture(const std::string &text, int width = 0);
+  private:
+    SDL_Texture *getTexture(const std::string &text, int width = 0);
 
-  SDL_Texture *loadTexture(std::string text, int width = 0);
+    SDL_Texture *loadTexture(std::string text, int width = 0);
 
-  std::weak_ptr<CGui> _gui;
+    std::weak_ptr<CGui> _gui;
 
-  struct _TTF_Font *font;
+    TTF_Font *font;
 };

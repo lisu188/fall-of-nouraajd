@@ -100,7 +100,7 @@ std::shared_ptr<CPlayer> CMap::getPlayer() {
     // TODO: think of better solution after save
     if (!player) {
         for (auto object : getObjects()) {
-            if (object->getName() == "player") {
+            if (object && object->getName() == "player") {
                 player = vstd::cast<CPlayer>(object);
                 player->setController(getGame()->createObject<CPlayerController>());
                 player->setFightController(getGame()->createObject<CPlayerFightController>());
@@ -421,6 +421,9 @@ void CMap::setTurn(int turn) { this->turn = turn; }
 void CMap::setTiles(std::set<std::shared_ptr<CTile>> objects) {
     tiles.clear();
     for (const auto &ob : objects) {
+        if (!ob) {
+            continue;
+        }
         tiles[normalizeCoords(ob->getCoords())] = ob;
     }
     bumpNavigationRevision();
@@ -434,6 +437,10 @@ void CMap::setObjects(std::set<std::shared_ptr<CMapObject>> objects) {
     mapObjects.clear();
     mapObjectsCache.clear();
     for (auto ob : objects) {
+        if (!ob) {
+            vstd::logger::warning("Ignoring null map object in CMap::setObjects");
+            continue;
+        }
         mapObjects[ob->getName()] = ob;
         mapObjectsCache.insert(std::make_pair(normalizeCoords(ob->getCoords()), ob->getName()));
     }
@@ -472,6 +479,10 @@ std::set<std::shared_ptr<CTrigger>> CMap::getTriggers() {
 
 void CMap::setTriggers(std::set<std::shared_ptr<CTrigger>> triggers) {
     for (auto trigger : triggers) {
+        if (!trigger) {
+            vstd::logger::warning("Ignoring null trigger in CMap::setTriggers");
+            continue;
+        }
         getEventHandler()->registerTrigger(trigger);
     }
 }

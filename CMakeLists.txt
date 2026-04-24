@@ -13,12 +13,19 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
-cmake_minimum_required(VERSION 3.3)
+cmake_minimum_required(VERSION 3.5)
+if (POLICY CMP0087)
+    cmake_policy(SET CMP0087 NEW)
+endif ()
 
 project(fall-of-nouraajd)
 
-include(CPack)
-set(CPACK_GENERATOR "TGZ")
+if (WIN32)
+    set(CPACK_GENERATOR "ZIP")
+    add_compile_definitions(SDL_MAIN_HANDLED)
+else ()
+    set(CPACK_GENERATOR "TGZ")
+endif ()
 
 include(${CMAKE_SOURCE_DIR}/cmake/cotire.cmake)
 
@@ -28,16 +35,18 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -include cmath -Wall -fconcepts")
+if (MSVC)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /W3 /bigobj /permissive- /Zc:preprocessor /EHsc /DBOOST_ALLOW_DEPRECATED_HEADERS /DBOOST_BIND_GLOBAL_PLACEHOLDERS /D_USE_MATH_DEFINES /DNOMINMAX /DWIN32_LEAN_AND_MEAN")
+else ()
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -include cmath -Wall -fconcepts")
+    set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O3 -s")
+    set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -g3")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DBOOST_ALLOW_DEPRECATED_HEADERS -DBOOST_BIND_GLOBAL_PLACEHOLDERS")
 
-set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O3 -s")
-set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -g3")
-
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DBOOST_ALLOW_DEPRECATED_HEADERS -DBOOST_BIND_GLOBAL_PLACEHOLDERS")
-
-if (WIN32)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D_hypot=hypot -Wa,-mbig-obj")
-    set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -O")
+    if (WIN32)
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D_hypot=hypot -Wa,-mbig-obj")
+        set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -O")
+    endif ()
 endif ()
 
 file(GLOB_RECURSE GAME_SRC ${CMAKE_SOURCE_DIR}/src/**.cpp ${CMAKE_SOURCE_DIR}/src/**.h)
@@ -59,9 +68,40 @@ if (NOT pybind11_FOUND)
         message(FATAL_ERROR "pybind11 was not found. Install pybind11 or set pybind11_DIR.")
     endif ()
 endif ()
-find_package(SDL2 REQUIRED)
-find_package(SDL2_image REQUIRED)
-find_package(SDL2_ttf REQUIRED)
+find_package(SDL2 CONFIG QUIET)
+if (NOT SDL2_FOUND AND NOT TARGET SDL2::SDL2)
+    find_package(SDL2 REQUIRED)
+endif ()
+find_package(SDL2_image CONFIG QUIET)
+if (NOT SDL2_image_FOUND AND NOT TARGET SDL2_image::SDL2_image)
+    find_package(SDL2_image REQUIRED)
+endif ()
+find_package(SDL2_ttf CONFIG QUIET)
+if (NOT SDL2_ttf_FOUND AND NOT TARGET SDL2_ttf::SDL2_ttf)
+    find_package(SDL2_ttf REQUIRED)
+endif ()
+
+set(BOOST_FILESYSTEM_LIBS ${Boost_LIBRARIES})
+if (TARGET Boost::filesystem)
+    set(BOOST_FILESYSTEM_LIBS Boost::filesystem)
+endif ()
+
+set(SDL2_LIBS ${SDL2_LIBRARY})
+set(SDL2_EXECUTABLE_LIBS ${SDL2_LIBRARY})
+if (TARGET SDL2::SDL2)
+    set(SDL2_LIBS SDL2::SDL2)
+    set(SDL2_EXECUTABLE_LIBS SDL2::SDL2)
+endif ()
+
+set(SDL2_IMAGE_LIBS ${SDL2_IMAGE_LIBRARY})
+if (TARGET SDL2_image::SDL2_image)
+    set(SDL2_IMAGE_LIBS SDL2_image::SDL2_image)
+endif ()
+
+set(SDL2_TTF_LIBS ${SDL2_TTF_LIBRARY})
+if (TARGET SDL2_ttf::SDL2_ttf)
+    set(SDL2_TTF_LIBS SDL2_ttf::SDL2_ttf)
+endif ()
 
 include_directories(${Boost_INCLUDE_DIRS})
 include_directories(${Python3_INCLUDE_DIRS})
@@ -76,7 +116,7 @@ include_directories(${CMAKE_SOURCE_DIR}/vstd)
 include_directories(${CMAKE_SOURCE_DIR}/random-dungeon-generator)
 
 pybind11_add_module(_game NO_EXTRAS ${GAME_SRC})
-target_link_libraries(_game PRIVATE ${Boost_LIBRARIES} ${SDL2_LIBRARY} ${SDL2_IMAGE_LIBRARY} ${SDL2_TTF_LIBRARY})
+target_link_libraries(_game PRIVATE ${BOOST_FILESYSTEM_LIBS} ${SDL2_LIBS} ${SDL2_IMAGE_LIBS} ${SDL2_TTF_LIBS})
 
 set_source_files_properties(
     ${CMAKE_SOURCE_DIR}/src/core/CModule.cpp
@@ -282,29 +322,47 @@ install(FILES res/game.py play.py mcp.py test.py DESTINATION fall-of-nouraajd)
 if (WIN32)
     install(FILES play.bat DESTINATION fall-of-nouraajd)
 
-    install(FILES windows-tools/SDL2_image-2.0.5/x86_64-w64-mingw32/bin/libjpeg-9.dll DESTINATION fall-of-nouraajd)
-    install(FILES windows-tools/SDL2_image-2.0.5/x86_64-w64-mingw32/bin/libpng16-16.dll DESTINATION fall-of-nouraajd)
-    install(FILES windows-tools/SDL2_image-2.0.5/x86_64-w64-mingw32/bin/libtiff-5.dll DESTINATION fall-of-nouraajd)
-    install(FILES windows-tools/SDL2_image-2.0.5/x86_64-w64-mingw32/bin/libwebp-7.dll DESTINATION fall-of-nouraajd)
-    install(FILES windows-tools/SDL2_image-2.0.5/x86_64-w64-mingw32/bin/SDL2_image.dll DESTINATION fall-of-nouraajd)
-    install(FILES windows-tools/SDL2_image-2.0.5/x86_64-w64-mingw32/bin/zlib1.dll DESTINATION fall-of-nouraajd)
+    set(WINDOWS_RUNTIME_DEPENDENCY_CODE "")
+    if (DEFINED _VCPKG_INSTALLED_DIR AND DEFINED VCPKG_TARGET_TRIPLET)
+        foreach (runtime_dir
+                 "${_VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}/bin"
+                 "${_VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}/debug/bin")
+            if (EXISTS "${runtime_dir}")
+                string(APPEND WINDOWS_RUNTIME_DEPENDENCY_CODE
+                       "list(APPEND runtime_search_dirs [[${runtime_dir}]])\n")
+            endif ()
+        endforeach ()
+    endif ()
 
-    install(FILES windows-tools/SDL2_ttf-2.0.15/x86_64-w64-mingw32/bin/libfreetype-6.dll DESTINATION fall-of-nouraajd)
-    install(FILES windows-tools/SDL2_ttf-2.0.15/x86_64-w64-mingw32/bin/SDL2_ttf.dll DESTINATION fall-of-nouraajd)
-
-    install(FILES windows-tools/SDL2-2.0.12/x86_64-w64-mingw32/bin/SDL2.dll DESTINATION fall-of-nouraajd)
-
-    install(FILES windows-tools/boost64/lib/libboost_filesystem-mgw8-mt-x64-1_74.dll DESTINATION fall-of-nouraajd)
-
-    install(FILES windows-tools/Python36/python.exe DESTINATION fall-of-nouraajd)
-    install(FILES windows-tools/Python36/python36.dll DESTINATION fall-of-nouraajd)
-    install(FILES windows-tools/Python36/vcruntime140.dll DESTINATION fall-of-nouraajd)
-
-    install(FILES windows-tools/mingw/mingw64/bin/libgcc_s_seh-1.dll DESTINATION fall-of-nouraajd)
-    install(FILES windows-tools/mingw/mingw64/bin/libstdc++-6.dll DESTINATION fall-of-nouraajd)
-    install(FILES windows-tools/mingw/mingw64/bin/libwinpthread-1.dll DESTINATION fall-of-nouraajd)
-
-    install(FILES windows-tools/Python36/python36.zip DESTINATION fall-of-nouraajd)
+    install(CODE "
+        if (CMAKE_VERSION VERSION_LESS 3.16)
+            message(WARNING \"CMake 3.16 or newer is required to bundle Windows runtime DLLs automatically.\")
+        else ()
+            set(runtime_search_dirs \"\$ENV{PATH}\")
+            ${WINDOWS_RUNTIME_DEPENDENCY_CODE}
+            file(GET_RUNTIME_DEPENDENCIES
+                RESOLVED_DEPENDENCIES_VAR runtime_deps
+                UNRESOLVED_DEPENDENCIES_VAR unresolved_runtime_deps
+                MODULES \"$<TARGET_FILE:_game>\"
+                DIRECTORIES \${runtime_search_dirs}
+                PRE_EXCLUDE_REGEXES
+                    \"api-ms-.*\"
+                    \"ext-ms-.*\"
+                POST_EXCLUDE_REGEXES
+                    \".*[Ww][Ii][Nn][Dd][Oo][Ww][Ss][\\/][Ss]ystem32.*\"
+            )
+            foreach (runtime_dep IN LISTS runtime_deps)
+                file(INSTALL
+                    DESTINATION \"\${CMAKE_INSTALL_PREFIX}/fall-of-nouraajd\"
+                    TYPE SHARED_LIBRARY
+                    FILES \"\${runtime_dep}\"
+                )
+            endforeach ()
+            if (unresolved_runtime_deps)
+                message(WARNING \"Unresolved Windows runtime dependencies: \${unresolved_runtime_deps}\")
+            endif ()
+        endif ()
+    ")
 endif ()
 
 
@@ -331,17 +389,39 @@ target_include_directories(for_unit_tests PRIVATE
 target_link_libraries(for_unit_tests PRIVATE
     Python3::Python
     pybind11::headers
-    ${SDL2_LIBRARY}
-    ${SDL2_IMAGE_LIBRARY}
+    ${BOOST_FILESYSTEM_LIBS}
+    ${SDL2_EXECUTABLE_LIBS}
+    ${SDL2_IMAGE_LIBS}
+    ${SDL2_TTF_LIBS}
 )
 
 enable_testing()
 add_test(NAME for_unit_tests COMMAND for_unit_tests)
+if (WIN32 AND DEFINED _VCPKG_INSTALLED_DIR AND DEFINED VCPKG_TARGET_TRIPLET)
+    set(TEST_PYTHONHOME "${_VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}/tools/python3")
+    set(TEST_RUNTIME_PATH "${_VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}/bin")
+    if (CMAKE_VERSION VERSION_GREATER_EQUAL 3.22)
+        set_tests_properties(for_unit_tests PROPERTIES
+            ENVIRONMENT "PYTHONHOME=${TEST_PYTHONHOME}"
+            ENVIRONMENT_MODIFICATION "PATH=path_list_prepend:${TEST_RUNTIME_PATH}"
+        )
+    else ()
+        set_tests_properties(for_unit_tests PROPERTIES
+            ENVIRONMENT "PYTHONHOME=${TEST_PYTHONHOME};PATH=${TEST_RUNTIME_PATH}"
+        )
+    endif ()
+endif ()
 
-SET(CPACK_STRIP_FILES _game.so)
+if (WIN32)
+    set(CPACK_STRIP_FILES _game.pyd)
+else ()
+    set(CPACK_STRIP_FILES _game.so)
+endif ()
 
 if (WIN32)
     set_target_properties(_game PROPERTIES UNITY_BUILD OFF)
 else()
     set_target_properties(_game PROPERTIES UNITY_BUILD ON UNITY_BUILD_BATCH_SIZE 8)
 endif ()
+
+include(CPack)

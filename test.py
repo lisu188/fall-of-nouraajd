@@ -18,11 +18,13 @@ import builtins
 import importlib
 import json
 import os
+import queue
 import re
 import select
 import subprocess
 import sys
 import tempfile
+import threading
 import time
 import traceback
 import types
@@ -54,6 +56,15 @@ if build_dir.exists():
 
 if str(Path.cwd()) not in sys.path:
     sys.path.insert(0, str(Path.cwd()))
+build_config = os.environ.get("GAME_BUILD_CONFIG")
+extension_dirs = []
+if build_config:
+    extension_dirs.append(build_dir / build_config)
+else:
+    extension_dirs.extend(build_dir / config for config in ("Release", "Debug", "RelWithDebInfo", "MinSizeRel"))
+for extension_dir in reversed(extension_dirs):
+    if extension_dir.exists() and str(extension_dir) not in sys.path:
+        sys.path.insert(0, str(extension_dir))
 if str(REPO_ROOT / "res") not in sys.path:
     sys.path.insert(1, str(REPO_ROOT / "res"))
 if str(REPO_ROOT) not in sys.path:
@@ -3015,7 +3026,7 @@ class GameTest(unittest.TestCase):
 
         dialog_dir = REPO_ROOT / "res/maps/nouraajd"
         for path in dialog_dir.glob("*.json"):
-            with open(path) as f:
+            with open(path, encoding="utf-8") as f:
                 data = json.load(f)
             for key, value in data.items():
                 if not isinstance(value, dict):
@@ -3980,7 +3991,7 @@ class GameTest(unittest.TestCase):
         errors = []
         for path in (REPO_ROOT / "res").rglob("*.json"):
             try:
-                with open(path) as f:
+                with open(path, encoding="utf-8") as f:
                     json.load(f)
             except Exception:
                 errors.append(str(path))
@@ -4089,10 +4100,14 @@ class GameTest(unittest.TestCase):
             ],
         }
 
-        with tempfile.TemporaryDirectory(dir=TEST_OUTPUT_DIR) as temp_dir:
-            path = Path(temp_dir) / "map.json"
-            path.write_text(json.dumps(map_data))
-            issues, warnings = validate_map_json_tiled_compatibility(path)
+        class InlineMapPath:
+            def read_text(self):
+                return json.dumps(map_data)
+
+            def relative_to(self, root):
+                return Path("inline/map.json")
+
+        issues, warnings = validate_map_json_tiled_compatibility(InlineMapPath())
 
         self.assertEqual([], issues)
         self.assertEqual([], warnings)
@@ -4101,12 +4116,12 @@ class GameTest(unittest.TestCase):
     def test_plugin_load_function(self):
         missing = []
         for path in (REPO_ROOT / "res/plugins").rglob("*.py"):
-            with open(path) as f:
+            with open(path, encoding="utf-8") as f:
                 tree = ast.parse(f.read())
             if not any(isinstance(n, ast.FunctionDef) and n.name == "load" for n in tree.body):
                 missing.append(str(path))
         for path in (REPO_ROOT / "res/maps").rglob("script.py"):
-            with open(path) as f:
+            with open(path, encoding="utf-8") as f:
                 tree = ast.parse(f.read())
             if not any(isinstance(n, ast.FunctionDef) and n.name == "load" for n in tree.body):
                 missing.append(str(path))
@@ -4121,9 +4136,14 @@ class GameTest(unittest.TestCase):
                 continue
             if any(p.startswith("cmake-build") for p in parts):
                 continue
-            if "random-dungeon-generator" in parts or "vstd" in parts:
+            if (
+                "random-dungeon-generator" in parts
+                or "vstd" in parts
+                or "vcpkg_installed" in parts
+                or "windows-tools" in parts
+            ):
                 continue
-            with open(path) as f:
+            with open(path, encoding="utf-8", errors="replace") as f:
                 for i, line in enumerate(f, 1):
                     if line.startswith("\t"):
                         offenders.append(f"{path}:{i}")
@@ -4139,7 +4159,7 @@ class GameTest(unittest.TestCase):
         json_paths = list((REPO_ROOT / "res/config").rglob("*.json"))
         json_paths.extend((REPO_ROOT / "res/maps").rglob("*.json"))
         for path in json_paths:
-            with open(path) as f:
+            with open(path, encoding="utf-8") as f:
                 data = json.load(f)
             for key, val in self._collect_resource_paths(data):
                 if val == "string":
@@ -4610,6 +4630,21 @@ class McpServerTest(unittest.TestCase):
             return payload
 
     def _readline(self, stream, deadline: float) -> bytes:
+        if os.name == "nt":
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                self.fail("Timed out waiting for MCP response header")
+            result_queue = queue.Queue(maxsize=1)
+
+            def read_line():
+                result_queue.put(stream.readline())
+
+            threading.Thread(target=read_line, daemon=True).start()
+            try:
+                return result_queue.get(timeout=remaining)
+            except queue.Empty:
+                self.fail("Timed out waiting for MCP response header")
+
         while True:
             remaining = deadline - time.monotonic()
             if remaining <= 0:

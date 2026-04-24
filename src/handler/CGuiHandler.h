@@ -27,6 +27,10 @@ class CDialog;
 
 class CMarket;
 
+class CCreature;
+
+class CItem;
+
 class CGuiHandler : public CGameObject {
     V_META(CGuiHandler, CGameObject, vstd::meta::empty())
 

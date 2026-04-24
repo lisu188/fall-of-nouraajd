@@ -24,94 +24,82 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <utility>
 
 void CProxyTargetGraphicsObject::refresh() {
-  vstd::with<void>(getGui(), [this](auto gui) {
-    int prevX = 0, prevY = 0;
-    for (const auto &x_pair : proxyObjects) {
-      prevX = std::max(prevX, x_pair.first + 1);
-      if (!x_pair.second.empty()) {
-        prevY = std::max(prevY, x_pair.second.rbegin()->first + 1);
-      }
-    }
-
-    int currentSizeX = getSizeX(gui);
-    int currentSizeY = getSizeY(gui);
-
-    int xDiff = currentSizeX - prevX;
-    int yDiff = currentSizeY - prevY;
-
-    for (int x = 0; x < std::max(prevX, currentSizeX); x++) {
-      for (int y = 0; y < std::max(prevY, currentSizeY); y++) {
-        if (vstd::square_ctn(currentSizeX, currentSizeY, x, y) &&
-            !vstd::square_ctn(prevX, prevY, x, y)) {
-          addProxyObject(gui, x, y);
-        } else if (!vstd::square_ctn(currentSizeX, currentSizeY, x, y) &&
-                   vstd::square_ctn(prevX, prevY, x, y)) {
-          removeProxyObject(x, y);
+    vstd::with<void>(getGui(), [this](auto gui) {
+        int prevX = 0, prevY = 0;
+        for (const auto &x_pair : proxyObjects) {
+            prevX = std::max(prevX, x_pair.first + 1);
+            if (!x_pair.second.empty()) {
+                prevY = std::max(prevY, x_pair.second.rbegin()->first + 1);
+            }
         }
-      }
-    }
 
-    if (xDiff != 0 || yDiff != 0) {
-      refreshAll();
-    }
-  });
+        int currentSizeX = getSizeX(gui);
+        int currentSizeY = getSizeY(gui);
+
+        int xDiff = currentSizeX - prevX;
+        int yDiff = currentSizeY - prevY;
+
+        for (int x = 0; x < std::max(prevX, currentSizeX); x++) {
+            for (int y = 0; y < std::max(prevY, currentSizeY); y++) {
+                if (vstd::square_ctn(currentSizeX, currentSizeY, x, y) && !vstd::square_ctn(prevX, prevY, x, y)) {
+                    addProxyObject(gui, x, y);
+                } else if (!vstd::square_ctn(currentSizeX, currentSizeY, x, y) &&
+                           vstd::square_ctn(prevX, prevY, x, y)) {
+                    removeProxyObject(x, y);
+                }
+            }
+        }
+
+        if (xDiff != 0 || yDiff != 0) {
+            refreshAll();
+        }
+    });
 }
 
-void CProxyTargetGraphicsObject::addProxyObject(auto gui, int &x, int &y) {
-  std::shared_ptr<CProxyGraphicsObject> nh =
-      std::make_shared<CProxyGraphicsObject>(x, y);
-  std::shared_ptr<CLayout> layout1 =
-      gui->getGame()->template createObject<CLayout>(proxyLayout);
-  layout1->setNumericProperty("tileSize",
-                              getTileSize(this->ptr<CGameGraphicsObject>()));
-  nh->setLayout(layout1);
-  proxyObjects[x][y] = nh;
-  addChild(nh);
+void CProxyTargetGraphicsObject::addProxyObject(std::shared_ptr<CGui> gui, int &x, int &y) {
+    std::shared_ptr<CProxyGraphicsObject> nh = std::make_shared<CProxyGraphicsObject>(x, y);
+    std::shared_ptr<CLayout> layout1 = gui->getGame()->template createObject<CLayout>(proxyLayout);
+    layout1->setNumericProperty("tileSize", getTileSize(this->ptr<CGameGraphicsObject>()));
+    nh->setLayout(layout1);
+    proxyObjects[x][y] = nh;
+    addChild(nh);
 }
 
 void CProxyTargetGraphicsObject::removeProxyObject(int &x, int &y) {
-  removeChild(proxyObjects[x][y]);
-  proxyObjects[x].erase(y);
-  if (proxyObjects[x].empty()) {
-    proxyObjects.erase(x);
-  }
+    removeChild(proxyObjects[x][y]);
+    proxyObjects[x].erase(y);
+    if (proxyObjects[x].empty()) {
+        proxyObjects.erase(x);
+    }
 }
 
 void CProxyTargetGraphicsObject::refreshAll() {
-  for (auto [_x, map_x] : proxyObjects) {
-    for (auto [no, val] : map_x) {
-      val->refresh();
+    for (auto [_x, map_x] : proxyObjects) {
+        for (auto [no, val] : map_x) {
+            val->refresh();
+        }
     }
-  }
 }
 
 void CProxyTargetGraphicsObject::refreshObject(int x, int y) {
-  int sizeX = getSizeX(getGui());
-  int sizeY = getSizeY(getGui());
-  if (x < 0 || x >= sizeX || y < 0 || y >= sizeY) {
-    vstd::logger::warning("Ignoring proxy refresh outside target bounds:", x,
-                          y, "size:", sizeX, sizeY);
-  } else {
-    proxyObjects[x][y]->refresh();
-  }
+    int sizeX = getSizeX(getGui());
+    int sizeY = getSizeY(getGui());
+    if (x < 0 || x >= sizeX || y < 0 || y >= sizeY) {
+        vstd::logger::warning("Ignoring proxy refresh outside target bounds:", x, y, "size:", sizeX, sizeY);
+    } else {
+        proxyObjects[x][y]->refresh();
+    }
 }
 
-int CProxyTargetGraphicsObject::getSizeX(std::shared_ptr<CGui> gui) {
-  return 0;
-}
+int CProxyTargetGraphicsObject::getSizeX(std::shared_ptr<CGui> gui) { return 0; }
 
-int CProxyTargetGraphicsObject::getSizeY(std::shared_ptr<CGui> gui) {
-  return 0;
-}
+int CProxyTargetGraphicsObject::getSizeY(std::shared_ptr<CGui> gui) { return 0; }
 
-std::list<std::shared_ptr<CGameGraphicsObject>>
-CProxyTargetGraphicsObject::getProxiedObjects(std::shared_ptr<CGui> gui, int x,
-                                              int y) {
-  return {};
+std::list<std::shared_ptr<CGameGraphicsObject>> CProxyTargetGraphicsObject::getProxiedObjects(std::shared_ptr<CGui> gui,
+                                                                                              int x, int y) {
+    return {};
 }
 
 std::string CProxyTargetGraphicsObject::getProxyLayout() { return proxyLayout; }
 
-void CProxyTargetGraphicsObject::setProxyLayout(std::string _layout) {
-  proxyLayout = std::move(_layout);
-}
+void CProxyTargetGraphicsObject::setProxyLayout(std::string _layout) { proxyLayout = std::move(_layout); }
