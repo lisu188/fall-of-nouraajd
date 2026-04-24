@@ -9,21 +9,6 @@ import tempfile
 from pathlib import Path
 
 
-EXCLUDED_FILES = {
-    Path("src/core/CJsonUtil.h"),
-    Path("src/core/CModule.cpp"),
-    Path("src/core/CTypes.cpp"),
-    Path("src/core/CTypes.h"),
-    Path("src/core/CWrapper.h"),
-}
-
-INCLUDED_PREFIXES = (
-    Path("src/core"),
-    Path("src/handler"),
-    Path("src/object"),
-)
-
-
 def parse_args():
     parser = argparse.ArgumentParser(description="Generate coverage reports from gcov JSON output.")
     parser.add_argument("--root", required=True, type=Path)
@@ -42,12 +27,10 @@ def normalize_path(path_str: str, cwd: Path) -> Path:
 
 def is_included(root: Path, source_path: Path) -> bool:
     try:
-        rel_path = source_path.resolve().relative_to(root.resolve())
+        source_path.resolve().relative_to(root.resolve())
     except ValueError:
         return False
-    if rel_path in EXCLUDED_FILES:
-        return False
-    return any(rel_path.is_relative_to(prefix) for prefix in INCLUDED_PREFIXES)
+    return True
 
 
 def collect_gcov_reports(build_dir: Path):

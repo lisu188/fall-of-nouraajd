@@ -32,22 +32,9 @@ The script:
 - runs `python3 test.py` against the coverage build
 - generates reports in `coverage/coverage.txt` and `coverage/coverage.html`
 - uses `gcovr` when available and falls back to the repo-local `gcov` parser otherwise
-- fails if line coverage in the scoped target is below 80%
+- fails if total line coverage is below 80%
 
 ## Coverage scope
-Included paths:
-- `src/core/**`
-- `src/handler/**`
-- `src/object/**`
+Coverage reports include every instrumented file under this repository root.
 
-Explicit exclusions:
-- `src/gui/**` (out of scope for this runtime target)
-- `vstd/**` (external utility library)
-- `random-dungeon-generator/**` (external generator dependency)
-- build/package directories (`cmake-build*`, `build*`, `package*`)
-- generated/binding boilerplate that is not realistic to unit test directly:
-  - `src/core/CModule.cpp`
-  - `src/core/CWrapper.h`
-  - `src/core/CTypes.cpp`
-  - `src/core/CTypes.h`
-  - `src/core/CJsonUtil.h`
+No source paths are excluded from the coverage report by default.

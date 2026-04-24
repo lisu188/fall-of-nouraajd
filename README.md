@@ -80,7 +80,7 @@ For Windows Visual Studio builds, use `--config Release`, pass `-C Release` to `
 and set `GAME_BUILD_CONFIG=Release` before running `python test.py`.
 Also run `./scripts/run_coverage.sh` when a change touches tests (for example
 `test.py` or `tests/unit/**`), `src/core/**`, `src/handler/**`, `src/object/**`,
-or the coverage tooling. The scoped line coverage threshold for that run is 80%;
+or the coverage tooling. The total line coverage threshold for that run is 80%;
 see `docs/testing.md` for details.
 Data validation tests run without needing the compiled `_game` module, but
 other tests require it to be built.
