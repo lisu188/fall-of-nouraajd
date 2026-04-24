@@ -115,6 +115,12 @@ extern void add_arr_member(const std::shared_ptr<json> &object, bool value);
 
 extern void add_arr_member(const std::shared_ptr<json> &object, int value);
 
+extern std::shared_ptr<CSerializerBase> game_object_pointer_serializer();
+
+extern std::shared_ptr<CSerializerBase> game_object_set_serializer();
+
+extern std::shared_ptr<CSerializerBase> game_object_map_serializer();
+
 template <> class CSerializerFunction<std::shared_ptr<json>, std::shared_ptr<CGameObject>> {
   public:
     static std::shared_ptr<json> serialize(const std::shared_ptr<CGameObject> &object);

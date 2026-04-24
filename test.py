@@ -2898,6 +2898,111 @@ class GameTest(unittest.TestCase):
         return True, json.dumps(report, sort_keys=True)
 
     @game_test
+    def test_domain_helpers_and_serialized_collections(self):
+        game = load_game_module()
+        g = game.CGameLoader.loadGame()
+        game.CGameLoader.startGame(g, "empty")
+
+        tile = g.createObject("CTile")
+        tile.canStep = True
+        tile.posx = 3
+        tile.posy = 4
+        tile.posz = 1
+        tile.tileType = "covered"
+        serialized_tile = json.loads(game.jsonify(tile))
+        self.assertTrue(serialized_tile["properties"]["canStep"])
+        self.assertEqual(serialized_tile["properties"]["posx"], 3)
+        self.assertEqual(serialized_tile["properties"]["tileType"], "covered")
+
+        weapon_slot = g.createObject("CSlot")
+        weapon_slot.setSlotName("weapon")
+        weapon_slot.setTypes({"CWeapon"})
+        slot_config = g.createObject("CSlotConfig")
+        slot_config.setConfiguration({"weapon": weapon_slot})
+        weapon = g.createObject("CWeapon")
+        generic_item = g.createObject("CItem")
+        self.assertTrue(slot_config.canFit("weapon", weapon))
+        self.assertFalse(slot_config.canFit("weapon", generic_item))
+        self.assertFalse(slot_config.canFit("missing", weapon))
+        self.assertEqual(set(slot_config.getFittingSlots(weapon)), {"weapon"})
+
+        market = g.createObject("CMarket")
+        market.sell = 50
+        market.buy = 25
+        sale_item = g.createObject("CItem")
+        sale_item.name = "saleItem"
+        sale_item.power = 1
+        expensive_item = g.createObject("CItem")
+        expensive_item.name = "expensiveItem"
+        expensive_item.power = 3
+        market.setItems({sale_item, expensive_item})
+        self.assertEqual(len(market.getItems()), 2)
+        market.remove(expensive_item)
+        market.remove(expensive_item)
+        market.add(expensive_item)
+
+        buyer = g.createObject("CCreature")
+        buyer.addGold(1000)
+        sell_cost = market.getSellCost(sale_item)
+        self.assertTrue(market.sellItem(buyer, sale_item))
+        self.assertEqual(buyer.getGold(), 1000 - sell_cost)
+        self.assertTrue(buyer.hasItem(lambda item: item.getName() == "saleItem"))
+
+        poor_buyer = g.createObject("CCreature")
+        poor_buyer.addGold(1)
+        self.assertFalse(market.sellItem(poor_buyer, expensive_item))
+        self.assertEqual(poor_buyer.getGold(), 1)
+
+        seller = g.createObject("CCreature")
+        owned_item = g.createObject("CItem")
+        owned_item.name = "ownedItem"
+        owned_item.power = 2
+        seller.addItem(owned_item)
+        buy_cost = market.getBuyCost(owned_item)
+        market.buyItem(seller, owned_item)
+        self.assertEqual(seller.getGold(), buy_cost)
+        self.assertFalse(seller.hasItem(lambda item: item.getName() == "ownedItem"))
+
+        attacker = g.createObject("CCreature")
+        defender = g.createObject("CCreature")
+        attacker.setMana(10)
+        interaction = g.createObject("CInteraction")
+        interaction.manaCost = 3
+        damage_effect = g.createObject("CEffect")
+        interaction.effect = damage_effect
+        interaction.onAction(attacker, defender)
+        self.assertEqual(attacker.getMana(), 7)
+
+        buff_interaction = g.createObject("CInteraction")
+        buff_effect = g.createObject("CEffect")
+        buff_effect.addTag(game.CTag.BUFF)
+        buff_interaction.effect = buff_effect
+        buff_interaction.onAction(attacker, defender)
+
+        tooltip_item = g.createObject("CItem")
+        tooltip_item.label = "Practice blade"
+        tooltip_item.description = "Blunt but balanced."
+        bonus = g.createObject("Stats")
+        bonus.strength = 2
+        bonus.damage = 1
+        tooltip_item.bonus = bonus
+        tooltip = game.CTooltipHandler.buildTooltip(tooltip_item)
+        self.assertIn("Practice blade", tooltip)
+        self.assertIn("Blunt but balanced.", tooltip)
+        self.assertIn("Strength: 2", tooltip)
+        self.assertIn("Damage: 1", tooltip)
+
+        return True, json.dumps(
+            {
+                "market_items": sorted(item.getName() for item in market.getItems()),
+                "slot_fits": sorted(slot_config.getFittingSlots(weapon)),
+                "tile": serialized_tile["properties"],
+                "tooltip": tooltip.splitlines(),
+            },
+            sort_keys=True,
+        )
+
+    @game_test
     def test_event_handler_dispatches_lifecycle_triggers_and_item_use(self):
         game = load_game_module()
 
