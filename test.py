@@ -207,6 +207,7 @@ SDL_PRESSED = 1
 SDL_RELEASED = 0
 SDL_SCANCODE_MASK = 1 << 30
 SDL_BUTTON_LEFT = 1
+SDL_PIXELFORMAT_RGBA32 = 376840196
 
 GUI_WIDTH = 1920
 GUI_HEIGHT = 1080
@@ -214,6 +215,17 @@ GUI_TILE_SIZE = 50
 XVFB_GAMEPLAY_CHILD_TESTS = (
     "test_keyboard_input_moves_player",
     "test_mouse_click_moves_player",
+    "test_screenshot_readback_has_rendered_pixels",
+    "test_screenshot_after_keyboard_move_has_rendered_pixels",
+    "test_screenshot_after_mouse_move_has_rendered_pixels",
+    "test_screenshot_after_save_hotkey_has_rendered_pixels",
+    "test_screenshot_after_wait_hotkey_has_rendered_pixels",
+    "test_screenshot_info_panel_has_rendered_pixels",
+    "test_screenshot_inventory_equipped_selection_has_rendered_pixels",
+    "test_screenshot_inventory_item_selection_has_rendered_pixels",
+    "test_screenshot_inventory_panel_has_rendered_pixels",
+    "test_screenshot_question_panel_has_rendered_pixels",
+    "test_screenshot_quest_panel_with_active_quest_has_rendered_pixels",
     "test_sidebar_mouse_opens_inventory_until_hotkey_closes_it",
     "test_save_hotkey_writes_loadable_map",
 )
@@ -337,6 +349,86 @@ def push_sdl_mouse_button_event(x, y, button=SDL_BUTTON_LEFT, event_type=SDL_MOU
 def push_sdl_mouse_click(x, y, button=SDL_BUTTON_LEFT):
     push_sdl_mouse_button_event(x, y, button, SDL_MOUSEBUTTONDOWN)
     push_sdl_mouse_button_event(x, y, button, SDL_MOUSEBUTTONUP)
+
+
+def capture_sdl_screenshot(path):
+    import ctypes
+    from PIL import Image
+
+    sdl = load_sdl_library()
+    sdl.SDL_GetKeyboardFocus.restype = ctypes.c_void_p
+    sdl.SDL_GetMouseFocus.restype = ctypes.c_void_p
+    window = sdl.SDL_GetKeyboardFocus() or sdl.SDL_GetMouseFocus()
+    if not window:
+        raise AssertionError("Could not find the focused SDL window for screenshot capture.")
+
+    sdl.SDL_GetRenderer.argtypes = [ctypes.c_void_p]
+    sdl.SDL_GetRenderer.restype = ctypes.c_void_p
+    renderer = sdl.SDL_GetRenderer(window)
+    if not renderer:
+        raise AssertionError("Could not find the SDL renderer for screenshot capture.")
+
+    width = ctypes.c_int()
+    height = ctypes.c_int()
+    sdl.SDL_GetRendererOutputSize.argtypes = [
+        ctypes.c_void_p,
+        ctypes.POINTER(ctypes.c_int),
+        ctypes.POINTER(ctypes.c_int),
+    ]
+    sdl.SDL_GetRendererOutputSize.restype = ctypes.c_int
+    if sdl.SDL_GetRendererOutputSize(renderer, ctypes.byref(width), ctypes.byref(height)) != 0:
+        raise_sdl_error(sdl, "SDL_GetRendererOutputSize")
+
+    pitch = width.value * 4
+    pixels = (ctypes.c_uint8 * (pitch * height.value))()
+    sdl.SDL_RenderReadPixels.argtypes = [
+        ctypes.c_void_p,
+        ctypes.c_void_p,
+        ctypes.c_uint32,
+        ctypes.c_void_p,
+        ctypes.c_int,
+    ]
+    sdl.SDL_RenderReadPixels.restype = ctypes.c_int
+    if sdl.SDL_RenderReadPixels(renderer, None, SDL_PIXELFORMAT_RGBA32, pixels, pitch) != 0:
+        raise_sdl_error(sdl, "SDL_RenderReadPixels")
+
+    data = bytes(pixels)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    Image.frombytes("RGBA", (width.value, height.value), data).save(path)
+    return data, width.value, height.value
+
+
+def raise_sdl_error(sdl, function_name):
+    import ctypes
+
+    sdl.SDL_GetError.restype = ctypes.c_char_p
+    error = sdl.SDL_GetError()
+    message = error.decode("utf-8", errors="replace") if error else "unknown SDL error"
+    raise AssertionError(f"{function_name} failed: {message}")
+
+
+def screenshot_pixel_summary(data):
+    unique_rgb = set()
+    non_black_pixels = 0
+    for offset in range(0, len(data), 4):
+        rgb = data[offset : offset + 3]
+        unique_rgb.add(rgb)
+        if rgb != b"\x00\x00\x00":
+            non_black_pixels += 1
+    return {"unique_rgb": len(unique_rgb), "non_black_pixels": non_black_pixels}
+
+
+def assert_screenshot_has_rendered_pixels(test_case, g, name):
+    screenshot_path = TEST_OUTPUT_DIR / f"{name}.png"
+    data, width, height = capture_sdl_screenshot(screenshot_path)
+    summary = screenshot_pixel_summary(data)
+
+    test_case.assertEqual((GUI_WIDTH, GUI_HEIGHT), (width, height))
+    test_case.assertTrue(screenshot_path.exists())
+    test_case.assertGreater(summary["unique_rgb"], 8)
+    test_case.assertGreater(summary["non_black_pixels"], width * height // 100)
+    assert_rendered_map_proxy_cells(test_case, g)
+    return summary
 
 
 def find_adjacent_walkable_direction(game_map, origin):
@@ -4822,14 +4914,14 @@ class XvfbGameplayTest(unittest.TestCase):
         )
 
 
-def create_xvfb_gameplay_session(test_case):
+def create_xvfb_gameplay_session(test_case, map_name="test", player_name=DEFAULT_PLAYER):
     test_case.assertEqual("x11", os.environ.get("SDL_VIDEODRIVER"))
     test_case.assertIn("DISPLAY", os.environ)
 
     game = load_game_module()
     g = game.CGameLoader.loadGame()
     game.CGameLoader.loadGui(g)
-    game.CGameLoader.startGameWithPlayer(g, "test", DEFAULT_PLAYER)
+    game.CGameLoader.startGameWithPlayer(g, map_name, player_name)
     pump_event_loop(5)
     return game, g, g.getMap(), g.getMap().getPlayer()
 
@@ -4861,6 +4953,13 @@ def queue_panel_observer(game, g, class_name):
     return observed
 
 
+def open_panel_for_screenshot(test_case, g, panel_name, class_name):
+    panel = g.getGuiHandler().openPanel(panel_name)
+    pump_event_loop(5)
+    test_case.assertTrue(gui_contains_class(g, class_name))
+    return panel
+
+
 class XvfbGameplayProcessTest(unittest.TestCase):
     def setUp(self):
         if os.environ.get("FON_XVFB_GAMEPLAY_CHILD") != "1":
@@ -4888,6 +4987,100 @@ class XvfbGameplayProcessTest(unittest.TestCase):
         self.assertEqual((target.x, target.y, target.z), (moved.x, moved.y, moved.z))
         self.assertGreater(game_map.getTurn(), initial_turn)
         assert_rendered_map_proxy_cells(self, g)
+
+    def test_screenshot_readback_has_rendered_pixels(self):
+        _, g, _, _ = create_xvfb_gameplay_session(self)
+        assert_screenshot_has_rendered_pixels(self, g, "xvfb_gameplay_screenshot")
+
+    def test_screenshot_after_keyboard_move_has_rendered_pixels(self):
+        _, g, game_map, player = create_xvfb_gameplay_session(self)
+        initial = player.getCoords()
+        target, keycode, scancode = find_adjacent_walkable_direction(game_map, initial)
+
+        assert_player_moves_to_key_target(self, game_map, player, target, keycode, scancode)
+        assert_screenshot_has_rendered_pixels(self, g, "xvfb_keyboard_move_screenshot")
+
+    def test_screenshot_after_mouse_move_has_rendered_pixels(self):
+        _, g, game_map, player = create_xvfb_gameplay_session(self)
+        initial = player.getCoords()
+        target, _, _ = find_adjacent_walkable_direction(game_map, initial)
+        click_x, click_y = visible_map_cell_center(initial, target)
+
+        push_sdl_mouse_click(click_x, click_y)
+        pump_event_loop(5)
+
+        moved = player.getCoords()
+        self.assertEqual((target.x, target.y, target.z), (moved.x, moved.y, moved.z))
+        assert_screenshot_has_rendered_pixels(self, g, "xvfb_mouse_move_screenshot")
+
+    def test_screenshot_after_save_hotkey_has_rendered_pixels(self):
+        _, g, game_map, _ = create_xvfb_gameplay_session(self)
+        marker = f"xvfb-screenshot-{os.getpid()}-{time.monotonic_ns()}"
+        game_map.setStringProperty("xvfb_save_marker", marker)
+
+        push_sdl_key_event(ord("s"), 0, SDL_KEYDOWN)
+        push_sdl_key_event(ord("s"), 0, SDL_KEYUP)
+        pump_event_loop(5)
+
+        assert_screenshot_has_rendered_pixels(self, g, "xvfb_save_hotkey_screenshot")
+
+    def test_screenshot_after_wait_hotkey_has_rendered_pixels(self):
+        _, g, game_map, _ = create_xvfb_gameplay_session(self)
+        initial_turn = game_map.getTurn()
+
+        push_sdl_key_event(ord(" "), 44, SDL_KEYDOWN)
+        push_sdl_key_event(ord(" "), 44, SDL_KEYUP)
+        pump_event_loop(5)
+
+        self.assertGreater(game_map.getTurn(), initial_turn)
+        assert_screenshot_has_rendered_pixels(self, g, "xvfb_wait_hotkey_screenshot")
+
+    def test_screenshot_info_panel_has_rendered_pixels(self):
+        _, g, _, _ = create_xvfb_gameplay_session(self)
+        panel = open_panel_for_screenshot(self, g, "infoPanel", "CGameTextPanel")
+        panel.setStringProperty("text", "xvfb screenshot verification")
+        pump_event_loop(5)
+        assert_screenshot_has_rendered_pixels(self, g, "xvfb_info_panel_screenshot")
+
+    def test_screenshot_inventory_panel_has_rendered_pixels(self):
+        _, g, _, player = create_xvfb_gameplay_session(self)
+        player.addItem("Sword")
+        open_panel_for_screenshot(self, g, "inventoryPanel", "CGameInventoryPanel")
+        assert_screenshot_has_rendered_pixels(self, g, "xvfb_inventory_panel_screenshot")
+
+    def test_screenshot_inventory_item_selection_has_rendered_pixels(self):
+        _, g, _, player = create_xvfb_gameplay_session(self)
+        player.addItem("Sword")
+        open_panel_for_screenshot(self, g, "inventoryPanel", "CGameInventoryPanel")
+
+        push_sdl_mouse_click(585, 265)
+        pump_event_loop(5)
+
+        assert_screenshot_has_rendered_pixels(self, g, "xvfb_inventory_item_selection_screenshot")
+
+    def test_screenshot_inventory_equipped_selection_has_rendered_pixels(self):
+        _, g, _, player = create_xvfb_gameplay_session(self)
+        player.addItem("Sword")
+        open_panel_for_screenshot(self, g, "inventoryPanel", "CGameInventoryPanel")
+
+        push_sdl_mouse_click(585, 265)
+        push_sdl_mouse_click(1185, 265)
+        pump_event_loop(5)
+
+        assert_screenshot_has_rendered_pixels(self, g, "xvfb_inventory_equipped_selection_screenshot")
+
+    def test_screenshot_question_panel_has_rendered_pixels(self):
+        _, g, _, _ = create_xvfb_gameplay_session(self)
+        panel = open_panel_for_screenshot(self, g, "questionPanel", "CGameQuestionPanel")
+        panel.setStringProperty("question", "Continue xvfb screenshot verification?")
+        pump_event_loop(5)
+        assert_screenshot_has_rendered_pixels(self, g, "xvfb_question_panel_screenshot")
+
+    def test_screenshot_quest_panel_with_active_quest_has_rendered_pixels(self):
+        _, g, _, player = create_xvfb_gameplay_session(self, map_name="nouraajd")
+        player.addQuest("mainQuest")
+        open_panel_for_screenshot(self, g, "questPanel", "CGameQuestPanel")
+        assert_screenshot_has_rendered_pixels(self, g, "xvfb_quest_panel_screenshot")
 
     def test_sidebar_mouse_opens_inventory_until_hotkey_closes_it(self):
         game, g, _, _ = create_xvfb_gameplay_session(self)
