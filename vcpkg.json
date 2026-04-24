@@ -4,6 +4,7 @@
   "dependencies": [
     "boost-algorithm",
     "boost-pool",
+    "nlohmann-json",
     "sdl2",
     "sdl2-image",
     "sdl2-ttf"
