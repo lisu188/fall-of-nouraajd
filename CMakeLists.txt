@@ -79,6 +79,10 @@ find_package(SDL2_ttf CONFIG QUIET)
 if (NOT SDL2_ttf_FOUND AND NOT TARGET SDL2_ttf::SDL2_ttf)
     find_package(SDL2_ttf REQUIRED)
 endif ()
+find_path(NLOHMANN_JSON_INCLUDE_DIR nlohmann/json.hpp)
+if (NOT NLOHMANN_JSON_INCLUDE_DIR)
+    message(FATAL_ERROR "nlohmann/json.hpp was not found. On Debian/Ubuntu, run: sudo apt-get install nlohmann-json3-dev.")
+endif ()
 
 set(SDL2_LIBS ${SDL2_LIBRARY})
 set(SDL2_EXECUTABLE_LIBS ${SDL2_LIBRARY})
@@ -101,7 +105,7 @@ include_directories(${Python3_INCLUDE_DIRS})
 include_directories(${SDL2_INCLUDE_DIR})
 include_directories(${SDL2_IMAGE_INCLUDE_DIR})
 include_directories(${SDL2_TTF_INCLUDE_DIR})
-include_directories(json/single_include/nlohmann)
+include_directories(${NLOHMANN_JSON_INCLUDE_DIR})
 
 include_directories(${CMAKE_SOURCE_DIR}/src)
 
@@ -371,7 +375,7 @@ add_executable(for_unit_tests
 target_include_directories(for_unit_tests PRIVATE
     ${CMAKE_SOURCE_DIR}/src
     ${CMAKE_SOURCE_DIR}/vstd
-    json/single_include/nlohmann
+    ${NLOHMANN_JSON_INCLUDE_DIR}
     ${Python3_INCLUDE_DIRS}
     ${SDL2_INCLUDE_DIR}
     ${SDL2_IMAGE_INCLUDE_DIR}
