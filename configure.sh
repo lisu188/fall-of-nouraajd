@@ -5,7 +5,8 @@ sudo apt-get install -y build-essential cmake ninja-build ccache \
     python3 python3-dev \
     libboost-dev \
     libsdl2-dev libsdl2-ttf-dev libsdl2-image-dev \
-    nlohmann-json3-dev
+    nlohmann-json3-dev \
+    xvfb xauth
 
 git submodule update --init --recursive
 mkdir -p cmake-build-debug
