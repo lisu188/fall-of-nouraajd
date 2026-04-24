@@ -26,7 +26,7 @@ std::string CTooltipHandler::buildTooltip(std::shared_ptr<CGameObject> object) {
         auto bonus = vstd::cast<CItem>(object)->getBonus();
         bonus->meta()->for_all_properties(bonus, [&](auto prop) {
             // TODO: move to meta
-            if (prop->value_type() == vstd::type_id<int>()) {
+            if (prop->value_type() == std::type_index(typeid(int))) {
                 auto value = bonus->getNumericProperty(prop->name());
                 if (value > 0) {
                     vstd::add_line(tooltip, vstd::camel(prop->name()) + ": " + vstd::str(value));

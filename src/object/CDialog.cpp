@@ -18,51 +18,38 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "CDialog.h"
 #include "core/CPythonOverrides.h"
 
-const std::set<std::shared_ptr<CDialogState>> &CDialog::getStates() const {
-  return states;
-}
+const std::set<std::shared_ptr<CDialogState>> &CDialog::getStates() const { return states; }
 
-void CDialog::setStates(const std::set<std::shared_ptr<CDialogState>> &states) {
-  CDialog::states = states;
-}
+void CDialog::setStates(const std::set<std::shared_ptr<CDialogState>> &states) { CDialog::states = states; }
 
 std::shared_ptr<CDialogState> CDialog::getState(std::string stateId) {
-  return vstd::find_if(states, [stateId](auto _state) {
-    return _state->getStateId() == stateId;
-  });
+    auto state = vstd::find_if(states, [stateId](auto _state) { return _state->getStateId() == stateId; });
+    return state != states.end() ? *state : nullptr;
 }
 
 void CDialog::invokeAction(std::string action) {
-  pybind11::gil_scoped_acquire gil;
-  if (auto override = CPythonOverrides::find_override(this, "invokeAction");
-      !override.is_none()) {
-    PY_SAFE(override(action); return;)
-  }
+    pybind11::gil_scoped_acquire gil;
+    if (auto override = CPythonOverrides::find_override(this, "invokeAction"); !override.is_none()) {
+        PY_SAFE(override(action); return;)
+    }
 }
 
 bool CDialog::invokeCondition(std::string condition) {
-  pybind11::gil_scoped_acquire gil;
-  if (auto override = CPythonOverrides::find_override(this, "invokeCondition");
-      !override.is_none()) {
-    PY_SAFE_RET_VAL(return override(condition).cast<bool>();, true)
-  }
-  return true;
+    pybind11::gil_scoped_acquire gil;
+    if (auto override = CPythonOverrides::find_override(this, "invokeCondition"); !override.is_none()) {
+        PY_SAFE_RET_VAL(return override(condition).cast<bool>();, true)
+    }
+    return true;
 }
 
 const std::string &CDialogState::getText() const { return text; }
 
-void CDialogState::setText(const std::string &text) {
-  CDialogState::text = text;
-}
+void CDialogState::setText(const std::string &text) { CDialogState::text = text; }
 
-const std::set<std::shared_ptr<CDialogOption>> &
-CDialogState::getOptions() const {
-  return options;
-}
+const std::set<std::shared_ptr<CDialogOption>> &CDialogState::getOptions() const { return options; }
 
-void CDialogState::setOptions(
-    const std::set<std::shared_ptr<CDialogOption>> &options) {
-  CDialogState::options = options;
+void CDialogState::setOptions(const std::set<std::shared_ptr<CDialogOption>> &options) {
+    CDialogState::options = options;
 }
 
 int CDialogOption::getNumber() const { return number; }
@@ -71,30 +58,20 @@ void CDialogOption::setNumber(int number) { CDialogOption::number = number; }
 
 const std::string &CDialogOption::getText() const { return text; }
 
-void CDialogOption::setText(const std::string &text) {
-  CDialogOption::text = text;
-}
+void CDialogOption::setText(const std::string &text) { CDialogOption::text = text; }
 
 const std::string &CDialogOption::getAction() const { return action; }
 
-void CDialogOption::setAction(const std::string &action) {
-  CDialogOption::action = action;
-}
+void CDialogOption::setAction(const std::string &action) { CDialogOption::action = action; }
 
 const std::string &CDialogState::getStateId() const { return stateId; }
 
-void CDialogState::setStateId(const std::string &stateId) {
-  CDialogState::stateId = stateId;
-}
+void CDialogState::setStateId(const std::string &stateId) { CDialogState::stateId = stateId; }
 
 const std::string &CDialogOption::getNextStateId() const { return nextStateId; }
 
-void CDialogOption::setNextStateId(const std::string &nextStateId) {
-  CDialogOption::nextStateId = nextStateId;
-}
+void CDialogOption::setNextStateId(const std::string &nextStateId) { CDialogOption::nextStateId = nextStateId; }
 
 const std::string &CDialogOption::getCondition() const { return condition; }
 
-void CDialogOption::setCondition(const std::string &condition) {
-  CDialogOption::condition = condition;
-}
+void CDialogOption::setCondition(const std::string &condition) { CDialogOption::condition = condition; }
