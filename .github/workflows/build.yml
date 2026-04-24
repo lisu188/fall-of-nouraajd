@@ -42,7 +42,12 @@ jobs:
           path: cmake-build-release/fall-of-nouraajd-*.tar.gz
 
   windows:
-    runs-on: windows-latest
+    runs-on: windows-2022
+    env:
+      CONFIGURE_BUILD_DIRS: cmake-build-release
+      VCPKG_BINARY_SOURCES: clear;x-gha,readwrite
+      VCPKG_OVERLAY_TRIPLETS: ${{ github.workspace }}\cmake\triplets
+      VCPKG_TARGET_TRIPLET: x64-windows-release
     steps:
       - uses: actions/checkout@v4
       - name: Set up Python
@@ -50,7 +55,7 @@ jobs:
         with:
           python-version: "3.12"
       - name: Install Python deps
-        run: python -m pip install --upgrade pillow
+        run: python -m pip install --upgrade pybind11 pillow
       - name: submodules
         run: git submodule update --init --recursive
       - name: Set up vcpkg
@@ -63,9 +68,18 @@ jobs:
             throw "VCPKG_ROOT and VCPKG_INSTALLATION_ROOT are not set"
           }
           "VCPKG_ROOT=$env:VCPKG_ROOT" | Out-File -FilePath $env:GITHUB_ENV -Append
+      - name: Enable vcpkg x-gha binary cache
+        uses: actions/github-script@v7
+        with:
+          script: |
+            core.exportVariable('ACTIONS_CACHE_URL', process.env.ACTIONS_CACHE_URL || '');
+            core.exportVariable('ACTIONS_RUNTIME_TOKEN', process.env.ACTIONS_RUNTIME_TOKEN || '');
       - name: Install native deps
         shell: pwsh
-        run: '& "$env:VCPKG_ROOT\vcpkg.exe" install --triplet x64-windows'
+        run: |
+          & "$env:VCPKG_ROOT\vcpkg.exe" install `
+            --triplet "$env:VCPKG_TARGET_TRIPLET" `
+            --overlay-triplets "$env:VCPKG_OVERLAY_TRIPLETS"
       - name: configure, test, and package
         shell: cmd
         run: |
@@ -77,7 +91,7 @@ jobs:
           if errorlevel 1 exit /b 1
           set GAME_BUILD_DIR=cmake-build-release
           set GAME_BUILD_CONFIG=Release
-          set PATH=%CD%\cmake-build-release\Release;%CD%\vcpkg_installed\x64-windows\bin;%PATH%
+          set PATH=%CD%\cmake-build-release\Release;%CD%\vcpkg_installed\%VCPKG_TARGET_TRIPLET%\bin;%PATH%
           python test.py
           if errorlevel 1 exit /b 1
           cmake --build cmake-build-release --config Release --target package

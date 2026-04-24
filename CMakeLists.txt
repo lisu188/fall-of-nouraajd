@@ -397,18 +397,32 @@ target_link_libraries(for_unit_tests PRIVATE
 
 enable_testing()
 add_test(NAME for_unit_tests COMMAND for_unit_tests)
-if (WIN32 AND DEFINED _VCPKG_INSTALLED_DIR AND DEFINED VCPKG_TARGET_TRIPLET)
-    set(TEST_PYTHONHOME "${_VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}/tools/python3")
-    set(TEST_RUNTIME_PATH "${_VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}/bin")
+if (WIN32)
+    get_filename_component(TEST_PYTHONHOME "${Python3_EXECUTABLE}" DIRECTORY)
+    if (DEFINED _VCPKG_INSTALLED_DIR AND DEFINED VCPKG_TARGET_TRIPLET)
+        set(TEST_RUNTIME_PATH "${_VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}/bin")
+    endif ()
     if (CMAKE_VERSION VERSION_GREATER_EQUAL 3.22)
-        set_tests_properties(for_unit_tests PROPERTIES
-            ENVIRONMENT "PYTHONHOME=${TEST_PYTHONHOME}"
-            ENVIRONMENT_MODIFICATION "PATH=path_list_prepend:${TEST_RUNTIME_PATH}"
-        )
+        if (TEST_RUNTIME_PATH)
+            set_tests_properties(for_unit_tests PROPERTIES
+                ENVIRONMENT "PYTHONHOME=${TEST_PYTHONHOME}"
+                ENVIRONMENT_MODIFICATION "PATH=path_list_prepend:${TEST_RUNTIME_PATH}"
+            )
+        else ()
+            set_tests_properties(for_unit_tests PROPERTIES
+                ENVIRONMENT "PYTHONHOME=${TEST_PYTHONHOME}"
+            )
+        endif ()
     else ()
-        set_tests_properties(for_unit_tests PROPERTIES
-            ENVIRONMENT "PYTHONHOME=${TEST_PYTHONHOME};PATH=${TEST_RUNTIME_PATH}"
-        )
+        if (TEST_RUNTIME_PATH)
+            set_tests_properties(for_unit_tests PROPERTIES
+                ENVIRONMENT "PYTHONHOME=${TEST_PYTHONHOME};PATH=${TEST_RUNTIME_PATH}"
+            )
+        else ()
+            set_tests_properties(for_unit_tests PROPERTIES
+                ENVIRONMENT "PYTHONHOME=${TEST_PYTHONHOME}"
+            )
+        endif ()
     endif ()
 endif ()
 
