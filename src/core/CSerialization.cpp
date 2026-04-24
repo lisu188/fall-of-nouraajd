@@ -26,6 +26,56 @@ std::shared_ptr<CSerializerBase> CSerialization::serializer(std::pair<std::type_
     return (*CTypes::serializers())[key];
 }
 
+namespace {
+class CGameObjectPointerSerializer : public CSerializerBase {
+  public:
+    std::any serialize(std::any object) final {
+        return std::any(object_serialize(vstd::any_cast<std::shared_ptr<CGameObject>>(object)));
+    }
+
+    std::any deserialize(std::shared_ptr<CGame> map, std::any object) final {
+        return std::any(object_deserialize(map, vstd::any_cast<std::shared_ptr<json>>(object)));
+    }
+};
+
+class CGameObjectSetSerializer : public CSerializerBase {
+  public:
+    std::any serialize(std::any object) final {
+        return std::any(array_serialize(vstd::any_cast<std::set<std::shared_ptr<CGameObject>>>(object)));
+    }
+
+    std::any deserialize(std::shared_ptr<CGame> map, std::any object) final {
+        return std::any(array_deserialize(map, vstd::any_cast<std::shared_ptr<json>>(object)));
+    }
+};
+
+class CGameObjectMapSerializer : public CSerializerBase {
+  public:
+    std::any serialize(std::any object) final {
+        return std::any(map_serialize(vstd::any_cast<std::map<std::string, std::shared_ptr<CGameObject>>>(object)));
+    }
+
+    std::any deserialize(std::shared_ptr<CGame> map, std::any object) final {
+        return std::any(map_deserialize(map, vstd::any_cast<std::shared_ptr<json>>(object)));
+    }
+};
+} // namespace
+
+std::shared_ptr<CSerializerBase> game_object_pointer_serializer() {
+    static auto serializer = std::make_shared<CGameObjectPointerSerializer>();
+    return serializer;
+}
+
+std::shared_ptr<CSerializerBase> game_object_set_serializer() {
+    static auto serializer = std::make_shared<CGameObjectSetSerializer>();
+    return serializer;
+}
+
+std::shared_ptr<CSerializerBase> game_object_map_serializer() {
+    static auto serializer = std::make_shared<CGameObjectMapSerializer>();
+    return serializer;
+}
+
 void CSerialization::setProperty(const std::shared_ptr<CGameObject> &object, const std::string &key,
                                  const std::shared_ptr<json> &value) {
     if (value->is_boolean()) {

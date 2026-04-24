@@ -86,9 +86,12 @@ class CTypes {
     template <fn::GameObjectDerived T> static void register_pointer() {}
 
     template <fn::GameObjectDerived T> static void register_serializer() {
-        register_serializer<std::shared_ptr<json>, std::shared_ptr<T>>();
-        register_serializer<std::shared_ptr<json>, std::set<std::shared_ptr<T>>>();
-        register_serializer<std::shared_ptr<json>, std::map<std::string, std::shared_ptr<T>>>();
+        (*serializers())[vstd::type_pair<std::shared_ptr<json>, std::shared_ptr<T>>()] =
+            game_object_pointer_serializer();
+        (*serializers())[vstd::type_pair<std::shared_ptr<json>, std::set<std::shared_ptr<T>>>()] =
+            game_object_set_serializer();
+        (*serializers())[vstd::type_pair<std::shared_ptr<json>, std::map<std::string, std::shared_ptr<T>>>()] =
+            game_object_map_serializer();
     }
 
     template <fn::GameObjectDerived T, fn::GameObjectDerived U> static void register_cast() {}

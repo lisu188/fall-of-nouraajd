@@ -501,7 +501,32 @@ PYBIND11_MODULE(_game, m) {
             },
             "Run a fight between one creature and multiple opponents.");
 
-    py::class_<CMarket, CGameObject, std::shared_ptr<CMarket>>(m, "CMarket", "Trading inventory and prices.");
+    py::class_<CSlot, CGameObject, std::shared_ptr<CSlot>>(m, "CSlot", "Equipment slot configuration entry.")
+        .def("getSlotName", &CSlot::getSlotName, "Return slot id.")
+        .def("setSlotName", &CSlot::setSlotName, "Set slot id.")
+        .def("getTypes", &CSlot::getTypes, "Return class names that can fit this slot.")
+        .def("setTypes", &CSlot::setTypes, "Set class names that can fit this slot.");
+
+    py::class_<CSlotConfig, CGameObject, std::shared_ptr<CSlotConfig>>(m, "CSlotConfig",
+                                                                       "Equipment slot compatibility table.")
+        .def("getConfiguration", &CSlotConfig::getConfiguration, "Return configured slots.")
+        .def("setConfiguration", &CSlotConfig::setConfiguration, "Replace configured slots.")
+        .def("canFit", &CSlotConfig::canFit, "Return whether an item can be equipped in a slot.")
+        .def("getFittingSlots", &CSlotConfig::getFittingSlots, "Return all slots that accept an item.");
+
+    py::class_<CMarket, CGameObject, std::shared_ptr<CMarket>>(m, "CMarket", "Trading inventory and prices.")
+        .def("add", &CMarket::add, "Add an item to the market.")
+        .def("remove", &CMarket::remove, "Remove an item from the market.")
+        .def("getItems", &CMarket::getItems, "Return market inventory.")
+        .def("setItems", &CMarket::setItems, "Replace market inventory.")
+        .def("sellItem", &CMarket::sellItem, "Sell an item from the market to a creature.")
+        .def("buyItem", &CMarket::buyItem, "Buy an owned item from a creature.")
+        .def("getSellCost", &CMarket::getSellCost, "Return customer purchase price for an item.")
+        .def("getBuyCost", &CMarket::getBuyCost, "Return merchant buyback price for an item.");
+
+    py::class_<CTooltipHandler, CGameObject, std::shared_ptr<CTooltipHandler>>(m, "CTooltipHandler",
+                                                                               "Tooltip text builder.")
+        .def_static("buildTooltip", &CTooltipHandler::buildTooltip, "Build tooltip text for an object.");
 
     py::class_<CGameLoader, std::shared_ptr<CGameLoader>>(m, "CGameLoader",
                                                           "Factory helpers for loading game sessions and maps.")
