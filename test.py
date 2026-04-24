@@ -4205,6 +4205,9 @@ class GameTest(unittest.TestCase):
             return False, json.dumps({"error": "black executable is required to enforce formatting policy"})
 
         python_files = [str(path.relative_to(REPO_ROOT)) for path in iter_python_source_files()]
+        if not python_files:
+            return True, json.dumps({"checked_files": [], "skipped": "no changed Python files"}, sort_keys=True)
+
         return_code, output, errors = run_command(["black", "--check", "-l", "120", *python_files])
         log = {"command": "black --check -l 120", "stdout": output, "stderr": errors, "checked_files": python_files}
         return return_code == 0, json.dumps(log, indent=2, sort_keys=True)

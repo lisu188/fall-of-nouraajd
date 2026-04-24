@@ -17,6 +17,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #pragma once
 
+#include "core/CConcepts.h"
 #include "core/CGlobal.h"
 #include "core/CUtil.h"
 
@@ -26,52 +27,47 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 class CMap;
 
 class CObjectHandler : public CGameObject {
-public:
-  CObjectHandler();
+  public:
+    CObjectHandler();
 
-  template <typename T = CGameObject>
-  std::shared_ptr<T> createObject(std::shared_ptr<CGame> game,
-                                  std::string type) {
-    return vstd::cast<T>(_createObject(game, type));
-  }
+    template <fn::GameObjectDerived T = CGameObject>
+    std::shared_ptr<T> createObject(std::shared_ptr<CGame> game, std::string type) {
+        return vstd::cast<T>(_createObject(game, type));
+    }
 
-  template <typename T = CGameObject>
-  std::shared_ptr<T> createObject(std::shared_ptr<CGame> game) {
-    return vstd::cast<T>(_createObject(game, T::static_meta()->name()));
-  }
+    template <fn::MetaRegisteredGameObject T = CGameObject>
+    std::shared_ptr<T> createObject(std::shared_ptr<CGame> game) {
+        return vstd::cast<T>(_createObject(game, T::static_meta()->name()));
+    }
 
-  template <typename T> std::shared_ptr<T> clone(std::shared_ptr<T> object) {
-    return vstd::cast<T>(_clone(object));
-  }
+    template <fn::GameObjectDerived T> std::shared_ptr<T> clone(std::shared_ptr<T> object) {
+        return vstd::cast<T>(_clone(object));
+    }
 
-  std::vector<std::string> getAllTypes();
+    std::vector<std::string> getAllTypes();
 
-  std::vector<std::string> getAllSubTypes(const std::string &claz);
+    std::vector<std::string> getAllSubTypes(const std::string &claz);
 
-  void registerConfig(const std::string &path);
+    void registerConfig(const std::string &path);
 
-  void registerConfig(const std::string &name, std::shared_ptr<json> value);
+    void registerConfig(const std::string &name, std::shared_ptr<json> value);
 
-  void registerConfig(const std::set<std::string> &paths);
+    void registerConfig(const std::set<std::string> &paths);
 
-  void registerType(std::string name,
-                    std::function<std::shared_ptr<CGameObject>()> constructor);
+    void registerType(std::string name, std::function<std::shared_ptr<CGameObject>()> constructor);
 
-  std::shared_ptr<CGameObject> getType(const std::string &name);
+    std::shared_ptr<CGameObject> getType(const std::string &name);
 
-  std::shared_ptr<json> getConfig(const std::string &type);
+    std::shared_ptr<json> getConfig(const std::string &type);
 
-  std::string getClass(const std::string &type);
+    std::string getClass(const std::string &type);
 
-private:
-  std::shared_ptr<CGameObject> _createObject(std::shared_ptr<CGame> map,
-                                             const std::string &type);
+  private:
+    std::shared_ptr<CGameObject> _createObject(std::shared_ptr<CGame> map, const std::string &type);
 
-  std::shared_ptr<CGameObject>
-  _clone(const std::shared_ptr<CGameObject> &object);
+    std::shared_ptr<CGameObject> _clone(const std::shared_ptr<CGameObject> &object);
 
-  std::unordered_map<std::string, std::function<std::shared_ptr<CGameObject>()>>
-      constructors;
+    std::unordered_map<std::string, std::function<std::shared_ptr<CGameObject>()>> constructors;
 
-  std::unordered_map<std::string, std::shared_ptr<json>> objectConfig;
+    std::unordered_map<std::string, std::shared_ptr<json>> objectConfig;
 };

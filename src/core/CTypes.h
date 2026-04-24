@@ -19,6 +19,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include <stdexcept>
 
+#include "core/CConcepts.h"
 #include "core/CGlobal.h"
 #include "core/CSerialization.h"
 #include "object/CObject.h"
@@ -71,40 +72,41 @@ class CTypes {
             std::make_shared<CCustomSerializer<Serialized, Deserialized>>(serialize, deserialize);
     }
 
-    template <typename T> static void register_builder() {
+    template <fn::MetaRegisteredGameObject T> static void register_builder() {
         (*builders())[T::static_meta()->name()] = []() { return std::make_shared<T>(); };
     }
 
-    template <typename T> static void register_predicate() {}
+    template <fn::GameObjectDerived T> static void register_predicate() {}
 
-    template <typename T> static void register_supplier() {}
+    template <fn::GameObjectDerived T> static void register_supplier() {}
 
-    template <typename T> static void register_consumer() {}
+    template <fn::GameObjectDerived T> static void register_consumer() {}
 
-    template <typename T> static void register_pointer() {}
+    template <fn::GameObjectDerived T> static void register_pointer() {}
 
-    template <typename T> static void register_serializer() {
+    template <fn::GameObjectDerived T> static void register_serializer() {
         register_serializer<std::shared_ptr<json>, std::shared_ptr<T>>();
         register_serializer<std::shared_ptr<json>, std::set<std::shared_ptr<T>>>();
         register_serializer<std::shared_ptr<json>, std::map<std::string, std::shared_ptr<T>>>();
     }
 
-    template <typename T, typename U> static void register_cast() {}
+    template <fn::GameObjectDerived T, fn::GameObjectDerived U> static void register_cast() {}
 
-    template <typename T, typename U> static void register_any_cast() {
+    template <fn::GameObjectDerived T, fn::GameObjectDerived U> static void register_any_cast() {
         vstd::register_any_type<std::shared_ptr<T>, std::shared_ptr<U>>();
         vstd::register_any_type<std::set<std::shared_ptr<T>>, std::set<std::shared_ptr<U>>>();
         vstd::register_any_type<std::map<std::string, std::shared_ptr<T>>, std::map<std::string, std::shared_ptr<U>>>();
     }
 
-    template <typename T> static void register_derived_types() {
+    template <fn::GameObjectDerived T> static void register_derived_types() {
         pointer_types()->insert(vstd::type_id<std::shared_ptr<T>>());
         array_types()->insert(vstd::type_id<std::set<std::shared_ptr<T>>>());
         map_types()->insert(vstd::type_id<std::map<std::string, std::shared_ptr<T>>>());
     }
 
-    template <typename T, typename U, typename... Args> static void register_type() {
-        static_assert(vstd::is_base_of<U, T>::value && !vstd::is_same<T, U>::value, "invalid base class");
+    template <fn::MetaRegisteredGameObject T, fn::GameObjectDerived U, fn::GameObjectDerived... Args>
+    static void register_type() {
+        static_assert(std::derived_from<T, U> && !std::same_as<T, U>, "invalid base class");
         register_type<T>();
         register_any_cast<T, U>();
         register_any_cast<U, T>();
@@ -112,7 +114,7 @@ class CTypes {
         register_type<T, Args...>();
     }
 
-    template <typename T> static void register_type() {
+    template <fn::MetaRegisteredGameObject T> static void register_type() {
         register_serializer<T>();
         register_builder<T>();
         register_consumer<T>();

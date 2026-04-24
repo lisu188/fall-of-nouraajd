@@ -20,43 +20,38 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "CGameObject.h"
 
 class CTrigger : public CGameObject {
-  V_META(CTrigger, CGameObject,
-         V_PROPERTY(CTrigger, std::string, object, getObject, setObject),
-         V_PROPERTY(CTrigger, std::string, event, getEvent, setEvent))
-public:
-  CTrigger();
+    V_META(CTrigger, CGameObject, V_PROPERTY(CTrigger, std::string, object, getObject, setObject),
+           V_PROPERTY(CTrigger, std::string, event, getEvent, setEvent))
+  public:
+    CTrigger();
 
-  virtual void trigger(std::shared_ptr<CGameObject>,
-                       std::shared_ptr<CGameEvent>);
+    virtual void trigger(std::shared_ptr<CGameObject>, std::shared_ptr<CGameEvent>);
 
-private:
-  std::string object;
-  std::string event;
+  private:
+    std::string object;
+    std::string event;
 
-public:
-  std::string getObject();
+  public:
+    std::string getObject();
 
-  void setObject(std::string object);
+    void setObject(std::string object);
 
-  std::string getEvent();
+    std::string getEvent();
 
-  void setEvent(std::string event);
+    void setEvent(std::string event);
 };
 
 class CCustomTrigger : public CTrigger {
-  V_META(CCustomTrigger, CTrigger, vstd::meta::empty())
+    V_META(CCustomTrigger, CTrigger, vstd::meta::empty())
 
-  std::function<void(std::shared_ptr<CGameObject>, std::shared_ptr<CGameEvent>)>
-      _trigger;
+    std::function<void(std::shared_ptr<CGameObject>, std::shared_ptr<CGameEvent>)> _trigger;
 
-public:
-  template <typename T>
-  CCustomTrigger(std::string object, std::string event, T __trigger)
-      : _trigger(__trigger) {
-    setObject(object);
-    setEvent(event);
-  }
+  public:
+    template <fn::TriggerCallback T>
+    CCustomTrigger(std::string object, std::string event, T __trigger) : _trigger(__trigger) {
+        setObject(object);
+        setEvent(event);
+    }
 
-  void trigger(std::shared_ptr<CGameObject> object,
-               std::shared_ptr<CGameEvent> event) override;
+    void trigger(std::shared_ptr<CGameObject> object, std::shared_ptr<CGameEvent> event) override;
 };

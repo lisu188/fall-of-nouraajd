@@ -17,6 +17,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #pragma once
 
+#include "core/CConcepts.h"
 #include "core/CGlobal.h"
 
 class CGameObject;
@@ -72,7 +73,7 @@ class CUtil {
 
     static Coords::Direction getDirection(Coords coords);
 
-    template <typename Predicate> static std::set<std::string> findFiles(std::string dir, Predicate pred) {
+    template <fn::FilePredicate Predicate> static std::set<std::string> findFiles(std::string dir, Predicate pred) {
         std::set<std::string> retValue;
         std::filesystem::directory_iterator iterator(dir), end;
         while (iterator != end) {
@@ -103,11 +104,7 @@ namespace vstd {
 template <> std::string str(Coords coords);
 }
 
-template <typename F>
-auto sdl_safe(
-    F f,
-    typename vstd::disable_if<vstd::is_same<typename vstd::function_traits<F>::return_type, int>::value>::type * = 0,
-    typename vstd::disable_if<vstd::is_same<typename vstd::function_traits<F>::return_type, void>::value>::type * = 0) {
+template <fn::SdlNullableCallable F> auto sdl_safe(F f) {
     auto return_value = f();
     if (!return_value) {
         vstd::logger::error(SDL_GetError());
@@ -115,11 +112,7 @@ auto sdl_safe(
     return return_value;
 }
 
-template <typename F>
-auto sdl_safe(
-    F f,
-    typename vstd::enable_if<vstd::is_same<typename vstd::function_traits<F>::return_type, int>::value>::type * = 0,
-    typename vstd::disable_if<vstd::is_same<typename vstd::function_traits<F>::return_type, void>::value>::type * = 0) {
+template <fn::SdlStatusCallable F> auto sdl_safe(F f) {
     auto return_value = f();
     if (return_value == -1) {
         vstd::logger::error(SDL_GetError());
@@ -127,13 +120,7 @@ auto sdl_safe(
     return return_value;
 }
 
-template <typename F>
-void sdl_safe(
-    F f,
-    typename vstd::disable_if<vstd::is_same<typename vstd::function_traits<F>::return_type, int>::value>::type * = 0,
-    typename vstd::enable_if<vstd::is_same<typename vstd::function_traits<F>::return_type, void>::value>::type * = 0) {
-    f();
-}
+template <fn::SdlVoidCallable F> void sdl_safe(F f) { f(); }
 
 #define SDL_SAFE(x) sdl_safe([&]() { return x; })
 

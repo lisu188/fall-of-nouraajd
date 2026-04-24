@@ -24,6 +24,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <string_view>
 #include <vector>
 
+#include "core/CConcepts.h"
+
 enum class CTag {
     Buff,
     Heal,
@@ -65,7 +67,7 @@ class CTags {
 
     static std::string_view toString(CTag tag);
 
-    template <typename Range> static bool isTagPresent(const Range &range, CTag tag) {
+    template <fn::TaggablePointerRange Range> static bool isTagPresent(const Range &range, CTag tag) {
         for (const auto &value : range) {
             if (value->hasTag(tag)) {
                 return true;

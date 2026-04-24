@@ -18,6 +18,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #pragma once
 
 #include "CSlotConfig.h"
+#include "core/CConcepts.h"
 #include "core/CGlobal.h"
 #include "core/CPlugin.h"
 #include "core/CUtil.h"
@@ -40,50 +41,50 @@ class CGuiHandler;
 class CScriptHandler;
 
 class CGame : public CGameObject {
-  V_META(CGame, CGameObject, vstd::meta::empty())
-public:
-  CGame();
+    V_META(CGame, CGameObject, vstd::meta::empty())
+  public:
+    CGame();
 
-  ~CGame();
+    ~CGame();
 
-  void changeMap(std::string file);
+    void changeMap(std::string file);
 
-  std::shared_ptr<CMap> getMap() const;
+    std::shared_ptr<CMap> getMap() const;
 
-  void setMap(std::shared_ptr<CMap> map);
+    void setMap(std::shared_ptr<CMap> map);
 
-  std::shared_ptr<CGuiHandler> getGuiHandler();
+    std::shared_ptr<CGuiHandler> getGuiHandler();
 
-  std::shared_ptr<CScriptHandler> getScriptHandler();
+    std::shared_ptr<CScriptHandler> getScriptHandler();
 
-  std::shared_ptr<CObjectHandler> getObjectHandler();
+    std::shared_ptr<CObjectHandler> getObjectHandler();
 
-  void loadPlugin(std::function<std::shared_ptr<CPlugin>()> plugin);
+    void loadPlugin(std::function<std::shared_ptr<CPlugin>()> plugin);
 
-  std::shared_ptr<CRngHandler> getRngHandler();
+    std::shared_ptr<CRngHandler> getRngHandler();
 
-  template <typename T> std::shared_ptr<T> createObject(std::string name) {
-    return getObjectHandler()->createObject<T>(this->ptr<CGame>(), name);
-  }
+    template <fn::GameObjectDerived T> std::shared_ptr<T> createObject(std::string name) {
+        return getObjectHandler()->createObject<T>(this->ptr<CGame>(), name);
+    }
 
-  template <typename T> std::shared_ptr<T> createObject() {
-    return getObjectHandler()->createObject<T>(this->ptr<CGame>());
-  }
+    template <fn::MetaRegisteredGameObject T> std::shared_ptr<T> createObject() {
+        return getObjectHandler()->createObject<T>(this->ptr<CGame>());
+    }
 
-  std::shared_ptr<CSlotConfig> getSlotConfiguration();
+    std::shared_ptr<CSlotConfig> getSlotConfiguration();
 
-private:
-  vstd::lazy<CGuiHandler> guiHandler;
-  vstd::lazy<CScriptHandler> scriptHandler;
-  vstd::lazy<CSlotConfig> slotConfiguration;
-  vstd::lazy<CRngHandler> rngHandler;
+  private:
+    vstd::lazy<CGuiHandler> guiHandler;
+    vstd::lazy<CScriptHandler> scriptHandler;
+    vstd::lazy<CSlotConfig> slotConfiguration;
+    vstd::lazy<CRngHandler> rngHandler;
 
-  vstd::lazy<CObjectHandler> objectHandler;
-  std::shared_ptr<CMap> map;
-  std::shared_ptr<CGui> _gui;
+    vstd::lazy<CObjectHandler> objectHandler;
+    std::shared_ptr<CMap> map;
+    std::shared_ptr<CGui> _gui;
 
-public:
-  std::shared_ptr<CGui> getGui() const;
+  public:
+    std::shared_ptr<CGui> getGui() const;
 
-  void setGui(std::shared_ptr<CGui> _gui);
+    void setGui(std::shared_ptr<CGui> _gui);
 };

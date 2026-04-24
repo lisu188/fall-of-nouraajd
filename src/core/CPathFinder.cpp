@@ -50,7 +50,7 @@ struct NextStepNode {
 };
 
 struct AStarCompare {
-    template <typename Node> bool operator()(const Node &a, const Node &b) const {
+    template <fn::PriorityCostNode Node> bool operator()(const Node &a, const Node &b) const {
         if (a.priority == b.priority) {
             return a.cost > b.cost;
         }
