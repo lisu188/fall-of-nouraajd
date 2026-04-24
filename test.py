@@ -201,14 +201,40 @@ def pump_event_loop(iterations=30):
 
 SDL_KEYDOWN = 0x300
 SDL_KEYUP = 0x301
+SDL_MOUSEBUTTONDOWN = 0x401
+SDL_MOUSEBUTTONUP = 0x402
 SDL_PRESSED = 1
 SDL_RELEASED = 0
 SDL_SCANCODE_MASK = 1 << 30
+SDL_BUTTON_LEFT = 1
+
+GUI_WIDTH = 1920
+GUI_HEIGHT = 1080
+GUI_TILE_SIZE = 50
+XVFB_GAMEPLAY_CHILD_TESTS = (
+    "test_keyboard_input_moves_player",
+    "test_mouse_click_moves_player",
+    "test_sidebar_mouse_opens_inventory_until_hotkey_closes_it",
+    "test_save_hotkey_writes_loadable_map",
+)
+
+
+def load_sdl_library():
+    import ctypes
+    import ctypes.util
+
+    for library_name in (ctypes.util.find_library("SDL2"), "libSDL2-2.0.so.0", "libSDL2.so"):
+        if not library_name:
+            continue
+        try:
+            return ctypes.CDLL(library_name)
+        except OSError:
+            continue
+    raise AssertionError("Could not load SDL2 for gameplay event injection.")
 
 
 def push_sdl_key_event(keycode, scancode, event_type=SDL_KEYDOWN):
     import ctypes
-    import ctypes.util
 
     class SDL_Keysym(ctypes.Structure):
         _fields_ = [
@@ -237,18 +263,7 @@ def push_sdl_key_event(keycode, scancode, event_type=SDL_KEYDOWN):
             ("padding", ctypes.c_uint8 * 56),
         ]
 
-    sdl = None
-    for library_name in (ctypes.util.find_library("SDL2"), "libSDL2-2.0.so.0", "libSDL2.so"):
-        if not library_name:
-            continue
-        try:
-            sdl = ctypes.CDLL(library_name)
-            break
-        except OSError:
-            continue
-    if sdl is None:
-        raise AssertionError("Could not load SDL2 for gameplay event injection.")
-
+    sdl = load_sdl_library()
     event = SDL_Event()
     event.type = event_type
     event.key.type = event_type
@@ -271,6 +286,59 @@ def push_sdl_key_event(keycode, scancode, event_type=SDL_KEYDOWN):
         raise AssertionError(f"SDL_PushEvent returned {pushed}.")
 
 
+def push_sdl_mouse_button_event(x, y, button=SDL_BUTTON_LEFT, event_type=SDL_MOUSEBUTTONDOWN):
+    import ctypes
+
+    class SDL_MouseButtonEvent(ctypes.Structure):
+        _fields_ = [
+            ("type", ctypes.c_uint32),
+            ("timestamp", ctypes.c_uint32),
+            ("windowID", ctypes.c_uint32),
+            ("which", ctypes.c_uint32),
+            ("button", ctypes.c_uint8),
+            ("state", ctypes.c_uint8),
+            ("clicks", ctypes.c_uint8),
+            ("padding1", ctypes.c_uint8),
+            ("x", ctypes.c_int32),
+            ("y", ctypes.c_int32),
+        ]
+
+    class SDL_Event(ctypes.Union):
+        _fields_ = [
+            ("type", ctypes.c_uint32),
+            ("button", SDL_MouseButtonEvent),
+            ("padding", ctypes.c_uint8 * 56),
+        ]
+
+    sdl = load_sdl_library()
+    event = SDL_Event()
+    event.type = event_type
+    event.button.type = event_type
+    event.button.button = button
+    event.button.state = SDL_PRESSED if event_type == SDL_MOUSEBUTTONDOWN else SDL_RELEASED
+    event.button.clicks = 1
+    event.button.x = x
+    event.button.y = y
+
+    sdl.SDL_GetKeyboardFocus.restype = ctypes.c_void_p
+    sdl.SDL_GetWindowID.argtypes = [ctypes.c_void_p]
+    sdl.SDL_GetWindowID.restype = ctypes.c_uint32
+    focused_window = sdl.SDL_GetKeyboardFocus()
+    if focused_window:
+        event.button.windowID = sdl.SDL_GetWindowID(focused_window)
+
+    sdl.SDL_PushEvent.argtypes = [ctypes.POINTER(SDL_Event)]
+    sdl.SDL_PushEvent.restype = ctypes.c_int
+    pushed = sdl.SDL_PushEvent(ctypes.byref(event))
+    if pushed != 1:
+        raise AssertionError(f"SDL_PushEvent returned {pushed}.")
+
+
+def push_sdl_mouse_click(x, y, button=SDL_BUTTON_LEFT):
+    push_sdl_mouse_button_event(x, y, button, SDL_MOUSEBUTTONDOWN)
+    push_sdl_mouse_button_event(x, y, button, SDL_MOUSEBUTTONUP)
+
+
 def find_adjacent_walkable_direction(game_map, origin):
     game = load_game_module()
     directions = (
@@ -284,6 +352,31 @@ def find_adjacent_walkable_direction(game_map, origin):
         if game_map.canStep(target):
             return target, keycode, scancode
     raise AssertionError(f"Expected an adjacent walkable tile near {origin.x},{origin.y},{origin.z}.")
+
+
+def visible_map_cell_center(origin, target):
+    dx = target.x - origin.x
+    dy = target.y - origin.y
+    center_cell_x = (GUI_WIDTH // GUI_TILE_SIZE + 1) // 2
+    center_cell_y = (GUI_HEIGHT // GUI_TILE_SIZE + 1) // 2
+    return (
+        (center_cell_x + dx) * GUI_TILE_SIZE + GUI_TILE_SIZE // 2,
+        (center_cell_y + dy) * GUI_TILE_SIZE + GUI_TILE_SIZE // 2,
+    )
+
+
+def gui_contains_class(g, class_name):
+    game = load_game_module()
+    gui_tree = json.loads(game.jsonify(g.getGui()))
+    stack = [gui_tree]
+    while stack:
+        node = stack.pop()
+        if not isinstance(node, dict):
+            continue
+        if node.get("class") == class_name:
+            return True
+        stack.extend(node.get("properties", {}).get("children") or [])
+    return False
 
 
 def get_map_proxy_child_counts(g):
@@ -4698,29 +4791,74 @@ class XvfbGameplayTest(unittest.TestCase):
             "--server-args=-screen 0 1920x1080x24",
             sys.executable,
             str(REPO_ROOT / "test.py"),
-            "XvfbGameplayProcessTest.test_keyboard_input_moves_player",
         ]
 
-        try:
-            completed = subprocess.run(
-                command,
-                cwd=REPO_ROOT,
-                env=env,
-                capture_output=True,
-                text=True,
-                timeout=90,
-            )
-        except subprocess.TimeoutExpired as exc:
-            stdout = exc.stdout or ""
-            stderr = exc.stderr or ""
-            self.fail(f"xvfb gameplay test timed out.\nstdout:\n{stdout}\nstderr:\n{stderr}")
+        failures = []
+        for child_test in XVFB_GAMEPLAY_CHILD_TESTS:
+            try:
+                completed = subprocess.run(
+                    command + [f"XvfbGameplayProcessTest.{child_test}"],
+                    cwd=REPO_ROOT,
+                    env=env,
+                    capture_output=True,
+                    text=True,
+                    timeout=90,
+                )
+            except subprocess.TimeoutExpired as exc:
+                stdout = exc.stdout or ""
+                stderr = exc.stderr or ""
+                failures.append(f"{child_test} timed out.\nstdout:\n{stdout}\nstderr:\n{stderr}")
+                continue
 
-        self.assertEqual(
-            0,
-            completed.returncode,
-            f"xvfb gameplay test failed with {completed.returncode}.\n"
-            f"stdout:\n{completed.stdout}\nstderr:\n{completed.stderr}",
+            if completed.returncode != 0:
+                failures.append(
+                    f"{child_test} failed with {completed.returncode}.\n"
+                    f"stdout:\n{completed.stdout}\nstderr:\n{completed.stderr}"
+                )
+
+        self.assertFalse(
+            failures,
+            "xvfb gameplay scenarios failed:\n\n" + "\n\n".join(failures),
         )
+
+
+def create_xvfb_gameplay_session(test_case):
+    test_case.assertEqual("x11", os.environ.get("SDL_VIDEODRIVER"))
+    test_case.assertIn("DISPLAY", os.environ)
+
+    game = load_game_module()
+    g = game.CGameLoader.loadGame()
+    game.CGameLoader.loadGui(g)
+    game.CGameLoader.startGameWithPlayer(g, "test", DEFAULT_PLAYER)
+    pump_event_loop(5)
+    return game, g, g.getMap(), g.getMap().getPlayer()
+
+
+def assert_player_moves_to_key_target(test_case, game_map, player, target, keycode, scancode):
+    initial_turn = game_map.getTurn()
+    push_sdl_key_event(keycode, scancode, SDL_KEYDOWN)
+    push_sdl_key_event(keycode, scancode, SDL_KEYUP)
+    pump_event_loop(5)
+
+    moved = player.getCoords()
+    test_case.assertEqual((target.x, target.y, target.z), (moved.x, moved.y, moved.z))
+    test_case.assertGreater(game_map.getTurn(), initial_turn)
+
+
+def assert_rendered_map_proxy_cells(test_case, g):
+    proxy_counts = get_map_proxy_child_counts(g)
+    test_case.assertTrue(proxy_counts, "Expected rendered map proxy cells after xvfb gameplay.")
+    test_case.assertEqual(0, sum(count == 0 for count in proxy_counts))
+
+
+def queue_panel_observer(game, g, class_name):
+    observed = {"open": False}
+
+    def observe():
+        observed["open"] = gui_contains_class(g, class_name)
+
+    game.event_loop.instance().invoke(observe)
+    return observed
 
 
 class XvfbGameplayProcessTest(unittest.TestCase):
@@ -4729,32 +4867,59 @@ class XvfbGameplayProcessTest(unittest.TestCase):
             self.skipTest("Run through XvfbGameplayTest so SDL uses xvfb instead of the dummy video driver.")
 
     def test_keyboard_input_moves_player(self):
-        self.assertEqual("x11", os.environ.get("SDL_VIDEODRIVER"))
-        self.assertIn("DISPLAY", os.environ)
-
-        game = load_game_module()
-        g = game.CGameLoader.loadGame()
-        game.CGameLoader.loadGui(g)
-        game.CGameLoader.startGameWithPlayer(g, "test", DEFAULT_PLAYER)
-        pump_event_loop(5)
-
-        game_map = g.getMap()
-        player = game_map.getPlayer()
+        _, g, game_map, player = create_xvfb_gameplay_session(self)
         initial = player.getCoords()
-        initial_turn = game_map.getTurn()
         target, keycode, scancode = find_adjacent_walkable_direction(game_map, initial)
 
-        push_sdl_key_event(keycode, scancode, SDL_KEYDOWN)
-        push_sdl_key_event(keycode, scancode, SDL_KEYUP)
+        assert_player_moves_to_key_target(self, game_map, player, target, keycode, scancode)
+        assert_rendered_map_proxy_cells(self, g)
+
+    def test_mouse_click_moves_player(self):
+        _, g, game_map, player = create_xvfb_gameplay_session(self)
+        initial = player.getCoords()
+        target, _, _ = find_adjacent_walkable_direction(game_map, initial)
+        click_x, click_y = visible_map_cell_center(initial, target)
+        initial_turn = game_map.getTurn()
+
+        push_sdl_mouse_click(click_x, click_y)
         pump_event_loop(5)
 
         moved = player.getCoords()
         self.assertEqual((target.x, target.y, target.z), (moved.x, moved.y, moved.z))
         self.assertGreater(game_map.getTurn(), initial_turn)
+        assert_rendered_map_proxy_cells(self, g)
 
-        proxy_counts = get_map_proxy_child_counts(g)
-        self.assertTrue(proxy_counts, "Expected rendered map proxy cells after xvfb gameplay.")
-        self.assertEqual(0, sum(count == 0 for count in proxy_counts))
+    def test_sidebar_mouse_opens_inventory_until_hotkey_closes_it(self):
+        game, g, _, _ = create_xvfb_gameplay_session(self)
+
+        push_sdl_mouse_click(1820, 25)
+        observed = queue_panel_observer(game, g, "CGameInventoryPanel")
+        push_sdl_key_event(ord("i"), 0, SDL_KEYDOWN)
+        push_sdl_key_event(ord("i"), 0, SDL_KEYUP)
+        pump_event_loop(5)
+
+        self.assertTrue(observed["open"])
+        self.assertFalse(gui_contains_class(g, "CGameInventoryPanel"))
+
+    def test_save_hotkey_writes_loadable_map(self):
+        _, _, game_map, _ = create_xvfb_gameplay_session(self)
+        game = load_game_module()
+        marker = f"xvfb-{os.getpid()}-{time.monotonic_ns()}"
+        game_map.setStringProperty("xvfb_save_marker", marker)
+
+        push_sdl_key_event(ord("s"), 0, SDL_KEYDOWN)
+        push_sdl_key_event(ord("s"), 0, SDL_KEYUP)
+        pump_event_loop(5)
+
+        save_name = game_map.getName()
+        save_path = Path.cwd() / "save" / f"{save_name}.json"
+        self.assertTrue(save_path.exists())
+        saved_json = json.loads(save_path.read_text())
+        self.assertEqual(marker, saved_json.get("properties", {}).get("xvfb_save_marker"))
+
+        loaded = game.CGameLoader.loadGame()
+        game.CGameLoader.loadSavedGame(loaded, save_name)
+        self.assertEqual(marker, loaded.getMap().getStringProperty("xvfb_save_marker"))
 
 
 class McpServerTest(unittest.TestCase):
