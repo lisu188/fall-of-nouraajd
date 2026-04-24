@@ -21,6 +21,7 @@ import os
 import queue
 import re
 import select
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -148,6 +149,52 @@ DEFAULT_PLAYER = "Warrior"
 NOURAAJD_VICTOR_TIMEOUT = 75
 TILED_FLIP_FLAG_MASK = 0xF0000000
 SUPPORTED_TILED_LAYER_TYPES = {"tilelayer", "objectgroup"}
+
+
+def git_changed_files():
+    if shutil.which("git") is None:
+        return []
+
+    changed = set()
+
+    def collect(cmd):
+        return_code, output, _ = run_command(cmd)
+        if return_code != 0 or not output:
+            return
+        changed.update(line.strip() for line in output.splitlines() if line.strip())
+
+    return_code, _, _ = run_command(["git", "rev-parse", "--verify", "main"])
+    if return_code == 0:
+        merge_base_code, merge_base, _ = run_command(["git", "merge-base", "main", "HEAD"])
+        if merge_base_code == 0 and merge_base:
+            collect(["git", "diff", "--name-only", "--diff-filter=ACMRTUXB", f"{merge_base.strip()}...HEAD"])
+
+    collect(["git", "diff", "--name-only", "--diff-filter=ACMRTUXB"])
+    collect(["git", "diff", "--cached", "--name-only", "--diff-filter=ACMRTUXB"])
+    collect(["git", "ls-files", "--others", "--exclude-standard"])
+
+    return sorted(path for path in changed if (REPO_ROOT / path).is_file())
+
+
+def iter_python_source_files():
+    for file_path in git_changed_files():
+        path = REPO_ROOT / file_path
+        if path.suffix == ".py":
+            yield path
+
+
+def iter_cpp_source_files():
+    for file_path in git_changed_files():
+        path = REPO_ROOT / file_path
+        if path.suffix in {".h", ".hpp", ".c", ".cc", ".cpp", ".cxx"}:
+            yield path
+
+
+def run_command(args):
+    proc = subprocess.run(args, cwd=REPO_ROOT, capture_output=True, text=True)
+    output = proc.stdout.strip()
+    errors = proc.stderr.strip()
+    return proc.returncode, output, errors
 
 
 def discover_maps():
@@ -4126,6 +4173,31 @@ class GameTest(unittest.TestCase):
             if not any(isinstance(n, ast.FunctionDef) and n.name == "load" for n in tree.body):
                 missing.append(str(path))
         return missing == [], json.dumps(missing)
+
+    @game_test
+    def test_python_black_formatting(self):
+        if shutil.which("black") is None:
+            return False, json.dumps({"error": "black executable is required to enforce formatting policy"})
+
+        python_files = [str(path.relative_to(REPO_ROOT)) for path in iter_python_source_files()]
+        return_code, output, errors = run_command(["black", "--check", "-l", "120", *python_files])
+        log = {"command": "black --check -l 120", "stdout": output, "stderr": errors, "checked_files": python_files}
+        return return_code == 0, json.dumps(log, indent=2, sort_keys=True)
+
+    @game_test
+    def test_cpp_clang_formatting(self):
+        if shutil.which("clang-format") is None:
+            return False, json.dumps({"error": "clang-format executable is required to enforce formatting policy"})
+
+        cxx_files = [str(path.relative_to(REPO_ROOT)) for path in iter_cpp_source_files()]
+        return_code, output, errors = run_command(["clang-format", "--dry-run", "--Werror", *cxx_files])
+        log = {
+            "command": "clang-format --dry-run --Werror",
+            "stdout": output,
+            "stderr": errors,
+            "checked_files": cxx_files,
+        }
+        return return_code == 0, json.dumps(log, indent=2, sort_keys=True)
 
     @game_test
     def test_indentation(self):
