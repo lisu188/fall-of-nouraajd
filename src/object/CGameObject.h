@@ -17,6 +17,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #pragma once
 
+#include "core/CConcepts.h"
 #include "core/CTags.h"
 #include "core/CGlobal.h"
 #include "core/CUtil.h"
@@ -52,7 +53,7 @@ class CGameObject : public vstd::stringable, public std::enable_shared_from_this
 
     void setGame(std::shared_ptr<CGame> game);
 
-    template <typename T = CGameObject> std::shared_ptr<T> ptr() {
+    template <fn::GameObjectDerived T = CGameObject> std::shared_ptr<T> ptr() {
         //_cast purposedly
         return vstd::cast<T>(const_cast<CGameObject *>(this)->shared_from_this());
     }
@@ -79,15 +80,16 @@ class CGameObject : public vstd::stringable, public std::enable_shared_from_this
 
     int getNumericProperty(std::string name);
 
-    template <typename T = CGameObject> void setObjectProperty(std::string name, std::shared_ptr<T> object) {
+    template <fn::GameObjectDerived T = CGameObject>
+    void setObjectProperty(std::string name, std::shared_ptr<T> object) {
         setProperty(name, std::any(object));
     }
 
-    template <typename T = CGameObject> std::shared_ptr<T> getObjectProperty(std::string name) {
+    template <fn::GameObjectDerived T = CGameObject> std::shared_ptr<T> getObjectProperty(std::string name) {
         return getProperty<std::shared_ptr<T>>(name);
     }
 
-    template <typename T = CGameObject> std::shared_ptr<T> clone() { return vstd::cast<T>(_clone()); }
+    template <fn::GameObjectDerived T = CGameObject> std::shared_ptr<T> clone() { return vstd::cast<T>(_clone()); }
 
     void incProperty(std::string name, int value);
 
