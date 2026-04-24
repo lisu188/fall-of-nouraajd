@@ -40,7 +40,6 @@ run_phase() {
 }
 
 cmake_args=(
-    --fresh
     -S . -B "${BUILD_DIR}" -G Ninja
     -DCMAKE_BUILD_TYPE=Debug
     -DCMAKE_CXX_COMPILER_LAUNCHER=
@@ -48,6 +47,9 @@ cmake_args=(
     -DCMAKE_EXE_LINKER_FLAGS=--coverage
     -DCMAKE_SHARED_LINKER_FLAGS=--coverage
 )
+if [[ "${COVERAGE_FRESH_CONFIGURE:-0}" == "1" ]]; then
+    cmake_args=(--fresh "${cmake_args[@]}")
+fi
 
 generate_report() {
     mkdir -p "${REPORT_DIR}" || return

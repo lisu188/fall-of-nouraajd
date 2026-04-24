@@ -310,9 +310,14 @@ DEFAULT_PLAYER = "Warrior"
 NOURAAJD_VICTOR_TIMEOUT = 75
 TILED_FLIP_FLAG_MASK = 0xF0000000
 SUPPORTED_TILED_LAYER_TYPES = {"tilelayer", "objectgroup"}
+_git_changed_files_cache = None
 
 
 def git_changed_files():
+    global _git_changed_files_cache
+    if _git_changed_files_cache is not None:
+        return list(_git_changed_files_cache)
+
     if shutil.which("git") is None:
         return []
 
@@ -324,9 +329,15 @@ def git_changed_files():
             return
         changed.update(line.strip() for line in output.splitlines() if line.strip())
 
-    return_code, _, _ = run_command(["git", "rev-parse", "--verify", "main"])
-    if return_code == 0:
-        merge_base_code, merge_base, _ = run_command(["git", "merge-base", "main", "HEAD"])
+    base_ref = None
+    for candidate in ("origin/main", "main"):
+        return_code, _, _ = run_command(["git", "rev-parse", "--verify", candidate])
+        if return_code == 0:
+            base_ref = candidate
+            break
+
+    if base_ref is not None:
+        merge_base_code, merge_base, _ = run_command(["git", "merge-base", base_ref, "HEAD"])
         if merge_base_code == 0 and merge_base:
             collect(["git", "diff", "--name-only", "--diff-filter=ACMRTUXB", f"{merge_base.strip()}...HEAD"])
 
@@ -334,7 +345,20 @@ def git_changed_files():
     collect(["git", "diff", "--cached", "--name-only", "--diff-filter=ACMRTUXB"])
     collect(["git", "ls-files", "--others", "--exclude-standard"])
 
-    return sorted(path for path in changed if (REPO_ROOT / path).is_file())
+    _git_changed_files_cache = tuple(sorted(path for path in changed if (REPO_ROOT / path).is_file()))
+    return list(_git_changed_files_cache)
+
+
+def git_tracked_files(*patterns):
+    if shutil.which("git") is None:
+        return []
+
+    command = ["git", "ls-files"]
+    command.extend(patterns)
+    return_code, output, _ = run_command(command)
+    if return_code != 0 or not output:
+        return []
+    return sorted(line.strip() for line in output.splitlines() if line.strip() and (REPO_ROOT / line.strip()).is_file())
 
 
 def iter_python_source_files():
@@ -4362,12 +4386,12 @@ class GameTest(unittest.TestCase):
 
     @game_test
     def test_python_black_formatting(self):
-        if shutil.which("black") is None:
-            return False, json.dumps({"error": "black executable is required to enforce formatting policy"})
-
         python_files = [str(path.relative_to(REPO_ROOT)) for path in iter_python_source_files()]
         if not python_files:
             return True, json.dumps({"checked_files": [], "skipped": "no changed Python files"}, sort_keys=True)
+
+        if shutil.which("black") is None:
+            return False, json.dumps({"error": "black executable is required to enforce formatting policy"})
 
         return_code, output, errors = run_command(["black", "--check", "-l", "120", *python_files])
         log = {"command": "black --check -l 120", "stdout": output, "stderr": errors, "checked_files": python_files}
@@ -4375,10 +4399,13 @@ class GameTest(unittest.TestCase):
 
     @game_test
     def test_cpp_clang_formatting(self):
+        cxx_files = [str(path.relative_to(REPO_ROOT)) for path in iter_cpp_source_files()]
+        if not cxx_files:
+            return True, json.dumps({"checked_files": [], "skipped": "no changed C++ files"}, sort_keys=True)
+
         if shutil.which("clang-format") is None:
             return False, json.dumps({"error": "clang-format executable is required to enforce formatting policy"})
 
-        cxx_files = [str(path.relative_to(REPO_ROOT)) for path in iter_cpp_source_files()]
         return_code, output, errors = run_command(["clang-format", "--dry-run", "--Werror", *cxx_files])
         log = {
             "command": "clang-format --dry-run --Werror",
@@ -4391,19 +4418,8 @@ class GameTest(unittest.TestCase):
     @game_test
     def test_indentation(self):
         offenders = []
-        for path in REPO_ROOT.rglob("*.py"):
-            parts = set(path.parts)
-            if "json" in parts and ("tools" in parts or "tests" in parts):
-                continue
-            if any(p.startswith("cmake-build") for p in parts):
-                continue
-            if (
-                "random-dungeon-generator" in parts
-                or "vstd" in parts
-                or "vcpkg_installed" in parts
-                or "windows-tools" in parts
-            ):
-                continue
+        for file_path in git_tracked_files("*.py"):
+            path = REPO_ROOT / file_path
             with open(path, encoding="utf-8", errors="replace") as f:
                 for i, line in enumerate(f, 1):
                     if line.startswith("\t"):
