@@ -95,7 +95,7 @@ Stats::Stats() {}
 
 void Stats::addBonus(std::shared_ptr<Stats> stats) {
     stats->meta()->for_all_properties(stats, [&](auto property) {
-        if (property->value_type() == vstd::type_id<int>()) {
+        if (property->value_type() == std::type_index(typeid(int))) {
             this->incProperty(property->name(), stats->getProperty<int>(property->name()));
         }
     });
@@ -103,7 +103,7 @@ void Stats::addBonus(std::shared_ptr<Stats> stats) {
 
 void Stats::removeBonus(std::shared_ptr<Stats> stats) {
     stats->meta()->for_all_properties(stats, [&](auto property) {
-        if (property->value_type() == vstd::type_id<int>()) {
+        if (property->value_type() == std::type_index(typeid(int))) {
             this->incProperty(property->name(), -stats->getProperty<int>(property->name()));
         }
     });

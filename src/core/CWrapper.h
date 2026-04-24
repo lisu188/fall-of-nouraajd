@@ -78,7 +78,7 @@ template <fn::PythonWrapperBase T> class CWrapper : public T {
 };
 
 template <> class CWrapper<CInteraction> : public CInteraction {
-    V_META(CWrapper<T>, CInteraction, vstd::meta::empty())
+    V_META(CWrapper<CInteraction>, CInteraction, vstd::meta::empty())
 
   public:
     using CInteraction::CInteraction;
@@ -104,7 +104,7 @@ template <> class CWrapper<CInteraction> : public CInteraction {
 };
 
 template <> class CWrapper<CEffect> : public CEffect {
-    V_META(CWrapper<T>, CEffect, vstd::meta::empty())
+    V_META(CWrapper<CEffect>, CEffect, vstd::meta::empty())
 
   public:
     using CEffect::CEffect;
@@ -120,7 +120,7 @@ template <> class CWrapper<CEffect> : public CEffect {
 };
 
 template <> class CWrapper<CTile> : public CTile {
-    V_META(CWrapper<T>, CTile, vstd::meta::empty())
+    V_META(CWrapper<CTile>, CTile, vstd::meta::empty())
 
   public:
     using CTile::CTile;
@@ -136,7 +136,7 @@ template <> class CWrapper<CTile> : public CTile {
 };
 
 template <> class CWrapper<CPotion> : public CPotion {
-    V_META(CWrapper<T>, CPotion, vstd::meta::empty())
+    V_META(CWrapper<CPotion>, CPotion, vstd::meta::empty())
 
   public:
     using CPotion::CPotion;
@@ -152,7 +152,7 @@ template <> class CWrapper<CPotion> : public CPotion {
 };
 
 template <> class CWrapper<CScroll> : public CScroll {
-    V_META(CWrapper<T>, CScroll, vstd::meta::empty())
+    V_META(CWrapper<CScroll>, CScroll, vstd::meta::empty())
 
   public:
     using CScroll::CScroll;
@@ -178,7 +178,7 @@ template <> class CWrapper<CScroll> : public CScroll {
 };
 
 template <> class CWrapper<CTrigger> : public CTrigger {
-    V_META(CWrapper<T>, CTrigger, vstd::meta::empty())
+    V_META(CWrapper<CTrigger>, CTrigger, vstd::meta::empty())
 
   public:
     using CTrigger::CTrigger;
@@ -194,7 +194,7 @@ template <> class CWrapper<CTrigger> : public CTrigger {
 };
 
 template <> class CWrapper<CQuest> : public CQuest {
-    V_META(CWrapper<T>, CQuest, vstd::meta::empty())
+    V_META(CWrapper<CQuest>, CQuest, vstd::meta::empty())
 
   public:
     using CQuest::CQuest;
@@ -220,7 +220,7 @@ template <> class CWrapper<CQuest> : public CQuest {
 };
 
 template <> class CWrapper<CPlugin> : public CPlugin {
-    V_META(CWrapper<T>, CPlugin, vstd::meta::empty())
+    V_META(CWrapper<CPlugin>, CPlugin, vstd::meta::empty())
 
   public:
     using CPlugin::CPlugin;
@@ -236,7 +236,7 @@ template <> class CWrapper<CPlugin> : public CPlugin {
 };
 
 template <> class CWrapper<CDialog> : public CDialog {
-    V_META(CWrapper<T>, CDialog, vstd::meta::empty())
+    V_META(CWrapper<CDialog>, CDialog, vstd::meta::empty())
 
   public:
     using CDialog::CDialog;

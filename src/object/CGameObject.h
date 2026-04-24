@@ -59,7 +59,12 @@ class CGameObject : public vstd::stringable, public std::enable_shared_from_this
     }
 
     template <typename T> void setProperty(std::string name, T property) {
-        this->meta()->set_property<CGameObject, T>(name, this->ptr(), property);
+        auto object = this->ptr();
+        if (this->meta()->has_property(name, object)) {
+            this->meta()->set_property<CGameObject, T>(name, object, property);
+        } else {
+            this->meta()->set_dynamic_property<CGameObject, T>(name, object, property);
+        }
     }
 
     template <typename T> T getProperty(std::string name) {

@@ -47,11 +47,11 @@ class CTypes {
 
     static bool is_array_type(std::type_index index);
 
-    template <typename T> static bool is_map_type() { return is_map_type(vstd::type_id<T>()); }
+    template <typename T> static bool is_map_type() { return is_map_type(std::type_index(typeid(T))); }
 
-    template <typename T> static bool is_pointer_type() { return is_pointer_type(vstd::type_id<T>()); }
+    template <typename T> static bool is_pointer_type() { return is_pointer_type(std::type_index(typeid(T))); }
 
-    template <typename T> static bool is_array_type() { return is_array_type(vstd::type_id<T>()); }
+    template <typename T> static bool is_array_type() { return is_array_type(std::type_index(typeid(T))); }
 
     template <typename Serialized, typename Deserialized> static void register_serializer() {
         (*serializers())[vstd::type_pair<Serialized, Deserialized>()] =
@@ -59,7 +59,8 @@ class CTypes {
     }
 
     template <typename T> static void register_custom_setter() {
-        (*setters())[vstd::type_id<T>()] = [](std::shared_ptr<CGameObject> object, std::string key, std::any value) {
+        (*setters())[std::type_index(typeid(T))] = [](std::shared_ptr<CGameObject> object, std::string key,
+                                                      std::any value) {
             object->setProperty(key, vstd::any_cast<T>(value));
         };
     }
@@ -99,9 +100,9 @@ class CTypes {
     }
 
     template <fn::GameObjectDerived T> static void register_derived_types() {
-        pointer_types()->insert(vstd::type_id<std::shared_ptr<T>>());
-        array_types()->insert(vstd::type_id<std::set<std::shared_ptr<T>>>());
-        map_types()->insert(vstd::type_id<std::map<std::string, std::shared_ptr<T>>>());
+        pointer_types()->insert(std::type_index(typeid(std::shared_ptr<T>)));
+        array_types()->insert(std::type_index(typeid(std::set<std::shared_ptr<T>>)));
+        map_types()->insert(std::type_index(typeid(std::map<std::string, std::shared_ptr<T>>)));
     }
 
     template <fn::MetaRegisteredGameObject T, fn::GameObjectDerived U, fn::GameObjectDerived... Args>
@@ -132,11 +133,11 @@ class CTypes {
     }
 
     static void set_custom_property(std::shared_ptr<CGameObject> object, std::string key, std::any property) {
-        auto propertyType = vstd::type_id(property.type());
+        auto propertyType = std::type_index(property.type());
         auto setter = setters()->find(propertyType);
         if (setter == setters()->end() || !setter->second) {
             throw std::runtime_error("No custom setter registered for property '" + key + "' of type '" +
-                                     vstd::type_name(propertyType) + "'");
+                                     std::string(propertyType.name()) + "'");
         }
         setter->second(object, key, property);
     }
