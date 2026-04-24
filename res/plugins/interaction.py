@@ -110,7 +110,7 @@ def load(self, context):
             second.hurt(damage)
 
         def configureEffect(self, effect):
-            if randint(1, 2) == 0:
+            if randint(1, 2) == 1:
                 return True
             return False
 

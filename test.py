@@ -1461,6 +1461,35 @@ class GameTest(unittest.TestCase):
         )
 
     @game_test
+    def test_disabled_teleporter_does_not_publish_waypoint(self):
+        _g, game_map, _player = load_game_map_with_player("test", "Warrior")
+        active_teleporter = find_runtime_object(game_map, "teleporter1")
+        teleporter = find_runtime_object(game_map, "teleporter2")
+        teleporter_coords = teleporter.getCoords()
+
+        self.assertFalse(teleporter.getBoolProperty("waypoint"))
+
+        advance_map_only(game_map, 1)
+
+        self.assertTrue(active_teleporter.getBoolProperty("waypoint"))
+        self.assertEqual(teleporter_coords.x, active_teleporter.getNumericProperty("x"))
+        self.assertEqual(teleporter_coords.y, active_teleporter.getNumericProperty("y"))
+        self.assertEqual(teleporter_coords.z, active_teleporter.getNumericProperty("z"))
+        self.assertFalse(teleporter.getBoolProperty("enabled"))
+        self.assertFalse(teleporter.getBoolProperty("waypoint"))
+
+        return True, json.dumps(
+            {
+                "active_name": active_teleporter.getName(),
+                "active_waypoint": active_teleporter.getBoolProperty("waypoint"),
+                "disabled_name": teleporter.getName(),
+                "disabled_enabled": teleporter.getBoolProperty("enabled"),
+                "disabled_waypoint": teleporter.getBoolProperty("waypoint"),
+            },
+            sort_keys=True,
+        )
+
+    @game_test
     def test_take_mana_clamps_at_zero(self):
         game = load_game_module()
         g = game.CGameLoader.loadGame()
@@ -1486,6 +1515,44 @@ class GameTest(unittest.TestCase):
                 "mana_max": mana_max,
                 "mana_after_partial_use": mana_after_partial_use,
                 "mana_after_overdraw": creature.getMana(),
+            },
+            sort_keys=True,
+        )
+
+    @game_test
+    def test_unequipping_armor_clamps_hp_and_mana_to_new_caps(self):
+        _g_hp, _game_map_hp, warrior = load_game_map_with_player("test", "Warrior")
+        warrior_hp_with_armor = warrior.getHpMax()
+        warrior.setHp(warrior_hp_with_armor)
+        warrior.unequipArmor()
+        warrior_hp_without_armor = warrior.getHpMax()
+
+        self.assertGreater(warrior_hp_with_armor, warrior_hp_without_armor)
+        self.assertEqual(warrior_hp_without_armor, warrior.getNumericProperty("hp"))
+        self.assertEqual(100, warrior.getHpRatio())
+
+        _g_mana, _game_map_mana, sorcerer = load_game_map_with_player("test", "Sorcerer")
+        sorcerer_stats = sorcerer.getStats()
+        sorcerer_mana_with_armor = sorcerer_stats.getNumericProperty(sorcerer_stats.getStringProperty("mainStat")) * 7
+        sorcerer.addManaProc(0)
+        sorcerer.unequipArmor()
+        sorcerer_stats_after_unequip = sorcerer.getStats()
+        sorcerer_mana_without_armor = (
+            sorcerer_stats_after_unequip.getNumericProperty(sorcerer_stats_after_unequip.getStringProperty("mainStat"))
+            * 7
+        )
+
+        self.assertGreater(sorcerer_mana_with_armor, sorcerer_mana_without_armor)
+        self.assertEqual(sorcerer_mana_without_armor, sorcerer.getMana())
+
+        return True, json.dumps(
+            {
+                "warrior_hp_with_armor": warrior_hp_with_armor,
+                "warrior_hp_without_armor": warrior_hp_without_armor,
+                "warrior_hp": warrior.getNumericProperty("hp"),
+                "sorcerer_mana_with_armor": sorcerer_mana_with_armor,
+                "sorcerer_mana_without_armor": sorcerer_mana_without_armor,
+                "sorcerer_mana": sorcerer.getMana(),
             },
             sort_keys=True,
         )
@@ -1955,6 +2022,61 @@ class GameTest(unittest.TestCase):
         return True, ""
 
     @game_test
+    def test_shadow_bolt_can_configure_its_effect(self):
+        game = load_game_module()
+        original_randint = game.randint
+        try:
+            game.randint = lambda lower, upper: lower
+            g = game.CGameLoader.loadGame()
+
+            shadow_bolt = g.createObject("ShadowBolt")
+            effect = g.createObject("AbyssalShadowsEffect")
+
+            self.assertTrue(shadow_bolt.configureEffect(effect))
+        finally:
+            game.randint = original_randint
+        return True, ""
+
+    @game_test
+    def test_monster_fight_controller_uses_only_one_heal_item_per_turn(self):
+        g, game_map, _player = load_game_map_with_player("test")
+        monster = g.createObject("GoblinThief")
+        monster.name = "unitTestMonsterController"
+        game_map.addObject(monster)
+        monster.moveTo(1, 1, 0)
+        monster.setHp(max(1, monster.getHpMax() // 4))
+
+        weak_potion = g.createObject("CPotion")
+        weak_potion.name = "unitTestWeakHeal"
+        weak_potion.typeId = "unitTestWeakHealPotion"
+        weak_potion.addTag("heal")
+        weak_potion.power = 1
+
+        strong_potion = g.createObject("CPotion")
+        strong_potion.name = "unitTestStrongHeal"
+        strong_potion.typeId = "unitTestStrongHealPotion"
+        strong_potion.addTag("heal")
+        strong_potion.power = 2
+
+        monster.addItem(weak_potion)
+        monster.addItem(strong_potion)
+
+        acted = monster.getFightController().control(monster, game_map.getPlayer())
+
+        self.assertTrue(acted)
+        self.assertEqual(0, monster.countItems("unitTestWeakHealPotion"))
+        self.assertEqual(1, monster.countItems("unitTestStrongHealPotion"))
+
+        return True, json.dumps(
+            {
+                "acted": acted,
+                "weak_remaining": monster.countItems("unitTestWeakHealPotion"),
+                "strong_remaining": monster.countItems("unitTestStrongHealPotion"),
+            },
+            sort_keys=True,
+        )
+
+    @game_test
     def test_multi_enemy_combat_resolves_and_rewards_once(self):
         game, g, attacker, defenders = self.make_multi_enemy_combat_fixture()
 
@@ -2012,6 +2134,41 @@ class GameTest(unittest.TestCase):
                 "remaining": remaining,
                 "exp_before": exp_before,
                 "exp_after": attacker.exp,
+            }
+        )
+
+    @game_test
+    def test_affiliated_creatures_do_not_fight_on_overlap(self):
+        game = load_game_module()
+
+        g = game.CGameLoader.loadGame()
+        game.CGameLoader.startGame(g, "empty")
+        allies = []
+        for x_pos in (0, 1):
+            creature = g.createObject("GoblinThief")
+            creature.baseStats.hit = 100
+            creature.baseStats.dmgMin = 10
+            creature.baseStats.dmgMax = 10
+            creature.baseStats.crit = 0
+            creature.hp = 1
+            creature.setStringProperty("affiliation", "encounter-pack")
+            g.getMap().addObject(creature)
+            creature.moveTo(x_pos, 0, 0)
+            allies.append(creature)
+
+        allies[1].moveTo(0, 0, 0)
+
+        remaining = sorted(creature.getName() for creature in allies if g.getMap().getObjectByName(creature.getName()))
+        occupants = sorted(obj.getName() for obj in g.getMap().getObjectsAtCoords(allies[0].getCoords()))
+
+        expected = sorted(creature.getName() for creature in allies)
+        self.assertEqual(expected, remaining)
+        self.assertEqual(expected, occupants)
+
+        return True, json.dumps(
+            {
+                "occupants": occupants,
+                "remaining": remaining,
             }
         )
 
@@ -2136,6 +2293,33 @@ class GameTest(unittest.TestCase):
         )
 
     @game_test
+    def test_attack_bonus_reflection_affects_hit_rolls(self):
+        game = load_game_module()
+
+        g = game.CGameLoader.loadGame()
+        game.CGameLoader.startGame(g, "empty")
+
+        creature = g.createObject("CCreature")
+        base_stats = g.createObject("Stats")
+        base_stats.hit = 0
+        base_stats.crit = 0
+        base_stats.dmgMin = 1
+        base_stats.dmgMax = 1
+        base_stats.damage = 0
+        creature.baseStats = base_stats
+
+        level_stats = g.createObject("Stats")
+        level_stats.attack = 100
+        creature.levelStats = level_stats
+        creature.level = 1
+
+        rolls = [creature.getDmg() for _ in range(20)]
+
+        self.assertEqual([1] * len(rolls), rolls)
+
+        return True, json.dumps({"rolls": rolls})
+
+    @game_test
     def test_create_object_without_config_logs_fallback(self):
         game = load_game_module()
 
@@ -2200,6 +2384,42 @@ class GameTest(unittest.TestCase):
             if not object:
                 failed.append(type)
         return failed == [], failed
+
+    @game_test
+    def test_effect_apply_uses_full_duration(self):
+        game = load_game_module()
+        seen_time_left = []
+
+        class CountingEffect(game.CEffect):
+            def onEffect(self):
+                seen_time_left.append(self.getTimeLeft())
+
+        g = game.CGameLoader.loadGame()
+        game.CGameLoader.startGame(g, "empty")
+
+        creature = g.createObject("CCreature")
+        effect = CountingEffect()
+        effect.duration = 3
+
+        effect.apply(creature)
+        effect.apply(creature)
+        effect.apply(creature)
+        effect.apply(creature)
+
+        self.assertEqual(
+            [3, 2, 1],
+            seen_time_left,
+            "A duration-N effect should tick exactly N times and expose the final tick to onEffect().",
+        )
+        self.assertEqual(0, effect.getTimeLeft())
+
+        return True, json.dumps(
+            {
+                "seen_time_left": seen_time_left,
+                "time_left": effect.getTimeLeft(),
+            },
+            sort_keys=True,
+        )
 
     @game_test
     def test_fights(self):
@@ -2887,6 +3107,48 @@ class GameTest(unittest.TestCase):
         )
 
     @game_test
+    def test_nouraajd_letter_reissue_and_quest_tag_regression(self):
+        game = load_game_module()
+        g, game_map, player = load_game_map_with_player("nouraajd")
+        town_hall = g.createObject("townHallDialog")
+
+        town_hall.give_letter()
+        self.assertTrue(
+            player.hasItem(lambda it: it.getName() == "letterToBeren" and it.hasTag(game.CTag.QUEST)),
+            "The mayor's letter should be tagged as a quest item so it cannot be sold or dropped.",
+        )
+        self.assertTrue(town_hall.has_letter_quest())
+        self.assertFalse(town_hall.can_offer_letter_work())
+
+        player.removeQuestItem(lambda it: it.getName() == "letterToBeren")
+        self.assertFalse(player.hasItem(lambda it: it.getName() == "letterToBeren"))
+        self.assertEqual(game_map.getStringProperty("quest_state_beren_chain"), "letter_in_hand")
+        self.assertFalse(town_hall.has_letter_quest())
+        self.assertTrue(
+            town_hall.can_offer_letter_work(),
+            "The mayor should reissue the letter if an older save or scripted state has lost the item.",
+        )
+
+        town_hall.give_letter()
+        self.assertTrue(
+            player.hasItem(lambda it: it.getName() == "letterToBeren" and it.hasTag(game.CTag.QUEST)),
+            "Reissued letters should stay protected as quest items.",
+        )
+        self.assertIn("deliverLetterQuest", quest_names(player))
+
+        return True, json.dumps(
+            {
+                "quest_state_beren_chain": game_map.getStringProperty("quest_state_beren_chain"),
+                "has_letter": player.hasItem(lambda it: it.getName() == "letterToBeren"),
+                "letter_is_quest_item": player.hasItem(
+                    lambda it: it.getName() == "letterToBeren" and it.hasTag(game.CTag.QUEST)
+                ),
+                "quests": quest_names(player),
+            },
+            sort_keys=True,
+        )
+
+    @game_test
     def test_nouraajd_octobogz_before_letter_and_relic_return_regression(self):
         g, game_map, player = load_game_map_with_player("nouraajd")
         town_hall = g.createObject("townHallDialog")
@@ -3226,6 +3488,46 @@ class GameTest(unittest.TestCase):
         return failed == [], json.dumps({"failed": failed, "checks": checks})
 
     @game_test
+    def test_nouraajd_class_specific_dialog_routes_unlock_for_type_ids(self):
+        g_wayfarer, _, wayfarer = load_game_map_with_player("nouraajd", "Wayfarer")
+        town_hall_wayfarer = g_wayfarer.createObject("townHallDialog")
+        beren_wayfarer = g_wayfarer.createObject("berenDialog")
+
+        self.assertEqual("CPlayer", wayfarer.getType())
+        self.assertEqual("Wayfarer", wayfarer.getTypeId())
+        self.assertTrue(town_hall_wayfarer.can_chart_wayfarer_route())
+        self.assertFalse(beren_wayfarer.can_inspect_stained_glass())
+
+        town_hall_wayfarer.chart_wayfarer_route()
+        self.assertEqual(1, wayfarer.getNumericProperty("wayfarer_routes"))
+        self.assertFalse(town_hall_wayfarer.can_chart_wayfarer_route())
+
+        g_inquisitor, _, inquisitor = load_game_map_with_player("nouraajd", "Inquisitor")
+        town_hall_inquisitor = g_inquisitor.createObject("townHallDialog")
+        beren_inquisitor = g_inquisitor.createObject("berenDialog")
+
+        self.assertEqual("CPlayer", inquisitor.getType())
+        self.assertEqual("Inquisitor", inquisitor.getTypeId())
+        self.assertFalse(town_hall_inquisitor.can_chart_wayfarer_route())
+        self.assertTrue(beren_inquisitor.can_inspect_stained_glass())
+
+        beren_inquisitor.inspect_stained_glass()
+        self.assertEqual(1, inquisitor.getNumericProperty("inquisitor_clues"))
+        self.assertFalse(beren_inquisitor.can_inspect_stained_glass())
+
+        return True, json.dumps(
+            {
+                "wayfarer_type": wayfarer.getType(),
+                "wayfarer_type_id": wayfarer.getTypeId(),
+                "wayfarer_routes": wayfarer.getNumericProperty("wayfarer_routes"),
+                "inquisitor_type": inquisitor.getType(),
+                "inquisitor_type_id": inquisitor.getTypeId(),
+                "inquisitor_clues": inquisitor.getNumericProperty("inquisitor_clues"),
+            },
+            sort_keys=True,
+        )
+
+    @game_test
     def test_ritual_dialog_integrity(self):
         config = json.loads((REPO_ROOT / "res/maps/ritual/config.json").read_text())
         dialog_defs = {
@@ -3298,6 +3600,89 @@ class GameTest(unittest.TestCase):
         )
 
         return True, json.dumps({"quests": quest_names(player)}, sort_keys=True)
+
+    @game_test
+    def test_ritual_quest_requires_successful_disruption(self):
+        g, game_map, player = load_game_map_with_player("ritual")
+
+        game_map.removeObjectByName("anchorNorth")
+        advance(g, 1)
+        self.assertTrue(game_map.getBoolProperty("ritual_started"))
+        self.assertIn(
+            "ritualQuest",
+            quest_names(player),
+            "Starting the ritual should not immediately complete the main ritual quest.",
+        )
+
+        game_map.removeObjectByName("anchorCrypt")
+        game_map.removeObjectByName("anchorSanctum")
+        self.assertTrue(game_map.getBoolProperty("leader_spawned"))
+
+        game_map.removeObjectByName("ritualLeader")
+        advance(g, 1)
+        self.assertTrue(game_map.getBoolProperty("leader_defeated"))
+        self.assertFalse(game_map.getBoolProperty("captive_lost"))
+        self.assertNotIn(
+            "ritualQuest",
+            quest_names(player),
+            "Defeating the leader before the captive is lost should complete the ritual disruption quest.",
+        )
+
+        return True, json.dumps(
+            {
+                "ritual_started": game_map.getBoolProperty("ritual_started"),
+                "leader_spawned": game_map.getBoolProperty("leader_spawned"),
+                "leader_defeated": game_map.getBoolProperty("leader_defeated"),
+                "captive_lost": game_map.getBoolProperty("captive_lost"),
+                "quests": quest_names(player),
+            },
+            sort_keys=True,
+        )
+
+    @game_test
+    def test_ritual_quest_failure_does_not_complete(self):
+        g, game_map, player = load_game_map_with_player("ritual")
+
+        game_map.removeObjectByName("anchorNorth")
+        advance(g, 71)
+        self.assertTrue(game_map.getBoolProperty("ritual_started"))
+        self.assertTrue(game_map.getBoolProperty("captive_lost"))
+        self.assertTrue(game_map.getBoolProperty("bad_ending"))
+        self.assertIn(
+            "ritualQuest",
+            quest_names(player),
+            "The ritual quest should not complete on the bad ending path where the ritual succeeds.",
+        )
+
+        return True, json.dumps(
+            {
+                "ritual_started": game_map.getBoolProperty("ritual_started"),
+                "captive_lost": game_map.getBoolProperty("captive_lost"),
+                "bad_ending": game_map.getBoolProperty("bad_ending"),
+                "quests": quest_names(player),
+            },
+            sort_keys=True,
+        )
+
+    @game_test
+    def test_ritual_captive_stays_at_prison(self):
+        g, game_map = load_game_map("ritual")
+        captive_definition = find_map_object_definition("ritual", "ritualCaptive")
+        captive = find_runtime_object(game_map, "ritualCaptive")
+        initial_coords = captive.getCoords()
+        expected_coords = (captive_definition["x"] // 32, captive_definition["y"] // 32, 0)
+
+        advance_map_only(game_map, 20)
+
+        captive = find_runtime_object(game_map, "ritualCaptive")
+        current_coords = captive.getCoords()
+        current_triplet = (current_coords.x, current_coords.y, current_coords.z)
+        initial_triplet = (initial_coords.x, initial_coords.y, initial_coords.z)
+
+        self.assertEqual(expected_coords, initial_triplet)
+        self.assertEqual(expected_coords, current_triplet)
+
+        return True, json.dumps({"initial_coords": initial_triplet, "current_coords": current_triplet}, sort_keys=True)
 
     @game_test
     def test_ritual_trigger_targets(self):
