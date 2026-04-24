@@ -23,8 +23,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 namespace {
 
 bool isConfigResourcePath(const std::string &path) {
-    const boost::filesystem::path resourcePath(path);
-    return !resourcePath.has_parent_path() || resourcePath.parent_path() == boost::filesystem::path("config");
+    const std::filesystem::path resourcePath(path);
+    return !resourcePath.has_parent_path() || resourcePath.parent_path() == std::filesystem::path("config");
 }
 
 } // namespace
@@ -78,8 +78,8 @@ std::shared_ptr<json> CResourcesProvider::loadJson(std::string path) {
 
 std::string CResourcesProvider::getPath(std::string path) {
     for (auto it : searchPath) {
-        if (boost::filesystem::exists(it / boost::filesystem::path(path))) {
-            boost::filesystem::path p = it / boost::filesystem::path(path);
+        auto p = std::filesystem::path(it) / std::filesystem::path(path);
+        if (std::filesystem::exists(p)) {
             return p.string();
         }
     }
@@ -106,7 +106,7 @@ std::vector<std::string> CResourcesProvider::getFiles(const std::string &type) {
         vstd::logger::fatal("Unknown resource type:", type);
     }
 
-    boost::filesystem::directory_iterator dir(folderName), end;
+    std::filesystem::directory_iterator dir(folderName), end;
     while (dir != end) {
         if (type == CResType::MAP || type == CResType::SAVE) {
             auto pt = dir->path().filename().stem().string();
@@ -124,10 +124,10 @@ std::vector<std::string> CResourcesProvider::getFiles(const std::string &type) {
 
 void CResourcesProvider::save(std::string file, const std::string &data) {
     vstd::logger::info("Saving map: " + file);
-    boost::filesystem::path path(file);
-    boost::filesystem::path dir = path.parent_path();
-    if (!boost::filesystem::exists(dir)) {
-        boost::filesystem::create_directory(dir);
+    std::filesystem::path path(file);
+    std::filesystem::path dir = path.parent_path();
+    if (!dir.empty() && !std::filesystem::exists(dir)) {
+        std::filesystem::create_directories(dir);
     }
     std::ofstream f(file);
     f << data;
@@ -141,9 +141,9 @@ std::shared_ptr<CAnimation> CAnimationProvider::getAnimation(const std::shared_p
                                                              const std::shared_ptr<CGameObject> &object, bool custom) {
     auto animation = game->createObject<CAnimation>("CAnimation");
     auto animationPath = object->getAnimation();
-    if (boost::filesystem::is_directory(animationPath)) {
+    if (std::filesystem::is_directory(animationPath)) {
         animation = game->createObject<CDynamicAnimation>("CDynamicAnimation");
-    } else if (boost::filesystem::is_regular_file(CResourcesProvider::getInstance()->getPath(animationPath + ".png"))) {
+    } else if (std::filesystem::is_regular_file(CResourcesProvider::getInstance()->getPath(animationPath + ".png"))) {
         animation = custom ? game->createObject<CAnimation>("CCustomAnimation")
                            : game->createObject<CStaticAnimation>("CStaticAnimation");
     } else {
@@ -175,8 +175,8 @@ const std::string &CResource::getPathSuffix() const { return pathSuffix; }
 void CResource::setPathSuffix(const std::string &pathSuffix) { CResource::pathSuffix = pathSuffix; }
 
 std::string CResource::getFilePath() const {
-    return (boost::filesystem::path(getPathPrefix()) /
-            boost::filesystem::path(getPath()).replace_extension(getPathSuffix()))
+    return (std::filesystem::path(getPathPrefix()) /
+            std::filesystem::path(getPath()).replace_extension(getPathSuffix()))
         .string();
 }
 

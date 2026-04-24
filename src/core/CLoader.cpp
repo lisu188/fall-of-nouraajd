@@ -304,7 +304,7 @@ std::shared_ptr<CMap> CRandomMapGenerator::loadRandomMap(const std::shared_ptr<C
 
 void CRandomMapGenerator::generateEncounters(const std::shared_ptr<CGame> &game, std::shared_ptr<CMap> &map,
                                              std::map<int, rdg<>::Room> &rooms) {
-    for (const auto &room : rooms | boost::adaptors::map_values) {
+    for (const auto &room : rooms | std::views::values) {
         auto roomCoords = Coords(room.row + room.width / 2, room.col + room.height / 2, 0);
         if (roomCoords.getDist(map->getEntry()) > 5) {
             for (const auto &creature : game->getRngHandler()->getRandomEncounter(5)) {

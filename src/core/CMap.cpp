@@ -288,8 +288,8 @@ bool CMap::isMoving() { return moving; }
 //         return vstd::castable<CCreature>(object);
 //     };
 //     for (std::shared_ptr<CMapObject> object:mapObjects |
-//                                             boost::adaptors::map_values |
-//                                             boost::adaptors::filtered(pred))
+//                                             std::views::values |
+//                                             std::views::filter(pred))
 //                                             {
 //         vstd::cast<CCreature>(object)->applyEffects();
 //     }
@@ -298,22 +298,21 @@ bool CMap::isMoving() { return moving; }
 void CMap::forObjects(std::function<void(std::shared_ptr<CMapObject>)> func,
                       std::function<bool(std::shared_ptr<CMapObject>)> predicate) {
     auto clone = mapObjects;
-    for (std::shared_ptr<CMapObject> object :
-         clone | boost::adaptors::map_values | boost::adaptors::filtered(predicate)) {
+    for (std::shared_ptr<CMapObject> object : clone | std::views::values | std::views::filter(predicate)) {
         func(object);
     }
 }
 
 void CMap::forTiles(std::function<void(std::shared_ptr<CTile>)> func,
                     std::function<bool(std::shared_ptr<CTile>)> predicate) {
-    for (std::shared_ptr<CTile> tile : (tiles | boost::adaptors::map_values | boost::adaptors::filtered(predicate))) {
+    for (std::shared_ptr<CTile> tile : tiles | std::views::values | std::views::filter(predicate)) {
         func(tile);
     }
 }
 
 void CMap::removeObjects(std::function<bool(std::shared_ptr<CMapObject>)> func) {
     auto clone = mapObjects;
-    for (std::shared_ptr<CMapObject> object : clone | boost::adaptors::map_values | boost::adaptors::filtered(func)) {
+    for (std::shared_ptr<CMapObject> object : clone | std::views::values | std::views::filter(func)) {
         removeObject(object);
     }
 }
@@ -357,7 +356,7 @@ void CMap::move() {
         std::make_shared<std::list<std::pair<std::shared_ptr<CCreature>, Coords>>>();
 
     std::vector<std::shared_ptr<CMapObject>> active_objects;
-    for (auto object : map->mapObjects | boost::adaptors::map_values | boost::adaptors::filtered(pred)) {
+    for (auto object : map->mapObjects | std::views::values | std::views::filter(pred)) {
         active_objects.push_back(object);
     }
 
@@ -367,7 +366,7 @@ void CMap::move() {
             [creature, coordinates](Coords coords) { coordinates->push_back(std::make_pair(creature, coords)); });
     };
 
-    auto pending = active_objects | boost::adaptors::transformed(controller);
+    auto pending = active_objects | std::views::transform(controller);
     auto joined = vstd::join(pending);
 
     bool round_complete = false;
@@ -435,7 +434,11 @@ void CMap::setTiles(std::set<std::shared_ptr<CTile>> objects) {
 }
 
 std::set<std::shared_ptr<CTile>> CMap::getTiles() {
-    return vstd::cast<std::set<std::shared_ptr<CTile>>>(tiles | boost::adaptors::map_values);
+    std::set<std::shared_ptr<CTile>> result;
+    for (const auto &[coords, tile] : tiles) {
+        result.insert(tile);
+    }
+    return result;
 }
 
 void CMap::setObjects(std::set<std::shared_ptr<CMapObject>> objects) {
@@ -453,7 +456,11 @@ void CMap::setObjects(std::set<std::shared_ptr<CMapObject>> objects) {
 }
 
 std::set<std::shared_ptr<CMapObject>> CMap::getObjects() {
-    return vstd::cast<std::set<std::shared_ptr<CMapObject>>>(mapObjects | boost::adaptors::map_values);
+    std::set<std::shared_ptr<CMapObject>> result;
+    for (const auto &[name, object] : mapObjects) {
+        result.insert(object);
+    }
+    return result;
 }
 
 void CMap::dumpPaths(std::string path) {

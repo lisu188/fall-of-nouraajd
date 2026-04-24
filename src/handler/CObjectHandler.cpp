@@ -48,7 +48,7 @@ std::shared_ptr<json> CObjectHandler::getConfig(const std::string &type) {
 
 std::vector<std::string> CObjectHandler::getAllTypes() {
     std::vector<std::string> types;
-    for (auto val : objectConfig | boost::adaptors::map_keys) {
+    for (auto val : objectConfig | std::views::keys) {
         types.push_back(val);
     }
     return types;
