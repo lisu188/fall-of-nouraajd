@@ -85,6 +85,80 @@ except Exception:
 MCP_PROTOCOL_VERSION = "2025-11-25"
 
 
+class ProgressTextTestResult(unittest.TextTestResult):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.showAll = False
+        self.dots = False
+        self.total_tests = 0
+        self.test_index = 0
+        self._test_start_times = {}
+
+    def startTest(self, test):
+        self.test_index += 1
+        self._test_start_times[id(test)] = time.monotonic()
+        self._write_progress(test, "start")
+        super().startTest(test)
+
+    def addSuccess(self, test):
+        unittest.TestResult.addSuccess(self, test)
+        self._write_progress(test, "ok", self._duration(test))
+
+    def addFailure(self, test, err):
+        unittest.TestResult.addFailure(self, test, err)
+        self._write_progress(test, "FAIL", self._duration(test))
+
+    def addError(self, test, err):
+        unittest.TestResult.addError(self, test, err)
+        self._write_progress(test, "ERROR", self._duration(test))
+
+    def addSkip(self, test, reason):
+        unittest.TestResult.addSkip(self, test, reason)
+        self._write_progress(test, "skip", self._duration(test), reason)
+
+    def addExpectedFailure(self, test, err):
+        unittest.TestResult.addExpectedFailure(self, test, err)
+        self._write_progress(test, "expected-failure", self._duration(test))
+
+    def addUnexpectedSuccess(self, test):
+        unittest.TestResult.addUnexpectedSuccess(self, test)
+        self._write_progress(test, "UNEXPECTED-SUCCESS", self._duration(test))
+
+    def _duration(self, test):
+        started_at = self._test_start_times.pop(id(test), None)
+        if started_at is None:
+            return None
+        return time.monotonic() - started_at
+
+    def _write_progress(self, test, status, duration=None, detail=None):
+        total = self.total_tests or "?"
+        test_name = self._test_name(test)
+        duration_text = "" if duration is None else f" {duration:.3f}s"
+        detail_text = "" if detail is None else f" {detail}"
+        self.stream.write(f"[test {self.test_index}/{total} {status}{duration_text}] {test_name}{detail_text}\n")
+        self.stream.flush()
+
+    @staticmethod
+    def _test_name(test):
+        test_id = test.id()
+        if test_id.startswith("__main__."):
+            return f"test.{test_id[len('__main__.'):]}"
+        return test_id
+
+
+class ProgressTextTestRunner(unittest.TextTestRunner):
+    resultclass = ProgressTextTestResult
+
+    def run(self, test):
+        self._total_tests = test.countTestCases()
+        return super().run(test)
+
+    def _makeResult(self):
+        result = super()._makeResult()
+        result.total_tests = getattr(self, "_total_tests", 0)
+        return result
+
+
 def load_game_module():
     game = importlib.import_module("game")
     builtins.game = game
@@ -4947,4 +5021,4 @@ class McpServerTest(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    unittest.main(testRunner=unittest.TextTestRunner())
+    unittest.main(testRunner=ProgressTextTestRunner)
