@@ -19,21 +19,20 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "object/CItem.h"
 
 std::string CTooltipHandler::buildTooltip(std::shared_ptr<CGameObject> object) {
-  std::string tooltip = object->getLabel();
-  vstd::add_line(tooltip, object->getDescription());
-  if (object->meta()->inherits("CItem")) {
+    std::string tooltip = object->getLabel();
     vstd::add_line(tooltip, object->getDescription());
-    auto bonus = vstd::cast<CItem>(object)->getBonus();
-    bonus->meta()->for_all_properties(bonus, [&](auto prop) {
-      // TODO: move to meta
-      if (prop->value_type() == boost::typeindex::type_id<int>()) {
-        auto value = bonus->getNumericProperty(prop->name());
-        if (value > 0) {
-          vstd::add_line(tooltip,
-                         vstd::camel(prop->name()) + ": " + vstd::str(value));
-        }
-      }
-    });
-  }
-  return tooltip;
+    if (object->meta()->inherits("CItem")) {
+        vstd::add_line(tooltip, object->getDescription());
+        auto bonus = vstd::cast<CItem>(object)->getBonus();
+        bonus->meta()->for_all_properties(bonus, [&](auto prop) {
+            // TODO: move to meta
+            if (prop->value_type() == std::type_index(typeid(int))) {
+                auto value = bonus->getNumericProperty(prop->name());
+                if (value > 0) {
+                    vstd::add_line(tooltip, vstd::camel(prop->name()) + ": " + vstd::str(value));
+                }
+            }
+        });
+    }
+    return tooltip;
 }

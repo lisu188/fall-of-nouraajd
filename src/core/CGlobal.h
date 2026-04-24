@@ -19,28 +19,27 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include <Python.h>
 
-#include <boost/filesystem.hpp>
-#include <boost/range/algorithm.hpp>
-#include <boost/range/irange.hpp>
-
+#include <pybind11/functional.h>
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
-#include <pybind11/functional.h>
 
 #include <SDL.h>
 #include <SDL_image.h>
 #include <SDL_ttf.h>
 
+#include <any>
+#include <concepts>
 #include <condition_variable>
 #include <csignal>
 #include <cstdio>
 #include <ctime>
 #include <deque>
+#include <filesystem>
 #include <fstream>
 #include <functional>
 #include <iomanip>
 #include <iostream>
-#include <json.hpp>
+#include <nlohmann/json.hpp>
 #include <limits>
 #include <list>
 #include <map>
@@ -48,13 +47,54 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <mutex>
 #include <queue>
 #include <random>
+#include <ranges>
 #include <set>
 #include <sstream>
 #include <string>
 #include <thread>
+#include <type_traits>
+#include <typeindex>
+#include <typeinfo>
 #include <unordered_map>
 #include <unordered_set>
+#include <utility>
 #include <vector>
 #include <vstd.h>
+
+// vstd's public meta macros currently cast accessors to exact by-value, non-const signatures.
+// The game code exposes const getters and reference-taking setters throughout its model types, so keep the
+// compatibility shim local to this project while consuming vstd unchanged.
+#ifdef V_PROPERTY
+#undef V_PROPERTY
+#endif
+#ifdef V_METHOD2
+#undef V_METHOD2
+#endif
+#ifdef V_METHOD3
+#undef V_METHOD3
+#endif
+#ifdef V_METHOD4
+#undef V_METHOD4
+#endif
+#ifdef V_METHOD5
+#undef V_METHOD5
+#endif
+#ifdef V_METHOD6
+#undef V_METHOD6
+#endif
+
+#define V_PROPERTY(CLASS, TYPE, NAME, GETTER, SETTER)                                                                  \
+    std::make_shared<vstd::detail::property_impl<CLASS, TYPE>>(V_STRING(NAME), &CLASS::GETTER, &CLASS::SETTER),        \
+        V_METHOD(CLASS, GETTER, TYPE), V_METHOD(CLASS, SETTER, void, TYPE)
+
+#define V_METHOD2(CLASS, NAME) std::make_shared<vstd::detail::method_impl<CLASS, void>>(V_STRING(NAME), &CLASS::NAME)
+#define V_METHOD3(CLASS, NAME, RET_TYPE)                                                                               \
+    std::make_shared<vstd::detail::method_impl<CLASS, RET_TYPE>>(V_STRING(NAME), &CLASS::NAME)
+#define V_METHOD4(CLASS, NAME, RET_TYPE, ...)                                                                          \
+    std::make_shared<vstd::detail::method_impl<CLASS, RET_TYPE, __VA_ARGS__>>(V_STRING(NAME), &CLASS::NAME)
+#define V_METHOD5(CLASS, NAME, RET_TYPE, ...)                                                                          \
+    std::make_shared<vstd::detail::method_impl<CLASS, RET_TYPE, __VA_ARGS__>>(V_STRING(NAME), &CLASS::NAME)
+#define V_METHOD6(CLASS, NAME, RET_TYPE, ...)                                                                          \
+    std::make_shared<vstd::detail::method_impl<CLASS, RET_TYPE, __VA_ARGS__>>(V_STRING(NAME), &CLASS::NAME)
 
 using json = nlohmann::json;

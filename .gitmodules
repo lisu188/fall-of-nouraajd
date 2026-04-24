@@ -1,9 +1,6 @@
 [submodule "vstd"]
 	path = vstd
 	url = https://github.com/lisu188/vstd.git
-[submodule "json"]
-	path = json
-	url = https://github.com/nlohmann/json.git
 [submodule "random-dungeon-generator"]
 	path = random-dungeon-generator
 	url = https://github.com/lisu188/random-dungeon-generator.git

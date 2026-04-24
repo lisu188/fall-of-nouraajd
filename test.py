@@ -21,6 +21,7 @@ import os
 import queue
 import re
 import select
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -198,6 +199,93 @@ def pump_event_loop(iterations=30):
         game.event_loop.instance().run()
 
 
+SDL_KEYDOWN = 0x300
+SDL_KEYUP = 0x301
+SDL_PRESSED = 1
+SDL_RELEASED = 0
+SDL_SCANCODE_MASK = 1 << 30
+
+
+def push_sdl_key_event(keycode, scancode, event_type=SDL_KEYDOWN):
+    import ctypes
+    import ctypes.util
+
+    class SDL_Keysym(ctypes.Structure):
+        _fields_ = [
+            ("scancode", ctypes.c_int),
+            ("sym", ctypes.c_int),
+            ("mod", ctypes.c_uint16),
+            ("unused", ctypes.c_uint32),
+        ]
+
+    class SDL_KeyboardEvent(ctypes.Structure):
+        _fields_ = [
+            ("type", ctypes.c_uint32),
+            ("timestamp", ctypes.c_uint32),
+            ("windowID", ctypes.c_uint32),
+            ("state", ctypes.c_uint8),
+            ("repeat", ctypes.c_uint8),
+            ("padding2", ctypes.c_uint8),
+            ("padding3", ctypes.c_uint8),
+            ("keysym", SDL_Keysym),
+        ]
+
+    class SDL_Event(ctypes.Union):
+        _fields_ = [
+            ("type", ctypes.c_uint32),
+            ("key", SDL_KeyboardEvent),
+            ("padding", ctypes.c_uint8 * 56),
+        ]
+
+    sdl = None
+    for library_name in (ctypes.util.find_library("SDL2"), "libSDL2-2.0.so.0", "libSDL2.so"):
+        if not library_name:
+            continue
+        try:
+            sdl = ctypes.CDLL(library_name)
+            break
+        except OSError:
+            continue
+    if sdl is None:
+        raise AssertionError("Could not load SDL2 for gameplay event injection.")
+
+    event = SDL_Event()
+    event.type = event_type
+    event.key.type = event_type
+    event.key.state = SDL_PRESSED if event_type == SDL_KEYDOWN else SDL_RELEASED
+    event.key.repeat = 0
+    event.key.keysym.scancode = scancode
+    event.key.keysym.sym = keycode
+
+    sdl.SDL_GetKeyboardFocus.restype = ctypes.c_void_p
+    sdl.SDL_GetWindowID.argtypes = [ctypes.c_void_p]
+    sdl.SDL_GetWindowID.restype = ctypes.c_uint32
+    focused_window = sdl.SDL_GetKeyboardFocus()
+    if focused_window:
+        event.key.windowID = sdl.SDL_GetWindowID(focused_window)
+
+    sdl.SDL_PushEvent.argtypes = [ctypes.POINTER(SDL_Event)]
+    sdl.SDL_PushEvent.restype = ctypes.c_int
+    pushed = sdl.SDL_PushEvent(ctypes.byref(event))
+    if pushed != 1:
+        raise AssertionError(f"SDL_PushEvent returned {pushed}.")
+
+
+def find_adjacent_walkable_direction(game_map, origin):
+    game = load_game_module()
+    directions = (
+        (game.Coords(1, 0, 0), SDL_SCANCODE_MASK | 79, 79),
+        (game.Coords(-1, 0, 0), SDL_SCANCODE_MASK | 80, 80),
+        (game.Coords(0, 1, 0), SDL_SCANCODE_MASK | 81, 81),
+        (game.Coords(0, -1, 0), SDL_SCANCODE_MASK | 82, 82),
+    )
+    for delta, keycode, scancode in directions:
+        target = game.Coords(origin.x + delta.x, origin.y + delta.y, origin.z + delta.z)
+        if game_map.canStep(target):
+            return target, keycode, scancode
+    raise AssertionError(f"Expected an adjacent walkable tile near {origin.x},{origin.y},{origin.z}.")
+
+
 def get_map_proxy_child_counts(g):
     game = load_game_module()
     gui_tree = json.loads(game.jsonify(g.getGui()))
@@ -222,6 +310,52 @@ DEFAULT_PLAYER = "Warrior"
 NOURAAJD_VICTOR_TIMEOUT = 75
 TILED_FLIP_FLAG_MASK = 0xF0000000
 SUPPORTED_TILED_LAYER_TYPES = {"tilelayer", "objectgroup"}
+
+
+def git_changed_files():
+    if shutil.which("git") is None:
+        return []
+
+    changed = set()
+
+    def collect(cmd):
+        return_code, output, _ = run_command(cmd)
+        if return_code != 0 or not output:
+            return
+        changed.update(line.strip() for line in output.splitlines() if line.strip())
+
+    return_code, _, _ = run_command(["git", "rev-parse", "--verify", "main"])
+    if return_code == 0:
+        merge_base_code, merge_base, _ = run_command(["git", "merge-base", "main", "HEAD"])
+        if merge_base_code == 0 and merge_base:
+            collect(["git", "diff", "--name-only", "--diff-filter=ACMRTUXB", f"{merge_base.strip()}...HEAD"])
+
+    collect(["git", "diff", "--name-only", "--diff-filter=ACMRTUXB"])
+    collect(["git", "diff", "--cached", "--name-only", "--diff-filter=ACMRTUXB"])
+    collect(["git", "ls-files", "--others", "--exclude-standard"])
+
+    return sorted(path for path in changed if (REPO_ROOT / path).is_file())
+
+
+def iter_python_source_files():
+    for file_path in git_changed_files():
+        path = REPO_ROOT / file_path
+        if path.suffix == ".py":
+            yield path
+
+
+def iter_cpp_source_files():
+    for file_path in git_changed_files():
+        path = REPO_ROOT / file_path
+        if path.suffix in {".h", ".hpp", ".c", ".cc", ".cpp", ".cxx"}:
+            yield path
+
+
+def run_command(args):
+    proc = subprocess.run(args, cwd=REPO_ROOT, capture_output=True, text=True)
+    output = proc.stdout.strip()
+    errors = proc.stderr.strip()
+    return proc.returncode, output, errors
 
 
 def discover_maps():
@@ -1519,6 +1653,31 @@ class GameTest(unittest.TestCase):
             {
                 "lava": [lava.x, lava.y, lava.z],
                 "player": [coords.x, coords.y, coords.z],
+            },
+            sort_keys=True,
+        )
+
+    @game_test
+    def test_replacing_non_origin_tile_preserves_origin_tile(self):
+        game = load_game_module()
+        _g, game_map, player = load_game_map_with_player("test", "Warrior")
+        game_map.removeAll(lambda obj: obj.getName() != "player")
+
+        origin = game.Coords(0, 0, 0)
+        adjacent = game.Coords(1, 0, 0)
+
+        game_map.replaceTile("WaterTile", origin)
+        self.assertFalse(game_map.canStep(origin))
+
+        game_map.replaceTile("GroundTile", adjacent)
+
+        self.assertFalse(game_map.canStep(origin))
+        self.assertTrue(game_map.canStep(adjacent))
+
+        return True, json.dumps(
+            {
+                "origin_walkable": game_map.canStep(origin),
+                "adjacent_walkable": game_map.canStep(adjacent),
             },
             sort_keys=True,
         )
@@ -4202,6 +4361,34 @@ class GameTest(unittest.TestCase):
         return missing == [], json.dumps(missing)
 
     @game_test
+    def test_python_black_formatting(self):
+        if shutil.which("black") is None:
+            return False, json.dumps({"error": "black executable is required to enforce formatting policy"})
+
+        python_files = [str(path.relative_to(REPO_ROOT)) for path in iter_python_source_files()]
+        if not python_files:
+            return True, json.dumps({"checked_files": [], "skipped": "no changed Python files"}, sort_keys=True)
+
+        return_code, output, errors = run_command(["black", "--check", "-l", "120", *python_files])
+        log = {"command": "black --check -l 120", "stdout": output, "stderr": errors, "checked_files": python_files}
+        return return_code == 0, json.dumps(log, indent=2, sort_keys=True)
+
+    @game_test
+    def test_cpp_clang_formatting(self):
+        if shutil.which("clang-format") is None:
+            return False, json.dumps({"error": "clang-format executable is required to enforce formatting policy"})
+
+        cxx_files = [str(path.relative_to(REPO_ROOT)) for path in iter_cpp_source_files()]
+        return_code, output, errors = run_command(["clang-format", "--dry-run", "--Werror", *cxx_files])
+        log = {
+            "command": "clang-format --dry-run --Werror",
+            "stdout": output,
+            "stderr": errors,
+            "checked_files": cxx_files,
+        }
+        return return_code == 0, json.dumps(log, indent=2, sort_keys=True)
+
+    @game_test
     def test_indentation(self):
         offenders = []
         for path in REPO_ROOT.rglob("*.py"):
@@ -4377,6 +4564,92 @@ class GameTest(unittest.TestCase):
             "victor_bad_end": quest_state(game_map3, "victor"),
         }
         return True, json.dumps(log, sort_keys=True)
+
+
+class XvfbGameplayTest(unittest.TestCase):
+    def test_keyboard_gameplay_under_xvfb(self):
+        if os.environ.get("FON_XVFB_GAMEPLAY_CHILD") == "1":
+            self.skipTest("xvfb child process runs only the focused gameplay test.")
+        if os.name != "posix":
+            self.skipTest("xvfb gameplay test is Linux/Unix only.")
+        if shutil.which("xvfb-run") is None:
+            self.skipTest("xvfb-run is not available.")
+        if shutil.which("xauth") is None:
+            self.skipTest("xauth is not available for xvfb-run.")
+
+        env = os.environ.copy()
+        env.update(
+            {
+                "FON_XVFB_GAMEPLAY_CHILD": "1",
+                "SDL_VIDEODRIVER": "x11",
+                "SDL_AUDIODRIVER": "dummy",
+                "SDL_RENDER_DRIVER": "software",
+                "LIBGL_ALWAYS_SOFTWARE": "1",
+            }
+        )
+        command = [
+            "xvfb-run",
+            "-a",
+            "--server-args=-screen 0 1920x1080x24",
+            sys.executable,
+            str(REPO_ROOT / "test.py"),
+            "XvfbGameplayProcessTest.test_keyboard_input_moves_player",
+        ]
+
+        try:
+            completed = subprocess.run(
+                command,
+                cwd=REPO_ROOT,
+                env=env,
+                capture_output=True,
+                text=True,
+                timeout=90,
+            )
+        except subprocess.TimeoutExpired as exc:
+            stdout = exc.stdout or ""
+            stderr = exc.stderr or ""
+            self.fail(f"xvfb gameplay test timed out.\nstdout:\n{stdout}\nstderr:\n{stderr}")
+
+        self.assertEqual(
+            0,
+            completed.returncode,
+            f"xvfb gameplay test failed with {completed.returncode}.\n"
+            f"stdout:\n{completed.stdout}\nstderr:\n{completed.stderr}",
+        )
+
+
+class XvfbGameplayProcessTest(unittest.TestCase):
+    def setUp(self):
+        if os.environ.get("FON_XVFB_GAMEPLAY_CHILD") != "1":
+            self.skipTest("Run through XvfbGameplayTest so SDL uses xvfb instead of the dummy video driver.")
+
+    def test_keyboard_input_moves_player(self):
+        self.assertEqual("x11", os.environ.get("SDL_VIDEODRIVER"))
+        self.assertIn("DISPLAY", os.environ)
+
+        game = load_game_module()
+        g = game.CGameLoader.loadGame()
+        game.CGameLoader.loadGui(g)
+        game.CGameLoader.startGameWithPlayer(g, "test", DEFAULT_PLAYER)
+        pump_event_loop(5)
+
+        game_map = g.getMap()
+        player = game_map.getPlayer()
+        initial = player.getCoords()
+        initial_turn = game_map.getTurn()
+        target, keycode, scancode = find_adjacent_walkable_direction(game_map, initial)
+
+        push_sdl_key_event(keycode, scancode, SDL_KEYDOWN)
+        push_sdl_key_event(keycode, scancode, SDL_KEYUP)
+        pump_event_loop(5)
+
+        moved = player.getCoords()
+        self.assertEqual((target.x, target.y, target.z), (moved.x, moved.y, moved.z))
+        self.assertGreater(game_map.getTurn(), initial_turn)
+
+        proxy_counts = get_map_proxy_child_counts(g)
+        self.assertTrue(proxy_counts, "Expected rendered map proxy cells after xvfb gameplay.")
+        self.assertEqual(0, sum(count == 0 for count in proxy_counts))
 
 
 class McpServerTest(unittest.TestCase):

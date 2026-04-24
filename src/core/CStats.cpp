@@ -94,40 +94,34 @@ int Stats::getMainValue() { return this->getNumericProperty(mainStat); }
 Stats::Stats() {}
 
 void Stats::addBonus(std::shared_ptr<Stats> stats) {
-  stats->meta()->for_all_properties(stats, [&](auto property) {
-    if (property->value_type() == boost::typeindex::type_id<int>()) {
-      this->incProperty(property->name(),
-                        stats->getProperty<int>(property->name()));
-    }
-  });
+    stats->meta()->for_all_properties(stats, [&](auto property) {
+        if (property->value_type() == std::type_index(typeid(int))) {
+            this->incProperty(property->name(), stats->getProperty<int>(property->name()));
+        }
+    });
 }
 
 void Stats::removeBonus(std::shared_ptr<Stats> stats) {
-  stats->meta()->for_all_properties(stats, [&](auto property) {
-    if (property->value_type() == boost::typeindex::type_id<int>()) {
-      this->incProperty(property->name(),
-                        -stats->getProperty<int>(property->name()));
-    }
-  });
+    stats->meta()->for_all_properties(stats, [&](auto property) {
+        if (property->value_type() == std::type_index(typeid(int))) {
+            this->incProperty(property->name(), -stats->getProperty<int>(property->name()));
+        }
+    });
 }
 
 std::string Stats::getText(int level) {
-  std::ostringstream stream;
-  stream << "Level: " << level << "\n";
-  stream << "Strength: " << strength << "\n";
-  stream << "Agility: " << agility << "\n";
-  stream << "Intelligence: " << intelligence << "\n";
-  stream << "Stamina: " << stamina << "\n";
-  stream << "Damage: " << dmgMin + damage << "-" << dmgMax + damage << "\n";
-  stream << "Hit: " << hit + attack << "%"
-         << "\n";
-  stream << "Crit: " << crit << "%"
-         << "\n";
-  stream << "Armor: " << armor << "%"
-         << "\n";
-  stream << "Block: " << block << "%"
-         << "\n";
-  return stream.str();
+    std::ostringstream stream;
+    stream << "Level: " << level << "\n";
+    stream << "Strength: " << strength << "\n";
+    stream << "Agility: " << agility << "\n";
+    stream << "Intelligence: " << intelligence << "\n";
+    stream << "Stamina: " << stamina << "\n";
+    stream << "Damage: " << dmgMin + damage << "-" << dmgMax + damage << "\n";
+    stream << "Hit: " << hit + attack << "%" << "\n";
+    stream << "Crit: " << crit << "%" << "\n";
+    stream << "Armor: " << armor << "%" << "\n";
+    stream << "Block: " << block << "%" << "\n";
+    return stream.str();
 }
 
 Damage::Damage() {}

@@ -17,17 +17,18 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #pragma once
 
+#include "core/CConcepts.h"
 #include "core/CGlobal.h"
 #include "core/CUtil.h"
 
 class CCreature;
 
-template <typename CoordsLike> std::list<Coords> near_coords(const CoordsLike &coords) {
+template <fn::CoordsLike CoordsLike> std::list<Coords> near_coords(const CoordsLike &coords) {
     return {Coords(coords.x + 1, coords.y, coords.z), Coords(coords.x - 1, coords.y, coords.z),
             Coords(coords.x, coords.y + 1, coords.z), Coords(coords.x, coords.y - 1, coords.z)};
 }
 
-template <typename CoordsLike> std::list<Coords> near_coords_with(const CoordsLike &coords) {
+template <fn::CoordsLike CoordsLike> std::list<Coords> near_coords_with(const CoordsLike &coords) {
     return {Coords(coords.x, coords.y, coords.z), Coords(coords.x + 1, coords.y, coords.z),
             Coords(coords.x - 1, coords.y, coords.z), Coords(coords.x, coords.y + 1, coords.z),
             Coords(coords.x, coords.y - 1, coords.z)};

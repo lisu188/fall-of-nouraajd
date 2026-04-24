@@ -17,6 +17,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #pragma once
 
+#include "core/CConcepts.h"
 #include "core/CGlobal.h"
 
 namespace CJsonUtil {
@@ -39,15 +40,15 @@ inline std::string preview_json(std::string text, size_t limit = 120) {
     return text.substr(0, limit) + "...";
 }
 
-template <typename T> bool hasStringProp(T object, std::string prop) {
+template <fn::JsonObjectPointer T> bool hasStringProp(T object, std::string prop) {
     return object->count(prop) && (*object)[prop].is_string();
 }
 
-template <typename T> bool hasObjectProp(T object, std::string prop) {
+template <fn::JsonObjectPointer T> bool hasObjectProp(T object, std::string prop) {
     return object->count(prop) && (*object)[prop].is_object();
 }
 
-template <typename T> bool isRef(T object) {
+template <fn::JsonObjectPointer T> bool isRef(T object) {
     if (object->size() == 1) {
         return hasStringProp(object, "ref");
     } else if (object->size() == 2) {
@@ -56,7 +57,7 @@ template <typename T> bool isRef(T object) {
     return false;
 }
 
-template <typename T> bool isType(T object) {
+template <fn::JsonObjectPointer T> bool isType(T object) {
     if (object->size() == 1) {
         return hasStringProp(object, "class");
     } else if (object->size() == 2) {
@@ -65,9 +66,9 @@ template <typename T> bool isType(T object) {
     return false;
 }
 
-template <typename T> bool isObject(T object) { return isRef(object) || isType(object); }
+template <fn::JsonObjectPointer T> bool isObject(T object) { return isRef(object) || isType(object); }
 
-template <typename T> bool isMap(T object) {
+template <fn::JsonMapPointer T> bool isMap(T object) {
     for (auto [key, value] : object->items()) {
         (void)key; // to silence compiler
         if (!value.is_object() || !isObject(&value)) {
@@ -89,7 +90,7 @@ std::shared_ptr<json> from_string(std::string json_string, const std::string &so
     //        vstd::logger::debug(json,reader.getFormatedErrorMessages());
 }
 
-template <typename T> std::string to_string(T value, int indent = -1) { return value->dump(indent); }
+template <fn::JsonDumpPointer T> std::string to_string(T value, int indent = -1) { return value->dump(indent); }
 
 inline std::shared_ptr<json> clone(const json &value) { return std::make_shared<json>(value); }
 

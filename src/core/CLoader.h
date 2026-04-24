@@ -82,8 +82,8 @@ class CRandomMapGenerator {
     static std::shared_ptr<CMap> loadRandomMap(const std::shared_ptr<CGame> &game);
 
   private:
-    static void generateTiles(std::shared_ptr<CMap> &map, rdg<void>::Dungeon &dungeon);
+    static void generateTiles(std::shared_ptr<CMap> &map, const rdg::Dungeon &dungeon);
 
     static void generateEncounters(const std::shared_ptr<CGame> &game, std::shared_ptr<CMap> &map,
-                                   std::map<int, rdg<>::Room> &rooms);
+                                   const std::vector<rdg::Room> &rooms);
 };

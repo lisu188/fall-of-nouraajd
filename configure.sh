@@ -1,10 +1,12 @@
 #!/bin/bash
 
-sudo apt update
-sudo apt install -y build-essential cmake ninja-build ccache \
+sudo apt-get update
+sudo apt-get install -y build-essential cmake ninja-build ccache \
     python3 python3-dev \
-    libboost-dev libboost-filesystem-dev \
-    libsdl2-dev libsdl2-ttf-dev libsdl2-image-dev
+    libboost-dev \
+    libsdl2-dev libsdl2-ttf-dev libsdl2-image-dev \
+    nlohmann-json3-dev \
+    xvfb xauth
 
 git submodule update --init --recursive
 mkdir -p cmake-build-debug

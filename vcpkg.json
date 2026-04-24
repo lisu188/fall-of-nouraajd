@@ -3,11 +3,8 @@
   "version-string": "0.1.0",
   "dependencies": [
     "boost-algorithm",
-    "boost-any",
-    "boost-filesystem",
     "boost-pool",
-    "boost-range",
-    "boost-type-index",
+    "nlohmann-json",
     "sdl2",
     "sdl2-image",
     "sdl2-ttf"

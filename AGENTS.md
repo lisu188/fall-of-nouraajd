@@ -19,6 +19,11 @@ Testing section. Import the optional `game` module inside each test that
 requires it so that tests which don't depend on the compiled module can still
 run.
 
+## Debugging
+- Use `valgrind` for native memory diagnostics and runtime error investigation.
+- Use `callgrind` through `valgrind --tool=callgrind` when profiling hot paths
+  or performance regressions.
+
 ### Resource-to-CMake checklist
 - Whenever files are added under `res/`, update the root `CMakeLists.txt` so each new file is covered by `configure_file(...)` entries or by an `install(DIRECTORY ...)` rule as appropriate.
 - Before committing, verify no `res/**` file is missing from CMake resource references.
@@ -62,6 +67,7 @@ possible.
 Regularly merge the repository's main branch (`main`) into your feature branch to
 stay up to date:
 Resolve any conflicts and rerun `python3 test.py`.
+Always update both `rdg` and `vstd` to the latest `main` branch before finishing your work.
 
 ## Adding Item Types
 Follow these steps whenever you introduce a new building, potion, effect, tile or other item type:
