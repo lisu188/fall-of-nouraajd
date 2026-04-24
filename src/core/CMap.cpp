@@ -143,14 +143,19 @@ void CMap::moveTile(std::shared_ptr<CTile> tile, int x, int y, int z) {
 }
 
 bool CMap::addTile(std::shared_ptr<CTile> tile, int x, int y, int z) {
+    if (!tile) {
+        return false;
+    }
     Coords coords = normalizeCoords(Coords(x, y, z));
     if (this->contains(coords.x, coords.y, coords.z)) {
         return false;
     }
+    tile->setPosx(coords.x);
+    tile->setPosy(coords.y);
+    tile->setPosz(coords.z);
     tiles.insert(std::make_pair(coords, tile));
     bumpNavigationRevision();
-    tile->moveTo(coords.x, coords.y, coords.z);
-    //    signal("tileChanged", Coords(x, y, z)); //moveTo already sends signal
+    signal("tileChanged", coords);
     return true;
 }
 
