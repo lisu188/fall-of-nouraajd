@@ -22,7 +22,7 @@ python3 play.py
 </pre>
 
 ### windows
-Install Visual Studio 2022 with the **Desktop development with C++** workload and CMake tools, install Python 3,
+Install Visual Studio 2022 with the **Desktop development with C++** workload and CMake tools, install Python 3.12,
 then install and bootstrap vcpkg. From a normal `cmd.exe` shell:
 <pre>
 git clone https://github.com/microsoft/vcpkg C:\vcpkg
