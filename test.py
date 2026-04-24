@@ -1497,6 +1497,31 @@ class GameTest(unittest.TestCase):
         )
 
     @game_test
+    def test_replacing_non_origin_tile_preserves_origin_tile(self):
+        game = load_game_module()
+        _g, game_map, player = load_game_map_with_player("test", "Warrior")
+        game_map.removeAll(lambda obj: obj.getName() != "player")
+
+        origin = game.Coords(0, 0, 0)
+        adjacent = game.Coords(1, 0, 0)
+
+        game_map.replaceTile("WaterTile", origin)
+        self.assertFalse(game_map.canStep(origin))
+
+        game_map.replaceTile("GroundTile", adjacent)
+
+        self.assertFalse(game_map.canStep(origin))
+        self.assertTrue(game_map.canStep(adjacent))
+
+        return True, json.dumps(
+            {
+                "origin_walkable": game_map.canStep(origin),
+                "adjacent_walkable": game_map.canStep(adjacent),
+            },
+            sort_keys=True,
+        )
+
+    @game_test
     def test_road_tile_heals_only_on_successful_step(self):
         game = load_game_module()
         g, game_map, player = load_game_map_with_player("test", "Warrior")
