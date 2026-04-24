@@ -36,7 +36,7 @@ class CAnimation : public CGameGraphicsObject {
 
     bool mouseEvent(std::shared_ptr<CGui> sharedPtr, SDL_EventType type, int button, int x, int y) override;
 
-    template <typename F> auto withCallback(F f) {
+    template <fn::AnimationCallback F> auto withCallback(F f) {
         callback = f;
         hasCallback = true;
         return this->ptr<CAnimation>();

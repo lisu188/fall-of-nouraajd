@@ -17,6 +17,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #pragma once
 
+#include "core/CConcepts.h"
 #include "core/CGlobal.h"
 
 class CGame;
@@ -37,39 +38,42 @@ class CSerializerBase {
 template <typename Serialized, typename Deserialized> class CSerializerFunction {
   public:
     template <typename T = Serialized, typename V = Deserialized>
-    static T serialize(V deserialized, typename std::enable_if<vstd::is_shared_ptr<V>::value>::type * = 0) {
+        requires fn::SharedPtr<V>
+    static T serialize(V deserialized) {
         return CSerializerFunction<T, std::shared_ptr<CGameObject>>::serialize(deserialized);
     }
 
     template <typename T = Serialized, typename V = Deserialized>
-    static V deserialize(std::shared_ptr<CGame> map, T serialized,
-                         typename std::enable_if<vstd::is_shared_ptr<V>::value>::type * = 0) {
+        requires fn::SharedPtr<V>
+    static V deserialize(std::shared_ptr<CGame> map, T serialized) {
         return std::dynamic_pointer_cast<typename V::element_type>(
             CSerializerFunction<T, std::shared_ptr<CGameObject>>::deserialize(map, serialized));
     }
 
     template <typename T = Serialized, typename V = Deserialized>
-    static T serialize(V deserialized, typename std::enable_if<vstd::is_set<V>::value>::type * = 0) {
+        requires fn::SetLike<V>
+    static T serialize(V deserialized) {
         return CSerializerFunction<T, std::set<std::shared_ptr<CGameObject>>>::serialize(
             vstd::cast<std::set<std::shared_ptr<CGameObject>>>(deserialized));
     }
 
     template <typename T = Serialized, typename V = Deserialized>
-    static V deserialize(std::shared_ptr<CGame> map, T serialized,
-                         typename std::enable_if<vstd::is_set<V>::value>::type * = 0) {
+        requires fn::SetLike<V>
+    static V deserialize(std::shared_ptr<CGame> map, T serialized) {
         return vstd::cast<V>(
             CSerializerFunction<T, std::set<std::shared_ptr<CGameObject>>>::deserialize(map, serialized));
     }
 
     template <typename T = Serialized, typename V = Deserialized>
-    static T serialize(V deserialized, typename std::enable_if<vstd::is_map<V>::value>::type * = 0) {
+        requires fn::MapLike<V>
+    static T serialize(V deserialized) {
         return CSerializerFunction<T, std::map<std::string, std::shared_ptr<CGameObject>>>::serialize(
             vstd::cast<std::map<std::string, std::shared_ptr<CGameObject>>>(deserialized));
     }
 
     template <typename T = Serialized, typename V = Deserialized>
-    static V deserialize(std::shared_ptr<CGame> map, T serialized,
-                         typename std::enable_if<vstd::is_map<V>::value>::type * = 0) {
+        requires fn::MapLike<V>
+    static V deserialize(std::shared_ptr<CGame> map, T serialized) {
         return vstd::cast<V>(
             CSerializerFunction<T, std::map<std::string, std::shared_ptr<CGameObject>>>::deserialize(map, serialized));
     }

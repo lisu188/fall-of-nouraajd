@@ -19,8 +19,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include <Python.h>
 
-#include <pybind11/pybind11.h>
 #include <pybind11/functional.h>
+#include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
 
 #include <SDL.h>
@@ -28,6 +28,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <SDL_ttf.h>
 
 #include <any>
+#include <concepts>
 #include <condition_variable>
 #include <csignal>
 #include <cstdio>
@@ -51,10 +52,12 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <sstream>
 #include <string>
 #include <thread>
+#include <type_traits>
 #include <typeindex>
 #include <typeinfo>
 #include <unordered_map>
 #include <unordered_set>
+#include <utility>
 #include <vector>
 #include <vstd.h>
 
