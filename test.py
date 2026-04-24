@@ -220,6 +220,7 @@ XVFB_GAMEPLAY_CHILD_TESTS = (
     "test_screenshot_after_mouse_move_has_rendered_pixels",
     "test_screenshot_after_save_hotkey_has_rendered_pixels",
     "test_screenshot_after_wait_hotkey_has_rendered_pixels",
+    "test_screenshot_character_panel_has_rendered_pixels",
     "test_screenshot_info_panel_has_rendered_pixels",
     "test_screenshot_inventory_equipped_selection_has_rendered_pixels",
     "test_screenshot_inventory_item_selection_has_rendered_pixels",
@@ -5050,6 +5051,11 @@ class XvfbGameplayProcessTest(unittest.TestCase):
 
         self.assertGreater(game_map.getTurn(), initial_turn)
         assert_screenshot_has_rendered_pixels(self, g, "xvfb_wait_hotkey_screenshot")
+
+    def test_screenshot_character_panel_has_rendered_pixels(self):
+        _, g, _, _ = create_xvfb_gameplay_session(self)
+        open_panel_for_screenshot(self, g, "characterPanel", "CGameCharacterPanel")
+        assert_screenshot_has_rendered_pixels(self, g, "xvfb_character_panel_screenshot")
 
     def test_screenshot_info_panel_has_rendered_pixels(self):
         _, g, _, _ = create_xvfb_gameplay_session(self)

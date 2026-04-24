@@ -133,6 +133,9 @@ CListView::collection_pointer CListView::invokeCollection(std::shared_ptr<CGui> 
 }
 
 void CListView::invokeCallback(std::shared_ptr<CGui> gui, int i, std::shared_ptr<CGameObject> object) {
+    if (callback.empty()) {
+        return;
+    }
     getParent()
         ->meta()
         ->invoke_method<void, CGameGraphicsObject, std::shared_ptr<CGui>, int, std::shared_ptr<CGameObject>>(
@@ -159,6 +162,9 @@ auto CListView::getArrowCallback(bool left) {
 }
 
 bool CListView::invokeSelect(std::shared_ptr<CGui> gui, int i, std::shared_ptr<CGameObject> object) {
+    if (select.empty()) {
+        return false;
+    }
     return getParent()
         ->meta()
         ->invoke_method<bool, CGameGraphicsObject, std::shared_ptr<CGui>, int, std::shared_ptr<CGameObject>>(
