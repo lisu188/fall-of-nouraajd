@@ -67,6 +67,7 @@ possible.
 Regularly merge the repository's main branch (`main`) into your feature branch to
 stay up to date:
 Resolve any conflicts and rerun `python3 test.py`.
+Always update both `rdg` and `vstd` to the latest `main` branch before finishing your work.
 
 ## Adding Item Types
 Follow these steps whenever you introduce a new building, potion, effect, tile or other item type:
