@@ -19,23 +19,21 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include <Python.h>
 
-#include <boost/filesystem.hpp>
-#include <boost/range/algorithm.hpp>
-#include <boost/range/irange.hpp>
-
 #include <pybind11/pybind11.h>
-#include <pybind11/stl.h>
 #include <pybind11/functional.h>
+#include <pybind11/stl.h>
 
 #include <SDL.h>
 #include <SDL_image.h>
 #include <SDL_ttf.h>
 
+#include <any>
 #include <condition_variable>
 #include <csignal>
 #include <cstdio>
 #include <ctime>
 #include <deque>
+#include <filesystem>
 #include <fstream>
 #include <functional>
 #include <iomanip>
@@ -48,10 +46,13 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <mutex>
 #include <queue>
 #include <random>
+#include <ranges>
 #include <set>
 #include <sstream>
 #include <string>
 #include <thread>
+#include <typeindex>
+#include <typeinfo>
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>

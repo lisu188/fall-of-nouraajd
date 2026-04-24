@@ -13,7 +13,7 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
-cmake_minimum_required(VERSION 3.5)
+cmake_minimum_required(VERSION 3.16)
 if (POLICY CMP0087)
     cmake_policy(SET CMP0087 NEW)
 endif ()
@@ -31,14 +31,14 @@ include(${CMAKE_SOURCE_DIR}/cmake/cotire.cmake)
 
 set(CMAKE_MODULE_PATH "${CMAKE_MODULE_PATH};${CMAKE_SOURCE_DIR}/cmake")
 
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
 if (MSVC)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /W3 /bigobj /permissive- /Zc:preprocessor /EHsc /DBOOST_ALLOW_DEPRECATED_HEADERS /DBOOST_BIND_GLOBAL_PLACEHOLDERS /D_USE_MATH_DEFINES /DNOMINMAX /DWIN32_LEAN_AND_MEAN")
 else ()
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -include cmath -Wall -fconcepts")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -include cmath -Wall")
     set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O3 -s")
     set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -g3")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DBOOST_ALLOW_DEPRECATED_HEADERS -DBOOST_BIND_GLOBAL_PLACEHOLDERS")
@@ -51,7 +51,6 @@ endif ()
 
 file(GLOB_RECURSE GAME_SRC ${CMAKE_SOURCE_DIR}/src/**.cpp ${CMAKE_SOURCE_DIR}/src/**.h)
 
-find_package(Boost COMPONENTS filesystem REQUIRED)
 find_package(Python3 COMPONENTS Interpreter Development REQUIRED)
 find_package(pybind11 CONFIG QUIET)
 if (NOT pybind11_FOUND)
@@ -81,11 +80,6 @@ if (NOT SDL2_ttf_FOUND AND NOT TARGET SDL2_ttf::SDL2_ttf)
     find_package(SDL2_ttf REQUIRED)
 endif ()
 
-set(BOOST_FILESYSTEM_LIBS ${Boost_LIBRARIES})
-if (TARGET Boost::filesystem)
-    set(BOOST_FILESYSTEM_LIBS Boost::filesystem)
-endif ()
-
 set(SDL2_LIBS ${SDL2_LIBRARY})
 set(SDL2_EXECUTABLE_LIBS ${SDL2_LIBRARY})
 if (TARGET SDL2::SDL2)
@@ -103,7 +97,6 @@ if (TARGET SDL2_ttf::SDL2_ttf)
     set(SDL2_TTF_LIBS SDL2_ttf::SDL2_ttf)
 endif ()
 
-include_directories(${Boost_INCLUDE_DIRS})
 include_directories(${Python3_INCLUDE_DIRS})
 include_directories(${SDL2_INCLUDE_DIR})
 include_directories(${SDL2_IMAGE_INCLUDE_DIR})
@@ -116,7 +109,7 @@ include_directories(${CMAKE_SOURCE_DIR}/vstd)
 include_directories(${CMAKE_SOURCE_DIR}/random-dungeon-generator)
 
 pybind11_add_module(_game NO_EXTRAS ${GAME_SRC})
-target_link_libraries(_game PRIVATE ${BOOST_FILESYSTEM_LIBS} ${SDL2_LIBS} ${SDL2_IMAGE_LIBS} ${SDL2_TTF_LIBS})
+target_link_libraries(_game PRIVATE ${SDL2_LIBS} ${SDL2_IMAGE_LIBS} ${SDL2_TTF_LIBS})
 
 set_source_files_properties(
     ${CMAKE_SOURCE_DIR}/src/core/CModule.cpp
@@ -380,7 +373,6 @@ target_include_directories(for_unit_tests PRIVATE
     ${CMAKE_SOURCE_DIR}/vstd
     json/single_include/nlohmann
     ${Python3_INCLUDE_DIRS}
-    ${Boost_INCLUDE_DIRS}
     ${SDL2_INCLUDE_DIR}
     ${SDL2_IMAGE_INCLUDE_DIR}
     ${SDL2_TTF_INCLUDE_DIR}
@@ -389,7 +381,6 @@ target_include_directories(for_unit_tests PRIVATE
 target_link_libraries(for_unit_tests PRIVATE
     Python3::Python
     pybind11::headers
-    ${BOOST_FILESYSTEM_LIBS}
     ${SDL2_EXECUTABLE_LIBS}
     ${SDL2_IMAGE_LIBS}
     ${SDL2_TTF_LIBS}
