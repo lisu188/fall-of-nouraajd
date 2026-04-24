@@ -258,8 +258,11 @@ std::set<std::shared_ptr<CGameObject>> array_deserialize(const std::shared_ptr<C
                                                          const std::shared_ptr<json> &object) {
     std::set<std::shared_ptr<CGameObject>> objects;
     for (unsigned int i = 0; i < object->size(); i++) {
-        objects.insert(CSerializerFunction<std::shared_ptr<json>, std::shared_ptr<CGameObject>>::deserialize(
-            map, CJsonUtil::alias(object, (*object)[i])));
+        auto deserialized = CSerializerFunction<std::shared_ptr<json>, std::shared_ptr<CGameObject>>::deserialize(
+            map, CJsonUtil::alias(object, (*object)[i]));
+        if (deserialized) {
+            objects.insert(deserialized);
+        }
     }
     return objects;
 }

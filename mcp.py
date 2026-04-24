@@ -97,9 +97,11 @@ class EngineMcpServer:
         trace_messages: bool = False,
         native_log_sink: str = "stdout",
         native_log_path: Path | None = None,
+        build_config: str | None = None,
     ) -> None:
         self.repo_root = repo_root
         self.build_dir = build_dir
+        self.build_config = build_config
         self.allow_origins = allow_origins or []
         self.trace_messages = trace_messages
         self.native_log_sink = native_log_sink
@@ -116,8 +118,13 @@ class EngineMcpServer:
 
     def build_extension(self) -> None:
         logger.info("building extension target _game in %s", self.build_dir)
+        command = ["cmake", "--build", str(self.build_dir), "--target", "_game"]
+        if self.build_config:
+            command.extend(["--config", self.build_config])
+        else:
+            command.append(f"-j{os.cpu_count() or 1}")
         subprocess.run(
-            ["cmake", "--build", str(self.build_dir), "--target", "_game", f"-j{os.cpu_count() or 1}"],
+            command,
             cwd=self.repo_root,
             check=True,
         )
@@ -126,16 +133,24 @@ class EngineMcpServer:
         os.chdir(self.build_dir)
         sys.path.insert(0, str(self.repo_root / "res"))
         sys.path.insert(0, str(self.build_dir))
+        for extension_dir in reversed(self._extension_search_dirs()):
+            if extension_dir.exists():
+                sys.path.insert(0, str(extension_dir))
         try:
             self._game_module = importlib.import_module("_game")
         except ModuleNotFoundError as exc:
             raise ModuleNotFoundError(
                 "Unable to import compiled `_game` module. Build it with `cmake --build "
-                f"{self.build_dir} --target _game -j$(nproc)` or run mcp.py with `--build`."
+                f"{self.build_dir} --target _game` or run mcp.py with `--build`."
             ) from exc
         self._configure_native_logging()
         self.game_module = importlib.import_module("game")
         logger.info("modules imported successfully")
+
+    def _extension_search_dirs(self) -> list[Path]:
+        if self.build_config:
+            return [self.build_dir / self.build_config]
+        return [self.build_dir / config for config in ("Release", "Debug", "RelWithDebInfo", "MinSizeRel")]
 
     def inspect_and_export(self) -> None:
         if self._game_module is None or self.game_module is None:
@@ -1447,6 +1462,11 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="MCP server exposing unified game/_game functions")
     parser.add_argument("--repo-root", default=None, help="Repository root path")
     parser.add_argument("--build-dir", default="cmake-build-release", help="Build directory containing _game")
+    parser.add_argument(
+        "--build-config",
+        default=os.environ.get("GAME_BUILD_CONFIG"),
+        help="CMake build configuration for multi-config generators such as Visual Studio",
+    )
     parser.add_argument("--build", action="store_true", help="Build the extension before starting the server")
     parser.add_argument("--stdio", action="store_true", help="Run as a stdio MCP server instead of HTTP")
     parser.add_argument("--host", default="127.0.0.1", help="HTTP host to bind when running in HTTP mode")
@@ -1512,6 +1532,7 @@ def main() -> int:
         trace_messages=args.trace_messages,
         native_log_sink=native_log_sink,
         native_log_path=native_log_path,
+        build_config=args.build_config,
     )
     if args.build:
         server.build_extension()

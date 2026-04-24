@@ -639,6 +639,6 @@ PYBIND11_MODULE(_game, m) {
     PY_WRAP_GENERIC_DOC(randint, "randint(lower, upper) -> int: Return a random integer in engine-defined bounds.");
     m.def("jsonify", &jsonify_py, "jsonify(obj) -> str: Serialize a game object to JSON text.");
     PY_WRAP_GENERIC_DOC(logger, "logger(message) -> None: Write an info log message to the engine logger.");
-    m.def("set_logger_sink", set_logger_sink_py,
+    m.def("set_logger_sink", set_logger_sink_py, py::arg("sink_name"), py::arg("path") = py::none(),
           "set_logger_sink(sink, path=None) -> None: Configure the native logger output target.");
 }

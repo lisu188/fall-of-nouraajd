@@ -22,12 +22,12 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 class CCreature;
 
-template <typename T = void> std::list<Coords> near_coords(auto coords) {
+template <typename CoordsLike> std::list<Coords> near_coords(const CoordsLike &coords) {
     return {Coords(coords.x + 1, coords.y, coords.z), Coords(coords.x - 1, coords.y, coords.z),
             Coords(coords.x, coords.y + 1, coords.z), Coords(coords.x, coords.y - 1, coords.z)};
 }
 
-template <typename T = void> std::list<Coords> near_coords_with(auto coords) {
+template <typename CoordsLike> std::list<Coords> near_coords_with(const CoordsLike &coords) {
     return {Coords(coords.x, coords.y, coords.z), Coords(coords.x + 1, coords.y, coords.z),
             Coords(coords.x - 1, coords.y, coords.z), Coords(coords.x, coords.y + 1, coords.z),
             Coords(coords.x, coords.y - 1, coords.z)};
