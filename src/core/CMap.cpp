@@ -366,8 +366,16 @@ void CMap::move() {
             [creature, coordinates](Coords coords) { coordinates->push_back(std::make_pair(creature, coords)); });
     };
 
-    auto pending = active_objects | std::views::transform(controller);
-    auto joined = vstd::join(pending);
+    std::vector<std::shared_ptr<vstd::future<void, Coords>>> pending;
+    for (const auto &object : active_objects) {
+        pending.push_back(controller(object));
+    }
+    auto joined = vstd::async([pending]() {
+        for (const auto &future : pending) {
+            future->get();
+        }
+        return std::set<void *>{};
+    });
 
     bool round_complete = false;
     joined->thenLater([&round_complete](std::set<void *>) { round_complete = true; });

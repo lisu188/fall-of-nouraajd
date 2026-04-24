@@ -139,7 +139,7 @@ std::shared_ptr<vstd::future<Coords, void>> CGroundController::control(std::shar
             }
         }
         if (!possible.empty()) {
-            return vstd::random_element(possible);
+            return *vstd::random_element(possible);
         }
         return creature->getCoords();
     });
@@ -159,7 +159,7 @@ std::shared_ptr<vstd::future<Coords, void>> CRangeController::control(std::share
             }
         }
         if (!possible.empty()) {
-            return vstd::random_element(possible);
+            return *vstd::random_element(possible);
         }
         return creature->getCoords();
     });

@@ -68,7 +68,7 @@ std::set<std::shared_ptr<CItem>> CRngHandler::calculateRandomLoot(int value) con
             possible_names.insert(it->second);
         }
         if (!possible_names.empty()) {
-            loot.insert(game.lock()->createObject<CItem>(vstd::random_element(possible_names)));
+            loot.insert(game.lock()->createObject<CItem>(*vstd::random_element(possible_names)));
         }
         value -= pow;
     }
@@ -95,14 +95,17 @@ std::set<std::shared_ptr<CCreature>> CRngHandler::calculateRandomEncounter(int v
             creaturePowerTable | std::views::keys | std::views::filter([pow](int it) { return it <= pow; });
         // TODO: util for range copy
         std::set<int> possiblePowers(possiblePowersRange.begin(), possiblePowersRange.end());
-        auto sw = vstd::random_element(possiblePowers);
+        if (possiblePowers.empty()) {
+            continue;
+        }
+        int sw = *vstd::random_element(possiblePowers);
         std::set<std::string> possible_names;
         auto range = creaturePowerTable.equal_range(sw);
         for (auto it = range.first; it != range.second; it++) {
             possible_names.insert(it->second);
         }
         if (!possible_names.empty()) {
-            auto creature = game.lock()->createObject<CCreature>(vstd::random_element(possible_names));
+            auto creature = game.lock()->createObject<CCreature>(*vstd::random_element(possible_names));
             creature->addExp(creature->getExpForLevel(pow - sw));
             encounter.insert(creature);
         }

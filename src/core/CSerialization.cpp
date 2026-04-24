@@ -47,14 +47,14 @@ std::type_index CSerialization::getProperty(const std::shared_ptr<CGameObject> &
 
 void CSerialization::setArrayProperty(const std::shared_ptr<CGameObject> &object, std::type_index property,
                                       const std::string &key, std::shared_ptr<json> value) {
-    setOtherProperty(vstd::type_id<std::shared_ptr<json>>(),
-                     property != V_VOID ? property : vstd::type_id<std::set<std::shared_ptr<CGameObject>>>(), object,
-                     key, std::any(value));
+    setOtherProperty(std::type_index(typeid(std::shared_ptr<json>)),
+                     property != V_VOID ? property : std::type_index(typeid(std::set<std::shared_ptr<CGameObject>>)),
+                     object, key, std::any(value));
 }
 
 void CSerialization::setObjectProperty(const std::shared_ptr<CGameObject> &object, std::type_index property,
                                        const std::string &key, std::shared_ptr<json> value) {
-    setOtherProperty(vstd::type_id<std::shared_ptr<json>>(),
+    setOtherProperty(std::type_index(typeid(std::shared_ptr<json>)),
                      property != V_VOID ? property : getGenericPropertyType(value), object, key, std::any(value));
 }
 
@@ -100,7 +100,7 @@ void CSerialization::setStringProperty(const std::shared_ptr<CGameObject> &objec
 }
 
 bool CSerialization::isString(const std::shared_ptr<CGameObject> &object, const std::string &key) {
-    return getProperty(object, key) == vstd::type_id<std::string>();
+    return getProperty(object, key) == std::type_index(typeid(std::string));
 }
 
 void CSerialization::setOtherProperty(std::type_index serializedId, std::type_index deserializedId,
@@ -114,7 +114,7 @@ void CSerialization::setOtherProperty(std::type_index serializedId, std::type_in
     } catch (const std::exception &ex) {
         throw std::runtime_error("Failed to deserialize property '" + key + "': " + ex.what());
     }
-    const auto resultType = vstd::type_id(result.type());
+    const auto resultType = std::type_index(result.type());
     if (CTypes::is_pointer_type(resultType)) {
         object->setProperty(key, vstd::any_cast<std::shared_ptr<CGameObject>>(result));
     } else if (CTypes::is_array_type(resultType)) {
@@ -152,12 +152,12 @@ void add_arr_member(const std::shared_ptr<json> &object, int value) { (*object)[
 
 void CSerialization::setProperty(const std::shared_ptr<json> &conf, const std::string &propertyName,
                                  const std::any &propertyValue) {
-    const auto propertyType = vstd::type_id(propertyValue.type());
-    if (propertyType == vstd::type_id<int>()) {
+    const auto propertyType = std::type_index(propertyValue.type());
+    if (propertyType == std::type_index(typeid(int))) {
         add_member(conf, propertyName, vstd::any_cast<int>(propertyValue));
-    } else if (propertyType == vstd::type_id<std::string>()) {
+    } else if (propertyType == std::type_index(typeid(std::string))) {
         add_member(conf, propertyName, vstd::any_cast<std::string>(propertyValue));
-    } else if (propertyType == vstd::type_id<bool>()) {
+    } else if (propertyType == std::type_index(typeid(bool))) {
         add_member(conf, propertyName, vstd::any_cast<bool>(propertyValue));
     } else {
         std::shared_ptr<CSerializerBase> serializer;
@@ -213,7 +213,7 @@ std::shared_ptr<CGameObject> object_deserialize(const std::shared_ptr<CGame> &ga
             CSerialization::setProperty(object, key, CJsonUtil::alias(config, value));
         }
     }
-    if (object) {
+    if (object && object->meta()->has_method("initialize", object)) {
         object->meta()->invoke_method<void>("initialize", object);
     }
     return object;
@@ -267,9 +267,9 @@ std::set<std::shared_ptr<CGameObject>> array_deserialize(const std::shared_ptr<C
 
 std::type_index CSerialization::getGenericPropertyType(const std::shared_ptr<json> &object) {
     if (CJsonUtil::isObject(object)) {
-        return vstd::type_id<std::shared_ptr<CGameObject>>();
+        return std::type_index(typeid(std::shared_ptr<CGameObject>));
     } else if (CJsonUtil::isMap(object)) {
-        return vstd::type_id<std::map<std::string, std::shared_ptr<CGameObject>>>();
+        return std::type_index(typeid(std::map<std::string, std::shared_ptr<CGameObject>>));
     }
     vstd::fail("Unable to determine property type!");
     return V_VOID;
