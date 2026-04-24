@@ -17,11 +17,18 @@ if errorlevel 1 (
 
 for /f "usebackq delims=" %%i in (`python -c "import sys; print(sys.executable)"`) do set "PYTHON_EXECUTABLE=%%i"
 for /f "usebackq delims=" %%i in (`python -c "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}')"`) do set "PYTHON_VERSION=%%i"
+for /f "usebackq delims=" %%i in (`python -m pybind11 --cmakedir`) do set "PYBIND11_DIR=%%i"
+if not defined PYBIND11_DIR (
+    echo pybind11 was not found for the active Python interpreter.
+    echo Install it with:
+    echo   python -m pip install --upgrade pybind11
+    exit /b 1
+)
 if not "!PYTHON_VERSION!"=="3.12" (
     echo Python 3.12 is required on PATH for the Windows build.
     echo Found Python !PYTHON_VERSION! at:
     echo   !PYTHON_EXECUTABLE!
-    echo vcpkg provides Python 3.12 development libraries, so the interpreter must match that ABI.
+    echo CMake links against the active interpreter and development libraries, so the ABI must match CI.
     exit /b 1
 )
 
@@ -58,13 +65,15 @@ if not defined CMAKE_GENERATOR set "CMAKE_GENERATOR=Visual Studio 17 2022"
 if not defined CMAKE_GENERATOR_PLATFORM set "CMAKE_GENERATOR_PLATFORM=x64"
 if not defined VCPKG_TARGET_TRIPLET set "VCPKG_TARGET_TRIPLET=x64-windows"
 if not defined VCPKG_INSTALLED_DIR set "VCPKG_INSTALLED_DIR=%CD%\vcpkg_installed"
+if not defined VCPKG_OVERLAY_TRIPLETS set "VCPKG_OVERLAY_TRIPLETS="
+if not defined VCPKG_MANIFEST_MODE set "VCPKG_MANIFEST_MODE=ON"
+if not defined CONFIGURE_BUILD_DIRS set "CONFIGURE_BUILD_DIRS=cmake-build-debug cmake-build-release"
 set "VCPKG_INSTALLED_DIR_CMAKE=!VCPKG_INSTALLED_DIR:\=/!"
 
-call :configure cmake-build-debug
-if errorlevel 1 exit /b 1
-
-call :configure cmake-build-release
-if errorlevel 1 exit /b 1
+for %%d in (!CONFIGURE_BUILD_DIRS!) do (
+    call :configure %%d
+    if errorlevel 1 exit /b 1
+)
 
 exit /b 0
 
@@ -93,6 +102,14 @@ if exist "!BUILD_DIR!\CMakeCache.txt" (
             rmdir /s /q "!BUILD_DIR!\CMakeFiles" 2>nul
         )
     )
+    if exist "!BUILD_DIR!\CMakeCache.txt" (
+        findstr /C:"VCPKG_TARGET_TRIPLET:STRING=!VCPKG_TARGET_TRIPLET!" "!BUILD_DIR!\CMakeCache.txt" >nul 2>nul
+        if errorlevel 1 (
+            echo Recreating !BUILD_DIR! because it was configured with a different vcpkg target triplet.
+            del /q "!BUILD_DIR!\CMakeCache.txt" 2>nul
+            rmdir /s /q "!BUILD_DIR!\CMakeFiles" 2>nul
+        )
+    )
 )
 
 cmake -B ./!BUILD_DIR! -S . ^
@@ -104,5 +121,8 @@ cmake -B ./!BUILD_DIR! -S . ^
     -DCMAKE_TOOLCHAIN_FILE="!VCPKG_TOOLCHAIN_FILE!" ^
     -DVCPKG_INSTALLED_DIR="!VCPKG_INSTALLED_DIR!" ^
     -DVCPKG_TARGET_TRIPLET="!VCPKG_TARGET_TRIPLET!" ^
+    -DVCPKG_OVERLAY_TRIPLETS="!VCPKG_OVERLAY_TRIPLETS!" ^
+    -DVCPKG_MANIFEST_MODE="!VCPKG_MANIFEST_MODE!" ^
+    -Dpybind11_DIR="!PYBIND11_DIR!" ^
     -DPython3_EXECUTABLE="!PYTHON_EXECUTABLE!"
 exit /b %ERRORLEVEL%
