@@ -1144,10 +1144,7 @@ class EngineHttpRequestHandler(BaseHTTPRequestHandler):
         if path == "/mcp" and not self.server.mcp_server.validate_origin(self.headers.get("Origin")):
             self._write_mcp_error(HTTPStatus.FORBIDDEN, None, -32600, "Forbidden origin")
             return
-        self.send_response(HTTPStatus.NO_CONTENT)
-        self._add_default_headers()
-        self.send_header("Allow", "GET, POST, DELETE, OPTIONS")
-        self.end_headers()
+        self._write_empty(HTTPStatus.NO_CONTENT, allow="GET, POST, DELETE, OPTIONS")
 
     def do_GET(self) -> None:
         path = self.path.split("?", 1)[0]
@@ -1199,10 +1196,7 @@ class EngineHttpRequestHandler(BaseHTTPRequestHandler):
 
         accept = self.headers.get("Accept", "")
         if "text/event-stream" not in accept:
-            self.send_response(HTTPStatus.METHOD_NOT_ALLOWED)
-            self._add_default_headers()
-            self.send_header("Allow", "POST, DELETE, OPTIONS, GET")
-            self.end_headers()
+            self._write_empty(HTTPStatus.METHOD_NOT_ALLOWED, allow="POST, DELETE, OPTIONS, GET")
             return
 
         session_id = self.headers.get("MCP-Session-Id")
@@ -1280,9 +1274,7 @@ class EngineHttpRequestHandler(BaseHTTPRequestHandler):
             self._write_mcp_error(HTTPStatus.NOT_FOUND, None, -32001, "Unknown session")
             return
 
-        self.send_response(HTTPStatus.NO_CONTENT)
-        self._add_default_headers()
-        self.end_headers()
+        self._write_empty(HTTPStatus.NO_CONTENT)
 
     def do_POST(self) -> None:
         path = self.path.split("?", 1)[0]
@@ -1355,13 +1347,11 @@ class EngineHttpRequestHandler(BaseHTTPRequestHandler):
                 response_protocol_version = state.protocol_version
 
         if response is None:
-            self.send_response(status)
-            self._add_default_headers()
-            if response_session_id:
-                self.send_header("MCP-Session-Id", response_session_id)
-            if response_protocol_version:
-                self.send_header("MCP-Protocol-Version", response_protocol_version)
-            self.end_headers()
+            self._write_empty(
+                status,
+                session_id=response_session_id,
+                protocol_version=response_protocol_version,
+            )
             self.server.mcp_server._trace_message(
                 transport="http",
                 direction="send",
@@ -1384,6 +1374,25 @@ class EngineHttpRequestHandler(BaseHTTPRequestHandler):
             session_id=response_session_id,
             protocol_version=response_protocol_version,
         )
+
+    def _write_empty(
+        self,
+        status: HTTPStatus,
+        *,
+        session_id: str | None = None,
+        protocol_version: str | None = None,
+        allow: str | None = None,
+    ) -> None:
+        self.send_response(status)
+        self._add_default_headers()
+        if allow:
+            self.send_header("Allow", allow)
+        if session_id:
+            self.send_header("MCP-Session-Id", session_id)
+        if protocol_version:
+            self.send_header("MCP-Protocol-Version", protocol_version)
+        self.send_header("Content-Length", "0")
+        self.end_headers()
 
     def log_message(self, format: str, *args: Any) -> None:
         logger.info('%s - "%s"', self.address_string(), format % args)
