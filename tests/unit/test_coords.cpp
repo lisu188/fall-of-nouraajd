@@ -1,6 +1,6 @@
 /*
 fall-of-nouraajd c++ dark fantasy game
-Copyright (C) 2025  Andrzej Lis
+Copyright (C) 2025-2026  Andrzej Lis
 
 This program is free software: you can redistribute it and/or modify
         it under the terms of the GNU General Public License as published by
@@ -177,6 +177,30 @@ void test_pathfinder_waypoint_and_blocked_goal() {
     auto path = CPathFinder::findPath(Coords(0, 0, 0), Coords(2, 0, 0), can_step, no_waypoint);
     expect_true(path.size() == 1, "findPath should return only start when goal is unreachable");
     expect_true(path.front() == Coords(0, 0, 0), "findPath should remain on start if no route exists");
+}
+
+void test_pathfinder_caches_passability_checks() {
+    std::map<Coords, int> calls;
+    auto can_step = [&calls](const Coords &coords) {
+        calls[coords]++;
+        return coords == Coords(0, 0, 0) || coords == Coords(1, 0, 0) || coords == Coords(2, 0, 0);
+    };
+    auto no_waypoint = [](const Coords &) { return std::pair<bool, Coords>(false, ZERO); };
+    auto duplicate_neighbors = [](const Coords &coords) {
+        if (coords == Coords(0, 0, 0)) {
+            return std::vector<Coords>{Coords(1, 0, 0), Coords(1, 0, 0)};
+        }
+        if (coords == Coords(1, 0, 0)) {
+            return std::vector<Coords>{Coords(2, 0, 0)};
+        }
+        return std::vector<Coords>{};
+    };
+
+    auto path = CPathFinder::findPath(Coords(0, 0, 0), Coords(2, 0, 0), can_step, no_waypoint, duplicate_neighbors);
+    expect_true(path.size() == 2, "findPath should follow the duplicate-neighbor route");
+    expect_true(path.front() == Coords(1, 0, 0), "findPath should still include the first route step");
+    expect_true(path.back() == Coords(2, 0, 0), "findPath should still end on the goal");
+    expect_true(calls[Coords(1, 0, 0)] == 1, "findPath should cache repeated passability checks");
 }
 
 void test_pathfinder_waypoint_override() {
@@ -618,6 +642,7 @@ int main() {
     test_near_coords_helpers();
     test_pathfinder_find_path_without_obstacles();
     test_pathfinder_waypoint_and_blocked_goal();
+    test_pathfinder_caches_passability_checks();
     test_pathfinder_waypoint_override();
     test_toroidal_pathfinder_prefers_wrapped_route();
     test_toroidal_pathfinder_wraps_on_both_axes();

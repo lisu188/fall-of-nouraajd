@@ -1,6 +1,6 @@
 /*
 fall-of-nouraajd c++ dark fantasy game
-Copyright (C) 2025  Andrzej Lis
+Copyright (C) 2025-2026  Andrzej Lis
 
 This program is free software: you can redistribute it and/or modify
         it under the terms of the GNU General Public License as published by
@@ -25,6 +25,25 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "object/CPlayer.h"
 
 namespace {
+struct FlowQueueNode {
+    int cost;
+    Coords coords;
+};
+
+struct FlowQueueCompare {
+    bool operator()(const FlowQueueNode &a, const FlowQueueNode &b) const { return a.cost > b.cost; }
+};
+
+struct TargetFlowField {
+    std::weak_ptr<CMap> map;
+    std::uint64_t revision = 0;
+    Coords goal;
+    std::unordered_map<Coords, Coords> nextSteps;
+};
+
+std::mutex targetFlowMutex;
+std::vector<std::shared_ptr<TargetFlowField>> targetFlowCache;
+
 bool creature_can_follow_step(const std::shared_ptr<CCreature> &creature, const Coords &step) {
     if (!creature || !creature->getMap()) {
         return false;
@@ -33,6 +52,98 @@ bool creature_can_follow_step(const std::shared_ptr<CCreature> &creature, const 
     auto current = map->normalizeCoords(creature->getCoords());
     auto target = map->normalizeCoords(step);
     return target != current && map->canStep(target);
+}
+
+std::shared_ptr<TargetFlowField> build_target_flow_field(const std::shared_ptr<CMap> &map, const Coords &goal,
+                                                         std::uint64_t revision) {
+    auto field = std::make_shared<TargetFlowField>();
+    field->map = map;
+    field->revision = revision;
+    field->goal = goal;
+
+    if (!map->canStep(goal)) {
+        return field;
+    }
+
+    std::unordered_map<Coords, int> costs;
+    std::priority_queue<FlowQueueNode, std::vector<FlowQueueNode>, FlowQueueCompare> frontier;
+    costs[goal] = 0;
+    frontier.push({0, goal});
+
+    while (!frontier.empty()) {
+        auto current = frontier.top();
+        frontier.pop();
+
+        auto best = costs.find(current.coords);
+        if (best == costs.end() || best->second != current.cost) {
+            continue;
+        }
+
+        for (auto previous : map->getAdjacentCoords(current.coords)) {
+            if (previous != goal && !map->canStep(previous)) {
+                continue;
+            }
+
+            const int nextCost = current.cost + 1;
+            auto previousCost = costs.find(previous);
+            if (previousCost == costs.end() || nextCost < previousCost->second) {
+                costs[previous] = nextCost;
+                field->nextSteps[previous] = current.coords;
+                frontier.push({nextCost, previous});
+            }
+        }
+    }
+
+    return field;
+}
+
+std::shared_ptr<TargetFlowField> get_target_flow_field(const std::shared_ptr<CMap> &map, const Coords &goal) {
+    constexpr std::size_t maxCachedFlowFields = 32;
+    const auto revision = map->getNavigationRevision();
+    std::lock_guard<std::mutex> lock(targetFlowMutex);
+
+    targetFlowCache.erase(std::remove_if(targetFlowCache.begin(), targetFlowCache.end(),
+                                         [](const auto &field) { return !field || field->map.expired(); }),
+                          targetFlowCache.end());
+
+    auto cached = std::find_if(targetFlowCache.begin(), targetFlowCache.end(), [&](const auto &field) {
+        return field->map.lock() == map && field->revision == revision && field->goal == goal;
+    });
+    if (cached != targetFlowCache.end()) {
+        return *cached;
+    }
+
+    auto field = build_target_flow_field(map, goal, revision);
+    targetFlowCache.push_back(field);
+    while (targetFlowCache.size() > maxCachedFlowFields) {
+        targetFlowCache.erase(targetFlowCache.begin());
+    }
+    return field;
+}
+
+Coords find_shared_target_next_step(const std::shared_ptr<CCreature> &creature,
+                                    const std::shared_ptr<CMapObject> &targetObject) {
+    if (!creature || !targetObject || !creature->getMap()) {
+        return creature ? creature->getCoords() : ZERO;
+    }
+
+    auto map = creature->getMap();
+    auto start = map->normalizeCoords(creature->getCoords());
+    auto goal = map->normalizeCoords(targetObject->getCoords());
+    if (start == goal || !map->canStep(goal)) {
+        return start;
+    }
+
+    auto flow = get_target_flow_field(map, goal);
+    auto next = flow->nextSteps.find(start);
+    if (next == flow->nextSteps.end()) {
+        return start;
+    }
+    auto step = map->normalizeCoords(next->second);
+    if (!creature_can_follow_step(creature, step)) {
+        return start;
+    }
+    return step;
 }
 } // namespace
 
@@ -43,12 +154,7 @@ std::shared_ptr<vstd::future<Coords, void>> CTargetController::control(std::shar
     if (!target_object) {
         return vstd::later([creature]() { return creature->getCoords(); });
     }
-    return CPathFinder::findNextStep(
-        creature->getCoords(), target_object->getCoords(),
-        [creature](const Coords &coords) { return creature->getMap()->canStep(coords); },
-        [](auto) { return std::make_pair(false, ZERO); },
-        [creature](const Coords &coords) { return creature->getMap()->getAdjacentCoords(coords); },
-        [creature](const Coords &from, const Coords &to) { return creature->getMap()->getDistance(from, to); });
+    return vstd::async([creature, target_object]() { return find_shared_target_next_step(creature, target_object); });
 }
 
 std::shared_ptr<vstd::future<Coords, void>> CController::control(std::shared_ptr<CCreature> c) {
