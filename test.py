@@ -15,6 +15,7 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 import ast
 import builtins
+import http.client
 import importlib
 import json
 import os
@@ -29,6 +30,7 @@ import threading
 import time
 import traceback
 import types
+from http import HTTPStatus
 from pathlib import Path
 import unittest
 
@@ -625,13 +627,17 @@ def find_adjacent_walkable_tile(game_map, origin):
     raise AssertionError(f"Expected an adjacent walkable tile near {origin.x},{origin.y},{origin.z}.")
 
 
-def get_panel_proxy_child_totals(panel):
+def get_panel_proxy_child_totals_by_collection(panel):
     game = load_game_module()
     panel_data = json.loads(game.jsonify(panel))
-    totals = []
+    totals = {}
     for child in panel_data.get("properties", {}).get("children") or []:
-        proxy_children = child.get("properties", {}).get("children") or []
-        totals.append(sum(len(proxy.get("properties", {}).get("children") or []) for proxy in proxy_children))
+        properties = child.get("properties", {})
+        collection = properties.get("collection")
+        if not collection:
+            continue
+        proxy_children = properties.get("children") or []
+        totals[collection] = sum(len(proxy.get("properties", {}).get("children") or []) for proxy in proxy_children)
     return totals
 
 
@@ -2350,21 +2356,22 @@ class GameTest(unittest.TestCase):
         pump_event_loop()
 
         player = g.getMap().getPlayer()
-        before_totals = get_panel_proxy_child_totals(panel)
+        before_totals = get_panel_proxy_child_totals_by_collection(panel)
 
         sword = g.createObject("Sword")
         player.addItem(sword)
-        after_add_without_pump = get_panel_proxy_child_totals(panel)
+        after_add_without_pump = get_panel_proxy_child_totals_by_collection(panel)
         pump_event_loop()
-        after_add_with_pump = get_panel_proxy_child_totals(panel)
+        after_add_with_pump = get_panel_proxy_child_totals_by_collection(panel)
 
         player.removeItem(lambda item: item == sword, False)
-        after_remove_without_pump = get_panel_proxy_child_totals(panel)
+        after_remove_without_pump = get_panel_proxy_child_totals_by_collection(panel)
         pump_event_loop()
-        after_remove_with_pump = get_panel_proxy_child_totals(panel)
+        after_remove_with_pump = get_panel_proxy_child_totals_by_collection(panel)
 
         self.assertEqual(before_totals, after_add_without_pump)
-        self.assertEqual(before_totals[0] + 1, after_add_with_pump[0])
+        self.assertEqual(before_totals["inventoryCollection"] + 1, after_add_with_pump["inventoryCollection"])
+        self.assertEqual(before_totals["equippedCollection"], after_add_with_pump["equippedCollection"])
         self.assertEqual(after_add_with_pump, after_remove_without_pump)
         self.assertEqual(before_totals, after_remove_with_pump)
 
@@ -5287,6 +5294,60 @@ class McpServerTest(unittest.TestCase):
         tools = batch_response[0].get("result", {}).get("tools", [])
         tool_names = {tool.get("name") for tool in tools}
         self.assertTrue({"engine_list", "engine_call", "engine_handle_call"}.issubset(tool_names))
+
+    def test_http_notification_response_declares_empty_body(self):
+        server = self.make_stub_server()
+        httpd = mcp.EngineHttpServer(("127.0.0.1", 0), mcp.EngineHttpRequestHandler, server)
+        thread = threading.Thread(target=httpd.serve_forever, daemon=True)
+        thread.start()
+        conn = http.client.HTTPConnection("127.0.0.1", httpd.server_address[1], timeout=5)
+        headers = {
+            "Accept": "application/json, text/event-stream",
+            "Content-Type": "application/json",
+        }
+        try:
+            conn.request(
+                "POST",
+                "/mcp",
+                body=json.dumps(
+                    {
+                        "jsonrpc": "2.0",
+                        "id": 1,
+                        "method": "initialize",
+                        "params": {
+                            "protocolVersion": MCP_PROTOCOL_VERSION,
+                            "capabilities": {},
+                            "clientInfo": {"name": "mcp-test", "version": "1.0"},
+                        },
+                    }
+                ),
+                headers=headers,
+            )
+            initialize_response = conn.getresponse()
+            self.assertEqual(HTTPStatus.OK, initialize_response.status)
+            session_id = initialize_response.getheader("MCP-Session-Id")
+            self.assertTrue(session_id)
+            initialize_response.read()
+
+            notification_headers = dict(headers)
+            notification_headers["MCP-Session-Id"] = session_id
+            conn.request(
+                "POST",
+                "/mcp",
+                body=json.dumps({"jsonrpc": "2.0", "method": "notifications/initialized", "params": {}}),
+                headers=notification_headers,
+            )
+            notification_response = conn.getresponse()
+
+            self.assertEqual(HTTPStatus.ACCEPTED, notification_response.status)
+            self.assertEqual("0", notification_response.getheader("Content-Length"))
+            self.assertEqual(session_id, notification_response.getheader("MCP-Session-Id"))
+            self.assertEqual(MCP_PROTOCOL_VERSION, notification_response.getheader("MCP-Protocol-Version"))
+            self.assertEqual(b"", notification_response.read())
+        finally:
+            conn.close()
+            httpd.shutdown()
+            httpd.server_close()
 
     def test_stdio_handshake_and_tool_listing(self):
         script = REPO_ROOT / "mcp.py"
