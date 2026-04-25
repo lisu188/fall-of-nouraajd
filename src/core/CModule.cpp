@@ -1,6 +1,6 @@
 /*
 fall-of-nouraajd c++ dark fantasy game
-Copyright (C) 2025  Andrzej Lis
+Copyright (C) 2025-2026  Andrzej Lis
 
 This program is free software: you can redistribute it and/or modify
         it under the terms of the GNU General Public License as published by
@@ -643,7 +643,8 @@ PYBIND11_MODULE(_game, m) {
         .def("getMarket", &CGameTradePanel::getMarket, "Return market displayed by this panel.");
 
     py::class_<CGameFightPanel, CGamePanel, std::shared_ptr<CGameFightPanel>>(m, "CGameFightPanel", "Fight panel.")
-        .def("getEnemy", &CGameFightPanel::getEnemy, "Return current enemy creature.");
+        .def("getEnemy", &CGameFightPanel::getEnemy, "Return current enemy creature.")
+        .def("setEnemy", &CGameFightPanel::setEnemy, "Set current enemy creature.");
 
     py::class_<CGameCharacterPanel, CGamePanel, std::shared_ptr<CGameCharacterPanel>>(m, "CGameCharacterPanel",
                                                                                       "Character sheet panel.");

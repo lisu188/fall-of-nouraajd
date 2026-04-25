@@ -1,6 +1,6 @@
 /*
 fall-of-nouraajd c++ dark fantasy game
-Copyright (C) 2025  Andrzej Lis
+Copyright (C) 2025-2026  Andrzej Lis
 
 This program is free software: you can redistribute it and/or modify
         it under the terms of the GNU General Public License as published by
@@ -309,10 +309,11 @@ void CListView::initialize() {
         },
         [self]() {
             if (self->refreshObject) {
-                self->refreshObject->invoke(self->getGui()->getGame(), self)
-                    ->connect(self->refreshEvent, self, "refresh");
-                self->refreshObject->invoke(self->getGui()->getGame(), self)
-                    ->connect(self->refreshEvent, self, "refreshAll");
+                auto refreshTarget = self->refreshObject->invoke(self->getGui()->getGame(), self);
+                if (refreshTarget) {
+                    refreshTarget->connect(self->refreshEvent, self, "refresh");
+                    refreshTarget->connect(self->refreshEvent, self, "refreshAll");
+                }
             }
             self->refresh();
         });
