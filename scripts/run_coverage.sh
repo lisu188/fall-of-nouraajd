@@ -3,7 +3,7 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 BUILD_DIR="${BUILD_DIR:-cmake-build-coverage}"
-MIN_COVERAGE="${MIN_COVERAGE:-80}"
+MIN_COVERAGE="${MIN_COVERAGE:-90}"
 REPORT_DIR="${ROOT_DIR}/coverage"
 COVERAGE_JOBS="${COVERAGE_JOBS:-$(nproc)}"
 SCRIPT_START=${SECONDS}
