@@ -422,7 +422,9 @@ void test_vstd_container_and_pointer_helpers() {
                 "find_if should return the first predicate match");
 
     int executed = 0;
-    vstd::execute_if(values, [](int value) { return value == 4; }, [&](int value) { executed = value; });
+    auto is_four = [](int value) { return value == 4; };
+    auto record_execution = [&](int value) { executed = value; };
+    vstd::execute_if(values, is_four, record_execution);
     expect_true(executed == 4, "execute_if should run a callback for matching values");
 
     vstd::erase(values, 4, [](int left, int right) { return left == right; });
