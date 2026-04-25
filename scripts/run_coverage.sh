@@ -69,8 +69,14 @@ generate_report() {
 
     if command -v gcovr >/dev/null 2>&1; then
         gcovr_args=()
-        if gcovr --help 2>/dev/null | grep -q -- "--gcov-parallel"; then
+        gcovr_help="$(gcovr --help 2>/dev/null || true)"
+        if grep -q -- "--gcov-parallel" <<<"${gcovr_help}"; then
             gcovr_args+=(--gcov-parallel "${COVERAGE_JOBS}")
+        elif grep -q -- "-j \\[GCOV_PARALLEL\\]" <<<"${gcovr_help}"; then
+            gcovr_args+=(-j "${COVERAGE_JOBS}")
+        fi
+        if grep -q -- "--merge-lines" <<<"${gcovr_help}"; then
+            gcovr_args+=(--merge-lines)
         fi
 
         # gcov can emit negative branch counts for some files; keep reporting and the line gate intact.

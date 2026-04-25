@@ -33,6 +33,7 @@ The script:
 - runs `python3 test.py` against the coverage build
 - generates reports in `coverage/coverage.txt` and `coverage/coverage.html`
 - uses `gcovr` when available and falls back to the repo-local `gcov` parser otherwise
+- merges repeated template/header line records in supported `gcovr` versions so the line gate matches the fallback reporter
 - fails if total line coverage is below 80%
 
 Optional coverage speed controls:
