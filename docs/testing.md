@@ -28,11 +28,19 @@ Run from the repository root when a change touches tests (for example
 
 The script:
 - configures a dedicated coverage build (`cmake-build-coverage`)
+- reuses the existing coverage configure by default; set `COVERAGE_FRESH_CONFIGURE=1` to force a fresh configure
 - builds `_game` with GCC/Clang coverage flags
 - runs `python3 test.py` against the coverage build
 - generates reports in `coverage/coverage.txt` and `coverage/coverage.html`
 - uses `gcovr` when available and falls back to the repo-local `gcov` parser otherwise
+- merges repeated template/header line records in supported `gcovr` versions so the line gate matches the fallback reporter
 - fails if total line coverage is below 80%
+
+Optional coverage speed controls:
+- `COVERAGE_CXX_COMPILER_LAUNCHER=<launcher>` overrides the compiler launcher for the coverage build
+- `COVERAGE_CXX_COMPILER_LAUNCHER=` disables the compiler launcher
+- when `COVERAGE_CXX_COMPILER_LAUNCHER` is unset, the script uses `ccache` automatically if it is available
+- `COVERAGE_JOBS=<n>` controls parallel coverage build and report collection jobs
 
 ## Coverage scope
 Coverage reports include every instrumented file under this repository root.
