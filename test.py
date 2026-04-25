@@ -1,5 +1,5 @@
 # fall-of-nouraajd c++ dark fantasy game
-# Copyright (C) 2025  Andrzej Lis
+# Copyright (C) 2025-2026  Andrzej Lis
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -2502,6 +2502,56 @@ class GameTest(unittest.TestCase):
         coords = chaser.getCoords()
         self.assertEqual((coords.x, coords.y, coords.z), (25, 13, 0))
         return True, json.dumps({"chaser_coords": [coords.x, coords.y, coords.z]})
+
+    @game_test
+    def test_target_controller_flow_field_invalidates_after_navigation_change(self):
+        game = load_game_module()
+
+        g = game.CGameLoader.loadGame()
+        game.CGameLoader.startGameWithPlayer(g, "test", "Warrior")
+        game_map = g.getMap()
+
+        for coords in [
+            game.Coords(10, 10, 0),
+            game.Coords(11, 10, 0),
+            game.Coords(12, 10, 0),
+            game.Coords(10, 11, 0),
+            game.Coords(11, 11, 0),
+            game.Coords(12, 11, 0),
+        ]:
+            game_map.replaceTile("RoadTile", coords)
+
+        target = g.createObject("CEvent")
+        target.setStringProperty("name", "flowTarget")
+        game_map.addObject(target)
+        target.moveTo(12, 10, 0)
+
+        chaser = g.createObject("Cultist")
+        controller = g.createObject("CTargetController")
+        controller.setTarget("flowTarget")
+        chaser.setController(controller)
+        chaser.setBoolProperty("npc", True)
+        game_map.addObject(chaser)
+        chaser.moveTo(10, 10, 0)
+
+        game_map.move()
+        first_step = chaser.getCoords()
+        self.assertEqual((first_step.x, first_step.y, first_step.z), (11, 10, 0))
+
+        chaser.moveTo(10, 10, 0)
+        game_map.replaceTile("WaterTile", game.Coords(11, 10, 0))
+        game_map.replaceTile("WaterTile", game.Coords(9, 10, 0))
+        game_map.replaceTile("WaterTile", game.Coords(10, 9, 0))
+
+        game_map.move()
+        second_step = chaser.getCoords()
+        self.assertEqual((second_step.x, second_step.y, second_step.z), (10, 11, 0))
+        return True, json.dumps(
+            {
+                "first_step": [first_step.x, first_step.y, first_step.z],
+                "second_step": [second_step.x, second_step.y, second_step.z],
+            }
+        )
 
     @game_test
     def test_new_player_classes_and_resources(self):

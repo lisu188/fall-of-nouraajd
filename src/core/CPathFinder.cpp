@@ -1,6 +1,6 @@
 /*
 fall-of-nouraajd c++ dark fantasy game
-Copyright (C) 2025  Andrzej Lis
+Copyright (C) 2025-2026  Andrzej Lis
 
 This program is free software: you can redistribute it and/or modify
         it under the terms of the GNU General Public License as published by
@@ -61,6 +61,26 @@ struct AStarCompare {
 using AStarQueue = std::priority_queue<AStarNode, std::vector<AStarNode>, AStarCompare>;
 using NextStepQueue = std::priority_queue<NextStepNode, std::vector<NextStepNode>, AStarCompare>;
 
+class PassabilityCache {
+  public:
+    explicit PassabilityCache(const std::function<bool(const Coords &)> &canStep) : canStep(canStep) {}
+
+    bool canStepAt(const Coords &coords) {
+        auto cached = values.find(coords);
+        if (cached != values.end()) {
+            return cached->second;
+        }
+
+        bool result = canStep(coords);
+        values.emplace(coords, result);
+        return result;
+    }
+
+  private:
+    const std::function<bool(const Coords &)> &canStep;
+    std::unordered_map<Coords, bool> values;
+};
+
 std::vector<Coords> candidates(const Coords &coords,
                                const std::function<std::pair<bool, Coords>(const Coords &)> &waypoint,
                                const std::function<std::vector<Coords>(const Coords &)> &neighbors) {
@@ -77,9 +97,10 @@ Values fillValues(const std::function<bool(const Coords &)> &canStep, const Coor
                   const std::function<std::vector<Coords>(const Coords &)> &neighbors,
                   const CPathFinder::StepCost &stepCost, const Coords *stopAt = nullptr) {
     Values values = std::make_shared<std::unordered_map<Coords, int>>();
+    PassabilityCache passability(canStep);
     Queue nodes;
 
-    if (canStep(goal) || (stopAt && goal == *stopAt)) {
+    if (passability.canStepAt(goal) || (stopAt && goal == *stopAt)) {
         (*values)[goal] = 0;
         nodes.push({0, goal});
     }
@@ -97,7 +118,7 @@ Values fillValues(const std::function<bool(const Coords &)> &canStep, const Coor
         }
 
         for (auto previous : candidates(current.coords, waypoint, neighbors)) {
-            if ((stopAt && previous == *stopAt) || canStep(previous)) {
+            if ((stopAt && previous == *stopAt) || passability.canStepAt(previous)) {
                 const int edge_cost = std::max(1, stepCost(previous, current.coords));
                 const int next_cost = current.cost + edge_cost;
                 auto value = values->find(previous);
@@ -144,7 +165,8 @@ std::vector<Coords> findAStarPath(Coords start, Coords goal, const std::function
     if (start == goal) {
         return {start};
     }
-    if (!canStep(goal)) {
+    PassabilityCache passability(canStep);
+    if (!passability.canStepAt(goal)) {
         return {start};
     }
 
@@ -168,7 +190,7 @@ std::vector<Coords> findAStarPath(Coords start, Coords goal, const std::function
         }
 
         for (auto next : candidates(current.coords, waypoint, neighbors)) {
-            if (next != goal && !canStep(next)) {
+            if (next != goal && !passability.canStepAt(next)) {
                 continue;
             }
 
@@ -194,7 +216,8 @@ Coords findAStarNextStep(Coords start, Coords goal, const std::function<bool(con
     if (start == goal) {
         return start;
     }
-    if (!canStep(goal)) {
+    PassabilityCache passability(canStep);
+    if (!passability.canStepAt(goal)) {
         return start;
     }
 
@@ -217,7 +240,7 @@ Coords findAStarNextStep(Coords start, Coords goal, const std::function<bool(con
         }
 
         for (auto next : candidates(current.coords, waypoint, neighbors)) {
-            if (next != goal && !canStep(next)) {
+            if (next != goal && !passability.canStepAt(next)) {
                 continue;
             }
 
