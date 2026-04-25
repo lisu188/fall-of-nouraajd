@@ -1,13 +1,14 @@
 #!/usr/bin/env python3
 import argparse
+import concurrent.futures
 import gzip
 import html
 import json
+import os
 import subprocess
 import sys
 import tempfile
 from pathlib import Path
-
 
 EXCLUDED_FILES = {
     Path("src/core/CJsonUtil.h"),
@@ -30,7 +31,18 @@ def parse_args():
     parser.add_argument("--build-dir", required=True, type=Path)
     parser.add_argument("--report-dir", required=True, type=Path)
     parser.add_argument("--min-line", required=True, type=float)
+    parser.add_argument("--jobs", default=max(1, os.cpu_count() or 1), type=positive_int)
     return parser.parse_args()
+
+
+def positive_int(value: str) -> int:
+    try:
+        parsed = int(value)
+    except ValueError as exc:
+        raise argparse.ArgumentTypeError(f"{value!r} is not an integer") from exc
+    if parsed < 1:
+        raise argparse.ArgumentTypeError("--jobs must be at least 1")
+    return parsed
 
 
 def normalize_path(path_str: str, cwd: Path) -> Path:
@@ -50,26 +62,46 @@ def is_included(root: Path, source_path: Path) -> bool:
     return any(rel_path.is_relative_to(prefix) for prefix in INCLUDED_PREFIXES)
 
 
-def collect_gcov_reports(build_dir: Path):
+def collect_reports_for_gcda(gcda: Path, output_dir: Path):
+    output_dir.mkdir()
+    subprocess.run(
+        ["gcov", "-j", "-p", str(gcda)],
+        cwd=output_dir,
+        check=True,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+    )
+
+    reports = []
+    for report_path in sorted(output_dir.glob("*.gcov.json.gz")):
+        with gzip.open(report_path, "rt", encoding="utf-8") as fh:
+            reports.append(json.load(fh))
+    return reports
+
+
+def collect_gcov_reports(build_dir: Path, jobs: int):
     gcda_files = sorted(build_dir.rglob("*.gcda"))
     if not gcda_files:
         raise RuntimeError(f"No .gcda files found under {build_dir}")
 
     with tempfile.TemporaryDirectory(prefix="fon-gcov-") as tmp_dir:
         tmp_path = Path(tmp_dir)
-        for gcda in gcda_files:
-            subprocess.run(
-                ["gcov", "-j", "-p", str(gcda)],
-                cwd=tmp_path,
-                check=True,
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
-            )
-
         reports = []
-        for report_path in sorted(tmp_path.glob("*.gcov.json.gz")):
-            with gzip.open(report_path, "rt", encoding="utf-8") as fh:
-                reports.append(json.load(fh))
+        jobs = min(jobs, len(gcda_files))
+        print(f"Collecting gcov reports from {len(gcda_files)} data files with {jobs} job(s)")
+
+        if jobs == 1:
+            for index, gcda in enumerate(gcda_files):
+                reports.extend(collect_reports_for_gcda(gcda, tmp_path / f"gcov-{index}"))
+            return reports
+
+        with concurrent.futures.ThreadPoolExecutor(max_workers=jobs) as executor:
+            futures = [
+                executor.submit(collect_reports_for_gcda, gcda, tmp_path / f"gcov-{index}")
+                for index, gcda in enumerate(gcda_files)
+            ]
+            for future in concurrent.futures.as_completed(futures):
+                reports.extend(future.result())
         return reports
 
 
@@ -178,7 +210,7 @@ def main():
     report_dir = args.report_dir.resolve()
     report_dir.mkdir(parents=True, exist_ok=True)
 
-    reports = collect_gcov_reports(build_dir)
+    reports = collect_gcov_reports(build_dir, args.jobs)
     merged = merge_line_counts(root, reports)
     summary, covered_lines, total_lines, total_percentage = summarize(root, merged)
 
