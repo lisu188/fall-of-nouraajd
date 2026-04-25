@@ -1,6 +1,6 @@
 /*
 fall-of-nouraajd c++ dark fantasy game
-Copyright (C) 2025  Andrzej Lis
+Copyright (C) 2025-2026  Andrzej Lis
 
 This program is free software: you can redistribute it and/or modify
         it under the terms of the GNU General Public License as published by
@@ -101,8 +101,8 @@ void CGuiHandler::showDialog(std::shared_ptr<CDialog> dialog) {
     }
     std::shared_ptr<CGameDialogPanel> panel = game->createObject<CGameDialogPanel>("dialogPanel");
     panel->setDialog(dialog);
-    panel->reload();
     game->getGui()->pushChild(panel);
+    panel->reload();
     panel->awaitClosing();
 }
 

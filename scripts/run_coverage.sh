@@ -78,6 +78,9 @@ generate_report() {
         if grep -q -- "--merge-lines" <<<"${gcovr_help}"; then
             gcovr_args+=(--merge-lines)
         fi
+        if grep -q -- "--merge-mode-functions" <<<"${gcovr_help}"; then
+            gcovr_args+=(--merge-mode-functions merge-use-line-min)
+        fi
 
         # gcov can emit negative branch counts for some files; keep reporting and the line gate intact.
         gcovr \
