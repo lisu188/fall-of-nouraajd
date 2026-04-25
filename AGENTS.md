@@ -129,7 +129,7 @@ Coverage command:
 ./scripts/run_coverage.sh
 ```
 
-The scoped line coverage threshold is 80%. Do not finish coverage-relevant work below that threshold without explicitly reporting it.
+The scoped line coverage threshold is 90%. Do not finish coverage-relevant work below that threshold without explicitly reporting it.
 
 Coverage reports are generated under `coverage/`.
 
