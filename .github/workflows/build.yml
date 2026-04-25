@@ -34,7 +34,13 @@ jobs:
             base="${{ github.event.before }}"
             head="${{ github.sha }}"
             if [[ -z "${base}" || "${base}" == "0000000000000000000000000000000000000000" ]]; then
-              base="$(git rev-list --max-parents=0 "${head}")"
+              default_branch="origin/${{ github.event.repository.default_branch }}"
+              if git rev-parse --verify "${default_branch}" >/dev/null 2>&1 &&
+                merge_base="$(git merge-base "${default_branch}" "${head}")"; then
+                base="${merge_base}"
+              else
+                base="$(git rev-list --max-parents=0 "${head}")"
+              fi
             fi
           fi
 
