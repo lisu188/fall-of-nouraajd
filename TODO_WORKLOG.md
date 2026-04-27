@@ -319,3 +319,21 @@
   - `python3 test.py` -> `Ran 82 tests in 138.766s`, `OK`
   - `./scripts/run_coverage.sh` -> `Ran 82 tests in 622.127s`, `OK`, `lines: 83.12% (2944 out of 3542)`
 - Blockers if unresolved: None. Manual visual confirmation in the original screenshot scene is still advisable, but the verified proxy-hole repro is now covered automatically.
+
+## Batch 22
+- Location: `test.py`, `src/core/CModule.cpp`, `src/gui/panel/CCreatureView.cpp`, `src/gui/panel/CCreatureView.h`, `src/gui/panel/CListView.cpp`, `todo.txt`
+- Original TODO or summary: `todo.txt` still tracked missing regression coverage for quest-item selection guards in inventory/fight panels and inventory/equipped selection reset.
+- Status: fixed
+- What was changed: Added xvfb GUI regressions that assert quest-tagged `letterToBeren` items do not become selected in inventory or fight item lists, and that equipping an inventory sword clears inventory selection before selecting the equipped slot. Exposed `CGameFightPanel.setEnemy(...)` for nonblocking fight-panel fixtures. While wiring the fight-panel regression, fixed the creature-view effects collection signature to match `CListView` callback invocation and guarded `CListView` refresh-object connections against scripts that temporarily resolve to `None`.
+- Why the change is correct: The guarded item-selection behavior already existed but had no active regression coverage. The new tests verify the rendered selection state through serialized `CSelectionBox` children instead of visual screenshots, so they exercise the actual GUI callback path without adding image baselines. The fight-panel fixture also covers a real initialization path that previously crashed when nested list refresh scripts were scheduled before every target object was available.
+- Validation performed:
+  - source verification of `todo.txt`, `TODO_WORKLOG.md`, `test.py`, `src/core/CModule.cpp`, `src/gui/panel/CGameInventoryPanel.cpp`, `src/gui/panel/CGameFightPanel.cpp`, `src/gui/panel/CCreatureView.cpp`, `src/gui/panel/CCreatureView.h`, `src/gui/panel/CListView.cpp`, and `res/config/panels.json`
+  - `black -l 120 test.py` -> `1 file left unchanged`
+  - `clang-format -i src/core/CModule.cpp src/gui/panel/CCreatureView.h src/gui/panel/CCreatureView.cpp src/gui/panel/CListView.cpp`
+  - `env FON_XVFB_GAMEPLAY_CHILD=1 SDL_VIDEODRIVER=x11 SDL_AUDIODRIVER=dummy SDL_RENDER_DRIVER=software LIBGL_ALWAYS_SOFTWARE=1 xvfb-run -a --server-args="-screen 0 1920x1080x24" python3 test.py XvfbGameplayProcessTest.test_inventory_equipped_selection_resets_inventory_selection XvfbGameplayProcessTest.test_inventory_quest_item_selection_is_ignored XvfbGameplayProcessTest.test_fight_quest_item_selection_is_ignored` -> `Ran 3 tests in 20.706s`, `OK` (run outside the sandbox because sandboxed `/tmp/.X11-unix` permissions made successful xvfb children exit nonzero)
+  - `cmake --build cmake-build-release --target _game for_unit_tests -j$(nproc)` -> `[100%] Built target _game`, `[100%] Built target for_unit_tests`
+  - `ctest --test-dir cmake-build-release --output-on-failure -R for_unit_tests` -> `1/1 Test #1: for_unit_tests ... Passed`
+  - `python3 test.py` -> `Ran 120 tests in 268.767s`, `OK (skipped=19)` (run outside the sandbox for xvfb child processes)
+  - `./scripts/run_coverage.sh` -> configured and built `cmake-build-coverage`, `ctest` passed, embedded `python3 test.py` passed with `Ran 120 tests in 335.984s`, then report generation failed the configured total line gate: `lines: 81.9% (6737 out of 8222)`, below `90.0%`
+  - `python3 scripts/coverage_report.py --root . --build-dir cmake-build-coverage --report-dir coverage --min-line 90 --jobs $(nproc)` -> also failed the total line gate: `lines: 82.04% (6766 out of 8247)`, below `90.00%`
+- Blockers if unresolved: Functional validation passed, but the required coverage command still fails at report generation because the repository's total line coverage is below the configured 90% threshold.

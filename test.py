@@ -228,6 +228,9 @@ XVFB_GAMEPLAY_CHILD_TESTS = (
     "test_screenshot_inventory_equipped_selection_has_rendered_pixels",
     "test_screenshot_inventory_item_selection_has_rendered_pixels",
     "test_screenshot_inventory_panel_has_rendered_pixels",
+    "test_inventory_equipped_selection_resets_inventory_selection",
+    "test_inventory_quest_item_selection_is_ignored",
+    "test_fight_quest_item_selection_is_ignored",
     "test_screenshot_question_panel_has_rendered_pixels",
     "test_screenshot_quest_panel_with_active_quest_has_rendered_pixels",
     "test_sidebar_mouse_opens_inventory_until_hotkey_closes_it",
@@ -666,6 +669,31 @@ def get_panel_proxy_child_totals_by_collection(panel):
         proxy_children = properties.get("children") or []
         totals[collection] = sum(len(proxy.get("properties", {}).get("children") or []) for proxy in proxy_children)
     return totals
+
+
+def get_panel_selection_box_counts_by_collection(panel):
+    game = load_game_module()
+    panel_data = json.loads(game.jsonify(panel))
+    counts = {}
+
+    def child_nodes(node):
+        return node.get("properties", {}).get("children") or []
+
+    def visit(node):
+        properties = node.get("properties", {})
+        collection = properties.get("collection")
+        if collection:
+            counts[collection] = sum(
+                1
+                for proxy in child_nodes(node)
+                for child in child_nodes(proxy)
+                if child.get("class") == "CSelectionBox"
+            )
+        for child in child_nodes(node):
+            visit(child)
+
+    visit(panel_data)
+    return counts
 
 
 def advance_turns(g, turns):
@@ -5646,6 +5674,59 @@ class XvfbGameplayProcessTest(unittest.TestCase):
         pump_event_loop(5)
 
         assert_screenshot_has_rendered_pixels(self, g, "xvfb_inventory_equipped_selection_screenshot")
+
+    def test_inventory_equipped_selection_resets_inventory_selection(self):
+        _, g, _, player = create_xvfb_gameplay_session(self)
+        player.addItem("Sword")
+        panel = open_panel_for_screenshot(self, g, "inventoryPanel", "CGameInventoryPanel")
+
+        push_sdl_mouse_click(585, 265)
+        pump_event_loop(5)
+        selected_after_inventory = get_panel_selection_box_counts_by_collection(panel)
+
+        push_sdl_mouse_click(1185, 265)
+        pump_event_loop(5)
+        selected_after_equip = get_panel_selection_box_counts_by_collection(panel)
+
+        push_sdl_mouse_click(1185, 265)
+        pump_event_loop(5)
+        selected_after_equipped_click = get_panel_selection_box_counts_by_collection(panel)
+
+        self.assertEqual(1, selected_after_inventory.get("inventoryCollection", 0))
+        self.assertEqual(0, selected_after_equip.get("inventoryCollection", 0))
+        self.assertEqual(0, selected_after_equip.get("equippedCollection", 0))
+        self.assertEqual(0, selected_after_equipped_click.get("inventoryCollection", 0))
+        self.assertEqual(1, selected_after_equipped_click.get("equippedCollection", 0))
+
+    def test_inventory_quest_item_selection_is_ignored(self):
+        game, g, _, player = create_xvfb_gameplay_session(self, map_name="nouraajd")
+        quest_item = g.createObject("letterToBeren")
+        self.assertTrue(quest_item.hasTag(game.CTag.QUEST))
+        player.addItem(quest_item)
+        panel = open_panel_for_screenshot(self, g, "inventoryPanel", "CGameInventoryPanel")
+
+        push_sdl_mouse_click(585, 265)
+        pump_event_loop(5)
+        selected_after_quest_click = get_panel_selection_box_counts_by_collection(panel)
+
+        self.assertEqual(0, selected_after_quest_click.get("inventoryCollection", 0))
+        self.assertEqual(0, selected_after_quest_click.get("equippedCollection", 0))
+
+    def test_fight_quest_item_selection_is_ignored(self):
+        game, g, _, player = create_xvfb_gameplay_session(self, map_name="nouraajd")
+        quest_item = g.createObject("letterToBeren")
+        self.assertTrue(quest_item.hasTag(game.CTag.QUEST))
+        player.addItem(quest_item)
+        panel = g.getGuiHandler().openPanel("fightPanel")
+        panel.setEnemy(g.createObject("GoblinThief"))
+        pump_event_loop(5)
+        self.assertTrue(gui_contains_class(g, "CGameFightPanel"))
+
+        push_sdl_mouse_click(585, 745)
+        pump_event_loop(5)
+        selected_after_quest_click = get_panel_selection_box_counts_by_collection(panel)
+
+        self.assertEqual(0, selected_after_quest_click.get("itemsCollection", 0))
 
     def test_screenshot_question_panel_has_rendered_pixels(self):
         _, g, _, _ = create_xvfb_gameplay_session(self)

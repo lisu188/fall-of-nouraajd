@@ -1,6 +1,6 @@
 /*
 fall-of-nouraajd c++ dark fantasy game
-Copyright (C) 2025  Andrzej Lis
+Copyright (C) 2025-2026  Andrzej Lis
 
 This program is free software: you can redistribute it and/or modify
         it under the terms of the GNU General Public License as published by
@@ -25,30 +25,27 @@ class CScript;
 class CCreature;
 
 class CCreatureView : public CProxyTargetGraphicsObject {
-  V_META(CCreatureView, CProxyTargetGraphicsObject,
-         V_PROPERTY(CCreatureView, std::shared_ptr<CScript>, creatureScript,
-                    getCreatureScript, setCreatureScript),
-         V_METHOD(CCreatureView, getEffects, CListView::collection_pointer),
-         V_METHOD(CCreatureView, getCreature, std::shared_ptr<CCreature>),
-         V_METHOD(CCreatureView, initialize))
-public:
-  std::list<std::shared_ptr<CGameGraphicsObject>>
-  getProxiedObjects(std::shared_ptr<CGui> gui, int x, int y) override;
+    V_META(CCreatureView, CProxyTargetGraphicsObject,
+           V_PROPERTY(CCreatureView, std::shared_ptr<CScript>, creatureScript, getCreatureScript, setCreatureScript),
+           V_METHOD(CCreatureView, getEffects, CListView::collection_pointer, std::shared_ptr<CGui>),
+           V_METHOD(CCreatureView, getCreature, std::shared_ptr<CCreature>), V_METHOD(CCreatureView, initialize))
+  public:
+    std::list<std::shared_ptr<CGameGraphicsObject>> getProxiedObjects(std::shared_ptr<CGui> gui, int x, int y) override;
 
-  int getSizeX(std::shared_ptr<CGui> gui) override;
+    int getSizeX(std::shared_ptr<CGui> gui) override;
 
-  int getSizeY(std::shared_ptr<CGui> gui) override;
+    int getSizeY(std::shared_ptr<CGui> gui) override;
 
-  void initialize();
+    void initialize();
 
-  std::shared_ptr<CScript> getCreatureScript();
+    std::shared_ptr<CScript> getCreatureScript();
 
-  void setCreatureScript(std::shared_ptr<CScript> _creature);
+    void setCreatureScript(std::shared_ptr<CScript> _creature);
 
-  CListView::collection_pointer getEffects();
+    CListView::collection_pointer getEffects(std::shared_ptr<CGui> gui);
 
-  std::shared_ptr<CCreature> getCreature();
+    std::shared_ptr<CCreature> getCreature();
 
-private:
-  std::shared_ptr<CScript> creatureScript;
+  private:
+    std::shared_ptr<CScript> creatureScript;
 };
