@@ -779,6 +779,8 @@ PYBIND11_MODULE(_game, m) {
 
     py::class_<CGameFightPanel, CGamePanel, std::shared_ptr<CGameFightPanel>>(m, "CGameFightPanel", "Fight panel.")
         .def("getEnemy", &CGameFightPanel::getEnemy, "Return current enemy creature.")
+    py::class_<CGameFightPanel, CGamePanel, std::shared_ptr<CGameFightPanel>>(m, "CGameFightPanel", "Fight panel.")
+        .def("getEnemy", &CGameFightPanel::getEnemy, "Return current enemy creature.")
         .def("setEnemy", &CGameFightPanel::setEnemy, "Set current enemy creature.")
         .def(
             "setEnemies",
