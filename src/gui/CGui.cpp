@@ -1,6 +1,6 @@
 /*
 fall-of-nouraajd c++ dark fantasy game
-Copyright (C) 2025  Andrzej Lis
+Copyright (C) 2025-2026  Andrzej Lis
 
 This program is free software: you can redistribute it and/or modify
         it under the terms of the GNU General Public License as published by
@@ -20,39 +20,34 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "gui/CTextureCache.h"
 
 CGui::CGui() {
-  SDL_SAFE(SDL_Init(SDL_INIT_VIDEO));
-  SDL_SAFE(SDL_CreateWindowAndRenderer(width, height, SDL_WINDOW_OPENGL,
-                                       &window, &renderer));
-  // TODO: set icon
-  // TODO: check render flags
+    SDL_SAFE(SDL_Init(SDL_INIT_VIDEO));
+    SDL_SAFE(SDL_CreateWindowAndRenderer(width, height, 0, &window, &renderer));
+    // TODO: set icon
+    // TODO: check render flags
 }
 
 CGui::~CGui() {
-  SDL_SAFE(SDL_DestroyRenderer(renderer));
-  SDL_SAFE(SDL_DestroyWindow(window));
+    SDL_SAFE(SDL_DestroyRenderer(renderer));
+    SDL_SAFE(SDL_DestroyWindow(window));
 }
 
 void CGui::render(int i1) {
-  SDL_SAFE(SDL_SetRenderDrawColor(renderer, BLACK));
-  SDL_SAFE(SDL_RenderClear(renderer));
-  CGameGraphicsObject::render(this->ptr<CGui>(), i1);
-  SDL_SAFE(SDL_RenderPresent(renderer));
+    SDL_SAFE(SDL_SetRenderDrawColor(renderer, BLACK));
+    SDL_SAFE(SDL_RenderClear(renderer));
+    CGameGraphicsObject::render(this->ptr<CGui>(), i1);
+    SDL_SAFE(SDL_RenderPresent(renderer));
 }
 
-bool CGui::event(SDL_Event *event) {
-  return CGameGraphicsObject::event(this->ptr<CGui>(), event);
-}
+bool CGui::event(SDL_Event *event) { return CGameGraphicsObject::event(this->ptr<CGui>(), event); }
 
 SDL_Renderer *CGui::getRenderer() const { return renderer; }
 
 std::shared_ptr<CTextureCache> CGui::getTextureCache() {
-  return _textureCache.get(
-      [this]() { return std::make_shared<CTextureCache>(this->ptr<CGui>()); });
+    return _textureCache.get([this]() { return std::make_shared<CTextureCache>(this->ptr<CGui>()); });
 }
 
 std::shared_ptr<CTextManager> CGui::getTextManager() {
-  return _textManager.get(
-      [this]() { return std::make_shared<CTextManager>(this->ptr<CGui>()); });
+    return _textManager.get([this]() { return std::make_shared<CTextManager>(this->ptr<CGui>()); });
 }
 
 int CGui::getWidth() { return width; }

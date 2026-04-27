@@ -21,7 +21,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "CGlobal.h"
 #include "../../vstd/veventloop.h"
+#include "../gui/CAnimation.h"
 #include "../gui/CGui.h"
+#include "../gui/object/CMapGraphicsObject.h"
 #include "../gui/object/CSideBar.h"
 #include "../gui/object/CStatsGraphicsObject.h"
 #include "../gui/panel/CCreatureView.h"
@@ -48,6 +50,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CTags.h"
 #include "core/CWrapper.h"
 #include <pybind11/stl_bind.h>
+#include <pybind11/stl.h>
 
 namespace py = pybind11;
 
@@ -167,6 +170,39 @@ py::object game_object_getattr(CGameObject &self, const std::string &name) {
 
     throw py::attribute_error(name);
 }
+
+py::list graphics_children(CGameGraphicsObject &self) {
+    py::list children;
+    for (const auto &child : self.getChildren()) {
+        children.append(child);
+    }
+    return children;
+}
+
+py::list graphics_proxied_objects(CProxyTargetGraphicsObject &self, const std::shared_ptr<CGui> &gui, int x, int y) {
+    py::list objects;
+    for (const auto &object : self.getProxiedObjects(gui, x, y)) {
+        objects.append(object);
+    }
+    return objects;
+}
+
+py::list list_view_collection_to_py(const CListView::collection_pointer &collection) {
+    py::list objects;
+    for (const auto &object : *collection) {
+        objects.append(object);
+    }
+    return objects;
+}
+
+std::vector<std::shared_ptr<CCreature>> creature_iterable_to_vector(const py::iterable &iterable) {
+    std::vector<std::shared_ptr<CCreature>> creatures;
+    for (const auto &item : iterable) {
+        creatures.push_back(item.is_none() ? nullptr : item.cast<std::shared_ptr<CCreature>>());
+    }
+    return creatures;
+}
+
 std::shared_ptr<CGameObject> cast_registered_python_object(const py::object &instance) {
     if (py::isinstance<CBuilding>(instance)) {
         return std::static_pointer_cast<CGameObject>(instance.cast<std::shared_ptr<CBuilding>>());
@@ -270,15 +306,81 @@ PYBIND11_MODULE(_game, m) {
     py::class_<CGameGraphicsObject, CGameObject, std::shared_ptr<CGameGraphicsObject>>(
         m, "CGameGraphicsObject", "Base class for GUI graphics objects.")
         .def("getGui", &CGameGraphicsObject::getGui, "Return the owning GUI object.")
-        .def("getParent", &CGameGraphicsObject::getParent, "Return the parent graphics object.");
+        .def("getParent", &CGameGraphicsObject::getParent, "Return the parent graphics object.")
+        .def("getChildren", &graphics_children, "Return this graphics object's children.")
+        .def("addChild", &CGameGraphicsObject::addChild, "Attach a graphics child.")
+        .def("pushChild", &CGameGraphicsObject::pushChild, "Attach a graphics child above existing children.")
+        .def("removeChild", &CGameGraphicsObject::removeChild, "Detach a graphics child.")
+        .def("findChild", py::overload_cast<const std::string &>(&CGameGraphicsObject::findChild),
+             "Find a child by C++ type name.")
+        .def(
+            "keyboardEvent",
+            [](CGameGraphicsObject &self, const std::shared_ptr<CGui> &gui, int type, int key) {
+                return self.keyboardEvent(gui, static_cast<SDL_EventType>(type), key);
+            },
+            "Dispatch a keyboard event to this object.")
+        .def(
+            "mouseEvent",
+            [](CGameGraphicsObject &self, const std::shared_ptr<CGui> &gui, int type, int button, int x, int y) {
+                return self.mouseEvent(gui, static_cast<SDL_EventType>(type), button, x, y);
+            },
+            "Dispatch a mouse button event to this object.");
 
     py::class_<CGui, CGameGraphicsObject, std::shared_ptr<CGui>>(m, "CGui", "Game GUI root object.")
         .def("getGame", &CGui::getGame, "Return the owning game.");
+
+    py::class_<CAnimation, CGameGraphicsObject, std::shared_ptr<CAnimation>>(m, "CAnimation",
+                                                                             "Base animation graphics object.")
+        .def("getObject", &CAnimation::getObject, "Return object represented by this animation.")
+        .def("setObject", &CAnimation::setObject, "Set object represented by this animation.");
+    py::class_<CStaticAnimation, CAnimation, std::shared_ptr<CStaticAnimation>>(m, "CStaticAnimation",
+                                                                                "Static bitmap animation.")
+        .def("getRotation", &CStaticAnimation::getRotation, "Return configured rotation.")
+        .def("setRotation", &CStaticAnimation::setRotation, "Set render rotation.")
+        .def("setColorMod", &CStaticAnimation::setColorMod, "Set texture color modulation.")
+        .def("clearColorMod", &CStaticAnimation::clearColorMod, "Clear texture color modulation.")
+        .def(
+            "renderObject",
+            [](CStaticAnimation &self, const std::shared_ptr<CGui> &gui, int x, int y, int w, int h, int frame_time) {
+                self.renderObject(gui, RECT(x, y, w, h), frame_time);
+            },
+            "Render the static animation into a rectangle.");
+    py::class_<CDynamicAnimation, CAnimation, std::shared_ptr<CDynamicAnimation>>(m, "CDynamicAnimation",
+                                                                                  "Frame-table animation.")
+        .def("initialize", &CDynamicAnimation::initialize, "Load animation frames from configuration.")
+        .def(
+            "renderObject",
+            [](CDynamicAnimation &self, const std::shared_ptr<CGui> &gui, int x, int y, int w, int h, int frame_time) {
+                self.renderObject(gui, RECT(x, y, w, h), frame_time);
+            },
+            "Render the dynamic animation into a rectangle.");
+    py::class_<CSelectionBox, CAnimation, std::shared_ptr<CSelectionBox>>(m, "CSelectionBox",
+                                                                          "Selection outline graphics object.")
+        .def("getThickness", &CSelectionBox::getThickness, "Return outline thickness.")
+        .def("setThickness", &CSelectionBox::setThickness, "Set outline thickness.")
+        .def(
+            "renderObject",
+            [](CSelectionBox &self, const std::shared_ptr<CGui> &gui, int x, int y, int w, int h, int frame_time) {
+                self.renderObject(gui, RECT(x, y, w, h), frame_time);
+            },
+            "Render the selection outline into a rectangle.");
 
     py::class_<CStatsGraphicsObject, CGameGraphicsObject, std::shared_ptr<CStatsGraphicsObject>>(
         m, "CStatsGraphicsObject");
 
     py::class_<CSideBar, CGameGraphicsObject, std::shared_ptr<CSideBar>>(m, "CSideBar");
+
+    py::class_<CProxyTargetGraphicsObject, CGameGraphicsObject, std::shared_ptr<CProxyTargetGraphicsObject>>(
+        m, "CProxyTargetGraphicsObject", "Graphics object that proxies child graphics for cells.")
+        .def("refresh", &CProxyTargetGraphicsObject::refresh, "Refresh proxy cell layout.")
+        .def("refreshAll", &CProxyTargetGraphicsObject::refreshAll, "Refresh all proxy cells.")
+        .def("refreshObject", &CProxyTargetGraphicsObject::refreshObject, "Refresh one proxy cell.")
+        .def("getProxiedObjects", &graphics_proxied_objects, "Return graphics objects proxied for a cell.");
+
+    py::class_<CMapGraphicsObject, CProxyTargetGraphicsObject, std::shared_ptr<CMapGraphicsObject>>(
+        m, "CMapGraphicsObject", "Map viewport graphics object.")
+        .def("refreshObject", py::overload_cast<Coords>(&CMapGraphicsObject::refreshObject),
+             "Refresh map proxies for a map coordinate.");
 
     py::class_<CCreatureView, CGameGraphicsObject, std::shared_ptr<CCreatureView>>(
         m, "CCreatureView", "Panel widget that renders a creature.")
@@ -348,7 +450,9 @@ PYBIND11_MODULE(_game, m) {
         .def("showSelection", &CGuiHandler::showSelection, "Open a selection panel.")
         .def("showInfo", &CGuiHandler::showInfo, "Open an info panel.")
         .def("openPanel", &CGuiHandler::openPanel, "Open a configured panel without blocking for user input.")
-        .def("showLoot", &CGuiHandler::showLoot, "Show loot acquisition UI.");
+        .def("showLoot", &CGuiHandler::showLoot, "Show loot acquisition UI.")
+        .def("showTooltip", &CGuiHandler::showTooltip, "Show a tooltip panel at screen coordinates.")
+        .def("flipPanel", &CGuiHandler::flipPanel, "Toggle a configured panel and bind its hotkey while open.");
 
     py::class_<CController, CGameObject, std::shared_ptr<CController>>(m, "CController", "Base movement controller.");
     py::class_<CPlayerController, CController, std::shared_ptr<CPlayerController>>(
@@ -435,7 +539,11 @@ PYBIND11_MODULE(_game, m) {
         .def("setDmgMin", &Stats::setDmgMin, "Set minimum base damage.")
         .def("setDmgMax", &Stats::setDmgMax, "Set maximum base damage.")
         .def("setHit", &Stats::setHit, "Set hit chance modifier.")
-        .def("setCrit", &Stats::setCrit, "Set critical chance percentage.");
+        .def("setCrit", &Stats::setCrit, "Set critical chance percentage.")
+        .def("getMainValue", &Stats::getMainValue, "Return current value of the configured main stat.")
+        .def("addBonus", &Stats::addBonus, "Add all numeric stats from another Stats object.")
+        .def("removeBonus", &Stats::removeBonus, "Remove all numeric stats from another Stats object.")
+        .def("getText", &Stats::getText, "Return formatted stat summary text.");
 
     auto ctile =
         py::class_<CTile, CWrapper<CTile>, std::shared_ptr<CTile>, CGameObject>(m, "CTile", "Base tile class.");
@@ -634,17 +742,78 @@ PYBIND11_MODULE(_game, m) {
         .def("getQuests", &CPlayer::getQuests, "Return the player's active quests.");
 
     py::class_<CListString, CGameObject, std::shared_ptr<CListString>>(m, "CListString", "String list wrapper object.")
-        .def("addValue", &CListString::addValue, "Append a value to the list.");
+        .def("addValue", &CListString::addValue, "Append a value to the list.")
+        .def("getValues", &CListString::getValues, "Return list values.")
+        .def("setValues", &CListString::setValues, "Replace list values.");
 
-    py::class_<CGamePanel, CGameGraphicsObject, std::shared_ptr<CGamePanel>>(m, "CGamePanel",
-                                                                             "Base in-game GUI panel.");
+    py::class_<CListInt, CGameObject, std::shared_ptr<CListInt>>(m, "CListInt", "Integer list wrapper object.")
+        .def("addValue", &CListInt::addValue, "Append a value to the list.")
+        .def("getValues", &CListInt::getValues, "Return list values.")
+        .def("setValues", &CListInt::setValues, "Replace list values.");
+
+    py::class_<CMapStringString, CGameObject, std::shared_ptr<CMapStringString>>(m, "CMapStringString",
+                                                                                 "String-to-string map wrapper.")
+        .def("getValues", &CMapStringString::getValues, "Return map values.")
+        .def("setValues", &CMapStringString::setValues, "Replace map values.");
+
+    py::class_<CMapStringInt, CGameObject, std::shared_ptr<CMapStringInt>>(m, "CMapStringInt",
+                                                                           "String-to-int map wrapper.")
+        .def("getValues", &CMapStringInt::getValues, "Return map values.")
+        .def("setValues", &CMapStringInt::setValues, "Replace map values.");
+
+    py::class_<CMapIntString, CGameObject, std::shared_ptr<CMapIntString>>(m, "CMapIntString",
+                                                                           "Int-to-string map wrapper.")
+        .def("getValues", &CMapIntString::getValues, "Return map values.")
+        .def("setValues", &CMapIntString::setValues, "Replace map values.");
+
+    py::class_<CMapIntInt, CGameObject, std::shared_ptr<CMapIntInt>>(m, "CMapIntInt", "Int-to-int map wrapper.")
+        .def("getValues", &CMapIntInt::getValues, "Return map values.")
+        .def("setValues", &CMapIntInt::setValues, "Replace map values.");
+
+    py::class_<CGamePanel, CGameGraphicsObject, std::shared_ptr<CGamePanel>>(m, "CGamePanel", "Base in-game GUI panel.")
+        .def("refreshViews", &CGamePanel::refreshViews, "Refresh list views contained by the panel.")
+        .def("close", &CGamePanel::close, "Close this panel.");
 
     py::class_<CGameTradePanel, CGamePanel, std::shared_ptr<CGameTradePanel>>(m, "CGameTradePanel", "Trade panel.")
         .def("getMarket", &CGameTradePanel::getMarket, "Return market displayed by this panel.");
 
     py::class_<CGameFightPanel, CGamePanel, std::shared_ptr<CGameFightPanel>>(m, "CGameFightPanel", "Fight panel.")
         .def("getEnemy", &CGameFightPanel::getEnemy, "Return current enemy creature.")
-        .def("setEnemy", &CGameFightPanel::setEnemy, "Set current enemy creature.");
+    py::class_<CGameFightPanel, CGamePanel, std::shared_ptr<CGameFightPanel>>(m, "CGameFightPanel", "Fight panel.")
+        .def("getEnemy", &CGameFightPanel::getEnemy, "Return current enemy creature.")
+        .def("setEnemy", &CGameFightPanel::setEnemy, "Set current enemy creature.")
+        .def(
+            "setEnemies",
+            [](CGameFightPanel &self, const py::iterable &creatures) {
+                self.setEnemies(creature_iterable_to_vector(creatures));
+            },
+            "Set available enemy creatures.")
+        .def("selectInteraction", &CGameFightPanel::selectInteraction, "Wait for and return selected interaction.")
+        .def(
+            "interactionsCollection",
+            [](CGameFightPanel &self, const std::shared_ptr<CGui> &gui) {
+                return list_view_collection_to_py(self.interactionsCollection(gui));
+            },
+            "Return player interactions shown by the fight panel.")
+        .def("interactionsCallback", &CGameFightPanel::interactionsCallback, "Handle interaction selection.")
+        .def("interactionsSelect", &CGameFightPanel::interactionsSelect, "Return whether interaction is selected.")
+        .def(
+            "itemsCollection",
+            [](CGameFightPanel &self, const std::shared_ptr<CGui> &gui) {
+                return list_view_collection_to_py(self.itemsCollection(gui));
+            },
+            "Return player items shown by the fight panel.")
+        .def("itemsCallback", &CGameFightPanel::itemsCallback, "Handle item selection.")
+        .def("itemsRightClickCallback", &CGameFightPanel::itemsRightClickCallback, "Handle direct item use.")
+        .def("itemsSelect", &CGameFightPanel::itemsSelect, "Return whether an item is selected.")
+        .def(
+            "enemiesCollection",
+            [](CGameFightPanel &self, const std::shared_ptr<CGui> &gui) {
+                return list_view_collection_to_py(self.enemiesCollection(gui));
+            },
+            "Return enemies shown by the fight panel.")
+        .def("enemiesCallback", &CGameFightPanel::enemiesCallback, "Handle enemy selection.")
+        .def("enemiesSelect", &CGameFightPanel::enemiesSelect, "Return whether an enemy is selected.");
 
     py::class_<CGameCharacterPanel, CGamePanel, std::shared_ptr<CGameCharacterPanel>>(m, "CGameCharacterPanel",
                                                                                       "Character sheet panel.");
@@ -662,10 +831,27 @@ PYBIND11_MODULE(_game, m) {
 
     py::class_<CGameTextPanel, CGamePanel, std::shared_ptr<CGameTextPanel>>(m, "CGameTextPanel", "Text display panel.");
 
-    py::class_<CProxyTargetGraphicsObject, CGameGraphicsObject, std::shared_ptr<CProxyTargetGraphicsObject>>(
-        m, "CProxyTargetGraphicsObject", "Graphics object that proxies a target object.");
-
-    py::class_<CListView, CProxyTargetGraphicsObject, std::shared_ptr<CListView>>(m, "CListView", "List view widget.");
+    py::class_<CListView, CProxyTargetGraphicsObject, std::shared_ptr<CListView>>(m, "CListView", "List view widget.")
+        .def("getCollection", &CListView::getCollection, "Return parent collection callback name.")
+        .def("setCollection", &CListView::setCollection, "Set parent collection callback name.")
+        .def("getCallback", &CListView::getCallback, "Return parent click callback name.")
+        .def("setCallback", &CListView::setCallback, "Set parent click callback name.")
+        .def("getRightClickCallback", &CListView::getRightClickCallback, "Return parent right-click callback name.")
+        .def("setRightClickCallback", &CListView::setRightClickCallback, "Set parent right-click callback name.")
+        .def("getSelect", &CListView::getSelect, "Return parent selection callback name.")
+        .def("setSelect", &CListView::setSelect, "Set parent selection callback name.")
+        .def("getXPrefferedSize", &CListView::getXPrefferedSize, "Return preferred X cell count.")
+        .def("setXPrefferedSize", &CListView::setXPrefferedSize, "Set preferred X cell count.")
+        .def("getYPrefferedSize", &CListView::getYPrefferedSize, "Return preferred Y cell count.")
+        .def("setYPrefferedSize", &CListView::setYPrefferedSize, "Set preferred Y cell count.")
+        .def("getTileSize", &CListView::getTileSize, "Return list tile size.")
+        .def("setTileSize", &CListView::setTileSize, "Set list tile size.")
+        .def("getAllowOversize", &CListView::getAllowOversize, "Return whether list scroll arrows are enabled.")
+        .def("setAllowOversize", &CListView::setAllowOversize, "Set whether list scroll arrows are enabled.")
+        .def("getShowEmpty", &CListView::getShowEmpty, "Return whether empty cells render boxes.")
+        .def("setShowEmpty", &CListView::setShowEmpty, "Set whether empty cells render boxes.")
+        .def("getGrouping", &CListView::getGrouping, "Return whether repeated type ids are grouped.")
+        .def("setGrouping", &CListView::setGrouping, "Set whether repeated type ids are grouped.");
     PY_WRAP_GENERIC_DOC(randint, "randint(lower, upper) -> int: Return a random integer in engine-defined bounds.");
     m.def("jsonify", &jsonify_py, "jsonify(obj) -> str: Serialize a game object to JSON text.");
     PY_WRAP_GENERIC_DOC(logger, "logger(message) -> None: Write an info log message to the engine logger.");

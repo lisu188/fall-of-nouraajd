@@ -209,6 +209,7 @@ SDL_PRESSED = 1
 SDL_RELEASED = 0
 SDL_SCANCODE_MASK = 1 << 30
 SDL_BUTTON_LEFT = 1
+SDL_BUTTON_RIGHT = 3
 SDL_PIXELFORMAT_RGBA32 = 376840196
 
 GUI_WIDTH = 1920
@@ -357,6 +358,21 @@ def push_sdl_mouse_click(x, y, button=SDL_BUTTON_LEFT):
     push_sdl_mouse_button_event(x, y, button, SDL_MOUSEBUTTONUP)
 
 
+def drain_sdl_events():
+    import ctypes
+
+    class SDL_Event(ctypes.Union):
+        _fields_ = [("padding", ctypes.c_uint8 * 56)]
+
+    sdl = load_sdl_library()
+    sdl.SDL_PollEvent.argtypes = [ctypes.POINTER(SDL_Event)]
+    sdl.SDL_PollEvent.restype = ctypes.c_int
+
+    event = SDL_Event()
+    while sdl.SDL_PollEvent(ctypes.byref(event)) == 1:
+        pass
+
+
 def capture_sdl_screenshot(path):
     import ctypes
     from PIL import Image
@@ -475,6 +491,17 @@ def gui_contains_class(g, class_name):
             return True
         stack.extend(node.get("properties", {}).get("children") or [])
     return False
+
+
+def collect_gui_children(root, class_name):
+    matches = []
+    stack = [root]
+    while stack:
+        node = stack.pop()
+        if node.getType() == class_name:
+            matches.append(node)
+        stack.extend(node.getChildren())
+    return matches
 
 
 def get_map_proxy_child_counts(g):
@@ -3267,6 +3294,96 @@ class GameTest(unittest.TestCase):
         return True, json.dumps(report, sort_keys=True)
 
     @game_test
+    def test_stats_bonus_text_and_custom_collection_roundtrips(self):
+        game = load_game_module()
+        g = game.CGameLoader.loadGame()
+        game.CGameLoader.startGame(g, "empty")
+
+        base = g.createObject("Stats")
+        base.mainStat = "strength"
+        base.strength = 4
+        base.agility = 2
+        base.dmgMin = 1
+        base.dmgMax = 3
+        base.hit = 50
+        base.crit = 5
+
+        bonus = g.createObject("Stats")
+        bonus.strength = 6
+        bonus.damage = 2
+        bonus.attack = 10
+        bonus.block = 3
+        bonus.armor = 7
+
+        base.addBonus(bonus)
+        self.assertEqual(10, base.getMainValue())
+        self.assertEqual(3, base.dmgMin + base.damage)
+        text_after_bonus = base.getText(7)
+        self.assertIn("Level: 7", text_after_bonus)
+        self.assertIn("Strength: 10", text_after_bonus)
+        self.assertIn("Damage: 3-5", text_after_bonus)
+        self.assertIn("Hit: 60%", text_after_bonus)
+        self.assertIn("Armor: 7%", text_after_bonus)
+
+        base.removeBonus(bonus)
+        self.assertEqual(4, base.getMainValue())
+        self.assertEqual(0, base.damage)
+        self.assertEqual(0, base.attack)
+
+        list_string = g.createObject("CListString")
+        list_string.setValues({"north", "south"})
+        list_string.addValue("west")
+
+        list_int = g.createObject("CListInt")
+        list_int.setValues({1, 3})
+        list_int.addValue(5)
+
+        map_string_string = g.createObject("CMapStringString")
+        map_string_string.setValues({"i": "inventoryPanel", "j": "questPanel"})
+
+        map_string_int = g.createObject("CMapStringInt")
+        map_string_int.setValues({"CMapObject": 1, "CCreature": 2})
+
+        map_int_string = g.createObject("CMapIntString")
+        map_int_string.setValues({0: "GroundTile", 1: "WaterTile"})
+
+        map_int_int = g.createObject("CMapIntInt")
+        map_int_int.setValues({0: 25, 1: 51})
+
+        tagged = g.createObject("CItem")
+        tagged.addTag(game.CTag.HEAL)
+        tagged.addTag("mana")
+
+        roundtrip_objects = {
+            "list_string": list_string,
+            "list_int": list_int,
+            "map_string_string": map_string_string,
+            "map_string_int": map_string_int,
+            "map_int_string": map_int_string,
+            "map_int_int": map_int_int,
+            "tagged": tagged,
+        }
+        serialized = {name: json.loads(game.jsonify(obj))["properties"] for name, obj in roundtrip_objects.items()}
+        clones = {name: obj.clone() for name, obj in roundtrip_objects.items()}
+
+        self.assertEqual({"north", "south", "west"}, set(clones["list_string"].getValues()))
+        self.assertEqual({1, 3, 5}, set(clones["list_int"].getValues()))
+        self.assertEqual({"i": "inventoryPanel", "j": "questPanel"}, dict(clones["map_string_string"].getValues()))
+        self.assertEqual({"CMapObject": 1, "CCreature": 2}, dict(clones["map_string_int"].getValues()))
+        self.assertEqual({0: "GroundTile", 1: "WaterTile"}, dict(clones["map_int_string"].getValues()))
+        self.assertEqual({0: 25, 1: 51}, dict(clones["map_int_int"].getValues()))
+        self.assertTrue(clones["tagged"].hasTag(game.CTag.HEAL))
+        self.assertTrue(clones["tagged"].hasTag(game.CTag.MANA))
+
+        return True, json.dumps(
+            {
+                "stats_text": text_after_bonus.splitlines(),
+                "serialized": serialized,
+            },
+            sort_keys=True,
+        )
+
+    @game_test
     def test_domain_helpers_and_serialized_collections(self):
         game = load_game_module()
         g = game.CGameLoader.loadGame()
@@ -3473,6 +3590,160 @@ class GameTest(unittest.TestCase):
         )
 
     @game_test
+    def test_python_wrapper_exceptions_are_caught_by_native_bridges(self):
+        game = load_game_module()
+        g = game.CGameLoader.loadGame()
+        game.CGameLoader.startGame(g, "empty")
+
+        calls = []
+
+        def fail(name):
+            calls.append(name)
+            raise RuntimeError(name)
+
+        class RaisingBuilding(game.CBuilding):
+            def onCreate(self, event):
+                fail("building_create")
+
+            def onTurn(self, event):
+                fail("building_turn")
+
+            def onDestroy(self, event):
+                fail("building_destroy")
+
+            def onEnter(self, event):
+                fail("building_enter")
+
+            def onLeave(self, event):
+                fail("building_leave")
+
+        class RaisingEvent(game.CEvent):
+            def onCreate(self, event):
+                fail("event_create")
+
+            def onTurn(self, event):
+                fail("event_turn")
+
+            def onDestroy(self, event):
+                fail("event_destroy")
+
+            def onEnter(self, event):
+                fail("event_enter")
+
+            def onLeave(self, event):
+                fail("event_leave")
+
+        class RaisingInteraction(game.CInteraction):
+            def performAction(self, first, second):
+                fail("interaction_perform")
+
+            def configureEffect(self, effect):
+                fail("interaction_configure")
+
+        class RaisingEffect(game.CEffect):
+            def onEffect(self):
+                fail("effect")
+
+        class RaisingTile(game.CTile):
+            def onStep(self, creature):
+                fail("tile")
+
+        class RaisingPotion(game.CPotion):
+            def onUse(self, event):
+                fail("potion")
+
+        class RaisingScroll(game.CScroll):
+            def onUse(self, event):
+                fail("scroll_use")
+
+            def isDisposable(self):
+                fail("scroll_disposable")
+
+        class RaisingTrigger(game.CTrigger):
+            def trigger(self, obj, event):
+                fail("trigger")
+
+        class RaisingQuest(game.CQuest):
+            def isCompleted(self):
+                fail("quest_completed")
+
+            def onComplete(self):
+                fail("quest_complete")
+
+        class RaisingPlugin(game.CPlugin):
+            def load(self, game_instance):
+                fail("plugin")
+
+        class RaisingDialog(game.CDialogBase):
+            def invokeAction(self, action):
+                fail(f"dialog_action_{action}")
+
+            def invokeCondition(self, condition):
+                fail(f"dialog_condition_{condition}")
+
+        creature = g.createObject("CCreature")
+        effect = g.createObject("CEffect")
+
+        for obj, base in ((RaisingBuilding(), game.CBuilding), (RaisingEvent(), game.CEvent)):
+            base.onCreate(obj, None)
+            base.onTurn(obj, None)
+            base.onDestroy(obj, None)
+            base.onEnter(obj, None)
+            base.onLeave(obj, None)
+
+        interaction = RaisingInteraction()
+        game.CInteraction.performAction(interaction, creature, creature)
+        self.assertFalse(game.CInteraction.configureEffect(interaction, effect))
+
+        game.CEffect.onEffect(RaisingEffect())
+        game.CTile.onStep(RaisingTile(), creature)
+        game.CPotion.onUse(RaisingPotion(), None)
+
+        scroll = RaisingScroll()
+        game.CScroll.onUse(scroll, None)
+        self.assertFalse(game.CScroll.isDisposable(scroll))
+
+        game.CTrigger.trigger(RaisingTrigger(), creature, None)
+
+        quest = RaisingQuest()
+        self.assertFalse(game.CQuest.isCompleted(quest))
+        game.CQuest.onComplete(quest)
+
+        game.CPlugin.load(RaisingPlugin(), g)
+
+        dialog = RaisingDialog()
+        game.CDialogBase.invokeAction(dialog, "open")
+        self.assertTrue(game.CDialogBase.invokeCondition(dialog, "ready"))
+
+        expected = {
+            "building_create",
+            "building_turn",
+            "building_destroy",
+            "building_enter",
+            "building_leave",
+            "event_create",
+            "event_turn",
+            "event_destroy",
+            "event_enter",
+            "event_leave",
+            "interaction_perform",
+            "interaction_configure",
+            "effect",
+            "tile",
+            "potion",
+            "scroll_use",
+            "scroll_disposable",
+            "trigger",
+            "quest_completed",
+            "quest_complete",
+            "plugin",
+            "dialog_action_open",
+            "dialog_condition_ready",
+        }
+        self.assertEqual(expected, set(calls))
+        return True, json.dumps(sorted(calls))
+
+    @game_test
     def test_tags_are_typed_in_bindings_and_persist_through_save_load(self):
         game = load_game_module()
         g = game.CGameLoader.loadGame()
@@ -3571,6 +3842,216 @@ class GameTest(unittest.TestCase):
         self.assertTrue(any(path.endswith(".py") for path in resources["plugins"]))
 
         return True, json.dumps(resources, sort_keys=True)
+
+    @game_test
+    def test_blocking_modal_gui_helpers_drive_panels(self):
+        game = load_game_module()
+        drain_sdl_events()
+        g = game.CGameLoader.loadGame()
+        game.CGameLoader.loadGui(g)
+        game.CGameLoader.startGameWithPlayer(g, "nouraajd", "Warrior")
+        pump_event_loop(5)
+
+        gui_handler = g.getGuiHandler()
+        player = g.getMap().getPlayer()
+
+        selection = g.createObject("CListString")
+        selection.addValue("FIRST")
+        selection.addValue("SECOND")
+        queue_sdl_inputs(game, lambda: push_sdl_mouse_click(960, 575))
+        self.assertEqual("SECOND", gui_handler.showSelection(selection))
+
+        queue_sdl_inputs(game, push_space_key)
+        gui_handler.showMessage("blocking message workflow")
+
+        queue_sdl_inputs(game, push_space_key)
+        gui_handler.showInfo("blocking info workflow", False)
+
+        queue_sdl_inputs(game, lambda: push_sdl_mouse_click(860, 650))
+        self.assertTrue(gui_handler.showQuestion("confirm yes?"))
+
+        queue_sdl_inputs(game, lambda: push_sdl_mouse_click(1060, 650))
+        self.assertFalse(gui_handler.showQuestion("confirm no?"))
+
+        market = g.createObject("CMarket")
+        market.sell = 50
+        market.buy = 25
+        market_item = g.createObject("Sword")
+        market.setItems({market_item})
+        player.addGold(1000)
+        player.addItem("Sword")
+        queue_sdl_inputs(
+            game,
+            lambda: push_sdl_mouse_click(585, 265),
+            lambda: push_sdl_mouse_click(1185, 265),
+            lambda: push_sdl_mouse_click(1060, 790),
+            lambda: push_sdl_mouse_click(860, 650),
+            lambda: push_sdl_mouse_click(585, 265),
+            lambda: push_sdl_mouse_click(860, 790),
+            lambda: push_sdl_mouse_click(860, 650),
+            push_space_key,
+        )
+        gui_handler.showTrade(market)
+        self.assertFalse(gui_contains_class(g, "CGameTradePanel"))
+
+        queue_sdl_inputs(game, lambda: push_digit_key(2))
+        gui_handler.showDialog(g.createObject("questDialog"))
+        self.assertFalse(gui_contains_class(g, "CGameDialogPanel"))
+
+        loot_creature = g.createObject("GoblinThief")
+        loot_item = g.createObject("Sword")
+        queue_sdl_inputs(game, lambda: push_sdl_mouse_click(585, 265), push_space_key)
+        gui_handler.showLoot(loot_creature, {loot_item})
+        self.assertFalse(gui_contains_class(g, "CGameLootPanel"))
+
+        gui_handler.showTooltip("workflow tooltip", 960, 540)
+        pump_event_loop(2)
+        self.assertTrue(gui_contains_class(g, "CTooltip"))
+
+        queue_sdl_inputs(
+            game,
+            lambda: push_sdl_key_event(ord("i"), 0, SDL_KEYDOWN),
+            lambda: push_sdl_key_event(ord("i"), 0, SDL_KEYUP),
+        )
+        gui_handler.flipPanel("inventoryPanel", "i")
+        self.assertFalse(gui_contains_class(g, "CGameInventoryPanel"))
+
+        return True, json.dumps(
+            {
+                "market_items": len(market.getItems()),
+                "player_swords": player.countItems("Sword"),
+            },
+            sort_keys=True,
+        )
+
+    @game_test
+    def test_fight_panel_callbacks_and_list_views(self):
+        game = load_game_module()
+        drain_sdl_events()
+        g = game.CGameLoader.loadGame()
+        game.CGameLoader.loadGui(g)
+        game.CGameLoader.startGameWithPlayer(g, "test", "Warrior")
+        pump_event_loop(5)
+
+        gui = g.getGui()
+        player = g.getMap().getPlayer()
+        player.setMana(999)
+        player.addItem("Sword")
+        player.addItem("Sword")
+
+        static_object = g.createObject("CItem")
+        static_object.animation = "images/item"
+        static_animation = g.createObject("CStaticAnimation")
+        static_animation.setObject(static_object)
+        static_animation.renderObject(gui, 0, 0, 24, 24, 0)
+        static_animation.setColorMod(200, 100, 50, 180)
+        static_animation.setRotation(90)
+        static_animation.renderObject(gui, 0, 0, 24, 24, 1)
+        static_animation.clearColorMod()
+        self.assertEqual(90, static_animation.getRotation())
+
+        dynamic_object = g.createObject("CGameObject")
+        dynamic_object.animation = "images/monsters/octobogz"
+        dynamic_animation = g.createObject("CDynamicAnimation")
+        dynamic_animation.setObject(dynamic_object)
+        dynamic_animation.initialize()
+        pump_event_loop(5)
+        dynamic_animation.renderObject(gui, 0, 0, 24, 24, 100)
+
+        selection_box = g.createObject("CSelectionBox")
+        selection_box.setThickness(3)
+        selection_box.renderObject(gui, 0, 0, 24, 24, 0)
+        self.assertEqual(3, selection_box.getThickness())
+        self.assertFalse(selection_box.mouseEvent(gui, SDL_MOUSEBUTTONDOWN, SDL_BUTTON_LEFT, 0, 0))
+
+        quest_item = g.createObject("CItem")
+        quest_item.name = "unitQuestMarker"
+        quest_item.typeId = "unitQuestMarker"
+        quest_item.addTag(game.CTag.QUEST)
+        player.addItem(quest_item)
+
+        panel = g.createObject("CGameFightPanel")
+        self.assertEqual("CGameFightPanel", panel.getType())
+
+        enemy_a = g.createObject("GoblinThief")
+        enemy_a.name = "unitFightEnemyA"
+        enemy_a.setHp(enemy_a.getHpMax())
+        enemy_b = g.createObject("GoblinThief")
+        enemy_b.name = "unitFightEnemyB"
+        enemy_b.setHp(enemy_b.getHpMax())
+        dead_enemy = g.createObject("GoblinThief")
+        dead_enemy.name = "unitFightEnemyDead"
+        dead_enemy.setHp(0)
+
+        panel.setEnemy(enemy_a)
+        self.assertEqual("unitFightEnemyA", panel.getEnemy().getName())
+        panel.setEnemy(dead_enemy)
+        self.assertIsNone(panel.getEnemy())
+        panel.setEnemies([enemy_a, enemy_b, enemy_a, dead_enemy, None])
+        self.assertEqual(
+            ["unitFightEnemyA", "unitFightEnemyB"], [enemy.getName() for enemy in panel.enemiesCollection(gui)]
+        )
+        panel.enemiesCallback(gui, 1, enemy_b)
+        self.assertTrue(panel.enemiesSelect(gui, 1, enemy_b))
+        self.assertFalse(panel.enemiesSelect(gui, 0, enemy_a))
+
+        interactions = panel.interactionsCollection(gui)
+        self.assertTrue(interactions)
+        action = interactions[0]
+        panel.interactionsCallback(gui, 0, action)
+        self.assertTrue(panel.interactionsSelect(gui, 0, action))
+        panel.interactionsCallback(gui, 0, action)
+        self.assertEqual(action.getName(), panel.selectInteraction().getName())
+        self.assertFalse(panel.interactionsSelect(gui, 0, action))
+
+        items = panel.itemsCollection(gui)
+        normal_item = next(item for item in items if not item.hasTag(game.CTag.QUEST))
+        panel.itemsCallback(gui, 0, quest_item)
+        self.assertFalse(panel.itemsSelect(gui, 0, quest_item))
+        panel.itemsCallback(gui, 0, normal_item)
+        self.assertTrue(panel.itemsSelect(gui, 0, normal_item))
+        self.assertFalse(panel.itemsRightClickCallback(gui, 0, quest_item))
+        self.assertTrue(panel.itemsRightClickCallback(gui, 0, normal_item))
+        self.assertFalse(panel.itemsSelect(gui, 0, normal_item))
+
+        inventory_panel = g.getGuiHandler().openPanel("inventoryPanel")
+        pump_event_loop(5)
+        list_views = collect_gui_children(inventory_panel, "CListView")
+        self.assertGreaterEqual(len(list_views), 2)
+        proxied_counts = {}
+        for index, list_view in enumerate(list_views):
+            list_view.setTileSize(50)
+            list_view.setXPrefferedSize(2)
+            list_view.setYPrefferedSize(2)
+            list_view.setAllowOversize(True)
+            list_view.refresh()
+            first_cell = list_view.getProxiedObjects(gui, 0, 0)
+            proxied_counts[f"{index}:first"] = len(first_cell)
+            self.assertTrue(first_cell or not list_view.getShowEmpty())
+            for graphic in first_cell:
+                graphic.mouseEvent(gui, SDL_MOUSEBUTTONDOWN, SDL_BUTTON_RIGHT, 1, 1)
+                graphic.mouseEvent(gui, SDL_MOUSEBUTTONDOWN, SDL_BUTTON_LEFT, 1, 1)
+            self.assertTrue(list_view.mouseEvent(gui, SDL_MOUSEBUTTONDOWN, SDL_BUTTON_LEFT, 1, 1))
+            list_view.mouseEvent(gui, SDL_MOUSEBUTTONDOWN, SDL_BUTTON_RIGHT, 1, 1)
+            self.assertTrue(list_view.mouseEvent(gui, SDL_MOUSEBUTTONDOWN, SDL_BUTTON_LEFT, 999, 999))
+
+            for graphic in list_view.getProxiedObjects(gui, 1, 1):
+                graphic.mouseEvent(gui, SDL_MOUSEBUTTONDOWN, SDL_BUTTON_LEFT, 1, 1)
+            for graphic in list_view.getProxiedObjects(gui, 0, 1):
+                graphic.mouseEvent(gui, SDL_MOUSEBUTTONDOWN, SDL_BUTTON_LEFT, 1, 1)
+
+        panel.mouseEvent(gui, SDL_MOUSEBUTTONDOWN, SDL_BUTTON_RIGHT, 0, 0)
+        inventory_panel.close()
+        self.assertFalse(gui_contains_class(g, "CGameInventoryPanel"))
+
+        return True, json.dumps(
+            {
+                "enemies": [enemy.getName() for enemy in panel.enemiesCollection(gui)],
+                "list_views": len(list_views),
+                "proxied_counts": proxied_counts,
+            },
+            sort_keys=True,
+        )
 
     @game_test
     def test_resource_provider_resolves_and_loads_known_files(self):
@@ -5053,6 +5534,24 @@ def queue_panel_observer(game, g, class_name):
 
     game.event_loop.instance().invoke(observe)
     return observed
+
+
+def queue_sdl_inputs(game, *callbacks):
+    def dispatch():
+        for callback in callbacks:
+            callback()
+
+    game.event_loop.instance().invoke(dispatch)
+
+
+def push_space_key():
+    push_sdl_key_event(ord(" "), 44, SDL_KEYDOWN)
+    push_sdl_key_event(ord(" "), 44, SDL_KEYUP)
+
+
+def push_digit_key(digit):
+    push_sdl_key_event(ord(str(digit)), 0, SDL_KEYDOWN)
+    push_sdl_key_event(ord(str(digit)), 0, SDL_KEYUP)
 
 
 def open_panel_for_screenshot(test_case, g, panel_name, class_name):
