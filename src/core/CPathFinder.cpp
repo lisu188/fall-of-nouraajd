@@ -82,17 +82,16 @@ template <fn::PathPassability CanStep> class PassabilityCache {
     std::unordered_map<Coords, bool> values;
 };
 
-template <fn::PathWaypoint Waypoint, fn::PathNeighbors Neighbors>
-std::vector<Coords> candidates(const Coords &coords, const Waypoint &waypoint, const Neighbors &neighbors) {
-    std::vector<Coords> list;
+template <fn::PathWaypoint Waypoint, fn::PathNeighbors Neighbors, typename CandidateHandler>
+void forEachCandidate(const Coords &coords, const Waypoint &waypoint, const Neighbors &neighbors,
+                      CandidateHandler handle) {
     for (const auto &neighbor : neighbors(coords)) {
-        list.push_back(neighbor);
+        handle(neighbor);
     }
     auto waypoint_direction = waypoint(coords);
     if (waypoint_direction.first) {
-        list.push_back(waypoint_direction.second);
+        handle(waypoint_direction.second);
     }
-    return list;
 }
 
 template <fn::PathPassability CanStep, fn::PathWaypoint Waypoint, fn::PathNeighbors Neighbors,
@@ -120,7 +119,7 @@ Values fillValues(const CanStep &canStep, const Coords &goal, const Waypoint &wa
             break;
         }
 
-        for (auto previous : candidates(current.coords, waypoint, neighbors)) {
+        forEachCandidate(current.coords, waypoint, neighbors, [&](Coords previous) {
             if ((stopAt && previous == *stopAt) || passability.canStepAt(previous)) {
                 const int edge_cost = std::max(1, stepCost(previous, current.coords));
                 const int next_cost = current.cost + edge_cost;
@@ -130,7 +129,7 @@ Values fillValues(const CanStep &canStep, const Coords &goal, const Waypoint &wa
                     nodes.push({next_cost, previous});
                 }
             }
-        }
+        });
     }
 
     return values;
@@ -191,9 +190,9 @@ std::vector<Coords> findAStarPath(Coords start, Coords goal, const CanStep &canS
             break;
         }
 
-        for (auto next : candidates(current.coords, waypoint, neighbors)) {
+        forEachCandidate(current.coords, waypoint, neighbors, [&](Coords next) {
             if (next != goal && !passability.canStepAt(next)) {
-                continue;
+                return;
             }
 
             const int edgeCost = std::max(1, stepCost(current.coords, next));
@@ -204,7 +203,7 @@ std::vector<Coords> findAStarPath(Coords start, Coords goal, const CanStep &canS
                 previous[next] = current.coords;
                 frontier.push({nextCost + estimateCost(distance, next, goal), nextCost, next});
             }
-        }
+        });
     }
 
     return buildPath(start, goal, previous);
@@ -240,9 +239,9 @@ Coords findAStarNextStep(Coords start, Coords goal, const CanStep &canStep, cons
             return current.firstStep;
         }
 
-        for (auto next : candidates(current.coords, waypoint, neighbors)) {
+        forEachCandidate(current.coords, waypoint, neighbors, [&](Coords next) {
             if (next != goal && !passability.canStepAt(next)) {
-                continue;
+                return;
             }
 
             const int edgeCost = std::max(1, stepCost(current.coords, next));
@@ -253,7 +252,7 @@ Coords findAStarNextStep(Coords start, Coords goal, const CanStep &canStep, cons
                 frontier.push({nextCost + estimateCost(distance, next, goal), nextCost, next,
                                current.coords == start ? next : current.firstStep});
             }
-        }
+        });
     }
 
     return start;
