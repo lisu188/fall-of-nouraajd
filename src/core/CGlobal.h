@@ -1,6 +1,6 @@
 /*
 fall-of-nouraajd c++ dark fantasy game
-Copyright (C) 2025  Andrzej Lis
+Copyright (C) 2025-2026  Andrzej Lis
 
 This program is free software: you can redistribute it and/or modify
         it under the terms of the GNU General Public License as published by
@@ -28,8 +28,11 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <SDL_ttf.h>
 
 #include <any>
+#include <array>
+#include <compare>
 #include <concepts>
 #include <condition_variable>
+#include <cmath>
 #include <csignal>
 #include <cstdio>
 #include <ctime>
@@ -37,6 +40,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <filesystem>
 #include <fstream>
 #include <functional>
+#include <expected>
 #include <iomanip>
 #include <iostream>
 #include <nlohmann/json.hpp>
@@ -49,6 +53,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <random>
 #include <ranges>
 #include <set>
+#include <source_location>
 #include <sstream>
 #include <string>
 #include <thread>

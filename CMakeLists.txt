@@ -1,5 +1,5 @@
 #fall-of-nouraajd c++ dark fantasy game
-# Copyright (C) 2025  Andrzej Lis
+# Copyright (C) 2025-2026  Andrzej Lis
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -22,7 +22,6 @@ project(fall-of-nouraajd)
 
 if (WIN32)
     set(CPACK_GENERATOR "ZIP")
-    add_compile_definitions(SDL_MAIN_HANDLED)
 else ()
     set(CPACK_GENERATOR "TGZ")
 endif ()
@@ -30,24 +29,6 @@ endif ()
 include(${CMAKE_SOURCE_DIR}/cmake/cotire.cmake)
 
 set(CMAKE_MODULE_PATH "${CMAKE_MODULE_PATH};${CMAKE_SOURCE_DIR}/cmake")
-
-set(CMAKE_CXX_STANDARD 23)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(CMAKE_CXX_EXTENSIONS OFF)
-
-if (MSVC)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /W3 /bigobj /permissive- /Zc:preprocessor /EHsc /DBOOST_ALLOW_DEPRECATED_HEADERS /DBOOST_BIND_GLOBAL_PLACEHOLDERS /D_USE_MATH_DEFINES /DNOMINMAX /DWIN32_LEAN_AND_MEAN")
-else ()
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -include cmath -Wall")
-    set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O3 -s")
-    set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -g3")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DBOOST_ALLOW_DEPRECATED_HEADERS -DBOOST_BIND_GLOBAL_PLACEHOLDERS")
-
-    if (WIN32)
-        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D_hypot=hypot -Wa,-mbig-obj")
-        set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -O")
-    endif ()
-endif ()
 
 file(GLOB_RECURSE GAME_SRC ${CMAKE_SOURCE_DIR}/src/**.cpp ${CMAKE_SOURCE_DIR}/src/**.h)
 
@@ -84,6 +65,54 @@ if (NOT NLOHMANN_JSON_INCLUDE_DIR)
     message(FATAL_ERROR "nlohmann/json.hpp was not found. On Debian/Ubuntu, run: sudo apt-get install nlohmann-json3-dev.")
 endif ()
 
+function(configure_fon_cpp_target target_name)
+    target_compile_features(${target_name} PRIVATE cxx_std_23)
+    set_target_properties(${target_name} PROPERTIES
+        CXX_STANDARD_REQUIRED ON
+        CXX_EXTENSIONS OFF
+    )
+    target_include_directories(${target_name} PRIVATE
+        ${CMAKE_SOURCE_DIR}/src
+        ${CMAKE_SOURCE_DIR}/vstd
+        ${CMAKE_SOURCE_DIR}/random-dungeon-generator
+        ${Python3_INCLUDE_DIRS}
+        ${SDL2_INCLUDE_DIR}
+        ${SDL2_IMAGE_INCLUDE_DIR}
+        ${SDL2_TTF_INCLUDE_DIR}
+        ${NLOHMANN_JSON_INCLUDE_DIR}
+    )
+    target_compile_definitions(${target_name} PRIVATE
+        BOOST_ALLOW_DEPRECATED_HEADERS
+        BOOST_BIND_GLOBAL_PLACEHOLDERS
+    )
+    if (WIN32)
+        target_compile_definitions(${target_name} PRIVATE SDL_MAIN_HANDLED)
+    endif ()
+    if (MSVC)
+        target_compile_options(${target_name} PRIVATE /W3 /bigobj /permissive- /Zc:preprocessor /EHsc)
+        target_compile_definitions(${target_name} PRIVATE
+            _USE_MATH_DEFINES
+            NOMINMAX
+            WIN32_LEAN_AND_MEAN
+        )
+    else ()
+        target_compile_options(${target_name} PRIVATE
+            -include cmath
+            -Wall
+            $<$<CONFIG:Release>:-O3>
+            $<$<CONFIG:Release>:-s>
+            $<$<CONFIG:Debug>:-g3>
+        )
+        if (WIN32)
+            target_compile_options(${target_name} PRIVATE
+                -Wa,-mbig-obj
+                $<$<CONFIG:Debug>:-O>
+            )
+            target_compile_definitions(${target_name} PRIVATE _hypot=hypot)
+        endif ()
+    endif ()
+endfunction()
+
 set(SDL2_LIBS ${SDL2_LIBRARY})
 set(SDL2_EXECUTABLE_LIBS ${SDL2_LIBRARY})
 if (TARGET SDL2::SDL2)
@@ -101,18 +130,8 @@ if (TARGET SDL2_ttf::SDL2_ttf)
     set(SDL2_TTF_LIBS SDL2_ttf::SDL2_ttf)
 endif ()
 
-include_directories(${Python3_INCLUDE_DIRS})
-include_directories(${SDL2_INCLUDE_DIR})
-include_directories(${SDL2_IMAGE_INCLUDE_DIR})
-include_directories(${SDL2_TTF_INCLUDE_DIR})
-include_directories(${NLOHMANN_JSON_INCLUDE_DIR})
-
-include_directories(${CMAKE_SOURCE_DIR}/src)
-
-include_directories(${CMAKE_SOURCE_DIR}/vstd)
-include_directories(${CMAKE_SOURCE_DIR}/random-dungeon-generator)
-
 pybind11_add_module(_game NO_EXTRAS ${GAME_SRC})
+configure_fon_cpp_target(_game)
 target_link_libraries(_game PRIVATE ${SDL2_LIBS} ${SDL2_IMAGE_LIBS} ${SDL2_TTF_LIBS})
 
 set_source_files_properties(
@@ -372,15 +391,7 @@ add_executable(for_unit_tests
     src/handler/CScriptHandler.cpp
 )
 
-target_include_directories(for_unit_tests PRIVATE
-    ${CMAKE_SOURCE_DIR}/src
-    ${CMAKE_SOURCE_DIR}/vstd
-    ${NLOHMANN_JSON_INCLUDE_DIR}
-    ${Python3_INCLUDE_DIRS}
-    ${SDL2_INCLUDE_DIR}
-    ${SDL2_IMAGE_INCLUDE_DIR}
-    ${SDL2_TTF_INCLUDE_DIR}
-)
+configure_fon_cpp_target(for_unit_tests)
 
 target_link_libraries(for_unit_tests PRIVATE
     Python3::Python

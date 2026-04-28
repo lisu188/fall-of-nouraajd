@@ -17,8 +17,10 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
 #include "core/CTags.h"
-#include "core/CUtil.h"
+#include "core/CJsonUtil.h"
 #include "core/CPathFinder.h"
+#include "core/CUtil.h"
+#include "gui/CSdlResources.h"
 #include "handler/CScriptHandler.h"
 #include <rdg.h>
 #include "vcache.h"
@@ -35,6 +37,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <stdexcept>
 #include <string>
 #include <thread>
+#include <type_traits>
 #include <vector>
 
 namespace {
@@ -56,6 +59,35 @@ struct CastBase {
 };
 
 struct CastDerived : CastBase {};
+
+struct ConceptCanStep {
+    bool operator()(const Coords &) const { return true; }
+};
+
+struct ConceptWaypoint {
+    std::pair<bool, Coords> operator()(const Coords &) const { return {false, ZERO}; }
+};
+
+struct ConceptNeighbors {
+    std::vector<Coords> operator()(const Coords &coords) const { return default_neighbors(coords); }
+};
+
+struct ConceptDistance {
+    double operator()(const Coords &from, const Coords &to) const { return from.getDist(to); }
+};
+
+struct ConceptStepCost {
+    int operator()(const Coords &, const Coords &) const { return 1; }
+};
+
+static_assert(fn::PathPassability<ConceptCanStep>);
+static_assert(fn::PathWaypoint<ConceptWaypoint>);
+static_assert(fn::PathNeighbors<ConceptNeighbors>);
+static_assert(fn::PathDistance<ConceptDistance>);
+static_assert(fn::PathStepCost<ConceptStepCost>);
+static_assert(std::is_const_v<std::remove_reference_t<decltype(ZERO)>>);
+static_assert(EAST + SOUTH == Coords(1, 1, 0));
+static_assert(UP - DOWN == Coords(0, 0, 2));
 
 void expect_true(bool condition, const char *message) {
     if (!condition) {
@@ -88,6 +120,7 @@ void test_comparison_and_ordering() {
     expect_true(Coords(1, 2, 3) < Coords(1, 2, 4), "operator< should compare z when x and y are equal");
     expect_true(!(Coords(2, 0, 0) < Coords(1, 99, 99)), "operator< should reject larger x values");
     expect_true(Coords(2, 0, 0) > Coords(1, 99, 99), "operator> should invert operator< for non-equal values");
+    expect_true(!(Coords(1, 2, 3) > Coords(1, 2, 3)), "operator> should reject equal coordinates");
     expect_true(Coords(1, 2, 3) != Coords(1, 2, 4), "operator!= should detect different coordinates");
 }
 
@@ -291,6 +324,38 @@ void test_toroidal_pathfinder_wraps_on_both_axes() {
     expect_true(path.front() == Coords(0, 25, 0) || path.front() == Coords(25, 0, 0),
                 "Toroidal path should take a wrapped step on one axis first");
     expect_true(path.back() == Coords(25, 25, 0), "Toroidal path should end at the wrapped goal coordinate");
+}
+
+void test_json_parse_expected_success_and_failure() {
+    auto parsed = CJsonUtil::parse_expected("{\"value\": 3}", "unit-json");
+    expect_true(parsed.has_value() && (*parsed)->at("value").get<int>() == 3,
+                "parse_expected should return parsed json on success");
+
+    auto failed = CJsonUtil::parse_expected("{", "unit-json-error");
+    expect_true(!failed.has_value(), "parse_expected should expose malformed json as an expected error");
+    if (!failed) {
+        expect_true(failed.error().source == "unit-json-error", "parse_expected error should retain source context");
+        expect_true(failed.error().preview == "{", "parse_expected error should retain a compact preview");
+    }
+    expect_true(CJsonUtil::from_string("{", "unit-json-wrapper") == nullptr,
+                "from_string should keep the public nullptr behavior on parse failure");
+}
+
+void test_sdl_raii_alias_owns_surface() {
+    auto surface = fn::sdl::SurfacePtr(SDL_CreateRGBSurfaceWithFormat(0, 2, 2, 32, SDL_PIXELFORMAT_RGBA32));
+    expect_true(surface != nullptr, "SurfacePtr should own SDL surfaces created by SDL");
+    if (!surface) {
+        return;
+    }
+
+    auto color = SDL_MapRGBA(surface->format, 1, 2, 3, 4);
+    SDL_FillRect(surface.get(), nullptr, color);
+    Uint8 r = 0;
+    Uint8 g = 0;
+    Uint8 b = 0;
+    Uint8 a = 0;
+    SDL_GetRGBA(color, surface->format, &r, &g, &b, &a);
+    expect_true(r == 1 && g == 2 && b == 3 && a == 4, "SurfacePtr should provide raw non-owning access via get");
 }
 
 void test_tag_round_trip_and_ordering() {
@@ -777,6 +842,8 @@ int main() {
     test_pathfinder_waypoint_override();
     test_toroidal_pathfinder_prefers_wrapped_route();
     test_toroidal_pathfinder_wraps_on_both_axes();
+    test_json_parse_expected_success_and_failure();
+    test_sdl_raii_alias_owns_surface();
     test_direction_mapping();
     test_rect_bounds_inclusion();
     test_tag_round_trip_and_ordering();

@@ -19,6 +19,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CGame.h"
 #include "core/CMap.h"
 #include "core/CScript.h"
+#include "core/CUtil.h"
 #include "gui/CGui.h"
 #include "gui/CLayout.h"
 #include "gui/CTextureCache.h"
@@ -97,8 +98,8 @@ CListView::calculateIndices(const std::shared_ptr<CGui> &gui) {
 
 std::shared_ptr<SDL_Rect> CListView::calculateIndexPosition(const std::shared_ptr<CGui> &gui,
                                                             const std::shared_ptr<SDL_Rect> &loc, int index) {
-    return RECT(tileSize * (index % getSizeX(gui)) + loc->x, tileSize * (index / getSizeX(gui)) + loc->y, tileSize,
-                tileSize);
+    return CUtil::rect(tileSize * (index % getSizeX(gui)) + loc->x, tileSize * (index / getSizeX(gui)) + loc->y,
+                       tileSize, tileSize);
 }
 
 bool CListView::isOversized(const std::shared_ptr<CGui> &gui) {

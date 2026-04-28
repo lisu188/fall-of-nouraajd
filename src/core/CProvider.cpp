@@ -1,6 +1,6 @@
 /*
 fall-of-nouraajd c++ dark fantasy game
-Copyright (C) 2025  Andrzej Lis
+Copyright (C) 2025-2026  Andrzej Lis
 
 This program is free software: you can redistribute it and/or modify
         it under the terms of the GNU General Public License as published by
@@ -66,14 +66,49 @@ std::shared_ptr<CResourcesProvider> CResourcesProvider::getInstance() {
     return instance;
 }
 
+std::expected<std::string, CResourcesProvider::LoadFailure>
+CResourcesProvider::loadExpected(std::string path, std::source_location location) {
+    const std::string requestedPath = path;
+    auto resolvedPath = getPath(std::move(path));
+    if (resolvedPath.empty()) {
+        return std::unexpected(LoadFailure{requestedPath, resolvedPath, "resource path was not found", location});
+    }
+
+    std::ifstream stream(resolvedPath);
+    if (!stream) {
+        return std::unexpected(LoadFailure{requestedPath, resolvedPath, "resource file could not be opened", location});
+    }
+
+    return std::string(std::istreambuf_iterator<char>(stream), std::istreambuf_iterator<char>());
+}
+
+void CResourcesProvider::logLoadFailure(const LoadFailure &failure) {
+    vstd::logger::warning("Failed to load resource:", failure.requestedPath, "resolved:", failure.resolvedPath,
+                          "reason:", failure.message);
+}
+
 std::string CResourcesProvider::load(std::string path) {
-    std::ifstream t(getPath(std::move(path)));
-    return {std::istreambuf_iterator<char>(t), std::istreambuf_iterator<char>()};
+    auto result = loadExpected(std::move(path));
+    if (!result) {
+        logLoadFailure(result.error());
+        return {};
+    }
+    return std::move(*result);
 }
 
 std::shared_ptr<json> CResourcesProvider::loadJson(std::string path) {
     auto source = path;
-    return CJsonUtil::from_string(load(std::move(path)), source);
+    auto text = loadExpected(std::move(path));
+    if (!text) {
+        logLoadFailure(text.error());
+        return nullptr;
+    }
+    auto parsed = CJsonUtil::parse_expected(std::move(*text), source);
+    if (!parsed) {
+        CJsonUtil::log_parse_error(parsed.error());
+        return nullptr;
+    }
+    return *parsed;
 }
 
 std::string CResourcesProvider::getPath(std::string path) {
