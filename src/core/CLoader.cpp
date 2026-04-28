@@ -1,6 +1,6 @@
 /*
 fall-of-nouraajd c++ dark fantasy game
-Copyright (C) 2025  Andrzej Lis
+Copyright (C) 2025-2026  Andrzej Lis
 
 This program is free software: you can redistribute it and/or modify
         it under the terms of the GNU General Public License as published by
@@ -111,6 +111,8 @@ bool is_valid_slot_name(const std::string &name) {
         return ch == '.' || ch == '_' || ch == '-';
     });
 }
+
+std::string build_saved_map_config_key(const std::string &slotName) { return "__save_slot__/" + slotName; }
 } // namespace
 
 void CMapLoader::loadFromTmx(const std::shared_ptr<CMap> &map, const std::shared_ptr<json> &mapc) {
@@ -177,6 +179,7 @@ std::shared_ptr<CMap> CMapLoader::loadSavedMap(const std::shared_ptr<CGame> &gam
     }
 
     const std::string path = "save/" + name + ".json";
+    const std::string saveConfigKey = build_saved_map_config_key(name);
 
     if (std::shared_ptr<json> save = CConfigurationProvider::getConfig(path)) {
         const auto mapName = (*save)["properties"]["mapName"].get<std::string>();
@@ -185,9 +188,9 @@ std::shared_ptr<CMap> CMapLoader::loadSavedMap(const std::shared_ptr<CGame> &gam
         CPluginLoader::loadPlugin(game, getScriptPath(mapName));
         game->getObjectHandler()->registerConfig(getConfigPaths(mapName)); // TODO: duplicate?
 
-        game->getObjectHandler()->registerConfig(name, save);
+        game->getObjectHandler()->registerConfig(saveConfigKey, save);
 
-        auto map = game->getObjectHandler()->createObject<CMap>(game, name);
+        auto map = game->getObjectHandler()->createObject<CMap>(game, saveConfigKey);
         if (std::shared_ptr<json> mapc = CConfigurationProvider::getConfig(getMapPath(mapName))) {
             map->setDefaultTiles({});
             map->setOutOfBoundsTiles({});
