@@ -1,6 +1,6 @@
 /*
 fall-of-nouraajd c++ dark fantasy game
-Copyright (C) 2025  Andrzej Lis
+Copyright (C) 2025-2026  Andrzej Lis
 
 This program is free software: you can redistribute it and/or modify
         it under the terms of the GNU General Public License as published by
@@ -575,6 +575,18 @@ Coords CMap::normalizeCoords(Coords coords) const {
 std::vector<Coords> CMap::getAdjacentCoords(Coords coords, bool includeSelf) const {
     std::vector<Coords> adjacent;
     adjacent.reserve(includeSelf ? 5 : 4);
+
+    if (!wrapsX(coords.z) && !wrapsY(coords.z)) {
+        if (includeSelf) {
+            adjacent.push_back(coords);
+        }
+        adjacent.push_back(coords + EAST);
+        adjacent.push_back(coords + WEST);
+        adjacent.push_back(coords + SOUTH);
+        adjacent.push_back(coords + NORTH);
+        return adjacent;
+    }
+
     auto add = [&adjacent, this](Coords candidate) {
         candidate = normalizeCoords(candidate);
         if (std::find(adjacent.begin(), adjacent.end(), candidate) == adjacent.end()) {
