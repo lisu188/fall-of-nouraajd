@@ -3056,6 +3056,48 @@ class GameTest(unittest.TestCase):
         return True, json.dumps({"log": log_text.strip(), "map_type": g.getMap().getType()})
 
     @game_test
+    def test_invalid_save_slot_names_are_rejected(self):
+        game = load_game_module()
+
+        unique = str(time.time_ns())
+        invalid_slots = [f"../evil_{unique}", f"a/b_{unique}"]
+        potential_writes = [
+            build_dir / f"evil_{unique}.json",
+            build_dir / "save" / "a" / f"b_{unique}.json",
+        ]
+
+        g = game.CGameLoader.loadGame()
+        game.CGameLoader.startGameWithPlayer(g, "test", "Warrior")
+        game_map = g.getMap()
+
+        log_path = make_temp_log_path()
+        try:
+            game.set_logger_sink("file", str(log_path))
+            for slot_name in invalid_slots:
+                game.CMapLoader.save(game_map, slot_name)
+                loaded_game = game.CGameLoader.loadGame()
+                game.CGameLoader.loadSavedGame(loaded_game, slot_name)
+                self.assertIsNotNone(loaded_game.getMap())
+                self.assertEqual("CMap", loaded_game.getMap().getType())
+        finally:
+            game.set_logger_sink("disabled", None)
+
+        log_text = log_path.read_text()
+        log_path.unlink(missing_ok=True)
+
+        for written_path in potential_writes:
+            self.assertFalse(written_path.exists(), f"Unexpected write for invalid slot: {written_path}")
+        self.assertIn("WARNING: Rejected invalid save slot name during save:", log_text)
+        self.assertIn("WARNING: Rejected invalid save slot name during load:", log_text)
+
+        return True, json.dumps(
+            {
+                "invalid_slots": invalid_slots,
+                "blocked_paths": [str(path) for path in potential_writes],
+            }
+        )
+
+    @game_test
     def test_objects(self):
         game = load_game_module()
 
