@@ -16,31 +16,33 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #include "CGui.h"
+#include "core/CUtil.h"
 #include "gui/CTextManager.h"
 #include "gui/CTextureCache.h"
 
 CGui::CGui() {
     SDL_SAFE(SDL_Init(SDL_INIT_VIDEO));
-    SDL_SAFE(SDL_CreateWindowAndRenderer(width, height, 0, &window, &renderer));
+    SDL_Window *rawWindow = nullptr;
+    SDL_Renderer *rawRenderer = nullptr;
+    SDL_SAFE(SDL_CreateWindowAndRenderer(width, height, 0, &rawWindow, &rawRenderer));
+    window.reset(rawWindow);
+    renderer.reset(rawRenderer);
     // TODO: set icon
     // TODO: check render flags
 }
 
-CGui::~CGui() {
-    SDL_SAFE(SDL_DestroyRenderer(renderer));
-    SDL_SAFE(SDL_DestroyWindow(window));
-}
+CGui::~CGui() = default;
 
 void CGui::render(int i1) {
-    SDL_SAFE(SDL_SetRenderDrawColor(renderer, BLACK));
-    SDL_SAFE(SDL_RenderClear(renderer));
+    CUtil::setRenderDrawColor(renderer.get(), CColors::Black);
+    SDL_SAFE(SDL_RenderClear(renderer.get()));
     CGameGraphicsObject::render(this->ptr<CGui>(), i1);
-    SDL_SAFE(SDL_RenderPresent(renderer));
+    SDL_SAFE(SDL_RenderPresent(renderer.get()));
 }
 
 bool CGui::event(SDL_Event *event) { return CGameGraphicsObject::event(this->ptr<CGui>(), event); }
 
-SDL_Renderer *CGui::getRenderer() const { return renderer; }
+SDL_Renderer *CGui::getRenderer() const { return renderer.get(); }
 
 std::shared_ptr<CTextureCache> CGui::getTextureCache() {
     return _textureCache.get([this]() { return std::make_shared<CTextureCache>(this->ptr<CGui>()); });

@@ -1,6 +1,6 @@
 /*
 fall-of-nouraajd c++ dark fantasy game
-Copyright (C) 2025  Andrzej Lis
+Copyright (C) 2025-2026  Andrzej Lis
 
 This program is free software: you can redistribute it and/or modify
         it under the terms of the GNU General Public License as published by
@@ -18,6 +18,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "CStatsGraphicsObject.h"
 #include "core/CMap.h"
 #include "core/CScript.h"
+#include "core/CUtil.h"
 #include "gui/CGui.h"
 #include "gui/CTextManager.h"
 #include "object/CPlayer.h"
@@ -30,16 +31,16 @@ void CStatsGraphicsUtil::drawStats(std::shared_ptr<CGui> gui, std::shared_ptr<CC
 
     const int barCount = showExp ? 3 : 2;
 
-    drawBar(gui, creature->getHpRatio(), 0, barCount, RED, x, y, w, h);
+    drawBar(gui, creature->getHpRatio(), 0, barCount, CColors::Red, x, y, w, h);
     if (showNumeric) {
         drawValues(gui, creature->getHp(), creature->getHpMax(), 0, barCount, x, y, w, h);
     }
-    drawBar(gui, creature->getManaRatio(), 1, barCount, BLUE, x, y, w, h);
+    drawBar(gui, creature->getManaRatio(), 1, barCount, CColors::Blue, x, y, w, h);
     if (showNumeric) {
         drawValues(gui, creature->getMana(), creature->getManaMax(), 1, barCount, x, y, w, h);
     }
     if (showExp) {
-        drawBar(gui, creature->getExpRatio(), 2, barCount, YELLOW, x, y, w, h);
+        drawBar(gui, creature->getExpRatio(), 2, barCount, CColors::Yellow, x, y, w, h);
         if (showNumeric) {
             drawValues(gui, creature->getExp(), creature->getExpForNextLevel(), 2, barCount, x, y, w, h);
         }
@@ -57,8 +58,8 @@ std::shared_ptr<CScript> CStatsGraphicsObject::getCreature() { return creature; 
 
 void CStatsGraphicsObject::setCreature(std::shared_ptr<CScript> _creature) { creature = _creature; }
 
-void CStatsGraphicsUtil::drawBar(std::shared_ptr<CGui> gui, int ratio, int index, int barCount, Uint8 r, Uint8 g,
-                                 Uint8 b, Uint8 a, int x, int y, int w, int h) {
+void CStatsGraphicsUtil::drawBar(std::shared_ptr<CGui> gui, int ratio, int index, int barCount, SDL_Color color, int x,
+                                 int y, int w, int h) {
     h = h / std::max(1, barCount);
     SDL_Rect filledBar;
     filledBar.x = x;
@@ -66,7 +67,7 @@ void CStatsGraphicsUtil::drawBar(std::shared_ptr<CGui> gui, int ratio, int index
     filledBar.h = h;
     filledBar.w = (int)(ratio / 100.0 * w);
 
-    SDL_SetRenderDrawColor(gui->getRenderer(), r, g, b, a);
+    CUtil::setRenderDrawColor(gui->getRenderer(), color);
     SDL_RenderFillRect(gui->getRenderer(), &filledBar);
 
     SDL_Rect emptyBar;
@@ -75,7 +76,7 @@ void CStatsGraphicsUtil::drawBar(std::shared_ptr<CGui> gui, int ratio, int index
     emptyBar.h = h;
     emptyBar.w = w - filledBar.w;
 
-    SDL_SetRenderDrawColor(gui->getRenderer(), BLACK);
+    CUtil::setRenderDrawColor(gui->getRenderer(), CColors::Black);
     SDL_RenderFillRect(gui->getRenderer(), &emptyBar);
 }
 

@@ -19,37 +19,37 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CUtil.h"
 
 SDL_Texture *CTextManager::getTexture(const std::string &text, int width) {
-    auto anim = _textures.find(std::make_pair(text, width));
-    if (anim == _textures.end()) {
-        _textures[std::make_pair(text, width)] = this->loadTexture(text, width);
-        return getTexture(text, width);
+    auto key = std::make_pair(text, width);
+    auto texture = _textures.find(key);
+    if (texture == _textures.end()) {
+        auto [inserted, _] = _textures.emplace(std::move(key), this->loadTexture(text, width));
+        return inserted->second.get();
     }
-    return _textures[std::make_pair(text, width)];
+    return texture->second.get();
 }
 
-SDL_Texture *CTextManager::loadTexture(std::string text, int width) {
+fn::sdl::TexturePtr CTextManager::loadTexture(std::string text, int width) {
     SDL_Color textColor = {255, 255, 255, 0};
     // in some sdl versions blended wrapped automatically treats 0 as not wrapper,
     // other versions fail on width=0
-    SDL_Surface *surface = SDL_SAFE(width ? TTF_RenderText_Blended_Wrapped(font, text.c_str(), textColor, width)
-                                          : TTF_RenderText_Blended(font, text.c_str(), textColor));
-    auto _texture = SDL_SAFE(SDL_CreateTextureFromSurface(_gui.lock()->getRenderer(), surface));
-    SDL_SAFE(SDL_FreeSurface(surface));
-    return _texture;
+    auto surface =
+        fn::sdl::SurfacePtr(SDL_SAFE(width ? TTF_RenderText_Blended_Wrapped(font.get(), text.c_str(), textColor, width)
+                                           : TTF_RenderText_Blended(font.get(), text.c_str(), textColor)));
+    if (!surface) {
+        return nullptr;
+    }
+    return fn::sdl::TexturePtr(SDL_SAFE(SDL_CreateTextureFromSurface(_gui.lock()->getRenderer(), surface.get())));
 }
 
 CTextManager::CTextManager(const std::shared_ptr<CGui> &_gui) {
     SDL_SAFE(TTF_Init());
-    font = SDL_SAFE(TTF_OpenFont("fonts/ampersand.ttf", 24));
+    font.reset(SDL_SAFE(TTF_OpenFont("fonts/ampersand.ttf", 24)));
     this->_gui = _gui;
 }
 
 CTextManager::~CTextManager() {
-    for (auto texture : _textures) {
-        SDL_SAFE(SDL_DestroyTexture(texture.second));
-    }
     _textures.clear();
-    SDL_SAFE(TTF_CloseFont(font));
+    font.reset();
 }
 
 int CTextManager::countLines(const std::string &text, int w) {
@@ -82,7 +82,7 @@ void CTextManager::drawTextCentered(const std::string &text, int x, int y, int w
         SDL_Rect actual;
         SDL_Texture *pTexture = getTexture(text, w);
         SDL_SAFE(SDL_QueryTexture(pTexture, nullptr, nullptr, &actual.w, &actual.h));
-        auto centered = CUtil::boxInBox(RECT(x, y, w, h), RECT(0, 0, actual.w, actual.h));
+        auto centered = CUtil::boxInBox(CUtil::rect(x, y, w, h), CUtil::rect(0, 0, actual.w, actual.h));
         SDL_SAFE(SDL_RenderCopy(_gui.lock()->getRenderer(), pTexture, nullptr, centered.get()));
     }
 }

@@ -1,6 +1,6 @@
 /*
 fall-of-nouraajd c++ dark fantasy game
-Copyright (C) 2025  Andrzej Lis
+Copyright (C) 2025-2026  Andrzej Lis
 
 This program is free software: you can redistribute it and/or modify
         it under the terms of the GNU General Public License as published by
@@ -20,34 +20,29 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "CGui.h"
 #include "CTextManager.h"
 #include "CTextureCache.h"
+#include "core/CUtil.h"
 
 CTooltip::CTooltip() {
-  // TODO: extract to json
-  setModal(true);
-  setBackground("images/tooltip");
+    // TODO: extract to json
+    setModal(true);
+    setBackground("images/tooltip");
 }
 
-void CTooltip::renderObject(std::shared_ptr<CGui> gui,
-                            std::shared_ptr<SDL_Rect> rect, int frameTime) {
-  // TODO: move this inside textManager
-  auto textureSize = gui->getTextManager()->getTextureSize(text);
-  gui->getTextManager()->drawText(
-      text,
-      CUtil::boxInBox(rect, RECT(0, 0, textureSize.first, textureSize.second)));
+void CTooltip::renderObject(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> rect, int frameTime) {
+    // TODO: move this inside textManager
+    auto textureSize = gui->getTextManager()->getTextureSize(text);
+    gui->getTextManager()->drawText(text,
+                                    CUtil::boxInBox(rect, CUtil::rect(0, 0, textureSize.first, textureSize.second)));
 }
 
-bool CTooltip::mouseEvent(std::shared_ptr<CGui> gui, SDL_EventType type,
-                          int button, int x, int y) {
-  if (type == SDL_MOUSEBUTTONUP && button == SDL_BUTTON_RIGHT) {
-    getParent()->removeChild(this->ptr<CTooltip>());
-  }
-  return true;
+bool CTooltip::mouseEvent(std::shared_ptr<CGui> gui, SDL_EventType type, int button, int x, int y) {
+    if (type == SDL_MOUSEBUTTONUP && button == SDL_BUTTON_RIGHT) {
+        getParent()->removeChild(this->ptr<CTooltip>());
+    }
+    return true;
 }
 
-bool CTooltip::keyboardEvent(std::shared_ptr<CGui> sharedPtr,
-                             SDL_EventType type, SDL_Keycode i) {
-  return true;
-}
+bool CTooltip::keyboardEvent(std::shared_ptr<CGui> sharedPtr, SDL_EventType type, SDL_Keycode i) { return true; }
 
 void CTooltip::setText(std::string _text) { this->text = _text; }
 

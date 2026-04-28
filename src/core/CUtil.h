@@ -1,6 +1,6 @@
 /*
 fall-of-nouraajd c++ dark fantasy game
-Copyright (C) 2025  Andrzej Lis
+Copyright (C) 2025-2026  Andrzej Lis
 
 This program is free software: you can redistribute it and/or modify
         it under the terms of the GNU General Public License as published by
@@ -25,36 +25,57 @@ class CGameObject;
 class CMapObject;
 
 struct Coords {
-    Coords();
+    constexpr Coords() = default;
 
-    Coords(int x, int y, int z);
+    constexpr Coords(int x, int y, int z) : x(x), y(y), z(z) {}
 
-    int x, y, z;
+    int x = 0;
+    int y = 0;
+    int z = 0;
 
-    bool operator==(const Coords &other) const;
+    constexpr auto operator<=>(const Coords &other) const = default;
 
-    bool operator!=(const Coords &other) const;
+    constexpr Coords operator-(const Coords &other) const { return {x - other.x, y - other.y, z - other.z}; }
 
-    bool operator<(const Coords &other) const;
+    constexpr Coords operator+(const Coords &other) const { return {x + other.x, y + other.y, z + other.z}; }
 
-    bool operator>(const Coords &other) const;
+    constexpr Coords operator*() const { return *this; }
 
-    Coords operator-(const Coords &other) const;
+    double getDist(const Coords &a) const {
+        const double dx = x - a.x;
+        const double dy = y - a.y;
+        return std::sqrt(dx * dx + dy * dy);
+    }
 
-    Coords operator+(const Coords &other) const;
+    constexpr bool same(const Coords &a) const { return x == a.x && y == a.y; }
 
-    Coords operator*() const;
+    constexpr bool adjacent(const Coords &a) const {
+        const int dx = x - a.x;
+        const int dy = y - a.y;
+        return dx * dx + dy * dy == 1;
+    }
 
-    double getDist(const Coords &a) const;
-
-    bool adjacent(const Coords &a) const;
-
-    bool same(const Coords &a) const;
-
-    bool adjacentOrSame(const Coords &a) const;
+    constexpr bool adjacentOrSame(const Coords &a) const { return adjacent(a) || same(a); }
 
     enum Direction { UNDEFINED, ZERO, EAST, WEST, NORTH, SOUTH, UP, DOWN };
-} extern ZERO, EAST, WEST, NORTH, SOUTH, UP, DOWN;
+};
+
+inline constexpr Coords ZERO{0, 0, 0};
+inline constexpr Coords EAST{1, 0, 0};
+inline constexpr Coords WEST{-1, 0, 0};
+inline constexpr Coords NORTH{0, -1, 0};
+inline constexpr Coords SOUTH{0, 1, 0};
+inline constexpr Coords UP{0, 0, 1};
+inline constexpr Coords DOWN{0, 0, -1};
+inline constexpr std::array<Coords, 4> CARDINAL_DIRECTIONS{EAST, WEST, SOUTH, NORTH};
+inline constexpr std::array<Coords, 6> AXIAL_DIRECTIONS{EAST, WEST, SOUTH, NORTH, UP, DOWN};
+
+namespace CColors {
+inline constexpr SDL_Color Blue{0, 0, 255, 0};
+inline constexpr SDL_Color Red{255, 0, 0, 0};
+inline constexpr SDL_Color Yellow{255, 255, 0, 0};
+inline constexpr SDL_Color Black{0, 0, 0, 0};
+} // namespace CColors
 
 class CUtil {
   public:
@@ -72,6 +93,8 @@ class CUtil {
     static int parseKey(SDL_Keycode i);
 
     static Coords::Direction getDirection(Coords coords);
+
+    static int setRenderDrawColor(SDL_Renderer *renderer, SDL_Color color);
 
     template <fn::FilePredicate Predicate> static std::set<std::string> findFiles(std::string dir, Predicate pred) {
         std::set<std::string> retValue;
@@ -126,4 +149,3 @@ template <fn::SdlVoidCallable F> void sdl_safe(F f) { f(); }
 
 #define JSONIFY(x) CJsonUtil::to_string(CSerialization::serialize<std::shared_ptr<json>>(x))
 #define JSONIFY_STYLED(x) CJsonUtil::to_string(CSerialization::serialize<std::shared_ptr<json>>(x), -1)
-#define RECT(x, y, w, h) CUtil::rect(x, y, w, h)

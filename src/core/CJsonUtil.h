@@ -1,6 +1,6 @@
 /*
 fall-of-nouraajd c++ dark fantasy game
-Copyright (C) 2025  Andrzej Lis
+Copyright (C) 2025-2026  Andrzej Lis
 
 This program is free software: you can redistribute it and/or modify
         it under the terms of the GNU General Public License as published by
@@ -21,6 +21,15 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CGlobal.h"
 
 namespace CJsonUtil {
+struct JsonParseError {
+    std::string source;
+    std::string message;
+    std::string preview;
+    std::source_location location;
+};
+
+using JsonParseResult = std::expected<std::shared_ptr<json>, JsonParseError>;
+
 inline std::shared_ptr<json> alias(const std::shared_ptr<json> &owner, json &value) {
     return std::shared_ptr<json>(owner, &value);
 }
@@ -38,6 +47,11 @@ inline std::string preview_json(std::string text, size_t limit = 120) {
         return text;
     }
     return text.substr(0, limit) + "...";
+}
+
+inline void log_parse_error(const JsonParseError &error) {
+    vstd::logger::warning("Failed to parse json from", error.source.empty() ? "<unknown>" : error.source, ":",
+                          error.message, "preview:", error.preview);
 }
 
 template <fn::JsonObjectPointer T> bool hasStringProp(T object, std::string prop) {
@@ -78,15 +92,24 @@ template <fn::JsonMapPointer T> bool isMap(T object) {
     return true;
 }
 
-template <typename T = void>
-std::shared_ptr<json> from_string(std::string json_string, const std::string &source = std::string()) {
+inline JsonParseResult parse_expected(std::string json_string, const std::string &source = std::string(),
+                                      std::source_location location = std::source_location::current()) {
     try {
         return std::make_shared<json>(json::parse(json_string));
     } catch (const std::exception &exception) {
-        vstd::logger::warning("Failed to parse json from", source.empty() ? "<unknown>" : source, ":", exception.what(),
-                              "preview:", preview_json(std::move(json_string)));
+        return std::unexpected(
+            JsonParseError{source, exception.what(), preview_json(std::move(json_string)), location});
+    }
+}
+
+template <typename T = void>
+std::shared_ptr<json> from_string(std::string json_string, const std::string &source = std::string()) {
+    auto result = parse_expected(std::move(json_string), source);
+    if (!result) {
+        log_parse_error(result.error());
         return nullptr;
     }
+    return *result;
     //        vstd::logger::debug(json,reader.getFormatedErrorMessages());
 }
 

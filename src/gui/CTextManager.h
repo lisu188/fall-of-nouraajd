@@ -1,6 +1,6 @@
 /*
 fall-of-nouraajd c++ dark fantasy game
-Copyright (C) 2025  Andrzej Lis
+Copyright (C) 2025-2026  Andrzej Lis
 
 This program is free software: you can redistribute it and/or modify
         it under the terms of the GNU General Public License as published by
@@ -19,11 +19,12 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "gui/CAnimation.h"
 #include "gui/CGui.h"
+#include "gui/CSdlResources.h"
 #include "object/CGameObject.h"
 
 class CTextManager : public CGameObject {
     V_META(CTextManager, CGameObject, vstd::meta::empty())
-    std::unordered_map<std::pair<std::string, int>, SDL_Texture *> _textures;
+    std::unordered_map<std::pair<std::string, int>, fn::sdl::TexturePtr> _textures;
 
   public:
     explicit CTextManager(const std::shared_ptr<CGui> &_gui = nullptr);
@@ -45,9 +46,9 @@ class CTextManager : public CGameObject {
   private:
     SDL_Texture *getTexture(const std::string &text, int width = 0);
 
-    SDL_Texture *loadTexture(std::string text, int width = 0);
+    fn::sdl::TexturePtr loadTexture(std::string text, int width = 0);
 
     std::weak_ptr<CGui> _gui;
 
-    TTF_Font *font;
+    fn::sdl::FontPtr font;
 };

@@ -1,6 +1,6 @@
 /*
 fall-of-nouraajd c++ dark fantasy game
-Copyright (C) 2025  Andrzej Lis
+Copyright (C) 2025-2026  Andrzej Lis
 
 This program is free software: you can redistribute it and/or modify
         it under the terms of the GNU General Public License as published by
@@ -30,8 +30,8 @@ class CStatsGraphicsUtil {
                           bool showNumeric, bool showExp);
 
   private:
-    static void drawBar(std::shared_ptr<CGui> gui, int ratio, int index, int barCount, Uint8 r, Uint8 g, Uint8 b,
-                        Uint8 a, int x, int y, int h, int w);
+    static void drawBar(std::shared_ptr<CGui> gui, int ratio, int index, int barCount, SDL_Color color, int x, int y,
+                        int h, int w);
 
     static void drawValues(std::shared_ptr<CGui> gui, int left, int right, int index, int barCount, int x, int y, int h,
                            int w);

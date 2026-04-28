@@ -1,6 +1,6 @@
 /*
 fall-of-nouraajd c++ dark fantasy game
-Copyright (C) 2025  Andrzej Lis
+Copyright (C) 2025-2026  Andrzej Lis
 
 This program is free software: you can redistribute it and/or modify
         it under the terms of the GNU General Public License as published by
@@ -19,6 +19,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "core/CGame.h"
 #include "core/CGlobal.h"
+#include "gui/CSdlResources.h"
 #include "gui/object/CGameGraphicsObject.h"
 #include "object/CGameObject.h"
 
@@ -27,58 +28,51 @@ class CTextureCache;
 class CTextManager;
 
 class CGui : public CGameGraphicsObject {
-  V_META(CGui, CGameGraphicsObject,
-         V_PROPERTY(CGui, int, height, getHeight, setHeight),
-         V_PROPERTY(CGui, int, width, getWidth, setWidth),
-         V_PROPERTY(CGui, int, tileSize, getTileSize, setTileSize))
-  SDL_Window *window = 0;
-  SDL_Renderer *renderer = 0;
+    V_META(CGui, CGameGraphicsObject, V_PROPERTY(CGui, int, height, getHeight, setHeight),
+           V_PROPERTY(CGui, int, width, getWidth, setWidth), V_PROPERTY(CGui, int, tileSize, getTileSize, setTileSize))
+    fn::sdl::WindowPtr window;
+    fn::sdl::RendererPtr renderer;
 
-public:
-  using CGameGraphicsObject::render;
+  public:
+    using CGameGraphicsObject::render;
 
-  SDL_Renderer *getRenderer() const;
+    SDL_Renderer *getRenderer() const;
 
-  int getWidth();
+    int getWidth();
 
-  void setWidth(int width);
+    void setWidth(int width);
 
-  int getHeight();
+    int getHeight();
 
-  void setHeight(int height);
+    void setHeight(int height);
 
-  int getTileSize();
+    int getTileSize();
 
-  void setTileSize(int tileSize);
+    void setTileSize(int tileSize);
 
-  int getTileCountX();
+    int getTileCountX();
 
-  int getTileCountY();
+    int getTileCountY();
 
-private:
-  int height = 1080;
-  int tileSize = 50;
-  int width = 1920;
+  private:
+    int height = 1080;
+    int tileSize = 50;
+    int width = 1920;
 
-public:
-  CGui();
+  public:
+    CGui();
 
-  ~CGui() override;
+    ~CGui() override;
 
-  void render(int i1);
+    void render(int i1);
 
-  bool event(SDL_Event *event);
+    bool event(SDL_Event *event);
 
-  std::shared_ptr<CTextureCache> getTextureCache();
+    std::shared_ptr<CTextureCache> getTextureCache();
 
-  std::shared_ptr<CTextManager> getTextManager();
+    std::shared_ptr<CTextManager> getTextManager();
 
-  vstd::lazy<CTextureCache> _textureCache;
+    vstd::lazy<CTextureCache> _textureCache;
 
-  vstd::lazy<CTextManager> _textManager;
+    vstd::lazy<CTextManager> _textManager;
 };
-
-#define BLUE 0, 0, 255, 0
-#define RED 255, 0, 0, 0
-#define YELLOW 255, 255, 0, 0
-#define BLACK 0, 0, 0, 0

@@ -16,6 +16,7 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #include "core/CPathFinder.h"
+#include "gui/CSdlResources.h"
 
 #include <algorithm>
 #include <cmath>
@@ -61,9 +62,9 @@ struct AStarCompare {
 using AStarQueue = std::priority_queue<AStarNode, std::vector<AStarNode>, AStarCompare>;
 using NextStepQueue = std::priority_queue<NextStepNode, std::vector<NextStepNode>, AStarCompare>;
 
-class PassabilityCache {
+template <fn::PathPassability CanStep> class PassabilityCache {
   public:
-    explicit PassabilityCache(const std::function<bool(const Coords &)> &canStep) : canStep(canStep) {}
+    explicit PassabilityCache(const CanStep &canStep) : canStep(canStep) {}
 
     bool canStepAt(const Coords &coords) {
         auto cached = values.find(coords);
@@ -77,14 +78,16 @@ class PassabilityCache {
     }
 
   private:
-    const std::function<bool(const Coords &)> &canStep;
+    const CanStep &canStep;
     std::unordered_map<Coords, bool> values;
 };
 
-std::vector<Coords> candidates(const Coords &coords,
-                               const std::function<std::pair<bool, Coords>(const Coords &)> &waypoint,
-                               const std::function<std::vector<Coords>(const Coords &)> &neighbors) {
-    auto list = neighbors(coords);
+template <fn::PathWaypoint Waypoint, fn::PathNeighbors Neighbors>
+std::vector<Coords> candidates(const Coords &coords, const Waypoint &waypoint, const Neighbors &neighbors) {
+    std::vector<Coords> list;
+    for (const auto &neighbor : neighbors(coords)) {
+        list.push_back(neighbor);
+    }
     auto waypoint_direction = waypoint(coords);
     if (waypoint_direction.first) {
         list.push_back(waypoint_direction.second);
@@ -92,10 +95,10 @@ std::vector<Coords> candidates(const Coords &coords,
     return list;
 }
 
-Values fillValues(const std::function<bool(const Coords &)> &canStep, const Coords &goal,
-                  const std::function<std::pair<bool, Coords>(const Coords &)> &waypoint,
-                  const std::function<std::vector<Coords>(const Coords &)> &neighbors,
-                  const CPathFinder::StepCost &stepCost, const Coords *stopAt = nullptr) {
+template <fn::PathPassability CanStep, fn::PathWaypoint Waypoint, fn::PathNeighbors Neighbors,
+          fn::PathStepCost StepCost>
+Values fillValues(const CanStep &canStep, const Coords &goal, const Waypoint &waypoint, const Neighbors &neighbors,
+                  const StepCost &stepCost, const Coords *stopAt = nullptr) {
     Values values = std::make_shared<std::unordered_map<Coords, int>>();
     PassabilityCache passability(canStep);
     Queue nodes;
@@ -133,8 +136,8 @@ Values fillValues(const std::function<bool(const Coords &)> &canStep, const Coor
     return values;
 }
 
-int estimateCost(const std::function<double(const Coords &, const Coords &)> &distance, const Coords &from,
-                 const Coords &goal) {
+template <fn::PathDistance Distance>
+int estimateCost(const Distance &distance, const Coords &from, const Coords &goal) {
     return std::max(0, static_cast<int>(std::floor(distance(from, goal))));
 }
 
@@ -157,11 +160,10 @@ std::vector<Coords> buildPath(const Coords &start, const Coords &goal,
     return path;
 }
 
-std::vector<Coords> findAStarPath(Coords start, Coords goal, const std::function<bool(const Coords &)> &canStep,
-                                  const std::function<std::pair<bool, Coords>(const Coords &)> &waypoint,
-                                  const std::function<std::vector<Coords>(const Coords &)> &neighbors,
-                                  const std::function<double(const Coords &, const Coords &)> &distance,
-                                  const CPathFinder::StepCost &stepCost) {
+template <fn::PathPassability CanStep, fn::PathWaypoint Waypoint, fn::PathNeighbors Neighbors,
+          fn::PathDistance Distance, fn::PathStepCost StepCost>
+std::vector<Coords> findAStarPath(Coords start, Coords goal, const CanStep &canStep, const Waypoint &waypoint,
+                                  const Neighbors &neighbors, const Distance &distance, const StepCost &stepCost) {
     if (start == goal) {
         return {start};
     }
@@ -208,11 +210,10 @@ std::vector<Coords> findAStarPath(Coords start, Coords goal, const std::function
     return buildPath(start, goal, previous);
 }
 
-Coords findAStarNextStep(Coords start, Coords goal, const std::function<bool(const Coords &)> &canStep,
-                         const std::function<std::pair<bool, Coords>(const Coords &)> &waypoint,
-                         const std::function<std::vector<Coords>(const Coords &)> &neighbors,
-                         const std::function<double(const Coords &, const Coords &)> &distance,
-                         const CPathFinder::StepCost &stepCost) {
+template <fn::PathPassability CanStep, fn::PathWaypoint Waypoint, fn::PathNeighbors Neighbors,
+          fn::PathDistance Distance, fn::PathStepCost StepCost>
+Coords findAStarNextStep(Coords start, Coords goal, const CanStep &canStep, const Waypoint &waypoint,
+                         const Neighbors &neighbors, const Distance &distance, const StepCost &stepCost) {
     if (start == goal) {
         return start;
     }
@@ -260,27 +261,20 @@ Coords findAStarNextStep(Coords start, Coords goal, const std::function<bool(con
 } // namespace
 
 std::shared_ptr<vstd::future<Coords, void>>
-CPathFinder::findNextStep(Coords start, Coords goal, const std::function<bool(const Coords &)> &canStep,
-                          const std::function<std::pair<bool, Coords>(const Coords &)> waypoint,
-                          const std::function<std::vector<Coords>(const Coords &)> &neighbors,
-                          const std::function<double(const Coords &, const Coords &)> &distance,
-                          const StepCost &stepCost) {
+CPathFinder::findNextStep(Coords start, Coords goal, const CanStep &canStep, const Waypoint waypoint,
+                          const Neighbors &neighbors, const Distance &distance, const StepCost &stepCost) {
     return vstd::async(
         [=]() { return findAStarNextStep(start, goal, canStep, waypoint, neighbors, distance, stepCost); });
 }
 
-std::vector<Coords> CPathFinder::findPath(Coords start, Coords goal, const std::function<bool(const Coords &)> &canStep,
-                                          const std::function<std::pair<bool, Coords>(const Coords &)> waypoint,
-                                          const std::function<std::vector<Coords>(const Coords &)> &neighbors,
-                                          const std::function<double(const Coords &, const Coords &)> &distance,
+std::vector<Coords> CPathFinder::findPath(Coords start, Coords goal, const CanStep &canStep, const Waypoint waypoint,
+                                          const Neighbors &neighbors, const Distance &distance,
                                           const StepCost &stepCost) {
     return findAStarPath(start, goal, canStep, waypoint, neighbors, distance, stepCost);
 }
 
-void CPathFinder::saveMap(Coords start, const std::function<bool(const Coords &)> &canStep, const std::string &path,
-                          const std::function<std::pair<bool, Coords>(const Coords &)> &waypoint,
-                          const std::function<std::vector<Coords>(const Coords &)> &neighbors,
-                          const std::function<double(const Coords &, const Coords &)> &, const StepCost &stepCost) {
+void CPathFinder::saveMap(Coords start, const CanStep &canStep, const std::string &path, const Waypoint &waypoint,
+                          const Neighbors &neighbors, const Distance &, const StepCost &stepCost) {
     Values values = fillValues(canStep, start, waypoint, neighbors, stepCost);
     int minx = std::numeric_limits<int>::max();
     int miny = std::numeric_limits<int>::max();
@@ -306,7 +300,11 @@ void CPathFinder::saveMap(Coords start, const std::function<bool(const Coords &)
         }
     }
     int factor = 4;
-    SDL_Surface *surface = SDL_CreateRGBSurface(0, factor * (maxx - minx), factor * (maxy - miny), 32, 0, 0, 0, 0);
+    auto surface = fn::sdl::SurfacePtr(
+        SDL_SAFE(SDL_CreateRGBSurface(0, factor * (maxx - minx), factor * (maxy - miny), 32, 0, 0, 0, 0)));
+    if (!surface) {
+        return;
+    }
     float scale = maxVal > 0 ? 256.0f / maxVal : 0.0f;
     for (const auto &entry : *values) {
         int posx = entry.first.x - minx;
@@ -318,8 +316,7 @@ void CPathFinder::saveMap(Coords start, const std::function<bool(const Coords &)
         rect.w = factor;
         rect.h = factor;
         float r = 256.0f - (scale * val);
-        SDL_FillRect(surface, &rect, SDL_MapRGB(surface->format, r, r, r));
+        SDL_FillRect(surface.get(), &rect, SDL_MapRGB(surface->format, r, r, r));
     }
-    IMG_SavePNG(surface, path.c_str());
-    SDL_FreeSurface(surface);
+    IMG_SavePNG(surface.get(), path.c_str());
 }
