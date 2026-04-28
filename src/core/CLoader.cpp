@@ -27,6 +27,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <pybind11/eval.h>
 #include <rdg.h>
 
+#include <algorithm>
+#include <cctype>
 #include <utility>
 
 namespace {
@@ -96,6 +98,19 @@ std::vector<std::string> build_tile_types(const json &tileset) {
     }
     return tileTypes;
 }
+
+bool is_valid_slot_name(const std::string &name) {
+    if (name.empty() || name.find("..") != std::string::npos) {
+        return false;
+    }
+
+    return std::all_of(name.begin(), name.end(), [](unsigned char ch) {
+        if (std::isalnum(ch)) {
+            return true;
+        }
+        return ch == '.' || ch == '_' || ch == '-';
+    });
+}
 } // namespace
 
 void CMapLoader::loadFromTmx(const std::shared_ptr<CMap> &map, const std::shared_ptr<json> &mapc) {
@@ -156,6 +171,11 @@ std::shared_ptr<CMap> CMapLoader::loadNewMap(const std::shared_ptr<CGame> &game,
 }
 
 std::shared_ptr<CMap> CMapLoader::loadSavedMap(const std::shared_ptr<CGame> &game, const std::string &name) {
+    if (!is_valid_slot_name(name)) {
+        vstd::logger::warning("Rejected invalid save slot name during load:", name);
+        return game->getObjectHandler()->createObject<CMap>(game);
+    }
+
     const std::string path = "save/" + name + ".json";
 
     if (std::shared_ptr<json> save = CConfigurationProvider::getConfig(path)) {
@@ -220,6 +240,11 @@ std::shared_ptr<CMap> CMapLoader::loadRandomMapWithPlayer(const std::shared_ptr<
 }
 
 void CMapLoader::save(const std::shared_ptr<CMap> &map, const std::string &name) {
+    if (!is_valid_slot_name(name)) {
+        vstd::logger::warning("Rejected invalid save slot name during save:", name);
+        return;
+    }
+
     CResourcesProvider::getInstance()->save(vstd::join({"save/", name, ".json"}, ""), JSONIFY_STYLED(map));
 }
 
