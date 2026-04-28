@@ -1,6 +1,6 @@
 /*
 fall-of-nouraajd c++ dark fantasy game
-Copyright (C) 2025  Andrzej Lis
+Copyright (C) 2025-2026  Andrzej Lis
 
 This program is free software: you can redistribute it and/or modify
         it under the terms of the GNU General Public License as published by
@@ -60,7 +60,8 @@ class CCreature : public CMapObject, public Moveable, public Visitable {
            V_PROPERTY(CCreature, std::shared_ptr<CFightController>, fightController, getFightController,
                       setFightController),
            V_PROPERTY(CCreature, bool, npc, isNpc, setNpc), V_METHOD(CCreature, getManaMax, int),
-           V_METHOD(CCreature, getHpMax, int), V_METHOD(CCreature, getManaRegRate, int))
+           V_METHOD(CCreature, getHpMax, int), V_METHOD(CCreature, getManaRegRate, int),
+           V_METHOD(CCreature, getEffects, std::set<std::shared_ptr<CEffect>>))
 
   public:
     CCreature();
