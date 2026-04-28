@@ -1,6 +1,6 @@
 /*
 fall-of-nouraajd c++ dark fantasy game
-Copyright (C) 2025  Andrzej Lis
+Copyright (C) 2025-2026  Andrzej Lis
 
 This program is free software: you can redistribute it and/or modify
         it under the terms of the GNU General Public License as published by
@@ -121,6 +121,18 @@ class CResourcesProvider {
     CResourcesProvider() = default;
 
   private:
+    struct LoadFailure {
+        std::string requestedPath;
+        std::string resolvedPath;
+        std::string message;
+        std::source_location location;
+    };
+
+    std::expected<std::string, LoadFailure>
+    loadExpected(std::string path, std::source_location location = std::source_location::current());
+
+    static void logLoadFailure(const LoadFailure &failure);
+
     static std::list<std::string> searchPath;
 };
 

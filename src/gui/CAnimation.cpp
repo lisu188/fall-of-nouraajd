@@ -1,6 +1,6 @@
 /*
 fall-of-nouraajd c++ dark fantasy game
-Copyright (C) 2025  Andrzej Lis
+Copyright (C) 2025-2026  Andrzej Lis
 
 This program is free software: you can redistribute it and/or modify
         it under the terms of the GNU General Public License as published by
@@ -21,6 +21,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "CTextManager.h"
 #include "CTooltip.h"
 #include "core/CProvider.h"
+#include "core/CUtil.h"
 #include "gui/CGui.h"
 #include "gui/CTextureCache.h"
 
@@ -152,7 +153,7 @@ void CSelectionBox::setThickness(int _thickness) { this->thickness = _thickness;
 int CSelectionBox::getThickness() { return thickness; }
 
 void CSelectionBox::renderObject(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> rect, int frameTime) {
-    SDL_SetRenderDrawColor(gui->getRenderer(), YELLOW);
+    CUtil::setRenderDrawColor(gui->getRenderer(), CColors::Yellow);
     SDL_Rect tmp = {rect->x, rect->y, thickness, rect->h};
     SDL_Rect tmp2 = {rect->x, rect->y, rect->w, thickness};
     SDL_Rect tmp3 = {rect->x, rect->y + rect->h - thickness, rect->w, thickness};

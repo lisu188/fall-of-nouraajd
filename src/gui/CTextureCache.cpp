@@ -1,6 +1,6 @@
 /*
 fall-of-nouraajd c++ dark fantasy game
-Copyright (C) 2025  Andrzej Lis
+Copyright (C) 2025-2026  Andrzej Lis
 
 This program is free software: you can redistribute it and/or modify
         it under the terms of the GNU General Public License as published by
@@ -16,6 +16,7 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #include "CTextureCache.h"
+#include "core/CUtil.h"
 
 Uint32 getpixel(SDL_Surface *surface, int x, int y) {
     int bpp = surface->format->BytesPerPixel;
@@ -83,31 +84,26 @@ SDL_Texture *CTextureCache::getTexture(std::string path) {
     if (vstd::ends_with(path, ".png")) {
         auto anim = _textures.find(path);
         if (anim == _textures.end()) {
-            _textures[path] = this->loadTexture(path);
-            return getTexture(path);
+            auto [inserted, _] = _textures.emplace(path, this->loadTexture(path));
+            return inserted->second.get();
         }
-        return _textures[path];
+        return anim->second.get();
     }
     return getTexture(path + ".png");
 }
 
-SDL_Texture *CTextureCache::loadTexture(std::string path) {
-    SDL_Surface *surface = IMG_Load(path.c_str());
+fn::sdl::TexturePtr CTextureCache::loadTexture(std::string path) {
+    auto surface = fn::sdl::SurfacePtr(IMG_Load(path.c_str()));
     if (!surface) {
         vstd::logger::error("CTextureCache::loadTexture: cannot load", path);
         return nullptr;
     }
-    return CTextureUtil::calculateAlpha(_gui.lock()->getRenderer(), surface);
+    return CTextureUtil::calculateAlpha(_gui.lock()->getRenderer(), std::move(surface));
 }
 
 CTextureCache::CTextureCache(std::shared_ptr<CGui> _gui) : _gui(_gui) {}
 
-CTextureCache::~CTextureCache() {
-    for (auto texture : _textures) {
-        SDL_DestroyTexture(texture.second);
-    }
-    _textures.clear();
-}
+CTextureCache::~CTextureCache() { _textures.clear(); }
 
 CTextureCache::CTextureCache() {}
 
@@ -125,7 +121,7 @@ auto CTextureUtil::getPixelRgba(SDL_Surface *surface, int x, int y) {
     return std::make_tuple(r, g, b, a);
 }
 
-SDL_Texture *CTextureUtil::calculateAlpha(SDL_Renderer *renderer, SDL_Surface *surface) {
+fn::sdl::TexturePtr CTextureUtil::calculateAlpha(SDL_Renderer *renderer, fn::sdl::SurfacePtr surface) {
     if (!surface) {
         vstd::logger::error("CTextureUtil::calculateAlpha: null surface");
         return nullptr;
@@ -136,41 +132,39 @@ SDL_Texture *CTextureUtil::calculateAlpha(SDL_Renderer *renderer, SDL_Surface *s
 
     if (w <= 0 || h <= 0) {
         vstd::logger::error("CTextureUtil::calculateAlpha: invalid surface size", w, h);
-        SDL_SAFE(SDL_FreeSurface(surface));
         return nullptr;
     }
 
-    auto secondSurface =
-        SDL_CreateRGBSurfaceWithFormat(surface->flags, surface->w, surface->h, 32, SDL_PIXELFORMAT_RGBA32);
+    auto secondSurface = fn::sdl::SurfacePtr(
+        SDL_SAFE(SDL_CreateRGBSurfaceWithFormat(surface->flags, surface->w, surface->h, 32, SDL_PIXELFORMAT_RGBA32)));
+    if (!secondSurface) {
+        return nullptr;
+    }
 
-    auto maskPixel = getPixelRgba(surface, 0, 0);
+    auto maskPixel = getPixelRgba(surface.get(), 0, 0);
 
-    bool shouldAddMask = vstd::all_equals(getPixelColor(surface, 0, 0), getPixelColor(surface, 0, h - 1),
-                                          getPixelColor(surface, w - 1, 0), getPixelColor(surface, w - 1, h - 1)) &&
-                         std::get<3>(maskPixel) == 255;
+    bool shouldAddMask =
+        vstd::all_equals(getPixelColor(surface.get(), 0, 0), getPixelColor(surface.get(), 0, h - 1),
+                         getPixelColor(surface.get(), w - 1, 0), getPixelColor(surface.get(), w - 1, h - 1)) &&
+        std::get<3>(maskPixel) == 255;
 
     std::unordered_set<std::pair<int, int>> mask =
-        shouldAddMask ? calculateMask(surface) : std::unordered_set<std::pair<int, int>>();
+        shouldAddMask ? calculateMask(surface.get()) : std::unordered_set<std::pair<int, int>>();
 
     for (auto verticalIndex = 0; verticalIndex < h; verticalIndex++) {
         for (auto horizontalIndex = 0; horizontalIndex < w; horizontalIndex++) {
-            auto currentPixel = getPixelRgba(surface, horizontalIndex, verticalIndex);
+            auto currentPixel = getPixelRgba(surface.get(), horizontalIndex, verticalIndex);
 
             auto [r, g, b, a] = currentPixel;
             if (vstd::ctn(mask, std::make_pair(horizontalIndex, verticalIndex))) {
-                setPixelColor(secondSurface, horizontalIndex, verticalIndex, {r, g, b, 0});
+                setPixelColor(secondSurface.get(), horizontalIndex, verticalIndex, {r, g, b, 0});
             } else {
-                setPixelColor(secondSurface, horizontalIndex, verticalIndex, {r, g, b, a});
+                setPixelColor(secondSurface.get(), horizontalIndex, verticalIndex, {r, g, b, a});
             }
         }
     }
 
-    auto texture = SDL_SAFE(SDL_CreateTextureFromSurface(renderer, secondSurface));
-
-    SDL_SAFE(SDL_FreeSurface(surface));
-    SDL_SAFE(SDL_FreeSurface(secondSurface));
-
-    return texture;
+    return fn::sdl::TexturePtr(SDL_SAFE(SDL_CreateTextureFromSurface(renderer, secondSurface.get())));
 }
 
 std::unordered_set<std::pair<int, int>> CTextureUtil::calculateMask(SDL_Surface *pSurface) {

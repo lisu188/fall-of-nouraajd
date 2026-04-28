@@ -1,6 +1,6 @@
 /*
 fall-of-nouraajd c++ dark fantasy game
-Copyright (C) 2025  Andrzej Lis
+Copyright (C) 2025-2026  Andrzej Lis
 
 This program is free software: you can redistribute it and/or modify
         it under the terms of the GNU General Public License as published by
@@ -21,9 +21,13 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 class CGameEvent;
 
+class CGame;
+
 class CGameObject;
 
 class CGui;
+
+struct Coords;
 
 enum class CTag;
 
@@ -86,6 +90,31 @@ template <typename F>
 concept FilePredicate = std::predicate<F, std::string>;
 
 template <typename F>
+concept PathPassability = std::predicate<const clean_t<F> &, const Coords &>;
+
+template <typename F>
+concept PathWaypoint =
+    std::invocable<const clean_t<F> &, const Coords &> &&
+    std::same_as<clean_t<std::invoke_result_t<const clean_t<F> &, const Coords &>>, std::pair<bool, Coords>>;
+
+template <typename F>
+concept PathNeighbors =
+    std::invocable<const clean_t<F> &, const Coords &> &&
+    std::ranges::input_range<std::invoke_result_t<const clean_t<F> &, const Coords &>> &&
+    std::convertible_to<clean_t<std::ranges::range_value_t<std::invoke_result_t<const clean_t<F> &, const Coords &>>>,
+                        Coords>;
+
+template <typename F>
+concept PathDistance =
+    std::invocable<const clean_t<F> &, const Coords &, const Coords &> &&
+    std::convertible_to<std::invoke_result_t<const clean_t<F> &, const Coords &, const Coords &>, double>;
+
+template <typename F>
+concept PathStepCost =
+    std::invocable<const clean_t<F> &, const Coords &, const Coords &> &&
+    std::convertible_to<std::invoke_result_t<const clean_t<F> &, const Coords &, const Coords &>, int>;
+
+template <typename F>
 concept SdlStatusCallable = std::invocable<F &> && std::same_as<std::invoke_result_t<F &>, int>;
 
 template <typename F>
@@ -94,6 +123,11 @@ concept SdlVoidCallable = std::invocable<F &> && std::same_as<std::invoke_result
 template <typename F>
 concept SdlNullableCallable = std::invocable<F &> && !SdlStatusCallable<F> && !SdlVoidCallable<F>;
 
+template <typename T>
+concept SdlResourcePointer = std::is_pointer_v<clean_t<T>> && requires(clean_t<T> value) {
+    { value == nullptr } -> std::convertible_to<bool>;
+};
+
 template <typename F>
 concept AnimationCallback = std::is_invocable_r_v<bool, F, std::shared_ptr<CGui>, SDL_EventType, int, int, int>;
 
@@ -101,8 +135,26 @@ template <typename F>
 concept TriggerCallback = std::is_invocable_r_v<void, F, std::shared_ptr<CGameObject>, std::shared_ptr<CGameEvent>>;
 
 template <typename T>
+concept PythonCallback = std::same_as<clean_t<T>, pybind11::object> || std::invocable<T &>;
+
+template <typename T>
 concept PythonWrapperBase = GameObjectDerived<T>;
 
 template <typename T>
 concept PythonReturn = std::same_as<T, void> || std::default_initializable<T>;
+
+template <typename T, typename Value>
+concept ExpectedLike = requires(T result) {
+    { result.has_value() } -> std::convertible_to<bool>;
+    { *result } -> std::convertible_to<Value>;
+};
+
+template <typename F, typename Serialized, typename Deserialized>
+concept SerializerCallable =
+    std::invocable<F &, Deserialized> && std::same_as<std::invoke_result_t<F &, Deserialized>, Serialized>;
+
+template <typename F, typename Serialized, typename Deserialized>
+concept DeserializerCallable =
+    std::invocable<F &, std::shared_ptr<CGame>, Serialized> &&
+    std::same_as<std::invoke_result_t<F &, std::shared_ptr<CGame>, Serialized>, Deserialized>;
 } // namespace fn

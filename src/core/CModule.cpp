@@ -48,6 +48,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CLoader.h"
 #include "core/CPythonOverrides.h"
 #include "core/CTags.h"
+#include "core/CUtil.h"
 #include "core/CWrapper.h"
 #include <pybind11/stl_bind.h>
 #include <pybind11/stl.h>
@@ -342,7 +343,7 @@ PYBIND11_MODULE(_game, m) {
         .def(
             "renderObject",
             [](CStaticAnimation &self, const std::shared_ptr<CGui> &gui, int x, int y, int w, int h, int frame_time) {
-                self.renderObject(gui, RECT(x, y, w, h), frame_time);
+                self.renderObject(gui, CUtil::rect(x, y, w, h), frame_time);
             },
             "Render the static animation into a rectangle.");
     py::class_<CDynamicAnimation, CAnimation, std::shared_ptr<CDynamicAnimation>>(m, "CDynamicAnimation",
@@ -351,7 +352,7 @@ PYBIND11_MODULE(_game, m) {
         .def(
             "renderObject",
             [](CDynamicAnimation &self, const std::shared_ptr<CGui> &gui, int x, int y, int w, int h, int frame_time) {
-                self.renderObject(gui, RECT(x, y, w, h), frame_time);
+                self.renderObject(gui, CUtil::rect(x, y, w, h), frame_time);
             },
             "Render the dynamic animation into a rectangle.");
     py::class_<CSelectionBox, CAnimation, std::shared_ptr<CSelectionBox>>(m, "CSelectionBox",
@@ -361,7 +362,7 @@ PYBIND11_MODULE(_game, m) {
         .def(
             "renderObject",
             [](CSelectionBox &self, const std::shared_ptr<CGui> &gui, int x, int y, int w, int h, int frame_time) {
-                self.renderObject(gui, RECT(x, y, w, h), frame_time);
+                self.renderObject(gui, CUtil::rect(x, y, w, h), frame_time);
             },
             "Render the selection outline into a rectangle.");
 
@@ -777,8 +778,6 @@ PYBIND11_MODULE(_game, m) {
     py::class_<CGameTradePanel, CGamePanel, std::shared_ptr<CGameTradePanel>>(m, "CGameTradePanel", "Trade panel.")
         .def("getMarket", &CGameTradePanel::getMarket, "Return market displayed by this panel.");
 
-    py::class_<CGameFightPanel, CGamePanel, std::shared_ptr<CGameFightPanel>>(m, "CGameFightPanel", "Fight panel.")
-        .def("getEnemy", &CGameFightPanel::getEnemy, "Return current enemy creature.")
     py::class_<CGameFightPanel, CGamePanel, std::shared_ptr<CGameFightPanel>>(m, "CGameFightPanel", "Fight panel.")
         .def("getEnemy", &CGameFightPanel::getEnemy, "Return current enemy creature.")
         .def("setEnemy", &CGameFightPanel::setEnemy, "Set current enemy creature.")
