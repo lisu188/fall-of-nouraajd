@@ -2360,6 +2360,39 @@ class GameTest(unittest.TestCase):
         )
 
     @game_test
+    def test_load_saved_map_slot_name_does_not_override_object_type_configs(self):
+        game = load_game_module()
+
+        g = game.CGameLoader.loadGame()
+        game.CGameLoader.startGameWithPlayer(g, "test", "Warrior")
+        save_name = "Sword"
+        save_path = Path.cwd() / "save" / f"{save_name}.json"
+        existing_save = save_path.read_text(encoding="utf-8") if save_path.exists() else None
+
+        try:
+            game.CMapLoader.save(g.getMap(), save_name)
+
+            loaded_game = game.CGameLoader.loadGame()
+            game.CGameLoader.loadSavedGame(loaded_game, save_name)
+
+            sword = loaded_game.createObject("Sword")
+            self.assertIsNotNone(sword)
+            self.assertEqual("CWeapon", sword.getType())
+
+            return True, json.dumps(
+                {
+                    "save_slot": save_name,
+                    "created_type": sword.getType(),
+                },
+                sort_keys=True,
+            )
+        finally:
+            if existing_save is None:
+                save_path.unlink(missing_ok=True)
+            else:
+                save_path.write_text(existing_save, encoding="utf-8")
+
+    @game_test
     def test_map_proxy_cells_remain_populated_after_player_move(self):
         game = load_game_module()
 
