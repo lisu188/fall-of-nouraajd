@@ -65,7 +65,7 @@ struct ConceptCanStep {
 };
 
 struct ConceptWaypoint {
-    std::pair<bool, Coords> operator()(const Coords &) const { return {false, ZERO}; }
+    std::optional<Coords> operator()(const Coords &) const { return std::nullopt; }
 };
 
 struct ConceptNeighbors {
@@ -193,7 +193,7 @@ void test_pathfinder_find_path_without_obstacles() {
     auto can_step = [](const Coords &coords) {
         return coords.x >= 0 && coords.x <= 2 && coords.y >= 0 && coords.y <= 2 && coords.z == 0;
     };
-    auto no_waypoint = [](const Coords &) { return std::pair<bool, Coords>(false, ZERO); };
+    auto no_waypoint = [](const Coords &) -> std::optional<Coords> { return std::nullopt; };
 
     auto path = CPathFinder::findPath(Coords(0, 0, 0), Coords(2, 0, 0), can_step, no_waypoint);
     expect_true(path.size() == 2, "findPath should include each next step until goal");
@@ -206,7 +206,7 @@ void test_pathfinder_find_path_without_obstacles() {
 
 void test_pathfinder_waypoint_and_blocked_goal() {
     auto can_step = [](const Coords &coords) { return coords == Coords(0, 0, 0); };
-    auto no_waypoint = [](const Coords &) { return std::pair<bool, Coords>(false, ZERO); };
+    auto no_waypoint = [](const Coords &) -> std::optional<Coords> { return std::nullopt; };
 
     auto path = CPathFinder::findPath(Coords(0, 0, 0), Coords(2, 0, 0), can_step, no_waypoint);
     expect_true(path.size() == 1, "findPath should return only start when goal is unreachable");
@@ -219,7 +219,7 @@ void test_pathfinder_caches_passability_checks() {
         calls[coords]++;
         return coords == Coords(0, 0, 0) || coords == Coords(1, 0, 0) || coords == Coords(2, 0, 0);
     };
-    auto no_waypoint = [](const Coords &) { return std::pair<bool, Coords>(false, ZERO); };
+    auto no_waypoint = [](const Coords &) -> std::optional<Coords> { return std::nullopt; };
     auto duplicate_neighbors = [](const Coords &coords) {
         if (coords == Coords(0, 0, 0)) {
             return std::vector<Coords>{Coords(1, 0, 0), Coords(1, 0, 0)};
@@ -241,11 +241,11 @@ void test_pathfinder_waypoint_override() {
     auto can_step = [](const Coords &coords) {
         return coords.y == 0 && coords.x >= 0 && coords.x <= 2 && coords.z == 0;
     };
-    auto forced_waypoint = [](const Coords &coords) {
+    auto forced_waypoint = [](const Coords &coords) -> std::optional<Coords> {
         if (coords == Coords(0, 0, 0)) {
-            return std::pair<bool, Coords>(true, Coords(2, 0, 0));
+            return Coords(2, 0, 0);
         }
-        return std::pair<bool, Coords>(false, ZERO);
+        return std::nullopt;
     };
     auto next_step = CPathFinder::findNextStep(Coords(0, 0, 0), Coords(2, 0, 0), can_step, forced_waypoint);
     expect_true(next_step->get() == Coords(2, 0, 0), "findNextStep should allow waypoint override when available");
@@ -289,7 +289,7 @@ void test_toroidal_pathfinder_prefers_wrapped_route() {
         Coords normalized = normalize_toroidal(coords, x_bound, y_bound);
         return normalized.z == 0 && normalized.y == 0;
     };
-    auto no_waypoint = [](const Coords &) { return std::pair<bool, Coords>(false, ZERO); };
+    auto no_waypoint = [](const Coords &) -> std::optional<Coords> { return std::nullopt; };
     auto neighbors = [=](const Coords &coords) { return toroidal_neighbors(coords, x_bound, y_bound); };
     auto distance = [=](const Coords &a, const Coords &b) {
         return toroidal_distance(normalize_toroidal(a, x_bound, y_bound), normalize_toroidal(b, x_bound, y_bound),
@@ -312,7 +312,7 @@ void test_toroidal_pathfinder_wraps_on_both_axes() {
         Coords normalized = normalize_toroidal(coords, x_bound, y_bound);
         return normalized.z == 0;
     };
-    auto no_waypoint = [](const Coords &) { return std::pair<bool, Coords>(false, ZERO); };
+    auto no_waypoint = [](const Coords &) -> std::optional<Coords> { return std::nullopt; };
     auto neighbors = [=](const Coords &coords) { return toroidal_neighbors(coords, x_bound, y_bound); };
     auto distance = [=](const Coords &a, const Coords &b) {
         return toroidal_distance(normalize_toroidal(a, x_bound, y_bound), normalize_toroidal(b, x_bound, y_bound),

@@ -1,6 +1,6 @@
 /*
 fall-of-nouraajd c++ dark fantasy game
-Copyright (C) 2025  Andrzej Lis
+Copyright (C) 2025-2026  Andrzej Lis
 
 This program is free software: you can redistribute it and/or modify
         it under the terms of the GNU General Public License as published by
@@ -47,6 +47,10 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "CWrapper.h"
 #include "core/CGame.h"
 
+#include <algorithm>
+#include <functional>
+#include <iterator>
+
 std::unordered_map<std::string, std::function<std::shared_ptr<CGameObject>()>> *CTypes::builders() {
     static std::unordered_map<std::string, std::function<std::shared_ptr<CGameObject>()>> reg;
     return &reg;
@@ -87,6 +91,62 @@ std::unordered_set<std::type_index> *CTypes::pointer_types() {
 }
 
 namespace {
+template <typename Value> std::set<Value> json_array_to_set(const std::shared_ptr<json> &object) {
+    std::set<Value> values;
+    std::ranges::transform(*object, std::inserter(values, values.end()),
+                           [](const json &value) { return value.get<Value>(); });
+    return values;
+}
+
+CTags json_array_to_tags(const std::shared_ptr<json> &object) {
+    CTags tags;
+    std::ranges::for_each(*object,
+                          [&tags](const json &value) { tags.insert(CTags::fromString(value.get<std::string>())); });
+    return tags;
+}
+
+template <typename Value> std::shared_ptr<json> set_to_json_array(const std::set<Value> &values) {
+    auto arr = std::make_shared<json>(json::array());
+    for (const auto &value : values) {
+        add_arr_member(arr, value);
+    }
+    return arr;
+}
+
+std::shared_ptr<json> tags_to_json_array(const CTags &tags) {
+    auto arr = std::make_shared<json>(json::array());
+    for (CTag tag : tags) {
+        add_arr_member(arr, std::string(CTags::toString(tag)));
+    }
+    return arr;
+}
+
+template <typename Value>
+std::map<std::string, Value> json_object_to_string_key_map(const std::shared_ptr<json> &object) {
+    std::map<std::string, Value> values;
+    for (auto [key, value] : object->items()) {
+        values.emplace(key, value.template get<Value>());
+    }
+    return values;
+}
+
+template <typename Value> std::map<int, Value> json_object_to_int_key_map(const std::shared_ptr<json> &object) {
+    std::map<int, Value> values;
+    for (auto [key, value] : object->items()) {
+        values.emplace(vstd::to_int(key).first, value.template get<Value>());
+    }
+    return values;
+}
+
+template <typename Key, typename Value, typename KeySerializer>
+std::shared_ptr<json> map_to_json_object(const std::map<Key, Value> &values, KeySerializer key_serializer) {
+    auto object = std::make_shared<json>();
+    for (const auto &[key, value] : values) {
+        add_member(object, key_serializer(key), value);
+    }
+    return object;
+}
+
 struct register_all_types {
     register_all_types() {
         // Original types1.cpp
@@ -189,117 +249,54 @@ struct register_all_types {
         }
 
         // Original types5.cpp (custom types)
-        auto array_string_deserialize = [](std::shared_ptr<CGame> game, std::shared_ptr<json> object) {
-            std::set<std::string> objects;
-            for (unsigned int i = 0; i < object->size(); i++) {
-                objects.insert((*object)[i].get<std::string>());
-            }
-            return objects;
+        auto array_string_deserialize = [](std::shared_ptr<CGame>, std::shared_ptr<json> object) {
+            return json_array_to_set<std::string>(object);
         };
 
-        auto array_string_serialize = [](std::set<std::string> set) {
-            std::shared_ptr<json> arr = std::make_shared<json>();
-            for (std::string ob : set) {
-                add_arr_member(arr, ob);
-            }
-            return arr;
+        auto array_string_serialize = [](const std::set<std::string> &set) { return set_to_json_array(set); };
+
+        auto tags_deserialize = [](std::shared_ptr<CGame>, std::shared_ptr<json> object) {
+            return json_array_to_tags(object);
         };
 
-        auto tags_deserialize = [](std::shared_ptr<CGame> game, std::shared_ptr<json> object) {
-            (void)game;
-            CTags tags;
-            for (unsigned int i = 0; i < object->size(); i++) {
-                tags.insert(CTags::fromString((*object)[i].get<std::string>()));
-            }
-            return tags;
+        auto tags_serialize = [](const CTags &tags) { return tags_to_json_array(tags); };
+
+        auto array_int_deserialize = [](std::shared_ptr<CGame>, std::shared_ptr<json> object) {
+            return json_array_to_set<int>(object);
         };
 
-        auto tags_serialize = [](CTags tags) {
-            std::shared_ptr<json> arr = std::make_shared<json>(json::array());
-            for (const auto &tag : tags) {
-                add_arr_member(arr, std::string(CTags::toString(tag)));
-            }
-            return arr;
+        auto array_int_serialize = [](const std::set<int> &set) { return set_to_json_array(set); };
+
+        auto map_string_string_deserialize = [](std::shared_ptr<CGame>, std::shared_ptr<json> object) {
+            return json_object_to_string_key_map<std::string>(object);
         };
 
-        auto array_int_deserialize = [](std::shared_ptr<CGame> game, std::shared_ptr<json> object) {
-            std::set<int> objects;
-            for (unsigned int i = 0; i < object->size(); i++) {
-                objects.insert((*object)[i].get<int>());
-            }
-            return objects;
+        auto map_string_string_serialize = [](const std::map<std::string, std::string> &map) {
+            return map_to_json_object(map, std::identity{});
         };
 
-        auto array_int_serialize = [](std::set<int> set) {
-            std::shared_ptr<json> arr = std::make_shared<json>();
-            for (int ob : set) {
-                add_arr_member(arr, ob);
-            }
-            return arr;
+        auto map_string_int_deserialize = [](std::shared_ptr<CGame>, std::shared_ptr<json> object) {
+            return json_object_to_string_key_map<int>(object);
         };
 
-        auto map_string_string_deserialize = [](std::shared_ptr<CGame> game, std::shared_ptr<json> object) {
-            std::map<std::string, std::string> objects;
-            for (auto [key, value] : object->items()) {
-                objects[key] = value.get<std::string>();
-            }
-            return objects;
+        auto map_string_int_serialize = [](const std::map<std::string, int> &map) {
+            return map_to_json_object(map, std::identity{});
         };
 
-        auto map_string_string_serialize = [](std::map<std::string, std::string> map) {
-            std::shared_ptr<json> arr = std::make_shared<json>();
-            for (auto ob : map) {
-                add_member(arr, ob.first, ob.second);
-            }
-            return arr;
+        auto map_int_string_deserialize = [](std::shared_ptr<CGame>, std::shared_ptr<json> object) {
+            return json_object_to_int_key_map<std::string>(object);
         };
 
-        auto map_string_int_deserialize = [](std::shared_ptr<CGame> game, std::shared_ptr<json> object) {
-            std::map<std::string, int> objects;
-            for (auto [key, value] : object->items()) {
-                objects[key] = value.get<int>();
-            }
-            return objects;
+        auto map_int_string_serialize = [](const std::map<int, std::string> &map) {
+            return map_to_json_object(map, [](int key) { return vstd::str(key); });
         };
 
-        auto map_string_int_serialize = [](std::map<std::string, int> map) {
-            std::shared_ptr<json> arr = std::make_shared<json>();
-            for (auto ob : map) {
-                add_member(arr, ob.first, ob.second);
-            }
-            return arr;
+        auto map_int_int_deserialize = [](std::shared_ptr<CGame>, std::shared_ptr<json> object) {
+            return json_object_to_int_key_map<int>(object);
         };
 
-        auto map_int_string_deserialize = [](std::shared_ptr<CGame> game, std::shared_ptr<json> object) {
-            std::map<int, std::string> objects;
-            for (auto [key, value] : object->items()) {
-                objects[vstd::to_int(key).first] = value.get<std::string>();
-            }
-            return objects;
-        };
-
-        auto map_int_string_serialize = [](std::map<int, std::string> map) {
-            std::shared_ptr<json> arr = std::make_shared<json>();
-            for (auto ob : map) {
-                add_member(arr, vstd::str(ob.first), ob.second);
-            }
-            return arr;
-        };
-
-        auto map_int_int_deserialize = [](std::shared_ptr<CGame> game, std::shared_ptr<json> object) {
-            std::map<int, int> objects;
-            for (auto [key, value] : object->items()) {
-                objects[vstd::to_int(key).first] = value.get<int>();
-            }
-            return objects;
-        };
-
-        auto map_int_int_serialize = [](std::map<int, int> map) {
-            std::shared_ptr<json> arr = std::make_shared<json>();
-            for (auto ob : map) {
-                add_member(arr, vstd::str(ob.first), ob.second);
-            }
-            return arr;
+        auto map_int_int_serialize = [](const std::map<int, int> &map) {
+            return map_to_json_object(map, [](int key) { return vstd::str(key); });
         };
 
         CTypes::register_custom_type<std::set<std::string>>(array_string_serialize, array_string_deserialize);

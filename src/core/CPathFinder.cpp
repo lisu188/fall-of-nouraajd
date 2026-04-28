@@ -89,8 +89,8 @@ void forEachCandidate(const Coords &coords, const Waypoint &waypoint, const Neig
         handle(neighbor);
     }
     auto waypoint_direction = waypoint(coords);
-    if (waypoint_direction.first) {
-        handle(waypoint_direction.second);
+    if (waypoint_direction) {
+        handle(*waypoint_direction);
     }
 }
 

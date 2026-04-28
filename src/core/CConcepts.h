@@ -95,7 +95,7 @@ concept PathPassability = std::predicate<const clean_t<F> &, const Coords &>;
 template <typename F>
 concept PathWaypoint =
     std::invocable<const clean_t<F> &, const Coords &> &&
-    std::same_as<clean_t<std::invoke_result_t<const clean_t<F> &, const Coords &>>, std::pair<bool, Coords>>;
+    std::same_as<clean_t<std::invoke_result_t<const clean_t<F> &, const Coords &>>, std::optional<Coords>>;
 
 template <typename F>
 concept PathNeighbors =

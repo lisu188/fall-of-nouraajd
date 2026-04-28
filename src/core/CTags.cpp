@@ -17,7 +17,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #include "core/CTags.h"
 
+#include <algorithm>
 #include <array>
+#include <iterator>
 #include <stdexcept>
 #include <utility>
 
@@ -35,8 +37,7 @@ const std::array<TagDefinition, 6> TAG_DEFINITIONS = {{
 
 std::string supported_tags_message() {
     std::string message;
-    for (const auto &[tag, name] : TAG_DEFINITIONS) {
-        (void)tag;
+    for (std::string_view name : TAG_DEFINITIONS | std::views::values) {
         if (!message.empty()) {
             message += ", ";
         }
@@ -61,9 +62,7 @@ std::size_t CTags::size() const { return tags.size(); }
 std::vector<std::string> CTags::toStrings() const {
     std::vector<std::string> names;
     names.reserve(tags.size());
-    for (const auto &tag : tags) {
-        names.emplace_back(toString(tag));
-    }
+    std::ranges::transform(tags, std::back_inserter(names), [](CTag tag) { return std::string(toString(tag)); });
     return names;
 }
 
@@ -79,29 +78,27 @@ const std::vector<CTag> &CTags::all() {
     static const std::vector<CTag> tags = []() {
         std::vector<CTag> values;
         values.reserve(TAG_DEFINITIONS.size());
-        for (const auto &[tag, name] : TAG_DEFINITIONS) {
-            (void)name;
-            values.push_back(tag);
-        }
+        std::ranges::transform(TAG_DEFINITIONS, std::back_inserter(values),
+                               [](const TagDefinition &definition) { return definition.first; });
         return values;
     }();
     return tags;
 }
 
 CTag CTags::fromString(std::string_view tag) {
-    for (const auto &[value, name] : TAG_DEFINITIONS) {
-        if (name == tag) {
-            return value;
-        }
+    auto match = std::ranges::find_if(TAG_DEFINITIONS,
+                                      [tag](const TagDefinition &definition) { return definition.second == tag; });
+    if (match != TAG_DEFINITIONS.end()) {
+        return match->first;
     }
     throw std::invalid_argument("Unknown tag '" + std::string(tag) + "'. Supported tags: " + supported_tags_message());
 }
 
 std::string_view CTags::toString(CTag tag) {
-    for (const auto &[value, name] : TAG_DEFINITIONS) {
-        if (value == tag) {
-            return name;
-        }
+    auto match = std::ranges::find_if(TAG_DEFINITIONS,
+                                      [tag](const TagDefinition &definition) { return definition.first == tag; });
+    if (match != TAG_DEFINITIONS.end()) {
+        return match->second;
     }
     throw std::invalid_argument("Unknown tag enum value: " + std::to_string(std::to_underlying(tag)) + ".");
 }

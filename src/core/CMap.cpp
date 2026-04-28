@@ -474,14 +474,14 @@ std::set<std::shared_ptr<CMapObject>> CMap::getObjects() {
 void CMap::dumpPaths(std::string path) {
     CPathFinder::saveMap(
         getPlayer()->getCoords(), [this](auto coords) { return this->canStep(coords); }, path,
-        [this](auto coords) {
+        [this](auto coords) -> std::optional<Coords> {
             for (auto ob : getObjectsAtCoords(coords)) {
                 if (ob->getBoolProperty("waypoint")) {
-                    return std::make_pair(true, Coords(ob->getNumericProperty("x"), ob->getNumericProperty("y"),
-                                                       ob->getNumericProperty("z")));
+                    return Coords(ob->getNumericProperty("x"), ob->getNumericProperty("y"),
+                                  ob->getNumericProperty("z"));
                 }
             }
-            return std::make_pair(false, ZERO);
+            return std::nullopt;
         },
         [this](auto coords) { return this->getAdjacentCoords(coords); },
         [this](auto from, auto to) { return this->getDistance(from, to); });
@@ -589,7 +589,7 @@ std::vector<Coords> CMap::getAdjacentCoords(Coords coords, bool includeSelf) con
 
     auto add = [&adjacent, this](Coords candidate) {
         candidate = normalizeCoords(candidate);
-        if (std::find(adjacent.begin(), adjacent.end(), candidate) == adjacent.end()) {
+        if (std::ranges::find(adjacent, candidate) == adjacent.end()) {
             adjacent.push_back(candidate);
         }
     };
