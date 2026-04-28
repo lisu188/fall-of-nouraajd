@@ -37,8 +37,12 @@ template <fn::CoordsLike CoordsLike> std::list<Coords> near_coords_with(const Co
 }
 
 inline std::vector<Coords> default_neighbors(const Coords &coords) {
-    auto list = near_coords(coords);
-    return std::vector<Coords>(list.begin(), list.end());
+    std::vector<Coords> list;
+    list.reserve(CARDINAL_DIRECTIONS.size());
+    for (const auto &offset : CARDINAL_DIRECTIONS) {
+        list.push_back(coords + offset);
+    }
+    return list;
 }
 
 class CPathFinder {
