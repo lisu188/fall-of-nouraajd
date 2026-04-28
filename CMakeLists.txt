@@ -99,6 +99,7 @@ function(configure_fon_cpp_target target_name)
         target_compile_options(${target_name} PRIVATE
             -include cmath
             -Wall
+            -fvisibility=hidden
             $<$<CONFIG:Release>:-O3>
             $<$<CONFIG:Release>:-s>
             $<$<CONFIG:Debug>:-g3>

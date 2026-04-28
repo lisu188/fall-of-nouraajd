@@ -26,12 +26,7 @@ std::shared_ptr<SDL_Rect> CUtil::boxInBox(const std::shared_ptr<SDL_Rect> &out, 
 }
 
 std::shared_ptr<SDL_Rect> CUtil::rect(int x, int y, int w, int h) {
-    std::shared_ptr<SDL_Rect> ret = std::make_shared<SDL_Rect>();
-    ret->x = x;
-    ret->y = y;
-    ret->w = w;
-    ret->h = h;
-    return ret;
+    return std::make_shared<SDL_Rect>(SDL_Rect{x, y, w, h});
 }
 
 std::shared_ptr<SDL_Rect> CUtil::centeredRect(int centerX, int centerY, int w, int h) {

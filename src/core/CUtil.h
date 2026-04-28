@@ -98,13 +98,11 @@ class CUtil {
 
     template <fn::FilePredicate Predicate> static std::set<std::string> findFiles(std::string dir, Predicate pred) {
         std::set<std::string> retValue;
-        std::filesystem::directory_iterator iterator(dir), end;
-        while (iterator != end) {
-            auto path = iterator->path().string();
+        for (const auto &entry : std::filesystem::directory_iterator(dir)) {
+            auto path = entry.path().string();
             if (pred(path)) {
-                retValue.insert(path);
+                retValue.insert(std::move(path));
             }
-            iterator++;
         }
         return retValue;
     }
