@@ -1,6 +1,6 @@
 /*
 fall-of-nouraajd c++ dark fantasy game
-Copyright (C) 2025  Andrzej Lis
+Copyright (C) 2025-2026  Andrzej Lis
 
 This program is free software: you can redistribute it and/or modify
         it under the terms of the GNU General Public License as published by
@@ -65,12 +65,13 @@ class CTypes {
         };
     }
 
-    template <typename Serialized, typename Deserialized>
-    static void
-    register_custom_serializer(std::function<Serialized(Deserialized)> serialize,
-                               std::function<Deserialized(std::shared_ptr<CGame>, Serialized)> deserialize) {
+    template <typename Serialized, typename Deserialized, fn::SerializerCallable<Serialized, Deserialized> Serialize,
+              fn::DeserializerCallable<Serialized, Deserialized> Deserialize>
+    static void register_custom_serializer(Serialize serialize, Deserialize deserialize) {
         (*serializers())[vstd::type_pair<Serialized, Deserialized>()] =
-            std::make_shared<CCustomSerializer<Serialized, Deserialized>>(serialize, deserialize);
+            std::make_shared<CCustomSerializer<Serialized, Deserialized>>(
+                std::function<Serialized(Deserialized)>(std::move(serialize)),
+                std::function<Deserialized(std::shared_ptr<CGame>, Serialized)>(std::move(deserialize)));
     }
 
     template <fn::MetaRegisteredGameObject T> static void register_builder() {
@@ -128,10 +129,10 @@ class CTypes {
         register_any_cast<T, T>();
     }
 
-    template <typename T>
-    static void register_custom_type(std::function<std::shared_ptr<json>(T)> serialize,
-                                     std::function<T(std::shared_ptr<CGame>, std::shared_ptr<json>)> deserialize) {
-        register_custom_serializer(serialize, deserialize);
+    template <typename T, fn::SerializerCallable<std::shared_ptr<json>, T> Serialize,
+              fn::DeserializerCallable<std::shared_ptr<json>, T> Deserialize>
+    static void register_custom_type(Serialize serialize, Deserialize deserialize) {
+        register_custom_serializer<std::shared_ptr<json>, T>(std::move(serialize), std::move(deserialize));
         register_custom_setter<T>();
     }
 
