@@ -199,7 +199,7 @@ std::shared_ptr<vstd::future<Coords, void>> CNpcRandomController::control(std::s
                     self->path = CPathFinder::findPath(
                         creature->getCoords(), candidate,
                         [creature](const Coords &c) { return creature->getMap()->canStep(c); },
-                        [](auto) { return std::make_pair(false, ZERO); },
+                        [](auto) -> std::optional<Coords> { return std::nullopt; },
                         [creature](const Coords &coords) { return creature->getMap()->getAdjacentCoords(coords); },
                         [creature](const Coords &from, const Coords &to) {
                             return creature->getMap()->getDistance(from, to);
@@ -418,14 +418,14 @@ bool CPlayerController::canContinue(std::shared_ptr<CPlayer> player) { return ha
 std::vector<Coords> CPlayerController::calculatePath(std::shared_ptr<CPlayer> player) {
     return CPathFinder::findPath(
         player->getCoords(), *target, [player](Coords coords) { return player->getMap()->canStep(coords); },
-        [player](auto coords) {
+        [player](auto coords) -> std::optional<Coords> {
             for (auto ob : player->getMap()->getObjectsAtCoords(coords)) {
                 if (ob->getBoolProperty("waypoint")) {
-                    return std::make_pair(true, Coords(ob->getNumericProperty("x"), ob->getNumericProperty("y"),
-                                                       ob->getNumericProperty("z")));
+                    return Coords(ob->getNumericProperty("x"), ob->getNumericProperty("y"),
+                                  ob->getNumericProperty("z"));
                 }
             }
-            return std::make_pair(false, ZERO);
+            return std::nullopt;
         },
         [player](const Coords &coords) { return player->getMap()->getAdjacentCoords(coords); },
         [player](const Coords &from, const Coords &to) { return player->getMap()->getDistance(from, to); });

@@ -49,6 +49,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <map>
 #include <memory>
 #include <mutex>
+#include <optional>
 #include <queue>
 #include <random>
 #include <ranges>
