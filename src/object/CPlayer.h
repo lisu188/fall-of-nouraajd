@@ -22,34 +22,32 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 class CQuest;
 
 class CPlayer : public CCreature {
-  V_META(CPlayer, CCreature,
-         V_PROPERTY(CPlayer, std::set<std::shared_ptr<CQuest>>, quests,
-                    getQuests, setQuests),
-         V_PROPERTY(CPlayer, std::set<std::shared_ptr<CQuest>>, completedQuests,
-                    getCompletedQuests, setCompletedQuests))
+    V_META(CPlayer, CCreature, V_PROPERTY(CPlayer, std::set<std::shared_ptr<CQuest>>, quests, getQuests, setQuests),
+           V_PROPERTY(CPlayer, std::set<std::shared_ptr<CQuest>>, completedQuests, getCompletedQuests,
+                      setCompletedQuests))
 
-public:
-  CPlayer() = default;
+  public:
+    CPlayer() = default;
 
-  ~CPlayer() override = default;
+    ~CPlayer() override = default;
 
-  void addQuest(std::string questName);
+    void addQuest(std::string questName);
 
-  std::set<std::shared_ptr<CQuest>> getQuests();
+    std::set<std::shared_ptr<CQuest>> getQuests();
 
-  void setQuests(std::set<std::shared_ptr<CQuest>> quests);
+    void setQuests(std::set<std::shared_ptr<CQuest>> quests);
 
-  std::set<std::shared_ptr<CQuest>> getCompletedQuests();
+    std::set<std::shared_ptr<CQuest>> getCompletedQuests();
 
-  void setCompletedQuests(std::set<std::shared_ptr<CQuest>> completedQuests);
+    void setCompletedQuests(std::set<std::shared_ptr<CQuest>> completedQuests);
 
-  void checkQuests();
+    void checkQuests();
 
-  void incTurn();
+    void incTurn();
 
-private:
-  std::set<std::shared_ptr<CQuest>> quests;
-  std::set<std::shared_ptr<CQuest>> completedQuests;
+  private:
+    std::set<std::shared_ptr<CQuest>> quests;
+    std::set<std::shared_ptr<CQuest>> completedQuests;
 
-  int turn = 0;
+    int turn = 0;
 };

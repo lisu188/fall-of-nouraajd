@@ -21,48 +21,38 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "object/CPlayer.h"
 
 class CGameInventoryPanel : public CGamePanel {
-  V_META(CGameInventoryPanel, CGamePanel,
-         V_METHOD(CGameInventoryPanel, inventoryCollection,
-                  CListView::collection_pointer, std::shared_ptr<CGui>),
-         V_METHOD(CGameInventoryPanel, inventoryCallback, void,
-                  std::shared_ptr<CGui>, int, std::shared_ptr<CGameObject>),
-         V_METHOD(CGameInventoryPanel, inventoryRightClickCallback, bool,
-                  std::shared_ptr<CGui>, int, std::shared_ptr<CGameObject>),
-         V_METHOD(CGameInventoryPanel, inventorySelect, bool,
-                  std::shared_ptr<CGui>, int, std::shared_ptr<CGameObject>),
-         V_METHOD(CGameInventoryPanel, equippedCollection,
-                  CListView::collection_pointer, std::shared_ptr<CGui>),
-         V_METHOD(CGameInventoryPanel, equippedCallback, void,
-                  std::shared_ptr<CGui>, int, std::shared_ptr<CGameObject>),
-         V_METHOD(CGameInventoryPanel, equippedSelect, bool,
-                  std::shared_ptr<CGui>, int, std::shared_ptr<CGameObject>))
+    V_META(
+        CGameInventoryPanel, CGamePanel,
+        V_METHOD(CGameInventoryPanel, inventoryCollection, CListView::collection_pointer, std::shared_ptr<CGui>),
+        V_METHOD(CGameInventoryPanel, inventoryCallback, void, std::shared_ptr<CGui>, int,
+                 std::shared_ptr<CGameObject>),
+        V_METHOD(CGameInventoryPanel, inventoryRightClickCallback, bool, std::shared_ptr<CGui>, int,
+                 std::shared_ptr<CGameObject>),
+        V_METHOD(CGameInventoryPanel, inventorySelect, bool, std::shared_ptr<CGui>, int, std::shared_ptr<CGameObject>),
+        V_METHOD(CGameInventoryPanel, equippedCollection, CListView::collection_pointer, std::shared_ptr<CGui>),
+        V_METHOD(CGameInventoryPanel, equippedCallback, void, std::shared_ptr<CGui>, int, std::shared_ptr<CGameObject>),
+        V_METHOD(CGameInventoryPanel, equippedSelect, bool, std::shared_ptr<CGui>, int, std::shared_ptr<CGameObject>))
 
-public:
-  CGameInventoryPanel();
+  public:
+    CGameInventoryPanel();
 
-  CListView::collection_pointer inventoryCollection(std::shared_ptr<CGui> gui);
+    CListView::collection_pointer inventoryCollection(std::shared_ptr<CGui> gui);
 
-  void inventoryCallback(std::shared_ptr<CGui> gui, int index,
-                         std::shared_ptr<CGameObject> _newSelection);
+    void inventoryCallback(std::shared_ptr<CGui> gui, int index, std::shared_ptr<CGameObject> _newSelection);
 
-  bool inventoryRightClickCallback(std::shared_ptr<CGui> gui, int index,
-                                   std::shared_ptr<CGameObject> _newSelection);
+    bool inventoryRightClickCallback(std::shared_ptr<CGui> gui, int index, std::shared_ptr<CGameObject> _newSelection);
 
-  bool inventorySelect(std::shared_ptr<CGui> gui, int index,
-                       std::shared_ptr<CGameObject> object);
+    bool inventorySelect(std::shared_ptr<CGui> gui, int index, std::shared_ptr<CGameObject> object);
 
-  CListView::collection_pointer equippedCollection(std::shared_ptr<CGui> gui);
+    CListView::collection_pointer equippedCollection(std::shared_ptr<CGui> gui);
 
-  void equippedCallback(std::shared_ptr<CGui> gui, int index,
-                        std::shared_ptr<CGameObject> _newSelection);
+    void equippedCallback(std::shared_ptr<CGui> gui, int index, std::shared_ptr<CGameObject> _newSelection);
 
-  bool equippedSelect(std::shared_ptr<CGui> gui, int index,
-                      std::shared_ptr<CGameObject> object);
+    bool equippedSelect(std::shared_ptr<CGui> gui, int index, std::shared_ptr<CGameObject> object);
 
-private:
-  std::weak_ptr<CItem> selectedInventory;
-  std::weak_ptr<CItem> selectedEquipped;
+  private:
+    std::weak_ptr<CItem> selectedInventory;
+    std::weak_ptr<CItem> selectedEquipped;
 
-  bool mouseEvent(std::shared_ptr<CGui> sharedPtr, SDL_EventType type,
-                  int button, int x, int y) override;
+    bool mouseEvent(std::shared_ptr<CGui> sharedPtr, SDL_EventType type, int button, int x, int y) override;
 };

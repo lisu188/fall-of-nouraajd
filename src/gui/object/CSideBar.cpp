@@ -20,41 +20,32 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "gui/CGui.h"
 #include "gui/panel/CGamePanel.h"
 
-void CSideBar::clickInventory(std::shared_ptr<CGui> gui) {
-  flipPanel(gui, "inventoryPanel");
-}
+void CSideBar::clickInventory(std::shared_ptr<CGui> gui) { flipPanel(gui, "inventoryPanel"); }
 
-void CSideBar::clickJournal(std::shared_ptr<CGui> gui) {
-  flipPanel(gui, "questPanel");
-}
+void CSideBar::clickJournal(std::shared_ptr<CGui> gui) { flipPanel(gui, "questPanel"); }
 
-void CSideBar::clickCharacter(std::shared_ptr<CGui> gui) {
-  flipPanel(gui, "characterPanel");
-}
+void CSideBar::clickCharacter(std::shared_ptr<CGui> gui) { flipPanel(gui, "characterPanel"); }
 
 std::shared_ptr<CMapStringString> CSideBar::getPanelKeys() { return panelKeys; }
 
-void CSideBar::setPanelKeys(std::shared_ptr<CMapStringString> _panelKeys) {
-  this->panelKeys = _panelKeys;
-}
+void CSideBar::setPanelKeys(std::shared_ptr<CMapStringString> _panelKeys) { this->panelKeys = _panelKeys; }
 
 void CSideBar::flipPanel(std::shared_ptr<CGui> gui, std::string panel) {
-  for (auto val : panelKeys->getValues()) {
-    if (val.second == panel) {
-      gui->getGame()->getGuiHandler()->flipPanel(panel, val.first);
+    for (auto val : panelKeys->getValues()) {
+        if (val.second == panel) {
+            gui->getGame()->getGuiHandler()->flipPanel(panel, val.first);
+        }
     }
-  }
 }
 
-bool CSideBar::keyboardEvent(std::shared_ptr<CGui> sharedPtr,
-                             SDL_EventType type, SDL_Keycode i) {
-  if (type == SDL_KEYDOWN) {
-    for (auto val : panelKeys->getValues()) {
-      if (i == val.first[0]) {
-        flipPanel(sharedPtr, val.second);
-        return true;
-      }
+bool CSideBar::keyboardEvent(std::shared_ptr<CGui> sharedPtr, SDL_EventType type, SDL_Keycode i) {
+    if (type == SDL_KEYDOWN) {
+        for (auto val : panelKeys->getValues()) {
+            if (i == val.first[0]) {
+                flipPanel(sharedPtr, val.second);
+                return true;
+            }
+        }
     }
-  }
-  return false;
+    return false;
 }

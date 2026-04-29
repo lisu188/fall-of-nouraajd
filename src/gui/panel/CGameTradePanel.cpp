@@ -21,152 +21,123 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "gui/CTextManager.h"
 #include "gui/CTextureCache.h"
 
-CListView::collection_pointer
-CGameTradePanel::inventoryCollection(std::shared_ptr<CGui> gui) {
-  return std::make_shared<CListView::collection_type>(
-      vstd::cast<CListView::collection_type>(
-          gui->getGame()->getMap()->getPlayer()->getItems()));
+CListView::collection_pointer CGameTradePanel::inventoryCollection(std::shared_ptr<CGui> gui) {
+    return std::make_shared<CListView::collection_type>(
+        vstd::cast<CListView::collection_type>(gui->getGame()->getMap()->getPlayer()->getItems()));
 }
 
-void CGameTradePanel::inventoryCallback(
-    std::shared_ptr<CGui> gui, int index,
-    std::shared_ptr<CGameObject> _newSelection) {
-  this->selectInventory(vstd::cast<CItem>(_newSelection));
-  refreshViews();
-}
-
-bool CGameTradePanel::inventorySelect(std::shared_ptr<CGui> gui, int index,
-                                      std::shared_ptr<CGameObject> object) {
-  return vstd::ctn(selectedInventory, object,
-                   [](auto a, auto b) { return a == b.lock(); });
-}
-
-CListView::collection_pointer
-CGameTradePanel::marketCollection(std::shared_ptr<CGui> gui) {
-  return std::make_shared<CListView::collection_type>(
-      vstd::cast<CListView::collection_type>(market->getItems()));
-}
-
-void CGameTradePanel::marketCallback(
-    std::shared_ptr<CGui> gui, int index,
-    std::shared_ptr<CGameObject> _newSelection) {
-  this->selectMarket(vstd::cast<CItem>(_newSelection));
-  refreshViews();
-}
-
-bool CGameTradePanel::marketSelect(std::shared_ptr<CGui> gui, int index,
-                                   std::shared_ptr<CGameObject> object) {
-  return vstd::ctn(selectedMarket, object,
-                   [](auto a, auto b) { return a == b.lock(); });
-}
-
-bool CGameTradePanel::mouseEvent(std::shared_ptr<CGui> gui,
-                                 SDL_EventType type, int button, int x,
-                                 int y) {
-  if (type == SDL_MOUSEBUTTONDOWN && button == SDL_BUTTON_RIGHT) {
-    selectedInventory.clear();
-    selectedMarket.clear();
+void CGameTradePanel::inventoryCallback(std::shared_ptr<CGui> gui, int index,
+                                        std::shared_ptr<CGameObject> _newSelection) {
+    this->selectInventory(vstd::cast<CItem>(_newSelection));
     refreshViews();
-  }
-  return true;
 }
 
-bool CGameTradePanel::keyboardEvent(std::shared_ptr<CGui> gui,
-                                    SDL_EventType type, SDL_Keycode i) {
-  if (type == SDL_KEYDOWN) {
-    // TODO: get rid of this
-    if (i == SDLK_SPACE) {
-      close();
+bool CGameTradePanel::inventorySelect(std::shared_ptr<CGui> gui, int index, std::shared_ptr<CGameObject> object) {
+    return vstd::ctn(selectedInventory, object, [](auto a, auto b) { return a == b.lock(); });
+}
+
+CListView::collection_pointer CGameTradePanel::marketCollection(std::shared_ptr<CGui> gui) {
+    return std::make_shared<CListView::collection_type>(vstd::cast<CListView::collection_type>(market->getItems()));
+}
+
+void CGameTradePanel::marketCallback(std::shared_ptr<CGui> gui, int index, std::shared_ptr<CGameObject> _newSelection) {
+    this->selectMarket(vstd::cast<CItem>(_newSelection));
+    refreshViews();
+}
+
+bool CGameTradePanel::marketSelect(std::shared_ptr<CGui> gui, int index, std::shared_ptr<CGameObject> object) {
+    return vstd::ctn(selectedMarket, object, [](auto a, auto b) { return a == b.lock(); });
+}
+
+bool CGameTradePanel::mouseEvent(std::shared_ptr<CGui> gui, SDL_EventType type, int button, int x, int y) {
+    if (type == SDL_MOUSEBUTTONDOWN && button == SDL_BUTTON_RIGHT) {
+        selectedInventory.clear();
+        selectedMarket.clear();
+        refreshViews();
     }
-  }
-  return true;
+    return true;
+}
+
+bool CGameTradePanel::keyboardEvent(std::shared_ptr<CGui> gui, SDL_EventType type, SDL_Keycode i) {
+    if (type == SDL_KEYDOWN) {
+        // TODO: get rid of this
+        if (i == SDLK_SPACE) {
+            close();
+        }
+    }
+    return true;
 }
 
 CGameTradePanel::CGameTradePanel() {}
 
 void CGameTradePanel::finalizeSell(std::shared_ptr<CGui> gui) {
-  if (!selectedInventory.empty() &&
-      gui->getGame()->getGuiHandler()->showQuestion(
-          "Do You want to sell these items: " +
-          vstd::join(getItemNames(selectedInventory), ", "))) {
-    for (auto item : selectedInventory) {
-      market->buyItem(gui->getGame()->getMap()->getPlayer(), item.lock());
+    if (!selectedInventory.empty() &&
+        gui->getGame()->getGuiHandler()->showQuestion("Do You want to sell these items: " +
+                                                      vstd::join(getItemNames(selectedInventory), ", "))) {
+        for (auto item : selectedInventory) {
+            market->buyItem(gui->getGame()->getMap()->getPlayer(), item.lock());
+        }
+        selectedInventory.clear();
     }
-    selectedInventory.clear();
-  }
 }
 
 void CGameTradePanel::finalizeBuy(std::shared_ptr<CGui> gui) {
-  if (getTotalBuyCost() > gui->getGame()->getMap()->getPlayer()->getGold()) {
-    gui->getGame()->getGuiHandler()->showInfo(
-        "You cannot afford all selected items!");
-  } else {
-    if (!selectedMarket.empty() &&
-        gui->getGame()->getGuiHandler()->showQuestion(
-            "Do You want to buy these items: " +
-            vstd::join(getItemNames(selectedMarket), ", "))) {
-      for (auto item : selectedMarket) {
-        market->sellItem(gui->getGame()->getMap()->getPlayer(), item.lock());
-      }
-      selectedMarket.clear();
+    if (getTotalBuyCost() > gui->getGame()->getMap()->getPlayer()->getGold()) {
+        gui->getGame()->getGuiHandler()->showInfo("You cannot afford all selected items!");
+    } else {
+        if (!selectedMarket.empty() &&
+            gui->getGame()->getGuiHandler()->showQuestion("Do You want to buy these items: " +
+                                                          vstd::join(getItemNames(selectedMarket), ", "))) {
+            for (auto item : selectedMarket) {
+                market->sellItem(gui->getGame()->getMap()->getPlayer(), item.lock());
+            }
+            selectedMarket.clear();
+        }
     }
-  }
 }
 
-std::set<std::string>
-CGameTradePanel::getItemNames(std::list<std::weak_ptr<CItem>> items) {
-  return vstd::functional::map<std::set<std::string>>(
-      items, [](std::weak_ptr<CItem> ob) { return ob.lock()->getLabel(); });
+std::set<std::string> CGameTradePanel::getItemNames(std::list<std::weak_ptr<CItem>> items) {
+    return vstd::functional::map<std::set<std::string>>(items,
+                                                        [](std::weak_ptr<CItem> ob) { return ob.lock()->getLabel(); });
 }
 
 int CGameTradePanel::getTotalSellCost() {
-  return vstd::functional::sum<int>(selectedInventory, [this](auto item) {
-    return market->getSellCost(item.lock());
-  });
+    return vstd::functional::sum<int>(selectedInventory,
+                                      [this](auto item) { return market->getSellCost(item.lock()); });
 }
 
 int CGameTradePanel::getTotalBuyCost() {
-  return vstd::functional::sum<int>(selectedMarket, [this](auto item) {
-    return market->getBuyCost(item.lock());
-  });
+    return vstd::functional::sum<int>(selectedMarket, [this](auto item) { return market->getBuyCost(item.lock()); });
 }
 
 void CGameTradePanel::selectMarket(std::weak_ptr<CItem> selection) {
-  if (selection.lock()) {
-    if (vstd::ctn(selectedMarket, selection,
-                  [](auto a, auto b) { return a.lock() == b.lock(); })) {
-      vstd::erase(selectedMarket, selection,
-                  [](auto a, auto b) { return a.lock() == b.lock(); });
-    } else {
-      selectedMarket.push_back(selection);
+    if (selection.lock()) {
+        if (vstd::ctn(selectedMarket, selection, [](auto a, auto b) { return a.lock() == b.lock(); })) {
+            vstd::erase(selectedMarket, selection, [](auto a, auto b) { return a.lock() == b.lock(); });
+        } else {
+            selectedMarket.push_back(selection);
+        }
     }
-  }
 }
 
 void CGameTradePanel::selectInventory(std::weak_ptr<CItem> selection) {
-  if (selection.lock() && !selection.lock()->hasTag(CTag::Quest)) {
-    if (vstd::ctn(selectedInventory, selection,
-                  [](auto a, auto b) { return a.lock() == b.lock(); })) {
-      vstd::erase(selectedInventory, selection,
-                  [](auto a, auto b) { return a.lock() == b.lock(); });
-    } else {
-      selectedInventory.push_back(selection);
+    if (selection.lock() && !selection.lock()->hasTag(CTag::Quest)) {
+        if (vstd::ctn(selectedInventory, selection, [](auto a, auto b) { return a.lock() == b.lock(); })) {
+            vstd::erase(selectedInventory, selection, [](auto a, auto b) { return a.lock() == b.lock(); });
+        } else {
+            selectedInventory.push_back(selection);
+        }
     }
-  }
 }
 
-void CGameTradePanel::setMarket(std::shared_ptr<CMarket> _market) {
-  market = _market;
-}
+void CGameTradePanel::setMarket(std::shared_ptr<CMarket> _market) { market = _market; }
 
 std::shared_ptr<CMarket> CGameTradePanel::getMarket() { return market; }
 
-void CGameTradePanel::renderSellCost(std::shared_ptr<CGui> gui,
-                                     std::shared_ptr<SDL_Rect> pRect, int i) {
-  gui->getTextManager()->drawTextCentered(vstd::str(getTotalSellCost()), pRect);
+void CGameTradePanel::renderSellCost(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> pRect, int i) {
+    gui->getTextManager()->drawTextCentered(vstd::str(getTotalSellCost()), pRect);
 }
 
-void CGameTradePanel::renderBuyCost(std::shared_ptr<CGui> gui,
-                                    std::shared_ptr<SDL_Rect> pRect, int i) {
-  gui->getTextManager()->drawTextCentered(vstd::str(getTotalBuyCost()), pRect);
+void CGameTradePanel::renderBuyCost(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> pRect, int i) {
+    gui->getTextManager()->drawTextCentered(vstd::str(getTotalBuyCost()), pRect);
 }

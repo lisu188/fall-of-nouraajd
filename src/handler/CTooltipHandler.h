@@ -21,6 +21,6 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 class CTooltipHandler : public CGameObject {
 
-public:
-  static std::string buildTooltip(std::shared_ptr<CGameObject> object);
+  public:
+    static std::string buildTooltip(std::shared_ptr<CGameObject> object);
 };

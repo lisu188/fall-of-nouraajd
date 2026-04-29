@@ -21,20 +21,19 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 class CEvent : public CMapObject, public Visitable {
 
-  V_META(CEvent, CMapObject,
-         V_PROPERTY(CEvent, bool, enabled, isEnabled, setEnabled))
+    V_META(CEvent, CMapObject, V_PROPERTY(CEvent, bool, enabled, isEnabled, setEnabled))
 
-public:
-  CEvent();
+  public:
+    CEvent();
 
-  bool isEnabled();
+    bool isEnabled();
 
-  void setEnabled(bool enabled);
+    void setEnabled(bool enabled);
 
-  virtual void onEnter(std::shared_ptr<CGameEvent>) override;
+    virtual void onEnter(std::shared_ptr<CGameEvent>) override;
 
-  virtual void onLeave(std::shared_ptr<CGameEvent>) override;
+    virtual void onLeave(std::shared_ptr<CGameEvent>) override;
 
-private:
-  bool enabled = true;
+  private:
+    bool enabled = true;
 };

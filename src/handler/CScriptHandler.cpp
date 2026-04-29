@@ -19,84 +19,71 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <pybind11/eval.h>
 
 CScriptHandler::CScriptHandler() {
-  main_module = pybind11::module::import("__main__");
-  main_namespace = main_module.attr("__dict__");
+    main_module = pybind11::module::import("__main__");
+    main_namespace = main_module.attr("__dict__");
 }
 
 CScriptHandler::~CScriptHandler() = default;
 
-void CScriptHandler::execute_script(std::string script,
-                                    pybind11::object name_space) {
-  auto target = name_space.is_none() ? main_namespace : name_space;
-  pybind11::exec(script + "\n", target, target);
+void CScriptHandler::execute_script(std::string script, pybind11::object name_space) {
+    auto target = name_space.is_none() ? main_namespace : name_space;
+    pybind11::exec(script + "\n", target, target);
 }
 
-std::string
-CScriptHandler::build_command(std::initializer_list<std::string> list) {
-  std::string command;
-  unsigned int pos = 0;
-  for (auto it = list.begin(); it != list.end(); it++, pos++) {
-    std::string part = vstd::replace(*it, "\"", "\\\"");
-    if (pos == 0) {
-      command.append(part);
-      command.append("(");
-    } else {
-      command.append("\"");
-      command.append(part);
-      command.append("\"");
-      if (pos < list.size() - 1) {
-        command.append(",");
-      } else {
-        command.append(")");
-      }
+std::string CScriptHandler::build_command(std::initializer_list<std::string> list) {
+    std::string command;
+    unsigned int pos = 0;
+    for (auto it = list.begin(); it != list.end(); it++, pos++) {
+        std::string part = vstd::replace(*it, "\"", "\\\"");
+        if (pos == 0) {
+            command.append(part);
+            command.append("(");
+        } else {
+            command.append("\"");
+            command.append(part);
+            command.append("\"");
+            if (pos < list.size() - 1) {
+                command.append(",");
+            } else {
+                command.append(")");
+            }
+        }
     }
-  }
-  return command;
+    return command;
 }
 
-void CScriptHandler::add_function(std::string function_name,
-                                  std::string function_code,
+void CScriptHandler::add_function(std::string function_name, std::string function_code,
                                   std::initializer_list<std::string> args) {
-  std::string def =
-      vstd::join({"def ", function_name, "(", vstd::join(args, ","), "):"}, "");
-  std::stringstream stream;
-  stream << def << std::endl;
-  for (std::string line : vstd::split(function_code, '\n')) {
-    stream << "\t" << line << std::endl;
-  }
-  try {
-    PY_UNSAFE(execute_script(stream.str()));
-  } catch (...) {
-    add_function(function_name, "print('Compilation failure!')", args);
-  }
+    std::string def = vstd::join({"def ", function_name, "(", vstd::join(args, ","), "):"}, "");
+    std::stringstream stream;
+    stream << def << std::endl;
+    for (std::string line : vstd::split(function_code, '\n')) {
+        stream << "\t" << line << std::endl;
+    }
+    try {
+        PY_UNSAFE(execute_script(stream.str()));
+    } catch (...) {
+        add_function(function_name, "print('Compilation failure!')", args);
+    }
 }
 
-void CScriptHandler::add_class(std::string class_name,
-                               std::string function_code,
+void CScriptHandler::add_class(std::string class_name, std::string function_code,
                                std::initializer_list<std::string> bases) {
-  std::string def =
-      vstd::join({"class ", class_name, "(", vstd::join(bases, ","), "):"}, "");
-  std::stringstream stream;
-  stream << def << std::endl;
-  for (std::string line : vstd::split(function_code, '\n')) {
-    stream << "\t" << line << std::endl;
-  }
-  execute_script(stream.str());
+    std::string def = vstd::join({"class ", class_name, "(", vstd::join(bases, ","), "):"}, "");
+    std::stringstream stream;
+    stream << def << std::endl;
+    for (std::string line : vstd::split(function_code, '\n')) {
+        stream << "\t" << line << std::endl;
+    }
+    execute_script(stream.str());
 }
 
-std::string
-CScriptHandler::add_class(std::string function_code,
-                          std::initializer_list<std::string> bases) {
-  std::string name =
-      vstd::join({"CLASS", vstd::to_hex_hash(function_code)}, "");
-  add_class(name, function_code, bases);
-  return name;
+std::string CScriptHandler::add_class(std::string function_code, std::initializer_list<std::string> bases) {
+    std::string name = vstd::join({"CLASS", vstd::to_hex_hash(function_code)}, "");
+    add_class(name, function_code, bases);
+    return name;
 }
 
-void CScriptHandler::import(std::string name) {
-  execute_script(vstd::join({"import", name}, " "));
-}
+void CScriptHandler::import(std::string name) { execute_script(vstd::join({"import", name}, " ")); }
 
-void CScriptHandler::execute_command(std::initializer_list<std::string> list) {
-  execute_script(build_command(list));
-}
+void CScriptHandler::execute_command(std::initializer_list<std::string> list) { execute_script(build_command(list)); }

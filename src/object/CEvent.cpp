@@ -27,17 +27,15 @@ bool CEvent::isEnabled() { return enabled; }
 void CEvent::setEnabled(bool enabled) { this->enabled = enabled; }
 
 void CEvent::onEnter(std::shared_ptr<CGameEvent> event) {
-  pybind11::gil_scoped_acquire gil;
-  if (auto override = CPythonOverrides::find_override(this, "onEnter");
-      !override.is_none()) {
-    PY_SAFE(override(event); return;)
-  }
+    pybind11::gil_scoped_acquire gil;
+    if (auto override = CPythonOverrides::find_override(this, "onEnter"); !override.is_none()) {
+        PY_SAFE(override(event); return;)
+    }
 }
 
 void CEvent::onLeave(std::shared_ptr<CGameEvent> event) {
-  pybind11::gil_scoped_acquire gil;
-  if (auto override = CPythonOverrides::find_override(this, "onLeave");
-      !override.is_none()) {
-    PY_SAFE(override(event); return;)
-  }
+    pybind11::gil_scoped_acquire gil;
+    if (auto override = CPythonOverrides::find_override(this, "onLeave"); !override.is_none()) {
+        PY_SAFE(override(event); return;)
+    }
 }

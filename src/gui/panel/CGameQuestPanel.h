@@ -20,11 +20,10 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "CGamePanel.h"
 
 class CGameQuestPanel : public CGamePanel {
-  V_META(CGameQuestPanel, CGamePanel, vstd::meta::empty())
+    V_META(CGameQuestPanel, CGamePanel, vstd::meta::empty())
 
-  void renderObject(std::shared_ptr<CGui> shared_ptr,
-                    std::shared_ptr<SDL_Rect> rect, int i) override;
+    void renderObject(std::shared_ptr<CGui> shared_ptr, std::shared_ptr<SDL_Rect> rect, int i) override;
 
-public:
-  std::string getText(std::shared_ptr<CGui> ptr);
+  public:
+    std::string getText(std::shared_ptr<CGui> ptr);
 };

@@ -22,25 +22,24 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 class CMapGraphicsObject;
 
 class CProxyGraphicsObject : public CGameGraphicsObject {
-  V_META(CProxyGraphicsObject, CGameGraphicsObject,
-         V_PROPERTY(CProxyGraphicsObject, int, x, getX, setX),
-         V_PROPERTY(CProxyGraphicsObject, int, y, getY, setY))
+    V_META(CProxyGraphicsObject, CGameGraphicsObject, V_PROPERTY(CProxyGraphicsObject, int, x, getX, setX),
+           V_PROPERTY(CProxyGraphicsObject, int, y, getY, setY))
 
-private:
-  int x, y;
+  private:
+    int x, y;
 
-public:
-  CProxyGraphicsObject() = default;
+  public:
+    CProxyGraphicsObject() = default;
 
-  CProxyGraphicsObject(int x, int y);
+    CProxyGraphicsObject(int x, int y);
 
-  int getX() { return x; }
+    int getX() { return x; }
 
-  void setX(int _x) { this->x = _x; }
+    void setX(int _x) { this->x = _x; }
 
-  int getY() { return y; }
+    int getY() { return y; }
 
-  void setY(int _y) { this->y = _y; }
+    void setY(int _y) { this->y = _y; }
 
-  void refresh();
+    void refresh();
 };

@@ -20,20 +20,18 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "CGameObject.h"
 
 class CQuest : public CGameObject {
-  V_META(CQuest, CGameObject,
-         V_PROPERTY(CQuest, std::string, description, getDescription,
-                    setDescription))
-public:
-  CQuest();
+    V_META(CQuest, CGameObject, V_PROPERTY(CQuest, std::string, description, getDescription, setDescription))
+  public:
+    CQuest();
 
-  virtual bool isCompleted();
+    virtual bool isCompleted();
 
-  virtual void onComplete();
+    virtual void onComplete();
 
-  std::string getDescription();
+    std::string getDescription();
 
-  void setDescription(std::string description);
+    void setDescription(std::string description);
 
-private:
-  std::string description = "";
+  private:
+    std::string description = "";
 };

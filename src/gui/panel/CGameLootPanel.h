@@ -23,30 +23,25 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "object/CItem.h"
 
 class CGameLootPanel : public CGamePanel {
-  V_META(CGameLootPanel, CGamePanel,
-         V_PROPERTY(CGameLootPanel, std::set<std::shared_ptr<CItem>>, items,
-                    getItems, setItems),
-         V_PROPERTY(CGameLootPanel, std::shared_ptr<CCreature>, creature,
-                    getCreature, setCreature),
-         V_METHOD(CGameLootPanel, itemsCollection,
-                  CListView::collection_pointer, std::shared_ptr<CGui>))
-public:
-  void setItems(const std::set<std::shared_ptr<CItem>> &_items);
+    V_META(CGameLootPanel, CGamePanel,
+           V_PROPERTY(CGameLootPanel, std::set<std::shared_ptr<CItem>>, items, getItems, setItems),
+           V_PROPERTY(CGameLootPanel, std::shared_ptr<CCreature>, creature, getCreature, setCreature),
+           V_METHOD(CGameLootPanel, itemsCollection, CListView::collection_pointer, std::shared_ptr<CGui>))
+  public:
+    void setItems(const std::set<std::shared_ptr<CItem>> &_items);
 
-  std::set<std::shared_ptr<CItem>> getItems();
+    std::set<std::shared_ptr<CItem>> getItems();
 
-  CListView::collection_pointer
-  itemsCollection(const std::shared_ptr<CGui> &gui);
+    CListView::collection_pointer itemsCollection(const std::shared_ptr<CGui> &gui);
 
-  bool keyboardEvent(std::shared_ptr<CGui> gui, SDL_EventType type,
-                     SDL_Keycode i) override;
+    bool keyboardEvent(std::shared_ptr<CGui> gui, SDL_EventType type, SDL_Keycode i) override;
 
-private:
-  std::set<std::shared_ptr<CItem>> items;
-  std::shared_ptr<CCreature> creature;
+  private:
+    std::set<std::shared_ptr<CItem>> items;
+    std::shared_ptr<CCreature> creature;
 
-public:
-  const std::shared_ptr<CCreature> &getCreature() const;
+  public:
+    const std::shared_ptr<CCreature> &getCreature() const;
 
-  void setCreature(const std::shared_ptr<CCreature> &creature);
+    void setCreature(const std::shared_ptr<CCreature> &creature);
 };

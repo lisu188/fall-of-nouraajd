@@ -23,34 +23,32 @@ CInteraction::CInteraction() {}
 
 CInteraction::~CInteraction() {}
 
-void CInteraction::onAction(std::shared_ptr<CCreature> first,
-                            std::shared_ptr<CCreature> second) {
-  vstd::logger::debug(first->to_string(), "used", this->to_string(), "against",
-                      second->to_string());
+void CInteraction::onAction(std::shared_ptr<CCreature> first, std::shared_ptr<CCreature> second) {
+    vstd::logger::debug(first->to_string(), "used", this->to_string(), "against", second->to_string());
 
-  first->takeMana(this->getManaCost());
+    first->takeMana(this->getManaCost());
 
-  this->performAction(first, second);
+    this->performAction(first, second);
 
-  if (effect) {
-    std::shared_ptr<CEffect> effect = this->effect->clone<CEffect>();
-    effect->setCaster(first);
-    if (this->configureEffect(effect)) {
-      if (effect->getAnimation().empty()) {
-        effect->setAnimation(getAnimation());
-      }
-      if (effect->getLabel().empty()) {
-        effect->setLabel(getLabel());
-      }
-      if (effect->hasTag(CTag::Buff)) {
-        effect->setVictim(first);
-        first->addEffect(effect);
-      } else {
-        effect->setVictim(second);
-        second->addEffect(effect);
-      }
+    if (effect) {
+        std::shared_ptr<CEffect> effect = this->effect->clone<CEffect>();
+        effect->setCaster(first);
+        if (this->configureEffect(effect)) {
+            if (effect->getAnimation().empty()) {
+                effect->setAnimation(getAnimation());
+            }
+            if (effect->getLabel().empty()) {
+                effect->setLabel(getLabel());
+            }
+            if (effect->hasTag(CTag::Buff)) {
+                effect->setVictim(first);
+                first->addEffect(effect);
+            } else {
+                effect->setVictim(second);
+                second->addEffect(effect);
+            }
+        }
     }
-  }
 }
 
 int CInteraction::getManaCost() const { return manaCost; }
@@ -59,24 +57,19 @@ void CInteraction::setManaCost(int value) { manaCost = value; }
 
 std::shared_ptr<CEffect> CInteraction::getEffect() const { return effect; }
 
-void CInteraction::setEffect(const std::shared_ptr<CEffect> value) {
-  effect = value;
-}
+void CInteraction::setEffect(const std::shared_ptr<CEffect> value) { effect = value; }
 
-void CInteraction::performAction(std::shared_ptr<CCreature> first,
-                                 std::shared_ptr<CCreature> second) {
-  pybind11::gil_scoped_acquire gil;
-  if (auto override = CPythonOverrides::find_override(this, "performAction");
-      !override.is_none()) {
-    PY_SAFE(override(first, second); return;)
-  }
+void CInteraction::performAction(std::shared_ptr<CCreature> first, std::shared_ptr<CCreature> second) {
+    pybind11::gil_scoped_acquire gil;
+    if (auto override = CPythonOverrides::find_override(this, "performAction"); !override.is_none()) {
+        PY_SAFE(override(first, second); return;)
+    }
 }
 
 bool CInteraction::configureEffect(std::shared_ptr<CEffect> effect) {
-  pybind11::gil_scoped_acquire gil;
-  if (auto override = CPythonOverrides::find_override(this, "configureEffect");
-      !override.is_none()) {
-    PY_SAFE_RET_VAL(return override(effect).cast<bool>();, true)
-  }
-  return true;
+    pybind11::gil_scoped_acquire gil;
+    if (auto override = CPythonOverrides::find_override(this, "configureEffect"); !override.is_none()) {
+        PY_SAFE_RET_VAL(return override(effect).cast<bool>();, true)
+    }
+    return true;
 }

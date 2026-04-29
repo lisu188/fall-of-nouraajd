@@ -26,51 +26,44 @@ CMapObject::CMapObject() {}
 CMapObject::~CMapObject() {}
 
 void CMapObject::move(int x, int y, int z) {
-  Coords target(posx + x, posy + y, posz + z);
-  auto map = getMap();
-  if (map) {
-    target = map->normalizeCoords(target);
-  }
-
-  if (dynamic_cast<Moveable *>(this) && map) {
-    auto current = map->normalizeCoords(Coords(posx, posy, posz));
-    auto delta = map->getShortestDelta(current, target);
-    bool is_registered = map->getObjectByName(getName()) == this->ptr<CMapObject>();
-    bool is_step_move = delta.z == 0 && std::abs(delta.x) + std::abs(delta.y) == 1;
-    if (is_registered && is_step_move && !map->canStep(target)) {
-      vstd::logger::debug(getName(), "cannot step on:", target.x, target.y,
-                          target.z);
-      return;
+    Coords target(posx + x, posy + y, posz + z);
+    auto map = getMap();
+    if (map) {
+        target = map->normalizeCoords(target);
     }
-    dynamic_cast<Moveable *>(this)->beforeMove();
-  }
 
-  Coords oldCoords(posx, posy, posz);
-  posx = target.x;
-  posy = target.y;
-  posz = target.z;
-  Coords newCoords(posx, posy, posz);
+    if (dynamic_cast<Moveable *>(this) && map) {
+        auto current = map->normalizeCoords(Coords(posx, posy, posz));
+        auto delta = map->getShortestDelta(current, target);
+        bool is_registered = map->getObjectByName(getName()) == this->ptr<CMapObject>();
+        bool is_step_move = delta.z == 0 && std::abs(delta.x) + std::abs(delta.y) == 1;
+        if (is_registered && is_step_move && !map->canStep(target)) {
+            vstd::logger::debug(getName(), "cannot step on:", target.x, target.y, target.z);
+            return;
+        }
+        dynamic_cast<Moveable *>(this)->beforeMove();
+    }
 
-  if (map) {
-    map->objectMoved(this->ptr<CMapObject>(), oldCoords, newCoords);
-  }
+    Coords oldCoords(posx, posy, posz);
+    posx = target.x;
+    posy = target.y;
+    posz = target.z;
+    Coords newCoords(posx, posy, posz);
 
-  if (dynamic_cast<Moveable *>(this) && map) {
-    dynamic_cast<Moveable *>(this)->afterMove();
-  }
+    if (map) {
+        map->objectMoved(this->ptr<CMapObject>(), oldCoords, newCoords);
+    }
+
+    if (dynamic_cast<Moveable *>(this) && map) {
+        dynamic_cast<Moveable *>(this)->afterMove();
+    }
 }
 
-void CMapObject::move(Coords coords) {
-  this->move(coords.x, coords.y, coords.z);
-}
+void CMapObject::move(Coords coords) { this->move(coords.x, coords.y, coords.z); }
 
-void CMapObject::moveTo(int x, int y, int z) {
-  move(x - posx, y - posy, z - posz);
-}
+void CMapObject::moveTo(int x, int y, int z) { move(x - posx, y - posy, z - posz); }
 
-void CMapObject::moveTo(Coords coords) {
-  this->moveTo(coords.x, coords.y, coords.z);
-}
+void CMapObject::moveTo(Coords coords) { this->moveTo(coords.x, coords.y, coords.z); }
 
 int CMapObject::getPosY() const { return posy; }
 
@@ -79,48 +72,40 @@ int CMapObject::getPosZ() const { return posz; }
 int CMapObject::getPosX() const { return posx; }
 
 void CMapObject::onTurn(std::shared_ptr<CGameEvent> event) {
-  pybind11::gil_scoped_acquire gil;
-  if (auto override = CPythonOverrides::find_override(this, "onTurn");
-      !override.is_none()) {
-    PY_SAFE(override(event); return;)
-  }
+    pybind11::gil_scoped_acquire gil;
+    if (auto override = CPythonOverrides::find_override(this, "onTurn"); !override.is_none()) {
+        PY_SAFE(override(event); return;)
+    }
 }
 
 void CMapObject::onCreate(std::shared_ptr<CGameEvent> event) {
-  pybind11::gil_scoped_acquire gil;
-  if (auto override = CPythonOverrides::find_override(this, "onCreate");
-      !override.is_none()) {
-    PY_SAFE(override(event); return;)
-  }
+    pybind11::gil_scoped_acquire gil;
+    if (auto override = CPythonOverrides::find_override(this, "onCreate"); !override.is_none()) {
+        PY_SAFE(override(event); return;)
+    }
 }
 
 void CMapObject::onDestroy(std::shared_ptr<CGameEvent> event) {
-  pybind11::gil_scoped_acquire gil;
-  if (auto override = CPythonOverrides::find_override(this, "onDestroy");
-      !override.is_none()) {
-    PY_SAFE(override(event); return;)
-  }
+    pybind11::gil_scoped_acquire gil;
+    if (auto override = CPythonOverrides::find_override(this, "onDestroy"); !override.is_none()) {
+        PY_SAFE(override(event); return;)
+    }
 }
 
 Coords CMapObject::getCoords() { return Coords(posx, posy, posz); }
 
-void CMapObject::setCoords(Coords coords) {
-  this->moveTo(coords.x, coords.y, coords.z);
-}
+void CMapObject::setCoords(Coords coords) { this->moveTo(coords.x, coords.y, coords.z); }
 
 bool CMapObject::isAffiliatedWith(std::shared_ptr<CMapObject> object) {
-  return !vstd::is_empty(this->getAffiliation()) &&
-         !vstd::is_empty(object->getAffiliation()) &&
-         this->getAffiliation() == object->getAffiliation();
+    return !vstd::is_empty(this->getAffiliation()) && !vstd::is_empty(object->getAffiliation()) &&
+           this->getAffiliation() == object->getAffiliation();
 }
 
 void CMapObject::setPosX(int posx) { this->posx = posx; }
 
 std::string CMapObject::getAffiliation() { return affiliation; }
 
-void CMapObject::setAffiliation(const std::string &affiliation) {
-  CMapObject::affiliation = affiliation;
-}
+void CMapObject::setAffiliation(const std::string &affiliation) { CMapObject::affiliation = affiliation; }
 
 void CMapObject::setPosY(int posy) { this->posy = posy; }
 
