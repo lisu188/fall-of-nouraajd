@@ -16,18 +16,38 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #include "gui/object/CProxyGraphicsObject.h"
-#include "core/CController.h"
-#include "core/CLoader.h"
-#include "gui/CLayout.h"
-#include "gui/object/CMapGraphicsObject.h"
 #include "gui/object/CProxyTargetGraphicsObject.h"
-#include "gui/panel/CGameInventoryPanel.h"
+
+#include <set>
+
+namespace {
+bool hasSameProxyChildren(const std::list<std::shared_ptr<CGameGraphicsObject>> &objects,
+                          const std::set<std::shared_ptr<CGameGraphicsObject>, priority_comparator> &children) {
+    if (objects.size() != children.size()) {
+        return false;
+    }
+    for (const auto &object : objects) {
+        auto current = children.find(object);
+        if (current == children.end() || (*current)->getPriority() != object->getPriority() ||
+            (*current)->meta()->name() != object->meta()->name()) {
+            return false;
+        }
+    }
+    return true;
+}
+} // namespace
 
 CProxyGraphicsObject::CProxyGraphicsObject(int x, int y) : x(x), y(y) {}
 
 void CProxyGraphicsObject::refresh() {
     vstd::with<void>(getGui(), [this](auto gui) {
-        auto objects = vstd::cast<CProxyTargetGraphicsObject>(getParent())->getProxiedObjects(gui, x, y);
+        auto target = vstd::cast<CProxyTargetGraphicsObject>(getParent());
+        auto objects = target->getProxiedObjects(gui, x, y);
+
+        if (hasSameProxyChildren(objects, children)) {
+            return;
+        }
+
         setChildren(std::set<std::shared_ptr<CGameGraphicsObject>>(objects.begin(), objects.end()));
     });
 }

@@ -2434,6 +2434,103 @@ class GameTest(unittest.TestCase):
         )
 
     @game_test
+    def test_map_proxy_refresh_reuses_children_and_updates_changed_cells(self):
+        game = load_game_module()
+
+        g = game.CGameLoader.loadGame()
+        game.CGameLoader.loadGui(g)
+        game.CGameLoader.startGameWithPlayer(g, "test", "Warrior")
+        pump_event_loop()
+
+        gui = g.getGui()
+        game_map = g.getMap()
+        player = game_map.getPlayer()
+        map_graph = next(child for child in collect_gui_children(gui, "CMapGraphicsObject"))
+
+        def represented_object(graphic):
+            try:
+                return graphic.getObject()
+            except AttributeError:
+                return None
+
+        def proxy_with_object(object_name):
+            for proxy in map_graph.getChildren():
+                for child in proxy.getChildren():
+                    represented = represented_object(child)
+                    if represented and represented.getName() == object_name:
+                        return proxy
+            return None
+
+        def proxy_has_type_id(proxy, type_id):
+            return any(
+                represented and represented.getTypeId() == type_id
+                for represented in (represented_object(child) for child in proxy.getChildren())
+            )
+
+        def has_footprint_overlay():
+            for proxy in map_graph.getChildren():
+                for child in proxy.getChildren():
+                    represented = represented_object(child)
+                    if represented and represented.getStringProperty("animation") == "images/footprint":
+                        return True
+            return False
+
+        player_proxy = proxy_with_object(player.getName())
+        self.assertIsNotNone(player_proxy)
+        player_graphic = next(child for child in player_proxy.getChildren() if represented_object(child) == player)
+        player_graphic.setNumericProperty("proxyReuseMarker", 17)
+        map_graph.refreshObject(player.getCoords())
+        player_proxy = proxy_with_object(player.getName())
+        refreshed_player_graphic = next(
+            child for child in player_proxy.getChildren() if represented_object(child) == player
+        )
+        self.assertEqual(17, refreshed_player_graphic.getNumericProperty("proxyReuseMarker"))
+
+        player_coords = player.getCoords()
+        marker = g.createObject("CEvent")
+        marker.setStringProperty("name", "mapProxyRefreshMarker")
+        marker.moveTo(player_coords.x, player_coords.y, player_coords.z)
+        game_map.addObject(marker)
+        pump_event_loop(5)
+        self.assertIsNotNone(proxy_with_object("mapProxyRefreshMarker"))
+
+        game_map.removeObject(marker)
+        pump_event_loop(5)
+        self.assertIsNone(proxy_with_object("mapProxyRefreshMarker"))
+
+        game_map.replaceTile("LavaTile", player_coords)
+        pump_event_loop(5)
+        self.assertTrue(proxy_has_type_id(proxy_with_object(player.getName()), "LavaTile"))
+
+        game_map.setBoolProperty("showCoordinates", True)
+        map_graph.refreshObject(player_coords)
+        self.assertTrue(
+            any(child.getType() == "CTextWidget" for child in proxy_with_object(player.getName()).getChildren())
+        )
+
+        target, _, _ = find_adjacent_walkable_direction(game_map, player_coords)
+        get_player_controller(player).setTarget(player, target)
+        map_graph.refreshAll()
+        self.assertTrue(has_footprint_overlay())
+
+        map_graph.refreshObject(game.Coords(-1, player_coords.y, player_coords.z))
+        self.assertEqual(0, sum(count == 0 for count in get_map_proxy_child_counts(g)))
+
+        gui.setNumericProperty("width", 100)
+        gui.setNumericProperty("height", 100)
+        map_graph.refresh()
+        self.assertEqual(9, len(map_graph.getChildren()))
+
+        return True, json.dumps(
+            {
+                "marker_removed": proxy_with_object("mapProxyRefreshMarker") is None,
+                "proxy_count_after_resize": len(map_graph.getChildren()),
+                "footprint_overlay": has_footprint_overlay(),
+            },
+            sort_keys=True,
+        )
+
+    @game_test
     def test_inventory_panel_refreshes_only_after_event_loop_drains(self):
         game = load_game_module()
 

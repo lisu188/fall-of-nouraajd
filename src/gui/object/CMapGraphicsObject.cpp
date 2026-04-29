@@ -42,58 +42,78 @@ std::shared_ptr<CAnimation> CMapGraphicsObject::syncProxyAnimation(std::shared_p
 
 std::list<std::shared_ptr<CGameGraphicsObject>> CMapGraphicsObject::getProxiedObjects(std::shared_ptr<CGui> gui, int x,
                                                                                       int y) {
-    return vstd::with<std::list<std::shared_ptr<CGameGraphicsObject>>>(gui->getGame()->getMap(), [&](auto map) {
-        std::list<std::shared_ptr<CGameGraphicsObject>> return_val;
+    auto game = gui->getGame();
+    auto map = game->getMap();
+    if (!map) {
+        return {};
+    }
+    if (cachedMap.lock() != map) {
+        proxyAnimations.clear();
+        cachedMap = map;
+        hasCachedProxyZ = false;
+    }
 
-        std::shared_ptr<CPlayer> player = gui->getGame()->getMap()->getPlayer();
-        auto proxyCoords = Coords(x, y, player->getCoords().z);
-        auto actualCoords = map->normalizeCoords(guiToMap(gui, Coords(x, y, player->getCoords().z)));
-        auto &slot = proxyAnimations[proxyCoords];
+    std::list<std::shared_ptr<CGameGraphicsObject>> return_val;
+    std::shared_ptr<CPlayer> player = map->getPlayer();
+    auto playerCoords = player->getCoords();
+    if (!hasCachedProxyZ || cachedProxyZ != playerCoords.z) {
+        proxyAnimations.clear();
+        cachedProxyZ = playerCoords.z;
+        hasCachedProxyZ = true;
+    }
 
-        std::shared_ptr<CTile> tile = map->getTile(actualCoords.x, actualCoords.y, actualCoords.z);
+    auto proxyCoords = Coords(x, y, playerCoords.z);
+    int tileCountX = gui->getTileCountX();
+    int tileCountY = gui->getTileCountY();
+    auto rawCoords = Coords(playerCoords.x - tileCountX / 2 + x, playerCoords.y - tileCountY / 2 + y, playerCoords.z);
+    auto actualCoords = map->normalizeCoords(rawCoords);
+    auto &slot = proxyAnimations[proxyCoords];
 
-        return_val.push_back(
-            syncProxyAnimation(gui, tile, slot.tile)
-                ->withCallback([actualCoords](std::shared_ptr<CGui> gui, SDL_EventType type, int button, int, int) {
-                    if (type == SDL_MOUSEBUTTONDOWN && button == SDL_BUTTON_LEFT) {
-                        auto controller =
-                            vstd::cast<CPlayerController>(gui->getGame()->getMap()->getPlayer()->getController());
-                        if (!controller) {
-                            return false;
-                        }
-                        auto player = gui->getGame()->getMap()->getPlayer();
-                        controller->setTarget(player, actualCoords);
-                        if (!gui->getMap()->isMoving()) {
-                            while (!controller->isCompleted(player)) {
-                                gui->getGame()->getMap()->move();
-                            }
-                        }
-                        return true;
+    std::shared_ptr<CTile> tile = map->getTile(actualCoords.x, actualCoords.y, actualCoords.z);
+    return_val.push_back(
+        syncProxyAnimation(gui, tile, slot.tile)
+            ->withCallback([actualCoords](std::shared_ptr<CGui> gui, SDL_EventType type, int button, int, int) {
+                if (type == SDL_MOUSEBUTTONDOWN && button == SDL_BUTTON_LEFT) {
+                    auto game = gui->getGame();
+                    auto map = game->getMap();
+                    auto player = map->getPlayer();
+                    auto controller = vstd::cast<CPlayerController>(player->getController());
+                    if (!controller) {
+                        return false;
                     }
-                    return false;
-                }));
+                    controller->setTarget(player, actualCoords);
+                    if (!map->isMoving()) {
+                        while (!controller->isCompleted(player)) {
+                            map->move();
+                        }
+                    }
+                    return true;
+                }
+                return false;
+            }));
 
-        auto objects = map->getObjectsAtCoords(actualCoords);
+    auto objects = map->getObjectsAtCoords(actualCoords);
+    if (slot.objects.size() != objects.size()) {
         slot.objects.resize(objects.size());
-        std::size_t objectIndex = 0;
-        for (const auto &ob : objects) {
-            return_val.push_back(syncProxyAnimation(gui, ob, slot.objects[objectIndex]));
-            objectIndex++;
-        }
+    }
+    std::size_t objectIndex = 0;
+    for (const auto &ob : objects) {
+        return_val.push_back(syncProxyAnimation(gui, ob, slot.objects[objectIndex]));
+        objectIndex++;
+    }
 
-        if (map->getBoolProperty("showCoordinates")) {
-            showCoordinates(gui, return_val, actualCoords);
-        }
+    if (map->getBoolProperty("showCoordinates")) {
+        showCoordinates(gui, return_val, actualCoords);
+    }
 
-        auto playerController = vstd::cast<CPlayerController>(player->getController());
-        auto path = playerController ? playerController->isOnPath(player, actualCoords)
-                                     : std::make_pair(false, Coords::UNDEFINED);
-        if (path.first) {
-            showFootprint(gui, path.second, return_val);
-        }
+    auto playerController = vstd::cast<CPlayerController>(player->getController());
+    auto path =
+        playerController ? playerController->isOnPath(player, actualCoords) : std::make_pair(false, Coords::UNDEFINED);
+    if (path.first) {
+        showFootprint(gui, path.second, return_val);
+    }
 
-        return return_val;
-    });
+    return return_val;
 }
 
 void CMapGraphicsObject::showCoordinates(std::shared_ptr<CGui> &gui,
@@ -221,4 +241,28 @@ void CMapGraphicsObject::refreshObject(Coords coords) {
 
     auto translated = mapToGui(gui, normalized);
     CProxyTargetGraphicsObject::refreshObject(translated.x, translated.y);
+}
+
+void CMapGraphicsObject::onProxyGridResized(int sizeX, int sizeY) {
+    auto gui = getGui();
+    auto map = gui->getGame()->getMap();
+    if (!map) {
+        proxyAnimations.clear();
+        cachedMap.reset();
+        hasCachedProxyZ = false;
+        return;
+    }
+    auto player = map->getPlayer();
+    pruneProxyAnimationCache(sizeX, sizeY, player->getCoords().z);
+}
+
+void CMapGraphicsObject::pruneProxyAnimationCache(int sizeX, int sizeY, int z) {
+    for (auto it = proxyAnimations.begin(); it != proxyAnimations.end();) {
+        const auto &coords = it->first;
+        if (coords.x < 0 || coords.x >= sizeX || coords.y < 0 || coords.y >= sizeY || coords.z != z) {
+            it = proxyAnimations.erase(it);
+        } else {
+            ++it;
+        }
+    }
 }

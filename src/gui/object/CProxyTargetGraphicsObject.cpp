@@ -51,6 +51,7 @@ void CProxyTargetGraphicsObject::refresh() {
         }
 
         if (xDiff != 0 || yDiff != 0) {
+            onProxyGridResized(currentSizeX, currentSizeY);
             refreshAll();
         }
     });
@@ -66,28 +67,44 @@ void CProxyTargetGraphicsObject::addProxyObject(std::shared_ptr<CGui> gui, int &
 }
 
 void CProxyTargetGraphicsObject::removeProxyObject(int &x, int &y) {
-    removeChild(proxyObjects[x][y]);
-    proxyObjects[x].erase(y);
-    if (proxyObjects[x].empty()) {
-        proxyObjects.erase(x);
+    auto xIt = proxyObjects.find(x);
+    if (xIt == proxyObjects.end()) {
+        return;
+    }
+    auto yIt = xIt->second.find(y);
+    if (yIt == xIt->second.end()) {
+        return;
+    }
+    removeChild(yIt->second);
+    xIt->second.erase(yIt);
+    if (xIt->second.empty()) {
+        proxyObjects.erase(xIt);
     }
 }
 
 void CProxyTargetGraphicsObject::refreshAll() {
-    for (auto [_x, map_x] : proxyObjects) {
-        for (auto [no, val] : map_x) {
+    for (auto &[_x, map_x] : proxyObjects) {
+        for (auto &[no, val] : map_x) {
             val->refresh();
         }
     }
 }
 
 void CProxyTargetGraphicsObject::refreshObject(int x, int y) {
-    int sizeX = getSizeX(getGui());
-    int sizeY = getSizeY(getGui());
+    auto gui = getGui();
+    int sizeX = getSizeX(gui);
+    int sizeY = getSizeY(gui);
     if (x < 0 || x >= sizeX || y < 0 || y >= sizeY) {
         vstd::logger::warning("Ignoring proxy refresh outside target bounds:", x, y, "size:", sizeX, sizeY);
-    } else {
-        proxyObjects[x][y]->refresh();
+        return;
+    }
+    auto xIt = proxyObjects.find(x);
+    if (xIt == proxyObjects.end()) {
+        return;
+    }
+    auto yIt = xIt->second.find(y);
+    if (yIt != xIt->second.end()) {
+        yIt->second->refresh();
     }
 }
 
@@ -103,3 +120,5 @@ std::list<std::shared_ptr<CGameGraphicsObject>> CProxyTargetGraphicsObject::getP
 std::string CProxyTargetGraphicsObject::getProxyLayout() { return proxyLayout; }
 
 void CProxyTargetGraphicsObject::setProxyLayout(std::string _layout) { proxyLayout = std::move(_layout); }
+
+void CProxyTargetGraphicsObject::onProxyGridResized(int sizeX, int sizeY) {}

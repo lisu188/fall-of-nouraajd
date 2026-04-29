@@ -38,6 +38,9 @@ class CProxyTargetGraphicsObject : public CGameGraphicsObject {
     std::map<int, std::map<int, std::shared_ptr<CProxyGraphicsObject>>> proxyObjects;
     std::string proxyLayout = "CProxyGraphicsLayout";
 
+  protected:
+    virtual void onProxyGridResized(int sizeX, int sizeY);
+
   public:
     std::string getProxyLayout();
 
