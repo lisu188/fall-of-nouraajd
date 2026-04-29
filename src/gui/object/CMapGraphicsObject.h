@@ -24,6 +24,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "gui/object/CProxyTargetGraphicsObject.h"
 
 class CProxyGraphicsObject;
+class CMap;
 
 class CMapGraphicsObject : public CProxyTargetGraphicsObject {
     V_META(CMapGraphicsObject, CProxyTargetGraphicsObject, V_METHOD(CMapGraphicsObject, initialize),
@@ -51,6 +52,9 @@ class CMapGraphicsObject : public CProxyTargetGraphicsObject {
     };
 
     std::unordered_map<Coords, ProxyAnimationSlot> proxyAnimations;
+    std::weak_ptr<CMap> cachedMap;
+    int cachedProxyZ = 0;
+    bool hasCachedProxyZ = false;
 
     Coords guiToMap(std::shared_ptr<CGui> gui, Coords coords);
 
@@ -65,4 +69,8 @@ class CMapGraphicsObject : public CProxyTargetGraphicsObject {
 
     void showFootprint(std::shared_ptr<CGui> &gui, Coords::Direction dir,
                        std::list<std::shared_ptr<CGameGraphicsObject>> &return_val) const;
+
+    void onProxyGridResized(int sizeX, int sizeY) override;
+
+    void pruneProxyAnimationCache(int sizeX, int sizeY, int z);
 };
