@@ -111,6 +111,8 @@ The Python tests require the compiled `_game` module for most runtime paths. Tes
 
 When validation cannot be run, do not imply that it passed. Report the exact command that was skipped or failed and the reason.
 
+Every bug fix must include at least one corresponding automated test (unit, integration, or regression) that fails before the fix and passes after it.
+
 ## Coverage
 
 Run coverage when a change touches:
