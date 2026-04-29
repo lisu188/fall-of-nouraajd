@@ -26,7 +26,7 @@ class CGame;
 class CMap;
 
 class CPlugin : public CGameObject {
-  V_META(CPlugin, CGameObject, vstd::meta::empty())
-public:
-  virtual void load(std::shared_ptr<CGame> game);
+    V_META(CPlugin, CGameObject, vstd::meta::empty())
+  public:
+    virtual void load(std::shared_ptr<CGame> game);
 };

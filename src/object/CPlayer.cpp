@@ -22,46 +22,41 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <utility>
 
 void CPlayer::checkQuests() {
-  auto set = quests;
-  for (const auto &quest : set) {
-    if (quest->isCompleted()) {
-      quest->onComplete();
-      quests.erase(quests.find(quest));
-      completedQuests.insert(quest);
+    auto set = quests;
+    for (const auto &quest : set) {
+        if (quest->isCompleted()) {
+            quest->onComplete();
+            quests.erase(quests.find(quest));
+            completedQuests.insert(quest);
+        }
     }
-  }
 }
 
 void CPlayer::addQuest(std::string questName) {
-  for (const auto &q : quests) {
-    if (q->getName() == questName) {
-      return;
+    for (const auto &q : quests) {
+        if (q->getName() == questName) {
+            return;
+        }
     }
-  }
-  for (const auto &q : completedQuests) {
-    if (q->getName() == questName) {
-      return;
+    for (const auto &q : completedQuests) {
+        if (q->getName() == questName) {
+            return;
+        }
     }
-  }
-  std::shared_ptr<CQuest> quest = getGame()->createObject<CQuest>(questName);
-  if (quest) {
-    quests.insert(quest);
-  }
+    std::shared_ptr<CQuest> quest = getGame()->createObject<CQuest>(questName);
+    if (quest) {
+        quests.insert(quest);
+    }
 }
 
 std::set<std::shared_ptr<CQuest>> CPlayer::getQuests() { return quests; }
 
-void CPlayer::setQuests(std::set<std::shared_ptr<CQuest>> _quests) {
-  this->quests = std::move(_quests);
-}
+void CPlayer::setQuests(std::set<std::shared_ptr<CQuest>> _quests) { this->quests = std::move(_quests); }
 
-std::set<std::shared_ptr<CQuest>> CPlayer::getCompletedQuests() {
-  return completedQuests;
-}
+std::set<std::shared_ptr<CQuest>> CPlayer::getCompletedQuests() { return completedQuests; }
 
-void CPlayer::setCompletedQuests(
-    std::set<std::shared_ptr<CQuest>> _completedQuests) {
-  completedQuests = std::move(_completedQuests);
+void CPlayer::setCompletedQuests(std::set<std::shared_ptr<CQuest>> _completedQuests) {
+    completedQuests = std::move(_completedQuests);
 }
 
 void CPlayer::incTurn() { turn++; }

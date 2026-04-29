@@ -20,7 +20,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "handler/CEventHandler.h"
 
 CBuilding::CBuilding() {
-  //    this->setZValue ( 1 );
+    //    this->setZValue ( 1 );
 }
 
 CBuilding::~CBuilding() {}
@@ -30,17 +30,15 @@ bool CBuilding::isEnabled() { return enabled; }
 void CBuilding::setEnabled(bool enabled) { this->enabled = enabled; }
 
 void CBuilding::onEnter(std::shared_ptr<CGameEvent> event) {
-  pybind11::gil_scoped_acquire gil;
-  if (auto override = CPythonOverrides::find_override(this, "onEnter");
-      !override.is_none()) {
-    PY_SAFE(override(event); return;)
-  }
+    pybind11::gil_scoped_acquire gil;
+    if (auto override = CPythonOverrides::find_override(this, "onEnter"); !override.is_none()) {
+        PY_SAFE(override(event); return;)
+    }
 }
 
 void CBuilding::onLeave(std::shared_ptr<CGameEvent> event) {
-  pybind11::gil_scoped_acquire gil;
-  if (auto override = CPythonOverrides::find_override(this, "onLeave");
-      !override.is_none()) {
-    PY_SAFE(override(event); return;)
-  }
+    pybind11::gil_scoped_acquire gil;
+    if (auto override = CPythonOverrides::find_override(this, "onLeave"); !override.is_none()) {
+        PY_SAFE(override(event); return;)
+    }
 }

@@ -21,25 +21,21 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CList.h"
 
 class CGameCharacterPanel : public CGamePanel {
-  V_META(CGameCharacterPanel, CGamePanel,
-         V_PROPERTY(CGameCharacterPanel, std::shared_ptr<CMapStringString>,
-                    charSheet, getCharSheet, setCharSheet),
-         V_METHOD(CGameCharacterPanel, interactionsCollection,
-                  CListView::collection_pointer, std::shared_ptr<CGui>))
+    V_META(CGameCharacterPanel, CGamePanel,
+           V_PROPERTY(CGameCharacterPanel, std::shared_ptr<CMapStringString>, charSheet, getCharSheet, setCharSheet),
+           V_METHOD(CGameCharacterPanel, interactionsCollection, CListView::collection_pointer, std::shared_ptr<CGui>))
 
-  void renderObject(std::shared_ptr<CGui> shared_ptr,
-                    std::shared_ptr<SDL_Rect> rect, int i) override;
+    void renderObject(std::shared_ptr<CGui> shared_ptr, std::shared_ptr<SDL_Rect> rect, int i) override;
 
-public:
-  std::shared_ptr<CMapStringString> getCharSheet();
+  public:
+    std::shared_ptr<CMapStringString> getCharSheet();
 
-  void setCharSheet(std::shared_ptr<CMapStringString> charSheet);
+    void setCharSheet(std::shared_ptr<CMapStringString> charSheet);
 
-  ~CGameCharacterPanel();
+    ~CGameCharacterPanel();
 
-  CListView::collection_pointer
-  interactionsCollection(std::shared_ptr<CGui> gui);
+    CListView::collection_pointer interactionsCollection(std::shared_ptr<CGui> gui);
 
-private:
-  std::shared_ptr<CMapStringString> charSheet;
+  private:
+    std::shared_ptr<CMapStringString> charSheet;
 };

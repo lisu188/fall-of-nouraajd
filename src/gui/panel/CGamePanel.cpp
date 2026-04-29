@@ -20,35 +20,29 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "gui/CTextureCache.h"
 #include "gui/object/CWidget.h"
 
-bool CGamePanel::keyboardEvent(std::shared_ptr<CGui> sharedPtr,
-                               SDL_EventType type, SDL_Keycode i) {
-  return true;
-}
+bool CGamePanel::keyboardEvent(std::shared_ptr<CGui> sharedPtr, SDL_EventType type, SDL_Keycode i) { return true; }
 
-bool CGamePanel::mouseEvent(std::shared_ptr<CGui> sharedPtr, SDL_EventType type,
-                            int button, int x, int y) {
-  return true;
+bool CGamePanel::mouseEvent(std::shared_ptr<CGui> sharedPtr, SDL_EventType type, int button, int x, int y) {
+    return true;
 }
 
 void CGamePanel::refreshViews() {
-  for (auto child : getChildren()) {
-    if (child->meta()->inherits(CListView::static_meta()->name())) {
-      vstd::cast<CListView>(child)->refreshAll();
+    for (auto child : getChildren()) {
+        if (child->meta()->inherits(CListView::static_meta()->name())) {
+            vstd::cast<CListView>(child)->refreshAll();
+        }
     }
-  }
 }
 
 CGamePanel::CGamePanel() {
-  // TODO: extract to json
-  setBackground("images/panel");
-  setModal(true);
+    // TODO: extract to json
+    setBackground("images/panel");
+    setModal(true);
 }
 
 void CGamePanel::awaitClosing() {
-  auto self = this->ptr<CGamePanel>();
-  vstd::wait_until([self]() {
-    return !self->getGui() || self->getGui()->findChild(self) == nullptr;
-  });
+    auto self = this->ptr<CGamePanel>();
+    vstd::wait_until([self]() { return !self->getGui() || self->getGui()->findChild(self) == nullptr; });
 }
 
 void CGamePanel::close() { getGui()->removeChild(this->ptr<CGamePanel>()); }

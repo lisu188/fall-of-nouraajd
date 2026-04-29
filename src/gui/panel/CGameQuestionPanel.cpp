@@ -22,27 +22,23 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 std::string CGameQuestionPanel::getQuestion() { return question; }
 
-void CGameQuestionPanel::setQuestion(std::string question) {
-  this->question = question;
-}
+void CGameQuestionPanel::setQuestion(std::string question) { this->question = question; }
 
 bool CGameQuestionPanel::awaitAnswer() {
-  vstd::wait_until([this]() { return selection != nullptr; });
-  return *selection;
+    vstd::wait_until([this]() { return selection != nullptr; });
+    return *selection;
 }
 
 void CGameQuestionPanel::clickNo(std::shared_ptr<CGui> gui) {
-  selection = std::make_shared<bool>(false);
-  close();
+    selection = std::make_shared<bool>(false);
+    close();
 }
 
 void CGameQuestionPanel::clickYes(std::shared_ptr<CGui> gui) {
-  selection = std::make_shared<bool>(true);
-  close();
+    selection = std::make_shared<bool>(true);
+    close();
 }
 
-void CGameQuestionPanel::renderQuestion(std::shared_ptr<CGui> gui,
-                                        std::shared_ptr<SDL_Rect> pRect,
-                                        int i) {
-  gui->getTextManager()->drawTextCentered(question, pRect);
+void CGameQuestionPanel::renderQuestion(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> pRect, int i) {
+    gui->getTextManager()->drawTextCentered(question, pRect);
 }

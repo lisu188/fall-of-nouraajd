@@ -19,13 +19,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CGame.h"
 #include "handler/CScriptHandler.h"
 
-std::shared_ptr<CGameObject>
-CScript::invoke(std::shared_ptr<CGame> game,
-                std::shared_ptr<CGameObject> self) {
-  return game->getScriptHandler()
-      ->call_created_function<std::shared_ptr<CGameObject>,
-                              std::shared_ptr<CGameObject>>("return " + script,
-                                                            {"self"}, self);
+std::shared_ptr<CGameObject> CScript::invoke(std::shared_ptr<CGame> game, std::shared_ptr<CGameObject> self) {
+    return game->getScriptHandler()->call_created_function<std::shared_ptr<CGameObject>, std::shared_ptr<CGameObject>>(
+        "return " + script, {"self"}, self);
 }
 
 std::string CScript::getScript() { return script; }

@@ -21,27 +21,24 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 // TODO: unify with CTextWidget
 class CGameTextPanel : public CGamePanel {
-  V_META(CGameTextPanel, CGamePanel,
-         V_PROPERTY(CGameTextPanel, std::string, text, getText, setText))
+    V_META(CGameTextPanel, CGamePanel, V_PROPERTY(CGameTextPanel, std::string, text, getText, setText))
 
-  void renderObject(std::shared_ptr<CGui> shared_ptr,
-                    std::shared_ptr<SDL_Rect> rect, int i) override;
+    void renderObject(std::shared_ptr<CGui> shared_ptr, std::shared_ptr<SDL_Rect> rect, int i) override;
 
-  bool keyboardEvent(std::shared_ptr<CGui> sharedPtr, SDL_EventType type,
-                     SDL_Keycode i) override;
+    bool keyboardEvent(std::shared_ptr<CGui> sharedPtr, SDL_EventType type, SDL_Keycode i) override;
 
-private:
-  std::string text;
-  bool centered = false;
+  private:
+    std::string text;
+    bool centered = false;
 
-public:
-  ~CGameTextPanel();
+  public:
+    ~CGameTextPanel();
 
-  std::string getText();
+    std::string getText();
 
-  void setText(std::string ext);
+    void setText(std::string ext);
 
-  bool getCentered();
+    bool getCentered();
 
-  void setCentered(bool ext);
+    void setCentered(bool ext);
 };

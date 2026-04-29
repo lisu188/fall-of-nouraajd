@@ -21,31 +21,28 @@ CSlotConfig::CSlotConfig() {}
 
 CSlotMap CSlotConfig::getConfiguration() { return configuration; }
 
-void CSlotConfig::setConfiguration(CSlotMap configuration) {
-  CSlotConfig::configuration = configuration;
-}
+void CSlotConfig::setConfiguration(CSlotMap configuration) { CSlotConfig::configuration = configuration; }
 
 bool CSlotConfig::canFit(std::string slot, std::shared_ptr<CItem> item) {
-  if (vstd::ctn(configuration, slot)) {
-    auto types = configuration.find(slot)->second->getTypes();
-    for (auto type : types) {
-      if (item->meta()->inherits(type)) {
-        return true;
-      }
+    if (vstd::ctn(configuration, slot)) {
+        auto types = configuration.find(slot)->second->getTypes();
+        for (auto type : types) {
+            if (item->meta()->inherits(type)) {
+                return true;
+            }
+        }
     }
-  }
-  return false;
+    return false;
 }
 
-std::set<std::string>
-CSlotConfig::getFittingSlots(std::shared_ptr<CItem> item) {
-  std::set<std::string> ret;
-  for (auto it : configuration) {
-    if (canFit(it.first, item)) {
-      ret.insert(it.first);
+std::set<std::string> CSlotConfig::getFittingSlots(std::shared_ptr<CItem> item) {
+    std::set<std::string> ret;
+    for (auto it : configuration) {
+        if (canFit(it.first, item)) {
+            ret.insert(it.first);
+        }
     }
-  }
-  return ret;
+    return ret;
 }
 
 CSlot::CSlot() {}
