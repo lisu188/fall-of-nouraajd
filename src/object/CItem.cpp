@@ -25,36 +25,30 @@ CItem::CItem() {}
 CItem::~CItem() {}
 
 void CItem::onEnter(std::shared_ptr<CGameEvent> event) {
-  if (std::shared_ptr<CCreature> visitor = vstd::cast<CCreature>(
-          vstd::cast<CGameEventCaused>(event)->getCause())) {
-    // ensure the item added to the inventory shares the same control block
-    // as the one stored inside the map
-    auto item = vstd::cast<CItem>(getMap()->getObjectByName(getName()));
-    visitor->addItem(item);
-    getMap()->removeObject(item);
-  }
+    if (std::shared_ptr<CCreature> visitor = vstd::cast<CCreature>(vstd::cast<CGameEventCaused>(event)->getCause())) {
+        // ensure the item added to the inventory shares the same control block
+        // as the one stored inside the map
+        auto item = vstd::cast<CItem>(getMap()->getObjectByName(getName()));
+        visitor->addItem(item);
+        getMap()->removeObject(item);
+    }
 }
 
 void CItem::onLeave(std::shared_ptr<CGameEvent>) {}
 
 void CItem::onEquip(std::shared_ptr<CGameEvent> event) {
-  vstd::logger::debug(
-      vstd::cast<CGameEventCaused>(event)->getCause()->getType(), "equipped",
-      getType(), "\n");
+    vstd::logger::debug(vstd::cast<CGameEventCaused>(event)->getCause()->getType(), "equipped", getType(), "\n");
 }
 
 void CItem::onUnequip(std::shared_ptr<CGameEvent> event) {
-  vstd::logger::debug(
-      vstd::cast<CGameEventCaused>(event)->getCause()->getType(), "unequipped",
-      getType(), "\n");
+    vstd::logger::debug(vstd::cast<CGameEventCaused>(event)->getCause()->getType(), "unequipped", getType(), "\n");
 }
 
 void CItem::onUse(std::shared_ptr<CGameEvent> event) {
-  pybind11::gil_scoped_acquire gil;
-  if (auto override = CPythonOverrides::find_override(this, "onUse");
-      !override.is_none()) {
-    PY_SAFE(override(event); return;)
-  }
+    pybind11::gil_scoped_acquire gil;
+    if (auto override = CPythonOverrides::find_override(this, "onUse"); !override.is_none()) {
+        PY_SAFE(override(event); return;)
+    }
 }
 
 int CItem::getPower() const { return power; }
@@ -66,8 +60,8 @@ CArmor::CArmor() {}
 std::shared_ptr<CInteraction> CItem::getInteraction() { return interaction; }
 
 void CItem::setInteraction(std::shared_ptr<CInteraction> interaction) {
-  this->interaction = interaction;
-  interaction->setManaCost(0);
+    this->interaction = interaction;
+    interaction->setManaCost(0);
 }
 
 CBelt::CBelt() {}
@@ -87,12 +81,11 @@ std::shared_ptr<Stats> CItem::getBonus() { return bonus; }
 void CItem::setBonus(std::shared_ptr<Stats> stats) { bonus = stats; }
 
 bool CItem::isDisposable() {
-  pybind11::gil_scoped_acquire gil;
-  if (auto override = CPythonOverrides::find_override(this, "isDisposable");
-      !override.is_none()) {
-    PY_SAFE_RET_VAL(return override().cast<bool>();, false)
-  }
-  return false;
+    pybind11::gil_scoped_acquire gil;
+    if (auto override = CPythonOverrides::find_override(this, "isDisposable"); !override.is_none()) {
+        PY_SAFE_RET_VAL(return override().cast<bool>();, false)
+    }
+    return false;
 }
 
 CPotion::CPotion() {}
@@ -105,6 +98,4 @@ std::string CScroll::getText() const { return text; }
 
 void CScroll::setText(const std::string &value) { text = value; }
 
-void CScroll::onUse(std::shared_ptr<CGameEvent>) {
-  getMap()->getGame()->getGuiHandler()->showMessage(text);
-}
+void CScroll::onUse(std::shared_ptr<CGameEvent>) { getMap()->getGame()->getGuiHandler()->showMessage(text); }

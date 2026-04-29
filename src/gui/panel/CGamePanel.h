@@ -24,19 +24,17 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 class CWidget;
 
 class CGamePanel : public CGameGraphicsObject {
-  V_META(CGamePanel, CGameGraphicsObject, vstd::meta::empty())
-public:
-  CGamePanel();
+    V_META(CGamePanel, CGameGraphicsObject, vstd::meta::empty())
+  public:
+    CGamePanel();
 
-  bool keyboardEvent(std::shared_ptr<CGui> sharedPtr, SDL_EventType type,
-                     SDL_Keycode i) override;
+    bool keyboardEvent(std::shared_ptr<CGui> sharedPtr, SDL_EventType type, SDL_Keycode i) override;
 
-  bool mouseEvent(std::shared_ptr<CGui> sharedPtr, SDL_EventType type,
-                  int button, int x, int y) override;
+    bool mouseEvent(std::shared_ptr<CGui> sharedPtr, SDL_EventType type, int button, int x, int y) override;
 
-  void refreshViews();
+    void refreshViews();
 
-  void awaitClosing();
+    void awaitClosing();
 
-  void close();
+    void close();
 };

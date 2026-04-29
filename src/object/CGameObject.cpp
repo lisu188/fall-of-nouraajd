@@ -23,11 +23,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include <utility>
 
-std::function<bool(std::shared_ptr<CGameObject>, std::shared_ptr<CGameObject>)>
-    CGameObject::name_comparator =
-        [](std::shared_ptr<CGameObject> a, std::shared_ptr<CGameObject> b) {
-          return a->getType() == b->getType();
-        };
+std::function<bool(std::shared_ptr<CGameObject>, std::shared_ptr<CGameObject>)> CGameObject::name_comparator =
+    [](std::shared_ptr<CGameObject> a, std::shared_ptr<CGameObject> b) { return a->getType() == b->getType(); };
 
 CGameObject::~CGameObject() {}
 
@@ -39,41 +36,29 @@ std::shared_ptr<CGame> CGameObject::getGame() { return game; }
 
 void CGameObject::setGame(std::shared_ptr<CGame> map) { this->game = map; }
 
-void CGameObject::setStringProperty(std::string name, std::string value) {
-  this->setProperty(name, value);
-}
+void CGameObject::setStringProperty(std::string name, std::string value) { this->setProperty(name, value); }
 
-void CGameObject::setBoolProperty(std::string name, bool value) {
-  this->setProperty(name, value);
-}
+void CGameObject::setBoolProperty(std::string name, bool value) { this->setProperty(name, value); }
 
-void CGameObject::setNumericProperty(std::string name, int value) {
-  this->setProperty(name, value);
-}
+void CGameObject::setNumericProperty(std::string name, int value) { this->setProperty(name, value); }
 
 std::string CGameObject::getStringProperty(std::string name) {
-  return this->hasProperty(name) ? this->getProperty<std::string>(name) : "";
+    return this->hasProperty(name) ? this->getProperty<std::string>(name) : "";
 }
 
-bool CGameObject::getBoolProperty(std::string name) {
-  return this->hasProperty(name) && this->getProperty<bool>(name);
-}
+bool CGameObject::getBoolProperty(std::string name) { return this->hasProperty(name) && this->getProperty<bool>(name); }
 
 int CGameObject::getNumericProperty(std::string name) {
-  return this->hasProperty(name) ? this->getProperty<int>(name) : 0;
+    return this->hasProperty(name) ? this->getProperty<int>(name) : 0;
 }
 
 void CGameObject::incProperty(std::string name, int value) {
-  this->setNumericProperty(name, this->getNumericProperty(name) + value);
+    this->setNumericProperty(name, this->getNumericProperty(name) + value);
 }
 
-std::string CGameObject::to_string() {
-  return vstd::join({getType(), getName()}, ":");
-}
+std::string CGameObject::to_string() { return vstd::join({getType(), getName()}, ":"); }
 
-std::shared_ptr<CGameObject> CGameObject::_clone() {
-  return game->getObjectHandler()->clone<CGameObject>(this->ptr());
-}
+std::shared_ptr<CGameObject> CGameObject::_clone() { return game->getObjectHandler()->clone<CGameObject>(this->ptr()); }
 
 CTags CGameObject::getTags() { return tags; }
 
@@ -89,28 +74,22 @@ void CGameObject::setName(std::string name) { this->name = name; }
 
 bool CGameObject::hasTag(CTag tag) { return tags.contains(tag); }
 
-bool CGameObject::hasTag(const std::string &tag) {
-  return hasTag(CTags::fromString(tag));
-}
+bool CGameObject::hasTag(const std::string &tag) { return hasTag(CTags::fromString(tag)); }
 
 void CGameObject::addTag(CTag tag) { tags.insert(tag); }
 
-void CGameObject::addTag(const std::string &tag) {
-  addTag(CTags::fromString(tag));
-}
+void CGameObject::addTag(const std::string &tag) { addTag(CTags::fromString(tag)); }
 
 void CGameObject::removeTag(CTag tag) { tags.erase(tag); }
 
-void CGameObject::removeTag(const std::string &tag) {
-  removeTag(CTags::fromString(tag));
-}
+void CGameObject::removeTag(const std::string &tag) { removeTag(CTags::fromString(tag)); }
 
 std::string CGameObject::getAnimation() { return animation; }
 
 void CGameObject::setAnimation(std::string animation) {
-  // TODO: implement this in AOP way
-  graphicsObject.clear();
-  this->animation = animation;
+    // TODO: implement this in AOP way
+    graphicsObject.clear();
+    this->animation = animation;
 }
 
 std::string CGameObject::getLabel() { return label; }
@@ -119,35 +98,25 @@ void CGameObject::setLabel(std::string _label) { label = _label; }
 
 std::string CGameObject::getDescription() { return description; }
 
-void CGameObject::setDescription(std::string _description) {
-  description = _description;
-}
+void CGameObject::setDescription(std::string _description) { description = _description; }
 
 std::shared_ptr<CAnimation> CGameObject::getGraphicsObject() {
-  return graphicsObject.get([this]() {
-    std::shared_ptr<CAnimation> anim =
-        CAnimationProvider::getAnimation(getGame(), this->ptr<CGameObject>());
-    for (auto [key, val] :
-         getGame()
-             ->createObject<CMapStringInt>("mapObjectPriorities")
-             ->getValues()) {
-      if (val > anim->getPriority() && this->meta()->inherits(key)) {
-        anim->setPriority(val);
-      }
-    }
-    return anim;
-  });
+    return graphicsObject.get([this]() {
+        std::shared_ptr<CAnimation> anim = CAnimationProvider::getAnimation(getGame(), this->ptr<CGameObject>());
+        for (auto [key, val] : getGame()->createObject<CMapStringInt>("mapObjectPriorities")->getValues()) {
+            if (val > anim->getPriority() && this->meta()->inherits(key)) {
+                anim->setPriority(val);
+            }
+        }
+        return anim;
+    });
 }
 
-void CGameObject::connect(std::string signal,
-                          std::shared_ptr<CGameObject> object,
-                          std::string slot) {
-  connections.emplace_back(signal, object, slot);
+void CGameObject::connect(std::string signal, std::shared_ptr<CGameObject> object, std::string slot) {
+    connections.emplace_back(signal, object, slot);
 }
 
-bool CGameObject::hasProperty(std::string name) {
-  return this->meta()->has_property<CGameObject>(name, this->ptr());
-}
+bool CGameObject::hasProperty(std::string name) { return this->meta()->has_property<CGameObject>(name, this->ptr()); }
 
 void CGameObject::setTypeId(std::string _typeId) { typeId = _typeId; }
 

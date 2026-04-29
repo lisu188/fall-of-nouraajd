@@ -21,22 +21,21 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 class CBuilding : public CMapObject, public Visitable {
 
-  V_META(CBuilding, CMapObject,
-         V_PROPERTY(CBuilding, bool, enabled, isEnabled, setEnabled))
+    V_META(CBuilding, CMapObject, V_PROPERTY(CBuilding, bool, enabled, isEnabled, setEnabled))
 
-public:
-  CBuilding();
+  public:
+    CBuilding();
 
-  virtual ~CBuilding();
+    virtual ~CBuilding();
 
-  bool isEnabled();
+    bool isEnabled();
 
-  void setEnabled(bool enabled);
+    void setEnabled(bool enabled);
 
-  virtual void onEnter(std::shared_ptr<CGameEvent>) override;
+    virtual void onEnter(std::shared_ptr<CGameEvent>) override;
 
-  virtual void onLeave(std::shared_ptr<CGameEvent>) override;
+    virtual void onLeave(std::shared_ptr<CGameEvent>) override;
 
-protected:
-  bool enabled = true;
+  protected:
+    bool enabled = true;
 };

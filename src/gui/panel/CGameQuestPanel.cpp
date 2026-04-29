@@ -20,22 +20,20 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "gui/CGui.h"
 #include "gui/CTextManager.h"
 
-void CGameQuestPanel::renderObject(std::shared_ptr<CGui> gui,
-                                   std::shared_ptr<SDL_Rect> rect, int i) {
-  gui->getTextManager()->drawText(getText(gui), rect->x, rect->y, rect->w);
+void CGameQuestPanel::renderObject(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> rect, int i) {
+    gui->getTextManager()->drawText(getText(gui), rect->x, rect->y, rect->w);
 }
 
 std::string CGameQuestPanel::getText(std::shared_ptr<CGui> ptr) {
-  std::string text = "";
-  for (auto quest :
-       ptr->getGame()->getMap()->getPlayer()->getCompletedQuests()) {
-    text += quest->getDescription();
-    text += "(completed)";
-    text += "\n";
-  }
-  for (auto quest : ptr->getGame()->getMap()->getPlayer()->getQuests()) {
-    text += quest->getDescription();
-    text += "\n";
-  }
-  return text;
+    std::string text = "";
+    for (auto quest : ptr->getGame()->getMap()->getPlayer()->getCompletedQuests()) {
+        text += quest->getDescription();
+        text += "(completed)";
+        text += "\n";
+    }
+    for (auto quest : ptr->getGame()->getMap()->getPlayer()->getQuests()) {
+        text += quest->getDescription();
+        text += "\n";
+    }
+    return text;
 }

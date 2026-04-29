@@ -21,13 +21,11 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 CTrigger::CTrigger() {}
 
-void CTrigger::trigger(std::shared_ptr<CGameObject> object,
-                       std::shared_ptr<CGameEvent> event) {
-  pybind11::gil_scoped_acquire gil;
-  if (auto override = CPythonOverrides::find_override(this, "trigger");
-      !override.is_none()) {
-    PY_SAFE(override(object, event); return;)
-  }
+void CTrigger::trigger(std::shared_ptr<CGameObject> object, std::shared_ptr<CGameEvent> event) {
+    pybind11::gil_scoped_acquire gil;
+    if (auto override = CPythonOverrides::find_override(this, "trigger"); !override.is_none()) {
+        PY_SAFE(override(object, event); return;)
+    }
 }
 
 std::string CTrigger::getObject() { return object; }
@@ -38,7 +36,6 @@ std::string CTrigger::getEvent() { return event; }
 
 void CTrigger::setEvent(std::string event) { CTrigger::event = event; }
 
-void CCustomTrigger::trigger(std::shared_ptr<CGameObject> object,
-                             std::shared_ptr<CGameEvent> event) {
-  _trigger(object, event);
+void CCustomTrigger::trigger(std::shared_ptr<CGameObject> object, std::shared_ptr<CGameEvent> event) {
+    _trigger(object, event);
 }

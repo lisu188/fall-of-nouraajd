@@ -27,65 +27,62 @@ class CMap;
 class CCreature;
 
 class CMapObject : public CGameObject, public Creatable, public Turnable {
-  friend class CObjectHandler;
+    friend class CObjectHandler;
 
-  V_META(CMapObject, CGameObject,
-         V_PROPERTY(CMapObject, int, posx, getPosX, setPosX),
-         V_PROPERTY(CMapObject, int, posy, getPosY, setPosY),
-         V_PROPERTY(CMapObject, int, posz, getPosZ, setPosZ),
-         V_PROPERTY(CMapObject, bool, canStep, getCanStep, setCanStep),
-         V_PROPERTY(CMapObject, std::string, affiliation, getAffiliation,
-                    setAffiliation))
+    V_META(CMapObject, CGameObject, V_PROPERTY(CMapObject, int, posx, getPosX, setPosX),
+           V_PROPERTY(CMapObject, int, posy, getPosY, setPosY), V_PROPERTY(CMapObject, int, posz, getPosZ, setPosZ),
+           V_PROPERTY(CMapObject, bool, canStep, getCanStep, setCanStep),
+           V_PROPERTY(CMapObject, std::string, affiliation, getAffiliation, setAffiliation))
 
-public:
-  CMapObject();
+  public:
+    CMapObject();
 
-  virtual ~CMapObject();
+    virtual ~CMapObject();
 
-  void setPosX(int posx);
+    void setPosX(int posx);
 
-  void setPosY(int posy);
+    void setPosY(int posy);
 
-  void setPosZ(int posz);
+    void setPosZ(int posz);
 
-  std::string getAffiliation();
+    std::string getAffiliation();
 
-  void setAffiliation(const std::string &affiliation);
+    void setAffiliation(const std::string &affiliation);
 
-  int getPosX() const;
+    int getPosX() const;
 
-  int getPosY() const;
+    int getPosY() const;
 
-  int getPosZ() const;
+    int getPosZ() const;
 
-  virtual void onTurn(std::shared_ptr<CGameEvent>) override;
+    virtual void onTurn(std::shared_ptr<CGameEvent>) override;
 
-  virtual void onCreate(std::shared_ptr<CGameEvent>) override;
+    virtual void onCreate(std::shared_ptr<CGameEvent>) override;
 
-  virtual void onDestroy(std::shared_ptr<CGameEvent>) override;
+    virtual void onDestroy(std::shared_ptr<CGameEvent>) override;
 
-  Coords getCoords();
+    Coords getCoords();
 
-  void setCoords(Coords coords);
+    void setCoords(Coords coords);
 
-  virtual void move(int x, int y, int z);
+    virtual void move(int x, int y, int z);
 
-  void move(Coords coords);
+    void move(Coords coords);
 
-  void moveTo(int x, int y, int z);
+    void moveTo(int x, int y, int z);
 
-  void moveTo(Coords coords);
+    void moveTo(Coords coords);
 
-  bool isAffiliatedWith(std::shared_ptr<CMapObject> object);
+    bool isAffiliatedWith(std::shared_ptr<CMapObject> object);
 
-  bool getCanStep();
+    bool getCanStep();
 
-  void setCanStep(bool step);
+    void setCanStep(bool step);
 
-private:
-  int posx = 0;
-  int posy = 0;
-  int posz = 0;
-  bool canStep = true;
-  std::string affiliation;
+  private:
+    int posx = 0;
+    int posy = 0;
+    int posz = 0;
+    bool canStep = true;
+    std::string affiliation;
 };
