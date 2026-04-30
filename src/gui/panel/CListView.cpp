@@ -18,14 +18,27 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "CListView.h"
 #include "core/CGame.h"
 #include "core/CMap.h"
+#include "core/CProvider.h"
 #include "core/CScript.h"
 #include "core/CUtil.h"
+#include "gui/CAnimation.h"
 #include "gui/CGui.h"
 #include "gui/CLayout.h"
 #include "gui/CTextureCache.h"
 #include "gui/object/CProxyGraphicsObject.h"
 #include "gui/object/CWidget.h"
 #include "handler/CEventHandler.h"
+
+namespace {
+std::shared_ptr<CAnimation> createListItemAnimation(const std::shared_ptr<CGui> &gui,
+                                                    const std::shared_ptr<CGameObject> &object) {
+    auto cached = object->getGraphicsObject();
+    auto animation = CAnimationProvider::getAnimation(gui->getGame(), object);
+    animation->setPriority(cached->getPriority());
+    animation->setLayout(std::make_shared<CParentLayout>());
+    return animation;
+}
+} // namespace
 
 void CListView::renderObject(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> loc, int frameTime) {}
 
@@ -209,7 +222,7 @@ std::list<std::shared_ptr<CGameGraphicsObject>> CListView::getProxiedObjects(std
             addItemBox(gui, return_val);
         }
         if (isItemPresent) {
-            addItem(return_val, indexedCollection, itemIndex);
+            addItem(gui, return_val, indexedCollection, itemIndex);
         }
         if (invokeSelect(gui, itemIndex, isItemPresent ? indexedCollection.find(itemIndex)->second : nullptr)) {
             addSelectionBox(gui, return_val);
@@ -243,25 +256,27 @@ void CListView::addSelectionBox(const std::shared_ptr<CGui> &gui,
     return_val.push_back(selectionBox); // TODO: cache
 }
 
-void CListView::addItem(std::list<std::shared_ptr<CGameGraphicsObject>> &return_val,
+void CListView::addItem(const std::shared_ptr<CGui> &gui, std::list<std::shared_ptr<CGameGraphicsObject>> &return_val,
                         std::unordered_multimap<int, std::shared_ptr<CGameObject>> indexedCollection,
                         int itemIndex) const {
     auto self = const_cast<CListView *>(this)->ptr<CListView>();
     auto object = indexedCollection.find(itemIndex)->second;
-    std::shared_ptr<CGameGraphicsObject> objectGraphic = object->getGraphicsObject()->withCallback(
-        [self, itemIndex, object](std::shared_ptr<CGui> gui, SDL_EventType type, int button, int, int) {
-            if (type != SDL_MOUSEBUTTONDOWN) {
-                return false;
-            }
-            if (button == SDL_BUTTON_LEFT) {
-                self->invokeCallback(gui, itemIndex, object);
-                return true;
-            }
-            if (button == SDL_BUTTON_RIGHT) {
-                return self->invokeRightClickCallback(gui, itemIndex, object);
-            }
-            return false;
-        });
+    std::shared_ptr<CGameGraphicsObject> objectGraphic =
+        createListItemAnimation(gui, object)
+            ->withCallback(
+                [self, itemIndex, object](std::shared_ptr<CGui> gui, SDL_EventType type, int button, int, int) {
+                    if (type != SDL_MOUSEBUTTONDOWN) {
+                        return false;
+                    }
+                    if (button == SDL_BUTTON_LEFT) {
+                        self->invokeCallback(gui, itemIndex, object);
+                        return true;
+                    }
+                    if (button == SDL_BUTTON_RIGHT) {
+                        return self->invokeRightClickCallback(gui, itemIndex, object);
+                    }
+                    return false;
+                });
     objectGraphic->setPriority(2);
     return_val.push_back(objectGraphic);
 }
