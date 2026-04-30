@@ -1,6 +1,6 @@
 /*
 fall-of-nouraajd c++ dark fantasy game
-Copyright (C) 2025  Andrzej Lis
+Copyright (C) 2025-2026  Andrzej Lis
 
 This program is free software: you can redistribute it and/or modify
         it under the terms of the GNU General Public License as published by
@@ -174,7 +174,7 @@ class CListView : public CProxyTargetGraphicsObject {
     void addItemBox(const std::shared_ptr<CGui> &gui,
                     std::list<std::shared_ptr<CGameGraphicsObject>> &return_val) const;
 
-    void addItem(std::list<std::shared_ptr<CGameGraphicsObject>> &return_val,
+    void addItem(const std::shared_ptr<CGui> &gui, std::list<std::shared_ptr<CGameGraphicsObject>> &return_val,
                  std::unordered_multimap<int, std::shared_ptr<CGameObject>> indexedCollection, int itemIndex) const;
 
     void addSelectionBox(const std::shared_ptr<CGui> &gui,

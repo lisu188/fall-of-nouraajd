@@ -10,17 +10,7 @@
 namespace {
 std::shared_ptr<CAnimation> clone_proxy_animation(const std::shared_ptr<CGui> &gui,
                                                   const std::shared_ptr<CAnimation> &cached) {
-    std::shared_ptr<CAnimation> animation;
-    if (vstd::cast<CDynamicAnimation>(cached)) {
-        animation = std::make_shared<CDynamicAnimation>();
-    } else if (vstd::cast<CStaticAnimation>(cached)) {
-        animation = std::make_shared<CStaticAnimation>();
-    } else if (vstd::cast<CSelectionBox>(cached)) {
-        animation = std::make_shared<CSelectionBox>();
-    } else {
-        animation = gui->getGame()->createObject<CAnimation>(cached->meta()->name());
-    }
-    animation->setGame(gui->getGame());
+    auto animation = gui->getGame()->createObject<CAnimation>(cached->meta()->name());
     animation->setPriority(cached->getPriority());
     return animation;
 }
