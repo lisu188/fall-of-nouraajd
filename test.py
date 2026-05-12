@@ -4177,6 +4177,48 @@ class GameTest(unittest.TestCase):
         )
 
     @game_test
+    def test_inventory_right_click_inspects_scroll_without_opening_it(self):
+        game = load_game_module()
+        g = game.CGameLoader.loadGame()
+        game.CGameLoader.loadGui(g)
+        game.CGameLoader.startGameWithPlayer(g, "nouraajd", "Warrior")
+        player = g.getMap().getPlayer()
+        player.addItem("letterFromRolf")
+
+        inventory_panel = g.getGuiHandler().openPanel("inventoryPanel")
+        pump_event_loop(5)
+        inventory_list = next(
+            list_view
+            for list_view in collect_gui_children(inventory_panel, "CListView")
+            if list_view.getCollection() == "inventoryCollection"
+        )
+        inventory_list.setTileSize(50)
+        inventory_list.setXPrefferedSize(8)
+        inventory_list.setYPrefferedSize(8)
+        inventory_list.refresh()
+
+        target_graphic = None
+        for y in range(8):
+            for x in range(8):
+                for graphic in inventory_list.getProxiedObjects(g.getGui(), x, y):
+                    obj = graphic.getObject() if hasattr(graphic, "getObject") else None
+                    if obj and obj.getTypeId() == "letterFromRolf":
+                        target_graphic = graphic
+                        break
+                if target_graphic:
+                    break
+            if target_graphic:
+                break
+
+        self.assertIsNotNone(target_graphic)
+        target_graphic.mouseEvent(g.getGui(), SDL_MOUSEBUTTONDOWN, SDL_BUTTON_RIGHT, 1, 1)
+        pump_event_loop(2)
+        self.assertTrue(gui_contains_class(g, "CTooltip"))
+        self.assertFalse(gui_contains_class(g, "CGameTextPanel"))
+
+        return True, json.dumps({"rolf_letters": player.countItems("letterFromRolf")}, sort_keys=True)
+
+    @game_test
     def test_fight_panel_callbacks_and_list_views(self):
         game = load_game_module()
         drain_sdl_events()
