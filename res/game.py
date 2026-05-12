@@ -3,6 +3,15 @@ from _game import *
 set_logger_sink("disabled", None)
 
 
+PLAYER_CLASS_SUMMARIES = {
+    "Assasin": "agile striker with poison and stun tricks",
+    "Inquisitor": "durable zealot who exposes corruption",
+    "Sorcerer": "high-mana caster with escalating spells",
+    "Warrior": "armored front-liner with reliable melee pressure",
+    "Wayfarer": "mobile scout with route and mark bonuses",
+}
+
+
 def register(context):
     def register_wrapper(f):
         context.getObjectHandler().registerType(f.__name__, f)
@@ -15,8 +24,8 @@ def trigger(context, event, object):
     def trigger_wrapper(f):
         context.getObjectHandler().registerType(f.__name__, f)
         trigger = context.createObject(f.__name__)
-        trigger.setStringProperty('object', object)
-        trigger.setStringProperty('event', event)
+        trigger.setStringProperty("object", object)
+        trigger.setStringProperty("event", event)
         map = context.getMap()
         if map:
             map.getEventHandler().registerTrigger(trigger)
@@ -32,19 +41,36 @@ def list_string(g, list):
     return return_list
 
 
+def player_class_options(g):
+    options = {}
+    for player_type in sorted(g.getObjectHandler().getAllSubTypes("CPlayer")):
+        player = g.createObject(player_type)
+        label = player.getStringProperty("label") or player_type
+        summary = PLAYER_CLASS_SUMMARIES.get(player_type, "adventurer")
+        option = f"{label} - {summary}"
+        options[option] = player_type
+    return options
+
+
+def choose_player_class(g):
+    options = player_class_options(g)
+    selection = g.getGuiHandler().showSelection(list_string(g, list(options.keys())))
+    return options.get(selection, selection)
+
+
 def new():
     g = CGameLoader.loadGame()
     CGameLoader.loadGui(g)
     selection = g.getGuiHandler().showSelection(list_string(g, ["NEW", "LOAD", "RANDOM"]))
     if selection == "NEW":
         map = g.getGuiHandler().showSelection(list_string(g, CResourcesProvider.getInstance().getFiles("MAP")))
-        player = g.getGuiHandler().showSelection(list_string(g, g.getObjectHandler().getAllSubTypes("CPlayer")))
+        player = choose_player_class(g)
         CGameLoader.startGameWithPlayer(g, map, player)
     elif selection == "LOAD":
         save = g.getGuiHandler().showSelection(list_string(g, CResourcesProvider.getInstance().getFiles("SAVE")))
         CGameLoader.loadSavedGame(g, save)
     elif selection == "RANDOM":
-        player = g.getGuiHandler().showSelection(list_string(g, g.getObjectHandler().getAllSubTypes("CPlayer")))
+        player = choose_player_class(g)
         CGameLoader.startRandomGameWithPlayer(g, player)
     while event_loop.instance().run():
         pass
