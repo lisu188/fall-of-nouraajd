@@ -1,6 +1,6 @@
 /*
 fall-of-nouraajd c++ dark fantasy game
-Copyright (C) 2025  Andrzej Lis
+Copyright (C) 2025-2026  Andrzej Lis
 
 This program is free software: you can redistribute it and/or modify
         it under the terms of the GNU General Public License as published by
@@ -29,4 +29,10 @@ class CPlugin : public CGameObject {
     V_META(CPlugin, CGameObject, vstd::meta::empty())
   public:
     virtual void load(std::shared_ptr<CGame> game);
+};
+
+class CNativeContentPlugin : public CPlugin {
+    V_META(CNativeContentPlugin, CPlugin, vstd::meta::empty())
+  public:
+    void load(std::shared_ptr<CGame> game) override;
 };

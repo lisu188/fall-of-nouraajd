@@ -1,0 +1,9 @@
+{
+  "global": [
+    {
+      "kind": "cpp",
+      "id": "CNativeContentPlugin"
+    }
+  ],
+  "maps": {}
+}

@@ -1750,6 +1750,26 @@ class GameTest(unittest.TestCase):
         return True, ""
 
     @game_test
+    def test_cpp_plugin_manifest_registers_native_content(self):
+        game = load_game_module()
+
+        g = game.CGameLoader.loadGame()
+        marker = g.createObject("nativePluginMarker")
+
+        self.assertIsNotNone(marker)
+        self.assertEqual("Native plugin marker", marker.getStringProperty("label"))
+        self.assertEqual("Registered by a compiled C++ plugin.", marker.getStringProperty("description"))
+        self.assertTrue(marker.getBoolProperty("nativePluginLoaded"))
+        self.assertTrue(game.CPluginLoader.loadCppPlugin(g, "CNativeContentPlugin"))
+        self.assertFalse(game.CPluginLoader.loadCppPlugin(g, "DefinitelyMissingPlugin"))
+
+        report = {
+            "marker": marker.getStringProperty("label"),
+            "native": marker.getBoolProperty("nativePluginLoaded"),
+        }
+        return True, json.dumps(report, sort_keys=True)
+
+    @game_test
     def test_crafting_runtime_applies_recipe(self):
         import crafting
 
