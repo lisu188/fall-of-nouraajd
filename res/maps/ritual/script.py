@@ -110,6 +110,20 @@ def load(self, context):
             game_map = self.getGame().getMap()
             return game_map.getBoolProperty("leader_defeated") and not game_map.getBoolProperty("captive_lost")
 
+        def getObjective(self):
+            game_map = self.getGame().getMap()
+            if not game_map.getBoolProperty("anchors_destroyed"):
+                return "Break all three ritual anchors before the final chant finishes."
+            if not game_map.getBoolProperty("leader_defeated"):
+                return "Defeat the ritual leader now that the anchors are broken."
+            return "Reach the captive and decide the chapel's fate."
+
+        def getReward(self):
+            return "Opens the road to the siege map if the captive survives."
+
+        def getHint(self):
+            return "The witness and chapel records describe where the anchors stand."
+
         def onComplete(self):
             pass
 
@@ -117,6 +131,16 @@ def load(self, context):
     class DestroyAnchorsQuest(CQuest):
         def isCompleted(self):
             return self.getGame().getMap().getBoolProperty("anchors_destroyed")
+
+        def getObjective(self):
+            count = self.getGame().getMap().getNumericProperty("anchors_destroyed_count")
+            return f"Destroy the north, crypt, and sanctum anchors ({count}/3 destroyed)."
+
+        def getReward(self):
+            return "Summons the exposed ritual leader."
+
+        def getHint(self):
+            return "One anchor is in the chapel, one in the crypt, and one near the sanctum glass."
 
         def onComplete(self):
             pass
@@ -127,6 +151,17 @@ def load(self, context):
             game_map = self.getGame().getMap()
             return game_map.getBoolProperty("captive_freed") or game_map.getBoolProperty("captive_lost")
 
+        def getObjective(self):
+            if self.getGame().getMap().getBoolProperty("captive_lost"):
+                return "The captive was lost to the rite."
+            return "Free the captive after the leader falls."
+
+        def getReward(self):
+            return "300 gold and a Life Potion if the captive survives."
+
+        def getHint(self):
+            return "The stained-glass prison opens only after the anchors and leader are gone."
+
         def onComplete(self):
             pass
 
@@ -135,6 +170,15 @@ def load(self, context):
         def isCompleted(self):
             game_map = self.getGame().getMap()
             return game_map.getBoolProperty("good_ending") or game_map.getBoolProperty("bad_ending")
+
+        def getObjective(self):
+            return "Resolve whether the chapel becomes a rescue or a warning."
+
+        def getReward(self):
+            return "Continues the campaign to the siege if you save the captive."
+
+        def getHint(self):
+            return "Return to the captive once the sanctum is quiet."
 
         def onComplete(self):
             pass
@@ -166,7 +210,11 @@ def load(self, context):
 
         def need_more_work(self):
             game_map = self.getGame().getMap()
-            return not self.can_free_captive() and not game_map.getBoolProperty("captive_lost") and not self.is_captive_freed()
+            return (
+                not self.can_free_captive()
+                and not game_map.getBoolProperty("captive_lost")
+                and not self.is_captive_freed()
+            )
 
         def free_captive(self):
             game_map = self.getGame().getMap()
@@ -183,8 +231,9 @@ def load(self, context):
                 player.addItem("LifePotion")
                 game_map.setBoolProperty("reward_claimed", True)
                 self.getGame().getGuiHandler().showMessage(
-                    "You earn 300 gold and a Life Potion for saving the captive."
+                    "You earn 300 gold and a Life Potion. The rescued captive points toward a siege beyond the marsh."
                 )
+            self.getGame().changeMap("siege")
 
     @trigger(context, "onTurn", "ritualTurnAnchor")
     class RitualTurnTrigger(CTrigger):

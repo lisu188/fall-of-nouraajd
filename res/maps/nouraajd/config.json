@@ -26,6 +26,12 @@
         },
         {
           "ref": "LesserLifePotion"
+        },
+        {
+          "ref": "LesserManaPotion"
+        },
+        {
+          "ref": "Scroll"
         }
       ]
     }

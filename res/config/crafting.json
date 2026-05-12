@@ -27,6 +27,17 @@
         "gold": 35,
         "unlockFlag": "CAN_CRAFT_SCROLLS"
     },
+    "scribe_emergency_portal_scroll": {
+        "station": "scribeDesk",
+        "inputs": [
+            { "item": "Scroll", "count": 1 },
+            { "item": "LesserManaPotion", "count": 2 }
+        ],
+        "output": { "item": "TownPortalScroll", "count": 1 },
+        "gold": 20,
+        "successChance": 85,
+        "unlockFlag": "CAN_CRAFT_SCROLLS"
+    },
     "blend_greater_life_potion": {
         "station": "alchemyTable",
         "inputs": [
@@ -44,5 +55,25 @@
         "output": { "item": "GreaterManaPotion", "count": 1 },
         "gold": 45,
         "successChance": 90
+    },
+    "brew_full_life_potion": {
+        "station": "alchemyTable",
+        "inputs": [
+            { "item": "GreaterLifePotion", "count": 2 }
+        ],
+        "output": { "item": "FullLifePotion", "count": 1 },
+        "gold": 90,
+        "successChance": 85,
+        "unlockFlag": "CAN_BREW_GREATER_POTIONS"
+    },
+    "brew_full_mana_potion": {
+        "station": "alchemyTable",
+        "inputs": [
+            { "item": "GreaterManaPotion", "count": 2 }
+        ],
+        "output": { "item": "FullManaPotion", "count": 1 },
+        "gold": 90,
+        "successChance": 85,
+        "unlockFlag": "CAN_BREW_GREATER_POTIONS"
     }
 }

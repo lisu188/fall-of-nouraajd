@@ -260,6 +260,21 @@
           }
         },
         {
+          "class": "CWidget",
+          "properties": {
+            "layout": {
+              "class": "CLayout",
+              "properties": {
+                "h": "14%",
+                "w": "80%",
+                "x": "10%",
+                "y": "66%"
+              }
+            },
+            "render": "renderCombatStatus"
+          }
+        },
+        {
           "class": "CListView",
           "properties": {
             "callback": "interactionsCallback",

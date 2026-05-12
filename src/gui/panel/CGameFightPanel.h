@@ -1,6 +1,6 @@
 /*
 fall-of-nouraajd c++ dark fantasy game
-Copyright (C) 2025  Andrzej Lis
+Copyright (C) 2025-2026  Andrzej Lis
 
 This program is free software: you can redistribute it and/or modify
         it under the terms of the GNU General Public License as published by
@@ -38,6 +38,7 @@ class CGameFightPanel : public CGamePanel {
            V_METHOD(CGameFightPanel, enemiesCollection, CListView::collection_pointer, std::shared_ptr<CGui>),
            V_METHOD(CGameFightPanel, enemiesCallback, void, std::shared_ptr<CGui>, int, std::shared_ptr<CGameObject>),
            V_METHOD(CGameFightPanel, enemiesSelect, bool, std::shared_ptr<CGui>, int, std::shared_ptr<CGameObject>),
+           V_METHOD(CGameFightPanel, renderCombatStatus, void, std::shared_ptr<CGui>, std::shared_ptr<SDL_Rect>, int),
            V_METHOD(CGameFightPanel, getEnemy, std::shared_ptr<CCreature>))
 
   public:
@@ -50,6 +51,10 @@ class CGameFightPanel : public CGamePanel {
     void setEnemy(std::shared_ptr<CCreature> en);
 
     void setEnemies(const std::vector<std::shared_ptr<CCreature>> &value);
+
+    std::string getCombatStatus(std::shared_ptr<CGui> gui);
+
+    void renderCombatStatus(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> rect, int frameTime);
 
   private:
     std::vector<std::shared_ptr<CCreature>> enemies;

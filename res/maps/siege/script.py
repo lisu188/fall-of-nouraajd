@@ -1,11 +1,69 @@
 def load(self, context):
     from game import CTag
     from game import CEvent
+    from game import CQuest
     from game import CTrigger
     from game import register
     from game import trigger
     from game import randint
     from game import logger
+
+    SPAWN_POINTS = ("spawnPoint1", "spawnPoint2", "spawnPoint3", "spawnPoint4")
+
+    def destroyed_gate_count(game_map):
+        count = 0
+        for name in SPAWN_POINTS:
+            gate = game_map.getObjectByName(name)
+            if gate and gate.getBoolProperty("destroyed"):
+                count += 1
+        return count
+
+    def ensure_siege_quest(player):
+        for quest in player.getQuests():
+            if quest.getName() == "defendSiegeQuest" or quest.getTypeId() == "defendSiegeQuest":
+                return
+        player.addQuest("defendSiegeQuest")
+
+    @register(context)
+    class SiegeStartEvent(CEvent):
+        def onEnter(self, event):
+            if not event.getCause().isPlayer():
+                return
+            game_map = self.getMap()
+            if game_map.getBoolProperty("siege_initialized"):
+                return
+            game_map.setBoolProperty("siege_initialized", True)
+            player = game_map.getPlayer()
+            ensure_siege_quest(player)
+            player.addItem("magicWand")
+            game_map.getGame().getGuiHandler().showMessage(
+                "The road ends at a besieged gatehouse. Seal each breach with mage-wands before the attackers "
+                "overrun it."
+            )
+
+    @register(context)
+    class DefendSiegeQuest(CQuest):
+        def isCompleted(self):
+            return destroyed_gate_count(self.getGame().getMap()) == len(SPAWN_POINTS)
+
+        def getObjective(self):
+            sealed = destroyed_gate_count(self.getGame().getMap())
+            return f"Seal every siege gate with charged wands ({sealed}/{len(SPAWN_POINTS)} sealed)."
+
+        def getReward(self):
+            return "500 gold and final campaign completion."
+
+        def getHint(self):
+            return "Pritz mages carry extra wands; defeat them if you run out."
+
+        def onComplete(self):
+            player = self.getGame().getMap().getPlayer()
+            if self.getGame().getMap().getBoolProperty("siege_reward_claimed"):
+                return
+            player.addGold(500)
+            self.getGame().getMap().setBoolProperty("siege_reward_claimed", True)
+            self.getGame().getMap().setBoolProperty("campaign_completed", True)
+            self.getGame().getGuiHandler().showMessage("The last breach is sealed. Nouraajd survives the night.")
 
     @register(context)
     class SpawnPoint(CEvent):

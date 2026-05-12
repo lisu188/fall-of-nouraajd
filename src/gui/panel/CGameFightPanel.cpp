@@ -1,6 +1,6 @@
 /*
 fall-of-nouraajd c++ dark fantasy game
-Copyright (C) 2025  Andrzej Lis
+Copyright (C) 2025-2026  Andrzej Lis
 
 This program is free software: you can redistribute it and/or modify
         it under the terms of the GNU General Public License as published by
@@ -21,6 +21,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "core/CMap.h"
 #include "gui/CAnimation.h"
+#include "gui/CTextManager.h"
 #include "gui/CTextureCache.h"
 #include "gui/object/CProxyTargetGraphicsObject.h"
 #include "gui/object/CStatsGraphicsObject.h"
@@ -193,4 +194,23 @@ void CGameFightPanel::enemiesCallback(std::shared_ptr<CGui> gui, int index,
 
 bool CGameFightPanel::enemiesSelect(std::shared_ptr<CGui> gui, int index, std::shared_ptr<CGameObject> object) {
     return object && enemy.lock() && enemy.lock() == object;
+}
+
+std::string CGameFightPanel::getCombatStatus(std::shared_ptr<CGui> gui) {
+    if (!gui || !gui->getGame() || !gui->getGame()->getMap()) {
+        return "";
+    }
+    auto status = gui->getGame()->getMap()->getStringProperty("combatStatus");
+    if (!status.empty()) {
+        return status;
+    }
+    if (enemy.lock()) {
+        return "Choose an action.\nEnemy: " + enemy.lock()->getLabel();
+    }
+    return "Choose an action.";
+}
+
+void CGameFightPanel::renderCombatStatus(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> rect, int frameTime) {
+    (void)frameTime;
+    gui->getTextManager()->drawText(getCombatStatus(gui), rect->x, rect->y, rect->w);
 }

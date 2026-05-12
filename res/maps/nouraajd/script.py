@@ -455,12 +455,21 @@ def load(self, context):
     @register(context)
     class ChangeMap(CEvent):
         def onEnter(self, event):
-            self.getMap().getGame().changeMap("map2")
+            self.getMap().getGame().changeMap("ritual")
 
     @register(context)
     class MainQuest(CQuest):
         def isCompleted(self):
             return _quest_system_from(self).get_state("main") == "gooby_slain"
+
+        def getObjective(self):
+            return "Follow Sergeant Rolf's trail, recover his skull, then slay Gooby beneath Nouraajd."
+
+        def getReward(self):
+            return "Unlocks the deeper Marumi Baso threat."
+
+        def getHint(self):
+            return "Search the cave outside town for the first sign of Rolf."
 
         def onComplete(self):
             self.getGame().getGuiHandler().showMessage("Gooby lies butchered, and weary townsfolk dare a ragged cheer.")
@@ -469,6 +478,15 @@ def load(self, context):
     class RolfQuest(CQuest):
         def isCompleted(self):
             return _quest_system_from(self).get_state("rolf") == "skull_recovered"
+
+        def getObjective(self):
+            return "Recover Sergeant Rolf's skull from the Pritscher cave."
+
+        def getReward(self):
+            return "Starts the Gooby hunt."
+
+        def getHint(self):
+            return "The cave entrance lies beyond Nouraajd's roads."
 
         def onComplete(self):
             self.getGame().getGuiHandler().showMessage(
@@ -480,6 +498,15 @@ def load(self, context):
         def isCompleted(self):
             return _quest_system_from(self).is_letter_delivered()
 
+        def getObjective(self):
+            return "Carry Mayor Irvin's sealed letter to Father Beren at the chapel."
+
+        def getReward(self):
+            return "Unlocks scribe-desk scroll crafting."
+
+        def getHint(self):
+            return "Ask at town hall, then visit the chapel."
+
         def onComplete(self):
             pass
 
@@ -487,6 +514,15 @@ def load(self, context):
     class RetrieveRelicQuest(CQuest):
         def isCompleted(self):
             return _quest_system_from(self).is_relic_returned()
+
+        def getObjective(self):
+            return "Recover the holy relic from the catacombs and return it to Father Beren."
+
+        def getReward(self):
+            return "Unlocks stronger alchemy recipes."
+
+        def getHint(self):
+            return "The catacombs hide the relic Beren needs."
 
         def onComplete(self):
             pass
@@ -496,6 +532,15 @@ def load(self, context):
         def isCompleted(self):
             return _quest_system_from(self).is_cave_purged()
 
+        def getObjective(self):
+            return "Use the returned relic to cleanse the OctoBogz cave, then report to Beren."
+
+        def getReward(self):
+            return "Opens the road to the ritual chapel."
+
+        def getHint(self):
+            return "Clear the OctoBogz lair after the relic is back in Beren's hands."
+
         def onComplete(self):
             pass
 
@@ -504,6 +549,20 @@ def load(self, context):
         def isCompleted(self):
             return _quest_system_from(self).victor_has_ended()
 
+        def getObjective(self):
+            state = _quest_system_from(self).get_state("victor")
+            if state == "encounter_active":
+                return "Defeat the cultists in the courtyard before Victor's daughter is taken."
+            if state in ("met_victor", "records_reviewed", "courtyard_known"):
+                return "Follow Victor's clue from the tavern and town hall to the marked courtyard."
+            return "Find Victor's missing daughter."
+
+        def getReward(self):
+            return "500 gold, healing, and Victor's remaining potions if you reach the courtyard in time."
+
+        def getHint(self):
+            return "The tavern rumor and town-hall records point to the courtyard."
+
         def onComplete(self):
             pass
 
@@ -511,6 +570,15 @@ def load(self, context):
     class OctoBogzQuest(CQuest):
         def isCompleted(self):
             return _quest_system_from(self).is_octobogz_contract_completed()
+
+        def getObjective(self):
+            return "Destroy the OctoBogz in the cave east of Nouraajd."
+
+        def getReward(self):
+            return "1000 gold and the Shadow Blade."
+
+        def getHint(self):
+            return "The travelers in Nouraajd know the route."
 
         def onComplete(self):
             game = self.getGame()
@@ -523,6 +591,15 @@ def load(self, context):
     class AmuletQuest(CQuest):
         def isCompleted(self):
             return _quest_system_from(self).is_amulet_returned()
+
+        def getObjective(self):
+            return "Recover the old woman's stolen amulet from the goblin thief."
+
+        def getReward(self):
+            return "50 gold."
+
+        def getHint(self):
+            return "The thief lurks near the village edge."
 
         def onComplete(self):
             pass
@@ -764,6 +841,10 @@ def load(self, context):
                 return
             player.removeItem(self._is_letter_to_beren, True)
             quest_system.mark_letter_delivered(player)
+            player.setBoolProperty("CAN_CRAFT_SCROLLS", True)
+            self.getGame().getGuiHandler().showMessage(
+                "Beren opens the chapel scriptorium to you; town portal scrolls can now be crafted."
+            )
             if not quest_system.is_relic_returned():
                 self._ensure_quest("retrieveRelicQuest")
 
@@ -775,6 +856,10 @@ def load(self, context):
                 return
             player.removeItem(lambda it: it.getName() == "holyRelic", True)
             quest_system.mark_relic_returned()
+            player.setBoolProperty("CAN_BREW_GREATER_POTIONS", True)
+            self.getGame().getGuiHandler().showMessage(
+                "Relic dust settles into the alchemist's notes; stronger draughts are now possible."
+            )
             if game_map.getBoolProperty("OCTOBOGZ_SLAIN"):
                 game_map.setBoolProperty("OCTOBOGZ_CLEARED", True)
             if not quest_system.is_cave_purged():
@@ -785,8 +870,9 @@ def load(self, context):
             if self.can_finish_cleanse():
                 quest_system.mark_cave_purged()
                 self.getGame().getGuiHandler().showMessage(
-                    "For a breath, the town is spared and the OctoBogz lie quiet."
+                    "For a breath, the town is spared. Beren points you toward the abandoned ritual chapel."
                 )
+                self.getGame().changeMap("ritual")
             else:
                 self.getGame().getGuiHandler().showMessage("The cave still writhes with OctoBogz corruption.")
 
