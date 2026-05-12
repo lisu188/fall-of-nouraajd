@@ -1,6 +1,6 @@
 /*
 fall-of-nouraajd c++ dark fantasy game
-Copyright (C) 2025  Andrzej Lis
+Copyright (C) 2025-2026  Andrzej Lis
 
 This program is free software: you can redistribute it and/or modify
         it under the terms of the GNU General Public License as published by
@@ -215,6 +215,36 @@ template <> class CWrapper<CQuest> : public CQuest {
         } catch (const py::error_already_set &) {
             PYTHON_LOG;
             PyErr_Clear();
+        }
+    }
+
+    std::string getObjective() override final {
+        try {
+            PYBIND11_OVERRIDE(std::string, CQuest, getObjective);
+        } catch (const py::error_already_set &) {
+            PYTHON_LOG;
+            PyErr_Clear();
+            return CQuest::getObjective();
+        }
+    }
+
+    std::string getReward() override final {
+        try {
+            PYBIND11_OVERRIDE(std::string, CQuest, getReward);
+        } catch (const py::error_already_set &) {
+            PYTHON_LOG;
+            PyErr_Clear();
+            return CQuest::getReward();
+        }
+    }
+
+    std::string getHint() override final {
+        try {
+            PYBIND11_OVERRIDE(std::string, CQuest, getHint);
+        } catch (const py::error_already_set &) {
+            PYTHON_LOG;
+            PyErr_Clear();
+            return CQuest::getHint();
         }
     }
 };

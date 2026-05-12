@@ -1,6 +1,6 @@
 /*
 fall-of-nouraajd c++ dark fantasy game
-Copyright (C) 2025  Andrzej Lis
+Copyright (C) 2025-2026  Andrzej Lis
 
 This program is free software: you can redistribute it and/or modify
         it under the terms of the GNU General Public License as published by
@@ -35,6 +35,36 @@ void CQuest::onComplete() {
     }
 }
 
+std::string CQuest::getObjective() {
+    pybind11::gil_scoped_acquire gil;
+    if (auto override = CPythonOverrides::find_override(this, "getObjective"); !override.is_none()) {
+        PY_SAFE_RET_VAL(return override().cast<std::string>();, objective)
+    }
+    return objective;
+}
+
+std::string CQuest::getReward() {
+    pybind11::gil_scoped_acquire gil;
+    if (auto override = CPythonOverrides::find_override(this, "getReward"); !override.is_none()) {
+        PY_SAFE_RET_VAL(return override().cast<std::string>();, reward)
+    }
+    return reward;
+}
+
+std::string CQuest::getHint() {
+    pybind11::gil_scoped_acquire gil;
+    if (auto override = CPythonOverrides::find_override(this, "getHint"); !override.is_none()) {
+        PY_SAFE_RET_VAL(return override().cast<std::string>();, hint)
+    }
+    return hint;
+}
+
 void CQuest::setDescription(std::string description) { this->description = description; }
 
 std::string CQuest::getDescription() { return description; }
+
+void CQuest::setObjective(std::string objective) { this->objective = objective; }
+
+void CQuest::setReward(std::string reward) { this->reward = reward; }
+
+void CQuest::setHint(std::string hint) { this->hint = hint; }

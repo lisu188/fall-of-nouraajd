@@ -1851,6 +1851,41 @@ class GameTest(unittest.TestCase):
         return True, ""
 
     @game_test
+    def test_crafting_unlocks_follow_story_progression(self):
+        import crafting
+
+        g, game_map, player = load_game_map_with_player("nouraajd")
+        runtime = crafting.get_runtime()
+
+        self.assertNotIn(
+            "craft_town_portal_scroll",
+            {recipe["id"] for recipe in runtime.available_recipes(player, "scribeDesk")},
+        )
+        town_hall = g.createObject("townHallDialog")
+        beren = g.createObject("berenDialog")
+        town_hall.give_letter()
+        beren.deliver_letter()
+        scribe_recipes = {recipe["id"] for recipe in runtime.available_recipes(player, "scribeDesk")}
+        self.assertIn("craft_town_portal_scroll", scribe_recipes)
+        self.assertIn("scribe_emergency_portal_scroll", scribe_recipes)
+
+        game_map.removeObjectByName("catacombs")
+        beren.return_relic()
+        alchemy_recipes = {recipe["id"] for recipe in runtime.available_recipes(player, "alchemyTable")}
+        self.assertIn("brew_full_life_potion", alchemy_recipes)
+        self.assertIn("brew_full_mana_potion", alchemy_recipes)
+
+        return True, json.dumps(
+            {
+                "alchemy_recipes": sorted(alchemy_recipes),
+                "can_brew_greater": player.getBoolProperty("CAN_BREW_GREATER_POTIONS"),
+                "can_craft_scrolls": player.getBoolProperty("CAN_CRAFT_SCROLLS"),
+                "scribe_recipes": sorted(scribe_recipes),
+            },
+            sort_keys=True,
+        )
+
+    @game_test
     def test_potions_are_not_consumed_at_full_resources(self):
         g, _game_map, player = load_game_map_with_player("nouraajd", "Sorcerer")
 
@@ -2761,6 +2796,11 @@ class GameTest(unittest.TestCase):
         for image_name in ("inquisitor.png", "wayfarer.png"):
             self.assertTrue((build_dir / "images" / "players" / image_name).exists(), image_name)
 
+        menu_options = game.player_class_options(g)
+        self.assertIn("Warrior", menu_options.values())
+        self.assertTrue(any(option.startswith("Warrior - ") for option in menu_options))
+        self.assertTrue(any(option.startswith("Inquisitor - ") for option in menu_options))
+
         required_types = (
             "ExposeCorruption",
             "SanctifiedWard",
@@ -2833,6 +2873,46 @@ class GameTest(unittest.TestCase):
         one_side_took_damage = attacker.getHpRatio() < attacker_hp_before or defender.getHpRatio() < defender_hp_before
         self.assertTrue(one_side_took_damage)
         return True, ""
+
+    @game_test
+    def test_combat_initiative_status_uses_agility_order(self):
+        game = load_game_module()
+
+        g = game.CGameLoader.loadGame()
+        game.CGameLoader.startGame(g, "empty")
+        attacker = g.createObject("Warrior")
+        attacker.name = "slowWarrior"
+        attacker.baseStats.agility = 1
+        attacker.baseStats.hit = 0
+        attacker.baseStats.dmgMin = 0
+        attacker.baseStats.dmgMax = 0
+        attacker.setFightController(g.createObject("CFightController"))
+        attacker.moveTo(0, 0, 0)
+        g.getMap().addObject(attacker)
+
+        defender = g.createObject("GoblinThief")
+        defender.name = "quickGoblin"
+        defender.baseStats.agility = 50
+        defender.baseStats.hit = 0
+        defender.baseStats.dmgMin = 0
+        defender.baseStats.dmgMax = 0
+        defender.setFightController(g.createObject("CFightController"))
+        defender.moveTo(1, 0, 0)
+        g.getMap().addObject(defender)
+
+        result = game.CFightHandler.fightMany(attacker, [defender])
+        status = g.getMap().getStringProperty("combatStatus")
+        self.assertFalse(result)
+        self.assertIn("Initiative:", status)
+        initiative_line = status.split("Initiative:", 1)[1]
+        self.assertLess(initiative_line.index("Goblin Thief"), initiative_line.index("Warrior"))
+
+        gui = g.createObject("gui")
+        panel = g.createObject("CGameFightPanel")
+        panel.setEnemy(defender)
+        self.assertIn("Initiative:", panel.getCombatStatus(gui))
+
+        return True, json.dumps({"resolved": result, "status": status}, sort_keys=True)
 
     @game_test
     def test_shadow_bolt_can_configure_its_effect(self):
@@ -5517,6 +5597,78 @@ class GameTest(unittest.TestCase):
             "gooby_spawned": [gooby.getCoords().x, gooby.getCoords().y, gooby.getCoords().z],
         }
         return success, json.dumps(log, sort_keys=True)
+
+    @game_test
+    def test_campaign_transitions_preserve_player_and_start_siege(self):
+        game = load_game_module()
+
+        g, game_map, player = load_game_map_with_player("nouraajd")
+        town_hall = g.createObject("townHallDialog")
+        beren = g.createObject("berenDialog")
+
+        town_hall.give_letter()
+        beren.deliver_letter()
+        game_map.removeObjectByName("catacombs")
+        beren.return_relic()
+        game_map.removeObjectByName("cave2")
+        beren.finish_cleanse()
+        pump_event_loop(10)
+
+        self.assertEqual("ritual", g.getMap().mapName)
+        self.assertTrue(g.getMap().getPlayer() == player)
+
+        ritual_map = g.getMap()
+        ritual_map.setBoolProperty("anchors_destroyed", True)
+        ritual_map.setBoolProperty("leader_defeated", True)
+        captured = g.createObject("capturedSoulDialog")
+        captured.free_captive()
+        pump_event_loop(10)
+
+        self.assertEqual("siege", g.getMap().mapName)
+        self.assertTrue(g.getMap().getPlayer() == player)
+        self.assertIn("defendSiegeQuest", quest_names(player))
+        self.assertGreaterEqual(player.countItems("magicWand"), 1)
+
+        return True, json.dumps(
+            {
+                "current_map": g.getMap().mapName,
+                "player_name": player.getName(),
+                "quests": quest_names(player),
+                "wands": player.countItems("magicWand"),
+            },
+            sort_keys=True,
+        )
+
+    @game_test
+    def test_quest_journal_shows_objectives_rewards_and_hints(self):
+        game = load_game_module()
+
+        g, game_map, player = load_game_map_with_player("nouraajd")
+        player.addQuest("rolfQuest")
+        game.CGameLoader.loadGui(g)
+        quest_panel = g.createObject("questPanel")
+        text = quest_panel.getText(g.getGui())
+
+        self.assertIn("[Active] Unravel the fate of Sergeant Rolf.", text)
+        self.assertIn("Objective: Recover Sergeant Rolf's skull", text)
+        self.assertIn("Reward: Starts the Gooby hunt.", text)
+        self.assertIn("Hint: The cave entrance lies beyond Nouraajd's roads.", text)
+
+        g_completed, completed_map, completed_player = load_game_map_with_player("nouraajd")
+        completed_player.addQuest("rolfQuest")
+        completed_map.removeObjectByName("cave1")
+        completed_player.checkQuests()
+        game.CGameLoader.loadGui(g_completed)
+        completed_panel = g_completed.createObject("questPanel")
+        text_after_completion = completed_panel.getText(g_completed.getGui())
+        self.assertIn("[Completed] Unravel the fate of Sergeant Rolf.", text_after_completion)
+        self.assertIn("Status: Completed", text_after_completion)
+        self.assertIn("[Active] Vanquish the Dreaded Gooby", text_after_completion)
+
+        return True, json.dumps(
+            {"before": text, "after": text_after_completion},
+            sort_keys=True,
+        )
 
     @game_test
     def test_nouraajd_quest_state_machine(self):

@@ -1,6 +1,6 @@
 /*
 fall-of-nouraajd c++ dark fantasy game
-Copyright (C) 2025  Andrzej Lis
+Copyright (C) 2025-2026  Andrzej Lis
 
 This program is free software: you can redistribute it and/or modify
         it under the terms of the GNU General Public License as published by
@@ -19,6 +19,45 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CMap.h"
 #include "gui/CGui.h"
 #include "gui/CTextManager.h"
+#include "object/CQuest.h"
+
+namespace {
+void append_quest_line(std::string &text, const std::shared_ptr<CQuest> &quest, bool completed) {
+    if (!quest) {
+        return;
+    }
+
+    text += completed ? "[Completed] " : "[Active] ";
+    text += quest->getDescription();
+    text += "\n";
+
+    const auto objective = quest->getObjective();
+    if (!objective.empty()) {
+        text += "  Objective: ";
+        text += objective;
+        text += "\n";
+    }
+
+    const auto reward = quest->getReward();
+    if (!reward.empty()) {
+        text += "  Reward: ";
+        text += reward;
+        text += "\n";
+    }
+
+    const auto hint = quest->getHint();
+    if (!completed && !hint.empty()) {
+        text += "  Hint: ";
+        text += hint;
+        text += "\n";
+    }
+
+    if (completed) {
+        text += "  Status: Completed\n";
+    }
+    text += "\n";
+}
+} // namespace
 
 void CGameQuestPanel::renderObject(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> rect, int i) {
     gui->getTextManager()->drawText(getText(gui), rect->x, rect->y, rect->w);
@@ -27,13 +66,13 @@ void CGameQuestPanel::renderObject(std::shared_ptr<CGui> gui, std::shared_ptr<SD
 std::string CGameQuestPanel::getText(std::shared_ptr<CGui> ptr) {
     std::string text = "";
     for (auto quest : ptr->getGame()->getMap()->getPlayer()->getCompletedQuests()) {
-        text += quest->getDescription();
-        text += "(completed)";
-        text += "\n";
+        append_quest_line(text, quest, true);
     }
     for (auto quest : ptr->getGame()->getMap()->getPlayer()->getQuests()) {
-        text += quest->getDescription();
-        text += "\n";
+        append_quest_line(text, quest, false);
+    }
+    if (text.empty()) {
+        text = "No active quests.\n";
     }
     return text;
 }

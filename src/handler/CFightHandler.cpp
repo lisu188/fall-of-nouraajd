@@ -1,6 +1,6 @@
 /*
 fall-of-nouraajd c++ dark fantasy game
-Copyright (C) 2025  Andrzej Lis
+Copyright (C) 2025-2026  Andrzej Lis
 
 This program is free software: you can redistribute it and/or modify
         it under the terms of the GNU General Public License as published by
@@ -44,6 +44,81 @@ auto encounter_state(const std::shared_ptr<CCreature> &attacker, const encounter
 
 bool is_present(const std::shared_ptr<CCreature> &creature) {
     return creature && creature->getMap() && creature->getMap()->getObjectByName(creature->getName());
+}
+
+std::string combat_name(const std::shared_ptr<CCreature> &creature) {
+    if (!creature) {
+        return "Unknown";
+    }
+    const auto label = creature->getLabel();
+    return label.empty() ? creature->getName() : label;
+}
+
+int initiative_score(const std::shared_ptr<CCreature> &creature) {
+    if (!creature) {
+        return 0;
+    }
+    return creature->getStats()->getAgility() * 2 + creature->getLevel();
+}
+
+encounter_type build_turn_order(const std::shared_ptr<CCreature> &attacker, const encounter_type &opponents) {
+    encounter_type order;
+    if (attacker && attacker->isAlive() && is_present(attacker)) {
+        order.push_back(attacker);
+    }
+    for (const auto &opponent : opponents) {
+        if (opponent && opponent->isAlive() && is_present(opponent)) {
+            order.push_back(opponent);
+        }
+    }
+    std::stable_sort(order.begin(), order.end(), [attacker](const auto &left, const auto &right) {
+        if (left == right) {
+            return false;
+        }
+        const auto leftScore = initiative_score(left);
+        const auto rightScore = initiative_score(right);
+        if (leftScore != rightScore) {
+            return leftScore > rightScore;
+        }
+        if (left == attacker) {
+            return true;
+        }
+        if (right == attacker) {
+            return false;
+        }
+        return combat_name(left) < combat_name(right);
+    });
+    return order;
+}
+
+std::string format_turn_order(const encounter_type &turnOrder) {
+    std::string text = "Initiative: ";
+    bool first = true;
+    for (const auto &creature : turnOrder) {
+        if (!first) {
+            text += " > ";
+        }
+        text += combat_name(creature);
+        text += " (";
+        text += vstd::str(initiative_score(creature));
+        text += ")";
+        first = false;
+    }
+    return text;
+}
+
+void update_combat_status(const std::shared_ptr<CCreature> &attacker, const encounter_type &opponents,
+                          const std::string &message) {
+    if (!attacker || !attacker->getMap()) {
+        return;
+    }
+    const auto turnOrder = build_turn_order(attacker, opponents);
+    auto status = message;
+    if (!status.empty()) {
+        status += "\n";
+    }
+    status += format_turn_order(turnOrder);
+    attacker->getMap()->setStringProperty("combatStatus", status);
 }
 
 encounter_type sanitize_opponents(const std::shared_ptr<CCreature> &attacker, const encounter_type &opponents) {
@@ -137,45 +212,56 @@ bool CFightHandler::fightMany(std::shared_ptr<CCreature> attacker,
         if (SDL_HasEvent(SDL_QUIT)) {
             break;
         }
-        current = resolve_target(attacker, opponents, current);
+        update_combat_status(attacker, opponents, "Combat round " + vstd::str(turn + 1) + " begins.");
         auto before = encounter_state(attacker, opponents);
+        const auto turnOrder = build_turn_order(attacker, opponents);
 
-        applyEffects(attacker);
-        if (!attacker->isAlive()) {
-            // TODO: who was the caster? we should gratify him
-            defeat_attacker(attacker, opponents, current);
-            resolved = true;
-            break;
-        }
-
-        if (!CTags::isTagPresent(attacker->getEffects(), CTag::Stun)) {
-            attacker->getFightController()->control(attacker, current);
-            remove_dead_opponents(attacker, opponents);
-            if (!attacker->isAlive()) {
-                defeat_attacker(attacker, opponents, current);
-                resolved = true;
+        for (const auto &actor : turnOrder) {
+            if (resolved || !attacker->isAlive() || opponents.empty()) {
                 break;
             }
-            if (opponents.empty()) {
-                resolved = true;
-                break;
-            }
-            current = resolve_target(attacker, opponents, current);
-        }
 
-        for (size_t i = 0; i < opponents.size() && attacker->isAlive();) {
-            auto opponent = opponents[i];
-            if (!opponent || !is_present(opponent)) {
-                opponents.erase(opponents.begin() + i);
-                if (opponents.empty()) {
+            if (actor == attacker) {
+                current = resolve_target(attacker, opponents, current);
+                update_combat_status(attacker, opponents,
+                                     combat_name(attacker) + " acts against " + combat_name(current) + ".");
+
+                applyEffects(attacker);
+                if (!attacker->isAlive()) {
+                    // TODO: who was the caster? we should gratify him
+                    defeat_attacker(attacker, opponents, current);
                     resolved = true;
                     break;
                 }
-                current = resolve_target(attacker, opponents, current);
+
+                if (!CTags::isTagPresent(attacker->getEffects(), CTag::Stun)) {
+                    attacker->getFightController()->control(attacker, current);
+                    remove_dead_opponents(attacker, opponents);
+                    if (!attacker->isAlive()) {
+                        defeat_attacker(attacker, opponents, current);
+                        resolved = true;
+                        break;
+                    }
+                    if (opponents.empty()) {
+                        resolved = true;
+                        break;
+                    }
+                    current = resolve_target(attacker, opponents, current);
+                } else {
+                    update_combat_status(attacker, opponents, combat_name(attacker) + " is stunned.");
+                }
                 continue;
             }
-            applyEffects(opponent);
-            if (!opponent->isAlive()) {
+
+            auto opponentIt = std::find(opponents.begin(), opponents.end(), actor);
+            if (opponentIt == opponents.end() || !actor || !is_present(actor)) {
+                continue;
+            }
+
+            update_combat_status(attacker, opponents,
+                                 combat_name(actor) + " acts against " + combat_name(attacker) + ".");
+            applyEffects(actor);
+            if (!actor->isAlive()) {
                 if (remove_dead_opponents(attacker, opponents)) {
                     if (opponents.empty()) {
                         resolved = true;
@@ -185,14 +271,16 @@ bool CFightHandler::fightMany(std::shared_ptr<CCreature> attacker,
                 }
                 continue;
             }
-            if (!CTags::isTagPresent(opponent->getEffects(), CTag::Stun)) {
-                opponent->getFightController()->control(opponent, attacker);
+            if (!CTags::isTagPresent(actor->getEffects(), CTag::Stun)) {
+                actor->getFightController()->control(actor, attacker);
                 if (!attacker->isAlive()) {
                     remove_dead_opponents(attacker, opponents);
-                    defeat_attacker(attacker, opponents, opponent);
+                    defeat_attacker(attacker, opponents, actor);
                     resolved = true;
                     break;
                 }
+            } else {
+                update_combat_status(attacker, opponents, combat_name(actor) + " is stunned.");
             }
             if (remove_dead_opponents(attacker, opponents)) {
                 if (opponents.empty()) {
@@ -200,9 +288,7 @@ bool CFightHandler::fightMany(std::shared_ptr<CCreature> attacker,
                     break;
                 }
                 current = resolve_target(attacker, opponents, current);
-                continue;
             }
-            ++i;
         }
 
         if (resolved || !attacker->isAlive()) {
@@ -220,6 +306,13 @@ bool CFightHandler::fightMany(std::shared_ptr<CCreature> attacker,
     attacker->getFightController()->end(attacker, current);
     for (const auto &opponent : allOpponents) {
         opponent->getFightController()->end(opponent, attacker);
+    }
+
+    if (resolved) {
+        const auto message = attacker->isAlive() && is_present(attacker)
+                                 ? combat_name(attacker) + " survives the encounter."
+                                 : "The encounter is resolved.";
+        update_combat_status(attacker, opponents, message);
     }
 
     return resolved;

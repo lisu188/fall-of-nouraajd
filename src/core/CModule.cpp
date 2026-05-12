@@ -578,7 +578,10 @@ PYBIND11_MODULE(_game, m) {
         py::class_<CQuest, CWrapper<CQuest>, std::shared_ptr<CQuest>, CGameObject>(m, "CQuest", "Base quest class.");
     cquest.def(py::init_alias<>())
         .def("isCompleted", &CQuest::isCompleted, "Return whether quest objectives are completed.")
-        .def("onComplete", &CQuest::onComplete, "Handle quest completion callback.");
+        .def("onComplete", &CQuest::onComplete, "Handle quest completion callback.")
+        .def("getObjective", &CQuest::getObjective, "Return current quest objective text.")
+        .def("getReward", &CQuest::getReward, "Return quest reward text.")
+        .def("getHint", &CQuest::getHint, "Return optional quest hint text.");
     m.attr("CQuestBase") = cquest;
 
     auto cdialog = py::class_<CDialog, CWrapper<CDialog>, std::shared_ptr<CDialog>, CGameObject>(
@@ -740,7 +743,9 @@ PYBIND11_MODULE(_game, m) {
 
     py::class_<CPlayer, CCreature, std::shared_ptr<CPlayer>>(m, "CPlayer", "Player-controlled creature.")
         .def("addQuest", &CPlayer::addQuest, "Add a quest to the player quest log.")
-        .def("getQuests", &CPlayer::getQuests, "Return the player's active quests.");
+        .def("getQuests", &CPlayer::getQuests, "Return the player's active quests.")
+        .def("getCompletedQuests", &CPlayer::getCompletedQuests, "Return the player's completed quests.")
+        .def("checkQuests", &CPlayer::checkQuests, "Move completed quests into the completed quest log.");
 
     py::class_<CListString, CGameObject, std::shared_ptr<CListString>>(m, "CListString", "String list wrapper object.")
         .def("addValue", &CListString::addValue, "Append a value to the list.")
@@ -781,6 +786,7 @@ PYBIND11_MODULE(_game, m) {
     py::class_<CGameFightPanel, CGamePanel, std::shared_ptr<CGameFightPanel>>(m, "CGameFightPanel", "Fight panel.")
         .def("getEnemy", &CGameFightPanel::getEnemy, "Return current enemy creature.")
         .def("setEnemy", &CGameFightPanel::setEnemy, "Set current enemy creature.")
+        .def("getCombatStatus", &CGameFightPanel::getCombatStatus, "Return current combat status text.")
         .def(
             "setEnemies",
             [](CGameFightPanel &self, const py::iterable &creatures) {
@@ -826,7 +832,8 @@ PYBIND11_MODULE(_game, m) {
     py::class_<CGameInventoryPanel, CGamePanel, std::shared_ptr<CGameInventoryPanel>>(m, "CGameInventoryPanel",
                                                                                       "Inventory panel.");
 
-    py::class_<CGameQuestPanel, CGamePanel, std::shared_ptr<CGameQuestPanel>>(m, "CGameQuestPanel", "Quest log panel.");
+    py::class_<CGameQuestPanel, CGamePanel, std::shared_ptr<CGameQuestPanel>>(m, "CGameQuestPanel", "Quest log panel.")
+        .def("getText", &CGameQuestPanel::getText, "Return rendered quest journal text.");
 
     py::class_<CGameTextPanel, CGamePanel, std::shared_ptr<CGameTextPanel>>(m, "CGameTextPanel", "Text display panel.");
 
