@@ -166,6 +166,7 @@ struct register_all_types {
             }
             CTypes::register_type<CPlugin, CGameObject>();
             {
+                CTypes::register_type<CNativeContentPlugin, CPlugin, CGameObject>();
                 CTypes::register_type<CWrapper<CPlugin>, CPlugin, CGameObject>();
             }
         }
