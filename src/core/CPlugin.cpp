@@ -1,6 +1,6 @@
 /*
 fall-of-nouraajd c++ dark fantasy game
-Copyright (C) 2025  Andrzej Lis
+Copyright (C) 2025-2026  Andrzej Lis
 
 This program is free software: you can redistribute it and/or modify
         it under the terms of the GNU General Public License as published by
@@ -16,5 +16,16 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #include "CPlugin.h"
+#include "core/CGame.h"
+#include "handler/CObjectHandler.h"
 
-void CPlugin::load(std::shared_ptr<CGame> game) {}
+void CPlugin::load(std::shared_ptr<CGame>) {}
+
+void CNativeContentPlugin::load(std::shared_ptr<CGame> game) {
+    auto config = std::make_shared<json>();
+    (*config)["class"] = "CGameObject";
+    (*config)["properties"]["label"] = "Native plugin marker";
+    (*config)["properties"]["description"] = "Registered by a compiled C++ plugin.";
+    (*config)["properties"]["nativePluginLoaded"] = true;
+    game->getObjectHandler()->registerConfig("nativePluginMarker", config);
+}

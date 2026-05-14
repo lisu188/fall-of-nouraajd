@@ -32,6 +32,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <utility>
 
 namespace {
+constexpr const char *PLUGIN_MANIFEST_PATH = "plugins/manifest.json";
+
 bool read_bool_property(const json &properties, const std::string &key) {
     if (!properties.count(key)) {
         return false;
@@ -113,6 +115,61 @@ bool is_valid_slot_name(const std::string &name) {
 }
 
 std::string build_saved_map_config_key(const std::string &slotName) { return "__save_slot__/" + slotName; }
+
+std::shared_ptr<json> load_plugin_manifest() {
+    auto provider = CResourcesProvider::getInstance();
+    if (provider->getPath(PLUGIN_MANIFEST_PATH).empty()) {
+        return nullptr;
+    }
+    return provider->loadJson(PLUGIN_MANIFEST_PATH);
+}
+
+bool load_plugin_entry(const std::shared_ptr<CGame> &game, const json &entry,
+                       std::set<std::string> &loadedPythonPlugins) {
+    if (!entry.is_object()) {
+        vstd::logger::warning("Ignoring non-object plugin manifest entry");
+        return false;
+    }
+
+    std::string kind = entry.value("kind", std::string());
+    if (kind.empty()) {
+        kind = entry.value("type", std::string());
+    }
+
+    if (kind == "cpp") {
+        const auto id = entry.value("id", std::string());
+        return CPluginLoader::loadCppPlugin(game, id);
+    }
+
+    if (kind == "python") {
+        const auto path = entry.value("path", std::string());
+        if (path.empty()) {
+            vstd::logger::warning("Ignoring Python plugin manifest entry without path");
+            return false;
+        }
+        if (!loadedPythonPlugins.insert(path).second) {
+            return true;
+        }
+        return CPluginLoader::loadPlugin(game, path);
+    }
+
+    vstd::logger::warning("Ignoring plugin manifest entry with unknown kind:", kind);
+    return false;
+}
+
+bool load_plugin_entries(const std::shared_ptr<CGame> &game, const json &entries,
+                         std::set<std::string> &loadedPythonPlugins) {
+    if (!entries.is_array()) {
+        vstd::logger::warning("Ignoring non-array plugin manifest section");
+        return false;
+    }
+
+    bool loadedAll = true;
+    for (const auto &entry : entries) {
+        loadedAll = load_plugin_entry(game, entry, loadedPythonPlugins) && loadedAll;
+    }
+    return loadedAll;
+}
 } // namespace
 
 void CMapLoader::loadFromTmx(const std::shared_ptr<CMap> &map, const std::shared_ptr<json> &mapc) {
@@ -164,7 +221,7 @@ std::shared_ptr<CMap> CMapLoader::loadNewMap(const std::shared_ptr<CGame> &game,
         std::shared_ptr<CMap> map = game->getObjectHandler()->createObject<CMap>(game);
         game->setMap(map);
         game->getObjectHandler()->registerConfig(getConfigPaths(mapName));
-        CPluginLoader::loadPlugin(game, getScriptPath(mapName));
+        CPluginLoader::loadMapPlugins(game, mapName);
         loadFromTmx(map, mapc);
         map->setMapName(mapName);
         return map;
@@ -185,7 +242,7 @@ std::shared_ptr<CMap> CMapLoader::loadSavedMap(const std::shared_ptr<CGame> &gam
         const auto mapName = (*save)["properties"]["mapName"].get<std::string>();
 
         game->getObjectHandler()->registerConfig(getConfigPaths(mapName));
-        CPluginLoader::loadPlugin(game, getScriptPath(mapName));
+        CPluginLoader::loadMapPlugins(game, mapName);
         game->getObjectHandler()->registerConfig(getConfigPaths(mapName)); // TODO: duplicate?
 
         game->getObjectHandler()->registerConfig(saveConfigKey, save);
@@ -404,11 +461,8 @@ void CGameLoader::initObjectHandler(const std::shared_ptr<CObjectHandler> &handl
     }
 }
 
-void CGameLoader::initScriptHandler(const std::shared_ptr<CScriptHandler> &handler,
-                                    const std::shared_ptr<CGame> &game) {
-    for (const std::string &script : CResourcesProvider::getInstance()->getFiles(CResType::PLUGIN)) {
-        CPluginLoader::loadPlugin(game, script);
-    }
+void CGameLoader::initScriptHandler(const std::shared_ptr<CScriptHandler> &, const std::shared_ptr<CGame> &game) {
+    CPluginLoader::loadGlobalPlugins(game);
 }
 
 void CGameLoader::loadGui(const std::shared_ptr<CGame> &game) {
@@ -421,11 +475,78 @@ void CGameLoader::loadGui(const std::shared_ptr<CGame> &game) {
         [game](SDL_Event *event) { return game->getGui()->event(event); });
 }
 
-void CPluginLoader::loadPlugin(const std::shared_ptr<CGame> &game, const std::string &path) {
-    PY_SAFE(std::string code = CResourcesProvider::getInstance()->load(path); pybind11::dict plugin_namespace;
-            plugin_namespace["__builtins__"] = pybind11::module::import("builtins");
-            plugin_namespace["__file__"] = path;
-            plugin_namespace["__name__"] = vstd::join({"plugin_", vstd::to_hex_hash(path)}, "");
-            pybind11::exec(code + "\n", plugin_namespace, plugin_namespace);
-            plugin_namespace["load"](pybind11::none(), pybind11::cast(game));)
+bool CPluginLoader::loadPlugin(const std::shared_ptr<CGame> &game, const std::string &path) {
+    bool loaded = false;
+    PY_SAFE_RET_VAL(std::string code = CResourcesProvider::getInstance()->load(path); pybind11::dict plugin_namespace;
+                    plugin_namespace["__builtins__"] = pybind11::module::import("builtins");
+                    plugin_namespace["__file__"] = path;
+                    plugin_namespace["__name__"] = vstd::join({"plugin_", vstd::to_hex_hash(path)}, "");
+                    pybind11::exec(code + "\n", plugin_namespace, plugin_namespace);
+                    plugin_namespace["load"](pybind11::none(), pybind11::cast(game)); loaded = true;, false)
+    return loaded;
+}
+
+bool CPluginLoader::loadCppPlugin(const std::shared_ptr<CGame> &game, const std::string &type) {
+    if (!game || type.empty()) {
+        vstd::logger::warning("Cannot load C++ plugin without a game and type id");
+        return false;
+    }
+
+    auto plugin = game->createObject<CPlugin>(type);
+    if (!plugin) {
+        vstd::logger::warning("Failed to create C++ plugin:", type);
+        return false;
+    }
+
+    try {
+        plugin->load(game);
+        return true;
+    } catch (const std::exception &exception) {
+        vstd::logger::warning("Failed to load C++ plugin:", type, exception.what());
+    } catch (...) {
+        vstd::logger::warning("Failed to load C++ plugin:", type);
+    }
+    return false;
+}
+
+bool CPluginLoader::loadGlobalPlugins(const std::shared_ptr<CGame> &game) {
+    bool loadedAll = true;
+    std::set<std::string> loadedPythonPlugins;
+
+    if (auto manifest = load_plugin_manifest()) {
+        if (manifest->contains("global")) {
+            loadedAll = load_plugin_entries(game, (*manifest)["global"], loadedPythonPlugins) && loadedAll;
+        }
+    }
+
+    for (const std::string &script : CResourcesProvider::getInstance()->getFiles(CResType::PLUGIN)) {
+        if (!loadedPythonPlugins.contains(script)) {
+            loadedAll = loadPlugin(game, script) && loadedAll;
+        }
+    }
+
+    return loadedAll;
+}
+
+bool CPluginLoader::loadMapPlugins(const std::shared_ptr<CGame> &game, const std::string &mapName) {
+    bool loadedAll = true;
+    std::set<std::string> loadedPythonPlugins;
+
+    if (auto manifest = load_plugin_manifest()) {
+        if (manifest->contains("maps")) {
+            const auto &mapEntries = (*manifest)["maps"];
+            if (mapEntries.is_object() && mapEntries.contains(mapName)) {
+                loadedAll = load_plugin_entries(game, mapEntries[mapName], loadedPythonPlugins) && loadedAll;
+            } else if (!mapEntries.is_object()) {
+                vstd::logger::warning("Ignoring non-object map plugin manifest section");
+                loadedAll = false;
+            }
+        }
+    }
+
+    const auto scriptPath = getScriptPath(mapName);
+    if (!loadedPythonPlugins.contains(scriptPath)) {
+        loadedAll = loadPlugin(game, scriptPath) && loadedAll;
+    }
+    return loadedAll;
 }
