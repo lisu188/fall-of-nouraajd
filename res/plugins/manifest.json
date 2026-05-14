@@ -3,6 +3,11 @@
     {
       "kind": "cpp",
       "id": "CNativeContentPlugin"
+    },
+    {
+      "kind": "dynamic",
+      "id": "nativeMarkerDynamic",
+      "library": "plugins/native/native_marker_plugin"
     }
   ],
   "maps": {}
