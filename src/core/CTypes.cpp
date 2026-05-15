@@ -155,15 +155,8 @@ struct register_all_types {
             CTypes::register_type<CGame, CGameObject>();
             CTypes::register_type<CMap, CGameObject>();
 
-            CTypes::register_type<CFightController, CGameObject>();
-            {
-                CTypes::register_type<CPlayerFightController, CFightController, CGameObject>();
-                CTypes::register_type<CMonsterFightController, CFightController, CGameObject>();
-            }
             CTypes::register_type<CGameEvent, CGameObject>();
-            {
-                CTypes::register_type<CGameEventCaused, CGameEvent, CGameObject>();
-            }
+            CTypes::register_type<CGameEventCaused, CGameEvent, CGameObject>();
             CTypes::register_type<CPlugin, CGameObject>();
             {
                 CTypes::register_type<CNativeContentPlugin, CPlugin, CGameObject>();
@@ -171,98 +164,11 @@ struct register_all_types {
             }
         }
 
-        // Original types2.cpp
-        CTypes::register_type<CGameObject>();
-        {
-            CTypes::register_type<CMapObject, CGameObject>();
-            {
-                CTypes::register_type<CBuilding, CMapObject, CGameObject>();
-                {
-                    CTypes::register_type<CWrapper<CBuilding>, CBuilding, CMapObject, CGameObject>();
-                }
-                CTypes::register_type<CEvent, CMapObject, CGameObject>();
-                {
-                    CTypes::register_type<CWrapper<CEvent>, CEvent, CMapObject, CGameObject>();
-                }
-                CTypes::register_type<CItem, CMapObject, CGameObject>();
-                {
-                    CTypes::register_type<CWeapon, CItem, CMapObject, CGameObject>();
-                    {
-                        CTypes::register_type<CSmallWeapon, CWeapon, CItem, CMapObject, CGameObject>();
-                    }
-                    CTypes::register_type<CArmor, CItem, CMapObject, CGameObject>();
-                    CTypes::register_type<CPotion, CItem, CMapObject, CGameObject>();
-                    {
-                        CTypes::register_type<CWrapper<CPotion>, CPotion, CItem, CMapObject, CGameObject>();
-                    }
-                    CTypes::register_type<CHelmet, CItem, CMapObject, CGameObject>();
-                    CTypes::register_type<CBoots, CItem, CMapObject, CGameObject>();
-                    CTypes::register_type<CBelt, CItem, CMapObject, CGameObject>();
-                    CTypes::register_type<CGloves, CItem, CMapObject, CGameObject>();
-                    CTypes::register_type<CScroll, CItem, CMapObject, CGameObject>();
-                    {
-                        CTypes::register_type<CWrapper<CScroll>, CScroll, CItem, CMapObject, CGameObject>();
-                    }
-                }
-                {
-                    CTypes::register_type<CWrapper<CScroll>, CScroll, CItem, CMapObject, CGameObject>();
-                }
-
-                CTypes::register_type<CCreature, CMapObject, CGameObject>();
-                {
-                    CTypes::register_type<CPlayer, CCreature, CMapObject, CGameObject>();
-                }
-            }
-        }
-
         // Original types3.cpp
         CTypes::register_type<CGameObject>();
         {
-            CTypes::register_type<CEffect, CGameObject>();
-            {
-                CTypes::register_type<CWrapper<CEffect>, CEffect, CGameObject>();
-            }
-
-            CTypes::register_type<CMarket, CGameObject>();
-            CTypes::register_type<CDialog, CGameObject>();
-            {
-                CTypes::register_type<CWrapper<CDialog>, CDialog, CGameObject>();
-            }
-            CTypes::register_type<CDialogOption, CGameObject>();
-            CTypes::register_type<CDialogState, CGameObject>();
-
-            CTypes::register_type<CTrigger, CGameObject>();
-            {
-                CTypes::register_type<CWrapper<CTrigger>, CTrigger, CGameObject>();
-            }
-
-            CTypes::register_type<CQuest, CGameObject>();
-            {
-                CTypes::register_type<CWrapper<CQuest>, CQuest, CGameObject>();
-            }
-
             CTypes::register_type<Stats, CGameObject>();
             CTypes::register_type<Damage, CGameObject>();
-
-            CTypes::register_type<CTile, CGameObject>();
-            {
-                CTypes::register_type<CWrapper<CTile>, CTile, CGameObject>();
-            }
-
-            CTypes::register_type<CInteraction, CGameObject>();
-            {
-                CTypes::register_type<CWrapper<CInteraction>, CInteraction, CGameObject>();
-            }
-
-            CTypes::register_type<CController, CGameObject>();
-            {
-                CTypes::register_type<CTargetController, CController, CGameObject>();
-                CTypes::register_type<CRandomController, CController, CGameObject>();
-                CTypes::register_type<CGroundController, CController, CGameObject>();
-                CTypes::register_type<CRangeController, CController, CGameObject>();
-                CTypes::register_type<CNpcRandomController, CController, CGameObject>();
-                CTypes::register_type<CPlayerController, CController, CGameObject>();
-            }
 
             CTypes::register_type<CTextureCache, CGameObject>();
             CTypes::register_type<CTextManager, CGameObject>();
