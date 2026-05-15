@@ -119,7 +119,37 @@ endif ()
 
 pybind11_add_module(_game NO_EXTRAS ${GAME_SRC})
 configure_fon_cpp_target(_game)
-target_link_libraries(_game PRIVATE ${SDL2_LIBS} ${SDL2_IMAGE_LIBS} ${SDL2_TTF_LIBS})
+target_link_libraries(_game PRIVATE ${SDL2_LIBS} ${SDL2_IMAGE_LIBS} ${SDL2_TTF_LIBS} ${CMAKE_DL_LIBS})
+
+add_library(native_marker_plugin MODULE native_plugins/native_marker_plugin.cpp)
+target_compile_features(native_marker_plugin PRIVATE cxx_std_23)
+set_target_properties(native_marker_plugin PROPERTIES
+    CXX_STANDARD_REQUIRED ON
+    CXX_EXTENSIONS OFF
+    PREFIX ""
+    OUTPUT_NAME "native_marker_plugin"
+    LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/plugins/native"
+    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/plugins/native"
+    ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/plugins/native"
+)
+if (CMAKE_CONFIGURATION_TYPES)
+    foreach (config IN LISTS CMAKE_CONFIGURATION_TYPES)
+        string(TOUPPER "${config}" config_upper)
+        set_target_properties(native_marker_plugin PROPERTIES
+            LIBRARY_OUTPUT_DIRECTORY_${config_upper} "${CMAKE_BINARY_DIR}/plugins/native"
+            RUNTIME_OUTPUT_DIRECTORY_${config_upper} "${CMAKE_BINARY_DIR}/plugins/native"
+            ARCHIVE_OUTPUT_DIRECTORY_${config_upper} "${CMAKE_BINARY_DIR}/plugins/native"
+        )
+    endforeach ()
+endif ()
+target_include_directories(native_marker_plugin PRIVATE ${CMAKE_SOURCE_DIR}/src)
+if (MSVC)
+    target_compile_options(native_marker_plugin PRIVATE /W3 /permissive- /Zc:preprocessor /EHsc)
+    target_compile_definitions(native_marker_plugin PRIVATE NOMINMAX WIN32_LEAN_AND_MEAN)
+elseif (CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang|AppleClang")
+    target_compile_options(native_marker_plugin PRIVATE -Wall -fvisibility=hidden)
+endif ()
+add_dependencies(_game native_marker_plugin)
 
 set_source_files_properties(
     ${CMAKE_SOURCE_DIR}/src/core/CModule.cpp
@@ -315,6 +345,11 @@ configure_file(play.py play.py)
 configure_file(mcp.py mcp.py)
 
 install(TARGETS _game DESTINATION fall-of-nouraajd)
+install(TARGETS native_marker_plugin
+    LIBRARY DESTINATION fall-of-nouraajd/plugins/native
+    RUNTIME DESTINATION fall-of-nouraajd/plugins/native
+    BUNDLE DESTINATION fall-of-nouraajd/plugins/native
+)
 install(DIRECTORY res/config DESTINATION fall-of-nouraajd)
 install(DIRECTORY res/fonts DESTINATION fall-of-nouraajd)
 install(DIRECTORY res/images DESTINATION fall-of-nouraajd)
