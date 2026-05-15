@@ -31,6 +31,11 @@ include(${CMAKE_SOURCE_DIR}/cmake/cotire.cmake)
 set(CMAKE_MODULE_PATH "${CMAKE_MODULE_PATH};${CMAKE_SOURCE_DIR}/cmake")
 
 file(GLOB_RECURSE GAME_SRC ${CMAKE_SOURCE_DIR}/src/**.cpp ${CMAKE_SOURCE_DIR}/src/**.h)
+list(APPEND GAME_SRC
+    ${CMAKE_SOURCE_DIR}/src/core/CRuntimeBridge.cpp
+    ${CMAKE_SOURCE_DIR}/src/core/CRuntimeBridge.h
+)
+list(REMOVE_DUPLICATES GAME_SRC)
 
 find_package(Python3 COMPONENTS Interpreter Development REQUIRED)
 find_package(pybind11 CONFIG REQUIRED)
@@ -51,7 +56,7 @@ if (NOT NLOHMANN_JSON_INCLUDE_DIR)
     message(FATAL_ERROR "nlohmann/json.hpp was not found. On Debian/Ubuntu, run: sudo apt-get install nlohmann-json3-dev.")
 endif ()
 
-function(configure_fon_cpp_target target_name)
+function(configure_cpp_target target_name)
     target_compile_features(${target_name} PRIVATE cxx_std_23)
     set_target_properties(${target_name} PROPERTIES
         CXX_STANDARD_REQUIRED ON
@@ -85,7 +90,6 @@ function(configure_fon_cpp_target target_name)
         target_compile_options(${target_name} PRIVATE
             -include cmath
             -Wall
-            -fvisibility=hidden
             $<$<CONFIG:Release>:-O3>
             $<$<CONFIG:Release>:-s>
             $<$<CONFIG:Debug>:-g3>
@@ -117,39 +121,91 @@ if (TARGET SDL2_ttf::SDL2_ttf)
     set(SDL2_TTF_LIBS SDL2_ttf::SDL2_ttf)
 endif ()
 
-pybind11_add_module(_game NO_EXTRAS ${GAME_SRC})
-configure_fon_cpp_target(_game)
-target_link_libraries(_game PRIVATE ${SDL2_LIBS} ${SDL2_IMAGE_LIBS} ${SDL2_TTF_LIBS} ${CMAKE_DL_LIBS})
+set(GAME_CORE_SRC ${GAME_SRC})
+list(FILTER GAME_CORE_SRC EXCLUDE REGEX ".*/src/core/CModule\\.cpp$")
 
-add_library(native_marker_plugin MODULE native_plugins/native_marker_plugin.cpp)
-target_compile_features(native_marker_plugin PRIVATE cxx_std_23)
-set_target_properties(native_marker_plugin PROPERTIES
-    CXX_STANDARD_REQUIRED ON
-    CXX_EXTENSIONS OFF
-    PREFIX ""
-    OUTPUT_NAME "native_marker_plugin"
-    LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/plugins/native"
-    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/plugins/native"
-    ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/plugins/native"
+add_library(game_core SHARED ${GAME_CORE_SRC})
+configure_cpp_target(game_core)
+set_target_properties(game_core PROPERTIES
+    OUTPUT_NAME "game_core"
+    WINDOWS_EXPORT_ALL_SYMBOLS ON
 )
-if (CMAKE_CONFIGURATION_TYPES)
-    foreach (config IN LISTS CMAKE_CONFIGURATION_TYPES)
-        string(TOUPPER "${config}" config_upper)
-        set_target_properties(native_marker_plugin PROPERTIES
-            LIBRARY_OUTPUT_DIRECTORY_${config_upper} "${CMAKE_BINARY_DIR}/plugins/native"
-            RUNTIME_OUTPUT_DIRECTORY_${config_upper} "${CMAKE_BINARY_DIR}/plugins/native"
-            ARCHIVE_OUTPUT_DIRECTORY_${config_upper} "${CMAKE_BINARY_DIR}/plugins/native"
+target_link_libraries(game_core PRIVATE
+    Python3::Python
+    pybind11::headers
+    ${SDL2_LIBS}
+    ${SDL2_IMAGE_LIBS}
+    ${SDL2_TTF_LIBS}
+    ${CMAKE_DL_LIBS}
+)
+
+pybind11_add_module(_game NO_EXTRAS ${CMAKE_SOURCE_DIR}/src/core/CModule.cpp)
+configure_cpp_target(_game)
+target_link_libraries(_game PRIVATE game_core)
+if (APPLE)
+    set_target_properties(_game PROPERTIES
+        BUILD_RPATH "@loader_path"
+        INSTALL_RPATH "@loader_path"
+    )
+elseif (UNIX)
+    set_target_properties(_game PROPERTIES
+        BUILD_RPATH "$ORIGIN"
+        INSTALL_RPATH "$ORIGIN"
+    )
+endif ()
+if (CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang|AppleClang")
+    target_compile_options(_game PRIVATE -fvisibility=hidden -fvisibility-inlines-hidden)
+endif ()
+
+set(NATIVE_PLUGIN_TARGETS)
+
+function(add_native_plugin target_name source_file)
+    add_library(${target_name} MODULE ${source_file})
+    configure_cpp_target(${target_name})
+    set_target_properties(${target_name} PROPERTIES
+        PREFIX ""
+        OUTPUT_NAME "${target_name}"
+        LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/plugins/native"
+        RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/plugins/native"
+        ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/plugins/native"
+    )
+    if (APPLE)
+        set_target_properties(${target_name} PROPERTIES
+            BUILD_RPATH "@loader_path/../.."
+            INSTALL_RPATH "@loader_path/../.."
         )
-    endforeach ()
-endif ()
-target_include_directories(native_marker_plugin PRIVATE ${CMAKE_SOURCE_DIR}/src)
-if (MSVC)
-    target_compile_options(native_marker_plugin PRIVATE /W3 /permissive- /Zc:preprocessor /EHsc)
-    target_compile_definitions(native_marker_plugin PRIVATE NOMINMAX WIN32_LEAN_AND_MEAN)
-elseif (CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang|AppleClang")
-    target_compile_options(native_marker_plugin PRIVATE -Wall -fvisibility=hidden)
-endif ()
-add_dependencies(_game native_marker_plugin)
+    elseif (UNIX)
+        set_target_properties(${target_name} PROPERTIES
+            BUILD_RPATH "$ORIGIN/../.."
+            INSTALL_RPATH "$ORIGIN/../.."
+        )
+    endif ()
+    if (CMAKE_CONFIGURATION_TYPES)
+        foreach (config IN LISTS CMAKE_CONFIGURATION_TYPES)
+            string(TOUPPER "${config}" config_upper)
+            set_target_properties(${target_name} PROPERTIES
+                LIBRARY_OUTPUT_DIRECTORY_${config_upper} "${CMAKE_BINARY_DIR}/plugins/native"
+                RUNTIME_OUTPUT_DIRECTORY_${config_upper} "${CMAKE_BINARY_DIR}/plugins/native"
+                ARCHIVE_OUTPUT_DIRECTORY_${config_upper} "${CMAKE_BINARY_DIR}/plugins/native"
+            )
+        endforeach ()
+    endif ()
+    if (CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang|AppleClang")
+        target_compile_options(${target_name} PRIVATE -fvisibility=hidden -fvisibility-inlines-hidden)
+    endif ()
+    target_link_libraries(${target_name} PRIVATE game_core)
+    set(NATIVE_PLUGIN_TARGETS ${NATIVE_PLUGIN_TARGETS} ${target_name} PARENT_SCOPE)
+endfunction()
+
+add_native_plugin(native_marker_plugin native_plugins/native_marker_plugin.cpp)
+add_native_plugin(native_gameplay_effects native_plugins/native_gameplay_effects.cpp)
+add_native_plugin(native_gameplay_interactions native_plugins/native_gameplay_interactions.cpp)
+add_native_plugin(native_gameplay_items native_plugins/native_gameplay_items.cpp)
+add_native_plugin(native_gameplay_tiles native_plugins/native_gameplay_tiles.cpp)
+add_native_plugin(native_gameplay_map_content native_plugins/native_gameplay_map_content.cpp)
+add_native_plugin(native_gameplay_controllers native_plugins/native_gameplay_controllers.cpp)
+add_native_plugin(native_gameplay_creatures native_plugins/native_gameplay_creatures.cpp)
+add_dependencies(_game ${NATIVE_PLUGIN_TARGETS})
 
 set_source_files_properties(
     ${CMAKE_SOURCE_DIR}/src/core/CModule.cpp
@@ -344,8 +400,8 @@ configure_file(test.py test.py)
 configure_file(play.py play.py)
 configure_file(mcp.py mcp.py)
 
-install(TARGETS _game DESTINATION fall-of-nouraajd)
-install(TARGETS native_marker_plugin
+install(TARGETS game_core _game DESTINATION fall-of-nouraajd)
+install(TARGETS ${NATIVE_PLUGIN_TARGETS}
     LIBRARY DESTINATION fall-of-nouraajd/plugins/native
     RUNTIME DESTINATION fall-of-nouraajd/plugins/native
     BUNDLE DESTINATION fall-of-nouraajd/plugins/native
@@ -414,7 +470,7 @@ add_executable(for_unit_tests
     src/handler/CScriptHandler.cpp
 )
 
-configure_fon_cpp_target(for_unit_tests)
+configure_cpp_target(for_unit_tests)
 
 target_link_libraries(for_unit_tests PRIVATE
     Python3::Python

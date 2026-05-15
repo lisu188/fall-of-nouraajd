@@ -38,7 +38,17 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "../gui/panel/CListView.h"
 #include "../handler/CHandler.h"
 #include "../handler/CRngHandler.h"
+#include "../object/CCreature.h"
 #include "../object/CDialog.h"
+#include "../object/CEffect.h"
+#include "../object/CInteraction.h"
+#include "../object/CItem.h"
+#include "../object/CMapObject.h"
+#include "../object/CMarket.h"
+#include "../object/CPlayer.h"
+#include "../object/CQuest.h"
+#include "../object/CTile.h"
+#include "../object/CTrigger.h"
 #include "CGame.h"
 #include "CList.h"
 #include "CMap.h"
@@ -47,7 +57,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CJsonUtil.h"
 #include "core/CLoader.h"
 #include "core/CPythonOverrides.h"
+#include "core/CRuntimeBridge.h"
 #include "core/CTags.h"
+#include "core/CTypes.h"
 #include "core/CUtil.h"
 #include "core/CWrapper.h"
 #include <pybind11/stl_bind.h>
@@ -71,7 +83,7 @@ std::string jsonify_py(const py::handle &value) {
 }
 
 void logger(std::string s) {
-    vstd::logger::info(std::move(s)); // TODO: add script name
+    CRuntimeBridge::log_info(std::move(s)); // TODO: add script name
 }
 
 static vstd::logger::sink parse_logger_sink(const std::string &sink_name) {
@@ -100,7 +112,7 @@ void set_logger_sink(const std::string &sink_name, const std::string &path) {
     if (target == vstd::logger::sink::file_sink && path.empty()) {
         throw std::invalid_argument("File logger sink requires a path");
     }
-    vstd::logger::set_sink(target, path);
+    CRuntimeBridge::set_logger_sink(target, path);
 }
 
 void set_logger_sink_py(const std::string &sink_name, py::object path = py::none()) {
@@ -245,7 +257,64 @@ extern void initModule1();
 
 #define PY_WRAP_GENERIC_DOC(fcn, doc) m.def(#fcn, fcn, doc)
 
+void register_python_binding_type_metadata() {
+    CTypes::register_type_metadata<Stats, CGameObject>();
+    CTypes::register_type_metadata<Damage, CGameObject>();
+
+    CTypes::register_type_metadata<CMapObject, CGameObject>();
+    CTypes::register_type_metadata<CBuilding, CMapObject, CGameObject>();
+    CTypes::register_type_metadata<CWrapper<CBuilding>, CBuilding, CMapObject, CGameObject>();
+    CTypes::register_type_metadata<CEvent, CMapObject, CGameObject>();
+    CTypes::register_type_metadata<CWrapper<CEvent>, CEvent, CMapObject, CGameObject>();
+
+    CTypes::register_type_metadata<CItem, CMapObject, CGameObject>();
+    CTypes::register_type_metadata<CWeapon, CItem, CMapObject, CGameObject>();
+    CTypes::register_type_metadata<CSmallWeapon, CWeapon, CItem, CMapObject, CGameObject>();
+    CTypes::register_type_metadata<CArmor, CItem, CMapObject, CGameObject>();
+    CTypes::register_type_metadata<CHelmet, CItem, CMapObject, CGameObject>();
+    CTypes::register_type_metadata<CBoots, CItem, CMapObject, CGameObject>();
+    CTypes::register_type_metadata<CBelt, CItem, CMapObject, CGameObject>();
+    CTypes::register_type_metadata<CGloves, CItem, CMapObject, CGameObject>();
+    CTypes::register_type_metadata<CPotion, CItem, CMapObject, CGameObject>();
+    CTypes::register_type_metadata<CWrapper<CPotion>, CPotion, CItem, CMapObject, CGameObject>();
+    CTypes::register_type_metadata<CScroll, CItem, CMapObject, CGameObject>();
+    CTypes::register_type_metadata<CWrapper<CScroll>, CScroll, CItem, CMapObject, CGameObject>();
+
+    CTypes::register_type_metadata<CEffect, CGameObject>();
+    CTypes::register_type_metadata<CWrapper<CEffect>, CEffect, CGameObject>();
+    CTypes::register_type_metadata<CInteraction, CGameObject>();
+    CTypes::register_type_metadata<CWrapper<CInteraction>, CInteraction, CGameObject>();
+    CTypes::register_type_metadata<CTile, CGameObject>();
+    CTypes::register_type_metadata<CWrapper<CTile>, CTile, CGameObject>();
+
+    CTypes::register_type_metadata<CMarket, CGameObject>();
+    CTypes::register_type_metadata<CDialog, CGameObject>();
+    CTypes::register_type_metadata<CWrapper<CDialog>, CDialog, CGameObject>();
+    CTypes::register_type_metadata<CDialogOption, CGameObject>();
+    CTypes::register_type_metadata<CDialogState, CGameObject>();
+    CTypes::register_type_metadata<CTrigger, CGameObject>();
+    CTypes::register_type_metadata<CWrapper<CTrigger>, CTrigger, CGameObject>();
+    CTypes::register_type_metadata<CQuest, CGameObject>();
+    CTypes::register_type_metadata<CWrapper<CQuest>, CQuest, CGameObject>();
+
+    CTypes::register_type_metadata<CFightController, CGameObject>();
+    CTypes::register_type_metadata<CPlayerFightController, CFightController, CGameObject>();
+    CTypes::register_type_metadata<CMonsterFightController, CFightController, CGameObject>();
+    CTypes::register_type_metadata<CController, CGameObject>();
+    CTypes::register_type_metadata<CPlayerController, CController, CGameObject>();
+    CTypes::register_type_metadata<CTargetController, CController, CGameObject>();
+    CTypes::register_type_metadata<CRandomController, CController, CGameObject>();
+    CTypes::register_type_metadata<CGroundController, CController, CGameObject>();
+    CTypes::register_type_metadata<CRangeController, CController, CGameObject>();
+    CTypes::register_type_metadata<CNpcRandomController, CController, CGameObject>();
+
+    CTypes::register_type_metadata<CCreature, CMapObject, CGameObject>();
+    CTypes::register_type_metadata<CPlayer, CCreature, CMapObject, CGameObject>();
+}
+
 PYBIND11_MODULE(_game, m) {
+    register_python_binding_type_metadata();
+
     py::enum_<CTag>(m, "CTag", "Canonical gameplay tag identifier.")
         .value("BUFF", CTag::Buff)
         .value("HEAL", CTag::Heal)
@@ -670,7 +739,7 @@ PYBIND11_MODULE(_game, m) {
 
     py::class_<vstd::event_loop<>, std::shared_ptr<vstd::event_loop<>>>(m, "event_loop",
                                                                         "Global async event loop utility.")
-        .def("instance", &vstd::event_loop<>::instance, "Return the singleton event loop instance.")
+        .def_static("instance", &CRuntimeBridge::event_loop_instance, "Return the singleton event loop instance.")
         .def("run", &vstd::event_loop<>::run, "Process queued tasks/events once.")
         .def("invoke", &vstd::event_loop<>::invoke, "Queue a callable for later execution.");
 

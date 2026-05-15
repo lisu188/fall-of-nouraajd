@@ -1813,6 +1813,64 @@ class GameTest(unittest.TestCase):
         return True, json.dumps(report, sort_keys=True)
 
     @game_test
+    def test_dynamic_domain_plugins_register_gameplay_classes(self):
+        game = load_game_module()
+
+        g = game.CGameLoader.loadGame()
+
+        class_names = [
+            "CEffect",
+            "CInteraction",
+            "CItem",
+            "CWeapon",
+            "CArmor",
+            "CPotion",
+            "CScroll",
+            "CTile",
+            "CMapObject",
+            "CBuilding",
+            "CEvent",
+            "CMarket",
+            "CDialog",
+            "CDialogOption",
+            "CDialogState",
+            "CTrigger",
+            "CQuest",
+            "CController",
+            "CTargetController",
+            "CRandomController",
+            "CNpcRandomController",
+            "CGroundController",
+            "CRangeController",
+            "CFightController",
+            "CMonsterFightController",
+            "CCreature",
+            "CPlayer",
+        ]
+        for class_name in class_names:
+            with self.subTest(class_name=class_name):
+                obj = g.createObject(class_name)
+                self.assertIsNotNone(obj)
+                self.assertEqual(class_name, obj.getType())
+
+        item_types = set(g.getObjectHandler().getAllSubTypes("CItem"))
+        map_object_types = set(g.getObjectHandler().getAllSubTypes("CMapObject"))
+        player_types = set(g.getObjectHandler().getAllSubTypes("CPlayer"))
+        tile_types = set(g.getObjectHandler().getAllSubTypes("CTile"))
+
+        self.assertIn("BladeOfDarkDreams", item_types)
+        self.assertIn("BladeOfDarkDreams", map_object_types)
+        self.assertIn("Assasin", player_types)
+        self.assertIn("BeachTile", tile_types)
+
+        report = {
+            "classes": len(class_names),
+            "items": len(item_types),
+            "players": sorted(player_types),
+        }
+        return True, json.dumps(report, sort_keys=True)
+
+    @game_test
     def test_crafting_runtime_applies_recipe(self):
         import crafting
 
