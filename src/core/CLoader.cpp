@@ -24,6 +24,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "handler/CRngHandler.h"
 #include "object/CCreature.h"
 #include "object/CPlayer.h"
+#include "plugin/FonPluginAbi.h"
 #include <pybind11/eval.h>
 #include <rdg.h>
 
@@ -31,8 +32,165 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <cctype>
 #include <utility>
 
+#if defined(_WIN32)
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+#include <windows.h>
+#else
+#include <dlfcn.h>
+#endif
+
 namespace {
 constexpr const char *PLUGIN_MANIFEST_PATH = "plugins/manifest.json";
+constexpr const char *DYNAMIC_PLUGIN_DEFAULT_ENTRY = "fon_plugin_load_v1";
+
+class CDynamicLibrary {
+  public:
+    explicit CDynamicLibrary(std::string path) : path(std::move(path)) {
+#if defined(_WIN32)
+        handle = LoadLibraryW(std::filesystem::path(this->path).wstring().c_str());
+#else
+        handle = dlopen(this->path.c_str(), RTLD_NOW | RTLD_LOCAL);
+#endif
+    }
+
+    ~CDynamicLibrary() {
+        if (!handle) {
+            return;
+        }
+#if defined(_WIN32)
+        FreeLibrary(handle);
+#else
+        dlclose(handle);
+#endif
+    }
+
+    CDynamicLibrary(const CDynamicLibrary &) = delete;
+    CDynamicLibrary &operator=(const CDynamicLibrary &) = delete;
+
+    bool isLoaded() const { return handle != nullptr; }
+
+    FonPluginLoadV1 loadSymbol(const std::string &symbolName) const {
+        if (!handle) {
+            return nullptr;
+        }
+
+#if defined(_WIN32)
+        auto symbol = GetProcAddress(handle, symbolName.c_str());
+        if (!symbol) {
+            vstd::logger::warning("Failed to find dynamic plugin symbol:", symbolName, "in:", path,
+                                  "error code:", static_cast<int>(GetLastError()));
+            return nullptr;
+        }
+        return reinterpret_cast<FonPluginLoadV1>(symbol);
+#else
+        dlerror();
+        auto symbol = dlsym(handle, symbolName.c_str());
+        const char *error = dlerror();
+        if (error != nullptr) {
+            vstd::logger::warning("Failed to find dynamic plugin symbol:", symbolName, "in:", path, "error:", error);
+            return nullptr;
+        }
+        return reinterpret_cast<FonPluginLoadV1>(symbol);
+#endif
+    }
+
+    const std::string &getPath() const { return path; }
+
+  private:
+    std::string path;
+#if defined(_WIN32)
+    HMODULE handle = nullptr;
+#else
+    void *handle = nullptr;
+#endif
+};
+
+std::string dynamic_library_suffix() {
+#if defined(_WIN32)
+    return ".dll";
+#elif defined(__APPLE__)
+    return ".dylib";
+#else
+    return ".so";
+#endif
+}
+
+std::vector<std::string> dynamic_library_candidates(const std::string &library) {
+    std::vector<std::string> candidates{library};
+    if (std::filesystem::path(library).extension().empty()) {
+        candidates.push_back(library + dynamic_library_suffix());
+    }
+    return candidates;
+}
+
+std::string resolve_dynamic_library_path(const std::string &library) {
+    auto provider = CResourcesProvider::getInstance();
+    for (const auto &candidate : dynamic_library_candidates(library)) {
+        auto resolved = provider->getPath(candidate);
+        if (!resolved.empty()) {
+            return std::filesystem::absolute(resolved).lexically_normal().string();
+        }
+        if (std::filesystem::exists(candidate)) {
+            return std::filesystem::absolute(candidate).lexically_normal().string();
+        }
+    }
+    return {};
+}
+
+CDynamicLibrary *load_dynamic_library(const std::string &path) {
+    static std::map<std::string, std::unique_ptr<CDynamicLibrary>> libraries;
+
+    auto existing = libraries.find(path);
+    if (existing != libraries.end()) {
+        return existing->second.get();
+    }
+
+    auto library = std::make_unique<CDynamicLibrary>(path);
+    if (!library->isLoaded()) {
+#if defined(_WIN32)
+        vstd::logger::warning("Failed to load dynamic plugin library:", path,
+                              "error code:", static_cast<int>(GetLastError()));
+#else
+        const char *error = dlerror();
+        vstd::logger::warning("Failed to load dynamic plugin library:", path,
+                              "error:", error == nullptr ? "<unknown>" : error);
+#endif
+        return nullptr;
+    }
+
+    auto inserted = libraries.emplace(path, std::move(library));
+    return inserted.first->second.get();
+}
+
+void dynamic_plugin_log(void *, const char *message) {
+    vstd::logger::info("Dynamic plugin:", message == nullptr ? "<null>" : message);
+}
+
+bool dynamic_plugin_register_config_json(void *opaqueGame, const char *id, const char *jsonText) {
+    if (opaqueGame == nullptr || id == nullptr || id[0] == '\0' || jsonText == nullptr) {
+        vstd::logger::warning("Dynamic plugin attempted to register config without a game, id, or json text");
+        return false;
+    }
+
+    auto *game = static_cast<CGame *>(opaqueGame);
+    auto parsed = CJsonUtil::parse_expected(jsonText, std::string("dynamic plugin config ") + id);
+    if (!parsed) {
+        CJsonUtil::log_parse_error(parsed.error());
+        return false;
+    }
+    if (!(*parsed)->is_object()) {
+        vstd::logger::warning("Dynamic plugin config is not an object:", id);
+        return false;
+    }
+
+    game->getObjectHandler()->registerConfig(id, *parsed);
+    return true;
+}
 
 bool read_bool_property(const json &properties, const std::string &key) {
     if (!properties.count(key)) {
@@ -125,7 +283,7 @@ std::shared_ptr<json> load_plugin_manifest() {
 }
 
 bool load_plugin_entry(const std::shared_ptr<CGame> &game, const json &entry,
-                       std::set<std::string> &loadedPythonPlugins) {
+                       std::set<std::string> &loadedPythonPlugins, std::set<std::string> &loadedDynamicPlugins) {
     if (!entry.is_object()) {
         vstd::logger::warning("Ignoring non-object plugin manifest entry");
         return false;
@@ -139,6 +297,20 @@ bool load_plugin_entry(const std::shared_ptr<CGame> &game, const json &entry,
     if (kind == "cpp") {
         const auto id = entry.value("id", std::string());
         return CPluginLoader::loadCppPlugin(game, id);
+    }
+
+    if (kind == "dynamic") {
+        const auto id = entry.value("id", std::string());
+        const auto library = entry.value("library", std::string());
+        const auto symbol = entry.value("entry", std::string(DYNAMIC_PLUGIN_DEFAULT_ENTRY));
+        if (id.empty() || library.empty()) {
+            vstd::logger::warning("Ignoring dynamic plugin manifest entry without id or library");
+            return false;
+        }
+        if (!loadedDynamicPlugins.insert(id).second) {
+            return true;
+        }
+        return CPluginLoader::loadDynamicPlugin(game, library, symbol);
     }
 
     if (kind == "python") {
@@ -158,7 +330,7 @@ bool load_plugin_entry(const std::shared_ptr<CGame> &game, const json &entry,
 }
 
 bool load_plugin_entries(const std::shared_ptr<CGame> &game, const json &entries,
-                         std::set<std::string> &loadedPythonPlugins) {
+                         std::set<std::string> &loadedPythonPlugins, std::set<std::string> &loadedDynamicPlugins) {
     if (!entries.is_array()) {
         vstd::logger::warning("Ignoring non-array plugin manifest section");
         return false;
@@ -166,7 +338,7 @@ bool load_plugin_entries(const std::shared_ptr<CGame> &game, const json &entries
 
     bool loadedAll = true;
     for (const auto &entry : entries) {
-        loadedAll = load_plugin_entry(game, entry, loadedPythonPlugins) && loadedAll;
+        loadedAll = load_plugin_entry(game, entry, loadedPythonPlugins, loadedDynamicPlugins) && loadedAll;
     }
     return loadedAll;
 }
@@ -509,13 +681,54 @@ bool CPluginLoader::loadCppPlugin(const std::shared_ptr<CGame> &game, const std:
     return false;
 }
 
+bool CPluginLoader::loadDynamicPlugin(const std::shared_ptr<CGame> &game, const std::string &library,
+                                      const std::string &entry) {
+    if (!game || library.empty()) {
+        vstd::logger::warning("Cannot load dynamic C++ plugin without a game and library path");
+        return false;
+    }
+
+    const auto symbolName = entry.empty() ? std::string(DYNAMIC_PLUGIN_DEFAULT_ENTRY) : entry;
+    const auto resolvedPath = resolve_dynamic_library_path(library);
+    if (resolvedPath.empty()) {
+        vstd::logger::warning("Failed to resolve dynamic C++ plugin library:", library);
+        return false;
+    }
+
+    auto *dynamicLibrary = load_dynamic_library(resolvedPath);
+    if (!dynamicLibrary) {
+        return false;
+    }
+
+    auto entrypoint = dynamicLibrary->loadSymbol(symbolName);
+    if (!entrypoint) {
+        return false;
+    }
+
+    FonPluginHostV1 host{FON_PLUGIN_API_VERSION, game.get(), dynamic_plugin_log, dynamic_plugin_register_config_json};
+    try {
+        if (!entrypoint(&host)) {
+            vstd::logger::warning("Dynamic C++ plugin entrypoint returned false:", library, symbolName);
+            return false;
+        }
+        return true;
+    } catch (const std::exception &exception) {
+        vstd::logger::warning("Failed to load dynamic C++ plugin:", library, symbolName, exception.what());
+    } catch (...) {
+        vstd::logger::warning("Failed to load dynamic C++ plugin:", library, symbolName);
+    }
+    return false;
+}
+
 bool CPluginLoader::loadGlobalPlugins(const std::shared_ptr<CGame> &game) {
     bool loadedAll = true;
     std::set<std::string> loadedPythonPlugins;
+    std::set<std::string> loadedDynamicPlugins;
 
     if (auto manifest = load_plugin_manifest()) {
         if (manifest->contains("global")) {
-            loadedAll = load_plugin_entries(game, (*manifest)["global"], loadedPythonPlugins) && loadedAll;
+            loadedAll = load_plugin_entries(game, (*manifest)["global"], loadedPythonPlugins, loadedDynamicPlugins) &&
+                        loadedAll;
         }
     }
 
@@ -531,12 +744,14 @@ bool CPluginLoader::loadGlobalPlugins(const std::shared_ptr<CGame> &game) {
 bool CPluginLoader::loadMapPlugins(const std::shared_ptr<CGame> &game, const std::string &mapName) {
     bool loadedAll = true;
     std::set<std::string> loadedPythonPlugins;
+    std::set<std::string> loadedDynamicPlugins;
 
     if (auto manifest = load_plugin_manifest()) {
         if (manifest->contains("maps")) {
             const auto &mapEntries = (*manifest)["maps"];
             if (mapEntries.is_object() && mapEntries.contains(mapName)) {
-                loadedAll = load_plugin_entries(game, mapEntries[mapName], loadedPythonPlugins) && loadedAll;
+                loadedAll = load_plugin_entries(game, mapEntries[mapName], loadedPythonPlugins, loadedDynamicPlugins) &&
+                            loadedAll;
             } else if (!mapEntries.is_object()) {
                 vstd::logger::warning("Ignoring non-object map plugin manifest section");
                 loadedAll = false;

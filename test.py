@@ -1770,6 +1770,49 @@ class GameTest(unittest.TestCase):
         return True, json.dumps(report, sort_keys=True)
 
     @game_test
+    def test_dynamic_plugin_manifest_registers_native_content(self):
+        game = load_game_module()
+
+        g = game.CGameLoader.loadGame()
+        marker = g.createObject("dynamicNativePluginMarker")
+
+        self.assertIsNotNone(marker)
+        self.assertEqual("Dynamic native plugin marker", marker.getStringProperty("label"))
+        self.assertEqual("Registered by a dynamic C++ plugin.", marker.getStringProperty("description"))
+        self.assertTrue(marker.getBoolProperty("nativePluginLoaded"))
+        self.assertTrue(marker.getBoolProperty("dynamicPluginLoaded"))
+
+        report = {
+            "dynamic": marker.getBoolProperty("dynamicPluginLoaded"),
+            "marker": marker.getStringProperty("label"),
+        }
+        return True, json.dumps(report, sort_keys=True)
+
+    @game_test
+    def test_dynamic_plugin_direct_load_and_failures(self):
+        game = load_game_module()
+
+        g = game.CGameLoader.loadGame()
+        sample_library = "plugins/native/native_marker_plugin"
+
+        self.assertTrue(game.CPluginLoader.loadDynamicPlugin(g, sample_library, "fon_plugin_load_direct_v1"))
+        marker = g.createObject("directDynamicPluginMarker")
+        self.assertIsNotNone(marker)
+        self.assertEqual("Direct dynamic plugin marker", marker.getStringProperty("label"))
+        self.assertTrue(marker.getBoolProperty("directDynamicPluginLoaded"))
+
+        self.assertFalse(game.CPluginLoader.loadDynamicPlugin(g, "plugins/native/definitely_missing_plugin"))
+        self.assertFalse(game.CPluginLoader.loadDynamicPlugin(g, sample_library, "fon_plugin_load_missing_v1"))
+        self.assertFalse(game.CPluginLoader.loadDynamicPlugin(g, sample_library, "fon_plugin_load_bad_api_v1"))
+        self.assertFalse(game.CPluginLoader.loadDynamicPlugin(g, sample_library, "fon_plugin_load_false_v1"))
+
+        report = {
+            "direct": marker.getBoolProperty("directDynamicPluginLoaded"),
+            "marker": marker.getStringProperty("label"),
+        }
+        return True, json.dumps(report, sort_keys=True)
+
+    @game_test
     def test_crafting_runtime_applies_recipe(self):
         import crafting
 
