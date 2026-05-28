@@ -82,6 +82,8 @@ generate_report() {
             gcovr_args+=(--merge-mode-functions merge-use-line-min)
         fi
 
+        # Detailed HTML needs every generated native source file to exist at report time.
+        # Summary HTML keeps the line gate intact without failing on those transient paths.
         # gcov can emit negative branch counts for some files; keep reporting and the line gate intact.
         gcovr \
             "${gcovr_args[@]}" \
@@ -91,7 +93,7 @@ generate_report() {
             --gcov-ignore-parse-errors negative_hits.warn_once_per_file \
             --print-summary \
             --txt "${REPORT_DIR}/coverage.txt" \
-            --html-details "${REPORT_DIR}/coverage.html" \
+            --html "${REPORT_DIR}/coverage.html" \
             --fail-under-line "${MIN_COVERAGE}" || return
     else
         python3 "${ROOT_DIR}/scripts/coverage_report.py" \
