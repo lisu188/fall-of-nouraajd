@@ -1,6 +1,6 @@
 /*
 fall-of-nouraajd c++ dark fantasy game
-Copyright (C) 2025  Andrzej Lis
+Copyright (C) 2025-2026  Andrzej Lis
 
 This program is free software: you can redistribute it and/or modify
         it under the terms of the GNU General Public License as published by
@@ -266,7 +266,11 @@ void CCreature::takeMana(int i) {
 }
 
 bool CCreature::isPlayer() {
-    const std::shared_ptr<CPlayer> player = getMap()->getPlayer();
+    auto map = getMap();
+    if (!map) {
+        return false;
+    }
+    const std::shared_ptr<CPlayer> player = map->getPlayer();
     return player && player == this->ptr<CPlayer>();
 }
 
@@ -274,6 +278,12 @@ int CCreature::getHpRatio() {
     auto hpMax = getHpMax();
     if (hp > hpMax) {
         return 100;
+    }
+    if (hpMax <= 0) {
+        return hp > 0 ? 100 : 0;
+    }
+    if (hp < 0) {
+        return 0;
     }
     return (float)hp / (float)hpMax * 100.0;
 }

@@ -1750,6 +1750,50 @@ class GameTest(unittest.TestCase):
         return True, ""
 
     @game_test
+    def test_binding_validation_rejects_invalid_logger_and_dynamic_values(self):
+        game = load_game_module()
+
+        g = game.CGameLoader.loadGame()
+        obj = g.createObject("CGameObject")
+
+        with self.assertRaisesRegex(TypeError, "jsonify"):
+            game.jsonify({"not": "a game object"})
+
+        with self.assertRaisesRegex(TypeError, "Unsupported CGameObject property type"):
+            obj.unsupported_dynamic_value = []
+
+        try:
+            with self.assertRaisesRegex(ValueError, "Unknown logger sink"):
+                game.set_logger_sink("unit-test-invalid-sink", None)
+
+            with self.assertRaisesRegex(ValueError, "File logger sink requires a path"):
+                game.set_logger_sink("file", None)
+        finally:
+            game.set_logger_sink("disabled", None)
+
+        return True, json.dumps({"checked": ["jsonify", "dynamic_value", "logger_sink"]}, sort_keys=True)
+
+    @game_test
+    def test_detached_creature_player_check_and_zero_hp_ratio_are_safe(self):
+        game = load_game_module()
+
+        g = game.CGameLoader.loadGame()
+        creature = g.createObject("CCreature")
+        creature.baseStats.stamina = 0
+        creature.levelStats.stamina = 0
+        creature.level = 0
+        creature.hp = 0
+
+        self.assertFalse(creature.isPlayer())
+        self.assertEqual(0, creature.getHpMax())
+        self.assertEqual(0, creature.getHpRatio())
+
+        creature.hp = 1
+        self.assertEqual(100, creature.getHpRatio())
+
+        return True, json.dumps({"hp_max": creature.getHpMax(), "is_player": creature.isPlayer()}, sort_keys=True)
+
+    @game_test
     def test_crafting_runtime_applies_recipe(self):
         import crafting
 
@@ -2915,6 +2959,80 @@ class GameTest(unittest.TestCase):
         return True, json.dumps({"resolved": result, "status": status}, sort_keys=True)
 
     @game_test
+    def test_combat_sanitizes_opponents_and_preserves_player_quest_loot(self):
+        game = load_game_module()
+
+        g = game.CGameLoader.loadGame()
+        game.CGameLoader.startGameWithPlayer(g, "empty", "Warrior")
+        game_map = g.getMap()
+        player = game_map.getPlayer()
+        player.moveTo(0, 0, 0)
+        player.setFightController(g.createObject("CFightController"))
+        player.unequipArmor()
+        player.setHp(1)
+        player.baseStats.agility = 1
+        player.baseStats.armor = 0
+        player.baseStats.block = 0
+        player.baseStats.hit = 0
+        player.baseStats.dmgMin = 0
+        player.baseStats.dmgMax = 0
+        player.baseStats.crit = 0
+
+        quest_item = g.createObject("CItem")
+        quest_item.name = "unitQuestKeepsake"
+        quest_item.typeId = "unitQuestKeepsake"
+        quest_item.addTag(game.CTag.QUEST)
+        player.addItem(quest_item)
+        player.addItem("Scroll")
+
+        winner = g.createObject("GoblinThief")
+        winner.name = "unitWinningGoblin"
+        winner.baseStats.agility = 100
+        winner.baseStats.hit = 100
+        winner.baseStats.dmgMin = 500
+        winner.baseStats.dmgMax = 500
+        winner.baseStats.crit = 0
+        winner.moveTo(1, 0, 0)
+        game_map.addObject(winner)
+
+        dead = g.createObject("GoblinThief")
+        dead.name = "unitDeadOpponent"
+        dead.moveTo(1, 0, 0)
+        game_map.addObject(dead)
+        dead.setHp(0)
+
+        no_controller = g.createObject("GoblinThief")
+        no_controller.name = "unitNoControllerOpponent"
+        no_controller.setFightController(None)
+        no_controller.setHp(1)
+        no_controller.moveTo(1, 0, 0)
+        game_map.addObject(no_controller)
+
+        missing_from_map = g.createObject("GoblinThief")
+        missing_from_map.name = "unitMissingOpponent"
+
+        self.assertFalse(game.CFightHandler.fightMany(winner, []))
+        result = game.CFightHandler.fightMany(winner, [missing_from_map, dead, winner, no_controller, player, player])
+
+        self.assertTrue(result)
+        self.assertIsNotNone(game_map.getObjectByName(winner.getName()))
+        self.assertIsNone(game_map.getObjectByName(no_controller.getName()))
+        self.assertTrue(player.hasItem(lambda item: item.getName() == "unitQuestKeepsake"))
+        self.assertFalse(player.hasItem(lambda item: item.getTypeId() == "Scroll"))
+        self.assertTrue(winner.hasItem(lambda item: item.getTypeId() == "Scroll"))
+        self.assertIn("Goblin Thief survives the encounter.", game_map.getStringProperty("combatStatus"))
+
+        return True, json.dumps(
+            {
+                "quest_item_retained": player.hasItem(lambda item: item.getName() == "unitQuestKeepsake"),
+                "winner": winner.getName(),
+                "winner_scrolls": winner.countItems("Scroll"),
+                "no_controller_removed": game_map.getObjectByName(no_controller.getName()) is None,
+            },
+            sort_keys=True,
+        )
+
+    @game_test
     def test_shadow_bolt_can_configure_its_effect(self):
         game = load_game_module()
         original_randint = game.randint
@@ -3544,6 +3662,112 @@ class GameTest(unittest.TestCase):
             "effect_time_left": effect.getTimeLeft(),
         }
         return True, json.dumps(report, sort_keys=True)
+
+    @game_test
+    def test_quest_callbacks_cover_base_registered_and_wrapper_paths(self):
+        game = load_game_module()
+
+        g = game.CGameLoader.loadGame()
+        game.CGameLoader.startGame(g, "empty")
+
+        base = g.createObject("CQuest")
+        self.assertEqual("", base.getObjective())
+        self.assertEqual("", base.getReward())
+        self.assertEqual("", base.getHint())
+        base.description = "Inspect the old road."
+        base.objective = "Find the missing stones."
+        base.reward = "A tidy sum."
+        base.hint = "Start near the gate."
+        self.assertEqual("Find the missing stones.", base.getObjective())
+        self.assertEqual("A tidy sum.", base.getReward())
+        self.assertEqual("Start near the gate.", base.getHint())
+
+        direct_calls = []
+
+        class DirectQuest(game.CQuest):
+            def isCompleted(self):
+                return True
+
+            def onComplete(self):
+                direct_calls.append("complete")
+
+            def getObjective(self):
+                return "Direct objective"
+
+            def getReward(self):
+                return "Direct reward"
+
+            def getHint(self):
+                return "Direct hint"
+
+        direct = DirectQuest()
+        self.assertTrue(direct.isCompleted())
+        direct.onComplete()
+        self.assertEqual(["complete"], direct_calls)
+        self.assertEqual("Direct objective", direct.getObjective())
+        self.assertEqual("Direct reward", direct.getReward())
+        self.assertEqual("Direct hint", direct.getHint())
+
+        class RaisingTextQuest(game.CQuest):
+            def getObjective(self):
+                raise RuntimeError("objective failed")
+
+            def getReward(self):
+                raise RuntimeError("reward failed")
+
+            def getHint(self):
+                raise RuntimeError("hint failed")
+
+        raising = RaisingTextQuest()
+        raising.objective = "Fallback objective"
+        raising.reward = "Fallback reward"
+        raising.hint = "Fallback hint"
+        self.assertEqual("Fallback objective", game.CQuest.getObjective(raising))
+        self.assertEqual("Fallback reward", game.CQuest.getReward(raising))
+        self.assertEqual("Fallback hint", game.CQuest.getHint(raising))
+
+        @game.register(g)
+        class UnitRegisteredQuest(game.CQuest):
+            def isCompleted(self):
+                return True
+
+            def onComplete(self):
+                self.setBoolProperty("unit_completed", True)
+
+            def getObjective(self):
+                return "Registered objective"
+
+            def getReward(self):
+                return "Registered reward"
+
+            def getHint(self):
+                return "Registered hint"
+
+        registered = g.createObject("UnitRegisteredQuest")
+        self.assertTrue(game.CQuest.isCompleted(registered))
+        game.CQuest.onComplete(registered)
+        self.assertTrue(registered.getBoolProperty("unit_completed"))
+        self.assertEqual("Registered objective", game.CQuest.getObjective(registered))
+        self.assertEqual("Registered reward", game.CQuest.getReward(registered))
+        self.assertEqual("Registered hint", game.CQuest.getHint(registered))
+
+        serialized = json.loads(game.jsonify(base))["properties"]
+        return True, json.dumps(
+            {
+                "base": {
+                    "description": serialized["description"],
+                    "hint": base.getHint(),
+                    "objective": base.getObjective(),
+                    "reward": base.getReward(),
+                },
+                "registered": {
+                    "hint": registered.getHint(),
+                    "objective": registered.getObjective(),
+                    "reward": registered.getReward(),
+                },
+            },
+            sort_keys=True,
+        )
 
     @game_test
     def test_stats_bonus_text_and_custom_collection_roundtrips(self):
@@ -4338,9 +4562,26 @@ class GameTest(unittest.TestCase):
         inventory_panel.close()
         self.assertFalse(gui_contains_class(g, "CGameInventoryPanel"))
 
+        configured_fight_panel = g.getGuiHandler().openPanel("fightPanel")
+        configured_fight_panel.setEnemies([enemy_a, enemy_b])
+        configured_fight_panel.refreshViews()
+        pump_event_loop(5)
+        effect_lists = [
+            list_view
+            for creature_view in collect_gui_children(configured_fight_panel, "CCreatureView")
+            for list_view in collect_gui_children(creature_view, "CListView")
+            if list_view.getCollection() == "getEffects"
+        ]
+        self.assertGreaterEqual(len(effect_lists), 2)
+        for list_view in effect_lists:
+            list_view.refresh()
+            list_view.getProxiedObjects(gui, 0, 0)
+        configured_fight_panel.close()
+
         return True, json.dumps(
             {
                 "enemies": [enemy.getName() for enemy in panel.enemiesCollection(gui)],
+                "effect_lists": len(effect_lists),
                 "list_views": len(list_views),
                 "proxied_counts": proxied_counts,
             },
@@ -5202,6 +5443,137 @@ class GameTest(unittest.TestCase):
         return success, json.dumps({"missing_actions": missing_actions, "missing_states": missing_states})
 
     @game_test
+    def test_ritual_static_integrity(self):
+        ritual_config = json.loads((REPO_ROOT / "res/maps/ritual/config.json").read_text())
+        configs = load_object_configs("ritual")
+        map_data = load_map_data("ritual")
+        script_path = REPO_ROOT / "res/maps/ritual/script.py"
+        script = script_path.read_text()
+        tree = ast.parse(script)
+
+        placed_objects = {}
+        for layer in map_data.get("layers", []):
+            if layer.get("type") != "objectgroup":
+                continue
+            for obj in layer.get("objects", []):
+                name = obj.get("name")
+                if name:
+                    placed_objects[name] = obj
+
+        script_classes = {node.name for node in ast.walk(tree) if isinstance(node, ast.ClassDef)}
+        methods_by_class = {
+            node.name: {method.name for method in node.body if isinstance(method, ast.FunctionDef)}
+            for node in ast.walk(tree)
+            if isinstance(node, ast.ClassDef)
+        }
+
+        required_objects = {
+            "anchorCrypt",
+            "anchorNorth",
+            "anchorSanctum",
+            "bossSpawn",
+            "chapelRecords",
+            "ritualCaptive",
+            "ritualStart",
+            "ritualTurnAnchor",
+            "ritualWitness",
+            "sanctumThreshold",
+            "waveSpawnEast",
+            "waveSpawnNorth",
+            "waveSpawnWest",
+        }
+        required_config_entries = {
+            "capturedSoulDialog",
+            "chapelWarningDialog",
+            "destroyAnchorsQuest",
+            "finalResolutionQuest",
+            "recordsDialog",
+            "rescueCaptiveQuest",
+            "ritualAnchorCrypt",
+            "ritualAnchorNorth",
+            "ritualAnchorSanctum",
+            "ritualCaptive",
+            "ritualCultist",
+            "ritualLeaderTemplate",
+            "ritualMage",
+            "ritualPritz",
+            "ritualQuest",
+            "ritualStart",
+            "ritualWitness",
+        }
+        resource_entries = {
+            "res/maps/ritual/config.json",
+            "res/maps/ritual/map.json",
+            "res/maps/ritual/script.py",
+        }
+
+        trigger_targets = set(re.findall(r'@trigger\(context,\s*"[^"]+",\s*"([^"]+)"\)', script))
+        lookup_refs = set(re.findall(r'getObjectByName\(\s*"([^"]+)"\s*\)', script))
+        spawn_refs = set(re.findall(r'addObjectByName\(\s*"([^"]+)"', script))
+        create_refs = set(re.findall(r'createObject\(\s*"([^"]+)"\s*\)', script))
+        item_refs = set(re.findall(r'addItem\(\s*"([^"]+)"\s*\)', script))
+        quest_refs = set(re.findall(r'ensure_quest\(player,\s*"([^"]+)"\)', script))
+
+        allowed_engine_types = {"CEvent"}
+        allowed_runtime_objects = {"player", "ritualLeader"}
+        map_types = {obj.get("type") for obj in placed_objects.values() if obj.get("type")}
+        missing_map_types = sorted(
+            type_name
+            for type_name in map_types
+            if type_name not in configs and type_name not in script_classes and type_name not in allowed_engine_types
+        )
+        missing_trigger_targets = sorted(
+            target
+            for target in trigger_targets
+            if target not in placed_objects and target not in allowed_runtime_objects
+        )
+        missing_lookup_refs = sorted(
+            ref for ref in lookup_refs if ref not in placed_objects and ref not in allowed_runtime_objects
+        )
+        missing_spawn_refs = sorted(ref for ref in spawn_refs if ref not in configs)
+        missing_create_refs = sorted(ref for ref in create_refs if ref not in configs)
+        missing_item_refs = sorted(ref for ref in item_refs if ref not in configs)
+        missing_quest_refs = sorted(ref for ref in quest_refs if ref not in ritual_config)
+
+        dialog_issues = []
+        for dialog_id, dialog in ritual_config.items():
+            dialog_class = dialog.get("class") if isinstance(dialog, dict) else None
+            if not isinstance(dialog_class, str) or not dialog_class.endswith("Dialog"):
+                continue
+            states = dialog.get("properties", {}).get("states", [])
+            state_ids = {state.get("properties", {}).get("stateId") for state in states}
+            if "ENTRY" not in state_ids:
+                dialog_issues.append(f"{dialog_id}:missing ENTRY")
+            for state in states:
+                state_id = state.get("properties", {}).get("stateId")
+                for option in state.get("properties", {}).get("options", []):
+                    properties = option.get("properties", {})
+                    next_state = properties.get("nextStateId")
+                    if next_state and next_state != "EXIT" and next_state not in state_ids:
+                        dialog_issues.append(f"{dialog_id}:{state_id}:bad nextStateId {next_state}")
+                    for hook in ("action", "condition"):
+                        method_name = properties.get(hook)
+                        if method_name and method_name not in methods_by_class.get(dialog_class, set()):
+                            dialog_issues.append(f"{dialog_id}:{state_id}:missing {hook} {method_name}")
+
+        cmake_text = (REPO_ROOT / "CMakeLists.txt").read_text()
+        issues = {
+            "missing_required_objects": sorted(required_objects - set(placed_objects)),
+            "missing_required_config_entries": sorted(required_config_entries - set(ritual_config)),
+            "missing_resource_entries": sorted(entry for entry in resource_entries if entry not in cmake_text),
+            "missing_map_types": missing_map_types,
+            "missing_trigger_targets": missing_trigger_targets,
+            "missing_lookup_refs": missing_lookup_refs,
+            "missing_spawn_refs": missing_spawn_refs,
+            "missing_create_refs": missing_create_refs,
+            "missing_item_refs": missing_item_refs,
+            "missing_quest_refs": missing_quest_refs,
+            "dialog_issues": dialog_issues,
+        }
+        failing_issues = {key: value for key, value in issues.items() if value}
+        return not failing_issues, json.dumps({"issues": issues}, sort_keys=True)
+
+    @game_test
     def test_ritual_has_no_static_cplayer_objects(self):
         configs = load_object_configs("ritual")
         map_data = load_map_data("ritual")
@@ -5320,6 +5692,52 @@ class GameTest(unittest.TestCase):
         self.assertEqual(expected_coords, current_triplet)
 
         return True, json.dumps({"initial_coords": initial_triplet, "current_coords": current_triplet}, sort_keys=True)
+
+    @game_test
+    def test_ritual_happy_path_frees_captive_and_starts_siege(self):
+        g, game_map, player = load_game_map_with_player("ritual")
+        start_gold = player.getGold()
+        start_life_potions = player.countItems("LifePotion")
+
+        game_map.removeObjectByName("anchorNorth")
+        advance(g, 1)
+        game_map.removeObjectByName("anchorCrypt")
+        game_map.removeObjectByName("anchorSanctum")
+        self.assertTrue(game_map.getBoolProperty("anchors_destroyed"))
+        self.assertTrue(game_map.getBoolProperty("leader_spawned"))
+
+        game_map.removeObjectByName("ritualLeader")
+        advance(g, 1)
+        self.assertTrue(game_map.getBoolProperty("leader_defeated"))
+
+        captured = g.createObject("capturedSoulDialog")
+        self.assertTrue(captured.can_free_captive())
+        captured.free_captive()
+        pump_event_loop(10)
+
+        self.assertEqual("siege", g.getMap().mapName)
+        self.assertTrue(g.getMap().getPlayer() == player)
+        self.assertTrue(game_map.getBoolProperty("captive_freed"))
+        self.assertTrue(game_map.getBoolProperty("good_ending"))
+        self.assertTrue(game_map.getBoolProperty("reward_claimed"))
+        self.assertEqual(start_gold + 300, player.getGold())
+        self.assertEqual(start_life_potions + 1, player.countItems("LifePotion"))
+        self.assertIn("defendSiegeQuest", quest_names(player))
+
+        return True, json.dumps(
+            {
+                "current_map": g.getMap().mapName,
+                "gold_delta": player.getGold() - start_gold,
+                "life_potion_delta": player.countItems("LifePotion") - start_life_potions,
+                "quests": quest_names(player),
+                "ritual_flags": {
+                    "captive_freed": game_map.getBoolProperty("captive_freed"),
+                    "good_ending": game_map.getBoolProperty("good_ending"),
+                    "reward_claimed": game_map.getBoolProperty("reward_claimed"),
+                },
+            },
+            sort_keys=True,
+        )
 
     @game_test
     def test_ritual_trigger_targets(self):
