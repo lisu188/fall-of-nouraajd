@@ -655,6 +655,14 @@ PYBIND11_MODULE(_game, m) {
         .def("loadNewMap", &CMapLoader::loadNewMap, "Load a map without changing the active player.")
         .def("save", &CMapLoader::save, "Save the current map state to a named save slot.");
 
+    py::class_<CPluginLoader, std::shared_ptr<CPluginLoader>>(m, "CPluginLoader", "Helpers for loading plugins.")
+        .def("loadPlugin", &CPluginLoader::loadPlugin, "Load a Python plugin resource into the game.")
+        .def("loadCppPlugin", &CPluginLoader::loadCppPlugin, "Load a compiled C++ plugin type into the game.")
+        .def_static("loadDynamicPlugin", &CPluginLoader::loadDynamicPlugin, py::arg("game"), py::arg("library"),
+                    py::arg("entry") = "fon_plugin_load_v1", "Load a dynamic C++ plugin shared library into the game.")
+        .def("loadGlobalPlugins", &CPluginLoader::loadGlobalPlugins, "Load configured global plugins.")
+        .def("loadMapPlugins", &CPluginLoader::loadMapPlugins, "Load configured plugins for a map.");
+
     auto cplugin = py::class_<CPlugin, CWrapper<CPlugin>, std::shared_ptr<CPlugin>, CGameObject>(m, "CPlugin",
                                                                                                  "Base plugin class.");
     cplugin.def(py::init_alias<>()).def("load", &CPlugin::load, "Load plugin content into a game.");

@@ -233,9 +233,21 @@ XVFB_GAMEPLAY_CHILD_TESTS = (
     "test_fight_quest_item_selection_is_ignored",
     "test_screenshot_question_panel_has_rendered_pixels",
     "test_screenshot_quest_panel_with_active_quest_has_rendered_pixels",
+    "test_full_nouraajd_quest_walkthrough_ui",
     "test_sidebar_mouse_opens_inventory_until_hotkey_closes_it",
     "test_save_hotkey_writes_loadable_map",
 )
+
+NOURAAJD_QUEST_DESCRIPTIONS = {
+    "rolfQuest": "Unravel the fate of Sergeant Rolf.",
+    "mainQuest": "Vanquish the Dreaded Gooby",
+    "deliverLetterQuest": "Bring Mayor Irvin's letter to Father Beren",
+    "retrieveRelicQuest": "Recover the holy relic from the catacombs",
+    "cleanseCaveQuest": "Use the relic to cleanse the OctoBogz cave",
+    "octoBogzQuest": "Clear the OctoBogz from the cave east of Nouraajd.",
+    "victorQuest": "Find Victor's daughter by following the town hall clue to the courtyard.",
+    "amuletQuest": "Find the stolen amulet for the old woman.",
+}
 
 
 def load_sdl_library():
@@ -441,12 +453,19 @@ def screenshot_pixel_summary(data):
 
 
 def assert_screenshot_has_rendered_pixels(test_case, g, name):
+    from PIL import Image
+
     screenshot_path = TEST_OUTPUT_DIR / f"{name}.png"
     data, width, height = capture_sdl_screenshot(screenshot_path)
     summary = screenshot_pixel_summary(data)
 
+    test_case.assertEqual(".png", screenshot_path.suffix)
     test_case.assertEqual((GUI_WIDTH, GUI_HEIGHT), (width, height))
     test_case.assertTrue(screenshot_path.exists())
+    test_case.assertGreater(screenshot_path.stat().st_size, 0)
+    with Image.open(screenshot_path) as image:
+        image.load()
+        test_case.assertEqual((width, height), image.size)
     test_case.assertGreater(summary["unique_rgb"], 8)
     test_case.assertGreater(summary["non_black_pixels"], width * height // 100)
     assert_rendered_map_proxy_cells(test_case, g)
@@ -1792,6 +1811,69 @@ class GameTest(unittest.TestCase):
         self.assertEqual(100, creature.getHpRatio())
 
         return True, json.dumps({"hp_max": creature.getHpMax(), "is_player": creature.isPlayer()}, sort_keys=True)
+
+    @game_test
+    def test_cpp_plugin_manifest_registers_native_content(self):
+        game = load_game_module()
+
+        g = game.CGameLoader.loadGame()
+        marker = g.createObject("nativePluginMarker")
+
+        self.assertIsNotNone(marker)
+        self.assertEqual("Native plugin marker", marker.getStringProperty("label"))
+        self.assertEqual("Registered by a compiled C++ plugin.", marker.getStringProperty("description"))
+        self.assertTrue(marker.getBoolProperty("nativePluginLoaded"))
+        self.assertTrue(game.CPluginLoader.loadCppPlugin(g, "CNativeContentPlugin"))
+        self.assertFalse(game.CPluginLoader.loadCppPlugin(g, "DefinitelyMissingPlugin"))
+
+        report = {
+            "marker": marker.getStringProperty("label"),
+            "native": marker.getBoolProperty("nativePluginLoaded"),
+        }
+        return True, json.dumps(report, sort_keys=True)
+
+    @game_test
+    def test_dynamic_plugin_manifest_registers_native_content(self):
+        game = load_game_module()
+
+        g = game.CGameLoader.loadGame()
+        marker = g.createObject("dynamicNativePluginMarker")
+
+        self.assertIsNotNone(marker)
+        self.assertEqual("Dynamic native plugin marker", marker.getStringProperty("label"))
+        self.assertEqual("Registered by a dynamic C++ plugin.", marker.getStringProperty("description"))
+        self.assertTrue(marker.getBoolProperty("nativePluginLoaded"))
+        self.assertTrue(marker.getBoolProperty("dynamicPluginLoaded"))
+
+        report = {
+            "dynamic": marker.getBoolProperty("dynamicPluginLoaded"),
+            "marker": marker.getStringProperty("label"),
+        }
+        return True, json.dumps(report, sort_keys=True)
+
+    @game_test
+    def test_dynamic_plugin_direct_load_and_failures(self):
+        game = load_game_module()
+
+        g = game.CGameLoader.loadGame()
+        sample_library = "plugins/native/native_marker_plugin"
+
+        self.assertTrue(game.CPluginLoader.loadDynamicPlugin(g, sample_library, "fon_plugin_load_direct_v1"))
+        marker = g.createObject("directDynamicPluginMarker")
+        self.assertIsNotNone(marker)
+        self.assertEqual("Direct dynamic plugin marker", marker.getStringProperty("label"))
+        self.assertTrue(marker.getBoolProperty("directDynamicPluginLoaded"))
+
+        self.assertFalse(game.CPluginLoader.loadDynamicPlugin(g, "plugins/native/definitely_missing_plugin"))
+        self.assertFalse(game.CPluginLoader.loadDynamicPlugin(g, sample_library, "fon_plugin_load_missing_v1"))
+        self.assertFalse(game.CPluginLoader.loadDynamicPlugin(g, sample_library, "fon_plugin_load_bad_api_v1"))
+        self.assertFalse(game.CPluginLoader.loadDynamicPlugin(g, sample_library, "fon_plugin_load_false_v1"))
+
+        report = {
+            "direct": marker.getBoolProperty("directDynamicPluginLoaded"),
+            "marker": marker.getStringProperty("label"),
+        }
+        return True, json.dumps(report, sort_keys=True)
 
     @game_test
     def test_crafting_runtime_applies_recipe(self):
@@ -6338,6 +6420,116 @@ def push_digit_key(digit):
     push_sdl_key_event(ord(str(digit)), 0, SDL_KEYUP)
 
 
+def push_letter_key(letter):
+    push_sdl_key_event(ord(letter), 0, SDL_KEYDOWN)
+    push_sdl_key_event(ord(letter), 0, SDL_KEYUP)
+
+
+def push_quest_log_key():
+    push_letter_key("j")
+
+
+def dialog_input_callbacks(inputs):
+    callbacks = []
+    for input_value in inputs:
+        if input_value == "space":
+            callbacks.append(push_space_key)
+        else:
+            callbacks.append(lambda digit=input_value: push_digit_key(digit))
+    return callbacks
+
+
+def run_blocking_gui_action(game, action, *callbacks):
+    if callbacks:
+        queue_sdl_inputs(game, *callbacks)
+    result = action()
+    pump_event_loop(5)
+    return result
+
+
+def show_dialog_with_keyboard(test_case, game, g, dialog, inputs):
+    observed = queue_panel_observer(game, g, "CGameDialogPanel")
+    queue_sdl_inputs(game, *dialog_input_callbacks(inputs))
+    g.getGuiHandler().showDialog(dialog)
+    pump_event_loop(5)
+    test_case.assertTrue(observed["open"], f"{dialog.getTypeId()} should open a dialog panel.")
+
+
+def open_quest_log_panel(test_case, g):
+    panel = g.getGuiHandler().openPanel("questPanel")
+    pump_event_loop(5)
+    test_case.assertTrue(gui_contains_class(g, "CGameQuestPanel"))
+    return panel
+
+
+def assert_quest_log_hotkey_opens_panel(test_case, game, g, active=(), completed=()):
+    observed = {"open": False, "text": ""}
+
+    def observe_open_panel():
+        observed["open"] = gui_contains_class(g, "CGameQuestPanel")
+        if observed["open"]:
+            observed["text"] = g.getGuiHandler().openPanel("questPanel").getText(g.getGui())
+
+    push_quest_log_key()
+    game.event_loop.instance().invoke(observe_open_panel)
+    push_quest_log_key()
+    pump_event_loop(10)
+
+    test_case.assertTrue(observed["open"], "The j hotkey should open the quest log panel.")
+    test_case.assertFalse(gui_contains_class(g, "CGameQuestPanel"), "The second j hotkey should close the quest log.")
+    for quest_id in active:
+        test_case.assertIn(nouraajd_quest_status_line("Active", quest_id), observed["text"])
+    for quest_id in completed:
+        test_case.assertIn(nouraajd_quest_status_line("Completed", quest_id), observed["text"])
+
+
+def nouraajd_quest_status_line(status, quest_id):
+    return f"[{status}] {NOURAAJD_QUEST_DESCRIPTIONS[quest_id]}"
+
+
+def assert_nouraajd_quest_log(test_case, g, active=(), completed=()):
+    quest_panel = open_quest_log_panel(test_case, g)
+    text = quest_panel.getText(g.getGui())
+    for quest_id in active:
+        test_case.assertIn(nouraajd_quest_status_line("Active", quest_id), text)
+    for quest_id in completed:
+        test_case.assertIn(nouraajd_quest_status_line("Completed", quest_id), text)
+    return text
+
+
+def capture_nouraajd_quest_log(test_case, g, name, active=(), completed=()):
+    text = assert_nouraajd_quest_log(test_case, g, active=active, completed=completed)
+    assert_screenshot_has_rendered_pixels(test_case, g, name)
+    g.getGuiHandler().openPanel("questPanel").close()
+    pump_event_loop(2)
+    return text
+
+
+def player_quest_id(quest):
+    if hasattr(quest, "getTypeId"):
+        quest_id = quest.getTypeId()
+        if quest_id:
+            return quest_id
+    return quest.getName()
+
+
+def find_player_quest(player, quest_id):
+    quests = list(player.getQuests())
+    if hasattr(player, "getCompletedQuests"):
+        quests.extend(player.getCompletedQuests())
+    for quest in quests:
+        if player_quest_id(quest) == quest_id:
+            return quest
+    return None
+
+
+def assert_player_quest_state(test_case, player, quest_id, completed):
+    quest = find_player_quest(player, quest_id)
+    test_case.assertIsNotNone(quest, f"{quest_id} should be present in the player's quest journal.")
+    test_case.assertEqual(completed, quest.isCompleted(), f"{quest_id} completion state mismatch.")
+    return quest
+
+
 def open_panel_for_screenshot(test_case, g, panel_name, class_name):
     panel = g.getGuiHandler().openPanel(panel_name)
     pump_event_loop(5)
@@ -6524,6 +6716,260 @@ class XvfbGameplayProcessTest(unittest.TestCase):
         player.addQuest("mainQuest")
         open_panel_for_screenshot(self, g, "questPanel", "CGameQuestPanel")
         assert_screenshot_has_rendered_pixels(self, g, "xvfb_quest_panel_screenshot")
+
+    def test_full_nouraajd_quest_walkthrough_ui(self):
+        game, g, game_map, player = create_xvfb_gameplay_session(self, map_name="nouraajd")
+        all_quest_ids = set(NOURAAJD_QUEST_DESCRIPTIONS)
+        completed_quests = set()
+
+        def quest_state(name):
+            return game_map.getStringProperty(f"quest_state_{name}")
+
+        def assert_active(quest_id):
+            assert_player_quest_state(self, player, quest_id, completed=False)
+
+        def assert_completed(quest_id):
+            assert_player_quest_state(self, player, quest_id, completed=True)
+            completed_quests.add(quest_id)
+
+        self.assertEqual("nouraajd", game_map.mapName)
+        start_events = [
+            obj for obj in game_map.getObjects() if obj.getTypeId() == "StartEvent" or obj.getType() == "StartEvent"
+        ]
+        self.assertTrue(start_events, "The Nouraajd map should author StartEvent tiles.")
+        start_coords = start_events[0].getCoords()
+        run_blocking_gui_action(
+            game,
+            lambda: player.moveTo(start_coords.x, start_coords.y, start_coords.z),
+            push_space_key,
+        )
+        self.assertGreaterEqual(player.countItems("letterFromRolf"), 1)
+        self.assertEqual("awaiting_skull", quest_state("rolf"))
+        assert_active("rolfQuest")
+        assert_quest_log_hotkey_opens_panel(self, game, g, active=("rolfQuest",))
+        capture_nouraajd_quest_log(
+            self,
+            g,
+            "xvfb_nouraajd_quest_log_rolf_initial",
+            active=("rolfQuest",),
+        )
+
+        run_blocking_gui_action(game, lambda: game_map.removeObjectByName("cave1"), push_space_key)
+        run_blocking_gui_action(game, player.checkQuests, push_space_key)
+        self.assertTrue(player.hasItem(lambda it: it.getName() == "skullOfRolf"))
+        self.assertTrue(game_map.getBoolProperty("completed_rolf"))
+        self.assertEqual("skull_recovered", quest_state("rolf"))
+        self.assertEqual("awaiting_gooby", quest_state("main"))
+        assert_completed("rolfQuest")
+        assert_active("mainQuest")
+        capture_nouraajd_quest_log(
+            self,
+            g,
+            "xvfb_nouraajd_quest_log_rolf_completed_main_active",
+            active=("mainQuest",),
+            completed=completed_quests,
+        )
+
+        gooby = find_runtime_object(game_map, "gooby1")
+        run_blocking_gui_action(game, lambda: game_map.removeObjectByName(gooby.getName()), push_space_key)
+        run_blocking_gui_action(game, player.checkQuests, push_space_key)
+        self.assertTrue(game_map.getBoolProperty("completed_gooby"))
+        self.assertEqual("gooby_slain", quest_state("main"))
+        assert_completed("mainQuest")
+
+        town_hall = g.createObject("townHallDialog")
+        show_dialog_with_keyboard(self, game, g, town_hall, [2])
+        run_blocking_gui_action(game, town_hall.give_letter, push_space_key)
+        self.assertEqual("letter_in_hand", quest_state("beren_chain"))
+        self.assertTrue(player.hasItem(lambda it: it.getName() == "letterToBeren"))
+        assert_active("deliverLetterQuest")
+        capture_nouraajd_quest_log(
+            self,
+            g,
+            "xvfb_nouraajd_quest_log_deliver_letter_active",
+            active=("deliverLetterQuest",),
+            completed=completed_quests,
+        )
+
+        beren = g.createObject("berenDialog")
+        show_dialog_with_keyboard(self, game, g, beren, [2])
+        run_blocking_gui_action(game, beren.deliver_letter, push_space_key)
+        player.checkQuests()
+        pump_event_loop(5)
+        self.assertEqual("letter_delivered", quest_state("beren_chain"))
+        self.assertFalse(player.hasItem(lambda it: it.getName() == "letterToBeren"))
+        self.assertTrue(player.getBoolProperty("CAN_CRAFT_SCROLLS"))
+        assert_completed("deliverLetterQuest")
+        assert_active("retrieveRelicQuest")
+
+        run_blocking_gui_action(game, lambda: game_map.removeObjectByName("catacombs"), push_space_key)
+        self.assertEqual("relic_obtained", quest_state("beren_chain"))
+        self.assertTrue(player.hasItem(lambda it: it.getName() == "holyRelic"))
+        show_dialog_with_keyboard(self, game, g, beren, [2])
+        run_blocking_gui_action(game, beren.return_relic, push_space_key)
+        player.checkQuests()
+        pump_event_loop(5)
+        self.assertEqual("relic_returned_waiting_kill", quest_state("beren_chain"))
+        self.assertFalse(player.hasItem(lambda it: it.getName() == "holyRelic"))
+        self.assertTrue(player.getBoolProperty("CAN_BREW_GREATER_POTIONS"))
+        assert_completed("retrieveRelicQuest")
+        assert_active("cleanseCaveQuest")
+        capture_nouraajd_quest_log(
+            self,
+            g,
+            "xvfb_nouraajd_quest_log_beren_cleanse_active",
+            active=("cleanseCaveQuest",),
+            completed=completed_quests,
+        )
+
+        show_dialog_with_keyboard(self, game, g, g.createObject("dialog"), [1, 2, 1, 1])
+        self.assertEqual("active", quest_state("octobogz_contract"))
+        assert_active("octoBogzQuest")
+
+        octobogz_gold = player.getGold()
+        octobogz_shadow_blades = player.countItems("ShadowBlade")
+        run_blocking_gui_action(game, lambda: game_map.removeObjectByName("cave2"), push_space_key)
+        run_blocking_gui_action(game, player.checkQuests, push_space_key)
+        self.assertEqual("ready_to_report", quest_state("beren_chain"))
+        self.assertEqual("completed", quest_state("octobogz_contract"))
+        self.assertTrue(game_map.getBoolProperty("completed_octobogz"))
+        self.assertTrue(game_map.getBoolProperty("OCTOBOGZ_CLEARED"))
+        self.assertEqual(octobogz_gold + 1000, player.getGold())
+        self.assertEqual(octobogz_shadow_blades + 1, player.countItems("ShadowBlade"))
+        assert_completed("octoBogzQuest")
+
+        show_dialog_with_keyboard(self, game, g, g.createObject("tavernDialog1"), [1, 1, 2, 3])
+        self.assertTrue(game_map.getBoolProperty("ASKED_ABOUT_GIRL"))
+        show_dialog_with_keyboard(self, game, g, g.createObject("tavernDialog2"), [1, 2, 2, 2, 1])
+        self.assertEqual("met_victor", quest_state("victor"))
+        self.assertTrue(game_map.getBoolProperty("TALKED_TO_VICTOR"))
+        assert_active("victorQuest")
+        show_dialog_with_keyboard(self, game, g, g.createObject("townHallDialog"), [1, 1])
+        leader = find_runtime_object(game_map, "cultLeaderQuest")
+        cultists = [obj for obj in game_map.getObjects() if obj.getName() and obj.getName().startswith("victorCultist")]
+        self.assertEqual("encounter_active", quest_state("victor"))
+        self.assertTrue(game_map.getBoolProperty("VICTOR_COURTYARD_FOUND"))
+        self.assertTrue(game_map.getBoolProperty("VICTOR_CULTISTS_SPAWNED"))
+        self.assertTrue(cultists)
+        victor_text = capture_nouraajd_quest_log(
+            self,
+            g,
+            "xvfb_nouraajd_quest_log_victor_encounter_active",
+            active=("cleanseCaveQuest", "victorQuest"),
+            completed=completed_quests,
+        )
+        self.assertIn("Objective: Defeat the cultists in the courtyard", victor_text)
+
+        captured_reward_ui = {"dialogs": [], "trades": []}
+        heal_amounts = []
+        original_show_dialog = game.CGuiHandler.showDialog
+        original_show_trade = game.CGuiHandler.showTrade
+        original_heal_proc = game.CPlayer.healProc
+        victor_gold = player.getGold()
+        try:
+
+            def capture_show_dialog(self, dialog):
+                captured_reward_ui["dialogs"].append(dialog.getTypeId())
+                queue_sdl_inputs(game, lambda: push_digit_key(1))
+                return original_show_dialog(self, dialog)
+
+            def capture_show_trade(self, market):
+                captured_reward_ui["trades"].append(market.getTypeId())
+                queue_sdl_inputs(game, push_space_key)
+                return original_show_trade(self, market)
+
+            def capture_heal_proc(self, amount):
+                heal_amounts.append(amount)
+                return original_heal_proc(self, amount)
+
+            game.CGuiHandler.showDialog = capture_show_dialog
+            game.CGuiHandler.showTrade = capture_show_trade
+            game.CPlayer.healProc = capture_heal_proc
+            game_map.removeObjectByName(leader.getName())
+            pump_event_loop(5)
+        finally:
+            game.CGuiHandler.showDialog = original_show_dialog
+            game.CGuiHandler.showTrade = original_show_trade
+            game.CPlayer.healProc = original_heal_proc
+
+        player.checkQuests()
+        pump_event_loop(5)
+        self.assertEqual("good_end", quest_state("victor"))
+        self.assertEqual(victor_gold + 500, player.getGold())
+        self.assertEqual([100], heal_amounts)
+        self.assertTrue(game_map.getBoolProperty("VICTOR_GOOD_END"))
+        self.assertTrue(game_map.getBoolProperty("VICTOR_REWARD_CLAIMED"))
+        self.assertIn("victorRewardDialog", captured_reward_ui["dialogs"])
+        self.assertIn("victorMarket", captured_reward_ui["trades"])
+        self.assertFalse(
+            any(
+                obj.getName() and (obj.getName() == "cultLeaderQuest" or obj.getName().startswith("victorCultist"))
+                for obj in game_map.getObjects()
+            )
+        )
+        assert_completed("victorQuest")
+
+        show_dialog_with_keyboard(self, game, g, g.createObject("questDialog"), [1, 1, 1])
+        self.assertEqual("active", quest_state("amulet"))
+        self.assertIsNotNone(game_map.getObjectByName("amuletGoblin"))
+        assert_active("amuletQuest")
+        capture_nouraajd_quest_log(
+            self,
+            g,
+            "xvfb_nouraajd_quest_log_amulet_active",
+            active=("cleanseCaveQuest", "amuletQuest"),
+            completed=completed_quests,
+        )
+
+        amulet_gold = player.getGold()
+        player.addItem("preciousAmulet")
+        show_dialog_with_keyboard(self, game, g, g.createObject("questReturnDialog"), [1, "space"])
+        player.checkQuests()
+        pump_event_loop(5)
+        self.assertEqual("returned", quest_state("amulet"))
+        self.assertEqual(amulet_gold + 50, player.getGold())
+        self.assertFalse(player.hasItem(lambda it: it.getName() == "preciousAmulet"))
+        self.assertIsNone(game_map.getObjectByName("amuletGoblin"))
+        self.assertIsNone(game_map.getObjectByName("oldWoman"))
+        assert_completed("amuletQuest")
+        capture_nouraajd_quest_log(
+            self,
+            g,
+            "xvfb_nouraajd_quest_log_amulet_completed",
+            active=("cleanseCaveQuest",),
+            completed=completed_quests,
+        )
+
+        transitions = []
+        original_change_map = game.CGame.changeMap
+        try:
+
+            def capture_change_map(self, map_name):
+                transitions.append(map_name)
+
+            game.CGame.changeMap = capture_change_map
+            show_dialog_with_keyboard(self, game, g, beren, [2])
+            run_blocking_gui_action(game, beren.finish_cleanse, push_space_key)
+        finally:
+            game.CGame.changeMap = original_change_map
+
+        player.checkQuests()
+        pump_event_loop(5)
+        self.assertEqual(["ritual"], transitions)
+        self.assertEqual("purged", quest_state("beren_chain"))
+        self.assertTrue(game_map.getBoolProperty("CAVE_PURGED"))
+        assert_completed("cleanseCaveQuest")
+        journal_quest_ids = {player_quest_id(quest) for quest in player.getQuests()}
+        journal_quest_ids.update(player_quest_id(quest) for quest in player.getCompletedQuests())
+        self.assertTrue(all_quest_ids.issubset(journal_quest_ids))
+        capture_nouraajd_quest_log(
+            self,
+            g,
+            "xvfb_nouraajd_quest_log_all_quests_completed",
+            completed=all_quest_ids,
+        )
+
+        self.assertEqual("nouraajd", g.getMap().mapName)
 
     def test_sidebar_mouse_opens_inventory_until_hotkey_closes_it(self):
         game, g, _, _ = create_xvfb_gameplay_session(self)
