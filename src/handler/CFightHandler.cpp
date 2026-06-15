@@ -144,6 +144,9 @@ encounter_type sanitize_opponents(const std::shared_ptr<CCreature> &attacker, co
 std::shared_ptr<CCreature> resolve_target(const std::shared_ptr<CCreature> &attacker, const encounter_type &opponents,
                                           std::shared_ptr<CCreature> current) {
     auto controller = attacker->getFightController();
+    if (!controller) {
+        return opponents.empty() ? std::shared_ptr<CCreature>() : opponents.front();
+    }
     controller->setOpponents(attacker, opponents);
     auto selected = controller->selectOpponent(attacker, opponents, current);
     return selected ? selected : (opponents.empty() ? std::shared_ptr<CCreature>() : opponents.front());
@@ -200,10 +203,16 @@ bool CFightHandler::fightMany(std::shared_ptr<CCreature> attacker,
 
     auto allOpponents = opponents;
     auto current = opponents.front();
-    attacker->getFightController()->setOpponents(attacker, opponents);
-    attacker->getFightController()->start(attacker, current);
+    auto attackerController = attacker->getFightController();
+    if (!attackerController) {
+        return false;
+    }
+    attackerController->setOpponents(attacker, opponents);
+    attackerController->start(attacker, current);
     for (const auto &opponent : allOpponents) {
-        opponent->getFightController()->start(opponent, attacker);
+        if (auto controller = opponent->getFightController()) {
+            controller->start(opponent, attacker);
+        }
     }
 
     int stale_turns = 0;
@@ -235,7 +244,7 @@ bool CFightHandler::fightMany(std::shared_ptr<CCreature> attacker,
                 }
 
                 if (!CTags::isTagPresent(attacker->getEffects(), CTag::Stun)) {
-                    attacker->getFightController()->control(attacker, current);
+                    attackerController->control(attacker, current);
                     remove_dead_opponents(attacker, opponents);
                     if (!attacker->isAlive()) {
                         defeat_attacker(attacker, opponents, current);
@@ -272,7 +281,9 @@ bool CFightHandler::fightMany(std::shared_ptr<CCreature> attacker,
                 continue;
             }
             if (!CTags::isTagPresent(actor->getEffects(), CTag::Stun)) {
-                actor->getFightController()->control(actor, attacker);
+                if (auto controller = actor->getFightController()) {
+                    controller->control(actor, attacker);
+                }
                 if (!attacker->isAlive()) {
                     remove_dead_opponents(attacker, opponents);
                     defeat_attacker(attacker, opponents, actor);
@@ -303,9 +314,11 @@ bool CFightHandler::fightMany(std::shared_ptr<CCreature> attacker,
         stale_turns = after == before ? stale_turns + 1 : 0;
     }
 
-    attacker->getFightController()->end(attacker, current);
+    attackerController->end(attacker, current);
     for (const auto &opponent : allOpponents) {
-        opponent->getFightController()->end(opponent, attacker);
+        if (auto controller = opponent->getFightController()) {
+            controller->end(opponent, attacker);
+        }
     }
 
     if (resolved) {

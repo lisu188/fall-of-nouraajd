@@ -28,6 +28,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "gui/object/CProxyGraphicsObject.h"
 #include "gui/object/CWidget.h"
 #include "handler/CEventHandler.h"
+#include <exception>
 
 namespace {
 std::shared_ptr<CAnimation> createListItemAnimation(const std::shared_ptr<CGui> &gui,
@@ -140,10 +141,18 @@ int CListView::getSizeY(std::shared_ptr<CGui> gui) {
 }
 
 CListView::collection_pointer CListView::invokeCollection(std::shared_ptr<CGui> gui) {
-    return getParent()
-        ->meta()
-        ->invoke_method<CListView::collection_pointer, CGameGraphicsObject, std::shared_ptr<CGui>>(
-            collection, vstd::cast<CGameGraphicsObject>(getParent()), gui);
+    auto parent = getParent();
+    if (!parent || collection.empty()) {
+        return std::make_shared<CListView::collection_type>();
+    }
+    try {
+        return parent->meta()->invoke_method<CListView::collection_pointer, CGameGraphicsObject, std::shared_ptr<CGui>>(
+            collection, vstd::cast<CGameGraphicsObject>(parent), gui);
+    } catch (const std::exception &e) {
+        vstd::logger::warning("Ignoring list collection callback failure:", collection, "on", parent->getType(),
+                              e.what());
+        return std::make_shared<CListView::collection_type>();
+    }
 }
 
 void CListView::invokeCallback(std::shared_ptr<CGui> gui, int i, std::shared_ptr<CGameObject> object) {
