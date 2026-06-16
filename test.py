@@ -15,6 +15,7 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 import ast
 import builtins
+import concurrent.futures
 import http.client
 import importlib
 import json
@@ -37,7 +38,19 @@ import unittest
 import mcp
 
 REPO_ROOT = Path(__file__).resolve().parent
-TEST_OUTPUT_DIR = REPO_ROOT / "test"
+
+
+def resolve_test_output_dir():
+    output_dir = os.environ.get("FON_TEST_OUTPUT_DIR")
+    if not output_dir:
+        return REPO_ROOT / "test"
+    path = Path(output_dir)
+    if not path.is_absolute():
+        path = REPO_ROOT / path
+    return path
+
+
+TEST_OUTPUT_DIR = resolve_test_output_dir()
 runtime_dir_id = os.getuid() if hasattr(os, "getuid") else os.getpid()
 XDG_RUNTIME_DIR = Path(tempfile.gettempdir()) / f"xdg-runtime-{runtime_dir_id}"
 
@@ -86,6 +99,28 @@ except Exception:
 
 MCP_PROTOCOL_VERSION = "2025-11-25"
 MCP_STDIO_SHUTDOWN_TIMEOUT_SECONDS = 30
+FON_TEST_WORKER = os.environ.get("FON_TEST_WORKER") == "1"
+SERIAL_TEST_NAMES = {
+    "GameTest.test_load_saved_map_slot_name_does_not_override_object_type_configs",
+    "GameTest.test_missing_save_resource_directory_lists_empty",
+    "XvfbGameplayTest.test_keyboard_gameplay_under_xvfb",
+}
+
+
+def parse_positive_int(value, name):
+    try:
+        parsed = int(value)
+    except (TypeError, ValueError):
+        raise ValueError(f"{name} must be a positive integer, got: {value}") from None
+    if parsed < 1:
+        raise ValueError(f"{name} must be a positive integer, got: {value}")
+    return parsed
+
+
+def unique_save_name(prefix):
+    shard = os.environ.get("FON_TEST_SHARD")
+    shard_part = f"-{shard}" if shard else ""
+    return f"{prefix}{shard_part}-{os.getpid()}-{time.time_ns()}"
 
 
 class ProgressTextTestResult(unittest.TextTestResult):
@@ -177,7 +212,7 @@ def make_temp_log_path():
 def game_test(f):
     def wrapper(self):
         n = f.__name__.split("test_")[1]
-        TEST_OUTPUT_DIR.mkdir(exist_ok=True)
+        TEST_OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
         result = f(self)
         success = result[0]
         log = result[1]
@@ -200,6 +235,24 @@ def pump_event_loop(iterations=30):
     game = load_game_module()
     for _ in range(iterations):
         game.event_loop.instance().run()
+
+
+def pump_event_loop_until(predicate, *, timeout=1.0, min_iterations=1):
+    game = load_game_module()
+    deadline = time.monotonic() + timeout
+    iterations = 0
+    while True:
+        game.event_loop.instance().run()
+        iterations += 1
+        try:
+            ready = predicate()
+        except Exception:
+            ready = False
+        if iterations >= min_iterations and ready:
+            return True
+        if time.monotonic() >= deadline:
+            return False
+        time.sleep(0.001)
 
 
 SDL_KEYDOWN = 0x300
@@ -248,6 +301,10 @@ XVFB_GAMEPLAY_CHILD_TESTS = (
     "test_sidebar_mouse_opens_inventory_until_hotkey_closes_it",
     "test_save_hotkey_writes_loadable_map",
 )
+XVFB_SAVE_MUTATING_CHILD_TESTS = {
+    "test_screenshot_after_save_hotkey_has_rendered_pixels",
+    "test_save_hotkey_writes_loadable_map",
+}
 
 NOURAAJD_QUEST_DESCRIPTIONS = {
     "rolfQuest": "Unravel the fate of Sergeant Rolf.",
@@ -328,6 +385,15 @@ sdl.SDL_Quit()
     return False, message
 
 
+def focused_sdl_window():
+    import ctypes
+
+    sdl = load_sdl_library()
+    sdl.SDL_GetKeyboardFocus.restype = ctypes.c_void_p
+    sdl.SDL_GetMouseFocus.restype = ctypes.c_void_p
+    return sdl.SDL_GetKeyboardFocus() or sdl.SDL_GetMouseFocus()
+
+
 def push_sdl_key_event(keycode, scancode, event_type=SDL_KEYDOWN):
     import ctypes
 
@@ -367,10 +433,9 @@ def push_sdl_key_event(keycode, scancode, event_type=SDL_KEYDOWN):
     event.key.keysym.scancode = scancode
     event.key.keysym.sym = keycode
 
-    sdl.SDL_GetKeyboardFocus.restype = ctypes.c_void_p
     sdl.SDL_GetWindowID.argtypes = [ctypes.c_void_p]
     sdl.SDL_GetWindowID.restype = ctypes.c_uint32
-    focused_window = sdl.SDL_GetKeyboardFocus()
+    focused_window = focused_sdl_window()
     if focused_window:
         event.key.windowID = sdl.SDL_GetWindowID(focused_window)
 
@@ -415,10 +480,9 @@ def push_sdl_mouse_button_event(x, y, button=SDL_BUTTON_LEFT, event_type=SDL_MOU
     event.button.x = x
     event.button.y = y
 
-    sdl.SDL_GetKeyboardFocus.restype = ctypes.c_void_p
     sdl.SDL_GetWindowID.argtypes = [ctypes.c_void_p]
     sdl.SDL_GetWindowID.restype = ctypes.c_uint32
-    focused_window = sdl.SDL_GetKeyboardFocus()
+    focused_window = focused_sdl_window()
     if focused_window:
         event.button.windowID = sdl.SDL_GetWindowID(focused_window)
 
@@ -453,61 +517,67 @@ def capture_sdl_screenshot(path, gui=None):
     import ctypes
     from PIL import Image
 
-    if gui is not None and hasattr(gui, "read_pixels"):
-        pixels, width, height = gui.read_pixels()
+    data = None
+    width = None
+    height = None
+    read_pixels = None
+    if gui is not None:
+        read_pixels = getattr(gui, "read_pixels", None) or getattr(gui, "readPixels", None)
+    if read_pixels is not None:
+        try:
+            pixels, width, height = read_pixels()
+            data = bytes(pixels)
+        except RuntimeError:
+            pass
+    if data is None:
+        sdl = load_sdl_library()
+        window = focused_sdl_window()
+        if not window:
+            sdl.SDL_GetWindowFromID.argtypes = [ctypes.c_uint32]
+            sdl.SDL_GetWindowFromID.restype = ctypes.c_void_p
+            for window_id in range(1, 256):
+                window = sdl.SDL_GetWindowFromID(window_id)
+                if window:
+                    break
+        if not window:
+            raise AssertionError("Could not find the focused SDL window for screenshot capture.")
+
+        sdl.SDL_GetRenderer.argtypes = [ctypes.c_void_p]
+        sdl.SDL_GetRenderer.restype = ctypes.c_void_p
+        renderer = sdl.SDL_GetRenderer(window)
+        if not renderer:
+            raise AssertionError("Could not find the SDL renderer for screenshot capture.")
+
+        width_value = ctypes.c_int()
+        height_value = ctypes.c_int()
+        sdl.SDL_GetRendererOutputSize.argtypes = [
+            ctypes.c_void_p,
+            ctypes.POINTER(ctypes.c_int),
+            ctypes.POINTER(ctypes.c_int),
+        ]
+        sdl.SDL_GetRendererOutputSize.restype = ctypes.c_int
+        if sdl.SDL_GetRendererOutputSize(renderer, ctypes.byref(width_value), ctypes.byref(height_value)) != 0:
+            raise_sdl_error(sdl, "SDL_GetRendererOutputSize")
+
+        width = width_value.value
+        height = height_value.value
+        pitch = width * 4
+        pixels = (ctypes.c_uint8 * (pitch * height))()
+        sdl.SDL_RenderReadPixels.argtypes = [
+            ctypes.c_void_p,
+            ctypes.c_void_p,
+            ctypes.c_uint32,
+            ctypes.c_void_p,
+            ctypes.c_int,
+        ]
+        sdl.SDL_RenderReadPixels.restype = ctypes.c_int
+        if sdl.SDL_RenderReadPixels(renderer, None, SDL_PIXELFORMAT_RGBA32, pixels, pitch) != 0:
+            raise_sdl_error(sdl, "SDL_RenderReadPixels")
         data = bytes(pixels)
-        path.parent.mkdir(parents=True, exist_ok=True)
-        Image.frombytes("RGBA", (width, height), data).save(path)
-        return data, width, height
 
-    sdl = load_sdl_library()
-    sdl.SDL_GetKeyboardFocus.restype = ctypes.c_void_p
-    sdl.SDL_GetMouseFocus.restype = ctypes.c_void_p
-    window = sdl.SDL_GetKeyboardFocus() or sdl.SDL_GetMouseFocus()
-    if not window:
-        sdl.SDL_GetWindowFromID.argtypes = [ctypes.c_uint32]
-        sdl.SDL_GetWindowFromID.restype = ctypes.c_void_p
-        for window_id in range(1, 256):
-            window = sdl.SDL_GetWindowFromID(window_id)
-            if window:
-                break
-    if not window:
-        raise AssertionError("Could not find the focused SDL window for screenshot capture.")
-
-    sdl.SDL_GetRenderer.argtypes = [ctypes.c_void_p]
-    sdl.SDL_GetRenderer.restype = ctypes.c_void_p
-    renderer = sdl.SDL_GetRenderer(window)
-    if not renderer:
-        raise AssertionError("Could not find the SDL renderer for screenshot capture.")
-
-    width = ctypes.c_int()
-    height = ctypes.c_int()
-    sdl.SDL_GetRendererOutputSize.argtypes = [
-        ctypes.c_void_p,
-        ctypes.POINTER(ctypes.c_int),
-        ctypes.POINTER(ctypes.c_int),
-    ]
-    sdl.SDL_GetRendererOutputSize.restype = ctypes.c_int
-    if sdl.SDL_GetRendererOutputSize(renderer, ctypes.byref(width), ctypes.byref(height)) != 0:
-        raise_sdl_error(sdl, "SDL_GetRendererOutputSize")
-
-    pitch = width.value * 4
-    pixels = (ctypes.c_uint8 * (pitch * height.value))()
-    sdl.SDL_RenderReadPixels.argtypes = [
-        ctypes.c_void_p,
-        ctypes.c_void_p,
-        ctypes.c_uint32,
-        ctypes.c_void_p,
-        ctypes.c_int,
-    ]
-    sdl.SDL_RenderReadPixels.restype = ctypes.c_int
-    if sdl.SDL_RenderReadPixels(renderer, None, SDL_PIXELFORMAT_RGBA32, pixels, pitch) != 0:
-        raise_sdl_error(sdl, "SDL_RenderReadPixels")
-
-    data = bytes(pixels)
     path.parent.mkdir(parents=True, exist_ok=True)
-    Image.frombytes("RGBA", (width.value, height.value), data).save(path)
-    return data, width.value, height.value
+    Image.frombytes("RGBA", (width, height), data).save(path)
+    return data, width, height
 
 
 def raise_sdl_error(sdl, function_name):
@@ -519,15 +589,13 @@ def raise_sdl_error(sdl, function_name):
     raise AssertionError(f"{function_name} failed: {message}")
 
 
-def screenshot_pixel_summary(data):
-    unique_rgb = set()
-    non_black_pixels = 0
-    for offset in range(0, len(data), 4):
-        rgb = data[offset : offset + 3]
-        unique_rgb.add(rgb)
-        if rgb != b"\x00\x00\x00":
-            non_black_pixels += 1
-    return {"unique_rgb": len(unique_rgb), "non_black_pixels": non_black_pixels}
+def screenshot_pixel_summary(image):
+    rgb_image = image.convert("RGB")
+    colors = rgb_image.getcolors(maxcolors=9)
+    unique_rgb = 10 if colors is None else len(colors)
+    histogram = rgb_image.convert("L").histogram()
+    non_black_pixels = sum(histogram[1:])
+    return {"unique_rgb": unique_rgb, "non_black_pixels": non_black_pixels}
 
 
 def screenshot_pixel_rgb(data, width, x, y):
@@ -558,7 +626,6 @@ def assert_screenshot_has_rendered_pixels(test_case, g, name):
         data, width, height = capture_sdl_screenshot(screenshot_path, g.getGui())
     except RuntimeError as exc:
         test_case.skipTest(f"SDL renderer is not available for screenshot readback: {exc}")
-    summary = screenshot_pixel_summary(data)
 
     test_case.assertEqual(".png", screenshot_path.suffix)
     test_case.assertEqual((GUI_WIDTH, GUI_HEIGHT), (width, height))
@@ -567,6 +634,7 @@ def assert_screenshot_has_rendered_pixels(test_case, g, name):
     with Image.open(screenshot_path) as image:
         image.load()
         test_case.assertEqual((width, height), image.size)
+        summary = screenshot_pixel_summary(image)
     test_case.assertGreater(summary["unique_rgb"], 8)
     test_case.assertGreater(summary["non_black_pixels"], width * height // 100)
     assert_rendered_map_proxy_cells(test_case, g)
@@ -1673,7 +1741,7 @@ def quest_names(player):
 
 
 def walkthrough_log_path(map_name):
-    TEST_OUTPUT_DIR.mkdir(exist_ok=True)
+    TEST_OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     return TEST_OUTPUT_DIR / f"walkthrough_{map_name}.json"
 
 
@@ -1842,9 +1910,18 @@ def execute_walkthrough(map_name):
 
 def run_walkthrough(map_name, fn):
     command = [sys.executable, str(REPO_ROOT / "test.py"), f"GameTest.test_map_walkthrough_{map_name}"]
-    completed = subprocess.run(command, cwd=REPO_ROOT, capture_output=True, text=True)
+    child_output_dir = TEST_OUTPUT_DIR / "walkthroughs" / map_name
+    env = os.environ.copy()
+    env.update(
+        {
+            "FON_TEST_WORKER": "1",
+            "FON_TEST_JOBS": "1",
+            "FON_TEST_OUTPUT_DIR": str(child_output_dir),
+        }
+    )
+    completed = subprocess.run(command, cwd=REPO_ROOT, env=env, capture_output=True, text=True)
     log = {}
-    log_path = walkthrough_log_path(map_name)
+    log_path = child_output_dir / f"walkthrough_{map_name}.json"
     if log_path.exists():
         try:
             log = json.loads(log_path.read_text())
@@ -2894,31 +2971,36 @@ class GameTest(unittest.TestCase):
         after_vertical = player.getCoords()
         self.assertEqual((after_vertical.x, after_vertical.y, after_vertical.z), (25, 25, 0))
 
-        save_name = "toroidal_wrap_regression"
-        game.CMapLoader.save(game_map, save_name)
+        save_name = unique_save_name("toroidal_wrap_regression")
+        save_path = Path.cwd() / "save" / f"{save_name}.json"
+        try:
+            game.CMapLoader.save(game_map, save_name)
 
-        loaded_game = game.CGameLoader.loadGame()
-        game.CGameLoader.loadSavedGame(loaded_game, save_name)
-        loaded_map = loaded_game.getMap()
-        loaded_player = loaded_map.getPlayer()
+            loaded_game = game.CGameLoader.loadGame()
+            game.CGameLoader.loadSavedGame(loaded_game, save_name)
+            loaded_map = loaded_game.getMap()
+            loaded_player = loaded_map.getPlayer()
 
-        self.assertTrue(loaded_map.canStep(game.Coords(-1, loaded_player.getCoords().y, 0)))
-        loaded_player.moveTo(-1, loaded_player.getCoords().y, 0)
-        self.assertEqual(
-            (loaded_player.getCoords().x, loaded_player.getCoords().y, loaded_player.getCoords().z), (25, 25, 0)
-        )
+            self.assertTrue(loaded_map.canStep(game.Coords(-1, loaded_player.getCoords().y, 0)))
+            loaded_player.moveTo(-1, loaded_player.getCoords().y, 0)
+            self.assertEqual(
+                (loaded_player.getCoords().x, loaded_player.getCoords().y, loaded_player.getCoords().z), (25, 25, 0)
+            )
 
-        return True, json.dumps(
-            {
-                "wrapped_horizontal": [after_horizontal.x, after_horizontal.y, after_horizontal.z],
-                "wrapped_vertical": [after_vertical.x, after_vertical.y, after_vertical.z],
-                "loaded_player": [
-                    loaded_player.getCoords().x,
-                    loaded_player.getCoords().y,
-                    loaded_player.getCoords().z,
-                ],
-            }
-        )
+            return True, json.dumps(
+                {
+                    "save_slot": save_name,
+                    "wrapped_horizontal": [after_horizontal.x, after_horizontal.y, after_horizontal.z],
+                    "wrapped_vertical": [after_vertical.x, after_vertical.y, after_vertical.z],
+                    "loaded_player": [
+                        loaded_player.getCoords().x,
+                        loaded_player.getCoords().y,
+                        loaded_player.getCoords().z,
+                    ],
+                }
+            )
+        finally:
+            save_path.unlink(missing_ok=True)
 
     @game_test
     def test_load_saved_map_slot_name_does_not_override_object_type_configs(self):
@@ -3178,29 +3260,34 @@ class GameTest(unittest.TestCase):
         initial_coords = game.Coords(-1, player.getCoords().y, 0)
         self.assertEqual("WaterTile", materialized_tile_type(game, game_map, initial_coords))
 
-        save_name = "out_of_bounds_tile_override_regression"
-        game.CMapLoader.save(game_map, save_name)
+        save_name = unique_save_name("out_of_bounds_tile_override_regression")
+        save_path = Path.cwd() / "save" / f"{save_name}.json"
+        try:
+            game.CMapLoader.save(game_map, save_name)
 
-        loaded_game = game.CGameLoader.loadGame()
-        game.CGameLoader.loadSavedGame(loaded_game, save_name)
-        loaded_map = loaded_game.getMap()
-        loaded_player = loaded_map.getPlayer()
+            loaded_game = game.CGameLoader.loadGame()
+            game.CGameLoader.loadSavedGame(loaded_game, save_name)
+            loaded_map = loaded_game.getMap()
+            loaded_player = loaded_map.getPlayer()
 
-        loaded_coords = game.Coords(25, loaded_player.getCoords().y, 0)
-        self.assertEqual("WaterTile", materialized_tile_type(game, loaded_map, loaded_coords))
+            loaded_coords = game.Coords(25, loaded_player.getCoords().y, 0)
+            self.assertEqual("WaterTile", materialized_tile_type(game, loaded_map, loaded_coords))
 
-        return True, json.dumps(
-            {
-                "initial_out_of_bounds_tile": {
-                    "coords": [initial_coords.x, initial_coords.y, initial_coords.z],
-                    "typeId": materialized_tile_type(game, game_map, initial_coords),
-                },
-                "loaded_out_of_bounds_tile": {
-                    "coords": [loaded_coords.x, loaded_coords.y, loaded_coords.z],
-                    "typeId": materialized_tile_type(game, loaded_map, loaded_coords),
-                },
-            }
-        )
+            return True, json.dumps(
+                {
+                    "save_slot": save_name,
+                    "initial_out_of_bounds_tile": {
+                        "coords": [initial_coords.x, initial_coords.y, initial_coords.z],
+                        "typeId": materialized_tile_type(game, game_map, initial_coords),
+                    },
+                    "loaded_out_of_bounds_tile": {
+                        "coords": [loaded_coords.x, loaded_coords.y, loaded_coords.z],
+                        "typeId": materialized_tile_type(game, loaded_map, loaded_coords),
+                    },
+                }
+            )
+        finally:
+            save_path.unlink(missing_ok=True)
 
     @game_test
     def test_player_recovery_from_map_objects_preserves_state(self):
@@ -5110,30 +5197,35 @@ class GameTest(unittest.TestCase):
         siege_map.addObject(heal_potion)
         heal_potion.moveTo(2, 2, 0)
 
-        save_name = "typed_tags_roundtrip"
-        game.CMapLoader.save(siege_map, save_name)
+        save_name = unique_save_name("typed_tags_roundtrip")
+        save_path = Path.cwd() / "save" / f"{save_name}.json"
+        try:
+            game.CMapLoader.save(siege_map, save_name)
 
-        loaded_game = game.CGameLoader.loadGame()
-        game.CGameLoader.loadSavedGame(loaded_game, save_name)
-        loaded_object = loaded_game.getMap().getObjectByName(tagged_object_name)
+            loaded_game = game.CGameLoader.loadGame()
+            game.CGameLoader.loadSavedGame(loaded_game, save_name)
+            loaded_object = loaded_game.getMap().getObjectByName(tagged_object_name)
 
-        self.assertIsNotNone(loaded_object)
-        self.assertTrue(loaded_object.hasTag(game.CTag.HEAL))
-        self.assertTrue(loaded_object.hasTag("heal"))
+            self.assertIsNotNone(loaded_object)
+            self.assertTrue(loaded_object.hasTag(game.CTag.HEAL))
+            self.assertTrue(loaded_object.hasTag("heal"))
 
-        report = {
-            "enum_checks": {
-                "heal": heal_potion.hasTag(game.CTag.HEAL),
-                "buff": barrier_effect.hasTag(game.CTag.BUFF),
-                "quest": magic_wand.hasTag(game.CTag.QUEST),
-                "wand": magic_wand.hasTag(game.CTag.WAND),
-            },
-            "saved_object": {
-                "name": tagged_object_name,
-                "loaded_has_heal": loaded_object.hasTag(game.CTag.HEAL),
-            },
-        }
-        return True, json.dumps(report, sort_keys=True)
+            report = {
+                "enum_checks": {
+                    "heal": heal_potion.hasTag(game.CTag.HEAL),
+                    "buff": barrier_effect.hasTag(game.CTag.BUFF),
+                    "quest": magic_wand.hasTag(game.CTag.QUEST),
+                    "wand": magic_wand.hasTag(game.CTag.WAND),
+                },
+                "save_slot": save_name,
+                "saved_object": {
+                    "name": tagged_object_name,
+                    "loaded_has_heal": loaded_object.hasTag(game.CTag.HEAL),
+                },
+            }
+            return True, json.dumps(report, sort_keys=True)
+        finally:
+            save_path.unlink(missing_ok=True)
 
     @game_test
     def test_missing_save_resource_directory_lists_empty(self):
@@ -6878,20 +6970,15 @@ class GameTest(unittest.TestCase):
     @game_test
     def test_map_walkthroughs(self):
         discovered_maps = discover_maps()
-        results = {}
-        failed = {}
-        for map_name in discovered_maps:
-            success, log = run_walkthrough(map_name, WALKTHROUGHS[map_name])
-            results[map_name] = log
-            if not success:
-                failed[map_name] = log
+        missing_tests = [
+            map_name for map_name in discovered_maps if not hasattr(self, f"test_map_walkthrough_{map_name}")
+        ]
         summary = {
             "discovered_maps": discovered_maps,
             "walkthroughs": {map_name: WALKTHROUGHS[map_name].__name__ for map_name in discovered_maps},
-            "failed": failed,
-            "results": results,
+            "missing_tests": missing_tests,
         }
-        return failed == {}, json.dumps(summary)
+        return missing_tests == [], json.dumps(summary)
 
     @game_test
     def test_json_validity(self):
@@ -7315,6 +7402,9 @@ class ConsoleEventIsolationTest(unittest.TestCase):
         env.update(
             {
                 "FON_CONSOLE_EVENT_CHILD": "1",
+                "FON_TEST_WORKER": "1",
+                "FON_TEST_JOBS": "1",
+                "FON_TEST_OUTPUT_DIR": str(TEST_OUTPUT_DIR / "console"),
                 "SDL_VIDEODRIVER": "dummy",
                 "SDL_AUDIODRIVER": "dummy",
                 "SDL_RENDER_DRIVER": "software",
@@ -7396,6 +7486,8 @@ class XvfbGameplayTest(unittest.TestCase):
         env.update(
             {
                 "FON_XVFB_GAMEPLAY_CHILD": "1",
+                "FON_TEST_WORKER": "1",
+                "FON_TEST_JOBS": "1",
                 "SDL_VIDEODRIVER": "x11",
                 "SDL_AUDIODRIVER": "dummy",
                 "SDL_RENDER_DRIVER": "software",
@@ -7410,13 +7502,20 @@ class XvfbGameplayTest(unittest.TestCase):
             str(REPO_ROOT / "test.py"),
         ]
 
-        failures = []
-        for child_test in XVFB_GAMEPLAY_CHILD_TESTS:
+        try:
+            xvfb_jobs = parse_positive_int(os.environ.get("FON_XVFB_JOBS", "2"), "FON_XVFB_JOBS")
+        except ValueError as exc:
+            self.fail(str(exc))
+
+        def run_child_test(child_test):
+            child_env = env.copy()
+            child_env["FON_TEST_OUTPUT_DIR"] = str(TEST_OUTPUT_DIR / "xvfb" / child_test)
+            child_env["FON_TEST_SHARD"] = f"xvfb-{child_test}"
             try:
                 completed = subprocess.run(
                     command + [f"XvfbGameplayProcessTest.{child_test}"],
                     cwd=REPO_ROOT,
-                    env=env,
+                    env=child_env,
                     capture_output=True,
                     text=True,
                     timeout=XVFB_GAMEPLAY_CHILD_TIMEOUT,
@@ -7424,14 +7523,43 @@ class XvfbGameplayTest(unittest.TestCase):
             except subprocess.TimeoutExpired as exc:
                 stdout = exc.stdout or ""
                 stderr = exc.stderr or ""
-                failures.append(f"{child_test} timed out.\nstdout:\n{stdout}\nstderr:\n{stderr}")
-                continue
+                return f"{child_test} timed out.\nstdout:\n{stdout}\nstderr:\n{stderr}"
 
             if completed.returncode != 0:
-                failures.append(
+                return (
                     f"{child_test} failed with {completed.returncode}.\n"
                     f"stdout:\n{completed.stdout}\nstderr:\n{completed.stderr}"
                 )
+            return None
+
+        parallel_child_tests = [
+            child_test for child_test in XVFB_GAMEPLAY_CHILD_TESTS if child_test not in XVFB_SAVE_MUTATING_CHILD_TESTS
+        ]
+        serial_child_tests = [
+            child_test for child_test in XVFB_GAMEPLAY_CHILD_TESTS if child_test in XVFB_SAVE_MUTATING_CHILD_TESTS
+        ]
+        failure_by_test = {}
+        if parallel_child_tests:
+            with concurrent.futures.ThreadPoolExecutor(
+                max_workers=min(xvfb_jobs, len(parallel_child_tests))
+            ) as executor:
+                futures = {
+                    executor.submit(run_child_test, child_test): child_test for child_test in parallel_child_tests
+                }
+                for future in concurrent.futures.as_completed(futures):
+                    child_test = futures[future]
+                    failure = future.result()
+                    if failure:
+                        failure_by_test[child_test] = failure
+
+        for child_test in serial_child_tests:
+            failure = run_child_test(child_test)
+            if failure:
+                failure_by_test[child_test] = failure
+
+        failures = [
+            failure_by_test[child_test] for child_test in XVFB_GAMEPLAY_CHILD_TESTS if child_test in failure_by_test
+        ]
 
         self.assertFalse(
             failures,
@@ -7527,13 +7655,13 @@ def show_dialog_with_keyboard(test_case, game, g, dialog, inputs):
     observed = queue_panel_observer(game, g, "CGameDialogPanel")
     queue_sdl_inputs(game, *dialog_input_callbacks(inputs))
     g.getGuiHandler().showDialog(dialog)
-    pump_event_loop(5)
+    pump_event_loop_until(lambda: observed["open"], timeout=1.0)
     test_case.assertTrue(observed["open"], f"{dialog.getTypeId()} should open a dialog panel.")
 
 
 def open_quest_log_panel(test_case, g):
     panel = g.getGuiHandler().openPanel("questPanel")
-    pump_event_loop(5)
+    pump_event_loop_until(lambda: gui_contains_class(g, "CGameQuestPanel"), timeout=1.0)
     test_case.assertTrue(gui_contains_class(g, "CGameQuestPanel"))
     return panel
 
@@ -7608,7 +7736,7 @@ def assert_player_quest_state(test_case, player, quest_id, completed):
 
 def open_panel_for_screenshot(test_case, g, panel_name, class_name):
     panel = g.getGuiHandler().openPanel(panel_name)
-    pump_event_loop(5)
+    pump_event_loop_until(lambda: gui_contains_class(g, class_name), timeout=1.0)
     test_case.assertTrue(gui_contains_class(g, class_name))
     return panel
 
@@ -8440,77 +8568,36 @@ class McpServerTest(unittest.TestCase):
             tools = tools_response.get("result", {}).get("tools", [])
             tool_names = {tool.get("name") for tool in tools}
             self.assertTrue({"engine_list", "engine_call", "engine_handle_call"}.issubset(tool_names))
-        finally:
-            self._shutdown_process(proc)
 
-    def test_stdio_gui_inventory_dump_from_repo_root(self):
-        script = REPO_ROOT / "mcp.py"
-        self.assertTrue(script.exists(), "MCP entry point is missing")
-        proc = subprocess.Popen(
-            [
-                sys.executable,
-                str(script),
-                "--stdio",
-                "--repo-root",
-                str(REPO_ROOT),
-                "--build-dir",
-                str(build_dir),
-            ],
-            stdin=subprocess.PIPE,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            bufsize=0,
-            cwd=str(REPO_ROOT),
-        )
-        try:
-            self._send_rpc(
-                proc,
-                {
-                    "jsonrpc": "2.0",
-                    "id": 1,
-                    "method": "initialize",
-                    "params": {
-                        "protocolVersion": MCP_PROTOCOL_VERSION,
-                        "capabilities": {},
-                        "clientInfo": {"name": "mcp-test", "version": "1.0"},
-                    },
-                },
-            )
-            initialize_response = self._read_rpc(proc)
-            self.assertNotIn("error", initialize_response)
-            self.assertEqual(initialize_response.get("id"), 1)
-
-            self._send_rpc(proc, {"jsonrpc": "2.0", "method": "notifications/initialized", "params": {}})
-
-            game_handle = self._call_tool(proc, 2, "engine_call", {"name": "CGameLoader.loadGame"})["result"]
-            self._call_tool(proc, 3, "engine_call", {"name": "CGameLoader.loadGui", "args": [game_handle]})
+            game_handle = self._call_tool(proc, 3, "engine_call", {"name": "CGameLoader.loadGame"})["result"]
+            self._call_tool(proc, 4, "engine_call", {"name": "CGameLoader.loadGui", "args": [game_handle]})
             self._call_tool(
                 proc,
-                4,
+                5,
                 "engine_call",
                 {"name": "CGameLoader.startGameWithPlayer", "args": [game_handle, "test", DEFAULT_PLAYER]},
             )
             gui_handler_handle = self._call_tool(
                 proc,
-                5,
+                6,
                 "engine_handle_call",
                 {"handle": game_handle["__handle__"], "method": "getGuiHandler"},
             )["result"]
             panel_handle = self._call_tool(
                 proc,
-                6,
+                7,
                 "engine_handle_call",
                 {"handle": gui_handler_handle["__handle__"], "method": "openPanel", "args": ["inventoryPanel"]},
             )["result"]
             self.assertEqual(panel_handle["__type__"], "CGameInventoryPanel")
             gui_handle = self._call_tool(
                 proc,
-                7,
+                8,
                 "engine_handle_call",
                 {"handle": game_handle["__handle__"], "method": "getGui"},
             )["result"]
             gui_tree = json.loads(
-                self._call_tool(proc, 8, "engine_call", {"name": "jsonify", "args": [gui_handle]})["result"]
+                self._call_tool(proc, 9, "engine_call", {"name": "jsonify", "args": [gui_handle]})["result"]
             )
 
             children = gui_tree.get("properties", {}).get("children") or []
@@ -8610,5 +8697,143 @@ class McpServerTest(unittest.TestCase):
             self.fail(f"MCP server exited with {proc.returncode}: {stderr_output}")
 
 
+def parse_runner_args(argv):
+    jobs = None
+    unittest_argv = [argv[0]]
+    index = 1
+    while index < len(argv):
+        arg = argv[index]
+        if arg == "--jobs":
+            if index + 1 >= len(argv):
+                raise ValueError("--jobs requires a positive integer argument")
+            jobs = parse_positive_int(argv[index + 1], "--jobs")
+            index += 2
+            continue
+        if arg.startswith("--jobs="):
+            jobs = parse_positive_int(arg.split("=", 1)[1], "--jobs")
+            index += 1
+            continue
+        unittest_argv.append(arg)
+        index += 1
+    return jobs, unittest_argv
+
+
+def selected_unittest_args(unittest_argv):
+    return [arg for arg in unittest_argv[1:] if not arg.startswith("-")]
+
+
+def runner_jobs(cli_jobs, unittest_argv):
+    if FON_TEST_WORKER:
+        return 1
+    if cli_jobs is not None:
+        return cli_jobs
+    env_jobs = os.environ.get("FON_TEST_JOBS")
+    if env_jobs:
+        return parse_positive_int(env_jobs, "FON_TEST_JOBS")
+    has_unittest_options = any(arg.startswith("-") for arg in unittest_argv[1:])
+    if not has_unittest_options and not selected_unittest_args(unittest_argv):
+        return os.cpu_count() or 1
+    return 1
+
+
+def flatten_suite(suite):
+    for test in suite:
+        if isinstance(test, unittest.TestSuite):
+            yield from flatten_suite(test)
+        else:
+            yield test
+
+
+def subprocess_test_name(test):
+    test_id = test.id()
+    for prefix in (f"{__name__}.", "__main__."):
+        if test_id.startswith(prefix):
+            return test_id[len(prefix) :]
+    return test_id
+
+
+def discover_unittest_test_names(unittest_argv):
+    loader = unittest.defaultTestLoader
+    selected = selected_unittest_args(unittest_argv)
+    if selected:
+        suite = loader.loadTestsFromNames(selected, module=sys.modules[__name__])
+    else:
+        suite = loader.loadTestsFromModule(sys.modules[__name__])
+
+    tests = list(flatten_suite(suite))
+    if any(test.__class__.__name__ == "_FailedTest" for test in tests):
+        return None
+    return [subprocess_test_name(test) for test in tests]
+
+
+def shard_test_names(test_names, jobs):
+    groups = [[] for _ in range(min(jobs, len(test_names)))]
+    for index, test_name in enumerate(test_names):
+        groups[index % len(groups)].append(test_name)
+    return groups
+
+
+def run_test_subprocess(test_names, shard_name):
+    output_dir = TEST_OUTPUT_DIR / "workers" / shard_name
+    env = os.environ.copy()
+    env.update(
+        {
+            "FON_TEST_WORKER": "1",
+            "FON_TEST_JOBS": "1",
+            "FON_TEST_OUTPUT_DIR": str(output_dir),
+            "FON_TEST_SHARD": shard_name,
+            "PYTHONUNBUFFERED": "1",
+        }
+    )
+    command = [sys.executable, str(REPO_ROOT / "test.py"), *test_names]
+    print(f"[test shard {shard_name}] running {len(test_names)} test(s)", flush=True)
+    return subprocess.Popen(command, cwd=REPO_ROOT, env=env)
+
+
+def run_sharded_tests(test_names, jobs):
+    serial_tests = [test_name for test_name in test_names if test_name in SERIAL_TEST_NAMES]
+    parallel_tests = [test_name for test_name in test_names if test_name not in SERIAL_TEST_NAMES]
+    failures = []
+
+    processes = []
+    if parallel_tests:
+        for index, group in enumerate(shard_test_names(parallel_tests, jobs), start=1):
+            processes.append((f"{index}", run_test_subprocess(group, f"{index}")))
+
+    for shard_name, proc in processes:
+        return_code = proc.wait()
+        if return_code != 0:
+            failures.append((shard_name, return_code))
+
+    if serial_tests:
+        serial_proc = run_test_subprocess(serial_tests, "serial")
+        return_code = serial_proc.wait()
+        if return_code != 0:
+            failures.append(("serial", return_code))
+
+    if failures:
+        for shard_name, return_code in failures:
+            print(f"[test shard {shard_name}] failed with exit code {return_code}", file=sys.stderr, flush=True)
+        return 1
+    return 0
+
+
+def main():
+    try:
+        cli_jobs, unittest_argv = parse_runner_args(sys.argv)
+        jobs = runner_jobs(cli_jobs, unittest_argv)
+    except ValueError as exc:
+        print(str(exc), file=sys.stderr)
+        sys.exit(2)
+
+    has_unittest_options = any(arg.startswith("-") for arg in unittest_argv[1:])
+    if jobs > 1 and not has_unittest_options:
+        test_names = discover_unittest_test_names(unittest_argv)
+        if test_names and len(test_names) > 1:
+            sys.exit(run_sharded_tests(test_names, jobs))
+
+    unittest.main(argv=unittest_argv, testRunner=ProgressTextTestRunner)
+
+
 if __name__ == "__main__":
-    unittest.main(testRunner=ProgressTextTestRunner)
+    main()
