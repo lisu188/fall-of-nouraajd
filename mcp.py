@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import argparse
+import ast
 import importlib
 import inspect
 import json
@@ -23,7 +24,7 @@ from urllib.parse import urlparse
 JSONRPC_VERSION = "2.0"
 SERVER_NAME = "fall-of-nouraajd-engine-mcp"
 SERVER_TITLE = "Fall of Nouraajd Engine MCP"
-SERVER_VERSION = "0.2.0"
+SERVER_VERSION = "0.3.0"
 LATEST_PROTOCOL_VERSION = "2025-11-25"
 SUPPORTED_PROTOCOL_VERSIONS = {
     "2025-11-25",
@@ -238,6 +239,8 @@ class EngineMcpServer:
             and type(value).__name__ == "instancemethod"
             and getattr(value, "__self__", None) is not None
         ):
+            return value
+        if callable(value) and inspect.isbuiltin(value) and getattr(value, "__self__", None) is not None:
             return value
         return None
 
@@ -751,6 +754,63 @@ class EngineMcpServer:
                     "additionalProperties": False,
                 },
             },
+            {
+                "name": "map_design_brief",
+                "title": "Build map design brief",
+                "description": (
+                    "Summarize maps, map config entries, script hooks, and optional resource catalogs for "
+                    "planning AI-assisted content edits."
+                ),
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "map_name": {
+                            "type": "string",
+                            "description": "Optional map directory name under res/maps.",
+                        },
+                        "include_objects": {
+                            "type": "boolean",
+                            "default": True,
+                            "description": "Include Tiled object-layer object summaries for the selected map.",
+                        },
+                        "include_resource_catalog": {
+                            "type": "boolean",
+                            "default": False,
+                            "description": "Include global resource ids from res/config/*.json.",
+                        },
+                        "max_objects": {
+                            "type": "integer",
+                            "default": 80,
+                            "minimum": 1,
+                            "maximum": 500,
+                        },
+                        "max_entries": {
+                            "type": "integer",
+                            "default": 160,
+                            "minimum": 1,
+                            "maximum": 500,
+                        },
+                        "max_ids_per_catalog": {
+                            "type": "integer",
+                            "default": 80,
+                            "minimum": 1,
+                            "maximum": 500,
+                        },
+                    },
+                    "additionalProperties": False,
+                },
+                "outputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "maps": {"type": "array"},
+                        "selectedMap": {"type": "object"},
+                        "resourceCatalog": {"type": "array"},
+                        "warnings": {"type": "array"},
+                    },
+                    "required": ["maps", "warnings"],
+                    "additionalProperties": False,
+                },
+            },
         ]
 
     def _call_tool(self, params: dict[str, Any], transport: str, session_id: str | None) -> dict[str, Any]:
@@ -813,6 +873,17 @@ class EngineMcpServer:
 
         if tool_name == "engine_handle_call":
             result = self._engine_handle_call(arguments)
+            self._emit_log(
+                transport=transport,
+                session_id=session_id,
+                level="info",
+                logger_name="tools",
+                data={"message": "tool call completed", "tool": tool_name},
+            )
+            return result
+
+        if tool_name == "map_design_brief":
+            result = self._map_design_brief(arguments)
             self._emit_log(
                 transport=transport,
                 session_id=session_id,
@@ -950,6 +1021,596 @@ class EngineMcpServer:
                 "structuredContent": error_payload,
                 "isError": True,
             }
+
+    def _map_design_brief(self, arguments: dict[str, Any]) -> dict[str, Any]:
+        map_name = arguments.get("map_name")
+        include_objects = self._optional_bool(arguments, "include_objects", True)
+        include_resource_catalog = self._optional_bool(arguments, "include_resource_catalog", False)
+        max_objects = self._bounded_int(arguments.get("max_objects"), "max_objects", 80, 1, 500)
+        max_entries = self._bounded_int(arguments.get("max_entries"), "max_entries", 160, 1, 500)
+        max_ids_per_catalog = self._bounded_int(
+            arguments.get("max_ids_per_catalog"),
+            "max_ids_per_catalog",
+            80,
+            1,
+            500,
+        )
+
+        if map_name is not None and (not isinstance(map_name, str) or not map_name):
+            raise ProtocolError(-32602, "map_design_brief `map_name` must be a non-empty string")
+
+        maps_root = (self.repo_root / "res" / "maps").resolve()
+        if not maps_root.is_dir():
+            raise ProtocolError(-32603, f"Maps directory not found: {self._relative_path(maps_root)}")
+
+        resource_index, resource_catalog = self._resource_catalog(max_ids_per_catalog)
+        map_dirs = self._map_directories(maps_root)
+        structured: dict[str, Any] = {
+            "maps": [self._map_overview(map_dir) for map_dir in map_dirs],
+            "warnings": [],
+        }
+
+        if include_resource_catalog:
+            structured["resourceCatalog"] = resource_catalog
+
+        if map_name:
+            selected_dir = self._resolve_map_dir(maps_root, map_name)
+            selected_map = self._selected_map_brief(
+                selected_dir,
+                resource_index=resource_index,
+                include_objects=include_objects,
+                max_objects=max_objects,
+                max_entries=max_entries,
+            )
+            structured["selectedMap"] = selected_map
+            structured["warnings"] = selected_map.get("warnings", [])
+
+        return {
+            "content": [
+                {
+                    "type": "text",
+                    "text": json.dumps(structured, ensure_ascii=False),
+                }
+            ],
+            "structuredContent": structured,
+            "isError": False,
+        }
+
+    def _map_directories(self, maps_root: Path) -> list[Path]:
+        return sorted((item for item in maps_root.iterdir() if item.is_dir()), key=lambda item: item.name)
+
+    def _resolve_map_dir(self, maps_root: Path, map_name: str) -> Path:
+        if "/" in map_name or "\\" in map_name or map_name in {".", ".."}:
+            raise ProtocolError(-32602, "map_design_brief `map_name` must name a direct child of res/maps")
+        map_dir = (maps_root / map_name).resolve()
+        try:
+            map_dir.relative_to(maps_root)
+        except ValueError as exc:
+            raise ProtocolError(-32602, "map_design_brief `map_name` must stay under res/maps") from exc
+        if not map_dir.is_dir():
+            raise ProtocolError(-32602, f"Unknown map: {map_name}")
+        return map_dir
+
+    def _map_overview(self, map_dir: Path) -> dict[str, Any]:
+        map_data = self._load_optional_json(map_dir / "map.json")
+        config_data = self._load_optional_json(map_dir / "config.json")
+        script_summary = self._script_summary(map_dir / "script.py", include_classes=False)
+        object_summary = self._map_object_summary(map_data, include_objects=False, max_objects=0)
+
+        return {
+            "name": map_dir.name,
+            "path": self._relative_path(map_dir),
+            "dimensions": self._map_dimensions(map_data),
+            "spawn": self._map_spawn(map_data),
+            "configEntryCount": len(config_data) if isinstance(config_data, dict) else 0,
+            "objectCount": object_summary["objectCount"],
+            "objectTypes": object_summary["objectTypes"],
+            "script": {
+                "classCount": script_summary["classCount"],
+                "triggerCount": len(script_summary["triggers"]),
+                "questCount": len(script_summary["quests"]),
+                "dialogCount": len(script_summary["dialogs"]),
+            },
+        }
+
+    def _selected_map_brief(
+        self,
+        map_dir: Path,
+        resource_index: dict[str, list[str]],
+        include_objects: bool,
+        max_objects: int,
+        max_entries: int,
+    ) -> dict[str, Any]:
+        map_data = self._load_optional_json(map_dir / "map.json")
+        config_data = self._load_optional_json(map_dir / "config.json")
+        if config_data is None:
+            config_data = {}
+        if not isinstance(config_data, dict):
+            raise ProtocolError(
+                -32603, f"Map config must be a JSON object: {self._relative_path(map_dir / 'config.json')}"
+            )
+
+        object_summary = self._map_object_summary(map_data, include_objects=include_objects, max_objects=max_objects)
+        config_summary = self._config_summary(config_data, max_entries=max_entries)
+        script_summary = self._script_summary(map_dir / "script.py", include_classes=True)
+        dialog_files = self._dialog_file_summaries(map_dir, max_entries=max_entries)
+        warnings = self._map_authoring_warnings(
+            config_data=config_data,
+            object_summary=object_summary,
+            script_summary=script_summary,
+            resource_index=resource_index,
+        )
+
+        return {
+            "name": map_dir.name,
+            "files": {
+                "map": self._relative_path(map_dir / "map.json"),
+                "config": self._relative_path(map_dir / "config.json"),
+                "script": self._relative_path(map_dir / "script.py"),
+            },
+            "dimensions": self._map_dimensions(map_data),
+            "spawn": self._map_spawn(map_data),
+            "objects": object_summary,
+            "config": config_summary,
+            "script": script_summary,
+            "dialogFiles": dialog_files,
+            "warnings": warnings,
+            "designNotes": [
+                "Use config entry ids as stable createObject/addObjectByName refs.",
+                "Use named map objects or config ids as trigger targets.",
+                "Keep dialog action and condition strings matched to methods on the dialog class.",
+            ],
+        }
+
+    def _resource_catalog(self, max_ids_per_catalog: int) -> tuple[dict[str, list[str]], list[dict[str, Any]]]:
+        config_root = self.repo_root / "res" / "config"
+        resource_index: dict[str, list[str]] = {}
+        catalog: list[dict[str, Any]] = []
+        if not config_root.is_dir():
+            return resource_index, catalog
+
+        for config_path in sorted(config_root.glob("*.json"), key=lambda item: item.name):
+            data = self._load_json(config_path)
+            ids = sorted(str(key) for key in data) if isinstance(data, dict) else []
+            for resource_id in ids:
+                resource_index.setdefault(resource_id, []).append(config_path.stem)
+            catalog.append(
+                {
+                    "name": config_path.stem,
+                    "path": self._relative_path(config_path),
+                    "count": len(ids),
+                    "ids": ids[:max_ids_per_catalog],
+                    "truncated": len(ids) > max_ids_per_catalog,
+                }
+            )
+        return resource_index, catalog
+
+    def _config_summary(self, config_data: dict[str, Any], max_entries: int) -> dict[str, Any]:
+        categories: dict[str, list[str]] = {}
+        entries: list[dict[str, Any]] = []
+
+        for entry_id in sorted(str(key) for key in config_data):
+            entry_value = config_data.get(entry_id)
+            if not isinstance(entry_value, dict):
+                entry = {"id": entry_id, "kind": "literal", "category": "other"}
+            else:
+                target_kind = "class" if "class" in entry_value else "ref" if "ref" in entry_value else "inline"
+                target = entry_value.get("class") if target_kind == "class" else entry_value.get("ref")
+                category = self._classify_config_entry(entry_id, entry_value)
+                entry = {
+                    "id": entry_id,
+                    "kind": target_kind,
+                    "target": target,
+                    "category": category,
+                }
+                properties = entry_value.get("properties")
+                if isinstance(properties, dict):
+                    description = properties.get("description")
+                    if isinstance(description, str) and description:
+                        entry["description"] = self._trim_text(description)
+                    tags = properties.get("tags")
+                    if isinstance(tags, list):
+                        entry["tags"] = [str(tag) for tag in tags]
+            categories.setdefault(str(entry["category"]), []).append(entry_id)
+            entries.append(entry)
+
+        return {
+            "entryCount": len(entries),
+            "categories": {name: ids for name, ids in sorted(categories.items())},
+            "entries": entries[:max_entries],
+            "truncated": len(entries) > max_entries,
+        }
+
+    def _classify_config_entry(self, entry_id: str, entry_value: dict[str, Any]) -> str:
+        target = entry_value.get("class") or entry_value.get("ref") or ""
+        properties = entry_value.get("properties")
+        properties = properties if isinstance(properties, dict) else {}
+        lowered = f"{entry_id} {target}".lower()
+
+        if "quest" in lowered:
+            return "quest"
+        if "dialog" in lowered or isinstance(properties.get("states"), list):
+            return "dialog"
+        if target == "CMarket" or "market" in lowered or isinstance(properties.get("items"), list):
+            return "market"
+        if properties.get("npc") is True or "npc" in lowered:
+            return "npc"
+        if "controller" in properties or "monster" in lowered or "cultist" in lowered or "pritz" in lowered:
+            return "creature"
+        if target == "CItem" or isinstance(properties.get("tags"), list):
+            return "item"
+        if target in {"Cave", "Market", "Teleporter"} or any(word in lowered for word in ("cave", "tavern", "chapel")):
+            return "location"
+        return "other"
+
+    def _map_object_summary(self, map_data: Any, include_objects: bool, max_objects: int) -> dict[str, Any]:
+        layers: list[dict[str, Any]] = []
+        objects: list[dict[str, Any]] = []
+        object_types: dict[str, int] = {}
+        object_names: list[str] = []
+        total_objects = 0
+
+        if not isinstance(map_data, dict):
+            return {
+                "objectCount": 0,
+                "objectTypes": {},
+                "layers": [],
+                "objects": [],
+                "objectsTruncated": False,
+                "namedObjects": [],
+            }
+
+        for layer in map_data.get("layers", []):
+            if not isinstance(layer, dict):
+                continue
+            layer_objects = layer.get("objects")
+            if not isinstance(layer_objects, list):
+                continue
+            layers.append(
+                {
+                    "name": layer.get("name"),
+                    "type": layer.get("type", "objectgroup"),
+                    "objectCount": len(layer_objects),
+                }
+            )
+            for obj in layer_objects:
+                if not isinstance(obj, dict):
+                    continue
+                total_objects += 1
+                object_type = str(obj.get("type") or "")
+                if object_type:
+                    object_types[object_type] = object_types.get(object_type, 0) + 1
+                object_name = obj.get("name")
+                if isinstance(object_name, str) and object_name:
+                    object_names.append(object_name)
+                if include_objects and len(objects) < max_objects:
+                    summary = {
+                        "id": obj.get("id"),
+                        "name": object_name,
+                        "type": object_type,
+                        "x": obj.get("x"),
+                        "y": obj.get("y"),
+                    }
+                    properties = obj.get("properties")
+                    if isinstance(properties, dict) and properties:
+                        summary["properties"] = self._compact_json(properties)
+                    objects.append(summary)
+
+        return {
+            "objectCount": total_objects,
+            "objectTypes": {name: object_types[name] for name in sorted(object_types)},
+            "layers": layers,
+            "objects": objects,
+            "objectsTruncated": include_objects and total_objects > len(objects),
+            "namedObjects": sorted(object_names),
+        }
+
+    def _map_dimensions(self, map_data: Any) -> dict[str, Any]:
+        if not isinstance(map_data, dict):
+            return {}
+        return {
+            "width": map_data.get("width"),
+            "height": map_data.get("height"),
+            "tilewidth": map_data.get("tilewidth"),
+            "tileheight": map_data.get("tileheight"),
+        }
+
+    def _map_spawn(self, map_data: Any) -> dict[str, Any]:
+        if not isinstance(map_data, dict):
+            return {}
+        spawn: dict[str, Any] = {}
+        properties = map_data.get("properties")
+        if isinstance(properties, dict):
+            for key in ("x", "y", "z"):
+                if key in properties:
+                    spawn[key] = properties[key]
+        for key in ("x", "y", "z"):
+            if key in map_data:
+                spawn[key] = map_data[key]
+        return spawn
+
+    def _script_summary(self, script_path: Path, include_classes: bool) -> dict[str, Any]:
+        summary: dict[str, Any] = {
+            "path": self._relative_path(script_path),
+            "classCount": 0,
+            "registeredClasses": [],
+            "triggers": [],
+            "quests": [],
+            "dialogs": [],
+            "events": [],
+            "dialogActions": [],
+            "warnings": [],
+        }
+        if include_classes:
+            summary["classes"] = []
+        if not script_path.exists():
+            return summary
+
+        try:
+            tree = ast.parse(script_path.read_text(encoding="utf-8"), filename=str(script_path))
+        except (OSError, SyntaxError) as exc:
+            summary["warnings"].append(
+                {
+                    "level": "warning",
+                    "code": "script_parse_failed",
+                    "message": f"Unable to parse {self._relative_path(script_path)}: {exc}",
+                }
+            )
+            return summary
+
+        classes = [node for node in ast.walk(tree) if isinstance(node, ast.ClassDef) and not node.name.startswith("_")]
+        summary["classCount"] = len(classes)
+        for class_node in classes:
+            bases = [self._ast_name(base) for base in class_node.bases]
+            bases = [base for base in bases if base]
+            methods = [
+                item.name
+                for item in class_node.body
+                if isinstance(item, (ast.FunctionDef, ast.AsyncFunctionDef)) and not item.name.startswith("_")
+            ]
+            decorators = [self._decorator_summary(decorator) for decorator in class_node.decorator_list]
+            decorators = [decorator for decorator in decorators if decorator]
+
+            class_summary = {
+                "name": class_node.name,
+                "bases": bases,
+                "methods": methods,
+                "decorators": decorators,
+            }
+            if include_classes:
+                summary["classes"].append(class_summary)
+
+            decorator_names = {decorator["name"] for decorator in decorators}
+            if "register" in decorator_names:
+                summary["registeredClasses"].append(class_node.name)
+            if "CQuest" in bases or class_node.name.endswith("Quest"):
+                summary["quests"].append(class_node.name)
+            if "CDialog" in bases or class_node.name.endswith("Dialog"):
+                summary["dialogs"].append(class_node.name)
+                actions = [
+                    method
+                    for method in methods
+                    if method
+                    not in {
+                        "onEnter",
+                        "onCreate",
+                        "onTurn",
+                        "onDestroy",
+                        "isCompleted",
+                        "getObjective",
+                        "getReward",
+                        "getHint",
+                        "onComplete",
+                    }
+                ]
+                summary["dialogActions"].append({"dialog": class_node.name, "methods": actions})
+            if "CEvent" in bases or class_node.name.endswith("Event"):
+                summary["events"].append(class_node.name)
+
+            for decorator in decorators:
+                if decorator["name"] != "trigger":
+                    continue
+                args = decorator.get("args", [])
+                trigger_summary = {"class": class_node.name}
+                if len(args) > 1 and isinstance(args[1], str):
+                    trigger_summary["event"] = args[1]
+                if len(args) > 2 and isinstance(args[2], str):
+                    trigger_summary["target"] = args[2]
+                summary["triggers"].append(trigger_summary)
+
+        for key in ("registeredClasses", "quests", "dialogs", "events"):
+            summary[key] = sorted(summary[key])
+        summary["dialogActions"] = sorted(summary["dialogActions"], key=lambda item: item["dialog"])
+        summary["triggers"] = sorted(
+            summary["triggers"],
+            key=lambda item: (str(item.get("target", "")), str(item.get("event", "")), item["class"]),
+        )
+        if include_classes:
+            summary["classes"] = sorted(summary["classes"], key=lambda item: item["name"])
+        return summary
+
+    def _decorator_summary(self, decorator: ast.expr) -> dict[str, Any] | None:
+        args: list[Any] = []
+        keywords: dict[str, Any] = {}
+        target = decorator
+        if isinstance(decorator, ast.Call):
+            target = decorator.func
+            args = [self._ast_literal(arg) for arg in decorator.args]
+            keywords = {keyword.arg: self._ast_literal(keyword.value) for keyword in decorator.keywords if keyword.arg}
+        name = self._ast_name(target)
+        if not name:
+            return None
+        result: dict[str, Any] = {"name": name}
+        if args:
+            result["args"] = args
+        if keywords:
+            result["keywords"] = keywords
+        return result
+
+    def _dialog_file_summaries(self, map_dir: Path, max_entries: int) -> list[dict[str, Any]]:
+        summaries: list[dict[str, Any]] = []
+        for dialog_path in sorted(map_dir.glob("dialog*.json"), key=lambda item: item.name):
+            data = self._load_optional_json(dialog_path)
+            entry_count = len(data) if isinstance(data, (dict, list)) else 0
+            summaries.append(
+                {
+                    "name": dialog_path.name,
+                    "path": self._relative_path(dialog_path),
+                    "topLevelType": type(data).__name__ if data is not None else "missing",
+                    "entryCount": entry_count,
+                    "truncated": entry_count > max_entries,
+                }
+            )
+        return summaries
+
+    def _map_authoring_warnings(
+        self,
+        config_data: dict[str, Any],
+        object_summary: dict[str, Any],
+        script_summary: dict[str, Any],
+        resource_index: dict[str, list[str]],
+    ) -> list[dict[str, Any]]:
+        warnings: list[dict[str, Any]] = []
+        config_ids = {str(key) for key in config_data}
+        known_ids = set(resource_index) | config_ids
+        refs = sorted(set(self._collect_refs(config_data)))
+        unresolved_refs = [ref for ref in refs if ref not in known_ids]
+        if unresolved_refs:
+            warnings.append(
+                {
+                    "level": "warning",
+                    "code": "unresolved_refs",
+                    "message": "Some config ref values do not match map or global resource ids.",
+                    "refs": unresolved_refs,
+                }
+            )
+
+        player_refs = sorted(ref for ref in refs if ref in {"Sorcerer", "Warrior", "Assasin"})
+        if player_refs:
+            warnings.append(
+                {
+                    "level": "warning",
+                    "code": "player_template_refs",
+                    "message": "Player-class refs should not be placed as normal map actors.",
+                    "refs": player_refs,
+                }
+            )
+
+        target_ids = config_ids | set(object_summary.get("namedObjects", []))
+        missing_trigger_targets = [
+            trigger
+            for trigger in script_summary.get("triggers", [])
+            if isinstance(trigger, dict)
+            and isinstance(trigger.get("target"), str)
+            and trigger["target"] not in target_ids
+        ]
+        if missing_trigger_targets:
+            warnings.append(
+                {
+                    "level": "warning",
+                    "code": "missing_trigger_targets",
+                    "message": "Some script trigger targets are not named map objects or config ids.",
+                    "triggers": missing_trigger_targets,
+                }
+            )
+
+        for script_warning in script_summary.get("warnings", []):
+            if isinstance(script_warning, dict):
+                warnings.append(script_warning)
+        return warnings
+
+    def _collect_refs(self, value: Any) -> list[str]:
+        refs: list[str] = []
+        if isinstance(value, dict):
+            ref = value.get("ref")
+            if isinstance(ref, str) and ref:
+                refs.append(ref)
+            for item in value.values():
+                refs.extend(self._collect_refs(item))
+        elif isinstance(value, list):
+            for item in value:
+                refs.extend(self._collect_refs(item))
+        return refs
+
+    def _load_optional_json(self, path: Path) -> Any:
+        if not path.exists():
+            return None
+        return self._load_json(path)
+
+    def _load_json(self, path: Path) -> Any:
+        try:
+            return json.loads(path.read_text(encoding="utf-8"))
+        except json.JSONDecodeError as exc:
+            raise ProtocolError(-32603, f"Invalid JSON in {self._relative_path(path)}: {exc}") from exc
+        except OSError as exc:
+            raise ProtocolError(-32603, f"Unable to read {self._relative_path(path)}: {exc}") from exc
+
+    def _compact_json(self, value: Any, depth: int = 0) -> Any:
+        if depth > 4:
+            return "..."
+        if value is None or isinstance(value, (int, float, bool)):
+            return value
+        if isinstance(value, str):
+            return self._trim_text(value)
+        if isinstance(value, list):
+            compacted = [self._compact_json(item, depth + 1) for item in value[:20]]
+            if len(value) > 20:
+                compacted.append("...")
+            return compacted
+        if isinstance(value, dict):
+            items = list(value.items())
+            compacted_dict = {str(key): self._compact_json(item, depth + 1) for key, item in items[:30]}
+            if len(items) > 30:
+                compacted_dict["..."] = f"{len(items) - 30} more"
+            return compacted_dict
+        return repr(value)
+
+    @staticmethod
+    def _bounded_int(value: Any, name: str, default: int, minimum: int, maximum: int) -> int:
+        if value is None:
+            return default
+        if isinstance(value, bool) or not isinstance(value, int):
+            raise ProtocolError(-32602, f"map_design_brief `{name}` must be an integer")
+        if value < minimum or value > maximum:
+            raise ProtocolError(-32602, f"map_design_brief `{name}` must be between {minimum} and {maximum}")
+        return value
+
+    @staticmethod
+    def _optional_bool(arguments: dict[str, Any], name: str, default: bool) -> bool:
+        value = arguments.get(name, default)
+        if not isinstance(value, bool):
+            raise ProtocolError(-32602, f"map_design_brief `{name}` must be a boolean")
+        return value
+
+    @staticmethod
+    def _ast_name(node: ast.AST) -> str | None:
+        if isinstance(node, ast.Name):
+            return node.id
+        if isinstance(node, ast.Attribute):
+            parent = EngineMcpServer._ast_name(node.value)
+            return f"{parent}.{node.attr}" if parent else node.attr
+        return None
+
+    @staticmethod
+    def _ast_literal(node: ast.AST) -> Any:
+        try:
+            return ast.literal_eval(node)
+        except (ValueError, SyntaxError):
+            name = EngineMcpServer._ast_name(node)
+            return name if name is not None else ast.dump(node)
+
+    @staticmethod
+    def _trim_text(value: str, limit: int = 240) -> str:
+        collapsed = " ".join(value.split())
+        if len(collapsed) <= limit:
+            return collapsed
+        return f"{collapsed[: limit - 3]}..."
+
+    def _relative_path(self, path: Path) -> str:
+        try:
+            return path.resolve().relative_to(self.repo_root.resolve()).as_posix()
+        except ValueError:
+            return str(path)
 
     def _resolve_handle_references(self, value: Any) -> Any:
         if isinstance(value, list):

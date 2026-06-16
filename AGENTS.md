@@ -113,6 +113,38 @@ When validation cannot be run, do not imply that it passed. Report the exact com
 
 Every bug fix must include at least one corresponding automated test (unit, integration, or regression) that fails before the fix and passes after it.
 
+## MCP game-session validation
+
+When a change affects maps, quests, dialogs, triggers, map scripts, gameplay-facing C++ bindings, or MCP tooling
+used to drive gameplay, validate it with an MCP game session in addition to the automated tests.
+
+Use the stdio MCP server after building `_game` so it exercises the current binary and copied resources:
+
+```sh
+python3 mcp.py --stdio --repo-root . --build-dir cmake-build-release
+```
+
+On Windows Visual Studio builds, include the build config when needed:
+
+```bat
+python mcp.py --stdio --repo-root . --build-dir cmake-build-release --build-config Release
+```
+
+For gameplay changes, the MCP session must drive a real game instance rather than only mutating flags:
+
+- Start the target map with `CGameLoader.loadGame` and `CGameLoader.startGameWithPlayer`.
+- Obtain the active map and player handles, usually through `CGame.getMap` and `CMap.getPlayer`.
+- Move the actual player through the authored route with `CMapObject.moveTo` or controller movement before firing
+  quest, dialog, combat, or trigger progress.
+- Move to relevant authored object coordinates such as start events, NPCs, caves, doors, teleporters, or encounter
+  leaders before invoking related actions.
+- Pump queued work with `event_loop.instance().run()` after movement, dialogs, `changeMap`, and other queued engine actions.
+- Assert observable state through MCP, including active and completed quests, map flags/properties, inventory changes,
+  rewards, spawned or removed objects, and final map transitions.
+
+If copied build resources are stale, rebuild or report the blocker. Do not edit generated build output to force the MCP
+run. If an MCP game-session check cannot be run, report the exact command or step that was blocked and why.
+
 ## Coverage
 
 Run coverage when a change touches:
