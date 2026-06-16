@@ -22,12 +22,15 @@ project(fall-of-nouraajd)
 
 set(FON_DEFAULT_ENABLE_UNITY_BUILD OFF)
 set(FON_DEFAULT_ENABLE_PCH OFF)
+set(FON_DEFAULT_UNITY_BATCH_SIZE "8")
 if (CMAKE_SYSTEM_NAME STREQUAL "Linux" AND CMAKE_BUILD_TYPE STREQUAL "Release")
     set(FON_DEFAULT_ENABLE_UNITY_BUILD ON)
     set(FON_DEFAULT_ENABLE_PCH ON)
+    set(FON_DEFAULT_UNITY_BATCH_SIZE "16")
 endif ()
 option(FON_ENABLE_UNITY_BUILD "Enable unity builds for large shared game targets." ${FON_DEFAULT_ENABLE_UNITY_BUILD})
-set(FON_UNITY_BATCH_SIZE "8" CACHE STRING "Number of source files per unity build translation unit.")
+set(FON_UNITY_BATCH_SIZE "${FON_DEFAULT_UNITY_BATCH_SIZE}" CACHE STRING
+    "Number of source files per unity build translation unit.")
 option(FON_ENABLE_PCH "Enable precompiled headers for large shared game targets." ${FON_DEFAULT_ENABLE_PCH})
 
 if (WIN32)
@@ -225,27 +228,8 @@ function(add_native_plugin target_name source_file)
 endfunction()
 
 add_native_plugin(native_marker_plugin native_plugins/native_marker_plugin.cpp)
-add_native_plugin(native_gameplay_effects native_plugins/native_gameplay_effects.cpp)
-add_native_plugin(native_gameplay_interactions native_plugins/native_gameplay_interactions.cpp)
-add_native_plugin(native_gameplay_items native_plugins/native_gameplay_items.cpp)
-add_native_plugin(native_gameplay_tiles native_plugins/native_gameplay_tiles.cpp)
-add_native_plugin(native_gameplay_map_content native_plugins/native_gameplay_map_content.cpp)
-add_native_plugin(native_gameplay_controllers native_plugins/native_gameplay_controllers.cpp)
-add_native_plugin(native_gameplay_creatures native_plugins/native_gameplay_creatures.cpp)
+add_native_plugin(native_gameplay native_plugins/native_gameplay.cpp)
 add_dependencies(_game ${NATIVE_PLUGIN_TARGETS})
-
-set_source_files_properties(
-    ${CMAKE_SOURCE_DIR}/src/core/CModule.cpp
-    ${CMAKE_SOURCE_DIR}/src/core/CTypes.cpp
-    ${CMAKE_SOURCE_DIR}/src/object/CCreature.cpp
-    ${CMAKE_SOURCE_DIR}/src/core/CSerialization.cpp
-    ${CMAKE_SOURCE_DIR}/src/core/CMap.cpp
-    ${CMAKE_SOURCE_DIR}/src/core/CLoader.cpp
-    ${CMAKE_SOURCE_DIR}/src/core/CController.cpp
-    ${CMAKE_SOURCE_DIR}/src/object/CInteraction.cpp
-    ${CMAKE_SOURCE_DIR}/src/object/CItem.cpp
-    PROPERTIES SKIP_UNITY_BUILD_INCLUSION ON
-)
 
 configure_file(res/config/armors.json config/armors.json)
 configure_file(res/config/panels.json config/panels.json)
