@@ -84,6 +84,27 @@ std::string jsonify_py(const py::handle &value) {
     throw py::type_error("jsonify() expects a CGameObject instance");
 }
 
+py::tuple read_gui_pixels(CGui &gui) {
+    SDL_Renderer *renderer = gui.getRenderer();
+    if (renderer == nullptr) {
+        throw std::runtime_error("CGui has no SDL renderer");
+    }
+
+    int width = 0;
+    int height = 0;
+    if (SDL_GetRendererOutputSize(renderer, &width, &height) != 0) {
+        throw std::runtime_error(std::string("SDL_GetRendererOutputSize failed: ") + SDL_GetError());
+    }
+
+    const int pitch = width * 4;
+    std::vector<unsigned char> pixels(static_cast<size_t>(pitch) * static_cast<size_t>(height));
+    if (SDL_RenderReadPixels(renderer, nullptr, SDL_PIXELFORMAT_RGBA32, pixels.data(), pitch) != 0) {
+        throw std::runtime_error(std::string("SDL_RenderReadPixels failed: ") + SDL_GetError());
+    }
+
+    return py::make_tuple(py::bytes(reinterpret_cast<const char *>(pixels.data()), pixels.size()), width, height);
+}
+
 void logger(std::string s) {
     CRuntimeBridge::log_info(std::move(s)); // TODO: add script name
 }
@@ -400,25 +421,7 @@ void init_game_module(py::module_ &m) {
 
     py::class_<CGui, CGameGraphicsObject, std::shared_ptr<CGui>>(m, "CGui", "Game GUI root object.")
         .def("getGame", &CGui::getGame, "Return the owning game.")
-        .def(
-            "read_pixels",
-            [](const CGui &self) {
-                SDL_Renderer *renderer = self.getRenderer();
-                if (!renderer) {
-                    throw std::runtime_error("CGui has no SDL renderer");
-                }
-                int width = 0;
-                int height = 0;
-                if (SDL_GetRendererOutputSize(renderer, &width, &height) != 0) {
-                    throw std::runtime_error(SDL_GetError());
-                }
-                std::string pixels(static_cast<std::size_t>(width) * static_cast<std::size_t>(height) * 4, '\0');
-                if (SDL_RenderReadPixels(renderer, nullptr, SDL_PIXELFORMAT_RGBA32, pixels.data(), width * 4) != 0) {
-                    throw std::runtime_error(SDL_GetError());
-                }
-                return py::make_tuple(py::bytes(pixels), width, height);
-            },
-            "Read the current SDL renderer pixels as RGBA bytes, width, and height.");
+        .def("read_pixels", &read_gui_pixels, "Read the current SDL renderer pixels as RGBA bytes, width, and height.");
 
     py::class_<CAnimation, CGameGraphicsObject, std::shared_ptr<CAnimation>>(m, "CAnimation",
                                                                              "Base animation graphics object.")

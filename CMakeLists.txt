@@ -20,6 +20,16 @@ endif ()
 
 project(fall-of-nouraajd)
 
+set(FON_DEFAULT_ENABLE_UNITY_BUILD OFF)
+set(FON_DEFAULT_ENABLE_PCH OFF)
+if (CMAKE_SYSTEM_NAME STREQUAL "Linux" AND CMAKE_BUILD_TYPE STREQUAL "Release")
+    set(FON_DEFAULT_ENABLE_UNITY_BUILD ON)
+    set(FON_DEFAULT_ENABLE_PCH ON)
+endif ()
+option(FON_ENABLE_UNITY_BUILD "Enable unity builds for large shared game targets." ${FON_DEFAULT_ENABLE_UNITY_BUILD})
+set(FON_UNITY_BATCH_SIZE "8" CACHE STRING "Number of source files per unity build translation unit.")
+option(FON_ENABLE_PCH "Enable precompiled headers for large shared game targets." ${FON_DEFAULT_ENABLE_PCH})
+
 if (WIN32)
     set(CPACK_GENERATOR "ZIP")
 else ()
@@ -135,6 +145,15 @@ configure_cpp_target(game_core)
 set_target_properties(game_core PROPERTIES
     OUTPUT_NAME "game_core"
 )
+if (FON_ENABLE_UNITY_BUILD)
+    set_target_properties(game_core PROPERTIES
+        UNITY_BUILD ON
+        UNITY_BUILD_BATCH_SIZE ${FON_UNITY_BATCH_SIZE}
+    )
+endif ()
+if (FON_ENABLE_PCH)
+    target_precompile_headers(game_core PRIVATE "${CMAKE_SOURCE_DIR}/src/core/CGlobal.h")
+endif ()
 target_compile_definitions(game_core PRIVATE
     FON_GAME_CORE_BUILD
 )
@@ -223,6 +242,8 @@ set_source_files_properties(
     ${CMAKE_SOURCE_DIR}/src/core/CMap.cpp
     ${CMAKE_SOURCE_DIR}/src/core/CLoader.cpp
     ${CMAKE_SOURCE_DIR}/src/core/CController.cpp
+    ${CMAKE_SOURCE_DIR}/src/object/CInteraction.cpp
+    ${CMAKE_SOURCE_DIR}/src/object/CItem.cpp
     PROPERTIES SKIP_UNITY_BUILD_INCLUSION ON
 )
 
@@ -469,14 +490,23 @@ if (WIN32)
 endif ()
 
 
-add_executable(for_unit_tests
-    tests/unit/test_coords.cpp
-    src/core/CTags.cpp
-    src/core/CUtil.cpp
-    src/core/CPathFinder.cpp
-    src/core/CFuture.cpp
-    src/handler/CScriptHandler.cpp
-)
+set(FOR_UNIT_TESTS_SRC tests/unit/test_coords.cpp)
+if (CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    list(APPEND FOR_UNIT_TESTS_SRC
+        src/handler/CScriptHandler.cpp
+    )
+endif ()
+if (NOT CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    list(APPEND FOR_UNIT_TESTS_SRC
+        src/core/CTags.cpp
+        src/core/CUtil.cpp
+        src/core/CPathFinder.cpp
+        src/core/CFuture.cpp
+        src/handler/CScriptHandler.cpp
+    )
+endif ()
+
+add_executable(for_unit_tests ${FOR_UNIT_TESTS_SRC})
 
 configure_cpp_target(for_unit_tests)
 
@@ -487,6 +517,9 @@ target_link_libraries(for_unit_tests PRIVATE
     ${SDL2_IMAGE_LIBS}
     ${SDL2_TTF_LIBS}
 )
+if (CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    target_link_libraries(for_unit_tests PRIVATE game_core)
+endif ()
 
 enable_testing()
 add_test(NAME for_unit_tests COMMAND for_unit_tests)
@@ -523,13 +556,6 @@ if (WIN32)
     set(CPACK_STRIP_FILES _game.pyd)
 else ()
     set(CPACK_STRIP_FILES _game.so)
-endif ()
-
-if (WIN32)
-    set_target_properties(_game PROPERTIES UNITY_BUILD OFF)
-else ()
-    set_target_properties(game_core PROPERTIES UNITY_BUILD ON UNITY_BUILD_BATCH_SIZE 8)
-    set_target_properties(_game PROPERTIES UNITY_BUILD ON UNITY_BUILD_BATCH_SIZE 8)
 endif ()
 
 include(CPack)

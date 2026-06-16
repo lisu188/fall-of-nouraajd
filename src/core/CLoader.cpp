@@ -173,7 +173,10 @@ PyObject *restricted_plugin_import(PyObject *, PyObject *args, PyObject *kwargs)
     }
 
     if (std::string(name) == "game" || std::string(name) == "json") {
-        return PyImport_ImportModule(name);
+        pybind11::object moduleName = pybind11::str(name);
+        return PyImport_ImportModuleLevelObject(moduleName.ptr(), globals == nullptr ? Py_None : globals,
+                                                locals == nullptr ? Py_None : locals,
+                                                fromlist == nullptr ? Py_None : fromlist, level);
     }
 
     PyErr_SetString(PyExc_ImportError, "Python resource plugins may only import the game and json modules");
@@ -790,14 +793,24 @@ bool CPluginLoader::loadPlugin(const std::shared_ptr<CGame> &game, const std::st
         vstd::logger::warning("Rejected Python plugin outside trusted resource plugin paths:", path);
         return false;
     }
-    bool loaded = false;
-    PY_SAFE_RET_VAL(std::string code = CResourcesProvider::getInstance()->load(path); pybind11::dict plugin_namespace;
-                    plugin_namespace["__builtins__"] = build_restricted_plugin_builtins();
-                    plugin_namespace["__file__"] = path;
-                    plugin_namespace["__name__"] = vstd::join({"plugin_", vstd::to_hex_hash(path)}, "");
-                    pybind11::exec(code + "\n", plugin_namespace, plugin_namespace);
-                    plugin_namespace["load"](pybind11::none(), pybind11::cast(game)); loaded = true;, false)
-    return loaded;
+    try {
+        std::string code = CResourcesProvider::getInstance()->load(path);
+        pybind11::dict plugin_namespace;
+        plugin_namespace["__builtins__"] = build_restricted_plugin_builtins();
+        plugin_namespace["__file__"] = path;
+        plugin_namespace["__name__"] = vstd::join({"plugin_", vstd::to_hex_hash(path)}, "");
+        pybind11::exec(code + "\n", plugin_namespace, plugin_namespace);
+        plugin_namespace["load"](pybind11::none(), pybind11::cast(game));
+        return true;
+    } catch (const pybind11::error_already_set &exception) {
+        vstd::logger::warning("Failed to load Python plugin:", path, exception.what());
+    } catch (const std::exception &exception) {
+        vstd::logger::warning("Failed to load Python plugin:", path, exception.what());
+    } catch (...) {
+        vstd::logger::warning("Failed to load Python plugin:", path);
+    }
+    PyErr_Clear();
+    return false;
 }
 
 bool CPluginLoader::loadCppPlugin(const std::shared_ptr<CGame> &game, const std::string &type) {
