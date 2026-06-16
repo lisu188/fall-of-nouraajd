@@ -131,6 +131,23 @@
           "width": 32,
           "x": 384,
           "y": 224
+        },
+        {
+          "height": 32,
+          "id": 25,
+          "name": "initializationProbe",
+          "properties": {
+            "marker": "configured-before-create"
+          },
+          "propertytypes": {
+            "marker": "string"
+          },
+          "rotation": 0,
+          "type": "InitializationProbe",
+          "visible": true,
+          "width": 32,
+          "x": 96,
+          "y": 128
         }
       ],
       "opacity": 1,
