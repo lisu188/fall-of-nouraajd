@@ -168,8 +168,8 @@ struct register_all_types {
         // Original types3.cpp
         CTypes::register_type<CGameObject>();
         {
-            CTypes::register_type<Stats, CGameObject>();
-            CTypes::register_type<Damage, CGameObject>();
+            CTypes::register_type<CStats, CGameObject>();
+            CTypes::register_type<CDamage, CGameObject>();
 
             CTypes::register_type<CTextureCache, CGameObject>();
             CTypes::register_type<CTextManager, CGameObject>();

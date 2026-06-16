@@ -28,7 +28,7 @@ class CWeapon;
 
 class CArmor;
 
-class Stats;
+class CStats;
 
 class CMap;
 
@@ -43,7 +43,7 @@ class CFightController;
 typedef std::map<std::string, std::shared_ptr<CInteraction>> CInteractionMap;
 typedef std::map<std::string, std::shared_ptr<CItem>> CItemMap;
 
-class CCreature : public CMapObject, public Moveable, public Visitable {
+class CCreature : public CMapObject, public CMoveable, public CVisitable {
 
     V_META(CCreature, CMapObject, V_PROPERTY(CCreature, int, exp, getExp, setExp),
            V_PROPERTY(CCreature, int, gold, getGold, setGold), V_PROPERTY(CCreature, int, level, getLevel, setLevel),
@@ -51,8 +51,8 @@ class CCreature : public CMapObject, public Moveable, public Visitable {
            V_PROPERTY(CCreature, int, sw, getSw, setSw),
            V_PROPERTY(CCreature, CInteractionMap, levelling, getLevelling, setLevelling),
            V_PROPERTY(CCreature, CItemMap, equipped, getEquipped, setEquipped),
-           V_PROPERTY(CCreature, std::shared_ptr<Stats>, baseStats, getBaseStats, setBaseStats),
-           V_PROPERTY(CCreature, std::shared_ptr<Stats>, levelStats, getLevelStats, setLevelStats),
+           V_PROPERTY(CCreature, std::shared_ptr<CStats>, baseStats, getBaseStats, setBaseStats),
+           V_PROPERTY(CCreature, std::shared_ptr<CStats>, levelStats, getLevelStats, setLevelStats),
            V_PROPERTY(CCreature, std::set<std::shared_ptr<CInteraction>>, actions, getActions, setActions),
            V_PROPERTY(CCreature, std::set<std::shared_ptr<CItem>>, items, getItems, setItems),
            V_PROPERTY(CCreature, std::set<std::shared_ptr<CEffect>>, effects, getEffects, setEffects),
@@ -100,7 +100,7 @@ class CCreature : public CMapObject, public Moveable, public Visitable {
 
     void healProc(float i);
 
-    void hurt(std::shared_ptr<Damage> damage);
+    void hurt(std::shared_ptr<CDamage> damage);
 
     void hurt(int i);
 
@@ -212,13 +212,13 @@ class CCreature : public CMapObject, public Moveable, public Visitable {
 
     void setLevelling(CInteractionMap value);
 
-    std::shared_ptr<Stats> getBaseStats();
+    std::shared_ptr<CStats> getBaseStats();
 
-    void setBaseStats(std::shared_ptr<Stats> value);
+    void setBaseStats(std::shared_ptr<CStats> value);
 
-    std::shared_ptr<Stats> getLevelStats();
+    std::shared_ptr<CStats> getLevelStats();
 
-    void setLevelStats(std::shared_ptr<Stats> value);
+    void setLevelStats(std::shared_ptr<CStats> value);
 
     int getSw() const;
 
@@ -248,7 +248,7 @@ class CCreature : public CMapObject, public Moveable, public Visitable {
 
     void useItem(std::shared_ptr<CItem> item);
 
-    std::shared_ptr<Stats> getStats();
+    std::shared_ptr<CStats> getStats();
 
   protected:
     virtual void levelUp();
@@ -272,8 +272,8 @@ class CCreature : public CMapObject, public Moveable, public Visitable {
     int mana = 0;
     int hp = 0;
 
-    std::shared_ptr<Stats> baseStats = std::make_shared<Stats>();
-    std::shared_ptr<Stats> levelStats = std::make_shared<Stats>();
+    std::shared_ptr<CStats> baseStats = std::make_shared<CStats>();
+    std::shared_ptr<CStats> levelStats = std::make_shared<CStats>();
 
     void takeDamage(int i);
 

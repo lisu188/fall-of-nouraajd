@@ -211,6 +211,9 @@ General:
 - Keep changes minimal and local to the requested behavior.
 - Do not rewrite broad areas only for style.
 - Do not add comments that merely restate obvious code.
+- Do not introduce or reintroduce the legacy three-letter project acronym formed from `F` + `O` + `N`.
+  Use `game`, `nouraajd`, or another explicit domain name for code, config, docs, scripts, environment variables,
+  filenames, branch names, temporary paths, and generated identifiers.
 
 Python:
 

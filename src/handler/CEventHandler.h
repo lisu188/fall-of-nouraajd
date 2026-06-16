@@ -30,7 +30,7 @@ class CGameObject;
 class CGameEvent : public CGameObject {
     V_META(CGameEvent, CGameObject, vstd::meta::empty())
   public:
-    class Type {
+    class CType {
       public:
         static std::string onEnter;
         static std::string onTurn;

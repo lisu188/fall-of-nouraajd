@@ -18,28 +18,28 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #pragma once
 
 #include "core/CExport.h"
-#include "plugin/FonPluginAbi.h"
+#include "plugin/CPluginAbi.h"
 
-using NativePluginHostV1 = FonPluginHostV1;
+using NativePluginHostV1 = CPluginHostV1;
 
-constexpr int NATIVE_PLUGIN_API_VERSION = FON_PLUGIN_API_VERSION;
+constexpr int NATIVE_PLUGIN_API_VERSION = GAME_PLUGIN_API_VERSION;
 
-#define NATIVE_PLUGIN_EXPORT FON_PLUGIN_EXPORT
+#define NATIVE_PLUGIN_EXPORT GAME_PLUGIN_EXPORT
 
 namespace native_plugin {
 
-FON_CORE_EXPORT bool register_effects(const NativePluginHostV1 *host);
+GAME_CORE_EXPORT bool register_effects(const NativePluginHostV1 *host);
 
-FON_CORE_EXPORT bool register_interactions(const NativePluginHostV1 *host);
+GAME_CORE_EXPORT bool register_interactions(const NativePluginHostV1 *host);
 
-FON_CORE_EXPORT bool register_items(const NativePluginHostV1 *host);
+GAME_CORE_EXPORT bool register_items(const NativePluginHostV1 *host);
 
-FON_CORE_EXPORT bool register_tiles(const NativePluginHostV1 *host);
+GAME_CORE_EXPORT bool register_tiles(const NativePluginHostV1 *host);
 
-FON_CORE_EXPORT bool register_map_content(const NativePluginHostV1 *host);
+GAME_CORE_EXPORT bool register_map_content(const NativePluginHostV1 *host);
 
-FON_CORE_EXPORT bool register_controllers(const NativePluginHostV1 *host);
+GAME_CORE_EXPORT bool register_controllers(const NativePluginHostV1 *host);
 
-FON_CORE_EXPORT bool register_creatures(const NativePluginHostV1 *host);
+GAME_CORE_EXPORT bool register_creatures(const NativePluginHostV1 *host);
 
 } // namespace native_plugin

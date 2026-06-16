@@ -26,7 +26,7 @@ class CMap;
 
 class CCreature;
 
-class CMapObject : public CGameObject, public Creatable, public Turnable {
+class CMapObject : public CGameObject, public CCreatable, public CTurnable {
     friend class CObjectHandler;
 
     V_META(CMapObject, CGameObject, V_PROPERTY(CMapObject, int, posx, getPosX, setPosX),

@@ -41,7 +41,7 @@ REPO_ROOT = Path(__file__).resolve().parent
 
 
 def resolve_test_output_dir():
-    output_dir = os.environ.get("FON_TEST_OUTPUT_DIR")
+    output_dir = os.environ.get("GAME_TEST_OUTPUT_DIR")
     if not output_dir:
         return REPO_ROOT / "test"
     path = Path(output_dir)
@@ -99,7 +99,7 @@ except Exception:
 
 MCP_PROTOCOL_VERSION = "2025-11-25"
 MCP_STDIO_SHUTDOWN_TIMEOUT_SECONDS = 30
-FON_TEST_WORKER = os.environ.get("FON_TEST_WORKER") == "1"
+GAME_TEST_WORKER = os.environ.get("GAME_TEST_WORKER") == "1"
 SERIAL_TEST_NAMES = {
     "GameTest.test_load_saved_map_slot_name_does_not_override_object_type_configs",
     "GameTest.test_missing_save_resource_directory_lists_empty",
@@ -118,7 +118,7 @@ def parse_positive_int(value, name):
 
 
 def unique_save_name(prefix):
-    shard = os.environ.get("FON_TEST_SHARD")
+    shard = os.environ.get("GAME_TEST_SHARD")
     shard_part = f"-{shard}" if shard else ""
     return f"{prefix}{shard_part}-{os.getpid()}-{time.time_ns()}"
 
@@ -204,7 +204,7 @@ def load_game_module():
 
 
 def make_temp_log_path():
-    fd, path = tempfile.mkstemp(prefix="fon-log-", suffix=".txt")
+    fd, path = tempfile.mkstemp(prefix="game-log-", suffix=".txt")
     os.close(fd)
     return Path(path)
 
@@ -277,7 +277,7 @@ GUI_TILE_SIZE = 50
 MINIMAP_RECT = (1700, 820, 220, 220)
 MINIMAP_PLAYER_RGB = (255, 255, 0)
 MINIMAP_VIEWPORT_RGB = (255, 255, 255)
-XVFB_GAMEPLAY_CHILD_TIMEOUT = 300 if os.environ.get("FON_COVERAGE_RUN") == "1" else 90
+XVFB_GAMEPLAY_CHILD_TIMEOUT = 300 if os.environ.get("GAME_COVERAGE_RUN") == "1" else 90
 XVFB_GAMEPLAY_CHILD_TESTS = (
     "test_keyboard_input_moves_player",
     "test_mouse_click_moves_player",
@@ -1914,9 +1914,9 @@ def run_walkthrough(map_name, fn):
     env = os.environ.copy()
     env.update(
         {
-            "FON_TEST_WORKER": "1",
-            "FON_TEST_JOBS": "1",
-            "FON_TEST_OUTPUT_DIR": str(child_output_dir),
+            "GAME_TEST_WORKER": "1",
+            "GAME_TEST_JOBS": "1",
+            "GAME_TEST_OUTPUT_DIR": str(child_output_dir),
         }
     )
     completed = subprocess.run(command, cwd=REPO_ROOT, env=env, capture_output=True, text=True)
@@ -2125,16 +2125,16 @@ class GameTest(unittest.TestCase):
         g = game.CGameLoader.loadGame()
         sample_library = "plugins/native/native_marker_plugin"
 
-        self.assertTrue(game.CPluginLoader.loadDynamicPlugin(g, sample_library, "fon_plugin_load_direct_v1"))
+        self.assertTrue(game.CPluginLoader.loadDynamicPlugin(g, sample_library, "game_plugin_load_direct_v1"))
         marker = g.createObject("directDynamicPluginMarker")
         self.assertIsNotNone(marker)
         self.assertEqual("Direct dynamic plugin marker", marker.getStringProperty("label"))
         self.assertTrue(marker.getBoolProperty("directDynamicPluginLoaded"))
 
         self.assertFalse(game.CPluginLoader.loadDynamicPlugin(g, "plugins/native/definitely_missing_plugin"))
-        self.assertFalse(game.CPluginLoader.loadDynamicPlugin(g, sample_library, "fon_plugin_load_missing_v1"))
-        self.assertFalse(game.CPluginLoader.loadDynamicPlugin(g, sample_library, "fon_plugin_load_bad_api_v1"))
-        self.assertFalse(game.CPluginLoader.loadDynamicPlugin(g, sample_library, "fon_plugin_load_false_v1"))
+        self.assertFalse(game.CPluginLoader.loadDynamicPlugin(g, sample_library, "game_plugin_load_missing_v1"))
+        self.assertFalse(game.CPluginLoader.loadDynamicPlugin(g, sample_library, "game_plugin_load_bad_api_v1"))
+        self.assertFalse(game.CPluginLoader.loadDynamicPlugin(g, sample_library, "game_plugin_load_false_v1"))
 
         report = {
             "direct": marker.getBoolProperty("directDynamicPluginLoaded"),
@@ -2657,7 +2657,7 @@ class GameTest(unittest.TestCase):
         game.CGameLoader.startGame(g, "empty")
 
         creature = g.createObject("CCreature")
-        stats = g.createObject("Stats")
+        stats = g.createObject("CStats")
         stats.mainStat = "intelligence"
         stats.intelligence = 2
         creature.baseStats = stats
@@ -4057,7 +4057,7 @@ class GameTest(unittest.TestCase):
         game.CGameLoader.startGame(g, "empty")
 
         creature = g.createObject("CCreature")
-        stats = g.createObject("Stats")
+        stats = g.createObject("CStats")
         stats.dmgMin = 8
         stats.dmgMax = 3
         stats.hit = 100
@@ -4079,7 +4079,7 @@ class GameTest(unittest.TestCase):
         game.CGameLoader.startGame(g, "empty")
 
         creature = g.createObject("CCreature")
-        stats = g.createObject("Stats")
+        stats = g.createObject("CStats")
         stats.stamina = 10
         stats.strength = 10
         stats.mainStat = "strength"
@@ -4121,7 +4121,7 @@ class GameTest(unittest.TestCase):
         game.CGameLoader.startGame(g, "empty")
 
         creature = g.createObject("CCreature")
-        base_stats = g.createObject("Stats")
+        base_stats = g.createObject("CStats")
         base_stats.hit = 0
         base_stats.crit = 0
         base_stats.dmgMin = 1
@@ -4129,7 +4129,7 @@ class GameTest(unittest.TestCase):
         base_stats.damage = 0
         creature.baseStats = base_stats
 
-        level_stats = g.createObject("Stats")
+        level_stats = g.createObject("CStats")
         level_stats.attack = 100
         creature.levelStats = level_stats
         creature.level = 1
@@ -4345,7 +4345,7 @@ class GameTest(unittest.TestCase):
         g = game.CGameLoader.loadGame()
         game.CGameLoader.startGame(g, "empty")
 
-        stats = g.createObject("Stats")
+        stats = g.createObject("CStats")
         for name, value in {
             "strength": 1,
             "agility": 2,
@@ -4368,7 +4368,7 @@ class GameTest(unittest.TestCase):
             setattr(stats, name, value)
             self.assertEqual(getattr(stats, name), value)
 
-        damage = g.createObject("Damage")
+        damage = g.createObject("CDamage")
         for name, value in {
             "fire": 21,
             "frost": 22,
@@ -4693,7 +4693,7 @@ class GameTest(unittest.TestCase):
         g = game.CGameLoader.loadGame()
         game.CGameLoader.startGame(g, "empty")
 
-        base = g.createObject("Stats")
+        base = g.createObject("CStats")
         base.mainStat = "strength"
         base.strength = 4
         base.agility = 2
@@ -4702,7 +4702,7 @@ class GameTest(unittest.TestCase):
         base.hit = 50
         base.crit = 5
 
-        bonus = g.createObject("Stats")
+        bonus = g.createObject("CStats")
         bonus.strength = 6
         bonus.damage = 2
         bonus.attack = 10
@@ -4862,7 +4862,7 @@ class GameTest(unittest.TestCase):
         tooltip_item = g.createObject("CItem")
         tooltip_item.label = "Practice blade"
         tooltip_item.description = "Blunt but balanced."
-        bonus = g.createObject("Stats")
+        bonus = g.createObject("CStats")
         bonus.strength = 2
         bonus.damage = 1
         tooltip_item.bonus = bonus
@@ -7393,7 +7393,7 @@ class GameTest(unittest.TestCase):
 
 class ConsoleEventIsolationTest(unittest.TestCase):
     def test_console_key_history_in_fresh_process(self):
-        if os.environ.get("FON_CONSOLE_EVENT_CHILD") == "1":
+        if os.environ.get("GAME_CONSOLE_EVENT_CHILD") == "1":
             self.skipTest("console event child process runs only the focused console test.")
         if os.name != "posix":
             self.skipTest("console event isolation test is Linux/Unix only.")
@@ -7401,10 +7401,10 @@ class ConsoleEventIsolationTest(unittest.TestCase):
         env = os.environ.copy()
         env.update(
             {
-                "FON_CONSOLE_EVENT_CHILD": "1",
-                "FON_TEST_WORKER": "1",
-                "FON_TEST_JOBS": "1",
-                "FON_TEST_OUTPUT_DIR": str(TEST_OUTPUT_DIR / "console"),
+                "GAME_CONSOLE_EVENT_CHILD": "1",
+                "GAME_TEST_WORKER": "1",
+                "GAME_TEST_JOBS": "1",
+                "GAME_TEST_OUTPUT_DIR": str(TEST_OUTPUT_DIR / "console"),
                 "SDL_VIDEODRIVER": "dummy",
                 "SDL_AUDIODRIVER": "dummy",
                 "SDL_RENDER_DRIVER": "software",
@@ -7429,7 +7429,7 @@ class ConsoleEventIsolationTest(unittest.TestCase):
 
 class ConsoleEventProcessTest(unittest.TestCase):
     def setUp(self):
-        if os.environ.get("FON_CONSOLE_EVENT_CHILD") != "1":
+        if os.environ.get("GAME_CONSOLE_EVENT_CHILD") != "1":
             self.skipTest("Run through ConsoleEventIsolationTest so the event loop is isolated.")
 
     def test_console_key_history(self):
@@ -7470,7 +7470,7 @@ class ConsoleEventProcessTest(unittest.TestCase):
 
 class XvfbGameplayTest(unittest.TestCase):
     def test_keyboard_gameplay_under_xvfb(self):
-        if os.environ.get("FON_XVFB_GAMEPLAY_CHILD") == "1":
+        if os.environ.get("GAME_XVFB_GAMEPLAY_CHILD") == "1":
             self.skipTest("xvfb child process runs only the focused gameplay test.")
         if os.name != "posix":
             self.skipTest("xvfb gameplay test is Linux/Unix only.")
@@ -7485,9 +7485,9 @@ class XvfbGameplayTest(unittest.TestCase):
         env = os.environ.copy()
         env.update(
             {
-                "FON_XVFB_GAMEPLAY_CHILD": "1",
-                "FON_TEST_WORKER": "1",
-                "FON_TEST_JOBS": "1",
+                "GAME_XVFB_GAMEPLAY_CHILD": "1",
+                "GAME_TEST_WORKER": "1",
+                "GAME_TEST_JOBS": "1",
                 "SDL_VIDEODRIVER": "x11",
                 "SDL_AUDIODRIVER": "dummy",
                 "SDL_RENDER_DRIVER": "software",
@@ -7503,14 +7503,14 @@ class XvfbGameplayTest(unittest.TestCase):
         ]
 
         try:
-            xvfb_jobs = parse_positive_int(os.environ.get("FON_XVFB_JOBS", "2"), "FON_XVFB_JOBS")
+            xvfb_jobs = parse_positive_int(os.environ.get("GAME_XVFB_JOBS", "2"), "GAME_XVFB_JOBS")
         except ValueError as exc:
             self.fail(str(exc))
 
         def run_child_test(child_test):
             child_env = env.copy()
-            child_env["FON_TEST_OUTPUT_DIR"] = str(TEST_OUTPUT_DIR / "xvfb" / child_test)
-            child_env["FON_TEST_SHARD"] = f"xvfb-{child_test}"
+            child_env["GAME_TEST_OUTPUT_DIR"] = str(TEST_OUTPUT_DIR / "xvfb" / child_test)
+            child_env["GAME_TEST_SHARD"] = f"xvfb-{child_test}"
             try:
                 completed = subprocess.run(
                     command + [f"XvfbGameplayProcessTest.{child_test}"],
@@ -7743,7 +7743,7 @@ def open_panel_for_screenshot(test_case, g, panel_name, class_name):
 
 class XvfbGameplayProcessTest(unittest.TestCase):
     def setUp(self):
-        if os.environ.get("FON_XVFB_GAMEPLAY_CHILD") != "1":
+        if os.environ.get("GAME_XVFB_GAMEPLAY_CHILD") != "1":
             self.skipTest("Run through XvfbGameplayTest so SDL uses xvfb instead of the dummy video driver.")
 
     def test_keyboard_input_moves_player(self):
@@ -8723,13 +8723,13 @@ def selected_unittest_args(unittest_argv):
 
 
 def runner_jobs(cli_jobs, unittest_argv):
-    if FON_TEST_WORKER:
+    if GAME_TEST_WORKER:
         return 1
     if cli_jobs is not None:
         return cli_jobs
-    env_jobs = os.environ.get("FON_TEST_JOBS")
+    env_jobs = os.environ.get("GAME_TEST_JOBS")
     if env_jobs:
-        return parse_positive_int(env_jobs, "FON_TEST_JOBS")
+        return parse_positive_int(env_jobs, "GAME_TEST_JOBS")
     has_unittest_options = any(arg.startswith("-") for arg in unittest_argv[1:])
     if not has_unittest_options and not selected_unittest_args(unittest_argv):
         return os.cpu_count() or 1
@@ -8778,10 +8778,10 @@ def run_test_subprocess(test_names, shard_name):
     env = os.environ.copy()
     env.update(
         {
-            "FON_TEST_WORKER": "1",
-            "FON_TEST_JOBS": "1",
-            "FON_TEST_OUTPUT_DIR": str(output_dir),
-            "FON_TEST_SHARD": shard_name,
+            "GAME_TEST_WORKER": "1",
+            "GAME_TEST_JOBS": "1",
+            "GAME_TEST_OUTPUT_DIR": str(output_dir),
+            "GAME_TEST_SHARD": shard_name,
             "PYTHONUNBUFFERED": "1",
         }
     )
