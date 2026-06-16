@@ -17,10 +17,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
 #include "CLayout.h"
-#include "core/CGame.h"
 #include "core/CUtil.h"
 #include "gui/object/CProxyGraphicsObject.h"
-#include "handler/CScriptHandler.h"
 
 std::shared_ptr<SDL_Rect> CLayout::getParentRect(std::shared_ptr<CGameGraphicsObject> object) {
     return object->getParent() ? object->getParent()->getLayout()->getRect(object->getParent())
@@ -60,16 +58,14 @@ void CLayout::setVertical(std::string vertical) { CLayout::vertical = vertical; 
 
 std::string CLayout::getVertical() { return vertical; }
 
-std::pair<CLayout::TYPE, int> CLayout::parseValue(std::shared_ptr<CGameGraphicsObject> object, std::string value) {
+std::pair<CLayout::TYPE, int> CLayout::parseValue(std::string value) {
     if (vstd::ends_with(value, "%") && vstd::is_int(value.substr(0, value.length() - 1))) {
         return std::make_pair(PERCENT, vstd::to_int(value.substr(0, value.length() - 1)).first);
     } else if (vstd::is_int(value)) {
         return std::make_pair(SIMPLE, vstd::to_int(value).first);
     }
-    // TODO: rethink parsing and validating script and script output
-    return std::make_pair(
-        SIMPLE, object->getGame()->getScriptHandler()->call_created_function<int, std::shared_ptr<CGameGraphicsObject>>(
-                    value, {"self"}, object));
+    vstd::logger::error("Invalid layout value:", value);
+    return std::make_pair(SIMPLE, 0);
 }
 
 int CLayout::parseValue(std::pair<TYPE, int> value, int parentValue) {
@@ -82,17 +78,15 @@ int CLayout::parseValue(std::pair<TYPE, int> value, int parentValue) {
     return vstd::fail_if(true, "Should not happen!");
 }
 
-int CLayout::parseValue(std::shared_ptr<CGameGraphicsObject> object, std::string value, int parentValue) {
-    return parseValue(parseValue(object, value), parentValue);
-}
+int CLayout::parseValue(std::string value, int parentValue) { return parseValue(parseValue(value), parentValue); }
 
 std::shared_ptr<SDL_Rect> CLayout::getRect(std::shared_ptr<CGameGraphicsObject> object) {
     auto parent = getParentRect(object);
 
-    int x = parseValue(object, getX(), parent->w);
-    int y = parseValue(object, getY(), parent->h);
-    int w = horizontal == "PARENT" ? parent->w : parseValue(object, getW(), parent->w);
-    int h = vertical == "PARENT" ? parent->h : parseValue(object, getH(), parent->h);
+    int x = parseValue(getX(), parent->w);
+    int y = parseValue(getY(), parent->h);
+    int w = horizontal == "PARENT" ? parent->w : parseValue(getW(), parent->w);
+    int h = vertical == "PARENT" ? parent->h : parseValue(getH(), parent->h);
 
     if (horizontal == "LEFT" || horizontal == "PARENT") {
         x = 0;

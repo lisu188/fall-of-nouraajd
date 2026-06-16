@@ -32,11 +32,11 @@ class CLayout : public CGameObject {
   private:
     enum TYPE { SIMPLE, PERCENT };
 
-    std::pair<TYPE, int> parseValue(std::shared_ptr<CGameGraphicsObject> object, std::string value);
+    std::pair<TYPE, int> parseValue(std::string value);
 
     int parseValue(std::pair<TYPE, int> value, int parentValue);
 
-    int parseValue(std::shared_ptr<CGameGraphicsObject> object, std::string value, int parentValue);
+    int parseValue(std::string value, int parentValue);
 
   protected:
     static std::shared_ptr<SDL_Rect> getParentRect(std::shared_ptr<CGameGraphicsObject> object);
