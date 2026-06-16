@@ -329,6 +329,35 @@ bool load_plugin_entry(const std::shared_ptr<CGame> &game, const json &entry,
     return false;
 }
 
+bool is_allowed_python_plugin_path(const std::string &path) {
+    auto normalizedPath = std::filesystem::path(path).lexically_normal();
+    if (normalizedPath.empty() || normalizedPath.is_absolute()) {
+        return false;
+    }
+
+    std::vector<std::string> parts;
+    for (const auto &part : normalizedPath) {
+        const auto token = part.string();
+        if (token.empty() || token == ".") {
+            continue;
+        }
+        if (token == "..") {
+            return false;
+        }
+        parts.push_back(token);
+    }
+
+    if (parts.size() >= 2 && parts[0] == "plugins") {
+        return normalizedPath.extension() == ".py";
+    }
+
+    if (parts.size() == 3 && parts[0] == "maps" && parts[2] == "script.py") {
+        return true;
+    }
+
+    return false;
+}
+
 bool load_plugin_entries(const std::shared_ptr<CGame> &game, const json &entries,
                          std::set<std::string> &loadedPythonPlugins, std::set<std::string> &loadedDynamicPlugins) {
     if (!entries.is_array()) {
@@ -650,6 +679,10 @@ void CGameLoader::loadGui(const std::shared_ptr<CGame> &game) {
 }
 
 bool CPluginLoader::loadPlugin(const std::shared_ptr<CGame> &game, const std::string &path) {
+    if (!is_allowed_python_plugin_path(path)) {
+        vstd::logger::warning("Rejected plugin path outside allowed resource locations:", path);
+        return false;
+    }
     bool loaded = false;
     PY_SAFE_RET_VAL(std::string code = CResourcesProvider::getInstance()->load(path); pybind11::dict plugin_namespace;
                     plugin_namespace["__builtins__"] = pybind11::module::import("builtins");
