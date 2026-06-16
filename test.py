@@ -5610,6 +5610,24 @@ class GameTest(unittest.TestCase):
             self.assertIn(needle, provider.load(resource_path), resource_path)
             resolved[resource_path] = full_path
 
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            tmp_path = Path(tmp_dir)
+            malicious_plugins = tmp_path / "plugins"
+            malicious_plugins.mkdir()
+            (malicious_plugins / "aardvark.py").write_text(
+                "def load(context):\n    raise RuntimeError('untrusted cwd plugin executed')\n",
+                encoding="utf-8",
+            )
+
+            original_cwd = Path.cwd()
+            try:
+                os.chdir(tmp_path)
+                self.assertFalse(provider.getPath("plugins/aardvark.py"))
+                self.assertNotIn("plugins/aardvark.py", provider.getFiles("PLUGIN"))
+                game.CGameLoader.loadGame()
+            finally:
+                os.chdir(original_cwd)
+
         return True, json.dumps(resolved, sort_keys=True)
 
     @game_test
