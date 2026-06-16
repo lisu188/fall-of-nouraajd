@@ -18,13 +18,16 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #pragma once
 
 #if defined(_WIN32)
-#if defined(FON_GAME_CORE_BUILD)
-#define FON_CORE_EXPORT __declspec(dllexport)
+#if defined(GAME_CORE_BUILD)
+#define GAME_CORE_EXPORT __declspec(dllexport)
 #else
-#define FON_CORE_EXPORT __declspec(dllimport)
+#define GAME_CORE_EXPORT __declspec(dllimport)
 #endif
+#define GAME_CORE_LOCAL
 #elif defined(__GNUC__) || defined(__clang__)
-#define FON_CORE_EXPORT __attribute__((visibility("default")))
+#define GAME_CORE_EXPORT __attribute__((visibility("default")))
+#define GAME_CORE_LOCAL __attribute__((visibility("hidden")))
 #else
-#define FON_CORE_EXPORT
+#define GAME_CORE_EXPORT
+#define GAME_CORE_LOCAL
 #endif

@@ -10,10 +10,10 @@ sudo apt-get install -y build-essential cmake ninja-build ccache clang-format \
     xvfb xauth
 
 git submodule update --init --recursive
-build_types_raw="${FON_CONFIGURE_BUILD_TYPES:-Debug Release}"
+build_types_raw="${GAME_CONFIGURE_BUILD_TYPES:-Debug Release}"
 read -r -a build_types <<< "${build_types_raw//,/ }"
 if [[ "${#build_types[@]}" -eq 0 ]]; then
-    echo "FON_CONFIGURE_BUILD_TYPES did not contain any build types" >&2
+    echo "GAME_CONFIGURE_BUILD_TYPES did not contain any build types" >&2
     exit 2
 fi
 

@@ -24,10 +24,10 @@ class CCreature;
 
 class CInteraction;
 
-class CItem : public CMapObject, public Visitable, public Wearable, public Usable {
+class CItem : public CMapObject, public CVisitable, public CWearable, public CUsable {
 
     V_META(CItem, CMapObject, V_PROPERTY(CItem, int, power, getPower, setPower),
-           V_PROPERTY(CItem, std::shared_ptr<Stats>, bonus, getBonus, setBonus),
+           V_PROPERTY(CItem, std::shared_ptr<CStats>, bonus, getBonus, setBonus),
            V_PROPERTY(CItem, std::shared_ptr<CInteraction>, interaction, getInteraction, setInteraction))
 
   public:
@@ -49,9 +49,9 @@ class CItem : public CMapObject, public Visitable, public Wearable, public Usabl
 
     void setPower(int value);
 
-    std::shared_ptr<Stats> getBonus();
+    std::shared_ptr<CStats> getBonus();
 
-    void setBonus(std::shared_ptr<Stats> stats);
+    void setBonus(std::shared_ptr<CStats> stats);
 
     std::shared_ptr<CInteraction> getInteraction();
 
@@ -60,7 +60,7 @@ class CItem : public CMapObject, public Visitable, public Wearable, public Usabl
     virtual bool isDisposable();
 
   protected:
-    std::shared_ptr<Stats> bonus = std::make_shared<Stats>();
+    std::shared_ptr<CStats> bonus = std::make_shared<CStats>();
     std::shared_ptr<CInteraction> interaction;
     int power = 0;
 

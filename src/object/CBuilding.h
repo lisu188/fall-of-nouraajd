@@ -19,7 +19,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "CMapObject.h"
 
-class CBuilding : public CMapObject, public Visitable {
+class CBuilding : public CMapObject, public CVisitable {
 
     V_META(CBuilding, CMapObject, V_PROPERTY(CBuilding, bool, enabled, isEnabled, setEnabled))
 

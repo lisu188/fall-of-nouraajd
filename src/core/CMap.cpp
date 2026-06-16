@@ -241,7 +241,7 @@ void CMap::addObject(const std::shared_ptr<CMapObject> &mapObject) {
     mapObjects.insert(std::make_pair(mapObject->getName(), mapObject));
     mapObjectsCache.insert(std::make_pair(normalizeCoords(mapObject->getCoords()), mapObject->getName()));
     bumpNavigationRevision();
-    getEventHandler()->gameEvent(mapObject, std::make_shared<CGameEvent>(CGameEvent::Type::onCreate));
+    getEventHandler()->gameEvent(mapObject, std::make_shared<CGameEvent>(CGameEvent::CType::onCreate));
     signal("objectChanged", mapObject->getCoords());
 }
 
@@ -258,7 +258,7 @@ void CMap::removeObject(const std::shared_ptr<CMapObject> &mapObject) {
     mapObjects.erase(map_object_it);
     vstd::erase_if(mapObjectsCache, [mapObject](auto it) { return it.second == mapObject->getName(); });
     bumpNavigationRevision();
-    getEventHandler()->gameEvent(mapObject, std::make_shared<CGameEvent>(CGameEvent::Type::onDestroy));
+    getEventHandler()->gameEvent(mapObject, std::make_shared<CGameEvent>(CGameEvent::CType::onDestroy));
     signal("objectChanged", mapObject->getCoords());
 }
 
@@ -332,7 +332,7 @@ void CMap::move() {
     // TODO: map->applyEffects();
 
     map->forObjects([map](std::shared_ptr<CMapObject> mapObject) {
-        map->getEventHandler()->gameEvent(mapObject, std::make_shared<CGameEvent>(CGameEvent::Type::onTurn));
+        map->getEventHandler()->gameEvent(mapObject, std::make_shared<CGameEvent>(CGameEvent::CType::onTurn));
     });
 
     auto is_active_creature = [map](const std::shared_ptr<CCreature> &creature) {
@@ -344,13 +344,13 @@ void CMap::move() {
         auto objects = map->getObjectsAtCoords(target);
         return std::any_of(objects.begin(), objects.end(), [&](const auto &object) {
             return object != creature &&
-                   (vstd::cast<CCreature>(object) || (vstd::cast<Visitable>(object) && !vstd::cast<CItem>(object)));
+                   (vstd::cast<CCreature>(object) || (vstd::cast<CVisitable>(object) && !vstd::cast<CItem>(object)));
         });
     };
 
     auto pred = [is_active_creature](std::shared_ptr<CMapObject> object) {
         auto creature = vstd::cast<CCreature>(object);
-        return creature && vstd::castable<Moveable>(object) && is_active_creature(creature);
+        return creature && vstd::castable<CMoveable>(object) && is_active_creature(creature);
     };
 
     std::shared_ptr<std::list<std::pair<std::shared_ptr<CCreature>, Coords>>> coordinates =

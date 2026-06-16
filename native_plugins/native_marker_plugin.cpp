@@ -15,7 +15,7 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-#include "plugin/FonPluginAbi.h"
+#include "plugin/CPluginAbi.h"
 
 namespace {
 
@@ -40,8 +40,8 @@ constexpr const char *DIRECT_MARKER_CONFIG = R"json({
   }
 })json";
 
-bool register_marker(const FonPluginHostV1 *host, const char *id, const char *config) {
-    if (host == nullptr || host->api_version != FON_PLUGIN_API_VERSION || host->game == nullptr ||
+bool register_marker(const CPluginHostV1 *host, const char *id, const char *config) {
+    if (host == nullptr || host->api_version != GAME_PLUGIN_API_VERSION || host->game == nullptr ||
         host->register_config_json == nullptr) {
         return false;
     }
@@ -53,16 +53,16 @@ bool register_marker(const FonPluginHostV1 *host, const char *id, const char *co
 
 } // namespace
 
-extern "C" FON_PLUGIN_EXPORT bool fon_plugin_load_v1(const FonPluginHostV1 *host) {
+extern "C" GAME_PLUGIN_EXPORT bool game_plugin_load_v1(const CPluginHostV1 *host) {
     return register_marker(host, "dynamicNativePluginMarker", DYNAMIC_MARKER_CONFIG);
 }
 
-extern "C" FON_PLUGIN_EXPORT bool fon_plugin_load_direct_v1(const FonPluginHostV1 *host) {
+extern "C" GAME_PLUGIN_EXPORT bool game_plugin_load_direct_v1(const CPluginHostV1 *host) {
     return register_marker(host, "directDynamicPluginMarker", DIRECT_MARKER_CONFIG);
 }
 
-extern "C" FON_PLUGIN_EXPORT bool fon_plugin_load_bad_api_v1(const FonPluginHostV1 *host) {
-    return host != nullptr && host->api_version == FON_PLUGIN_API_VERSION + 1;
+extern "C" GAME_PLUGIN_EXPORT bool game_plugin_load_bad_api_v1(const CPluginHostV1 *host) {
+    return host != nullptr && host->api_version == GAME_PLUGIN_API_VERSION + 1;
 }
 
-extern "C" FON_PLUGIN_EXPORT bool fon_plugin_load_false_v1(const FonPluginHostV1 *) { return false; }
+extern "C" GAME_PLUGIN_EXPORT bool game_plugin_load_false_v1(const CPluginHostV1 *) { return false; }

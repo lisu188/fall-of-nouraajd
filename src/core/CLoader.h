@@ -79,7 +79,7 @@ class CPluginLoader {
     static bool loadCppPlugin(const std::shared_ptr<CGame> &game, const std::string &type);
 
     static bool loadDynamicPlugin(const std::shared_ptr<CGame> &game, const std::string &library,
-                                  const std::string &entry = "fon_plugin_load_v1");
+                                  const std::string &entry = "game_plugin_load_v1");
 
     static bool loadGlobalPlugins(const std::shared_ptr<CGame> &game);
 

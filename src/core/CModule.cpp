@@ -281,8 +281,8 @@ extern void initModule1();
 #define PY_WRAP_GENERIC_DOC(fcn, doc) m.def(#fcn, fcn, doc)
 
 void register_python_binding_type_metadata() {
-    CTypes::register_type_metadata<Stats, CGameObject>();
-    CTypes::register_type_metadata<Damage, CGameObject>();
+    CTypes::register_type_metadata<CStats, CGameObject>();
+    CTypes::register_type_metadata<CDamage, CGameObject>();
 
     CTypes::register_type_metadata<CMapObject, CGameObject>();
     CTypes::register_type_metadata<CBuilding, CMapObject, CGameObject>();
@@ -635,24 +635,24 @@ void init_game_module(py::module_ &m) {
         .def("configureEffect", &CInteraction::configureEffect, "Configure an effect instance before it is applied.");
     m.attr("CInteractionBase") = cinteraction;
 
-    py::class_<Damage, CGameObject, std::shared_ptr<Damage>>(m, "Damage",
-                                                             "Damage packet with typed damage components.");
-    py::class_<Stats, CGameObject, std::shared_ptr<Stats>>(m, "Stats",
-                                                           "Creature stat container used for combat calculations.")
-        .def("setStrength", &Stats::setStrength, "Set strength.")
-        .def("setAgility", &Stats::setAgility, "Set agility.")
-        .def("setStamina", &Stats::setStamina, "Set stamina.")
-        .def("setIntelligence", &Stats::setIntelligence, "Set intelligence.")
-        .def("setArmor", &Stats::setArmor, "Set armor reduction percentage.")
-        .def("setBlock", &Stats::setBlock, "Set block chance percentage.")
-        .def("setDmgMin", &Stats::setDmgMin, "Set minimum base damage.")
-        .def("setDmgMax", &Stats::setDmgMax, "Set maximum base damage.")
-        .def("setHit", &Stats::setHit, "Set hit chance modifier.")
-        .def("setCrit", &Stats::setCrit, "Set critical chance percentage.")
-        .def("getMainValue", &Stats::getMainValue, "Return current value of the configured main stat.")
-        .def("addBonus", &Stats::addBonus, "Add all numeric stats from another Stats object.")
-        .def("removeBonus", &Stats::removeBonus, "Remove all numeric stats from another Stats object.")
-        .def("getText", &Stats::getText, "Return formatted stat summary text.");
+    py::class_<CDamage, CGameObject, std::shared_ptr<CDamage>>(m, "CDamage",
+                                                               "CDamage packet with typed damage components.");
+    py::class_<CStats, CGameObject, std::shared_ptr<CStats>>(m, "CStats",
+                                                             "Creature stat container used for combat calculations.")
+        .def("setStrength", &CStats::setStrength, "Set strength.")
+        .def("setAgility", &CStats::setAgility, "Set agility.")
+        .def("setStamina", &CStats::setStamina, "Set stamina.")
+        .def("setIntelligence", &CStats::setIntelligence, "Set intelligence.")
+        .def("setArmor", &CStats::setArmor, "Set armor reduction percentage.")
+        .def("setBlock", &CStats::setBlock, "Set block chance percentage.")
+        .def("setDmgMin", &CStats::setDmgMin, "Set minimum base damage.")
+        .def("setDmgMax", &CStats::setDmgMax, "Set maximum base damage.")
+        .def("setHit", &CStats::setHit, "Set hit chance modifier.")
+        .def("setCrit", &CStats::setCrit, "Set critical chance percentage.")
+        .def("getMainValue", &CStats::getMainValue, "Return current value of the configured main stat.")
+        .def("addBonus", &CStats::addBonus, "Add all numeric stats from another CStats object.")
+        .def("removeBonus", &CStats::removeBonus, "Remove all numeric stats from another CStats object.")
+        .def("getText", &CStats::getText, "Return formatted stat summary text.");
 
     auto ctile =
         py::class_<CTile, CWrapper<CTile>, std::shared_ptr<CTile>, CGameObject>(m, "CTile", "Base tile class.");
@@ -770,7 +770,7 @@ void init_game_module(py::module_ &m) {
         .def("loadPlugin", &CPluginLoader::loadPlugin, "Load a Python plugin resource into the game.")
         .def("loadCppPlugin", &CPluginLoader::loadCppPlugin, "Load a compiled C++ plugin type into the game.")
         .def_static("loadDynamicPlugin", &CPluginLoader::loadDynamicPlugin, py::arg("game"), py::arg("library"),
-                    py::arg("entry") = "fon_plugin_load_v1", "Load a dynamic C++ plugin shared library into the game.")
+                    py::arg("entry") = "game_plugin_load_v1", "Load a dynamic C++ plugin shared library into the game.")
         .def("loadGlobalPlugins", &CPluginLoader::loadGlobalPlugins, "Load configured global plugins.")
         .def("loadMapPlugins", &CPluginLoader::loadMapPlugins, "Load configured plugins for a map.");
 
@@ -812,7 +812,7 @@ void init_game_module(py::module_ &m) {
 
     void (CCreature::*hurtInt)(int) = &CCreature::hurt;
     void (CCreature::*hurtFloat)(float) = &CCreature::hurt;
-    void (CCreature::*hurtDmg)(std::shared_ptr<Damage>) = &CCreature::hurt;
+    void (CCreature::*hurtDmg)(std::shared_ptr<CDamage>) = &CCreature::hurt;
     void (CCreature::*addItemByName)(std::string) = &CCreature::addItem;
     void (CCreature::*addItemByObject)(std::shared_ptr<CItem>) = &CCreature::addItem;
     bool (CCreature::*hasItem)(std::function<bool(std::shared_ptr<CItem>)>) = &CCreature::hasItem;
@@ -822,7 +822,7 @@ void init_game_module(py::module_ &m) {
         m, "CCreature", "Creature that can move, fight, and manage inventory.")
         .def("getDmg", &CCreature::getDmg, "Roll outgoing attack damage.")
         .def("hurt", hurtInt, "Apply raw damage value (int).")
-        .def("hurt", hurtDmg, "Apply structured Damage object.")
+        .def("hurt", hurtDmg, "Apply structured CDamage object.")
         .def("hurt", hurtFloat, "Apply damage value (float), rounded to int.")
         .def("getWeapon", &CCreature::getWeapon, "Return equipped weapon or None.")
         .def(
