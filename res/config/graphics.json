@@ -36,6 +36,12 @@
             "priority": 1
           },
           "ref": "sideBar"
+        },
+        {
+          "properties": {
+            "priority": 1
+          },
+          "ref": "minimapGraphics"
         }
       ],
       "layout": {
@@ -55,6 +61,26 @@
     "properties": {
       "layout": {
         "class": "CParentLayout"
+      }
+    }
+  },
+  "minimapGraphics": {
+    "class": "CMinimapGraphicsObject",
+    "properties": {
+      "layout": {
+        "class": "CLayout",
+        "properties": {
+          "h": 220,
+          "w": 220,
+          "x": 1700,
+          "y": 820
+        }
+      },
+      "visible": {
+        "class": "CScript",
+        "properties": {
+          "script": "self.getGui().getGame().getMap().getPlayer()"
+        }
       }
     }
   },

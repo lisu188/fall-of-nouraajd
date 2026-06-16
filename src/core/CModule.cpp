@@ -24,6 +24,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "../gui/CAnimation.h"
 #include "../gui/CGui.h"
 #include "../gui/object/CMapGraphicsObject.h"
+#include "../gui/object/CMinimapGraphicsObject.h"
 #include "../gui/object/CSideBar.h"
 #include "../gui/object/CStatsGraphicsObject.h"
 #include "../gui/panel/CCreatureView.h"
@@ -398,7 +399,26 @@ void init_game_module(py::module_ &m) {
             "Dispatch a mouse button event to this object.");
 
     py::class_<CGui, CGameGraphicsObject, std::shared_ptr<CGui>>(m, "CGui", "Game GUI root object.")
-        .def("getGame", &CGui::getGame, "Return the owning game.");
+        .def("getGame", &CGui::getGame, "Return the owning game.")
+        .def(
+            "read_pixels",
+            [](const CGui &self) {
+                SDL_Renderer *renderer = self.getRenderer();
+                if (!renderer) {
+                    throw std::runtime_error("CGui has no SDL renderer");
+                }
+                int width = 0;
+                int height = 0;
+                if (SDL_GetRendererOutputSize(renderer, &width, &height) != 0) {
+                    throw std::runtime_error(SDL_GetError());
+                }
+                std::string pixels(static_cast<std::size_t>(width) * static_cast<std::size_t>(height) * 4, '\0');
+                if (SDL_RenderReadPixels(renderer, nullptr, SDL_PIXELFORMAT_RGBA32, pixels.data(), width * 4) != 0) {
+                    throw std::runtime_error(SDL_GetError());
+                }
+                return py::make_tuple(py::bytes(pixels), width, height);
+            },
+            "Read the current SDL renderer pixels as RGBA bytes, width, and height.");
 
     py::class_<CAnimation, CGameGraphicsObject, std::shared_ptr<CAnimation>>(m, "CAnimation",
                                                                              "Base animation graphics object.")
@@ -440,6 +460,9 @@ void init_game_module(py::module_ &m) {
         m, "CStatsGraphicsObject");
 
     py::class_<CSideBar, CGameGraphicsObject, std::shared_ptr<CSideBar>>(m, "CSideBar");
+
+    py::class_<CMinimapGraphicsObject, CGameGraphicsObject, std::shared_ptr<CMinimapGraphicsObject>>(
+        m, "CMinimapGraphicsObject", "Display-only current-level minimap graphics object.");
 
     py::class_<CProxyTargetGraphicsObject, CGameGraphicsObject, std::shared_ptr<CProxyTargetGraphicsObject>>(
         m, "CProxyTargetGraphicsObject", "Graphics object that proxies child graphics for cells.")

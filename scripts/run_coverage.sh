@@ -109,7 +109,7 @@ run_phase "configure" cmake "${cmake_args[@]}"
 run_phase "build _game and for_unit_tests" cmake --build "${BUILD_DIR}" --target _game for_unit_tests -j"${COVERAGE_JOBS}"
 run_phase "coverage data cleanup" find "${BUILD_DIR}" -name '*.gcda' -delete
 run_phase "ctest" ctest --test-dir "${BUILD_DIR}" --output-on-failure
-run_phase "python test suite" env GAME_BUILD_DIR="${BUILD_DIR}" python3 test.py
+run_phase "python test suite" env GAME_BUILD_DIR="${BUILD_DIR}" FON_COVERAGE_RUN=1 python3 test.py
 run_phase "report generation" generate_report
 
 total_elapsed=$((SECONDS - SCRIPT_START))
