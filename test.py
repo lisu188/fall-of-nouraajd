@@ -7780,12 +7780,11 @@ class McpServerTest(unittest.TestCase):
         server._export_module_callables(module, source="game")
 
         self.assertIn("top_level", server.exports)
-        self.assertIn("Dialog", server.exports)
+        self.assertNotIn("Dialog", server.exports)
         self.assertIn("Dialog.invoke", server.exports)
         self.assertIn("Dialog.class_invoke", server.exports)
         self.assertIn("Dialog.static_invoke", server.exports)
         self.assertNotIn("NativeLike.append", server.exports)
-        self.assertEqual(server.exports["Dialog"].source, "game")
         self.assertEqual(server.exports["Dialog.invoke"].source, "game.Dialog")
 
     def test_export_module_includes_pybind_class_methods(self):
@@ -7835,6 +7834,27 @@ class McpServerTest(unittest.TestCase):
 
         self.assertEqual(handle["__type__"], "Dialog")
         self.assertEqual(handle["pythonMethods"], [{"name": "invoke", "signature": "(self, action)"}])
+
+    def test_engine_handle_call_rejects_private_methods(self):
+        server = self.make_stub_server()
+
+        class Dialog:
+            def invoke(self, action):
+                return action
+
+        handle = server._serialize_result(Dialog())
+        response = server._engine_handle_call(
+            {
+                "handle": handle["__handle__"],
+                "method": "__getattribute__",
+                "args": ["invoke"],
+            }
+        )
+
+        self.assertTrue(response["isError"])
+        self.assertEqual(
+            response["structuredContent"], {"error": "Method `__getattribute__` is not exported for handle calls"}
+        )
 
     def test_initialize_response_preserves_request_id(self):
         server = self.make_stub_server()
