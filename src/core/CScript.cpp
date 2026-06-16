@@ -1,6 +1,6 @@
 /*
 fall-of-nouraajd c++ dark fantasy game
-Copyright (C) 2025  Andrzej Lis
+Copyright (C) 2025-2026  Andrzej Lis
 
 This program is free software: you can redistribute it and/or modify
         it under the terms of the GNU General Public License as published by
@@ -18,8 +18,13 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CScript.h"
 #include "core/CGame.h"
 #include "handler/CScriptHandler.h"
+#include "vlogger.h"
 
 std::shared_ptr<CGameObject> CScript::invoke(std::shared_ptr<CGame> game, std::shared_ptr<CGameObject> self) {
+    if (!isSafeAccessorExpression(script)) {
+        vstd::logger::error("CScript: rejected unsafe accessor expression", script);
+        return nullptr;
+    }
     return game->getScriptHandler()->call_created_function<std::shared_ptr<CGameObject>, std::shared_ptr<CGameObject>>(
         "return " + script, {"self"}, self);
 }
