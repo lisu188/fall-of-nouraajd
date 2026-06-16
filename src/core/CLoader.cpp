@@ -30,6 +30,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include <algorithm>
 #include <cctype>
+#include <optional>
 #include <utility>
 
 #if defined(_WIN32)
@@ -109,6 +110,122 @@ class CDynamicLibrary {
     void *handle = nullptr;
 #endif
 };
+
+std::optional<std::string> normalize_relative_resource_path(const std::string &path) {
+    const std::filesystem::path resourcePath(path);
+    if (path.empty() || resourcePath.is_absolute() || resourcePath.has_root_name()) {
+        return std::nullopt;
+    }
+
+    const auto normalized = resourcePath.lexically_normal().generic_string();
+    if (normalized.empty() || normalized == "." || normalized == ".." || normalized.rfind("../", 0) == 0 ||
+        normalized.find("/../") != std::string::npos) {
+        return std::nullopt;
+    }
+    return normalized;
+}
+
+bool is_valid_map_name(const std::string &mapName) {
+    if (mapName.empty()) {
+        return true;
+    }
+
+    return std::all_of(mapName.begin(), mapName.end(), [](unsigned char ch) {
+        if (std::isalnum(ch)) {
+            return true;
+        }
+        return ch == '_' || ch == '-';
+    });
+}
+
+bool is_allowed_python_plugin_path(const std::string &path) {
+    const auto normalized = normalize_relative_resource_path(path);
+    if (!normalized || !vstd::ends_with(*normalized, ".py")) {
+        return false;
+    }
+
+    const std::filesystem::path pluginPath(*normalized);
+    if (normalized->rfind("plugins/", 0) == 0) {
+        return true;
+    }
+
+    if (pluginPath.filename() != "script.py") {
+        return false;
+    }
+    auto parent = pluginPath.parent_path();
+    if (parent.parent_path() != "maps") {
+        return false;
+    }
+    return is_valid_map_name(parent.filename().string());
+}
+
+PyObject *restricted_plugin_import(PyObject *, PyObject *args, PyObject *kwargs) {
+    const char *name = nullptr;
+    PyObject *globals = nullptr;
+    PyObject *locals = nullptr;
+    PyObject *fromlist = nullptr;
+    int level = 0;
+    static const char *keywords[] = {"name", "globals", "locals", "fromlist", "level", nullptr};
+
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "s|OOOi:__import__", const_cast<char **>(keywords), &name, &globals,
+                                     &locals, &fromlist, &level)) {
+        return nullptr;
+    }
+
+    if (std::string(name) == "game" || std::string(name) == "json") {
+        return PyImport_ImportModule(name);
+    }
+
+    PyErr_SetString(PyExc_ImportError, "Python resource plugins may only import the game and json modules");
+    return nullptr;
+}
+
+pybind11::dict build_restricted_plugin_builtins() {
+    auto builtins = pybind11::module_::import("builtins");
+    pybind11::dict safeBuiltins;
+    const std::vector<std::string> allowedNames = {"__build_class__",
+                                                   "abs",
+                                                   "all",
+                                                   "any",
+                                                   "bool",
+                                                   "callable",
+                                                   "classmethod",
+                                                   "dict",
+                                                   "enumerate",
+                                                   "Exception",
+                                                   "float",
+                                                   "getattr",
+                                                   "hasattr",
+                                                   "int",
+                                                   "isinstance",
+                                                   "len",
+                                                   "list",
+                                                   "max",
+                                                   "min",
+                                                   "print",
+                                                   "property",
+                                                   "range",
+                                                   "RuntimeError",
+                                                   "set",
+                                                   "setattr",
+                                                   "staticmethod",
+                                                   "sorted",
+                                                   "str",
+                                                   "sum",
+                                                   "super",
+                                                   "tuple",
+                                                   "TypeError",
+                                                   "ValueError"};
+
+    for (const auto &name : allowedNames) {
+        safeBuiltins[pybind11::str(name)] = builtins.attr(name.c_str());
+    }
+    static PyMethodDef importMethod = {"__import__", reinterpret_cast<PyCFunction>(restricted_plugin_import),
+                                       METH_VARARGS | METH_KEYWORDS,
+                                       "Import allow-listed modules for Python resource plugins."};
+    safeBuiltins["__import__"] = pybind11::reinterpret_steal<pybind11::object>(PyCFunction_New(&importMethod, nullptr));
+    return safeBuiltins;
+}
 
 std::string dynamic_library_suffix() {
 #if defined(_WIN32)
@@ -329,35 +446,6 @@ bool load_plugin_entry(const std::shared_ptr<CGame> &game, const json &entry,
     return false;
 }
 
-bool is_allowed_python_plugin_path(const std::string &path) {
-    auto normalizedPath = std::filesystem::path(path).lexically_normal();
-    if (normalizedPath.empty() || normalizedPath.is_absolute()) {
-        return false;
-    }
-
-    std::vector<std::string> parts;
-    for (const auto &part : normalizedPath) {
-        const auto token = part.string();
-        if (token.empty() || token == ".") {
-            continue;
-        }
-        if (token == "..") {
-            return false;
-        }
-        parts.push_back(token);
-    }
-
-    if (parts.size() >= 2 && parts[0] == "plugins") {
-        return normalizedPath.extension() == ".py";
-    }
-
-    if (parts.size() == 3 && parts[0] == "maps" && parts[2] == "script.py") {
-        return true;
-    }
-
-    return false;
-}
-
 bool load_plugin_entries(const std::shared_ptr<CGame> &game, const json &entries,
                          std::set<std::string> &loadedPythonPlugins, std::set<std::string> &loadedDynamicPlugins) {
     if (!entries.is_array()) {
@@ -402,17 +490,32 @@ void CMapLoader::loadFromTmx(const std::shared_ptr<CMap> &map, const std::shared
 }
 
 std::set<std::string> getConfigPaths(const std::string &mapName) {
+    if (!is_valid_map_name(mapName)) {
+        vstd::logger::warning("Rejected invalid map name while loading config:", mapName);
+        return {};
+    }
+
     return CUtil::findFiles("maps/" + mapName, [](auto path) {
         return vstd::ends_with(path, ".json") && !vstd::ends_with(path, "map.json");
     });
 }
 
 std::string getScriptPath(std::string mapName) {
+    if (!is_valid_map_name(mapName)) {
+        vstd::logger::warning("Rejected invalid map name while resolving script:", mapName);
+        return {};
+    }
+
     std::string path = vstd::join({"maps/", std::move(mapName)}, "");
     return vstd::join({path, "/script.py"}, "");
 }
 
 std::string getMapPath(std::string mapName) {
+    if (!is_valid_map_name(mapName)) {
+        vstd::logger::warning("Rejected invalid map name while resolving map:", mapName);
+        return {};
+    }
+
     std::string path = vstd::join({"maps/", std::move(mapName)}, "");
     return vstd::join({path, "/map.json"}, "");
 }
@@ -684,12 +787,12 @@ void CGameLoader::loadGui(const std::shared_ptr<CGame> &game) {
 
 bool CPluginLoader::loadPlugin(const std::shared_ptr<CGame> &game, const std::string &path) {
     if (!is_allowed_python_plugin_path(path)) {
-        vstd::logger::warning("Rejected plugin path outside allowed resource locations:", path);
+        vstd::logger::warning("Rejected Python plugin outside trusted resource plugin paths:", path);
         return false;
     }
     bool loaded = false;
     PY_SAFE_RET_VAL(std::string code = CResourcesProvider::getInstance()->load(path); pybind11::dict plugin_namespace;
-                    plugin_namespace["__builtins__"] = pybind11::module::import("builtins");
+                    plugin_namespace["__builtins__"] = build_restricted_plugin_builtins();
                     plugin_namespace["__file__"] = path;
                     plugin_namespace["__name__"] = vstd::join({"plugin_", vstd::to_hex_hash(path)}, "");
                     pybind11::exec(code + "\n", plugin_namespace, plugin_namespace);
@@ -781,6 +884,11 @@ bool CPluginLoader::loadGlobalPlugins(const std::shared_ptr<CGame> &game) {
 }
 
 bool CPluginLoader::loadMapPlugins(const std::shared_ptr<CGame> &game, const std::string &mapName) {
+    if (!is_valid_map_name(mapName)) {
+        vstd::logger::warning("Rejected invalid map name while loading plugins:", mapName);
+        return false;
+    }
+
     bool loadedAll = true;
     std::set<std::string> loadedPythonPlugins;
     std::set<std::string> loadedDynamicPlugins;
