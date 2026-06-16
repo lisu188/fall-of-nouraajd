@@ -87,6 +87,13 @@ python3 mcp.py --stdio --repo-root . --build-dir cmake-build-release
 
 On Windows Visual Studio builds, add `--build-config Release` when required.
 
+When adding stdio MCP subprocess tests, drain `stderr` concurrently while the server runs. The server logs tool
+activity to `stderr`, and long walkthrough-style tests can block if the pipe is left unread. Prefer setting the MCP
+session log level to `critical` after initialization and use `--native-log-sink disabled` or a file sink when native
+logs are not part of the assertion. Full-map `jsonify(map)` MCP calls can take longer than ordinary tool calls during
+large walkthrough tests, especially under full-suite load; give those calls a wider response timeout than the default
+quick protocol checks.
+
 ## Required validation
 
 For every code change, run this full workflow from the repository root unless the environment makes it impossible:
@@ -108,6 +115,18 @@ python test.py
 ```
 
 The Python tests require the compiled `_game` module for most runtime paths. Tests that do not need `_game` should still be able to run, so import optional `game`/`_game` modules inside the individual tests that need them.
+
+Windows validation portability notes:
+
+- When tests need build-local DLLs such as `SDL2.dll`, resolve them from the active `GAME_BUILD_DIR` and
+  `GAME_BUILD_CONFIG` before falling back to system library names.
+- Keep temporary backups of build resources such as `save/` inside the build tree; moving OneDrive-backed files through
+  `%TEMP%` can fail if the cloud provider is unavailable.
+- Python tooling checks should fall back to `python -m <tool>` with the current interpreter when console scripts are not
+  present on `PATH`.
+- On Windows multi-config builds, the compiled `_game` module lives under a config directory such as `Release/`, while
+  copied resources may live in the build root. Resource lookup and MCP tests should account for both locations and treat
+  missing config-local resource directories as normal misses, not canonicalization failures.
 
 When validation cannot be run, do not imply that it passed. Report the exact command that was skipped or failed and the reason.
 

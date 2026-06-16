@@ -20,6 +20,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CJsonUtil.h"
 #include "gui/CAnimation.h"
 
+#include <algorithm>
+
 #ifdef _WIN32
 #include <windows.h>
 #else
@@ -82,7 +84,23 @@ std::list<std::string> buildResourceSearchPath() {
     std::list<std::string> paths;
     auto moduleRoot = getModuleResourceRoot();
     if (!moduleRoot.empty()) {
-        paths.push_back(std::filesystem::weakly_canonical(moduleRoot).string());
+        std::error_code errorCode;
+        auto canonicalModuleRoot = std::filesystem::weakly_canonical(moduleRoot, errorCode);
+        if (!errorCode) {
+            paths.push_back(canonicalModuleRoot.string());
+        }
+
+        auto parentRoot = moduleRoot.parent_path();
+        if (!parentRoot.empty() && parentRoot != moduleRoot) {
+            errorCode.clear();
+            auto canonicalParentRoot = std::filesystem::weakly_canonical(parentRoot, errorCode);
+            if (!errorCode) {
+                const auto parentPath = canonicalParentRoot.string();
+                if (std::find(paths.begin(), paths.end(), parentPath) == paths.end()) {
+                    paths.push_back(parentPath);
+                }
+            }
+        }
     }
     return paths;
 }
@@ -194,8 +212,21 @@ std::string CResourcesProvider::getPath(std::string path) {
             continue;
         }
 
-        auto resourceRoot = std::filesystem::weakly_canonical(root);
-        auto candidate = std::filesystem::weakly_canonical(resourceRoot / requestedPath);
+        std::error_code errorCode;
+        auto resourceRoot = std::filesystem::weakly_canonical(root, errorCode);
+        if (errorCode) {
+            continue;
+        }
+
+        const auto candidatePath = resourceRoot / requestedPath;
+        if (!std::filesystem::exists(candidatePath, errorCode) || errorCode) {
+            continue;
+        }
+
+        auto candidate = std::filesystem::weakly_canonical(candidatePath, errorCode);
+        if (errorCode) {
+            continue;
+        }
         if (isWithinResourceRoot(candidate, resourceRoot) && std::filesystem::exists(candidate)) {
             return candidate.string();
         }

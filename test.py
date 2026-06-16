@@ -98,6 +98,8 @@ except Exception:
     pass
 
 MCP_PROTOCOL_VERSION = "2025-11-25"
+MCP_STDIO_TOOL_TIMEOUT_SECONDS = 10
+MCP_STDIO_MAP_JSON_TIMEOUT_SECONDS = 60
 MCP_STDIO_SHUTDOWN_TIMEOUT_SECONDS = 30
 GAME_TEST_WORKER = os.environ.get("GAME_TEST_WORKER") == "1"
 SERIAL_TEST_NAMES = {
@@ -322,11 +324,23 @@ def load_sdl_library():
     import ctypes
     import ctypes.util
 
-    for library_name in (ctypes.util.find_library("SDL2"), "libSDL2-2.0.so.0", "libSDL2.so"):
+    library_names = [ctypes.util.find_library("SDL2")]
+    for extension_dir in extension_dirs:
+        library_names.append(extension_dir / "SDL2.dll")
+    library_names.extend(
+        [
+            build_dir / "vcpkg_installed" / "x64-windows" / "bin" / "SDL2.dll",
+            "SDL2.dll",
+            "libSDL2-2.0.so.0",
+            "libSDL2.so",
+        ]
+    )
+
+    for library_name in library_names:
         if not library_name:
             continue
         try:
-            return ctypes.CDLL(library_name)
+            return ctypes.CDLL(str(library_name))
         except OSError:
             continue
     raise AssertionError("Could not load SDL2 for gameplay event injection.")
@@ -5233,9 +5247,11 @@ class GameTest(unittest.TestCase):
         provider = game.CResourcesProvider.getInstance()
 
         save_path = Path.cwd() / "save"
+        backup_root = None
         backup_path = None
         if save_path.exists():
-            backup_path = Path(tempfile.mkdtemp(prefix="save-backup-")) / "save"
+            backup_root = Path(tempfile.mkdtemp(prefix="save-backup-", dir=save_path.parent))
+            backup_path = backup_root / "save"
             shutil.move(str(save_path), str(backup_path))
 
         try:
@@ -5246,6 +5262,8 @@ class GameTest(unittest.TestCase):
                 if save_path.exists():
                     shutil.rmtree(save_path)
                 shutil.move(str(backup_path), str(save_path))
+            if backup_root is not None and backup_root.exists():
+                shutil.rmtree(backup_root)
 
         return True, json.dumps({"save": []}, sort_keys=True)
 
@@ -7127,11 +7145,16 @@ class GameTest(unittest.TestCase):
         if not python_files:
             return True, json.dumps({"checked_files": [], "skipped": "no changed Python files"}, sort_keys=True)
 
-        if shutil.which("black") is None:
-            return False, json.dumps({"error": "black executable is required to enforce formatting policy"})
+        black_executable = shutil.which("black")
+        black_command = [black_executable] if black_executable else [sys.executable, "-m", "black"]
 
-        return_code, output, errors = run_command(["black", "--check", "-l", "120", *python_files])
-        log = {"command": "black --check -l 120", "stdout": output, "stderr": errors, "checked_files": python_files}
+        return_code, output, errors = run_command([*black_command, "--check", "-l", "120", *python_files])
+        log = {
+            "command": " ".join([*black_command, "--check", "-l", "120"]),
+            "stdout": output,
+            "stderr": errors,
+            "checked_files": python_files,
+        }
         return return_code == 0, json.dumps(log, indent=2, sort_keys=True)
 
     @game_test
@@ -8248,6 +8271,13 @@ class PlayBootstrapTest(unittest.TestCase):
 
 
 class McpServerTest(unittest.TestCase):
+    MCP_WALKTHROUGHS = {
+        "nouraajd": "_mcp_walkthrough_nouraajd",
+        "ritual": "_mcp_walkthrough_ritual",
+        "siege": "_mcp_walkthrough_siege",
+        "test": "_mcp_walkthrough_test",
+    }
+
     def make_stub_server(self):
         server = mcp.EngineMcpServer(repo_root=REPO_ROOT, build_dir=build_dir)
         server.exports["echo"] = mcp.ExportedCallable(
@@ -8616,6 +8646,349 @@ class McpServerTest(unittest.TestCase):
         finally:
             self._shutdown_process(proc)
 
+    def test_stdio_map_walkthroughs_cover_all_maps(self):
+        discovered_maps = discover_maps()
+        self.assertEqual(set(discovered_maps), set(self.MCP_WALKTHROUGHS))
+
+        results = {}
+        failed = {}
+        for map_name in discovered_maps:
+            success, log = self._run_mcp_walkthrough(map_name)
+            results[map_name] = log
+            if not success:
+                failed[map_name] = log
+
+        summary = {
+            "discovered_maps": discovered_maps,
+            "walkthroughs": self.MCP_WALKTHROUGHS,
+            "failed": failed,
+            "results": results,
+        }
+        TEST_OUTPUT_DIR.mkdir(exist_ok=True)
+        (TEST_OUTPUT_DIR / "mcp_walkthroughs.json").write_text(json.dumps(summary, indent=2, sort_keys=True))
+        self.assertEqual({}, failed, json.dumps(summary, sort_keys=True))
+
+    def _run_mcp_walkthrough(self, map_name):
+        proc = None
+        success = False
+        log = {}
+        try:
+            proc = self._start_stdio_mcp_process()
+            self._initialize_stdio_mcp(proc)
+            session = {"proc": proc, "next_request_id": 3}
+            log = getattr(self, self.MCP_WALKTHROUGHS[map_name])(session)
+            success = True
+        except Exception as exc:
+            log = {
+                "map": map_name,
+                "error": str(exc),
+                "exception_type": type(exc).__name__,
+                "traceback": traceback.format_exc(),
+            }
+        finally:
+            if proc is not None:
+                try:
+                    self._shutdown_process(proc)
+                except Exception as exc:
+                    success = False
+                    log.setdefault("map", map_name)
+                    log["shutdown_error"] = str(exc)
+                    log["shutdown_exception_type"] = type(exc).__name__
+                    log["shutdown_traceback"] = traceback.format_exc()
+            self._write_mcp_walkthrough_log(map_name, log)
+        return success, log
+
+    def _start_stdio_mcp_process(self):
+        script = REPO_ROOT / "mcp.py"
+        self.assertTrue(script.exists(), "MCP entry point is missing")
+        command = [
+            sys.executable,
+            str(script),
+            "--stdio",
+            "--repo-root",
+            str(REPO_ROOT),
+            "--build-dir",
+            str(build_dir),
+            "--native-log-sink",
+            "disabled",
+        ]
+        if build_config:
+            command.extend(["--build-config", build_config])
+        proc = subprocess.Popen(
+            command,
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            bufsize=0,
+            cwd=str(REPO_ROOT),
+        )
+        proc._mcp_stderr_chunks = []
+
+        def drain_stderr():
+            if proc.stderr is None:
+                return
+            for chunk in iter(lambda: proc.stderr.read(4096), b""):
+                proc._mcp_stderr_chunks.append(chunk)
+
+        proc._mcp_stderr_thread = threading.Thread(target=drain_stderr, daemon=True)
+        proc._mcp_stderr_thread.start()
+        return proc
+
+    def _initialize_stdio_mcp(self, proc):
+        self._send_rpc(
+            proc,
+            {
+                "jsonrpc": "2.0",
+                "id": 1,
+                "method": "initialize",
+                "params": {
+                    "protocolVersion": MCP_PROTOCOL_VERSION,
+                    "capabilities": {},
+                    "clientInfo": {"name": "mcp-walkthrough-test", "version": "1.0"},
+                },
+            },
+        )
+        initialize_response = self._read_rpc(proc)
+        self.assertNotIn("error", initialize_response)
+        self.assertEqual(initialize_response.get("id"), 1)
+        self._send_rpc(proc, {"jsonrpc": "2.0", "method": "notifications/initialized", "params": {}})
+        self._send_rpc(
+            proc,
+            {
+                "jsonrpc": "2.0",
+                "id": 2,
+                "method": "logging/setLevel",
+                "params": {"level": "critical"},
+            },
+        )
+        log_level_response = self._read_rpc(proc)
+        self.assertNotIn("error", log_level_response)
+        self.assertEqual(log_level_response.get("id"), 2)
+
+    def _write_mcp_walkthrough_log(self, map_name, log):
+        TEST_OUTPUT_DIR.mkdir(exist_ok=True)
+        path = TEST_OUTPUT_DIR / f"mcp_walkthrough_{map_name}.json"
+        path.write_text(json.dumps(log, indent=2, sort_keys=True))
+
+    def _mcp_tool(self, session, name, arguments, timeout=MCP_STDIO_TOOL_TIMEOUT_SECONDS):
+        request_id = session["next_request_id"]
+        session["next_request_id"] += 1
+        return self._call_tool(session["proc"], request_id, name, arguments, timeout=timeout)
+
+    def _mcp_engine_call(self, session, name, args=None, kwargs=None, timeout=MCP_STDIO_TOOL_TIMEOUT_SECONDS):
+        arguments = {"name": name}
+        if args is not None:
+            arguments["args"] = args
+        if kwargs is not None:
+            arguments["kwargs"] = kwargs
+        return self._mcp_tool(session, "engine_call", arguments, timeout=timeout)["result"]
+
+    def _mcp_handle_call(self, session, handle, method, args=None, kwargs=None, timeout=MCP_STDIO_TOOL_TIMEOUT_SECONDS):
+        handle_id = handle["__handle__"] if isinstance(handle, dict) else handle
+        arguments = {"handle": handle_id, "method": method}
+        if args is not None:
+            arguments["args"] = args
+        if kwargs is not None:
+            arguments["kwargs"] = kwargs
+        return self._mcp_tool(session, "engine_handle_call", arguments, timeout=timeout)["result"]
+
+    def _mcp_load_game_map(self, session, map_name):
+        game_handle = self._mcp_engine_call(session, "CGameLoader.loadGame")
+        self._mcp_engine_call(session, "CGameLoader.startGame", [game_handle, map_name])
+        map_handle = self._mcp_handle_call(session, game_handle, "getMap")
+        return game_handle, map_handle
+
+    def _mcp_load_game_map_with_player(self, session, map_name, player_name=DEFAULT_PLAYER):
+        game_handle = self._mcp_engine_call(session, "CGameLoader.loadGame")
+        self._mcp_engine_call(session, "CGameLoader.startGameWithPlayer", [game_handle, map_name, player_name])
+        map_handle = self._mcp_handle_call(session, game_handle, "getMap")
+        player_handle = self._mcp_handle_call(session, map_handle, "getPlayer")
+        return game_handle, map_handle, player_handle
+
+    def _mcp_get_object_by_name(self, session, map_handle, object_name):
+        obj = self._mcp_handle_call(session, map_handle, "getObjectByName", [object_name])
+        self.assertIsInstance(obj, dict, f"Expected object handle for {object_name}.")
+        self.assertIn("__handle__", obj, f"Could not find runtime object {object_name}.")
+        return obj
+
+    def _mcp_serialized_map(self, session, map_handle):
+        return json.loads(
+            self._mcp_engine_call(session, "jsonify", [map_handle], timeout=MCP_STDIO_MAP_JSON_TIMEOUT_SECONDS)
+        )
+
+    def _mcp_advance_map(self, session, map_handle, turns):
+        for _ in range(turns):
+            self._mcp_handle_call(session, map_handle, "move")
+        return self._mcp_handle_call(session, map_handle, "getTurn")
+
+    def _serialized_objects(self, map_data):
+        return map_data.get("properties", {}).get("objects") or []
+
+    def _serialized_object_by_name(self, map_data, object_name):
+        for obj in self._serialized_objects(map_data):
+            if obj.get("properties", {}).get("name") == object_name:
+                return obj
+        raise AssertionError(f"Could not find serialized object {object_name}.")
+
+    def _serialized_player(self, map_data):
+        for obj in self._serialized_objects(map_data):
+            properties = obj.get("properties", {})
+            if obj.get("class") == "CPlayer" or properties.get("name") == "player":
+                return obj
+        raise AssertionError("Could not find serialized player object.")
+
+    def _serialized_coords(self, obj):
+        properties = obj.get("properties", {})
+        return [properties.get("posx"), properties.get("posy"), properties.get("posz")]
+
+    def _serialized_inventory_has(self, player_data, item_name):
+        items = player_data.get("properties", {}).get("items") or []
+        if isinstance(items, dict):
+            items = items.values()
+        for item in items:
+            properties = item.get("properties", {}) if isinstance(item, dict) else {}
+            if properties.get("name") == item_name or properties.get("typeId") == item_name:
+                return True
+        return False
+
+    def _serialized_quest_ids(self, player_data):
+        quest_ids = []
+        for key in ("quests", "completedQuests"):
+            for quest in player_data.get("properties", {}).get(key) or []:
+                properties = quest.get("properties", {}) if isinstance(quest, dict) else {}
+                quest_id = properties.get("typeId") or properties.get("name")
+                if quest_id:
+                    quest_ids.append(quest_id)
+        return sorted(quest_ids)
+
+    def _mcp_walkthrough_test(self, session):
+        _, map_handle, player_handle = self._mcp_load_game_map_with_player(session, "test")
+        teleporter_1_def = find_map_object_definition("test", "teleporter1")
+        teleporter_2_def = find_map_object_definition("test", "teleporter2")
+        ground_hole_def = find_map_object_definition("test", "groundHole")
+
+        teleporter = self._mcp_get_object_by_name(session, map_handle, "teleporter1")
+        teleporter_coords = self._mcp_handle_call(session, teleporter, "getCoords")
+        self._mcp_handle_call(session, player_handle, "setCoords", [teleporter_coords])
+        after_teleport_map = self._mcp_serialized_map(session, map_handle)
+        after_teleport = self._serialized_coords(self._serialized_player(after_teleport_map))
+
+        ground_hole = self._mcp_get_object_by_name(session, map_handle, "groundHole")
+        ground_hole_coords = self._mcp_handle_call(session, ground_hole, "getCoords")
+        self._mcp_handle_call(session, player_handle, "setCoords", [ground_hole_coords])
+        after_ground_hole_map = self._mcp_serialized_map(session, map_handle)
+        after_ground_hole = self._serialized_coords(self._serialized_player(after_ground_hole_map))
+
+        self.assertEqual([teleporter_2_def["x"] // 32, teleporter_2_def["y"] // 32, 0], after_teleport)
+        self.assertEqual([ground_hole_def["x"] // 32, ground_hole_def["y"] // 32, -1], after_ground_hole)
+        return {
+            "map": "test",
+            "teleporter_from": [teleporter_1_def["x"] // 32, teleporter_1_def["y"] // 32, 0],
+            "teleporter_to": after_teleport,
+            "ground_hole_exit": after_ground_hole,
+        }
+
+    def _mcp_walkthrough_nouraajd(self, session):
+        _, map_handle, _ = self._mcp_load_game_map_with_player(session, "nouraajd")
+        for name in ("cave1", "catacombs", "cave2"):
+            find_map_object_definition("nouraajd", name)
+
+        self._mcp_handle_call(session, map_handle, "removeObjectByName", ["cave1"])
+        gooby = self._mcp_get_object_by_name(session, map_handle, "gooby1")
+        gooby_name = self._mcp_handle_call(session, gooby, "getName")
+        self._mcp_handle_call(session, map_handle, "removeObjectByName", [gooby_name])
+        self._mcp_handle_call(session, map_handle, "removeObjectByName", ["catacombs"])
+        self._mcp_handle_call(session, map_handle, "removeObjectByName", ["cave2"])
+
+        flags = {
+            "completed_rolf": self._mcp_handle_call(session, map_handle, "getBoolProperty", ["completed_rolf"]),
+            "completed_gooby": self._mcp_handle_call(session, map_handle, "getBoolProperty", ["completed_gooby"]),
+            "octobogz_slain": self._mcp_handle_call(session, map_handle, "getBoolProperty", ["OCTOBOGZ_SLAIN"]),
+        }
+        map_data = self._mcp_serialized_map(session, map_handle)
+        player_data = self._serialized_player(map_data)
+        has_skull = self._serialized_inventory_has(player_data, "skullOfRolf")
+        has_relic = self._serialized_inventory_has(player_data, "holyRelic")
+
+        self.assertTrue(flags["completed_rolf"])
+        self.assertTrue(flags["completed_gooby"])
+        self.assertTrue(flags["octobogz_slain"])
+        self.assertTrue(has_skull)
+        self.assertTrue(has_relic)
+        return {
+            "map": "nouraajd",
+            **flags,
+            "has_skull_of_rolf": has_skull,
+            "has_holy_relic": has_relic,
+            "quests": self._serialized_quest_ids(player_data),
+        }
+
+    def _mcp_walkthrough_ritual(self, session):
+        _, map_handle = self._mcp_load_game_map(session, "ritual")
+        for name in ("anchorNorth", "anchorCrypt", "anchorSanctum"):
+            find_map_object_definition("ritual", name)
+
+        self._mcp_handle_call(session, map_handle, "removeObjectByName", ["anchorNorth"])
+        turn_after_countdown = self._mcp_advance_map(session, map_handle, 5)
+        self._mcp_handle_call(session, map_handle, "removeObjectByName", ["anchorCrypt"])
+        self._mcp_handle_call(session, map_handle, "removeObjectByName", ["anchorSanctum"])
+        self._mcp_get_object_by_name(session, map_handle, "ritualLeader")
+        self._mcp_advance_map(session, map_handle, 70)
+
+        flags = {
+            "ritual_started": self._mcp_handle_call(session, map_handle, "getBoolProperty", ["ritual_started"]),
+            "anchors_destroyed": self._mcp_handle_call(session, map_handle, "getBoolProperty", ["anchors_destroyed"]),
+            "leader_spawned": self._mcp_handle_call(session, map_handle, "getBoolProperty", ["leader_spawned"]),
+            "captive_lost": self._mcp_handle_call(session, map_handle, "getBoolProperty", ["captive_lost"]),
+            "bad_ending": self._mcp_handle_call(session, map_handle, "getBoolProperty", ["bad_ending"]),
+            "ritual_finished": self._mcp_handle_call(session, map_handle, "getBoolProperty", ["ritual_finished"]),
+        }
+        for value in flags.values():
+            self.assertTrue(value)
+        return {
+            "map": "ritual",
+            **flags,
+            "anchors_destroyed_count": self._mcp_handle_call(
+                session, map_handle, "getNumericProperty", ["anchors_destroyed_count"]
+            ),
+            "countdown_after_turns": self._mcp_handle_call(
+                session, map_handle, "getNumericProperty", ["ritual_countdown"]
+            ),
+            "turn_after_countdown": turn_after_countdown,
+            "note": "MCP walkthrough covers the deterministic no-player ritual failure path.",
+        }
+
+    def _mcp_walkthrough_siege(self, session):
+        _, map_handle, player_handle = self._mcp_load_game_map_with_player(session, "siege")
+        spawn_point = self._mcp_get_object_by_name(session, map_handle, "spawnPoint1")
+        spawn_coords = self._mcp_handle_call(session, spawn_point, "getCoords")
+        self._mcp_handle_call(session, spawn_point, "setBoolProperty", ["enabled", True])
+        self._mcp_handle_call(session, spawn_point, "setStringProperty", ["animation", "images/misc/open_door"])
+        self._mcp_handle_call(session, map_handle, "replaceTile", ["SwampTile", spawn_coords])
+        spawned_name = self._mcp_handle_call(session, map_handle, "addObjectByName", ["siegePritz", spawn_coords])
+
+        map_data = self._mcp_serialized_map(session, map_handle)
+        spawn_data = self._serialized_object_by_name(map_data, "spawnPoint1")
+        siege_units = sorted(
+            obj.get("properties", {}).get("name")
+            for obj in self._serialized_objects(map_data)
+            if obj.get("properties", {}).get("affiliation") == "siege"
+        )
+        wand_count = self._mcp_handle_call(session, player_handle, "countItems", ["magicWand"])
+        player_data = self._serialized_player(map_data)
+
+        self.assertTrue(spawn_data.get("properties", {}).get("enabled"))
+        self.assertEqual("siegePritz", spawned_name)
+        self.assertTrue(siege_units)
+        self.assertGreaterEqual(wand_count, 1)
+        return {
+            "map": "siege",
+            "enabled_gates": ["spawnPoint1"],
+            "spawned_enemies": siege_units,
+            "wands": wand_count,
+            "quests": self._serialized_quest_ids(player_data),
+        }
+
     def _send_rpc(self, proc, payload):
         if proc.stdin is None:
             self.fail("Process stdin not available")
@@ -8623,7 +8996,7 @@ class McpServerTest(unittest.TestCase):
         proc.stdin.write(line.encode("utf-8"))
         proc.stdin.flush()
 
-    def _call_tool(self, proc, request_id: int, name: str, arguments: dict):
+    def _call_tool(self, proc, request_id: int, name: str, arguments: dict, timeout=MCP_STDIO_TOOL_TIMEOUT_SECONDS):
         self._send_rpc(
             proc,
             {
@@ -8633,7 +9006,7 @@ class McpServerTest(unittest.TestCase):
                 "params": {"name": name, "arguments": arguments},
             },
         )
-        response = self._read_rpc(proc)
+        response = self._read_rpc(proc, timeout=timeout)
         self.assertEqual(response.get("id"), request_id)
         result = response.get("result", {})
         self.assertFalse(result.get("isError"), result)
@@ -8688,7 +9061,13 @@ class McpServerTest(unittest.TestCase):
         except subprocess.TimeoutExpired:
             proc.kill()
             proc.wait()
-        stderr_output = proc.stderr.read().decode("utf-8", errors="ignore") if proc.stderr else ""
+        stderr_chunks = getattr(proc, "_mcp_stderr_chunks", None)
+        stderr_thread = getattr(proc, "_mcp_stderr_thread", None)
+        if stderr_thread is not None:
+            stderr_thread.join(timeout=1.0)
+            stderr_output = b"".join(stderr_chunks or []).decode("utf-8", errors="ignore")
+        else:
+            stderr_output = proc.stderr.read().decode("utf-8", errors="ignore") if proc.stderr else ""
         if proc.stdout:
             proc.stdout.close()
         if proc.stderr:
