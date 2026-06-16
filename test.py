@@ -8138,6 +8138,9 @@ class McpServerTest(unittest.TestCase):
         def top_level():
             return "top-level"
 
+        def set_logger_sink(sink_name, path=None):
+            return sink_name, path
+
         class Dialog:
             def invoke(self, action):
                 return action
@@ -8154,6 +8157,7 @@ class McpServerTest(unittest.TestCase):
             append = list.append
 
         module.top_level = top_level
+        module.set_logger_sink = set_logger_sink
         module.Dialog = Dialog
         module.NativeLike = NativeLike
 
@@ -8165,6 +8169,7 @@ class McpServerTest(unittest.TestCase):
         self.assertIn("Dialog.class_invoke", server.exports)
         self.assertIn("Dialog.static_invoke", server.exports)
         self.assertNotIn("NativeLike.append", server.exports)
+        self.assertNotIn("set_logger_sink", server.exports)
         self.assertEqual(server.exports["Dialog.invoke"].source, "game.Dialog")
 
     def test_export_module_includes_pybind_class_methods(self):
