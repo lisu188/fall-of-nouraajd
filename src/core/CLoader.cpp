@@ -487,16 +487,20 @@ void CMapLoader::handleTileLayer(const std::shared_ptr<CMap> &map, const std::ve
     const auto game = map->getGame();
     int level = vstd::to_int(layerProperties["level"].get<std::string>()).first;
 
-    int yLayer = layer["width"].get<int>();
-    int xLayer = layer["height"].get<int>();
+    int width = layer["width"].get<int>();
+    int height = layer["height"].get<int>();
 
-    for (int y = 0; y < yLayer; ++y) {
-        for (int x = 0; x < xLayer; ++x) {
-            int id = layerData[x + y * xLayer].get<int>();
+    for (int y = 0; y < height; ++y) {
+        for (int x = 0; x < width; ++x) {
+            int id = layerData[x + y * width].get<int>();
             if (id == 0) {
                 continue;
             }
             id--;
+            if (id < 0 || id >= static_cast<int>(tileTypes.size()) || tileTypes[id].empty()) {
+                vstd::logger::warning("Skipping invalid tile id", id + 1, "at", x, y, "level", level);
+                continue;
+            }
             map->addTile(game->createObject<CTile>(tileTypes[id]), x, y, level);
         }
     }
