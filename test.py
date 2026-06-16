@@ -2025,6 +2025,30 @@ class GameTest(unittest.TestCase):
             save_path.unlink(missing_ok=True)
 
     @game_test
+    def test_python_plugin_loader_rejects_non_resource_paths(self):
+        game = load_game_module()
+        g = game.CGameLoader.loadGame()
+
+        with tempfile.NamedTemporaryFile("w", suffix=".py", delete=False) as tmp:
+            tmp.write("def load(context, game):\n    pass\n")
+            absolute_path = tmp.name
+
+        try:
+            self.assertFalse(game.CPluginLoader.loadPlugin(g, absolute_path))
+            self.assertFalse(game.CPluginLoader.loadPlugin(g, "../res/plugins/effect.py"))
+            self.assertFalse(game.CPluginLoader.loadPlugin(g, "maps/nouraajd/not_script.py"))
+            self.assertTrue(game.CPluginLoader.loadPlugin(g, "plugins/effect.py"))
+
+            report = {
+                "absolute_path_rejected": absolute_path,
+                "relative_parent_rejected": "../res/plugins/effect.py",
+                "non_script_map_rejected": "maps/nouraajd/not_script.py",
+            }
+            return True, json.dumps(report, sort_keys=True)
+        finally:
+            os.unlink(absolute_path)
+
+    @game_test
     def test_crafting_runtime_applies_recipe(self):
         import crafting
 
