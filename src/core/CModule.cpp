@@ -482,6 +482,7 @@ void init_game_module(py::module_ &m) {
 
     bool (CMap::*canStep)(Coords) = &CMap::canStep;
     int (CMap::*getMovementCost)(Coords) = &CMap::getMovementCost;
+    std::shared_ptr<CTile> (CMap::*getTile)(int, int, int) = &CMap::getTile;
     void (CMap::*addObject)(const std::shared_ptr<CMapObject> &) = &CMap::addObject;
 
     py::class_<CMap, CGameObject, std::shared_ptr<CMap>>(
@@ -502,6 +503,7 @@ void init_game_module(py::module_ &m) {
         .def("canStep", canStep, "Return whether coordinates are walkable.")
         .def("getMovementCost", getMovementCost,
              "Return movement cost at coordinates. One-step turns treat every tile as cost 1.")
+        .def("getTile", getTile, "Return the tile at coordinates, creating the layer default when missing.")
         .def("dumpPaths", &CMap::dumpPaths, "Write pathfinding diagnostics to a file path.")
         .def("getEntryX", &CMap::getEntryX, "Return map entry X coordinate.")
         .def("getEntryY", &CMap::getEntryY, "Return map entry Y coordinate.")
@@ -641,7 +643,9 @@ void init_game_module(py::module_ &m) {
 
     auto ctile =
         py::class_<CTile, CWrapper<CTile>, std::shared_ptr<CTile>, CGameObject>(m, "CTile", "Base tile class.");
-    ctile.def(py::init_alias<>()).def("onStep", &CTile::onStep, "Handle a creature stepping on this tile.");
+    ctile.def(py::init_alias<>())
+        .def("onStep", &CTile::onStep, "Handle a creature stepping on this tile.")
+        .def("getTileType", &CTile::getTileType, "Return this tile's terrain type.");
     m.attr("CTileBase") = ctile;
 
     py::class_<CItem, CMapObject, std::shared_ptr<CItem>>(m, "CItem", "Base inventory/equipment item.");

@@ -1388,18 +1388,6 @@ def validate_tiled_layer(
                 )
             )
 
-        if width is not None and height is not None and width != height:
-            issues.append(
-                map_validation_issue(
-                    path,
-                    "loader_assumption",
-                    f"{prefix} is rectangular ({width}x{height}), but the current handleTileLayer() implementation swaps width and height and is only safe for square layers.",
-                    field="width",
-                    layer_name=layer_name,
-                    layer_index=layer_index,
-                )
-            )
-
         for cell_index, gid in enumerate(data):
             if not is_integral_json_number(gid) or int(gid) < 0:
                 issues.append(
@@ -1892,6 +1880,70 @@ class GameTest(unittest.TestCase):
         self.assertIsNone(g.createObject("DefinitelyMissingType"))
         self.assertIsNone(g.getMap().getObjectByName("DefinitelyMissingObject"))
         g.getMap().removeObjectByName("DefinitelyMissingObject")
+        return True, ""
+
+    @game_test
+    def test_non_square_tmx_tile_layer_preserves_row_major_tile_positions(self):
+        game = load_game_module()
+        map_name = "unit_non_square_tmx"
+        map_dir = Path.cwd() / "maps" / map_name
+        map_dir.mkdir(parents=True, exist_ok=True)
+        (map_dir / "config.json").write_text("{}")
+        (map_dir / "script.py").write_text("")
+        (map_dir / "map.json").write_text(
+            json.dumps(
+                {
+                    "type": "map",
+                    "orientation": "orthogonal",
+                    "width": 3,
+                    "height": 2,
+                    "tilewidth": 32,
+                    "tileheight": 32,
+                    "properties": {"x": "0", "y": "0", "z": "0"},
+                    "tilesets": [
+                        {
+                            "firstgid": 1,
+                            "tileproperties": {
+                                "0": {"type": "GrassTile"},
+                                "1": {"type": "WaterTile"},
+                                "2": {"type": "MountainTile"},
+                            },
+                        }
+                    ],
+                    "layers": [
+                        {
+                            "type": "tilelayer",
+                            "name": "ground",
+                            "width": 3,
+                            "height": 2,
+                            "properties": {
+                                "level": "0",
+                                "default": "GrassTile",
+                                "outOfBounds": "WaterTile",
+                                "xBound": "3",
+                                "yBound": "2",
+                            },
+                            "data": [1, 2, 3, 3, 2, 99],
+                        }
+                    ],
+                }
+            )
+        )
+
+        g = game.CGameLoader.loadGame()
+        game.CGameLoader.startGame(g, map_name)
+        game_map = g.getMap()
+
+        expected_tile_types = {
+            (0, 0): "grass",
+            (1, 0): "water",
+            (2, 0): "mountain",
+            (0, 1): "mountain",
+            (1, 1): "water",
+            (2, 1): "grass",
+        }
+        for (x_pos, y_pos), tile_type in expected_tile_types.items():
+            self.assertEqual(tile_type, game_map.getTile(x_pos, y_pos, 0).getTileType())
         return True, ""
 
     @game_test
