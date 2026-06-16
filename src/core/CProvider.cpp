@@ -141,7 +141,20 @@ std::vector<std::string> CResourcesProvider::getFiles(const std::string &type) {
         vstd::logger::fatal("Unknown resource type:", type);
     }
 
-    std::filesystem::directory_iterator dir(folderName), end;
+    const auto resolvedFolderName = getPath(folderName);
+    std::error_code errorCode;
+    const bool directoryExists =
+        !resolvedFolderName.empty() && std::filesystem::is_directory(resolvedFolderName, errorCode);
+    if (!directoryExists) {
+        if (type == CResType::SAVE) {
+            vstd::logger::debug("Optional resource directory is missing:", folderName);
+        } else {
+            vstd::logger::warning("Resource directory is missing:", folderName);
+        }
+        return retValue;
+    }
+
+    std::filesystem::directory_iterator dir(resolvedFolderName), end;
     while (dir != end) {
         if (type == CResType::MAP || type == CResType::SAVE) {
             auto pt = dir->path().filename().stem().string();
