@@ -120,8 +120,22 @@ class CTypes {
     }
 
     template <fn::MetaRegisteredGameObject T> static void register_type() {
-        register_serializer<T>();
         register_builder<T>();
+        register_type_metadata<T>();
+    }
+
+    template <fn::MetaRegisteredGameObject T, fn::GameObjectDerived U, fn::GameObjectDerived... Args>
+    static void register_type_metadata() {
+        static_assert(std::derived_from<T, U> && !std::same_as<T, U>, "invalid base class");
+        register_type_metadata<T>();
+        register_any_cast<T, U>();
+        register_any_cast<U, T>();
+        register_cast<U, T>();
+        register_type_metadata<T, Args...>();
+    }
+
+    template <fn::MetaRegisteredGameObject T> static void register_type_metadata() {
+        register_serializer<T>();
         register_consumer<T>();
         register_supplier<T>();
         register_predicate<T>();

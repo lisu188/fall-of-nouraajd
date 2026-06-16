@@ -85,6 +85,7 @@ except Exception:
     pass
 
 MCP_PROTOCOL_VERSION = "2025-11-25"
+MCP_STDIO_SHUTDOWN_TIMEOUT_SECONDS = 30
 
 
 class ProgressTextTestResult(unittest.TextTestResult):
@@ -208,6 +209,11 @@ SDL_MOUSEBUTTONUP = 0x402
 SDL_PRESSED = 1
 SDL_RELEASED = 0
 SDL_SCANCODE_MASK = 1 << 30
+SDLK_BACKSPACE = 8
+SDLK_TAB = 9
+SDLK_RETURN = 13
+SDLK_DOWN = 1073741905
+SDLK_UP = 1073741906
 SDL_BUTTON_LEFT = 1
 SDL_BUTTON_RIGHT = 3
 SDL_PIXELFORMAT_RGBA32 = 376840196
@@ -1782,6 +1788,18 @@ class GameTest(unittest.TestCase):
             obj.unsupported_dynamic_value = []
 
         try:
+            with tempfile.TemporaryDirectory() as log_dir:
+                try:
+                    log_path = Path(log_dir) / "native.log"
+                    game.set_logger_sink("stdout")
+                    game.logger("stdout logger coverage")
+                    game.set_logger_sink("stderr")
+                    game.logger("stderr logger coverage")
+                    game.set_logger_sink("file", str(log_path))
+                    game.logger("file logger coverage")
+                finally:
+                    game.set_logger_sink("disabled", None)
+
             with self.assertRaisesRegex(ValueError, "Unknown logger sink"):
                 game.set_logger_sink("unit-test-invalid-sink", None)
 
@@ -1874,6 +1892,137 @@ class GameTest(unittest.TestCase):
             "marker": marker.getStringProperty("label"),
         }
         return True, json.dumps(report, sort_keys=True)
+
+    @game_test
+    def test_dynamic_domain_plugins_register_gameplay_classes(self):
+        game = load_game_module()
+
+        g = game.CGameLoader.loadGame()
+
+        class_names = [
+            "CEffect",
+            "CInteraction",
+            "CItem",
+            "CWeapon",
+            "CSmallWeapon",
+            "CArmor",
+            "CPotion",
+            "CScroll",
+            "CTile",
+            "CMapObject",
+            "CBuilding",
+            "CEvent",
+            "CMarket",
+            "CDialog",
+            "CDialogOption",
+            "CDialogState",
+            "CTrigger",
+            "CQuest",
+            "CController",
+            "CTargetController",
+            "CRandomController",
+            "CNpcRandomController",
+            "CGroundController",
+            "CRangeController",
+            "CPlayerController",
+            "CFightController",
+            "CPlayerFightController",
+            "CMonsterFightController",
+            "CCreature",
+            "CPlayer",
+        ]
+        for class_name in class_names:
+            with self.subTest(class_name=class_name):
+                obj = g.createObject(class_name)
+                self.assertIsNotNone(obj)
+                self.assertEqual(class_name, obj.getType())
+
+        item_types = set(g.getObjectHandler().getAllSubTypes("CItem"))
+        map_object_types = set(g.getObjectHandler().getAllSubTypes("CMapObject"))
+        player_types = set(g.getObjectHandler().getAllSubTypes("CPlayer"))
+        tile_types = set(g.getObjectHandler().getAllSubTypes("CTile"))
+
+        self.assertIn("BladeOfDarkDreams", item_types)
+        self.assertIn("BladeOfDarkDreams", map_object_types)
+        self.assertIn("Assasin", player_types)
+        self.assertIn("BeachTile", tile_types)
+
+        report = {
+            "classes": len(class_names),
+            "items": len(item_types),
+            "players": sorted(player_types),
+        }
+        return True, json.dumps(report, sort_keys=True)
+
+    @game_test
+    def test_dynamic_domain_plugins_serialize_clone_and_load_gameplay_content(self):
+        game = load_game_module()
+        g = game.CGameLoader.loadGame()
+
+        effect = g.createObject("CEffect")
+        effect.setNumericProperty("duration", 3)
+        effect.setStringProperty("roundTripMarker", "effect")
+        effect_clone_json = json.loads(game.jsonify(effect.clone()))
+        self.assertEqual("CEffect", effect_clone_json.get("class"))
+        self.assertEqual(3, effect_clone_json.get("properties", {}).get("duration"))
+        self.assertEqual("effect", effect_clone_json.get("properties", {}).get("roundTripMarker"))
+
+        market = g.createObject("CMarket")
+        market.setNumericProperty("sell", 125)
+        market.add(g.createObject("BladeOfDarkDreams"))
+        market.add(g.createObject("LifePotion"))
+        market_clone_json = json.loads(game.jsonify(market.clone()))
+        market_items = market_clone_json.get("properties", {}).get("items") or []
+        self.assertEqual("CMarket", market_clone_json.get("class"))
+        self.assertEqual(125, market_clone_json.get("properties", {}).get("sell"))
+        self.assertEqual({"BladeOfDarkDreams", "LifePotion"}, {item["properties"]["typeId"] for item in market_items})
+
+        creature = g.createObject("CCreature")
+        creature.addItem(g.createObject("BladeOfDarkDreams"))
+        creature.setController(g.createObject("CTargetController"))
+        creature.setFightController(g.createObject("CFightController"))
+        creature_clone_json = json.loads(game.jsonify(creature.clone()))
+        creature_properties = creature_clone_json.get("properties", {})
+        creature_items = creature_properties.get("items") or []
+        self.assertEqual("CCreature", creature_clone_json.get("class"))
+        self.assertEqual({"BladeOfDarkDreams"}, {item["properties"]["typeId"] for item in creature_items})
+        self.assertEqual("CTargetController", creature_properties.get("controller", {}).get("class"))
+        self.assertEqual("CFightController", creature_properties.get("fightController", {}).get("class"))
+
+        save_name = f"dynamic_domain_plugin_roundtrip_{os.getpid()}_{time.time_ns()}"
+        object_name = "dynamicDomainRoundTripBlade"
+        save_path = Path.cwd() / "save" / f"{save_name}.json"
+        _, game_map, _ = load_game_map_with_player("test")
+        round_trip_item = game_map.getGame().createObject("BladeOfDarkDreams")
+        round_trip_item.name = object_name
+        round_trip_item.setStringProperty("roundTripMarker", save_name)
+        game_map.addObject(round_trip_item)
+        round_trip_item.moveTo(game_map.getEntryX(), game_map.getEntryY(), game_map.getEntryZ())
+
+        try:
+            game.CMapLoader.save(game_map, save_name)
+
+            loaded_game = game.CGameLoader.loadGame()
+            game.CGameLoader.loadSavedGame(loaded_game, save_name)
+            loaded_item = loaded_game.getMap().getObjectByName(object_name)
+
+            self.assertIsNotNone(loaded_item)
+            self.assertEqual("CWeapon", loaded_item.getType())
+            self.assertEqual("BladeOfDarkDreams", loaded_item.getTypeId())
+            self.assertEqual(save_name, loaded_item.getStringProperty("roundTripMarker"))
+
+            report = {
+                "cloned_effect": effect_clone_json.get("class"),
+                "cloned_market_items": sorted(item["properties"]["typeId"] for item in market_items),
+                "cloned_creature_items": sorted(item["properties"]["typeId"] for item in creature_items),
+                "loaded_item": {
+                    "type": loaded_item.getType(),
+                    "typeId": loaded_item.getTypeId(),
+                },
+            }
+            return True, json.dumps(report, sort_keys=True)
+        finally:
+            save_path.unlink(missing_ok=True)
 
     @game_test
     def test_crafting_runtime_applies_recipe(self):
@@ -2900,6 +3049,213 @@ class GameTest(unittest.TestCase):
         )
 
     @game_test
+    def test_dynamic_controller_plugins_drive_map_movement_modes(self):
+        game = load_game_module()
+
+        g = game.CGameLoader.loadGame()
+        game.CGameLoader.startGameWithPlayer(g, "test", "Warrior")
+        game_map = g.getMap()
+        player = game_map.getPlayer()
+
+        player_start = game.Coords(20, 10, 0)
+        player_target = game.Coords(21, 10, 0)
+        ground_start = game.Coords(20, 12, 0)
+        ground_target = ground_start
+        for coords, tile_type in (
+            (player_start, "RoadTile"),
+            (player_target, "RoadTile"),
+            (ground_start, "GroundTile"),
+            (game.Coords(19, 12, 0), "WaterTile"),
+            (game.Coords(20, 11, 0), "WaterTile"),
+            (game.Coords(20, 13, 0), "WaterTile"),
+        ):
+            game_map.replaceTile(tile_type, coords)
+
+        player.moveTo(player_start.x, player_start.y, player_start.z)
+        player_controller = get_player_controller(player)
+        player_controller.setTarget(player, player_target)
+        self.assertFalse(player_controller.isCompleted(player))
+
+        ground_walker = g.createObject("GoblinThief")
+        ground_walker.name = "unitGroundWalker"
+        ground_walker.setHp(ground_walker.getHpMax())
+        ground_walker.setBoolProperty("npc", True)
+        ground_walker.moveTo(ground_start.x, ground_start.y, ground_start.z)
+        ground_controller = g.createObject("CGroundController")
+        ground_controller.setTileType("unitMissingTileType")
+        ground_walker.setController(ground_controller)
+        game_map.addObject(ground_walker)
+
+        temp_item = g.createObject("CItem")
+        temp_item.name = "unitControllerTempItem"
+        game_map.addObject(temp_item)
+        temp_item.moveTo(22, 12, 0)
+        self.assertEqual("CItem", game_map.addObjectByName("CItem", game.Coords(23, 12, 0)))
+        game_map.removeAll(lambda obj: obj.getName() == "unitControllerTempItem")
+        self.assertIsNone(game_map.getObjectByName("unitControllerTempItem"))
+
+        waypoint = g.createObject("CEvent")
+        waypoint.name = "unitControllerWaypoint"
+        waypoint.waypoint = True
+        waypoint.x = player_target.x
+        waypoint.y = player_target.y
+        waypoint.z = player_target.z
+        game_map.addObject(waypoint)
+        waypoint.moveTo(24, 12, 0)
+
+        dump_path = TEST_OUTPUT_DIR / "dynamic_controller_paths.txt"
+        game_map.dumpPaths(str(dump_path))
+        self.assertTrue(dump_path.exists())
+        self.assertGreater(dump_path.stat().st_size, 0)
+
+        game_map.move()
+        player_coords = player.getCoords()
+        ground_coords = ground_walker.getCoords()
+        self.assertEqual(
+            (player_target.x, player_target.y, player_target.z), (player_coords.x, player_coords.y, player_coords.z)
+        )
+        self.assertEqual(
+            (ground_target.x, ground_target.y, ground_target.z), (ground_coords.x, ground_coords.y, ground_coords.z)
+        )
+        self.assertTrue(player_controller.isCompleted(player))
+        self.assertEqual("unitMissingTileType", ground_controller.getTileType())
+
+        return True, json.dumps(
+            {
+                "ground": [ground_coords.x, ground_coords.y, ground_coords.z],
+                "player": [player_coords.x, player_coords.y, player_coords.z],
+                "turn": game_map.getTurn(),
+            },
+            sort_keys=True,
+        )
+
+    @game_test
+    def test_generated_tiled_map_exercises_loader_metadata_and_objects(self):
+        game = load_game_module()
+        map_name = "generated_loader_unit"
+        generated_dir = Path.cwd() / "maps" / map_name
+        generated_dir.mkdir(parents=True, exist_ok=True)
+        (generated_dir / "script.py").write_text("def load(self, context):\n    pass\n")
+        (generated_dir / "map.json").write_text(
+            json.dumps(
+                {
+                    "height": 3,
+                    "width": 3,
+                    "tileheight": 32,
+                    "tilewidth": 32,
+                    "type": "map",
+                    "version": 1,
+                    "properties": {"x": "1", "y": "1", "z": "0"},
+                    "tilesets": [
+                        {
+                            "firstgid": 1,
+                            "tileheight": 32,
+                            "tilewidth": 32,
+                            "tileproperties": {
+                                "-1": {"type": "GroundTile"},
+                                "0": {"type": "GroundTile"},
+                                "1": {"type": "RoadTile"},
+                                "2": {"type": "WaterTile"},
+                            },
+                            "tilepropertytypes": {
+                                "-1": {"type": "string"},
+                                "0": {"type": "string"},
+                                "1": {"type": "string"},
+                                "2": {"type": "string"},
+                            },
+                        }
+                    ],
+                    "layers": [
+                        {
+                            "data": [1, 2, 0, 2, 1, 2, 0, 2, 1],
+                            "height": 3,
+                            "name": "wrapped level",
+                            "properties": {
+                                "default": "GroundTile",
+                                "level": "0",
+                                "outOfBounds": "WaterTile",
+                                "wrapX": "true",
+                                "wrapY": 1,
+                                "xBound": "2",
+                                "yBound": "2",
+                            },
+                            "type": "tilelayer",
+                            "width": 3,
+                        },
+                        {
+                            "data": [1, 0, 0, 1],
+                            "height": 2,
+                            "name": "plain level",
+                            "properties": {
+                                "default": "GroundTile",
+                                "level": "1",
+                                "wrapX": False,
+                                "wrapY": "0",
+                                "xBound": "1",
+                                "yBound": "1",
+                            },
+                            "type": "tilelayer",
+                            "width": 2,
+                        },
+                        {
+                            "draworder": "topdown",
+                            "name": "objects",
+                            "objects": [
+                                {
+                                    "height": 32,
+                                    "name": "generatedEvent",
+                                    "properties": {"enabled": True, "label": "Generated event"},
+                                    "rotation": 0,
+                                    "type": "CEvent",
+                                    "visible": True,
+                                    "width": 32,
+                                    "x": 32,
+                                    "y": 32,
+                                },
+                                {
+                                    "height": 32,
+                                    "name": "missingGeneratedObject",
+                                    "rotation": 0,
+                                    "type": "MissingGeneratedObject",
+                                    "visible": True,
+                                    "width": 32,
+                                    "x": 64,
+                                    "y": 64,
+                                },
+                            ],
+                            "properties": {"level": "0"},
+                            "type": "objectgroup",
+                        },
+                    ],
+                },
+                indent=2,
+            )
+        )
+
+        g = game.CGameLoader.loadGame()
+        game.CGameLoader.startGame(g, map_name)
+        generated_map = g.getMap()
+        generated_event = generated_map.getObjectByName("generatedEvent")
+
+        self.assertEqual((1, 1, 0), (generated_map.getEntryX(), generated_map.getEntryY(), generated_map.getEntryZ()))
+        self.assertEqual(map_name, generated_map.mapName)
+        self.assertIsNotNone(generated_event)
+        self.assertTrue(generated_event.enabled)
+        self.assertEqual("Generated event", generated_event.label)
+        self.assertIsNone(generated_map.getObjectByName("missingGeneratedObject"))
+        self.assertTrue(generated_map.canStep(game.Coords(3, 1, 0)))
+        self.assertFalse(generated_map.canStep(game.Coords(1, 3, 1)))
+
+        return True, json.dumps(
+            {
+                "entry": [generated_map.getEntryX(), generated_map.getEntryY(), generated_map.getEntryZ()],
+                "event": generated_event.getName(),
+                "map": generated_map.mapName,
+            },
+            sort_keys=True,
+        )
+
+    @game_test
     def test_new_player_classes_and_resources(self):
         game = load_game_module()
 
@@ -3746,6 +4102,114 @@ class GameTest(unittest.TestCase):
         return True, json.dumps(report, sort_keys=True)
 
     @game_test
+    def test_python_registered_gameplay_wrappers_survive_native_plugin_split(self):
+        game = load_game_module()
+        g = game.CGameLoader.loadGame()
+        game.CGameLoader.startGame(g, "empty")
+        handler = g.getObjectHandler()
+        calls = []
+
+        class PyBuilding(game.CBuilding):
+            def onEnter(self, event):
+                calls.append(("building_enter", self.getName()))
+
+        class PyEvent(game.CEvent):
+            def onCreate(self, event):
+                calls.append(("event_create", self.getName()))
+
+        class PyInteraction(game.CInteraction):
+            def performAction(self, first, second):
+                calls.append(("interaction_perform", first.getName(), second.getName()))
+
+            def configureEffect(self, effect):
+                calls.append(("interaction_configure", effect.getName()))
+                return True
+
+        class PyEffect(game.CEffect):
+            def onEffect(self):
+                calls.append(("effect_tick", self.getName()))
+
+        class PyTile(game.CTile):
+            def onStep(self, creature):
+                calls.append(("tile_step", creature.getName()))
+
+        class PyPotion(game.CPotion):
+            def onUse(self, event):
+                calls.append(("potion_use", self.getName()))
+
+        class PyScroll(game.CScroll):
+            def onUse(self, event):
+                calls.append(("scroll_use", self.getName()))
+
+            def isDisposable(self):
+                return True
+
+        class PyTrigger(game.CTrigger):
+            def trigger(self, obj, event):
+                calls.append(("trigger", self.getName()))
+
+        class PyQuest(game.CQuest):
+            def isCompleted(self):
+                return True
+
+            def getObjective(self):
+                return "Python registered objective"
+
+        class PyPlugin(game.CPlugin):
+            def load(self, context):
+                calls.append(("plugin_load", context.getType()))
+
+        class PyDialog(game.CDialog):
+            def invokeAction(self, action):
+                calls.append(("dialog_action", action))
+
+            def invokeCondition(self, condition):
+                calls.append(("dialog_condition", condition))
+                return condition == "ready"
+
+        registered_classes = {
+            "PyBuilding": PyBuilding,
+            "PyEvent": PyEvent,
+            "PyInteraction": PyInteraction,
+            "PyEffect": PyEffect,
+            "PyTile": PyTile,
+            "PyPotion": PyPotion,
+            "PyScroll": PyScroll,
+            "PyTrigger": PyTrigger,
+            "PyQuest": PyQuest,
+            "PyPlugin": PyPlugin,
+            "PyDialog": PyDialog,
+        }
+        for name, cls in registered_classes.items():
+            handler.registerType(name, cls)
+
+        created = {name: handler.createObject(g, name) for name in registered_classes}
+        for name, obj in created.items():
+            obj.name = name
+            self.assertEqual(name, obj.getName())
+
+        actor = g.createObject("CCreature")
+        actor.name = "pyActor"
+        effect = created["PyEffect"]
+        game.CBuilding.onEnter(created["PyBuilding"], None)
+        game.CEvent.onCreate(created["PyEvent"], None)
+        game.CInteraction.performAction(created["PyInteraction"], actor, actor)
+        self.assertTrue(game.CInteraction.configureEffect(created["PyInteraction"], effect))
+        game.CEffect.onEffect(effect)
+        game.CTile.onStep(created["PyTile"], actor)
+        game.CPotion.onUse(created["PyPotion"], None)
+        game.CScroll.onUse(created["PyScroll"], None)
+        self.assertTrue(game.CScroll.isDisposable(created["PyScroll"]))
+        game.CTrigger.trigger(created["PyTrigger"], None, None)
+        self.assertTrue(game.CQuest.isCompleted(created["PyQuest"]))
+        self.assertEqual("Python registered objective", game.CQuest.getObjective(created["PyQuest"]))
+        game.CPlugin.load(created["PyPlugin"], g)
+        game.CDialogBase2.invokeAction(created["PyDialog"], "open")
+        self.assertTrue(game.CDialogBase2.invokeCondition(created["PyDialog"], "ready"))
+
+        return True, json.dumps({"calls": calls, "registered": sorted(created)}, sort_keys=True)
+
+    @game_test
     def test_quest_callbacks_cover_base_registered_and_wrapper_paths(self):
         game = load_game_module()
 
@@ -4539,6 +5003,12 @@ class GameTest(unittest.TestCase):
         player.addItem("Sword")
         player.addItem("Sword")
 
+        console = collect_gui_children(gui, "CConsoleGraphicsObject")[0]
+        console.consoleState = "logger('console coverage')"
+        self.assertEqual("logger('console coverage')", console.consoleState)
+        console.consoleState = ""
+        self.assertEqual("", console.consoleState)
+
         static_object = g.createObject("CItem")
         static_object.animation = "images/item"
         static_animation = g.createObject("CStaticAnimation")
@@ -4669,6 +5139,33 @@ class GameTest(unittest.TestCase):
             },
             sort_keys=True,
         )
+
+    @game_test
+    def test_graphics_object_tree_helpers_are_bound(self):
+        game = load_game_module()
+
+        g = game.CGameLoader.loadGame()
+        game.CGameLoader.loadGui(g)
+        gui = g.getGui()
+
+        root = g.createObject("CGameGraphicsObject")
+        branch = g.createObject("CGameGraphicsObject")
+        leaf = g.createObject("CStatsGraphicsObject")
+
+        root.pushChild(branch)
+        branch.addChild(leaf)
+
+        self.assertEqual(["CGameGraphicsObject"], [child.getType() for child in root.getChildren()])
+        self.assertEqual("CGameGraphicsObject", branch.getParent().getType())
+        self.assertEqual("CStatsGraphicsObject", root.findChild("CStatsGraphicsObject").getType())
+        self.assertIsNone(root.findChild("DefinitelyMissingGraphicsObject"))
+        self.assertFalse(root.keyboardEvent(gui, SDL_KEYDOWN, SDLK_TAB))
+        self.assertFalse(root.mouseEvent(gui, SDL_MOUSEBUTTONDOWN, SDL_BUTTON_LEFT, 5, 6))
+
+        root.removeChild(branch)
+        self.assertEqual([], list(root.getChildren()))
+
+        return True, ""
 
     @game_test
     def test_resource_provider_resolves_and_loads_known_files(self):
@@ -6305,6 +6802,80 @@ class GameTest(unittest.TestCase):
         return True, json.dumps(log, sort_keys=True)
 
 
+class ConsoleEventIsolationTest(unittest.TestCase):
+    def test_console_key_history_in_fresh_process(self):
+        if os.environ.get("FON_CONSOLE_EVENT_CHILD") == "1":
+            self.skipTest("console event child process runs only the focused console test.")
+        if os.name != "posix":
+            self.skipTest("console event isolation test is Linux/Unix only.")
+
+        env = os.environ.copy()
+        env.update(
+            {
+                "FON_CONSOLE_EVENT_CHILD": "1",
+                "SDL_VIDEODRIVER": "dummy",
+                "SDL_AUDIODRIVER": "dummy",
+                "SDL_RENDER_DRIVER": "software",
+                "LIBGL_ALWAYS_SOFTWARE": "1",
+            }
+        )
+        completed = subprocess.run(
+            [sys.executable, str(REPO_ROOT / "test.py"), "ConsoleEventProcessTest.test_console_key_history"],
+            cwd=REPO_ROOT,
+            env=env,
+            capture_output=True,
+            text=True,
+            timeout=45,
+        )
+
+        self.assertEqual(
+            0,
+            completed.returncode,
+            f"console event child failed.\nstdout:\n{completed.stdout}\nstderr:\n{completed.stderr}",
+        )
+
+
+class ConsoleEventProcessTest(unittest.TestCase):
+    def setUp(self):
+        if os.environ.get("FON_CONSOLE_EVENT_CHILD") != "1":
+            self.skipTest("Run through ConsoleEventIsolationTest so the event loop is isolated.")
+
+    def test_console_key_history(self):
+        game = load_game_module()
+        drain_sdl_events()
+        g = game.CGameLoader.loadGame()
+        game.CGameLoader.loadGui(g)
+        game.CGameLoader.startGameWithPlayer(g, "test", "Warrior")
+        pump_event_loop(5)
+
+        console = collect_gui_children(g.getGui(), "CConsoleGraphicsObject")[0]
+        command = "logger('console child coverage')"
+
+        push_sdl_key_event(SDLK_TAB, 0)
+        pump_event_loop(2)
+        console.consoleState = command
+        push_sdl_key_event(SDLK_RETURN, 0)
+        pump_event_loop(2)
+        self.assertEqual("", console.consoleState)
+
+        push_sdl_key_event(SDLK_TAB, 0)
+        pump_event_loop(2)
+        push_sdl_key_event(SDLK_UP, 0)
+        pump_event_loop(2)
+        self.assertEqual(command, console.consoleState)
+        push_sdl_key_event(SDLK_DOWN, 0)
+        pump_event_loop(2)
+        self.assertEqual("", console.consoleState)
+
+        console.consoleState = "first"
+        push_sdl_key_event(SDLK_BACKSPACE, 0)
+        pump_event_loop(2)
+        self.assertEqual("firs", console.consoleState)
+        push_sdl_key_event(SDLK_TAB, 0)
+        pump_event_loop(2)
+        self.assertEqual("", console.consoleState)
+
+
 class XvfbGameplayTest(unittest.TestCase):
     def test_keyboard_gameplay_under_xvfb(self):
         if os.environ.get("FON_XVFB_GAMEPLAY_CHILD") == "1":
@@ -7413,7 +7984,8 @@ class McpServerTest(unittest.TestCase):
         if proc.stdin:
             proc.stdin.close()
         try:
-            proc.wait(timeout=5)
+            # Coverage-instrumented native teardown can finish several seconds after stdio closes.
+            proc.wait(timeout=MCP_STDIO_SHUTDOWN_TIMEOUT_SECONDS)
         except subprocess.TimeoutExpired:
             proc.kill()
             proc.wait()
