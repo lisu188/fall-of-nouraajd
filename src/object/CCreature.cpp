@@ -26,7 +26,12 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 bool visitablePredicate(std::shared_ptr<CMapObject> object) { return vstd::cast<Visitable>(object).operator bool(); };
 
-void CCreature::setActions(std::set<std::shared_ptr<CInteraction>> value) { actions = value; }
+void CCreature::setActions(std::set<std::shared_ptr<CInteraction>> value) {
+    actions.clear();
+    for (const auto &action : value) {
+        addAction(action);
+    }
+}
 
 std::set<std::shared_ptr<CInteraction>> CCreature::getActions() { return actions; }
 
@@ -110,6 +115,10 @@ void CCreature::setEquipped(CItemMap value) {
 
 void CCreature::addItems(std::set<std::shared_ptr<CItem>> items) {
     for (std::shared_ptr<CItem> it : items) {
+        if (!it) {
+            vstd::logger::warning("Skipping null item while adding inventory to", to_string());
+            continue;
+        }
         this->items.insert(it);
         signal("inventoryChanged");
     }
@@ -175,7 +184,8 @@ CInteractionMap CCreature::getLevelling() { return levelling; }
 void CCreature::setLevelling(CInteractionMap value) { levelling = value; }
 
 void CCreature::setItems(std::set<std::shared_ptr<CItem>> value) {
-    items = value; // TODO: rethink inventory changed here
+    items.clear(); // TODO: rethink inventory changed here
+    addItems(value);
 }
 
 std::set<std::shared_ptr<CItem>> CCreature::getItems() { return items; }
@@ -225,6 +235,10 @@ void CCreature::addAction(std::shared_ptr<CInteraction> action) {
 }
 
 void CCreature::addEffect(std::shared_ptr<CEffect> effect) {
+    if (!effect) {
+        vstd::logger::warning("Skipping null effect for", to_string());
+        return;
+    }
     if (vstd::ctn(effects, effect, CGameObject::name_comparator)) {
         vstd::logger::debug(effect->to_string(), "skipping already present effect for", this->to_string());
     } else {
@@ -497,7 +511,12 @@ void CCreature::onLeave(std::shared_ptr<CGameEvent>) {}
 
 void CCreature::onDestroy(std::shared_ptr<CGameEvent>) { effects.clear(); }
 
-void CCreature::setEffects(const std::set<std::shared_ptr<CEffect>> &value) { effects = value; }
+void CCreature::setEffects(const std::set<std::shared_ptr<CEffect>> &value) {
+    effects.clear();
+    for (const auto &effect : value) {
+        addEffect(effect);
+    }
+}
 
 std::shared_ptr<CController> CCreature::getController() {
     return controller ? controller : std::make_shared<CController>();
@@ -569,10 +588,14 @@ std::shared_ptr<Stats> CCreature::getStats() {
         ret->addBonus(getLevelStats());
     }
     for (auto [slot, item] : getEquipped()) {
-        ret->addBonus(item->getBonus());
+        if (item) {
+            ret->addBonus(item->getBonus());
+        }
     }
     for (auto effect : getEffects()) {
-        ret->addBonus(effect->getBonus());
+        if (effect) {
+            ret->addBonus(effect->getBonus());
+        }
     }
     return ret;
 }

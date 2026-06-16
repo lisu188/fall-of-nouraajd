@@ -353,6 +353,10 @@ void CFightHandler::applyEffects(const std::shared_ptr<CCreature> &cr) {
     auto effects = cr->getEffects();
 
     for (const auto &effect : effects) {
+        if (!effect) {
+            vstd::logger::warning("Skipping null effect while expiring effects for", cr->to_string());
+            continue;
+        }
         if (effect->getTimeLeft() == 0) {
             vstd::logger::debug(cr->to_string(), "is now free from", effect->to_string());
             cr->removeEffect(effect);
@@ -361,6 +365,10 @@ void CFightHandler::applyEffects(const std::shared_ptr<CCreature> &cr) {
         }
     }
     for (const auto &effect : effects) {
+        if (!effect) {
+            vstd::logger::warning("Skipping null effect while applying effects for", cr->to_string());
+            continue;
+        }
         vstd::logger::debug(cr->to_string(), "suffers from", effect->to_string());
         effect->apply(cr);
         if (!cr->isAlive()) {
