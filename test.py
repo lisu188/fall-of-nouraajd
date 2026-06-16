@@ -4612,6 +4612,31 @@ class GameTest(unittest.TestCase):
         )
 
     @game_test
+    def test_map_object_properties_and_coordinates_are_available_during_on_create(self):
+        _g, game_map = load_game_map("test")
+        probe = game_map.getObjectByName("initializationProbe")
+
+        self.assertIsNotNone(probe)
+        self.assertEqual("configured-before-create", probe.getStringProperty("observedMarker"))
+        self.assertEqual(3, probe.getNumericProperty("observedX"))
+        self.assertEqual(4, probe.getNumericProperty("observedY"))
+        self.assertEqual(0, probe.getNumericProperty("observedZ"))
+        self.assertEqual({probe.getName()}, {obj.getName() for obj in game_map.getObjectsAtCoords(probe.getCoords())})
+
+        return True, json.dumps(
+            {
+                "coords": [
+                    probe.getNumericProperty("observedX"),
+                    probe.getNumericProperty("observedY"),
+                    probe.getNumericProperty("observedZ"),
+                ],
+                "marker": probe.getStringProperty("observedMarker"),
+                "objects_at_coords": sorted(obj.getName() for obj in game_map.getObjectsAtCoords(probe.getCoords())),
+            },
+            sort_keys=True,
+        )
+
+    @game_test
     def test_python_wrapper_exceptions_are_caught_by_native_bridges(self):
         game = load_game_module()
         g = game.CGameLoader.loadGame()
