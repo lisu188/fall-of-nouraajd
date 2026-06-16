@@ -14,7 +14,6 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 import json
-from pathlib import Path
 
 import game
 from game import randint
@@ -122,15 +121,13 @@ def apply_recipe(game_instance, player, recipe):
 
 class CraftingRuntime:
     def __init__(self):
-        self._data_root = Path(__file__).resolve().parents[1] / "config"
         self._item_labels = self._load_item_labels()
         self._recipes = self._load_recipes()
 
     def _read_json(self, filename):
-        path = self._data_root / filename
         try:
-            return json.loads(path.read_text())
-        except (FileNotFoundError, json.JSONDecodeError):
+            return json.loads(game.CResourcesProvider.getInstance().load("config/" + filename))
+        except Exception:
             return {}
 
     def _load_item_labels(self):
@@ -211,9 +208,7 @@ class CraftingRuntime:
 
     def describe_recipe(self, recipe):
         parts = [
-            f"{req['count']}x {self.get_item_label(req['item_id'])}"
-            for req in recipe["inputs"]
-            if req["count"] > 0
+            f"{req['count']}x {self.get_item_label(req['item_id'])}" for req in recipe["inputs"] if req["count"] > 0
         ]
         if recipe["gold"] > 0:
             parts.append(f"{recipe['gold']}g")

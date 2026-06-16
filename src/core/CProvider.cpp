@@ -28,9 +28,21 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 namespace {
 
+bool isSafeRelativeResourcePath(const std::string &path) {
+    const std::filesystem::path resourcePath(path);
+    if (path.empty() || resourcePath.is_absolute() || resourcePath.has_root_name()) {
+        return false;
+    }
+
+    const auto normalized = resourcePath.lexically_normal().generic_string();
+    return !normalized.empty() && normalized != "." && normalized != ".." && normalized.rfind("../", 0) != 0 &&
+           normalized.find("/../") == std::string::npos;
+}
+
 bool isConfigResourcePath(const std::string &path) {
     const std::filesystem::path resourcePath(path);
-    return !resourcePath.has_parent_path() || resourcePath.parent_path() == std::filesystem::path("config");
+    return isSafeRelativeResourcePath(path) &&
+           (!resourcePath.has_parent_path() || resourcePath.parent_path() == std::filesystem::path("config"));
 }
 
 std::filesystem::path providerModulePathAnchor() { return std::filesystem::path(); }
@@ -171,11 +183,12 @@ std::shared_ptr<json> CResourcesProvider::loadJson(std::string path) {
 }
 
 std::string CResourcesProvider::getPath(std::string path) {
-    const std::filesystem::path requestedPath(std::move(path));
-    if (requestedPath.is_absolute()) {
+    if (!isSafeRelativeResourcePath(path)) {
+        vstd::logger::warning("Rejected unsafe resource path:", path);
         return {};
     }
 
+    const auto requestedPath = std::filesystem::path(path).lexically_normal();
     for (const auto &root : searchPath) {
         if (root.empty()) {
             continue;
