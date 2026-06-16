@@ -20,11 +20,70 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CJsonUtil.h"
 #include "gui/CAnimation.h"
 
+#ifdef _WIN32
+#include <windows.h>
+#else
+#include <dlfcn.h>
+#endif
+
 namespace {
 
 bool isConfigResourcePath(const std::string &path) {
     const std::filesystem::path resourcePath(path);
     return !resourcePath.has_parent_path() || resourcePath.parent_path() == std::filesystem::path("config");
+}
+
+std::filesystem::path providerModulePathAnchor() { return std::filesystem::path(); }
+
+std::filesystem::path getModuleResourceRoot() {
+#ifdef _WIN32
+    HMODULE moduleHandle = nullptr;
+    if (GetModuleHandleExA(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
+                           reinterpret_cast<LPCSTR>(&providerModulePathAnchor), &moduleHandle) == 0) {
+        return {};
+    }
+
+    std::string buffer(MAX_PATH, '\0');
+    DWORD length = 0;
+    while (true) {
+        length = GetModuleFileNameA(moduleHandle, buffer.data(), static_cast<DWORD>(buffer.size()));
+        if (length == 0) {
+            return {};
+        }
+        if (length < buffer.size() - 1) {
+            buffer.resize(length);
+            break;
+        }
+        buffer.resize(buffer.size() * 2, '\0');
+    }
+    return std::filesystem::path(buffer).parent_path();
+#else
+    Dl_info info{};
+    if (dladdr(reinterpret_cast<void *>(&providerModulePathAnchor), &info) == 0 || info.dli_fname == nullptr) {
+        return {};
+    }
+    return std::filesystem::path(info.dli_fname).parent_path();
+#endif
+}
+
+std::list<std::string> buildResourceSearchPath() {
+    std::list<std::string> paths;
+    auto moduleRoot = getModuleResourceRoot();
+    if (!moduleRoot.empty()) {
+        paths.push_back(std::filesystem::weakly_canonical(moduleRoot).string());
+    }
+    return paths;
+}
+
+bool isWithinResourceRoot(const std::filesystem::path &candidate, const std::filesystem::path &root) {
+    auto candidateIt = candidate.begin();
+    auto rootIt = root.begin();
+    for (; rootIt != root.end(); ++rootIt, ++candidateIt) {
+        if (candidateIt == candidate.end() || *candidateIt != *rootIt) {
+            return false;
+        }
+    }
+    return true;
 }
 
 } // namespace
@@ -59,7 +118,7 @@ void CConfigurationProvider::loadConfig(const std::string &path) {
     this->insert(std::make_pair(path, CResourcesProvider::getInstance()->loadJson(path)));
 }
 
-std::list<std::string> CResourcesProvider::searchPath = {""};
+std::list<std::string> CResourcesProvider::searchPath = buildResourceSearchPath();
 
 std::shared_ptr<CResourcesProvider> CResourcesProvider::getInstance() {
     static std::shared_ptr<CResourcesProvider> instance = std::make_shared<CResourcesProvider>();
@@ -112,10 +171,20 @@ std::shared_ptr<json> CResourcesProvider::loadJson(std::string path) {
 }
 
 std::string CResourcesProvider::getPath(std::string path) {
-    for (auto it : searchPath) {
-        auto p = std::filesystem::path(it) / std::filesystem::path(path);
-        if (std::filesystem::exists(p)) {
-            return p.string();
+    const std::filesystem::path requestedPath(std::move(path));
+    if (requestedPath.is_absolute()) {
+        return {};
+    }
+
+    for (const auto &root : searchPath) {
+        if (root.empty()) {
+            continue;
+        }
+
+        auto resourceRoot = std::filesystem::weakly_canonical(root);
+        auto candidate = std::filesystem::weakly_canonical(resourceRoot / requestedPath);
+        if (isWithinResourceRoot(candidate, resourceRoot) && std::filesystem::exists(candidate)) {
+            return candidate.string();
         }
     }
     return {};
@@ -154,13 +223,15 @@ std::vector<std::string> CResourcesProvider::getFiles(const std::string &type) {
         return retValue;
     }
 
-    std::filesystem::directory_iterator dir(resolvedFolderName), end;
+    const auto folderPath = std::filesystem::path(resolvedFolderName);
+    const auto resourceRoot = folderPath.parent_path();
+    std::filesystem::directory_iterator dir(folderPath), end;
     while (dir != end) {
         if (type == CResType::MAP || type == CResType::SAVE) {
             auto pt = dir->path().filename().stem().string();
             retValue.push_back(pt);
         } else {
-            auto pt = dir->path().string();
+            auto pt = std::filesystem::relative(dir->path(), resourceRoot).generic_string();
             if (vstd::ends_with(pt, vstd::join({".", suffix}, ""))) {
                 retValue.push_back(pt);
             }
