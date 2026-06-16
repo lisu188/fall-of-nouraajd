@@ -8068,6 +8068,39 @@ class XvfbGameplayProcessTest(unittest.TestCase):
         self.assertEqual(marker, loaded.getMap().getStringProperty("xvfb_save_marker"))
 
 
+class PlayBootstrapTest(unittest.TestCase):
+    def _load_play_function(self, function_name):
+        module = ast.parse((REPO_ROOT / "play.py").read_text())
+        function_node = next(
+            node for node in module.body if isinstance(node, ast.FunctionDef) and node.name == function_name
+        )
+        isolated_module = ast.Module(body=[function_node], type_ignores=[])
+        ast.fix_missing_locations(isolated_module)
+        namespace = {"os": os, "Path": Path}
+        exec(compile(isolated_module, str(REPO_ROOT / "play.py"), "exec"), namespace)
+        return namespace[function_name]
+
+    def test_ensure_workdir_switches_to_trusted_dir_even_when_cwd_has_config(self):
+        ensure_workdir = self._load_play_function("_ensure_workdir")
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp = Path(tmpdir)
+            attacker_cwd = tmp / "attacker"
+            trusted_dir = tmp / "trusted-build"
+            attacker_cwd.mkdir()
+            trusted_dir.mkdir()
+            (attacker_cwd / "config").mkdir()
+            (attacker_cwd / "plugins").mkdir()
+
+            original_cwd = Path.cwd()
+            try:
+                os.chdir(attacker_cwd)
+                ensure_workdir(trusted_dir)
+                self.assertEqual(trusted_dir, Path.cwd())
+            finally:
+                os.chdir(original_cwd)
+
+
 class McpServerTest(unittest.TestCase):
     def make_stub_server(self):
         server = mcp.EngineMcpServer(repo_root=REPO_ROOT, build_dir=build_dir)

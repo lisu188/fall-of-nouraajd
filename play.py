@@ -40,9 +40,8 @@ def _insert_extension_paths(build_dir: Path) -> None:
         _insert_path(build_dir / config)
 
 
-def _ensure_workdir(build_dir: Path | None) -> None:
-    if build_dir and not (Path.cwd() / "config").exists():
-        os.chdir(build_dir)
+def _ensure_workdir(trusted_dir: Path) -> None:
+    os.chdir(trusted_dir)
 
 
 def _bootstrap() -> None:
@@ -53,7 +52,7 @@ def _bootstrap() -> None:
     if build_dir:
         _insert_path(build_dir)
         _insert_extension_paths(build_dir)
-    _ensure_workdir(build_dir)
+    _ensure_workdir(build_dir or res_dir)
 
 
 _bootstrap()
