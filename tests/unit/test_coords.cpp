@@ -20,6 +20,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CJsonUtil.h"
 #include "core/CPathFinder.h"
 #include "core/CSerialization.h"
+#include "core/CScript.h"
 #include "core/CUtil.h"
 #include "gui/CSdlResources.h"
 #include "handler/CScriptHandler.h"
@@ -648,6 +649,21 @@ void test_vstd_string_helpers() {
     expect_true(vstd::camel("hello world") == "Hello World ", "camel should title-case space-separated words");
 }
 
+void test_script_rejects_executable_expressions() {
+    expect_true(CScript::isSafeAccessorExpression("self.getGui().getGame().getMap().getPlayer()"),
+                "safe accessor validation should accept existing panel refresh target expressions");
+    expect_true(CScript::isSafeAccessorExpression(" self.getParent().getMarket() "),
+                "safe accessor validation should trim existing accessor expressions");
+    expect_true(!CScript::isSafeAccessorExpression("(__import__('os').system('id > /tmp/pwned'), self)[1]"),
+                "safe accessor validation should reject Python side-effect expressions");
+    expect_true(!CScript::isSafeAccessorExpression("self.getGui().getGame().getMap().getPlayer().__class__"),
+                "safe accessor validation should reject attribute access without a zero-argument call");
+    expect_true(!CScript::isSafeAccessorExpression("self.getGui(__import__('os'))"),
+                "safe accessor validation should reject method arguments");
+    expect_true(!CScript::isSafeAccessorExpression("game.getMap()"),
+                "safe accessor validation should only allow expressions rooted at self");
+}
+
 void test_script_handler_executes_commands_and_wraps_functions() {
     CScriptHandler handler;
 
@@ -879,6 +895,7 @@ int main() {
     test_vstd_queue_collection_and_function_helpers();
     test_vstd_allocation_random_and_value_helpers();
     test_vstd_string_helpers();
+    test_script_rejects_executable_expressions();
     test_script_handler_executes_commands_and_wraps_functions();
     test_random_dungeon_cell_flags_and_validation();
     test_random_dungeon_layout_variants_generate_accessible_maps();
