@@ -4851,6 +4851,28 @@ class GameTest(unittest.TestCase):
         return True, json.dumps(report, sort_keys=True)
 
     @game_test
+    def test_missing_save_resource_directory_lists_empty(self):
+        game = load_game_module()
+        provider = game.CResourcesProvider.getInstance()
+
+        save_path = Path.cwd() / "save"
+        backup_path = None
+        if save_path.exists():
+            backup_path = Path(tempfile.mkdtemp(prefix="save-backup-")) / "save"
+            shutil.move(str(save_path), str(backup_path))
+
+        try:
+            self.assertFalse(save_path.exists())
+            self.assertEqual([], list(provider.getFiles("SAVE")))
+        finally:
+            if backup_path is not None and backup_path.exists():
+                if save_path.exists():
+                    shutil.rmtree(save_path)
+                shutil.move(str(backup_path), str(save_path))
+
+        return True, json.dumps({"save": []}, sort_keys=True)
+
+    @game_test
     def test_headless_handlers_and_resources(self):
         game = load_game_module()
         g = game.CGameLoader.loadGame()
