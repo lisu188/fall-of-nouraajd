@@ -19,6 +19,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CTags.h"
 #include "core/CJsonUtil.h"
 #include "core/CPathFinder.h"
+#include "core/CSerialization.h"
 #include "core/CUtil.h"
 #include "gui/CSdlResources.h"
 #include "handler/CScriptHandler.h"
@@ -94,6 +95,26 @@ void expect_true(bool condition, const char *message) {
         std::cerr << "FAIL: " << message << "\n";
         ++failures;
     }
+}
+
+void test_string_deserialization_preserves_empty_and_whitespace() {
+    auto empty_value = CSerialization::coerceStringProperty(std::type_index(typeid(std::string)), "");
+    expect_true(std::holds_alternative<std::string>(empty_value) && std::get<std::string>(empty_value).empty(),
+                "string deserialization should preserve intentionally empty strings");
+
+    auto blank_value = CSerialization::coerceStringProperty(std::type_index(typeid(std::string)), "   ");
+    expect_true(std::holds_alternative<std::string>(blank_value) && std::get<std::string>(blank_value) == "   ",
+                "string deserialization should preserve whitespace-only strings");
+}
+
+void test_string_deserialization_coerces_non_string_targets() {
+    auto numeric_value = CSerialization::coerceStringProperty(std::type_index(typeid(int)), "42");
+    expect_true(std::holds_alternative<int>(numeric_value) && std::get<int>(numeric_value) == 42,
+                "numeric string deserialization should preserve numeric coercion for numeric targets");
+
+    auto bool_value = CSerialization::coerceStringProperty(std::type_index(typeid(bool)), "true");
+    expect_true(std::holds_alternative<bool>(bool_value) && std::get<bool>(bool_value),
+                "boolean string deserialization should preserve boolean coercion for boolean targets");
 }
 
 void test_happy_path_add_and_distance() {
@@ -831,6 +852,8 @@ void test_random_dungeon_layout_variants_generate_accessible_maps() {
 int main() {
     pybind11::scoped_interpreter guard{};
 
+    test_string_deserialization_preserves_empty_and_whitespace();
+    test_string_deserialization_coerces_non_string_targets();
     test_happy_path_add_and_distance();
     test_edge_case_adjacent_or_same();
     test_comparison_and_ordering();

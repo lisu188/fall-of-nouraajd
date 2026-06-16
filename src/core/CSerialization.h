@@ -1,6 +1,6 @@
 /*
 fall-of-nouraajd c++ dark fantasy game
-Copyright (C) 2025  Andrzej Lis
+Copyright (C) 2025-2026  Andrzej Lis
 
 This program is free software: you can redistribute it and/or modify
         it under the terms of the GNU General Public License as published by
@@ -19,6 +19,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "core/CConcepts.h"
 #include "core/CGlobal.h"
+#include "core/CJsonUtil.h"
+
+#include <variant>
 
 class CGame;
 
@@ -198,6 +201,37 @@ class CSerialization {
 
     static void setProperty(const std::shared_ptr<json> &conf, const std::string &propertyName,
                             const std::any &propertyValue);
+
+    using CoercedStringProperty = std::variant<std::monostate, std::string, int, bool, std::shared_ptr<json>>;
+
+    static CoercedStringProperty coerceStringProperty(std::type_index property, const std::string &value) {
+        if (property == std::type_index(typeid(std::string))) {
+            return value;
+        }
+        if (vstd::trim(value).empty()) {
+            return std::monostate();
+        }
+
+        auto val = vstd::to_int(value);
+        if (val.second) {
+            return val.first;
+        }
+        if (value == "true") {
+            return true;
+        }
+        if (value == "false") {
+            return false;
+        }
+
+        auto parsed = CJsonUtil::from_string(value);
+        if (parsed && parsed->is_number() && vstd::str(parsed->get<double>()) != value) {
+            return value;
+        }
+        if (!parsed || parsed->is_string()) {
+            return value;
+        }
+        return parsed;
+    }
 
     static std::string generateName(const std::shared_ptr<CGameObject> &object);
 
