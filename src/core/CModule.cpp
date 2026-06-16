@@ -508,6 +508,16 @@ void init_game_module(py::module_ &m) {
             },
             "Register a class constructor under a class name.")
         .def("createObject", createObjectByType, "Create an object by configured type id.")
+        .def(
+            "registerConfigJson",
+            [](CObjectHandler &self, const std::string &name, const std::string &config) {
+                auto parsed = CJsonUtil::from_string(config, "registerConfigJson:" + name);
+                if (!parsed) {
+                    throw std::runtime_error("Failed to parse object config json for " + name);
+                }
+                self.registerConfig(name, parsed);
+            },
+            "Register object configuration from a JSON string.")
         .def("getAllTypes", &CObjectHandler::getAllTypes, "Return all configured object type ids.")
         .def("getAllSubTypes", &CObjectHandler::getAllSubTypes,
              "Return configured type ids whose class inherits the given base class.");
@@ -672,6 +682,7 @@ void init_game_module(py::module_ &m) {
 
     py::class_<CFightHandler, std::shared_ptr<CFightHandler>>(m, "CFightHandler", "Combat resolution service.")
         .def("fight", &CFightHandler::fight, "Run a fight between two creatures.")
+        .def_static("applyEffects", &CFightHandler::applyEffects, "Apply active effects to a creature.")
         .def(
             "fightMany",
             [](std::shared_ptr<CCreature> attacker, const py::iterable &opponents) {
@@ -814,6 +825,11 @@ void init_game_module(py::module_ &m) {
         .def("addItem", addItemByName, "Create and add an item by type id.")
         .def("addItem", addItemByObject, "Add an existing item object.")
         .def("addItems", &CCreature::addItems, "Add all items from a set to inventory.")
+        .def("setItems", &CCreature::setItems, "Replace inventory items.")
+        .def("getItems", &CCreature::getItems, "Return inventory items.")
+        .def("setEffects", &CCreature::setEffects, "Replace active effects.")
+        .def("getEffects", &CCreature::getEffects, "Return active effects.")
+        .def("getActions", &CCreature::getActions, "Return available actions.")
         .def("removeItem", removeItem,
              "Remove the first inventory item matching predicate(item). Optional second arg allows quest removal.")
         .def("removeQuestItem", removeQuestItem, "Remove first matching quest item predicate from inventory.")

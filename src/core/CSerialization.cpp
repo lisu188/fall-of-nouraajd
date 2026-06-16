@@ -27,6 +27,20 @@ std::shared_ptr<CSerializerBase> CSerialization::serializer(std::pair<std::type_
 }
 
 namespace {
+thread_local std::string array_deserialize_context;
+
+class ScopedArrayDeserializeContext {
+  public:
+    explicit ScopedArrayDeserializeContext(std::string context) : previous(array_deserialize_context) {
+        array_deserialize_context = std::move(context);
+    }
+
+    ~ScopedArrayDeserializeContext() { array_deserialize_context = previous; }
+
+  private:
+    std::string previous;
+};
+
 class CGameObjectPointerSerializer : public CSerializerBase {
   public:
     std::any serialize(std::any object) final {
@@ -160,6 +174,15 @@ void CSerialization::setOtherProperty(std::type_index serializedId, std::type_in
         (*CTypes::serializers())[std::make_pair(serializedId, deserializedId)];
     std::any result;
     try {
+        std::string context = "property '" + key + "'";
+        if (object) {
+            context += " on ";
+            context += vstd::is_empty(object->getTypeId()) ? object->meta()->name() : object->getTypeId();
+            if (!vstd::is_empty(object->getName())) {
+                context += " named '" + object->getName() + "'";
+            }
+        }
+        ScopedArrayDeserializeContext arrayContext(context);
         result = vstd::not_null(serializer, "No serializer!")->deserialize(object->getGame(), value);
     } catch (const std::exception &ex) {
         throw std::runtime_error("Failed to deserialize property '" + key + "': " + ex.what());
@@ -308,7 +331,10 @@ std::set<std::shared_ptr<CGameObject>> array_deserialize(const std::shared_ptr<C
         auto deserialized = CSerializerFunction<std::shared_ptr<json>, std::shared_ptr<CGameObject>>::deserialize(
             map, CJsonUtil::alias(object, (*object)[i]));
         if (!deserialized) {
-            vstd::logger::warning("Failed to deserialize object in array at index:", i);
+            vstd::logger::warning("Failed to deserialize object in array",
+                                  array_deserialize_context.empty() ? "property <unknown>" : array_deserialize_context,
+                                  "index", i, "- skipping null entry");
+            continue;
         }
         objects.insert(deserialized);
     }

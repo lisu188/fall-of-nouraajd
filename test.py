@@ -1955,6 +1955,61 @@ class GameTest(unittest.TestCase):
         return True, json.dumps(report, sort_keys=True)
 
     @game_test
+    def test_array_deserialize_skips_bad_entries_and_consumers_are_safe(self):
+        game = load_game_module()
+
+        g = game.CGameLoader.loadGame()
+        handler = g.getObjectHandler()
+        handler.registerConfigJson(
+            "ArrayDeserializeRegressionCreature",
+            json.dumps(
+                {
+                    "class": "CCreature",
+                    "properties": {
+                        "actions": [{"ref": "Strike"}, {"ref": "DefinitelyMissingInteraction"}],
+                        "effects": [{"class": "CEffect"}, {"class": "DefinitelyMissingEffectClass"}],
+                        "items": [{"ref": "LifePotion"}, {"ref": "DefinitelyMissingItem"}],
+                    },
+                }
+            ),
+        )
+
+        creature = g.createObject("ArrayDeserializeRegressionCreature")
+        self.assertIsNotNone(creature)
+
+        actions = list(creature.getActions())
+        effects = list(creature.getEffects())
+        items = list(creature.getItems())
+
+        self.assertTrue(actions)
+        self.assertTrue(effects)
+        self.assertTrue(items)
+        self.assertNotIn(None, actions)
+        self.assertNotIn(None, effects)
+        self.assertNotIn(None, items)
+        self.assertEqual(["Strike"], sorted(action.getTypeId() for action in actions))
+        self.assertEqual(["LifePotion"], sorted(item.getTypeId() for item in items))
+
+        # High-risk consumers should tolerate nulls defensively even if a caller bypasses deserialization.
+        creature.setItems({None, g.createObject("ManaPotion")})
+        creature.addItems({None, g.createObject("LesserLifePotion")})
+        creature.setEffects({None, g.createObject("CEffect")})
+        game.CFightHandler.applyEffects(creature)
+
+        self.assertNotIn(None, list(creature.getItems()))
+        self.assertNotIn(None, list(creature.getEffects()))
+        self.assertEqual(2, len(creature.getItems()))
+
+        return True, json.dumps(
+            {
+                "actions": sorted(action.getTypeId() for action in actions),
+                "effects": len(effects),
+                "items": sorted(item.getTypeId() for item in items),
+            },
+            sort_keys=True,
+        )
+
+    @game_test
     def test_dynamic_domain_plugins_serialize_clone_and_load_gameplay_content(self):
         game = load_game_module()
         g = game.CGameLoader.loadGame()
