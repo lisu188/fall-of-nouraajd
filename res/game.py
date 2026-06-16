@@ -63,11 +63,23 @@ def new():
     CGameLoader.loadGui(g)
     selection = g.getGuiHandler().showSelection(list_string(g, ["NEW", "LOAD", "RANDOM"]))
     if selection == "NEW":
-        map = g.getGuiHandler().showSelection(list_string(g, CResourcesProvider.getInstance().getFiles("MAP")))
+        maps = CResourcesProvider.getInstance().getFiles("MAP")
+        if not maps:
+            g.getGuiHandler().showInfo("No maps are available.", True)
+            return
+        map = g.getGuiHandler().showSelection(list_string(g, maps))
+        if not map:
+            return
         player = choose_player_class(g)
         CGameLoader.startGameWithPlayer(g, map, player)
     elif selection == "LOAD":
-        save = g.getGuiHandler().showSelection(list_string(g, CResourcesProvider.getInstance().getFiles("SAVE")))
+        saves = CResourcesProvider.getInstance().getFiles("SAVE")
+        if not saves:
+            g.getGuiHandler().showInfo("No saved games are available.", True)
+            return
+        save = g.getGuiHandler().showSelection(list_string(g, saves))
+        if not save:
+            return
         CGameLoader.loadSavedGame(g, save)
     elif selection == "RANDOM":
         player = choose_player_class(g)
