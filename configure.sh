@@ -10,8 +10,12 @@ sudo apt-get install -y build-essential cmake ninja-build ccache clang-format \
     xvfb xauth
 
 git submodule update --init --recursive
-mkdir -p cmake-build-debug
-mkdir -p cmake-build-release
+build_types_raw="${FON_CONFIGURE_BUILD_TYPES:-Debug Release}"
+read -r -a build_types <<< "${build_types_raw//,/ }"
+if [[ "${#build_types[@]}" -eq 0 ]]; then
+    echo "FON_CONFIGURE_BUILD_TYPES did not contain any build types" >&2
+    exit 2
+fi
 
 PYBIND11_CONFIG="$(dpkg-query -L pybind11-dev | awk '/\/pybind11Config.cmake$/ { print; exit }')"
 if [[ -z "${PYBIND11_CONFIG}" ]]; then
@@ -20,13 +24,14 @@ if [[ -z "${PYBIND11_CONFIG}" ]]; then
 fi
 PYBIND11_DIR="$(dirname "${PYBIND11_CONFIG}")"
 
-cmake -G Ninja -B ./cmake-build-debug -S . \
-    -DCMAKE_BUILD_TYPE=Debug \
-    -Dpybind11_DIR="${PYBIND11_DIR}" \
-    -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
-cmake -G Ninja -B ./cmake-build-release -S . \
-    -DCMAKE_BUILD_TYPE=Release \
-    -Dpybind11_DIR="${PYBIND11_DIR}" \
-    -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
+for build_type in "${build_types[@]}"; do
+    build_type_lower="$(tr '[:upper:]' '[:lower:]' <<< "${build_type}")"
+    build_dir="cmake-build-${build_type_lower}"
+    mkdir -p "${build_dir}"
+    cmake -G Ninja -B "./${build_dir}" -S . \
+        -DCMAKE_BUILD_TYPE="${build_type}" \
+        -Dpybind11_DIR="${PYBIND11_DIR}" \
+        -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
+done
 
 #export SDL_VIDEO_X11_VISUALID=0x022 //TODO: check this, this was used to run in WSL ubuntu with xming
