@@ -121,15 +121,26 @@ void CGuiHandler::showLoot(std::shared_ptr<CCreature> creature, std::set<std::sh
 CGuiHandler::CGuiHandler(std::shared_ptr<CGame> game) : _game(game) {}
 
 std::string CGuiHandler::showSelection(std::shared_ptr<CListString> list) {
-    std::shared_ptr<CGamePanel> panel = _game.lock()->createObject<CGamePanel>("selectionPanel");
-    vstd::cast<CCenteredLayout>(panel->getLayout())->setH(vstd::str(75 * list->getValues().size()));
+    auto game = _game.lock();
+    if (!game || !game->getGui()) {
+        return "";
+    }
+
+    auto values = list ? list->getValues() : std::set<std::string>();
+    if (values.empty()) {
+        vstd::logger::warning("Selection requested with an empty option list.");
+        return "";
+    }
+
+    std::shared_ptr<CGamePanel> panel = game->createObject<CGamePanel>("selectionPanel");
+    vstd::cast<CCenteredLayout>(panel->getLayout())->setH(vstd::str(75 * values.size()));
 
     std::shared_ptr<std::string> selected;
 
     std::set<std::shared_ptr<CGameGraphicsObject>> widgets;
     int i = 0;
     // TODO: unify with CGameDialogPanel
-    for (auto item : list->getValues()) {
+    for (auto item : values) {
         std::string clickName = vstd::str("click") + vstd::str(i);
 
         panel->meta()->set_method<CGameGraphicsObject, void, std::shared_ptr<CGui>>(
@@ -137,12 +148,12 @@ std::string CGuiHandler::showSelection(std::shared_ptr<CListString> list) {
                 selected = std::make_shared<std::string>(item);
             });
 
-        std::shared_ptr<CButton> widget = _game.lock()->createObject<CButton>("CButton");
+        std::shared_ptr<CButton> widget = game->createObject<CButton>("CButton");
         widget->setClick(clickName);
         widget->setText(item);
 
-        std::shared_ptr<CLayout> layout = _game.lock()->createObject<CLayout>("CLayout");
-        int percentSize = 100.0 / list->getValues().size();
+        std::shared_ptr<CLayout> layout = game->createObject<CLayout>("CLayout");
+        int percentSize = 100.0 / values.size();
         layout->setX(vstd::str(0) + "%");
         layout->setY(vstd::str(percentSize * i) + "%");
         layout->setW(vstd::str(100) + "%");
@@ -154,7 +165,7 @@ std::string CGuiHandler::showSelection(std::shared_ptr<CListString> list) {
 
     panel->setChildren(widgets);
 
-    _game.lock()->getGui()->pushChild(panel);
+    game->getGui()->pushChild(panel);
 
     vstd::wait_until([&]() { return selected != nullptr; });
 

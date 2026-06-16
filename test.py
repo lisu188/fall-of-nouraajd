@@ -4913,6 +4913,99 @@ class GameTest(unittest.TestCase):
         return True, json.dumps(resources, sort_keys=True)
 
     @game_test
+    def test_empty_selection_list_returns_without_waiting(self):
+        game = load_game_module()
+        g = game.CGameLoader.loadGame()
+        game.CGameLoader.loadGui(g)
+
+        empty_selection = g.createObject("CListString")
+        started_at = time.monotonic()
+        selected = g.getGuiHandler().showSelection(empty_selection)
+
+        self.assertEqual("", selected)
+        self.assertLess(time.monotonic() - started_at, 1.0)
+        return True, json.dumps({"selected": selected})
+
+    def test_new_game_load_with_no_saves_reports_message(self):
+        game = load_game_module()
+
+        class FakeListString:
+            def __init__(self):
+                self.values = []
+
+            def addValue(self, value):
+                self.values.append(value)
+
+            def getValues(self):
+                return set(self.values)
+
+        class FakeGuiHandler:
+            def __init__(self):
+                self.messages = []
+                self.selections = []
+
+            def showSelection(self, list_string):
+                self.selections.append(sorted(list_string.getValues()))
+                return "LOAD"
+
+            def showInfo(self, message, centered):
+                self.messages.append((message, centered))
+
+        class FakeGame:
+            def __init__(self):
+                self.gui_handler = FakeGuiHandler()
+
+            def createObject(self, type_id):
+                if type_id != "CListString":
+                    raise AssertionError(f"unexpected fake object type: {type_id}")
+                return FakeListString()
+
+            def getGuiHandler(self):
+                return self.gui_handler
+
+        fake_game = FakeGame()
+
+        class FakeGameLoader:
+            loaded_save = None
+
+            @staticmethod
+            def loadGame():
+                return fake_game
+
+            @staticmethod
+            def loadGui(g):
+                pass
+
+            @staticmethod
+            def loadSavedGame(g, save):
+                FakeGameLoader.loaded_save = save
+
+        class FakeResourcesProvider:
+            @staticmethod
+            def getInstance():
+                return FakeResourcesProvider()
+
+            def getFiles(self, kind):
+                return [] if kind == "SAVE" else ["nouraajd"]
+
+        original_loader = game.CGameLoader
+        original_provider = game.CResourcesProvider
+        original_event_loop = game.event_loop
+        try:
+            game.CGameLoader = FakeGameLoader
+            game.CResourcesProvider = FakeResourcesProvider
+            game.event_loop = types.SimpleNamespace(instance=lambda: None)
+            game.new()
+        finally:
+            game.CGameLoader = original_loader
+            game.CResourcesProvider = original_provider
+            game.event_loop = original_event_loop
+
+        self.assertEqual([["LOAD", "NEW", "RANDOM"]], fake_game.gui_handler.selections)
+        self.assertEqual([("No saved games are available.", True)], fake_game.gui_handler.messages)
+        self.assertIsNone(FakeGameLoader.loaded_save)
+
+    @game_test
     def test_blocking_modal_gui_helpers_drive_panels(self):
         game = load_game_module()
         drain_sdl_events()
