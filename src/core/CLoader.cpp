@@ -519,12 +519,14 @@ void CMapLoader::handleObjectLayer(const std::shared_ptr<CMap> &map, const json 
         if (!vstd::is_empty(objectName)) {
             mapObject->setName(objectName);
         }
-        map->addObject(mapObject);
         const json &objectProperties = object.count("properties") ? object["properties"] : json();
         for (auto &[key, value] : objectProperties.items()) {
             CSerialization::setProperty(mapObject, key, CJsonUtil::clone(value));
         }
-        mapObject->moveTo(xPos, yPos, level);
+        mapObject->setPosX(xPos);
+        mapObject->setPosY(yPos);
+        mapObject->setPosZ(level);
+        map->addObject(mapObject);
         vstd::logger::debug("Loaded object:", mapObject->to_string());
     }
 }

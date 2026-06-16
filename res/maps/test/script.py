@@ -7,13 +7,22 @@ def load(self, context):
     @register(context)
     class ChangeMap(CEvent):
         def onEnter(self, event):
-            pass #self.getMap().getGame().changeMap("test")
+            pass  # self.getMap().getGame().changeMap("test")
+
+    @register(context)
+    class InitializationProbe(CEvent):
+        def onCreate(self, event):
+            coords = self.getCoords()
+            self.setStringProperty("observedMarker", self.getStringProperty("marker"))
+            self.setNumericProperty("observedX", coords.x)
+            self.setNumericProperty("observedY", coords.y)
+            self.setNumericProperty("observedZ", coords.z)
 
     @trigger(context, "onEnter", "market1")
     class MarketTrigger(CTrigger):
         def trigger(self, object, event):
             if event.getCause().isPlayer():
-                object.getGame().getGuiHandler().showTrade(object.getObjectProperty('market'))
+                object.getGame().getGuiHandler().showTrade(object.getObjectProperty("market"))
 
     # TODO: replace with onLoad event
     @trigger(context, "onTurn", "triggerAnchor")
