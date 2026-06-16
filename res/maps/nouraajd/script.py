@@ -872,6 +872,7 @@ def load(self, context):
                 self.getGame().getGuiHandler().showMessage(
                     "For a breath, the town is spared. Beren points you toward the abandoned ritual chapel."
                 )
+                self.getGame().getMap().getPlayer().checkQuests()
                 self.getGame().changeMap("ritual")
             else:
                 self.getGame().getGuiHandler().showMessage("The cave still writhes with OctoBogz corruption.")

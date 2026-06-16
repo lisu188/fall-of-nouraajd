@@ -1,6 +1,6 @@
 /*
 fall-of-nouraajd c++ dark fantasy game
-Copyright (C) 2025  Andrzej Lis
+Copyright (C) 2025-2026  Andrzej Lis
 
 This program is free software: you can redistribute it and/or modify
         it under the terms of the GNU General Public License as published by
@@ -21,6 +21,16 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CMap.h"
 #include <utility>
 
+namespace {
+std::string questId(const std::shared_ptr<CQuest> &quest) {
+    if (!quest) {
+        return "";
+    }
+    auto typeId = quest->getTypeId();
+    return typeId.empty() ? quest->getName() : typeId;
+}
+} // namespace
+
 void CPlayer::checkQuests() {
     auto set = quests;
     for (const auto &quest : set) {
@@ -34,12 +44,12 @@ void CPlayer::checkQuests() {
 
 void CPlayer::addQuest(std::string questName) {
     for (const auto &q : quests) {
-        if (q->getName() == questName) {
+        if (questId(q) == questName) {
             return;
         }
     }
     for (const auto &q : completedQuests) {
-        if (q->getName() == questName) {
+        if (questId(q) == questName) {
             return;
         }
     }

@@ -5882,6 +5882,65 @@ class GameTest(unittest.TestCase):
         )
 
     @game_test
+    def test_nouraajd_cleanse_quest_completes_before_ritual_transition(self):
+        g, game_map, player = load_game_map_with_player("nouraajd")
+        town_hall = g.createObject("townHallDialog")
+        beren = g.createObject("berenDialog")
+
+        town_hall.give_letter()
+        beren.deliver_letter()
+        game_map.removeObjectByName("catacombs")
+        beren.return_relic()
+        game_map.removeObjectByName("cave2")
+        self.assertIn("cleanseCaveQuest", quest_names(player))
+        self.assertTrue(beren.can_finish_cleanse())
+
+        beren.finish_cleanse()
+        pump_event_loop(10)
+
+        completed_quest_ids = sorted(player_quest_id(quest) for quest in player.getCompletedQuests())
+        self.assertEqual("ritual", g.getMap().mapName)
+        self.assertTrue(game_map.getBoolProperty("CAVE_PURGED"))
+        self.assertNotIn("cleanseCaveQuest", quest_names(player))
+        self.assertIn("cleanseCaveQuest", completed_quest_ids)
+
+        return True, json.dumps(
+            {
+                "active": quest_names(player),
+                "completed": completed_quest_ids,
+                "current_map": g.getMap().mapName,
+                "quest_state_beren_chain": game_map.getStringProperty("quest_state_beren_chain"),
+            },
+            sort_keys=True,
+        )
+
+    @game_test
+    def test_player_add_quest_does_not_reopen_completed_type_id(self):
+        g, game_map, player = load_game_map_with_player("nouraajd")
+
+        player.addQuest("rolfQuest")
+        self.assertIn("rolfQuest", quest_names(player))
+
+        game_map.removeObjectByName("cave1")
+        player.checkQuests()
+        completed_quest_ids = sorted(player_quest_id(quest) for quest in player.getCompletedQuests())
+        self.assertIn("rolfQuest", completed_quest_ids)
+        self.assertNotIn("rolfQuest", quest_names(player))
+
+        player.addQuest("rolfQuest")
+        reopened_quests = quest_names(player)
+        self.assertNotIn("rolfQuest", reopened_quests)
+
+        return True, json.dumps(
+            {
+                "active": reopened_quests,
+                "completed": sorted(player_quest_id(quest) for quest in player.getCompletedQuests()),
+                "quest_state_rolf": game_map.getStringProperty("quest_state_rolf"),
+            },
+            sort_keys=True,
+        )
+
+    @game_test
     def test_nouraajd_letter_reissue_and_quest_tag_regression(self):
         game = load_game_module()
         g, game_map, player = load_game_map_with_player("nouraajd")
@@ -7958,6 +8017,7 @@ class McpServerTest(unittest.TestCase):
         self.assertIn("CGameLoader.loadGame", server.exports)
         self.assertIn("CGameLoader.loadGui", server.exports)
         self.assertIn("CGameLoader.startGameWithPlayer", server.exports)
+        self.assertIn("event_loop.instance", server.exports)
         self.assertIn("CGuiHandler.openPanel", server.exports)
 
     def test_engine_call_resolves_handle_arguments_for_python_methods(self):
@@ -8072,6 +8132,48 @@ class McpServerTest(unittest.TestCase):
         tools = batch_response[0].get("result", {}).get("tools", [])
         tool_names = {tool.get("name") for tool in tools}
         self.assertTrue({"engine_list", "engine_call", "engine_handle_call"}.issubset(tool_names))
+
+    def test_map_design_brief_summarizes_selected_map_hooks(self):
+        server = self.make_stub_server()
+
+        result = server._call_tool(
+            {
+                "name": "map_design_brief",
+                "arguments": {
+                    "map_name": "ritual",
+                    "include_resource_catalog": True,
+                    "max_objects": 5,
+                    "max_ids_per_catalog": 5,
+                },
+            },
+            transport="stdio",
+            session_id=None,
+        )
+
+        self.assertFalse(result["isError"])
+        brief = result["structuredContent"]
+        map_names = {item["name"] for item in brief["maps"]}
+        self.assertIn("ritual", map_names)
+        self.assertEqual(brief["selectedMap"]["name"], "ritual")
+        self.assertIn("destroyAnchorsQuest", brief["selectedMap"]["config"]["categories"]["quest"])
+        trigger_targets = {trigger.get("target") for trigger in brief["selectedMap"]["script"]["triggers"]}
+        self.assertIn("anchorNorth", trigger_targets)
+        dialog_actions = {
+            item["dialog"]: set(item["methods"]) for item in brief["selectedMap"]["script"]["dialogActions"]
+        }
+        self.assertIn("free_captive", dialog_actions["CapturedSoulDialog"])
+        catalog_names = {item["name"] for item in brief["resourceCatalog"]}
+        self.assertIn("items", catalog_names)
+
+    def test_map_design_brief_rejects_path_traversal(self):
+        server = self.make_stub_server()
+
+        with self.assertRaisesRegex(mcp.ProtocolError, "direct child"):
+            server._call_tool(
+                {"name": "map_design_brief", "arguments": {"map_name": "../nouraajd"}},
+                transport="stdio",
+                session_id=None,
+            )
 
     def test_http_notification_response_declares_empty_body(self):
         server = self.make_stub_server()
