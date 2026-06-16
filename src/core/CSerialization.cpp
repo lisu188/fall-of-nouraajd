@@ -1,6 +1,6 @@
 /*
 fall-of-nouraajd c++ dark fantasy game
-Copyright (C) 2025  Andrzej Lis
+Copyright (C) 2025-2026  Andrzej Lis
 
 This program is free software: you can redistribute it and/or modify
         it under the terms of the GNU General Public License as published by
@@ -127,25 +127,15 @@ void CSerialization::setBooleanProperty(const std::shared_ptr<CGameObject> &obje
 
 void CSerialization::setStringProperty(const std::shared_ptr<CGameObject> &object, const std::string &key,
                                        const std::string &value) {
-    if (!vstd::trim(value).empty()) {
-        auto val = vstd::to_int(value);
-        if (val.second) {
-            setNumericProperty(object, key, val.first);
-        } else if (value == "true") {
-            setBooleanProperty(object, key, true);
-        } else if (value == "false") {
-            setBooleanProperty(object, key, false);
-        } else {
-            // TODO: make method that checks if object is JSON
-            std::shared_ptr<json> d = CJsonUtil::from_string(value);
-            if (d && d->is_number() && vstd::str(d->get<double>()) != value) {
-                object->setStringProperty(key, value);
-            } else if (!d || d->is_string()) {
-                object->setStringProperty(key, value);
-            } else {
-                setProperty(object, key, d);
-            }
-        }
+    auto coerced = coerceStringProperty(getProperty(object, key), value);
+    if (std::holds_alternative<std::string>(coerced)) {
+        object->setStringProperty(key, std::get<std::string>(coerced));
+    } else if (std::holds_alternative<int>(coerced)) {
+        setNumericProperty(object, key, std::get<int>(coerced));
+    } else if (std::holds_alternative<bool>(coerced)) {
+        setBooleanProperty(object, key, std::get<bool>(coerced));
+    } else if (std::holds_alternative<std::shared_ptr<json>>(coerced)) {
+        setProperty(object, key, std::get<std::shared_ptr<json>>(coerced));
     }
 }
 
