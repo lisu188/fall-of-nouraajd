@@ -43,6 +43,12 @@ LOG_LEVELS = {
     "alert": 1,
     "emergency": 0,
 }
+MCP_EXCLUDED_EXPORTS = {
+    "load",
+    "register",
+    "set_logger_sink",
+    "trigger",
+}
 
 logger = logging.getLogger(SERVER_NAME)
 
@@ -189,7 +195,7 @@ class EngineMcpServer:
                 continue
             if not callable(value):
                 continue
-            if name in {"load", "register", "trigger"}:
+            if name in MCP_EXCLUDED_EXPORTS:
                 continue
             if name not in self.exports:
                 self.exports[name] = ExportedCallable(
