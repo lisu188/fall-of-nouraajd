@@ -24,7 +24,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "handler/CRngHandler.h"
 #include "object/CCreature.h"
 #include "object/CPlayer.h"
-#include "plugin/FonPluginAbi.h"
+#include "plugin/CPluginAbi.h"
 #include <pybind11/eval.h>
 #include <rdg.h>
 
@@ -47,7 +47,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 namespace {
 constexpr const char *PLUGIN_MANIFEST_PATH = "plugins/manifest.json";
-constexpr const char *DYNAMIC_PLUGIN_DEFAULT_ENTRY = "fon_plugin_load_v1";
+constexpr const char *DYNAMIC_PLUGIN_DEFAULT_ENTRY = "game_plugin_load_v1";
 
 class CDynamicLibrary {
   public:
@@ -75,7 +75,7 @@ class CDynamicLibrary {
 
     bool isLoaded() const { return handle != nullptr; }
 
-    FonPluginLoadV1 loadSymbol(const std::string &symbolName) const {
+    CPluginLoadV1 loadSymbol(const std::string &symbolName) const {
         if (!handle) {
             return nullptr;
         }
@@ -87,7 +87,7 @@ class CDynamicLibrary {
                                   "error code:", static_cast<int>(GetLastError()));
             return nullptr;
         }
-        return reinterpret_cast<FonPluginLoadV1>(symbol);
+        return reinterpret_cast<CPluginLoadV1>(symbol);
 #else
         dlerror();
         auto symbol = dlsym(handle, symbolName.c_str());
@@ -96,7 +96,7 @@ class CDynamicLibrary {
             vstd::logger::warning("Failed to find dynamic plugin symbol:", symbolName, "in:", path, "error:", error);
             return nullptr;
         }
-        return reinterpret_cast<FonPluginLoadV1>(symbol);
+        return reinterpret_cast<CPluginLoadV1>(symbol);
 #endif
     }
 
@@ -169,6 +169,11 @@ PyObject *restricted_plugin_import(PyObject *, PyObject *args, PyObject *kwargs)
 
     if (!PyArg_ParseTupleAndKeywords(args, kwargs, "s|OOOi:__import__", const_cast<char **>(keywords), &name, &globals,
                                      &locals, &fromlist, &level)) {
+        return nullptr;
+    }
+
+    if (level != 0) {
+        PyErr_SetString(PyExc_ImportError, "Python resource plugins may not use relative imports");
         return nullptr;
     }
 
@@ -860,7 +865,7 @@ bool CPluginLoader::loadDynamicPlugin(const std::shared_ptr<CGame> &game, const 
         return false;
     }
 
-    FonPluginHostV1 host{FON_PLUGIN_API_VERSION, game.get(), dynamic_plugin_log, dynamic_plugin_register_config_json};
+    CPluginHostV1 host{GAME_PLUGIN_API_VERSION, game.get(), dynamic_plugin_log, dynamic_plugin_register_config_json};
     try {
         if (!entrypoint(&host)) {
             vstd::logger::warning("Dynamic C++ plugin entrypoint returned false:", library, symbolName);

@@ -39,9 +39,9 @@ void CEffect::apply(std::shared_ptr<CCreature> creature) {
     timeLeft--;
 }
 
-std::shared_ptr<Stats> CEffect::getBonus() { return bonus; }
+std::shared_ptr<CStats> CEffect::getBonus() { return bonus; }
 
-void CEffect::setBonus(std::shared_ptr<Stats> value) { bonus = value; }
+void CEffect::setBonus(std::shared_ptr<CStats> value) { bonus = value; }
 
 int CEffect::getDuration() { return duration; }
 

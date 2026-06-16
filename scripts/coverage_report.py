@@ -68,7 +68,7 @@ def collect_gcov_reports(build_dir: Path, jobs: int):
     if not gcda_files:
         raise RuntimeError(f"No .gcda files found under {build_dir}")
 
-    with tempfile.TemporaryDirectory(prefix="fon-gcov-") as tmp_dir:
+    with tempfile.TemporaryDirectory(prefix="game-gcov-") as tmp_dir:
         tmp_path = Path(tmp_dir)
         reports = []
         jobs = min(jobs, len(gcda_files))

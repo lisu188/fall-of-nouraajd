@@ -21,27 +21,27 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <stdint.h>
 
 #if defined(_WIN32)
-#define FON_PLUGIN_EXPORT __declspec(dllexport)
+#define GAME_PLUGIN_EXPORT __declspec(dllexport)
 #elif defined(__GNUC__) || defined(__clang__)
-#define FON_PLUGIN_EXPORT __attribute__((visibility("default")))
+#define GAME_PLUGIN_EXPORT __attribute__((visibility("default")))
 #else
-#define FON_PLUGIN_EXPORT
+#define GAME_PLUGIN_EXPORT
 #endif
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-enum { FON_PLUGIN_API_VERSION = 1 };
+enum { GAME_PLUGIN_API_VERSION = 1 };
 
-typedef struct FonPluginHostV1 {
+typedef struct CPluginHostV1 {
     uint32_t api_version;
     void *game;
     void (*log)(void *game, const char *message);
     bool (*register_config_json)(void *game, const char *id, const char *json_text);
-} FonPluginHostV1;
+} CPluginHostV1;
 
-typedef bool (*FonPluginLoadV1)(const FonPluginHostV1 *host);
+typedef bool (*CPluginLoadV1)(const CPluginHostV1 *host);
 
 #ifdef __cplusplus
 }

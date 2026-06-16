@@ -17,83 +17,83 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #include "core/CStats.h"
 
-int Stats::getAttack() const { return attack; }
+int CStats::getAttack() const { return attack; }
 
-void Stats::setAttack(int value) { attack = value; }
+void CStats::setAttack(int value) { attack = value; }
 
-int Stats::getDamage() const { return damage; }
+int CStats::getDamage() const { return damage; }
 
-void Stats::setDamage(int value) { damage = value; }
+void CStats::setDamage(int value) { damage = value; }
 
-int Stats::getShadowResist() const { return shadowResist; }
+int CStats::getShadowResist() const { return shadowResist; }
 
-void Stats::setShadowResist(int value) { shadowResist = value; }
+void CStats::setShadowResist(int value) { shadowResist = value; }
 
-int Stats::getThunderResist() const { return thunderResist; }
+int CStats::getThunderResist() const { return thunderResist; }
 
-void Stats::setThunderResist(int value) { thunderResist = value; }
+void CStats::setThunderResist(int value) { thunderResist = value; }
 
-int Stats::getNormalResist() const { return normalResist; }
+int CStats::getNormalResist() const { return normalResist; }
 
-void Stats::setNormalResist(int value) { normalResist = value; }
+void CStats::setNormalResist(int value) { normalResist = value; }
 
-int Stats::getFrostResist() const { return frostResist; }
+int CStats::getFrostResist() const { return frostResist; }
 
-void Stats::setFrostResist(int value) { frostResist = value; }
+void CStats::setFrostResist(int value) { frostResist = value; }
 
-int Stats::getFireResist() const { return fireResist; }
+int CStats::getFireResist() const { return fireResist; }
 
-void Stats::setFireResist(int value) { fireResist = value; }
+void CStats::setFireResist(int value) { fireResist = value; }
 
-int Stats::getCrit() const { return crit; }
+int CStats::getCrit() const { return crit; }
 
-void Stats::setCrit(int value) { crit = value; }
+void CStats::setCrit(int value) { crit = value; }
 
-int Stats::getHit() const { return hit; }
+int CStats::getHit() const { return hit; }
 
-void Stats::setHit(int value) { hit = value; }
+void CStats::setHit(int value) { hit = value; }
 
-int Stats::getDmgMax() const { return dmgMax; }
+int CStats::getDmgMax() const { return dmgMax; }
 
-void Stats::setDmgMax(int value) { dmgMax = value; }
+void CStats::setDmgMax(int value) { dmgMax = value; }
 
-int Stats::getDmgMin() const { return dmgMin; }
+int CStats::getDmgMin() const { return dmgMin; }
 
-void Stats::setDmgMin(int value) { dmgMin = value; }
+void CStats::setDmgMin(int value) { dmgMin = value; }
 
-int Stats::getBlock() const { return block; }
+int CStats::getBlock() const { return block; }
 
-void Stats::setBlock(int value) { block = value; }
+void CStats::setBlock(int value) { block = value; }
 
-int Stats::getArmor() const { return armor; }
+int CStats::getArmor() const { return armor; }
 
-void Stats::setArmor(int value) { armor = value; }
+void CStats::setArmor(int value) { armor = value; }
 
-int Stats::getIntelligence() const { return intelligence; }
+int CStats::getIntelligence() const { return intelligence; }
 
-void Stats::setIntelligence(int value) { intelligence = value; }
+void CStats::setIntelligence(int value) { intelligence = value; }
 
-int Stats::getStamina() const { return stamina; }
+int CStats::getStamina() const { return stamina; }
 
-void Stats::setStamina(int value) { stamina = value; }
+void CStats::setStamina(int value) { stamina = value; }
 
-int Stats::getAgility() const { return agility; }
+int CStats::getAgility() const { return agility; }
 
-void Stats::setAgility(int value) { agility = value; }
+void CStats::setAgility(int value) { agility = value; }
 
-int Stats::getStrength() const { return strength; }
+int CStats::getStrength() const { return strength; }
 
-void Stats::setStrength(int value) { strength = value; }
+void CStats::setStrength(int value) { strength = value; }
 
-std::string Stats::getMainStat() const { return mainStat; }
+std::string CStats::getMainStat() const { return mainStat; }
 
-void Stats::setMainStat(const std::string &value) { mainStat = value; }
+void CStats::setMainStat(const std::string &value) { mainStat = value; }
 
-int Stats::getMainValue() { return this->getNumericProperty(mainStat); }
+int CStats::getMainValue() { return this->getNumericProperty(mainStat); }
 
-Stats::Stats() {}
+CStats::CStats() {}
 
-void Stats::addBonus(std::shared_ptr<Stats> stats) {
+void CStats::addBonus(std::shared_ptr<CStats> stats) {
     stats->meta()->for_all_properties(stats, [&](auto property) {
         if (property->value_type() == std::type_index(typeid(int))) {
             this->incProperty(property->name(), stats->getProperty<int>(property->name()));
@@ -101,7 +101,7 @@ void Stats::addBonus(std::shared_ptr<Stats> stats) {
     });
 }
 
-void Stats::removeBonus(std::shared_ptr<Stats> stats) {
+void CStats::removeBonus(std::shared_ptr<CStats> stats) {
     stats->meta()->for_all_properties(stats, [&](auto property) {
         if (property->value_type() == std::type_index(typeid(int))) {
             this->incProperty(property->name(), -stats->getProperty<int>(property->name()));
@@ -109,7 +109,7 @@ void Stats::removeBonus(std::shared_ptr<Stats> stats) {
     });
 }
 
-std::string Stats::getText(int level) {
+std::string CStats::getText(int level) {
     std::ostringstream stream;
     stream << "Level: " << level << "\n";
     stream << "Strength: " << strength << "\n";
@@ -124,24 +124,24 @@ std::string Stats::getText(int level) {
     return stream.str();
 }
 
-Damage::Damage() {}
+CDamage::CDamage() {}
 
-int Damage::getFire() const { return fire; }
+int CDamage::getFire() const { return fire; }
 
-void Damage::setFire(int value) { fire = value; }
+void CDamage::setFire(int value) { fire = value; }
 
-int Damage::getFrost() const { return frost; }
+int CDamage::getFrost() const { return frost; }
 
-void Damage::setFrost(int value) { frost = value; }
+void CDamage::setFrost(int value) { frost = value; }
 
-int Damage::getThunder() const { return thunder; }
+int CDamage::getThunder() const { return thunder; }
 
-void Damage::setThunder(int value) { thunder = value; }
+void CDamage::setThunder(int value) { thunder = value; }
 
-int Damage::getShadow() const { return shadow; }
+int CDamage::getShadow() const { return shadow; }
 
-void Damage::setShadow(int value) { shadow = value; }
+void CDamage::setShadow(int value) { shadow = value; }
 
-int Damage::getNormal() const { return normal; }
+int CDamage::getNormal() const { return normal; }
 
-void Damage::setNormal(int value) { normal = value; }
+void CDamage::setNormal(int value) { normal = value; }

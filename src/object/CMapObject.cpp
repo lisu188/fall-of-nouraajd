@@ -32,7 +32,7 @@ void CMapObject::move(int x, int y, int z) {
         target = map->normalizeCoords(target);
     }
 
-    if (dynamic_cast<Moveable *>(this) && map) {
+    if (dynamic_cast<CMoveable *>(this) && map) {
         auto current = map->normalizeCoords(Coords(posx, posy, posz));
         auto delta = map->getShortestDelta(current, target);
         bool is_registered = map->getObjectByName(getName()) == this->ptr<CMapObject>();
@@ -41,7 +41,7 @@ void CMapObject::move(int x, int y, int z) {
             vstd::logger::debug(getName(), "cannot step on:", target.x, target.y, target.z);
             return;
         }
-        dynamic_cast<Moveable *>(this)->beforeMove();
+        dynamic_cast<CMoveable *>(this)->beforeMove();
     }
 
     Coords oldCoords(posx, posy, posz);
@@ -54,8 +54,8 @@ void CMapObject::move(int x, int y, int z) {
         map->objectMoved(this->ptr<CMapObject>(), oldCoords, newCoords);
     }
 
-    if (dynamic_cast<Moveable *>(this) && map) {
-        dynamic_cast<Moveable *>(this)->afterMove();
+    if (dynamic_cast<CMoveable *>(this) && map) {
+        dynamic_cast<CMoveable *>(this)->afterMove();
     }
 }
 

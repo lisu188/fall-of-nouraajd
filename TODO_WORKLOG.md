@@ -257,7 +257,7 @@
   - `clang-format -i src/gui/object/CWidget.h src/gui/object/CWidget.cpp`
   - `cmake --build cmake-build-release --target _game for_unit_tests -j$(nproc)` -> `[100%] Built target _game`, `[100%] Built target for_unit_tests`
   - `ctest --test-dir cmake-build-release --output-on-failure -R for_unit_tests` -> `1/1 Test #1: for_unit_tests ... Passed`
-  - `python3 test.py` -> tool polling duplicated long-running sandboxes in this environment, so the suite was rerun once in a single background shell writing to `/tmp/fon-python-test.log`; the final log ended with `Ran 78 tests in 283.191s` and `OK`
+  - `python3 test.py` -> tool polling duplicated long-running sandboxes in this environment, so the suite was rerun once in a single background shell writing to `/tmp/game-python-test.log`; the final log ended with `Ran 78 tests in 283.191s` and `OK`
 - Blockers if unresolved: No known functional blocker remains, but this environment's long-command polling can clone `python3 test.py` runs, so future full-suite checks should avoid session polling and capture the output from a single process.
 
 ## Batch 19
@@ -276,11 +276,11 @@
   - `python3 -m unittest test.McpServerTest.test_export_module_includes_pybind_class_methods` -> `Ran 1 test`, `OK`
   - `python3 -m unittest test.McpServerTest.test_stdio_handshake_and_tool_listing` -> `Ran 1 test`, `OK`
   - `python3 -m unittest test.McpServerTest.test_stdio_gui_inventory_dump_from_repo_root` -> `Ran 1 test`, `OK`
-  - `python3 - <<'PY' ...` -> wrote `/tmp/fon-gui-tree.json`, printed `CGameInventoryPanel`, and confirmed 5 top-level GUI children after `openPanel("inventoryPanel")`
+  - `python3 - <<'PY' ...` -> wrote `/tmp/game-gui-tree.json`, printed `CGameInventoryPanel`, and confirmed 5 top-level GUI children after `openPanel("inventoryPanel")`
   - `timeout 120s /home/andrz/.local/bin/black -l 120 mcp.py test.py` -> printed `All done!` and `2 files left unchanged`, but the wrapper still exited with code `124` after two trailing `Aborted!` lines during worker shutdown
   - `cmake --build cmake-build-release --target _game for_unit_tests -j$(nproc)` -> `[100%] Built target _game`, `[100%] Built target for_unit_tests`
   - `ctest --test-dir cmake-build-release --output-on-failure -R for_unit_tests` -> `1/1 Test #1: for_unit_tests ... Passed`
-  - `python3 test.py` -> `/tmp/fon-gui-python.log` ended with `Ran 80 tests in 98.953s` and `OK`
+  - `python3 test.py` -> `/tmp/game-gui-python.log` ended with `Ran 80 tests in 98.953s` and `OK`
   - `./scripts/run_coverage.sh` -> configured and built `cmake-build-coverage`, `ctest` passed, then the instrumented `python3 test.py` phase emitted `..........................................` and remained CPU-bound until it was terminated with `kill -9`; the script ended with `./scripts/run_coverage.sh: line 27:   226 Killed                  GAME_BUILD_DIR="${BUILD_DIR}" python3 test.py`
 - Blockers if unresolved: Functional validation passed, but the required coverage step is still blocked by the repo's instrumented `python3 test.py` phase hanging without producing a coverage report, so no fresh scoped percentage was produced for this batch.
 
@@ -330,7 +330,7 @@
   - source verification of `todo.txt`, `TODO_WORKLOG.md`, `test.py`, `src/core/CModule.cpp`, `src/gui/panel/CGameInventoryPanel.cpp`, `src/gui/panel/CGameFightPanel.cpp`, `src/gui/panel/CCreatureView.cpp`, `src/gui/panel/CCreatureView.h`, `src/gui/panel/CListView.cpp`, and `res/config/panels.json`
   - `black -l 120 test.py` -> `1 file left unchanged`
   - `clang-format -i src/core/CModule.cpp src/gui/panel/CCreatureView.h src/gui/panel/CCreatureView.cpp src/gui/panel/CListView.cpp`
-  - `env FON_XVFB_GAMEPLAY_CHILD=1 SDL_VIDEODRIVER=x11 SDL_AUDIODRIVER=dummy SDL_RENDER_DRIVER=software LIBGL_ALWAYS_SOFTWARE=1 xvfb-run -a --server-args="-screen 0 1920x1080x24" python3 test.py XvfbGameplayProcessTest.test_inventory_equipped_selection_resets_inventory_selection XvfbGameplayProcessTest.test_inventory_quest_item_selection_is_ignored XvfbGameplayProcessTest.test_fight_quest_item_selection_is_ignored` -> `Ran 3 tests in 20.706s`, `OK` (run outside the sandbox because sandboxed `/tmp/.X11-unix` permissions made successful xvfb children exit nonzero)
+  - `env GAME_XVFB_GAMEPLAY_CHILD=1 SDL_VIDEODRIVER=x11 SDL_AUDIODRIVER=dummy SDL_RENDER_DRIVER=software LIBGL_ALWAYS_SOFTWARE=1 xvfb-run -a --server-args="-screen 0 1920x1080x24" python3 test.py XvfbGameplayProcessTest.test_inventory_equipped_selection_resets_inventory_selection XvfbGameplayProcessTest.test_inventory_quest_item_selection_is_ignored XvfbGameplayProcessTest.test_fight_quest_item_selection_is_ignored` -> `Ran 3 tests in 20.706s`, `OK` (run outside the sandbox because sandboxed `/tmp/.X11-unix` permissions made successful xvfb children exit nonzero)
   - `cmake --build cmake-build-release --target _game for_unit_tests -j$(nproc)` -> `[100%] Built target _game`, `[100%] Built target for_unit_tests`
   - `ctest --test-dir cmake-build-release --output-on-failure -R for_unit_tests` -> `1/1 Test #1: for_unit_tests ... Passed`
   - `python3 test.py` -> `Ran 120 tests in 268.767s`, `OK (skipped=19)` (run outside the sandbox for xvfb child processes)

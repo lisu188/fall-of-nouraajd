@@ -76,9 +76,9 @@ CSmallWeapon::CSmallWeapon() {}
 
 CWeapon::CWeapon() : CItem() {}
 
-std::shared_ptr<Stats> CItem::getBonus() { return bonus; }
+std::shared_ptr<CStats> CItem::getBonus() { return bonus; }
 
-void CItem::setBonus(std::shared_ptr<Stats> stats) { bonus = stats; }
+void CItem::setBonus(std::shared_ptr<CStats> stats) { bonus = stats; }
 
 bool CItem::isDisposable() {
     pybind11::gil_scoped_acquire gil;

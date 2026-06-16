@@ -4,7 +4,7 @@
     "properties": {
       "animation": "images/items/weapons/bladeofdarkdreams",
       "bonus": {
-        "class": "Stats",
+        "class": "CStats",
         "properties": {
           "agility": 7,
           "crit": 3,
@@ -25,7 +25,7 @@
     "properties": {
       "animation": "images/items/weapons/broadsword",
       "bonus": {
-        "class": "Stats",
+        "class": "CStats",
         "properties": {
           "agility": 2,
           "dmgMax": 18,
@@ -45,7 +45,7 @@
     "properties": {
       "animation": "images/items/weapons/chaossword",
       "bonus": {
-        "class": "Stats",
+        "class": "CStats",
         "properties": {
           "attack": 15,
           "damage": 25
@@ -64,7 +64,7 @@
     "properties": {
       "animation": "images/items/weapons/dagger",
       "bonus": {
-        "class": "Stats",
+        "class": "CStats",
         "properties": {
           "agility": 4,
           "dmgMax": 11,
@@ -82,7 +82,7 @@
     "properties": {
       "animation": "images/items/weapons/daggerofvileheart",
       "bonus": {
-        "class": "Stats",
+        "class": "CStats",
         "properties": {
           "agility": 15,
           "crit": 6,
@@ -103,7 +103,7 @@
     "properties": {
       "animation": "images/items/weapons/knife",
       "bonus": {
-        "class": "Stats",
+        "class": "CStats",
         "properties": {
           "agility": 1,
           "dmgMax": 7,
@@ -120,7 +120,7 @@
     "properties": {
       "animation": "images/items/weapons/longsword",
       "bonus": {
-        "class": "Stats",
+        "class": "CStats",
         "properties": {
           "dmgMax": 14,
           "dmgMin": 12,
@@ -138,7 +138,7 @@
     "properties": {
       "animation": "images/items/weapons/shadowblade",
       "bonus": {
-        "class": "Stats",
+        "class": "CStats",
         "properties": {
           "agility": 18,
           "crit": 6,
@@ -159,7 +159,7 @@
     "properties": {
       "animation": "images/items/weapons/shortstaff",
       "bonus": {
-        "class": "Stats",
+        "class": "CStats",
         "properties": {
           "dmgMax": 7,
           "dmgMin": 5,
@@ -176,7 +176,7 @@
     "properties": {
       "animation": "images/items/weapons/shortsword",
       "bonus": {
-        "class": "Stats",
+        "class": "CStats",
         "properties": {
           "dmgMax": 7,
           "dmgMin": 5,
@@ -193,7 +193,7 @@
     "properties": {
       "animation": "images/items/weapons/staff",
       "bonus": {
-        "class": "Stats",
+        "class": "CStats",
         "properties": {
           "dmgMax": 10,
           "dmgMin": 7,
@@ -214,7 +214,7 @@
     "properties": {
       "animation": "images/items/weapons/staffoftheabyss",
       "bonus": {
-        "class": "Stats",
+        "class": "CStats",
         "properties": {
           "agility": 10,
           "dmgMax": 41,
@@ -234,7 +234,7 @@
     "properties": {
       "animation": "images/items/weapons/stiletto",
       "bonus": {
-        "class": "Stats",
+        "class": "CStats",
         "properties": {
           "agility": 4,
           "dmgMax": 17,
@@ -254,7 +254,7 @@
     "properties": {
       "animation": "images/items/weapons/sword",
       "bonus": {
-        "class": "Stats",
+        "class": "CStats",
         "properties": {
           "attack": 5,
           "damage": 10
@@ -269,7 +269,7 @@
     "properties": {
       "animation": "images/items/weapons/valkyrie",
       "bonus": {
-        "class": "Stats",
+        "class": "CStats",
         "properties": {
           "agility": 17,
           "crit": 1,
@@ -290,7 +290,7 @@
     "properties": {
       "animation": "images/items/weapons/void",
       "bonus": {
-        "class": "Stats",
+        "class": "CStats",
         "properties": {
           "agility": 12,
           "block": 4,
@@ -312,7 +312,7 @@
     "properties": {
       "animation": "images/items/weapons/wand",
       "bonus": {
-        "class": "Stats",
+        "class": "CStats",
         "properties": {
           "agility": 2,
           "dmgMax": 17,

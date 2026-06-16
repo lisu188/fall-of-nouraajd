@@ -21,4 +21,4 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include <pybind11/pybind11.h>
 
-FON_CORE_EXPORT void init_game_module(pybind11::module_ &m);
+GAME_CORE_EXPORT void init_game_module(pybind11::module_ &m);

@@ -1,6 +1,6 @@
 /*
 fall-of-nouraajd c++ dark fantasy game
-Copyright (C) 2025  Andrzej Lis
+Copyright (C) 2025-2026  Andrzej Lis
 
 This program is free software: you can redistribute it and/or modify
         it under the terms of the GNU General Public License as published by
@@ -16,17 +16,33 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #include "core/CMap.h"
+#include <memory>
 #include <pybind11/eval.h>
 
+namespace {
+class CScriptHandlerState {
+  public:
+    pybind11::object mainModule;
+    pybind11::dict mainNamespace;
+};
+
+CScriptHandlerState &get_state(const std::shared_ptr<void> &pythonState) {
+    return *std::static_pointer_cast<CScriptHandlerState>(pythonState);
+}
+} // namespace
+
 CScriptHandler::CScriptHandler() {
-    main_module = pybind11::module::import("__main__");
-    main_namespace = main_module.attr("__dict__");
+    pythonState = std::make_shared<CScriptHandlerState>();
+    auto &state = get_state(pythonState);
+    state.mainModule = pybind11::module::import("__main__");
+    state.mainNamespace = state.mainModule.attr("__dict__");
 }
 
 CScriptHandler::~CScriptHandler() = default;
 
 void CScriptHandler::execute_script(std::string script, pybind11::object name_space) {
-    auto target = name_space.is_none() ? main_namespace : name_space;
+    auto &state = get_state(pythonState);
+    auto target = name_space.is_none() ? state.mainNamespace : name_space;
     pybind11::exec(script + "\n", target, target);
 }
 
@@ -87,3 +103,10 @@ std::string CScriptHandler::add_class(std::string function_code, std::initialize
 void CScriptHandler::import(std::string name) { execute_script(vstd::join({"import", name}, " ")); }
 
 void CScriptHandler::execute_command(std::initializer_list<std::string> list) { execute_script(build_command(list)); }
+
+pybind11::object CScriptHandler::get_py_object(std::string name) {
+    execute_script(vstd::join({"__tmp__", name}, "="));
+    pybind11::object object = get_state(pythonState).mainNamespace["__tmp__"];
+    execute_script("del __tmp__");
+    return object;
+}

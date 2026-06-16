@@ -188,38 +188,38 @@ class CGameObject : public vstd::stringable, public std::enable_shared_from_this
     std::shared_ptr<CGame> game;
 };
 
-class Visitable {
+class CVisitable {
   public:
     virtual void onEnter(std::shared_ptr<CGameEvent>) = 0;
 
     virtual void onLeave(std::shared_ptr<CGameEvent>) = 0;
 };
 
-class Moveable {
+class CMoveable {
   public:
     virtual void beforeMove() = 0;
 
     virtual void afterMove() = 0;
 };
 
-class Wearable {
+class CWearable {
   public:
     virtual void onEquip(std::shared_ptr<CGameEvent>) = 0;
 
     virtual void onUnequip(std::shared_ptr<CGameEvent>) = 0;
 };
 
-class Usable {
+class CUsable {
   public:
     virtual void onUse(std::shared_ptr<CGameEvent>) = 0;
 };
 
-class Turnable {
+class CTurnable {
   public:
     virtual void onTurn(std::shared_ptr<CGameEvent>) = 0;
 };
 
-class Creatable {
+class CCreatable {
   public:
     virtual void onCreate(std::shared_ptr<CGameEvent>) = 0;
 

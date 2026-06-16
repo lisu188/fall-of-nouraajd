@@ -17,47 +17,47 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #include "handler/CHandler.h"
 
-std::string CGameEvent::Type::onEnter = "onEnter";
-std::string CGameEvent::Type::onTurn = "onTurn";
-std::string CGameEvent::Type::onCreate = "onCreate";
-std::string CGameEvent::Type::onDestroy = "onDestroy";
-std::string CGameEvent::Type::onLeave = "onLeave";
-std::string CGameEvent::Type::onUse = "onUse";
-std::string CGameEvent::Type::onEquip = "onEquip";
-std::string CGameEvent::Type::onUnequip = "onUnequip";
+std::string CGameEvent::CType::onEnter = "onEnter";
+std::string CGameEvent::CType::onTurn = "onTurn";
+std::string CGameEvent::CType::onCreate = "onCreate";
+std::string CGameEvent::CType::onDestroy = "onDestroy";
+std::string CGameEvent::CType::onLeave = "onLeave";
+std::string CGameEvent::CType::onUse = "onUse";
+std::string CGameEvent::CType::onEquip = "onEquip";
+std::string CGameEvent::CType::onUnequip = "onUnequip";
 
 void CEventHandler::gameEvent(std::shared_ptr<CMapObject> object, std::shared_ptr<CGameEvent> event) const {
     // TODO: maybe add reflection
-    if (event->getType() == CGameEvent::Type::onEnter) {
-        if (auto visitable = vstd::cast<Visitable>(object)) {
+    if (event->getType() == CGameEvent::CType::onEnter) {
+        if (auto visitable = vstd::cast<CVisitable>(object)) {
             visitable->onEnter(event);
         }
-    } else if (event->getType() == CGameEvent::Type::onLeave) {
-        if (auto visitable = vstd::cast<Visitable>(object)) {
+    } else if (event->getType() == CGameEvent::CType::onLeave) {
+        if (auto visitable = vstd::cast<CVisitable>(object)) {
             visitable->onLeave(event);
         }
-    } else if (event->getType() == CGameEvent::Type::onTurn) {
-        if (auto turnable = vstd::cast<Turnable>(object)) {
+    } else if (event->getType() == CGameEvent::CType::onTurn) {
+        if (auto turnable = vstd::cast<CTurnable>(object)) {
             turnable->onTurn(event);
         }
-    } else if (event->getType() == CGameEvent::Type::onDestroy) {
-        if (auto creatable = vstd::cast<Creatable>(object)) {
+    } else if (event->getType() == CGameEvent::CType::onDestroy) {
+        if (auto creatable = vstd::cast<CCreatable>(object)) {
             creatable->onDestroy(event);
         }
-    } else if (event->getType() == CGameEvent::Type::onCreate) {
-        if (auto creatable = vstd::cast<Creatable>(object)) {
+    } else if (event->getType() == CGameEvent::CType::onCreate) {
+        if (auto creatable = vstd::cast<CCreatable>(object)) {
             creatable->onCreate(event);
         }
-    } else if (event->getType() == CGameEvent::Type::onUse) {
-        if (auto usable = vstd::cast<Usable>(object)) {
+    } else if (event->getType() == CGameEvent::CType::onUse) {
+        if (auto usable = vstd::cast<CUsable>(object)) {
             usable->onUse(event);
         }
-    } else if (event->getType() == CGameEvent::Type::onEquip) {
-        if (auto wearable = vstd::cast<Wearable>(object)) {
+    } else if (event->getType() == CGameEvent::CType::onEquip) {
+        if (auto wearable = vstd::cast<CWearable>(object)) {
             wearable->onEquip(event);
         }
-    } else if (event->getType() == CGameEvent::Type::onUnequip) {
-        if (auto wearable = vstd::cast<Wearable>(object)) {
+    } else if (event->getType() == CGameEvent::CType::onUnequip) {
+        if (auto wearable = vstd::cast<CWearable>(object)) {
             wearable->onUnequip(event);
         }
     } else {

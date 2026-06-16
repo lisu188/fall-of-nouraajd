@@ -36,9 +36,9 @@ class CEffect : public CGameObject {
 
     void apply(std::shared_ptr<CCreature> creature);
 
-    std::shared_ptr<Stats> getBonus();
+    std::shared_ptr<CStats> getBonus();
 
-    void setBonus(std::shared_ptr<Stats> value);
+    void setBonus(std::shared_ptr<CStats> value);
 
     int getDuration();
 
@@ -61,7 +61,7 @@ class CEffect : public CGameObject {
   private:
     int timeLeft = 0;
     int timeTotal = 0;
-    std::shared_ptr<Stats> bonus = std::make_shared<Stats>();
+    std::shared_ptr<CStats> bonus = std::make_shared<CStats>();
     std::shared_ptr<CCreature> caster;
     std::shared_ptr<CCreature> victim;
     int duration = 0;

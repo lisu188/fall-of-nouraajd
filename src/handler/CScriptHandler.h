@@ -1,6 +1,6 @@
 /*
 fall-of-nouraajd c++ dark fantasy game
-Copyright (C) 2025  Andrzej Lis
+Copyright (C) 2025-2026  Andrzej Lis
 
 This program is free software: you can redistribute it and/or modify
         it under the terms of the GNU General Public License as published by
@@ -18,11 +18,13 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #pragma once
 
 #include "core/CConcepts.h"
+#include "core/CExport.h"
 #include "core/CGlobal.h"
 #include "core/CUtil.h"
+#include <memory>
 #include <utility>
 
-template <fn::PythonReturn Ret, typename... Args> struct wrap {
+template <fn::PythonReturn Ret, typename... Args> struct GAME_CORE_LOCAL CPythonFunctionWrapper {
     static std::function<Ret(Args...)> call(pybind11::object func) {
         return [func](Args... args) -> Ret {
             try {
@@ -37,7 +39,7 @@ template <fn::PythonReturn Ret, typename... Args> struct wrap {
     }
 };
 
-template <typename... Args> struct wrap<void, Args...> {
+template <typename... Args> struct GAME_CORE_LOCAL CPythonFunctionWrapper<void, Args...> {
     static std::function<void(Args...)> call(pybind11::object func) {
         return [func](Args... args) { PY_SAFE(func(std::forward<Args>(args)...)); };
     }
@@ -66,7 +68,7 @@ class CScriptHandler {
     template <typename Ret = void, typename... Args>
         requires fn::PythonReturn<Ret>
     std::function<Ret(Args...)> get_function(std::string functionName) {
-        return wrap<Ret, Args...>::call(get_object(functionName));
+        return CPythonFunctionWrapper<Ret, Args...>::call(get_object(functionName));
     }
 
     template <typename Ret = void, typename... Args>
@@ -100,15 +102,10 @@ class CScriptHandler {
         execute_script("del " + name);
     }
 
-    template <typename T = pybind11::object> T get_object(std::string name) {
-        execute_script(vstd::join({"__tmp__", name}, "="));
-        pybind11::object object = main_namespace["__tmp__"];
-        T t = object.cast<T>();
-        execute_script("del __tmp__");
-        return t;
-    }
+    template <typename T = pybind11::object> T get_object(std::string name) { return get_py_object(name).cast<T>(); }
 
   private:
-    pybind11::object main_module;
-    pybind11::dict main_namespace;
+    pybind11::object get_py_object(std::string name);
+
+    std::shared_ptr<void> pythonState;
 };

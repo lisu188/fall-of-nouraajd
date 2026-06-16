@@ -15,8 +15,8 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 def load(self, context):
     from game import CInteraction
-    from game import Damage
-    from game import Stats
+    from game import CDamage
+    from game import CStats
     from game import randint
     from game import register
 
@@ -39,7 +39,7 @@ def load(self, context):
     @register(context)
     class ElemStaff(CInteraction):
         def performAction(self, first, second):
-            damage = Damage()
+            damage = CDamage()
             damage.setNumericProperty("fire", 1)
             damage.setNumericProperty("frost", 1)
             damage.setNumericProperty("thunder", 1)
@@ -69,7 +69,7 @@ def load(self, context):
     @register(context)
     class ChaosBlast(CInteraction):
         def performAction(self, first, second):
-            damage = Damage()
+            damage = CDamage()
             damage.setNumericProperty("fire", first.getMana() // 2)
             damage.setNumericProperty("thunder", first.getMana() // 2)
             second.hurt(damage)
@@ -89,7 +89,7 @@ def load(self, context):
     class FrostBolt(CInteraction):
         def performAction(self, first, second):
             Attack().onAction(first, second)
-            damage = Damage()
+            damage = CDamage()
             intelligence = first.getStats().getNumericProperty("intelligence")
             damage.setNumericProperty("frost", intelligence * 75 // 100)
             second.hurt(damage)
@@ -105,7 +105,7 @@ def load(self, context):
     @register(context)
     class ShadowBolt(CInteraction):
         def performAction(self, first, second):
-            damage = Damage()
+            damage = CDamage()
             damage.setNumericProperty("shadow", int(first.getDmg() * 2.25))
             second.hurt(damage)
 
@@ -177,7 +177,7 @@ def load(self, context):
             caster = effect.getCaster()
             if not caster:
                 return False
-            stats = Stats()
+            stats = CStats()
             stats.setNumericProperty("armor", caster.getStats().getNumericProperty("armor") * 75 // 100)
             effect.setBonus(stats)
             return True
@@ -186,7 +186,7 @@ def load(self, context):
     class ExposeCorruption(CInteraction):
         def performAction(self, first, second):
             Attack().onAction(first, second)
-            damage = Damage()
+            damage = CDamage()
             clues = first.getNumericProperty("inquisitor_clues")
             base = first.getStats().getNumericProperty("intelligence") // 2 + first.getLevel()
             if is_cultist(second):
@@ -199,7 +199,7 @@ def load(self, context):
             if not caster:
                 return False
             clues = caster.getNumericProperty("inquisitor_clues")
-            stats = Stats()
+            stats = CStats()
             stats.setNumericProperty("armor", -(2 + clues * 2))
             stats.setNumericProperty("block", -(2 + caster.getLevel() // 2))
             effect.setBonus(stats)
@@ -216,7 +216,7 @@ def load(self, context):
             if not caster:
                 return False
             clues = caster.getNumericProperty("inquisitor_clues")
-            stats = Stats()
+            stats = CStats()
             stats.setNumericProperty("armor", 4 + caster.getLevel() + clues)
             stats.setNumericProperty("normalResist", 3 + clues * 2)
             stats.setNumericProperty("hit", 2 + clues)
@@ -234,7 +234,7 @@ def load(self, context):
             if not caster:
                 return False
             routes = caster.getNumericProperty("wayfarer_routes")
-            stats = Stats()
+            stats = CStats()
             stats.setNumericProperty("agility", 2 + routes + caster.getLevel() // 3)
             stats.setNumericProperty("block", 4 + routes * 2)
             stats.setNumericProperty("hit", 3 + routes)
@@ -245,7 +245,7 @@ def load(self, context):
     @register(context)
     class SmugglersMark(CInteraction):
         def performAction(self, first, second):
-            damage = Damage()
+            damage = CDamage()
             routes = first.getNumericProperty("wayfarer_routes")
             damage.setNumericProperty("normal", max(1, first.getStats().getNumericProperty("agility") // 2 + routes))
             second.hurt(damage)
@@ -255,7 +255,7 @@ def load(self, context):
             if not caster:
                 return False
             routes = caster.getNumericProperty("wayfarer_routes")
-            stats = Stats()
+            stats = CStats()
             stats.setNumericProperty("block", -(3 + routes * 2))
             stats.setNumericProperty("hit", -(2 + caster.getLevel() // 3))
             effect.setBonus(stats)

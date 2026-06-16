@@ -29,13 +29,13 @@ std::shared_ptr<CSerializerBase> CSerialization::serializer(std::pair<std::type_
 namespace {
 thread_local std::string array_deserialize_context;
 
-class ScopedArrayDeserializeContext {
+class CScopedArrayDeserializeContext {
   public:
-    explicit ScopedArrayDeserializeContext(std::string context) : previous(array_deserialize_context) {
+    explicit CScopedArrayDeserializeContext(std::string context) : previous(array_deserialize_context) {
         array_deserialize_context = std::move(context);
     }
 
-    ~ScopedArrayDeserializeContext() { array_deserialize_context = previous; }
+    ~CScopedArrayDeserializeContext() { array_deserialize_context = previous; }
 
   private:
     std::string previous;
@@ -172,7 +172,7 @@ void CSerialization::setOtherProperty(std::type_index serializedId, std::type_in
                 context += " named '" + object->getName() + "'";
             }
         }
-        ScopedArrayDeserializeContext arrayContext(context);
+        CScopedArrayDeserializeContext arrayContext(context);
         result = vstd::not_null(serializer, "No serializer!")->deserialize(object->getGame(), value);
     } catch (const std::exception &ex) {
         throw std::runtime_error("Failed to deserialize property '" + key + "': " + ex.what());

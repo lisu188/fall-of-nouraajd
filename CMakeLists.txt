@@ -20,18 +20,18 @@ endif ()
 
 project(fall-of-nouraajd)
 
-set(FON_DEFAULT_ENABLE_UNITY_BUILD OFF)
-set(FON_DEFAULT_ENABLE_PCH OFF)
-set(FON_DEFAULT_UNITY_BATCH_SIZE "8")
+set(GAME_DEFAULT_ENABLE_UNITY_BUILD OFF)
+set(GAME_DEFAULT_ENABLE_PCH OFF)
+set(GAME_DEFAULT_UNITY_BATCH_SIZE "8")
 if (CMAKE_SYSTEM_NAME STREQUAL "Linux" AND CMAKE_BUILD_TYPE STREQUAL "Release")
-    set(FON_DEFAULT_ENABLE_UNITY_BUILD ON)
-    set(FON_DEFAULT_ENABLE_PCH ON)
-    set(FON_DEFAULT_UNITY_BATCH_SIZE "16")
+    set(GAME_DEFAULT_ENABLE_UNITY_BUILD ON)
+    set(GAME_DEFAULT_ENABLE_PCH ON)
+    set(GAME_DEFAULT_UNITY_BATCH_SIZE "16")
 endif ()
-option(FON_ENABLE_UNITY_BUILD "Enable unity builds for large shared game targets." ${FON_DEFAULT_ENABLE_UNITY_BUILD})
-set(FON_UNITY_BATCH_SIZE "${FON_DEFAULT_UNITY_BATCH_SIZE}" CACHE STRING
+option(GAME_ENABLE_UNITY_BUILD "Enable unity builds for large shared game targets." ${GAME_DEFAULT_ENABLE_UNITY_BUILD})
+set(GAME_UNITY_BATCH_SIZE "${GAME_DEFAULT_UNITY_BATCH_SIZE}" CACHE STRING
     "Number of source files per unity build translation unit.")
-option(FON_ENABLE_PCH "Enable precompiled headers for large shared game targets." ${FON_DEFAULT_ENABLE_PCH})
+option(GAME_ENABLE_PCH "Enable precompiled headers for large shared game targets." ${GAME_DEFAULT_ENABLE_PCH})
 
 if (WIN32)
     set(CPACK_GENERATOR "ZIP")
@@ -148,17 +148,17 @@ configure_cpp_target(game_core)
 set_target_properties(game_core PROPERTIES
     OUTPUT_NAME "game_core"
 )
-if (FON_ENABLE_UNITY_BUILD)
+if (GAME_ENABLE_UNITY_BUILD)
     set_target_properties(game_core PROPERTIES
         UNITY_BUILD ON
-        UNITY_BUILD_BATCH_SIZE ${FON_UNITY_BATCH_SIZE}
+        UNITY_BUILD_BATCH_SIZE ${GAME_UNITY_BATCH_SIZE}
     )
 endif ()
-if (FON_ENABLE_PCH)
+if (GAME_ENABLE_PCH)
     target_precompile_headers(game_core PRIVATE "${CMAKE_SOURCE_DIR}/src/core/CGlobal.h")
 endif ()
 target_compile_definitions(game_core PRIVATE
-    FON_GAME_CORE_BUILD
+    GAME_CORE_BUILD
 )
 target_link_libraries(game_core PRIVATE
     Python3::Python

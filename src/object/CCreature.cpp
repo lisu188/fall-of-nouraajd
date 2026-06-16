@@ -24,7 +24,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CJsonUtil.h"
 #include "core/CMap.h"
 
-bool visitablePredicate(std::shared_ptr<CMapObject> object) { return vstd::cast<Visitable>(object).operator bool(); };
+bool visitablePredicate(std::shared_ptr<CMapObject> object) { return vstd::cast<CVisitable>(object).operator bool(); };
 
 void CCreature::setActions(std::set<std::shared_ptr<CInteraction>> value) {
     actions.clear();
@@ -73,9 +73,9 @@ std::shared_ptr<CInteraction> CCreature::getLevelAction() {
     }
 }
 
-std::shared_ptr<Stats> CCreature::getLevelStats() { return levelStats; }
+std::shared_ptr<CStats> CCreature::getLevelStats() { return levelStats; }
 
-void CCreature::setLevelStats(std::shared_ptr<Stats> _value) { levelStats = _value; }
+void CCreature::setLevelStats(std::shared_ptr<CStats> _value) { levelStats = _value; }
 
 void CCreature::addItem(std::shared_ptr<CItem> item) {
     std::set<std::shared_ptr<CItem>> list;
@@ -149,7 +149,7 @@ void CCreature::healProc(float i) {
 }
 
 void CCreature::hurt(int i) {
-    std::shared_ptr<Damage> damage = std::make_shared<Damage>();
+    std::shared_ptr<CDamage> damage = std::make_shared<CDamage>();
     damage->setNormal(i);
     hurt(damage);
 }
@@ -190,7 +190,7 @@ void CCreature::setItems(std::set<std::shared_ptr<CItem>> value) {
 
 std::set<std::shared_ptr<CItem>> CCreature::getItems() { return items; }
 
-void CCreature::hurt(std::shared_ptr<Damage> damage) {
+void CCreature::hurt(std::shared_ptr<CDamage> damage) {
     auto stats = getStats();
     takeDamage(damage->getNormal() * (100 - stats->getNormalResist()) / 100.0);
     takeDamage(damage->getThunder() * (100 - stats->getThunderResist()) / 100.0);
@@ -335,7 +335,7 @@ void CCreature::equipItem(std::string i, std::shared_ptr<CItem> newItem) {
         std::shared_ptr<CItem> oldItem = equipped.at(i);
 
         getMap()->getEventHandler()->gameEvent(
-            oldItem, std::make_shared<CGameEventCaused>(CGameEvent::Type::onUnequip, this->ptr<CCreature>()));
+            oldItem, std::make_shared<CGameEventCaused>(CGameEvent::CType::onUnequip, this->ptr<CCreature>()));
         this->addItem(oldItem);
         if (newItem == oldItem) {
             newItem = nullptr;
@@ -343,7 +343,7 @@ void CCreature::equipItem(std::string i, std::shared_ptr<CItem> newItem) {
     }
     if (newItem) {
         getMap()->getEventHandler()->gameEvent(
-            newItem, std::make_shared<CGameEventCaused>(CGameEvent::Type::onEquip, this->ptr<CCreature>()));
+            newItem, std::make_shared<CGameEventCaused>(CGameEvent::CType::onEquip, this->ptr<CCreature>()));
         removeItem(newItem);
         equipped[i] = newItem;
         signal("equippedChanged");
@@ -423,9 +423,9 @@ int CCreature::getSw() const { return sw; }
 
 void CCreature::setSw(int _value) { sw = _value; }
 
-std::shared_ptr<Stats> CCreature::getBaseStats() { return baseStats; }
+std::shared_ptr<CStats> CCreature::getBaseStats() { return baseStats; }
 
-void CCreature::setBaseStats(std::shared_ptr<Stats> _value) { baseStats = _value; }
+void CCreature::setBaseStats(std::shared_ptr<CStats> _value) { baseStats = _value; }
 
 int CCreature::getHpMax() {
     return getStats()->getStamina() * 7;
@@ -461,7 +461,7 @@ void CCreature::beforeMove() {
 
     auto func = [self](std::shared_ptr<CMapObject> object) {
         self->getMap()->getEventHandler()->gameEvent(
-            object, std::make_shared<CGameEventCaused>(CGameEvent::Type::onLeave, self));
+            object, std::make_shared<CGameEventCaused>(CGameEvent::CType::onLeave, self));
     };
 
     getMap()->forObjectsAtCoords(getCoords(), func, visitablePredicate);
@@ -489,7 +489,7 @@ void CCreature::afterMove() {
 
     auto eventAction = [self](auto object) {
         self->getMap()->getEventHandler()->gameEvent(
-            object, std::make_shared<CGameEventCaused>(CGameEvent::Type::onEnter, self));
+            object, std::make_shared<CGameEventCaused>(CGameEvent::CType::onEnter, self));
     };
 
     getMap()->forObjectsAtCoords(this->getCoords(), fightAction, fightPred);
@@ -566,7 +566,7 @@ void CCreature::useItem(std::shared_ptr<CItem> item) {
         return;
     }
     getMap()->getEventHandler()->gameEvent(item,
-                                           std::make_shared<CGameEventCaused>(CGameEvent::Type::onUse, this->ptr()));
+                                           std::make_shared<CGameEventCaused>(CGameEvent::CType::onUse, this->ptr()));
     if (item->isDisposable()) {
         removeItem(item);
     }
@@ -580,8 +580,8 @@ void CCreature::removeQuestItem(std::shared_ptr<CItem> item) { removeItem(item, 
 
 void CCreature::removeQuestItem(std::function<bool(std::shared_ptr<CItem>)> item) { removeItem(item, true); }
 
-std::shared_ptr<Stats> CCreature::getStats() {
-    std::shared_ptr<Stats> ret = std::make_shared<Stats>();
+std::shared_ptr<CStats> CCreature::getStats() {
+    std::shared_ptr<CStats> ret = std::make_shared<CStats>();
     ret->setMainStat(getBaseStats()->getMainStat());
     ret->addBonus(getBaseStats());
     for (int i = 0; i < level; i++) {

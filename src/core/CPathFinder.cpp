@@ -62,9 +62,9 @@ struct AStarCompare {
 using AStarQueue = std::priority_queue<AStarNode, std::vector<AStarNode>, AStarCompare>;
 using NextStepQueue = std::priority_queue<NextStepNode, std::vector<NextStepNode>, AStarCompare>;
 
-template <fn::PathPassability CanStep> class PassabilityCache {
+template <fn::PathPassability CanStep> class CPassabilityCache {
   public:
-    explicit PassabilityCache(const CanStep &canStep) : canStep(canStep) {}
+    explicit CPassabilityCache(const CanStep &canStep) : canStep(canStep) {}
 
     bool canStepAt(const Coords &coords) {
         auto cached = values.find(coords);
@@ -99,7 +99,7 @@ template <fn::PathPassability CanStep, fn::PathWaypoint Waypoint, fn::PathNeighb
 Values fillValues(const CanStep &canStep, const Coords &goal, const Waypoint &waypoint, const Neighbors &neighbors,
                   const StepCost &stepCost, const Coords *stopAt = nullptr) {
     Values values = std::make_shared<std::unordered_map<Coords, int>>();
-    PassabilityCache passability(canStep);
+    CPassabilityCache passability(canStep);
     Queue nodes;
 
     if (passability.canStepAt(goal) || (stopAt && goal == *stopAt)) {
@@ -166,7 +166,7 @@ std::vector<Coords> findAStarPath(Coords start, Coords goal, const CanStep &canS
     if (start == goal) {
         return {start};
     }
-    PassabilityCache passability(canStep);
+    CPassabilityCache passability(canStep);
     if (!passability.canStepAt(goal)) {
         return {start};
     }
@@ -216,7 +216,7 @@ Coords findAStarNextStep(Coords start, Coords goal, const CanStep &canStep, cons
     if (start == goal) {
         return start;
     }
-    PassabilityCache passability(canStep);
+    CPassabilityCache passability(canStep);
     if (!passability.canStepAt(goal)) {
         return start;
     }

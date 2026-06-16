@@ -21,23 +21,23 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CUtil.h"
 #include "object/CMapObject.h"
 
-class Stats : public CGameObject {
+class CStats : public CGameObject {
 
-    V_META(Stats, CGameObject, V_PROPERTY(Stats, int, strength, getStrength, setStrength),
-           V_PROPERTY(Stats, int, agility, getAgility, setAgility),
-           V_PROPERTY(Stats, int, stamina, getStamina, setStamina),
-           V_PROPERTY(Stats, int, intelligence, getIntelligence, setIntelligence),
-           V_PROPERTY(Stats, int, armor, getArmor, setArmor), V_PROPERTY(Stats, int, block, getBlock, setBlock),
-           V_PROPERTY(Stats, int, dmgMin, getDmgMin, setDmgMin), V_PROPERTY(Stats, int, dmgMax, getDmgMax, setDmgMax),
-           V_PROPERTY(Stats, int, attack, getAttack, setAttack), V_PROPERTY(Stats, int, hit, getHit, setHit),
-           V_PROPERTY(Stats, int, crit, getCrit, setCrit),
-           V_PROPERTY(Stats, int, fireResist, getFireResist, setFireResist),
-           V_PROPERTY(Stats, int, frostResist, getFrostResist, setFrostResist),
-           V_PROPERTY(Stats, int, normalResist, getNormalResist, setNormalResist),
-           V_PROPERTY(Stats, int, thunderResist, getThunderResist, setThunderResist),
-           V_PROPERTY(Stats, int, shadowResist, getShadowResist, setShadowResist),
-           V_PROPERTY(Stats, int, damage, getDamage, setDamage),
-           V_PROPERTY(Stats, std::string, mainStat, getMainStat, setMainStat))
+    V_META(CStats, CGameObject, V_PROPERTY(CStats, int, strength, getStrength, setStrength),
+           V_PROPERTY(CStats, int, agility, getAgility, setAgility),
+           V_PROPERTY(CStats, int, stamina, getStamina, setStamina),
+           V_PROPERTY(CStats, int, intelligence, getIntelligence, setIntelligence),
+           V_PROPERTY(CStats, int, armor, getArmor, setArmor), V_PROPERTY(CStats, int, block, getBlock, setBlock),
+           V_PROPERTY(CStats, int, dmgMin, getDmgMin, setDmgMin), V_PROPERTY(CStats, int, dmgMax, getDmgMax, setDmgMax),
+           V_PROPERTY(CStats, int, attack, getAttack, setAttack), V_PROPERTY(CStats, int, hit, getHit, setHit),
+           V_PROPERTY(CStats, int, crit, getCrit, setCrit),
+           V_PROPERTY(CStats, int, fireResist, getFireResist, setFireResist),
+           V_PROPERTY(CStats, int, frostResist, getFrostResist, setFrostResist),
+           V_PROPERTY(CStats, int, normalResist, getNormalResist, setNormalResist),
+           V_PROPERTY(CStats, int, thunderResist, getThunderResist, setThunderResist),
+           V_PROPERTY(CStats, int, shadowResist, getShadowResist, setShadowResist),
+           V_PROPERTY(CStats, int, damage, getDamage, setDamage),
+           V_PROPERTY(CStats, std::string, mainStat, getMainStat, setMainStat))
 
     int attack = 0;
     int damage = 0;
@@ -58,11 +58,11 @@ class Stats : public CGameObject {
     int strength = 0;
 
   public:
-    Stats();
+    CStats();
 
-    void addBonus(std::shared_ptr<Stats> stats);
+    void addBonus(std::shared_ptr<CStats> stats);
 
-    void removeBonus(std::shared_ptr<Stats> stats);
+    void removeBonus(std::shared_ptr<CStats> stats);
 
     std::string getText(int level);
 
@@ -144,12 +144,12 @@ class Stats : public CGameObject {
     std::string mainStat;
 };
 
-class Damage : public CGameObject {
+class CDamage : public CGameObject {
 
-    V_META(Damage, CGameObject, V_PROPERTY(Damage, int, fire, getFire, setFire),
-           V_PROPERTY(Damage, int, thunder, getThunder, setThunder),
-           V_PROPERTY(Damage, int, shadow, getShadow, setShadow), V_PROPERTY(Damage, int, frost, getFrost, setFrost),
-           V_PROPERTY(Damage, int, normal, getNormal, setNormal))
+    V_META(CDamage, CGameObject, V_PROPERTY(CDamage, int, fire, getFire, setFire),
+           V_PROPERTY(CDamage, int, thunder, getThunder, setThunder),
+           V_PROPERTY(CDamage, int, shadow, getShadow, setShadow), V_PROPERTY(CDamage, int, frost, getFrost, setFrost),
+           V_PROPERTY(CDamage, int, normal, getNormal, setNormal))
 
     int fire = 0;
     int frost = 0;
@@ -158,7 +158,7 @@ class Damage : public CGameObject {
     int normal = 0;
 
   public:
-    Damage();
+    CDamage();
 
     int getFire() const;
 
