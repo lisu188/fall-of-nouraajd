@@ -111,7 +111,7 @@ The Python tests require the compiled `_game` module for most runtime paths. Tes
 
 When validation cannot be run, do not imply that it passed. Report the exact command that was skipped or failed and the reason.
 
-Every bug fix must include at least one corresponding automated test (unit, integration, or regression) that fails before the fix and passes after it.
+Every bug fix must include at least one corresponding automated test (unit, integration, or regression) that fails before the fix and passes after it. Treat this as required bugfix test coverage; do not mark a bug fix complete without a regression test covering the fixed behavior.
 
 ## Coverage
 
@@ -191,7 +191,7 @@ Python:
 C++:
 
 - Use `CamelCase` for class names.
-- Use `camelCase` for all C++ methods, even when they are exposed to Python.
+- Use `camelCase` for all methods, including methods exposed to Python.
 
 JSON/resource IDs:
 

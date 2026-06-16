@@ -239,6 +239,7 @@ void CMap::addObject(const std::shared_ptr<CMapObject> &mapObject) {
         creature->addExp(0);
     }
     mapObjects.insert(std::make_pair(mapObject->getName(), mapObject));
+    mapObjectsCache.insert(std::make_pair(normalizeCoords(mapObject->getCoords()), mapObject->getName()));
     bumpNavigationRevision();
     getEventHandler()->gameEvent(mapObject, std::make_shared<CGameEvent>(CGameEvent::Type::onCreate));
     signal("objectChanged", mapObject->getCoords());
