@@ -182,7 +182,8 @@ General:
 
 Python:
 
-- Use `snake_case` for functions, methods, and local variables.
+- Use `camelCase` for functions and methods, including methods exposed to or called from C++/JSON.
+- Use `snake_case` for local variables.
 - Use `UPPER_SNAKE_CASE` for global flags and constant-like values.
 - Use `CamelCase` for classes.
 - Trigger classes decorated with `@trigger` must use `CamelCase` and end with `Trigger`.
@@ -190,8 +191,7 @@ Python:
 C++:
 
 - Use `CamelCase` for class names.
-- Existing engine methods exposed to Python may keep their current `CamelCase` names.
-- New Python-only methods should use `snake_case`.
+- Use `camelCase` for all C++ methods, even when they are exposed to Python.
 
 JSON/resource IDs:
 
