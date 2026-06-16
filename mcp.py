@@ -185,6 +185,7 @@ class EngineMcpServer:
                 continue
             if inspect.isclass(value):
                 self._export_class_python_methods(value, source=source)
+                continue
             if not callable(value):
                 continue
             if name in {"load", "register", "trigger"}:
@@ -892,6 +893,13 @@ class EngineMcpServer:
             raise ProtocolError(-32602, "engine_handle_call `args` must be an array")
         if not isinstance(call_kwargs, dict):
             raise ProtocolError(-32602, "engine_handle_call `kwargs` must be an object")
+        if method.startswith("_"):
+            result = {"error": f"Method `{method}` is not exported for handle calls"}
+            return {
+                "content": [{"type": "text", "text": json.dumps(result, ensure_ascii=False)}],
+                "structuredContent": result,
+                "isError": True,
+            }
         if handle not in self.handles:
             result = {"error": f"Unknown handle: {handle}"}
             return {
