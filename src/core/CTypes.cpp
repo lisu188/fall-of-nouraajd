@@ -22,6 +22,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "../gui/CTooltip.h"
 #include "../gui/object/CConsoleGraphicsObject.h"
 #include "../gui/object/CMapGraphicsObject.h"
+#include "../gui/object/CMinimapGraphicsObject.h"
 #include "../gui/object/CProxyGraphicsObject.h"
 #include "../gui/object/CSideBar.h"
 #include "../gui/object/CStatsGraphicsObject.h"
@@ -282,6 +283,7 @@ struct register_all_types {
                 CTypes::register_type<CConsoleGraphicsObject, CGameGraphicsObject, CGameObject>();
                 CTypes::register_type<CProxyGraphicsObject, CGameGraphicsObject, CGameObject>();
                 CTypes::register_type<CSideBar, CGameGraphicsObject, CGameObject>();
+                CTypes::register_type<CMinimapGraphicsObject, CGameGraphicsObject, CGameObject>();
             }
         }
 

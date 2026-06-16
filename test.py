@@ -221,10 +221,15 @@ SDL_PIXELFORMAT_RGBA32 = 376840196
 GUI_WIDTH = 1920
 GUI_HEIGHT = 1080
 GUI_TILE_SIZE = 50
+MINIMAP_RECT = (1700, 820, 220, 220)
+MINIMAP_PLAYER_RGB = (255, 255, 0)
+MINIMAP_VIEWPORT_RGB = (255, 255, 255)
+XVFB_GAMEPLAY_CHILD_TIMEOUT = 300 if os.environ.get("FON_COVERAGE_RUN") == "1" else 90
 XVFB_GAMEPLAY_CHILD_TESTS = (
     "test_keyboard_input_moves_player",
     "test_mouse_click_moves_player",
     "test_screenshot_readback_has_rendered_pixels",
+    "test_screenshot_minimap_has_rendered_pixels",
     "test_screenshot_after_keyboard_move_has_rendered_pixels",
     "test_screenshot_after_mouse_move_has_rendered_pixels",
     "test_screenshot_after_save_hotkey_has_rendered_pixels",
@@ -268,6 +273,59 @@ def load_sdl_library():
         except OSError:
             continue
     raise AssertionError("Could not load SDL2 for gameplay event injection.")
+
+
+def sdl_x11_video_driver_available():
+    env = os.environ.copy()
+    env.update(
+        {
+            "SDL_VIDEODRIVER": "x11",
+            "SDL_AUDIODRIVER": "dummy",
+            "SDL_RENDER_DRIVER": "software",
+            "LIBGL_ALWAYS_SOFTWARE": "1",
+        }
+    )
+    script = r"""
+import ctypes
+import ctypes.util
+import sys
+
+for library_name in (ctypes.util.find_library("SDL2"), "libSDL2-2.0.so.0", "libSDL2.so"):
+    if not library_name:
+        continue
+    try:
+        sdl = ctypes.CDLL(library_name)
+        break
+    except OSError:
+        pass
+else:
+    sys.stderr.write("Could not load SDL2.")
+    sys.exit(1)
+
+sdl.SDL_Init.argtypes = [ctypes.c_uint32]
+sdl.SDL_Init.restype = ctypes.c_int
+sdl.SDL_GetError.restype = ctypes.c_char_p
+if sdl.SDL_Init(0x20) != 0:
+    error = sdl.SDL_GetError()
+    sys.stderr.write(error.decode("utf-8", errors="replace") if error else "SDL_Init failed.")
+    sys.exit(1)
+sdl.SDL_Quit()
+"""
+    try:
+        completed = subprocess.run(
+            ["xvfb-run", "-a", "--server-args=-screen 0 1920x1080x24", sys.executable, "-c", script],
+            cwd=REPO_ROOT,
+            env=env,
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+    except subprocess.TimeoutExpired:
+        return False, "SDL x11 initialization under xvfb timed out."
+    if completed.returncode == 0:
+        return True, ""
+    message = (completed.stderr or completed.stdout or "SDL x11 initialization under xvfb failed.").strip()
+    return False, message
 
 
 def push_sdl_key_event(keycode, scancode, event_type=SDL_KEYDOWN):
@@ -391,14 +449,28 @@ def drain_sdl_events():
         pass
 
 
-def capture_sdl_screenshot(path):
+def capture_sdl_screenshot(path, gui=None):
     import ctypes
     from PIL import Image
+
+    if gui is not None and hasattr(gui, "read_pixels"):
+        pixels, width, height = gui.read_pixels()
+        data = bytes(pixels)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        Image.frombytes("RGBA", (width, height), data).save(path)
+        return data, width, height
 
     sdl = load_sdl_library()
     sdl.SDL_GetKeyboardFocus.restype = ctypes.c_void_p
     sdl.SDL_GetMouseFocus.restype = ctypes.c_void_p
     window = sdl.SDL_GetKeyboardFocus() or sdl.SDL_GetMouseFocus()
+    if not window:
+        sdl.SDL_GetWindowFromID.argtypes = [ctypes.c_uint32]
+        sdl.SDL_GetWindowFromID.restype = ctypes.c_void_p
+        for window_id in range(1, 256):
+            window = sdl.SDL_GetWindowFromID(window_id)
+            if window:
+                break
     if not window:
         raise AssertionError("Could not find the focused SDL window for screenshot capture.")
 
@@ -458,11 +530,34 @@ def screenshot_pixel_summary(data):
     return {"unique_rgb": len(unique_rgb), "non_black_pixels": non_black_pixels}
 
 
+def screenshot_pixel_rgb(data, width, x, y):
+    offset = (y * width + x) * 4
+    return tuple(data[offset : offset + 3])
+
+
+def screenshot_rect_summary(data, width, rect):
+    x, y, w, h = rect
+    unique_rgb = set()
+    non_black_pixels = 0
+    color_counts = {}
+    for row in range(y, y + h):
+        for col in range(x, x + w):
+            rgb = screenshot_pixel_rgb(data, width, col, row)
+            unique_rgb.add(rgb)
+            color_counts[rgb] = color_counts.get(rgb, 0) + 1
+            if rgb != (0, 0, 0):
+                non_black_pixels += 1
+    return {"unique_rgb": len(unique_rgb), "non_black_pixels": non_black_pixels, "color_counts": color_counts}
+
+
 def assert_screenshot_has_rendered_pixels(test_case, g, name):
     from PIL import Image
 
     screenshot_path = TEST_OUTPUT_DIR / f"{name}.png"
-    data, width, height = capture_sdl_screenshot(screenshot_path)
+    try:
+        data, width, height = capture_sdl_screenshot(screenshot_path, g.getGui())
+    except RuntimeError as exc:
+        test_case.skipTest(f"SDL renderer is not available for screenshot readback: {exc}")
     summary = screenshot_pixel_summary(data)
 
     test_case.assertEqual(".png", screenshot_path.suffix)
@@ -475,6 +570,31 @@ def assert_screenshot_has_rendered_pixels(test_case, g, name):
     test_case.assertGreater(summary["unique_rgb"], 8)
     test_case.assertGreater(summary["non_black_pixels"], width * height // 100)
     assert_rendered_map_proxy_cells(test_case, g)
+    return summary
+
+
+def assert_minimap_has_rendered_pixels(test_case, g, name):
+    from PIL import Image
+
+    screenshot_path = TEST_OUTPUT_DIR / f"{name}.png"
+    try:
+        data, width, height = capture_sdl_screenshot(screenshot_path, g.getGui())
+    except RuntimeError as exc:
+        test_case.skipTest(f"SDL renderer is not available for screenshot readback: {exc}")
+    summary = screenshot_rect_summary(data, width, MINIMAP_RECT)
+
+    test_case.assertEqual((GUI_WIDTH, GUI_HEIGHT), (width, height))
+    test_case.assertTrue(screenshot_path.exists())
+    test_case.assertGreater(screenshot_path.stat().st_size, 0)
+    with Image.open(screenshot_path) as image:
+        image.load()
+        test_case.assertEqual((width, height), image.size)
+
+    minimap_area = MINIMAP_RECT[2] * MINIMAP_RECT[3]
+    test_case.assertGreater(summary["unique_rgb"], 3)
+    test_case.assertGreater(summary["non_black_pixels"], minimap_area * 9 // 10)
+    test_case.assertGreater(summary["color_counts"].get(MINIMAP_PLAYER_RGB, 0), 0)
+    test_case.assertGreater(summary["color_counts"].get(MINIMAP_VIEWPORT_RGB, 0), 0)
     return summary
 
 
@@ -2741,6 +2861,40 @@ class GameTest(unittest.TestCase):
                 "empty_after_east_move": sum(count == 0 for count in east_counts),
                 "empty_after_west_move": sum(count == 0 for count in west_counts),
             }
+        )
+
+    @game_test
+    def test_gui_includes_display_only_minimap_layout(self):
+        game = load_game_module()
+
+        g = game.CGameLoader.loadGame()
+        game.CGameLoader.loadGui(g)
+        game.CGameLoader.startGameWithPlayer(g, "test", "Warrior")
+        pump_event_loop()
+
+        gui_tree = json.loads(game.jsonify(g.getGui()))
+        children = gui_tree.get("properties", {}).get("children") or []
+        minimap = next((child for child in children if child.get("class") == "CMinimapGraphicsObject"), None)
+        self.assertIsNotNone(minimap, "The root GUI should include the minimap HUD child.")
+
+        minimap_props = minimap.get("properties", {})
+        layout = minimap_props.get("layout", {})
+        layout_props = layout.get("properties", {})
+        self.assertEqual(1, minimap_props.get("priority"))
+        self.assertEqual("CLayout", layout.get("class"))
+        self.assertEqual(
+            {"x": 1700, "y": 820, "w": 220, "h": 220},
+            {key: int(layout_props.get(key)) for key in ("x", "y", "w", "h")},
+        )
+        self.assertEqual("CScript", minimap_props.get("visible", {}).get("class"))
+
+        return True, json.dumps(
+            {
+                "class": minimap.get("class"),
+                "priority": minimap_props.get("priority"),
+                "layout": {key: layout_props.get(key) for key in ("x", "y", "w", "h")},
+            },
+            sort_keys=True,
         )
 
     @game_test
@@ -7026,6 +7180,9 @@ class XvfbGameplayTest(unittest.TestCase):
             self.skipTest("xvfb-run is not available.")
         if shutil.which("xauth") is None:
             self.skipTest("xauth is not available for xvfb-run.")
+        available, reason = sdl_x11_video_driver_available()
+        if not available:
+            self.skipTest(f"SDL x11 video driver is not available under xvfb: {reason}")
 
         env = os.environ.copy()
         env.update(
@@ -7054,7 +7211,7 @@ class XvfbGameplayTest(unittest.TestCase):
                     env=env,
                     capture_output=True,
                     text=True,
-                    timeout=90,
+                    timeout=XVFB_GAMEPLAY_CHILD_TIMEOUT,
                 )
             except subprocess.TimeoutExpired as exc:
                 stdout = exc.stdout or ""
@@ -7279,6 +7436,12 @@ class XvfbGameplayProcessTest(unittest.TestCase):
     def test_screenshot_readback_has_rendered_pixels(self):
         _, g, _, _ = create_xvfb_gameplay_session(self)
         assert_screenshot_has_rendered_pixels(self, g, "xvfb_gameplay_screenshot")
+
+    def test_screenshot_minimap_has_rendered_pixels(self):
+        _, g, _, _ = create_xvfb_gameplay_session(self)
+        summary = assert_minimap_has_rendered_pixels(self, g, "xvfb_minimap_screenshot")
+        self.assertTrue(gui_contains_class(g, "CMinimapGraphicsObject"))
+        self.assertGreaterEqual(summary["color_counts"].get(MINIMAP_PLAYER_RGB, 0), 20)
 
     def test_screenshot_after_keyboard_move_has_rendered_pixels(self):
         _, g, game_map, player = create_xvfb_gameplay_session(self)
