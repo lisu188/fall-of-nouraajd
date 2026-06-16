@@ -8,6 +8,48 @@
       "kind": "dynamic",
       "id": "nativeMarkerDynamic",
       "library": "plugins/native/native_marker_plugin"
+    },
+    {
+      "kind": "dynamic",
+      "id": "nativeGameplayEffects",
+      "library": "plugins/native/native_gameplay_effects",
+      "entry": "native_plugin_load_v1"
+    },
+    {
+      "kind": "dynamic",
+      "id": "nativeGameplayInteractions",
+      "library": "plugins/native/native_gameplay_interactions",
+      "entry": "native_plugin_load_v1"
+    },
+    {
+      "kind": "dynamic",
+      "id": "nativeGameplayItems",
+      "library": "plugins/native/native_gameplay_items",
+      "entry": "native_plugin_load_v1"
+    },
+    {
+      "kind": "dynamic",
+      "id": "nativeGameplayTiles",
+      "library": "plugins/native/native_gameplay_tiles",
+      "entry": "native_plugin_load_v1"
+    },
+    {
+      "kind": "dynamic",
+      "id": "nativeGameplayMapContent",
+      "library": "plugins/native/native_gameplay_map_content",
+      "entry": "native_plugin_load_v1"
+    },
+    {
+      "kind": "dynamic",
+      "id": "nativeGameplayControllers",
+      "library": "plugins/native/native_gameplay_controllers",
+      "entry": "native_plugin_load_v1"
+    },
+    {
+      "kind": "dynamic",
+      "id": "nativeGameplayCreatures",
+      "library": "plugins/native/native_gameplay_creatures",
+      "entry": "native_plugin_load_v1"
     }
   ],
   "maps": {}
