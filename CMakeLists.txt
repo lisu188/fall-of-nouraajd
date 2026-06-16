@@ -527,7 +527,8 @@ endif ()
 
 if (WIN32)
     set_target_properties(_game PROPERTIES UNITY_BUILD OFF)
-else()
+else ()
+    set_target_properties(game_core PROPERTIES UNITY_BUILD ON UNITY_BUILD_BATCH_SIZE 8)
     set_target_properties(_game PROPERTIES UNITY_BUILD ON UNITY_BUILD_BATCH_SIZE 8)
 endif ()
 
