@@ -24,6 +24,10 @@ CMarket::CMarket() {}
 CMarket::~CMarket() {}
 
 void CMarket::add(std::shared_ptr<CItem> item) {
+    if (!item) {
+        vstd::logger::warning("Skipping null market item");
+        return;
+    }
     items.insert(item);
     signal("itemsChanged");
 }
