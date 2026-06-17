@@ -73,7 +73,7 @@ void CTextManager::drawText(const std::string &text, int x, int y, int w) {
         actual.y = y;
         SDL_Texture *pTexture = getTexture(text, w);
         SDL_SAFE(SDL_QueryTexture(pTexture, nullptr, nullptr, &actual.w, &actual.h));
-        SDL_SAFE(SDL_RenderCopy(_gui.lock()->getRenderer(), pTexture, nullptr, &actual));
+        CUtil::renderCopy(_gui.lock()->getRenderer(), pTexture, nullptr, &actual);
     }
 }
 
@@ -83,7 +83,7 @@ void CTextManager::drawTextCentered(const std::string &text, int x, int y, int w
         SDL_Texture *pTexture = getTexture(text, w);
         SDL_SAFE(SDL_QueryTexture(pTexture, nullptr, nullptr, &actual.w, &actual.h));
         auto centered = CUtil::boxInBox(CUtil::rect(x, y, w, h), CUtil::rect(0, 0, actual.w, actual.h));
-        SDL_SAFE(SDL_RenderCopy(_gui.lock()->getRenderer(), pTexture, nullptr, centered.get()));
+        CUtil::renderCopy(_gui.lock()->getRenderer(), pTexture, nullptr, centered.get());
     }
 }
 
