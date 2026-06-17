@@ -61,7 +61,9 @@ std::shared_ptr<CInteraction> CItem::getInteraction() { return interaction; }
 
 void CItem::setInteraction(std::shared_ptr<CInteraction> interaction) {
     this->interaction = interaction;
-    interaction->setManaCost(0);
+    if (interaction) {
+        interaction->setManaCost(0);
+    }
 }
 
 CBelt::CBelt() {}
