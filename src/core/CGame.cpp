@@ -1,6 +1,6 @@
 /*
 fall-of-nouraajd c++ dark fantasy game
-Copyright (C) 2025  Andrzej Lis
+Copyright (C) 2025-2026  Andrzej Lis
 
 This program is free software: you can redistribute it and/or modify
         it under the terms of the GNU General Public License as published by
@@ -16,6 +16,7 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #include "core/CGame.h"
+#include "core/CGameContext.h"
 #include "core/CLoader.h"
 #include "gui/CGui.h"
 
@@ -29,17 +30,20 @@ std::shared_ptr<CMap> CGame::getMap() const { return map; }
 
 void CGame::setMap(std::shared_ptr<CMap> map) { this->map = map; }
 
+std::shared_ptr<CGameContext> CGame::getContext() {
+    if (!context) {
+        context = std::make_shared<CGameContext>(this->ptr<CGame>());
+    }
+    return context;
+}
+
 std::shared_ptr<CGuiHandler> CGame::getGuiHandler() {
     return guiHandler.get([this]() { return std::make_shared<CGuiHandler>(this->ptr<CGame>()); });
 }
 
-std::shared_ptr<CScriptHandler> CGame::getScriptHandler() {
-    return scriptHandler.get([]() { return std::make_shared<CScriptHandler>(); });
-}
+std::shared_ptr<CScriptHandler> CGame::getScriptHandler() { return getContext()->getScriptHandler(); }
 
-std::shared_ptr<CObjectHandler> CGame::getObjectHandler() {
-    return objectHandler.get([]() { return std::make_shared<CObjectHandler>(); });
-}
+std::shared_ptr<CObjectHandler> CGame::getObjectHandler() { return getContext()->getObjectHandler(); }
 
 void CGame::loadPlugin(std::function<std::shared_ptr<CPlugin>()> plugin) { plugin()->load(this->ptr<CGame>()); }
 
@@ -51,6 +55,4 @@ std::shared_ptr<CSlotConfig> CGame::getSlotConfiguration() {
     return slotConfiguration.get([this]() { return createObject<CSlotConfig>("slotConfiguration"); });
 }
 
-std::shared_ptr<CRngHandler> CGame::getRngHandler() {
-    return rngHandler.get([this]() { return std::make_shared<CRngHandler>(this->ptr<CGame>()); });
-}
+std::shared_ptr<CRngHandler> CGame::getRngHandler() { return getContext()->getRngHandler(); }

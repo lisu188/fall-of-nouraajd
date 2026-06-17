@@ -51,6 +51,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "../object/CTile.h"
 #include "../object/CTrigger.h"
 #include "CGame.h"
+#include "CGameContext.h"
 #include "CList.h"
 #include "CMap.h"
 #include "CProvider.h"
@@ -385,11 +386,21 @@ void init_game_module(py::module_ &m) {
 
     std::shared_ptr<CGameObject> (CGame::*createObject)(std::string) = &CGame::createObject<CGameObject>;
 
+    py::class_<CScriptHandler, std::shared_ptr<CScriptHandler>>(m, "CScriptHandler",
+                                                                "Python script execution service.");
+
+    py::class_<CGameContext, std::shared_ptr<CGameContext>>(m, "CGameContext",
+                                                            "Runtime service context owned by a game instance.")
+        .def("getObjectHandler", &CGameContext::getObjectHandler, "Return the object factory/registry handler.")
+        .def("getScriptHandler", &CGameContext::getScriptHandler, "Return the Python script execution service.")
+        .def("getRngHandler", &CGameContext::getRngHandler, "Return the random encounter/loot handler.");
+
     py::class_<CGame, CGameObject, std::shared_ptr<CGame>>(
         m, "CGame", "Top-level game container holding the active map, handlers, and GUI.")
         .def("getMap", &CGame::getMap, "Return the currently loaded map.")
         .def("changeMap", &CGame::changeMap, "Load and switch to another map.")
         .def("loadPlugin", &CGame::loadPlugin, "Load a plugin object into the game.")
+        .def("getContext", &CGame::getContext, "Return the runtime service context.")
         .def("getGuiHandler", &CGame::getGuiHandler, "Return the GUI handler service.")
         .def("getObjectHandler", &CGame::getObjectHandler, "Return the object factory/registry handler.")
         .def("getRngHandler", &CGame::getRngHandler, "Return the random encounter/loot handler.")

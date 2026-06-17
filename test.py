@@ -2374,6 +2374,64 @@ class GameTest(unittest.TestCase):
         return True, json.dumps({"registered": sorted(created), "json": json_defined_types}, sort_keys=True)
 
     @game_test
+    def test_game_context_owns_runtime_services_and_preserves_creation(self):
+        game = load_game_module()
+
+        g = game.CGameLoader.loadGame()
+        context = g.getContext()
+        self.assertIsNotNone(context)
+        self.assertIs(context, g.getContext())
+
+        object_handler = context.getObjectHandler()
+        script_handler = context.getScriptHandler()
+        rng_handler = context.getRngHandler()
+
+        self.assertIs(object_handler, context.getObjectHandler())
+        self.assertIs(script_handler, context.getScriptHandler())
+        self.assertIs(rng_handler, context.getRngHandler())
+        self.assertIs(object_handler, g.getObjectHandler())
+        self.assertIs(rng_handler, g.getRngHandler())
+
+        other_game = game.CGameLoader.loadGame()
+        self.assertIsNot(context, other_game.getContext())
+        self.assertIsNot(object_handler, other_game.getObjectHandler())
+
+        object_handler.registerConfigJson(
+            "contextOwnedProbe",
+            json.dumps(
+                {
+                    "class": "CGameObject",
+                    "properties": {
+                        "label": "context owned",
+                    },
+                }
+            ),
+        )
+
+        probe = g.createObject("contextOwnedProbe")
+        self.assertIsNotNone(probe)
+        self.assertEqual("context owned", probe.getStringProperty("label"))
+        self.assertIs(g, probe.getGame())
+        self.assertIsNone(other_game.createObject("contextOwnedProbe"))
+
+        game.CGameLoader.startGameWithPlayer(g, "test", "Warrior")
+        game_map = g.getMap()
+        self.assertIsNotNone(game_map)
+        player = game_map.getPlayer()
+        self.assertIsNotNone(player)
+        self.assertEqual("CPlayer", player.getType())
+        self.assertIs(g, game_map.getGame())
+        self.assertIs(g, player.getGame())
+        self.assertIs(context, g.getContext())
+
+        report = {
+            "map": game_map.getType(),
+            "player": player.getType(),
+            "probe": probe.getStringProperty("label"),
+        }
+        return True, json.dumps(report, sort_keys=True)
+
+    @game_test
     def test_array_deserialize_skips_bad_entries_and_consumers_are_safe(self):
         game = load_game_module()
 

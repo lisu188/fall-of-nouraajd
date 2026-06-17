@@ -1,6 +1,6 @@
 /*
 fall-of-nouraajd c++ dark fantasy game
-Copyright (C) 2025  Andrzej Lis
+Copyright (C) 2025-2026  Andrzej Lis
 
 This program is free software: you can redistribute it and/or modify
         it under the terms of the GNU General Public License as published by
@@ -32,6 +32,8 @@ class CMap;
 
 class CGameObject;
 
+class CGameContext;
+
 class CGui;
 
 class CRngHandler;
@@ -52,6 +54,8 @@ class CGame : public CGameObject {
     std::shared_ptr<CMap> getMap() const;
 
     void setMap(std::shared_ptr<CMap> map);
+
+    std::shared_ptr<CGameContext> getContext();
 
     std::shared_ptr<CGuiHandler> getGuiHandler();
 
@@ -75,11 +79,9 @@ class CGame : public CGameObject {
 
   private:
     vstd::lazy<CGuiHandler> guiHandler;
-    vstd::lazy<CScriptHandler> scriptHandler;
     vstd::lazy<CSlotConfig> slotConfiguration;
-    vstd::lazy<CRngHandler> rngHandler;
 
-    vstd::lazy<CObjectHandler> objectHandler;
+    std::shared_ptr<CGameContext> context;
     std::shared_ptr<CMap> map;
     std::shared_ptr<CGui> _gui;
 

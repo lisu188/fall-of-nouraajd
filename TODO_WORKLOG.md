@@ -386,3 +386,36 @@
   - `git diff --check` -> no whitespace errors
   - `./scripts/run_coverage.sh` -> C++ tests passed, embedded `python3 test.py` passed, and report generation passed with `lines: 91.3% (8805 out of 9644)`
 - Blockers if unresolved: None.
+
+## Batch 25
+- Location: `src/core/CGameContext.h`, `src/core/CGameContext.cpp`, `src/core/CGame.h`,
+  `src/core/CGame.cpp`, `src/core/CModule.cpp`, `test.py`, `todo.txt`
+- Original TODO or summary: `CGame` still lazily constructed several runtime services directly, while `todo.txt`
+  tracked broad singleton/context work without an explicit service-owner seam.
+- Status: fixed
+- What was changed: Added `CGameContext` as the first explicit per-game runtime service context. `CGame` now owns a
+  `std::shared_ptr<CGameContext>` and keeps the existing `getObjectHandler()`, `getScriptHandler()`, and
+  `getRngHandler()` APIs by delegating to context-owned stable service instances. Added `CGame::getContext()` and a
+  minimal Python binding for `CGameContext` plus `CScriptHandler` so public regression coverage can exercise the new
+  seam. `CGuiHandler`, `CSlotConfig`, active map, and active GUI intentionally remain owned by `CGame` for now because
+  they are still tied to UI/session state or deserialized game configuration. Narrowed the context TODO to the
+  remaining global/static providers and UI/session services.
+- Why the change is correct: The loader still initializes object builders, JSON configs, and plugins through the same
+  `CGame` public getters, so object creation, JSON loading, plugin loading, and serialization continue to receive the
+  owning `CGame`. `CGameContext` stores only a `std::weak_ptr<CGame>` for services that need the game during lazy
+  construction, avoiding a new strong `CGame -> CGameContext -> CGame` cycle while leaving the existing
+  `CGameObject::getGame()` ownership model unchanged. The regression proves the context is non-null after
+  `CGameLoader.loadGame()`, service instances are stable and shared with existing `CGame` getters, configured object
+  creation remains per-game, and `startGameWithPlayer()` still creates map/player objects with the same owning game.
+- Validation performed:
+  - `git fetch origin main` -> updated `origin/main` from `99558a69` to `8e1060fe`
+  - `git rebase --autostash origin/main` -> completed cleanly and reapplied the local changes
+  - `clang-format -i src/core/CGameContext.h src/core/CGameContext.cpp src/core/CGame.h src/core/CGame.cpp src/core/CModule.cpp`
+  - `black -l 120 test.py` -> `1 file left unchanged`
+  - `python3 -m unittest test.GameTest.test_game_context_owns_runtime_services_and_preserves_creation` -> `Ran 1 test`, `OK`
+  - `cmake --build cmake-build-release --target _game for_unit_tests -j$(nproc)` -> completed successfully after CMake regenerated the build files
+  - `ctest --test-dir cmake-build-release --output-on-failure -R for_unit_tests` -> `1/1 Test #1: for_unit_tests ... Passed`
+  - `python3 test.py` -> all shards and serial tests passed on the rebased branch
+  - `./scripts/run_coverage.sh` -> C++ tests passed, embedded `python3 test.py` passed, and report generation passed with `lines: 92.00% (9040 out of 9826)`
+- Blockers if unresolved: None. A pre-rebase `python3 test.py` run wedged in a GUI shard and was terminated; the
+  isolated shard, full suite rerun, and final post-rebase full suite all passed.
