@@ -3,7 +3,6 @@
 //TODO: drag & drop
 //TODO: resizing panels
 //TODO: migrate remaining global/static providers and UI/session services into CGameContext where safe
-//TODO: initiative
 //TODO: when lost fight in cave, panel pops out after return to position
 //TODO: encapsulate SDL_RenderCopy
 //TODO: what if we return to oldMap after switch?
