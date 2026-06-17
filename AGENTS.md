@@ -6,7 +6,7 @@ These instructions apply to the entire repository unless a more specific `AGENTS
 
 The default branch is `main`.
 
-Keep changes narrow. Do not modify unrelated files, generated build output, packaged artifacts, dependency lock state, or submodule SHAs unless the task explicitly requires it. Do not rebase or update from `main` unless asked. Final pull request auto-merge setup is covered by the mandatory delivery workflow below. If a task requires touching `random-dungeon-generator` or `vstd`, state that clearly and rerun the full validation workflow.
+Keep changes narrow. Do not modify unrelated files, generated build output, packaged artifacts, dependency lock state, or submodule SHAs unless the task explicitly requires it. Do not rebase or update from `main` unless asked. Pull request auto-merge is explicit opt-in only; enable it only when the user or task instructions specifically request it. If a task requires touching `random-dungeon-generator` or `vstd`, state that clearly and rerun the full validation workflow.
 
 When this file conflicts with the current code, tests, or build scripts, trust the code and update this file as part of the fix.
 
@@ -384,10 +384,10 @@ After finishing a change, always complete the repository delivery workflow:
 3. Commit the change with a clear, specific commit message.
 4. Push the branch to the remote.
 5. Open a pull request targeting `main`.
-6. Enable auto-merge for the pull request.
-7. Do not wait for GitHub checks to finish after auto-merge is enabled; leave the pull request in auto-merge state.
+6. Enable auto-merge only when the user or task instructions explicitly request it.
+7. When auto-merge was explicitly requested and is enabled, do not wait for GitHub checks to finish; leave the pull request in auto-merge state.
 
-Keep one logical change per commit where practical. Do not bundle unrelated cleanup with feature or bug-fix work. Do not manually merge a pull request, bypass failing required checks, or bypass unresolved merge conflicts unless the user explicitly instructs that specific bypass. If pushing, opening, or enabling auto-merge is blocked by missing remotes, authentication, permissions, unavailable checks, or platform failures, report the exact blocker and leave the branch and pull request intact.
+Keep one logical change per commit where practical. Do not bundle unrelated cleanup with feature or bug-fix work. Do not manually merge a pull request, enable auto-merge without explicit opt-in, bypass failing required checks, or bypass unresolved merge conflicts unless the user explicitly instructs that specific bypass. If pushing, opening, or enabling requested auto-merge is blocked by missing remotes, authentication, permissions, unavailable checks, or platform failures, report the exact blocker and leave the branch and pull request intact.
 
 Before finishing, summarize:
 

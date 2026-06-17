@@ -75,7 +75,16 @@ std::map<std::string, Value> json_object_to_string_key_map(const std::shared_ptr
 template <typename Value> std::map<int, Value> json_object_to_int_key_map(const std::shared_ptr<json> &object) {
     std::map<int, Value> values;
     for (auto [key, value] : object->items()) {
-        values.emplace(vstd::to_int(key).first, value.template get<Value>());
+        if (key.empty()) {
+            vstd::logger::warning("Skipping empty integer map key");
+            continue;
+        }
+        auto parsed = vstd::to_int(key);
+        if (!parsed.second) {
+            vstd::logger::warning("Skipping invalid integer map key:", key);
+            continue;
+        }
+        values.emplace(parsed.first, value.template get<Value>());
     }
     return values;
 }

@@ -89,18 +89,6 @@ std::list<std::string> buildResourceSearchPath() {
         if (!errorCode) {
             paths.push_back(canonicalModuleRoot.string());
         }
-
-        auto parentRoot = moduleRoot.parent_path();
-        if (!parentRoot.empty() && parentRoot != moduleRoot) {
-            errorCode.clear();
-            auto canonicalParentRoot = std::filesystem::weakly_canonical(parentRoot, errorCode);
-            if (!errorCode) {
-                const auto parentPath = canonicalParentRoot.string();
-                if (std::find(paths.begin(), paths.end(), parentPath) == paths.end()) {
-                    paths.push_back(parentPath);
-                }
-            }
-        }
     }
     return paths;
 }
@@ -302,9 +290,13 @@ void CResourcesProvider::save(std::string file, std::shared_ptr<json> data) {
 
 std::shared_ptr<CAnimation> CAnimationProvider::getAnimation(const std::shared_ptr<CGame> &game,
                                                              const std::shared_ptr<CGameObject> &object, bool custom) {
+    if (!game || !object) {
+        return nullptr;
+    }
     auto animation = game->createObject<CAnimation>("CAnimation");
     auto animationPath = object->getAnimation();
-    if (std::filesystem::is_directory(animationPath)) {
+    const auto resolvedAnimationPath = CResourcesProvider::getInstance()->getPath(animationPath);
+    if (!resolvedAnimationPath.empty() && std::filesystem::is_directory(resolvedAnimationPath)) {
         animation = game->createObject<CDynamicAnimation>("CDynamicAnimation");
     } else if (std::filesystem::is_regular_file(CResourcesProvider::getInstance()->getPath(animationPath + ".png"))) {
         animation = custom ? game->createObject<CAnimation>("CCustomAnimation")
@@ -322,7 +314,11 @@ std::shared_ptr<CAnimation> CAnimationProvider::getAnimation(const std::shared_p
                                                              bool custom) {
     std::shared_ptr<CGameObject> object = game->createObject<CGameObject>();
     object->setAnimation(std::move(path));
-    return getAnimation(game, object, custom);
+    auto animation = getAnimation(game, object, custom);
+    if (animation) {
+        animation->setOwnedObject(object);
+    }
+    return animation;
 }
 
 const std::string &CResource::getPath() const { return path; }
@@ -347,7 +343,7 @@ std::string CTextResource::getText() {
     const auto filePath = getFilePath();
     auto resolvedPath = CResourcesProvider::getInstance()->getPath(filePath);
     if (resolvedPath.empty()) {
-        resolvedPath = filePath;
+        return {};
     }
 
     std::ifstream t(resolvedPath);

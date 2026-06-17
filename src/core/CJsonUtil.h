@@ -63,6 +63,9 @@ template <fn::JsonObjectPointer T> bool hasObjectProp(T object, std::string prop
 }
 
 template <fn::JsonObjectPointer T> bool isRef(T object) {
+    if (object == nullptr || !object->is_object()) {
+        return false;
+    }
     if (object->size() == 1) {
         return hasStringProp(object, "ref");
     } else if (object->size() == 2) {
@@ -72,6 +75,9 @@ template <fn::JsonObjectPointer T> bool isRef(T object) {
 }
 
 template <fn::JsonObjectPointer T> bool isType(T object) {
+    if (object == nullptr || !object->is_object()) {
+        return false;
+    }
     if (object->size() == 1) {
         return hasStringProp(object, "class");
     } else if (object->size() == 2) {
@@ -83,6 +89,9 @@ template <fn::JsonObjectPointer T> bool isType(T object) {
 template <fn::JsonObjectPointer T> bool isObject(T object) { return isRef(object) || isType(object); }
 
 template <fn::JsonMapPointer T> bool isMap(T object) {
+    if (object == nullptr || !object->is_object()) {
+        return false;
+    }
     for (auto [key, value] : object->items()) {
         (void)key; // to silence compiler
         if (!value.is_object() || !isObject(&value)) {

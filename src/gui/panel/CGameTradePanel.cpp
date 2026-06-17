@@ -22,8 +22,11 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "gui/CTextureCache.h"
 
 CListView::collection_pointer CGameTradePanel::inventoryCollection(std::shared_ptr<CGui> gui) {
-    return std::make_shared<CListView::collection_type>(
-        vstd::cast<CListView::collection_type>(gui->getGame()->getMap()->getPlayer()->getItems()));
+    auto player = gui && gui->getGame() && gui->getGame()->getMap() ? gui->getGame()->getMap()->getPlayer() : nullptr;
+    if (!player) {
+        return std::make_shared<CListView::collection_type>();
+    }
+    return std::make_shared<CListView::collection_type>(vstd::cast<CListView::collection_type>(player->getItems()));
 }
 
 void CGameTradePanel::inventoryCallback(std::shared_ptr<CGui> gui, int index,
@@ -37,6 +40,9 @@ bool CGameTradePanel::inventorySelect(std::shared_ptr<CGui> gui, int index, std:
 }
 
 CListView::collection_pointer CGameTradePanel::marketCollection(std::shared_ptr<CGui> gui) {
+    if (!market) {
+        return std::make_shared<CListView::collection_type>();
+    }
     return std::make_shared<CListView::collection_type>(vstd::cast<CListView::collection_type>(market->getItems()));
 }
 
@@ -71,25 +77,33 @@ bool CGameTradePanel::keyboardEvent(std::shared_ptr<CGui> gui, SDL_EventType typ
 CGameTradePanel::CGameTradePanel() {}
 
 void CGameTradePanel::finalizeSell(std::shared_ptr<CGui> gui) {
+    auto player = gui && gui->getGame() && gui->getGame()->getMap() ? gui->getGame()->getMap()->getPlayer() : nullptr;
+    if (!market || !player) {
+        return;
+    }
     if (!selectedInventory.empty() &&
         gui->getGame()->getGuiHandler()->showQuestion("Do You want to sell these items: " +
                                                       vstd::join(getItemNames(selectedInventory), ", "))) {
         for (auto item : selectedInventory) {
-            market->buyItem(gui->getGame()->getMap()->getPlayer(), item.lock());
+            market->buyItem(player, item.lock());
         }
         selectedInventory.clear();
     }
 }
 
 void CGameTradePanel::finalizeBuy(std::shared_ptr<CGui> gui) {
-    if (getTotalBuyCost() > gui->getGame()->getMap()->getPlayer()->getGold()) {
+    auto player = gui && gui->getGame() && gui->getGame()->getMap() ? gui->getGame()->getMap()->getPlayer() : nullptr;
+    if (!market || !player) {
+        return;
+    }
+    if (getTotalBuyCost() > player->getGold()) {
         gui->getGame()->getGuiHandler()->showInfo("You cannot afford all selected items!");
     } else {
         if (!selectedMarket.empty() &&
             gui->getGame()->getGuiHandler()->showQuestion("Do You want to buy these items: " +
                                                           vstd::join(getItemNames(selectedMarket), ", "))) {
             for (auto item : selectedMarket) {
-                market->sellItem(gui->getGame()->getMap()->getPlayer(), item.lock());
+                market->sellItem(player, item.lock());
             }
             selectedMarket.clear();
         }
@@ -97,17 +111,30 @@ void CGameTradePanel::finalizeBuy(std::shared_ptr<CGui> gui) {
 }
 
 std::set<std::string> CGameTradePanel::getItemNames(std::list<std::weak_ptr<CItem>> items) {
-    return vstd::functional::map<std::set<std::string>>(items,
-                                                        [](std::weak_ptr<CItem> ob) { return ob.lock()->getLabel(); });
+    return vstd::functional::map<std::set<std::string>>(items, [](std::weak_ptr<CItem> ob) {
+        auto item = ob.lock();
+        return item ? item->getLabel() : std::string();
+    });
 }
 
 int CGameTradePanel::getTotalSellCost() {
-    return vstd::functional::sum<int>(selectedInventory,
-                                      [this](auto item) { return market->getSellCost(item.lock()); });
+    if (!market) {
+        return 0;
+    }
+    return vstd::functional::sum<int>(selectedInventory, [this](auto item) {
+        auto locked = item.lock();
+        return locked ? market->getBuyCost(locked) : 0;
+    });
 }
 
 int CGameTradePanel::getTotalBuyCost() {
-    return vstd::functional::sum<int>(selectedMarket, [this](auto item) { return market->getBuyCost(item.lock()); });
+    if (!market) {
+        return 0;
+    }
+    return vstd::functional::sum<int>(selectedMarket, [this](auto item) {
+        auto locked = item.lock();
+        return locked ? market->getSellCost(locked) : 0;
+    });
 }
 
 void CGameTradePanel::selectMarket(std::weak_ptr<CItem> selection) {

@@ -196,6 +196,9 @@ bool CFightHandler::fight(std::shared_ptr<CCreature> a, std::shared_ptr<CCreatur
 
 bool CFightHandler::fightMany(std::shared_ptr<CCreature> attacker,
                               const std::vector<std::shared_ptr<CCreature>> &encounterOpponents) {
+    if (!attacker) {
+        return false;
+    }
     auto opponents = sanitize_opponents(attacker, encounterOpponents);
     if (opponents.empty()) {
         return false;
@@ -350,6 +353,10 @@ void CFightHandler::defeatedCreature(const std::shared_ptr<CCreature> &a, const 
 }
 
 void CFightHandler::applyEffects(const std::shared_ptr<CCreature> &cr) {
+    if (!cr) {
+        vstd::logger::warning("Skipping effect application for null creature");
+        return;
+    }
     auto effects = cr->getEffects();
 
     for (const auto &effect : effects) {
