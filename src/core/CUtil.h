@@ -96,6 +96,13 @@ class CUtil {
 
     static int setRenderDrawColor(SDL_Renderer *renderer, SDL_Color color);
 
+    static int renderCopy(SDL_Renderer *renderer, SDL_Texture *texture, const SDL_Rect *source,
+                          const SDL_Rect *destination);
+
+    static int renderCopyEx(SDL_Renderer *renderer, SDL_Texture *texture, const SDL_Rect *source,
+                            const SDL_Rect *destination, double angle, const SDL_Point *center,
+                            SDL_RendererFlip flip);
+
     template <fn::FilePredicate Predicate> static std::set<std::string> findFiles(std::string dir, Predicate pred) {
         std::set<std::string> retValue;
         for (const auto &entry : std::filesystem::directory_iterator(dir)) {
