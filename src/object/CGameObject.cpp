@@ -24,7 +24,15 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <utility>
 
 std::function<bool(std::shared_ptr<CGameObject>, std::shared_ptr<CGameObject>)> CGameObject::name_comparator =
-    [](std::shared_ptr<CGameObject> a, std::shared_ptr<CGameObject> b) { return a->getType() == b->getType(); };
+    [](std::shared_ptr<CGameObject> a, std::shared_ptr<CGameObject> b) {
+        if (!a || !b) {
+            return a == b;
+        }
+        if (!a->getTypeId().empty() || !b->getTypeId().empty()) {
+            return a->getTypeId() == b->getTypeId();
+        }
+        return a->getType() == b->getType() && a->getName() == b->getName();
+    };
 
 CGameObject::~CGameObject() {}
 
