@@ -92,7 +92,7 @@ bool CGameFightPanel::itemsRightClickCallback(std::shared_ptr<CGui> gui, int ind
     }
     gui->getGame()->getMap()->getPlayer()->useItem(newSelection);
     selectedItem.reset();
-    refreshViews();
+    refreshEncounterViews();
     return true;
 }
 

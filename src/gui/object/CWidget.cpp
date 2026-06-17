@@ -79,6 +79,9 @@ bool CWidget::mouseEvent(std::shared_ptr<CGui> gui, SDL_EventType type, int butt
 CWidget::CWidget() {}
 
 void CTextWidget::renderObject(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> rect, int frameTime) {
+    if (!gui || !rect || !gui->getTextManager()) {
+        return;
+    }
     if (centered) {
         gui->getTextManager()->drawTextCentered(text, rect->x, rect->y, rect->w, rect->h);
     } else {
