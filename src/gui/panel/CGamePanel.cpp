@@ -45,4 +45,8 @@ void CGamePanel::awaitClosing() {
     vstd::wait_until([self]() { return !self->getGui() || self->getGui()->findChild(self) == nullptr; });
 }
 
-void CGamePanel::close() { getGui()->removeChild(this->ptr<CGamePanel>()); }
+void CGamePanel::close() {
+    if (auto gui = getGui()) {
+        gui->removeChild(this->ptr<CGamePanel>());
+    }
+}
