@@ -95,6 +95,9 @@ class ProtocolError(Exception):
         self.data = data
 
 
+MCP_ALLOWED_BUILTIN_CLASS_METHODS = frozenset({"event_loop.instance"})
+
+
 class EngineMcpServer:
     def __init__(
         self,
@@ -213,9 +216,9 @@ class EngineMcpServer:
         for name, value in inspect.getmembers(cls):
             if name.startswith("_"):
                 continue
-            if self._python_callable(value) is None:
-                continue
             export_name = f"{class_name}.{name}"
+            if self._python_callable(value, qualified_name=export_name) is None:
+                continue
             if export_name in self.exports:
                 continue
             self.exports[export_name] = ExportedCallable(
@@ -234,7 +237,7 @@ class EngineMcpServer:
             return "(signature unavailable)"
 
     @staticmethod
-    def _python_callable(value: Any) -> Any | None:
+    def _python_callable(value: Any, qualified_name: str | None = None) -> Any | None:
         if inspect.isfunction(value):
             return value
         function = getattr(value, "__func__", None)
@@ -247,7 +250,12 @@ class EngineMcpServer:
             and getattr(value, "__self__", None) is not None
         ):
             return value
-        if callable(value) and inspect.isbuiltin(value) and getattr(value, "__self__", None) is not None:
+        if (
+            callable(value)
+            and inspect.isbuiltin(value)
+            and getattr(value, "__self__", None) is not None
+            and qualified_name in MCP_ALLOWED_BUILTIN_CLASS_METHODS
+        ):
             return value
         return None
 
