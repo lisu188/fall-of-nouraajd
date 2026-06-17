@@ -24,6 +24,25 @@ def load(self, context):
                 return
         player.addQuest("defendSiegeQuest")
 
+    def living_blockers_at(gate):
+        blockers = []
+        player = gate.getMap().getPlayer()
+        x = gate.getPosX()
+        y = gate.getPosY()
+        z = gate.getPosZ()
+
+        def collect_blocker(object):
+            if object == gate or object == player:
+                return
+            if hasattr(object, "isAlive") and object.isAlive():
+                blockers.append(object)
+
+        gate.getMap().forObjects(
+            collect_blocker,
+            lambda object: object.getPosX() == x and object.getPosY() == y and object.getPosZ() == z,
+        )
+        return blockers
+
     @register(context)
     class SiegeStartEvent(CEvent):
         def onEnter(self, event):
@@ -71,6 +90,7 @@ def load(self, context):
             self.setStringProperty("animation", "images/misc/closed_door")
             self.setBoolProperty("enabled", False)
             self.setBoolProperty("destroyed", False)
+            self.setBoolProperty("canStep", False)
 
         def onTurn(self, event):
             if self.getBoolProperty("enabled") and not self.getBoolProperty("destroyed") and randint(1, 10) == 10:
@@ -89,6 +109,12 @@ def load(self, context):
                 return
             if self.getMap().getPlayer().hasItem(lambda it: it.hasTag(CTag.WAND)):
                 if self.getMap().getGame().getGuiHandler().showQuestion("Do You want to seal the gate?"):
+                    blockers = living_blockers_at(self)
+                    if blockers:
+                        self.getMap().getGame().getGuiHandler().showInfo(
+                            "The gate is blocked. Defeat or lure away the creature standing in the breach first!"
+                        )
+                        return
                     self.getMap().getPlayer().removeQuestItem(lambda it: it.hasTag(CTag.WAND))
                     self.setBoolProperty("destroyed", True)
                     self.setStringProperty("animation", "images/misc/closed_door")
@@ -106,6 +132,7 @@ def load(self, context):
                     logger("Spawning gate")
                     spawnObject.getMap().replaceTile("SwampTile", spawnObject.getCoords())
                     spawnObject.setBoolProperty("enabled", True)
+                    spawnObject.setBoolProperty("canStep", True)
                     # TODO: autoexport set get property
                     spawnObject.setStringProperty("animation", "images/misc/open_door")
                     event.cont = False
