@@ -7,12 +7,23 @@ MIN_COVERAGE="${MIN_COVERAGE:-90}"
 REPORT_DIR="${ROOT_DIR}/coverage"
 COVERAGE_JOBS="${COVERAGE_JOBS:-$(nproc)}"
 COVERAGE_REPORTER="${COVERAGE_REPORTER:-python}"
+GAME_TEST_JOBS="${GAME_TEST_JOBS:-${COVERAGE_JOBS}}"
+GAME_XVFB_JOBS="${GAME_XVFB_JOBS:-4}"
+GAME_TEST_OUTPUT_DIR="${GAME_TEST_OUTPUT_DIR:-${REPORT_DIR}/test-output}"
 SCRIPT_START=${SECONDS}
 
 cd "${ROOT_DIR}"
 
 if [[ ! "${COVERAGE_JOBS}" =~ ^[1-9][0-9]*$ ]]; then
     echo "COVERAGE_JOBS must be a positive integer, got: ${COVERAGE_JOBS}" >&2
+    exit 2
+fi
+if [[ ! "${GAME_TEST_JOBS}" =~ ^[1-9][0-9]*$ ]]; then
+    echo "GAME_TEST_JOBS must be a positive integer, got: ${GAME_TEST_JOBS}" >&2
+    exit 2
+fi
+if [[ ! "${GAME_XVFB_JOBS}" =~ ^[1-9][0-9]*$ ]]; then
+    echo "GAME_XVFB_JOBS must be a positive integer, got: ${GAME_XVFB_JOBS}" >&2
     exit 2
 fi
 
@@ -118,7 +129,13 @@ run_phase "configure" cmake "${cmake_args[@]}"
 run_phase "build _game and for_unit_tests" cmake --build "${BUILD_DIR}" --target _game for_unit_tests -j"${COVERAGE_JOBS}"
 run_phase "coverage data cleanup" find "${BUILD_DIR}" -name '*.gcda' -delete
 run_phase "ctest" ctest --test-dir "${BUILD_DIR}" --output-on-failure
-run_phase "python test suite" env GAME_BUILD_DIR="${BUILD_DIR}" GAME_COVERAGE_RUN=1 python3 test.py
+run_phase "python test suite" env \
+    GAME_BUILD_DIR="${BUILD_DIR}" \
+    GAME_COVERAGE_RUN=1 \
+    GAME_TEST_JOBS="${GAME_TEST_JOBS}" \
+    GAME_XVFB_JOBS="${GAME_XVFB_JOBS}" \
+    GAME_TEST_OUTPUT_DIR="${GAME_TEST_OUTPUT_DIR}" \
+    python3 test.py --jobs "${GAME_TEST_JOBS}"
 run_phase "report generation" generate_report
 
 total_elapsed=$((SECONDS - SCRIPT_START))
