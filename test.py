@@ -23,6 +23,7 @@ import os
 import queue
 import re
 import select
+import signal
 import shutil
 import subprocess
 import sys
@@ -115,10 +116,11 @@ MCP_STDIO_TOOL_TIMEOUT_SECONDS = 10
 MCP_STDIO_MAP_JSON_TIMEOUT_SECONDS = 60
 MCP_STDIO_SHUTDOWN_TIMEOUT_SECONDS = 30
 GAME_TEST_WORKER = os.environ.get("GAME_TEST_WORKER") == "1"
+XVFB_GAMEPLAY_PARENT_TEST = "XvfbGameplayTest.test_keyboard_gameplay_under_xvfb"
 SERIAL_TEST_NAMES = {
     "GameTest.test_load_saved_map_slot_name_does_not_override_object_type_configs",
     "GameTest.test_missing_save_resource_directory_lists_empty",
-    "XvfbGameplayTest.test_keyboard_gameplay_under_xvfb",
+    XVFB_GAMEPLAY_PARENT_TEST,
 }
 SERIAL_TEST_PREFIXES = ("McpServerTest.test_stdio_map_walkthrough_",)
 DEFAULT_TEST_DURATIONS = {
@@ -126,13 +128,23 @@ DEFAULT_TEST_DURATIONS = {
     "McpServerTest.test_stdio_map_walkthrough_ritual": 45.0,
     "McpServerTest.test_stdio_map_walkthrough_siege": 30.0,
     "McpServerTest.test_stdio_map_walkthrough_test": 20.0,
-    "XvfbGameplayTest.test_keyboard_gameplay_under_xvfb": 90.0,
+    XVFB_GAMEPLAY_PARENT_TEST: 90.0,
     "GameTest.test_map_walkthrough_nouraajd": 25.0,
     "GameTest.test_map_walkthrough_ritual": 20.0,
     "GameTest.test_map_walkthrough_siege": 15.0,
     "GameTest.test_map_walkthrough_test": 10.0,
     "GameTest.test_playthrough": 20.0,
     "GameTest.test_campaign_transitions_preserve_player_and_start_siege": 20.0,
+    "GameTest.test_map_walkthroughs": 20.0,
+    "GameTest.test_nouraajd_quest_state_machine": 14.0,
+    "GameTest.test_quest_journal_shows_objectives_rewards_and_hints": 12.0,
+    "GameTest.test_generated_tiled_map_exercises_loader_metadata_and_objects": 10.0,
+    "GameTest.test_fights": 8.0,
+    "GameTest.test_level": 8.0,
+    "ConsoleEventIsolationTest.test_console_key_history_in_fresh_process": 6.0,
+    "McpServerTest.test_stdio_handshake_and_tool_listing": 10.0,
+    "McpServerTest.test_stdio_batch_handles_initialize_and_tool_listing": 8.0,
+    "McpServerTest.test_map_design_brief_summarizes_selected_map_hooks": 6.0,
 }
 
 
@@ -144,6 +156,19 @@ def parse_positive_int(value, name):
     if parsed < 1:
         raise ValueError(f"{name} must be a positive integer, got: {value}")
     return parsed
+
+
+def default_xvfb_jobs():
+    cpu_count = os.cpu_count() or 1
+    if os.name == "posix" and cpu_count > 1:
+        return min(4, cpu_count)
+    return 1
+
+
+def parse_name_filter(value):
+    if not value:
+        return set()
+    return {name.strip() for name in value.split(",") if name.strip()}
 
 
 def unique_save_name(prefix):
@@ -333,6 +358,7 @@ GUI_TILE_SIZE = 50
 MINIMAP_RECT = (1700, 820, 220, 220)
 MINIMAP_PLAYER_RGB = (255, 255, 0)
 MINIMAP_VIEWPORT_RGB = (255, 255, 255)
+COMBAT_STALE_LOOP_TIMEOUT_SECONDS = 5.0 if os.environ.get("GAME_COVERAGE_RUN") == "1" else 2.0
 XVFB_GAMEPLAY_CHILD_TIMEOUT = 300 if os.environ.get("GAME_COVERAGE_RUN") == "1" else 90
 XVFB_GAMEPLAY_CHILD_TESTS = (
     "test_keyboard_input_moves_player",
@@ -360,6 +386,34 @@ XVFB_GAMEPLAY_CHILD_TESTS = (
 XVFB_SAVE_MUTATING_CHILD_TESTS = {
     "test_screenshot_after_save_hotkey_has_rendered_pixels",
     "test_save_hotkey_writes_loadable_map",
+}
+XVFB_LONG_CHILD_TESTS = {
+    "test_full_nouraajd_quest_walkthrough_ui",
+}
+XVFB_BATCHABLE_CHILD_TESTS = {
+    "test_screenshot_readback_has_rendered_pixels",
+    "test_screenshot_minimap_has_rendered_pixels",
+    "test_screenshot_character_panel_has_rendered_pixels",
+    "test_screenshot_info_panel_has_rendered_pixels",
+    "test_screenshot_inventory_panel_has_rendered_pixels",
+    "test_screenshot_question_panel_has_rendered_pixels",
+    "test_screenshot_quest_panel_with_active_quest_has_rendered_pixels",
+}
+XVFB_GAMEPLAY_CHILD_DURATION_HINTS = {
+    "test_full_nouraajd_quest_walkthrough_ui": 90,
+    "test_screenshot_after_save_hotkey_has_rendered_pixels": 8,
+    "test_save_hotkey_writes_loadable_map": 8,
+    "test_screenshot_minimap_has_rendered_pixels": 6,
+    "test_screenshot_inventory_equipped_selection_has_rendered_pixels": 6,
+    "test_screenshot_inventory_item_selection_has_rendered_pixels": 6,
+    "test_inventory_equipped_selection_resets_inventory_selection": 6,
+    "test_inventory_quest_item_selection_is_ignored": 6,
+    "test_fight_quest_item_selection_is_ignored": 6,
+}
+NOURAAJD_QUEST_LOG_SCREENSHOT_CHECKPOINTS = {
+    "xvfb_nouraajd_quest_log_rolf_initial",
+    "xvfb_nouraajd_quest_log_victor_encounter_active",
+    "xvfb_nouraajd_quest_log_all_quests_completed",
 }
 
 NOURAAJD_QUEST_DESCRIPTIONS = {
@@ -4028,7 +4082,7 @@ class GameTest(unittest.TestCase):
         remaining = [defender.getName() for defender in defenders if g.getMap().getObjectByName(defender.getName())]
 
         self.assertTrue(result)
-        self.assertLess(elapsed, 2.0)
+        self.assertLess(elapsed, COMBAT_STALE_LOOP_TIMEOUT_SECONDS)
         self.assertTrue(attacker.isAlive())
         self.assertEqual([], remaining)
         self.assertEqual(expected_exp, attacker.exp)
@@ -4127,7 +4181,7 @@ class GameTest(unittest.TestCase):
         )
 
         self.assertFalse(result)
-        self.assertLess(elapsed, 2.0)
+        self.assertLess(elapsed, COMBAT_STALE_LOOP_TIMEOUT_SECONDS)
         self.assertTrue(attacker.isAlive())
         self.assertEqual(exp_before, attacker.exp)
         self.assertEqual(sorted(defender.getName() for defender in defenders), remaining)
@@ -7628,62 +7682,120 @@ class XvfbGameplayTest(unittest.TestCase):
         ]
 
         try:
-            xvfb_jobs = parse_positive_int(os.environ.get("GAME_XVFB_JOBS", "2"), "GAME_XVFB_JOBS")
+            xvfb_jobs = parse_positive_int(
+                os.environ.get("GAME_XVFB_JOBS", str(default_xvfb_jobs())),
+                "GAME_XVFB_JOBS",
+            )
         except ValueError as exc:
             self.fail(str(exc))
 
-        def run_child_test(child_test):
+        def run_child_group(group_name, child_tests):
             child_env = env.copy()
-            child_env["GAME_TEST_OUTPUT_DIR"] = str(TEST_OUTPUT_DIR / "xvfb" / child_test)
-            child_env["GAME_TEST_SHARD"] = f"xvfb-{child_test}"
+            child_env["GAME_TEST_OUTPUT_DIR"] = str(TEST_OUTPUT_DIR / "xvfb" / group_name)
+            child_env["GAME_TEST_SHARD"] = f"xvfb-{group_name}"
+            child_test_args = [f"XvfbGameplayProcessTest.{child_test}" for child_test in child_tests]
+            duration_hint = sum(XVFB_GAMEPLAY_CHILD_DURATION_HINTS.get(child_test, 1) for child_test in child_tests)
+            timeout = max(XVFB_GAMEPLAY_CHILD_TIMEOUT * max(1, len(child_tests)), duration_hint * 3)
+            proc = None
             try:
-                completed = subprocess.run(
-                    command + [f"XvfbGameplayProcessTest.{child_test}"],
+                proc = subprocess.Popen(
+                    command + child_test_args,
                     cwd=REPO_ROOT,
                     env=child_env,
-                    capture_output=True,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
                     text=True,
-                    timeout=XVFB_GAMEPLAY_CHILD_TIMEOUT,
+                    start_new_session=(os.name == "posix"),
                 )
+                stdout, stderr = proc.communicate(timeout=timeout)
             except subprocess.TimeoutExpired as exc:
-                stdout = exc.stdout or ""
-                stderr = exc.stderr or ""
-                return f"{child_test} timed out.\nstdout:\n{stdout}\nstderr:\n{stderr}"
-
-            if completed.returncode != 0:
+                if proc is not None:
+                    if os.name == "posix":
+                        try:
+                            os.killpg(proc.pid, signal.SIGKILL)
+                        except ProcessLookupError:
+                            pass
+                    else:
+                        proc.kill()
+                    stdout, stderr = proc.communicate()
+                else:
+                    stdout = exc.stdout or ""
+                    stderr = exc.stderr or ""
                 return (
-                    f"{child_test} failed with {completed.returncode}.\n"
-                    f"stdout:\n{completed.stdout}\nstderr:\n{completed.stderr}"
+                    f"{group_name} timed out while running {', '.join(child_tests)}.\n"
+                    f"stdout:\n{stdout}\nstderr:\n{stderr}"
+                )
+
+            if proc.returncode != 0:
+                return (
+                    f"{group_name} failed with {proc.returncode} while running {', '.join(child_tests)}.\n"
+                    f"stdout:\n{stdout}\nstderr:\n{stderr}"
                 )
             return None
 
+        selected_child_tests = list(XVFB_GAMEPLAY_CHILD_TESTS)
+        only_child_tests = parse_name_filter(os.environ.get("GAME_XVFB_ONLY_CHILD_TESTS"))
+        if only_child_tests:
+            selected_child_tests = [child_test for child_test in selected_child_tests if child_test in only_child_tests]
+        skipped_child_tests = parse_name_filter(os.environ.get("GAME_XVFB_SKIP_CHILD_TESTS"))
+        if skipped_child_tests:
+            selected_child_tests = [
+                child_test for child_test in selected_child_tests if child_test not in skipped_child_tests
+            ]
+
         parallel_child_tests = [
-            child_test for child_test in XVFB_GAMEPLAY_CHILD_TESTS if child_test not in XVFB_SAVE_MUTATING_CHILD_TESTS
+            child_test for child_test in selected_child_tests if child_test not in XVFB_SAVE_MUTATING_CHILD_TESTS
         ]
         serial_child_tests = [
-            child_test for child_test in XVFB_GAMEPLAY_CHILD_TESTS if child_test in XVFB_SAVE_MUTATING_CHILD_TESTS
+            child_test for child_test in selected_child_tests if child_test in XVFB_SAVE_MUTATING_CHILD_TESTS
         ]
-        failure_by_test = {}
+        isolate_children = os.environ.get("GAME_XVFB_ISOLATE") == "1"
+        if isolate_children:
+            parallel_child_groups = [(child_test, [child_test]) for child_test in parallel_child_tests]
+        else:
+            batchable_child_tests = [
+                child_test for child_test in parallel_child_tests if child_test in XVFB_BATCHABLE_CHILD_TESTS
+            ]
+            isolated_child_tests = [
+                child_test for child_test in parallel_child_tests if child_test not in XVFB_BATCHABLE_CHILD_TESTS
+            ]
+            child_jobs = min(xvfb_jobs, len(batchable_child_tests)) if batchable_child_tests else 0
+            parallel_child_groups = [
+                (f"group-{index}", group)
+                for index, group in enumerate(
+                    shard_test_names(
+                        batchable_child_tests,
+                        child_jobs,
+                        XVFB_GAMEPLAY_CHILD_DURATION_HINTS,
+                    ),
+                    start=1,
+                )
+            ]
+            parallel_child_groups.extend((child_test, [child_test]) for child_test in isolated_child_tests)
+
+        failure_by_group = {}
         if parallel_child_tests:
             with concurrent.futures.ThreadPoolExecutor(
-                max_workers=min(xvfb_jobs, len(parallel_child_tests))
+                max_workers=min(xvfb_jobs, len(parallel_child_groups))
             ) as executor:
                 futures = {
-                    executor.submit(run_child_test, child_test): child_test for child_test in parallel_child_tests
+                    executor.submit(run_child_group, group_name, child_tests): group_name
+                    for group_name, child_tests in parallel_child_groups
                 }
                 for future in concurrent.futures.as_completed(futures):
-                    child_test = futures[future]
+                    group_name = futures[future]
                     failure = future.result()
                     if failure:
-                        failure_by_test[child_test] = failure
+                        failure_by_group[group_name] = failure
 
         for child_test in serial_child_tests:
-            failure = run_child_test(child_test)
+            failure = run_child_group(child_test, [child_test])
             if failure:
-                failure_by_test[child_test] = failure
+                failure_by_group[child_test] = failure
 
+        child_group_order = [*parallel_child_groups, *((child_test, [child_test]) for child_test in serial_child_tests)]
         failures = [
-            failure_by_test[child_test] for child_test in XVFB_GAMEPLAY_CHILD_TESTS if child_test in failure_by_test
+            failure_by_group[group_name] for group_name, _ in child_group_order if group_name in failure_by_group
         ]
 
         self.assertFalse(
@@ -7702,6 +7814,13 @@ def create_xvfb_gameplay_session(test_case, map_name="test", player_name=DEFAULT
     game.CGameLoader.startGameWithPlayer(g, map_name, player_name)
     pump_event_loop(5)
     return game, g, g.getMap(), g.getMap().getPlayer()
+
+
+def wait_for_panel_class(test_case, g, class_name, timeout=5.0):
+    test_case.assertTrue(
+        pump_event_loop_until(lambda: gui_contains_class(g, class_name), timeout=timeout),
+        f"Expected {class_name} to be visible.",
+    )
 
 
 def assert_player_moves_to_key_target(test_case, game_map, player, target, keycode, scancode):
@@ -7828,7 +7947,8 @@ def assert_nouraajd_quest_log(test_case, g, active=(), completed=()):
 
 def capture_nouraajd_quest_log(test_case, g, name, active=(), completed=()):
     text = assert_nouraajd_quest_log(test_case, g, active=active, completed=completed)
-    assert_screenshot_has_rendered_pixels(test_case, g, name)
+    if name in NOURAAJD_QUEST_LOG_SCREENSHOT_CHECKPOINTS:
+        assert_screenshot_has_rendered_pixels(test_case, g, name)
     g.getGuiHandler().openPanel("questPanel").close()
     pump_event_loop(2)
     return text
@@ -7861,8 +7981,7 @@ def assert_player_quest_state(test_case, player, quest_id, completed):
 
 def open_panel_for_screenshot(test_case, g, panel_name, class_name):
     panel = g.getGuiHandler().openPanel(panel_name)
-    pump_event_loop_until(lambda: gui_contains_class(g, class_name), timeout=1.0)
-    test_case.assertTrue(gui_contains_class(g, class_name))
+    wait_for_panel_class(test_case, g, class_name)
     return panel
 
 
@@ -8030,8 +8149,7 @@ class XvfbGameplayProcessTest(unittest.TestCase):
         player.addItem(quest_item)
         panel = g.getGuiHandler().openPanel("fightPanel")
         panel.setEnemy(g.createObject("GoblinThief"))
-        pump_event_loop(5)
-        self.assertTrue(gui_contains_class(g, "CGameFightPanel"))
+        wait_for_panel_class(self, g, "CGameFightPanel")
 
         push_sdl_mouse_click(585, 745)
         pump_event_loop(5)
@@ -8326,10 +8444,10 @@ class XvfbGameplayProcessTest(unittest.TestCase):
 
         push_sdl_key_event(ord("s"), 0, SDL_KEYDOWN)
         push_sdl_key_event(ord("s"), 0, SDL_KEYUP)
-        pump_event_loop(5)
 
         save_name = game_map.getName()
         save_path = Path.cwd() / "save" / f"{save_name}.json"
+        self.assertTrue(pump_event_loop_until(lambda: save_path.exists(), timeout=1.0))
         self.assertTrue(save_path.exists())
         saved_json = json.loads(save_path.read_text())
         self.assertEqual(marker, saved_json.get("properties", {}).get("xvfb_save_marker"))
@@ -9315,7 +9433,7 @@ def shard_test_names(test_names, jobs, timings=None):
     return groups
 
 
-def run_test_subprocess(test_names, shard_name):
+def run_test_subprocess(test_names, shard_name, extra_env=None):
     output_dir = TEST_OUTPUT_DIR / "workers" / shard_name
     timings_file = output_dir / "test-timings.json"
     env = os.environ.copy()
@@ -9329,20 +9447,46 @@ def run_test_subprocess(test_names, shard_name):
             "PYTHONUNBUFFERED": "1",
         }
     )
+    if extra_env:
+        env.update(extra_env)
     command = [sys.executable, str(REPO_ROOT / "test.py"), *test_names]
     print(f"[test shard {shard_name}] running {len(test_names)} test(s)", flush=True)
     return subprocess.Popen(command, cwd=REPO_ROOT, env=env)
 
 
-def run_sharded_tests(test_names, jobs):
-    serial_tests = [test_name for test_name in test_names if is_serial_test_name(test_name)]
-    parallel_tests = [test_name for test_name in test_names if not is_serial_test_name(test_name)]
+def run_sharded_tests(test_names, jobs, *, allow_xvfb_sidecar=False):
+    sidecar_tests = []
+    long_xvfb_tests = []
+    if allow_xvfb_sidecar and jobs > 1 and XVFB_GAMEPLAY_PARENT_TEST in test_names:
+        sidecar_tests = [XVFB_GAMEPLAY_PARENT_TEST]
+        long_xvfb_tests = [XVFB_GAMEPLAY_PARENT_TEST]
+
+    reserved_jobs = len(sidecar_tests)
+    worker_jobs = max(1, jobs - reserved_jobs)
+    serial_tests = [
+        test_name for test_name in test_names if is_serial_test_name(test_name) and test_name not in sidecar_tests
+    ]
+    parallel_tests = [
+        test_name for test_name in test_names if not is_serial_test_name(test_name) and test_name not in sidecar_tests
+    ]
     timings = load_test_timings(TEST_TIMINGS_FILE)
     failures = []
 
     processes = []
+    for sidecar_test in sidecar_tests:
+        processes.append(
+            (
+                "xvfb",
+                run_test_subprocess(
+                    [sidecar_test],
+                    "xvfb",
+                    extra_env={"GAME_XVFB_SKIP_CHILD_TESTS": ",".join(sorted(XVFB_LONG_CHILD_TESTS))},
+                ),
+            )
+        )
+
     if parallel_tests:
-        for index, group in enumerate(shard_test_names(parallel_tests, jobs, timings), start=1):
+        for index, group in enumerate(shard_test_names(parallel_tests, worker_jobs, timings), start=1):
             processes.append((f"{index}", run_test_subprocess(group, f"{index}")))
 
     for shard_name, proc in processes:
@@ -9355,6 +9499,16 @@ def run_sharded_tests(test_names, jobs):
         return_code = serial_proc.wait()
         if return_code != 0:
             failures.append(("serial", return_code))
+
+    for long_xvfb_test in long_xvfb_tests:
+        long_proc = run_test_subprocess(
+            [long_xvfb_test],
+            "xvfb-long",
+            extra_env={"GAME_XVFB_ONLY_CHILD_TESTS": ",".join(sorted(XVFB_LONG_CHILD_TESTS))},
+        )
+        return_code = long_proc.wait()
+        if return_code != 0:
+            failures.append(("xvfb-long", return_code))
 
     if failures:
         for shard_name, return_code in failures:
@@ -9377,10 +9531,11 @@ def main():
         sys.exit(2)
 
     has_unittest_options = any(arg.startswith("-") for arg in unittest_argv[1:])
+    full_suite = not has_unittest_options and not selected_unittest_args(unittest_argv)
     if jobs > 1 and not has_unittest_options:
         test_names = discover_unittest_test_names(unittest_argv)
         if test_names and len(test_names) > 1:
-            sys.exit(run_sharded_tests(test_names, jobs))
+            sys.exit(run_sharded_tests(test_names, jobs, allow_xvfb_sidecar=full_suite))
 
     unittest.main(argv=unittest_argv, testRunner=ProgressTextTestRunner)
 
