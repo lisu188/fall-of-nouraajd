@@ -58,6 +58,10 @@ int CMarket::getBuy() const { return buy; }
 void CMarket::setBuy(int value) { buy = value; }
 
 bool CMarket::sellItem(std::shared_ptr<CCreature> cre, std::shared_ptr<CItem> item) {
+    if (!cre || !item) {
+        vstd::logger::warning("Ignoring market sell request with missing creature or item");
+        return false;
+    }
     int price = getSellCost(item);
     vstd::fail_if(!vstd::ctn(items, item), "tried to sell item not on sell");
     if (cre->getGold() < price) {
@@ -70,10 +74,17 @@ bool CMarket::sellItem(std::shared_ptr<CCreature> cre, std::shared_ptr<CItem> it
 }
 
 int CMarket::getSellCost(std::shared_ptr<CItem> item) {
+    if (!item) {
+        return 0;
+    }
     return (int)(pow(2, item->getPower()) * 200.0 * ((double)getSell()) / 100.0);
 }
 
 void CMarket::buyItem(std::shared_ptr<CCreature> cre, std::shared_ptr<CItem> item) {
+    if (!cre || !item) {
+        vstd::logger::warning("Ignoring market buy request with missing creature or item");
+        return;
+    }
     int price = getBuyCost(item);
     std::set<std::shared_ptr<CItem>> items = cre->getInInventory();
     vstd::fail_if(!vstd::ctn(items, item), "tried to sell not owned item");
@@ -83,5 +94,8 @@ void CMarket::buyItem(std::shared_ptr<CCreature> cre, std::shared_ptr<CItem> ite
 }
 
 int CMarket::getBuyCost(std::shared_ptr<CItem> item) {
+    if (!item) {
+        return 0;
+    }
     return (int)(pow(2, item->getPower()) * 200.0 * ((double)getBuy()) / 100.0);
 }
