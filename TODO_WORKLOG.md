@@ -369,3 +369,20 @@
   - `GAME_BUILD_DIR=cmake-build-wsl-release python3 -m unittest test.GameTest.test_binding_validation_rejects_invalid_logger_and_dynamic_values` -> `Ran 1 test`, `OK`
   - `./scripts/run_coverage.sh` after the Windows logger cleanup -> `ctest` passed, embedded `python3 test.py` passed with `Ran 150 tests in 923.456s`, `OK (skipped=21)`, and report generation passed with `lines: 90.2% (8350 out of 9262)`
 - Blockers if unresolved: None. Windows `python`/`py` shims were not available on the PowerShell PATH, so Windows Python checks used the Codex-bundled Python executable directly.
+
+## Batch 24
+- Location: `AGENTS.md`, `src/core/CTypes.cpp`, `src/core/CTypeRegistration.h`, `src/core/CCoreTypeRegistration.cpp`, `src/object/CObjectTypeRegistration.cpp`, `src/handler/CHandlerTypeRegistration.cpp`, `src/gui/CGuiTypeRegistration.cpp`, `src/gui/panel/CGuiPanelTypeRegistration.cpp`, `src/gui/object/CGuiWidgetTypeRegistration.cpp`, `src/gui/CAnimationTypeRegistration.cpp`, `test.py`, `todo.txt`
+- Original TODO or summary: Runtime type registration for static engine, handler, GUI, panel, widget, and animation classes was concentrated in `CTypes.cpp`, and `todo.txt` still asked for a broad mechanism to ensure every `V_META` type is registered.
+- Status: fixed
+- What was changed: Added a small module registration declaration layer and moved the existing static registration groups into module-owned registration units. `CTypes.cpp` now keeps the registry storage and one static initializer that calls the module registration functions in sequence. The existing `CTypes::register_type<T>()`, custom serializer registration, builder registration, and metadata APIs remain unchanged. Added a regression test that creates representative registered classes through `CGameLoader.loadGame()` and verifies configured JSON type ids still instantiate through the initialized object handler. Updated the repository delivery workflow in `AGENTS.md` to require commit, push, PR creation, and enabling auto-merge without waiting for remote checks after auto-merge is set.
+- Why the change is correct: The refactor preserves the same runtime registration mechanism and static initialization point while moving class ownership out of the monolithic registry body. The regression exercises the loader-to-handler path used by object creation and JSON loading, covering representative object, core, handler, GUI, panel, widget, and animation registrations. The broad `V_META` TODO was narrowed rather than removed because the new test is representative, not an exhaustive declaration audit. The `AGENTS.md` workflow now matches the requested delivery behavior while still preventing manual bypass of failed checks.
+- Validation performed:
+  - `clang-format -i src/core/CTypes.cpp src/core/CTypeRegistration.h src/core/CCoreTypeRegistration.cpp src/object/CObjectTypeRegistration.cpp src/handler/CHandlerTypeRegistration.cpp src/gui/CGuiTypeRegistration.cpp src/gui/CAnimationTypeRegistration.cpp src/gui/panel/CGuiPanelTypeRegistration.cpp src/gui/object/CGuiWidgetTypeRegistration.cpp`
+  - `black -l 120 test.py` -> `1 file left unchanged`
+  - `cmake --build cmake-build-release --target _game for_unit_tests -j$(nproc)` -> completed successfully
+  - `python3 -m unittest test.GameTest.test_static_module_type_registration_initializes_runtime_factories` -> `Ran 1 test`, `OK`
+  - `ctest --test-dir cmake-build-release --output-on-failure -R for_unit_tests` -> `1/1 Test #1: for_unit_tests ... Passed`
+  - `python3 test.py` -> all shards and serial tests passed
+  - `git diff --check` -> no whitespace errors
+  - `./scripts/run_coverage.sh` -> C++ tests passed, embedded `python3 test.py` passed, and report generation passed with `lines: 91.3% (8805 out of 9644)`
+- Blockers if unresolved: None.
