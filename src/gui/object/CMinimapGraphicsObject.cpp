@@ -357,7 +357,7 @@ void CMinimapGraphicsObject::renderObject(std::shared_ptr<CGui> gui, std::shared
         terrainSignature = signature;
     }
     if (terrainTexture) {
-        SDL_SAFE(SDL_RenderCopy(renderer, terrainTexture.get(), nullptr, rect.get()));
+        CUtil::renderCopy(renderer, terrainTexture.get(), nullptr, rect.get());
     } else {
         fill_rect(renderer, rect, MINIMAP_BACKGROUND);
         draw_terrain(renderer, map, playerCoords.z, scale);
