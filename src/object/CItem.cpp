@@ -25,12 +25,20 @@ CItem::CItem() {}
 CItem::~CItem() {}
 
 void CItem::onEnter(std::shared_ptr<CGameEvent> event) {
-    if (std::shared_ptr<CCreature> visitor = vstd::cast<CCreature>(vstd::cast<CGameEventCaused>(event)->getCause())) {
+    auto caused = vstd::cast<CGameEventCaused>(event);
+    auto map = getMap();
+    if (!caused || !map) {
+        return;
+    }
+    if (std::shared_ptr<CCreature> visitor = vstd::cast<CCreature>(caused->getCause())) {
         // ensure the item added to the inventory shares the same control block
         // as the one stored inside the map
-        auto item = vstd::cast<CItem>(getMap()->getObjectByName(getName()));
+        auto item = vstd::cast<CItem>(map->getObjectByName(getName()));
+        if (!item) {
+            return;
+        }
         visitor->addItem(item);
-        getMap()->removeObject(item);
+        map->removeObject(item);
     }
 }
 
@@ -61,7 +69,9 @@ std::shared_ptr<CInteraction> CItem::getInteraction() { return interaction; }
 
 void CItem::setInteraction(std::shared_ptr<CInteraction> interaction) {
     this->interaction = interaction;
-    interaction->setManaCost(0);
+    if (interaction) {
+        interaction->setManaCost(0);
+    }
 }
 
 CBelt::CBelt() {}
