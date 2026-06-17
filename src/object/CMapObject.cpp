@@ -97,7 +97,7 @@ Coords CMapObject::getCoords() { return Coords(posx, posy, posz); }
 void CMapObject::setCoords(Coords coords) { this->moveTo(coords.x, coords.y, coords.z); }
 
 bool CMapObject::isAffiliatedWith(std::shared_ptr<CMapObject> object) {
-    return !vstd::is_empty(this->getAffiliation()) && !vstd::is_empty(object->getAffiliation()) &&
+    return object && !vstd::is_empty(this->getAffiliation()) && !vstd::is_empty(object->getAffiliation()) &&
            this->getAffiliation() == object->getAffiliation();
 }
 
