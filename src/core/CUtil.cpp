@@ -87,4 +87,14 @@ int CUtil::setRenderDrawColor(SDL_Renderer *renderer, SDL_Color color) {
     return SDL_SAFE(SDL_SetRenderDrawColor(renderer, color.r, color.g, color.b, color.a));
 }
 
+int CUtil::renderCopy(SDL_Renderer *renderer, SDL_Texture *texture, const SDL_Rect *source,
+                      const SDL_Rect *destination) {
+    return SDL_SAFE(SDL_RenderCopy(renderer, texture, source, destination));
+}
+
+int CUtil::renderCopyEx(SDL_Renderer *renderer, SDL_Texture *texture, const SDL_Rect *source,
+                        const SDL_Rect *destination, double angle, const SDL_Point *center, SDL_RendererFlip flip) {
+    return SDL_SAFE(SDL_RenderCopyEx(renderer, texture, source, destination, angle, center, flip));
+}
+
 // TODO: implement drag_drop
