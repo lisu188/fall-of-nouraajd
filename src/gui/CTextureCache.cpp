@@ -98,7 +98,12 @@ fn::sdl::TexturePtr CTextureCache::loadTexture(std::string path) {
         vstd::logger::error("CTextureCache::loadTexture: cannot load", path);
         return nullptr;
     }
-    return CTextureUtil::calculateAlpha(_gui.lock()->getRenderer(), std::move(surface));
+    auto gui = _gui.lock();
+    if (!gui || !gui->getRenderer()) {
+        vstd::logger::error("CTextureCache::loadTexture: cannot load without an active renderer", path);
+        return nullptr;
+    }
+    return CTextureUtil::calculateAlpha(gui->getRenderer(), std::move(surface));
 }
 
 CTextureCache::CTextureCache(std::shared_ptr<CGui> _gui) : _gui(_gui) {}
