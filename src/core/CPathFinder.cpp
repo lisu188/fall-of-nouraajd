@@ -275,6 +275,10 @@ std::vector<Coords> CPathFinder::findPath(Coords start, Coords goal, const CanSt
 void CPathFinder::saveMap(Coords start, const CanStep &canStep, const std::string &path, const Waypoint &waypoint,
                           const Neighbors &neighbors, const Distance &, const StepCost &stepCost) {
     Values values = fillValues(canStep, start, waypoint, neighbors, stepCost);
+    if (values->empty()) {
+        return;
+    }
+
     int minx = std::numeric_limits<int>::max();
     int miny = std::numeric_limits<int>::max();
     int maxx = std::numeric_limits<int>::min();
@@ -299,8 +303,10 @@ void CPathFinder::saveMap(Coords start, const CanStep &canStep, const std::strin
         }
     }
     int factor = 4;
+    const int width = std::max(1, maxx - minx + 1);
+    const int height = std::max(1, maxy - miny + 1);
     auto surface = fn::sdl::SurfacePtr(
-        SDL_SAFE(SDL_CreateRGBSurface(0, factor * (maxx - minx), factor * (maxy - miny), 32, 0, 0, 0, 0)));
+        SDL_SAFE(SDL_CreateRGBSurface(0, factor * width, factor * height, 32, 0, 0, 0, 0)));
     if (!surface) {
         return;
     }
