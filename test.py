@@ -2272,6 +2272,54 @@ class GameTest(unittest.TestCase):
         return True, json.dumps(report, sort_keys=True)
 
     @game_test
+    def test_static_module_type_registration_initializes_runtime_factories(self):
+        game = load_game_module()
+
+        g = game.CGameLoader.loadGame()
+        representative_types = {
+            "object": ["CGameObject"],
+            "core": ["CGame", "CMap", "CStats", "CListString", "CSlot", "CScript"],
+            "object_model": ["CPlayer", "CTile", "CItem"],
+            "handler": ["CGameEvent", "CGameEventCaused"],
+            "gui": ["CLayout", "CProxyGraphicsLayout", "CGameGraphicsObject", "CStatsGraphicsObject"],
+            "panel": ["CGamePanel", "CGameDialogPanel", "CGameInventoryPanel", "CListView"],
+            "widget": ["CWidget", "CTextWidget", "CButton"],
+            "animation": ["CAnimation", "CStaticAnimation", "CDynamicAnimation", "CSelectionBox", "CTooltip"],
+        }
+
+        created = {}
+        missing = {}
+        wrong_type = {}
+        for category, type_names in representative_types.items():
+            for type_name in type_names:
+                obj = g.createObject(type_name)
+                if obj is None:
+                    missing.setdefault(category, []).append(type_name)
+                    continue
+                if obj.getType() != type_name:
+                    wrong_type[type_name] = obj.getType()
+                    continue
+                created[type_name] = obj.getType()
+
+        self.assertEqual({}, missing)
+        self.assertEqual({}, wrong_type)
+        self.assertIsNotNone(g.getObjectHandler())
+        self.assertIsNotNone(g.getRngHandler())
+
+        json_defined_types = {
+            "panelKeys": "CMapStringString",
+            "questionPanel": "CGameQuestionPanel",
+        }
+        for type_id, expected_class in json_defined_types.items():
+            with self.subTest(type_id=type_id):
+                obj = g.createObject(type_id)
+                self.assertIsNotNone(obj)
+                self.assertEqual(expected_class, obj.getType())
+                self.assertEqual(type_id, obj.getTypeId())
+
+        return True, json.dumps({"registered": sorted(created), "json": json_defined_types}, sort_keys=True)
+
+    @game_test
     def test_array_deserialize_skips_bad_entries_and_consumers_are_safe(self):
         game = load_game_module()
 

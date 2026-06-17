@@ -6,7 +6,7 @@ These instructions apply to the entire repository unless a more specific `AGENTS
 
 The default branch is `main`.
 
-Keep changes narrow. Do not modify unrelated files, generated build output, packaged artifacts, dependency lock state, or submodule SHAs unless the task explicitly requires it. Do not merge, rebase, or update from `main` unless asked. If a task requires touching `random-dungeon-generator` or `vstd`, state that clearly and rerun the full validation workflow.
+Keep changes narrow. Do not modify unrelated files, generated build output, packaged artifacts, dependency lock state, or submodule SHAs unless the task explicitly requires it. Do not rebase or update from `main` unless asked. Final pull request auto-merge setup is covered by the mandatory delivery workflow below. If a task requires touching `random-dungeon-generator` or `vstd`, state that clearly and rerun the full validation workflow.
 
 When this file conflicts with the current code, tests, or build scripts, trust the code and update this file as part of the fix.
 
@@ -326,8 +326,8 @@ When exposing a new C++ class to Python:
 1. Add or update a `CWrapper<YourClass>` specialization in `src/core/CWrapper.h` if Python subclasses need to override virtual behavior.
 2. Add the pybind11 binding in `src/core/CModule.cpp` inside `PYBIND11_MODULE(_game, m)`.
 3. Use `py::class_<...>` with the correct base class, wrapper class when needed, and `std::shared_ptr<...>`.
-4. Register the type hierarchy in `src/core/CTypes.cpp` with `CTypes::register_type<...>()`.
-5. Register wrapper types in `CTypes.cpp` when wrapped Python-overridable types are involved.
+4. Register the type hierarchy in the owning module registration unit with `CTypes::register_type<...>()`.
+5. Register wrapper types in the owning module registration unit when wrapped Python-overridable types are involved.
 6. Add or update Python plugin classes under `res/plugins/` when the new type is intended to be instantiated from scripts or config.
 7. Build `_game`, run C++ tests, and run `python3 test.py`.
 
@@ -377,13 +377,17 @@ Before proposing a change, reproduce the relevant local parts of CI as closely a
 
 ## Commits and pull requests
 
-Do not commit unless explicitly asked.
+After finishing a change, always complete the repository delivery workflow:
 
-When asked to commit:
+1. Review the final diff and ensure it contains only intended files.
+2. Run the required validation workflow, plus coverage or MCP validation when required by this file.
+3. Commit the change with a clear, specific commit message.
+4. Push the branch to the remote.
+5. Open a pull request targeting `main`.
+6. Enable auto-merge for the pull request.
+7. Do not wait for GitHub checks to finish after auto-merge is enabled; leave the pull request in auto-merge state.
 
-- use a clear, specific commit message;
-- keep one logical change per commit where practical;
-- do not bundle unrelated cleanup with feature or bug-fix work.
+Keep one logical change per commit where practical. Do not bundle unrelated cleanup with feature or bug-fix work. Do not manually merge a pull request, bypass failing required checks, or bypass unresolved merge conflicts unless the user explicitly instructs that specific bypass. If pushing, opening, or enabling auto-merge is blocked by missing remotes, authentication, permissions, unavailable checks, or platform failures, report the exact blocker and leave the branch and pull request intact.
 
 Before finishing, summarize:
 
