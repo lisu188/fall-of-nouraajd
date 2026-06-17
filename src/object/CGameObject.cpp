@@ -30,7 +30,10 @@ CGameObject::~CGameObject() {}
 
 CGameObject::CGameObject() {}
 
-std::shared_ptr<CMap> CGameObject::getMap() { return getGame()->getMap(); }
+std::shared_ptr<CMap> CGameObject::getMap() {
+    auto currentGame = getGame();
+    return currentGame ? currentGame->getMap() : nullptr;
+}
 
 std::shared_ptr<CGame> CGameObject::getGame() { return game; }
 
