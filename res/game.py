@@ -3,15 +3,6 @@ from _game import *
 set_logger_sink("disabled", None)
 
 
-PLAYER_CLASS_SUMMARIES = {
-    "Assasin": "agile striker with poison and stun tricks",
-    "Inquisitor": "durable zealot who exposes corruption",
-    "Sorcerer": "high-mana caster with escalating spells",
-    "Warrior": "armored front-liner with reliable melee pressure",
-    "Wayfarer": "mobile scout with route and mark bonuses",
-}
-
-
 def register(context):
     def register_wrapper(f):
         context.getObjectHandler().registerType(f.__name__, f)
@@ -46,9 +37,7 @@ def player_class_options(g):
     for player_type in sorted(g.getObjectHandler().getAllSubTypes("CPlayer")):
         player = g.createObject(player_type)
         label = player.getStringProperty("label") or player_type
-        summary = PLAYER_CLASS_SUMMARIES.get(player_type, "adventurer")
-        option = f"{label} - {summary}"
-        options[option] = player_type
+        options[label] = player_type
     return options
 
 
