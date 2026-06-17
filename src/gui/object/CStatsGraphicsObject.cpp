@@ -48,6 +48,9 @@ void CStatsGraphicsUtil::drawStats(std::shared_ptr<CGui> gui, std::shared_ptr<CC
 }
 
 void CStatsGraphicsObject::renderObject(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> rect, int frameTime) {
+    if (!creature) {
+        return;
+    }
     auto cret = creature->invoke<CCreature>(gui->getGame(), this->ptr());
     CStatsGraphicsUtil::drawStats(gui, cret, rect->x, rect->y, rect->w, rect->h, true, true);
 }

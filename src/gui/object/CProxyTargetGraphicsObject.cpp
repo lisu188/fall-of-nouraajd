@@ -25,6 +25,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 void CProxyTargetGraphicsObject::refresh() {
     vstd::with<void>(getGui(), [this](auto gui) {
+        constexpr int maxProxyCells = 4096;
         int prevX = 0, prevY = 0;
         for (const auto &x_pair : proxyObjects) {
             prevX = std::max(prevX, x_pair.first + 1);
@@ -33,8 +34,13 @@ void CProxyTargetGraphicsObject::refresh() {
             }
         }
 
-        int currentSizeX = getSizeX(gui);
-        int currentSizeY = getSizeY(gui);
+        int currentSizeX = std::clamp(getSizeX(gui), 0, maxProxyCells);
+        int currentSizeY = std::clamp(getSizeY(gui), 0, maxProxyCells);
+        if (currentSizeX > 0 && currentSizeY > maxProxyCells / currentSizeX) {
+            vstd::logger::warning("Skipping oversized proxy grid:", currentSizeX, currentSizeY);
+            currentSizeX = 0;
+            currentSizeY = 0;
+        }
 
         int xDiff = currentSizeX - prevX;
         int yDiff = currentSizeY - prevY;
@@ -60,6 +66,10 @@ void CProxyTargetGraphicsObject::refresh() {
 void CProxyTargetGraphicsObject::addProxyObject(std::shared_ptr<CGui> gui, int &x, int &y) {
     std::shared_ptr<CProxyGraphicsObject> nh = std::make_shared<CProxyGraphicsObject>(x, y);
     std::shared_ptr<CLayout> layout1 = gui->getGame()->template createObject<CLayout>(proxyLayout);
+    if (!layout1) {
+        vstd::logger::warning("Skipping proxy object with missing layout:", proxyLayout);
+        return;
+    }
     layout1->setNumericProperty("tileSize", getTileSize(this->ptr<CGameGraphicsObject>()));
     nh->setLayout(layout1);
     proxyObjects[x][y] = nh;
@@ -92,8 +102,11 @@ void CProxyTargetGraphicsObject::refreshAll() {
 
 void CProxyTargetGraphicsObject::refreshObject(int x, int y) {
     auto gui = getGui();
-    int sizeX = getSizeX(gui);
-    int sizeY = getSizeY(gui);
+    if (!gui) {
+        return;
+    }
+    int sizeX = std::max(0, getSizeX(gui));
+    int sizeY = std::max(0, getSizeY(gui));
     if (x < 0 || x >= sizeX || y < 0 || y >= sizeY) {
         vstd::logger::warning("Ignoring proxy refresh outside target bounds:", x, y, "size:", sizeX, sizeY);
         return;

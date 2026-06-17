@@ -27,6 +27,9 @@ std::string CGameEvent::CType::onEquip = "onEquip";
 std::string CGameEvent::CType::onUnequip = "onUnequip";
 
 void CEventHandler::gameEvent(std::shared_ptr<CMapObject> object, std::shared_ptr<CGameEvent> event) const {
+    if (!object || !event) {
+        return;
+    }
     // TODO: maybe add reflection
     if (event->getType() == CGameEvent::CType::onEnter) {
         if (auto visitable = vstd::cast<CVisitable>(object)) {
@@ -70,6 +73,10 @@ void CEventHandler::gameEvent(std::shared_ptr<CMapObject> object, std::shared_pt
 }
 
 void CEventHandler::registerTrigger(std::shared_ptr<CTrigger> trigger) {
+    if (!trigger) {
+        vstd::logger::warning("Ignoring null trigger registration");
+        return;
+    }
     triggers.insert(std::make_pair(std::make_pair(trigger->getObject(), trigger->getEvent()), trigger));
 }
 

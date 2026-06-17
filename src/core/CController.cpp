@@ -25,6 +25,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "object/CPlayer.h"
 
 namespace {
+constexpr std::size_t MAX_FLOW_FIELD_CELLS = 1'000'000;
+
 struct FlowQueueNode {
     int cost;
     Coords coords;
@@ -71,6 +73,10 @@ std::shared_ptr<TargetFlowField> build_target_flow_field(const std::shared_ptr<C
     frontier.push({0, goal});
 
     while (!frontier.empty()) {
+        if (costs.size() >= MAX_FLOW_FIELD_CELLS) {
+            vstd::logger::warning("Target flow field reached visit limit");
+            break;
+        }
         auto current = frontier.top();
         frontier.pop();
 
@@ -150,6 +156,9 @@ Coords find_shared_target_next_step(const std::shared_ptr<CCreature> &creature,
 CTargetController::CTargetController() {}
 
 std::shared_ptr<vstd::future<Coords, void>> CTargetController::control(std::shared_ptr<CCreature> creature) {
+    if (!creature || !creature->getMap()) {
+        return vstd::later([]() { return ZERO; });
+    }
     auto target_object = creature->getMap()->getObjectByName(target);
     if (!target_object) {
         return vstd::later([creature]() { return creature->getCoords(); });
@@ -158,6 +167,9 @@ std::shared_ptr<vstd::future<Coords, void>> CTargetController::control(std::shar
 }
 
 std::shared_ptr<vstd::future<Coords, void>> CController::control(std::shared_ptr<CCreature> c) {
+    if (!c) {
+        return vstd::later([]() { return ZERO; });
+    }
     return vstd::later([c]() { return c->getCoords(); });
 }
 
@@ -172,6 +184,9 @@ std::string CTargetController::getTarget() { return target; }
 void CTargetController::setTarget(std::string target) { this->target = target; }
 
 std::shared_ptr<vstd::future<Coords, void>> CRandomController::control(std::shared_ptr<CCreature> creature) {
+    if (!creature) {
+        return vstd::later([]() { return ZERO; });
+    }
     return vstd::later([creature]() {
         Coords target = creature->getCoords() + Coords(vstd::rand(-1, 1), vstd::rand(-1, 1), 0);
         return creature->getMap() ? creature->getMap()->normalizeCoords(target) : target;
@@ -180,6 +195,9 @@ std::shared_ptr<vstd::future<Coords, void>> CRandomController::control(std::shar
 
 std::shared_ptr<vstd::future<Coords, void>> CNpcRandomController::control(std::shared_ptr<CCreature> creature) {
     auto self = this->ptr<CNpcRandomController>();
+    if (!creature || !creature->getMap()) {
+        return vstd::later([creature]() { return creature ? creature->getCoords() : ZERO; });
+    }
     return vstd::later([self, creature]() -> Coords {
         if (!self->path.empty() && self->currentStep < static_cast<int>(self->path.size())) {
             auto next = creature->getMap()->normalizeCoords(self->path[self->currentStep]);
@@ -236,6 +254,9 @@ void CGroundController::setTileType(std::string type) { _tileType = type; }
 
 std::shared_ptr<vstd::future<Coords, void>> CGroundController::control(std::shared_ptr<CCreature> creature) {
     auto self = this->ptr<CGroundController>();
+    if (!creature || !creature->getMap()) {
+        return vstd::later([creature]() { return creature ? creature->getCoords() : ZERO; });
+    }
     return vstd::later([self, creature]() -> Coords {
         std::vector<Coords> possible;
         for (auto c : creature->getMap()->getAdjacentCoords(creature->getCoords(), true)) {
@@ -255,6 +276,9 @@ CRangeController::CRangeController() {}
 
 std::shared_ptr<vstd::future<Coords, void>> CRangeController::control(std::shared_ptr<CCreature> creature) {
     auto self = this->ptr<CRangeController>();
+    if (!creature || !creature->getMap()) {
+        return vstd::later([creature]() { return creature ? creature->getCoords() : ZERO; });
+    }
     return vstd::later([self, creature]() -> Coords {
         std::vector<Coords> possible;
         std::shared_ptr<CMapObject> targetObject = creature->getMap()->getObjectByName(self->getTarget());
@@ -280,6 +304,9 @@ void CRangeController::setDistance(int distance) { this->distance = distance; }
 int CRangeController::getDistance() { return distance; }
 
 bool CMonsterFightController::control(std::shared_ptr<CCreature> me, std::shared_ptr<CCreature> opponent) {
+    if (!me || !opponent) {
+        return false;
+    }
     if (me->getHpRatio() < 75) {
         auto object = getLeastPowerfulItemWithTag(me, CTag::Heal);
         if (object) {
@@ -343,6 +370,9 @@ std::shared_ptr<CInteraction> CMonsterFightController::selectInteraction(std::sh
 
 std::shared_ptr<vstd::future<Coords, void>> CPlayerController::control(std::shared_ptr<CCreature> c) {
     auto player = vstd::cast<CPlayer>(c);
+    if (!player) {
+        return vstd::now([]() { return ZERO; });
+    }
     return vstd::now([this, player]() {
         if (!canContinue(player)) {
             return player->getCoords();
@@ -352,6 +382,10 @@ std::shared_ptr<vstd::future<Coords, void>> CPlayerController::control(std::shar
 }
 
 void CPlayerController::setTarget(std::shared_ptr<CPlayer> player, Coords _target) {
+    if (!player || !player->getMap()) {
+        clearPath();
+        return;
+    }
     target = std::make_shared<Coords>(player->getMap()->normalizeCoords(_target));
     path.clear();
     currentStep = 0;
@@ -432,6 +466,9 @@ std::vector<Coords> CPlayerController::calculatePath(std::shared_ptr<CPlayer> pl
 }
 
 bool CFightController::control(std::shared_ptr<CCreature> me, std::shared_ptr<CCreature> opponent) {
+    if (!me || !opponent) {
+        return false;
+    }
     vstd::logger::warning("Empty fight controller used!");
     return true;
 }
@@ -454,6 +491,9 @@ std::shared_ptr<CCreature> CFightController::selectOpponent(std::shared_ptr<CCre
 }
 
 void CPlayerFightController::start(std::shared_ptr<CCreature> me, std::shared_ptr<CCreature> opponent) {
+    if (!me || !me->getMap() || !me->getMap()->getGame()) {
+        return;
+    }
     vstd::if_not_null(me->getMap()->getGame()->getGui(), [&](auto gui) {
         fightPanel = me->getGame()->createObject<CGameFightPanel>("fightPanel");
         fightPanel->setEnemies({opponent});
@@ -462,19 +502,27 @@ void CPlayerFightController::start(std::shared_ptr<CCreature> me, std::shared_pt
 }
 
 bool CPlayerFightController::control(std::shared_ptr<CCreature> me, std::shared_ptr<CCreature> opponent) {
+    if (!me || !opponent || !me->getMap() || !me->getMap()->getGame()) {
+        return false;
+    }
     bool used = false;
     vstd::if_not_null(me->getMap()->getGame()->getGui(), [&](auto gui) {
         // TODO: what about mana cost?
         auto target = fightPanel && fightPanel->getEnemy() ? fightPanel->getEnemy() : opponent;
-        if (auto action = fightPanel->selectInteraction()) {
-            me->useAction(action, target);
-            used = true;
+        if (fightPanel && target) {
+            if (auto action = fightPanel->selectInteraction()) {
+                me->useAction(action, target);
+                used = true;
+            }
         }
     });
     return used;
 }
 
 void CPlayerFightController::end(std::shared_ptr<CCreature> me, std::shared_ptr<CCreature> opponent) {
+    if (!me || !me->getMap() || !me->getMap()->getGame()) {
+        return;
+    }
     vstd::if_not_null(me->getMap()->getGame()->getGui(), [&](auto gui) {
         if (fightPanel) {
             fightPanel->close();

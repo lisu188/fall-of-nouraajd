@@ -98,6 +98,9 @@ std::vector<std::string> CObjectHandler::getAllSubTypes(const std::string &claz)
         if (CJsonUtil::isRef(conf)) {
             conf = getConfig((*conf)["ref"].get<std::string>());
         }
+        if (!conf || !conf->is_object() || !conf->contains("class") || !(*conf)["class"].is_string()) {
+            continue;
+        }
         auto clas = (*conf)["class"].get<std::string>();
         if (getType(clas) && getType(clas)->meta()->inherits(claz)) {
             ret.push_back(type);
@@ -110,6 +113,9 @@ std::string CObjectHandler::getClass(const std::string &type) {
     auto conf = getConfig(type);
     if (CJsonUtil::isRef(conf)) {
         conf = getConfig((*conf)["ref"].get<std::string>());
+    }
+    if (!conf || !conf->is_object() || !conf->contains("class") || !(*conf)["class"].is_string()) {
+        return "";
     }
     return (*conf)["class"].get<std::string>();
 }

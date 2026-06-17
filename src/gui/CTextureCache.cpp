@@ -18,6 +18,12 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "CTextureCache.h"
 #include "core/CUtil.h"
 
+#include <algorithm>
+
+namespace {
+constexpr int MAX_ALPHA_MASK_PIXELS = 4'000'000;
+}
+
 Uint32 getpixel(SDL_Surface *surface, int x, int y) {
     int bpp = surface->format->BytesPerPixel;
     /* Here p is the address to the pixel we want to retrieve */
@@ -98,7 +104,8 @@ fn::sdl::TexturePtr CTextureCache::loadTexture(std::string path) {
         vstd::logger::error("CTextureCache::loadTexture: cannot load", path);
         return nullptr;
     }
-    return CTextureUtil::calculateAlpha(_gui.lock()->getRenderer(), std::move(surface));
+    auto gui = _gui.lock();
+    return gui ? CTextureUtil::calculateAlpha(gui->getRenderer(), std::move(surface)) : nullptr;
 }
 
 CTextureCache::CTextureCache(std::shared_ptr<CGui> _gui) : _gui(_gui) {}
@@ -130,8 +137,12 @@ fn::sdl::TexturePtr CTextureUtil::calculateAlpha(SDL_Renderer *renderer, fn::sdl
     int w = surface->w;
     int h = surface->h;
 
-    if (w <= 0 || h <= 0) {
+    if (w <= 0 || h <= 0 || w > MAX_ALPHA_MASK_PIXELS / std::max(1, h)) {
         vstd::logger::error("CTextureUtil::calculateAlpha: invalid surface size", w, h);
+        return nullptr;
+    }
+    if (!renderer) {
+        vstd::logger::error("CTextureUtil::calculateAlpha: null renderer");
         return nullptr;
     }
 
@@ -172,6 +183,11 @@ std::unordered_set<std::pair<int, int>> CTextureUtil::calculateMask(SDL_Surface 
     std::unordered_set<std::pair<int, int>> remaining;
     std::unordered_set<std::pair<int, int>> result;
 
+    if (!pSurface || pSurface->w <= 0 || pSurface->h <= 0 ||
+        pSurface->w > MAX_ALPHA_MASK_PIXELS / std::max(1, pSurface->h)) {
+        return result;
+    }
+
     remaining.insert(std::make_pair(0, 0));
     remaining.insert(std::make_pair(0, pSurface->h - 1));
     remaining.insert(std::make_pair(pSurface->w - 1, 0));
@@ -193,7 +209,7 @@ std::unordered_set<std::pair<int, int>> CTextureUtil::calculateMask(SDL_Surface 
                     int y = coords.second + j;
                     if (x >= 0 && x < pSurface->w && y >= 0 && y < pSurface->h) {
                         std::pair<int, int> value = std::make_pair(x, y);
-                        if (!vstd::ctn(checked, value)) {
+                        if (!vstd::ctn(checked, value) && result.size() + remaining.size() < MAX_ALPHA_MASK_PIXELS) {
                             remaining.insert(value);
                         }
                     }

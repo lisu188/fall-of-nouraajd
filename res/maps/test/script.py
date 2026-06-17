@@ -18,12 +18,6 @@ def load(self, context):
             self.setNumericProperty("observedY", coords.y)
             self.setNumericProperty("observedZ", coords.z)
 
-    @trigger(context, "onEnter", "market1")
-    class MarketTrigger(CTrigger):
-        def trigger(self, object, event):
-            if event.getCause().isPlayer():
-                object.getGame().getGuiHandler().showTrade(object.getObjectProperty("market"))
-
     # TODO: replace with onLoad event
     @trigger(context, "onTurn", "triggerAnchor")
     class TurnTrigger(CTrigger):

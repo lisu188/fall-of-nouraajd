@@ -65,10 +65,16 @@ void CGameQuestPanel::renderObject(std::shared_ptr<CGui> gui, std::shared_ptr<SD
 
 std::string CGameQuestPanel::getText(std::shared_ptr<CGui> ptr) {
     std::string text = "";
-    for (auto quest : ptr->getGame()->getMap()->getPlayer()->getCompletedQuests()) {
+    auto game = ptr ? ptr->getGame() : nullptr;
+    auto map = game ? game->getMap() : nullptr;
+    auto player = map ? map->getPlayer() : nullptr;
+    if (!player) {
+        return "No active quests.\n";
+    }
+    for (auto quest : player->getCompletedQuests()) {
         append_quest_line(text, quest, true);
     }
-    for (auto quest : ptr->getGame()->getMap()->getPlayer()->getQuests()) {
+    for (auto quest : player->getQuests()) {
         append_quest_line(text, quest, false);
     }
     if (text.empty()) {

@@ -52,6 +52,7 @@ constexpr SDL_Color MINIMAP_PLAYER{255, 255, 0, 255};
 constexpr SDL_Color MINIMAP_CREATURE{255, 0, 0, 255};
 constexpr SDL_Color MINIMAP_OBJECT{255, 170, 0, 255};
 constexpr SDL_Color MINIMAP_VIEWPORT{255, 255, 255, 255};
+constexpr long long MAX_MINIMAP_DEFAULT_CELLS = 100'000;
 
 struct LevelBounds {
     int minX = 0;
@@ -209,6 +210,12 @@ template <typename T> void draw_cell(T *target, const MinimapScale &scale, Coord
 }
 
 template <typename T> void draw_default_terrain(T *target, const MinimapScale &scale, SDL_Color color) {
+    const long long width = static_cast<long long>(scale.bounds.maxX) - scale.bounds.minX + 1;
+    const long long height = static_cast<long long>(scale.bounds.maxY) - scale.bounds.minY + 1;
+    if (width <= 0 || height <= 0 || width > MAX_MINIMAP_DEFAULT_CELLS / std::max(1LL, height)) {
+        fill_rect(target, scale.rect, MINIMAP_BACKGROUND);
+        return;
+    }
     for (int y = scale.bounds.minY; y <= scale.bounds.maxY; ++y) {
         for (int x = scale.bounds.minX; x <= scale.bounds.maxX; ++x) {
             draw_cell(target, scale, Coords(x, y, 0), color);

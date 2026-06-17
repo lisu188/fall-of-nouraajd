@@ -19,6 +19,19 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "gui/CGui.h"
 #include "gui/CTextManager.h"
 
+#include <algorithm>
+#include <cstdlib>
+
+namespace {
+constexpr std::size_t MAX_CONSOLE_INPUT = 1024;
+constexpr std::size_t MAX_CONSOLE_HISTORY = 64;
+
+bool pythonConsoleEnabled() {
+    const char *enabled = std::getenv("GAME_ENABLE_PYTHON_CONSOLE");
+    return enabled != nullptr && std::string(enabled) == "1";
+}
+} // namespace
+
 void CConsoleGraphicsObject::renderObject(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> rect, int frameTime) {
     gui->getTextManager()->drawText(consoleState, rect->x, rect->y, rect->w);
 }
@@ -47,8 +60,11 @@ CConsoleGraphicsObject::CConsoleGraphicsObject() {
                 return true;
             } else {
                 if (event->key.keysym.sym == SDLK_TAB) {
-                    startInput();
-                    return true;
+                    if (pythonConsoleEnabled()) {
+                        startInput();
+                        return true;
+                    }
+                    return false;
                 }
             }
             return false;
@@ -58,17 +74,28 @@ CConsoleGraphicsObject::CConsoleGraphicsObject() {
             return event->type == SDL_TEXTINPUT && inProgress;
         },
         [this](std::shared_ptr<CGui> gui, std::shared_ptr<CGameGraphicsObject> self, SDL_Event *event) {
-            consoleState += event->text.text;
+            if (consoleState.size() < MAX_CONSOLE_INPUT) {
+                consoleState += event->text.text;
+                if (consoleState.size() > MAX_CONSOLE_INPUT) {
+                    consoleState.resize(MAX_CONSOLE_INPUT);
+                }
+            }
             return true;
         });
 }
 
 void CConsoleGraphicsObject::incrementHistoryIndex() {
+    if (consoleHistory.empty()) {
+        consoleHistory.push_back("");
+    }
     historyIndex++;
     historyIndex = historyIndex % consoleHistory.size();
 }
 
 void CConsoleGraphicsObject::decrementHistoryIndex() {
+    if (consoleHistory.empty()) {
+        consoleHistory.push_back("");
+    }
     historyIndex--;
     if (historyIndex < 0) {
         historyIndex = consoleHistory.size() + historyIndex;
@@ -88,12 +115,19 @@ void CConsoleGraphicsObject::stopInput() {
 
 void CConsoleGraphicsObject::clearConsole() {
     consoleHistory.push_back(consoleState);
+    while (consoleHistory.size() > MAX_CONSOLE_HISTORY) {
+        consoleHistory.erase(consoleHistory.begin());
+    }
+    historyIndex = std::clamp(historyIndex, 0, static_cast<int>(consoleHistory.size()) - 1);
     consoleState = "";
 }
 
 std::string CConsoleGraphicsObject::getConsoleState() { return consoleState; }
 
 void CConsoleGraphicsObject::setConsoleState(std::string consoleState) {
+    if (consoleState.size() > MAX_CONSOLE_INPUT) {
+        consoleState.resize(MAX_CONSOLE_INPUT);
+    }
     CConsoleGraphicsObject::consoleState = consoleState;
 }
 
@@ -103,4 +137,16 @@ std::list<std::string> CConsoleGraphicsObject::getConsoleHistory() {
 
 void CConsoleGraphicsObject::setConsoleHistory(std::list<std::string> consoleHistory) {
     this->consoleHistory = std::vector<std::string>(consoleHistory.begin(), consoleHistory.end());
+    if (this->consoleHistory.empty()) {
+        this->consoleHistory.push_back("");
+    }
+    for (auto &entry : this->consoleHistory) {
+        if (entry.size() > MAX_CONSOLE_INPUT) {
+            entry.resize(MAX_CONSOLE_INPUT);
+        }
+    }
+    while (this->consoleHistory.size() > MAX_CONSOLE_HISTORY) {
+        this->consoleHistory.erase(this->consoleHistory.begin());
+    }
+    historyIndex = std::clamp(historyIndex, 0, static_cast<int>(this->consoleHistory.size()) - 1);
 }

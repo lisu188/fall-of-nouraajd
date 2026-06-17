@@ -25,7 +25,8 @@ class CAnimation : public CGameGraphicsObject {
     V_META(CAnimation, CGameGraphicsObject, vstd::meta::empty())
 
   protected:
-    std::shared_ptr<CGameObject> object; // TODO: try make weak
+    std::weak_ptr<CGameObject> object;
+    std::shared_ptr<CGameObject> ownedObject;
 
   public:
     CAnimation();
@@ -33,6 +34,8 @@ class CAnimation : public CGameGraphicsObject {
     std::shared_ptr<CGameObject> getObject();
 
     void setObject(std::shared_ptr<CGameObject> _object);
+
+    void setOwnedObject(std::shared_ptr<CGameObject> _object);
 
     bool mouseEvent(std::shared_ptr<CGui> sharedPtr, SDL_EventType type, int button, int x, int y) override;
 

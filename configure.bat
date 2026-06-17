@@ -29,13 +29,6 @@ call :add_python_user_scripts_to_path
 
 for /f "usebackq delims=" %%i in (`python -c "import sys; print(sys.executable)"`) do set "PYTHON_EXECUTABLE=%%i"
 for /f "usebackq delims=" %%i in (`python -c "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}')"`) do set "PYTHON_VERSION=%%i"
-for /f "usebackq delims=" %%i in (`python -m pybind11 --cmakedir`) do set "PYBIND11_DIR=%%i"
-if not defined PYBIND11_DIR (
-    echo pybind11 was not found for the active Python interpreter.
-    echo Install it with:
-    echo   python -m pip install --upgrade pybind11
-    exit /b 1
-)
 if not "!PYTHON_VERSION!"=="3.12" (
     echo Python 3.12 is required on PATH for the Windows build.
     echo Found Python !PYTHON_VERSION! at:
@@ -273,6 +266,5 @@ cmake -B ./!BUILD_DIR! -S . ^
     -DVCPKG_TARGET_TRIPLET="!VCPKG_TARGET_TRIPLET!" ^
     -DVCPKG_OVERLAY_TRIPLETS="!VCPKG_OVERLAY_TRIPLETS!" ^
     -DVCPKG_MANIFEST_MODE="!VCPKG_MANIFEST_MODE!" ^
-    -Dpybind11_DIR="!PYBIND11_DIR!" ^
     -DPython3_EXECUTABLE="!PYTHON_EXECUTABLE!"
 exit /b %ERRORLEVEL%

@@ -42,6 +42,9 @@ CProxyGraphicsObject::CProxyGraphicsObject(int x, int y) : x(x), y(y) {}
 void CProxyGraphicsObject::refresh() {
     vstd::with<void>(getGui(), [this](auto gui) {
         auto target = vstd::cast<CProxyTargetGraphicsObject>(getParent());
+        if (!target) {
+            return;
+        }
         auto objects = target->getProxiedObjects(gui, x, y);
 
         if (hasSameProxyChildren(objects, children)) {

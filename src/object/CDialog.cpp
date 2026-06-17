@@ -37,9 +37,9 @@ void CDialog::invokeAction(std::string action) {
 bool CDialog::invokeCondition(std::string condition) {
     pybind11::gil_scoped_acquire gil;
     if (auto override = CPythonOverrides::find_override(this, "invokeCondition"); !override.is_none()) {
-        PY_SAFE_RET_VAL(return override(condition).cast<bool>();, true)
+        PY_SAFE_RET_VAL(return override(condition).cast<bool>();, false)
     }
-    return true;
+    return false;
 }
 
 const std::string &CDialogState::getText() const { return text; }

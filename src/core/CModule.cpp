@@ -568,7 +568,7 @@ void init_game_module(py::module_ &m) {
         .def("showDialog", &CGuiHandler::showDialog, "Open a dialog panel.")
         .def("showQuestion", &CGuiHandler::showQuestion, "Open a question/choice panel.")
         .def("showSelection", &CGuiHandler::showSelection, "Open a selection panel.")
-        .def("showInfo", &CGuiHandler::showInfo, "Open an info panel.")
+        .def("showInfo", &CGuiHandler::showInfo, py::arg("message"), py::arg("centered") = false, "Open an info panel.")
         .def("openPanel", &CGuiHandler::openPanel, "Open a configured panel without blocking for user input.")
         .def("showLoot", &CGuiHandler::showLoot, "Show loot acquisition UI.")
         .def("showTooltip", &CGuiHandler::showTooltip, "Show a tooltip panel at screen coordinates.")

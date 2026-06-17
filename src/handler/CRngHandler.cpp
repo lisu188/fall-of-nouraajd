@@ -22,6 +22,14 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CUtil.h"
 #include "object/CObject.h"
 
+#include <algorithm>
+
+namespace {
+constexpr int MAX_RANDOM_VALUE = 1000;
+
+int clampRandomValue(int value) { return std::clamp(value, 0, MAX_RANDOM_VALUE); }
+} // namespace
+
 std::set<std::shared_ptr<CItem>> CRngHandler::getRandomLoot(int value) const { return calculateRandomLoot(value); }
 
 std::set<std::shared_ptr<CCreature>> CRngHandler::getRandomEncounter(int value) const {
@@ -34,7 +42,9 @@ std::set<std::shared_ptr<CCreature>> CRngHandler::getRandomEncounter(int value) 
     for (const auto &creature : randomEncounter) {
         creature->setAffiliation(vstd::str(hash));
         // TODO: make this customizable
-        creature->setController(game.lock()->createObject<CController>("CRandomController"));
+        if (auto currentGame = game.lock()) {
+            creature->setController(currentGame->createObject<CController>("CRandomController"));
+        }
     }
     return randomEncounter;
 }
@@ -61,6 +71,11 @@ CRngHandler::CRngHandler(const std::shared_ptr<CGame> &game) : game(game) {
 
 std::set<std::shared_ptr<CItem>> CRngHandler::calculateRandomLoot(int value) const {
     std::set<std::shared_ptr<CItem>> loot;
+    auto currentGame = game.lock();
+    if (!currentGame) {
+        return loot;
+    }
+    value = clampRandomValue(value);
     for (auto pow : vstd::random_components(value, itemPowerTable | std::views::keys)) {
         std::set<std::string> possible_names;
         auto range = itemPowerTable.equal_range(pow);
@@ -68,7 +83,7 @@ std::set<std::shared_ptr<CItem>> CRngHandler::calculateRandomLoot(int value) con
             possible_names.insert(it->second);
         }
         if (!possible_names.empty()) {
-            loot.insert(game.lock()->createObject<CItem>(*vstd::random_element(possible_names)));
+            loot.insert(currentGame->createObject<CItem>(*vstd::random_element(possible_names)));
         }
         value -= pow;
     }
@@ -77,6 +92,9 @@ std::set<std::shared_ptr<CItem>> CRngHandler::calculateRandomLoot(int value) con
 
 void CRngHandler::addRandomLoot(const std::shared_ptr<CCreature> &creature,
                                 const std::set<std::shared_ptr<CItem>> &items) {
+    if (!creature) {
+        return;
+    }
     // TODO: polymorphic
     if (creature->isPlayer()) {
         creature->getGame()->getGuiHandler()->showLoot(creature, items);
@@ -90,6 +108,11 @@ void CRngHandler::addRandomLoot(const std::shared_ptr<CCreature> &creature, int 
 
 std::set<std::shared_ptr<CCreature>> CRngHandler::calculateRandomEncounter(int value) const {
     std::set<std::shared_ptr<CCreature>> encounter;
+    auto currentGame = game.lock();
+    if (!currentGame) {
+        return encounter;
+    }
+    value = clampRandomValue(value);
     for (int pow : vstd::random_components(value, std::views::iota(1, value + 1))) {
         auto possiblePowersRange =
             creaturePowerTable | std::views::keys | std::views::filter([pow](int it) { return it <= pow; });
@@ -105,7 +128,10 @@ std::set<std::shared_ptr<CCreature>> CRngHandler::calculateRandomEncounter(int v
             possible_names.insert(it->second);
         }
         if (!possible_names.empty()) {
-            auto creature = game.lock()->createObject<CCreature>(*vstd::random_element(possible_names));
+            auto creature = currentGame->createObject<CCreature>(*vstd::random_element(possible_names));
+            if (!creature) {
+                continue;
+            }
             creature->addExp(creature->getExpForLevel(pow - sw));
             encounter.insert(creature);
         }
@@ -115,6 +141,9 @@ std::set<std::shared_ptr<CCreature>> CRngHandler::calculateRandomEncounter(int v
 }
 
 void CRngHandler::addRandomEncounter(const std::shared_ptr<CMap> &map, int x, int y, int z, int value) {
+    if (!map) {
+        return;
+    }
     for (const auto &creature : getRandomEncounter(value)) {
         map->addObject(creature, Coords(x, y, z));
     }
