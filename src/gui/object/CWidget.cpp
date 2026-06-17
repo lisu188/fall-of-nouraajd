@@ -29,10 +29,12 @@ std::string CWidget::getClick() { return click; }
 void CWidget::setClick(std::string click) { this->click = click; }
 
 void CWidget::renderObject(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> rect, int frameTime) {
-    this->getParent()
-        ->meta()
-        ->invoke_method<void, CGameGraphicsObject, std::shared_ptr<CGui>, std::shared_ptr<SDL_Rect>, int>(
-            this->getRender(), getParent(), gui, rect, frameTime);
+    auto parent = getParent();
+    if (!parent || getRender().empty()) {
+        return;
+    }
+    parent->meta()->invoke_method<void, CGameGraphicsObject, std::shared_ptr<CGui>, std::shared_ptr<SDL_Rect>, int>(
+        this->getRender(), parent, gui, rect, frameTime);
 }
 
 bool CWidget::mouseEvent(std::shared_ptr<CGui> gui, SDL_EventType type, int button, int x, int y) {
