@@ -8314,10 +8314,18 @@ class McpServerTest(unittest.TestCase):
         class NativeLike:
             append = list.append
 
+        class CPluginLoader:
+            loadDynamicPlugin = staticmethod(len)
+
+        class event_loop:
+            instance = staticmethod(len)
+
         module.top_level = top_level
         module.set_logger_sink = set_logger_sink
         module.Dialog = Dialog
         module.NativeLike = NativeLike
+        module.CPluginLoader = CPluginLoader
+        module.event_loop = event_loop
 
         server._export_module_callables(module, source="game")
 
@@ -8326,6 +8334,8 @@ class McpServerTest(unittest.TestCase):
         self.assertIn("Dialog.invoke", server.exports)
         self.assertIn("Dialog.class_invoke", server.exports)
         self.assertIn("Dialog.static_invoke", server.exports)
+        self.assertIn("event_loop.instance", server.exports)
+        self.assertNotIn("CPluginLoader.loadDynamicPlugin", server.exports)
         self.assertNotIn("NativeLike.append", server.exports)
         self.assertNotIn("set_logger_sink", server.exports)
         self.assertEqual(server.exports["Dialog.invoke"].source, "game.Dialog")
@@ -8340,6 +8350,7 @@ class McpServerTest(unittest.TestCase):
         self.assertIn("CGameLoader.startGameWithPlayer", server.exports)
         self.assertIn("event_loop.instance", server.exports)
         self.assertIn("CGuiHandler.openPanel", server.exports)
+        self.assertNotIn("CPluginLoader.loadDynamicPlugin", server.exports)
 
     def test_engine_call_resolves_handle_arguments_for_python_methods(self):
         server = self.make_stub_server()
