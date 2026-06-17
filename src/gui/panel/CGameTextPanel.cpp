@@ -24,6 +24,9 @@ std::string CGameTextPanel::getText() { return text; }
 void CGameTextPanel::setText(std::string _text) { text = _text; }
 
 void CGameTextPanel::renderObject(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> rect, int i) {
+    if (!gui || !rect || !gui->getTextManager()) {
+        return;
+    }
     if (centered) {
         gui->getTextManager()->drawTextCentered(text, rect->x, rect->y, rect->w, rect->h);
     } else {
