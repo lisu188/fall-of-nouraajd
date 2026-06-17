@@ -218,6 +218,30 @@ class CraftingRuntime:
         chance = recipe["success_chance"]
         return f"{recipe['display_name']} [{recipe['id']}]: {parts_text} -> {output['count']}x {output_label} ({chance}% success)"
 
+    def missing_requirements(self, player, recipe):
+        missing = []
+        for requirement in recipe["inputs"]:
+            required_count = requirement["count"]
+            if required_count <= 0:
+                continue
+            item_id = requirement["item_id"]
+            held_count = count_inventory_matches(player, item_id)
+            if held_count < required_count:
+                missing.append(f"{required_count - held_count}x {self.get_item_label(item_id)}")
+        gold_cost = recipe["gold"]
+        if gold_cost > 0:
+            held_gold = player.getNumericProperty("gold")
+            if held_gold < gold_cost:
+                missing.append(f"{gold_cost - held_gold}g")
+        return missing
+
+    def describe_recipe_for_player(self, player, recipe):
+        description = self.describe_recipe(recipe)
+        missing = self.missing_requirements(player, recipe)
+        if not missing:
+            return f"{description} [ready]"
+        return f"{description} [missing: {', '.join(missing)}]"
+
     def is_unlocked(self, player, recipe):
         unlock_state = recipe.get("unlock", {"type": "none", "value": None})
         if unlock_state["type"] == "flag":
@@ -287,16 +311,16 @@ def open_crafting_station(station, player):
     game_instance = station.getGame()
     handler = game_instance.getGuiHandler()
     station_label = station.getStringProperty("label") or station_id
-    available = runtime.available_recipes(player, station_id)
-    if not available:
-        handler.showInfo(f"No known recipes for {station_label}.", True)
-        return
     leave_option = "Leave"
     while True:
+        available = runtime.available_recipes(player, station_id)
+        if not available:
+            handler.showInfo(f"No known recipes for {station_label}.", True)
+            return
         option_map = {}
         options = []
         for recipe in available:
-            description = runtime.describe_recipe(recipe)
+            description = runtime.describe_recipe_for_player(player, recipe)
             option_map[description] = recipe
             options.append(description)
         options.append(leave_option)
