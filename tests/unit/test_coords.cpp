@@ -19,6 +19,12 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CTags.h"
 #include "core/CJsonUtil.h"
 #include "core/CPathFinder.h"
+#if defined(__linux__)
+#include "core/CMap.h"
+#include "core/CProvider.h"
+#include "object/CMapObject.h"
+#include "object/CTile.h"
+#endif
 #include "core/CSerialization.h"
 #include "core/CScript.h"
 #include "core/CUtil.h"
@@ -32,10 +38,16 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <algorithm>
 #include <atomic>
 #include <chrono>
+#if defined(__linux__)
+#include <filesystem>
+#endif
 #include <iostream>
 #include <map>
 #include <pybind11/embed.h>
 #include <queue>
+#if defined(__linux__)
+#include <set>
+#endif
 #include <stdexcept>
 #include <string>
 #include <thread>
@@ -734,6 +746,182 @@ void test_script_handler_executes_commands_and_wraps_functions() {
                 "void call_created_function should update Python state and clean up its temporary function");
 }
 
+#if defined(__linux__)
+void test_map_tiles_bounds_wrapping_and_object_cache() {
+    auto map = std::make_shared<CMap>();
+    map->setMapName("coverageMap");
+    map->setTurn(7);
+    map->setEntryX(1);
+    map->setEntryY(2);
+    map->setEntryZ(3);
+    expect_true(map->getMapName() == "coverageMap", "map name accessors should round-trip values");
+    expect_true(map->getTurn() == 7, "map turn accessors should round-trip values");
+    expect_true(map->getEntry() == Coords(1, 2, 3), "map entry accessors should expose a single coordinate");
+
+    map->setXBounds({{0, 4}, {1, 2}});
+    map->setYBounds({{0, 3}, {2, 5}});
+    map->setDefaultTiles({{0, "GroundTile"}});
+    map->setOutOfBoundsTiles({{0, "MountainTile"}});
+    map->setWrapX({{0, 1}});
+    map->setWrapY({{0, 1}});
+    expect_true(map->getXBounds().at(0) == 4, "x bounds should be stored by level");
+    expect_true(map->getYBounds().at(2) == 5, "y bounds should be stored by level");
+    expect_true(map->getDefaultTiles().at(0) == "GroundTile", "default tile ids should be stored by level");
+    expect_true(map->getOutOfBoundsTiles().at(0) == "MountainTile", "out-of-bounds tile ids should be stored by level");
+    expect_true(map->getWrapX().at(0) == 1 && map->getWrapY().at(0) == 1, "wrapping flags should be stored by level");
+
+    auto bounds = map->getBounds();
+    expect_true(bounds.at(0) == std::make_pair(4, 3), "bounds should combine matching x/y levels");
+    expect_true(bounds.at(1) == std::make_pair(2, 0), "bounds should include x-only levels");
+    expect_true(bounds.at(2) == std::make_pair(0, 5), "bounds should include y-only levels");
+    expect_true(map->wrapsX(0) && map->wrapsY(0), "configured wrapped levels should report wrapping");
+    expect_true(!map->wrapsX(1) && !map->wrapsY(1), "unconfigured levels should not report wrapping");
+    expect_true(map->normalizeCoords(Coords(-1, 4, 0)) == Coords(4, 0, 0),
+                "wrapped coordinates should normalize across both axes");
+
+    const auto adjacent = map->getAdjacentCoords(Coords(0, 0, 0), true);
+    expect_true(adjacent.size() == 5, "wrapped adjacency should include self and four unique neighbors");
+    expect_true(std::find(adjacent.begin(), adjacent.end(), Coords(4, 0, 0)) != adjacent.end(),
+                "wrapped adjacency should include the west edge neighbor");
+    expect_true(std::find(adjacent.begin(), adjacent.end(), Coords(0, 3, 0)) != adjacent.end(),
+                "wrapped adjacency should include the north edge neighbor");
+    expect_true(map->getShortestDelta(Coords(0, 0, 0), Coords(4, 3, 0)) == Coords(-1, -1, 0),
+                "shortest deltas should prefer wrapped movement when shorter");
+    expect_true(map->getDistance(Coords(0, 0, 0), Coords(4, 0, 0)) == 1.0,
+                "distance should use wrapped shortest deltas");
+
+    auto floor = std::make_shared<CTile>();
+    floor->setTileType("floor");
+    floor->setCanStep(true);
+    expect_true(!map->addTile(nullptr, 0, 0, 0), "addTile should reject null tiles");
+    expect_true(map->addTile(floor, 1, 1, 0), "addTile should store a new tile");
+    expect_true(floor->getCoords() == Coords(1, 1, 0), "addTile should synchronize tile coordinates");
+    expect_true(!map->addTile(std::make_shared<CTile>(), 1, 1, 0), "addTile should reject duplicate coordinates");
+    expect_true(map->contains(1, 1, 0), "contains should find manually added tiles");
+    expect_true(map->getTile(1, 1, 0) == floor, "getTile should return existing tiles without creating defaults");
+    expect_true(map->canStep(1, 1, 0), "walkable manual tiles should be passable");
+
+    const auto revision_before_move = map->getNavigationRevision();
+    map->moveTile(floor, 2, 1, 0);
+    expect_true(map->getNavigationRevision() > revision_before_move, "moving a tile should bump navigation revision");
+    expect_true(!map->contains(1, 1, 0) && map->contains(2, 1, 0), "moveTile should relocate the tile index");
+    expect_true(map->getTile(2, 1, 0) == floor, "moved tiles should be indexed at their new coordinate");
+    expect_true(map->getMovementCost(2, 1, 0) == 1, "movement cost should be available for existing tiles");
+
+    auto wall = std::make_shared<CTile>();
+    wall->setCanStep(false);
+    expect_true(map->addTile(wall, 3, 1, 0), "additional manual tiles should be accepted");
+    expect_true(!map->canStep(3, 1, 0), "blocking manual tiles should make coordinates impassable");
+    expect_true(!map->canStep(1, 0, 2), "bounded non-wrapped levels should reject out-of-bounds coordinates");
+
+    int visited_tiles = 0;
+    map->forTiles([&visited_tiles](std::shared_ptr<CTile>) { visited_tiles++; },
+                  [](std::shared_ptr<CTile>) { return true; });
+    expect_true(visited_tiles == 2, "forTiles should visit stored tiles");
+    map->removeTile(3, 1, 0);
+    expect_true(!map->contains(3, 1, 0), "removeTile should erase indexed tiles");
+
+    std::set<std::shared_ptr<CTile>> replacement_tiles;
+    replacement_tiles.insert(nullptr);
+    replacement_tiles.insert(floor);
+    map->setTiles(replacement_tiles);
+    expect_true(map->getTiles().size() == 1, "setTiles should ignore null tiles and keep valid tiles");
+
+    auto blocker = std::make_shared<CMapObject>();
+    blocker->setName("blockingObject");
+    blocker->setCanStep(false);
+    blocker->setPosX(2);
+    blocker->setPosY(2);
+    blocker->setPosZ(0);
+    auto marker = std::make_shared<CMapObject>();
+    marker->setName("markerObject");
+    marker->setCanStep(true);
+    marker->setPosX(4);
+    marker->setPosY(2);
+    marker->setPosZ(0);
+
+    std::set<std::shared_ptr<CMapObject>> objects;
+    objects.insert(nullptr);
+    objects.insert(blocker);
+    objects.insert(marker);
+    map->setObjects(objects);
+    expect_true(map->getObjects().size() == 2, "setObjects should ignore null objects and index valid objects");
+    expect_true(map->getObjectByName("markerObject") == marker, "objects should be searchable by name");
+    expect_true(map->getObjectByName("missingObject") == nullptr, "missing object names should return null");
+    expect_true(!map->canStep(2, 2, 0), "blocking objects should make coordinates impassable");
+
+    int visited_objects = 0;
+    map->forObjects([&visited_objects](std::shared_ptr<CMapObject>) { visited_objects++; },
+                    [](std::shared_ptr<CMapObject>) { return true; });
+    expect_true(visited_objects == 2, "forObjects should visit indexed objects");
+
+    int marker_visits = 0;
+    map->forObjectsAtCoords(
+        Coords(4, 2, 0), [&marker_visits](std::shared_ptr<CMapObject>) { marker_visits++; },
+        [](std::shared_ptr<CMapObject> object) { return object->getCanStep(); });
+    expect_true(marker_visits == 1, "forObjectsAtCoords should filter objects at normalized coordinates");
+
+    const auto old_coords = marker->getCoords();
+    marker->setPosX(0);
+    marker->setPosY(2);
+    map->objectMoved(marker, old_coords, marker->getCoords());
+    expect_true(map->getObjectsAtCoords(Coords(4, 2, 0)).empty(),
+                "objectMoved should remove stale object cache entries");
+    expect_true(map->getObjectsAtCoords(Coords(0, 2, 0)).contains(marker),
+                "objectMoved should index objects at their new coordinate");
+
+    auto missing = std::make_shared<CMapObject>();
+    missing->setName("missingObject");
+    map->removeObject(nullptr);
+    map->removeObject(missing);
+    map->removeObjectByName("markerObject");
+    expect_true(map->getObjectByName("markerObject") == nullptr, "removeObjectByName should erase existing objects");
+    map->removeObjects([](std::shared_ptr<CMapObject> object) { return object->getName() == "blockingObject"; });
+    expect_true(map->getObjects().empty(), "removeObjects should erase matching objects from a cloned iteration");
+}
+
+void test_resource_provider_paths_and_config_loader() {
+    auto provider = CResourcesProvider::getInstance();
+    expect_true(provider->getPath("").empty(), "empty resource paths should be rejected");
+    expect_true(provider->getPath("../config/items.json").empty(), "parent-relative resource paths should be rejected");
+    expect_true(provider->getPath("config/../config/items.json").find("items.json") != std::string::npos,
+                "normalized safe resource paths should resolve");
+
+    const auto config_files = provider->getFiles(CResType::CONFIG);
+    expect_true(std::find(config_files.begin(), config_files.end(), "config/items.json") != config_files.end(),
+                "config file listing should include items.json");
+    const auto plugin_files = provider->getFiles(CResType::PLUGIN);
+    expect_true(std::find(plugin_files.begin(), plugin_files.end(), "plugins/effect.py") != plugin_files.end(),
+                "plugin file listing should include effect.py");
+    const auto map_files = provider->getFiles(CResType::MAP);
+    expect_true(std::find(map_files.begin(), map_files.end(), "test") != map_files.end(),
+                "map directory listing should include the test map");
+    const auto save_files = provider->getFiles(CResType::SAVE);
+    expect_true(save_files.empty() || !save_files.front().empty(),
+                "save file listing should tolerate absent optional save directories");
+
+    expect_true(!provider->load("config/items.json").empty(), "load should read existing resources as text");
+    expect_true(provider->load("config/missing-resource.json").empty(),
+                "load should return empty text for missing files");
+    auto parsed_items = provider->loadJson("config/items.json");
+    expect_true(parsed_items && parsed_items->is_object(), "loadJson should parse existing JSON resources");
+
+    CConfigResourceLoader loader;
+    auto item_resource = std::static_pointer_cast<CTextResource>(loader.load("config/items.json"));
+    expect_true(std::filesystem::path(item_resource->getFilePath()).generic_string() == "config/items.json",
+                "config loader should avoid double config prefixes");
+    expect_true(!item_resource->getText().empty(), "config resources should load text through the provider");
+    auto normalized_resource = std::static_pointer_cast<CTextResource>(loader.load("items"));
+    expect_true(std::filesystem::path(normalized_resource->getFilePath()).generic_string() == "config/items.json",
+                "config loader should append the json suffix for bare names");
+
+    auto cached_config = CConfigurationProvider::getConfig("items.json");
+    expect_true(cached_config && cached_config->is_object(), "configuration provider should parse normalized configs");
+    expect_true(CConfigurationProvider::getConfig("items.json") == cached_config,
+                "configuration provider should cache parsed configs by path");
+}
+#endif
+
 void test_random_dungeon_cell_flags_and_validation() {
     rdg::Cell cell;
     cell.setType(rdg::CellType::ROOM);
@@ -897,6 +1085,10 @@ int main() {
     test_vstd_string_helpers();
     test_script_rejects_executable_expressions();
     test_script_handler_executes_commands_and_wraps_functions();
+#if defined(__linux__)
+    test_map_tiles_bounds_wrapping_and_object_cache();
+    test_resource_provider_paths_and_config_loader();
+#endif
     test_random_dungeon_cell_flags_and_validation();
     test_random_dungeon_layout_variants_generate_accessible_maps();
 

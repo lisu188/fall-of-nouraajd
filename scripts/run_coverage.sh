@@ -6,6 +6,7 @@ BUILD_DIR="${BUILD_DIR:-cmake-build-coverage}"
 MIN_COVERAGE="${MIN_COVERAGE:-90}"
 REPORT_DIR="${ROOT_DIR}/coverage"
 COVERAGE_JOBS="${COVERAGE_JOBS:-$(nproc)}"
+COVERAGE_REPORTER="${COVERAGE_REPORTER:-python}"
 SCRIPT_START=${SECONDS}
 
 cd "${ROOT_DIR}"
@@ -67,7 +68,12 @@ fi
 generate_report() {
     mkdir -p "${REPORT_DIR}" || return
 
-    if command -v gcovr >/dev/null 2>&1; then
+    if [[ "${COVERAGE_REPORTER}" == "gcovr" ]]; then
+        if ! command -v gcovr >/dev/null 2>&1; then
+            echo "COVERAGE_REPORTER=gcovr requested, but gcovr was not found" >&2
+            return 2
+        fi
+
         gcovr_args=()
         gcovr_help="$(gcovr --help 2>/dev/null || true)"
         if grep -q -- "--gcov-parallel" <<<"${gcovr_help}"; then
@@ -95,13 +101,16 @@ generate_report() {
             --txt "${REPORT_DIR}/coverage.txt" \
             --html "${REPORT_DIR}/coverage.html" \
             --fail-under-line "${MIN_COVERAGE}" || return
-    else
+    elif [[ "${COVERAGE_REPORTER}" == "python" ]]; then
         python3 "${ROOT_DIR}/scripts/coverage_report.py" \
             --root "${ROOT_DIR}" \
             --build-dir "${BUILD_DIR}" \
             --report-dir "${REPORT_DIR}" \
             --min-line "${MIN_COVERAGE}" \
             --jobs "${COVERAGE_JOBS}" || return
+    else
+        echo "Unknown COVERAGE_REPORTER '${COVERAGE_REPORTER}'. Expected 'python' or 'gcovr'." >&2
+        return 2
     fi
 }
 

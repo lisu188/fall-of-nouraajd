@@ -182,6 +182,10 @@ Coverage command:
 ./scripts/run_coverage.sh
 ```
 
+`scripts/run_coverage.sh` uses the repository Python coverage reporter as the default line gate. Use
+`COVERAGE_REPORTER=gcovr ./scripts/run_coverage.sh` only for diagnostic comparison; gcovr has counted extra
+instrumented/generated lines differently in this repo and can fail the gate even when the canonical reporter passes.
+
 The scoped line coverage threshold is 90%. Do not finish coverage-relevant work below that threshold without explicitly reporting it.
 
 Coverage reports are generated under `coverage/`.
