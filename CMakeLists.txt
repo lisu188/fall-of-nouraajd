@@ -23,7 +23,7 @@ project(fall-of-nouraajd)
 set(GAME_DEFAULT_ENABLE_UNITY_BUILD OFF)
 set(GAME_DEFAULT_ENABLE_PCH OFF)
 set(GAME_DEFAULT_UNITY_BATCH_SIZE "8")
-if (CMAKE_SYSTEM_NAME STREQUAL "Linux" AND CMAKE_BUILD_TYPE STREQUAL "Release")
+if ((CMAKE_SYSTEM_NAME STREQUAL "Linux" OR WIN32) AND CMAKE_BUILD_TYPE STREQUAL "Release")
     set(GAME_DEFAULT_ENABLE_UNITY_BUILD ON)
     set(GAME_DEFAULT_ENABLE_PCH ON)
     set(GAME_DEFAULT_UNITY_BATCH_SIZE "16")
@@ -93,7 +93,7 @@ function(configure_cpp_target target_name)
         target_compile_definitions(${target_name} PRIVATE SDL_MAIN_HANDLED)
     endif ()
     if (MSVC)
-        target_compile_options(${target_name} PRIVATE /W3 /bigobj /permissive- /Zc:preprocessor /EHsc)
+        target_compile_options(${target_name} PRIVATE /W3 /bigobj /MP /permissive- /Zc:preprocessor /EHsc)
         target_compile_definitions(${target_name} PRIVATE
             _USE_MATH_DEFINES
             NOMINMAX

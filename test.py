@@ -51,6 +51,19 @@ def resolve_test_output_dir():
 
 
 TEST_OUTPUT_DIR = resolve_test_output_dir()
+
+
+def resolve_test_timings_file():
+    timings_file = os.environ.get("GAME_TEST_TIMINGS_FILE")
+    if not timings_file:
+        return TEST_OUTPUT_DIR / "test-timings.json"
+    path = Path(timings_file)
+    if not path.is_absolute():
+        path = REPO_ROOT / path
+    return path
+
+
+TEST_TIMINGS_FILE = resolve_test_timings_file()
 runtime_dir_id = os.getuid() if hasattr(os, "getuid") else os.getpid()
 XDG_RUNTIME_DIR = Path(tempfile.gettempdir()) / f"xdg-runtime-{runtime_dir_id}"
 
@@ -107,6 +120,20 @@ SERIAL_TEST_NAMES = {
     "GameTest.test_missing_save_resource_directory_lists_empty",
     "XvfbGameplayTest.test_keyboard_gameplay_under_xvfb",
 }
+SERIAL_TEST_PREFIXES = ("McpServerTest.test_stdio_map_walkthrough_",)
+DEFAULT_TEST_DURATIONS = {
+    "McpServerTest.test_stdio_map_walkthrough_nouraajd": 45.0,
+    "McpServerTest.test_stdio_map_walkthrough_ritual": 45.0,
+    "McpServerTest.test_stdio_map_walkthrough_siege": 30.0,
+    "McpServerTest.test_stdio_map_walkthrough_test": 20.0,
+    "XvfbGameplayTest.test_keyboard_gameplay_under_xvfb": 90.0,
+    "GameTest.test_map_walkthrough_nouraajd": 25.0,
+    "GameTest.test_map_walkthrough_ritual": 20.0,
+    "GameTest.test_map_walkthrough_siege": 15.0,
+    "GameTest.test_map_walkthrough_test": 10.0,
+    "GameTest.test_playthrough": 20.0,
+    "GameTest.test_campaign_transitions_preserve_player_and_start_siege": 20.0,
+}
 
 
 def parse_positive_int(value, name):
@@ -133,6 +160,7 @@ class ProgressTextTestResult(unittest.TextTestResult):
         self.total_tests = 0
         self.test_index = 0
         self._test_start_times = {}
+        self.test_durations = {}
 
     def startTest(self, test):
         self.test_index += 1
@@ -142,33 +170,49 @@ class ProgressTextTestResult(unittest.TextTestResult):
 
     def addSuccess(self, test):
         unittest.TestResult.addSuccess(self, test)
-        self._write_progress(test, "ok", self._duration(test))
+        duration = self._duration(test)
+        self._record_duration(test, duration)
+        self._write_progress(test, "ok", duration)
 
     def addFailure(self, test, err):
         unittest.TestResult.addFailure(self, test, err)
-        self._write_progress(test, "FAIL", self._duration(test))
+        duration = self._duration(test)
+        self._record_duration(test, duration)
+        self._write_progress(test, "FAIL", duration)
 
     def addError(self, test, err):
         unittest.TestResult.addError(self, test, err)
-        self._write_progress(test, "ERROR", self._duration(test))
+        duration = self._duration(test)
+        self._record_duration(test, duration)
+        self._write_progress(test, "ERROR", duration)
 
     def addSkip(self, test, reason):
         unittest.TestResult.addSkip(self, test, reason)
-        self._write_progress(test, "skip", self._duration(test), reason)
+        duration = self._duration(test)
+        self._record_duration(test, duration)
+        self._write_progress(test, "skip", duration, reason)
 
     def addExpectedFailure(self, test, err):
         unittest.TestResult.addExpectedFailure(self, test, err)
-        self._write_progress(test, "expected-failure", self._duration(test))
+        duration = self._duration(test)
+        self._record_duration(test, duration)
+        self._write_progress(test, "expected-failure", duration)
 
     def addUnexpectedSuccess(self, test):
         unittest.TestResult.addUnexpectedSuccess(self, test)
-        self._write_progress(test, "UNEXPECTED-SUCCESS", self._duration(test))
+        duration = self._duration(test)
+        self._record_duration(test, duration)
+        self._write_progress(test, "UNEXPECTED-SUCCESS", duration)
 
     def _duration(self, test):
         started_at = self._test_start_times.pop(id(test), None)
         if started_at is None:
             return None
         return time.monotonic() - started_at
+
+    def _record_duration(self, test, duration):
+        if duration is not None:
+            self.test_durations[self._subprocess_name(test)] = duration
 
     def _write_progress(self, test, status, duration=None, detail=None):
         total = self.total_tests or "?"
@@ -185,13 +229,23 @@ class ProgressTextTestResult(unittest.TextTestResult):
             return f"test.{test_id[len('__main__.'):]}"
         return test_id
 
+    @staticmethod
+    def _subprocess_name(test):
+        test_id = test.id()
+        for prefix in (f"{__name__}.", "__main__."):
+            if test_id.startswith(prefix):
+                return test_id[len(prefix) :]
+        return test_id
+
 
 class ProgressTextTestRunner(unittest.TextTestRunner):
     resultclass = ProgressTextTestResult
 
     def run(self, test):
         self._total_tests = test.countTestCases()
-        return super().run(test)
+        result = super().run(test)
+        write_test_timings(TEST_TIMINGS_FILE, result.test_durations)
+        return result
 
     def _makeResult(self):
         result = super()._makeResult()
@@ -8650,23 +8704,31 @@ class McpServerTest(unittest.TestCase):
         discovered_maps = discover_maps()
         self.assertEqual(set(discovered_maps), set(self.MCP_WALKTHROUGHS))
 
-        results = {}
-        failed = {}
-        for map_name in discovered_maps:
-            success, log = self._run_mcp_walkthrough(map_name)
-            results[map_name] = log
-            if not success:
-                failed[map_name] = log
-
         summary = {
             "discovered_maps": discovered_maps,
             "walkthroughs": self.MCP_WALKTHROUGHS,
-            "failed": failed,
-            "results": results,
         }
         TEST_OUTPUT_DIR.mkdir(exist_ok=True)
         (TEST_OUTPUT_DIR / "mcp_walkthroughs.json").write_text(json.dumps(summary, indent=2, sort_keys=True))
-        self.assertEqual({}, failed, json.dumps(summary, sort_keys=True))
+
+    def test_stdio_map_walkthrough_nouraajd(self):
+        self._assert_mcp_walkthrough("nouraajd")
+
+    def test_stdio_map_walkthrough_ritual(self):
+        self._assert_mcp_walkthrough("ritual")
+
+    def test_stdio_map_walkthrough_siege(self):
+        self._assert_mcp_walkthrough("siege")
+
+    def test_stdio_map_walkthrough_test(self):
+        self._assert_mcp_walkthrough("test")
+
+    def _assert_mcp_walkthrough(self, map_name):
+        discovered_maps = discover_maps()
+        self.assertIn(map_name, discovered_maps)
+        self.assertIn(map_name, self.MCP_WALKTHROUGHS)
+        success, log = self._run_mcp_walkthrough(map_name)
+        self.assertTrue(success, json.dumps(log, sort_keys=True))
 
     def _run_mcp_walkthrough(self, map_name):
         proc = None
@@ -9101,6 +9163,51 @@ def selected_unittest_args(unittest_argv):
     return [arg for arg in unittest_argv[1:] if not arg.startswith("-")]
 
 
+def load_test_timings(path):
+    try:
+        with open(path, encoding="utf-8") as f:
+            data = json.load(f)
+    except (OSError, json.JSONDecodeError):
+        return {}
+    timings = {}
+    if isinstance(data, dict):
+        for test_name, duration in data.items():
+            try:
+                timings[test_name] = max(float(duration), 0.001)
+            except (TypeError, ValueError):
+                continue
+    return timings
+
+
+def write_test_timings(path, timings):
+    if not timings:
+        return
+    path.parent.mkdir(parents=True, exist_ok=True)
+    existing = load_test_timings(path)
+    existing.update({test_name: round(float(duration), 6) for test_name, duration in timings.items()})
+    path.write_text(json.dumps(dict(sorted(existing.items())), indent=2, sort_keys=True), encoding="utf-8")
+
+
+def test_duration_weight(test_name, timings):
+    if test_name in timings:
+        return timings[test_name]
+    if test_name in DEFAULT_TEST_DURATIONS:
+        return DEFAULT_TEST_DURATIONS[test_name]
+    if test_name.startswith("McpServerTest.test_stdio_map_walkthrough_"):
+        return 30.0
+    if test_name.startswith("XvfbGameplayProcessTest."):
+        return 10.0
+    if "walkthrough" in test_name:
+        return 8.0
+    if test_name.startswith("McpServerTest."):
+        return 6.0
+    return 1.0
+
+
+def is_serial_test_name(test_name):
+    return test_name in SERIAL_TEST_NAMES or any(test_name.startswith(prefix) for prefix in SERIAL_TEST_PREFIXES)
+
+
 def runner_jobs(cli_jobs, unittest_argv):
     if GAME_TEST_WORKER:
         return 1
@@ -9145,15 +9252,24 @@ def discover_unittest_test_names(unittest_argv):
     return [subprocess_test_name(test) for test in tests]
 
 
-def shard_test_names(test_names, jobs):
+def shard_test_names(test_names, jobs, timings=None):
     groups = [[] for _ in range(min(jobs, len(test_names)))]
-    for index, test_name in enumerate(test_names):
-        groups[index % len(groups)].append(test_name)
+    group_weights = [0.0 for _ in groups]
+    timings = timings or {}
+    weighted_tests = sorted(
+        ((test_duration_weight(test_name, timings), index, test_name) for index, test_name in enumerate(test_names)),
+        key=lambda item: (-item[0], item[1]),
+    )
+    for weight, _, test_name in weighted_tests:
+        group_index = min(range(len(groups)), key=lambda index: group_weights[index])
+        groups[group_index].append(test_name)
+        group_weights[group_index] += weight
     return groups
 
 
 def run_test_subprocess(test_names, shard_name):
     output_dir = TEST_OUTPUT_DIR / "workers" / shard_name
+    timings_file = output_dir / "test-timings.json"
     env = os.environ.copy()
     env.update(
         {
@@ -9161,6 +9277,7 @@ def run_test_subprocess(test_names, shard_name):
             "GAME_TEST_JOBS": "1",
             "GAME_TEST_OUTPUT_DIR": str(output_dir),
             "GAME_TEST_SHARD": shard_name,
+            "GAME_TEST_TIMINGS_FILE": str(timings_file),
             "PYTHONUNBUFFERED": "1",
         }
     )
@@ -9170,13 +9287,14 @@ def run_test_subprocess(test_names, shard_name):
 
 
 def run_sharded_tests(test_names, jobs):
-    serial_tests = [test_name for test_name in test_names if test_name in SERIAL_TEST_NAMES]
-    parallel_tests = [test_name for test_name in test_names if test_name not in SERIAL_TEST_NAMES]
+    serial_tests = [test_name for test_name in test_names if is_serial_test_name(test_name)]
+    parallel_tests = [test_name for test_name in test_names if not is_serial_test_name(test_name)]
+    timings = load_test_timings(TEST_TIMINGS_FILE)
     failures = []
 
     processes = []
     if parallel_tests:
-        for index, group in enumerate(shard_test_names(parallel_tests, jobs), start=1):
+        for index, group in enumerate(shard_test_names(parallel_tests, jobs, timings), start=1):
             processes.append((f"{index}", run_test_subprocess(group, f"{index}")))
 
     for shard_name, proc in processes:
@@ -9194,6 +9312,11 @@ def run_sharded_tests(test_names, jobs):
         for shard_name, return_code in failures:
             print(f"[test shard {shard_name}] failed with exit code {return_code}", file=sys.stderr, flush=True)
         return 1
+
+    combined_timings = {}
+    for timings_path in (TEST_OUTPUT_DIR / "workers").glob("*/test-timings.json"):
+        combined_timings.update(load_test_timings(timings_path))
+    write_test_timings(TEST_TIMINGS_FILE, combined_timings)
     return 0
 
 
