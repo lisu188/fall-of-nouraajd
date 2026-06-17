@@ -23,6 +23,8 @@ class CGameObject;
 
 namespace CPythonOverrides {
 
+inline bool hasAttachedPythonThread() { return PyGILState_Check(); }
+
 inline std::unordered_map<const CGameObject *, pybind11::object> &instances() {
     // Intentionally leak the registry so pybind11::object destructors do not run
     // during C++ static teardown after the Python interpreter has finalized.
@@ -31,7 +33,9 @@ inline std::unordered_map<const CGameObject *, pybind11::object> &instances() {
 }
 
 inline void retain(const std::shared_ptr<CGameObject> &object, const pybind11::object &instance) {
-    pybind11::gil_scoped_acquire gil;
+    if (!hasAttachedPythonThread()) {
+        return;
+    }
     instances()[object.get()] = instance;
 }
 
@@ -41,6 +45,17 @@ inline pybind11::object *find(const CGameObject *object) {
         return nullptr;
     }
     return &it->second;
+}
+
+inline void release(const CGameObject *object) {
+    if (!hasAttachedPythonThread()) {
+        return;
+    }
+    auto it = instances().find(object);
+    if (it == instances().end()) {
+        return;
+    }
+    instances().erase(it);
 }
 
 inline pybind11::object find_override(const CGameObject *object, const char *method_name) {

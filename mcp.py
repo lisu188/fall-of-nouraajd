@@ -43,11 +43,158 @@ LOG_LEVELS = {
     "alert": 1,
     "emergency": 0,
 }
+MAX_MCP_MESSAGE_BYTES = 1024 * 1024
+MAX_HTTP_SESSIONS = 32
+MAX_HTTP_STREAMS_PER_SESSION = 4
+MAX_TRACE_STRING_BYTES = 512
 MCP_EXCLUDED_EXPORTS = {
     "load",
     "register",
     "set_logger_sink",
     "trigger",
+}
+MCP_ALLOWED_EXPORTS = {
+    "CGameLoader.loadGame",
+    "CGameLoader.loadGui",
+    "CGameLoader.startGame",
+    "CGameLoader.startGameWithPlayer",
+    "CGameLoader.startRandomGameWithPlayer",
+    "CGameLoader.loadSavedGame",
+    "event_loop.instance",
+    "jsonify",
+    "logger",
+    "randint",
+}
+MCP_ALLOWED_HANDLE_METHODS = {
+    "CGameObject": {
+        "addTag",
+        "getBoolProperty",
+        "getDescription",
+        "getLabel",
+        "getName",
+        "getNumericProperty",
+        "getStringProperty",
+        "getType",
+        "getTypeId",
+        "hasTag",
+        "incProperty",
+        "removeTag",
+        "setBoolProperty",
+        "setDescription",
+        "setLabel",
+        "setName",
+        "setNumericProperty",
+        "setStringProperty",
+    },
+    "CGame": {
+        "changeMap",
+        "createObject",
+        "getGui",
+        "getGuiHandler",
+        "getMap",
+        "getObjectHandler",
+        "getRngHandler",
+    },
+    "CMap": {
+        "addObjectByName",
+        "canStep",
+        "getEntryX",
+        "getEntryY",
+        "getEntryZ",
+        "getLocationByName",
+        "getObjectByName",
+        "getObjects",
+        "getObjectsAtCoords",
+        "getPlayer",
+        "getTile",
+        "getTurn",
+        "move",
+        "removeObjectByName",
+        "replaceTile",
+    },
+    "CMapObject": {
+        "getCoords",
+        "getMap",
+        "move",
+        "moveTo",
+        "setCoords",
+    },
+    "CCreature": {
+        "addGold",
+        "addItem",
+        "addItems",
+        "countItems",
+        "getActions",
+        "getGold",
+        "getHpRatio",
+        "getItems",
+        "getLevel",
+        "getMana",
+        "heal",
+        "healProc",
+        "isAlive",
+        "isNpc",
+        "isPlayer",
+        "takeGold",
+        "takeMana",
+        "useAction",
+        "useItem",
+    },
+    "CPlayer": {
+        "addQuest",
+        "checkQuests",
+        "getCompletedQuests",
+        "getQuests",
+    },
+    "CObjectHandler": {
+        "createObject",
+        "getAllSubTypes",
+        "getAllTypes",
+    },
+    "CGuiHandler": {
+        "openPanel",
+        "showDialog",
+        "showInfo",
+        "showLoot",
+        "showMessage",
+        "showQuestion",
+        "showSelection",
+        "showTrade",
+        "showTooltip",
+    },
+    "CListString": {
+        "addValue",
+        "getValues",
+        "setValues",
+    },
+    "CDialog": {
+        "invokeAction",
+        "invokeCondition",
+    },
+    "CDialogState": {
+        "getOptions",
+        "getStateId",
+        "getText",
+    },
+    "CDialogOption": {
+        "getAction",
+        "getCondition",
+        "getNextStateId",
+        "getNumber",
+        "getText",
+    },
+    "CMarket": {
+        "add",
+        "buyItem",
+        "getBuyCost",
+        "getItems",
+        "getSellCost",
+        "remove",
+        "sellItem",
+    },
+    "event_loop": {
+        "run",
+    },
 }
 
 logger = logging.getLogger(SERVER_NAME)
@@ -200,6 +347,8 @@ class EngineMcpServer:
                 continue
             if name in MCP_EXCLUDED_EXPORTS:
                 continue
+            if name not in MCP_ALLOWED_EXPORTS:
+                continue
             if name not in self.exports:
                 self.exports[name] = ExportedCallable(
                     name=name,
@@ -217,6 +366,8 @@ class EngineMcpServer:
             if name.startswith("_"):
                 continue
             export_name = f"{class_name}.{name}"
+            if export_name not in MCP_ALLOWED_EXPORTS:
+                continue
             if self._python_callable(value, qualified_name=export_name) is None:
                 continue
             if export_name in self.exports:
@@ -262,7 +413,14 @@ class EngineMcpServer:
     def serve_stdio(self) -> None:
         logger.info("starting stdio MCP server")
         while True:
-            request = self._read_stdio_message()
+            try:
+                request = self._read_stdio_message()
+            except ProtocolError as exc:
+                self._write_stdio_message(self._error_response(None, exc.code, exc.message, exc.data))
+                continue
+            except json.JSONDecodeError:
+                self._write_stdio_message(self._error_response(None, -32700, "Parse error"))
+                continue
             if request is None:
                 logger.info("stdio closed")
                 return
@@ -572,8 +730,10 @@ class EngineMcpServer:
         if transport == "stdio":
             self.stdio_state = state
         else:
-            new_session_id = self._create_session_id()
             with self._lock:
+                if len(self.http_sessions) >= MAX_HTTP_SESSIONS:
+                    raise ProtocolError(-32003, "Too many active HTTP sessions")
+                new_session_id = self._create_session_id()
                 self.http_sessions[new_session_id] = state
 
         self._emit_log(
@@ -644,9 +804,11 @@ class EngineMcpServer:
             state = self.http_sessions.get(session_id)
             if state is None:
                 raise KeyError(session_id)
+            if len(state.streams) >= MAX_HTTP_STREAMS_PER_SESSION:
+                raise ProtocolError(-32003, "Too many active streams for session")
             stream_id = f"s_{self._next_stream_seq}"
             self._next_stream_seq += 1
-            stream = ClientStream(stream_id=stream_id, queue=queue.Queue())
+            stream = ClientStream(stream_id=stream_id, queue=queue.Queue(maxsize=256))
             state.streams[stream_id] = stream
             return stream
 
@@ -667,7 +829,7 @@ class EngineMcpServer:
                 stream.queue.put_nowait(None)
             except Exception:
                 pass
-        logger.info("terminated session %s", session_id)
+        logger.info("terminated HTTP MCP session")
         return True
 
     def serve_http(self, host: str, port: int) -> None:
@@ -1006,6 +1168,13 @@ class EngineMcpServer:
 
         if not callable(method_callable):
             result = {"error": f"Attribute `{method}` on handle `{handle}` is not callable"}
+            return {
+                "content": [{"type": "text", "text": json.dumps(result, ensure_ascii=False)}],
+                "structuredContent": result,
+                "isError": True,
+            }
+        if method not in self._allowed_handle_methods_for(target):
+            result = {"error": f"Method `{method}` is not exported for handle calls"}
             return {
                 "content": [{"type": "text", "text": json.dumps(result, ensure_ascii=False)}],
                 "structuredContent": result,
@@ -1650,13 +1819,24 @@ class EngineMcpServer:
 
     def _python_methods_for(self, value: Any) -> list[dict[str, str]]:
         methods: list[dict[str, str]] = []
+        allowed_methods = self._allowed_handle_methods_for(value)
         for name, member in inspect.getmembers(type(value)):
             if name.startswith("_"):
+                continue
+            if name not in allowed_methods:
                 continue
             if self._python_callable(member) is None:
                 continue
             methods.append({"name": name, "signature": self._safe_signature(member)})
         methods.sort(key=lambda item: item["name"])
+        return methods
+
+    @staticmethod
+    def _allowed_handle_methods_for(value: Any) -> set[str]:
+        methods: set[str] = set()
+        for cls in getattr(type(value), "__mro__", (type(value),)):
+            class_name = getattr(cls, "__name__", "")
+            methods.update(MCP_ALLOWED_HANDLE_METHODS.get(class_name, set()))
         return methods
 
     def _serialize_result(self, value: Any) -> Any:
@@ -1689,11 +1869,11 @@ class EngineMcpServer:
         record: dict[str, Any] = {
             "transport": transport,
             "direction": direction,
-            "sessionId": session_id,
-            "payload": self._jsonable(payload),
+            "sessionId": self._redact_trace_value(session_id),
+            "payload": self._redact_trace_value(payload),
         }
         if extra:
-            record["meta"] = self._jsonable(extra)
+            record["meta"] = self._redact_trace_value(extra)
         logger.debug("trace %s", json.dumps(record, ensure_ascii=False))
 
     def _emit_log(
@@ -1784,9 +1964,13 @@ class EngineMcpServer:
     @staticmethod
     def _read_stdio_message() -> Any | None:
         while True:
-            raw = sys.stdin.buffer.readline()
+            raw = sys.stdin.buffer.readline(MAX_MCP_MESSAGE_BYTES + 1)
             if not raw:
                 return None
+            if len(raw) > MAX_MCP_MESSAGE_BYTES:
+                while raw and not raw.endswith(b"\n"):
+                    raw = sys.stdin.buffer.readline(8192)
+                raise ProtocolError(-32600, "MCP stdio message exceeds 1 MiB limit")
             line = raw.decode("utf-8").strip()
             if not line:
                 continue
@@ -1807,6 +1991,29 @@ class EngineMcpServer:
             return [EngineMcpServer._jsonable(item) for item in value]
         if isinstance(value, dict):
             return {str(key): EngineMcpServer._jsonable(item) for key, item in value.items()}
+        return repr(value)
+
+    @staticmethod
+    def _redact_trace_value(value: Any, key: str | None = None) -> Any:
+        if key and key.lower() in {"authorization", "mcp-session-id", "sessionid", "session_id", "token"}:
+            return "<redacted>"
+        if value is None or isinstance(value, (int, float, bool)):
+            return value
+        if isinstance(value, str):
+            if len(value) > MAX_TRACE_STRING_BYTES:
+                return f"{value[:MAX_TRACE_STRING_BYTES]}...<truncated>"
+            return value
+        if isinstance(value, (list, tuple)):
+            return [EngineMcpServer._redact_trace_value(item) for item in value[:50]]
+        if isinstance(value, dict):
+            redacted = {}
+            for index, (item_key, item_value) in enumerate(value.items()):
+                if index >= 50:
+                    redacted["..."] = f"{len(value) - index} more"
+                    break
+                string_key = str(item_key)
+                redacted[string_key] = EngineMcpServer._redact_trace_value(item_value, string_key)
+            return redacted
         return repr(value)
 
 
@@ -1904,6 +2111,9 @@ class EngineHttpRequestHandler(BaseHTTPRequestHandler):
         except KeyError:
             self._write_mcp_error(HTTPStatus.NOT_FOUND, None, -32001, "Unknown session")
             return
+        except ProtocolError as exc:
+            self._write_mcp_error(HTTPStatus.TOO_MANY_REQUESTS, None, exc.code, exc.message, exc.data)
+            return
 
         self.send_response(HTTPStatus.OK)
         self._add_default_headers()
@@ -1988,6 +2198,17 @@ class EngineHttpRequestHandler(BaseHTTPRequestHandler):
             length = int(length_header)
         except ValueError:
             self._write_mcp_error(HTTPStatus.BAD_REQUEST, None, -32600, "Invalid Content-Length header")
+            return
+        if length < 0:
+            self._write_mcp_error(HTTPStatus.BAD_REQUEST, None, -32600, "Invalid Content-Length header")
+            return
+        if length > MAX_MCP_MESSAGE_BYTES:
+            self._write_mcp_error(
+                HTTPStatus.REQUEST_ENTITY_TOO_LARGE,
+                None,
+                -32600,
+                "MCP HTTP message exceeds 1 MiB limit",
+            )
             return
 
         try:
@@ -2074,7 +2295,8 @@ class EngineHttpRequestHandler(BaseHTTPRequestHandler):
             self.send_header("MCP-Session-Id", session_id)
         if protocol_version:
             self.send_header("MCP-Protocol-Version", protocol_version)
-        self.send_header("Content-Length", "0")
+        if status not in {HTTPStatus.NO_CONTENT, HTTPStatus.NOT_MODIFIED}:
+            self.send_header("Content-Length", "0")
         self.end_headers()
 
     def log_message(self, format: str, *args: Any) -> None:

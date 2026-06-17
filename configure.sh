@@ -2,7 +2,7 @@
 set -euo pipefail
 
 sudo apt-get update
-sudo apt-get install -y build-essential cmake ninja-build ccache clang-format \
+sudo apt-get install -y build-essential cmake ninja-build ccache clang-format black \
     python3 python3-dev pybind11-dev python3-pil \
     libboost-dev \
     libsdl2-dev libsdl2-ttf-dev libsdl2-image-dev \

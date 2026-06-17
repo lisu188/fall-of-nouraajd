@@ -18,17 +18,40 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "CTextManager.h"
 #include "core/CUtil.h"
 
+#include <algorithm>
+
+namespace {
+constexpr std::size_t MAX_TEXT_TEXTURES = 512;
+constexpr std::size_t MAX_RENDER_TEXT_BYTES = 4096;
+constexpr int MAX_TEXT_WRAP_WIDTH = 8192;
+
+std::string boundedText(std::string text) {
+    if (text.size() > MAX_RENDER_TEXT_BYTES) {
+        text.resize(MAX_RENDER_TEXT_BYTES);
+    }
+    return text;
+}
+
+int boundedWidth(int width) { return std::clamp(width, 0, MAX_TEXT_WRAP_WIDTH); }
+} // namespace
+
 SDL_Texture *CTextManager::getTexture(const std::string &text, int width) {
-    auto key = std::make_pair(text, width);
+    auto key = std::make_pair(boundedText(text), boundedWidth(width));
     auto texture = _textures.find(key);
     if (texture == _textures.end()) {
-        auto [inserted, _] = _textures.emplace(std::move(key), this->loadTexture(text, width));
+        if (_textures.size() >= MAX_TEXT_TEXTURES) {
+            _textures.clear();
+        }
+        auto [inserted, _] = _textures.emplace(key, this->loadTexture(key.first, key.second));
         return inserted->second.get();
     }
     return texture->second.get();
 }
 
 fn::sdl::TexturePtr CTextManager::loadTexture(std::string text, int width) {
+    if (!font || !_gui.lock() || !_gui.lock()->getRenderer()) {
+        return nullptr;
+    }
     SDL_Color textColor = {255, 255, 255, 0};
     // in some sdl versions blended wrapped automatically treats 0 as not wrapper,
     // other versions fail on width=0
@@ -55,9 +78,15 @@ CTextManager::~CTextManager() {
 int CTextManager::countLines(const std::string &text, int w) {
     SDL_Rect wrapped;
     SDL_Texture *wrappedTexture = getTexture(text, w);
+    if (!wrappedTexture) {
+        return 1;
+    }
     SDL_SAFE(SDL_QueryTexture(wrappedTexture, nullptr, nullptr, &wrapped.w, &wrapped.h));
     SDL_Rect notWrapped;
     SDL_Texture *notWrappedTexture = getTexture(text);
+    if (!notWrappedTexture) {
+        return 1;
+    }
     SDL_SAFE(SDL_QueryTexture(notWrappedTexture, nullptr, nullptr, &notWrapped.w, &notWrapped.h));
     if (wrapped.h <= 0 || notWrapped.h <= 0) {
         return 1;
@@ -72,6 +101,9 @@ void CTextManager::drawText(const std::string &text, int x, int y, int w) {
         actual.x = x;
         actual.y = y;
         SDL_Texture *pTexture = getTexture(text, w);
+        if (!pTexture || !_gui.lock()) {
+            return;
+        }
         SDL_SAFE(SDL_QueryTexture(pTexture, nullptr, nullptr, &actual.w, &actual.h));
         SDL_SAFE(SDL_RenderCopy(_gui.lock()->getRenderer(), pTexture, nullptr, &actual));
     }
@@ -81,6 +113,9 @@ void CTextManager::drawTextCentered(const std::string &text, int x, int y, int w
     if (text.length() != 0) {
         SDL_Rect actual;
         SDL_Texture *pTexture = getTexture(text, w);
+        if (!pTexture || !_gui.lock()) {
+            return;
+        }
         SDL_SAFE(SDL_QueryTexture(pTexture, nullptr, nullptr, &actual.w, &actual.h));
         auto centered = CUtil::boxInBox(CUtil::rect(x, y, w, h), CUtil::rect(0, 0, actual.w, actual.h));
         SDL_SAFE(SDL_RenderCopy(_gui.lock()->getRenderer(), pTexture, nullptr, centered.get()));
@@ -107,6 +142,9 @@ std::pair<int, int> CTextManager::getTextureSize(std::string text) {
         }
     } else {
         SDL_Texture *pTexture = getTexture(text);
+        if (!pTexture) {
+            return std::make_pair(0, 0);
+        }
         SDL_SAFE(SDL_QueryTexture(pTexture, nullptr, nullptr, &w, &h));
     }
     return std::make_pair(w, h);

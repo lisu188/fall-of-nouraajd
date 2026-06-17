@@ -60,11 +60,13 @@ bool CListView::mouseEvent(std::shared_ptr<CGui> gui, SDL_EventType type, int bu
 }
 
 void CListView::doShift(const std::shared_ptr<CGui> &gui, int val) {
+    auto collection = invokeCollection(gui);
+    const int visibleSlots = std::max(1, getSizeX(gui) * getSizeY(gui) - 2);
     shift += val;
     if (shift < 0) {
         shift = 0;
-    } else if (shift > (signed)(*invokeCollection(gui)).size() - (getSizeX(gui) * getSizeY(gui) - 2 /*arrows*/)) {
-        shift = (*invokeCollection(gui)).size() - (getSizeX(gui) * getSizeY(gui) - 2 /*arrows*/);
+    } else if (shift > static_cast<int>(collection->size()) - visibleSlots) {
+        shift = std::max(0, static_cast<int>(collection->size()) - visibleSlots);
     }
     refreshAll();
 }
@@ -132,12 +134,16 @@ int CListView::getItemTypesCount(const std::shared_ptr<CGui> &gui) {
 
 // TODO: sizes should be calculated dynamically based on preferences
 int CListView::getSizeX(std::shared_ptr<CGui> gui) {
-    return xPrefferedSize != -1 ? xPrefferedSize : getLayout()->getRect(this->ptr<CListView>())->w / tileSize;
+    const int safeTileSize = std::max(1, tileSize);
+    return xPrefferedSize != -1 ? std::clamp(xPrefferedSize, 1, 128)
+                                : std::max(1, getLayout()->getRect(this->ptr<CListView>())->w / safeTileSize);
 }
 
 // TODO: sizes should be calculated dynamically based on preferences
 int CListView::getSizeY(std::shared_ptr<CGui> gui) {
-    return yPrefferedSize != -1 ? yPrefferedSize : getLayout()->getRect(this->ptr<CListView>())->h / tileSize;
+    const int safeTileSize = std::max(1, tileSize);
+    return yPrefferedSize != -1 ? std::clamp(yPrefferedSize, 1, 128)
+                                : std::max(1, getLayout()->getRect(this->ptr<CListView>())->h / safeTileSize);
 }
 
 CListView::collection_pointer CListView::invokeCollection(std::shared_ptr<CGui> gui) {
@@ -156,23 +162,32 @@ CListView::collection_pointer CListView::invokeCollection(std::shared_ptr<CGui> 
 }
 
 void CListView::invokeCallback(std::shared_ptr<CGui> gui, int i, std::shared_ptr<CGameObject> object) {
-    if (callback.empty()) {
+    auto parent = getParent();
+    if (!parent || callback.empty()) {
         return;
     }
-    getParent()
-        ->meta()
-        ->invoke_method<void, CGameGraphicsObject, std::shared_ptr<CGui>, int, std::shared_ptr<CGameObject>>(
-            callback, vstd::cast<CGameGraphicsObject>(getParent()), gui, i, object);
+    try {
+        parent->meta()
+            ->invoke_method<void, CGameGraphicsObject, std::shared_ptr<CGui>, int, std::shared_ptr<CGameObject>>(
+                callback, vstd::cast<CGameGraphicsObject>(parent), gui, i, object);
+    } catch (const std::exception &exception) {
+        vstd::logger::warning("Ignoring list callback failure:", callback, exception.what());
+    }
 }
 
 bool CListView::invokeRightClickCallback(std::shared_ptr<CGui> gui, int i, std::shared_ptr<CGameObject> object) {
-    if (rightClickCallback.empty()) {
+    auto parent = getParent();
+    if (!parent || rightClickCallback.empty()) {
         return false;
     }
-    return getParent()
-        ->meta()
-        ->invoke_method<bool, CGameGraphicsObject, std::shared_ptr<CGui>, int, std::shared_ptr<CGameObject>>(
-            rightClickCallback, vstd::cast<CGameGraphicsObject>(getParent()), gui, i, object);
+    try {
+        return parent->meta()
+            ->invoke_method<bool, CGameGraphicsObject, std::shared_ptr<CGui>, int, std::shared_ptr<CGameObject>>(
+                rightClickCallback, vstd::cast<CGameGraphicsObject>(parent), gui, i, object);
+    } catch (const std::exception &exception) {
+        vstd::logger::warning("Ignoring list right-click callback failure:", rightClickCallback, exception.what());
+        return false;
+    }
 }
 
 auto CListView::getArrowCallback(bool left) {
@@ -185,19 +200,25 @@ auto CListView::getArrowCallback(bool left) {
 }
 
 bool CListView::invokeSelect(std::shared_ptr<CGui> gui, int i, std::shared_ptr<CGameObject> object) {
-    if (select.empty()) {
+    auto parent = getParent();
+    if (!parent || select.empty()) {
         return false;
     }
-    return getParent()
-        ->meta()
-        ->invoke_method<bool, CGameGraphicsObject, std::shared_ptr<CGui>, int, std::shared_ptr<CGameObject>>(
-            select, vstd::cast<CGameGraphicsObject>(getParent()), gui, i, object);
+    try {
+        return parent->meta()
+            ->invoke_method<bool, CGameGraphicsObject, std::shared_ptr<CGui>, int, std::shared_ptr<CGameObject>>(
+                select, vstd::cast<CGameGraphicsObject>(parent), gui, i, object);
+    } catch (const std::exception &exception) {
+        vstd::logger::warning("Ignoring list select callback failure:", select, exception.what());
+        return false;
+    }
 }
 
 bool CListView::tryGetClickedObject(std::shared_ptr<CGui> gui, int x, int y, int &index,
                                     std::shared_ptr<CGameObject> &object) {
-    int xIndex = x / tileSize;
-    int yIndex = y / tileSize;
+    const int safeTileSize = std::max(1, tileSize);
+    int xIndex = x / safeTileSize;
+    int yIndex = y / safeTileSize;
     if (xIndex < 0 || yIndex < 0 || xIndex >= getSizeX(gui) || yIndex >= getSizeY(gui)) {
         return false;
     }
@@ -354,7 +375,7 @@ void CListView::setYPrefferedSize(int yPrefferedSize) { CListView::yPrefferedSiz
 
 int CListView::getTileSize() { return tileSize; }
 
-void CListView::setTileSize(int _tileSize) { tileSize = _tileSize; }
+void CListView::setTileSize(int _tileSize) { tileSize = std::clamp(_tileSize, 1, 512); }
 
 bool CListView::getAllowOversize() { return allowOversize; }
 

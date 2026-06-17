@@ -28,7 +28,7 @@ bool CGamePanel::mouseEvent(std::shared_ptr<CGui> sharedPtr, SDL_EventType type,
 
 void CGamePanel::refreshViews() {
     for (auto child : getChildren()) {
-        if (child->meta()->inherits(CListView::static_meta()->name())) {
+        if (child && child->meta()->inherits(CListView::static_meta()->name())) {
             vstd::cast<CListView>(child)->refreshAll();
         }
     }
@@ -45,4 +45,8 @@ void CGamePanel::awaitClosing() {
     vstd::wait_until([self]() { return !self->getGui() || self->getGui()->findChild(self) == nullptr; });
 }
 
-void CGamePanel::close() { getGui()->removeChild(this->ptr<CGamePanel>()); }
+void CGamePanel::close() {
+    if (auto gui = getGui()) {
+        gui->removeChild(this->ptr<CGamePanel>());
+    }
+}

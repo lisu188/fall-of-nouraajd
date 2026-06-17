@@ -92,6 +92,9 @@ std::shared_ptr<CSerializerBase> game_object_map_serializer() {
 
 void CSerialization::setProperty(const std::shared_ptr<CGameObject> &object, const std::string &key,
                                  const std::shared_ptr<json> &value) {
+    if (!object || !value) {
+        return;
+    }
     if (value->is_boolean()) {
         setBooleanProperty(object, key, value->get<bool>());
     } else if (value->is_number()) {
@@ -161,7 +164,13 @@ void CSerialization::setOtherProperty(std::type_index serializedId, std::type_in
                                       const std::shared_ptr<CGameObject> &object, const std::string &key,
                                       const std::any &value) {
     std::shared_ptr<CSerializerBase> serializer =
-        (*CTypes::serializers())[std::make_pair(serializedId, deserializedId)];
+        vstd::ctn(*CTypes::serializers(), std::make_pair(serializedId, deserializedId))
+            ? (*CTypes::serializers())[std::make_pair(serializedId, deserializedId)]
+            : nullptr;
+    if (!serializer) {
+        vstd::logger::warning("No serializer for property:", key);
+        return;
+    }
     std::any result;
     try {
         std::string context = "property '" + key + "'";
@@ -258,6 +267,9 @@ std::shared_ptr<json> object_serialize(const std::shared_ptr<CGameObject> &objec
 std::shared_ptr<CGameObject> object_deserialize(const std::shared_ptr<CGame> &game,
                                                 const std::shared_ptr<json> &config) {
     std::shared_ptr<CGameObject> object;
+    if (!game || !config || !config->is_object()) {
+        return nullptr;
+    }
     if (CJsonUtil::isRef(config)) {
         object = game->getObjectHandler()->createObject(game, (*config)["ref"].get<std::string>());
     } else if (CJsonUtil::isType(config)) {
@@ -273,7 +285,11 @@ std::shared_ptr<CGameObject> object_deserialize(const std::shared_ptr<CGame> &ga
     if (object && config->is_object() && config->count("properties")) {
         auto properties = &(*config)["properties"];
         for (auto &[key, value] : properties->items()) {
-            CSerialization::setProperty(object, key, CJsonUtil::alias(config, value));
+            try {
+                CSerialization::setProperty(object, key, CJsonUtil::alias(config, value));
+            } catch (const std::exception &exception) {
+                vstd::logger::warning("Skipping malformed property:", key, exception.what());
+            }
         }
     }
     if (object && object->meta()->has_method("initialize", object)) {
@@ -299,9 +315,15 @@ std::shared_ptr<json> map_serialize(const std::map<std::string, std::shared_ptr<
 std::map<std::string, std::shared_ptr<CGameObject>> map_deserialize(const std::shared_ptr<CGame> &map,
                                                                     const std::shared_ptr<json> &object) {
     std::map<std::string, std::shared_ptr<CGameObject>> ret;
+    if (!object || !object->is_object()) {
+        return ret;
+    }
     for (auto &[key, val] : object->items()) {
-        ret[key] = CSerializerFunction<std::shared_ptr<json>, std::shared_ptr<CGameObject>>::deserialize(
+        auto deserialized = CSerializerFunction<std::shared_ptr<json>, std::shared_ptr<CGameObject>>::deserialize(
             map, CJsonUtil::alias(object, val));
+        if (deserialized) {
+            ret[key] = deserialized;
+        }
     }
     return ret;
 }
@@ -317,6 +339,9 @@ std::shared_ptr<json> array_serialize(const std::set<std::shared_ptr<CGameObject
 std::set<std::shared_ptr<CGameObject>> array_deserialize(const std::shared_ptr<CGame> &map,
                                                          const std::shared_ptr<json> &object) {
     std::set<std::shared_ptr<CGameObject>> objects;
+    if (!object || !object->is_array()) {
+        return objects;
+    }
     for (unsigned int i = 0; i < object->size(); i++) {
         auto deserialized = CSerializerFunction<std::shared_ptr<json>, std::shared_ptr<CGameObject>>::deserialize(
             map, CJsonUtil::alias(object, (*object)[i]));
@@ -337,8 +362,8 @@ std::type_index CSerialization::getGenericPropertyType(const std::shared_ptr<jso
     } else if (CJsonUtil::isMap(object)) {
         return std::type_index(typeid(std::map<std::string, std::shared_ptr<CGameObject>>));
     }
-    vstd::fail("Unable to determine property type!");
-    return V_VOID;
+    vstd::logger::warning("Unable to determine JSON property type; treating as object pointer");
+    return std::type_index(typeid(std::shared_ptr<CGameObject>));
 }
 
 std::shared_ptr<json> CSerializerFunction<std::shared_ptr<json>, std::set<std::shared_ptr<CGameObject>>>::serialize(

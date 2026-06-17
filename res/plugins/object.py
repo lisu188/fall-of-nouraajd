@@ -25,6 +25,8 @@ def load(self, context):
     @register(context)
     class WayPoint(CBuilding):
         def onEnter(self, event):
+            if not event or not event.getCause():
+                return
             exit_coords = self.getExit()
             if exit_coords:
                 event.getCause().setCoords(exit_coords)
@@ -48,19 +50,29 @@ def load(self, context):
         def getExit(self):
             if self.getBoolProperty("enabled"):
                 exit = self.getStringProperty("exit")
-                loc = self.getMap().getLocationByName(exit)
-                return loc
+                if not exit or not self.getMap():
+                    return None
+                target = self.getMap().getObjectByName(exit)
+                if not target:
+                    return None
+                loc = target.getCoords()
+                if self.getMap().canStep(loc):
+                    return loc
+            return None
 
     @register(context)
     class GroundHole(WayPoint):
         def getExit(self):
+            if not self.getMap():
+                return None
             loc = self.getCoords()
-            return Coords(loc.x, loc.y, loc.z - 1)
+            target = Coords(loc.x, loc.y, loc.z - 1)
+            return target if self.getMap().canStep(target) else None
 
     @register(context)
     class Market(CBuilding):
         def onEnter(self, event):
-            if event.getCause().isPlayer():
+            if event and event.getCause() and event.getCause().isPlayer():
                 market = self.getObjectProperty("market")
                 if market:
                     self.getMap().getGame().getGuiHandler().showTrade(market)

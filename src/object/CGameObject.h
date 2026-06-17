@@ -184,8 +184,7 @@ class CGameObject : public vstd::stringable, public std::enable_shared_from_this
 
     CTags tags;
 
-    // TODO: this creates cyclic dependencies
-    std::shared_ptr<CGame> game;
+    std::weak_ptr<CGame> game;
 };
 
 class CVisitable {

@@ -94,7 +94,10 @@ void CMap::replaceTile(std::string name, Coords coords) {
     addTile(getGame()->createObject<CTile>(name), coords.x, coords.y, coords.z);
 }
 
-Coords CMap::getLocationByName(std::string name) { return this->getObjectByName(name)->getCoords(); }
+Coords CMap::getLocationByName(std::string name) {
+    auto object = this->getObjectByName(name);
+    return object ? object->getCoords() : ZERO;
+}
 
 std::shared_ptr<CPlayer> CMap::getPlayer() {
     // TODO: think of better solution after save
@@ -102,9 +105,11 @@ std::shared_ptr<CPlayer> CMap::getPlayer() {
         for (auto object : getObjects()) {
             if (object && object->getName() == "player") {
                 player = vstd::cast<CPlayer>(object);
-                player->setController(getGame()->createObject<CPlayerController>());
-                player->setFightController(getGame()->createObject<CPlayerFightController>());
-                registerPlayerTriggers();
+                if (player) {
+                    player->setController(getGame()->createObject<CPlayerController>());
+                    player->setFightController(getGame()->createObject<CPlayerFightController>());
+                    registerPlayerTriggers();
+                }
                 break;
             }
         }
@@ -113,6 +118,10 @@ std::shared_ptr<CPlayer> CMap::getPlayer() {
 }
 
 void CMap::setPlayer(std::shared_ptr<CPlayer> player) {
+    if (!player) {
+        vstd::logger::warning("Ignoring null player assignment");
+        return;
+    }
     player->setName("player");
     player->setController(getGame()->createObject<CPlayerController>());
     player->setFightController(getGame()->createObject<CPlayerFightController>());
@@ -228,7 +237,14 @@ bool CMap::contains(int x, int y, int z) {
 }
 
 void CMap::addObject(const std::shared_ptr<CMapObject> &mapObject) {
-    vstd::fail_if(vstd::ctn(mapObjects, mapObject->getName()), "Map object already exists: " + mapObject->getName());
+    if (!mapObject) {
+        vstd::logger::warning("Ignoring null map object");
+        return;
+    }
+    if (vstd::ctn(mapObjects, mapObject->getName())) {
+        vstd::logger::warning("Ignoring duplicate map object:", mapObject->getName());
+        return;
+    }
     std::shared_ptr<CCreature> creature = vstd::cast<CCreature>(mapObject);
     if (creature.get()) {
         if (creature->getLevel() == 0) {
@@ -473,8 +489,13 @@ std::set<std::shared_ptr<CMapObject>> CMap::getObjects() {
 }
 
 void CMap::dumpPaths(std::string path) {
+    auto currentPlayer = getPlayer();
+    if (!currentPlayer) {
+        vstd::logger::warning("Cannot dump paths without a player");
+        return;
+    }
     CPathFinder::saveMap(
-        getPlayer()->getCoords(), [this](auto coords) { return this->canStep(coords); }, path,
+        currentPlayer->getCoords(), [this](auto coords) { return this->canStep(coords); }, path,
         [this](auto coords) -> std::optional<Coords> {
             for (auto ob : getObjectsAtCoords(coords)) {
                 if (ob->getBoolProperty("waypoint")) {
@@ -513,6 +534,9 @@ void CMap::setMapName(std::string mapName) { this->mapName = mapName; }
 std::string CMap::getMapName() { return mapName; }
 
 void CMap::objectMoved(const std::shared_ptr<CMapObject> &object, Coords _old, Coords _new) {
+    if (!object) {
+        return;
+    }
     _old = normalizeCoords(_old);
     _new = normalizeCoords(_new);
     vstd::erase_if(mapObjectsCache, [object](auto it) { return it.second == object->getName(); });

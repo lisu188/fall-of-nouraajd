@@ -19,6 +19,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CGame.h"
 #include "core/CList.h"
 #include "core/CMap.h"
+#include "core/CPythonOverrides.h"
 #include "gui/CAnimation.h"
 
 #include <utility>
@@ -26,13 +27,16 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 std::function<bool(std::shared_ptr<CGameObject>, std::shared_ptr<CGameObject>)> CGameObject::name_comparator =
     [](std::shared_ptr<CGameObject> a, std::shared_ptr<CGameObject> b) { return a->getType() == b->getType(); };
 
-CGameObject::~CGameObject() {}
+CGameObject::~CGameObject() { CPythonOverrides::release(this); }
 
 CGameObject::CGameObject() {}
 
-std::shared_ptr<CMap> CGameObject::getMap() { return getGame()->getMap(); }
+std::shared_ptr<CMap> CGameObject::getMap() {
+    auto currentGame = getGame();
+    return currentGame ? currentGame->getMap() : nullptr;
+}
 
-std::shared_ptr<CGame> CGameObject::getGame() { return game; }
+std::shared_ptr<CGame> CGameObject::getGame() { return game.lock(); }
 
 void CGameObject::setGame(std::shared_ptr<CGame> map) { this->game = map; }
 
@@ -58,7 +62,10 @@ void CGameObject::incProperty(std::string name, int value) {
 
 std::string CGameObject::to_string() { return vstd::join({getType(), getName()}, ":"); }
 
-std::shared_ptr<CGameObject> CGameObject::_clone() { return game->getObjectHandler()->clone<CGameObject>(this->ptr()); }
+std::shared_ptr<CGameObject> CGameObject::_clone() {
+    auto currentGame = getGame();
+    return currentGame ? currentGame->getObjectHandler()->clone<CGameObject>(this->ptr()) : nullptr;
+}
 
 CTags CGameObject::getTags() { return tags; }
 
@@ -102,8 +109,19 @@ void CGameObject::setDescription(std::string _description) { description = _desc
 
 std::shared_ptr<CAnimation> CGameObject::getGraphicsObject() {
     return graphicsObject.get([this]() {
-        std::shared_ptr<CAnimation> anim = CAnimationProvider::getAnimation(getGame(), this->ptr<CGameObject>());
-        for (auto [key, val] : getGame()->createObject<CMapStringInt>("mapObjectPriorities")->getValues()) {
+        auto currentGame = getGame();
+        if (!currentGame) {
+            return std::shared_ptr<CAnimation>();
+        }
+        std::shared_ptr<CAnimation> anim = CAnimationProvider::getAnimation(currentGame, this->ptr<CGameObject>());
+        if (!anim) {
+            return anim;
+        }
+        auto priorities = currentGame->createObject<CMapStringInt>("mapObjectPriorities");
+        if (!priorities) {
+            return anim;
+        }
+        for (auto [key, val] : priorities->getValues()) {
             if (val > anim->getPriority() && this->meta()->inherits(key)) {
                 anim->setPriority(val);
             }

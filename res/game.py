@@ -1,4 +1,5 @@
 from _game import *
+import json
 
 set_logger_sink("disabled", None)
 
@@ -78,8 +79,34 @@ def new():
 
 
 class CDialog(CDialogBase2):
+    def _get_public_callback(self, name):
+        if not isinstance(name, str) or not name.isidentifier() or name.startswith("_"):
+            return None
+        if name in {"invokeAction", "invokeCondition"}:
+            return None
+        callback = type(self).__dict__.get(name)
+        if callback is None:
+            return None
+        bound = getattr(self, name, None)
+        return bound if callable(bound) else None
+
     def invokeAction(self, action):
-        getattr(self, action)()
+        callback = self._get_public_callback(action)
+        if callback is None:
+            logger(f"Rejected unknown dialog action: {action}")
+            return
+        try:
+            callback()
+        except Exception as exc:
+            logger(f"Dialog action failed closed: {action}: {exc}")
 
     def invokeCondition(self, condition):
-        return getattr(self, condition)()
+        callback = self._get_public_callback(condition)
+        if callback is None:
+            logger(f"Rejected unknown dialog condition: {condition}")
+            return False
+        try:
+            return bool(callback())
+        except Exception as exc:
+            logger(f"Dialog condition failed closed: {condition}: {exc}")
+            return False

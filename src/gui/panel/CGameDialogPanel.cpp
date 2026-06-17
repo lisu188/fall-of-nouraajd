@@ -22,6 +22,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "gui/object/CWidget.h"
 #include "object/CDialog.h"
 
+#include <algorithm>
+
 const std::shared_ptr<CDialog> &CGameDialogPanel::getDialog() const { return dialog; }
 
 void CGameDialogPanel::setDialog(const std::shared_ptr<CDialog> &_dialog) { dialog = _dialog; }
@@ -29,8 +31,17 @@ void CGameDialogPanel::setDialog(const std::shared_ptr<CDialog> &_dialog) { dial
 // TODO: unify with CGuiHandler
 void CGameDialogPanel::reload() {
     auto self = this->ptr<CGameDialogPanel>();
+    if (!dialog) {
+        self->close();
+        return;
+    }
     if (currentStateId != "EXIT") {
         std::shared_ptr<CDialogState> state = dialog->getState(currentStateId);
+        if (!state) {
+            vstd::logger::warning("Closing dialog with missing state:", currentStateId);
+            self->close();
+            return;
+        }
 
         std::set<std::shared_ptr<CGameGraphicsObject>> widgets;
 
@@ -58,7 +69,8 @@ void CGameDialogPanel::reload() {
 
             std::shared_ptr<CLayout> optionWidgetLayout = getGame()->createObject<CLayout>("CLayout");
 
-            auto lines = getGame()->getGui()->getTextManager()->countLines(optionText, getLayout()->getRect(self)->w);
+            const auto width = std::max(1, getLayout()->getRect(self)->w);
+            auto lines = getGame()->getGui()->getTextManager()->countLines(optionText, width);
             totalLines += lines;
 
             optionWidgetLayout->setY(vstd::str(100 - (totalLines * percentSize)) + "%");
@@ -94,7 +106,17 @@ std::map<int, std::shared_ptr<CDialogOption>, std::greater<>> CGameDialogPanel::
     };
 
     std::set<std::shared_ptr<CDialogOption>, OptionComparator> options;
-    for (const auto &option : dialog->getState(currentStateId)->getOptions()) {
+    if (!dialog) {
+        return {};
+    }
+    auto state = dialog->getState(currentStateId);
+    if (!state) {
+        return {};
+    }
+    for (const auto &option : state->getOptions()) {
+        if (!option) {
+            continue;
+        }
         if (option->getCondition().empty() || dialog->invokeCondition(option->getCondition())) {
             options.insert(option);
         }
@@ -111,10 +133,13 @@ std::map<int, std::shared_ptr<CDialogOption>, std::greater<>> CGameDialogPanel::
 void CGameDialogPanel::selectOption(int option) { selectOption(getOption(option)); }
 
 void CGameDialogPanel::selectOption(const std::shared_ptr<CDialogOption> &option) {
+    if (!option || !dialog) {
+        return;
+    }
     if (!option->getAction().empty()) {
         dialog->invokeAction(option->getAction());
     }
-    currentStateId = option->getNextStateId();
+    currentStateId = option->getNextStateId().empty() ? "EXIT" : option->getNextStateId();
     reload();
 }
 

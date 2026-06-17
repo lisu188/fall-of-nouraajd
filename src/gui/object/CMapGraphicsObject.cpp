@@ -7,6 +7,8 @@
 #include "gui/object/CProxyGraphicsObject.h"
 #include "gui/panel/CGameInventoryPanel.h"
 
+#include <algorithm>
+
 namespace {
 std::shared_ptr<CAnimation> clone_proxy_animation(const std::shared_ptr<CGui> &gui,
                                                   const std::shared_ptr<CAnimation> &cached) {
@@ -21,7 +23,13 @@ CMapGraphicsObject::CMapGraphicsObject() {}
 std::shared_ptr<CAnimation> CMapGraphicsObject::syncProxyAnimation(std::shared_ptr<CGui> gui,
                                                                    const std::shared_ptr<CGameObject> &object,
                                                                    std::shared_ptr<CAnimation> &animation) {
+    if (!object) {
+        return nullptr;
+    }
     auto cached = object->getGraphicsObject();
+    if (!cached) {
+        return nullptr;
+    }
     if (!animation || animation->meta()->name() != cached->meta()->name()) {
         animation = clone_proxy_animation(gui, cached);
     }
@@ -45,6 +53,9 @@ std::list<std::shared_ptr<CGameGraphicsObject>> CMapGraphicsObject::getProxiedOb
 
     std::list<std::shared_ptr<CGameGraphicsObject>> return_val;
     std::shared_ptr<CPlayer> player = map->getPlayer();
+    if (!player) {
+        return {};
+    }
     auto playerCoords = player->getCoords();
     if (!hasCachedProxyZ || cachedProxyZ != playerCoords.z) {
         proxyAnimations.clear();
@@ -60,20 +71,25 @@ std::list<std::shared_ptr<CGameGraphicsObject>> CMapGraphicsObject::getProxiedOb
     auto &slot = proxyAnimations[proxyCoords];
 
     std::shared_ptr<CTile> tile = map->getTile(actualCoords.x, actualCoords.y, actualCoords.z);
-    return_val.push_back(
-        syncProxyAnimation(gui, tile, slot.tile)
-            ->withCallback([actualCoords](std::shared_ptr<CGui> gui, SDL_EventType type, int button, int, int) {
+    auto tileAnimation = syncProxyAnimation(gui, tile, slot.tile);
+    if (tileAnimation) {
+        return_val.push_back(tileAnimation->withCallback(
+            [actualCoords](std::shared_ptr<CGui> gui, SDL_EventType type, int button, int, int) {
                 if (type == SDL_MOUSEBUTTONDOWN && button == SDL_BUTTON_LEFT) {
                     auto game = gui->getGame();
                     auto map = game->getMap();
                     auto player = map->getPlayer();
+                    if (!player) {
+                        return false;
+                    }
                     auto controller = vstd::cast<CPlayerController>(player->getController());
                     if (!controller) {
                         return false;
                     }
                     controller->setTarget(player, actualCoords);
                     if (!map->isMoving()) {
-                        while (!controller->isCompleted(player)) {
+                        const int maxSteps = std::max(1, gui->getTileCountX() * gui->getTileCountY() * 4);
+                        for (int step = 0; step < maxSteps && !controller->isCompleted(player); ++step) {
                             map->move();
                         }
                     }
@@ -81,6 +97,7 @@ std::list<std::shared_ptr<CGameGraphicsObject>> CMapGraphicsObject::getProxiedOb
                 }
                 return false;
             }));
+    }
 
     auto objects = map->getObjectsAtCoords(actualCoords);
     if (slot.objects.size() != objects.size()) {
@@ -88,7 +105,9 @@ std::list<std::shared_ptr<CGameGraphicsObject>> CMapGraphicsObject::getProxiedOb
     }
     std::size_t objectIndex = 0;
     for (const auto &ob : objects) {
-        return_val.push_back(syncProxyAnimation(gui, ob, slot.objects[objectIndex]));
+        if (auto animation = syncProxyAnimation(gui, ob, slot.objects[objectIndex])) {
+            return_val.push_back(animation);
+        }
         objectIndex++;
     }
 
@@ -169,29 +188,36 @@ bool CMapGraphicsObject::keyboardEvent(std::shared_ptr<CGui> gui, SDL_EventType 
             return true;
         }
         std::shared_ptr<CPlayer> player = gui->getGame()->getMap()->getPlayer();
+        if (!player) {
+            return false;
+        }
+        auto controller = vstd::cast<CPlayerController>(player->getController());
+        if (!controller) {
+            return false;
+        }
         switch (i) {
         case SDLK_UP:
-            vstd::cast<CPlayerController>(player->getController())->setTarget(player, player->getCoords() + NORTH);
+            controller->setTarget(player, player->getCoords() + NORTH);
             gui->getGame()->getMap()->move();
             return true;
         case SDLK_DOWN:
-            vstd::cast<CPlayerController>(player->getController())->setTarget(player, player->getCoords() + SOUTH);
+            controller->setTarget(player, player->getCoords() + SOUTH);
             gui->getGame()->getMap()->move();
             return true;
         case SDLK_LEFT:
-            vstd::cast<CPlayerController>(player->getController())->setTarget(player, player->getCoords() + WEST);
+            controller->setTarget(player, player->getCoords() + WEST);
             gui->getGame()->getMap()->move();
             return true;
         case SDLK_RIGHT:
-            vstd::cast<CPlayerController>(player->getController())->setTarget(player, player->getCoords() + EAST);
+            controller->setTarget(player, player->getCoords() + EAST);
             gui->getGame()->getMap()->move();
             return true;
         case SDLK_SPACE:
-            vstd::cast<CPlayerController>(player->getController())->setTarget(player, player->getCoords() + ZERO);
+            controller->setTarget(player, player->getCoords() + ZERO);
             gui->getGame()->getMap()->move();
             return true;
         case SDLK_s:
-            CMapLoader::save(gui->getGame()->getMap(), gui->getGame()->getMap()->getName());
+            CMapLoader::save(gui->getGame()->getMap(), gui->getGame()->getMap()->getMapName());
             return true;
         }
     }
@@ -200,14 +226,22 @@ bool CMapGraphicsObject::keyboardEvent(std::shared_ptr<CGui> gui, SDL_EventType 
 
 Coords CMapGraphicsObject::mapToGui(std::shared_ptr<CGui> gui, Coords coords) {
     auto map = gui->getGame()->getMap();
-    auto playerCoords = map->getPlayer()->getCoords();
+    auto player = map ? map->getPlayer() : nullptr;
+    if (!player) {
+        return ZERO;
+    }
+    auto playerCoords = player->getCoords();
     auto delta = map->getShortestDelta(playerCoords, coords);
     return Coords(delta.x + gui->getTileCountX() / 2, delta.y + gui->getTileCountY() / 2, coords.z);
 }
 
 Coords CMapGraphicsObject::guiToMap(std::shared_ptr<CGui> gui, Coords coords) {
     auto map = gui->getGame()->getMap();
-    auto playerCoords = map->getPlayer()->getCoords();
+    auto player = map ? map->getPlayer() : nullptr;
+    if (!player) {
+        return ZERO;
+    }
+    auto playerCoords = player->getCoords();
     auto raw = Coords(playerCoords.x - gui->getTileCountX() / 2 + coords.x,
                       playerCoords.y - gui->getTileCountY() / 2 + coords.y, playerCoords.z);
     return map->normalizeCoords(raw);
@@ -215,7 +249,13 @@ Coords CMapGraphicsObject::guiToMap(std::shared_ptr<CGui> gui, Coords coords) {
 
 void CMapGraphicsObject::refreshObject(Coords coords) {
     auto gui = getGui();
+    if (!gui || !gui->getGame()) {
+        return;
+    }
     auto map = gui->getGame()->getMap();
+    if (!map || !map->getPlayer()) {
+        return;
+    }
     Coords normalized = map->normalizeCoords(coords);
 
     if (map->wrapsX(normalized.z) || map->wrapsY(normalized.z)) {
@@ -243,6 +283,10 @@ void CMapGraphicsObject::onProxyGridResized(int sizeX, int sizeY) {
         return;
     }
     auto player = map->getPlayer();
+    if (!player) {
+        proxyAnimations.clear();
+        return;
+    }
     pruneProxyAnimationCache(sizeX, sizeY, player->getCoords().z);
 }
 

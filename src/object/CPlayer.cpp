@@ -34,6 +34,10 @@ std::string questId(const std::shared_ptr<CQuest> &quest) {
 void CPlayer::checkQuests() {
     auto set = quests;
     for (const auto &quest : set) {
+        if (!quest) {
+            quests.erase(quest);
+            continue;
+        }
         if (quest->isCompleted()) {
             quest->onComplete();
             quests.erase(quests.find(quest));
@@ -61,11 +65,15 @@ void CPlayer::addQuest(std::string questName) {
 
 std::set<std::shared_ptr<CQuest>> CPlayer::getQuests() { return quests; }
 
-void CPlayer::setQuests(std::set<std::shared_ptr<CQuest>> _quests) { this->quests = std::move(_quests); }
+void CPlayer::setQuests(std::set<std::shared_ptr<CQuest>> _quests) {
+    std::erase_if(_quests, [](const auto &quest) { return quest == nullptr; });
+    this->quests = std::move(_quests);
+}
 
 std::set<std::shared_ptr<CQuest>> CPlayer::getCompletedQuests() { return completedQuests; }
 
 void CPlayer::setCompletedQuests(std::set<std::shared_ptr<CQuest>> _completedQuests) {
+    std::erase_if(_completedQuests, [](const auto &quest) { return quest == nullptr; });
     completedQuests = std::move(_completedQuests);
 }
 

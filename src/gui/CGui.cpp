@@ -20,6 +20,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "gui/CTextManager.h"
 #include "gui/CTextureCache.h"
 
+#include <algorithm>
+
 CGui::CGui() {
     SDL_SAFE(SDL_Init(SDL_INIT_VIDEO));
     SDL_Window *rawWindow = nullptr;
@@ -54,15 +56,15 @@ std::shared_ptr<CTextManager> CGui::getTextManager() {
 
 int CGui::getWidth() { return width; }
 
-void CGui::setWidth(int width) { CGui::width = width; }
+void CGui::setWidth(int width) { CGui::width = std::clamp(width, 320, 7680); }
 
 int CGui::getHeight() { return height; }
 
-void CGui::setHeight(int height) { CGui::height = height; }
+void CGui::setHeight(int height) { CGui::height = std::clamp(height, 240, 4320); }
 
 int CGui::getTileSize() { return tileSize; }
 
-void CGui::setTileSize(int tileSize) { CGui::tileSize = tileSize; }
+void CGui::setTileSize(int tileSize) { CGui::tileSize = std::clamp(tileSize, 1, 512); }
 
 int CGui::getTileCountX() { return width / tileSize + 1; }
 

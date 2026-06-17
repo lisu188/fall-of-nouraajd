@@ -26,11 +26,14 @@ class PythonPluginSandboxTest(unittest.TestCase):
     def setUpClass(cls):
         cls.loader_source = (REPO_ROOT / "src" / "core" / "CLoader.cpp").read_text()
         cls.provider_source = (REPO_ROOT / "src" / "core" / "CProvider.cpp").read_text()
+        cls.game_source = (REPO_ROOT / "res" / "game.py").read_text()
 
     def test_python_plugins_do_not_receive_full_builtins(self):
         self.assertIn("build_restricted_plugin_builtins", self.loader_source)
+        self.assertIn("PyEval_GetBuiltins", self.loader_source)
         self.assertIn('plugin_namespace["__builtins__"] = build_restricted_plugin_builtins();', self.loader_source)
         self.assertNotIn('plugin_namespace["__builtins__"] = pybind11::module::import("builtins")', self.loader_source)
+        self.assertNotIn('pybind11::module_::import("builtins")', self.loader_source)
         self.assertNotIn('safeBuiltins[pybind11::str("open")]', self.loader_source)
         self.assertNotIn('safeBuiltins[pybind11::str("eval")]', self.loader_source)
         self.assertNotIn('safeBuiltins[pybind11::str("exec")]', self.loader_source)
@@ -42,12 +45,25 @@ class PythonPluginSandboxTest(unittest.TestCase):
         self.assertIn('std::string(name) == "game" || std::string(name) == "json"', self.loader_source)
         self.assertIn("Python resource plugins may only import the game and json modules", self.loader_source)
 
+    def test_allowlisted_imports_return_safe_proxy_modules(self):
+        self.assertIn("build_safe_proxy_module", self.loader_source)
+        self.assertIn("PyImport_GetModule", self.loader_source)
+        self.assertIn('proxy.attr("__builtins__") = build_restricted_plugin_builtins();', self.loader_source)
+        self.assertIn("import json", self.game_source)
+        self.assertNotIn("PyImport_ImportModuleLevelObject", self.loader_source)
+
     def test_plugin_and_map_paths_are_validated_before_loading(self):
         self.assertIn("is_allowed_python_plugin_path", self.loader_source)
         self.assertIn("Rejected Python plugin outside trusted resource plugin paths", self.loader_source)
         self.assertIn("is_valid_map_name", self.loader_source)
         self.assertIn("Rejected invalid map name while loading plugins", self.loader_source)
         self.assertIn("Rejected invalid map name while resolving map", self.loader_source)
+
+    def test_dynamic_plugins_are_limited_to_packaged_native_resources(self):
+        self.assertIn("is_allowed_dynamic_library_path", self.loader_source)
+        self.assertIn('"plugins/native/"', self.loader_source)
+        self.assertIn("Rejected dynamic C++ plugin outside packaged native plugin paths", self.loader_source)
+        self.assertNotIn("std::filesystem::exists(candidate)", self.loader_source)
 
     def test_resource_provider_rejects_absolute_and_parent_traversal_paths(self):
         self.assertIn("isSafeRelativeResourcePath", self.provider_source)

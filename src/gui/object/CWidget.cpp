@@ -20,6 +20,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "gui/CLayout.h"
 #include "gui/CTextManager.h"
 
+#include <exception>
+
 void CWidget::setRender(std::string draw) { this->render = draw; }
 
 std::string CWidget::getRender() { return render; }
@@ -29,10 +31,16 @@ std::string CWidget::getClick() { return click; }
 void CWidget::setClick(std::string click) { this->click = click; }
 
 void CWidget::renderObject(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> rect, int frameTime) {
-    this->getParent()
-        ->meta()
-        ->invoke_method<void, CGameGraphicsObject, std::shared_ptr<CGui>, std::shared_ptr<SDL_Rect>, int>(
-            this->getRender(), getParent(), gui, rect, frameTime);
+    auto parent = getParent();
+    if (!parent || getRender().empty()) {
+        return;
+    }
+    try {
+        parent->meta()->invoke_method<void, CGameGraphicsObject, std::shared_ptr<CGui>, std::shared_ptr<SDL_Rect>, int>(
+            this->getRender(), parent, gui, rect, frameTime);
+    } catch (const std::exception &exception) {
+        vstd::logger::warning("Ignoring widget render callback failure:", getRender(), exception.what());
+    }
 }
 
 bool CWidget::mouseEvent(std::shared_ptr<CGui> gui, SDL_EventType type, int button, int x, int y) {
@@ -51,8 +59,16 @@ bool CWidget::mouseEvent(std::shared_ptr<CGui> gui, SDL_EventType type, int butt
         auto rect = getLayout()->getRect(this->ptr<CGameGraphicsObject>());
         auto releasedInside = x >= 0 && y >= 0 && x < rect->w && y < rect->h;
         if (clickable && releasedInside) {
-            this->getParent()->meta()->invoke_method<void, CGameGraphicsObject, std::shared_ptr<CGui>>(
-                this->getClick(), getParent(), gui);
+            auto parent = getParent();
+            if (!parent) {
+                return true;
+            }
+            try {
+                parent->meta()->invoke_method<void, CGameGraphicsObject, std::shared_ptr<CGui>>(this->getClick(),
+                                                                                                parent, gui);
+            } catch (const std::exception &exception) {
+                vstd::logger::warning("Ignoring widget click callback failure:", getClick(), exception.what());
+            }
         }
         return true;
     }

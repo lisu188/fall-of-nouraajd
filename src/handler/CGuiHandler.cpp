@@ -85,7 +85,7 @@ bool CGuiHandler::showQuestion(std::string question) {
 
 void CGuiHandler::showTrade(std::shared_ptr<CMarket> market) {
     auto game = _game.lock();
-    if (!game || !game->getGui()) {
+    if (!game || !game->getGui() || !market) {
         return;
     }
     std::shared_ptr<CGameTradePanel> panel = game->createObject<CGameTradePanel>("tradePanel");
@@ -96,7 +96,7 @@ void CGuiHandler::showTrade(std::shared_ptr<CMarket> market) {
 
 void CGuiHandler::showDialog(std::shared_ptr<CDialog> dialog) {
     auto game = _game.lock();
-    if (!game || !game->getGui()) {
+    if (!game || !game->getGui() || !dialog) {
         return;
     }
     std::shared_ptr<CGameDialogPanel> panel = game->createObject<CGameDialogPanel>("dialogPanel");
@@ -108,7 +108,7 @@ void CGuiHandler::showDialog(std::shared_ptr<CDialog> dialog) {
 
 void CGuiHandler::showLoot(std::shared_ptr<CCreature> creature, std::set<std::shared_ptr<CItem>> items) {
     auto game = _game.lock();
-    if (!game || !game->getGui()) {
+    if (!game || !game->getGui() || !creature) {
         return;
     }
     std::shared_ptr<CGameLootPanel> panel = game->createObject<CGameLootPanel>("lootPanel");
@@ -177,6 +177,9 @@ std::string CGuiHandler::showSelection(std::shared_ptr<CListString> list) {
 void CGuiHandler::showTooltip(std::string text, int x, int y) {
     if (text.length() > 0) {
         auto game = _game.lock();
+        if (!game || !game->getGui()) {
+            return;
+        }
         auto layout = create_tooltip_layout(game, text, x, y);
         auto tooltip = game->createObject<CTooltip>();
         tooltip->setText(text);
@@ -201,7 +204,7 @@ std::shared_ptr<CGamePanel> CGuiHandler::openPanel(std::string panel) {
 
 void CGuiHandler::flipPanel(std::string panel, std::string hotkey) {
     std::shared_ptr<CGame> game = _game.lock();
-    if (!game || !game->getGui()) {
+    if (!game || !game->getGui() || hotkey.empty()) {
         return;
     }
     auto panelClas = game->getObjectHandler()->getClass(panel);
