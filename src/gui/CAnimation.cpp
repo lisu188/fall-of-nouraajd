@@ -40,9 +40,9 @@ void CStaticAnimation::renderObject(std::shared_ptr<CGui> gui, std::shared_ptr<S
         SDL_SetTextureAlphaMod(texture, colorA);
     }
     if (rotation == 0) {
-        SDL_SAFE(SDL_RenderCopy(gui->getRenderer(), texture, nullptr, rect.get()));
+        CUtil::renderCopy(gui->getRenderer(), texture, nullptr, rect.get());
     } else {
-        SDL_SAFE(SDL_RenderCopyEx(gui->getRenderer(), texture, nullptr, rect.get(), rotation, nullptr, SDL_FLIP_NONE));
+        CUtil::renderCopyEx(gui->getRenderer(), texture, nullptr, rect.get(), rotation, nullptr, SDL_FLIP_NONE);
     }
     if (useColorMod) {
         SDL_SetTextureColorMod(texture, 255, 255, 255);
@@ -111,7 +111,7 @@ void CDynamicAnimation::renderObject(std::shared_ptr<CGui> gui, std::shared_ptr<
             vstd::logger::error("CDynamicAnimation: missing frame", paths[currFrame]);
             return;
         }
-        SDL_SAFE(SDL_RenderCopy(gui->getRenderer(), texture, nullptr, rect.get()));
+        CUtil::renderCopy(gui->getRenderer(), texture, nullptr, rect.get());
     }
 }
 
