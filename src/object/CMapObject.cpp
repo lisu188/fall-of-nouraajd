@@ -50,7 +50,7 @@ void CMapObject::move(int x, int y, int z) {
     posz = target.z;
     Coords newCoords(posx, posy, posz);
 
-    if (map) {
+    if (map && map->getObjectByName(getName()) == this->ptr<CMapObject>()) {
         map->objectMoved(this->ptr<CMapObject>(), oldCoords, newCoords);
     }
 
