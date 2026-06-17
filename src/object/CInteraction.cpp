@@ -24,7 +24,13 @@ CInteraction::CInteraction() {}
 CInteraction::~CInteraction() {}
 
 void CInteraction::onAction(std::shared_ptr<CCreature> first, std::shared_ptr<CCreature> second) {
-    vstd::logger::debug(first->to_string(), "used", this->to_string(), "against", second->to_string());
+    if (!first) {
+        vstd::logger::warning("Skipping interaction without actor:", this->to_string());
+        return;
+    }
+
+    vstd::logger::debug(first->to_string(), "used", this->to_string(), "against",
+                        second ? second->to_string() : "<no target>");
 
     first->takeMana(this->getManaCost());
 
@@ -43,9 +49,11 @@ void CInteraction::onAction(std::shared_ptr<CCreature> first, std::shared_ptr<CC
             if (effect->hasTag(CTag::Buff)) {
                 effect->setVictim(first);
                 first->addEffect(effect);
-            } else {
+            } else if (second) {
                 effect->setVictim(second);
                 second->addEffect(effect);
+            } else {
+                vstd::logger::warning("Skipping non-buff effect without target:", this->to_string());
             }
         }
     }
