@@ -21,8 +21,11 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "gui/object/CProxyGraphicsObject.h"
 
 std::shared_ptr<SDL_Rect> CLayout::getParentRect(std::shared_ptr<CGameGraphicsObject> object) {
-    return object->getParent() ? object->getParent()->getLayout()->getRect(object->getParent())
-                               : CUtil::rect(0, 0, 0, 0);
+    if (!object) {
+        return CUtil::rect(0, 0, 0, 0);
+    }
+    auto parent = object->getParent();
+    return parent && parent->getLayout() ? parent->getLayout()->getRect(parent) : CUtil::rect(0, 0, 0, 0);
 }
 
 std::string CLayout::getW() { return w; }
@@ -48,7 +51,11 @@ void CLayout::setRect(int x, int y, int w, int h) {
     setH(vstd::str(h));
 }
 
-void CLayout::setRect(const std::shared_ptr<SDL_Rect> &rect) { setRect(rect->x, rect->y, rect->w, rect->h); }
+void CLayout::setRect(const std::shared_ptr<SDL_Rect> &rect) {
+    if (rect) {
+        setRect(rect->x, rect->y, rect->w, rect->h);
+    }
+}
 
 void CLayout::setHorizontal(std::string horizontal) { CLayout::horizontal = horizontal; }
 
@@ -127,6 +134,9 @@ int CProxyGraphicsLayout::getTileSize() { return tileSize; }
 
 std::shared_ptr<SDL_Rect> CProxyGraphicsLayout::getRect(std::shared_ptr<CGameGraphicsObject> object) {
     auto pRect = getParentRect(object);
-    return CUtil::rect(pRect->x + vstd::cast<CProxyGraphicsObject>(object)->getX() * tileSize,
-                       pRect->y + vstd::cast<CProxyGraphicsObject>(object)->getY() * tileSize, tileSize, tileSize);
+    auto proxy = vstd::cast<CProxyGraphicsObject>(object);
+    if (!proxy) {
+        return CUtil::rect(pRect->x, pRect->y, 0, 0);
+    }
+    return CUtil::rect(pRect->x + proxy->getX() * tileSize, pRect->y + proxy->getY() * tileSize, tileSize, tileSize);
 }
