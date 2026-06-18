@@ -355,7 +355,7 @@ SDL_PIXELFORMAT_RGBA32 = 376840196
 GUI_WIDTH = 1920
 GUI_HEIGHT = 1080
 GUI_TILE_SIZE = 50
-MINIMAP_RECT = (1700, 820, 220, 220)
+MINIMAP_RECT = (1700, 860, 220, 220)
 MINIMAP_PLAYER_RGB = (255, 255, 0)
 MINIMAP_VIEWPORT_RGB = (255, 255, 255)
 COMBAT_STALE_LOOP_TIMEOUT_SECONDS = 5.0 if os.environ.get("GAME_COVERAGE_RUN") == "1" else 2.0
@@ -3332,17 +3332,16 @@ class GameTest(unittest.TestCase):
         layout_props = layout.get("properties", {})
         self.assertEqual(1, minimap_props.get("priority"))
         self.assertEqual("CLayout", layout.get("class"))
-        self.assertEqual(
-            {"x": 1700, "y": 820, "w": 220, "h": 220},
-            {key: int(layout_props.get(key)) for key in ("x", "y", "w", "h")},
-        )
+        self.assertEqual("RIGHT", layout_props.get("horizontal"))
+        self.assertEqual("DOWN", layout_props.get("vertical"))
+        self.assertEqual({"w": 220, "h": 220}, {key: int(layout_props.get(key)) for key in ("w", "h")})
         self.assertEqual("CScript", minimap_props.get("visible", {}).get("class"))
 
         return True, json.dumps(
             {
                 "class": minimap.get("class"),
                 "priority": minimap_props.get("priority"),
-                "layout": {key: layout_props.get(key) for key in ("x", "y", "w", "h")},
+                "layout": {key: layout_props.get(key) for key in ("horizontal", "vertical", "w", "h")},
             },
             sort_keys=True,
         )
