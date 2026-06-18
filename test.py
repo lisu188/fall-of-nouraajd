@@ -3373,8 +3373,13 @@ class GameTest(unittest.TestCase):
         self.assertEqual(1, minimap_props.get("priority"))
         self.assertEqual("CLayout", layout.get("class"))
         self.assertEqual(
-            {"x": 1700, "y": 820, "w": 220, "h": 220},
-            {key: int(layout_props.get(key)) for key in ("x", "y", "w", "h")},
+            {"horizontal": "RIGHT", "vertical": "DOWN", "w": 220, "h": 220},
+            {
+                "horizontal": layout_props.get("horizontal"),
+                "vertical": layout_props.get("vertical"),
+                "w": int(layout_props.get("w")),
+                "h": int(layout_props.get("h")),
+            },
         )
         self.assertEqual("CScript", minimap_props.get("visible", {}).get("class"))
 
@@ -3382,7 +3387,7 @@ class GameTest(unittest.TestCase):
             {
                 "class": minimap.get("class"),
                 "priority": minimap_props.get("priority"),
-                "layout": {key: layout_props.get(key) for key in ("x", "y", "w", "h")},
+                "layout": {key: layout_props.get(key) for key in ("horizontal", "vertical", "w", "h")},
             },
             sort_keys=True,
         )
