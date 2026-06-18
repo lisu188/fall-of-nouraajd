@@ -557,7 +557,7 @@ XVFB_GAMEPLAY_CHILD_DURATION_HINTS = {
     "test_fight_panel_and_nested_views_layout": 12,
     "test_all_list_views_capacity_paging_and_shrink": 12,
     "test_text_centric_panel_layouts": 10,
-    "test_all_top_level_panels_block_outside_map_clicks": 8,
+    "test_all_top_level_panels_block_outside_map_clicks": 45,
     "test_screenshot_after_save_hotkey_has_rendered_pixels": 8,
     "test_save_hotkey_writes_loadable_map": 8,
     "test_screenshot_minimap_has_rendered_pixels": 6,
@@ -1074,12 +1074,36 @@ def activate_list_cell(list_view, gui, column, row, button=SDL_BUTTON_LEFT):
     list_view.mouseEvent(gui, SDL_MOUSEBUTTONDOWN, button, column * tile + tile // 2, row * tile + tile // 2)
 
 
+def activate_first_proxy_graphic(list_view, gui, column, row, button=SDL_BUTTON_LEFT):
+    for graphic in list_view.getProxiedObjects(gui, column, row):
+        if graphic.mouseEvent(gui, SDL_MOUSEBUTTONDOWN, button, 1, 1):
+            return True
+    return False
+
+
 def activate_widget(widget, gui):
     rect = resolved_rect(widget)
     x = rect[2] // 2
     y = rect[3] // 2
     widget.mouseEvent(gui, SDL_MOUSEBUTTONDOWN, SDL_BUTTON_LEFT, x, y)
     widget.mouseEvent(gui, SDL_MOUSEBUTTONUP, SDL_BUTTON_LEFT, x, y)
+
+
+def queue_question_answer(game, g, button_index):
+    observed = {"attempts": 0}
+
+    def answer():
+        panel = find_top_level_panel(g, "CGameQuestionPanel")
+        if panel is None:
+            observed["attempts"] += 1
+            if observed["attempts"] > 1000:
+                raise AssertionError("CGameQuestionPanel was not visible for queued answer.")
+            game.event_loop.instance().invoke(answer)
+            return
+        buttons = sorted(find_descendants_by_type(panel, "CButton"), key=lambda child: resolved_rect(child)[0])
+        activate_widget(buttons[button_index], g.getGui())
+
+    game.event_loop.instance().invoke(answer)
 
 
 def list_cell_objects(list_view, gui, column, row):
@@ -1170,6 +1194,25 @@ def panel_pixel_summary(data, width, height, panel_rect, regions=None):
     return summary
 
 
+def pixel_diff_bounds(before, after, width, rect):
+    bounds = None
+    changed = 0
+    for row in range(rect[1], rect_bottom(rect)):
+        for col in range(rect[0], rect_right(rect)):
+            offset = (row * width + col) * 4
+            if before[offset : offset + 3] == after[offset : offset + 3]:
+                continue
+            changed += 1
+            bounds = (
+                (col, row, col, row)
+                if bounds is None
+                else (min(bounds[0], col), min(bounds[1], row), max(bounds[2], col), max(bounds[3], row))
+            )
+    if bounds is None:
+        return None, 0
+    return (bounds[0], bounds[1], bounds[2] - bounds[0] + 1, bounds[3] - bounds[1] + 1), changed
+
+
 def annotate_panel_layout(source_path, output_path, summary):
     from PIL import Image, ImageDraw
 
@@ -1229,6 +1272,11 @@ def capture_panel_layout(test_case, g, scenario, panel, regions=None, outside_to
         f"{scenario} rendered {summary['pixels']['outside']} pixels outside {panel_rect}.",
     )
     return summary
+
+
+def assert_region_has_pixels(test_case, summary, region, minimum=1):
+    actual = summary["pixels"]["regions"].get(region, 0)
+    test_case.assertGreaterEqual(actual, minimum, f"{summary['scenario']} region {region} has {actual} pixels.")
 
 
 @contextlib.contextmanager
@@ -11426,6 +11474,10 @@ class PanelLayoutManifestTest(unittest.TestCase):
 
         bound_doc = getattr(load_game_module().CGameGraphicsObject.getResolvedRect, "__doc__", "") or ""
         self.assertIn("Return resolved runtime layout", bound_doc)
+        game = load_game_module()
+        g = game.CGameLoader.loadGame()
+        plain_graphic = g.createObject("CGameGraphicsObject")
+        self.assertEqual((0, 0, 0, 0), resolved_rect(plain_graphic))
 
 
 class XvfbGameplayProcessTest(unittest.TestCase):
@@ -11616,12 +11668,24 @@ class XvfbGameplayProcessTest(unittest.TestCase):
     def test_panel_harness_info_artifacts(self):
         _, g, _, _ = create_xvfb_gameplay_session(self)
         panel = open_layout_panel(self, g, "infoPanel")
+        sibling = None
         panel.setText("isolated panel harness verification")
 
         try:
             with isolated_gui_panel(g, panel):
                 summary = capture_panel_layout(self, g, "layout_harness_info_panel", panel)
+            sibling = open_layout_panel(self, g, "inventoryPanel")
+            self.assertTrue(gui_has_child_object(g, sibling))
+            with self.assertRaises(AssertionError):
+                with isolated_gui_panel(g, panel):
+                    self.assertFalse(gui_has_child_object(g, sibling))
+                    capture_panel_layout(
+                        self, g, "layout_harness_info_panel_expected_failure", panel, outside_tolerance=-1
+                    )
+            self.assertTrue(gui_has_child_object(g, sibling))
         finally:
+            if sibling is not None:
+                sibling.close()
             panel.close()
             pump_event_loop(3)
 
@@ -11645,6 +11709,16 @@ class XvfbGameplayProcessTest(unittest.TestCase):
                         capture_panel_layout(self, g, f"layout_root_{resource_id}", panel)
                 finally:
                     panel.close()
+                    pump_event_loop(3)
+                self.assertEqual(0, sum(1 for child in g.getGui().getChildren() if child.getType() == case["class"]))
+                reopened = open_layout_panel(self, g, resource_id)
+                try:
+                    assert_runtime_rect(self, f"{resource_id} reopened", reopened, case["root"])
+                    self.assertEqual(
+                        1, sum(1 for child in g.getGui().getChildren() if child.getType() == case["class"])
+                    )
+                finally:
+                    reopened.close()
                     pump_event_loop(3)
                 self.assertEqual(0, sum(1 for child in g.getGui().getChildren() if child.getType() == case["class"]))
 
@@ -11686,13 +11760,14 @@ class XvfbGameplayProcessTest(unittest.TestCase):
             assert_child_inside(self, "characterPanel", root, "actions", action_rect)
             assert_no_overlap(self, "character content", (560, 240, 800, 540), "actions", action_rect)
             with isolated_gui_panel(g, character):
-                capture_panel_layout(
+                summary = capture_panel_layout(
                     self,
                     g,
                     "layout_character_panel",
                     character,
                     regions={"actions": action_rect},
                 )
+            assert_region_has_pixels(self, summary, "actions")
         finally:
             character.close()
             pump_event_loop(3)
@@ -11707,10 +11782,29 @@ class XvfbGameplayProcessTest(unittest.TestCase):
                     "Wrapped info panel text that should occupy the top-left content area without leaving the panel.",
                 ),
             ):
-                info.setCentered(centered)
-                info.setText(text)
-                pump_event_loop(3)
                 with isolated_gui_panel(g, info):
+                    info.setText("")
+                    pump_event_loop(3)
+                    empty_data, width, _ = capture_sdl_screenshot(
+                        TEST_OUTPUT_DIR / f"layout_info_panel_{centered}_empty.png", g.getGui()
+                    )
+                    info.setCentered(centered)
+                    info.setText(text)
+                    pump_event_loop(3)
+                    text_data, _, _ = capture_sdl_screenshot(
+                        TEST_OUTPUT_DIR / f"layout_info_panel_{centered}_text.png", g.getGui()
+                    )
+                    text_bounds, changed = pixel_diff_bounds(empty_data, text_data, width, ROOT_400_300)
+                    self.assertGreater(changed, 0)
+                    assert_child_inside(self, "infoPanel", ROOT_400_300, "info text", text_bounds)
+                    if centered:
+                        expected_center = rect_center(ROOT_400_300)
+                        actual_center = rect_center(text_bounds)
+                        self.assertLess(abs(expected_center[0] - actual_center[0]), 70)
+                        self.assertLess(abs(expected_center[1] - actual_center[1]), 70)
+                    else:
+                        self.assertLessEqual(text_bounds[0], ROOT_400_300[0] + 25)
+                        self.assertLessEqual(text_bounds[1], ROOT_400_300[1] + 25)
                     capture_panel_layout(self, g, f"layout_info_panel_{centered}", info)
         finally:
             info.close()
@@ -11719,45 +11813,86 @@ class XvfbGameplayProcessTest(unittest.TestCase):
         text_panel = open_layout_panel(self, g, "textPanel")
         try:
             assert_runtime_rect(self, "textPanel", text_panel, ROOT_800_600)
-            text_panel.setText("Short message.")
-            pump_event_loop(3)
             with isolated_gui_panel(g, text_panel):
+                text_panel.setText("")
+                pump_event_loop(3)
+                empty_data, width, _ = capture_sdl_screenshot(
+                    TEST_OUTPUT_DIR / "layout_text_panel_empty.png", g.getGui()
+                )
+                text_panel.setText("Short message.")
+                pump_event_loop(3)
+                short_data, _, _ = capture_sdl_screenshot(
+                    TEST_OUTPUT_DIR / "layout_text_panel_short_text.png", g.getGui()
+                )
+                short_bounds, changed = pixel_diff_bounds(empty_data, short_data, width, ROOT_800_600)
+                self.assertGreater(changed, 0)
                 short_summary = capture_panel_layout(self, g, "layout_text_panel_short", text_panel)
             long_text = "\n".join(
                 ["Long layout paragraph with enough words to wrap inside the text panel." for _ in range(18)]
             )
-            text_panel.setText(long_text)
-            pump_event_loop(3)
             with isolated_gui_panel(g, text_panel):
+                text_panel.setText(long_text)
+                pump_event_loop(3)
+                long_data, _, _ = capture_sdl_screenshot(
+                    TEST_OUTPUT_DIR / "layout_text_panel_long_text.png", g.getGui()
+                )
+                long_bounds, changed = pixel_diff_bounds(empty_data, long_data, width, ROOT_800_600)
+                self.assertGreater(changed, 0)
                 long_summary = capture_panel_layout(self, g, "layout_text_panel_long", text_panel)
             self.assertGreater(long_text.count("\n"), 1)
+            self.assertGreater(long_bounds[3], short_bounds[3])
             self.assertGreaterEqual(long_summary["pixels"]["inside"], short_summary["pixels"]["inside"])
+            near_limit_text = " ".join(["near-limit wrapped layout content"] * 100)
+            self.assertLess(len(near_limit_text), 4096)
+            text_panel.setText(near_limit_text)
+            pump_event_loop(3)
+            with isolated_gui_panel(g, text_panel):
+                capture_panel_layout(self, g, "layout_text_panel_near_limit", text_panel)
             push_space_key()
             pump_event_loop(5)
             self.assertFalse(gui_contains_class(g, "CGameTextPanel"))
+            reopened_text = open_layout_panel(self, g, "textPanel")
+            try:
+                assert_runtime_rect(self, "textPanel reopened", reopened_text, ROOT_800_600)
+            finally:
+                reopened_text.close()
+                pump_event_loop(3)
         finally:
             if text_panel in list(g.getGui().getChildren()):
                 text_panel.close()
                 pump_event_loop(3)
 
-        active_quests = {make_ui_layout_quest(g, index) for index in range(4)}
-        completed_quests = {make_ui_layout_quest(g, index, completed=True) for index in range(2)}
-        player.setQuests(active_quests)
-        player.setCompletedQuests(completed_quests)
-        quest_panel = open_layout_panel(self, g, "questPanel")
-        try:
-            assert_runtime_rect(self, "questPanel", quest_panel, ROOT_800_600)
-            quest_text = quest_panel.getText(g.getGui())
-            self.assertIn("[Active] Quest 0:", quest_text)
-            self.assertIn("[Completed] Quest 0:", quest_text)
-            self.assertIn("Hint 0:", quest_text)
-            completed_block = quest_text.split("[Completed] Quest 0:", 1)[1].split("[", 1)[0]
-            self.assertNotIn("Hint 0:", completed_block)
-            with isolated_gui_panel(g, quest_panel):
-                capture_panel_layout(self, g, "layout_quest_panel_dense", quest_panel)
-        finally:
-            quest_panel.close()
-            pump_event_loop(3)
+        def assert_quest_panel_state(active_quests, completed_quests, scenario):
+            player.setQuests(set(active_quests))
+            player.setCompletedQuests(set(completed_quests))
+            quest_panel = open_layout_panel(self, g, "questPanel")
+            try:
+                assert_runtime_rect(self, "questPanel", quest_panel, ROOT_800_600)
+                quest_text = quest_panel.getText(g.getGui())
+                with isolated_gui_panel(g, quest_panel):
+                    capture_panel_layout(self, g, scenario, quest_panel)
+                return quest_text
+            finally:
+                quest_panel.close()
+                pump_event_loop(3)
+
+        empty_text = assert_quest_panel_state([], [], "layout_quest_panel_empty")
+        self.assertNotIn("uiLayoutQuest", empty_text)
+
+        single_quest = make_ui_layout_quest(g, 0)
+        single_text = assert_quest_panel_state([single_quest], [], "layout_quest_panel_single")
+        self.assertIn("[Active] Quest 0:", single_text)
+        self.assertIn("Objective 0:", single_text)
+        self.assertIn("Reward 0:", single_text)
+        self.assertIn("Hint 0:", single_text)
+
+        active_quests = [make_ui_layout_quest(g, index) for index in range(4)]
+        completed_quests = [make_ui_layout_quest(g, index, completed=True) for index in range(2)]
+        dense_text = assert_quest_panel_state(active_quests, completed_quests, "layout_quest_panel_dense")
+        self.assertIn("[Active] Quest 0:", dense_text)
+        self.assertIn("[Completed] Quest 0:", dense_text)
+        completed_block = dense_text.split("[Completed] Quest 0:", 1)[1].split("[", 1)[0]
+        self.assertNotIn("Hint 0:", completed_block)
 
     def test_choice_panel_layouts_and_hitboxes(self):
         game, g, _, _ = create_xvfb_gameplay_session(self)
@@ -11766,7 +11901,7 @@ class XvfbGameplayProcessTest(unittest.TestCase):
             def inspect(panel):
                 root = assert_runtime_rect(self, "questionPanel", panel, ROOT_400_300)
                 question = next(child for child in panel.getChildren() if child.getType() == "CWidget")
-                assert_runtime_rect(self, "question text", question, (760, 390, 400, 225))
+                question_rect = assert_runtime_rect(self, "question text", question, (760, 390, 400, 225))
                 buttons = sorted(find_descendants_by_type(panel, "CButton"), key=lambda child: resolved_rect(child)[0])
                 self.assertEqual(2, len(buttons))
                 left = assert_runtime_rect(self, "question yes", buttons[0], (760, 615, 200, 75))
@@ -11775,6 +11910,22 @@ class XvfbGameplayProcessTest(unittest.TestCase):
                 assert_child_inside(self, "questionPanel", root, "YES", left)
                 assert_child_inside(self, "questionPanel", root, "NO", right)
                 with isolated_gui_panel(g, panel):
+                    question_text = panel.question
+                    panel.question = ""
+                    pump_event_loop(3)
+                    empty_data, width, _ = capture_sdl_screenshot(
+                        TEST_OUTPUT_DIR / f"layout_question_{expected_rect}_empty.png", g.getGui()
+                    )
+                    panel.question = question_text
+                    pump_event_loop(3)
+                    text_data, _, _ = capture_sdl_screenshot(
+                        TEST_OUTPUT_DIR / f"layout_question_{expected_rect}_text.png", g.getGui()
+                    )
+                    text_bounds, changed = pixel_diff_bounds(empty_data, text_data, width, root)
+                    self.assertGreater(changed, 0)
+                    assert_child_inside(self, "question text", question_rect, "rendered question", text_bounds)
+                    assert_no_overlap(self, "rendered question", text_bounds, "YES", left)
+                    assert_no_overlap(self, "rendered question", text_bounds, "NO", right)
                     capture_panel_layout(self, g, f"layout_question_{expected_rect}", panel)
                 activate_widget(next(button for button in buttons if resolved_rect(button) == click_rect), g.getGui())
                 return {"left": left, "right": right}
@@ -11796,7 +11947,10 @@ class XvfbGameplayProcessTest(unittest.TestCase):
             game,
             g,
             "CGameQuestionPanel",
-            lambda: g.getGuiHandler().showQuestion("Confirm no with a wrapped question prompt?"),
+            lambda: g.getGuiHandler().showQuestion(
+                "Confirm no with a wrapped question prompt that spans enough words to exercise the upper "
+                "question rectangle without entering either button hitbox?"
+            ),
             inspect_question("no", (960, 615, 200, 75)),
             lambda panel: None,
         )
@@ -11821,6 +11975,7 @@ class XvfbGameplayProcessTest(unittest.TestCase):
                         button_rect = resolved_rect(button)
                         assert_positive_rect(self, f"selection button {index}", button_rect)
                         assert_child_inside(self, "selectionPanel", root, f"selection button {index}", button_rect)
+                        self.assertEqual(options[index], button.text)
                         if last_rect is not None:
                             assert_no_overlap(
                                 self, "previous selection button", last_rect, "selection button", button_rect
@@ -11872,6 +12027,7 @@ class XvfbGameplayProcessTest(unittest.TestCase):
                 if previous is not None:
                     assert_no_overlap(self, "previous dialog widget", previous, "dialog widget", widget_rect)
                 previous = widget_rect
+            entry_texts = {widget.text for widget in entry_widgets}
             with isolated_gui_panel(g, panel):
                 capture_panel_layout(self, g, "layout_dialog_entry", panel)
 
@@ -11881,6 +12037,9 @@ class XvfbGameplayProcessTest(unittest.TestCase):
             )
             self.assertGreaterEqual(len(next_widgets), 2)
             self.assertEqual(ROOT_800_600, resolved_rect(panel))
+            next_texts = {widget.text for widget in next_widgets}
+            self.assertFalse(any("Entry dialog text" in text for text in next_texts))
+            self.assertNotEqual(entry_texts, next_texts)
             with isolated_gui_panel(g, panel):
                 capture_panel_layout(self, g, "layout_dialog_next", panel)
             self.assertTrue(panel.keyboardEvent(g.getGui(), SDL_KEYDOWN, ord("1")))
@@ -11893,6 +12052,51 @@ class XvfbGameplayProcessTest(unittest.TestCase):
             "CGameDialogPanel",
             lambda: g.getGuiHandler().showDialog(dialog),
             inspect_dialog,
+            lambda panel: None,
+        )
+
+        dense_options = [
+            (
+                f"Dense option {index} with wrapped text that should receive a positive non-overlapping rectangle "
+                "inside the dialog option area."
+            )
+            for index in range(6)
+        ]
+        dense_state = make_dialog_state(
+            g,
+            "ENTRY",
+            "Dense dialog state with enough options to exercise proportional option layout.",
+            dense_options,
+            next_state="EXIT",
+        )
+        dense_dialog = make_dialog(g, [dense_state])
+
+        def inspect_dense_dialog(panel):
+            root = assert_runtime_rect(self, "dialogPanel dense", panel, ROOT_800_600)
+            widgets = sorted(find_descendants_by_type(panel, "CTextWidget"), key=lambda child: resolved_rect(child)[1])
+            self.assertEqual(1 + len(dense_options), len(widgets))
+            previous = None
+            for widget in widgets:
+                widget_rect = resolved_rect(widget)
+                assert_positive_rect(self, "dense dialog widget", widget_rect)
+                assert_child_inside(self, "dialogPanel", root, "dense dialog widget", widget_rect)
+                if previous is not None:
+                    assert_no_overlap(
+                        self, "previous dense dialog widget", previous, "dense dialog widget", widget_rect
+                    )
+                previous = widget_rect
+            with isolated_gui_panel(g, panel):
+                capture_panel_layout(self, g, "layout_dialog_dense_options", panel)
+            self.assertTrue(panel.keyboardEvent(g.getGui(), SDL_KEYDOWN, ord(str(len(dense_options)))))
+            return {"widgets": len(widgets)}
+
+        run_blocking_panel_inspection(
+            self,
+            game,
+            g,
+            "CGameDialogPanel",
+            lambda: g.getGuiHandler().showDialog(dense_dialog),
+            inspect_dense_dialog,
             lambda panel: None,
         )
         self.assertFalse(gui_contains_class(g, "CGameDialogPanel"))
@@ -11959,35 +12163,54 @@ class XvfbGameplayProcessTest(unittest.TestCase):
             inventory.close()
             pump_event_loop(3)
 
-        loot_items = set(make_unique_scroll_items(g, 49, "lootLayout"))
         loot_creature = g.createObject("GoblinThief")
 
-        def inspect_loot(panel):
-            root = assert_runtime_rect(self, "lootPanel", panel, ROOT_400_300)
-            items_list = find_list_view(panel, "itemsCollection")
-            list_rect = assert_runtime_rect(self, "loot items", items_list, ROOT_400_300)
-            self.assertEqual((8, 6), list_runtime_grid(items_list, g.getGui()))
-            first_page = list_visible_object_names(items_list, g.getGui())
-            for graphic in items_list.getProxiedObjects(g.getGui(), 7, 5):
-                graphic.mouseEvent(g.getGui(), SDL_MOUSEBUTTONDOWN, SDL_BUTTON_LEFT, 1, 1)
-            second_page = list_visible_object_names(items_list, g.getGui())
-            self.assertNotEqual(first_page, second_page)
-            assert_child_inside(self, "lootPanel", root, "loot list", list_rect)
-            with isolated_gui_panel(g, panel):
-                capture_panel_layout(self, g, "layout_loot_panel_overflow", panel, regions={"items": list_rect})
-            panel.keyboardEvent(g.getGui(), SDL_KEYDOWN, ord(" "))
-            return {"first": first_page[:3], "second": second_page[:3]}
+        def run_loot_case(items, scenario, overflow=False):
+            def inspect_loot(panel):
+                root = assert_runtime_rect(self, "lootPanel", panel, ROOT_400_300)
+                items_list = find_list_view(panel, "itemsCollection")
+                list_rect = assert_runtime_rect(self, "loot items", items_list, ROOT_400_300)
+                self.assertEqual((8, 6), list_runtime_grid(items_list, g.getGui()))
+                first_page = list_visible_object_names(items_list, g.getGui())
+                result = {"first": first_page}
+                if overflow:
+                    for graphic in items_list.getProxiedObjects(g.getGui(), 7, 5):
+                        graphic.mouseEvent(g.getGui(), SDL_MOUSEBUTTONDOWN, SDL_BUTTON_LEFT, 1, 1)
+                    second_page = list_visible_object_names(items_list, g.getGui())
+                    self.assertNotEqual(first_page, second_page)
+                    result["second"] = second_page
+                assert_child_inside(self, "lootPanel", root, "loot list", list_rect)
+                with isolated_gui_panel(g, panel):
+                    capture_panel_layout(self, g, scenario, panel, regions={"items": list_rect})
+                panel.keyboardEvent(g.getGui(), SDL_KEYDOWN, ord(" "))
+                return result
 
-        run_blocking_panel_inspection(
-            self,
-            game,
-            g,
-            "CGameLootPanel",
-            lambda: g.getGuiHandler().showLoot(loot_creature, loot_items),
-            inspect_loot,
-            lambda panel: None,
+            _, result = run_blocking_panel_inspection(
+                self,
+                game,
+                g,
+                "CGameLootPanel",
+                lambda: g.getGuiHandler().showLoot(loot_creature, set(items)),
+                inspect_loot,
+                lambda panel: None,
+            )
+            self.assertFalse(gui_contains_class(g, "CGameLootPanel"))
+            return result
+
+        self.assertEqual([], run_loot_case([], "layout_loot_panel_empty")["first"])
+        self.assertEqual(
+            1, len(run_loot_case(make_unique_scroll_items(g, 1, "lootSingle"), "layout_loot_panel_single")["first"])
         )
-        self.assertFalse(gui_contains_class(g, "CGameLootPanel"))
+        grouped_loot = [g.createObject("Scroll") for _ in range(3)]
+        for index, item in enumerate(grouped_loot):
+            item.name = f"lootGroupedScroll{index}"
+        self.assertEqual(1, len(run_loot_case(grouped_loot, "layout_loot_panel_grouped")["first"]))
+        exact_loot = make_unique_scroll_items(g, 48, "lootExact")
+        self.assertEqual(48, len(run_loot_case(exact_loot, "layout_loot_panel_exact_capacity")["first"]))
+        overflow_result = run_loot_case(
+            make_unique_scroll_items(g, 49, "lootLayout"), "layout_loot_panel_overflow", True
+        )
+        self.assertIn("second", overflow_result)
 
         market = g.createObject("CMarket")
         market.sell = 50
@@ -12027,14 +12250,42 @@ class XvfbGameplayProcessTest(unittest.TestCase):
             pump_event_loop(5)
             self.assertGreater(trade.getTotalSellCost(), 0)
             self.assertGreater(trade.getTotalBuyCost(), 0)
+            selected_trade = get_panel_selection_box_counts_by_collection(trade)
+            self.assertEqual(1, selected_trade.get("inventoryCollection", 0))
+            self.assertEqual(1, selected_trade.get("marketCollection", 0))
+            buttons = {button.text: button for button in find_descendants_by_type(trade, "CButton")}
+            self.assertEqual(sell_button_rect, resolved_rect(buttons["SELL"]))
+            self.assertEqual(buy_button_rect, resolved_rect(buttons["BUY"]))
+            queue_question_answer(game, g, 1)
+            activate_widget(buttons["SELL"], g.getGui())
+            pump_event_loop(5)
+            self.assertFalse(gui_contains_class(g, "CGameQuestionPanel"))
+            self.assertTrue(gui_has_child_object(g, trade))
+            queue_question_answer(game, g, 1)
+            activate_widget(buttons["BUY"], g.getGui())
+            pump_event_loop(5)
+            self.assertFalse(gui_contains_class(g, "CGameQuestionPanel"))
+            trade.mouseEvent(g.getGui(), SDL_MOUSEBUTTONDOWN, SDL_BUTTON_RIGHT, 1, 1)
+            pump_event_loop(5)
+            self.assertEqual(0, trade.getTotalSellCost())
+            self.assertEqual(0, trade.getTotalBuyCost())
             with isolated_gui_panel(g, trade):
-                capture_panel_layout(
+                summary = capture_panel_layout(
                     self,
                     g,
                     "layout_trade_panel",
                     trade,
-                    regions={"player": player_rect, "market": market_rect},
+                    regions={
+                        "player": player_rect,
+                        "market": market_rect,
+                        "sellCost": sell_cost_rect,
+                        "buyCost": buy_cost_rect,
+                        "sellButton": sell_button_rect,
+                        "buyButton": buy_button_rect,
+                    },
                 )
+            for region in ("player", "market", "sellCost", "buyCost", "sellButton", "buyButton"):
+                assert_region_has_pixels(self, summary, region)
         finally:
             trade.close()
             pump_event_loop(3)
@@ -12056,6 +12307,15 @@ class XvfbGameplayProcessTest(unittest.TestCase):
             enemies.append(enemy)
         enemies[4].setEffects(
             {g.createObject("Stun"), g.createObject("BarrierEffect"), g.createObject("BloodlashEffect")}
+        )
+        enemies[5].setEffects(
+            {
+                g.createObject("Stun"),
+                g.createObject("BarrierEffect"),
+                g.createObject("BloodlashEffect"),
+                g.createObject("LethalPoisonEffect"),
+                g.createObject("MutilationEffect"),
+            }
         )
         game_map.setStringProperty("combatStatus", "Initiative: player\nChoose a target and action.")
 
@@ -12125,11 +12385,15 @@ class XvfbGameplayProcessTest(unittest.TestCase):
             self.assertTrue(enemy_selector.getAllowOversize())
             self.assertEqual((4, 1), list_runtime_grid(enemy_selector, g.getGui()))
             for _ in range(4):
-                click_list_cell(enemy_selector, 3, 0)
+                self.assertTrue(activate_first_proxy_graphic(enemy_selector, g.getGui(), 3, 0))
                 pump_event_loop(3)
-            click_list_cell(enemy_selector, 1, 0)
+            self.assertTrue(activate_first_proxy_graphic(enemy_selector, g.getGui(), 1, 0))
             pump_event_loop(5)
             self.assertEqual("layoutEnemy4", fight.getEnemy().getName())
+            self.assertTrue(activate_first_proxy_graphic(enemy_selector, g.getGui(), 2, 0))
+            pump_event_loop(5)
+            self.assertEqual("layoutEnemy5", fight.getEnemy().getName())
+            self.assertEqual(5, len(fight.getEnemy().getEffects()))
 
             enemy_effect_lists = [
                 list_view
@@ -12142,6 +12406,22 @@ class XvfbGameplayProcessTest(unittest.TestCase):
                 effect_rect = resolved_rect(list_view)
                 assert_child_inside(self, "creatureView", resolved_rect(list_view.getParent()), "effects", effect_rect)
                 self.assertEqual((1, 4), list_runtime_grid(list_view, g.getGui()))
+                for column, row, _ in list_visible_object_cells(list_view, g.getGui()):
+                    assert_child_inside(
+                        self,
+                        "effects",
+                        effect_rect,
+                        "effect cell",
+                        list_cell_rect(list_view, column, row),
+                    )
+
+            fight.setEnemies(enemies[:3])
+            pump_event_loop(5)
+            self.assertEqual(3, len(fight.enemiesCollection(g.getGui())))
+            self.assertEqual("layoutEnemy0", fight.getEnemy().getName())
+            shrunk_enemy_names = set(list_visible_object_names(enemy_selector, g.getGui()))
+            self.assertTrue(shrunk_enemy_names)
+            self.assertTrue(shrunk_enemy_names.issubset({enemy.getName() for enemy in enemies[:3]}))
 
             with isolated_gui_panel(g, fight):
                 capture_panel_layout(
