@@ -77,7 +77,23 @@ void CEventHandler::registerTrigger(std::shared_ptr<CTrigger> trigger) {
         vstd::logger::warning("Ignoring null trigger registration");
         return;
     }
-    triggers.insert(std::make_pair(std::make_pair(trigger->getObject(), trigger->getEvent()), trigger));
+    const auto key = std::make_pair(trigger->getObject(), trigger->getEvent());
+    auto range = triggers.equal_range(key);
+    for (auto it = range.first; it != range.second; ++it) {
+        const auto &existing = it->second;
+        if (!existing) {
+            continue;
+        }
+        const bool sameIdentity = existing == trigger || (existing->getType() == trigger->getType() &&
+                                                          existing->getTypeId() == trigger->getTypeId() &&
+                                                          existing->getName() == trigger->getName());
+        if (sameIdentity) {
+            vstd::logger::debug("Ignoring duplicate trigger registration:", trigger->getTypeId(), trigger->getObject(),
+                                trigger->getEvent());
+            return;
+        }
+    }
+    triggers.insert(std::make_pair(key, trigger));
 }
 
 std::set<std::shared_ptr<CTrigger>> CEventHandler::getTriggers() {

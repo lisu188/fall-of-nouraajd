@@ -26,6 +26,7 @@ class ResourceAndGuiHardeningTest(unittest.TestCase):
 
     def test_loader_rejects_sparse_tiles_and_bad_tmx_objects(self):
         loader = self.read("src/core/CLoader.cpp")
+        save_format = self.read("src/core/CSaveFormat.cpp")
 
         self.assertIn("MAX_TILESET_ID", loader)
         self.assertIn("MAX_TMX_LAYER_CELLS", loader)
@@ -33,7 +34,7 @@ class ResourceAndGuiHardeningTest(unittest.TestCase):
         self.assertIn("Skipping sparse tile id above limit", loader)
         self.assertIn("Skipping tile layer with invalid dimensions", loader)
         self.assertIn("Skipping malformed map object", loader)
-        self.assertIn("Rejected save without a valid mapName", loader)
+        self.assertIn("save envelope contains invalid mapName", save_format)
 
     def test_dialogs_fail_closed(self):
         dialog_cpp = self.read("src/object/CDialog.cpp")

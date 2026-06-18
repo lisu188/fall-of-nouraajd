@@ -18,6 +18,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CProvider.h"
 #include "core/CGame.h"
 #include "core/CJsonUtil.h"
+#include "core/CSaveFormat.h"
 #include "gui/CAnimation.h"
 
 #include <algorithm>
@@ -28,6 +29,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <windows.h>
 #else
 #include <dlfcn.h>
+#include <fcntl.h>
+#include <unistd.h>
 #endif
 
 namespace {
@@ -47,19 +50,6 @@ bool isConfigResourcePath(const std::string &path) {
     const std::filesystem::path resourcePath(path);
     return isSafeRelativeResourcePath(path) &&
            (!resourcePath.has_parent_path() || resourcePath.parent_path() == std::filesystem::path("config"));
-}
-
-bool isListedSaveSlotName(const std::string &name) {
-    if (name.empty() || name.front() == '.' || name.find("..") != std::string::npos) {
-        return false;
-    }
-
-    return std::all_of(name.begin(), name.end(), [](unsigned char ch) {
-        if (std::isalnum(ch)) {
-            return true;
-        }
-        return ch == '.' || ch == '_' || ch == '-';
-    });
 }
 
 std::filesystem::path uniqueTempPathFor(const std::filesystem::path &path) {
@@ -113,6 +103,44 @@ bool writeTextFile(const std::filesystem::path &path, const std::string &data) {
     return true;
 }
 
+void flushFileBestEffort(const std::filesystem::path &path) {
+#ifdef _WIN32
+    HANDLE handle = CreateFileW(path.wstring().c_str(), GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, nullptr,
+                                OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
+    if (handle == INVALID_HANDLE_VALUE) {
+        return;
+    }
+    FlushFileBuffers(handle);
+    CloseHandle(handle);
+#else
+    const int fd = ::open(path.c_str(), O_RDONLY);
+    if (fd < 0) {
+        return;
+    }
+    (void)::fsync(fd);
+    (void)::close(fd);
+#endif
+}
+
+void flushDirectoryBestEffort(const std::filesystem::path &path) {
+#ifdef _WIN32
+    HANDLE handle = CreateFileW(path.wstring().c_str(), GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, nullptr,
+                                OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, nullptr);
+    if (handle == INVALID_HANDLE_VALUE) {
+        return;
+    }
+    FlushFileBuffers(handle);
+    CloseHandle(handle);
+#else
+    const int fd = ::open(path.c_str(), O_RDONLY | O_DIRECTORY);
+    if (fd < 0) {
+        return;
+    }
+    (void)::fsync(fd);
+    (void)::close(fd);
+#endif
+}
+
 bool restoreBackup(const std::filesystem::path &backupPath, const std::filesystem::path &path) {
     std::error_code errorCode;
     if (std::filesystem::exists(path, errorCode) && !removePathIfExists(path, "restore-remove-partial-primary")) {
@@ -123,6 +151,7 @@ bool restoreBackup(const std::filesystem::path &backupPath, const std::filesyste
         logSaveFailure(path, "restore-backup", errorCode.message());
         return false;
     }
+    flushDirectoryBestEffort(path.parent_path());
     return true;
 }
 
@@ -144,13 +173,14 @@ bool saveAtomically(const std::filesystem::path &path, const std::string &data) 
     }
 
     const auto tempPath = uniqueTempPathFor(normalizedPath);
-    const auto backupPath = std::filesystem::path(normalizedPath.string() + ".bak");
+    const auto backupPath = std::filesystem::path(normalizedPath.string() + CSaveFormat::BACKUP_SUFFIX);
     bool primaryMovedToBackup = false;
 
     if (!writeTextFile(tempPath, data)) {
         removePathIfExists(tempPath, "cleanup-temp-after-write-failure");
         return false;
     }
+    flushFileBestEffort(tempPath);
 
     if (std::filesystem::exists(normalizedPath, errorCode)) {
         if (!removePathIfExists(backupPath, "remove-old-backup")) {
@@ -163,6 +193,7 @@ bool saveAtomically(const std::filesystem::path &path, const std::string &data) 
             removePathIfExists(tempPath, "cleanup-temp-after-rotate-failure");
             return false;
         }
+        flushDirectoryBestEffort(dir);
         primaryMovedToBackup = true;
     } else if (errorCode) {
         logSaveFailure(normalizedPath, "check-primary", errorCode.message());
@@ -180,6 +211,7 @@ bool saveAtomically(const std::filesystem::path &path, const std::string &data) 
         return false;
     }
 
+    flushDirectoryBestEffort(dir);
     return true;
 }
 
@@ -360,6 +392,7 @@ std::string CResourcesProvider::getPath(std::string path) {
 
 std::vector<std::string> CResourcesProvider::getFiles(const std::string &type) {
     std::vector<std::string> retValue;
+    std::set<std::string> saveSlots;
     std::string folderName;
     std::string suffix;
 
@@ -396,10 +429,15 @@ std::vector<std::string> CResourcesProvider::getFiles(const std::string &type) {
     std::filesystem::directory_iterator dir(folderPath), end;
     while (dir != end) {
         if (type == CResType::SAVE) {
-            if (dir->is_regular_file(errorCode) && dir->path().extension() == ".json") {
-                auto slotName = dir->path().stem().string();
-                if (isListedSaveSlotName(slotName)) {
-                    retValue.push_back(slotName);
+            if (dir->is_regular_file(errorCode)) {
+                const auto filename = dir->path().filename();
+                if (auto slotName = CSaveFormat::primarySlotFromFilename(filename)) {
+                    saveSlots.insert(*slotName);
+                } else if (auto backupSlotName = CSaveFormat::backupSlotFromFilename(filename)) {
+                    const auto primaryPath = folderPath / (backupSlotName.value() + ".json");
+                    if (!std::filesystem::exists(primaryPath, errorCode)) {
+                        saveSlots.insert(*backupSlotName);
+                    }
                 }
             }
         } else if (type == CResType::MAP) {
@@ -413,19 +451,24 @@ std::vector<std::string> CResourcesProvider::getFiles(const std::string &type) {
         }
         dir++;
     }
+    if (type == CResType::SAVE) {
+        retValue.assign(saveSlots.begin(), saveSlots.end());
+    }
     std::ranges::sort(retValue);
     return retValue;
 }
 
-void CResourcesProvider::save(std::string file, const std::string &data) {
+bool CResourcesProvider::save(std::string file, const std::string &data) {
     vstd::logger::info("Saving map: " + file);
     if (!saveAtomically(std::filesystem::path(std::move(file)), data)) {
         vstd::logger::warning("Save failed; previous resource copy was preserved where possible");
+        return false;
     }
+    return true;
 }
 
-void CResourcesProvider::save(std::string file, std::shared_ptr<json> data) {
-    save(std::move(file), CJsonUtil::to_string(std::move(data)));
+bool CResourcesProvider::save(std::string file, std::shared_ptr<json> data) {
+    return save(std::move(file), CJsonUtil::to_string(std::move(data)));
 }
 
 std::shared_ptr<CAnimation> CAnimationProvider::getAnimation(const std::shared_ptr<CGame> &game,

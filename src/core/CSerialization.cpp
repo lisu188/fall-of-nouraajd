@@ -42,6 +42,11 @@ class CScopedArrayDeserializeContext {
     std::string previous;
 };
 
+bool shouldSkipInvalidArrayEntryInStrictMode() {
+    return array_deserialize_context.find("property 'quests'") != std::string::npos ||
+           array_deserialize_context.find("property 'completedQuests'") != std::string::npos;
+}
+
 class CGameObjectPointerSerializer : public CSerializerBase {
   public:
     std::any serialize(std::any object) final {
@@ -365,8 +370,18 @@ std::set<std::shared_ptr<CGameObject>> array_deserialize(const std::shared_ptr<C
         return objects;
     }
     for (unsigned int i = 0; i < object->size(); i++) {
-        auto deserialized = CSerializerFunction<std::shared_ptr<json>, std::shared_ptr<CGameObject>>::deserialize(
-            map, CJsonUtil::alias(object, (*object)[i]));
+        auto entry = CJsonUtil::alias(object, (*object)[i]);
+        if (!entry || !entry->is_object()) {
+            if (CSerialization::isStrict() && !shouldSkipInvalidArrayEntryInStrictMode()) {
+                throw std::runtime_error("Cannot deserialize a missing or non-object game object");
+            }
+            vstd::logger::warning("Failed to deserialize object in array",
+                                  array_deserialize_context.empty() ? "property <unknown>" : array_deserialize_context,
+                                  "index", i, "- skipping non-object entry");
+            continue;
+        }
+        auto deserialized =
+            CSerializerFunction<std::shared_ptr<json>, std::shared_ptr<CGameObject>>::deserialize(map, entry);
         if (!deserialized) {
             if (CSerialization::isStrict()) {
                 throw std::runtime_error("Failed to deserialize object in array at index " + std::to_string(i));
