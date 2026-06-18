@@ -105,6 +105,17 @@ ctest --test-dir cmake-build-release --output-on-failure --verbose -L performanc
 python3 test.py
 ```
 
+During iteration, use named Python suites for narrower feedback before the required full workflow:
+
+```sh
+python3 test.py --suite fast
+python3 test.py --suite gameplay
+GAME_XVFB_JOBS=4 python3 test.py --suite ui
+```
+
+`python3 test.py` and `python3 test.py --suite full` both run the full Python suite. `./scripts/run_coverage.sh` uses
+`python3 test.py --suite coverage-safe` for the coverage Python phase.
+
 Windows Release equivalent:
 
 ```bat

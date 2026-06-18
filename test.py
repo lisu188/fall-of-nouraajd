@@ -119,6 +119,32 @@ MCP_STDIO_MAP_JSON_TIMEOUT_SECONDS = 60
 MCP_STDIO_SHUTDOWN_TIMEOUT_SECONDS = 30
 GAME_TEST_WORKER = os.environ.get("GAME_TEST_WORKER") == "1"
 XVFB_GAMEPLAY_PARENT_TEST = "XvfbGameplayTest.test_keyboard_gameplay_under_xvfb"
+VALID_TEST_SUITES = ("fast", "gameplay", "ui", "coverage-safe", "full")
+FAST_TEST_PREFIXES = (
+    "CoverageReportTest.",
+    "PanelLayoutManifestTest.",
+    "PlayBootstrapTest.",
+    "TestRunnerSuiteTest.",
+)
+FAST_TEST_NAMES = {
+    "McpServerTest.test_engine_call_resolves_handle_arguments_for_python_methods",
+    "McpServerTest.test_engine_handle_call_rejects_private_methods",
+    "McpServerTest.test_engine_handle_call_scopes_controller_access_to_players",
+    "McpServerTest.test_http_notification_response_declares_empty_body",
+    "McpServerTest.test_initialize_response_preserves_request_id",
+    "McpServerTest.test_map_design_brief_rejects_path_traversal",
+    "McpServerTest.test_serialize_result_lists_python_methods_for_handles",
+    "McpServerTest.test_stdio_batch_handles_initialize_and_tool_listing",
+}
+GAMEPLAY_TEST_PREFIXES = (
+    "ConsoleEventIsolationTest.",
+    "ConsoleEventProcessTest.",
+    "GameTest.",
+    "McpServerTest.",
+)
+GAMEPLAY_EXCLUDED_TEST_NAMES = {
+    "McpServerTest.test_http_notification_response_declares_empty_body",
+}
 SERIAL_TEST_NAMES = {
     "GameTest.test_load_saved_map_slot_name_does_not_override_object_type_configs",
     "GameTest.test_missing_save_resource_directory_lists_empty",
@@ -2852,7 +2878,21 @@ def run_walkthrough(map_name, fn):
             "GAME_TEST_OUTPUT_DIR": str(child_output_dir),
         }
     )
-    completed = subprocess.run(command, cwd=REPO_ROOT, env=env, capture_output=True, text=True)
+    timeout = max(30, test_duration_weight(f"GameTest.test_map_walkthrough_{map_name}", {}) * 6)
+    if os.environ.get("GAME_COVERAGE_RUN") == "1":
+        timeout *= 4
+    try:
+        completed = subprocess.run(command, cwd=REPO_ROOT, env=env, capture_output=True, text=True, timeout=timeout)
+    except subprocess.TimeoutExpired as exc:
+        log = {
+            "map": map_name,
+            "timeout_seconds": timeout,
+            "stdout": (exc.stdout or "").strip(),
+            "stderr": (exc.stderr or "").strip(),
+            "walkthrough": fn.__name__,
+        }
+        write_walkthrough_log(map_name, log)
+        return False, log
     log = {}
     log_path = child_output_dir / f"walkthrough_{map_name}.json"
     if log_path.exists():
@@ -13317,6 +13357,65 @@ class CoverageReportTest(unittest.TestCase):
             self.assertEqual(audit, json.loads(json_report.read_text(encoding="utf-8")))
 
 
+class TestRunnerSuiteTest(unittest.TestCase):
+    def test_parse_runner_args_accepts_suite_names(self):
+        jobs, suite_name, unittest_argv = parse_runner_args(
+            ["test.py", "--suite", "gameplay", "--jobs=3", "GameTest.test_turns"]
+        )
+
+        self.assertEqual(3, jobs)
+        self.assertEqual("gameplay", suite_name)
+        self.assertEqual(["test.py", "GameTest.test_turns"], unittest_argv)
+
+    def test_parse_runner_args_rejects_unknown_suite(self):
+        with self.assertRaisesRegex(ValueError, "--suite must be one of"):
+            parse_runner_args(["test.py", "--suite", "slow"])
+
+    def test_suite_filters_keep_runtime_groups_distinct(self):
+        sample_names = [
+            "CoverageReportTest.test_coverage_paths_accept_noncanonical_root",
+            "GameTest.test_map_walkthrough_nouraajd",
+            "McpServerTest.test_stdio_map_walkthrough_test",
+            "PanelLayoutManifestTest.test_panel_layout_manifest_matches_panels_json",
+            XVFB_GAMEPLAY_PARENT_TEST,
+            "XvfbGameplayProcessTest.test_screenshot_inventory_panel_has_rendered_pixels",
+        ]
+
+        self.assertEqual(
+            [
+                "CoverageReportTest.test_coverage_paths_accept_noncanonical_root",
+                "PanelLayoutManifestTest.test_panel_layout_manifest_matches_panels_json",
+            ],
+            filter_test_names_by_suite(sample_names, "fast"),
+        )
+        self.assertEqual(
+            ["GameTest.test_map_walkthrough_nouraajd", "McpServerTest.test_stdio_map_walkthrough_test"],
+            filter_test_names_by_suite(sample_names, "gameplay"),
+        )
+        self.assertEqual(
+            ["PanelLayoutManifestTest.test_panel_layout_manifest_matches_panels_json", XVFB_GAMEPLAY_PARENT_TEST],
+            filter_test_names_by_suite(sample_names, "ui"),
+        )
+        self.assertEqual(sample_names, filter_test_names_by_suite(sample_names, "coverage-safe"))
+
+    def test_suite_commands_are_documented_and_used_by_automation(self):
+        build_workflow = (REPO_ROOT / ".github" / "workflows" / "build.yml").read_text(encoding="utf-8")
+        release_workflow = (REPO_ROOT / ".github" / "workflows" / "release.yml").read_text(encoding="utf-8")
+        coverage_script = (REPO_ROOT / "scripts" / "run_coverage.sh").read_text(encoding="utf-8")
+        testing_docs = (REPO_ROOT / "docs" / "testing.md").read_text(encoding="utf-8")
+
+        self.assertIn("python3 test.py --suite fast", build_workflow)
+        self.assertIn("python3 test.py --suite gameplay", build_workflow)
+        self.assertIn("python3 test.py --suite ui", build_workflow)
+        self.assertIn("python test.py --suite fast", build_workflow)
+        self.assertIn("python test.py --suite gameplay", build_workflow)
+        self.assertIn("python3 test.py --suite full", release_workflow)
+        self.assertIn("python3 test.py --suite coverage-safe", coverage_script)
+
+        for suite_name in VALID_TEST_SUITES:
+            self.assertIn(f"--suite {suite_name}", testing_docs)
+
+
 class McpServerTest(unittest.TestCase):
     MCP_WALKTHROUGHS = {
         "multilevel": "_mcp_walkthrough_multilevel",
@@ -14382,6 +14481,7 @@ class McpServerTest(unittest.TestCase):
 
 def parse_runner_args(argv):
     jobs = None
+    suite_name = "full"
     unittest_argv = [argv[0]]
     index = 1
     while index < len(argv):
@@ -14396,13 +14496,43 @@ def parse_runner_args(argv):
             jobs = parse_positive_int(arg.split("=", 1)[1], "--jobs")
             index += 1
             continue
+        if arg == "--suite":
+            if index + 1 >= len(argv):
+                raise ValueError(f"--suite requires one of: {', '.join(VALID_TEST_SUITES)}")
+            suite_name = argv[index + 1]
+            if suite_name not in VALID_TEST_SUITES:
+                raise ValueError(f"--suite must be one of: {', '.join(VALID_TEST_SUITES)}")
+            index += 2
+            continue
+        if arg.startswith("--suite="):
+            suite_name = arg.split("=", 1)[1]
+            if suite_name not in VALID_TEST_SUITES:
+                raise ValueError(f"--suite must be one of: {', '.join(VALID_TEST_SUITES)}")
+            index += 1
+            continue
         unittest_argv.append(arg)
         index += 1
-    return jobs, unittest_argv
+    return jobs, suite_name, unittest_argv
 
 
 def selected_unittest_args(unittest_argv):
     return [arg for arg in unittest_argv[1:] if not arg.startswith("-")]
+
+
+def test_name_matches_suite(test_name, suite_name):
+    if suite_name in {"coverage-safe", "full"}:
+        return True
+    if suite_name == "fast":
+        return test_name in FAST_TEST_NAMES or test_name.startswith(FAST_TEST_PREFIXES)
+    if suite_name == "gameplay":
+        return test_name not in GAMEPLAY_EXCLUDED_TEST_NAMES and test_name.startswith(GAMEPLAY_TEST_PREFIXES)
+    if suite_name == "ui":
+        return test_name == XVFB_GAMEPLAY_PARENT_TEST or test_name.startswith("PanelLayoutManifestTest.")
+    raise ValueError(f"--suite must be one of: {', '.join(VALID_TEST_SUITES)}")
+
+
+def filter_test_names_by_suite(test_names, suite_name):
+    return [test_name for test_name in test_names if test_name_matches_suite(test_name, suite_name)]
 
 
 def load_test_timings(path):
@@ -14450,7 +14580,7 @@ def is_serial_test_name(test_name):
     return test_name in SERIAL_TEST_NAMES or any(test_name.startswith(prefix) for prefix in SERIAL_TEST_PREFIXES)
 
 
-def runner_jobs(cli_jobs, unittest_argv):
+def runner_jobs(cli_jobs, unittest_argv, suite_name="full"):
     if GAME_TEST_WORKER:
         return 1
     if cli_jobs is not None:
@@ -14459,7 +14589,7 @@ def runner_jobs(cli_jobs, unittest_argv):
     if env_jobs:
         return parse_positive_int(env_jobs, "GAME_TEST_JOBS")
     has_unittest_options = any(arg.startswith("-") for arg in unittest_argv[1:])
-    if not has_unittest_options and not selected_unittest_args(unittest_argv):
+    if not has_unittest_options and (suite_name != "full" or not selected_unittest_args(unittest_argv)):
         return os.cpu_count() or 1
     return 1
 
@@ -14509,6 +14639,13 @@ def shard_test_names(test_names, jobs, timings=None):
     return groups
 
 
+def test_group_timeout_seconds(test_names, timings=None):
+    timings = timings or {}
+    duration_hint = sum(test_duration_weight(test_name, timings) for test_name in test_names)
+    multiplier = 8 if os.environ.get("GAME_COVERAGE_RUN") == "1" else 4
+    return max(30, int(duration_hint * multiplier))
+
+
 def run_test_subprocess(test_names, shard_name, extra_env=None):
     output_dir = TEST_OUTPUT_DIR / "workers" / shard_name
     timings_file = output_dir / "test-timings.json"
@@ -14527,7 +14664,27 @@ def run_test_subprocess(test_names, shard_name, extra_env=None):
         env.update(extra_env)
     command = [sys.executable, str(REPO_ROOT / "test.py"), *test_names]
     print(f"[test shard {shard_name}] running {len(test_names)} test(s)", flush=True)
-    return subprocess.Popen(command, cwd=REPO_ROOT, env=env)
+    return subprocess.Popen(command, cwd=REPO_ROOT, env=env, start_new_session=(os.name == "posix"))
+
+
+def wait_test_subprocess(proc, shard_name, test_names, timeout_seconds):
+    try:
+        return proc.wait(timeout=timeout_seconds)
+    except subprocess.TimeoutExpired:
+        if os.name == "posix":
+            try:
+                os.killpg(proc.pid, signal.SIGKILL)
+            except ProcessLookupError:
+                pass
+        else:
+            proc.kill()
+        proc.wait()
+        print(
+            f"[test shard {shard_name}] timed out after {timeout_seconds}s while running {', '.join(test_names)}",
+            file=sys.stderr,
+            flush=True,
+        )
+        return 124
 
 
 def run_sharded_tests(test_names, jobs, *, allow_xvfb_sidecar=False):
@@ -14553,6 +14710,7 @@ def run_sharded_tests(test_names, jobs, *, allow_xvfb_sidecar=False):
         processes.append(
             (
                 "xvfb",
+                [sidecar_test],
                 run_test_subprocess(
                     [sidecar_test],
                     "xvfb",
@@ -14563,16 +14721,21 @@ def run_sharded_tests(test_names, jobs, *, allow_xvfb_sidecar=False):
 
     if parallel_tests:
         for index, group in enumerate(shard_test_names(parallel_tests, worker_jobs, timings), start=1):
-            processes.append((f"{index}", run_test_subprocess(group, f"{index}")))
+            processes.append((f"{index}", group, run_test_subprocess(group, f"{index}")))
 
-    for shard_name, proc in processes:
-        return_code = proc.wait()
+    for shard_name, group, proc in processes:
+        return_code = wait_test_subprocess(proc, shard_name, group, test_group_timeout_seconds(group, timings))
         if return_code != 0:
             failures.append((shard_name, return_code))
 
     if serial_tests:
         serial_proc = run_test_subprocess(serial_tests, "serial")
-        return_code = serial_proc.wait()
+        return_code = wait_test_subprocess(
+            serial_proc,
+            "serial",
+            serial_tests,
+            test_group_timeout_seconds(serial_tests, timings),
+        )
         if return_code != 0:
             failures.append(("serial", return_code))
 
@@ -14582,7 +14745,12 @@ def run_sharded_tests(test_names, jobs, *, allow_xvfb_sidecar=False):
             "xvfb-long",
             extra_env={"GAME_XVFB_ONLY_CHILD_TESTS": ",".join(sorted(XVFB_LONG_CHILD_TESTS))},
         )
-        return_code = long_proc.wait()
+        return_code = wait_test_subprocess(
+            long_proc,
+            "xvfb-long",
+            [long_xvfb_test],
+            test_group_timeout_seconds([long_xvfb_test], timings),
+        )
         if return_code != 0:
             failures.append(("xvfb-long", return_code))
 
@@ -14600,18 +14768,31 @@ def run_sharded_tests(test_names, jobs, *, allow_xvfb_sidecar=False):
 
 def main():
     try:
-        cli_jobs, unittest_argv = parse_runner_args(sys.argv)
-        jobs = runner_jobs(cli_jobs, unittest_argv)
+        cli_jobs, suite_name, unittest_argv = parse_runner_args(sys.argv)
+        jobs = runner_jobs(cli_jobs, unittest_argv, suite_name)
     except ValueError as exc:
         print(str(exc), file=sys.stderr)
         sys.exit(2)
 
     has_unittest_options = any(arg.startswith("-") for arg in unittest_argv[1:])
-    full_suite = not has_unittest_options and not selected_unittest_args(unittest_argv)
-    if jobs > 1 and not has_unittest_options:
+    if suite_name != "full" and has_unittest_options:
+        print("--suite cannot be combined with unittest runner options", file=sys.stderr)
+        sys.exit(2)
+
+    selected_args = selected_unittest_args(unittest_argv)
+    full_suite = suite_name in {"coverage-safe", "full"} and not has_unittest_options and not selected_args
+    should_discover = (suite_name != "full" or jobs > 1) and not has_unittest_options
+    if should_discover:
         test_names = discover_unittest_test_names(unittest_argv)
-        if test_names and len(test_names) > 1:
+        if test_names is not None and suite_name != "full":
+            test_names = filter_test_names_by_suite(test_names, suite_name)
+        if test_names and len(test_names) > 1 and jobs > 1:
             sys.exit(run_sharded_tests(test_names, jobs, allow_xvfb_sidecar=full_suite))
+        if test_names:
+            unittest_argv = [unittest_argv[0], *test_names]
+        elif test_names == []:
+            print(f"No tests matched --suite {suite_name}", file=sys.stderr)
+            sys.exit(1)
 
     unittest.main(argv=unittest_argv, testRunner=ProgressTextTestRunner)
 

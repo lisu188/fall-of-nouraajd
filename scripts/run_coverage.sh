@@ -154,7 +154,7 @@ run_phase "python test suite" env \
     GAME_TEST_JOBS="${GAME_TEST_JOBS}" \
     GAME_XVFB_JOBS="${GAME_XVFB_JOBS}" \
     GAME_TEST_OUTPUT_DIR="${GAME_TEST_OUTPUT_DIR}" \
-    python3 test.py --jobs "${GAME_TEST_JOBS}"
+    python3 test.py --suite coverage-safe --jobs "${GAME_TEST_JOBS}"
 run_phase "report generation" generate_report
 
 total_elapsed=$((SECONDS - SCRIPT_START))
