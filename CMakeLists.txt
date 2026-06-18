@@ -546,11 +546,8 @@ function(add_game_unit_test target_name)
 
     configure_cpp_target(${target_name})
     target_link_libraries(${target_name} PRIVATE
-        Python3::Python
-        pybind11::headers
+        ${GAME_CORE_LINK_LIBS}
         ${SDL2_EXECUTABLE_LIBS}
-        ${SDL2_IMAGE_LIBS}
-        ${SDL2_TTF_LIBS}
     )
     if (NOT WIN32)
         target_link_libraries(${target_name} PRIVATE game_core)
@@ -609,11 +606,8 @@ if (WIN32)
 endif ()
 configure_cpp_target(performance_guard_tests)
 target_link_libraries(performance_guard_tests PRIVATE
-    Python3::Python
-    pybind11::headers
+    ${GAME_CORE_LINK_LIBS}
     ${SDL2_EXECUTABLE_LIBS}
-    ${SDL2_IMAGE_LIBS}
-    ${SDL2_TTF_LIBS}
 )
 if (NOT WIN32)
     target_link_libraries(performance_guard_tests PRIVATE game_core)
