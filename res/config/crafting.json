@@ -45,7 +45,8 @@
         ],
         "output": { "item": "GreaterLifePotion", "count": 1 },
         "gold": 45,
-        "successChance": 90
+        "successChance": 90,
+        "unlockFlag": "CAN_BREW_GREATER_POTIONS"
     },
     "blend_greater_mana_potion": {
         "station": "alchemyTable",
@@ -54,7 +55,8 @@
         ],
         "output": { "item": "GreaterManaPotion", "count": 1 },
         "gold": 45,
-        "successChance": 90
+        "successChance": 90,
+        "unlockFlag": "CAN_BREW_GREATER_POTIONS"
     },
     "brew_full_life_potion": {
         "station": "alchemyTable",

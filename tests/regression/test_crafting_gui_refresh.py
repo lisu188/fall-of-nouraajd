@@ -40,7 +40,9 @@ def load_crafting_with_fake_game():
     old_game = sys.modules.get("game")
     sys.modules["game"] = fake_game
     try:
-        spec = importlib.util.spec_from_file_location("crafting_under_test", REPO_ROOT / "res" / "plugins" / "crafting.py")
+        spec = importlib.util.spec_from_file_location(
+            "crafting_under_test", REPO_ROOT / "res" / "plugins" / "crafting.py"
+        )
         module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(module)
         return module
@@ -111,7 +113,7 @@ class FakePlayer:
 
 class FakeRuntime:
     def __init__(self):
-        self.available_calls = 0
+        self.station_option_calls = 0
         self.recipe = {
             "id": "brew_life_potion",
             "inputs": [{"item_id": "LesserLifePotion", "count": 2}],
@@ -120,16 +122,20 @@ class FakeRuntime:
             "success_chance": 100,
         }
 
-    def available_recipes(self, player, station_id):
-        self.available_calls += 1
-        return [self.recipe]
+    def station_options(self, player, station_id):
+        self.station_option_calls += 1
+        description = self.describe_recipe_for_player(player, self.recipe)
+        return [self.recipe], {description: self.recipe}
+
+    def is_unlocked(self, player, recipe):
+        return True
 
     def describe_recipe(self, recipe):
         return "Life Potion [brew_life_potion]: 2x Lesser Life Potion, 20g -> 1x Life Potion (100% success)"
 
     def describe_recipe_for_player(self, player, recipe):
-        state = "ready" if player.item_count >= 2 and player.gold >= 20 else "missing"
-        return f"{self.describe_recipe(recipe)} [{state}]"
+        state = "READY" if player.item_count >= 2 and player.gold >= 20 else "MISSING"
+        return f"{state} - {self.describe_recipe(recipe)}"
 
     def execute_recipe(self, game_instance, player, recipe):
         player.item_count = 0
@@ -150,10 +156,10 @@ class CraftingGuiRefreshTest(unittest.TestCase):
 
         crafting.open_crafting_station(FakeStation(handler), player)
 
-        self.assertEqual(2, runtime.available_calls)
+        self.assertEqual(2, runtime.station_option_calls)
         self.assertEqual(2, len(handler.menus))
-        self.assertIn("[ready]", handler.menus[0][0])
-        self.assertIn("[missing]", handler.menus[1][0])
+        self.assertIn("READY -", handler.menus[0][0])
+        self.assertIn("MISSING -", handler.menus[1][0])
         self.assertEqual(("You crafted Life Potion.", True), handler.messages[-1])
 
 
