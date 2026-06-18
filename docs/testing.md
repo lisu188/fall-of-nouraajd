@@ -114,9 +114,9 @@ The script:
 - runs native CTest, including the deterministic `performance` label guard
 - runs `python3 test.py` against the coverage build
 - generates reports in `coverage/coverage.txt` and `coverage/coverage.html`
-- uses `gcovr` when available and falls back to the repo-local `gcov` parser otherwise
-- merges repeated template/header line records in supported `gcovr` versions so the line gate matches the fallback reporter
-- fails if scoped line coverage is below 100%
+- uses the repo-local Python reporter by default; set `COVERAGE_REPORTER=gcovr` only for diagnostic comparison
+- applies line exclusions from `scripts/coverage_exclusions.json` unless `COVERAGE_LINE_EXCLUSIONS` is overridden
+- fails if eligible line coverage is below the default `MIN_COVERAGE=100` gate
 
 Optional coverage speed controls:
 - `COVERAGE_CXX_COMPILER_LAUNCHER=<launcher>` overrides the compiler launcher for the coverage build
