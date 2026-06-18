@@ -16,13 +16,18 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+#include "core/CController.h"
+#include "core/CGame.h"
 #include "core/CLoader.h"
 #include "core/CMap.h"
 #include "core/CProvider.h"
+#include "core/CSceneManager.h"
 #include "object/CGameObject.h"
 #include "object/CMapObject.h"
+#include "object/CPlayer.h"
 #include "object/CTile.h"
 #include "test_harness.h"
+#include "veventloop.h"
 
 #include <pybind11/embed.h>
 
@@ -31,6 +36,134 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <set>
 
 namespace {
+
+void pump_event_loop_iterations(int iterations = 10) {
+    auto loop = vstd::event_loop<>::instance();
+    for (int i = 0; i < iterations; ++i) {
+        loop->run();
+    }
+}
+
+Coords first_adjacent_walkable(const std::shared_ptr<CMap> &map, Coords origin) {
+    for (const auto &delta : {EAST, WEST, SOUTH, NORTH}) {
+        Coords target(origin.x + delta.x, origin.y + delta.y, origin.z + delta.z);
+        if (map->canStep(target)) {
+            return target;
+        }
+    }
+    return origin;
+}
+
+void test_scene_manager_state_duplicate_and_player_transfer() {
+    auto game = CGameLoader::loadGame();
+    CGameLoader::startGameWithPlayer(game, "test", "Warrior");
+    auto old_map = game->getMap();
+    auto player = old_map->getPlayer();
+    old_map->setTurn(17);
+
+    auto manager = game->getSceneManager();
+    expect_true(manager->getTransitionState() == CSceneManager::TransitionState::Idle,
+                "scene manager should start idle");
+    expect_true(!manager->isTransitionPending(), "idle scene manager should not report pending transitions");
+    expect_true(manager->requestMapChange(game, "ritual"), "scene manager should accept a first transition request");
+    expect_true(manager->getTransitionState() == CSceneManager::TransitionState::TransitionPending,
+                "accepted scene transition should enter pending state before the event loop runs");
+    expect_true(manager->isTransitionPending(), "pending scene manager should report an active transition");
+    expect_true(manager->getPendingMapName() == "ritual", "scene manager should expose the queued target");
+    expect_true(!manager->requestMapChange(game, "siege"),
+                "scene manager should reject duplicate transition requests while pending");
+    expect_true(manager->getPendingMapName() == "ritual", "duplicate request should not replace the pending target");
+    expect_true(game->getMap() == old_map, "transition should not replace the active map before the event loop runs");
+
+    pump_event_loop_iterations();
+
+    auto new_map = game->getMap();
+    expect_true(new_map != old_map, "transition should replace the active map after the event loop runs");
+    expect_true(new_map->getMapName() == "ritual", "first queued transition should determine the destination map");
+    expect_true(new_map->getTurn() == 17, "scene transition should preserve the old map turn");
+    expect_true(new_map->getPlayer() == player, "scene transition should transfer the same player object");
+    expect_true(player->getCoords() == new_map->getEntry(), "transferred player should land at the target map entry");
+    expect_true(manager->getTransitionState() == CSceneManager::TransitionState::Idle,
+                "scene manager should return to idle after transition completion");
+    expect_true(!manager->isTransitionPending(), "completed scene transition should clear pending state");
+    expect_true(manager->getPendingMapName().empty(), "completed scene transition should clear pending map name");
+}
+
+void test_scene_manager_repeated_transitions_and_controller_usability() {
+    auto game = CGameLoader::loadGame();
+    CGameLoader::startGameWithPlayer(game, "test", "Warrior");
+    auto player = game->getMap()->getPlayer();
+    game->getMap()->setTurn(5);
+
+    game->getSceneManager()->requestMapChange(game, "ritual");
+    pump_event_loop_iterations();
+    auto ritual_map = game->getMap();
+    expect_true(ritual_map->getMapName() == "ritual", "first sequential scene transition should reach ritual");
+    expect_true(ritual_map->getPlayer() == player, "first sequential scene transition should keep player identity");
+
+    auto controller = std::dynamic_pointer_cast<CPlayerController>(player->getController());
+    expect_true(controller != nullptr,
+                "player controller should be reset to a usable CPlayerController after transition");
+    const auto target = first_adjacent_walkable(ritual_map, player->getCoords());
+    if (target != player->getCoords()) {
+        controller->setTarget(player, target);
+        ritual_map->move();
+        expect_true(player->getCoords() == target, "player controller should move the player after transition");
+    }
+
+    const int expected_turn = ritual_map->getTurn() + 3;
+    ritual_map->setTurn(expected_turn);
+    game->getSceneManager()->requestMapChange(game, "test");
+    pump_event_loop_iterations();
+
+    expect_true(game->getMap()->getMapName() == "test", "second sequential scene transition should reach test map");
+    expect_true(game->getMap()->getPlayer() == player,
+                "second sequential scene transition should keep player identity");
+    expect_true(game->getMap()->getTurn() == expected_turn,
+                "second sequential scene transition should copy the updated turn");
+    expect_true(game->getSceneManager()->getTransitionState() == CSceneManager::TransitionState::Idle,
+                "scene manager should remain reusable after sequential transitions");
+}
+
+void test_scene_manager_null_and_legacy_missing_target_behavior() {
+    auto standalone_manager = std::make_shared<CSceneManager>();
+    expect_true(!standalone_manager->requestMapChange(nullptr, "ritual"),
+                "scene manager should reject transition requests without a game");
+    expect_true(standalone_manager->getTransitionState() == CSceneManager::TransitionState::Idle,
+                "null-game rejection should leave scene manager idle");
+    CGameLoader::changeMap(nullptr, "ritual");
+
+    auto game = CGameLoader::loadGame();
+    CGameLoader::startGameWithPlayer(game, "test", "Warrior");
+    auto old_player = game->getMap()->getPlayer();
+    game->getMap()->setTurn(19);
+
+    expect_true(game->getSceneManager()->requestMapChange(game, ""),
+                "scene manager should preserve loader compatibility for empty map names");
+    pump_event_loop_iterations();
+
+    expect_true(game->getMap() != nullptr, "empty-map compatibility path should still install a map object");
+    expect_true(game->getMap()->getMapName().empty(), "empty-map compatibility path should keep the blank map name");
+    expect_true(game->getMap()->getPlayer() == old_player,
+                "empty-map compatibility path should still transfer the existing player");
+    expect_true(game->getMap()->getTurn() == 19, "empty-map compatibility path should copy the old turn");
+    expect_true(game->getSceneManager()->getTransitionState() == CSceneManager::TransitionState::Idle,
+                "empty-map compatibility path should reset transition state");
+
+    game->getMap()->setTurn(21);
+
+    expect_true(game->getSceneManager()->requestMapChange(game, "missingSceneManagerMap"),
+                "scene manager should preserve loader compatibility for missing map names");
+    pump_event_loop_iterations();
+
+    expect_true(game->getMap() != nullptr, "missing-map compatibility path should still install a map object");
+    expect_true(game->getMap()->getMapName().empty(), "missing-map compatibility path should keep the blank map name");
+    expect_true(game->getMap()->getPlayer() == old_player,
+                "missing-map compatibility path should still transfer the existing player");
+    expect_true(game->getMap()->getTurn() == 21, "missing-map compatibility path should copy the old turn");
+    expect_true(game->getSceneManager()->getTransitionState() == CSceneManager::TransitionState::Idle,
+                "missing-map compatibility path should reset transition state");
+}
 
 void test_map_tiles_bounds_wrapping_and_object_cache() {
     auto map = std::make_shared<CMap>();
@@ -259,6 +392,9 @@ void test_animation_provider_uses_dynamic_animation_for_directory_resources() {
 int main() {
     pybind11::scoped_interpreter guard{};
 
+    test_scene_manager_state_duplicate_and_player_transfer();
+    test_scene_manager_repeated_transitions_and_controller_usability();
+    test_scene_manager_null_and_legacy_missing_target_behavior();
     test_map_tiles_bounds_wrapping_and_object_cache();
     test_map_keeps_tiles_and_objects_separate_by_z();
     test_can_step_checks_default_tile_passability_without_materializing();

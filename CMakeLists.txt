@@ -47,6 +47,8 @@ file(GLOB_RECURSE GAME_SRC ${CMAKE_SOURCE_DIR}/src/**.cpp ${CMAKE_SOURCE_DIR}/sr
 list(APPEND GAME_SRC
     ${CMAKE_SOURCE_DIR}/src/core/CRuntimeBridge.cpp
     ${CMAKE_SOURCE_DIR}/src/core/CRuntimeBridge.h
+    ${CMAKE_SOURCE_DIR}/src/core/CSceneManager.cpp
+    ${CMAKE_SOURCE_DIR}/src/core/CSceneManager.h
 )
 list(REMOVE_DUPLICATES GAME_SRC)
 

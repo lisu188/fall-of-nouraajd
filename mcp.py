@@ -94,6 +94,13 @@ MCP_ALLOWED_HANDLE_METHODS = {
         "getMap",
         "getObjectHandler",
         "getRngHandler",
+        "getSceneManager",
+    },
+    "CSceneManager": {
+        "getPendingMapName",
+        "getTransitionStateName",
+        "isTransitionPending",
+        "requestMapChange",
     },
     "CMap": {
         "addObjectByName",

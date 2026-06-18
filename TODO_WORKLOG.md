@@ -481,3 +481,55 @@
   in this runtime. The later `/mnt/c/Users/andrz/Downloads/stairs_up_and_down.zip` was visible and was extracted into
   versioned source assets. The later `catacombs.png` asset was available from
   `/mnt/c/Users/andrz/OneDrive/Pulpit/catacombs.png` and was integrated as the level-1 landmark.
+
+## Batch 27
+- Location: `src/core/CSceneManager.h`, `src/core/CSceneManager.cpp`, `src/core/CGame.h`,
+  `src/core/CGame.cpp`, `src/core/CLoader.cpp`, `src/core/CModule.cpp`, `mcp.py`,
+  `tests/unit/test_map.cpp`, `test.py`, `CMakeLists.txt`, `TODO_WORKLOG.md`
+- Original TODO or summary: Map switching was implemented directly in `CGameLoader::changeMap(...)`, making it hard to
+  reason about queued transition state, duplicate requests, and future multilevel-map/session policy. The task asked for
+  a `CSceneManager`/`CWorldSession` boundary while preserving the existing queued Nouraajd -> ritual behavior and adding
+  unit, integration, save/load, and MCP-style coverage.
+- Status: fixed
+- What was changed: Added `CSceneManager` as a per-game transition manager owned by `CGame`. `CGame::changeMap(...)`
+  and `CGameLoader::changeMap(...)` remain public compatibility wrappers, but `CGameLoader::changeMap(...)` now delegates
+  to `CSceneManager::requestMapChange(...)`. The manager stores explicit `Idle`, `TransitionPending`, and `Transitioning`
+  state, queues work through the same event-loop path, waits for the current map to stop moving, loads the target through
+  the existing `CMapLoader::loadNewMap(...)` path, swaps the active map, transfers the same player object, and copies the
+  old turn counter. Duplicate requests while pending or transitioning are logged and ignored. Added pybind exposure and
+  MCP handle allowlist coverage for `CGame.getSceneManager()` and the small transition-inspection API. During the rebase
+  onto current `main`, the native C++ coverage was moved from the deleted legacy `tests/unit/test_coords.cpp` into
+  `tests/unit/test_map.cpp`.
+- Why the change is correct: The transition execution sequence remains the legacy sequence, only moved behind a reusable
+  per-game boundary with observable state. The duplicate policy is deliberately conservative: while a transition is
+  pending or executing, the first accepted target wins and later requests are rejected without replacing the pending
+  target. A nested redirect requested by a destination entry trigger is covered explicitly and remains on the first
+  destination. Old-map caching/restoration is intentionally still out of scope, so the `todo.txt` entry about returning to
+  the old map remains open.
+- Tests added: C++ unit coverage for lifecycle state, duplicate rejection, turn copy, same-player transfer, controller
+  usability after a switch, repeated sequential switches, null-game rejection, empty-map compatibility, and missing-map
+  legacy compatibility. Python integration coverage covers deferred event-loop switching, duplicate request policy, real
+  `test -> ritual -> siege` transitions, nested destination-entry redirect rejection, save/load after a transition, and
+  the authored Nouraajd -> ritual -> siege campaign route. MCP stdio coverage drives a real server session through
+  `CGame.changeMap("ritual")` and asserts active map, player state, inventory, turn, quest, and manager state.
+- Validation performed before this rebase:
+  - `cmake -G Ninja -B cmake-build-release -S . -DCMAKE_BUILD_TYPE=Release`
+  - `cmake --build cmake-build-release --target _game for_unit_tests -j$(nproc)`
+  - `ctest --test-dir cmake-build-release --output-on-failure -R for_unit_tests`
+  - `python3 -m unittest test.McpServerTest.test_export_module_includes_pybind_class_methods
+    test.GameTest.test_change_map_waits_for_event_loop_after_move_event
+    test.GameTest.test_scene_manager_duplicate_transition_keeps_first_request
+    test.GameTest.test_scene_manager_real_map_transitions_preserve_player_state_and_triggers
+    test.GameTest.test_save_load_after_scene_manager_transition_preserves_active_map_player_state
+    test.GameTest.test_campaign_transitions_preserve_player_and_start_siege
+    test.McpServerTest.test_stdio_scene_manager_map_transition_walkthrough` -> `Ran 7 tests`, `OK`
+  - `python3 -m unittest test.GameTest.test_gui_includes_display_only_minimap_layout` -> `Ran 1 test`, `OK`
+  - `python3 -m unittest test.GameTest.test_scene_manager_duplicate_transition_keeps_first_request
+    test.GameTest.test_scene_manager_real_map_transitions_preserve_player_state_and_triggers
+    test.GameTest.test_scene_manager_rejects_nested_transition_from_destination_entry
+    test.GameTest.test_save_load_after_scene_manager_transition_preserves_active_map_player_state
+    test.McpServerTest.test_stdio_scene_manager_map_transition_walkthrough` -> `Ran 5 tests`, `OK`
+  - `python3 test.py` -> completed successfully
+  - `./scripts/run_coverage.sh` -> C++ tests passed, embedded `python3 test.py` passed, and report generation passed with
+    `lines: 90.17% (9493 out of 10528)`
+- Blockers if unresolved: None.
