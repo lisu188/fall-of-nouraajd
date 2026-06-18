@@ -132,6 +132,24 @@ When validation cannot be run, do not imply that it passed. Report the exact com
 
 Every bug fix must include at least one corresponding automated test (unit, integration, or regression) that fails before the fix and passes after it. Treat this as required bugfix test coverage; do not mark a bug fix complete without a regression test covering the fixed behavior.
 
+## Build, test, and coverage time optimization
+
+Treat build, test, and coverage runtime as a first-class maintenance concern. Optimize aggressively for fast
+feedback while preserving the required validation guarantees.
+
+- During iteration, prefer the narrowest reliable build or test command that exercises the changed behavior, then run the
+  required full validation workflow before finishing.
+- Use available parallelism for local builds and automation, such as `-j$(nproc)` for CMake builds on Linux, without
+  hiding failures or racing shared test state.
+- Avoid unnecessary clean builds, dependency reinstalls, broad resource recopies, full-suite reruns, or repo-wide
+  formatting when a targeted command is sufficient.
+- Keep new and updated tests deterministic, focused, and reasonably scoped; split slow end-to-end coverage from fast
+  regression checks when correctness allows.
+- When adding scripts, CI steps, fixtures, MCP walkthroughs, or coverage checks, account for their runtime cost and avoid
+  repeated expensive setup inside loops or per-test fixtures.
+- If a required validation command is slow, do not skip it silently; run it when possible and report exact blockers when
+  the environment prevents it.
+
 ## MCP game-session validation
 
 When a change affects maps, quests, dialogs, triggers, map scripts, gameplay-facing C++ bindings, or MCP tooling
