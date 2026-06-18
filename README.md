@@ -72,18 +72,23 @@ git submodule update --init --recursive
 
 From the repository root, run:
 <pre>
+python3 scripts/validate_content.py --repo-root .
+python3 -m unittest tests.test_content_validator
 cmake --build cmake-build-release --target _game for_unit_tests -j$(nproc)
 ctest --test-dir cmake-build-release --output-on-failure -R for_unit_tests
 python3 test.py
 </pre>
 For Windows Visual Studio builds, use `--config Release`, pass `-C Release` to `ctest`,
-and set `GAME_BUILD_CONFIG=Release` before running `python test.py`.
+and set `GAME_BUILD_CONFIG=Release` before running `python test.py`. Use
+`python scripts/validate_content.py --repo-root .` and
+`python -m unittest tests.test_content_validator` for the Windows content-validation
+steps.
 Also run `./scripts/run_coverage.sh` when a change touches tests (for example
 `test.py` or `tests/unit/**`), `src/core/**`, `src/handler/**`, `src/object/**`,
 or the coverage tooling. The total line coverage threshold for that run is 90%;
 see `docs/testing.md` for details, including recommended branch-protection checks.
-Data validation tests run without needing the compiled `_game` module, but
-other tests require it to be built.
+Content JSON validation and its focused fixture tests run without needing the
+compiled `_game` module, but other tests require it to be built.
 `requirements-dev.txt` is the pinned source for pip-managed Python test tools
 used by CI, Windows, and virtual environments. Linux native build dependencies,
 including pybind11, still come from the OS packages installed by `./configure.sh`.

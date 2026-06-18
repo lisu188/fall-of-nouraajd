@@ -21,15 +21,24 @@ python -m pip install --upgrade -r requirements-dev.txt
 Run from the repository root:
 
 ```bash
+python3 scripts/validate_content.py --repo-root .
+python3 -m unittest tests.test_content_validator
 cmake --build cmake-build-release --target _game for_unit_tests performance_guard_tests -j$(nproc)
 ctest --test-dir cmake-build-release --output-on-failure -R for_unit_tests
 ctest --test-dir cmake-build-release --output-on-failure --verbose -L performance
 python3 test.py
 ```
 
+The content JSON validator and its focused fixture tests use only the Python
+standard library and do not require the compiled `_game` module. They are run
+early in CI before the native build so broken map/config/dialog refs fail before
+expensive gameplay tests.
+
 For Windows Visual Studio Release builds, use the same target and CTest label with the active configuration:
 
 ```bat
+python scripts/validate_content.py --repo-root .
+python -m unittest tests.test_content_validator
 cmake --build cmake-build-release --config Release --target _game for_unit_tests performance_guard_tests
 ctest --test-dir cmake-build-release -C Release --output-on-failure -R for_unit_tests
 ctest --test-dir cmake-build-release -C Release --output-on-failure --verbose -L performance
