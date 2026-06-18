@@ -35,16 +35,21 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 namespace {
 
-bool isSafeRelativeResourcePath(const std::string &path) {
+std::optional<std::filesystem::path> normalizeSafeRelativeResourcePath(const std::string &path) {
     const std::filesystem::path resourcePath(path);
     if (path.empty() || resourcePath.is_absolute() || resourcePath.has_root_name()) {
-        return false;
+        return std::nullopt;
     }
 
     const auto normalized = resourcePath.lexically_normal().generic_string();
-    return !normalized.empty() && normalized != "." && normalized != ".." && normalized.rfind("../", 0) != 0 &&
-           normalized.find("/../") == std::string::npos;
+    if (normalized.empty() || normalized == "." || normalized == ".." || normalized.rfind("../", 0) == 0 ||
+        normalized.find("/../") != std::string::npos) {
+        return std::nullopt;
+    }
+    return std::filesystem::path(normalized);
 }
+
+bool isSafeRelativeResourcePath(const std::string &path) { return normalizeSafeRelativeResourcePath(path).has_value(); }
 
 bool isConfigResourcePath(const std::string &path) {
     const std::filesystem::path resourcePath(path);
@@ -155,8 +160,8 @@ bool restoreBackup(const std::filesystem::path &backupPath, const std::filesyste
     return true;
 }
 
-bool saveAtomically(const std::filesystem::path &path, const std::string &data) {
-    if (path.empty() || path.is_absolute() || path.has_root_name() || !isSafeRelativeResourcePath(path.string())) {
+bool saveAtomicallyResolved(const std::filesystem::path &path, const std::string &data) {
+    if (path.empty()) {
         logSaveFailure(path, "validate-path", "unsafe relative path");
         return false;
     }
@@ -270,6 +275,31 @@ bool isWithinResourceRoot(const std::filesystem::path &candidate, const std::fil
         }
     }
     return true;
+}
+
+std::filesystem::path resolveWritableResourcePath(const std::list<std::string> &roots, const std::string &path) {
+    const auto requestedPath = normalizeSafeRelativeResourcePath(path);
+    if (!requestedPath) {
+        return {};
+    }
+
+    for (const auto &root : roots) {
+        if (root.empty()) {
+            continue;
+        }
+
+        std::error_code errorCode;
+        auto resourceRoot = std::filesystem::weakly_canonical(root, errorCode);
+        if (errorCode) {
+            continue;
+        }
+
+        auto candidate = (resourceRoot / *requestedPath).lexically_normal();
+        if (isWithinResourceRoot(candidate, resourceRoot)) {
+            return candidate;
+        }
+    }
+    return {};
 }
 
 } // namespace
@@ -459,9 +489,16 @@ std::vector<std::string> CResourcesProvider::getFiles(const std::string &type) {
 }
 
 bool CResourcesProvider::save(std::string file, const std::string &data) {
-    vstd::logger::info("Saving map: " + file);
-    if (!saveAtomically(std::filesystem::path(std::move(file)), data)) {
-        vstd::logger::warning("Save failed; previous resource copy was preserved where possible");
+    const auto requestedFile = file;
+    const auto resolvedPath = resolveWritableResourcePath(searchPath, requestedFile);
+    vstd::logger::info("Saving resource:", requestedFile, "resolved:", resolvedPath.string());
+    if (resolvedPath.empty()) {
+        logSaveFailure(requestedFile, "resolve-path", "resource path was not found");
+        return false;
+    }
+    if (!saveAtomicallyResolved(resolvedPath, data)) {
+        vstd::logger::warning("Save failed; previous resource copy was preserved where possible", requestedFile,
+                              "resolved:", resolvedPath.string());
         return false;
     }
     return true;
