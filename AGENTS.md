@@ -6,7 +6,7 @@ These instructions apply to the entire repository unless a more specific `AGENTS
 
 The default branch is `main`.
 
-Keep changes narrow. Do not modify unrelated files, generated build output, packaged artifacts, dependency lock state, or submodule SHAs unless the task explicitly requires it. Do not rebase or update from `main` unless asked. Pull request auto-merge is the default; enable it after opening a pull request unless the user explicitly asks not to, the repository does not support it, or merge requirements are not satisfied. If a task requires touching `random-dungeon-generator` or `vstd`, state that clearly and rerun the full validation workflow.
+Keep changes narrow. Do not modify unrelated files, generated build output, packaged artifacts, dependency lock state, or submodule SHAs unless the task explicitly requires it. Do not rebase or update from `main` unless asked. Pull request squash auto-merge is the default; after opening a pull request, run `gh pr merge <PR_NUMBER> --auto --squash` unless the user explicitly asks not to or GitHub reports that the merge command is unavailable. If a task requires touching `random-dungeon-generator` or `vstd`, state that clearly and rerun the full validation workflow.
 
 When this file conflicts with the current code, tests, or build scripts, trust the code and update this file as part of the fix.
 
@@ -442,8 +442,8 @@ After finishing a change, always complete the repository delivery workflow:
 3. Commit the change with a clear, specific commit message.
 4. Push the branch to the remote.
 5. Open a pull request targeting `main`.
-6. Enable auto-merge for the pull request by default, unless the user explicitly asks not to or GitHub reports that auto-merge is unavailable.
-7. When auto-merge is enabled, do not wait for GitHub checks to finish; leave the pull request in auto-merge state.
+6. Run `gh pr merge <PR_NUMBER> --auto --squash` for the pull request by default, unless the user explicitly asks not to or GitHub reports that the merge command is unavailable. Replace `<PR_NUMBER>` with the pull request just opened.
+7. If GitHub queues auto-merge, do not wait for checks to finish. If GitHub merges immediately, report that outcome plainly.
 
 Keep one logical change per commit where practical. Do not bundle unrelated cleanup with feature or bug-fix work. Do not bypass failing required checks or unresolved merge conflicts unless the user explicitly instructs that specific bypass. If pushing, opening, merging, or enabling auto-merge is blocked by missing remotes, authentication, permissions, unavailable checks, merge conflicts, or platform failures, report the exact blocker and leave the branch and pull request intact.
 
