@@ -24,6 +24,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "object/CQuest.h"
 #include "test_harness.h"
 
+#include <limits>
 #include <memory>
 #include <set>
 
@@ -72,6 +73,80 @@ void test_market_guard_paths_and_item_transfers() {
     expect_true(creature->getGold() == 460, "market purchase should pay the creature");
     expect_true(!creature->hasInInventory(item), "market purchase should remove the item from inventory");
     expect_true(market->getItems().contains(item), "market purchase should move the item into stock");
+}
+
+void test_market_prices_are_bounded_and_non_exploitable() {
+    auto market = std::make_shared<CMarket>();
+    auto buyer = std::make_shared<CCreature>();
+    auto seller = std::make_shared<CCreature>();
+    auto powerful_item = std::make_shared<CItem>();
+
+    powerful_item->setPower(25);
+    market->add(powerful_item);
+
+    expect_true(market->getSellCost(powerful_item) == 100000, "high-power market sale price should be capped");
+    expect_true(market->getBuyCost(powerful_item) == 5000, "high-power market buyback should be capped");
+    expect_true(market->getBuyCost(powerful_item) <= market->getSellCost(powerful_item),
+                "market buyback should never exceed sale price");
+
+    buyer->setGold(99999);
+    expect_true(!market->sellItem(buyer, powerful_item), "buyer should not buy a capped item without enough gold");
+    expect_true(buyer->getGold() == 99999, "failed capped sale should not change buyer gold");
+    expect_true(market->getItems().contains(powerful_item), "failed capped sale should keep item in market");
+
+    buyer->setGold(100000);
+    expect_true(market->sellItem(buyer, powerful_item), "buyer should buy capped item at exact price");
+    expect_true(buyer->getGold() == 0, "capped sale should subtract exact capped price");
+    expect_true(buyer->hasInInventory(powerful_item), "capped sale should transfer item to buyer");
+
+    market->buyItem(buyer, powerful_item);
+    expect_true(buyer->getGold() == 5000, "capped buyback should pay the capped buyback price");
+    expect_true(!buyer->hasInInventory(powerful_item), "buyback should remove item from seller inventory");
+    expect_true(market->getItems().contains(powerful_item), "buyback should return item to market stock");
+
+    market->setSell(-100);
+    auto negative_price_item = std::make_shared<CItem>();
+    negative_price_item->setPower(1);
+    market->add(negative_price_item);
+    seller->setGold(1000);
+    expect_true(market->getSellCost(negative_price_item) == 0, "negative sale percentages should price at zero");
+    expect_true(!market->sellItem(seller, negative_price_item), "zero-priced market sales should fail closed");
+    expect_true(seller->getGold() == 1000, "failed zero-priced sale should not change gold");
+    expect_true(market->getItems().contains(negative_price_item), "failed zero-priced sale should keep stock");
+
+    market->setBuy(-100);
+    seller->addItem(negative_price_item);
+    expect_true(market->getBuyCost(negative_price_item) == 0, "negative buyback percentages should price at zero");
+    market->buyItem(seller, negative_price_item);
+    expect_true(seller->getGold() == 1000, "zero-priced buyback should not pay the seller");
+    expect_true(seller->hasInInventory(negative_price_item), "zero-priced buyback should leave item in inventory");
+
+    market->setSell(100);
+    auto underflow_item = std::make_shared<CItem>();
+    underflow_item->setPower(-2000);
+    market->add(underflow_item);
+    expect_true(market->getSellCost(underflow_item) == 0, "underflowed sale prices should fail closed");
+    expect_true(!market->sellItem(seller, underflow_item), "underflowed zero-price market sales should fail closed");
+    expect_true(seller->getGold() == 1000, "underflowed sale should not change gold");
+    expect_true(market->getItems().contains(underflow_item), "underflowed sale should keep stock");
+
+    auto low_power_item = std::make_shared<CItem>();
+    low_power_item->setPower(-10);
+    expect_true(market->getSellCost(low_power_item) == 1, "positive sub-unit sale prices should round up to one");
+
+    auto overflowing_base_item = std::make_shared<CItem>();
+    overflowing_base_item->setPower(2048);
+    expect_true(market->getSellCost(overflowing_base_item) == 100000, "overflowing base prices should cap safely");
+
+    auto overflowing_scale_item = std::make_shared<CItem>();
+    overflowing_scale_item->setPower(1000);
+    market->setSell(std::numeric_limits<int>::max());
+    expect_true(market->getSellCost(overflowing_scale_item) == 100000, "overflowing scaled prices should cap safely");
+
+    auto replacement_item = std::make_shared<CItem>();
+    market->setItems({replacement_item});
+    expect_true(market->getItems().size() == 1 && market->getItems().contains(replacement_item),
+                "market setItems should remove old stock before adding replacements");
 }
 
 void test_player_quest_setters_filter_nulls_and_skip_duplicates() {
@@ -148,6 +223,7 @@ void test_creature_inventory_equipment_and_ratio_helpers() {
 
 int main() {
     test_market_guard_paths_and_item_transfers();
+    test_market_prices_are_bounded_and_non_exploitable();
     test_player_quest_setters_filter_nulls_and_skip_duplicates();
     test_creature_inventory_equipment_and_ratio_helpers();
 
