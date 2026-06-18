@@ -17,9 +17,12 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
 #include "core/CController.h"
+#include "core/CGame.h"
+#include "core/CMap.h"
 #include "core/CStats.h"
 #include "object/CCreature.h"
 #include "object/CPlayer.h"
+#include "object/CTile.h"
 #include "test_harness.h"
 #include "veventloop.h"
 
@@ -37,6 +40,13 @@ std::shared_ptr<CCreature> creature_at(int x, int y, int z) {
     creature->setPosY(y);
     creature->setPosZ(z);
     return creature;
+}
+
+std::shared_ptr<CTile> walkable_tile() {
+    auto tile = std::make_shared<CTile>();
+    tile->setTileType("floor");
+    tile->setCanStep(true);
+    return tile;
 }
 
 Coords resolve_coords(const std::shared_ptr<vstd::future<Coords, void>> &future) {
@@ -101,6 +111,31 @@ void test_movement_controller_null_and_no_map_paths() {
     player_controller->onTurnEnded(nullptr);
 }
 
+void test_npc_random_controller_clears_current_tile_path() {
+    auto game = std::make_shared<CGame>();
+    auto map = std::make_shared<CMap>();
+    game->setMap(map);
+    map->setGame(game);
+    map->setXBounds({{0, 0}});
+    map->setYBounds({{0, 0}});
+    map->setWrapX({{0, 1}});
+    map->setWrapY({{0, 1}});
+    map->addTile(walkable_tile(), 0, 0, 0);
+
+    auto creature = creature_at(0, 0, 0);
+    creature->setName("unitNpcRandomWalker");
+    creature->setGame(game);
+    creature->setHp(1);
+
+    auto controller = std::make_shared<CNpcRandomController>();
+    controller->setGame(game);
+    creature->setController(controller);
+
+    auto selected = resolve_coords(controller->control(creature));
+    expect_true(selected == Coords(0, 0, 0),
+                "NPC random controller should stay put when every random target normalizes to the current tile");
+}
+
 void test_fight_controller_guard_paths_and_fallbacks() {
     auto attacker = creature_at(0, 0, 0);
     auto opponent = creature_at(1, 0, 0);
@@ -146,6 +181,7 @@ void test_fight_controller_guard_paths_and_fallbacks() {
 
 int main() {
     test_movement_controller_null_and_no_map_paths();
+    test_npc_random_controller_clears_current_tile_path();
     test_fight_controller_guard_paths_and_fallbacks();
 
     return finish_tests();

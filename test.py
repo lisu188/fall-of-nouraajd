@@ -1176,6 +1176,120 @@ def find_runtime_object(game_map, object_name):
     return obj
 
 
+NOURAAJD_QUEST_STATE_NAMES = (
+    "rolf",
+    "main",
+    "beren_chain",
+    "octobogz_contract",
+    "amulet",
+    "victor",
+)
+
+NOURAAJD_MAP_BOOL_FLAGS = (
+    "completed_rolf",
+    "completed_gooby",
+    "DELIVERED_LETTER",
+    "RELIC_RETURNED",
+    "OCTOBOGZ_SLAIN",
+    "OCTOBOGZ_CLEARED",
+    "CAVE_PURGED",
+    "completed_octobogz",
+    "AMULET_QUEST_STARTED",
+    "AMULET_RETURNED",
+    "VICTOR_QUEST_STARTED",
+    "VICTOR_COURTYARD_FOUND",
+    "VICTOR_CULTISTS_SPAWNED",
+    "VICTOR_GOOD_END",
+    "VICTOR_BAD_END",
+    "VICTOR_HELP",
+    "VICTOR_REWARD_CLAIMED",
+)
+
+NOURAAJD_PLAYER_BOOL_FLAGS = (
+    "CAN_CRAFT_SCROLLS",
+    "CAN_BREW_GREATER_POTIONS",
+)
+
+NOURAAJD_INVENTORY_ITEMS = (
+    "letterFromRolf",
+    "skullOfRolf",
+    "letterToBeren",
+    "holyRelic",
+    "preciousAmulet",
+    "ShadowBlade",
+)
+
+
+def completed_quest_names(player):
+    if not hasattr(player, "getCompletedQuests"):
+        return []
+    return sorted(player_quest_id(quest) for quest in player.getCompletedQuests())
+
+
+def named_object_presence(game_map, names):
+    return {name: game_map.getObjectByName(name) is not None for name in names}
+
+
+def named_object_prefix_counts(game_map, prefixes):
+    counts = {prefix: 0 for prefix in prefixes}
+    for obj in game_map.getObjects():
+        name = obj.getName()
+        if not name:
+            continue
+        for prefix in prefixes:
+            if name.startswith(prefix):
+                counts[prefix] += 1
+    return counts
+
+
+def nouraajd_quest_state_snapshot(game_map):
+    return {quest: game_map.getStringProperty(f"quest_state_{quest}") for quest in NOURAAJD_QUEST_STATE_NAMES}
+
+
+def player_item_counts(player, item_ids):
+    return {item_id: player.countItems(item_id) for item_id in item_ids}
+
+
+def nouraajd_save_load_snapshot(game_map, player, *, object_names=(), object_prefixes=()):
+    return {
+        "map": game_map.mapName,
+        "player": coords_tuple(player.getCoords()),
+        "turn": game_map.getTurn(),
+        "quest_states": nouraajd_quest_state_snapshot(game_map),
+        "map_flags": {flag: game_map.getBoolProperty(flag) for flag in NOURAAJD_MAP_BOOL_FLAGS},
+        "victor_turn": game_map.getNumericProperty("VICTOR_COURTYARD_TURN"),
+        "player_flags": {flag: player.getBoolProperty(flag) for flag in NOURAAJD_PLAYER_BOOL_FLAGS},
+        "items": player_item_counts(player, NOURAAJD_INVENTORY_ITEMS),
+        "active_quests": quest_names(player),
+        "completed_quests": completed_quest_names(player),
+        "objects": named_object_presence(game_map, object_names),
+        "object_prefix_counts": named_object_prefix_counts(game_map, object_prefixes),
+    }
+
+
+def save_load_roundtrip(game, game_map, prefix):
+    save_name = unique_save_name(prefix)
+    save_path = Path.cwd() / "save" / f"{save_name}.json"
+    game.CMapLoader.save(game_map, save_name)
+    loaded_game = game.CGameLoader.loadGame()
+    game.CGameLoader.loadSavedGame(loaded_game, save_name)
+    loaded_map = loaded_game.getMap()
+    loaded_player = loaded_map.getPlayer()
+    return save_path, loaded_game, loaded_map, loaded_player
+
+
+def assert_nouraajd_save_load_roundtrip(test_case, game, game_map, prefix, save_paths, **snapshot_kwargs):
+    before = nouraajd_save_load_snapshot(game_map, game_map.getPlayer(), **snapshot_kwargs)
+    save_path, loaded_game, loaded_map, loaded_player = save_load_roundtrip(game, game_map, prefix)
+    save_paths.append(save_path)
+    after = nouraajd_save_load_snapshot(loaded_map, loaded_player, **snapshot_kwargs)
+
+    test_case.assertEqual(before, after)
+    test_case.assertIsNotNone(get_player_controller(loaded_player))
+    test_case.assertIsNotNone(loaded_player.getFightController())
+    return loaded_game, loaded_map, loaded_player, after
+
+
 def find_map_object_definition(map_name, object_name):
     map_data = load_map_data(map_name)
     for layer in map_data.get("layers", []):
@@ -4200,6 +4314,153 @@ class GameTest(unittest.TestCase):
             },
             sort_keys=True,
         )
+
+    @game_test
+    def test_saved_quest_dependency_loader_uses_class_and_type_refs(self):
+        game = load_game_module()
+        map_root = Path.cwd() / "maps"
+        save_name = unique_save_name("quest_dependency_loader")
+        save_path = Path.cwd() / "save" / f"{save_name}.json"
+        map_dirs = [
+            map_root / "unit_class_source",
+            map_root / "unit_type_source",
+            map_root / "unit_empty_config",
+            map_root / "unit_scalar_config",
+            map_root / "unit_bad@map",
+        ]
+
+        try:
+            class_source = map_dirs[0]
+            class_source.mkdir(parents=True, exist_ok=True)
+            (class_source / "script.py").write_text(
+                "\n".join(
+                    [
+                        "def load(self, context):",
+                        "    from game import CQuest, register",
+                        "    @register(context)",
+                        "    class UnitClassOnlyQuest(CQuest):",
+                        "        pass",
+                    ]
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            (class_source / "config.json").write_text(
+                json.dumps(
+                    {
+                        "unitClassOnlyAlias": {
+                            "class": "UnitClassOnlyQuest",
+                            "properties": {"description": "Class-only dependency quest"},
+                        }
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+            type_source = map_dirs[1]
+            type_source.mkdir(parents=True, exist_ok=True)
+            (type_source / "script.py").write_text("def load(self, context):\n    pass\n", encoding="utf-8")
+            (type_source / "config.json").write_text(
+                json.dumps(
+                    {
+                        "unitTypeOnlyAlias": {
+                            "class": "UnitTypeOnlyQuest",
+                            "properties": {"typeId": "externalTypeQuest"},
+                        }
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+            empty_config = map_dirs[2]
+            empty_config.mkdir(parents=True, exist_ok=True)
+            (empty_config / "config.json").write_text("[]\n", encoding="utf-8")
+
+            scalar_config = map_dirs[3]
+            scalar_config.mkdir(parents=True, exist_ok=True)
+            (scalar_config / "config.json").write_text('{"notObject": false}\n', encoding="utf-8")
+
+            invalid_map = map_dirs[4]
+            invalid_map.mkdir(parents=True, exist_ok=True)
+
+            save_path.parent.mkdir(exist_ok=True)
+            save_path.write_text(
+                json.dumps(
+                    {
+                        "class": "CMap",
+                        "properties": {
+                            "mapName": "ritual",
+                            "turn": 7,
+                            "tiles": [],
+                            "triggers": [],
+                            "objects": [
+                                {
+                                    "class": "CPlayer",
+                                    "properties": {
+                                        "name": "player",
+                                        "posx": 3,
+                                        "posy": 22,
+                                        "posz": 0,
+                                        "quests": [
+                                            False,
+                                            {"class": "CQuest"},
+                                            {
+                                                "class": "UnitClassOnlyQuest",
+                                                "properties": {
+                                                    "name": "classQuest",
+                                                    "typeId": "externalClassQuest",
+                                                },
+                                            },
+                                            {
+                                                "class": "CQuest",
+                                                "properties": {
+                                                    "name": "typeQuest",
+                                                    "typeId": "externalTypeQuest",
+                                                },
+                                            },
+                                        ],
+                                        "completedQuests": [
+                                            {
+                                                "class": "CQuest",
+                                                "properties": {
+                                                    "name": "genericCompletedQuest",
+                                                    "typeId": "genericCompletedQuest",
+                                                },
+                                            }
+                                        ],
+                                    },
+                                }
+                            ],
+                        },
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+            g = game.CGameLoader.loadGame()
+            game.CGameLoader.loadSavedGame(g, save_name)
+            loaded_map = g.getMap()
+            loaded_player = loaded_map.getPlayer()
+
+            self.assertEqual("ritual", loaded_map.mapName)
+            self.assertEqual(7, loaded_map.getTurn())
+            self.assertEqual((3, 22, 0), coords_tuple(loaded_player.getCoords()))
+            self.assertIn("externalClassQuest", quest_names(loaded_player))
+            self.assertIn("externalTypeQuest", quest_names(loaded_player))
+            self.assertIn("genericCompletedQuest", completed_quest_names(loaded_player))
+
+            return True, json.dumps(
+                {
+                    "active": quest_names(loaded_player),
+                    "completed": completed_quest_names(loaded_player),
+                    "map": loaded_map.mapName,
+                },
+                sort_keys=True,
+            )
+        finally:
+            save_path.unlink(missing_ok=True)
+            for map_dir in map_dirs:
+                shutil.rmtree(map_dir, ignore_errors=True)
 
     @game_test
     def test_multilevel_map_loads_authored_z_layers(self):
@@ -8455,6 +8716,257 @@ class GameTest(unittest.TestCase):
             {"before": text, "after": text_after_completion},
             sort_keys=True,
         )
+
+    @game_test
+    def test_nouraajd_save_load_quest_milestones(self):
+        game = load_game_module()
+        save_paths = []
+
+        try:
+            g, game_map, player = load_game_map_with_player("nouraajd")
+            player.addItem("letterFromRolf")
+            player.addQuest("rolfQuest")
+
+            self.assertEqual("awaiting_skull", game_map.getStringProperty("quest_state_rolf"))
+            self.assertEqual("locked", game_map.getStringProperty("quest_state_main"))
+            g, game_map, player, initial = assert_nouraajd_save_load_roundtrip(
+                self,
+                game,
+                game_map,
+                "nouraajd_initial_invariants",
+                save_paths,
+                object_names=("cave1", "catacombs", "cave2"),
+            )
+            self.assertGreaterEqual(initial["items"]["letterFromRolf"], 1)
+            self.assertIn("rolfQuest", initial["active_quests"])
+
+            game_map.removeObjectByName("cave1")
+            player.checkQuests()
+            pump_event_loop(3)
+            gooby = find_runtime_object(game_map, "gooby1")
+            game_map.removeObjectByName(gooby.getName())
+            player.checkQuests()
+            pump_event_loop(3)
+
+            town_hall = g.createObject("townHallDialog")
+            beren = g.createObject("berenDialog")
+            town_hall.give_letter()
+            beren.deliver_letter()
+            player.checkQuests()
+            pump_event_loop(3)
+
+            self.assertEqual("skull_recovered", game_map.getStringProperty("quest_state_rolf"))
+            self.assertEqual("gooby_slain", game_map.getStringProperty("quest_state_main"))
+            self.assertEqual("letter_delivered", game_map.getStringProperty("quest_state_beren_chain"))
+            self.assertTrue(player.getBoolProperty("CAN_CRAFT_SCROLLS"))
+            g, game_map, player, mid = assert_nouraajd_save_load_roundtrip(
+                self,
+                game,
+                game_map,
+                "nouraajd_mid_invariants",
+                save_paths,
+                object_names=("cave1", "gooby1", "catacombs", "cave2"),
+            )
+            self.assertFalse(mid["objects"]["cave1"])
+            self.assertFalse(mid["objects"]["gooby1"])
+            self.assertTrue(mid["objects"]["catacombs"])
+            self.assertIn("rolfQuest", mid["completed_quests"])
+            self.assertIn("mainQuest", mid["completed_quests"])
+            self.assertIn("retrieveRelicQuest", mid["active_quests"])
+
+            beren = g.createObject("berenDialog")
+            travelers = g.createObject("dialog")
+            game_map.removeObjectByName("catacombs")
+            beren.return_relic()
+            travelers.accept_quest()
+            game_map.removeObjectByName("cave2")
+            player.checkQuests()
+            pump_event_loop(3)
+
+            self.assertEqual("ready_to_report", game_map.getStringProperty("quest_state_beren_chain"))
+            self.assertEqual("completed", game_map.getStringProperty("quest_state_octobogz_contract"))
+            self.assertTrue(player.getBoolProperty("CAN_BREW_GREATER_POTIONS"))
+            g, game_map, player, late = assert_nouraajd_save_load_roundtrip(
+                self,
+                game,
+                game_map,
+                "nouraajd_late_invariants",
+                save_paths,
+                object_names=("catacombs", "cave2"),
+            )
+            self.assertFalse(late["objects"]["catacombs"])
+            self.assertFalse(late["objects"]["cave2"])
+            self.assertTrue(late["map_flags"]["RELIC_RETURNED"])
+            self.assertTrue(late["map_flags"]["OCTOBOGZ_CLEARED"])
+            self.assertTrue(late["map_flags"]["completed_octobogz"])
+            self.assertGreaterEqual(late["items"]["ShadowBlade"], 1)
+            self.assertIn("octoBogzQuest", late["completed_quests"])
+            self.assertIn("cleanseCaveQuest", late["active_quests"])
+
+            return True, json.dumps(
+                {
+                    "initial": initial["quest_states"],
+                    "mid": mid["quest_states"],
+                    "late": late["quest_states"],
+                    "save_count": len(save_paths),
+                },
+                sort_keys=True,
+            )
+        finally:
+            for save_path in save_paths:
+                save_path.unlink(missing_ok=True)
+
+    @game_test
+    def test_nouraajd_save_load_optional_quest_object_state(self):
+        game = load_game_module()
+        save_paths = []
+
+        try:
+            g, game_map, player = load_game_map_with_player("nouraajd")
+            tavern_dialog = g.createObject("tavernDialog2")
+            tavern_dialog.talked_to_victor()
+            town_hall = g.createObject("townHallDialog")
+            town_hall.spawn_cultists()
+
+            self.assertEqual("encounter_active", game_map.getStringProperty("quest_state_victor"))
+            g, game_map, player, encounter = assert_nouraajd_save_load_roundtrip(
+                self,
+                game,
+                game_map,
+                "nouraajd_victor_encounter_invariants",
+                save_paths,
+                object_names=("cultLeaderQuest",),
+                object_prefixes=("victorCultist",),
+            )
+            self.assertTrue(encounter["objects"]["cultLeaderQuest"])
+            self.assertGreater(encounter["object_prefix_counts"]["victorCultist"], 0)
+            self.assertGreaterEqual(encounter["victor_turn"], 0)
+
+            leader = find_runtime_object(game_map, "cultLeaderQuest")
+            game_map.removeObjectByName(leader.getName())
+            player.checkQuests()
+            pump_event_loop(5)
+
+            self.assertEqual("good_end", game_map.getStringProperty("quest_state_victor"))
+            g, game_map, player, victor_done = assert_nouraajd_save_load_roundtrip(
+                self,
+                game,
+                game_map,
+                "nouraajd_victor_good_invariants",
+                save_paths,
+                object_names=("cultLeaderQuest",),
+                object_prefixes=("victorCultist",),
+            )
+            self.assertFalse(victor_done["objects"]["cultLeaderQuest"])
+            self.assertEqual(0, victor_done["object_prefix_counts"]["victorCultist"])
+            self.assertTrue(victor_done["map_flags"]["VICTOR_GOOD_END"])
+            self.assertTrue(victor_done["map_flags"]["VICTOR_REWARD_CLAIMED"])
+            self.assertIn("victorQuest", victor_done["completed_quests"])
+
+            quest_dialog = g.createObject("questDialog")
+            quest_dialog.start_amulet_quest()
+            self.assertEqual("active", game_map.getStringProperty("quest_state_amulet"))
+            g, game_map, player, amulet_active = assert_nouraajd_save_load_roundtrip(
+                self,
+                game,
+                game_map,
+                "nouraajd_amulet_active_invariants",
+                save_paths,
+                object_names=("oldWoman", "amuletGoblin"),
+            )
+            self.assertTrue(amulet_active["objects"]["oldWoman"])
+            self.assertTrue(amulet_active["objects"]["amuletGoblin"])
+
+            player.addItem("preciousAmulet")
+            quest_return_dialog = g.createObject("questReturnDialog")
+            quest_return_dialog.complete_amulet_quest()
+            player.checkQuests()
+            pump_event_loop(3)
+
+            self.assertEqual("returned", game_map.getStringProperty("quest_state_amulet"))
+            g, game_map, player, amulet_returned = assert_nouraajd_save_load_roundtrip(
+                self,
+                game,
+                game_map,
+                "nouraajd_amulet_returned_invariants",
+                save_paths,
+                object_names=("oldWoman", "amuletGoblin"),
+            )
+            self.assertFalse(amulet_returned["objects"]["oldWoman"])
+            self.assertFalse(amulet_returned["objects"]["amuletGoblin"])
+            self.assertTrue(amulet_returned["map_flags"]["AMULET_RETURNED"])
+            self.assertEqual(0, amulet_returned["items"]["preciousAmulet"])
+            self.assertIn("amuletQuest", amulet_returned["completed_quests"])
+
+            return True, json.dumps(
+                {
+                    "victor": victor_done["quest_states"]["victor"],
+                    "amulet": amulet_returned["quest_states"]["amulet"],
+                    "save_count": len(save_paths),
+                },
+                sort_keys=True,
+            )
+        finally:
+            for save_path in save_paths:
+                save_path.unlink(missing_ok=True)
+
+    @game_test
+    def test_nouraajd_save_load_after_ritual_transition(self):
+        game = load_game_module()
+        g, game_map, player = load_game_map_with_player("nouraajd")
+        town_hall = g.createObject("townHallDialog")
+        beren = g.createObject("berenDialog")
+
+        town_hall.give_letter()
+        beren.deliver_letter()
+        game_map.removeObjectByName("catacombs")
+        beren.return_relic()
+        game_map.removeObjectByName("cave2")
+        player.checkQuests()
+        pump_event_loop(3)
+
+        self.assertTrue(beren.can_finish_cleanse())
+        beren.finish_cleanse()
+        pump_event_loop(10)
+
+        ritual_map = g.getMap()
+        ritual_player = ritual_map.getPlayer()
+        self.assertEqual("ritual", ritual_map.mapName)
+
+        before = {
+            "map": ritual_map.mapName,
+            "player": coords_tuple(ritual_player.getCoords()),
+            "turn": ritual_map.getTurn(),
+            "active_quests": quest_names(ritual_player),
+            "completed_quests": completed_quest_names(ritual_player),
+            "player_flags": {flag: ritual_player.getBoolProperty(flag) for flag in NOURAAJD_PLAYER_BOOL_FLAGS},
+        }
+
+        save_path, loaded_game, loaded_map, loaded_player = save_load_roundtrip(
+            game,
+            ritual_map,
+            "nouraajd_ritual_transition_invariants",
+        )
+        try:
+            after = {
+                "map": loaded_map.mapName,
+                "player": coords_tuple(loaded_player.getCoords()),
+                "turn": loaded_map.getTurn(),
+                "active_quests": quest_names(loaded_player),
+                "completed_quests": completed_quest_names(loaded_player),
+                "player_flags": {flag: loaded_player.getBoolProperty(flag) for flag in NOURAAJD_PLAYER_BOOL_FLAGS},
+            }
+
+            self.assertEqual(before, after)
+            self.assertEqual("ritual", loaded_map.mapName)
+            self.assertNotIn("cleanseCaveQuest", after["active_quests"])
+            self.assertIn("cleanseCaveQuest", after["completed_quests"])
+            self.assertIsNotNone(get_player_controller(loaded_player))
+            self.assertIsNotNone(loaded_player.getFightController())
+
+            return True, json.dumps(after, sort_keys=True)
+        finally:
+            save_path.unlink(missing_ok=True)
 
     @game_test
     def test_nouraajd_quest_state_machine(self):

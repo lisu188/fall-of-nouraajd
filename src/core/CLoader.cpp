@@ -652,12 +652,121 @@ std::string getMapPath(std::string mapName) {
     return vstd::join({path, "/map.json"}, "");
 }
 
+struct CSavedQuestRefs {
+    std::set<std::string> classes;
+    std::set<std::string> typeIds;
+};
+
+void collect_saved_quest(const json &quest, CSavedQuestRefs &refs) {
+    if (!quest.is_object()) {
+        return;
+    }
+
+    if (quest.contains("class") && quest["class"].is_string()) {
+        refs.classes.insert(quest["class"].get<std::string>());
+    }
+    if (!quest.contains("properties") || !quest["properties"].is_object()) {
+        return;
+    }
+
+    const json &properties = quest["properties"];
+    for (const char *key : {"typeId", "name"}) {
+        if (properties.contains(key) && properties[key].is_string()) {
+            refs.typeIds.insert(properties[key].get<std::string>());
+        }
+    }
+}
+
+void collect_saved_quest_refs(const json &node, CSavedQuestRefs &refs) {
+    if (node.is_object()) {
+        if (node.contains("properties") && node["properties"].is_object()) {
+            const json &properties = node["properties"];
+            for (const char *journalProperty : {"quests", "completedQuests"}) {
+                if (!properties.contains(journalProperty) || !properties[journalProperty].is_array()) {
+                    continue;
+                }
+                for (const auto &quest : properties[journalProperty]) {
+                    collect_saved_quest(quest, refs);
+                }
+            }
+        }
+        for (const auto &[key, value] : node.items()) {
+            (void)key;
+            collect_saved_quest_refs(value, refs);
+        }
+        return;
+    }
+
+    if (node.is_array()) {
+        for (const auto &value : node) {
+            collect_saved_quest_refs(value, refs);
+        }
+    }
+}
+
+bool config_matches_saved_quest_refs(const json &entry, const CSavedQuestRefs &refs) {
+    if (!entry.is_object()) {
+        return false;
+    }
+    if (entry.contains("class") && entry["class"].is_string() &&
+        refs.classes.contains(entry["class"].get<std::string>())) {
+        return true;
+    }
+    if (entry.contains("properties") && entry["properties"].is_object()) {
+        const json &properties = entry["properties"];
+        if (properties.contains("typeId") && properties["typeId"].is_string() &&
+            refs.typeIds.contains(properties["typeId"].get<std::string>())) {
+            return true;
+        }
+    }
+    return false;
+}
+
+bool map_defines_saved_quest_refs(const std::string &mapName, const CSavedQuestRefs &refs) {
+    for (const auto &configPath : getConfigPaths(mapName)) {
+        auto config = CConfigurationProvider::getConfig(configPath);
+        if (!config || !config->is_object()) {
+            continue;
+        }
+        for (const auto &[key, entry] : config->items()) {
+            if (refs.typeIds.contains(key) || config_matches_saved_quest_refs(entry, refs)) {
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
+std::set<std::string> get_saved_map_dependencies(const json &save, const std::string &mapName) {
+    std::set<std::string> maps = {mapName};
+    CSavedQuestRefs questRefs;
+    collect_saved_quest_refs(save, questRefs);
+    if (questRefs.classes.empty() && questRefs.typeIds.empty()) {
+        return maps;
+    }
+
+    for (const auto &candidate : CResourcesProvider::getInstance()->getFiles(CResType::MAP)) {
+        if (!is_valid_map_name(candidate)) {
+            continue;
+        }
+        if (map_defines_saved_quest_refs(candidate, questRefs)) {
+            maps.insert(candidate);
+        }
+    }
+    return maps;
+}
+
+void load_map_resources(const std::shared_ptr<CGame> &game, const std::string &mapName) {
+    game->getObjectHandler()->registerConfig(getConfigPaths(mapName));
+    CPluginLoader::loadMapPlugins(game, mapName);
+    game->getObjectHandler()->registerConfig(getConfigPaths(mapName));
+}
+
 std::shared_ptr<CMap> CMapLoader::loadNewMap(const std::shared_ptr<CGame> &game, const std::string &mapName) {
     if (std::shared_ptr<json> mapc = CConfigurationProvider::getConfig(getMapPath(mapName))) {
         std::shared_ptr<CMap> map = game->getObjectHandler()->createObject<CMap>(game);
         game->setMap(map);
-        game->getObjectHandler()->registerConfig(getConfigPaths(mapName));
-        CPluginLoader::loadMapPlugins(game, mapName);
+        load_map_resources(game, mapName);
         loadFromTmx(map, mapc);
         map->setMapName(mapName);
         return map;
@@ -686,9 +795,13 @@ std::shared_ptr<CMap> CMapLoader::loadSavedMap(const std::shared_ptr<CGame> &gam
             return game->getObjectHandler()->createObject<CMap>(game);
         }
 
+        load_map_resources(game, mapName);
+        for (const auto &requiredMap : get_saved_map_dependencies(*save, mapName)) {
+            if (requiredMap != mapName) {
+                load_map_resources(game, requiredMap);
+            }
+        }
         game->getObjectHandler()->registerConfig(getConfigPaths(mapName));
-        CPluginLoader::loadMapPlugins(game, mapName);
-        game->getObjectHandler()->registerConfig(getConfigPaths(mapName)); // TODO: duplicate?
 
         game->getObjectHandler()->registerConfig(saveConfigKey, save);
 
