@@ -188,6 +188,9 @@ configure_cpp_target(game_core)
 set_target_properties(game_core PROPERTIES
     OUTPUT_NAME "game_core"
 )
+if (WIN32)
+    target_compile_definitions(game_core PRIVATE GAME_CORE_BUILD)
+endif ()
 if (GAME_ENABLE_PCH AND WIN32)
     target_precompile_headers(game_core PRIVATE "${CMAKE_SOURCE_DIR}/src/core/CGlobal.h")
 endif ()
