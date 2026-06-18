@@ -2933,6 +2933,17 @@ class GameTest(unittest.TestCase):
         return True, ""
 
     @game_test
+    def test_resolved_rect_binding_defaults_to_empty_rect(self):
+        game = load_game_module()
+        bound_doc = getattr(game.CGameGraphicsObject.getResolvedRect, "__doc__", "") or ""
+        self.assertIn("Return resolved runtime layout", bound_doc)
+
+        g = game.CGameLoader.loadGame()
+        plain_graphic = g.createObject("CGameGraphicsObject")
+        self.assertEqual((0, 0, 0, 0), resolved_rect(plain_graphic))
+        return True, ""
+
+    @game_test
     def test_non_square_tmx_tile_layer_preserves_row_major_tile_positions(self):
         game = load_game_module()
         map_name = "unit_non_square_tmx"
@@ -11632,13 +11643,6 @@ class PanelLayoutManifestTest(unittest.TestCase):
                     self.assertIn("root", case)
                 else:
                     self.assertIn("parent", case)
-
-        bound_doc = getattr(load_game_module().CGameGraphicsObject.getResolvedRect, "__doc__", "") or ""
-        self.assertIn("Return resolved runtime layout", bound_doc)
-        game = load_game_module()
-        g = game.CGameLoader.loadGame()
-        plain_graphic = g.createObject("CGameGraphicsObject")
-        self.assertEqual((0, 0, 0, 0), resolved_rect(plain_graphic))
 
 
 class XvfbGameplayProcessTest(unittest.TestCase):
