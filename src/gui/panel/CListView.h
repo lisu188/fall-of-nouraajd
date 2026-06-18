@@ -158,6 +158,16 @@ class CListView : public CProxyTargetGraphicsObject {
 
     int getLeftArrowIndex(const std::shared_ptr<CGui> &gui);
 
+    int getCellCount(const std::shared_ptr<CGui> &gui);
+
+    int getVisibleItemSlots(const std::shared_ptr<CGui> &gui, int itemTypeCount);
+
+    int getMaxShift(const std::shared_ptr<CGui> &gui, int itemTypeCount);
+
+    bool isOversizedForCount(const std::shared_ptr<CGui> &gui, int itemTypeCount);
+
+    void clampShift(const std::shared_ptr<CGui> &gui, int itemTypeCount);
+
     // TODO: do not generate whole map, instead add callback arguement and stop
     // when met
     std::unordered_multimap<int, std::shared_ptr<CGameObject>> calculateIndices(const std::shared_ptr<CGui> &gui);

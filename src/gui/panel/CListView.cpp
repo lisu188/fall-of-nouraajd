@@ -60,19 +60,17 @@ bool CListView::mouseEvent(std::shared_ptr<CGui> gui, SDL_EventType type, int bu
 }
 
 void CListView::doShift(const std::shared_ptr<CGui> &gui, int val) {
-    auto collection = invokeCollection(gui);
-    const int visibleSlots = std::max(1, getSizeX(gui) * getSizeY(gui) - 2);
+    const int itemTypeCount = getItemTypesCount(gui);
+    clampShift(gui, itemTypeCount);
     shift += val;
-    if (shift < 0) {
-        shift = 0;
-    } else if (shift > static_cast<int>(collection->size()) - visibleSlots) {
-        shift = std::max(0, static_cast<int>(collection->size()) - visibleSlots);
-    }
+    clampShift(gui, itemTypeCount);
     refreshAll();
 }
 
 int CListView::shiftIndex(const std::shared_ptr<CGui> &gui, int arg) {
-    if (!isOversized(gui)) {
+    const int itemTypeCount = getItemTypesCount(gui);
+    clampShift(gui, itemTypeCount);
+    if (!isOversizedForCount(gui, itemTypeCount)) {
         return arg;
     }
     return arg > getLeftArrowIndex(gui) ? arg + shift - 1 : arg + shift;
@@ -119,7 +117,9 @@ std::shared_ptr<SDL_Rect> CListView::calculateIndexPosition(const std::shared_pt
 }
 
 bool CListView::isOversized(const std::shared_ptr<CGui> &gui) {
-    return allowOversize && getItemTypesCount(gui) > (getSizeX(gui) * getSizeY(gui));
+    const int itemTypeCount = getItemTypesCount(gui);
+    clampShift(gui, itemTypeCount);
+    return isOversizedForCount(gui, itemTypeCount);
 }
 
 int CListView::getItemTypesCount(const std::shared_ptr<CGui> &gui) {
@@ -144,6 +144,30 @@ int CListView::getSizeY(std::shared_ptr<CGui> gui) {
     const int safeTileSize = std::max(1, tileSize);
     return yPrefferedSize != -1 ? std::clamp(yPrefferedSize, 1, 128)
                                 : std::max(1, getLayout()->getRect(this->ptr<CListView>())->h / safeTileSize);
+}
+
+int CListView::getCellCount(const std::shared_ptr<CGui> &gui) { return std::max(1, getSizeX(gui) * getSizeY(gui)); }
+
+bool CListView::isOversizedForCount(const std::shared_ptr<CGui> &gui, int itemTypeCount) {
+    return allowOversize && itemTypeCount > getCellCount(gui);
+}
+
+int CListView::getVisibleItemSlots(const std::shared_ptr<CGui> &gui, int itemTypeCount) {
+    if (!isOversizedForCount(gui, itemTypeCount)) {
+        return getCellCount(gui);
+    }
+    return std::max(1, getCellCount(gui) - 2);
+}
+
+int CListView::getMaxShift(const std::shared_ptr<CGui> &gui, int itemTypeCount) {
+    if (!isOversizedForCount(gui, itemTypeCount)) {
+        return 0;
+    }
+    return std::max(0, itemTypeCount - getVisibleItemSlots(gui, itemTypeCount));
+}
+
+void CListView::clampShift(const std::shared_ptr<CGui> &gui, int itemTypeCount) {
+    shift = std::clamp(shift, 0, getMaxShift(gui, itemTypeCount));
 }
 
 CListView::collection_pointer CListView::invokeCollection(std::shared_ptr<CGui> gui) {
@@ -216,6 +240,8 @@ bool CListView::invokeSelect(std::shared_ptr<CGui> gui, int i, std::shared_ptr<C
 
 bool CListView::tryGetClickedObject(std::shared_ptr<CGui> gui, int x, int y, int &index,
                                     std::shared_ptr<CGameObject> &object) {
+    const int itemTypeCount = getItemTypesCount(gui);
+    clampShift(gui, itemTypeCount);
     const int safeTileSize = std::max(1, tileSize);
     int xIndex = x / safeTileSize;
     int yIndex = y / safeTileSize;
@@ -233,12 +259,15 @@ bool CListView::tryGetClickedObject(std::shared_ptr<CGui> gui, int x, int y, int
 
 std::list<std::shared_ptr<CGameGraphicsObject>> CListView::getProxiedObjects(std::shared_ptr<CGui> gui, int x, int y) {
     std::list<std::shared_ptr<CGameGraphicsObject>> return_val;
+    const int itemTypeCount = getItemTypesCount(gui);
+    clampShift(gui, itemTypeCount);
     int i = getSizeX(gui) * y + x;
-    if (i == getLeftArrowIndex(gui) && isOversized(gui)) {
+    const bool oversized = isOversizedForCount(gui, itemTypeCount);
+    if (i == getLeftArrowIndex(gui) && oversized) {
         return_val.push_back(CAnimationProvider::getAnimation(gui->getGame(),
                                                               "images/arrows/left")
                                  ->withCallback(getArrowCallback(true))); // TODO: cache
-    } else if (i == getRightArrowIndex(gui) && isOversized(gui)) {
+    } else if (i == getRightArrowIndex(gui) && oversized) {
         return_val.push_back(CAnimationProvider::getAnimation(gui->getGame(),
                                                               "images/arrows/right")
                                  ->withCallback(getArrowCallback(false))); // TODO: cache

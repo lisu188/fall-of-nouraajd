@@ -1,6 +1,6 @@
 /*
 fall-of-nouraajd c++ dark fantasy game
-Copyright (C) 2025  Andrzej Lis
+Copyright (C) 2025-2026  Andrzej Lis
 
 This program is free software: you can redistribute it and/or modify
         it under the terms of the GNU General Public License as published by
@@ -85,7 +85,7 @@ void CTextWidget::renderObject(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Re
     if (centered) {
         gui->getTextManager()->drawTextCentered(text, rect->x, rect->y, rect->w, rect->h);
     } else {
-        gui->getTextManager()->drawText(text, rect->x, rect->y, rect->w);
+        gui->getTextManager()->drawText(text, rect);
     }
 }
 

@@ -33,6 +33,36 @@ std::string boundedText(std::string text) {
 }
 
 int boundedWidth(int width) { return std::clamp(width, 0, MAX_TEXT_WRAP_WIDTH); }
+
+class RenderClipGuard {
+  public:
+    RenderClipGuard(SDL_Renderer *renderer, const SDL_Rect &clip) : renderer(renderer) {
+        if (!renderer) {
+            return;
+        }
+        clipWasEnabled = SDL_RenderIsClipEnabled(renderer);
+        if (clipWasEnabled) {
+            SDL_RenderGetClipRect(renderer, &previousClip);
+        }
+        SDL_RenderSetClipRect(renderer, &clip);
+    }
+
+    ~RenderClipGuard() {
+        if (!renderer) {
+            return;
+        }
+        if (clipWasEnabled) {
+            SDL_RenderSetClipRect(renderer, &previousClip);
+        } else {
+            SDL_RenderSetClipRect(renderer, nullptr);
+        }
+    }
+
+  private:
+    SDL_Renderer *renderer;
+    SDL_bool clipWasEnabled = SDL_FALSE;
+    SDL_Rect previousClip = {0, 0, 0, 0};
+};
 } // namespace
 
 SDL_Texture *CTextManager::getTexture(const std::string &text, int width) {
@@ -118,6 +148,8 @@ void CTextManager::drawTextCentered(const std::string &text, int x, int y, int w
         }
         SDL_SAFE(SDL_QueryTexture(pTexture, nullptr, nullptr, &actual.w, &actual.h));
         auto centered = CUtil::boxInBox(CUtil::rect(x, y, w, h), CUtil::rect(0, 0, actual.w, actual.h));
+        SDL_Rect clip = {x, y, std::max(0, w), std::max(0, h)};
+        RenderClipGuard clipGuard(_gui.lock()->getRenderer(), clip);
         SDL_SAFE(SDL_RenderCopy(_gui.lock()->getRenderer(), pTexture, nullptr, centered.get()));
     }
 }
@@ -127,6 +159,11 @@ void CTextManager::drawTextCentered(const std::string &text, const std::shared_p
 }
 
 void CTextManager::drawText(const std::string &text, const std::shared_ptr<SDL_Rect> &rect) {
+    if (!rect || !_gui.lock()) {
+        return;
+    }
+    SDL_Rect clip = {rect->x, rect->y, std::max(0, rect->w), std::max(0, rect->h)};
+    RenderClipGuard clipGuard(_gui.lock()->getRenderer(), clip);
     drawText(text, rect->x, rect->y, rect->w);
 }
 

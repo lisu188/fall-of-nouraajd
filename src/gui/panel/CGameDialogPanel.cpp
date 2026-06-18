@@ -1,6 +1,6 @@
 /*
 fall-of-nouraajd c++ dark fantasy game
-Copyright (C) 2025  Andrzej Lis
+Copyright (C) 2025-2026  Andrzej Lis
 
 This program is free software: you can redistribute it and/or modify
         it under the terms of the GNU General Public License as published by
@@ -23,6 +23,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "object/CDialog.h"
 
 #include <algorithm>
+#include <tuple>
+#include <vector>
 
 const std::shared_ptr<CDialog> &CGameDialogPanel::getDialog() const { return dialog; }
 
@@ -49,10 +51,23 @@ void CGameDialogPanel::reload() {
         mainWidget->setCentered(false);
         mainWidget->setText(state->getText());
 
-        int percentSize = 5;
+        auto currentOptions = getCurrentOptions();
+        const auto panelRect = getLayout()->getRect(self);
+        const auto width = std::max(1, panelRect ? panelRect->w : 1);
+        const int minimumMainPercent = 20;
 
+        std::vector<std::tuple<int, std::shared_ptr<CDialogOption>, int>> optionLayouts;
         int totalLines = 0;
-        for (const auto &[index, option] : getCurrentOptions()) {
+        for (const auto &[index, option] : currentOptions) {
+            auto optionText = vstd::str(index + 1) + ": " + option->getText();
+            int lines = std::max(1, getGame()->getGui()->getTextManager()->countLines(optionText, width));
+            optionLayouts.emplace_back(index, option, lines);
+            totalLines += lines;
+        }
+
+        const int optionAreaPercent = std::max(0, 100 - minimumMainPercent);
+        int consumedLines = 0;
+        for (const auto &[index, option, lines] : optionLayouts) {
             std::string clickName = vstd::to_hex_hash(option);
 
             auto _option = option;
@@ -69,13 +84,13 @@ void CGameDialogPanel::reload() {
 
             std::shared_ptr<CLayout> optionWidgetLayout = getGame()->createObject<CLayout>("CLayout");
 
-            const auto width = std::max(1, getLayout()->getRect(self)->w);
-            auto lines = getGame()->getGui()->getTextManager()->countLines(optionText, width);
-            totalLines += lines;
-
-            optionWidgetLayout->setY(vstd::str(100 - (totalLines * percentSize)) + "%");
+            const int y0 = optionAreaPercent * consumedLines / std::max(1, totalLines);
+            consumedLines += lines;
+            const int y1 = optionAreaPercent * consumedLines / std::max(1, totalLines);
+            const int height = std::max(1, y1 - y0);
+            optionWidgetLayout->setY(vstd::str(minimumMainPercent + y0) + "%");
             optionWidgetLayout->setW(vstd::str(100) + "%");
-            optionWidgetLayout->setH(vstd::str(percentSize * lines) + "%");
+            optionWidgetLayout->setH(vstd::str(height) + "%");
             optionWidget->setLayout(optionWidgetLayout);
 
             widgets.insert(optionWidget);
@@ -83,7 +98,7 @@ void CGameDialogPanel::reload() {
 
         std::shared_ptr<CLayout> mainWidgetLayout = getGame()->createObject<CLayout>("CLayout");
         mainWidgetLayout->setW(vstd::str(100) + "%");
-        int textSize = 100 - totalLines * percentSize;
+        int textSize = optionLayouts.empty() ? 100 : minimumMainPercent;
         mainWidgetLayout->setH(vstd::str(textSize) + "%");
         mainWidget->setLayout(mainWidgetLayout);
 

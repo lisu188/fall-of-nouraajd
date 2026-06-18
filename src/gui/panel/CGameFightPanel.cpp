@@ -212,5 +212,5 @@ std::string CGameFightPanel::getCombatStatus(std::shared_ptr<CGui> gui) {
 
 void CGameFightPanel::renderCombatStatus(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> rect, int frameTime) {
     (void)frameTime;
-    gui->getTextManager()->drawText(getCombatStatus(gui), rect->x, rect->y, rect->w);
+    gui->getTextManager()->drawText(getCombatStatus(gui), rect);
 }

@@ -16,6 +16,7 @@
 import ast
 import builtins
 import concurrent.futures
+import contextlib
 import http.client
 import importlib
 import importlib.util
@@ -415,6 +416,89 @@ GUI_TILE_SIZE = 50
 MINIMAP_RECT = (1700, 820, 220, 220)
 MINIMAP_PLAYER_RGB = (255, 255, 0)
 MINIMAP_VIEWPORT_RGB = (255, 255, 255)
+ROOT_800_600 = (560, 240, 800, 600)
+ROOT_400_300 = (760, 390, 400, 300)
+ROOT_SELECTION_BASE = (810, 390, 300, 300)
+PANEL_LAYOUT_CASES = {
+    "characterPanel": {
+        "kind": "panel",
+        "class": "CGameCharacterPanel",
+        "root": ROOT_800_600,
+        "tests": ("test_text_centric_panel_layouts",),
+    },
+    "creatureView": {
+        "kind": "nested",
+        "class": "CCreatureView",
+        "parent": "fightPanel",
+        "tests": ("test_fight_panel_and_nested_views_layout",),
+    },
+    "questionPanel": {
+        "kind": "panel",
+        "class": "CGameQuestionPanel",
+        "root": ROOT_400_300,
+        "tests": ("test_choice_panel_layouts_and_hitboxes",),
+    },
+    "fightPanel": {
+        "kind": "panel",
+        "class": "CGameFightPanel",
+        "root": ROOT_800_600,
+        "tests": ("test_fight_panel_and_nested_views_layout",),
+    },
+    "selectionPanel": {
+        "kind": "panel",
+        "class": "CGamePanel",
+        "root": ROOT_SELECTION_BASE,
+        "tests": ("test_choice_panel_layouts_and_hitboxes",),
+    },
+    "infoPanel": {
+        "kind": "panel",
+        "class": "CGameTextPanel",
+        "root": ROOT_400_300,
+        "tests": ("test_text_centric_panel_layouts", "test_panel_harness_info_artifacts"),
+    },
+    "inventoryPanel": {
+        "kind": "panel",
+        "class": "CGameInventoryPanel",
+        "root": ROOT_800_600,
+        "tests": ("test_inventory_loot_trade_list_layouts", "test_all_list_views_capacity_paging_and_shrink"),
+    },
+    "questPanel": {
+        "kind": "panel",
+        "class": "CGameQuestPanel",
+        "root": ROOT_800_600,
+        "tests": ("test_text_centric_panel_layouts",),
+    },
+    "statsView": {
+        "kind": "nested",
+        "class": "CStatsGraphicsObject",
+        "parent": "fightPanel",
+        "tests": ("test_fight_panel_and_nested_views_layout",),
+    },
+    "lootPanel": {
+        "kind": "panel",
+        "class": "CGameLootPanel",
+        "root": ROOT_400_300,
+        "tests": ("test_inventory_loot_trade_list_layouts", "test_all_list_views_capacity_paging_and_shrink"),
+    },
+    "textPanel": {
+        "kind": "panel",
+        "class": "CGameTextPanel",
+        "root": ROOT_800_600,
+        "tests": ("test_text_centric_panel_layouts",),
+    },
+    "tradePanel": {
+        "kind": "panel",
+        "class": "CGameTradePanel",
+        "root": ROOT_800_600,
+        "tests": ("test_inventory_loot_trade_list_layouts", "test_all_list_views_capacity_paging_and_shrink"),
+    },
+    "dialogPanel": {
+        "kind": "panel",
+        "class": "CGameDialogPanel",
+        "root": ROOT_800_600,
+        "tests": ("test_choice_panel_layouts_and_hitboxes",),
+    },
+}
 COMBAT_STALE_LOOP_TIMEOUT_SECONDS = 5.0 if os.environ.get("GAME_COVERAGE_RUN") == "1" else 2.0
 XVFB_GAMEPLAY_CHILD_TIMEOUT = 300 if os.environ.get("GAME_COVERAGE_RUN") == "1" else 90
 XVFB_GAMEPLAY_CHILD_TESTS = (
@@ -436,6 +520,14 @@ XVFB_GAMEPLAY_CHILD_TESTS = (
     "test_fight_quest_item_selection_is_ignored",
     "test_screenshot_question_panel_has_rendered_pixels",
     "test_screenshot_quest_panel_with_active_quest_has_rendered_pixels",
+    "test_panel_harness_info_artifacts",
+    "test_all_panel_root_layout_contracts",
+    "test_all_top_level_panels_block_outside_map_clicks",
+    "test_text_centric_panel_layouts",
+    "test_choice_panel_layouts_and_hitboxes",
+    "test_inventory_loot_trade_list_layouts",
+    "test_fight_panel_and_nested_views_layout",
+    "test_all_list_views_capacity_paging_and_shrink",
     "test_full_nouraajd_quest_walkthrough_ui",
     "test_sidebar_mouse_opens_inventory_until_hotkey_closes_it",
     "test_save_hotkey_writes_loadable_map",
@@ -455,9 +547,17 @@ XVFB_BATCHABLE_CHILD_TESTS = {
     "test_screenshot_inventory_panel_has_rendered_pixels",
     "test_screenshot_question_panel_has_rendered_pixels",
     "test_screenshot_quest_panel_with_active_quest_has_rendered_pixels",
+    "test_panel_harness_info_artifacts",
+    "test_all_panel_root_layout_contracts",
 }
 XVFB_GAMEPLAY_CHILD_DURATION_HINTS = {
     "test_full_nouraajd_quest_walkthrough_ui": 90,
+    "test_choice_panel_layouts_and_hitboxes": 12,
+    "test_inventory_loot_trade_list_layouts": 12,
+    "test_fight_panel_and_nested_views_layout": 12,
+    "test_all_list_views_capacity_paging_and_shrink": 12,
+    "test_text_centric_panel_layouts": 10,
+    "test_all_top_level_panels_block_outside_map_clicks": 8,
     "test_screenshot_after_save_hotkey_has_rendered_pixels": 8,
     "test_save_hotkey_writes_loadable_map": 8,
     "test_screenshot_minimap_has_rendered_pixels": 6,
@@ -804,6 +904,346 @@ def screenshot_rect_summary(data, width, rect):
             if rgb != (0, 0, 0):
                 non_black_pixels += 1
     return {"unique_rgb": len(unique_rgb), "non_black_pixels": non_black_pixels, "color_counts": color_counts}
+
+
+def resolved_rect(obj):
+    x, y, w, h = obj.getResolvedRect()
+    return int(x), int(y), int(w), int(h)
+
+
+def rect_right(rect):
+    return rect[0] + rect[2]
+
+
+def rect_bottom(rect):
+    return rect[1] + rect[3]
+
+
+def rect_area(rect):
+    return max(0, rect[2]) * max(0, rect[3])
+
+
+def rect_contains(outer, inner):
+    return (
+        inner[0] >= outer[0]
+        and inner[1] >= outer[1]
+        and rect_right(inner) <= rect_right(outer)
+        and rect_bottom(inner) <= rect_bottom(outer)
+    )
+
+
+def rect_contains_point(rect, x, y):
+    return rect[0] <= x < rect_right(rect) and rect[1] <= y < rect_bottom(rect)
+
+
+def rect_intersection(left, right):
+    x0 = max(left[0], right[0])
+    y0 = max(left[1], right[1])
+    x1 = min(rect_right(left), rect_right(right))
+    y1 = min(rect_bottom(left), rect_bottom(right))
+    return x0, y0, max(0, x1 - x0), max(0, y1 - y0)
+
+
+def rect_center(rect):
+    return rect[0] + rect[2] // 2, rect[1] + rect[3] // 2
+
+
+def centered_screen_rect(width, height):
+    return GUI_WIDTH // 2 - width // 2, GUI_HEIGHT // 2 - height // 2, width, height
+
+
+def same_gui_object(left, right):
+    if left is right:
+        return True
+    try:
+        if left == right:
+            return True
+    except Exception:
+        pass
+    return (
+        left.getType(),
+        left.getTypeId() if hasattr(left, "getTypeId") else "",
+        left.getName() if hasattr(left, "getName") else "",
+        resolved_rect(left),
+    ) == (
+        right.getType(),
+        right.getTypeId() if hasattr(right, "getTypeId") else "",
+        right.getName() if hasattr(right, "getName") else "",
+        resolved_rect(right),
+    )
+
+
+def gui_has_child_object(g, target):
+    return any(same_gui_object(child, target) for child in g.getGui().getChildren())
+
+
+def assert_positive_rect(test_case, label, rect):
+    test_case.assertGreater(rect[2], 0, f"{label} should have positive width: {rect}")
+    test_case.assertGreater(rect[3], 0, f"{label} should have positive height: {rect}")
+
+
+def assert_rect_on_screen(test_case, label, rect, width=GUI_WIDTH, height=GUI_HEIGHT):
+    assert_positive_rect(test_case, label, rect)
+    test_case.assertTrue(rect_contains((0, 0, width, height), rect), f"{label} escapes screen: {rect}")
+
+
+def assert_child_inside(test_case, parent_label, parent_rect, child_label, child_rect):
+    test_case.assertTrue(
+        rect_contains(parent_rect, child_rect),
+        f"{child_label} {child_rect} should be inside {parent_label} {parent_rect}",
+    )
+
+
+def assert_no_overlap(test_case, left_label, left_rect, right_label, right_rect):
+    overlap = rect_intersection(left_rect, right_rect)
+    test_case.assertEqual(
+        0,
+        rect_area(overlap),
+        f"{left_label} {left_rect} overlaps {right_label} {right_rect} at {overlap}",
+    )
+
+
+def assert_runtime_rect(test_case, label, obj, expected):
+    actual = resolved_rect(obj)
+    test_case.assertEqual(expected, actual, f"{label} resolved rectangle mismatch.")
+    return actual
+
+
+def gui_child_sort_key(child):
+    return (
+        child.getPriority() if hasattr(child, "getPriority") else 0,
+        child.getType() if hasattr(child, "getType") else "",
+        child.getName() if hasattr(child, "getName") else "",
+        child.getTypeId() if hasattr(child, "getTypeId") else "",
+    )
+
+
+def collect_gui_descendants(root):
+    result = []
+    stack = [root]
+    while stack:
+        current = stack.pop()
+        result.append(current)
+        children = sorted(list(current.getChildren()), key=gui_child_sort_key)
+        stack.extend(reversed(children))
+    return result
+
+
+def find_descendants_by_type(root, class_name):
+    return [child for child in collect_gui_descendants(root) if child.getType() == class_name]
+
+
+def find_top_level_panel(g, class_name):
+    matches = [child for child in g.getGui().getChildren() if child.getType() == class_name]
+    return sorted(matches, key=gui_child_sort_key)[-1] if matches else None
+
+
+def find_list_view(root, collection):
+    matches = [
+        child
+        for child in find_descendants_by_type(root, "CListView")
+        if getattr(child, "getCollection", lambda: "")() == collection
+    ]
+    if not matches:
+        raise AssertionError(f"Could not find CListView with collection {collection}.")
+    return matches[0]
+
+
+def list_runtime_grid(list_view, gui):
+    columns, rows = list_view.getRuntimeGridSize(gui)
+    return int(columns), int(rows)
+
+
+def list_cell_rect(list_view, column, row):
+    x, y, _, _ = resolved_rect(list_view)
+    tile = list_view.getTileSize()
+    return x + column * tile, y + row * tile, tile, tile
+
+
+def click_rect_center(rect, button=SDL_BUTTON_LEFT):
+    x, y = rect_center(rect)
+    push_sdl_mouse_click(x, y, button)
+
+
+def click_list_cell(list_view, column, row, button=SDL_BUTTON_LEFT):
+    click_rect_center(list_cell_rect(list_view, column, row), button=button)
+
+
+def activate_list_cell(list_view, gui, column, row, button=SDL_BUTTON_LEFT):
+    tile = list_view.getTileSize()
+    list_view.mouseEvent(gui, SDL_MOUSEBUTTONDOWN, button, column * tile + tile // 2, row * tile + tile // 2)
+
+
+def activate_widget(widget, gui):
+    rect = resolved_rect(widget)
+    x = rect[2] // 2
+    y = rect[3] // 2
+    widget.mouseEvent(gui, SDL_MOUSEBUTTONDOWN, SDL_BUTTON_LEFT, x, y)
+    widget.mouseEvent(gui, SDL_MOUSEBUTTONUP, SDL_BUTTON_LEFT, x, y)
+
+
+def list_cell_objects(list_view, gui, column, row):
+    objects = []
+    for graphic in list_view.getProxiedObjects(gui, column, row):
+        get_object = getattr(graphic, "getObject", None)
+        represented = get_object() if get_object else None
+        if represented is not None and represented.getType() != "CGameObject":
+            objects.append(represented)
+    return objects
+
+
+def list_visible_object_cells(list_view, gui):
+    columns, rows = list_runtime_grid(list_view, gui)
+    for row in range(rows):
+        for column in range(columns):
+            for obj in list_cell_objects(list_view, gui, column, row):
+                yield column, row, obj
+
+
+def click_first_list_object(test_case, list_view, gui, predicate=None, button=SDL_BUTTON_LEFT):
+    columns, rows = list_runtime_grid(list_view, gui)
+    for row in range(rows):
+        for column in range(columns):
+            for graphic in list_view.getProxiedObjects(gui, column, row):
+                get_object = getattr(graphic, "getObject", None)
+                obj = get_object() if get_object else None
+                if obj is None or obj.getType() == "CGameObject":
+                    continue
+                if predicate is None or predicate(obj):
+                    graphic.mouseEvent(gui, SDL_MOUSEBUTTONDOWN, button, 1, 1)
+                    return obj
+    raise AssertionError(f"No matching object found in {list_view.getCollection()} list.")
+
+
+def list_visible_object_names(list_view, gui):
+    return [obj.getName() or obj.getTypeId() for _, _, obj in list_visible_object_cells(list_view, gui)]
+
+
+def gui_object_record(obj):
+    record = {
+        "type": obj.getType(),
+        "typeId": obj.getTypeId() if hasattr(obj, "getTypeId") else "",
+        "name": obj.getName() if hasattr(obj, "getName") else "",
+        "priority": obj.getPriority() if hasattr(obj, "getPriority") else 0,
+        "rect": list(resolved_rect(obj)),
+    }
+    for key, getter_name in (
+        ("collection", "getCollection"),
+        ("callback", "getCallback"),
+        ("select", "getSelect"),
+    ):
+        getter = getattr(obj, getter_name, None)
+        if getter:
+            record[key] = getter()
+    return record
+
+
+def panel_pixel_summary(data, width, height, panel_rect, regions=None):
+    regions = regions or {}
+    summary = {
+        "inside": 0,
+        "outside": 0,
+        "tightBounds": None,
+        "regions": {name: 0 for name in regions},
+    }
+    bounds = None
+    for pixel_index in range(width * height):
+        offset = pixel_index * 4
+        if data[offset : offset + 3] == b"\x00\x00\x00":
+            continue
+        x = pixel_index % width
+        y = pixel_index // width
+        if rect_contains_point(panel_rect, x, y):
+            summary["inside"] += 1
+        else:
+            summary["outside"] += 1
+        bounds = (
+            (x, y, x, y)
+            if bounds is None
+            else (min(bounds[0], x), min(bounds[1], y), max(bounds[2], x), max(bounds[3], y))
+        )
+        for name, rect in regions.items():
+            if rect_contains_point(rect, x, y):
+                summary["regions"][name] += 1
+    if bounds is not None:
+        summary["tightBounds"] = [bounds[0], bounds[1], bounds[2] - bounds[0] + 1, bounds[3] - bounds[1] + 1]
+    return summary
+
+
+def annotate_panel_layout(source_path, output_path, summary):
+    from PIL import Image, ImageDraw
+
+    with Image.open(source_path) as image:
+        annotated = image.convert("RGBA")
+    draw = ImageDraw.Draw(annotated)
+    panel_rect = summary["panel"]["rect"]
+    draw.rectangle(
+        [panel_rect[0], panel_rect[1], rect_right(panel_rect), rect_bottom(panel_rect)],
+        outline=(255, 255, 0, 255),
+        width=3,
+    )
+    for obj in summary["objects"][:80]:
+        rect = obj["rect"]
+        if rect[2] <= 0 or rect[3] <= 0:
+            continue
+        draw.rectangle([rect[0], rect[1], rect_right(rect), rect_bottom(rect)], outline=(0, 255, 255, 255), width=1)
+        label = obj.get("collection") or obj["type"]
+        draw.text((rect[0] + 2, rect[1] + 2), label, fill=(255, 255, 255, 255))
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    annotated.save(output_path)
+
+
+def capture_panel_layout(test_case, g, scenario, panel, regions=None, outside_tolerance=0):
+    regions = regions or {}
+    pump_event_loop(3)
+    screenshot_path = TEST_OUTPUT_DIR / f"{scenario}.png"
+    try:
+        data, width, height = capture_sdl_screenshot(screenshot_path, g.getGui())
+    except RuntimeError as exc:
+        test_case.skipTest(f"SDL renderer is not available for screenshot readback: {exc}")
+    test_case.assertEqual((GUI_WIDTH, GUI_HEIGHT), (width, height))
+    panel_rect = resolved_rect(panel)
+    objects = sorted((gui_object_record(obj) for obj in collect_gui_descendants(panel)), key=lambda item: item["rect"])
+    summary = {
+        "scenario": scenario,
+        "screen": [width, height],
+        "panel": gui_object_record(panel),
+        "objects": objects,
+        "pixels": panel_pixel_summary(data, width, height, panel_rect, regions=regions),
+    }
+    json_path = TEST_OUTPUT_DIR / f"{scenario}-layout.json"
+    json_path.parent.mkdir(parents=True, exist_ok=True)
+    json_path.write_text(json.dumps(summary, indent=2, sort_keys=True))
+    annotated_path = TEST_OUTPUT_DIR / f"{scenario}-annotated.png"
+    annotate_panel_layout(screenshot_path, annotated_path, summary)
+
+    test_case.assertTrue(screenshot_path.exists())
+    test_case.assertGreater(screenshot_path.stat().st_size, 0)
+    test_case.assertTrue(annotated_path.exists())
+    test_case.assertGreater(annotated_path.stat().st_size, 0)
+    test_case.assertTrue(json_path.exists())
+    test_case.assertGreater(summary["pixels"]["inside"], 0, f"{scenario} has no pixels inside {panel_rect}.")
+    test_case.assertLessEqual(
+        summary["pixels"]["outside"],
+        outside_tolerance,
+        f"{scenario} rendered {summary['pixels']['outside']} pixels outside {panel_rect}.",
+    )
+    return summary
+
+
+@contextlib.contextmanager
+def isolated_gui_panel(g, panel):
+    gui = g.getGui()
+    removed = [child for child in gui.getChildren() if not same_gui_object(child, panel)]
+    for child in removed:
+        gui.removeChild(child)
+    pump_event_loop(3)
+    try:
+        yield
+    finally:
+        for child in removed:
+            gui.addChild(child)
+        pump_event_loop(3)
 
 
 def assert_screenshot_has_rendered_pixels(test_case, g, name):
@@ -7388,17 +7828,13 @@ class GameTest(unittest.TestCase):
         market.setItems({market_item})
         player.addGold(1000)
         player.addItem("Sword")
-        queue_sdl_inputs(
-            game,
-            lambda: push_sdl_mouse_click(585, 265),
-            lambda: push_sdl_mouse_click(1185, 265),
-            lambda: push_sdl_mouse_click(1060, 790),
-            lambda: push_sdl_mouse_click(860, 650),
-            lambda: push_sdl_mouse_click(585, 265),
-            lambda: push_sdl_mouse_click(860, 790),
-            lambda: push_sdl_mouse_click(860, 650),
-            push_space_key,
-        )
+
+        def close_trade_panel():
+            panel = find_top_level_panel(g, "CGameTradePanel")
+            if panel:
+                panel.close()
+
+        game.event_loop.instance().invoke(close_trade_panel)
         gui_handler.showTrade(market)
         self.assertFalse(gui_contains_class(g, "CGameTradePanel"))
 
@@ -7416,11 +7852,12 @@ class GameTest(unittest.TestCase):
         pump_event_loop(2)
         self.assertTrue(gui_contains_class(g, "CTooltip"))
 
-        queue_sdl_inputs(
-            game,
-            lambda: push_sdl_key_event(ord("i"), 0, SDL_KEYDOWN),
-            lambda: push_sdl_key_event(ord("i"), 0, SDL_KEYUP),
-        )
+        def close_inventory_panel():
+            panel = find_top_level_panel(g, "CGameInventoryPanel")
+            if panel:
+                panel.close()
+
+        game.event_loop.instance().invoke(close_inventory_panel)
         gui_handler.flipPanel("inventoryPanel", "i")
         self.assertFalse(gui_contains_class(g, "CGameInventoryPanel"))
 
@@ -10609,6 +11046,133 @@ def open_panel_for_screenshot(test_case, g, panel_name, class_name):
     return panel
 
 
+def wait_for_panel_closed(test_case, g, class_name, timeout=2.0):
+    test_case.assertTrue(
+        pump_event_loop_until(lambda: not gui_contains_class(g, class_name), timeout=timeout),
+        f"Expected {class_name} to be closed.",
+    )
+
+
+def configure_panel_for_layout(g, panel_name, panel):
+    if panel_name in {"infoPanel", "textPanel"}:
+        panel.setText(f"{panel_name} layout verification")
+    elif panel_name == "questionPanel":
+        panel.setStringProperty("question", "Continue layout verification?")
+    elif panel_name == "fightPanel":
+        enemy = g.createObject("GoblinThief")
+        enemy.name = "layoutRootGoblin"
+        enemy.setHp(enemy.getHpMax())
+        panel.setEnemy(enemy)
+    elif panel_name == "tradePanel":
+        market = g.createObject("CMarket")
+        market.setItems({g.createObject("Scroll")})
+        panel.setMarket(market)
+
+
+def open_layout_panel(test_case, g, panel_name):
+    expected_class = PANEL_LAYOUT_CASES[panel_name]["class"]
+    panel = g.getGuiHandler().openPanel(panel_name)
+    wait_for_panel_class(test_case, g, expected_class)
+    configure_panel_for_layout(g, panel_name, panel)
+    pump_event_loop(3)
+    return panel
+
+
+def run_blocking_panel_inspection(test_case, game, g, class_name, action, inspect, close_input):
+    observed = {}
+
+    def inspect_then_close():
+        panel = find_top_level_panel(g, class_name)
+        if panel is None:
+            observed["attempts"] = observed.get("attempts", 0) + 1
+            if observed["attempts"] > 1000:
+                observed["error"] = f"{class_name} was not visible during blocking inspection."
+                return
+            game.event_loop.instance().invoke(inspect_then_close)
+            return
+        try:
+            observed["result"] = inspect(panel)
+        except Exception:
+            observed["error"] = traceback.format_exc()
+        finally:
+            close_input(panel)
+
+    game.event_loop.instance().invoke(inspect_then_close)
+    return_value = action()
+    pump_event_loop(5)
+    if "error" in observed:
+        raise AssertionError(observed["error"])
+    test_case.assertIn("result", observed, f"{class_name} inspection did not run.")
+    return return_value, observed["result"]
+
+
+def make_ui_layout_quest(g, index, completed=False):
+    quest = g.createObject("CQuest")
+    status = "completed" if completed else "active"
+    quest.name = f"uiLayoutQuest{index}{status}"
+    quest.typeId = quest.name
+    quest.description = f"Quest {index}: inspect the panel layout under dense {status} journal content."
+    quest.objective = f"Objective {index}: verify wrapped objective text stays inside the quest panel rectangle."
+    quest.reward = f"Reward {index}: deterministic diagnostics for the layout harness."
+    quest.hint = f"Hint {index}: this hint should only appear while the quest is active."
+    return quest
+
+
+def make_dialog_state(g, state_id, text, option_texts, next_state="EXIT"):
+    state = g.createObject("CDialogState")
+    state.stateId = state_id
+    state.text = text
+    options = set()
+    for number, option_text in enumerate(option_texts):
+        option = g.createObject("CDialogOption")
+        option.number = number
+        option.text = option_text
+        option.nextStateId = next_state
+        options.add(option)
+    state.setOptions(options)
+    return state
+
+
+def make_dialog(g, states):
+    dialog = g.createObject("CDialog")
+    dialog.setStates(set(states))
+    return dialog
+
+
+def make_unique_scroll_items(g, count, prefix):
+    items = []
+    for index in range(count):
+        item = g.createObject("Scroll")
+        item.name = f"{prefix}Scroll{index}"
+        item.typeId = f"{prefix}ScrollType{index}"
+        item.animation = "images/items/scroll"
+        items.append(item)
+    return items
+
+
+class PanelLayoutManifestTest(unittest.TestCase):
+    def test_panel_layout_manifest_matches_panels_json(self):
+        panel_defs = json.loads((REPO_ROOT / "res" / "config" / "panels.json").read_text())
+        self.assertEqual(set(panel_defs), set(PANEL_LAYOUT_CASES))
+
+        xvfb_methods = {name for name in dir(XvfbGameplayProcessTest) if name.startswith("test_")}
+        for resource_id, case in PANEL_LAYOUT_CASES.items():
+            with self.subTest(resource_id=resource_id):
+                self.assertIn("class", case)
+                self.assertEqual(panel_defs[resource_id].get("class"), case["class"])
+                for test_name in case["tests"]:
+                    self.assertIn(test_name, xvfb_methods)
+                    self.assertIn(test_name, XVFB_GAMEPLAY_CHILD_TESTS)
+                if case["kind"] == "panel":
+                    self.assertIn("layout", panel_defs[resource_id].get("properties", {}))
+                    self.assertIn("root", case)
+                else:
+                    self.assertIn("parent", case)
+
+        bound_doc = getattr(load_game_module().CGameGraphicsObject.getResolvedRect, "__doc__", "") or ""
+        self.assertIn("Return resolved runtime layout", bound_doc)
+
+
 class XvfbGameplayProcessTest(unittest.TestCase):
     def setUp(self):
         if os.environ.get("GAME_XVFB_GAMEPLAY_CHILD") != "1":
@@ -10793,6 +11357,657 @@ class XvfbGameplayProcessTest(unittest.TestCase):
         player.addQuest("mainQuest")
         open_panel_for_screenshot(self, g, "questPanel", "CGameQuestPanel")
         assert_screenshot_has_rendered_pixels(self, g, "xvfb_quest_panel_screenshot")
+
+    def test_panel_harness_info_artifacts(self):
+        _, g, _, _ = create_xvfb_gameplay_session(self)
+        panel = open_layout_panel(self, g, "infoPanel")
+        panel.setText("isolated panel harness verification")
+
+        try:
+            with isolated_gui_panel(g, panel):
+                summary = capture_panel_layout(self, g, "layout_harness_info_panel", panel)
+        finally:
+            panel.close()
+            pump_event_loop(3)
+
+        self.assertEqual(list(ROOT_400_300), summary["panel"]["rect"])
+        self.assertFalse(any("0x" in json.dumps(obj) for obj in summary["objects"]))
+        assert_rendered_map_proxy_cells(self, g)
+
+    def test_all_panel_root_layout_contracts(self):
+        _, g, _, _ = create_xvfb_gameplay_session(self)
+        top_level_cases = [
+            (resource_id, case) for resource_id, case in PANEL_LAYOUT_CASES.items() if case["kind"] == "panel"
+        ]
+        for resource_id, case in top_level_cases:
+            with self.subTest(resource_id=resource_id):
+                panel = open_layout_panel(self, g, resource_id)
+                try:
+                    rect = assert_runtime_rect(self, resource_id, panel, case["root"])
+                    assert_rect_on_screen(self, resource_id, rect)
+                    self.assertTrue(gui_has_child_object(g, panel))
+                    with isolated_gui_panel(g, panel):
+                        capture_panel_layout(self, g, f"layout_root_{resource_id}", panel)
+                finally:
+                    panel.close()
+                    pump_event_loop(3)
+                self.assertEqual(0, sum(1 for child in g.getGui().getChildren() if child.getType() == case["class"]))
+
+    def test_all_top_level_panels_block_outside_map_clicks(self):
+        _, g, game_map, player = create_xvfb_gameplay_session(self)
+        candidates = ((25, 25), (GUI_WIDTH - 25, 25), (25, GUI_HEIGHT - 25), (960, 100))
+        for resource_id, case in PANEL_LAYOUT_CASES.items():
+            if case["kind"] != "panel":
+                continue
+            with self.subTest(resource_id=resource_id):
+                panel = open_layout_panel(self, g, resource_id)
+                try:
+                    panel_rect = resolved_rect(panel)
+                    click_point = next(point for point in candidates if not rect_contains_point(panel_rect, *point))
+                    before = player.getCoords()
+                    before_turn = game_map.getTurn()
+                    push_sdl_mouse_click(*click_point)
+                    pump_event_loop(5)
+                    after = player.getCoords()
+                    self.assertEqual((before.x, before.y, before.z), (after.x, after.y, after.z))
+                    self.assertEqual(before_turn, game_map.getTurn())
+                    self.assertTrue(gui_has_child_object(g, panel))
+                finally:
+                    panel.close()
+                    pump_event_loop(3)
+
+    def test_text_centric_panel_layouts(self):
+        _, g, _, player = create_xvfb_gameplay_session(self)
+        player.setNumericProperty("gold", 999999)
+        player.setNumericProperty("level", 42)
+        player.setHp(player.getHpMax())
+        player.setMana(999)
+
+        character = open_layout_panel(self, g, "characterPanel")
+        try:
+            root = assert_runtime_rect(self, "characterPanel", character, ROOT_800_600)
+            actions = find_list_view(character, "interactionsCollection")
+            action_rect = assert_runtime_rect(self, "character actions", actions, (560, 780, 800, 60))
+            assert_child_inside(self, "characterPanel", root, "actions", action_rect)
+            assert_no_overlap(self, "character content", (560, 240, 800, 540), "actions", action_rect)
+            with isolated_gui_panel(g, character):
+                capture_panel_layout(
+                    self,
+                    g,
+                    "layout_character_panel",
+                    character,
+                    regions={"actions": action_rect},
+                )
+        finally:
+            character.close()
+            pump_event_loop(3)
+
+        info = open_layout_panel(self, g, "infoPanel")
+        try:
+            assert_runtime_rect(self, "infoPanel", info, ROOT_400_300)
+            for centered, text in (
+                (True, "Short centered info."),
+                (
+                    False,
+                    "Wrapped info panel text that should occupy the top-left content area without leaving the panel.",
+                ),
+            ):
+                info.setCentered(centered)
+                info.setText(text)
+                pump_event_loop(3)
+                with isolated_gui_panel(g, info):
+                    capture_panel_layout(self, g, f"layout_info_panel_{centered}", info)
+        finally:
+            info.close()
+            pump_event_loop(3)
+
+        text_panel = open_layout_panel(self, g, "textPanel")
+        try:
+            assert_runtime_rect(self, "textPanel", text_panel, ROOT_800_600)
+            text_panel.setText("Short message.")
+            pump_event_loop(3)
+            with isolated_gui_panel(g, text_panel):
+                short_summary = capture_panel_layout(self, g, "layout_text_panel_short", text_panel)
+            long_text = "\n".join(
+                ["Long layout paragraph with enough words to wrap inside the text panel." for _ in range(18)]
+            )
+            text_panel.setText(long_text)
+            pump_event_loop(3)
+            with isolated_gui_panel(g, text_panel):
+                long_summary = capture_panel_layout(self, g, "layout_text_panel_long", text_panel)
+            self.assertGreater(long_text.count("\n"), 1)
+            self.assertGreaterEqual(long_summary["pixels"]["inside"], short_summary["pixels"]["inside"])
+            push_space_key()
+            pump_event_loop(5)
+            self.assertFalse(gui_contains_class(g, "CGameTextPanel"))
+        finally:
+            if text_panel in list(g.getGui().getChildren()):
+                text_panel.close()
+                pump_event_loop(3)
+
+        active_quests = {make_ui_layout_quest(g, index) for index in range(4)}
+        completed_quests = {make_ui_layout_quest(g, index, completed=True) for index in range(2)}
+        player.setQuests(active_quests)
+        player.setCompletedQuests(completed_quests)
+        quest_panel = open_layout_panel(self, g, "questPanel")
+        try:
+            assert_runtime_rect(self, "questPanel", quest_panel, ROOT_800_600)
+            quest_text = quest_panel.getText(g.getGui())
+            self.assertIn("[Active] Quest 0:", quest_text)
+            self.assertIn("[Completed] Quest 0:", quest_text)
+            self.assertIn("Hint 0:", quest_text)
+            completed_block = quest_text.split("[Completed] Quest 0:", 1)[1].split("[", 1)[0]
+            self.assertNotIn("Hint 0:", completed_block)
+            with isolated_gui_panel(g, quest_panel):
+                capture_panel_layout(self, g, "layout_quest_panel_dense", quest_panel)
+        finally:
+            quest_panel.close()
+            pump_event_loop(3)
+
+    def test_choice_panel_layouts_and_hitboxes(self):
+        game, g, _, _ = create_xvfb_gameplay_session(self)
+
+        def inspect_question(expected_rect, click_rect):
+            def inspect(panel):
+                root = assert_runtime_rect(self, "questionPanel", panel, ROOT_400_300)
+                question = next(child for child in panel.getChildren() if child.getType() == "CWidget")
+                assert_runtime_rect(self, "question text", question, (760, 390, 400, 225))
+                buttons = sorted(find_descendants_by_type(panel, "CButton"), key=lambda child: resolved_rect(child)[0])
+                self.assertEqual(2, len(buttons))
+                left = assert_runtime_rect(self, "question yes", buttons[0], (760, 615, 200, 75))
+                right = assert_runtime_rect(self, "question no", buttons[1], (960, 615, 200, 75))
+                assert_no_overlap(self, "YES", left, "NO", right)
+                assert_child_inside(self, "questionPanel", root, "YES", left)
+                assert_child_inside(self, "questionPanel", root, "NO", right)
+                with isolated_gui_panel(g, panel):
+                    capture_panel_layout(self, g, f"layout_question_{expected_rect}", panel)
+                activate_widget(next(button for button in buttons if resolved_rect(button) == click_rect), g.getGui())
+                return {"left": left, "right": right}
+
+            return inspect
+
+        answer, _ = run_blocking_panel_inspection(
+            self,
+            game,
+            g,
+            "CGameQuestionPanel",
+            lambda: g.getGuiHandler().showQuestion("Confirm yes?"),
+            inspect_question("yes", (760, 615, 200, 75)),
+            lambda panel: None,
+        )
+        self.assertTrue(answer)
+        answer, _ = run_blocking_panel_inspection(
+            self,
+            game,
+            g,
+            "CGameQuestionPanel",
+            lambda: g.getGuiHandler().showQuestion("Confirm no with a wrapped question prompt?"),
+            inspect_question("no", (960, 615, 200, 75)),
+            lambda panel: None,
+        )
+        self.assertFalse(answer)
+
+        for count in (1, 3, 8):
+            options = [f"option{index:02d}" for index in range(count)]
+            for selected_index in (0, count - 1):
+                selection = g.createObject("CListString")
+                for option in options:
+                    selection.addValue(option)
+                expected_root = centered_screen_rect(300, 75 * count)
+
+                def inspect_selection(panel, selected_index=selected_index, expected_root=expected_root):
+                    root = assert_runtime_rect(self, f"selection {count}", panel, expected_root)
+                    buttons = sorted(
+                        find_descendants_by_type(panel, "CButton"), key=lambda child: resolved_rect(child)[1]
+                    )
+                    self.assertEqual(count, len(buttons))
+                    last_rect = None
+                    for index, button in enumerate(buttons):
+                        button_rect = resolved_rect(button)
+                        assert_positive_rect(self, f"selection button {index}", button_rect)
+                        assert_child_inside(self, "selectionPanel", root, f"selection button {index}", button_rect)
+                        if last_rect is not None:
+                            assert_no_overlap(
+                                self, "previous selection button", last_rect, "selection button", button_rect
+                            )
+                        last_rect = button_rect
+                    with isolated_gui_panel(g, panel):
+                        capture_panel_layout(self, g, f"layout_selection_{count}_{selected_index}", panel)
+                    activate_widget(buttons[selected_index], g.getGui())
+                    return [resolved_rect(button) for button in buttons]
+
+                selected, _ = run_blocking_panel_inspection(
+                    self,
+                    game,
+                    g,
+                    "CGamePanel",
+                    lambda selection=selection: g.getGuiHandler().showSelection(selection),
+                    inspect_selection,
+                    lambda panel: None,
+                )
+                self.assertEqual(options[selected_index], selected)
+
+        entry = make_dialog_state(
+            g,
+            "ENTRY",
+            "Entry dialog text that verifies state reload and wrapped option layout.",
+            ["Move to next state"],
+            next_state="NEXT",
+        )
+        next_state = make_dialog_state(
+            g,
+            "NEXT",
+            "Next dialog state with fresh widgets.",
+            ["Exit dialog"],
+            next_state="EXIT",
+        )
+        dialog = make_dialog(g, [entry, next_state])
+
+        def inspect_dialog(panel):
+            root = assert_runtime_rect(self, "dialogPanel", panel, ROOT_800_600)
+            entry_widgets = sorted(
+                find_descendants_by_type(panel, "CTextWidget"), key=lambda child: resolved_rect(child)[1]
+            )
+            self.assertGreaterEqual(len(entry_widgets), 2)
+            previous = None
+            for widget in entry_widgets:
+                widget_rect = resolved_rect(widget)
+                assert_positive_rect(self, "dialog widget", widget_rect)
+                assert_child_inside(self, "dialogPanel", root, "dialog widget", widget_rect)
+                if previous is not None:
+                    assert_no_overlap(self, "previous dialog widget", previous, "dialog widget", widget_rect)
+                previous = widget_rect
+            with isolated_gui_panel(g, panel):
+                capture_panel_layout(self, g, "layout_dialog_entry", panel)
+
+            self.assertTrue(panel.keyboardEvent(g.getGui(), SDL_KEYDOWN, ord("1")))
+            next_widgets = sorted(
+                find_descendants_by_type(panel, "CTextWidget"), key=lambda child: resolved_rect(child)[1]
+            )
+            self.assertGreaterEqual(len(next_widgets), 2)
+            self.assertEqual(ROOT_800_600, resolved_rect(panel))
+            with isolated_gui_panel(g, panel):
+                capture_panel_layout(self, g, "layout_dialog_next", panel)
+            self.assertTrue(panel.keyboardEvent(g.getGui(), SDL_KEYDOWN, ord("1")))
+            return {"entry_widgets": len(entry_widgets), "next_widgets": len(next_widgets)}
+
+        run_blocking_panel_inspection(
+            self,
+            game,
+            g,
+            "CGameDialogPanel",
+            lambda: g.getGuiHandler().showDialog(dialog),
+            inspect_dialog,
+            lambda panel: None,
+        )
+        self.assertFalse(gui_contains_class(g, "CGameDialogPanel"))
+
+    def test_inventory_loot_trade_list_layouts(self):
+        game, g, _, player = create_xvfb_gameplay_session(self)
+        player.addItem("Sword")
+        player.addItem("Scroll")
+        duplicate = g.createObject("Scroll")
+        duplicate.name = "inventoryDuplicateScroll"
+        player.addItem(duplicate)
+        quest_item = g.createObject("CItem")
+        quest_item.name = "layoutQuestItem"
+        quest_item.typeId = "layoutQuestItem"
+        quest_item.animation = "images/items/scroll"
+        quest_item.addTag(game.CTag.QUEST)
+        player.addItem(quest_item)
+
+        inventory = open_layout_panel(self, g, "inventoryPanel")
+        try:
+            root = assert_runtime_rect(self, "inventoryPanel", inventory, ROOT_800_600)
+            inventory_list = find_list_view(inventory, "inventoryCollection")
+            equipped_list = find_list_view(inventory, "equippedCollection")
+            inventory_rect = assert_runtime_rect(self, "inventory list", inventory_list, (560, 240, 200, 600))
+            equipped_rect = assert_runtime_rect(self, "equipped list", equipped_list, (1160, 240, 200, 600))
+            assert_child_inside(self, "inventoryPanel", root, "inventory list", inventory_rect)
+            assert_child_inside(self, "inventoryPanel", root, "equipped list", equipped_rect)
+            assert_no_overlap(self, "inventory list", inventory_rect, "equipped list", equipped_rect)
+            self.assertEqual((4, 2), list_runtime_grid(equipped_list, g.getGui()))
+
+            click_first_list_object(
+                self,
+                inventory_list,
+                g.getGui(),
+                lambda item: item.getTypeId() == "Sword",
+            )
+            pump_event_loop(5)
+            selected_after_inventory = get_panel_selection_box_counts_by_collection(inventory)
+            self.assertEqual(1, selected_after_inventory.get("inventoryCollection", 0))
+            activate_list_cell(equipped_list, g.getGui(), 0, 0)
+            pump_event_loop(5)
+            selected_after_equip = get_panel_selection_box_counts_by_collection(inventory)
+            self.assertEqual(0, selected_after_equip.get("inventoryCollection", 0))
+            click_first_list_object(
+                self,
+                inventory_list,
+                g.getGui(),
+                lambda item: not item.hasTag(game.CTag.QUEST),
+                button=SDL_BUTTON_RIGHT,
+            )
+            pump_event_loop(5)
+            selected_after_reset = get_panel_selection_box_counts_by_collection(inventory)
+            self.assertEqual(0, selected_after_reset.get("inventoryCollection", 0))
+
+            with isolated_gui_panel(g, inventory):
+                capture_panel_layout(
+                    self,
+                    g,
+                    "layout_inventory_panel",
+                    inventory,
+                    regions={"inventory": inventory_rect, "equipped": equipped_rect},
+                )
+        finally:
+            inventory.close()
+            pump_event_loop(3)
+
+        loot_items = set(make_unique_scroll_items(g, 49, "lootLayout"))
+        loot_creature = g.createObject("GoblinThief")
+
+        def inspect_loot(panel):
+            root = assert_runtime_rect(self, "lootPanel", panel, ROOT_400_300)
+            items_list = find_list_view(panel, "itemsCollection")
+            list_rect = assert_runtime_rect(self, "loot items", items_list, ROOT_400_300)
+            self.assertEqual((8, 6), list_runtime_grid(items_list, g.getGui()))
+            first_page = list_visible_object_names(items_list, g.getGui())
+            for graphic in items_list.getProxiedObjects(g.getGui(), 7, 5):
+                graphic.mouseEvent(g.getGui(), SDL_MOUSEBUTTONDOWN, SDL_BUTTON_LEFT, 1, 1)
+            second_page = list_visible_object_names(items_list, g.getGui())
+            self.assertNotEqual(first_page, second_page)
+            assert_child_inside(self, "lootPanel", root, "loot list", list_rect)
+            with isolated_gui_panel(g, panel):
+                capture_panel_layout(self, g, "layout_loot_panel_overflow", panel, regions={"items": list_rect})
+            panel.keyboardEvent(g.getGui(), SDL_KEYDOWN, ord(" "))
+            return {"first": first_page[:3], "second": second_page[:3]}
+
+        run_blocking_panel_inspection(
+            self,
+            game,
+            g,
+            "CGameLootPanel",
+            lambda: g.getGuiHandler().showLoot(loot_creature, loot_items),
+            inspect_loot,
+            lambda panel: None,
+        )
+        self.assertFalse(gui_contains_class(g, "CGameLootPanel"))
+
+        market = g.createObject("CMarket")
+        market.sell = 50
+        market.buy = 25
+        market_item = g.createObject("Sword")
+        market_item.name = "layoutMarketSword"
+        market.setItems({market_item})
+        player.addGold(1000)
+        player.addItem("Sword")
+        trade = open_layout_panel(self, g, "tradePanel")
+        trade.setMarket(market)
+        pump_event_loop(3)
+        try:
+            root = assert_runtime_rect(self, "tradePanel", trade, ROOT_800_600)
+            player_list = find_list_view(trade, "inventoryCollection")
+            market_list = find_list_view(trade, "marketCollection")
+            player_rect = assert_runtime_rect(self, "trade player list", player_list, (560, 240, 200, 600))
+            market_rect = assert_runtime_rect(self, "trade market list", market_list, (1160, 240, 200, 600))
+            sell_cost_rect = (760, 240, 200, 200)
+            buy_cost_rect = (960, 240, 200, 200)
+            sell_button_rect = (760, 740, 200, 100)
+            buy_button_rect = (960, 740, 200, 100)
+            for label, rect in (
+                ("player list", player_rect),
+                ("market list", market_rect),
+                ("sell cost", sell_cost_rect),
+                ("buy cost", buy_cost_rect),
+                ("sell button", sell_button_rect),
+                ("buy button", buy_button_rect),
+            ):
+                assert_child_inside(self, "tradePanel", root, label, rect)
+            assert_no_overlap(self, "player list", player_rect, "market list", market_rect)
+            assert_no_overlap(self, "sell cost", sell_cost_rect, "sell button", sell_button_rect)
+            assert_no_overlap(self, "buy cost", buy_cost_rect, "buy button", buy_button_rect)
+            click_first_list_object(self, player_list, g.getGui(), lambda item: not item.hasTag(game.CTag.QUEST))
+            click_first_list_object(self, market_list, g.getGui())
+            pump_event_loop(5)
+            self.assertGreater(trade.getTotalSellCost(), 0)
+            self.assertGreater(trade.getTotalBuyCost(), 0)
+            with isolated_gui_panel(g, trade):
+                capture_panel_layout(
+                    self,
+                    g,
+                    "layout_trade_panel",
+                    trade,
+                    regions={"player": player_rect, "market": market_rect},
+                )
+        finally:
+            trade.close()
+            pump_event_loop(3)
+
+    def test_fight_panel_and_nested_views_layout(self):
+        game, g, game_map, player = create_xvfb_gameplay_session(self)
+        player.addItem("Sword")
+        quest_item = g.createObject("CItem")
+        quest_item.name = "fightLayoutQuestItem"
+        quest_item.typeId = "fightLayoutQuestItem"
+        quest_item.animation = "images/items/scroll"
+        quest_item.addTag(game.CTag.QUEST)
+        player.addItem(quest_item)
+        enemies = []
+        for index in range(6):
+            enemy = g.createObject("GoblinThief")
+            enemy.name = f"layoutEnemy{index}"
+            enemy.setHp(max(1, enemy.getHpMax() - index))
+            enemies.append(enemy)
+        enemies[4].setEffects(
+            {g.createObject("Stun"), g.createObject("BarrierEffect"), g.createObject("BloodlashEffect")}
+        )
+        game_map.setStringProperty("combatStatus", "Initiative: player\nChoose a target and action.")
+
+        fight = open_layout_panel(self, g, "fightPanel")
+        fight.setEnemies(enemies)
+        pump_event_loop(5)
+        try:
+            root = assert_runtime_rect(self, "fightPanel", fight, ROOT_800_600)
+            direct_children = sorted(fight.getChildren(), key=lambda child: resolved_rect(child))
+            cards = [child for child in direct_children if child.getType() == "CGameGraphicsObject"]
+            self.assertEqual(2, len(cards))
+            player_card = assert_runtime_rect(self, "player card", cards[0], (710, 340, 200, 300))
+            enemy_card = assert_runtime_rect(self, "enemy card", cards[1], (1010, 340, 200, 300))
+            enemy_selector = find_list_view(fight, "enemiesCollection")
+            selector_rect = assert_runtime_rect(self, "enemy selector", enemy_selector, (800, 270, 320, 60))
+            items_row = assert_runtime_rect(
+                self, "items row", find_list_view(fight, "itemsCollection"), (560, 720, 800, 60)
+            )
+            actions_row = assert_runtime_rect(
+                self,
+                "actions row",
+                find_list_view(fight, "interactionsCollection"),
+                (560, 780, 800, 60),
+            )
+            status_widgets = [
+                child for child in fight.getChildren() if child.getType() == "CWidget" and resolved_rect(child)[1] < 720
+            ]
+            self.assertEqual(1, len(status_widgets))
+            status_rect = assert_runtime_rect(self, "combat status", status_widgets[0], (640, 642, 640, 78))
+            for label, rect in (
+                ("player card", player_card),
+                ("enemy card", enemy_card),
+                ("enemy selector", selector_rect),
+                ("status", status_rect),
+                ("items", items_row),
+                ("actions", actions_row),
+            ):
+                assert_child_inside(self, "fightPanel", root, label, rect)
+            assert_no_overlap(self, "player card", player_card, "enemy card", enemy_card)
+            assert_no_overlap(self, "status", status_rect, "items", items_row)
+            assert_no_overlap(self, "items", items_row, "actions", actions_row)
+
+            creature_views = sorted(
+                find_descendants_by_type(fight, "CCreatureView"), key=lambda child: resolved_rect(child)
+            )
+            stats_views = sorted(
+                find_descendants_by_type(fight, "CStatsGraphicsObject"),
+                key=lambda child: resolved_rect(child),
+            )
+            expected_nested = {
+                (710, 340, 200, 200),
+                (710, 540, 200, 100),
+                (1010, 340, 200, 200),
+                (1010, 540, 200, 100),
+            }
+            self.assertEqual(expected_nested, {resolved_rect(child) for child in creature_views + stats_views})
+            for card_rect in (player_card, enemy_card):
+                nested = [
+                    child for child in creature_views + stats_views if rect_contains(card_rect, resolved_rect(child))
+                ]
+                self.assertEqual(2, len(nested))
+                assert_no_overlap(
+                    self, "nested upper", resolved_rect(nested[0]), "nested lower", resolved_rect(nested[1])
+                )
+
+            self.assertEqual(6, len(fight.enemiesCollection(g.getGui())))
+            self.assertTrue(enemy_selector.getAllowOversize())
+            self.assertEqual((4, 1), list_runtime_grid(enemy_selector, g.getGui()))
+            for _ in range(4):
+                click_list_cell(enemy_selector, 3, 0)
+                pump_event_loop(3)
+            click_list_cell(enemy_selector, 1, 0)
+            pump_event_loop(5)
+            self.assertEqual("layoutEnemy4", fight.getEnemy().getName())
+
+            enemy_effect_lists = [
+                list_view
+                for view in creature_views
+                for list_view in find_descendants_by_type(view, "CListView")
+                if list_view.getCollection() == "getEffects"
+            ]
+            self.assertEqual(2, len(enemy_effect_lists))
+            for list_view in enemy_effect_lists:
+                effect_rect = resolved_rect(list_view)
+                assert_child_inside(self, "creatureView", resolved_rect(list_view.getParent()), "effects", effect_rect)
+                self.assertEqual((1, 4), list_runtime_grid(list_view, g.getGui()))
+
+            with isolated_gui_panel(g, fight):
+                capture_panel_layout(
+                    self,
+                    g,
+                    "layout_fight_panel",
+                    fight,
+                    regions={
+                        "selector": selector_rect,
+                        "status": status_rect,
+                        "items": items_row,
+                        "actions": actions_row,
+                    },
+                )
+        finally:
+            fight.close()
+            pump_event_loop(3)
+
+    def test_all_list_views_capacity_paging_and_shrink(self):
+        _, g, _, player = create_xvfb_gameplay_session(self)
+        panels_to_collections = {
+            "characterPanel": {"interactionsCollection"},
+            "fightPanel": {"enemiesCollection", "itemsCollection", "interactionsCollection", "getEffects"},
+            "inventoryPanel": {"inventoryCollection", "equippedCollection"},
+            "lootPanel": {"itemsCollection"},
+            "tradePanel": {"inventoryCollection", "marketCollection"},
+        }
+
+        inventory_items = make_unique_scroll_items(g, 7, "capacity")
+        player.setItems(set(inventory_items))
+        inventory = open_layout_panel(self, g, "inventoryPanel")
+        try:
+            inventory_list = find_list_view(inventory, "inventoryCollection")
+            inventory_list.setXPrefferedSize(2)
+            inventory_list.setYPrefferedSize(2)
+            inventory_list.setAllowOversize(True)
+            inventory_list.setGrouping(False)
+            inventory_list.refreshAll()
+            first_page = list_visible_object_names(inventory_list, g.getGui())
+            for graphic in inventory_list.getProxiedObjects(g.getGui(), 1, 1):
+                graphic.mouseEvent(g.getGui(), SDL_MOUSEBUTTONDOWN, SDL_BUTTON_LEFT, 1, 1)
+            final_page = list_visible_object_names(inventory_list, g.getGui())
+            self.assertNotEqual(first_page, final_page)
+
+            player.setItems(set(inventory_items[:3]))
+            inventory_list.refreshAll()
+            shrunk_page = list_visible_object_names(inventory_list, g.getGui())
+            self.assertTrue(shrunk_page)
+
+            player.setItems(set(inventory_items[:2]))
+            inventory_list.refreshAll()
+            below_capacity = list_visible_object_names(inventory_list, g.getGui())
+            self.assertEqual(2, len(below_capacity))
+
+            duplicates = [g.createObject("Scroll") for _ in range(7)]
+            for index, item in enumerate(duplicates):
+                item.name = f"groupedCapacityScroll{index}"
+            player.setItems(set(duplicates))
+            inventory_list.setGrouping(True)
+            inventory_list.refreshAll()
+            grouped_names = list_visible_object_names(inventory_list, g.getGui())
+            self.assertEqual(1, len(set(grouped_names)))
+        finally:
+            inventory.close()
+            pump_event_loop(3)
+
+        fight = open_layout_panel(self, g, "fightPanel")
+        try:
+            enemies = []
+            for index in range(6):
+                enemy = g.createObject("GoblinThief")
+                enemy.name = f"matrixEnemy{index}"
+                enemy.setHp(enemy.getHpMax())
+                enemies.append(enemy)
+            fight.setEnemies(enemies)
+            found = {list_view.getCollection() for list_view in find_descendants_by_type(fight, "CListView")}
+            self.assertTrue(panels_to_collections["fightPanel"].issubset(found))
+        finally:
+            fight.close()
+            pump_event_loop(3)
+
+        for panel_name in ("characterPanel", "inventoryPanel"):
+            panel = open_layout_panel(self, g, panel_name)
+            try:
+                found = {list_view.getCollection() for list_view in find_descendants_by_type(panel, "CListView")}
+                self.assertTrue(panels_to_collections[panel_name].issubset(found))
+            finally:
+                panel.close()
+                pump_event_loop(3)
+
+        trade = open_layout_panel(self, g, "tradePanel")
+        try:
+            market = g.createObject("CMarket")
+            market.setItems({g.createObject("Scroll")})
+            trade.setMarket(market)
+            found = {list_view.getCollection() for list_view in find_descendants_by_type(trade, "CListView")}
+            self.assertTrue(panels_to_collections["tradePanel"].issubset(found))
+        finally:
+            trade.close()
+            pump_event_loop(3)
+
+        loot_items = set(make_unique_scroll_items(g, 2, "matrixLoot"))
+        result = {}
+
+        def inspect_loot_matrix(panel):
+            found = {list_view.getCollection() for list_view in find_descendants_by_type(panel, "CListView")}
+            self.assertTrue(panels_to_collections["lootPanel"].issubset(found))
+            result["loot"] = True
+            panel.keyboardEvent(g.getGui(), SDL_KEYDOWN, ord(" "))
+            return found
+
+        run_blocking_panel_inspection(
+            self,
+            load_game_module(),
+            g,
+            "CGameLootPanel",
+            lambda: g.getGuiHandler().showLoot(g.createObject("GoblinThief"), loot_items),
+            inspect_loot_matrix,
+            lambda panel: None,
+        )
+        self.assertTrue(result["loot"])
 
     def test_full_nouraajd_quest_walkthrough_ui(self):
         game, g, game_map, player = create_xvfb_gameplay_session(self, map_name="nouraajd")

@@ -60,7 +60,7 @@ void append_quest_line(std::string &text, const std::shared_ptr<CQuest> &quest, 
 } // namespace
 
 void CGameQuestPanel::renderObject(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> rect, int i) {
-    gui->getTextManager()->drawText(getText(gui), rect->x, rect->y, rect->w);
+    gui->getTextManager()->drawText(getText(gui), rect);
 }
 
 std::string CGameQuestPanel::getText(std::shared_ptr<CGui> ptr) {

@@ -23,6 +23,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "../../vstd/veventloop.h"
 #include "../gui/CAnimation.h"
 #include "../gui/CGui.h"
+#include "../gui/CLayout.h"
 #include "../gui/object/CMapGraphicsObject.h"
 #include "../gui/object/CMinimapGraphicsObject.h"
 #include "../gui/object/CSideBar.h"
@@ -448,7 +449,21 @@ void init_game_module(py::module_ &m) {
             [](CGameGraphicsObject &self, const std::shared_ptr<CGui> &gui, int type, int button, int x, int y) {
                 return self.mouseEvent(gui, static_cast<SDL_EventType>(type), button, x, y);
             },
-            "Dispatch a mouse button event to this object.");
+            "Dispatch a mouse button event to this object.")
+        .def(
+            "getResolvedRect",
+            [](CGameGraphicsObject &self) {
+                auto layout = self.getLayout();
+                if (!layout) {
+                    return py::make_tuple(0, 0, 0, 0);
+                }
+                auto rect = layout->getRect(self.ptr<CGameGraphicsObject>());
+                if (!rect) {
+                    return py::make_tuple(0, 0, 0, 0);
+                }
+                return py::make_tuple(rect->x, rect->y, rect->w, rect->h);
+            },
+            "Return resolved runtime layout as (x, y, width, height).");
 
     py::class_<CGui, CGameGraphicsObject, std::shared_ptr<CGui>>(m, "CGui", "Game GUI root object.")
         .def("getGame", &CGui::getGame, "Return the owning game.")
@@ -729,13 +744,17 @@ void init_game_module(py::module_ &m) {
         m, "CDialog", "Base dialog definition.");
     cdialog.def(py::init_alias<>())
         .def("invokeAction", &CDialog::invokeAction, "Run a named dialog action callback.")
-        .def("invokeCondition", &CDialog::invokeCondition, "Evaluate a named dialog condition callback.");
+        .def("invokeCondition", &CDialog::invokeCondition, "Evaluate a named dialog condition callback.")
+        .def("getStates", &CDialog::getStates, "Return dialog states.")
+        .def("setStates", &CDialog::setStates, "Replace dialog states.");
     m.attr("CDialogBase") = cdialog;
     m.attr("CDialogBase2") = cdialog;
 
     py::class_<CDialogOption, CGameObject, std::shared_ptr<CDialogOption>>(m, "CDialogOption",
                                                                            "Single selectable dialog option.");
-    py::class_<CDialogState, CGameObject, std::shared_ptr<CDialogState>>(m, "CDialogState", "Dialog state node.");
+    py::class_<CDialogState, CGameObject, std::shared_ptr<CDialogState>>(m, "CDialogState", "Dialog state node.")
+        .def("getOptions", &CDialogState::getOptions, "Return dialog options.")
+        .def("setOptions", &CDialogState::setOptions, "Replace dialog options.");
 
     py::class_<CEventHandler, CGameObject, std::shared_ptr<CEventHandler>>(m, "CEventHandler",
                                                                            "Dispatcher for game/map events.")
@@ -899,7 +918,9 @@ void init_game_module(py::module_ &m) {
     py::class_<CPlayer, CCreature, std::shared_ptr<CPlayer>>(m, "CPlayer", "Player-controlled creature.")
         .def("addQuest", &CPlayer::addQuest, "Add a quest to the player quest log.")
         .def("getQuests", &CPlayer::getQuests, "Return the player's active quests.")
+        .def("setQuests", &CPlayer::setQuests, "Replace active quests.")
         .def("getCompletedQuests", &CPlayer::getCompletedQuests, "Return the player's completed quests.")
+        .def("setCompletedQuests", &CPlayer::setCompletedQuests, "Replace completed quests.")
         .def("checkQuests", &CPlayer::checkQuests, "Move completed quests into the completed quest log.");
 
     py::class_<CListString, CGameObject, std::shared_ptr<CListString>>(m, "CListString", "String list wrapper object.")
@@ -936,7 +957,10 @@ void init_game_module(py::module_ &m) {
         .def("close", &CGamePanel::close, "Close this panel.");
 
     py::class_<CGameTradePanel, CGamePanel, std::shared_ptr<CGameTradePanel>>(m, "CGameTradePanel", "Trade panel.")
-        .def("getMarket", &CGameTradePanel::getMarket, "Return market displayed by this panel.");
+        .def("getMarket", &CGameTradePanel::getMarket, "Return market displayed by this panel.")
+        .def("setMarket", &CGameTradePanel::setMarket, "Set market displayed by this panel.")
+        .def("getTotalSellCost", &CGameTradePanel::getTotalSellCost, "Return selected inventory sell total.")
+        .def("getTotalBuyCost", &CGameTradePanel::getTotalBuyCost, "Return selected market buy total.");
 
     py::class_<CGameFightPanel, CGamePanel, std::shared_ptr<CGameFightPanel>>(m, "CGameFightPanel", "Fight panel.")
         .def("getEnemy", &CGameFightPanel::getEnemy, "Return current enemy creature.")
@@ -990,7 +1014,11 @@ void init_game_module(py::module_ &m) {
     py::class_<CGameQuestPanel, CGamePanel, std::shared_ptr<CGameQuestPanel>>(m, "CGameQuestPanel", "Quest log panel.")
         .def("getText", &CGameQuestPanel::getText, "Return rendered quest journal text.");
 
-    py::class_<CGameTextPanel, CGamePanel, std::shared_ptr<CGameTextPanel>>(m, "CGameTextPanel", "Text display panel.");
+    py::class_<CGameTextPanel, CGamePanel, std::shared_ptr<CGameTextPanel>>(m, "CGameTextPanel", "Text display panel.")
+        .def("getText", &CGameTextPanel::getText, "Return panel text.")
+        .def("setText", &CGameTextPanel::setText, "Set panel text.")
+        .def("getCentered", &CGameTextPanel::getCentered, "Return whether text is centered.")
+        .def("setCentered", &CGameTextPanel::setCentered, "Set whether text is centered.");
 
     py::class_<CListView, CProxyTargetGraphicsObject, std::shared_ptr<CListView>>(m, "CListView", "List view widget.")
         .def("getCollection", &CListView::getCollection, "Return parent collection callback name.")
@@ -1012,7 +1040,13 @@ void init_game_module(py::module_ &m) {
         .def("getShowEmpty", &CListView::getShowEmpty, "Return whether empty cells render boxes.")
         .def("setShowEmpty", &CListView::setShowEmpty, "Set whether empty cells render boxes.")
         .def("getGrouping", &CListView::getGrouping, "Return whether repeated type ids are grouped.")
-        .def("setGrouping", &CListView::setGrouping, "Set whether repeated type ids are grouped.");
+        .def("setGrouping", &CListView::setGrouping, "Set whether repeated type ids are grouped.")
+        .def(
+            "getRuntimeGridSize",
+            [](CListView &self, const std::shared_ptr<CGui> &gui) {
+                return py::make_tuple(self.getSizeX(gui), self.getSizeY(gui));
+            },
+            "Return resolved list grid size as (columns, rows).");
     PY_WRAP_GENERIC_DOC(randint, "randint(lower, upper) -> int: Return a random integer in engine-defined bounds.");
     m.def("jsonify", &jsonify_py, "jsonify(obj) -> str: Serialize a game object to JSON text.");
     PY_WRAP_GENERIC_DOC(logger, "logger(message) -> None: Write an info log message to the engine logger.");
