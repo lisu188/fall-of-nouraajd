@@ -19,6 +19,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CGame.h"
 #include "core/CLoader.h"
 #include "core/CMap.h"
+#include "core/CPlaytestTrace.h"
 #include "object/CPlayer.h"
 
 bool CSceneManager::requestMapChange(const std::shared_ptr<CGame> &game, std::string mapName) {
@@ -28,20 +29,47 @@ bool CSceneManager::requestMapChange(const std::shared_ptr<CGame> &game, std::st
 bool CSceneManager::requestMapChange(const std::shared_ptr<CGame> &game, MapTransitionRequest request) {
     const std::string mapName = std::move(request.mapName);
     if (!game) {
+        if (CPlaytestTrace::enabled()) {
+            CPlaytestTrace::record("map_transition_rejected", {{"reason", "missing_game"}, {"toMap", mapName}});
+        }
         vstd::logger::warning("Rejected map transition without a game:", mapName);
         return false;
     }
     if (game->getSceneManager().get() != this) {
+        if (CPlaytestTrace::enabled()) {
+            json fields = {{"reason", "mismatched_scene_manager"}, {"toMap", mapName}};
+            CPlaytestTrace::addMapContext(fields, game->getMap());
+            CPlaytestTrace::record("map_transition_rejected", fields);
+        }
         vstd::logger::warning("Rejected map transition for a mismatched scene manager:", mapName);
         return false;
     }
     if (transitionState != TransitionState::Idle) {
+        if (CPlaytestTrace::enabled()) {
+            json fields = {
+                {"pendingMap", pendingMapName},
+                {"reason", "transition_pending"},
+                {"toMap", mapName},
+                {"transitionState", getTransitionStateName()},
+            };
+            CPlaytestTrace::addMapContext(fields, game->getMap());
+            CPlaytestTrace::record("map_transition_rejected", fields);
+        }
         vstd::logger::warning("Ignoring duplicate map transition request:", mapName, "while pending:", pendingMapName);
         return false;
     }
 
     transitionState = TransitionState::TransitionPending;
     pendingMapName = mapName;
+    if (CPlaytestTrace::enabled()) {
+        json fields = {
+            {"accepted", true},
+            {"toMap", mapName},
+            {"transitionState", getTransitionStateName()},
+        };
+        CPlaytestTrace::addMapContext(fields, game->getMap());
+        CPlaytestTrace::record("map_transition_requested", fields);
+    }
 
     auto manager = shared_from_this();
     vstd::call_later([manager, game, mapName]() {
@@ -76,6 +104,12 @@ void CSceneManager::performMapChange(const std::shared_ptr<CGame> &game, const s
     try {
         transitionState = TransitionState::Transitioning;
         std::shared_ptr<CMap> oldMap = game->getMap();
+        json traceFields = json::object();
+        if (CPlaytestTrace::enabled()) {
+            traceFields["fromMap"] = oldMap ? oldMap->getMapName() : "";
+            traceFields["oldTurn"] = oldMap ? oldMap->getTurn() : 0;
+            traceFields["toMap"] = mapName;
+        }
         std::shared_ptr<CMap> map = CMapLoader::loadNewMap(game, mapName);
         game->setMap(map);
         if (oldMap && game->getMap()) {
@@ -85,8 +119,21 @@ void CSceneManager::performMapChange(const std::shared_ptr<CGame> &game, const s
             }
             game->getMap()->setTurn(oldMap->getTurn());
         }
+        if (CPlaytestTrace::enabled()) {
+            CPlaytestTrace::addMapContext(traceFields, game->getMap());
+            traceFields["result"] = "completed";
+            traceFields["transitionState"] = getTransitionStateName();
+            CPlaytestTrace::record("map_transition_completed", traceFields);
+        }
         resetTransition();
     } catch (...) {
+        if (CPlaytestTrace::enabled()) {
+            json fields = {{"result", "failed"}, {"toMap", mapName}, {"transitionState", getTransitionStateName()}};
+            if (game) {
+                CPlaytestTrace::addMapContext(fields, game->getMap());
+            }
+            CPlaytestTrace::record("map_transition_failed", fields);
+        }
         resetTransition();
         throw;
     }

@@ -19,6 +19,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <algorithm>
 #include "core/CController.h"
 #include "core/CGame.h"
+#include "core/CPlaytestTrace.h"
 #include "core/CSerialization.h"
 #include "object/CItem.h"
 #include "object/CTrigger.h"
@@ -623,6 +624,16 @@ void CMap::objectMoved(const std::shared_ptr<CMapObject> &object, Coords _old, C
     }
     _old = normalizeCoords(_old);
     _new = normalizeCoords(_new);
+    if (CPlaytestTrace::enabled() && _old != _new) {
+        json fields = {
+            {"committed", true},
+            {"from", CPlaytestTrace::coords(_old)},
+            {"object", CPlaytestTrace::objectRef(object)},
+            {"to", CPlaytestTrace::coords(_new)},
+        };
+        CPlaytestTrace::addMapContext(fields, this->ptr<CMap>());
+        CPlaytestTrace::record("movement", fields);
+    }
     vstd::erase_if(mapObjectsCache, [object](auto it) { return it.second == object->getName(); });
 
     mapObjectsCache.insert(std::make_pair(_new, object->getName()));

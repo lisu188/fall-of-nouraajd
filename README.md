@@ -113,6 +113,14 @@ ctest --test-dir cmake-build-release --output-on-failure -R for_unit_tests
 ctest --test-dir cmake-build-release --output-on-failure --verbose -L performance
 python3 test.py
 </pre>
+Optional playtest trace for walkthrough/debugging runs:
+<pre>
+GAME_PLAYTEST_TRACE=1 GAME_PLAYTEST_TRACE_FILE=playtest-trace.jsonl python3 test.py GameTest.test_map_walkthrough_nouraajd
+</pre>
+The trace is disabled by default. When enabled, it writes deterministic JSON-line records for gameplay debugging,
+including movement, map transitions, dialogs, quest state changes, inventory, combat, rewards, and GUI panel openings.
+Tests can also use `game.configure_playtest_trace()`, `game.get_playtest_trace()`, and
+`game.drain_playtest_trace()` for in-process assertions.
 For Windows Visual Studio builds, use `--config Release`, pass `-C Release` to `ctest`,
 then set `GAME_BUILD_DIR=cmake-build-release` and `GAME_BUILD_CONFIG=Release` before running `python test.py`. Use
 `python scripts/validate_content.py --repo-root .` and

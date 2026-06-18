@@ -60,6 +60,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CJsonUtil.h"
 #include "core/CLoader.h"
 #include "core/CModuleInit.h"
+#include "core/CPlaytestTrace.h"
 #include "core/CPythonOverrides.h"
 #include "core/CRuntimeBridge.h"
 #include "core/CSceneManager.h"
@@ -147,6 +148,15 @@ void set_logger_sink_py(const std::string &sink_name, py::object path = py::none
         file_path = path.cast<std::string>();
     }
     set_logger_sink(sink_name, file_path);
+}
+
+void configure_playtest_trace_py(bool enabled = true, py::object output_path = py::none(),
+                                 std::size_t max_records = 1000) {
+    std::string target;
+    if (!output_path.is_none()) {
+        target = output_path.cast<std::string>();
+    }
+    CPlaytestTrace::configure(enabled, target, max_records);
 }
 
 py::list map_get_objects(const std::shared_ptr<CMap> &map) {
@@ -339,6 +349,7 @@ void register_python_binding_type_metadata() {
 }
 
 void init_game_module(py::module_ &m) {
+    CPlaytestTrace::configureFromEnvironment();
     register_python_binding_type_metadata();
 
     py::enum_<CTag>(m, "CTag", "Canonical gameplay tag identifier.")
@@ -1066,6 +1077,22 @@ void init_game_module(py::module_ &m) {
     PY_WRAP_GENERIC_DOC(logger, "logger(message) -> None: Write an info log message to the engine logger.");
     m.def("set_logger_sink", set_logger_sink_py, py::arg("sink_name"), py::arg("path") = py::none(),
           "set_logger_sink(sink, path=None) -> None: Configure the native logger output target.");
+    m.def("configure_playtest_trace", configure_playtest_trace_py, py::arg("enabled") = true,
+          py::arg("output_path") = py::none(), py::arg("max_records") = 1000,
+          "configure_playtest_trace(enabled=True, output_path=None, max_records=1000) -> None: Configure structured "
+          "playtest trace collection.");
+    m.def("configure_playtest_trace_from_env", &CPlaytestTrace::configureFromEnvironment,
+          "Configure playtest tracing from GAME_PLAYTEST_TRACE.");
+    m.def("playtest_trace_enabled", &CPlaytestTrace::enabled,
+          "playtest_trace_enabled() -> bool: Return whether structured playtest tracing is enabled.");
+    m.def("clear_playtest_trace", &CPlaytestTrace::clear,
+          "clear_playtest_trace() -> None: Clear collected playtest trace records.");
+    m.def("get_playtest_trace_records", &CPlaytestTrace::records,
+          "get_playtest_trace_records() -> list[str]: Return collected JSONL playtest trace records.");
+    m.def("drain_playtest_trace_records", &CPlaytestTrace::drain,
+          "drain_playtest_trace_records() -> list[str]: Return and clear collected JSONL playtest trace records.");
+    m.def("record_playtest_trace_json", &CPlaytestTrace::recordJson, py::arg("event"), py::arg("fields_json") = "{}",
+          "record_playtest_trace_json(event, fields_json='{}') -> None: Add one structured playtest trace record.");
 }
 
 #if !defined(_WIN32)

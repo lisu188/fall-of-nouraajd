@@ -23,6 +23,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CController.h"
 #include "core/CGame.h"
 #include "core/CMap.h"
+#include "core/CPlaytestTrace.h"
 #include "core/CTags.h"
 #include "object/CCreature.h"
 #include "object/CEffect.h"
@@ -355,6 +356,14 @@ CFightOutcome CFightHandler::fightManyOutcome(std::shared_ptr<CCreature> attacke
             controller->start(opponent, attacker);
         }
     }
+    if (CPlaytestTrace::enabled()) {
+        json fields = {
+            {"attacker", CPlaytestTrace::objectRef(attacker)},
+            {"opponents", CPlaytestTrace::objectRefs(allOpponents)},
+        };
+        CPlaytestTrace::addMapContext(fields, encounterMap);
+        CPlaytestTrace::record("combat_started", fields);
+    }
 
     int stale_turns = 0;
     CFightOutcome outcome = CFightOutcome::invalid;
@@ -481,6 +490,17 @@ CFightOutcome CFightHandler::fightManyOutcome(std::shared_ptr<CCreature> attacke
                              include_initiative);
     }
 
+    if (CPlaytestTrace::enabled()) {
+        json fields = {
+            {"attacker", CPlaytestTrace::objectRef(attacker)},
+            {"opponents", CPlaytestTrace::objectRefs(allOpponents)},
+            {"outcome", static_cast<int>(outcome)},
+            {"outcomeName", final_status_message(outcome, attackerName)},
+        };
+        CPlaytestTrace::addMapContext(fields, encounterMap);
+        CPlaytestTrace::record("combat_finished", fields);
+    }
+
     return outcome;
 }
 
@@ -499,6 +519,17 @@ void CFightHandler::defeatedCreature(const std::shared_ptr<CCreature> &a, const 
             b->removeItem(item);
             items.insert(item);
         }
+    }
+    if (CPlaytestTrace::enabled()) {
+        json fields = {
+            {"defeated", CPlaytestTrace::objectRef(b)},
+            {"items", CPlaytestTrace::itemRefs(items)},
+            {"recipient", CPlaytestTrace::objectRef(a)},
+            {"rewardSource", "combat"},
+            {"scale", b->getScale()},
+        };
+        CPlaytestTrace::addMapContext(fields, encounterMap);
+        CPlaytestTrace::record("reward_granted", fields);
     }
     a->getGame()->getRngHandler()->addRandomLoot(a, items);
     encounterMap->removeObject(b);

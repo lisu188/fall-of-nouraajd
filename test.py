@@ -342,6 +342,18 @@ def load_game_module():
     return game
 
 
+def event_names(trace):
+    return [record.get("event") for record in trace]
+
+
+def trace_tail_from_file(path, limit=80):
+    path = Path(path)
+    if not path.exists():
+        return []
+    lines = path.read_text(encoding="utf-8", errors="replace").splitlines()
+    return [json.loads(line) for line in lines[-limit:] if line.strip()]
+
+
 def make_temp_log_path():
     fd, path = tempfile.mkstemp(prefix="game-log-", suffix=".txt")
     os.close(fd)
@@ -10884,6 +10896,67 @@ class GameTest(unittest.TestCase):
             save_path.unlink(missing_ok=True)
 
     @game_test
+    def test_playtest_trace_records_core_gameplay_events(self):
+        game = load_game_module()
+        game.configure_playtest_trace(True)
+        try:
+            g, game_map, player = load_game_map_with_player("nouraajd")
+            target = find_adjacent_walkable_tile(game_map, player.getCoords())
+            player.moveTo(target.x, target.y, target.z)
+            player.addItem("letterFromRolf")
+            player.addQuest("rolfQuest")
+            game_map.removeObjectByName("cave1")
+
+            _combat_game, _session, attacker, defenders = self.make_multi_enemy_combat_fixture()
+            attacker.addGold(25)
+            game.CFightHandler.fightMany(attacker, defenders)
+
+            g.changeMap("ritual")
+            pump_event_loop(10)
+
+            trace = game.drain_playtest_trace()
+        finally:
+            game.configure_playtest_trace(False)
+
+        names = event_names(trace)
+        for expected in (
+            "movement",
+            "inventory_added",
+            "quest_added",
+            "quest_state_changed",
+            "gold_changed",
+            "combat_started",
+            "combat_finished",
+            "reward_granted",
+            "map_transition_requested",
+            "map_transition_completed",
+        ):
+            self.assertIn(expected, names)
+
+        self.assertTrue(any(record.get("map") == "nouraajd" for record in trace))
+        self.assertTrue(
+            any(
+                record.get("event") == "inventory_added" and (record.get("item") or {}).get("id") == "letterFromRolf"
+                for record in trace
+            )
+        )
+        self.assertTrue(
+            any(
+                record.get("event") == "quest_state_changed"
+                and record.get("quest") == "rolf"
+                and record.get("current") == "skull_recovered"
+                for record in trace
+            )
+        )
+        self.assertTrue(
+            any(
+                record.get("event") == "map_transition_completed" and record.get("toMap") == "ritual"
+                for record in trace
+            )
+        )
+        return True, json.dumps({"events": names, "trace": trace}, sort_keys=True)
+
+    @game_test
     def test_nouraajd_quest_state_machine(self):
         game = load_game_module()
 
@@ -13806,7 +13879,7 @@ class McpServerTest(unittest.TestCase):
         success = False
         log = {}
         try:
-            proc = self._start_stdio_mcp_process()
+            proc = self._start_stdio_mcp_process(map_name)
             self._initialize_stdio_mcp(proc)
             session = {"proc": proc, "next_request_id": 3}
             log = getattr(self, self.MCP_WALKTHROUGHS[map_name])(session)
@@ -13828,12 +13901,26 @@ class McpServerTest(unittest.TestCase):
                     log["shutdown_error"] = str(exc)
                     log["shutdown_exception_type"] = type(exc).__name__
                     log["shutdown_traceback"] = traceback.format_exc()
+            trace_path = getattr(proc, "_playtest_trace_path", None) if proc is not None else None
+            if map_name == "nouraajd" and trace_path is not None and trace_path.exists():
+                log["playtest_trace_path"] = str(trace_path)
+                if not success:
+                    log["playtest_trace_tail"] = trace_tail_from_file(trace_path)
             self._write_mcp_walkthrough_log(map_name, log)
         return success, log
 
-    def _start_stdio_mcp_process(self):
+    def _start_stdio_mcp_process(self, map_name=None):
         script = REPO_ROOT / "mcp.py"
         self.assertTrue(script.exists(), "MCP entry point is missing")
+        trace_path = None
+        env = None
+        if map_name == "nouraajd":
+            TEST_OUTPUT_DIR.mkdir(exist_ok=True)
+            trace_path = TEST_OUTPUT_DIR / "mcp_walkthrough_nouraajd_trace.jsonl"
+            trace_path.unlink(missing_ok=True)
+            env = os.environ.copy()
+            env["GAME_PLAYTEST_TRACE"] = "1"
+            env["GAME_PLAYTEST_TRACE_FILE"] = str(trace_path)
         command = [
             sys.executable,
             str(script),
@@ -13854,7 +13941,9 @@ class McpServerTest(unittest.TestCase):
             stderr=subprocess.PIPE,
             bufsize=0,
             cwd=str(REPO_ROOT),
+            env=env,
         )
+        proc._playtest_trace_path = trace_path
         proc._mcp_stderr_chunks = []
 
         def drain_stderr():
