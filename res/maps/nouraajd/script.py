@@ -11,6 +11,7 @@ def load(self, context):
     VICTOR_CULTIST_PREFIX = "victorCultist"
     VICTOR_COURTYARD_SPAWNS = [(44, 100, 0), (46, 100, 0), (45, 99, 0), (45, 101, 0)]
     VICTOR_COURTYARD_LEADER_SPAWN = (45, 100, 0)
+    VICTOR_COURTYARD_FALLBACK_RADIUS = 3
 
     def _clear_victor_encounter(game_map):
         def should_remove(obj):
@@ -19,6 +20,31 @@ def load(self, context):
 
         game_map.removeAll(should_remove)
         game_map.setNumericProperty("VICTOR_COURTYARD_TURN", -1)
+        game_map.setNumericProperty("VICTOR_CULTISTS_PLACED", 0)
+
+    def _coords_key(coords):
+        return coords.x, coords.y, coords.z
+
+    def _victor_spawn_candidates(preferred):
+        x, y, z = preferred
+        yield preferred
+        for radius in range(1, VICTOR_COURTYARD_FALLBACK_RADIUS + 1):
+            for dx in range(-radius, radius + 1):
+                for dy in range(-radius, radius + 1):
+                    if abs(dx) + abs(dy) != radius:
+                        continue
+                    yield x + dx, y + dy, z
+
+    def _find_victor_spawn_coords(game_map, preferred, reserved):
+        for candidate in _victor_spawn_candidates(preferred):
+            coords = Coords(*candidate)
+            key = _coords_key(coords)
+            if key in reserved:
+                continue
+            if game_map.canStep(coords):
+                reserved.add(key)
+                return coords
+        return None
 
     def _expire_victor_search(game_map):
         quest_system = _get_quest_system(game_map)
@@ -55,33 +81,55 @@ def load(self, context):
             _expire_victor_search(game_map)
             return False
 
-        spawned = False
-        for index, (x, y, z) in enumerate(dialog.COURTYARD_SPAWNS, start=1):
-            coords = Coords(x, y, z)
-            if game_map.canStep(coords):
-                mon = game.createObject("Cultist")
-                target_ctrl = game.createObject("CTargetController")
-                target_ctrl.setTarget("player")
-                mon.setController(target_ctrl)
-                mon.setStringProperty("name", f"{VICTOR_CULTIST_PREFIX}{index}")
-                game_map.addObject(mon)
-                mon.moveTo(coords.x, coords.y, coords.z)
-                spawned = True
+        _clear_victor_encounter(game_map)
+        reserved = set()
+        leader_coords = _find_victor_spawn_coords(game_map, dialog.COURTYARD_LEADER_SPAWN, reserved)
+        if leader_coords is None:
+            game.getGuiHandler().showMessage(
+                "The courtyard is choked with bodies and barricades; the cult's hidden door cannot be reached yet."
+            )
+            return False
 
-        coords = Coords(*dialog.COURTYARD_LEADER_SPAWN)
-        if game_map.canStep(coords):
-            leader = game.createObject("CultLeader")
-            leader.setStringProperty("name", "cultLeaderQuest")
+        leader = game.createObject("CultLeader")
+        leader.setStringProperty("name", "cultLeaderQuest")
+        target_ctrl = game.createObject("CTargetController")
+        target_ctrl.setTarget("player")
+        leader.setController(target_ctrl)
+        game_map.addObject(leader)
+        if game_map.getObjectByName("cultLeaderQuest") is None:
+            game.getGuiHandler().showMessage(
+                "The cult door shudders open, then slams shut before the leader can be drawn into the courtyard."
+            )
+            return False
+        leader.moveTo(leader_coords.x, leader_coords.y, leader_coords.z)
+
+        placed_cultists = 0
+        for index, preferred in enumerate(dialog.COURTYARD_SPAWNS, start=1):
+            coords = _find_victor_spawn_coords(game_map, preferred, reserved)
+            if coords is None:
+                continue
+            mon = game.createObject("Cultist")
             target_ctrl = game.createObject("CTargetController")
             target_ctrl.setTarget("player")
-            leader.setController(target_ctrl)
-            game_map.addObject(leader)
-            leader.moveTo(coords.x, coords.y, coords.z)
-            spawned = True
+            mon.setController(target_ctrl)
+            mon.setStringProperty("name", f"{VICTOR_CULTIST_PREFIX}{index}")
+            game_map.addObject(mon)
+            mon.moveTo(coords.x, coords.y, coords.z)
+            placed_cultists += 1
 
-        if spawned:
-            quest_system.mark_victor_encounter_active()
-        return spawned
+        if placed_cultists == 0:
+            _clear_victor_encounter(game_map)
+            game.getGuiHandler().showMessage(
+                "The cult leader vanishes back through the branded door; the courtyard is too choked for a fight."
+            )
+            return False
+
+        game_map.setNumericProperty("VICTOR_CULTISTS_PLACED", placed_cultists)
+        quest_system.mark_victor_encounter_active()
+        game.getGuiHandler().showMessage(
+            "The cultists reel toward the stained-glass door. Break their rite before Victor's daughter is taken."
+        )
+        return True
 
     class _TrackedQuest:
         def __init__(self, name):
@@ -553,15 +601,26 @@ def load(self, context):
             state = _quest_system_from(self).get_state("victor")
             if state == "encounter_active":
                 return "Defeat the cultists in the courtyard before Victor's daughter is taken."
+            if state == "good_end":
+                return "Victor's daughter survived the courtyard rite."
+            if state == "bad_end":
+                return "Victor's daughter was taken when the courtyard rite ended."
             if state in ("met_victor", "records_reviewed", "courtyard_known"):
-                return "Follow Victor's clue from the tavern and town hall to the marked courtyard."
+                return "Follow Victor's clue from the tavern to the town hall records, then to the courtyard."
             return "Find Victor's missing daughter."
 
         def getReward(self):
             return "500 gold, healing, and Victor's remaining potions if you reach the courtyard in time."
 
         def getHint(self):
-            return "The tavern rumor and town-hall records point to the courtyard."
+            state = _quest_system_from(self).get_state("victor")
+            if state == "encounter_active":
+                return f"The cultists began their rite; you have {VICTOR_COURTYARD_TIMEOUT_TURNS} turns from first contact."
+            if state == "good_end":
+                return "Victor and his daughter have fled the courtyard alive."
+            if state == "bad_end":
+                return "The courtyard is empty now, scrubbed clean by Marumi Baso's servants."
+            return "Ask Victor at the tavern, search the town hall ledgers, then hurry to the courtyard."
 
         def onComplete(self):
             pass
@@ -770,8 +829,25 @@ def load(self, context):
         def talked_to_victor(self):
             return self.getGame().getMap().getBoolProperty("TALKED_TO_VICTOR")
 
+        def can_discuss_victor_records(self):
+            if not self.talked_to_victor():
+                return False
+            state = _quest_system_from(self).get_state("victor")
+            return state in ("not_started", "met_victor", "records_reviewed", "courtyard_known")
+
+        def victor_encounter_active(self):
+            return _quest_system_from(self).get_state("victor") == "encounter_active"
+
+        def victor_good_end(self):
+            return _quest_system_from(self).get_state("victor") == "good_end"
+
+        def victor_bad_end(self):
+            return _quest_system_from(self).get_state("victor") == "bad_end"
+
         def start_victor_quest(self):
             quest_system = _quest_system_from(self)
+            if quest_system.get_state("victor") == "not_started" and self.talked_to_victor():
+                quest_system.record_met_victor()
             quest_system.record_victor_records()
             self._ensure_quest("victorQuest")
 
