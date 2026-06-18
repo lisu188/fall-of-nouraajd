@@ -1,5 +1,5 @@
 # fall-of-nouraajd c++ dark fantasy game
-# Copyright (C) 2025  Andrzej Lis
+# Copyright (C) 2025-2026  Andrzej Lis
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -31,6 +31,10 @@ def _find_build_dir(root: Path) -> Path | None:
     return None
 
 
+def _is_resource_root(path: Path) -> bool:
+    return (path / "config").is_dir() and (path / "maps").is_dir() and (path / "plugins").is_dir()
+
+
 def _insert_extension_paths(build_dir: Path) -> None:
     build_config = os.environ.get("GAME_BUILD_CONFIG")
     if build_config:
@@ -45,14 +49,21 @@ def _ensure_workdir(trusted_dir: Path) -> None:
 
 
 def _bootstrap() -> None:
-    repo_root = Path(__file__).resolve().parent
-    res_dir = repo_root / "res"
-    _insert_path(res_dir)
-    build_dir = _find_build_dir(repo_root)
+    script_dir = Path(__file__).resolve().parent
+    source_res_dir = script_dir / "res"
+    build_dir = _find_build_dir(script_dir)
     if build_dir:
         _insert_path(build_dir)
         _insert_extension_paths(build_dir)
-    _ensure_workdir(build_dir or res_dir)
+        _insert_path(source_res_dir)
+        _ensure_workdir(build_dir)
+        return
+    if _is_resource_root(script_dir):
+        _insert_path(script_dir)
+        _ensure_workdir(script_dir)
+        return
+    _insert_path(source_res_dir)
+    _ensure_workdir(source_res_dir)
 
 
 _bootstrap()

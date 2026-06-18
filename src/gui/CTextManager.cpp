@@ -16,6 +16,7 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #include "CTextManager.h"
+#include "core/CProvider.h"
 #include "core/CUtil.h"
 
 #include <algorithm>
@@ -96,7 +97,16 @@ fn::sdl::TexturePtr CTextManager::loadTexture(std::string text, int width) {
 
 CTextManager::CTextManager(const std::shared_ptr<CGui> &_gui) {
     SDL_SAFE(TTF_Init());
-    font.reset(SDL_SAFE(TTF_OpenFont("fonts/ampersand.ttf", 24)));
+    constexpr const char *fontResource = "fonts/ampersand.ttf";
+    const auto resolvedFont = CResourcesProvider::getInstance()->getPath(fontResource);
+    if (resolvedFont.empty()) {
+        vstd::logger::error("CTextManager: cannot resolve font", fontResource, "resolved:", resolvedFont);
+    } else {
+        font.reset(SDL_SAFE(TTF_OpenFont(resolvedFont.c_str(), 24)));
+        if (!font) {
+            vstd::logger::error("CTextManager: cannot load font", fontResource, "resolved:", resolvedFont);
+        }
+    }
     this->_gui = _gui;
 }
 

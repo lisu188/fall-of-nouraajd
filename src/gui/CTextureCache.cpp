@@ -16,6 +16,7 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #include "CTextureCache.h"
+#include "core/CProvider.h"
 #include "core/CUtil.h"
 
 #include <algorithm>
@@ -99,9 +100,14 @@ SDL_Texture *CTextureCache::getTexture(std::string path) {
 }
 
 fn::sdl::TexturePtr CTextureCache::loadTexture(std::string path) {
-    auto surface = fn::sdl::SurfacePtr(IMG_Load(path.c_str()));
+    const auto resolvedPath = CResourcesProvider::getInstance()->getPath(path);
+    if (resolvedPath.empty()) {
+        vstd::logger::error("CTextureCache::loadTexture: cannot resolve", path, "resolved:", resolvedPath);
+        return nullptr;
+    }
+    auto surface = fn::sdl::SurfacePtr(IMG_Load(resolvedPath.c_str()));
     if (!surface) {
-        vstd::logger::error("CTextureCache::loadTexture: cannot load", path);
+        vstd::logger::error("CTextureCache::loadTexture: cannot load", path, "resolved:", resolvedPath);
         return nullptr;
     }
     auto gui = _gui.lock();

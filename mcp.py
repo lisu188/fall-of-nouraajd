@@ -300,11 +300,12 @@ class EngineMcpServer:
 
     def import_modules(self) -> None:
         os.chdir(self.build_dir)
-        sys.path.insert(0, str(self.repo_root / "res"))
-        sys.path.insert(0, str(self.build_dir))
+        self._insert_import_path(self.repo_root / "res")
+        self._insert_import_path(self.repo_root)
+        self._insert_import_path(self.build_dir)
         for extension_dir in reversed(self._extension_search_dirs()):
             if extension_dir.exists():
-                sys.path.insert(0, str(extension_dir))
+                self._insert_import_path(extension_dir)
         try:
             self._game_module = importlib.import_module("_game")
         except ModuleNotFoundError as exc:
@@ -320,6 +321,24 @@ class EngineMcpServer:
         if self.build_config:
             return [self.build_dir / self.build_config]
         return [self.build_dir / config for config in ("Release", "Debug", "RelWithDebInfo", "MinSizeRel")]
+
+    @staticmethod
+    def _insert_import_path(path: Path) -> None:
+        if not path.exists():
+            return
+        path_text = str(path)
+        if path_text not in sys.path:
+            sys.path.insert(0, path_text)
+
+    @staticmethod
+    def _is_resource_root(path: Path) -> bool:
+        return (path / "config").is_dir() and (path / "maps").is_dir() and (path / "plugins").is_dir()
+
+    def _resource_root(self) -> Path | None:
+        for candidate in (self.build_dir, self.repo_root, self.repo_root / "res"):
+            if self._is_resource_root(candidate):
+                return candidate
+        return None
 
     def inspect_and_export(self) -> None:
         if self._game_module is None or self.game_module is None:
@@ -1242,7 +1261,8 @@ class EngineMcpServer:
         if map_name is not None and (not isinstance(map_name, str) or not map_name):
             raise ProtocolError(-32602, "map_design_brief `map_name` must be a non-empty string")
 
-        maps_root = (self.repo_root / "res" / "maps").resolve()
+        resource_root = self._resource_root()
+        maps_root = (resource_root / "maps").resolve() if resource_root else (self.repo_root / "res" / "maps").resolve()
         if not maps_root.is_dir():
             raise ProtocolError(-32603, f"Maps directory not found: {self._relative_path(maps_root)}")
 
@@ -1284,12 +1304,12 @@ class EngineMcpServer:
 
     def _resolve_map_dir(self, maps_root: Path, map_name: str) -> Path:
         if "/" in map_name or "\\" in map_name or map_name in {".", ".."}:
-            raise ProtocolError(-32602, "map_design_brief `map_name` must name a direct child of res/maps")
+            raise ProtocolError(-32602, "map_design_brief `map_name` must name a direct child of maps")
         map_dir = (maps_root / map_name).resolve()
         try:
             map_dir.relative_to(maps_root)
         except ValueError as exc:
-            raise ProtocolError(-32602, "map_design_brief `map_name` must stay under res/maps") from exc
+            raise ProtocolError(-32602, "map_design_brief `map_name` must stay under maps") from exc
         if not map_dir.is_dir():
             raise ProtocolError(-32602, f"Unknown map: {map_name}")
         return map_dir
@@ -1366,7 +1386,8 @@ class EngineMcpServer:
         }
 
     def _resource_catalog(self, max_ids_per_catalog: int) -> tuple[dict[str, list[str]], list[dict[str, Any]]]:
-        config_root = self.repo_root / "res" / "config"
+        resource_root = self._resource_root()
+        config_root = (resource_root / "config") if resource_root else self.repo_root / "res" / "config"
         resource_index: dict[str, list[str]] = {}
         catalog: list[dict[str, Any]] = []
         if not config_root.is_dir():
@@ -2430,6 +2451,10 @@ def configure_logging(level_name: str, log_sink: str = "stderr", trace_messages:
     )
 
 
+def is_resource_root(path: Path) -> bool:
+    return (path / "config").is_dir() and (path / "maps").is_dir() and (path / "plugins").is_dir()
+
+
 def main() -> int:
     args = parse_args()
     python_log_sink = "stderr" if args.stdio else "stdout"
@@ -2437,6 +2462,8 @@ def main() -> int:
     repo_root = Path(args.repo_root).resolve() if args.repo_root else Path(__file__).resolve().parent
     build_dir_arg = Path(args.build_dir)
     build_dir = build_dir_arg.resolve() if build_dir_arg.is_absolute() else (repo_root / build_dir_arg).resolve()
+    if not build_dir.exists() and is_resource_root(repo_root):
+        build_dir = repo_root
     native_log_sink = args.native_log_sink or ("file" if args.stdio else "stdout")
     native_log_path: Path | None = None
     if native_log_sink == "file":
