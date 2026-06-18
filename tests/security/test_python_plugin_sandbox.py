@@ -25,6 +25,7 @@ class PythonPluginSandboxTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.loader_source = (REPO_ROOT / "src" / "core" / "CLoader.cpp").read_text()
+        cls.save_format_source = (REPO_ROOT / "src" / "core" / "CSaveFormat.cpp").read_text()
         cls.provider_source = (REPO_ROOT / "src" / "core" / "CProvider.cpp").read_text()
         cls.game_source = (REPO_ROOT / "res" / "game.py").read_text()
 
@@ -55,7 +56,8 @@ class PythonPluginSandboxTest(unittest.TestCase):
     def test_plugin_and_map_paths_are_validated_before_loading(self):
         self.assertIn("is_allowed_python_plugin_path", self.loader_source)
         self.assertIn("Rejected Python plugin outside trusted resource plugin paths", self.loader_source)
-        self.assertIn("is_valid_map_name", self.loader_source)
+        self.assertIn("isValidMapName", self.save_format_source)
+        self.assertIn("CSaveFormat::isValidMapName", self.loader_source)
         self.assertIn("Rejected invalid map name while loading plugins", self.loader_source)
         self.assertIn("Rejected invalid map name while resolving map", self.loader_source)
 

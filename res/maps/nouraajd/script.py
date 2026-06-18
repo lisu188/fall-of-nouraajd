@@ -174,18 +174,8 @@ def load(self, context):
     if not hasattr(CPlayer, "getQuests"):
         CPlayer.getQuests = _python_get_quests
 
-    _QUEST_SYSTEMS = {}
-
-    def _quest_state_key(game_map):
-        return game_map.getName()
-
     def _get_quest_system(game_map):
-        key = _quest_state_key(game_map)
-        system = _QUEST_SYSTEMS.get(key)
-        if system is None or system.is_stale(game_map):
-            system = QuestSystem(game_map)
-            _QUEST_SYSTEMS[key] = system
-        return system
+        return QuestSystem(game_map)
 
     def _quest_system_from(obj):
         return _get_quest_system(obj.getGame().getMap())

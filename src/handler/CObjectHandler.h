@@ -52,6 +52,8 @@ class CObjectHandler : public CGameObject {
 
     void registerConfig(const std::string &name, std::shared_ptr<json> value);
 
+    void unregisterConfig(const std::string &name);
+
     void registerConfig(const std::set<std::string> &paths);
 
     void registerType(std::string name, std::function<std::shared_ptr<CGameObject>()> constructor);

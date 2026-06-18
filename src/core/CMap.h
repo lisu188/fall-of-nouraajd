@@ -131,6 +131,8 @@ class CMap : public CGameObject {
 
     void setPlayer(std::shared_ptr<CPlayer> player);
 
+    bool restorePlayerAfterLoad(std::string &error);
+
     void moveTile(std::shared_ptr<CTile> tile, int x, int y, int z);
 
     std::shared_ptr<CEventHandler> getEventHandler();

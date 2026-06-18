@@ -18,6 +18,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "core/CJsonUtil.h"
 #include "core/CPathFinder.h"
+#include "core/CSaveFormat.h"
 #include "core/CSerialization.h"
 #include "core/CScript.h"
 #include "core/CTags.h"
@@ -509,6 +510,89 @@ void test_script_rejects_executable_expressions() {
                 "safe accessor validation should only allow expressions rooted at self");
 }
 
+std::shared_ptr<json> make_save_snapshot(std::string map_name = "test") {
+    auto snapshot = std::make_shared<json>();
+    (*snapshot)["class"] = "CMap";
+    (*snapshot)["properties"] = json::object();
+    (*snapshot)["properties"]["mapName"] = std::move(map_name);
+    return snapshot;
+}
+
+void test_save_format_codec_validation() {
+    auto snapshot = make_save_snapshot();
+    auto envelope = CSaveFormat::buildEnvelope(snapshot, "test");
+    expect_true(envelope.has_value(), "save format should build a valid envelope");
+    expect_true((*envelope)->at("format").get<std::string>() == CSaveFormat::FORMAT,
+                "save envelope should use the canonical format marker");
+    expect_true((*envelope)->at("schemaVersion").get<int>() == CSaveFormat::SCHEMA_VERSION,
+                "save envelope should use the canonical schema version");
+
+    auto decoded = CSaveFormat::decodeDocument(*envelope);
+    expect_true(decoded.has_value() && decoded->mapName == "test" &&
+                    decoded->encoding == CSaveFormat::Encoding::Versioned,
+                "save format should decode versioned envelopes");
+
+    auto legacy = CSaveFormat::decodeDocument(snapshot);
+    expect_true(legacy.has_value() && legacy->mapName == "test" && legacy->encoding == CSaveFormat::Encoding::Legacy,
+                "save format should decode legacy snapshots");
+    expect_true(!CSaveFormat::decodeDocument(make_save_snapshot("../test")).has_value(),
+                "save format should reject legacy snapshots with invalid map names");
+
+    auto wrong_format = std::make_shared<json>(**envelope);
+    (*wrong_format)["format"] = "other";
+    expect_true(!CSaveFormat::decodeDocument(wrong_format).has_value(), "save format should reject unknown formats");
+
+    auto missing_schema = std::make_shared<json>(**envelope);
+    missing_schema->erase("schemaVersion");
+    expect_true(!CSaveFormat::decodeDocument(missing_schema).has_value(),
+                "save format should reject envelopes without schemaVersion");
+
+    auto old_schema = std::make_shared<json>(**envelope);
+    (*old_schema)["schemaVersion"] = 0;
+    expect_true(!CSaveFormat::decodeDocument(old_schema).has_value(), "save format should reject old schema versions");
+
+    auto future_schema = std::make_shared<json>(**envelope);
+    (*future_schema)["schemaVersion"] = CSaveFormat::SCHEMA_VERSION + 1;
+    expect_true(!CSaveFormat::decodeDocument(future_schema).has_value(),
+                "save format should reject future schema versions");
+
+    auto invalid_map = std::make_shared<json>(**envelope);
+    (*invalid_map)["mapName"] = "../test";
+    expect_true(!CSaveFormat::decodeDocument(invalid_map).has_value(), "save format should reject invalid map names");
+
+    auto missing_snapshot = std::make_shared<json>(**envelope);
+    missing_snapshot->erase("snapshot");
+    expect_true(!CSaveFormat::decodeDocument(missing_snapshot).has_value(),
+                "save format should reject envelopes without snapshots");
+
+    auto wrong_class = std::make_shared<json>(**envelope);
+    (*wrong_class)["snapshot"]["class"] = "CCreature";
+    expect_true(!CSaveFormat::decodeDocument(wrong_class).has_value(), "save format should reject non-map snapshots");
+
+    auto mismatched_map = std::make_shared<json>(**envelope);
+    (*mismatched_map)["snapshot"]["properties"]["mapName"] = "empty";
+    expect_true(!CSaveFormat::decodeDocument(mismatched_map).has_value(),
+                "save format should reject envelope/snapshot map mismatches");
+
+    expect_true(CSaveFormat::isValidSlotName("slot-1_ok.json"), "save format should allow safe slot names");
+    expect_true(!CSaveFormat::isValidSlotName(".hidden"), "save format should reject hidden slot names");
+    expect_true(CSaveFormat::primarySlotFromFilename("slot.json") == std::optional<std::string>("slot"),
+                "save format should extract primary slot names");
+    expect_true(CSaveFormat::backupSlotFromFilename("slot.json.bak") == std::optional<std::string>("slot"),
+                "save format should extract backup slot names");
+    expect_true(!CSaveFormat::backupSlotFromFilename("slot.txt.bak").has_value(),
+                "save format should reject backups without json primaries");
+    expect_true(!CSaveFormat::backupSlotFromFilename(".hidden.json.bak").has_value(),
+                "save format should reject hidden backup slot names");
+
+    expect_true(!CSaveFormat::buildEnvelope(std::make_shared<json>(json::object()), "test").has_value(),
+                "save format should reject envelopes built from non-map snapshots");
+    expect_true(!CSaveFormat::buildEnvelope(snapshot, "other").has_value(),
+                "save format should reject envelopes when snapshot and active map names differ");
+    expect_true(!CSaveFormat::buildEnvelope(make_save_snapshot("../test"), "../test").has_value(),
+                "save format should reject envelopes with invalid map names");
+}
+
 } // namespace
 
 int main() {
@@ -536,6 +620,7 @@ int main() {
     test_tag_mutation_iteration_and_range_helpers();
     test_delayed_future_handlers_run_through_event_loop();
     test_script_rejects_executable_expressions();
+    test_save_format_codec_validation();
 
     return finish_tests();
 }

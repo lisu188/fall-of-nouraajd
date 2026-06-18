@@ -184,6 +184,55 @@ def unique_save_name(prefix):
     return f"{prefix}{shard_part}-{os.getpid()}-{time.time_ns()}"
 
 
+SAVE_FORMAT = "fall-of-nouraajd-save"
+SAVE_SCHEMA_VERSION = 1
+
+
+def save_primary_path(slot_name):
+    return Path.cwd() / "save" / f"{slot_name}.json"
+
+
+def save_backup_path(slot_name):
+    return Path.cwd() / "save" / f"{slot_name}.json.bak"
+
+
+def cleanup_save_slot(slot_name):
+    primary = save_primary_path(slot_name)
+    backup = save_backup_path(slot_name)
+    primary.unlink(missing_ok=True)
+    if backup.exists() and backup.is_dir():
+        shutil.rmtree(backup)
+    else:
+        backup.unlink(missing_ok=True)
+    if primary.parent.exists():
+        for path in primary.parent.glob(f".{slot_name}.json.*.tmp"):
+            path.unlink(missing_ok=True)
+
+
+def save_temp_paths(slot_name):
+    save_dir = Path.cwd() / "save"
+    if not save_dir.exists():
+        return []
+    return list(save_dir.glob(f".{slot_name}.json.*.tmp"))
+
+
+def save_snapshot(saved_document):
+    if saved_document.get("format") == SAVE_FORMAT:
+        return saved_document.get("snapshot", {})
+    return saved_document
+
+
+def assert_save_envelope(test_case, saved_document, map_name):
+    test_case.assertEqual(SAVE_FORMAT, saved_document.get("format"))
+    test_case.assertEqual(SAVE_SCHEMA_VERSION, saved_document.get("schemaVersion"))
+    test_case.assertEqual(map_name, saved_document.get("mapName"))
+    snapshot = saved_document.get("snapshot")
+    test_case.assertIsInstance(snapshot, dict)
+    test_case.assertEqual("CMap", snapshot.get("class"))
+    test_case.assertEqual(map_name, snapshot.get("properties", {}).get("mapName"))
+    return snapshot
+
+
 class ProgressTextTestResult(unittest.TextTestResult):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -2782,7 +2831,6 @@ class GameTest(unittest.TestCase):
 
         save_name = f"dynamic_domain_plugin_roundtrip_{os.getpid()}_{time.time_ns()}"
         object_name = "dynamicDomainRoundTripBlade"
-        save_path = Path.cwd() / "save" / f"{save_name}.json"
         round_trip_game, game_map, _ = load_game_map_with_player("test")
         round_trip_item = round_trip_game.createObject("BladeOfDarkDreams")
         round_trip_item.name = object_name
@@ -2813,7 +2861,7 @@ class GameTest(unittest.TestCase):
             }
             return True, json.dumps(report, sort_keys=True)
         finally:
-            save_path.unlink(missing_ok=True)
+            cleanup_save_slot(save_name)
 
     @game_test
     def test_python_plugin_loader_rejects_non_resource_paths(self):
@@ -3655,7 +3703,6 @@ class GameTest(unittest.TestCase):
         self.assertEqual((after_vertical.x, after_vertical.y, after_vertical.z), (25, 25, 0))
 
         save_name = unique_save_name("toroidal_wrap_regression")
-        save_path = Path.cwd() / "save" / f"{save_name}.json"
         try:
             game.CMapLoader.save(game_map, save_name)
 
@@ -3683,7 +3730,7 @@ class GameTest(unittest.TestCase):
                 }
             )
         finally:
-            save_path.unlink(missing_ok=True)
+            cleanup_save_slot(save_name)
 
     @game_test
     def test_load_saved_map_slot_name_does_not_override_object_type_configs(self):
@@ -3693,7 +3740,11 @@ class GameTest(unittest.TestCase):
         game.CGameLoader.startGameWithPlayer(g, "test", "Warrior")
         save_name = "Sword"
         save_path = Path.cwd() / "save" / f"{save_name}.json"
+        backup_path = save_backup_path(save_name)
         existing_save = save_path.read_text(encoding="utf-8") if save_path.exists() else None
+        existing_backup = (
+            backup_path.read_text(encoding="utf-8") if backup_path.exists() and backup_path.is_file() else None
+        )
 
         try:
             game.CMapLoader.save(g.getMap(), save_name)
@@ -3716,7 +3767,12 @@ class GameTest(unittest.TestCase):
             if existing_save is None:
                 save_path.unlink(missing_ok=True)
             else:
+                save_path.parent.mkdir(exist_ok=True)
                 save_path.write_text(existing_save, encoding="utf-8")
+            if existing_backup is None:
+                backup_path.unlink(missing_ok=True)
+            else:
+                backup_path.write_text(existing_backup, encoding="utf-8")
 
     @game_test
     def test_map_proxy_cells_remain_populated_after_player_move(self):
@@ -3949,7 +4005,6 @@ class GameTest(unittest.TestCase):
         self.assertEqual("WaterTile", materialized_tile_type(game, game_map, initial_coords))
 
         save_name = unique_save_name("out_of_bounds_tile_override_regression")
-        save_path = Path.cwd() / "save" / f"{save_name}.json"
         try:
             game.CMapLoader.save(game_map, save_name)
 
@@ -3975,7 +4030,7 @@ class GameTest(unittest.TestCase):
                 }
             )
         finally:
-            save_path.unlink(missing_ok=True)
+            cleanup_save_slot(save_name)
 
     @game_test
     def test_player_recovery_from_map_objects_preserves_state(self):
@@ -4562,7 +4617,6 @@ class GameTest(unittest.TestCase):
         saved_turn = game_map.getTurn()
 
         save_name = unique_save_name("multilevel_z_roundtrip")
-        save_path = Path.cwd() / "save" / f"{save_name}.json"
         try:
             game.CMapLoader.save(game_map, save_name)
 
@@ -4599,7 +4653,7 @@ class GameTest(unittest.TestCase):
                 sort_keys=True,
             )
         finally:
-            save_path.unlink(missing_ok=True)
+            cleanup_save_slot(save_name)
 
     @game_test
     def test_multilevel_map_stale_collision_cache_is_z_scoped(self):
@@ -5179,12 +5233,15 @@ class GameTest(unittest.TestCase):
         game = load_game_module()
 
         save_name = f"invalid_save_{time.time_ns()}"
-        save_dir = build_dir / "save"
+        save_dir = Path.cwd() / "save"
         save_dir.mkdir(exist_ok=True)
         save_path = save_dir / f"{save_name}.json"
         save_path.write_text('{"properties":', encoding="utf-8")
 
         g = game.CGameLoader.loadGame()
+        game.CGameLoader.startGameWithPlayer(g, "test", "Warrior")
+        active_map = g.getMap()
+        active_map.description = "active-before-invalid-load"
         log_path = make_temp_log_path()
         try:
             game.set_logger_sink("file", str(log_path))
@@ -5196,23 +5253,465 @@ class GameTest(unittest.TestCase):
         log_text = log_path.read_text()
         log_path.unlink(missing_ok=True)
 
-        self.assertIsNotNone(g.getMap())
-        self.assertEqual("CMap", g.getMap().getType())
+        self.assertTrue(g.getMap() == active_map)
+        self.assertEqual("active-before-invalid-load", g.getMap().description)
         self.assertIn("WARNING: Failed to parse json from", log_text)
         self.assertIn(f"save/{save_name}.json", log_text)
         self.assertIn('preview: {"properties":', log_text)
+        self.assertIn("Saved game was not loaded; keeping the active map unchanged", log_text)
 
-        return True, json.dumps({"log": log_text.strip(), "map_type": g.getMap().getType()})
+        return True, json.dumps({"log": log_text.strip(), "map_description": g.getMap().description})
+
+    @game_test
+    def test_legacy_save_loads_and_resaves_as_versioned_format(self):
+        game = load_game_module()
+
+        save_name = unique_save_name("legacy_save_migration")
+        save_path = save_primary_path(save_name)
+        cleanup_save_slot(save_name)
+        save_path.parent.mkdir(exist_ok=True)
+        g, game_map, _player = load_game_map_with_player("test")
+        marker = f"legacy-marker-{time.time_ns()}"
+        game_map.description = marker
+        legacy_save = json.loads(game.jsonify(game_map))
+        for obj in legacy_save.get("properties", {}).get("objects", []):
+            if obj.get("properties", {}).get("name") == "player":
+                obj["properties"].pop("controller", None)
+                obj["properties"].pop("fightController", None)
+        save_path.write_text(json.dumps(legacy_save), encoding="utf-8")
+
+        try:
+            loaded_game = game.CGameLoader.loadGame()
+            game.CGameLoader.loadSavedGame(loaded_game, save_name)
+            loaded_map = loaded_game.getMap()
+            loaded_player = loaded_map.getPlayer()
+            self.assertEqual(marker, loaded_map.description)
+            self.assertIsNotNone(get_player_controller(loaded_player))
+            self.assertIsNotNone(loaded_player.getFightController())
+
+            game.CMapLoader.save(loaded_map, save_name)
+            saved_json = json.loads(save_path.read_text(encoding="utf-8"))
+            snapshot = assert_save_envelope(self, saved_json, "test")
+            self.assertEqual(marker, snapshot.get("properties", {}).get("description"))
+
+            return True, json.dumps(
+                {
+                    "legacy_loaded": True,
+                    "resaved_format": saved_json.get("format"),
+                    "player_controller": type(loaded_player.getController()).__name__,
+                },
+                sort_keys=True,
+            )
+        finally:
+            cleanup_save_slot(save_name)
+
+    @game_test
+    def test_legacy_save_rejects_noncanonical_player_name_without_activation(self):
+        game = load_game_module()
+
+        save_name = unique_save_name("legacy_bad_player_name")
+        cleanup_save_slot(save_name)
+        save_primary_path(save_name).parent.mkdir(exist_ok=True)
+        _g, game_map, _player = load_game_map_with_player("test")
+        legacy_save = json.loads(game.jsonify(game_map))
+        for obj in legacy_save.get("properties", {}).get("objects", []):
+            if obj.get("properties", {}).get("name") == "player":
+                obj["properties"]["name"] = "unitPlayer"
+                break
+        save_primary_path(save_name).write_text(json.dumps(legacy_save), encoding="utf-8")
+
+        loaded_game = game.CGameLoader.loadGame()
+        game.CGameLoader.startGameWithPlayer(loaded_game, "test", "Warrior")
+        active_map = loaded_game.getMap()
+        active_map.description = "active-before-bad-player"
+        log_path = make_temp_log_path()
+        try:
+            game.set_logger_sink("file", str(log_path))
+            game.CGameLoader.loadSavedGame(loaded_game, save_name)
+        finally:
+            game.set_logger_sink("disabled", None)
+            cleanup_save_slot(save_name)
+
+        log_text = log_path.read_text()
+        log_path.unlink(missing_ok=True)
+        self.assertTrue(loaded_game.getMap() == active_map)
+        self.assertEqual("active-before-bad-player", loaded_game.getMap().description)
+        self.assertIn("saved player object is not named player", log_text)
+
+        return True, json.dumps({"active_description": loaded_game.getMap().description}, sort_keys=True)
+
+    @game_test
+    def test_legacy_save_rejects_invalid_nested_object_property_without_activation(self):
+        game = load_game_module()
+
+        save_name = unique_save_name("legacy_bad_nested_property")
+        cleanup_save_slot(save_name)
+        save_primary_path(save_name).parent.mkdir(exist_ok=True)
+        _g, game_map, _player = load_game_map_with_player("test")
+        legacy_save = json.loads(game.jsonify(game_map))
+        for obj in legacy_save.get("properties", {}).get("objects", []):
+            if obj.get("properties", {}).get("name") == "player":
+                obj["properties"]["baseStats"] = {"class": "DefinitelyMissingSavedClass"}
+                break
+        save_primary_path(save_name).write_text(json.dumps(legacy_save), encoding="utf-8")
+
+        loaded_game = game.CGameLoader.loadGame()
+        game.CGameLoader.startGameWithPlayer(loaded_game, "test", "Warrior")
+        active_map = loaded_game.getMap()
+        active_map.description = "active-before-bad-nested-property"
+        log_path = make_temp_log_path()
+        try:
+            game.set_logger_sink("file", str(log_path))
+            game.CGameLoader.loadSavedGame(loaded_game, save_name)
+        finally:
+            game.set_logger_sink("disabled", None)
+            cleanup_save_slot(save_name)
+
+        log_text = log_path.read_text()
+        log_path.unlink(missing_ok=True)
+        self.assertTrue(loaded_game.getMap() == active_map)
+        self.assertEqual("active-before-bad-nested-property", loaded_game.getMap().description)
+        self.assertIn("Cannot deserialize unresolved game object: DefinitelyMissingSavedClass", log_text)
+
+        return True, json.dumps({"active_description": loaded_game.getMap().description}, sort_keys=True)
+
+    @game_test
+    def test_same_process_save_overwrite_loads_fresh_snapshot(self):
+        game = load_game_module()
+
+        save_name = unique_save_name("fresh_overwrite")
+        cleanup_save_slot(save_name)
+        g, game_map, _player = load_game_map_with_player("test")
+        try:
+            game_map.description = "overwrite-A"
+            game.CMapLoader.save(game_map, save_name)
+
+            first_loaded = game.CGameLoader.loadGame()
+            game.CGameLoader.loadSavedGame(first_loaded, save_name)
+            self.assertEqual("overwrite-A", first_loaded.getMap().description)
+
+            game_map.description = "overwrite-B"
+            game.CMapLoader.save(game_map, save_name)
+
+            second_loaded = game.CGameLoader.loadGame()
+            game.CGameLoader.loadSavedGame(second_loaded, save_name)
+            self.assertEqual("overwrite-B", second_loaded.getMap().description)
+            saved_json = json.loads(save_primary_path(save_name).read_text(encoding="utf-8"))
+            snapshot = assert_save_envelope(self, saved_json, "test")
+            self.assertEqual("overwrite-B", snapshot.get("properties", {}).get("description"))
+            backup_json = json.loads(save_backup_path(save_name).read_text(encoding="utf-8"))
+            backup_snapshot = assert_save_envelope(self, backup_json, "test")
+            self.assertEqual("overwrite-A", backup_snapshot.get("properties", {}).get("description"))
+            self.assertEqual([], save_temp_paths(save_name))
+
+            return True, json.dumps(
+                {
+                    "backup_exists": save_backup_path(save_name).exists(),
+                    "loaded_description": second_loaded.getMap().description,
+                },
+                sort_keys=True,
+            )
+        finally:
+            cleanup_save_slot(save_name)
+
+    @game_test
+    def test_corrupt_primary_recovers_valid_backup(self):
+        game = load_game_module()
+
+        save_name = unique_save_name("backup_recovery")
+        cleanup_save_slot(save_name)
+        g, game_map, _player = load_game_map_with_player("test")
+        game_map.description = "backup-valid"
+        try:
+            game.CMapLoader.save(game_map, save_name)
+            shutil.copyfile(save_primary_path(save_name), save_backup_path(save_name))
+            save_primary_path(save_name).write_text('{"snapshot":', encoding="utf-8")
+
+            log_path = make_temp_log_path()
+            try:
+                game.set_logger_sink("file", str(log_path))
+                loaded_game = game.CGameLoader.loadGame()
+                game.CGameLoader.loadSavedGame(loaded_game, save_name)
+            finally:
+                game.set_logger_sink("disabled", None)
+
+            log_text = log_path.read_text()
+            log_path.unlink(missing_ok=True)
+
+            self.assertEqual("backup-valid", loaded_game.getMap().description)
+            self.assertIn("Recovered save slot from backup", log_text)
+            self.assertIn("Repaired save primary from recovered backup", log_text)
+            repaired_json = json.loads(save_primary_path(save_name).read_text(encoding="utf-8"))
+            repaired_snapshot = assert_save_envelope(self, repaired_json, "test")
+            self.assertEqual("backup-valid", repaired_snapshot.get("properties", {}).get("description"))
+
+            return True, json.dumps({"recovered_description": loaded_game.getMap().description}, sort_keys=True)
+        finally:
+            cleanup_save_slot(save_name)
+
+    @game_test
+    def test_failed_primary_restore_does_not_poison_backup_recovery(self):
+        game = load_game_module()
+
+        save_name = unique_save_name("backup_after_failed_restore")
+        cleanup_save_slot(save_name)
+        _g, game_map, _player = load_game_map_with_player("test")
+        game_map.description = "backup-after-strict-failure"
+        try:
+            game.CMapLoader.save(game_map, save_name)
+            shutil.copyfile(save_primary_path(save_name), save_backup_path(save_name))
+            primary_json = json.loads(save_primary_path(save_name).read_text(encoding="utf-8"))
+            primary_json["snapshot"]["properties"]["objects"].append(
+                {"class": "DefinitelyMissingSavedClass", "properties": {"name": "badPrimaryObject"}}
+            )
+            save_primary_path(save_name).write_text(json.dumps(primary_json), encoding="utf-8")
+
+            log_path = make_temp_log_path()
+            try:
+                game.set_logger_sink("file", str(log_path))
+                loaded_game = game.CGameLoader.loadGame()
+                game.CGameLoader.loadSavedGame(loaded_game, save_name)
+            finally:
+                game.set_logger_sink("disabled", None)
+
+            log_text = log_path.read_text()
+            log_path.unlink(missing_ok=True)
+            self.assertEqual("backup-after-strict-failure", loaded_game.getMap().description)
+            self.assertIn("Cannot deserialize unresolved game object: DefinitelyMissingSavedClass", log_text)
+            self.assertIn("Recovered save slot from backup", log_text)
+
+            return True, json.dumps({"recovered_description": loaded_game.getMap().description}, sort_keys=True)
+        finally:
+            cleanup_save_slot(save_name)
+
+    @game_test
+    def test_corrupt_and_future_saves_do_not_replace_active_map(self):
+        game = load_game_module()
+
+        corrupt_name = unique_save_name("corrupt_both")
+        future_name = unique_save_name("future_version")
+        cleanup_save_slot(corrupt_name)
+        cleanup_save_slot(future_name)
+        save_primary_path(corrupt_name).parent.mkdir(exist_ok=True)
+        try:
+            save_primary_path(corrupt_name).write_text('{"properties":', encoding="utf-8")
+            save_backup_path(corrupt_name).write_text('{"properties":', encoding="utf-8")
+
+            g = game.CGameLoader.loadGame()
+            game.CGameLoader.startGameWithPlayer(g, "test", "Warrior")
+            active_map = g.getMap()
+            active_map.description = "active-map"
+            game.CGameLoader.loadSavedGame(g, corrupt_name)
+            self.assertTrue(g.getMap() == active_map)
+            self.assertEqual("active-map", g.getMap().description)
+
+            game.CMapLoader.save(active_map, future_name)
+            future_json = json.loads(save_primary_path(future_name).read_text(encoding="utf-8"))
+            future_json["schemaVersion"] = SAVE_SCHEMA_VERSION + 1
+            save_primary_path(future_name).write_text(json.dumps(future_json), encoding="utf-8")
+            save_backup_path(future_name).unlink(missing_ok=True)
+            game.CGameLoader.loadSavedGame(g, future_name)
+            self.assertTrue(g.getMap() == active_map)
+            self.assertEqual("active-map", g.getMap().description)
+
+            return True, json.dumps({"active_description": g.getMap().description}, sort_keys=True)
+        finally:
+            cleanup_save_slot(corrupt_name)
+            cleanup_save_slot(future_name)
+
+    @game_test
+    def test_save_listing_filters_backup_temp_and_directory_artifacts(self):
+        game = load_game_module()
+
+        slot_name = unique_save_name("listed_slot")
+        save_dir = Path.cwd() / "save"
+        save_dir.mkdir(exist_ok=True)
+        artifacts = [
+            save_dir / f"{slot_name}.json",
+            save_dir / f"{slot_name}.json.bak",
+            save_dir / f"{slot_name}.json.tmp",
+            save_dir / f".{slot_name}.json",
+            save_dir / f".{slot_name}.json.123.tmp",
+            save_dir / f"{slot_name}.txt",
+        ]
+        backup_only_slot = unique_save_name("backup_only_slot")
+        backup_only_path = save_dir / f"{backup_only_slot}.json.bak"
+        directory_artifact = save_dir / f"{slot_name}_dir.json"
+        try:
+            for path in artifacts:
+                path.write_text("{}", encoding="utf-8")
+            backup_only_path.write_text("{}", encoding="utf-8")
+            directory_artifact.mkdir(exist_ok=True)
+
+            listed = set(game.CResourcesProvider.getInstance().getFiles("SAVE"))
+            self.assertIn(slot_name, listed)
+            self.assertIn(backup_only_slot, listed)
+            self.assertNotIn(f"{slot_name}.json", listed)
+            self.assertNotIn(f"{slot_name}_dir", listed)
+            self.assertNotIn(f".{slot_name}", listed)
+
+            return True, json.dumps({"listed": sorted(name for name in listed if slot_name in name)}, sort_keys=True)
+        finally:
+            for path in artifacts:
+                path.unlink(missing_ok=True)
+            backup_only_path.unlink(missing_ok=True)
+            if directory_artifact.exists():
+                shutil.rmtree(directory_artifact)
+
+    @game_test
+    def test_failed_save_rotation_preserves_existing_primary(self):
+        game = load_game_module()
+
+        save_name = unique_save_name("failed_rotation")
+        cleanup_save_slot(save_name)
+        g, game_map, _player = load_game_map_with_player("test")
+        try:
+            game_map.description = "before-failed-rotation"
+            game.CMapLoader.save(game_map, save_name)
+            original_bytes = save_primary_path(save_name).read_bytes()
+
+            backup_dir = save_backup_path(save_name)
+            backup_dir.mkdir(exist_ok=True)
+            (backup_dir / "blocker").write_text("block", encoding="utf-8")
+
+            game_map.description = "after-failed-rotation"
+            game.CMapLoader.save(game_map, save_name)
+
+            self.assertEqual(original_bytes, save_primary_path(save_name).read_bytes())
+            saved_json = json.loads(save_primary_path(save_name).read_text(encoding="utf-8"))
+            snapshot = assert_save_envelope(self, saved_json, "test")
+            self.assertEqual("before-failed-rotation", snapshot.get("properties", {}).get("description"))
+            self.assertEqual([], save_temp_paths(save_name))
+
+            return True, json.dumps({"primary_preserved": True}, sort_keys=True)
+        finally:
+            cleanup_save_slot(save_name)
+
+    @game_test
+    def test_python_backed_nouraajd_object_round_trips_through_save(self):
+        game = load_game_module()
+
+        save_name = unique_save_name("python_backed_object")
+        cleanup_save_slot(save_name)
+        g, game_map, player = load_game_map_with_player("nouraajd")
+        marker = f"python-backed-{time.time_ns()}"
+        event = g.createObject("StartEvent")
+        event.name = "unitPythonBackedStartEvent"
+        event.setStringProperty("roundTripMarker", marker)
+        game_map.addObject(event)
+        event.moveTo(player.getCoords().x, player.getCoords().y, player.getCoords().z)
+        try:
+            game.CMapLoader.save(game_map, save_name)
+
+            loaded_game = game.CGameLoader.loadGame()
+            game.CGameLoader.loadSavedGame(loaded_game, save_name)
+            loaded_event = loaded_game.getMap().getObjectByName("unitPythonBackedStartEvent")
+
+            self.assertIsNotNone(loaded_event)
+            self.assertEqual("StartEvent", loaded_event.getType())
+            self.assertEqual("StartEvent", loaded_event.getTypeId())
+            self.assertEqual(marker, loaded_event.getStringProperty("roundTripMarker"))
+
+            return True, json.dumps(
+                {
+                    "loaded_type": loaded_event.getType(),
+                    "marker": loaded_event.getStringProperty("roundTripMarker"),
+                },
+                sort_keys=True,
+            )
+        finally:
+            cleanup_save_slot(save_name)
+
+    @game_test
+    def test_nouraajd_snapshot_restores_runtime_state_and_single_claim_rewards(self):
+        game = load_game_module()
+        original_show_message = game.CGuiHandler.showMessage
+        try:
+            game.CGuiHandler.showMessage = lambda self, message: None
+            save_name = unique_save_name("nouraajd_state_roundtrip")
+            cleanup_save_slot(save_name)
+            g, game_map, player = load_game_map_with_player("nouraajd")
+
+            target = find_adjacent_walkable_tile(game_map, player.getCoords())
+            drive_player_to_target(game_map, player, target, max_turns=4)
+            player.addItem("LifePotion")
+            player.addQuest("octoBogzQuest")
+            game_map.setBoolProperty("unitSaveFlag", True)
+
+            weapon = player.getWeapon()
+            weapon_type = weapon.getTypeId() if weapon else ""
+
+            game_map.removeObjectByName("cave1")
+            self.assertIsNone(game_map.getObjectByName("cave1"))
+            self.assertIsNotNone(game_map.getObjectByName("gooby1"))
+            game_map.removeObjectByName("catacombs")
+            game_map.removeObjectByName("cave2")
+            player.checkQuests()
+
+            saved_coords = coords_tuple(player.getCoords())
+            saved_turn = game_map.getTurn()
+            saved_gold = player.getGold()
+            saved_shadow_blades = player.countItems("ShadowBlade")
+            saved_life_potions = player.countItems("LifePotion")
+
+            game.CMapLoader.save(game_map, save_name)
+
+            loaded_game = game.CGameLoader.loadGame()
+            game.CGameLoader.loadSavedGame(loaded_game, save_name)
+            loaded_map = loaded_game.getMap()
+            loaded_player = loaded_map.getPlayer()
+
+            self.assertEqual("nouraajd", loaded_map.mapName)
+            self.assertEqual(saved_coords, coords_tuple(loaded_player.getCoords()))
+            self.assertEqual(saved_turn, loaded_map.getTurn())
+            self.assertTrue(loaded_map.getBoolProperty("unitSaveFlag"))
+            self.assertEqual(saved_life_potions, loaded_player.countItems("LifePotion"))
+            self.assertEqual(weapon_type, loaded_player.getWeapon().getTypeId() if loaded_player.getWeapon() else "")
+            self.assertIsNone(loaded_map.getObjectByName("cave1"))
+            self.assertIsNone(loaded_map.getObjectByName("catacombs"))
+            self.assertIsNone(loaded_map.getObjectByName("cave2"))
+            self.assertIsNotNone(loaded_map.getObjectByName("gooby1"))
+            self.assertTrue(loaded_player.hasItem(lambda it: it.getName() == "skullOfRolf"))
+            self.assertTrue(loaded_player.hasItem(lambda it: it.getName() == "holyRelic"))
+            self.assertEqual(saved_gold, loaded_player.getGold())
+            self.assertEqual(saved_shadow_blades, loaded_player.countItems("ShadowBlade"))
+            self.assertIsNotNone(get_player_controller(loaded_player))
+            self.assertIsNotNone(loaded_player.getFightController())
+
+            loaded_player.checkQuests()
+            self.assertEqual(saved_gold, loaded_player.getGold())
+            self.assertEqual(saved_shadow_blades, loaded_player.countItems("ShadowBlade"))
+
+            loaded_map.removeObjectByName("gooby1")
+            self.assertTrue(loaded_map.getBoolProperty("completed_gooby"))
+
+            return True, json.dumps(
+                {
+                    "coords": saved_coords,
+                    "turn": saved_turn,
+                    "gold": loaded_player.getGold(),
+                    "shadow_blades": loaded_player.countItems("ShadowBlade"),
+                    "weapon": weapon_type,
+                },
+                sort_keys=True,
+            )
+        finally:
+            game.CGuiHandler.showMessage = original_show_message
+            cleanup_save_slot(save_name)
 
     @game_test
     def test_invalid_save_slot_names_are_rejected(self):
         game = load_game_module()
 
         unique = str(time.time_ns())
-        invalid_slots = [f"../evil_{unique}", f"a/b_{unique}"]
+        invalid_slots = [f"../evil_{unique}", f"a/b_{unique}", f".hidden_{unique}"]
         potential_writes = [
-            build_dir / f"evil_{unique}.json",
-            build_dir / "save" / "a" / f"b_{unique}.json",
+            Path.cwd() / f"evil_{unique}.json",
+            Path.cwd() / f"evil_{unique}.json.bak",
+            Path.cwd() / "save" / "a" / f"b_{unique}.json",
+            Path.cwd() / "save" / "a" / f"b_{unique}.json.bak",
+            Path.cwd() / "save" / f".hidden_{unique}.json",
+            Path.cwd() / "save" / f".hidden_{unique}.json.bak",
         ]
 
         g = game.CGameLoader.loadGame()
@@ -5225,9 +5724,10 @@ class GameTest(unittest.TestCase):
             for slot_name in invalid_slots:
                 game.CMapLoader.save(game_map, slot_name)
                 loaded_game = game.CGameLoader.loadGame()
+                game.CGameLoader.startGameWithPlayer(loaded_game, "test", "Warrior")
+                active_map = loaded_game.getMap()
                 game.CGameLoader.loadSavedGame(loaded_game, slot_name)
-                self.assertIsNotNone(loaded_game.getMap())
-                self.assertEqual("CMap", loaded_game.getMap().getType())
+                self.assertTrue(loaded_game.getMap() == active_map)
         finally:
             game.set_logger_sink("disabled", None)
 
@@ -5245,6 +5745,226 @@ class GameTest(unittest.TestCase):
                 "blocked_paths": [str(path) for path in potential_writes],
             }
         )
+
+    @game_test
+    def test_malformed_save_envelopes_are_rejected_without_activation(self):
+        game = load_game_module()
+
+        g = game.CGameLoader.loadGame()
+        game.CGameLoader.startGameWithPlayer(g, "test", "Warrior")
+        active_map = g.getMap()
+        active_marker = f"active-envelope-guard-{time.time_ns()}"
+        active_map.description = active_marker
+        valid_snapshot = json.loads(game.jsonify(active_map))
+        mismatched_snapshot = json.loads(json.dumps(valid_snapshot))
+        mismatched_snapshot["properties"]["mapName"] = "empty"
+        wrong_class_snapshot = json.loads(json.dumps(valid_snapshot))
+        wrong_class_snapshot["class"] = "CCreature"
+
+        cases = [
+            (
+                "root_array",
+                [],
+                "save root is not a JSON object",
+            ),
+            (
+                "wrong_format",
+                {"format": "other-format", "schemaVersion": SAVE_SCHEMA_VERSION},
+                "unsupported save format",
+            ),
+            (
+                "missing_schema",
+                {"format": SAVE_FORMAT, "mapName": "test", "snapshot": valid_snapshot},
+                "save envelope is missing integer schemaVersion",
+            ),
+            (
+                "old_schema",
+                {"format": SAVE_FORMAT, "schemaVersion": 0, "mapName": "test", "snapshot": valid_snapshot},
+                "unsupported save schema version",
+            ),
+            (
+                "missing_map_name",
+                {"format": SAVE_FORMAT, "schemaVersion": SAVE_SCHEMA_VERSION, "snapshot": valid_snapshot},
+                "save envelope is missing string mapName",
+            ),
+            (
+                "invalid_map_name",
+                {
+                    "format": SAVE_FORMAT,
+                    "schemaVersion": SAVE_SCHEMA_VERSION,
+                    "mapName": "../test",
+                    "snapshot": valid_snapshot,
+                },
+                "save envelope contains invalid mapName",
+            ),
+            (
+                "missing_snapshot",
+                {"format": SAVE_FORMAT, "schemaVersion": SAVE_SCHEMA_VERSION, "mapName": "test"},
+                "save envelope is missing object snapshot",
+            ),
+            (
+                "wrong_snapshot_class",
+                {
+                    "format": SAVE_FORMAT,
+                    "schemaVersion": SAVE_SCHEMA_VERSION,
+                    "mapName": "test",
+                    "snapshot": wrong_class_snapshot,
+                },
+                "save snapshot is missing a valid CMap mapName",
+            ),
+            (
+                "map_mismatch",
+                {
+                    "format": SAVE_FORMAT,
+                    "schemaVersion": SAVE_SCHEMA_VERSION,
+                    "mapName": "test",
+                    "snapshot": mismatched_snapshot,
+                },
+                "save envelope mapName does not match snapshot mapName",
+            ),
+        ]
+
+        slots = []
+        log_path = make_temp_log_path()
+        try:
+            game.set_logger_sink("file", str(log_path))
+            for suffix, document, _expected in cases:
+                slot_name = unique_save_name(f"malformed_envelope_{suffix}")
+                slots.append(slot_name)
+                cleanup_save_slot(slot_name)
+                save_primary_path(slot_name).parent.mkdir(exist_ok=True)
+                save_primary_path(slot_name).write_text(json.dumps(document), encoding="utf-8")
+
+                game.CGameLoader.loadSavedGame(g, slot_name)
+                self.assertTrue(g.getMap() == active_map)
+                self.assertEqual(active_marker, g.getMap().description)
+        finally:
+            game.set_logger_sink("disabled", None)
+            for slot_name in slots:
+                cleanup_save_slot(slot_name)
+
+        log_text = log_path.read_text()
+        log_path.unlink(missing_ok=True)
+        for _suffix, _document, expected in cases:
+            self.assertIn(expected, log_text)
+
+        return True, json.dumps(
+            {
+                "cases": [suffix for suffix, _document, _expected in cases],
+                "active_description": g.getMap().description,
+            },
+            sort_keys=True,
+        )
+
+    @game_test
+    def test_strict_save_deserialization_rejects_partial_snapshot_without_activation(self):
+        game = load_game_module()
+
+        g = game.CGameLoader.loadGame()
+        game.CGameLoader.startGameWithPlayer(g, "test", "Warrior")
+        active_map = g.getMap()
+        active_marker = f"active-strict-guard-{time.time_ns()}"
+        active_map.description = active_marker
+        snapshot = json.loads(game.jsonify(active_map))
+        cases = [
+            (
+                "missing_class",
+                {},
+                "Cannot deserialize unresolved game object: <unknown>",
+            ),
+            (
+                "non_object",
+                None,
+                "Cannot deserialize a missing or non-object game object",
+            ),
+            (
+                "missing_type",
+                {"class": "DefinitelyMissingSavedClass", "properties": {"name": "badSavedObject"}},
+                "Cannot deserialize unresolved game object: DefinitelyMissingSavedClass",
+            ),
+        ]
+
+        slots = []
+        log_path = make_temp_log_path()
+        try:
+            game.set_logger_sink("file", str(log_path))
+            for suffix, bad_object, _expected in cases:
+                slot_name = unique_save_name(f"strict_restore_{suffix}")
+                slots.append(slot_name)
+                cleanup_save_slot(slot_name)
+                save_primary_path(slot_name).parent.mkdir(exist_ok=True)
+                saved_document = {
+                    "format": SAVE_FORMAT,
+                    "schemaVersion": SAVE_SCHEMA_VERSION,
+                    "mapName": "test",
+                    "snapshot": json.loads(json.dumps(snapshot)),
+                }
+                saved_document["snapshot"]["properties"]["objects"].append(bad_object)
+                save_primary_path(slot_name).write_text(json.dumps(saved_document), encoding="utf-8")
+
+                game.CGameLoader.loadSavedGame(g, slot_name)
+                self.assertTrue(g.getMap() == active_map)
+                self.assertEqual(active_marker, g.getMap().description)
+        finally:
+            game.set_logger_sink("disabled", None)
+            for slot_name in slots:
+                cleanup_save_slot(slot_name)
+
+        log_text = log_path.read_text()
+        log_path.unlink(missing_ok=True)
+        for _suffix, _bad_object, expected in cases:
+            self.assertIn(expected, log_text)
+
+        return True, json.dumps(
+            {
+                "cases": [suffix for suffix, _bad_object, _expected in cases],
+                "active_description": g.getMap().description,
+            },
+            sort_keys=True,
+        )
+
+    @game_test
+    def test_strict_save_rejects_duplicate_object_names_without_activation(self):
+        game = load_game_module()
+
+        save_name = unique_save_name("strict_restore_duplicate_object")
+        cleanup_save_slot(save_name)
+        save_primary_path(save_name).parent.mkdir(exist_ok=True)
+        _source_game, source_map, _player = load_game_map_with_player("test")
+        saved_document = {
+            "format": SAVE_FORMAT,
+            "schemaVersion": SAVE_SCHEMA_VERSION,
+            "mapName": "test",
+            "snapshot": json.loads(game.jsonify(source_map)),
+        }
+        player_object = None
+        for obj in saved_document["snapshot"]["properties"]["objects"]:
+            if obj.get("properties", {}).get("name") == "player":
+                player_object = json.loads(json.dumps(obj))
+                break
+        self.assertIsNotNone(player_object)
+        saved_document["snapshot"]["properties"]["objects"].append(player_object)
+        save_primary_path(save_name).write_text(json.dumps(saved_document), encoding="utf-8")
+
+        loaded_game = game.CGameLoader.loadGame()
+        game.CGameLoader.startGameWithPlayer(loaded_game, "test", "Warrior")
+        active_map = loaded_game.getMap()
+        active_map.description = "active-before-duplicate-object"
+        log_path = make_temp_log_path()
+        try:
+            game.set_logger_sink("file", str(log_path))
+            game.CGameLoader.loadSavedGame(loaded_game, save_name)
+        finally:
+            game.set_logger_sink("disabled", None)
+            cleanup_save_slot(save_name)
+
+        log_text = log_path.read_text()
+        log_path.unlink(missing_ok=True)
+        self.assertTrue(loaded_game.getMap() == active_map)
+        self.assertEqual("active-before-duplicate-object", loaded_game.getMap().description)
+        self.assertIn("Saved map contains duplicate object name: player", log_text)
+
+        return True, json.dumps({"active_description": loaded_game.getMap().description}, sort_keys=True)
 
     @game_test
     def test_objects(self):
@@ -6209,7 +6929,6 @@ class GameTest(unittest.TestCase):
         heal_potion.moveTo(2, 2, 0)
 
         save_name = unique_save_name("typed_tags_roundtrip")
-        save_path = Path.cwd() / "save" / f"{save_name}.json"
         try:
             game.CMapLoader.save(siege_map, save_name)
 
@@ -6236,7 +6955,7 @@ class GameTest(unittest.TestCase):
             }
             return True, json.dumps(report, sort_keys=True)
         finally:
-            save_path.unlink(missing_ok=True)
+            cleanup_save_slot(save_name)
 
     @game_test
     def test_missing_save_resource_directory_lists_empty(self):
@@ -9941,7 +10660,9 @@ class XvfbGameplayProcessTest(unittest.TestCase):
 
         save_name = game_map.mapName
         save_path = Path.cwd() / "save" / f"{save_name}.json"
+        backup_path = save_backup_path(save_name)
         existing_save = save_path.read_bytes() if save_path.exists() else None
+        existing_backup = backup_path.read_bytes() if backup_path.exists() and backup_path.is_file() else None
 
         def saved_marker_matches():
             if not save_path.exists():
@@ -9950,7 +10671,7 @@ class XvfbGameplayProcessTest(unittest.TestCase):
                 saved_json = json.loads(save_path.read_text())
             except json.JSONDecodeError:
                 return False
-            return marker == saved_json.get("properties", {}).get("description")
+            return marker == save_snapshot(saved_json).get("properties", {}).get("description")
 
         try:
             save_path.unlink(missing_ok=True)
@@ -9958,7 +10679,8 @@ class XvfbGameplayProcessTest(unittest.TestCase):
             push_sdl_key_event(ord("s"), 0, SDL_KEYUP)
             self.assertTrue(pump_event_loop_until(saved_marker_matches, timeout=1.0))
             saved_json = json.loads(save_path.read_text())
-            self.assertEqual(marker, saved_json.get("properties", {}).get("description"))
+            snapshot = assert_save_envelope(self, saved_json, save_name)
+            self.assertEqual(marker, snapshot.get("properties", {}).get("description"))
 
             loaded = game.CGameLoader.loadGame()
             game.CGameLoader.loadSavedGame(loaded, save_name)
@@ -9970,6 +10692,10 @@ class XvfbGameplayProcessTest(unittest.TestCase):
             else:
                 save_path.parent.mkdir(exist_ok=True)
                 save_path.write_bytes(existing_save)
+            if existing_backup is None:
+                backup_path.unlink(missing_ok=True)
+            else:
+                backup_path.write_bytes(existing_backup)
 
 
 class PlayBootstrapTest(unittest.TestCase):

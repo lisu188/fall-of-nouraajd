@@ -114,9 +114,9 @@ class CResourcesProvider {
 
     std::vector<std::string> getFiles(const std::string &type);
 
-    void save(std::string file, const std::string &data);
+    bool save(std::string file, const std::string &data);
 
-    void save(std::string file, std::shared_ptr<json> data);
+    bool save(std::string file, std::shared_ptr<json> data);
 
     CResourcesProvider() = default;
 

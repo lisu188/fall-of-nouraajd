@@ -39,6 +39,8 @@ void CObjectHandler::registerConfig(const std::string &name, std::shared_ptr<jso
     objectConfig[name] = value;
 }
 
+void CObjectHandler::unregisterConfig(const std::string &name) { objectConfig.erase(name); }
+
 std::shared_ptr<json> CObjectHandler::getConfig(const std::string &type) {
     if (vstd::ctn(objectConfig, type)) {
         return objectConfig[type];
