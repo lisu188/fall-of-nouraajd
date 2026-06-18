@@ -469,15 +469,29 @@ void CCreature::beforeMove() {
 
 void CCreature::afterMove() {
     auto self = this->ptr<CCreature>();
+    auto map = getMap();
+    if (!map) {
+        return;
+    }
+    const auto arrival = map->normalizeCoords(getCoords());
 
-    if (getMap()->getTile(this->getCoords())) {
-        getMap()->getTile(this->getCoords())->onStep(this->ptr<CCreature>());
+    auto moverStillAtArrival = [self, map, arrival]() {
+        return self->isAlive() && self->getMap() == map && map->getObjectByName(self->getName()) == self &&
+               map->normalizeCoords(self->getCoords()) == arrival;
+    };
+
+    if (map->getTile(arrival)) {
+        map->getTile(arrival)->onStep(self);
+    }
+    if (!moverStillAtArrival()) {
+        return;
     }
 
-    auto fightPred = [self](std::shared_ptr<CMapObject> object) {
+    auto fightPred = [self, map](std::shared_ptr<CMapObject> object) {
         auto other = vstd::cast<CCreature>(object);
         return other && self != object && !self->isNpc() && !other->isNpc() && !self->isAffiliatedWith(object) &&
-               self->getMap()->getObjectByName(self->getName()) && object->getMap()->getObjectByName(object->getName());
+               self->getMap() == map && map->getObjectByName(self->getName()) == self && other->getMap() == map &&
+               map->getObjectByName(other->getName()) == other;
     };
 
     std::vector<std::shared_ptr<CCreature>> opponents;
@@ -487,16 +501,18 @@ void CCreature::afterMove() {
         }
     };
 
-    auto eventAction = [self](auto object) {
-        self->getMap()->getEventHandler()->gameEvent(
-            object, std::make_shared<CGameEventCaused>(CGameEvent::CType::onEnter, self));
+    auto eventAction = [self, map](auto object) {
+        map->getEventHandler()->gameEvent(object, std::make_shared<CGameEventCaused>(CGameEvent::CType::onEnter, self));
     };
 
-    getMap()->forObjectsAtCoords(this->getCoords(), fightAction, fightPred);
+    map->forObjectsAtCoords(arrival, fightAction, fightPred);
+    bool allow_enter = true;
     if (!opponents.empty()) {
-        CFightHandler::fightMany(self, opponents);
+        allow_enter = CFightHandler::fightManyOutcome(self, opponents) == CFightOutcome::attackerVictory;
     }
-    getMap()->forObjectsAtCoords(this->getCoords(), eventAction, visitablePredicate);
+    if (allow_enter && moverStillAtArrival()) {
+        map->forObjectsAtCoords(arrival, eventAction, visitablePredicate);
+    }
 }
 
 void CCreature::addGold(int gold) { this->setGold(this->getGold() + gold); }

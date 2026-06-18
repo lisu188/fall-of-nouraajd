@@ -760,6 +760,13 @@ void init_game_module(py::module_ &m) {
                                                                            "Dispatcher for game/map events.")
         .def("registerTrigger", &CEventHandler::registerTrigger, "Register a trigger for an event type.");
 
+    py::enum_<CFightOutcome>(m, "CFightOutcome")
+        .value("invalid", CFightOutcome::invalid)
+        .value("attackerVictory", CFightOutcome::attackerVictory)
+        .value("attackerDefeat", CFightOutcome::attackerDefeat)
+        .value("stalemate", CFightOutcome::stalemate)
+        .value("interrupted", CFightOutcome::interrupted);
+
     py::class_<CFightHandler, std::shared_ptr<CFightHandler>>(m, "CFightHandler", "Combat resolution service.")
         .def("fight", &CFightHandler::fight, "Run a fight between two creatures.")
         .def_static("applyEffects", &CFightHandler::applyEffects, "Apply active effects to a creature.")
@@ -772,7 +779,13 @@ void init_game_module(py::module_ &m) {
                 }
                 return CFightHandler::fightMany(attacker, encounter);
             },
-            "Run a fight between one creature and multiple opponents.");
+            "Run a fight between one creature and multiple opponents.")
+        .def_static(
+            "fightManyOutcome",
+            [](std::shared_ptr<CCreature> attacker, const py::iterable &opponents) {
+                return CFightHandler::fightManyOutcome(attacker, creature_iterable_to_vector(opponents));
+            },
+            "Run a multi-opponent fight and return the detailed C++ outcome.");
 
     py::class_<CSlot, CGameObject, std::shared_ptr<CSlot>>(m, "CSlot", "Equipment slot configuration entry.")
         .def("getSlotName", &CSlot::getSlotName, "Return slot id.")
@@ -892,6 +905,7 @@ void init_game_module(py::module_ &m) {
         .def("setController", &CCreature::setController, "Set the movement controller.")
         .def("getFightController", &CCreature::getFightController, "Return the fight controller.")
         .def("setFightController", &CCreature::setFightController, "Set the fight controller.")
+        .def("getHp", &CCreature::getHp, "Return current HP.")
         .def("setHp", &CCreature::setHp, "Set current HP.")
         .def("setMana", &CCreature::setMana, "Set current mana.")
         .def("addExp", &CCreature::addExp, "Add experience and trigger level ups when thresholds are reached.")
