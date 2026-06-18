@@ -127,13 +127,16 @@ jobs:
       CONFIGURE_BUILD_DIRS: cmake-build-release
       GAME_TEST_TIMINGS_FILE: test/test-timings-windows.json
       GAME_WINDOWS_FAST_BUILD: "1"
-      GAME_WINDOWS_INSTALL_FAST_TOOLS: "1"
+      GAME_WINDOWS_INSTALL_FAST_TOOLS: "0"
       GAME_WINDOWS_REQUIRE_FAST_TOOLS: "1"
       SCCACHE_DIR: ${{ github.workspace }}\.sccache
+      SCCACHE_SHA256: dcf489090aa5ef4c7d145e8b29f759124c803d636c3107f397bd50d425b5f341
+      SCCACHE_VERSION: "0.15.0"
       VCPKG_BINARY_SOURCES: clear;x-gha,readwrite
       VCPKG_INSTALLED_DIR: ${{ github.workspace }}\vcpkg_installed\fast
       VCPKG_OVERLAY_TRIPLETS: ${{ github.workspace }}\cmake\triplets
       VCPKG_TARGET_TRIPLET: x64-windows-release
+      WINDOWS_FAST_TOOLS_DIR: ${{ github.workspace }}\.windows-tools\bin
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
       - name: Set up Python
@@ -182,6 +185,56 @@ jobs:
           script: |
             core.exportVariable('ACTIONS_CACHE_URL', process.env.ACTIONS_CACHE_URL || '');
             core.exportVariable('ACTIONS_RUNTIME_TOKEN', process.env.ACTIONS_RUNTIME_TOKEN || '');
+      - &setup-windows-fast-tools
+        name: Set up Windows fast tools
+        shell: pwsh
+        timeout-minutes: 5
+        run: |
+          $ErrorActionPreference = "Stop"
+
+          $toolsDir = $env:WINDOWS_FAST_TOOLS_DIR
+          New-Item -ItemType Directory -Force -Path $toolsDir | Out-Null
+
+          if (-not (Get-Command ninja -ErrorAction SilentlyContinue)) {
+            python -m pip install --user ninja
+            $pythonScripts = Join-Path $env:APPDATA "Python\Python312\Scripts"
+            if (Test-Path $pythonScripts) {
+              $env:PATH = "$pythonScripts;$env:PATH"
+              $pythonScripts | Out-File -FilePath $env:GITHUB_PATH -Append
+            }
+          }
+          if (-not (Get-Command ninja -ErrorAction SilentlyContinue)) {
+            throw "ninja was not found after setup."
+          }
+
+          $sccacheExe = Join-Path $toolsDir "sccache.exe"
+          if (-not (Test-Path $sccacheExe)) {
+            $assetName = "sccache-v{0}-x86_64-pc-windows-msvc.zip" -f $env:SCCACHE_VERSION
+            $archivePath = Join-Path $env:RUNNER_TEMP $assetName
+            $extractDir = Join-Path $env:RUNNER_TEMP "sccache"
+            $url = "https://github.com/mozilla/sccache/releases/download/v{0}/{1}" -f $env:SCCACHE_VERSION, $assetName
+
+            Invoke-WebRequest -Uri $url -OutFile $archivePath
+            $actualHash = (Get-FileHash -Algorithm SHA256 $archivePath).Hash.ToLowerInvariant()
+            if ($actualHash -ne $env:SCCACHE_SHA256) {
+              throw "Unexpected sccache archive hash '$actualHash'."
+            }
+
+            Remove-Item -Recurse -Force $extractDir -ErrorAction SilentlyContinue
+            Expand-Archive -Path $archivePath -DestinationPath $extractDir -Force
+            $downloadedSccache = Get-ChildItem -Path $extractDir -Recurse -Filter sccache.exe | Select-Object -First 1
+            if (-not $downloadedSccache) {
+              throw "sccache.exe was not found in the downloaded archive."
+            }
+            Copy-Item -Path $downloadedSccache.FullName -Destination $sccacheExe -Force
+          }
+
+          $toolsDir | Out-File -FilePath $env:GITHUB_PATH -Append
+          "SCCACHE_EXECUTABLE=$sccacheExe" | Out-File -FilePath $env:GITHUB_ENV -Append
+          $env:PATH = "$toolsDir;$env:PATH"
+
+          ninja --version
+          & $sccacheExe --version
       - name: Restore vcpkg installed tree
         id: restore-vcpkg-installed
         uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830
@@ -272,6 +325,7 @@ jobs:
       - *setup-msvc
       - *setup-vcpkg
       - *enable-vcpkg-x-gha
+      - *setup-windows-fast-tools
       - name: Restore vcpkg installed tree
         id: restore-vcpkg-installed
         uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830
@@ -306,6 +360,7 @@ jobs:
           "Windows build jobs: $buildJobs"
           "Windows Python test jobs: $testJobs"
       - name: Configure
+        timeout-minutes: 10
         shell: cmd
         run: |
           call configure.bat
