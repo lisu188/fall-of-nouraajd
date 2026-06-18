@@ -7473,6 +7473,48 @@ class GameTest(unittest.TestCase):
         return True, json.dumps({"rolf_letters": player.countItems("letterFromRolf")}, sort_keys=True)
 
     @game_test
+    def test_inventory_double_select_uses_selected_item(self):
+        game = load_game_module()
+        g = game.CGameLoader.loadGame()
+        game.CGameLoader.loadGui(g)
+        game.CGameLoader.startGameWithPlayer(g, "nouraajd", "Warrior")
+        pump_event_loop(5)
+
+        gui = g.getGui()
+        player = g.getMap().getPlayer()
+        for item in list(player.getItems()):
+            player.removeItem(lambda current, target=item: current == target, True)
+
+        potion = g.createObject("LesserLifePotion")
+        player.addItem(potion)
+        player.setHp(max(1, player.getHpMax() - 10))
+
+        inventory_panel = g.getGuiHandler().openPanel("inventoryPanel")
+        pump_event_loop(5)
+        inventory_list = next(
+            list_view
+            for list_view in collect_gui_children(inventory_panel, "CListView")
+            if list_view.getCollection() == "inventoryCollection"
+        )
+        inventory_list.setTileSize(50)
+        inventory_list.setXPrefferedSize(2)
+        inventory_list.setYPrefferedSize(2)
+        inventory_list.refresh()
+
+        self.assertTrue(inventory_list.mouseEvent(gui, SDL_MOUSEBUTTONDOWN, SDL_BUTTON_LEFT, 1, 1))
+        self.assertGreater(
+            get_panel_selection_box_counts_by_collection(inventory_panel).get("inventoryCollection", 0), 0
+        )
+        self.assertTrue(inventory_list.mouseEvent(gui, SDL_MOUSEBUTTONDOWN, SDL_BUTTON_LEFT, 1, 1))
+
+        self.assertEqual(0, player.countItems("LesserLifePotion"))
+        self.assertEqual(0, get_panel_selection_box_counts_by_collection(inventory_panel).get("inventoryCollection", 0))
+
+        return True, json.dumps(
+            {"hp_ratio": player.getHpRatio(), "potions": player.countItems("LesserLifePotion")}, sort_keys=True
+        )
+
+    @game_test
     def test_fight_panel_callbacks_and_list_views(self):
         game = load_game_module()
         drain_sdl_events()
@@ -7496,6 +7538,12 @@ class GameTest(unittest.TestCase):
         static_object = g.createObject("CItem")
         static_object.animation = "images/item"
         static_animation = g.createObject("CStaticAnimation")
+        static_animation.renderObject(gui, 0, 0, 24, 24, 0)
+        missing_static_object = g.createObject("CGameObject")
+        missing_static_object.animation = "images/does-not-exist"
+        missing_static_animation = g.createObject("CStaticAnimation")
+        missing_static_animation.setObject(missing_static_object)
+        missing_static_animation.renderObject(gui, 0, 0, 24, 24, 0)
         static_animation.setObject(static_object)
         static_animation.renderObject(gui, 0, 0, 24, 24, 0)
         static_animation.setColorMod(200, 100, 50, 180)
@@ -7511,6 +7559,40 @@ class GameTest(unittest.TestCase):
         dynamic_animation.initialize()
         pump_event_loop(5)
         dynamic_animation.renderObject(gui, 0, 0, 24, 24, 100)
+        pritzmage_object = g.createObject("CGameObject")
+        pritzmage_object.animation = "images/monsters/pritzmage"
+        pritzmage_animation = g.createObject("CDynamicAnimation")
+        pritzmage_animation.setObject(pritzmage_object)
+        pritzmage_animation.initialize()
+        pump_event_loop(5)
+        pritzmage_animation.renderObject(gui, 0, 0, 24, 24, 250)
+
+        def write_animation_fixture(name, timings=None, copy_frames=True):
+            fixture_dir = Path("images") / f"unit_{name}_{time.time_ns()}"
+            fixture_dir.mkdir(parents=True, exist_ok=True)
+            if timings is not None:
+                (fixture_dir / "time.json").write_text(json.dumps(timings), encoding="utf-8")
+                if copy_frames:
+                    source_frame = Path("images") / "monsters" / "octobogz" / "0.png"
+                    for key in timings:
+                        shutil.copyfile(source_frame, fixture_dir / f"{key}.png")
+            return fixture_dir.as_posix()
+
+        for animation_path, should_render in (
+            (write_animation_fixture("positive", {"0": 100}), True),
+            (write_animation_fixture("missing_frame", {"0": 100}, copy_frames=False), True),
+            (write_animation_fixture("missing_time", None), False),
+            (write_animation_fixture("invalid_time", {"0": "bad"}), False),
+            (write_animation_fixture("zero_time", {"0": 0}), False),
+        ):
+            fixture_object = g.createObject("CGameObject")
+            fixture_object.animation = animation_path
+            fixture_animation = g.createObject("CDynamicAnimation")
+            fixture_animation.setObject(fixture_object)
+            fixture_animation.initialize()
+            pump_event_loop(5)
+            if should_render:
+                fixture_animation.renderObject(gui, 0, 0, 24, 24, 100)
 
         selection_box = g.createObject("CSelectionBox")
         selection_box.setThickness(3)
@@ -7572,6 +7654,66 @@ class GameTest(unittest.TestCase):
         pump_event_loop(5)
         list_views = collect_gui_children(inventory_panel, "CListView")
         self.assertGreaterEqual(len(list_views), 2)
+        inventory_list = next(
+            list_view for list_view in list_views if list_view.getCollection() == "inventoryCollection"
+        )
+        equipped_list = next(list_view for list_view in list_views if list_view.getCollection() == "equippedCollection")
+        for list_view in (inventory_list, equipped_list):
+            list_view.setTileSize(50)
+            list_view.setXPrefferedSize(2)
+            list_view.setYPrefferedSize(2)
+            list_view.setAllowOversize(True)
+            list_view.refresh()
+
+        def populated_cell(list_view):
+            list_view.refresh()
+            for y in range(2):
+                for x in range(2):
+                    if list_view.getProxiedObjects(gui, x, y):
+                        return x, y
+            return None
+
+        def empty_cell(list_view):
+            list_view.refresh()
+            for y in range(2):
+                for x in range(2):
+                    if not list_view.getProxiedObjects(gui, x, y):
+                        return x, y
+            return 1, 1
+
+        inventory_cell = populated_cell(inventory_list)
+        self.assertIsNotNone(inventory_cell)
+        self.assertTrue(
+            inventory_list.mouseEvent(
+                gui, SDL_MOUSEBUTTONDOWN, SDL_BUTTON_LEFT, inventory_cell[0] * 50 + 1, inventory_cell[1] * 50 + 1
+            )
+        )
+        self.assertTrue(equipped_list.mouseEvent(gui, SDL_MOUSEBUTTONDOWN, SDL_BUTTON_LEFT, 1, 1))
+        equipped_cell = populated_cell(equipped_list)
+        self.assertIsNotNone(equipped_cell)
+        self.assertTrue(
+            equipped_list.mouseEvent(
+                gui, SDL_MOUSEBUTTONDOWN, SDL_BUTTON_LEFT, equipped_cell[0] * 50 + 1, equipped_cell[1] * 50 + 1
+            )
+        )
+        inventory_empty_cell = empty_cell(inventory_list)
+        self.assertTrue(
+            inventory_list.mouseEvent(
+                gui,
+                SDL_MOUSEBUTTONDOWN,
+                SDL_BUTTON_LEFT,
+                inventory_empty_cell[0] * 50 + 1,
+                inventory_empty_cell[1] * 50 + 1,
+            )
+        )
+        inventory_list.mouseEvent(
+            gui,
+            SDL_MOUSEBUTTONDOWN,
+            SDL_BUTTON_RIGHT,
+            inventory_empty_cell[0] * 50 + 1,
+            inventory_empty_cell[1] * 50 + 1,
+        )
+        self.assertTrue(inventory_panel.mouseEvent(gui, SDL_MOUSEBUTTONDOWN, SDL_BUTTON_RIGHT, 0, 0))
         proxied_counts = {}
         for index, list_view in enumerate(list_views):
             list_view.setTileSize(50)
@@ -7648,6 +7790,26 @@ class GameTest(unittest.TestCase):
 
         root.removeChild(branch)
         self.assertEqual([], list(root.getChildren()))
+
+        return True, ""
+
+    @game_test
+    def test_render_only_widget_ignores_mouse_clicks(self):
+        game = load_game_module()
+        drain_sdl_events()
+        g = game.CGameLoader.loadGame()
+        game.CGameLoader.loadGui(g)
+        game.CGameLoader.startGameWithPlayer(g, "nouraajd", "Warrior")
+        panel = g.getGuiHandler().openPanel("questionPanel")
+        panel.setStringProperty("question", "Render-only widget event coverage?")
+        pump_event_loop(5)
+
+        push_sdl_mouse_click(960, 500, SDL_BUTTON_RIGHT)
+        push_sdl_mouse_click(960, 500, SDL_BUTTON_LEFT)
+        pump_event_loop(5)
+
+        self.assertTrue(gui_contains_class(g, "CGameQuestionPanel"))
+        panel.close()
 
         return True, ""
 
@@ -11094,6 +11256,62 @@ class CoverageReportTest(unittest.TestCase):
 
             with self.assertRaisesRegex(ValueError, "glob"):
                 coverage_report.load_include_prefixes(root, ["src/*.cpp"])
+
+    def test_coverage_exclusion_audit_reports_raw_counts_and_snippets(self):
+        coverage_report = self._load_coverage_report_module()
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            source = root / "src" / "sample.cpp"
+            source.parent.mkdir()
+            source.write_text("one\ntwo\nthree\n", encoding="utf-8")
+            manifest_path = self._write_manifest(
+                root,
+                [
+                    {
+                        "path": "src/sample.cpp",
+                        "reason": "synthetic exclusion",
+                        "ranges": ["2-3"],
+                    }
+                ],
+            )
+
+            merged = {source.resolve(): {1: 1, 2: 0, 3: 7}}
+            exclusions = coverage_report.load_line_exclusions(root, manifest_path)
+            coverage_report.validate_line_exclusions(root, merged, exclusions)
+
+            audit = coverage_report.build_exclusion_audit(root, merged, exclusions)
+            self.assertEqual(2, audit["total"])
+            self.assertEqual(1, audit["covered"])
+            self.assertEqual(1, audit["uncovered"])
+            self.assertEqual(
+                [
+                    {
+                        "path": "src/sample.cpp",
+                        "line": 2,
+                        "count": 0,
+                        "covered": False,
+                        "reason": "synthetic exclusion",
+                        "source": "two",
+                    },
+                    {
+                        "path": "src/sample.cpp",
+                        "line": 3,
+                        "count": 7,
+                        "covered": True,
+                        "reason": "synthetic exclusion",
+                        "source": "three",
+                    },
+                ],
+                audit["lines"],
+            )
+
+            text_report = root / "exclusion_audit.txt"
+            json_report = root / "exclusion_audit.json"
+            coverage_report.write_exclusion_audit_text(text_report, audit)
+            coverage_report.write_exclusion_audit_json(json_report, audit)
+            self.assertIn("src/sample.cpp:3 count=7 covered", text_report.read_text(encoding="utf-8"))
+            self.assertEqual(audit, json.loads(json_report.read_text(encoding="utf-8")))
 
 
 class McpServerTest(unittest.TestCase):

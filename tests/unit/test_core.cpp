@@ -17,6 +17,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
 #include "core/CJsonUtil.h"
+#include "core/CGame.h"
 #include "core/CPathFinder.h"
 #include "core/CSaveFormat.h"
 #include "core/CSerialization.h"
@@ -24,6 +25,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CTags.h"
 #include "core/CUtil.h"
 #include "gui/CSdlResources.h"
+#include "object/CGameObject.h"
 #include "test_harness.h"
 #include "vutil.h"
 
@@ -42,6 +44,16 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <vector>
 
 namespace {
+
+template <typename Func> void expect_runtime_error(Func func, const char *message) {
+    bool threw = false;
+    try {
+        func();
+    } catch (const std::runtime_error &) {
+        threw = true;
+    }
+    expect_true(threw, message);
+}
 
 struct TagProbe {
     CTags tags;
@@ -593,6 +605,92 @@ void test_save_format_codec_validation() {
                 "save format should reject envelopes with invalid map names");
 }
 
+void test_serialization_collection_and_error_helpers() {
+    auto game = std::make_shared<CGame>();
+    auto object = std::make_shared<CGameObject>();
+    object->setName("serializedObject");
+    object->setType("CGameObject");
+
+    CSerialization::setProperty(nullptr, "ignored", std::make_shared<json>(true));
+    CSerialization::setProperty(object, "type", std::make_shared<json>(42));
+    expect_true(object->getType() == "42", "numeric JSON should coerce into string-backed properties");
+    CSerialization::setProperty(object, "dynamicJsonFromString",
+                                std::make_shared<json>(std::string(R"({"value": true})")));
+    CSerialization::setProperty(object, "dynamicMapFromString",
+                                std::make_shared<json>(std::string(R"({"entry": {"class": "CGameObject"}})")));
+    CSerialization::setProperty(object, "dynamicJson", std::make_shared<json>(json::parse(R"({"value": true})")));
+
+    std::set<std::shared_ptr<CGameObject>> object_set{object};
+    auto serialized_set =
+        CSerializerFunction<std::shared_ptr<json>, std::set<std::shared_ptr<CGameObject>>>::serialize(object_set);
+    expect_true(serialized_set->is_array() && serialized_set->size() == 1,
+                "set serializer should encode game objects as a JSON array");
+
+    auto empty_array = std::make_shared<json>(json::array());
+    auto deserialized_set =
+        CSerializerFunction<std::shared_ptr<json>, std::set<std::shared_ptr<CGameObject>>>::deserialize(game,
+                                                                                                        empty_array);
+    expect_true(deserialized_set.empty(), "set deserializer should accept empty arrays");
+
+    std::map<std::string, std::shared_ptr<CGameObject>> object_map{{"entry", object}};
+    auto serialized_map =
+        CSerializerFunction<std::shared_ptr<json>, std::map<std::string, std::shared_ptr<CGameObject>>>::serialize(
+            object_map);
+    expect_true(serialized_map->is_object() && serialized_map->contains("entry"),
+                "map serializer should encode game objects by key");
+
+    auto empty_object = std::make_shared<json>(json::object());
+    auto deserialized_map =
+        CSerializerFunction<std::shared_ptr<json>, std::map<std::string, std::shared_ptr<CGameObject>>>::deserialize(
+            game, empty_object);
+    expect_true(deserialized_map.empty(), "map deserializer should accept empty objects");
+
+    expect_true(CSerializerFunction<std::shared_ptr<json>, std::shared_ptr<CGameObject>>::deserialize(
+                    nullptr, std::make_shared<json>(json::object())) == nullptr,
+                "non-strict object deserialization should fail closed without a game");
+
+    expect_runtime_error(
+        [&]() {
+            CSerialization::StrictScope strict;
+            CSerializerFunction<std::shared_ptr<json>, std::shared_ptr<CGameObject>>::deserialize(
+                nullptr, std::make_shared<json>(json::object()));
+        },
+        "strict object deserialization should reject a missing game");
+
+    auto unresolved_ref = std::make_shared<json>(json::object());
+    (*unresolved_ref)["ref"] = "missingObjectType";
+    expect_runtime_error(
+        [&]() {
+            CSerialization::StrictScope strict;
+            CSerializerFunction<std::shared_ptr<json>, std::shared_ptr<CGameObject>>::deserialize(game, unresolved_ref);
+        },
+        "strict object deserialization should report unresolved references");
+
+    auto invalid_array = std::make_shared<json>(json::array({1}));
+    auto non_strict_skipped =
+        CSerializerFunction<std::shared_ptr<json>, std::set<std::shared_ptr<CGameObject>>>::deserialize(game,
+                                                                                                        invalid_array);
+    expect_true(non_strict_skipped.empty(), "non-strict array deserialization should skip malformed entries");
+
+    expect_runtime_error(
+        [&]() {
+            CSerialization::StrictScope strict;
+            CSerializerFunction<std::shared_ptr<json>, std::set<std::shared_ptr<CGameObject>>>::deserialize(
+                game, invalid_array);
+        },
+        "strict array deserialization should reject malformed entries");
+
+    auto invalid_map = std::make_shared<json>(json::object());
+    (*invalid_map)["bad"] = 1;
+    expect_runtime_error(
+        [&]() {
+            CSerialization::StrictScope strict;
+            CSerializerFunction<std::shared_ptr<json>,
+                                std::map<std::string, std::shared_ptr<CGameObject>>>::deserialize(game, invalid_map);
+        },
+        "strict map deserialization should reject malformed entries");
+}
+
 } // namespace
 
 int main() {
@@ -621,6 +719,7 @@ int main() {
     test_delayed_future_handlers_run_through_event_loop();
     test_script_rejects_executable_expressions();
     test_save_format_codec_validation();
+    test_serialization_collection_and_error_helpers();
 
     return finish_tests();
 }

@@ -21,6 +21,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CMap.h"
 #include "core/CStats.h"
 #include "object/CCreature.h"
+#include "object/CItem.h"
 #include "object/CPlayer.h"
 #include "object/CTile.h"
 #include "test_harness.h"
@@ -226,6 +227,33 @@ void test_fight_controller_guard_paths_and_fallbacks() {
                 "player fight controller should fall back to base opponent selection without a panel");
 }
 
+void test_monster_fight_controller_uses_mana_item_when_mana_is_low() {
+    auto game = std::make_shared<CGame>();
+    auto map = std::make_shared<CMap>();
+    game->setMap(map);
+    map->setGame(game);
+
+    auto monster = creature_at(0, 0, 0);
+    monster->setGame(game);
+    monster->getBaseStats()->setIntelligence(10);
+    monster->setHp(monster->getHpMax());
+    monster->setMana(0);
+
+    auto opponent = creature_at(1, 0, 0);
+    opponent->setGame(game);
+
+    auto mana_potion = std::make_shared<CPotion>();
+    mana_potion->setGame(game);
+    mana_potion->setPower(5);
+    mana_potion->addTag(CTag::Mana);
+    monster->addItem(mana_potion);
+
+    auto controller = std::make_shared<CMonsterFightController>();
+    expect_true(controller->control(monster, opponent),
+                "monster fight controller should use a mana item when mana is low");
+    expect_true(monster->getItems().empty(), "used disposable mana item should be removed from inventory");
+}
+
 } // namespace
 
 int main() {
@@ -233,6 +261,7 @@ int main() {
     test_npc_random_controller_clears_current_tile_path();
     test_npc_random_controller_clears_stale_blocked_path();
     test_fight_controller_guard_paths_and_fallbacks();
+    test_monster_fight_controller_uses_mana_item_when_mana_is_low();
 
     return finish_tests();
 }

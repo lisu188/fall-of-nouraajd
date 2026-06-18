@@ -25,6 +25,11 @@ def parse_args():
         default=[],
         help="Root-relative source path prefix to include. May be repeated. Defaults to the full repository.",
     )
+    parser.add_argument(
+        "--audit-exclusions",
+        action="store_true",
+        help="Write exclusion audit reports with raw hit counts and source snippets.",
+    )
     return parser.parse_args()
 
 
@@ -345,6 +350,57 @@ def write_html_report(
     )
 
 
+def build_exclusion_audit(root: Path, merged, exclusions):
+    lines = []
+    for source_path in sorted(exclusions):
+        line_counts = merged.get(source_path, {})
+        try:
+            source_lines = source_path.read_text(encoding="utf-8", errors="replace").splitlines()
+        except OSError:
+            source_lines = []
+        for line_number, reason in sorted(exclusions[source_path].items()):
+            if line_number <= 0 or line_number not in line_counts:
+                continue
+            count = line_counts[line_number]
+            snippet = source_lines[line_number - 1].strip() if line_number <= len(source_lines) else ""
+            lines.append(
+                {
+                    "path": str(source_path.relative_to(root)),
+                    "line": line_number,
+                    "count": count,
+                    "covered": count > 0,
+                    "reason": reason,
+                    "source": snippet,
+                }
+            )
+
+    covered = sum(1 for line in lines if line["covered"])
+    return {
+        "total": len(lines),
+        "covered": covered,
+        "uncovered": len(lines) - covered,
+        "lines": lines,
+    }
+
+
+def write_exclusion_audit_text(report_path: Path, audit):
+    lines = [
+        f"EXCLUDED LINES {audit['total']} total, {audit['covered']} covered, {audit['uncovered']} uncovered",
+        "",
+    ]
+    for item in audit["lines"]:
+        status = "covered" if item["covered"] else "uncovered"
+        lines.append(
+            f"{item['path']}:{item['line']} count={item['count']} {status} "
+            f"reason={json.dumps(item['reason'])} source={json.dumps(item['source'])}"
+        )
+    report_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+
+def write_exclusion_audit_json(report_path: Path, audit):
+    report_path.write_text(json.dumps(audit, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+
 def main():
     args = parse_args()
     root = args.root.resolve()
@@ -365,6 +421,11 @@ def main():
     write_html_report(
         report_dir / "coverage.html", summary, covered_lines, total_lines, total_percentage, excluded_lines
     )
+    if args.audit_exclusions:
+        audit = build_exclusion_audit(root, merged, exclusions)
+        write_exclusion_audit_text(report_dir / "exclusion_audit.txt", audit)
+        write_exclusion_audit_json(report_dir / "exclusion_audit.json", audit)
+        print("exclusions: " f"{audit['total']} total ({audit['covered']} covered, {audit['uncovered']} uncovered)")
 
     print(f"lines: {total_percentage:.2f}% ({covered_lines} out of {total_lines}, {excluded_lines} excluded)")
     if total_percentage < args.min_line:
