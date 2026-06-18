@@ -27,6 +27,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "test_harness.h"
 #include "veventloop.h"
 
+#include <pybind11/embed.h>
+
 #include <memory>
 #include <vector>
 
@@ -257,6 +259,8 @@ void test_monster_fight_controller_uses_mana_item_when_mana_is_low() {
 } // namespace
 
 int main() {
+    pybind11::scoped_interpreter guard{};
+
     test_movement_controller_null_and_no_map_paths();
     test_npc_random_controller_clears_current_tile_path();
     test_npc_random_controller_clears_stale_blocked_path();

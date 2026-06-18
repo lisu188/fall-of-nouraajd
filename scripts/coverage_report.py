@@ -381,7 +381,7 @@ def build_exclusion_audit(root: Path, merged, exclusions):
             snippet = source_lines[line_number - 1].strip() if line_number <= len(source_lines) else ""
             lines.append(
                 {
-                    "path": str(source_path.relative_to(root)),
+                    "path": source_path.relative_to(root).as_posix(),
                     "line": line_number,
                     "count": count,
                     "covered": count > 0,
