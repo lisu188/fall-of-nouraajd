@@ -12,8 +12,10 @@ test/
 .project
 *.h.*
 *.cpp.*
-*.idea/
+.idea/
 /cmake-build-*
 /json/
 /vcpkg_installed/
 /windows-tools/
+/planning/*.xlsx.lock
+/planning/.*.tmp.xlsx
