@@ -66,10 +66,11 @@ find_package(SDL2_ttf CONFIG QUIET)
 if (NOT SDL2_ttf_FOUND AND NOT TARGET SDL2_ttf::SDL2_ttf)
     find_package(SDL2_ttf REQUIRED)
 endif ()
-find_path(NLOHMANN_JSON_INCLUDE_DIR nlohmann/json.hpp)
-if (NOT NLOHMANN_JSON_INCLUDE_DIR)
-    message(FATAL_ERROR "nlohmann/json.hpp was not found. On Debian/Ubuntu, run: sudo apt-get install nlohmann-json3-dev.")
-endif ()
+
+add_library(simdjson_vendor STATIC ${CMAKE_SOURCE_DIR}/third_party/simdjson/simdjson.cpp)
+target_compile_features(simdjson_vendor PUBLIC cxx_std_23)
+target_include_directories(simdjson_vendor SYSTEM PUBLIC ${CMAKE_SOURCE_DIR}/third_party/simdjson)
+set_target_properties(simdjson_vendor PROPERTIES POSITION_INDEPENDENT_CODE ON)
 
 function(configure_cpp_target target_name)
     target_compile_features(${target_name} PRIVATE cxx_std_23)
@@ -85,7 +86,6 @@ function(configure_cpp_target target_name)
         ${SDL2_INCLUDE_DIR}
         ${SDL2_IMAGE_INCLUDE_DIR}
         ${SDL2_TTF_INCLUDE_DIR}
-        ${NLOHMANN_JSON_INCLUDE_DIR}
     )
     target_compile_definitions(${target_name} PRIVATE
         BOOST_ALLOW_DEPRECATED_HEADERS
@@ -151,6 +151,7 @@ set(GAME_CORE_LINK_LIBS
     ${SDL2_LIBS}
     ${SDL2_IMAGE_LIBS}
     ${SDL2_TTF_LIBS}
+    simdjson_vendor
     ${CMAKE_DL_LIBS}
 )
 
