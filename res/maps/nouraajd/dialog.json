@@ -234,7 +234,7 @@
           "class": "CDialogState",
           "properties": {
             "stateId": "INKEEPER_ABOUT_GIRL",
-            "text": "They prowled after a young lass. I cursed them out and sent them hunting elsewhere. Does this accursed inn look fit for a child to you?",
+            "text": "They prowled after a young lass, then drifted toward the old civic court. I cursed them out and sent them hunting elsewhere. If Victor's girl is their quarry, the town hall ledgers may know the door they seek.",
             "options": [
               {
                 "ref": "askAboutMarumi",
