@@ -412,6 +412,8 @@ void test_json_parse_expected_success_and_failure() {
         expect_true(failed.error().source == "unit-json-error", "parse_expected error should retain source context");
         expect_true(failed.error().preview == "{", "parse_expected error should retain a compact preview");
     }
+    auto duplicate_key = CJsonUtil::parse_expected(R"({"value": 1, "value": 2})", "unit-json-duplicate");
+    expect_true(!duplicate_key.has_value(), "parse_expected should reject duplicate object keys");
     expect_true(CJsonUtil::from_string("{", "unit-json-wrapper") == nullptr,
                 "from_string should keep the public nullptr behavior on parse failure");
 }

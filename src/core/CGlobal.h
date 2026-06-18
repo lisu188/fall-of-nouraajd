@@ -43,7 +43,6 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <expected>
 #include <iomanip>
 #include <iostream>
-#include <nlohmann/json.hpp>
 #include <limits>
 #include <list>
 #include <map>
@@ -66,6 +65,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <utility>
 #include <vector>
 #include <vstd.h>
+
+#include "core/CJson.h"
 
 // vstd's public meta macros currently cast accessors to exact by-value, non-const signatures.
 // The game code exposes const getters and reference-taking setters throughout its model types, so keep the
@@ -102,5 +103,3 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
     std::make_shared<vstd::detail::method_impl<CLASS, RET_TYPE, __VA_ARGS__>>(V_STRING(NAME), &CLASS::NAME)
 #define V_METHOD6(CLASS, NAME, RET_TYPE, ...)                                                                          \
     std::make_shared<vstd::detail::method_impl<CLASS, RET_TYPE, __VA_ARGS__>>(V_STRING(NAME), &CLASS::NAME)
-
-using json = nlohmann::json;

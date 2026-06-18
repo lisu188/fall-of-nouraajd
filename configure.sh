@@ -6,7 +6,6 @@ sudo apt-get install -y build-essential cmake ninja-build ccache clang-format bl
     python3 python3-dev python3-pip python3-venv pybind11-dev python3-pil \
     libboost-dev \
     libsdl2-dev libsdl2-ttf-dev libsdl2-image-dev \
-    nlohmann-json3-dev \
     xvfb xauth
 
 git submodule update --init --recursive

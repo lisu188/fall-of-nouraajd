@@ -40,7 +40,7 @@ git submodule update --init --recursive
 ./configure.sh
 ```
 
-The README’s Ubuntu setup uses Python, pybind11 headers, and nlohmann-json development packages before configuration.
+The README’s Ubuntu setup uses Python and pybind11 headers before configuration; JSON parsing is vendored in the tree.
 
 Windows:
 

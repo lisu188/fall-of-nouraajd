@@ -999,6 +999,8 @@ def iter_python_source_files():
 def iter_cpp_source_files():
     for file_path in git_changed_files():
         path = REPO_ROOT / file_path
+        if path.relative_to(REPO_ROOT).parts[:1] == ("third_party",):
+            continue
         if path.suffix in {".h", ".hpp", ".c", ".cc", ".cpp", ".cxx"}:
             yield path
 
