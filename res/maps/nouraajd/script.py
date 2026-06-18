@@ -5,6 +5,10 @@ def load(self, context):
     from game import CPlayer
     from game import CDialog
     from game import Coords
+    from game import LegacyBoolFlag
+    from game import PlayerQuestRegistry
+    from game import QuestStateStore
+    from game import ensure_quest
     from game import register, trigger
 
     VICTOR_COURTYARD_TIMEOUT_TURNS = 75
@@ -131,48 +135,14 @@ def load(self, context):
         )
         return True
 
-    class _TrackedQuest:
-        def __init__(self, name):
-            self._name = name
-
-        def getName(self):
-            return self._name
-
-    _player_quests = {}
+    _player_quest_registry = PlayerQuestRegistry()
+    _player_quest_registry.install_on(CPlayer)
 
     def _reset_player_quests(player):
-        _player_quests.clear()
-
-    def _ensure_player_quest_api(player):
-        if not isinstance(_player_quests, dict):
-            _player_quests.clear()
-
-    def _quest_id(quest):
-        if hasattr(quest, "getTypeId"):
-            quest_id = quest.getTypeId()
-            if quest_id:
-                return quest_id
-        return quest.getName()
-
-    def _player_has_quest(player, quest_name):
-        if hasattr(player, "getQuests"):
-            return any(_quest_id(quest) == quest_name for quest in player.getQuests())
-        _ensure_player_quest_api(player)
-        return quest_name in _player_quests
+        _player_quest_registry.reset(player)
 
     def _grant_quest(player, quest_name):
-        if _player_has_quest(player, quest_name):
-            return
-        player.addQuest(quest_name)
-        if not hasattr(player, "getQuests"):
-            _player_quests[quest_name] = _TrackedQuest(quest_name)
-
-    def _python_get_quests(self):
-        _ensure_player_quest_api(self)
-        return list(_player_quests.values())
-
-    if not hasattr(CPlayer, "getQuests"):
-        CPlayer.getQuests = _python_get_quests
+        ensure_quest(player, quest_name, registry=_player_quest_registry)
 
     def _get_quest_system(game_map):
         return QuestSystem(game_map)
@@ -180,7 +150,7 @@ def load(self, context):
     def _quest_system_from(obj):
         return _get_quest_system(obj.getGame().getMap())
 
-    class QuestSystem:
+    class QuestSystem(QuestStateStore):
         QUEST_KEYS = {
             "rolf": "quest_state_rolf",
             "main": "quest_state_main",
@@ -199,116 +169,49 @@ def load(self, context):
             "victor": "not_started",
         }
 
-        def __init__(self, game_map):
-            self.map = game_map
+        QUEST_NUMERIC_DEFAULTS = {
+            "VICTOR_COURTYARD_TURN": -1,
+        }
 
-        def is_stale(self, game_map):
-            return self.map != game_map
-
-        def _key(self, quest):
-            return self.QUEST_KEYS[quest]
-
-        def get_state(self, quest):
-            state = self.map.getStringProperty(self._key(quest))
-            if not state:
-                state = self.QUEST_DEFAULTS[quest]
-                self.map.setStringProperty(self._key(quest), state)
-            return state
-
-        def _set_state(self, quest, state, sync=True):
-            self.map.setStringProperty(self._key(quest), state)
-            if sync:
-                self._sync_legacy_flags()
-
-        def reset_all(self):
-            for quest, state in self.QUEST_DEFAULTS.items():
-                self.map.setStringProperty(self._key(quest), state)
-            self.map.setNumericProperty("VICTOR_COURTYARD_TURN", -1)
-            self._sync_legacy_flags()
-
-        def initialize_defaults(self):
-            changed = False
-            for quest, state in self.QUEST_DEFAULTS.items():
-                if not self.map.getStringProperty(self._key(quest)):
-                    self.map.setStringProperty(self._key(quest), state)
-                    changed = True
-            if changed:
-                self.map.setNumericProperty("VICTOR_COURTYARD_TURN", -1)
-                self._sync_legacy_flags()
-
-        # --- Compatibility helpers ---
-        def _beren_flags(self):
-            state = self.get_state("beren_chain")
-            delivered = state not in ("letter_pending", "letter_in_hand", "octobogz_slain_pending_letter")
-            relic_returned = state in (
-                "relic_returned_waiting_kill",
-                "ready_to_report",
-                "purged",
-            )
-            octobogz_slain = state in (
-                "octobogz_slain_pending_letter",
-                "octobogz_slain_no_relic",
-                "ready_to_report",
-                "purged",
-            )
-            octobogz_cleared = state in ("ready_to_report", "purged")
-            cave_purged = state == "purged"
-            return delivered, relic_returned, octobogz_slain, octobogz_cleared, cave_purged
-
-        def _victor_flags(self):
-            state = self.get_state("victor")
-            started = state in (
-                "met_victor",
-                "records_reviewed",
-                "courtyard_known",
-                "encounter_active",
-                "good_end",
-                "bad_end",
-            )
-            courtyard_found = state in ("courtyard_known", "encounter_active", "good_end", "bad_end")
-            encounter_active = state == "encounter_active"
-            good_end = state == "good_end"
-            bad_end = state == "bad_end"
-            return started, courtyard_found, encounter_active, good_end, bad_end
-
-        def _sync_legacy_flags(self):
-            self.map.setBoolProperty("completed_rolf", self.get_state("rolf") == "skull_recovered")
-            self.map.setBoolProperty("completed_gooby", self.get_state("main") == "gooby_slain")
-
-            (
-                delivered,
-                relic_returned,
-                octobogz_slain,
-                octobogz_cleared,
-                cave_purged,
-            ) = self._beren_flags()
-            self.map.setBoolProperty("DELIVERED_LETTER", delivered)
-            self.map.setBoolProperty("RELIC_RETURNED", relic_returned)
-            self.map.setBoolProperty("OCTOBOGZ_SLAIN", octobogz_slain)
-            self.map.setBoolProperty("OCTOBOGZ_CLEARED", octobogz_cleared)
-            self.map.setBoolProperty("CAVE_PURGED", cave_purged)
-
-            contract_state = self.get_state("octobogz_contract")
-            self.map.setBoolProperty("completed_octobogz", contract_state == "completed")
-
-            amulet_state = self.get_state("amulet")
-            self.map.setBoolProperty("AMULET_QUEST_STARTED", amulet_state == "active")
-            self.map.setBoolProperty("AMULET_RETURNED", amulet_state == "returned")
-
-            (
-                victor_started,
-                courtyard_found,
-                encounter_active,
-                victor_good,
-                victor_bad,
-            ) = self._victor_flags()
-            self.map.setBoolProperty("VICTOR_QUEST_STARTED", victor_started)
-            self.map.setBoolProperty("VICTOR_COURTYARD_FOUND", courtyard_found)
-            self.map.setBoolProperty("VICTOR_CULTISTS_SPAWNED", encounter_active)
-            self.map.setBoolProperty("VICTOR_GOOD_END", victor_good)
-            self.map.setBoolProperty("VICTOR_BAD_END", victor_bad)
-            self.map.setBoolProperty("VICTOR_HELP", victor_good)
-            self.map.setBoolProperty("VICTOR_REWARD_CLAIMED", victor_good)
+        LEGACY_BOOL_FLAGS = (
+            LegacyBoolFlag("completed_rolf", "rolf", states=("skull_recovered",)),
+            LegacyBoolFlag("completed_gooby", "main", states=("gooby_slain",)),
+            LegacyBoolFlag(
+                "DELIVERED_LETTER",
+                "beren_chain",
+                excluded_states=("letter_pending", "letter_in_hand", "octobogz_slain_pending_letter"),
+            ),
+            LegacyBoolFlag(
+                "RELIC_RETURNED",
+                "beren_chain",
+                states=("relic_returned_waiting_kill", "ready_to_report", "purged"),
+            ),
+            LegacyBoolFlag(
+                "OCTOBOGZ_SLAIN",
+                "beren_chain",
+                states=("octobogz_slain_pending_letter", "octobogz_slain_no_relic", "ready_to_report", "purged"),
+            ),
+            LegacyBoolFlag("OCTOBOGZ_CLEARED", "beren_chain", states=("ready_to_report", "purged")),
+            LegacyBoolFlag("CAVE_PURGED", "beren_chain", states=("purged",)),
+            LegacyBoolFlag("completed_octobogz", "octobogz_contract", states=("completed",)),
+            LegacyBoolFlag("AMULET_QUEST_STARTED", "amulet", states=("active",)),
+            LegacyBoolFlag("AMULET_RETURNED", "amulet", states=("returned",)),
+            LegacyBoolFlag(
+                "VICTOR_QUEST_STARTED",
+                "victor",
+                states=("met_victor", "records_reviewed", "courtyard_known", "encounter_active", "good_end", "bad_end"),
+            ),
+            LegacyBoolFlag(
+                "VICTOR_COURTYARD_FOUND",
+                "victor",
+                states=("courtyard_known", "encounter_active", "good_end", "bad_end"),
+            ),
+            LegacyBoolFlag("VICTOR_CULTISTS_SPAWNED", "victor", states=("encounter_active",)),
+            LegacyBoolFlag("VICTOR_GOOD_END", "victor", states=("good_end",)),
+            LegacyBoolFlag("VICTOR_BAD_END", "victor", states=("bad_end",)),
+            LegacyBoolFlag("VICTOR_HELP", "victor", states=("good_end",)),
+            LegacyBoolFlag("VICTOR_REWARD_CLAIMED", "victor", states=("good_end",)),
+        )
 
         # --- Rolf / Gooby ---
         def ensure_main_quest(self, player):
@@ -436,13 +339,15 @@ def load(self, context):
 
         # --- Query helpers ---
         def is_letter_delivered(self):
-            return self._beren_flags()[0]
+            return not self.state_in(
+                "beren_chain", ("letter_pending", "letter_in_hand", "octobogz_slain_pending_letter")
+            )
 
         def is_relic_returned(self):
-            return self._beren_flags()[1]
+            return self.state_in("beren_chain", ("relic_returned_waiting_kill", "ready_to_report", "purged"))
 
         def is_cave_purged(self):
-            return self._beren_flags()[4]
+            return self.state_in("beren_chain", ("purged",))
 
         def is_octobogz_contract_completed(self):
             return self.get_state("octobogz_contract") == "completed"
