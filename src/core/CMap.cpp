@@ -337,7 +337,7 @@ void CMap::removeObject(const std::shared_ptr<CMapObject> &mapObject) {
     }
 
     auto map_object_it = mapObjects.find(mapObject->getName());
-    if (map_object_it == mapObjects.end()) {
+    if (map_object_it == mapObjects.end() || map_object_it->second != mapObject) {
         return;
     }
 
@@ -749,8 +749,14 @@ void CMap::registerPlayerTriggers() {
 
     auto restartTrigger = std::make_shared<CCustomTrigger>("player", "onDestroy", [](auto object, auto event) {
         auto _player = vstd::cast<CPlayer>(object);
-        _player->getMap()->addObject(_player);
-        _player->moveTo(object->getMap()->getEntryX(), object->getMap()->getEntryY(), object->getMap()->getEntryZ());
+        auto map = _player->getMap();
+        const auto old_coords = _player->getCoords();
+        const auto entry = map->normalizeCoords(map->getEntry());
+        map->addObject(_player);
+        _player->setPosX(entry.x);
+        _player->setPosY(entry.y);
+        _player->setPosZ(entry.z);
+        map->objectMoved(_player, old_coords, entry);
         _player->setHp(1);
     });
 
