@@ -37,7 +37,7 @@ jobs:
       - name: test (c++)
         run: ctest --test-dir cmake-build-release --output-on-failure -R for_unit_tests
       - name: test (python)
-        run: GAME_XVFB_JOBS=4 python3 test.py --jobs "$(nproc)"
+        run: GAME_XVFB_JOBS=4 python3 test.py --suite full --jobs "$(nproc)"
       - name: package
         run: cmake --build cmake-build-release --target package -j"$(nproc)"
       - name: Upload release

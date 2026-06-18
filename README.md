@@ -121,6 +121,9 @@ The trace is disabled by default. When enabled, it writes deterministic JSON-lin
 including movement, map transitions, dialogs, quest state changes, inventory, combat, rewards, and GUI panel openings.
 Tests can also use `game.configure_playtest_trace()`, `game.get_playtest_trace()`, and
 `game.drain_playtest_trace()` for in-process assertions.
+For focused Python feedback, use the named suites documented in
+`docs/testing.md`, for example `python3 test.py --suite fast`,
+`python3 test.py --suite gameplay`, and `GAME_XVFB_JOBS=4 python3 test.py --suite ui`.
 For Windows Visual Studio builds, use `--config Release`, pass `-C Release` to `ctest`,
 then set `GAME_BUILD_DIR=cmake-build-release` and `GAME_BUILD_CONFIG=Release` before running `python test.py`. Use
 `python scripts/validate_content.py --repo-root .` and

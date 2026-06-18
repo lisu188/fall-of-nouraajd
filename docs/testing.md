@@ -49,6 +49,29 @@ python test.py
 
 The CI Windows job uses a single-config Ninja Release build, so its `ctest` commands omit `-C Release`.
 
+## Python test suites
+`python3 test.py` remains the full Python regression suite. For faster feedback, the runner also accepts named suites:
+
+```bash
+python3 test.py --suite fast
+python3 test.py --suite gameplay
+GAME_XVFB_JOBS=4 python3 test.py --suite ui
+python3 test.py --suite coverage-safe
+python3 test.py --suite full
+```
+
+- `fast` runs runner, bootstrap, manifest, coverage-report, and lightweight MCP protocol checks that do not require the
+  compiled `_game` module.
+- `gameplay` runs deterministic engine, map, save/load, quest, combat, and MCP gameplay checks after `_game` is built.
+- `ui` runs the Xvfb parent test and GUI layout manifest checks; it is intended for Linux/Unix environments with
+  `xvfb-run` and `xauth`.
+- `coverage-safe` is the Python suite used by `./scripts/run_coverage.sh`; it preserves the coverage-oriented full
+  behavior while making the coverage entrypoint explicit.
+- `full` is the default full-suite behavior and is equivalent to omitting `--suite`.
+
+Use `--jobs <n>` with any suite to enable the existing sharded runner, for example
+`python3 test.py --suite gameplay --jobs "$(nproc)"`.
+
 ## Native performance guards
 The deterministic native performance guard suite is built with the `performance_guard_tests` target and run through
 CTest label `performance`:
