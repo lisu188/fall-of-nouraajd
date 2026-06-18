@@ -50,6 +50,33 @@ def normalize_path(path_str: str, cwd: Path) -> Path:
     return path.resolve()
 
 
+def filesystem_relative_path(root: Path, path: Path) -> Path:
+    root = root.resolve()
+    path = path.resolve()
+    try:
+        return path.relative_to(root)
+    except ValueError:
+        matching_relative_path = relative_path_from_matching_ancestor(root, path)
+        if matching_relative_path is not None:
+            return matching_relative_path
+        raise
+
+
+def relative_path_from_matching_ancestor(root: Path, path: Path) -> Path | None:
+    suffix = []
+    current = path
+    while True:
+        try:
+            if current.samefile(root):
+                return Path(*reversed(suffix)) if suffix else Path(".")
+        except OSError:
+            return None
+        if current.parent == current:
+            return None
+        suffix.append(current.name)
+        current = current.parent
+
+
 def validate_include_prefix(root: Path, prefix_str: str) -> Path:
     root = root.resolve()
     if not isinstance(prefix_str, str) or not prefix_str:
@@ -64,7 +91,7 @@ def validate_include_prefix(root: Path, prefix_str: str) -> Path:
 
     include_path = (root / prefix).resolve()
     try:
-        include_path.relative_to(root)
+        filesystem_relative_path(root, include_path)
     except ValueError as exc:
         raise ValueError(f"coverage include prefix escapes repository root: {prefix_str}") from exc
     if not include_path.exists():
@@ -80,14 +107,14 @@ def is_included(root: Path, source_path: Path, include_prefixes=()) -> bool:
     root = root.resolve()
     try:
         resolved = source_path.resolve()
-        resolved.relative_to(root)
+        filesystem_relative_path(root, resolved)
     except ValueError:
         return False
     if not include_prefixes:
         return True
     for include_prefix in include_prefixes:
         try:
-            resolved.relative_to(include_prefix.resolve())
+            filesystem_relative_path(include_prefix, resolved)
             return True
         except ValueError:
             pass
@@ -108,7 +135,7 @@ def validate_exclusion_path(root: Path, rel_path_str: str) -> Path:
 
     source_path = (root / rel_path).resolve()
     try:
-        source_path.relative_to(root)
+        filesystem_relative_path(root, source_path)
     except ValueError as exc:
         raise ValueError(f"coverage exclusion path escapes repository root: {rel_path_str}") from exc
     if not source_path.exists():
@@ -177,7 +204,7 @@ def validate_line_exclusions(root: Path, merged, exclusions):
     root = root.resolve()
     for source_path, line_reasons in exclusions.items():
         source_path = source_path.resolve()
-        rel_path = source_path.relative_to(root)
+        rel_path = filesystem_relative_path(root, source_path)
         if source_path not in merged:
             raise ValueError(f"coverage exclusion path is stale or was not instrumented: {rel_path}")
 
@@ -285,7 +312,7 @@ def summarize(root: Path, merged, exclusions=None):
         missing = [
             line for line, count in sorted(line_counts.items()) if line > 0 and line not in excluded_set and count == 0
         ]
-        rel_path = source_path.resolve().relative_to(root)
+        rel_path = filesystem_relative_path(root, source_path)
         summary.append(
             {
                 "path": rel_path,
@@ -383,7 +410,7 @@ def build_exclusion_audit(root: Path, merged, exclusions):
             snippet = source_lines[line_number - 1].strip() if line_number <= len(source_lines) else ""
             lines.append(
                 {
-                    "path": source_path.relative_to(root).as_posix(),
+                    "path": filesystem_relative_path(root, source_path).as_posix(),
                     "line": line_number,
                     "count": count,
                     "covered": count > 0,
