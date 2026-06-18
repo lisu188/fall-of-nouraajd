@@ -15,7 +15,7 @@ tab - open/close python console
 ## running
 ### ubuntu
 <pre>
-sudo apt-get install python3.11 python3.11-dev python3-pil pybind11-dev nlohmann-json3-dev
+sudo apt-get install python3 python3-dev python3-pip python3-venv python3-pil pybind11-dev nlohmann-json3-dev
 ./configure.sh
 cmake --build cmake-build-release --target _game -j$(nproc)
 python3 play.py
@@ -28,7 +28,7 @@ then install and bootstrap vcpkg. From a normal `cmd.exe` shell:
 git clone https://github.com/microsoft/vcpkg C:\vcpkg
 C:\vcpkg\bootstrap-vcpkg.bat
 set VCPKG_ROOT=C:\vcpkg
-python -m pip install --upgrade pillow
+python -m pip install --upgrade -r requirements-dev.txt
 git submodule update --init --recursive
 %VCPKG_ROOT%\vcpkg install --triplet x64-windows
 configure.bat
@@ -84,3 +84,10 @@ or the coverage tooling. The total line coverage threshold for that run is 90%;
 see `docs/testing.md` for details, including recommended branch-protection checks.
 Data validation tests run without needing the compiled `_game` module, but
 other tests require it to be built.
+`requirements-dev.txt` is the pinned source for pip-managed Python test tools
+used by CI, Windows, and virtual environments. Linux native build dependencies,
+including pybind11, still come from the OS packages installed by `./configure.sh`.
+When using a pip-managed Python environment, run:
+<pre>
+python -m pip install --upgrade -r requirements-dev.txt
+</pre>
