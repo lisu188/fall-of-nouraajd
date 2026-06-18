@@ -14,7 +14,13 @@
   "ridgeSign": {
     "ref": "signPost",
     "properties": {
-      "text": "OLD MILITARY ROAD - Rolf's ridge, the catacombs, and the cursed sinkhole lie northwest."
+      "text": "OLD MILITARY ROAD - Rolf's Pritz labyrinth lies far west. The cursed sinkhole festers nearer town."
+    }
+  },
+  "catacombsSign": {
+    "ref": "signPost",
+    "properties": {
+      "text": "CHAPEL CRYPT - The relic catacombs lie beyond the old wall, apart from the Pritz tunnels."
     }
   },
   "swampRoadSign": {

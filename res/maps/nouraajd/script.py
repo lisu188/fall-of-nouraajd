@@ -9,8 +9,8 @@ def load(self, context):
 
     VICTOR_COURTYARD_TIMEOUT_TURNS = 75
     VICTOR_CULTIST_PREFIX = "victorCultist"
-    VICTOR_COURTYARD_SPAWNS = [(126, 113, 0), (130, 113, 0), (128, 111, 0), (128, 115, 0)]
-    VICTOR_COURTYARD_LEADER_SPAWN = (128, 113, 0)
+    VICTOR_COURTYARD_SPAWNS = [(44, 100, 0), (46, 100, 0), (45, 99, 0), (45, 101, 0)]
+    VICTOR_COURTYARD_LEADER_SPAWN = (45, 100, 0)
     VICTOR_COURTYARD_FALLBACK_RADIUS = 3
 
     def _clear_victor_encounter(game_map):
