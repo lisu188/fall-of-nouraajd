@@ -248,6 +248,8 @@ jobs:
         id: validate-vcpkg-installed
         shell: pwsh
         run: |
+          $ErrorActionPreference = "Stop"
+
           $tripletRoot = Join-Path $env:VCPKG_INSTALLED_DIR $env:VCPKG_TARGET_TRIPLET
           $expectedPaths = @(
             "include\SDL2\SDL.h",
@@ -268,9 +270,33 @@ jobs:
             }
           }
 
+          $dryRunOutput = & "$env:VCPKG_ROOT\vcpkg.exe" install --dry-run `
+            --triplet "$env:VCPKG_TARGET_TRIPLET" `
+            --overlay-triplets "$env:VCPKG_OVERLAY_TRIPLETS" `
+            "--x-install-root=$env:VCPKG_INSTALLED_DIR" 2>&1
+          $dryRunExit = $LASTEXITCODE
+          $dryRunText = $dryRunOutput -join "`n"
+          $needsInstallPattern = @(
+            "The following packages will be built and installed",
+            "The following packages will be installed",
+            "The following packages will be rebuilt"
+          ) -join "|"
+
           if ($missing.Count -gt 0) {
             "valid=false" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
             "vcpkg installed cache is missing expected files: $($missing -join ', ')"
+          } elseif ($dryRunExit -ne 0) {
+            "valid=false" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+            "vcpkg dry-run validation failed with exit code $dryRunExit."
+            $dryRunText
+          } elseif ($dryRunText -match $needsInstallPattern) {
+            "valid=false" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+            "vcpkg installed cache is incomplete; dry-run would install additional packages."
+            $dryRunText
+          } elseif ($dryRunText -notmatch "The following packages are already installed") {
+            "valid=false" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+            "vcpkg dry-run did not confirm that all requested packages are already installed."
+            $dryRunText
           } else {
             "valid=true" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
             "vcpkg installed cache is valid."
@@ -363,6 +389,7 @@ jobs:
         timeout-minutes: 10
         shell: cmd
         run: |
+          set VCPKG_MANIFEST_MODE=OFF
           call configure.bat
           if errorlevel 1 exit /b 1
       - name: Build test targets
