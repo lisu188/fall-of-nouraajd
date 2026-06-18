@@ -6,6 +6,10 @@ on:
       - main
   pull_request:
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   linux:
     runs-on: ubuntu-24.04
@@ -100,8 +104,10 @@ jobs:
             ccache --show-stats
           fi
       - name: package
+        if: github.event_name != 'pull_request'
         run: cmake --build cmake-build-release --target package -j"$(nproc)"
       - name: publish
+        if: github.event_name != 'pull_request'
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: fall-of-nouraajd-linux
@@ -163,6 +169,12 @@ jobs:
           script: |
             core.exportVariable('ACTIONS_CACHE_URL', process.env.ACTIONS_CACHE_URL || '');
             core.exportVariable('ACTIONS_RUNTIME_TOKEN', process.env.ACTIONS_RUNTIME_TOKEN || '');
+      - name: Cache vcpkg installed tree
+        id: cache-vcpkg-installed
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830
+        with:
+          path: ${{ env.VCPKG_INSTALLED_DIR }}
+          key: ${{ runner.os }}-${{ env.VCPKG_TARGET_TRIPLET }}-vcpkg-installed-${{ hashFiles('vcpkg.json', 'cmake/triplets/*.cmake', 'configure.bat', 'CMakeLists.txt', 'cmake/**/*.cmake') }}
       - name: Cache sccache
         uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830
         with:
@@ -179,12 +191,46 @@ jobs:
         shell: pwsh
         run: |
           $buildJobs = [Math]::Max(1, [Environment]::ProcessorCount)
-          $testJobs = 1
+          $testJobs = [Math]::Min(4, [Math]::Max(1, [Environment]::ProcessorCount))
           "CMAKE_BUILD_PARALLEL_LEVEL=$buildJobs" | Out-File -FilePath $env:GITHUB_ENV -Append
           "GAME_TEST_JOBS=$testJobs" | Out-File -FilePath $env:GITHUB_ENV -Append
           "Windows build jobs: $buildJobs"
           "Windows Python test jobs: $testJobs"
+      - name: Validate vcpkg installed cache
+        id: validate-vcpkg-installed
+        if: steps.cache-vcpkg-installed.outputs.cache-hit == 'true'
+        shell: pwsh
+        run: |
+          $tripletRoot = Join-Path $env:VCPKG_INSTALLED_DIR $env:VCPKG_TARGET_TRIPLET
+          $expectedPaths = @(
+            "include\SDL2\SDL.h",
+            "include\SDL2\SDL_image.h",
+            "include\SDL2\SDL_ttf.h",
+            "include\nlohmann\json.hpp",
+            "lib\SDL2.lib",
+            "lib\SDL2_image.lib",
+            "lib\SDL2_ttf.lib",
+            "bin\SDL2.dll",
+            "bin\SDL2_image.dll",
+            "bin\SDL2_ttf.dll"
+          )
+          $missing = @()
+          foreach ($relativePath in $expectedPaths) {
+            $candidate = Join-Path $tripletRoot $relativePath
+            if (-not (Test-Path $candidate)) {
+              $missing += $relativePath
+            }
+          }
+
+          if ($missing.Count -gt 0) {
+            "valid=false" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+            "vcpkg installed cache is missing expected files: $($missing -join ', ')"
+          } else {
+            "valid=true" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+            "vcpkg installed cache is valid."
+          }
       - name: Install native deps
+        if: steps.validate-vcpkg-installed.outputs.valid != 'true'
         shell: pwsh
         run: |
           & "$env:VCPKG_ROOT\vcpkg.exe" install `
@@ -231,18 +277,20 @@ jobs:
           python test.py
           if errorlevel 1 exit /b 1
       - name: package
+        if: github.event_name != 'pull_request'
         shell: cmd
         run: |
           cmake --build cmake-build-release --target package --parallel %CMAKE_BUILD_PARALLEL_LEVEL%
           if errorlevel 1 exit /b 1
       - name: sccache stats after package
-        if: always()
+        if: github.event_name != 'pull_request' && always()
         shell: cmd
         run: |
           where sccache >nul 2>nul
           if errorlevel 1 exit /b 0
           if not errorlevel 1 sccache --show-stats
       - name: publish
+        if: github.event_name != 'pull_request'
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: fall-of-nouraajd-windows
