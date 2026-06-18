@@ -23,6 +23,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CGame.h"
 #include "core/CJsonUtil.h"
 #include "core/CMap.h"
+#include "core/CPlaytestTrace.h"
 
 bool visitablePredicate(std::shared_ptr<CMapObject> object) { return vstd::cast<CVisitable>(object).operator bool(); };
 
@@ -56,9 +57,20 @@ void CCreature::addExp(int exp) {
     if (!isAlive()) {
         return;
     }
+    const int before = this->exp;
     this->exp += exp;
     while (this->exp >= getExpForNextLevel()) {
         this->levelUp();
+    }
+    if (CPlaytestTrace::enabled() && exp != 0) {
+        json fields = {
+            {"actor", CPlaytestTrace::objectRef(this->ptr<CCreature>())},
+            {"after", this->exp},
+            {"before", before},
+            {"delta", exp},
+        };
+        CPlaytestTrace::addMapContext(fields, getMap());
+        CPlaytestTrace::record("experience_changed", fields);
     }
 }
 
@@ -89,6 +101,15 @@ void CCreature::removeItem(std::shared_ptr<CItem> item, bool quest) {
         vstd::logger::fatal("Tried to drop quest item");
     } else {
         if (items.erase(item)) {
+            if (CPlaytestTrace::enabled()) {
+                json fields = {
+                    {"item", CPlaytestTrace::objectRef(item)},
+                    {"owner", CPlaytestTrace::objectRef(this->ptr<CCreature>())},
+                    {"questRemoval", quest},
+                };
+                CPlaytestTrace::addMapContext(fields, getMap());
+                CPlaytestTrace::record("inventory_removed", fields);
+            }
             signal("inventoryChanged");
         }
     }
@@ -120,6 +141,14 @@ void CCreature::addItems(std::set<std::shared_ptr<CItem>> items) {
             continue;
         }
         this->items.insert(it);
+        if (CPlaytestTrace::enabled()) {
+            json fields = {
+                {"item", CPlaytestTrace::objectRef(it)},
+                {"owner", CPlaytestTrace::objectRef(this->ptr<CCreature>())},
+            };
+            CPlaytestTrace::addMapContext(fields, getMap());
+            CPlaytestTrace::record("inventory_added", fields);
+        }
         signal("inventoryChanged");
     }
 }
@@ -454,7 +483,20 @@ int CCreature::getManaRegRate() { return getStats()->getMainValue() / 10 + 1; }
 
 int CCreature::getGold() { return gold; }
 
-void CCreature::setGold(int value) { gold = value; }
+void CCreature::setGold(int value) {
+    const int before = gold;
+    gold = value;
+    if (CPlaytestTrace::enabled() && before != value) {
+        json fields = {
+            {"actor", CPlaytestTrace::objectRef(this->ptr<CCreature>())},
+            {"after", value},
+            {"before", before},
+            {"delta", value - before},
+        };
+        CPlaytestTrace::addMapContext(fields, getMap());
+        CPlaytestTrace::record("gold_changed", fields);
+    }
+}
 
 void CCreature::beforeMove() {
     auto self = this->ptr<CCreature>();

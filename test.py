@@ -119,6 +119,32 @@ MCP_STDIO_MAP_JSON_TIMEOUT_SECONDS = 60
 MCP_STDIO_SHUTDOWN_TIMEOUT_SECONDS = 30
 GAME_TEST_WORKER = os.environ.get("GAME_TEST_WORKER") == "1"
 XVFB_GAMEPLAY_PARENT_TEST = "XvfbGameplayTest.test_keyboard_gameplay_under_xvfb"
+VALID_TEST_SUITES = ("fast", "gameplay", "ui", "coverage-safe", "full")
+FAST_TEST_PREFIXES = (
+    "CoverageReportTest.",
+    "PanelLayoutManifestTest.",
+    "PlayBootstrapTest.",
+    "TestRunnerSuiteTest.",
+)
+FAST_TEST_NAMES = {
+    "McpServerTest.test_engine_call_resolves_handle_arguments_for_python_methods",
+    "McpServerTest.test_engine_handle_call_rejects_private_methods",
+    "McpServerTest.test_engine_handle_call_scopes_controller_access_to_players",
+    "McpServerTest.test_http_notification_response_declares_empty_body",
+    "McpServerTest.test_initialize_response_preserves_request_id",
+    "McpServerTest.test_map_design_brief_rejects_path_traversal",
+    "McpServerTest.test_serialize_result_lists_python_methods_for_handles",
+    "McpServerTest.test_stdio_batch_handles_initialize_and_tool_listing",
+}
+GAMEPLAY_TEST_PREFIXES = (
+    "ConsoleEventIsolationTest.",
+    "ConsoleEventProcessTest.",
+    "GameTest.",
+    "McpServerTest.",
+)
+GAMEPLAY_EXCLUDED_TEST_NAMES = {
+    "McpServerTest.test_http_notification_response_declares_empty_body",
+}
 SERIAL_TEST_NAMES = {
     "GameTest.test_load_saved_map_slot_name_does_not_override_object_type_configs",
     "GameTest.test_missing_save_resource_directory_lists_empty",
@@ -342,6 +368,18 @@ def load_game_module():
     return game
 
 
+def event_names(trace):
+    return [record.get("event") for record in trace]
+
+
+def trace_tail_from_file(path, limit=80):
+    path = Path(path)
+    if not path.exists():
+        return []
+    lines = path.read_text(encoding="utf-8", errors="replace").splitlines()
+    return [json.loads(line) for line in lines[-limit:] if line.strip()]
+
+
 def make_temp_log_path():
     fd, path = tempfile.mkstemp(prefix="game-log-", suffix=".txt")
     os.close(fd)
@@ -557,7 +595,7 @@ XVFB_GAMEPLAY_CHILD_DURATION_HINTS = {
     "test_fight_panel_and_nested_views_layout": 12,
     "test_all_list_views_capacity_paging_and_shrink": 12,
     "test_text_centric_panel_layouts": 10,
-    "test_all_top_level_panels_block_outside_map_clicks": 8,
+    "test_all_top_level_panels_block_outside_map_clicks": 45,
     "test_screenshot_after_save_hotkey_has_rendered_pixels": 8,
     "test_save_hotkey_writes_loadable_map": 8,
     "test_screenshot_minimap_has_rendered_pixels": 6,
@@ -1074,12 +1112,36 @@ def activate_list_cell(list_view, gui, column, row, button=SDL_BUTTON_LEFT):
     list_view.mouseEvent(gui, SDL_MOUSEBUTTONDOWN, button, column * tile + tile // 2, row * tile + tile // 2)
 
 
+def activate_first_proxy_graphic(list_view, gui, column, row, button=SDL_BUTTON_LEFT):
+    for graphic in list_view.getProxiedObjects(gui, column, row):
+        if graphic.mouseEvent(gui, SDL_MOUSEBUTTONDOWN, button, 1, 1):
+            return True
+    return False
+
+
 def activate_widget(widget, gui):
     rect = resolved_rect(widget)
     x = rect[2] // 2
     y = rect[3] // 2
     widget.mouseEvent(gui, SDL_MOUSEBUTTONDOWN, SDL_BUTTON_LEFT, x, y)
     widget.mouseEvent(gui, SDL_MOUSEBUTTONUP, SDL_BUTTON_LEFT, x, y)
+
+
+def queue_question_answer(game, g, button_index):
+    observed = {"attempts": 0}
+
+    def answer():
+        panel = find_top_level_panel(g, "CGameQuestionPanel")
+        if panel is None:
+            observed["attempts"] += 1
+            if observed["attempts"] > 1000:
+                raise AssertionError("CGameQuestionPanel was not visible for queued answer.")
+            game.event_loop.instance().invoke(answer)
+            return
+        buttons = sorted(find_descendants_by_type(panel, "CButton"), key=lambda child: resolved_rect(child)[0])
+        activate_widget(buttons[button_index], g.getGui())
+
+    game.event_loop.instance().invoke(answer)
 
 
 def list_cell_objects(list_view, gui, column, row):
@@ -1170,6 +1232,25 @@ def panel_pixel_summary(data, width, height, panel_rect, regions=None):
     return summary
 
 
+def pixel_diff_bounds(before, after, width, rect):
+    bounds = None
+    changed = 0
+    for row in range(rect[1], rect_bottom(rect)):
+        for col in range(rect[0], rect_right(rect)):
+            offset = (row * width + col) * 4
+            if before[offset : offset + 3] == after[offset : offset + 3]:
+                continue
+            changed += 1
+            bounds = (
+                (col, row, col, row)
+                if bounds is None
+                else (min(bounds[0], col), min(bounds[1], row), max(bounds[2], col), max(bounds[3], row))
+            )
+    if bounds is None:
+        return None, 0
+    return (bounds[0], bounds[1], bounds[2] - bounds[0] + 1, bounds[3] - bounds[1] + 1), changed
+
+
 def annotate_panel_layout(source_path, output_path, summary):
     from PIL import Image, ImageDraw
 
@@ -1229,6 +1310,11 @@ def capture_panel_layout(test_case, g, scenario, panel, regions=None, outside_to
         f"{scenario} rendered {summary['pixels']['outside']} pixels outside {panel_rect}.",
     )
     return summary
+
+
+def assert_region_has_pixels(test_case, summary, region, minimum=1):
+    actual = summary["pixels"]["regions"].get(region, 0)
+    test_case.assertGreaterEqual(actual, minimum, f"{summary['scenario']} region {region} has {actual} pixels.")
 
 
 @contextlib.contextmanager
@@ -2792,7 +2878,21 @@ def run_walkthrough(map_name, fn):
             "GAME_TEST_OUTPUT_DIR": str(child_output_dir),
         }
     )
-    completed = subprocess.run(command, cwd=REPO_ROOT, env=env, capture_output=True, text=True)
+    timeout = max(30, test_duration_weight(f"GameTest.test_map_walkthrough_{map_name}", {}) * 6)
+    if os.environ.get("GAME_COVERAGE_RUN") == "1":
+        timeout *= 4
+    try:
+        completed = subprocess.run(command, cwd=REPO_ROOT, env=env, capture_output=True, text=True, timeout=timeout)
+    except subprocess.TimeoutExpired as exc:
+        log = {
+            "map": map_name,
+            "timeout_seconds": timeout,
+            "stdout": (exc.stdout or "").strip(),
+            "stderr": (exc.stderr or "").strip(),
+            "walkthrough": fn.__name__,
+        }
+        write_walkthrough_log(map_name, log)
+        return False, log
     log = {}
     log_path = child_output_dir / f"walkthrough_{map_name}.json"
     if log_path.exists():
@@ -8511,18 +8611,27 @@ class GameTest(unittest.TestCase):
         game = load_game_module()
         provider = game.CResourcesProvider.getInstance()
 
-        samples = {
+        text_samples = {
             "config/tiles.json": "GroundTile",
             "maps/test/map.json": '"layers"',
             "plugins/effect.py": "def load",
         }
         resolved = {}
-        for resource_path, needle in samples.items():
+        for resource_path, needle in text_samples.items():
             full_path = provider.getPath(resource_path)
             self.assertTrue(full_path, resource_path)
             self.assertTrue(Path(full_path).exists(), full_path)
             self.assertIn(needle, provider.load(resource_path), resource_path)
             resolved[resource_path] = full_path
+
+        for resource_path in ("fonts/ampersand.ttf", "images/item.png"):
+            full_path = provider.getPath(resource_path)
+            self.assertTrue(full_path, resource_path)
+            self.assertTrue(Path(full_path).exists(), full_path)
+            resolved[resource_path] = full_path
+
+        resource_root = Path(provider.getPath("config/items.json")).parents[1]
+        self.assertIn("test", provider.getFiles("MAP"))
 
         with tempfile.TemporaryDirectory() as tmp_dir:
             tmp_path = Path(tmp_dir)
@@ -8532,15 +8641,54 @@ class GameTest(unittest.TestCase):
                 "def load(context):\n    raise RuntimeError('untrusted cwd plugin executed')\n",
                 encoding="utf-8",
             )
+            (tmp_path / "maps" / "test").mkdir(parents=True)
+            (tmp_path / "maps" / "test" / "config.json").write_text("{}", encoding="utf-8")
+            (tmp_path / "maps" / "zzFake").mkdir(parents=True)
+            (tmp_path / "images").mkdir()
+            (tmp_path / "images" / "item.png").write_text("not a packaged texture", encoding="utf-8")
+            (tmp_path / "fonts").mkdir()
+            (tmp_path / "fonts" / "ampersand.ttf").write_text("not a packaged font", encoding="utf-8")
+            (tmp_path / "save").mkdir()
+            save_name = unique_save_name("provider_root_cwd")
+            provider_save_path = resource_root / "save" / f"{save_name}.json"
+            provider_backup_path = resource_root / "save" / f"{save_name}.json.bak"
+            cwd_save_path = tmp_path / "save" / f"{save_name}.json"
 
             original_cwd = Path.cwd()
             try:
+                provider_save_path.unlink(missing_ok=True)
+                provider_backup_path.unlink(missing_ok=True)
                 os.chdir(tmp_path)
                 self.assertFalse(provider.getPath("plugins/aardvark.py"))
                 self.assertNotIn("plugins/aardvark.py", provider.getFiles("PLUGIN"))
-                game.CGameLoader.loadGame()
+                self.assertNotIn("zzFake", provider.getFiles("MAP"))
+
+                g = game.CGameLoader.loadGame()
+                game.CGameLoader.loadGui(g)
+                game.CGameLoader.startGameWithPlayer(g, "test", "Warrior")
+                self.assertEqual("test", g.getMap().mapName)
+
+                panel = g.getGuiHandler().openPanel("questionPanel")
+                panel.setStringProperty("question", "Provider font smoke")
+                static_object = g.createObject("CGameObject")
+                static_object.animation = "images/item"
+                static_animation = g.createObject("CStaticAnimation")
+                static_animation.setObject(static_object)
+                static_animation.renderObject(g.getGui(), 0, 0, 24, 24, 0)
+                pump_event_loop(5)
+
+                game.CMapLoader.save(g.getMap(), save_name)
+                self.assertTrue(provider_save_path.exists(), provider_save_path)
+                self.assertFalse(cwd_save_path.exists(), cwd_save_path)
+                self.assertEqual(provider_save_path.resolve(), Path(provider.getPath(f"save/{save_name}.json")))
+
+                loaded_game = game.CGameLoader.loadGame()
+                game.CGameLoader.loadSavedGame(loaded_game, save_name)
+                self.assertEqual("test", loaded_game.getMap().mapName)
             finally:
                 os.chdir(original_cwd)
+                provider_save_path.unlink(missing_ok=True)
+                provider_backup_path.unlink(missing_ok=True)
 
         return True, json.dumps(resolved, sort_keys=True)
 
@@ -10788,6 +10936,67 @@ class GameTest(unittest.TestCase):
             save_path.unlink(missing_ok=True)
 
     @game_test
+    def test_playtest_trace_records_core_gameplay_events(self):
+        game = load_game_module()
+        game.configure_playtest_trace(True)
+        try:
+            g, game_map, player = load_game_map_with_player("nouraajd")
+            target = find_adjacent_walkable_tile(game_map, player.getCoords())
+            player.moveTo(target.x, target.y, target.z)
+            player.addItem("letterFromRolf")
+            player.addQuest("rolfQuest")
+            game_map.removeObjectByName("cave1")
+
+            _combat_game, _session, attacker, defenders = self.make_multi_enemy_combat_fixture()
+            attacker.addGold(25)
+            game.CFightHandler.fightMany(attacker, defenders)
+
+            g.changeMap("ritual")
+            pump_event_loop(10)
+
+            trace = game.drain_playtest_trace()
+        finally:
+            game.configure_playtest_trace(False)
+
+        names = event_names(trace)
+        for expected in (
+            "movement",
+            "inventory_added",
+            "quest_added",
+            "quest_state_changed",
+            "gold_changed",
+            "combat_started",
+            "combat_finished",
+            "reward_granted",
+            "map_transition_requested",
+            "map_transition_completed",
+        ):
+            self.assertIn(expected, names)
+
+        self.assertTrue(any(record.get("map") == "nouraajd" for record in trace))
+        self.assertTrue(
+            any(
+                record.get("event") == "inventory_added" and (record.get("item") or {}).get("id") == "letterFromRolf"
+                for record in trace
+            )
+        )
+        self.assertTrue(
+            any(
+                record.get("event") == "quest_state_changed"
+                and record.get("quest") == "rolf"
+                and record.get("current") == "skull_recovered"
+                for record in trace
+            )
+        )
+        self.assertTrue(
+            any(
+                record.get("event") == "map_transition_completed" and record.get("toMap") == "ritual"
+                for record in trace
+            )
+        )
+        return True, json.dumps({"events": names, "trace": trace}, sort_keys=True)
+
+    @game_test
     def test_nouraajd_quest_state_machine(self):
         game = load_game_module()
 
@@ -11426,6 +11635,10 @@ class PanelLayoutManifestTest(unittest.TestCase):
 
         bound_doc = getattr(load_game_module().CGameGraphicsObject.getResolvedRect, "__doc__", "") or ""
         self.assertIn("Return resolved runtime layout", bound_doc)
+        game = load_game_module()
+        g = game.CGameLoader.loadGame()
+        plain_graphic = g.createObject("CGameGraphicsObject")
+        self.assertEqual((0, 0, 0, 0), resolved_rect(plain_graphic))
 
 
 class XvfbGameplayProcessTest(unittest.TestCase):
@@ -11616,12 +11829,24 @@ class XvfbGameplayProcessTest(unittest.TestCase):
     def test_panel_harness_info_artifacts(self):
         _, g, _, _ = create_xvfb_gameplay_session(self)
         panel = open_layout_panel(self, g, "infoPanel")
+        sibling = None
         panel.setText("isolated panel harness verification")
 
         try:
             with isolated_gui_panel(g, panel):
                 summary = capture_panel_layout(self, g, "layout_harness_info_panel", panel)
+            sibling = open_layout_panel(self, g, "inventoryPanel")
+            self.assertTrue(gui_has_child_object(g, sibling))
+            with self.assertRaises(AssertionError):
+                with isolated_gui_panel(g, panel):
+                    self.assertFalse(gui_has_child_object(g, sibling))
+                    capture_panel_layout(
+                        self, g, "layout_harness_info_panel_expected_failure", panel, outside_tolerance=-1
+                    )
+            self.assertTrue(gui_has_child_object(g, sibling))
         finally:
+            if sibling is not None:
+                sibling.close()
             panel.close()
             pump_event_loop(3)
 
@@ -11645,6 +11870,16 @@ class XvfbGameplayProcessTest(unittest.TestCase):
                         capture_panel_layout(self, g, f"layout_root_{resource_id}", panel)
                 finally:
                     panel.close()
+                    pump_event_loop(3)
+                self.assertEqual(0, sum(1 for child in g.getGui().getChildren() if child.getType() == case["class"]))
+                reopened = open_layout_panel(self, g, resource_id)
+                try:
+                    assert_runtime_rect(self, f"{resource_id} reopened", reopened, case["root"])
+                    self.assertEqual(
+                        1, sum(1 for child in g.getGui().getChildren() if child.getType() == case["class"])
+                    )
+                finally:
+                    reopened.close()
                     pump_event_loop(3)
                 self.assertEqual(0, sum(1 for child in g.getGui().getChildren() if child.getType() == case["class"]))
 
@@ -11686,13 +11921,14 @@ class XvfbGameplayProcessTest(unittest.TestCase):
             assert_child_inside(self, "characterPanel", root, "actions", action_rect)
             assert_no_overlap(self, "character content", (560, 240, 800, 540), "actions", action_rect)
             with isolated_gui_panel(g, character):
-                capture_panel_layout(
+                summary = capture_panel_layout(
                     self,
                     g,
                     "layout_character_panel",
                     character,
                     regions={"actions": action_rect},
                 )
+            assert_region_has_pixels(self, summary, "actions")
         finally:
             character.close()
             pump_event_loop(3)
@@ -11707,10 +11943,29 @@ class XvfbGameplayProcessTest(unittest.TestCase):
                     "Wrapped info panel text that should occupy the top-left content area without leaving the panel.",
                 ),
             ):
-                info.setCentered(centered)
-                info.setText(text)
-                pump_event_loop(3)
                 with isolated_gui_panel(g, info):
+                    info.setText("")
+                    pump_event_loop(3)
+                    empty_data, width, _ = capture_sdl_screenshot(
+                        TEST_OUTPUT_DIR / f"layout_info_panel_{centered}_empty.png", g.getGui()
+                    )
+                    info.setCentered(centered)
+                    info.setText(text)
+                    pump_event_loop(3)
+                    text_data, _, _ = capture_sdl_screenshot(
+                        TEST_OUTPUT_DIR / f"layout_info_panel_{centered}_text.png", g.getGui()
+                    )
+                    text_bounds, changed = pixel_diff_bounds(empty_data, text_data, width, ROOT_400_300)
+                    self.assertGreater(changed, 0)
+                    assert_child_inside(self, "infoPanel", ROOT_400_300, "info text", text_bounds)
+                    if centered:
+                        expected_center = rect_center(ROOT_400_300)
+                        actual_center = rect_center(text_bounds)
+                        self.assertLess(abs(expected_center[0] - actual_center[0]), 70)
+                        self.assertLess(abs(expected_center[1] - actual_center[1]), 70)
+                    else:
+                        self.assertLessEqual(text_bounds[0], ROOT_400_300[0] + 25)
+                        self.assertLessEqual(text_bounds[1], ROOT_400_300[1] + 25)
                     capture_panel_layout(self, g, f"layout_info_panel_{centered}", info)
         finally:
             info.close()
@@ -11719,45 +11974,86 @@ class XvfbGameplayProcessTest(unittest.TestCase):
         text_panel = open_layout_panel(self, g, "textPanel")
         try:
             assert_runtime_rect(self, "textPanel", text_panel, ROOT_800_600)
-            text_panel.setText("Short message.")
-            pump_event_loop(3)
             with isolated_gui_panel(g, text_panel):
+                text_panel.setText("")
+                pump_event_loop(3)
+                empty_data, width, _ = capture_sdl_screenshot(
+                    TEST_OUTPUT_DIR / "layout_text_panel_empty.png", g.getGui()
+                )
+                text_panel.setText("Short message.")
+                pump_event_loop(3)
+                short_data, _, _ = capture_sdl_screenshot(
+                    TEST_OUTPUT_DIR / "layout_text_panel_short_text.png", g.getGui()
+                )
+                short_bounds, changed = pixel_diff_bounds(empty_data, short_data, width, ROOT_800_600)
+                self.assertGreater(changed, 0)
                 short_summary = capture_panel_layout(self, g, "layout_text_panel_short", text_panel)
             long_text = "\n".join(
                 ["Long layout paragraph with enough words to wrap inside the text panel." for _ in range(18)]
             )
-            text_panel.setText(long_text)
-            pump_event_loop(3)
             with isolated_gui_panel(g, text_panel):
+                text_panel.setText(long_text)
+                pump_event_loop(3)
+                long_data, _, _ = capture_sdl_screenshot(
+                    TEST_OUTPUT_DIR / "layout_text_panel_long_text.png", g.getGui()
+                )
+                long_bounds, changed = pixel_diff_bounds(empty_data, long_data, width, ROOT_800_600)
+                self.assertGreater(changed, 0)
                 long_summary = capture_panel_layout(self, g, "layout_text_panel_long", text_panel)
             self.assertGreater(long_text.count("\n"), 1)
+            self.assertGreater(long_bounds[3], short_bounds[3])
             self.assertGreaterEqual(long_summary["pixels"]["inside"], short_summary["pixels"]["inside"])
+            near_limit_text = " ".join(["near-limit wrapped layout content"] * 100)
+            self.assertLess(len(near_limit_text), 4096)
+            text_panel.setText(near_limit_text)
+            pump_event_loop(3)
+            with isolated_gui_panel(g, text_panel):
+                capture_panel_layout(self, g, "layout_text_panel_near_limit", text_panel)
             push_space_key()
             pump_event_loop(5)
             self.assertFalse(gui_contains_class(g, "CGameTextPanel"))
+            reopened_text = open_layout_panel(self, g, "textPanel")
+            try:
+                assert_runtime_rect(self, "textPanel reopened", reopened_text, ROOT_800_600)
+            finally:
+                reopened_text.close()
+                pump_event_loop(3)
         finally:
             if text_panel in list(g.getGui().getChildren()):
                 text_panel.close()
                 pump_event_loop(3)
 
-        active_quests = {make_ui_layout_quest(g, index) for index in range(4)}
-        completed_quests = {make_ui_layout_quest(g, index, completed=True) for index in range(2)}
-        player.setQuests(active_quests)
-        player.setCompletedQuests(completed_quests)
-        quest_panel = open_layout_panel(self, g, "questPanel")
-        try:
-            assert_runtime_rect(self, "questPanel", quest_panel, ROOT_800_600)
-            quest_text = quest_panel.getText(g.getGui())
-            self.assertIn("[Active] Quest 0:", quest_text)
-            self.assertIn("[Completed] Quest 0:", quest_text)
-            self.assertIn("Hint 0:", quest_text)
-            completed_block = quest_text.split("[Completed] Quest 0:", 1)[1].split("[", 1)[0]
-            self.assertNotIn("Hint 0:", completed_block)
-            with isolated_gui_panel(g, quest_panel):
-                capture_panel_layout(self, g, "layout_quest_panel_dense", quest_panel)
-        finally:
-            quest_panel.close()
-            pump_event_loop(3)
+        def assert_quest_panel_state(active_quests, completed_quests, scenario):
+            player.setQuests(set(active_quests))
+            player.setCompletedQuests(set(completed_quests))
+            quest_panel = open_layout_panel(self, g, "questPanel")
+            try:
+                assert_runtime_rect(self, "questPanel", quest_panel, ROOT_800_600)
+                quest_text = quest_panel.getText(g.getGui())
+                with isolated_gui_panel(g, quest_panel):
+                    capture_panel_layout(self, g, scenario, quest_panel)
+                return quest_text
+            finally:
+                quest_panel.close()
+                pump_event_loop(3)
+
+        empty_text = assert_quest_panel_state([], [], "layout_quest_panel_empty")
+        self.assertNotIn("uiLayoutQuest", empty_text)
+
+        single_quest = make_ui_layout_quest(g, 0)
+        single_text = assert_quest_panel_state([single_quest], [], "layout_quest_panel_single")
+        self.assertIn("[Active] Quest 0:", single_text)
+        self.assertIn("Objective 0:", single_text)
+        self.assertIn("Reward 0:", single_text)
+        self.assertIn("Hint 0:", single_text)
+
+        active_quests = [make_ui_layout_quest(g, index) for index in range(4)]
+        completed_quests = [make_ui_layout_quest(g, index, completed=True) for index in range(2)]
+        dense_text = assert_quest_panel_state(active_quests, completed_quests, "layout_quest_panel_dense")
+        self.assertIn("[Active] Quest 0:", dense_text)
+        self.assertIn("[Completed] Quest 0:", dense_text)
+        completed_block = dense_text.split("[Completed] Quest 0:", 1)[1].split("[", 1)[0]
+        self.assertNotIn("Hint 0:", completed_block)
 
     def test_choice_panel_layouts_and_hitboxes(self):
         game, g, _, _ = create_xvfb_gameplay_session(self)
@@ -11766,7 +12062,7 @@ class XvfbGameplayProcessTest(unittest.TestCase):
             def inspect(panel):
                 root = assert_runtime_rect(self, "questionPanel", panel, ROOT_400_300)
                 question = next(child for child in panel.getChildren() if child.getType() == "CWidget")
-                assert_runtime_rect(self, "question text", question, (760, 390, 400, 225))
+                question_rect = assert_runtime_rect(self, "question text", question, (760, 390, 400, 225))
                 buttons = sorted(find_descendants_by_type(panel, "CButton"), key=lambda child: resolved_rect(child)[0])
                 self.assertEqual(2, len(buttons))
                 left = assert_runtime_rect(self, "question yes", buttons[0], (760, 615, 200, 75))
@@ -11775,6 +12071,22 @@ class XvfbGameplayProcessTest(unittest.TestCase):
                 assert_child_inside(self, "questionPanel", root, "YES", left)
                 assert_child_inside(self, "questionPanel", root, "NO", right)
                 with isolated_gui_panel(g, panel):
+                    question_text = panel.question
+                    panel.question = ""
+                    pump_event_loop(3)
+                    empty_data, width, _ = capture_sdl_screenshot(
+                        TEST_OUTPUT_DIR / f"layout_question_{expected_rect}_empty.png", g.getGui()
+                    )
+                    panel.question = question_text
+                    pump_event_loop(3)
+                    text_data, _, _ = capture_sdl_screenshot(
+                        TEST_OUTPUT_DIR / f"layout_question_{expected_rect}_text.png", g.getGui()
+                    )
+                    text_bounds, changed = pixel_diff_bounds(empty_data, text_data, width, root)
+                    self.assertGreater(changed, 0)
+                    assert_child_inside(self, "question text", question_rect, "rendered question", text_bounds)
+                    assert_no_overlap(self, "rendered question", text_bounds, "YES", left)
+                    assert_no_overlap(self, "rendered question", text_bounds, "NO", right)
                     capture_panel_layout(self, g, f"layout_question_{expected_rect}", panel)
                 activate_widget(next(button for button in buttons if resolved_rect(button) == click_rect), g.getGui())
                 return {"left": left, "right": right}
@@ -11796,7 +12108,10 @@ class XvfbGameplayProcessTest(unittest.TestCase):
             game,
             g,
             "CGameQuestionPanel",
-            lambda: g.getGuiHandler().showQuestion("Confirm no with a wrapped question prompt?"),
+            lambda: g.getGuiHandler().showQuestion(
+                "Confirm no with a wrapped question prompt that spans enough words to exercise the upper "
+                "question rectangle without entering either button hitbox?"
+            ),
             inspect_question("no", (960, 615, 200, 75)),
             lambda panel: None,
         )
@@ -11821,6 +12136,7 @@ class XvfbGameplayProcessTest(unittest.TestCase):
                         button_rect = resolved_rect(button)
                         assert_positive_rect(self, f"selection button {index}", button_rect)
                         assert_child_inside(self, "selectionPanel", root, f"selection button {index}", button_rect)
+                        self.assertEqual(options[index], button.text)
                         if last_rect is not None:
                             assert_no_overlap(
                                 self, "previous selection button", last_rect, "selection button", button_rect
@@ -11872,6 +12188,7 @@ class XvfbGameplayProcessTest(unittest.TestCase):
                 if previous is not None:
                     assert_no_overlap(self, "previous dialog widget", previous, "dialog widget", widget_rect)
                 previous = widget_rect
+            entry_texts = {widget.text for widget in entry_widgets}
             with isolated_gui_panel(g, panel):
                 capture_panel_layout(self, g, "layout_dialog_entry", panel)
 
@@ -11881,6 +12198,9 @@ class XvfbGameplayProcessTest(unittest.TestCase):
             )
             self.assertGreaterEqual(len(next_widgets), 2)
             self.assertEqual(ROOT_800_600, resolved_rect(panel))
+            next_texts = {widget.text for widget in next_widgets}
+            self.assertFalse(any("Entry dialog text" in text for text in next_texts))
+            self.assertNotEqual(entry_texts, next_texts)
             with isolated_gui_panel(g, panel):
                 capture_panel_layout(self, g, "layout_dialog_next", panel)
             self.assertTrue(panel.keyboardEvent(g.getGui(), SDL_KEYDOWN, ord("1")))
@@ -11893,6 +12213,51 @@ class XvfbGameplayProcessTest(unittest.TestCase):
             "CGameDialogPanel",
             lambda: g.getGuiHandler().showDialog(dialog),
             inspect_dialog,
+            lambda panel: None,
+        )
+
+        dense_options = [
+            (
+                f"Dense option {index} with wrapped text that should receive a positive non-overlapping rectangle "
+                "inside the dialog option area."
+            )
+            for index in range(6)
+        ]
+        dense_state = make_dialog_state(
+            g,
+            "ENTRY",
+            "Dense dialog state with enough options to exercise proportional option layout.",
+            dense_options,
+            next_state="EXIT",
+        )
+        dense_dialog = make_dialog(g, [dense_state])
+
+        def inspect_dense_dialog(panel):
+            root = assert_runtime_rect(self, "dialogPanel dense", panel, ROOT_800_600)
+            widgets = sorted(find_descendants_by_type(panel, "CTextWidget"), key=lambda child: resolved_rect(child)[1])
+            self.assertEqual(1 + len(dense_options), len(widgets))
+            previous = None
+            for widget in widgets:
+                widget_rect = resolved_rect(widget)
+                assert_positive_rect(self, "dense dialog widget", widget_rect)
+                assert_child_inside(self, "dialogPanel", root, "dense dialog widget", widget_rect)
+                if previous is not None:
+                    assert_no_overlap(
+                        self, "previous dense dialog widget", previous, "dense dialog widget", widget_rect
+                    )
+                previous = widget_rect
+            with isolated_gui_panel(g, panel):
+                capture_panel_layout(self, g, "layout_dialog_dense_options", panel)
+            self.assertTrue(panel.keyboardEvent(g.getGui(), SDL_KEYDOWN, ord(str(len(dense_options)))))
+            return {"widgets": len(widgets)}
+
+        run_blocking_panel_inspection(
+            self,
+            game,
+            g,
+            "CGameDialogPanel",
+            lambda: g.getGuiHandler().showDialog(dense_dialog),
+            inspect_dense_dialog,
             lambda panel: None,
         )
         self.assertFalse(gui_contains_class(g, "CGameDialogPanel"))
@@ -11959,35 +12324,54 @@ class XvfbGameplayProcessTest(unittest.TestCase):
             inventory.close()
             pump_event_loop(3)
 
-        loot_items = set(make_unique_scroll_items(g, 49, "lootLayout"))
         loot_creature = g.createObject("GoblinThief")
 
-        def inspect_loot(panel):
-            root = assert_runtime_rect(self, "lootPanel", panel, ROOT_400_300)
-            items_list = find_list_view(panel, "itemsCollection")
-            list_rect = assert_runtime_rect(self, "loot items", items_list, ROOT_400_300)
-            self.assertEqual((8, 6), list_runtime_grid(items_list, g.getGui()))
-            first_page = list_visible_object_names(items_list, g.getGui())
-            for graphic in items_list.getProxiedObjects(g.getGui(), 7, 5):
-                graphic.mouseEvent(g.getGui(), SDL_MOUSEBUTTONDOWN, SDL_BUTTON_LEFT, 1, 1)
-            second_page = list_visible_object_names(items_list, g.getGui())
-            self.assertNotEqual(first_page, second_page)
-            assert_child_inside(self, "lootPanel", root, "loot list", list_rect)
-            with isolated_gui_panel(g, panel):
-                capture_panel_layout(self, g, "layout_loot_panel_overflow", panel, regions={"items": list_rect})
-            panel.keyboardEvent(g.getGui(), SDL_KEYDOWN, ord(" "))
-            return {"first": first_page[:3], "second": second_page[:3]}
+        def run_loot_case(items, scenario, overflow=False):
+            def inspect_loot(panel):
+                root = assert_runtime_rect(self, "lootPanel", panel, ROOT_400_300)
+                items_list = find_list_view(panel, "itemsCollection")
+                list_rect = assert_runtime_rect(self, "loot items", items_list, ROOT_400_300)
+                self.assertEqual((8, 6), list_runtime_grid(items_list, g.getGui()))
+                first_page = list_visible_object_names(items_list, g.getGui())
+                result = {"first": first_page}
+                if overflow:
+                    for graphic in items_list.getProxiedObjects(g.getGui(), 7, 5):
+                        graphic.mouseEvent(g.getGui(), SDL_MOUSEBUTTONDOWN, SDL_BUTTON_LEFT, 1, 1)
+                    second_page = list_visible_object_names(items_list, g.getGui())
+                    self.assertNotEqual(first_page, second_page)
+                    result["second"] = second_page
+                assert_child_inside(self, "lootPanel", root, "loot list", list_rect)
+                with isolated_gui_panel(g, panel):
+                    capture_panel_layout(self, g, scenario, panel, regions={"items": list_rect})
+                panel.keyboardEvent(g.getGui(), SDL_KEYDOWN, ord(" "))
+                return result
 
-        run_blocking_panel_inspection(
-            self,
-            game,
-            g,
-            "CGameLootPanel",
-            lambda: g.getGuiHandler().showLoot(loot_creature, loot_items),
-            inspect_loot,
-            lambda panel: None,
+            _, result = run_blocking_panel_inspection(
+                self,
+                game,
+                g,
+                "CGameLootPanel",
+                lambda: g.getGuiHandler().showLoot(loot_creature, set(items)),
+                inspect_loot,
+                lambda panel: None,
+            )
+            self.assertFalse(gui_contains_class(g, "CGameLootPanel"))
+            return result
+
+        self.assertEqual([], run_loot_case([], "layout_loot_panel_empty")["first"])
+        self.assertEqual(
+            1, len(run_loot_case(make_unique_scroll_items(g, 1, "lootSingle"), "layout_loot_panel_single")["first"])
         )
-        self.assertFalse(gui_contains_class(g, "CGameLootPanel"))
+        grouped_loot = [g.createObject("Scroll") for _ in range(3)]
+        for index, item in enumerate(grouped_loot):
+            item.name = f"lootGroupedScroll{index}"
+        self.assertEqual(1, len(run_loot_case(grouped_loot, "layout_loot_panel_grouped")["first"]))
+        exact_loot = make_unique_scroll_items(g, 48, "lootExact")
+        self.assertEqual(48, len(run_loot_case(exact_loot, "layout_loot_panel_exact_capacity")["first"]))
+        overflow_result = run_loot_case(
+            make_unique_scroll_items(g, 49, "lootLayout"), "layout_loot_panel_overflow", True
+        )
+        self.assertIn("second", overflow_result)
 
         market = g.createObject("CMarket")
         market.sell = 50
@@ -12027,14 +12411,42 @@ class XvfbGameplayProcessTest(unittest.TestCase):
             pump_event_loop(5)
             self.assertGreater(trade.getTotalSellCost(), 0)
             self.assertGreater(trade.getTotalBuyCost(), 0)
+            selected_trade = get_panel_selection_box_counts_by_collection(trade)
+            self.assertEqual(1, selected_trade.get("inventoryCollection", 0))
+            self.assertEqual(1, selected_trade.get("marketCollection", 0))
+            buttons = {button.text: button for button in find_descendants_by_type(trade, "CButton")}
+            self.assertEqual(sell_button_rect, resolved_rect(buttons["SELL"]))
+            self.assertEqual(buy_button_rect, resolved_rect(buttons["BUY"]))
+            queue_question_answer(game, g, 1)
+            activate_widget(buttons["SELL"], g.getGui())
+            pump_event_loop(5)
+            self.assertFalse(gui_contains_class(g, "CGameQuestionPanel"))
+            self.assertTrue(gui_has_child_object(g, trade))
+            queue_question_answer(game, g, 1)
+            activate_widget(buttons["BUY"], g.getGui())
+            pump_event_loop(5)
+            self.assertFalse(gui_contains_class(g, "CGameQuestionPanel"))
+            trade.mouseEvent(g.getGui(), SDL_MOUSEBUTTONDOWN, SDL_BUTTON_RIGHT, 1, 1)
+            pump_event_loop(5)
+            self.assertEqual(0, trade.getTotalSellCost())
+            self.assertEqual(0, trade.getTotalBuyCost())
             with isolated_gui_panel(g, trade):
-                capture_panel_layout(
+                summary = capture_panel_layout(
                     self,
                     g,
                     "layout_trade_panel",
                     trade,
-                    regions={"player": player_rect, "market": market_rect},
+                    regions={
+                        "player": player_rect,
+                        "market": market_rect,
+                        "sellCost": sell_cost_rect,
+                        "buyCost": buy_cost_rect,
+                        "sellButton": sell_button_rect,
+                        "buyButton": buy_button_rect,
+                    },
                 )
+            for region in ("player", "market", "sellCost", "buyCost", "sellButton", "buyButton"):
+                assert_region_has_pixels(self, summary, region)
         finally:
             trade.close()
             pump_event_loop(3)
@@ -12056,6 +12468,15 @@ class XvfbGameplayProcessTest(unittest.TestCase):
             enemies.append(enemy)
         enemies[4].setEffects(
             {g.createObject("Stun"), g.createObject("BarrierEffect"), g.createObject("BloodlashEffect")}
+        )
+        enemies[5].setEffects(
+            {
+                g.createObject("Stun"),
+                g.createObject("BarrierEffect"),
+                g.createObject("BloodlashEffect"),
+                g.createObject("LethalPoisonEffect"),
+                g.createObject("MutilationEffect"),
+            }
         )
         game_map.setStringProperty("combatStatus", "Initiative: player\nChoose a target and action.")
 
@@ -12125,11 +12546,15 @@ class XvfbGameplayProcessTest(unittest.TestCase):
             self.assertTrue(enemy_selector.getAllowOversize())
             self.assertEqual((4, 1), list_runtime_grid(enemy_selector, g.getGui()))
             for _ in range(4):
-                click_list_cell(enemy_selector, 3, 0)
+                self.assertTrue(activate_first_proxy_graphic(enemy_selector, g.getGui(), 3, 0))
                 pump_event_loop(3)
-            click_list_cell(enemy_selector, 1, 0)
+            self.assertTrue(activate_first_proxy_graphic(enemy_selector, g.getGui(), 1, 0))
             pump_event_loop(5)
             self.assertEqual("layoutEnemy4", fight.getEnemy().getName())
+            self.assertTrue(activate_first_proxy_graphic(enemy_selector, g.getGui(), 2, 0))
+            pump_event_loop(5)
+            self.assertEqual("layoutEnemy5", fight.getEnemy().getName())
+            self.assertEqual(5, len(fight.getEnemy().getEffects()))
 
             enemy_effect_lists = [
                 list_view
@@ -12142,6 +12567,22 @@ class XvfbGameplayProcessTest(unittest.TestCase):
                 effect_rect = resolved_rect(list_view)
                 assert_child_inside(self, "creatureView", resolved_rect(list_view.getParent()), "effects", effect_rect)
                 self.assertEqual((1, 4), list_runtime_grid(list_view, g.getGui()))
+                for column, row, _ in list_visible_object_cells(list_view, g.getGui()):
+                    assert_child_inside(
+                        self,
+                        "effects",
+                        effect_rect,
+                        "effect cell",
+                        list_cell_rect(list_view, column, row),
+                    )
+
+            fight.setEnemies(enemies[:3])
+            pump_event_loop(5)
+            self.assertEqual(3, len(fight.enemiesCollection(g.getGui())))
+            self.assertEqual("layoutEnemy0", fight.getEnemy().getName())
+            shrunk_enemy_names = set(list_visible_object_names(enemy_selector, g.getGui()))
+            self.assertTrue(shrunk_enemy_names)
+            self.assertTrue(shrunk_enemy_names.issubset({enemy.getName() for enemy in enemies[:3]}))
 
             with isolated_gui_panel(g, fight):
                 capture_panel_layout(
@@ -12578,16 +13019,20 @@ class XvfbGameplayProcessTest(unittest.TestCase):
 
 
 class PlayBootstrapTest(unittest.TestCase):
-    def _load_play_function(self, function_name):
+    def _load_play_namespace(self, script_path=None):
+        script_path = script_path or (REPO_ROOT / "play.py")
         module = ast.parse((REPO_ROOT / "play.py").read_text())
-        function_node = next(
-            node for node in module.body if isinstance(node, ast.FunctionDef) and node.name == function_name
+        isolated_module = ast.Module(
+            body=[node for node in module.body if isinstance(node, ast.FunctionDef)],
+            type_ignores=[],
         )
-        isolated_module = ast.Module(body=[function_node], type_ignores=[])
         ast.fix_missing_locations(isolated_module)
-        namespace = {"os": os, "Path": Path}
+        namespace = {"os": os, "Path": Path, "sys": sys, "__file__": str(script_path)}
         exec(compile(isolated_module, str(REPO_ROOT / "play.py"), "exec"), namespace)
-        return namespace[function_name]
+        return namespace
+
+    def _load_play_function(self, function_name):
+        return self._load_play_namespace()[function_name]
 
     def test_ensure_workdir_switches_to_trusted_dir_even_when_cwd_has_config(self):
         ensure_workdir = self._load_play_function("_ensure_workdir")
@@ -12608,6 +13053,44 @@ class PlayBootstrapTest(unittest.TestCase):
                 self.assertEqual(trusted_dir, Path.cwd())
             finally:
                 os.chdir(original_cwd)
+
+    def test_bootstrap_uses_packaged_resource_root_without_res_directory(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            package_root = Path(tmpdir) / "package"
+            for resource_dir in ("config", "maps", "plugins"):
+                (package_root / resource_dir).mkdir(parents=True)
+
+            namespace = self._load_play_namespace(package_root / "play.py")
+            original_cwd = Path.cwd()
+            original_sys_path = list(sys.path)
+            try:
+                namespace["_bootstrap"]()
+                self.assertEqual(package_root, Path.cwd())
+                self.assertEqual(str(package_root), sys.path[0])
+            finally:
+                os.chdir(original_cwd)
+                sys.path[:] = original_sys_path
+
+    def test_bootstrap_uses_build_dir_for_source_tree_run(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            source_root = Path(tmpdir) / "source"
+            build_root = source_root / "cmake-build-release"
+            resource_root = source_root / "res"
+            build_root.mkdir(parents=True)
+            for resource_dir in ("config", "maps", "plugins"):
+                (resource_root / resource_dir).mkdir(parents=True)
+
+            namespace = self._load_play_namespace(source_root / "play.py")
+            original_cwd = Path.cwd()
+            original_sys_path = list(sys.path)
+            try:
+                namespace["_bootstrap"]()
+                self.assertEqual(build_root, Path.cwd())
+                self.assertIn(str(build_root), sys.path)
+                self.assertIn(str(resource_root), sys.path)
+            finally:
+                os.chdir(original_cwd)
+                sys.path[:] = original_sys_path
 
 
 class CoverageReportTest(unittest.TestCase):
@@ -12872,6 +13355,65 @@ class CoverageReportTest(unittest.TestCase):
             coverage_report.write_exclusion_audit_json(json_report, audit)
             self.assertIn("src/sample.cpp:3 count=7 covered", text_report.read_text(encoding="utf-8"))
             self.assertEqual(audit, json.loads(json_report.read_text(encoding="utf-8")))
+
+
+class TestRunnerSuiteTest(unittest.TestCase):
+    def test_parse_runner_args_accepts_suite_names(self):
+        jobs, suite_name, unittest_argv = parse_runner_args(
+            ["test.py", "--suite", "gameplay", "--jobs=3", "GameTest.test_turns"]
+        )
+
+        self.assertEqual(3, jobs)
+        self.assertEqual("gameplay", suite_name)
+        self.assertEqual(["test.py", "GameTest.test_turns"], unittest_argv)
+
+    def test_parse_runner_args_rejects_unknown_suite(self):
+        with self.assertRaisesRegex(ValueError, "--suite must be one of"):
+            parse_runner_args(["test.py", "--suite", "slow"])
+
+    def test_suite_filters_keep_runtime_groups_distinct(self):
+        sample_names = [
+            "CoverageReportTest.test_coverage_paths_accept_noncanonical_root",
+            "GameTest.test_map_walkthrough_nouraajd",
+            "McpServerTest.test_stdio_map_walkthrough_test",
+            "PanelLayoutManifestTest.test_panel_layout_manifest_matches_panels_json",
+            XVFB_GAMEPLAY_PARENT_TEST,
+            "XvfbGameplayProcessTest.test_screenshot_inventory_panel_has_rendered_pixels",
+        ]
+
+        self.assertEqual(
+            [
+                "CoverageReportTest.test_coverage_paths_accept_noncanonical_root",
+                "PanelLayoutManifestTest.test_panel_layout_manifest_matches_panels_json",
+            ],
+            filter_test_names_by_suite(sample_names, "fast"),
+        )
+        self.assertEqual(
+            ["GameTest.test_map_walkthrough_nouraajd", "McpServerTest.test_stdio_map_walkthrough_test"],
+            filter_test_names_by_suite(sample_names, "gameplay"),
+        )
+        self.assertEqual(
+            ["PanelLayoutManifestTest.test_panel_layout_manifest_matches_panels_json", XVFB_GAMEPLAY_PARENT_TEST],
+            filter_test_names_by_suite(sample_names, "ui"),
+        )
+        self.assertEqual(sample_names, filter_test_names_by_suite(sample_names, "coverage-safe"))
+
+    def test_suite_commands_are_documented_and_used_by_automation(self):
+        build_workflow = (REPO_ROOT / ".github" / "workflows" / "build.yml").read_text(encoding="utf-8")
+        release_workflow = (REPO_ROOT / ".github" / "workflows" / "release.yml").read_text(encoding="utf-8")
+        coverage_script = (REPO_ROOT / "scripts" / "run_coverage.sh").read_text(encoding="utf-8")
+        testing_docs = (REPO_ROOT / "docs" / "testing.md").read_text(encoding="utf-8")
+
+        self.assertIn("python3 test.py --suite fast", build_workflow)
+        self.assertIn("python3 test.py --suite gameplay", build_workflow)
+        self.assertIn("python3 test.py --suite ui", build_workflow)
+        self.assertIn("python test.py --suite fast", build_workflow)
+        self.assertIn("python test.py --suite gameplay", build_workflow)
+        self.assertIn("python3 test.py --suite full", release_workflow)
+        self.assertIn("python3 test.py --suite coverage-safe", coverage_script)
+
+        for suite_name in VALID_TEST_SUITES:
+            self.assertIn(f"--suite {suite_name}", testing_docs)
 
 
 class McpServerTest(unittest.TestCase):
@@ -13155,6 +13697,44 @@ class McpServerTest(unittest.TestCase):
         catalog_names = {item["name"] for item in brief["resourceCatalog"]}
         self.assertIn("items", catalog_names)
 
+    def test_map_design_brief_uses_packaged_resource_root(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            package_root = Path(tmpdir) / "package"
+            repo_root = Path(tmpdir) / "source"
+            package_map = package_root / "maps" / "packaged"
+            for resource_dir in ("config", "plugins"):
+                (package_root / resource_dir).mkdir(parents=True)
+            package_map.mkdir(parents=True)
+            repo_root.mkdir()
+            (package_root / "config" / "items.json").write_text(
+                json.dumps({"packagedItem": {"class": "CItem"}}),
+                encoding="utf-8",
+            )
+            (package_map / "map.json").write_text(json.dumps({"layers": []}), encoding="utf-8")
+            (package_map / "config.json").write_text(
+                json.dumps({"packagedQuest": {"class": "CQuest"}}), encoding="utf-8"
+            )
+
+            server = mcp.EngineMcpServer(repo_root=repo_root, build_dir=package_root)
+            result = server._call_tool(
+                {
+                    "name": "map_design_brief",
+                    "arguments": {
+                        "map_name": "packaged",
+                        "include_resource_catalog": True,
+                    },
+                },
+                transport="stdio",
+                session_id=None,
+            )
+
+            self.assertFalse(result["isError"])
+            brief = result["structuredContent"]
+            self.assertEqual(["packaged"], [item["name"] for item in brief["maps"]])
+            self.assertEqual("packaged", brief["selectedMap"]["name"])
+            catalog = {item["name"]: item for item in brief["resourceCatalog"]}
+            self.assertEqual(["packagedItem"], catalog["items"]["ids"])
+
     def test_map_design_brief_rejects_path_traversal(self):
         server = self.make_stub_server()
 
@@ -13398,7 +13978,7 @@ class McpServerTest(unittest.TestCase):
         success = False
         log = {}
         try:
-            proc = self._start_stdio_mcp_process()
+            proc = self._start_stdio_mcp_process(map_name)
             self._initialize_stdio_mcp(proc)
             session = {"proc": proc, "next_request_id": 3}
             log = getattr(self, self.MCP_WALKTHROUGHS[map_name])(session)
@@ -13420,12 +14000,26 @@ class McpServerTest(unittest.TestCase):
                     log["shutdown_error"] = str(exc)
                     log["shutdown_exception_type"] = type(exc).__name__
                     log["shutdown_traceback"] = traceback.format_exc()
+            trace_path = getattr(proc, "_playtest_trace_path", None) if proc is not None else None
+            if map_name == "nouraajd" and trace_path is not None and trace_path.exists():
+                log["playtest_trace_path"] = str(trace_path)
+                if not success:
+                    log["playtest_trace_tail"] = trace_tail_from_file(trace_path)
             self._write_mcp_walkthrough_log(map_name, log)
         return success, log
 
-    def _start_stdio_mcp_process(self):
+    def _start_stdio_mcp_process(self, map_name=None):
         script = REPO_ROOT / "mcp.py"
         self.assertTrue(script.exists(), "MCP entry point is missing")
+        trace_path = None
+        env = None
+        if map_name == "nouraajd":
+            TEST_OUTPUT_DIR.mkdir(exist_ok=True)
+            trace_path = TEST_OUTPUT_DIR / "mcp_walkthrough_nouraajd_trace.jsonl"
+            trace_path.unlink(missing_ok=True)
+            env = os.environ.copy()
+            env["GAME_PLAYTEST_TRACE"] = "1"
+            env["GAME_PLAYTEST_TRACE_FILE"] = str(trace_path)
         command = [
             sys.executable,
             str(script),
@@ -13446,7 +14040,9 @@ class McpServerTest(unittest.TestCase):
             stderr=subprocess.PIPE,
             bufsize=0,
             cwd=str(REPO_ROOT),
+            env=env,
         )
+        proc._playtest_trace_path = trace_path
         proc._mcp_stderr_chunks = []
 
         def drain_stderr():
@@ -13885,6 +14481,7 @@ class McpServerTest(unittest.TestCase):
 
 def parse_runner_args(argv):
     jobs = None
+    suite_name = "full"
     unittest_argv = [argv[0]]
     index = 1
     while index < len(argv):
@@ -13899,13 +14496,43 @@ def parse_runner_args(argv):
             jobs = parse_positive_int(arg.split("=", 1)[1], "--jobs")
             index += 1
             continue
+        if arg == "--suite":
+            if index + 1 >= len(argv):
+                raise ValueError(f"--suite requires one of: {', '.join(VALID_TEST_SUITES)}")
+            suite_name = argv[index + 1]
+            if suite_name not in VALID_TEST_SUITES:
+                raise ValueError(f"--suite must be one of: {', '.join(VALID_TEST_SUITES)}")
+            index += 2
+            continue
+        if arg.startswith("--suite="):
+            suite_name = arg.split("=", 1)[1]
+            if suite_name not in VALID_TEST_SUITES:
+                raise ValueError(f"--suite must be one of: {', '.join(VALID_TEST_SUITES)}")
+            index += 1
+            continue
         unittest_argv.append(arg)
         index += 1
-    return jobs, unittest_argv
+    return jobs, suite_name, unittest_argv
 
 
 def selected_unittest_args(unittest_argv):
     return [arg for arg in unittest_argv[1:] if not arg.startswith("-")]
+
+
+def test_name_matches_suite(test_name, suite_name):
+    if suite_name in {"coverage-safe", "full"}:
+        return True
+    if suite_name == "fast":
+        return test_name in FAST_TEST_NAMES or test_name.startswith(FAST_TEST_PREFIXES)
+    if suite_name == "gameplay":
+        return test_name not in GAMEPLAY_EXCLUDED_TEST_NAMES and test_name.startswith(GAMEPLAY_TEST_PREFIXES)
+    if suite_name == "ui":
+        return test_name == XVFB_GAMEPLAY_PARENT_TEST or test_name.startswith("PanelLayoutManifestTest.")
+    raise ValueError(f"--suite must be one of: {', '.join(VALID_TEST_SUITES)}")
+
+
+def filter_test_names_by_suite(test_names, suite_name):
+    return [test_name for test_name in test_names if test_name_matches_suite(test_name, suite_name)]
 
 
 def load_test_timings(path):
@@ -13953,7 +14580,7 @@ def is_serial_test_name(test_name):
     return test_name in SERIAL_TEST_NAMES or any(test_name.startswith(prefix) for prefix in SERIAL_TEST_PREFIXES)
 
 
-def runner_jobs(cli_jobs, unittest_argv):
+def runner_jobs(cli_jobs, unittest_argv, suite_name="full"):
     if GAME_TEST_WORKER:
         return 1
     if cli_jobs is not None:
@@ -13962,7 +14589,7 @@ def runner_jobs(cli_jobs, unittest_argv):
     if env_jobs:
         return parse_positive_int(env_jobs, "GAME_TEST_JOBS")
     has_unittest_options = any(arg.startswith("-") for arg in unittest_argv[1:])
-    if not has_unittest_options and not selected_unittest_args(unittest_argv):
+    if not has_unittest_options and (suite_name != "full" or not selected_unittest_args(unittest_argv)):
         return os.cpu_count() or 1
     return 1
 
@@ -14012,6 +14639,13 @@ def shard_test_names(test_names, jobs, timings=None):
     return groups
 
 
+def test_group_timeout_seconds(test_names, timings=None):
+    timings = timings or {}
+    duration_hint = sum(test_duration_weight(test_name, timings) for test_name in test_names)
+    multiplier = 8 if os.environ.get("GAME_COVERAGE_RUN") == "1" else 4
+    return max(30, int(duration_hint * multiplier))
+
+
 def run_test_subprocess(test_names, shard_name, extra_env=None):
     output_dir = TEST_OUTPUT_DIR / "workers" / shard_name
     timings_file = output_dir / "test-timings.json"
@@ -14030,7 +14664,27 @@ def run_test_subprocess(test_names, shard_name, extra_env=None):
         env.update(extra_env)
     command = [sys.executable, str(REPO_ROOT / "test.py"), *test_names]
     print(f"[test shard {shard_name}] running {len(test_names)} test(s)", flush=True)
-    return subprocess.Popen(command, cwd=REPO_ROOT, env=env)
+    return subprocess.Popen(command, cwd=REPO_ROOT, env=env, start_new_session=(os.name == "posix"))
+
+
+def wait_test_subprocess(proc, shard_name, test_names, timeout_seconds):
+    try:
+        return proc.wait(timeout=timeout_seconds)
+    except subprocess.TimeoutExpired:
+        if os.name == "posix":
+            try:
+                os.killpg(proc.pid, signal.SIGKILL)
+            except ProcessLookupError:
+                pass
+        else:
+            proc.kill()
+        proc.wait()
+        print(
+            f"[test shard {shard_name}] timed out after {timeout_seconds}s while running {', '.join(test_names)}",
+            file=sys.stderr,
+            flush=True,
+        )
+        return 124
 
 
 def run_sharded_tests(test_names, jobs, *, allow_xvfb_sidecar=False):
@@ -14056,6 +14710,7 @@ def run_sharded_tests(test_names, jobs, *, allow_xvfb_sidecar=False):
         processes.append(
             (
                 "xvfb",
+                [sidecar_test],
                 run_test_subprocess(
                     [sidecar_test],
                     "xvfb",
@@ -14066,16 +14721,21 @@ def run_sharded_tests(test_names, jobs, *, allow_xvfb_sidecar=False):
 
     if parallel_tests:
         for index, group in enumerate(shard_test_names(parallel_tests, worker_jobs, timings), start=1):
-            processes.append((f"{index}", run_test_subprocess(group, f"{index}")))
+            processes.append((f"{index}", group, run_test_subprocess(group, f"{index}")))
 
-    for shard_name, proc in processes:
-        return_code = proc.wait()
+    for shard_name, group, proc in processes:
+        return_code = wait_test_subprocess(proc, shard_name, group, test_group_timeout_seconds(group, timings))
         if return_code != 0:
             failures.append((shard_name, return_code))
 
     if serial_tests:
         serial_proc = run_test_subprocess(serial_tests, "serial")
-        return_code = serial_proc.wait()
+        return_code = wait_test_subprocess(
+            serial_proc,
+            "serial",
+            serial_tests,
+            test_group_timeout_seconds(serial_tests, timings),
+        )
         if return_code != 0:
             failures.append(("serial", return_code))
 
@@ -14085,7 +14745,12 @@ def run_sharded_tests(test_names, jobs, *, allow_xvfb_sidecar=False):
             "xvfb-long",
             extra_env={"GAME_XVFB_ONLY_CHILD_TESTS": ",".join(sorted(XVFB_LONG_CHILD_TESTS))},
         )
-        return_code = long_proc.wait()
+        return_code = wait_test_subprocess(
+            long_proc,
+            "xvfb-long",
+            [long_xvfb_test],
+            test_group_timeout_seconds([long_xvfb_test], timings),
+        )
         if return_code != 0:
             failures.append(("xvfb-long", return_code))
 
@@ -14103,18 +14768,31 @@ def run_sharded_tests(test_names, jobs, *, allow_xvfb_sidecar=False):
 
 def main():
     try:
-        cli_jobs, unittest_argv = parse_runner_args(sys.argv)
-        jobs = runner_jobs(cli_jobs, unittest_argv)
+        cli_jobs, suite_name, unittest_argv = parse_runner_args(sys.argv)
+        jobs = runner_jobs(cli_jobs, unittest_argv, suite_name)
     except ValueError as exc:
         print(str(exc), file=sys.stderr)
         sys.exit(2)
 
     has_unittest_options = any(arg.startswith("-") for arg in unittest_argv[1:])
-    full_suite = not has_unittest_options and not selected_unittest_args(unittest_argv)
-    if jobs > 1 and not has_unittest_options:
+    if suite_name != "full" and has_unittest_options:
+        print("--suite cannot be combined with unittest runner options", file=sys.stderr)
+        sys.exit(2)
+
+    selected_args = selected_unittest_args(unittest_argv)
+    full_suite = suite_name in {"coverage-safe", "full"} and not has_unittest_options and not selected_args
+    should_discover = (suite_name != "full" or jobs > 1) and not has_unittest_options
+    if should_discover:
         test_names = discover_unittest_test_names(unittest_argv)
-        if test_names and len(test_names) > 1:
+        if test_names is not None and suite_name != "full":
+            test_names = filter_test_names_by_suite(test_names, suite_name)
+        if test_names and len(test_names) > 1 and jobs > 1:
             sys.exit(run_sharded_tests(test_names, jobs, allow_xvfb_sidecar=full_suite))
+        if test_names:
+            unittest_argv = [unittest_argv[0], *test_names]
+        elif test_names == []:
+            print(f"No tests matched --suite {suite_name}", file=sys.stderr)
+            sys.exit(1)
 
     unittest.main(argv=unittest_argv, testRunner=ProgressTextTestRunner)
 

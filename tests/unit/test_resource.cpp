@@ -17,14 +17,30 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
 #include "core/CProvider.h"
+#include "core/CSaveFormat.h"
 #include "test_harness.h"
 
 #include <algorithm>
+#include <chrono>
 #include <filesystem>
 #include <memory>
 #include <string>
 
 namespace {
+
+class ScopedCurrentPath {
+  public:
+    explicit ScopedCurrentPath(std::filesystem::path replacement)
+        : originalPath(std::filesystem::current_path()), replacementPath(std::move(replacement)) {
+        std::filesystem::current_path(replacementPath);
+    }
+
+    ~ScopedCurrentPath() { std::filesystem::current_path(originalPath); }
+
+  private:
+    std::filesystem::path originalPath;
+    std::filesystem::path replacementPath;
+};
 
 void test_resource_provider_paths_and_config_loader() {
     auto provider = CResourcesProvider::getInstance();
@@ -67,10 +83,48 @@ void test_resource_provider_paths_and_config_loader() {
                 "configuration provider should cache parsed configs by path");
 }
 
+void test_resource_provider_save_uses_provider_root_when_cwd_changes() {
+    auto provider = CResourcesProvider::getInstance();
+    const auto itemsPath = std::filesystem::path(provider->getPath("config/items.json"));
+    expect_true(!itemsPath.empty(), "items config should resolve before provider-root save test");
+    if (itemsPath.empty()) {
+        return;
+    }
+    const auto resourceRoot = itemsPath.parent_path().parent_path();
+    const std::string logicalSavePath = "save/unit_resource_provider_cwd.json";
+    const auto providerSavePath = resourceRoot / logicalSavePath;
+    const auto providerBackupPath = std::filesystem::path(providerSavePath.string() + CSaveFormat::BACKUP_SUFFIX);
+    std::filesystem::remove(providerSavePath);
+    std::filesystem::remove(providerBackupPath);
+
+    const auto nonce = std::chrono::steady_clock::now().time_since_epoch().count();
+    const auto tempRoot = std::filesystem::temp_directory_path() / ("resource-provider-cwd-" + std::to_string(nonce));
+    std::filesystem::create_directories(tempRoot / "save");
+    const auto cwdSavePath = tempRoot / logicalSavePath;
+
+    {
+        ScopedCurrentPath cwd(tempRoot);
+        expect_true(provider->save(logicalSavePath, "{\"providerRoot\":true}"),
+                    "provider save should succeed from unrelated cwd");
+    }
+
+    expect_true(std::filesystem::exists(providerSavePath), "save should be written under provider resource root");
+    expect_true(!std::filesystem::exists(cwdSavePath), "save should not be written under current working directory");
+    expect_true(provider->getPath(logicalSavePath) == std::filesystem::weakly_canonical(providerSavePath).string(),
+                "new save should resolve through provider search roots");
+    expect_true(provider->load(logicalSavePath).find("providerRoot") != std::string::npos,
+                "new save should be loadable through provider");
+
+    std::filesystem::remove(providerSavePath);
+    std::filesystem::remove(providerBackupPath);
+    std::filesystem::remove_all(tempRoot);
+}
+
 } // namespace
 
 int main() {
     test_resource_provider_paths_and_config_loader();
+    test_resource_provider_save_uses_provider_root_when_cwd_changes();
 
     return finish_tests();
 }
