@@ -11,6 +11,30 @@
       "text": "NOURAAJD - EAST"
     }
   },
+  "ridgeSign": {
+    "ref": "signPost",
+    "properties": {
+      "text": "OLD MILITARY ROAD - Rolf's ridge, the catacombs, and the cursed sinkhole lie northwest."
+    }
+  },
+  "swampRoadSign": {
+    "ref": "signPost",
+    "properties": {
+      "text": "SWAMP ROAD - OctoBogz mire ahead. Beren's relic is the only clean flame."
+    }
+  },
+  "courtyardSign": {
+    "ref": "signPost",
+    "properties": {
+      "text": "BURNED COURTYARD - Marumi Baso sigils mark the stones. Do not linger after dusk."
+    }
+  },
+  "outskirtsSign": {
+    "ref": "signPost",
+    "properties": {
+      "text": "OUTSKIRTS HUT - Keep to the road; goblins prowl the grove."
+    }
+  },
   "exampleMarket": {
     "class": "CMarket",
     "properties": {
