@@ -536,9 +536,13 @@ def load(self, context):
 
         def onComplete(self):
             game = self.getGame()
-            player = game.getMap().getPlayer()
+            game_map = game.getMap()
+            if game_map.getBoolProperty("OCTOBOGZ_REWARD_CLAIMED"):
+                return
+            player = game_map.getPlayer()
             player.addGold(1000)
             player.addItem("ShadowBlade")
+            game_map.setBoolProperty("OCTOBOGZ_REWARD_CLAIMED", True)
             game.getGuiHandler().showMessage("The refugees press 1000 gold and the Shadow Blade into your hands.")
 
     @register(context)
@@ -922,10 +926,13 @@ def load(self, context):
             game = self.getGame()
             game_map = game.getMap()
             player = game_map.getPlayer()
+            quest_system = _quest_system_from(self)
+            if quest_system.get_state("amulet") != "active":
+                return
             if player.hasItem(lambda it: it.getName() == "preciousAmulet"):
                 player.removeItem(lambda it: it.getName() == "preciousAmulet", True)
                 player.addGold(50)
-                _quest_system_from(self).finish_amulet()
+                quest_system.finish_amulet()
                 amulet_goblin = game_map.getObjectByName("amuletGoblin")
                 if amulet_goblin:
                     game_map.removeObject(amulet_goblin)
