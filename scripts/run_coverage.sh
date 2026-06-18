@@ -6,6 +6,7 @@ BUILD_DIR="${BUILD_DIR:-cmake-build-coverage}"
 MIN_COVERAGE="${MIN_COVERAGE:-100}"
 REPORT_DIR="${ROOT_DIR}/coverage"
 COVERAGE_LINE_EXCLUSIONS="${COVERAGE_LINE_EXCLUSIONS:-${ROOT_DIR}/scripts/coverage_exclusions.json}"
+COVERAGE_INCLUDE_PREFIXES="${COVERAGE_INCLUDE_PREFIXES:-src native_plugins}"
 COVERAGE_JOBS="${COVERAGE_JOBS:-$(nproc)}"
 COVERAGE_REPORTER="${COVERAGE_REPORTER:-python}"
 GAME_TEST_JOBS="${GAME_TEST_JOBS:-${COVERAGE_JOBS}}"
@@ -123,6 +124,12 @@ generate_report() {
         )
         if [[ -n "${COVERAGE_LINE_EXCLUSIONS}" ]]; then
             coverage_report_args+=(--line-exclusions "${COVERAGE_LINE_EXCLUSIONS}")
+        fi
+        if [[ -n "${COVERAGE_INCLUDE_PREFIXES}" ]]; then
+            read -r -a coverage_include_prefixes <<<"${COVERAGE_INCLUDE_PREFIXES}"
+            for include_prefix in "${coverage_include_prefixes[@]}"; do
+                coverage_report_args+=(--include-prefix "${include_prefix}")
+            done
         fi
         python3 "${ROOT_DIR}/scripts/coverage_report.py" \
             "${coverage_report_args[@]}" || return

@@ -9535,6 +9535,47 @@ class CoverageReportTest(unittest.TestCase):
             self.assertEqual(summary[0]["missing"], [3])
             self.assertEqual(summary[0]["excluded"], [2])
 
+    def test_coverage_include_prefixes_scope_reported_files(self):
+        coverage_report = self._load_coverage_report_module()
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            source = root / "src" / "sample.cpp"
+            test_source = root / "tests" / "sample_test.cpp"
+            source.parent.mkdir()
+            test_source.parent.mkdir()
+            source.write_text("one\ntwo\n", encoding="utf-8")
+            test_source.write_text("one\n", encoding="utf-8")
+
+            reports = [
+                {
+                    "current_working_directory": str(root),
+                    "files": [
+                        {
+                            "file": str(source),
+                            "lines": [
+                                {"line_number": 1, "count": 1},
+                                {"line_number": 2, "count": 0},
+                            ],
+                        },
+                        {
+                            "file": str(test_source),
+                            "lines": [
+                                {"line_number": 1, "count": 0},
+                            ],
+                        },
+                    ],
+                }
+            ]
+
+            include_prefixes = coverage_report.load_include_prefixes(root, ["src"])
+            merged = coverage_report.merge_line_counts(root, reports, include_prefixes)
+
+            self.assertEqual(set(merged), {source.resolve()})
+            summary, covered, total, percentage, excluded = coverage_report.summarize(root, merged)
+            self.assertEqual((covered, total, percentage, excluded), (1, 2, 50.0, 0))
+            self.assertEqual(summary[0]["path"], Path("src/sample.cpp"))
+
     def test_coverage_line_exclusions_fail_closed(self):
         coverage_report = self._load_coverage_report_module()
 
@@ -9567,6 +9608,9 @@ class CoverageReportTest(unittest.TestCase):
             )
             with self.assertRaisesRegex(ValueError, "glob"):
                 coverage_report.load_line_exclusions(root, glob_manifest)
+
+            with self.assertRaisesRegex(ValueError, "glob"):
+                coverage_report.load_include_prefixes(root, ["src/*.cpp"])
 
 
 class McpServerTest(unittest.TestCase):

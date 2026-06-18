@@ -19,6 +19,12 @@ def parse_args():
     parser.add_argument("--min-line", required=True, type=float)
     parser.add_argument("--jobs", default=max(1, os.cpu_count() or 1), type=positive_int)
     parser.add_argument("--line-exclusions", type=Path, help="Reviewed root-relative line exclusion manifest.")
+    parser.add_argument(
+        "--include-prefix",
+        action="append",
+        default=[],
+        help="Root-relative source path prefix to include. May be repeated. Defaults to the full repository.",
+    )
     return parser.parse_args()
 
 
@@ -39,12 +45,46 @@ def normalize_path(path_str: str, cwd: Path) -> Path:
     return path.resolve()
 
 
-def is_included(root: Path, source_path: Path) -> bool:
+def validate_include_prefix(root: Path, prefix_str: str) -> Path:
+    if not isinstance(prefix_str, str) or not prefix_str:
+        raise ValueError("coverage include prefixes must be non-empty strings")
+    prefix = Path(prefix_str)
+    if prefix.is_absolute():
+        raise ValueError(f"coverage include prefix must be root-relative: {prefix_str}")
+    if any(part in {"", ".", ".."} for part in prefix.parts):
+        raise ValueError(f"coverage include prefix must be normalized: {prefix_str}")
+    if any(char in prefix_str for char in "*?[]"):
+        raise ValueError(f"coverage include prefix cannot use glob syntax: {prefix_str}")
+
+    include_path = (root / prefix).resolve()
     try:
-        source_path.resolve().relative_to(root.resolve())
+        include_path.relative_to(root)
+    except ValueError as exc:
+        raise ValueError(f"coverage include prefix escapes repository root: {prefix_str}") from exc
+    if not include_path.exists():
+        raise ValueError(f"coverage include prefix does not exist: {prefix_str}")
+    return include_path
+
+
+def load_include_prefixes(root: Path, include_prefixes):
+    return tuple(validate_include_prefix(root, prefix) for prefix in include_prefixes)
+
+
+def is_included(root: Path, source_path: Path, include_prefixes=()) -> bool:
+    try:
+        resolved = source_path.resolve()
+        resolved.relative_to(root.resolve())
     except ValueError:
         return False
-    return True
+    if not include_prefixes:
+        return True
+    for include_prefix in include_prefixes:
+        try:
+            resolved.relative_to(include_prefix)
+            return True
+        except ValueError:
+            pass
+    return False
 
 
 def validate_exclusion_path(root: Path, rel_path_str: str) -> Path:
@@ -186,13 +226,13 @@ def collect_gcov_reports(build_dir: Path, jobs: int):
         return reports
 
 
-def merge_line_counts(root: Path, reports):
+def merge_line_counts(root: Path, reports, include_prefixes=()):
     merged = {}
     for report in reports:
         cwd = Path(report.get("current_working_directory", root))
         for file_data in report.get("files", []):
             source_path = normalize_path(file_data["file"], cwd)
-            if not is_included(root, source_path):
+            if not is_included(root, source_path, include_prefixes):
                 continue
 
             file_lines = merged.setdefault(source_path, {})
@@ -312,9 +352,10 @@ def main():
     report_dir = args.report_dir.resolve()
     report_dir.mkdir(parents=True, exist_ok=True)
 
+    include_prefixes = load_include_prefixes(root, args.include_prefix)
     exclusions = load_line_exclusions(root, args.line_exclusions)
     reports = collect_gcov_reports(build_dir, args.jobs)
-    merged = merge_line_counts(root, reports)
+    merged = merge_line_counts(root, reports, include_prefixes)
     validate_line_exclusions(root, merged, exclusions)
     summary, covered_lines, total_lines, total_percentage, excluded_lines = summarize(root, merged, exclusions)
 
