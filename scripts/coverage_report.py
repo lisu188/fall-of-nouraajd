@@ -193,6 +193,16 @@ def validate_line_exclusions(root: Path, merged, exclusions):
             raise ValueError(f"coverage exclusion for {rel_path} would exclude the entire instrumented file")
 
 
+def scope_line_exclusions(root: Path, exclusions, include_prefixes=()):
+    if not include_prefixes:
+        return exclusions
+    return {
+        source_path: dict(line_reasons)
+        for source_path, line_reasons in exclusions.items()
+        if is_included(root, source_path, include_prefixes)
+    }
+
+
 def collect_reports_for_gcda(gcda: Path, output_dir: Path):
     output_dir.mkdir()
     subprocess.run(
@@ -418,6 +428,7 @@ def main():
     exclusions = load_line_exclusions(root, args.line_exclusions)
     reports = collect_gcov_reports(build_dir, args.jobs)
     merged = merge_line_counts(root, reports, include_prefixes)
+    exclusions = scope_line_exclusions(root, exclusions, include_prefixes)
     validate_line_exclusions(root, merged, exclusions)
     summary, covered_lines, total_lines, total_percentage, excluded_lines = summarize(root, merged, exclusions)
 

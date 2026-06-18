@@ -11223,6 +11223,44 @@ class CoverageReportTest(unittest.TestCase):
             self.assertEqual((covered, total, percentage, excluded), (1, 2, 50.0, 0))
             self.assertEqual(summary[0]["path"], Path("src/sample.cpp"))
 
+    def test_coverage_include_prefixes_scope_exclusions(self):
+        coverage_report = self._load_coverage_report_module()
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            source = root / "src" / "sample.cpp"
+            test_source = root / "tests" / "sample_test.cpp"
+            source.parent.mkdir()
+            test_source.parent.mkdir()
+            source.write_text("one\ntwo\n", encoding="utf-8")
+            test_source.write_text("one\n", encoding="utf-8")
+            manifest_path = self._write_manifest(
+                root,
+                [
+                    {
+                        "path": "src/sample.cpp",
+                        "reason": "in-scope exclusion",
+                        "ranges": ["2"],
+                    },
+                    {
+                        "path": "tests/sample_test.cpp",
+                        "reason": "out-of-scope exclusion",
+                        "ranges": ["9"],
+                    },
+                ],
+            )
+
+            include_prefixes = coverage_report.load_include_prefixes(root, ["src"])
+            merged = {source.resolve(): {1: 1, 2: 0}}
+            exclusions = coverage_report.load_line_exclusions(root, manifest_path)
+            scoped_exclusions = coverage_report.scope_line_exclusions(root, exclusions, include_prefixes)
+            coverage_report.validate_line_exclusions(root, merged, scoped_exclusions)
+
+            self.assertEqual(set(scoped_exclusions), {source.resolve()})
+            summary, covered, total, percentage, excluded = coverage_report.summarize(root, merged, scoped_exclusions)
+            self.assertEqual((covered, total, percentage, excluded), (1, 1, 100.0, 1))
+            self.assertEqual(summary[0]["excluded"], [2])
+
     def test_coverage_paths_accept_noncanonical_root(self):
         coverage_report = self._load_coverage_report_module()
 

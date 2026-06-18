@@ -225,6 +225,7 @@ Run coverage when a change touches:
 - `tests/unit/**`
 - `scripts/run_coverage.sh`
 - coverage tooling
+- `native_plugins/**`
 - `src/core/**`
 - `src/handler/**`
 - `src/object/**`

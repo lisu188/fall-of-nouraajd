@@ -31,6 +31,10 @@ bool CSceneManager::requestMapChange(const std::shared_ptr<CGame> &game, MapTran
         vstd::logger::warning("Rejected map transition without a game:", mapName);
         return false;
     }
+    if (game->getSceneManager().get() != this) {
+        vstd::logger::warning("Rejected map transition for a mismatched scene manager:", mapName);
+        return false;
+    }
     if (transitionState != TransitionState::Idle) {
         vstd::logger::warning("Ignoring duplicate map transition request:", mapName, "while pending:", pendingMapName);
         return false;

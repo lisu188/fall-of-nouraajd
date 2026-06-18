@@ -82,17 +82,19 @@ Use `.github/workflows/build.yml` as the required pull request workflow for `mai
 
 Recommended required status checks:
 - `linux` (shown in some GitHub branch-protection UI as `build / linux`)
+- `windows-deps` (shown in some GitHub branch-protection UI as `build / windows-deps`)
 - `windows` (shown in some GitHub branch-protection UI as `build / windows`)
 
-These two jobs cover the current PR build, native C++ tests, native performance guards, Python regression suite, and
-packaging on Linux and Windows. The Linux job also runs `./scripts/run_coverage.sh` when the changed paths match the
-workflow coverage rule, so coverage is conditional inside `linux` rather than a separate always-present check.
+These jobs cover the current PR build, native C++ tests, native performance guards, Python regression suite, dependency
+cache validation, and packaging on Linux and Windows. The Linux job also runs `./scripts/run_coverage.sh` when the
+changed paths match the workflow coverage rule, so coverage is conditional inside `linux` rather than a separate
+always-present check.
 
 Manual repository settings for `main`:
 - require a pull request before merging
 - require status checks to pass before merging
 - require branches to be up to date before merging
-- select the `linux` and `windows` checks from the `build` workflow
+- select the `linux`, `windows-deps`, and `windows` checks from the `build` workflow
 
 Do not use `Release / build` as a required PR check; `.github/workflows/release.yml` runs only for version tags.
 If future work splits fast, gameplay, UI/Xvfb, or coverage runs into separate PR jobs, add those jobs to branch
@@ -101,7 +103,7 @@ protection only after they finish deterministically in CI.
 ## Coverage workflow
 Run from the repository root when a change touches tests (for example
 `test.py` or `tests/unit/**`), `src/core/**`, `src/handler/**`,
-`src/object/**`, or the coverage tooling:
+`src/object/**`, `native_plugins/**`, or the coverage tooling:
 
 ```bash
 ./scripts/run_coverage.sh
