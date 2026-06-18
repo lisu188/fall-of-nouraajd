@@ -144,7 +144,12 @@ MCP_ALLOWED_HANDLE_METHODS = {
         "addQuest",
         "checkQuests",
         "getCompletedQuests",
+        "getController",
         "getQuests",
+    },
+    "CPlayerController": {
+        "isCompleted",
+        "setTarget",
     },
     "CObjectHandler": {
         "createObject",

@@ -267,6 +267,10 @@ configure_file(res/maps/test/config.json maps/test/config.json)
 configure_file(res/maps/test/map.json maps/test/map.json)
 configure_file(res/maps/test/script.py maps/test/script.py)
 
+configure_file(res/maps/multilevel/config.json maps/multilevel/config.json)
+configure_file(res/maps/multilevel/map.json maps/multilevel/map.json)
+configure_file(res/maps/multilevel/script.py maps/multilevel/script.py)
+
 configure_file(res/plugins/effect.py plugins/effect.py)
 configure_file(res/plugins/interaction.py plugins/interaction.py)
 configure_file(res/plugins/object.py plugins/object.py)
@@ -366,11 +370,14 @@ configure_file(res/images/items/helmets/crownofnightmares.png images/items/helme
 configure_file(res/images/items/belts/undestructiblebelt.png images/items/belts/undestructiblebelt.png COPYONLY)
 
 configure_file(res/images/buildings/cave.png images/buildings/cave.png COPYONLY)
+configure_file(res/images/buildings/catacombs.png images/buildings/catacombs.png COPYONLY)
 configure_file(res/images/buildings/chapel.png images/buildings/chapel.png COPYONLY)
 configure_file(res/images/buildings/market.png images/buildings/market.png COPYONLY)
 configure_file(res/images/buildings/teleporter.png images/buildings/teleporter.png COPYONLY)
 configure_file(res/images/buildings/dungeon.png images/buildings/dungeon.png COPYONLY)
 configure_file(res/images/buildings/groundhole.png images/buildings/groundhole.png COPYONLY)
+configure_file(res/images/buildings/stairs_up.png images/buildings/stairs_up.png COPYONLY)
+configure_file(res/images/buildings/stairs_down.png images/buildings/stairs_down.png COPYONLY)
 configure_file(res/images/buildings/tavern.png images/buildings/tavern.png COPYONLY)
 configure_file(res/images/buildings/town_hall.png images/buildings/town_hall.png COPYONLY)
 
