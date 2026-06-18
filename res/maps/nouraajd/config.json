@@ -8,13 +8,25 @@
   "nouraajdSign": {
     "ref": "signPost",
     "properties": {
-      "text": "NOURAAJD - EAST"
+      "text": "NOURAAJD GATE - WEST"
     }
   },
   "ridgeSign": {
     "ref": "signPost",
     "properties": {
-      "text": "OLD MILITARY ROAD - Rolf's Pritz labyrinth lies far west. The cursed sinkhole festers nearer town."
+      "text": "OLD MILITARY ROAD - Rolf's Pritz labyrinth lies far northwest. The cursed sinkhole festers nearer town."
+    }
+  },
+  "pritzRoadSign": {
+    "ref": "signPost",
+    "properties": {
+      "text": "OLD MILITARY ROAD - Pritz labyrinth far northwest. Keep west until the road dies, then turn north into stone."
+    }
+  },
+  "labyrinthTurnSign": {
+    "ref": "signPost",
+    "properties": {
+      "text": "PRITZ LABYRINTH - The road ends here. Follow the broken path north through the mountain teeth."
     }
   },
   "catacombsSign": {
@@ -27,6 +39,12 @@
     "ref": "signPost",
     "properties": {
       "text": "SWAMP ROAD - OctoBogz mire ahead. Beren's relic is the only clean flame."
+    }
+  },
+  "eastReturnSign": {
+    "ref": "signPost",
+    "properties": {
+      "text": "SWAMP BEND - OctoBogz lair north. Nouraajd chapel and gate west."
     }
   },
   "courtyardSign": {
@@ -110,13 +128,13 @@
   "rolfQuest": {
     "class": "RolfQuest",
     "properties": {
-      "description": "Unravel the fate of Sergeant Rolf."
+      "description": "Unravel Sergeant Rolf's fate in the Pritz labyrinth."
     }
   },
   "octoBogzQuest": {
     "class": "OctoBogzQuest",
     "properties": {
-      "description": "Clear the OctoBogz from the cave east of Nouraajd."
+      "description": "Clear the OctoBogz from the eastern swamp cave."
     }
   },
   "skullOfRolf": {
@@ -257,7 +275,7 @@
     "properties": {
       "label": "Letter from Rolf",
       "description": "A blood-smeared plea from Sergeant Rolf describing the Pritscher hordes closing around the town.",
-      "text": "Lord Commander,\nThe nightmarish Pritschers gnaw at our barricades without pause. Locals swear their lair festers beneath the desolate ruins of Nouraajd. Our ranks thin, our walls rot. We cannot scour them alone. Send blades before all is lost.\nSergeant Rolf"
+      "text": "Lord Commander,\nThe nightmarish Pritschers gnaw at our barricades without pause. Locals swear their labyrinth lair festers far northwest of Nouraajd, beyond the broken military road. Our ranks thin, our walls rot. We cannot scour them alone. Send blades before all is lost.\nSergeant Rolf"
     }
   },
   "letterToBeren": {
@@ -281,13 +299,13 @@
   "retrieveRelicQuest": {
     "class": "RetrieveRelicQuest",
     "properties": {
-      "description": "Recover the holy relic from the catacombs"
+      "description": "Recover the holy relic from the chapel catacombs"
     }
   },
   "cleanseCaveQuest": {
     "class": "CleanseCaveQuest",
     "properties": {
-      "description": "Use the relic to cleanse the OctoBogz cave"
+      "description": "Use the returned relic to cleanse the eastern OctoBogz cave"
     }
   },
   "victorQuest": {
@@ -321,7 +339,7 @@
   "amuletQuest": {
     "class": "AmuletQuest",
     "properties": {
-      "description": "Find the stolen amulet for the old woman."
+      "description": "Find the stolen amulet in the outskirts grove."
     }
   },
   "questDialog": {
@@ -355,7 +373,7 @@
           "class": "CDialogState",
           "properties": {
             "stateId": "OLD_WOMAN_HELLO",
-            "text": "Oh, traveler... the goblins in the nearby grove stole my family amulet. Generations prayed over it, and now it's vanished into their claws.",
+            "text": "Oh, traveler... the goblins in the grove east of my outskirts hut stole my family amulet. Generations prayed over it, and now it's vanished into their claws.",
             "options": [
               {
                 "class": "CDialogOption",
@@ -380,7 +398,7 @@
           "class": "CDialogState",
           "properties": {
             "stateId": "ACCEPT_QUEST",
-            "text": "Thank you. The goblins are quick and mean as knives—please be careful when you seek them.",
+            "text": "Thank you. The goblins are quick and mean as knives—follow the scarred trail east, and please be careful when you seek them.",
             "options": [
               {
                 "ref": "exitOption",

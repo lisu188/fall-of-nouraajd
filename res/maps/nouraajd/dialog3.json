@@ -183,7 +183,7 @@
           "class": "CDialogState",
           "properties": {
             "stateId": "COURTYARD_PATH",
-            "text": "You reach the courtyard between the tavern, town hall, and chapel. Behind a wooden door branded with the Cult of Marumi Baso sigil, voices count down a rite; press on now or Victor's child will vanish into stained glass and knives.",
+            "text": "You reach the courtyard between the tavern, town hall, and chapel. Behind a wooden door branded with the Cult of Marumi Baso sigil, voices count down a rite; once you break in, the cultists have only moments before Victor's child vanishes into stained glass and knives.",
             "options": [
               {
                 "class": "CDialogOption",

@@ -7,7 +7,7 @@
           "class": "CDialogState",
           "properties": {
             "stateId": "ENTRY",
-            "text": "Hold a moment, stranger. Are you bound for the eastern road beyond the river?",
+            "text": "Hold a moment, stranger. Are you bound for the eastern swamp road beyond the river?",
             "options": [
               {
                 "class": "CDialogOption",
@@ -32,7 +32,7 @@
           "class": "CDialogState",
           "properties": {
             "stateId": "ASK_WHY",
-            "text": "Be careful. A cave out there seethes with OctoBogz—twisted things part octopus, part hare, all shadowcraft. They lash caravans with Abyssal Shadows and leave bones in the sand.",
+            "text": "Be careful. A cave north of the swamp bend seethes with OctoBogz—twisted things part octopus, part hare, all shadowcraft. They lash caravans with Abyssal Shadows and leave bones in the mire.",
             "options": [
               {
                 "class": "CDialogOption",
@@ -74,7 +74,7 @@
           "class": "CDialogState",
           "properties": {
             "stateId": "OFFER_HELP",
-            "text": "Those of us who escaped have pooled what coin we have. We'll pay generously if someone dares that cave and ends the OctoBogz blight.",
+            "text": "Those of us who escaped have pooled what coin we have. We'll pay generously if someone dares that eastern cave and ends the OctoBogz blight; Beren's relic is said to be the only way to leave it clean.",
             "options": [
               {
                 "class": "CDialogOption",
@@ -100,7 +100,7 @@
           "class": "CDialogState",
           "properties": {
             "stateId": "ACCEPT_QUEST",
-            "text": "Head east across the river. The cave is half-buried under boulders and sand; follow the guttural echoes and you'll find it.",
+            "text": "Head east across the river, then north at the swamp bend. The cave is half-buried under boulders and black water; follow the guttural echoes and you'll find it.",
             "options": [
               {
                 "ref": "exitOption",
