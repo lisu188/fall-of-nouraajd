@@ -586,14 +586,14 @@ NOURAAJD_QUEST_LOG_SCREENSHOT_CHECKPOINTS = {
 }
 
 NOURAAJD_QUEST_DESCRIPTIONS = {
-    "rolfQuest": "Unravel Sergeant Rolf's fate in the Pritz labyrinth.",
+    "rolfQuest": "Unravel the fate of Sergeant Rolf.",
     "mainQuest": "Vanquish the Dreaded Gooby",
     "deliverLetterQuest": "Bring Mayor Irvin's letter to Father Beren",
-    "retrieveRelicQuest": "Recover the holy relic from the chapel catacombs",
-    "cleanseCaveQuest": "Use the returned relic to cleanse the eastern OctoBogz cave",
-    "octoBogzQuest": "Clear the OctoBogz from the eastern swamp cave.",
+    "retrieveRelicQuest": "Recover the holy relic from the catacombs",
+    "cleanseCaveQuest": "Use the relic to cleanse the OctoBogz cave",
+    "octoBogzQuest": "Clear the OctoBogz from the cave east of Nouraajd.",
     "victorQuest": "Find Victor's daughter by following tavern and town-hall clues to the courtyard.",
-    "amuletQuest": "Find the stolen amulet in the outskirts grove.",
+    "amuletQuest": "Find the stolen amulet for the old woman.",
 }
 
 
@@ -8818,7 +8818,7 @@ class GameTest(unittest.TestCase):
         return missing_targets == [], json.dumps(missing_targets)
 
     @game_test
-    def test_nouraajd_hub_spoke_layout_topology(self):
+    def test_nouraajd_restored_map_layout_topology(self):
         map_data = load_map_data("nouraajd")
         config = json.loads((REPO_ROOT / "res/maps/nouraajd/config.json").read_text())
         script = (REPO_ROOT / "res/maps/nouraajd/script.py").read_text()
@@ -8898,38 +8898,22 @@ class GameTest(unittest.TestCase):
 
         expected_tiles = {
             "cave1": (19, 10),
-            "catacombs": (57, 101),
-            "cave2": (134, 96),
+            "catacombs": (22, 17),
+            "cave2": (166, 21),
             "nouraajdSign": (106, 110),
-            "market1": (107, 112),
-            "scribeDesk1": (108, 109),
-            "alchemyTable1": (108, 110),
-            "questGiver": (109, 113),
+            "market1": (106, 111),
+            "scribeDesk1": (105, 109),
+            "alchemyTable1": (105, 110),
+            "questGiver": (107, 111),
             "nouraajdTownHall": (43, 101),
             "nouraajdChapel": (50, 101),
             "nouraajdTavern": (48, 99),
             "nouraajdDoor": (44, 106),
-            "oldWoman": (145, 88),
-            "ridgeSign": (103, 104),
-            "pritzRoadSign": (103, 111),
-            "labyrinthTurnSign": (30, 111),
-            "catacombsSign": (56, 104),
-            "swampRoadSign": (124, 106),
-            "eastReturnSign": (131, 109),
-            "courtyardSign": (46, 102),
-            "outskirtsSign": (144, 89),
+            "oldWoman": (190, 5),
         }
-        gated_town_names = {"nouraajdTownHall", "nouraajdChapel", "nouraajdTavern", "courtyardSign"}
+        gated_town_names = {"nouraajdTownHall", "nouraajdChapel", "nouraajdTavern"}
 
         road_gid = 6
-
-        def has_nearby_road(tile, radius=2):
-            x, y = tile
-            for ny in range(y - radius, y + radius + 1):
-                for nx in range(x - radius, x + radius + 1):
-                    if 0 <= nx < width and 0 <= ny < height and data[ny * width + nx] == road_gid:
-                        return True
-            return False
 
         layout_failures = []
         if duplicate_names:
@@ -8948,21 +8932,19 @@ class GameTest(unittest.TestCase):
                 layout_failures.append(f"{name} is unreachable from spawn")
             if not walkable(actual, include_gate_blockers=False):
                 layout_failures.append(f"{name} sits on impassable terrain")
-            if name not in {"cave1", "nouraajdDoor", "nouraajdSign"} and not has_nearby_road(actual):
-                layout_failures.append(f"{name} has no nearby road breadcrumb")
 
         script_checks = {
             "victor_leader": "VICTOR_COURTYARD_LEADER_SPAWN = (45, 100, 0)" in script,
             "victor_cultists": "VICTOR_COURTYARD_SPAWNS = [(44, 100, 0), (46, 100, 0), (45, 99, 0), (45, 101, 0)]"
             in script,
             "gooby_fixed": "gooby.moveTo(100, 100, 0)" in script,
-            "amulet_goblin_near_old_woman": "goblin.moveTo(154, 90, 0)" in script,
+            "amulet_goblin_near_old_woman": "goblin.moveTo(195, 8, 0)" in script,
         }
         for name, ok in script_checks.items():
             if not ok:
                 layout_failures.append(f"script check failed: {name}")
 
-        sign_configs = {
+        removed_route_signs = {
             "ridgeSign",
             "pritzRoadSign",
             "labyrinthTurnSign",
@@ -8972,32 +8954,41 @@ class GameTest(unittest.TestCase):
             "courtyardSign",
             "outskirtsSign",
         }
-        missing_sign_configs = sorted(sign for sign in sign_configs if sign not in config)
-        if missing_sign_configs:
-            layout_failures.append(f"missing sign configs: {missing_sign_configs}")
+        remaining_route_sign_configs = sorted(sign for sign in removed_route_signs if sign in config)
+        if remaining_route_sign_configs:
+            layout_failures.append(f"route sign configs should be restored away: {remaining_route_sign_configs}")
+        remaining_route_sign_objects = sorted(sign for sign in removed_route_signs if sign in by_name)
+        if remaining_route_sign_objects:
+            layout_failures.append(f"route sign objects should be restored away: {remaining_route_sign_objects}")
+
+        ambient_config_names = {name for name in config if name.startswith("ambient")}
+        ambient_object_names = {name for name in by_name if name.startswith("ambient")}
+        if len(ambient_config_names) != 33:
+            layout_failures.append(f"ambient config count {len(ambient_config_names)}, expected 33")
+        if ambient_config_names != ambient_object_names:
+            layout_failures.append(
+                "ambient config/object mismatch: "
+                f"{sorted(ambient_config_names.symmetric_difference(ambient_object_names))}"
+            )
 
         expected_terrain = {
-            (9, 35): road_gid,
-            (14, 35): road_gid,
-            (20, 31): road_gid,
-            (18, 9): 9,
-            (45, 100): 9,
-            (44, 100): 10,
-            (54, 101): 3,
-            (57, 102): 9,
-            (100, 100): 10,
-            (134, 96): road_gid,
-            (133, 95): 3,
-            (145, 88): 10,
-            (153, 90): 7,
-            (155, 90): 10,
+            (19, 10): 10,
+            (22, 17): 10,
+            (166, 21): 7,
+            (44, 106): road_gid,
+            (105, 109): 11,
+            (105, 110): 11,
+            (106, 111): road_gid,
+            (107, 111): road_gid,
+            (190, 5): 9,
+            (195, 8): 9,
         }
         for tile, expected_gid in expected_terrain.items():
             actual_gid = data[tile[1] * width + tile[0]]
             if actual_gid != expected_gid:
                 layout_failures.append(f"terrain {tile} gid {actual_gid}, expected {expected_gid}")
 
-        spawn_checks = [(100, 100), (44, 100), (45, 99), (45, 100), (45, 101), (46, 100), (154, 90)]
+        spawn_checks = [(100, 100), (44, 100), (45, 99), (45, 100), (45, 101), (46, 100), (195, 8)]
         for tile in spawn_checks:
             reachable_tiles = (
                 open_seen if tile in {(44, 100), (45, 99), (45, 100), (45, 101), (46, 100)} else closed_seen
@@ -9093,7 +9084,7 @@ class GameTest(unittest.TestCase):
         return failed == [], json.dumps({"failed": failed, "checks": checks})
 
     @game_test
-    def test_nouraajd_wayfinding_text_contract(self):
+    def test_nouraajd_restored_map_text_contract(self):
         script = (REPO_ROOT / "res/maps/nouraajd/script.py").read_text()
         config = json.loads((REPO_ROOT / "res/maps/nouraajd/config.json").read_text())
         dialog2 = (REPO_ROOT / "res/maps/nouraajd/dialog2.json").read_text()
@@ -9116,22 +9107,35 @@ class GameTest(unittest.TestCase):
             for name, value in config.items()
             if value.get("ref") == "signPost"
         }
+        removed_route_signs = {
+            "ridgeSign",
+            "pritzRoadSign",
+            "labyrinthTurnSign",
+            "catacombsSign",
+            "swampRoadSign",
+            "eastReturnSign",
+            "courtyardSign",
+            "outskirtsSign",
+        }
+        ambient_config_names = {name for name in config if name.startswith("ambient")}
 
         checks = {
-            "spawn_sign_points_west": "west" in sign_texts.get("nouraajdSign", ""),
-            "pritz_is_far_northwest_labyrinth": "pritz labyrinth" in text and "far northwest" in text,
-            "pritz_turn_sign_exists": "labyrinthTurnSign" in config and "north" in sign_texts["labyrinthTurnSign"],
-            "chapel_catacombs_are_distinct": "chapel catacombs" in text and "apart from the pritz tunnels" in text,
-            "octobogz_east_swamp_route": "octobogz" in text and "eastern swamp" in text and "swamp bend" in text,
-            "relic_return_order_visible": "return the relic to beren first" in text
-            or "with this relic returned" in text,
+            "spawn_sign_points_east": "east" in sign_texts.get("nouraajdSign", ""),
+            "route_signs_removed": not any(sign in config for sign in removed_route_signs),
+            "ambient_overlay_preserved": len(ambient_config_names) == 33 and "ambientGateTriageNotice" in config,
+            "rolf_old_route_text": "search the cave outside town" in text
+            and "the cave entrance lies beyond nouraajd's roads" in text,
+            "octobogz_old_route_text": "eastern road beyond the river" in text
+            and "half-buried under boulders and sand" in text,
+            "catacombs_old_text": "descend into the catacombs" in text
+            and "the catacombs hide the relic beren needs" in text,
             "victor_timer_start_visible": (
                 "VICTOR_COURTYARD_TIMEOUT_TURNS = 75" in script
-                and "broke into the courtyard" in script
-                and "once you break in" in dialog3.lower()
-                and "breaking into the courtyard" in dialog4.lower()
+                and "the cultists began their rite" in script.lower()
+                and "press on now" in dialog3.lower()
+                and "the rite has already begun" in dialog4.lower()
             ),
-            "amulet_outskirts_route_visible": "outskirts" in text and "scarred trail east" in text,
+            "amulet_old_route_text": "near the village edge" in text and "nearby grove" in text,
         }
         failed = sorted(name for name, ok in checks.items() if not ok)
         return failed == [], json.dumps({"failed": failed, "checks": checks}, sort_keys=True)
@@ -10623,10 +10627,10 @@ class GameTest(unittest.TestCase):
         quest_panel = g.createObject("questPanel")
         text = quest_panel.getText(g.getGui())
 
-        self.assertIn("[Active] Unravel Sergeant Rolf's fate in the Pritz labyrinth.", text)
+        self.assertIn("[Active] Unravel the fate of Sergeant Rolf.", text)
         self.assertIn("Objective: Recover Sergeant Rolf's skull from the Pritscher cave", text)
         self.assertIn("Reward: Starts the Gooby hunt.", text)
-        self.assertIn("Hint: The Pritz labyrinth begins where the old military road breaks north", text)
+        self.assertIn("Hint: The cave entrance lies beyond Nouraajd's roads.", text)
 
         g_completed, completed_map, completed_player = load_game_map_with_player("nouraajd")
         completed_player.addQuest("rolfQuest")
@@ -10635,7 +10639,7 @@ class GameTest(unittest.TestCase):
         game.CGameLoader.loadGui(g_completed)
         completed_panel = g_completed.createObject("questPanel")
         text_after_completion = completed_panel.getText(g_completed.getGui())
-        self.assertIn("[Completed] Unravel Sergeant Rolf's fate in the Pritz labyrinth.", text_after_completion)
+        self.assertIn("[Completed] Unravel the fate of Sergeant Rolf.", text_after_completion)
         self.assertIn("Status: Completed", text_after_completion)
         self.assertIn("[Active] Vanquish the Dreaded Gooby", text_after_completion)
 
