@@ -154,7 +154,12 @@ set(GAME_CORE_LINK_LIBS
     ${CMAKE_DL_LIBS}
 )
 
-add_library(game_core_objects OBJECT ${GAME_CORE_SRC})
+set(GAME_CORE_OBJECT_SRC ${GAME_CORE_SRC})
+if (WIN32)
+    list(FILTER GAME_CORE_OBJECT_SRC EXCLUDE REGEX ".*/src/core/CModule\\.cpp$")
+endif ()
+
+add_library(game_core_objects OBJECT ${GAME_CORE_OBJECT_SRC})
 configure_cpp_target(game_core_objects)
 set_target_properties(game_core_objects PROPERTIES
     POSITION_INDEPENDENT_CODE ON
@@ -173,10 +178,22 @@ target_compile_definitions(game_core_objects PRIVATE
 )
 target_link_libraries(game_core_objects PRIVATE ${GAME_CORE_LINK_LIBS})
 
-add_library(game_core SHARED $<TARGET_OBJECTS:game_core_objects>)
+set(GAME_CORE_SHARED_SRC $<TARGET_OBJECTS:game_core_objects>)
+if (WIN32)
+    list(APPEND GAME_CORE_SHARED_SRC ${CMAKE_SOURCE_DIR}/src/core/CModule.cpp)
+endif ()
+
+add_library(game_core SHARED ${GAME_CORE_SHARED_SRC})
+configure_cpp_target(game_core)
 set_target_properties(game_core PROPERTIES
     OUTPUT_NAME "game_core"
 )
+if (WIN32)
+    target_compile_definitions(game_core PRIVATE GAME_CORE_BUILD)
+endif ()
+if (GAME_ENABLE_PCH AND WIN32)
+    target_precompile_headers(game_core PRIVATE "${CMAKE_SOURCE_DIR}/src/core/CGlobal.h")
+endif ()
 target_link_libraries(game_core PRIVATE
     ${GAME_CORE_LINK_LIBS}
 )
@@ -574,7 +591,11 @@ endfunction()
 add_game_unit_test(core_unit_tests tests/unit/test_core.cpp)
 add_game_unit_test(controller_unit_tests tests/unit/test_controller.cpp)
 add_game_unit_test(gui_unit_tests tests/unit/test_gui.cpp)
-add_game_unit_test(handler_unit_tests tests/unit/test_handler.cpp src/handler/CScriptHandler.cpp)
+set(GAME_HANDLER_UNIT_TEST_SRC tests/unit/test_handler.cpp)
+if (NOT WIN32)
+    list(APPEND GAME_HANDLER_UNIT_TEST_SRC src/handler/CScriptHandler.cpp)
+endif ()
+add_game_unit_test(handler_unit_tests ${GAME_HANDLER_UNIT_TEST_SRC})
 add_game_unit_test(object_unit_tests tests/unit/test_object.cpp)
 
 add_executable(performance_guard_tests
@@ -582,8 +603,8 @@ add_executable(performance_guard_tests
     tests/unit/test_pathfinder_performance.cpp
     tests/unit/test_engine_hotspot_performance.cpp
 )
-if (GAME_UNIT_TEST_SUPPORT_SRC)
-    target_sources(performance_guard_tests PRIVATE ${GAME_UNIT_TEST_SUPPORT_SRC})
+if (WIN32)
+    target_sources(performance_guard_tests PRIVATE $<TARGET_OBJECTS:game_core_objects>)
 endif ()
 configure_cpp_target(performance_guard_tests)
 target_link_libraries(performance_guard_tests PRIVATE
@@ -593,7 +614,7 @@ target_link_libraries(performance_guard_tests PRIVATE
     ${SDL2_IMAGE_LIBS}
     ${SDL2_TTF_LIBS}
 )
-if (CMAKE_SYSTEM_NAME STREQUAL "Linux")
+if (NOT WIN32)
     target_link_libraries(performance_guard_tests PRIVATE game_core)
 endif ()
 add_test(NAME "performance.performance_guard_tests" COMMAND performance_guard_tests)
