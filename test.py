@@ -123,7 +123,6 @@ XVFB_GAMEPLAY_PARENT_TEST = "XvfbGameplayTest.test_keyboard_gameplay_under_xvfb"
 VALID_TEST_SUITES = ("fast", "gameplay", "ui", "coverage-safe", "full")
 FAST_TEST_PREFIXES = (
     "CoverageReportTest.",
-    "PanelLayoutManifestTest.",
     "PlayBootstrapTest.",
     "TestRunnerSuiteTest.",
 )
@@ -136,6 +135,7 @@ FAST_TEST_NAMES = {
     "McpServerTest.test_map_design_brief_rejects_path_traversal",
     "McpServerTest.test_serialize_result_lists_python_methods_for_handles",
     "McpServerTest.test_stdio_batch_handles_initialize_and_tool_listing",
+    "PanelLayoutManifestTest.test_panel_layout_manifest_matches_panels_json",
 }
 GAMEPLAY_TEST_PREFIXES = (
     "ConsoleEventIsolationTest.",
@@ -13397,10 +13397,12 @@ class CoverageReportTest(unittest.TestCase):
             exclusions = coverage_report.load_line_exclusions(alias_root, manifest_path)
             coverage_report.validate_line_exclusions(alias_root, merged, exclusions)
             summary, covered, total, percentage, excluded = coverage_report.summarize(alias_root, merged, exclusions)
+            audit = coverage_report.build_exclusion_audit(alias_root, merged, exclusions)
 
             self.assertEqual(set(merged), {source.resolve()})
             self.assertEqual((covered, total, percentage, excluded), (1, 1, 100.0, 1))
             self.assertEqual(summary[0]["path"], Path("src/sample.cpp"))
+            self.assertEqual(["src/sample.cpp"], [line["path"] for line in audit["lines"]])
 
     def test_coverage_line_exclusions_fail_closed(self):
         coverage_report = self._load_coverage_report_module()
@@ -13531,7 +13533,10 @@ class TestRunnerSuiteTest(unittest.TestCase):
             filter_test_names_by_suite(sample_names, "gameplay"),
         )
         self.assertEqual(
-            ["PanelLayoutManifestTest.test_panel_layout_manifest_matches_panels_json", XVFB_GAMEPLAY_PARENT_TEST],
+            [
+                "PanelLayoutManifestTest.test_panel_layout_manifest_matches_panels_json",
+                XVFB_GAMEPLAY_PARENT_TEST,
+            ],
             filter_test_names_by_suite(sample_names, "ui"),
         )
         self.assertEqual(sample_names, filter_test_names_by_suite(sample_names, "coverage-safe"))
