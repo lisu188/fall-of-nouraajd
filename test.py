@@ -9514,6 +9514,66 @@ class GameTest(unittest.TestCase):
             game.CGuiHandler.showTrade = original_show_trade
 
     @game_test
+    def test_nouraajd_market_economy_assumptions(self):
+        game = load_game_module()
+        config = json.loads((REPO_ROOT / "res/maps/nouraajd/config.json").read_text())
+        economy_doc = (REPO_ROOT / "docs/nouraajd-economy.md").read_text(encoding="utf-8")
+        g, game_map, player = load_game_map_with_player("nouraajd")
+
+        def market_refs(market_id):
+            return [item["ref"] for item in config[market_id]["properties"]["items"]]
+
+        general_refs = market_refs("exampleMarket")
+        victor_refs = market_refs("victorMarket")
+        tavern_refs = market_refs("tavernBeerMarket")
+
+        self.assertEqual(player.getGold(), 0)
+        self.assertEqual(player.countItems("LesserLifePotion"), 0)
+        self.assertEqual(player.countItems("LesserManaPotion"), 0)
+        self.assertEqual(general_refs.count("LesserLifePotion"), 3)
+        self.assertEqual(general_refs.count("LesserManaPotion"), 1)
+        self.assertEqual(general_refs.count("Scroll"), 1)
+        self.assertEqual(general_refs.count("DaggerOfVileHeart"), 1)
+        self.assertNotIn("LifePotion", general_refs)
+        self.assertNotIn("ManaPotion", general_refs)
+        self.assertEqual(victor_refs, ["LesserLifePotion", "LifePotion", "LesserManaPotion", "ManaPotion"])
+        self.assertEqual(tavern_refs, ["DarkBeer", "DarkBeer", "SpicedBeer"])
+
+        market = g.createObject("exampleMarket")
+        expected_sell_costs = {
+            "Scroll": 200,
+            "LesserLifePotion": 400,
+            "LesserManaPotion": 400,
+            "DarkBeer": 400,
+            "SpicedBeer": 400,
+            "LifePotion": 800,
+            "ManaPotion": 1600,
+            "DaggerOfVileHeart": 100000,
+            "ShadowBlade": 100000,
+        }
+        sell_costs = {item_id: market.getSellCost(g.createObject(item_id)) for item_id in expected_sell_costs}
+        buyback_costs = {
+            item_id: market.getBuyCost(g.createObject(item_id)) for item_id in ("DaggerOfVileHeart", "ShadowBlade")
+        }
+
+        self.assertEqual(expected_sell_costs, sell_costs)
+        self.assertEqual({"DaggerOfVileHeart": 5000, "ShadowBlade": 5000}, buyback_costs)
+        self.assertLess(player.getGold() + 1000 + 500, sell_costs["DaggerOfVileHeart"])
+        self.assertIn("Starting gold: 0", economy_doc)
+        self.assertIn("Merchant buyback prices are capped at 5000 gold", economy_doc)
+
+        return True, json.dumps(
+            {
+                "general_refs": general_refs,
+                "victor_refs": victor_refs,
+                "tavern_refs": tavern_refs,
+                "sell_costs": sell_costs,
+                "buyback_costs": buyback_costs,
+            },
+            sort_keys=True,
+        )
+
+    @game_test
     def test_nouraajd_victor_town_hall_clue_regression(self):
         g, game_map, player = load_game_map_with_player("nouraajd")
         tavern_intro = g.createObject("tavernDialog1")
@@ -9880,12 +9940,43 @@ class GameTest(unittest.TestCase):
         self.assertEqual(game_map.getStringProperty("quest_state_amulet"), "returned")
         self.assertIsNone(game_map.getObjectByName("amuletGoblin"))
 
+        player.addItem("preciousAmulet")
+        quest_return_dialog.complete_amulet_quest()
+        self.assertEqual(player.getGold() - start_gold, 50)
+        self.assertEqual(game_map.getStringProperty("quest_state_amulet"), "returned")
+        self.assertTrue(player.hasItem(lambda it: it.getName() == "preciousAmulet"))
+
         return True, json.dumps(
             {
                 "quest_state_amulet": game_map.getStringProperty("quest_state_amulet"),
                 "gold_delta": player.getGold() - start_gold,
+                "duplicate_amulet_present": player.hasItem(lambda it: it.getName() == "preciousAmulet"),
                 "old_woman_present": game_map.getObjectByName("oldWoman") is not None,
                 "amulet_goblin_present": game_map.getObjectByName("amuletGoblin") is not None,
+            },
+            sort_keys=True,
+        )
+
+    @game_test
+    def test_nouraajd_octobogz_unique_reward_is_not_duplicated(self):
+        g, game_map, player = load_game_map_with_player("nouraajd")
+        quest = g.createObject("octoBogzQuest")
+        start_gold = player.getGold()
+
+        quest.onComplete()
+        self.assertEqual(player.getGold() - start_gold, 1000)
+        self.assertEqual(player.countItems("ShadowBlade"), 1)
+        self.assertTrue(game_map.getBoolProperty("OCTOBOGZ_REWARD_CLAIMED"))
+
+        quest.onComplete()
+        self.assertEqual(player.getGold() - start_gold, 1000)
+        self.assertEqual(player.countItems("ShadowBlade"), 1)
+
+        return True, json.dumps(
+            {
+                "gold_delta": player.getGold() - start_gold,
+                "shadow_blades": player.countItems("ShadowBlade"),
+                "reward_claimed": game_map.getBoolProperty("OCTOBOGZ_REWARD_CLAIMED"),
             },
             sort_keys=True,
         )
