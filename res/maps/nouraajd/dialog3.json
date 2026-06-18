@@ -107,7 +107,7 @@
           "class": "CDialogState",
           "properties": {
             "stateId": "VICTOR_SPEECH",
-            "text": "I'm Victor. It's my daughter... She's been gone three days. My ex-wife lost her in the market crowd, and neither I nor the guards can find a trace. I'm terrified she's gone forever. (sobs)",
+            "text": "I'm Victor. It's my daughter... She's been gone three days. My ex-wife lost her in the market crowd, and neither I nor the guards can find a trace. Every hour makes the town quieter about her. I'm terrified she's gone forever. (sobs)",
             "options": [
               {
                 "class": "CDialogOption",
@@ -133,14 +133,14 @@
           "class": "CDialogState",
           "properties": {
             "stateId": "VICTOR_CLUE",
-            "text": "No... Someone swore they saw a girl like her near the courtyard, but when I rushed there I found nothing. No tracks, no ribbon, nothing.",
+            "text": "A washerwoman swore she saw a girl like her near the old courtyard between the tavern, town hall, and chapel. When I rushed there I found nothing. No tracks, no ribbon, nothing.",
             "options": [
               {
                 "class": "CDialogOption",
                 "properties": {
                   "number": 0,
                   "nextStateId": "COURTYARD_PATH",
-                  "text": "We'll scour the courtyard together."
+                  "text": "I'll search that courtyard before the trail dies."
                 }
               },
               {
@@ -148,7 +148,7 @@
                 "properties": {
                   "number": 1,
                   "nextStateId": "SUGGEST_TOWN_HALL",
-                  "text": "Maybe the town hall keeps a clue."
+                  "text": "Maybe the town hall keeps older records about that courtyard."
                 }
               }
             ]
@@ -158,14 +158,14 @@
           "class": "CDialogState",
           "properties": {
             "stateId": "SUGGEST_TOWN_HALL",
-            "text": "What?! I've heard of them but never knew where their chapel hides. We should check the town hall—someone there must know.",
+            "text": "What?! I've heard of them but never knew where their chapel hides. If they took her, they will not wait for grieving men. The town hall ledgers may name the door they use.",
             "options": [
               {
                 "class": "CDialogOption",
                 "properties": {
                   "number": 0,
                   "nextStateId": "EXIT",
-                  "text": "Then let's head for the town hall."
+                  "text": "Then I'll check the town hall records."
                 }
               },
               {
@@ -173,7 +173,7 @@
                 "properties": {
                   "number": 1,
                   "nextStateId": "COURTYARD_PATH",
-                  "text": "I'll take the courtyard."
+                  "text": "I'll run to the courtyard now."
                 }
               }
             ]
@@ -183,13 +183,13 @@
           "class": "CDialogState",
           "properties": {
             "stateId": "COURTYARD_PATH",
-            "text": "You reach the courtyard and find a wooden door branded with the Cult of Marumi Baso sigil. The place is occupied; press on and you may yet save Victor's child.",
+            "text": "You reach the courtyard between the tavern, town hall, and chapel. Behind a wooden door branded with the Cult of Marumi Baso sigil, voices count down a rite; press on now or Victor's child will vanish into stained glass and knives.",
             "options": [
               {
                 "class": "CDialogOption",
                 "properties": {
                   "number": 0,
-                  "text": "I'll confront them in that courtyard.",
+                  "text": "Break into the courtyard rite.",
                   "action": "spawn_cultists",
                   "nextStateId": "EXIT"
                 }
@@ -208,7 +208,7 @@
           "class": "CDialogState",
           "properties": {
             "stateId": "ENTRY",
-            "text": "You smash through the stained glass and drag Victor's trembling daughter into the light. Overwhelmed, Victor presses 500 gold into your palm and urges you to take whatever potions he still has left.",
+            "text": "You smash through the stained glass and drag Victor's trembling daughter into the light before the last verse is spoken. Overwhelmed, Victor presses 500 gold into your palm and urges you to take whatever potions he still has left.",
             "options": [
               {
                 "ref": "exitOption",

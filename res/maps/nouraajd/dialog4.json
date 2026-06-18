@@ -13,7 +13,7 @@
                 "class": "CDialogOption",
                 "properties": {
                   "number": 0,
-                  "condition": "talked_to_victor",
+                  "condition": "can_discuss_victor_records",
                   "nextStateId": "VICTOR_CLUE",
                   "text": "Do your ledgers mention Victor's missing daughter?"
                 }
@@ -22,6 +22,33 @@
                 "class": "CDialogOption",
                 "properties": {
                   "number": 1,
+                  "condition": "victor_encounter_active",
+                  "nextStateId": "VICTOR_ACTIVE_REMINDER",
+                  "text": "About Victor's daughter..."
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 2,
+                  "condition": "victor_good_end",
+                  "nextStateId": "VICTOR_GOOD_REPORT",
+                  "text": "Victor's daughter is safe."
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 3,
+                  "condition": "victor_bad_end",
+                  "nextStateId": "VICTOR_BAD_REPORT",
+                  "text": "Victor's daughter is gone."
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 4,
                   "condition": "has_letter_quest",
                   "nextStateId": "ASK_HELP_REPEAT",
                   "text": "About the sealed letter..."
@@ -30,7 +57,7 @@
               {
                 "class": "CDialogOption",
                 "properties": {
-                  "number": 2,
+                  "number": 5,
                   "condition": "can_chart_wayfarer_route",
                   "action": "chart_wayfarer_route",
                   "nextStateId": "WAYFARER_ROUTE",
@@ -40,7 +67,7 @@
               {
                 "class": "CDialogOption",
                 "properties": {
-                  "number": 3,
+                  "number": 6,
                   "condition": "can_offer_letter_work",
                   "nextStateId": "ASK_HELP",
                   "text": "I'm looking for work."
@@ -49,7 +76,7 @@
               {
                 "ref": "exitOption",
                 "properties": {
-                  "number": 4
+                  "number": 7
                 }
               }
             ]
@@ -114,12 +141,12 @@
           "class": "CDialogState",
           "properties": {
             "stateId": "VICTOR_CLUE",
-            "text": "Among dusty ledgers you find a note on the Cult of Marumi Baso. A decade ago they concealed their chapel behind a wooden door in the courtyard. The author swears they sacrifice girls who resemble their dead prophet's daughter to preserve a stained glass and stretch the prophet's unnatural life.",
+            "text": "Among dusty ledgers you find a note on the Cult of Marumi Baso. A decade ago they concealed their chapel behind a wooden door in the courtyard between the tavern, town hall, and chapel. The author swears they sacrifice girls who resemble their dead prophet's daughter to preserve a stained glass and stretch the prophet's unnatural life. If Victor's child is there, the rite has already begun.",
             "options": [
               {
                 "class": "CDialogOption",
                 "properties": {
-                  "text": "Search the courtyard",
+                  "text": "Run to the courtyard now.",
                   "number": 0,
                   "action": "spawn_cultists",
                   "nextStateId": "EXIT"
@@ -129,6 +156,51 @@
                 "ref": "exitOption",
                 "properties": {
                   "number": 1
+                }
+              }
+            ]
+          }
+        },
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "VICTOR_ACTIVE_REMINDER",
+            "text": "Mayor Irvin shuts the ledger with shaking hands. If the courtyard door is open, there is no time left for ink or argument.",
+            "options": [
+              {
+                "ref": "exitOption",
+                "properties": {
+                  "number": 0
+                }
+              }
+            ]
+          }
+        },
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "VICTOR_GOOD_REPORT",
+            "text": "Word reaches the hall that Victor carried his daughter from the cult door alive. Irvin marks the ledger with a rare clean line: rescued.",
+            "options": [
+              {
+                "ref": "exitOption",
+                "properties": {
+                  "number": 0
+                }
+              }
+            ]
+          }
+        },
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "VICTOR_BAD_REPORT",
+            "text": "Irvin has only an ash-stained ribbon and a cleaned courtyard to record. The Cult of Marumi Baso left no debtor, no corpse, and no road to follow.",
+            "options": [
+              {
+                "ref": "exitOption",
+                "properties": {
+                  "number": 0
                 }
               }
             ]

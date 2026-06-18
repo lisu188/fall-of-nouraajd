@@ -263,7 +263,7 @@
   "victorQuest": {
     "class": "VictorQuest",
     "properties": {
-      "description": "Find Victor's daughter by following the town hall clue to the courtyard."
+      "description": "Find Victor's daughter by following tavern and town-hall clues to the courtyard."
     }
   },
   "holyRelic": {
