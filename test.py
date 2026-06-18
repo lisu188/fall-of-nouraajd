@@ -124,15 +124,21 @@ SERIAL_TEST_NAMES = {
 }
 SERIAL_TEST_PREFIXES = ("McpServerTest.test_stdio_map_walkthrough_",)
 DEFAULT_TEST_DURATIONS = {
+    "McpServerTest.test_stdio_map_walkthrough_multilevel": 25.0,
     "McpServerTest.test_stdio_map_walkthrough_nouraajd": 45.0,
     "McpServerTest.test_stdio_map_walkthrough_ritual": 45.0,
     "McpServerTest.test_stdio_map_walkthrough_siege": 30.0,
     "McpServerTest.test_stdio_map_walkthrough_test": 20.0,
     XVFB_GAMEPLAY_PARENT_TEST: 90.0,
+    "GameTest.test_map_walkthrough_multilevel": 12.0,
     "GameTest.test_map_walkthrough_nouraajd": 25.0,
     "GameTest.test_map_walkthrough_ritual": 20.0,
     "GameTest.test_map_walkthrough_siege": 15.0,
     "GameTest.test_map_walkthrough_test": 10.0,
+    "GameTest.test_multilevel_map_loads_authored_z_layers": 6.0,
+    "GameTest.test_multilevel_map_player_uses_stairs_both_directions": 8.0,
+    "GameTest.test_multilevel_map_stale_collision_cache_is_z_scoped": 6.0,
+    "GameTest.test_multilevel_map_z_state_persists_after_save_load": 8.0,
     "GameTest.test_playthrough": 20.0,
     "GameTest.test_campaign_transitions_preserve_player_and_start_siege": 20.0,
     "GameTest.test_map_walkthroughs": 20.0,
@@ -1008,6 +1014,66 @@ def find_adjacent_walkable_tile(game_map, origin):
         if game_map.canStep(target):
             return target
     raise AssertionError(f"Expected an adjacent walkable tile near {origin.x},{origin.y},{origin.z}.")
+
+
+def coords_tuple(coords):
+    return coords.x, coords.y, coords.z
+
+
+def drive_player_to_target(game_map, player, target, *, until=None, max_turns=24):
+    controller = set_player_target(player, target)
+
+    def reached():
+        return until() if until else coords_tuple(player.getCoords()) == coords_tuple(target)
+
+    if reached():
+        return controller
+    for _ in range(max_turns):
+        game_map.move()
+        pump_event_loop(2)
+        if reached():
+            return controller
+    raise AssertionError(
+        f"Player did not reach target {coords_tuple(target)} from {coords_tuple(player.getCoords())} "
+        f"after {max_turns} turns."
+    )
+
+
+def multilevel_object_layer_levels():
+    levels = {}
+    for layer in load_map_data("multilevel").get("layers", []):
+        if layer.get("type") != "objectgroup":
+            continue
+        layer_level = int(layer.get("properties", {}).get("level", 0))
+        for obj in layer.get("objects", []):
+            if obj.get("name"):
+                levels[obj["name"]] = layer_level
+    return levels
+
+
+def drive_multilevel_route(game_map, player):
+    stairs_up = find_runtime_object(game_map, "stairsUp")
+    stairs_down = find_runtime_object(game_map, "stairsDown")
+    upper_goal = find_runtime_object(game_map, "multilevelUpperGoal")
+    lower_goal = find_runtime_object(game_map, "multilevelLowerGoal")
+
+    start_turn = game_map.getTurn()
+    drive_player_to_target(game_map, player, stairs_up.getCoords(), until=lambda: player.getCoords().z == 1)
+    upper_landing = coords_tuple(player.getCoords())
+    drive_player_to_target(game_map, player, upper_goal.getCoords())
+    upper_goal_coords = coords_tuple(player.getCoords())
+    drive_player_to_target(game_map, player, stairs_down.getCoords(), until=lambda: player.getCoords().z == 0)
+    lower_landing = coords_tuple(player.getCoords())
+    drive_player_to_target(game_map, player, lower_goal.getCoords())
+    lower_goal_coords = coords_tuple(player.getCoords())
+
+    return {
+        "turns": game_map.getTurn() - start_turn,
+        "upper_landing": upper_landing,
+        "upper_goal": upper_goal_coords,
+        "lower_landing": lower_landing,
+        "lower_goal": lower_goal_coords,
+    }
 
 
 def get_panel_proxy_child_totals_by_collection(panel):
@@ -1950,7 +2016,7 @@ def walkthrough_test_map():
     assert (after_ground_hole.x, after_ground_hole.y, after_ground_hole.z) == (
         ground_hole_def["x"] // 32,
         ground_hole_def["y"] // 32,
-        0,
+        -1,
     )
     return {
         "map": "test",
@@ -2061,7 +2127,30 @@ def walkthrough_nouraajd_map():
     }
 
 
+def walkthrough_multilevel_map():
+    _g, game_map, player = load_game_map_with_player("multilevel")
+    route = drive_multilevel_route(game_map, player)
+
+    assert game_map.getBoolProperty("used_stairs_up"), "The route should use the upper stairs."
+    assert game_map.getBoolProperty("used_stairs_down"), "The route should use the lower stairs."
+    assert game_map.getBoolProperty("visited_upper_goal"), "The upper authored target should be visited."
+    assert game_map.getBoolProperty("visited_lower_goal"), "The lower authored target should be visited."
+    assert game_map.canStep(load_game_module().Coords(2, 2, 1)), "Level 0 blocker should not block level 1."
+    assert game_map.canStep(load_game_module().Coords(5, 2, 0)), "Level 1 blocker should not block level 0."
+
+    return {
+        "map": "multilevel",
+        "route": route,
+        "turn": game_map.getTurn(),
+        "used_stairs_up": game_map.getBoolProperty("used_stairs_up"),
+        "used_stairs_down": game_map.getBoolProperty("used_stairs_down"),
+        "visited_upper_goal": game_map.getBoolProperty("visited_upper_goal"),
+        "visited_lower_goal": game_map.getBoolProperty("visited_lower_goal"),
+    }
+
+
 WALKTHROUGHS = {
+    "multilevel": walkthrough_multilevel_map,
     "nouraajd": walkthrough_nouraajd_map,
     "ritual": walkthrough_ritual_map,
     "siege": walkthrough_siege_map,
@@ -4110,6 +4199,182 @@ class GameTest(unittest.TestCase):
             },
             sort_keys=True,
         )
+
+    @game_test
+    def test_multilevel_map_loads_authored_z_layers(self):
+        game = load_game_module()
+        _g, game_map, player = load_game_map_with_player("multilevel")
+        object_levels = multilevel_object_layer_levels()
+
+        self.assertEqual("multilevel", game_map.mapName)
+        self.assertEqual((1, 1, 0), (game_map.getEntryX(), game_map.getEntryY(), game_map.getEntryZ()))
+        self.assertEqual((1, 1, 0), coords_tuple(player.getCoords()))
+
+        for name in (
+            "multilevelStart",
+            "stairsUp",
+            "level0ObjectBlocker",
+            "multilevelLowerGoal",
+            "stairsDown",
+            "level1ObjectBlocker",
+            "multilevelUpperGoal",
+        ):
+            runtime_object = find_runtime_object(game_map, name)
+            self.assertEqual(object_levels[name], runtime_object.getCoords().z)
+
+        self.assertEqual("GroundTile", game_map.getTile(1, 1, 0).getTypeId())
+        self.assertEqual("MountainTile", game_map.getTile(1, 1, 1).getTypeId())
+        self.assertTrue(game_map.canStep(game.Coords(1, 1, 0)))
+        self.assertFalse(game_map.canStep(game.Coords(1, 1, 1)))
+        self.assertFalse(game_map.canStep(game.Coords(3, 2, 0)))
+        self.assertFalse(game_map.canStep(game.Coords(5, 3, 1)))
+        self.assertFalse(game_map.canStep(game.Coords(2, 2, 0)))
+        self.assertTrue(game_map.canStep(game.Coords(2, 2, 1)))
+        self.assertTrue(game_map.canStep(game.Coords(5, 2, 0)))
+        self.assertFalse(game_map.canStep(game.Coords(5, 2, 1)))
+
+        advance_map_only(game_map, 1)
+        stairs_up = find_runtime_object(game_map, "stairsUp")
+        stairs_down = find_runtime_object(game_map, "stairsDown")
+        upper_goal = find_runtime_object(game_map, "multilevelUpperGoal")
+        self.assertTrue(stairs_up.getBoolProperty("waypoint"))
+        self.assertEqual((4, 1, 1), (stairs_up.x, stairs_up.y, stairs_up.z))
+        self.assertTrue(stairs_down.getBoolProperty("waypoint"))
+        self.assertEqual((4, 1, 0), (stairs_down.x, stairs_down.y, stairs_down.z))
+        self.assertEqual("images/buildings/catacombs", upper_goal.getStringProperty("animation"))
+
+        return True, json.dumps(
+            {
+                "entry": [game_map.getEntryX(), game_map.getEntryY(), game_map.getEntryZ()],
+                "objects": {
+                    name: coords_tuple(find_runtime_object(game_map, name).getCoords()) for name in object_levels
+                },
+                "player": coords_tuple(player.getCoords()),
+            },
+            sort_keys=True,
+        )
+
+    @game_test
+    def test_multilevel_map_player_uses_stairs_both_directions(self):
+        _game_module = load_game_module()
+        _g, game_map, player = load_game_map_with_player("multilevel")
+        player_name = player.getName()
+        player_hp_max = player.getHpMax()
+        potion_count = player.countItems("LesserLifePotion")
+        player.addItem("LesserLifePotion")
+
+        route = drive_multilevel_route(game_map, player)
+        controller = get_player_controller(player)
+
+        self.assertEqual((6, 5, 0), coords_tuple(player.getCoords()))
+        self.assertTrue(controller.isCompleted(player))
+        self.assertIsNotNone(player.getFightController())
+        self.assertEqual(player_name, player.getName())
+        self.assertEqual(player_hp_max, player.getHpMax())
+        self.assertEqual(potion_count + 1, player.countItems("LesserLifePotion"))
+        self.assertTrue(game_map.getBoolProperty("used_stairs_up"))
+        self.assertTrue(game_map.getBoolProperty("used_stairs_down"))
+        self.assertTrue(game_map.getBoolProperty("visited_upper_goal"))
+        self.assertTrue(game_map.getBoolProperty("visited_lower_goal"))
+        self.assertGreater(route["turns"], 0)
+
+        return True, json.dumps(
+            {
+                "final_player": coords_tuple(player.getCoords()),
+                "potion_count": player.countItems("LesserLifePotion"),
+                "route": route,
+                "turn": game_map.getTurn(),
+            },
+            sort_keys=True,
+        )
+
+    @game_test
+    def test_multilevel_map_z_state_persists_after_save_load(self):
+        game = load_game_module()
+        _g, game_map, player = load_game_map_with_player("multilevel")
+        stairs_up = find_runtime_object(game_map, "stairsUp")
+        upper_goal = find_runtime_object(game_map, "multilevelUpperGoal")
+        drive_player_to_target(game_map, player, stairs_up.getCoords(), until=lambda: player.getCoords().z == 1)
+        drive_player_to_target(game_map, player, upper_goal.getCoords())
+        saved_coords = coords_tuple(player.getCoords())
+        saved_turn = game_map.getTurn()
+
+        save_name = unique_save_name("multilevel_z_roundtrip")
+        save_path = Path.cwd() / "save" / f"{save_name}.json"
+        try:
+            game.CMapLoader.save(game_map, save_name)
+
+            loaded_game = game.CGameLoader.loadGame()
+            game.CGameLoader.loadSavedGame(loaded_game, save_name)
+            loaded_map = loaded_game.getMap()
+            loaded_player = loaded_map.getPlayer()
+
+            self.assertEqual("multilevel", loaded_map.mapName)
+            self.assertEqual(saved_coords, coords_tuple(loaded_player.getCoords()))
+            self.assertEqual(saved_turn, loaded_map.getTurn())
+            self.assertTrue(loaded_map.getBoolProperty("used_stairs_up"))
+            self.assertTrue(loaded_map.getBoolProperty("visited_upper_goal"))
+            self.assertIsNotNone(get_player_controller(loaded_player))
+            self.assertIsNotNone(loaded_player.getFightController())
+
+            loaded_stairs_down = find_runtime_object(loaded_map, "stairsDown")
+            drive_player_to_target(
+                loaded_map,
+                loaded_player,
+                loaded_stairs_down.getCoords(),
+                until=lambda: loaded_player.getCoords().z == 0,
+            )
+            self.assertEqual((4, 1, 0), coords_tuple(loaded_player.getCoords()))
+            self.assertTrue(loaded_map.getBoolProperty("used_stairs_down"))
+
+            return True, json.dumps(
+                {
+                    "loaded_player": coords_tuple(loaded_player.getCoords()),
+                    "save_slot": save_name,
+                    "saved_player": saved_coords,
+                    "turn": loaded_map.getTurn(),
+                },
+                sort_keys=True,
+            )
+        finally:
+            save_path.unlink(missing_ok=True)
+
+    @game_test
+    def test_multilevel_map_stale_collision_cache_is_z_scoped(self):
+        game = load_game_module()
+        g, game_map, _player = load_game_map_with_player("multilevel")
+        lower_probe = game.Coords(6, 1, 0)
+        upper_probe = game.Coords(6, 1, 1)
+        self.assertTrue(game_map.canStep(lower_probe))
+        self.assertTrue(game_map.canStep(upper_probe))
+
+        blocker = g.createObject("CEvent")
+        blocker.name = "dynamicZBlocker"
+        blocker.canStep = False
+        game_map.addObject(blocker)
+        try:
+            blocker.moveTo(lower_probe.x, lower_probe.y, lower_probe.z)
+            self.assertFalse(game_map.canStep(lower_probe))
+            self.assertTrue(game_map.canStep(upper_probe))
+            self.assertIn(blocker, game_map.getObjectsAtCoords(lower_probe))
+            self.assertNotIn(blocker, game_map.getObjectsAtCoords(upper_probe))
+
+            blocker.moveTo(upper_probe.x, upper_probe.y, upper_probe.z)
+            self.assertTrue(game_map.canStep(lower_probe))
+            self.assertFalse(game_map.canStep(upper_probe))
+            self.assertNotIn(blocker, game_map.getObjectsAtCoords(lower_probe))
+            self.assertIn(blocker, game_map.getObjectsAtCoords(upper_probe))
+
+            return True, json.dumps(
+                {
+                    "blocker": blocker.getName(),
+                    "lower_probe": coords_tuple(lower_probe),
+                    "upper_probe": coords_tuple(upper_probe),
+                },
+                sort_keys=True,
+            )
+        finally:
+            game_map.removeObject(blocker)
 
     @game_test
     def test_new_player_classes_and_resources(self):
@@ -7720,6 +7985,10 @@ class GameTest(unittest.TestCase):
         return missing_targets == [], json.dumps(missing_targets)
 
     @game_test
+    def test_map_walkthrough_multilevel(self):
+        return execute_walkthrough("multilevel")
+
+    @game_test
     def test_map_walkthrough_nouraajd(self):
         return execute_walkthrough("nouraajd")
 
@@ -9124,6 +9393,7 @@ class PlayBootstrapTest(unittest.TestCase):
 
 class McpServerTest(unittest.TestCase):
     MCP_WALKTHROUGHS = {
+        "multilevel": "_mcp_walkthrough_multilevel",
         "nouraajd": "_mcp_walkthrough_nouraajd",
         "ritual": "_mcp_walkthrough_ritual",
         "siege": "_mcp_walkthrough_siege",
@@ -9264,6 +9534,41 @@ class McpServerTest(unittest.TestCase):
         self.assertEqual(
             response["structuredContent"], {"error": "Method `__getattribute__` is not exported for handle calls"}
         )
+
+    def test_engine_handle_call_scopes_controller_access_to_players(self):
+        server = self.make_stub_server()
+
+        class CCreature:
+            def getController(self):
+                return "creature-controller"
+
+        class CPlayer(CCreature):
+            def getController(self):
+                return "player-controller"
+
+        creature_handle = server._serialize_result(CCreature())
+        creature_response = server._engine_handle_call(
+            {
+                "handle": creature_handle["__handle__"],
+                "method": "getController",
+                "args": [],
+            }
+        )
+        self.assertTrue(creature_response["isError"])
+        self.assertEqual(
+            creature_response["structuredContent"], {"error": "Method `getController` is not exported for handle calls"}
+        )
+
+        player_handle = server._serialize_result(CPlayer())
+        player_response = server._engine_handle_call(
+            {
+                "handle": player_handle["__handle__"],
+                "method": "getController",
+                "args": [],
+            }
+        )
+        self.assertFalse(player_response["isError"])
+        self.assertEqual(player_response["structuredContent"]["result"], "player-controller")
 
     def test_initialize_response_preserves_request_id(self):
         server = self.make_stub_server()
@@ -9525,6 +9830,9 @@ class McpServerTest(unittest.TestCase):
     def test_stdio_map_walkthrough_nouraajd(self):
         self._assert_mcp_walkthrough("nouraajd")
 
+    def test_stdio_map_walkthrough_multilevel(self):
+        self._assert_mcp_walkthrough("multilevel")
+
     def test_stdio_map_walkthrough_ritual(self):
         self._assert_mcp_walkthrough("ritual")
 
@@ -9694,6 +10002,10 @@ class McpServerTest(unittest.TestCase):
             self._mcp_handle_call(session, map_handle, "move")
         return self._mcp_handle_call(session, map_handle, "getTurn")
 
+    def _mcp_pump_event_loop(self, session):
+        loop = self._mcp_engine_call(session, "event_loop.instance")
+        self._mcp_handle_call(session, loop, "run")
+
     def _serialized_objects(self, map_data):
         return map_data.get("properties", {}).get("objects") or []
 
@@ -9734,6 +10046,24 @@ class McpServerTest(unittest.TestCase):
                     quest_ids.append(quest_id)
         return sorted(quest_ids)
 
+    def _mcp_serialized_player_coords(self, session, map_handle):
+        return self._serialized_coords(self._serialized_player(self._mcp_serialized_map(session, map_handle)))
+
+    def _mcp_drive_player_to_target(self, session, map_handle, player_handle, target_handle, *, until, max_turns=24):
+        controller = self._mcp_handle_call(session, player_handle, "getController")
+        target_coords = self._mcp_handle_call(session, target_handle, "getCoords")
+        self._mcp_handle_call(session, controller, "setTarget", [player_handle, target_coords])
+        for _ in range(max_turns):
+            player_coords = self._mcp_serialized_player_coords(session, map_handle)
+            if until(player_coords):
+                return player_coords
+            self._mcp_handle_call(session, map_handle, "move")
+            self._mcp_pump_event_loop(session)
+            player_coords = self._mcp_serialized_player_coords(session, map_handle)
+            if until(player_coords):
+                return player_coords
+        raise AssertionError(f"Player did not satisfy MCP movement predicate after {max_turns} turns.")
+
     def _mcp_walkthrough_test(self, session):
         _, map_handle, player_handle = self._mcp_load_game_map_with_player(session, "test")
         teleporter_1_def = find_map_object_definition("test", "teleporter1")
@@ -9753,12 +10083,72 @@ class McpServerTest(unittest.TestCase):
         after_ground_hole = self._serialized_coords(self._serialized_player(after_ground_hole_map))
 
         self.assertEqual([teleporter_2_def["x"] // 32, teleporter_2_def["y"] // 32, 0], after_teleport)
-        self.assertEqual([ground_hole_def["x"] // 32, ground_hole_def["y"] // 32, 0], after_ground_hole)
+        self.assertEqual([ground_hole_def["x"] // 32, ground_hole_def["y"] // 32, -1], after_ground_hole)
         return {
             "map": "test",
             "teleporter_from": [teleporter_1_def["x"] // 32, teleporter_1_def["y"] // 32, 0],
             "teleporter_to": after_teleport,
             "ground_hole_exit": after_ground_hole,
+        }
+
+    def _mcp_walkthrough_multilevel(self, session):
+        _, map_handle, player_handle = self._mcp_load_game_map_with_player(session, "multilevel")
+        for name in (
+            "stairsUp",
+            "stairsDown",
+            "level0ObjectBlocker",
+            "level1ObjectBlocker",
+            "multilevelUpperGoal",
+            "multilevelLowerGoal",
+        ):
+            find_map_object_definition("multilevel", name)
+
+        initial_map = self._mcp_serialized_map(session, map_handle)
+        initial_player = self._serialized_player(initial_map)
+        self.assertEqual([1, 1, 0], self._serialized_coords(initial_player))
+        self.assertEqual(
+            [4, 1, 0],
+            self._serialized_coords(self._serialized_object_by_name(initial_map, "stairsUp")),
+        )
+        self.assertEqual(
+            [4, 1, 1],
+            self._serialized_coords(self._serialized_object_by_name(initial_map, "stairsDown")),
+        )
+
+        stairs_up = self._mcp_get_object_by_name(session, map_handle, "stairsUp")
+        stairs_down = self._mcp_get_object_by_name(session, map_handle, "stairsDown")
+        upper_goal = self._mcp_get_object_by_name(session, map_handle, "multilevelUpperGoal")
+        lower_goal = self._mcp_get_object_by_name(session, map_handle, "multilevelLowerGoal")
+
+        upper_landing = self._mcp_drive_player_to_target(
+            session, map_handle, player_handle, stairs_up, until=lambda coords: coords == [4, 1, 1]
+        )
+        upper_goal_coords = self._mcp_drive_player_to_target(
+            session, map_handle, player_handle, upper_goal, until=lambda coords: coords == [6, 4, 1]
+        )
+        lower_landing = self._mcp_drive_player_to_target(
+            session, map_handle, player_handle, stairs_down, until=lambda coords: coords == [4, 1, 0]
+        )
+        lower_goal_coords = self._mcp_drive_player_to_target(
+            session, map_handle, player_handle, lower_goal, until=lambda coords: coords == [6, 5, 0]
+        )
+
+        flags = {
+            "used_stairs_up": self._mcp_handle_call(session, map_handle, "getBoolProperty", ["used_stairs_up"]),
+            "used_stairs_down": self._mcp_handle_call(session, map_handle, "getBoolProperty", ["used_stairs_down"]),
+            "visited_upper_goal": self._mcp_handle_call(session, map_handle, "getBoolProperty", ["visited_upper_goal"]),
+            "visited_lower_goal": self._mcp_handle_call(session, map_handle, "getBoolProperty", ["visited_lower_goal"]),
+        }
+        for value in flags.values():
+            self.assertTrue(value)
+
+        return {
+            "map": "multilevel",
+            **flags,
+            "lower_goal": lower_goal_coords,
+            "lower_landing": lower_landing,
+            "upper_goal": upper_goal_coords,
+            "upper_landing": upper_landing,
         }
 
     def _mcp_walkthrough_nouraajd(self, session):

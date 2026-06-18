@@ -204,18 +204,27 @@ std::shared_ptr<CTile> CMap::getTile(Coords coords) { return this->getTile(coord
 
 bool CMap::canStep(int x, int y, int z) {
     Coords coords = normalizeCoords(Coords(x, y, z));
-    auto it = this->tiles.find(coords);
     for (const auto &object : getObjectsAtCoords(coords)) {
         if (!object->getCanStep()) {
             return false;
         }
     }
+    auto it = this->tiles.find(coords);
     if (it != this->tiles.end()) {
         return (*it).second->canStep();
     }
-    const int x_bound = vstd::ctn(xBounds, z) ? xBounds.at(z) : 0;
-    const int y_bound = vstd::ctn(yBounds, z) ? yBounds.at(z) : 0;
-    return !(coords.x < 0 || coords.y < 0 || coords.x > x_bound || coords.y > y_bound);
+    if (!getGame()) {
+        const int x_bound = vstd::ctn(xBounds, z) ? xBounds.at(z) : 0;
+        const int y_bound = vstd::ctn(yBounds, z) ? yBounds.at(z) : 0;
+        return !(coords.x < 0 || coords.y < 0 || coords.x > x_bound || coords.y > y_bound);
+    }
+    const auto tile_type =
+        hasBounds(z) && (coords.x < 0 || coords.y < 0 || coords.x > xBounds.at(z) || coords.y > yBounds.at(z))
+            ? (vstd::ctn(outOfBoundsTiles, z) && !outOfBoundsTiles.at(z).empty() ? outOfBoundsTiles.at(z)
+                                                                                 : "MountainTile")
+            : (vstd::ctn(defaultTiles, z) && !defaultTiles.at(z).empty() ? defaultTiles.at(z) : "GrassTile");
+    auto tile = getGame()->createObject<CTile>(tile_type);
+    return tile && tile->canStep();
 }
 
 bool CMap::canStep(Coords coords) { return canStep(coords.x, coords.y, coords.z); }
