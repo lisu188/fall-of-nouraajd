@@ -143,30 +143,40 @@ else ()
     set(GAME_MODULE_SRC ${CMAKE_SOURCE_DIR}/src/core/CModule.cpp)
 endif ()
 
-add_library(game_core SHARED ${GAME_CORE_SRC})
-configure_cpp_target(game_core)
-set_target_properties(game_core PROPERTIES
-    OUTPUT_NAME "game_core"
-)
-if (GAME_ENABLE_UNITY_BUILD)
-    set_target_properties(game_core PROPERTIES
-        UNITY_BUILD ON
-        UNITY_BUILD_BATCH_SIZE ${GAME_UNITY_BATCH_SIZE}
-    )
-endif ()
-if (GAME_ENABLE_PCH)
-    target_precompile_headers(game_core PRIVATE "${CMAKE_SOURCE_DIR}/src/core/CGlobal.h")
-endif ()
-target_compile_definitions(game_core PRIVATE
-    GAME_CORE_BUILD
-)
-target_link_libraries(game_core PRIVATE
+set(GAME_CORE_LINK_LIBS
     Python3::Python
     pybind11::headers
     ${SDL2_LIBS}
     ${SDL2_IMAGE_LIBS}
     ${SDL2_TTF_LIBS}
     ${CMAKE_DL_LIBS}
+)
+
+add_library(game_core_objects OBJECT ${GAME_CORE_SRC})
+configure_cpp_target(game_core_objects)
+set_target_properties(game_core_objects PROPERTIES
+    POSITION_INDEPENDENT_CODE ON
+)
+if (GAME_ENABLE_UNITY_BUILD)
+    set_target_properties(game_core_objects PROPERTIES
+        UNITY_BUILD ON
+        UNITY_BUILD_BATCH_SIZE ${GAME_UNITY_BATCH_SIZE}
+    )
+endif ()
+if (GAME_ENABLE_PCH)
+    target_precompile_headers(game_core_objects PRIVATE "${CMAKE_SOURCE_DIR}/src/core/CGlobal.h")
+endif ()
+target_compile_definitions(game_core_objects PRIVATE
+    GAME_CORE_BUILD
+)
+target_link_libraries(game_core_objects PRIVATE ${GAME_CORE_LINK_LIBS})
+
+add_library(game_core SHARED $<TARGET_OBJECTS:game_core_objects>)
+set_target_properties(game_core PROPERTIES
+    OUTPUT_NAME "game_core"
+)
+target_link_libraries(game_core PRIVATE
+    ${GAME_CORE_LINK_LIBS}
 )
 
 pybind11_add_module(_game NO_EXTRAS ${GAME_MODULE_SRC})
@@ -500,15 +510,6 @@ endif ()
 enable_testing()
 
 set(GAME_UNIT_TEST_TARGETS)
-set(GAME_UNIT_TEST_SUPPORT_SRC)
-if (NOT CMAKE_SYSTEM_NAME STREQUAL "Linux")
-    list(APPEND GAME_UNIT_TEST_SUPPORT_SRC
-        src/core/CTags.cpp
-        src/core/CUtil.cpp
-        src/core/CPathFinder.cpp
-        src/core/CFuture.cpp
-    )
-endif ()
 
 if (WIN32)
     get_filename_component(TEST_PYTHONHOME "${Python3_EXECUTABLE}" DIRECTORY)
@@ -519,8 +520,8 @@ endif ()
 
 function(add_game_unit_test target_name)
     add_executable(${target_name} ${ARGN})
-    if (GAME_UNIT_TEST_SUPPORT_SRC)
-        target_sources(${target_name} PRIVATE ${GAME_UNIT_TEST_SUPPORT_SRC})
+    if (WIN32)
+        target_sources(${target_name} PRIVATE $<TARGET_OBJECTS:game_core_objects>)
     endif ()
 
     configure_cpp_target(${target_name})
@@ -531,7 +532,7 @@ function(add_game_unit_test target_name)
         ${SDL2_IMAGE_LIBS}
         ${SDL2_TTF_LIBS}
     )
-    if (CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    if (NOT WIN32)
         target_link_libraries(${target_name} PRIVATE game_core)
     endif ()
 
