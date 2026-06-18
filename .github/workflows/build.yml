@@ -137,6 +137,7 @@ jobs:
       SCCACHE_SHA256: dcf489090aa5ef4c7d145e8b29f759124c803d636c3107f397bd50d425b5f341
       SCCACHE_VERSION: "0.15.0"
       VCPKG_BINARY_SOURCES: clear;x-gha,readwrite
+      VCPKG_ALLOW_MODIFIED_INSTALLED_CACHE: "1"
       VCPKG_INSTALLED_DIR: ${{ github.workspace }}\vcpkg_installed\fast
       VCPKG_OVERLAY_TRIPLETS: ${{ github.workspace }}\cmake\triplets
       VCPKG_TARGET_TRIPLET: x64-windows-release
@@ -287,6 +288,11 @@ jobs:
             "The following packages will be installed",
             "The following packages will be rebuilt"
           ) -join "|"
+          $packageActionLines = @($dryRunOutput | Where-Object { $_ -match "^\s{2}(\* )?[A-Za-z0-9_.-]+:" })
+          $hasOnlyModifiedPackageActions = $packageActionLines.Count -gt 0 -and -not (
+            $packageActionLines | Where-Object { $_ -notmatch "^\s{2}\* " }
+          )
+          $allowModifiedOnly = $env:VCPKG_ALLOW_MODIFIED_INSTALLED_CACHE -eq "1"
 
           if ($missing.Count -gt 0) {
             "valid=false" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
@@ -296,9 +302,15 @@ jobs:
             "vcpkg dry-run validation failed with exit code $dryRunExit."
             $dryRunText
           } elseif ($dryRunText -match $needsInstallPattern) {
-            "valid=false" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
-            "vcpkg installed cache is incomplete; dry-run would install additional packages."
-            $dryRunText
+            if ($allowModifiedOnly -and $hasOnlyModifiedPackageActions) {
+              "valid=true" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+              "vcpkg installed cache has runner-local ABI metadata drift; required files are present."
+              $dryRunText
+            } else {
+              "valid=false" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+              "vcpkg installed cache is incomplete; dry-run would install additional packages."
+              $dryRunText
+            }
           } elseif ($dryRunText -notmatch "The following packages are already installed") {
             "valid=false" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
             "vcpkg dry-run did not confirm that all requested packages are already installed."
@@ -368,10 +380,29 @@ jobs:
           key: ${{ needs.windows-deps.outputs.vcpkg-installed-cache-key }}
       - *validate-vcpkg-installed
       - name: Require vcpkg installed cache
-        if: steps.validate-vcpkg-installed.outputs.valid != 'true'
+        if: steps.restore-vcpkg-installed.outputs.cache-hit != 'true'
         shell: pwsh
         run: |
           throw "windows-deps did not seed a valid vcpkg installed cache for key '${{ needs.windows-deps.outputs.vcpkg-installed-cache-key }}'."
+      - name: Repair vcpkg installed tree
+        id: repair-vcpkg-installed
+        if: steps.restore-vcpkg-installed.outputs.cache-hit == 'true' && steps.validate-vcpkg-installed.outputs.valid != 'true'
+        shell: pwsh
+        timeout-minutes: 10
+        run: |
+          "Restored vcpkg installed tree needs runner-local repair; running vcpkg install with x-gha binary cache."
+          & "$env:VCPKG_ROOT\vcpkg.exe" install `
+            --triplet "$env:VCPKG_TARGET_TRIPLET" `
+            --overlay-triplets "$env:VCPKG_OVERLAY_TRIPLETS" `
+            "--x-install-root=$env:VCPKG_INSTALLED_DIR"
+          "repaired=true" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+      - name: Save repaired vcpkg installed tree
+        if: steps.repair-vcpkg-installed.outputs.repaired == 'true'
+        continue-on-error: true
+        uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830
+        with:
+          path: ${{ env.VCPKG_INSTALLED_DIR }}
+          key: ${{ needs.windows-deps.outputs.vcpkg-installed-cache-key }}-windows
       - name: Cache sccache
         uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830
         with:
