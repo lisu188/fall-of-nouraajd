@@ -19,9 +19,7 @@
         "85",
         "133",
         "150",
-        "220-221",
         "307",
-        "333-334",
         "399-400",
         "416",
         "457",
@@ -131,6 +129,7 @@
       "reason": "Reviewed legacy uncovered branch baseline; unreviewed coverage changes remain visible in the 95% scoped line gate.",
       "ranges": [
         "53",
+        "64",
         "90",
         "98",
         "100-101",
@@ -138,24 +137,33 @@
         "146-147",
         "154",
         "236",
+        "262",
         "286",
         "289",
         "385",
+        "411",
         "448",
         "460",
         "511",
         "518",
         "521",
+        "537",
         "547",
         "553",
+        "573",
         "578",
         "583-584",
         "596",
+        "604",
         "620",
+        "647",
         "687",
+        "714",
         "719",
         "723",
-        "730"
+        "730",
+        "750",
+        "757"
       ]
     },
     {
@@ -296,33 +304,18 @@
       "path": "src/core/CSerialization.cpp",
       "reason": "Reviewed legacy uncovered branch baseline; unreviewed coverage changes remain visible in the 95% scoped line gate.",
       "ranges": [
-        "106",
         "149",
-        "164-165",
         "181-182",
         "231",
         "275",
-        "281-282",
-        "284",
         "301",
         "316",
         "338",
         "344",
         "352",
-        "356",
         "364",
         "370",
-        "387",
-        "402-403",
-        "405-406",
-        "409",
-        "411",
-        "415",
-        "417",
-        "421",
-        "423",
-        "427",
-        "429"
+        "387"
       ]
     },
     {
@@ -330,8 +323,7 @@
       "reason": "Reviewed legacy uncovered branch baseline; unreviewed coverage changes remain visible in the 95% scoped line gate.",
       "ranges": [
         "222",
-        "238",
-        "243"
+        "238"
       ]
     },
     {
@@ -370,17 +362,9 @@
       "path": "src/gui/CAnimation.cpp",
       "reason": "Reviewed legacy uncovered branch baseline; unreviewed coverage changes remain visible in the 95% scoped line gate.",
       "ranges": [
-        "40",
-        "44-45",
-        "95",
-        "99",
         "106",
         "109",
-        "123-124",
         "136",
-        "141-142",
-        "148-152",
-        "156-160",
         "181"
       ]
     },
@@ -432,7 +416,6 @@
         "71",
         "77-79",
         "81",
-        "104-105",
         "115",
         "133-134",
         "141-142",
@@ -590,7 +573,6 @@
       "ranges": [
         "36",
         "41-43",
-        "49",
         "64",
         "69-71",
         "76",
@@ -630,11 +612,9 @@
       "path": "src/gui/panel/CGameInventoryPanel.cpp",
       "reason": "Reviewed legacy uncovered branch baseline; unreviewed coverage changes remain visible in the 95% scoped line gate.",
       "ranges": [
-        "38-44",
+        "41-44",
         "53",
-        "82",
-        "108-112",
-        "114"
+        "82"
       ]
     },
     {
@@ -693,7 +673,6 @@
         "173-175",
         "187-190",
         "211-214",
-        "228",
         "265",
         "308"
       ]
