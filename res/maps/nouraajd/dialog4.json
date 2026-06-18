@@ -141,7 +141,7 @@
           "class": "CDialogState",
           "properties": {
             "stateId": "VICTOR_CLUE",
-            "text": "Among dusty ledgers you find a note on the Cult of Marumi Baso. A decade ago they concealed their chapel behind a wooden door in the courtyard between the tavern, town hall, and chapel. The author swears they sacrifice girls who resemble their dead prophet's daughter to preserve a stained glass and stretch the prophet's unnatural life. If Victor's child is there, breaking into the courtyard starts the last desperate count.",
+            "text": "Among dusty ledgers you find a note on the Cult of Marumi Baso. A decade ago they concealed their chapel behind a wooden door in the courtyard between the tavern, town hall, and chapel. The author swears they sacrifice girls who resemble their dead prophet's daughter to preserve a stained glass and stretch the prophet's unnatural life. If Victor's child is there, the rite has already begun.",
             "options": [
               {
                 "class": "CDialogOption",
