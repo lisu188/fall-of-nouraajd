@@ -153,11 +153,12 @@ std::string CGuiHandler::showSelection(std::shared_ptr<CListString> list) {
         widget->setText(item);
 
         std::shared_ptr<CLayout> layout = game->createObject<CLayout>("CLayout");
-        int percentSize = 100.0 / values.size();
+        const int y0 = 100 * i / values.size();
+        const int y1 = 100 * (i + 1) / values.size();
         layout->setX(vstd::str(0) + "%");
-        layout->setY(vstd::str(percentSize * i) + "%");
+        layout->setY(vstd::str(y0) + "%");
         layout->setW(vstd::str(100) + "%");
-        layout->setH(vstd::str(percentSize) + "%");
+        layout->setH(vstd::str(y1 - y0) + "%");
         widget->setLayout(layout);
         widgets.insert(widget);
         i++;

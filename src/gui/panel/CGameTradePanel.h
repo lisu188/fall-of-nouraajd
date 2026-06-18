@@ -1,6 +1,6 @@
 /*
 fall-of-nouraajd c++ dark fantasy game
-Copyright (C) 2025  Andrzej Lis
+Copyright (C) 2025-2026  Andrzej Lis
 
 This program is free software: you can redistribute it and/or modify
         it under the terms of the GNU General Public License as published by
@@ -63,6 +63,10 @@ class CGameTradePanel : public CGamePanel {
 
     void finalizeBuy(std::shared_ptr<CGui> shared_ptr);
 
+    int getTotalSellCost();
+
+    int getTotalBuyCost();
+
   private:
     std::shared_ptr<CMarket> market;
     std::list<std::weak_ptr<CItem>> selectedInventory;
@@ -75,10 +79,6 @@ class CGameTradePanel : public CGamePanel {
     void selectMarket(std::weak_ptr<CItem> selection);
 
     void selectInventory(std::weak_ptr<CItem> selection);
-
-    int getTotalSellCost();
-
-    int getTotalBuyCost();
 
     // TODO: should be not unique collection. items get merged
     std::set<std::string> getItemNames(std::list<std::weak_ptr<CItem>> items);
