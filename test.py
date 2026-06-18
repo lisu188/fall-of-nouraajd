@@ -38,6 +38,7 @@ from http import HTTPStatus
 from pathlib import Path
 import unittest
 
+import game_simulation
 import mcp
 
 REPO_ROOT = Path(__file__).resolve().parent
@@ -10354,6 +10355,126 @@ class GameTest(unittest.TestCase):
         return missing_tests == [], json.dumps(summary)
 
     @game_test
+    def test_game_simulation_nouraajd_quest_walkthrough(self):
+        simulation = game_simulation.GameSimulation.startGame(load_game_module(), "nouraajd", DEFAULT_PLAYER)
+        result = simulation.runSteps(
+            [
+                {"action": "interact_object", "object": "cave1", "name": "recover Rolf skull"},
+                {"action": "move_to_object", "object": "nouraajdSign", "mode": "direct", "name": "stand at gate sign"},
+                {"action": "interact_object", "object": "gooby1", "name": "defeat Gooby"},
+                {"action": "interact_object", "object": "catacombs", "name": "recover relic"},
+                {"action": "interact_object", "object": "cave2", "name": "clear OctoBogz"},
+                {"action": "assert_map_bool", "property": "completed_rolf"},
+                {"action": "assert_map_bool", "property": "completed_gooby"},
+                {"action": "assert_map_bool", "property": "OCTOBOGZ_SLAIN"},
+                {"action": "assert_inventory_contains", "item": "skullOfRolf"},
+                {"action": "assert_inventory_contains", "item": "holyRelic"},
+            ]
+        )
+
+        flag_state = simulation.readMapState(
+            include_objects=False,
+            bool_flags=["completed_rolf", "completed_gooby", "OCTOBOGZ_SLAIN"],
+            string_properties=["quest_state_rolf", "quest_state_main", "quest_state_beren_chain"],
+        )
+        summary = {
+            "steps": [step["step"] for step in result["steps"]],
+            "approaches": [
+                step["result"].get("approach") for step in result["steps"] if step["action"] == "interact_object"
+            ],
+            "flags": flag_state["boolFlags"],
+            "quest_states": flag_state["stringProperties"],
+            "inventory": [item["name"] for item in simulation.readInventory()],
+            "quest_log": simulation.readQuestLog(),
+        }
+        ok = (
+            flag_state["boolFlags"]["completed_rolf"]
+            and flag_state["boolFlags"]["completed_gooby"]
+            and flag_state["boolFlags"]["OCTOBOGZ_SLAIN"]
+            and "skullOfRolf" in summary["inventory"]
+            and "holyRelic" in summary["inventory"]
+            and flag_state["stringProperties"]["quest_state_rolf"] == "skull_recovered"
+            and flag_state["stringProperties"]["quest_state_main"] == "gooby_slain"
+            and all(
+                step["result"].get("approach")
+                and step["result"]["approach"]["target"] == step["result"]["object"]["coords"]
+                and step["result"]["approach"]["distance"] <= 1
+                for step in result["steps"]
+                if step["action"] == "interact_object"
+            )
+        )
+        return ok, json.dumps(summary, sort_keys=True)
+
+    @game_test
+    def test_game_simulation_gui_tree_and_screenshot_helpers(self):
+        simulation = game_simulation.GameSimulation.startGame(
+            load_game_module(),
+            "test",
+            DEFAULT_PLAYER,
+            load_gui=True,
+        )
+        panel_result = simulation.openPanel("inventoryPanel")
+        screenshot_path = TEST_OUTPUT_DIR / "simulation_inventory_panel.png"
+
+        def write_test_screenshot(path, _gui):
+            from PIL import Image
+
+            Image.new("RGBA", (320, 200), (31, 47, 63, 255)).save(path)
+            return None, 320, 200
+
+        screenshot = simulation.captureGuiScreenshot(screenshot_path, write_test_screenshot)
+        from PIL import Image
+
+        with Image.open(screenshot_path) as image:
+            image.load()
+            loaded_size = image.size
+        inline_screenshot = simulation.runSteps(
+            [{"action": "capture_gui_screenshot", "name": "capture inline screenshot"}]
+        )["steps"][0]["result"]
+        ok = (
+            "CGameInventoryPanel" in panel_result["guiClasses"]
+            and simulation.guiContainsClass("CGameInventoryPanel")
+            and screenshot["suffix"] == ".png"
+            and screenshot["bytes"] > 0
+            and screenshot["width"] == 320
+            and screenshot["height"] == 200
+            and loaded_size == (320, 200)
+            and inline_screenshot["suffix"] == ".png"
+            and inline_screenshot["bytes"] > 0
+            and inline_screenshot["width"] > 0
+            and inline_screenshot["height"] > 0
+            and len(inline_screenshot["pngBase64"]) > 0
+        )
+        return ok, json.dumps(
+            {
+                "panel": panel_result,
+                "screenshot": screenshot,
+                "inline_screenshot": {
+                    key: (len(value) if key == "pngBase64" else value) for key, value in inline_screenshot.items()
+                },
+            },
+            sort_keys=True,
+        )
+
+    @game_test
+    def test_game_simulation_errors_include_step_and_state(self):
+        simulation = game_simulation.GameSimulation.startGame(load_game_module(), "test", DEFAULT_PLAYER)
+        try:
+            simulation.runSteps(
+                [{"action": "move_to_object", "object": "missingSimulationTarget", "name": "missing target"}]
+            )
+        except game_simulation.SimulationError as exc:
+            payload = exc.asDict()
+            ok = (
+                payload["step"] == "missing target"
+                and "missingSimulationTarget" in payload["error"]
+                and payload["state"].get("map") == "test"
+                and "player" in payload["state"]
+            )
+            return ok, json.dumps(payload, sort_keys=True)
+        return False, "SimulationError was not raised"
+
+    @game_test
     def test_json_validity(self):
         errors = []
         for path in (REPO_ROOT / "res").rglob("*.json"):
@@ -13514,6 +13635,53 @@ class McpServerTest(unittest.TestCase):
         }
         self.assertTrue({"getTransitionStateName", "requestMapChange"}.issubset(method_names))
 
+    def test_simulation_run_tool_executes_nouraajd_steps(self):
+        server = mcp.EngineMcpServer(repo_root=REPO_ROOT, build_dir=build_dir)
+        server.import_modules()
+
+        result = server._call_tool(
+            {
+                "name": "simulation_run",
+                "arguments": {
+                    "map": "nouraajd",
+                    "player_class": DEFAULT_PLAYER,
+                    "steps": [
+                        {"action": "interact_object", "object": "cave1", "name": "recover Rolf skull"},
+                        {"action": "interact_object", "object": "gooby1", "name": "defeat Gooby"},
+                        {"action": "interact_object", "object": "catacombs", "name": "recover relic"},
+                        {"action": "interact_object", "object": "cave2", "name": "clear OctoBogz"},
+                        {
+                            "action": "read_map_state",
+                            "include_objects": False,
+                            "bool_flags": ["completed_rolf", "completed_gooby", "OCTOBOGZ_SLAIN"],
+                        },
+                        {"action": "assert_inventory_contains", "item": "skullOfRolf"},
+                        {"action": "assert_inventory_contains", "item": "holyRelic"},
+                    ],
+                },
+            },
+            transport="stdio",
+            session_id=None,
+        )
+
+        self.assertFalse(result["isError"], result["structuredContent"])
+        structured = result["structuredContent"]
+        self.assertEqual("nouraajd", structured["map"])
+        inventory_names = {item["name"] for item in structured["inventory"]}
+        self.assertTrue({"skullOfRolf", "holyRelic"}.issubset(inventory_names))
+        self.assertTrue(
+            all(
+                step["result"].get("approach")
+                and step["result"]["approach"]["target"] == step["result"]["object"]["coords"]
+                and step["result"]["approach"]["distance"] <= 1
+                for step in structured["steps"][:4]
+            )
+        )
+        flag_step = structured["steps"][4]["result"]["boolFlags"]
+        self.assertTrue(flag_step["completed_rolf"])
+        self.assertTrue(flag_step["completed_gooby"])
+        self.assertTrue(flag_step["OCTOBOGZ_SLAIN"])
+
     def test_engine_call_resolves_handle_arguments_for_python_methods(self):
         server = self.make_stub_server()
 
@@ -13667,7 +13835,7 @@ class McpServerTest(unittest.TestCase):
         self.assertEqual(batch_response[0].get("id"), 2)
         tools = batch_response[0].get("result", {}).get("tools", [])
         tool_names = {tool.get("name") for tool in tools}
-        self.assertTrue({"engine_list", "engine_call", "engine_handle_call"}.issubset(tool_names))
+        self.assertTrue({"engine_list", "engine_call", "engine_handle_call", "simulation_run"}.issubset(tool_names))
 
     def test_map_design_brief_summarizes_selected_map_hooks(self):
         server = self.make_stub_server()
@@ -13850,7 +14018,7 @@ class McpServerTest(unittest.TestCase):
             self.assertEqual(tools_response.get("id"), 2)
             tools = tools_response.get("result", {}).get("tools", [])
             tool_names = {tool.get("name") for tool in tools}
-            self.assertTrue({"engine_list", "engine_call", "engine_handle_call"}.issubset(tool_names))
+            self.assertTrue({"engine_list", "engine_call", "engine_handle_call", "simulation_run"}.issubset(tool_names))
 
             game_handle = self._call_tool(proc, 3, "engine_call", {"name": "CGameLoader.loadGame"})["result"]
             self._call_tool(proc, 4, "engine_call", {"name": "CGameLoader.loadGui", "args": [game_handle]})

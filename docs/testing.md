@@ -72,6 +72,16 @@ python3 test.py --suite full
 Use `--jobs <n>` with any suite to enable the existing sharded runner, for example
 `python3 test.py --suite gameplay --jobs "$(nproc)"`.
 
+## Deterministic simulation helpers
+Use `game_simulation.py` for new Python gameplay walkthroughs that need stable setup, bounded movement, object
+interaction, map/inventory/quest inspection, GUI tree assertions, or screenshot capture callbacks. The helper raises
+`SimulationError` with the failed step and a compact current-state snapshot when a step cannot complete.
+
+Codex and MCP workflows can use the `simulation_run` MCP tool for the same high-level step model without raw handle
+or method calls. `capture_gui_screenshot` returns PNG metadata and inline base64 data for MCP callers instead of
+writing arbitrary server-side paths. Prefer this layer for new walkthrough coverage, then drop to `engine_call` or
+`engine_handle_call` only when the helper does not expose the needed engine operation.
+
 ## Native performance guards
 The deterministic native performance guard suite is built with the `performance_guard_tests` target and run through
 CTest label `performance`:
