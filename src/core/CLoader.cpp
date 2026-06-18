@@ -694,10 +694,13 @@ void repair_recovered_backup(const SaveLoadResult &loaded, const std::string &sl
     }
     const auto primaryPath = CSaveFormat::primaryPath(slotName);
     std::error_code errorCode;
-    std::filesystem::remove(primaryPath, errorCode);
-    if (errorCode) {
+    const auto resolvedPrimaryPath = CResourcesProvider::getInstance()->getPath(primaryPath);
+    if (!resolvedPrimaryPath.empty()) {
+        std::filesystem::remove(resolvedPrimaryPath, errorCode);
+    }
+    if (!resolvedPrimaryPath.empty() && errorCode) {
         vstd::logger::warning("Recovered backup primary repair could not remove rejected primary:", slotName,
-                              primaryPath, "reason:", errorCode.message());
+                              primaryPath, "resolved:", resolvedPrimaryPath, "reason:", errorCode.message());
         return;
     }
     if (CResourcesProvider::getInstance()->save(primaryPath, backupBytes)) {
@@ -822,9 +825,25 @@ std::set<std::string> getConfigPaths(const std::string &mapName) {
         return {};
     }
 
-    return CUtil::findFiles("maps/" + mapName, [](auto path) {
-        return vstd::ends_with(path, ".json") && !vstd::ends_with(path, "map.json");
-    });
+    const auto logicalMapPath = "maps/" + mapName;
+    const auto resolvedMapPath = CResourcesProvider::getInstance()->getPath(logicalMapPath);
+    std::error_code errorCode;
+    if (resolvedMapPath.empty() || !std::filesystem::is_directory(resolvedMapPath, errorCode)) {
+        vstd::logger::warning("Map config directory is missing:", logicalMapPath, "resolved:", resolvedMapPath);
+        return {};
+    }
+
+    std::set<std::string> configPaths;
+    for (const auto &entry : std::filesystem::directory_iterator(resolvedMapPath)) {
+        if (!entry.is_regular_file(errorCode)) {
+            continue;
+        }
+        const auto filename = entry.path().filename().generic_string();
+        if (vstd::ends_with(filename, ".json") && filename != "map.json") {
+            configPaths.insert(vstd::join({logicalMapPath, "/", filename}, ""));
+        }
+    }
+    return configPaths;
 }
 
 std::string getScriptPath(std::string mapName) {

@@ -8559,18 +8559,27 @@ class GameTest(unittest.TestCase):
         game = load_game_module()
         provider = game.CResourcesProvider.getInstance()
 
-        samples = {
+        text_samples = {
             "config/tiles.json": "GroundTile",
             "maps/test/map.json": '"layers"',
             "plugins/effect.py": "def load",
         }
         resolved = {}
-        for resource_path, needle in samples.items():
+        for resource_path, needle in text_samples.items():
             full_path = provider.getPath(resource_path)
             self.assertTrue(full_path, resource_path)
             self.assertTrue(Path(full_path).exists(), full_path)
             self.assertIn(needle, provider.load(resource_path), resource_path)
             resolved[resource_path] = full_path
+
+        for resource_path in ("fonts/ampersand.ttf", "images/item.png"):
+            full_path = provider.getPath(resource_path)
+            self.assertTrue(full_path, resource_path)
+            self.assertTrue(Path(full_path).exists(), full_path)
+            resolved[resource_path] = full_path
+
+        resource_root = Path(provider.getPath("config/items.json")).parents[1]
+        self.assertIn("test", provider.getFiles("MAP"))
 
         with tempfile.TemporaryDirectory() as tmp_dir:
             tmp_path = Path(tmp_dir)
@@ -8580,15 +8589,54 @@ class GameTest(unittest.TestCase):
                 "def load(context):\n    raise RuntimeError('untrusted cwd plugin executed')\n",
                 encoding="utf-8",
             )
+            (tmp_path / "maps" / "test").mkdir(parents=True)
+            (tmp_path / "maps" / "test" / "config.json").write_text("{}", encoding="utf-8")
+            (tmp_path / "maps" / "zzFake").mkdir(parents=True)
+            (tmp_path / "images").mkdir()
+            (tmp_path / "images" / "item.png").write_text("not a packaged texture", encoding="utf-8")
+            (tmp_path / "fonts").mkdir()
+            (tmp_path / "fonts" / "ampersand.ttf").write_text("not a packaged font", encoding="utf-8")
+            (tmp_path / "save").mkdir()
+            save_name = unique_save_name("provider_root_cwd")
+            provider_save_path = resource_root / "save" / f"{save_name}.json"
+            provider_backup_path = resource_root / "save" / f"{save_name}.json.bak"
+            cwd_save_path = tmp_path / "save" / f"{save_name}.json"
 
             original_cwd = Path.cwd()
             try:
+                provider_save_path.unlink(missing_ok=True)
+                provider_backup_path.unlink(missing_ok=True)
                 os.chdir(tmp_path)
                 self.assertFalse(provider.getPath("plugins/aardvark.py"))
                 self.assertNotIn("plugins/aardvark.py", provider.getFiles("PLUGIN"))
-                game.CGameLoader.loadGame()
+                self.assertNotIn("zzFake", provider.getFiles("MAP"))
+
+                g = game.CGameLoader.loadGame()
+                game.CGameLoader.loadGui(g)
+                game.CGameLoader.startGameWithPlayer(g, "test", "Warrior")
+                self.assertEqual("test", g.getMap().mapName)
+
+                panel = g.getGuiHandler().openPanel("questionPanel")
+                panel.setStringProperty("question", "Provider font smoke")
+                static_object = g.createObject("CGameObject")
+                static_object.animation = "images/item"
+                static_animation = g.createObject("CStaticAnimation")
+                static_animation.setObject(static_object)
+                static_animation.renderObject(g.getGui(), 0, 0, 24, 24, 0)
+                pump_event_loop(5)
+
+                game.CMapLoader.save(g.getMap(), save_name)
+                self.assertTrue(provider_save_path.exists(), provider_save_path)
+                self.assertFalse(cwd_save_path.exists(), cwd_save_path)
+                self.assertEqual(provider_save_path.resolve(), Path(provider.getPath(f"save/{save_name}.json")))
+
+                loaded_game = game.CGameLoader.loadGame()
+                game.CGameLoader.loadSavedGame(loaded_game, save_name)
+                self.assertEqual("test", loaded_game.getMap().mapName)
             finally:
                 os.chdir(original_cwd)
+                provider_save_path.unlink(missing_ok=True)
+                provider_backup_path.unlink(missing_ok=True)
 
         return True, json.dumps(resolved, sort_keys=True)
 
@@ -12858,16 +12906,20 @@ class XvfbGameplayProcessTest(unittest.TestCase):
 
 
 class PlayBootstrapTest(unittest.TestCase):
-    def _load_play_function(self, function_name):
+    def _load_play_namespace(self, script_path=None):
+        script_path = script_path or (REPO_ROOT / "play.py")
         module = ast.parse((REPO_ROOT / "play.py").read_text())
-        function_node = next(
-            node for node in module.body if isinstance(node, ast.FunctionDef) and node.name == function_name
+        isolated_module = ast.Module(
+            body=[node for node in module.body if isinstance(node, ast.FunctionDef)],
+            type_ignores=[],
         )
-        isolated_module = ast.Module(body=[function_node], type_ignores=[])
         ast.fix_missing_locations(isolated_module)
-        namespace = {"os": os, "Path": Path}
+        namespace = {"os": os, "Path": Path, "sys": sys, "__file__": str(script_path)}
         exec(compile(isolated_module, str(REPO_ROOT / "play.py"), "exec"), namespace)
-        return namespace[function_name]
+        return namespace
+
+    def _load_play_function(self, function_name):
+        return self._load_play_namespace()[function_name]
 
     def test_ensure_workdir_switches_to_trusted_dir_even_when_cwd_has_config(self):
         ensure_workdir = self._load_play_function("_ensure_workdir")
@@ -12888,6 +12940,44 @@ class PlayBootstrapTest(unittest.TestCase):
                 self.assertEqual(trusted_dir, Path.cwd())
             finally:
                 os.chdir(original_cwd)
+
+    def test_bootstrap_uses_packaged_resource_root_without_res_directory(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            package_root = Path(tmpdir) / "package"
+            for resource_dir in ("config", "maps", "plugins"):
+                (package_root / resource_dir).mkdir(parents=True)
+
+            namespace = self._load_play_namespace(package_root / "play.py")
+            original_cwd = Path.cwd()
+            original_sys_path = list(sys.path)
+            try:
+                namespace["_bootstrap"]()
+                self.assertEqual(package_root, Path.cwd())
+                self.assertEqual(str(package_root), sys.path[0])
+            finally:
+                os.chdir(original_cwd)
+                sys.path[:] = original_sys_path
+
+    def test_bootstrap_uses_build_dir_for_source_tree_run(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            source_root = Path(tmpdir) / "source"
+            build_root = source_root / "cmake-build-release"
+            resource_root = source_root / "res"
+            build_root.mkdir(parents=True)
+            for resource_dir in ("config", "maps", "plugins"):
+                (resource_root / resource_dir).mkdir(parents=True)
+
+            namespace = self._load_play_namespace(source_root / "play.py")
+            original_cwd = Path.cwd()
+            original_sys_path = list(sys.path)
+            try:
+                namespace["_bootstrap"]()
+                self.assertEqual(build_root, Path.cwd())
+                self.assertIn(str(build_root), sys.path)
+                self.assertIn(str(resource_root), sys.path)
+            finally:
+                os.chdir(original_cwd)
+                sys.path[:] = original_sys_path
 
 
 class CoverageReportTest(unittest.TestCase):
@@ -13434,6 +13524,44 @@ class McpServerTest(unittest.TestCase):
         self.assertIn("free_captive", dialog_actions["CapturedSoulDialog"])
         catalog_names = {item["name"] for item in brief["resourceCatalog"]}
         self.assertIn("items", catalog_names)
+
+    def test_map_design_brief_uses_packaged_resource_root(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            package_root = Path(tmpdir) / "package"
+            repo_root = Path(tmpdir) / "source"
+            package_map = package_root / "maps" / "packaged"
+            for resource_dir in ("config", "plugins"):
+                (package_root / resource_dir).mkdir(parents=True)
+            package_map.mkdir(parents=True)
+            repo_root.mkdir()
+            (package_root / "config" / "items.json").write_text(
+                json.dumps({"packagedItem": {"class": "CItem"}}),
+                encoding="utf-8",
+            )
+            (package_map / "map.json").write_text(json.dumps({"layers": []}), encoding="utf-8")
+            (package_map / "config.json").write_text(
+                json.dumps({"packagedQuest": {"class": "CQuest"}}), encoding="utf-8"
+            )
+
+            server = mcp.EngineMcpServer(repo_root=repo_root, build_dir=package_root)
+            result = server._call_tool(
+                {
+                    "name": "map_design_brief",
+                    "arguments": {
+                        "map_name": "packaged",
+                        "include_resource_catalog": True,
+                    },
+                },
+                transport="stdio",
+                session_id=None,
+            )
+
+            self.assertFalse(result["isError"])
+            brief = result["structuredContent"]
+            self.assertEqual(["packaged"], [item["name"] for item in brief["maps"]])
+            self.assertEqual("packaged", brief["selectedMap"]["name"])
+            catalog = {item["name"]: item for item in brief["resourceCatalog"]}
+            self.assertEqual(["packagedItem"], catalog["items"]["ids"])
 
     def test_map_design_brief_rejects_path_traversal(self):
         server = self.make_stub_server()
