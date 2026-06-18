@@ -22,10 +22,14 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CMap.h"
 #include "core/CProvider.h"
 #include "core/CSceneManager.h"
+#include "core/CSerialization.h"
+#include "core/CStats.h"
+#include "object/CCreature.h"
 #include "object/CGameObject.h"
 #include "object/CMapObject.h"
 #include "object/CPlayer.h"
 #include "object/CTile.h"
+#include "object/CTrigger.h"
 #include "test_harness.h"
 #include "veventloop.h"
 
@@ -34,6 +38,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <algorithm>
 #include <memory>
 #include <set>
+#include <stdexcept>
 
 namespace {
 
@@ -163,6 +168,67 @@ void test_scene_manager_null_and_legacy_missing_target_behavior() {
     expect_true(game->getMap()->getTurn() == 21, "missing-map compatibility path should copy the old turn");
     expect_true(game->getSceneManager()->getTransitionState() == CSceneManager::TransitionState::Idle,
                 "missing-map compatibility path should reset transition state");
+}
+
+class FixedStepController : public CController {
+  public:
+    explicit FixedStepController(Coords target, bool remove_before_return = false)
+        : target(target), removeBeforeReturn(remove_before_return) {}
+
+    std::shared_ptr<vstd::future<Coords, void>> control(std::shared_ptr<CCreature> creature) override {
+        return vstd::later([this, creature]() {
+            if (removeBeforeReturn && creature && creature->getMap()) {
+                creature->getMap()->removeObject(creature);
+            }
+            return target;
+        });
+    }
+
+    void interrupt(std::shared_ptr<CCreature>) override { interruptCount++; }
+
+    void onStepCommitted(std::shared_ptr<CCreature>, const Coords &) override { committedCount++; }
+
+    void onTurnEnded(std::shared_ptr<CCreature>) override { turnEndedCount++; }
+
+    Coords target;
+    bool removeBeforeReturn = false;
+    int interruptCount = 0;
+    int committedCount = 0;
+    int turnEndedCount = 0;
+};
+
+std::shared_ptr<CStats> creature_stats() {
+    auto stats = std::make_shared<CStats>();
+    stats->setMainStat("intelligence");
+    stats->setIntelligence(10);
+    stats->setStrength(10);
+    stats->setAgility(10);
+    stats->setStamina(10);
+    return stats;
+}
+
+std::shared_ptr<CCreature> test_creature(const std::shared_ptr<CGame> &game, const std::string &name, Coords coords,
+                                         const std::shared_ptr<CController> &controller) {
+    auto creature = std::make_shared<CCreature>();
+    creature->setBaseStats(creature_stats());
+    creature->setName(name);
+    creature->setGame(game);
+    creature->setController(controller);
+    creature->setPosX(coords.x);
+    creature->setPosY(coords.y);
+    creature->setPosZ(coords.z);
+    creature->setHp(creature->getHpMax());
+    return creature;
+}
+
+template <typename Func> void expect_runtime_error(Func func, const char *message) {
+    bool threw = false;
+    try {
+        func();
+    } catch (const std::runtime_error &) {
+        threw = true;
+    }
+    expect_true(threw, message);
 }
 
 void test_map_tiles_bounds_wrapping_and_object_cache() {
@@ -298,6 +364,156 @@ void test_map_tiles_bounds_wrapping_and_object_cache() {
     expect_true(map->getObjects().empty(), "removeObjects should erase matching objects from a cloned iteration");
 }
 
+void test_map_defensive_branches_and_strict_validation() {
+    auto map = std::make_shared<CMap>();
+    map->setXBounds({{0, -1}});
+    map->setYBounds({{0, 0}});
+    map->setWrapX({{0, 1}});
+    expect_true(map->normalizeCoords(Coords(5, 0, 0)) == Coords(5, 0, 0),
+                "wrapped normalization should leave invalid bounds unchanged");
+
+    map->setXBounds({{0, 2}});
+    auto bounds = map->getBounds();
+    expect_true(bounds.at(0) == std::make_pair(2, 0), "getBounds should return combined bounds");
+    expect_true(map->getAdjacentCoords(Coords(1, 1, 0)).size() == 4,
+                "non-wrapped adjacency should return four neighbors");
+
+    auto located = std::make_shared<CMapObject>();
+    located->setName("locatedObject");
+    located->setCanStep(false);
+    located->setPosX(1);
+    located->setPosY(0);
+    located->setPosZ(0);
+    map->addObject(located);
+    expect_true(map->getLocationByName("locatedObject") == Coords(1, 0, 0),
+                "getLocationByName should return existing object coordinates");
+    expect_true(map->getLocationByName("missingObject") == ZERO,
+                "getLocationByName should return ZERO for missing objects");
+    expect_true(map->addObjectByName("CMapObject", Coords(1, 0, 0)).empty(),
+                "addObjectByName should return an empty name for blocked coordinates");
+
+    auto named_tile = std::make_shared<CTile>();
+    named_tile->setTileType("namedTile");
+    expect_true(map->addTile(named_tile, 0, 0, 0), "fixture tile should be added");
+    expect_true(map->getTile(Coords(0, 0, 0)) == named_tile, "coordinate getTile overload should return stored tiles");
+    expect_true(map->getTiles().size() == 1, "getTiles should return stored tile snapshots");
+    expect_true(map->getObjects().size() == 1, "getObjects should return stored object snapshots");
+    expect_true(map->getObjectsAtCoords(Coords(99, 99, 0)).empty(),
+                "empty coordinate lookups should return an empty set");
+
+    map->setPlayer(nullptr);
+
+    std::string error;
+    auto empty_map = std::make_shared<CMap>();
+    expect_true(!empty_map->restorePlayerAfterLoad(error) && error == "saved map does not contain a player object",
+                "restorePlayerAfterLoad should reject maps without a player");
+
+    auto invalid_player_map = std::make_shared<CMap>();
+    auto invalid_player = std::make_shared<CPlayer>();
+    invalid_player->setBaseStats(creature_stats());
+    invalid_player->setName("notPlayer");
+    invalid_player_map->addObject(invalid_player);
+    expect_true(!invalid_player_map->restorePlayerAfterLoad(error) &&
+                    error == "saved player object is not named player",
+                "restorePlayerAfterLoad should reject non-canonical player names");
+
+    auto duplicate_player_map = std::make_shared<CMap>();
+    auto first_player = std::make_shared<CPlayer>();
+    first_player->setBaseStats(creature_stats());
+    first_player->setName("firstPlayer");
+    auto second_player = std::make_shared<CPlayer>();
+    second_player->setBaseStats(creature_stats());
+    second_player->setName("secondPlayer");
+    duplicate_player_map->addObject(first_player);
+    duplicate_player_map->addObject(second_player);
+    first_player->setName("player");
+    second_player->setName("player");
+    expect_true(!duplicate_player_map->restorePlayerAfterLoad(error) &&
+                    error == "saved map contains multiple player objects",
+                "restorePlayerAfterLoad should reject multiple player instances");
+
+    auto duplicate_name = std::make_shared<CMapObject>();
+    duplicate_name->setName("locatedObject");
+    map->addObject(nullptr);
+    map->addObject(duplicate_name);
+    expect_true(map->getObjects().size() == 1, "addObject should ignore null and duplicate objects");
+
+    {
+        CSerialization::StrictScope strict;
+        expect_runtime_error([&]() { map->setObjects({nullptr}); }, "strict setObjects should reject null objects");
+
+        auto empty_name = std::make_shared<CMapObject>();
+        empty_name->setName("");
+        expect_runtime_error([&]() { map->setObjects({empty_name}); },
+                             "strict setObjects should reject empty object names");
+    }
+
+    map->dumpPaths("/tmp/no-player-map-paths.txt");
+    map->setTriggers({nullptr});
+    map->objectMoved(nullptr, ZERO, ZERO);
+    expect_true(map->getTriggers().empty(), "null triggers should be ignored");
+
+    auto normal_trigger = std::make_shared<CTrigger>();
+    normal_trigger->setObject("locatedObject");
+    normal_trigger->setEvent("onTurn");
+    auto custom_trigger = std::make_shared<CCustomTrigger>("locatedObject", "onDestroy", [](auto, auto) {});
+    map->setTriggers({normal_trigger, custom_trigger});
+    auto restored_triggers = map->getTriggers();
+    expect_true(restored_triggers.contains(normal_trigger) && !restored_triggers.contains(custom_trigger),
+                "getTriggers should omit custom trigger callbacks from serialized trigger snapshots");
+}
+
+void test_map_move_interrupts_invalid_planned_steps() {
+    auto game = CGameLoader::loadGame();
+    auto map = std::make_shared<CMap>();
+    game->setMap(map);
+    map->setGame(game);
+    map->setXBounds({{0, 2}});
+    map->setYBounds({{0, 2}});
+    for (int y = 0; y <= 2; ++y) {
+        for (int x = 0; x <= 2; ++x) {
+            auto tile = std::make_shared<CTile>();
+            tile->setCanStep(!(x == 2 && y == 1));
+            map->addTile(tile, x, y, 0);
+        }
+    }
+
+    auto removing_controller = std::make_shared<FixedStepController>(Coords(1, 0, 0), true);
+    auto removed_creature = test_creature(game, "removedCreature", Coords(0, 0, 0), removing_controller);
+    map->addObject(removed_creature);
+    map->move();
+    expect_true(removing_controller->interruptCount == 1,
+                "move should interrupt creatures removed before their planned step is committed");
+    expect_true(map->getObjectByName("removedCreature") == nullptr,
+                "fixture creature should have removed itself during planning");
+
+    auto blocked_controller = std::make_shared<FixedStepController>(Coords(2, 1, 0));
+    auto blocked_creature = test_creature(game, "blockedCreature", Coords(1, 1, 0), blocked_controller);
+    map->addObject(blocked_creature);
+    map->move();
+    expect_true(blocked_controller->interruptCount == 1,
+                "move should interrupt creatures whose planned step becomes blocked");
+    expect_true(blocked_controller->committedCount == 0, "blocked planned steps should not be committed");
+    expect_true(blocked_creature->getCoords() == Coords(1, 1, 0), "blocked creatures should stay in place");
+}
+
+void test_map_player_trigger_registration_is_idempotent() {
+    auto game = CGameLoader::loadGame();
+    auto map = std::make_shared<CMap>();
+    game->setMap(map);
+    map->setGame(game);
+    map->setXBounds({{0, 2}});
+    map->setYBounds({{0, 2}});
+
+    auto first_player = std::make_shared<CPlayer>();
+    first_player->setBaseStats(creature_stats());
+    auto second_player = std::make_shared<CPlayer>();
+    second_player->setBaseStats(creature_stats());
+    map->setPlayer(first_player);
+    map->setPlayer(second_player);
+    expect_true(map->getPlayer() == second_player, "setPlayer should still replace the active player");
+}
+
 void test_map_keeps_tiles_and_objects_separate_by_z() {
     auto map = std::make_shared<CMap>();
     map->setXBounds({{0, 4}, {1, 4}});
@@ -396,6 +612,9 @@ int main() {
     test_scene_manager_repeated_transitions_and_controller_usability();
     test_scene_manager_null_and_legacy_missing_target_behavior();
     test_map_tiles_bounds_wrapping_and_object_cache();
+    test_map_defensive_branches_and_strict_validation();
+    test_map_move_interrupts_invalid_planned_steps();
+    test_map_player_trigger_registration_is_idempotent();
     test_map_keeps_tiles_and_objects_separate_by_z();
     test_can_step_checks_default_tile_passability_without_materializing();
     test_animation_provider_uses_dynamic_animation_for_directory_resources();
