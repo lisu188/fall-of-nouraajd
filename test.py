@@ -13019,6 +13019,15 @@ class XvfbGameplayProcessTest(unittest.TestCase):
 
 
 class PlayBootstrapTest(unittest.TestCase):
+    def assertSamePath(self, expected, actual):
+        self.assertTrue(os.path.samefile(expected, actual), f"{Path(expected)} != {Path(actual)}")
+
+    def assertPathIn(self, expected, paths):
+        for path in paths:
+            if path and Path(path).exists() and os.path.samefile(expected, path):
+                return
+        self.fail(f"{Path(expected)} not found in path list")
+
     def _load_play_namespace(self, script_path=None):
         script_path = script_path or (REPO_ROOT / "play.py")
         module = ast.parse((REPO_ROOT / "play.py").read_text())
@@ -13050,7 +13059,7 @@ class PlayBootstrapTest(unittest.TestCase):
             try:
                 os.chdir(attacker_cwd)
                 ensure_workdir(trusted_dir)
-                self.assertEqual(trusted_dir, Path.cwd())
+                self.assertSamePath(trusted_dir, Path.cwd())
             finally:
                 os.chdir(original_cwd)
 
@@ -13065,8 +13074,8 @@ class PlayBootstrapTest(unittest.TestCase):
             original_sys_path = list(sys.path)
             try:
                 namespace["_bootstrap"]()
-                self.assertEqual(package_root, Path.cwd())
-                self.assertEqual(str(package_root), sys.path[0])
+                self.assertSamePath(package_root, Path.cwd())
+                self.assertSamePath(package_root, sys.path[0])
             finally:
                 os.chdir(original_cwd)
                 sys.path[:] = original_sys_path
@@ -13085,9 +13094,9 @@ class PlayBootstrapTest(unittest.TestCase):
             original_sys_path = list(sys.path)
             try:
                 namespace["_bootstrap"]()
-                self.assertEqual(build_root, Path.cwd())
-                self.assertIn(str(build_root), sys.path)
-                self.assertIn(str(resource_root), sys.path)
+                self.assertSamePath(build_root, Path.cwd())
+                self.assertPathIn(build_root, sys.path)
+                self.assertPathIn(resource_root, sys.path)
             finally:
                 os.chdir(original_cwd)
                 sys.path[:] = original_sys_path

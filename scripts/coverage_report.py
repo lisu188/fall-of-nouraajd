@@ -367,8 +367,10 @@ def write_html_report(
 
 
 def build_exclusion_audit(root: Path, merged, exclusions):
+    root = root.resolve()
     lines = []
     for source_path in sorted(exclusions):
+        source_path = source_path.resolve()
         line_counts = merged.get(source_path, {})
         try:
             source_lines = source_path.read_text(encoding="utf-8", errors="replace").splitlines()
