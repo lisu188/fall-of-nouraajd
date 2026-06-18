@@ -2652,7 +2652,7 @@ class GameTest(unittest.TestCase):
 
         assert result["ok"], f"Crafting failed: {result}"
         assert before == 2 and after == 0, f"Unexpected reagent counts: before={before}, after={after}"
-        assert crafted_count >= 1, "Player did not receive the crafted item."
+        assert crafted_count == 1, "Player should receive exactly one crafted item."
         assert remaining_gold == 80, f"Expected 80 gold after crafting, got {remaining_gold}"
 
         return True, {
@@ -2709,6 +2709,7 @@ class GameTest(unittest.TestCase):
 
         # RNG failure leaves inventory and gold untouched
         reset()
+        player.setBoolProperty("CAN_BREW_GREATER_POTIONS", True)
         player.addItem("LifePotion")
         player.addItem("LifePotion")
         player.setNumericProperty("gold", 200)
@@ -2737,6 +2738,10 @@ class GameTest(unittest.TestCase):
         g, game_map, player = load_game_map_with_player("nouraajd")
         runtime = crafting.get_runtime()
 
+        initial_alchemy_recipes = {recipe["id"] for recipe in runtime.available_recipes(player, "alchemyTable")}
+        self.assertIn("brew_life_potion", initial_alchemy_recipes)
+        self.assertNotIn("blend_greater_life_potion", initial_alchemy_recipes)
+        self.assertNotIn("brew_full_life_potion", initial_alchemy_recipes)
         self.assertNotIn(
             "craft_town_portal_scroll",
             {recipe["id"] for recipe in runtime.available_recipes(player, "scribeDesk")},
@@ -2752,6 +2757,8 @@ class GameTest(unittest.TestCase):
         game_map.removeObjectByName("catacombs")
         beren.return_relic()
         alchemy_recipes = {recipe["id"] for recipe in runtime.available_recipes(player, "alchemyTable")}
+        self.assertIn("blend_greater_life_potion", alchemy_recipes)
+        self.assertIn("blend_greater_mana_potion", alchemy_recipes)
         self.assertIn("brew_full_life_potion", alchemy_recipes)
         self.assertIn("brew_full_mana_potion", alchemy_recipes)
 
@@ -2764,6 +2771,195 @@ class GameTest(unittest.TestCase):
             },
             sort_keys=True,
         )
+
+    @game_test
+    def test_crafting_locked_recipe_attempt_is_atomic(self):
+        import crafting
+
+        g, _game_map, player = load_game_map_with_player("nouraajd")
+        player.setNumericProperty("gold", 500)
+        player.addItem("Scroll")
+        player.addItem("ManaPotion")
+        player.addItem("GreaterLifePotion")
+        player.addItem("GreaterLifePotion")
+
+        before = {
+            "gold": player.getNumericProperty("gold"),
+            "scroll": player.countItems("Scroll"),
+            "mana": player.countItems("ManaPotion"),
+            "greater_life": player.countItems("GreaterLifePotion"),
+            "town_portal": player.countItems("TownPortalScroll"),
+            "full_life": player.countItems("FullLifePotion"),
+        }
+
+        scroll_result = crafting.craft_recipe(g, player, "craft_town_portal_scroll")
+        potion_result = crafting.craft_recipe(g, player, "brew_full_life_potion")
+
+        self.assertEqual({"ok": False, "reason": "locked"}, scroll_result)
+        self.assertEqual({"ok": False, "reason": "locked"}, potion_result)
+        self.assertEqual(before["gold"], player.getNumericProperty("gold"))
+        self.assertEqual(before["scroll"], player.countItems("Scroll"))
+        self.assertEqual(before["mana"], player.countItems("ManaPotion"))
+        self.assertEqual(before["greater_life"], player.countItems("GreaterLifePotion"))
+        self.assertEqual(before["town_portal"], player.countItems("TownPortalScroll"))
+        self.assertEqual(before["full_life"], player.countItems("FullLifePotion"))
+
+        return True, json.dumps({"scroll_result": scroll_result, "potion_result": potion_result}, sort_keys=True)
+
+    @game_test
+    def test_crafting_invalid_recipe_id_is_atomic(self):
+        import crafting
+
+        g, _game_map, player = load_game_map_with_player("nouraajd")
+        player.setNumericProperty("gold", 123)
+        player.addItem("LesserLifePotion")
+        before_items = player.countItems("LesserLifePotion")
+
+        result = crafting.craft_recipe(g, player, "not_a_real_recipe")
+
+        self.assertEqual({"ok": False, "reason": "missing:recipe"}, result)
+        self.assertEqual(123, player.getNumericProperty("gold"))
+        self.assertEqual(before_items, player.countItems("LesserLifePotion"))
+
+        return True, json.dumps(result, sort_keys=True)
+
+    @game_test
+    def test_crafting_station_options_show_recipe_states(self):
+        import crafting
+
+        game = load_game_module()
+        g, game_map, player = load_game_map_with_player("nouraajd")
+        player.setNumericProperty("gold", 100)
+        player.addItem("LesserLifePotion")
+        player.addItem("LesserLifePotion")
+
+        class FakeEvent:
+            def __init__(self, cause):
+                self.cause = cause
+
+            def getCause(self):
+                return self.cause
+
+        captured_options = []
+        captured_infos = []
+        original_show_selection = game.CGuiHandler.showSelection
+        original_show_info = game.CGuiHandler.showInfo
+
+        def capture_selection(self, list_string):
+            options = sorted(list_string.getValues())
+            captured_options.append(options)
+            return crafting.LEAVE_OPTION
+
+        def capture_info(self, message, centered=True):
+            captured_infos.append((message, centered))
+
+        try:
+            game.CGuiHandler.showSelection = capture_selection
+            game.CGuiHandler.showInfo = capture_info
+            find_runtime_object(game_map, "alchemyTable1").onEnter(FakeEvent(player))
+            find_runtime_object(game_map, "scribeDesk1").onEnter(FakeEvent(player))
+        finally:
+            game.CGuiHandler.showSelection = original_show_selection
+            game.CGuiHandler.showInfo = original_show_info
+
+        self.assertEqual(2, len(captured_options))
+        alchemy_options, scribe_options = captured_options
+        self.assertTrue(
+            any(option.startswith("READY -") and "[brew_life_potion]" in option for option in alchemy_options)
+        )
+        self.assertTrue(
+            any(option.startswith("MISSING -") and "[brew_mana_potion]" in option for option in alchemy_options)
+        )
+        self.assertTrue(
+            any(option.startswith("LOCKED -") and "[blend_greater_life_potion]" in option for option in alchemy_options)
+        )
+        self.assertTrue(
+            any(option.startswith("LOCKED -") and "[brew_full_life_potion]" in option for option in alchemy_options)
+        )
+        self.assertTrue(any("Output:" in option and "Requires:" in option for option in alchemy_options))
+        self.assertTrue(
+            any(option.startswith("LOCKED -") and "[craft_town_portal_scroll]" in option for option in scribe_options)
+        )
+        self.assertEqual([], captured_infos)
+
+        return True, json.dumps({"alchemy": alchemy_options, "scribe": scribe_options}, sort_keys=True)
+
+    @game_test
+    def test_crafting_station_locked_missing_and_success_paths(self):
+        import crafting
+
+        game = load_game_module()
+        g, game_map, player = load_game_map_with_player("nouraajd")
+        player.setNumericProperty("gold", 200)
+
+        def clear_item(item_id):
+            while player.countItems(item_id) > 0:
+                player.removeItem(lambda it, tid=item_id: it.getTypeId() == tid, True)
+
+        for item_id in ("Scroll", "ManaPotion", "TownPortalScroll", "LesserLifePotion", "LifePotion"):
+            clear_item(item_id)
+
+        class FakeEvent:
+            def __init__(self, cause):
+                self.cause = cause
+
+            def getCause(self):
+                return self.cause
+
+        selections = []
+        captured_infos = []
+        original_show_selection = game.CGuiHandler.showSelection
+        original_show_info = game.CGuiHandler.showInfo
+
+        def select_recipe(recipe_id):
+            def select(options):
+                return next(option for option in options if f"[{recipe_id}]" in option)
+
+            return select
+
+        def queued_selection(self, list_string):
+            options = sorted(list_string.getValues())
+            choice = selections.pop(0) if selections else crafting.LEAVE_OPTION
+            return choice(options) if callable(choice) else choice
+
+        def capture_info(self, message, centered=True):
+            captured_infos.append(message)
+
+        try:
+            game.CGuiHandler.showSelection = queued_selection
+            game.CGuiHandler.showInfo = capture_info
+
+            player.addItem("Scroll")
+            player.addItem("ManaPotion")
+            selections[:] = [select_recipe("craft_town_portal_scroll"), crafting.LEAVE_OPTION]
+            find_runtime_object(game_map, "scribeDesk1").onEnter(FakeEvent(player))
+            self.assertEqual(1, player.countItems("Scroll"))
+            self.assertEqual(1, player.countItems("ManaPotion"))
+            self.assertEqual(0, player.countItems("TownPortalScroll"))
+
+            player.setBoolProperty("CAN_CRAFT_SCROLLS", True)
+            clear_item("Scroll")
+            selections[:] = [select_recipe("craft_town_portal_scroll"), crafting.LEAVE_OPTION]
+            find_runtime_object(game_map, "scribeDesk1").onEnter(FakeEvent(player))
+            self.assertEqual(1, player.countItems("ManaPotion"))
+            self.assertEqual(0, player.countItems("TownPortalScroll"))
+
+            player.addItem("LesserLifePotion")
+            player.addItem("LesserLifePotion")
+            selections[:] = [select_recipe("brew_life_potion"), crafting.LEAVE_OPTION]
+            find_runtime_object(game_map, "alchemyTable1").onEnter(FakeEvent(player))
+        finally:
+            game.CGuiHandler.showSelection = original_show_selection
+            game.CGuiHandler.showInfo = original_show_info
+
+        self.assertTrue(any("locked" in message.lower() for message in captured_infos))
+        self.assertTrue(any("missing" in message.lower() and "Scroll" in message for message in captured_infos))
+        self.assertTrue(any("You crafted Life Potion." == message for message in captured_infos))
+        self.assertEqual(0, player.countItems("LesserLifePotion"))
+        self.assertEqual(1, player.countItems("LifePotion"))
+        self.assertEqual(180, player.getNumericProperty("gold"))
+
+        return True, json.dumps({"messages": captured_infos}, sort_keys=True)
 
     @game_test
     def test_potions_are_not_consumed_at_full_resources(self):

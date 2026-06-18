@@ -18,6 +18,13 @@ import json
 import game
 from game import randint
 
+LEAVE_OPTION = "Leave"
+
+UNLOCK_HINTS = {
+    "CAN_CRAFT_SCROLLS": "Deliver Mayor Irvin's sealed letter to Father Beren.",
+    "CAN_BREW_GREATER_POTIONS": "Return the holy relic to Father Beren.",
+}
+
 
 def _status(ok, reason=""):
     return {"ok": ok, "reason": reason}
@@ -206,17 +213,29 @@ class CraftingRuntime:
     def get_item_label(self, item_id):
         return self._item_labels.get(item_id, item_id)
 
-    def describe_recipe(self, recipe):
+    def describe_entries(self, entries):
         parts = [
-            f"{req['count']}x {self.get_item_label(req['item_id'])}" for req in recipe["inputs"] if req["count"] > 0
+            f"{entry['count']}x {self.get_item_label(entry['item_id'])}" for entry in entries if entry["count"] > 0
         ]
+        return ", ".join(parts) if parts else "None"
+
+    def describe_requirements(self, recipe):
+        parts = [self.describe_entries(recipe["inputs"])]
         if recipe["gold"] > 0:
             parts.append(f"{recipe['gold']}g")
-        parts_text = ", ".join(parts) if parts else "No cost"
+        return ", ".join(part for part in parts if part and part != "None") or "No cost"
+
+    def describe_outputs(self, recipe):
+        return self.describe_entries(recipe["outputs"])
+
+    def describe_recipe(self, recipe):
+        parts_text = self.describe_requirements(recipe)
         output = recipe["outputs"][0]
-        output_label = self.get_item_label(output["item_id"])
         chance = recipe["success_chance"]
-        return f"{recipe['display_name']} [{recipe['id']}]: {parts_text} -> {output['count']}x {output_label} ({chance}% success)"
+        return (
+            f"{recipe['display_name']} [{recipe['id']}] | "
+            f"Output: {self.describe_outputs(recipe)} | Requires: {parts_text} | {chance}% success"
+        )
 
     def missing_requirements(self, player, recipe):
         missing = []
@@ -235,12 +254,28 @@ class CraftingRuntime:
                 missing.append(f"{gold_cost - held_gold}g")
         return missing
 
+    def recipe_unlock_hint(self, recipe):
+        unlock_state = recipe.get("unlock", {"type": "none", "value": None})
+        if unlock_state["type"] != "flag":
+            return ""
+        flag_name = unlock_state["value"]
+        return UNLOCK_HINTS.get(flag_name, f"Requires {flag_name}.")
+
+    def recipe_state(self, player, recipe):
+        if not self.is_unlocked(player, recipe):
+            return "locked"
+        if self.missing_requirements(player, recipe):
+            return "missing"
+        return "ready"
+
     def describe_recipe_for_player(self, player, recipe):
         description = self.describe_recipe(recipe)
+        if not self.is_unlocked(player, recipe):
+            return f"LOCKED - {description} | Unlock: {self.recipe_unlock_hint(recipe)}"
         missing = self.missing_requirements(player, recipe)
         if not missing:
-            return f"{description} [ready]"
-        return f"{description} [missing: {', '.join(missing)}]"
+            return f"READY - {description}"
+        return f"MISSING - {description} | Missing: {', '.join(missing)}"
 
     def is_unlocked(self, player, recipe):
         unlock_state = recipe.get("unlock", {"type": "none", "value": None})
@@ -259,6 +294,11 @@ class CraftingRuntime:
     def available_recipes(self, player, station_id):
         return [recipe for recipe in self.station_recipes(station_id) if self.is_unlocked(player, recipe)]
 
+    def station_options(self, player, station_id):
+        recipes = self.station_recipes(station_id)
+        option_map = {self.describe_recipe_for_player(player, recipe): recipe for recipe in recipes}
+        return recipes, option_map
+
     def execute_recipe(self, game_instance, player, recipe):
         if not self.is_unlocked(player, recipe):
             return _status(False, "locked")
@@ -275,7 +315,7 @@ def get_runtime():
     return _RUNTIME
 
 
-def _format_result_message(runtime, recipe, result):
+def _format_result_message(runtime, recipe, result, player=None):
     if result["ok"]:
         output = recipe["outputs"][0]
         label = runtime.get_item_label(output["item_id"])
@@ -284,11 +324,16 @@ def _format_result_message(runtime, recipe, result):
             return f"You crafted {quantity}x {label}."
         return f"You crafted {label}."
     reason = result.get("reason", "")
+    if reason == "locked":
+        return f"That recipe is locked. {runtime.recipe_unlock_hint(recipe)}"
     if reason == "failed":
         return "The reagents fizzled and nothing was created."
     if reason == "missing:gold":
         return "You need more gold to craft this."
     if reason.startswith("missing:"):
+        missing = runtime.missing_requirements(player, recipe) if player else []
+        if missing:
+            return f"You are missing {', '.join(missing)}."
         missing_item = reason.split("missing:", 1)[1]
         return f"You need more {runtime.get_item_label(missing_item)}."
     return reason or "Crafting failed."
@@ -311,24 +356,22 @@ def open_crafting_station(station, player):
     game_instance = station.getGame()
     handler = game_instance.getGuiHandler()
     station_label = station.getStringProperty("label") or station_id
-    leave_option = "Leave"
     while True:
-        available = runtime.available_recipes(player, station_id)
-        if not available:
+        recipes, option_map = runtime.station_options(player, station_id)
+        if not recipes:
             handler.showInfo(f"No known recipes for {station_label}.", True)
             return
-        option_map = {}
-        options = []
-        for recipe in available:
-            description = runtime.describe_recipe_for_player(player, recipe)
-            option_map[description] = recipe
-            options.append(description)
-        options.append(leave_option)
+        options = list(option_map.keys())
+        options.append(LEAVE_OPTION)
         selection = handler.showSelection(game.list_string(game_instance, options))
-        if selection == leave_option or selection not in option_map:
+        if selection == LEAVE_OPTION or selection not in option_map:
             break
-        result = runtime.execute_recipe(game_instance, player, option_map[selection])
-        handler.showInfo(_format_result_message(runtime, option_map[selection], result), True)
+        recipe = option_map[selection]
+        if not runtime.is_unlocked(player, recipe):
+            handler.showInfo(_format_result_message(runtime, recipe, _status(False, "locked"), player), True)
+            continue
+        result = runtime.execute_recipe(game_instance, player, recipe)
+        handler.showInfo(_format_result_message(runtime, recipe, result, player), True)
 
 
 def craft_recipe(game_instance, player, recipe_id):
