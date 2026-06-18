@@ -26,6 +26,8 @@ class ConfigureSupplyChainTest(unittest.TestCase):
         configure_script = (REPO_ROOT / "configure.sh").read_text()
 
         self.assertIn("pybind11-dev", configure_script)
+        self.assertIn("python3-pip", configure_script)
+        self.assertIn("python3-venv", configure_script)
         self.assertIn("python3-pil", configure_script)
         self.assertIn("black", configure_script)
         self.assertNotRegex(configure_script, re.compile(r"python3\s+-m\s+pip\s+install[^\n]*\bpybind11\b"))
@@ -58,10 +60,16 @@ class ConfigureSupplyChainTest(unittest.TestCase):
 
     def test_workflows_do_not_install_unpinned_pybind11_or_pillow(self):
         workflow_text = "\n".join(path.read_text() for path in (REPO_ROOT / ".github" / "workflows").glob("*.yml"))
+        requirements_text = (REPO_ROOT / "requirements-dev.txt").read_text()
 
         self.assertNotRegex(workflow_text, re.compile(r"pip\s+install[^\n]*\bpybind11\b", re.IGNORECASE))
         self.assertNotRegex(workflow_text, re.compile(r"pip\s+install[^\n]*\bpillow(?:\s|$)", re.IGNORECASE))
-        self.assertIn("pillow==", workflow_text)
+        self.assertIn("-r requirements-dev.txt", workflow_text)
+        self.assertIn("from PIL import Image; import black", workflow_text)
+        self.assertIn("import _game; import game", workflow_text)
+        self.assertIn("pillow==11.2.1", requirements_text)
+        self.assertIn("black==25.1.0", requirements_text)
+        self.assertNotRegex(requirements_text, re.compile(r"^pybind11\b", re.IGNORECASE | re.MULTILINE))
 
 
 if __name__ == "__main__":

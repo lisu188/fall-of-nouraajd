@@ -8,6 +8,15 @@ git submodule update --init --recursive
 ./configure.sh
 ```
 
+`requirements-dev.txt` is the source of truth for pip-managed developer and test Python packages used by CI, such as
+Pillow and Black. Native build dependencies, including pybind11 headers and CMake config files, still come from
+`pybind11-dev` on Linux and vcpkg on Windows. Run the pip command in the same Python environment that will run
+`test.py`.
+
+```bash
+python -m pip install --upgrade -r requirements-dev.txt
+```
+
 ## Normal test workflow
 Run from the repository root:
 
