@@ -26,6 +26,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "object/CPlayer.h"
 #include "test_harness.h"
 
+#include <pybind11/embed.h>
+
 namespace {
 
 void test_widget_ignores_unarmed_non_left_clicks() {
@@ -81,6 +83,8 @@ void test_inventory_double_select_uses_selected_item_and_clears_selection() {
 } // namespace
 
 int main() {
+    pybind11::scoped_interpreter guard{};
+
     test_widget_ignores_unarmed_non_left_clicks();
     test_inventory_double_select_uses_selected_item_and_clears_selection();
 

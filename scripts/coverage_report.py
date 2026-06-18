@@ -51,6 +51,7 @@ def normalize_path(path_str: str, cwd: Path) -> Path:
 
 
 def validate_include_prefix(root: Path, prefix_str: str) -> Path:
+    root = root.resolve()
     if not isinstance(prefix_str, str) or not prefix_str:
         raise ValueError("coverage include prefixes must be non-empty strings")
     prefix = Path(prefix_str)
@@ -76,16 +77,17 @@ def load_include_prefixes(root: Path, include_prefixes):
 
 
 def is_included(root: Path, source_path: Path, include_prefixes=()) -> bool:
+    root = root.resolve()
     try:
         resolved = source_path.resolve()
-        resolved.relative_to(root.resolve())
+        resolved.relative_to(root)
     except ValueError:
         return False
     if not include_prefixes:
         return True
     for include_prefix in include_prefixes:
         try:
-            resolved.relative_to(include_prefix)
+            resolved.relative_to(include_prefix.resolve())
             return True
         except ValueError:
             pass
@@ -93,6 +95,7 @@ def is_included(root: Path, source_path: Path, include_prefixes=()) -> bool:
 
 
 def validate_exclusion_path(root: Path, rel_path_str: str) -> Path:
+    root = root.resolve()
     if not isinstance(rel_path_str, str) or not rel_path_str:
         raise ValueError("coverage exclusion paths must be non-empty strings")
     rel_path = Path(rel_path_str)
@@ -171,7 +174,9 @@ def load_line_exclusions(root: Path, manifest_path: Path | None):
 
 
 def validate_line_exclusions(root: Path, merged, exclusions):
+    root = root.resolve()
     for source_path, line_reasons in exclusions.items():
+        source_path = source_path.resolve()
         rel_path = source_path.relative_to(root)
         if source_path not in merged:
             raise ValueError(f"coverage exclusion path is stale or was not instrumented: {rel_path}")
@@ -249,6 +254,7 @@ def merge_line_counts(root: Path, reports, include_prefixes=()):
 
 
 def summarize(root: Path, merged, exclusions=None):
+    root = root.resolve()
     exclusions = exclusions or {}
     summary = []
     total_lines = 0
@@ -269,7 +275,7 @@ def summarize(root: Path, merged, exclusions=None):
         missing = [
             line for line, count in sorted(line_counts.items()) if line > 0 and line not in excluded_set and count == 0
         ]
-        rel_path = source_path.relative_to(root)
+        rel_path = source_path.resolve().relative_to(root)
         summary.append(
             {
                 "path": rel_path,

@@ -11221,6 +11221,56 @@ class CoverageReportTest(unittest.TestCase):
             self.assertEqual((covered, total, percentage, excluded), (1, 2, 50.0, 0))
             self.assertEqual(summary[0]["path"], Path("src/sample.cpp"))
 
+    def test_coverage_paths_accept_noncanonical_root(self):
+        coverage_report = self._load_coverage_report_module()
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            real_root = Path(tmpdir) / "real"
+            alias_root = Path(tmpdir) / "alias"
+            real_root.mkdir()
+            try:
+                os.symlink(real_root, alias_root, target_is_directory=True)
+            except (OSError, NotImplementedError) as exc:
+                self.skipTest(f"symlink root setup is unavailable: {exc}")
+
+            source = alias_root / "src" / "sample.cpp"
+            source.parent.mkdir()
+            source.write_text("one\ntwo\n", encoding="utf-8")
+            manifest_path = self._write_manifest(
+                alias_root,
+                [
+                    {
+                        "path": "src/sample.cpp",
+                        "reason": "synthetic unreachable branch",
+                        "ranges": ["2"],
+                    }
+                ],
+            )
+            reports = [
+                {
+                    "current_working_directory": str(alias_root),
+                    "files": [
+                        {
+                            "file": str(source),
+                            "lines": [
+                                {"line_number": 1, "count": 1},
+                                {"line_number": 2, "count": 0},
+                            ],
+                        }
+                    ],
+                }
+            ]
+
+            include_prefixes = coverage_report.load_include_prefixes(alias_root, ["src"])
+            merged = coverage_report.merge_line_counts(alias_root, reports, include_prefixes)
+            exclusions = coverage_report.load_line_exclusions(alias_root, manifest_path)
+            coverage_report.validate_line_exclusions(alias_root, merged, exclusions)
+            summary, covered, total, percentage, excluded = coverage_report.summarize(alias_root, merged, exclusions)
+
+            self.assertEqual(set(merged), {source.resolve()})
+            self.assertEqual((covered, total, percentage, excluded), (1, 1, 100.0, 1))
+            self.assertEqual(summary[0]["path"], Path("src/sample.cpp"))
+
     def test_coverage_line_exclusions_fail_closed(self):
         coverage_report = self._load_coverage_report_module()
 
