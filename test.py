@@ -871,8 +871,14 @@ MAPS_DIR = REPO_ROOT / "res/maps"
 DEFAULT_PLAYER = "Warrior"
 NOURAAJD_VICTOR_TIMEOUT = 75
 NOURAAJD_VICTOR_FALLBACK_RADIUS = 3
-NOURAAJD_VICTOR_LEADER_SPAWN = (45, 100, 0)
-NOURAAJD_VICTOR_PREFERRED_SPAWNS = ((44, 100, 0), (46, 100, 0), (45, 99, 0), (45, 101, 0), (45, 100, 0))
+NOURAAJD_VICTOR_LEADER_SPAWN = (128, 113, 0)
+NOURAAJD_VICTOR_PREFERRED_SPAWNS = (
+    (126, 113, 0),
+    (130, 113, 0),
+    (128, 111, 0),
+    (128, 115, 0),
+    (128, 113, 0),
+)
 TILED_FLIP_FLAG_MASK = 0xF0000000
 SUPPORTED_TILED_LAYER_TYPES = {"tilelayer", "objectgroup"}
 _git_changed_files_cache = None
@@ -6368,6 +6374,148 @@ class GameTest(unittest.TestCase):
             target for target in trigger_targets if target not in placed_names and target not in runtime_spawned_targets
         )
         return missing_targets == [], json.dumps(missing_targets)
+
+    @game_test
+    def test_nouraajd_hub_spoke_layout_topology(self):
+        map_data = load_map_data("nouraajd")
+        config = json.loads((REPO_ROOT / "res/maps/nouraajd/config.json").read_text())
+        script = (REPO_ROOT / "res/maps/nouraajd/script.py").read_text()
+
+        width = map_data["width"]
+        height = map_data["height"]
+        tile_layer = next(layer for layer in map_data["layers"] if layer.get("type") == "tilelayer")
+        data = tile_layer["data"]
+        objects = []
+        for layer in map_data["layers"]:
+            if layer.get("type") == "objectgroup":
+                objects.extend(layer.get("objects", []))
+
+        by_name = {obj["name"]: obj for obj in objects if obj.get("name")}
+        duplicate_names = sorted(
+            name for name in by_name if len([obj for obj in objects if obj.get("name") == name]) > 1
+        )
+
+        def tile_of(name):
+            obj = by_name[name]
+            return int(obj["x"] // map_data["tilewidth"]), int(obj["y"] // map_data["tileheight"])
+
+        def prop_value(obj, key):
+            props = obj.get("properties", {})
+            if isinstance(props, dict):
+                return props.get(key)
+            for prop in props:
+                if prop.get("name") == key:
+                    return prop.get("value")
+            return None
+
+        closed_blockers = {
+            (int(obj["x"] // map_data["tilewidth"]), int(obj["y"] // map_data["tileheight"]))
+            for obj in objects
+            if str(prop_value(obj, "canStep")).lower() == "false"
+        }
+        impassable_gids = {2, 12}
+
+        def walkable(tile, include_closed_blockers=True):
+            x, y = tile
+            if not (0 <= x < width and 0 <= y < height):
+                return False
+            if data[y * width + x] in impassable_gids:
+                return False
+            return not include_closed_blockers or tile not in closed_blockers
+
+        start = (
+            int(map_data["properties"]["x"]),
+            int(map_data["properties"]["y"]),
+        )
+        seen = {start}
+        queue_tiles = [start]
+        while queue_tiles:
+            x, y = queue_tiles.pop(0)
+            for nx, ny in ((x + 1, y), (x - 1, y), (x, y + 1), (x, y - 1)):
+                nxt = (nx, ny)
+                if nxt not in seen and walkable(nxt):
+                    seen.add(nxt)
+                    queue_tiles.append(nxt)
+
+        expected_tiles = {
+            "cave1": (96, 92),
+            "catacombs": (101, 94),
+            "cave2": (134, 96),
+            "nouraajdSign": (106, 110),
+            "market1": (107, 112),
+            "scribeDesk1": (108, 109),
+            "alchemyTable1": (108, 110),
+            "questGiver": (109, 113),
+            "nouraajdTownHall": (112, 110),
+            "nouraajdChapel": (116, 112),
+            "nouraajdTavern": (112, 115),
+            "nouraajdDoor": (106, 111),
+            "oldWoman": (145, 88),
+            "ridgeSign": (103, 104),
+            "swampRoadSign": (124, 106),
+            "courtyardSign": (122, 114),
+            "outskirtsSign": (144, 89),
+        }
+
+        road_gid = 6
+
+        def has_nearby_road(tile, radius=2):
+            x, y = tile
+            for ny in range(y - radius, y + radius + 1):
+                for nx in range(x - radius, x + radius + 1):
+                    if 0 <= nx < width and 0 <= ny < height and data[ny * width + nx] == road_gid:
+                        return True
+            return False
+
+        layout_failures = []
+        if duplicate_names:
+            layout_failures.append(f"duplicate names: {duplicate_names}")
+        if map_data.get("nextobjectid", 0) <= max(obj["id"] for obj in objects):
+            layout_failures.append("nextobjectid must be greater than every object id")
+        for name, expected in expected_tiles.items():
+            if name not in by_name:
+                layout_failures.append(f"{name} missing")
+                continue
+            actual = tile_of(name)
+            if actual != expected:
+                layout_failures.append(f"{name} at {actual}, expected {expected}")
+            if actual not in seen:
+                layout_failures.append(f"{name} is unreachable from spawn")
+            if not walkable(actual, include_closed_blockers=False):
+                layout_failures.append(f"{name} sits on impassable terrain")
+            if name not in {"nouraajdDoor", "nouraajdSign"} and not has_nearby_road(actual):
+                layout_failures.append(f"{name} has no nearby road breadcrumb")
+
+        script_checks = {
+            "victor_leader": "VICTOR_COURTYARD_LEADER_SPAWN = (128, 113, 0)" in script,
+            "victor_cultists": "VICTOR_COURTYARD_SPAWNS = [(126, 113, 0), (130, 113, 0), (128, 111, 0), (128, 115, 0)]"
+            in script,
+            "gooby_fixed": "gooby.moveTo(100, 100, 0)" in script,
+            "amulet_goblin_near_old_woman": "goblin.moveTo(154, 90, 0)" in script,
+        }
+        for name, ok in script_checks.items():
+            if not ok:
+                layout_failures.append(f"script check failed: {name}")
+
+        sign_configs = {"ridgeSign", "swampRoadSign", "courtyardSign", "outskirtsSign"}
+        missing_sign_configs = sorted(sign for sign in sign_configs if sign not in config)
+        if missing_sign_configs:
+            layout_failures.append(f"missing sign configs: {missing_sign_configs}")
+
+        spawn_checks = [(100, 100), (126, 113), (128, 111), (128, 113), (128, 115), (130, 113), (154, 90)]
+        for tile in spawn_checks:
+            if tile not in seen:
+                layout_failures.append(f"scripted spawn {tile} is unreachable")
+            if not walkable(tile, include_closed_blockers=False):
+                layout_failures.append(f"scripted spawn {tile} sits on impassable terrain")
+
+        log = {
+            "failures": layout_failures,
+            "expected_tiles": expected_tiles,
+            "reachable_tiles": len(seen),
+            "script_checks": script_checks,
+        }
+        return layout_failures == [], json.dumps(log, sort_keys=True)
 
     @game_test
     def test_nouraajd_quest_integrity_regression(self):
