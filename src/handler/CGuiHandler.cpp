@@ -19,6 +19,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CGame.h"
 #include "core/CList.h"
 #include "core/CMap.h"
+#include "core/CPlaytestTrace.h"
 #include "gui/CLayout.h"
 #include "gui/CTextManager.h"
 #include "gui/CTooltip.h"
@@ -52,6 +53,14 @@ void CGuiHandler::showMessage(std::string message) {
         vstd::logger::info(message);
         return;
     }
+    if (CPlaytestTrace::enabled()) {
+        json fields = {{"blocking", true},
+                       {"messageLength", static_cast<unsigned long long>(message.size())},
+                       {"panel", "textPanel"},
+                       {"panelKind", "message"}};
+        CPlaytestTrace::addMapContext(fields, game->getMap());
+        CPlaytestTrace::record("gui_panel_opened", fields);
+    }
     std::shared_ptr<CGameTextPanel> panel = game->createObject<CGameTextPanel>("textPanel");
     panel->setText(message);
     game->getGui()->pushChild(panel);
@@ -63,6 +72,15 @@ void CGuiHandler::showInfo(std::string message, bool centered) {
     if (!game || !game->getGui()) {
         vstd::logger::info(message);
         return;
+    }
+    if (CPlaytestTrace::enabled()) {
+        json fields = {{"blocking", true},
+                       {"centered", centered},
+                       {"messageLength", static_cast<unsigned long long>(message.size())},
+                       {"panel", "infoPanel"},
+                       {"panelKind", "info"}};
+        CPlaytestTrace::addMapContext(fields, game->getMap());
+        CPlaytestTrace::record("gui_panel_opened", fields);
     }
     std::shared_ptr<CGameTextPanel> panel = game->createObject<CGameTextPanel>("infoPanel");
     panel->setText(message);
@@ -77,6 +95,14 @@ bool CGuiHandler::showQuestion(std::string question) {
         vstd::logger::info(question);
         return false;
     }
+    if (CPlaytestTrace::enabled()) {
+        json fields = {{"blocking", true},
+                       {"messageLength", static_cast<unsigned long long>(question.size())},
+                       {"panel", "questionPanel"},
+                       {"panelKind", "question"}};
+        CPlaytestTrace::addMapContext(fields, game->getMap());
+        CPlaytestTrace::record("gui_panel_opened", fields);
+    }
     std::shared_ptr<CGameQuestionPanel> panel = game->createObject<CGameQuestionPanel>("questionPanel");
     panel->setQuestion(question);
     game->getGui()->pushChild(panel);
@@ -87,6 +113,14 @@ void CGuiHandler::showTrade(std::shared_ptr<CMarket> market) {
     auto game = _game.lock();
     if (!game || !game->getGui() || !market) {
         return;
+    }
+    if (CPlaytestTrace::enabled()) {
+        json fields = {{"blocking", true},
+                       {"market", CPlaytestTrace::objectRef(market)},
+                       {"panel", "tradePanel"},
+                       {"panelKind", "trade"}};
+        CPlaytestTrace::addMapContext(fields, game->getMap());
+        CPlaytestTrace::record("gui_panel_opened", fields);
     }
     std::shared_ptr<CGameTradePanel> panel = game->createObject<CGameTradePanel>("tradePanel");
     panel->setMarket(market);
@@ -99,6 +133,15 @@ void CGuiHandler::showDialog(std::shared_ptr<CDialog> dialog) {
     if (!game || !game->getGui() || !dialog) {
         return;
     }
+    if (CPlaytestTrace::enabled()) {
+        json fields = {{"blocking", true},
+                       {"dialog", CPlaytestTrace::objectRef(dialog)},
+                       {"panel", "dialogPanel"},
+                       {"panelKind", "dialog"}};
+        CPlaytestTrace::addMapContext(fields, game->getMap());
+        CPlaytestTrace::record("dialog_opened", fields);
+        CPlaytestTrace::record("gui_panel_opened", fields);
+    }
     std::shared_ptr<CGameDialogPanel> panel = game->createObject<CGameDialogPanel>("dialogPanel");
     panel->setDialog(dialog);
     game->getGui()->pushChild(panel);
@@ -110,6 +153,15 @@ void CGuiHandler::showLoot(std::shared_ptr<CCreature> creature, std::set<std::sh
     auto game = _game.lock();
     if (!game || !game->getGui() || !creature) {
         return;
+    }
+    if (CPlaytestTrace::enabled()) {
+        json fields = {{"blocking", true},
+                       {"creature", CPlaytestTrace::objectRef(creature)},
+                       {"items", CPlaytestTrace::itemRefs(items)},
+                       {"panel", "lootPanel"},
+                       {"panelKind", "loot"}};
+        CPlaytestTrace::addMapContext(fields, game->getMap());
+        CPlaytestTrace::record("gui_panel_opened", fields);
     }
     std::shared_ptr<CGameLootPanel> panel = game->createObject<CGameLootPanel>("lootPanel");
     panel->setCreature(creature);
@@ -130,6 +182,14 @@ std::string CGuiHandler::showSelection(std::shared_ptr<CListString> list) {
     if (values.empty()) {
         vstd::logger::warning("Selection requested with an empty option list.");
         return "";
+    }
+    if (CPlaytestTrace::enabled()) {
+        json fields = {{"blocking", true},
+                       {"optionCount", static_cast<unsigned long long>(values.size())},
+                       {"panel", "selectionPanel"},
+                       {"panelKind", "selection"}};
+        CPlaytestTrace::addMapContext(fields, game->getMap());
+        CPlaytestTrace::record("gui_panel_opened", fields);
     }
 
     std::shared_ptr<CGamePanel> panel = game->createObject<CGamePanel>("selectionPanel");
@@ -197,6 +257,11 @@ std::shared_ptr<CGamePanel> CGuiHandler::openPanel(std::string panel) {
     auto panelClas = game->getObjectHandler()->getClass(panel);
     if (auto currentPanel = vstd::cast<CGamePanel>(game->getGui()->findChild(panelClas))) {
         return currentPanel;
+    }
+    if (CPlaytestTrace::enabled()) {
+        json fields = {{"blocking", false}, {"panel", panel}, {"panelKind", "configured"}};
+        CPlaytestTrace::addMapContext(fields, game->getMap());
+        CPlaytestTrace::record("gui_panel_opened", fields);
     }
     std::shared_ptr<CGamePanel> child = game->createObject<CGamePanel>(panel);
     game->getGui()->pushChild(child);

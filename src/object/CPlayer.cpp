@@ -19,6 +19,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "core/CGame.h"
 #include "core/CMap.h"
+#include "core/CPlaytestTrace.h"
 #include <utility>
 
 namespace {
@@ -39,6 +40,14 @@ void CPlayer::checkQuests() {
             continue;
         }
         if (quest->isCompleted()) {
+            if (CPlaytestTrace::enabled()) {
+                json fields = {
+                    {"player", CPlaytestTrace::objectRef(this->ptr<CPlayer>())},
+                    {"quest", questId(quest)},
+                };
+                CPlaytestTrace::addMapContext(fields, getMap());
+                CPlaytestTrace::record("quest_completed", fields);
+            }
             quest->onComplete();
             quests.erase(quests.find(quest));
             completedQuests.insert(quest);
@@ -60,6 +69,14 @@ void CPlayer::addQuest(std::string questName) {
     std::shared_ptr<CQuest> quest = getGame()->createObject<CQuest>(questName);
     if (quest) {
         quests.insert(quest);
+        if (CPlaytestTrace::enabled()) {
+            json fields = {
+                {"player", CPlaytestTrace::objectRef(this->ptr<CPlayer>())},
+                {"quest", questName},
+            };
+            CPlaytestTrace::addMapContext(fields, getMap());
+            CPlaytestTrace::record("quest_added", fields);
+        }
     }
 }
 

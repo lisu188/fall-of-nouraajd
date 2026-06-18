@@ -3,6 +3,43 @@ import json
 
 set_logger_sink("disabled", None)
 
+_native_configure_playtest_trace = configure_playtest_trace
+_native_get_playtest_trace_records = get_playtest_trace_records
+_native_drain_playtest_trace_records = drain_playtest_trace_records
+_native_record_playtest_trace_json = record_playtest_trace_json
+
+
+def configure_playtest_trace(enabled=True, output_path=None, max_records=1000):
+    _native_configure_playtest_trace(bool(enabled), output_path, max_records)
+
+
+def _parse_playtest_trace(records):
+    return [json.loads(record) for record in records]
+
+
+def get_playtest_trace():
+    return _parse_playtest_trace(_native_get_playtest_trace_records())
+
+
+def drain_playtest_trace():
+    return _parse_playtest_trace(_native_drain_playtest_trace_records())
+
+
+def record_playtest_trace(event, **fields):
+    if playtest_trace_enabled():
+        _native_record_playtest_trace_json(event, json.dumps(fields, sort_keys=True))
+
+
+def playtest_object_ref(obj):
+    if obj is None:
+        return None
+    return {
+        "id": getattr(obj, "getTypeId", lambda: "")() or getattr(obj, "getName", lambda: "")(),
+        "name": getattr(obj, "getName", lambda: "")(),
+        "type": getattr(obj, "getType", lambda: "")(),
+        "typeId": getattr(obj, "getTypeId", lambda: "")(),
+    }
+
 
 def register(context):
     def register_wrapper(f):
@@ -93,20 +130,52 @@ class CDialog(CDialogBase2):
     def invokeAction(self, action):
         callback = self._get_public_callback(action)
         if callback is None:
+            record_playtest_trace(
+                "dialog_action_rejected",
+                action=action,
+                dialog=playtest_object_ref(self),
+                reason="unknown_action",
+            )
             logger(f"Rejected unknown dialog action: {action}")
             return
         try:
+            record_playtest_trace("dialog_action", action=action, dialog=playtest_object_ref(self))
             callback()
         except Exception as exc:
+            record_playtest_trace(
+                "dialog_action_failed",
+                action=action,
+                dialog=playtest_object_ref(self),
+                error=type(exc).__name__,
+            )
             logger(f"Dialog action failed closed: {action}: {exc}")
 
     def invokeCondition(self, condition):
         callback = self._get_public_callback(condition)
         if callback is None:
+            record_playtest_trace(
+                "dialog_condition_rejected",
+                condition=condition,
+                dialog=playtest_object_ref(self),
+                reason="unknown_condition",
+            )
             logger(f"Rejected unknown dialog condition: {condition}")
             return False
         try:
-            return bool(callback())
+            result = bool(callback())
+            record_playtest_trace(
+                "dialog_condition",
+                condition=condition,
+                dialog=playtest_object_ref(self),
+                result=result,
+            )
+            return result
         except Exception as exc:
+            record_playtest_trace(
+                "dialog_condition_failed",
+                condition=condition,
+                dialog=playtest_object_ref(self),
+                error=type(exc).__name__,
+            )
             logger(f"Dialog condition failed closed: {condition}: {exc}")
             return False
