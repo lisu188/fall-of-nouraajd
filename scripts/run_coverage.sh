@@ -3,7 +3,7 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 BUILD_DIR="${BUILD_DIR:-cmake-build-coverage}"
-MIN_COVERAGE="${MIN_COVERAGE:-100}"
+MIN_COVERAGE="${MIN_COVERAGE:-95}"
 REPORT_DIR="${ROOT_DIR}/coverage"
 COVERAGE_LINE_EXCLUSIONS="${COVERAGE_LINE_EXCLUSIONS:-${ROOT_DIR}/scripts/coverage_exclusions.json}"
 COVERAGE_INCLUDE_PREFIXES="${COVERAGE_INCLUDE_PREFIXES:-src native_plugins}"

@@ -130,6 +130,7 @@ DEFAULT_TEST_DURATIONS = {
     "McpServerTest.test_stdio_map_walkthrough_ritual": 45.0,
     "McpServerTest.test_stdio_map_walkthrough_siege": 30.0,
     "McpServerTest.test_stdio_map_walkthrough_test": 20.0,
+    "McpServerTest.test_stdio_scene_manager_map_transition_walkthrough": 20.0,
     XVFB_GAMEPLAY_PARENT_TEST: 90.0,
     "GameTest.test_map_walkthrough_multilevel": 12.0,
     "GameTest.test_map_walkthrough_nouraajd": 25.0,
@@ -3620,7 +3621,9 @@ class GameTest(unittest.TestCase):
         origin = player.getCoords()
         target = find_adjacent_walkable_tile(game_map, origin)
         controller = get_player_controller(player)
+        scene_manager = g.getSceneManager()
         lifecycle = []
+        self.assertEqual("Idle", scene_manager.getTransitionStateName())
 
         class DeferredChangeMap(game.CEvent):
             def onEnter(self, event):
@@ -3645,6 +3648,9 @@ class GameTest(unittest.TestCase):
 
         self.assertEqual("test", g.getMap().mapName)
         self.assertEqual(1, g.getMap().getTurn())
+        self.assertEqual("TransitionPending", scene_manager.getTransitionStateName())
+        self.assertTrue(scene_manager.isTransitionPending())
+        self.assertEqual("ritual", scene_manager.getPendingMapName())
         self.assertEqual(
             (target.x, target.y, target.z), (player.getCoords().x, player.getCoords().y, player.getCoords().z)
         )
@@ -3659,6 +3665,9 @@ class GameTest(unittest.TestCase):
         self.assertEqual("ritual", g.getMap().mapName)
         self.assertEqual(1, g.getMap().getTurn())
         self.assertTrue(g.getMap().getPlayer() == player)
+        self.assertEqual("Idle", scene_manager.getTransitionStateName())
+        self.assertFalse(scene_manager.isTransitionPending())
+        self.assertEqual("", scene_manager.getPendingMapName())
 
         return True, json.dumps(
             {
@@ -3680,6 +3689,230 @@ class GameTest(unittest.TestCase):
             },
             sort_keys=True,
         )
+
+    @game_test
+    def test_scene_manager_duplicate_transition_keeps_first_request(self):
+        game = load_game_module()
+
+        g, game_map, player = load_game_map_with_player("test")
+        scene_manager = g.getSceneManager()
+        game_map.setNumericProperty("turn", 12)
+
+        self.assertTrue(scene_manager.requestMapChange(g, "ritual"))
+        self.assertEqual("TransitionPending", scene_manager.getTransitionStateName())
+        self.assertEqual("ritual", scene_manager.getPendingMapName())
+        self.assertFalse(scene_manager.requestMapChange(g, "siege"))
+        self.assertEqual("ritual", scene_manager.getPendingMapName())
+        self.assertEqual("test", g.getMap().mapName)
+
+        self.assertTrue(
+            pump_event_loop_until(
+                lambda: g.getMap().mapName == "ritual" and not scene_manager.isTransitionPending(),
+                timeout=2.0,
+                min_iterations=2,
+            )
+        )
+
+        self.assertEqual("ritual", g.getMap().mapName)
+        self.assertEqual(12, g.getMap().getTurn())
+        self.assertTrue(g.getMap().getPlayer() == player)
+        self.assertEqual("Idle", scene_manager.getTransitionStateName())
+        self.assertEqual("", scene_manager.getPendingMapName())
+
+        return True, json.dumps(
+            {
+                "destination": g.getMap().mapName,
+                "pending": scene_manager.getPendingMapName(),
+                "player": player.getName(),
+                "turn": g.getMap().getTurn(),
+            },
+            sort_keys=True,
+        )
+
+    @game_test
+    def test_scene_manager_real_map_transitions_preserve_player_state_and_triggers(self):
+        game = load_game_module()
+
+        g, game_map, player = load_game_map_with_player("test")
+        scene_manager = g.getSceneManager()
+        origin = player.getCoords()
+        target = find_adjacent_walkable_tile(game_map, origin)
+        player.addItem("LesserLifePotion")
+        player.setNumericProperty("gold", 123)
+        player.setStringProperty("sceneTransitionMarker", "kept")
+
+        set_player_target(player, target)
+        game_map.move()
+        turn_after_move = game_map.getTurn()
+        self.assertEqual(
+            (target.x, target.y, target.z),
+            (player.getCoords().x, player.getCoords().y, player.getCoords().z),
+        )
+
+        g.changeMap("ritual")
+        self.assertEqual("TransitionPending", scene_manager.getTransitionStateName())
+        self.assertTrue(
+            pump_event_loop_until(
+                lambda: g.getMap().mapName == "ritual" and not scene_manager.isTransitionPending(),
+                timeout=2.0,
+                min_iterations=2,
+            )
+        )
+
+        ritual_map = g.getMap()
+        ritual_coords = player.getCoords()
+        self.assertEqual("ritual", ritual_map.mapName)
+        self.assertTrue(ritual_map.getPlayer() == player)
+        self.assertEqual(turn_after_move, ritual_map.getTurn())
+        self.assertEqual(
+            (ritual_map.getEntryX(), ritual_map.getEntryY(), ritual_map.getEntryZ()),
+            (ritual_coords.x, ritual_coords.y, ritual_coords.z),
+        )
+        self.assertEqual("kept", player.getStringProperty("sceneTransitionMarker"))
+        self.assertEqual(123, player.getNumericProperty("gold"))
+        self.assertGreaterEqual(player.countItems("LesserLifePotion"), 1)
+        self.assertTrue(ritual_map.getBoolProperty("ritual_initialized"))
+        self.assertIn("ritualQuest", quest_names(player))
+
+        expected_siege_turn = ritual_map.getTurn() + 2
+        ritual_map.setNumericProperty("turn", expected_siege_turn)
+        g.changeMap("siege")
+        self.assertEqual("TransitionPending", scene_manager.getTransitionStateName())
+        self.assertTrue(
+            pump_event_loop_until(
+                lambda: g.getMap().mapName == "siege" and not scene_manager.isTransitionPending(),
+                timeout=2.0,
+                min_iterations=2,
+            )
+        )
+
+        siege_map = g.getMap()
+        siege_coords = player.getCoords()
+        self.assertEqual("siege", siege_map.mapName)
+        self.assertTrue(siege_map.getPlayer() == player)
+        self.assertEqual(expected_siege_turn, siege_map.getTurn())
+        self.assertEqual(
+            (siege_map.getEntryX(), siege_map.getEntryY(), siege_map.getEntryZ()),
+            (siege_coords.x, siege_coords.y, siege_coords.z),
+        )
+        self.assertTrue(siege_map.getBoolProperty("siege_initialized"))
+        self.assertIn("defendSiegeQuest", quest_names(player))
+        self.assertGreaterEqual(player.countItems("magicWand"), 1)
+        self.assertEqual("kept", player.getStringProperty("sceneTransitionMarker"))
+        self.assertEqual("Idle", scene_manager.getTransitionStateName())
+
+        return True, json.dumps(
+            {
+                "destination": siege_map.mapName,
+                "player": player.getName(),
+                "quests": quest_names(player),
+                "turn": siege_map.getTurn(),
+                "wands": player.countItems("magicWand"),
+            },
+            sort_keys=True,
+        )
+
+    @game_test
+    def test_scene_manager_rejects_nested_transition_from_destination_entry(self):
+        game = load_game_module()
+
+        g, game_map, player = load_game_map_with_player("test")
+        scene_manager = g.getSceneManager()
+        game_map.setNumericProperty("turn", 14)
+
+        class RedirectingStartEvent(game.CEvent):
+            def onEnter(self, event):
+                if event.getCause().getName() != "player":
+                    return
+                self.getMap().setBoolProperty("nested_redirect_seen", True)
+                self.getMap().getGame().changeMap("siege")
+
+        g.getObjectHandler().registerType("StartEvent", RedirectingStartEvent)
+        g.changeMap("ritual")
+        self.assertEqual("TransitionPending", scene_manager.getTransitionStateName())
+
+        self.assertTrue(
+            pump_event_loop_until(
+                lambda: g.getMap().mapName == "ritual" and not scene_manager.isTransitionPending(),
+                timeout=2.0,
+                min_iterations=2,
+            )
+        )
+        pump_event_loop(5)
+
+        self.assertEqual("ritual", g.getMap().mapName)
+        self.assertTrue(g.getMap().getPlayer() == player)
+        self.assertEqual(14, g.getMap().getTurn())
+        self.assertTrue(g.getMap().getBoolProperty("nested_redirect_seen"))
+        self.assertEqual("Idle", scene_manager.getTransitionStateName())
+        self.assertEqual("", scene_manager.getPendingMapName())
+
+        return True, json.dumps(
+            {
+                "destination": g.getMap().mapName,
+                "nested_redirect_seen": g.getMap().getBoolProperty("nested_redirect_seen"),
+                "player": player.getName(),
+                "turn": g.getMap().getTurn(),
+            },
+            sort_keys=True,
+        )
+
+    @game_test
+    def test_save_load_after_scene_manager_transition_preserves_active_map_player_state(self):
+        game = load_game_module()
+
+        g, _game_map, player = load_game_map_with_player("test")
+        scene_manager = g.getSceneManager()
+        save_name = unique_save_name("scene_manager_transition_roundtrip")
+        save_path = Path.cwd() / "save" / f"{save_name}.json"
+        player.addItem("LesserLifePotion")
+        player.setNumericProperty("gold", 77)
+        player.setStringProperty("sceneTransitionMarker", save_name)
+
+        try:
+            g.changeMap("ritual")
+            self.assertTrue(
+                pump_event_loop_until(
+                    lambda: g.getMap().mapName == "ritual" and not scene_manager.isTransitionPending(),
+                    timeout=2.0,
+                    min_iterations=2,
+                )
+            )
+            ritual_map = g.getMap()
+            self.assertTrue(ritual_map.getPlayer() == player)
+            self.assertTrue(ritual_map.getBoolProperty("ritual_initialized"))
+            self.assertIn("ritualQuest", quest_names(player))
+
+            game.CMapLoader.save(ritual_map, save_name)
+
+            loaded_game = game.CGameLoader.loadGame()
+            game.CGameLoader.loadSavedGame(loaded_game, save_name)
+            loaded_map = loaded_game.getMap()
+            loaded_player = loaded_map.getPlayer()
+            loaded_coords = loaded_player.getCoords()
+
+            self.assertEqual("ritual", loaded_map.mapName)
+            self.assertEqual(
+                (loaded_map.getEntryX(), loaded_map.getEntryY(), loaded_map.getEntryZ()),
+                (loaded_coords.x, loaded_coords.y, loaded_coords.z),
+            )
+            self.assertEqual(save_name, loaded_player.getStringProperty("sceneTransitionMarker"))
+            self.assertEqual(77, loaded_player.getNumericProperty("gold"))
+            self.assertGreaterEqual(loaded_player.countItems("LesserLifePotion"), 1)
+            self.assertTrue(loaded_map.getBoolProperty("ritual_initialized"))
+            self.assertIn("ritualQuest", quest_names(loaded_player))
+
+            return True, json.dumps(
+                {
+                    "map": loaded_map.mapName,
+                    "player": loaded_player.getName(),
+                    "quests": quest_names(loaded_player),
+                    "save": save_name,
+                },
+                sort_keys=True,
+            )
+        finally:
+            save_path.unlink(missing_ok=True)
 
     @game_test
     def test_toroidal_map_wraps_and_survives_save_load(self):
@@ -9369,6 +9602,7 @@ class GameTest(unittest.TestCase):
         game = load_game_module()
 
         g, game_map, player = load_game_map_with_player("nouraajd")
+        scene_manager = g.getSceneManager()
         town_hall = g.createObject("townHallDialog")
         beren = g.createObject("berenDialog")
 
@@ -9377,27 +9611,38 @@ class GameTest(unittest.TestCase):
         game_map.removeObjectByName("catacombs")
         beren.return_relic()
         game_map.removeObjectByName("cave2")
+        chapel = game_map.getObjectByName("nouraajdChapel")
+        chapel_coords = chapel.getCoords()
+        player.moveTo(chapel_coords.x, chapel_coords.y, chapel_coords.z)
         beren.finish_cleanse()
+        self.assertEqual("TransitionPending", scene_manager.getTransitionStateName())
         pump_event_loop(10)
 
         self.assertEqual("ritual", g.getMap().mapName)
         self.assertTrue(g.getMap().getPlayer() == player)
+        self.assertEqual("Idle", scene_manager.getTransitionStateName())
 
         ritual_map = g.getMap()
         ritual_map.setBoolProperty("anchors_destroyed", True)
         ritual_map.setBoolProperty("leader_defeated", True)
+        captive_marker = ritual_map.getObjectByName("ritualCaptive")
+        captive_coords = captive_marker.getCoords()
+        player.moveTo(captive_coords.x, captive_coords.y, captive_coords.z)
         captured = g.createObject("capturedSoulDialog")
         captured.free_captive()
+        self.assertEqual("TransitionPending", scene_manager.getTransitionStateName())
         pump_event_loop(10)
 
         self.assertEqual("siege", g.getMap().mapName)
         self.assertTrue(g.getMap().getPlayer() == player)
+        self.assertEqual("Idle", scene_manager.getTransitionStateName())
         self.assertIn("defendSiegeQuest", quest_names(player))
         self.assertGreaterEqual(player.countItems("magicWand"), 1)
 
         return True, json.dumps(
             {
                 "current_map": g.getMap().mapName,
+                "manager": scene_manager.getTransitionStateName(),
                 "player_name": player.getName(),
                 "quests": quest_names(player),
                 "wands": player.countItems("magicWand"),
@@ -10929,6 +11174,22 @@ class McpServerTest(unittest.TestCase):
         self.assertNotIn("CPluginLoader.loadDynamicPlugin", server.exports)
         self.assertNotIn("CGuiHandler.openPanel", server.exports)
 
+        game_module = server.game_module
+        g = game_module.CGameLoader.loadGame()
+        game_module.CGameLoader.startGameWithPlayer(g, "test", DEFAULT_PLAYER)
+        game_handle = server._serialize_result(g)
+        scene_manager_handle = server._engine_handle_call(
+            {
+                "handle": game_handle["__handle__"],
+                "method": "getSceneManager",
+            }
+        )
+        self.assertFalse(scene_manager_handle["isError"])
+        method_names = {
+            method["name"] for method in scene_manager_handle["structuredContent"]["result"].get("pythonMethods", [])
+        }
+        self.assertTrue({"getTransitionStateName", "requestMapChange"}.issubset(method_names))
+
     def test_engine_call_resolves_handle_arguments_for_python_methods(self):
         server = self.make_stub_server()
 
@@ -11301,6 +11562,51 @@ class McpServerTest(unittest.TestCase):
 
     def test_stdio_map_walkthrough_test(self):
         self._assert_mcp_walkthrough("test")
+
+    def test_stdio_scene_manager_map_transition_walkthrough(self):
+        proc = None
+        try:
+            proc = self._start_stdio_mcp_process()
+            self._initialize_stdio_mcp(proc)
+            session = {"proc": proc, "next_request_id": 3}
+
+            game_handle, map_handle, player_handle = self._mcp_load_game_map_with_player(session, "test")
+            manager_handle = self._mcp_handle_call(session, game_handle, "getSceneManager")
+            self._mcp_handle_call(session, player_handle, "addItem", ["LesserLifePotion"])
+            self._mcp_handle_call(session, player_handle, "setNumericProperty", ["gold", 45])
+            self._mcp_handle_call(session, player_handle, "setStringProperty", ["sceneTransitionMarker", "mcp"])
+            self._mcp_handle_call(session, map_handle, "setNumericProperty", ["turn", 6])
+
+            self._mcp_handle_call(session, game_handle, "changeMap", ["ritual"])
+            self.assertEqual(
+                "TransitionPending", self._mcp_handle_call(session, manager_handle, "getTransitionStateName")
+            )
+
+            event_loop_handle = self._mcp_engine_call(session, "event_loop.instance")
+            for _ in range(10):
+                self._mcp_handle_call(session, event_loop_handle, "run")
+
+            ritual_map_handle = self._mcp_handle_call(session, game_handle, "getMap")
+            ritual_player_handle = self._mcp_handle_call(session, ritual_map_handle, "getPlayer")
+            ritual_map = self._mcp_serialized_map(session, ritual_map_handle)
+            ritual_player = self._serialized_player(ritual_map)
+            ritual_properties = ritual_map.get("properties", {})
+            player_properties = ritual_player.get("properties", {})
+
+            self.assertEqual("Idle", self._mcp_handle_call(session, manager_handle, "getTransitionStateName"))
+            self.assertEqual("ritual", ritual_properties.get("mapName"))
+            self.assertEqual(6, ritual_properties.get("turn"))
+            self.assertTrue(ritual_properties.get("ritual_initialized"))
+            self.assertEqual("mcp", player_properties.get("sceneTransitionMarker"))
+            self.assertEqual(45, self._mcp_handle_call(session, ritual_player_handle, "getNumericProperty", ["gold"]))
+            self.assertGreaterEqual(
+                self._mcp_handle_call(session, ritual_player_handle, "countItems", ["LesserLifePotion"]), 1
+            )
+            self.assertIn("ritualQuest", self._serialized_quest_ids(ritual_player))
+            self.assertTrue(self._serialized_inventory_has(ritual_player, "LesserLifePotion"))
+        finally:
+            if proc is not None:
+                self._shutdown_process(proc)
 
     def _assert_mcp_walkthrough(self, map_name):
         discovered_maps = discover_maps()

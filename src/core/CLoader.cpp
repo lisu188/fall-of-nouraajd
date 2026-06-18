@@ -19,6 +19,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CController.h"
 #include "core/CJsonUtil.h"
 #include "core/CSaveFormat.h"
+#include "core/CSceneManager.h"
 #include "core/CTypes.h"
 #include "gui/CGui.h"
 #include "gui/object/CMapGraphicsObject.h"
@@ -1185,22 +1186,11 @@ void CGameLoader::startGame(const std::shared_ptr<CGame> &game, const std::strin
 }
 
 void CGameLoader::changeMap(const std::shared_ptr<CGame> &game, const std::string &name) {
-    vstd::call_later([game, name]() {
-        // TODO: implement stop processing events here
-        vstd::call_when([game]() { return !game->getMap() || !game->getMap()->isMoving(); },
-                        [game, name]() {
-                            std::shared_ptr<CMap> oldMap = game->getMap();
-                            std::shared_ptr<CMap> map = CMapLoader::loadNewMap(game, name);
-                            game->setMap(map);
-                            if (oldMap && game->getMap()) {
-                                std::shared_ptr<CPlayer> player = oldMap->getPlayer();
-                                if (player) {
-                                    game->getMap()->setPlayer(player);
-                                }
-                                game->getMap()->setTurn(oldMap->getTurn());
-                            }
-                        });
-    });
+    if (!game) {
+        vstd::logger::warning("Rejected map transition without a game:", name);
+        return;
+    }
+    game->getSceneManager()->requestMapChange(game, name);
 }
 
 void CGameLoader::initConfigurations(const std::shared_ptr<CObjectHandler> &handler) {
