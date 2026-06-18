@@ -18,7 +18,9 @@ jobs:
         with:
           python-version: "3.12"
       - name: Install Python deps
-        run: python -m pip install --upgrade pillow==11.2.1
+        run: python3 -m pip install --upgrade pillow==11.2.1
+      - name: Smoke test Python deps
+        run: python3 -c "from PIL import Image; print(Image.__name__)"
       - name: detect coverage need
         id: coverage-needed
         shell: bash
