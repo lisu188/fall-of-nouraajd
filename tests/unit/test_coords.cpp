@@ -18,6 +18,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "core/CTags.h"
 #include "core/CJsonUtil.h"
+#include "core/CLoader.h"
 #include "core/CPathFinder.h"
 #if defined(__linux__)
 #include "core/CMap.h"
@@ -283,6 +284,25 @@ void test_pathfinder_waypoint_override() {
     };
     auto next_step = CPathFinder::findNextStep(Coords(0, 0, 0), Coords(2, 0, 0), can_step, forced_waypoint);
     expect_true(next_step->get() == Coords(2, 0, 0), "findNextStep should allow waypoint override when available");
+}
+
+void test_pathfinder_crosses_levels_through_explicit_waypoint() {
+    auto can_step = [](const Coords &coords) {
+        return coords == Coords(0, 0, 0) || coords == Coords(1, 0, 0) || coords == Coords(1, 0, 1) ||
+               coords == Coords(2, 0, 1);
+    };
+    auto stair_waypoint = [](const Coords &coords) -> std::optional<Coords> {
+        if (coords == Coords(1, 0, 0)) {
+            return Coords(1, 0, 1);
+        }
+        return std::nullopt;
+    };
+
+    auto path = CPathFinder::findPath(Coords(0, 0, 0), Coords(2, 0, 1), can_step, stair_waypoint);
+    expect_true(path.size() == 3, "cross-level waypoint path should include stair landing and goal");
+    expect_true(path[0] == Coords(1, 0, 0), "cross-level path should first move to the connector");
+    expect_true(path[1] == Coords(1, 0, 1), "cross-level path should then move to the connector landing");
+    expect_true(path[2] == Coords(2, 0, 1), "cross-level path should finish on the target level");
 }
 
 int wrap_axis(int value, int bound) {
@@ -880,6 +900,85 @@ void test_map_tiles_bounds_wrapping_and_object_cache() {
     expect_true(map->getObjects().empty(), "removeObjects should erase matching objects from a cloned iteration");
 }
 
+void test_map_keeps_tiles_and_objects_separate_by_z() {
+    auto map = std::make_shared<CMap>();
+    map->setXBounds({{0, 4}, {1, 4}});
+    map->setYBounds({{0, 4}, {1, 4}});
+
+    auto lower_floor = std::make_shared<CTile>();
+    lower_floor->setCanStep(true);
+    lower_floor->setTileType("lowerFloor");
+    auto upper_wall = std::make_shared<CTile>();
+    upper_wall->setCanStep(false);
+    upper_wall->setTileType("upperWall");
+    auto upper_floor = std::make_shared<CTile>();
+    upper_floor->setCanStep(true);
+    upper_floor->setTileType("upperFloor");
+    auto lower_probe_floor = std::make_shared<CTile>();
+    lower_probe_floor->setCanStep(true);
+    lower_probe_floor->setTileType("lowerProbeFloor");
+
+    expect_true(map->addTile(lower_floor, 1, 1, 0), "same x/y should accept a level 0 tile");
+    expect_true(map->addTile(upper_wall, 1, 1, 1), "same x/y should accept a separate level 1 tile");
+    expect_true(!map->addTile(std::make_shared<CTile>(), 1, 1, 0),
+                "duplicate x/y/z tile coordinates should still be rejected");
+    expect_true(map->addTile(lower_probe_floor, 2, 2, 0), "lower probe tile should be stored");
+    expect_true(map->addTile(upper_floor, 2, 2, 1), "upper probe tile should be stored");
+
+    expect_true(map->getTile(1, 1, 0) == lower_floor, "getTile should return the level 0 tile");
+    expect_true(map->getTile(1, 1, 1) == upper_wall, "getTile should return the level 1 tile");
+    expect_true(map->canStep(1, 1, 0), "walkable lower tile should be passable");
+    expect_true(!map->canStep(1, 1, 1), "blocking upper tile should be impassable");
+    expect_true(map->getTiles().size() == 4, "tile storage should count distinct z-level coordinates");
+
+    auto lower_blocker = std::make_shared<CMapObject>();
+    lower_blocker->setName("lowerBlocker");
+    lower_blocker->setCanStep(false);
+    lower_blocker->setPosX(2);
+    lower_blocker->setPosY(2);
+    lower_blocker->setPosZ(0);
+    auto upper_marker = std::make_shared<CMapObject>();
+    upper_marker->setName("upperMarker");
+    upper_marker->setCanStep(true);
+    upper_marker->setPosX(2);
+    upper_marker->setPosY(2);
+    upper_marker->setPosZ(1);
+
+    map->setObjects({lower_blocker, upper_marker});
+    auto lower_objects = map->getObjectsAtCoords(Coords(2, 2, 0));
+    auto upper_objects = map->getObjectsAtCoords(Coords(2, 2, 1));
+    expect_true(lower_objects.size() == 1 && lower_objects.contains(lower_blocker),
+                "object lookup should return only objects on the requested lower level");
+    expect_true(upper_objects.size() == 1 && upper_objects.contains(upper_marker),
+                "object lookup should return only objects on the requested upper level");
+    expect_true(!map->canStep(2, 2, 0), "lower blocking object should block only its own level");
+    expect_true(map->canStep(2, 2, 1), "upper level should remain passable at the same x/y");
+
+    auto old_upper_coords = upper_marker->getCoords();
+    upper_marker->setPosX(3);
+    map->objectMoved(upper_marker, old_upper_coords, upper_marker->getCoords());
+    expect_true(map->getObjectsAtCoords(Coords(2, 2, 1)).empty(),
+                "moving an upper-level object should clear its old z-specific cache entry");
+    expect_true(map->getObjectsAtCoords(Coords(3, 2, 1)).contains(upper_marker),
+                "moving an upper-level object should populate its new z-specific cache entry");
+    expect_true(map->getObjectsAtCoords(Coords(2, 2, 0)).contains(lower_blocker),
+                "moving an upper-level object should not disturb lower-level cache entries");
+}
+
+void test_can_step_checks_default_tile_passability_without_materializing() {
+    auto game = CGameLoader::loadGame();
+    CGameLoader::startGameWithPlayer(game, "multilevel", "Warrior");
+    auto map = game->getMap();
+
+    const auto initial_tile_count = map->getTiles().size();
+    const auto initial_navigation_revision = map->getNavigationRevision();
+    expect_true(!map->contains(0, 0, 0), "sparse multilevel map should not materialize default tiles at load");
+    expect_true(!map->canStep(0, 0, 0), "canStep should honor the level's blocking default tile");
+    expect_true(map->getTiles().size() == initial_tile_count, "canStep should not materialize missing default tiles");
+    expect_true(map->getNavigationRevision() == initial_navigation_revision,
+                "canStep should not bump navigation revision for missing default tiles");
+}
+
 void test_resource_provider_paths_and_config_loader() {
     auto provider = CResourcesProvider::getInstance();
     expect_true(provider->getPath("").empty(), "empty resource paths should be rejected");
@@ -1067,6 +1166,7 @@ int main() {
     test_pathfinder_waypoint_and_blocked_goal();
     test_pathfinder_caches_passability_checks();
     test_pathfinder_waypoint_override();
+    test_pathfinder_crosses_levels_through_explicit_waypoint();
     test_toroidal_pathfinder_prefers_wrapped_route();
     test_toroidal_pathfinder_wraps_on_both_axes();
     test_json_parse_expected_success_and_failure();
@@ -1087,6 +1187,8 @@ int main() {
     test_script_handler_executes_commands_and_wraps_functions();
 #if defined(__linux__)
     test_map_tiles_bounds_wrapping_and_object_cache();
+    test_map_keeps_tiles_and_objects_separate_by_z();
+    test_can_step_checks_default_tile_passability_without_materializing();
     test_resource_provider_paths_and_config_loader();
 #endif
     test_random_dungeon_cell_flags_and_validation();

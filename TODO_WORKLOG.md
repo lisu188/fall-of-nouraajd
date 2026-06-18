@@ -419,3 +419,65 @@
   - `./scripts/run_coverage.sh` -> C++ tests passed, embedded `python3 test.py` passed, and report generation passed with `lines: 92.00% (9040 out of 9826)`
 - Blockers if unresolved: None. A pre-rebase `python3 test.py` run wedged in a GUI shard and was terminated; the
   isolated shard, full suite rerun, and final post-rebase full suite all passed.
+
+## Batch 26
+- Location: `res/maps/multilevel/map.json`, `res/maps/multilevel/config.json`,
+  `res/maps/multilevel/script.py`, `res/images/buildings/stairs_up.png`,
+  `res/images/buildings/stairs_down.png`, `res/images/buildings/catacombs.png`, `CMakeLists.txt`,
+  `src/core/CMap.cpp`, `tests/unit/test_coords.cpp`,
+  `test.py`, `mcp.py`, `todo.txt`
+- Original TODO or summary: Add a real authored multilevel map with deterministic level transitions, movement support,
+  save/load coverage, and gameplay-facing walkthrough validation. The existing `todo.txt` item about multilevel
+  pathfinding was too broad for the connector-based support implemented here.
+- Status: fixed for authored connector-based multilevel gameplay; generalized multilevel pathfinding remains tracked.
+- What was changed: Added the `multilevel` map with explicit z=0 and z=1 tile layers, z-specific object layers,
+  entry coordinates, level-specific blockers, goal events, and `LevelStairs` transition objects. The stairs publish
+  waypoint metadata for player pathfinding and use a one-event guard so landing on the paired stair does not bounce the
+  player back immediately. Added the supplied `stairs_up.png` and `stairs_down.png` image assets under
+  `res/images/buildings/`, then integrated the supplied `catacombs.png` as the level-1 goal landmark. Updated the
+  authored animation ids and wired all new map/image resources through CMake.
+  Tightened `CMap::canStep()` so missing sparse tiles honor configured default/out-of-bounds passability without
+  materializing tiles or bumping navigation revisions. Narrowed MCP controller access to player handles while allowing
+  MCP walkthroughs to drive the real player through `CPlayerController`.
+- Why the map is truly multilevel: `map.json` contains separate authored tile and object layers with
+  `properties.level` values for levels 0 and 1. Runtime tests assert level-specific tiles and objects load at the
+  expected z values, blockers only affect their own z level, and the player can move from level 0 to level 1 and back
+  through authored stair objects.
+- Movement/transition design: Normal same-level movement still uses the existing controller/pathfinder and cardinal
+  adjacency. Cross-level movement is connector-based: `stairsUp` and `stairsDown` are stepable map objects that expose
+  `waypoint`, `x`, `y`, and `z` for the opposite landing and move the player on `onEnter` after validating
+  `canStep(target)`. This supports the authored route without treating every matching x/y on another floor as adjacent.
+- Tests added: Native unit tests cover z-specific tile/object/cache separation, explicit waypoint cross-level
+  pathfinding, and non-mutating default-tile `canStep()` checks. Python integration tests cover authored z-layer
+  loading, controller-driven up/down stair movement, save/load after moving to z=1, z-scoped stale collision cache
+  behavior, and the `multilevel` walkthrough. MCP tests cover the same gameplay route over stdio and verify all playable
+  maps have MCP walkthroughs. A security-scope regression keeps non-player creature controller access denied over MCP.
+- Validation performed:
+  - `python3 -m json.tool res/maps/multilevel/map.json`
+  - `python3 -m json.tool res/maps/multilevel/config.json`
+  - `python3 -m py_compile test.py mcp.py res/maps/multilevel/script.py`
+  - `file res/images/buildings/stairs_up.png res/images/buildings/stairs_down.png res/images/buildings/catacombs.png`
+  - `python3 - <<'PY' ... PIL Image.open(...) ... PY` -> all supplied PNGs load as 1024x1024 RGBA
+  - `black -l 120 test.py mcp.py res/maps/multilevel/script.py`
+  - `clang-format -i src/core/CMap.cpp tests/unit/test_coords.cpp`
+  - `cmake --build cmake-build-release --target _game for_unit_tests -j$(nproc)`
+  - `ctest --test-dir cmake-build-release --output-on-failure -R for_unit_tests`
+  - `python3 test.py GameTest.test_map_json_tiled_compatibility GameTest.test_map_walkthrough_test
+    McpServerTest.test_stdio_map_walkthrough_test
+    McpServerTest.test_engine_handle_call_scopes_controller_access_to_players
+    GameTest.test_multilevel_map_loads_authored_z_layers
+    GameTest.test_multilevel_map_player_uses_stairs_both_directions
+    GameTest.test_multilevel_map_z_state_persists_after_save_load
+    GameTest.test_multilevel_map_stale_collision_cache_is_z_scoped GameTest.test_map_walkthrough_multilevel
+    McpServerTest.test_stdio_map_walkthrough_multilevel McpServerTest.test_stdio_map_walkthroughs_cover_all_maps`
+    -> `Ran 11 tests`, `OK`
+  - `git diff --check` -> no whitespace errors
+  - `python3 test.py` -> all shards and serial tests passed, including MCP map walkthroughs and Xvfb gameplay shards
+  - `./scripts/run_coverage.sh` -> C++ tests passed, embedded `python3 test.py` passed, and report generation passed
+    with `lines: 90.34% (9455 out of 10466)`
+  - `python3 mcp.py --stdio --repo-root . --build-dir cmake-build-release` -> modules imported, 10 callables
+    exported, stdio server started, then exited cleanly when stdin closed
+- Blockers if unresolved: The first user-provided path `/mnt/c/Users/andrz/OneDrive/Pulpit/stairs.png` was not visible
+  in this runtime. The later `/mnt/c/Users/andrz/Downloads/stairs_up_and_down.zip` was visible and was extracted into
+  versioned source assets. The later `catacombs.png` asset was available from
+  `/mnt/c/Users/andrz/OneDrive/Pulpit/catacombs.png` and was integrated as the level-1 landmark.
