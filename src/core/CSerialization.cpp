@@ -28,6 +28,7 @@ std::shared_ptr<CSerializerBase> CSerialization::serializer(std::pair<std::type_
 
 namespace {
 thread_local std::string array_deserialize_context;
+thread_local bool strict_deserialization = false;
 
 class CScopedArrayDeserializeContext {
   public:
@@ -74,6 +75,10 @@ class CGameObjectMapSerializer : public CSerializerBase {
     }
 };
 } // namespace
+
+CSerialization::StrictScope::StrictScope() : previous(CSerialization::setStrict(true)) {}
+
+CSerialization::StrictScope::~StrictScope() { CSerialization::setStrict(previous); }
 
 std::shared_ptr<CSerializerBase> game_object_pointer_serializer() {
     static auto serializer = std::make_shared<CGameObjectPointerSerializer>();
@@ -268,6 +273,9 @@ std::shared_ptr<CGameObject> object_deserialize(const std::shared_ptr<CGame> &ga
                                                 const std::shared_ptr<json> &config) {
     std::shared_ptr<CGameObject> object;
     if (!game || !config || !config->is_object()) {
+        if (CSerialization::isStrict()) {
+            throw std::runtime_error("Cannot deserialize a missing or non-object game object");
+        }
         return nullptr;
     }
     if (CJsonUtil::isRef(config)) {
@@ -282,12 +290,24 @@ std::shared_ptr<CGameObject> object_deserialize(const std::shared_ptr<CGame> &ga
             object->setGame(game);
         }
     }
+    if (!object && CSerialization::isStrict()) {
+        std::string type = "<unknown>";
+        if (config->contains("ref") && (*config)["ref"].is_string()) {
+            type = (*config)["ref"].get<std::string>();
+        } else if (config->contains("class") && (*config)["class"].is_string()) {
+            type = (*config)["class"].get<std::string>();
+        }
+        throw std::runtime_error("Cannot deserialize unresolved game object: " + type);
+    }
     if (object && config->is_object() && config->count("properties")) {
         auto properties = &(*config)["properties"];
         for (auto &[key, value] : properties->items()) {
             try {
                 CSerialization::setProperty(object, key, CJsonUtil::alias(config, value));
             } catch (const std::exception &exception) {
+                if (CSerialization::isStrict()) {
+                    throw;
+                }
                 vstd::logger::warning("Skipping malformed property:", key, exception.what());
             }
         }
@@ -323,6 +343,8 @@ std::map<std::string, std::shared_ptr<CGameObject>> map_deserialize(const std::s
             map, CJsonUtil::alias(object, val));
         if (deserialized) {
             ret[key] = deserialized;
+        } else if (CSerialization::isStrict()) {
+            throw std::runtime_error("Failed to deserialize object in map property '" + key + "'");
         }
     }
     return ret;
@@ -346,6 +368,9 @@ std::set<std::shared_ptr<CGameObject>> array_deserialize(const std::shared_ptr<C
         auto deserialized = CSerializerFunction<std::shared_ptr<json>, std::shared_ptr<CGameObject>>::deserialize(
             map, CJsonUtil::alias(object, (*object)[i]));
         if (!deserialized) {
+            if (CSerialization::isStrict()) {
+                throw std::runtime_error("Failed to deserialize object in array at index " + std::to_string(i));
+            }
             vstd::logger::warning("Failed to deserialize object in array",
                                   array_deserialize_context.empty() ? "property <unknown>" : array_deserialize_context,
                                   "index", i, "- skipping null entry");
@@ -397,4 +422,12 @@ std::shared_ptr<CGameObject> CSerializerFunction<std::shared_ptr<json>, std::sha
 std::shared_ptr<json> CSerializerFunction<std::shared_ptr<json>, std::shared_ptr<CGameObject>>::serialize(
     const std::shared_ptr<CGameObject> &object) {
     return object_serialize(object);
+}
+
+bool CSerialization::isStrict() { return strict_deserialization; }
+
+bool CSerialization::setStrict(bool value) {
+    const bool previous = strict_deserialization;
+    strict_deserialization = value;
+    return previous;
 }

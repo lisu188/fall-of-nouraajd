@@ -142,6 +142,34 @@ void CMap::setPlayer(std::shared_ptr<CPlayer> player) {
     player->moveTo(entryx, entryy, entryz);
 }
 
+bool CMap::restorePlayerAfterLoad(std::string &error) {
+    std::shared_ptr<CPlayer> restoredPlayer;
+    for (const auto &object : getObjects()) {
+        if (auto loadedPlayer = std::dynamic_pointer_cast<CPlayer>(object)) {
+            if (object->getName() != "player") {
+                error = "saved player object is not named player";
+                return false;
+            }
+            restoredPlayer = loadedPlayer;
+            break;
+        }
+    }
+
+    if (!restoredPlayer) {
+        return true;
+    }
+
+    if (!std::dynamic_pointer_cast<CPlayerController>(restoredPlayer->getController())) {
+        restoredPlayer->setController(getGame()->createObject<CPlayerController>());
+    }
+    if (!std::dynamic_pointer_cast<CPlayerFightController>(restoredPlayer->getFightController())) {
+        restoredPlayer->setFightController(getGame()->createObject<CPlayerFightController>());
+    }
+    player = restoredPlayer;
+    registerPlayerTriggers();
+    return true;
+}
+
 std::shared_ptr<CEventHandler> CMap::getEventHandler() {
     return eventHandler.get([this]() { return std::make_shared<CEventHandler>(); });
 }
