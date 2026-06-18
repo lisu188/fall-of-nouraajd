@@ -61,6 +61,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CModuleInit.h"
 #include "core/CPythonOverrides.h"
 #include "core/CRuntimeBridge.h"
+#include "core/CSceneManager.h"
 #include "core/CTags.h"
 #include "core/CTypes.h"
 #include "core/CUtil.h"
@@ -395,6 +396,24 @@ void init_game_module(py::module_ &m) {
         .def("getScriptHandler", &CGameContext::getScriptHandler, "Return the Python script execution service.")
         .def("getRngHandler", &CGameContext::getRngHandler, "Return the random encounter/loot handler.");
 
+    py::enum_<CSceneManager::TransitionState>(m, "CSceneTransitionState", "Scene transition lifecycle state.")
+        .value("Idle", CSceneManager::TransitionState::Idle)
+        .value("TransitionPending", CSceneManager::TransitionState::TransitionPending)
+        .value("Transitioning", CSceneManager::TransitionState::Transitioning);
+
+    bool (CSceneManager::*requestMapChange)(const std::shared_ptr<CGame> &, std::string) =
+        &CSceneManager::requestMapChange;
+
+    py::class_<CSceneManager, std::shared_ptr<CSceneManager>>(m, "CSceneManager",
+                                                              "Owns queued map transition state and execution.")
+        .def("requestMapChange", requestMapChange, "Queue a map transition request.")
+        .def("isTransitionPending", &CSceneManager::isTransitionPending,
+             "Return whether a map transition is pending or executing.")
+        .def("getTransitionState", &CSceneManager::getTransitionState, "Return the current transition state.")
+        .def("getTransitionStateName", &CSceneManager::getTransitionStateName,
+             "Return the current transition state name.")
+        .def("getPendingMapName", &CSceneManager::getPendingMapName, "Return the queued target map name.");
+
     py::class_<CGame, CGameObject, std::shared_ptr<CGame>>(
         m, "CGame", "Top-level game container holding the active map, handlers, and GUI.")
         .def("getMap", &CGame::getMap, "Return the currently loaded map.")
@@ -403,6 +422,7 @@ void init_game_module(py::module_ &m) {
         .def("getContext", &CGame::getContext, "Return the runtime service context.")
         .def("getGuiHandler", &CGame::getGuiHandler, "Return the GUI handler service.")
         .def("getObjectHandler", &CGame::getObjectHandler, "Return the object factory/registry handler.")
+        .def("getSceneManager", &CGame::getSceneManager, "Return the scene transition manager.")
         .def("getRngHandler", &CGame::getRngHandler, "Return the random encounter/loot handler.")
         .def("createObject", createObject, "Create an object by configured type id.")
         .def("getGui", &CGame::getGui, "Return the GUI root object.");

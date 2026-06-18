@@ -18,13 +18,14 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CGame.h"
 #include "core/CGameContext.h"
 #include "core/CLoader.h"
+#include "core/CSceneManager.h"
 #include "gui/CGui.h"
 
 CGame::CGame() {}
 
 CGame::~CGame() {}
 
-void CGame::changeMap(std::string file) { CGameLoader::changeMap(this->ptr<CGame>(), file); }
+void CGame::changeMap(std::string file) { CGameLoader::changeMap(this->ptr<CGame>(), std::move(file)); }
 
 std::shared_ptr<CMap> CGame::getMap() const { return map; }
 
@@ -44,6 +45,13 @@ std::shared_ptr<CGuiHandler> CGame::getGuiHandler() {
 std::shared_ptr<CScriptHandler> CGame::getScriptHandler() { return getContext()->getScriptHandler(); }
 
 std::shared_ptr<CObjectHandler> CGame::getObjectHandler() { return getContext()->getObjectHandler(); }
+
+std::shared_ptr<CSceneManager> CGame::getSceneManager() {
+    if (!sceneManager) {
+        sceneManager = std::make_shared<CSceneManager>();
+    }
+    return sceneManager;
+}
 
 void CGame::loadPlugin(std::function<std::shared_ptr<CPlugin>()> plugin) { plugin()->load(this->ptr<CGame>()); }
 

@@ -116,7 +116,7 @@ The script:
 - generates reports in `coverage/coverage.txt` and `coverage/coverage.html`
 - uses the repo-local Python reporter by default; set `COVERAGE_REPORTER=gcovr` only for diagnostic comparison
 - applies line exclusions from `scripts/coverage_exclusions.json` unless `COVERAGE_LINE_EXCLUSIONS` is overridden
-- fails if eligible line coverage is below the default `MIN_COVERAGE=100` gate
+- fails if eligible line coverage is below the default `MIN_COVERAGE=95` gate
 
 Optional coverage speed controls:
 - `COVERAGE_CXX_COMPILER_LAUNCHER=<launcher>` overrides the compiler launcher for the coverage build

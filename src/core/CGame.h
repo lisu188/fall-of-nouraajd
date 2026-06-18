@@ -36,6 +36,8 @@ class CGameContext;
 
 class CGui;
 
+class CSceneManager;
+
 class CRngHandler;
 
 class CGuiHandler;
@@ -63,6 +65,8 @@ class CGame : public CGameObject {
 
     std::shared_ptr<CObjectHandler> getObjectHandler();
 
+    std::shared_ptr<CSceneManager> getSceneManager();
+
     void loadPlugin(std::function<std::shared_ptr<CPlugin>()> plugin);
 
     std::shared_ptr<CRngHandler> getRngHandler();
@@ -82,6 +86,7 @@ class CGame : public CGameObject {
     vstd::lazy<CSlotConfig> slotConfiguration;
 
     std::shared_ptr<CGameContext> context;
+    std::shared_ptr<CSceneManager> sceneManager;
     std::shared_ptr<CMap> map;
     std::shared_ptr<CGui> _gui;
 
