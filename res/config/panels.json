@@ -241,7 +241,7 @@
         {
           "class": "CListView",
           "properties": {
-            "allowOversize": false,
+            "allowOversize": true,
             "callback": "enemiesCallback",
             "collection": "enemiesCollection",
             "layout": {
@@ -265,10 +265,10 @@
             "layout": {
               "class": "CLayout",
               "properties": {
-                "h": "14%",
+                "h": "13%",
                 "w": "80%",
                 "x": "10%",
-                "y": "66%"
+                "y": "67%"
               }
             },
             "render": "renderCombatStatus"
