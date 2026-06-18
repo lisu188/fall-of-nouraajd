@@ -40,6 +40,7 @@ import unittest
 
 import game_simulation
 import mcp
+import quest_state
 
 REPO_ROOT = Path(__file__).resolve().parent
 
@@ -124,6 +125,7 @@ VALID_TEST_SUITES = ("fast", "gameplay", "ui", "coverage-safe", "full")
 FAST_TEST_PREFIXES = (
     "CoverageReportTest.",
     "PlayBootstrapTest.",
+    "QuestStateHelperTest.",
     "TestRunnerSuiteTest.",
 )
 FAST_TEST_NAMES = {
@@ -13495,6 +13497,137 @@ class CoverageReportTest(unittest.TestCase):
             coverage_report.write_exclusion_audit_json(json_report, audit)
             self.assertIn("src/sample.cpp:3 count=7 covered", text_report.read_text(encoding="utf-8"))
             self.assertEqual(audit, json.loads(json_report.read_text(encoding="utf-8")))
+
+
+class QuestStateHelperTest(unittest.TestCase):
+    class FakeMap:
+        def __init__(self):
+            self.strings = {}
+            self.bools = {}
+            self.numerics = {}
+
+        def getStringProperty(self, name):
+            return self.strings.get(name, "")
+
+        def setStringProperty(self, name, value):
+            self.strings[name] = value
+
+        def getBoolProperty(self, name):
+            return self.bools.get(name, False)
+
+        def setBoolProperty(self, name, value):
+            self.bools[name] = bool(value)
+
+        def getNumericProperty(self, name):
+            return self.numerics.get(name, 0)
+
+        def setNumericProperty(self, name, value):
+            self.numerics[name] = value
+
+    class DemoQuestStore(quest_state.QuestStateStore):
+        QUEST_KEYS = {
+            "alpha": "quest_state_alpha",
+            "beta": "quest_state_beta",
+        }
+        QUEST_DEFAULTS = {
+            "alpha": "pending",
+            "beta": "locked",
+        }
+        QUEST_NUMERIC_DEFAULTS = {
+            "demo_turn": -1,
+        }
+        LEGACY_BOOL_FLAGS = (
+            quest_state.LegacyBoolFlag("alpha_done", "alpha", states=("done",)),
+            quest_state.LegacyBoolFlag("beta_unlocked", "beta", excluded_states=("locked",)),
+        )
+
+    class FakeQuest:
+        def __init__(self, name="", type_id=""):
+            self._name = name
+            self._type_id = type_id
+
+        def getName(self):
+            return self._name
+
+        def getTypeId(self):
+            return self._type_id
+
+    class FakePlayer:
+        def __init__(self):
+            self.added_quests = []
+
+        def addQuest(self, quest_name):
+            self.added_quests.append(quest_name)
+
+    class NativeQuestPlayer(FakePlayer):
+        def __init__(self, quests):
+            super().__init__()
+            self._quests = quests
+
+        def getQuests(self):
+            return self._quests
+
+    def test_quest_state_store_initializes_resets_and_syncs_legacy_flags(self):
+        fake_map = self.FakeMap()
+        fake_map.setStringProperty("quest_state_alpha", "done")
+        fake_map.setNumericProperty("demo_turn", 42)
+        store = self.DemoQuestStore(fake_map)
+
+        self.assertTrue(store.initialize_defaults())
+        self.assertEqual("done", fake_map.getStringProperty("quest_state_alpha"))
+        self.assertEqual("locked", fake_map.getStringProperty("quest_state_beta"))
+        self.assertEqual(-1, fake_map.getNumericProperty("demo_turn"))
+        self.assertTrue(fake_map.getBoolProperty("alpha_done"))
+        self.assertFalse(fake_map.getBoolProperty("beta_unlocked"))
+
+        store.set_state("beta", "active")
+        self.assertEqual("active", fake_map.getStringProperty("quest_state_beta"))
+        self.assertTrue(fake_map.getBoolProperty("beta_unlocked"))
+
+        store.reset_all()
+        self.assertEqual("pending", fake_map.getStringProperty("quest_state_alpha"))
+        self.assertEqual("locked", fake_map.getStringProperty("quest_state_beta"))
+        self.assertEqual(-1, fake_map.getNumericProperty("demo_turn"))
+        self.assertFalse(fake_map.getBoolProperty("alpha_done"))
+        self.assertFalse(fake_map.getBoolProperty("beta_unlocked"))
+
+    def test_ensure_quest_uses_type_ids_and_python_fallback_registry(self):
+        native_player = self.NativeQuestPlayer([self.FakeQuest(name="displayName", type_id="existingQuest")])
+        self.assertFalse(quest_state.ensure_quest(native_player, "existingQuest"))
+        self.assertTrue(quest_state.ensure_quest(native_player, "newQuest"))
+        self.assertEqual(["newQuest"], native_player.added_quests)
+
+        fallback_player = self.FakePlayer()
+        registry = quest_state.PlayerQuestRegistry()
+        self.assertTrue(quest_state.ensure_quest(fallback_player, "fallbackQuest", registry=registry))
+        self.assertFalse(quest_state.ensure_quest(fallback_player, "fallbackQuest", registry=registry))
+        self.assertEqual(["fallbackQuest"], fallback_player.added_quests)
+        self.assertEqual(["fallbackQuest"], [quest.getTypeId() for quest in registry._quests.values()])
+
+        class PythonOnlyPlayer(self.FakePlayer):
+            pass
+
+        installed_registry = quest_state.PlayerQuestRegistry()
+        installed_registry.install_on(PythonOnlyPlayer)
+        installed_player = PythonOnlyPlayer()
+        self.assertTrue(quest_state.ensure_quest(installed_player, "installedQuest", registry=installed_registry))
+        self.assertFalse(quest_state.ensure_quest(installed_player, "installedQuest", registry=installed_registry))
+        self.assertEqual(["installedQuest"], installed_player.added_quests)
+        self.assertEqual(["installedQuest"], [quest.getTypeId() for quest in installed_player.getQuests()])
+
+    def test_nouraajd_quest_state_uses_shared_helpers_and_stable_keys(self):
+        script = (REPO_ROOT / "res/maps/nouraajd/script.py").read_text(encoding="utf-8")
+        game_module = (REPO_ROOT / "res/game.py").read_text(encoding="utf-8")
+        cmake = (REPO_ROOT / "CMakeLists.txt").read_text(encoding="utf-8")
+
+        self.assertIn("from quest_state import QuestStateStore", game_module)
+        self.assertIn("configure_file(quest_state.py quest_state.py)", cmake)
+        self.assertIn("from game import QuestStateStore", script)
+        self.assertIn("class QuestSystem(QuestStateStore)", script)
+        self.assertNotIn("class _TrackedQuest", script)
+        self.assertNotIn("_player_quests = {}", script)
+        for quest_name in NOURAAJD_QUEST_STATE_NAMES:
+            self.assertIn(f'"{quest_name}": "quest_state_{quest_name}"', script)
 
 
 class TestRunnerSuiteTest(unittest.TestCase):

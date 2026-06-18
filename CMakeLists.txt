@@ -466,6 +466,7 @@ configure_file(test.py test.py)
 configure_file(play.py play.py)
 configure_file(mcp.py mcp.py)
 configure_file(game_simulation.py game_simulation.py)
+configure_file(quest_state.py quest_state.py)
 
 install(TARGETS game_core _game DESTINATION fall-of-nouraajd)
 install(TARGETS ${NATIVE_PLUGIN_TARGETS}
@@ -479,7 +480,7 @@ install(DIRECTORY res/images DESTINATION fall-of-nouraajd)
 install(DIRECTORY res/maps DESTINATION fall-of-nouraajd)
 install(DIRECTORY res/plugins DESTINATION fall-of-nouraajd)
 
-install(FILES res/game.py play.py mcp.py test.py game_simulation.py DESTINATION fall-of-nouraajd)
+install(FILES res/game.py play.py mcp.py test.py game_simulation.py quest_state.py DESTINATION fall-of-nouraajd)
 
 if (WIN32)
     install(FILES play.bat DESTINATION fall-of-nouraajd)

@@ -1,6 +1,13 @@
 from _game import *
 import json
 
+from quest_state import LegacyBoolFlag
+from quest_state import PlayerQuestRegistry
+from quest_state import QuestStateStore
+from quest_state import ensure_quest
+from quest_state import player_has_quest
+from quest_state import quest_id
+
 set_logger_sink("disabled", None)
 
 _native_configure_playtest_trace = configure_playtest_trace
