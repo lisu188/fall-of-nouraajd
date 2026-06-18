@@ -16,6 +16,9 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+#include "handler/CGuiHandler.h"
+#include "handler/CQuestHandler.h"
+#include "handler/CRngHandler.h"
 #include "handler/CScriptHandler.h"
 #include "test_harness.h"
 
@@ -94,12 +97,31 @@ void test_script_handler_executes_commands_and_wraps_functions() {
                 "void call_created_function should update Python state and clean up its temporary function");
 }
 
+void test_handler_constructors_are_covered_by_native_tests() {
+    CQuestHandler quest_handler;
+    CRngHandler rng_handler;
+    CGuiHandler gui_handler;
+
+    expect_true(CGuiHandler::static_meta()->name() == "CGuiHandler",
+                "GUI handler metadata should expose its type name");
+    expect_true(gui_handler.meta()->inherits("CGameObject"), "GUI handler metadata should preserve its object base");
+    gui_handler.showMessage("native handler constructor coverage");
+    gui_handler.showInfo("native handler info coverage");
+    expect_true(!gui_handler.showQuestion("native handler question coverage"),
+                "headless GUI handler questions should return false");
+    expect_true(rng_handler.getRandomLoot(0).empty(), "default RNG handler should return no loot without a game");
+    expect_true(rng_handler.getRandomEncounter(0).empty(),
+                "default RNG handler should return no encounters without a game");
+    (void)quest_handler;
+}
+
 } // namespace
 
 int main() {
     pybind11::scoped_interpreter guard{};
 
     test_script_handler_executes_commands_and_wraps_functions();
+    test_handler_constructors_are_covered_by_native_tests();
 
     return finish_tests();
 }

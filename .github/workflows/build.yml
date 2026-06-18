@@ -45,7 +45,7 @@ jobs:
           run_coverage=false
           while IFS= read -r path; do
             case "${path}" in
-              test.py|tests/*|scripts/run_coverage.sh|scripts/coverage_report.py|src/core/*|src/handler/*|src/object/*)
+              test.py|tests/*|scripts/run_coverage.sh|scripts/coverage_report.py|scripts/coverage_exclusions.json|src/core/*|src/handler/*|src/object/*)
                 run_coverage=true
                 break
                 ;;

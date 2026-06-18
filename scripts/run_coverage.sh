@@ -3,8 +3,9 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 BUILD_DIR="${BUILD_DIR:-cmake-build-coverage}"
-MIN_COVERAGE="${MIN_COVERAGE:-90}"
+MIN_COVERAGE="${MIN_COVERAGE:-100}"
 REPORT_DIR="${ROOT_DIR}/coverage"
+COVERAGE_LINE_EXCLUSIONS="${COVERAGE_LINE_EXCLUSIONS:-${ROOT_DIR}/scripts/coverage_exclusions.json}"
 COVERAGE_JOBS="${COVERAGE_JOBS:-$(nproc)}"
 COVERAGE_REPORTER="${COVERAGE_REPORTER:-python}"
 GAME_TEST_JOBS="${GAME_TEST_JOBS:-${COVERAGE_JOBS}}"
@@ -113,12 +114,18 @@ generate_report() {
             --html "${REPORT_DIR}/coverage.html" \
             --fail-under-line "${MIN_COVERAGE}" || return
     elif [[ "${COVERAGE_REPORTER}" == "python" ]]; then
+        coverage_report_args=(
+            --root "${ROOT_DIR}"
+            --build-dir "${BUILD_DIR}"
+            --report-dir "${REPORT_DIR}"
+            --min-line "${MIN_COVERAGE}"
+            --jobs "${COVERAGE_JOBS}"
+        )
+        if [[ -n "${COVERAGE_LINE_EXCLUSIONS}" ]]; then
+            coverage_report_args+=(--line-exclusions "${COVERAGE_LINE_EXCLUSIONS}")
+        fi
         python3 "${ROOT_DIR}/scripts/coverage_report.py" \
-            --root "${ROOT_DIR}" \
-            --build-dir "${BUILD_DIR}" \
-            --report-dir "${REPORT_DIR}" \
-            --min-line "${MIN_COVERAGE}" \
-            --jobs "${COVERAGE_JOBS}" || return
+            "${coverage_report_args[@]}" || return
     else
         echo "Unknown COVERAGE_REPORTER '${COVERAGE_REPORTER}'. Expected 'python' or 'gcovr'." >&2
         return 2
