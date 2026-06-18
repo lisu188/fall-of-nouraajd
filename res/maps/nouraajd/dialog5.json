@@ -62,7 +62,7 @@
           "class": "CDialogState",
           "properties": {
             "stateId": "LETTER_DELIVERED",
-            "text": "Thank you for bearing the mayor's plea. Now descend into the catacombs and retrieve the holy relic our town clings to.",
+            "text": "Thank you for bearing the mayor's plea. Now descend into the chapel catacombs beyond the old wall and retrieve the holy relic our town clings to.",
             "options": [
               {
                 "ref": "exitOption",
@@ -77,7 +77,7 @@
           "class": "CDialogState",
           "properties": {
             "stateId": "RELIC_RETURNED",
-            "text": "Excellent. With this relic you can scour the OctoBogz from their eastern cave. Return when that blight is ended.",
+            "text": "Excellent. With this relic returned, you can scour the OctoBogz from their eastern swamp cave. Follow the road east, turn north at the mire, and return when that blight is ended.",
             "options": [
               {
                 "ref": "exitOption",

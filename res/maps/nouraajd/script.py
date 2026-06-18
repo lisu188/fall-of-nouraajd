@@ -9,8 +9,8 @@ def load(self, context):
 
     VICTOR_COURTYARD_TIMEOUT_TURNS = 75
     VICTOR_CULTIST_PREFIX = "victorCultist"
-    VICTOR_COURTYARD_SPAWNS = [(126, 113, 0), (130, 113, 0), (128, 111, 0), (128, 115, 0)]
-    VICTOR_COURTYARD_LEADER_SPAWN = (128, 113, 0)
+    VICTOR_COURTYARD_SPAWNS = [(44, 100, 0), (46, 100, 0), (45, 99, 0), (45, 101, 0)]
+    VICTOR_COURTYARD_LEADER_SPAWN = (45, 100, 0)
     VICTOR_COURTYARD_FALLBACK_RADIUS = 3
 
     def _clear_victor_encounter(game_map):
@@ -511,13 +511,13 @@ def load(self, context):
             return _quest_system_from(self).get_state("main") == "gooby_slain"
 
         def getObjective(self):
-            return "Follow Sergeant Rolf's trail, recover his skull, then slay Gooby beneath Nouraajd."
+            return "Follow Sergeant Rolf's trail to the far northwest Pritz labyrinth, recover his skull, then slay Gooby beneath Nouraajd."
 
         def getReward(self):
             return "Unlocks the deeper Marumi Baso threat."
 
         def getHint(self):
-            return "Search the cave outside town for the first sign of Rolf."
+            return "Follow the old military road west, then north into the far northwest Pritz labyrinth."
 
         def onComplete(self):
             self.getGame().getGuiHandler().showMessage("Gooby lies butchered, and weary townsfolk dare a ragged cheer.")
@@ -528,13 +528,13 @@ def load(self, context):
             return _quest_system_from(self).get_state("rolf") == "skull_recovered"
 
         def getObjective(self):
-            return "Recover Sergeant Rolf's skull from the Pritscher cave."
+            return "Recover Sergeant Rolf's skull from the Pritscher cave in the far northwest labyrinth."
 
         def getReward(self):
             return "Starts the Gooby hunt."
 
         def getHint(self):
-            return "The cave entrance lies beyond Nouraajd's roads."
+            return "The Pritz labyrinth begins where the old military road breaks north through the mountains."
 
         def onComplete(self):
             self.getGame().getGuiHandler().showMessage(
@@ -553,7 +553,7 @@ def load(self, context):
             return "Unlocks scribe-desk scroll crafting."
 
         def getHint(self):
-            return "Ask at town hall, then visit the chapel."
+            return "Ask at town hall, then visit Father Beren at the chapel inside the old walls."
 
         def onComplete(self):
             pass
@@ -564,13 +564,13 @@ def load(self, context):
             return _quest_system_from(self).is_relic_returned()
 
         def getObjective(self):
-            return "Recover the holy relic from the catacombs and return it to Father Beren."
+            return "Recover the holy relic from the chapel catacombs and return it to Father Beren."
 
         def getReward(self):
             return "Unlocks stronger alchemy recipes."
 
         def getHint(self):
-            return "The catacombs hide the relic Beren needs."
+            return "The chapel catacombs beyond the old wall hide the relic Beren needs."
 
         def onComplete(self):
             pass
@@ -581,13 +581,13 @@ def load(self, context):
             return _quest_system_from(self).is_cave_purged()
 
         def getObjective(self):
-            return "Use the returned relic to cleanse the OctoBogz cave, then report to Beren."
+            return "Use the returned relic to cleanse the eastern OctoBogz cave, then report to Beren."
 
         def getReward(self):
             return "Opens the road to the ritual chapel."
 
         def getHint(self):
-            return "Clear the OctoBogz lair after the relic is back in Beren's hands."
+            return "Return the relic to Beren first, then follow the east swamp road to the OctoBogz lair."
 
         def onComplete(self):
             pass
@@ -615,7 +615,7 @@ def load(self, context):
         def getHint(self):
             state = _quest_system_from(self).get_state("victor")
             if state == "encounter_active":
-                return f"The cultists began their rite; you have {VICTOR_COURTYARD_TIMEOUT_TURNS} turns from first contact."
+                return f"The cultists began their rite when you broke into the courtyard; you have {VICTOR_COURTYARD_TIMEOUT_TURNS} turns from first contact."
             if state == "good_end":
                 return "Victor and his daughter have fled the courtyard alive."
             if state == "bad_end":
@@ -631,13 +631,13 @@ def load(self, context):
             return _quest_system_from(self).is_octobogz_contract_completed()
 
         def getObjective(self):
-            return "Destroy the OctoBogz in the cave east of Nouraajd."
+            return "Destroy the OctoBogz in the eastern swamp cave."
 
         def getReward(self):
             return "1000 gold and the Shadow Blade."
 
         def getHint(self):
-            return "The travelers in Nouraajd know the route."
+            return "Follow the east swamp road past the bend; Beren's relic will matter before the cave is truly clean."
 
         def onComplete(self):
             game = self.getGame()
@@ -658,7 +658,7 @@ def load(self, context):
             return "50 gold."
 
         def getHint(self):
-            return "The thief lurks near the village edge."
+            return "The thief lurks along the scarred trail east of the old woman's outskirts hut."
 
         def onComplete(self):
             pass
