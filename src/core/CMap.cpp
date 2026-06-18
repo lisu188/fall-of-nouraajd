@@ -22,7 +22,18 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "object/CItem.h"
 #include "object/CTrigger.h"
 
+#include <atomic>
+
 namespace {
+std::atomic_bool mapCoordinateLookupProbeEnabled{false};
+std::atomic_size_t mapCoordinateLookupProbeCounter{0};
+
+void recordCoordinateLookupProbe() {
+    if (mapCoordinateLookupProbeEnabled.load(std::memory_order_relaxed)) {
+        mapCoordinateLookupProbeCounter.fetch_add(1, std::memory_order_relaxed);
+    }
+}
+
 int normalize_wrapped_axis(int value, int max_value) {
     const int size = max_value + 1;
     if (size <= 0) {
@@ -136,6 +147,21 @@ std::shared_ptr<CEventHandler> CMap::getEventHandler() {
 }
 
 std::uint64_t CMap::getNavigationRevision() const { return navigationRevision; }
+
+std::size_t CMap::getObjectCacheEntryCountForTesting() const { return mapObjectsCache.size(); }
+
+void performance_guard::resetMapCoordinateLookupProbe() {
+    mapCoordinateLookupProbeCounter.store(0, std::memory_order_relaxed);
+    mapCoordinateLookupProbeEnabled.store(true, std::memory_order_relaxed);
+}
+
+std::size_t performance_guard::mapCoordinateLookupProbeCount() {
+    return mapCoordinateLookupProbeCounter.load(std::memory_order_relaxed);
+}
+
+void performance_guard::disableMapCoordinateLookupProbe() {
+    mapCoordinateLookupProbeEnabled.store(false, std::memory_order_relaxed);
+}
 
 void CMap::bumpNavigationRevision() { navigationRevision++; }
 
@@ -563,6 +589,7 @@ std::set<std::shared_ptr<CMapObject>> CMap::getObjectsAtCoords(Coords coords) {
     std::set<std::shared_ptr<CMapObject>> ret;
     auto range = mapObjectsCache.equal_range(coords);
     for (auto it = range.first; it != range.second; it++) {
+        recordCoordinateLookupProbe();
         if (auto ob = getObjectByName(it->second)) {
             ret.insert(ob);
         }

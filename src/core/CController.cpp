@@ -153,6 +153,19 @@ Coords find_shared_target_next_step(const std::shared_ptr<CCreature> &creature,
 }
 } // namespace
 
+std::size_t performance_guard::targetFlowCacheSize() {
+    std::lock_guard<std::mutex> lock(targetFlowMutex);
+    targetFlowCache.erase(std::remove_if(targetFlowCache.begin(), targetFlowCache.end(),
+                                         [](const auto &field) { return !field || field->map.expired(); }),
+                          targetFlowCache.end());
+    return targetFlowCache.size();
+}
+
+void performance_guard::clearTargetFlowCache() {
+    std::lock_guard<std::mutex> lock(targetFlowMutex);
+    targetFlowCache.clear();
+}
+
 CTargetController::CTargetController() {}
 
 std::shared_ptr<vstd::future<Coords, void>> CTargetController::control(std::shared_ptr<CCreature> creature) {
