@@ -140,7 +140,8 @@ generate_report() {
 }
 
 run_phase "configure" cmake "${cmake_args[@]}"
-run_phase "build _game and for_unit_tests" cmake --build "${BUILD_DIR}" --target _game for_unit_tests -j"${COVERAGE_JOBS}"
+run_phase "build _game, for_unit_tests, and performance_guard_tests" \
+    cmake --build "${BUILD_DIR}" --target _game for_unit_tests performance_guard_tests -j"${COVERAGE_JOBS}"
 run_phase "coverage data cleanup" find "${BUILD_DIR}" -name '*.gcda' -delete
 run_phase "ctest" ctest --test-dir "${BUILD_DIR}" --output-on-failure
 run_phase "python test suite" env \

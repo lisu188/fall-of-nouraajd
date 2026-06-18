@@ -1,6 +1,6 @@
 /*
 fall-of-nouraajd c++ dark fantasy game
-Copyright (C) 2025  Andrzej Lis
+Copyright (C) 2025-2026  Andrzej Lis
 
 This program is free software: you can redistribute it and/or modify
         it under the terms of the GNU General Public License as published by
@@ -17,6 +17,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #pragma once
 
+#include <cstddef>
 #include <unordered_map>
 #include <vector>
 
@@ -187,3 +188,8 @@ class CRangeController : public CController {
     int distance = 15;
     std::string target;
 };
+
+namespace performance_guard {
+std::size_t targetFlowCacheSize();
+void clearTargetFlowCache();
+} // namespace performance_guard

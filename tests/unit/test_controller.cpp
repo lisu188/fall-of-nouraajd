@@ -54,6 +54,26 @@ Coords resolve_coords(const std::shared_ptr<vstd::future<Coords, void>> &future)
     return future->get();
 }
 
+std::shared_ptr<CTile> tile(bool can_step) {
+    auto result = std::make_shared<CTile>();
+    result->setCanStep(can_step);
+    return result;
+}
+
+std::shared_ptr<CMap> open_tile_map(const std::shared_ptr<CGame> &game, int width, int height) {
+    auto map = std::make_shared<CMap>();
+    game->setMap(map);
+    map->setGame(game);
+    map->setXBounds({{0, width - 1}});
+    map->setYBounds({{0, height - 1}});
+    for (int y = 0; y < height; ++y) {
+        for (int x = 0; x < width; ++x) {
+            map->addTile(tile(true), x, y, 0);
+        }
+    }
+    return map;
+}
+
 void test_movement_controller_null_and_no_map_paths() {
     auto creature = creature_at(2, 3, 4);
 
@@ -136,6 +156,35 @@ void test_npc_random_controller_clears_current_tile_path() {
                 "NPC random controller should stay put when every random target normalizes to the current tile");
 }
 
+void test_npc_random_controller_clears_stale_blocked_path() {
+    vstd::rng().seed(12345);
+    auto game = std::make_shared<CGame>();
+    auto map = open_tile_map(game, 11, 11);
+    auto creature = creature_at(5, 5, 0);
+    creature->setGame(game);
+
+    auto controller = std::make_shared<CNpcRandomController>();
+    Coords original = creature->getCoords();
+    Coords planned = original;
+    for (int attempt = 0; attempt < 20 && planned == original; ++attempt) {
+        controller->interrupt(creature);
+        planned = resolve_coords(controller->control(creature));
+    }
+
+    expect_true(planned != original, "NPC random controller fixture should find a real next step");
+    expect_true(map->getDistance(original, planned) == 1.0, "NPC random controller should plan an adjacent step");
+    expect_true(map->canStep(planned), "planned NPC random step should be initially passable");
+
+    map->removeTile(planned.x, planned.y, planned.z);
+    expect_true(map->addTile(tile(false), planned.x, planned.y, planned.z), "fixture should block the planned step");
+    expect_true(!map->canStep(planned), "fixture should make the planned step impassable");
+
+    auto replanned = resolve_coords(controller->control(creature));
+    expect_true(replanned != planned, "NPC random controller should not keep a newly blocked stale next step");
+    expect_true(replanned == original || map->canStep(replanned),
+                "NPC random controller should either stay put or replan to a passable step");
+}
+
 void test_fight_controller_guard_paths_and_fallbacks() {
     auto attacker = creature_at(0, 0, 0);
     auto opponent = creature_at(1, 0, 0);
@@ -182,6 +231,7 @@ void test_fight_controller_guard_paths_and_fallbacks() {
 int main() {
     test_movement_controller_null_and_no_map_paths();
     test_npc_random_controller_clears_current_tile_path();
+    test_npc_random_controller_clears_stale_blocked_path();
     test_fight_controller_guard_paths_and_fallbacks();
 
     return finish_tests();

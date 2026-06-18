@@ -570,8 +570,58 @@ endfunction()
 
 add_game_unit_test(core_unit_tests tests/unit/test_core.cpp)
 add_game_unit_test(controller_unit_tests tests/unit/test_controller.cpp)
+add_game_unit_test(gui_unit_tests tests/unit/test_gui.cpp)
 add_game_unit_test(handler_unit_tests tests/unit/test_handler.cpp src/handler/CScriptHandler.cpp)
 add_game_unit_test(object_unit_tests tests/unit/test_object.cpp)
+
+add_executable(performance_guard_tests
+    tests/unit/test_performance.cpp
+    tests/unit/test_pathfinder_performance.cpp
+    tests/unit/test_engine_hotspot_performance.cpp
+)
+if (GAME_UNIT_TEST_SUPPORT_SRC)
+    target_sources(performance_guard_tests PRIVATE ${GAME_UNIT_TEST_SUPPORT_SRC})
+endif ()
+configure_cpp_target(performance_guard_tests)
+target_link_libraries(performance_guard_tests PRIVATE
+    Python3::Python
+    pybind11::headers
+    ${SDL2_EXECUTABLE_LIBS}
+    ${SDL2_IMAGE_LIBS}
+    ${SDL2_TTF_LIBS}
+)
+if (CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    target_link_libraries(performance_guard_tests PRIVATE game_core)
+endif ()
+add_test(NAME "performance.performance_guard_tests" COMMAND performance_guard_tests)
+set_tests_properties("performance.performance_guard_tests" PROPERTIES
+    LABELS "performance;performance_guard_tests"
+    TIMEOUT 20
+)
+if (WIN32)
+    if (CMAKE_VERSION VERSION_GREATER_EQUAL 3.22)
+        if (TEST_RUNTIME_PATH)
+            set_tests_properties("performance.performance_guard_tests" PROPERTIES
+                ENVIRONMENT "PYTHONHOME=${TEST_PYTHONHOME}"
+                ENVIRONMENT_MODIFICATION "PATH=path_list_prepend:${TEST_RUNTIME_PATH}"
+            )
+        else ()
+            set_tests_properties("performance.performance_guard_tests" PROPERTIES
+                ENVIRONMENT "PYTHONHOME=${TEST_PYTHONHOME}"
+            )
+        endif ()
+    else ()
+        if (TEST_RUNTIME_PATH)
+            set_tests_properties("performance.performance_guard_tests" PROPERTIES
+                ENVIRONMENT "PYTHONHOME=${TEST_PYTHONHOME};PATH=${TEST_RUNTIME_PATH}"
+            )
+        else ()
+            set_tests_properties("performance.performance_guard_tests" PROPERTIES
+                ENVIRONMENT "PYTHONHOME=${TEST_PYTHONHOME}"
+            )
+        endif ()
+    endif ()
+endif ()
 add_game_unit_test(vstd_unit_tests tests/unit/test_vstd.cpp)
 add_game_unit_test(random_dungeon_unit_tests tests/unit/test_random_dungeon.cpp)
 if (CMAKE_SYSTEM_NAME STREQUAL "Linux")

@@ -1,6 +1,6 @@
 /*
 fall-of-nouraajd c++ dark fantasy game
-Copyright (C) 2025  Andrzej Lis
+Copyright (C) 2025-2026  Andrzej Lis
 
 This program is free software: you can redistribute it and/or modify
         it under the terms of the GNU General Public License as published by
@@ -16,6 +16,8 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #pragma once
+
+#include <cstddef>
 
 #include "core/CGlobal.h"
 
@@ -179,6 +181,8 @@ class CMap : public CGameObject {
 
     std::uint64_t getNavigationRevision() const;
 
+    std::size_t getObjectCacheEntryCountForTesting() const;
+
     // TODO: accept predicate, can be used in siege map
     std::set<std::shared_ptr<CMapObject>> getObjects();
 
@@ -237,3 +241,9 @@ class CMap : public CGameObject {
 
     void registerPlayerTriggers();
 };
+
+namespace performance_guard {
+void resetMapCoordinateLookupProbe();
+std::size_t mapCoordinateLookupProbeCount();
+void disableMapCoordinateLookupProbe();
+} // namespace performance_guard

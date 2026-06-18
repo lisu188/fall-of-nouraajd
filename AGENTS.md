@@ -99,16 +99,18 @@ quick protocol checks.
 For every code change, run this full workflow from the repository root unless the environment makes it impossible:
 
 ```sh
-cmake --build cmake-build-release --target _game for_unit_tests -j$(nproc)
+cmake --build cmake-build-release --target _game for_unit_tests performance_guard_tests -j$(nproc)
 ctest --test-dir cmake-build-release --output-on-failure -R for_unit_tests
+ctest --test-dir cmake-build-release --output-on-failure --verbose -L performance
 python3 test.py
 ```
 
 Windows Release equivalent:
 
 ```bat
-cmake --build cmake-build-release --config Release --target _game for_unit_tests
+cmake --build cmake-build-release --config Release --target _game for_unit_tests performance_guard_tests
 ctest --test-dir cmake-build-release -C Release --output-on-failure -R for_unit_tests
+ctest --test-dir cmake-build-release -C Release --output-on-failure --verbose -L performance
 set GAME_BUILD_DIR=cmake-build-release
 set GAME_BUILD_CONFIG=Release
 python test.py
@@ -149,6 +151,39 @@ feedback while preserving the required validation guarantees.
   repeated expensive setup inside loops or per-test fixtures.
 - If a required validation command is slow, do not skip it silently; run it when possible and report exact blockers when
   the environment prevents it.
+
+## Performance regression testing
+
+Native performance guards are part of normal validation. Build them with the `performance_guard_tests` target and run
+them through CTest label `performance` with visible output:
+
+```sh
+cmake --build cmake-build-release --target performance_guard_tests -j$(nproc)
+ctest --test-dir cmake-build-release --output-on-failure --verbose -L performance
+```
+
+On Windows Visual Studio Release builds, include `--config Release` on the build command and `-C Release` on the CTest
+command.
+
+Profile before claiming a bottleneck or changing performance-sensitive behavior. Add or update a performance guard for
+changes to pathfinding, AI/controllers, map turns, spatial caches, serialization/loading, rendering hot paths, or any
+measured hot loop. Do not rely on intuition alone.
+
+Performance guards must be deterministic CI gates, not diagnostic-only measurements. Prefer bounded work, expansion,
+callback, cache-entry, and reuse/invalidation counts over elapsed time. Keep workloads fixed, avoid external services and
+non-deterministic inputs, and keep output visible enough to diagnose the failing budget in CI logs. The guard target must
+remain safe on Linux and Windows and must not add new dependencies without explicit approval.
+
+Timing is supplemental evidence only. If timing is used, run Release builds with warm-up and repeated samples, report a
+median or ratio with enough headroom for CI variance, and never make a tight one-shot millisecond assertion the sole
+gate. Large benchmarks stay opt-in and outside PR gates.
+
+Any budget change must include before/after evidence, platform and build details, the exact commands used, and a
+rationale. Do not weaken, delete, skip, or silently rebaseline a budget merely to make CI pass. Intentional algorithmic
+changes must update the guard and rationale in the same change.
+
+Final reports for performance-sensitive work must include exact before/after commands and results. If a performance
+command cannot be run, report the unavailable or skipped command honestly with the blocker.
 
 ## MCP game-session validation
 
@@ -203,8 +238,9 @@ Coverage command:
 `scripts/run_coverage.sh` uses the repository Python coverage reporter as the default line gate. Use
 `COVERAGE_REPORTER=gcovr ./scripts/run_coverage.sh` only for diagnostic comparison; gcovr has counted extra
 instrumented/generated lines differently in this repo and can fail the gate even when the canonical reporter passes.
+The script builds and runs the native `performance_guard_tests` CTest entry as part of coverage validation.
 
-The scoped line coverage threshold is 90%. Do not finish coverage-relevant work below that threshold without explicitly reporting it.
+The scoped line coverage threshold is 100%. Do not finish coverage-relevant work below that threshold without explicitly reporting it.
 
 Coverage reports are generated under `coverage/`.
 
@@ -389,7 +425,8 @@ Prefer small, reproducible failing cases. Add tests for regressions when practic
 
 ## CI expectations
 
-The main build workflow validates Linux and Windows builds, runs C++ tests, runs Python tests, runs coverage on Linux, packages artifacts, and uploads build artifacts.
+The main build workflow validates Linux and Windows builds, runs C++ tests, runs native performance guards, runs Python
+tests, runs coverage on Linux, packages artifacts, and uploads build artifacts.
 
 Before proposing a change, reproduce the relevant local parts of CI as closely as the environment allows.
 
