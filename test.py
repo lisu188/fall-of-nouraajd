@@ -18,6 +18,7 @@ import builtins
 import concurrent.futures
 import http.client
 import importlib
+import importlib.util
 import json
 import os
 import queue
@@ -9490,6 +9491,82 @@ class PlayBootstrapTest(unittest.TestCase):
                 self.assertEqual(trusted_dir, Path.cwd())
             finally:
                 os.chdir(original_cwd)
+
+
+class CoverageReportTest(unittest.TestCase):
+    def _load_coverage_report_module(self):
+        module_path = REPO_ROOT / "scripts" / "coverage_report.py"
+        spec = importlib.util.spec_from_file_location("coverage_report_for_test", module_path)
+        module = importlib.util.module_from_spec(spec)
+        self.assertIsNotNone(spec.loader)
+        spec.loader.exec_module(module)
+        return module
+
+    def _write_manifest(self, root, exclusions):
+        manifest_path = root / "coverage_exclusions.json"
+        manifest_path.write_text(json.dumps({"version": 1, "exclusions": exclusions}), encoding="utf-8")
+        return manifest_path
+
+    def test_coverage_line_exclusions_remove_only_reviewed_lines(self):
+        coverage_report = self._load_coverage_report_module()
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            source = root / "src" / "sample.cpp"
+            source.parent.mkdir()
+            source.write_text("one\ntwo\nthree\nfour\n", encoding="utf-8")
+            manifest_path = self._write_manifest(
+                root,
+                [
+                    {
+                        "path": "src/sample.cpp",
+                        "reason": "synthetic unreachable branch",
+                        "ranges": ["2"],
+                    }
+                ],
+            )
+
+            merged = {source.resolve(): {1: 1, 2: 0, 3: 0, 4: 1}}
+            exclusions = coverage_report.load_line_exclusions(root, manifest_path)
+            coverage_report.validate_line_exclusions(root, merged, exclusions)
+            summary, covered, total, percentage, excluded = coverage_report.summarize(root, merged, exclusions)
+
+            self.assertEqual((covered, total, percentage, excluded), (2, 3, 100.0 * 2 / 3, 1))
+            self.assertEqual(summary[0]["missing"], [3])
+            self.assertEqual(summary[0]["excluded"], [2])
+
+    def test_coverage_line_exclusions_fail_closed(self):
+        coverage_report = self._load_coverage_report_module()
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            source = root / "src" / "sample.cpp"
+            source.parent.mkdir()
+            source.write_text("one\ntwo\n", encoding="utf-8")
+            merged = {source.resolve(): {1: 0, 2: 0}}
+
+            stale_manifest = self._write_manifest(
+                root,
+                [{"path": "src/sample.cpp", "reason": "stale line", "ranges": ["3"]}],
+            )
+            exclusions = coverage_report.load_line_exclusions(root, stale_manifest)
+            with self.assertRaisesRegex(ValueError, "non-instrumented"):
+                coverage_report.validate_line_exclusions(root, merged, exclusions)
+
+            whole_file_manifest = self._write_manifest(
+                root,
+                [{"path": "src/sample.cpp", "reason": "too broad", "ranges": ["1-2"]}],
+            )
+            exclusions = coverage_report.load_line_exclusions(root, whole_file_manifest)
+            with self.assertRaisesRegex(ValueError, "entire instrumented file"):
+                coverage_report.validate_line_exclusions(root, merged, exclusions)
+
+            glob_manifest = self._write_manifest(
+                root,
+                [{"path": "src/*.cpp", "reason": "glob", "ranges": ["1"]}],
+            )
+            with self.assertRaisesRegex(ValueError, "glob"):
+                coverage_report.load_line_exclusions(root, glob_manifest)
 
 
 class McpServerTest(unittest.TestCase):

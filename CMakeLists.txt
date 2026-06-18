@@ -481,67 +481,87 @@ if (WIN32)
 endif ()
 
 
-set(FOR_UNIT_TESTS_SRC tests/unit/test_coords.cpp)
-if (CMAKE_SYSTEM_NAME STREQUAL "Linux")
-    list(APPEND FOR_UNIT_TESTS_SRC
-        src/handler/CScriptHandler.cpp
-    )
-endif ()
+enable_testing()
+
+set(GAME_UNIT_TEST_TARGETS)
+set(GAME_UNIT_TEST_SUPPORT_SRC)
 if (NOT CMAKE_SYSTEM_NAME STREQUAL "Linux")
-    list(APPEND FOR_UNIT_TESTS_SRC
+    list(APPEND GAME_UNIT_TEST_SUPPORT_SRC
         src/core/CTags.cpp
         src/core/CUtil.cpp
         src/core/CPathFinder.cpp
         src/core/CFuture.cpp
-        src/handler/CScriptHandler.cpp
     )
 endif ()
 
-add_executable(for_unit_tests ${FOR_UNIT_TESTS_SRC})
-
-configure_cpp_target(for_unit_tests)
-
-target_link_libraries(for_unit_tests PRIVATE
-    Python3::Python
-    pybind11::headers
-    ${SDL2_EXECUTABLE_LIBS}
-    ${SDL2_IMAGE_LIBS}
-    ${SDL2_TTF_LIBS}
-)
-if (CMAKE_SYSTEM_NAME STREQUAL "Linux")
-    target_link_libraries(for_unit_tests PRIVATE game_core)
-endif ()
-
-enable_testing()
-add_test(NAME for_unit_tests COMMAND for_unit_tests)
 if (WIN32)
     get_filename_component(TEST_PYTHONHOME "${Python3_EXECUTABLE}" DIRECTORY)
     if (DEFINED _VCPKG_INSTALLED_DIR AND DEFINED VCPKG_TARGET_TRIPLET)
         set(TEST_RUNTIME_PATH "${_VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}/bin")
     endif ()
-    if (CMAKE_VERSION VERSION_GREATER_EQUAL 3.22)
-        if (TEST_RUNTIME_PATH)
-            set_tests_properties(for_unit_tests PROPERTIES
-                ENVIRONMENT "PYTHONHOME=${TEST_PYTHONHOME}"
-                ENVIRONMENT_MODIFICATION "PATH=path_list_prepend:${TEST_RUNTIME_PATH}"
-            )
+endif ()
+
+function(add_game_unit_test target_name)
+    add_executable(${target_name} ${ARGN})
+    if (GAME_UNIT_TEST_SUPPORT_SRC)
+        target_sources(${target_name} PRIVATE ${GAME_UNIT_TEST_SUPPORT_SRC})
+    endif ()
+
+    configure_cpp_target(${target_name})
+    target_link_libraries(${target_name} PRIVATE
+        Python3::Python
+        pybind11::headers
+        ${SDL2_EXECUTABLE_LIBS}
+        ${SDL2_IMAGE_LIBS}
+        ${SDL2_TTF_LIBS}
+    )
+    if (CMAKE_SYSTEM_NAME STREQUAL "Linux")
+        target_link_libraries(${target_name} PRIVATE game_core)
+    endif ()
+
+    set(test_name "for_unit_tests.${target_name}")
+    add_test(NAME "${test_name}" COMMAND ${target_name})
+    set_tests_properties("${test_name}" PROPERTIES
+        LABELS "for_unit_tests;unit;${target_name}"
+    )
+    if (WIN32)
+        if (CMAKE_VERSION VERSION_GREATER_EQUAL 3.22)
+            if (TEST_RUNTIME_PATH)
+                set_tests_properties("${test_name}" PROPERTIES
+                    ENVIRONMENT "PYTHONHOME=${TEST_PYTHONHOME}"
+                    ENVIRONMENT_MODIFICATION "PATH=path_list_prepend:${TEST_RUNTIME_PATH}"
+                )
+            else ()
+                set_tests_properties("${test_name}" PROPERTIES
+                    ENVIRONMENT "PYTHONHOME=${TEST_PYTHONHOME}"
+                )
+            endif ()
         else ()
-            set_tests_properties(for_unit_tests PROPERTIES
-                ENVIRONMENT "PYTHONHOME=${TEST_PYTHONHOME}"
-            )
-        endif ()
-    else ()
-        if (TEST_RUNTIME_PATH)
-            set_tests_properties(for_unit_tests PROPERTIES
-                ENVIRONMENT "PYTHONHOME=${TEST_PYTHONHOME};PATH=${TEST_RUNTIME_PATH}"
-            )
-        else ()
-            set_tests_properties(for_unit_tests PROPERTIES
-                ENVIRONMENT "PYTHONHOME=${TEST_PYTHONHOME}"
-            )
+            if (TEST_RUNTIME_PATH)
+                set_tests_properties("${test_name}" PROPERTIES
+                    ENVIRONMENT "PYTHONHOME=${TEST_PYTHONHOME};PATH=${TEST_RUNTIME_PATH}"
+                )
+            else ()
+                set_tests_properties("${test_name}" PROPERTIES
+                    ENVIRONMENT "PYTHONHOME=${TEST_PYTHONHOME}"
+                )
+            endif ()
         endif ()
     endif ()
+
+    set(GAME_UNIT_TEST_TARGETS ${GAME_UNIT_TEST_TARGETS} ${target_name} PARENT_SCOPE)
+endfunction()
+
+add_game_unit_test(core_unit_tests tests/unit/test_core.cpp)
+add_game_unit_test(handler_unit_tests tests/unit/test_handler.cpp src/handler/CScriptHandler.cpp)
+add_game_unit_test(vstd_unit_tests tests/unit/test_vstd.cpp)
+add_game_unit_test(random_dungeon_unit_tests tests/unit/test_random_dungeon.cpp)
+if (CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    add_game_unit_test(map_unit_tests tests/unit/test_map.cpp)
+    add_game_unit_test(resource_unit_tests tests/unit/test_resource.cpp)
 endif ()
+
+add_custom_target(for_unit_tests DEPENDS ${GAME_UNIT_TEST_TARGETS})
 
 if (WIN32)
     set(CPACK_STRIP_FILES _game.pyd)
