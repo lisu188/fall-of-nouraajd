@@ -79,7 +79,7 @@ jobs:
           key: ${{ runner.os }}-ccache-${{ hashFiles('**/CMakeLists.txt') }}
           restore-keys: ${{ runner.os }}-ccache-
       - name: build test targets
-        run: cmake --build cmake-build-release --target _game for_unit_tests -j"$(nproc)"
+        run: cmake --build cmake-build-release --target _game for_unit_tests performance_guard_tests -j"$(nproc)"
       - name: Smoke test game imports
         run: PYTHONPATH=cmake-build-release:res python3 -c "import _game; import game; print('game imports ok')"
       - name: ccache stats after build
@@ -91,6 +91,8 @@ jobs:
           fi
       - name: test (c++)
         run: ctest --test-dir cmake-build-release --output-on-failure -R for_unit_tests
+      - name: performance guard (native)
+        run: ctest --test-dir cmake-build-release --output-on-failure --verbose -L performance
       - name: test (python)
         run: GAME_XVFB_JOBS=4 python3 test.py --jobs "$(nproc)"
       - name: coverage
@@ -245,7 +247,7 @@ jobs:
       - name: Build test targets
         shell: cmd
         run: |
-          cmake --build cmake-build-release --target _game for_unit_tests --parallel %CMAKE_BUILD_PARALLEL_LEVEL%
+          cmake --build cmake-build-release --target _game for_unit_tests performance_guard_tests --parallel %CMAKE_BUILD_PARALLEL_LEVEL%
           if errorlevel 1 exit /b 1
       - name: Smoke test game imports
         shell: cmd
@@ -267,6 +269,11 @@ jobs:
         shell: cmd
         run: |
           ctest --test-dir cmake-build-release --output-on-failure -R for_unit_tests
+          if errorlevel 1 exit /b 1
+      - name: performance guard (native)
+        shell: cmd
+        run: |
+          ctest --test-dir cmake-build-release --output-on-failure --verbose -L performance
           if errorlevel 1 exit /b 1
       - name: test (python)
         shell: cmd
