@@ -19,6 +19,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <algorithm>
 #include "core/CController.h"
 #include "core/CGame.h"
+#include "core/CSerialization.h"
 #include "object/CItem.h"
 #include "object/CTrigger.h"
 
@@ -140,6 +141,40 @@ void CMap::setPlayer(std::shared_ptr<CPlayer> player) {
     registerPlayerTriggers();
     addObject(player);
     player->moveTo(entryx, entryy, entryz);
+}
+
+bool CMap::restorePlayerAfterLoad(std::string &error) {
+    std::shared_ptr<CPlayer> restoredPlayer;
+    int restoredPlayerCount = 0;
+    for (const auto &object : getObjects()) {
+        if (auto loadedPlayer = std::dynamic_pointer_cast<CPlayer>(object)) {
+            restoredPlayerCount++;
+            if (object->getName() != "player") {
+                error = "saved player object is not named player";
+                return false;
+            }
+            if (restoredPlayer) {
+                error = "saved map contains multiple player objects";
+                return false;
+            }
+            restoredPlayer = loadedPlayer;
+        }
+    }
+
+    if (!restoredPlayer) {
+        error = restoredPlayerCount == 0 ? "saved map does not contain a player object" : "saved player is invalid";
+        return false;
+    }
+
+    if (!std::dynamic_pointer_cast<CPlayerController>(restoredPlayer->getController())) {
+        restoredPlayer->setController(getGame()->createObject<CPlayerController>());
+    }
+    if (!std::dynamic_pointer_cast<CPlayerFightController>(restoredPlayer->getFightController())) {
+        restoredPlayer->setFightController(getGame()->createObject<CPlayerFightController>());
+    }
+    player = restoredPlayer;
+    registerPlayerTriggers();
+    return true;
 }
 
 std::shared_ptr<CEventHandler> CMap::getEventHandler() {
@@ -502,6 +537,20 @@ std::set<std::shared_ptr<CTile>> CMap::getTiles() {
 }
 
 void CMap::setObjects(std::set<std::shared_ptr<CMapObject>> objects) {
+    if (CSerialization::isStrict()) {
+        std::set<std::string> names;
+        for (const auto &ob : objects) {
+            if (!ob) {
+                throw std::runtime_error("Saved map contains null object");
+            }
+            if (ob->getName().empty()) {
+                throw std::runtime_error("Saved map contains object with empty name");
+            }
+            if (!names.insert(ob->getName()).second) {
+                throw std::runtime_error("Saved map contains duplicate object name: " + ob->getName());
+            }
+        }
+    }
     mapObjects.clear();
     mapObjectsCache.clear();
     for (auto ob : objects) {

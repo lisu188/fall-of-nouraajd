@@ -18,6 +18,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CLoader.h"
 #include "core/CController.h"
 #include "core/CJsonUtil.h"
+#include "core/CSaveFormat.h"
 #include "core/CTypes.h"
 #include "gui/CGui.h"
 #include "gui/object/CMapGraphicsObject.h"
@@ -45,11 +46,25 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <dlfcn.h>
 #endif
 
+std::set<std::string> getConfigPaths(const std::string &mapName);
+
+std::string getMapPath(std::string mapName);
+
+std::set<std::string> get_saved_map_dependencies(const json &save, const std::string &mapName);
+
+void load_map_resources(const std::shared_ptr<CGame> &game, const std::string &mapName);
+
 namespace {
 constexpr const char *PLUGIN_MANIFEST_PATH = "plugins/manifest.json";
 constexpr const char *DYNAMIC_PLUGIN_DEFAULT_ENTRY = "game_plugin_load_v1";
 constexpr std::size_t MAX_TILESET_ID = 16384;
 constexpr int MAX_TMX_LAYER_CELLS = 1'000'000;
+
+struct SaveLoadResult {
+    std::shared_ptr<CMap> map;
+    std::string sourcePath;
+    bool recoveredFromBackup = false;
+};
 
 class CDynamicLibrary {
   public:
@@ -127,19 +142,6 @@ std::optional<std::string> normalize_relative_resource_path(const std::string &p
     return normalized;
 }
 
-bool is_valid_map_name(const std::string &mapName) {
-    if (mapName.empty()) {
-        return true;
-    }
-
-    return std::all_of(mapName.begin(), mapName.end(), [](unsigned char ch) {
-        if (std::isalnum(ch)) {
-            return true;
-        }
-        return ch == '_' || ch == '-';
-    });
-}
-
 bool is_allowed_python_plugin_path(const std::string &path) {
     const auto normalized = normalize_relative_resource_path(path);
     if (!normalized || !vstd::ends_with(*normalized, ".py")) {
@@ -158,7 +160,7 @@ bool is_allowed_python_plugin_path(const std::string &path) {
     if (parent.parent_path() != "maps") {
         return false;
     }
-    return is_valid_map_name(parent.filename().string());
+    return CSaveFormat::isValidMapName(parent.filename().string());
 }
 
 bool is_safe_proxy_attr(const std::string &name) {
@@ -497,20 +499,212 @@ std::vector<std::string> build_tile_types(const json &tileset) {
     return tileTypes;
 }
 
-bool is_valid_slot_name(const std::string &name) {
-    if (name.empty() || name.find("..") != std::string::npos) {
+std::expected<std::shared_ptr<json>, std::string> build_save_envelope(const std::shared_ptr<CMap> &map) {
+    if (!map) {
+        return std::unexpected("map is null");
+    }
+
+    auto snapshot = CSerialization::serialize<std::shared_ptr<json>>(map);
+    return CSaveFormat::buildEnvelope(snapshot, map->getMapName());
+}
+
+void apply_authored_map_metadata(const std::shared_ptr<CMap> &map, const std::string &mapName) {
+    if (!map) {
+        return;
+    }
+    if (std::shared_ptr<json> mapc = CConfigurationProvider::getConfig(getMapPath(mapName))) {
+        map->setDefaultTiles({});
+        map->setOutOfBoundsTiles({});
+        map->setXBounds({});
+        map->setYBounds({});
+        map->setWrapX({});
+        map->setWrapY({});
+        const json emptyObject = json::object();
+        const json emptyArray = json::array();
+        const json &mapProperties =
+            mapc->contains("properties") && (*mapc)["properties"].is_object() ? (*mapc)["properties"] : emptyObject;
+        map->setEntryX(read_int_property(mapProperties, "x", 0));
+        map->setEntryY(read_int_property(mapProperties, "y", 0));
+        map->setEntryZ(read_int_property(mapProperties, "z", 0));
+        const json &layers = mapc->contains("layers") && (*mapc)["layers"].is_array() ? (*mapc)["layers"] : emptyArray;
+        for (const auto &layer : layers) {
+            if (layer.is_object() && layer.contains("type") && layer["type"].is_string() &&
+                vstd::string_equals(layer["type"].get<std::string>(), "tilelayer")) {
+                apply_tile_layer_metadata(map, layer);
+            }
+        }
+    }
+}
+
+class CScopedGameMap {
+  public:
+    explicit CScopedGameMap(std::shared_ptr<CGame> game, std::shared_ptr<CMap> replacement = nullptr)
+        : game(std::move(game)), previous(this->game ? this->game->getMap() : nullptr) {
+        if (this->game) {
+            this->game->setMap(std::move(replacement));
+        }
+    }
+
+    ~CScopedGameMap() {
+        if (game) {
+            game->setMap(previous);
+        }
+    }
+
+    CScopedGameMap(const CScopedGameMap &) = delete;
+    CScopedGameMap &operator=(const CScopedGameMap &) = delete;
+
+  private:
+    std::shared_ptr<CGame> game;
+    std::shared_ptr<CMap> previous;
+};
+
+class CScopedObjectConfig {
+  public:
+    CScopedObjectConfig(std::shared_ptr<CObjectHandler> handler, std::string name, std::shared_ptr<json> value)
+        : handler(std::move(handler)), name(std::move(name)) {
+        if (this->handler) {
+            previous = this->handler->getConfig(this->name);
+            this->handler->registerConfig(this->name, std::move(value));
+        }
+    }
+
+    ~CScopedObjectConfig() {
+        if (!handler) {
+            return;
+        }
+        if (previous) {
+            handler->registerConfig(name, previous);
+        } else {
+            handler->unregisterConfig(name);
+        }
+    }
+
+    CScopedObjectConfig(const CScopedObjectConfig &) = delete;
+    CScopedObjectConfig &operator=(const CScopedObjectConfig &) = delete;
+
+  private:
+    std::shared_ptr<CObjectHandler> handler;
+    std::string name;
+    std::shared_ptr<json> previous;
+};
+
+bool rehydrate_loaded_map(const std::shared_ptr<CGame> &game, const std::shared_ptr<CMap> &map,
+                          const std::string &mapName, std::string &error) {
+    if (!game || !map) {
+        error = "deserialized map is null";
+        return false;
+    }
+    if (map->getMapName() != mapName) {
+        error = "deserialized mapName does not match save envelope";
         return false;
     }
 
-    return std::all_of(name.begin(), name.end(), [](unsigned char ch) {
-        if (std::isalnum(ch)) {
-            return true;
-        }
-        return ch == '.' || ch == '_' || ch == '-';
-    });
+    apply_authored_map_metadata(map, mapName);
+
+    return map->restorePlayerAfterLoad(error);
 }
 
-std::string build_saved_map_config_key(const std::string &slotName) { return "__save_slot__/" + slotName; }
+std::expected<std::shared_ptr<CMap>, std::string>
+restore_save_document(const std::shared_ptr<CGame> &game, const CSaveFormat::DecodedDocument &saveDocument,
+                      const std::string &slotName) {
+    if (!game) {
+        return std::unexpected("cannot restore save without a game");
+    }
+
+    {
+        CScopedGameMap scopedMap(game);
+        load_map_resources(game, saveDocument.mapName);
+        for (const auto &requiredMap : get_saved_map_dependencies(*saveDocument.snapshot, saveDocument.mapName)) {
+            if (requiredMap != saveDocument.mapName) {
+                load_map_resources(game, requiredMap);
+            }
+        }
+    }
+
+    const auto saveConfigKey = CSaveFormat::savedMapConfigKey(slotName);
+    CScopedObjectConfig scopedSaveConfig(game->getObjectHandler(), saveConfigKey, saveDocument.snapshot);
+
+    std::shared_ptr<CMap> map;
+    try {
+        CSerialization::StrictScope strict;
+        map = game->getObjectHandler()->createObject<CMap>(game, saveConfigKey);
+    } catch (const std::exception &exception) {
+        return std::unexpected(std::string("failed to deserialize saved map: ") + exception.what());
+    }
+
+    std::string rehydrateError;
+    if (!rehydrate_loaded_map(game, map, saveDocument.mapName, rehydrateError)) {
+        return std::unexpected(rehydrateError);
+    }
+
+    return map;
+}
+
+std::expected<std::shared_ptr<CMap>, std::string>
+load_save_candidate(const std::shared_ptr<CGame> &game, const std::string &slotName, const std::string &path) {
+    auto raw = CResourcesProvider::getInstance()->loadJson(path);
+    if (!raw) {
+        return std::unexpected("save file could not be read or parsed");
+    }
+    auto decoded = CSaveFormat::decodeDocument(raw);
+    if (!decoded) {
+        return std::unexpected(decoded.error());
+    }
+    if (decoded->encoding == CSaveFormat::Encoding::Legacy) {
+        vstd::logger::info("Migrating legacy save in memory:", slotName, path);
+    }
+    return restore_save_document(game, *decoded, slotName);
+}
+
+std::optional<SaveLoadResult> try_load_saved_map(const std::shared_ptr<CGame> &game, const std::string &name) {
+    if (!CSaveFormat::isValidSlotName(name)) {
+        vstd::logger::warning("Rejected invalid save slot name during load:", name);
+        return std::nullopt;
+    }
+
+    const auto primaryPath = CSaveFormat::primaryPath(name);
+    auto primary = load_save_candidate(game, name, primaryPath);
+    if (primary) {
+        return SaveLoadResult{*primary, primaryPath, false};
+    }
+
+    vstd::logger::warning("Rejected primary save:", primaryPath, "reason:", primary.error());
+
+    const auto backupPath = CSaveFormat::backupPath(name);
+    auto backup = load_save_candidate(game, name, backupPath);
+    if (backup) {
+        vstd::logger::warning("Recovered save slot from backup:", name, backupPath);
+        return SaveLoadResult{*backup, backupPath, true};
+    }
+
+    vstd::logger::warning("Rejected backup save:", backupPath, "reason:", backup.error());
+    return std::nullopt;
+}
+
+void repair_recovered_backup(const SaveLoadResult &loaded, const std::string &slotName) {
+    if (!loaded.recoveredFromBackup) {
+        return;
+    }
+    const auto backupBytes = CResourcesProvider::getInstance()->load(loaded.sourcePath);
+    if (backupBytes.empty()) {
+        vstd::logger::warning("Recovered backup could not be read for primary repair:", slotName, loaded.sourcePath);
+        return;
+    }
+    const auto primaryPath = CSaveFormat::primaryPath(slotName);
+    std::error_code errorCode;
+    std::filesystem::remove(primaryPath, errorCode);
+    if (errorCode) {
+        vstd::logger::warning("Recovered backup primary repair could not remove rejected primary:", slotName,
+                              primaryPath, "reason:", errorCode.message());
+        return;
+    }
+    if (CResourcesProvider::getInstance()->save(primaryPath, backupBytes)) {
+        vstd::logger::warning("Repaired save primary from recovered backup:", slotName, primaryPath);
+    } else {
+        vstd::logger::warning("Failed to repair save primary from recovered backup:", slotName, primaryPath);
+    }
+}
 
 std::shared_ptr<json> load_plugin_manifest() {
     auto provider = CResourcesProvider::getInstance();
@@ -622,7 +816,7 @@ void CMapLoader::loadFromTmx(const std::shared_ptr<CMap> &map, const std::shared
 }
 
 std::set<std::string> getConfigPaths(const std::string &mapName) {
-    if (!is_valid_map_name(mapName)) {
+    if (!CSaveFormat::isValidMapName(mapName)) {
         vstd::logger::warning("Rejected invalid map name while loading config:", mapName);
         return {};
     }
@@ -633,7 +827,7 @@ std::set<std::string> getConfigPaths(const std::string &mapName) {
 }
 
 std::string getScriptPath(std::string mapName) {
-    if (!is_valid_map_name(mapName)) {
+    if (!CSaveFormat::isValidMapName(mapName)) {
         vstd::logger::warning("Rejected invalid map name while resolving script:", mapName);
         return {};
     }
@@ -643,7 +837,7 @@ std::string getScriptPath(std::string mapName) {
 }
 
 std::string getMapPath(std::string mapName) {
-    if (!is_valid_map_name(mapName)) {
+    if (!CSaveFormat::isValidMapName(mapName)) {
         vstd::logger::warning("Rejected invalid map name while resolving map:", mapName);
         return {};
     }
@@ -746,7 +940,7 @@ std::set<std::string> get_saved_map_dependencies(const json &save, const std::st
     }
 
     for (const auto &candidate : CResourcesProvider::getInstance()->getFiles(CResType::MAP)) {
-        if (!is_valid_map_name(candidate)) {
+        if (!CSaveFormat::isValidMapName(candidate)) {
             continue;
         }
         if (map_defines_saved_quest_refs(candidate, questRefs)) {
@@ -775,74 +969,8 @@ std::shared_ptr<CMap> CMapLoader::loadNewMap(const std::shared_ptr<CGame> &game,
 }
 
 std::shared_ptr<CMap> CMapLoader::loadSavedMap(const std::shared_ptr<CGame> &game, const std::string &name) {
-    if (!is_valid_slot_name(name)) {
-        vstd::logger::warning("Rejected invalid save slot name during load:", name);
-        return game->getObjectHandler()->createObject<CMap>(game);
-    }
-
-    const std::string path = "save/" + name + ".json";
-    const std::string saveConfigKey = build_saved_map_config_key(name);
-
-    if (std::shared_ptr<json> save = CConfigurationProvider::getConfig(path)) {
-        if (!save->is_object() || !save->contains("properties") || !(*save)["properties"].is_object() ||
-            !(*save)["properties"].contains("mapName") || !(*save)["properties"]["mapName"].is_string()) {
-            vstd::logger::warning("Rejected save without a valid mapName:", name);
-            return game->getObjectHandler()->createObject<CMap>(game);
-        }
-        const auto mapName = (*save)["properties"]["mapName"].get<std::string>();
-        if (!is_valid_map_name(mapName)) {
-            vstd::logger::warning("Rejected save with invalid mapName:", mapName);
-            return game->getObjectHandler()->createObject<CMap>(game);
-        }
-
-        load_map_resources(game, mapName);
-        for (const auto &requiredMap : get_saved_map_dependencies(*save, mapName)) {
-            if (requiredMap != mapName) {
-                load_map_resources(game, requiredMap);
-            }
-        }
-        game->getObjectHandler()->registerConfig(getConfigPaths(mapName));
-
-        game->getObjectHandler()->registerConfig(saveConfigKey, save);
-
-        auto map = game->getObjectHandler()->createObject<CMap>(game, saveConfigKey);
-        if (!map) {
-            vstd::logger::warning("Failed to deserialize saved map:", name);
-            return game->getObjectHandler()->createObject<CMap>(game);
-        }
-        if (std::shared_ptr<json> mapc = CConfigurationProvider::getConfig(getMapPath(mapName))) {
-            map->setDefaultTiles({});
-            map->setOutOfBoundsTiles({});
-            map->setXBounds({});
-            map->setYBounds({});
-            map->setWrapX({});
-            map->setWrapY({});
-            const json emptyObject = json::object();
-            const json emptyArray = json::array();
-            const json &mapProperties =
-                mapc->contains("properties") && (*mapc)["properties"].is_object() ? (*mapc)["properties"] : emptyObject;
-            map->setEntryX(read_int_property(mapProperties, "x", 0));
-            map->setEntryY(read_int_property(mapProperties, "y", 0));
-            map->setEntryZ(read_int_property(mapProperties, "z", 0));
-            const json &layers =
-                mapc->contains("layers") && (*mapc)["layers"].is_array() ? (*mapc)["layers"] : emptyArray;
-            for (const auto &layer : layers) {
-                if (layer.is_object() && layer.contains("type") && layer["type"].is_string() &&
-                    vstd::string_equals(layer["type"].get<std::string>(), "tilelayer")) {
-                    apply_tile_layer_metadata(map, layer);
-                }
-            }
-        }
-        for (const auto &object : map->getObjects()) {
-            if (auto player = std::dynamic_pointer_cast<CPlayer>(object)) {
-                if (player) {
-                    map->player = player;
-                    map->registerPlayerTriggers();
-                    break;
-                }
-            }
-        }
-        return map;
+    if (auto loaded = try_load_saved_map(game, name)) {
+        return loaded->map;
     }
     return game->getObjectHandler()->createObject<CMap>(game);
 }
@@ -870,12 +998,18 @@ std::shared_ptr<CMap> CMapLoader::loadRandomMapWithPlayer(const std::shared_ptr<
 }
 
 void CMapLoader::save(const std::shared_ptr<CMap> &map, const std::string &name) {
-    if (!is_valid_slot_name(name)) {
+    if (!CSaveFormat::isValidSlotName(name)) {
         vstd::logger::warning("Rejected invalid save slot name during save:", name);
         return;
     }
 
-    CResourcesProvider::getInstance()->save(vstd::join({"save/", name, ".json"}, ""), JSONIFY_STYLED(map));
+    auto envelope = build_save_envelope(map);
+    if (!envelope) {
+        vstd::logger::warning("Rejected invalid save snapshot:", name, "reason:", envelope.error());
+        return;
+    }
+
+    CResourcesProvider::getInstance()->save(CSaveFormat::primaryPath(name), CJsonUtil::to_string(*envelope, -1));
 }
 
 void CMapLoader::handleTileLayer(const std::shared_ptr<CMap> &map, const std::vector<std::string> &tileTypes,
@@ -1038,7 +1172,12 @@ void CGameLoader::startRandomGameWithPlayer(const std::shared_ptr<CGame> &game, 
 }
 
 void CGameLoader::loadSavedGame(const std::shared_ptr<CGame> &game, const std::string &save) {
-    game->setMap(CMapLoader::loadSavedMap(game, save));
+    if (auto loaded = try_load_saved_map(game, save)) {
+        game->setMap(loaded->map);
+        repair_recovered_backup(*loaded, save);
+        return;
+    }
+    vstd::logger::warning("Saved game was not loaded; keeping the active map unchanged:", save);
 }
 
 void CGameLoader::startGame(const std::shared_ptr<CGame> &game, const std::string &file) {
@@ -1211,7 +1350,7 @@ bool CPluginLoader::loadGlobalPlugins(const std::shared_ptr<CGame> &game) {
 }
 
 bool CPluginLoader::loadMapPlugins(const std::shared_ptr<CGame> &game, const std::string &mapName) {
-    if (!is_valid_map_name(mapName)) {
+    if (!CSaveFormat::isValidMapName(mapName)) {
         vstd::logger::warning("Rejected invalid map name while loading plugins:", mapName);
         return false;
     }
