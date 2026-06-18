@@ -40992,6 +40992,303 @@
           "width": 32,
           "x": 4192,
           "y": 3488
+        },
+        {
+          "height": 32,
+          "id": 115,
+          "name": "ambientGateTriageNotice",
+          "type": "ambientGateTriageNotice",
+          "width": 32,
+          "x": 3328,
+          "y": 3488
+        },
+        {
+          "height": 32,
+          "id": 116,
+          "name": "ambientGateBellRope",
+          "type": "ambientGateBellRope",
+          "width": 32,
+          "x": 3360,
+          "y": 3520
+        },
+        {
+          "height": 32,
+          "id": 117,
+          "name": "ambientRefugeeBundle",
+          "type": "ambientRefugeeBundle",
+          "width": 32,
+          "x": 3392,
+          "y": 3552
+        },
+        {
+          "height": 32,
+          "id": 118,
+          "name": "ambientMarketRationLedger",
+          "type": "ambientMarketRationLedger",
+          "width": 32,
+          "x": 3424,
+          "y": 3552
+        },
+        {
+          "height": 32,
+          "id": 119,
+          "name": "ambientCutWellRope",
+          "type": "ambientCutWellRope",
+          "width": 32,
+          "x": 3456,
+          "y": 3584
+        },
+        {
+          "height": 32,
+          "id": 120,
+          "name": "ambientScribeNotice",
+          "type": "ambientScribeNotice",
+          "width": 32,
+          "x": 3488,
+          "y": 3648
+        },
+        {
+          "height": 32,
+          "id": 121,
+          "name": "ambientTavernLastCall",
+          "type": "ambientTavernLastCall",
+          "width": 32,
+          "x": 1504,
+          "y": 3168
+        },
+        {
+          "height": 32,
+          "id": 122,
+          "name": "ambientVictorRibbon",
+          "type": "ambientVictorRibbon",
+          "width": 32,
+          "x": 1568,
+          "y": 3168
+        },
+        {
+          "height": 32,
+          "id": 123,
+          "name": "ambientTownHallPleaBoard",
+          "type": "ambientTownHallPleaBoard",
+          "width": 32,
+          "x": 1344,
+          "y": 3232
+        },
+        {
+          "height": 32,
+          "id": 124,
+          "name": "ambientMayorAshLedger",
+          "type": "ambientMayorAshLedger",
+          "width": 32,
+          "x": 1408,
+          "y": 3232
+        },
+        {
+          "height": 32,
+          "id": 125,
+          "name": "ambientChapelTallowShrine",
+          "type": "ambientChapelTallowShrine",
+          "width": 32,
+          "x": 1568,
+          "y": 3232
+        },
+        {
+          "height": 32,
+          "id": 126,
+          "name": "ambientChapelBoneBasin",
+          "type": "ambientChapelBoneBasin",
+          "width": 32,
+          "x": 1632,
+          "y": 3232
+        },
+        {
+          "height": 32,
+          "id": 127,
+          "name": "ambientStainedGlassPrayer",
+          "type": "ambientStainedGlassPrayer",
+          "width": 32,
+          "x": 1440,
+          "y": 3264
+        },
+        {
+          "height": 32,
+          "id": 128,
+          "name": "ambientAbandonedMarketStall",
+          "type": "ambientAbandonedMarketStall",
+          "width": 32,
+          "x": 1504,
+          "y": 3264
+        },
+        {
+          "height": 32,
+          "id": 129,
+          "name": "ambientCultDoorScratch",
+          "type": "ambientCultDoorScratch",
+          "width": 32,
+          "x": 1376,
+          "y": 3200
+        },
+        {
+          "height": 32,
+          "id": 130,
+          "name": "ambientWashedBloodCobble",
+          "type": "ambientWashedBloodCobble",
+          "width": 32,
+          "x": 1504,
+          "y": 3200
+        },
+        {
+          "height": 32,
+          "id": 131,
+          "name": "ambientPlagueHouseSeal",
+          "type": "ambientPlagueHouseSeal",
+          "width": 32,
+          "x": 1408,
+          "y": 3264
+        },
+        {
+          "height": 32,
+          "id": 132,
+          "name": "ambientMissingChildRibbon",
+          "type": "ambientMissingChildRibbon",
+          "width": 32,
+          "x": 1440,
+          "y": 3296
+        },
+        {
+          "height": 32,
+          "id": 133,
+          "name": "ambientBoardedNursery",
+          "type": "ambientBoardedNursery",
+          "width": 32,
+          "x": 1472,
+          "y": 3296
+        },
+        {
+          "height": 32,
+          "id": 134,
+          "name": "ambientOldQuarterChalk",
+          "type": "ambientOldQuarterChalk",
+          "width": 32,
+          "x": 1344,
+          "y": 3264
+        },
+        {
+          "height": 32,
+          "id": 135,
+          "name": "ambientNightBellWarning",
+          "type": "ambientNightBellWarning",
+          "width": 32,
+          "x": 1536,
+          "y": 3264
+        },
+        {
+          "height": 32,
+          "id": 136,
+          "name": "ambientCryptWarningNote",
+          "type": "ambientCryptWarningNote",
+          "width": 32,
+          "x": 1792,
+          "y": 3296
+        },
+        {
+          "height": 32,
+          "id": 137,
+          "name": "ambientRelicPilgrimBones",
+          "type": "ambientRelicPilgrimBones",
+          "width": 32,
+          "x": 1856,
+          "y": 3264
+        },
+        {
+          "height": 32,
+          "id": 138,
+          "name": "ambientPritzSkullPile",
+          "type": "ambientPritzSkullPile",
+          "width": 32,
+          "x": 992,
+          "y": 3552
+        },
+        {
+          "height": 32,
+          "id": 139,
+          "name": "ambientRatGnawedStandard",
+          "type": "ambientRatGnawedStandard",
+          "width": 32,
+          "x": 640,
+          "y": 320
+        },
+        {
+          "height": 32,
+          "id": 140,
+          "name": "ambientRolfBootprints",
+          "type": "ambientRolfBootprints",
+          "width": 32,
+          "x": 608,
+          "y": 352
+        },
+        {
+          "height": 32,
+          "id": 141,
+          "name": "ambientSwampFisherWarning",
+          "type": "ambientSwampFisherWarning",
+          "width": 32,
+          "x": 3968,
+          "y": 3360
+        },
+        {
+          "height": 32,
+          "id": 142,
+          "name": "ambientOctobogzNet",
+          "type": "ambientOctobogzNet",
+          "width": 32,
+          "x": 4000,
+          "y": 3392
+        },
+        {
+          "height": 32,
+          "id": 143,
+          "name": "ambientMireLantern",
+          "type": "ambientMireLantern",
+          "width": 32,
+          "x": 4192,
+          "y": 3456
+        },
+        {
+          "height": 32,
+          "id": 144,
+          "name": "ambientSwampReturnScratch",
+          "type": "ambientSwampReturnScratch",
+          "width": 32,
+          "x": 4224,
+          "y": 3488
+        },
+        {
+          "height": 32,
+          "id": 145,
+          "name": "ambientOutskirtsDoorMark",
+          "type": "ambientOutskirtsDoorMark",
+          "width": 32,
+          "x": 4672,
+          "y": 2816
+        },
+        {
+          "height": 32,
+          "id": 146,
+          "name": "ambientOldWomanPrayerBundle",
+          "type": "ambientOldWomanPrayerBundle",
+          "width": 32,
+          "x": 4640,
+          "y": 2848
+        },
+        {
+          "height": 32,
+          "id": 147,
+          "name": "ambientRitualSealShard",
+          "type": "ambientRitualSealShard",
+          "width": 32,
+          "x": 3424,
+          "y": 3456
         }
       ],
       "opacity": 1,
@@ -41007,7 +41304,7 @@
       "y": 0
     }
   ],
-  "nextobjectid": 115,
+  "nextobjectid": 148,
   "orientation": "orthogonal",
   "properties": {
     "x": "110",

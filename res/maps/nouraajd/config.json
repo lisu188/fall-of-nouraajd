@@ -59,6 +59,270 @@
       "text": "OUTSKIRTS HUT - Keep to the road; goblins prowl the grove."
     }
   },
+  "ambientGateTriageNotice": {
+    "ref": "signPost",
+    "properties": {
+      "animation": "images/ambient/notice_board",
+      "canStep": true,
+      "text": "TRIAGE NOTICE - Fevered to chapel, bitten to barricade, speaking in another voice to the ditch."
+    }
+  },
+  "ambientGateBellRope": {
+    "ref": "signPost",
+    "properties": {
+      "animation": "images/ambient/signpost",
+      "canStep": true,
+      "text": "The gate bell rope is tarred black: one pull for rats, two for cultists, three when no one answers."
+    }
+  },
+  "ambientRefugeeBundle": {
+    "ref": "signPost",
+    "properties": {
+      "animation": "images/ambient/supply_pile",
+      "canStep": true,
+      "text": "A bundle of children's shoes waits beside the gate, each pair tied with a strip of funeral cloth."
+    }
+  },
+  "ambientMarketRationLedger": {
+    "ref": "signPost",
+    "properties": {
+      "animation": "images/ambient/notice_board",
+      "canStep": true,
+      "text": "Market ledger: flour rationed, salt vanished, debt payable in candles, knives, or confessions."
+    }
+  },
+  "ambientCutWellRope": {
+    "ref": "signPost",
+    "properties": {
+      "animation": "images/ambient/stone_well",
+      "canStep": true,
+      "text": "The well bucket reeks of brine and old sermons; its rope has been cut from below."
+    }
+  },
+  "ambientScribeNotice": {
+    "ref": "signPost",
+    "properties": {
+      "animation": "images/ambient/notice_board",
+      "canStep": true,
+      "text": "Scribe's notice: portal sigils require clean hands, paid gold, and no cult brands."
+    }
+  },
+  "ambientTavernLastCall": {
+    "ref": "signPost",
+    "properties": {
+      "animation": "images/ambient/wooden_bench",
+      "canStep": true,
+      "text": "LAST CALL - Bitter beer remains. Vodka was traded for bandages before Victor began shouting."
+    }
+  },
+  "ambientVictorRibbon": {
+    "ref": "signPost",
+    "properties": {
+      "animation": "images/ambient/street_lantern",
+      "canStep": true,
+      "text": "A soot-dark ribbon is pinned near the tavern door, small enough for a frightened child."
+    }
+  },
+  "ambientTownHallPleaBoard": {
+    "ref": "signPost",
+    "properties": {
+      "animation": "images/ambient/notice_board",
+      "canStep": true,
+      "text": "PLEAS TO MAYOR IRVIN - rats, missing kin, ration theft, glass prayers, no answers."
+    }
+  },
+  "ambientMayorAshLedger": {
+    "ref": "signPost",
+    "properties": {
+      "animation": "images/ambient/wooden_bench",
+      "canStep": true,
+      "text": "A ledger page lists households in ash instead of ink; half the names are crossed out twice."
+    }
+  },
+  "ambientChapelTallowShrine": {
+    "ref": "signPost",
+    "properties": {
+      "animation": "images/ambient/brazier",
+      "canStep": true,
+      "text": "Tallow candles gutter around a jawbone relic; every flame leans toward the chapel crypt."
+    }
+  },
+  "ambientChapelBoneBasin": {
+    "ref": "signPost",
+    "properties": {
+      "animation": "images/ambient/stone_shrine",
+      "canStep": true,
+      "text": "A basin of rainwater and finger bones bears a prayer for those who entered the catacombs."
+    }
+  },
+  "ambientStainedGlassPrayer": {
+    "ref": "signPost",
+    "properties": {
+      "animation": "images/ambient/brazier",
+      "canStep": true,
+      "text": "Prayer scrap: If the glass sings after sunset, do not answer in your own name."
+    }
+  },
+  "ambientAbandonedMarketStall": {
+    "ref": "signPost",
+    "properties": {
+      "animation": "images/ambient/market_stall",
+      "canStep": true,
+      "text": "An abandoned stall still displays prices for bread, grave salt, and one honest night's sleep."
+    }
+  },
+  "ambientCultDoorScratch": {
+    "ref": "signPost",
+    "properties": {
+      "animation": "images/ambient/broken_fence",
+      "canStep": true,
+      "text": "Scratches around the old door form a patient spiral, the mark of Marumi Baso."
+    }
+  },
+  "ambientWashedBloodCobble": {
+    "ref": "signPost",
+    "properties": {
+      "animation": "images/ambient/rubble_and_skulls",
+      "canStep": true,
+      "text": "The cobbles have been scrubbed clean, but rain keeps drawing red seams from between them."
+    }
+  },
+  "ambientPlagueHouseSeal": {
+    "ref": "signPost",
+    "properties": {
+      "animation": "images/ambient/broken_fence",
+      "canStep": true,
+      "text": "This house is sealed from outside. Something inside has written prayers backward on the door."
+    }
+  },
+  "ambientMissingChildRibbon": {
+    "ref": "signPost",
+    "properties": {
+      "animation": "images/ambient/signpost",
+      "canStep": true,
+      "text": "A yellow ribbon hangs from a nail, knotted with the same care as Victor's shaking hands."
+    }
+  },
+  "ambientBoardedNursery": {
+    "ref": "signPost",
+    "properties": {
+      "animation": "images/ambient/broken_fence",
+      "canStep": true,
+      "text": "Boards cover a nursery window; lullabies are scratched into the wood from both sides."
+    }
+  },
+  "ambientOldQuarterChalk": {
+    "ref": "signPost",
+    "properties": {
+      "animation": "images/ambient/notice_board",
+      "canStep": true,
+      "text": "Chalk marks count the sick: one line for fever, two for bite, a circle for dreams of glass."
+    }
+  },
+  "ambientNightBellWarning": {
+    "ref": "signPost",
+    "properties": {
+      "animation": "images/ambient/street_lantern",
+      "canStep": true,
+      "text": "CURFEW - When the night bell rings without a hand, close shutters and forget every voice outside."
+    }
+  },
+  "ambientCryptWarningNote": {
+    "ref": "signPost",
+    "properties": {
+      "animation": "images/ambient/signpost",
+      "canStep": true,
+      "text": "CRYPT WARNING - Beren's relic sleeps beyond the wall; thieves return older than their fathers."
+    }
+  },
+  "ambientRelicPilgrimBones": {
+    "ref": "signPost",
+    "properties": {
+      "animation": "images/ambient/gravestone_cluster",
+      "canStep": true,
+      "text": "Pilgrim bones kneel toward the catacombs, each skull turned away from the chapel."
+    }
+  },
+  "ambientPritzSkullPile": {
+    "ref": "signPost",
+    "properties": {
+      "animation": "images/ambient/rubble_and_skulls",
+      "canStep": true,
+      "text": "A heap of split skulls marks the Pritz road; Rolf's sigil is carved into the largest."
+    }
+  },
+  "ambientRatGnawedStandard": {
+    "ref": "signPost",
+    "properties": {
+      "animation": "images/ambient/broken_cart",
+      "canStep": true,
+      "text": "A gnawed standard leans in the dirt, its last order still legible: Hold until dawn."
+    }
+  },
+  "ambientRolfBootprints": {
+    "ref": "signPost",
+    "properties": {
+      "animation": "images/ambient/dead_tree",
+      "canStep": true,
+      "text": "Bootprints hardened in mud turn north here, then scatter as if the squad broke formation."
+    }
+  },
+  "ambientSwampFisherWarning": {
+    "ref": "signPost",
+    "properties": {
+      "animation": "images/ambient/signpost",
+      "canStep": true,
+      "text": "FISHER WARNING - The mire keeps nets, names, and fingers. Burn anything that tugs back."
+    }
+  },
+  "ambientOctobogzNet": {
+    "ref": "signPost",
+    "properties": {
+      "animation": "images/ambient/hay_bales",
+      "canStep": true,
+      "text": "A torn net is threaded with black slime and bright feathers that twitch without wind."
+    }
+  },
+  "ambientMireLantern": {
+    "ref": "signPost",
+    "properties": {
+      "animation": "images/ambient/street_lantern",
+      "canStep": true,
+      "text": "A drowned lantern burns under the swamp skin, lighting no road but the one downward."
+    }
+  },
+  "ambientSwampReturnScratch": {
+    "ref": "signPost",
+    "properties": {
+      "animation": "images/ambient/signpost",
+      "canStep": true,
+      "text": "A scratched arrow points back west. Beneath it: Return the relic before the mire learns your name."
+    }
+  },
+  "ambientOutskirtsDoorMark": {
+    "ref": "signPost",
+    "properties": {
+      "animation": "images/ambient/dead_tree",
+      "canStep": true,
+      "text": "The outskirts door bears three knocks from outside and one deep dent from within."
+    }
+  },
+  "ambientOldWomanPrayerBundle": {
+    "ref": "signPost",
+    "properties": {
+      "animation": "images/ambient/supply_pile",
+      "canStep": true,
+      "text": "A bundle of prayer cords waits by the hut, each knot tied around a missing neighbor's name."
+    }
+  },
+  "ambientRitualSealShard": {
+    "ref": "signPost",
+    "properties": {
+      "animation": "images/ambient/campfire_cauldron",
+      "canStep": true,
+      "text": "A shard of stained glass hums beneath soot, warm with a ritual that has not happened yet."
+    }
+  },
   "exampleMarket": {
     "class": "CMarket",
     "properties": {
