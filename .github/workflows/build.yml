@@ -200,7 +200,6 @@ jobs:
             "include\SDL2\SDL.h",
             "include\SDL2\SDL_image.h",
             "include\SDL2\SDL_ttf.h",
-            "include\nlohmann\json.hpp",
             "lib\SDL2.lib",
             "lib\SDL2_image.lib",
             "lib\SDL2_ttf.lib",
