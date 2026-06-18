@@ -108,8 +108,9 @@ From the repository root, run:
 <pre>
 python3 scripts/validate_content.py --repo-root .
 python3 -m unittest tests.test_content_validator
-cmake --build cmake-build-release --target _game for_unit_tests -j$(nproc)
+cmake --build cmake-build-release --target _game for_unit_tests performance_guard_tests -j$(nproc)
 ctest --test-dir cmake-build-release --output-on-failure -R for_unit_tests
+ctest --test-dir cmake-build-release --output-on-failure --verbose -L performance
 python3 test.py
 </pre>
 For Windows Visual Studio builds, use `--config Release`, pass `-C Release` to `ctest`,
@@ -119,7 +120,7 @@ then set `GAME_BUILD_DIR=cmake-build-release` and `GAME_BUILD_CONFIG=Release` be
 steps.
 Also run `./scripts/run_coverage.sh` when a change touches tests (for example
 `test.py` or `tests/unit/**`), `src/core/**`, `src/handler/**`, `src/object/**`,
-or the coverage tooling. The default coverage run uses the Python reporter with
+`native_plugins/**`, or the coverage tooling. The default coverage run uses the Python reporter with
 `scripts/coverage_exclusions.json` and enforces a 95% eligible-line gate; see
 `docs/testing.md` for details, including recommended branch-protection checks.
 Content JSON validation and its focused fixture tests run without needing the

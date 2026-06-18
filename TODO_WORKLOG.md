@@ -530,6 +530,6 @@
     test.GameTest.test_save_load_after_scene_manager_transition_preserves_active_map_player_state
     test.McpServerTest.test_stdio_scene_manager_map_transition_walkthrough` -> `Ran 5 tests`, `OK`
   - `python3 test.py` -> completed successfully
-  - `./scripts/run_coverage.sh` -> C++ tests passed, embedded `python3 test.py` passed, and report generation passed with
-    `lines: 90.17% (9493 out of 10528)`
+  - Historical pre-95% coverage-gate evidence: `./scripts/run_coverage.sh` passed report generation with
+    `lines: 90.17% (9493 out of 10528)` before the current threshold was enforced.
 - Blockers if unresolved: None.

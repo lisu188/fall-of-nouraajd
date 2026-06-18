@@ -170,6 +170,29 @@ void test_scene_manager_null_and_legacy_missing_target_behavior() {
                 "missing-map compatibility path should reset transition state");
 }
 
+void test_scene_manager_rejects_cross_game_requests() {
+    auto game_a = CGameLoader::loadGame();
+    CGameLoader::startGameWithPlayer(game_a, "test", "Warrior");
+    auto game_b = CGameLoader::loadGame();
+    CGameLoader::startGameWithPlayer(game_b, "test", "Warrior");
+
+    auto manager_a = game_a->getSceneManager();
+    auto manager_b = game_b->getSceneManager();
+
+    expect_true(!manager_a->requestMapChange(game_b, "ritual"),
+                "scene manager should reject transition requests for another game");
+    expect_true(manager_a->getTransitionState() == CSceneManager::TransitionState::Idle,
+                "cross-game rejection should leave the called manager idle");
+    expect_true(manager_a->getPendingMapName().empty(), "cross-game rejection should not queue a destination");
+    expect_true(manager_b->getTransitionState() == CSceneManager::TransitionState::Idle,
+                "cross-game rejection should not mutate the target game's manager");
+
+    pump_event_loop_iterations();
+
+    expect_true(game_a->getMap()->getMapName() == "test", "cross-game rejection should not transition source game");
+    expect_true(game_b->getMap()->getMapName() == "test", "cross-game rejection should not transition target game");
+}
+
 class FixedStepController : public CController {
   public:
     explicit FixedStepController(Coords target, bool remove_before_return = false)
@@ -611,6 +634,7 @@ int main() {
     test_scene_manager_state_duplicate_and_player_transfer();
     test_scene_manager_repeated_transitions_and_controller_usability();
     test_scene_manager_null_and_legacy_missing_target_behavior();
+    test_scene_manager_rejects_cross_game_requests();
     test_map_tiles_bounds_wrapping_and_object_cache();
     test_map_defensive_branches_and_strict_validation();
     test_map_move_interrupts_invalid_planned_steps();
