@@ -71,9 +71,9 @@
         "class": "CLayout",
         "properties": {
           "h": 220,
-          "w": 220,
-          "x": 1700,
-          "y": 820
+          "horizontal": "RIGHT",
+          "vertical": "DOWN",
+          "w": 220
         }
       },
       "visible": {
