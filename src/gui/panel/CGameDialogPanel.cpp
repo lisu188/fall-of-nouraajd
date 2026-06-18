@@ -17,6 +17,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
 #include "CGameDialogPanel.h"
+#include "core/CPlaytestTrace.h"
 #include "gui/CLayout.h"
 #include "gui/CTextManager.h"
 #include "gui/object/CWidget.h"
@@ -150,6 +151,17 @@ void CGameDialogPanel::selectOption(int option) { selectOption(getOption(option)
 void CGameDialogPanel::selectOption(const std::shared_ptr<CDialogOption> &option) {
     if (!option || !dialog) {
         return;
+    }
+    if (CPlaytestTrace::enabled()) {
+        json fields = {
+            {"action", option->getAction()},
+            {"dialog", CPlaytestTrace::objectRef(dialog)},
+            {"nextStateId", option->getNextStateId()},
+            {"optionNumber", option->getNumber()},
+            {"stateId", currentStateId},
+        };
+        CPlaytestTrace::addMapContext(fields, getGame() ? getGame()->getMap() : nullptr);
+        CPlaytestTrace::record("dialog_option_selected", fields);
     }
     if (!option->getAction().empty()) {
         dialog->invokeAction(option->getAction());

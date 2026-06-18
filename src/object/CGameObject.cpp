@@ -1,6 +1,6 @@
 /*
 fall-of-nouraajd c++ dark fantasy game
-Copyright (C) 2025  Andrzej Lis
+Copyright (C) 2025-2026  Andrzej Lis
 
 This program is free software: you can redistribute it and/or modify
         it under the terms of the GNU General Public License as published by
@@ -19,6 +19,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CGame.h"
 #include "core/CList.h"
 #include "core/CMap.h"
+#include "core/CPlaytestTrace.h"
 #include "core/CPythonOverrides.h"
 #include "gui/CAnimation.h"
 
@@ -48,7 +49,23 @@ std::shared_ptr<CGame> CGameObject::getGame() { return game.lock(); }
 
 void CGameObject::setGame(std::shared_ptr<CGame> map) { this->game = map; }
 
-void CGameObject::setStringProperty(std::string name, std::string value) { this->setProperty(name, value); }
+void CGameObject::setStringProperty(std::string name, std::string value) {
+    std::string previous;
+    const bool traceQuestState = CPlaytestTrace::enabled() && name.starts_with("quest_state_");
+    if (traceQuestState) {
+        previous = getStringProperty(name);
+    }
+    this->setProperty(name, value);
+    if (traceQuestState && previous != value) {
+        json fields = {
+            {"current", value},     {"object", CPlaytestTrace::objectRef(this->ptr<CGameObject>())},
+            {"previous", previous}, {"quest", name.substr(std::string("quest_state_").size())},
+            {"questKey", name},
+        };
+        CPlaytestTrace::addMapContext(fields, std::dynamic_pointer_cast<CMap>(this->ptr<CGameObject>()));
+        CPlaytestTrace::record("quest_state_changed", fields);
+    }
+}
 
 void CGameObject::setBoolProperty(std::string name, bool value) { this->setProperty(name, value); }
 
