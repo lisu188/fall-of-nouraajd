@@ -389,7 +389,7 @@ After finishing a change, always complete the repository delivery workflow:
 
 Keep one logical change per commit where practical. Do not bundle unrelated cleanup with feature or bug-fix work. Do not bypass failing required checks or unresolved merge conflicts unless the user explicitly instructs that specific bypass. If pushing, opening, merging, or enabling auto-merge is blocked by missing remotes, authentication, permissions, unavailable checks, merge conflicts, or platform failures, report the exact blocker and leave the branch and pull request intact.
 
-When working on a GitHub issue, it may be closed after the fixing pull request has been merged. Do not close the issue before the merge unless the user explicitly asks for that.
+When working on a GitHub issue, close it only after the fixing pull request has been merged.
 
 Before finishing, summarize:
 

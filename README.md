@@ -81,6 +81,6 @@ and set `GAME_BUILD_CONFIG=Release` before running `python test.py`.
 Also run `./scripts/run_coverage.sh` when a change touches tests (for example
 `test.py` or `tests/unit/**`), `src/core/**`, `src/handler/**`, `src/object/**`,
 or the coverage tooling. The total line coverage threshold for that run is 90%;
-see `docs/testing.md` for details.
+see `docs/testing.md` for details, including recommended branch-protection checks.
 Data validation tests run without needing the compiled `_game` module, but
 other tests require it to be built.
