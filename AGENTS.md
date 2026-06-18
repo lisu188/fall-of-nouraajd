@@ -389,6 +389,8 @@ After finishing a change, always complete the repository delivery workflow:
 
 Keep one logical change per commit where practical. Do not bundle unrelated cleanup with feature or bug-fix work. Do not manually merge a pull request, enable auto-merge without explicit opt-in, bypass failing required checks, or bypass unresolved merge conflicts unless the user explicitly instructs that specific bypass. If pushing, opening, or enabling requested auto-merge is blocked by missing remotes, authentication, permissions, unavailable checks, or platform failures, report the exact blocker and leave the branch and pull request intact.
 
+When working on a GitHub issue, it may be closed after the fixing pull request has been merged. Do not close the issue before the merge unless the user explicitly asks for that.
+
 Before finishing, summarize:
 
 - files changed;
