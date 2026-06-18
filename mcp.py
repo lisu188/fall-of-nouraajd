@@ -21,6 +21,8 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import urlparse
 
+import game_simulation
+
 JSONRPC_VERSION = "2.0"
 SERVER_NAME = "fall-of-nouraajd-engine-mcp"
 SERVER_TITLE = "Fall of Nouraajd Engine MCP"
@@ -963,6 +965,57 @@ class EngineMcpServer:
                 },
             },
             {
+                "name": "simulation_run",
+                "title": "Run deterministic game simulation",
+                "description": (
+                    "Start a game and execute bounded high-level simulation steps for Codex/MCP walkthroughs."
+                ),
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "map": {"type": "string"},
+                        "player_class": {"type": "string", "default": "Warrior"},
+                        "load_gui": {"type": "boolean", "default": False},
+                        "steps": {
+                            "type": "array",
+                            "default": [],
+                            "items": {"type": "object"},
+                            "maxItems": 100,
+                        },
+                    },
+                    "required": ["map"],
+                    "additionalProperties": False,
+                },
+                "outputSchema": {
+                    "oneOf": [
+                        {
+                            "type": "object",
+                            "properties": {
+                                "map": {"type": "string"},
+                                "playerClass": {"type": "string"},
+                                "steps": {"type": "array"},
+                                "state": {"type": "object"},
+                                "questLog": {"type": "object"},
+                                "inventory": {"type": "array"},
+                            },
+                            "required": ["map", "playerClass", "steps", "state", "questLog", "inventory"],
+                            "additionalProperties": False,
+                        },
+                        {
+                            "type": "object",
+                            "properties": {
+                                "step": {"type": "string"},
+                                "error": {"type": "string"},
+                                "state": {"type": "object"},
+                                "traceback": {"type": "string"},
+                            },
+                            "required": ["step", "error"],
+                            "additionalProperties": False,
+                        },
+                    ],
+                },
+            },
+            {
                 "name": "map_design_brief",
                 "title": "Build map design brief",
                 "description": (
@@ -1087,6 +1140,17 @@ class EngineMcpServer:
                 level="info",
                 logger_name="tools",
                 data={"message": "tool call completed", "tool": tool_name},
+            )
+            return result
+
+        if tool_name == "simulation_run":
+            result = self._simulation_run(arguments)
+            self._emit_log(
+                transport=transport,
+                session_id=session_id,
+                level="info",
+                logger_name="tools",
+                data={"message": "tool call completed", "tool": tool_name, "isError": result.get("isError", False)},
             )
             return result
 
@@ -1240,6 +1304,63 @@ class EngineMcpServer:
                         "text": json.dumps(error_payload, ensure_ascii=False),
                     }
                 ],
+                "structuredContent": error_payload,
+                "isError": True,
+            }
+
+    def _simulation_run(self, arguments: dict[str, Any]) -> dict[str, Any]:
+        map_name = arguments.get("map")
+        player_class = arguments.get("player_class", "Warrior")
+        load_gui = arguments.get("load_gui", False)
+        steps = arguments.get("steps", [])
+
+        if self.game_module is None:
+            raise ProtocolError(-32603, "simulation_run requires imported game modules")
+        if not isinstance(map_name, str) or not map_name:
+            raise ProtocolError(-32602, "simulation_run requires non-empty string `map`")
+        if not isinstance(player_class, str) or not player_class:
+            raise ProtocolError(-32602, "simulation_run `player_class` must be a non-empty string")
+        if not isinstance(load_gui, bool):
+            raise ProtocolError(-32602, "simulation_run `load_gui` must be a boolean")
+        if not isinstance(steps, list):
+            raise ProtocolError(-32602, "simulation_run `steps` must be an array")
+        if len(steps) > 100:
+            raise ProtocolError(-32602, "simulation_run accepts at most 100 steps")
+        for step in steps:
+            if isinstance(step, dict) and step.get("action") == "capture_gui_screenshot" and step.get("path"):
+                raise ProtocolError(
+                    -32602,
+                    "simulation_run capture_gui_screenshot returns screenshot data inline; file paths are not allowed",
+                )
+
+        try:
+            structured = game_simulation.runSimulation(
+                self.game_module,
+                map_name,
+                player_class=player_class,
+                load_gui=load_gui,
+                steps=steps,
+            )
+            return {
+                "content": [{"type": "text", "text": json.dumps(structured, ensure_ascii=False)}],
+                "structuredContent": structured,
+                "isError": False,
+            }
+        except game_simulation.SimulationError as exc:
+            error_payload = exc.asDict()
+            return {
+                "content": [{"type": "text", "text": json.dumps(error_payload, ensure_ascii=False)}],
+                "structuredContent": error_payload,
+                "isError": True,
+            }
+        except Exception as exc:
+            error_payload = {
+                "step": "simulation_run",
+                "error": str(exc),
+                "traceback": traceback.format_exc(limit=10),
+            }
+            return {
+                "content": [{"type": "text", "text": json.dumps(error_payload, ensure_ascii=False)}],
                 "structuredContent": error_payload,
                 "isError": True,
             }
