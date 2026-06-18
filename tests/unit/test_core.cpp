@@ -214,6 +214,16 @@ void test_pathfinder_waypoint_and_blocked_goal() {
     expect_true(path.front() == Coords(0, 0, 0), "findPath should remain on start if no route exists");
 }
 
+void test_pathfinder_returns_start_when_passable_goal_has_no_route() {
+    auto can_step = [](const Coords &coords) { return coords == Coords(0, 0, 0) || coords == Coords(2, 0, 0); };
+    auto no_waypoint = [](const Coords &) -> std::optional<Coords> { return std::nullopt; };
+    auto no_neighbors = [](const Coords &) { return std::vector<Coords>{}; };
+
+    auto path = CPathFinder::findPath(Coords(0, 0, 0), Coords(2, 0, 0), can_step, no_waypoint, no_neighbors);
+    expect_true(path.size() == 1 && path.front() == Coords(0, 0, 0),
+                "findPath should remain on start when a passable goal cannot be reached");
+}
+
 void test_pathfinder_caches_passability_checks() {
     std::map<Coords, int> calls;
     auto can_step = [&calls](const Coords &coords) {
@@ -347,6 +357,38 @@ void test_toroidal_pathfinder_wraps_on_both_axes() {
 }
 
 void test_json_parse_expected_success_and_failure() {
+    expect_true(CJsonUtil::preview_json("line\nnext\tend\r") == "line next end ",
+                "preview_json should normalize control whitespace");
+    expect_true(CJsonUtil::preview_json("") == "<empty>", "preview_json should mark empty source text");
+
+    json ref = {{"ref", "GroundTile"}};
+    json ref_with_properties = {{"ref", "GroundTile"}, {"properties", json::object()}};
+    json invalid_ref = {{"ref", "GroundTile"}, {"class", "CTile"}, {"properties", json::object()}};
+    json type = {{"class", "CTile"}};
+    json type_with_properties = {{"class", "CTile"}, {"properties", json::object()}};
+    json invalid_type = {{"ref", "GroundTile"}, {"class", "CTile"}, {"properties", json::object()}};
+    json not_object = json::array();
+    json *null_json = nullptr;
+
+    expect_true(CJsonUtil::isRef(&ref), "single ref objects should be detected as references");
+    expect_true(CJsonUtil::isRef(&ref_with_properties), "ref objects may include properties");
+    expect_true(!CJsonUtil::isRef(&invalid_ref), "larger ref-like objects should not be accepted as references");
+    expect_true(!CJsonUtil::isRef(&not_object), "non-object json should not be accepted as references");
+    expect_true(!CJsonUtil::isRef(null_json), "null json should not be accepted as references");
+
+    expect_true(CJsonUtil::isType(&type), "single class objects should be detected as type definitions");
+    expect_true(CJsonUtil::isType(&type_with_properties), "type definitions may include properties");
+    expect_true(!CJsonUtil::isType(&invalid_type), "larger type-like objects should not be accepted as types");
+    expect_true(!CJsonUtil::isType(&not_object), "non-object json should not be accepted as types");
+    expect_true(!CJsonUtil::isType(null_json), "null json should not be accepted as types");
+
+    json object_map = {{"floor", ref}, {"wall", type}};
+    json invalid_map = {{"floor", 1}};
+    expect_true(CJsonUtil::isMap(&object_map), "maps of object configs should be detected as object maps");
+    expect_true(!CJsonUtil::isMap(&invalid_map), "maps containing non-object values should be rejected");
+    expect_true(!CJsonUtil::isMap(&not_object), "non-object json should not be accepted as maps");
+    expect_true(!CJsonUtil::isMap(null_json), "null json should not be accepted as maps");
+
     auto parsed = CJsonUtil::parse_expected("{\"value\": 3}", "unit-json");
     expect_true(parsed.has_value() && (*parsed)->at("value").get<int>() == 3,
                 "parse_expected should return parsed json on success");
@@ -479,6 +521,7 @@ int main() {
     test_near_coords_helpers();
     test_pathfinder_find_path_without_obstacles();
     test_pathfinder_waypoint_and_blocked_goal();
+    test_pathfinder_returns_start_when_passable_goal_has_no_route();
     test_pathfinder_caches_passability_checks();
     test_pathfinder_waypoint_override();
     test_pathfinder_crosses_levels_through_explicit_waypoint();

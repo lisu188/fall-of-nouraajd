@@ -18,9 +18,13 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "core/CLoader.h"
 #include "core/CMap.h"
+#include "core/CProvider.h"
+#include "object/CGameObject.h"
 #include "object/CMapObject.h"
 #include "object/CTile.h"
 #include "test_harness.h"
+
+#include <pybind11/embed.h>
 
 #include <algorithm>
 #include <memory>
@@ -240,12 +244,25 @@ void test_can_step_checks_default_tile_passability_without_materializing() {
                 "canStep should not bump navigation revision for missing default tiles");
 }
 
+void test_animation_provider_uses_dynamic_animation_for_directory_resources() {
+    auto game = CGameLoader::loadGame();
+    auto object = std::make_shared<CGameObject>();
+    object->setAnimation("images/monsters/octobogz");
+
+    auto animation = CAnimationProvider::getAnimation(game, object);
+    expect_true(animation && animation->meta()->inherits("CDynamicAnimation"),
+                "animation provider should use dynamic animations for directory resources");
+}
+
 } // namespace
 
 int main() {
+    pybind11::scoped_interpreter guard{};
+
     test_map_tiles_bounds_wrapping_and_object_cache();
     test_map_keeps_tiles_and_objects_separate_by_z();
     test_can_step_checks_default_tile_passability_without_materializing();
+    test_animation_provider_uses_dynamic_animation_for_directory_resources();
 
     return finish_tests();
 }

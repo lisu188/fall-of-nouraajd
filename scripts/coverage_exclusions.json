@@ -1,59 +1,12 @@
 {
   "version": 1,
-  "description": "Reviewed line-level coverage baseline. Exclusions are exact root-relative line ranges; no globs or whole-file entries are accepted by the reporter.",
+  "description": "Reviewed line-level production coverage baseline. Exclusions are exact root-relative line ranges; no globs or whole-file entries are accepted by the reporter.",
   "exclusions": [
     {
       "path": "native_plugins/native_marker_plugin.cpp",
       "reason": "Reviewed legacy uncovered branch baseline; new uncovered lines fail the 100% eligible-line gate.",
       "ranges": [
         "46"
-      ]
-    },
-    {
-      "path": "random-dungeon-generator/rdg.h",
-      "reason": "Third-party dungeon-generator template/header branches counted by gcov; tracked as reviewed legacy baseline.",
-      "ranges": [
-        "85",
-        "91",
-        "94",
-        "101",
-        "118-123",
-        "127",
-        "134-135",
-        "137",
-        "145",
-        "150-153",
-        "156-159",
-        "162-163",
-        "165",
-        "170-173",
-        "176-177",
-        "180-183",
-        "185",
-        "194-195",
-        "197",
-        "264",
-        "476",
-        "688",
-        "725",
-        "845",
-        "847",
-        "944",
-        "955",
-        "1023-1024",
-        "1228",
-        "1234",
-        "1260",
-        "1287",
-        "1291",
-        "1306",
-        "1311",
-        "1328",
-        "1345",
-        "1364",
-        "1383",
-        "1457",
-        "1474"
       ]
     },
     {
@@ -65,39 +18,20 @@
         "77-78",
         "85",
         "133",
-        "146",
         "150",
-        "160",
-        "171",
-        "188",
-        "199",
         "207-208",
-        "258",
-        "280",
         "294",
-        "308",
         "320-321",
-        "328",
-        "368",
-        "374",
         "386-387",
         "403",
         "444",
-        "470",
-        "495",
         "498-501",
-        "506",
         "511-515",
         "518",
-        "524",
         "527-529",
         "531",
-        "534",
-        "536-537",
-        "539",
-        "542",
-        "545-547",
-        "549"
+        "537",
+        "547"
       ]
     },
     {
@@ -123,29 +57,12 @@
       ]
     },
     {
-      "path": "src/core/CJsonUtil.h",
-      "reason": "Reviewed legacy uncovered branch baseline; new uncovered lines fail the 100% eligible-line gate.",
-      "ranges": [
-        "40",
-        "44",
-        "67",
-        "74",
-        "79",
-        "86",
-        "91-93",
-        "95",
-        "97-98",
-        "101"
-      ]
-    },
-    {
       "path": "src/core/CLoader.cpp",
       "reason": "Reviewed legacy uncovered branch baseline; new uncovered lines fail the 100% eligible-line gate.",
       "ranges": [
         "66",
         "82",
         "159",
-        "175-176",
         "205",
         "209-210",
         "217-218",
@@ -192,7 +109,7 @@
         "845-847",
         "917",
         "973-974",
-        "1009-1012",
+        "1011-1012",
         "1019-1020",
         "1032-1037",
         "1043-1044",
@@ -299,7 +216,6 @@
         "281",
         "287-289",
         "294",
-        "300",
         "346"
       ]
     },
@@ -856,26 +772,11 @@
       "reason": "Reviewed legacy uncovered branch baseline; new uncovered lines fail the 100% eligible-line gate.",
       "ranges": [
         "89",
-        "133",
-        "157",
-        "167",
-        "171",
         "243",
-        "259",
-        "311",
-        "314",
         "325",
         "341",
-        "360",
-        "366",
-        "393-398",
-        "400-402",
-        "407",
-        "413-416",
-        "418-419",
-        "442-445",
-        "448",
-        "504",
+        "402",
+        "419",
         "549",
         "579",
         "596-597",
@@ -960,13 +861,7 @@
       "path": "src/object/CMarket.cpp",
       "reason": "Reviewed legacy uncovered branch baseline; new uncovered lines fail the 100% eligible-line gate.",
       "ranges": [
-        "28-29",
-        "43",
-        "62",
-        "76",
-        "83",
-        "88",
-        "97"
+        "43"
       ]
     },
     {
@@ -974,9 +869,7 @@
       "reason": "Reviewed legacy uncovered branch baseline; new uncovered lines fail the 100% eligible-line gate.",
       "ranges": [
         "27",
-        "38-39",
-        "52",
-        "75-78"
+        "38-39"
       ]
     },
     {
@@ -1021,172 +914,6 @@
       "ranges": [
         "33",
         "46"
-      ]
-    },
-    {
-      "path": "tests/unit/test_core.cpp",
-      "reason": "Reviewed legacy uncovered branch baseline; new uncovered lines fail the 100% eligible-line gate.",
-      "ranges": [
-        "210",
-        "231",
-        "249",
-        "368"
-      ]
-    },
-    {
-      "path": "tests/unit/test_harness.h",
-      "reason": "Reviewed legacy uncovered branch baseline; new uncovered lines fail the 100% eligible-line gate.",
-      "ranges": [
-        "27-28",
-        "38-39"
-      ]
-    },
-    {
-      "path": "tests/unit/test_map.cpp",
-      "reason": "Reviewed legacy uncovered branch baseline; new uncovered lines fail the 100% eligible-line gate.",
-      "ranges": [
-        "159-161",
-        "164-167",
-        "169-180",
-        "182-184",
-        "186-187",
-        "189-193",
-        "195-206",
-        "208-211",
-        "213",
-        "215-216",
-        "218-221",
-        "223",
-        "225",
-        "227",
-        "229-232",
-        "234-239",
-        "241",
-        "247-248",
-        "250"
-      ]
-    },
-    {
-      "path": "vstd/vassert.h",
-      "reason": "Shared support-library template/error branches counted by gcov; tracked as reviewed legacy baseline.",
-      "ranges": [
-        "30",
-        "35",
-        "37-38",
-        "46-47"
-      ]
-    },
-    {
-      "path": "vstd/vcast.h",
-      "reason": "Shared support-library template/error branches counted by gcov; tracked as reviewed legacy baseline.",
-      "ranges": [
-        "70"
-      ]
-    },
-    {
-      "path": "vstd/veventloop.h",
-      "reason": "Shared support-library template/error branches counted by gcov; tracked as reviewed legacy baseline.",
-      "ranges": [
-        "93-98",
-        "100-106",
-        "117",
-        "140"
-      ]
-    },
-    {
-      "path": "vstd/vfunctional.h",
-      "reason": "Shared support-library template/error branches counted by gcov; tracked as reviewed legacy baseline.",
-      "ranges": [
-        "55",
-        "98"
-      ]
-    },
-    {
-      "path": "vstd/vfuture.h",
-      "reason": "Shared support-library template/error branches counted by gcov; tracked as reviewed legacy baseline.",
-      "ranges": [
-        "141",
-        "201"
-      ]
-    },
-    {
-      "path": "vstd/vlogger.h",
-      "reason": "Shared support-library template/error branches counted by gcov; tracked as reviewed legacy baseline.",
-      "ranges": [
-        "50",
-        "57-59",
-        "73",
-        "75-76",
-        "79",
-        "81-82",
-        "136"
-      ]
-    },
-    {
-      "path": "vstd/vmeta.h",
-      "reason": "Shared support-library template/error branches counted by gcov; tracked as reviewed legacy baseline.",
-      "ranges": [
-        "147",
-        "156",
-        "212",
-        "214",
-        "228",
-        "230",
-        "255",
-        "284",
-        "286",
-        "318",
-        "320",
-        "405",
-        "408",
-        "417",
-        "421",
-        "450",
-        "551",
-        "623",
-        "715"
-      ]
-    },
-    {
-      "path": "vstd/vstring.h",
-      "reason": "Shared support-library template/error branches counted by gcov; tracked as reviewed legacy baseline.",
-      "ranges": [
-        "112"
-      ]
-    },
-    {
-      "path": "vstd/vthreadpool.h",
-      "reason": "Shared support-library template/error branches counted by gcov; tracked as reviewed legacy baseline.",
-      "ranges": [
-        "46",
-        "56",
-        "58-59",
-        "71",
-        "82",
-        "84",
-        "86-87",
-        "89",
-        "91-93",
-        "95",
-        "97-100",
-        "113",
-        "129",
-        "137",
-        "139-142"
-      ]
-    },
-    {
-      "path": "vstd/vutil.h",
-      "reason": "Shared support-library template/error branches counted by gcov; tracked as reviewed legacy baseline.",
-      "ranges": [
-        "135",
-        "143",
-        "236",
-        "327",
-        "332",
-        "339",
-        "415",
-        "429"
       ]
     }
   ]
