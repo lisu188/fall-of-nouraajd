@@ -69,8 +69,8 @@ select one story with equal probability, then randomly select one eligible subst
 order and never randomize ineligible rows.
 
 Before dispatch/refill decisions, assign a read-only project manager role when subagent capacity permits. The project
-manager reviews the merged workbook, active work, stale claims, blockers, dependency chains, validation cost, RAM/disk
-limits, and open PR state, then reports:
+manager reviews the merged workbook, active work, stale claims, blockers, dependency chains, validation cost, resource
+state, disk cleanup needs, and open PR state, then reports:
 
 - the highest available priority tier and candidate `(Epic #, Story #)` groups;
 - issues likely to unblock other work;
@@ -79,7 +79,7 @@ limits, and open PR state, then reports:
 - source-backed recommendations for priority changes, issue splits, deferrals, or blocker publications.
 
 The project manager is advisory. It must not claim issues, edit files, touch the workbook, start validation, or override
-the dependency, conflict, highest-priority-tier, randomized story/substory, RAM, disk, or PR requirements. Any priority,
+the dependency, conflict, highest-priority-tier, randomized story/substory, resource, cleanup, or PR requirements. Any priority,
 dependency, status, or scope change must be approved by the user or controller and merged through a serialized
 workbook-only pull request before it affects dispatch.
 
@@ -124,21 +124,20 @@ Alternatively use `claim --format prompt`.
 
 ## Live worker status
 
-Keep at least four live subagents attached to the controller whenever the subagent interface is available. Keep four
-implementation issues active whenever four safe, eligible, non-conflicting issues exist, and make that active
-implementation count RAM- and disk-aware. Before dispatching or refilling implementation workers, inspect current
-available RAM, swap pressure, free disk, accumulated run/worktrees, prunable worktree metadata, and running heavy
-build/test/coverage/Xvfb/MCP jobs. Set the live implementation worker budget to the smaller of four and the number of
-workers the machine can support without memory or disk pressure. If the controller cannot keep four issue workers
-active, report the concrete eligibility, conflict, status, RAM, disk, cleanup, or repository-safety blocker.
+Keep at least eight live subagents attached to the controller whenever the subagent interface is available. Keep at least
+eight implementation issues active whenever eight safe, eligible, non-conflicting issues exist. Before dispatching or
+refilling implementation workers, note current RAM, free disk, accumulated run/worktrees, prunable worktree metadata,
+and running heavy build/test/coverage/Xvfb/MCP jobs so the controller avoids obvious resource pressure without imposing
+a fixed RAM cap. If the controller cannot keep eight issue workers active, report the concrete eligibility, conflict,
+status, resource, disk, cleanup, or repository-safety blocker.
 
 Standby subagents may help with lightweight status polling, eligibility summaries, or review preparation only when fewer
-than four implementation issues can safely run. They must not claim issues, edit files, touch the workbook, start builds,
+than eight implementation issues can safely run. They must not claim issues, edit files, touch the workbook, start builds,
 run tests, or launch coverage/Xvfb/MCP validation.
 
-When four implementation workers are not safe, prefer assigning one standby subagent as the project manager so the next
-refill decision has a current prioritization brief. When four safe implementation issues and enough resources exist, the
-project manager should run as extra read-only capacity rather than displacing an implementation worker.
+When eight implementation workers are not safe, prefer assigning one standby subagent as the project manager so the next
+refill decision has a current prioritization brief. When eight safe implementation issues exist, the project manager
+should run as extra read-only capacity rather than displacing an implementation worker.
 
 Poll every active worker through the available subagent/task interface. If direct polling is unavailable, require
 structured status updates from the worker.
@@ -155,7 +154,7 @@ work, print a live status table containing at least:
 - current validation command if running;
 - branch name;
 - pull request number or pending PR state;
-- current RAM and disk state;
+- current resource and disk state;
 - cleanup state, including prunable worktree metadata and accumulated run/worktree size when known;
 - project-manager prioritization brief state or the reason no project-manager subagent is available;
 - blockers;
@@ -203,10 +202,8 @@ Implemented the detailed fight result contract while preserving the bool compati
 EOF
 
 cat >/tmp/task-validation.txt <<'EOF'
-cmake --build cmake-build-release --target _game for_unit_tests performance_guard_tests -j1: PASS
-ctest --test-dir cmake-build-release --output-on-failure -R for_unit_tests: PASS
-ctest --test-dir cmake-build-release --output-on-failure --verbose -L performance: PASS
-python3 test.py: PASS
+focused local regression: PASS
+python3 scripts/poll_pr_checks.py <PR_NUMBER> --check linux: PASS
 EOF
 
 python3 scripts/issue_queue.py complete \
@@ -217,9 +214,9 @@ python3 scripts/issue_queue.py complete \
   --validation-file /tmp/task-validation.txt
 ```
 
-For local agents, full Linux compilation, native tests, performance guards, the full Python suite, and coverage may also
-be satisfied by opening the pull request and polling GitHub Actions when local heavy validation is impractical or would
-duplicate CI:
+For local agents, prefer GitHub Actions polling as the default PR delivery path for heavy Linux validation. After
+focused local checks, open the pull request and satisfy full Linux compilation, native tests, performance guards, the
+full Python suite, and coverage by polling GitHub Actions instead of duplicating those heavy commands locally:
 
 ```bash
 python3 scripts/poll_pr_checks.py <PR_NUMBER> --check linux
@@ -231,10 +228,14 @@ For coverage-relevant changes, require the conditional coverage step explicitly:
 python3 scripts/poll_pr_checks.py <PR_NUMBER> --check linux --require-step coverage
 ```
 
-Report focused local checks separately from CI-polled validation. The `linux` check proves coverage only when the
-workflow's changed-path rule runs its `coverage` step. Linux polling does not replace required Windows checks, release
-packaging, MCP gameplay validation, manual review, or issue-specific regression coverage. Do not enable auto-merge until
-CI-polled validation passes when it is the only full-validation evidence.
+Run heavy local Linux validation only when CI cannot cover the required evidence, a focused local reproduction is
+necessary before opening the PR, or GitHub Actions polling is unavailable or blocked. Report focused local checks
+separately from CI-polled validation. Passing `build / linux` is sufficient PR delivery evidence for Linux compilation, native tests,
+native performance guards, Python suites, and conditional coverage. It proves coverage only when the workflow's
+changed-path rule runs its `coverage` step; use `--require-step coverage` for coverage-relevant changes. Additional
+platform, release, MCP gameplay, manual, or issue-specific validation is needed only when the task targets that surface
+or the user requests it. Do not enable auto-merge until CI-polled validation passes when it is the only full-validation
+evidence.
 
 `DONE` requires a result summary, validation results, `Progress %=100`, and a completion timestamp. Do not mark `DONE`
 while implementation auto-merge is merely queued.
@@ -309,17 +310,15 @@ python3 scripts/issue_queue.py show --issue "$ISSUE_NAME"
 - Queue completion records validation; it does not prove the code has been integrated into another subagent's uncommitted work.
 - Worker implementation branches must not modify `planning/fall_of_nouraajd_issue_proposals.xlsx`.
 - Serialize workbook claim, heartbeat, and terminal-status pull requests; do not keep multiple binary workbook PRs open for merge.
-- To spare RAM, queue-controller workers must use serial local builds such as `-j1` unless the user explicitly allows more parallelism.
-- Multiple local heavy build, test, coverage, Xvfb, or MCP validation jobs may run concurrently only inside the current
-  RAM-safe heavy-job budget. If all local heavy jobs are explicitly serial, such as `-j1` or equivalent, and RAM has
-  headroom with no swap pressure, that budget can be at least four concurrent heavy jobs. Prefer CI polling for Linux
-  full validation when local heavy validation would consume avoidable RAM, disk, or time.
-- Keep at least four live subagents and four active implementation issues whenever four issues are safe and eligible,
-  using standby roles only when fewer than four implementation workers are safe.
-- Recalculate the RAM-safe implementation worker and heavy-job budgets before each dispatch/refill and before starting
-  heavy validation; fewer than four active implementation workers or heavy jobs can still be the correct budget.
-- If RAM-safety limits or missing worker status prevent safe dispatch, stop filling worker slots until the blocker clears.
-- If disk-safety limits, prunable worktree metadata, or accumulated run/worktree usage prevent safe dispatch, stop
+- Do not run local native builds, `ctest`, full Python suites, or coverage for PR delivery unless a focused local
+  reproduction is necessary or GitHub Actions cannot provide the needed evidence.
+- Prefer CI polling for Linux full validation instead of duplicating heavy local build, test, and coverage work.
+- Keep at least eight live subagents and at least eight active implementation issues whenever eight issues are safe and
+  eligible, using standby roles only when fewer than eight implementation workers are safe.
+- Check resource pressure before dispatch/refill and before starting local heavy validation, but do not impose a fixed
+  RAM cap. If missing worker status or actual resource pressure prevents safe dispatch, stop filling worker slots until
+  the blocker clears.
+- If disk pressure, prunable worktree metadata, or accumulated run/worktree usage prevent safe dispatch, stop
   filling worker slots until the blocker is reported or safely cleaned.
 - Remove only completed clean worktrees. Use `git worktree prune` only for prunable metadata after reviewing that the
   corresponding worktree directories no longer exist. Do not delete branches unless explicitly asked.

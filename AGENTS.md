@@ -20,15 +20,14 @@ implementation branches must never modify it. Serialize queue state changes thro
 claim or terminal status PR should mark exactly one issue unless the controller workflow explicitly permits batching and
 all selected issues are proven independent.
 
-Keep at least four live subagents attached to the controller whenever the subagent interface is available. Keep four
-implementation issues active whenever four safe, eligible, non-conflicting issues exist. With the default cap of four
-implementation workers, four active issues are both the operating target and the cap unless the user explicitly changes
-the cap. Before filling any implementation slot, inspect current available RAM, free disk space, existing run/worktree
-usage, and running heavy jobs, then set a RAM- and disk-safe worker budget for this controller iteration. Dispatch work
-up to four whenever RAM, disk, issue eligibility, live worker status, and repository safety allow it. Use standby
-subagents only when fewer than four
+Keep at least eight live subagents attached to the controller whenever the subagent interface is available. Keep at least
+eight implementation issues active whenever eight safe, eligible, non-conflicting issues exist. Treat eight active issues as
+the minimum operating target, not a best-effort aspiration. Before filling any implementation slot, note current RAM,
+free disk space, existing run/worktree usage, and running heavy jobs so the controller avoids obvious resource pressure,
+but do not impose a fixed RAM cap or rewrite build parallelism solely by workflow policy. Dispatch work whenever issue
+eligibility, live worker status, and repository safety allow it. Use standby subagents only when fewer than eight
 implementation issues can safely run; they may do lightweight status, eligibility, or review-prep tasks, but must not
-claim issues, edit files, or run heavy validation. Before filling each RAM- and disk-approved worker slot, fetch the
+claim issues, edit files, or run heavy validation. Before filling each free worker slot, fetch the
 latest `origin/main`, recalculate the full eligible set from the merged workbook, and exclude:
 
 - rows whose status is not `NOT_STARTED`;
@@ -45,7 +44,7 @@ Assign a read-only project manager role whenever subagent capacity permits. Befo
 project manager should summarize the highest available priority tier, candidate story groups, dependency unlocks, stale
 or blocked work, validation and resource cost, scope conflicts, and any source-backed priority-change recommendations.
 The role is advisory: it must not claim work, edit files, touch the workbook, start validation, or override dependency,
-conflict, priority-tier, randomized selection, RAM, disk, or PR requirements. Priority, dependency, status, or scope
+conflict, priority-tier, randomized selection, resource, cleanup, or PR requirements. Priority, dependency, status, or scope
 changes affect dispatch only after an approved workbook-only pull request merges into `main`.
 
 For each selected issue, merge a workbook-only `IN_PROGRESS` claim PR before implementation starts. After the claim PR
@@ -58,22 +57,20 @@ not mark the issue `DONE` until that implementation PR actually merges.
 
 After every controller loop iteration, claim/PR status check, cleanup audit, and before dispatching new work, print a
 concise live status table. Include worker owner, issue key, phase, progress estimate, last action, changed files,
-running validation command, branch, PR state, disk/RAM state, cleanup state, project-manager brief state, blockers, and
+running validation command, branch, PR state, resource state, cleanup state, project-manager brief state, blockers, and
 next controller action. Use subagent status polling or structured worker updates for live status; the workbook is
 durable queue state, not the live worker-status channel.
 
-For local RAM safety, queue-controller workers must not use high-parallelism builds. Adapt repository build commands
-such as `-j$(nproc)` to `-j1` unless the user explicitly allows a higher count. Recalculate the RAM-safe heavy-job budget
-before starting validation. When every heavy job is explicitly serial, such as `-j1` or an equivalent one-worker test
-setting, and RAM has headroom with no swap pressure, up to four heavy jobs may run concurrently. Lower that count when
-jobs are not serial, RAM is tight, swap is active, or the jobs are known to be memory-hungry. Report the exact adjusted
-commands used.
+For PR delivery, do not run local native builds, `ctest`, full Python suites, or coverage unless a focused local
+reproduction is necessary or GitHub Actions cannot provide the needed evidence. Use cheap focused local checks for fast
+feedback, then outsource compilation, native tests, performance guards, full Python suites, and coverage to GitHub
+Actions polling. Report the exact local commands used.
 
-For local disk safety, run `python3 scripts/controller_resource_audit.py --json` before dispatch/refill decisions,
-before starting heavy validation, after every controller loop iteration, and after any merged checkpoint cleanup. Treat
-low free disk, high filesystem usage, large accumulated run/worktrees, or prunable worktree metadata as blockers to new
-work until reported or cleaned safely. Remove only completed clean worktrees, use `git worktree prune` only for prunable
-metadata after review, and do not delete branches unless explicitly asked.
+For local disk safety, run `python3 scripts/controller_resource_audit.py --json` before dispatch/refill decisions, before
+any necessary local heavy validation, after every controller loop iteration, and after any merged checkpoint cleanup.
+Treat low free disk, high filesystem usage, large accumulated run/worktrees, or prunable worktree metadata as blockers to
+new work until reported or cleaned safely. Remove only completed clean worktrees, use `git worktree prune` only for
+prunable metadata after review, and do not delete branches unless explicitly asked.
 
 ## Project overview
 
@@ -161,8 +158,9 @@ quick protocol checks.
 
 ## Required validation
 
-For every code change, satisfy this full workflow unless the environment makes it impossible. Run the commands locally
-when practical:
+For every code change, satisfy this full workflow. For agent PR delivery, do not run these native-build-heavy commands
+locally unless a focused local reproduction is necessary or GitHub Actions cannot provide the needed evidence; normally
+use focused local checks, open the PR, and poll `build / linux`. Local equivalents are:
 
 ```sh
 cmake --build cmake-build-release --target _game for_unit_tests performance_guard_tests -j$(nproc)
@@ -182,10 +180,10 @@ GAME_XVFB_JOBS=4 python3 test.py --suite ui
 `python3 test.py` and `python3 test.py --suite full` both run the full Python suite. `./scripts/run_coverage.sh` uses
 `python3 test.py --suite coverage-safe` for the coverage Python phase.
 
-When local full validation is impractical, resource-expensive, or would duplicate the pull request workflow, run focused
-local checks that exercise the changed behavior, open the pull request, and poll the GitHub Actions `linux` check in the
-`build` workflow to a final successful conclusion instead of running local compilation, native tests, the full Python
-suite, and required coverage locally:
+Prefer GitHub Actions polling as the default path for heavy Linux validation. Run focused local checks that exercise the
+changed behavior, open the pull request, and poll the GitHub Actions `linux` check in the `build` workflow to a final
+successful conclusion instead of running local compilation, native tests, the full Python suite, and required coverage
+locally:
 
 ```sh
 python3 scripts/poll_pr_checks.py <PR_NUMBER> --check linux
@@ -197,14 +195,17 @@ For coverage-relevant changes, require the CI `coverage` step explicitly:
 python3 scripts/poll_pr_checks.py <PR_NUMBER> --check linux --require-step coverage
 ```
 
-CI-polled validation is acceptable only for commands that the `linux` job actually ran for that pull request head.
-Coverage is satisfied by CI only when the workflow's path rule runs the `coverage` step inside `linux`. Linux polling
-does not replace required Windows checks, release packaging, MCP gameplay validation, manual review, or the requirement
-to add regression coverage for bug fixes. Report local commands, skipped or blocked local commands, and CI job
-names/conclusions separately; never imply a skipped local command passed. When CI polling supplies the full validation
-evidence, wait for the selected check(s) to pass before enabling auto-merge. If GitHub merges before polling finishes,
-continue polling the exact PR head or resulting `main` workflow and report any failure as a regression requiring
-immediate follow-up.
+Run heavy local Linux validation only when the PR workflow cannot cover the required evidence, a focused local
+reproduction is necessary before opening the PR, or GitHub Actions polling is unavailable or blocked. Passing the PR `build / linux`
+check, polled with `python3 scripts/poll_pr_checks.py <PR_NUMBER> --check linux`, is sufficient PR delivery evidence for
+Linux compilation, native tests, native performance guards, Python suites, and conditional coverage. Coverage is
+satisfied by CI only when the workflow's path rule runs the `coverage` step inside `linux`; use `--require-step coverage`
+for coverage-relevant changes. Additional Windows, release, MCP gameplay, manual, or platform-specific validation is
+needed only when the task explicitly targets that surface or the user requests it. Report local commands, skipped or
+blocked local commands, and CI job names/conclusions separately; never imply a skipped local command passed. When CI
+polling supplies the full validation evidence, wait for the selected check(s) to pass before enabling auto-merge. If
+GitHub merges before polling finishes, continue polling the exact PR head or resulting `main` workflow and report any
+failure as a regression requiring immediate follow-up.
 
 Windows Release equivalent:
 
@@ -241,17 +242,19 @@ Treat build, test, and coverage runtime as a first-class maintenance concern. Op
 feedback while preserving the required validation guarantees.
 
 - During iteration, prefer the narrowest reliable build or test command that exercises the changed behavior, then satisfy
-  the required full validation workflow locally or by completed GitHub Actions polling before finishing.
-- Use available parallelism for local builds and automation, such as `-j$(nproc)` for CMake builds on Linux, without
-  hiding failures or racing shared test state.
+  heavy compilation, native tests, full Python suites, and coverage through completed GitHub Actions polling for the PR
+  head before finishing.
+- Avoid local native builds for PR delivery when GitHub Actions can run them. If a local build is genuinely necessary,
+  use available parallelism such as `-j$(nproc)` without hiding failures or racing shared test state.
 - Avoid unnecessary clean builds, dependency reinstalls, broad resource recopies, full-suite reruns, or repo-wide
   formatting when a targeted command is sufficient.
 - Keep new and updated tests deterministic, focused, and reasonably scoped; split slow end-to-end coverage from fast
   regression checks when correctness allows.
 - When adding scripts, CI steps, fixtures, MCP walkthroughs, or coverage checks, account for their runtime cost and avoid
   repeated expensive setup inside loops or per-test fixtures.
-- If a required validation command is slow, do not skip it silently; run it when possible and report exact blockers when
-  the environment prevents it.
+- If a required validation command is slow or native-build-heavy, do not block PR delivery on duplicating it locally when
+  GitHub Actions can run the same evidence. Push the PR, poll the selected job, and report exact blockers only when
+  neither local execution nor CI polling can supply the evidence.
 
 ## Performance regression testing
 
@@ -320,8 +323,7 @@ run. If an MCP game-session check cannot be run, report the exact command or ste
 
 ## Coverage
 
-Run coverage locally, or use the PR `linux` GitHub Actions job when its `coverage` step runs and passes, when a change
-touches:
+For PR delivery, use the PR `linux` GitHub Actions job with `--require-step coverage` when a change touches:
 
 - `test.py`
 - `tests/unit/**`
@@ -332,7 +334,8 @@ touches:
 - `src/handler/**`
 - `src/object/**`
 
-Coverage command:
+Local coverage is a fallback only when CI cannot cover the required evidence, polling is unavailable, or a focused local
+coverage reproduction is necessary. Local coverage command:
 
 ```sh
 ./scripts/run_coverage.sh
@@ -533,15 +536,17 @@ Prefer small, reproducible failing cases. Add tests for regressions when practic
 The main build workflow validates Linux and Windows builds, runs C++ tests, runs native performance guards, runs Python
 tests, runs coverage on Linux, packages artifacts, and uploads build artifacts.
 
-Before proposing a change, reproduce the relevant local parts of CI as closely as the environment allows.
+Before proposing a change, run focused local checks that exercise the changed behavior. Let GitHub Actions supply
+compilation, full-suite, and coverage evidence for PR delivery whenever the workflow covers the required checks.
 
 ## Commits and pull requests
 
 After finishing a change, always complete the repository delivery workflow:
 
 1. Review the final diff and ensure it contains only intended files.
-2. Run the required validation workflow locally or through CI polling, plus coverage or MCP validation when required by
-   this file.
+2. Run focused local validation, then use CI polling for heavy compilation, full-suite tests, and coverage when the PR
+   workflow covers the required evidence. Run local heavy validation only for CI gaps, necessary focused reproduction, or
+   unavailable polling.
 3. Commit the change with a clear, specific commit message.
 4. Push the branch to the remote.
 5. Open a pull request targeting `main`.
