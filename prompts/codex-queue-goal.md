@@ -6,19 +6,26 @@ Act as the Fall of Nouraajd queue controller. Read and follow `prompts/codex-que
 Use `planning/fall_of_nouraajd_issue_proposals.xlsx` as the single durable task source of truth. The controller is the
 only writer of that workbook; worker implementation branches must never modify it.
 
-## Worker budget
+## Subagent and worker budget
 
-Keep up to four implementation issues active, but treat four as a hard maximum rather than a target. Before every
-dispatch, refill, or heavy validation decision, inspect current available RAM, swap pressure, active worker status, and
-running build/test/coverage/Xvfb/MCP jobs. Dynamically set the active worker budget to the smaller of four and the
-number of workers the machine can currently support without memory pressure.
+Keep at least four live subagents attached to the controller whenever the subagent interface is available. Keep four
+implementation issues active whenever four safe, eligible, non-conflicting issues exist. With the default cap of four
+implementation workers, four active issues are both the operating target and the cap unless the user explicitly changes
+the cap. Before every dispatch, refill, or heavy validation decision, inspect current available RAM, swap pressure, active
+worker status, and running build/test/coverage/Xvfb/MCP jobs. Dynamically set the active implementation worker budget to
+the smaller of four and the number of workers the machine can currently support without memory pressure.
 
-Leave worker slots empty when RAM is tight, swap is active, worker status is missing, or another heavy validation job is
-running. Raise the worker count again only after the RAM gate clears.
+When RAM is tight, swap is active, worker status is missing, conflicts block selection, or no safe eligible issue exists,
+keep excess subagents in standby instead of assigning unsafe implementation work. Raise the active implementation count
+back to four as soon as the blocker clears. Standby subagents may do lightweight status polling, eligibility summaries,
+or review prep, but must not claim issues, edit files, touch the workbook, start builds, run tests, or launch
+coverage/Xvfb/MCP validation.
 
 Workers must not use parallel local builds. Adapt repository-local commands such as `-j$(nproc)` to `-j1` unless the
-user explicitly allows a higher job count. Do not run multiple heavy build, test, coverage, Xvfb, or MCP validation jobs
-concurrently across workers. Serialize memory-heavy validation and report every adjusted command exactly.
+user explicitly allows a higher job count. Recalculate the RAM-safe heavy-job budget before validation. If every heavy
+job is explicitly serial, such as `-j1` or an equivalent one-worker test setting, and RAM has headroom with no swap
+pressure, allow at least four concurrent heavy jobs. Lower that budget when jobs are not serial, RAM is tight, swap is
+active, worker status is missing, or a job is known to be memory-hungry. Report every adjusted command exactly.
 
 ## Eligibility and selection
 
@@ -81,7 +88,7 @@ Do not rely on the workbook alone for live worker status. Use workbook updates o
 
 ## Stop conditions
 
-Continuously refill RAM-approved free worker slots up to the current dynamic worker budget. Stop only when no safe
-eligible issue remains, all remaining work is blocked or conflicting, GitHub/authentication/worktree state is unsafe,
-active workers cannot be polled or recovered safely, RAM-safety limits prevent further progress, or the user stops the
-run.
+Continuously refill RAM-approved free implementation slots up to four active issues while maintaining at least four live
+subagents through standby roles when needed. Stop only when no safe eligible issue remains, all remaining work is blocked
+or conflicting, GitHub/authentication/worktree state is unsafe, active workers cannot be polled or recovered safely,
+RAM-safety limits prevent further progress, or the user stops the run.

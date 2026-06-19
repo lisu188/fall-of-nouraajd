@@ -16,15 +16,18 @@ Explicitly spawn worker subagents for implementation tasks. Do not merely descri
 6. Never bypass failing checks, unresolved conflicts, missing approvals, or repository protections.
 7. Never use `git reset --hard`, `git clean`, force-push, or destructive checkout operations against a worktree containing unreviewed user changes.
 8. Use a separate Git worktree and branch for every claim publication, implementation task, and terminal queue update.
-9. Keep at most four implementation workers active at once, and dynamically lower that cap based on current available
-   RAM and running heavy jobs.
-10. Serialize all workbook pull requests. The XLSX file is binary and must never be modified concurrently on multiple branches intended to merge.
-11. Claim and terminal-status pull requests normally update exactly one issue. Do not batch workbook edits unless this workflow explicitly permits it and all selected issues are proven independent.
-12. Preserve public identifiers and backward compatibility unless source evidence proves they are broken.
-13. For local RAM safety, use serial or very low-parallelism validation. Replace repository-local `-j$(nproc)` build
+9. Keep at least four live subagents attached to the controller whenever the subagent interface is available.
+10. Keep four implementation issues active whenever four safe, eligible, non-conflicting issues exist. With the default
+   cap of four implementation workers, four active issues are both the operating target and the cap unless the user
+   explicitly changes the cap.
+11. Serialize all workbook pull requests. The XLSX file is binary and must never be modified concurrently on multiple branches intended to merge.
+12. Claim and terminal-status pull requests normally update exactly one issue. Do not batch workbook edits unless this workflow explicitly permits it and all selected issues are proven independent.
+13. Preserve public identifiers and backward compatibility unless source evidence proves they are broken.
+14. For local RAM safety, use serial or very low-parallelism validation. Replace repository-local `-j$(nproc)` build
    commands with `-j1` unless the user explicitly authorizes more parallelism.
-14. Recalculate a RAM-safe worker budget before every dispatch/refill decision and before starting heavy validation.
-   Four workers is a hard ceiling, not a fill target.
+15. Recalculate a RAM-safe worker budget before every dispatch/refill decision and before starting heavy validation.
+   If fewer than four issue workers are active, document the concrete eligibility, conflict, status, RAM, or repository
+   safety blocker that prevents filling the slot.
 
 ## Startup
 
@@ -102,6 +105,11 @@ Use lowercase ASCII, hyphens, and repository-approved naming. Do not reuse a bra
 
 ## Live status reporting
 
+Maintain at least four live subagents and aim to keep four implementation issues active. If fewer than four
+implementation issues can safely run, assign the excess subagents only lightweight standby roles such as status polling,
+eligibility summaries, or review preparation, and print the exact blocker preventing four active issues. Standby
+subagents must not claim issues, edit files, start builds, run tests, or touch the workbook.
+
 Regularly poll every active worker using the available subagent or task interface. If direct polling is unavailable,
 require structured worker updates and summarize the latest update.
 
@@ -125,9 +133,11 @@ structured worker updates are the live-status source.
 
 ## Eligibility and random selection
 
-Before filling each free worker slot, first recalculate the current RAM-safe worker budget from available memory,
-swap pressure, active worker status, and running heavy build/test/coverage/Xvfb/MCP jobs. Four workers is the maximum
-allowed budget, not the default. If current RAM conditions only support fewer workers, leave the extra slots empty.
+Before filling each free worker slot, first ensure at least four live subagents are attached to the controller, then
+recalculate the current RAM-safe implementation worker budget from available memory, swap pressure, active worker status,
+and running heavy build/test/coverage/Xvfb/MCP jobs. Four active implementation workers is the default operating target
+and current cap. If current conditions only support fewer implementation workers, keep the extra subagents in standby and
+record the blocker rather than assigning unsafe implementation issues.
 
 For each RAM-approved free slot, fetch the latest merged queue state from `origin/main` and calculate the complete
 eligible set yourself. The `claim` command is deterministic by workbook order, so use it only after selecting the exact
@@ -169,7 +179,8 @@ Do not bypass dependencies to keep workers occupied.
 
 Do not start additional workers when live worker status is missing, when the next candidate conflicts with active work,
 or when RAM-safety limits require waiting for heavy validation to finish. If available RAM drops after workers are
-already active, stop refilling slots and pause new heavy validation until the budget recovers.
+already active, stop refilling implementation slots and pause new heavy validation until the budget recovers. Keep at
+least four subagents alive by assigning standby-only work when fewer than four implementation slots are safe.
 
 ## Phase 1: publish an `IN_PROGRESS` claim
 
@@ -299,8 +310,11 @@ Every worker must:
 8. Add regression coverage for bug fixes.
 9. Run focused validation during implementation and all required repository validation before completion.
 10. Never edit `planning/fall_of_nouraajd_issue_proposals.xlsx` on the implementation branch.
-11. Avoid parallel local builds. Use `-j1` for CMake builds and wait when the controller has paused heavy validation for RAM safety.
-12. Never start heavy build, test, coverage, Xvfb, or MCP validation while the controller reports another heavy validation job is running.
+11. Avoid parallel local builds. Use `-j1` for CMake builds and wait when the controller has paused heavy validation for
+    RAM safety.
+12. Start heavy build, test, coverage, Xvfb, or MCP validation only when the controller reports that the current
+    RAM-safe heavy-job budget has capacity. Serial heavy jobs may run alongside other serial heavy jobs up to that
+    budget.
 13. Never commit unrelated local changes, generated build output, packaged artifacts, dependency lock changes, or submodule SHA changes unless the issue explicitly requires them.
 14. Produce a final report containing:
     - what was checked;
@@ -340,16 +354,23 @@ If a worker disappears, do not overwrite the active claim. Inspect its worktree 
 
 ## RAM-safe validation
 
-The controller owns a dynamic RAM gate. Before dispatching workers, refilling slots, or starting any heavy validation,
-inspect current available RAM and running processes, for example with `free -h` or `free -m` plus a process listing.
-Set the active worker budget to the smaller of four and the number of workers that can run without risking swap pressure
-or out-of-memory failures. Record the RAM-gate decision in the live status table when it affects dispatch or validation.
+The controller owns a dynamic RAM gate. Before dispatching implementation workers, refilling implementation slots, or
+starting any heavy validation, inspect current available RAM and running processes, for example with `free -h` or
+`free -m` plus a process listing. Set the active implementation worker budget to the smaller of four and the number of
+workers that can run without risking swap pressure or out-of-memory failures. Treat four active issue workers as the
+target; record the RAM-gate decision in the live status table whenever it prevents four active issues or affects
+validation.
 
 Repository instructions may show parallel build examples such as `-j$(nproc)`. In queue-controller operation, adapt
 those local commands to `-j1` unless the user explicitly permits a higher job count. Record the adjusted command in worker
 reports and PR bodies.
 
-The controller must serialize memory-heavy validation across workers:
+The controller must calculate a RAM-safe heavy-job budget across workers. If every heavy command is explicitly serial
+(`-j1` or equivalent), RAM has headroom, and swap is idle, the budget may be at least four concurrent heavy jobs. Lower
+the budget, potentially to one, for non-serial commands, memory-hungry jobs, low available RAM, swap activity, or missing
+worker status.
+
+This budget applies to:
 
 - CMake builds;
 - `ctest` suites;
@@ -358,10 +379,11 @@ The controller must serialize memory-heavy validation across workers:
 - Xvfb tests;
 - MCP gameplay sessions.
 
-Workers may perform lightweight source inspection and prepare summaries while waiting for the RAM gate. Do not dispatch
-additional implementation work when doing so would leave active workers unpollable or start competing heavy validation.
-Do not treat an empty worker slot as fillable merely because fewer than four workers are active; it is fillable only
-when the current RAM budget allows it.
+Workers and standby subagents may perform lightweight source inspection and prepare summaries while waiting for the RAM
+gate. Do not dispatch additional implementation work when doing so would leave active workers unpollable or exceed the
+current heavy-job budget. Empty implementation slots should be filled until four issues are active unless the current RAM
+budget, eligibility set, conflicts, missing status, or repository safety prevents it. The subagent floor is satisfied by
+standby subagents only when four active implementation issues are not safe.
 
 ## Phase 3: review and publish implementation
 

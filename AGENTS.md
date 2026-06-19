@@ -20,12 +20,15 @@ implementation branches must never modify it. Serialize queue state changes thro
 claim or terminal status PR should mark exactly one issue unless the controller workflow explicitly permits batching and
 all selected issues are proven independent.
 
-Keep at most four implementation workers active at once, but treat four as a hard maximum rather than a target. Before
-filling any slot, inspect current available RAM and running heavy jobs, then set a RAM-safe worker budget for this
-controller iteration. Dispatch only up to the smaller of four and that current budget; if memory is tight, swap is
-active, or another build/test/coverage/Xvfb/MCP job is running, reduce the budget and leave slots empty until the
-blocker clears. Before filling each RAM-approved worker slot, fetch the latest `origin/main`, recalculate the full
-eligible set from the merged workbook, and exclude:
+Keep at least four live subagents attached to the controller whenever the subagent interface is available. Keep four
+implementation issues active whenever four safe, eligible, non-conflicting issues exist. With the default cap of four
+implementation workers, four active issues are both the operating target and the cap unless the user explicitly changes
+the cap. Before filling any implementation slot, inspect current available RAM and running heavy jobs, then set a
+RAM-safe worker budget for this controller iteration. Dispatch implementation work up to four whenever RAM, issue
+eligibility, live worker status, and repository safety allow it. Use standby subagents only when fewer than four
+implementation issues can safely run; they may do lightweight status, eligibility, or review-prep tasks, but must not
+claim issues, edit files, or run heavy validation. Before filling each RAM-approved worker slot, fetch the latest
+`origin/main`, recalculate the full eligible set from the merged workbook, and exclude:
 
 - rows whose status is not `NOT_STARTED`;
 - rows with dependencies that are not `DONE`;
@@ -51,10 +54,11 @@ command, branch, PR state, blockers, and next controller action. Use subagent st
 updates for live status; the workbook is durable queue state, not the live worker-status channel.
 
 For local RAM safety, queue-controller workers must not use high-parallelism builds. Adapt repository build commands
-such as `-j$(nproc)` to `-j1` unless the user explicitly allows a higher count. Do not run multiple heavy build, test,
-coverage, Xvfb, or MCP validation jobs concurrently across workers. Serialize memory-heavy validation and report the
-exact adjusted commands used. Recalculate the RAM-safe worker budget again before starting heavy validation; pausing
-validation or dispatch is preferred to overcommitting memory.
+such as `-j$(nproc)` to `-j1` unless the user explicitly allows a higher count. Recalculate the RAM-safe heavy-job budget
+before starting validation. When every heavy job is explicitly serial, such as `-j1` or an equivalent one-worker test
+setting, and RAM has headroom with no swap pressure, up to four heavy jobs may run concurrently. Lower that count when
+jobs are not serial, RAM is tight, swap is active, or the jobs are known to be memory-hungry. Report the exact adjusted
+commands used.
 
 ## Project overview
 
