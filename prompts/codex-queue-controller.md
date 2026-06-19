@@ -8,7 +8,7 @@ Explicitly spawn worker subagents for implementation tasks. Do not merely descri
 
 ## Core invariants
 
-1. The controller is the only writer of the queue workbook.
+1. Controller instances are the only writers of the queue workbook.
 2. Worker implementation branches must not modify `planning/fall_of_nouraajd_issue_proposals.xlsx`.
 3. Before implementation starts, the issue must be claimed as `IN_PROGRESS` and that workbook-only claim pull request must be merged into `main`.
 4. Source implementation and queue-state publication use separate branches and pull requests.
@@ -32,6 +32,8 @@ Explicitly spawn worker subagents for implementation tasks. Do not merely descri
    until safely reported or cleaned.
 17. Keep issue prioritization explicit. A project-manager role may recommend sequencing and priority changes, but those
    recommendations are advisory until the controller or user approves a serialized workbook-only queue update.
+18. Every controller instance must have a unique controller ID. Use it in every worker owner string so multiple
+   controllers can run without owner collisions.
 
 ## Startup
 
@@ -65,7 +67,18 @@ Explicitly spawn worker subagents for implementation tasks. Do not merely descri
    python3 -m unittest tests.test_issue_queue
    ```
 
-6. Stop dispatching if validation fails. Repair only the verified queue/workflow defect and publish that repair through the normal repository workflow. Do not silently rewrite issue scope, descriptions, dependencies, priorities, or acceptance criteria.
+6. Generate and record this controller's unique ID before creating any owner strings:
+
+   ```bash
+   CONTROLLER_ID="$(python3 scripts/issue_queue.py controller-id --plain)"
+   OWNER_PREFIX="controller/${CONTROLLER_ID}"
+   python3 scripts/issue_queue.py controller-id --controller-id "$CONTROLLER_ID"
+   ```
+
+   Use owner names such as `${OWNER_PREFIX}/subagent-1`. Do not use generic owners such as `controller/subagent-1`;
+   another controller may be running at the same time.
+
+7. Stop dispatching if validation fails. Repair only the verified queue/workflow defect and publish that repair through the normal repository workflow. Do not silently rewrite issue scope, descriptions, dependencies, priorities, or acceptance criteria.
 
 ## Controller-owned workspace model
 
@@ -83,12 +96,12 @@ Each active task gets:
 
 Never check out the same branch in two worktrees. Never allow two workers to share a writable worktree.
 
-Use stable owner names such as:
+Use owner names scoped by this controller's unique ID, such as:
 
 ```text
-controller/subagent-1
-controller/subagent-2
-controller/subagent-3
+controller/<controller-id>/subagent-1
+controller/<controller-id>/subagent-2
+controller/<controller-id>/qa
 ```
 
 ## Branch naming
@@ -118,6 +131,10 @@ When subagent capacity permits, keep one read-only project manager attached to t
 be an extra subagent beyond active implementation workers, or a standby role when fewer than eight implementation issues
 are safe. It must not reduce the floor of eight active implementation issues when eight safe issues exist.
 
+When subagent capacity permits, keep one read-only QA subagent attached to the controller. QA reviews selected issue
+risk, diffs, tests, CI evidence, and merge readiness. QA must not claim issues, edit files, touch the workbook, or run
+heavy validation unless the controller explicitly assigns a bounded validation task.
+
 Regularly poll every active worker using the available subagent or task interface. If direct polling is unavailable,
 require structured worker updates and summarize the latest update.
 
@@ -125,6 +142,7 @@ After every controller loop iteration, cleanup audit, claim or pull-request stat
 work, print a concise live status table. Include at minimum:
 
 - worker owner;
+- controller ID;
 - issue key;
 - current phase;
 - progress estimate;
@@ -136,6 +154,7 @@ work, print a concise live status table. Include at minimum:
 - current resource and disk state;
 - cleanup state, including prunable worktree registrations and accumulated run/worktree size when known;
 - project-manager brief state or the reason no project-manager subagent is available;
+- QA review state or the reason no QA subagent is available;
 - blockers;
 - next controller action.
 

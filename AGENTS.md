@@ -15,10 +15,12 @@ When this file conflicts with the current code, tests, or build scripts, trust t
 When acting as the Codex queue controller for `planning/fall_of_nouraajd_issue_proposals.xlsx`, also follow
 `prompts/codex-queue-controller.md` and `docs/codex-agent-queue.md`.
 
-The workbook on `main` is the single queue source of truth. The controller is the only writer of the workbook; worker
-implementation branches must never modify it. Serialize queue state changes through workbook-only pull requests. Each
-claim or terminal status PR should mark exactly one issue unless the controller workflow explicitly permits batching and
-all selected issues are proven independent.
+The workbook on `main` is the single queue source of truth. Controller instances are the only writers of the workbook;
+worker implementation branches must never modify it. Every controller instance must start by generating or recording a
+unique controller ID with `python3 scripts/issue_queue.py controller-id` and use owner names under that prefix, such as
+`controller/<controller-id>/subagent-1`, so concurrent controllers do not collide. Serialize queue state changes through
+workbook-only pull requests. Each claim or terminal status PR should mark exactly one issue unless the controller
+workflow explicitly permits batching and all selected issues are proven independent.
 
 Keep at least eight live subagents attached to the controller whenever the subagent interface is available. Keep at least
 eight implementation issues active whenever eight safe, eligible, non-conflicting issues exist. Treat eight active issues as
@@ -47,6 +49,10 @@ The role is advisory: it must not claim work, edit files, touch the workbook, st
 conflict, priority-tier, randomized selection, resource, cleanup, or PR requirements. Priority, dependency, status, or scope
 changes affect dispatch only after an approved workbook-only pull request merges into `main`.
 
+Assign one read-only QA subagent whenever subagent capacity permits. The QA role reviews diffs, regression coverage,
+validation plans, CI results, and merge readiness; it must not claim issues, edit files, touch the workbook, or run heavy
+validation unless the controller explicitly assigns a bounded QA validation task.
+
 For each selected issue, merge a workbook-only `IN_PROGRESS` claim PR before implementation starts. After the claim PR
 actually merges, create a fresh implementation worktree from updated `origin/main`, assign exactly one worker subagent,
 and pass it the generated issue prompt plus any controller overrides. Workers must inspect source, verify root cause,
@@ -56,10 +62,10 @@ implementation PR, polls required CI first when CI supplies full validation evid
 not mark the issue `DONE` until that implementation PR actually merges.
 
 After every controller loop iteration, claim/PR status check, cleanup audit, and before dispatching new work, print a
-concise live status table. Include worker owner, issue key, phase, progress estimate, last action, changed files,
-running validation command, branch, PR state, resource state, cleanup state, project-manager brief state, blockers, and
-next controller action. Use subagent status polling or structured worker updates for live status; the workbook is
-durable queue state, not the live worker-status channel.
+concise live status table. Include controller ID, worker owner, issue key, phase, progress estimate, last action,
+changed files, running validation command, branch, PR state, resource state, cleanup state, project-manager brief state,
+QA review state, blockers, and next controller action. Use subagent status polling or structured worker updates for
+live status; the workbook is durable queue state, not the live worker-status channel.
 
 When a controller loop does not publish any new claim, still fetch and inspect `origin/main` before the next decision.
 Check whether claim, implementation, status, or reclaim PRs merged elsewhere and update live state from the merged
