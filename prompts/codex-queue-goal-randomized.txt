@@ -1,2 +1,0 @@
-Use the queue controller workflow, consult the read-only project manager prioritization brief when available, and select
-the next eligible story randomly after dependency and conflict filtering.

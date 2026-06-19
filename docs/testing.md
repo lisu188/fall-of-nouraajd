@@ -125,15 +125,15 @@ changed paths match the workflow coverage rule, so coverage is conditional insid
 always-present check.
 
 ## CI-Polled Validation
-For local agents, the PR `linux` job can replace local heavy Linux validation when local compilation, full Python tests,
-or coverage would be resource-expensive or duplicate the CI run. Run focused local checks first, open the pull request,
-and poll the Linux check to a successful conclusion:
+For local agents, prefer the PR `linux` job as the default delivery path for heavy Linux validation. Run focused local
+checks first, open the pull request, and poll the Linux check to a successful conclusion instead of duplicating local
+compilation, native tests, full Python tests, or coverage:
 
 ```bash
 python3 scripts/poll_pr_checks.py <PR_NUMBER> --check linux
 ```
 
-Use `--check` more than once when the task needs additional required jobs:
+Use `--check` more than once only when the task explicitly needs additional platform or release jobs:
 
 ```bash
 python3 scripts/poll_pr_checks.py <PR_NUMBER> --check linux --check windows-deps --check windows
@@ -145,11 +145,13 @@ For coverage-relevant changes, require the conditional coverage step explicitly:
 python3 scripts/poll_pr_checks.py <PR_NUMBER> --check linux --require-step coverage
 ```
 
-CI-polled validation counts only for commands the selected job actually ran for that PR head. The `linux` job proves
-the Release build, native tests, performance guard, gameplay suite, UI suite, and conditional coverage. It proves
-coverage only when the workflow's changed-path rule runs the `coverage` step. Record the polled job name, conclusion,
-and URL separately from local commands. Do not report skipped local commands as passed, and do not enable auto-merge
-until the selected CI-polled validation has passed when it is the only full-validation evidence.
+Run heavy local Linux validation only when CI cannot cover the required evidence, a focused local reproduction is
+necessary before opening the PR, or GitHub Actions polling is unavailable or blocked. Passing `build / linux` is sufficient PR
+delivery evidence for the Release build, native tests, performance guard, gameplay suite, UI suite, and conditional
+coverage. It proves coverage only when the workflow's changed-path rule runs the `coverage` step; use
+`--require-step coverage` for coverage-relevant changes. Record the polled job name, conclusion, and URL separately from
+local commands. Do not report skipped local commands as passed, and do not enable auto-merge until the selected
+CI-polled validation has passed when it is the only full-validation evidence.
 
 Manual repository settings for `main`:
 - require a pull request before merging
@@ -161,9 +163,10 @@ Do not use `Release / build` as a required PR check; `.github/workflows/release.
 If future work splits fast, gameplay, UI/Xvfb, or coverage runs into separate PR jobs, add those jobs to branch
 protection only after they finish deterministically in CI.
 
-## Coverage workflow
-Run from the repository root, or satisfy through the PR `linux` job when its coverage step runs and passes, when a
-change touches tests (for example
+## Coverage Workflow
+For PR delivery, satisfy coverage through the PR `linux` job when its coverage step runs and passes. Run local coverage
+only when CI cannot cover the required evidence, polling is unavailable, or a focused local coverage reproduction is
+necessary. Coverage is required when a change touches tests (for example
 `test.py` or `tests/unit/**`), `src/core/**`, `src/handler/**`,
 `src/object/**`, `native_plugins/**`, or the coverage tooling:
 
