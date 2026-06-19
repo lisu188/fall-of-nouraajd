@@ -268,6 +268,7 @@ class ContentValidator:
         self.metadata_declared_classes: set[str] = set()
         self.static_registered_classes: set[str] = set()
         self.native_plugin_registered_classes: set[str] = set()
+        self.native_plugin_declared_class_sources: dict[str, set[str]] = {}
         self.python_registered_classes: set[str] = set()
         self.reviewed_abstract_internal_classes: set[str] = set(REVIEWED_ABSTRACT_INTERNAL_CLASSES)
 
@@ -297,13 +298,79 @@ class ContentValidator:
                     self.metadata_declared_classes.add(class_name)
                 for class_name in iter_cpp_template_type_names(text, "register_type"):
                     if path.name == "NativePlugin.cpp":
-                        self.native_plugin_registered_classes.add(class_name)
-                    else:
+                        continue
+                    if path.name.endswith("TypeRegistration.cpp"):
                         self.static_registered_classes.add(class_name)
                 for match in re.finditer(r"V_META\(\s*([A-Za-z_]\w*)", text):
                     class_name = match.group(1)
                     if is_concrete_cpp_class_name(class_name):
                         self.metadata_declared_classes.add(class_name)
+        self._collect_native_plugin_classes()
+
+    def _collect_native_plugin_classes(self) -> None:
+        helper_classes = self._native_plugin_helper_classes()
+        entry_helpers = self._native_plugin_entry_helpers(helper_classes)
+        loaded_entries = self._manifest_native_plugin_entries()
+        for library, entry in loaded_entries:
+            for class_name in entry_helpers.get((library, entry), set()):
+                self.native_plugin_registered_classes.add(class_name)
+
+    def _native_plugin_helper_classes(self) -> dict[str, set[str]]:
+        path = self.repo_root / "src" / "plugin" / "NativePlugin.cpp"
+        if not path.exists():
+            return {}
+        text = read_text_lossy(path)
+        helper_classes: dict[str, set[str]] = {}
+        for name, body in iter_cpp_function_bodies(text):
+            if not name.startswith("register_"):
+                continue
+            classes = iter_cpp_template_type_names(body, "register_type")
+            if classes:
+                helper_classes[name] = classes
+                for class_name in classes:
+                    self.native_plugin_declared_class_sources.setdefault(class_name, set()).add(
+                        f"native_plugin::{name}"
+                    )
+        return helper_classes
+
+    def _native_plugin_entry_helpers(self, helper_classes: dict[str, set[str]]) -> dict[tuple[str, str], set[str]]:
+        native_dir = self.repo_root / "native_plugins"
+        entry_helpers: dict[tuple[str, str], set[str]] = {}
+        if not native_dir.exists():
+            return entry_helpers
+        for path in sorted(native_dir.glob("*.cpp")):
+            text = read_text_lossy(path)
+            library = path.stem
+            for entry, body in iter_cpp_function_bodies(text):
+                classes = iter_cpp_template_type_names(body, "register_type")
+                for helper_name in re.findall(r"\bnative_plugin::(register_[A-Za-z_]\w*)\s*\(", body):
+                    classes.update(helper_classes.get(helper_name, set()))
+                if classes:
+                    entry_helpers[(library, entry)] = classes
+                    for class_name in classes:
+                        self.native_plugin_declared_class_sources.setdefault(class_name, set()).add(
+                            f"{library}:{entry}"
+                        )
+        return entry_helpers
+
+    def _manifest_native_plugin_entries(self) -> set[tuple[str, str]]:
+        manifest_path = self.repo_root / "res" / "plugins" / "manifest.json"
+        if not manifest_path.exists():
+            return set()
+        data = self._load_json(manifest_path)
+        loaded_entries: set[tuple[str, str]] = set()
+        if not isinstance(data, dict):
+            return loaded_entries
+        for entry in iter_manifest_plugin_entries(data):
+            if entry.get("kind") != "dynamic":
+                continue
+            library = entry.get("library")
+            if not isinstance(library, str) or not library:
+                continue
+            function_name = entry.get("entry", "game_plugin_load_v1")
+            if isinstance(function_name, str) and function_name:
+                loaded_entries.add((Path(library).name, function_name))
+        return loaded_entries
 
     def _collect_plugin_classes(self) -> None:
         plugin_dir = self.repo_root / "res" / "plugins"
@@ -870,6 +937,9 @@ class ContentValidator:
     def _class_reference_message(self, class_name: str, label: str) -> str:
         if class_name in self.reviewed_abstract_internal_classes:
             return f'{label} "{class_name}" is reviewed as abstract/internal and cannot be used as content'
+        if class_name in self.native_plugin_declared_class_sources:
+            owners = ", ".join(sorted(self.native_plugin_declared_class_sources[class_name]))
+            return f'{label} "{class_name}" is registered by native plugin code but no manifest entry loads {owners}'
         if class_name in self.metadata_declared_classes:
             return f'{label} "{class_name}" is declared in metadata but is not registered as constructible content'
         return f'unknown {label} "{class_name}"'
@@ -919,6 +989,34 @@ def normalize_cpp_type(raw: str) -> str:
     return re.sub(r"\s+", "", name)
 
 
+def read_text_lossy(path: Path) -> str:
+    try:
+        return path.read_text(encoding="utf-8")
+    except UnicodeDecodeError:
+        return path.read_text(encoding="utf-8", errors="ignore")
+
+
+def iter_cpp_function_bodies(text: str) -> list[tuple[str, str]]:
+    functions: list[tuple[str, str]] = []
+    pattern = re.compile(
+        r"(?:extern\s+\"C\"\s+)?(?:[A-Z_]+\s+)*bool\s+([A-Za-z_]\w*)\s*\([^)]*\)\s*\{",
+        re.MULTILINE,
+    )
+    for match in pattern.finditer(text):
+        body_start = match.end()
+        depth = 1
+        index = body_start
+        while index < len(text) and depth:
+            if text[index] == "{":
+                depth += 1
+            elif text[index] == "}":
+                depth -= 1
+            index += 1
+        if depth == 0:
+            functions.append((match.group(1), text[body_start : index - 1]))
+    return functions
+
+
 def iter_cpp_template_type_names(text: str, call_name: str) -> set[str]:
     names: set[str] = set()
     pattern = re.compile(rf"\b{re.escape(call_name)}\s*<\s*([^,;\n]+)")
@@ -927,6 +1025,19 @@ def iter_cpp_template_type_names(text: str, call_name: str) -> set[str]:
         if is_concrete_cpp_class_name(name):
             names.add(name)
     return names
+
+
+def iter_manifest_plugin_entries(data: dict[str, Any]) -> list[dict[str, Any]]:
+    entries: list[dict[str, Any]] = []
+    global_entries = data.get("global")
+    if isinstance(global_entries, list):
+        entries.extend(entry for entry in global_entries if isinstance(entry, dict))
+    map_entries = data.get("maps")
+    if isinstance(map_entries, dict):
+        for map_plugins in map_entries.values():
+            if isinstance(map_plugins, list):
+                entries.extend(entry for entry in map_plugins if isinstance(entry, dict))
+    return entries
 
 
 def is_concrete_cpp_class_name(name: str) -> bool:
