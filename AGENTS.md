@@ -20,8 +20,12 @@ implementation branches must never modify it. Serialize queue state changes thro
 claim or terminal status PR should mark exactly one issue unless the controller workflow explicitly permits batching and
 all selected issues are proven independent.
 
-Keep at most four implementation workers active at once. Before filling each free worker slot, fetch the latest
-`origin/main`, recalculate the full eligible set from the merged workbook, and exclude:
+Keep at most four implementation workers active at once, but treat four as a hard maximum rather than a target. Before
+filling any slot, inspect current available RAM and running heavy jobs, then set a RAM-safe worker budget for this
+controller iteration. Dispatch only up to the smaller of four and that current budget; if memory is tight, swap is
+active, or another build/test/coverage/Xvfb/MCP job is running, reduce the budget and leave slots empty until the
+blocker clears. Before filling each RAM-approved worker slot, fetch the latest `origin/main`, recalculate the full
+eligible set from the merged workbook, and exclude:
 
 - rows whose status is not `NOT_STARTED`;
 - rows with dependencies that are not `DONE`;
@@ -46,10 +50,11 @@ status table. Include worker owner, issue key, phase, progress estimate, last ac
 command, branch, PR state, blockers, and next controller action. Use subagent status polling or structured worker
 updates for live status; the workbook is durable queue state, not the live worker-status channel.
 
-For local RAM safety, queue-controller workers must not use high-parallelism builds. Adapt repository build commands such
-as `-j$(nproc)` to `-j1` unless the user explicitly allows a higher count. Do not run multiple heavy build, test,
+For local RAM safety, queue-controller workers must not use high-parallelism builds. Adapt repository build commands
+such as `-j$(nproc)` to `-j1` unless the user explicitly allows a higher count. Do not run multiple heavy build, test,
 coverage, Xvfb, or MCP validation jobs concurrently across workers. Serialize memory-heavy validation and report the
-exact adjusted commands used.
+exact adjusted commands used. Recalculate the RAM-safe worker budget again before starting heavy validation; pausing
+validation or dispatch is preferred to overcommitting memory.
 
 ## Project overview
 
