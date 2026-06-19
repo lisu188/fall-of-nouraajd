@@ -387,6 +387,49 @@ void test_map_tiles_bounds_wrapping_and_object_cache() {
     expect_true(map->getObjects().empty(), "removeObjects should erase matching objects from a cloned iteration");
 }
 
+void test_map_navigation_edges_update_revision() {
+    auto map = std::make_shared<CMap>();
+    map->setXBounds({{0, 4}});
+    map->setYBounds({{0, 4}});
+    map->setWrapX({{0, 1}});
+
+    const auto initial_revision = map->getNavigationRevision();
+    CNavigationEdge bridge;
+    bridge.source = Coords(-1, 2, 0);
+    bridge.target = Coords(1, 2, 0);
+    bridge.enabled = true;
+    bridge.bidirectional = true;
+    bridge.movementCost = 3;
+    bridge.sourceObjectName = "ropeBridge";
+
+    map->addNavigationEdge(bridge);
+    expect_true(map->getNavigationRevision() > initial_revision,
+                "adding a navigation edge should bump navigation revision");
+
+    const auto revision_after_add = map->getNavigationRevision();
+    const auto &edges = map->getNavigationEdges();
+    expect_true(edges.size() == 1, "added navigation edge should be stored by the map");
+    expect_true(edges.front().source == Coords(4, 2, 0), "navigation edge source should be normalized");
+    expect_true(edges.front().target == Coords(1, 2, 0), "navigation edge target should be normalized");
+    expect_true(edges.front().enabled, "navigation edge should preserve enabled state");
+    expect_true(edges.front().bidirectional, "navigation edge should preserve directionality");
+    expect_true(edges.front().movementCost == 3, "navigation edge should preserve movement cost");
+    expect_true(edges.front().sourceObjectName == std::optional<std::string>("ropeBridge"),
+                "navigation edge should preserve source object name");
+
+    const std::optional<std::string> bridge_name = "ropeBridge";
+    expect_true(!map->removeNavigationEdge(Coords(4, 2, 0), Coords(0, 2, 0), bridge_name),
+                "removing a missing navigation edge should report false");
+    expect_true(map->getNavigationRevision() == revision_after_add,
+                "removing a missing navigation edge should not bump navigation revision");
+
+    expect_true(map->removeNavigationEdge(Coords(-1, 2, 0), Coords(1, 2, 0), bridge_name),
+                "removing an existing navigation edge should report true");
+    expect_true(map->getNavigationEdges().empty(), "removed navigation edge should leave map storage");
+    expect_true(map->getNavigationRevision() > revision_after_add,
+                "removing an existing navigation edge should bump navigation revision");
+}
+
 void test_map_defensive_branches_and_strict_validation() {
     auto map = std::make_shared<CMap>();
     map->setXBounds({{0, -1}});
@@ -636,6 +679,7 @@ int main() {
     test_scene_manager_null_and_legacy_missing_target_behavior();
     test_scene_manager_rejects_cross_game_requests();
     test_map_tiles_bounds_wrapping_and_object_cache();
+    test_map_navigation_edges_update_revision();
     test_map_defensive_branches_and_strict_validation();
     test_map_move_interrupts_invalid_planned_steps();
     test_map_player_trigger_registration_is_idempotent();

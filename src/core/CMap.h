@@ -44,6 +44,17 @@ class CTrigger;
 
 class CGame;
 
+struct CNavigationEdge {
+    Coords source;
+    Coords target;
+    bool enabled = true;
+    bool bidirectional = false;
+    int movementCost = 1;
+    std::optional<std::string> sourceObjectName;
+
+    bool operator==(const CNavigationEdge &other) const = default;
+};
+
 class CMap : public CGameObject {
     using StringMap = std::map<int, std::string>;
     using IntMap = std::map<int, int>;
@@ -183,6 +194,12 @@ class CMap : public CGameObject {
 
     std::uint64_t getNavigationRevision() const;
 
+    const std::vector<CNavigationEdge> &getNavigationEdges() const;
+
+    void addNavigationEdge(CNavigationEdge edge);
+
+    bool removeNavigationEdge(Coords source, Coords target, std::optional<std::string> sourceObjectName = std::nullopt);
+
     std::size_t getObjectCacheEntryCountForTesting() const;
 
     // TODO: accept predicate, can be used in siege map
@@ -214,6 +231,7 @@ class CMap : public CGameObject {
     std::unordered_multimap<Coords, std::string> mapObjectsCache;
 
     std::unordered_map<Coords, std::shared_ptr<CTile>> tiles;
+    std::vector<CNavigationEdge> navigationEdges;
 
     std::shared_ptr<CPlayer> player;
     StringMap defaultTiles;
