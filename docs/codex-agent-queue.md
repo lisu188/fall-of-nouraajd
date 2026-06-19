@@ -109,8 +109,13 @@ Alternatively use `claim --format prompt`.
 
 ## Live worker status
 
-Keep at most four implementation workers active at once. Poll every active worker through the available subagent/task
-interface. If direct polling is unavailable, require structured status updates from the worker.
+Keep at most four implementation workers active at once, but make the active worker count RAM-aware. Before dispatching
+or refilling workers, inspect current available RAM, swap pressure, and running heavy build/test/coverage/Xvfb/MCP jobs.
+Set the live worker budget to the smaller of four and the number of workers the machine can support without memory
+pressure. Leave slots empty when RAM is tight, and raise the count again only after the RAM gate clears.
+
+Poll every active worker through the available subagent/task interface. If direct polling is unavailable, require
+structured status updates from the worker.
 
 After every controller loop iteration, claim or pull-request status check, and before dispatching new work, print a live
 status table containing at least:
@@ -237,4 +242,6 @@ python3 scripts/issue_queue.py show --issue "$ISSUE_NAME"
 - Serialize workbook claim, heartbeat, and terminal-status pull requests; do not keep multiple binary workbook PRs open for merge.
 - To spare RAM, queue-controller workers must use serial local builds such as `-j1` unless the user explicitly allows more parallelism.
 - Do not run multiple heavy build, test, coverage, Xvfb, or MCP validation jobs concurrently across workers.
+- Recalculate the RAM-safe worker budget before each dispatch/refill and before starting heavy validation; fewer than
+  four active workers can still be the correct budget.
 - If RAM-safety limits or missing worker status prevent safe dispatch, stop filling worker slots until the blocker clears.
