@@ -21,7 +21,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 class CGame;
 class CObjectHandler;
+class CConfigurationProvider;
 class CRngHandler;
+class CResourcesProvider;
 class CScriptHandler;
 
 class CGameContext {
@@ -34,9 +36,17 @@ class CGameContext {
 
     std::shared_ptr<CRngHandler> getRngHandler();
 
+    std::shared_ptr<CResourcesProvider> getResourcesProvider();
+
+    std::shared_ptr<CConfigurationProvider> getConfigurationProvider();
+
   private:
+    static void deleteConfigurationProvider(CConfigurationProvider *provider);
+
     std::weak_ptr<CGame> game;
     std::shared_ptr<CObjectHandler> objectHandler;
     std::shared_ptr<CScriptHandler> scriptHandler;
     std::shared_ptr<CRngHandler> rngHandler;
+    std::shared_ptr<CResourcesProvider> resourcesProvider;
+    std::shared_ptr<CConfigurationProvider> configurationProvider;
 };

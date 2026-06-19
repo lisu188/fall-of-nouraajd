@@ -17,6 +17,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #include "core/CGameContext.h"
 #include "core/CGame.h"
+#include "core/CProvider.h"
 #include "handler/CObjectHandler.h"
 #include "handler/CRngHandler.h"
 #include "handler/CScriptHandler.h"
@@ -50,3 +51,20 @@ std::shared_ptr<CRngHandler> CGameContext::getRngHandler() {
     }
     return rngHandler;
 }
+
+std::shared_ptr<CResourcesProvider> CGameContext::getResourcesProvider() {
+    if (!resourcesProvider) {
+        resourcesProvider = std::make_shared<CResourcesProvider>();
+    }
+    return resourcesProvider;
+}
+
+std::shared_ptr<CConfigurationProvider> CGameContext::getConfigurationProvider() {
+    if (!configurationProvider) {
+        configurationProvider = std::shared_ptr<CConfigurationProvider>(new CConfigurationProvider(),
+                                                                        &CGameContext::deleteConfigurationProvider);
+    }
+    return configurationProvider;
+}
+
+void CGameContext::deleteConfigurationProvider(CConfigurationProvider *provider) { delete provider; }

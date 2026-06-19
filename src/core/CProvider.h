@@ -100,6 +100,8 @@ class CAnimation;
 
 class CGame;
 
+class CGameContext;
+
 class CGameObject;
 
 class CResourcesProvider {
@@ -141,6 +143,8 @@ class CConfigurationProvider : private std::map<std::string, std::shared_ptr<jso
     static std::shared_ptr<json> getConfig(const std::string &path);
 
   private:
+    friend class CGameContext;
+
     CConfigurationProvider() = default;
 
     ~CConfigurationProvider();

@@ -36,6 +36,10 @@ class CGameContext;
 
 class CGui;
 
+class CConfigurationProvider;
+
+class CResourcesProvider;
+
 class CSceneManager;
 
 class CRngHandler;
@@ -70,6 +74,10 @@ class CGame : public CGameObject {
     void loadPlugin(std::function<std::shared_ptr<CPlugin>()> plugin);
 
     std::shared_ptr<CRngHandler> getRngHandler();
+
+    std::shared_ptr<CResourcesProvider> getResourcesProvider();
+
+    std::shared_ptr<CConfigurationProvider> getConfigurationProvider();
 
     template <fn::GameObjectDerived T> std::shared_ptr<T> createObject(std::string name) {
         return getObjectHandler()->createObject<T>(this->ptr<CGame>(), name);

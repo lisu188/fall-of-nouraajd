@@ -17,8 +17,13 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
 #include "core/CProvider.h"
+#include "core/CLoader.h"
 #include "core/CSaveFormat.h"
+#include "core/CGame.h"
+#include "core/CGameContext.h"
 #include "test_harness.h"
+
+#include <pybind11/embed.h>
 
 #include <algorithm>
 #include <chrono>
@@ -120,11 +125,43 @@ void test_resource_provider_save_uses_provider_root_when_cwd_changes() {
     std::filesystem::remove_all(tempRoot);
 }
 
+void test_game_context_owns_provider_instances() {
+    auto game_a = CGameLoader::loadGame();
+    auto game_b = CGameLoader::loadGame();
+
+    auto context_a = game_a->getContext();
+    auto context_b = game_b->getContext();
+    expect_true(context_a != context_b, "loaded games should have distinct contexts");
+
+    auto resources_a = context_a->getResourcesProvider();
+    auto configuration_a = context_a->getConfigurationProvider();
+    auto resources_b = context_b->getResourcesProvider();
+    auto configuration_b = context_b->getConfigurationProvider();
+
+    expect_true(resources_a != nullptr, "game context should create a resources provider");
+    expect_true(configuration_a != nullptr, "game context should create a configuration provider");
+    expect_true(resources_a == context_a->getResourcesProvider(),
+                "resources provider should be stable within a game context");
+    expect_true(configuration_a == context_a->getConfigurationProvider(),
+                "configuration provider should be stable within a game context");
+    expect_true(resources_a == game_a->getResourcesProvider(), "game should delegate resources provider access");
+    expect_true(configuration_a == game_a->getConfigurationProvider(),
+                "game should delegate configuration provider access");
+    expect_true(resources_a != resources_b, "loaded games should not share context-owned resources providers");
+    expect_true(configuration_a != configuration_b,
+                "loaded games should not share context-owned configuration providers");
+    expect_true(resources_a != CResourcesProvider::getInstance(),
+                "context-owned resources provider should be distinct from the backward-compatible singleton");
+}
+
 } // namespace
 
 int main() {
+    pybind11::scoped_interpreter guard{};
+
     test_resource_provider_paths_and_config_loader();
     test_resource_provider_save_uses_provider_root_when_cwd_changes();
+    test_game_context_owns_provider_instances();
 
     return finish_tests();
 }

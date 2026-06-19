@@ -64,3 +64,9 @@ std::shared_ptr<CSlotConfig> CGame::getSlotConfiguration() {
 }
 
 std::shared_ptr<CRngHandler> CGame::getRngHandler() { return getContext()->getRngHandler(); }
+
+std::shared_ptr<CResourcesProvider> CGame::getResourcesProvider() { return getContext()->getResourcesProvider(); }
+
+std::shared_ptr<CConfigurationProvider> CGame::getConfigurationProvider() {
+    return getContext()->getConfigurationProvider();
+}
