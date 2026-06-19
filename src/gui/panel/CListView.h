@@ -146,6 +146,8 @@ class CListView : public CProxyTargetGraphicsObject {
 
     bool invokeSelect(std::shared_ptr<CGui> gui, int i, std::shared_ptr<CGameObject> object);
 
+    bool canInvokeParentCallback(const std::shared_ptr<CGui> &gui, const std::shared_ptr<CGameGraphicsObject> &parent);
+
     bool tryGetClickedObject(std::shared_ptr<CGui> gui, int x, int y, int &index, std::shared_ptr<CGameObject> &object);
 
     std::unordered_map<std::pair<int, int>, std::shared_ptr<CProxyGraphicsObject>> proxyObjects;

@@ -1,6 +1,6 @@
 /*
 fall-of-nouraajd c++ dark fantasy game
-Copyright (C) 2025  Andrzej Lis
+Copyright (C) 2025-2026  Andrzej Lis
 
 This program is free software: you can redistribute it and/or modify
         it under the terms of the GNU General Public License as published by
@@ -105,6 +105,10 @@ class CGameGraphicsObject : public CGameObject {
     void removeParent();
 
     std::shared_ptr<CGui> getGui();
+
+    bool isAttachedToGui(const std::shared_ptr<CGui> &gui);
+
+    bool hasRenderableGui(const std::shared_ptr<CGui> &gui);
 
     bool getModal();
 

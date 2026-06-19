@@ -1,6 +1,6 @@
 /*
 fall-of-nouraajd c++ dark fantasy game
-Copyright (C) 2025  Andrzej Lis
+Copyright (C) 2025-2026  Andrzej Lis
 
 This program is free software: you can redistribute it and/or modify
         it under the terms of the GNU General Public License as published by
@@ -25,8 +25,8 @@ std::string CGameQuestionPanel::getQuestion() { return question; }
 void CGameQuestionPanel::setQuestion(std::string question) { this->question = question; }
 
 bool CGameQuestionPanel::awaitAnswer() {
-    vstd::wait_until([this]() { return selection != nullptr; });
-    return *selection;
+    vstd::wait_until([this]() { return selection != nullptr || !getGui(); });
+    return selection ? *selection : false;
 }
 
 void CGameQuestionPanel::clickNo(std::shared_ptr<CGui> gui) {
