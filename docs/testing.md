@@ -124,6 +124,33 @@ cache validation, and packaging on Linux and Windows. The Linux job also runs `.
 changed paths match the workflow coverage rule, so coverage is conditional inside `linux` rather than a separate
 always-present check.
 
+## CI-Polled Validation
+For local agents, the PR `linux` job can replace local heavy Linux validation when local compilation, full Python tests,
+or coverage would be resource-expensive or duplicate the CI run. Run focused local checks first, open the pull request,
+and poll the Linux check to a successful conclusion:
+
+```bash
+python3 scripts/poll_pr_checks.py <PR_NUMBER> --check linux
+```
+
+Use `--check` more than once when the task needs additional required jobs:
+
+```bash
+python3 scripts/poll_pr_checks.py <PR_NUMBER> --check linux --check windows-deps --check windows
+```
+
+For coverage-relevant changes, require the conditional coverage step explicitly:
+
+```bash
+python3 scripts/poll_pr_checks.py <PR_NUMBER> --check linux --require-step coverage
+```
+
+CI-polled validation counts only for commands the selected job actually ran for that PR head. The `linux` job proves
+the Release build, native tests, performance guard, gameplay suite, UI suite, and conditional coverage. It proves
+coverage only when the workflow's changed-path rule runs the `coverage` step. Record the polled job name, conclusion,
+and URL separately from local commands. Do not report skipped local commands as passed, and do not enable auto-merge
+until the selected CI-polled validation has passed when it is the only full-validation evidence.
+
 Manual repository settings for `main`:
 - require a pull request before merging
 - require status checks to pass before merging
@@ -135,7 +162,8 @@ If future work splits fast, gameplay, UI/Xvfb, or coverage runs into separate PR
 protection only after they finish deterministically in CI.
 
 ## Coverage workflow
-Run from the repository root when a change touches tests (for example
+Run from the repository root, or satisfy through the PR `linux` job when its coverage step runs and passes, when a
+change touches tests (for example
 `test.py` or `tests/unit/**`), `src/core/**`, `src/handler/**`,
 `src/object/**`, `native_plugins/**`, or the coverage tooling:
 

@@ -145,13 +145,16 @@ Repeat the following cycle:
 6. Conserve RAM and disk
    - Workers must not use parallel builds.
    - Use `-j1` for local CMake builds unless the user explicitly authorizes otherwise.
-   - Serialize memory-heavy builds, full tests, coverage, Xvfb, and MCP sessions.
+   - Serialize memory-heavy local builds, full tests, coverage, Xvfb, and MCP sessions.
    - Allow lightweight inspection and review while heavy validation is running.
    - Inspect available RAM and swap before every heavy command.
    - Run `python3 scripts/controller_resource_audit.py --json` before dispatch/refill decisions, before heavy
      validation, after each controller loop, and after merged-checkpoint cleanup.
    - Treat low free disk, high filesystem usage, large accumulated run/worktrees, or prunable worktree registrations as
      blockers to new heavy work until safely reported or cleaned.
+   - Prefer GitHub Actions polling for Linux compilation, native tests, full Python suites, and coverage when local
+     heavy validation would duplicate CI or consume avoidable resources:
+     `python3 scripts/poll_pr_checks.py <PR_NUMBER> --check linux`.
 
 7. Review
    - Require a separate subagent to review the complete diff.
@@ -160,7 +163,8 @@ Repeat the following cycle:
 
 8. Validate
    - Run focused workflow tests first.
-   - Run repository-required validation for every affected path.
+   - Satisfy repository-required validation for every affected path through local commands or completed GitHub Actions
+     polling for the exact PR head.
    - Record exact commands and outcomes.
    - Do not claim success for commands that were skipped or blocked.
 
@@ -173,6 +177,8 @@ Repeat the following cycle:
    - Commit only intended files.
    - Push the branch and open a PR targeting `main`.
    - Include root cause, changes, evidence, tests, risks, and manual-review items.
+   - If CI polling supplies the full validation evidence, poll the selected check(s) to success and update the PR
+     validation notes before enabling auto-merge.
    - Enable squash auto-merge according to `AGENTS.md`.
    - Do not treat queued auto-merge as merged.
    - Poll the PR and checks regularly.
