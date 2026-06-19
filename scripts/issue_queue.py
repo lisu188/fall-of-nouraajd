@@ -779,6 +779,16 @@ def statusCounts(state: QueueState) -> dict[str, int]:
     return dict(sorted(counts.items()))
 
 
+def activeClaimSummary(state: QueueState, stale: Sequence[dict[str, Any]]) -> dict[str, int]:
+    activeCount = statusCounts(state).get(STATUS_IN_PROGRESS, 0)
+    staleCount = len(stale)
+    return {
+        "total": activeCount,
+        "unexpired": max(0, activeCount - staleCount),
+        "stale": staleCount,
+    }
+
+
 def storyKey(task: TaskRecord) -> tuple[str, str]:
     return (
         str(task.values.get("Epic #") or "").strip(),
@@ -837,10 +847,8 @@ def shortlistTasks(
         allowFileOverlap=allowFileOverlap,
     )
     counts = statusCounts(state)
-    activeCount = counts.get(STATUS_IN_PROGRESS, 0)
     stale = staleClaims(state)
-    staleClaimCount = len(stale)
-    unexpiredActiveCount = max(0, activeCount - staleClaimCount)
+    activeClaims = activeClaimSummary(state, stale)
     selectionSeed = seed or uuid.uuid4().hex
     fileOverlapFilter = (
         "direct target-file overlap allowed by --allow-file-overlap"
@@ -857,14 +865,10 @@ def shortlistTasks(
         "storyGroups": [],
         "selected": None,
         "statusCounts": counts,
-        "activeCount": activeCount,
-        "unexpiredActiveCount": unexpiredActiveCount,
-        "staleClaimCount": staleClaimCount,
-        "activeClaims": {
-            "total": activeCount,
-            "unexpired": unexpiredActiveCount,
-            "stale": staleClaimCount,
-        },
+        "activeCount": activeClaims["total"],
+        "unexpiredActiveCount": activeClaims["unexpired"],
+        "staleClaimCount": activeClaims["stale"],
+        "activeClaims": activeClaims,
         "staleClaims": stale,
         "rejectedCount": len(rejected),
         "rejectionSummary": rejectionSummary(rejected),
@@ -1775,7 +1779,19 @@ def main(argv: Sequence[str] | None = None) -> int:
             if args.dry_run:
                 state = loadQueue(workbookPath, writable=False)
                 try:
-                    printJson({"stale": staleClaims(state, olderThanMinutes=args.older_than_minutes)})
+                    now = utcNow()
+                    allStale = staleClaims(state, now=now)
+                    stale = staleClaims(state, olderThanMinutes=args.older_than_minutes, now=now)
+                    printJson(
+                        {
+                            "workbook": str(workbookPath),
+                            "olderThanMinutes": args.older_than_minutes,
+                            "reclaimableStaleCount": len(stale),
+                            "staleCount": len(allStale),
+                            "activeClaims": activeClaimSummary(state, allStale),
+                            "stale": stale,
+                        }
+                    )
                 finally:
                     state.workbook.close()
             else:
