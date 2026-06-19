@@ -295,6 +295,12 @@ class IssueQueueTest(unittest.TestCase):
         self.assertIn(claim["claimId"], prompt)
         self.assertIn("Inspect the relevant project files first.", prompt)
         self.assertIn("Do not commit, push, merge, or open a PR", prompt)
+        self.assertIn("Report queue milestones to the controller", prompt)
+        self.assertIn("The controller owns workbook updates", prompt)
+        self.assertIn("Do not run issue_queue.py heartbeat, complete, block, fail, cancel, or release", prompt)
+        self.assertNotIn("run a heartbeat", prompt)
+        self.assertNotIn("call complete", prompt)
+        self.assertNotIn("call block", prompt)
 
     def test_unrelated_xlsx_parts_are_preserved_byte_for_byte(self) -> None:
         marker_name = "custom/marker.bin"
