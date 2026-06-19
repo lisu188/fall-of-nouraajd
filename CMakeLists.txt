@@ -39,8 +39,6 @@ else ()
     set(CPACK_GENERATOR "TGZ")
 endif ()
 
-include(${CMAKE_SOURCE_DIR}/cmake/cotire.cmake)
-
 set(CMAKE_MODULE_PATH "${CMAKE_MODULE_PATH};${CMAKE_SOURCE_DIR}/cmake")
 
 file(GLOB_RECURSE GAME_SRC ${CMAKE_SOURCE_DIR}/src/**.cpp ${CMAKE_SOURCE_DIR}/src/**.h)

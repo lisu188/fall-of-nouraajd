@@ -1,14 +1,18 @@
 #!/bin/bash
 set -euo pipefail
 
-sudo apt-get update
-sudo apt-get install -y build-essential cmake ninja-build ccache clang-format black \
-    python3 python3-dev python3-pip python3-venv pybind11-dev python3-pil \
-    libboost-dev \
-    libsdl2-dev libsdl2-ttf-dev libsdl2-image-dev \
-    xvfb xauth
+if [[ "${GAME_CONFIGURE_SKIP_APT:-0}" != "1" ]]; then
+    sudo apt-get update
+    sudo apt-get install -y build-essential cmake ninja-build ccache clang-format black \
+        python3 python3-dev python3-pip python3-venv pybind11-dev python3-pil \
+        libboost-dev \
+        libsdl2-dev libsdl2-ttf-dev libsdl2-image-dev \
+        xvfb xauth
+fi
 
-git submodule update --init --recursive
+if [[ "${GAME_CONFIGURE_SKIP_SUBMODULES:-0}" != "1" ]]; then
+    git submodule update --init --recursive
+fi
 build_types_raw="${GAME_CONFIGURE_BUILD_TYPES:-Debug Release}"
 read -r -a build_types <<< "${build_types_raw//,/ }"
 if [[ "${#build_types[@]}" -eq 0 ]]; then

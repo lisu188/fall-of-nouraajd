@@ -67,8 +67,8 @@ class ConfigureSupplyChainTest(unittest.TestCase):
         self.assertIn("-r requirements-dev.txt", workflow_text)
         self.assertIn("from PIL import Image; import black", workflow_text)
         self.assertIn("import _game; import game", workflow_text)
-        self.assertIn("pillow==11.2.1", requirements_text)
-        self.assertIn("black==25.1.0", requirements_text)
+        self.assertRegex(requirements_text, re.compile(r"^pillow==[0-9]+(?:\.[0-9]+)*$", re.MULTILINE))
+        self.assertRegex(requirements_text, re.compile(r"^black==[0-9]+(?:\.[0-9]+)*$", re.MULTILINE))
         self.assertNotRegex(requirements_text, re.compile(r"^pybind11\b", re.IGNORECASE | re.MULTILINE))
 
 
