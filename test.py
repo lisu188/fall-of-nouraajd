@@ -610,7 +610,12 @@ XVFB_GAMEPLAY_CHILD_DURATION_HINTS = {
 }
 NOURAAJD_QUEST_LOG_SCREENSHOT_CHECKPOINTS = {
     "xvfb_nouraajd_quest_log_rolf_initial",
+    "xvfb_nouraajd_quest_log_rolf_completed_main_active",
+    "xvfb_nouraajd_quest_log_deliver_letter_active",
+    "xvfb_nouraajd_quest_log_beren_cleanse_active",
     "xvfb_nouraajd_quest_log_victor_encounter_active",
+    "xvfb_nouraajd_quest_log_amulet_active",
+    "xvfb_nouraajd_quest_log_amulet_completed",
     "xvfb_nouraajd_quest_log_all_quests_completed",
 }
 
@@ -2801,25 +2806,159 @@ def walkthrough_nouraajd_map():
         if name != "gooby1":
             find_map_object_definition("nouraajd", name)
 
+    def quest_state(name):
+        return game_map.getStringProperty(f"quest_state_{name}")
+
+    def assert_active(quest_id):
+        assert quest_id in quest_names(player), f"{quest_id} should be active."
+
+    def assert_completed(quest_id):
+        assert quest_id in completed_quest_names(player), f"{quest_id} should be completed."
+
+    start_events = [
+        obj for obj in game_map.getObjects() if obj.getTypeId() == "StartEvent" or obj.getType() == "StartEvent"
+    ]
+    assert start_events, "The Nouraajd walkthrough should start from an authored StartEvent."
+    start_coords = start_events[0].getCoords()
+    player.moveTo(start_coords.x, start_coords.y, start_coords.z)
+    pump_event_loop(5)
+    assert player.countItems("letterFromRolf") >= 1, "StartEvent should grant Rolf's letter."
+    assert quest_state("rolf") == "awaiting_skull"
+    assert_active("rolfQuest")
+
     game_map.removeObjectByName("cave1")
+    player.checkQuests()
+    assert quest_state("rolf") == "skull_recovered"
+    assert quest_state("main") == "awaiting_gooby"
+    assert_completed("rolfQuest")
+    assert_active("mainQuest")
+
     gooby = find_runtime_object(game_map, "gooby1")
     game_map.removeObjectByName(gooby.getName())
-    game_map.removeObjectByName("catacombs")
-    game_map.removeObjectByName("cave2")
+    player.checkQuests()
+    assert quest_state("main") == "gooby_slain"
+    assert_completed("mainQuest")
 
-    assert game_map.getBoolProperty("completed_rolf"), "The cave1 trigger should complete the Rolf lead."
-    assert player.hasItem(lambda it: it.getName() == "skullOfRolf"), "The cave1 trigger should award Rolf's skull."
-    assert game_map.getBoolProperty("completed_gooby"), "Defeating Gooby should complete the main quest flag."
-    assert player.hasItem(lambda it: it.getName() == "holyRelic"), "The catacombs trigger should award the holy relic."
-    assert game_map.getBoolProperty("OCTOBOGZ_SLAIN"), "The cave2 trigger should mark the OctoBogz slain."
+    town_hall = g.createObject("townHallDialog")
+    beren = g.createObject("berenDialog")
+    travelers = g.createObject("dialog")
+    town_hall.give_letter()
+    assert quest_state("beren_chain") == "letter_in_hand"
+    assert player.countItems("letterToBeren") == 1
+    assert_active("deliverLetterQuest")
+
+    beren.deliver_letter()
+    player.checkQuests()
+    assert quest_state("beren_chain") == "letter_delivered"
+    assert player.countItems("letterToBeren") == 0
+    assert player.getBoolProperty("CAN_CRAFT_SCROLLS")
+    assert_completed("deliverLetterQuest")
+    assert_active("retrieveRelicQuest")
+
+    game_map.removeObjectByName("catacombs")
+    assert quest_state("beren_chain") == "relic_obtained"
+    assert player.countItems("holyRelic") == 1
+
+    beren.return_relic()
+    player.checkQuests()
+    assert quest_state("beren_chain") == "relic_returned_waiting_kill"
+    assert player.countItems("holyRelic") == 0
+    assert player.getBoolProperty("CAN_BREW_GREATER_POTIONS")
+    assert_completed("retrieveRelicQuest")
+    assert_active("cleanseCaveQuest")
+
+    travelers.accept_quest()
+    assert quest_state("octobogz_contract") == "active"
+    assert_active("octoBogzQuest")
+
+    octobogz_gold = player.getGold()
+    octobogz_shadow_blades = player.countItems("ShadowBlade")
+    game_map.removeObjectByName("cave2")
+    player.checkQuests()
+    assert quest_state("beren_chain") == "ready_to_report"
+    assert quest_state("octobogz_contract") == "completed"
+    assert game_map.getBoolProperty("OCTOBOGZ_SLAIN")
+    assert game_map.getBoolProperty("OCTOBOGZ_CLEARED")
+    assert game_map.getBoolProperty("completed_octobogz")
+    assert player.getGold() == octobogz_gold + 1000
+    assert player.countItems("ShadowBlade") == octobogz_shadow_blades + 1
+    assert_completed("octoBogzQuest")
+
+    tavern_intro = g.createObject("tavernDialog1")
+    tavern = g.createObject("tavernDialog2")
+    tavern_intro.asked_about_girl()
+    tavern.talked_to_victor()
+    assert quest_state("victor") == "met_victor"
+    assert_active("victorQuest")
+    town_hall.spawn_cultists()
+    leader = find_runtime_object(game_map, "cultLeaderQuest")
+    cultists = [obj for obj in game_map.getObjects() if obj.getName() and obj.getName().startswith("victorCultist")]
+    assert quest_state("victor") == "encounter_active"
+    assert game_map.getBoolProperty("VICTOR_COURTYARD_FOUND")
+    assert game_map.getBoolProperty("VICTOR_CULTISTS_SPAWNED")
+    assert cultists, "Victor good-ending path should spawn cultists."
+
+    victor_gold = player.getGold()
+    game_map.removeObjectByName(leader.getName())
+    player.checkQuests()
+    assert quest_state("victor") == "good_end"
+    assert player.getGold() == victor_gold + 500
+    assert game_map.getBoolProperty("VICTOR_GOOD_END")
+    assert game_map.getBoolProperty("VICTOR_REWARD_CLAIMED")
+    assert game_map.getObjectByName("cultLeaderQuest") is None
+    assert not any(obj.getName() and obj.getName().startswith("victorCultist") for obj in game_map.getObjects())
+    assert_completed("victorQuest")
+
+    quest_dialog = g.createObject("questDialog")
+    quest_return_dialog = g.createObject("questReturnDialog")
+    quest_dialog.start_amulet_quest()
+    assert quest_state("amulet") == "active"
+    assert game_map.getObjectByName("amuletGoblin") is not None
+    assert_active("amuletQuest")
+    amulet_gold = player.getGold()
+    player.addItem("preciousAmulet")
+    quest_return_dialog.complete_amulet_quest()
+    player.checkQuests()
+    assert quest_state("amulet") == "returned"
+    assert player.getGold() == amulet_gold + 50
+    assert player.countItems("preciousAmulet") == 0
+    assert game_map.getObjectByName("oldWoman") is None
+    assert game_map.getObjectByName("amuletGoblin") is None
+    assert_completed("amuletQuest")
+
+    beren.finish_cleanse()
+    pump_event_loop(10)
+    assert quest_state("beren_chain") == "purged"
+    assert game_map.getBoolProperty("CAVE_PURGED")
+    assert_completed("cleanseCaveQuest")
+    assert g.getMap().mapName == "ritual"
+
+    g_bad, game_map_bad, player_bad = load_game_map_with_player("nouraajd")
+    tavern_bad = g_bad.createObject("tavernDialog2")
+    town_hall_bad = g_bad.createObject("townHallDialog")
+    tavern_bad.talked_to_victor()
+    town_hall_bad.spawn_cultists()
+    assert game_map_bad.getStringProperty("quest_state_victor") == "encounter_active"
+    bad_start_gold = player_bad.getGold()
+    force_nouraajd_victor_timeout(game_map_bad)
+    player_bad.checkQuests()
+    assert game_map_bad.getStringProperty("quest_state_victor") == "bad_end"
+    assert player_bad.getGold() == bad_start_gold
+    assert game_map_bad.getBoolProperty("VICTOR_BAD_END")
+    assert not game_map_bad.getBoolProperty("VICTOR_REWARD_CLAIMED")
+    assert game_map_bad.getObjectByName("cultLeaderQuest") is None
+    assert not any(obj.getName() and obj.getName().startswith("victorCultist") for obj in game_map_bad.getObjects())
+    assert "victorQuest" in completed_quest_names(player_bad)
+
     return {
         "map": "nouraajd",
-        "completed_rolf": game_map.getBoolProperty("completed_rolf"),
-        "completed_gooby": game_map.getBoolProperty("completed_gooby"),
-        "octobogz_slain": game_map.getBoolProperty("OCTOBOGZ_SLAIN"),
-        "has_skull_of_rolf": player.hasItem(lambda it: it.getName() == "skullOfRolf"),
-        "has_holy_relic": player.hasItem(lambda it: it.getName() == "holyRelic"),
-        "quests": quest_names(player),
+        "quest_states": nouraajd_quest_state_snapshot(game_map),
+        "bad_victor_state": game_map_bad.getStringProperty("quest_state_victor"),
+        "items": player_item_counts(player, NOURAAJD_INVENTORY_ITEMS),
+        "gold": player.getGold(),
+        "active_quests": quest_names(player),
+        "completed_quests": completed_quest_names(player),
+        "current_map": g.getMap().mapName,
     }
 
 
@@ -14836,21 +14975,38 @@ class McpServerTest(unittest.TestCase):
         }
 
     def _mcp_walkthrough_nouraajd(self, session):
-        _, map_handle, _ = self._mcp_load_game_map_with_player(session, "nouraajd")
+        _, map_handle, player_handle = self._mcp_load_game_map_with_player(session, "nouraajd")
         for name in ("cave1", "catacombs", "cave2"):
             find_map_object_definition("nouraajd", name)
 
+        def quest_state(active_map, name):
+            return self._mcp_handle_call(session, active_map, "getStringProperty", [f"quest_state_{name}"])
+
+        def map_bool(active_map, name):
+            return self._mcp_handle_call(session, active_map, "getBoolProperty", [name])
+
         self._mcp_handle_call(session, map_handle, "removeObjectByName", ["cave1"])
+        self._mcp_handle_call(session, player_handle, "checkQuests")
+        self.assertEqual("skull_recovered", quest_state(map_handle, "rolf"))
+        self.assertEqual("awaiting_gooby", quest_state(map_handle, "main"))
+
         gooby = self._mcp_get_object_by_name(session, map_handle, "gooby1")
         gooby_name = self._mcp_handle_call(session, gooby, "getName")
         self._mcp_handle_call(session, map_handle, "removeObjectByName", [gooby_name])
+        self._mcp_handle_call(session, player_handle, "checkQuests")
+        self.assertEqual("gooby_slain", quest_state(map_handle, "main"))
+
         self._mcp_handle_call(session, map_handle, "removeObjectByName", ["catacombs"])
         self._mcp_handle_call(session, map_handle, "removeObjectByName", ["cave2"])
+        self._mcp_handle_call(session, player_handle, "checkQuests")
+        self.assertEqual("octobogz_slain_pending_letter", quest_state(map_handle, "beren_chain"))
+        self.assertEqual("completed", quest_state(map_handle, "octobogz_contract"))
 
         flags = {
-            "completed_rolf": self._mcp_handle_call(session, map_handle, "getBoolProperty", ["completed_rolf"]),
-            "completed_gooby": self._mcp_handle_call(session, map_handle, "getBoolProperty", ["completed_gooby"]),
-            "octobogz_slain": self._mcp_handle_call(session, map_handle, "getBoolProperty", ["OCTOBOGZ_SLAIN"]),
+            "completed_rolf": map_bool(map_handle, "completed_rolf"),
+            "completed_gooby": map_bool(map_handle, "completed_gooby"),
+            "octobogz_slain": map_bool(map_handle, "OCTOBOGZ_SLAIN"),
+            "completed_octobogz": map_bool(map_handle, "completed_octobogz"),
         }
         map_data = self._mcp_serialized_map(session, map_handle)
         player_data = self._serialized_player(map_data)
@@ -14860,11 +15016,13 @@ class McpServerTest(unittest.TestCase):
         self.assertTrue(flags["completed_rolf"])
         self.assertTrue(flags["completed_gooby"])
         self.assertTrue(flags["octobogz_slain"])
+        self.assertTrue(flags["completed_octobogz"])
         self.assertTrue(has_skull)
         self.assertTrue(has_relic)
         return {
             "map": "nouraajd",
             **flags,
+            "quest_states": {name: quest_state(map_handle, name) for name in NOURAAJD_QUEST_STATE_NAMES},
             "has_skull_of_rolf": has_skull,
             "has_holy_relic": has_relic,
             "quests": self._serialized_quest_ids(player_data),
