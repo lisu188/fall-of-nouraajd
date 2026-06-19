@@ -450,6 +450,7 @@ SDL_KEYDOWN = 0x300
 SDL_KEYUP = 0x301
 SDL_QUIT = 0x100
 SDL_INIT_EVENTS = 0x00004000
+SDL_MOUSEMOTION = 0x400
 SDL_MOUSEBUTTONDOWN = 0x401
 SDL_MOUSEBUTTONUP = 0x402
 SDL_PRESSED = 1
@@ -569,6 +570,7 @@ XVFB_GAMEPLAY_CHILD_TESTS = (
     "test_screenshot_inventory_equipped_selection_has_rendered_pixels",
     "test_screenshot_inventory_item_selection_has_rendered_pixels",
     "test_screenshot_inventory_panel_has_rendered_pixels",
+    "test_inventory_drag_release_outside_source_equips_item",
     "test_inventory_equipped_selection_resets_inventory_selection",
     "test_inventory_quest_item_selection_is_ignored",
     "test_fight_quest_item_selection_is_ignored",
@@ -617,6 +619,7 @@ XVFB_GAMEPLAY_CHILD_DURATION_HINTS = {
     "test_screenshot_minimap_has_rendered_pixels": 6,
     "test_screenshot_inventory_equipped_selection_has_rendered_pixels": 6,
     "test_screenshot_inventory_item_selection_has_rendered_pixels": 6,
+    "test_inventory_drag_release_outside_source_equips_item": 6,
     "test_inventory_equipped_selection_resets_inventory_selection": 6,
     "test_inventory_quest_item_selection_is_ignored": 6,
     "test_fight_quest_item_selection_is_ignored": 6,
@@ -845,6 +848,52 @@ def push_sdl_mouse_button_event(x, y, button=SDL_BUTTON_LEFT, event_type=SDL_MOU
     focused_window = focused_sdl_window()
     if focused_window:
         event.button.windowID = sdl.SDL_GetWindowID(focused_window)
+
+    sdl.SDL_PushEvent.argtypes = [ctypes.POINTER(SDL_Event)]
+    sdl.SDL_PushEvent.restype = ctypes.c_int
+    pushed = sdl.SDL_PushEvent(ctypes.byref(event))
+    if pushed != 1:
+        raise AssertionError(f"SDL_PushEvent returned {pushed}.")
+
+
+def push_sdl_mouse_motion_event(x, y, xrel=0, yrel=0):
+    import ctypes
+
+    class SDL_MouseMotionEvent(ctypes.Structure):
+        _fields_ = [
+            ("type", ctypes.c_uint32),
+            ("timestamp", ctypes.c_uint32),
+            ("windowID", ctypes.c_uint32),
+            ("which", ctypes.c_uint32),
+            ("state", ctypes.c_uint32),
+            ("x", ctypes.c_int32),
+            ("y", ctypes.c_int32),
+            ("xrel", ctypes.c_int32),
+            ("yrel", ctypes.c_int32),
+        ]
+
+    class SDL_Event(ctypes.Union):
+        _fields_ = [
+            ("type", ctypes.c_uint32),
+            ("motion", SDL_MouseMotionEvent),
+            ("padding", ctypes.c_uint8 * 56),
+        ]
+
+    sdl = load_sdl_library()
+    event = SDL_Event()
+    event.type = SDL_MOUSEMOTION
+    event.motion.type = SDL_MOUSEMOTION
+    event.motion.state = 1 << (SDL_BUTTON_LEFT - 1)
+    event.motion.x = x
+    event.motion.y = y
+    event.motion.xrel = xrel
+    event.motion.yrel = yrel
+
+    sdl.SDL_GetWindowID.argtypes = [ctypes.c_void_p]
+    sdl.SDL_GetWindowID.restype = ctypes.c_uint32
+    focused_window = focused_sdl_window()
+    if focused_window:
+        event.motion.windowID = sdl.SDL_GetWindowID(focused_window)
 
     sdl.SDL_PushEvent.argtypes = [ctypes.POINTER(SDL_Event)]
     sdl.SDL_PushEvent.restype = ctypes.c_int
@@ -12924,6 +12973,43 @@ class XvfbGameplayProcessTest(unittest.TestCase):
         self.assertEqual(0, selected_after_equip.get("equippedCollection", 0))
         self.assertEqual(0, selected_after_equipped_click.get("inventoryCollection", 0))
         self.assertEqual(1, selected_after_equipped_click.get("equippedCollection", 0))
+
+    def test_inventory_drag_release_outside_source_equips_item(self):
+        _, g, _, player = create_xvfb_gameplay_session(self)
+        player.addItem("ChaosSword")
+        panel = open_panel_for_screenshot(self, g, "inventoryPanel", "CGameInventoryPanel")
+        list_views = collect_gui_children(panel, "CListView")
+        inventory_list = next(
+            list_view for list_view in list_views if list_view.getCollection() == "inventoryCollection"
+        )
+        equipped_list = next(list_view for list_view in list_views if list_view.getCollection() == "equippedCollection")
+        inventory_rect = inventory_list.getResolvedRect()
+        equipped_rect = equipped_list.getResolvedRect()
+        start_x = inventory_rect[0] + 25
+        start_y = inventory_rect[1] + 25
+        outside_source_x = inventory_rect[0] + inventory_rect[2] + 20
+        outside_source_y = start_y
+        target_x = equipped_rect[0] + 25
+        target_y = equipped_rect[1] + 25
+        inventory_before = player.countItems("ChaosSword")
+
+        push_sdl_mouse_button_event(start_x, start_y, SDL_BUTTON_LEFT, SDL_MOUSEBUTTONDOWN)
+        pump_event_loop(3)
+        self.assertTrue(g.getGui().hasDragSession())
+        self.assertTrue(g.getGui().hasPointerCapture())
+
+        push_sdl_mouse_motion_event(outside_source_x, outside_source_y, outside_source_x - start_x, 0)
+        pump_event_loop(3)
+        self.assertTrue(g.getGui().hasDragSession())
+        self.assertTrue(g.getGui().hasPointerCapture())
+
+        push_sdl_mouse_button_event(target_x, target_y, SDL_BUTTON_LEFT, SDL_MOUSEBUTTONUP)
+        pump_event_loop(5)
+
+        self.assertFalse(g.getGui().hasDragSession())
+        self.assertFalse(g.getGui().hasPointerCapture())
+        self.assertEqual(inventory_before - 1, player.countItems("ChaosSword"))
+        self.assertEqual("ChaosSword", player.getWeapon().getTypeId())
 
     def test_inventory_quest_item_selection_is_ignored(self):
         game, g, _, player = create_xvfb_gameplay_session(self, map_name="nouraajd")
