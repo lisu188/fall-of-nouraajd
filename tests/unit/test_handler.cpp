@@ -27,7 +27,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CMap.h"
 #include "core/CPlaytestTrace.h"
 #include "gui/CGui.h"
-#include "gui/panel/CGamePanel.h"
+#include "gui/panel/CGameFightPanel.h"
 #include "object/CCreature.h"
 #include "object/CInteraction.h"
 #include "object/CEffect.h"
@@ -35,7 +35,6 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "object/CPlayer.h"
 #include "object/CQuest.h"
 #include "test_harness.h"
-#include "veventloop.h"
 
 #include <SDL.h>
 #include <pybind11/embed.h>
@@ -65,6 +64,13 @@ class KillingFightController : public NoProgressFightController {
         }
         return true;
     }
+};
+
+class CancellingFightController : public NoProgressFightController {
+  public:
+    bool control(std::shared_ptr<CCreature>, std::shared_ptr<CCreature>) override { return false; }
+
+    bool isCancelled(std::shared_ptr<CCreature>, std::shared_ptr<CCreature>) override { return true; }
 };
 
 class LethalEffect : public CEffect {
@@ -460,23 +466,29 @@ void test_fight_handler_reports_cancelled_closed_fight_panel() {
 
     auto defender = add_test_creature(game, "unitPanelCancelledDefender", 1, 0);
     auto gui = game->getGui();
-    bool closed_panel = false;
-    vstd::event_loop<>::instance()->invoke([gui, &closed_panel]() {
-        auto panel = vstd::cast<CGamePanel>(gui->findChild("CGameFightPanel"));
-        expect_true(panel != nullptr, "fight panel should exist while player action selection is waiting");
-        if (panel) {
-            panel->close();
-            closed_panel = true;
-        }
-    });
+    auto controller = std::dynamic_pointer_cast<CPlayerFightController>(player->getFightController());
+    expect_true(controller != nullptr, "player should use a player fight controller");
+    controller->start(player, defender);
 
+    auto panel = vstd::cast<CGameFightPanel>(gui->findChild("CGameFightPanel"));
+    expect_true(panel != nullptr, "fight panel should exist after player fight controller starts");
+    if (panel) {
+        panel->close();
+        expect_true(panel->isCancelled(), "closing a fight panel should mark pending action selection cancelled");
+    }
+    expect_true(!controller->control(player, defender), "closed fight panel should not select an action");
+    expect_true(controller->isCancelled(player, defender), "closed fight panel should cancel player control");
+    controller->end(player, defender);
+
+    player->setFightController(std::make_shared<CancellingFightController>());
+    const auto handler_controller = std::dynamic_pointer_cast<CancellingFightController>(player->getFightController());
     const auto result = CFightHandler::fightManyResult(player, {defender});
-
-    expect_true(closed_panel, "test callback should close the fight panel during action selection");
     expect_true(result.outcome == CFightOutcome::Cancelled, "closed fight panel should cancel combat immediately");
     expect_true(result.rounds == 1, "panel cancellation during the first action should report the active round");
     expect_true(result.survivor == player && result.opponent == defender,
                 "panel cancellation should keep participant metadata");
+    expect_true(handler_controller->start_count == 1 && handler_controller->end_count == 1,
+                "controller cleanup should run when combat is cancelled");
     expect_true(game->getMap()->getStringProperty("combatStatus").find("interrupted") != std::string::npos,
                 "panel cancellation should publish the interrupted status text");
 }

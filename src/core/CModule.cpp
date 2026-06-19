@@ -993,6 +993,9 @@ void init_game_module(py::module_ &m) {
         .def("getEnemy", &CGameFightPanel::getEnemy, "Return current enemy creature.")
         .def("setEnemy", &CGameFightPanel::setEnemy, "Set current enemy creature.")
         .def("getCombatStatus", &CGameFightPanel::getCombatStatus, "Return current combat status text.")
+        .def("isCancelled", &CGameFightPanel::isCancelled, "Return whether action selection was cancelled.")
+        .def("cancel", &CGameFightPanel::cancel, "Cancel pending action selection.")
+        .def("close", &CGameFightPanel::close, "Cancel action selection and close this fight panel.")
         .def(
             "setEnemies",
             [](CGameFightPanel &self, const py::iterable &creatures) {

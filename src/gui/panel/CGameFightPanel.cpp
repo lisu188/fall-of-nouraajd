@@ -158,6 +158,11 @@ void CGameFightPanel::cancel() {
 
 void CGameFightPanel::resetCancellation() { cancelled = false; }
 
+void CGameFightPanel::close() {
+    cancel();
+    CGamePanel::close();
+}
+
 std::shared_ptr<CCreature> CGameFightPanel::getEnemy() { return enemy.lock(); }
 
 void CGameFightPanel::setEnemy(std::shared_ptr<CCreature> en) {
