@@ -6,7 +6,7 @@ These instructions apply to the entire repository unless a more specific `AGENTS
 
 The default branch is `main`.
 
-Keep changes narrow. Do not modify unrelated files, generated build output, packaged artifacts, dependency lock state, or submodule SHAs unless the task explicitly requires it. Do not rebase or update from `main` unless asked. Pull request squash auto-merge is the default; after opening a pull request, run `gh pr merge <PR_NUMBER> --auto --squash` unless the user explicitly asks not to or GitHub reports that the merge command is unavailable. If a task requires touching `random-dungeon-generator` or `vstd`, state that clearly and rerun the full validation workflow.
+Keep changes narrow. Do not modify unrelated files, generated build output, packaged artifacts, dependency lock state, or submodule SHAs unless the task explicitly requires it. Do not rebase or update from `main` unless asked. Pull request squash auto-merge is the default; after opening a pull request, run `gh pr merge <PR_NUMBER> --auto --squash` unless the user explicitly asks not to, GitHub reports that the merge command is unavailable, or the pull request is intentionally using CI-polled validation as the full validation evidence. When CI-polled validation replaces local heavy validation, poll the required GitHub Actions check(s) to success before enabling auto-merge. If a task requires touching `random-dungeon-generator` or `vstd`, state that clearly and rerun the full validation workflow.
 
 When this file conflicts with the current code, tests, or build scripts, trust the code and update this file as part of the fix.
 
@@ -53,8 +53,8 @@ actually merges, create a fresh implementation worktree from updated `origin/mai
 and pass it the generated issue prompt plus any controller overrides. Workers must inspect source, verify root cause,
 make the smallest backward-compatible change, add regression coverage, run focused and required validation where
 feasible, and report exact commands and outcomes. The controller reviews the diff, commits, pushes, opens the
-implementation PR, and enables squash auto-merge; do not mark the issue `DONE` until that implementation PR actually
-merges.
+implementation PR, polls required CI first when CI supplies full validation evidence, and enables squash auto-merge; do
+not mark the issue `DONE` until that implementation PR actually merges.
 
 After every controller loop iteration, claim/PR status check, cleanup audit, and before dispatching new work, print a
 concise live status table. Include worker owner, issue key, phase, progress estimate, last action, changed files,
@@ -161,7 +161,8 @@ quick protocol checks.
 
 ## Required validation
 
-For every code change, run this full workflow from the repository root unless the environment makes it impossible:
+For every code change, satisfy this full workflow unless the environment makes it impossible. Run the commands locally
+when practical:
 
 ```sh
 cmake --build cmake-build-release --target _game for_unit_tests performance_guard_tests -j$(nproc)
@@ -180,6 +181,30 @@ GAME_XVFB_JOBS=4 python3 test.py --suite ui
 
 `python3 test.py` and `python3 test.py --suite full` both run the full Python suite. `./scripts/run_coverage.sh` uses
 `python3 test.py --suite coverage-safe` for the coverage Python phase.
+
+When local full validation is impractical, resource-expensive, or would duplicate the pull request workflow, run focused
+local checks that exercise the changed behavior, open the pull request, and poll the GitHub Actions `linux` check in the
+`build` workflow to a final successful conclusion instead of running local compilation, native tests, the full Python
+suite, and required coverage locally:
+
+```sh
+python3 scripts/poll_pr_checks.py <PR_NUMBER> --check linux
+```
+
+For coverage-relevant changes, require the CI `coverage` step explicitly:
+
+```sh
+python3 scripts/poll_pr_checks.py <PR_NUMBER> --check linux --require-step coverage
+```
+
+CI-polled validation is acceptable only for commands that the `linux` job actually ran for that pull request head.
+Coverage is satisfied by CI only when the workflow's path rule runs the `coverage` step inside `linux`. Linux polling
+does not replace required Windows checks, release packaging, MCP gameplay validation, manual review, or the requirement
+to add regression coverage for bug fixes. Report local commands, skipped or blocked local commands, and CI job
+names/conclusions separately; never imply a skipped local command passed. When CI polling supplies the full validation
+evidence, wait for the selected check(s) to pass before enabling auto-merge. If GitHub merges before polling finishes,
+continue polling the exact PR head or resulting `main` workflow and report any failure as a regression requiring
+immediate follow-up.
 
 Windows Release equivalent:
 
@@ -215,8 +240,8 @@ Every bug fix must include at least one corresponding automated test (unit, inte
 Treat build, test, and coverage runtime as a first-class maintenance concern. Optimize aggressively for fast
 feedback while preserving the required validation guarantees.
 
-- During iteration, prefer the narrowest reliable build or test command that exercises the changed behavior, then run the
-  required full validation workflow before finishing.
+- During iteration, prefer the narrowest reliable build or test command that exercises the changed behavior, then satisfy
+  the required full validation workflow locally or by completed GitHub Actions polling before finishing.
 - Use available parallelism for local builds and automation, such as `-j$(nproc)` for CMake builds on Linux, without
   hiding failures or racing shared test state.
 - Avoid unnecessary clean builds, dependency reinstalls, broad resource recopies, full-suite reruns, or repo-wide
@@ -295,7 +320,8 @@ run. If an MCP game-session check cannot be run, report the exact command or ste
 
 ## Coverage
 
-Run coverage when a change touches:
+Run coverage locally, or use the PR `linux` GitHub Actions job when its `coverage` step runs and passes, when a change
+touches:
 
 - `test.py`
 - `tests/unit/**`
@@ -514,12 +540,13 @@ Before proposing a change, reproduce the relevant local parts of CI as closely a
 After finishing a change, always complete the repository delivery workflow:
 
 1. Review the final diff and ensure it contains only intended files.
-2. Run the required validation workflow, plus coverage or MCP validation when required by this file.
+2. Run the required validation workflow locally or through CI polling, plus coverage or MCP validation when required by
+   this file.
 3. Commit the change with a clear, specific commit message.
 4. Push the branch to the remote.
 5. Open a pull request targeting `main`.
-6. Run `gh pr merge <PR_NUMBER> --auto --squash` for the pull request by default, unless the user explicitly asks not to or GitHub reports that the merge command is unavailable. Replace `<PR_NUMBER>` with the pull request just opened.
-7. If GitHub queues auto-merge, do not wait for checks to finish. If GitHub merges immediately, report that outcome plainly.
+6. Run `gh pr merge <PR_NUMBER> --auto --squash` for the pull request by default, unless the user explicitly asks not to, GitHub reports that the merge command is unavailable, or CI polling is supplying the full validation evidence and has not passed yet. Replace `<PR_NUMBER>` with the pull request just opened.
+7. If GitHub queues auto-merge, do not wait for checks to finish unless those checks are the selected CI-polled validation evidence. If GitHub merges immediately, report that outcome plainly.
 
 Keep one logical change per commit where practical. Do not bundle unrelated cleanup with feature or bug-fix work. Do not bypass failing required checks or unresolved merge conflicts unless the user explicitly instructs that specific bypass. If pushing, opening, merging, or enabling auto-merge is blocked by missing remotes, authentication, permissions, unavailable checks, merge conflicts, or platform failures, report the exact blocker and leave the branch and pull request intact.
 

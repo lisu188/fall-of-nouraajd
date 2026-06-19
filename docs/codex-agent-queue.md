@@ -217,6 +217,25 @@ python3 scripts/issue_queue.py complete \
   --validation-file /tmp/task-validation.txt
 ```
 
+For local agents, full Linux compilation, native tests, performance guards, the full Python suite, and coverage may also
+be satisfied by opening the pull request and polling GitHub Actions when local heavy validation is impractical or would
+duplicate CI:
+
+```bash
+python3 scripts/poll_pr_checks.py <PR_NUMBER> --check linux
+```
+
+For coverage-relevant changes, require the conditional coverage step explicitly:
+
+```bash
+python3 scripts/poll_pr_checks.py <PR_NUMBER> --check linux --require-step coverage
+```
+
+Report focused local checks separately from CI-polled validation. The `linux` check proves coverage only when the
+workflow's changed-path rule runs its `coverage` step. Linux polling does not replace required Windows checks, release
+packaging, MCP gameplay validation, manual review, or issue-specific regression coverage. Do not enable auto-merge until
+CI-polled validation passes when it is the only full-validation evidence.
+
 `DONE` requires a result summary, validation results, `Progress %=100`, and a completion timestamp. Do not mark `DONE`
 while implementation auto-merge is merely queued.
 
@@ -291,9 +310,10 @@ python3 scripts/issue_queue.py show --issue "$ISSUE_NAME"
 - Worker implementation branches must not modify `planning/fall_of_nouraajd_issue_proposals.xlsx`.
 - Serialize workbook claim, heartbeat, and terminal-status pull requests; do not keep multiple binary workbook PRs open for merge.
 - To spare RAM, queue-controller workers must use serial local builds such as `-j1` unless the user explicitly allows more parallelism.
-- Multiple heavy build, test, coverage, Xvfb, or MCP validation jobs may run concurrently only inside the current
-  RAM-safe heavy-job budget. If all heavy jobs are explicitly serial, such as `-j1` or equivalent, and RAM has headroom
-  with no swap pressure, that budget can be at least four concurrent heavy jobs.
+- Multiple local heavy build, test, coverage, Xvfb, or MCP validation jobs may run concurrently only inside the current
+  RAM-safe heavy-job budget. If all local heavy jobs are explicitly serial, such as `-j1` or equivalent, and RAM has
+  headroom with no swap pressure, that budget can be at least four concurrent heavy jobs. Prefer CI polling for Linux
+  full validation when local heavy validation would consume avoidable RAM, disk, or time.
 - Keep at least four live subagents and four active implementation issues whenever four issues are safe and eligible,
   using standby roles only when fewer than four implementation workers are safe.
 - Recalculate the RAM-safe implementation worker and heavy-job budgets before each dispatch/refill and before starting

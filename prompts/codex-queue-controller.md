@@ -420,12 +420,32 @@ worker status.
 
 This budget applies to:
 
-- CMake builds;
-- `ctest` suites;
-- `python3 test.py` full or GUI suites;
-- `./scripts/run_coverage.sh`;
-- Xvfb tests;
-- MCP gameplay sessions.
+- local CMake builds;
+- local `ctest` suites;
+- local `python3 test.py` full or GUI suites;
+- local `./scripts/run_coverage.sh`;
+- local Xvfb tests;
+- local MCP gameplay sessions.
+
+When local heavy validation would waste RAM, disk, or time, the controller may satisfy Linux compilation, native tests,
+performance guards, full Python suites, and required coverage by opening the implementation PR and polling GitHub
+Actions instead:
+
+```bash
+python3 scripts/poll_pr_checks.py "$PR_NUMBER" --check linux
+```
+
+For coverage-relevant changes, require the conditional coverage step explicitly:
+
+```bash
+python3 scripts/poll_pr_checks.py "$PR_NUMBER" --check linux --require-step coverage
+```
+
+CI-polled validation is valid only for steps the `linux` job actually ran for that PR head. Linux polling does not
+replace required Windows checks, release packaging, MCP gameplay validation, manual review, or issue-specific regression
+coverage. Record focused local checks, skipped local heavy commands, CI job names, conclusions, URLs, and the exact PR
+head separately. If CI polling supplies the full validation evidence, do not enable auto-merge until the selected
+check(s) have passed.
 
 Workers and standby subagents may perform lightweight source inspection and prepare summaries while waiting for the RAM
 gate. Do not dispatch additional implementation work when doing so would leave active workers unpollable or exceed the
@@ -446,8 +466,9 @@ Before committing:
    ```
 
 4. Confirm no unrelated files, broad formatting, casual renames, or speculative redesigns were introduced.
-5. Confirm required tests and validation ran, or exact blockers are recorded.
-6. For gameplay changes, confirm required MCP validation; for GUI changes, confirm required Xvfb validation; for performance-sensitive changes, confirm deterministic performance guards and evidence; for coverage-relevant changes, run the required coverage workflow.
+5. Confirm required tests and validation ran locally, were satisfied by successful CI polling, or exact blockers are
+   recorded.
+6. For gameplay changes, confirm required MCP validation; for GUI changes, confirm required Xvfb validation; for performance-sensitive changes, confirm deterministic performance guards and evidence; for coverage-relevant changes, run the required coverage workflow locally or verify that the CI-polled `linux` job ran coverage successfully.
 
 Then commit and push only intended implementation files:
 
@@ -478,8 +499,13 @@ IMPL_PR_URL=$(gh pr create \
   --title "$PR_TITLE" \
   --body-file "$IMPL_PR_BODY")
 IMPL_PR_NUMBER=$(gh pr view "$IMPL_PR_URL" --json number --jq .number)
+python3 scripts/poll_pr_checks.py "$IMPL_PR_NUMBER" --check linux
 gh pr merge "$IMPL_PR_NUMBER" --auto --squash
 ```
+
+Run the polling command before enabling auto-merge when CI supplies the full validation evidence. If full validation was
+already completed locally, polling is still useful evidence but is not required before enabling auto-merge. For
+coverage-relevant changes, add `--require-step coverage`.
 
 Do not mark the task `DONE` when auto-merge is merely queued. Record the issue as awaiting implementation merge, continue other safe controller work, and re-check later. Proceed to terminal queue publication only after the PR state is actually `MERGED`. Do not bypass failing checks or unresolved conflicts.
 
