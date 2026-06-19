@@ -80,6 +80,12 @@ class IssueQueueTest(unittest.TestCase):
         }
         return [base[header] for header in issue_queue.ALL_HEADERS]
 
+    def with_values(self, row: list[object], updates: dict[str, object]) -> list[object]:
+        indexes = {header: index for index, header in enumerate(issue_queue.ALL_HEADERS)}
+        for header, value in updates.items():
+            row[indexes[header]] = value
+        return row
+
     def create_workbook(self, rows: list[list[object]]) -> None:
         main_ns = issue_queue.MAIN_NS
         ET.register_namespace("x", main_ns)
@@ -227,6 +233,87 @@ class IssueQueueTest(unittest.TestCase):
         self.assertEqual([], eligible)
         self.assertIn("dependencies-not-done", rejected[self.issue_c][0])
         self.assertTrue(any(reason.startswith("active-file-overlap") for reason in rejected[self.issue_d]))
+
+    def test_shortlist_groups_highest_priority_and_selects_seeded_issue(self) -> None:
+        first_story = "[EPIC_01][STORY_01][SUBSTORY_01]First high priority story"
+        second_story = "[EPIC_01][STORY_02][SUBSTORY_01]Second high priority story"
+        low_priority = "[EPIC_01][STORY_03][SUBSTORY_01]Lower priority story"
+        blocked = "[EPIC_01][STORY_04][SUBSTORY_01]Blocked high priority story"
+        self.create_workbook(
+            [
+                self.task_row(first_story, "P0", None, "src/first.cpp"),
+                self.with_values(
+                    self.task_row(second_story, "P0", None, "src/second.cpp"),
+                    {"Story #": "STORY_02", "Story Title": "Second Story"},
+                ),
+                self.with_values(
+                    self.task_row(low_priority, "P1", None, "src/low.cpp"),
+                    {"Story #": "STORY_03", "Story Title": "Low Story"},
+                ),
+                self.with_values(
+                    self.task_row(blocked, "P0", first_story, "src/blocked.cpp"),
+                    {"Story #": "STORY_04", "Story Title": "Blocked Story"},
+                ),
+            ]
+        )
+        state = issue_queue.loadQueue(self.workbook_path)
+
+        payload = issue_queue.shortlistTasks(state, seed="demo-seed", includeRejected=True)
+        repeated = issue_queue.shortlistTasks(state, seed="demo-seed", includeRejected=True)
+
+        self.assertTrue(payload["eligible"])
+        self.assertEqual("P0", payload["highestPriority"])
+        self.assertEqual(3, payload["eligibleCount"])
+        self.assertEqual(2, payload["highestPriorityEligibleCount"])
+        self.assertEqual(["STORY_01", "STORY_02"], [group["story"] for group in payload["storyGroups"]])
+        self.assertEqual("EPIC_01/STORY_01", payload["selected"]["storyKey"])
+        self.assertEqual(payload["selected"], repeated["selected"])
+        self.assertIn(payload["selected"]["issue"]["issueName"], {first_story, second_story})
+        story_two_payload = issue_queue.shortlistTasks(state, seed="story-two")
+        self.assertEqual("EPIC_01/STORY_02", story_two_payload["selected"]["storyKey"])
+        self.assertEqual(second_story, story_two_payload["selected"]["issue"]["issueName"])
+        allow_overlap_payload = issue_queue.shortlistTasks(state, seed="demo-seed", allowFileOverlap=True)
+        self.assertTrue(allow_overlap_payload["allowFileOverlap"])
+        self.assertIn(
+            "direct target-file overlap allowed by --allow-file-overlap",
+            allow_overlap_payload["mechanicalFilters"],
+        )
+        self.assertNotIn(
+            "direct target-file overlap excluded unless --allow-file-overlap is used",
+            allow_overlap_payload["mechanicalFilters"],
+        )
+        self.assertIn(blocked, payload["rejected"])
+        self.assertEqual(1, payload["rejectionSummary"]["dependencies-not-done"])
+
+    def test_shortlist_cli_reports_without_mutating_workbook(self) -> None:
+        before = self.workbook_path.read_bytes()
+        stdout = io.StringIO()
+        with contextlib.redirect_stdout(stdout):
+            exit_code = issue_queue.main(
+                [
+                    "shortlist",
+                    "--workbook",
+                    str(self.workbook_path),
+                    "--seed",
+                    "demo-seed",
+                    "--include-rejected",
+                    "--json",
+                ]
+            )
+        payload = json.loads(stdout.getvalue())
+
+        self.assertEqual(0, exit_code)
+        self.assertEqual(before, self.workbook_path.read_bytes())
+        self.assertEqual("demo-seed", payload["selectionSeed"])
+        self.assertTrue(payload["eligible"])
+        self.assertEqual("P0", payload["highestPriority"])
+        self.assertFalse(payload["allowFileOverlap"])
+        self.assertIn(
+            "direct target-file overlap excluded unless --allow-file-overlap is used",
+            payload["mechanicalFilters"],
+        )
+        self.assertIn("storyGroups", payload)
+        self.assertIn("rejected", payload)
 
     def test_controller_id_generates_unique_owner_prefix(self) -> None:
         first = issue_queue.generateControllerId(hostname="Build Host.local", pid=1234, unique="ABCDEF12")

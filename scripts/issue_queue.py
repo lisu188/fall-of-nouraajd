@@ -14,6 +14,7 @@ prefix for its workers.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import io
 import posixpath
 import contextlib
@@ -758,6 +759,166 @@ def eligibleTasks(
     return eligible, rejected
 
 
+def rejectionReasonKey(reason: str) -> str:
+    return reason.split(":", 1)[0].split("=", 1)[0]
+
+
+def rejectionSummary(rejected: dict[str, list[str]]) -> dict[str, int]:
+    summary: dict[str, int] = {}
+    for reasons in rejected.values():
+        for reason in reasons:
+            key = rejectionReasonKey(reason)
+            summary[key] = summary.get(key, 0) + 1
+    return dict(sorted(summary.items()))
+
+
+def statusCounts(state: QueueState) -> dict[str, int]:
+    counts: dict[str, int] = {}
+    for task in state.tasks:
+        counts[task.status] = counts.get(task.status, 0) + 1
+    return dict(sorted(counts.items()))
+
+
+def storyKey(task: TaskRecord) -> tuple[str, str]:
+    return (
+        str(task.values.get("Epic #") or "").strip(),
+        str(task.values.get("Story #") or "").strip(),
+    )
+
+
+def storyKeyText(key: tuple[str, str]) -> str:
+    return "/".join(key)
+
+
+def stableChoice(items: Sequence[Any], seed: str, namespace: str, key: Any) -> Any:
+    if not items:
+        raise QueueError("Cannot select from an empty candidate list")
+    return min(
+        items,
+        key=lambda item: (
+            hashlib.sha256(f"{seed}|{namespace}|{key(item)}".encode("utf-8")).hexdigest(),
+            key(item),
+        ),
+    )
+
+
+def shortTaskPayload(task: TaskRecord) -> dict[str, Any]:
+    return {
+        "issueName": task.issueName,
+        "row": task.row,
+        "priority": task.priority,
+        "epic": str(task.values.get("Epic #") or "").strip(),
+        "epicTitle": str(task.values.get("Epic Title") or "").strip(),
+        "story": str(task.values.get("Story #") or "").strip(),
+        "storyTitle": str(task.values.get("Story Title") or "").strip(),
+        "substory": str(task.values.get("Substory #") or "").strip(),
+        "substoryTitle": str(task.values.get("Substory Title") or "").strip(),
+        "component": str(task.values.get("Component") or "").strip(),
+        "targetFiles": sorted(task.targetFiles),
+        "dependencies": task.dependencies,
+        "validation": str(task.values.get("Validation / Tests") or "").strip(),
+    }
+
+
+def shortlistTasks(
+    state: QueueState,
+    priorities: set[str] | None = None,
+    epic: str | None = None,
+    component: str | None = None,
+    allowFileOverlap: bool = False,
+    seed: str | None = None,
+    includeRejected: bool = False,
+) -> dict[str, Any]:
+    eligible, rejected = eligibleTasks(
+        state,
+        priorities=priorities,
+        epic=epic,
+        component=component,
+        allowFileOverlap=allowFileOverlap,
+    )
+    counts = statusCounts(state)
+    selectionSeed = seed or uuid.uuid4().hex
+    fileOverlapFilter = (
+        "direct target-file overlap allowed by --allow-file-overlap"
+        if allowFileOverlap
+        else "direct target-file overlap excluded unless --allow-file-overlap is used"
+    )
+    payload: dict[str, Any] = {
+        "eligible": bool(eligible),
+        "selectionSeed": selectionSeed,
+        "allowFileOverlap": allowFileOverlap,
+        "eligibleCount": len(eligible),
+        "highestPriority": None,
+        "highestPriorityEligibleCount": 0,
+        "storyGroups": [],
+        "selected": None,
+        "statusCounts": counts,
+        "activeCount": counts.get(STATUS_IN_PROGRESS, 0),
+        "staleClaims": staleClaims(state),
+        "rejectedCount": len(rejected),
+        "rejectionSummary": rejectionSummary(rejected),
+        "mechanicalFilters": [
+            "status=NOT_STARTED",
+            "dependencies=DONE",
+            fileOverlapFilter,
+        ],
+    }
+    if includeRejected:
+        payload["rejected"] = rejected
+    if not eligible:
+        payload["reason"] = "No eligible task"
+        return payload
+
+    highestPriority = eligible[0].priority
+    highestCandidates = [task for task in eligible if task.priority == highestPriority]
+    grouped: dict[tuple[str, str], list[TaskRecord]] = {}
+    for task in highestCandidates:
+        grouped.setdefault(storyKey(task), []).append(task)
+
+    selectedStoryKey = stableChoice(
+        sorted(grouped),
+        selectionSeed,
+        "story",
+        storyKeyText,
+    )
+    selectedTask = stableChoice(
+        sorted(grouped[selectedStoryKey], key=taskSortKey),
+        selectionSeed,
+        "substory",
+        lambda task: task.issueName,
+    )
+    storyGroups = []
+    for key in sorted(grouped):
+        tasks = sorted(grouped[key], key=taskSortKey)
+        first = tasks[0]
+        storyGroups.append(
+            {
+                "storyKey": storyKeyText(key),
+                "epic": key[0],
+                "epicTitle": str(first.values.get("Epic Title") or "").strip(),
+                "story": key[1],
+                "storyTitle": str(first.values.get("Story Title") or "").strip(),
+                "priority": highestPriority,
+                "eligibleCount": len(tasks),
+                "selected": key == selectedStoryKey,
+                "issues": [shortTaskPayload(task) for task in tasks],
+            }
+        )
+
+    payload.update(
+        {
+            "highestPriority": highestPriority,
+            "highestPriorityEligibleCount": len(highestCandidates),
+            "storyGroups": storyGroups,
+            "selected": {
+                "storyKey": storyKeyText(selectedStoryKey),
+                "issue": shortTaskPayload(selectedTask),
+            },
+        }
+    )
+    return payload
+
+
 def validateQueueState(state: QueueState) -> tuple[list[str], list[str]]:
     errors: list[str] = []
     warnings: list[str] = []
@@ -1348,6 +1509,19 @@ def buildParser() -> argparse.ArgumentParser:
     nextParser.add_argument("--component")
     nextParser.add_argument("--allow-file-overlap", action="store_true")
 
+    shortlistParser = subparsers.add_parser(
+        "shortlist",
+        help="Show read-only eligible story groups and a seeded recommendation",
+    )
+    addCommonArguments(shortlistParser)
+    shortlistParser.add_argument("--priority", action="append", default=[])
+    shortlistParser.add_argument("--epic")
+    shortlistParser.add_argument("--component")
+    shortlistParser.add_argument("--allow-file-overlap", action="store_true")
+    shortlistParser.add_argument("--seed", help="Stable seed for reproducible story and substory selection")
+    shortlistParser.add_argument("--include-rejected", action="store_true", help="Include per-issue rejection reasons")
+    shortlistParser.add_argument("--json", action="store_true", help="Output JSON (default)")
+
     claimParser = subparsers.add_parser("claim", help="Atomically claim an eligible task")
     addCommonArguments(claimParser)
     claimParser.add_argument("--owner", required=True)
@@ -1448,7 +1622,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             printJson({"workbook": str(workbookPath), "errors": errors, "warnings": warnings})
             return 1 if errors else 0
 
-        if args.command in {"list", "show", "next", "prompt"}:
+        if args.command in {"list", "show", "next", "shortlist", "prompt"}:
             state = loadQueue(workbookPath, writable=False)
             try:
                 if args.command == "list":
@@ -1475,6 +1649,20 @@ def main(argv: Sequence[str] | None = None) -> int:
                         printJson({"eligible": False, "reason": "No eligible task", "rejected": rejected})
                         return 3
                     printJson({"eligible": True, "task": taskPayload(eligible[0])})
+                    return 0
+                if args.command == "shortlist":
+                    priorities = {item.upper() for item in args.priority} or None
+                    printJson(
+                        shortlistTasks(
+                            state,
+                            priorities=priorities,
+                            epic=args.epic,
+                            component=args.component,
+                            allowFileOverlap=args.allow_file_overlap,
+                            seed=args.seed,
+                            includeRejected=args.include_rejected,
+                        )
+                    )
                     return 0
                 task = requireClaim(state, args.issue, args.claim_id, args.owner)
                 print(renderWorkerPrompt(task))
