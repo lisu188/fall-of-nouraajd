@@ -25,9 +25,12 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CGame.h"
 #include "core/CLoader.h"
 #include "core/CMap.h"
+#include "core/CPlaytestTrace.h"
 #include "object/CCreature.h"
 #include "object/CEffect.h"
 #include "object/CItem.h"
+#include "object/CPlayer.h"
+#include "object/CQuest.h"
 #include "test_harness.h"
 
 #include <SDL.h>
@@ -74,6 +77,15 @@ class CountingEffect : public CEffect {
     int ticks = 0;
 
     void onEffect() override { ticks++; }
+};
+
+class CompletedQuest : public CQuest {
+  public:
+    int complete_count = 0;
+
+    bool isCompleted() override { return true; }
+
+    void onComplete() override { complete_count++; }
 };
 
 std::shared_ptr<CGame> load_empty_game() {
@@ -418,6 +430,60 @@ void test_fight_handler_counts_effect_duration_as_progress() {
                 "timed-effect stale handling should not remove living participants");
 }
 
+void test_playtest_trace_records_native_limits_and_quest_completion() {
+    CPlaytestTrace::configure(true, "", 2);
+    CPlaytestTrace::recordJson("native_empty_fields", "");
+    CPlaytestTrace::recordJson("native_array_fields", "[1]");
+    CPlaytestTrace::record("native_over_limit");
+    CPlaytestTrace::record("native_after_truncation");
+
+    const auto limited_records = CPlaytestTrace::records();
+    bool saw_truncation = false;
+    for (const auto &line : limited_records) {
+        const auto record = json::parse(line);
+        saw_truncation = saw_truncation || record.value("event", std::string()) == "trace_truncated";
+    }
+    expect_true(limited_records.size() == 3 && saw_truncation,
+                "playtest trace should append one truncation record after the configured limit");
+
+    const auto drained = CPlaytestTrace::drain();
+    expect_true(drained.size() == limited_records.size() && CPlaytestTrace::records().empty(),
+                "drain should return and clear buffered trace records");
+
+    CPlaytestTrace::configure(true, "", 100);
+    expect_true(CPlaytestTrace::objectRef(nullptr).is_null(), "null object refs should serialize as JSON null");
+    expect_true(CPlaytestTrace::objectRefs({}).empty(), "empty object ref collections should serialize as arrays");
+    expect_true(CPlaytestTrace::itemRefs({}).empty(), "empty item ref collections should serialize as arrays");
+
+    json mapless_fields = {{"coords", CPlaytestTrace::coords(Coords(1, 2, 3))}};
+    CPlaytestTrace::addMapContext(mapless_fields, nullptr);
+    expect_true(!mapless_fields.contains("map"), "map context should not be added for null maps");
+
+    auto game = CGameLoader::loadGame();
+    CGameLoader::startGameWithPlayer(game, "empty", "Warrior");
+    auto player = game->getMap()->getPlayer();
+    auto quest = std::make_shared<CompletedQuest>();
+    quest->setName("unitCompletedQuest");
+    quest->setTypeId("unitCompletedQuest");
+    player->setQuests({quest});
+
+    player->checkQuests();
+
+    expect_true(quest->complete_count == 1, "completed quest callbacks should run exactly once");
+    expect_true(player->getQuests().empty(), "completed quests should leave the active quest set");
+    expect_true(player->getCompletedQuests().count(quest) == 1, "completed quests should move to the completed set");
+
+    bool saw_completion = false;
+    for (const auto &line : CPlaytestTrace::drain()) {
+        const auto record = json::parse(line);
+        saw_completion =
+            saw_completion || (record.value("event", std::string()) == "quest_completed" &&
+                               record.value("quest", std::string()) == "unitCompletedQuest" && record.contains("map"));
+    }
+    expect_true(saw_completion, "quest completion should be recorded with map context when tracing is enabled");
+    CPlaytestTrace::configure(false);
+}
+
 void test_player_respawn_normalizes_wrapped_entry_coords() {
     auto game = CGameLoader::loadGame();
     CGameLoader::startGameWithPlayer(game, "empty", "Warrior");
@@ -452,6 +518,7 @@ int main() {
     test_fight_handler_reports_explicit_outcomes_and_final_status();
     test_fight_handler_reports_cancelled_quit_event();
     test_fight_handler_counts_effect_duration_as_progress();
+    test_playtest_trace_records_native_limits_and_quest_completion();
     test_player_respawn_normalizes_wrapped_entry_coords();
 
     return finish_tests();

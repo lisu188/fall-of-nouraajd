@@ -16,6 +16,7 @@ def load(self, context):
     VICTOR_COURTYARD_SPAWNS = [(44, 100, 0), (46, 100, 0), (45, 99, 0), (45, 101, 0)]
     VICTOR_COURTYARD_LEADER_SPAWN = (45, 100, 0)
     VICTOR_COURTYARD_FALLBACK_RADIUS = 3
+    MAIN_QUEST_GOLD_REWARD = 200
 
     def _clear_victor_encounter(game_map):
         def should_remove(obj):
@@ -415,12 +416,16 @@ def load(self, context):
             return "Follow Sergeant Rolf's trail, recover his skull, then slay Gooby beneath Nouraajd."
 
         def getReward(self):
-            return "Unlocks the deeper Marumi Baso threat."
+            return "200 gold from relieved townsfolk."
 
         def getHint(self):
             return "Search the cave outside town for the first sign of Rolf."
 
         def onComplete(self):
+            game_map = self.getGame().getMap()
+            if not game_map.getBoolProperty("GOOBY_REWARD_CLAIMED"):
+                game_map.getPlayer().addGold(MAIN_QUEST_GOLD_REWARD)
+                game_map.setBoolProperty("GOOBY_REWARD_CLAIMED", True)
             self.getGame().getGuiHandler().showMessage("Gooby lies butchered, and weary townsfolk dare a ragged cheer.")
 
     @register(context)
@@ -511,7 +516,12 @@ def load(self, context):
             return "Find Victor's missing daughter."
 
         def getReward(self):
-            return "500 gold, healing, and Victor's remaining potions if you reach the courtyard in time."
+            if _quest_system_from(self).get_state("victor") == "bad_end":
+                return "No reward if Victor's daughter is taken."
+            return (
+                "500 gold, healing, and one-time access to buy Victor's remaining potions "
+                "if you reach the courtyard in time."
+            )
 
         def getHint(self):
             state = _quest_system_from(self).get_state("victor")
@@ -910,8 +920,12 @@ def load(self, context):
     class OctoBogzDialog(CDialog):
         def accept_quest(self):
             game_map = self.getGame().getMap()
-            _grant_quest(game_map.getPlayer(), "octoBogzQuest")
-            _quest_system_from(self).activate_octobogz_contract()
+            player = game_map.getPlayer()
+            quest_system = _quest_system_from(self)
+            _grant_quest(player, "octoBogzQuest")
+            quest_system.activate_octobogz_contract()
+            if quest_system.is_octobogz_contract_completed():
+                player.checkQuests()
 
     @trigger(context, "onEnter", "questGiver")
     class QuestGiverTrigger(CTrigger):
