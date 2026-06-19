@@ -363,7 +363,12 @@ python3 scripts/issue_queue.py heartbeat \
 
 Commit and merge that workbook-only change using the same status-PR process as claim publication.
 
-If a worker disappears, do not overwrite the active claim. Inspect its worktree and branch, wait for lease expiry, and use `reclaim-stale` only when the claim is genuinely stale and no recoverable work remains.
+If a worker disappears, do not overwrite the active claim. Inspect its worktree and branch, wait for lease expiry, and
+run `python3 scripts/issue_queue.py reclaim-stale --dry-run --older-than-minutes <minutes>` to list stale
+`IN_PROGRESS` claims without mutating the workbook. Use mutating `reclaim-stale` only when the claim is genuinely stale
+and no recoverable work remains. Treat `validate` warnings about expired `IN_PROGRESS` leases and derived
+`list --status IN_PROGRESS --json` lease-expiration fields as read-only recovery signals, not permission to reclaim
+without inspection.
 
 ## RAM-safe validation
 
@@ -494,6 +499,8 @@ Do not merge partial implementation code merely to publish a queue status. If co
 - Authentication or permission failure: stop Git publication and report the exact command and error.
 - Dirty user worktree: do not clean or reset it; operate only in new worktrees.
 - Stale worktree: inspect commits and uncommitted files before removal.
+- Stale `IN_PROGRESS` claim: run `reclaim-stale --dry-run`, inspect the worker branch/worktree/PR state, and only then
+  publish a workbook-only reclaim change when no recoverable work remains.
 - Queue workbook conflict: close or resolve the older queue PR first; never attempt a binary merge by combining workbook copies.
 
 Never convert `BLOCKED`, `FAILED`, or `CANCELLED` to `DONE` merely to unlock dependencies.
