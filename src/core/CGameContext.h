@@ -20,6 +20,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <memory>
 
 class CGame;
+class CGuiHandler;
 class CObjectHandler;
 class CRngHandler;
 class CScriptHandler;
@@ -30,12 +31,15 @@ class CGameContext {
 
     std::shared_ptr<CObjectHandler> getObjectHandler();
 
+    std::shared_ptr<CGuiHandler> getGuiHandler();
+
     std::shared_ptr<CScriptHandler> getScriptHandler();
 
     std::shared_ptr<CRngHandler> getRngHandler();
 
   private:
     std::weak_ptr<CGame> game;
+    std::shared_ptr<CGuiHandler> guiHandler;
     std::shared_ptr<CObjectHandler> objectHandler;
     std::shared_ptr<CScriptHandler> scriptHandler;
     std::shared_ptr<CRngHandler> rngHandler;

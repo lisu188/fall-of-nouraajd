@@ -407,6 +407,7 @@ void init_game_module(py::module_ &m) {
     py::class_<CGameContext, std::shared_ptr<CGameContext>>(m, "CGameContext",
                                                             "Runtime service context owned by a game instance.")
         .def("getObjectHandler", &CGameContext::getObjectHandler, "Return the object factory/registry handler.")
+        .def("getGuiHandler", &CGameContext::getGuiHandler, "Return the GUI handler service.")
         .def("getScriptHandler", &CGameContext::getScriptHandler, "Return the Python script execution service.")
         .def("getRngHandler", &CGameContext::getRngHandler, "Return the random encounter/loot handler.");
 

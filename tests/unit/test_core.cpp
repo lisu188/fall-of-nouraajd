@@ -18,6 +18,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "core/CJsonUtil.h"
 #include "core/CGame.h"
+#include "core/CGameContext.h"
 #include "core/CList.h"
 #include "core/CPathFinder.h"
 #include "core/CSaveFormat.h"
@@ -776,6 +777,20 @@ void test_object_clone_batches_property_notifications() {
     expect_true(probe->threat_changed_calls == 0, "clone batches should suppress dynamic field signals");
 }
 
+void test_game_context_owns_distinct_gui_handlers_per_game() {
+    auto first_game = std::make_shared<CGame>();
+    auto second_game = std::make_shared<CGame>();
+
+    auto first_context_handler = first_game->getContext()->getGuiHandler();
+    auto first_game_handler = first_game->getGuiHandler();
+    auto second_game_handler = second_game->getGuiHandler();
+
+    expect_true(first_context_handler == first_game_handler,
+                "CGame::getGuiHandler should return the handler owned by CGameContext");
+    expect_true(first_game_handler != second_game_handler,
+                "separate CGame instances should receive distinct GUI handlers");
+}
+
 void test_delayed_future_handlers_run_through_event_loop() {
     auto loop = vstd::event_loop<>::instance();
     const int previous_fps = loop->getFps();
@@ -1012,6 +1027,7 @@ int main() {
     test_nested_property_notification_batches_emit_one_deterministic_signal();
     test_object_deserialization_batches_property_notifications();
     test_object_clone_batches_property_notifications();
+    test_game_context_owns_distinct_gui_handlers_per_game();
     test_delayed_future_handlers_run_through_event_loop();
     test_script_rejects_executable_expressions();
     test_save_format_codec_validation();

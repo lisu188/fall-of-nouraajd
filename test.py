@@ -3456,18 +3456,22 @@ class GameTest(unittest.TestCase):
         self.assertIs(context, g.getContext())
 
         object_handler = context.getObjectHandler()
+        gui_handler = context.getGuiHandler()
         script_handler = context.getScriptHandler()
         rng_handler = context.getRngHandler()
 
         self.assertIs(object_handler, context.getObjectHandler())
+        self.assertIs(gui_handler, context.getGuiHandler())
         self.assertIs(script_handler, context.getScriptHandler())
         self.assertIs(rng_handler, context.getRngHandler())
         self.assertIs(object_handler, g.getObjectHandler())
+        self.assertIs(gui_handler, g.getGuiHandler())
         self.assertIs(rng_handler, g.getRngHandler())
 
         other_game = game.CGameLoader.loadGame()
         self.assertIsNot(context, other_game.getContext())
         self.assertIsNot(object_handler, other_game.getObjectHandler())
+        self.assertIsNot(gui_handler, other_game.getGuiHandler())
 
         object_handler.registerConfigJson(
             "contextOwnedProbe",
