@@ -243,18 +243,18 @@
       "path": "src/core/CSerialization.cpp",
       "reason": "Reviewed legacy uncovered branch baseline; unreviewed coverage changes remain visible in the 95% scoped line gate.",
       "ranges": [
-        "149",
-        "181-182",
-        "231",
-        "275",
-        "301",
-        "317",
-        "339",
-        "345",
-        "353",
-        "365",
+        "239",
+        "271-272",
+        "321",
         "371",
-        "388"
+        "398",
+        "414",
+        "435",
+        "442",
+        "450",
+        "461",
+        "468",
+        "485"
       ]
     },
     {
