@@ -172,7 +172,7 @@ void CListView::clampShift(const std::shared_ptr<CGui> &gui, int itemTypeCount) 
 
 CListView::collection_pointer CListView::invokeCollection(std::shared_ptr<CGui> gui) {
     auto parent = getParent();
-    if (!parent || collection.empty()) {
+    if (!canInvokeParentCallback(gui, parent) || collection.empty()) {
         return std::make_shared<CListView::collection_type>();
     }
     try {
@@ -187,7 +187,7 @@ CListView::collection_pointer CListView::invokeCollection(std::shared_ptr<CGui> 
 
 void CListView::invokeCallback(std::shared_ptr<CGui> gui, int i, std::shared_ptr<CGameObject> object) {
     auto parent = getParent();
-    if (!parent || callback.empty()) {
+    if (!canInvokeParentCallback(gui, parent) || callback.empty()) {
         return;
     }
     try {
@@ -201,7 +201,7 @@ void CListView::invokeCallback(std::shared_ptr<CGui> gui, int i, std::shared_ptr
 
 bool CListView::invokeRightClickCallback(std::shared_ptr<CGui> gui, int i, std::shared_ptr<CGameObject> object) {
     auto parent = getParent();
-    if (!parent || rightClickCallback.empty()) {
+    if (!canInvokeParentCallback(gui, parent) || rightClickCallback.empty()) {
         return false;
     }
     try {
@@ -225,7 +225,7 @@ auto CListView::getArrowCallback(bool left) {
 
 bool CListView::invokeSelect(std::shared_ptr<CGui> gui, int i, std::shared_ptr<CGameObject> object) {
     auto parent = getParent();
-    if (!parent || select.empty()) {
+    if (!canInvokeParentCallback(gui, parent) || select.empty()) {
         return false;
     }
     try {
@@ -236,6 +236,11 @@ bool CListView::invokeSelect(std::shared_ptr<CGui> gui, int i, std::shared_ptr<C
         vstd::logger::warning("Ignoring list select callback failure:", select, exception.what());
         return false;
     }
+}
+
+bool CListView::canInvokeParentCallback(const std::shared_ptr<CGui> &gui,
+                                        const std::shared_ptr<CGameGraphicsObject> &parent) {
+    return parent && isAttachedToGui(gui) && parent->isAttachedToGui(gui);
 }
 
 bool CListView::tryGetClickedObject(std::shared_ptr<CGui> gui, int x, int y, int &index,
@@ -259,6 +264,9 @@ bool CListView::tryGetClickedObject(std::shared_ptr<CGui> gui, int x, int y, int
 
 std::list<std::shared_ptr<CGameGraphicsObject>> CListView::getProxiedObjects(std::shared_ptr<CGui> gui, int x, int y) {
     std::list<std::shared_ptr<CGameGraphicsObject>> return_val;
+    if (!isAttachedToGui(gui) || !gui->getGame()) {
+        return return_val;
+    }
     const int itemTypeCount = getItemTypesCount(gui);
     clampShift(gui, itemTypeCount);
     int i = getSizeX(gui) * y + x;
@@ -326,6 +334,9 @@ void CListView::addItem(const std::shared_ptr<CGui> &gui, std::list<std::shared_
                 [self, itemIndex, object](std::shared_ptr<CGui> gui, SDL_EventType type, int button, int, int) {
                     if (type != SDL_MOUSEBUTTONDOWN) {
                         return false;
+                    }
+                    if (!self->isAttachedToGui(gui)) {
+                        return true;
                     }
                     if (button == SDL_BUTTON_LEFT) {
                         self->invokeCallback(gui, itemIndex, object);

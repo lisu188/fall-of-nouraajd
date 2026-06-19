@@ -1,6 +1,6 @@
 /*
 fall-of-nouraajd c++ dark fantasy game
-Copyright (C) 2025  Andrzej Lis
+Copyright (C) 2025-2026  Andrzej Lis
 
 This program is free software: you can redistribute it and/or modify
         it under the terms of the GNU General Public License as published by
@@ -25,26 +25,35 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 void CGameGraphicsObject::renderObject(std::shared_ptr<CGui> reneder, std::shared_ptr<SDL_Rect> rect, int frameTime) {}
 
-void CGameGraphicsObject::render(std::shared_ptr<CGui> reneder, int frameTime) {
-    if (isVisible()) {
-        renderBackground(reneder, getRect(), frameTime);
-        renderObject(reneder, getRect(), frameTime);
+void CGameGraphicsObject::render(std::shared_ptr<CGui> renderer, int frameTime) {
+    if (hasRenderableGui(renderer) && isVisible()) {
+        renderBackground(renderer, getRect(), frameTime);
+        renderObject(renderer, getRect(), frameTime);
+        if (!isAttachedToGui(renderer)) {
+            return;
+        }
         auto snapshot = children;
         for (const auto &child : snapshot) {
             if (child && children.contains(child)) {
-                child->render(reneder, frameTime);
+                child->render(renderer, frameTime);
+                if (!isAttachedToGui(renderer)) {
+                    return;
+                }
             }
         }
     }
 }
 
 bool CGameGraphicsObject::event(std::shared_ptr<CGui> gui, SDL_Event *event) {
-    if (isVisible()) {
+    if (isAttachedToGui(gui) && isVisible()) {
         auto snapshot = children;
         for (auto it = snapshot.rbegin(); it != snapshot.rend(); ++it) {
             const auto &child = *it;
             if (child && children.contains(child) && child->event(gui, event)) {
                 return true;
+            }
+            if (!isAttachedToGui(gui)) {
+                return false;
             }
         }
         auto callbacks = eventCallbackList;
@@ -52,6 +61,9 @@ bool CGameGraphicsObject::event(std::shared_ptr<CGui> gui, SDL_Event *event) {
             if (callback.first(gui, this->ptr<CGameGraphicsObject>(), event) &&
                 callback.second(gui, this->ptr<CGameGraphicsObject>(), event)) {
                 return true;
+            }
+            if (!isAttachedToGui(gui)) {
+                return false;
             }
         }
         if (event->type == SDL_KEYDOWN || event->type == SDL_KEYUP) {
@@ -167,6 +179,12 @@ void CGameGraphicsObject::pushChild(const std::shared_ptr<CGameGraphicsObject> &
 
 std::shared_ptr<CGui> CGameGraphicsObject::getGui() { return vstd::cast<CGui>(getTopParent()); }
 
+bool CGameGraphicsObject::isAttachedToGui(const std::shared_ptr<CGui> &gui) { return gui && getTopParent() == gui; }
+
+bool CGameGraphicsObject::hasRenderableGui(const std::shared_ptr<CGui> &gui) {
+    return isAttachedToGui(gui) && gui->getRenderer();
+}
+
 bool CGameGraphicsObject::getModal() { return modal; }
 
 void CGameGraphicsObject::setModal(bool _modal) { modal = _modal; }
@@ -211,7 +229,7 @@ bool CGameGraphicsObject::isVisible() {
 }
 
 void CGameGraphicsObject::renderBackground(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> rect, int time) {
-    if (!background.empty()) {
+    if (hasRenderableGui(gui) && !background.empty()) {
         auto texture = gui->getTextureCache()->getTexture(background);
         if (!texture) {
             vstd::logger::error("CGameGraphicsObject: missing background", background);

@@ -8282,6 +8282,27 @@ class GameTest(unittest.TestCase):
         queue_sdl_inputs(game, lambda: push_sdl_mouse_click(1060, 650))
         self.assertFalse(gui_handler.showQuestion("confirm no?"))
 
+        def close_question_panel():
+            panel = find_top_level_panel(g, "CGameQuestionPanel")
+            if panel:
+                panel.close()
+
+        game.event_loop.instance().invoke(close_question_panel)
+        self.assertFalse(gui_handler.showQuestion("externally closed question?"))
+        self.assertFalse(gui_contains_class(g, "CGameQuestionPanel"))
+
+        closed_selection = g.createObject("CListString")
+        closed_selection.addValue("CLOSED")
+
+        def close_selection_panel():
+            panel = find_top_level_panel(g, "CGamePanel")
+            if panel:
+                panel.close()
+
+        game.event_loop.instance().invoke(close_selection_panel)
+        self.assertEqual("", gui_handler.showSelection(closed_selection))
+        self.assertFalse(gui_contains_class(g, "CGamePanel"))
+
         market = g.createObject("CMarket")
         market.sell = 50
         market.buy = 25
@@ -8369,6 +8390,51 @@ class GameTest(unittest.TestCase):
         pump_event_loop(2)
         self.assertTrue(gui_contains_class(g, "CTooltip"))
         self.assertFalse(gui_contains_class(g, "CGameTextPanel"))
+
+        return True, json.dumps({"rolf_letters": player.countItems("letterFromRolf")}, sort_keys=True)
+
+    @game_test
+    def test_detached_inventory_list_view_ignores_stale_item_callbacks(self):
+        game = load_game_module()
+        g = game.CGameLoader.loadGame()
+        game.CGameLoader.loadGui(g)
+        game.CGameLoader.startGameWithPlayer(g, "nouraajd", "Warrior")
+        player = g.getMap().getPlayer()
+        player.addItem("letterFromRolf")
+
+        inventory_panel = g.getGuiHandler().openPanel("inventoryPanel")
+        pump_event_loop(5)
+        inventory_list = next(
+            list_view
+            for list_view in collect_gui_children(inventory_panel, "CListView")
+            if list_view.getCollection() == "inventoryCollection"
+        )
+        inventory_list.setTileSize(50)
+        inventory_list.setXPrefferedSize(8)
+        inventory_list.setYPrefferedSize(8)
+        inventory_list.refresh()
+
+        target_graphic = None
+        for y in range(8):
+            for x in range(8):
+                for graphic in inventory_list.getProxiedObjects(g.getGui(), x, y):
+                    obj = graphic.getObject() if hasattr(graphic, "getObject") else None
+                    if obj and obj.getTypeId() == "letterFromRolf":
+                        target_graphic = graphic
+                        break
+                if target_graphic:
+                    break
+            if target_graphic:
+                break
+
+        self.assertIsNotNone(target_graphic)
+        inventory_panel.close()
+        pump_event_loop(2)
+        self.assertFalse(gui_contains_class(g, "CGameInventoryPanel"))
+
+        target_graphic.mouseEvent(g.getGui(), SDL_MOUSEBUTTONDOWN, SDL_BUTTON_RIGHT, 1, 1)
+        pump_event_loop(2)
+        self.assertFalse(gui_contains_class(g, "CTooltip"))
 
         return True, json.dumps({"rolf_letters": player.countItems("letterFromRolf")}, sort_keys=True)
 
