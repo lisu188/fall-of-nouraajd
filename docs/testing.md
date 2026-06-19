@@ -65,8 +65,9 @@ python3 test.py --suite full
 - `gameplay` runs deterministic engine, map, save/load, quest, combat, and MCP gameplay checks after `_game` is built.
 - `ui` runs the Xvfb parent test and GUI layout manifest checks; it is intended for Linux/Unix environments with
   `xvfb-run` and `xauth`.
-- `coverage-safe` is the Python suite used by `./scripts/run_coverage.sh`; it preserves the coverage-oriented full
-  behavior while making the coverage entrypoint explicit.
+- `coverage-safe` is the Python suite used by `./scripts/run_coverage.sh`; it keeps deterministic coverage drivers and
+  GUI coverage, but omits duplicate subprocess walkthrough checks that are already covered by the normal gameplay CI
+  suite.
 - `full` is the default full-suite behavior and is equivalent to omitting `--suite`.
 
 Use `--jobs <n>` with any suite to enable the existing sharded runner, for example
@@ -147,7 +148,7 @@ The script:
 - reuses the existing coverage configure by default; set `COVERAGE_FRESH_CONFIGURE=1` to force a fresh configure
 - builds `_game`, `for_unit_tests`, and `performance_guard_tests` with GCC/Clang coverage flags
 - runs native CTest, including the deterministic `performance` label guard
-- runs `python3 test.py` against the coverage build
+- runs `python3 test.py --suite coverage-safe` against the coverage build with a finite outer timeout
 - generates reports in `coverage/coverage.txt` and `coverage/coverage.html`
 - uses the repo-local Python reporter by default; set `COVERAGE_REPORTER=gcovr` only for diagnostic comparison
 - applies line exclusions from `scripts/coverage_exclusions.json` unless `COVERAGE_LINE_EXCLUSIONS` is overridden
@@ -158,6 +159,8 @@ Optional coverage speed controls:
 - `COVERAGE_CXX_COMPILER_LAUNCHER=` disables the compiler launcher
 - when `COVERAGE_CXX_COMPILER_LAUNCHER` is unset, the script uses `ccache` automatically if it is available
 - `COVERAGE_JOBS=<n>` controls parallel coverage build and report collection jobs
+- `COVERAGE_PYTHON_TIMEOUT_SECONDS=<seconds>` bounds the coverage Python phase; the default is 1800 seconds
+- `COVERAGE_GCOV_TIMEOUT_SECONDS=<seconds>` bounds each `gcov` JSON extraction; the default is 120 seconds
 
 ## Coverage scope
 The canonical coverage report is scoped to production/native plugin code by default:
