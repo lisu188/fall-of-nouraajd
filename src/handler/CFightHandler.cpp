@@ -317,28 +317,7 @@ std::string final_status_message(CFightOutcome outcome, const std::string &attac
     return "";
 }
 
-} // namespace
-
-bool CFightResult::resolved() const {
-    return outcome == CFightOutcome::AttackerVictory || outcome == CFightOutcome::AttackerDefeat;
-}
-
-bool CFightResult::attackerSucceeded() const { return outcome == CFightOutcome::AttackerVictory; }
-
-bool CFightHandler::fight(std::shared_ptr<CCreature> a, std::shared_ptr<CCreature> b) { return fightMany(a, {b}); }
-
-bool CFightHandler::fightMany(std::shared_ptr<CCreature> attacker,
-                              const std::vector<std::shared_ptr<CCreature>> &encounterOpponents) {
-    return fightManyResult(attacker, encounterOpponents).resolved();
-}
-
-CFightOutcome CFightHandler::fightManyOutcome(std::shared_ptr<CCreature> attacker,
-                                              const std::vector<std::shared_ptr<CCreature>> &encounterOpponents) {
-    return fightManyResult(attacker, encounterOpponents).outcome;
-}
-
-CFightResult CFightHandler::fightManyResult(std::shared_ptr<CCreature> attacker,
-                                            const std::vector<std::shared_ptr<CCreature>> &encounterOpponents) {
+CFightResult resolve_fight_many(std::shared_ptr<CCreature> attacker, const encounter_type &encounterOpponents) {
     CFightResult result;
     if (!attacker) {
         return result;
@@ -548,6 +527,31 @@ CFightResult CFightHandler::fightManyResult(std::shared_ptr<CCreature> attacker,
     }
 
     return result;
+}
+
+} // namespace
+
+bool CFightResult::resolved() const {
+    return outcome == CFightOutcome::AttackerVictory || outcome == CFightOutcome::AttackerDefeat;
+}
+
+bool CFightResult::attackerSucceeded() const { return outcome == CFightOutcome::AttackerVictory; }
+
+bool CFightHandler::fight(std::shared_ptr<CCreature> a, std::shared_ptr<CCreature> b) { return fightMany(a, {b}); }
+
+bool CFightHandler::fightMany(std::shared_ptr<CCreature> attacker,
+                              const std::vector<std::shared_ptr<CCreature>> &encounterOpponents) {
+    return fightManyResult(attacker, encounterOpponents).resolved();
+}
+
+CFightOutcome CFightHandler::fightManyOutcome(std::shared_ptr<CCreature> attacker,
+                                              const std::vector<std::shared_ptr<CCreature>> &encounterOpponents) {
+    return fightManyResult(attacker, encounterOpponents).outcome;
+}
+
+CFightResult CFightHandler::fightManyResult(std::shared_ptr<CCreature> attacker,
+                                            const std::vector<std::shared_ptr<CCreature>> &encounterOpponents) {
+    return resolve_fight_many(attacker, encounterOpponents);
 }
 
 void CFightHandler::defeatedCreature(const std::shared_ptr<CCreature> &a, const std::shared_ptr<CCreature> &b) {
