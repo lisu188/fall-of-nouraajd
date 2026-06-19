@@ -68,7 +68,20 @@ generic owners such as `controller/subagent-1`; multiple controllers may be runn
 
 The queue CLI `claim` command is deterministic: it picks the first eligible row by priority and workbook order. The
 controller workflow requires explicit random selection instead. Before each claim, fetch latest `origin/main`, read the
-merged workbook, and calculate the complete eligible set by excluding:
+merged workbook, and generate a read-only mechanical shortlist:
+
+```bash
+python3 scripts/issue_queue.py shortlist \
+  --seed "${CONTROLLER_ID}-$(date -u +%Y%m%dT%H%M%SZ)" \
+  --include-rejected \
+  --json
+```
+
+The shortlist command does not mutate the workbook. It filters queue status, dependencies, optional CLI filters, and
+direct target-file overlaps, keeps only the highest currently eligible priority tier for `storyGroups`, and emits a
+seeded recommended `selected.issue.issueName`. Treat that output as mechanical evidence for the controller and
+project-manager brief, not as an automatic claim. The controller and PM must still inspect active-scope conflicts not
+represented by exact target-file overlap, including:
 
 - rows whose status is not `NOT_STARTED`;
 - rows with unfinished dependencies;
@@ -79,7 +92,8 @@ merged workbook, and calculate the complete eligible set by excluding:
 
 Keep only the highest currently available priority tier. Group remaining candidates by `(Epic #, Story #)`, randomly
 select one story with equal probability, then randomly select one eligible substory inside it. Never default to workbook
-order and never randomize ineligible rows.
+order and never randomize ineligible rows. After final review, claim the exact selected issue with `claim --issue`; the
+claim command revalidates eligibility under the workbook lock.
 
 Before dispatch/refill decisions, assign a read-only project manager role when subagent capacity permits. The project
 manager reviews the merged workbook, active work, stale claims, blockers, dependency chains, validation cost, resource

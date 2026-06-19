@@ -40,7 +40,12 @@ latest `origin/main`, recalculate the full eligible set from the merged workbook
 
 After exclusions, keep only the highest currently available priority tier. Group candidates by `(Epic #, Story #)`,
 randomly select one story with equal probability, then randomly select one eligible substory in that story. Do not fall
-back to spreadsheet order and do not include ineligible rows in the random choice.
+back to spreadsheet order and do not include ineligible rows in the random choice. Use
+`python3 scripts/issue_queue.py shortlist --seed "$CONTROLLER_ID-<utc-cycle-id>" --include-rejected --json` as the
+read-only mechanical selector before each claim; it reports eligible highest-priority story groups, stale claims,
+rejection summaries, and a seeded recommendation without mutating the workbook. The controller and project manager must
+still exclude source-backed indirect conflicts that exact target-file overlap cannot detect, then claim the final exact
+issue with `claim --issue` so eligibility is rechecked under the workbook lock.
 
 Assign a read-only project manager role whenever subagent capacity permits. Before dispatch/refill decisions, the
 project manager should summarize the highest available priority tier, candidate story groups, dependency unlocks, stale
