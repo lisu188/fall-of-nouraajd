@@ -10469,6 +10469,83 @@ class GameTest(unittest.TestCase):
         return True, json.dumps(results, sort_keys=True)
 
     @game_test
+    def test_nouraajd_start_event_preserves_existing_class_progression(self):
+        game = load_game_module()
+        cases = [
+            {
+                "player_type": "Wayfarer",
+                "counter": "wayfarer_routes",
+                "counter_value": 3,
+                "flag": "charted_smuggler_route",
+                "default_counter": "inquisitor_clues",
+                "default_flag": "inspected_stained_glass",
+            },
+            {
+                "player_type": "Inquisitor",
+                "counter": "inquisitor_clues",
+                "counter_value": 2,
+                "flag": "inspected_stained_glass",
+                "default_counter": "wayfarer_routes",
+                "default_flag": "charted_smuggler_route",
+            },
+        ]
+        results = {}
+        save_names = []
+
+        try:
+            for case in cases:
+                save_name = unique_save_name(f"nouraajd_{case['player_type'].lower()}_class_progression")
+                save_names.append(save_name)
+                cleanup_save_slot(save_name)
+                _g, game_map, player = load_game_map_with_player("nouraajd", case["player_type"])
+                start_events = [
+                    obj
+                    for obj in game_map.getObjects()
+                    if obj.getTypeId() == "StartEvent" or obj.getType() == "StartEvent"
+                ]
+
+                self.assertTrue(start_events, "The Nouraajd map should author StartEvent tiles.")
+                self.assertFalse(hasattr(player, case["default_counter"]))
+                self.assertFalse(hasattr(player, case["default_flag"]))
+
+                player.setNumericProperty(case["counter"], case["counter_value"])
+                player.setBoolProperty(case["flag"], True)
+                game_map.setBoolProperty("ASKED_ABOUT_GIRL", True)
+
+                start_coords = start_events[0].getCoords()
+                player.moveTo(start_coords.x, start_coords.y, start_coords.z)
+                pump_event_loop(5)
+
+                self.assertEqual(case["counter_value"], player.getNumericProperty(case["counter"]))
+                self.assertTrue(player.getBoolProperty(case["flag"]))
+                self.assertTrue(hasattr(player, case["default_counter"]))
+                self.assertTrue(hasattr(player, case["default_flag"]))
+                self.assertEqual(0, player.getNumericProperty(case["default_counter"]))
+                self.assertFalse(player.getBoolProperty(case["default_flag"]))
+                self.assertFalse(game_map.getBoolProperty("ASKED_ABOUT_GIRL"))
+
+                game.CMapLoader.save(game_map, save_name)
+                loaded_game = game.CGameLoader.loadGame()
+                game.CGameLoader.loadSavedGame(loaded_game, save_name)
+                loaded_player = loaded_game.getMap().getPlayer()
+
+                self.assertEqual(case["counter_value"], loaded_player.getNumericProperty(case["counter"]))
+                self.assertTrue(loaded_player.getBoolProperty(case["flag"]))
+
+                results[case["player_type"]] = {
+                    "counter": loaded_player.getNumericProperty(case["counter"]),
+                    "flag": loaded_player.getBoolProperty(case["flag"]),
+                    "default_counter": loaded_player.getNumericProperty(case["default_counter"]),
+                    "default_flag": loaded_player.getBoolProperty(case["default_flag"]),
+                    "asked_about_girl": loaded_game.getMap().getBoolProperty("ASKED_ABOUT_GIRL"),
+                }
+
+            return True, json.dumps(results, sort_keys=True)
+        finally:
+            for save_name in save_names:
+                cleanup_save_slot(save_name)
+
+    @game_test
     def test_nouraajd_main_quest_remains_completable_by_every_class(self):
         class_ids = ("Assasin", "Inquisitor", "Sorcerer", "Warrior", "Wayfarer")
         results = {}
