@@ -1,6 +1,6 @@
 /*
 fall-of-nouraajd c++ dark fantasy game
-Copyright (C) 2025  Andrzej Lis
+Copyright (C) 2025-2026  Andrzej Lis
 
 This program is free software: you can redistribute it and/or modify
         it under the terms of the GNU General Public License as published by
@@ -72,6 +72,8 @@ class CMapObject : public CGameObject, public CCreatable, public CTurnable {
     void moveTo(int x, int y, int z);
 
     void moveTo(Coords coords);
+
+    void relocateWithoutMoveHooks(Coords coords);
 
     bool isAffiliatedWith(std::shared_ptr<CMapObject> object);
 

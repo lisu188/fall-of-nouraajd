@@ -48,6 +48,22 @@ void CMapObject::moveTo(int x, int y, int z) { move(x - posx, y - posy, z - posz
 
 void CMapObject::moveTo(Coords coords) { this->moveTo(coords.x, coords.y, coords.z); }
 
+void CMapObject::relocateWithoutMoveHooks(Coords coords) {
+    auto map = getMap();
+    if (map) {
+        coords = map->normalizeCoords(coords);
+    }
+
+    Coords oldCoords(posx, posy, posz);
+    posx = coords.x;
+    posy = coords.y;
+    posz = coords.z;
+
+    if (map && map->getObjectByName(getName()) == this->ptr<CMapObject>()) {
+        map->objectMoved(this->ptr<CMapObject>(), oldCoords, coords);
+    }
+}
+
 int CMapObject::getPosY() const { return posy; }
 
 int CMapObject::getPosZ() const { return posz; }

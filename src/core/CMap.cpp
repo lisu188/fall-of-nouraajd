@@ -784,13 +784,8 @@ void CMap::registerPlayerTriggers() {
     auto restartTrigger = std::make_shared<CCustomTrigger>("player", "onDestroy", [](auto object, auto event) {
         auto _player = vstd::cast<CPlayer>(object);
         auto map = _player->getMap();
-        const auto old_coords = _player->getCoords();
-        const auto entry = map->normalizeCoords(map->getEntry());
         map->addObject(_player);
-        _player->setPosX(entry.x);
-        _player->setPosY(entry.y);
-        _player->setPosZ(entry.z);
-        map->objectMoved(_player, old_coords, entry);
+        _player->relocateWithoutMoveHooks(map->getEntry());
         _player->setHp(1);
     });
 
