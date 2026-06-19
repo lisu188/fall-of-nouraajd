@@ -326,9 +326,10 @@ python3 scripts/issue_queue.py reclaim-stale --dry-run --older-than-minutes 30
 python3 scripts/issue_queue.py reclaim-stale --older-than-minutes 30
 ```
 
-The dry run lists stale rows without modifying the workbook and reports `activeClaims`, `staleCount`, and
-`reclaimableStaleCount`. `staleCount` is the total expired active-claim count; `reclaimableStaleCount` is the number of
-rows returned by the current `--older-than-minutes` threshold. Inspect the worker worktree, branch, pull request, and
+The dry run lists stale rows without modifying the workbook and reports `activeClaims`, `staleCount`,
+`reclaimableStaleCount`, and `reclaimSafety`. `staleCount` is the total expired active-claim count;
+`reclaimableStaleCount` is the number of rows returned by the current `--older-than-minutes` threshold. Dry-run rows are
+lease-timing candidates only and include `reclaimReady: false`; inspect the worker worktree, branch, pull request, and
 any recoverable changes before running the mutating command. Run the mutating command only from a fresh workbook-only
 branch and publish it through the same serialized queue-state PR process as claims and terminal statuses. Reclaimed rows
 are not eligible for dispatch until that reclaim PR actually merges. The mutating command only reclaims rows whose lease

@@ -1116,6 +1116,17 @@ def staleClaims(state: QueueState, olderThanMinutes: int = 0, now: datetime | No
     return records
 
 
+def markStaleClaimsForInspection(stale: Sequence[dict[str, Any]]) -> list[dict[str, Any]]:
+    return [
+        {
+            **record,
+            "reclaimReady": False,
+            "requiredInspection": "worker worktree, branch, pull request, and recoverable changes",
+        }
+        for record in stale
+    ]
+
+
 def claimTask(
     workbookPath: Path,
     owner: str,
@@ -1786,10 +1797,15 @@ def main(argv: Sequence[str] | None = None) -> int:
                         {
                             "workbook": str(workbookPath),
                             "olderThanMinutes": args.older_than_minutes,
+                            "reclaimSafety": {
+                                "leaseOnly": True,
+                                "requiresInspection": True,
+                                "message": "Dry-run rows satisfy lease timing only; inspect worker state and PRs before mutating.",
+                            },
                             "reclaimableStaleCount": len(stale),
                             "staleCount": len(allStale),
                             "activeClaims": activeClaimSummary(state, allStale),
-                            "stale": stale,
+                            "stale": markStaleClaimsForInspection(stale),
                         }
                     )
                 finally:
