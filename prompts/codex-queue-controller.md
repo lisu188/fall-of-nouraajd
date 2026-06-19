@@ -205,18 +205,22 @@ Use `python3 scripts/issue_queue.py shortlist --seed "$CONTROLLER_ID-<utc-cycle-
 read-only mechanical selector before each claim. The command reports eligible highest-priority story groups, stale
 claims, `activeClaims.total`, `activeClaims.unexpired`, `activeClaims.stale`, rejection summaries, and a seeded
 recommended issue without mutating the workbook. Use the unexpired count, not raw `activeCount`, when deciding whether
-the active-worker floor is genuinely satisfied. Treat the recommendation as evidence for the project-manager brief and
-final controller review; still exclude source-backed indirect conflicts that the exact target-file filter cannot detect.
+the active-worker floor is genuinely satisfied. It also reports target-file overlap advisories through
+`advisoryTargetFileOverlapCount`, `advisoryTargetFileOverlaps`, and per-issue `activeFileOverlaps`. Treat the
+recommendation and overlap advisories as evidence for the project-manager brief and final controller review; do not
+exclude a task solely because its exact `Target Files / Modules` overlap active work.
 Claim only after final review with `claim --issue`, which revalidates under the workbook lock.
 
 Exclude every row that has:
 
 - a status other than `NOT_STARTED`;
 - any dependency that is not `DONE`;
-- a target-file overlap with active work;
-- an active-scope conflict;
+- a source-backed active-scope conflict;
 - an indirect conflict through shared headers, bindings, tests, CMake, map scripts, dialog/config files, serialization,
   generated resources, or shared runtime systems.
+
+Use exact target-file overlap with active work as an advisory guide for source inspection and sequencing decisions. If
+inspection confirms that the overlap is a real active-scope conflict, exclude or defer it on that basis.
 
 After exclusions:
 
@@ -369,7 +373,7 @@ on XLSX-only controller coordination PRs.
    - a requirement to report progress to the controller rather than directly mutating queue state.
    - a resource-awareness instruction to prefer GitHub Actions polling for heavy Linux validation and report exact local commands.
 
-6. Do not dispatch tasks concurrently when their scopes overlap directly or indirectly through shared headers, tests, bindings, registration units, CMake, shared JSON, map scripts, dialogs, serialization, or generated resources.
+6. Do not dispatch tasks concurrently when source inspection shows their scopes overlap directly or indirectly through shared headers, tests, bindings, registration units, CMake, shared JSON, map scripts, dialogs, serialization, or generated resources.
 
 ## Worker contract
 

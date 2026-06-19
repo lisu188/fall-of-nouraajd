@@ -43,18 +43,20 @@ eligible set. Exclude:
 
 - rows whose status is not `NOT_STARTED`;
 - rows with unfinished dependencies;
-- rows with direct target-file overlap against active work;
-- rows with active-scope conflicts;
+- rows with source-backed active-scope conflicts;
 - rows with indirect conflicts through shared headers, bindings, tests, CMake, map scripts, dialog/config files,
   serialization, generated resources, or shared runtime systems.
+
+Treat direct `Target Files / Modules` overlap against active work as advisory scope evidence, not as an automatic
+exclusion. Use it to guide source inspection, sequencing, and project-manager risk notes.
 
 Keep only the highest currently available priority tier. Group remaining candidates by `(Epic #, Story #)`, randomly
 select one story with equal probability, then randomly select one eligible substory in that story. Never default to
 spreadsheet order, and never randomize an ineligible issue into consideration. Use
 `python3 scripts/issue_queue.py shortlist --seed "$CONTROLLER_ID-<utc-cycle-id>" --include-rejected --json` as the
 read-only mechanical selector before each claim. Use its `activeClaims.unexpired` and stale-claim fields for active
-worker capacity decisions, then still review source-backed indirect conflicts before claiming the final exact issue with
-`claim --issue`.
+worker capacity decisions, review target-file overlap advisories, then still exclude source-backed active-scope conflicts
+before claiming the final exact issue with `claim --issue`.
 
 Use the project-manager prioritization brief to decide whether to proceed, publish a queue-state update, or report a
 blocker. Do not use it as an ad hoc override: priority, dependency, status, or scope changes affect dispatch only after

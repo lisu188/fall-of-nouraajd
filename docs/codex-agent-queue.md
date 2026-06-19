@@ -25,9 +25,9 @@ The queue uses two different mechanisms:
 Each active row has both an `Owner` and a random `Claim ID`. Heartbeat, completion, block, failure, cancellation, and release operations require both values. A subagent cannot update a task merely by knowing its issue title.
 
 The queue lock prevents duplicate task claims. It does **not** prevent two subagents from editing the same source file.
-By default `claim` skips tasks whose exact `Target Files / Modules` overlap an existing `IN_PROGRESS` row. The
-controller must still inspect scopes and serialize work when shared headers, bindings, tests, CMake, map scripts,
-dialog/config files, serialization, generated resources, or shared runtime systems are coupled.
+Exact `Target Files / Modules` overlap is advisory evidence, not an automatic claim blocker. The controller must inspect
+scopes and serialize work when source-backed direct or indirect conflicts exist through shared headers, bindings, tests,
+CMake, map scripts, dialog/config files, serialization, generated resources, or shared runtime systems.
 
 ## Setup
 
@@ -77,17 +77,18 @@ python3 scripts/issue_queue.py shortlist \
   --json
 ```
 
-The shortlist command does not mutate the workbook. It filters queue status, dependencies, optional CLI filters, and
-direct target-file overlaps, keeps only the highest currently eligible priority tier for `storyGroups`, and emits a
-seeded recommended `selected.issue.issueName`. It also reports `activeClaims.total`, `activeClaims.unexpired`,
-`activeClaims.stale`, `staleClaimCount`, and `staleClaims` so expired leases are not mistaken for live worker capacity.
-Treat that output as mechanical evidence for the controller and project-manager brief, not as an automatic claim. The
-controller and PM must still inspect active-scope conflicts not represented by exact target-file overlap, including:
+The shortlist command does not mutate the workbook. It filters queue status, dependencies, and optional CLI filters,
+keeps only the highest currently eligible priority tier for `storyGroups`, and emits a seeded recommended
+`selected.issue.issueName`. It also reports `activeClaims.total`, `activeClaims.unexpired`, `activeClaims.stale`,
+`staleClaimCount`, `staleClaims`, `advisoryTargetFileOverlapCount`, `advisoryTargetFileOverlaps`, and per-issue
+`activeFileOverlaps` so expired leases and exact target-file overlaps can inform dispatch decisions without becoming
+automatic blockers. Treat that output as mechanical evidence for the controller and project-manager brief, not as an
+automatic claim. The controller and PM must still inspect source-backed active-scope conflicts, including:
 
 - rows whose status is not `NOT_STARTED`;
 - rows with unfinished dependencies;
-- direct target-file overlaps with active work;
 - active-scope conflicts;
+- target-file overlaps with active work that source inspection confirms are real conflicts;
 - indirect conflicts through shared headers, bindings, tests, CMake, map scripts, dialog/config files, serialization,
   generated resources, or shared runtime systems.
 
@@ -136,8 +137,12 @@ The CLI considers a row mechanically eligible only when:
 
 - status is `NOT_STARTED`;
 - every issue in `Dependencies` is `DONE`;
-- optional priority/epic/component filters match;
-- target files do not overlap currently active rows, unless `--allow-file-overlap` is explicitly supplied.
+- optional priority/epic/component filters match.
+
+The CLI reports target-file overlaps as advisory metadata. The legacy `--allow-file-overlap` flag is still accepted for
+older controller prompts, but exact overlap no longer changes mechanical eligibility by itself. Task payloads from
+`list --json`, `show`, `next`, and `claim` include `Target File Overlap Policy` and `Active File Overlaps` fields for
+direct-command review.
 
 To claim an exact row:
 
