@@ -447,6 +447,8 @@ def pump_event_loop_until(predicate, *, timeout=1.0, min_iterations=1):
 
 SDL_KEYDOWN = 0x300
 SDL_KEYUP = 0x301
+SDL_QUIT = 0x100
+SDL_INIT_EVENTS = 0x00004000
 SDL_MOUSEBUTTONDOWN = 0x401
 SDL_MOUSEBUTTONUP = 0x402
 SDL_PRESSED = 1
@@ -853,6 +855,33 @@ def push_sdl_mouse_button_event(x, y, button=SDL_BUTTON_LEFT, event_type=SDL_MOU
 def push_sdl_mouse_click(x, y, button=SDL_BUTTON_LEFT):
     push_sdl_mouse_button_event(x, y, button, SDL_MOUSEBUTTONDOWN)
     push_sdl_mouse_button_event(x, y, button, SDL_MOUSEBUTTONUP)
+
+
+def push_sdl_quit_event():
+    import ctypes
+
+    class SDL_Event(ctypes.Union):
+        _fields_ = [
+            ("type", ctypes.c_uint32),
+            ("padding", ctypes.c_uint8 * 56),
+        ]
+
+    sdl = load_sdl_library()
+    sdl.SDL_InitSubSystem.argtypes = [ctypes.c_uint32]
+    sdl.SDL_InitSubSystem.restype = ctypes.c_int
+    if sdl.SDL_InitSubSystem(SDL_INIT_EVENTS) != 0:
+        sdl.SDL_GetError.restype = ctypes.c_char_p
+        error = sdl.SDL_GetError()
+        message = error.decode("utf-8", errors="replace") if error else "SDL_InitSubSystem failed."
+        raise AssertionError(message)
+
+    event = SDL_Event()
+    event.type = SDL_QUIT
+    sdl.SDL_PushEvent.argtypes = [ctypes.POINTER(SDL_Event)]
+    sdl.SDL_PushEvent.restype = ctypes.c_int
+    pushed = sdl.SDL_PushEvent(ctypes.byref(event))
+    if pushed != 1:
+        raise AssertionError(f"SDL_PushEvent returned {pushed}.")
 
 
 def drain_sdl_events():
@@ -5771,6 +5800,27 @@ class GameTest(unittest.TestCase):
         event.moveTo(coords.x, coords.y, coords.z)
         return event
 
+    def add_counting_tile(self, game, g, game_map, type_name, coords, hits):
+        class CountingTile(game.CTile):
+            def onStep(self, creature):
+                hits.append((type_name, creature.getName()))
+
+        g.getObjectHandler().registerType(type_name, CountingTile)
+        g.getObjectHandler().registerConfigJson(
+            type_name,
+            json.dumps(
+                {
+                    "class": type_name,
+                    "properties": {
+                        "canStep": True,
+                        "label": type_name,
+                        "tileType": type_name,
+                    },
+                }
+            ),
+        )
+        game_map.replaceTile(type_name, coords)
+
     @game_test
     def test_combat_invariants(self):
         game = load_game_module()
@@ -6040,6 +6090,15 @@ class GameTest(unittest.TestCase):
         no_combat_map.addObject(no_combat_mover)
         no_combat_mover.setHp(10)
         no_combat_target = game.Coords(1, 0, 0)
+        no_combat_tile_hits = []
+        self.add_counting_tile(
+            game,
+            no_combat_game,
+            no_combat_map,
+            "UnitNoCombatTile",
+            no_combat_target,
+            no_combat_tile_hits,
+        )
         self.add_counting_event(
             game,
             no_combat_game,
@@ -6050,17 +6109,134 @@ class GameTest(unittest.TestCase):
             no_combat_hits,
         )
         no_combat_mover.moveTo(no_combat_target.x, no_combat_target.y, no_combat_target.z)
+        self.assertEqual([("UnitNoCombatTile", "unitNoCombatMover")], no_combat_tile_hits)
         self.assertEqual([("unitNoCombatCounter", "unitNoCombatMover")], no_combat_hits)
 
-        # Tile effects can move the creature again; the old destination must not start stale combat afterward.
+        # Stalemated combat leaves the destination visitable untouched.
+        stalemate_game = game.CGameLoader.loadGame()
+        game.CGameLoader.startGame(stalemate_game, "empty")
+        stalemate_map = stalemate_game.getMap()
+        stalemate_hits = []
+        stalemate_tile_hits = []
+        stalemate_mover = stalemate_game.createObject("CCreature")
+        stalemate_mover.name = "unitStalemateMover"
+        stalemate_mover.setFightController(stalemate_game.createObject("CFightController"))
+        stalemate_map.addObject(stalemate_mover)
+        stalemate_mover.setHp(10)
+        stalemate_target = game.Coords(1, 0, 0)
+        stale_defender = stalemate_game.createObject("CCreature")
+        stale_defender.name = "unitStalemateDefender"
+        stale_defender.setFightController(stalemate_game.createObject("CFightController"))
+        stale_defender.moveTo(stalemate_target.x, stalemate_target.y, stalemate_target.z)
+        stalemate_map.addObject(stale_defender)
+        stale_defender.setHp(10)
+        self.add_counting_tile(
+            game,
+            stalemate_game,
+            stalemate_map,
+            "UnitStalemateTile",
+            stalemate_target,
+            stalemate_tile_hits,
+        )
+        self.add_counting_event(
+            game,
+            stalemate_game,
+            stalemate_map,
+            "UnitStalemateCounter",
+            "unitStalemateCounter",
+            stalemate_target,
+            stalemate_hits,
+        )
+        stalemate_mover.moveTo(stalemate_target.x, stalemate_target.y, stalemate_target.z)
+        self.assertEqual([], stalemate_tile_hits)
+        self.assertEqual([], stalemate_hits)
+        self.assertIsNotNone(stalemate_map.getObjectByName("unitStalemateMover"))
+        self.assertIsNotNone(stalemate_map.getObjectByName("unitStalemateDefender"))
+
+        # Cancelled combat leaves the hostile destination tile and visitable untouched.
+        cancel_game = game.CGameLoader.loadGame()
+        game.CGameLoader.startGame(cancel_game, "empty")
+        cancel_map = cancel_game.getMap()
+        cancel_tile_hits = []
+        cancel_hits = []
+        cancel_mover = cancel_game.createObject("CCreature")
+        cancel_mover.name = "unitCancelMover"
+        cancel_mover.setFightController(cancel_game.createObject("CFightController"))
+        cancel_map.addObject(cancel_mover)
+        cancel_mover.setHp(10)
+        cancel_target = game.Coords(1, 0, 0)
+        cancel_defender = cancel_game.createObject("CCreature")
+        cancel_defender.name = "unitCancelDefender"
+        cancel_defender.setFightController(cancel_game.createObject("CFightController"))
+        cancel_defender.moveTo(cancel_target.x, cancel_target.y, cancel_target.z)
+        cancel_map.addObject(cancel_defender)
+        cancel_defender.setHp(10)
+        self.add_counting_tile(
+            game,
+            cancel_game,
+            cancel_map,
+            "UnitCancelTile",
+            cancel_target,
+            cancel_tile_hits,
+        )
+        self.add_counting_event(
+            game,
+            cancel_game,
+            cancel_map,
+            "UnitCancelCounter",
+            "unitCancelCounter",
+            cancel_target,
+            cancel_hits,
+        )
+        push_sdl_quit_event()
+        try:
+            cancel_mover.moveTo(cancel_target.x, cancel_target.y, cancel_target.z)
+        finally:
+            drain_sdl_events()
+        self.assertEqual([], cancel_tile_hits)
+        self.assertEqual([], cancel_hits)
+        self.assertIsNotNone(cancel_map.getObjectByName("unitCancelMover"))
+        self.assertIsNotNone(cancel_map.getObjectByName("unitCancelDefender"))
+
+        # Attacker victory allows the original destination tile and visitable to run once.
+        victory_game, victory_session, victory_attacker, victory_defenders = self.make_multi_enemy_combat_fixture()
+        victory_map = victory_session.getMap()
+        victory_hits = []
+        victory_tile_hits = []
+        victory_target = victory_defenders[0].getCoords()
+        self.add_counting_tile(
+            victory_game,
+            victory_session,
+            victory_map,
+            "UnitVictoryTile",
+            victory_target,
+            victory_tile_hits,
+        )
+        self.add_counting_event(
+            victory_game,
+            victory_session,
+            victory_map,
+            "UnitVictoryCounter",
+            "unitVictoryCounter",
+            victory_target,
+            victory_hits,
+        )
+        victory_attacker.moveTo(victory_target.x, victory_target.y, victory_target.z)
+        self.assertEqual([("UnitVictoryTile", victory_attacker.getName())], victory_tile_hits)
+        self.assertEqual([("unitVictoryCounter", victory_attacker.getName())], victory_hits)
+
+        # After victorious combat, tile effects can move the creature again and suppress stale destination onEnter.
         relocation_game = game.CGameLoader.loadGame()
         game.CGameLoader.startGame(relocation_game, "empty")
         relocation_map = relocation_game.getMap()
         relocation_target = game.Coords(1, 0, 0)
         relocated_target = find_adjacent_walkable_tile(relocation_map, relocation_target)
+        relocation_tile_hits = []
+        relocation_enter_hits = []
 
         class UnitRelocatingTile(game.CTile):
             def onStep(self, creature):
+                relocation_tile_hits.append(("UnitRelocatingTile", creature.getName()))
                 creature.moveTo(relocated_target.x, relocated_target.y, relocated_target.z)
 
         relocation_game.getObjectHandler().registerType("UnitRelocatingTile", UnitRelocatingTile)
@@ -6094,64 +6270,27 @@ class GameTest(unittest.TestCase):
         relocation_defender.hp = 1
         relocation_defender.moveTo(relocation_target.x, relocation_target.y, relocation_target.z)
         relocation_map.addObject(relocation_defender)
+        self.add_counting_event(
+            game,
+            relocation_game,
+            relocation_map,
+            "UnitRelocationCounter",
+            "unitRelocationCounter",
+            relocation_target,
+            relocation_enter_hits,
+        )
         relocation_map.replaceTile("UnitRelocatingTile", relocation_target)
         relocation_mover.moveTo(relocation_target.x, relocation_target.y, relocation_target.z)
 
-        self.assertIsNotNone(relocation_map.getObjectByName("unitRelocationDefender"))
+        self.assertIsNone(relocation_map.getObjectByName("unitRelocationDefender"))
+        self.assertEqual([("UnitRelocatingTile", "unitRelocationMover")], relocation_tile_hits)
+        self.assertEqual([], relocation_enter_hits)
         self.assertEqual(
             (relocated_target.x, relocated_target.y, relocated_target.z),
             (relocation_mover.getCoords().x, relocation_mover.getCoords().y, relocation_mover.getCoords().z),
         )
 
-        # Stalemated combat leaves the destination visitable untouched.
-        stalemate_game = game.CGameLoader.loadGame()
-        game.CGameLoader.startGame(stalemate_game, "empty")
-        stalemate_map = stalemate_game.getMap()
-        stalemate_hits = []
-        stalemate_mover = stalemate_game.createObject("CCreature")
-        stalemate_mover.name = "unitStalemateMover"
-        stalemate_mover.setFightController(stalemate_game.createObject("CFightController"))
-        stalemate_map.addObject(stalemate_mover)
-        stalemate_mover.setHp(10)
-        stalemate_target = game.Coords(1, 0, 0)
-        stale_defender = stalemate_game.createObject("CCreature")
-        stale_defender.name = "unitStalemateDefender"
-        stale_defender.setFightController(stalemate_game.createObject("CFightController"))
-        stale_defender.moveTo(stalemate_target.x, stalemate_target.y, stalemate_target.z)
-        stalemate_map.addObject(stale_defender)
-        stale_defender.setHp(10)
-        self.add_counting_event(
-            game,
-            stalemate_game,
-            stalemate_map,
-            "UnitStalemateCounter",
-            "unitStalemateCounter",
-            stalemate_target,
-            stalemate_hits,
-        )
-        stalemate_mover.moveTo(stalemate_target.x, stalemate_target.y, stalemate_target.z)
-        self.assertEqual([], stalemate_hits)
-        self.assertIsNotNone(stalemate_map.getObjectByName("unitStalemateMover"))
-        self.assertIsNotNone(stalemate_map.getObjectByName("unitStalemateDefender"))
-
-        # Attacker victory allows the original destination visitable to run once.
-        victory_game, victory_session, victory_attacker, victory_defenders = self.make_multi_enemy_combat_fixture()
-        victory_map = victory_session.getMap()
-        victory_hits = []
-        victory_target = victory_defenders[0].getCoords()
-        self.add_counting_event(
-            victory_game,
-            victory_session,
-            victory_map,
-            "UnitVictoryCounter",
-            "unitVictoryCounter",
-            victory_target,
-            victory_hits,
-        )
-        victory_attacker.moveTo(victory_target.x, victory_target.y, victory_target.z)
-        self.assertEqual([("unitVictoryCounter", victory_attacker.getName())], victory_hits)
-
-        # Player defeat respawns silently and does not leak destination or entry onEnter from the old move.
+        # Player defeat respawns silently and does not leak destination tile, destination onEnter, or entry onEnter.
         defeat_game = game.CGameLoader.loadGame()
         game.CGameLoader.startGameWithPlayer(defeat_game, "empty", "Warrior")
         defeat_map = defeat_game.getMap()
@@ -6160,14 +6299,9 @@ class GameTest(unittest.TestCase):
         player.unequipArmor()
         player.setHp(1)
         defeat_hits = []
+        defeat_tile_hits = []
         entry = player.getCoords()
         defeat_target = find_adjacent_walkable_tile(defeat_map, entry)
-        self.add_counting_event(
-            game, defeat_game, defeat_map, "UnitEntryCounter", "unitEntryCounter", entry, defeat_hits
-        )
-        self.add_counting_event(
-            game, defeat_game, defeat_map, "UnitDefeatCounter", "unitDefeatCounter", defeat_target, defeat_hits
-        )
         killer = defeat_game.createObject("GoblinThief")
         killer.name = "unitDefeatKiller"
         killer.baseStats.agility = 100
@@ -6177,8 +6311,23 @@ class GameTest(unittest.TestCase):
         killer.baseStats.crit = 0
         killer.moveTo(defeat_target.x, defeat_target.y, defeat_target.z)
         defeat_map.addObject(killer)
+        self.add_counting_tile(
+            game,
+            defeat_game,
+            defeat_map,
+            "UnitDefeatTile",
+            defeat_target,
+            defeat_tile_hits,
+        )
+        self.add_counting_event(
+            game, defeat_game, defeat_map, "UnitEntryCounter", "unitEntryCounter", entry, defeat_hits
+        )
+        self.add_counting_event(
+            game, defeat_game, defeat_map, "UnitDefeatCounter", "unitDefeatCounter", defeat_target, defeat_hits
+        )
         player.moveTo(defeat_target.x, defeat_target.y, defeat_target.z)
 
+        self.assertEqual([], defeat_tile_hits)
         self.assertEqual([], defeat_hits)
         self.assertEqual(
             (entry.x, entry.y, entry.z), (player.getCoords().x, player.getCoords().y, player.getCoords().z)
@@ -6187,10 +6336,18 @@ class GameTest(unittest.TestCase):
 
         return True, json.dumps(
             {
+                "cancel_hits": cancel_hits,
+                "cancel_tile_hits": cancel_tile_hits,
+                "defeat_tile_hits": defeat_tile_hits,
                 "no_combat_hits": no_combat_hits,
+                "no_combat_tile_hits": no_combat_tile_hits,
                 "relocation_defender_present": relocation_map.getObjectByName("unitRelocationDefender") is not None,
+                "relocation_enter_hits": relocation_enter_hits,
+                "relocation_tile_hits": relocation_tile_hits,
                 "stalemate_hits": stalemate_hits,
+                "stalemate_tile_hits": stalemate_tile_hits,
                 "victory_hits": victory_hits,
+                "victory_tile_hits": victory_tile_hits,
                 "defeat_hits": defeat_hits,
             },
             sort_keys=True,
