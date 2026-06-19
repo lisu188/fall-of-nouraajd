@@ -84,11 +84,20 @@ def jobsFromRunPayload(payload: dict[str, Any]) -> list[JobRun]:
     return [jobFromPayload(item) for item in payload.get("jobs") or [] if isinstance(item, dict) and item.get("name")]
 
 
+def runStatus(runPayload: dict[str, Any]) -> str:
+    return normalizeStatus(runPayload.get("status"))
+
+
 def selectRunForHead(runs: Sequence[dict[str, Any]], headSha: str) -> dict[str, Any] | None:
     for run in runs:
         if str(run.get("headSha") or "") == headSha:
             return run
     return None
+
+
+def appendUniqueJob(jobs: list[JobRun], job: JobRun) -> None:
+    if not any(existing.name == job.name for existing in jobs):
+        jobs.append(job)
 
 
 def evaluateRun(
@@ -105,7 +114,8 @@ def evaluateRun(
             message="no matching pull_request workflow run found yet",
         )
 
-    jobs_by_name = {job.name: job for job in jobsFromRunPayload(runPayload)}
+    all_jobs = jobsFromRunPayload(runPayload)
+    jobs_by_name = {job.name: job for job in all_jobs}
     selected_jobs: list[JobRun] = []
     missing_jobs: list[str] = []
     missing_steps: list[str] = []
@@ -148,33 +158,59 @@ def evaluateRun(
             message=f"pending job(s): {names}",
         )
 
+    display_jobs = list(selected_jobs)
     for step_name in requiredSteps:
-        for job in selected_jobs:
-            steps_by_name = {step.name: step for step in job.steps}
-            step = steps_by_name.get(step_name)
-            if step is None:
-                missing_steps.append(f"{job.name}/{step_name}")
-            elif step.status != "COMPLETED":
+        matches = [(job, step) for job in all_jobs for step in job.steps if step.name == step_name]
+        if not matches:
+            missing_steps.append(step_name)
+            continue
+        for job, step in matches:
+            appendUniqueJob(display_jobs, job)
+            if step.status != "COMPLETED":
                 return CheckEvaluation(
                     state="pending",
-                    jobs=tuple(selected_jobs),
+                    jobs=tuple(display_jobs),
                     missingJobs=(),
                     missingSteps=(),
-                    message=f"pending step: {job.name}/{step_name}={step.status or 'UNKNOWN'}",
+                    message=f"pending step: {job.name}/{step.name}={step.status or 'UNKNOWN'}",
                 )
-            elif step.conclusion != SUCCESS_CONCLUSION:
+            if step.conclusion != SUCCESS_CONCLUSION:
                 return CheckEvaluation(
                     state="failure",
-                    jobs=tuple(selected_jobs),
+                    jobs=tuple(display_jobs),
                     missingJobs=(),
                     missingSteps=(),
-                    message=f"failed step: {job.name}/{step_name}={step.conclusion or 'UNKNOWN'}",
+                    message=f"failed step: {job.name}/{step.name}={step.conclusion or 'UNKNOWN'}",
+                )
+            if job.status != "COMPLETED":
+                return CheckEvaluation(
+                    state="pending",
+                    jobs=tuple(display_jobs),
+                    missingJobs=(),
+                    missingSteps=(),
+                    message=f"pending job with required step: {job.name}={job.status or 'UNKNOWN'}",
+                )
+            if job.conclusion != SUCCESS_CONCLUSION:
+                return CheckEvaluation(
+                    state="failure",
+                    jobs=tuple(display_jobs),
+                    missingJobs=(),
+                    missingSteps=(),
+                    message=f"failed job with required step: {job.name}={job.conclusion or 'UNKNOWN'}",
                 )
 
     if missing_steps:
+        if runStatus(runPayload) != "COMPLETED":
+            return CheckEvaluation(
+                state="pending",
+                jobs=tuple(display_jobs),
+                missingJobs=(),
+                missingSteps=tuple(missing_steps),
+                message=f"missing required step(s) so far: {', '.join(missing_steps)}",
+            )
         return CheckEvaluation(
             state="failure",
-            jobs=tuple(selected_jobs),
+            jobs=tuple(display_jobs),
             missingJobs=(),
             missingSteps=tuple(missing_steps),
             message=f"missing required step(s): {', '.join(missing_steps)}",
@@ -182,7 +218,7 @@ def evaluateRun(
 
     return CheckEvaluation(
         state="success",
-        jobs=tuple(selected_jobs),
+        jobs=tuple(display_jobs),
         missingJobs=(),
         missingSteps=(),
         message=f"successful job(s): {', '.join(requiredJobs)}",
@@ -293,9 +329,7 @@ def formatJob(job: JobRun, requiredSteps: Sequence[str]) -> list[str]:
         steps_by_name = {step.name: step for step in job.steps}
         for step_name in requiredSteps:
             step = steps_by_name.get(step_name)
-            if step is None:
-                lines.append(f"  {step_name}: missing")
-            else:
+            if step is not None:
                 step_conclusion = f"/{step.conclusion}" if step.conclusion else ""
                 lines.append(f"  {step.name}: {step.status}{step_conclusion}")
     return lines
@@ -392,7 +426,7 @@ def parseArgs(argv: Sequence[str]) -> argparse.Namespace:
         action="append",
         dest="steps",
         default=[],
-        help="Required step name inside every selected job, such as coverage. May be repeated.",
+        help="Required step name that must pass somewhere in the selected workflow run. May be repeated.",
     )
     parser.add_argument(
         "--interval-seconds",

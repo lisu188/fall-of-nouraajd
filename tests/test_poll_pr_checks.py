@@ -9,12 +9,12 @@ from scripts import poll_pr_checks
 
 
 class PollPrChecksTest(unittest.TestCase):
-    def runPayload(self, jobs: list[dict[str, object]]) -> dict[str, object]:
+    def runPayload(self, jobs: list[dict[str, object]], *, status: str = "completed") -> dict[str, object]:
         return {
             "headSha": "abc123",
             "url": "https://github.com/example/repo/actions/runs/1",
             "workflowName": "build",
-            "status": "completed",
+            "status": status,
             "conclusion": "success",
             "jobs": jobs,
         }
@@ -129,6 +129,65 @@ class PollPrChecksTest(unittest.TestCase):
 
         self.assertTrue(evaluation.succeeded)
 
+    def test_evaluate_run_accepts_required_step_from_non_selected_job(self) -> None:
+        evaluation = poll_pr_checks.evaluateRun(
+            self.runPayload(
+                [
+                    self.jobPayload(name="linux"),
+                    self.jobPayload(
+                        name="linux-coverage",
+                        steps=[
+                            {
+                                "name": "coverage",
+                                "status": "completed",
+                                "conclusion": "success",
+                            }
+                        ],
+                    ),
+                ]
+            ),
+            ["linux"],
+            ["coverage"],
+        )
+
+        self.assertTrue(evaluation.succeeded)
+        self.assertEqual(("linux", "linux-coverage"), tuple(job.name for job in evaluation.jobs))
+
+    def test_evaluate_run_fails_required_step_from_non_selected_job(self) -> None:
+        evaluation = poll_pr_checks.evaluateRun(
+            self.runPayload(
+                [
+                    self.jobPayload(name="linux"),
+                    self.jobPayload(
+                        name="linux-coverage",
+                        steps=[
+                            {
+                                "name": "coverage",
+                                "status": "completed",
+                                "conclusion": "failure",
+                            }
+                        ],
+                    ),
+                ]
+            ),
+            ["linux"],
+            ["coverage"],
+        )
+
+        self.assertTrue(evaluation.failed)
+        self.assertIn("linux-coverage/coverage=FAILURE", evaluation.message)
+
+    def test_evaluate_run_waits_for_missing_required_step_while_workflow_runs(self) -> None:
+        evaluation = poll_pr_checks.evaluateRun(
+            self.runPayload([self.jobPayload(name="linux")], status="in_progress"),
+            ["linux"],
+            ["coverage"],
+        )
+
+        self.assertEqual("pending", evaluation.state)
+        self.assertEqual(("coverage",), evaluation.missingSteps)
+        self.assertIn("missing required step(s) so far", evaluation.message)
+
     def test_evaluate_run_fails_skipped_required_step(self) -> None:
         evaluation = poll_pr_checks.evaluateRun(
             self.runPayload(
@@ -151,6 +210,31 @@ class PollPrChecksTest(unittest.TestCase):
         self.assertTrue(evaluation.failed)
         self.assertIn("linux/coverage=SKIPPED", evaluation.message)
 
+    def test_evaluate_run_fails_required_step_job_failure(self) -> None:
+        evaluation = poll_pr_checks.evaluateRun(
+            self.runPayload(
+                [
+                    self.jobPayload(name="linux"),
+                    self.jobPayload(
+                        name="linux-coverage",
+                        conclusion="failure",
+                        steps=[
+                            {
+                                "name": "coverage",
+                                "status": "completed",
+                                "conclusion": "success",
+                            }
+                        ],
+                    ),
+                ]
+            ),
+            ["linux"],
+            ["coverage"],
+        )
+
+        self.assertTrue(evaluation.failed)
+        self.assertIn("linux-coverage=FAILURE", evaluation.message)
+
     def test_evaluate_run_fails_missing_required_step_after_job_success(self) -> None:
         evaluation = poll_pr_checks.evaluateRun(
             self.runPayload([self.jobPayload()]),
@@ -159,7 +243,7 @@ class PollPrChecksTest(unittest.TestCase):
         )
 
         self.assertTrue(evaluation.failed)
-        self.assertEqual(("linux/coverage",), evaluation.missingSteps)
+        self.assertEqual(("coverage",), evaluation.missingSteps)
 
     def test_evaluate_pr_state_passes_already_merged_pr(self) -> None:
         evaluation = poll_pr_checks.evaluatePrState(
