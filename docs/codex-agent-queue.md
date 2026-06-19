@@ -111,10 +111,11 @@ Alternatively use `claim --format prompt`.
 
 Keep at least four live subagents attached to the controller whenever the subagent interface is available. Keep four
 implementation issues active whenever four safe, eligible, non-conflicting issues exist, and make that active
-implementation count RAM-aware. Before dispatching or refilling implementation workers, inspect current available RAM,
-swap pressure, and running heavy build/test/coverage/Xvfb/MCP jobs. Set the live implementation worker budget to the
-smaller of four and the number of workers the machine can support without memory pressure. If the controller cannot keep
-four issue workers active, report the concrete eligibility, conflict, status, RAM, or repository-safety blocker.
+implementation count RAM- and disk-aware. Before dispatching or refilling implementation workers, inspect current
+available RAM, swap pressure, free disk, accumulated run/worktrees, prunable worktree metadata, and running heavy
+build/test/coverage/Xvfb/MCP jobs. Set the live implementation worker budget to the smaller of four and the number of
+workers the machine can support without memory or disk pressure. If the controller cannot keep four issue workers
+active, report the concrete eligibility, conflict, status, RAM, disk, cleanup, or repository-safety blocker.
 
 Standby subagents may help with lightweight status polling, eligibility summaries, or review preparation only when fewer
 than four implementation issues can safely run. They must not claim issues, edit files, touch the workbook, start builds,
@@ -123,8 +124,8 @@ run tests, or launch coverage/Xvfb/MCP validation.
 Poll every active worker through the available subagent/task interface. If direct polling is unavailable, require
 structured status updates from the worker.
 
-After every controller loop iteration, claim or pull-request status check, and before dispatching new work, print a live
-status table containing at least:
+After every controller loop iteration, cleanup audit, claim or pull-request status check, and before dispatching new
+work, print a live status table containing at least:
 
 - worker owner;
 - issue key;
@@ -135,11 +136,25 @@ status table containing at least:
 - current validation command if running;
 - branch name;
 - pull request number or pending PR state;
+- current RAM and disk state;
+- cleanup state, including prunable worktree metadata and accumulated run/worktree size when known;
 - blockers;
 - next controller action.
 
 Do not rely on workbook fields for live status. The workbook records durable queue state; live worker state comes from
 subagent polling or structured worker reports.
+
+Run the read-only resource audit before every dispatch/refill decision, before heavy validation, after each controller
+loop, and after merged-checkpoint cleanup:
+
+```bash
+python3 scripts/controller_resource_audit.py --json
+```
+
+The audit reports disk usage, active and prunable worktree registrations, and matching controller run/worktrees such as
+`/tmp/nouraajd-*` and `/tmp/fall-of-nouraajd-codex`. It is report-only by default. Treat audit errors as blockers to new
+heavy work, and treat warnings about prunable worktree metadata or large accumulated run/worktrees as cleanup prompts
+before refilling worker slots.
 
 ## Subagent progress protocol
 
@@ -255,3 +270,7 @@ python3 scripts/issue_queue.py show --issue "$ISSUE_NAME"
 - Recalculate the RAM-safe implementation worker and heavy-job budgets before each dispatch/refill and before starting
   heavy validation; fewer than four active implementation workers or heavy jobs can still be the correct budget.
 - If RAM-safety limits or missing worker status prevent safe dispatch, stop filling worker slots until the blocker clears.
+- If disk-safety limits, prunable worktree metadata, or accumulated run/worktree usage prevent safe dispatch, stop
+  filling worker slots until the blocker is reported or safely cleaned.
+- Remove only completed clean worktrees. Use `git worktree prune` only for prunable metadata after reviewing that the
+  corresponding worktree directories no longer exist. Do not delete branches unless explicitly asked.

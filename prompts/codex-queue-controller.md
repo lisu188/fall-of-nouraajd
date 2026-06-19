@@ -23,11 +23,14 @@ Explicitly spawn worker subagents for implementation tasks. Do not merely descri
 11. Serialize all workbook pull requests. The XLSX file is binary and must never be modified concurrently on multiple branches intended to merge.
 12. Claim and terminal-status pull requests normally update exactly one issue. Do not batch workbook edits unless this workflow explicitly permits it and all selected issues are proven independent.
 13. Preserve public identifiers and backward compatibility unless source evidence proves they are broken.
-14. For local RAM safety, use serial or very low-parallelism validation. Replace repository-local `-j$(nproc)` build
-   commands with `-j1` unless the user explicitly authorizes more parallelism.
+14. For local RAM and disk safety, use serial or very low-parallelism validation. Replace repository-local
+   `-j$(nproc)` build commands with `-j1` unless the user explicitly authorizes more parallelism.
 15. Recalculate a RAM-safe worker budget before every dispatch/refill decision and before starting heavy validation.
    If fewer than four issue workers are active, document the concrete eligibility, conflict, status, RAM, or repository
    safety blocker that prevents filling the slot.
+16. Run the controller resource audit before dispatch/refill decisions, before heavy validation, after each controller
+   loop, and after merged-checkpoint cleanup. Treat low free disk or stale run/worktree pressure as blockers to new work
+   until safely reported or cleaned.
 
 ## Startup
 
@@ -113,8 +116,8 @@ subagents must not claim issues, edit files, start builds, run tests, or touch t
 Regularly poll every active worker using the available subagent or task interface. If direct polling is unavailable,
 require structured worker updates and summarize the latest update.
 
-After every controller loop iteration, after every claim or pull-request status check, and before dispatching new work,
-print a concise live status table. Include at minimum:
+After every controller loop iteration, cleanup audit, claim or pull-request status check, and before dispatching new
+work, print a concise live status table. Include at minimum:
 
 - worker owner;
 - issue key;
@@ -125,6 +128,8 @@ print a concise live status table. Include at minimum:
 - current validation command if one is running;
 - branch name;
 - pull request number or pending PR state;
+- current RAM and disk state;
+- cleanup state, including prunable worktree registrations and accumulated run/worktree size when known;
 - blockers;
 - next controller action.
 
@@ -133,10 +138,16 @@ structured worker updates are the live-status source.
 
 ## Eligibility and random selection
 
-Before filling each free worker slot, first ensure at least four live subagents are attached to the controller, then
-recalculate the current RAM-safe implementation worker budget from available memory, swap pressure, active worker status,
-and running heavy build/test/coverage/Xvfb/MCP jobs. Four active implementation workers is the default operating target
-and current cap. If current conditions only support fewer implementation workers, keep the extra subagents in standby and
+Before filling each free worker slot, ensure at least four live subagents are attached to the controller, then run:
+
+```bash
+python3 scripts/controller_resource_audit.py --json
+```
+
+Use the audit plus current available memory, swap pressure, active worker status, disk pressure, accumulated
+run/worktree usage, prunable worktree metadata, and running heavy build/test/coverage/Xvfb/MCP jobs to recalculate the
+RAM- and disk-safe implementation worker budget. Four active implementation workers is the default operating target and
+current cap. If current conditions only support fewer implementation workers, keep the extra subagents in standby and
 record the blocker rather than assigning unsafe implementation issues.
 
 For each RAM-approved free slot, fetch the latest merged queue state from `origin/main` and calculate the complete
@@ -173,14 +184,16 @@ For each RAM-approved free subagent slot:
 6. Supervise progress and review the final diff and validation.
 7. Publish and merge the implementation pull request.
 8. Publish and merge the terminal workbook status.
-9. Remove completed worktrees and dispatch the next eligible task.
+9. Remove completed clean worktrees, prune stale worktree metadata after review, rerun the resource audit, and dispatch
+   the next eligible task.
 
 Do not bypass dependencies to keep workers occupied.
 
 Do not start additional workers when live worker status is missing, when the next candidate conflicts with active work,
-or when RAM-safety limits require waiting for heavy validation to finish. If available RAM drops after workers are
-already active, stop refilling implementation slots and pause new heavy validation until the budget recovers. Keep at
-least four subagents alive by assigning standby-only work when fewer than four implementation slots are safe.
+or when RAM- or disk-safety limits require waiting for heavy validation or cleanup to finish. If available RAM drops or
+disk pressure rises after workers are already active, stop refilling implementation slots and pause new heavy validation
+until the budget recovers. Keep at least four subagents alive by assigning standby-only work when fewer than four
+implementation slots are safe.
 
 ## Phase 1: publish an `IN_PROGRESS` claim
 
@@ -487,13 +500,24 @@ Never convert `BLOCKED`, `FAILED`, or `CANCELLED` to `DONE` merely to unlock dep
 
 ## Cleanup
 
+After every controller loop, PR status poll, and merged checkpoint, run the read-only resource audit:
+
+```bash
+python3 scripts/controller_resource_audit.py --json
+```
+
+Use the audit to report free disk, accumulated run/worktrees, and prunable worktree metadata. If disk pressure is high
+or many stale worktree registrations exist, stop refilling worker slots until cleanup is reviewed and completed safely.
+
 After both implementation and terminal-status PRs merge:
 
 1. Verify no uncommitted files remain in the task worktrees.
 2. Remove task worktrees with `git worktree remove <path>`.
 3. Run `git worktree prune`.
-4. Delete local branches only after verifying their commits are reachable from `origin/main`.
-5. Do not remove a branch or worktree that contains unmerged or uncommitted work.
+4. Rerun `python3 scripts/controller_resource_audit.py --json` and record the new disk/worktree state.
+5. Delete local branches only after verifying their commits are reachable from `origin/main` and only when the user has
+   explicitly allowed branch deletion.
+6. Do not remove a branch or worktree that contains unmerged or uncommitted work.
 
 ## Stop conditions
 
@@ -508,6 +532,7 @@ Stop dispatching new tasks when:
 - available subagent capacity is exhausted;
 - live worker status cannot be polled or recovered safely;
 - RAM-safety limits require waiting before more work can start;
+- disk-safety limits or accumulated run/worktree state require cleanup before more work can start;
 - the repository is in an unresolved state.
 
 Before stopping, report:
@@ -517,5 +542,6 @@ Before stopping, report:
 - queue-state PRs and whether they merged;
 - validation status of the workbook;
 - implementation validation status;
+- disk/RAM state and cleanup performed or deferred;
 - worktrees requiring manual review;
 - next eligible issue, when one exists.
