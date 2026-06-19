@@ -380,6 +380,36 @@ void test_fight_handler_reports_explicit_outcomes_and_final_status() {
     expect_true(status.find("defeated") != std::string::npos, "final defeat status should be explicit");
 }
 
+void test_fight_handler_reports_invalid_result_metadata() {
+    const auto null_result = CFightHandler::fightManyResult(std::shared_ptr<CCreature>(), {});
+    expect_true(null_result.outcome == CFightOutcome::Invalid && null_result.rounds == 0,
+                "null attackers should return an invalid empty result");
+    expect_true(!null_result.survivor && !null_result.opponent,
+                "null attackers should not report stale survivor metadata");
+
+    auto detached = std::make_shared<CCreature>();
+    detached->setName("unitDetachedAttacker");
+    detached->setFightController(std::make_shared<NoProgressFightController>());
+    const auto detached_result = CFightHandler::fightManyResult(detached, {});
+    expect_true(detached_result.outcome == CFightOutcome::Invalid,
+                "attackers without an active map registration should return invalid");
+
+    auto game = load_empty_game();
+    auto attacker = add_test_creature(game, "unitInvalidMetadataAttacker");
+    const auto empty_opponents = CFightHandler::fightManyResult(attacker, {});
+    expect_true(empty_opponents.outcome == CFightOutcome::Invalid,
+                "combat without active opponents should return invalid");
+
+    auto controllerless = add_test_creature(game, "unitControllerlessAttacker", 2, 0);
+    auto defender = add_test_creature(game, "unitControllerlessDefender", 3, 0);
+    controllerless->setFightController(nullptr);
+    const auto controllerless_result = CFightHandler::fightManyResult(controllerless, {defender});
+    expect_true(controllerless_result.outcome == CFightOutcome::Invalid,
+                "attackers without fight controllers should return invalid");
+    expect_true(game->getMap()->getObjectByName(defender->getName()) == defender,
+                "invalid controller checks should not mutate active opponents");
+}
+
 void test_fight_handler_reports_cancelled_quit_event() {
     expect_true(SDL_InitSubSystem(SDL_INIT_EVENTS) == 0, "SDL event subsystem should initialize for quit events");
     SDL_FlushEvent(SDL_QUIT);
@@ -484,6 +514,41 @@ void test_playtest_trace_records_native_limits_and_quest_completion() {
     CPlaytestTrace::configure(false);
 }
 
+void test_fight_handler_records_outcome_trace_metadata() {
+    CPlaytestTrace::configure(true);
+    try {
+        auto game = load_empty_game();
+        auto victor = add_test_creature(game, "unitTraceOutcomeVictor");
+        victor->setFightController(std::make_shared<KillingFightController>());
+        auto defeated = add_test_creature(game, "unitTraceOutcomeDefeated", 1, 0);
+        add_unit_loot(game, defeated, "unitTraceOutcomeLoot");
+
+        const auto result = CFightHandler::fightManyResult(victor, {defeated});
+        const auto records = CPlaytestTrace::drain();
+
+        bool found_finished = false;
+        for (const auto &record : records) {
+            const auto parsed = json::parse(record);
+            if (parsed.value("event", std::string()) != "combat_finished") {
+                continue;
+            }
+            found_finished = true;
+            expect_true(parsed.value("outcome", 0) == static_cast<int>(CFightOutcome::AttackerVictory),
+                        "combat_finished traces should include the explicit fight outcome");
+            expect_true(parsed.value("rounds", 0) == result.rounds,
+                        "combat_finished traces should include the resolved round count");
+            expect_true(parsed.contains("survivor") &&
+                            parsed["survivor"].value("name", std::string()) == victor->getName(),
+                        "combat_finished traces should include the survivor reference");
+        }
+        expect_true(found_finished, "combat should emit a combat_finished trace while tracing is enabled");
+    } catch (...) {
+        CPlaytestTrace::configure(false);
+        throw;
+    }
+    CPlaytestTrace::configure(false);
+}
+
 void test_player_respawn_normalizes_wrapped_entry_coords() {
     auto game = CGameLoader::loadGame();
     CGameLoader::startGameWithPlayer(game, "empty", "Warrior");
@@ -516,9 +581,11 @@ int main() {
     test_fight_handler_rejects_stale_and_cross_map_participants();
     test_fight_handler_attributes_lethal_effects_to_valid_casters();
     test_fight_handler_reports_explicit_outcomes_and_final_status();
+    test_fight_handler_reports_invalid_result_metadata();
     test_fight_handler_reports_cancelled_quit_event();
     test_fight_handler_counts_effect_duration_as_progress();
     test_playtest_trace_records_native_limits_and_quest_completion();
+    test_fight_handler_records_outcome_trace_metadata();
     test_player_respawn_normalizes_wrapped_entry_coords();
 
     return finish_tests();
