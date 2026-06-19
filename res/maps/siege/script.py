@@ -114,11 +114,16 @@ def load(self, context):
         def onEnter(self, event):
             if not event.getCause().isPlayer():
                 return
-            if not self.getBoolProperty("enabled") or self.getBoolProperty("destroyed"):
+            if (
+                not self.getBoolProperty("enabled")
+                or self.getBoolProperty("pendingSeal")
+                or self.getBoolProperty("destroyed")
+            ):
                 return
             if self.getMap().getPlayer().hasItem(lambda it: it.hasTag(CTag.WAND)):
                 if self.getMap().getGame().getGuiHandler().showQuestion("Do You want to seal the gate?"):
                     self.getMap().getPlayer().removeQuestItem(lambda it: it.hasTag(CTag.WAND))
+                    self.setBoolProperty("enabled", False)
                     self.setBoolProperty("destroyed", True)
                     self.setBoolProperty("pendingSeal", True)
                     self.setStringProperty("animation", "images/misc/closed_door")
@@ -144,5 +149,6 @@ def load(self, context):
                     enableSpawn,
                     lambda ob: event.cont
                     and ob.getStringProperty("type") == "SpawnPoint"
-                    and not ob.getBoolProperty("enabled"),
+                    and not ob.getBoolProperty("enabled")
+                    and not ob.getBoolProperty("destroyed"),
                 )

@@ -10950,6 +10950,63 @@ class GameTest(unittest.TestCase):
         )
 
     @game_test
+    def test_siege_spawn_point_seal_consumes_one_wand_once_while_pending(self):
+        class FakeEvent:
+            def __init__(self, cause):
+                self.cause = cause
+
+            def getCause(self):
+                return self.cause
+
+        game = load_game_module()
+        original_show_question = game.CGuiHandler.showQuestion
+        question_calls = []
+
+        def confirm_seal(_self, _message):
+            question_calls.append(True)
+            return True
+
+        try:
+            game.CGuiHandler.showQuestion = confirm_seal
+            _g, game_map, player = load_game_map_with_player("siege")
+            spawn_point = find_runtime_object(game_map, "spawnPoint1")
+            spawn_coords = spawn_point.getCoords()
+            player.moveTo(spawn_coords.x, spawn_coords.y, spawn_coords.z)
+            player.addItem("magicWand")
+            player.addItem("magicWand")
+            starting_wands = player.countItems("magicWand")
+            spawn_point.setBoolProperty("enabled", True)
+            spawn_point.setBoolProperty("canStep", True)
+
+            spawn_point.onEnter(FakeEvent(player))
+            after_first_seal_wands = player.countItems("magicWand")
+            spawn_point.onEnter(FakeEvent(player))
+            after_second_enter_wands = player.countItems("magicWand")
+
+            self.assertEqual(starting_wands - 1, after_first_seal_wands)
+            self.assertEqual(after_first_seal_wands, after_second_enter_wands)
+            self.assertEqual(1, len(question_calls))
+            self.assertFalse(spawn_point.getBoolProperty("enabled"))
+            self.assertTrue(spawn_point.getBoolProperty("destroyed"))
+            self.assertTrue(spawn_point.getBoolProperty("pendingSeal"))
+            self.assertEqual("images/misc/closed_door", spawn_point.getStringProperty("animation"))
+        finally:
+            game.CGuiHandler.showQuestion = original_show_question
+
+        return True, json.dumps(
+            {
+                "after_first_seal_wands": after_first_seal_wands,
+                "after_second_enter_wands": after_second_enter_wands,
+                "destroyed": spawn_point.getBoolProperty("destroyed"),
+                "enabled": spawn_point.getBoolProperty("enabled"),
+                "pendingSeal": spawn_point.getBoolProperty("pendingSeal"),
+                "question_calls": len(question_calls),
+                "starting_wands": starting_wands,
+            },
+            sort_keys=True,
+        )
+
+    @game_test
     def test_map_walkthrough_test(self):
         return execute_walkthrough("test")
 
