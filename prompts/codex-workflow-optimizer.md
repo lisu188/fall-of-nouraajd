@@ -72,6 +72,15 @@ Use these roles, rotating them when useful:
    - Read-only until assigned an isolated fix.
    - Review diffs, test design, backward compatibility, failure paths, documentation, and validation evidence.
 
+5. Project manager and prioritization scout
+   - Read-only.
+   - Review the issue queue, active work, dependencies, blockers, user impact, validation cost, RAM/disk limits, and
+     stale claims.
+   - Produce a prioritization brief that identifies the highest-value safe work, sequencing risks, dependency unlocks,
+     and priority-change recommendations.
+   - Must not edit the workbook, claim work, dispatch workers, or bypass the queue controller's dependency, conflict,
+     priority-tier, random-selection, RAM, disk, or PR requirements.
+
 Subagents may inspect in parallel. Never allow multiple workers to modify overlapping files or indirectly coupled workflow components concurrently. When implementation scopes overlap, keep only one writer and use the other agents for analysis, review, or status polling.
 
 ## Controller polling and status
@@ -117,7 +126,7 @@ Repeat the following cycle:
    - Do not claim a bottleneck without measurement or reproducible evidence.
 
 3. Select an optimization
-   - Have the audit and review agents propose concrete candidates.
+   - Have the audit, review, and project-manager agents propose concrete candidates.
    - Rank candidates by correctness impact, failure risk, developer-time reduction, testability, and scope.
    - Select the smallest coherent improvement with a clear root cause and measurable expected result.
    - Prefer bug fixes, missing guards, deterministic tests, and removal of verified duplication over broad redesigns.

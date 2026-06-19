@@ -31,6 +31,8 @@ Explicitly spawn worker subagents for implementation tasks. Do not merely descri
 16. Run the controller resource audit before dispatch/refill decisions, before heavy validation, after each controller
    loop, and after merged-checkpoint cleanup. Treat low free disk or stale run/worktree pressure as blockers to new work
    until safely reported or cleaned.
+17. Keep issue prioritization explicit. A project-manager role may recommend sequencing and priority changes, but those
+   recommendations are advisory until the controller or user approves a serialized workbook-only queue update.
 
 ## Startup
 
@@ -113,6 +115,11 @@ implementation issues can safely run, assign the excess subagents only lightweig
 eligibility summaries, or review preparation, and print the exact blocker preventing four active issues. Standby
 subagents must not claim issues, edit files, start builds, run tests, or touch the workbook.
 
+When subagent capacity permits, keep one read-only project manager attached to the controller. The project manager may
+be an extra subagent beyond active implementation workers, or a standby role when fewer than four implementation issues
+are safe. It must not reduce the target of four active implementation issues when four safe issues and enough resources
+exist.
+
 Regularly poll every active worker using the available subagent or task interface. If direct polling is unavailable,
 require structured worker updates and summarize the latest update.
 
@@ -130,11 +137,33 @@ work, print a concise live status table. Include at minimum:
 - pull request number or pending PR state;
 - current RAM and disk state;
 - cleanup state, including prunable worktree registrations and accumulated run/worktree size when known;
+- project-manager brief state or the reason no project-manager subagent is available;
 - blockers;
 - next controller action.
 
 Do not rely on the workbook alone for live worker status. The workbook records durable queue state; worker polling or
 structured worker updates are the live-status source.
+
+## Project manager prioritization role
+
+Before each dispatch/refill decision, have the project manager review the current merged workbook, active workers,
+stale claims, blocked or failed rows, dependency chains, resource limits, and open pull requests. If no project-manager
+subagent is available, the controller must perform this checklist directly and say so in the live status table.
+
+The project manager produces a concise prioritization brief containing:
+
+- the highest available priority tier after dependency, status, conflict, RAM, and disk filtering;
+- candidate `(Epic #, Story #)` groups in that tier;
+- work likely to unblock dependent issues;
+- stale, blocked, failed, or repeatedly deferred work that needs controller attention;
+- scope conflicts, validation cost, resource risk, and sequencing risk;
+- recommended priority changes, issue splits, deferrals, or blocker publications with source-backed evidence.
+
+Project-manager recommendations do not bypass the queue rules. The controller must still keep only the highest
+currently available workbook priority tier, group by `(Epic #, Story #)`, randomly select one eligible story, and
+randomly select one eligible substory inside it. Any change to issue priority, dependencies, status, or scope requires
+an explicit user/controller decision and a serialized workbook-only pull request that merges into `main` before the
+changed data affects dispatch.
 
 ## Eligibility and random selection
 
@@ -152,7 +181,8 @@ record the blocker rather than assigning unsafe implementation issues.
 
 For each RAM-approved free slot, fetch the latest merged queue state from `origin/main` and calculate the complete
 eligible set yourself. The `claim` command is deterministic by workbook order, so use it only after selecting the exact
-issue.
+issue. Refresh the project-manager prioritization brief before selecting, and use it to decide whether to proceed,
+pause for a priority/status update, or report a blocker. Do not use the brief as an ad hoc priority override.
 
 Exclude every row that has:
 

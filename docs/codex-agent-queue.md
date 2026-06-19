@@ -68,6 +68,21 @@ Keep only the highest currently available priority tier. Group remaining candida
 select one story with equal probability, then randomly select one eligible substory inside it. Never default to workbook
 order and never randomize ineligible rows.
 
+Before dispatch/refill decisions, assign a read-only project manager role when subagent capacity permits. The project
+manager reviews the merged workbook, active work, stale claims, blockers, dependency chains, validation cost, RAM/disk
+limits, and open PR state, then reports:
+
+- the highest available priority tier and candidate `(Epic #, Story #)` groups;
+- issues likely to unblock other work;
+- stale, blocked, failed, or repeatedly deferred rows needing controller attention;
+- scope, validation, resource, and sequencing risks;
+- source-backed recommendations for priority changes, issue splits, deferrals, or blocker publications.
+
+The project manager is advisory. It must not claim issues, edit files, touch the workbook, start validation, or override
+the dependency, conflict, highest-priority-tier, randomized story/substory, RAM, disk, or PR requirements. Any priority,
+dependency, status, or scope change must be approved by the user or controller and merged through a serialized
+workbook-only pull request before it affects dispatch.
+
 After selecting an exact issue, claim that row:
 
 ```bash
@@ -121,6 +136,10 @@ Standby subagents may help with lightweight status polling, eligibility summarie
 than four implementation issues can safely run. They must not claim issues, edit files, touch the workbook, start builds,
 run tests, or launch coverage/Xvfb/MCP validation.
 
+When four implementation workers are not safe, prefer assigning one standby subagent as the project manager so the next
+refill decision has a current prioritization brief. When four safe implementation issues and enough resources exist, the
+project manager should run as extra read-only capacity rather than displacing an implementation worker.
+
 Poll every active worker through the available subagent/task interface. If direct polling is unavailable, require
 structured status updates from the worker.
 
@@ -138,6 +157,7 @@ work, print a live status table containing at least:
 - pull request number or pending PR state;
 - current RAM and disk state;
 - cleanup state, including prunable worktree metadata and accumulated run/worktree size when known;
+- project-manager prioritization brief state or the reason no project-manager subagent is available;
 - blockers;
 - next controller action.
 
