@@ -24,6 +24,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CSceneManager.h"
 #include "core/CSerialization.h"
 #include "core/CStats.h"
+#include "core/CTypes.h"
 #include "object/CCreature.h"
 #include "object/CGameObject.h"
 #include "object/CMapObject.h"
@@ -230,6 +231,31 @@ class MovementOriginProbeCreature : public CCreature {
 
     std::optional<Coords> observedOriginDuringAfterMove;
     bool originClearedAfterBaseAfterMove = false;
+};
+
+class MoveHookCounterCreature : public CCreature {
+  public:
+    void beforeMove() override {
+        beforeMoveCalls++;
+        CCreature::beforeMove();
+    }
+
+    void afterMove() override {
+        afterMoveCalls++;
+        CCreature::afterMove();
+    }
+
+    int beforeMoveCalls = 0;
+    int afterMoveCalls = 0;
+};
+
+class ObjectChangedProbe : public CGameObject {
+    V_META(ObjectChangedProbe, CGameObject, V_METHOD(ObjectChangedProbe, onObjectChanged, void, Coords))
+
+  public:
+    void onObjectChanged(Coords coords) { objectChangedCoords.push_back(coords); }
+
+    std::vector<Coords> objectChangedCoords;
 };
 
 std::shared_ptr<CStats> creature_stats() {
@@ -613,6 +639,54 @@ void test_creature_tracks_pending_move_origin_only_during_after_move() {
                 "pending move origin should be empty after movement finishes");
 }
 
+void test_map_object_relocate_without_move_hooks_updates_spatial_state_once() {
+    CTypes::register_type_metadata<ObjectChangedProbe, CGameObject>();
+
+    auto game = std::make_shared<CGame>();
+    auto map = std::make_shared<CMap>();
+    game->setMap(map);
+    map->setGame(game);
+    map->setXBounds({{0, 4}});
+    map->setYBounds({{0, 3}});
+    map->setWrapX({{0, 1}});
+    map->setWrapY({{0, 1}});
+
+    auto creature = std::make_shared<MoveHookCounterCreature>();
+    creature->setName("relocationProbe");
+    creature->setGame(game);
+    creature->setBaseStats(creature_stats());
+    creature->setLevel(1);
+    creature->setHp(creature->getHpMax());
+    creature->setCanStep(false);
+    map->addObject(creature);
+
+    auto probe = std::make_shared<ObjectChangedProbe>();
+    map->connect("objectChanged", probe, "onObjectChanged");
+
+    const auto revision_before_relocation = map->getNavigationRevision();
+    const auto cache_entries_before_relocation = map->getObjectCacheEntryCountForTesting();
+
+    creature->relocateWithoutMoveHooks(Coords(-1, 4, 0));
+    pump_event_loop_iterations();
+
+    expect_true(creature->getCoords() == Coords(4, 0, 0),
+                "relocateWithoutMoveHooks should normalize and store the destination coordinates");
+    expect_true(map->getObjectsAtCoords(Coords(0, 0, 0)).empty(),
+                "relocateWithoutMoveHooks should remove stale object cache entries");
+    expect_true(map->getObjectsAtCoords(Coords(4, 0, 0)).contains(creature),
+                "relocateWithoutMoveHooks should index the object at its normalized destination");
+    expect_true(map->getObjectCacheEntryCountForTesting() == cache_entries_before_relocation,
+                "relocateWithoutMoveHooks should keep one cache entry for the relocated object");
+    expect_true(map->getNavigationRevision() > revision_before_relocation,
+                "relocateWithoutMoveHooks should bump navigation revision through objectMoved");
+    expect_true(creature->beforeMoveCalls == 0 && creature->afterMoveCalls == 0,
+                "relocateWithoutMoveHooks should not invoke movement hooks");
+    expect_true(!creature->getPendingMoveOrigin().has_value(),
+                "relocateWithoutMoveHooks should not create pending movement origin state");
+    expect_true((probe->objectChangedCoords == std::vector<Coords>{Coords(0, 0, 0), Coords(4, 0, 0)}),
+                "relocateWithoutMoveHooks should emit one old-coordinate and one new-coordinate signal");
+}
+
 void test_map_player_trigger_registration_is_idempotent() {
     auto game = CGameLoader::loadGame();
     auto map = std::make_shared<CMap>();
@@ -733,6 +807,7 @@ int main() {
     test_map_defensive_branches_and_strict_validation();
     test_map_move_interrupts_invalid_planned_steps();
     test_creature_tracks_pending_move_origin_only_during_after_move();
+    test_map_object_relocate_without_move_hooks_updates_spatial_state_once();
     test_map_player_trigger_registration_is_idempotent();
     test_map_keeps_tiles_and_objects_separate_by_z();
     test_can_step_checks_default_tile_passability_without_materializing();
