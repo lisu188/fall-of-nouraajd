@@ -23,6 +23,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CSerialization.h"
 #include "core/CScript.h"
 #include "core/CTags.h"
+#include "core/CTypes.h"
 #include "core/CUtil.h"
 #include "gui/CSdlResources.h"
 #include "object/CGameObject.h"
@@ -79,6 +80,22 @@ struct ConceptDistance {
 
 struct ConceptStepCost {
     int operator()(const Coords &, const Coords &) const { return 1; }
+};
+
+class PropertyChangeProbe : public CGameObject {
+    V_META(PropertyChangeProbe, CGameObject, V_METHOD(PropertyChangeProbe, onPropertyChanged, void, std::string),
+           V_METHOD(PropertyChangeProbe, onLabelChanged), V_METHOD(PropertyChangeProbe, onThreatChanged))
+
+  public:
+    void onPropertyChanged(std::string property_name) { changed_properties.push_back(property_name); }
+
+    void onLabelChanged() { ++label_changed_calls; }
+
+    void onThreatChanged() { ++threat_changed_calls; }
+
+    std::vector<std::string> changed_properties;
+    int label_changed_calls = 0;
+    int threat_changed_calls = 0;
 };
 
 static_assert(fn::PathPassability<ConceptCanStep>);
@@ -488,6 +505,30 @@ void test_tag_mutation_iteration_and_range_helpers() {
     expect_true(!CTags::isTagPresent(probes, CTag::Wand), "isTagPresent should reject absent tags");
 }
 
+void test_property_setters_emit_change_signals() {
+    CTypes::register_type_metadata<PropertyChangeProbe, CGameObject>();
+
+    auto object = std::make_shared<CGameObject>();
+    auto probe = std::make_shared<PropertyChangeProbe>();
+
+    object->connect("propertyChanged", probe, "onPropertyChanged");
+    object->connect("labelChanged", probe, "onLabelChanged");
+    object->connect("threatChanged", probe, "onThreatChanged");
+
+    object->setStringProperty("label", "Alert");
+    object->setNumericProperty("threat", 7);
+
+    auto loop = vstd::event_loop<>::instance();
+    for (int i = 0; i < 5; ++i) {
+        loop->run();
+    }
+
+    expect_true((probe->changed_properties == std::vector<std::string>{"label", "threat"}),
+                "propertyChanged should include string and numeric property names");
+    expect_true(probe->label_changed_calls == 1, "setStringProperty should emit the property-specific signal");
+    expect_true(probe->threat_changed_calls == 1, "setNumericProperty should emit the property-specific signal");
+}
+
 void test_delayed_future_handlers_run_through_event_loop() {
     auto loop = vstd::event_loop<>::instance();
     const int previous_fps = loop->getFps();
@@ -718,6 +759,7 @@ int main() {
     test_tag_round_trip_and_ordering();
     test_unknown_tag_rejection();
     test_tag_mutation_iteration_and_range_helpers();
+    test_property_setters_emit_change_signals();
     test_delayed_future_handlers_run_through_event_loop();
     test_script_rejects_executable_expressions();
     test_save_format_codec_validation();

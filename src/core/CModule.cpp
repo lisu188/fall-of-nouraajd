@@ -372,6 +372,8 @@ void init_game_module(py::module_ &m) {
         .def("setStringProperty", &CGameObject::setStringProperty, "Set a string property by name.")
         .def("setNumericProperty", &CGameObject::setNumericProperty, "Set an integer property by name.")
         .def("setBoolProperty", &CGameObject::setBoolProperty, "Set a boolean property by name.")
+        .def("notifyPropertyChanged", &CGameObject::notifyPropertyChanged,
+             "Emit generic and property-specific property change signals.")
         .def("getObjectProperty", &CGameObject::getObjectProperty<CGameObject>, "Return an object property by name.")
         .def("setObjectProperty", &CGameObject::setObjectProperty<CGameObject>, "Set an object property by name.")
         .def("incProperty", &CGameObject::incProperty, "Increment an integer property by value.")
