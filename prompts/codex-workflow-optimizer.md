@@ -101,14 +101,19 @@ Repeat the following cycle:
 1. Synchronize
    - Verify repository identity and GitHub authentication.
    - Fetch `origin/main`.
-   - Inspect open workflow-related PRs, active worktrees, branches, and dirty state.
+   - Inspect open workflow-related PRs, active worktrees, branches, dirty state, disk usage, and accumulated
+     run/worktrees.
    - Never destroy or overwrite unreviewed work.
 
 2. Establish evidence
    - Run the narrow workflow validation:
      - `python3 scripts/issue_queue.py validate`
      - `python3 -m unittest tests.test_issue_queue`
-   - Collect relevant evidence such as failures, test duration, queue conflicts, stale claims, PR-state errors, unnecessary rebuilds, RAM use, swap pressure, and prompt/document drift.
+     - `python3 -m unittest tests.test_controller_resource_audit`
+     - `python3 scripts/controller_resource_audit.py --json --skip-run-tree-sizes`
+   - Collect relevant evidence such as failures, test duration, queue conflicts, stale claims, PR-state errors,
+     unnecessary rebuilds, RAM use, swap pressure, disk pressure, stale run/worktrees, prunable worktree metadata, and
+     prompt/document drift.
    - Do not claim a bottleneck without measurement or reproducible evidence.
 
 3. Select an optimization
@@ -128,12 +133,16 @@ Repeat the following cycle:
    - Preserve existing CLI contracts, queue statuses, workbook compatibility, branch naming, and public behavior unless explicitly migrating them.
    - Keep documentation, prompts, implementation, and tests synchronized.
 
-6. Conserve RAM
+6. Conserve RAM and disk
    - Workers must not use parallel builds.
    - Use `-j1` for local CMake builds unless the user explicitly authorizes otherwise.
    - Serialize memory-heavy builds, full tests, coverage, Xvfb, and MCP sessions.
    - Allow lightweight inspection and review while heavy validation is running.
    - Inspect available RAM and swap before every heavy command.
+   - Run `python3 scripts/controller_resource_audit.py --json` before dispatch/refill decisions, before heavy
+     validation, after each controller loop, and after merged-checkpoint cleanup.
+   - Treat low free disk, high filesystem usage, large accumulated run/worktrees, or prunable worktree registrations as
+     blockers to new heavy work until safely reported or cleaned.
 
 7. Review
    - Require a separate subagent to review the complete diff.
@@ -162,9 +171,11 @@ Repeat the following cycle:
    - Independent read-only auditing may continue while a PR is pending.
 
 10. Continue from updated `main`
-    - After a PR actually merges, fetch the new `origin/main`.
-    - Remove only clean, merged worktrees and branches.
-    - Re-run baseline workflow validation.
+   - After a PR actually merges, fetch the new `origin/main`.
+   - Remove only clean, merged worktrees.
+   - Run `git worktree prune` only for prunable metadata after reviewing that the worktree directories no longer exist.
+   - Do not delete local or remote branches unless the user explicitly asks.
+   - Re-run baseline workflow validation.
     - Compare behavior with the previous baseline.
     - Start the next optimization cycle.
 
@@ -204,6 +215,7 @@ Stop implementation and provide a final status report when:
 - open conflicts or failing required checks prevent safe progress;
 - live subagents cannot be polled or recovered;
 - RAM safety prevents further validation;
+- disk safety or accumulated run/worktree state prevents further validation or safe dispatch;
 - no concrete, source-backed, testable workflow improvement remains.
 
 Do not manufacture optimization work merely to keep the loop active.
@@ -219,6 +231,7 @@ Print:
 - tests and exact outcomes;
 - PR number and merge commit;
 - baseline before and after;
+- disk/RAM state and cleanup performed or deferred;
 - remaining risks;
 - next proposed optimization;
 - current worker status table.
