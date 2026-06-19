@@ -547,13 +547,6 @@ void CCreature::afterMove() {
                map->normalizeCoords(self->getCoords()) == arrival;
     };
 
-    if (map->getTile(arrival)) {
-        map->getTile(arrival)->onStep(self);
-    }
-    if (!moverStillAtArrival()) {
-        return;
-    }
-
     auto fightPred = [self, map](std::shared_ptr<CMapObject> object) {
         auto other = vstd::cast<CCreature>(object);
         return other && self != object && !self->isNpc() && !other->isNpc() && !self->isAffiliatedWith(object) &&
@@ -573,13 +566,23 @@ void CCreature::afterMove() {
     };
 
     map->forObjectsAtCoords(arrival, fightAction, fightPred);
-    bool allow_enter = true;
     if (!opponents.empty()) {
-        allow_enter = CFightHandler::fightManyOutcome(self, opponents) == CFightOutcome::attackerVictory;
+        const auto result = CFightHandler::fightManyResult(self, opponents);
+        if (result.outcome != CFightOutcome::AttackerVictory || !moverStillAtArrival()) {
+            return;
+        }
     }
-    if (allow_enter && moverStillAtArrival()) {
-        map->forObjectsAtCoords(arrival, eventAction, visitablePredicate);
+
+    if (!moverStillAtArrival()) {
+        return;
     }
+    if (map->getTile(arrival)) {
+        map->getTile(arrival)->onStep(self);
+    }
+    if (!moverStillAtArrival()) {
+        return;
+    }
+    map->forObjectsAtCoords(arrival, eventAction, visitablePredicate);
 }
 
 const std::optional<Coords> &CCreature::getPendingMoveOrigin() const { return pendingMoveOrigin; }
