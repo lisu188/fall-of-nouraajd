@@ -99,6 +99,8 @@ WORKFLOW_HEADERS = (
 ALL_HEADERS = REQUIRED_HEADERS + WORKFLOW_HEADERS
 ISSUE_NAME_PATTERN = re.compile(r"^\[EPIC_\d{2}\]\[STORY_\d{2}\]\[SUBSTORY_\d{2}\].+")
 PRIORITY_ORDER = {"P0": 0, "P1": 1, "P2": 2}
+DEFAULT_RECLAIM_AGE_MINUTES = 240
+DEFAULT_CONTROLLER_ACTIVE_ISSUE_FLOOR = 4
 
 
 class QueueError(RuntimeError):
@@ -802,6 +804,52 @@ def activeClaimSummary(state: QueueState, stale: Sequence[dict[str, Any]]) -> di
     }
 
 
+def ownerMatchesPrefix(owner: str, ownerPrefix: str) -> bool:
+    return owner == ownerPrefix or owner.startswith(f"{ownerPrefix}/")
+
+
+def controllerCapacityPayload(
+    state: QueueState,
+    controllerId: str,
+    activeFloor: int = DEFAULT_CONTROLLER_ACTIVE_ISSUE_FLOOR,
+    eligibleCount: int | None = None,
+    now: datetime | None = None,
+) -> dict[str, Any]:
+    if activeFloor < 0:
+        raise QueueError("--controller-active-floor must be non-negative")
+    controllerId = controllerId.strip()
+    if not controllerId:
+        raise QueueError("--controller-id must be non-empty")
+    now = now or utcNow()
+    ownerPrefix = controllerOwnerPrefix(controllerId)
+    stale = staleClaims(state, now=now)
+    staleIssues = {record["issueName"] for record in stale}
+    activeTasks = [
+        task
+        for task in state.tasks
+        if task.status == STATUS_IN_PROGRESS
+        and ownerMatchesPrefix(str(task.values.get("Owner") or "").strip(), ownerPrefix)
+    ]
+    staleTasks = [task for task in activeTasks if task.issueName in staleIssues]
+    liveTasks = [task for task in activeTasks if task.issueName not in staleIssues]
+    deficit = max(0, activeFloor - len(liveTasks))
+    fillable = min(deficit, eligibleCount) if eligibleCount is not None else deficit
+    return {
+        "controllerId": controllerId,
+        "ownerPrefix": ownerPrefix,
+        "activeFloor": activeFloor,
+        "activeTotal": len(activeTasks),
+        "activeNonStale": len(liveTasks),
+        "staleOwned": len(staleTasks),
+        "deficitToFloor": deficit,
+        "eligibleCount": eligibleCount,
+        "fillableDeficit": fillable,
+        "needsRefill": fillable > 0,
+        "activeIssues": [task.issueName for task in sorted(liveTasks, key=taskSortKey)],
+        "staleIssues": [task.issueName for task in sorted(staleTasks, key=taskSortKey)],
+    }
+
+
 def storyKey(task: TaskRecord) -> tuple[str, str]:
     return (
         str(task.values.get("Epic #") or "").strip(),
@@ -852,6 +900,8 @@ def shortlistTasks(
     allowFileOverlap: bool = False,
     seed: str | None = None,
     includeRejected: bool = False,
+    controllerId: str | None = None,
+    controllerActiveFloor: int = DEFAULT_CONTROLLER_ACTIVE_ISSUE_FLOOR,
 ) -> dict[str, Any]:
     eligible, rejected = eligibleTasks(
         state,
@@ -891,6 +941,13 @@ def shortlistTasks(
             "direct target-file overlaps reported as advisory metadata",
         ],
     }
+    if controllerId:
+        payload["controllerCapacity"] = controllerCapacityPayload(
+            state,
+            controllerId=controllerId,
+            activeFloor=controllerActiveFloor,
+            eligibleCount=len(eligible),
+        )
     if includeRejected:
         payload["rejected"] = rejected
         payload["advisoryTargetFileOverlaps"] = advisoryOverlaps
@@ -1098,16 +1155,25 @@ def taskLeasePayload(task: TaskRecord, now: datetime) -> dict[str, Any]:
     }
 
 
-def staleClaimPayload(task: TaskRecord, now: datetime, olderThanMinutes: int = 0) -> dict[str, Any] | None:
+def staleClaimPayload(
+    task: TaskRecord,
+    now: datetime,
+    olderThanMinutes: int = DEFAULT_RECLAIM_AGE_MINUTES,
+) -> dict[str, Any] | None:
     if task.status != STATUS_IN_PROGRESS:
         return None
     lease = parseUtc(task.values.get("Lease Until UTC"))
     updated = parseUtc(task.values.get("Updated At UTC")) or parseUtc(task.values.get("Claimed At UTC"))
     leasePayload = taskLeasePayload(task, now)
-    expired = bool(leasePayload.get("leaseExpired"))
     oldEnough = updated is None or updated <= now - timedelta(minutes=olderThanMinutes)
-    if not expired or not oldEnough:
+    if not oldEnough:
         return None
+    if lease is None:
+        staleReason = "missing lease"
+    elif bool(leasePayload.get("leaseExpired")):
+        staleReason = "lease expired"
+    else:
+        staleReason = f"no heartbeat for {olderThanMinutes} minutes"
 
     return {
         "issueName": task.issueName,
@@ -1117,10 +1183,16 @@ def staleClaimPayload(task: TaskRecord, now: datetime, olderThanMinutes: int = 0
         "updatedAtUtc": formatUtc(updated) if updated else None,
         "leaseUntilUtc": formatUtc(lease) if lease else None,
         **leasePayload,
+        "staleReason": staleReason,
+        "staleThresholdMinutes": olderThanMinutes,
     }
 
 
-def staleClaims(state: QueueState, olderThanMinutes: int = 0, now: datetime | None = None) -> list[dict[str, Any]]:
+def staleClaims(
+    state: QueueState,
+    olderThanMinutes: int = DEFAULT_RECLAIM_AGE_MINUTES,
+    now: datetime | None = None,
+) -> list[dict[str, Any]]:
     if olderThanMinutes < 0:
         raise QueueError("--older-than-minutes must be non-negative")
     now = now or utcNow()
@@ -1350,7 +1422,7 @@ def releaseTask(
 
 def reclaimStaleTasks(
     workbookPath: Path,
-    olderThanMinutes: int = 0,
+    olderThanMinutes: int = DEFAULT_RECLAIM_AGE_MINUTES,
     lockTimeoutSeconds: float = 30.0,
 ) -> list[dict[str, Any]]:
     if olderThanMinutes < 0:
@@ -1571,6 +1643,16 @@ def buildParser() -> argparse.ArgumentParser:
     shortlistParser.add_argument("--seed", help="Stable seed for reproducible story and substory selection")
     shortlistParser.add_argument("--include-rejected", action="store_true", help="Include per-issue rejection reasons")
     shortlistParser.add_argument("--json", action="store_true", help="Output JSON (default)")
+    shortlistParser.add_argument("--controller-id", help="Include active-worker floor status for this controller")
+    shortlistParser.add_argument(
+        "--controller-active-floor",
+        type=int,
+        default=DEFAULT_CONTROLLER_ACTIVE_ISSUE_FLOOR,
+        help=(
+            "Minimum non-stale active issues this controller should keep when eligible work exists "
+            f"(default: {DEFAULT_CONTROLLER_ACTIVE_ISSUE_FLOOR})"
+        ),
+    )
 
     claimParser = subparsers.add_parser("claim", help="Atomically claim an eligible task")
     addCommonArguments(claimParser)
@@ -1633,9 +1715,17 @@ def buildParser() -> argparse.ArgumentParser:
     releaseParser.add_argument("--owner", required=True)
     releaseParser.add_argument("--note", default="")
 
-    reclaimParser = subparsers.add_parser("reclaim-stale", help="Release expired IN_PROGRESS claims")
+    reclaimParser = subparsers.add_parser("reclaim-stale", help="Release stale IN_PROGRESS claims")
     addCommonArguments(reclaimParser)
-    reclaimParser.add_argument("--older-than-minutes", type=int, default=0)
+    reclaimParser.add_argument(
+        "--older-than-minutes",
+        type=int,
+        default=DEFAULT_RECLAIM_AGE_MINUTES,
+        help=(
+            "Only reclaim claims whose last update is at least this many minutes old "
+            f"(default: {DEFAULT_RECLAIM_AGE_MINUTES})"
+        ),
+    )
     reclaimParser.add_argument("--dry-run", action="store_true", help="Report stale claims without modifying the queue")
 
     return parser
@@ -1715,6 +1805,8 @@ def main(argv: Sequence[str] | None = None) -> int:
                             allowFileOverlap=args.allow_file_overlap,
                             seed=args.seed,
                             includeRejected=args.include_rejected,
+                            controllerId=args.controller_id,
+                            controllerActiveFloor=args.controller_active_floor,
                         )
                     )
                     return 0
@@ -1819,20 +1911,19 @@ def main(argv: Sequence[str] | None = None) -> int:
                 state = loadQueue(workbookPath, writable=False)
                 try:
                     now = utcNow()
-                    allStale = staleClaims(state, now=now)
                     stale = staleClaims(state, olderThanMinutes=args.older_than_minutes, now=now)
                     printJson(
                         {
                             "workbook": str(workbookPath),
                             "olderThanMinutes": args.older_than_minutes,
                             "reclaimSafety": {
-                                "leaseOnly": True,
+                                "timingOnly": True,
                                 "requiresInspection": True,
-                                "message": "Dry-run rows satisfy lease timing only; inspect worker state and PRs before mutating.",
+                                "message": "Dry-run rows satisfy queue timing only; inspect worker state and PRs before mutating.",
                             },
                             "reclaimableStaleCount": len(stale),
-                            "staleCount": len(allStale),
-                            "activeClaims": activeClaimSummary(state, allStale),
+                            "staleCount": len(stale),
+                            "activeClaims": activeClaimSummary(state, stale),
                             "stale": markStaleClaimsForInspection(stale),
                         }
                     )

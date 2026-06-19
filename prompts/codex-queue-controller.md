@@ -19,20 +19,22 @@ Explicitly spawn worker subagents for implementation tasks. Do not merely descri
 9. Keep at least eight live subagents attached to the controller whenever the subagent interface is available.
 10. Keep at least eight implementation issues active whenever eight safe, eligible, non-conflicting issues exist. Treat
    eight active issues as the minimum operating target, not a best-effort aspiration.
-11. Serialize all workbook pull requests. The XLSX file is binary and must never be modified concurrently on multiple branches intended to merge.
-12. Claim and terminal-status pull requests normally update exactly one issue. Do not batch workbook edits unless this workflow explicitly permits it and all selected issues are proven independent.
-13. Preserve public identifiers and backward compatibility unless source evidence proves they are broken.
-14. Do not run local native builds, `ctest`, full Python suites, or coverage for PR delivery unless a focused local
+11. Keep at least four non-stale implementation issues active under this controller's own owner prefix whenever four
+   eligible issues can safely be claimed by this controller. Stale owned claims do not count toward that floor.
+12. Serialize all workbook pull requests. The XLSX file is binary and must never be modified concurrently on multiple branches intended to merge.
+13. Claim and terminal-status pull requests normally update exactly one issue. Do not batch workbook edits unless this workflow explicitly permits it and all selected issues are proven independent.
+14. Preserve public identifiers and backward compatibility unless source evidence proves they are broken.
+15. Do not run local native builds, `ctest`, full Python suites, or coverage for PR delivery unless a focused local
    reproduction is necessary or GitHub Actions cannot provide the needed evidence. Outsource heavy validation to GitHub
    Actions polling.
-15. If fewer than eight issue workers are active, document the concrete eligibility, conflict, status, resource, or
-   repository safety blocker that prevents filling the slot.
-16. Run the controller resource audit before dispatch/refill decisions, before heavy validation, after each controller
+16. If fewer than eight issue workers are active or this controller has fewer than four non-stale owned claims, document
+   the concrete eligibility, conflict, status, resource, or repository safety blocker that prevents filling the slot.
+17. Run the controller resource audit before dispatch/refill decisions, before heavy validation, after each controller
    loop, and after merged-checkpoint cleanup. Treat low free disk or stale run/worktree pressure as blockers to new work
    until safely reported or cleaned.
-17. Keep issue prioritization explicit. A project-manager role may recommend sequencing and priority changes, but those
+18. Keep issue prioritization explicit. A project-manager role may recommend sequencing and priority changes, but those
    recommendations are advisory until the controller or user approves a serialized workbook-only queue update.
-18. Every controller instance must have a unique controller ID. Use it in every worker owner string so multiple
+19. Every controller instance must have a unique controller ID. Use it in every worker owner string so multiple
    controllers can run without owner collisions.
 
 ## Startup
@@ -126,6 +128,11 @@ Maintain at least eight live subagents and keep at least eight implementation is
 implementation issues can safely run, assign the excess subagents only lightweight standby roles such as status polling,
 eligibility summaries, or review preparation, and print the exact blocker preventing eight active issues. Standby
 subagents must not claim issues, edit files, start builds, run tests, or touch the workbook.
+Each controller must also keep at least four of its own non-stale workbook claims active when four eligible issues can
+be safely claimed. Use `controllerCapacity` from `shortlist --controller-id "$CONTROLLER_ID"` to measure the current
+controller's floor; stale owned claims do not count. Continue claim/refill iterations until
+`controllerCapacity.deficitToFloor` is zero, `controllerCapacity.fillableDeficit` is zero, or a concrete eligibility,
+resource, repository-safety, or worker-status blocker is printed.
 
 When subagent capacity permits, keep one read-only project manager attached to the controller. The project manager may
 be an extra subagent beyond active implementation workers, or a standby role when fewer than eight implementation issues
@@ -201,11 +208,14 @@ eligible set yourself. The `claim` command is deterministic by workbook order, s
 issue. Refresh the project-manager prioritization brief before selecting, and use it to decide whether to proceed,
 pause for a priority/status update, or report a blocker. Do not use the brief as an ad hoc priority override.
 
-Use `python3 scripts/issue_queue.py shortlist --seed "$CONTROLLER_ID-<utc-cycle-id>" --include-rejected --json` as the
-read-only mechanical selector before each claim. The command reports eligible highest-priority story groups, stale
-claims, `activeClaims.total`, `activeClaims.unexpired`, `activeClaims.stale`, rejection summaries, and a seeded
+Use
+`python3 scripts/issue_queue.py shortlist --seed "$CONTROLLER_ID-<utc-cycle-id>" --controller-id "$CONTROLLER_ID" --include-rejected --json`
+as the read-only mechanical selector before each claim. The command reports eligible highest-priority story groups,
+stale claims, `activeClaims.total`, `activeClaims.unexpired`, `activeClaims.stale`, rejection summaries, and a seeded
 recommended issue without mutating the workbook. Use the unexpired count, not raw `activeCount`, when deciding whether
-the active-worker floor is genuinely satisfied. It also reports target-file overlap advisories through
+the global active-worker floor is genuinely satisfied. Use `controllerCapacity.activeNonStale`,
+`controllerCapacity.deficitToFloor`, and `controllerCapacity.fillableDeficit` to enforce this controller's four-issue
+owned-claim floor before stopping a refill loop. It also reports target-file overlap advisories through
 `advisoryTargetFileOverlapCount`, `advisoryTargetFileOverlaps`, and per-issue `activeFileOverlaps`. Treat the
 recommendation and overlap advisories as evidence for the project-manager brief and final controller review; do not
 exclude a task solely because its exact `Target Files / Modules` overlap active work.
@@ -428,11 +438,12 @@ python3 scripts/issue_queue.py heartbeat \
 
 Commit and merge that workbook-only change using the same status-PR process as claim publication.
 
-If a worker disappears, do not overwrite the active claim. Inspect its worktree and branch, wait for lease expiry, and
-run `python3 scripts/issue_queue.py reclaim-stale --dry-run --older-than-minutes <minutes>` to list stale
-`IN_PROGRESS` claims without mutating the workbook. The dry-run output includes `activeClaims`, `staleCount`, and
-`reclaimableStaleCount`; use those fields to distinguish all expired active leases from rows eligible under the current
-age threshold. Dry-run rows are lease-timing candidates only and include `reclaimReady: false`; use mutating
+If a worker disappears, do not overwrite the active claim. Inspect its worktree and branch, then run
+`python3 scripts/issue_queue.py reclaim-stale --dry-run` to list stale `IN_PROGRESS` claims without mutating the
+workbook. The default reclaim age threshold is 240 minutes; pass `--older-than-minutes <minutes>` only when the
+controller has an explicit reason to override it. The dry-run output includes `activeClaims`, `staleCount`, and
+`reclaimableStaleCount`; use those fields to distinguish active claims from rows eligible under the current
+heartbeat-age threshold. Dry-run rows are queue-timing candidates only and include `reclaimReady: false`; use mutating
 `reclaim-stale` only when the claim is genuinely stale and no recoverable work remains. Treat `validate` warnings about
 expired `IN_PROGRESS` leases and derived `list --status IN_PROGRESS --json` lease-expiration fields as read-only
 recovery signals, not permission to reclaim without inspection.
@@ -444,7 +455,9 @@ delivery, do not run local native builds, `ctest`, full Python suites, or covera
 necessary or GitHub Actions cannot provide the needed evidence. Before any necessary local heavy command, note current
 available RAM, disk pressure, running heavy jobs, and worker status. Treat eight active issue workers as the minimum
 target whenever safe eligible work exists; record the concrete blocker if actual resource pressure prevents eight active
-issues.
+issues. Also treat four non-stale owned claims as this controller's minimum active target whenever
+`controllerCapacity.fillableDeficit` is greater than zero; record the concrete blocker if the controller cannot close
+that deficit.
 
 Repository instructions may show local build examples such as `-j$(nproc)`. Treat them as local equivalents, not the
 default PR delivery path. Record the reason and exact command in worker reports and PR bodies whenever local heavy
