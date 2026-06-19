@@ -105,6 +105,27 @@ class PropertyChangeProbe : public CGameObject {
     int threat_changed_calls = 0;
 };
 
+class PrimitiveSerializationHolder : public CGameObject {
+    V_META(PrimitiveSerializationHolder, CGameObject,
+           V_PROPERTY(PrimitiveSerializationHolder, std::shared_ptr<CListString>, listValues, getListValues,
+                      setListValues),
+           V_PROPERTY(PrimitiveSerializationHolder, std::shared_ptr<CMapStringString>, mapValues, getMapValues,
+                      setMapValues))
+
+  public:
+    std::shared_ptr<CListString> getListValues() { return listValues; }
+
+    void setListValues(std::shared_ptr<CListString> value) { listValues = value; }
+
+    std::shared_ptr<CMapStringString> getMapValues() { return mapValues; }
+
+    void setMapValues(std::shared_ptr<CMapStringString> value) { mapValues = value; }
+
+  private:
+    std::shared_ptr<CListString> listValues;
+    std::shared_ptr<CMapStringString> mapValues;
+};
+
 void drain_event_loop() {
     auto loop = vstd::event_loop<>::instance();
     for (int i = 0; i < 5; ++i) {
@@ -567,6 +588,96 @@ void test_reviewed_value_wrappers_have_explicit_primitive_metadata() {
     expect_true(!CTypes::isPrimitiveType<CStats>(), "multi-property value-like objects should not be primitive");
 }
 
+void test_nested_primitive_wrappers_serialize_direct_values_and_round_trip() {
+    CTypes::register_type_metadata<PrimitiveSerializationHolder, CGameObject>();
+
+    auto game = std::make_shared<CGame>();
+    game->getObjectHandler()->registerType(PrimitiveSerializationHolder::static_meta()->name(),
+                                           []() { return std::make_shared<PrimitiveSerializationHolder>(); });
+    game->getObjectHandler()->registerType(CListString::static_meta()->name(),
+                                           []() { return std::make_shared<CListString>(); });
+    game->getObjectHandler()->registerType(CMapStringString::static_meta()->name(),
+                                           []() { return std::make_shared<CMapStringString>(); });
+
+    auto list_values = std::make_shared<CListString>();
+    list_values->setValues({"north", "south"});
+    auto map_values = std::make_shared<CMapStringString>();
+    map_values->setValues({{"confirm", "enter"}, {"inventory", "i"}});
+
+    auto holder = std::make_shared<PrimitiveSerializationHolder>();
+    holder->setGame(game);
+    holder->setListValues(list_values);
+    holder->setMapValues(map_values);
+
+    auto serialized = CSerializerFunction<std::shared_ptr<json>, std::shared_ptr<CGameObject>>::serialize(holder);
+    auto properties = &(*serialized)["properties"];
+    auto serialized_list =
+        CSerializerFunction<std::shared_ptr<json>, std::shared_ptr<CGameObject>>::serialize(list_values);
+
+    expect_true((*properties)["listValues"].is_array(),
+                "nested CListString properties should serialize as their direct JSON array values");
+    expect_true((*properties)["listValues"].size() == 2,
+                "nested CListString direct values should preserve all entries");
+    expect_true((*properties)["mapValues"].is_object() && !CJsonUtil::isObject(&(*properties)["mapValues"]),
+                "nested CMapStringString properties should serialize as their direct JSON object values");
+    expect_true((*properties)["mapValues"]["inventory"].get<std::string>() == "i",
+                "nested CMapStringString direct values should preserve key-value entries");
+    expect_true((*serialized_list)["class"].get<std::string>() == CListString::static_meta()->name() &&
+                    (*serialized_list)["properties"].contains("values"),
+                "top-level primitive wrappers should keep their object identity");
+
+    auto round_trip = std::dynamic_pointer_cast<PrimitiveSerializationHolder>(
+        CSerializerFunction<std::shared_ptr<json>, std::shared_ptr<CGameObject>>::deserialize(game, serialized));
+
+    expect_true(round_trip && round_trip->getListValues(),
+                "direct CListString JSON values should deserialize back into the primitive wrapper property");
+    expect_true(round_trip && round_trip->getMapValues(),
+                "direct CMapStringString JSON values should deserialize back into the primitive wrapper property");
+    expect_true(round_trip->getListValues()->getValues() == std::set<std::string>({"north", "south"}),
+                "CListString primitive wrapper values should round-trip through direct nested JSON");
+    expect_true(round_trip->getMapValues()->getValues() ==
+                    std::map<std::string, std::string>({{"confirm", "enter"}, {"inventory", "i"}}),
+                "CMapStringString primitive wrapper values should round-trip through direct nested JSON");
+
+    auto reserved_key_map_values = std::make_shared<CMapStringString>();
+    reserved_key_map_values->setValues({{"ref", "north"}});
+    holder->setMapValues(reserved_key_map_values);
+
+    auto serialized_reserved_map =
+        CSerializerFunction<std::shared_ptr<json>, std::shared_ptr<CGameObject>>::serialize(holder);
+    auto reserved_map_properties = &(*serialized_reserved_map)["properties"];
+
+    expect_true(CJsonUtil::isObject(&(*reserved_map_properties)["mapValues"]),
+                "single-entry flattened maps can have object-config-shaped keys");
+
+    auto reserved_map_round_trip = std::dynamic_pointer_cast<PrimitiveSerializationHolder>(
+        CSerializerFunction<std::shared_ptr<json>, std::shared_ptr<CGameObject>>::deserialize(game,
+                                                                                              serialized_reserved_map));
+
+    expect_true(reserved_map_round_trip && reserved_map_round_trip->getMapValues() &&
+                    reserved_map_round_trip->getMapValues()->getValues() ==
+                        std::map<std::string, std::string>({{"ref", "north"}}),
+                "CMapStringString flattened values named ref should deserialize as primitive map entries");
+
+    auto panel_keys_config = std::make_shared<json>();
+    (*panel_keys_config)["class"] = CMapStringString::static_meta()->name();
+    (*panel_keys_config)["properties"]["values"] = {{"i", "inventoryPanel"}, {"j", "questPanel"}};
+    game->getObjectHandler()->registerConfig("panelKeys", panel_keys_config);
+
+    auto holder_with_ref_config = std::make_shared<json>();
+    (*holder_with_ref_config)["class"] = PrimitiveSerializationHolder::static_meta()->name();
+    (*holder_with_ref_config)["properties"]["mapValues"]["ref"] = "panelKeys";
+
+    auto ref_round_trip = std::dynamic_pointer_cast<PrimitiveSerializationHolder>(
+        CSerializerFunction<std::shared_ptr<json>, std::shared_ptr<CGameObject>>::deserialize(game,
+                                                                                              holder_with_ref_config));
+
+    expect_true(ref_round_trip && ref_round_trip->getMapValues() &&
+                    ref_round_trip->getMapValues()->getValues() ==
+                        std::map<std::string, std::string>({{"i", "inventoryPanel"}, {"j", "questPanel"}}),
+                "CMapStringString object refs should resolve to the referenced primitive wrapper");
+}
+
 void test_nested_property_notification_batches_emit_one_deterministic_signal() {
     CTypes::register_type_metadata<PropertyChangeProbe, CGameObject>();
 
@@ -897,6 +1008,7 @@ int main() {
     test_tag_mutation_iteration_and_range_helpers();
     test_property_setters_emit_change_signals();
     test_reviewed_value_wrappers_have_explicit_primitive_metadata();
+    test_nested_primitive_wrappers_serialize_direct_values_and_round_trip();
     test_nested_property_notification_batches_emit_one_deterministic_signal();
     test_object_deserialization_batches_property_notifications();
     test_object_clone_batches_property_notifications();
