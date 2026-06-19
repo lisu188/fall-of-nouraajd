@@ -388,9 +388,15 @@ def load(self, context):
                 quest_system.reset_all()
                 game_map.setBoolProperty("ASKED_ABOUT_GIRL", False)
                 game_map.setBoolProperty("TALKED_TO_VICTOR", False)
+                player.setNumericProperty("warrior_barricades", 0)
+                player.setNumericProperty("assasin_trails", 0)
                 player.setNumericProperty("inquisitor_clues", 0)
+                player.setNumericProperty("sorcerer_sigils", 0)
                 player.setNumericProperty("wayfarer_routes", 0)
+                player.setBoolProperty("braced_nouraajd_gate", False)
+                player.setBoolProperty("shadowed_robed_men", False)
                 player.setBoolProperty("inspected_stained_glass", False)
+                player.setBoolProperty("decoded_stained_glass_ward", False)
                 player.setBoolProperty("charted_smuggler_route", False)
                 _grant_quest(player, "rolfQuest")
                 player.addItem("letterFromRolf")
@@ -619,6 +625,22 @@ def load(self, context):
 
     @register(context)
     class DoorDialog(CDialog):
+        def can_brace_gate(self):
+            player = self.getGame().getMap().getPlayer()
+            return player.getTypeId() == "Warrior" and not player.getBoolProperty("braced_nouraajd_gate")
+
+        def brace_gate(self):
+            player = self.getGame().getMap().getPlayer()
+            if not self.can_brace_gate():
+                return
+            player.incProperty("warrior_barricades", 1)
+            player.setBoolProperty("braced_nouraajd_gate", True)
+            player.addExp(750)
+            self.open_door()
+            self.getGame().getGuiHandler().showMessage(
+                "You shoulder the warped gate back onto its braces; Rolf's last chalk marks point east."
+            )
+
         def open_door(self):
             self.getGame().getMap().removeAll(lambda ob: ob.getName().startswith("nouraajdDoorTrigger"))
             self.getGame().getMap().getObjectByName("nouraajdDoor").setBoolProperty("opened", True)
@@ -645,6 +667,22 @@ def load(self, context):
 
         def asked_about_girl(self):
             self.getGame().getMap().setBoolProperty("ASKED_ABOUT_GIRL", True)
+
+        def can_shadow_robed_men(self):
+            player = self.getGame().getMap().getPlayer()
+            return player.getTypeId() == "Assasin" and not player.getBoolProperty("shadowed_robed_men")
+
+        def shadow_robed_men(self):
+            player = self.getGame().getMap().getPlayer()
+            if not self.can_shadow_robed_men():
+                return
+            player.incProperty("assasin_trails", 1)
+            player.setBoolProperty("shadowed_robed_men", True)
+            player.addExp(750)
+            self.asked_about_girl()
+            self.getGame().getGuiHandler().showMessage(
+                "You ghost after the robed men long enough to mark their courtyard turn and the child's yellow ribbon."
+            )
 
     @register(context)
     class TavernDialog2(CDialog):
@@ -794,6 +832,22 @@ def load(self, context):
             player.addExp(750)
             self.getGame().getGuiHandler().showMessage(
                 "The stained glass hides a Marumi Baso seal; zeal hardens as you memorize the cult's patient cipher."
+            )
+
+        def can_decode_stained_glass_ward(self):
+            player = self.getGame().getMap().getPlayer()
+            return player.getTypeId() == "Sorcerer" and not player.getBoolProperty("decoded_stained_glass_ward")
+
+        def decode_stained_glass_ward(self):
+            player = self.getGame().getMap().getPlayer()
+            if not self.can_decode_stained_glass_ward():
+                return
+            player.incProperty("sorcerer_sigils", 1)
+            player.setBoolProperty("decoded_stained_glass_ward", True)
+            player.addItem("Scroll")
+            player.addExp(750)
+            self.getGame().getGuiHandler().showMessage(
+                "You unwind a cold ward from the stained glass and copy its safest stroke onto a blank scroll."
             )
 
         def can_deliver_letter(self):

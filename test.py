@@ -9984,13 +9984,48 @@ class GameTest(unittest.TestCase):
     @game_test
     def test_new_class_dialog_hooks(self):
         script = (REPO_ROOT / "res/maps/nouraajd/script.py").read_text()
+        dialog = json.loads((REPO_ROOT / "res/maps/nouraajd/dialog.json").read_text())
         dialog4 = json.loads((REPO_ROOT / "res/maps/nouraajd/dialog4.json").read_text())
         dialog5 = json.loads((REPO_ROOT / "res/maps/nouraajd/dialog5.json").read_text())
 
+        door_entry = dialog["doorDialog"]["properties"]["states"][0]["properties"]["options"]
+        tavern_cultist_options = None
+        for state in dialog["tavernDialog1"]["properties"]["states"]:
+            if state.get("properties", {}).get("stateId") == "INKEEPER_ABOUT_CULTISTS":
+                tavern_cultist_options = state["properties"]["options"]
+                break
         town_hall_entry = dialog4["townHallDialog"]["properties"]["states"][0]["properties"]["options"]
         beren_entry = dialog5["berenDialog"]["properties"]["states"][0]["properties"]["options"]
+        door_states = {
+            state.get("properties", {}).get("stateId") for state in dialog["doorDialog"]["properties"]["states"]
+        }
+        tavern_states = {
+            state.get("properties", {}).get("stateId") for state in dialog["tavernDialog1"]["properties"]["states"]
+        }
+        beren_states = {
+            state.get("properties", {}).get("stateId") for state in dialog5["berenDialog"]["properties"]["states"]
+        }
 
         checks = {
+            "warrior_condition_method": "def can_brace_gate(self):" in script,
+            "warrior_action_method": "def brace_gate(self):" in script,
+            "warrior_player_property": "warrior_barricades" in script and "braced_nouraajd_gate" in script,
+            "warrior_dialog_option": any(
+                option.get("properties", {}).get("condition") == "can_brace_gate"
+                and option.get("properties", {}).get("action") == "brace_gate"
+                for option in door_entry
+            ),
+            "warrior_dialog_state": "WARRIOR_GATE" in door_states,
+            "assasin_condition_method": "def can_shadow_robed_men(self):" in script,
+            "assasin_action_method": "def shadow_robed_men(self):" in script,
+            "assasin_player_property": "assasin_trails" in script and "shadowed_robed_men" in script,
+            "assasin_dialog_option": tavern_cultist_options is not None
+            and any(
+                option.get("properties", {}).get("condition") == "can_shadow_robed_men"
+                and option.get("properties", {}).get("action") == "shadow_robed_men"
+                for option in tavern_cultist_options
+            ),
+            "assasin_dialog_state": "ASSASIN_TRAIL" in tavern_states,
             "wayfarer_condition_method": "def can_chart_wayfarer_route(self):" in script,
             "wayfarer_action_method": "def chart_wayfarer_route(self):" in script,
             "wayfarer_player_property": "wayfarer_routes" in script,
@@ -10007,6 +10042,15 @@ class GameTest(unittest.TestCase):
                 and option.get("properties", {}).get("action") == "inspect_stained_glass"
                 for option in beren_entry
             ),
+            "sorcerer_condition_method": "def can_decode_stained_glass_ward(self):" in script,
+            "sorcerer_action_method": "def decode_stained_glass_ward(self):" in script,
+            "sorcerer_player_property": "sorcerer_sigils" in script and "decoded_stained_glass_ward" in script,
+            "sorcerer_dialog_option": any(
+                option.get("properties", {}).get("condition") == "can_decode_stained_glass_ward"
+                and option.get("properties", {}).get("action") == "decode_stained_glass_ward"
+                for option in beren_entry
+            ),
+            "sorcerer_dialog_state": "SORCERER_WARD" in beren_states,
         }
 
         failed = sorted([name for name, ok in checks.items() if not ok])
@@ -10014,43 +10058,129 @@ class GameTest(unittest.TestCase):
 
     @game_test
     def test_nouraajd_class_specific_dialog_routes_unlock_for_type_ids(self):
-        g_wayfarer, _, wayfarer = load_game_map_with_player("nouraajd", "Wayfarer")
-        town_hall_wayfarer = g_wayfarer.createObject("townHallDialog")
-        beren_wayfarer = g_wayfarer.createObject("berenDialog")
-
-        self.assertEqual("CPlayer", wayfarer.getType())
-        self.assertEqual("Wayfarer", wayfarer.getTypeId())
-        self.assertTrue(town_hall_wayfarer.can_chart_wayfarer_route())
-        self.assertFalse(beren_wayfarer.can_inspect_stained_glass())
-
-        town_hall_wayfarer.chart_wayfarer_route()
-        self.assertEqual(1, wayfarer.getNumericProperty("wayfarer_routes"))
-        self.assertFalse(town_hall_wayfarer.can_chart_wayfarer_route())
-
-        g_inquisitor, _, inquisitor = load_game_map_with_player("nouraajd", "Inquisitor")
-        town_hall_inquisitor = g_inquisitor.createObject("townHallDialog")
-        beren_inquisitor = g_inquisitor.createObject("berenDialog")
-
-        self.assertEqual("CPlayer", inquisitor.getType())
-        self.assertEqual("Inquisitor", inquisitor.getTypeId())
-        self.assertFalse(town_hall_inquisitor.can_chart_wayfarer_route())
-        self.assertTrue(beren_inquisitor.can_inspect_stained_glass())
-
-        beren_inquisitor.inspect_stained_glass()
-        self.assertEqual(1, inquisitor.getNumericProperty("inquisitor_clues"))
-        self.assertFalse(beren_inquisitor.can_inspect_stained_glass())
-
-        return True, json.dumps(
+        cases = [
             {
-                "wayfarer_type": wayfarer.getType(),
-                "wayfarer_type_id": wayfarer.getTypeId(),
-                "wayfarer_routes": wayfarer.getNumericProperty("wayfarer_routes"),
-                "inquisitor_type": inquisitor.getType(),
-                "inquisitor_type_id": inquisitor.getTypeId(),
-                "inquisitor_clues": inquisitor.getNumericProperty("inquisitor_clues"),
+                "player_type": "Warrior",
+                "dialog_type": "doorDialog",
+                "condition": "can_brace_gate",
+                "action": "brace_gate",
+                "counter": "warrior_barricades",
+                "flag": "braced_nouraajd_gate",
             },
-            sort_keys=True,
-        )
+            {
+                "player_type": "Assasin",
+                "dialog_type": "tavernDialog1",
+                "condition": "can_shadow_robed_men",
+                "action": "shadow_robed_men",
+                "counter": "assasin_trails",
+                "flag": "shadowed_robed_men",
+            },
+            {
+                "player_type": "Wayfarer",
+                "dialog_type": "townHallDialog",
+                "condition": "can_chart_wayfarer_route",
+                "action": "chart_wayfarer_route",
+                "counter": "wayfarer_routes",
+                "flag": "charted_smuggler_route",
+            },
+            {
+                "player_type": "Inquisitor",
+                "dialog_type": "berenDialog",
+                "condition": "can_inspect_stained_glass",
+                "action": "inspect_stained_glass",
+                "counter": "inquisitor_clues",
+                "flag": "inspected_stained_glass",
+            },
+            {
+                "player_type": "Sorcerer",
+                "dialog_type": "berenDialog",
+                "condition": "can_decode_stained_glass_ward",
+                "action": "decode_stained_glass_ward",
+                "counter": "sorcerer_sigils",
+                "flag": "decoded_stained_glass_ward",
+                "item": "Scroll",
+            },
+        ]
+        results = {}
+
+        for case in cases:
+            g, game_map, player = load_game_map_with_player("nouraajd", case["player_type"])
+            dialog = g.createObject(case["dialog_type"])
+            before_items = player.countItems(case["item"]) if case.get("item") else None
+
+            self.assertEqual("CPlayer", player.getType())
+            self.assertEqual(case["player_type"], player.getTypeId())
+            for other in cases:
+                other_dialog = (
+                    dialog if other["dialog_type"] == case["dialog_type"] else g.createObject(other["dialog_type"])
+                )
+                expected = other["player_type"] == case["player_type"]
+                self.assertEqual(
+                    expected,
+                    getattr(other_dialog, other["condition"])(),
+                    f"{case['player_type']} visibility for {other['condition']}",
+                )
+
+            self.assertTrue(getattr(dialog, case["condition"])())
+            getattr(dialog, case["action"])()
+            self.assertFalse(getattr(dialog, case["condition"])())
+            self.assertEqual(1, player.getNumericProperty(case["counter"]))
+            self.assertTrue(player.getBoolProperty(case["flag"]))
+
+            if case["player_type"] == "Warrior":
+                town_gate = game_map.getObjectByName("nouraajdDoor")
+                self.assertIsNotNone(town_gate)
+                self.assertTrue(town_gate.getBoolProperty("opened"))
+                self.assertFalse(any(obj.getName().startswith("nouraajdDoorTrigger") for obj in game_map.getObjects()))
+            elif case["player_type"] == "Assasin":
+                self.assertTrue(game_map.getBoolProperty("ASKED_ABOUT_GIRL"))
+            elif case.get("item"):
+                self.assertEqual(before_items + 1, player.countItems(case["item"]))
+
+            getattr(dialog, case["action"])()
+            self.assertEqual(1, player.getNumericProperty(case["counter"]))
+            if case.get("item"):
+                self.assertEqual(before_items + 1, player.countItems(case["item"]))
+
+            results[case["player_type"]] = {
+                "counter": player.getNumericProperty(case["counter"]),
+                "flag": player.getBoolProperty(case["flag"]),
+                "item_count": player.countItems(case["item"]) if case.get("item") else None,
+                "asked_about_girl": game_map.getBoolProperty("ASKED_ABOUT_GIRL"),
+            }
+
+        return True, json.dumps(results, sort_keys=True)
+
+    @game_test
+    def test_nouraajd_main_quest_remains_completable_by_every_class(self):
+        class_ids = ("Assasin", "Inquisitor", "Sorcerer", "Warrior", "Wayfarer")
+        results = {}
+
+        for player_type in class_ids:
+            g, game_map, player = load_game_map_with_player("nouraajd", player_type)
+            self.assertEqual(player_type, player.getTypeId())
+
+            game_map.removeObjectByName("cave1")
+            self.assertEqual("skull_recovered", game_map.getStringProperty("quest_state_rolf"))
+            self.assertEqual("awaiting_gooby", game_map.getStringProperty("quest_state_main"))
+            self.assertIn("mainQuest", quest_names(player))
+
+            gooby = find_runtime_object(game_map, "gooby1")
+            game_map.removeObjectByName(gooby.getName())
+            player.checkQuests()
+
+            self.assertEqual("gooby_slain", game_map.getStringProperty("quest_state_main"))
+            self.assertTrue(game_map.getBoolProperty("completed_gooby"))
+            assert_player_quest_state(self, player, "mainQuest", completed=True)
+
+            results[player_type] = {
+                "quest_state_rolf": game_map.getStringProperty("quest_state_rolf"),
+                "quest_state_main": game_map.getStringProperty("quest_state_main"),
+                "completed_gooby": game_map.getBoolProperty("completed_gooby"),
+                "completed_quests": completed_quest_names(player),
+            }
+
+        return True, json.dumps(results, sort_keys=True)
 
     @game_test
     def test_ritual_dialog_integrity(self):

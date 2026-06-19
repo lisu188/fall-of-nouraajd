@@ -50,9 +50,19 @@
                 }
               },
               {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 4,
+                  "action": "decode_stained_glass_ward",
+                  "nextStateId": "SORCERER_WARD",
+                  "text": "Decode the warding sigils in the stained glass.",
+                  "condition": "can_decode_stained_glass_ward"
+                }
+              },
+              {
                 "ref": "exitOption",
                 "properties": {
-                  "number": 4
+                  "number": 5
                 }
               }
             ]
@@ -63,6 +73,21 @@
           "properties": {
             "stateId": "LETTER_DELIVERED",
             "text": "Thank you for bearing the mayor's plea. Now descend into the catacombs and retrieve the holy relic our town clings to.",
+            "options": [
+              {
+                "ref": "exitOption",
+                "properties": {
+                  "number": 0
+                }
+              }
+            ]
+          }
+        },
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "SORCERER_WARD",
+            "text": "The glass hides a cold ward written in patient circles. You copy one safe arc before the rest bites back.",
             "options": [
               {
                 "ref": "exitOption",
