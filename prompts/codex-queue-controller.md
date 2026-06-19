@@ -423,9 +423,10 @@ If a worker disappears, do not overwrite the active claim. Inspect its worktree 
 run `python3 scripts/issue_queue.py reclaim-stale --dry-run --older-than-minutes <minutes>` to list stale
 `IN_PROGRESS` claims without mutating the workbook. The dry-run output includes `activeClaims`, `staleCount`, and
 `reclaimableStaleCount`; use those fields to distinguish all expired active leases from rows eligible under the current
-age threshold. Use mutating `reclaim-stale` only when the claim is genuinely stale and no recoverable work remains.
-Treat `validate` warnings about expired `IN_PROGRESS` leases and derived `list --status IN_PROGRESS --json`
-lease-expiration fields as read-only recovery signals, not permission to reclaim without inspection.
+age threshold. Dry-run rows are lease-timing candidates only and include `reclaimReady: false`; use mutating
+`reclaim-stale` only when the claim is genuinely stale and no recoverable work remains. Treat `validate` warnings about
+expired `IN_PROGRESS` leases and derived `list --status IN_PROGRESS --json` lease-expiration fields as read-only
+recovery signals, not permission to reclaim without inspection.
 
 ## Resource-aware validation
 
