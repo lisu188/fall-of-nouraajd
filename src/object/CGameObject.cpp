@@ -159,6 +159,11 @@ void CGameObject::connect(std::string signal, std::shared_ptr<CGameObject> objec
     connections.emplace_back(signal, object, slot);
 }
 
+void CGameObject::notifyPropertyChanged(const std::string &name) {
+    signal("propertyChanged", name);
+    signal(name + "Changed");
+}
+
 bool CGameObject::hasProperty(std::string name) { return this->meta()->has_property<CGameObject>(name, this->ptr()); }
 
 void CGameObject::setTypeId(std::string _typeId) { typeId = _typeId; }
