@@ -73,6 +73,24 @@ BUILTIN_CLASSES = {
     "CTrigger",
     "CWeapon",
 }
+PYTHON_REGISTRATION_DECORATORS = {"register", "trigger"}
+REVIEWED_ABSTRACT_INTERNAL_CLASSES = {
+    "CConfigResource",
+    "CConfigResourceLoader",
+    "CEventHandler",
+    "CGame",
+    "CGameEvent",
+    "CGameEventCaused",
+    "CGuiHandler",
+    "CMap",
+    "CNativeContentPlugin",
+    "CObjectHandler",
+    "CPlugin",
+    "CResource",
+    "CResourceLoader",
+    "CRngHandler",
+    "CTextResource",
+}
 
 
 @dataclass(frozen=True)
@@ -109,6 +127,7 @@ class ScriptCall:
 class ScriptInfo:
     path: Path
     classes: set[str] = field(default_factory=set)
+    registered_classes: set[str] = field(default_factory=set)
     methods_by_class: dict[str, set[str]] = field(default_factory=dict)
     calls: list[ScriptCall] = field(default_factory=list)
     trigger_targets: list[ScriptCall] = field(default_factory=list)
@@ -135,6 +154,8 @@ class ScriptAnalyzer(ast.NodeVisitor):
 
     def visit_ClassDef(self, node: ast.ClassDef) -> Any:
         self.info.classes.add(node.name)
+        if any(is_python_registration_decorator(decorator) for decorator in node.decorator_list):
+            self.info.registered_classes.add(node.name)
         self.info.methods_by_class.setdefault(node.name, set())
         self._class_stack.append(node.name)
         for child in node.body:
@@ -200,6 +221,12 @@ def first_string_arg(node: ast.Call) -> str | None:
     return None
 
 
+def is_python_registration_decorator(decorator: ast.AST) -> bool:
+    if isinstance(decorator, ast.Call):
+        return call_name(decorator.func) in PYTHON_REGISTRATION_DECORATORS
+    return call_name(decorator) in PYTHON_REGISTRATION_DECORATORS
+
+
 class TriggerAnalyzer(ast.NodeVisitor):
     def __init__(self, info: ScriptInfo) -> None:
         self.info = info
@@ -237,8 +264,12 @@ class ContentValidator:
         self.global_files: dict[Path, Any] = {}
         self.map_contexts: list[MapContext] = []
         self.plugin_info: list[ScriptInfo] = []
-        self.engine_classes: set[str] = set(BUILTIN_CLASSES)
-        self.plugin_classes: set[str] = set()
+        self.fallback_registered_classes: set[str] = set(BUILTIN_CLASSES)
+        self.metadata_declared_classes: set[str] = set()
+        self.static_registered_classes: set[str] = set()
+        self.native_plugin_registered_classes: set[str] = set()
+        self.python_registered_classes: set[str] = set()
+        self.reviewed_abstract_internal_classes: set[str] = set(REVIEWED_ABSTRACT_INTERNAL_CLASSES)
 
     def validate(self) -> list[ValidationIssue]:
         self._collect_engine_classes()
@@ -262,10 +293,17 @@ class ContentValidator:
                     text = path.read_text(encoding="utf-8")
                 except UnicodeDecodeError:
                     text = path.read_text(encoding="utf-8", errors="ignore")
-                for match in re.finditer(r"register_type(?:_metadata)?<\s*([^,>]+)", text):
-                    self.engine_classes.add(normalize_cpp_type(match.group(1)))
+                for class_name in iter_cpp_template_type_names(text, "register_type_metadata"):
+                    self.metadata_declared_classes.add(class_name)
+                for class_name in iter_cpp_template_type_names(text, "register_type"):
+                    if path.name == "NativePlugin.cpp":
+                        self.native_plugin_registered_classes.add(class_name)
+                    else:
+                        self.static_registered_classes.add(class_name)
                 for match in re.finditer(r"V_META\(\s*([A-Za-z_]\w*)", text):
-                    self.engine_classes.add(match.group(1))
+                    class_name = match.group(1)
+                    if is_concrete_cpp_class_name(class_name):
+                        self.metadata_declared_classes.add(class_name)
 
     def _collect_plugin_classes(self) -> None:
         plugin_dir = self.repo_root / "res" / "plugins"
@@ -273,7 +311,7 @@ class ContentValidator:
             info = self._parse_script(path)
             if info:
                 self.plugin_info.append(info)
-                self.plugin_classes.update(info.classes)
+                self.python_registered_classes.update(info.registered_classes)
 
     def _load_global_configs(self) -> None:
         config_dir = self.repo_root / "res" / "config"
@@ -347,7 +385,7 @@ class ContentValidator:
 
     def _validate_global_configs(self) -> None:
         visible = dict(self.global_entries)
-        known_classes = self.engine_classes | self.plugin_classes
+        known_classes = self._constructible_classes()
         for entry in self.global_entries.values():
             self._validate_config_entry(entry, visible, known_classes)
         self._validate_crafting_refs()
@@ -368,10 +406,17 @@ class ContentValidator:
         return visible
 
     def _known_classes(self, context: MapContext) -> set[str]:
-        classes = set(self.engine_classes | self.plugin_classes)
-        if context.script_info:
-            classes.update(context.script_info.classes)
-        return classes
+        return self._constructible_classes(context.script_info.registered_classes if context.script_info else set())
+
+    def _constructible_classes(self, extra_registered_classes: set[str] | None = None) -> set[str]:
+        classes = (
+            self.fallback_registered_classes
+            | self.static_registered_classes
+            | self.native_plugin_registered_classes
+            | self.python_registered_classes
+            | set(extra_registered_classes or set())
+        )
+        return classes - self.reviewed_abstract_internal_classes
 
     def _validate_config_entry(
         self, entry: ConfigEntry, visible: dict[str, ConfigEntry], known_classes: set[str]
@@ -408,7 +453,7 @@ class ContentValidator:
             class_name = value.get("class")
             if is_object_node or in_object_node:
                 if isinstance(class_name, str) and class_name not in known_classes:
-                    self._issue(path, f"{location}.class", f'unknown class "{class_name}"')
+                    self._issue(path, f"{location}.class", self._class_reference_message(class_name, "class"))
                 elif class_name is not None and not isinstance(class_name, str):
                     self._issue(path, f"{location}.class", "expected string class name")
             for key, child in value.items():
@@ -508,7 +553,11 @@ class ContentValidator:
                     f"tile id {tile_id} has no tilesets[0].tileproperties[{tile_id - 1}].type",
                 )
             elif tile_type not in visible and tile_type not in known_classes:
-                self._issue(context.map_path, f"{location}.data[{index}]", f'unknown tile type "{tile_type}"')
+                self._issue(
+                    context.map_path,
+                    f"{location}.data[{index}]",
+                    self._class_reference_message(tile_type, "tile type"),
+                )
 
     def _validate_object_layer(
         self,
@@ -544,7 +593,11 @@ class ContentValidator:
             if not isinstance(object_type, str) or not object_type:
                 self._issue(context.map_path, f"{object_location}.type", "expected non-empty object type")
             elif object_type not in visible and object_type not in known_classes:
-                self._issue(context.map_path, f"{object_location}.type", f'unknown object type "{object_type}"')
+                self._issue(
+                    context.map_path,
+                    f"{object_location}.type",
+                    self._class_reference_message(object_type, "object type"),
+                )
             for numeric_key in ("width", "height"):
                 numeric_value = obj.get(numeric_key)
                 if numeric_value is not None and not isinstance(numeric_value, (int, float)):
@@ -715,7 +768,7 @@ class ContentValidator:
                     self._issue(
                         context.script_info.path,
                         call.location,
-                        f'unknown object ref or class "{call.value}"',
+                        self._class_reference_message(call.value, "object ref or class"),
                     )
             elif call.name in SCRIPT_ITEM_CALLS:
                 if call.value not in visible:
@@ -814,6 +867,13 @@ class ContentValidator:
         has_class = "class" in value
         return has_ref or (has_class and ("properties" in value or set(value) <= OBJECT_SCHEMA_KEYS))
 
+    def _class_reference_message(self, class_name: str, label: str) -> str:
+        if class_name in self.reviewed_abstract_internal_classes:
+            return f'{label} "{class_name}" is reviewed as abstract/internal and cannot be used as content'
+        if class_name in self.metadata_declared_classes:
+            return f'{label} "{class_name}" is declared in metadata but is not registered as constructible content'
+        return f'unknown {label} "{class_name}"'
+
 
 def iter_map_objects(map_data: Any) -> list[dict[str, Any]]:
     objects: list[dict[str, Any]] = []
@@ -853,10 +913,24 @@ def tile_types_by_id(map_data: Any) -> dict[int, str]:
 
 def normalize_cpp_type(raw: str) -> str:
     name = raw.strip()
-    wrapper_match = re.match(r"CWrapper<\s*([A-Za-z_]\w*)\s*>", name)
+    wrapper_match = re.match(r"CWrapper<\s*([A-Za-z_]\w*)\s*>?$", name)
     if wrapper_match:
         return wrapper_match.group(1)
     return re.sub(r"\s+", "", name)
+
+
+def iter_cpp_template_type_names(text: str, call_name: str) -> set[str]:
+    names: set[str] = set()
+    pattern = re.compile(rf"\b{re.escape(call_name)}\s*<\s*([^,;\n]+)")
+    for match in pattern.finditer(text):
+        name = normalize_cpp_type(match.group(1))
+        if is_concrete_cpp_class_name(name):
+            names.add(name)
+    return names
+
+
+def is_concrete_cpp_class_name(name: str) -> bool:
+    return name != "CWrapper" and re.match(r"^C[A-Za-z_]\w*$", name) is not None
 
 
 def append_field(location: str, key: Any) -> str:
