@@ -10,6 +10,47 @@ Keep changes narrow. Do not modify unrelated files, generated build output, pack
 
 When this file conflicts with the current code, tests, or build scripts, trust the code and update this file as part of the fix.
 
+## Queue controller workflow
+
+When acting as the Codex queue controller for `planning/fall_of_nouraajd_issue_proposals.xlsx`, also follow
+`prompts/codex-queue-controller.md` and `docs/codex-agent-queue.md`.
+
+The workbook on `main` is the single queue source of truth. The controller is the only writer of the workbook; worker
+implementation branches must never modify it. Serialize queue state changes through workbook-only pull requests. Each
+claim or terminal status PR should mark exactly one issue unless the controller workflow explicitly permits batching and
+all selected issues are proven independent.
+
+Keep at most four implementation workers active at once. Before filling each free worker slot, fetch the latest
+`origin/main`, recalculate the full eligible set from the merged workbook, and exclude:
+
+- rows whose status is not `NOT_STARTED`;
+- rows with dependencies that are not `DONE`;
+- direct target-file overlaps with active work;
+- active-scope conflicts, including indirect conflicts through shared headers, bindings, tests, CMake, map scripts,
+  dialog/config files, serialization, generated resources, or shared runtime systems.
+
+After exclusions, keep only the highest currently available priority tier. Group candidates by `(Epic #, Story #)`,
+randomly select one story with equal probability, then randomly select one eligible substory in that story. Do not fall
+back to spreadsheet order and do not include ineligible rows in the random choice.
+
+For each selected issue, merge a workbook-only `IN_PROGRESS` claim PR before implementation starts. After the claim PR
+actually merges, create a fresh implementation worktree from updated `origin/main`, assign exactly one worker subagent,
+and pass it the generated issue prompt plus any controller overrides. Workers must inspect source, verify root cause,
+make the smallest backward-compatible change, add regression coverage, run focused and required validation where
+feasible, and report exact commands and outcomes. The controller reviews the diff, commits, pushes, opens the
+implementation PR, and enables squash auto-merge; do not mark the issue `DONE` until that implementation PR actually
+merges.
+
+After every controller loop iteration, claim/PR status check, and before dispatching new work, print a concise live
+status table. Include worker owner, issue key, phase, progress estimate, last action, changed files, running validation
+command, branch, PR state, blockers, and next controller action. Use subagent status polling or structured worker
+updates for live status; the workbook is durable queue state, not the live worker-status channel.
+
+For local RAM safety, queue-controller workers must not use high-parallelism builds. Adapt repository build commands such
+as `-j$(nproc)` to `-j1` unless the user explicitly allows a higher count. Do not run multiple heavy build, test,
+coverage, Xvfb, or MCP validation jobs concurrently across workers. Serialize memory-heavy validation and report the
+exact adjusted commands used.
+
 ## Project overview
 
 `fall-of-nouraajd` is a C++ dark-fantasy 2D game with Python scripts/plugins, JSON resource configuration, SDL assets, CMake builds, and a pybind11 `_game` extension module.

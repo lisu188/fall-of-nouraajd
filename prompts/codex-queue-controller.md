@@ -16,8 +16,11 @@ Explicitly spawn worker subagents for implementation tasks. Do not merely descri
 6. Never bypass failing checks, unresolved conflicts, missing approvals, or repository protections.
 7. Never use `git reset --hard`, `git clean`, force-push, or destructive checkout operations against a worktree containing unreviewed user changes.
 8. Use a separate Git worktree and branch for every claim publication, implementation task, and terminal queue update.
-9. Serialize all workbook pull requests. The XLSX file is binary and must never be modified concurrently on multiple branches intended to merge.
-10. Preserve public identifiers and backward compatibility unless source evidence proves they are broken.
+9. Keep at most four implementation workers active at once.
+10. Serialize all workbook pull requests. The XLSX file is binary and must never be modified concurrently on multiple branches intended to merge.
+11. Claim and terminal-status pull requests normally update exactly one issue. Do not batch workbook edits unless this workflow explicitly permits it and all selected issues are proven independent.
+12. Preserve public identifiers and backward compatibility unless source evidence proves they are broken.
+13. For local RAM safety, use serial or very low-parallelism validation. Replace repository-local `-j$(nproc)` build commands with `-j1` unless the user explicitly authorizes more parallelism.
 
 ## Startup
 
@@ -93,12 +96,59 @@ codex/status-epic-01-story-02-substory-03-failed
 
 Use lowercase ASCII, hyphens, and repository-approved naming. Do not reuse a branch name from another active or merged task.
 
+## Live status reporting
+
+Regularly poll every active worker using the available subagent or task interface. If direct polling is unavailable,
+require structured worker updates and summarize the latest update.
+
+After every controller loop iteration, after every claim or pull-request status check, and before dispatching new work,
+print a concise live status table. Include at minimum:
+
+- worker owner;
+- issue key;
+- current phase;
+- progress estimate;
+- last reported action;
+- changed files if known;
+- current validation command if one is running;
+- branch name;
+- pull request number or pending PR state;
+- blockers;
+- next controller action.
+
+Do not rely on the workbook alone for live worker status. The workbook records durable queue state; worker polling or
+structured worker updates are the live-status source.
+
+## Eligibility and random selection
+
+Before filling each free worker slot, fetch the latest merged queue state from `origin/main` and calculate the complete
+eligible set yourself. The `claim` command is deterministic by workbook order, so use it only after selecting the exact
+issue.
+
+Exclude every row that has:
+
+- a status other than `NOT_STARTED`;
+- any dependency that is not `DONE`;
+- a target-file overlap with active work;
+- an active-scope conflict;
+- an indirect conflict through shared headers, bindings, tests, CMake, map scripts, dialog/config files, serialization,
+  generated resources, or shared runtime systems.
+
+After exclusions:
+
+1. Keep only the highest currently available priority tier.
+2. Group the remaining candidates by `(Epic #, Story #)`.
+3. Randomly select one story with equal probability.
+4. Randomly select one eligible substory within the chosen story.
+
+Never default to spreadsheet order, and never randomize an ineligible issue into consideration.
+
 ## Dispatch loop
 
 For each free subagent slot:
 
 1. Inspect current `IN_PROGRESS`, `BLOCKED`, and dependency states.
-2. Select only an eligible `NOT_STARTED` issue whose dependencies are `DONE` and whose code scope does not conflict with active work.
+2. Recalculate the eligible set from the latest merged workbook and select one issue using the required priority/story/substory randomization.
 3. Publish the claim to `main` before starting implementation.
 4. Create the implementation worktree from the post-claim `origin/main`.
 5. Generate the exact worker prompt and explicitly spawn a worker subagent in that worktree.
@@ -108,6 +158,9 @@ For each free subagent slot:
 9. Remove completed worktrees and dispatch the next eligible task.
 
 Do not bypass dependencies to keep workers occupied.
+
+Do not start additional workers when live worker status is missing, when the next candidate conflicts with active work,
+or when RAM-safety limits require waiting for heavy validation to finish.
 
 ## Phase 1: publish an `IN_PROGRESS` claim
 
@@ -219,6 +272,7 @@ If the claim PR conflicts, fails validation, or cannot merge, do not start imple
    - the implementation branch name;
    - a strict instruction not to edit the workbook;
    - a requirement to report progress to the controller rather than directly mutating queue state.
+   - a RAM-safety instruction to avoid parallel builds and use `-j1` for local CMake builds unless the user explicitly allows more.
 
 6. Do not dispatch tasks concurrently when their scopes overlap directly or indirectly through shared headers, tests, bindings, registration units, CMake, shared JSON, map scripts, dialogs, serialization, or generated resources.
 
@@ -236,8 +290,10 @@ Every worker must:
 8. Add regression coverage for bug fixes.
 9. Run focused validation during implementation and all required repository validation before completion.
 10. Never edit `planning/fall_of_nouraajd_issue_proposals.xlsx` on the implementation branch.
-11. Never commit unrelated local changes, generated build output, packaged artifacts, dependency lock changes, or submodule SHA changes unless the issue explicitly requires them.
-12. Produce a final report containing:
+11. Avoid parallel local builds. Use `-j1` for CMake builds and wait when the controller has paused heavy validation for RAM safety.
+12. Never start heavy build, test, coverage, Xvfb, or MCP validation while the controller reports another heavy validation job is running.
+13. Never commit unrelated local changes, generated build output, packaged artifacts, dependency lock changes, or submodule SHA changes unless the issue explicitly requires them.
+14. Produce a final report containing:
     - what was checked;
     - what was broken;
     - what changed;
@@ -272,6 +328,24 @@ python3 scripts/issue_queue.py heartbeat \
 Commit and merge that workbook-only change using the same status-PR process as claim publication.
 
 If a worker disappears, do not overwrite the active claim. Inspect its worktree and branch, wait for lease expiry, and use `reclaim-stale` only when the claim is genuinely stale and no recoverable work remains.
+
+## RAM-safe validation
+
+Repository instructions may show parallel build examples such as `-j$(nproc)`. In queue-controller operation, adapt those
+local commands to `-j1` unless the user explicitly permits a higher job count. Record the adjusted command in worker
+reports and PR bodies.
+
+The controller must serialize memory-heavy validation across workers:
+
+- CMake builds;
+- `ctest` suites;
+- `python3 test.py` full or GUI suites;
+- `./scripts/run_coverage.sh`;
+- Xvfb tests;
+- MCP gameplay sessions.
+
+Workers may perform lightweight source inspection and prepare summaries while waiting for the RAM gate. Do not dispatch
+additional implementation work when doing so would leave active workers unpollable or start competing heavy validation.
 
 ## Phase 3: review and publish implementation
 
@@ -394,6 +468,8 @@ Stop dispatching new tasks when:
 - all remaining work is blocked by dependencies;
 - every safe task conflicts with active work;
 - available subagent capacity is exhausted;
+- live worker status cannot be polled or recovered safely;
+- RAM-safety limits require waiting before more work can start;
 - the repository is in an unresolved state.
 
 Before stopping, report:
