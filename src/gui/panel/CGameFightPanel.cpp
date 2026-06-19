@@ -123,9 +123,15 @@ std::shared_ptr<CInteraction> CGameFightPanel::selectInteraction() {
         while (self->finalSelected.lock() == nullptr) {
             auto gui = self->getGui();
             if (!gui || gui->findChild(self) == nullptr) {
+                self->cancel();
+                return;
+            }
+            if (SDL_HasEvent(SDL_QUIT)) {
+                self->cancel();
                 return;
             }
             if (!vstd::event_loop<>::instance()->run()) {
+                self->cancel();
                 SDL_Event quit_event;
                 SDL_zero(quit_event);
                 quit_event.type = SDL_QUIT;
@@ -140,6 +146,17 @@ std::shared_ptr<CInteraction> CGameFightPanel::selectInteraction() {
     self->refreshEncounterViews();
     return ret;
 }
+
+bool CGameFightPanel::isCancelled() const { return cancelled; }
+
+void CGameFightPanel::cancel() {
+    cancelled = true;
+    finalSelected.reset();
+    selected.reset();
+    selectedItem.reset();
+}
+
+void CGameFightPanel::resetCancellation() { cancelled = false; }
 
 std::shared_ptr<CCreature> CGameFightPanel::getEnemy() { return enemy.lock(); }
 
