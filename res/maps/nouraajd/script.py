@@ -145,6 +145,14 @@ def load(self, context):
     def _grant_quest(player, quest_name):
         ensure_quest(player, quest_name, registry=_player_quest_registry)
 
+    def _set_numeric_property_default(obj, name, value):
+        if not hasattr(obj, name):
+            obj.setNumericProperty(name, value)
+
+    def _set_bool_property_default(obj, name, value):
+        if not hasattr(obj, name):
+            obj.setBoolProperty(name, value)
+
     def _get_quest_system(game_map):
         return QuestSystem(game_map)
 
@@ -389,16 +397,16 @@ def load(self, context):
                 quest_system.reset_all()
                 game_map.setBoolProperty("ASKED_ABOUT_GIRL", False)
                 game_map.setBoolProperty("TALKED_TO_VICTOR", False)
-                player.setNumericProperty("warrior_barricades", 0)
-                player.setNumericProperty("assasin_trails", 0)
-                player.setNumericProperty("inquisitor_clues", 0)
-                player.setNumericProperty("sorcerer_sigils", 0)
-                player.setNumericProperty("wayfarer_routes", 0)
-                player.setBoolProperty("braced_nouraajd_gate", False)
-                player.setBoolProperty("shadowed_robed_men", False)
-                player.setBoolProperty("inspected_stained_glass", False)
-                player.setBoolProperty("decoded_stained_glass_ward", False)
-                player.setBoolProperty("charted_smuggler_route", False)
+                _set_numeric_property_default(player, "warrior_barricades", 0)
+                _set_numeric_property_default(player, "assasin_trails", 0)
+                _set_numeric_property_default(player, "inquisitor_clues", 0)
+                _set_numeric_property_default(player, "sorcerer_sigils", 0)
+                _set_numeric_property_default(player, "wayfarer_routes", 0)
+                _set_bool_property_default(player, "braced_nouraajd_gate", False)
+                _set_bool_property_default(player, "shadowed_robed_men", False)
+                _set_bool_property_default(player, "inspected_stained_glass", False)
+                _set_bool_property_default(player, "decoded_stained_glass_ward", False)
+                _set_bool_property_default(player, "charted_smuggler_route", False)
                 _grant_quest(player, "rolfQuest")
                 player.addItem("letterFromRolf")
 
