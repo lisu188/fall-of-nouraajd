@@ -1143,14 +1143,14 @@ Preserve backward compatibility unless something is clearly broken.
 {values.get('Validation / Tests')}
 
 9. Queue protocol
-- Before editing, run a heartbeat at 5% with a note describing the files inspected.
-- After root-cause analysis, heartbeat at 20% with the verified root cause.
-- After implementation, heartbeat at 70% with the changed files.
-- After focused validation, heartbeat at 90% with exact commands and results.
-- Use this exact Claim ID and Owner for every queue update.
-- Do not edit the workflow columns in the XLSX manually.
-- On success, call complete with a result summary and exact validation results.
-- On a verified blocker, call block with a precise reason. Do not invent missing source details.
+- Report queue milestones to the controller after source inspection, root-cause analysis, implementation, focused
+    validation, and full validation.
+- Include this exact Claim ID and Owner in milestone reports so the controller can publish workbook updates from a
+    workbook-only branch.
+- The controller owns workbook updates; worker implementation branches must not edit the workbook or workflow columns.
+- Do not run issue_queue.py heartbeat, complete, block, fail, cancel, or release from this implementation worktree.
+- On success, provide a result summary and exact validation results for controller completion.
+- On a verified blocker, report a precise reason to the controller. Do not invent missing source details.
 
 10. Required final report
 Report:
