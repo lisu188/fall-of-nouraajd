@@ -1,6 +1,9 @@
 from __future__ import annotations
 
+import io
 import unittest
+from contextlib import redirect_stdout
+from unittest.mock import patch
 
 from scripts import poll_pr_checks
 
@@ -157,6 +160,95 @@ class PollPrChecksTest(unittest.TestCase):
 
         self.assertTrue(evaluation.failed)
         self.assertEqual(("linux/coverage",), evaluation.missingSteps)
+
+    def test_evaluate_pr_state_passes_already_merged_pr(self) -> None:
+        evaluation = poll_pr_checks.evaluatePrState(
+            {
+                "state": "MERGED",
+                "mergedAt": "2026-06-19T09:19:25Z",
+                "mergeCommit": {"oid": "abc123"},
+            }
+        )
+
+        self.assertIsNotNone(evaluation)
+        self.assertTrue(evaluation.succeeded)
+        self.assertIn("already merged", evaluation.message)
+        self.assertIn("abc123", evaluation.message)
+
+    def test_evaluate_pr_state_fails_closed_unmerged_pr(self) -> None:
+        evaluation = poll_pr_checks.evaluatePrState({"state": "CLOSED"})
+
+        self.assertIsNotNone(evaluation)
+        self.assertTrue(evaluation.failed)
+        self.assertIn("closed without merge", evaluation.message)
+
+    def test_poll_checks_stops_when_pr_is_already_merged(self) -> None:
+        with (
+            patch.object(
+                poll_pr_checks,
+                "runGhPrView",
+                return_value={
+                    "headRefOid": "abc123",
+                    "url": "https://github.com/example/repo/pull/1",
+                    "state": "MERGED",
+                    "mergedAt": "2026-06-19T09:19:25Z",
+                    "mergeCommit": {"oid": "abc123"},
+                },
+            ),
+            patch.object(poll_pr_checks, "runGhRunList") as run_list,
+        ):
+            with redirect_stdout(io.StringIO()):
+                evaluation = poll_pr_checks.pollChecks(
+                    pr="1",
+                    repo=None,
+                    workflow="build.yml",
+                    requiredJobs=["linux"],
+                    requiredSteps=[],
+                    intervalSeconds=1,
+                    timeoutSeconds=1,
+                )
+
+        self.assertTrue(evaluation.succeeded)
+        run_list.assert_not_called()
+
+    def test_poll_checks_stops_if_pr_merges_while_job_is_pending(self) -> None:
+        open_pr = {
+            "headRefOid": "abc123",
+            "url": "https://github.com/example/repo/pull/1",
+            "state": "OPEN",
+        }
+        merged_pr = {
+            "headRefOid": "def456",
+            "url": "https://github.com/example/repo/pull/1",
+            "state": "MERGED",
+            "mergedAt": "2026-06-19T09:19:25Z",
+            "mergeCommit": {"oid": "merge123"},
+        }
+        pending_run = self.runPayload([self.jobPayload(status="in_progress", conclusion="")])
+
+        with (
+            patch.object(poll_pr_checks, "runGhPrView", side_effect=[open_pr, merged_pr]),
+            patch.object(
+                poll_pr_checks, "runGhRunList", return_value=[{"databaseId": 1, "headSha": "abc123"}]
+            ) as run_list,
+            patch.object(poll_pr_checks, "runGhRunView", return_value=pending_run),
+            patch.object(poll_pr_checks.time, "sleep") as sleep,
+        ):
+            with redirect_stdout(io.StringIO()):
+                evaluation = poll_pr_checks.pollChecks(
+                    pr="1",
+                    repo=None,
+                    workflow="build.yml",
+                    requiredJobs=["linux"],
+                    requiredSteps=[],
+                    intervalSeconds=30,
+                    timeoutSeconds=120,
+                )
+
+        self.assertTrue(evaluation.succeeded)
+        self.assertIn("already merged", evaluation.message)
+        run_list.assert_called_once_with("abc123", "build.yml", None)
+        sleep.assert_called_once_with(30)
 
 
 if __name__ == "__main__":

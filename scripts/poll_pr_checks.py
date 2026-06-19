@@ -189,6 +189,31 @@ def evaluateRun(
     )
 
 
+def evaluatePrState(prPayload: dict[str, Any]) -> CheckEvaluation | None:
+    state = normalizeStatus(prPayload.get("state"))
+    if state == "MERGED":
+        merged_at = prPayload.get("mergedAt") or "unknown time"
+        merge_commit = prPayload.get("mergeCommit") or {}
+        merge_oid = merge_commit.get("oid") if isinstance(merge_commit, dict) else None
+        suffix = f" with merge commit {merge_oid}" if merge_oid else ""
+        return CheckEvaluation(
+            state="success",
+            jobs=(),
+            missingJobs=(),
+            missingSteps=(),
+            message=f"pull request already merged at {merged_at}{suffix}",
+        )
+    if state == "CLOSED":
+        return CheckEvaluation(
+            state="failure",
+            jobs=(),
+            missingJobs=(),
+            missingSteps=(),
+            message="pull request is closed without merge",
+        )
+    return None
+
+
 def runGhJson(command: Sequence[str]) -> Any:
     result = subprocess.run(
         list(command),
@@ -213,7 +238,7 @@ def ghCommandWithRepo(command: list[str], repo: str | None) -> list[str]:
 
 def runGhPrView(pr: str, repo: str | None) -> dict[str, Any]:
     command = ghCommandWithRepo(
-        ["gh", "pr", "view", pr, "--json", "headRefOid,headRefName,number,url"],
+        ["gh", "pr", "view", pr, "--json", "headRefOid,headRefName,number,url,state,mergedAt,mergeCommit"],
         repo,
     )
     payload = runGhJson(command)
@@ -310,6 +335,10 @@ def pollChecks(
 ) -> CheckEvaluation:
     started = time.monotonic()
     pr_payload = runGhPrView(pr, repo)
+    pr_state_evaluation = evaluatePrState(pr_payload)
+    if pr_state_evaluation is not None:
+        printEvaluation(pr_payload, None, pr_state_evaluation, requiredSteps)
+        return pr_state_evaluation
     head_sha = str(pr_payload["headRefOid"])
 
     while True:
@@ -329,6 +358,11 @@ def pollChecks(
                 message=f"timed out after {timeoutSeconds}s: {evaluation.message}",
             )
         time.sleep(intervalSeconds)
+        latest_pr_payload = runGhPrView(pr, repo)
+        pr_state_evaluation = evaluatePrState(latest_pr_payload)
+        if pr_state_evaluation is not None:
+            printEvaluation(latest_pr_payload, None, pr_state_evaluation, requiredSteps)
+            return pr_state_evaluation
 
 
 def positiveInt(value: str) -> int:
